@@ -275,7 +275,9 @@
             border: 3px solid #C62828;
         }
         .emergency-card h3 { color: #C62828; margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
-        .emergency-grid, .checklist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .emergency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .checklist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        @media (max-width: 600px) { .checklist-grid { grid-template-columns: 1fr; } }
         .emergency-item, .checklist-item { background: linear-gradient(135deg, #FFEBEE, #FFCDD2); padding: 15px; border-radius: 15px; border-left: 4px solid #C62828; }
         .emergency-item h4, .checklist-item h4 { color: #B71C1C; margin-bottom: 8px; font-size: 1.1rem; }
         .checklist-snorkel { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); border-left-color: #0288D1; }
@@ -1428,37 +1430,36 @@
 
                 <div class="transport-between drive">
                     <div class="transport-icon">🚗</div>
-                    <div class="transport-line">伊芸 SA→殘波岬（讀谷村）約30分鐘</div>
+                    <div class="transport-line">伊芸 SA→AEON Mall 來客夢（北中城 IC 旁）約15分鐘</div>
                 </div>
 
                 <div class="event">
-                    <div class="event-time">15:15-16:15</div>
+                    <div class="event-time">15:00-18:00</div>
                     <div class="event-card">
                         <div class="event-title">
-                            <h3>🏖️ <a href="https://maps.google.com/?q=残波岬" target="_blank">殘波岬（30m 斷崖絕壁）</a></h3>
+                            <h3>🛍️ <a href="https://maps.google.com/?q=イオンモール沖縄ライカム" target="_blank">AEON Mall 沖繩來客夢</a></h3>
                         </div>
-                        <p class="event-desc">讀谷村最西端，高達 30m 的珊瑚礁斷崖綿延約 2km，白色「殘波岬燈塔」是沖繩唯一可登頂的燈塔（¥300）。天氣好時可遠眺慶良間諸島，也是沖繩本島「最後夕陽落下之地」</p>
-                        <a href="https://maps.google.com/?q=残波岬" target="_blank" class="map-link">📍 Google Map</a>
-                        <a href="https://maps.apple.com/?q=残波岬" target="_blank" class="map-link apple">🍎 Apple Map</a>
-                        <span class="map-link mapcode">📟 1005 685 296</span>
-                        <span class="tag tag-attraction">景點</span>
-                        <span class="tag tag-nature">自然</span>
+                        <p class="event-desc">沖繩最大購物中心！1F <strong>寶可夢中心</strong>（沖繩限定風速狗＋皮卡丘周邊）、2F <strong>UNIQLO</strong>，還有超市、藥妝、沖繩伴手禮一次買齊</p>
+                        <a href="https://maps.google.com/?q=イオンモール沖縄ライカム" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=イオンモール沖縄ライカム" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 530 406</span>
+                        <span class="tag tag-shopping">購物</span>
                         <div class="reservation-info">
-                            🏠 <strong>燈塔開放時間：</strong>3~9 月 平日 9:30~16:30／假日 9:30~17:30 ｜ 10~2 月 9:30~16:30 ｜ 入場 ¥300（中學生以上）
+                            🕐 <strong>營業時間：</strong>10:00~22:00（專門店）｜寶可夢中心 10:00~22:00
                         </div>
                         <div class="parking-info">
-                            🅿️ <strong>殘波岬公園停車場：</strong>免費，大型停車場｜<a href="https://maps.google.com/?q=残波岬公園駐車場" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=残波岬公園駐車場" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 1005 685 296</span>
+                            🅿️ <strong>停車場：</strong>免費，約 4,000 台｜<a href="https://maps.google.com/?q=イオンモール沖縄ライカム駐車場" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=イオンモール沖縄ライカム駐車場" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 530 406</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="transport-between drive">
                     <div class="transport-icon">🚗</div>
-                    <div class="transport-line">殘波岬→租車公司 約30分鐘</div>
+                    <div class="transport-line">AEON Mall→租車公司 約25分鐘</div>
                 </div>
 
                 <div class="event">
-                    <div class="event-time">16:45-17:15</div>
+                    <div class="event-time">18:25-18:55</div>
                     <div class="event-card">
                         <div class="event-title">
                             <h3>🚗 還車手續</h3>
@@ -1479,7 +1480,7 @@
                 </div>
 
                 <div class="event">
-                    <div class="event-time">17:45</div>
+                    <div class="event-time">19:20</div>
                     <div class="event-card">
                         <div class="event-title">
                             <h3>🏨 <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank">Check in 東橫inn 那霸</a></h3>
@@ -1504,7 +1505,7 @@
                 </div>
 
                 <div class="event">
-                    <div class="event-time">18:00-19:30</div>
+                    <div class="event-time">19:30-21:00</div>
                     <div class="event-card">
                         <div class="event-title">
                             <h3>🍽️ 那霸國際通晚餐</h3>
@@ -1543,7 +1544,7 @@
                 <ul>
                     <li><strong>高速通行費：</strong>名護 IC → 北中城 IC 約 ¥780</li>
                     <li><strong>還車注意：</strong>還車前需加滿油，附近找加油站（ガソリンスタンド）</li>
-                    <li><strong>還車時間：</strong>建議 16:45 前到達，預留充足時間</li>
+                    <li><strong>還車時間：</strong>建議 18:25 前到達，預留充足時間</li>
                 </ul>
             </div>
             <div class="budget-card">
