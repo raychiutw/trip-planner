@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 沖繩五日自駕遊行程表</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --coral-red: #FF6B6B;
+            --ocean-teal: #00B4D8;
+            --deep-ocean: #0077B6;
+            --tropical-green: #2D936C;
+            --sunset-orange: #FF8C42;
+            --sand-cream: #FFF5E1;
+            --shisa-brown: #8B5E3C;
+            --hibiscus-pink: #FF4081;
+            --night-purple: #5C2D91;
+            --sky-blue: #90E0EF;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(180deg, #E0F7FA 0%, #B2EBF2 15%, #80DEEA 30%, #4DD0E1 50%, #26C6DA 65%, #00ACC1 80%, #00838F 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 120px;
+            background:
+                radial-gradient(ellipse at 20% 100%, rgba(255,255,255,0.3) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 100%, rgba(255,255,255,0.2) 0%, transparent 50%);
+            z-index: 0;
+            animation: wave-drift 6s ease-in-out infinite;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 300%;
+            height: 80px;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                rgba(255,255,255,0.15) 40px,
+                transparent 80px,
+                rgba(255,255,255,0.1) 120px,
+                transparent 160px
+            );
+            z-index: 0;
+            animation: wave-drift 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes wave-drift {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(-80px); }
+        }
+        @keyframes sway {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        @keyframes float-up {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 3px solid var(--deep-ocean);
+            position: relative;
+            overflow: hidden;
+        }
+        header::before { content: '🐠'; position: absolute; top: 10px; left: 20px; font-size: 2rem; animation: sway 3s ease-in-out infinite; }
+        header::after { content: '🐚'; position: absolute; top: 10px; right: 20px; font-size: 2rem; animation: float-up 3s ease-in-out infinite; }
+        header h1 { font-size: 2.8rem; margin-bottom: 10px; color: var(--deep-ocean); }
+        header p { font-size: 1.2rem; color: var(--shisa-brown); }
+        .departure-info { margin-top: 15px; padding: 10px 20px; background: linear-gradient(135deg, var(--ocean-teal), #48CAE4); border-radius: 20px; display: inline-block; color: white; font-weight: 500; }
+
+        .flight-info {
+            background: rgba(255,255,255,0.92);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 3px solid var(--deep-ocean);
+        }
+        .flight-info h3 { color: var(--deep-ocean); margin-bottom: 15px; font-size: 1.3rem; }
+        .flight-row {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #E0F7FA, #B2EBF2);
+            border-radius: 15px;
+            margin-bottom: 10px;
+            border: 2px dashed var(--ocean-teal);
+        }
+        .flight-row:last-child { margin-bottom: 0; }
+        .flight-icon { font-size: 1.5rem; margin-right: 15px; }
+        .flight-details { flex: 1; }
+        .flight-details .route { font-weight: 600; color: var(--shisa-brown); font-size: 1.2rem; }
+        .flight-details .time { color: #666; font-size: 1rem; margin-top: 3px; }
+
+        .day-card {
+            background: rgba(255,255,255,0.92);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 3px solid var(--shisa-brown);
+        }
+        .day-card[id], [id="checklist"], [id="flight"], [id="weather-backup"], [id="emergency"] { scroll-margin-top: 80px; }
+        .day-1 { --day-color: #FF6B6B; --day-color-light: #FF8E8E; --day-color-alt: #E85555; }
+        .day-2 { --day-color: #00B4D8; --day-color-light: #48CAE4; --day-color-alt: #0096C7; }
+        .day-3 { --day-color: #0077B6; --day-color-light: #0096C7; --day-color-alt: #005F8E; }
+        .day-4 { --day-color: #FF8C42; --day-color-light: #FFB347; --day-color-alt: #E87830; }
+        .day-5 { --day-color: #5C2D91; --day-color-light: #9B59B6; --day-color-alt: #4A2272; }
+
+        .day-header { padding: 20px 25px; color: white; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--day-color), var(--day-color-light)); }
+        .day-header h2 { font-size: 1.6rem; }
+        .day-header .date { font-size: 1.1rem; opacity: 0.9; }
+        .accommodation-badge { background: rgba(255,255,255,0.3); padding: 5px 15px; border-radius: 20px; font-size: 1rem; }
+
+        .hotel-info { background: linear-gradient(135deg, var(--sand-cream), #FFF8DC); padding: 20px 25px; border-bottom: 2px dashed var(--shisa-brown); }
+        .hotel-info h4 { color: var(--shisa-brown); font-size: 1.2rem; margin-bottom: 10px; }
+        .hotel-info h4 a { color: var(--shisa-brown); text-decoration: none; border-bottom: 2px dotted var(--shisa-brown); }
+        .hotel-info h4 a:hover { color: var(--deep-ocean); }
+        .hotel-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 1rem; color: #555; }
+        .hotel-details span { display: flex; align-items: center; gap: 6px; }
+        .price-tag { background: linear-gradient(135deg, var(--tropical-green), #38B000); color: white; padding: 3px 12px; border-radius: 15px; font-weight: 600; font-size: 0.85rem; }
+        .status-paid { background: linear-gradient(135deg, var(--tropical-green), #38B000); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
+        .status-pending { background: linear-gradient(135deg, var(--sunset-orange), #FFD700); color: #333; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
+
+        .timeline { padding: 25px; }
+
+        .event { display: flex; margin-bottom: 15px; align-items: flex-start; }
+        .event-time {
+            width: 130px; min-width: 130px;
+            background: linear-gradient(135deg, var(--shisa-brown), #A0826D);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-align: center;
+            margin-right: 15px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        .day-card .event-time { background: linear-gradient(135deg, var(--day-color), var(--day-color-alt)); }
+
+        .event-card {
+            flex: 1;
+            background: #fafafa;
+            border-radius: 15px;
+            padding: 15px 20px;
+            border-left: 4px solid var(--shisa-brown);
+        }
+        .day-card .event-card { border-left-color: var(--day-color); }
+
+        .event-title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .event-title h3 { color: var(--shisa-brown); font-size: 1.2rem; }
+        .event-title h3 a { color: var(--shisa-brown); text-decoration: none; }
+        .event-title h3 a:hover { color: var(--deep-ocean); text-decoration: underline; }
+        .event-desc { color: #666; font-size: 1rem; line-height: 1.6; margin-bottom: 8px; }
+
+        .map-link { display: inline-flex; align-items: center; gap: 4px; background: #4285F4; color: white; padding: 3px 10px; border-radius: 10px; font-size: 0.8rem; text-decoration: none; margin-right: 5px; margin-bottom: 4px; }
+        .map-link-inline { display: inline; font-size: 0.85rem; padding: 2px 8px; }
+        .map-link:hover { background: #3367D6; }
+        .map-link.apple { background: #333; }
+        .map-link.apple:hover { background: #555; }
+        .map-link.mapcode { background: #E65100; }
+        .map-link.mapcode:hover { background: #BF360C; }
+
+        .reservation-info {
+            display: block;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #FFE3E3, #FFCDD2);
+            border-radius: 10px;
+            border: 1px solid #EF9A9A;
+            font-size: 0.95rem;
+            color: #C62828;
+        }
+        .reservation-info a { color: #C62828; font-weight: 600; }
+
+        .parking-info {
+            display: block;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+            border-radius: 10px;
+            border: 1px solid #81C784;
+            font-size: 0.95rem;
+            color: #2E7D32;
+        }
+        .parking-info strong { color: #1B5E20; }
+
+        .budget-card {
+            background: linear-gradient(135deg, #FFF9C4, #FFF59D);
+            border-left: 5px solid #F57F17;
+            padding: 15px 20px;
+            margin: 20px 25px 25px;
+            border-radius: 0 15px 15px 0;
+        }
+        .budget-card h4 { color: #F57F17; margin-bottom: 10px; font-size: 1.1rem; }
+        .budget-card table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        .budget-card table td { padding: 5px 0; color: #5D4037; }
+        .budget-card table td:first-child { font-weight: 500; }
+        .budget-card table td:last-child { text-align: right; font-weight: 600; color: #E65100; }
+        .budget-card .budget-total { border-top: 2px solid #F57F17; margin-top: 8px; padding-top: 8px; font-size: 1.05rem; font-weight: 700; color: #E65100; }
+
+        .emergency-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 3px solid #C62828;
+        }
+        .emergency-card h3 { color: #C62828; margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
+        .emergency-grid, .checklist-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .emergency-item, .checklist-item { background: linear-gradient(135deg, #FFEBEE, #FFCDD2); padding: 15px; border-radius: 15px; border-left: 4px solid #C62828; }
+        .emergency-item h4, .checklist-item h4 { color: #B71C1C; margin-bottom: 8px; font-size: 1.1rem; }
+        .checklist-snorkel { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); border-left-color: #0288D1; }
+        .checklist-snorkel h4 { color: #01579B; }
+        .checklist-typhoon { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left-color: #FF9800; }
+        .checklist-typhoon h4 { color: #E65100; }
+        .checklist-car { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); border-left-color: #7B1FA2; }
+        .checklist-car h4 { color: #4A148C; }
+        .checklist-hotel { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); border-left-color: #388E3C; }
+        .checklist-hotel h4 { color: #1B5E20; }
+        .emergency-item p, .checklist-item p { color: #5D4037; font-size: 0.95rem; line-height: 1.6; margin: 5px 0; }
+        .emergency-item a, .checklist-item a { color: #C62828; font-weight: 600; text-decoration: none; }
+        .emergency-item a:hover, .checklist-item a:hover { text-decoration: underline; }
+
+        /* Section cards matching day-card style */
+        .section-card {
+            background: rgba(255,255,255,0.92);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 3px solid var(--shisa-brown);
+        }
+        .section-header {
+            padding: 20px 25px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-header h2 { font-size: 1.6rem; }
+        .section-body { padding: 25px; }
+        .section-checklist { --section-color: #FF9800; --section-color-light: #FFB74D; }
+        .section-flight { --section-color: #0077B6; --section-color-light: #0096C7; }
+        .section-weather { --section-color: #1976D2; --section-color-light: #42A5F5; }
+        .section-emergency { --section-color: #C62828; --section-color-light: #EF5350; }
+        .section-card .section-header { background: linear-gradient(135deg, var(--section-color), var(--section-color-light)); }
+
+
+        /* Weather info inside day-card */
+        .weather-info { padding: 15px; margin: 15px 0; border-radius: 12px; }
+        .weather-info h4 { margin: 0 0 10px 0; font-size: 1rem; }
+        .weather-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 0.9rem; color: #424242; }
+        .day-1 .weather-info { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 4px solid #FF9800; }
+        .day-1 .weather-info h4 { color: #E65100; }
+        .day-2 .weather-info { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); border-left: 4px solid #00B4D8; }
+        .day-2 .weather-info h4 { color: #006064; }
+        .day-3 .weather-info { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 4px solid #0077B6; }
+        .day-3 .weather-info h4 { color: #01579B; }
+        .day-4 .weather-info { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 4px solid #FF8C42; }
+        .day-4 .weather-info h4 { color: #E65100; }
+        .day-5 .weather-info { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); border-left: 4px solid #5C2D91; }
+        .day-5 .weather-info h4 { color: #4A148C; }
+
+        .weather-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 3px solid var(--deep-ocean);
+        }
+        .weather-card h3 { color: var(--deep-ocean); margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
+        .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .weather-day { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); padding: 15px; border-radius: 15px; border-left: 4px solid var(--deep-ocean); }
+        .weather-day h4 { color: #006064; margin-bottom: 10px; font-size: 1.1rem; }
+        .weather-day ul { list-style: none; padding-left: 0; }
+        .weather-day ul li { color: #424242; font-size: 0.95rem; line-height: 1.6; margin-bottom: 5px; padding-left: 20px; position: relative; }
+        .weather-day ul li::before { content: '🌊'; position: absolute; left: 0; }
+
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; margin-right: 5px; border: 1px solid transparent; }
+        .tag-food { background: #FFF3BF; color: #E67700; border-color: #FFD43B; }
+        .tag-attraction { background: #E7F5FF; color: #1971C2; border-color: #74C0FC; }
+        .tag-shopping { background: #F3D9FA; color: #9C36B5; border-color: #E599F7; }
+        .tag-nature { background: #D3F9D8; color: #2B8A3E; border-color: #8CE99A; }
+        .tag-beach { background: #E0F7FA; color: #006064; border-color: #80DEEA; }
+        .tag-water { background: #E3F2FD; color: #0D47A1; border-color: #90CAF9; }
+        .tag-transport { background: #D0EBFF; color: #1864AB; border-color: #74C0FC; }
+        .tag-hotel { background: #FFE8CC; color: #D35400; border-color: #F0B27A; }
+        .tag-onsen { background: #FCE4EC; color: #C62828; border-color: #F48FB1; }
+
+        .transport-between {
+            display: flex;
+            align-items: stretch;
+            margin: 8px 0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .transport-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            font-size: 1.3rem;
+            color: white;
+            min-width: 50px;
+        }
+        .transport-line {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        /* 開車 */
+        .transport-between.drive .transport-icon { background: linear-gradient(135deg, #E65100, #FF8C42); }
+        .transport-between.drive .transport-line { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); color: #E65100; border: 1px solid #FFB74D; border-left: none; }
+        /* 步行 */
+        .transport-between.walk .transport-icon { background: linear-gradient(135deg, #2E7D32, #4CAF50); }
+        .transport-between.walk .transport-line { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); color: #2E7D32; border: 1px solid #81C784; border-left: none; }
+        /* 電車 */
+        .transport-between.train .transport-icon { background: linear-gradient(135deg, #7B1FA2, #AB47BC); }
+        .transport-between.train .transport-line { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); color: #7B1FA2; border: 1px solid #BA68C8; border-left: none; }
+        /* 預設（接駁車等） */
+        .transport-between.shuttle .transport-icon { background: linear-gradient(135deg, #1565C0, #42A5F5); }
+        .transport-between.shuttle .transport-line { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); color: #1565C0; border: 1px solid #64B5F6; border-left: none; }
+
+        .notes {
+            background: linear-gradient(135deg, #FFF9DB, #FFF3BF);
+            border-left: 5px solid var(--sunset-orange);
+            padding: 15px 20px;
+            margin: 20px 25px 25px;
+            border-radius: 0 15px 15px 0;
+        }
+        .notes h4 { color: #E67700; margin-bottom: 8px; font-size: 1.05rem; }
+        .notes ul { list-style: none; color: #74603D; font-size: 1rem; }
+        .notes ul li { margin-bottom: 5px; padding-left: 25px; position: relative; }
+        .notes ul li::before { content: '🐚'; position: absolute; left: 0; }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            background: rgba(255,255,255,0.85);
+            border-radius: 25px;
+            border: 3px solid var(--deep-ocean);
+            color: var(--shisa-brown);
+        }
+        .shisa-decoration { font-size: 3rem; margin: 10px 0; }
+
+        .quick-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 25px;
+            margin-bottom: 25px;
+            padding: 10px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            border: 2px solid var(--deep-ocean);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .quick-nav-select {
+            padding: 8px 14px;
+            border: 2px solid var(--deep-ocean);
+            border-radius: 20px;
+            background: rgba(255,255,255,0.95);
+            color: var(--deep-ocean);
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230077B6' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        .quick-nav-select:hover, .quick-nav-select:focus {
+            background-color: var(--deep-ocean);
+            color: white;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+        }
+        .print-toggle {
+            padding: 6px 14px;
+            border: 2px solid var(--deep-ocean);
+            border-radius: 15px;
+            background: rgba(255,255,255,0.95);
+            color: var(--deep-ocean);
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        .print-toggle:hover { background: var(--deep-ocean); color: white; }
+
+        /* Hourly Weather */
+        .hourly-weather {
+            margin: 0 0 15px;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .hourly-weather-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .hourly-weather-title { font-size: 0.85rem; font-weight: 600; color: #555; }
+        .hw-update-time { font-size: 0.72rem; color: #999; }
+        .hw-grid { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: 6px; }
+        .hw-block { background: rgba(255,255,255,0.85); border-radius: 10px; padding: 8px 4px; text-align: center; border: 1px solid rgba(0,0,0,0.06); min-width: 56px; flex-shrink: 0; }
+        .hw-block-time { font-size: 0.72rem; font-weight: 600; color: #555; margin-bottom: 2px; }
+        .hw-block-loc { font-size: 0.6rem; color: #fff; border-radius: 6px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; line-height: 1.4; white-space: nowrap; }
+        .hw-loc-0 { background: #0077B6; }
+        .hw-loc-1 { background: #E65100; }
+        .hw-loc-2 { background: #2D936C; }
+        .hw-loc-3 { background: #5C2D91; }
+        .hw-block-icon { font-size: 1.2rem; line-height: 1.2; }
+        .hw-block-temp { font-size: 0.78rem; font-weight: 700; color: #E65100; margin: 1px 0; }
+        .hw-block-rain { font-size: 0.68rem; color: #1565C0; }
+        .hw-block-rain.hw-rain-high { color: #0D47A1; font-weight: 700; }
+        .hw-loading { text-align: center; padding: 12px; color: #999; font-size: 0.85rem; }
+        .hw-error { text-align: center; padding: 12px; color: #C62828; font-size: 0.85rem; background: #FFEBEE; border-radius: 8px; }
+
+        /* Print mode */
+        .print-mode { background: #fff !important; }
+        .print-mode::before, .print-mode::after { display: none !important; }
+        .print-mode header, .print-mode footer, .print-mode .flight-info, .print-mode .flight-row,
+        .print-mode .day-card, .print-mode .hotel-info, .print-mode .event-card,
+        .print-mode .emergency-card, .print-mode .emergency-item, .print-mode .checklist-item,
+        .print-mode .weather-card, .print-mode .weather-day,
+        .print-mode .section-card, .print-mode .section-body,
+        .print-mode .departure-info, .print-mode .reservation-info,
+        .print-mode .parking-info, .print-mode .hotel-parking, .print-mode .budget-card, .print-mode .notes,
+        .print-mode .transport-line, .print-mode .transport-icon, .print-mode .transport-between,
+        .print-mode .weather-info, .print-mode .hourly-weather {
+            background: #fff !important; box-shadow: none !important; animation: none !important;
+        }
+        .print-mode .hw-block { background: #fff !important; border-color: #ccc !important; }
+        .print-mode .hw-block-loc { background: #666 !important; }
+        .print-mode h1, .print-mode h2, .print-mode h3, .print-mode h4,
+        .print-mode p, .print-mode span, .print-mode a, .print-mode td,
+        .print-mode li, .print-mode div { color: #000 !important; }
+        .print-mode .day-header { background: #333 !important; }
+        .print-mode .day-header * { color: #fff !important; }
+        .print-mode .event-time { background: #555 !important; color: #fff !important; }
+        .print-mode .map-link { background: #555 !important; color: #fff !important; }
+        .print-mode .price-tag, .print-mode .status-paid, .print-mode .status-pending { background: #555 !important; color: #fff !important; }
+        .print-mode .day-card, .print-mode .flight-info, .print-mode .flight-row,
+        .print-mode .hotel-info, .print-mode .event-card,
+        .print-mode .emergency-card, .print-mode .emergency-item, .print-mode .checklist-item,
+        .print-mode .weather-card, .print-mode .budget-card, .print-mode .notes,
+        .print-mode .reservation-info, .print-mode .parking-info, .print-mode .hotel-parking,
+        .print-mode .transport-between, .print-mode .section-card { border-color: #999 !important; }
+        .print-mode .section-header { background: #333 !important; }
+        .print-mode .section-header * { color: #fff !important; }
+        .print-mode .event-card { border-left-color: #333 !important; }
+        .print-mode .quick-nav { background: #fff !important; border-color: #999 !important; box-shadow: none !important; }
+        .print-mode .quick-nav-select { border-color: #555 !important; color: #333 !important; }
+        .print-mode .print-toggle { border-color: #555 !important; color: #333 !important; }
+        .print-mode [class^="tag-"], .print-mode [class*=" tag-"] { background: #fff !important; color: #000 !important; border: 1px solid #999 !important; }
+
+        .hotel-parking {
+            margin-top: 12px;
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+            border-radius: 10px;
+            border: 1px solid #81C784;
+            font-size: 0.95rem;
+            color: #2E7D32;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .hotel-parking strong { color: #1B5E20; }
+
+        @media print {
+            .quick-nav { display: none !important; }
+            .day-card { page-break-inside: avoid; }
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.8rem; }
+            .day-header { flex-direction: column; gap: 10px; }
+            .event { flex-direction: column; }
+            .event-time { min-width: auto; width: 100%; margin-right: 0; margin-bottom: 10px; }
+            .transport-between { margin: 8px 0; }
+            .hotel-details { grid-template-columns: 1fr; }
+            body::before, body::after { display: none !important; }
+            .quick-nav { padding: 8px 12px; }
+            .quick-nav-select { font-size: 0.8rem; padding: 6px 28px 6px 10px; }
+            .print-toggle { font-size: 0.8rem; padding: 6px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌊 2026 沖繩五日自駕遊 🏝️</h1>
+            <p>那霸 → 北谷美國村 → 青之洞窟 → 美麗海水族館 → 古宇利島</p>
+            <div class="departure-info">🚗 自駕遊｜租車 3 天（Day 1 ~ Day 4 還車）</div>
+        </header>
+
+        <nav class="quick-nav">
+            <select class="quick-nav-select" onchange="if(this.value){document.getElementById(this.value).scrollIntoView({behavior:'smooth',block:'start'});}">
+                <option value="">🌊 快速跳轉</option>
+                <option value="checklist">📋 出發前確認事項</option>
+                <option value="flight">✈️ 航班資訊</option>
+                <option value="day1">Day 1 - 抵達＋美國村</option>
+                <option value="day2">Day 2 - 青之洞窟＋萬座毛</option>
+                <option value="day3">Day 3 - 水族館＋瀨底海灘</option>
+                <option value="day4">Day 4 - 古宇利島＋回那霸</option>
+                <option value="day5">Day 5 - 購物＋回程</option>
+                <option value="weather-backup">🌀 颱風/雨天備案</option>
+                <option value="emergency">🆘 緊急聯絡資訊</option>
+            </select>
+            <button class="print-toggle" onclick="document.body.classList.toggle('print-mode'); this.textContent = document.body.classList.contains('print-mode') ? '🎨 一般模式' : '🖨️ 列印模式'">🖨️ 列印模式</button>
+        </nav>
+
+        <!-- Pre-Departure Checklist -->
+        <div id="checklist" class="section-card section-checklist">
+            <div class="section-header">
+                <h2>📋 出發前確認事項</h2>
+            </div>
+            <div class="section-body">
+            <div class="checklist-grid">
+                <div class="checklist-item checklist-snorkel">
+                    <h4>🤿 青之洞窟浮潛預約</h4>
+                    <p>⏰ <strong>確認時間：</strong>出發前 1-2 週</p>
+                    <p>📅 <strong>相關日期：</strong>Day 2 (7/30 週四) 10:30</p>
+                    <p>⚠️ 暑假為旺季，務必提早預約早場時段</p>
+                </div>
+                <div class="checklist-item checklist-typhoon">
+                    <h4>🌀 颱風動態追蹤</h4>
+                    <p>⏰ <strong>確認時間：</strong>出發前 3-5 天</p>
+                    <p>⚠️ 7-8月為颱風季，需密切注意天氣預報</p>
+                    <p>📱 建議下載：Windy 或 tenki.jp APP</p>
+                </div>
+                <div class="checklist-item checklist-car">
+                    <h4>🚗 租車確認</h4>
+                    <p>⏰ <strong>確認時間：</strong>出發前 2-4 週</p>
+                    <p>🔑 <strong>需備：</strong>台灣駕照＋日文譯本</p>
+                    <p>📅 <strong>租車期間：</strong>7/29 13:30 ~ 8/1 16:00（3天）</p>
+                </div>
+                <div class="checklist-item checklist-hotel">
+                    <h4>📞 飯店預約確認</h4>
+                    <p>✅ <strong>待預約：</strong></p>
+                    <p>• Vessel Hotel Campana 北谷（7/29 一晚）</p>
+                    <p>• Super Hotel 名護（7/30-31 二晚）</p>
+                    <p>• 東橫inn 那霸美榮橋站（8/1 一晚）</p>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Flight Info -->
+        <div id="flight" class="section-card section-flight">
+            <div class="section-header">
+                <h2>✈️ 航班資訊</h2>
+            </div>
+            <div class="section-body">
+            <div class="flight-row">
+                <span class="flight-icon">🛫</span>
+                <div class="flight-details">
+                    <div class="route">去程：桃園 TPE → 那霸 OKA</div>
+                    <div class="time">7月29日（三）出發 → 約12:00 抵達那霸機場（飛行約1.5小時）</div>
+                </div>
+            </div>
+            <div class="flight-row">
+                <span class="flight-icon">🛬</span>
+                <div class="flight-details">
+                    <div class="route">回程：那霸 OKA → 桃園 TPE</div>
+                    <div class="time">8月2日（日）那霸機場出發（16:00 前到機場）</div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- ==================== Day 1 ==================== -->
+        <div id="day1" class="day-card day-1">
+            <div class="day-header">
+                <div>
+                    <h2>Day 1 - 抵達＋美國村</h2>
+                    <span class="date">7月29日（三）</span>
+                </div>
+                <span class="accommodation-badge">🏨 Vessel Hotel Campana</span>
+            </div>
+            <div class="weather-info">
+                <h4>☀️ 北谷天氣預報</h4>
+                <div class="weather-info-grid">
+                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
+                    <div>☀️ <strong>天氣：</strong>晴時多雲</div>
+                    <div>💧 <strong>降雨機率：</strong>20%</div>
+                    <div>🌊 <strong>海況：</strong>適合戲水</div>
+                </div>
+            </div>
+            <div class="hourly-weather" id="hourly-1">
+                <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
+            </div>
+            <div class="hotel-info">
+                <h4>🏨 <a href="https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank">Vessel Hotel Campana Okinawa</a></h4>
+                <div class="hotel-details">
+                    <span>📍 北谷美國村內</span>
+                    <span>🚶 步行 1 分到美國村</span>
+                    <span>♨️ 頂樓海景溫泉</span>
+                    <span>🍽️ 含早餐（沖繩料理）</span>
+                    <span><span class="status-pending">待預約</span></span>
+                </div>
+                <div class="hotel-parking">
+                    🅿️ <strong>停車場：</strong>¥500/晚（先到先得，滿了用附近提攜停車場）｜
+                    <a href="https://maps.google.com/?q=26.3282,127.7632" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.3282,127.7632" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <span class="map-link mapcode map-link-inline">📟 33 525 382</span>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="event">
+                    <div class="event-time">12:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🛫 <a href="https://maps.google.com/?q=那霸機場" target="_blank">抵達那霸機場</a></h3>
+                        </div>
+                        <p class="event-desc">入境、領取行李</p>
+                        <a href="https://maps.google.com/?q=那霸機場" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=那霸機場" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 002 519</span>
+                    </div>
+                </div>
+
+                <div class="transport-between shuttle">
+                    <div class="transport-icon">🚐</div>
+                    <div class="transport-line">租車公司接駁車 約10分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">12:00-13:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🚗 租車取車</h3>
+                        </div>
+                        <p class="event-desc">辦理租車手續、熟悉車輛操作（日本靠左行駛）</p>
+                        <span class="tag tag-transport">租車</span>
+                        <div class="reservation-info">
+                            🔑 <strong>需備文件：</strong>台灣駕照正本＋日文譯本＋護照<br>
+                            ⚠️ 日文譯本可至各地監理所辦理（NT$100）<br>
+                            📅 <strong>租車期間：</strong>7/29 13:30 ~ 8/1 16:00
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">開車前往北谷 約40分鐘<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">走國道58號北上</span></div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">14:10-14:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏨 <a href="https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank">Check in Vessel Hotel Campana</a></h3>
+                        </div>
+                        <p class="event-desc">放行李，換裝準備玩水</p>
+                        <a href="https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 526 450</span>
+                        <span class="tag tag-hotel">住宿</span>
+                    </div>
+                </div>
+
+                <div class="transport-between walk">
+                    <div class="transport-icon">🚶</div>
+                    <div class="transport-line">步行 約3分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">14:30-17:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏖️ <a href="https://maps.google.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank">美國村＋Sunset Beach 戲水</a></h3>
+                        </div>
+                        <p class="event-desc">美國村內逛街購物，Sunset Beach 沙灘戲水。異國風情的彩色商圈，集結服飾店、雜貨店、餐廳</p>
+                        <a href="https://maps.google.com/?q=American+Village+Chatan+Okinawa" target="_blank" class="map-link">📍 美國村</a>
+                        <a href="https://maps.apple.com/?q=American+Village+Chatan+Okinawa" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 526 450</span>
+                        <a href="https://maps.google.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank" class="map-link">📍 Sunset Beach</a>
+                        <a href="https://maps.apple.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 526 419</span>
+                        <span class="tag tag-beach">海灘</span>
+                        <span class="tag tag-shopping">購物</span>
+                    </div>
+                </div>
+
+                <div class="transport-between walk">
+                    <div class="transport-icon">🚶</div>
+                    <div class="transport-line">步行回飯店沖洗 約3分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">18:00-20:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍽️ <a href="https://maps.google.com/?q=American+Village+Chatan+restaurants" target="_blank">美國村晚餐＋散步</a></h3>
+                        </div>
+                        <p class="event-desc">推薦沖繩料理：苦瓜炒蛋（ゴーヤーチャンプルー）、豬腳（てびち）、沖繩麵（沖縄そば）、泡盛</p>
+                        <a href="https://maps.google.com/?q=American+Village+Chatan+restaurants" target="_blank" class="map-link">📍 美國村餐廳</a>
+                        <a href="https://maps.apple.com/?q=American+Village+Chatan+restaurants" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 526 450</span>
+                        <span class="tag tag-food">美食</span>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">20:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>♨️ 飯店頂樓海景溫泉</h3>
+                        </div>
+                        <p class="event-desc">Vessel Hotel Campana 頂樓展望浴場，邊泡湯邊看夜景</p>
+                        <span class="tag tag-onsen">溫泉</span>
+                    </div>
+                </div>
+            </div>
+            <div class="budget-card">
+                <h4>💰 Day 1 預算估算</h4>
+                <table>
+                    <tr><td>🚗 租車（3天分攤：¥6,000/天）</td><td>¥6,000 (約 NT$ 1,320)</td></tr>
+                    <tr><td>🍽️ 晚餐</td><td>¥3,000 (約 NT$ 660)</td></tr>
+                    <tr><td>🏨 Vessel Hotel Campana</td><td>¥20,000 (約 NT$ 4,400)</td></tr>
+                </table>
+                <div class="budget-total">當日小計：約 ¥29,000（NT$ 6,380）</div>
+            </div>
+        </div>
+
+        <!-- ==================== Day 2 ==================== -->
+        <div id="day2" class="day-card day-2">
+            <div class="day-header">
+                <div>
+                    <h2>Day 2 - 青之洞窟浮潛＋萬座毛</h2>
+                    <span class="date">7月30日（四）</span>
+                </div>
+                <span class="accommodation-badge">🏨 Super Hotel 名護</span>
+            </div>
+            <div class="weather-info">
+                <h4>☀️ 恩納村・名護天氣預報</h4>
+                <div class="weather-info-grid">
+                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
+                    <div>☀️ <strong>天氣：</strong>晴</div>
+                    <div>💧 <strong>降雨機率：</strong>20%</div>
+                    <div>🌊 <strong>海況：</strong>適合浮潛</div>
+                </div>
+            </div>
+            <div class="hourly-weather" id="hourly-2">
+                <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
+            </div>
+            <div class="hotel-info">
+                <h4>🏨 <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank">Super Hotel Okinawa Nago</a></h4>
+                <div class="hotel-details">
+                    <span>📍 名護市</span>
+                    <span>♨️ 天然溫泉「萬座之湯」</span>
+                    <span>🍽️ 含免費早餐（DIY taco rice）</span>
+                    <span>📅 連住 2 晚（7/30-31）</span>
+                    <span><span class="status-pending">待預約</span></span>
+                </div>
+                <div class="hotel-parking">
+                    🅿️ <strong>停車場：</strong>免費｜
+                    <a href="https://maps.google.com/?q=26.5918,127.9772" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.5918,127.9772" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <span class="map-link mapcode map-link-inline">📟 206 688 382</span>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="event">
+                    <div class="event-time">10:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🚗 出發前往真榮田岬</h3>
+                        </div>
+                        <p class="event-desc">退房 Vessel Hotel Campana，前往青之洞窟浮潛集合地點</p>
+                        <span class="tag tag-transport">自駕</span>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">北谷→真榮田岬 約30分鐘<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">走國道58號北上</span></div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">10:30-12:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🤿 <a href="https://maps.google.com/?q=真榮田岬+青の洞窟" target="_blank">青之洞窟浮潛</a></h3>
+                        </div>
+                        <p class="event-desc">沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁</p>
+                        <a href="https://maps.google.com/?q=真榮田岬+青の洞窟" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=真榮田岬青の洞窟" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 206 062 685</span>
+                        <span class="tag tag-water">浮潛</span>
+                        <span class="tag tag-nature">自然</span>
+                        <div class="reservation-info">
+                            ⚠️ <strong>須提前預約！</strong>暑假非常搶手<br>
+                            💰 浮潛費用：約 ¥3,000~5,000/人<br>
+                            🕐 建議預約早上場次，海況較穩定<br>
+                            👙 店家提供全套裝備（面鏡、呼吸管、救生衣）
+                        </div>
+                        <div class="parking-info">
+                            🅿️ <strong>停車場：</strong>¥100/次｜<a href="https://maps.google.com/?q=26.4395,127.7673" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4395,127.7673" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 062 685</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">真榮田岬→萬座毛 約15分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">12:45-13:15</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🐘 <a href="https://maps.google.com/?q=万座毛" target="_blank">萬座毛</a></h3>
+                        </div>
+                        <p class="event-desc">沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線</p>
+                        <a href="https://maps.google.com/?q=万座毛" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=万座毛" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 206 312 039</span>
+                        <span class="tag tag-attraction">景點</span>
+                        <span class="tag tag-nature">自然</span>
+                        <div class="parking-info">
+                            🅿️ <strong>停車場：</strong>免費｜入場費 ¥100｜<a href="https://maps.google.com/?q=26.4372,127.8534" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4372,127.8534" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 312 039</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">萬座毛→名護 約35分鐘<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">沿國道58號北上</span></div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">14:00-15:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍜 名護市午餐</h3>
+                        </div>
+                        <p class="event-desc">推薦：名護沖繩麵（沖縄そば），濃郁豚骨湯底配軟嫩三層肉</p>
+                        <span class="tag tag-food">美食</span>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">15:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏨 <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank">Check in Super Hotel 名護</a></h3>
+                        </div>
+                        <p class="event-desc">下午自由休息。晚上推薦泡飯店天然溫泉「萬座之湯」</p>
+                        <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 206 688 637</span>
+                        <span class="tag tag-hotel">住宿</span>
+                        <span class="tag tag-onsen">溫泉</span>
+                    </div>
+                </div>
+            </div>
+            <div class="notes">
+                <h4>注意事項</h4>
+                <ul>
+                    <li><strong>防曬：</strong>使用防水 SPF50+，海裡紫外線更強</li>
+                    <li><strong>水母：</strong>7-8月有水母，建議穿水母衣或選有防護網的區域</li>
+                    <li><strong>浮潛預約：</strong>建議出發前 1-2 週在 Jalan 或 Asoview 預約</li>
+                </ul>
+            </div>
+            <div class="budget-card">
+                <h4>💰 Day 2 預算估算</h4>
+                <table>
+                    <tr><td>🚗 租車（3天分攤）</td><td>¥6,000 (約 NT$ 1,320)</td></tr>
+                    <tr><td>⛽ 油資</td><td>¥1,000 (約 NT$ 220)</td></tr>
+                    <tr><td>🤿 浮潛費用（2人）</td><td>¥8,000 (約 NT$ 1,760)</td></tr>
+                    <tr><td>🐘 萬座毛入場</td><td>¥200 (約 NT$ 44)</td></tr>
+                    <tr><td>🍜 午餐＋晚餐</td><td>¥4,000 (約 NT$ 880)</td></tr>
+                    <tr><td>🏨 Super Hotel 名護</td><td>¥8,000 (約 NT$ 1,760)</td></tr>
+                </table>
+                <div class="budget-total">當日小計：約 ¥27,200（NT$ 5,984）</div>
+            </div>
+        </div>
+
+        <!-- ==================== Day 3 ==================== -->
+        <div id="day3" class="day-card day-3">
+            <div class="day-header">
+                <div>
+                    <h2>Day 3 - 美麗海水族館＋瀨底海灘</h2>
+                    <span class="date">7月31日（五）</span>
+                </div>
+                <span class="accommodation-badge">🏨 Super Hotel 名護（連住）</span>
+            </div>
+            <div class="weather-info">
+                <h4>☀️ 本部・瀨底天氣預報</h4>
+                <div class="weather-info-grid">
+                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 32°C</div>
+                    <div>☀️ <strong>天氣：</strong>晴時多雲</div>
+                    <div>💧 <strong>降雨機率：</strong>30%</div>
+                    <div>🌊 <strong>海況：</strong>適合戲水</div>
+                </div>
+            </div>
+            <div class="hourly-weather" id="hourly-3">
+                <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
+            </div>
+            <div class="hotel-info">
+                <h4>🏨 <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank">Super Hotel Okinawa Nago</a>（連住第 2 晚）</h4>
+                <div class="hotel-details">
+                    <span>📍 名護市（同昨晚）</span>
+                    <span>🧳 行李不用搬</span>
+                    <span>🍽️ 免費早餐</span>
+                </div>
+                <div class="hotel-parking">
+                    🅿️ <strong>停車場：</strong>免費｜
+                    <a href="https://maps.google.com/?q=26.5918,127.9772" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.5918,127.9772" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <span class="map-link mapcode map-link-inline">📟 206 688 382</span>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="event">
+                    <div class="event-time">10:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🚗 出發前往美麗海水族館</h3>
+                        </div>
+                        <p class="event-desc">從 Super Hotel 名護出發</p>
+                        <span class="tag tag-transport">自駕</span>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">名護→美麗海水族館 約30分鐘<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">走國道449號往本部方向</span></div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">10:30-14:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🐠 <a href="https://maps.google.com/?q=沖縄美ら海水族館" target="_blank">美麗海水族館</a></h3>
+                        </div>
+                        <p class="event-desc">世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。13:00 海豚秀必看（免費，建議提早佔位）</p>
+                        <a href="https://maps.google.com/?q=沖縄美ら海水族館" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=沖縄美ら海水族館" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 553 075 797</span>
+                        <span class="tag tag-attraction">景點</span>
+                        <div class="reservation-info">
+                            🎫 <strong>門票：</strong>大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710<br>
+                            🕐 <strong>營業時間：</strong>08:30~18:30（夏季延長至20:00）<br>
+                            🐬 <strong>海豚秀：</strong>11:00 / 13:00 / 14:30 / 16:00（免費）<br>
+                            💡 建議先逛水族館，13:00 看海豚秀
+                        </div>
+                        <div class="parking-info">
+                            🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href="https://maps.google.com/?q=26.6941,127.8775" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6941,127.8775" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 553 075 797</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">14:30-15:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍽️ 水族館附近午餐</h3>
+                        </div>
+                        <p class="event-desc">海洋博公園內有海景餐廳，或到附近的本部町覓食</p>
+                        <span class="tag tag-food">美食</span>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">水族館→瀨底島 約15分鐘<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">過瀨底大橋即到</span></div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">15:15-17:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏖️ <a href="https://maps.google.com/?q=瀬底ビーチ" target="_blank">瀨底海灘戲水</a></h3>
+                        </div>
+                        <p class="event-desc">沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，可看到熱帶魚</p>
+                        <a href="https://maps.google.com/?q=瀬底ビーチ" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=瀬底ビーチ" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 206 822 241</span>
+                        <span class="tag tag-beach">海灘</span>
+                        <span class="tag tag-nature">自然</span>
+                        <div class="parking-info">
+                            🅿️ <strong>停車場：</strong>¥1,000/次｜<a href="https://maps.google.com/?q=26.6568,127.8529" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6568,127.8529" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 822 215</span>｜淋浴 ¥500<br>
+                            🏖️ 設施齊全：更衣室、淋浴間、租借用品
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">瀨底島→Super Hotel 名護 約30分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">18:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏨 回到 Super Hotel 名護</h3>
+                        </div>
+                        <p class="event-desc">晚餐後泡天然溫泉放鬆</p>
+                        <span class="tag tag-hotel">住宿</span>
+                        <span class="tag tag-onsen">溫泉</span>
+                    </div>
+                </div>
+            </div>
+            <div class="budget-card">
+                <h4>💰 Day 3 預算估算</h4>
+                <table>
+                    <tr><td>🚗 租車（3天分攤）</td><td>¥6,000 (約 NT$ 1,320)</td></tr>
+                    <tr><td>🐠 水族館門票（2人）</td><td>¥4,360 (約 NT$ 959)</td></tr>
+                    <tr><td>🏖️ 瀨底海灘停車＋淋浴</td><td>¥2,000 (約 NT$ 440)</td></tr>
+                    <tr><td>🍽️ 午餐＋晚餐</td><td>¥4,000 (約 NT$ 880)</td></tr>
+                    <tr><td>🏨 Super Hotel 名護</td><td>¥8,000 (約 NT$ 1,760)</td></tr>
+                </table>
+                <div class="budget-total">當日小計：約 ¥24,360（NT$ 5,359）</div>
+            </div>
+        </div>
+
+        <!-- ==================== Day 4 ==================== -->
+        <div id="day4" class="day-card day-4">
+            <div class="day-header">
+                <div>
+                    <h2>Day 4 - 古宇利島＋回那霸</h2>
+                    <span class="date">8月1日（六）</span>
+                </div>
+                <span class="accommodation-badge">🏨 東橫inn 那霸</span>
+            </div>
+            <div class="weather-info">
+                <h4>☀️ 古宇利島・那霸天氣預報</h4>
+                <div class="weather-info-grid">
+                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
+                    <div>⛅ <strong>天氣：</strong>多雲時晴</div>
+                    <div>💧 <strong>降雨機率：</strong>30%</div>
+                    <div>🌊 <strong>海況：</strong>普通</div>
+                </div>
+            </div>
+            <div class="hourly-weather" id="hourly-4">
+                <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
+            </div>
+            <div class="hotel-info">
+                <h4>🏨 <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank">東橫inn 那霸國際通美榮橋站</a></h4>
+                <div class="hotel-details">
+                    <span>📍 那霸美榮橋站旁</span>
+                    <span>🚶 走路 1 分到國際通</span>
+                    <span>🍽️ 含免費早餐</span>
+                    <span>🚝 單軌美榮橋站步行 1 分</span>
+                    <span><span class="status-pending">待預約</span></span>
+                </div>
+                <div class="hotel-parking">
+                    🅿️ <strong>停車場：</strong>¥550/晚（先到先得，數量有限）｜
+                    <a href="https://maps.google.com/?q=26.2153,127.6791" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.2153,127.6791" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <span class="map-link mapcode map-link-inline">📟 33 157 382</span>
+                </div>
+            </div>
+            <div class="timeline">
+                <div class="event">
+                    <div class="event-time">10:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🚗 出發前往古宇利島</h3>
+                        </div>
+                        <p class="event-desc">退房 Super Hotel 名護，前往古宇利島</p>
+                        <span class="tag tag-transport">自駕</span>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">名護→古宇利島 約30分鐘<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">經屋我地島→古宇利大橋</span></div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">10:30-12:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🌉 <a href="https://maps.google.com/?q=古宇利大橋" target="_blank">古宇利大橋＋心形岩</a></h3>
+                        </div>
+                        <p class="event-desc">古宇利大橋全長 2km，兩側碧藍海水極為壯觀。心形岩（ハートロック）是沖繩最浪漫的拍照景點</p>
+                        <a href="https://maps.google.com/?q=古宇利大橋" target="_blank" class="map-link">📍 古宇利大橋</a>
+                        <a href="https://maps.apple.com/?q=古宇利大橋" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 485 692 174</span>
+                        <a href="https://maps.google.com/?q=ハートロック+古宇利島" target="_blank" class="map-link">📍 心形岩</a>
+                        <a href="https://maps.apple.com/?q=ハートロック古宇利島" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 485 751 179</span>
+                        <span class="tag tag-attraction">景點</span>
+                        <span class="tag tag-nature">自然</span>
+                        <div class="parking-info">
+                            🅿️ <strong>古宇利大橋展望台停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6895,128.0253" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6895,128.0253" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 662 831</span><br>
+                            🅿️ <strong>心形岩停車場：</strong>¥300/次｜<a href="https://maps.google.com/?q=26.7023,128.0314" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.7023,128.0314" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 751 149</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">12:00-12:45</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🦐 <a href="https://maps.google.com/?q=古宇利島+蝦蝦飯" target="_blank">午餐：古宇利島蝦蝦飯</a></h3>
+                        </div>
+                        <p class="event-desc">島上人氣名店，夏威夷風蒜蝦飯配海景，拍照打卡聖地</p>
+                        <a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 485 692 174</span>
+                        <span class="tag tag-food">美食</span>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">古宇利島→名護 IC 約30分鐘</div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">名護 IC→伊芸 SA（高速）約20分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">13:35-14:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🛣️ <a href="https://maps.google.com/?q=伊芸サービスエリア" target="_blank">伊芸 SA 休息站</a></h3>
+                        </div>
+                        <p class="event-desc">沖繩自動車道上的海景休息站，有展望台和沖繩小吃</p>
+                        <a href="https://maps.google.com/?q=伊芸サービスエリア" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=伊芸サービスエリア" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 835 282</span>
+                        <span class="tag tag-food">美食</span>
+                        <div class="parking-info">
+                            🅿️ <strong>停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.4484,127.8231" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4484,127.8231" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 160 503</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">伊芸 SA→北中城 IC（高速）約20分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">14:30-15:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏘️ <a href="https://maps.google.com/?q=港川外人住宅街" target="_blank">港川外人住宅街</a> 或 <a href="https://maps.google.com/?q=中城城跡" target="_blank">中城城跡</a></h3>
+                        </div>
+                        <p class="event-desc"><strong>港川外人住宅街：</strong>美軍老宅改建的文青咖啡＋雜貨小店街，很好拍<br>
+                        <strong>中城城跡：</strong>世界遺產，城牆保存最完整的琉球古城，眺望太平洋絕景</p>
+                        <a href="https://maps.google.com/?q=港川外人住宅街" target="_blank" class="map-link">📍 港川住宅街</a>
+                        <a href="https://maps.apple.com/?q=港川外人住宅街" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 341 002</span>
+                        <a href="https://maps.google.com/?q=中城城跡" target="_blank" class="map-link">📍 中城城跡</a>
+                        <a href="https://maps.apple.com/?q=中城城跡" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 411 738</span>
+                        <span class="tag tag-attraction">景點</span>
+                        <span class="tag tag-shopping">購物</span>
+                        <div class="parking-info">
+                            🅿️ <strong>港川外人住宅街停車：</strong>路邊停車，免費（各店門口）｜<a href="https://maps.google.com/?q=26.3348,127.7573" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.3348,127.7573" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 526 450</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between drive">
+                    <div class="transport-icon">🚗</div>
+                    <div class="transport-line">景點→租車公司 約20分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">15:50-16:20</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🚗 還車手續</h3>
+                        </div>
+                        <p class="event-desc">歸還租車，完成車輛檢查</p>
+                        <span class="tag tag-transport">租車</span>
+                    </div>
+                </div>
+
+                <div class="transport-between shuttle">
+                    <div class="transport-icon">🚐</div>
+                    <div class="transport-line">租車公司接駁車→那霸空港站 約10分鐘</div>
+                </div>
+
+                <div class="transport-between train">
+                    <div class="transport-icon">🚝</div>
+                    <div class="transport-line">單軌 那霸空港→美榮橋站 約12分鐘 ¥270</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">16:45</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🏨 <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank">Check in 東橫inn 那霸</a></h3>
+                        </div>
+                        <p class="event-desc">步行 1 分鐘到美榮橋站。晚上可到國際通附近散步覓食</p>
+                        <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 157 413</span>
+                        <span class="tag tag-hotel">住宿</span>
+                    </div>
+                </div>
+            </div>
+            <div class="notes">
+                <h4>注意事項</h4>
+                <ul>
+                    <li><strong>高速通行費：</strong>名護 IC → 北中城 IC 約 ¥780</li>
+                    <li><strong>還車注意：</strong>還車前需加滿油，附近找加油站（ガソリンスタンド）</li>
+                    <li><strong>還車時間：</strong>建議 15:50 前到達，預留充足時間</li>
+                </ul>
+            </div>
+            <div class="budget-card">
+                <h4>💰 Day 4 預算估算</h4>
+                <table>
+                    <tr><td>🚗 租車（3天分攤）</td><td>¥6,000 (約 NT$ 1,320)</td></tr>
+                    <tr><td>⛽ 加滿油還車</td><td>¥2,000 (約 NT$ 440)</td></tr>
+                    <tr><td>🛣️ 高速通行費</td><td>¥780 (約 NT$ 172)</td></tr>
+                    <tr><td>🅿️ 心形岩停車</td><td>¥300 (約 NT$ 66)</td></tr>
+                    <tr><td>🦐 午餐（蝦蝦飯）</td><td>¥2,000 (約 NT$ 440)</td></tr>
+                    <tr><td>🚝 單軌電車</td><td>¥540 (約 NT$ 119)</td></tr>
+                    <tr><td>🍽️ 晚餐</td><td>¥2,000 (約 NT$ 440)</td></tr>
+                    <tr><td>🏨 東橫inn 那霸</td><td>¥8,000 (約 NT$ 1,760)</td></tr>
+                </table>
+                <div class="budget-total">當日小計：約 ¥21,620（NT$ 4,757）</div>
+            </div>
+        </div>
+
+        <!-- ==================== Day 5 ==================== -->
+        <div id="day5" class="day-card day-5">
+            <div class="day-header">
+                <div>
+                    <h2>Day 5 - 購物＋回程</h2>
+                    <span class="date">8月2日（日）</span>
+                </div>
+                <span class="accommodation-badge">✈️ 回程</span>
+            </div>
+            <div class="weather-info">
+                <h4>⛅ 那霸天氣預報</h4>
+                <div class="weather-info-grid">
+                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
+                    <div>⛅ <strong>天氣：</strong>多雲</div>
+                    <div>💧 <strong>降雨機率：</strong>30%</div>
+                    <div>🚝 <strong>交通：</strong>單軌＋步行</div>
+                </div>
+            </div>
+            <div class="hourly-weather" id="hourly-5">
+                <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
+            </div>
+            <div class="timeline">
+                <div class="event">
+                    <div class="event-time">10:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🚶 步行前往國際通</h3>
+                        </div>
+                        <p class="event-desc">從東橫inn 步行 1 分鐘即到國際通入口</p>
+                        <span class="tag tag-transport">步行</span>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">10:00-12:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🛍️ <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank">國際通逛街＋午餐</a></h3>
+                        </div>
+                        <p class="event-desc">沖繩最熱鬧的商店街，約 1.6 公里。伴手禮推薦：紅芋塔、雪鹽金楚糕、黑糖、泡盛、風獅爺小物</p>
+                        <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=国際通り那覇" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 157 382</span>
+                        <span class="tag tag-shopping">購物</span>
+                        <span class="tag tag-food">美食</span>
+                        <div class="reservation-info">
+                            🎁 <strong>必買伴手禮：</strong><br>
+                            🍠 紅芋塔（御菓子御殿）<br>
+                            🧂 雪鹽金楚糕（ちんすこう）<br>
+                            🍶 泡盛（沖繩特產燒酒）<br>
+                            🐚 風獅爺（シーサー）擺飾<br>
+                            💊 藥妝店（大國藥妝、松本清）
+                        </div>
+                        <div class="parking-info">
+                            🅿️ <strong>停車場：</strong>無專用停車場，周邊付費停車場 ¥200-300/30分｜推薦：てんぶす那覇地下停車場｜<a href="https://maps.google.com/?q=26.2148,127.6847" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.2148,127.6847" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 411</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between train">
+                    <div class="transport-icon">🚝</div>
+                    <div class="transport-line">單軌 美榮橋→おもろまち站 1站約3分鐘 ¥230</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">12:35-13:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🛍️ <a href="https://maps.google.com/?q=Tギャラリア+沖縄" target="_blank">DFS T Galleria 免稅店</a></h3>
+                        </div>
+                        <p class="event-desc">就在おもろまち站旁，國際精品免稅價格。化妝品、香水、包包等</p>
+                        <a href="https://maps.google.com/?q=Tギャラリア+沖縄" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=Tギャラリア沖縄" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 188 487</span>
+                        <span class="tag tag-shopping">購物</span>
+                    </div>
+                </div>
+
+                <div class="transport-between train">
+                    <div class="transport-icon">🚝</div>
+                    <div class="transport-line">單軌 おもろまち→美榮橋 1站約3分鐘</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">13:35-14:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🧳 回飯店拿行李</h3>
+                        </div>
+                        <p class="event-desc">回東橫inn 領取寄放行李</p>
+                    </div>
+                </div>
+
+                <div class="transport-between train">
+                    <div class="transport-icon">🚝</div>
+                    <div class="transport-line">單軌 美榮橋→那霸空港站 約12分鐘 ¥270</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">14:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>✈️ <a href="https://maps.google.com/?q=那霸機場" target="_blank">抵達那霸機場</a></h3>
+                        </div>
+                        <p class="event-desc">機場內還有免稅店可以最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味</p>
+                        <a href="https://maps.google.com/?q=那霸機場" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=那霸機場" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 002 519</span>
+                        <span class="tag tag-shopping">購物</span>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">16:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>✈️ 那霸機場 Deadline</h3>
+                        </div>
+                        <p class="event-desc">登機回台灣！めんそーれ（歡迎再來）沖繩！</p>
+                    </div>
+                </div>
+            </div>
+            <div class="budget-card">
+                <h4>💰 Day 5 預算估算</h4>
+                <table>
+                    <tr><td>🚝 單軌電車</td><td>¥1,000 (約 NT$ 220)</td></tr>
+                    <tr><td>🍽️ 午餐</td><td>¥1,500 (約 NT$ 330)</td></tr>
+                    <tr><td>🛍️ 伴手禮＋購物</td><td>¥10,000 (約 NT$ 2,200)</td></tr>
+                </table>
+                <div class="budget-total">當日小計：約 ¥12,500（NT$ 2,750）</div>
+            </div>
+        </div>
+
+        <!-- Weather Contingency -->
+        <div id="weather-backup" class="section-card section-weather">
+            <div class="section-header">
+                <h2>🌀 颱風/雨天備案</h2>
+            </div>
+            <div class="section-body">
+            <div class="weather-grid">
+                <div class="weather-day">
+                    <h4>🌧️ Day 1-2 雨天備案（中部）</h4>
+                    <ul>
+                        <li>AEON Mall 北谷（購物＋美食街）</li>
+                        <li>琉球村（室內體驗琉球文化）</li>
+                        <li>體驗王國 むら咲むら（手作體驗）</li>
+                    </ul>
+                </div>
+                <div class="weather-day">
+                    <h4>🌧️ Day 3-4 雨天備案（北部）</h4>
+                    <ul>
+                        <li>水族館不受天候影響，正常參觀</li>
+                        <li>名護鳳梨園（室內設施為主）</li>
+                        <li>ORION 啤酒工廠見學（免費試飲）</li>
+                    </ul>
+                </div>
+                <div class="weather-day">
+                    <h4>🌀 颱風來襲對策</h4>
+                    <ul>
+                        <li>航班異動：確認航空公司官網</li>
+                        <li>水上活動全面停止</li>
+                        <li>改為室內行程：購物中心、水族館</li>
+                        <li>緊急聯絡：租車公司、飯店</li>
+                    </ul>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Emergency Contacts -->
+        <div id="emergency" class="section-card section-emergency">
+            <div class="section-header">
+                <h2>🆘 緊急聯絡資訊</h2>
+            </div>
+            <div class="section-body">
+            <div class="emergency-grid">
+                <div class="emergency-item">
+                    <h4>🚔 日本報警</h4>
+                    <p>📞 <a href="tel:110">110</a>（警察）</p>
+                    <p>📞 <a href="tel:119">119</a>（消防・救護車）</p>
+                </div>
+                <div class="emergency-item">
+                    <h4>🏥 那霸市立病院</h4>
+                    <p>📞 <a href="tel:098-884-5111">098-884-5111</a></p>
+                    <p>📍 那霸市古島 2-31-1</p>
+                </div>
+                <div class="emergency-item">
+                    <h4>🏥 北部地區醫院（名護）</h4>
+                    <p>📞 <a href="tel:0980-52-2719">0980-52-2719</a></p>
+                    <p>📍 名護市大中 2-12-3</p>
+                </div>
+                <div class="emergency-item">
+                    <h4>🇹🇼 台北駐日經濟文化代表處</h4>
+                    <p>📞 <a href="tel:03-3280-7811">03-3280-7811</a></p>
+                    <p>📞 急難救助：<a href="tel:080-6552-4764">080-6552-4764</a></p>
+                </div>
+                <div class="emergency-item">
+                    <h4>📞 沖繩觀光多語言客服</h4>
+                    <p>📞 <a href="tel:098-851-6464">098-851-6464</a></p>
+                    <p>🕐 09:00~21:00（中文可通）</p>
+                </div>
+                <div class="emergency-item">
+                    <h4>🚗 租車公司緊急聯絡</h4>
+                    <p>📞 請確認租車合約上的 24H 緊急電話</p>
+                    <p>⚠️ 事故時先撥 110 報警，再聯絡租車公司</p>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="shisa-decoration">🐠🐚🏝️🐚🐠</div>
+            <h3>2026 沖繩五日自駕遊</h3>
+            <p>7/29（三）~ 8/2（日）</p>
+            <p style="margin-top: 15px; font-size: 1.1rem; font-weight: 600;">
+                💰 五日總預算估算：約 ¥114,680（NT$ 25,230）
+            </p>
+            <p style="margin-top: 8px; font-size: 0.85rem; color: #999;">
+                匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準
+            </p>
+            <p style="margin-top: 15px; font-size: 0.9rem;">めんそーれ 沖繩！🌊 祝旅途愉快！</p>
+        </footer>
+    </div>
+
+    <script>
+    (function(){
+        var DAYS = [
+            {
+                id: 'hourly-1',
+                date: '2026-07-29',
+                label: '北谷',
+                locations: [
+                    { lat: 26.3344, lon: 127.7809, name: '那霸', start: 0, end: 13 },
+                    { lat: 26.3362, lon: 127.7636, name: '北谷', start: 14, end: 23 }
+                ]
+            },
+            {
+                id: 'hourly-2',
+                date: '2026-07-30',
+                label: '恩納・名護',
+                locations: [
+                    { lat: 26.3362, lon: 127.7636, name: '北谷', start: 0, end: 9 },
+                    { lat: 26.4969, lon: 127.8536, name: '恩納', start: 10, end: 13 },
+                    { lat: 26.5918, lon: 127.9773, name: '名護', start: 14, end: 23 }
+                ]
+            },
+            {
+                id: 'hourly-3',
+                date: '2026-07-31',
+                label: '本部・瀨底',
+                locations: [
+                    { lat: 26.5918, lon: 127.9773, name: '名護', start: 0, end: 9 },
+                    { lat: 26.6577, lon: 127.8782, name: '本部', start: 10, end: 15 },
+                    { lat: 26.6510, lon: 127.8530, name: '瀨底', start: 15, end: 18 },
+                    { lat: 26.5918, lon: 127.9773, name: '名護', start: 18, end: 23 }
+                ]
+            },
+            {
+                id: 'hourly-4',
+                date: '2026-08-01',
+                label: '古宇利・那霸',
+                locations: [
+                    { lat: 26.5918, lon: 127.9773, name: '名護', start: 0, end: 9 },
+                    { lat: 26.7025, lon: 127.9586, name: '古宇利', start: 10, end: 13 },
+                    { lat: 26.3344, lon: 127.7809, name: '那霸', start: 14, end: 23 }
+                ]
+            },
+            {
+                id: 'hourly-5',
+                date: '2026-08-02',
+                label: '那霸',
+                locations: [
+                    { lat: 26.3344, lon: 127.7809, name: '那霸', start: 0, end: 23 }
+                ]
+            }
+        ];
+
+        var WMO_ICONS = {
+            0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
+            45:'🌫️',48:'🌫️',
+            51:'🌦️',53:'🌦️',55:'🌧️',
+            56:'🌧️',57:'🌧️',
+            61:'🌦️',63:'🌧️',65:'🌧️',
+            66:'🌧️',67:'🌧️',
+            71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',
+            80:'🌦️',81:'🌧️',82:'🌧️',
+            85:'🌨️',86:'🌨️',
+            95:'⛈️',96:'⛈️',99:'⛈️'
+        };
+
+        function getLocIdx(day, hour) {
+            for (var i = day.locations.length - 1; i >= 0; i--) {
+                if (hour >= day.locations[i].start) return i;
+            }
+            return 0;
+        }
+
+        function mostCommonCode(codes, start, end) {
+            var counts = {};
+            for (var i = start; i <= end && i < codes.length; i++) {
+                var c = codes[i]; counts[c] = (counts[c]||0) + 1;
+            }
+            var best = codes[start], max = 0;
+            for (var k in counts) { if (counts[k] > max) { max = counts[k]; best = parseInt(k); } }
+            return best;
+        }
+
+        function renderHourly(container, merged, day) {
+            var now = new Date();
+            var html = '<div class="hourly-weather-header">';
+            html += '<span class="hourly-weather-title">⏱️ 逐時天氣預報 — ' + day.label + '</span>';
+            html += '<span class="hw-update-time">更新：' + now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0') + '</span>';
+            html += '</div><div class="hw-grid">';
+            for (var h = 6; h <= 21; h++) {
+                var li = getLocIdx(day, h);
+                var icon = WMO_ICONS[merged.codes[h]] || '❓';
+                var temp = Math.round(merged.temps[h]);
+                var rain = merged.rains[h];
+                html += '<div class="hw-block">';
+                html += '<div class="hw-block-time">' + h + ':00</div>';
+                if (day.locations.length > 1) {
+                    html += '<div class="hw-block-loc hw-loc-' + li + '">' + day.locations[li].name + '</div>';
+                }
+                html += '<div class="hw-block-icon">' + icon + '</div>';
+                html += '<div class="hw-block-temp">' + temp + '°C</div>';
+                html += '<div class="hw-block-rain' + (rain >= 50 ? ' hw-rain-high' : '') + '">💧' + rain + '%</div>';
+                html += '</div>';
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function updateSummary(container, merged) {
+            var parent = container.closest('.day-card');
+            if (!parent) return;
+            var info = parent.querySelector('.weather-info');
+            if (!info) return;
+            var temps = merged.temps.slice(6, 22);
+            var minT = Math.round(Math.min.apply(null, temps));
+            var maxT = Math.round(Math.max.apply(null, temps));
+            var maxRain = Math.max.apply(null, merged.rains.slice(6, 22));
+            var code = mostCommonCode(merged.codes, 8, 18);
+            var icon = WMO_ICONS[code] || '❓';
+            var divs = info.querySelectorAll('div > div');
+            if (divs.length >= 3) {
+                divs[0].innerHTML = '🌡️ <strong>氣溫：</strong>' + minT + '°C ~ ' + maxT + '°C';
+                divs[1].innerHTML = icon + ' <strong>天氣：</strong>' + (code <= 1 ? '晴' : code <= 2 ? '晴時多雲' : code <= 3 ? '多雲' : '有雨');
+                divs[2].innerHTML = '💧 <strong>降雨機率：</strong>' + maxRain + '%';
+            }
+        }
+
+        function fetchDay(day) {
+            var container = document.getElementById(day.id);
+            if (!container) return;
+            var uniqueLocs = [];
+            var seen = {};
+            day.locations.forEach(function(loc) {
+                var key = loc.lat + ',' + loc.lon;
+                if (!seen[key]) { seen[key] = true; uniqueLocs.push(loc); }
+            });
+            var promises = uniqueLocs.map(function(loc) {
+                var url = 'https://api.open-meteo.com/v1/forecast'
+                    + '?latitude=' + loc.lat + '&longitude=' + loc.lon
+                    + '&hourly=temperature_2m,precipitation_probability,weather_code'
+                    + '&start_date=' + day.date + '&end_date=' + day.date
+                    + '&timezone=Asia/Tokyo';
+                return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+                    return { loc: loc, data: d };
+                });
+            });
+            Promise.all(promises).then(function(results) {
+                var locDataMap = {};
+                results.forEach(function(r) {
+                    locDataMap[r.loc.lat + ',' + r.loc.lon] = r.data;
+                });
+                var merged = { temps: [], rains: [], codes: [] };
+                for (var h = 0; h < 24; h++) {
+                    var li = getLocIdx(day, h);
+                    var loc = day.locations[li];
+                    var key = loc.lat + ',' + loc.lon;
+                    var d = locDataMap[key];
+                    if (d && d.hourly) {
+                        merged.temps.push(d.hourly.temperature_2m[h]);
+                        merged.rains.push(d.hourly.precipitation_probability[h]);
+                        merged.codes.push(d.hourly.weather_code[h]);
+                    } else {
+                        merged.temps.push(0); merged.rains.push(0); merged.codes.push(0);
+                    }
+                }
+                renderHourly(container, merged, day);
+                updateSummary(container, merged);
+            }).catch(function(err) {
+                container.innerHTML = '<div class="hw-error">天氣資料載入失敗：' + err.message + '</div>';
+            });
+        }
+
+        DAYS.forEach(fetchDay);
+
+        // Auto-update quick nav dropdown on scroll
+        var navSelect = document.querySelector('.quick-nav-select');
+        var sectionIds = ['checklist','flight','day1','day2','day3','day4','day5','weather-backup','emergency'];
+        if (navSelect && 'IntersectionObserver' in window) {
+            var currentSection = '';
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        currentSection = entry.target.id;
+                    }
+                });
+                if (currentSection) {
+                    for (var i = 0; i < navSelect.options.length; i++) {
+                        if (navSelect.options[i].value === currentSection) {
+                            navSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }, {
+                rootMargin: '-80px 0px -60% 0px',
+                threshold: 0
+            });
+            sectionIds.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) observer.observe(el);
+            });
+        }
+
+        window.addEventListener('beforeprint', function() { document.body.classList.add('print-mode'); });
+        window.addEventListener('afterprint', function() { document.body.classList.remove('print-mode'); });
+    })();
+    </script>
+</body>
+</html>
