@@ -213,6 +213,42 @@
         }
         .parking-info strong { color: #1B5E20; }
 
+        .restaurant-choices {
+            display: block;
+            margin-top: 10px;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #FFF8E1, #FFECB3);
+            border-radius: 10px;
+            border: 1px solid #FFD54F;
+            font-size: 0.95rem;
+            color: #5D4037;
+        }
+        .restaurant-choices > strong { color: #E65100; }
+        .restaurant-choice {
+            padding: 8px 0;
+            border-bottom: 1px dashed #FFD54F;
+            line-height: 1.6;
+        }
+        .restaurant-choice:last-child { border-bottom: none; }
+        .restaurant-choice strong { color: #BF360C; }
+        .restaurant-choice a:not(.map-link) { color: #E65100; font-weight: 600; text-decoration: none; }
+        .restaurant-choice a:not(.map-link):hover { text-decoration: underline; }
+
+        .souvenir-info {
+            display: block;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #F3E5F5, #E1BEE7);
+            border-radius: 10px;
+            border: 1px solid #CE93D8;
+            font-size: 0.95rem;
+            color: #6A1B9A;
+            line-height: 1.6;
+        }
+        .souvenir-info strong { color: #4A148C; }
+        .souvenir-info a:not(.map-link) { color: #6A1B9A; font-weight: 600; text-decoration: none; }
+        .souvenir-info a:not(.map-link):hover { text-decoration: underline; }
+
         .budget-card {
             background: linear-gradient(135deg, #FFF9C4, #FFF59D);
             border-left: 5px solid #F57F17;
@@ -474,6 +510,7 @@
         .print-mode .section-card, .print-mode .section-body,
         .print-mode .departure-info, .print-mode .reservation-info,
         .print-mode .parking-info, .print-mode .hotel-parking, .print-mode .budget-card, .print-mode .notes,
+        .print-mode .restaurant-choices, .print-mode .restaurant-choice, .print-mode .souvenir-info,
         .print-mode .transport-line, .print-mode .transport-icon, .print-mode .transport-between,
         .print-mode .weather-info, .print-mode .hourly-weather {
             background: #fff !important; box-shadow: none !important; animation: none !important;
@@ -553,7 +590,7 @@
                 <option value="day2">Day 2 - 青之洞窟＋萬座毛</option>
                 <option value="day3">Day 3 - 水族館＋瀨底海灘</option>
                 <option value="day4">Day 4 - 古宇利島＋回那霸</option>
-                <option value="day5">Day 5 - 購物＋回程</option>
+                <option value="day5">Day 5 - 首里城＋國際通＋回程</option>
                 <option value="weather-backup">🌀 颱風/雨天備案</option>
                 <option value="emergency">🆘 緊急聯絡資訊</option>
             </select>
@@ -731,6 +768,17 @@
                         <span class="map-link mapcode">📟 33 526 419</span>
                         <span class="tag tag-beach">海灘</span>
                         <span class="tag tag-shopping">購物</span>
+                        <div class="souvenir-info">
+                            🎁 <strong>北谷伴手禮推薦：</strong><br>
+                            🏪 <a href="https://maps.google.com/?q=ドン・キホーテ+北谷店" target="_blank">唐吉訶德 北谷店</a>（24H 免稅藥妝＋零食）
+                            <a href="https://maps.google.com/?q=ドン・キホーテ+北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=ドンキホーテ北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 526 241</span><br>
+                            🛒 <a href="https://maps.google.com/?q=イオン北谷店" target="_blank">AEON 北谷店</a>（大型商場，沖繩限定零食＋伴手禮專區）
+                            <a href="https://maps.google.com/?q=イオン北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=イオン北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 526 084</span>
+                        </div>
                     </div>
                 </div>
 
@@ -743,13 +791,31 @@
                     <div class="event-time">18:00-20:00</div>
                     <div class="event-card">
                         <div class="event-title">
-                            <h3>🍽️ <a href="https://maps.google.com/?q=American+Village+Chatan+restaurants" target="_blank">美國村晚餐＋散步</a></h3>
+                            <h3>🍽️ 美國村晚餐＋散步</h3>
                         </div>
-                        <p class="event-desc">推薦沖繩料理：苦瓜炒蛋（ゴーヤーチャンプルー）、豬腳（てびち）、沖繩麵（沖縄そば）、泡盛</p>
-                        <a href="https://maps.google.com/?q=American+Village+Chatan+restaurants" target="_blank" class="map-link">📍 美國村餐廳</a>
-                        <a href="https://maps.apple.com/?q=American+Village+Chatan+restaurants" target="_blank" class="map-link apple">🍎 Apple Map</a>
-                        <span class="map-link mapcode">📟 33 526 450</span>
+                        <p class="event-desc">美國村商圈內餐廳選擇豐富，用餐後沿海岸散步看夕陽夜景</p>
                         <span class="tag tag-food">美食</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>晚餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=琉球新麺通堂+北谷美浜店" target="_blank">琉球新麵 通堂 北谷美浜店</a> — 沖繩人氣拉麵，「男味」濃厚豚骨 / 「女味」清爽雞湯，¥800~<br>
+                                <a href="https://maps.google.com/?q=琉球新麺通堂+北谷美浜店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=琉球新麺通堂北谷美浜店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 526 312</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉きんぐ+北谷店" target="_blank">焼肉きんぐ 北谷店</a> — 日本人氣燒肉吃到飽，¥2,980~/人（90分鐘）<br>
+                                <a href="https://maps.google.com/?q=焼肉きんぐ+北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=焼肉きんぐ北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 526 178</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>其他推薦：</strong><a href="https://maps.google.com/?q=やっぱりステーキ+北谷店" target="_blank">やっぱりステーキ 北谷店</a> — CP 值之王！溶岩石板燒牛排 ¥1,000 起，白飯＋沙拉＋湯吃到飽，自控熟度<br>
+                                <a href="https://maps.google.com/?q=やっぱりステーキ+北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=やっぱりステーキ北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 526 450</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -889,8 +955,40 @@
                         <div class="event-title">
                             <h3>🍜 名護市午餐</h3>
                         </div>
-                        <p class="event-desc">推薦：名護沖繩麵（沖縄そば），濃郁豚骨湯底配軟嫩三層肉</p>
+                        <p class="event-desc">名護市區覓食，多種沖繩在地美食可選</p>
                         <span class="tag tag-food">美食</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>午餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=我部祖河食堂+名護店" target="_blank">我部祖河食堂</a> — 創業 50 年以上名護名店，傳統沖繩麵（三層肉そば），¥700~<br>
+                                <a href="https://maps.google.com/?q=我部祖河食堂+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=我部祖河食堂名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 694</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — 沖繩品牌「もとぶ牛」直營燒肉，午間套餐 ¥1,500~<br>
+                                <a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 795 582</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=百年古家+大家+うふやー" target="_blank">百年古家 大家（うふやー）</a> — 明治古民家改建餐廳，阿古豬涮涮鍋御膳 ¥1,500~，庭園景觀超美<br>
+                                <a href="https://maps.google.com/?q=百年古家+大家+うふやー" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=百年古家大家うふやー" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 745 056</span>
+                            </div>
+                        </div>
+                        <div class="souvenir-info">
+                            🎁 <strong>恩納・名護伴手禮推薦：</strong><br>
+                            🍠 <a href="https://maps.google.com/?q=御菓子御殿+恩納店" target="_blank">御菓子御殿 恩納店</a>（紅芋塔工廠直營，可參觀製作過程）
+                            <a href="https://maps.google.com/?q=御菓子御殿+恩納店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=御菓子御殿恩納店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 206 096 786</span><br>
+                            🏪 <a href="https://maps.google.com/?q=道の駅許田" target="_blank">道の駅許田</a>（沖繩人氣最高休息站，當地土產＋水果集合）
+                            <a href="https://maps.google.com/?q=道の駅許田" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=道の駅許田" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 206 476 710</span>
+                        </div>
                     </div>
                 </div>
 
@@ -900,12 +998,44 @@
                         <div class="event-title">
                             <h3>🏨 <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank">Check in Super Hotel 名護</a></h3>
                         </div>
-                        <p class="event-desc">下午自由休息。晚上推薦泡飯店天然溫泉「萬座之湯」</p>
+                        <p class="event-desc">下午自由休息，傍晚出門覓食</p>
                         <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link">📍 Google Map</a>
                         <a href="https://maps.apple.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link apple">🍎 Apple Map</a>
                         <span class="map-link mapcode">📟 206 688 637</span>
                         <span class="tag tag-hotel">住宿</span>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">18:00-19:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍽️ 名護晚餐</h3>
+                        </div>
+                        <p class="event-desc">名護市區覓食，飯後回飯店泡天然溫泉「萬座之湯」</p>
+                        <span class="tag tag-food">美食</span>
                         <span class="tag tag-onsen">溫泉</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>晚餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=麺屋はちれん+名護" target="_blank">麵屋 はちれん</a> — 名護人氣拉麵，濃厚豚骨魚介系，¥800~<br>
+                                <a href="https://maps.google.com/?q=麺屋はちれん+名護" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=麺屋はちれん名護" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 326</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉乃我那覇+名護店" target="_blank">焼肉乃我那覇 名護店</a> — 沖繩品牌豬「あぐー豚」燒肉，¥2,000~<br>
+                                <a href="https://maps.google.com/?q=焼肉乃我那覇+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=焼肉乃我那覇名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 450</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=名護漁港食堂" target="_blank">名護漁港食堂</a> — 漁港直營，新鮮海鮮丼＋沖繩近海魚，¥1,000~<br>
+                                <a href="https://maps.google.com/?q=名護漁港食堂" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=名護漁港食堂" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 171</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1001,6 +1131,11 @@
                             🐬 <strong>海豚秀：</strong>11:00 / 13:00 / 14:30 / 16:00（免費）<br>
                             💡 建議先逛水族館，13:00 看海豚秀
                         </div>
+                        <div class="souvenir-info">
+                            🎁 <strong>水族館伴手禮：</strong><br>
+                            🐠 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾、沖繩海鹽系列<br>
+                            🐚 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品
+                        </div>
                         <div class="parking-info">
                             🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href="https://maps.google.com/?q=26.6941,127.8775" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6941,127.8775" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 553 075 797</span>
                         </div>
@@ -1013,8 +1148,29 @@
                         <div class="event-title">
                             <h3>🍽️ 水族館附近午餐</h3>
                         </div>
-                        <p class="event-desc">海洋博公園內有海景餐廳，或到附近的本部町覓食</p>
+                        <p class="event-desc">海洋博公園周邊或本部町覓食</p>
                         <span class="tag tag-food">美食</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>午餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=きしもと食堂+本部町" target="_blank">きしもと食堂</a> — 明治 38 年（1905）創業！本部町傳奇沖繩麵，手打木灰麵條，¥600~<br>
+                                <a href="https://maps.google.com/?q=きしもと食堂+本部町" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=きしもと食堂本部町" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 857 712</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — もとぶ牛直營，水族館附近最佳燒肉，¥1,500~<br>
+                                <a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 795 582</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=海人食堂+本部漁港" target="_blank">海人食堂</a> — 本部漁港直營食堂，新鮮近海魚海鮮丼＋沖繩天婦羅，¥1,000~<br>
+                                <a href="https://maps.google.com/?q=海人食堂+本部漁港" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=海人食堂本部漁港" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 857 471</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1049,12 +1205,45 @@
                 </div>
 
                 <div class="event">
-                    <div class="event-time">18:00</div>
+                    <div class="event-time">18:00-19:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍽️ 名護晚餐</h3>
+                        </div>
+                        <p class="event-desc">回到名護市區覓食，飯後回飯店泡天然溫泉放鬆</p>
+                        <span class="tag tag-food">美食</span>
+                        <span class="tag tag-onsen">溫泉</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>晚餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=幸ちゃんそば+名護" target="_blank">幸ちゃんそば</a> — 名護在地老字號沖繩麵，三層肉大碗滿足，¥650~<br>
+                                <a href="https://maps.google.com/?q=幸ちゃんそば+名護" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=幸ちゃんそば名護" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 585</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉五苑+名護店" target="_blank">焼肉五苑 名護店</a> — 平價燒肉吃到飽，¥1,980~/人<br>
+                                <a href="https://maps.google.com/?q=焼肉五苑+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=焼肉五苑名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 232</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=A%26W+名護店" target="_blank">A&amp;W 名護店</a> — 沖繩限定美式漢堡連鎖，1號店！Root Beer 必喝，¥800~<br>
+                                <a href="https://maps.google.com/?q=A%26W+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=A%26W名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 688 860</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">20:00</div>
                     <div class="event-card">
                         <div class="event-title">
                             <h3>🏨 回到 Super Hotel 名護</h3>
                         </div>
-                        <p class="event-desc">晚餐後泡天然溫泉放鬆</p>
+                        <p class="event-desc">泡天然溫泉「萬座之湯」放鬆，早點休息</p>
                         <span class="tag tag-hotel">住宿</span>
                         <span class="tag tag-onsen">溫泉</span>
                     </div>
@@ -1154,13 +1343,38 @@
                     <div class="event-time">12:00-12:45</div>
                     <div class="event-card">
                         <div class="event-title">
-                            <h3>🦐 <a href="https://maps.google.com/?q=古宇利島+蝦蝦飯" target="_blank">午餐：古宇利島蝦蝦飯</a></h3>
+                            <h3>🍽️ 古宇利島午餐</h3>
                         </div>
-                        <p class="event-desc">島上人氣名店，夏威夷風蒜蝦飯配海景，拍照打卡聖地</p>
-                        <a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link">📍 Google Map</a>
-                        <a href="https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link apple">🍎 Apple Map</a>
-                        <span class="map-link mapcode">📟 485 692 174</span>
+                        <p class="event-desc">島上用餐配無敵海景</p>
                         <span class="tag tag-food">美食</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>午餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=古宇利島+沖縄そば" target="_blank">古宇利そば</a> — 島上手打沖繩麵小店，海景座位，¥700~<br>
+                                <a href="https://maps.google.com/?q=古宇利島+沖縄そば" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=古宇利島沖縄そば" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 485 692 195</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — 離島回程順路，もとぶ牛燒肉，¥1,500~<br>
+                                <a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 206 795 582</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🦐 <strong>其他推薦：</strong><a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank">蝦蝦飯（Shrimp Wagon）</a> — 島上排隊名店，夏威夷風蒜蝦飯配海景，¥1,000~<br>
+                                <a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 485 692 174</span>
+                            </div>
+                        </div>
+                        <div class="souvenir-info">
+                            🎁 <strong>古宇利島伴手禮：</strong><br>
+                            🏪 <a href="https://maps.google.com/?q=古宇利島物産センター" target="_blank">古宇利島物產中心</a>（古宇利大橋旁，島產黑糖＋海鹽＋限定零食）
+                            <a href="https://maps.google.com/?q=古宇利島物産センター" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=古宇利島物産センター" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 485 692 089</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1250,11 +1464,54 @@
                         <div class="event-title">
                             <h3>🏨 <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank">Check in 東橫inn 那霸</a></h3>
                         </div>
-                        <p class="event-desc">步行 1 分鐘到美榮橋站。晚上可到國際通附近散步覓食</p>
+                        <p class="event-desc">步行 1 分鐘到美榮橋站，放好行李後出門覓食</p>
                         <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
                         <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
                         <span class="map-link mapcode">📟 33 157 413</span>
                         <span class="tag tag-hotel">住宿</span>
+                        <div class="souvenir-info">
+                            🎁 <strong>那霸國際通伴手禮推薦：</strong><br>
+                            🍠 <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank">御菓子御殿 國際通松尾店</a>（紅芋塔本店）
+                            <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=御菓子御殿国際通り松尾店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 157 352</span><br>
+                            🧂 <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank">鹽屋（まーすやー）國際通店</a>（雪鹽系列＋鹽味冰淇淋）
+                            <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=塩屋国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 157 383</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">17:30-19:00</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍽️ 那霸國際通晚餐</h3>
+                        </div>
+                        <p class="event-desc">國際通周邊美食街，選擇豐富</p>
+                        <span class="tag tag-food">美食</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>晚餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=通堂拉麵+小禄本店" target="_blank">琉球新麵 通堂 小禄本店</a> — 沖繩在地人氣 No.1 拉麵，¥800~<br>
+                                <a href="https://maps.google.com/?q=通堂拉麵+小禄本店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=通堂拉麵小禄本店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 096 697</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank">燒肉琉球の牛 國際通店</a> — 高級燒肉，石垣牛＋阿古豬，午間套餐 ¥2,000~<br>
+                                <a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=琉球の牛国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 157 382</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=ジャッキーステーキハウス+那覇" target="_blank">Jack's Steak House（ジャッキー）</a> — 1953 年創業！沖繩最老牌牛排，テンダーロイン S ¥3,000 / NY ステーキ S ¥2,400。<strong>週三公休</strong><br>
+                                <a href="https://maps.google.com/?q=ジャッキーステーキハウス+那覇" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=ジャッキーステーキハウス那覇" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 155 236</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1286,7 +1543,7 @@
         <div id="day5" class="day-card day-5">
             <div class="day-header">
                 <div>
-                    <h2>Day 5 - 購物＋回程</h2>
+                    <h2>Day 5 - 首里城＋國際通＋回程</h2>
                     <span class="date">8月2日（日）</span>
                 </div>
                 <span class="accommodation-badge">✈️ 回程</span>
@@ -1305,54 +1562,141 @@
             </div>
             <div class="timeline">
                 <div class="event">
-                    <div class="event-time">10:00</div>
+                    <div class="event-time">08:30</div>
                     <div class="event-card">
                         <div class="event-title">
-                            <h3>🚶 步行前往國際通</h3>
+                            <h3>🧳 退房＋寄放行李</h3>
                         </div>
-                        <p class="event-desc">從東橫inn 步行 1 分鐘即到國際通入口</p>
-                        <span class="tag tag-transport">步行</span>
+                        <p class="event-desc">東橫inn 退房，將行李寄放櫃台（免費寄放服務），輕裝出發</p>
+                        <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 157 413</span>
+                        <span class="tag tag-hotel">住宿</span>
                     </div>
                 </div>
 
+                <div class="transport-between train">
+                    <div class="transport-icon">🚝</div>
+                    <div class="transport-line">單軌 美榮橋→首里站 約18分鐘 ¥300<br>
+                    <span style="font-size: 0.85em; opacity: 0.9;">💡 建議購買一日乘車券 ¥800（今天會多次搭乘較划算）</span></div>
+                </div>
+
+                <div class="transport-between walk">
+                    <div class="transport-icon">🚶</div>
+                    <div class="transport-line">首里站→首里城 步行約15分鐘（上坡，沿指標走）</div>
+                </div>
+
                 <div class="event">
-                    <div class="event-time">10:00-12:30</div>
+                    <div class="event-time">09:00-10:30</div>
                     <div class="event-card">
                         <div class="event-title">
-                            <h3>🛍️ <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank">國際通逛街＋午餐</a></h3>
+                            <h3>🏯 <a href="https://maps.google.com/?q=首里城公園" target="_blank">首里城公園</a></h3>
                         </div>
-                        <p class="event-desc">沖繩最熱鬧的商店街，約 1.6 公里。伴手禮推薦：紅芋塔、雪鹽金楚糕、黑糖、泡盛、風獅爺小物</p>
-                        <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank" class="map-link">📍 Google Map</a>
-                        <a href="https://maps.apple.com/?q=国際通り那覇" target="_blank" class="map-link apple">🍎 Apple Map</a>
-                        <span class="map-link mapcode">📟 33 157 382</span>
-                        <span class="tag tag-shopping">購物</span>
-                        <span class="tag tag-food">美食</span>
+                        <p class="event-desc">琉球王國的象徵，世界遺產。2019 年大火後正殿重建中（預計 2026 年完工），御庭＋城牆＋守禮門可參觀。居高臨下眺望那霸市區及慶良間群島</p>
+                        <a href="https://maps.google.com/?q=首里城公園" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=首里城公園" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 161 526</span>
+                        <span class="tag tag-attraction">景點</span>
+                        <span class="tag tag-nature">自然</span>
                         <div class="reservation-info">
-                            🎁 <strong>必買伴手禮：</strong><br>
-                            🍠 紅芋塔（御菓子御殿）<br>
-                            🧂 雪鹽金楚糕（ちんすこう）<br>
-                            🍶 泡盛（沖繩特產燒酒）<br>
-                            🐚 風獅爺（シーサー）擺飾<br>
-                            💊 藥妝店（大國藥妝、松本清）
+                            🎫 <strong>門票：</strong>大人 ¥400 / 高中生 ¥300 / 中小學生 ¥160<br>
+                            🕐 <strong>營業時間：</strong>08:30~18:00（夏季延長至19:30）<br>
+                            📸 <strong>推薦拍照點：</strong>守禮門、歡會門、西台（展望台）
                         </div>
-                        <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>無專用停車場，周邊付費停車場 ¥200-300/30分｜推薦：てんぶす那覇地下停車場｜<a href="https://maps.google.com/?q=26.2148,127.6847" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.2148,127.6847" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 411</span>
+                        <div class="souvenir-info">
+                            🎁 <strong>首里城伴手禮：</strong><br>
+                            🏪 首里城公園商店 — 琉球王國限定周邊、紅型（びんがた）花紋商品<br>
+                            🍡 <a href="https://maps.google.com/?q=首里金城町石畳道" target="_blank">金城町石疊道周邊</a>（古民家小店，琉球玻璃＋シーサー手作體驗）
+                            <a href="https://maps.google.com/?q=首里金城町石畳道" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=首里金城町石畳道" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 161 245</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="transport-between train">
                     <div class="transport-icon">🚝</div>
-                    <div class="transport-line">單軌 美榮橋→おもろまち站 1站約3分鐘 ¥230</div>
+                    <div class="transport-line">步行回首里站→單軌 首里→牧志站 約15分鐘 ¥260</div>
                 </div>
 
                 <div class="event">
-                    <div class="event-time">12:35-13:30</div>
+                    <div class="event-time">11:00-12:30</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🛍️ <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank">國際通逛街＋買伴手禮</a></h3>
+                        </div>
+                        <p class="event-desc">沖繩最熱鬧的商店街，約 1.6 公里。最後衝刺採購伴手禮！</p>
+                        <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=国際通り那覇" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 157 382</span>
+                        <span class="tag tag-shopping">購物</span>
+                        <div class="souvenir-info">
+                            🎁 <strong>國際通必買伴手禮＋店家：</strong><br>
+                            🍠 <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank">御菓子御殿 國際通松尾店</a>（紅芋塔 ¥1,100/10入）
+                            <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=御菓子御殿国際通り松尾店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 157 352</span><br>
+                            🧂 <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank">鹽屋（まーすやー）</a>（雪鹽金楚糕、鹽味冰淇淋必吃）
+                            <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=塩屋国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 157 383</span><br>
+                            🏪 <a href="https://maps.google.com/?q=わしたショップ+国際通り本店" target="_blank">わしたショップ 國際通本店</a>（沖繩物產公社直營，最齊全的沖繩土產）
+                            <a href="https://maps.google.com/?q=わしたショップ+国際通り本店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=わしたショップ国際通り本店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 157 411</span><br>
+                            💊 <a href="https://maps.google.com/?q=ドン・キホーテ+国際通り店" target="_blank">唐吉訶德 國際通店</a>（藥妝＋零食＋免稅）
+                            <a href="https://maps.google.com/?q=ドン・キホーテ+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                            <a href="https://maps.apple.com/?q=ドンキホーテ国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                            <span class="map-link mapcode map-link-inline">📟 33 157 382</span><br>
+                            🍶 泡盛（推薦：殘波、久米仙、瑞泉）各店均有販售
+                        </div>
+                    </div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">12:30-13:15</div>
+                    <div class="event-card">
+                        <div class="event-title">
+                            <h3>🍽️ 國際通午餐</h3>
+                        </div>
+                        <p class="event-desc">國際通周邊用餐，最後一餐沖繩美食！</p>
+                        <span class="tag tag-food">美食</span>
+                        <div class="restaurant-choices">
+                            🍽️ <strong>午餐推薦三選一：</strong>
+                            <div class="restaurant-choice">
+                                🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=暖暮拉麵+那覇牧志店" target="_blank">暖暮拉麵 那覇牧志店</a> — 九州博多濃厚豚骨拉麵名店，國際通人氣排隊店，¥800~<br>
+                                <a href="https://maps.google.com/?q=暖暮拉麵+那覇牧志店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=暖暮拉麵那覇牧志店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 157 323</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank">燒肉琉球の牛 國際通店</a> — 高級燒肉，石垣牛＋阿古豬，午間套餐 ¥2,000~<br>
+                                <a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=琉球の牛国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 157 382</span>
+                            </div>
+                            <div class="restaurant-choice">
+                                🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店" target="_blank">やっぱりステーキ 國際通店</a> — CP 值之王！溶岩石板燒牛排 ¥1,000 起，白飯＋沙拉＋湯吃到飽，營業到凌晨 1:30<br>
+                                <a href="https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                                <a href="https://maps.apple.com/?q=やっぱりステーキ4th国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <span class="map-link mapcode map-link-inline">📟 33 157 383</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="transport-between train">
+                    <div class="transport-icon">🚝</div>
+                    <div class="transport-line">單軌 牧志→おもろまち站 1站約3分鐘 ¥230</div>
+                </div>
+
+                <div class="event">
+                    <div class="event-time">13:20-13:45</div>
                     <div class="event-card">
                         <div class="event-title">
                             <h3>🛍️ <a href="https://maps.google.com/?q=Tギャラリア+沖縄" target="_blank">DFS T Galleria 免稅店</a></h3>
                         </div>
-                        <p class="event-desc">就在おもろまち站旁，國際精品免稅價格。化妝品、香水、包包等</p>
+                        <p class="event-desc">就在おもろまち站旁，國際精品免稅價格。化妝品、香水、包包等，快速掃貨</p>
                         <a href="https://maps.google.com/?q=Tギャラリア+沖縄" target="_blank" class="map-link">📍 Google Map</a>
                         <a href="https://maps.apple.com/?q=Tギャラリア沖縄" target="_blank" class="map-link apple">🍎 Apple Map</a>
                         <span class="map-link mapcode">📟 33 188 487</span>
@@ -1362,16 +1706,19 @@
 
                 <div class="transport-between train">
                     <div class="transport-icon">🚝</div>
-                    <div class="transport-line">單軌 おもろまち→美榮橋 1站約3分鐘</div>
+                    <div class="transport-line">單軌 おもろまち→美榮橋 1站約3分鐘 ¥230</div>
                 </div>
 
                 <div class="event">
-                    <div class="event-time">13:35-14:00</div>
+                    <div class="event-time">13:50</div>
                     <div class="event-card">
                         <div class="event-title">
-                            <h3>🧳 回飯店拿行李</h3>
+                            <h3>🧳 回飯店取行李</h3>
                         </div>
-                        <p class="event-desc">回東橫inn 領取寄放行李</p>
+                        <p class="event-desc">回東橫inn 領取寄放行李，準備前往機場</p>
+                        <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
+                        <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                        <span class="map-link mapcode">📟 33 157 413</span>
                     </div>
                 </div>
 
@@ -1404,14 +1751,23 @@
                     </div>
                 </div>
             </div>
+            <div class="notes">
+                <h4>注意事項</h4>
+                <ul>
+                    <li><strong>單軌一日券：</strong>¥800/人，今天搭 4 次以上就划算（單程 ¥230~300）</li>
+                    <li><strong>行李寄放：</strong>東橫inn 退房後可免費寄放行李至取回</li>
+                    <li><strong>首里城上坡：</strong>建議穿好走的鞋，夏天注意防曬補水</li>
+                </ul>
+            </div>
             <div class="budget-card">
                 <h4>💰 Day 5 預算估算</h4>
                 <table>
-                    <tr><td>🚝 單軌電車</td><td>¥1,000 (約 NT$ 220)</td></tr>
-                    <tr><td>🍽️ 午餐</td><td>¥1,500 (約 NT$ 330)</td></tr>
+                    <tr><td>🚝 單軌一日券（2人）</td><td>¥1,600 (約 NT$ 352)</td></tr>
+                    <tr><td>🏯 首里城門票（2人）</td><td>¥800 (約 NT$ 176)</td></tr>
+                    <tr><td>🍽️ 午餐</td><td>¥2,000 (約 NT$ 440)</td></tr>
                     <tr><td>🛍️ 伴手禮＋購物</td><td>¥10,000 (約 NT$ 2,200)</td></tr>
                 </table>
-                <div class="budget-total">當日小計：約 ¥12,500（NT$ 2,750）</div>
+                <div class="budget-total">當日小計：約 ¥14,400（NT$ 3,168）</div>
             </div>
         </div>
 
@@ -1498,7 +1854,7 @@
             <h3>2026 沖繩五日自駕遊</h3>
             <p>7/29（三）~ 8/2（日）</p>
             <p style="margin-top: 15px; font-size: 1.1rem; font-weight: 600;">
-                💰 五日總預算估算：約 ¥114,680（NT$ 25,230）
+                💰 五日總預算估算：約 ¥116,580（NT$ 25,648）
             </p>
             <p style="margin-top: 8px; font-size: 0.85rem; color: #999;">
                 匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準
