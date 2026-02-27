@@ -7,16 +7,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --coral-red: #FF6B6B;
-            --ocean-teal: #00B4D8;
-            --deep-ocean: #0077B6;
-            --tropical-green: #2D936C;
-            --sunset-orange: #FF8C42;
-            --sand-cream: #FFF5E1;
-            --shisa-brown: #8B5E3C;
-            --hibiscus-pink: #FF4081;
-            --night-purple: #5C2D91;
-            --sky-blue: #90E0EF;
+            --primary-900: #023E8A;
+            --primary-700: #0077B6;
+            --primary-500: #0096C7;
+            --primary-400: #00B4D8;
+            --primary-300: #48CAE4;
+            --primary-200: #90E0EF;
+            --primary-100: #CAF0F8;
+            --sand-700: #8B7355;
+            --sand-500: #C4956A;
+            --sand-300: #DEC9A8;
+            --sand-100: #F5EDE0;
+            --text-dark: #1A3A5C;
+            --text-medium: #4A6D8C;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,7 +27,7 @@
 
         body {
             font-family: 'Noto Sans TC', sans-serif;
-            background: linear-gradient(180deg, #E0F7FA 0%, #B2EBF2 15%, #80DEEA 30%, #4DD0E1 50%, #26C6DA 65%, #00ACC1 80%, #00838F 100%);
+            background: linear-gradient(180deg, #E8F4F8 0%, #D1ECF1 15%, #B8DDE6 30%, #9ECFDB 50%, #84C1D0 65%, #6AB3C5 80%, #50A5BA 100%);
             background-attachment: fixed;
             min-height: 100vh;
             padding: 20px;
@@ -85,15 +88,15 @@
             border-radius: 30px;
             margin-bottom: 25px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-            border: 3px solid var(--deep-ocean);
+            border: 3px solid var(--primary-700);
             position: relative;
             overflow: hidden;
         }
         header::before { content: '🐠'; position: absolute; top: 10px; left: 20px; font-size: 2rem; animation: sway 3s ease-in-out infinite; }
         header::after { content: '🐚'; position: absolute; top: 10px; right: 20px; font-size: 2rem; animation: float-up 3s ease-in-out infinite; }
-        header h1 { font-size: 2.8rem; margin-bottom: 10px; color: var(--deep-ocean); }
-        header p { font-size: 1.2rem; color: var(--shisa-brown); }
-        .departure-info { margin-top: 15px; padding: 10px 20px; background: linear-gradient(135deg, var(--ocean-teal), #48CAE4); border-radius: 20px; display: inline-block; color: white; font-weight: 500; }
+        header h1 { font-size: 2.8rem; margin-bottom: 10px; color: var(--primary-700); }
+        header p { font-size: 1.2rem; color: var(--text-dark); }
+        .departure-info { margin-top: 15px; padding: 10px 20px; background: linear-gradient(135deg, var(--primary-700), var(--primary-300)); border-radius: 20px; display: inline-block; color: white; font-weight: 500; }
 
         .flight-info {
             background: rgba(255,255,255,0.92);
@@ -101,22 +104,22 @@
             margin-bottom: 25px;
             padding: 25px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 3px solid var(--deep-ocean);
+            border: 3px solid var(--primary-700);
         }
-        .flight-info h3 { color: var(--deep-ocean); margin-bottom: 15px; font-size: 1.3rem; }
+        .flight-info h3 { color: var(--primary-700); margin-bottom: 15px; font-size: 1.3rem; }
         .flight-row {
             display: flex;
             align-items: center;
             padding: 15px;
-            background: linear-gradient(135deg, #E0F7FA, #B2EBF2);
+            background: linear-gradient(135deg, var(--primary-100), #E0F4FF);
             border-radius: 15px;
             margin-bottom: 10px;
-            border: 2px dashed var(--ocean-teal);
+            border: 2px dashed var(--primary-400);
         }
         .flight-row:last-child { margin-bottom: 0; }
         .flight-icon { font-size: 1.5rem; margin-right: 15px; }
         .flight-details { flex: 1; }
-        .flight-details .route { font-weight: 600; color: var(--shisa-brown); font-size: 1.2rem; }
+        .flight-details .route { font-weight: 600; color: var(--text-dark); font-size: 1.2rem; }
         .flight-details .time { color: #666; font-size: 1rem; margin-top: 3px; }
 
         .day-card {
@@ -125,36 +128,36 @@
             margin-bottom: 25px;
             overflow: hidden;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 3px solid var(--shisa-brown);
+            border: 3px solid var(--primary-700);
         }
         .day-card[id], [id="checklist"], [id="flight"], [id="weather-backup"], [id="emergency"] { scroll-margin-top: 80px; }
-        .day-1 { --day-color: #FF6B6B; --day-color-light: #FF8E8E; --day-color-alt: #E85555; }
-        .day-2 { --day-color: #00B4D8; --day-color-light: #48CAE4; --day-color-alt: #0096C7; }
-        .day-3 { --day-color: #0077B6; --day-color-light: #0096C7; --day-color-alt: #005F8E; }
-        .day-4 { --day-color: #FF8C42; --day-color-light: #FFB347; --day-color-alt: #E87830; }
-        .day-5 { --day-color: #5C2D91; --day-color-light: #9B59B6; --day-color-alt: #4A2272; }
+        .day-1 { --day-color: #0096C7; --day-color-light: #48CAE4; --day-color-alt: #0088B5; }
+        .day-2 { --day-color: #0077B6; --day-color-light: #0096C7; --day-color-alt: #006199; }
+        .day-3 { --day-color: #023E8A; --day-color-light: #0353A4; --day-color-alt: #012E6B; }
+        .day-4 { --day-color: #00B4D8; --day-color-light: #48CAE4; --day-color-alt: #009AB8; }
+        .day-5 { --day-color: #0353A4; --day-color-light: #1A73E8; --day-color-alt: #02438C; }
 
         .day-header { padding: 20px 25px; color: white; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, var(--day-color), var(--day-color-light)); }
         .day-header h2 { font-size: 1.6rem; }
         .day-header .date { font-size: 1.1rem; opacity: 0.9; }
         .accommodation-badge { background: rgba(255,255,255,0.3); padding: 5px 15px; border-radius: 20px; font-size: 1rem; }
 
-        .hotel-info { background: linear-gradient(135deg, var(--sand-cream), #FFF8DC); padding: 20px 25px; border-bottom: 2px dashed var(--shisa-brown); }
-        .hotel-info h4 { color: var(--shisa-brown); font-size: 1.2rem; margin-bottom: 10px; }
-        .hotel-info h4 a { color: var(--shisa-brown); text-decoration: none; border-bottom: 2px dotted var(--shisa-brown); }
-        .hotel-info h4 a:hover { color: var(--deep-ocean); }
+        .hotel-info { background: linear-gradient(135deg, var(--sand-100), #FFF8F0); padding: 20px 25px; border-bottom: 2px dashed var(--sand-500); }
+        .hotel-info h4 { color: var(--sand-700); font-size: 1.2rem; margin-bottom: 10px; }
+        .hotel-info h4 a { color: var(--sand-700); text-decoration: none; border-bottom: 2px dotted var(--sand-500); }
+        .hotel-info h4 a:hover { color: var(--primary-700); }
         .hotel-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 1rem; color: #555; }
         .hotel-details span { display: flex; align-items: center; gap: 6px; }
-        .price-tag { background: linear-gradient(135deg, var(--tropical-green), #38B000); color: white; padding: 3px 12px; border-radius: 15px; font-weight: 600; font-size: 0.85rem; }
-        .status-paid { background: linear-gradient(135deg, var(--tropical-green), #38B000); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
-        .status-pending { background: linear-gradient(135deg, var(--sunset-orange), #FFD700); color: #333; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
+        .price-tag { background: linear-gradient(135deg, var(--primary-700), var(--primary-500)); color: white; padding: 3px 12px; border-radius: 15px; font-weight: 600; font-size: 0.85rem; }
+        .status-paid { background: linear-gradient(135deg, var(--primary-700), var(--primary-500)); color: white; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
+        .status-pending { background: linear-gradient(135deg, var(--sand-500), var(--sand-300)); color: #333; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
 
         .timeline { padding: 25px; }
 
         .event { display: flex; margin-bottom: 15px; align-items: flex-start; }
         .event-time {
             width: 130px; min-width: 130px;
-            background: linear-gradient(135deg, var(--shisa-brown), #A0826D);
+            background: linear-gradient(135deg, var(--primary-700), var(--primary-500));
             color: white;
             padding: 8px 12px;
             border-radius: 12px;
@@ -162,7 +165,7 @@
             font-weight: 600;
             text-align: center;
             margin-right: 15px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 3px 10px rgba(0,119,182,0.25);
         }
         .day-card .event-time { background: linear-gradient(135deg, var(--day-color), var(--day-color-alt)); }
 
@@ -171,14 +174,14 @@
             background: #fafafa;
             border-radius: 15px;
             padding: 15px 20px;
-            border-left: 4px solid var(--shisa-brown);
+            border-left: 4px solid var(--primary-700);
         }
         .day-card .event-card { border-left-color: var(--day-color); }
 
         .event-title { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-        .event-title h3 { color: var(--shisa-brown); font-size: 1.2rem; }
-        .event-title h3 a { color: var(--shisa-brown); text-decoration: none; }
-        .event-title h3 a:hover { color: var(--deep-ocean); text-decoration: underline; }
+        .event-title h3 { color: var(--text-dark); font-size: 1.2rem; }
+        .event-title h3 a { color: var(--text-dark); text-decoration: none; }
+        .event-title h3 a:hover { color: var(--primary-700); text-decoration: underline; }
         .event-desc { color: #666; font-size: 1rem; line-height: 1.6; margin-bottom: 8px; }
 
         .map-link { display: inline-flex; align-items: center; gap: 4px; background: #4285F4; color: white; padding: 3px 10px; border-radius: 10px; font-size: 0.8rem; text-decoration: none; margin-right: 5px; margin-bottom: 4px; }
@@ -193,78 +196,78 @@
             display: block;
             margin-top: 8px;
             padding: 8px 12px;
-            background: linear-gradient(135deg, #FFE3E3, #FFCDD2);
+            background: linear-gradient(135deg, var(--sand-100), #FFF8F0);
             border-radius: 10px;
-            border: 1px solid #EF9A9A;
+            border: 1px solid var(--sand-300);
             font-size: 0.95rem;
-            color: #C62828;
+            color: var(--sand-700);
         }
-        .reservation-info a { color: #C62828; font-weight: 600; }
+        .reservation-info a { color: var(--primary-700); font-weight: 600; }
 
         .parking-info {
             display: block;
             margin-top: 8px;
             padding: 8px 12px;
-            background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+            background: linear-gradient(135deg, var(--primary-100), #E0F4FF);
             border-radius: 10px;
-            border: 1px solid #81C784;
+            border: 1px solid var(--primary-200);
             font-size: 0.95rem;
-            color: #2E7D32;
+            color: var(--primary-900);
         }
-        .parking-info strong { color: #1B5E20; }
+        .parking-info strong { color: var(--primary-900); }
 
         .restaurant-choices {
             display: block;
             margin-top: 10px;
             padding: 10px 14px;
-            background: linear-gradient(135deg, #FFF8E1, #FFECB3);
+            background: linear-gradient(135deg, var(--sand-100), #FFF8F0);
             border-radius: 10px;
-            border: 1px solid #FFD54F;
+            border: 1px solid var(--sand-300);
             font-size: 0.95rem;
-            color: #5D4037;
+            color: var(--text-dark);
         }
-        .restaurant-choices > strong { color: #E65100; }
+        .restaurant-choices > strong { color: var(--sand-700); }
         .restaurant-choice {
             padding: 8px 0;
-            border-bottom: 1px dashed #FFD54F;
+            border-bottom: 1px dashed var(--sand-300);
             line-height: 1.6;
         }
         .restaurant-choice:last-child { border-bottom: none; }
-        .restaurant-choice strong { color: #BF360C; }
-        .restaurant-choice a:not(.map-link) { color: #E65100; font-weight: 600; text-decoration: none; }
+        .restaurant-choice strong { color: var(--sand-700); }
+        .restaurant-choice a:not(.map-link) { color: var(--primary-700); font-weight: 600; text-decoration: none; }
         .restaurant-choice a:not(.map-link):hover { text-decoration: underline; }
         .restaurant-meta { display: block; margin-top: 4px; font-size: 0.85em; color: #888; }
-        .restaurant-meta a { color: #C62828; font-weight: 600; text-decoration: none; }
+        .restaurant-meta a { color: var(--primary-700); font-weight: 600; text-decoration: none; }
         .restaurant-meta a:hover { text-decoration: underline; }
 
         .souvenir-info {
             display: block;
             margin-top: 8px;
             padding: 8px 12px;
-            background: linear-gradient(135deg, #F3E5F5, #E1BEE7);
+            background: linear-gradient(135deg, var(--primary-100), #E0F4FF);
             border-radius: 10px;
-            border: 1px solid #CE93D8;
+            border: 1px solid var(--primary-200);
             font-size: 0.95rem;
-            color: #6A1B9A;
+            color: var(--primary-900);
             line-height: 1.6;
         }
-        .souvenir-info strong { color: #4A148C; }
-        .souvenir-info a:not(.map-link) { color: #6A1B9A; font-weight: 600; text-decoration: none; }
+        .souvenir-info strong { color: var(--primary-900); }
+        .souvenir-info a:not(.map-link) { color: var(--primary-700); font-weight: 600; text-decoration: none; }
         .souvenir-info a:not(.map-link):hover { text-decoration: underline; }
 
         .budget-card {
-            background: linear-gradient(135deg, #FFF9C4, #FFF59D);
-            border-left: 5px solid #F57F17;
+            background: linear-gradient(135deg, var(--sand-100), #FFF8F0);
+            border-left: 5px solid var(--sand-500);
             padding: 15px 20px;
             margin: 20px 25px 25px;
             border-radius: 0 15px 15px 0;
         }
-        .budget-card h4 { color: #F57F17; margin-bottom: 10px; font-size: 1.1rem; }
+        .budget-card h4 { color: var(--sand-700); margin-bottom: 10px; font-size: 1.1rem; }
         .budget-card table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-        .budget-card table td { padding: 5px 0; color: #5D4037; }
+        .budget-card table td { padding: 5px 0; color: var(--text-dark); }
         .budget-card table td:first-child { font-weight: 500; }
-        .budget-card table td:last-child { text-align: right; font-weight: 600; color: #E65100; }
-        .budget-card .budget-total { border-top: 2px solid #F57F17; margin-top: 8px; padding-top: 8px; font-size: 1.05rem; font-weight: 700; color: #E65100; }
+        .budget-card table td:last-child { text-align: right; font-weight: 600; color: var(--primary-700); }
+        .budget-card .budget-total { border-top: 2px solid var(--sand-500); margin-top: 8px; padding-top: 8px; font-size: 1.05rem; font-weight: 700; color: var(--primary-700); }
 
         .emergency-card {
             background: rgba(255,255,255,0.95);
@@ -272,24 +275,24 @@
             margin-bottom: 25px;
             padding: 25px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 3px solid #C62828;
+            border: 3px solid var(--primary-700);
         }
-        .emergency-card h3 { color: #C62828; margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
+        .emergency-card h3 { color: var(--primary-900); margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
         .emergency-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
         .checklist-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         @media (max-width: 600px) { .checklist-grid { grid-template-columns: 1fr; } }
-        .emergency-item, .checklist-item { background: linear-gradient(135deg, #FFEBEE, #FFCDD2); padding: 15px; border-radius: 15px; border-left: 4px solid #C62828; }
-        .emergency-item h4, .checklist-item h4 { color: #B71C1C; margin-bottom: 8px; font-size: 1.1rem; }
-        .checklist-snorkel { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); border-left-color: #0288D1; }
-        .checklist-snorkel h4 { color: #01579B; }
-        .checklist-typhoon { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left-color: #FF9800; }
-        .checklist-typhoon h4 { color: #E65100; }
-        .checklist-car { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); border-left-color: #7B1FA2; }
-        .checklist-car h4 { color: #4A148C; }
-        .checklist-hotel { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); border-left-color: #388E3C; }
-        .checklist-hotel h4 { color: #1B5E20; }
-        .emergency-item p, .checklist-item p { color: #5D4037; font-size: 0.95rem; line-height: 1.6; margin: 5px 0; }
-        .emergency-item a, .checklist-item a { color: #C62828; font-weight: 600; text-decoration: none; }
+        .emergency-item, .checklist-item { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); padding: 15px; border-radius: 15px; border-left: 4px solid var(--primary-700); }
+        .emergency-item h4, .checklist-item h4 { color: var(--primary-900); margin-bottom: 8px; font-size: 1.1rem; }
+        .checklist-snorkel { background: linear-gradient(135deg, var(--primary-100), #D6EEF8); border-left-color: var(--primary-500); }
+        .checklist-snorkel h4 { color: var(--primary-900); }
+        .checklist-typhoon { background: linear-gradient(135deg, var(--sand-100), #FFF8F0); border-left-color: var(--sand-500); }
+        .checklist-typhoon h4 { color: var(--sand-700); }
+        .checklist-car { background: linear-gradient(135deg, var(--primary-100), #D6EEF8); border-left-color: var(--primary-400); }
+        .checklist-car h4 { color: var(--primary-900); }
+        .checklist-hotel { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); border-left-color: var(--primary-700); }
+        .checklist-hotel h4 { color: var(--primary-900); }
+        .emergency-item p, .checklist-item p { color: var(--text-dark); font-size: 0.95rem; line-height: 1.6; margin: 5px 0; }
+        .emergency-item a, .checklist-item a { color: var(--primary-700); font-weight: 600; text-decoration: none; }
         .emergency-item a:hover, .checklist-item a:hover { text-decoration: underline; }
 
         /* Section cards matching day-card style */
@@ -299,7 +302,7 @@
             margin-bottom: 25px;
             overflow: hidden;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 3px solid var(--shisa-brown);
+            border: 3px solid var(--primary-700);
         }
         .section-header {
             padding: 20px 25px;
@@ -310,27 +313,20 @@
         }
         .section-header h2 { font-size: 1.6rem; }
         .section-body { padding: 25px; }
-        .section-checklist { --section-color: #FF9800; --section-color-light: #FFB74D; }
-        .section-flight { --section-color: #0077B6; --section-color-light: #0096C7; }
-        .section-weather { --section-color: #1976D2; --section-color-light: #42A5F5; }
-        .section-emergency { --section-color: #C62828; --section-color-light: #EF5350; }
+        .section-checklist { --section-color: var(--primary-500); --section-color-light: var(--primary-300); }
+        .section-flight { --section-color: var(--primary-700); --section-color-light: var(--primary-500); }
+        .section-weather { --section-color: var(--primary-700); --section-color-light: var(--primary-400); }
+        .section-emergency { --section-color: var(--primary-900); --section-color-light: var(--primary-700); }
         .section-card .section-header { background: linear-gradient(135deg, var(--section-color), var(--section-color-light)); }
 
 
         /* Weather info inside day-card */
         .weather-info { padding: 15px; margin: 15px 0; border-radius: 12px; }
         .weather-info h4 { margin: 0 0 10px 0; font-size: 1rem; }
-        .weather-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 0.9rem; color: #424242; }
-        .day-1 .weather-info { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 4px solid #FF9800; }
-        .day-1 .weather-info h4 { color: #E65100; }
-        .day-2 .weather-info { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); border-left: 4px solid #00B4D8; }
-        .day-2 .weather-info h4 { color: #006064; }
-        .day-3 .weather-info { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); border-left: 4px solid #0077B6; }
-        .day-3 .weather-info h4 { color: #01579B; }
-        .day-4 .weather-info { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); border-left: 4px solid #FF8C42; }
-        .day-4 .weather-info h4 { color: #E65100; }
-        .day-5 .weather-info { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); border-left: 4px solid #5C2D91; }
-        .day-5 .weather-info h4 { color: #4A148C; }
+        .weather-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 12px; font-size: 0.9rem; color: #424242; }
+        .weather-info-grid > div { white-space: nowrap; }
+        .weather-info { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); border-left: 4px solid var(--day-color, var(--primary-700)); }
+        .weather-info h4 { color: var(--primary-900); }
 
         .weather-card {
             background: rgba(255,255,255,0.95);
@@ -338,26 +334,26 @@
             margin-bottom: 25px;
             padding: 25px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-            border: 3px solid var(--deep-ocean);
+            border: 3px solid var(--primary-700);
         }
-        .weather-card h3 { color: var(--deep-ocean); margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
+        .weather-card h3 { color: var(--primary-700); margin-bottom: 15px; font-size: 1.4rem; text-align: center; }
         .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
-        .weather-day { background: linear-gradient(135deg, #E0F7FA, #B2EBF2); padding: 15px; border-radius: 15px; border-left: 4px solid var(--deep-ocean); }
-        .weather-day h4 { color: #006064; margin-bottom: 10px; font-size: 1.1rem; }
+        .weather-day { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); padding: 15px; border-radius: 15px; border-left: 4px solid var(--primary-700); }
+        .weather-day h4 { color: var(--primary-900); margin-bottom: 10px; font-size: 1.1rem; }
         .weather-day ul { list-style: none; padding-left: 0; }
         .weather-day ul li { color: #424242; font-size: 0.95rem; line-height: 1.6; margin-bottom: 5px; padding-left: 20px; position: relative; }
         .weather-day ul li::before { content: '🌊'; position: absolute; left: 0; }
 
         .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85rem; margin-right: 5px; border: 1px solid transparent; }
-        .tag-food { background: #FFF3BF; color: #E67700; border-color: #FFD43B; }
-        .tag-attraction { background: #E7F5FF; color: #1971C2; border-color: #74C0FC; }
-        .tag-shopping { background: #F3D9FA; color: #9C36B5; border-color: #E599F7; }
-        .tag-nature { background: #D3F9D8; color: #2B8A3E; border-color: #8CE99A; }
-        .tag-beach { background: #E0F7FA; color: #006064; border-color: #80DEEA; }
-        .tag-water { background: #E3F2FD; color: #0D47A1; border-color: #90CAF9; }
-        .tag-transport { background: #D0EBFF; color: #1864AB; border-color: #74C0FC; }
-        .tag-hotel { background: #FFE8CC; color: #D35400; border-color: #F0B27A; }
-        .tag-onsen { background: #FCE4EC; color: #C62828; border-color: #F48FB1; }
+        .tag-food { background: var(--sand-100); color: var(--sand-700); border-color: var(--sand-300); }
+        .tag-attraction { background: var(--primary-100); color: var(--primary-900); border-color: var(--primary-200); }
+        .tag-shopping { background: #E0F4FF; color: var(--primary-700); border-color: var(--primary-200); }
+        .tag-nature { background: var(--primary-100); color: var(--primary-900); border-color: var(--primary-200); }
+        .tag-beach { background: var(--primary-100); color: var(--primary-900); border-color: var(--primary-300); }
+        .tag-water { background: var(--primary-100); color: var(--primary-900); border-color: var(--primary-200); }
+        .tag-transport { background: #E0F4FF; color: var(--primary-700); border-color: var(--primary-300); }
+        .tag-hotel { background: var(--sand-100); color: var(--sand-700); border-color: var(--sand-300); }
+        .tag-onsen { background: var(--sand-100); color: var(--sand-700); border-color: var(--sand-300); }
 
         .transport-between {
             display: flex;
@@ -387,27 +383,27 @@
             line-height: 1.4;
         }
         /* 開車 */
-        .transport-between.drive .transport-icon { background: linear-gradient(135deg, #E65100, #FF8C42); }
-        .transport-between.drive .transport-line { background: linear-gradient(135deg, #FFF3E0, #FFE0B2); color: #E65100; border: 1px solid #FFB74D; border-left: none; }
+        .transport-between.drive .transport-icon { background: linear-gradient(135deg, var(--sand-700), var(--sand-500)); }
+        .transport-between.drive .transport-line { background: linear-gradient(135deg, var(--sand-100), #FFF8F0); color: var(--sand-700); border: 1px solid var(--sand-300); border-left: none; }
         /* 步行 */
-        .transport-between.walk .transport-icon { background: linear-gradient(135deg, #2E7D32, #4CAF50); }
-        .transport-between.walk .transport-line { background: linear-gradient(135deg, #E8F5E9, #C8E6C9); color: #2E7D32; border: 1px solid #81C784; border-left: none; }
+        .transport-between.walk .transport-icon { background: linear-gradient(135deg, var(--primary-500), var(--primary-300)); }
+        .transport-between.walk .transport-line { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); color: var(--primary-700); border: 1px solid var(--primary-200); border-left: none; }
         /* 電車 */
-        .transport-between.train .transport-icon { background: linear-gradient(135deg, #7B1FA2, #AB47BC); }
-        .transport-between.train .transport-line { background: linear-gradient(135deg, #F3E5F5, #E1BEE7); color: #7B1FA2; border: 1px solid #BA68C8; border-left: none; }
+        .transport-between.train .transport-icon { background: linear-gradient(135deg, var(--primary-900), var(--primary-700)); }
+        .transport-between.train .transport-line { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); color: var(--primary-900); border: 1px solid var(--primary-200); border-left: none; }
         /* 預設（接駁車等） */
-        .transport-between.shuttle .transport-icon { background: linear-gradient(135deg, #1565C0, #42A5F5); }
-        .transport-between.shuttle .transport-line { background: linear-gradient(135deg, #E3F2FD, #BBDEFB); color: #1565C0; border: 1px solid #64B5F6; border-left: none; }
+        .transport-between.shuttle .transport-icon { background: linear-gradient(135deg, var(--primary-700), var(--primary-400)); }
+        .transport-between.shuttle .transport-line { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); color: var(--primary-700); border: 1px solid var(--primary-200); border-left: none; }
 
         .notes {
-            background: linear-gradient(135deg, #FFF9DB, #FFF3BF);
-            border-left: 5px solid var(--sunset-orange);
+            background: linear-gradient(135deg, var(--sand-100), #FFF8F0);
+            border-left: 5px solid var(--sand-500);
             padding: 15px 20px;
             margin: 20px 25px 25px;
             border-radius: 0 15px 15px 0;
         }
-        .notes h4 { color: #E67700; margin-bottom: 8px; font-size: 1.05rem; }
-        .notes ul { list-style: none; color: #74603D; font-size: 1rem; }
+        .notes h4 { color: var(--sand-700); margin-bottom: 8px; font-size: 1.05rem; }
+        .notes ul { list-style: none; color: var(--text-dark); font-size: 1rem; }
         .notes ul li { margin-bottom: 5px; padding-left: 25px; position: relative; }
         .notes ul li::before { content: '🐚'; position: absolute; left: 0; }
 
@@ -416,8 +412,8 @@
             padding: 30px;
             background: rgba(255,255,255,0.85);
             border-radius: 25px;
-            border: 3px solid var(--deep-ocean);
-            color: var(--shisa-brown);
+            border: 3px solid var(--primary-700);
+            color: var(--text-dark);
         }
         .shisa-decoration { font-size: 3rem; margin: 10px 0; }
 
@@ -432,7 +428,7 @@
             margin-bottom: 25px;
             padding: 10px 20px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            border: 2px solid var(--deep-ocean);
+            border: 2px solid var(--primary-700);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -440,10 +436,10 @@
         }
         .quick-nav-select {
             padding: 8px 14px;
-            border: 2px solid var(--deep-ocean);
+            border: 2px solid var(--primary-700);
             border-radius: 20px;
             background: rgba(255,255,255,0.95);
-            color: var(--deep-ocean);
+            color: var(--primary-700);
             font-family: 'Noto Sans TC', sans-serif;
             font-size: 0.9rem;
             font-weight: 600;
@@ -459,16 +455,16 @@
             padding-right: 32px;
         }
         .quick-nav-select:hover, .quick-nav-select:focus {
-            background-color: var(--deep-ocean);
+            background-color: var(--primary-700);
             color: white;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
         }
         .print-toggle {
             padding: 6px 14px;
-            border: 2px solid var(--deep-ocean);
+            border: 2px solid var(--primary-700);
             border-radius: 15px;
             background: rgba(255,255,255,0.95);
-            color: var(--deep-ocean);
+            color: var(--primary-700);
             font-family: 'Noto Sans TC', sans-serif;
             font-size: 0.8rem;
             font-weight: 600;
@@ -477,7 +473,7 @@
             margin-left: auto;
             white-space: nowrap;
         }
-        .print-toggle:hover { background: var(--deep-ocean); color: white; }
+        .print-toggle:hover { background: var(--primary-700); color: white; }
 
         /* Hourly Weather */
         .hourly-weather {
@@ -494,16 +490,16 @@
         .hw-block { background: rgba(255,255,255,0.85); border-radius: 10px; padding: 8px 4px; text-align: center; border: 1px solid rgba(0,0,0,0.06); min-width: 56px; flex-shrink: 0; }
         .hw-block-time { font-size: 0.72rem; font-weight: 600; color: #555; margin-bottom: 2px; }
         .hw-block-loc { font-size: 0.6rem; color: #fff; border-radius: 6px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; line-height: 1.4; white-space: nowrap; }
-        .hw-loc-0 { background: #0077B6; }
-        .hw-loc-1 { background: #E65100; }
-        .hw-loc-2 { background: #2D936C; }
-        .hw-loc-3 { background: #5C2D91; }
+        .hw-loc-0 { background: var(--primary-700); }
+        .hw-loc-1 { background: var(--primary-500); }
+        .hw-loc-2 { background: var(--primary-900); }
+        .hw-loc-3 { background: var(--primary-400); }
         .hw-block-icon { font-size: 1.2rem; line-height: 1.2; }
-        .hw-block-temp { font-size: 0.78rem; font-weight: 700; color: #E65100; margin: 1px 0; }
-        .hw-block-rain { font-size: 0.68rem; color: #1565C0; }
-        .hw-block-rain.hw-rain-high { color: #0D47A1; font-weight: 700; }
+        .hw-block-temp { font-size: 0.78rem; font-weight: 700; color: var(--primary-900); margin: 1px 0; }
+        .hw-block-rain { font-size: 0.68rem; color: var(--primary-700); }
+        .hw-block-rain.hw-rain-high { color: var(--primary-900); font-weight: 700; }
         .hw-loading { text-align: center; padding: 12px; color: #999; font-size: 0.85rem; }
-        .hw-error { text-align: center; padding: 12px; color: #C62828; font-size: 0.85rem; background: #FFEBEE; border-radius: 8px; }
+        .hw-error { text-align: center; padding: 12px; color: var(--primary-900); font-size: 0.85rem; background: var(--primary-100); border-radius: 8px; }
 
         /* Print mode */
         .print-mode { background: #fff !important; }
@@ -547,17 +543,17 @@
         .hotel-parking {
             margin-top: 12px;
             padding: 10px 15px;
-            background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+            background: linear-gradient(135deg, var(--primary-100), #E0F4FF);
             border-radius: 10px;
-            border: 1px solid #81C784;
+            border: 1px solid var(--primary-200);
             font-size: 0.95rem;
-            color: #2E7D32;
+            color: var(--primary-900);
             display: flex;
             align-items: flex-start;
             gap: 8px;
             flex-wrap: wrap;
         }
-        .hotel-parking strong { color: #1B5E20; }
+        .hotel-parking strong { color: var(--primary-900); }
 
         @media print {
             .quick-nav { display: none !important; }
@@ -575,6 +571,8 @@
             .quick-nav { padding: 8px 12px; }
             .quick-nav-select { font-size: 0.8rem; padding: 6px 28px 6px 10px; }
             .print-toggle { font-size: 0.8rem; padding: 6px 10px; }
+            .weather-info-grid { grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 0.85rem; }
+            .weather-info-grid > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         }
     </style>
 </head>
