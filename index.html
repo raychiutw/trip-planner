@@ -320,13 +320,6 @@
         .section-card .section-header { background: linear-gradient(135deg, var(--section-color), var(--section-color-light)); }
 
 
-        /* Weather info inside day-card */
-        .weather-info { padding: 15px; margin: 15px 0; border-radius: 12px; }
-        .weather-info h4 { margin: 0 0 10px 0; font-size: 1rem; }
-        .weather-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 8px; font-size: 0.9rem; color: #424242; }
-        .weather-info-grid > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .weather-info { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); border-left: 4px solid var(--day-color, var(--primary-700)); }
-        .weather-info h4 { color: var(--primary-900); }
 
         .weather-card {
             background: rgba(255,255,255,0.95);
@@ -513,7 +506,7 @@
         .print-mode .parking-info, .print-mode .hotel-parking, .print-mode .budget-card, .print-mode .notes,
         .print-mode .restaurant-choices, .print-mode .restaurant-choice, .print-mode .souvenir-info,
         .print-mode .transport-line, .print-mode .transport-icon, .print-mode .transport-between,
-        .print-mode .weather-info, .print-mode .hourly-weather {
+        .print-mode .hourly-weather {
             background: #fff !important; box-shadow: none !important; animation: none !important;
         }
         .print-mode .hw-block { background: #fff !important; border-color: #ccc !important; }
@@ -571,9 +564,6 @@
             .quick-nav { padding: 8px 12px; }
             .quick-nav-select { font-size: 0.8rem; padding: 6px 28px 6px 10px; }
             .print-toggle { font-size: 0.8rem; padding: 6px 10px; }
-            .weather-info { padding: 10px 12px; }
-            .weather-info-grid { grid-template-columns: 1fr 1fr; gap: 4px 6px; font-size: 0.8rem; }
-            .weather-info-grid > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         }
     </style>
 </head>
@@ -668,15 +658,6 @@
                     <span class="date">7月29日（三）</span>
                 </div>
                 <span class="accommodation-badge">🏨 Vessel Hotel Campana</span>
-            </div>
-            <div class="weather-info">
-                <h4>☀️ 北谷天氣預報</h4>
-                <div class="weather-info-grid">
-                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
-                    <div>☀️ <strong>天氣：</strong>晴時多雲</div>
-                    <div>💧 <strong>降雨機率：</strong>20%</div>
-                    <div>🌊 <strong>海況：</strong>適合戲水</div>
-                </div>
             </div>
             <div class="hourly-weather" id="hourly-1">
                 <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
@@ -856,15 +837,6 @@
                     <span class="date">7月30日（四）</span>
                 </div>
                 <span class="accommodation-badge">🏨 Super Hotel 名護</span>
-            </div>
-            <div class="weather-info">
-                <h4>☀️ 恩納村・名護天氣預報</h4>
-                <div class="weather-info-grid">
-                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
-                    <div>☀️ <strong>天氣：</strong>晴</div>
-                    <div>💧 <strong>降雨機率：</strong>20%</div>
-                    <div>🌊 <strong>海況：</strong>適合浮潛</div>
-                </div>
             </div>
             <div class="hourly-weather" id="hourly-2">
                 <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
@@ -1083,15 +1055,6 @@
                 </div>
                 <span class="accommodation-badge">🏨 Super Hotel 名護（連住）</span>
             </div>
-            <div class="weather-info">
-                <h4>☀️ 本部・瀨底天氣預報</h4>
-                <div class="weather-info-grid">
-                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 32°C</div>
-                    <div>☀️ <strong>天氣：</strong>晴時多雲</div>
-                    <div>💧 <strong>降雨機率：</strong>30%</div>
-                    <div>🌊 <strong>海況：</strong>適合戲水</div>
-                </div>
-            </div>
             <div class="hourly-weather" id="hourly-3">
                 <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
             </div>
@@ -1289,15 +1252,6 @@
                     <span class="date">8月1日（六）</span>
                 </div>
                 <span class="accommodation-badge">🏨 東橫inn 那霸</span>
-            </div>
-            <div class="weather-info">
-                <h4>☀️ 古宇利島・那霸天氣預報</h4>
-                <div class="weather-info-grid">
-                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
-                    <div>⛅ <strong>天氣：</strong>多雲時晴</div>
-                    <div>💧 <strong>降雨機率：</strong>30%</div>
-                    <div>🌊 <strong>海況：</strong>普通</div>
-                </div>
             </div>
             <div class="hourly-weather" id="hourly-4">
                 <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
@@ -1567,15 +1521,6 @@
                     <span class="date">8月2日（日）</span>
                 </div>
                 <span class="accommodation-badge">✈️ 回程</span>
-            </div>
-            <div class="weather-info">
-                <h4>⛅ 那霸天氣預報</h4>
-                <div class="weather-info-grid">
-                    <div>🌡️ <strong>氣溫：</strong>27°C ~ 33°C</div>
-                    <div>⛅ <strong>天氣：</strong>多雲</div>
-                    <div>💧 <strong>降雨機率：</strong>30%</div>
-                    <div>🚝 <strong>交通：</strong>單軌＋步行</div>
-                </div>
             </div>
             <div class="hourly-weather" id="hourly-5">
                 <div class="hw-loading">⏳ 正在載入逐時天氣預報...</div>
@@ -1994,25 +1939,6 @@
             container.innerHTML = html;
         }
 
-        function updateSummary(container, merged) {
-            var parent = container.closest('.day-card');
-            if (!parent) return;
-            var info = parent.querySelector('.weather-info');
-            if (!info) return;
-            var temps = merged.temps.slice(6, 22);
-            var minT = Math.round(Math.min.apply(null, temps));
-            var maxT = Math.round(Math.max.apply(null, temps));
-            var maxRain = Math.max.apply(null, merged.rains.slice(6, 22));
-            var code = mostCommonCode(merged.codes, 8, 18);
-            var icon = WMO_ICONS[code] || '❓';
-            var divs = info.querySelectorAll('div > div');
-            if (divs.length >= 3) {
-                divs[0].innerHTML = '🌡️ <strong>氣溫：</strong>' + minT + '°C ~ ' + maxT + '°C';
-                divs[1].innerHTML = icon + ' <strong>天氣：</strong>' + (code <= 1 ? '晴' : code <= 2 ? '晴時多雲' : code <= 3 ? '多雲' : '有雨');
-                divs[2].innerHTML = '💧 <strong>降雨機率：</strong>' + maxRain + '%';
-            }
-        }
-
         function fetchDay(day) {
             var container = document.getElementById(day.id);
             if (!container) return;
@@ -2052,7 +1978,6 @@
                     }
                 }
                 renderHourly(container, merged, day);
-                updateSummary(container, merged);
             }).catch(function(err) {
                 container.innerHTML = '<div class="hw-error">天氣資料載入失敗：' + err.message + '</div>';
             });
