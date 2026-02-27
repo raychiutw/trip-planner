@@ -323,8 +323,8 @@
         /* Weather info inside day-card */
         .weather-info { padding: 15px; margin: 15px 0; border-radius: 12px; }
         .weather-info h4 { margin: 0 0 10px 0; font-size: 1rem; }
-        .weather-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 12px; font-size: 0.9rem; color: #424242; }
-        .weather-info-grid > div { white-space: nowrap; }
+        .weather-info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 8px; font-size: 0.9rem; color: #424242; }
+        .weather-info-grid > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .weather-info { background: linear-gradient(135deg, var(--primary-100), #E0F4FF); border-left: 4px solid var(--day-color, var(--primary-700)); }
         .weather-info h4 { color: var(--primary-900); }
 
@@ -571,8 +571,9 @@
             .quick-nav { padding: 8px 12px; }
             .quick-nav-select { font-size: 0.8rem; padding: 6px 28px 6px 10px; }
             .print-toggle { font-size: 0.8rem; padding: 6px 10px; }
-            .weather-info-grid { grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 0.85rem; }
-            .weather-info-grid > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            .weather-info { padding: 10px 12px; }
+            .weather-info-grid { grid-template-columns: 1fr 1fr; gap: 4px 6px; font-size: 0.8rem; }
+            .weather-info-grid > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
         }
     </style>
 </head>
@@ -691,8 +692,8 @@
                 </div>
                 <div class="hotel-parking">
                     🅿️ <strong>停車場：</strong>¥500/晚（先到先得，滿了用附近提攜停車場）｜
-                    <a href="https://maps.google.com/?q=26.3282,127.7632" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                    <a href="https://maps.apple.com/?ll=26.3282,127.7632" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <a href="https://maps.google.com/?q=26.3151,127.7545" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.3151,127.7545" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
                     <span class="map-link mapcode map-link-inline">📟 33 525 382</span>
                 </div>
             </div>
@@ -879,8 +880,8 @@
                 </div>
                 <div class="hotel-parking">
                     🅿️ <strong>停車場：</strong>免費｜
-                    <a href="https://maps.google.com/?q=26.5918,127.9772" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                    <a href="https://maps.apple.com/?ll=26.5918,127.9772" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <a href="https://maps.google.com/?q=26.6045,127.9742" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.6045,127.9742" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
                     <span class="map-link mapcode map-link-inline">📟 206 688 382</span>
                 </div>
             </div>
@@ -921,7 +922,7 @@
                             👙 店家提供全套裝備（面鏡、呼吸管、救生衣）
                         </div>
                         <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>¥100/次｜<a href="https://maps.google.com/?q=26.4395,127.7673" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4395,127.7673" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 062 685</span>
+                            🅿️ <strong>停車場：</strong>¥100/次｜<a href="https://maps.google.com/?q=26.4450,127.7714" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4450,127.7714" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 062 685</span>
                         </div>
                     </div>
                 </div>
@@ -944,7 +945,7 @@
                         <span class="tag tag-attraction">景點</span>
                         <span class="tag tag-nature">自然</span>
                         <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>免費｜入場費 ¥100｜<a href="https://maps.google.com/?q=26.4372,127.8534" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4372,127.8534" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 312 039</span>
+                            🅿️ <strong>停車場：</strong>免費｜入場費 ¥100
                         </div>
                     </div>
                 </div>
@@ -1103,8 +1104,8 @@
                 </div>
                 <div class="hotel-parking">
                     🅿️ <strong>停車場：</strong>免費｜
-                    <a href="https://maps.google.com/?q=26.5918,127.9772" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                    <a href="https://maps.apple.com/?ll=26.5918,127.9772" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <a href="https://maps.google.com/?q=26.6045,127.9742" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.6045,127.9742" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
                     <span class="map-link mapcode map-link-inline">📟 206 688 382</span>
                 </div>
             </div>
@@ -1149,7 +1150,7 @@
                             🐚 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品
                         </div>
                         <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href="https://maps.google.com/?q=26.6941,127.8775" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6941,127.8775" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 553 075 797</span>
+                            🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href="https://maps.google.com/?q=26.6908,127.8757" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6908,127.8757" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 553 075 797</span>
                         </div>
                     </div>
                 </div>
@@ -1208,7 +1209,7 @@
                         <span class="tag tag-beach">海灘</span>
                         <span class="tag tag-nature">自然</span>
                         <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>¥1,000/次｜<a href="https://maps.google.com/?q=26.6568,127.8529" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6568,127.8529" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 822 215</span>｜淋浴 ¥500<br>
+                            🅿️ <strong>停車場：</strong>¥1,000/次｜<a href="https://maps.google.com/?q=26.6500,127.8563" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6500,127.8563" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 822 264</span>｜淋浴 ¥500<br>
                             🏖️ 設施齊全：更衣室、淋浴間、租借用品
                         </div>
                     </div>
@@ -1312,8 +1313,8 @@
                 </div>
                 <div class="hotel-parking">
                     🅿️ <strong>停車場：</strong>¥550/晚（先到先得，數量有限）｜
-                    <a href="https://maps.google.com/?q=26.2153,127.6791" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                    <a href="https://maps.apple.com/?ll=26.2153,127.6791" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                    <a href="https://maps.google.com/?q=26.2186,127.6837" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                    <a href="https://maps.apple.com/?ll=26.2186,127.6837" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
                     <span class="map-link mapcode map-link-inline">📟 33 157 382</span>
                 </div>
             </div>
@@ -1351,8 +1352,8 @@
                         <span class="tag tag-attraction">景點</span>
                         <span class="tag tag-nature">自然</span>
                         <div class="parking-info">
-                            🅿️ <strong>古宇利大橋展望台停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6895,128.0253" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6895,128.0253" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 662 831</span><br>
-                            🅿️ <strong>心形岩停車場：</strong>¥300/次｜<a href="https://maps.google.com/?q=26.7023,128.0314" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.7023,128.0314" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 751 149</span>
+                            🅿️ <strong>古宇利大橋展望台停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6789,128.0128" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6789,128.0128" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 662 831</span><br>
+                            🅿️ <strong>心形岩停車場：</strong>¥300/次｜<a href="https://maps.google.com/?q=26.7137,128.0148" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.7137,128.0148" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 751 179</span>
                         </div>
                     </div>
                 </div>
@@ -1420,9 +1421,6 @@
                         <a href="https://maps.apple.com/?q=伊芸サービスエリア" target="_blank" class="map-link apple">🍎 Apple Map</a>
                         <span class="map-link mapcode">📟 33 835 282</span>
                         <span class="tag tag-food">美食</span>
-                        <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.4484,127.8231" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4484,127.8231" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 160 503</span>
-                        </div>
                     </div>
                 </div>
 
@@ -1446,7 +1444,7 @@
                             🕐 <strong>營業時間：</strong>10:00~22:00（專門店）｜寶可夢中心 10:00~22:00
                         </div>
                         <div class="parking-info">
-                            🅿️ <strong>停車場：</strong>免費，約 4,000 台｜<a href="https://maps.google.com/?q=イオンモール沖縄ライカム駐車場" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=イオンモール沖縄ライカム駐車場" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 530 406</span>
+                            🅿️ <strong>停車場：</strong>免費，約 4,000 台｜<a href="https://maps.google.com/?q=26.3138,127.7966" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.3138,127.7966" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 530 406</span>
                         </div>
                     </div>
                 </div>
