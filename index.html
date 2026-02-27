@@ -480,7 +480,7 @@
         .hourly-weather-title { font-size: 0.95rem; font-weight: 600; color: #555; }
         .hw-update-time { font-size: 0.78rem; color: #999; }
         .hw-grid { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; padding-bottom: 6px; scroll-behavior: smooth; }
-        .hw-block { background: rgba(255,255,255,0.9); border-radius: 12px; padding: 10px 8px; text-align: center; border: 1px solid rgba(0,0,0,0.06); min-width: calc((100% - 40px) / 6); flex-shrink: 0; }
+        .hw-block { background: rgba(255,255,255,0.9); border-radius: 12px; padding: 10px 8px; text-align: center; border: 1px solid rgba(0,0,0,0.06); min-width: calc((100% - 56px) / 8); flex-shrink: 0; }
         .hw-block.hw-now { border: 2px solid var(--primary-700); background: var(--primary-100); }
         .hw-block-time { font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 3px; }
         .hw-block-loc { font-size: 0.7rem; color: #fff; border-radius: 6px; padding: 2px 6px; display: inline-block; margin-bottom: 3px; line-height: 1.4; white-space: nowrap; }
@@ -1944,7 +1944,7 @@
             html += '<span class="hourly-weather-title">⏱️ 逐時天氣預報 — ' + day.label + '</span>';
             html += '<span class="hw-update-time">更新：' + currentHour + ':' + String(now.getMinutes()).padStart(2,'0') + '</span>';
             html += '</div><div class="hw-grid">';
-            for (var h = 6; h <= 21; h++) {
+            for (var h = 0; h <= 23; h++) {
                 var li = getLocIdx(day, h);
                 var icon = WMO_ICONS[merged.codes[h]] || '❓';
                 var temp = Math.round(merged.temps[h]);
