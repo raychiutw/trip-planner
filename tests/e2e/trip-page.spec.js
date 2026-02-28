@@ -97,7 +97,7 @@ test.describe('導航功能', () => {
 test.describe('漢堡選單', () => {
   test('選單按鈕開關 menu', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const menuDrop = page.locator('#menuDrop');
 
     // 初始關閉
@@ -107,14 +107,14 @@ test.describe('漢堡選單', () => {
     await menuBtn.click();
     await expect(menuDrop).toHaveClass(/open/);
 
-    // 再點擊關閉
-    await menuBtn.click();
+    // 點擊 X 關閉（滿版 overlay 覆蓋漢堡按鈕）
+    await page.locator('.menu-close').click();
     await expect(menuDrop).not.toHaveClass(/open/);
   });
 
   test('選單項目點擊後捲動並關閉選單', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const menuDrop = page.locator('#menuDrop');
 
     await menuBtn.click();
@@ -130,16 +130,16 @@ test.describe('漢堡選單', () => {
     await expect(page.locator('#sec-flight')).toBeInViewport();
   });
 
-  test('點擊選單外部關閉選單', async ({ page }) => {
+  test('點擊 X 按鈕關閉選單', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const menuDrop = page.locator('#menuDrop');
 
     await menuBtn.click();
     await expect(menuDrop).toHaveClass(/open/);
 
-    // 點擊頁面其他位置
-    await page.locator('#tripContent').click({ position: { x: 10, y: 10 } });
+    // 點擊選單內的 X 關閉按鈕
+    await page.locator('.menu-close').click();
     await expect(menuDrop).not.toHaveClass(/open/);
   });
 });
@@ -148,7 +148,7 @@ test.describe('漢堡選單', () => {
 test.describe('深色模式', () => {
   test('切換深色模式 toggle body.dark', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const body = page.locator('body');
 
     // 初始無 dark
@@ -167,7 +167,7 @@ test.describe('深色模式', () => {
 
   test('深色模式按鈕文字切換', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
     await menuBtn.click();
     const darkBtn = page.locator('[data-action="toggle-dark"]');
@@ -180,7 +180,7 @@ test.describe('深色模式', () => {
 
   test('深色模式保存到 localStorage', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
     await menuBtn.click();
     await page.locator('[data-action="toggle-dark"]').click();
@@ -370,7 +370,7 @@ test.describe('列印模式', () => {
   test('切換列印模式', async ({ page }) => {
     await page.goto('/');
     const body = page.locator('body');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
     // 開啟選單 → 點擊列印模式
     await menuBtn.click();
@@ -387,7 +387,7 @@ test.describe('列印模式', () => {
 test.describe('行程切換', () => {
   test('切換行程檔 dialog 出現', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
     await menuBtn.click();
     await page.locator('[data-action="switch-trip"]').click();
@@ -398,7 +398,7 @@ test.describe('行程切換', () => {
 
   test('點擊另一行程後載入新資料', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
     await menuBtn.click();
     await page.locator('[data-action="switch-trip"]').click();
