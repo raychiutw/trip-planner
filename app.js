@@ -148,7 +148,7 @@ function renderTimelineEvent(ev) {
         html += escHtml(ev.title || '');
     }
     html += '</span>';
-    if (hasBody) html += '<span class="tl-arrow">▸</span>';
+    if (hasBody) html += '<span class="tl-arrow">＋</span>';
     html += '</div>';
     if (ev.note) html += '<div class="tl-desc">' + escHtml(ev.note) + '</div>';
     if (hasBody) {
@@ -185,7 +185,7 @@ function renderHotel(hotel) {
     var nameHtml = escHtml(hotel.name || '');
     var hotelUrl = escUrl(hotel.url);
     if (hotelUrl) nameHtml = '<a href="' + hotelUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
-    html += '<div class="col-row">🏨 ' + nameHtml + ' <span class="arrow">▸</span></div>';
+    html += '<div class="col-row">🏨 ' + nameHtml + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
     if (hotel.details && hotel.details.length) {
         html += '<div class="hotel-detail-grid">';
@@ -211,7 +211,7 @@ function renderHotel(hotel) {
 /* ===== Render: Budget ===== */
 function renderBudget(budget) {
     var html = '';
-    html += '<div class="col-row">💰 ' + escHtml(budget.summary || '') + ' <span class="arrow">▸</span></div>';
+    html += '<div class="col-row">💰 ' + escHtml(budget.summary || '') + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
     if (budget.items && budget.items.length) {
         html += '<table class="budget-table">';
@@ -675,7 +675,7 @@ function buildMenu(data) {
     var html = '<div class="menu-col">';
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
-        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">\ud83d\udccd D' + id + ' ' + escHtml(day.label) + '</button>';
+        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">Day ' + id + '</button>';
     });
     html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
@@ -701,13 +701,19 @@ function toggleEv(e, el) {
     if (e.target.tagName === 'A' || e.target.closest('a')) return;
     var ev = el.closest('.tl-event');
     ev.classList.toggle('expanded');
-    el.setAttribute('aria-expanded', ev.classList.contains('expanded'));
+    var isExpanded = ev.classList.contains('expanded');
+    el.setAttribute('aria-expanded', isExpanded);
+    var arrow = el.querySelector('.tl-arrow');
+    if (arrow) arrow.textContent = isExpanded ? '－' : '＋';
 }
 function toggleCol(el) {
     el.classList.toggle('open');
     var detail = el.nextElementSibling;
     if (detail) detail.classList.toggle('open');
-    el.setAttribute('aria-expanded', el.classList.contains('open'));
+    var isOpen = el.classList.contains('open');
+    el.setAttribute('aria-expanded', isOpen);
+    var arrow = el.querySelector('.arrow');
+    if (arrow) arrow.textContent = isOpen ? '－' : '＋';
 }
 function toggleDark() {
     document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
@@ -734,14 +740,15 @@ function scrollToSec(id) {
     document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
-function toggleMenu(el) {
+function toggleMenu() {
     var menu = document.getElementById('menuDrop');
-    if (menu.classList.contains('open')) { menu.classList.remove('open'); document.body.style.overflow = ''; return; }
-    var rect = el.getBoundingClientRect();
-    menu.style.top = (rect.bottom + 4) + 'px';
-    menu.style.right = (window.innerWidth - rect.right) + 'px';
-    menu.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    if (menu.classList.contains('open')) {
+        menu.classList.remove('open');
+        document.body.style.overflow = '';
+    } else {
+        menu.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
 }
 function toggleHw(el) {
     var p = el.closest('.hourly-weather');
@@ -900,12 +907,6 @@ function autoScrollToday(dates) {
 /* ===== Central Event Delegation ===== */
 document.addEventListener('click', function(e) {
     var t = e.target;
-
-    // 0. Close menu when clicking outside (before other handlers)
-    var menu = document.getElementById('menuDrop');
-    if (menu && menu.classList.contains('open') && !t.closest('.dh-menu') && !t.closest('#menuDrop')) {
-        menu.classList.remove('open'); document.body.style.overflow = '';
-    }
 
     // 1. data-action buttons (menu, nav, toggles)
     var actionEl = t.closest('[data-action]');
