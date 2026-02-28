@@ -212,7 +212,7 @@ tests/
 ├── unit/                    ← 單元測試（Vitest + jsdom）
 │   ├── escape.test.js       ← escHtml, escUrl, stripInlineHandlers
 │   ├── render.test.js       ← 所有 render 函式
-│   ├── validate.test.js     ← validateDay, renderWarnings
+│   ├── validate.test.js     ← validateTripData, validateDay, renderWarnings
 │   └── routing.test.js      ← fileToSlug, slugToFile
 ├── integration/             ← 整合測試（Vitest + 真實 JSON）
 │   └── render-pipeline.test.js ← 真實 JSON → render 函式 → HTML 驗證
