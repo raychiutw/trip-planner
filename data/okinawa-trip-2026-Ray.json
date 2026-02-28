@@ -153,48 +153,1539 @@
       "id": 1,
       "date": "7/29（三）",
       "label": "北谷",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-1\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div>\n\n                <!-- Hotel -->\n                <div class=\"col-row\">🏨 <a href=\"https://bobbyfun.tw/2023-04-27-2319/\" target=\"_blank\">Vessel Hotel Campana Okinawa</a> <span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <div class=\"hotel-detail-grid\">\n                        <span>📍 北谷美國村內</span><span>🚶 步行 1 分到美國村</span><span>♨️ 頂樓海景溫泉</span><span>🍽️ 含早餐（沖繩料理）</span>\n                    </div>\n                    <div class=\"hotel-sub\">🅿️ <strong>停車場：</strong>¥500/晚（先到先得）｜\n                        <a href=\"https://maps.google.com/?q=北谷町営駐車場+美浜\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                        <a href=\"https://maps.apple.com/?q=北谷町営駐車場+美浜\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                        <span class=\"map-link mapcode map-link-inline\">📟 33 525 382</span>\n                    </div>\n                    <div class=\"hotel-sub\">🛒 <strong>附近超市：</strong><a href=\"https://gogojp.tw/aeon-chatan/\" target=\"_blank\">AEON 北谷店</a>｜步行 5 分鐘｜食品區營業至 24:00｜\n                        <a href=\"https://maps.google.com/?q=イオン北谷店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                    </div>\n                </div>\n\n                <div class=\"timeline\">\n                    <!-- 10:45 抵達那霸機場 -->\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">10:45</span>\n                            <span class=\"tl-title\">🛫 抵達那霸機場</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">入境、領取行李</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=那霸機場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=那霸機場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 002 519</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚝 單軌電車 那霸空港→歌町/美榮橋 約15~27分鐘</div>\n                    </div>\n\n                    <!-- 12:00 租車取車 -->\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">12:00-12:30</span>\n                            <span class=\"tl-title\">🚗 租車取車</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">取車地點：歌町 or 美榮橋町｜辦理租車手續、熟悉車輛操作（日本靠左行駛）</p>\n                            <div class=\"info-box reservation\">\n                                🔑 <strong>需備文件：</strong>台灣駕照正本＋日文譯本＋護照<br>\n                                ⚠️ 日文譯本可至各地監理所辦理（NT$100）<br>\n                                📅 <strong>租車期間：</strong>7/29 12:00 ~ 8/1 還車\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 開車 約40分鐘（國道58號北上）</div>\n                    </div>\n\n                    <!-- 13:40 Check in -->\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">13:40-14:00</span>\n                            <span class=\"tl-title\">🏨 <a href=\"https://bobbyfun.tw/2023-04-27-2319/\" target=\"_blank\">Check in Vessel Hotel</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">放行李，換裝準備玩水</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 526 450</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚶 步行 約3分鐘</div>\n                    </div>\n\n                    <!-- 14:30 美國村 -->\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">14:00-17:30</span>\n                            <span class=\"tl-title\">🏖️ <a href=\"https://bobbyfun.tw/2024-01-08-2709/\" target=\"_blank\">美國村＋Sunset Beach</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">美國村內逛街購物，Sunset Beach 沙灘戲水。異國風情的彩色商圈，集結服飾店、雜貨店、餐廳</p>\n                            <div class=\"nav-links\">\n                                <strong>美國村：</strong>\n                                <a href=\"https://maps.google.com/?q=American+Village+Chatan+Okinawa\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=American+Village+Chatan+Okinawa\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 526 450</span><br>\n                                <strong>Sunset Beach：</strong>\n                                <a href=\"https://maps.google.com/?q=Sunset+Beach+Chatan+Okinawa\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=Sunset+Beach+Chatan+Okinawa\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 526 419</span>\n                            </div>\n                            <div class=\"info-box souvenir\">\n                                🎁 <strong>北谷伴手禮推薦：</strong><br>\n                                🏪 <a href=\"https://maps.google.com/?q=ドン・キホーテ+北谷店\" target=\"_blank\">唐吉訶德 北谷店</a>（24H 免稅藥妝＋零食）\n                                <a href=\"https://maps.google.com/?q=ドン・キホーテ+北谷店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=ドンキホーテ北谷店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 526 241</span><br>\n                                🛒 <a href=\"https://maps.google.com/?q=イオン北谷店\" target=\"_blank\">AEON 北谷店</a>（大型商場，沖繩限定零食＋伴手禮專區）\n                                <a href=\"https://maps.google.com/?q=イオン北谷店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=イオン北谷店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 526 084</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚶 步行回飯店沖洗 約3分鐘</div>\n                    </div>\n\n                    <!-- 18:00 晚餐 -->\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">18:00-19:30</span>\n                            <span class=\"tl-title\">🍽️ 美國村晚餐＋散步</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">美國村商圈內餐廳選擇豐富，用餐後沿海岸散步看夕陽夜景</p>\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>晚餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">\n                                    🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=琉球新麺通堂+北谷美浜店\" target=\"_blank\">琉球新麵 通堂 北谷美浜店</a> — 沖繩人氣拉麵，「男味」濃厚豚骨 / 「女味」清爽雞湯，¥800~<br>\n                                    <a href=\"https://maps.google.com/?q=琉球新麺通堂+北谷美浜店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                    <a href=\"https://maps.apple.com/?q=琉球新麺通堂北谷美浜店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                    <span class=\"map-link mapcode map-link-inline\">📟 33 526 312</span>\n                                    <span class=\"restaurant-meta\">⏰ 11:00~24:00 ｜ 不接受預約</span>\n                                </div>\n                                <div class=\"restaurant-choice\">\n                                    🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=焼肉きんぐ+北谷店\" target=\"_blank\">焼肉きんぐ 北谷店</a> — 日本人氣燒肉吃到飽，¥2,980~/人（90分鐘）<br>\n                                    <a href=\"https://maps.google.com/?q=焼肉きんぐ+北谷店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                    <a href=\"https://maps.apple.com/?q=焼肉きんぐ北谷店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                    <span class=\"map-link mapcode map-link-inline\">📟 33 526 178</span>\n                                    <span class=\"restaurant-meta\">⏰ 平日 17:00~24:00／假日 11:00~24:00 ｜ 📞 <a href=\"https://epark.jp/shopinfo/jsp608996/\" target=\"_blank\">EPARK 預約</a></span>\n                                </div>\n                                <div class=\"restaurant-choice\">\n                                    🥩 <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=やっぱりステーキ+北谷店\" target=\"_blank\">やっぱりステーキ 北谷店</a> — CP 值之王！溶岩石板燒牛排 ¥1,000 起，白飯＋沙拉＋湯吃到飽<br>\n                                    <a href=\"https://maps.google.com/?q=やっぱりステーキ+北谷店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                    <a href=\"https://maps.apple.com/?q=やっぱりステーキ北谷店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                    <span class=\"map-link mapcode map-link-inline\">📟 33 526 450</span>\n                                    <span class=\"restaurant-meta\">⏰ 11:00~24:00 ｜ 不接受預約</span>\n                                </div>\n                            </div>\n                        </div>\n                    </div>\n\n                    <!-- 20:00 溫泉 -->\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\">\n                            <span class=\"tl-time\">20:00</span>\n                            <span class=\"tl-title\">♨️ 飯店頂樓海景溫泉</span>\n                        </div>\n                        <div class=\"tl-transit\" style=\"color:var(--gray);font-style:italic;padding-left:8px;\">邊泡湯邊看夜景</div>\n                    </div>\n                </div>\n\n                <!-- Budget -->\n                <div class=\"col-row\">💰 當日預算 約 ¥29,000（NT$ 6,380）<span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <table class=\"budget-table\">\n                        <tr><td>🚗 租車（3天分攤：¥6,000/天）</td><td>¥6,000</td></tr>\n                        <tr><td>🍽️ 晚餐</td><td>¥3,000</td></tr>\n                        <tr><td>🏨 Vessel Hotel Campana</td><td>¥20,000</td></tr>\n                    </table>\n                </div>"
+      "content": {
+        "hotel": {
+          "url": "https://bobbyfun.tw/2023-04-27-2319/",
+          "name": "Vessel Hotel Campana Okinawa",
+          "details": [
+            "📍 北谷美國村內",
+            "🚶 步行 1 分到美國村",
+            "♨️ 頂樓海景溫泉",
+            "🍽️ 含早餐（沖繩料理）"
+          ],
+          "subs": [
+            {
+              "label": "🅿️ 停車場",
+              "text": "¥500/晚（先到先得）",
+              "location": {
+                "name": "北谷町営駐車場 美浜",
+                "mapcode": "33 525 382"
+              }
+            },
+            {
+              "label": "🛒 附近超市",
+              "text": "AEON 北谷店｜步行 5 分鐘｜食品區營業至 24:00",
+              "location": {
+                "name": "イオン北谷店"
+              }
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "10:45",
+            "emoji": "🛫",
+            "title": "抵達那霸機場",
+            "description": "入境、領取行李",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "mapcode": "33 002 519"
+              }
+            ],
+            "transit": {
+              "emoji": "🚝",
+              "text": "單軌電車 那霸空港→歌町/美榮橋 約15~27分鐘"
+            }
+          },
+          {
+            "time": "12:00-12:30",
+            "emoji": "🚗",
+            "title": "租車取車",
+            "description": "取車地點：歌町 or 美榮橋町｜辦理租車手續、熟悉車輛操作（日本靠左行駛）",
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "items": [
+                  "🔑 需備文件：台灣駕照正本＋日文譯本＋護照 ⚠️ 日文譯本可至各地監理所辦理（NT$100） 📅 租車期間：7/29 12:00 ~ 8/1 還車"
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "開車 約40分鐘（國道58號北上）"
+            }
+          },
+          {
+            "time": "13:40-14:00",
+            "emoji": "🏨",
+            "titleUrl": "https://bobbyfun.tw/2023-04-27-2319/",
+            "title": "Check in Vessel Hotel",
+            "description": "放行李，換裝準備玩水",
+            "locations": [
+              {
+                "name": "Vessel Hotel Campana Okinawa",
+                "mapcode": "33 526 450"
+              }
+            ],
+            "transit": {
+              "emoji": "🚶",
+              "text": "步行 約3分鐘"
+            }
+          },
+          {
+            "time": "14:00-17:30",
+            "emoji": "🏖",
+            "titleUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+            "title": "美國村＋Sunset Beach",
+            "description": "美國村內逛街購物，Sunset Beach 沙灘戲水。異國風情的彩色商圈，集結服飾店、雜貨店、餐廳",
+            "locations": [
+              {
+                "label": "美國村",
+                "name": "American Village Chatan Okinawa",
+                "mapcode": "33 526 450"
+              },
+              {
+                "label": "Sunset Beach",
+                "name": "Sunset Beach Chatan Okinawa",
+                "mapcode": "33 526 419"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "souvenir",
+                "title": "北谷伴手禮推薦",
+                "items": [
+                  {
+                    "emoji": "🏪",
+                    "name": "\udfea 唐吉訶德 北谷店",
+                    "note": "24H 免稅藥妝＋零食",
+                    "location": {
+                      "name": "ドン・キホーテ 北谷店",
+                      "mapcode": "33 526 241"
+                    }
+                  },
+                  {
+                    "emoji": "🛒",
+                    "name": "\uded2 AEON 北谷店",
+                    "note": "大型商場，沖繩限定零食＋伴手禮專區",
+                    "location": {
+                      "name": "イオン北谷店",
+                      "mapcode": "33 526 084"
+                    }
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚶",
+              "text": "步行回飯店沖洗 約3分鐘"
+            }
+          },
+          {
+            "time": "18:00-19:30",
+            "emoji": "🍽",
+            "title": "️ 美國村晚餐＋散步",
+            "description": "美國村商圈內餐廳選擇豐富，用餐後沿海岸散步看夕陽夜景",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "琉球新麵 通堂 北谷美浜店",
+                    "desc": "沖繩人氣拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "琉球新麺通堂 北谷美浜店",
+                      "mapcode": "33 526 312"
+                    },
+                    "hours": "11:00~24:00",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "焼肉きんぐ 北谷店",
+                    "desc": "日本人氣燒肉吃到飽",
+                    "price": "¥2,980~/人（90分鐘）",
+                    "location": {
+                      "name": "焼肉きんぐ 北谷店",
+                      "mapcode": "33 526 178"
+                    },
+                    "hours": "平日 17:00~24:00／假日 11:00~24:00",
+                    "reservation": "EPARK 預約",
+                    "reservationUrl": "https://epark.jp/shopinfo/jsp608996/"
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "其他推薦",
+                    "name": "やっぱりステーキ 北谷店",
+                    "desc": "CP 值之王！溶岩石板燒牛排 ¥1,000 起",
+                    "location": {
+                      "name": "やっぱりステーキ 北谷店",
+                      "mapcode": "33 526 450"
+                    },
+                    "hours": "11:00~24:00",
+                    "reservation": null,
+                    "price": "¥1,000~"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "20:00",
+            "emoji": "♨",
+            "title": "️ 飯店頂樓海景溫泉",
+            "note": "邊泡湯邊看夜景"
+          }
+        ],
+        "budget": {
+          "summary": "當日預算 約 ¥29,000（NT$ 6,380）",
+          "items": [
+            {
+              "label": "🚗 租車（3天分攤：¥6,000/天）",
+              "amount": "¥6,000"
+            },
+            {
+              "label": "🍽️ 晚餐",
+              "amount": "¥3,000"
+            },
+            {
+              "label": "🏨 Vessel Hotel Campana",
+              "amount": "¥20,000"
+            }
+          ]
+        }
+      }
     },
     {
       "id": 2,
       "date": "7/30（四）",
       "label": "青之洞窟",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-2\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div>\n\n                <div class=\"col-row\">🏨 <a href=\"https://awo9john.com/super-hotel-nago/\" target=\"_blank\">Super Hotel Okinawa Nago</a> <span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <div class=\"hotel-detail-grid\"><span>📍 名護市</span><span>♨️ 天然溫泉「萬座之湯」</span><span>🍽️ 含免費早餐（DIY taco rice）</span><span>📅 連住 2 晚（7/30-31）</span></div>\n                    <div class=\"hotel-sub\">🅿️ <strong>停車場：</strong>免費｜<a href=\"https://maps.google.com/?q=スーパーホテル沖縄名護+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=スーパーホテル沖縄名護+駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 382</span></div>\n                    <div class=\"hotel-sub\">🛒 <strong>附近超市：</strong>MaxValu なご店｜步行 7 分鐘｜24 小時營業｜晚 9 點後熟食半價｜<a href=\"https://maps.google.com/?q=マックスバリュなご店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a></div>\n                    <div class=\"hotel-sub\">🏪 <strong>唐吉軻德：</strong><a href=\"https://rocky.tw/mpglobaldonki/\" target=\"_blank\">名護店</a>｜開車 5 分鐘｜24 小時營業｜<a href=\"https://maps.google.com/?q=ドン・キホーテ名護店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a></div>\n                </div>\n\n                <div class=\"timeline\">\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\"><span class=\"tl-time\">10:00</span><span class=\"tl-title\">🚗 出發前往真榮田岬</span></div>\n                        <div class=\"tl-transit\">⤷ 🚗 北谷→真榮田岬 約30分鐘（國道58號北上）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">10:30-12:30</span>\n                            <span class=\"tl-title\">🤿 <a href=\"https://bobbyfun.tw/2024-01-11-2731/\" target=\"_blank\">青之洞窟浮潛</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=真榮田岬+青の洞窟\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=真榮田岬青の洞窟\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 206 062 685</span>\n                            </div>\n                            <div class=\"info-box reservation\">⚠️ <strong>須提前預約！</strong>暑假非常搶手，建議出發前 1~2 個月預約<br>🕐 建議預約早上場次，海況較穩定<br>👙 店家提供全套裝備（面鏡、呼吸管、救生衣）＋免費水中拍照</div>\n                            <div class=\"info-box restaurants\">\n                                🤿 <strong>中文教練店家推薦：</strong>\n                                <div class=\"restaurant-choice\">⭐ <strong><a href=\"https://www.bestdiveokinawa.com/\" target=\"_blank\">青潛 Best Dive Okinawa</a></strong> — 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加<span class=\"restaurant-meta\">💰 ~¥8,000/人（含船費＋拍照20張以上）｜自有停車場＋接駁車</span></div>\n                                <div class=\"restaurant-choice\">⭐ <strong><a href=\"https://www.natural-blue.net/tw/\" target=\"_blank\">Natural Blue 自然之藍</a></strong> — 台灣人中文教練，沖繩安全優良店認證，CP 值最高<span class=\"restaurant-meta\">💰 ~¥5,500/人（未稅）｜僅收日幣現金 ｜ 6歲以上</span></div>\n                                <div class=\"restaurant-choice\">⭐ <strong><a href=\"https://heichaodive.com/\" target=\"_blank\">黑潮潛水 Kuroshio Diving</a></strong> — 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯<span class=\"restaurant-meta\">💰 ~¥8,000/人（全包無隱藏費用）｜ 9歲以上</span></div>\n                            </div>\n                            <div class=\"info-box parking\">🅿️ <strong>停車場：</strong>¥100/次｜<a href=\"https://maps.google.com/?q=真栄田岬+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=真栄田岬+駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 062 685</span></div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 約15分鐘 真榮田岬→萬座毛</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">12:45-13:15</span>\n                            <span class=\"tl-title\">🐘 <a href=\"https://bobbyfun.tw/2024-01-07-2697/\" target=\"_blank\">萬座毛</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=万座毛\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=万座毛\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 206 312 039</span>\n                            </div>\n                            <div class=\"info-box parking\">🅿️ <strong>停車場：</strong>免費｜入場費 ¥100</div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 約35分鐘 萬座毛→名護（國道58號北上）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">14:00-15:30</span>\n                            <span class=\"tl-title\">🍜 名護市午餐</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">名護市區覓食，多種沖繩在地美食可選</p>\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>午餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=我部祖河食堂+名護店\" target=\"_blank\">我部祖河食堂</a> — 創業 50 年以上名護名店，傳統沖繩麵，¥700~<br><a href=\"https://maps.google.com/?q=我部祖河食堂+名護店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=我部祖河食堂名護店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 694</span><span class=\"restaurant-meta\">⏰ 10:00~20:00（週四公休）｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=焼肉もとぶ牧場+本部店\" target=\"_blank\">焼肉もとぶ牧場 本部店</a> — 沖繩品牌「もとぶ牛」直營燒肉，午間 ¥1,500~<br><a href=\"https://maps.google.com/?q=焼肉もとぶ牧場+本部店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=焼肉もとぶ牧場本部店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 795 582</span><span class=\"restaurant-meta\">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href=\"https://www.tablecheck.com/en/shops/motobu-farm/reserve\" target=\"_blank\">TableCheck 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🍽️ <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=百年古家+大家+うふやー\" target=\"_blank\">百年古家 大家（うふやー）</a> — 明治古民家改建餐廳，阿古豬涮涮鍋 ¥1,500~<br><a href=\"https://maps.google.com/?q=百年古家+大家+うふやー\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=百年古家大家うふやー\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 745 056</span><span class=\"restaurant-meta\">⏰ 午 11:00~17:00／夜 18:00~22:00 ｜ 📞 <a href=\"https://www.tablecheck.com/en/shops/ufuya/reserve\" target=\"_blank\">TableCheck 預約</a></span></div>\n                            </div>\n                            <div class=\"info-box souvenir\">🎁 <strong>恩納・名護伴手禮：</strong><br>🍠 <a href=\"https://maps.google.com/?q=御菓子御殿+恩納店\" target=\"_blank\">御菓子御殿 恩納店</a>（紅芋塔工廠直營） <a href=\"https://maps.google.com/?q=御菓子御殿+恩納店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=御菓子御殿恩納店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 096 786</span><br>🏪 <a href=\"https://maps.google.com/?q=道の駅許田\" target=\"_blank\">道の駅許田</a>（沖繩人氣最高休息站） <a href=\"https://maps.google.com/?q=道の駅許田\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=道の駅許田\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 476 710</span></div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">15:30</span>\n                            <span class=\"tl-title\">🏨 <a href=\"https://awo9john.com/super-hotel-nago/\" target=\"_blank\">Check in Super Hotel</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">下午自由休息，傍晚出門覓食</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=Super+Hotel+Okinawa+Nago\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=Super+Hotel+Okinawa+Nago\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 206 688 637</span>\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">18:00-19:30</span>\n                            <span class=\"tl-title\">🍽️ 名護晚餐＋溫泉</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">名護市區覓食，飯後回飯店泡天然溫泉「萬座之湯」</p>\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>晚餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=麺屋はちれん+名護\" target=\"_blank\">麵屋 はちれん</a> — 名護人氣拉麵，濃厚豚骨魚介系，¥800~<br><a href=\"https://maps.google.com/?q=麺屋はちれん+名護\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=麺屋はちれん名護\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 326</span><span class=\"restaurant-meta\">⏰ 11:30~14:30, 18:00~22:00 ｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=焼肉乃我那覇+名護店\" target=\"_blank\">焼肉乃我那覇 名護店</a> — 沖繩品牌豬「あぐー豚」燒肉，¥2,000~<br><a href=\"https://maps.google.com/?q=焼肉乃我那覇+名護店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=焼肉乃我那覇名護店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 450</span><span class=\"restaurant-meta\">⏰ 午 11:30~15:00／夜 17:30~22:30（週三公休）｜ 📞 <a href=\"https://www.hotpepper.jp/strJ004248399/\" target=\"_blank\">HotPepper 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🍽️ <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=名護漁港食堂\" target=\"_blank\">名護漁港食堂</a> — 漁港直營，新鮮海鮮丼，¥1,000~<br><a href=\"https://maps.google.com/?q=名護漁港食堂\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=名護漁港食堂\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 171</span><span class=\"restaurant-meta\">⏰ 11:00~15:30 ｜ 不接受預約</span></div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n\n                <div class=\"col-row\">💰 當日預算 約 ¥27,200（NT$ 5,984）<span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <table class=\"budget-table\">\n                        <tr><td>🚗 租車（3天分攤）</td><td>¥6,000</td></tr><tr><td>⛽ 油資</td><td>¥1,000</td></tr><tr><td>🤿 浮潛費用（2人）</td><td>¥8,000</td></tr><tr><td>🐘 萬座毛入場</td><td>¥200</td></tr><tr><td>🍜 午餐＋晚餐</td><td>¥4,000</td></tr><tr><td>🏨 Super Hotel 名護</td><td>¥8,000</td></tr>\n                    </table>\n                    <ul class=\"notes-list\"><li><strong>防曬：</strong>使用防水 SPF50+，海裡紫外線更強</li><li><strong>水母：</strong>7-8月有水母，建議穿水母衣或選有防護網的區域</li><li><strong>浮潛預約：</strong>建議出發前 1-2 週在 Jalan 或 Asoview 預約</li></ul>\n                </div>"
+      "content": {
+        "hotel": {
+          "url": "https://awo9john.com/super-hotel-nago/",
+          "name": "Super Hotel Okinawa Nago",
+          "details": [
+            "📍 名護市",
+            "♨️ 天然溫泉「萬座之湯」",
+            "🍽️ 含免費早餐（DIY taco rice）",
+            "📅 連住 2 晚（7/30-31）"
+          ],
+          "subs": [
+            {
+              "label": "🅿️ 停車場",
+              "text": "免費",
+              "location": {
+                "name": "スーパーホテル沖縄名護 駐車場",
+                "mapcode": "206 688 382"
+              }
+            },
+            {
+              "label": "🛒 附近超市",
+              "text": "MaxValu なご店｜步行 7 分鐘｜24 小時營業｜晚 9 點後熟食半價",
+              "location": {
+                "name": "マックスバリュなご店"
+              }
+            },
+            {
+              "label": "🏪 唐吉軻德",
+              "text": "名護店｜開車 5 分鐘｜24 小時營業",
+              "location": {
+                "name": "ドン・キホーテ名護店"
+              }
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "10:00",
+            "emoji": "🚗",
+            "title": "出發前往真榮田岬",
+            "transit": {
+              "emoji": "🚗",
+              "text": "北谷→真榮田岬 約30分鐘（國道58號北上）"
+            }
+          },
+          {
+            "time": "10:30-12:30",
+            "emoji": "🤿",
+            "titleUrl": "https://bobbyfun.tw/2024-01-11-2731/",
+            "title": "青之洞窟浮潛",
+            "description": "沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁",
+            "locations": [
+              {
+                "name": "真榮田岬 青の洞窟",
+                "mapcode": "206 062 685"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "items": [
+                  "⚠️ 須提前預約！暑假非常搶手，建議出發前 1~2 個月預約",
+                  "🕐 建議預約早上場次，海況較穩定",
+                  "👙 店家提供全套裝備（面鏡、呼吸管、救生衣）＋免費水中拍照"
+                ]
+              },
+              {
+                "type": "restaurants",
+                "title": "🤿 中文教練店家推薦",
+                "restaurants": [
+                  {
+                    "emoji": "⭐",
+                    "name": "青潛 Best Dive Okinawa",
+                    "url": "https://www.bestdiveokinawa.com/",
+                    "desc": "全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加",
+                    "price": "~¥8,000/人（含船費＋拍照20張以上）",
+                    "location": {
+                      "name": "Best Dive Okinawa 青之洞窟"
+                    },
+                    "hours": null,
+                    "reservation": "自有停車場＋接駁車"
+                  },
+                  {
+                    "emoji": "⭐",
+                    "name": "Natural Blue 自然之藍",
+                    "url": "https://www.natural-blue.net/tw/",
+                    "desc": "台灣人中文教練，沖繩安全優良店認證，CP 值最高",
+                    "price": "~¥5,500/人（未稅）",
+                    "location": {
+                      "name": "Natural Blue 青之洞窟"
+                    },
+                    "hours": null,
+                    "reservation": "僅收日幣現金｜6歲以上"
+                  },
+                  {
+                    "emoji": "⭐",
+                    "name": "黑潮潛水 Kuroshio Diving",
+                    "url": "https://heichaodive.com/",
+                    "desc": "台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯",
+                    "price": "~¥8,000/人（全包無隱藏費用）",
+                    "location": {
+                      "name": "黑潮潛水 青之洞窟"
+                    },
+                    "hours": null,
+                    "reservation": "9歲以上"
+                  }
+                ]
+              },
+              {
+                "type": "parking",
+                "title": "停車場",
+                "price": "¥100/次",
+                "location": {
+                  "name": "真栄田岬 駐車場",
+                  "mapcode": "206 062 685"
+                }
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約15分鐘 真榮田岬→萬座毛"
+            }
+          },
+          {
+            "time": "12:45-13:15",
+            "emoji": "🐘",
+            "titleUrl": "https://bobbyfun.tw/2024-01-07-2697/",
+            "title": "萬座毛",
+            "description": "沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線",
+            "locations": [
+              {
+                "name": "万座毛",
+                "mapcode": "206 312 039"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "parking",
+                "title": "停車場",
+                "price": "免費｜入場費 ¥100"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約35分鐘 萬座毛→名護（國道58號北上）"
+            }
+          },
+          {
+            "time": "14:00-15:30",
+            "emoji": "🍜",
+            "title": "名護市午餐",
+            "description": "名護市區覓食，多種沖繩在地美食可選",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "我部祖河食堂",
+                    "desc": "創業 50 年以上名護名店",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "我部祖河食堂 名護店",
+                      "mapcode": "206 688 694"
+                    },
+                    "hours": "10:00~20:00（週四公休）",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "焼肉もとぶ牧場 本部店",
+                    "desc": "沖繩品牌「もとぶ牛」直營燒肉",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "焼肉もとぶ牧場 本部店",
+                      "mapcode": "206 795 582"
+                    },
+                    "hours": "午 11:30~15:00／夜 17:00~22:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve"
+                  },
+                  {
+                    "emoji": "🍽",
+                    "category": "其他推薦",
+                    "name": "百年古家 大家（うふやー）",
+                    "desc": "明治古民家改建餐廳，阿古豬涮涮鍋",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "百年古家 大家 うふやー",
+                      "mapcode": "206 745 056"
+                    },
+                    "hours": "午 11:00~17:00／夜 18:00~22:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve"
+                  }
+                ]
+              },
+              {
+                "type": "souvenir",
+                "title": "恩納・名護伴手禮",
+                "items": [
+                  {
+                    "emoji": "🍠",
+                    "name": "\udf60 御菓子御殿 恩納店",
+                    "note": "紅芋塔工廠直營",
+                    "location": {
+                      "name": "御菓子御殿 恩納店",
+                      "mapcode": "206 096 786"
+                    }
+                  },
+                  {
+                    "emoji": "🏪",
+                    "name": "\udfea 道の駅許田",
+                    "note": "沖繩人氣最高休息站",
+                    "location": {
+                      "name": "道の駅許田",
+                      "mapcode": "206 476 710"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "15:30",
+            "emoji": "🏨",
+            "titleUrl": "https://awo9john.com/super-hotel-nago/",
+            "title": "Check in Super Hotel",
+            "description": "下午自由休息，傍晚出門覓食",
+            "locations": [
+              {
+                "name": "Super Hotel Okinawa Nago",
+                "mapcode": "206 688 637"
+              }
+            ]
+          },
+          {
+            "time": "18:00-19:30",
+            "emoji": "🍽",
+            "title": "️ 名護晚餐＋溫泉",
+            "description": "名護市區覓食，飯後回飯店泡天然溫泉「萬座之湯」",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "麵屋 はちれん",
+                    "desc": "名護人氣拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "麺屋はちれん 名護",
+                      "mapcode": "206 688 326"
+                    },
+                    "hours": "11:30~14:30, 18:00~22:00",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "焼肉乃我那覇 名護店",
+                    "desc": "沖繩品牌豬「あぐー豚」燒肉",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "焼肉乃我那覇 名護店",
+                      "mapcode": "206 688 450"
+                    },
+                    "hours": "午 11:30~15:00／夜 17:30~22:30（週三公休）",
+                    "reservation": "HotPepper 預約",
+                    "reservationUrl": "https://www.hotpepper.jp/strJ004248399/"
+                  },
+                  {
+                    "emoji": "🍽",
+                    "category": "其他推薦",
+                    "name": "名護漁港食堂",
+                    "desc": "漁港直營，新鮮海鮮丼",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "名護漁港食堂",
+                      "mapcode": "206 688 171"
+                    },
+                    "hours": "11:00~15:30",
+                    "reservation": null
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "budget": {
+          "summary": "當日預算 約 ¥27,200（NT$ 5,984）",
+          "items": [
+            {
+              "label": "🚗 租車（3天分攤）",
+              "amount": "¥6,000"
+            },
+            {
+              "label": "⛽ 油資",
+              "amount": "¥1,000"
+            },
+            {
+              "label": "🤿 浮潛費用（2人）",
+              "amount": "¥8,000"
+            },
+            {
+              "label": "🐘 萬座毛入場",
+              "amount": "¥200"
+            },
+            {
+              "label": "🍜 午餐＋晚餐",
+              "amount": "¥4,000"
+            },
+            {
+              "label": "🏨 Super Hotel 名護",
+              "amount": "¥8,000"
+            }
+          ],
+          "notes": [
+            "防曬：使用防水 SPF50+，海裡紫外線更強",
+            "水母：7-8月有水母，建議穿水母衣或選有防護網的區域",
+            "浮潛預約：建議出發前 1-2 週在 Jalan 或 Asoview 預約"
+          ]
+        }
+      }
     },
     {
       "id": 3,
       "date": "7/31（五）",
       "label": "水族館",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-3\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div>\n\n                <div class=\"col-row\">🏨 <a href=\"https://awo9john.com/super-hotel-nago/\" target=\"_blank\">Super Hotel Nago</a>（連住第 2 晚）<span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <div class=\"hotel-detail-grid\"><span>📍 名護市（同昨晚）</span><span>🧳 行李不用搬</span><span>🍽️ 免費早餐</span></div>\n                    <div class=\"hotel-sub\">🅿️ <strong>停車場：</strong>免費｜<a href=\"https://maps.google.com/?q=スーパーホテル沖縄名護+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=スーパーホテル沖縄名護+駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 382</span></div>\n                </div>\n\n                <div class=\"timeline\">\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\"><span class=\"tl-time\">08:00</span><span class=\"tl-title\">🚗 出發前往水族館</span></div>\n                        <div class=\"tl-transit\">⤷ 🚗 名護→美麗海水族館 約30分鐘（國道449號往本部）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">08:30-12:30</span>\n                            <span class=\"tl-title\">🐠 <a href=\"https://www.klook.com/zh-TW/blog/top-tip-churaumi-aquarium-okinawa/\" target=\"_blank\">美麗海水族館</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。11:00 海豚秀必看</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=沖縄美ら海水族館\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=沖縄美ら海水族館\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 553 075 797</span>\n                            </div>\n                            <div class=\"info-box reservation\">🎫 <strong>門票：</strong>大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710<br>🕐 <strong>營業時間：</strong>08:30~18:30（夏季延長至20:00）<br>🐬 <strong>海豚秀：</strong>11:00 / 13:00 / 14:30 / 16:00（免費）<br>💡 建議先逛水族館，11:00 看海豚秀</div>\n                            <div class=\"info-box souvenir\">🎁 <strong>水族館伴手禮：</strong><br>🐠 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾<br>🐚 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品</div>\n                            <div class=\"info-box parking\">🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href=\"https://maps.google.com/?q=海洋博公園+P7駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=海洋博公園+P7駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 553 075 797</span></div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">12:30-14:00</span>\n                            <span class=\"tl-title\">🍽️ 水族館附近午餐</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>午餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=きしもと食堂+本部町\" target=\"_blank\">きしもと食堂</a> — 明治 38 年創業！傳奇沖繩麵，手打木灰麵條，¥600~<br><a href=\"https://maps.google.com/?q=きしもと食堂+本部町\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=きしもと食堂本部町\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 857 712</span><span class=\"restaurant-meta\">⏰ 11:00~17:00（週三公休）｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=焼肉もとぶ牧場+本部店\" target=\"_blank\">焼肉もとぶ牧場 本部店</a> — もとぶ牛直營，¥1,500~<br><a href=\"https://maps.google.com/?q=焼肉もとぶ牧場+本部店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=焼肉もとぶ牧場本部店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 795 582</span><span class=\"restaurant-meta\">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href=\"https://www.tablecheck.com/en/shops/motobu-farm/reserve\" target=\"_blank\">TableCheck 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🍽️ <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=海人食堂+本部漁港\" target=\"_blank\">海人食堂</a> — 本部漁港直營食堂，新鮮海鮮丼，¥1,000~<br><a href=\"https://maps.google.com/?q=海人食堂+本部漁港\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=海人食堂本部漁港\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 857 471</span><span class=\"restaurant-meta\">⏰ 11:00~15:30 ｜ 不接受預約</span></div>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 水族館→瀨底島 約15分鐘（過瀨底大橋即到）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">14:15-16:00</span>\n                            <span class=\"tl-title\">🏖️ <a href=\"https://www.jathao.com/2024/11/okinawa-sesoko-island.html\" target=\"_blank\">瀨底海灘戲水</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，可看到熱帶魚</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=瀬底ビーチ\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=瀬底ビーチ\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 206 822 241</span>\n                            </div>\n                            <div class=\"info-box parking\">🅿️ <strong>停車場：</strong>¥1,000/次｜<a href=\"https://maps.google.com/?q=瀬底ビーチ+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=瀬底ビーチ+駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 822 264</span>｜淋浴 ¥500<br>🏖️ 設施齊全：更衣室、淋浴間、租借用品</div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 瀨底島→Super Hotel 名護 約30分鐘</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">16:30-18:00</span>\n                            <span class=\"tl-title\">🍽️ 名護晚餐＋溫泉</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">回到名護市區覓食，飯後回飯店泡天然溫泉放鬆</p>\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>晚餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=幸ちゃんそば+名護\" target=\"_blank\">幸ちゃんそば</a> — 名護在地老字號沖繩麵，¥650~<br><a href=\"https://maps.google.com/?q=幸ちゃんそば+名護\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=幸ちゃんそば名護\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 585</span><span class=\"restaurant-meta\">⏰ 10:00~15:00（售完即止・週一公休）｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=焼肉五苑+名護店\" target=\"_blank\">焼肉五苑 名護店</a> — 平價燒肉吃到飽，¥1,980~/人<br><a href=\"https://maps.google.com/?q=焼肉五苑+名護店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=焼肉五苑名護店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 688 232</span><span class=\"restaurant-meta\">⏰ 平日 16:00~23:00／假日 12:00~23:00 ｜ 📞 <a href=\"https://epark.jp/shopinfo/jsp607670/\" target=\"_blank\">EPARK 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🍽️ <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=レストランふりっぱー+名護\" target=\"_blank\">レストラン ふりっぱー</a> — 1971 年創業名護老牌牛排！ヒレステーキ ¥2,700~。<strong>週三公休・僅收現金</strong><br><a href=\"https://maps.google.com/?q=レストランふりっぱー+名護\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=レストランふりっぱー名護\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 717 028</span><span class=\"restaurant-meta\">⏰ 平日 11:30~18:30／假日 11:30~21:00（僅收現金）｜ 不接受預約</span></div>\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\"><span class=\"tl-time\">18:30</span><span class=\"tl-title\">🏨 回到 Super Hotel 名護</span></div>\n                        <div class=\"tl-transit\" style=\"color:var(--gray);font-style:italic;padding-left:8px;\">泡天然溫泉「萬座之湯」放鬆，早點休息</div>\n                    </div>\n                </div>\n\n                <div class=\"col-row\">💰 當日預算 約 ¥24,360（NT$ 5,359）<span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <table class=\"budget-table\">\n                        <tr><td>🚗 租車（3天分攤）</td><td>¥6,000</td></tr><tr><td>🐠 水族館門票（2人）</td><td>¥4,360</td></tr><tr><td>🏖️ 瀨底海灘停車＋淋浴</td><td>¥2,000</td></tr><tr><td>🍽️ 午餐＋晚餐</td><td>¥4,000</td></tr><tr><td>🏨 Super Hotel 名護</td><td>¥8,000</td></tr>\n                    </table>\n                </div>"
+      "content": {
+        "hotel": {
+          "url": "https://awo9john.com/super-hotel-nago/",
+          "name": "Super Hotel Nago",
+          "details": [
+            "📍 名護市（同昨晚）",
+            "🧳 行李不用搬",
+            "🍽️ 免費早餐"
+          ],
+          "subs": [
+            {
+              "label": "🅿️ 停車場",
+              "text": "免費",
+              "location": {
+                "name": "スーパーホテル沖縄名護 駐車場",
+                "mapcode": "206 688 382"
+              }
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "08:00",
+            "emoji": "🚗",
+            "title": "出發前往水族館",
+            "transit": {
+              "emoji": "🚗",
+              "text": "名護→美麗海水族館 約30分鐘（國道449號往本部）"
+            }
+          },
+          {
+            "time": "08:30-12:30",
+            "emoji": "🐠",
+            "titleUrl": "https://www.klook.com/zh-TW/blog/top-tip-churaumi-aquarium-okinawa/",
+            "title": "美麗海水族館",
+            "description": "世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。11:00 海豚秀必看",
+            "locations": [
+              {
+                "name": "沖縄美ら海水族館",
+                "mapcode": "553 075 797"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "items": [
+                  "🎫 門票：大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710🕐 營業時間：08:30~18:30（夏季延長至20:00）🐬 海豚秀：11:00 / 13:00 / 14:30 / 16:00（免費）💡 建議先逛水族館，11:00 看海豚秀 🎁 水族館伴手禮：🐠 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾🐚 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品 🅿️ 停車場：免費（P7 最近入口）｜G Map Map 📟 553 075 797"
+                ]
+              }
+            ]
+          },
+          {
+            "time": "12:30-14:00",
+            "emoji": "🍽",
+            "title": "️ 水族館附近午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "きしもと食堂",
+                    "desc": "明治 38 年創業！傳奇沖繩麵",
+                    "price": "¥600~",
+                    "location": {
+                      "name": "きしもと食堂 本部町",
+                      "mapcode": "206 857 712"
+                    },
+                    "hours": "11:00~17:00（週三公休）",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "焼肉もとぶ牧場 本部店",
+                    "desc": "沖繩品牌「もとぶ牛」直營燒肉",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "焼肉もとぶ牧場 本部店",
+                      "mapcode": "206 795 582"
+                    },
+                    "hours": "午 11:30~15:00／夜 17:00~22:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve"
+                  },
+                  {
+                    "emoji": "🍽",
+                    "category": "其他推薦",
+                    "name": "海人食堂",
+                    "desc": "本部漁港直營食堂，新鮮生魚片",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "海人食堂 本部漁港",
+                      "mapcode": "206 857 471"
+                    },
+                    "hours": "11:00~15:30",
+                    "reservation": null
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "水族館→瀨底島 約15分鐘（過瀨底大橋即到）"
+            }
+          },
+          {
+            "time": "14:15-16:00",
+            "emoji": "🏖",
+            "titleUrl": "https://www.jathao.com/2024/11/okinawa-sesoko-island.html",
+            "title": "瀨底海灘戲水",
+            "description": "沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，可看到熱帶魚",
+            "locations": [
+              {
+                "name": "瀬底ビーチ",
+                "mapcode": "206 822 241"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "parking",
+                "title": "停車場",
+                "price": "¥1,000/次",
+                "location": {
+                  "name": "瀬底ビーチ 駐車場",
+                  "mapcode": "206 822 264"
+                }
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "瀨底島→Super Hotel 名護 約30分鐘"
+            }
+          },
+          {
+            "time": "16:30-18:00",
+            "emoji": "🍽",
+            "title": "️ 名護晚餐＋溫泉",
+            "description": "回到名護市區覓食，飯後回飯店泡天然溫泉放鬆",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "幸ちゃんそば",
+                    "desc": "名護在地老字號沖繩麵",
+                    "price": "¥650~",
+                    "location": {
+                      "name": "幸ちゃんそば 名護",
+                      "mapcode": "206 688 585"
+                    },
+                    "hours": "10:00~15:00（售完即止・週一公休）",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "焼肉五苑 名護店",
+                    "desc": "平價燒肉吃到飽",
+                    "price": "¥1,980~/人",
+                    "location": {
+                      "name": "焼肉五苑 名護店",
+                      "mapcode": "206 688 232"
+                    },
+                    "hours": "平日 16:00~23:00／假日 12:00~23:00",
+                    "reservation": "EPARK 預約",
+                    "reservationUrl": "https://epark.jp/shopinfo/jsp607670/"
+                  },
+                  {
+                    "emoji": "🍽",
+                    "category": "其他推薦",
+                    "name": "レストラン ふりっぱー",
+                    "desc": "1971 年創業名護老牌牛排！ヒレステーキ",
+                    "price": "¥2,700~",
+                    "location": {
+                      "name": "レストランふりっぱー 名護",
+                      "mapcode": "206 717 028"
+                    },
+                    "hours": "11:00~21:00（週三公休）",
+                    "reservation": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "18:30",
+            "emoji": "🏨",
+            "title": "回到 Super Hotel 名護",
+            "note": "泡天然溫泉「萬座之湯」放鬆，早點休息"
+          }
+        ],
+        "budget": {
+          "summary": "當日預算 約 ¥24,360（NT$ 5,359）",
+          "items": [
+            {
+              "label": "🚗 租車（3天分攤）",
+              "amount": "¥6,000"
+            },
+            {
+              "label": "🐠 水族館門票（2人）",
+              "amount": "¥4,360"
+            },
+            {
+              "label": "🏖️ 瀨底海灘停車＋淋浴",
+              "amount": "¥2,000"
+            },
+            {
+              "label": "🍽️ 午餐＋晚餐",
+              "amount": "¥4,000"
+            },
+            {
+              "label": "🏨 Super Hotel 名護",
+              "amount": "¥8,000"
+            }
+          ]
+        }
+      }
     },
     {
       "id": 4,
       "date": "8/1（六）",
       "label": "古宇利",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-4\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div>\n\n                <div class=\"col-row\">🏨 <a href=\"https://dorismaworld.com/toyokoinn-makishi/\" target=\"_blank\">東橫inn 那霸國際通美榮橋站</a> <span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <div class=\"hotel-detail-grid\"><span>📍 那霸美榮橋站旁</span><span>🚶 走路 1 分到國際通</span><span>🍽️ 含免費早餐</span><span>🚝 單軌美榮橋站步行 1 分</span></div>\n                    <div class=\"hotel-sub\">🅿️ <strong>停車場：</strong>¥550/晚（先到先得）｜<a href=\"https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅+駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 382</span></div>\n                    <div class=\"hotel-sub\">🛒 <strong>附近超市：</strong><a href=\"https://okinawa.letsgojp.com/archives/668971/\" target=\"_blank\">UNION 前島店</a>｜步行 2 分鐘｜24 小時營業｜<a href=\"https://maps.google.com/?q=フレッシュプラザユニオン前島店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a></div>\n                    <div class=\"hotel-sub\">🏪 <strong>唐吉軻德：</strong><a href=\"https://linshibi.com/?p=16331\" target=\"_blank\">國際通店</a>｜步行 7 分鐘｜09:00~03:00｜<a href=\"https://maps.google.com/?q=ドン・キホーテ国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a></div>\n                </div>\n\n                <div class=\"timeline\">\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\"><span class=\"tl-time\">10:00</span><span class=\"tl-title\">🚗 出發前往古宇利島</span></div>\n                        <div class=\"tl-transit\">⤷ 🚗 名護→古宇利島 約30分鐘（經屋我地島→古宇利大橋）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">10:30-12:00</span>\n                            <span class=\"tl-title\">🌉 <a href=\"https://tisshuang.com/blog/post/kouri-island\" target=\"_blank\">古宇利大橋＋心形岩</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">古宇利大橋全長 2km，兩側碧藍海水極為壯觀。心形岩（ハートロック）是沖繩最浪漫的拍照景點</p>\n                            <div class=\"nav-links\">\n                                <strong>古宇利大橋：</strong><a href=\"https://maps.google.com/?q=古宇利大橋\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=古宇利大橋\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 692 174</span><br>\n                                <strong>心形岩：</strong><a href=\"https://maps.google.com/?q=ハートロック+古宇利島\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=ハートロック古宇利島\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 751 179</span>\n                            </div>\n                            <div class=\"info-box parking\">🅿️ <strong>大橋展望台：</strong>免費｜<a href=\"https://maps.google.com/?q=古宇利島+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 662 831</span><br>🅿️ <strong>心形岩：</strong>¥300/次｜<a href=\"https://maps.google.com/?q=古宇利オーシャンタワー+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 751 179</span></div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">12:00-13:30</span>\n                            <span class=\"tl-title\">🍽️ 古宇利島午餐</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>午餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=古宇利島+沖縄そば\" target=\"_blank\">古宇利そば</a> — 島上手打沖繩麵，海景座位，¥700~<br><a href=\"https://maps.google.com/?q=古宇利島+沖縄そば\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=古宇利島沖縄そば\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 692 195</span><span class=\"restaurant-meta\">⏰ 11:00~18:00（週三公休）｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=焼肉もとぶ牧場+本部店\" target=\"_blank\">焼肉もとぶ牧場 本部店</a> — 離島回程順路，¥1,500~<br><a href=\"https://maps.google.com/?q=焼肉もとぶ牧場+本部店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=焼肉もとぶ牧場本部店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 206 795 582</span><span class=\"restaurant-meta\">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href=\"https://www.tablecheck.com/en/shops/motobu-farm/reserve\" target=\"_blank\">TableCheck 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🦐 <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island\" target=\"_blank\">蝦蝦飯（Shrimp Wagon）</a> — 島上排隊名店，夏威夷風蒜蝦飯，¥1,000~<br><a href=\"https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 692 174</span><span class=\"restaurant-meta\">⏰ 11:00~17:00 ｜ 不接受預約</span></div>\n                            </div>\n                            <div class=\"info-box souvenir\">🎁 <strong>古宇利島伴手禮：</strong><br>🏪 <a href=\"https://maps.google.com/?q=古宇利島物産センター\" target=\"_blank\">古宇利島物產中心</a>（島產黑糖＋海鹽＋限定零食） <a href=\"https://maps.google.com/?q=古宇利島物産センター\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=古宇利島物産センター\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 485 692 089</span></div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 古宇利島→伊芸SA 約50分鐘（經名護IC上高速）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">14:20-14:45</span>\n                            <span class=\"tl-title\">🛣️ 伊芸 SA 休息站</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">沖繩自動車道上的海景休息站，有展望台和沖繩小吃</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=伊芸サービスエリア\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=伊芸サービスエリア\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 835 282</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 伊芸SA→AEON Mall 來客夢 約15分鐘</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">15:00-18:00</span>\n                            <span class=\"tl-title\">🛍️ <a href=\"https://gogojp.tw/aeon-mall-rycom/\" target=\"_blank\">AEON Mall 沖繩來客夢</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">沖繩最大購物中心！1F <strong>寶可夢中心</strong>（沖繩限定風速狗＋皮卡丘周邊）、2F <strong>UNIQLO</strong>，還有超市、藥妝、沖繩伴手禮一次買齊</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=イオンモール沖縄ライカム\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=イオンモール沖縄ライカム\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 530 406</span>\n                            </div>\n                            <div class=\"info-box reservation\">🕐 <strong>營業時間：</strong>10:00~22:00（專門店）｜寶可夢中心 10:00~22:00</div>\n                            <div class=\"info-box parking\">🅿️ <strong>停車場：</strong>免費，約 4,000 台｜<a href=\"https://maps.google.com/?q=イオンモール沖縄ライカム+駐車場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=イオンモール沖縄ライカム+駐車場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 530 406</span></div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚗 AEON Mall→租車公司（歌町/美榮橋）約30分鐘</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\"><span class=\"tl-time\">18:30-19:00</span><span class=\"tl-title\">🚗 還車手續</span></div>\n                        <div class=\"tl-transit\">⤷ 🚶 步行至東橫inn 約5~10分鐘</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">19:10</span>\n                            <span class=\"tl-title\">🏨 <a href=\"https://dorismaworld.com/toyokoinn-makishi/\" target=\"_blank\">Check in 東橫inn</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">放好行李後出門覓食</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 157 413</span>\n                            </div>\n                            <div class=\"info-box souvenir\">🎁 <strong>那霸國際通伴手禮推薦：</strong><br>🍠 <a href=\"https://maps.google.com/?q=御菓子御殿+国際通り松尾店\" target=\"_blank\">御菓子御殿 國際通松尾店</a>（紅芋塔本店） <a href=\"https://maps.google.com/?q=御菓子御殿+国際通り松尾店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=御菓子御殿国際通り松尾店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 352</span><br>🧂 <a href=\"https://maps.google.com/?q=塩屋+国際通り店\" target=\"_blank\">鹽屋（まーすやー）國際通店</a>（雪鹽系列＋鹽味冰淇淋） <a href=\"https://maps.google.com/?q=塩屋+国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=塩屋国際通り店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 383</span></div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">19:30-21:00</span>\n                            <span class=\"tl-title\">🍽️ 那霸國際通晚餐</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>晚餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=通堂拉麵+小禄本店\" target=\"_blank\">琉球新麵 通堂 小禄本店</a> — 沖繩在地人氣 No.1 拉麵，¥800~<br><a href=\"https://maps.google.com/?q=通堂拉麵+小禄本店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=通堂拉麵小禄本店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 096 697</span><span class=\"restaurant-meta\">⏰ 11:00~24:00 ｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=琉球の牛+国際通り店\" target=\"_blank\">燒肉琉球の牛 國際通店</a> — 石垣牛＋阿古豬，¥2,000~<br><a href=\"https://maps.google.com/?q=琉球の牛+国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=琉球の牛国際通り店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 382</span><span class=\"restaurant-meta\">⏰ 17:00~23:00 ｜ 📞 <a href=\"https://www.tablecheck.com/en/shops/yakiniku-naha/reserve\" target=\"_blank\">TableCheck 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🍽️ <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=ジャッキーステーキハウス+那覇\" target=\"_blank\">Jack's Steak House</a> — 1953 年創業！沖繩最老牌牛排，¥2,400~。<strong>週三公休</strong><br><a href=\"https://maps.google.com/?q=ジャッキーステーキハウス+那覇\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=ジャッキーステーキハウス那覇\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 155 236</span><span class=\"restaurant-meta\">⏰ 11:00~翌 1:00（週三公休）｜ 不接受預約</span></div>\n                            </div>\n                        </div>\n                    </div>\n                </div>\n\n                <div class=\"col-row\">💰 當日預算 約 ¥21,620（NT$ 4,757）<span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <table class=\"budget-table\">\n                        <tr><td>🚗 租車（3天分攤）</td><td>¥6,000</td></tr><tr><td>⛽ 加滿油還車</td><td>¥2,000</td></tr><tr><td>🛣️ 高速通行費</td><td>¥780</td></tr><tr><td>🅿️ 心形岩停車</td><td>¥300</td></tr><tr><td>🦐 午餐</td><td>¥2,000</td></tr><tr><td>🍽️ 晚餐</td><td>¥2,000</td></tr><tr><td>🏨 東橫inn</td><td>¥8,000</td></tr>\n                    </table>\n                    <ul class=\"notes-list\"><li><strong>高速通行費：</strong>名護 IC → 北中城 IC 約 ¥780</li><li><strong>還車注意：</strong>還車前需加滿油，附近找加油站</li><li><strong>還車地點：</strong>歌町/美榮橋，步行可達東橫inn</li></ul>\n                </div>"
+      "content": {
+        "hotel": {
+          "url": "https://dorismaworld.com/toyokoinn-makishi/",
+          "name": "東橫inn 那霸國際通美榮橋站",
+          "details": [
+            "📍 那霸美榮橋站旁",
+            "🚶 走路 1 分到國際通",
+            "🍽️ 含免費早餐",
+            "🚝 單軌美榮橋站步行 1 分"
+          ],
+          "subs": [
+            {
+              "label": "🅿️ 停車場",
+              "text": "¥550/晚（先到先得）",
+              "location": {
+                "name": "東横INN那覇国際通り美栄橋駅 駐車場",
+                "mapcode": "33 157 382"
+              }
+            },
+            {
+              "label": "🛒 附近超市",
+              "text": "UNION 前島店｜步行 2 分鐘｜24 小時營業",
+              "location": {
+                "name": "フレッシュプラザユニオン前島店"
+              }
+            },
+            {
+              "label": "🏪 唐吉軻德",
+              "text": "國際通店｜步行 7 分鐘｜09:00~03:00",
+              "location": {
+                "name": "ドン・キホーテ国際通り店"
+              }
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "10:00",
+            "emoji": "🚗",
+            "title": "出發前往古宇利島",
+            "transit": {
+              "emoji": "🚗",
+              "text": "名護→古宇利島 約30分鐘（經屋我地島→古宇利大橋）"
+            }
+          },
+          {
+            "time": "10:30-12:00",
+            "emoji": "🌉",
+            "titleUrl": "https://tisshuang.com/blog/post/kouri-island",
+            "title": "古宇利大橋＋心形岩",
+            "description": "古宇利大橋全長 2km，兩側碧藍海水極為壯觀。心形岩（ハートロック）是沖繩最浪漫的拍照景點",
+            "locations": [
+              {
+                "label": "古宇利大橋",
+                "name": "古宇利大橋",
+                "mapcode": "485 692 174"
+              },
+              {
+                "label": "心形岩",
+                "name": "ハートロック 古宇利島",
+                "mapcode": "485 751 179"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "parking",
+                "title": "大橋展望台",
+                "price": "免費",
+                "location": {
+                  "name": "古宇利島 駐車場",
+                  "mapcode": "485 662 831"
+                }
+              }
+            ]
+          },
+          {
+            "time": "12:00-13:30",
+            "emoji": "🍽",
+            "title": "️ 古宇利島午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "古宇利そば",
+                    "desc": "島上手打沖繩麵",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "古宇利島 沖縄そば",
+                      "mapcode": "485 692 195"
+                    },
+                    "hours": "11:00~18:00（週三公休）",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "焼肉もとぶ牧場 本部店",
+                    "desc": "沖繩品牌「もとぶ牛」直營燒肉",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "焼肉もとぶ牧場 本部店",
+                      "mapcode": "206 795 582"
+                    },
+                    "hours": "午 11:30~15:00／夜 17:00~22:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve"
+                  },
+                  {
+                    "emoji": "🦐",
+                    "category": "其他推薦",
+                    "name": "蝦蝦飯（Shrimp Wagon）",
+                    "desc": "島上排隊名店",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "Shrimp Wagon Kouri Island",
+                      "mapcode": "485 692 174"
+                    },
+                    "hours": "11:00~17:00",
+                    "reservation": null
+                  }
+                ]
+              },
+              {
+                "type": "souvenir",
+                "title": "古宇利島伴手禮",
+                "items": [
+                  {
+                    "emoji": "🏪",
+                    "name": "\udfea 古宇利島物產中心",
+                    "note": "島產黑糖＋海鹽＋限定零食",
+                    "location": {
+                      "name": "古宇利島物産センター",
+                      "mapcode": "485 692 089"
+                    }
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "古宇利島→伊芸SA 約50分鐘（經名護IC上高速）"
+            }
+          },
+          {
+            "time": "14:20-14:45",
+            "emoji": "🛣",
+            "title": "️ 伊芸 SA 休息站",
+            "description": "沖繩自動車道上的海景休息站，有展望台和沖繩小吃",
+            "locations": [
+              {
+                "name": "伊芸サービスエリア",
+                "mapcode": "33 835 282"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "伊芸SA→AEON Mall 來客夢 約15分鐘"
+            }
+          },
+          {
+            "time": "15:00-18:00",
+            "emoji": "🛍",
+            "titleUrl": "https://gogojp.tw/aeon-mall-rycom/",
+            "title": "AEON Mall 沖繩來客夢",
+            "description": "沖繩最大購物中心！1F",
+            "locations": [
+              {
+                "name": "イオンモール沖縄ライカム",
+                "mapcode": "33 530 406"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "items": [
+                  "🕐 營業時間：10:00~22:00（專門店）｜寶可夢中心 10:00~22:00 🅿️ 停車場：免費，約 4,000 台｜G Map Map 📟 33 530 406"
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "AEON Mall→租車公司（歌町/美榮橋）約30分鐘"
+            }
+          },
+          {
+            "time": "18:30-19:00",
+            "emoji": "🚗",
+            "title": "還車手續",
+            "transit": {
+              "emoji": "🚶",
+              "text": "步行至東橫inn 約5~10分鐘"
+            }
+          },
+          {
+            "time": "19:10",
+            "emoji": "🏨",
+            "titleUrl": "https://dorismaworld.com/toyokoinn-makishi/",
+            "title": "Check in 東橫inn",
+            "description": "放好行李後出門覓食",
+            "locations": [
+              {
+                "name": "東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 413"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "souvenir",
+                "title": "那霸國際通伴手禮推薦",
+                "items": [
+                  {
+                    "emoji": "🍠",
+                    "name": "\udf60 御菓子御殿 國際通松尾店",
+                    "note": "紅芋塔本店",
+                    "location": {
+                      "name": "御菓子御殿 国際通り松尾店",
+                      "mapcode": "33 157 352"
+                    }
+                  },
+                  {
+                    "emoji": "🧂",
+                    "name": "🧂 鹽屋",
+                    "note": "まーすやー",
+                    "location": {
+                      "name": "塩屋 国際通り店",
+                      "mapcode": "33 157 383"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "19:30-21:00",
+            "emoji": "🍽",
+            "title": "️ 那霸國際通晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "琉球新麵 通堂 小禄本店",
+                    "desc": "沖繩在地人氣 No.1 拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "通堂拉麵 小禄本店",
+                      "mapcode": "33 096 697"
+                    },
+                    "hours": "11:00~24:00",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "燒肉琉球の牛 國際通店",
+                    "desc": "石垣牛＋阿古豬，A5 和牛燒肉",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "琉球の牛 国際通り店",
+                      "mapcode": "33 157 382"
+                    },
+                    "hours": "17:00~23:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve"
+                  },
+                  {
+                    "emoji": "🍽",
+                    "category": "其他推薦",
+                    "name": "Jack's Steak House",
+                    "desc": "1953 年創業！沖繩最老牌牛排",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "ジャッキーステーキハウス 那覇",
+                      "mapcode": "33 155 236"
+                    },
+                    "hours": "11:00~翌 1:00（週三公休）",
+                    "reservation": null
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "budget": {
+          "summary": "當日預算 約 ¥21,620（NT$ 4,757）",
+          "items": [
+            {
+              "label": "🚗 租車（3天分攤）",
+              "amount": "¥6,000"
+            },
+            {
+              "label": "⛽ 加滿油還車",
+              "amount": "¥2,000"
+            },
+            {
+              "label": "🛣️ 高速通行費",
+              "amount": "¥780"
+            },
+            {
+              "label": "🅿️ 心形岩停車",
+              "amount": "¥300"
+            },
+            {
+              "label": "🦐 午餐",
+              "amount": "¥2,000"
+            },
+            {
+              "label": "🍽️ 晚餐",
+              "amount": "¥2,000"
+            },
+            {
+              "label": "🏨 東橫inn",
+              "amount": "¥8,000"
+            }
+          ],
+          "notes": [
+            "高速通行費：名護 IC → 北中城 IC 約 ¥780",
+            "還車注意：還車前需加滿油，附近找加油站",
+            "還車地點：歌町/美榮橋，步行可達東橫inn"
+          ]
+        }
+      }
     },
     {
       "id": 5,
       "date": "8/2（日）✈️",
       "label": "首里城",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-5\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div>\n\n                <div class=\"timeline\">\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">08:30</span>\n                            <span class=\"tl-title\">🧳 退房＋寄放行李</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">東橫inn 退房，將行李寄放櫃台（免費），輕裝出發</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 157 413</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚝 單軌 美榮橋→首里站 約18分鐘 ¥300（💡 建議購買一日券 ¥800）</div>\n                        <div class=\"tl-transit\">⤷ 🚶 首里站→首里城 步行約15分鐘（上坡）</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">09:00-10:30</span>\n                            <span class=\"tl-title\">🏯 <a href=\"https://okinawa.letsgojp.com/archives/14911/\" target=\"_blank\">首里城公園</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">琉球王國的象徵，世界遺產。2019 年大火後正殿重建中（預計 2026 年完工），御庭＋城牆＋守禮門可參觀</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=首里城公園\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=首里城公園\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 161 526</span>\n                            </div>\n                            <div class=\"info-box reservation\">🎫 <strong>門票：</strong>大人 ¥400 / 高中生 ¥300 / 中小學生 ¥160<br>🕐 <strong>營業時間：</strong>08:30~18:00（夏季延長至19:30）<br>📸 <strong>推薦拍照點：</strong>守禮門、歡會門、西台（展望台）</div>\n                            <div class=\"info-box souvenir\">🎁 <strong>首里城伴手禮：</strong><br>🏪 首里城公園商店 — 琉球王國限定周邊、紅型花紋商品<br>🍡 <a href=\"https://maps.google.com/?q=首里金城町石畳道\" target=\"_blank\">金城町石疊道周邊</a>（琉球玻璃＋シーサー手作） <a href=\"https://maps.google.com/?q=首里金城町石畳道\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=首里金城町石畳道\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 161 245</span></div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚝 首里→牧志站 約15分鐘 ¥260</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">11:00-12:30</span>\n                            <span class=\"tl-title\">🛍️ <a href=\"https://mimihan.tw/kokusai-street/\" target=\"_blank\">國際通逛街＋買伴手禮</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">沖繩最熱鬧的商店街，約 1.6 公里。最後衝刺採購伴手禮！</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=国際通り+那覇\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=国際通り那覇\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 157 382</span>\n                            </div>\n                            <div class=\"info-box souvenir\">🎁 <strong>國際通必買伴手禮：</strong><br>\n                                🍠 <a href=\"https://maps.google.com/?q=御菓子御殿+国際通り松尾店\" target=\"_blank\">御菓子御殿</a>（紅芋塔 ¥1,100/10入） <a href=\"https://maps.google.com/?q=御菓子御殿+国際通り松尾店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 352</span><br>\n                                🧂 <a href=\"https://maps.google.com/?q=塩屋+国際通り店\" target=\"_blank\">鹽屋（まーすやー）</a>（雪鹽金楚糕） <a href=\"https://maps.google.com/?q=塩屋+国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 383</span><br>\n                                🏪 <a href=\"https://maps.google.com/?q=わしたショップ+国際通り本店\" target=\"_blank\">わしたショップ</a>（沖繩物產公社直營） <a href=\"https://maps.google.com/?q=わしたショップ+国際通り本店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 411</span><br>\n                                💊 <a href=\"https://maps.google.com/?q=ドン・キホーテ+国際通り店\" target=\"_blank\">唐吉訶德 國際通店</a>（藥妝＋零食＋免稅） <a href=\"https://maps.google.com/?q=ドン・キホーテ+国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 382</span><br>\n                                🍶 泡盛（推薦：殘波、久米仙、瑞泉）各店均有販售\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">12:30-14:00</span>\n                            <span class=\"tl-title\">🍽️ 國際通午餐</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">最後一餐沖繩美食！</p>\n                            <div class=\"info-box restaurants\">\n                                🍽️ <strong>午餐推薦三選一：</strong>\n                                <div class=\"restaurant-choice\">🍜 <strong>拉麵：</strong><a href=\"https://maps.google.com/?q=暖暮拉麵+那覇牧志店\" target=\"_blank\">暖暮拉麵 那覇牧志店</a> — 九州博多濃厚豚骨拉麵，¥800~<br><a href=\"https://maps.google.com/?q=暖暮拉麵+那覇牧志店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=暖暮拉麵那覇牧志店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 323</span><span class=\"restaurant-meta\">⏰ 平日 10:00~翌 2:00／假日 9:00~翌 2:00 ｜ 不接受預約</span></div>\n                                <div class=\"restaurant-choice\">🥩 <strong>燒肉：</strong><a href=\"https://maps.google.com/?q=琉球の牛+国際通り店\" target=\"_blank\">燒肉琉球の牛</a> — 石垣牛＋阿古豬，午間 ¥2,000~<br><a href=\"https://maps.google.com/?q=琉球の牛+国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=琉球の牛国際通り店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 382</span><span class=\"restaurant-meta\">⏰ 17:00~23:00 ｜ 📞 <a href=\"https://www.tablecheck.com/en/shops/yakiniku-naha/reserve\" target=\"_blank\">TableCheck 預約</a></span></div>\n                                <div class=\"restaurant-choice\">🍽️ <strong>其他推薦：</strong><a href=\"https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店\" target=\"_blank\">やっぱりステーキ 國際通店</a> — CP 值之王！¥1,000 起<br><a href=\"https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=やっぱりステーキ4th国際通り店\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a> <span class=\"map-link mapcode map-link-inline\">📟 33 157 383</span><span class=\"restaurant-meta\">⏰ 11:00~翌 1:30 ｜ 不接受預約</span></div>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚝 牧志→おもろまち站 約3分鐘 ¥230</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">14:05-15:30</span>\n                            <span class=\"tl-title\">🛍️ <a href=\"https://mimigo.tw/okinawa-dfs/\" target=\"_blank\">DFS T Galleria 免稅店</a></span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">就在おもろまち站旁，國際精品免稅價格。化妝品、香水、包包等</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=Tギャラリア+沖縄\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=Tギャラリア沖縄\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 188 487</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚝 おもろまち→美榮橋 約3分鐘 ¥230</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">15:35</span>\n                            <span class=\"tl-title\">🧳 回飯店取行李</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">回東橫inn 領取寄放行李，傍晚前往機場</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 157 413</span>\n                            </div>\n                        </div>\n                        <div class=\"tl-transit\">⤷ 🚝 美榮橋→那霸空港站 約12分鐘 ¥270</div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head clickable\">\n                            <span class=\"tl-time\">18:55</span>\n                            <span class=\"tl-title\">✈️ 抵達那霸機場</span>\n                            <span class=\"tl-arrow\">▸</span>\n                        </div>\n                        <div class=\"tl-body\">\n                            <p class=\"tl-desc\">辦理報到＋託運行李。機場內免稅店最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味</p>\n                            <div class=\"nav-links\">\n                                <a href=\"https://maps.google.com/?q=那霸機場\" target=\"_blank\" class=\"map-link map-link-inline\"><span class=\"g-icon\">G</span> Map</a>\n                                <a href=\"https://maps.apple.com/?q=那霸機場\" target=\"_blank\" class=\"map-link apple map-link-inline\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a>\n                                <span class=\"map-link mapcode map-link-inline\">📟 33 002 519</span>\n                            </div>\n                        </div>\n                    </div>\n\n                    <div class=\"tl-event\">\n                        <div class=\"tl-head\"><span class=\"tl-time\">20:55</span><span class=\"tl-title\">✈️ CI 121 起飛回台灣</span></div>\n                        <div class=\"tl-transit\" style=\"color:var(--gray);font-style:italic;padding-left:8px;\">21:30 抵達桃園｜めんそーれ（歡迎再來）沖繩！🌊</div>\n                    </div>\n                </div>\n\n                <div class=\"col-row\">💰 當日預算 約 ¥14,400（NT$ 3,168）<span class=\"arrow\">▸</span></div>\n                <div class=\"col-detail\">\n                    <table class=\"budget-table\">\n                        <tr><td>🚝 單軌一日券（2人）</td><td>¥1,600</td></tr><tr><td>🏯 首里城門票（2人）</td><td>¥800</td></tr><tr><td>🍽️ 午餐</td><td>¥2,000</td></tr><tr><td>🛍️ 伴手禮＋購物</td><td>¥10,000</td></tr>\n                    </table>\n                    <ul class=\"notes-list\"><li><strong>回程航班：</strong>CI 121 20:55 起飛，需 18:55 前到機場</li><li><strong>單軌一日券：</strong>¥800/人，搭 4 次以上就划算</li><li><strong>行李寄放：</strong>東橫inn 退房後可免費寄放行李</li><li><strong>首里城上坡：</strong>建議穿好走的鞋，夏天注意防曬補水</li></ul>\n                </div>"
+      "content": {
+        "timeline": [
+          {
+            "time": "08:30",
+            "emoji": "🧳",
+            "title": "退房＋寄放行李",
+            "description": "東橫inn 退房，將行李寄放櫃台（免費），輕裝出發",
+            "locations": [
+              {
+                "name": "東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 413"
+              }
+            ],
+            "transit": {
+              "emoji": "🚝",
+              "text": "單軌 美榮橋→首里站 約18分鐘 ¥300（💡 建議購買一日券 ¥800）"
+            }
+          },
+          {
+            "time": "09:00-10:30",
+            "emoji": "🏯",
+            "titleUrl": "https://okinawa.letsgojp.com/archives/14911/",
+            "title": "首里城公園",
+            "description": "琉球王國的象徵，世界遺產。2019 年大火後正殿重建中（預計 2026 年完工），御庭＋城牆＋守禮門可參觀",
+            "locations": [
+              {
+                "name": "首里城公園",
+                "mapcode": "33 161 526"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "items": [
+                  "🎫 門票：大人 ¥400 / 高中生 ¥300 / 中小學生 ¥160🕐 營業時間：08:30~18:00（夏季延長至19:30）📸 推薦拍照點：守禮門、歡會門、西台（展望台） 🎁 首里城伴手禮：🏪 首里城公園商店 — 琉球王國限定周邊、紅型花紋商品🍡 金城町石疊道周邊（琉球玻璃＋シーサー手作） G Map Map 📟 33 161 245"
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚝",
+              "text": "首里→牧志站 約15分鐘 ¥260"
+            }
+          },
+          {
+            "time": "11:00-12:30",
+            "emoji": "🛍",
+            "titleUrl": "https://mimihan.tw/kokusai-street/",
+            "title": "國際通逛街＋買伴手禮",
+            "description": "沖繩最熱鬧的商店街，約 1.6 公里。最後衝刺採購伴手禮！",
+            "locations": [
+              {
+                "name": "国際通り 那覇",
+                "mapcode": "33 157 382"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "souvenir",
+                "title": "國際通必買伴手禮",
+                "items": [
+                  {
+                    "emoji": "🍠",
+                    "name": "\udf60 御菓子御殿",
+                    "note": "紅芋塔 ¥1,100/10入",
+                    "location": {
+                      "name": "御菓子御殿 国際通り松尾店",
+                      "mapcode": "33 157 352"
+                    }
+                  },
+                  {
+                    "emoji": "🧂",
+                    "name": "🧂 鹽屋",
+                    "note": "まーすやー",
+                    "location": {
+                      "name": "塩屋 国際通り店",
+                      "mapcode": "33 157 383"
+                    }
+                  },
+                  {
+                    "emoji": "🏪",
+                    "name": "\udfea わしたショップ",
+                    "note": "沖繩物產公社直營",
+                    "location": {
+                      "name": "わしたショップ 国際通り本店",
+                      "mapcode": "33 157 411"
+                    }
+                  },
+                  {
+                    "emoji": "💊",
+                    "name": "\udc8a 唐吉訶德 國際通店",
+                    "note": "藥妝＋零食＋免稅",
+                    "location": {
+                      "name": "ドン・キホーテ 国際通り店",
+                      "mapcode": "33 157 382"
+                    }
+                  },
+                  {
+                    "emoji": "🍶",
+                    "name": "\udf76 泡盛",
+                    "note": "推薦：殘波、久米仙、瑞泉"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "12:30-14:00",
+            "emoji": "🍽",
+            "title": "️ 國際通午餐",
+            "description": "最後一餐沖繩美食！",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦三選一",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "拉麵",
+                    "name": "暖暮拉麵 那覇牧志店",
+                    "desc": "九州博多濃厚豚骨拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "暖暮拉麵 那覇牧志店",
+                      "mapcode": "33 157 323"
+                    },
+                    "hours": "平日 10:00~翌 2:00／假日 9:00~翌 2:00",
+                    "reservation": null
+                  },
+                  {
+                    "emoji": "🥩",
+                    "category": "燒肉",
+                    "name": "燒肉琉球の牛",
+                    "desc": "石垣牛＋阿古豬，A5 和牛燒肉",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "琉球の牛 国際通り店",
+                      "mapcode": "33 157 382"
+                    },
+                    "hours": "17:00~23:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve"
+                  },
+                  {
+                    "emoji": "🍽",
+                    "category": "其他推薦",
+                    "name": "やっぱりステーキ 國際通店",
+                    "desc": "CP 值之王！",
+                    "price": "¥1,000",
+                    "location": {
+                      "name": "やっぱりステーキ 4th 国際通り店",
+                      "mapcode": "33 157 383"
+                    },
+                    "hours": "11:00~翌 1:30",
+                    "reservation": null
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚝",
+              "text": "牧志→おもろまち站 約3分鐘 ¥230"
+            }
+          },
+          {
+            "time": "14:05-15:30",
+            "emoji": "🛍",
+            "titleUrl": "https://mimigo.tw/okinawa-dfs/",
+            "title": "DFS T Galleria 免稅店",
+            "description": "就在おもろまち站旁，國際精品免稅價格。化妝品、香水、包包等",
+            "locations": [
+              {
+                "name": "Tギャラリア 沖縄",
+                "mapcode": "33 188 487"
+              }
+            ],
+            "transit": {
+              "emoji": "🚝",
+              "text": "おもろまち→美榮橋 約3分鐘 ¥230"
+            }
+          },
+          {
+            "time": "15:35",
+            "emoji": "🧳",
+            "title": "回飯店取行李",
+            "description": "回東橫inn 領取寄放行李，傍晚前往機場",
+            "locations": [
+              {
+                "name": "東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 413"
+              }
+            ],
+            "transit": {
+              "emoji": "🚝",
+              "text": "美榮橋→那霸空港站 約12分鐘 ¥270"
+            }
+          },
+          {
+            "time": "18:55",
+            "emoji": "✈",
+            "title": "️ 抵達那霸機場",
+            "description": "辦理報到＋託運行李。機場內免稅店最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "mapcode": "33 002 519"
+              }
+            ]
+          },
+          {
+            "time": "20:55",
+            "emoji": "✈",
+            "title": "️ CI 121 起飛回台灣",
+            "note": "21:30 抵達桃園｜めんそーれ（歡迎再來）沖繩！🌊"
+          }
+        ],
+        "budget": {
+          "summary": "當日預算 約 ¥14,400（NT$ 3,168）",
+          "items": [
+            {
+              "label": "🚝 單軌一日券（2人）",
+              "amount": "¥1,600"
+            },
+            {
+              "label": "🏯 首里城門票（2人）",
+              "amount": "¥800"
+            },
+            {
+              "label": "🍽️ 午餐",
+              "amount": "¥2,000"
+            },
+            {
+              "label": "🛍️ 伴手禮＋購物",
+              "amount": "¥10,000"
+            }
+          ],
+          "notes": [
+            "回程航班：CI 121 20:55 起飛，需 18:55 前到機場",
+            "單軌一日券：¥800/人，搭 4 次以上就划算",
+            "行李寄放：東橫inn 退房後可免費寄放行李",
+            "首里城上坡：建議穿好走的鞋，夏天注意防曬補水"
+          ]
+        }
+      }
     }
   ],
   "flights": {
     "title": "✈️ 航班資訊",
-    "content": "<div class=\"flight-row\"><span class=\"flight-icon\">🛫</span><div class=\"flight-info\"><span class=\"flight-label\">去程 CI 120</span><span class=\"flight-route\">TPE → OKA</span><span class=\"flight-time\">7/29（三）08:40→10:45</span></div></div>\n                <div class=\"flight-row\"><span class=\"flight-icon\">🛬</span><div class=\"flight-info\"><span class=\"flight-route flight-label\">回程 CI 121</span><span class=\"flight-route\">OKA → TPE</span><span class=\"flight-time\">8/2（日）20:55→21:30</span></div></div>\n                <p style=\"margin-top:8px;font-size:var(--fs-md);color:var(--gray);\">訂位代號：<strong>TNCFHM</strong>｜華航 China Airlines｜3 位旅客</p>"
+    "content": {
+      "segments": [
+        {
+          "icon": "🛫",
+          "label": "去程 CI 120",
+          "route": "TPE → OKA",
+          "time": "7/29（三）08:40→10:45"
+        },
+        {
+          "icon": "🛬",
+          "label": "回程 CI 121",
+          "route": "OKA → TPE",
+          "time": "8/2（日）20:55→21:30"
+        }
+      ],
+      "airline": {
+        "icon": "🏢",
+        "name": "華航 China Airlines",
+        "note": "訂位代號：TNCFHM｜華航 China Airlines｜3 位旅客"
+      }
+    }
   },
   "checklist": {
     "title": "✅ 出發前確認事項",
-    "content": "<div class=\"ov-grid\">\n                    <div class=\"ov-card\"><h4>🤿 青之洞窟浮潛預約</h4><p>⏰ 建議出發前 1~2 個月預約</p><p>📅 Day 2 (7/30 週四) 10:30</p><p>🏪 推薦中文店家：<a href=\"https://www.bestdiveokinawa.com/\" target=\"_blank\">青潛</a>、<a href=\"https://www.natural-blue.net/tw/\" target=\"_blank\">Natural Blue</a>、<a href=\"https://heichaodive.com/\" target=\"_blank\">黑潮潛水</a></p></div>\n                    <div class=\"ov-card warm\"><h4>🌀 颱風動態追蹤</h4><p>⏰ 確認時間：出發前 3-5 天</p><p>⚠️ 7-8月為颱風季，需密切注意天氣預報</p><p>📱 建議下載：Windy 或 tenki.jp APP</p></div>\n                    <div class=\"ov-card\"><h4>🚗 租車確認</h4><p>⏰ 確認時間：出發前 2-4 週</p><p>🔑 需備：台灣駕照＋日文譯本</p><p>📅 租車期間：7/29 12:00 ~ 8/1 還車（歌町/美榮橋）</p></div>\n                    <div class=\"ov-card\"><h4>📞 飯店預約確認</h4><p>• Vessel Hotel Campana 北谷（7/29 一晚）</p><p>• Super Hotel 名護（7/30-31 二晚）</p><p>• 東橫inn 那霸美榮橋站（8/1 一晚）</p></div>\n                </div>"
+    "content": {
+      "cards": [
+        {
+          "color": "var(--blue-light)",
+          "title": "🤿 青之洞窟浮潛預約",
+          "items": [
+            "⏰ 建議出發前 1~2 個月預約",
+            "📅 Day 2 (7/30 週四) 10:30",
+            "🏪 推薦中文店家：青潛、Natural Blue、黑潮潛水"
+          ]
+        },
+        {
+          "color": "var(--sand-light)",
+          "title": "🌀 颱風動態追蹤",
+          "items": [
+            "⏰ 確認時間：出發前 3-5 天",
+            "⚠️ 7-8月為颱風季，需密切注意天氣預報",
+            "📱 建議下載：Windy 或 tenki.jp APP"
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🚗 租車確認",
+          "items": [
+            "⏰ 確認時間：出發前 2-4 週",
+            "🔑 需備：台灣駕照＋日文譯本",
+            "📅 租車期間：7/29 12:00 ~ 8/1 還車（歌町/美榮橋）"
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "📞 飯店預約確認",
+          "items": [
+            "• Vessel Hotel Campana 北谷（7/29 一晚）",
+            "• Super Hotel 名護（7/30-31 二晚）",
+            "• 東橫inn 那霸美榮橋站（8/1 一晚）"
+          ]
+        }
+      ]
+    }
   },
   "backup": {
     "title": "🔄 颱風/雨天備案",
-    "content": "<div class=\"ov-grid\">\n                    <div class=\"ov-card\"><h4>🌧️ Day 1-2 雨天備案（中部）</h4><ul class=\"weather-list\"><li>AEON Mall 北谷（購物＋美食街）</li><li>琉球村（室內體驗琉球文化）</li><li>體驗王國 むら咲むら（手作體驗）</li></ul></div>\n                    <div class=\"ov-card\"><h4>🌧️ Day 3-4 雨天備案（北部）</h4><ul class=\"weather-list\"><li>水族館不受天候影響，正常參觀</li><li>名護鳳梨園（室內設施為主）</li><li>ORION 啤酒工廠見學（免費試飲）</li></ul></div>\n                    <div class=\"ov-card warm\"><h4>🌀 颱風來襲對策</h4><ul class=\"weather-list\"><li>航班異動：確認航空公司官網</li><li>水上活動全面停止</li><li>改為室內行程：購物中心、水族館</li><li>緊急聯絡：租車公司、飯店</li></ul></div>\n                </div>"
+    "content": {
+      "cards": [
+        {
+          "color": "var(--blue-light)",
+          "title": "🌧️ Day 1-2 雨天備案（中部）",
+          "weatherItems": [
+            "AEON Mall 北谷（購物＋美食街）",
+            "琉球村（室內體驗琉球文化）",
+            "體驗王國 むら咲むら（手作體驗）"
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🌧️ Day 3-4 雨天備案（北部）",
+          "weatherItems": [
+            "水族館不受天候影響，正常參觀",
+            "名護鳳梨園（室內設施為主）",
+            "ORION 啤酒工廠見學（免費試飲）"
+          ]
+        },
+        {
+          "color": "var(--sand-light)",
+          "title": "🌀 颱風來襲對策",
+          "weatherItems": [
+            "航班異動：確認航空公司官網",
+            "水上活動全面停止",
+            "改為室內行程：購物中心、水族館",
+            "緊急聯絡：租車公司、飯店"
+          ]
+        }
+      ]
+    }
   },
   "emergency": {
     "title": "🆘 緊急聯絡資訊",
-    "content": "<div class=\"ov-grid\">\n                    <div class=\"ov-card\"><h4>🚔 日本報警</h4><p>📞 <a href=\"tel:110\">110</a>（警察）</p><p>📞 <a href=\"tel:119\">119</a>（消防・救護車）</p></div>\n                    <div class=\"ov-card\"><h4>🏥 那霸市立病院</h4><p>📞 <a href=\"tel:098-884-5111\">098-884-5111</a></p><p>📍 那霸市古島 2-31-1</p></div>\n                    <div class=\"ov-card\"><h4>🏥 北部地區醫院（名護）</h4><p>📞 <a href=\"tel:0980-52-2719\">0980-52-2719</a></p><p>📍 名護市大中 2-12-3</p></div>\n                    <div class=\"ov-card\"><h4>🇹🇼 台北駐日經濟文化代表處</h4><p>📞 <a href=\"tel:03-3280-7811\">03-3280-7811</a></p><p>📞 急難救助：<a href=\"tel:080-6552-4764\">080-6552-4764</a></p></div>\n                    <div class=\"ov-card\"><h4>📞 沖繩觀光多語言客服</h4><p>📞 <a href=\"tel:098-851-6464\">098-851-6464</a></p><p>🕐 09:00~21:00（中文可通）</p></div>\n                    <div class=\"ov-card\"><h4>🚗 租車公司緊急聯絡</h4><p>📞 請確認租車合約上的 24H 緊急電話</p><p>⚠️ 事故時先撥 110 報警，再聯絡租車公司</p></div>\n                </div>"
-  },
-  "footerHtml": "<h3>🌊 2026 沖繩五日自駕遊</h3>\n            <p>7/29（三）~ 8/2（日）</p>\n            <p style=\"font-weight:600;\">💰 五日總預算：約 ¥116,580（NT$ 25,648）</p>\n            <p style=\"color:var(--gray);\">匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準</p>\n            <p>めんそーれ 沖繩！🌊 祝旅途愉快！</p>"
+    "content": {
+      "cards": [
+        {
+          "color": "var(--blue-light)",
+          "title": "🚔 日本報警",
+          "contacts": [
+            {
+              "phone": "110",
+              "label": "110"
+            },
+            {
+              "phone": "119",
+              "label": "119"
+            }
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🏥 那霸市立病院",
+          "contacts": [
+            {
+              "phone": "098-884-5111",
+              "label": "098-884-5111"
+            }
+          ],
+          "address": "那霸市古島 2-31-1"
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🏥 北部地區醫院（名護）",
+          "contacts": [
+            {
+              "phone": "0980-52-2719",
+              "label": "0980-52-2719"
+            }
+          ],
+          "address": "名護市大中 2-12-3"
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🇹🇼 台北駐日經濟文化代表處",
+          "contacts": [
+            {
+              "phone": "03-3280-7811",
+              "label": "03-3280-7811"
+            },
+            {
+              "phone": "080-6552-4764",
+              "label": "急難救助 080-6552-4764"
+            }
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "📞 沖繩觀光多語言客服",
+          "contacts": [
+            {
+              "phone": "098-851-6464",
+              "label": "098-851-6464"
+            }
+          ],
+          "notes": [
+            "🕐 09:00~21:00（中文可通）",
+            "🕐 09:00~21:00（中文可通）"
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🚗 租車公司緊急聯絡",
+          "contacts": [],
+          "notes": [
+            "⚠️ 事故時先撥 110 報警，再聯絡租車公司"
+          ]
+        }
+      ]
+    }
+  }
 }
