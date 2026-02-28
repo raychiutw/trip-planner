@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、美麗海水族館、古宇利島。含餐廳推薦、地圖導航、預算規劃。">
+    <meta name="theme-color" content="#0077B6">
+    <meta property="og:title" content="2026 沖繩五日自駕遊行程表">
+    <meta property="og:description" content="那霸→北谷美國村→青之洞窟→美麗海水族館→古宇利島，五日完整行程含餐廳三選一、地圖導航、預算規劃">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://raychiutw.github.io/okinawa-trip-2026/">
     <title>2026 沖繩五日自駕遊行程表</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://api.open-meteo.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -224,6 +233,14 @@
         /* ===== Info Header ===== */
         .info-header { background: var(--text) !important; }
 
+        /* ===== Trip Intro ===== */
+        .trip-intro { background: var(--white); padding: 14px 20px; text-align: center; border-bottom: 1px solid var(--gray-light); }
+        .trip-intro-route { font-size: var(--fs-sm); color: var(--gray); }
+        .trip-intro-badge { display: inline-block; margin-top: 6px; padding: 4px 14px; background: var(--blue); color: #FFFFFF; border-radius: 12px; font-size: var(--fs-sm); font-weight: 600; }
+
+        /* ===== Menu Separator ===== */
+        .menu-sep { border-top: 1px solid var(--gray-light); margin: 4px 0; }
+
         /* ===== Dark Mode ===== */
         body.dark { --blue: #4FC3F7; --blue-light: #1A2A3A; --sand: #E0A870; --sand-light: #2A2218; --white: #1E1E1E; --gray: #AAAAAA; --gray-light: #2A2A2A; --text: #E8E8E8; background: #121212; }
         body.dark .day-header { background: #1565C0; }
@@ -249,6 +266,7 @@
         body.dark .hotel-sub { background: #1A2A3A; }
         body.dark .col-row { border-bottom-color: #333; }
         body.dark .restaurant-choice { border-bottom-color: #444; }
+        body.dark .menu-sep { border-top-color: #444; }
         body.dark footer { border-top-color: #333; }
 
     </style>
@@ -262,9 +280,9 @@
         </div>
 
         <!-- ===== Trip Intro ===== -->
-        <div style="background:var(--white);padding:14px 20px;text-align:center;border-bottom:1px solid var(--gray-light);">
-            <div style="font-size:var(--fs-sm);color:var(--gray);">那霸 → 北谷美國村 → 青之洞窟 → 美麗海水族館 → 古宇利島</div>
-            <div style="display:inline-block;margin-top:6px;padding:4px 14px;background:var(--blue);color:var(--white);border-radius:12px;font-size:var(--fs-sm);font-weight:600;">🚗 自駕遊｜租車 3 天（Day 1 ~ Day 4 還車）</div>
+        <div class="trip-intro">
+            <div class="trip-intro-route">那霸 → 北谷美國村 → 青之洞窟 → 美麗海水族館 → 古宇利島</div>
+            <div class="trip-intro-badge">🚗 自駕遊｜租車 3 天（Day 1 ~ Day 4 還車）</div>
         </div>
 
         <!-- ==================== Day 1 ==================== -->
@@ -444,6 +462,7 @@
         <!-- ==================== Day 2 ==================== -->
         <section>
             <div class="day-header" id="day2">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn active" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 2</h2>
                 <div class="dh-right">7/30（四）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
@@ -567,6 +586,7 @@
         <!-- ==================== Day 3 ==================== -->
         <section>
             <div class="day-header" id="day3">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn active" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 3</h2>
                 <div class="dh-right">7/31（五）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
@@ -675,6 +695,7 @@
         <!-- ==================== Day 4 ==================== -->
         <section>
             <div class="day-header" id="day4">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn active" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 4</h2>
                 <div class="dh-right">8/1（六）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
@@ -819,6 +840,7 @@
         <!-- ==================== Day 5 ==================== -->
         <section>
             <div class="day-header" id="day5">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn active" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 5</h2>
                 <div class="dh-right">8/2（日）✈️</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
@@ -1044,6 +1066,17 @@
 
     <!-- ===== Menu Dropdown (fixed) ===== -->
     <div class="menu-dropdown" id="menuDrop">
+        <button class="menu-item" onclick="scrollToSec('day1')">📍 Day 1 — 北谷</button>
+        <button class="menu-item" onclick="scrollToSec('day2')">📍 Day 2 — 青之洞窟</button>
+        <button class="menu-item" onclick="scrollToSec('day3')">📍 Day 3 — 水族館</button>
+        <button class="menu-item" onclick="scrollToSec('day4')">📍 Day 4 — 古宇利</button>
+        <button class="menu-item" onclick="scrollToSec('day5')">📍 Day 5 — 首里城</button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" onclick="scrollToSec('sec-flight')">✈️ 航班資訊</button>
+        <button class="menu-item" onclick="scrollToSec('sec-checklist')">✅ 出發前確認</button>
+        <button class="menu-item" onclick="scrollToSec('sec-backup')">🔄 颱風/雨天備案</button>
+        <button class="menu-item" onclick="scrollToSec('sec-emergency')">🆘 緊急聯絡</button>
+        <div class="menu-sep"></div>
         <button class="menu-item" onclick="toggleDark()">🌙 深色模式</button>
         <button class="menu-item" onclick="togglePrint()">🖨️ 列印模式</button>
     </div>
@@ -1055,32 +1088,40 @@
     /* ===== Toggle Functions ===== */
     function toggleEv(e, el) {
         if (e.target.tagName === 'A') return;
-        el.closest('.tl-event').classList.toggle('expanded');
+        var ev = el.closest('.tl-event');
+        ev.classList.toggle('expanded');
+        el.setAttribute('aria-expanded', ev.classList.contains('expanded'));
     }
     function toggleCol(el) {
         el.classList.toggle('open');
         var detail = el.nextElementSibling;
         if (detail) detail.classList.toggle('open');
+        el.setAttribute('aria-expanded', el.classList.contains('open'));
     }
     function toggleDark() {
         document.getElementById('menuDrop').classList.remove('open');
         document.body.classList.toggle('dark');
-        localStorage.setItem('dark', document.body.classList.contains('dark') ? '1' : '0');
+        var isDark = document.body.classList.contains('dark');
+        localStorage.setItem('dark', isDark ? '1' : '0');
         var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
-        if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️ 淺色模式' : '🌙 深色模式';
+        if (btn) btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', isDark ? '#1565C0' : '#0077B6');
     }
     if (localStorage.getItem('dark') === '1') {
         document.body.classList.add('dark');
         var dbtn = document.querySelector('.menu-item[onclick*="toggleDark"]');
         if (dbtn) dbtn.textContent = '☀️ 淺色模式';
+        var dmeta = document.querySelector('meta[name="theme-color"]');
+        if (dmeta) dmeta.setAttribute('content', '#1565C0');
     }
-    function scrollToDay(n) {
-        var el = document.getElementById('day' + n);
+    function scrollToSec(id) {
+        var el = document.getElementById(id);
         if (!el) return;
-        var rect = el.getBoundingClientRect();
-        window.scrollBy({ top: rect.top, behavior: 'smooth' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         document.getElementById('menuDrop').classList.remove('open');
     }
+    function scrollToDay(n) { scrollToSec('day' + n); }
     function toggleMenu(e) {
         e.stopPropagation();
         var menu = document.getElementById('menuDrop');
@@ -1098,18 +1139,18 @@
             if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
         }
     }
+    /* ===== Day Nav Active Pill (all headers) ===== */
     (function(){
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
-        var day1Nav = document.querySelector('#day1 .dh-nav');
-        if (!day1Nav) return;
-        var pills = day1Nav.querySelectorAll('.dn[data-day]');
+        var allPills = document.querySelectorAll('.dh-nav .dn[data-day]');
+        if (!allPills.length) return;
         var ticking = false;
         window.addEventListener('scroll', function() {
             if (!ticking) { requestAnimationFrame(function() {
                 var current = 0;
                 for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
-                pills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+                allPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
                 ticking = false;
             }); ticking = true; }
         });
@@ -1135,6 +1176,15 @@
         if (menu && menu.classList.contains('open') && !e.target.closest('.dh-menu') && !e.target.closest('#menuDrop')) {
             menu.classList.remove('open');
         }
+    });
+    /* ===== ARIA Init ===== */
+    document.querySelectorAll('.col-row').forEach(function(el) {
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-expanded', 'false');
+    });
+    document.querySelectorAll('.tl-head.clickable').forEach(function(el) {
+        el.setAttribute('role', 'button');
+        el.setAttribute('aria-expanded', 'false');
     });
 
     /* ===== Hourly Weather API (Open-Meteo) ===== */
