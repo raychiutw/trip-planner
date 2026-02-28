@@ -66,6 +66,11 @@ describe('validateTripData — errors', () => {
     expect(r.errors.some(e => e.includes('autoScrollDates'))).toBe(true);
   });
 
+  it('rejects days not starting from Day 1', () => {
+    const r = validateTripData(validTrip({ days: [{ id: 3, date: '2026-07-31' }] }));
+    expect(r.errors.some(e => e.includes('Day 1'))).toBe(true);
+  });
+
   it('rejects missing footer', () => {
     const r = validateTripData(validTrip({ footer: undefined }));
     expect(r.errors).toContain('缺少 footer');

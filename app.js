@@ -397,6 +397,7 @@ function validateTripData(data) {
     else if (!Array.isArray(data.days)) errors.push('days 必須是陣列');
     else if (data.days.length === 0) errors.push('days 不得為空陣列');
     else {
+        if (Number(data.days[0].id) !== 1) errors.push('行程必須從 Day 1 開始（第一天 id 應為 1）');
         data.days.forEach(function(d, i) {
             if (!d.id && d.id !== 0) errors.push('days[' + i + '] 缺少 id');
             if (!d.date) errors.push('days[' + i + '] 缺少 date');
