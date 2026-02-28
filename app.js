@@ -659,8 +659,13 @@ function renderTrip(data) {
     // Init weather
     if (data.weather && data.weather.length) initWeather(data.weather);
 
-    // Auto-scroll to today
-    autoScrollToday(data.autoScrollDates);
+    // Hash anchor or auto-scroll to today
+    var hash = window.location.hash.replace('#', '');
+    if (hash && document.getElementById(hash)) {
+        scrollToSec(hash);
+    } else {
+        autoScrollToday(data.autoScrollDates);
+    }
 
     // Re-init nav scroll tracking
     initNavTracking();
@@ -725,6 +730,7 @@ function scrollToSec(id) {
     var navH = document.getElementById('stickyNav').offsetHeight;
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
+    history.replaceState(null, '', '#' + id);
     document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
