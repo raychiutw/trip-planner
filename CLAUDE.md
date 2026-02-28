@@ -231,3 +231,14 @@ npm run test:watch # Vitest 監聽模式（開發時用）
 - 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `app.js` 的 `module.exports` 加上對應測試與匯出
 - 修改 JSON 結構時，需確認 `tests/json/schema.test.js` 的驗證規則仍正確
 - 新增互動行為時，需在 `tests/e2e/trip-page.spec.js` 加上對應 E2E 測試
+
+## Agent Teams 使用規範
+
+- 執行複雜任務時，盡量使用 agent teams 並行處理（如多檔搜尋、多餐廳查詢、多檔編輯等）
+- Agent teammates 統一使用 **sonnet** 模型（`model: "sonnet"`），以平衡效能與成本
+- 適合使用 agent teams 的場景：
+  - 多個餐廳 / 景點的網誌搜尋
+  - 多個 JSON 檔案的平行編輯
+  - 獨立的程式碼搜尋與研究任務
+  - 測試執行與程式碼修改的平行作業
+- 主要 agent（team lead）仍使用預設模型，僅 teammates 指定 sonnet
