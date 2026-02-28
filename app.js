@@ -22,6 +22,10 @@ function sanitizeHtml(html) {
     });
     return doc.body.innerHTML;
 }
+// Strip legacy inline onclick from trusted JSON content (defence-in-depth)
+function stripInlineHandlers(html) {
+    return html.replace(/\s+onclick="[^"]*"/g, '');
+}
 
 /* ===== URL Routing ===== */
 var DEFAULT_SLUG = 'okinawa-trip-2026-Ray';
@@ -117,8 +121,8 @@ function loadTrip(filename) {
 }
 
 function renderTrip(data) {
-    // Sanitize content if custom upload
-    var safe = IS_CUSTOM ? sanitizeHtml : function(s) { return s; };
+    // Sanitize content: custom uploads get full sanitization, trusted JSON strips leftover inline handlers
+    var safe = IS_CUSTOM ? sanitizeHtml : stripInlineHandlers;
 
     // Update page title & meta tags
     document.title = data.meta.title;
@@ -133,7 +137,7 @@ function renderTrip(data) {
     var navHtml = '';
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
-        navHtml += '<button class="dn" data-day="' + id + '" onclick="scrollToDay(' + id + ')">D' + id + '</button>';
+        navHtml += '<button class="dn" data-day="' + id + '" data-action="scroll-to" data-target="day' + id + '">D' + id + '</button>';
     });
     document.getElementById('navPills').innerHTML = navHtml;
 
@@ -160,7 +164,7 @@ function renderTrip(data) {
         var d = data[sec.key];
         if (!d) return;
         html += '<section>';
-        html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + escHtml(d.title) + '</h2><button class="dh-menu" onclick="toggleMenu(event)">\u2261</button></div>';
+        html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + escHtml(d.title) + '</h2><button class="dh-menu" data-action="toggle-menu">\u2261</button></div>';
         html += '<div class="day-content">' + safe(d.content || '') + '</div>';
         html += '</section>';
     });
@@ -196,29 +200,29 @@ function buildMenu(data) {
     var html = '<div class="menu-col">';
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
-        html += '<button class="menu-item" onclick="scrollToSec(\'day' + id + '\')">\ud83d\udccd D' + id + ' ' + escHtml(day.label) + '</button>';
+        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">\ud83d\udccd D' + id + ' ' + escHtml(day.label) + '</button>';
     });
     html += '</div><div class="menu-col">';
-    html += '<button class="menu-item" onclick="scrollToSec(\'sec-flight\')">✈️ 航班資訊</button>';
-    html += '<button class="menu-item" onclick="scrollToSec(\'sec-checklist\')">✅ 出發前確認</button>';
-    html += '<button class="menu-item" onclick="scrollToSec(\'sec-backup\')">🔄 颱風/雨天備案</button>';
-    html += '<button class="menu-item" onclick="scrollToSec(\'sec-emergency\')">🆘 緊急聯絡</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">🔄 颱風/雨天備案</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">🆘 緊急聯絡</button>';
     html += '<div class="menu-sep"></div>';
-    html += '<button class="menu-item" onclick="toggleDark()">🌙 深色模式</button>';
-    html += '<button class="menu-item" onclick="togglePrint()">🖨️ 列印模式</button>';
-    html += '<button class="menu-item" onclick="switchTripFile()">📂 切換行程檔</button>';
+    html += '<button class="menu-item" data-action="toggle-dark">🌙 深色模式</button>';
+    html += '<button class="menu-item" data-action="toggle-print">🖨️ 列印模式</button>';
+    html += '<button class="menu-item" data-action="switch-trip">📂 切換行程檔</button>';
     html += '</div>';
     document.getElementById('menuGrid').innerHTML = html;
     // Update dark mode button text
     if (document.body.classList.contains('dark')) {
-        var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+        var btn = document.querySelector('[data-action="toggle-dark"]');
         if (btn) btn.textContent = '☀️ 淺色模式';
     }
 }
 
 /* ===== Toggle Functions ===== */
 function toggleEv(e, el) {
-    if (e.target.tagName === 'A') return;
+    if (e.target.tagName === 'A' || e.target.closest('a')) return;
     var ev = el.closest('.tl-event');
     ev.classList.toggle('expanded');
     el.setAttribute('aria-expanded', ev.classList.contains('expanded'));
@@ -234,7 +238,7 @@ function toggleDark() {
     document.body.classList.toggle('dark');
     var isDark = document.body.classList.contains('dark');
     localStorage.setItem('dark', isDark ? '1' : '0');
-    var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+    var btn = document.querySelector('[data-action="toggle-dark"]');
     if (btn) btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', isDark ? '#1565C0' : '#0077B6');
@@ -253,11 +257,10 @@ function scrollToSec(id) {
     document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
-function toggleMenu(e) {
-    e.stopPropagation();
+function toggleMenu(el) {
     var menu = document.getElementById('menuDrop');
     if (menu.classList.contains('open')) { menu.classList.remove('open'); document.body.style.overflow = ''; return; }
-    var rect = e.currentTarget.getBoundingClientRect();
+    var rect = el.getBoundingClientRect();
     menu.style.top = (rect.bottom + 4) + 'px';
     menu.style.right = (window.innerWidth - rect.right) + 'px';
     menu.classList.add('open');
@@ -277,14 +280,14 @@ function togglePrint() {
     if (entering && document.body.classList.contains('dark')) {
         document.body.dataset.wasDark = '1';
         document.body.classList.remove('dark');
-        var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+        var btn = document.querySelector('[data-action="toggle-dark"]');
         if (btn) btn.textContent = '🌙 深色模式';
     }
     document.body.classList.toggle('print-mode');
     if (!entering && document.body.dataset.wasDark === '1') {
         document.body.classList.add('dark');
         delete document.body.dataset.wasDark;
-        var btn2 = document.querySelector('.menu-item[onclick*="toggleDark"]');
+        var btn2 = document.querySelector('[data-action="toggle-dark"]');
         if (btn2) btn2.textContent = '☀️ 淺色模式';
     }
 }
@@ -417,11 +420,43 @@ function autoScrollToday(dates) {
     }
 }
 
-// Close menu when clicking outside
+/* ===== Central Event Delegation ===== */
 document.addEventListener('click', function(e) {
+    var t = e.target;
+
+    // 0. Close menu when clicking outside (before other handlers)
     var menu = document.getElementById('menuDrop');
-    if (menu && menu.classList.contains('open') && !e.target.closest('.dh-menu') && !e.target.closest('#menuDrop')) {
+    if (menu && menu.classList.contains('open') && !t.closest('.dh-menu') && !t.closest('#menuDrop')) {
         menu.classList.remove('open'); document.body.style.overflow = '';
+    }
+
+    // 1. data-action buttons (menu, nav, toggles)
+    var actionEl = t.closest('[data-action]');
+    if (actionEl) {
+        switch (actionEl.getAttribute('data-action')) {
+            case 'toggle-menu': e.stopPropagation(); toggleMenu(actionEl); break;
+            case 'scroll-to':  scrollToSec(actionEl.getAttribute('data-target')); break;
+            case 'toggle-dark': toggleDark(); break;
+            case 'toggle-print': togglePrint(); break;
+            case 'switch-trip': switchTripFile(); break;
+            case 'toggle-hw':  toggleHw(actionEl); break;
+        }
+        return;
+    }
+
+    // 2. Timeline event expand/collapse (from JSON content)
+    var tlHead = t.closest('.tl-head.clickable');
+    if (tlHead) {
+        if (t.tagName === 'A' || t.closest('a')) return;
+        toggleEv(e, tlHead);
+        return;
+    }
+
+    // 3. Collapsible row expand/collapse (from JSON content)
+    var colRow = t.closest('.col-row');
+    if (colRow) {
+        if (t.tagName === 'A' || t.closest('a')) return;
+        toggleCol(colRow);
     }
 });
 
@@ -437,7 +472,7 @@ function initWeather(weatherDays) {
         for(var h=0;h<24;h++){var t=Math.round(m.temps[h]),r=m.rains[h],ic=WMO[m.codes[h]]||'❓';if(t<minT)minT=t;if(t>maxT)maxT=t;if(r<minR)minR=r;if(r>maxR)maxR=r;iconCount[ic]=(iconCount[ic]||0)+1;}
         var maxCnt=0;for(var k in iconCount)if(iconCount[k]>maxCnt){maxCnt=iconCount[k];bestIcon=k;}
         var locs=day.locations.map(function(l){return l.name;}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
-        var html='<div class="hw-summary" onclick="toggleHw(this)">'+bestIcon+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; 💧'+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
+        var html='<div class="hw-summary" data-action="toggle-hw">'+bestIcon+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; 💧'+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
         html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">⏱️ 逐時天氣 — '+day.label+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
         for(var h=0;h<=23;h++){
             var li=getLocIdx(day,h),icon=WMO[m.codes[h]]||'❓',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);
@@ -448,23 +483,46 @@ function initWeather(weatherDays) {
         html+='</div></div>';c.innerHTML=html;
     }
 
-    function fetchDay(day){
-        var c=document.getElementById(day.id);if(!c)return;
-        var uq=[],seen={};
-        day.locations.forEach(function(l){var k=l.lat+','+l.lon;if(!seen[k]){seen[k]=true;uq.push(l);}});
-        Promise.all(uq.map(function(l){
-            return fetch('https://api.open-meteo.com/v1/forecast?latitude='+l.lat+'&longitude='+l.lon+'&hourly=temperature_2m,precipitation_probability,weather_code&start_date='+day.date+'&end_date='+day.date+'&timezone=Asia/Tokyo').then(function(r){return r.json();}).then(function(d){return{loc:l,data:d};});
-        })).then(function(res){
-            var dm={};res.forEach(function(r){dm[r.loc.lat+','+r.loc.lon]=r.data;});
+    // Batch: collect unique locations across all days, fetch once per location with full date range
+    var locMap={},minDate=null,maxDate=null;
+    weatherDays.forEach(function(day){
+        if(!minDate||day.date<minDate)minDate=day.date;
+        if(!maxDate||day.date>maxDate)maxDate=day.date;
+        day.locations.forEach(function(l){var k=l.lat+','+l.lon;if(!locMap[k])locMap[k]={lat:l.lat,lon:l.lon};});
+    });
+    var locKeys=Object.keys(locMap);
+    Promise.all(locKeys.map(function(k){
+        var l=locMap[k];
+        return fetch('https://api.open-meteo.com/v1/forecast?latitude='+l.lat+'&longitude='+l.lon+'&hourly=temperature_2m,precipitation_probability,weather_code&start_date='+minDate+'&end_date='+maxDate+'&timezone=Asia/Tokyo')
+            .then(function(r){return r.json();})
+            .then(function(d){return{key:k,data:d};});
+    })).then(function(results){
+        var cache={};results.forEach(function(r){cache[r.key]=r.data;});
+        weatherDays.forEach(function(day){
+            var c=document.getElementById(day.id);if(!c)return;
+            // Find hour offset for this day's date in the API response
+            var sample=cache[locKeys[0]];
+            if(!sample||!sample.hourly)return;
+            var dayOffset=sample.hourly.time.indexOf(day.date+'T00:00');
+            if(dayOffset<0)return;
             var mg={temps:[],rains:[],codes:[]};
-            for(var h=0;h<24;h++){var li=getLocIdx(day,h),l=day.locations[li],d=dm[l.lat+','+l.lon];
-                if(d&&d.hourly){mg.temps.push(d.hourly.temperature_2m[h]);mg.rains.push(d.hourly.precipitation_probability[h]);mg.codes.push(d.hourly.weather_code[h]);}
-                else{mg.temps.push(0);mg.rains.push(0);mg.codes.push(0);}
+            for(var h=0;h<24;h++){
+                var li=getLocIdx(day,h),l=day.locations[li],d=cache[l.lat+','+l.lon];
+                var idx=dayOffset+h;
+                if(d&&d.hourly&&idx<d.hourly.temperature_2m.length){
+                    mg.temps.push(d.hourly.temperature_2m[idx]);
+                    mg.rains.push(d.hourly.precipitation_probability[idx]);
+                    mg.codes.push(d.hourly.weather_code[idx]);
+                }else{mg.temps.push(0);mg.rains.push(0);mg.codes.push(0);}
             }
             renderHourly(c,mg,day);
-        }).catch(function(e){c.innerHTML='<div class="hw-error">天氣資料載入失敗：'+e.message+'</div>';});
-    }
-    weatherDays.forEach(fetchDay);
+        });
+    }).catch(function(e){
+        weatherDays.forEach(function(day){
+            var c=document.getElementById(day.id);
+            if(c)c.innerHTML='<div class="hw-error">天氣資料載入失敗：'+e.message+'</div>';
+        });
+    });
 }
 
 window.addEventListener('beforeprint',function(){document.body.classList.add('print-mode');});
