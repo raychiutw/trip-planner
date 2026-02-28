@@ -886,6 +886,10 @@ function initNavTracking() {
             var current = -1;
             if (!inInfo) { for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; } }
             navPills.forEach(function(btn) { btn.classList.toggle('active', current >= 0 && parseInt(btn.getAttribute('data-day')) === current + 1); });
+            if (current >= 0) {
+                var newHash = '#day' + (current + 1);
+                if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
+            }
             ticking = false;
         }); ticking = true; }
     };
