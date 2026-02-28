@@ -383,6 +383,103 @@ function renderSuggestions(data) {
     return html;
 }
 
+/* ===== Validate Trip Data (structure + URL + mapcode) ===== */
+function validateTripData(data) {
+    var errors = [];
+    var warnings = [];
+    if (!data || typeof data !== 'object') { errors.push('資料不是有效的物件'); return { errors: errors, warnings: warnings }; }
+
+    // --- Top-level structure (errors) ---
+    if (!data.meta) errors.push('缺少 meta');
+    else if (!data.meta.title) errors.push('meta 缺少 title');
+
+    if (!data.days) errors.push('缺少 days');
+    else if (!Array.isArray(data.days)) errors.push('days 必須是陣列');
+    else if (data.days.length === 0) errors.push('days 不得為空陣列');
+    else {
+        data.days.forEach(function(d, i) {
+            if (!d.id && d.id !== 0) errors.push('days[' + i + '] 缺少 id');
+            if (!d.date) errors.push('days[' + i + '] 缺少 date');
+        });
+    }
+
+    if (!data.weather || !Array.isArray(data.weather) || data.weather.length === 0)
+        errors.push('缺少 weather 或為空');
+    if (!data.autoScrollDates || !Array.isArray(data.autoScrollDates) || data.autoScrollDates.length === 0)
+        errors.push('缺少 autoScrollDates 或為空');
+    if (!data.footer) errors.push('缺少 footer');
+    else {
+        if (!data.footer.title) errors.push('footer 缺少 title');
+        if (!data.footer.dates) errors.push('footer 缺少 dates');
+    }
+
+    // --- Recursive walk for warnings ---
+    var URL_FIELDS = ['titleUrl', 'url', 'googleQuery', 'appleQuery', 'reservationUrl', 'blogUrl', 'reserve'];
+    var MAPCODE_RE = /^\d{2,4}\s\d{3}\s\d{3}\*\d{2}$/;
+
+    function walk(obj, path) {
+        if (!obj || typeof obj !== 'object') return;
+        if (Array.isArray(obj)) {
+            obj.forEach(function(item, i) { walk(item, path + '[' + i + ']'); });
+            return;
+        }
+        for (var key in obj) {
+            if (!obj.hasOwnProperty(key)) continue;
+            var val = obj[key];
+            // URL safety
+            if (URL_FIELDS.indexOf(key) >= 0 && typeof val === 'string' && val.length > 0) {
+                if (!/^(https?:|tel:)/i.test(val)) {
+                    warnings.push(path + '.' + key + ' 含有不安全的 URL：' + val);
+                }
+            }
+            // Google Maps prefix
+            if (key === 'googleQuery' && typeof val === 'string' && val.length > 0) {
+                if (!/^https:\/\/maps\.google\.com\//i.test(val) && !/^https:\/\/www\.google\.com\/maps\//i.test(val)) {
+                    warnings.push(path + '.' + key + ' 不符合 Google Maps URL 格式：' + val);
+                }
+            }
+            // Apple Maps prefix
+            if (key === 'appleQuery' && typeof val === 'string' && val.length > 0) {
+                if (!/^https:\/\/maps\.apple\.com\//i.test(val)) {
+                    warnings.push(path + '.' + key + ' 不符合 Apple Maps URL 格式：' + val);
+                }
+            }
+            // Mapcode format
+            if (key === 'mapcode' && typeof val === 'string' && val.length > 0) {
+                if (!MAPCODE_RE.test(val)) {
+                    warnings.push(path + '.' + key + ' 格式不符（應如 33 530 406*00）：' + val);
+                }
+            }
+            // Recurse
+            if (typeof val === 'object') walk(val, path + '.' + key);
+        }
+    }
+    walk(data, 'root');
+
+    // --- Weather lat/lon type check ---
+    if (Array.isArray(data.weather)) {
+        data.weather.forEach(function(w, i) {
+            if (Array.isArray(w.locations)) {
+                w.locations.forEach(function(loc, j) {
+                    if (typeof loc.lat !== 'number') warnings.push('weather[' + i + '].locations[' + j + '].lat 必須是 number');
+                    if (typeof loc.lon !== 'number') warnings.push('weather[' + i + '].locations[' + j + '].lon 必須是 number');
+                });
+            }
+        });
+    }
+
+    // --- Suggestions priority check ---
+    if (data.suggestions && data.suggestions.content && Array.isArray(data.suggestions.content.cards)) {
+        data.suggestions.content.cards.forEach(function(card, i) {
+            if (card.priority && ['high', 'medium', 'low'].indexOf(card.priority) < 0) {
+                warnings.push('suggestions.cards[' + i + '].priority 必須是 high/medium/low，目前為：' + card.priority);
+            }
+        });
+    }
+
+    return { errors: errors, warnings: warnings };
+}
+
 /* ===== Validate Day (time vs hours) ===== */
 function validateDay(day) {
     var warnings = [];
@@ -829,6 +926,14 @@ function switchTripFile() {
                     reader.onload = function(ev) {
                         try {
                             var data = JSON.parse(ev.target.result);
+                            var validation = validateTripData(data);
+                            if (validation.errors.length > 0) {
+                                alert('行程資料驗證失敗：\n\n' + validation.errors.join('\n'));
+                                return;
+                            }
+                            if (validation.warnings.length > 0) {
+                                validation.warnings.forEach(function(w) { console.warn('[trip-planner]', w); });
+                            }
                             TRIP = data;
                             var key = 'custom:' + file.name;
                             TRIP_FILE = key;
@@ -1048,6 +1153,7 @@ if (typeof module !== 'undefined' && module.exports) {
         renderEmergency: renderEmergency,
         renderSuggestions: renderSuggestions,
         renderWarnings: renderWarnings,
+        validateTripData: validateTripData,
         validateDay: validateDay,
         fileToSlug: fileToSlug,
         slugToFile: slugToFile,
