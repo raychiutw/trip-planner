@@ -2,8 +2,38 @@
 
 ## 專案結構
 
-- `index.html` — 單一檔案網頁（HTML + CSS + JS），包含五日完整行程表
+```
+index.html          — HTML 外殼（載入 CSS / JS）
+style.css           — 所有樣式
+app.js              — 所有邏輯（載入 JSON、渲染、導航、天氣）
+data/
+  trips.json        — 行程清單（供切換選單讀取）
+  okinawa-trip-2026-Ray.json — 行程參數檔（天數、地點、航程、雨備等）
+CLAUDE.md           — 開發規範
+```
+
 - GitHub Pages 網址：https://raychiutw.github.io/okinawa-trip-2026/
+
+## 行程參數檔格式（`data/*.json`）
+
+```jsonc
+{
+  "meta": { "title", "dates", "travelers" },
+  "autoScrollDates": { "start", "end" },
+  "weather": [{ "id", "date", "label", "locations": [{ "lat", "lon", "name", "start", "end" }] }],
+  "days": [{ "id", "date", "label", "content": "<HTML>" }],
+  "flights": { "title", "content": "<HTML>" },
+  "checklist": { "title", "content": "<HTML>" },
+  "backup": { "title", "content": "<HTML>" },
+  "emergency": { "title", "content": "<HTML>" },
+  "footer": "<HTML>",
+  "footerHtml": "<HTML>"
+}
+```
+
+- `days` 陣列決定天數與每日內容，增減天數只需修改此陣列
+- `weather[].locations` 決定各天的天氣預報地點
+- 新增行程檔後，於 `data/trips.json` 登錄即可在選單中顯示
 
 ## 開發規範
 
@@ -23,7 +53,8 @@
 
 ### 程式碼風格
 
-- 單一 `index.html` 架構，CSS 與 JS 內嵌
+- `index.html` 為精簡外殼，CSS 與 JS 各自獨立檔案
+- `app.js` 透過 `fetch()` 載入 `data/*.json` 動態渲染頁面
 - CSS class 命名慣例：
   - `.restaurant-choices` / `.restaurant-choice` — 餐廳三選一區塊
   - `.restaurant-meta` — 營業時間與預約資訊
@@ -31,7 +62,7 @@
   - `.reservation-info` — 預約 / 門票資訊
   - `.parking-info` — 停車場資訊
   - `.map-link` / `.map-link-inline` — 地圖連結（Google / Apple / Mapcode）
-  - `.day-1` ~ `.day-5` — 各天主題色
+  - `.day-1` ~ `.day-N` — 各天主題色（天數由 JSON 決定）
 - 地圖連結格式：Google Map + Apple Map + Mapcode 三組
 
 ### 內容規範
