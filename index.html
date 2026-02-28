@@ -70,7 +70,7 @@
         .day-header .dh-right + .dh-menu { margin-left: 0; }
 
         /* ===== Day Content ===== */
-        .day-content { background: var(--white); padding: 0 20px 16px; }
+        .day-content { background: var(--white); padding: 0 20px 16px; min-height: calc(100vh - 50px); }
 
         /* ===== Hourly Weather ===== */
         .hourly-weather { padding: 12px 0; overflow: hidden; }
@@ -1120,7 +1120,7 @@
             if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
         }
     }
-    /* ===== Day Nav Active Pill (all headers) ===== */
+    /* ===== Day Nav Active Pill ===== */
     (function(){
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
