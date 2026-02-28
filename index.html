@@ -58,7 +58,8 @@
         .weather-list li::before { content: '🌊'; position: absolute; left: 0; }
 
         /* ===== Day Header (sticky) ===== */
-        .day-header { position: sticky; top: 0; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .day-header { position: relative; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .day-header.is-sticky { position: sticky; top: 0; }
         .day-header h2 { font-size: var(--fs-md); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .day-header .dh-right { font-size: var(--fs-sm); opacity: 0.9; white-space: nowrap; margin-left: auto; }
         .dh-nav { display: flex; gap: 3px; flex-shrink: 0; }
@@ -1099,6 +1100,8 @@
     function scrollToSec(id) {
         var el = document.getElementById(id);
         if (!el) return;
+        document.querySelectorAll('.day-header.is-sticky').forEach(function(h) { h.classList.remove('is-sticky'); });
+        el.classList.add('is-sticky');
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         document.getElementById('menuDrop').classList.remove('open');
     }
@@ -1120,21 +1123,29 @@
             if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
         }
     }
-    /* ===== Day Nav Active Pill (all headers) ===== */
+    /* ===== Day Nav Active Pill + Sticky Management ===== */
     (function(){
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
         var allPills = document.querySelectorAll('.dh-nav .dn[data-day]');
         if (!allPills.length) return;
+        var allDayHeaders = document.querySelectorAll('.day-header');
+        function updateActive() {
+            var current = 0;
+            for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
+            allPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+            /* Only one header sticky at a time: find the last header (day or info) scrolled past top */
+            var stickyEl = headers[current];
+            allDayHeaders.forEach(function(h) {
+                if (h.classList.contains('info-header') && h.getBoundingClientRect().top <= 10 && h.parentElement.getBoundingClientRect().bottom > 0) stickyEl = h;
+            });
+            allDayHeaders.forEach(function(h) { h.classList.toggle('is-sticky', h === stickyEl); });
+        }
         var ticking = false;
         window.addEventListener('scroll', function() {
-            if (!ticking) { requestAnimationFrame(function() {
-                var current = 0;
-                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
-                allPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
-                ticking = false;
-            }); ticking = true; }
+            if (!ticking) { requestAnimationFrame(function() { updateActive(); ticking = false; }); ticking = true; }
         });
+        updateActive();
     })();
     function togglePrint() {
         document.getElementById('menuDrop').classList.remove('open');
