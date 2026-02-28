@@ -44,8 +44,7 @@
         .ov-card a { color: var(--blue); font-weight: 600; text-decoration: none; }
         .ov-card a:hover { text-decoration: underline; }
         .ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-        .ov-card { background: var(--blue-light); padding: 14px; border-radius: 12px; border-left: 4px solid var(--blue); }
-        .ov-card.warm { background: var(--sand-light); border-left-color: var(--sand); }
+        .ov-card { padding: 14px; border-radius: 12px; }
         .ov-card h4 { margin-top: 0; }
         .flight-row { display: flex; align-items: center; padding: 10px 12px; background: var(--blue-light); border-radius: 12px; margin-bottom: 8px; gap: 8px; }
         .flight-row .flight-icon { font-size: 1.4rem; flex-shrink: 0; }
@@ -247,8 +246,6 @@
         body.dark .map-link.mapcode:hover { background: var(--sand); color: #1E1E1E; }
         body.dark .hw-block { border-color: #333; }
         body.dark .menu-dropdown { background: #2A2A2A; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
-        body.dark .ov-card { background: #1A2A3A; }
-        body.dark .ov-card.warm { background: #2A2218; }
         body.dark .flight-row { background: #1A2A3A; }
         body.dark .info-box.reservation { background: #2A2218; }
         body.dark .info-box.parking { background: #1A2A3A; }
@@ -479,7 +476,13 @@
                                 <a href="https://maps.apple.com/?q=真榮田岬青の洞窟" target="_blank" class="map-link apple"><span class="apple-icon"><svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg></span> Map</a>
                                 <span class="map-link mapcode">📟 206 062 685</span>
                             </div>
-                            <div class="info-box reservation">⚠️ <strong>須提前預約！</strong>暑假非常搶手<br>💰 浮潛費用：約 ¥3,000~5,000/人<br>🕐 建議預約早上場次，海況較穩定<br>👙 店家提供全套裝備（面鏡、呼吸管、救生衣）</div>
+                            <div class="info-box reservation">⚠️ <strong>須提前預約！</strong>暑假非常搶手，建議出發前 1~2 個月預約<br>🕐 建議預約早上場次，海況較穩定<br>👙 店家提供全套裝備（面鏡、呼吸管、救生衣）＋免費水中拍照</div>
+                            <div class="info-box restaurants">
+                                🤿 <strong>中文教練店家推薦：</strong>
+                                <div class="restaurant-choice">⭐ <strong><a href="https://www.bestdiveokinawa.com/" target="_blank">青潛 Best Dive Okinawa</a></strong> — 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加<span class="restaurant-meta">💰 ~¥8,000/人（含船費＋拍照20張以上）｜自有停車場＋接駁車</span></div>
+                                <div class="restaurant-choice">⭐ <strong><a href="https://www.natural-blue.net/tw/" target="_blank">Natural Blue 自然之藍</a></strong> — 台灣人中文教練，沖繩安全優良店認證，CP 值最高<span class="restaurant-meta">💰 ~¥5,500/人（未稅）｜僅收日幣現金 ｜ 6歲以上</span></div>
+                                <div class="restaurant-choice">⭐ <strong><a href="https://heichaodive.com/" target="_blank">黑潮潛水 Kuroshio Diving</a></strong> — 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯<span class="restaurant-meta">💰 ~¥8,000/人（全包無隱藏費用）｜ 9歲以上</span></div>
+                            </div>
                             <div class="info-box parking">🅿️ <strong>停車場：</strong>¥100/次｜<a href="https://maps.google.com/?q=26.4450,127.7714" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.4450,127.7714" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"><svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 062 685</span></div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 約15分鐘 真榮田岬→萬座毛</div>
@@ -989,7 +992,7 @@
             </div>
             <div class="day-content">
                 <div class="ov-grid">
-                    <div class="ov-card"><h4>🤿 青之洞窟浮潛預約</h4><p>⏰ 確認時間：出發前 1-2 週</p><p>📅 Day 2 (7/30 週四) 10:30</p><p>⚠️ 暑假為旺季，務必提早預約早場時段</p></div>
+                    <div class="ov-card"><h4>🤿 青之洞窟浮潛預約</h4><p>⏰ 建議出發前 1~2 個月預約</p><p>📅 Day 2 (7/30 週四) 10:30</p><p>🏪 推薦中文店家：<a href="https://www.bestdiveokinawa.com/" target="_blank">青潛</a>、<a href="https://www.natural-blue.net/tw/" target="_blank">Natural Blue</a>、<a href="https://heichaodive.com/" target="_blank">黑潮潛水</a></p></div>
                     <div class="ov-card warm"><h4>🌀 颱風動態追蹤</h4><p>⏰ 確認時間：出發前 3-5 天</p><p>⚠️ 7-8月為颱風季，需密切注意天氣預報</p><p>📱 建議下載：Windy 或 tenki.jp APP</p></div>
                     <div class="ov-card"><h4>🚗 租車確認</h4><p>⏰ 確認時間：出發前 2-4 週</p><p>🔑 需備：台灣駕照＋日文譯本</p><p>📅 租車期間：7/29 12:00 ~ 8/1 還車（歌町/美榮橋）</p></div>
                     <div class="ov-card"><h4>📞 飯店預約確認</h4><p>• Vessel Hotel Campana 北谷（7/29 一晚）</p><p>• Super Hotel 名護（7/30-31 二晚）</p><p>• 東橫inn 那霸美榮橋站（8/1 一晚）</p></div>
@@ -1125,11 +1128,13 @@
         var navPills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
         if (!navPills.length) return;
         var navH = document.getElementById('stickyNav').offsetHeight;
+        var infoStart = document.getElementById('sec-flight');
         var ticking = false;
         window.addEventListener('scroll', function() {
             if (!ticking) { requestAnimationFrame(function() {
+                var inInfo = infoStart && infoStart.getBoundingClientRect().top <= navH + 10;
                 var current = -1;
-                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; }
+                if (!inInfo) { for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; } }
                 navPills.forEach(function(btn) { btn.classList.toggle('active', current >= 0 && parseInt(btn.getAttribute('data-day')) === current + 1); });
                 ticking = false;
             }); ticking = true; }
