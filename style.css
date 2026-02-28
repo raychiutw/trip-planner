@@ -18,7 +18,8 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--gray-light); f
 #tripContent a { color: var(--text); text-decoration: underline; }
 #tripContent a:visited { color: var(--text); }
 
-.container { max-width: 800px; margin: 0 auto; }
+.container { max-width: 100%; margin: 0 auto; padding: 0 24px; }
+@media (max-width: 600px) { .container { padding: 0; } }
 
 
 /* ===== Menu Dropdown (two-column) ===== */
@@ -225,6 +226,20 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 /* ===== Menu Separator ===== */
 .menu-sep { border-top: 1px solid var(--gray-light); margin: 4px 0; }
 
+/* ===== Trip Switcher Overlay ===== */
+.trip-overlay { display: flex; position: fixed; inset: 0; background: var(--white); z-index: 400; align-items: center; justify-content: center; flex-direction: column; }
+.trip-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+.trip-close:hover { background: var(--gray-light); }
+.trip-list { display: flex; flex-direction: column; gap: 8px; width: 90%; max-width: 420px; }
+.trip-list h3 { font-size: 1.1rem; color: var(--text); margin: 0 0 4px; text-align: center; }
+.trip-btn { width: 100%; text-align: left; padding: 14px 16px; border-radius: 10px; border: 1.5px solid var(--blue-light); background: none; cursor: pointer; font-family: inherit; font-size: var(--fs-md); color: var(--text); }
+.trip-btn:hover { background: var(--blue-light); }
+.trip-btn.active { border-color: var(--blue); }
+.trip-btn strong { display: block; font-size: var(--fs-lg); }
+.trip-btn .trip-sub { font-size: 0.85em; color: var(--gray); margin-top: 2px; }
+.trip-upload { width: 100%; text-align: center; padding: 10px; border: none; background: none; cursor: pointer; font-family: inherit; font-size: var(--fs-md); color: var(--gray); border-radius: 8px; }
+.trip-upload:hover { background: var(--gray-light); }
+
 /* ===== Dark Mode ===== */
 body.dark { --blue: #4FC3F7; --blue-light: #1A2A3A; --sand: #E0A870; --sand-light: #2A2218; --white: #1E1E1E; --gray: #AAAAAA; --gray-light: #2A2A2A; --text: #E8E8E8; background: #121212; }
 body.dark .sticky-nav { background: #1565C0; color: #E8E8E8; }
@@ -254,6 +269,13 @@ body.dark .hotel-sub { background: #1A2A3A; }
 body.dark .col-row { border-bottom-color: #333; }
 body.dark .restaurant-choice { border-bottom-color: #444; }
 body.dark .menu-sep { border-top-color: #444; }
+body.dark .trip-overlay { background: #2A2A2A; }
+body.dark .trip-close { color: #E8E8E8; }
+body.dark .trip-close:hover { background: #333; }
+body.dark .trip-btn { border-color: #333; }
+body.dark .trip-btn:hover { background: #333; }
+body.dark .trip-btn.active { border-color: #4FC3F7; }
+body.dark .trip-upload:hover { background: #333; }
 body.dark footer { border-top-color: #333; }
 body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.15); border-left-color: #F87171; }
 body.dark .suggestion-card.high { background: rgba(220, 38, 38, 0.15); border-left-color: #F87171; }

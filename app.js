@@ -790,35 +790,37 @@ function switchTripFile() {
         .then(function(r) { return r.json(); })
         .then(function(trips) {
             var overlay = document.createElement('div');
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:400;display:flex;align-items:center;justify-content:center;';
-            var box = document.createElement('div');
-            box.style.cssText = 'background:var(--white);border-radius:12px;padding:20px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
-            box.innerHTML = '<h3 style="margin:0 0 12px;font-size:1.1rem;color:var(--text);">📂 選擇行程</h3>';
+            overlay.className = 'trip-overlay';
+            // X close button
+            var xBtn = document.createElement('button');
+            xBtn.className = 'trip-close';
+            xBtn.innerHTML = '✕';
+            xBtn.onclick = function() { document.body.removeChild(overlay); document.body.style.overflow = ''; };
+            overlay.appendChild(xBtn);
+            var list = document.createElement('div');
+            list.className = 'trip-list';
+            list.innerHTML = '<h3>📂 選擇行程</h3>';
             trips.forEach(function(t) {
                 var btn = document.createElement('button');
-                btn.className = 'menu-item';
-                btn.style.cssText = 'width:100%;text-align:left;padding:12px;margin-bottom:4px;border-radius:8px;border:1.5px solid var(--blue-light);';
-                btn.innerHTML = '<strong>' + escHtml(t.name) + '</strong><br><span style="font-size:0.85em;color:var(--gray);">' + escHtml(t.dates) + '</span>';
-                if (TRIP_FILE === t.file) btn.style.borderColor = 'var(--blue)';
-                btn.onclick = function() { document.body.removeChild(overlay); loadTrip(t.file); window.scrollTo({top:0,behavior:'smooth'}); };
-                box.appendChild(btn);
+                btn.className = 'trip-btn' + (TRIP_FILE === t.file ? ' active' : '');
+                btn.innerHTML = '<strong>' + escHtml(t.name) + '</strong><span class="trip-sub">' + escHtml(t.dates) + '</span>';
+                btn.onclick = function() { document.body.removeChild(overlay); document.body.style.overflow = ''; loadTrip(t.file); window.scrollTo({top:0,behavior:'smooth'}); };
+                list.appendChild(btn);
             });
             // Show current custom trip if active
             if (TRIP_FILE.indexOf('custom:') === 0 && TRIP) {
                 var customBtn = document.createElement('button');
-                customBtn.className = 'menu-item';
-                customBtn.style.cssText = 'width:100%;text-align:left;padding:12px;margin-bottom:4px;border-radius:8px;border:1.5px solid var(--blue);';
-                customBtn.innerHTML = '<strong>\ud83d\udcce ' + escHtml(TRIP_FILE.replace('custom:', '')) + '</strong><br><span style="font-size:0.85em;color:var(--gray);">\u81ea\u8a02\u4e0a\u50b3\uff08\u50c5\u9650\u672c\u6b21 session\uff09</span>';
-                customBtn.onclick = function() { document.body.removeChild(overlay); };
-                box.appendChild(customBtn);
+                customBtn.className = 'trip-btn active';
+                customBtn.innerHTML = '<strong>\ud83d\udcce ' + escHtml(TRIP_FILE.replace('custom:', '')) + '</strong><span class="trip-sub">\u81ea\u8a02\u4e0a\u50b3\uff08\u50c5\u9650\u672c\u6b21 session\uff09</span>';
+                customBtn.onclick = function() { document.body.removeChild(overlay); document.body.style.overflow = ''; };
+                list.appendChild(customBtn);
             }
             // Upload custom
             var upBtn = document.createElement('button');
-            upBtn.className = 'menu-item';
-            upBtn.style.cssText = 'width:100%;text-align:center;padding:10px;margin-top:8px;color:var(--gray);';
+            upBtn.className = 'trip-upload';
             upBtn.textContent = '📁 上傳自訂 JSON 檔案';
             upBtn.onclick = function() {
-                document.body.removeChild(overlay);
+                document.body.removeChild(overlay); document.body.style.overflow = '';
                 var input = document.createElement('input');
                 input.type = 'file'; input.accept = '.json';
                 input.onchange = function(e) {
@@ -843,17 +845,10 @@ function switchTripFile() {
                 };
                 input.click();
             };
-            box.appendChild(upBtn);
-            // Close btn
-            var closeBtn = document.createElement('button');
-            closeBtn.className = 'menu-item';
-            closeBtn.style.cssText = 'width:100%;text-align:center;padding:8px;margin-top:4px;color:var(--gray);';
-            closeBtn.textContent = '✕ 關閉';
-            closeBtn.onclick = function() { document.body.removeChild(overlay); };
-            box.appendChild(closeBtn);
-            overlay.appendChild(box);
-            overlay.onclick = function(e) { if (e.target === overlay) document.body.removeChild(overlay); };
+            list.appendChild(upBtn);
+            overlay.appendChild(list);
             document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
         })
         .catch(function() { alert('無法載入行程清單'); });
 }
