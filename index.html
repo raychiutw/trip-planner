@@ -24,10 +24,9 @@
             --gray: #666666;
             --gray-light: #F5F5F5;
             --text: #1A3A5C;
-            --fs-xl: 2.2rem;
-            --fs-lg: 1.6rem;
-            --fs-md: 1.25rem;
-            --fs-sm: 1.05rem;
+            --fs-lg: 1.15rem;
+            --fs-md: 0.95rem;
+            --fs-sm: 0.82rem;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
@@ -51,26 +50,33 @@
         .ov-card h4 { margin-top: 0; }
         .flight-row { display: flex; align-items: center; padding: 12px; background: var(--blue-light); border-radius: 12px; margin-bottom: 8px; gap: 12px; }
         .flight-row span:first-child { font-size: 1.4rem; }
-        .flight-route { font-weight: 600; font-size: var(--fs-md); }
+        .flight-route { font-weight: 600; font-size: var(--fs-lg); }
         .flight-time { font-size: var(--fs-sm); color: var(--gray); margin-top: 2px; }
         .weather-list { list-style: none; padding: 0; }
         .weather-list li { font-size: var(--fs-sm); padding: 3px 0 3px 22px; position: relative; }
         .weather-list li::before { content: '🌊'; position: absolute; left: 0; }
 
-        /* ===== Day Header (sticky) ===== */
-        .day-header { position: sticky; top: 0; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
-        .day-header h2 { font-size: var(--fs-md); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* ===== Sticky Nav ===== */
+        .sticky-nav { position: sticky; top: 0; z-index: 200; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .sticky-nav h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; }
+        .sticky-nav .dh-right { font-size: var(--fs-sm); opacity: 0.9; white-space: nowrap; margin-left: auto; }
+        .sticky-nav .dh-right + .dh-menu { margin-left: 0; }
+        body.dark .sticky-nav { background: #1565C0; }
+
+        /* ===== Day Header (section divider) ===== */
+        .day-header { position: relative; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; scroll-margin-top: 44px; }
+        .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .day-header .dh-right { font-size: var(--fs-sm); opacity: 0.9; white-space: nowrap; margin-left: auto; }
         .dh-nav { display: flex; gap: 3px; flex-shrink: 0; }
-        .dn { background: rgba(255,255,255,0.2); color: var(--white); border: none; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-family: inherit; cursor: pointer; font-weight: 600; }
+        .dn { background: rgba(255,255,255,0.2); color: var(--white); border: none; padding: 3px 8px; border-radius: 12px; font-size: var(--fs-sm); font-family: inherit; cursor: pointer; font-weight: 600; }
         .dn:hover { background: rgba(255,255,255,0.35); }
         .dn.active { background: var(--white); color: var(--blue); }
-        .dh-menu { background: rgba(255,255,255,0.2); color: var(--white); border: none; width: 32px; height: 32px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: 700; flex-shrink: 0; margin-left: auto; }
+        .dh-menu { background: rgba(255,255,255,0.2); color: var(--white); border: none; width: 32px; height: 32px; border-radius: 8px; font-size: var(--fs-md); cursor: pointer; font-weight: 700; flex-shrink: 0; margin-left: auto; }
         .dh-menu:hover { background: rgba(255,255,255,0.35); }
         .day-header .dh-right + .dh-menu { margin-left: 0; }
 
         /* ===== Day Content ===== */
-        .day-content { background: var(--white); padding: 0 20px 16px; min-height: calc(100vh - 50px); }
+        .day-content { background: var(--white); padding: 0 20px 16px; }
 
         /* ===== Hourly Weather ===== */
         .hourly-weather { padding: 12px 0; overflow: hidden; }
@@ -81,14 +87,14 @@
         .hw-block { background: var(--white); border-radius: 10px; padding: 8px 6px; text-align: center; border: 1px solid var(--gray-light); min-width: calc((100% - 42px) / 8); flex-shrink: 0; }
         .hw-block.hw-now { border: 2px solid var(--blue); background: var(--blue-light); }
         .hw-block-time { font-size: var(--fs-sm); font-weight: 600; color: var(--gray); margin-bottom: 2px; }
-        .hw-block-loc { font-size: 0.7rem; color: var(--white); border-radius: 4px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; white-space: nowrap; }
+        .hw-block-loc { font-size: var(--fs-sm); color: var(--white); border-radius: 4px; padding: 1px 5px; display: inline-block; margin-bottom: 2px; white-space: nowrap; }
         .hw-loc-0 { background: var(--blue); }
         .hw-loc-1 { background: var(--sand); }
         .hw-loc-2 { background: var(--text); }
         .hw-loc-3 { background: var(--gray); }
         .hw-block-icon { font-size: 1.4rem; line-height: 1.3; }
         .hw-block-temp { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
-        .hw-block-rain { font-size: 0.78rem; color: var(--blue); }
+        .hw-block-rain { font-size: var(--fs-sm); color: var(--blue); }
         .hw-block-rain.hw-rain-high { color: var(--text); font-weight: 700; }
         .hw-loading { text-align: center; padding: 10px; color: var(--gray); font-size: var(--fs-sm); }
         .hw-error { text-align: center; padding: 10px; color: var(--text); font-size: var(--fs-sm); background: var(--blue-light); border-radius: 8px; }
@@ -102,7 +108,7 @@
         .col-detail.open { display: block; }
         .col-detail a { color: var(--blue); font-weight: 600; text-decoration: none; }
         .col-detail a:hover { text-decoration: underline; }
-        .status-tag { font-size: 0.75rem; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+        .status-tag { font-size: var(--fs-sm); padding: 2px 8px; border-radius: 8px; font-weight: 600; }
         .status-tag.pending { background: var(--sand-light); color: var(--sand); }
         .status-tag.paid { background: var(--blue-light); color: var(--blue); }
         .hotel-detail-grid { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; }
@@ -118,7 +124,7 @@
         .tl-head.clickable { cursor: pointer; }
         .tl-head.clickable:hover { background: var(--blue-light); }
         .tl-time { font-weight: 700; font-size: var(--fs-sm); color: var(--blue); min-width: 95px; flex-shrink: 0; }
-        .tl-title { font-weight: 600; font-size: var(--fs-md); }
+        .tl-title { font-weight: 600; font-size: var(--fs-lg); }
         .tl-title a { color: var(--text); text-decoration: none; }
         .tl-title a:hover { color: var(--blue); text-decoration: underline; }
         .tl-arrow { margin-left: auto; color: var(--gray); font-size: var(--fs-sm); transition: transform 0.2s; flex-shrink: 0; }
@@ -129,18 +135,17 @@
         .tl-transit { padding: 1px 8px 1px 0; margin-left: 0; font-size: var(--fs-sm); color: var(--gray); }
 
         /* ===== Nav Group (Map Links) ===== */
-        .nav-group { margin: 6px 0; }
-        .nav-toggle { display: inline-block; background: none; color: var(--blue); border: 1.5px solid var(--blue); padding: 3px 10px; border-radius: 6px; font-size: var(--fs-sm); cursor: pointer; }
-        .nav-toggle:hover { background: var(--blue); color: var(--white); }
-        .nav-links { display: none; margin-top: 4px; }
-        .nav-group.open .nav-links { display: block; }
+        .nav-links { margin: 6px 0; }
         .map-link { display: inline-flex; align-items: center; gap: 3px; background: none; color: var(--blue); border: 1.5px solid var(--blue); padding: 2px 8px; border-radius: 6px; font-size: var(--fs-sm); text-decoration: none; margin-right: 4px; margin-bottom: 3px; }
         .map-link:hover { background: var(--blue); color: var(--white); }
+        .map-link .g-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #4285F4; color: #fff; font-size: 10px; font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; }
         .map-link.apple { color: #333; border-color: #333; background: none; }
         .map-link.apple:hover { background: #333; color: var(--white); }
+        .map-link .apple-icon { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; }
         .map-link.mapcode { color: var(--sand); border-color: var(--sand); background: none; }
         .map-link.mapcode:hover { background: var(--sand); color: var(--white); }
-        .map-link-inline { font-size: 0.8rem; padding: 1px 6px; }
+        .map-link-inline { font-size: var(--fs-sm); padding: 1px 6px; }
+        .map-link-inline .g-icon { width: 13px; height: 13px; font-size: 8px; }
 
         /* ===== Info Boxes ===== */
         .info-box { margin: 6px 0; padding: 8px 12px; border-radius: 8px; font-size: var(--fs-sm); line-height: 1.7; }
@@ -170,49 +175,42 @@
 
         /* ===== Footer ===== */
         footer { text-align: center; padding: 24px 20px; background: var(--white); color: var(--text); border-top: 2px solid var(--blue-light); margin-top: 4px; }
-        footer h3 { font-size: var(--fs-md); color: var(--blue); }
+        footer h3 { font-size: var(--fs-lg); color: var(--blue); }
         footer p { font-size: var(--fs-sm); margin-top: 4px; }
 
         /* ===== Print Mode ===== */
         .print-mode { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; background: var(--gray-light) !important; }
         .print-mode .container { max-width: 420px; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-        .print-mode .tl-body, .print-mode .col-detail, .print-mode .nav-links { display: block !important; }
-        .print-mode .tl-arrow, .print-mode .col-row .arrow, .print-mode .nav-toggle { display: none !important; }
+        .print-mode .tl-body, .print-mode .col-detail { display: block !important; }
+        .print-mode .tl-arrow, .print-mode .col-row .arrow { display: none !important; }
         .print-mode .dh-nav, .print-mode .dh-menu { display: none !important; }
+        .print-mode .sticky-nav { display: none; }
         .print-mode .top-bar, .print-mode .day-header { position: relative !important; }
-        .print-mode .day-header { flex-wrap: wrap; padding: 8px 12px; }
-        .print-mode .hw-detail { display: block !important; }
-        .print-mode .hw-summary { display: none !important; }
-        .print-mode .day-header { background: #333 !important; }
+        .print-mode .day-header { flex-wrap: wrap; padding: 8px 12px; background: var(--blue) !important; }
+        .print-mode .hourly-weather { display: none !important; }
         .print-mode .map-link { color: #333 !important; border-color: #333 !important; background: none !important; }
-        .print-mode .nav-toggle { background: #555 !important; }
         .print-mode .status-tag { background: #ddd !important; color: #333 !important; }
-        .print-mode .hw-grid { flex-wrap: wrap; overflow-x: visible; }
-        .print-mode .hw-block { min-width: calc((100% - 10px) / 4); }
         .print-mode .ov-grid { grid-template-columns: 1fr; }
         .print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 9999; background: #D32F2F; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: var(--fs-sm); font-family: inherit; cursor: pointer; font-weight: 600; box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
         .print-exit-btn:hover { background: #B71C1C; }
         .print-mode .print-exit-btn { display: block; }
         @media print {
             @page { size: A4; margin: 12mm; }
-            body { background: #fff !important; }
-            .menu-dropdown, .nav-toggle, .dh-nav, .dh-menu, .print-exit-btn { display: none !important; }
+            body { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; background: #fff !important; }
+            .sticky-nav, .menu-dropdown, .dh-nav, .dh-menu, .print-exit-btn, .hourly-weather { display: none !important; }
             .container { max-width: 100% !important; box-shadow: none !important; }
-            .tl-body, .col-detail, .nav-links { display: block !important; }
+            .tl-body, .col-detail { display: block !important; }
             .tl-arrow, .col-row .arrow { display: none !important; }
             .top-bar, .day-header { position: relative !important; }
-            .day-header { background: #333 !important; }
+            .day-header { background: var(--blue) !important; }
             .day-content { break-inside: avoid; }
-            .hw-detail { display: block !important; }
-            .hw-summary { display: none !important; }
         }
 
         /* ===== Mobile ===== */
         @media (max-width: 600px) {
-            .top-bar h1 { font-size: var(--fs-md); }
+            :root { --fs-lg: 1.25rem; --fs-md: 1.05rem; --fs-sm: 0.92rem; }
             .day-header { top: 0; padding: 6px 8px; gap: 4px; flex-wrap: wrap; }
             .dh-nav { gap: 2px; }
-            .dn { padding: 3px 7px; font-size: 0.8rem; }
             .tl-head { flex-wrap: wrap; }
             .tl-time { min-width: 75px; }
             .hw-grid { gap: 5px; scroll-snap-type: x mandatory; }
@@ -236,10 +234,12 @@
 
         /* ===== Dark Mode ===== */
         body.dark { --blue: #4FC3F7; --blue-light: #1A2A3A; --sand: #E0A870; --sand-light: #2A2218; --white: #1E1E1E; --gray: #AAAAAA; --gray-light: #2A2A2A; --text: #E8E8E8; background: #121212; }
-        body.dark .day-header { background: #1565C0; }
-        body.dark .info-header { background: #333 !important; }
+        body.dark .sticky-nav { background: #1565C0; color: #E8E8E8; }
+        body.dark .day-header { background: #1565C0; color: #E8E8E8; }
+        body.dark .info-header { background: #333 !important; color: #E8E8E8 !important; }
+        body.dark .dn { color: #E8E8E8; }
         body.dark .dn.active { background: #E8E8E8; color: #1565C0; }
-        body.dark .dh-menu { background: rgba(255,255,255,0.15); }
+        body.dark .dh-menu { background: rgba(255,255,255,0.15); color: #E8E8E8; }
         body.dark .map-link { color: #4FC3F7; border-color: #4FC3F7; }
         body.dark .map-link:hover { background: #1565C0; color: #fff; border-color: #1565C0; }
         body.dark .map-link.apple { color: #aaa; border-color: #aaa; }
@@ -266,48 +266,54 @@
 <body>
     <div class="container">
 
+        <!-- ===== Sticky Nav ===== -->
+        <div class="sticky-nav" id="stickyNav">
+            <div class="dh-nav"><button class="dn active" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
+            <h2 id="navTitle">Day 1</h2>
+            <div class="dh-right" id="navDate">7/29（三）</div>
+            <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
+        </div>
+
         <!-- ==================== Day 1 ==================== -->
         <section>
             <div class="day-header" id="day1">
-                <div class="dh-nav"><button class="dn active" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 1</h2>
                 <div class="dh-right">7/29（三）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-1"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
 
                 <!-- Hotel -->
-                <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://bobbyfun.tw/2023-04-27-2319/" target="_blank" onclick="event.stopPropagation()">Vessel Hotel Campana Okinawa</a> <span class="status-tag pending">待預約</span> <span class="arrow">▸</span></div>
+                <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://bobbyfun.tw/2023-04-27-2319/" target="_blank" onclick="event.stopPropagation()">Vessel Hotel Campana Okinawa</a> <span class="arrow">▸</span></div>
                 <div class="col-detail">
                     <div class="hotel-detail-grid">
                         <span>📍 北谷美國村內</span><span>🚶 步行 1 分到美國村</span><span>♨️ 頂樓海景溫泉</span><span>🍽️ 含早餐（沖繩料理）</span>
                     </div>
                     <div class="hotel-sub">🅿️ <strong>停車場：</strong>¥500/晚（先到先得）｜
-                        <a href="https://maps.google.com/?q=26.3151,127.7545" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                        <a href="https://maps.apple.com/?ll=26.3151,127.7545" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                        <a href="https://maps.google.com/?q=26.3151,127.7545" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
+                        <a href="https://maps.apple.com/?ll=26.3151,127.7545" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a>
                         <span class="map-link mapcode map-link-inline">📟 33 525 382</span>
                     </div>
                     <div class="hotel-sub">🛒 <strong>附近超市：</strong><a href="https://gogojp.tw/aeon-chatan/" target="_blank">AEON 北谷店</a>｜步行 5 分鐘｜食品區營業至 24:00｜
-                        <a href="https://maps.google.com/?q=イオン北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
+                        <a href="https://maps.google.com/?q=イオン北谷店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
                     </div>
                 </div>
 
                 <div class="timeline">
-                    <!-- 12:00 抵達那霸機場 -->
+                    <!-- 11:40 抵達那霸機場 -->
                     <div class="tl-event">
                         <div class="tl-head clickable" onclick="toggleEv(event,this)">
-                            <span class="tl-time">12:00</span>
+                            <span class="tl-time">11:40</span>
                             <span class="tl-title">🛫 抵達那霸機場</span>
                             <span class="tl-arrow">▸</span>
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">入境、領取行李</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=那霸機場" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=那霸機場" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=那霸機場" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=那霸機場" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 002 519</span>
-                            </div></div>
+                            </div>
                         </div>
                         <div class="tl-transit">⤷ 🚐 接駁車 約10分鐘</div>
                     </div>
@@ -315,7 +321,7 @@
                     <!-- 12:00 租車取車 -->
                     <div class="tl-event">
                         <div class="tl-head clickable" onclick="toggleEv(event,this)">
-                            <span class="tl-time">12:00-13:30</span>
+                            <span class="tl-time">12:00-13:00</span>
                             <span class="tl-title">🚗 租車取車</span>
                             <span class="tl-arrow">▸</span>
                         </div>
@@ -324,26 +330,26 @@
                             <div class="info-box reservation">
                                 🔑 <strong>需備文件：</strong>台灣駕照正本＋日文譯本＋護照<br>
                                 ⚠️ 日文譯本可至各地監理所辦理（NT$100）<br>
-                                📅 <strong>租車期間：</strong>7/29 13:30 ~ 8/1 16:00
+                                📅 <strong>租車期間：</strong>7/29 13:00 ~ 8/1 16:00
                             </div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 開車 約40分鐘（國道58號北上）</div>
                     </div>
 
-                    <!-- 14:10 Check in -->
+                    <!-- 13:40 Check in -->
                     <div class="tl-event">
                         <div class="tl-head clickable" onclick="toggleEv(event,this)">
-                            <span class="tl-time">14:10-14:30</span>
+                            <span class="tl-time">13:40-14:00</span>
                             <span class="tl-title">🏨 <a href="https://bobbyfun.tw/2023-04-27-2319/" target="_blank">Check in Vessel Hotel</a></span>
                             <span class="tl-arrow">▸</span>
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">放行李，換裝準備玩水</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 526 450</span>
-                            </div></div>
+                            </div>
                         </div>
                         <div class="tl-transit">⤷ 🚶 步行 約3分鐘</div>
                     </div>
@@ -351,31 +357,31 @@
                     <!-- 14:30 美國村 -->
                     <div class="tl-event">
                         <div class="tl-head clickable" onclick="toggleEv(event,this)">
-                            <span class="tl-time">14:30-17:30</span>
+                            <span class="tl-time">14:00-17:30</span>
                             <span class="tl-title">🏖️ <a href="https://bobbyfun.tw/2024-01-08-2709/" target="_blank">美國村＋Sunset Beach</a></span>
                             <span class="tl-arrow">▸</span>
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">美國村內逛街購物，Sunset Beach 沙灘戲水。異國風情的彩色商圈，集結服飾店、雜貨店、餐廳</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
+                            <div class="nav-links">
                                 <strong>美國村：</strong>
-                                <a href="https://maps.google.com/?q=American+Village+Chatan+Okinawa" target="_blank" class="map-link">📍 Google</a>
-                                <a href="https://maps.apple.com/?q=American+Village+Chatan+Okinawa" target="_blank" class="map-link apple">🍎 Apple</a>
+                                <a href="https://maps.google.com/?q=American+Village+Chatan+Okinawa" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=American+Village+Chatan+Okinawa" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 526 450</span><br>
                                 <strong>Sunset Beach：</strong>
-                                <a href="https://maps.google.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank" class="map-link">📍 Google</a>
-                                <a href="https://maps.apple.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank" class="map-link apple">🍎 Apple</a>
+                                <a href="https://maps.google.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=Sunset+Beach+Chatan+Okinawa" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 526 419</span>
-                            </div></div>
+                            </div>
                             <div class="info-box souvenir">
                                 🎁 <strong>北谷伴手禮推薦：</strong><br>
                                 🏪 <a href="https://maps.google.com/?q=ドン・キホーテ+北谷店" target="_blank">唐吉訶德 北谷店</a>（24H 免稅藥妝＋零食）
-                                <a href="https://maps.google.com/?q=ドン・キホーテ+北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                                <a href="https://maps.apple.com/?q=ドンキホーテ北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <a href="https://maps.google.com/?q=ドン・キホーテ+北谷店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=ドンキホーテ北谷店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode map-link-inline">📟 33 526 241</span><br>
                                 🛒 <a href="https://maps.google.com/?q=イオン北谷店" target="_blank">AEON 北谷店</a>（大型商場，沖繩限定零食＋伴手禮專區）
-                                <a href="https://maps.google.com/?q=イオン北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                                <a href="https://maps.apple.com/?q=イオン北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                <a href="https://maps.google.com/?q=イオン北谷店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=イオン北谷店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode map-link-inline">📟 33 526 084</span>
                             </div>
                         </div>
@@ -395,22 +401,22 @@
                                 🍽️ <strong>晚餐推薦三選一：</strong>
                                 <div class="restaurant-choice">
                                     🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=琉球新麺通堂+北谷美浜店" target="_blank">琉球新麵 通堂 北谷美浜店</a> — 沖繩人氣拉麵，「男味」濃厚豚骨 / 「女味」清爽雞湯，¥800~<br>
-                                    <a href="https://maps.google.com/?q=琉球新麺通堂+北谷美浜店" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                                    <a href="https://maps.apple.com/?q=琉球新麺通堂北谷美浜店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                    <a href="https://maps.google.com/?q=琉球新麺通堂+北谷美浜店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
+                                    <a href="https://maps.apple.com/?q=琉球新麺通堂北谷美浜店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a>
                                     <span class="map-link mapcode map-link-inline">📟 33 526 312</span>
                                     <span class="restaurant-meta">⏰ 11:00~24:00 ｜ 不接受預約</span>
                                 </div>
                                 <div class="restaurant-choice">
                                     🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉きんぐ+北谷店" target="_blank">焼肉きんぐ 北谷店</a> — 日本人氣燒肉吃到飽，¥2,980~/人（90分鐘）<br>
-                                    <a href="https://maps.google.com/?q=焼肉きんぐ+北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                                    <a href="https://maps.apple.com/?q=焼肉きんぐ北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                    <a href="https://maps.google.com/?q=焼肉きんぐ+北谷店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
+                                    <a href="https://maps.apple.com/?q=焼肉きんぐ北谷店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a>
                                     <span class="map-link mapcode map-link-inline">📟 33 526 178</span>
                                     <span class="restaurant-meta">⏰ 平日 17:00~24:00／假日 11:00~24:00 ｜ 📞 <a href="https://epark.jp/shopinfo/jsp608996/" target="_blank">EPARK 預約</a></span>
                                 </div>
                                 <div class="restaurant-choice">
                                     🥩 <strong>其他推薦：</strong><a href="https://maps.google.com/?q=やっぱりステーキ+北谷店" target="_blank">やっぱりステーキ 北谷店</a> — CP 值之王！溶岩石板燒牛排 ¥1,000 起，白飯＋沙拉＋湯吃到飽<br>
-                                    <a href="https://maps.google.com/?q=やっぱりステーキ+北谷店" target="_blank" class="map-link map-link-inline">📍 Map</a>
-                                    <a href="https://maps.apple.com/?q=やっぱりステーキ北谷店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a>
+                                    <a href="https://maps.google.com/?q=やっぱりステーキ+北谷店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a>
+                                    <a href="https://maps.apple.com/?q=やっぱりステーキ北谷店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a>
                                     <span class="map-link mapcode map-link-inline">📟 33 526 450</span>
                                     <span class="restaurant-meta">⏰ 11:00~24:00 ｜ 不接受預約</span>
                                 </div>
@@ -443,20 +449,18 @@
         <!-- ==================== Day 2 ==================== -->
         <section>
             <div class="day-header" id="day2">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn active" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 2</h2>
                 <div class="dh-right">7/30（四）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-2"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
 
-                <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://awo9john.com/super-hotel-nago/" target="_blank" onclick="event.stopPropagation()">Super Hotel Okinawa Nago</a> <span class="status-tag pending">待預約</span> <span class="arrow">▸</span></div>
+                <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://awo9john.com/super-hotel-nago/" target="_blank" onclick="event.stopPropagation()">Super Hotel Okinawa Nago</a> <span class="arrow">▸</span></div>
                 <div class="col-detail">
                     <div class="hotel-detail-grid"><span>📍 名護市</span><span>♨️ 天然溫泉「萬座之湯」</span><span>🍽️ 含免費早餐（DIY taco rice）</span><span>📅 連住 2 晚（7/30-31）</span></div>
-                    <div class="hotel-sub">🅿️ <strong>停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6045,127.9742" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6045,127.9742" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 382</span></div>
-                    <div class="hotel-sub">🛒 <strong>附近超市：</strong>MaxValu なご店｜步行 7 分鐘｜24 小時營業｜晚 9 點後熟食半價｜<a href="https://maps.google.com/?q=マックスバリュなご店" target="_blank" class="map-link map-link-inline">📍 Map</a></div>
-                    <div class="hotel-sub">🏪 <strong>唐吉軻德：</strong><a href="https://rocky.tw/mpglobaldonki/" target="_blank">名護店</a>｜開車 5 分鐘｜24 小時營業｜<a href="https://maps.google.com/?q=ドン・キホーテ名護店" target="_blank" class="map-link map-link-inline">📍 Map</a></div>
+                    <div class="hotel-sub">🅿️ <strong>停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6045,127.9742" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.6045,127.9742" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 382</span></div>
+                    <div class="hotel-sub">🛒 <strong>附近超市：</strong>MaxValu なご店｜步行 7 分鐘｜24 小時營業｜晚 9 點後熟食半價｜<a href="https://maps.google.com/?q=マックスバリュなご店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a></div>
+                    <div class="hotel-sub">🏪 <strong>唐吉軻德：</strong><a href="https://rocky.tw/mpglobaldonki/" target="_blank">名護店</a>｜開車 5 分鐘｜24 小時營業｜<a href="https://maps.google.com/?q=ドン・キホーテ名護店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a></div>
                 </div>
 
                 <div class="timeline">
@@ -473,13 +477,13 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=真榮田岬+青の洞窟" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=真榮田岬青の洞窟" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=真榮田岬+青の洞窟" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=真榮田岬青の洞窟" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 206 062 685</span>
-                            </div></div>
+                            </div>
                             <div class="info-box reservation">⚠️ <strong>須提前預約！</strong>暑假非常搶手<br>💰 浮潛費用：約 ¥3,000~5,000/人<br>🕐 建議預約早上場次，海況較穩定<br>👙 店家提供全套裝備（面鏡、呼吸管、救生衣）</div>
-                            <div class="info-box parking">🅿️ <strong>停車場：</strong>¥100/次｜<a href="https://maps.google.com/?q=26.4450,127.7714" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.4450,127.7714" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 062 685</span></div>
+                            <div class="info-box parking">🅿️ <strong>停車場：</strong>¥100/次｜<a href="https://maps.google.com/?q=26.4450,127.7714" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.4450,127.7714" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 062 685</span></div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 約15分鐘 真榮田岬→萬座毛</div>
                     </div>
@@ -492,11 +496,11 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=万座毛" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=万座毛" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=万座毛" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=万座毛" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 206 312 039</span>
-                            </div></div>
+                            </div>
                             <div class="info-box parking">🅿️ <strong>停車場：</strong>免費｜入場費 ¥100</div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 約35分鐘 萬座毛→名護（國道58號北上）</div>
@@ -512,11 +516,11 @@
                             <p class="tl-desc">名護市區覓食，多種沖繩在地美食可選</p>
                             <div class="info-box restaurants">
                                 🍽️ <strong>午餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=我部祖河食堂+名護店" target="_blank">我部祖河食堂</a> — 創業 50 年以上名護名店，傳統沖繩麵，¥700~<br><a href="https://maps.google.com/?q=我部祖河食堂+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=我部祖河食堂名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 694</span><span class="restaurant-meta">⏰ 10:00~20:00（週四公休）｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — 沖繩品牌「もとぶ牛」直營燒肉，午間 ¥1,500~<br><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 795 582</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/motobu-farm/reserve" target="_blank">TableCheck 預約</a></span></div>
-                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=百年古家+大家+うふやー" target="_blank">百年古家 大家（うふやー）</a> — 明治古民家改建餐廳，阿古豬涮涮鍋 ¥1,500~<br><a href="https://maps.google.com/?q=百年古家+大家+うふやー" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=百年古家大家うふやー" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 745 056</span><span class="restaurant-meta">⏰ 午 11:00~17:00／夜 18:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/ufuya/reserve" target="_blank">TableCheck 預約</a></span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=我部祖河食堂+名護店" target="_blank">我部祖河食堂</a> — 創業 50 年以上名護名店，傳統沖繩麵，¥700~<br><a href="https://maps.google.com/?q=我部祖河食堂+名護店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=我部祖河食堂名護店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 694</span><span class="restaurant-meta">⏰ 10:00~20:00（週四公休）｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — 沖繩品牌「もとぶ牛」直營燒肉，午間 ¥1,500~<br><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 795 582</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/motobu-farm/reserve" target="_blank">TableCheck 預約</a></span></div>
+                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=百年古家+大家+うふやー" target="_blank">百年古家 大家（うふやー）</a> — 明治古民家改建餐廳，阿古豬涮涮鍋 ¥1,500~<br><a href="https://maps.google.com/?q=百年古家+大家+うふやー" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=百年古家大家うふやー" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 745 056</span><span class="restaurant-meta">⏰ 午 11:00~17:00／夜 18:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/ufuya/reserve" target="_blank">TableCheck 預約</a></span></div>
                             </div>
-                            <div class="info-box souvenir">🎁 <strong>恩納・名護伴手禮：</strong><br>🍠 <a href="https://maps.google.com/?q=御菓子御殿+恩納店" target="_blank">御菓子御殿 恩納店</a>（紅芋塔工廠直營） <a href="https://maps.google.com/?q=御菓子御殿+恩納店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=御菓子御殿恩納店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 096 786</span><br>🏪 <a href="https://maps.google.com/?q=道の駅許田" target="_blank">道の駅許田</a>（沖繩人氣最高休息站） <a href="https://maps.google.com/?q=道の駅許田" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=道の駅許田" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 476 710</span></div>
+                            <div class="info-box souvenir">🎁 <strong>恩納・名護伴手禮：</strong><br>🍠 <a href="https://maps.google.com/?q=御菓子御殿+恩納店" target="_blank">御菓子御殿 恩納店</a>（紅芋塔工廠直營） <a href="https://maps.google.com/?q=御菓子御殿+恩納店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=御菓子御殿恩納店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 096 786</span><br>🏪 <a href="https://maps.google.com/?q=道の駅許田" target="_blank">道の駅許田</a>（沖繩人氣最高休息站） <a href="https://maps.google.com/?q=道の駅許田" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=道の駅許田" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 476 710</span></div>
                         </div>
                     </div>
 
@@ -528,11 +532,11 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">下午自由休息，傍晚出門覓食</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=Super+Hotel+Okinawa+Nago" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 206 688 637</span>
-                            </div></div>
+                            </div>
                         </div>
                     </div>
 
@@ -546,9 +550,9 @@
                             <p class="tl-desc">名護市區覓食，飯後回飯店泡天然溫泉「萬座之湯」</p>
                             <div class="info-box restaurants">
                                 🍽️ <strong>晚餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=麺屋はちれん+名護" target="_blank">麵屋 はちれん</a> — 名護人氣拉麵，濃厚豚骨魚介系，¥800~<br><a href="https://maps.google.com/?q=麺屋はちれん+名護" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=麺屋はちれん名護" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 326</span><span class="restaurant-meta">⏰ 11:30~14:30, 18:00~22:00 ｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉乃我那覇+名護店" target="_blank">焼肉乃我那覇 名護店</a> — 沖繩品牌豬「あぐー豚」燒肉，¥2,000~<br><a href="https://maps.google.com/?q=焼肉乃我那覇+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=焼肉乃我那覇名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 450</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:30~22:30（週三公休）｜ 📞 <a href="https://www.hotpepper.jp/strJ004248399/" target="_blank">HotPepper 預約</a></span></div>
-                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=名護漁港食堂" target="_blank">名護漁港食堂</a> — 漁港直營，新鮮海鮮丼，¥1,000~<br><a href="https://maps.google.com/?q=名護漁港食堂" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=名護漁港食堂" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 171</span><span class="restaurant-meta">⏰ 11:00~15:30 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=麺屋はちれん+名護" target="_blank">麵屋 はちれん</a> — 名護人氣拉麵，濃厚豚骨魚介系，¥800~<br><a href="https://maps.google.com/?q=麺屋はちれん+名護" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=麺屋はちれん名護" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 326</span><span class="restaurant-meta">⏰ 11:30~14:30, 18:00~22:00 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉乃我那覇+名護店" target="_blank">焼肉乃我那覇 名護店</a> — 沖繩品牌豬「あぐー豚」燒肉，¥2,000~<br><a href="https://maps.google.com/?q=焼肉乃我那覇+名護店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=焼肉乃我那覇名護店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 450</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:30~22:30（週三公休）｜ 📞 <a href="https://www.hotpepper.jp/strJ004248399/" target="_blank">HotPepper 預約</a></span></div>
+                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=名護漁港食堂" target="_blank">名護漁港食堂</a> — 漁港直營，新鮮海鮮丼，¥1,000~<br><a href="https://maps.google.com/?q=名護漁港食堂" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=名護漁港食堂" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 171</span><span class="restaurant-meta">⏰ 11:00~15:30 ｜ 不接受預約</span></div>
                             </div>
                         </div>
                     </div>
@@ -567,10 +571,8 @@
         <!-- ==================== Day 3 ==================== -->
         <section>
             <div class="day-header" id="day3">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn active" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 3</h2>
                 <div class="dh-right">7/31（五）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-3"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -578,7 +580,7 @@
                 <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://awo9john.com/super-hotel-nago/" target="_blank" onclick="event.stopPropagation()">Super Hotel Nago</a>（連住第 2 晚）<span class="arrow">▸</span></div>
                 <div class="col-detail">
                     <div class="hotel-detail-grid"><span>📍 名護市（同昨晚）</span><span>🧳 行李不用搬</span><span>🍽️ 免費早餐</span></div>
-                    <div class="hotel-sub">🅿️ <strong>停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6045,127.9742" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6045,127.9742" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 382</span></div>
+                    <div class="hotel-sub">🅿️ <strong>停車場：</strong>免費｜<a href="https://maps.google.com/?q=26.6045,127.9742" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.6045,127.9742" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 382</span></div>
                 </div>
 
                 <div class="timeline">
@@ -595,14 +597,14 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。11:00 海豚秀必看</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=沖縄美ら海水族館" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=沖縄美ら海水族館" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=沖縄美ら海水族館" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=沖縄美ら海水族館" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 553 075 797</span>
-                            </div></div>
+                            </div>
                             <div class="info-box reservation">🎫 <strong>門票：</strong>大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710<br>🕐 <strong>營業時間：</strong>08:30~18:30（夏季延長至20:00）<br>🐬 <strong>海豚秀：</strong>11:00 / 13:00 / 14:30 / 16:00（免費）<br>💡 建議先逛水族館，11:00 看海豚秀</div>
                             <div class="info-box souvenir">🎁 <strong>水族館伴手禮：</strong><br>🐠 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾<br>🐚 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品</div>
-                            <div class="info-box parking">🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href="https://maps.google.com/?q=26.6908,127.8757" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6908,127.8757" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 553 075 797</span></div>
+                            <div class="info-box parking">🅿️ <strong>停車場：</strong>免費（P7 最近入口）｜<a href="https://maps.google.com/?q=26.6908,127.8757" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.6908,127.8757" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 553 075 797</span></div>
                         </div>
                     </div>
 
@@ -615,9 +617,9 @@
                         <div class="tl-body">
                             <div class="info-box restaurants">
                                 🍽️ <strong>午餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=きしもと食堂+本部町" target="_blank">きしもと食堂</a> — 明治 38 年創業！傳奇沖繩麵，手打木灰麵條，¥600~<br><a href="https://maps.google.com/?q=きしもと食堂+本部町" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=きしもと食堂本部町" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 857 712</span><span class="restaurant-meta">⏰ 11:00~17:00（週三公休）｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — もとぶ牛直營，¥1,500~<br><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 795 582</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/motobu-farm/reserve" target="_blank">TableCheck 預約</a></span></div>
-                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=海人食堂+本部漁港" target="_blank">海人食堂</a> — 本部漁港直營食堂，新鮮海鮮丼，¥1,000~<br><a href="https://maps.google.com/?q=海人食堂+本部漁港" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=海人食堂本部漁港" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 857 471</span><span class="restaurant-meta">⏰ 11:00~15:30 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=きしもと食堂+本部町" target="_blank">きしもと食堂</a> — 明治 38 年創業！傳奇沖繩麵，手打木灰麵條，¥600~<br><a href="https://maps.google.com/?q=きしもと食堂+本部町" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=きしもと食堂本部町" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 857 712</span><span class="restaurant-meta">⏰ 11:00~17:00（週三公休）｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — もとぶ牛直營，¥1,500~<br><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 795 582</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/motobu-farm/reserve" target="_blank">TableCheck 預約</a></span></div>
+                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=海人食堂+本部漁港" target="_blank">海人食堂</a> — 本部漁港直營食堂，新鮮海鮮丼，¥1,000~<br><a href="https://maps.google.com/?q=海人食堂+本部漁港" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=海人食堂本部漁港" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 857 471</span><span class="restaurant-meta">⏰ 11:00~15:30 ｜ 不接受預約</span></div>
                             </div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 水族館→瀨底島 約15分鐘（過瀨底大橋即到）</div>
@@ -631,12 +633,12 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，可看到熱帶魚</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=瀬底ビーチ" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=瀬底ビーチ" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=瀬底ビーチ" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=瀬底ビーチ" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 206 822 241</span>
-                            </div></div>
-                            <div class="info-box parking">🅿️ <strong>停車場：</strong>¥1,000/次｜<a href="https://maps.google.com/?q=26.6500,127.8563" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.6500,127.8563" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 822 264</span>｜淋浴 ¥500<br>🏖️ 設施齊全：更衣室、淋浴間、租借用品</div>
+                            </div>
+                            <div class="info-box parking">🅿️ <strong>停車場：</strong>¥1,000/次｜<a href="https://maps.google.com/?q=26.6500,127.8563" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.6500,127.8563" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 822 264</span>｜淋浴 ¥500<br>🏖️ 設施齊全：更衣室、淋浴間、租借用品</div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 瀨底島→Super Hotel 名護 約30分鐘</div>
                     </div>
@@ -651,9 +653,9 @@
                             <p class="tl-desc">回到名護市區覓食，飯後回飯店泡天然溫泉放鬆</p>
                             <div class="info-box restaurants">
                                 🍽️ <strong>晚餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=幸ちゃんそば+名護" target="_blank">幸ちゃんそば</a> — 名護在地老字號沖繩麵，¥650~<br><a href="https://maps.google.com/?q=幸ちゃんそば+名護" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=幸ちゃんそば名護" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 585</span><span class="restaurant-meta">⏰ 10:00~15:00（售完即止・週一公休）｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉五苑+名護店" target="_blank">焼肉五苑 名護店</a> — 平價燒肉吃到飽，¥1,980~/人<br><a href="https://maps.google.com/?q=焼肉五苑+名護店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=焼肉五苑名護店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 232</span><span class="restaurant-meta">⏰ 平日 16:00~23:00／假日 12:00~23:00 ｜ 📞 <a href="https://epark.jp/shopinfo/jsp607670/" target="_blank">EPARK 預約</a></span></div>
-                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=レストランふりっぱー+名護" target="_blank">レストラン ふりっぱー</a> — 1971 年創業名護老牌牛排！ヒレステーキ ¥2,700~。<strong>週三公休・僅收現金</strong><br><a href="https://maps.google.com/?q=レストランふりっぱー+名護" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=レストランふりっぱー名護" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 717 028</span><span class="restaurant-meta">⏰ 平日 11:30~18:30／假日 11:30~21:00（僅收現金）｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=幸ちゃんそば+名護" target="_blank">幸ちゃんそば</a> — 名護在地老字號沖繩麵，¥650~<br><a href="https://maps.google.com/?q=幸ちゃんそば+名護" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=幸ちゃんそば名護" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 585</span><span class="restaurant-meta">⏰ 10:00~15:00（售完即止・週一公休）｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉五苑+名護店" target="_blank">焼肉五苑 名護店</a> — 平價燒肉吃到飽，¥1,980~/人<br><a href="https://maps.google.com/?q=焼肉五苑+名護店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=焼肉五苑名護店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 688 232</span><span class="restaurant-meta">⏰ 平日 16:00~23:00／假日 12:00~23:00 ｜ 📞 <a href="https://epark.jp/shopinfo/jsp607670/" target="_blank">EPARK 預約</a></span></div>
+                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=レストランふりっぱー+名護" target="_blank">レストラン ふりっぱー</a> — 1971 年創業名護老牌牛排！ヒレステーキ ¥2,700~。<strong>週三公休・僅收現金</strong><br><a href="https://maps.google.com/?q=レストランふりっぱー+名護" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=レストランふりっぱー名護" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 717 028</span><span class="restaurant-meta">⏰ 平日 11:30~18:30／假日 11:30~21:00（僅收現金）｜ 不接受預約</span></div>
                             </div>
                         </div>
                     </div>
@@ -676,20 +678,18 @@
         <!-- ==================== Day 4 ==================== -->
         <section>
             <div class="day-header" id="day4">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn active" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 4</h2>
                 <div class="dh-right">8/1（六）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-4"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
 
-                <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://dorismaworld.com/toyokoinn-makishi/" target="_blank" onclick="event.stopPropagation()">東橫inn 那霸國際通美榮橋站</a> <span class="status-tag pending">待預約</span> <span class="arrow">▸</span></div>
+                <div class="col-row" onclick="toggleCol(this)">🏨 <a href="https://dorismaworld.com/toyokoinn-makishi/" target="_blank" onclick="event.stopPropagation()">東橫inn 那霸國際通美榮橋站</a> <span class="arrow">▸</span></div>
                 <div class="col-detail">
                     <div class="hotel-detail-grid"><span>📍 那霸美榮橋站旁</span><span>🚶 走路 1 分到國際通</span><span>🍽️ 含免費早餐</span><span>🚝 單軌美榮橋站步行 1 分</span></div>
-                    <div class="hotel-sub">🅿️ <strong>停車場：</strong>¥550/晚（先到先得）｜<a href="https://maps.google.com/?q=26.2186,127.6837" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.2186,127.6837" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span></div>
-                    <div class="hotel-sub">🛒 <strong>附近超市：</strong><a href="https://okinawa.letsgojp.com/archives/668971/" target="_blank">UNION 前島店</a>｜步行 2 分鐘｜24 小時營業｜<a href="https://maps.google.com/?q=フレッシュプラザユニオン前島店" target="_blank" class="map-link map-link-inline">📍 Map</a></div>
-                    <div class="hotel-sub">🏪 <strong>唐吉軻德：</strong><a href="https://linshibi.com/?p=16331" target="_blank">國際通店</a>｜步行 7 分鐘｜09:00~03:00｜<a href="https://maps.google.com/?q=ドン・キホーテ国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a></div>
+                    <div class="hotel-sub">🅿️ <strong>停車場：</strong>¥550/晚（先到先得）｜<a href="https://maps.google.com/?q=26.2186,127.6837" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.2186,127.6837" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span></div>
+                    <div class="hotel-sub">🛒 <strong>附近超市：</strong><a href="https://okinawa.letsgojp.com/archives/668971/" target="_blank">UNION 前島店</a>｜步行 2 分鐘｜24 小時營業｜<a href="https://maps.google.com/?q=フレッシュプラザユニオン前島店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a></div>
+                    <div class="hotel-sub">🏪 <strong>唐吉軻德：</strong><a href="https://linshibi.com/?p=16331" target="_blank">國際通店</a>｜步行 7 分鐘｜09:00~03:00｜<a href="https://maps.google.com/?q=ドン・キホーテ国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a></div>
                 </div>
 
                 <div class="timeline">
@@ -706,11 +706,11 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">古宇利大橋全長 2km，兩側碧藍海水極為壯觀。心形岩（ハートロック）是沖繩最浪漫的拍照景點</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <strong>古宇利大橋：</strong><a href="https://maps.google.com/?q=古宇利大橋" target="_blank" class="map-link">📍 Google</a> <a href="https://maps.apple.com/?q=古宇利大橋" target="_blank" class="map-link apple">🍎 Apple</a> <span class="map-link mapcode">📟 485 692 174</span><br>
-                                <strong>心形岩：</strong><a href="https://maps.google.com/?q=ハートロック+古宇利島" target="_blank" class="map-link">📍 Google</a> <a href="https://maps.apple.com/?q=ハートロック古宇利島" target="_blank" class="map-link apple">🍎 Apple</a> <span class="map-link mapcode">📟 485 751 179</span>
-                            </div></div>
-                            <div class="info-box parking">🅿️ <strong>大橋展望台：</strong>免費｜<a href="https://maps.google.com/?q=26.6789,128.0128" target="_blank" class="map-link map-link-inline">📍 Map</a> <span class="map-link mapcode map-link-inline">📟 485 662 831</span><br>🅿️ <strong>心形岩：</strong>¥300/次｜<a href="https://maps.google.com/?q=26.7137,128.0148" target="_blank" class="map-link map-link-inline">📍 Map</a> <span class="map-link mapcode map-link-inline">📟 485 751 179</span></div>
+                            <div class="nav-links">
+                                <strong>古宇利大橋：</strong><a href="https://maps.google.com/?q=古宇利大橋" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=古宇利大橋" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode">📟 485 692 174</span><br>
+                                <strong>心形岩：</strong><a href="https://maps.google.com/?q=ハートロック+古宇利島" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=ハートロック古宇利島" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode">📟 485 751 179</span>
+                            </div>
+                            <div class="info-box parking">🅿️ <strong>大橋展望台：</strong>免費｜<a href="https://maps.google.com/?q=26.6789,128.0128" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <span class="map-link mapcode map-link-inline">📟 485 662 831</span><br>🅿️ <strong>心形岩：</strong>¥300/次｜<a href="https://maps.google.com/?q=26.7137,128.0148" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <span class="map-link mapcode map-link-inline">📟 485 751 179</span></div>
                         </div>
                     </div>
 
@@ -723,11 +723,11 @@
                         <div class="tl-body">
                             <div class="info-box restaurants">
                                 🍽️ <strong>午餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=古宇利島+沖縄そば" target="_blank">古宇利そば</a> — 島上手打沖繩麵，海景座位，¥700~<br><a href="https://maps.google.com/?q=古宇利島+沖縄そば" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=古宇利島沖縄そば" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 692 195</span><span class="restaurant-meta">⏰ 11:00~18:00（週三公休）｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — 離島回程順路，¥1,500~<br><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 206 795 582</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/motobu-farm/reserve" target="_blank">TableCheck 預約</a></span></div>
-                                <div class="restaurant-choice">🦐 <strong>其他推薦：</strong><a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank">蝦蝦飯（Shrimp Wagon）</a> — 島上排隊名店，夏威夷風蒜蝦飯，¥1,000~<br><a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 692 174</span><span class="restaurant-meta">⏰ 11:00~17:00 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=古宇利島+沖縄そば" target="_blank">古宇利そば</a> — 島上手打沖繩麵，海景座位，¥700~<br><a href="https://maps.google.com/?q=古宇利島+沖縄そば" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=古宇利島沖縄そば" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 485 692 195</span><span class="restaurant-meta">⏰ 11:00~18:00（週三公休）｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank">焼肉もとぶ牧場 本部店</a> — 離島回程順路，¥1,500~<br><a href="https://maps.google.com/?q=焼肉もとぶ牧場+本部店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=焼肉もとぶ牧場本部店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 206 795 582</span><span class="restaurant-meta">⏰ 午 11:30~15:00／夜 17:00~22:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/motobu-farm/reserve" target="_blank">TableCheck 預約</a></span></div>
+                                <div class="restaurant-choice">🦐 <strong>其他推薦：</strong><a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank">蝦蝦飯（Shrimp Wagon）</a> — 島上排隊名店，夏威夷風蒜蝦飯，¥1,000~<br><a href="https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 485 692 174</span><span class="restaurant-meta">⏰ 11:00~17:00 ｜ 不接受預約</span></div>
                             </div>
-                            <div class="info-box souvenir">🎁 <strong>古宇利島伴手禮：</strong><br>🏪 <a href="https://maps.google.com/?q=古宇利島物産センター" target="_blank">古宇利島物產中心</a>（島產黑糖＋海鹽＋限定零食） <a href="https://maps.google.com/?q=古宇利島物産センター" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=古宇利島物産センター" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 485 692 089</span></div>
+                            <div class="info-box souvenir">🎁 <strong>古宇利島伴手禮：</strong><br>🏪 <a href="https://maps.google.com/?q=古宇利島物産センター" target="_blank">古宇利島物產中心</a>（島產黑糖＋海鹽＋限定零食） <a href="https://maps.google.com/?q=古宇利島物産センター" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=古宇利島物産センター" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 485 692 089</span></div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 古宇利島→伊芸SA 約50分鐘（經名護IC上高速）</div>
                     </div>
@@ -740,11 +740,11 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">沖繩自動車道上的海景休息站，有展望台和沖繩小吃</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=伊芸サービスエリア" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=伊芸サービスエリア" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=伊芸サービスエリア" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=伊芸サービスエリア" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 835 282</span>
-                            </div></div>
+                            </div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 伊芸SA→AEON Mall 來客夢 約15分鐘</div>
                     </div>
@@ -757,13 +757,13 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">沖繩最大購物中心！1F <strong>寶可夢中心</strong>（沖繩限定風速狗＋皮卡丘周邊）、2F <strong>UNIQLO</strong>，還有超市、藥妝、沖繩伴手禮一次買齊</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=イオンモール沖縄ライカム" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=イオンモール沖縄ライカム" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=イオンモール沖縄ライカム" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=イオンモール沖縄ライカム" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 530 406</span>
-                            </div></div>
+                            </div>
                             <div class="info-box reservation">🕐 <strong>營業時間：</strong>10:00~22:00（專門店）｜寶可夢中心 10:00~22:00</div>
-                            <div class="info-box parking">🅿️ <strong>停車場：</strong>免費，約 4,000 台｜<a href="https://maps.google.com/?q=26.3138,127.7966" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?ll=26.3138,127.7966" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 530 406</span></div>
+                            <div class="info-box parking">🅿️ <strong>停車場：</strong>免費，約 4,000 台｜<a href="https://maps.google.com/?q=26.3138,127.7966" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?ll=26.3138,127.7966" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 530 406</span></div>
                         </div>
                         <div class="tl-transit">⤷ 🚗 AEON Mall→租車公司 約25分鐘</div>
                     </div>
@@ -782,12 +782,12 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">步行 1 分鐘到美榮橋站，放好行李後出門覓食</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 157 413</span>
-                            </div></div>
-                            <div class="info-box souvenir">🎁 <strong>那霸國際通伴手禮推薦：</strong><br>🍠 <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank">御菓子御殿 國際通松尾店</a>（紅芋塔本店） <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=御菓子御殿国際通り松尾店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 352</span><br>🧂 <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank">鹽屋（まーすやー）國際通店</a>（雪鹽系列＋鹽味冰淇淋） <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=塩屋国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 383</span></div>
+                            </div>
+                            <div class="info-box souvenir">🎁 <strong>那霸國際通伴手禮推薦：</strong><br>🍠 <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank">御菓子御殿 國際通松尾店</a>（紅芋塔本店） <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=御菓子御殿国際通り松尾店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 352</span><br>🧂 <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank">鹽屋（まーすやー）國際通店</a>（雪鹽系列＋鹽味冰淇淋） <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=塩屋国際通り店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 383</span></div>
                         </div>
                     </div>
 
@@ -800,9 +800,9 @@
                         <div class="tl-body">
                             <div class="info-box restaurants">
                                 🍽️ <strong>晚餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=通堂拉麵+小禄本店" target="_blank">琉球新麵 通堂 小禄本店</a> — 沖繩在地人氣 No.1 拉麵，¥800~<br><a href="https://maps.google.com/?q=通堂拉麵+小禄本店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=通堂拉麵小禄本店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 096 697</span><span class="restaurant-meta">⏰ 11:00~24:00 ｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank">燒肉琉球の牛 國際通店</a> — 石垣牛＋阿古豬，¥2,000~<br><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=琉球の牛国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span><span class="restaurant-meta">⏰ 17:00~23:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/yakiniku-naha/reserve" target="_blank">TableCheck 預約</a></span></div>
-                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=ジャッキーステーキハウス+那覇" target="_blank">Jack's Steak House</a> — 1953 年創業！沖繩最老牌牛排，¥2,400~。<strong>週三公休</strong><br><a href="https://maps.google.com/?q=ジャッキーステーキハウス+那覇" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=ジャッキーステーキハウス那覇" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 155 236</span><span class="restaurant-meta">⏰ 11:00~翌 1:00（週三公休）｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=通堂拉麵+小禄本店" target="_blank">琉球新麵 通堂 小禄本店</a> — 沖繩在地人氣 No.1 拉麵，¥800~<br><a href="https://maps.google.com/?q=通堂拉麵+小禄本店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=通堂拉麵小禄本店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 096 697</span><span class="restaurant-meta">⏰ 11:00~24:00 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank">燒肉琉球の牛 國際通店</a> — 石垣牛＋阿古豬，¥2,000~<br><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=琉球の牛国際通り店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span><span class="restaurant-meta">⏰ 17:00~23:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/yakiniku-naha/reserve" target="_blank">TableCheck 預約</a></span></div>
+                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=ジャッキーステーキハウス+那覇" target="_blank">Jack's Steak House</a> — 1953 年創業！沖繩最老牌牛排，¥2,400~。<strong>週三公休</strong><br><a href="https://maps.google.com/?q=ジャッキーステーキハウス+那覇" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=ジャッキーステーキハウス那覇" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 155 236</span><span class="restaurant-meta">⏰ 11:00~翌 1:00（週三公休）｜ 不接受預約</span></div>
                             </div>
                         </div>
                     </div>
@@ -821,10 +821,8 @@
         <!-- ==================== Day 5 ==================== -->
         <section>
             <div class="day-header" id="day5">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn active" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 5</h2>
                 <div class="dh-right">8/2（日）✈️</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-5"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -838,11 +836,11 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">東橫inn 退房，將行李寄放櫃台（免費），輕裝出發</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 157 413</span>
-                            </div></div>
+                            </div>
                         </div>
                         <div class="tl-transit">⤷ 🚝 單軌 美榮橋→首里站 約18分鐘 ¥300（💡 建議購買一日券 ¥800）</div>
                         <div class="tl-transit">⤷ 🚶 首里站→首里城 步行約15分鐘（上坡）</div>
@@ -856,13 +854,13 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">琉球王國的象徵，世界遺產。2019 年大火後正殿重建中（預計 2026 年完工），御庭＋城牆＋守禮門可參觀</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=首里城公園" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=首里城公園" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=首里城公園" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=首里城公園" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 161 526</span>
-                            </div></div>
+                            </div>
                             <div class="info-box reservation">🎫 <strong>門票：</strong>大人 ¥400 / 高中生 ¥300 / 中小學生 ¥160<br>🕐 <strong>營業時間：</strong>08:30~18:00（夏季延長至19:30）<br>📸 <strong>推薦拍照點：</strong>守禮門、歡會門、西台（展望台）</div>
-                            <div class="info-box souvenir">🎁 <strong>首里城伴手禮：</strong><br>🏪 首里城公園商店 — 琉球王國限定周邊、紅型花紋商品<br>🍡 <a href="https://maps.google.com/?q=首里金城町石畳道" target="_blank">金城町石疊道周邊</a>（琉球玻璃＋シーサー手作） <a href="https://maps.google.com/?q=首里金城町石畳道" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=首里金城町石畳道" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 161 245</span></div>
+                            <div class="info-box souvenir">🎁 <strong>首里城伴手禮：</strong><br>🏪 首里城公園商店 — 琉球王國限定周邊、紅型花紋商品<br>🍡 <a href="https://maps.google.com/?q=首里金城町石畳道" target="_blank">金城町石疊道周邊</a>（琉球玻璃＋シーサー手作） <a href="https://maps.google.com/?q=首里金城町石畳道" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=首里金城町石畳道" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 161 245</span></div>
                         </div>
                         <div class="tl-transit">⤷ 🚝 首里→牧志站 約15分鐘 ¥260</div>
                     </div>
@@ -875,16 +873,16 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">沖繩最熱鬧的商店街，約 1.6 公里。最後衝刺採購伴手禮！</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=国際通り那覇" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=国際通り+那覇" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=国際通り那覇" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 157 382</span>
-                            </div></div>
+                            </div>
                             <div class="info-box souvenir">🎁 <strong>國際通必買伴手禮：</strong><br>
-                                🍠 <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank">御菓子御殿</a>（紅芋塔 ¥1,100/10入） <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank" class="map-link map-link-inline">📍 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 352</span><br>
-                                🧂 <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank">鹽屋（まーすやー）</a>（雪鹽金楚糕） <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 383</span><br>
-                                🏪 <a href="https://maps.google.com/?q=わしたショップ+国際通り本店" target="_blank">わしたショップ</a>（沖繩物產公社直營） <a href="https://maps.google.com/?q=わしたショップ+国際通り本店" target="_blank" class="map-link map-link-inline">📍 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 411</span><br>
-                                💊 <a href="https://maps.google.com/?q=ドン・キホーテ+国際通り店" target="_blank">唐吉訶德 國際通店</a>（藥妝＋零食＋免稅） <a href="https://maps.google.com/?q=ドン・キホーテ+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span><br>
+                                🍠 <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank">御菓子御殿</a>（紅芋塔 ¥1,100/10入） <a href="https://maps.google.com/?q=御菓子御殿+国際通り松尾店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 352</span><br>
+                                🧂 <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank">鹽屋（まーすやー）</a>（雪鹽金楚糕） <a href="https://maps.google.com/?q=塩屋+国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 383</span><br>
+                                🏪 <a href="https://maps.google.com/?q=わしたショップ+国際通り本店" target="_blank">わしたショップ</a>（沖繩物產公社直營） <a href="https://maps.google.com/?q=わしたショップ+国際通り本店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 411</span><br>
+                                💊 <a href="https://maps.google.com/?q=ドン・キホーテ+国際通り店" target="_blank">唐吉訶德 國際通店</a>（藥妝＋零食＋免稅） <a href="https://maps.google.com/?q=ドン・キホーテ+国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span><br>
                                 🍶 泡盛（推薦：殘波、久米仙、瑞泉）各店均有販售
                             </div>
                         </div>
@@ -900,9 +898,9 @@
                             <p class="tl-desc">最後一餐沖繩美食！</p>
                             <div class="info-box restaurants">
                                 🍽️ <strong>午餐推薦三選一：</strong>
-                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=暖暮拉麵+那覇牧志店" target="_blank">暖暮拉麵 那覇牧志店</a> — 九州博多濃厚豚骨拉麵，¥800~<br><a href="https://maps.google.com/?q=暖暮拉麵+那覇牧志店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=暖暮拉麵那覇牧志店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 323</span><span class="restaurant-meta">⏰ 平日 10:00~翌 2:00／假日 9:00~翌 2:00 ｜ 不接受預約</span></div>
-                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank">燒肉琉球の牛</a> — 石垣牛＋阿古豬，午間 ¥2,000~<br><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=琉球の牛国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span><span class="restaurant-meta">⏰ 17:00~23:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/yakiniku-naha/reserve" target="_blank">TableCheck 預約</a></span></div>
-                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店" target="_blank">やっぱりステーキ 國際通店</a> — CP 值之王！¥1,000 起<br><a href="https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店" target="_blank" class="map-link map-link-inline">📍 Map</a> <a href="https://maps.apple.com/?q=やっぱりステーキ4th国際通り店" target="_blank" class="map-link apple map-link-inline">🍎 Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 383</span><span class="restaurant-meta">⏰ 11:00~翌 1:30 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🍜 <strong>拉麵：</strong><a href="https://maps.google.com/?q=暖暮拉麵+那覇牧志店" target="_blank">暖暮拉麵 那覇牧志店</a> — 九州博多濃厚豚骨拉麵，¥800~<br><a href="https://maps.google.com/?q=暖暮拉麵+那覇牧志店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=暖暮拉麵那覇牧志店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 323</span><span class="restaurant-meta">⏰ 平日 10:00~翌 2:00／假日 9:00~翌 2:00 ｜ 不接受預約</span></div>
+                                <div class="restaurant-choice">🥩 <strong>燒肉：</strong><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank">燒肉琉球の牛</a> — 石垣牛＋阿古豬，午間 ¥2,000~<br><a href="https://maps.google.com/?q=琉球の牛+国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=琉球の牛国際通り店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 382</span><span class="restaurant-meta">⏰ 17:00~23:00 ｜ 📞 <a href="https://www.tablecheck.com/en/shops/yakiniku-naha/reserve" target="_blank">TableCheck 預約</a></span></div>
+                                <div class="restaurant-choice">🍽️ <strong>其他推薦：</strong><a href="https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店" target="_blank">やっぱりステーキ 國際通店</a> — CP 值之王！¥1,000 起<br><a href="https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店" target="_blank" class="map-link map-link-inline"><span class="g-icon">G</span> Map</a> <a href="https://maps.apple.com/?q=やっぱりステーキ4th国際通り店" target="_blank" class="map-link apple map-link-inline"><span class="apple-icon"></span> Map</a> <span class="map-link mapcode map-link-inline">📟 33 157 383</span><span class="restaurant-meta">⏰ 11:00~翌 1:30 ｜ 不接受預約</span></div>
                             </div>
                         </div>
                         <div class="tl-transit">⤷ 🚝 牧志→おもろまち站 約3分鐘 ¥230</div>
@@ -916,11 +914,11 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">就在おもろまち站旁，國際精品免稅價格。化妝品、香水、包包等</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=Tギャラリア+沖縄" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=Tギャラリア沖縄" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=Tギャラリア+沖縄" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=Tギャラリア沖縄" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 188 487</span>
-                            </div></div>
+                            </div>
                         </div>
                         <div class="tl-transit">⤷ 🚝 おもろまち→美榮橋 約3分鐘 ¥230</div>
                     </div>
@@ -933,34 +931,34 @@
                         </div>
                         <div class="tl-body">
                             <p class="tl-desc">回東橫inn 領取寄放行李，傍晚前往機場</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 157 413</span>
-                            </div></div>
+                            </div>
                         </div>
                         <div class="tl-transit">⤷ 🚝 美榮橋→那霸空港站 約12分鐘 ¥270</div>
                     </div>
 
                     <div class="tl-event">
                         <div class="tl-head clickable" onclick="toggleEv(event,this)">
-                            <span class="tl-time">18:00</span>
+                            <span class="tl-time">18:55</span>
                             <span class="tl-title">✈️ 抵達那霸機場</span>
                             <span class="tl-arrow">▸</span>
                         </div>
                         <div class="tl-body">
-                            <p class="tl-desc">機場內還有免稅店可以最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味</p>
-                            <div class="nav-group"><span class="nav-toggle" onclick="event.stopPropagation();this.parentElement.classList.toggle('open')">📍 導航</span><div class="nav-links">
-                                <a href="https://maps.google.com/?q=那霸機場" target="_blank" class="map-link">📍 Google Map</a>
-                                <a href="https://maps.apple.com/?q=那霸機場" target="_blank" class="map-link apple">🍎 Apple Map</a>
+                            <p class="tl-desc">辦理報到＋託運行李。機場內免稅店最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味</p>
+                            <div class="nav-links">
+                                <a href="https://maps.google.com/?q=那霸機場" target="_blank" class="map-link"><span class="g-icon">G</span> Map</a>
+                                <a href="https://maps.apple.com/?q=那霸機場" target="_blank" class="map-link apple"><span class="apple-icon"></span> Map</a>
                                 <span class="map-link mapcode">📟 33 002 519</span>
-                            </div></div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="tl-event">
-                        <div class="tl-head"><span class="tl-time">20:00</span><span class="tl-title">✈️ 起飛回台灣</span></div>
-                        <div class="tl-transit" style="color:var(--gray);font-style:italic;padding-left:8px;">めんそーれ（歡迎再來）沖繩！🌊</div>
+                        <div class="tl-head"><span class="tl-time">20:55</span><span class="tl-title">✈️ CI 121 起飛回台灣</span></div>
+                        <div class="tl-transit" style="color:var(--gray);font-style:italic;padding-left:8px;">21:40 抵達桃園｜めんそーれ（歡迎再來）沖繩！🌊</div>
                     </div>
                 </div>
 
@@ -969,7 +967,7 @@
                     <table class="budget-table">
                         <tr><td>🚝 單軌一日券（2人）</td><td>¥1,600</td></tr><tr><td>🏯 首里城門票（2人）</td><td>¥800</td></tr><tr><td>🍽️ 午餐</td><td>¥2,000</td></tr><tr><td>🛍️ 伴手禮＋購物</td><td>¥10,000</td></tr>
                     </table>
-                    <ul class="notes-list"><li><strong>單軌一日券：</strong>¥800/人，搭 4 次以上就划算</li><li><strong>行李寄放：</strong>東橫inn 退房後可免費寄放行李</li><li><strong>首里城上坡：</strong>建議穿好走的鞋，夏天注意防曬補水</li></ul>
+                    <ul class="notes-list"><li><strong>回程航班：</strong>CI 121 20:55 起飛，需 18:55 前到機場</li><li><strong>單軌一日券：</strong>¥800/人，搭 4 次以上就划算</li><li><strong>行李寄放：</strong>東橫inn 退房後可免費寄放行李</li><li><strong>首里城上坡：</strong>建議穿好走的鞋，夏天注意防曬補水</li></ul>
                 </div>
             </div>
         </section>
@@ -981,8 +979,9 @@
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
-                <div class="flight-row"><span>🛫</span><div><div class="flight-route">去程：桃園 TPE → 那霸 OKA</div><div class="flight-time">7月29日（三）出發 → 約12:00 抵達那霸機場（飛行約1.5小時）</div></div></div>
-                <div class="flight-row"><span>🛬</span><div><div class="flight-route">回程：那霸 OKA → 桃園 TPE</div><div class="flight-time">8月2日（日）20:00 那霸機場出發（18:00 前到機場）</div></div></div>
+                <div class="flight-row"><span>🛫</span><div><div class="flight-route">去程：CI 120｜桃園 TPE → 那霸 OKA</div><div class="flight-time">7月29日（三）08:40 出發 → 11:40 抵達（飛行約2小時）</div></div></div>
+                <div class="flight-row"><span>🛬</span><div><div class="flight-route">回程：CI 121｜那霸 OKA → 桃園 TPE</div><div class="flight-time">8月2日（日）20:55 出發 → 21:40 抵達（飛行約1.5小時）</div></div></div>
+                <p style="margin-top:8px;font-size:var(--fs-sm);color:var(--gray);">訂位代號：<strong>TNCFHM</strong>｜華航 China Airlines｜3 位旅客</p>
             </div>
         </section>
 
@@ -1080,7 +1079,7 @@
         el.setAttribute('aria-expanded', el.classList.contains('open'));
     }
     function toggleDark() {
-        document.getElementById('menuDrop').classList.remove('open');
+        document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
         document.body.classList.toggle('dark');
         var isDark = document.body.classList.contains('dark');
         localStorage.setItem('dark', isDark ? '1' : '0');
@@ -1096,21 +1095,36 @@
         var dmeta = document.querySelector('meta[name="theme-color"]');
         if (dmeta) dmeta.setAttribute('content', '#1565C0');
     }
+    var dayData = [
+        { id: 'day1', title: 'Day 1', date: '7/29（三）' },
+        { id: 'day2', title: 'Day 2', date: '7/30（四）' },
+        { id: 'day3', title: 'Day 3', date: '7/31（五）' },
+        { id: 'day4', title: 'Day 4', date: '8/1（六）' },
+        { id: 'day5', title: 'Day 5', date: '8/2（日）✈️' }
+    ];
+    function updateStickyNav(n) {
+        var d = dayData[n] || dayData[0];
+        document.getElementById('navTitle').textContent = d.title;
+        document.getElementById('navDate').textContent = d.date;
+    }
     function scrollToSec(id) {
         var el = document.getElementById(id);
         if (!el) return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        document.getElementById('menuDrop').classList.remove('open');
+        var navH = document.getElementById('stickyNav').offsetHeight;
+        var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
+        window.scrollTo({ top: top, behavior: 'smooth' });
+        document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
     }
     function scrollToDay(n) { scrollToSec('day' + n); }
     function toggleMenu(e) {
         e.stopPropagation();
         var menu = document.getElementById('menuDrop');
-        if (menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+        if (menu.classList.contains('open')) { menu.classList.remove('open'); document.body.style.overflow = ''; return; }
         var rect = e.currentTarget.getBoundingClientRect();
         menu.style.top = (rect.bottom + 4) + 'px';
         menu.style.right = (window.innerWidth - rect.right) + 'px';
         menu.classList.add('open');
+        document.body.style.overflow = 'hidden';
     }
     function toggleHw(el) {
         var p = el.closest('.hourly-weather');
@@ -1120,25 +1134,40 @@
             if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
         }
     }
-    /* ===== Day Nav Active Pill ===== */
+    /* ===== Day Nav Active Pill + Sticky Nav Update ===== */
     (function(){
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
-        var allPills = document.querySelectorAll('.dh-nav .dn[data-day]');
-        if (!allPills.length) return;
+        var navPills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
+        if (!navPills.length) return;
+        var navH = document.getElementById('stickyNav').offsetHeight;
         var ticking = false;
         window.addEventListener('scroll', function() {
             if (!ticking) { requestAnimationFrame(function() {
                 var current = 0;
-                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
-                allPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; }
+                navPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+                updateStickyNav(current);
                 ticking = false;
             }); ticking = true; }
         });
     })();
     function togglePrint() {
-        document.getElementById('menuDrop').classList.remove('open');
+        document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+        var entering = !document.body.classList.contains('print-mode');
+        if (entering && document.body.classList.contains('dark')) {
+            document.body.dataset.wasDark = '1';
+            document.body.classList.remove('dark');
+            var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+            if (btn) btn.textContent = '🌙 深色模式';
+        }
         document.body.classList.toggle('print-mode');
+        if (!entering && document.body.dataset.wasDark === '1') {
+            document.body.classList.add('dark');
+            delete document.body.dataset.wasDark;
+            var btn2 = document.querySelector('.menu-item[onclick*="toggleDark"]');
+            if (btn2) btn2.textContent = '☀️ 淺色模式';
+        }
     }
     // Auto-scroll to today's day on load
     window.addEventListener('load', function(){
@@ -1148,14 +1177,17 @@
         var idx = dates.indexOf(todayStr);
         if (idx >= 0) {
             var el = document.getElementById('day' + (idx + 1));
-            if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+            if (el) {
+                var navH = document.getElementById('stickyNav').offsetHeight;
+                window.scrollTo({ top: el.offsetTop - navH, behavior: 'auto' });
+            }
         }
     });
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
         var menu = document.getElementById('menuDrop');
         if (menu && menu.classList.contains('open') && !e.target.closest('.dh-menu') && !e.target.closest('#menuDrop')) {
-            menu.classList.remove('open');
+            menu.classList.remove('open'); document.body.style.overflow = '';
         }
     });
     /* ===== ARIA Init ===== */
