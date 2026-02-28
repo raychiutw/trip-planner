@@ -187,30 +187,24 @@
         .print-mode .dh-nav, .print-mode .dh-menu { display: none !important; }
         .print-mode .sticky-nav { display: none; }
         .print-mode .top-bar, .print-mode .day-header { position: relative !important; }
-        .print-mode .day-header { flex-wrap: wrap; padding: 8px 12px; }
-        .print-mode .hw-detail { display: block !important; }
-        .print-mode .hw-summary { display: none !important; }
-        .print-mode .day-header { background: #333 !important; }
+        .print-mode .day-header { flex-wrap: wrap; padding: 8px 12px; background: var(--blue) !important; }
+        .print-mode .hourly-weather { display: none !important; }
         .print-mode .map-link { color: #333 !important; border-color: #333 !important; background: none !important; }
         .print-mode .status-tag { background: #ddd !important; color: #333 !important; }
-        .print-mode .hw-grid { flex-wrap: wrap; overflow-x: visible; }
-        .print-mode .hw-block { min-width: calc((100% - 10px) / 4); }
         .print-mode .ov-grid { grid-template-columns: 1fr; }
         .print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 9999; background: #D32F2F; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: var(--fs-sm); font-family: inherit; cursor: pointer; font-weight: 600; box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
         .print-exit-btn:hover { background: #B71C1C; }
         .print-mode .print-exit-btn { display: block; }
         @media print {
             @page { size: A4; margin: 12mm; }
-            body { background: #fff !important; }
-            .sticky-nav, .menu-dropdown, .dh-nav, .dh-menu, .print-exit-btn { display: none !important; }
+            body { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; background: #fff !important; }
+            .sticky-nav, .menu-dropdown, .dh-nav, .dh-menu, .print-exit-btn, .hourly-weather { display: none !important; }
             .container { max-width: 100% !important; box-shadow: none !important; }
             .tl-body, .col-detail { display: block !important; }
             .tl-arrow, .col-row .arrow { display: none !important; }
             .top-bar, .day-header { position: relative !important; }
-            .day-header { background: #333 !important; }
+            .day-header { background: var(--blue) !important; }
             .day-content { break-inside: avoid; }
-            .hw-detail { display: block !important; }
-            .hw-summary { display: none !important; }
         }
 
         /* ===== Mobile ===== */
@@ -1158,7 +1152,20 @@
     })();
     function togglePrint() {
         document.getElementById('menuDrop').classList.remove('open');
+        var entering = !document.body.classList.contains('print-mode');
+        if (entering && document.body.classList.contains('dark')) {
+            document.body.dataset.wasDark = '1';
+            document.body.classList.remove('dark');
+            var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+            if (btn) btn.textContent = '🌙 深色模式';
+        }
         document.body.classList.toggle('print-mode');
+        if (!entering && document.body.dataset.wasDark === '1') {
+            document.body.classList.add('dark');
+            delete document.body.dataset.wasDark;
+            var btn2 = document.querySelector('.menu-item[onclick*="toggleDark"]');
+            if (btn2) btn2.textContent = '☀️ 淺色模式';
+        }
     }
     // Auto-scroll to today's day on load
     window.addEventListener('load', function(){
