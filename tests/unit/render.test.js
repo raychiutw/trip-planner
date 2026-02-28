@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 const {
   renderMapLinks,
+  renderNavLinks,
   renderRestaurant,
   renderInfoBox,
   renderTimelineEvent,
@@ -13,6 +14,7 @@ const {
   renderBackup,
   renderEmergency,
   renderSuggestions,
+  safeColor,
   escHtml,
   APPLE_SVG,
 } = require('../../app.js');
@@ -51,6 +53,44 @@ describe('renderMapLinks', () => {
     const html = renderMapLinks({ name: 'Test', googleQuery: 'javascript:alert(1)' });
     expect(html).toContain('maps.google.com');
     expect(html).not.toContain('javascript:');
+  });
+});
+
+/* ===== renderNavLinks ===== */
+describe('renderNavLinks', () => {
+  it('returns empty string for empty locations', () => {
+    expect(renderNavLinks([])).toBe('');
+  });
+
+  it('returns empty string for null', () => {
+    expect(renderNavLinks(null)).toBe('');
+  });
+
+  it('renders single location with label', () => {
+    const html = renderNavLinks([{ label: '集合點', name: '那霸機場' }]);
+    expect(html).toContain('nav-links');
+    expect(html).toContain('<strong>');
+    expect(html).toContain('集合點');
+    expect(html).toContain('maps.google.com');
+  });
+
+  it('renders multiple locations in order', () => {
+    const html = renderNavLinks([
+      { label: 'A', name: '首里城' },
+      { label: 'B', name: '國際通' },
+    ]);
+    expect(html).toContain(encodeURIComponent('首里城'));
+    expect(html).toContain(encodeURIComponent('國際通'));
+    const idxA = html.indexOf('A：');
+    const idxB = html.indexOf('B：');
+    expect(idxA).toBeLessThan(idxB);
+  });
+
+  it('renders location without label (no <strong>)', () => {
+    const html = renderNavLinks([{ name: '美麗海水族館' }]);
+    expect(html).toContain('nav-links');
+    expect(html).not.toContain('<strong>');
+    expect(html).toContain('maps.google.com');
   });
 });
 
@@ -394,6 +434,14 @@ describe('renderChecklist', () => {
   it('returns empty for no data', () => {
     expect(renderChecklist({})).toBe('');
   });
+
+  it('uses safeColor for card background', () => {
+    const html = renderChecklist({
+      cards: [{ title: 'T', items: ['A'], color: 'red;} body{display:none' }],
+    });
+    expect(html).toContain('var(--blue-light)');
+    expect(html).not.toContain('display:none');
+  });
 });
 
 /* ===== renderBackup ===== */
@@ -528,5 +576,20 @@ describe('renderSuggestions', () => {
     });
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;img');
+  });
+
+  it('blocks priority class injection', () => {
+    const html = renderSuggestions({
+      cards: [{ title: 'Hack', priority: 'high onclick=alert(1)', items: ['test'] }],
+    });
+    expect(html).toContain('class="suggestion-card"');
+    expect(html).not.toContain('onclick');
+  });
+
+  it('falls back color to default for CSS injection in checklist', () => {
+    const html = renderChecklist({
+      cards: [{ title: 'T', items: ['A'], color: 'red;} body{display:none' }],
+    });
+    expect(html).toContain('var(--blue-light)');
   });
 });
