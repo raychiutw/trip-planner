@@ -5,6 +5,17 @@ var TRIP_FILE = localStorage.getItem('tripFile') || 'data/okinawa-trip-2026-Ray.
 function loadTrip(filename) {
     TRIP_FILE = filename;
     localStorage.setItem('tripFile', filename);
+    // Custom uploads stored in localStorage (prefix: custom:)
+    if (filename.indexOf('custom:') === 0) {
+        var raw = localStorage.getItem('tripData:' + filename);
+        if (raw) {
+            try { var data = JSON.parse(raw); TRIP = data; renderTrip(data); return; }
+            catch(e) { /* fall through to error */ }
+        }
+        document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">❌ 自訂行程已過期，請重新上傳</div>';
+        localStorage.removeItem('tripFile');
+        return;
+    }
     fetch(filename + '?t=' + Date.now())
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(data) { TRIP = data; renderTrip(data); })
@@ -194,6 +205,15 @@ function switchTripFile() {
                 btn.onclick = function() { document.body.removeChild(overlay); loadTrip(t.file); window.scrollTo({top:0,behavior:'smooth'}); };
                 box.appendChild(btn);
             });
+            // Show current custom trip if active
+            if (TRIP_FILE.indexOf('custom:') === 0 && TRIP) {
+                var customBtn = document.createElement('button');
+                customBtn.className = 'menu-item';
+                customBtn.style.cssText = 'width:100%;text-align:left;padding:12px;margin-bottom:4px;border-radius:8px;border:1.5px solid var(--blue);';
+                customBtn.innerHTML = '<strong>📎 ' + TRIP_FILE.replace('custom:', '') + '</strong><br><span style="font-size:0.85em;color:var(--gray);">自訂上傳（localStorage）</span>';
+                customBtn.onclick = function() { document.body.removeChild(overlay); };
+                box.appendChild(customBtn);
+            }
             // Upload custom
             var upBtn = document.createElement('button');
             upBtn.className = 'menu-item';
@@ -207,7 +227,16 @@ function switchTripFile() {
                     var file = e.target.files[0]; if (!file) return;
                     var reader = new FileReader();
                     reader.onload = function(ev) {
-                        try { var data = JSON.parse(ev.target.result); TRIP = data; TRIP_FILE = file.name; localStorage.setItem('tripFile', file.name); renderTrip(data); window.scrollTo({top:0,behavior:'smooth'}); }
+                        try {
+                            var data = JSON.parse(ev.target.result);
+                            TRIP = data;
+                            var key = 'custom:' + file.name;
+                            TRIP_FILE = key;
+                            localStorage.setItem('tripFile', key);
+                            localStorage.setItem('tripData:' + key, ev.target.result);
+                            renderTrip(data);
+                            window.scrollTo({top:0,behavior:'smooth'});
+                        }
                         catch(err) { alert('JSON 格式錯誤：' + err.message); }
                     };
                     reader.readAsText(file);
