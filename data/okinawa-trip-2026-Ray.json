@@ -1260,23 +1260,42 @@
             "infoBoxes": [
               {
                 "type": "reservation",
-                "title": "⛽ 還車前加油（人工服務）",
+                "title": "⛽ 美榮橋還車 → 崇元寺店（人工）",
                 "items": [
                   "🏪 ENEOS Dr.Drive 崇元寺店",
                   "📍 沖縄県那覇市泊 1-3-5",
                   "🕐 平日 07:00~21:00 ／ 日・祝 08:00~21:00",
                   "✅ フルサービス（人工加油，非自助）",
-                  "📞 098-866-5267",
-                  "🚗 從 AEON Mall 方向過來，還車前順路加油"
+                  "📞 098-866-5267"
                 ]
               },
               {
                 "type": "parking",
-                "title": "加油站位置",
+                "title": "崇元寺店位置",
                 "location": {
                   "name": "ENEOS Dr.Drive 崇元寺店",
                   "googleQuery": "https://maps.google.com/?q=ENEOS+Dr.Drive+崇元寺店+那覇",
                   "appleQuery": "https://maps.apple.com/?q=ENEOS+Dr.Drive+崇元寺店+那覇"
+                }
+              },
+              {
+                "type": "reservation",
+                "title": "⛽ 歌町還車 → めかる給油所（人工）",
+                "items": [
+                  "🏪 ENEOS めかる給油所",
+                  "📍 沖縄県那覇市銘苅 226",
+                  "🕐 平日 07:00~21:00 ／ 日・祝 08:00~21:00",
+                  "✅ フルサービス（人工加油，非自助）",
+                  "📞 098-863-8770"
+                ]
+              },
+              {
+                "type": "parking",
+                "title": "めかる給油所位置",
+                "location": {
+                  "name": "ENEOS めかる給油所 那覇市銘苅",
+                  "googleQuery": "https://maps.google.com/?q=ENEOS+めかる給油所+那覇市銘苅",
+                  "appleQuery": "https://maps.apple.com/?q=ENEOS+めかる給油所+那覇市銘苅"
                 }
               }
             ],
