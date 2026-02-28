@@ -27,6 +27,39 @@ function stripInlineHandlers(html) {
     return html.replace(/\s+onclick="[^"]*"/g, '');
 }
 
+/* ===== LocalStorage Helper (trip-planner- prefix, 6-month expiry) ===== */
+var LS_PREFIX = 'trip-planner-';
+var LS_TTL = 180 * 86400000; // 6 months
+
+function lsSet(key, value) {
+    localStorage.setItem(LS_PREFIX + key, JSON.stringify({ v: value, exp: Date.now() + LS_TTL }));
+}
+function lsGet(key) {
+    try {
+        var d = JSON.parse(localStorage.getItem(LS_PREFIX + key));
+        if (d && d.exp > Date.now()) return d.v;
+        localStorage.removeItem(LS_PREFIX + key);
+        return null;
+    } catch(e) { return null; }
+}
+function lsRemove(key) {
+    localStorage.removeItem(LS_PREFIX + key);
+}
+function lsRenewAll() {
+    var newExp = Date.now() + LS_TTL;
+    for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf(LS_PREFIX) === 0) {
+            try {
+                var d = JSON.parse(localStorage.getItem(k));
+                if (d && d.exp) { d.exp = newExp; localStorage.setItem(k, JSON.stringify(d)); }
+            } catch(e) {}
+        }
+    }
+}
+// Renew all on page load
+lsRenewAll();
+
 /* ===== URL Routing ===== */
 var DEFAULT_SLUG = 'okinawa-trip-2026-Ray';
 function fileToSlug(f) { var m = f.match(/^data\/(.+)\.json$/); return m ? m[1] : null; }
@@ -37,38 +70,37 @@ function setUrlTrip(slug) {
     if (slug) url.searchParams.set('trip', slug); else url.searchParams.delete('trip');
     history.replaceState(null, '', url);
 }
-function saveTripPref(slug) {
-    localStorage.setItem('tripPref', JSON.stringify({ slug: slug, exp: Date.now() + 180 * 86400000 }));
-}
-function loadTripPref() {
-    try { var d = JSON.parse(localStorage.getItem('tripPref')); return d && d.exp > Date.now() ? d.slug : null; }
-    catch(e) { return null; }
-}
+function saveTripPref(slug) { lsSet('trip-pref', slug); }
+function loadTripPref() { return lsGet('trip-pref'); }
 
 /* ===== Trip Data Loading ===== */
 var TRIP = null;
 var TRIP_FILE = '';
 var IS_CUSTOM = false;
 
-// Migrate old keys
+// Migrate old keys to trip-planner- prefix
 (function() {
+    // Migrate old 'tripFile'
     var old = localStorage.getItem('tripFile');
-    if (old && !localStorage.getItem('tripPref')) {
+    if (old && !lsGet('trip-pref')) {
         var s = fileToSlug(old);
         if (s) saveTripPref(s);
     }
     localStorage.removeItem('tripFile');
-    // Migrate old short-slug tripPref (e.g. 'Ray' → 'okinawa-trip-2026-Ray')
+    // Migrate old 'tripPref' (unprefixed)
     try {
         var p = JSON.parse(localStorage.getItem('tripPref'));
-        if (p && p.slug && p.slug.indexOf('/') === -1 && !p.slug.match(/\./)) {
-            var full = 'data/' + p.slug + '.json';
-            if (!full.match(/^data\/.*-.*\.json$/)) {
-                // Old short slug, clear it and let default take over
-                localStorage.removeItem('tripPref');
-            }
+        if (p && p.slug) {
+            if (!lsGet('trip-pref')) saveTripPref(p.slug);
+            localStorage.removeItem('tripPref');
         }
     } catch(e) {}
+    // Migrate old 'dark' (unprefixed)
+    var oldDark = localStorage.getItem('dark');
+    if (oldDark !== null) {
+        if (lsGet('dark') === null) lsSet('dark', oldDark);
+        localStorage.removeItem('dark');
+    }
 })();
 
 function resolveAndLoad() {
@@ -237,13 +269,13 @@ function toggleDark() {
     document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
     document.body.classList.toggle('dark');
     var isDark = document.body.classList.contains('dark');
-    localStorage.setItem('dark', isDark ? '1' : '0');
+    lsSet('dark', isDark ? '1' : '0');
     var btn = document.querySelector('[data-action="toggle-dark"]');
     if (btn) btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', isDark ? '#1565C0' : '#0077B6');
 }
-if (localStorage.getItem('dark') === '1') {
+if (lsGet('dark') === '1') {
     document.body.classList.add('dark');
     var dmeta = document.querySelector('meta[name="theme-color"]');
     if (dmeta) dmeta.setAttribute('content', '#1565C0');
