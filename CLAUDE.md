@@ -225,6 +225,7 @@ npm run test:watch # Vitest 監聽模式（開發時用）
 
 ### 測試規範
 
+- **只有變更到程式碼（含 `data/*.json`）時才需要跑測試**；僅修改 `CLAUDE.md`、`README.md` 等文件不需跑測試
 - app.js 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
 - `tests/setup.js` 提供全域 stub（localStorage、DOM 元素、meta 標籤）
 - E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
