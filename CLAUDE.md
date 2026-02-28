@@ -3,13 +3,18 @@
 ## 專案結構
 
 ```
-index.html          — HTML 外殼（載入 CSS / JS）
-style.css           — 所有樣式
-app.js              — 所有邏輯（載入 JSON、渲染、導航、天氣）
+index.html              — HTML 外殼（載入 CSS / JS）
+style.css               — 所有樣式
+app.js                  — 所有邏輯（載入 JSON、渲染、導航、天氣）
 data/
-  trips.json        — 行程清單（供切換選單讀取）
-  okinawa-trip-2026-Ray.json — 行程參數檔（天數、地點、航程、雨備等）
-CLAUDE.md           — 開發規範
+  trips.json            — 行程清單（供切換選單讀取）
+  okinawa-trip-2026-Ray.json    — 行程參數檔
+  okinawa-trip-2026-HuiYun.json — 行程參數檔
+package.json            — npm 依賴（vitest, playwright, jsdom, serve）
+vitest.config.js        — Vitest 設定
+playwright.config.js    — Playwright 設定
+tests/                  — 測試（詳見「測試」章節）
+CLAUDE.md               — 開發規範
 ```
 
 - GitHub Pages 網址：https://raychiutw.github.io/trip-planner/
@@ -189,3 +194,40 @@ CLAUDE.md           — 開發規範
 - 每餐提供三選一（拉麵 + 燒肉 + 其他推薦）
 - 每家餐廳標註營業時間，可預約者附預約連結
 - 語言：繁體中文台灣用語，日文店名保留原文
+
+## 測試
+
+### 測試架構
+
+```
+tests/
+├── unit/                    ← 單元測試（Vitest + jsdom）
+│   ├── escape.test.js       ← escHtml, escUrl, stripInlineHandlers
+│   ├── render.test.js       ← 所有 render 函式
+│   ├── validate.test.js     ← validateDay, renderWarnings
+│   └── routing.test.js      ← fileToSlug, slugToFile
+├── integration/             ← 整合測試（Vitest + 真實 JSON）
+│   └── render-pipeline.test.js ← 真實 JSON → render 函式 → HTML 驗證
+├── json/                    ← JSON 結構驗證（Vitest）
+│   ├── schema.test.js       ← 行程 JSON 結構完整性 + URL 安全性
+│   └── registry.test.js     ← trips.json 檔案參照驗證
+└── e2e/                     ← E2E 測試（Playwright + Chromium）
+    └── trip-page.spec.js    ← 真實瀏覽器互動驗證
+```
+
+### 執行方式
+
+```bash
+npm test          # 單元 + 整合 + JSON 驗證（Vitest，173 個測試）
+npm run test:e2e  # E2E 瀏覽器測試（Playwright，30 個測試）
+npm run test:watch # Vitest 監聽模式（開發時用）
+```
+
+### 測試規範
+
+- app.js 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
+- `tests/setup.js` 提供全域 stub（localStorage、DOM 元素、meta 標籤）
+- E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
+- 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `app.js` 的 `module.exports` 加上對應測試與匯出
+- 修改 JSON 結構時，需確認 `tests/json/schema.test.js` 的驗證規則仍正確
+- 新增互動行為時，需在 `tests/e2e/trip-page.spec.js` 加上對應 E2E 測試
