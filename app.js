@@ -735,9 +735,11 @@ if (lsGet('dark') === '1') {
     var dmeta = document.querySelector('meta[name="theme-color"]');
     if (dmeta) dmeta.setAttribute('content', '#1565C0');
 }
+var _manualScrollTs = 0;
 function scrollToSec(id) {
     var el = document.getElementById(id);
     if (!el) return;
+    _manualScrollTs = Date.now();
     var navH = document.getElementById('stickyNav').offsetHeight;
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
@@ -886,7 +888,7 @@ function initNavTracking() {
             var current = -1;
             if (!inInfo) { for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; } }
             navPills.forEach(function(btn) { btn.classList.toggle('active', current >= 0 && parseInt(btn.getAttribute('data-day')) === current + 1); });
-            if (current >= 0) {
+            if (current >= 0 && Date.now() - _manualScrollTs > 600) {
                 var newHash = '#day' + (current + 1);
                 if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
             }

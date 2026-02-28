@@ -226,6 +226,10 @@ npm run test:watch # Vitest 監聽模式（開發時用）
 ### 測試規範
 
 - **只有變更到程式碼（含 `data/*.json`）時才需要跑測試**；僅修改 `CLAUDE.md`、`README.md` 等文件不需跑測試
+- **⚠️ 必須遵守：commit 前一定要跑測試並全數通過，不得跳過**
+  - 修改 `data/*.json`：至少跑 `npm test`（Vitest 173 個測試）
+  - 修改 `app.js` / `style.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**（含 Playwright 30 個 E2E 測試）
+  - 測試失敗時必須修復後重跑，不得帶著失敗 commit
 - app.js 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
 - `tests/setup.js` 提供全域 stub（localStorage、DOM 元素、meta 標籤）
 - E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
