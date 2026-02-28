@@ -57,8 +57,15 @@
         .weather-list li { font-size: var(--fs-sm); padding: 3px 0 3px 22px; position: relative; }
         .weather-list li::before { content: '🌊'; position: absolute; left: 0; }
 
-        /* ===== Day Header (sticky) ===== */
-        .day-header { position: sticky; top: 0; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        /* ===== Sticky Nav ===== */
+        .sticky-nav { position: sticky; top: 0; z-index: 200; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .sticky-nav h2 { font-size: var(--fs-md); font-weight: 700; white-space: nowrap; }
+        .sticky-nav .dh-right { font-size: var(--fs-sm); opacity: 0.9; white-space: nowrap; margin-left: auto; }
+        .sticky-nav .dh-right + .dh-menu { margin-left: 0; }
+        body.dark .sticky-nav { background: #1565C0; }
+
+        /* ===== Day Header (section divider) ===== */
+        .day-header { position: relative; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; scroll-margin-top: 44px; }
         .day-header h2 { font-size: var(--fs-md); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .day-header .dh-right { font-size: var(--fs-sm); opacity: 0.9; white-space: nowrap; margin-left: auto; }
         .dh-nav { display: flex; gap: 3px; flex-shrink: 0; }
@@ -70,7 +77,7 @@
         .day-header .dh-right + .dh-menu { margin-left: 0; }
 
         /* ===== Day Content ===== */
-        .day-content { background: var(--white); padding: 0 20px 16px; min-height: calc(100vh - 50px); }
+        .day-content { background: var(--white); padding: 0 20px 16px; }
 
         /* ===== Hourly Weather ===== */
         .hourly-weather { padding: 12px 0; overflow: hidden; }
@@ -179,6 +186,7 @@
         .print-mode .tl-body, .print-mode .col-detail, .print-mode .nav-links { display: block !important; }
         .print-mode .tl-arrow, .print-mode .col-row .arrow, .print-mode .nav-toggle { display: none !important; }
         .print-mode .dh-nav, .print-mode .dh-menu { display: none !important; }
+        .print-mode .sticky-nav { display: none; }
         .print-mode .top-bar, .print-mode .day-header { position: relative !important; }
         .print-mode .day-header { flex-wrap: wrap; padding: 8px 12px; }
         .print-mode .hw-detail { display: block !important; }
@@ -196,7 +204,7 @@
         @media print {
             @page { size: A4; margin: 12mm; }
             body { background: #fff !important; }
-            .menu-dropdown, .nav-toggle, .dh-nav, .dh-menu, .print-exit-btn { display: none !important; }
+            .sticky-nav, .menu-dropdown, .nav-toggle, .dh-nav, .dh-menu, .print-exit-btn { display: none !important; }
             .container { max-width: 100% !important; box-shadow: none !important; }
             .tl-body, .col-detail, .nav-links { display: block !important; }
             .tl-arrow, .col-row .arrow { display: none !important; }
@@ -266,13 +274,19 @@
 <body>
     <div class="container">
 
+        <!-- ===== Sticky Nav ===== -->
+        <div class="sticky-nav" id="stickyNav">
+            <div class="dh-nav"><button class="dn active" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
+            <h2 id="navTitle">Day 1</h2>
+            <div class="dh-right" id="navDate">7/29（三）</div>
+            <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
+        </div>
+
         <!-- ==================== Day 1 ==================== -->
         <section>
             <div class="day-header" id="day1">
-                <div class="dh-nav"><button class="dn active" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 1</h2>
                 <div class="dh-right">7/29（三）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-1"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -443,10 +457,8 @@
         <!-- ==================== Day 2 ==================== -->
         <section>
             <div class="day-header" id="day2">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn active" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 2</h2>
                 <div class="dh-right">7/30（四）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-2"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -567,10 +579,8 @@
         <!-- ==================== Day 3 ==================== -->
         <section>
             <div class="day-header" id="day3">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn active" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 3</h2>
                 <div class="dh-right">7/31（五）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-3"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -676,10 +686,8 @@
         <!-- ==================== Day 4 ==================== -->
         <section>
             <div class="day-header" id="day4">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn active" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 4</h2>
                 <div class="dh-right">8/1（六）</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-4"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -821,10 +829,8 @@
         <!-- ==================== Day 5 ==================== -->
         <section>
             <div class="day-header" id="day5">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn active" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 5</h2>
                 <div class="dh-right">8/2（日）✈️</div>
-                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-5"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -1096,10 +1102,24 @@
         var dmeta = document.querySelector('meta[name="theme-color"]');
         if (dmeta) dmeta.setAttribute('content', '#1565C0');
     }
+    var dayData = [
+        { id: 'day1', title: 'Day 1', date: '7/29（三）' },
+        { id: 'day2', title: 'Day 2', date: '7/30（四）' },
+        { id: 'day3', title: 'Day 3', date: '7/31（五）' },
+        { id: 'day4', title: 'Day 4', date: '8/1（六）' },
+        { id: 'day5', title: 'Day 5', date: '8/2（日）✈️' }
+    ];
+    function updateStickyNav(n) {
+        var d = dayData[n] || dayData[0];
+        document.getElementById('navTitle').textContent = d.title;
+        document.getElementById('navDate').textContent = d.date;
+    }
     function scrollToSec(id) {
         var el = document.getElementById(id);
         if (!el) return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var navH = document.getElementById('stickyNav').offsetHeight;
+        var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
+        window.scrollTo({ top: top, behavior: 'smooth' });
         document.getElementById('menuDrop').classList.remove('open');
     }
     function scrollToDay(n) { scrollToSec('day' + n); }
@@ -1120,18 +1140,20 @@
             if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
         }
     }
-    /* ===== Day Nav Active Pill ===== */
+    /* ===== Day Nav Active Pill + Sticky Nav Update ===== */
     (function(){
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
-        var allPills = document.querySelectorAll('.dh-nav .dn[data-day]');
-        if (!allPills.length) return;
+        var navPills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
+        if (!navPills.length) return;
+        var navH = document.getElementById('stickyNav').offsetHeight;
         var ticking = false;
         window.addEventListener('scroll', function() {
             if (!ticking) { requestAnimationFrame(function() {
                 var current = 0;
-                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
-                allPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; }
+                navPills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+                updateStickyNav(current);
                 ticking = false;
             }); ticking = true; }
         });
@@ -1148,7 +1170,10 @@
         var idx = dates.indexOf(todayStr);
         if (idx >= 0) {
             var el = document.getElementById('day' + (idx + 1));
-            if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+            if (el) {
+                var navH = document.getElementById('stickyNav').offsetHeight;
+                window.scrollTo({ top: el.offsetTop - navH, behavior: 'auto' });
+            }
         }
     });
     // Close menu when clicking outside
