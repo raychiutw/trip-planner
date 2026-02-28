@@ -1,26 +1,79 @@
+/* ===== Utility ===== */
+function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function sanitizeHtml(html) {
+    // Strip <script>, <iframe>, on* attributes from user-uploaded content
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    doc.querySelectorAll('script,iframe,object,embed,form').forEach(function(el) { el.remove(); });
+    doc.querySelectorAll('*').forEach(function(el) {
+        Array.from(el.attributes).forEach(function(attr) {
+            if (attr.name.indexOf('on') === 0) el.removeAttribute(attr.name);
+            if (attr.name === 'href' || attr.name === 'src' || attr.name === 'action') {
+                var val = (attr.value || '').trim().toLowerCase();
+                if (val.indexOf('javascript:') === 0 || val.indexOf('data:text/html') === 0) el.removeAttribute(attr.name);
+            }
+        });
+        // Add rel="noopener noreferrer" to target="_blank" links
+        if (el.tagName === 'A' && el.getAttribute('target') === '_blank') {
+            el.setAttribute('rel', 'noopener noreferrer');
+        }
+    });
+    return doc.body.innerHTML;
+}
+
 /* ===== Trip Data Loading ===== */
 var TRIP = null;
 var TRIP_FILE = localStorage.getItem('tripFile') || 'data/okinawa-trip-2026-Ray.json';
+var IS_CUSTOM = TRIP_FILE.indexOf('custom:') === 0;
 
 function loadTrip(filename) {
     TRIP_FILE = filename;
+    IS_CUSTOM = filename.indexOf('custom:') === 0;
     localStorage.setItem('tripFile', filename);
+    // Custom uploads stored in localStorage (prefix: custom:)
+    if (IS_CUSTOM) {
+        var raw = localStorage.getItem('tripData:' + filename);
+        if (raw) {
+            try { var data = JSON.parse(raw); TRIP = data; renderTrip(data); return; }
+            catch(e) { /* fall through to error */ }
+        }
+        document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u81ea\u8a02\u884c\u7a0b\u5df2\u904e\u671f\uff0c\u8acb\u91cd\u65b0\u4e0a\u50b3</div>';
+        localStorage.removeItem('tripFile');
+        return;
+    }
+    // Only allow relative paths (prevent fetching external URLs)
+    if (/^https?:\/\//i.test(filename) || filename.indexOf('..') !== -1) {
+        document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
+        return;
+    }
     fetch(filename + '?t=' + Date.now())
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(data) { TRIP = data; renderTrip(data); })
         .catch(function(e) {
-            document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">❌ 載入失敗：' + filename + '<br>' + e.message + '</div>';
+            document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u8f09\u5165\u5931\u6557\uff1a' + escHtml(filename) + '</div>';
         });
 }
 
 function renderTrip(data) {
-    // Update page title
-    document.title = data.meta.title;
+    // Sanitize content if custom upload
+    var safe = IS_CUSTOM ? sanitizeHtml : function(s) { return s; };
 
-    // Build nav pills
+    // Update page title & meta tags
+    document.title = data.meta.title;
+    var metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc && data.meta.description) metaDesc.setAttribute('content', data.meta.description);
+    var ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', data.meta.title);
+    var ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc && data.meta.ogDescription) ogDesc.setAttribute('content', data.meta.ogDescription);
+
+    // Build nav pills (day.id is numeric, safe)
     var navHtml = '';
     data.days.forEach(function(day) {
-        navHtml += '<button class="dn" data-day="' + day.id + '" onclick="scrollToDay(' + day.id + ')">D' + day.id + '</button>';
+        var id = parseInt(day.id) || 0;
+        navHtml += '<button class="dn" data-day="' + id + '" onclick="scrollToDay(' + id + ')">D' + id + '</button>';
     });
     document.getElementById('navPills').innerHTML = navHtml;
 
@@ -29,9 +82,10 @@ function renderTrip(data) {
 
     // Day sections
     data.days.forEach(function(day) {
+        var id = parseInt(day.id) || 0;
         html += '<section>';
-        html += '<div class="day-header" id="day' + day.id + '"><h2>Day ' + day.id + '</h2><div class="dh-right">' + day.date + '</div></div>';
-        html += '<div class="day-content">' + day.content + '</div>';
+        html += '<div class="day-header" id="day' + id + '"><h2>Day ' + id + '</h2><div class="dh-right">' + escHtml(day.date) + '</div></div>';
+        html += '<div class="day-content">' + safe(day.content || '') + '</div>';
         html += '</section>';
     });
 
@@ -46,18 +100,18 @@ function renderTrip(data) {
         var d = data[sec.key];
         if (!d) return;
         html += '<section>';
-        html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + d.title + '</h2><button class="dh-menu" onclick="toggleMenu(event)">≡</button></div>';
-        html += '<div class="day-content">' + d.content + '</div>';
+        html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + escHtml(d.title) + '</h2><button class="dh-menu" onclick="toggleMenu(event)">\u2261</button></div>';
+        html += '<div class="day-content">' + safe(d.content || '') + '</div>';
         html += '</section>';
     });
 
     // Footer
     html += '<footer>';
-    html += '<h3>' + data.footer.title + '</h3>';
-    html += '<p>' + data.footer.dates + '</p>';
-    html += '<p style="font-weight:600;">' + data.footer.budget + '</p>';
-    html += '<p style="color:var(--gray);">' + data.footer.exchangeNote + '</p>';
-    html += '<p>' + data.footer.tagline + '</p>';
+    html += '<h3>' + escHtml(data.footer.title) + '</h3>';
+    html += '<p>' + escHtml(data.footer.dates) + '</p>';
+    if (data.footer.budget) html += '<p style="font-weight:600;">' + escHtml(data.footer.budget) + '</p>';
+    if (data.footer.exchangeNote) html += '<p style="color:var(--gray);">' + escHtml(data.footer.exchangeNote) + '</p>';
+    html += '<p>' + escHtml(data.footer.tagline) + '</p>';
     html += '</footer>';
 
     document.getElementById('tripContent').innerHTML = html;
@@ -81,7 +135,8 @@ function renderTrip(data) {
 function buildMenu(data) {
     var html = '<div class="menu-col">';
     data.days.forEach(function(day) {
-        html += '<button class="menu-item" onclick="scrollToSec(\'day' + day.id + '\')">📍 D' + day.id + ' ' + day.label + '</button>';
+        var id = parseInt(day.id) || 0;
+        html += '<button class="menu-item" onclick="scrollToSec(\'day' + id + '\')">\ud83d\udccd D' + id + ' ' + escHtml(day.label) + '</button>';
     });
     html += '</div><div class="menu-col">';
     html += '<button class="menu-item" onclick="scrollToSec(\'sec-flight\')">✈️ 航班資訊</button>';
@@ -189,11 +244,20 @@ function switchTripFile() {
                 var btn = document.createElement('button');
                 btn.className = 'menu-item';
                 btn.style.cssText = 'width:100%;text-align:left;padding:12px;margin-bottom:4px;border-radius:8px;border:1.5px solid var(--blue-light);';
-                btn.innerHTML = '<strong>' + t.name + '</strong><br><span style="font-size:0.85em;color:var(--gray);">' + t.dates + '</span>';
+                btn.innerHTML = '<strong>' + escHtml(t.name) + '</strong><br><span style="font-size:0.85em;color:var(--gray);">' + escHtml(t.dates) + '</span>';
                 if (TRIP_FILE === t.file) btn.style.borderColor = 'var(--blue)';
                 btn.onclick = function() { document.body.removeChild(overlay); loadTrip(t.file); window.scrollTo({top:0,behavior:'smooth'}); };
                 box.appendChild(btn);
             });
+            // Show current custom trip if active
+            if (TRIP_FILE.indexOf('custom:') === 0 && TRIP) {
+                var customBtn = document.createElement('button');
+                customBtn.className = 'menu-item';
+                customBtn.style.cssText = 'width:100%;text-align:left;padding:12px;margin-bottom:4px;border-radius:8px;border:1.5px solid var(--blue);';
+                customBtn.innerHTML = '<strong>\ud83d\udcce ' + escHtml(TRIP_FILE.replace('custom:', '')) + '</strong><br><span style="font-size:0.85em;color:var(--gray);">\u81ea\u8a02\u4e0a\u50b3\uff08localStorage\uff09</span>';
+                customBtn.onclick = function() { document.body.removeChild(overlay); };
+                box.appendChild(customBtn);
+            }
             // Upload custom
             var upBtn = document.createElement('button');
             upBtn.className = 'menu-item';
@@ -207,7 +271,16 @@ function switchTripFile() {
                     var file = e.target.files[0]; if (!file) return;
                     var reader = new FileReader();
                     reader.onload = function(ev) {
-                        try { var data = JSON.parse(ev.target.result); TRIP = data; TRIP_FILE = file.name; localStorage.setItem('tripFile', file.name); renderTrip(data); window.scrollTo({top:0,behavior:'smooth'}); }
+                        try {
+                            var data = JSON.parse(ev.target.result);
+                            TRIP = data;
+                            var key = 'custom:' + file.name;
+                            TRIP_FILE = key;
+                            localStorage.setItem('tripFile', key);
+                            localStorage.setItem('tripData:' + key, ev.target.result);
+                            renderTrip(data);
+                            window.scrollTo({top:0,behavior:'smooth'});
+                        }
                         catch(err) { alert('JSON 格式錯誤：' + err.message); }
                     };
                     reader.readAsText(file);
@@ -262,7 +335,7 @@ function initNavTracking() {
             ticking = false;
         }); ticking = true; }
     };
-    window.addEventListener('scroll', window._navScrollHandler);
+    window.addEventListener('scroll', window._navScrollHandler, { passive: true });
     // Trigger once immediately to set initial state
     window._navScrollHandler();
 }
