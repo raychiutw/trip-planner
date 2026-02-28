@@ -3,6 +3,402 @@ function escHtml(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ===== URL Safe Validation ===== */
+function escUrl(url) {
+    if (!url) return '';
+    var s = String(url).trim();
+    if (/^(https?:|tel:)/i.test(s)) return s;
+    return '';
+}
+
+/* ===== Apple SVG Icon ===== */
+var APPLE_SVG = '<svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>';
+
+/* ===== Render: Map Links ===== */
+function renderMapLinks(loc, inline) {
+    var cls = inline ? 'map-link map-link-inline' : 'map-link';
+    var html = '';
+    var gq = escUrl(loc.googleQuery || loc.url || '') || ('https://maps.google.com/?q=' + encodeURIComponent(loc.name || ''));
+    if (!/^https?:/i.test(gq)) gq = 'https://maps.google.com/?q=' + encodeURIComponent(loc.name || '');
+    html += '<a href="' + escUrl(gq) + '" target="_blank" rel="noopener noreferrer" class="' + cls + '">'
+          + '<span class="g-icon">G</span> Map</a>';
+    var aq = escUrl(loc.appleQuery || '') || ('https://maps.apple.com/?q=' + encodeURIComponent(loc.name || ''));
+    if (!/^https?:/i.test(aq)) aq = 'https://maps.apple.com/?q=' + encodeURIComponent(loc.name || '');
+    html += '<a href="' + escUrl(aq) + '" target="_blank" rel="noopener noreferrer" class="' + cls + ' apple">'
+          + '<span class="apple-icon">' + APPLE_SVG + '</span> Map</a>';
+    if (loc.mapcode) {
+        html += '<span class="' + cls + ' mapcode">📟 ' + escHtml(loc.mapcode) + '</span>';
+    }
+    return html;
+}
+
+/* ===== Render: Nav Links ===== */
+function renderNavLinks(locations) {
+    if (!locations || !locations.length) return '';
+    var html = '<div class="nav-links">';
+    locations.forEach(function(loc) {
+        if (loc.label) html += '<strong>' + escHtml(loc.label) + '：</strong>';
+        html += renderMapLinks(loc, true);
+    });
+    html += '</div>';
+    return html;
+}
+
+/* ===== Render: Restaurant ===== */
+function renderRestaurant(r) {
+    var html = '<div class="restaurant-choice">';
+    var nameHtml = escHtml(r.name);
+    var rUrl = escUrl(r.url);
+    if (rUrl) nameHtml = '<a href="' + rUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
+    html += (r.emoji ? r.emoji + ' ' : '')
+          + (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
+          + nameHtml;
+    if (r.desc) html += ' — ' + escHtml(r.desc);
+    if (r.price) html += '，' + escHtml(r.price);
+    html += '<br>';
+    if (r.location) html += renderMapLinks(r.location, true);
+    var meta = '';
+    if (r.hours) meta += '⏰ ' + escHtml(r.hours);
+    if (r.reservation) {
+        if (meta) meta += ' ｜ ';
+        var resUrl = escUrl(r.reservationUrl);
+        if (resUrl) {
+            meta += '📞 <a href="' + resUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(r.reservation) + '</a>';
+        } else {
+            meta += '📞 ' + escHtml(r.reservation);
+        }
+    }
+    if (meta) html += '<span class="restaurant-meta">' + meta + '</span>';
+    html += '</div>';
+    return html;
+}
+
+/* ===== Render: Info Box ===== */
+function renderInfoBox(box) {
+    var html = '';
+    switch (box.type) {
+        case 'reservation':
+            html += '<div class="info-box reservation">';
+            if (box.title) html += '<strong>' + escHtml(box.title) + '</strong><br>';
+            if (box.items && box.items.length) {
+                box.items.forEach(function(item) {
+                    html += escHtml(item) + '<br>';
+                });
+            }
+            if (box.notes) html += escHtml(box.notes);
+            html += '</div>';
+            break;
+        case 'parking':
+            html += '<div class="info-box parking">';
+            if (box.title) html += '🅿️ <strong>' + escHtml(box.title) + '</strong>';
+            if (box.price) html += '：' + escHtml(box.price);
+            if (box.location) html += ' ' + renderMapLinks(box.location, true);
+            html += '</div>';
+            break;
+        case 'souvenir':
+            html += '<div class="info-box souvenir">';
+            if (box.title) html += '🎁 <strong>' + escHtml(box.title) + '</strong><br>';
+            if (box.items && box.items.length) {
+                box.items.forEach(function(item) {
+                    html += (item.emoji || '🏪') + ' ';
+                    var itemUrl = escUrl(item.url);
+                    if (itemUrl) {
+                        html += '<a href="' + itemUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(item.name) + '</a>';
+                    } else {
+                        html += escHtml(item.name);
+                    }
+                    if (item.note) html += '（' + escHtml(item.note) + '）';
+                    if (item.location) html += ' ' + renderMapLinks(item.location, true);
+                    html += '<br>';
+                });
+            }
+            html += '</div>';
+            break;
+        case 'restaurants':
+            html += '<div class="info-box restaurants">';
+            var rCount = box.restaurants ? box.restaurants.length : 0;
+            var rTitle = box.title || (rCount > 1 ? ('🍽️ ' + rCount + '選一') : '🍽️ 推薦餐廳');
+            html += '🍽️ <strong>' + escHtml(rTitle) + '：</strong>';
+            if (box.restaurants && box.restaurants.length) {
+                box.restaurants.forEach(function(r) { html += renderRestaurant(r); });
+            }
+            html += '</div>';
+            break;
+        default:
+            if (box.content) html += '<div class="info-box">' + escHtml(box.content) + '</div>';
+            break;
+    }
+    return html;
+}
+
+/* ===== Render: Timeline Event ===== */
+function renderTimelineEvent(ev) {
+    var hasBody = ev.description || (ev.locations && ev.locations.length) || (ev.infoBoxes && ev.infoBoxes.length);
+    var html = '<div class="tl-event">';
+    var headCls = 'tl-head' + (hasBody ? ' clickable' : '');
+    html += '<div class="' + headCls + '">';
+    html += '<span class="tl-time">' + escHtml(ev.time || '') + '</span>';
+    html += '<span class="tl-title">';
+    if (ev.emoji) html += ev.emoji + ' ';
+    var titleUrl = escUrl(ev.titleUrl);
+    if (titleUrl) {
+        html += '<a href="' + titleUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(ev.title) + '</a>';
+    } else {
+        html += escHtml(ev.title || '');
+    }
+    html += '</span>';
+    if (hasBody) html += '<span class="tl-arrow">▸</span>';
+    html += '</div>';
+    if (ev.note) html += '<div class="tl-desc">' + escHtml(ev.note) + '</div>';
+    if (hasBody) {
+        html += '<div class="tl-body">';
+        if (ev.description) html += '<p class="tl-desc">' + escHtml(ev.description) + '</p>';
+        if (ev.locations && ev.locations.length) html += renderNavLinks(ev.locations);
+        if (ev.infoBoxes && ev.infoBoxes.length) {
+            ev.infoBoxes.forEach(function(box) { html += renderInfoBox(box); });
+        }
+        html += '</div>';
+    }
+    if (ev.transit) {
+        html += '<div class="tl-transit">⤷ '
+              + (ev.transit.emoji ? ev.transit.emoji + ' ' : '')
+              + escHtml(ev.transit.text || ev.transit)
+              + '</div>';
+    }
+    html += '</div>';
+    return html;
+}
+
+/* ===== Render: Timeline ===== */
+function renderTimeline(events) {
+    if (!events || !events.length) return '';
+    var html = '<div class="timeline">';
+    events.forEach(function(ev) { html += renderTimelineEvent(ev); });
+    html += '</div>';
+    return html;
+}
+
+/* ===== Render: Hotel ===== */
+function renderHotel(hotel) {
+    var html = '';
+    var nameHtml = escHtml(hotel.name || '');
+    var hotelUrl = escUrl(hotel.url);
+    if (hotelUrl) nameHtml = '<a href="' + hotelUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
+    html += '<div class="col-row">🏨 ' + nameHtml + ' <span class="arrow">▸</span></div>';
+    html += '<div class="col-detail">';
+    if (hotel.details && hotel.details.length) {
+        html += '<div class="hotel-detail-grid">';
+        hotel.details.forEach(function(d) { html += '<span>' + escHtml(d) + '</span>'; });
+        html += '</div>';
+    }
+    if (hotel.subs && hotel.subs.length) {
+        hotel.subs.forEach(function(sub) {
+            html += '<div class="hotel-sub">';
+            if (sub.label) html += '<strong>' + escHtml(sub.label) + '：</strong>';
+            if (sub.text) html += escHtml(sub.text);
+            if (sub.location) html += ' ' + renderMapLinks(sub.location, true);
+            if (sub.items && sub.items.length) {
+                sub.items.forEach(function(item) { html += '<br>' + escHtml(item); });
+            }
+            html += '</div>';
+        });
+    }
+    html += '</div>';
+    return html;
+}
+
+/* ===== Render: Budget ===== */
+function renderBudget(budget) {
+    var html = '';
+    html += '<div class="col-row">💰 ' + escHtml(budget.summary || '') + ' <span class="arrow">▸</span></div>';
+    html += '<div class="col-detail">';
+    if (budget.items && budget.items.length) {
+        html += '<table class="budget-table">';
+        budget.items.forEach(function(item) {
+            html += '<tr><td>' + escHtml(item.label) + '</td><td>' + escHtml(item.amount) + '</td></tr>';
+        });
+        if (budget.total) {
+            html += '<tr class="budget-total"><td>' + escHtml(budget.total.label || '小計') + '</td><td>' + escHtml(budget.total.amount) + '</td></tr>';
+        }
+        html += '</table>';
+    }
+    if (budget.notes && budget.notes.length) {
+        html += '<ul class="notes-list">';
+        budget.notes.forEach(function(n) { html += '<li>' + escHtml(n) + '</li>'; });
+        html += '</ul>';
+    }
+    html += '</div>';
+    return html;
+}
+
+/* ===== Render: Day Content ===== */
+function renderDayContent(content, weatherId) {
+    var html = '';
+    if (weatherId) {
+        html += '<div class="hourly-weather" id="' + escHtml(weatherId) + '"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>';
+    }
+    if (content.hotel) html += renderHotel(content.hotel);
+    if (content.timeline) html += renderTimeline(content.timeline);
+    if (content.budget) html += renderBudget(content.budget);
+    return html;
+}
+
+/* ===== Render: Flights ===== */
+function renderFlights(data) {
+    var html = '';
+    if (data.segments && data.segments.length) {
+        data.segments.forEach(function(seg) {
+            html += '<div class="flight-row">';
+            html += '<span class="flight-icon">' + (seg.icon || '✈️') + '</span>';
+            html += '<div class="flight-info">';
+            if (seg.label) html += '<span class="flight-label">' + escHtml(seg.label) + '</span>';
+            if (seg.flightNo) html += '<span class="flight-route">' + escHtml(seg.flightNo) + '</span>';
+            if (seg.route) html += '<span class="flight-route">' + escHtml(seg.route) + '</span>';
+            if (seg.time) html += '<span class="flight-time">' + escHtml(seg.time) + '</span>';
+            html += '</div></div>';
+        });
+    }
+    if (data.airline) {
+        html += '<div class="flight-row">';
+        html += '<span class="flight-icon">' + (data.airline.icon || '🏢') + '</span>';
+        html += '<div class="flight-info"><span class="flight-label">' + escHtml(data.airline.name || '') + '</span>';
+        if (data.airline.note) html += '<span class="flight-time">' + escHtml(data.airline.note) + '</span>';
+        html += '</div></div>';
+    }
+    return html;
+}
+
+/* ===== Render: Checklist ===== */
+function renderChecklist(data) {
+    var html = '';
+    if (data.cards && data.cards.length) {
+        html += '<div class="ov-grid">';
+        data.cards.forEach(function(card) {
+            html += '<div class="ov-card" style="background:' + escHtml(card.color || 'var(--blue-light)') + ';">';
+            if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
+            if (card.items && card.items.length) {
+                html += '<p>';
+                card.items.forEach(function(item) { html += escHtml(item) + '<br>'; });
+                html += '</p>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
+    } else if (data.items && data.items.length) {
+        html += '<ul class="notes-list">';
+        data.items.forEach(function(item) { html += '<li>' + escHtml(item) + '</li>'; });
+        html += '</ul>';
+    }
+    return html;
+}
+
+/* ===== Render: Backup ===== */
+function renderBackup(data) {
+    var html = '';
+    if (data.cards && data.cards.length) {
+        html += '<div class="ov-grid">';
+        data.cards.forEach(function(card) {
+            html += '<div class="ov-card" style="background:' + escHtml(card.color || 'var(--blue-light)') + ';">';
+            if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
+            if (card.desc) html += '<p>' + escHtml(card.desc) + '</p>';
+            if (card.weatherItems && card.weatherItems.length) {
+                html += '<ul class="weather-list">';
+                card.weatherItems.forEach(function(w) { html += '<li>' + escHtml(w) + '</li>'; });
+                html += '</ul>';
+            }
+            if (card.items && card.items.length) {
+                html += '<p>';
+                card.items.forEach(function(item) { html += escHtml(item) + '<br>'; });
+                html += '</p>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
+    } else if (data.items && data.items.length) {
+        html += '<ul class="notes-list">';
+        data.items.forEach(function(item) { html += '<li>' + escHtml(item) + '</li>'; });
+        html += '</ul>';
+    }
+    return html;
+}
+
+/* ===== Render: Emergency ===== */
+function renderEmergency(data) {
+    var html = '';
+    if (data.cards && data.cards.length) {
+        html += '<div class="ov-grid">';
+        data.cards.forEach(function(card) {
+            html += '<div class="ov-card" style="background:' + escHtml(card.color || 'var(--blue-light)') + ';">';
+            if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
+            if (card.contacts && card.contacts.length) {
+                card.contacts.forEach(function(c) {
+                    html += '<p>';
+                    var cUrl = escUrl(c.url || ('tel:' + (c.phone || '')));
+                    if (cUrl) {
+                        html += '<a href="' + cUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(c.label || c.phone) + '</a>';
+                    } else {
+                        html += escHtml(c.label || c.phone || '');
+                    }
+                    if (c.note) html += '：' + escHtml(c.note);
+                    html += '</p>';
+                });
+            }
+            if (card.address) html += '<p>📍 ' + escHtml(card.address) + '</p>';
+            if (card.notes && card.notes.length) {
+                card.notes.forEach(function(n) { html += '<p>' + escHtml(n) + '</p>'; });
+            }
+            if (card.items && card.items.length) {
+                html += '<p>';
+                card.items.forEach(function(item) { html += escHtml(item) + '<br>'; });
+                html += '</p>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
+    }
+    return html;
+}
+
+/* ===== Validate Day (time vs hours) ===== */
+function validateDay(day) {
+    var warnings = [];
+    if (!day || !day.content || !day.content.timeline) return warnings;
+    day.content.timeline.forEach(function(ev) {
+        if (!ev.time || !ev.infoBoxes) return;
+        var evTime = ev.time.split('-')[0].replace(':', '');
+        var evHour = parseInt(evTime.substring(0, evTime.length - 2), 10) || 0;
+        ev.infoBoxes.forEach(function(box) {
+            if (box.type === 'restaurants' && box.restaurants) {
+                box.restaurants.forEach(function(r) {
+                    if (r.hours) {
+                        var m = r.hours.match(/(\d{1,2}):(\d{2})/);
+                        if (m && evHour < parseInt(m[1], 10)) {
+                            warnings.push(escHtml(ev.title) + ' (' + escHtml(ev.time) + ') 可能早於 ' + escHtml(r.name) + ' 營業時間 (' + escHtml(r.hours) + ')');
+                        }
+                    }
+                });
+            }
+            if (box.hours) {
+                var m2 = box.hours.match(/(\d{1,2}):(\d{2})/);
+                if (m2 && evHour < parseInt(m2[1], 10)) {
+                    warnings.push(escHtml(ev.title) + ' (' + escHtml(ev.time) + ') 可能早於營業時間 (' + escHtml(box.hours) + ')');
+                }
+            }
+        });
+    });
+    return warnings;
+}
+
+/* ===== Render: Warnings ===== */
+function renderWarnings(warnings) {
+    if (!warnings || !warnings.length) return '';
+    var html = '<div class="trip-warnings" style="background:#FFEBEE;border-left:4px solid #D32F2F;padding:10px 14px;margin:8px 0;border-radius:6px;font-size:var(--fs-md);color:#D32F2F;">';
+    html += '<strong>⚠️ 注意事項：</strong><ul style="margin:4px 0 0 16px;">';
+    warnings.forEach(function(w) { html += '<li>' + w + '</li>'; });
+    html += '</ul></div>';
+    return html;
+}
 function sanitizeHtml(html) {
     // Strip <script>, <iframe>, on* attributes from user-uploaded content
     var doc = new DOMParser().parseFromString(html, 'text/html');
@@ -181,7 +577,20 @@ function renderTrip(data) {
         var id = parseInt(day.id) || 0;
         html += '<section>';
         html += '<div class="day-header" id="day' + id + '"><h2>Day ' + id + '</h2><div class="dh-right">' + escHtml(day.date) + '</div></div>';
-        html += '<div class="day-content">' + safe(day.content || '') + '</div>';
+        html += '<div class="day-content">';
+        if (typeof day.content === 'string') {
+            html += safe(day.content || '');
+        } else {
+            var warnings = validateDay(day);
+            if (warnings.length) html += renderWarnings(warnings);
+            // 找出對應此天的 weather id
+            var weatherId = null;
+            if (data.weather) {
+                data.weather.forEach(function(w) { if (w.date === day.date || w.dayId === id) weatherId = w.id; });
+            }
+            html += renderDayContent(day.content || {}, weatherId);
+        }
+        html += '</div>';
         html += '</section>';
     });
 
@@ -197,7 +606,16 @@ function renderTrip(data) {
         if (!d) return;
         html += '<section>';
         html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + escHtml(d.title) + '</h2><button class="dh-menu" data-action="toggle-menu">\u2261</button></div>';
-        html += '<div class="day-content">' + safe(d.content || '') + '</div>';
+        html += '<div class="day-content">';
+        if (typeof d.content === 'string') {
+            html += safe(d.content || '');
+        } else {
+            if (sec.key === 'flights') html += renderFlights(d.content || {});
+            else if (sec.key === 'checklist') html += renderChecklist(d.content || {});
+            else if (sec.key === 'backup') html += renderBackup(d.content || {});
+            else if (sec.key === 'emergency') html += renderEmergency(d.content || {});
+        }
+        html += '</div>';
         html += '</section>';
     });
 
@@ -557,8 +975,20 @@ function initWeather(weatherDays) {
     });
 }
 
-window.addEventListener('beforeprint',function(){document.body.classList.add('print-mode');});
-window.addEventListener('afterprint',function(){document.body.classList.remove('print-mode');});
+window.addEventListener('beforeprint', function() {
+    document.body.classList.add('print-mode');
+    if (document.body.classList.contains('dark')) {
+        document.body.dataset.wasDark = '1';
+        document.body.classList.remove('dark');
+    }
+});
+window.addEventListener('afterprint', function() {
+    document.body.classList.remove('print-mode');
+    if (document.body.dataset.wasDark === '1') {
+        document.body.classList.add('dark');
+        delete document.body.dataset.wasDark;
+    }
+});
 
 // Initial load — resolve from URL → sessionStorage → localStorage → default
 resolveAndLoad();
