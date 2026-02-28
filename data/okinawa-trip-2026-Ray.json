@@ -321,7 +321,8 @@
                       "mapcode": "33 526 312*00"
                     },
                     "hours": "11:00~24:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://bigsharkgogogo.tw/ryoji-familyaa/"
                   },
                   {
                     "emoji": "🥩",
@@ -337,7 +338,8 @@
                     },
                     "hours": "平日 17:00~24:00／假日 11:00~24:00",
                     "reservation": "EPARK 預約",
-                    "reservationUrl": "https://epark.jp/shopinfo/jsp608996/"
+                    "reservationUrl": "https://epark.jp/shopinfo/jsp608996/",
+                    "blogUrl": "https://mimigo.tw/yakiniku-king/"
                   },
                   {
                     "emoji": "🥩",
@@ -352,7 +354,8 @@
                     },
                     "hours": "11:00~24:00",
                     "reservation": null,
-                    "price": "¥1,000~"
+                    "price": "¥1,000~",
+                    "blogUrl": "https://slowlifeinokinawa.com/okifood-yappari/"
                   }
                 ]
               }
@@ -431,7 +434,7 @@
         },
         "timeline": [
           {
-            "time": "10:00",
+            "time": "09:00",
             "emoji": "🚗",
             "title": "出發前往真榮田岬",
             "transit": {
@@ -440,7 +443,7 @@
             }
           },
           {
-            "time": "10:30-12:30",
+            "time": "09:30-11:30",
             "emoji": "🤿",
             "titleUrl": "https://bobbyfun.tw/2024-01-11-2731/",
             "title": "青之洞窟浮潛",
@@ -528,7 +531,7 @@
             }
           },
           {
-            "time": "12:45-13:15",
+            "time": "11:45-12:15",
             "emoji": "🐘",
             "titleUrl": "https://bobbyfun.tw/2024-01-07-2697/",
             "title": "萬座毛",
@@ -554,7 +557,7 @@
             }
           },
           {
-            "time": "14:00-15:30",
+            "time": "12:50-14:20",
             "emoji": "🍜",
             "title": "名護市午餐",
             "description": "名護市區覓食，多種沖繩在地美食可選",
@@ -576,7 +579,8 @@
                       "mapcode": "206 688 694*00"
                     },
                     "hours": "10:00~20:00（週四公休）",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://irenelife.com/blog/post/gabusokasoba"
                   },
                   {
                     "emoji": "🥩",
@@ -592,7 +596,8 @@
                     },
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve",
+                    "blogUrl": "https://carollin.tw/motobu-farm/"
                   },
                   {
                     "emoji": "🍽",
@@ -608,7 +613,8 @@
                     },
                     "hours": "午 11:00~17:00／夜 18:00~22:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
+                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
                   }
                 ]
               },
@@ -626,21 +632,39 @@
                       "appleQuery": "https://maps.apple.com/?q=御菓子御殿+恩納店",
                       "mapcode": "206 096 786*00"
                     }
-                  },
-                  {
-                    "emoji": "🏪",
-                    "name": "\udfea 道の駅許田",
-                    "note": "沖繩人氣最高休息站",
-                    "location": {
-                      "name": "道の駅許田",
-                      "googleQuery": "https://maps.google.com/?q=道の駅許田",
-                      "appleQuery": "https://maps.apple.com/?q=道の駅許田",
-                      "mapcode": "206 476 710*00"
-                    }
                   }
                 ]
               }
-            ]
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約10分鐘 名護→道の駅許田"
+            }
+          },
+          {
+            "time": "14:30-15:15",
+            "emoji": "🏪",
+            "title": "道之驛許田",
+            "description": "沖繩人氣最高休息站！必買沙翁（サーターアンダギー）、黑糖、在地農產。還有折扣水族館門票",
+            "locations": [
+              {
+                "name": "道の駅許田",
+                "googleQuery": "https://maps.google.com/?q=道の駅許田",
+                "appleQuery": "https://maps.apple.com/?q=道の駅許田",
+                "mapcode": "206 476 710*00"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "parking",
+                "title": "停車場",
+                "price": "免費"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約10分鐘 許田→Super Hotel 名護"
+            }
           },
           {
             "time": "15:30",
@@ -696,7 +720,8 @@
                     },
                     "hours": "午 11:30~15:00／夜 17:30~22:30（週三公休）",
                     "reservation": "HotPepper 預約",
-                    "reservationUrl": "https://www.hotpepper.jp/strJ004248399/"
+                    "reservationUrl": "https://www.hotpepper.jp/strJ004248399/",
+                    "blogUrl": "https://alfie073.pixnet.net/blog/post/358808330"
                   },
                   {
                     "emoji": "🍽",
@@ -711,7 +736,8 @@
                       "mapcode": "206 688 171*00"
                     },
                     "hours": "11:00~15:30",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://linrosely.pixnet.net/blog/posts/10350933152"
                   }
                 ]
               }
@@ -782,7 +808,7 @@
         },
         "timeline": [
           {
-            "time": "08:00",
+            "time": "09:00",
             "emoji": "🚗",
             "title": "出發前往水族館",
             "transit": {
@@ -791,7 +817,7 @@
             }
           },
           {
-            "time": "08:30-12:30",
+            "time": "09:30-13:30",
             "emoji": "🐠",
             "titleUrl": "https://www.klook.com/zh-TW/blog/top-tip-churaumi-aquarium-okinawa/",
             "title": "美麗海水族館",
@@ -814,7 +840,7 @@
             ]
           },
           {
-            "time": "12:30-14:00",
+            "time": "13:30-15:00",
             "emoji": "🍽",
             "title": "️ 水族館附近午餐",
             "infoBoxes": [
@@ -835,7 +861,8 @@
                       "mapcode": "206 857 712*00"
                     },
                     "hours": "11:00~17:00（週三公休）",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://www.huihuifun.com/kishimoto-cafeteria/"
                   },
                   {
                     "emoji": "🥩",
@@ -851,7 +878,8 @@
                     },
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve",
+                    "blogUrl": "https://carollin.tw/motobu-farm/"
                   },
                   {
                     "emoji": "🍽",
@@ -866,7 +894,8 @@
                       "mapcode": "206 857 471*00"
                     },
                     "hours": "11:00~15:30",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/kaihoumaru2/"
                   }
                 ]
               }
@@ -877,7 +906,7 @@
             }
           },
           {
-            "time": "14:15-16:00",
+            "time": "15:15-17:00",
             "emoji": "🏖",
             "titleUrl": "https://www.jathao.com/2024/11/okinawa-sesoko-island.html",
             "title": "瀨底海灘戲水",
@@ -909,7 +938,7 @@
             }
           },
           {
-            "time": "16:30-18:00",
+            "time": "17:30-19:00",
             "emoji": "🍽",
             "title": "️ 名護晚餐＋溫泉",
             "description": "回到名護市區覓食，飯後回飯店泡天然溫泉放鬆",
@@ -931,7 +960,8 @@
                       "mapcode": "206 688 585*00"
                     },
                     "hours": "10:00~15:00（售完即止・週一公休）",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://chrysie.pixnet.net/blog/post/119628384"
                   },
                   {
                     "emoji": "🥩",
@@ -947,7 +977,8 @@
                     },
                     "hours": "平日 16:00~23:00／假日 12:00~23:00",
                     "reservation": "EPARK 預約",
-                    "reservationUrl": "https://epark.jp/shopinfo/jsp607670/"
+                    "reservationUrl": "https://epark.jp/shopinfo/jsp607670/",
+                    "blogUrl": "https://alfie073.pixnet.net/blog/post/358808918"
                   },
                   {
                     "emoji": "🍽",
@@ -962,7 +993,8 @@
                       "mapcode": "206 717 028*00"
                     },
                     "hours": "11:00~21:00（週三公休）",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://boo2k.com/archives/124296"
                   }
                 ]
               }
@@ -1049,7 +1081,7 @@
         },
         "timeline": [
           {
-            "time": "10:00",
+            "time": "09:00",
             "emoji": "🚗",
             "title": "出發前往古宇利島",
             "transit": {
@@ -1058,7 +1090,7 @@
             }
           },
           {
-            "time": "10:30-12:00",
+            "time": "09:30-11:00",
             "emoji": "🌉",
             "titleUrl": "https://tisshuang.com/blog/post/kouri-island",
             "title": "古宇利大橋＋心形岩",
@@ -1094,7 +1126,7 @@
             ]
           },
           {
-            "time": "12:00-13:30",
+            "time": "11:00-12:30",
             "emoji": "🍽",
             "title": "️ 古宇利島午餐",
             "infoBoxes": [
@@ -1131,7 +1163,8 @@
                     },
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve",
+                    "blogUrl": "https://carollin.tw/motobu-farm/"
                   },
                   {
                     "emoji": "🦐",
@@ -1146,7 +1179,8 @@
                       "mapcode": "485 692 174*00"
                     },
                     "hours": "11:00~17:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://shin.tw/jp-okinawa-shrimp-wagon/"
                   }
                 ]
               },
@@ -1174,7 +1208,7 @@
             }
           },
           {
-            "time": "14:20-14:45",
+            "time": "13:20-13:45",
             "emoji": "🛣",
             "title": "️ 伊芸 SA 休息站",
             "description": "沖繩自動車道上的海景休息站，有展望台和沖繩小吃",
@@ -1192,7 +1226,7 @@
             }
           },
           {
-            "time": "15:00-18:00",
+            "time": "14:00-17:00",
             "emoji": "🛍",
             "titleUrl": "https://gogojp.tw/aeon-mall-rycom/",
             "title": "AEON Mall 沖繩來客夢",
@@ -1219,7 +1253,7 @@
             }
           },
           {
-            "time": "18:30-19:00",
+            "time": "17:30-18:00",
             "emoji": "🚗",
             "title": "還車手續",
             "transit": {
@@ -1228,7 +1262,7 @@
             }
           },
           {
-            "time": "19:10",
+            "time": "18:10",
             "emoji": "🏨",
             "titleUrl": "https://dorismaworld.com/toyokoinn-makishi/",
             "title": "Check in 東橫inn",
@@ -1273,7 +1307,7 @@
             ]
           },
           {
-            "time": "19:30-21:00",
+            "time": "18:30-20:00",
             "emoji": "🍽",
             "title": "️ 那霸國際通晚餐",
             "infoBoxes": [
@@ -1294,7 +1328,8 @@
                       "mapcode": "33 096 697*00"
                     },
                     "hours": "11:00~24:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://bigsharkgogogo.tw/ryoji-familyaa/"
                   },
                   {
                     "emoji": "🥩",
@@ -1310,7 +1345,8 @@
                     },
                     "hours": "17:00~23:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve",
+                    "blogUrl": "https://lailai-web.com/ryukyu-no-ushi-naha/"
                   },
                   {
                     "emoji": "🍽",
@@ -1325,7 +1361,8 @@
                       "mapcode": "33 155 236*00"
                     },
                     "hours": "11:00~翌 1:00（週三公休）",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://baygolee.com/jacks-steak-house/"
                   }
                 ]
               }
@@ -1518,7 +1555,8 @@
                       "mapcode": "33 157 323*00"
                     },
                     "hours": "平日 10:00~翌 2:00／假日 9:00~翌 2:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   },
                   {
                     "emoji": "🥩",
@@ -1534,7 +1572,8 @@
                     },
                     "hours": "17:00~23:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve",
+                    "blogUrl": "https://lailai-web.com/ryukyu-no-ushi-naha/"
                   },
                   {
                     "emoji": "🍽",
@@ -1549,7 +1588,8 @@
                       "mapcode": "33 157 383*00"
                     },
                     "hours": "11:00~翌 1:30",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://slowlifeinokinawa.com/okifood-yappari/"
                   }
                 ]
               }
@@ -1677,38 +1717,51 @@
       "cards": [
         {
           "color": "var(--blue-light)",
-          "title": "🤿 青之洞窟浮潛預約",
+          "title": "🛂 證件與通訊",
           "items": [
-            "⏰ 建議出發前 1~2 個月預約",
-            "📅 Day 2 (7/30 週四) 10:30",
-            "🏪 推薦中文店家：青潛、Natural Blue、黑潮潛水"
+            "護照（有效期 6 個月以上）",
+            "台灣駕照正本＋日文譯本（監理所 NT$100）",
+            "信用卡（海外消費免手續費佳）",
+            "日本 eSIM 或 WiFi 分享器",
+            "飯店訂房確認信"
+          ]
+        },
+        {
+          "color": "var(--sand-light)",
+          "title": "💴 金錢與行李",
+          "items": [
+            "日幣現金（建議備 ¥30,000 以上）",
+            "防曬乳 SPF50+、墨鏡、帽子",
+            "泳衣、水母衣（7-8月水母季）",
+            "行動電源＋充電線"
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "🤿 浮潛＋租車預約",
+          "items": [
+            "青之洞窟浮潛：出發前 1-2 個月預約（Day 2 7/30 10:30）",
+            "推薦中文店家：青潛、Natural Blue、黑潮潛水",
+            "租車期間：7/29 12:00 ~ 8/1 還車（歌町/美榮橋）",
+            "需備文件：台灣駕照＋日文譯本＋護照"
           ]
         },
         {
           "color": "var(--sand-light)",
           "title": "🌀 颱風動態追蹤",
           "items": [
-            "⏰ 確認時間：出發前 3-5 天",
-            "⚠️ 7-8月為颱風季，需密切注意天氣預報",
-            "📱 建議下載：Windy 或 tenki.jp APP"
+            "確認時間：出發前 3-5 天",
+            "7-8月為颱風季，需密切注意天氣預報",
+            "建議下載：Windy 或 tenki.jp APP"
           ]
         },
         {
           "color": "var(--blue-light)",
-          "title": "🚗 租車確認",
+          "title": "🏨 飯店預約確認",
           "items": [
-            "⏰ 確認時間：出發前 2-4 週",
-            "🔑 需備：台灣駕照＋日文譯本",
-            "📅 租車期間：7/29 12:00 ~ 8/1 還車（歌町/美榮橋）"
-          ]
-        },
-        {
-          "color": "var(--blue-light)",
-          "title": "📞 飯店預約確認",
-          "items": [
-            "• Vessel Hotel Campana 北谷（7/29 一晚）",
-            "• Super Hotel 名護（7/30-31 二晚）",
-            "• 東橫inn 那霸美榮橋站（8/1 一晚）"
+            "Vessel Hotel Campana 北谷（7/29 一晚）",
+            "Super Hotel 名護（7/30-31 二晚）",
+            "東橫inn 那霸美榮橋站（8/1 一晚）"
           ]
         }
       ]
@@ -1757,25 +1810,25 @@
           "title": "🔴 高優先",
           "priority": "high",
           "items": [
-            "Day 1 抵達那霸 17:15 後直接排 4 小時行程（首里城＋國際通），長途飛行後可能疲勞，建議精簡或保留彈性",
-            "Day 4 行程過密：6 個景點＋午餐＋晚餐，09:00~21:00 連續 12 小時，建議擇一刪減"
+            "Day 2 青之洞窟浮潛：7-8月暑假旺季非常搶手，務必出發前 1-2 個月完成預約",
+            "Day 5 午餐「琉球の牛」營業時間 17:00 起，12:30 午餐時段未營業，建議選暖暮拉麵或やっぱりステーキ"
           ]
         },
         {
           "title": "🟡 中優先",
           "priority": "medium",
           "items": [
-            "Day 2 燒肉三選一只有焼肉もとぶ牧場有預約連結，其他兩家建議也查詢預約方式",
-            "Day 3 美麗海水族館只排 2hr，帶小孩可能不夠，建議預留 3hr",
-            "Day 5 下午行程（新都心→DFS→超市）較瑣碎，可考慮合併精簡"
+            "Day 2 晚餐麵屋はちれん、名護漁港食堂無線上預約，暑假旺季可能需排隊 30 分鐘以上",
+            "Day 3 瀨底海灘 7-8月有水母出沒，建議穿水母衣或選有防護網區域戲水",
+            "Day 4 名護→古宇利→來客夢→那霸，車程合計約 2 小時，留意體力與時間掌控"
           ]
         },
         {
           "title": "🟢 低優先",
           "priority": "low",
           "items": [
-            "Day 2 殘波岬 & AEON Mall 各 1.5hr，若時間不夠可擇一",
-            "Day 4 古宇利島停留 2.5hr 充裕，可視天氣彈性調整"
+            "Day 5 首里城正殿重建中（預計 2026 完工），出發前確認最新開放範圍",
+            "Day 4 古宇利島停留時間充裕（09:30-12:30），可視天氣彈性調整海灘或拍照時間"
           ]
         }
       ]

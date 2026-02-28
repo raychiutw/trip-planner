@@ -69,6 +69,11 @@ function renderRestaurant(r) {
             meta += '📞 ' + escHtml(r.reservation);
         }
     }
+    var blogUrl = escUrl(r.blogUrl);
+    if (blogUrl) {
+        if (meta) meta += ' ｜ ';
+        meta += '📝 <a href="' + blogUrl + '" target="_blank" rel="noopener noreferrer">網誌推薦</a>';
+    }
     if (meta) html += '<span class="restaurant-meta">' + meta + '</span>';
     html += '</div>';
     return html;
@@ -675,7 +680,7 @@ function buildMenu(data) {
     var html = '<div class="menu-col">';
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
-        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">Day ' + id + '</button>';
+        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">📍 Day ' + id + '</button>';
     });
     html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';

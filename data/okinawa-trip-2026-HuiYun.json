@@ -420,7 +420,8 @@
                     },
                     "hours": "11:00~21:00（午餐 11:00~15:00）",
                     "reservation": "ホットペッパー預約",
-                    "reservationUrl": "https://www.hotpepper.jp/strJ001257517/"
+                    "reservationUrl": "https://www.hotpepper.jp/strJ001257517/",
+                    "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
                   }
                 ]
               }
@@ -728,7 +729,8 @@
                     },
                     "hours": "午 11:00~15:30／晚 17:30~21:00",
                     "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve"
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
+                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
                   }
                 ]
               }
@@ -799,7 +801,8 @@
                       "mapcode": "485 692 246*56"
                     },
                     "hours": "11:00~18:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://kafu.tw/kouri-shrimp/"
                   }
                 ]
               }
@@ -851,7 +854,8 @@
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
               }
@@ -1224,7 +1228,8 @@
                       "mapcode": "33 032 412*44"
                     },
                     "hours": "11:00~21:00（鬆餅 L.O. 19:40）",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://kafu.tw/happy-pancake/"
                   }
                 ]
               }
@@ -1351,29 +1356,51 @@
     "content": {
       "cards": [
         {
-          "title": "必帶證件",
+          "title": "🛂 證件與通訊",
           "color": "var(--blue-light)",
           "items": [
-            "🛂 護照（有效期6個月以上）",
-            "💳 信用卡（海外消費免手續費佳）",
-            "🏨 飯店訂房確認信"
+            "護照（有效期 6 個月以上）",
+            "台灣駕照正本＋日文譯本（監理所 NT$100）",
+            "信用卡（海外消費免手續費佳）",
+            "日本 eSIM 或 WiFi 分享器",
+            "飯店訂房確認信"
           ]
         },
         {
-          "title": "通訊與電器",
-          "color": "var(--green-light)",
+          "title": "💴 金錢與行李",
+          "color": "var(--sand-light)",
           "items": [
-            "📱 日本 eSIM 或 WiFi 分享器",
-            "🔌 電壓 100V（台灣電器可直接使用）"
+            "日幣現金（建議備 ¥30,000 以上）",
+            "防曬乳 SPF50+、墨鏡、帽子",
+            "泳衣、浮潛裝備",
+            "行動電源＋充電線"
           ]
         },
         {
-          "title": "金錢與行李",
-          "color": "var(--yellow-light)",
+          "title": "🌀 颱風動態追蹤",
+          "color": "var(--sand-light)",
           "items": [
-            "💴 日幣現金（建議備 ¥30,000 以上）",
-            "🧴 防曬乳、墨鏡、帽子",
-            "👗 泳衣、浮潛裝備"
+            "確認時間：出發前 3-5 天",
+            "7月為颱風季，需密切注意天氣預報",
+            "建議下載：Windy 或 tenki.jp APP"
+          ]
+        },
+        {
+          "title": "🚗 租車確認",
+          "color": "var(--blue-light)",
+          "items": [
+            "需備文件：台灣駕照＋日文譯本＋護照",
+            "確認取車與還車時間地點",
+            "加保免責補償險（CDW）建議"
+          ]
+        },
+        {
+          "title": "🏨 住宿確認",
+          "color": "var(--blue-light)",
+          "items": [
+            "沖繩那霸美居飯店（7/2, 7/6-7 共三晚）",
+            "BUZZ RESORT Chatan（7/3 一晚）",
+            "HOPE VILLA Onnason（7/4-5 二晚）"
           ]
         }
       ]
@@ -1405,28 +1432,28 @@
           "title": "🔴 高優先",
           "priority": "high",
           "items": [
-            "Day 2 行程過晚：plate jam 宵夜 23:37 + BUZZ RESORT 01:04 入住，影響隔天精神",
-            "Day 6 行程過晚：ASHIBINAA 20:40 + Can*Do 22:41 + SPORTS DEPO 23:51，建議刪減或提前",
-            "Day 3 路線折返：恩納→殘波岬→萬座毛→石川→恩納(check in)→翡翠海灘(本部)→恩納，翡翠海灘往返車程約 1.5hr"
+            "Day 2 行程過晚：plate jam 宵夜 23:37、BUZZ RESORT 01:04 入住，隔天 08:00 出發只能睡不到 6 小時",
+            "Day 6 ASHIBINAA Outlet 營業到 20:00，排 20:40 抵達可能已關門；Can*Do 22:41、SPORTS DEPO 23:51 也需確認營業時間",
+            "Day 3 路線嚴重折返：恩納→殘波岬→萬座毛→石川→恩納 check in→翡翠海灘(本部)→恩納，翡翠海灘來回車程約 1.5hr 但只停 30 分鐘"
           ]
         },
         {
           "title": "🟡 中優先",
           "priority": "medium",
           "items": [
-            "Day 2 午餐只有敘敘苑一家，建議補 2~3 選一",
-            "Day 4 午餐（百年古家）和下午茶（蝦蝦飯）間距短，胃可能吃不下",
-            "各天缺少預算估計（Ray 有 budget 但 HuiYun 沒有）",
-            "Day 3 翡翠海灘 17:01 出發，7 月日落約 19:20，時間偏晚且往返車程長"
+            "Day 2 午餐只有敘敘苑一家，建議補充 2-3 選一以防排隊或客滿",
+            "Day 4 蝦蝦飯 16:00 標為「午餐」但距上一餐（百年古家 12:28）已過 3.5 小時，建議改標為「下午茶」",
+            "各天缺少每日預算估計，建議加入方便控制旅費",
+            "Day 3 翡翠海灘 17:01 出發、只停 30 分鐘，加上來回車程 1.5hr，投入產出比低，建議改排 Day 4 水族館同天或刪除"
           ]
         },
         {
           "title": "🟢 低優先",
           "priority": "low",
           "items": [
-            "建議 Day 5 來客夢增加寶可夢中心的購物時間（目前只排 1hr）",
-            "Day 6 波上宮停留 1hr 偏長（一般 30 分鐘即可）",
-            "可考慮把沖繩媳婦移到國際通商店街那天（Day 5），順路"
+            "Day 5 寶可夢中心只排 1hr，限定商品排隊可能耗時，建議增加至 1.5-2hr",
+            "Day 6 波上宮停留 1hr 偏長，一般參拜 30 分鐘即可",
+            "Day 6 沖繩媳婦在首里附近，可考慮移到 Day 5 國際通那天順路"
           ]
         }
       ]
