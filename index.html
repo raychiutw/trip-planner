@@ -19,8 +19,6 @@
             --fs-lg: 1.6rem;
             --fs-md: 1.25rem;
             --fs-sm: 1.05rem;
-            --topbar-h: 56px;
-            --tabs-h: 44px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
@@ -29,15 +27,11 @@
         .container { max-width: 800px; margin: 0 auto; }
 
         /* ===== Top Bar ===== */
-        .top-bar { position: sticky; top: 0; z-index: 100; background: var(--white); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--blue-light); }
-        .top-bar h1 { font-size: var(--fs-lg); color: var(--blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .top-bar-right { display: flex; align-items: center; gap: 8px; }
-        .menu-btn { background: none; border: 2px solid var(--blue); color: var(--blue); width: 38px; height: 38px; border-radius: 10px; font-size: 1.3rem; cursor: pointer; flex-shrink: 0; font-weight: 700; }
-        .menu-btn:hover { background: var(--blue); color: var(--white); }
+        .top-bar { position: relative; background: var(--white); padding: 12px 20px; text-align: center; border-bottom: 2px solid var(--blue-light); }
+        .top-bar h1 { font-size: var(--fs-lg); color: var(--blue); }
 
         /* ===== Menu Dropdown ===== */
-        .menu-wrap { position: relative; }
-        .menu-dropdown { display: none; position: absolute; top: 46px; right: 0; background: var(--white); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 6px; min-width: 180px; z-index: 200; }
+        .menu-dropdown { display: none; position: fixed; top: 8px; right: 8px; background: var(--white); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 6px; min-width: 180px; z-index: 300; }
         .menu-dropdown.open { display: block; }
         .menu-item { display: block; width: 100%; padding: 10px 14px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: var(--fs-sm); font-family: inherit; color: var(--text); text-align: left; }
         .menu-item:hover { background: var(--blue-light); }
@@ -58,9 +52,16 @@
         .weather-list li::before { content: '🌊'; position: absolute; left: 0; }
 
         /* ===== Day Header (sticky) ===== */
-        .day-header { position: sticky; top: calc(var(--topbar-h) + var(--tabs-h)); z-index: 50; background: var(--blue); color: var(--white); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .day-header h2 { font-size: var(--fs-lg); font-weight: 700; }
-        .day-header .dh-right { font-size: var(--fs-sm); opacity: 0.9; text-align: right; }
+        .day-header { position: sticky; top: 0; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .day-header h2 { font-size: var(--fs-md); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .day-header .dh-right { font-size: var(--fs-sm); opacity: 0.9; white-space: nowrap; margin-left: auto; }
+        .dh-nav { display: flex; gap: 3px; flex-shrink: 0; }
+        .dn { background: rgba(255,255,255,0.2); color: var(--white); border: none; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; font-family: inherit; cursor: pointer; font-weight: 600; }
+        .dn:hover { background: rgba(255,255,255,0.35); }
+        .dn.active { background: var(--white); color: var(--blue); }
+        .dh-menu { background: rgba(255,255,255,0.2); color: var(--white); border: none; width: 32px; height: 32px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: 700; flex-shrink: 0; margin-left: auto; }
+        .dh-menu:hover { background: rgba(255,255,255,0.35); }
+        .day-header .dh-right + .dh-menu { margin-left: 0; }
 
         /* ===== Day Content ===== */
         .day-content { background: var(--white); padding: 0 20px 16px; }
@@ -165,19 +166,21 @@
         footer p { font-size: var(--fs-sm); margin-top: 4px; }
 
         /* ===== Print Mode ===== */
-        .print-mode { background: var(--white) !important; }
+        .print-mode { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; background: var(--white) !important; }
         .print-mode .tl-body, .print-mode .col-detail, .print-mode .nav-links { display: block !important; }
         .print-mode .tl-arrow, .print-mode .col-row .arrow, .print-mode .nav-toggle { display: none !important; }
-        .print-mode .menu-btn { display: none !important; }
-        .print-mode .top-bar, .print-mode .day-header, .print-mode .day-tabs { position: relative !important; }
-        .print-mode .day-tabs { display: none !important; }
+        .print-mode .dn, .print-mode .dh-menu { display: none !important; }
+        .print-mode .top-bar, .print-mode .day-header { position: relative !important; }
         .print-mode .hw-detail { display: block !important; }
         .print-mode .hw-summary { display: none !important; }
         .print-mode .day-header { background: #333 !important; }
         .print-mode .map-link, .print-mode .nav-toggle { background: #555 !important; }
         .print-mode .status-tag { background: #ddd !important; color: #333 !important; }
+        .print-exit-btn { display: none; position: fixed; top: 10px; right: 10px; z-index: 9999; background: #D32F2F; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: var(--fs-sm); font-family: inherit; cursor: pointer; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .print-exit-btn:hover { background: #B71C1C; }
+        .print-mode .print-exit-btn { display: block; }
         @media print {
-            .menu-btn, .menu-dropdown, .nav-toggle, .day-tabs { display: none !important; }
+            .menu-dropdown, .nav-toggle, .dn, .dh-menu, .dh-nav, .print-exit-btn { display: none !important; }
             .tl-body, .col-detail, .nav-links { display: block !important; }
             .tl-arrow, .col-row .arrow { display: none !important; }
             .top-bar, .day-header { position: relative !important; }
@@ -189,21 +192,17 @@
 
         /* ===== Mobile ===== */
         @media (max-width: 600px) {
-            :root { --fs-xl: 1.8rem; --fs-lg: 1.4rem; --fs-md: 1.15rem; --fs-sm: 0.95rem; --topbar-h: 50px; --tabs-h: 40px; }
+            :root { --fs-xl: 1.8rem; --fs-lg: 1.4rem; --fs-md: 1.15rem; --fs-sm: 0.95rem; }
             .top-bar h1 { font-size: 1.2rem; }
-            .day-header { flex-direction: column; gap: 4px; align-items: flex-start; top: calc(var(--topbar-h) + var(--tabs-h)); }
+            .day-header { top: 0; padding: 6px 8px; gap: 4px; flex-wrap: wrap; }
+            .day-header h2 { font-size: var(--fs-sm); }
+            .dh-nav { gap: 2px; }
+            .dn { padding: 2px 6px; font-size: 0.7rem; }
             .tl-head { flex-wrap: wrap; }
             .tl-time { min-width: 75px; }
             .hw-grid { gap: 5px; scroll-snap-type: x mandatory; }
             .hw-block { min-width: calc((100% - 10px) / 3); scroll-snap-align: start; }
-            .day-tab span { display: none; }
         }
-        /* ===== Day Tabs ===== */
-        .day-tabs { position: sticky; top: var(--topbar-h); z-index: 90; background: var(--white); display: flex; justify-content: center; gap: 4px; padding: 6px 12px; border-bottom: 2px solid var(--blue-light); height: var(--tabs-h); align-items: center; }
-        .day-tab { background: none; border: 2px solid var(--blue); color: var(--blue); padding: 4px 12px; border-radius: 20px; font-size: var(--fs-sm); font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-        .day-tab:hover { background: var(--blue-light); }
-        .day-tab.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
-        .day-tab span { font-weight: 400; }
 
         /* ===== Weather Collapsible ===== */
         .hw-summary { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; cursor: pointer; font-size: var(--fs-sm); color: var(--gray); user-select: none; }
@@ -220,14 +219,13 @@
         body.dark { --blue: #4FC3F7; --blue-light: #1A2A3A; --sand: #E0A870; --sand-light: #2A2218; --white: #1E1E1E; --gray: #AAAAAA; --gray-light: #2A2A2A; --text: #E8E8E8; background: #121212; }
         body.dark .day-header { background: #1565C0; }
         body.dark .info-header { background: #333 !important; }
-        body.dark .day-tab.active { background: #1565C0; border-color: #1565C0; }
-        body.dark .day-tab { border-color: #4FC3F7; }
+        body.dark .dn.active { background: #E8E8E8; color: #1565C0; }
+        body.dark .dh-menu { background: rgba(255,255,255,0.15); }
         body.dark .map-link { background: #1565C0; }
         body.dark .map-link.apple { background: #555; }
         body.dark .map-link.mapcode { background: var(--sand); }
         body.dark .hw-block { border-color: #333; }
         body.dark .top-bar { border-bottom-color: #333; }
-        body.dark .day-tabs { border-bottom-color: #333; }
         body.dark .menu-dropdown { background: #2A2A2A; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
         body.dark .ov-card { background: #1A2A3A; }
         body.dark .ov-card.warm { background: #2A2218; }
@@ -241,8 +239,6 @@
         body.dark .restaurant-choice { border-bottom-color: #444; }
         body.dark footer { border-top-color: #333; }
 
-        /* Print mode overrides dark */
-        .print-mode { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; }
     </style>
 </head>
 <body>
@@ -251,22 +247,6 @@
         <!-- ===== Top Bar ===== -->
         <div class="top-bar">
             <h1>🌊 2026 沖繩五日自駕遊</h1>
-            <div class="menu-wrap">
-                <button class="menu-btn" onclick="document.getElementById('menuDrop').classList.toggle('open')">≡</button>
-                <div class="menu-dropdown" id="menuDrop">
-                    <button class="menu-item" onclick="toggleDark()">🌙 深色模式</button>
-                    <button class="menu-item" onclick="togglePrint()">🖨️ 列印模式</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== Day Tabs ===== -->
-        <div class="day-tabs" id="dayTabs">
-            <button class="day-tab active" onclick="scrollToDay(1)">D1<span>美國村</span></button>
-            <button class="day-tab" onclick="scrollToDay(2)">D2<span>青洞窟</span></button>
-            <button class="day-tab" onclick="scrollToDay(3)">D3<span>水族館</span></button>
-            <button class="day-tab" onclick="scrollToDay(4)">D4<span>古宇利</span></button>
-            <button class="day-tab" onclick="scrollToDay(5)">D5<span>首里城</span></button>
         </div>
 
         <!-- ===== Trip Intro ===== -->
@@ -278,8 +258,10 @@
         <!-- ==================== Day 1 ==================== -->
         <section>
             <div class="day-header" id="day1">
+                <div class="dh-nav"><button class="dn active" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 1 — 抵達＋美國村</h2>
                 <div class="dh-right">7/29（三）</div>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-1"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -450,8 +432,10 @@
         <!-- ==================== Day 2 ==================== -->
         <section>
             <div class="day-header" id="day2">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn active" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 2 — 青之洞窟＋萬座毛</h2>
                 <div class="dh-right">7/30（四）</div>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-2"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -572,8 +556,10 @@
         <!-- ==================== Day 3 ==================== -->
         <section>
             <div class="day-header" id="day3">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn active" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 3 — 水族館＋瀨底海灘</h2>
                 <div class="dh-right">7/31（五）</div>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-3"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -679,8 +665,10 @@
         <!-- ==================== Day 4 ==================== -->
         <section>
             <div class="day-header" id="day4">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn active" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 4 — 古宇利島＋回那霸</h2>
                 <div class="dh-right">8/1（六）</div>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-4"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -822,8 +810,10 @@
         <!-- ==================== Day 5 ==================== -->
         <section>
             <div class="day-header" id="day5">
+                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn active" data-day="5" onclick="scrollToDay(5)">D5</button></div>
                 <h2>Day 5 — 首里城＋國際通＋回程</h2>
                 <div class="dh-right">8/2（日）✈️</div>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="hourly-weather" id="hourly-5"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>
@@ -977,6 +967,7 @@
         <section>
             <div class="day-header info-header" id="sec-flight">
                 <h2>✈️ 航班資訊</h2>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="flight-row"><span>🛫</span><div><div class="flight-route">去程：桃園 TPE → 那霸 OKA</div><div class="flight-time">7月29日（三）出發 → 約12:00 抵達那霸機場（飛行約1.5小時）</div></div></div>
@@ -988,6 +979,7 @@
         <section>
             <div class="day-header info-header" id="sec-checklist">
                 <h2>✅ 出發前確認事項</h2>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="ov-grid">
@@ -1003,6 +995,7 @@
         <section>
             <div class="day-header info-header" id="sec-backup">
                 <h2>🔄 颱風/雨天備案</h2>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="ov-grid">
@@ -1017,6 +1010,7 @@
         <section>
             <div class="day-header info-header" id="sec-emergency">
                 <h2>🆘 緊急聯絡資訊</h2>
+                <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
                 <div class="ov-grid">
@@ -1039,6 +1033,15 @@
             <p>めんそーれ 沖繩！🌊 祝旅途愉快！</p>
         </footer>
     </div>
+
+    <!-- ===== Menu Dropdown (fixed) ===== -->
+    <div class="menu-dropdown" id="menuDrop">
+        <button class="menu-item" onclick="toggleDark()">🌙 深色模式</button>
+        <button class="menu-item" onclick="togglePrint()">🖨️ 列印模式</button>
+    </div>
+
+    <!-- ===== Print Exit Button ===== -->
+    <button class="print-exit-btn" id="printExitBtn" onclick="togglePrint()">✕ 結束列印模式</button>
 
     <script>
     /* ===== Toggle Functions ===== */
@@ -1066,9 +1069,12 @@
     function scrollToDay(n) {
         var el = document.getElementById('day' + n);
         if (!el) return;
-        var cs = getComputedStyle(document.documentElement);
-        var offset = parseFloat(cs.getPropertyValue('--topbar-h')) + parseFloat(cs.getPropertyValue('--tabs-h'));
-        window.scrollTo({ top: el.offsetTop - offset, behavior: 'smooth' });
+        window.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+        document.getElementById('menuDrop').classList.remove('open');
+    }
+    function toggleMenu(e) {
+        e.stopPropagation();
+        document.getElementById('menuDrop').classList.toggle('open');
     }
     function toggleHw(el) {
         var p = el.closest('.hourly-weather');
@@ -1079,17 +1085,15 @@
         }
     }
     (function(){
-        var tabs = document.querySelectorAll('.day-tab');
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
+        var allDn = document.querySelectorAll('.dn[data-day]');
         var ticking = false;
         window.addEventListener('scroll', function() {
             if (!ticking) { requestAnimationFrame(function() {
-                var cs = getComputedStyle(document.documentElement);
-                var offset = parseFloat(cs.getPropertyValue('--topbar-h')) + parseFloat(cs.getPropertyValue('--tabs-h')) + 10;
                 var current = 0;
-                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= offset) current = i; }
-                tabs.forEach(function(t, idx) { t.classList.toggle('active', idx === current); });
+                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
+                allDn.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
                 ticking = false;
             }); ticking = true; }
         });
@@ -1101,7 +1105,7 @@
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
         var menu = document.getElementById('menuDrop');
-        if (menu && menu.classList.contains('open') && !e.target.closest('.menu-wrap')) {
+        if (menu && menu.classList.contains('open') && !e.target.closest('.dh-menu') && !e.target.closest('#menuDrop')) {
             menu.classList.remove('open');
         }
     });
