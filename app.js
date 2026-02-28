@@ -360,6 +360,24 @@ function renderEmergency(data) {
     return html;
 }
 
+/* ===== Render: Suggestions ===== */
+function renderSuggestions(data) {
+    var html = '';
+    if (data.cards && data.cards.length) {
+        data.cards.forEach(function(card) {
+            var cls = 'suggestion-card';
+            if (card.priority) cls += ' ' + card.priority;
+            html += '<div class="' + cls + '">';
+            if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
+            if (card.items && card.items.length) {
+                card.items.forEach(function(item) { html += '<p>' + escHtml(item) + '</p>'; });
+            }
+            html += '</div>';
+        });
+    }
+    return html;
+}
+
 /* ===== Validate Day (time vs hours) ===== */
 function validateDay(day) {
     var warnings = [];
@@ -598,6 +616,7 @@ function renderTrip(data) {
     var infoSections = [
         { key: 'flights', id: 'sec-flight' },
         { key: 'checklist', id: 'sec-checklist' },
+        { key: 'suggestions', id: 'sec-suggestions' },
         { key: 'backup', id: 'sec-backup' },
         { key: 'emergency', id: 'sec-emergency' }
     ];
@@ -612,6 +631,7 @@ function renderTrip(data) {
         } else {
             if (sec.key === 'flights') html += renderFlights(d.content || {});
             else if (sec.key === 'checklist') html += renderChecklist(d.content || {});
+            else if (sec.key === 'suggestions') html += renderSuggestions(d.content || {});
             else if (sec.key === 'backup') html += renderBackup(d.content || {});
             else if (sec.key === 'emergency') html += renderEmergency(d.content || {});
         }
@@ -655,6 +675,7 @@ function buildMenu(data) {
     html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">💡 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">🔄 颱風/雨天備案</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">🆘 緊急聯絡</button>';
     html += '<div class="menu-sep"></div>';
