@@ -11,7 +11,7 @@
     --fs-md: 0.95rem;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 body { font-family: 'Noto Sans TC', sans-serif; background: var(--gray-light); font-size: var(--fs-md); color: var(--text); line-height: 1.6; }
 
 .container { max-width: 800px; margin: 0 auto; }
@@ -156,6 +156,10 @@ body.dark .sticky-nav { background: #1565C0; }
 .notes-list li { padding: 2px 0 2px 22px; position: relative; font-size: var(--fs-md); }
 .notes-list li::before { content: '📌'; position: absolute; left: 0; }
 
+/* ===== Trip Warnings ===== */
+.trip-warnings { margin-bottom: 12px; }
+.trip-warning-item { background: #FEE2E2; border-left: 4px solid #DC2626; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: var(--fs-md); }
+
 /* ===== Footer ===== */
 footer { text-align: center; padding: 24px 20px; background: var(--white); color: var(--text); border-top: 2px solid var(--blue-light); margin-top: 4px; }
 footer h3 { font-size: var(--fs-lg); color: var(--blue); }
@@ -163,7 +167,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 
 /* ===== Print Mode ===== */
 .print-mode { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; background: var(--gray-light) !important; }
-.print-mode .container { max-width: 420px; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+.print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
 .print-mode .tl-body, .print-mode .col-detail { display: block !important; }
 .print-mode .tl-arrow, .print-mode .col-row .arrow { display: none !important; }
 .print-mode .dh-nav, .print-mode .dh-menu { display: none !important; }
@@ -173,7 +177,6 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .print-mode .hourly-weather { display: none !important; }
 .print-mode .map-link { color: #333 !important; border-color: #333 !important; background: none !important; }
 .print-mode .status-tag { background: #ddd !important; color: #333 !important; }
-.print-mode .ov-grid { grid-template-columns: 1fr; }
 .print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 9999; background: #D32F2F; color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: var(--fs-md); font-family: inherit; cursor: pointer; font-weight: 600; box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
 .print-exit-btn:hover { background: #B71C1C; }
 .print-mode .print-exit-btn { display: block; }
@@ -243,3 +246,4 @@ body.dark .col-row { border-bottom-color: #333; }
 body.dark .restaurant-choice { border-bottom-color: #444; }
 body.dark .menu-sep { border-top-color: #444; }
 body.dark footer { border-top-color: #333; }
+body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.15); border-left-color: #F87171; }
