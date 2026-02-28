@@ -24,9 +24,9 @@ function sanitizeHtml(html) {
 }
 
 /* ===== URL Routing ===== */
-var DEFAULT_SLUG = 'Ray';
-function fileToSlug(f) { var m = f.match(/^data\/[^\/]+-([^.]+)\.json$/); return m ? m[1] : null; }
-function slugToFile(s) { return 'data/okinawa-trip-2026-' + s + '.json'; }
+var DEFAULT_SLUG = 'okinawa-trip-2026-Ray';
+function fileToSlug(f) { var m = f.match(/^data\/(.+)\.json$/); return m ? m[1] : null; }
+function slugToFile(s) { return 'data/' + s + '.json'; }
 function getUrlTrip() { return new URLSearchParams(window.location.search).get('trip'); }
 function setUrlTrip(slug) {
     var url = new URL(window.location);
@@ -46,7 +46,7 @@ var TRIP = null;
 var TRIP_FILE = '';
 var IS_CUSTOM = false;
 
-// Migrate old tripFile key
+// Migrate old keys
 (function() {
     var old = localStorage.getItem('tripFile');
     if (old && !localStorage.getItem('tripPref')) {
@@ -54,6 +54,17 @@ var IS_CUSTOM = false;
         if (s) saveTripPref(s);
     }
     localStorage.removeItem('tripFile');
+    // Migrate old short-slug tripPref (e.g. 'Ray' → 'okinawa-trip-2026-Ray')
+    try {
+        var p = JSON.parse(localStorage.getItem('tripPref'));
+        if (p && p.slug && p.slug.indexOf('/') === -1 && !p.slug.match(/\./)) {
+            var full = 'data/' + p.slug + '.json';
+            if (!full.match(/^data\/.*-.*\.json$/)) {
+                // Old short slug, clear it and let default take over
+                localStorage.removeItem('tripPref');
+            }
+        }
+    } catch(e) {}
 })();
 
 function resolveAndLoad() {
