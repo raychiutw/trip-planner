@@ -1013,3 +1013,31 @@ window.addEventListener('afterprint', function() {
 
 // Initial load — resolve from URL → sessionStorage → localStorage → default
 resolveAndLoad();
+
+/* ===== Module Exports (Node.js / Vitest only) ===== */
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        escHtml: escHtml,
+        escUrl: escUrl,
+        stripInlineHandlers: stripInlineHandlers,
+        renderMapLinks: renderMapLinks,
+        renderNavLinks: renderNavLinks,
+        renderRestaurant: renderRestaurant,
+        renderInfoBox: renderInfoBox,
+        renderTimelineEvent: renderTimelineEvent,
+        renderTimeline: renderTimeline,
+        renderHotel: renderHotel,
+        renderBudget: renderBudget,
+        renderDayContent: renderDayContent,
+        renderFlights: renderFlights,
+        renderChecklist: renderChecklist,
+        renderBackup: renderBackup,
+        renderEmergency: renderEmergency,
+        renderSuggestions: renderSuggestions,
+        renderWarnings: renderWarnings,
+        validateDay: validateDay,
+        fileToSlug: fileToSlug,
+        slugToFile: slugToFile,
+        APPLE_SVG: APPLE_SVG
+    };
+}
