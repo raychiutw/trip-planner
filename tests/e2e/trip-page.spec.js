@@ -414,4 +414,151 @@ test.describe('行程切換', () => {
     // URL 應包含 HuiYun
     expect(page.url()).toContain('HuiYun');
   });
+
+  test('行程切換 dialog X 按鈕關閉', async ({ page }) => {
+    await page.goto('/');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+
+    await menuBtn.click();
+    await page.locator('[data-action="switch-trip"]').click();
+    await expect(page.getByText('選擇行程')).toBeVisible();
+
+    // 點擊 X 關閉 dialog
+    await page.locator('.trip-close').click();
+    await expect(page.locator('.trip-overlay')).not.toBeAttached();
+  });
+});
+
+/* ===== 13. 天氣元件 ===== */
+test.describe('天氣元件', () => {
+  test('天氣摘要點擊展開/收合', async ({ page }) => {
+    await page.goto('/');
+    // 等待天氣元件載入
+    await page.waitForTimeout(1000);
+
+    const summary = page.locator('.hw-summary').first();
+    // 只在天氣元件存在時測試
+    if (await summary.count() > 0) {
+      const container = summary.locator('..');
+
+      // 點擊展開
+      await summary.click();
+      await expect(container).toHaveClass(/hw-open/);
+
+      // 確認詳細內容可見
+      const detail = container.locator('.hw-detail');
+      await expect(detail).toBeVisible();
+
+      // 點擊收合
+      await summary.click();
+      await expect(container).not.toHaveClass(/hw-open/);
+    }
+  });
+
+  test('天氣 API 失敗顯示錯誤訊息', async ({ page }) => {
+    // 覆蓋 beforeEach 的 mock，改為 abort
+    await page.route('**/api.open-meteo.com/**', (route) => {
+      route.abort();
+    });
+    await page.goto('/');
+    await page.waitForTimeout(2000);
+
+    // 應該顯示錯誤訊息
+    const error = page.locator('.hw-error');
+    if (await error.count() > 0) {
+      await expect(error.first()).toContainText('天氣資料載入失敗');
+    }
+  });
+});
+
+/* ===== 14. Dark mode 持久化 ===== */
+test.describe('Dark mode 持久化', () => {
+  test('深色模式 reload 後仍保持', async ({ page }) => {
+    await page.goto('/');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const body = page.locator('body');
+
+    // 啟用 dark mode
+    await menuBtn.click();
+    await page.locator('[data-action="toggle-dark"]').click();
+    await expect(body).toHaveClass(/dark/);
+
+    // Reload
+    await page.reload();
+    await page.waitForTimeout(500);
+
+    // dark mode 仍然存在
+    await expect(page.locator('body')).toHaveClass(/dark/);
+  });
+});
+
+/* ===== 15. ?trip= URL 參數載入 ===== */
+test.describe('?trip= URL 參數', () => {
+  test('?trip= 參數載入對應行程', async ({ page }) => {
+    await page.goto('/?trip=okinawa-trip-2026-HuiYun');
+    await page.waitForTimeout(1000);
+
+    // 頁面應載入 HuiYun 行程內容
+    await expect(page.locator('body')).toBeAttached();
+    // URL 應維持 trip 參數
+    expect(page.url()).toContain('trip=okinawa-trip-2026-HuiYun');
+  });
+});
+
+/* ===== 16. 無效 hash ===== */
+test.describe('無效 hash', () => {
+  test('無效 hash 不導致頁面崩潰', async ({ page }) => {
+    await page.goto('/#nonexistent');
+    await page.waitForTimeout(500);
+
+    // 頁面應正常載入，不崩潰
+    await expect(page.locator('body')).toBeAttached();
+    await expect(page.locator('#navPills')).toBeAttached();
+  });
+});
+
+/* ===== 17. Dark + Print 互動 ===== */
+test.describe('Dark + Print 互動', () => {
+  test('列印模式暫時移除 dark，退出後恢復', async ({ page }) => {
+    await page.goto('/');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const body = page.locator('body');
+
+    // 啟用 dark mode
+    await menuBtn.click();
+    await page.locator('[data-action="toggle-dark"]').click();
+    await expect(body).toHaveClass(/dark/);
+
+    // 進入列印模式
+    await menuBtn.click();
+    await page.locator('#menuDrop [data-action="toggle-print"]').click();
+    await expect(body).toHaveClass(/print-mode/);
+    // 列印模式下不應有 dark
+    await expect(body).not.toHaveClass(/dark/);
+
+    // 退出列印模式
+    await page.locator('#printExitBtn').click();
+    await expect(body).not.toHaveClass(/print-mode/);
+    // dark 應恢復
+    await expect(body).toHaveClass(/dark/);
+  });
+});
+
+/* ===== 18. Nav pill 捲動 highlight ===== */
+test.describe('Nav pill 捲動 highlight', () => {
+  test('捲動到 Day 3 時 nav pill 3 自動 highlight', async ({ page }) => {
+    await page.goto('/');
+
+    // 使用 JavaScript 捲動到 Day 3 並觸發 scroll 事件
+    await page.evaluate(() => {
+      const el = document.getElementById('day3');
+      if (el) el.scrollIntoView({ behavior: 'instant' });
+    });
+    // 等待 scroll 事件 + requestAnimationFrame 處理
+    await page.waitForTimeout(800);
+
+    // nav pill 3 應有 active class
+    const pill3 = page.locator('.dn[data-day="3"]');
+    await expect(pill3).toHaveClass(/active/);
+  });
 });

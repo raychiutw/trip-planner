@@ -12,6 +12,10 @@ function escUrl(url) {
     return '';
 }
 
+/* ===== Safe Color Validation ===== */
+var SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgb\(\d+,\s*\d+,\s*\d+\)|var\(--[\w-]+\)|[a-z]+)$/i;
+function safeColor(c) { return (c && SAFE_COLOR_RE.test(c)) ? c : 'var(--blue-light)'; }
+
 /* ===== Apple SVG Icon ===== */
 var APPLE_SVG = '<svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>';
 
@@ -280,7 +284,7 @@ function renderChecklist(data) {
     if (data.cards && data.cards.length) {
         html += '<div class="ov-grid">';
         data.cards.forEach(function(card) {
-            html += '<div class="ov-card" style="background:' + escHtml(card.color || 'var(--blue-light)') + ';">';
+            html += '<div class="ov-card" style="background:' + safeColor(card.color) + ';">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.items && card.items.length) {
                 html += '<p>';
@@ -304,7 +308,7 @@ function renderBackup(data) {
     if (data.cards && data.cards.length) {
         html += '<div class="ov-grid">';
         data.cards.forEach(function(card) {
-            html += '<div class="ov-card" style="background:' + escHtml(card.color || 'var(--blue-light)') + ';">';
+            html += '<div class="ov-card" style="background:' + safeColor(card.color) + ';">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.desc) html += '<p>' + escHtml(card.desc) + '</p>';
             if (card.weatherItems && card.weatherItems.length) {
@@ -334,7 +338,7 @@ function renderEmergency(data) {
     if (data.cards && data.cards.length) {
         html += '<div class="ov-grid">';
         data.cards.forEach(function(card) {
-            html += '<div class="ov-card" style="background:' + escHtml(card.color || 'var(--blue-light)') + ';">';
+            html += '<div class="ov-card" style="background:' + safeColor(card.color) + ';">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.contacts && card.contacts.length) {
                 card.contacts.forEach(function(c) {
@@ -369,9 +373,10 @@ function renderEmergency(data) {
 function renderSuggestions(data) {
     var html = '';
     if (data.cards && data.cards.length) {
+        var SAFE_PRIORITY = { high: true, medium: true, low: true };
         data.cards.forEach(function(card) {
             var cls = 'suggestion-card';
-            if (card.priority) cls += ' ' + card.priority;
+            if (card.priority && SAFE_PRIORITY[card.priority]) cls += ' ' + card.priority;
             html += '<div class="' + cls + '">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.items && card.items.length) {
@@ -430,25 +435,25 @@ function validateTripData(data) {
             // URL safety
             if (URL_FIELDS.indexOf(key) >= 0 && typeof val === 'string' && val.length > 0) {
                 if (!/^(https?:|tel:)/i.test(val)) {
-                    warnings.push(path + '.' + key + ' 含有不安全的 URL：' + val);
+                    warnings.push(path + '.' + key + ' 含有不安全的 URL：' + escHtml(val));
                 }
             }
             // Google Maps prefix
             if (key === 'googleQuery' && typeof val === 'string' && val.length > 0) {
                 if (!/^https:\/\/maps\.google\.com\//i.test(val) && !/^https:\/\/www\.google\.com\/maps\//i.test(val)) {
-                    warnings.push(path + '.' + key + ' 不符合 Google Maps URL 格式：' + val);
+                    warnings.push(path + '.' + key + ' 不符合 Google Maps URL 格式：' + escHtml(val));
                 }
             }
             // Apple Maps prefix
             if (key === 'appleQuery' && typeof val === 'string' && val.length > 0) {
                 if (!/^https:\/\/maps\.apple\.com\//i.test(val)) {
-                    warnings.push(path + '.' + key + ' 不符合 Apple Maps URL 格式：' + val);
+                    warnings.push(path + '.' + key + ' 不符合 Apple Maps URL 格式：' + escHtml(val));
                 }
             }
             // Mapcode format
             if (key === 'mapcode' && typeof val === 'string' && val.length > 0) {
                 if (!MAPCODE_RE.test(val)) {
-                    warnings.push(path + '.' + key + ' 格式不符（應如 33 530 406*00）：' + val);
+                    warnings.push(path + '.' + key + ' 格式不符（應如 33 530 406*00）：' + escHtml(val));
                 }
             }
             // Recurse
@@ -473,7 +478,7 @@ function validateTripData(data) {
     if (data.suggestions && data.suggestions.content && Array.isArray(data.suggestions.content.cards)) {
         data.suggestions.content.cards.forEach(function(card, i) {
             if (card.priority && ['high', 'medium', 'low'].indexOf(card.priority) < 0) {
-                warnings.push('suggestions.cards[' + i + '].priority 必須是 high/medium/low，目前為：' + card.priority);
+                warnings.push('suggestions.cards[' + i + '].priority 必須是 high/medium/low，目前為：' + escHtml(card.priority));
             }
         });
     }
@@ -529,7 +534,7 @@ function sanitizeHtml(html) {
             if (attr.name.indexOf('on') === 0) el.removeAttribute(attr.name);
             if (attr.name === 'href' || attr.name === 'src' || attr.name === 'action') {
                 var val = (attr.value || '').trim().toLowerCase();
-                if (val.indexOf('javascript:') === 0 || val.indexOf('data:text/html') === 0) el.removeAttribute(attr.name);
+                if (val && !/^(https?:|tel:|mailto:|#)/.test(val)) el.removeAttribute(attr.name);
             }
         });
         // Add rel="noopener noreferrer" to target="_blank" links
@@ -541,7 +546,7 @@ function sanitizeHtml(html) {
 }
 // Strip legacy inline onclick from trusted JSON content (defence-in-depth)
 function stripInlineHandlers(html) {
-    return html.replace(/\s+onclick="[^"]*"/g, '');
+    return html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 }
 
 /* ===== LocalStorage Helper (trip-planner- prefix, 6-month expiry) ===== */
@@ -1110,7 +1115,7 @@ function initWeather(weatherDays) {
     }).catch(function(e){
         weatherDays.forEach(function(day){
             var c=document.getElementById(day.id);
-            if(c)c.innerHTML='<div class="hw-error">天氣資料載入失敗：'+e.message+'</div>';
+            if(c)c.innerHTML='<div class="hw-error">天氣資料載入失敗：'+escHtml(e.message)+'</div>';
         });
     });
 }
@@ -1139,6 +1144,8 @@ if (typeof module !== 'undefined' && module.exports) {
         escHtml: escHtml,
         escUrl: escUrl,
         stripInlineHandlers: stripInlineHandlers,
+        sanitizeHtml: sanitizeHtml,
+        safeColor: safeColor,
         renderMapLinks: renderMapLinks,
         renderNavLinks: renderNavLinks,
         renderRestaurant: renderRestaurant,

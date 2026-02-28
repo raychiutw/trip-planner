@@ -160,6 +160,53 @@ describe('validateTripData — warnings', () => {
     const r = validateTripData(d);
     expect(r.warnings.some(w => w.includes('priority') && w.includes('high/medium/low'))).toBe(true);
   });
+
+  it('escapes HTML in warning val (XSS prevention)', () => {
+    const d = validTrip();
+    d.days[0].content = { timeline: [{ titleUrl: '<script>alert(1)</script>' }] };
+    const r = validateTripData(d);
+    const urlWarning = r.warnings.find(w => w.includes('不安全的 URL'));
+    expect(urlWarning).toBeDefined();
+    expect(urlWarning).toContain('&lt;script&gt;');
+    expect(urlWarning).not.toContain('<script>');
+  });
+
+  it('warns on unsafe blogUrl', () => {
+    const d = validTrip();
+    d.days[0].content = { timeline: [{ blogUrl: 'ftp://evil.com/blog' }] };
+    const r = validateTripData(d);
+    expect(r.warnings.some(w => w.includes('不安全的 URL') && w.includes('blogUrl'))).toBe(true);
+  });
+
+  it('warns on unsafe reservationUrl', () => {
+    const d = validTrip();
+    d.days[0].content = { timeline: [{ reservationUrl: 'data:text/html,<h1>xss</h1>' }] };
+    const r = validateTripData(d);
+    expect(r.warnings.some(w => w.includes('不安全的 URL') && w.includes('reservationUrl'))).toBe(true);
+  });
+
+  it('warns on non-number weather lon', () => {
+    const d = validTrip({ weather: [{ id: 'day1', date: '2026-07-29', locations: [{ lat: 26.21, lon: '127.68', start: '09:00', end: '18:00' }] }] });
+    const r = validateTripData(d);
+    expect(r.warnings.some(w => w.includes('lon') && w.includes('number'))).toBe(true);
+  });
+
+  it('traverses deeply nested restaurant.location.googleQuery', () => {
+    const d = validTrip();
+    d.days[0].content = {
+      timeline: [{
+        infoBoxes: [{
+          type: 'restaurants',
+          restaurants: [{
+            name: 'Test',
+            location: { googleQuery: 'https://evil.com/maps' }
+          }]
+        }]
+      }]
+    };
+    const r = validateTripData(d);
+    expect(r.warnings.some(w => w.includes('Google Maps URL'))).toBe(true);
+  });
 });
 
 /* ===== validateDay ===== */
