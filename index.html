@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com; img-src * data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com; img-src * data:;">
     <meta name="description" content="2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、美麗海水族館、古宇利島。含餐廳推薦、地圖導航、預算規劃。">
     <meta name="theme-color" content="#0077B6">
     <meta property="og:title" content="2026 沖繩五日自駕遊行程表">
@@ -21,14 +21,14 @@
     <div class="container">
         <div class="sticky-nav" id="stickyNav">
             <div class="dh-nav" id="navPills"></div>
-            <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
+            <button class="dh-menu" data-action="toggle-menu">≡</button>
         </div>
         <div id="tripContent"><div style="text-align:center;padding:40px;color:var(--gray);">⏳ 載入行程資料中...</div></div>
     </div>
     <div class="menu-dropdown" id="menuDrop">
         <div class="menu-grid" id="menuGrid"></div>
     </div>
-    <button class="print-exit-btn" id="printExitBtn" onclick="togglePrint()">✕ 結束列印模式</button>
+    <button class="print-exit-btn" id="printExitBtn" data-action="toggle-print">✕ 結束列印模式</button>
     <script src="app.js"></script>
 </body>
 </html>
