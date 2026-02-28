@@ -47,10 +47,12 @@
         .ov-card { background: var(--blue-light); padding: 14px; border-radius: 12px; border-left: 4px solid var(--blue); }
         .ov-card.warm { background: var(--sand-light); border-left-color: var(--sand); }
         .ov-card h4 { margin-top: 0; }
-        .flight-row { display: flex; align-items: center; padding: 12px; background: var(--blue-light); border-radius: 12px; margin-bottom: 8px; gap: 12px; }
-        .flight-row span:first-child { font-size: 1.4rem; }
-        .flight-route { font-weight: 600; font-size: var(--fs-lg); }
-        .flight-time { font-size: var(--fs-md); color: var(--gray); margin-top: 2px; }
+        .flight-row { display: flex; align-items: center; padding: 10px 12px; background: var(--blue-light); border-radius: 12px; margin-bottom: 8px; gap: 8px; }
+        .flight-row .flight-icon { font-size: 1.4rem; flex-shrink: 0; }
+        .flight-info { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; flex: 1; min-width: 0; }
+        .flight-label { font-weight: 700; font-size: var(--fs-md); white-space: nowrap; }
+        .flight-route { font-weight: 600; font-size: var(--fs-lg); white-space: nowrap; }
+        .flight-time { font-size: var(--fs-md); color: var(--gray); white-space: nowrap; }
         .weather-list { list-style: none; padding: 0; }
         .weather-list li { font-size: var(--fs-md); padding: 3px 0 3px 22px; position: relative; }
         .weather-list li::before { content: '🌊'; position: absolute; left: 0; }
@@ -973,8 +975,8 @@
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
             <div class="day-content">
-                <div class="flight-row"><span>🛫</span><div><div class="flight-route">去程：CI 120｜桃園 TPE → 那霸 OKA</div><div class="flight-time">7月29日（三）08:40 出發 → 10:45 抵達（飛行約1小時）</div></div></div>
-                <div class="flight-row"><span>🛬</span><div><div class="flight-route">回程：CI 121｜那霸 OKA → 桃園 TPE</div><div class="flight-time">8月2日（日）20:55 出發 → 21:30 抵達（飛行約1.5小時）</div></div></div>
+                <div class="flight-row"><span class="flight-icon">🛫</span><div class="flight-info"><span class="flight-label">去程 CI 120</span><span class="flight-route">TPE → OKA</span><span class="flight-time">7/29（三）08:40→10:45</span></div></div>
+                <div class="flight-row"><span class="flight-icon">🛬</span><div class="flight-info"><span class="flight-route flight-label">回程 CI 121</span><span class="flight-route">OKA → TPE</span><span class="flight-time">8/2（日）20:55→21:30</span></div></div>
                 <p style="margin-top:8px;font-size:var(--fs-md);color:var(--gray);">訂位代號：<strong>TNCFHM</strong>｜華航 China Airlines｜3 位旅客</p>
             </div>
         </section>
