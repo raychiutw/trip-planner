@@ -15,10 +15,12 @@
             --gray: #666666;
             --gray-light: #F5F5F5;
             --text: #1A3A5C;
-            --fs-xl: 2rem;
-            --fs-lg: 1.4rem;
-            --fs-md: 1.1rem;
-            --fs-sm: 0.9rem;
+            --fs-xl: 2.2rem;
+            --fs-lg: 1.6rem;
+            --fs-md: 1.25rem;
+            --fs-sm: 1.05rem;
+            --topbar-h: 56px;
+            --tabs-h: 44px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
@@ -40,16 +42,9 @@
         .menu-item { display: block; width: 100%; padding: 10px 14px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: var(--fs-sm); font-family: inherit; color: var(--text); text-align: left; }
         .menu-item:hover { background: var(--blue-light); }
 
-        /* ===== Overlay ===== */
-        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 300; justify-content: center; align-items: flex-start; padding: 50px 16px; overflow-y: auto; }
-        .overlay.active { display: flex; }
-        .overlay-panel { background: var(--white); border-radius: 16px; max-width: 640px; width: 100%; padding: 24px; position: relative; }
-        .overlay-close { position: absolute; top: 10px; right: 14px; background: none; border: none; font-size: 1.6rem; cursor: pointer; color: var(--gray); line-height: 1; }
-        .overlay-panel h2 { font-size: var(--fs-lg); color: var(--blue); margin-bottom: 16px; }
-        .overlay-panel h4 { color: var(--text); margin: 12px 0 6px; font-size: var(--fs-md); }
-        .overlay-panel p { font-size: var(--fs-sm); margin: 4px 0; line-height: 1.7; }
-        .overlay-panel a { color: var(--blue); font-weight: 600; text-decoration: none; }
-        .overlay-panel a:hover { text-decoration: underline; }
+        .ov-card p { font-size: var(--fs-sm); margin: 4px 0; line-height: 1.7; }
+        .ov-card a { color: var(--blue); font-weight: 600; text-decoration: none; }
+        .ov-card a:hover { text-decoration: underline; }
         .ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
         .ov-card { background: var(--blue-light); padding: 14px; border-radius: 12px; border-left: 4px solid var(--blue); }
         .ov-card.warm { background: var(--sand-light); border-left-color: var(--sand); }
@@ -63,7 +58,7 @@
         .weather-list li::before { content: '🌊'; position: absolute; left: 0; }
 
         /* ===== Day Header (sticky) ===== */
-        .day-header { position: sticky; top: 52px; z-index: 50; background: var(--blue); color: var(--white); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .day-header { position: sticky; top: calc(var(--topbar-h) + var(--tabs-h)); z-index: 50; background: var(--blue); color: var(--white); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; }
         .day-header h2 { font-size: var(--fs-lg); font-weight: 700; }
         .day-header .dh-right { font-size: var(--fs-sm); opacity: 0.9; text-align: right; }
 
@@ -115,7 +110,7 @@
         .tl-head { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px; border-radius: 8px; }
         .tl-head.clickable { cursor: pointer; }
         .tl-head.clickable:hover { background: var(--blue-light); }
-        .tl-time { font-weight: 700; font-size: var(--fs-sm); color: var(--blue); min-width: 85px; flex-shrink: 0; }
+        .tl-time { font-weight: 700; font-size: var(--fs-sm); color: var(--blue); min-width: 95px; flex-shrink: 0; }
         .tl-title { font-weight: 600; font-size: var(--fs-md); }
         .tl-title a { color: var(--text); text-decoration: none; }
         .tl-title a:hover { color: var(--blue); text-decoration: underline; }
@@ -174,29 +169,80 @@
         .print-mode .tl-body, .print-mode .col-detail, .print-mode .nav-links { display: block !important; }
         .print-mode .tl-arrow, .print-mode .col-row .arrow, .print-mode .nav-toggle { display: none !important; }
         .print-mode .menu-btn { display: none !important; }
-        .print-mode .top-bar, .print-mode .day-header { position: relative !important; }
+        .print-mode .top-bar, .print-mode .day-header, .print-mode .day-tabs { position: relative !important; }
+        .print-mode .day-tabs { display: none !important; }
+        .print-mode .hw-detail { display: block !important; }
+        .print-mode .hw-summary { display: none !important; }
         .print-mode .day-header { background: #333 !important; }
         .print-mode .map-link, .print-mode .nav-toggle { background: #555 !important; }
         .print-mode .status-tag { background: #ddd !important; color: #333 !important; }
         @media print {
-            .menu-btn, .menu-dropdown, .nav-toggle { display: none !important; }
+            .menu-btn, .menu-dropdown, .nav-toggle, .day-tabs { display: none !important; }
             .tl-body, .col-detail, .nav-links { display: block !important; }
             .tl-arrow, .col-row .arrow { display: none !important; }
             .top-bar, .day-header { position: relative !important; }
             .day-header { background: #333 !important; }
             .day-content { break-inside: avoid; }
+            .hw-detail { display: block !important; }
+            .hw-summary { display: none !important; }
         }
 
         /* ===== Mobile ===== */
         @media (max-width: 600px) {
-            :root { --fs-xl: 1.6rem; }
-            .top-bar h1 { font-size: 1.1rem; }
-            .day-header { flex-direction: column; gap: 4px; align-items: flex-start; top: 48px; }
+            :root { --fs-xl: 1.8rem; --fs-lg: 1.4rem; --fs-md: 1.15rem; --fs-sm: 0.95rem; --topbar-h: 50px; --tabs-h: 40px; }
+            .top-bar h1 { font-size: 1.2rem; }
+            .day-header { flex-direction: column; gap: 4px; align-items: flex-start; top: calc(var(--topbar-h) + var(--tabs-h)); }
             .tl-head { flex-wrap: wrap; }
-            .tl-time { min-width: 70px; }
+            .tl-time { min-width: 75px; }
             .hw-grid { gap: 5px; scroll-snap-type: x mandatory; }
             .hw-block { min-width: calc((100% - 10px) / 3); scroll-snap-align: start; }
+            .day-tab span { display: none; }
         }
+        /* ===== Day Tabs ===== */
+        .day-tabs { position: sticky; top: var(--topbar-h); z-index: 90; background: var(--white); display: flex; justify-content: center; gap: 4px; padding: 6px 12px; border-bottom: 2px solid var(--blue-light); height: var(--tabs-h); align-items: center; }
+        .day-tab { background: none; border: 2px solid var(--blue); color: var(--blue); padding: 4px 12px; border-radius: 20px; font-size: var(--fs-sm); font-family: inherit; cursor: pointer; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+        .day-tab:hover { background: var(--blue-light); }
+        .day-tab.active { background: var(--blue); color: var(--white); border-color: var(--blue); }
+        .day-tab span { font-weight: 400; }
+
+        /* ===== Weather Collapsible ===== */
+        .hw-summary { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; cursor: pointer; font-size: var(--fs-sm); color: var(--gray); user-select: none; }
+        .hw-summary:hover { color: var(--blue); }
+        .hw-summary-arrow { transition: transform 0.2s; margin-left: 8px; flex-shrink: 0; }
+        .hw-open .hw-summary-arrow { transform: rotate(90deg); }
+        .hw-detail { display: none; }
+        .hw-open .hw-detail { display: block; }
+
+        /* ===== Info Header ===== */
+        .info-header { background: var(--text) !important; }
+
+        /* ===== Dark Mode ===== */
+        body.dark { --blue: #4FC3F7; --blue-light: #1A2A3A; --sand: #E0A870; --sand-light: #2A2218; --white: #1E1E1E; --gray: #AAAAAA; --gray-light: #2A2A2A; --text: #E8E8E8; background: #121212; }
+        body.dark .day-header { background: #1565C0; }
+        body.dark .info-header { background: #333 !important; }
+        body.dark .day-tab.active { background: #1565C0; border-color: #1565C0; }
+        body.dark .day-tab { border-color: #4FC3F7; }
+        body.dark .map-link { background: #1565C0; }
+        body.dark .map-link.apple { background: #555; }
+        body.dark .map-link.mapcode { background: var(--sand); }
+        body.dark .hw-block { border-color: #333; }
+        body.dark .top-bar { border-bottom-color: #333; }
+        body.dark .day-tabs { border-bottom-color: #333; }
+        body.dark .menu-dropdown { background: #2A2A2A; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+        body.dark .ov-card { background: #1A2A3A; }
+        body.dark .ov-card.warm { background: #2A2218; }
+        body.dark .flight-row { background: #1A2A3A; }
+        body.dark .info-box.reservation { background: #2A2218; }
+        body.dark .info-box.parking { background: #1A2A3A; }
+        body.dark .info-box.souvenir { background: #1A2A3A; }
+        body.dark .info-box.restaurants { background: #2A2218; }
+        body.dark .hotel-sub { background: #1A2A3A; }
+        body.dark .col-row { border-bottom-color: #333; }
+        body.dark .restaurant-choice { border-bottom-color: #444; }
+        body.dark footer { border-top-color: #333; }
+
+        /* Print mode overrides dark */
+        .print-mode { --blue: #0077B6; --blue-light: #E0F4FF; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #666666; --gray-light: #F5F5F5; --text: #1A3A5C; }
     </style>
 </head>
 <body>
@@ -208,66 +254,19 @@
             <div class="menu-wrap">
                 <button class="menu-btn" onclick="document.getElementById('menuDrop').classList.toggle('open')">≡</button>
                 <div class="menu-dropdown" id="menuDrop">
-                    <button class="menu-item" onclick="openOv('ov-flight')">✈️ 航班資訊</button>
-                    <button class="menu-item" onclick="openOv('ov-checklist')">✅ 行前確認</button>
-                    <button class="menu-item" onclick="openOv('ov-backup')">🔄 備案方案</button>
-                    <button class="menu-item" onclick="openOv('ov-emergency')">🆘 緊急聯絡</button>
+                    <button class="menu-item" onclick="toggleDark()">🌙 深色模式</button>
                     <button class="menu-item" onclick="togglePrint()">🖨️ 列印模式</button>
                 </div>
             </div>
         </div>
 
-        <!-- ===== Overlay: Flight ===== -->
-        <div class="overlay" id="ov-flight" onclick="if(event.target===this)closeOv(this)">
-            <div class="overlay-panel">
-                <button class="overlay-close" onclick="closeOv(this.closest('.overlay'))">✕</button>
-                <h2>✈️ 航班資訊</h2>
-                <div class="flight-row"><span>🛫</span><div><div class="flight-route">去程：桃園 TPE → 那霸 OKA</div><div class="flight-time">7月29日（三）出發 → 約12:00 抵達那霸機場（飛行約1.5小時）</div></div></div>
-                <div class="flight-row"><span>🛬</span><div><div class="flight-route">回程：那霸 OKA → 桃園 TPE</div><div class="flight-time">8月2日（日）20:00 那霸機場出發（18:00 前到機場）</div></div></div>
-            </div>
-        </div>
-
-        <!-- ===== Overlay: Checklist ===== -->
-        <div class="overlay" id="ov-checklist" onclick="if(event.target===this)closeOv(this)">
-            <div class="overlay-panel">
-                <button class="overlay-close" onclick="closeOv(this.closest('.overlay'))">✕</button>
-                <h2>✅ 出發前確認事項</h2>
-                <div class="ov-grid">
-                    <div class="ov-card"><h4>🤿 青之洞窟浮潛預約</h4><p>⏰ 確認時間：出發前 1-2 週</p><p>📅 Day 2 (7/30 週四) 10:30</p><p>⚠️ 暑假為旺季，務必提早預約早場時段</p></div>
-                    <div class="ov-card warm"><h4>🌀 颱風動態追蹤</h4><p>⏰ 確認時間：出發前 3-5 天</p><p>⚠️ 7-8月為颱風季，需密切注意天氣預報</p><p>📱 建議下載：Windy 或 tenki.jp APP</p></div>
-                    <div class="ov-card"><h4>🚗 租車確認</h4><p>⏰ 確認時間：出發前 2-4 週</p><p>🔑 需備：台灣駕照＋日文譯本</p><p>📅 租車期間：7/29 13:30 ~ 8/1 16:00（3天）</p></div>
-                    <div class="ov-card"><h4>📞 飯店預約確認</h4><p>• Vessel Hotel Campana 北谷（7/29 一晚）</p><p>• Super Hotel 名護（7/30-31 二晚）</p><p>• 東橫inn 那霸美榮橋站（8/1 一晚）</p></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== Overlay: Backup ===== -->
-        <div class="overlay" id="ov-backup" onclick="if(event.target===this)closeOv(this)">
-            <div class="overlay-panel">
-                <button class="overlay-close" onclick="closeOv(this.closest('.overlay'))">✕</button>
-                <h2>🔄 颱風/雨天備案</h2>
-                <div class="ov-grid">
-                    <div class="ov-card"><h4>🌧️ Day 1-2 雨天備案（中部）</h4><ul class="weather-list"><li>AEON Mall 北谷（購物＋美食街）</li><li>琉球村（室內體驗琉球文化）</li><li>體驗王國 むら咲むら（手作體驗）</li></ul></div>
-                    <div class="ov-card"><h4>🌧️ Day 3-4 雨天備案（北部）</h4><ul class="weather-list"><li>水族館不受天候影響，正常參觀</li><li>名護鳳梨園（室內設施為主）</li><li>ORION 啤酒工廠見學（免費試飲）</li></ul></div>
-                    <div class="ov-card warm"><h4>🌀 颱風來襲對策</h4><ul class="weather-list"><li>航班異動：確認航空公司官網</li><li>水上活動全面停止</li><li>改為室內行程：購物中心、水族館</li><li>緊急聯絡：租車公司、飯店</li></ul></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== Overlay: Emergency ===== -->
-        <div class="overlay" id="ov-emergency" onclick="if(event.target===this)closeOv(this)">
-            <div class="overlay-panel">
-                <button class="overlay-close" onclick="closeOv(this.closest('.overlay'))">✕</button>
-                <h2>🆘 緊急聯絡資訊</h2>
-                <div class="ov-grid">
-                    <div class="ov-card"><h4>🚔 日本報警</h4><p>📞 <a href="tel:110">110</a>（警察）</p><p>📞 <a href="tel:119">119</a>（消防・救護車）</p></div>
-                    <div class="ov-card"><h4>🏥 那霸市立病院</h4><p>📞 <a href="tel:098-884-5111">098-884-5111</a></p><p>📍 那霸市古島 2-31-1</p></div>
-                    <div class="ov-card"><h4>🏥 北部地區醫院（名護）</h4><p>📞 <a href="tel:0980-52-2719">0980-52-2719</a></p><p>📍 名護市大中 2-12-3</p></div>
-                    <div class="ov-card"><h4>🇹🇼 台北駐日經濟文化代表處</h4><p>📞 <a href="tel:03-3280-7811">03-3280-7811</a></p><p>📞 急難救助：<a href="tel:080-6552-4764">080-6552-4764</a></p></div>
-                    <div class="ov-card"><h4>📞 沖繩觀光多語言客服</h4><p>📞 <a href="tel:098-851-6464">098-851-6464</a></p><p>🕐 09:00~21:00（中文可通）</p></div>
-                    <div class="ov-card"><h4>🚗 租車公司緊急聯絡</h4><p>📞 請確認租車合約上的 24H 緊急電話</p><p>⚠️ 事故時先撥 110 報警，再聯絡租車公司</p></div>
-                </div>
-            </div>
+        <!-- ===== Day Tabs ===== -->
+        <div class="day-tabs" id="dayTabs">
+            <button class="day-tab active" onclick="scrollToDay(1)">D1<span>美國村</span></button>
+            <button class="day-tab" onclick="scrollToDay(2)">D2<span>青洞窟</span></button>
+            <button class="day-tab" onclick="scrollToDay(3)">D3<span>水族館</span></button>
+            <button class="day-tab" onclick="scrollToDay(4)">D4<span>古宇利</span></button>
+            <button class="day-tab" onclick="scrollToDay(5)">D5<span>首里城</span></button>
         </div>
 
         <!-- ===== Trip Intro ===== -->
@@ -974,6 +973,63 @@
             </div>
         </section>
 
+        <!-- ===== 航班資訊 ===== -->
+        <section>
+            <div class="day-header info-header" id="sec-flight">
+                <h2>✈️ 航班資訊</h2>
+            </div>
+            <div class="day-content">
+                <div class="flight-row"><span>🛫</span><div><div class="flight-route">去程：桃園 TPE → 那霸 OKA</div><div class="flight-time">7月29日（三）出發 → 約12:00 抵達那霸機場（飛行約1.5小時）</div></div></div>
+                <div class="flight-row"><span>🛬</span><div><div class="flight-route">回程：那霸 OKA → 桃園 TPE</div><div class="flight-time">8月2日（日）20:00 那霸機場出發（18:00 前到機場）</div></div></div>
+            </div>
+        </section>
+
+        <!-- ===== 行前確認 ===== -->
+        <section>
+            <div class="day-header info-header" id="sec-checklist">
+                <h2>✅ 出發前確認事項</h2>
+            </div>
+            <div class="day-content">
+                <div class="ov-grid">
+                    <div class="ov-card"><h4>🤿 青之洞窟浮潛預約</h4><p>⏰ 確認時間：出發前 1-2 週</p><p>📅 Day 2 (7/30 週四) 10:30</p><p>⚠️ 暑假為旺季，務必提早預約早場時段</p></div>
+                    <div class="ov-card warm"><h4>🌀 颱風動態追蹤</h4><p>⏰ 確認時間：出發前 3-5 天</p><p>⚠️ 7-8月為颱風季，需密切注意天氣預報</p><p>📱 建議下載：Windy 或 tenki.jp APP</p></div>
+                    <div class="ov-card"><h4>🚗 租車確認</h4><p>⏰ 確認時間：出發前 2-4 週</p><p>🔑 需備：台灣駕照＋日文譯本</p><p>📅 租車期間：7/29 13:30 ~ 8/1 16:00（3天）</p></div>
+                    <div class="ov-card"><h4>📞 飯店預約確認</h4><p>• Vessel Hotel Campana 北谷（7/29 一晚）</p><p>• Super Hotel 名護（7/30-31 二晚）</p><p>• 東橫inn 那霸美榮橋站（8/1 一晚）</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== 備案方案 ===== -->
+        <section>
+            <div class="day-header info-header" id="sec-backup">
+                <h2>🔄 颱風/雨天備案</h2>
+            </div>
+            <div class="day-content">
+                <div class="ov-grid">
+                    <div class="ov-card"><h4>🌧️ Day 1-2 雨天備案（中部）</h4><ul class="weather-list"><li>AEON Mall 北谷（購物＋美食街）</li><li>琉球村（室內體驗琉球文化）</li><li>體驗王國 むら咲むら（手作體驗）</li></ul></div>
+                    <div class="ov-card"><h4>🌧️ Day 3-4 雨天備案（北部）</h4><ul class="weather-list"><li>水族館不受天候影響，正常參觀</li><li>名護鳳梨園（室內設施為主）</li><li>ORION 啤酒工廠見學（免費試飲）</li></ul></div>
+                    <div class="ov-card warm"><h4>🌀 颱風來襲對策</h4><ul class="weather-list"><li>航班異動：確認航空公司官網</li><li>水上活動全面停止</li><li>改為室內行程：購物中心、水族館</li><li>緊急聯絡：租車公司、飯店</li></ul></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== 緊急聯絡 ===== -->
+        <section>
+            <div class="day-header info-header" id="sec-emergency">
+                <h2>🆘 緊急聯絡資訊</h2>
+            </div>
+            <div class="day-content">
+                <div class="ov-grid">
+                    <div class="ov-card"><h4>🚔 日本報警</h4><p>📞 <a href="tel:110">110</a>（警察）</p><p>📞 <a href="tel:119">119</a>（消防・救護車）</p></div>
+                    <div class="ov-card"><h4>🏥 那霸市立病院</h4><p>📞 <a href="tel:098-884-5111">098-884-5111</a></p><p>📍 那霸市古島 2-31-1</p></div>
+                    <div class="ov-card"><h4>🏥 北部地區醫院（名護）</h4><p>📞 <a href="tel:0980-52-2719">0980-52-2719</a></p><p>📍 名護市大中 2-12-3</p></div>
+                    <div class="ov-card"><h4>🇹🇼 台北駐日經濟文化代表處</h4><p>📞 <a href="tel:03-3280-7811">03-3280-7811</a></p><p>📞 急難救助：<a href="tel:080-6552-4764">080-6552-4764</a></p></div>
+                    <div class="ov-card"><h4>📞 沖繩觀光多語言客服</h4><p>📞 <a href="tel:098-851-6464">098-851-6464</a></p><p>🕐 09:00~21:00（中文可通）</p></div>
+                    <div class="ov-card"><h4>🚗 租車公司緊急聯絡</h4><p>📞 請確認租車合約上的 24H 緊急電話</p><p>⚠️ 事故時先撥 110 報警，再聯絡租車公司</p></div>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer>
             <h3>🌊 2026 沖繩五日自駕遊</h3>
@@ -995,15 +1051,49 @@
         var detail = el.nextElementSibling;
         if (detail) detail.classList.toggle('open');
     }
-    function openOv(id) {
+    function toggleDark() {
         document.getElementById('menuDrop').classList.remove('open');
-        document.getElementById(id).classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.toggle('dark');
+        localStorage.setItem('dark', document.body.classList.contains('dark') ? '1' : '0');
+        var btn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+        if (btn) btn.textContent = document.body.classList.contains('dark') ? '☀️ 淺色模式' : '🌙 深色模式';
     }
-    function closeOv(el) {
-        el.classList.remove('active');
-        document.body.style.overflow = '';
+    if (localStorage.getItem('dark') === '1') {
+        document.body.classList.add('dark');
+        var dbtn = document.querySelector('.menu-item[onclick*="toggleDark"]');
+        if (dbtn) dbtn.textContent = '☀️ 淺色模式';
     }
+    function scrollToDay(n) {
+        var el = document.getElementById('day' + n);
+        if (!el) return;
+        var cs = getComputedStyle(document.documentElement);
+        var offset = parseFloat(cs.getPropertyValue('--topbar-h')) + parseFloat(cs.getPropertyValue('--tabs-h'));
+        window.scrollTo({ top: el.offsetTop - offset, behavior: 'smooth' });
+    }
+    function toggleHw(el) {
+        var p = el.closest('.hourly-weather');
+        p.classList.toggle('hw-open');
+        if (p.classList.contains('hw-open')) {
+            var g = p.querySelector('.hw-grid');
+            if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
+        }
+    }
+    (function(){
+        var tabs = document.querySelectorAll('.day-tab');
+        var headers = [];
+        for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
+        var ticking = false;
+        window.addEventListener('scroll', function() {
+            if (!ticking) { requestAnimationFrame(function() {
+                var cs = getComputedStyle(document.documentElement);
+                var offset = parseFloat(cs.getPropertyValue('--topbar-h')) + parseFloat(cs.getPropertyValue('--tabs-h')) + 10;
+                var current = 0;
+                for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= offset) current = i; }
+                tabs.forEach(function(t, idx) { t.classList.toggle('active', idx === current); });
+                ticking = false;
+            }); ticking = true; }
+        });
+    })();
     function togglePrint() {
         document.getElementById('menuDrop').classList.remove('open');
         document.body.classList.toggle('print-mode');
@@ -1031,16 +1121,19 @@
 
         function renderHourly(c,m,day){
             var now=new Date(),ch=now.getHours();
-            var html='<div class="hourly-weather-header"><span class="hourly-weather-title">⏱️ 逐時天氣 — '+day.label+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
+            var minT=99,maxT=-99,minR=100,maxR=0,iconCount={},bestIcon='☀️';
+            for(var h=0;h<24;h++){var t=Math.round(m.temps[h]),r=m.rains[h],ic=WMO[m.codes[h]]||'❓';if(t<minT)minT=t;if(t>maxT)maxT=t;if(r<minR)minR=r;if(r>maxR)maxR=r;iconCount[ic]=(iconCount[ic]||0)+1;}
+            var maxCnt=0;for(var k in iconCount)if(iconCount[k]>maxCnt){maxCnt=iconCount[k];bestIcon=k;}
+            var locs=day.locations.map(function(l){return l.name;}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
+            var html='<div class="hw-summary" onclick="toggleHw(this)">'+bestIcon+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; 💧'+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
+            html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">⏱️ 逐時天氣 — '+day.label+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
             for(var h=0;h<=23;h++){
                 var li=getLocIdx(day,h),icon=WMO[m.codes[h]]||'❓',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);
                 html+='<div class="hw-block'+(isNow?' hw-now':'')+'" data-hour="'+h+'"><div class="hw-block-time">'+(isNow?'▶ ':'')+h+':00</div>';
                 if(day.locations.length>1)html+='<div class="hw-block-loc hw-loc-'+li+'">'+day.locations[li].name+'</div>';
                 html+='<div class="hw-block-icon">'+icon+'</div><div class="hw-block-temp">'+temp+'°C</div><div class="hw-block-rain'+(rain>=50?' hw-rain-high':'')+'">💧'+rain+'%</div></div>';
             }
-            html+='</div>';c.innerHTML=html;
-            var grid=c.querySelector('.hw-grid');
-            if(grid){var tb=grid.querySelector('[data-hour="'+Math.max(6,Math.min(21,ch))+'"]');if(tb)grid.scrollLeft=tb.offsetLeft-grid.offsetLeft;}
+            html+='</div></div>';c.innerHTML=html;
         }
 
         function fetchDay(day){
