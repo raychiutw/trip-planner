@@ -217,7 +217,7 @@ tests/
 ├── integration/             ← 整合測試（Vitest + 真實 JSON）
 │   └── render-pipeline.test.js ← 真實 JSON → render 函式 → HTML 驗證
 ├── json/                    ← JSON 結構驗證（Vitest）
-│   ├── schema.test.js       ← 行程 JSON 結構完整性 + URL 安全性
+│   ├── schema.test.js       ← validateTripData 驗證 + 額外品質檢查
 │   └── registry.test.js     ← trips.json 檔案參照驗證
 └── e2e/                     ← E2E 測試（Playwright + Chromium）
     └── trip-page.spec.js    ← 真實瀏覽器互動驗證
