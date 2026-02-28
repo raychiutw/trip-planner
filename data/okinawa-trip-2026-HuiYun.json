@@ -397,14 +397,29 @@
           {
             "time": "12:53-14:53",
             "emoji": "🍽️",
-            "title": "敘敘苑 沖繩浦添PARCO CITY店",
-            "description": "叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐",
-            "locations": [
+            "title": "午餐",
+            "infoBoxes": [
               {
-                "name": "サンエー浦添西海岸パルコシティ",
-                "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
-                "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
-                "mapcode": "33 394 819*12"
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🥩",
+                    "category": "高級燒肉",
+                    "name": "敘敘苑 沖繩浦添PARCO CITY店",
+                    "desc": "叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐",
+                    "price": "¥2,400~",
+                    "location": {
+                      "name": "サンエー浦添西海岸パルコシティ",
+                      "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
+                      "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
+                      "mapcode": "33 394 819*12"
+                    },
+                    "hours": "11:00~21:00（午餐 11:00~15:00）",
+                    "reservation": "ホットペッパー預約",
+                    "reservationUrl": "https://www.hotpepper.jp/strJ001257517/"
+                  }
+                ]
               }
             ]
           },
@@ -682,14 +697,29 @@
           {
             "time": "11:28-12:28",
             "emoji": "🍽️",
-            "title": "百年古家 大家 阿古豬",
-            "description": "百年古家 大家 うふやー — 古民家餐廳、阿古豬料理",
-            "locations": [
+            "title": "午餐",
+            "infoBoxes": [
               {
-                "name": "百年古家 大家",
-                "googleQuery": "https://maps.google.com/?q=百年古家+大家",
-                "appleQuery": "https://maps.apple.com/?q=百年古家+大家",
-                "mapcode": "206 620 592*27"
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🍽️",
+                    "category": "沖繩料理・阿古豬",
+                    "name": "百年古家 大家",
+                    "desc": "百年古家 大家 うふやー — 古民家餐廳、阿古豬料理",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "百年古家 大家",
+                      "googleQuery": "https://maps.google.com/?q=百年古家+大家",
+                      "appleQuery": "https://maps.apple.com/?q=百年古家+大家",
+                      "mapcode": "206 620 592*27"
+                    },
+                    "hours": "午 11:00~15:30／晚 17:30~21:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve"
+                  }
+                ]
               }
             ],
             "transit": {
@@ -736,14 +766,28 @@
           {
             "time": "16:00-17:00",
             "emoji": "🍽️",
-            "title": "古宇利蝦蝦飯",
-            "description": "KOURI SHRIMP — 人氣蒜蝦飯",
-            "locations": [
+            "title": "午餐",
+            "infoBoxes": [
               {
-                "name": "古宇利島 蝦蝦飯",
-                "googleQuery": "https://maps.google.com/?q=古宇利島+蝦蝦飯",
-                "appleQuery": "https://maps.apple.com/?q=古宇利島+蝦蝦飯",
-                "mapcode": "485 692 246*56"
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🦐",
+                    "category": "夏威夷蒜香蝦飯",
+                    "name": "古宇利蝦蝦飯",
+                    "desc": "KOURI SHRIMP — 人氣蒜蝦飯",
+                    "price": "¥1,300~",
+                    "location": {
+                      "name": "古宇利島 蝦蝦飯",
+                      "googleQuery": "https://maps.google.com/?q=古宇利島+蝦蝦飯",
+                      "appleQuery": "https://maps.apple.com/?q=古宇利島+蝦蝦飯",
+                      "mapcode": "485 692 246*56"
+                    },
+                    "hours": "11:00~18:00",
+                    "reservation": null
+                  }
+                ]
               }
             ],
             "transit": {
@@ -772,14 +816,28 @@
           {
             "time": "19:30-20:30",
             "emoji": "🍜",
-            "title": "暖暮拉麵 名護店",
-            "description": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
-            "locations": [
+            "title": "晚餐",
+            "infoBoxes": [
               {
-                "name": "暖暮 名護店",
-                "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
-                "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
-                "mapcode": "206 627 464*87"
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "豚骨拉麵",
+                    "name": "暖暮拉麵 名護店",
+                    "desc": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "暖暮 名護店",
+                      "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
+                      "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
+                      "mapcode": "206 627 464*87"
+                    },
+                    "hours": "10:00~24:00",
+                    "reservation": null
+                  }
+                ]
               }
             ],
             "transit": {
@@ -899,14 +957,29 @@
           {
             "time": "18:01-19:01",
             "emoji": "🍽️",
-            "title": "爐端燒 Uguisu",
-            "description": "炉端ダイニング ウグイス — 晚餐",
-            "locations": [
+            "title": "晚餐",
+            "infoBoxes": [
               {
-                "name": "炉端焼き うぐいす 那覇",
-                "googleQuery": "https://maps.google.com/?q=炉端焼き+うぐいす+那覇",
-                "appleQuery": "https://maps.apple.com/?q=炉端焼き+うぐいす+那覇",
-                "mapcode": "33 156 410*77"
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🔥",
+                    "category": "爐端燒・居酒屋",
+                    "name": "爐端燒 Uguisu",
+                    "desc": "炉端ダイニング ウグイス — 沖繩炭火料理",
+                    "price": "¥3,000~",
+                    "location": {
+                      "name": "炉端焼き うぐいす 那覇",
+                      "googleQuery": "https://maps.google.com/?q=炉端焼き+うぐいす+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=炉端焼き+うぐいす+那覇",
+                      "mapcode": "33 156 410*77"
+                    },
+                    "hours": "17:30~24:00（週四公休）",
+                    "reservation": "ホットペッパー預約",
+                    "reservationUrl": "https://www.hotpepper.jp/strJ004445055/"
+                  }
+                ]
               }
             ],
             "transit": {
@@ -1061,15 +1134,25 @@
           },
           {
             "time": "16:05-17:05",
-            "emoji": "🍽️",
-            "title": "沖繩媳婦",
-            "description": "OKINAWA SHIN BOO — 不定休，營業日公告於IG/FB",
-            "locations": [
+            "emoji": "🛍️",
+            "title": "午餐",
+            "infoBoxes": [
               {
-                "name": "沖繩媳婦 那覇",
-                "googleQuery": "https://maps.google.com/?q=沖繩媳婦+那覇",
-                "appleQuery": "https://maps.apple.com/?q=沖繩媳婦+那覇",
-                "mapcode": "33 186 300*66"
+                "type": "souvenir",
+                "title": "伴手禮推薦",
+                "items": [
+                  {
+                    "emoji": "🛍️",
+                    "name": "沖繩媳婦 OKINAWA SHIN BOO",
+                    "note": "台灣人經營的沖繩伴手禮專賣店｜不定休，營業日公告於IG/FB",
+                    "location": {
+                      "name": "沖繩媳婦 那覇",
+                      "googleQuery": "https://maps.google.com/?q=沖繩媳婦+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=沖繩媳婦+那覇",
+                      "mapcode": "33 186 300*66"
+                    }
+                  }
+                ]
               }
             ],
             "transit": {
@@ -1098,14 +1181,28 @@
           {
             "time": "19:31-20:31",
             "emoji": "🥞",
-            "title": "幸福鬆餅",
-            "description": "幸せのパンケーキ 沖縄店 — 舒芙蕾鬆餅",
-            "locations": [
+            "title": "晚餐",
+            "infoBoxes": [
               {
-                "name": "瀬長島ウミカジテラス",
-                "googleQuery": "https://maps.google.com/?q=瀬長島ウミカジテラス",
-                "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス",
-                "mapcode": "33 032 412*44"
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🥞",
+                    "category": "鬆餅甜點",
+                    "name": "幸福鬆餅",
+                    "desc": "幸せのパンケーキ 沖縄店 — 舒芙蕾鬆餅",
+                    "price": "¥1,100~",
+                    "location": {
+                      "name": "瀬長島ウミカジテラス",
+                      "googleQuery": "https://maps.google.com/?q=瀬長島ウミカジテラス",
+                      "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス",
+                      "mapcode": "33 032 412*44"
+                    },
+                    "hours": "11:00~21:00（鬆餅 L.O. 19:40）",
+                    "reservation": null
+                  }
+                ]
               }
             ],
             "transit": {

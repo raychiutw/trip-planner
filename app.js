@@ -605,7 +605,7 @@ function renderTrip(data) {
         var d = data[sec.key];
         if (!d) return;
         html += '<section>';
-        html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + escHtml(d.title) + '</h2><button class="dh-menu" data-action="toggle-menu">\u2261</button></div>';
+        html += '<div class="day-header info-header" id="' + sec.id + '"><h2>' + escHtml(d.title) + '</h2></div>';
         html += '<div class="day-content">';
         if (typeof d.content === 'string') {
             html += safe(d.content || '');

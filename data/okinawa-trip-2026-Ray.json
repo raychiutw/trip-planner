@@ -169,14 +169,18 @@
               "text": "¥500/晚（先到先得）",
               "location": {
                 "name": "北谷町営駐車場 美浜",
-                "mapcode": "33 525 382"
+                "googleQuery": "https://maps.google.com/?q=北谷町営駐車場+美浜",
+                "appleQuery": "https://maps.apple.com/?q=北谷町営駐車場+美浜",
+                "mapcode": "33 525 382*00"
               }
             },
             {
               "label": "🛒 附近超市",
               "text": "AEON 北谷店｜步行 5 分鐘｜食品區營業至 24:00",
               "location": {
-                "name": "イオン北谷店"
+                "name": "イオン北谷店",
+                "googleQuery": "https://maps.google.com/?q=イオン北谷店",
+                "appleQuery": "https://maps.apple.com/?q=イオン北谷店"
               }
             }
           ]
@@ -190,7 +194,9 @@
             "locations": [
               {
                 "name": "那霸機場",
-                "mapcode": "33 002 519"
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場",
+                "mapcode": "33 002 519*00"
               }
             ],
             "transit": {
@@ -225,7 +231,9 @@
             "locations": [
               {
                 "name": "Vessel Hotel Campana Okinawa",
-                "mapcode": "33 526 450"
+                "googleQuery": "https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa",
+                "appleQuery": "https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa",
+                "mapcode": "33 526 450*63"
               }
             ],
             "transit": {
@@ -243,12 +251,16 @@
               {
                 "label": "美國村",
                 "name": "American Village Chatan Okinawa",
-                "mapcode": "33 526 450"
+                "googleQuery": "https://maps.google.com/?q=American+Village+Chatan+Okinawa",
+                "appleQuery": "https://maps.apple.com/?q=American+Village+Chatan+Okinawa",
+                "mapcode": "33 526 450*63"
               },
               {
                 "label": "Sunset Beach",
                 "name": "Sunset Beach Chatan Okinawa",
-                "mapcode": "33 526 419"
+                "googleQuery": "https://maps.google.com/?q=Sunset+Beach+Chatan+Okinawa",
+                "appleQuery": "https://maps.apple.com/?q=Sunset+Beach+Chatan+Okinawa",
+                "mapcode": "33 526 419*00"
               }
             ],
             "infoBoxes": [
@@ -262,7 +274,9 @@
                     "note": "24H 免稅藥妝＋零食",
                     "location": {
                       "name": "ドン・キホーテ 北谷店",
-                      "mapcode": "33 526 241"
+                      "googleQuery": "https://maps.google.com/?q=ドン・キホーテ+北谷店",
+                      "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ+北谷店",
+                      "mapcode": "33 526 241*00"
                     }
                   },
                   {
@@ -271,7 +285,9 @@
                     "note": "大型商場，沖繩限定零食＋伴手禮專區",
                     "location": {
                       "name": "イオン北谷店",
-                      "mapcode": "33 526 084"
+                      "googleQuery": "https://maps.google.com/?q=イオン北谷店",
+                      "appleQuery": "https://maps.apple.com/?q=イオン北谷店",
+                      "mapcode": "33 526 084*00"
                     }
                   }
                 ]
@@ -300,7 +316,9 @@
                     "price": "¥800~",
                     "location": {
                       "name": "琉球新麺通堂 北谷美浜店",
-                      "mapcode": "33 526 312"
+                      "googleQuery": "https://maps.google.com/?q=琉球新麺通堂+北谷美浜店",
+                      "appleQuery": "https://maps.apple.com/?q=琉球新麺通堂+北谷美浜店",
+                      "mapcode": "33 526 312*00"
                     },
                     "hours": "11:00~24:00",
                     "reservation": null
@@ -313,7 +331,9 @@
                     "price": "¥2,980~/人（90分鐘）",
                     "location": {
                       "name": "焼肉きんぐ 北谷店",
-                      "mapcode": "33 526 178"
+                      "googleQuery": "https://maps.google.com/?q=焼肉きんぐ+北谷店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉きんぐ+北谷店",
+                      "mapcode": "33 526 178*00"
                     },
                     "hours": "平日 17:00~24:00／假日 11:00~24:00",
                     "reservation": "EPARK 預約",
@@ -326,7 +346,9 @@
                     "desc": "CP 值之王！溶岩石板燒牛排 ¥1,000 起",
                     "location": {
                       "name": "やっぱりステーキ 北谷店",
-                      "mapcode": "33 526 450"
+                      "googleQuery": "https://maps.google.com/?q=やっぱりステーキ+北谷店",
+                      "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+北谷店",
+                      "mapcode": "33 526 450*63"
                     },
                     "hours": "11:00~24:00",
                     "reservation": null,
@@ -382,21 +404,27 @@
               "text": "免費",
               "location": {
                 "name": "スーパーホテル沖縄名護 駐車場",
-                "mapcode": "206 688 382"
+                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄名護",
+                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄名護",
+                "mapcode": "206 688 382*00"
               }
             },
             {
               "label": "🛒 附近超市",
               "text": "MaxValu なご店｜步行 7 分鐘｜24 小時營業｜晚 9 點後熟食半價",
               "location": {
-                "name": "マックスバリュなご店"
+                "name": "マックスバリュなご店",
+                "googleQuery": "https://maps.google.com/?q=マックスバリュなご店",
+                "appleQuery": "https://maps.apple.com/?q=マックスバリュなご店"
               }
             },
             {
               "label": "🏪 唐吉軻德",
               "text": "名護店｜開車 5 分鐘｜24 小時營業",
               "location": {
-                "name": "ドン・キホーテ名護店"
+                "name": "ドン・キホーテ名護店",
+                "googleQuery": "https://maps.google.com/?q=ドン・キホーテ名護店",
+                "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ名護店"
               }
             }
           ]
@@ -420,7 +448,9 @@
             "locations": [
               {
                 "name": "真榮田岬 青の洞窟",
-                "mapcode": "206 062 685"
+                "googleQuery": "https://maps.google.com/?q=真榮田岬+青の洞窟",
+                "appleQuery": "https://maps.apple.com/?q=真榮田岬+青の洞窟",
+                "mapcode": "206 062 685*77"
               }
             ],
             "infoBoxes": [
@@ -443,7 +473,9 @@
                     "desc": "全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加",
                     "price": "~¥8,000/人（含船費＋拍照20張以上）",
                     "location": {
-                      "name": "Best Dive Okinawa 青之洞窟"
+                      "name": "Best Dive Okinawa 青之洞窟",
+                      "googleQuery": "https://maps.google.com/?q=Best+Dive+Okinawa",
+                      "appleQuery": "https://maps.apple.com/?q=Best+Dive+Okinawa"
                     },
                     "hours": null,
                     "reservation": "自有停車場＋接駁車"
@@ -455,7 +487,9 @@
                     "desc": "台灣人中文教練，沖繩安全優良店認證，CP 值最高",
                     "price": "~¥5,500/人（未稅）",
                     "location": {
-                      "name": "Natural Blue 青之洞窟"
+                      "name": "Natural Blue 青之洞窟",
+                      "googleQuery": "https://maps.google.com/?q=Natural+Blue+沖縄",
+                      "appleQuery": "https://maps.apple.com/?q=Natural+Blue+沖縄"
                     },
                     "hours": null,
                     "reservation": "僅收日幣現金｜6歲以上"
@@ -467,7 +501,9 @@
                     "desc": "台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯",
                     "price": "~¥8,000/人（全包無隱藏費用）",
                     "location": {
-                      "name": "黑潮潛水 青之洞窟"
+                      "name": "黑潮潛水 青之洞窟",
+                      "googleQuery": "https://maps.google.com/?q=黒潮潜水+沖縄",
+                      "appleQuery": "https://maps.apple.com/?q=黒潮潜水+沖縄"
                     },
                     "hours": null,
                     "reservation": "9歲以上"
@@ -480,7 +516,9 @@
                 "price": "¥100/次",
                 "location": {
                   "name": "真栄田岬 駐車場",
-                  "mapcode": "206 062 685"
+                  "googleQuery": "https://maps.google.com/?q=真栄田岬+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=真栄田岬+駐車場",
+                  "mapcode": "206 062 685*77"
                 }
               }
             ],
@@ -498,7 +536,9 @@
             "locations": [
               {
                 "name": "万座毛",
-                "mapcode": "206 312 039"
+                "googleQuery": "https://maps.google.com/?q=万座毛",
+                "appleQuery": "https://maps.apple.com/?q=万座毛",
+                "mapcode": "206 312 038*55"
               }
             ],
             "infoBoxes": [
@@ -531,7 +571,9 @@
                     "price": "¥700~",
                     "location": {
                       "name": "我部祖河食堂 名護店",
-                      "mapcode": "206 688 694"
+                      "googleQuery": "https://maps.google.com/?q=我部祖河食堂+名護店",
+                      "appleQuery": "https://maps.apple.com/?q=我部祖河食堂+名護店",
+                      "mapcode": "206 688 694*00"
                     },
                     "hours": "10:00~20:00（週四公休）",
                     "reservation": null
@@ -544,7 +586,9 @@
                     "price": "¥1,500~",
                     "location": {
                       "name": "焼肉もとぶ牧場 本部店",
-                      "mapcode": "206 795 582"
+                      "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+本部店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+本部店",
+                      "mapcode": "206 795 582*00"
                     },
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
@@ -558,7 +602,9 @@
                     "price": "¥1,500~",
                     "location": {
                       "name": "百年古家 大家 うふやー",
-                      "mapcode": "206 745 056"
+                      "googleQuery": "https://maps.google.com/?q=百年古家+大家+うふやー",
+                      "appleQuery": "https://maps.apple.com/?q=百年古家+大家+うふやー",
+                      "mapcode": "206 745 056*00"
                     },
                     "hours": "午 11:00~17:00／夜 18:00~22:00",
                     "reservation": "TableCheck 預約",
@@ -576,7 +622,9 @@
                     "note": "紅芋塔工廠直營",
                     "location": {
                       "name": "御菓子御殿 恩納店",
-                      "mapcode": "206 096 786"
+                      "googleQuery": "https://maps.google.com/?q=御菓子御殿+恩納店",
+                      "appleQuery": "https://maps.apple.com/?q=御菓子御殿+恩納店",
+                      "mapcode": "206 096 786*00"
                     }
                   },
                   {
@@ -585,7 +633,9 @@
                     "note": "沖繩人氣最高休息站",
                     "location": {
                       "name": "道の駅許田",
-                      "mapcode": "206 476 710"
+                      "googleQuery": "https://maps.google.com/?q=道の駅許田",
+                      "appleQuery": "https://maps.apple.com/?q=道の駅許田",
+                      "mapcode": "206 476 710*00"
                     }
                   }
                 ]
@@ -601,7 +651,9 @@
             "locations": [
               {
                 "name": "Super Hotel Okinawa Nago",
-                "mapcode": "206 688 637"
+                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄名護",
+                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄名護",
+                "mapcode": "206 688 637*00"
               }
             ]
           },
@@ -623,7 +675,9 @@
                     "price": "¥800~",
                     "location": {
                       "name": "麺屋はちれん 名護",
-                      "mapcode": "206 688 326"
+                      "googleQuery": "https://maps.google.com/?q=麺屋はちれん+名護",
+                      "appleQuery": "https://maps.apple.com/?q=麺屋はちれん+名護",
+                      "mapcode": "206 688 326*00"
                     },
                     "hours": "11:30~14:30, 18:00~22:00",
                     "reservation": null
@@ -636,7 +690,9 @@
                     "price": "¥2,000~",
                     "location": {
                       "name": "焼肉乃我那覇 名護店",
-                      "mapcode": "206 688 450"
+                      "googleQuery": "https://maps.google.com/?q=焼肉乃我那覇+名護店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉乃我那覇+名護店",
+                      "mapcode": "206 688 450*00"
                     },
                     "hours": "午 11:30~15:00／夜 17:30~22:30（週三公休）",
                     "reservation": "HotPepper 預約",
@@ -650,7 +706,9 @@
                     "price": "¥1,000~",
                     "location": {
                       "name": "名護漁港食堂",
-                      "mapcode": "206 688 171"
+                      "googleQuery": "https://maps.google.com/?q=名護漁港食堂",
+                      "appleQuery": "https://maps.apple.com/?q=名護漁港食堂",
+                      "mapcode": "206 688 171*00"
                     },
                     "hours": "11:00~15:30",
                     "reservation": null
@@ -715,7 +773,9 @@
               "text": "免費",
               "location": {
                 "name": "スーパーホテル沖縄名護 駐車場",
-                "mapcode": "206 688 382"
+                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄名護",
+                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄名護",
+                "mapcode": "206 688 382*00"
               }
             }
           ]
@@ -739,7 +799,9 @@
             "locations": [
               {
                 "name": "沖縄美ら海水族館",
-                "mapcode": "553 075 797"
+                "googleQuery": "https://maps.google.com/?q=沖縄美ら海水族館",
+                "appleQuery": "https://maps.apple.com/?q=沖縄美ら海水族館",
+                "mapcode": "553 075 797*00"
               }
             ],
             "infoBoxes": [
@@ -768,7 +830,9 @@
                     "price": "¥600~",
                     "location": {
                       "name": "きしもと食堂 本部町",
-                      "mapcode": "206 857 712"
+                      "googleQuery": "https://maps.google.com/?q=きしもと食堂+本部町",
+                      "appleQuery": "https://maps.apple.com/?q=きしもと食堂+本部町",
+                      "mapcode": "206 857 712*00"
                     },
                     "hours": "11:00~17:00（週三公休）",
                     "reservation": null
@@ -781,7 +845,9 @@
                     "price": "¥1,500~",
                     "location": {
                       "name": "焼肉もとぶ牧場 本部店",
-                      "mapcode": "206 795 582"
+                      "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+本部店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+本部店",
+                      "mapcode": "206 795 582*00"
                     },
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
@@ -795,7 +861,9 @@
                     "price": "¥1,000~",
                     "location": {
                       "name": "海人食堂 本部漁港",
-                      "mapcode": "206 857 471"
+                      "googleQuery": "https://maps.google.com/?q=海人食堂+本部漁港",
+                      "appleQuery": "https://maps.apple.com/?q=海人食堂+本部漁港",
+                      "mapcode": "206 857 471*00"
                     },
                     "hours": "11:00~15:30",
                     "reservation": null
@@ -817,7 +885,9 @@
             "locations": [
               {
                 "name": "瀬底ビーチ",
-                "mapcode": "206 822 241"
+                "googleQuery": "https://maps.google.com/?q=瀬底ビーチ",
+                "appleQuery": "https://maps.apple.com/?q=瀬底ビーチ",
+                "mapcode": "206 822 241*00"
               }
             ],
             "infoBoxes": [
@@ -827,7 +897,9 @@
                 "price": "¥1,000/次",
                 "location": {
                   "name": "瀬底ビーチ 駐車場",
-                  "mapcode": "206 822 264"
+                  "googleQuery": "https://maps.google.com/?q=瀬底ビーチ+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=瀬底ビーチ+駐車場",
+                  "mapcode": "206 822 264*00"
                 }
               }
             ],
@@ -854,7 +926,9 @@
                     "price": "¥650~",
                     "location": {
                       "name": "幸ちゃんそば 名護",
-                      "mapcode": "206 688 585"
+                      "googleQuery": "https://maps.google.com/?q=幸ちゃんそば+名護",
+                      "appleQuery": "https://maps.apple.com/?q=幸ちゃんそば+名護",
+                      "mapcode": "206 688 585*00"
                     },
                     "hours": "10:00~15:00（售完即止・週一公休）",
                     "reservation": null
@@ -867,7 +941,9 @@
                     "price": "¥1,980~/人",
                     "location": {
                       "name": "焼肉五苑 名護店",
-                      "mapcode": "206 688 232"
+                      "googleQuery": "https://maps.google.com/?q=焼肉五苑+名護店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉五苑+名護店",
+                      "mapcode": "206 688 232*00"
                     },
                     "hours": "平日 16:00~23:00／假日 12:00~23:00",
                     "reservation": "EPARK 預約",
@@ -881,7 +957,9 @@
                     "price": "¥2,700~",
                     "location": {
                       "name": "レストランふりっぱー 名護",
-                      "mapcode": "206 717 028"
+                      "googleQuery": "https://maps.google.com/?q=レストランふりっぱー+名護",
+                      "appleQuery": "https://maps.apple.com/?q=レストランふりっぱー+名護",
+                      "mapcode": "206 717 028*00"
                     },
                     "hours": "11:00~21:00（週三公休）",
                     "reservation": null
@@ -944,21 +1022,27 @@
               "text": "¥550/晚（先到先得）",
               "location": {
                 "name": "東横INN那覇国際通り美栄橋駅 駐車場",
-                "mapcode": "33 157 382"
+                "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
+                "appleQuery": "https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 382*00"
               }
             },
             {
               "label": "🛒 附近超市",
               "text": "UNION 前島店｜步行 2 分鐘｜24 小時營業",
               "location": {
-                "name": "フレッシュプラザユニオン前島店"
+                "name": "フレッシュプラザユニオン前島店",
+                "googleQuery": "https://maps.google.com/?q=フレッシュプラザユニオン前島店",
+                "appleQuery": "https://maps.apple.com/?q=フレッシュプラザユニオン前島店"
               }
             },
             {
               "label": "🏪 唐吉軻德",
               "text": "國際通店｜步行 7 分鐘｜09:00~03:00",
               "location": {
-                "name": "ドン・キホーテ国際通り店"
+                "name": "ドン・キホーテ国際通り店",
+                "googleQuery": "https://maps.google.com/?q=ドン・キホーテ国際通り店",
+                "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ国際通り店"
               }
             }
           ]
@@ -983,12 +1067,16 @@
               {
                 "label": "古宇利大橋",
                 "name": "古宇利大橋",
-                "mapcode": "485 692 174"
+                "googleQuery": "https://maps.google.com/?q=古宇利大橋",
+                "appleQuery": "https://maps.apple.com/?q=古宇利大橋",
+                "mapcode": "485 692 174*00"
               },
               {
                 "label": "心形岩",
                 "name": "ハートロック 古宇利島",
-                "mapcode": "485 751 179"
+                "googleQuery": "https://maps.google.com/?q=ハートロック+古宇利島",
+                "appleQuery": "https://maps.apple.com/?q=ハートロック+古宇利島",
+                "mapcode": "485 751 179*00"
               }
             ],
             "infoBoxes": [
@@ -998,7 +1086,9 @@
                 "price": "免費",
                 "location": {
                   "name": "古宇利島 駐車場",
-                  "mapcode": "485 662 831"
+                  "googleQuery": "https://maps.google.com/?q=古宇利島+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=古宇利島+駐車場",
+                  "mapcode": "485 662 831*00"
                 }
               }
             ]
@@ -1020,7 +1110,9 @@
                     "price": "¥700~",
                     "location": {
                       "name": "古宇利島 沖縄そば",
-                      "mapcode": "485 692 195"
+                      "googleQuery": "https://maps.google.com/?q=古宇利島+沖縄そば",
+                      "appleQuery": "https://maps.apple.com/?q=古宇利島+沖縄そば",
+                      "mapcode": "485 692 195*00"
                     },
                     "hours": "11:00~18:00（週三公休）",
                     "reservation": null
@@ -1033,7 +1125,9 @@
                     "price": "¥1,500~",
                     "location": {
                       "name": "焼肉もとぶ牧場 本部店",
-                      "mapcode": "206 795 582"
+                      "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+本部店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+本部店",
+                      "mapcode": "206 795 582*00"
                     },
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
@@ -1047,7 +1141,9 @@
                     "price": "¥1,000~",
                     "location": {
                       "name": "Shrimp Wagon Kouri Island",
-                      "mapcode": "485 692 174"
+                      "googleQuery": "https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island",
+                      "appleQuery": "https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island",
+                      "mapcode": "485 692 174*00"
                     },
                     "hours": "11:00~17:00",
                     "reservation": null
@@ -1064,7 +1160,9 @@
                     "note": "島產黑糖＋海鹽＋限定零食",
                     "location": {
                       "name": "古宇利島物産センター",
-                      "mapcode": "485 692 089"
+                      "googleQuery": "https://maps.google.com/?q=古宇利島物産センター",
+                      "appleQuery": "https://maps.apple.com/?q=古宇利島物産センター",
+                      "mapcode": "485 692 089*00"
                     }
                   }
                 ]
@@ -1083,7 +1181,9 @@
             "locations": [
               {
                 "name": "伊芸サービスエリア",
-                "mapcode": "33 835 282"
+                "googleQuery": "https://maps.google.com/?q=伊芸サービスエリア",
+                "appleQuery": "https://maps.apple.com/?q=伊芸サービスエリア",
+                "mapcode": "33 835 282*00"
               }
             ],
             "transit": {
@@ -1100,7 +1200,9 @@
             "locations": [
               {
                 "name": "イオンモール沖縄ライカム",
-                "mapcode": "33 530 406"
+                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
+                "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム",
+                "mapcode": "33 530 406*00"
               }
             ],
             "infoBoxes": [
@@ -1134,7 +1236,9 @@
             "locations": [
               {
                 "name": "東横INN那覇国際通り美栄橋駅",
-                "mapcode": "33 157 413"
+                "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
+                "appleQuery": "https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 413*00"
               }
             ],
             "infoBoxes": [
@@ -1148,7 +1252,9 @@
                     "note": "紅芋塔本店",
                     "location": {
                       "name": "御菓子御殿 国際通り松尾店",
-                      "mapcode": "33 157 352"
+                      "googleQuery": "https://maps.google.com/?q=御菓子御殿+国際通り松尾店",
+                      "appleQuery": "https://maps.apple.com/?q=御菓子御殿+国際通り松尾店",
+                      "mapcode": "33 157 352*00"
                     }
                   },
                   {
@@ -1157,7 +1263,9 @@
                     "note": "まーすやー",
                     "location": {
                       "name": "塩屋 国際通り店",
-                      "mapcode": "33 157 383"
+                      "googleQuery": "https://maps.google.com/?q=塩屋+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り店",
+                      "mapcode": "33 157 383*00"
                     }
                   }
                 ]
@@ -1181,7 +1289,9 @@
                     "price": "¥800~",
                     "location": {
                       "name": "通堂拉麵 小禄本店",
-                      "mapcode": "33 096 697"
+                      "googleQuery": "https://maps.google.com/?q=琉球新麺通堂+小禄本店",
+                      "appleQuery": "https://maps.apple.com/?q=琉球新麺通堂+小禄本店",
+                      "mapcode": "33 096 697*00"
                     },
                     "hours": "11:00~24:00",
                     "reservation": null
@@ -1194,7 +1304,9 @@
                     "price": "¥2,000~",
                     "location": {
                       "name": "琉球の牛 国際通り店",
-                      "mapcode": "33 157 382"
+                      "googleQuery": "https://maps.google.com/?q=琉球の牛+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=琉球の牛+国際通り店",
+                      "mapcode": "33 157 382*00"
                     },
                     "hours": "17:00~23:00",
                     "reservation": "TableCheck 預約",
@@ -1208,7 +1320,9 @@
                     "price": "¥2,000~",
                     "location": {
                       "name": "ジャッキーステーキハウス 那覇",
-                      "mapcode": "33 155 236"
+                      "googleQuery": "https://maps.google.com/?q=ジャッキーステーキハウス+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=ジャッキーステーキハウス+那覇",
+                      "mapcode": "33 155 236*00"
                     },
                     "hours": "11:00~翌 1:00（週三公休）",
                     "reservation": null
@@ -1272,7 +1386,9 @@
             "locations": [
               {
                 "name": "東横INN那覇国際通り美栄橋駅",
-                "mapcode": "33 157 413"
+                "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
+                "appleQuery": "https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 413*00"
               }
             ],
             "transit": {
@@ -1289,7 +1405,9 @@
             "locations": [
               {
                 "name": "首里城公園",
-                "mapcode": "33 161 526"
+                "googleQuery": "https://maps.google.com/?q=首里城公園",
+                "appleQuery": "https://maps.apple.com/?q=首里城公園",
+                "mapcode": "33 161 526*00"
               }
             ],
             "infoBoxes": [
@@ -1314,7 +1432,9 @@
             "locations": [
               {
                 "name": "国際通り 那覇",
-                "mapcode": "33 157 382"
+                "googleQuery": "https://maps.google.com/?q=国際通り+那覇",
+                "appleQuery": "https://maps.apple.com/?q=国際通り+那覇",
+                "mapcode": "33 157 382*00"
               }
             ],
             "infoBoxes": [
@@ -1328,7 +1448,9 @@
                     "note": "紅芋塔 ¥1,100/10入",
                     "location": {
                       "name": "御菓子御殿 国際通り松尾店",
-                      "mapcode": "33 157 352"
+                      "googleQuery": "https://maps.google.com/?q=御菓子御殿+国際通り松尾店",
+                      "appleQuery": "https://maps.apple.com/?q=御菓子御殿+国際通り松尾店",
+                      "mapcode": "33 157 352*00"
                     }
                   },
                   {
@@ -1337,7 +1459,9 @@
                     "note": "まーすやー",
                     "location": {
                       "name": "塩屋 国際通り店",
-                      "mapcode": "33 157 383"
+                      "googleQuery": "https://maps.google.com/?q=塩屋+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り店",
+                      "mapcode": "33 157 383*00"
                     }
                   },
                   {
@@ -1346,7 +1470,9 @@
                     "note": "沖繩物產公社直營",
                     "location": {
                       "name": "わしたショップ 国際通り本店",
-                      "mapcode": "33 157 411"
+                      "googleQuery": "https://maps.google.com/?q=わしたショップ+国際通り本店",
+                      "appleQuery": "https://maps.apple.com/?q=わしたショップ+国際通り本店",
+                      "mapcode": "33 157 411*00"
                     }
                   },
                   {
@@ -1355,7 +1481,9 @@
                     "note": "藥妝＋零食＋免稅",
                     "location": {
                       "name": "ドン・キホーテ 国際通り店",
-                      "mapcode": "33 157 382"
+                      "googleQuery": "https://maps.google.com/?q=ドン・キホーテ+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ+国際通り店",
+                      "mapcode": "33 157 382*00"
                     }
                   },
                   {
@@ -1385,7 +1513,9 @@
                     "price": "¥800~",
                     "location": {
                       "name": "暖暮拉麵 那覇牧志店",
-                      "mapcode": "33 157 323"
+                      "googleQuery": "https://maps.google.com/?q=暖暮+那覇牧志店",
+                      "appleQuery": "https://maps.apple.com/?q=暖暮+那覇牧志店",
+                      "mapcode": "33 157 323*00"
                     },
                     "hours": "平日 10:00~翌 2:00／假日 9:00~翌 2:00",
                     "reservation": null
@@ -1398,7 +1528,9 @@
                     "price": "¥2,000~",
                     "location": {
                       "name": "琉球の牛 国際通り店",
-                      "mapcode": "33 157 382"
+                      "googleQuery": "https://maps.google.com/?q=琉球の牛+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=琉球の牛+国際通り店",
+                      "mapcode": "33 157 382*00"
                     },
                     "hours": "17:00~23:00",
                     "reservation": "TableCheck 預約",
@@ -1412,7 +1544,9 @@
                     "price": "¥1,000",
                     "location": {
                       "name": "やっぱりステーキ 4th 国際通り店",
-                      "mapcode": "33 157 383"
+                      "googleQuery": "https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店",
+                      "mapcode": "33 157 383*00"
                     },
                     "hours": "11:00~翌 1:30",
                     "reservation": null
@@ -1434,7 +1568,9 @@
             "locations": [
               {
                 "name": "Tギャラリア 沖縄",
-                "mapcode": "33 188 487"
+                "googleQuery": "https://maps.google.com/?q=Tギャラリア+沖縄",
+                "appleQuery": "https://maps.apple.com/?q=Tギャラリア+沖縄",
+                "mapcode": "33 188 487*00"
               }
             ],
             "transit": {
@@ -1450,7 +1586,9 @@
             "locations": [
               {
                 "name": "東横INN那覇国際通り美栄橋駅",
-                "mapcode": "33 157 413"
+                "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
+                "appleQuery": "https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 413*00"
               }
             ],
             "transit": {
@@ -1466,7 +1604,9 @@
             "locations": [
               {
                 "name": "那霸機場",
-                "mapcode": "33 002 519"
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場",
+                "mapcode": "33 002 519*00"
               }
             ]
           },
@@ -1618,12 +1758,14 @@
           "title": "🚔 日本報警",
           "contacts": [
             {
+              "label": "警察 110",
               "phone": "110",
-              "label": "110"
+              "url": "tel:110"
             },
             {
+              "label": "消防・救護 119",
               "phone": "119",
-              "label": "119"
+              "url": "tel:119"
             }
           ]
         },
@@ -1632,8 +1774,9 @@
           "title": "🏥 那霸市立病院",
           "contacts": [
             {
+              "label": "098-884-5111",
               "phone": "098-884-5111",
-              "label": "098-884-5111"
+              "url": "tel:098-884-5111"
             }
           ],
           "address": "那霸市古島 2-31-1"
@@ -1643,8 +1786,9 @@
           "title": "🏥 北部地區醫院（名護）",
           "contacts": [
             {
+              "label": "0980-52-2719",
               "phone": "0980-52-2719",
-              "label": "0980-52-2719"
+              "url": "tel:0980-52-2719"
             }
           ],
           "address": "名護市大中 2-12-3"
@@ -1654,12 +1798,14 @@
           "title": "🇹🇼 台北駐日經濟文化代表處",
           "contacts": [
             {
+              "label": "03-3280-7811",
               "phone": "03-3280-7811",
-              "label": "03-3280-7811"
+              "url": "tel:+81332807811"
             },
             {
+              "label": "急難救助 080-6552-4764",
               "phone": "080-6552-4764",
-              "label": "急難救助 080-6552-4764"
+              "url": "tel:+81806552-4764"
             }
           ]
         },
@@ -1668,8 +1814,9 @@
           "title": "📞 沖繩觀光多語言客服",
           "contacts": [
             {
+              "label": "098-851-6464",
               "phone": "098-851-6464",
-              "label": "098-851-6464"
+              "url": "tel:098-851-6464"
             }
           ],
           "notes": [

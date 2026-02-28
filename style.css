@@ -26,8 +26,7 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--gray-light); f
 .menu-item:hover { background: var(--blue-light); }
 
 .ov-card p { font-size: var(--fs-md); margin: 4px 0; line-height: 1.7; }
-.ov-card a { color: var(--text); font-weight: 600; text-decoration: underline; }
-.ov-card a:visited { color: var(--text); }
+.ov-card a, .ov-card a:link, .ov-card a:visited { color: var(--text); font-weight: 600; text-decoration: underline; }
 .ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .ov-card { padding: 14px; border-radius: 12px; }
 .ov-card h4 { margin-top: 0; }
@@ -88,8 +87,7 @@ body.dark .sticky-nav { background: #1565C0; }
 .col-row.open .arrow { transform: rotate(90deg); }
 .col-detail { display: none; padding: 10px 0; font-size: var(--fs-md); line-height: 1.7; }
 .col-detail.open { display: block; }
-.col-detail a { color: var(--text); font-weight: 600; text-decoration: underline; }
-.col-detail a:visited { color: var(--text); }
+.col-detail a, .col-detail a:link, .col-detail a:visited { color: var(--text); font-weight: 600; text-decoration: underline; }
 .status-tag { font-size: var(--fs-md); padding: 2px 8px; border-radius: 8px; font-weight: 600; }
 .status-tag.pending { background: var(--sand-light); color: var(--sand); }
 .status-tag.paid { background: var(--blue-light); color: var(--blue); }
@@ -107,8 +105,7 @@ body.dark .sticky-nav { background: #1565C0; }
 .tl-head.clickable:hover { background: var(--blue-light); }
 .tl-time { font-weight: 700; font-size: var(--fs-md); color: var(--blue); min-width: 95px; flex-shrink: 0; }
 .tl-title { font-weight: 600; font-size: var(--fs-lg); }
-.tl-title a { color: var(--text); text-decoration: none; }
-.tl-title a:visited { color: var(--text); }
+.tl-title a, .tl-title a:link, .tl-title a:visited { color: var(--text); text-decoration: none; }
 .tl-title a:hover { text-decoration: underline; }
 .tl-arrow { margin-left: auto; color: var(--gray); font-size: var(--fs-md); transition: transform 0.2s; flex-shrink: 0; }
 .tl-event.expanded .tl-arrow { transform: rotate(90deg); }
@@ -135,17 +132,14 @@ body.dark .sticky-nav { background: #1565C0; }
 
 /* ===== Info Boxes ===== */
 .info-box { margin: 6px 0; padding: 8px 12px; border-radius: 8px; font-size: var(--fs-md); line-height: 1.7; }
-.info-box a { color: var(--text); font-weight: 600; text-decoration: underline; }
-.info-box a:visited { color: var(--text); }
+.info-box a, .info-box a:link, .info-box a:visited { color: var(--text); font-weight: 600; text-decoration: underline; }
 .info-box strong { font-weight: 600; }
 .restaurant-choice { padding: 6px 0; border-bottom: 1px dashed var(--sand); line-height: 1.7; }
 .restaurant-choice:last-child { border-bottom: none; }
 .restaurant-choice strong { color: var(--sand); }
-.restaurant-choice a:not(.map-link) { color: var(--text); font-weight: 600; text-decoration: underline; }
-.restaurant-choice a:not(.map-link):visited { color: var(--text); }
+.restaurant-choice a:not(.map-link), .restaurant-choice a:not(.map-link):link, .restaurant-choice a:not(.map-link):visited { color: var(--text); font-weight: 600; text-decoration: underline; }
 .restaurant-meta { display: block; margin-top: 3px; font-size: var(--fs-md); color: var(--gray); }
-.restaurant-meta a { color: var(--text); font-weight: 600; text-decoration: underline; }
-.restaurant-meta a:visited { color: var(--text); }
+.restaurant-meta a, .restaurant-meta a:link, .restaurant-meta a:visited { color: var(--text); font-weight: 600; text-decoration: underline; }
 
 /* ===== Budget ===== */
 .budget-table { width: 100%; border-collapse: collapse; font-size: var(--fs-md); }
