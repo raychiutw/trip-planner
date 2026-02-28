@@ -9,7 +9,7 @@
   "footer": {
     "title": "🌊 2026 沖繩五日自駕遊",
     "dates": "7/29（三）~ 8/2（日）",
-    "budget": "💰 五日總預算：約 ¥116,580（NT$ 25,648）",
+    "budget": "💰 五日總預算：約 ¥122,460（NT$ 26,941）",
     "exchangeNote": "匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準",
     "tagline": "めんそーれ 沖繩！🌊 祝旅途愉快！"
   },
@@ -45,7 +45,7 @@
     {
       "id": "hourly-2",
       "date": "2026-07-30",
-      "label": "恩納・名護",
+      "label": "恩納・本部",
       "locations": [
         {
           "lat": 26.3362,
@@ -62,9 +62,9 @@
           "end": 13
         },
         {
-          "lat": 26.5918,
-          "lon": 127.9773,
-          "name": "名護",
+          "lat": 26.6577,
+          "lon": 127.8782,
+          "name": "本部",
           "start": 14,
           "end": 23
         }
@@ -73,33 +73,26 @@
     {
       "id": "hourly-3",
       "date": "2026-07-31",
-      "label": "本部・瀨底",
+      "label": "本部・古宇利",
       "locations": [
-        {
-          "lat": 26.5918,
-          "lon": 127.9773,
-          "name": "名護",
-          "start": 0,
-          "end": 9
-        },
         {
           "lat": 26.6577,
           "lon": 127.8782,
           "name": "本部",
-          "start": 10,
-          "end": 15
+          "start": 0,
+          "end": 14
         },
         {
-          "lat": 26.651,
-          "lon": 127.853,
-          "name": "瀨底",
+          "lat": 26.7025,
+          "lon": 127.9586,
+          "name": "古宇利",
           "start": 15,
-          "end": 18
+          "end": 17
         },
         {
-          "lat": 26.5918,
-          "lon": 127.9773,
-          "name": "名護",
+          "lat": 26.4969,
+          "lon": 127.8536,
+          "name": "恩納",
           "start": 18,
           "end": 23
         }
@@ -108,27 +101,20 @@
     {
       "id": "hourly-4",
       "date": "2026-08-01",
-      "label": "古宇利・那霸",
+      "label": "恩納・那霸",
       "locations": [
         {
-          "lat": 26.5918,
-          "lon": 127.9773,
-          "name": "名護",
+          "lat": 26.4969,
+          "lon": 127.8536,
+          "name": "恩納",
           "start": 0,
-          "end": 9
-        },
-        {
-          "lat": 26.7025,
-          "lon": 127.9586,
-          "name": "古宇利",
-          "start": 10,
-          "end": 13
+          "end": 10
         },
         {
           "lat": 26.3344,
           "lon": 127.7809,
           "name": "那霸",
-          "start": 14,
+          "start": 11,
           "end": 23
         }
       ]
@@ -393,41 +379,32 @@
       "label": "青之洞窟",
       "content": {
         "hotel": {
-          "url": "https://awo9john.com/super-hotel-nago/",
-          "name": "Super Hotel Okinawa Nago",
+          "url": "https://rocky.tw/royalviewhotel/",
+          "name": "Royal View Hotel Churaumi",
           "details": [
-            "📍 名護市",
-            "♨️ 天然溫泉「萬座之湯」",
-            "🍽️ 含免費早餐（DIY taco rice）",
-            "📅 連住 2 晚（7/30-31）"
+            "📍 本部町（水族館步行 5 分鐘）",
+            "🏊 花園游泳池（4~10月開放）",
+            "🅿️ 免費停車（90 台）",
+            "🍽️ 可選含早餐方案"
           ],
           "subs": [
             {
               "label": "🅿️ 停車場",
-              "text": "免費",
+              "text": "免費，90 台",
               "location": {
-                "name": "スーパーホテル沖縄名護 駐車場",
-                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄名護",
-                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄名護",
-                "mapcode": "206 688 382*00"
+                "name": "ロイヤルビューホテル美ら海",
+                "googleQuery": "https://maps.google.com/?q=ロイヤルビューホテル美ら海",
+                "appleQuery": "https://maps.apple.com/?q=Royal+View+Hotel+Churaumi",
+                "mapcode": "553 075 863*05"
               }
             },
             {
-              "label": "🛒 附近超市",
-              "text": "MaxValu なご店｜步行 7 分鐘｜24 小時營業｜晚 9 點後熟食半價",
+              "label": "🏪 附近便利商店",
+              "text": "飯店內伴手禮商店｜步行 5 分有便利商店",
               "location": {
-                "name": "マックスバリュなご店",
-                "googleQuery": "https://maps.google.com/?q=マックスバリュなご店",
-                "appleQuery": "https://maps.apple.com/?q=マックスバリュなご店"
-              }
-            },
-            {
-              "label": "🏪 唐吉軻德",
-              "text": "名護店｜開車 5 分鐘｜24 小時營業",
-              "location": {
-                "name": "ドン・キホーテ名護店",
-                "googleQuery": "https://maps.google.com/?q=ドン・キホーテ名護店",
-                "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ名護店"
+                "name": "ロイヤルビューホテル美ら海",
+                "googleQuery": "https://maps.google.com/?q=ロイヤルビューホテル美ら海",
+                "appleQuery": "https://maps.apple.com/?q=Royal+View+Hotel+Churaumi"
               }
             }
           ]
@@ -663,29 +640,65 @@
             ],
             "transit": {
               "emoji": "🚗",
-              "text": "約10分鐘 許田→Super Hotel 名護"
+              "text": "約25分鐘 許田→瀨底島（過瀨底大橋即到）"
             }
           },
           {
-            "time": "15:30",
-            "emoji": "🏨",
-            "titleUrl": "https://awo9john.com/super-hotel-nago/",
-            "title": "Check in Super Hotel",
-            "description": "下午自由休息，傍晚出門覓食",
+            "time": "15:40-17:15",
+            "emoji": "🏖",
+            "titleUrl": "https://www.jathao.com/2024/11/okinawa-sesoko-island.html",
+            "title": "瀨底海灘戲水",
+            "description": "沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，傍晚戲水最舒服",
             "locations": [
               {
-                "name": "Super Hotel Okinawa Nago",
-                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄名護",
-                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄名護",
-                "mapcode": "206 688 637*00"
+                "name": "瀬底ビーチ",
+                "googleQuery": "https://maps.google.com/?q=瀬底ビーチ",
+                "appleQuery": "https://maps.apple.com/?q=瀬底ビーチ",
+                "mapcode": "206 822 241*00"
               }
-            ]
+            ],
+            "infoBoxes": [
+              {
+                "type": "parking",
+                "title": "停車場",
+                "price": "¥1,000/次",
+                "location": {
+                  "name": "瀬底ビーチ 駐車場",
+                  "googleQuery": "https://maps.google.com/?q=瀬底ビーチ+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=瀬底ビーチ+駐車場",
+                  "mapcode": "206 822 264*00"
+                }
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "瀨底島→Royal View Hotel 約15分鐘"
+            }
           },
           {
-            "time": "18:00-19:30",
+            "time": "17:30",
+            "emoji": "🏨",
+            "titleUrl": "https://rocky.tw/royalviewhotel/",
+            "title": "Check in Royal View Hotel",
+            "description": "放好行李休息，花園游泳池開放中（4~10月）",
+            "locations": [
+              {
+                "name": "ロイヤルビューホテル美ら海",
+                "googleQuery": "https://maps.google.com/?q=ロイヤルビューホテル美ら海",
+                "appleQuery": "https://maps.apple.com/?q=Royal+View+Hotel+Churaumi",
+                "mapcode": "553 075 863*05"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "Royal View→名護市區 約20分鐘"
+            }
+          },
+          {
+            "time": "18:30-20:00",
             "emoji": "🍽",
-            "title": "️ 名護晚餐＋溫泉",
-            "description": "名護市區覓食，飯後回飯店泡天然溫泉「萬座之湯」",
+            "title": "️ 名護晚餐",
+            "description": "開車到名護市區覓食（約20分鐘），飯後回本部飯店",
             "infoBoxes": [
               {
                 "type": "restaurants",
@@ -726,18 +739,18 @@
                   {
                     "emoji": "🍽",
                     "category": "其他推薦",
-                    "name": "名護漁港食堂",
-                    "desc": "漁港直營，新鮮海鮮丼",
-                    "price": "¥1,000~",
+                    "name": "レストラン ふりっぱー",
+                    "desc": "1971 年創業名護老牌牛排！ヒレステーキ",
+                    "price": "¥2,700~",
                     "location": {
-                      "name": "名護漁港食堂",
-                      "googleQuery": "https://maps.google.com/?q=名護漁港食堂",
-                      "appleQuery": "https://maps.apple.com/?q=名護漁港食堂",
-                      "mapcode": "206 688 171*00"
+                      "name": "レストランふりっぱー 名護",
+                      "googleQuery": "https://maps.google.com/?q=レストランふりっぱー+名護",
+                      "appleQuery": "https://maps.apple.com/?q=レストランふりっぱー+名護",
+                      "mapcode": "206 717 028*00"
                     },
-                    "hours": "11:00~15:30",
+                    "hours": "11:00~21:00（週三公休）",
                     "reservation": null,
-                    "blogUrl": "https://linrosely.pixnet.net/blog/posts/10350933152"
+                    "blogUrl": "https://boo2k.com/archives/124296"
                   }
                 ]
               }
@@ -745,10 +758,10 @@
           }
         ],
         "budget": {
-          "summary": "當日預算 約 ¥27,200（NT$ 5,984）",
+          "summary": "當日預算 約 ¥29,200（NT$ 6,424）",
           "items": [
             {
-              "label": "🚗 租車（3天分攤）",
+              "label": "🚗 租車（4天分攤）",
               "amount": "¥6,000"
             },
             {
@@ -764,12 +777,16 @@
               "amount": "¥200"
             },
             {
-              "label": "🍜 午餐＋晚餐",
+              "label": "🏖️ 瀨底海灘停車",
+              "amount": "¥1,000"
+            },
+            {
+              "label": "🍽️ 午餐＋晚餐",
               "amount": "¥4,000"
             },
             {
-              "label": "🏨 Super Hotel 名護",
-              "amount": "¥8,000"
+              "label": "🏨 Royal View Hotel",
+              "amount": "¥9,000"
             }
           ],
           "notes": [
@@ -783,25 +800,35 @@
     {
       "id": 3,
       "date": "7/31（五）",
-      "label": "水族館",
+      "label": "水族館・古宇利",
       "content": {
         "hotel": {
-          "url": "https://awo9john.com/super-hotel-nago/",
-          "name": "Super Hotel Nago",
+          "url": "https://bobbyfun.tw/2023-04-27-2318/",
+          "name": "Rizzan Sea-Park Hotel 谷茶灣",
           "details": [
-            "📍 名護市（同昨晚）",
-            "🧳 行李不用搬",
-            "🍽️ 免費早餐"
+            "📍 恩納村谷茶（800m 私人沙灘）",
+            "🏊 戶外泳池＋室內泳池",
+            "🅿️ ¥500/晚（500 台）",
+            "🍽️ 可選含早餐方案"
           ],
           "subs": [
             {
               "label": "🅿️ 停車場",
-              "text": "免費",
+              "text": "¥500/晚，500 台（飯店對面，可無限進出）",
               "location": {
-                "name": "スーパーホテル沖縄名護 駐車場",
-                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄名護",
-                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄名護",
-                "mapcode": "206 688 382*00"
+                "name": "リザンシーパークホテル谷茶ベイ",
+                "googleQuery": "https://maps.google.com/?q=リザンシーパークホテル谷茶ベイ",
+                "appleQuery": "https://maps.apple.com/?q=Rizzan+Sea-Park+Hotel+Tancha+Bay",
+                "mapcode": "206 158 096*58"
+              }
+            },
+            {
+              "label": "🏪 飯店內便利商店",
+              "text": "館內「りざんのコンビニ」｜步行 3 分有 FamilyMart",
+              "location": {
+                "name": "リザンシーパークホテル谷茶ベイ",
+                "googleQuery": "https://maps.google.com/?q=リザンシーパークホテル谷茶ベイ",
+                "appleQuery": "https://maps.apple.com/?q=Rizzan+Sea-Park+Hotel+Tancha+Bay"
               }
             }
           ]
@@ -813,11 +840,11 @@
             "title": "出發前往水族館",
             "transit": {
               "emoji": "🚗",
-              "text": "名護→美麗海水族館 約30分鐘（國道449號往本部）"
+              "text": "本部→美麗海水族館 約15分鐘"
             }
           },
           {
-            "time": "09:30-13:30",
+            "time": "09:15-12:45",
             "emoji": "🐠",
             "titleUrl": "https://www.klook.com/zh-TW/blog/top-tip-churaumi-aquarium-okinawa/",
             "title": "美麗海水族館",
@@ -840,7 +867,7 @@
             ]
           },
           {
-            "time": "13:30-15:00",
+            "time": "13:00-14:30",
             "emoji": "🍽",
             "title": "️ 水族館附近午餐",
             "infoBoxes": [
@@ -902,133 +929,156 @@
             ],
             "transit": {
               "emoji": "🚗",
-              "text": "水族館→瀨底島 約15分鐘（過瀨底大橋即到）"
+              "text": "水族館→古宇利島 約30分鐘（經屋我地島→古宇利大橋）"
             }
           },
           {
-            "time": "15:15-17:00",
-            "emoji": "🏖",
-            "titleUrl": "https://www.jathao.com/2024/11/okinawa-sesoko-island.html",
-            "title": "瀨底海灘戲水",
-            "description": "沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，可看到熱帶魚",
+            "time": "15:00-17:00",
+            "emoji": "🌉",
+            "titleUrl": "https://tisshuang.com/blog/post/kouri-island",
+            "title": "古宇利大橋＋心形岩",
+            "description": "古宇利大橋全長 2km，兩側碧藍海水極為壯觀。心形岩（ハートロック）是沖繩最浪漫的拍照景點",
             "locations": [
               {
-                "name": "瀬底ビーチ",
-                "googleQuery": "https://maps.google.com/?q=瀬底ビーチ",
-                "appleQuery": "https://maps.apple.com/?q=瀬底ビーチ",
-                "mapcode": "206 822 241*00"
+                "label": "古宇利大橋",
+                "name": "古宇利大橋",
+                "googleQuery": "https://maps.google.com/?q=古宇利大橋",
+                "appleQuery": "https://maps.apple.com/?q=古宇利大橋",
+                "mapcode": "485 692 174*00"
+              },
+              {
+                "label": "心形岩",
+                "name": "ハートロック 古宇利島",
+                "googleQuery": "https://maps.google.com/?q=ハートロック+古宇利島",
+                "appleQuery": "https://maps.apple.com/?q=ハートロック+古宇利島",
+                "mapcode": "485 751 179*00"
               }
             ],
             "infoBoxes": [
               {
                 "type": "parking",
-                "title": "停車場",
-                "price": "¥1,000/次",
+                "title": "大橋展望台",
+                "price": "免費",
                 "location": {
-                  "name": "瀬底ビーチ 駐車場",
-                  "googleQuery": "https://maps.google.com/?q=瀬底ビーチ+駐車場",
-                  "appleQuery": "https://maps.apple.com/?q=瀬底ビーチ+駐車場",
-                  "mapcode": "206 822 264*00"
+                  "name": "古宇利島 駐車場",
+                  "googleQuery": "https://maps.google.com/?q=古宇利島+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=古宇利島+駐車場",
+                  "mapcode": "485 662 831*00"
                 }
               }
             ],
             "transit": {
               "emoji": "🚗",
-              "text": "瀨底島→Super Hotel 名護 約30分鐘"
+              "text": "古宇利島→恩納村 約50分鐘（經名護→國道58號南下）"
             }
           },
           {
-            "time": "17:30-19:00",
+            "time": "18:00",
+            "emoji": "🏨",
+            "titleUrl": "https://bobbyfun.tw/2023-04-27-2318/",
+            "title": "Check in Rizzan Sea-Park Hotel",
+            "description": "800m 私人沙灘度假飯店，放好行李後出門覓食",
+            "locations": [
+              {
+                "name": "リザンシーパークホテル谷茶ベイ",
+                "googleQuery": "https://maps.google.com/?q=リザンシーパークホテル谷茶ベイ",
+                "appleQuery": "https://maps.apple.com/?q=Rizzan+Sea-Park+Hotel+Tancha+Bay",
+                "mapcode": "206 158 096*58"
+              }
+            ]
+          },
+          {
+            "time": "18:30-20:00",
             "emoji": "🍽",
-            "title": "️ 名護晚餐＋溫泉",
-            "description": "回到名護市區覓食，飯後回飯店泡天然溫泉放鬆",
+            "title": "️ 恩納村晚餐",
+            "description": "飯店周邊餐廳覓食，飯後回飯店散步私人沙灘",
             "infoBoxes": [
               {
                 "type": "restaurants",
                 "title": "晚餐推薦三選一",
                 "restaurants": [
                   {
-                    "emoji": "🍜",
-                    "category": "拉麵",
-                    "name": "幸ちゃんそば",
-                    "desc": "名護在地老字號沖繩麵",
-                    "price": "¥650~",
+                    "emoji": "🍽",
+                    "category": "沖繩料理",
+                    "name": "琉球亭",
+                    "desc": "Rizzan 正對面步行 1 分！沖繩料理居酒屋",
+                    "price": "¥2,000~",
                     "location": {
-                      "name": "幸ちゃんそば 名護",
-                      "googleQuery": "https://maps.google.com/?q=幸ちゃんそば+名護",
-                      "appleQuery": "https://maps.apple.com/?q=幸ちゃんそば+名護",
-                      "mapcode": "206 688 585*00"
+                      "name": "琉球亭 恩納村谷茶",
+                      "googleQuery": "https://maps.google.com/?q=琉球亭+恩納村谷茶",
+                      "appleQuery": "https://maps.apple.com/?q=琉球亭+恩納村谷茶"
                     },
-                    "hours": "10:00~15:00（售完即止・週一公休）",
-                    "reservation": null,
-                    "blogUrl": "https://chrysie.pixnet.net/blog/post/119628384"
+                    "hours": "17:30~24:00",
+                    "reservation": "HotPepper 預約",
+                    "reservationUrl": "https://www.hotpepper.jp/strJ000859452/",
+                    "blogUrl": "https://baygolee.com/ryuukyuutei/"
                   },
                   {
                     "emoji": "🥩",
                     "category": "燒肉",
-                    "name": "焼肉五苑 名護店",
-                    "desc": "平價燒肉吃到飽",
-                    "price": "¥1,980~/人",
+                    "name": "焼肉 琉球の牛 恩納本館",
+                    "desc": "A5 沖繩縣產和牛，西海岸第一燒肉名店",
+                    "price": "¥4,500~",
                     "location": {
-                      "name": "焼肉五苑 名護店",
-                      "googleQuery": "https://maps.google.com/?q=焼肉五苑+名護店",
-                      "appleQuery": "https://maps.apple.com/?q=焼肉五苑+名護店",
-                      "mapcode": "206 688 232*00"
+                      "name": "焼肉琉球の牛 恩納",
+                      "googleQuery": "https://maps.google.com/?q=焼肉琉球の牛+恩納",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉琉球の牛+恩納"
                     },
-                    "hours": "平日 16:00~23:00／假日 12:00~23:00",
-                    "reservation": "EPARK 預約",
-                    "reservationUrl": "https://epark.jp/shopinfo/jsp607670/",
-                    "blogUrl": "https://alfie073.pixnet.net/blog/post/358808918"
+                    "hours": "17:00~22:30",
+                    "reservation": "TableCheck 預約（建議提前 7 天）",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-onna/reserve",
+                    "blogUrl": "https://bobbyfun.tw/2023-05-01-2338/"
                   },
                   {
                     "emoji": "🍽",
                     "category": "其他推薦",
-                    "name": "レストラン ふりっぱー",
-                    "desc": "1971 年創業名護老牌牛排！ヒレステーキ",
-                    "price": "¥2,700~",
+                    "name": "沖縄料理 ちぬまん 恩納ムーンビーチ前別邸",
+                    "desc": "沖繩居酒屋＋三線民謠現場演奏，可免費接送",
+                    "price": "¥3,000~",
                     "location": {
-                      "name": "レストランふりっぱー 名護",
-                      "googleQuery": "https://maps.google.com/?q=レストランふりっぱー+名護",
-                      "appleQuery": "https://maps.apple.com/?q=レストランふりっぱー+名護",
-                      "mapcode": "206 717 028*00"
+                      "name": "ちぬまん 恩納ムーンビーチ前別邸",
+                      "googleQuery": "https://maps.google.com/?q=ちぬまん+恩納ムーンビーチ前別邸",
+                      "appleQuery": "https://maps.apple.com/?q=ちぬまん+恩納ムーンビーチ前別邸"
                     },
-                    "hours": "11:00~21:00（週三公休）",
-                    "reservation": null,
-                    "blogUrl": "https://boo2k.com/archives/124296"
+                    "hours": "17:00~22:30",
+                    "reservation": "電話預約 098-989-0987",
+                    "reservationUrl": null
                   }
                 ]
               }
             ]
-          },
-          {
-            "time": "18:30",
-            "emoji": "🏨",
-            "title": "回到 Super Hotel 名護",
-            "note": "泡天然溫泉「萬座之湯」放鬆，早點休息"
           }
         ],
         "budget": {
-          "summary": "當日預算 約 ¥24,360（NT$ 5,359）",
+          "summary": "當日預算 約 ¥30,360（NT$ 6,679）",
           "items": [
             {
-              "label": "🚗 租車（3天分攤）",
+              "label": "🚗 租車（4天分攤）",
               "amount": "¥6,000"
+            },
+            {
+              "label": "⛽ 油資",
+              "amount": "¥1,000"
             },
             {
               "label": "🐠 水族館門票（2人）",
               "amount": "¥4,360"
             },
             {
-              "label": "🏖️ 瀨底海灘停車＋淋浴",
-              "amount": "¥2,000"
-            },
-            {
               "label": "🍽️ 午餐＋晚餐",
-              "amount": "¥4,000"
+              "amount": "¥6,000"
             },
             {
-              "label": "🏨 Super Hotel 名護",
-              "amount": "¥8,000"
+              "label": "🏨 Rizzan Sea-Park Hotel",
+              "amount": "¥12,000"
+            },
+            {
+              "label": "🅿️ 飯店停車",
+              "amount": "¥500"
+            },
+            {
+              "label": "🛣️ 高速通行費",
+              "amount": "¥500"
             }
           ]
         }
@@ -1037,7 +1087,7 @@
     {
       "id": 4,
       "date": "8/1（六）",
-      "label": "古宇利",
+      "label": "來客夢",
       "content": {
         "hotel": {
           "url": "https://dorismaworld.com/toyokoinn-makishi/",
@@ -1081,156 +1131,20 @@
         },
         "timeline": [
           {
-            "time": "09:00",
+            "time": "10:00",
             "emoji": "🚗",
-            "title": "出發前往古宇利島",
+            "title": "恩納出發 → AEON Mall",
             "transit": {
               "emoji": "🚗",
-              "text": "名護→古宇利島 約30分鐘（經屋我地島→古宇利大橋）"
+              "text": "Rizzan Sea-Park Hotel → AEON Mall 來客夢 約35分鐘（國道58號南下）"
             }
           },
           {
-            "time": "09:30-11:00",
-            "emoji": "🌉",
-            "titleUrl": "https://tisshuang.com/blog/post/kouri-island",
-            "title": "古宇利大橋＋心形岩",
-            "description": "古宇利大橋全長 2km，兩側碧藍海水極為壯觀。心形岩（ハートロック）是沖繩最浪漫的拍照景點",
-            "locations": [
-              {
-                "label": "古宇利大橋",
-                "name": "古宇利大橋",
-                "googleQuery": "https://maps.google.com/?q=古宇利大橋",
-                "appleQuery": "https://maps.apple.com/?q=古宇利大橋",
-                "mapcode": "485 692 174*00"
-              },
-              {
-                "label": "心形岩",
-                "name": "ハートロック 古宇利島",
-                "googleQuery": "https://maps.google.com/?q=ハートロック+古宇利島",
-                "appleQuery": "https://maps.apple.com/?q=ハートロック+古宇利島",
-                "mapcode": "485 751 179*00"
-              }
-            ],
-            "infoBoxes": [
-              {
-                "type": "parking",
-                "title": "大橋展望台",
-                "price": "免費",
-                "location": {
-                  "name": "古宇利島 駐車場",
-                  "googleQuery": "https://maps.google.com/?q=古宇利島+駐車場",
-                  "appleQuery": "https://maps.apple.com/?q=古宇利島+駐車場",
-                  "mapcode": "485 662 831*00"
-                }
-              }
-            ]
-          },
-          {
-            "time": "11:00-11:30",
-            "emoji": "🍽",
-            "title": "️ 古宇利島午餐",
-            "infoBoxes": [
-              {
-                "type": "restaurants",
-                "title": "午餐推薦三選一",
-                "restaurants": [
-                  {
-                    "emoji": "🍜",
-                    "category": "拉麵",
-                    "name": "古宇利そば",
-                    "desc": "島上手打沖繩麵",
-                    "price": "¥700~",
-                    "location": {
-                      "name": "古宇利島 沖縄そば",
-                      "googleQuery": "https://maps.google.com/?q=古宇利島+沖縄そば",
-                      "appleQuery": "https://maps.apple.com/?q=古宇利島+沖縄そば",
-                      "mapcode": "485 692 195*00"
-                    },
-                    "hours": "11:00~18:00（週三公休）",
-                    "reservation": null
-                  },
-                  {
-                    "emoji": "🥩",
-                    "category": "燒肉",
-                    "name": "焼肉もとぶ牧場 本部店",
-                    "desc": "沖繩品牌「もとぶ牛」直營燒肉",
-                    "price": "¥1,500~",
-                    "location": {
-                      "name": "焼肉もとぶ牧場 本部店",
-                      "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+本部店",
-                      "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+本部店",
-                      "mapcode": "206 795 582*00"
-                    },
-                    "hours": "午 11:30~15:00／夜 17:00~22:00",
-                    "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve",
-                    "blogUrl": "https://carollin.tw/motobu-farm/"
-                  },
-                  {
-                    "emoji": "🦐",
-                    "category": "其他推薦",
-                    "name": "蝦蝦飯（Shrimp Wagon）",
-                    "desc": "島上排隊名店",
-                    "price": "¥1,000~",
-                    "location": {
-                      "name": "Shrimp Wagon Kouri Island",
-                      "googleQuery": "https://maps.google.com/?q=Shrimp+Wagon+Kouri+Island",
-                      "appleQuery": "https://maps.apple.com/?q=Shrimp+Wagon+Kouri+Island",
-                      "mapcode": "485 692 174*00"
-                    },
-                    "hours": "11:00~17:00",
-                    "reservation": null,
-                    "blogUrl": "https://shin.tw/jp-okinawa-shrimp-wagon/"
-                  }
-                ]
-              },
-              {
-                "type": "souvenir",
-                "title": "古宇利島伴手禮",
-                "items": [
-                  {
-                    "emoji": "🏪",
-                    "name": "\udfea 古宇利島物產中心",
-                    "note": "島產黑糖＋海鹽＋限定零食",
-                    "location": {
-                      "name": "古宇利島物産センター",
-                      "googleQuery": "https://maps.google.com/?q=古宇利島物産センター",
-                      "appleQuery": "https://maps.apple.com/?q=古宇利島物産センター",
-                      "mapcode": "485 692 089*00"
-                    }
-                  }
-                ]
-              }
-            ],
-            "transit": {
-              "emoji": "🚗",
-              "text": "古宇利島→伊芸SA 約50分鐘（經名護IC上高速）"
-            }
-          },
-          {
-            "time": "12:20-12:45",
-            "emoji": "🛣",
-            "title": "️ 伊芸 SA 休息站",
-            "description": "沖繩自動車道上的海景休息站，有展望台和沖繩小吃",
-            "locations": [
-              {
-                "name": "伊芸サービスエリア",
-                "googleQuery": "https://maps.google.com/?q=伊芸サービスエリア",
-                "appleQuery": "https://maps.apple.com/?q=伊芸サービスエリア",
-                "mapcode": "33 835 282*00"
-              }
-            ],
-            "transit": {
-              "emoji": "🚗",
-              "text": "伊芸SA→AEON Mall 來客夢 約15分鐘"
-            }
-          },
-          {
-            "time": "13:00-16:00",
+            "time": "10:35-14:00",
             "emoji": "🛍",
             "titleUrl": "https://gogojp.tw/aeon-mall-rycom/",
             "title": "AEON Mall 沖繩來客夢",
-            "description": "沖繩最大購物中心！1F",
+            "description": "沖繩最大購物中心！午餐可在美食街解決",
             "locations": [
               {
                 "name": "イオンモール沖縄ライカム",
@@ -1253,7 +1167,7 @@
             }
           },
           {
-            "time": "16:30-17:00",
+            "time": "14:30-15:00",
             "emoji": "🚗",
             "title": "還車手續",
             "description": "還車前先到附近人工加油站加滿油",
@@ -1305,11 +1219,11 @@
             }
           },
           {
-            "time": "17:10",
+            "time": "15:10",
             "emoji": "🏨",
             "titleUrl": "https://dorismaworld.com/toyokoinn-makishi/",
             "title": "Check in 東橫inn",
-            "description": "放好行李後出門覓食",
+            "description": "放好行李後出門逛國際通",
             "locations": [
               {
                 "name": "東横INN那覇国際通り美栄橋駅",
@@ -1350,7 +1264,20 @@
             ]
           },
           {
-            "time": "17:30-19:00",
+            "time": "15:30-17:30",
+            "emoji": "🚶",
+            "title": "國際通自由時間",
+            "description": "逛國際通商店街、伴手禮採購、牧志公設市場等",
+            "locations": [
+              {
+                "name": "国際通り",
+                "googleQuery": "https://maps.google.com/?q=国際通り+那覇",
+                "appleQuery": "https://maps.apple.com/?q=国際通り+那覇"
+              }
+            ]
+          },
+          {
+            "time": "18:00-19:30",
             "emoji": "🍽",
             "title": "️ 那霸國際通晚餐",
             "infoBoxes": [
@@ -1413,7 +1340,7 @@
           }
         ],
         "budget": {
-          "summary": "當日預算 約 ¥21,620（NT$ 4,757）",
+          "summary": "當日預算 約 ¥19,500（NT$ 4,290）",
           "items": [
             {
               "label": "🚗 租車（3天分攤）",
@@ -1424,16 +1351,8 @@
               "amount": "¥2,000"
             },
             {
-              "label": "🛣️ 高速通行費",
-              "amount": "¥780"
-            },
-            {
-              "label": "🅿️ 心形岩停車",
-              "amount": "¥300"
-            },
-            {
-              "label": "🦐 午餐",
-              "amount": "¥2,000"
+              "label": "🍽️ 午餐（AEON 美食街）",
+              "amount": "¥1,500"
             },
             {
               "label": "🍽️ 晚餐",
@@ -1445,7 +1364,7 @@
             }
           ],
           "notes": [
-            "高速通行費：名護 IC → 北中城 IC 約 ¥780",
+            "不需高速通行費：恩納→AEON Mall 走國道58號約35分鐘",
             "還車注意：還車前需加滿油，附近找加油站",
             "還車地點：歌町/美榮橋，步行可達東橫inn"
           ]
