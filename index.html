@@ -271,7 +271,7 @@
         <section>
             <div class="day-header" id="day1">
                 <div class="dh-nav"><button class="dn active" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
-                <h2>Day 1 — 抵達＋美國村</h2>
+                <h2>Day 1</h2>
                 <div class="dh-right">7/29（三）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
@@ -444,8 +444,7 @@
         <!-- ==================== Day 2 ==================== -->
         <section>
             <div class="day-header" id="day2">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn active" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
-                <h2>Day 2 — 青之洞窟＋萬座毛</h2>
+                <h2>Day 2</h2>
                 <div class="dh-right">7/30（四）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
@@ -568,8 +567,7 @@
         <!-- ==================== Day 3 ==================== -->
         <section>
             <div class="day-header" id="day3">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn active" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
-                <h2>Day 3 — 水族館＋瀨底海灘</h2>
+                <h2>Day 3</h2>
                 <div class="dh-right">7/31（五）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
@@ -677,8 +675,7 @@
         <!-- ==================== Day 4 ==================== -->
         <section>
             <div class="day-header" id="day4">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn active" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn" data-day="5" onclick="scrollToDay(5)">D5</button></div>
-                <h2>Day 4 — 古宇利島＋回那霸</h2>
+                <h2>Day 4</h2>
                 <div class="dh-right">8/1（六）</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
@@ -822,8 +819,7 @@
         <!-- ==================== Day 5 ==================== -->
         <section>
             <div class="day-header" id="day5">
-                <div class="dh-nav"><button class="dn" data-day="1" onclick="scrollToDay(1)">D1</button><button class="dn" data-day="2" onclick="scrollToDay(2)">D2</button><button class="dn" data-day="3" onclick="scrollToDay(3)">D3</button><button class="dn" data-day="4" onclick="scrollToDay(4)">D4</button><button class="dn active" data-day="5" onclick="scrollToDay(5)">D5</button></div>
-                <h2>Day 5 — 首里城＋國際通＋回程</h2>
+                <h2>Day 5</h2>
                 <div class="dh-right">8/2（日）✈️</div>
                 <button class="dh-menu" onclick="toggleMenu(event)">≡</button>
             </div>
@@ -1081,7 +1077,8 @@
     function scrollToDay(n) {
         var el = document.getElementById('day' + n);
         if (!el) return;
-        window.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+        var rect = el.getBoundingClientRect();
+        window.scrollBy({ top: rect.top, behavior: 'smooth' });
         document.getElementById('menuDrop').classList.remove('open');
     }
     function toggleMenu(e) {
@@ -1104,13 +1101,15 @@
     (function(){
         var headers = [];
         for (var i = 1; i <= 5; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
-        var allDn = document.querySelectorAll('.dn[data-day]');
+        var day1Nav = document.querySelector('#day1 .dh-nav');
+        if (!day1Nav) return;
+        var pills = day1Nav.querySelectorAll('.dn[data-day]');
         var ticking = false;
         window.addEventListener('scroll', function() {
             if (!ticking) { requestAnimationFrame(function() {
                 var current = 0;
                 for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= 10) current = i; }
-                allDn.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
+                pills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === current + 1); });
                 ticking = false;
             }); ticking = true; }
         });
@@ -1120,13 +1119,16 @@
         document.body.classList.toggle('print-mode');
     }
     // Auto-scroll to today's day on load
-    (function(){
+    window.addEventListener('load', function(){
         var dates = ['2026-07-29','2026-07-30','2026-07-31','2026-08-01','2026-08-02'];
         var now = new Date();
         var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
         var idx = dates.indexOf(todayStr);
-        if (idx >= 0) { setTimeout(function(){ scrollToDay(idx + 1); }, 300); }
-    })();
+        if (idx >= 0) {
+            var el = document.getElementById('day' + (idx + 1));
+            if (el) el.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+    });
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
         var menu = document.getElementById('menuDrop');
