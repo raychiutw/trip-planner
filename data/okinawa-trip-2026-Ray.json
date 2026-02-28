@@ -166,7 +166,8 @@
               "location": {
                 "name": "イオン北谷店",
                 "googleQuery": "https://maps.google.com/?q=イオン北谷店",
-                "appleQuery": "https://maps.apple.com/?q=イオン北谷店"
+                "appleQuery": "https://maps.apple.com/?q=イオン北谷店",
+                "mapcode": "33 526 213*28"
               }
             }
           ]
@@ -194,12 +195,27 @@
             "time": "12:00-12:30",
             "emoji": "🚗",
             "title": "租車取車",
-            "description": "取車地點：歌町 or 美榮橋町｜辦理租車手續、熟悉車輛操作（日本靠左行駛）",
+            "description": "タイムズカー 美栄橋駅前店｜辦理租車手續、熟悉車輛操作（日本靠左行駛）",
+            "locations": [
+              {
+                "name": "タイムズカー 美栄橋駅前店",
+                "googleQuery": "https://maps.google.com/?q=タイムズカー+美栄橋駅前店",
+                "appleQuery": "https://maps.apple.com/?q=タイムズカー+美栄橋駅前店",
+                "mapcode": "33 157 393*30"
+              }
+            ],
             "infoBoxes": [
               {
                 "type": "reservation",
+                "title": "🚗 租車資訊",
                 "items": [
-                  "🔑 需備文件：台灣駕照正本＋日文譯本＋護照 ⚠️ 日文譯本可至各地監理所辦理（NT$100） 📅 租車期間：7/29 12:00 ~ 8/1 還車"
+                  "🏪 タイムズカー 美栄橋駅前店",
+                  "📍 沖縄県那覇市牧志2-17-9（美榮橋站步行 3 分）",
+                  "📅 取車：2026/07/29 12:00",
+                  "📅 還車：2026/08/01 18:00",
+                  "📋 預約編號：202600477681",
+                  "🔑 需備文件：台灣駕照正本＋日文譯本＋護照",
+                  "⚠️ 日文譯本可至各地監理所辦理（NT$100）"
                 ]
               }
             ],
@@ -941,7 +957,8 @@
                     "location": {
                       "name": "焼肉琉球の牛 恩納",
                       "googleQuery": "https://maps.google.com/?q=焼肉琉球の牛+恩納",
-                      "appleQuery": "https://maps.apple.com/?q=焼肉琉球の牛+恩納"
+                      "appleQuery": "https://maps.apple.com/?q=焼肉琉球の牛+恩納",
+                      "mapcode": "206 096 716*71"
                     },
                     "hours": "17:00~22:30",
                     "reservation": "TableCheck 預約（建議提前 7 天）",
@@ -1010,7 +1027,8 @@
               "location": {
                 "name": "ドン・キホーテ国際通り店",
                 "googleQuery": "https://maps.google.com/?q=ドン・キホーテ国際通り店",
-                "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ国際通り店"
+                "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ国際通り店",
+                "mapcode": "33 157 412*76"
               }
             }
           ]
@@ -1156,10 +1174,10 @@
             }
           },
           {
-            "time": "17:00-17:30",
+            "time": "17:10-18:00",
             "emoji": "🚗",
-            "title": "還車手續",
-            "description": "還車前先到附近人工加油站加滿油",
+            "title": "加油＋還車手續",
+            "description": "先到崇元寺店加油，再至美栄橋駅前店還車",
             "infoBoxes": [
               {
                 "type": "reservation",
@@ -1183,23 +1201,13 @@
               },
               {
                 "type": "reservation",
-                "title": "⛽ 歌町還車 → めかる給油所（人工）",
+                "title": "🚗 還車店鋪",
                 "items": [
-                  "🏪 ENEOS めかる給油所",
-                  "📍 沖縄県那覇市銘苅 226",
-                  "🕐 平日 07:00~21:00 ／ 日・祝 08:00~21:00",
-                  "✅ フルサービス（人工加油，非自助）",
-                  "📞 098-863-8770"
+                  "🏪 タイムズカー 美栄橋駅前店",
+                  "📍 沖縄県那覇市牧志2-17-9",
+                  "📅 還車時間：2026/08/01 18:00",
+                  "📋 預約編號：202600477681"
                 ]
-              },
-              {
-                "type": "parking",
-                "title": "めかる給油所位置",
-                "location": {
-                  "name": "ENEOS めかる給油所 那覇市銘苅",
-                  "googleQuery": "https://maps.google.com/?q=ENEOS+めかる給油所+那覇市銘苅",
-                  "appleQuery": "https://maps.apple.com/?q=ENEOS+めかる給油所+那覇市銘苅"
-                }
               }
             ],
             "transit": {
@@ -1208,11 +1216,11 @@
             }
           },
           {
-            "time": "17:40",
+            "time": "18:10",
             "emoji": "🏨",
             "titleUrl": "https://dorismaworld.com/toyokoinn-makishi/",
             "title": "Check in 東橫inn",
-            "description": "放好行李後出門逛國際通",
+            "description": "放好行李後出門覓食",
             "locations": [
               {
                 "name": "東横INN那覇国際通り美栄橋駅",
@@ -1253,7 +1261,7 @@
             ]
           },
           {
-            "time": "18:00-19:30",
+            "time": "18:30-20:00",
             "emoji": "🍽",
             "title": "️ 那霸國際通晚餐",
             "infoBoxes": [
@@ -1623,7 +1631,7 @@
           "items": [
             "青之洞窟浮潛：出發前 1-2 個月預約（Day 2 7/30 10:30）",
             "推薦中文店家：青潛、Natural Blue、黑潮潛水",
-            "租車期間：7/29 12:00 ~ 8/1 還車（歌町/美榮橋）",
+            "タイムズカー 美栄橋駅前店｜取車 7/29 12:00｜還車 8/1 18:00｜預約 202600477681",
             "需備文件：台灣駕照＋日文譯本＋護照"
           ]
         },

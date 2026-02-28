@@ -1326,26 +1326,6 @@
                   "googleQuery": "https://maps.google.com/?q=ENEOS+安里バイパスSS+那覇",
                   "appleQuery": "https://maps.apple.com/?q=ENEOS+安里バイパスSS+那覇"
                 }
-              },
-              {
-                "type": "reservation",
-                "title": "⛽ 備選 → めかる給油所（人工）",
-                "items": [
-                  "🏪 ENEOS めかる給油所",
-                  "📍 沖縄県那覇市銘苅226",
-                  "🕐 平日 07:00~21:00 ／ 日・祝 08:00~21:00",
-                  "✅ フルサービス（人工加油，非自助）",
-                  "📞 098-863-8770"
-                ]
-              },
-              {
-                "type": "parking",
-                "title": "めかる給油所位置",
-                "location": {
-                  "name": "ENEOS めかる給油所 那覇市銘苅",
-                  "googleQuery": "https://maps.google.com/?q=ENEOS+めかる給油所+那覇市銘苅",
-                  "appleQuery": "https://maps.apple.com/?q=ENEOS+めかる給油所+那覇市銘苅"
-                }
               }
             ]
           }
