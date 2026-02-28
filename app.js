@@ -23,26 +23,86 @@ function sanitizeHtml(html) {
     return doc.body.innerHTML;
 }
 
+/* ===== URL Routing ===== */
+var DEFAULT_SLUG = 'okinawa-trip-2026-Ray';
+function fileToSlug(f) { var m = f.match(/^data\/(.+)\.json$/); return m ? m[1] : null; }
+function slugToFile(s) { return 'data/' + s + '.json'; }
+function getUrlTrip() { return new URLSearchParams(window.location.search).get('trip'); }
+function setUrlTrip(slug) {
+    var url = new URL(window.location);
+    if (slug) url.searchParams.set('trip', slug); else url.searchParams.delete('trip');
+    history.replaceState(null, '', url);
+}
+function saveTripPref(slug) {
+    localStorage.setItem('tripPref', JSON.stringify({ slug: slug, exp: Date.now() + 180 * 86400000 }));
+}
+function loadTripPref() {
+    try { var d = JSON.parse(localStorage.getItem('tripPref')); return d && d.exp > Date.now() ? d.slug : null; }
+    catch(e) { return null; }
+}
+
 /* ===== Trip Data Loading ===== */
 var TRIP = null;
-var TRIP_FILE = localStorage.getItem('tripFile') || 'data/okinawa-trip-2026-Ray.json';
-var IS_CUSTOM = TRIP_FILE.indexOf('custom:') === 0;
+var TRIP_FILE = '';
+var IS_CUSTOM = false;
+
+// Migrate old keys
+(function() {
+    var old = localStorage.getItem('tripFile');
+    if (old && !localStorage.getItem('tripPref')) {
+        var s = fileToSlug(old);
+        if (s) saveTripPref(s);
+    }
+    localStorage.removeItem('tripFile');
+    // Migrate old short-slug tripPref (e.g. 'Ray' → 'okinawa-trip-2026-Ray')
+    try {
+        var p = JSON.parse(localStorage.getItem('tripPref'));
+        if (p && p.slug && p.slug.indexOf('/') === -1 && !p.slug.match(/\./)) {
+            var full = 'data/' + p.slug + '.json';
+            if (!full.match(/^data\/.*-.*\.json$/)) {
+                // Old short slug, clear it and let default take over
+                localStorage.removeItem('tripPref');
+            }
+        }
+    } catch(e) {}
+})();
+
+function resolveAndLoad() {
+    // 1. URL has ?trip= param
+    var slug = getUrlTrip();
+    if (slug && /^[\w-]+$/.test(slug)) { loadTrip(slugToFile(slug)); return; }
+    // 2. sessionStorage has custom trip (this session only)
+    var ck = sessionStorage.getItem('customTripKey');
+    if (ck && sessionStorage.getItem('tripData:' + ck)) { loadTrip(ck); return; }
+    // 3. localStorage has preference (6-month expiry)
+    var saved = loadTripPref();
+    if (saved) { loadTrip(slugToFile(saved)); return; }
+    // 4. Default
+    loadTrip(slugToFile(DEFAULT_SLUG));
+}
 
 function loadTrip(filename) {
     TRIP_FILE = filename;
     IS_CUSTOM = filename.indexOf('custom:') === 0;
-    localStorage.setItem('tripFile', filename);
-    // Custom uploads stored in localStorage (prefix: custom:)
+
     if (IS_CUSTOM) {
-        var raw = localStorage.getItem('tripData:' + filename);
+        // Custom upload: sessionStorage only, no URL change
+        setUrlTrip(null);
+        var raw = sessionStorage.getItem('tripData:' + filename);
         if (raw) {
             try { var data = JSON.parse(raw); TRIP = data; renderTrip(data); return; }
             catch(e) { /* fall through to error */ }
         }
         document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u81ea\u8a02\u884c\u7a0b\u5df2\u904e\u671f\uff0c\u8acb\u91cd\u65b0\u4e0a\u50b3</div>';
-        localStorage.removeItem('tripFile');
+        sessionStorage.removeItem('customTripKey');
         return;
     }
+
+    // Normal file: update URL + save preference
+    var slug = fileToSlug(filename);
+    if (slug) { setUrlTrip(slug); saveTripPref(slug); }
+    sessionStorage.removeItem('customTripKey');
+
     // Only allow relative paths (prevent fetching external URLs)
     if (/^https?:\/\//i.test(filename) || filename.indexOf('..') !== -1) {
         document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
@@ -254,7 +314,7 @@ function switchTripFile() {
                 var customBtn = document.createElement('button');
                 customBtn.className = 'menu-item';
                 customBtn.style.cssText = 'width:100%;text-align:left;padding:12px;margin-bottom:4px;border-radius:8px;border:1.5px solid var(--blue);';
-                customBtn.innerHTML = '<strong>\ud83d\udcce ' + escHtml(TRIP_FILE.replace('custom:', '')) + '</strong><br><span style="font-size:0.85em;color:var(--gray);">\u81ea\u8a02\u4e0a\u50b3\uff08localStorage\uff09</span>';
+                customBtn.innerHTML = '<strong>\ud83d\udcce ' + escHtml(TRIP_FILE.replace('custom:', '')) + '</strong><br><span style="font-size:0.85em;color:var(--gray);">\u81ea\u8a02\u4e0a\u50b3\uff08\u50c5\u9650\u672c\u6b21 session\uff09</span>';
                 customBtn.onclick = function() { document.body.removeChild(overlay); };
                 box.appendChild(customBtn);
             }
@@ -276,8 +336,10 @@ function switchTripFile() {
                             TRIP = data;
                             var key = 'custom:' + file.name;
                             TRIP_FILE = key;
-                            localStorage.setItem('tripFile', key);
-                            localStorage.setItem('tripData:' + key, ev.target.result);
+                            IS_CUSTOM = true;
+                            sessionStorage.setItem('customTripKey', key);
+                            sessionStorage.setItem('tripData:' + key, ev.target.result);
+                            setUrlTrip(null);
                             renderTrip(data);
                             window.scrollTo({top:0,behavior:'smooth'});
                         }
@@ -408,5 +470,5 @@ function initWeather(weatherDays) {
 window.addEventListener('beforeprint',function(){document.body.classList.add('print-mode');});
 window.addEventListener('afterprint',function(){document.body.classList.remove('print-mode');});
 
-// Initial load
-loadTrip(TRIP_FILE);
+// Initial load — resolve from URL → sessionStorage → localStorage → default
+resolveAndLoad();
