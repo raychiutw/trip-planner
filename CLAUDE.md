@@ -12,7 +12,7 @@ data/
 CLAUDE.md           — 開發規範
 ```
 
-- GitHub Pages 網址：https://raychiutw.github.io/okinawa-trip-2026/
+- GitHub Pages 網址：https://raychiutw.github.io/trip-planner/
 
 ## 行程參數檔格式（`data/*.json`）
 
