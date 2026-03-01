@@ -426,7 +426,7 @@ function renderChecklist(data) {
 function renderBackup(data) {
     var html = '';
     if (data.cards && data.cards.length) {
-        html += '<div class="ov-grid">';
+        html += '<div class="ov-grid ov-grid-2">';
         data.cards.forEach(function(card) {
             html += '<div class="ov-card">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';

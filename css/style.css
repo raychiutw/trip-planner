@@ -14,8 +14,10 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .ov-card p { font-size: var(--fs-md); margin: 4px 0; line-height: 1.7; }
 .ov-card a { color: var(--text); font-weight: 600; text-decoration: underline; }
 .ov-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ov-grid-2 { grid-template-columns: repeat(2, 1fr); }
 .ov-card { padding: 14px; background: var(--blue-light); border-radius: 10px; }
-.ov-card h4 { margin-top: 0; }
+.ov-card h4 { margin-top: 0; position: relative; padding-left: 18px; }
+.ov-card h4::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
 .flight-row { display: flex; align-items: center; padding: 10px 12px; border-radius: 12px; margin-bottom: 0; gap: 8px; }
 .flight-row .flight-icon { font-size: 1.4rem; flex-shrink: 0; display: flex; align-items: center; }
 .flight-row .flight-icon .svg-icon { width: 1.4rem; height: 1.4rem; }
