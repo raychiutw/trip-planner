@@ -20,13 +20,17 @@
 <body>
     <div class="container">
         <div class="sticky-nav" id="stickyNav">
-            <button class="dh-menu" data-action="toggle-menu">≡</button>
+            <button class="dh-menu" data-action="toggle-menu" aria-label="選單"><span class="hamburger-icon"><span></span><span></span><span></span></span></button>
             <div class="dh-nav" id="navPills"></div>
         </div>
         <div id="tripContent"><div style="text-align:center;padding:40px;color:var(--gray);">⏳ 載入行程資料中...</div></div>
     </div>
-    <div class="menu-dropdown" id="menuDrop">
-        <button class="menu-close" data-action="toggle-menu">✕</button>
+    <div class="menu-backdrop" id="menuBackdrop"></div>
+    <div class="menu-drawer" id="menuDrop">
+        <div class="menu-drawer-header">
+            <span class="menu-drawer-title">選單</span>
+            <button class="menu-close" data-action="toggle-menu">✕</button>
+        </div>
         <div class="menu-grid" id="menuGrid"></div>
     </div>
     <button class="print-exit-btn" id="printExitBtn" data-action="toggle-print">✕ 結束列印模式</button>

@@ -864,7 +864,7 @@ function toggleCol(el) {
     if (arrow) arrow.textContent = isOpen ? '－' : '＋';
 }
 function toggleDark() {
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
     document.body.classList.toggle('dark');
     var isDark = document.body.classList.contains('dark');
     lsSet('dark', isDark ? '1' : '0');
@@ -887,16 +887,19 @@ function scrollToSec(id) {
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
     history.replaceState(null, '', '#' + id);
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
 function toggleMenu() {
     var menu = document.getElementById('menuDrop');
+    var backdrop = document.getElementById('menuBackdrop');
     if (menu.classList.contains('open')) {
         menu.classList.remove('open');
+        backdrop.classList.remove('open');
         document.body.style.overflow = '';
     } else {
         menu.classList.add('open');
+        backdrop.classList.add('open');
         document.body.style.overflow = 'hidden';
     }
 }
@@ -909,7 +912,7 @@ function toggleHw(el) {
     }
 }
 function togglePrint() {
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
     var entering = !document.body.classList.contains('print-mode');
     if (entering && document.body.classList.contains('dark')) {
         document.body.dataset.wasDark = '1';
@@ -928,7 +931,7 @@ function togglePrint() {
 
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
     fetch('data/trips.json?t=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(trips) {
@@ -1064,6 +1067,9 @@ function autoScrollToday(dates) {
 /* ===== Central Event Delegation ===== */
 document.addEventListener('click', function(e) {
     var t = e.target;
+
+    // 0. Backdrop click closes menu
+    if (t.id === 'menuBackdrop') { toggleMenu(); return; }
 
     // 1. data-action buttons (menu, nav, toggles)
     var actionEl = t.closest('[data-action]');
