@@ -1017,7 +1017,6 @@ function buildMenu(data) {
     var sidebarNav = document.getElementById('sidebarNav');
     if (sidebarNav) {
         var sHtml = '';
-        sHtml += '<div class="sidebar-section-title">導覽</div>';
         var navItems = [
             { icon: '✈️', label: '航班資訊', target: 'sec-flight' },
             { icon: '✅', label: '出發前確認', target: 'sec-checklist' },
@@ -1031,7 +1030,6 @@ function buildMenu(data) {
                    + '<span class="item-label">' + escHtml(item.label) + '</span></button>';
         });
         sHtml += '<div class="menu-sep"></div>';
-        sHtml += '<div class="sidebar-section-title">設定</div>';
         sHtml += '<button class="menu-item" data-action="toggle-dark" title="深色模式"><span class="item-icon">🌙</span><span class="item-label">深色模式</span></button>';
         sHtml += '<button class="menu-item" data-action="toggle-print" title="列印模式"><span class="item-icon">🖨️</span><span class="item-label">列印模式</span></button>';
         sHtml += '<div class="menu-sep" style="margin-top:auto"></div>';
