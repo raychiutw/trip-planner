@@ -67,3 +67,4 @@ tests/              unit/  integration/  json/  e2e/
 
 - Teammates 用 **sonnet** 模型
 - 適合場景：多檔搜尋、多餐廳查詢、平行編輯、測試與修改平行
+- 獨立且不需等待結果的 agent 使用 `run_in_background: true` 背景執行，主線程繼續處理其他工作
