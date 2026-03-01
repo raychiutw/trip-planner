@@ -1,4 +1,6 @@
-檢查 GitHub Issues 中的待處理行程修改請求。
+處理旅伴送出的行程修改請求，自動套用到行程 JSON 並部署。
+
+⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
 步驟：
 1. git pull origin master

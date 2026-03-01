@@ -25,7 +25,7 @@ tests/                  — 測試（詳見「測試」章節）
 .claude/commands/       — Cowork Skills（已簽入版控）
   add-spot.md           — 將景點/餐廳加入行程
   deploy.md             — Commit + push + 開啟 GitHub Pages
-  process-requests.md   — 處理 GitHub Issues 行程修改請求
+  render-trip.md   — 處理 GitHub Issues 行程修改請求
 CLAUDE.md               — 開發規範
 ```
 
@@ -310,7 +310,7 @@ CLAUDE.md               — 開發規範
 ```
 Trip 頁面 → 右下角 FAB → 導向 edit.html?trip={slug}
 Edit 頁面 → 首次設定 PAT + 綁定行程 → 輸入修改文字 → POST GitHub Issue (label: trip-edit)
-Cowork /process-requests → 讀 Issue → 改 trip JSON → npm test → commit push → close Issue
+Cowork /render-trip → 讀 Issue → 改 trip JSON → npm test → commit push → close Issue
 ```
 
 #### 安全設計
@@ -328,7 +328,7 @@ Cowork /process-requests → 讀 Issue → 改 trip JSON → npm test → commit
 }
 ```
 
-#### Cowork Skill（`/process-requests`）
+#### Cowork Skill（`/render-trip`）
 - 定時執行，讀取 `--label trip-edit --state open` 的 Issue
 - 解析 body JSON → 修改對應 trip JSON → `git diff --name-only` 白名單檢查
 - 通過 → npm test → commit push → close Issue + comment
