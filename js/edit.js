@@ -86,17 +86,6 @@
         });
     }
 
-    /* ===== Render: Forbidden ===== */
-    function renderForbidden(config) {
-        var html = '<div class="edit-forbidden">';
-        html += '<div class="edit-forbidden-icon">⛔</div>';
-        html += '<h3>此行程屬於其他人</h3>';
-        html += '<p>你只能編輯《' + escHtml(config.tripName) + '》</p>';
-        html += '<a href="index.html?trip=' + encodeURIComponent(config.tripSlug) + '" class="edit-btn edit-btn-primary" style="display:inline-block;width:auto;padding:12px 24px;text-decoration:none;">前往我的行程</a>';
-        html += '</div>';
-        editMain.innerHTML = html;
-    }
-
     /* ===== Render: Edit Form ===== */
     function renderEditForm(config) {
         var html = '';
@@ -221,9 +210,10 @@
             return;
         }
 
-        // Ownership check
+        // URL 帶不同行程 → 切換到該行程
         if (urlTrip && config.tripSlug !== urlTrip) {
-            renderForbidden(config);
+            clearEditConfig();
+            renderSetup();
             return;
         }
 

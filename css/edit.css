@@ -41,12 +41,6 @@
 .edit-status.success { background: #D1FAE5; color: #065F46; }
 .edit-status.error { background: #FEE2E2; color: #991B1B; }
 
-/* ===== Forbidden Screen ===== */
-.edit-forbidden { text-align: center; padding: 40px 20px; }
-.edit-forbidden-icon { font-size: 3rem; margin-bottom: 12px; }
-.edit-forbidden h3 { font-size: var(--fs-lg); margin-bottom: 8px; color: var(--text); }
-.edit-forbidden p { font-size: var(--fs-md); color: var(--gray); margin-bottom: 16px; line-height: 1.6; }
-
 /* ===== Request History ===== */
 .edit-history { margin-top: 24px; }
 .edit-history h3 { font-size: var(--fs-md); font-weight: 600; color: var(--gray); margin-bottom: 8px; }
