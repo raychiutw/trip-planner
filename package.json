@@ -1,0 +1,16 @@
+{
+  "name": "trip-planner",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "jsdom": "^26.0.0",
+    "serve": "^14.2.5",
+    "vitest": "^3.0.0"
+  }
+}

@@ -239,59 +239,1313 @@
       "id": 1,
       "date": "7/2（四）",
       "label": "那霸",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-1\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">15:20-17:20</span><span class=\"tl-title\">🛫 桃園國際機場 出發</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">辦理登機、出境</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=25.0797,121.2342\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=25.0797,121.2342\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ ✈️ 飛行 約1小時20分</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">19:40-20:40</span><span class=\"tl-title\">🛬 抵達那霸機場</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">入境、領取行李</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2066,127.6476\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2066,127.6476\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約37分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">21:17-22:17</span><span class=\"tl-title\">🏨 NAHA新都心HOTEL</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">寄放行李</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3282,127.6947\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3282,127.6947\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約12分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">22:29</span><span class=\"tl-title\">🏨 沖繩那霸美居飯店 Check in</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">Mercure Okinawa Naha</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2148,127.6724\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2148,127.6724\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "hotel": {
+          "name": "沖繩那霸美居飯店",
+          "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "details": [
+            "📍 那霸市壺川 3-3-19",
+            "🌙 Day 1 Check in 22:29"
+          ],
+          "subs": []
+        },
+        "timeline": [
+          {
+            "time": "15:20-17:20",
+            "emoji": "🛫",
+            "title": "桃園國際機場 出發",
+            "description": "辦理登機、出境",
+            "locations": [
+              {
+                "name": "桃園國際機場",
+                "googleQuery": "https://maps.google.com/?q=桃園國際機場",
+                "appleQuery": "https://maps.apple.com/?q=桃園國際機場"
+              }
+            ],
+            "transit": {
+              "emoji": "✈️",
+              "text": "飛行 約1小時20分"
+            }
+          },
+          {
+            "time": "19:40-20:40",
+            "emoji": "🛬",
+            "title": "抵達那霸機場",
+            "description": "入境、領取行李",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場",
+                "mapcode": "33 122 298*54"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約37分鐘"
+            }
+          },
+          {
+            "time": "21:17-22:17",
+            "emoji": "🏨",
+            "title": "NAHA新都心HOTEL",
+            "description": "寄放行李",
+            "locations": [
+              {
+                "name": "ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "mapcode": "33 548 827*76"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約12分鐘"
+            }
+          },
+          {
+            "time": "22:29",
+            "emoji": "🏨",
+            "title": "沖繩那霸美居飯店 Check in",
+            "description": "Mercure Okinawa Naha",
+            "locations": [
+              {
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 2,
       "date": "7/3（五）",
       "label": "浦添・美國村",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-2\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head\"><span class=\"tl-time\">09:00</span><span class=\"tl-title\">🏨 沖繩那霸美居飯店 出發</span></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">09:23-10:23</span><span class=\"tl-title\">🏨 NAHA新都心HOTEL</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">接人</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3282,127.6947\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3282,127.6947\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約5分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">10:28-11:28</span><span class=\"tl-title\">🛒 天久琉貿樂市</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">天久りうぼう — 超市採買</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3325,127.6891\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3325,127.6891\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約7分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">11:35-12:35</span><span class=\"tl-title\">🛍️ San-A Naha Main Place</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">サンエー那覇メインプレイス — 購物中心</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3299,127.6974\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3299,127.6974\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約18分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">12:53-14:53</span><span class=\"tl-title\">🍽️ 敘敘苑 沖繩浦添PARCO CITY店</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2867,127.6591\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2867,127.6591\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">14:54-18:54</span><span class=\"tl-title\">🛍️ PARCO CITY 購物</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">グラニフ 沖縄 PARCO CITY 等店家逛街購物</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2867,127.6591\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2867,127.6591\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約14分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">19:08-20:08</span><span class=\"tl-title\">🌳 浦添大公園</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">長溜滑梯等設施，適合親子</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2657,127.7417\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2657,127.7417\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約24分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">20:32-23:32</span><span class=\"tl-title\">🏖️ 美國村</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">アメリカンビレッジ — 異國風情商圈、逛街購物、夜景</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3264,127.7636\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3264,127.7636\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約5分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">23:37-00:37</span><span class=\"tl-title\">🍽️ plate jam</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">宵夜</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3338,127.7695\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3338,127.7695\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約27分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">01:04</span><span class=\"tl-title\">🏨 BUZZ RESORT Check in</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">Design Resort Nakadoma inn — 恩納村住宿</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4554,127.7777\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4554,127.7777\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "hotel": {
+          "name": "BUZZ RESORT Chatan",
+          "url": "https://www.buzz-resort.com/",
+          "details": [
+            "📍 北谷町美浜",
+            "🌙 Day 2 Check in 01:04（翌日深夜）"
+          ],
+          "subs": []
+        },
+        "timeline": [
+          {
+            "time": "09:00",
+            "emoji": "🚗",
+            "title": "沖繩旅毛 取車",
+            "description": "7座車 Toyota Alphard｜4大3小（14、15、10歲）",
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "🚗 租車資訊",
+                "items": [
+                  "🏪 店家：沖繩旅毛",
+                  "🚙 車型：Toyota Alphard（7人座）",
+                  "👨‍👩‍👧‍👦 4大3小（14、15、10歲）",
+                  "📅 取車：7/3 09:00 那霸新都心",
+                  "📅 還車：7/7 18:00 那霸新都心"
+                ]
+              }
+            ]
+          },
+          {
+            "time": "09:00",
+            "emoji": "🏨",
+            "title": "沖繩那霸美居飯店 出發"
+          },
+          {
+            "time": "09:23-10:23",
+            "emoji": "🏨",
+            "title": "NAHA新都心HOTEL",
+            "description": "接人",
+            "locations": [
+              {
+                "name": "ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "mapcode": "33 548 827*76"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約5分鐘"
+            }
+          },
+          {
+            "time": "10:28-11:28",
+            "emoji": "🛒",
+            "title": "天久琉貿樂市",
+            "titleUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
+            "description": "天久りうぼう — 超市採買",
+            "locations": [
+              {
+                "name": "天久りうぼう楽市",
+                "googleQuery": "https://maps.google.com/?q=天久りうぼう楽市",
+                "appleQuery": "https://maps.apple.com/?q=天久りうぼう楽市",
+                "mapcode": "33 577 387*18"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約7分鐘"
+            }
+          },
+          {
+            "time": "11:35-12:35",
+            "emoji": "🛍️",
+            "title": "San-A Naha Main Place",
+            "titleUrl": "https://www.jathao.com/2015/10/main-placedfs-t-galleria-okinawa.html",
+            "description": "サンエー那覇メインプレイス — 購物中心",
+            "locations": [
+              {
+                "name": "サンエー那覇メインプレイス",
+                "googleQuery": "https://maps.google.com/?q=サンエー那覇メインプレイス",
+                "appleQuery": "https://maps.apple.com/?q=サンエー那覇メインプレイス",
+                "mapcode": "33 578 117*61"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約18分鐘"
+            }
+          },
+          {
+            "time": "12:53-14:53",
+            "emoji": "🍽️",
+            "title": "午餐",
+            "titleUrl": "https://christy0104.pixnet.net/blog/post/357435489",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🥩",
+                    "category": "高級燒肉",
+                    "name": "敘敘苑 沖繩浦添PARCO CITY店",
+                    "desc": "叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐",
+                    "price": "¥2,400~",
+                    "location": {
+                      "name": "サンエー浦添西海岸パルコシティ",
+                      "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
+                      "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
+                      "mapcode": "33 394 819*12"
+                    },
+                    "hours": "11:00~21:00（午餐 11:00~15:00）",
+                    "reservation": "ホットペッパー預約",
+                    "reservationUrl": "https://www.hotpepper.jp/strJ001257517/",
+                    "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "14:54-18:54",
+            "emoji": "🛍️",
+            "title": "PARCO CITY 購物",
+            "titleUrl": "https://ajunfun.tw/parco-city/",
+            "description": "グラニフ 沖縄 PARCO CITY 等店家逛街購物",
+            "locations": [
+              {
+                "name": "サンエー浦添西海岸パルコシティ",
+                "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
+                "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
+                "mapcode": "33 394 819*12"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約14分鐘"
+            }
+          },
+          {
+            "time": "19:08-20:08",
+            "emoji": "🌳",
+            "title": "浦添大公園",
+            "titleUrl": "https://livia1028.pixnet.net/blog/post/577990066",
+            "description": "長溜滑梯等設施，適合親子",
+            "locations": [
+              {
+                "name": "浦添大公園",
+                "googleQuery": "https://maps.google.com/?q=浦添大公園",
+                "appleQuery": "https://maps.apple.com/?q=浦添大公園",
+                "mapcode": "33 344 367*55"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約24分鐘"
+            }
+          },
+          {
+            "time": "20:32-23:32",
+            "emoji": "🏖️",
+            "title": "美國村",
+            "titleUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+            "description": "アメリカンビレッジ — 異國風情商圈、逛街購物、夜景",
+            "locations": [
+              {
+                "name": "美浜アメリカンビレッジ",
+                "googleQuery": "https://maps.google.com/?q=美浜アメリカンビレッジ",
+                "appleQuery": "https://maps.apple.com/?q=美浜アメリカンビレッジ",
+                "mapcode": "33 556 625*14"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約5分鐘"
+            }
+          },
+          {
+            "time": "23:37-00:37",
+            "emoji": "🍽️",
+            "title": "plate jam",
+            "description": "宵夜",
+            "locations": [
+              {
+                "name": "plate jam 北谷",
+                "googleQuery": "https://maps.google.com/?q=plate+jam+北谷",
+                "appleQuery": "https://maps.apple.com/?q=plate+jam+北谷",
+                "mapcode": "33 587 527*50"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約27分鐘"
+            }
+          },
+          {
+            "time": "01:04",
+            "emoji": "🏨",
+            "title": "BUZZ RESORT Check in",
+            "description": "Design Resort Nakadoma inn — 恩納村住宿",
+            "locations": [
+              {
+                "name": "Buzz Resort Chatan",
+                "googleQuery": "https://maps.google.com/?q=Buzz+Resort+Chatan",
+                "appleQuery": "https://maps.apple.com/?q=Buzz+Resort+Chatan",
+                "mapcode": "206 123 166*75"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 3,
       "date": "7/4（六）",
       "label": "殘波岬・萬座毛",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-3\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head\"><span class=\"tl-time\">08:00</span><span class=\"tl-title\">🏨 BUZZ RESORT 出發</span></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">08:05-11:05</span><span class=\"tl-title\">🎣 前兼久漁港</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">漁港體驗活動（約3小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4566,127.7812\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4566,127.7812\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約20分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">11:25-12:25</span><span class=\"tl-title\">🏖️ 殘波岬公園</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">残波岬公園 — 壯觀海岸線、燈塔</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4421,127.7125\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4421,127.7125\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約30分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">12:55-13:25</span><span class=\"tl-title\">🌊 萬座毛</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">万座毛 — 象鼻岩自然景觀（約30分鐘）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.5047,127.8512\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.5047,127.8512\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約20分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">13:45-14:45</span><span class=\"tl-title\">🛒 業務超市 宇流麻石川店</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">業務スーパー うるま石川店 — 食材採買</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4349,127.8281\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4349,127.8281\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約29分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">15:14-16:14</span><span class=\"tl-title\">🏨 HOPE VILLA Onnason</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">HOPE VILLA Onnason（恩納村）— Check in</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4826,127.8431\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4826,127.8431\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約47分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">17:01-17:31</span><span class=\"tl-title\">🏖️ Emerald Beach 翡翠海灘</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">海洋博公園內的美麗海灘（約30分鐘）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.6933,127.8776\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.6933,127.8776\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約50分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">18:21</span><span class=\"tl-title\">🏠 返回恩納村</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">回程休息</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=null\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?q=null\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "hotel": {
+          "name": "HOPE VILLA Onnason",
+          "url": "https://hopevilla.jp/",
+          "details": [
+            "📍 恩納村",
+            "🌙 Day 3 Check in 15:14"
+          ],
+          "subs": []
+        },
+        "timeline": [
+          {
+            "time": "08:00",
+            "emoji": "🏨",
+            "title": "BUZZ RESORT 出發"
+          },
+          {
+            "time": "08:05-11:05",
+            "emoji": "🎣",
+            "title": "前兼久漁港",
+            "description": "漁港體驗活動（約3小時）",
+            "locations": [
+              {
+                "name": "前兼久漁港",
+                "googleQuery": "https://maps.google.com/?q=前兼久漁港",
+                "appleQuery": "https://maps.apple.com/?q=前兼久漁港",
+                "mapcode": "206 123 299*87"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約20分鐘"
+            }
+          },
+          {
+            "time": "11:25-12:25",
+            "emoji": "🏖️",
+            "title": "殘波岬公園",
+            "titleUrl": "https://janotts.pixnet.net/blog/post/31382013",
+            "description": "残波岬公園 — 壯觀海岸線、燈塔",
+            "locations": [
+              {
+                "name": "残波岬公園",
+                "googleQuery": "https://maps.google.com/?q=残波岬公園",
+                "appleQuery": "https://maps.apple.com/?q=残波岬公園",
+                "mapcode": "1005 685 531*71"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約30分鐘"
+            }
+          },
+          {
+            "time": "12:55-13:25",
+            "emoji": "🌊",
+            "title": "萬座毛",
+            "titleUrl": "https://travelholic0202.pixnet.net/blog/post/97932943",
+            "description": "万座毛 — 象鼻岩自然景觀（約30分鐘）",
+            "locations": [
+              {
+                "name": "万座毛",
+                "googleQuery": "https://maps.google.com/?q=万座毛",
+                "appleQuery": "https://maps.apple.com/?q=万座毛",
+                "mapcode": "206 312 071*08"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約20分鐘"
+            }
+          },
+          {
+            "time": "13:45-14:45",
+            "emoji": "🛒",
+            "title": "業務超市 宇流麻石川店",
+            "description": "業務スーパー うるま石川店 — 食材採買",
+            "locations": [
+              {
+                "name": "業務スーパー うるま石川店",
+                "googleQuery": "https://maps.google.com/?q=業務スーパー+うるま石川店",
+                "appleQuery": "https://maps.apple.com/?q=業務スーパー+うるま石川店",
+                "mapcode": "206 039 648*50"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約29分鐘"
+            }
+          },
+          {
+            "time": "15:14-16:14",
+            "emoji": "🏨",
+            "title": "HOPE VILLA Onnason",
+            "description": "HOPE VILLA Onnason（恩納村）— Check in",
+            "locations": [
+              {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason",
+                "mapcode": "206 221 372*23"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約47分鐘"
+            }
+          },
+          {
+            "time": "17:01-17:31",
+            "emoji": "🏖️",
+            "title": "Emerald Beach 翡翠海灘",
+            "titleUrl": "https://navyblue77.pixnet.net/blog/posts/3047639241",
+            "description": "海洋博公園內的美麗海灘（約30分鐘）",
+            "locations": [
+              {
+                "name": "エメラルドビーチ",
+                "googleQuery": "https://maps.google.com/?q=エメラルドビーチ",
+                "appleQuery": "https://maps.apple.com/?q=エメラルドビーチ",
+                "mapcode": "553 075 646*08"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約50分鐘"
+            }
+          },
+          {
+            "time": "18:21",
+            "emoji": "🏠",
+            "title": "返回恩納村",
+            "description": "回程休息",
+            "locations": [
+              {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 4,
       "date": "7/5（日）",
       "label": "美麗海・古宇利",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-4\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head\"><span class=\"tl-time\">09:00</span><span class=\"tl-title\">🏨 HOPE VILLA Onnason 出發</span></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">09:26-11:26</span><span class=\"tl-title\">🍍 名護鳳梨園</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">ナゴパイナップルパーク — 鳳梨主題園區、試吃區（約2小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.6102,127.9048\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.6102,127.9048\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約2分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">11:28-12:28</span><span class=\"tl-title\">🍽️ 百年古家 大家 阿古豬</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">百年古家 大家 うふやー — 古民家餐廳、阿古豬料理</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.5928,127.9209\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.5928,127.9209\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約26分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">12:54-14:54</span><span class=\"tl-title\">🐠 沖繩美麗海水族館</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">沖縄美ら海水族館 — 黑潮之海大水槽（約2小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.694,127.8779\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.694,127.8779\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約34分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">15:28-15:58</span><span class=\"tl-title\">🗼 古宇利海洋塔</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">古宇利オーシャンタワー — 觀景塔、眺望古宇利大橋（約30分鐘）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.7064,128.0254\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.7064,128.0254\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約2分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">16:00-17:00</span><span class=\"tl-title\">🍽️ 古宇利蝦蝦飯</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">KOURI SHRIMP — 人氣蒜蝦飯</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.6979,128.0164\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.6979,128.0164\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約1分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">17:01-19:01</span><span class=\"tl-title\">🏝️ 古宇利島</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">古宇利島 — 環島兜風、沙灘散步（約2小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.6964,128.0161\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.6964,128.0161\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約29分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">19:30-20:30</span><span class=\"tl-title\">🍜 暖暮拉麵 名護店</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">ラーメン暖暮 名護店 — 人氣豚骨拉麵</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.5916,127.977\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.5916,127.977\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約28分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">20:58</span><span class=\"tl-title\">🏨 HOPE VILLA Onnason</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">返回住宿休息</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4826,127.8431\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4826,127.8431\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "hotel": {
+          "name": "HOPE VILLA Onnason",
+          "url": "https://hopevilla.jp/",
+          "details": [
+            "📍 恩納村",
+            "🌙 Day 3~4 連住"
+          ],
+          "subs": []
+        },
+        "timeline": [
+          {
+            "time": "09:00",
+            "emoji": "🏨",
+            "title": "HOPE VILLA Onnason 出發"
+          },
+          {
+            "time": "09:26-11:26",
+            "emoji": "🍍",
+            "title": "名護鳳梨園",
+            "titleUrl": "https://bobbyfun.tw/2024-01-11-2732/",
+            "description": "ナゴパイナップルパーク — 鳳梨主題園區、試吃區（約2小時）",
+            "locations": [
+              {
+                "name": "ナゴパイナップルパーク",
+                "googleQuery": "https://maps.google.com/?q=ナゴパイナップルパーク",
+                "appleQuery": "https://maps.apple.com/?q=ナゴパイナップルパーク",
+                "mapcode": "206 678 684*87"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約2分鐘"
+            }
+          },
+          {
+            "time": "11:28-12:28",
+            "emoji": "🍽️",
+            "title": "午餐",
+            "titleUrl": "https://s2905074.pixnet.net/blog/post/468301733",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🍽️",
+                    "category": "沖繩料理・阿古豬",
+                    "name": "百年古家 大家",
+                    "desc": "百年古家 大家 うふやー — 古民家餐廳、阿古豬料理",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "百年古家 大家",
+                      "googleQuery": "https://maps.google.com/?q=百年古家+大家",
+                      "appleQuery": "https://maps.apple.com/?q=百年古家+大家",
+                      "mapcode": "206 620 592*27"
+                    },
+                    "hours": "午 11:00~15:30／晚 17:30~21:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
+                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約26分鐘"
+            }
+          },
+          {
+            "time": "12:54-14:54",
+            "emoji": "🐠",
+            "title": "沖繩美麗海水族館",
+            "titleUrl": "https://bobbyfun.tw/2024-01-08-2706/",
+            "description": "沖縄美ら海水族館 — 黑潮之海大水槽（約2小時）",
+            "locations": [
+              {
+                "name": "沖縄美ら海水族館",
+                "googleQuery": "https://maps.google.com/?q=沖縄美ら海水族館",
+                "appleQuery": "https://maps.apple.com/?q=沖縄美ら海水族館",
+                "mapcode": "553 075 737*66"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約34分鐘"
+            }
+          },
+          {
+            "time": "15:28-15:58",
+            "emoji": "🗼",
+            "title": "古宇利海洋塔",
+            "titleUrl": "https://tsnio.com/kouri-ocean-tower/",
+            "description": "古宇利オーシャンタワー — 觀景塔、眺望古宇利大橋（約30分鐘）",
+            "locations": [
+              {
+                "name": "古宇利オーシャンタワー",
+                "googleQuery": "https://maps.google.com/?q=古宇利オーシャンタワー",
+                "appleQuery": "https://maps.apple.com/?q=古宇利オーシャンタワー",
+                "mapcode": "485 723 248*36"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約2分鐘"
+            }
+          },
+          {
+            "time": "16:00-17:00",
+            "emoji": "🍽️",
+            "title": "午餐",
+            "titleUrl": "https://s2905074.pixnet.net/blog/post/576369016",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🦐",
+                    "category": "夏威夷蒜香蝦飯",
+                    "name": "古宇利蝦蝦飯",
+                    "desc": "KOURI SHRIMP — 人氣蒜蝦飯",
+                    "price": "¥1,300~",
+                    "location": {
+                      "name": "古宇利島 蝦蝦飯",
+                      "googleQuery": "https://maps.google.com/?q=古宇利島+蝦蝦飯",
+                      "appleQuery": "https://maps.apple.com/?q=古宇利島+蝦蝦飯",
+                      "mapcode": "485 692 246*56"
+                    },
+                    "hours": "11:00~18:00",
+                    "reservation": null,
+                    "blogUrl": "https://kafu.tw/kouri-shrimp/"
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約1分鐘"
+            }
+          },
+          {
+            "time": "17:01-19:01",
+            "emoji": "🏝️",
+            "title": "古宇利島",
+            "titleUrl": "https://okinawa.letsgojp.com/archives/392405/",
+            "description": "古宇利島 — 環島兜風、沙灘散步（約2小時）",
+            "locations": [
+              {
+                "name": "古宇利島",
+                "googleQuery": "https://maps.google.com/?q=古宇利島",
+                "appleQuery": "https://maps.apple.com/?q=古宇利島",
+                "mapcode": "485 692 065*25"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約29分鐘"
+            }
+          },
+          {
+            "time": "19:30-20:30",
+            "emoji": "🍜",
+            "title": "晚餐",
+            "titleUrl": "https://hanblog.tw/ramendanbo/",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🍜",
+                    "category": "豚骨拉麵",
+                    "name": "暖暮拉麵 名護店",
+                    "desc": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "暖暮 名護店",
+                      "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
+                      "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
+                      "mapcode": "206 627 464*87"
+                    },
+                    "hours": "10:00~24:00",
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約28分鐘"
+            }
+          },
+          {
+            "time": "20:58",
+            "emoji": "🏨",
+            "title": "HOPE VILLA Onnason",
+            "description": "返回住宿休息",
+            "locations": [
+              {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason",
+                "mapcode": "206 221 372*23"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 5,
       "date": "7/6（一）",
       "label": "來客夢・國際通",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-5\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head\"><span class=\"tl-time\">09:00</span><span class=\"tl-title\">🏨 HOPE VILLA Onnason 出發</span></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">09:12-10:12</span><span class=\"tl-title\">🏖️ Ryukyu Beach Club</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">海灘活動</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.4744,127.7972\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.4744,127.7972\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約36分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">10:48-13:48</span><span class=\"tl-title\">🛍️ 永旺夢樂城沖繩來客夢</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">イオンモール沖縄ライカム — 大型購物中心（約3小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3389,127.7791\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3389,127.7791\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約3分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">13:51-14:51</span><span class=\"tl-title\">🎮 沖繩寶可夢中心</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">ポケモンセンターオキナワ — 來客夢1F</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3389,127.7791\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3389,127.7791\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約34分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">15:25-17:55</span><span class=\"tl-title\">🛍️ 國際通商店街</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">那覇国際通り — 逛街購物（約2.5小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2158,127.6856\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2158,127.6856\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約6分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">18:01-19:01</span><span class=\"tl-title\">🍽️ 爐端燒 Uguisu</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">炉端ダイニング ウグイス — 晚餐</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.216,127.6789\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.216,127.6789\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約9分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">19:10-20:10</span><span class=\"tl-title\">🏨 NAHA新都心HOTEL</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">送人</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3282,127.6947\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3282,127.6947\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約12分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">20:22</span><span class=\"tl-title\">🏨 沖繩那霸美居飯店 Check in</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">Mercure Okinawa Naha</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2148,127.6724\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2148,127.6724\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "hotel": {
+          "name": "沖繩那霸美居飯店",
+          "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "details": [
+            "📍 那霸市壺川 3-3-19",
+            "🌙 Day 5 Check in 20:22"
+          ],
+          "subs": []
+        },
+        "timeline": [
+          {
+            "time": "09:00",
+            "emoji": "🏨",
+            "title": "HOPE VILLA Onnason 出發"
+          },
+          {
+            "time": "09:12-10:12",
+            "emoji": "🏖️",
+            "title": "Ryukyu Beach Club",
+            "description": "海灘活動",
+            "locations": [
+              {
+                "name": "Ryukyu Beach Club",
+                "googleQuery": "https://maps.google.com/?q=Ryukyu+Beach+Club",
+                "appleQuery": "https://maps.apple.com/?q=Ryukyu+Beach+Club",
+                "mapcode": "206 185 416*17"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約36分鐘"
+            }
+          },
+          {
+            "time": "10:48-13:48",
+            "emoji": "🛍️",
+            "title": "永旺夢樂城沖繩來客夢",
+            "titleUrl": "https://tisshuang.com/blog/post/aeon-mall",
+            "description": "イオンモール沖縄ライカム — 大型購物中心（約3小時）",
+            "locations": [
+              {
+                "name": "イオンモール沖縄ライカム",
+                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
+                "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム",
+                "mapcode": "33 618 171*12"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約3分鐘"
+            }
+          },
+          {
+            "time": "13:51-14:51",
+            "emoji": "🎮",
+            "title": "沖繩寶可夢中心",
+            "description": "ポケモンセンターオキナワ — 來客夢1F",
+            "locations": [
+              {
+                "name": "イオンモール沖縄ライカム",
+                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
+                "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム",
+                "mapcode": "33 618 171*12"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約34分鐘"
+            }
+          },
+          {
+            "time": "15:25-17:55",
+            "emoji": "🛍️",
+            "title": "國際通商店街",
+            "titleUrl": "https://bluehero.pixnet.net/blog/post/41779315",
+            "description": "那覇国際通り — 逛街購物（約2.5小時）",
+            "locations": [
+              {
+                "name": "国際通り 那覇",
+                "googleQuery": "https://maps.google.com/?q=国際通り+那覇",
+                "appleQuery": "https://maps.apple.com/?q=国際通り+那覇",
+                "mapcode": "33 157 375*85"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約6分鐘"
+            }
+          },
+          {
+            "time": "18:01-19:01",
+            "emoji": "🍽️",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🔥",
+                    "category": "爐端燒・居酒屋",
+                    "name": "爐端燒 Uguisu",
+                    "desc": "炉端ダイニング ウグイス — 沖繩炭火料理",
+                    "price": "¥3,000~",
+                    "location": {
+                      "name": "炉端焼き うぐいす 那覇",
+                      "googleQuery": "https://maps.google.com/?q=炉端焼き+うぐいす+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=炉端焼き+うぐいす+那覇",
+                      "mapcode": "33 156 410*77"
+                    },
+                    "hours": "17:30~24:00（週四公休）",
+                    "reservation": "ホットペッパー預約",
+                    "reservationUrl": "https://www.hotpepper.jp/strJ004445055/"
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約9分鐘"
+            }
+          },
+          {
+            "time": "19:10-20:10",
+            "emoji": "🏨",
+            "title": "NAHA新都心HOTEL",
+            "description": "送人",
+            "locations": [
+              {
+                "name": "ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "mapcode": "33 548 827*76"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約12分鐘"
+            }
+          },
+          {
+            "time": "20:22",
+            "emoji": "🏨",
+            "title": "沖繩那霸美居飯店 Check in",
+            "description": "Mercure Okinawa Naha",
+            "locations": [
+              {
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 6,
       "date": "7/7（二）",
       "label": "牧志・瀨長島",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-6\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head\"><span class=\"tl-time\">09:00</span><span class=\"tl-title\">🏨 沖繩那霸美居飯店 出發</span></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">09:12-10:12</span><span class=\"tl-title\">🏨 NAHA新都心HOTEL</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">接人</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3282,127.6947\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3282,127.6947\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約9分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">10:21-11:51</span><span class=\"tl-title\">🏪 第一牧志公設市場</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">鮮魚、海產、沖繩特產，2樓可代煮（約1.5小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2143,127.6869\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2143,127.6869\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約7分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">11:58-12:58</span><span class=\"tl-title\">🏺 世豊商店</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">壺屋燒物街陶器選購</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2122,127.6925\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2122,127.6925\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約29分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">13:27-14:27</span><span class=\"tl-title\">🕳️ 玉泉洞</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">沖繩世界內的鐘乳石洞穴，壯觀地質景觀</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.1421,127.7469\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.1421,127.7469\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約32分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">14:59-15:59</span><span class=\"tl-title\">⛩️ 波上宮</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">沖繩總鎮守、崖上神社</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2193,127.6697\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2193,127.6697\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約6分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">16:05-17:05</span><span class=\"tl-title\">🍽️ 沖繩媳婦</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">OKINAWA SHIN BOO — 不定休，營業日公告於IG/FB</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2235,127.6732\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2235,127.6732\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約21分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">17:26-19:26</span><span class=\"tl-title\">🌅 瀨長島</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">瀬長島 ウミカジテラス — 白色希臘風露台商場（約2小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.1829,127.6461\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.1829,127.6461\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約5分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">19:31-20:31</span><span class=\"tl-title\">🥞 幸福鬆餅</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">幸せのパンケーキ 沖縄店 — 舒芙蕾鬆餅</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.1829,127.6461\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.1829,127.6461\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約9分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">20:40-22:40</span><span class=\"tl-title\">🛍️ 沖繩 ASHIBINAA Outlet</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">沖縄アウトレットモール あしびなー — 品牌折扣購物（約2小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.17,127.665\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.17,127.665\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">22:41-23:41</span><span class=\"tl-title\">🛒 Can*Do</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">Can Do 沖縄あしびなー店 — 百元商店</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.17,127.665\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.17,127.665\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">23:51-00:51</span><span class=\"tl-title\">🏋️ SPORTS DEPO 豐崎店</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">スポーツデポ 豊崎店 — 運動用品</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.1693,127.6619\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.1693,127.6619\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "hotel": {
+          "name": "沖繩那霸美居飯店",
+          "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "details": [
+            "📍 那霸市壺川 3-3-19",
+            "🌙 Day 5~6 連住"
+          ],
+          "subs": []
+        },
+        "timeline": [
+          {
+            "time": "09:00",
+            "emoji": "🏨",
+            "title": "沖繩那霸美居飯店 出發"
+          },
+          {
+            "time": "09:12-10:12",
+            "emoji": "🏨",
+            "title": "NAHA新都心HOTEL",
+            "description": "接人",
+            "locations": [
+              {
+                "name": "ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "mapcode": "33 548 827*76"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約9分鐘"
+            }
+          },
+          {
+            "time": "10:21-11:51",
+            "emoji": "🏪",
+            "title": "第一牧志公設市場",
+            "titleUrl": "https://bobbyfun.tw/2024-01-07-2705/",
+            "description": "鮮魚、海產、沖繩特產，2樓可代煮（約1.5小時）",
+            "locations": [
+              {
+                "name": "第一牧志公設市場",
+                "googleQuery": "https://maps.google.com/?q=第一牧志公設市場",
+                "appleQuery": "https://maps.apple.com/?q=第一牧志公設市場",
+                "mapcode": "33 157 199*43"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約7分鐘"
+            }
+          },
+          {
+            "time": "11:58-12:58",
+            "emoji": "🏺",
+            "title": "世豊商店",
+            "description": "壺屋燒物街陶器選購",
+            "locations": [
+              {
+                "name": "世豊商店 那覇",
+                "googleQuery": "https://maps.google.com/?q=世豊商店+那覇",
+                "appleQuery": "https://maps.apple.com/?q=世豊商店+那覇",
+                "mapcode": "33 128 879*17"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約29分鐘"
+            }
+          },
+          {
+            "time": "13:27-14:27",
+            "emoji": "🕳️",
+            "title": "玉泉洞",
+            "titleUrl": "https://bobowin.blog/okinawa-world/",
+            "description": "沖繩世界內的鐘乳石洞穴，壯觀地質景觀",
+            "locations": [
+              {
+                "name": "おきなわワールド",
+                "googleQuery": "https://maps.google.com/?q=おきなわワールド",
+                "appleQuery": "https://maps.apple.com/?q=おきなわワールド",
+                "mapcode": "232 494 535*76"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約32分鐘"
+            }
+          },
+          {
+            "time": "14:59-15:59",
+            "emoji": "⛩️",
+            "title": "波上宮",
+            "titleUrl": "https://hugh0714.pixnet.net/blog/post/64248388",
+            "description": "沖繩總鎮守、崖上神社",
+            "locations": [
+              {
+                "name": "波上宮",
+                "googleQuery": "https://maps.google.com/?q=波上宮",
+                "appleQuery": "https://maps.apple.com/?q=波上宮",
+                "mapcode": "33 155 737*43"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約6分鐘"
+            }
+          },
+          {
+            "time": "16:05-17:05",
+            "emoji": "🛍️",
+            "title": "午餐",
+            "titleUrl": "https://spirit0926.pixnet.net/blog/post/51163360",
+            "infoBoxes": [
+              {
+                "type": "souvenir",
+                "title": "伴手禮推薦",
+                "items": [
+                  {
+                    "emoji": "🛍️",
+                    "name": "沖繩媳婦 OKINAWA SHIN BOO",
+                    "note": "台灣人經營的沖繩伴手禮專賣店｜不定休，營業日公告於IG/FB",
+                    "location": {
+                      "name": "沖繩媳婦 那覇",
+                      "googleQuery": "https://maps.google.com/?q=沖繩媳婦+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=沖繩媳婦+那覇",
+                      "mapcode": "33 186 300*66"
+                    }
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約21分鐘"
+            }
+          },
+          {
+            "time": "17:26-19:26",
+            "emoji": "🌅",
+            "title": "瀨長島",
+            "titleUrl": "https://pfse64289.pixnet.net/blog/post/347236489",
+            "description": "瀬長島 ウミカジテラス — 白色希臘風露台商場（約2小時）",
+            "locations": [
+              {
+                "name": "瀬長島ウミカジテラス",
+                "googleQuery": "https://maps.google.com/?q=瀬長島ウミカジテラス",
+                "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス",
+                "mapcode": "33 032 412*44"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約5分鐘"
+            }
+          },
+          {
+            "time": "19:31-20:31",
+            "emoji": "🥞",
+            "title": "晚餐",
+            "titleUrl": "https://purpleswallow.pixnet.net/blog/post/47187297",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "emoji": "🥞",
+                    "category": "鬆餅甜點",
+                    "name": "幸福鬆餅",
+                    "desc": "幸せのパンケーキ 沖縄店 — 舒芙蕾鬆餅",
+                    "price": "¥1,100~",
+                    "location": {
+                      "name": "瀬長島ウミカジテラス",
+                      "googleQuery": "https://maps.google.com/?q=瀬長島ウミカジテラス",
+                      "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス",
+                      "mapcode": "33 032 412*44"
+                    },
+                    "hours": "11:00~21:00（鬆餅 L.O. 19:40）",
+                    "reservation": null,
+                    "blogUrl": "https://kafu.tw/happy-pancake/"
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約9分鐘"
+            }
+          },
+          {
+            "time": "20:40-22:40",
+            "emoji": "🛍️",
+            "title": "沖繩 ASHIBINAA Outlet",
+            "titleUrl": "https://jujucute88.pixnet.net/blog/post/234415008",
+            "description": "沖縄アウトレットモール あしびなー — 品牌折扣購物（約2小時）",
+            "locations": [
+              {
+                "name": "沖縄アウトレットモールあしびなー",
+                "googleQuery": "https://maps.google.com/?q=沖縄アウトレットモールあしびなー",
+                "appleQuery": "https://maps.apple.com/?q=沖縄アウトレットモールあしびなー",
+                "mapcode": "232 575 810*11"
+              }
+            ]
+          },
+          {
+            "time": "22:41-23:41",
+            "emoji": "🛒",
+            "title": "Can*Do",
+            "description": "Can Do 沖縄あしびなー店 — 百元商店",
+            "locations": [
+              {
+                "name": "沖縄アウトレットモールあしびなー",
+                "googleQuery": "https://maps.google.com/?q=沖縄アウトレットモールあしびなー",
+                "appleQuery": "https://maps.apple.com/?q=沖縄アウトレットモールあしびなー",
+                "mapcode": "232 575 810*11"
+              }
+            ]
+          },
+          {
+            "time": "23:51-00:51",
+            "emoji": "🏋️",
+            "title": "SPORTS DEPO 豐崎店",
+            "description": "スポーツデポ 豊崎店 — 運動用品",
+            "locations": [
+              {
+                "name": "スポーツデポ 豊崎店",
+                "googleQuery": "https://maps.google.com/?q=スポーツデポ+豊崎店",
+                "appleQuery": "https://maps.apple.com/?q=スポーツデポ+豊崎店",
+                "mapcode": "232 574 739*42"
+              }
+            ]
+          },
+          {
+            "time": "17:30-18:00",
+            "emoji": "🚗",
+            "title": "沖繩旅毛 還車",
+            "description": "還車前先到附近人工加油站加滿油",
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "⛽ 新都心還車 → 安里バイパスSS（人工・最近）",
+                "items": [
+                  "🏪 ENEOS 安里バイパスSS",
+                  "📍 沖縄県那覇市大道75-1",
+                  "🕐 07:00~22:00（年中無休）",
+                  "✅ フルサービス（人工加油，非自助）",
+                  "📞 098-887-7712"
+                ]
+              },
+              {
+                "type": "parking",
+                "title": "安里バイパスSS 位置",
+                "location": {
+                  "name": "ENEOS 安里バイパスSS 那覇市大道",
+                  "googleQuery": "https://maps.google.com/?q=ENEOS+安里バイパスSS+那覇",
+                  "appleQuery": "https://maps.apple.com/?q=ENEOS+安里バイパスSS+那覇"
+                }
+              }
+            ]
+          }
+        ]
+      }
     },
     {
       "id": 7,
       "date": "7/8（三）",
       "label": "回程",
-      "content": "<div class=\"hourly-weather\" id=\"hourly-7\"><div class=\"hw-loading\">⏳ 正在載入逐時天氣預報...</div></div><div class=\"timeline\"><div class=\"tl-event\"><div class=\"tl-head\"><span class=\"tl-time\">10:00</span><span class=\"tl-title\">🏨 沖繩那霸美居飯店 退房</span></div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">11:24-12:24</span><span class=\"tl-title\">🏨 NAHA新都心HOTEL</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">接人、寄放行李</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.3282,127.6947\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.3282,127.6947\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div><div class=\"tl-transit\">⤷ 🚗 約42分鐘</div></div><div class=\"tl-event\"><div class=\"tl-head clickable\"><span class=\"tl-time\">13:06-16:06</span><span class=\"tl-title\">🛫 那霸機場</span><span class=\"tl-arrow\">▸</span></div><div class=\"tl-body\"><p class=\"tl-desc\">辦理登機、機場購物、回程（約3小時）</p><div class=\"nav-links\"><a href=\"https://maps.google.com/?q=26.2066,127.6476\" target=\"_blank\" class=\"map-link\"><span class=\"g-icon\">G</span> Map</a> <a href=\"https://maps.apple.com/?ll=26.2066,127.6476\" target=\"_blank\" class=\"map-link apple\"><span class=\"apple-icon\"><svg viewBox=\"0 0 384 512\"><path d=\"M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z\"/></svg></span> Map</a></div></div></div></div>"
+      "content": {
+        "timeline": [
+          {
+            "time": "10:00",
+            "emoji": "🏨",
+            "title": "沖繩那霸美居飯店 退房"
+          },
+          {
+            "time": "11:24-12:24",
+            "emoji": "🏨",
+            "title": "NAHA新都心HOTEL",
+            "description": "接人、寄放行李",
+            "locations": [
+              {
+                "name": "ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
+                "mapcode": "33 548 827*76"
+              }
+            ],
+            "transit": {
+              "emoji": "🚗",
+              "text": "約42分鐘"
+            }
+          },
+          {
+            "time": "13:06-16:06",
+            "emoji": "🛫",
+            "title": "那霸機場",
+            "description": "辦理登機、機場購物、回程（約3小時）",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場",
+                "mapcode": "33 122 298*54"
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "flights": {
     "title": "✈️ 航班資訊",
-    "content": "<div class=\"flight-row\">\n            <div class=\"fr-seg\">\n                <div class=\"fr-label\">去程</div>\n                <div class=\"fr-detail\">\n                    <span class=\"fr-route\">桃園 TPE → 那霸 OKA</span>\n                    <span class=\"fr-date\">7/2（四）</span>\n                    <span class=\"fr-time\">15:20 出發 → 19:40 抵達（日本時間）</span>\n                </div>\n            </div>\n            <div class=\"fr-seg\">\n                <div class=\"fr-label\">回程</div>\n                <div class=\"fr-detail\">\n                    <span class=\"fr-route\">那霸 OKA → 桃園 TPE</span>\n                    <span class=\"fr-date\">7/8（三）</span>\n                    <span class=\"fr-time\">機場報到 13:06 起</span>\n                </div>\n            </div>\n        </div>"
+    "content": {
+      "segments": [
+        {
+          "icon": "✈️",
+          "label": "去程",
+          "route": "桃園 TPE → 那霸 OKA",
+          "time": "7/2（四）15:20 出發 → 19:40 抵達（日本時間）"
+        },
+        {
+          "icon": "✈️",
+          "label": "回程",
+          "route": "那霸 OKA → 桃園 TPE",
+          "time": "7/8（三）機場報到 13:06 起"
+        }
+      ]
+    }
   },
   "checklist": {
     "title": "✅ 出發前確認清單",
-    "content": "<div class=\"checklist-grid\">\n            <div class=\"ck-item\">🛂 護照（有效期6個月以上）</div>\n            <div class=\"ck-item\">💳 信用卡（海外消費免手續費佳）</div>\n            <div class=\"ck-item\">📱 日本 eSIM 或 WiFi 分享器</div>\n            <div class=\"ck-item\">🔌 電壓 100V（台灣電器可直接使用）</div>\n            <div class=\"ck-item\">💴 日幣現金（建議備 ¥30,000 以上）</div>\n            <div class=\"ck-item\">🧴 防曬乳、墨鏡、帽子</div>\n            <div class=\"ck-item\">👗 泳衣、浮潛裝備</div>\n            <div class=\"ck-item\">🏨 飯店訂房確認信</div>\n        </div>"
+    "content": {
+      "cards": [
+        {
+          "title": "🛂 證件與通訊",
+          "color": "var(--blue-light)",
+          "items": [
+            "護照（有效期 6 個月以上）",
+            "台灣駕照正本＋日文譯本（監理所 NT$100）",
+            "信用卡（海外消費免手續費佳）",
+            "日本 eSIM 或 WiFi 分享器",
+            "飯店訂房確認信"
+          ]
+        },
+        {
+          "title": "💴 金錢與行李",
+          "color": "var(--sand-light)",
+          "items": [
+            "日幣現金（建議備 ¥30,000 以上）",
+            "防曬乳 SPF50+、墨鏡、帽子",
+            "泳衣、浮潛裝備",
+            "行動電源＋充電線"
+          ]
+        },
+        {
+          "title": "🌀 颱風動態追蹤",
+          "color": "var(--sand-light)",
+          "items": [
+            "確認時間：出發前 3-5 天",
+            "7月為颱風季，需密切注意天氣預報",
+            "建議下載：Windy 或 tenki.jp APP"
+          ]
+        },
+        {
+          "title": "🚗 租車確認",
+          "color": "var(--blue-light)",
+          "items": [
+            "需備文件：台灣駕照＋日文譯本＋護照",
+            "確認取車與還車時間地點",
+            "加保免責補償險（CDW）建議"
+          ]
+        },
+        {
+          "title": "🏨 住宿確認",
+          "color": "var(--blue-light)",
+          "items": [
+            "沖繩那霸美居飯店（7/2, 7/6-7 共三晚）",
+            "BUZZ RESORT Chatan（7/3 一晚）",
+            "HOPE VILLA Onnason（7/4-5 二晚）"
+          ]
+        }
+      ]
+    }
   },
   "backup": {
     "title": "🔄 颱風／雨天備案",
-    "content": "<div class=\"backup-content\">\n            <p>🌧️ <strong>室內替代方案：</strong></p>\n            <ul>\n                <li>🛍️ PARCO CITY / 來客夢 AEON Mall — 大型購物中心</li>\n                <li>🛍️ 國際通商店街 — 有騎樓可遮雨</li>\n                <li>🛍️ ASHIBINAA Outlet — 室內購物</li>\n                <li>🐠 沖繩美麗海水族館 — 室內景點</li>\n                <li>🕳️ 玉泉洞 — 洞穴內不受天氣影響</li>\n            </ul>\n        </div>"
+    "content": {
+      "cards": [
+        {
+          "title": "🌧️ 室內替代方案",
+          "color": "var(--blue-light)",
+          "items": [
+            "🛍️ PARCO CITY / 來客夢 AEON Mall — 大型購物中心",
+            "🛍️ 國際通商店街 — 有騎樓可遮雨",
+            "🛍️ ASHIBINAA Outlet — 室內購物",
+            "🐠 沖繩美麗海水族館 — 室內景點",
+            "🕳️ 玉泉洞 — 洞穴內不受天氣影響"
+          ]
+        }
+      ]
+    }
+  },
+  "suggestions": {
+    "title": "💡 行程建議修改事項",
+    "content": {
+      "cards": [
+        {
+          "title": "🔴 高優先",
+          "priority": "high",
+          "items": [
+            "Day 2 行程過晚：plate jam 宵夜 23:37、BUZZ RESORT 01:04 入住，隔天 08:00 出發只能睡不到 6 小時",
+            "Day 6 ASHIBINAA Outlet 營業到 20:00，排 20:40 抵達可能已關門；Can*Do 22:41、SPORTS DEPO 23:51 也需確認營業時間",
+            "Day 3 路線嚴重折返：恩納→殘波岬→萬座毛→石川→恩納 check in→翡翠海灘(本部)→恩納，翡翠海灘來回車程約 1.5hr 但只停 30 分鐘"
+          ]
+        },
+        {
+          "title": "🟡 中優先",
+          "priority": "medium",
+          "items": [
+            "Day 2 午餐只有敘敘苑一家，建議補充 2-3 選一以防排隊或客滿",
+            "Day 4 蝦蝦飯 16:00 標為「午餐」但距上一餐（百年古家 12:28）已過 3.5 小時，建議改標為「下午茶」",
+            "各天缺少每日預算估計，建議加入方便控制旅費",
+            "Day 3 翡翠海灘 17:01 出發、只停 30 分鐘，加上來回車程 1.5hr，投入產出比低，建議改排 Day 4 水族館同天或刪除"
+          ]
+        },
+        {
+          "title": "🟢 低優先",
+          "priority": "low",
+          "items": [
+            "Day 5 寶可夢中心只排 1hr，限定商品排隊可能耗時，建議增加至 1.5-2hr",
+            "Day 6 波上宮停留 1hr 偏長，一般參拜 30 分鐘即可",
+            "Day 6 沖繩媳婦在首里附近，可考慮移到 Day 5 國際通那天順路"
+          ]
+        }
+      ]
+    }
   },
   "emergency": {
     "title": "🆘 緊急聯絡",
-    "content": "<div class=\"emergency-content\">\n            <p>🚨 <strong>日本緊急電話：</strong>警察 110 ／ 消防・救護 119</p>\n            <p>🏥 <strong>旅遊保險：</strong>出發前請確認已投保海外旅遊險</p>\n            <p>🇹🇼 <strong>駐日代表處（緊急）：</strong>+81-3-3280-7917</p>\n            <p>🏨 <strong>住宿聯絡：</strong></p>\n            <ul>\n                <li>沖繩那霸美居飯店 Mercure Okinawa Naha — 3-3-19 Tsubogawa</li>\n                <li>NAHA新都心HOTEL — +81-98-894-8558</li>\n                <li>BUZZ RESORT — +81-98-982-5337</li>\n                <li>HOPE VILLA Onnason — 恩納村</li>\n            </ul>\n        </div>"
+    "content": {
+      "cards": [
+        {
+          "title": "🚨 緊急電話",
+          "contacts": [
+            {
+              "label": "警察 110",
+              "phone": "110",
+              "url": "tel:110"
+            },
+            {
+              "label": "消防・救護 119",
+              "phone": "119",
+              "url": "tel:119"
+            },
+            {
+              "label": "駐日代表處（緊急）+81-3-3280-7917",
+              "phone": "+81332807917",
+              "url": "tel:+81332807917"
+            }
+          ]
+        },
+        {
+          "title": "🏥 旅遊保險",
+          "notes": [
+            "出發前請確認已投保海外旅遊險"
+          ]
+        },
+        {
+          "title": "🏨 住宿聯絡",
+          "items": [
+            "沖繩那霸美居飯店 Mercure Okinawa Naha — 3-3-19 Tsubogawa",
+            "NAHA新都心HOTEL — +81-98-894-8558",
+            "BUZZ RESORT — +81-98-982-5337",
+            "HOPE VILLA Onnason — 恩納村"
+          ]
+        }
+      ]
+    }
   }
 }
