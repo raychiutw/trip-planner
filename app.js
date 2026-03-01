@@ -826,17 +826,12 @@ function renderTrip(data) {
 
 function buildMenu(data) {
     var html = '<div class="menu-col">';
-    data.days.forEach(function(day) {
-        var id = parseInt(day.id) || 0;
-        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">📍 Day ' + id + '</button>';
-    });
-    html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">💡 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">🔄 颱風/雨天備案</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">🆘 緊急聯絡</button>';
-    html += '<div class="menu-sep"></div>';
+    html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="toggle-dark">🌙 深色模式</button>';
     html += '<button class="menu-item" data-action="toggle-print">🖨️ 列印模式</button>';
     html += '<button class="menu-item" data-action="switch-trip">📂 切換行程檔</button>';
