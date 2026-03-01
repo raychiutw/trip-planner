@@ -4,7 +4,7 @@ import { resolve } from 'path';
 
 const { validateTripData } = require('../../app.js');
 
-const DATA_DIR = resolve(__dirname, '../../data');
+const DATA_DIR = resolve(__dirname, '../../data/trips');
 
 const jsonFiles = [
   'okinawa-trip-2026-Ray.json',

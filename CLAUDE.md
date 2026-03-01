@@ -3,23 +3,31 @@
 ## 專案結構
 
 ```
-index.html              — HTML 外殼（載入 CSS / JS，含 sidebar + container + info-panel 三欄佈局）
-style.css               — 所有樣式
-app.js                  — 所有邏輯（載入 JSON、渲染、導航、天氣）
+index.html              — HTML 外殼（載入 shared + trip CSS/JS，含 sidebar + container + info-panel 三欄佈局 + FAB）
+edit.html               — AI 修改行程頁面（載入 shared + edit CSS/JS）
+shared.css              — 共用樣式（variables, reset, base layout, dark mode, overlay, buttons）
+shared.js               — 共用函式（escHtml, escUrl, localStorage helpers, dark mode, GitHub constants）
+style.css               — Trip 專用樣式（timeline, weather, hotel, sidebar, nav, etc.）
+edit.css                — Edit 專用樣式（form, setup dialog, FAB, request history）
+app.js                  — Trip 專用邏輯（載入 JSON、渲染、導航、天氣）
+edit.js                 — Edit 專用邏輯（GitHub Issues API, setup flow, request submission）
 data/
-  trips.json            — 行程清單（供切換選單讀取）
-  okinawa-trip-2026-Ray.json    — 行程參數檔
-  okinawa-trip-2026-HuiYun.json — 行程參數檔
+  trips.json            — 行程清單（供切換選單讀取，含 owner 欄位）
+  trips/                — 行程參數檔
+    okinawa-trip-2026-Ray.json
+    okinawa-trip-2026-HuiYun.json
 package.json            — npm 依賴（vitest, playwright, jsdom, serve）
 vitest.config.js        — Vitest 設定
 playwright.config.js    — Playwright 設定
 tests/                  — 測試（詳見「測試」章節）
+.claude/commands/       — Cowork Skills
+  process-requests.md   — 處理 GitHub Issues 行程修改請求
 CLAUDE.md               — 開發規範
 ```
 
 - GitHub Pages 網址：https://raychiutw.github.io/trip-planner/
 
-## 行程參數檔格式（`data/*.json`）
+## 行程參數檔格式（`data/trips/*.json`）
 
 ### 頂層結構
 
@@ -158,6 +166,21 @@ CLAUDE.md               — 開發規範
 - 新增行程檔後，於 `data/trips.json` 登錄即可在選單中顯示
 - 舊格式（`days[].content: "<HTML>"`）仍向下相容，app.js 自動偵測渲染模式
 
+### trips.json 格式
+
+```jsonc
+[
+  {
+    "file": "data/trips/okinawa-trip-2026-Ray.json",
+    "name": "Ray 的沖繩之旅",
+    "dates": "2026/7/29 ~ 8/2",
+    "owner": "Ray"
+  }
+]
+```
+
+- `owner` 欄位用於 edit.html 的行程歸屬檢查
+
 ## 開發規範
 
 ### Git 工作流程
@@ -177,7 +200,9 @@ CLAUDE.md               — 開發規範
 ### 程式碼風格
 
 - `index.html` 為精簡外殼，CSS 與 JS 各自獨立檔案
-- `app.js` 透過 `fetch()` 載入 `data/*.json` 動態渲染頁面
+- `shared.js` 提供共用函式（`escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, `lsSet/lsGet/lsRemove/lsRenewAll`, `toggleDarkShared`, `GH_OWNER`, `GH_REPO`），index.html 和 edit.html 都載入
+- `app.js` 依賴 shared.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
+- `edit.js` 依賴 shared.js，處理 GitHub Issues API 與設定/編輯流程
 - CSS class 命名慣例：
   - `.restaurant-choices` / `.restaurant-choice` — 餐廳三選一區塊
   - `.restaurant-meta` — 營業時間與預約資訊
@@ -195,7 +220,20 @@ CLAUDE.md               — 開發規範
   - `.info-card` — 資訊面板卡片
   - `.countdown-card` — 行程倒數器
   - `.stats-card` — 行程統計卡
+  - `.edit-fab` — 右下角 AI 修改行程 FAB 按鈕
+  - `.edit-page` / `.edit-main` — 編輯頁面佈局
 - 地圖連結格式：Google Map + Apple Map + Mapcode 三組
+
+### CSS/JS 拆分規則
+
+| 檔案 | 載入頁面 | 內容 |
+|------|---------|------|
+| `shared.css` | index + edit | variables, reset, body, `.page-layout`, trip overlay（`.trip-btn` 等）, dark mode base |
+| `style.css` | index only | timeline, weather, hotel, sidebar, nav, info-panel, print, 所有 trip-specific dark mode |
+| `edit.css` | index + edit | FAB 按鈕、edit page form/setup/history、edit-specific dark mode |
+| `shared.js` | index + edit | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
+| `app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js 的全域函式） |
+| `edit.js` | edit only | GitHub API, setup flow, edit form, request history |
 
 ### UI 設計規範
 
@@ -260,6 +298,37 @@ CLAUDE.md               — 開發規範
   - **每日交通統計**：確認每個 transit 的 text 欄位包含分鐘數，讓 `calcDrivingStats()` 能正確計算；開車超過 2 小時的天數應考慮精簡行程
 - 確保以上區段的內容與最新行程一致，避免出現已刪除景點的殘留資訊或遺漏新增景點的相關提醒
 
+### AI 修改行程功能（edit.html）
+
+#### 架構
+```
+Trip 頁面 → 右下角 FAB → 導向 edit.html?trip={slug}
+Edit 頁面 → 首次設定 PAT + 綁定行程 → 輸入修改文字 → POST GitHub Issue (label: trip-edit)
+Cowork /process-requests → 讀 Issue → 改 trip JSON → npm test → commit push → close Issue
+```
+
+#### 安全設計
+- **GitHub PAT**：Fine-Grained，僅 `Issues: Read+Write`，無 Contents 權限
+- **Cowork 白名單**：`git diff --name-only` 只允許 `data/trips/{tripSlug}.json`
+- **Web UI**：localStorage 綁定 owner + tripSlug，歸屬檢查防止改別人行程
+- **CSP**：`connect-src` 含 `https://api.github.com`
+
+#### Issue 格式
+```json
+{
+  "title": "[trip-edit] {owner}: {text前50字}",
+  "body": { "owner": "Ray", "tripSlug": "okinawa-trip-2026-Ray", "text": "...", "timestamp": "..." },
+  "labels": ["trip-edit"]
+}
+```
+
+#### Cowork Skill（`/process-requests`）
+- 定時執行，讀取 `--label trip-edit --state open` 的 Issue
+- 解析 body JSON → 修改對應 trip JSON → `git diff --name-only` 白名單檢查
+- 通過 → npm test → commit push → close Issue + comment
+- 失敗 → git checkout → close Issue + error comment
+- **禁止修改**：app.js, shared.js, edit.js, style.css, shared.css, edit.css, index.html, edit.html, data/trips.json
+
 ## 測試
 
 ### 測試架構
@@ -267,7 +336,7 @@ CLAUDE.md               — 開發規範
 ```
 tests/
 ├── unit/                    ← 單元測試（Vitest + jsdom）
-│   ├── escape.test.js       ← escHtml, escUrl, stripInlineHandlers
+│   ├── escape.test.js       ← escHtml, escUrl, stripInlineHandlers（from shared.js）
 │   ├── render.test.js       ← 所有 render 函式
 │   ├── validate.test.js     ← validateTripData, validateDay, renderWarnings
 │   └── routing.test.js      ← fileToSlug, slugToFile
@@ -285,20 +354,22 @@ tests/
 ```bash
 npm test          # 單元 + 整合 + JSON 驗證（Vitest）
 npm run test:e2e  # E2E 瀏覽器測試（Playwright）
-npm run test:watch # Vitest 監聽模式（開發時用）
+npm run test:watch # Vitest 監聯模式（開發時用）
 ```
 
 ### 測試規範
 
-- **只有變更到程式碼（含 `data/*.json`）時才需要跑測試**；僅修改 `CLAUDE.md`、`README.md` 等文件不需跑測試
+- **只有變更到程式碼（含 `data/trips/*.json`）時才需要跑測試**；僅修改 `CLAUDE.md`、`README.md` 等文件不需跑測試
 - **⚠️ 必須遵守：commit 前一定要跑測試並全數通過，不得跳過**
-  - 修改 `data/*.json`：至少跑 `npm test`
-  - 修改 `app.js` / `style.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
+  - 修改 `data/trips/*.json`：至少跑 `npm test`
+  - 修改 `app.js` / `shared.js` / `style.css` / `shared.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
+  - 修改 `edit.js` / `edit.css` / `edit.html`：跑 `npm test`（確保共用函式未被破壞）
   - 測試失敗時必須修復後重跑，不得帶著失敗 commit
-- app.js 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
-- `tests/setup.js` 提供全域 stub（localStorage、DOM 元素、meta 標籤）
+- `tests/setup.js` 先載入 `shared.js`（提供 escHtml 等全域函式），再載入全域 stub
+- app.js 和 shared.js 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
 - E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
 - 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `app.js` 的 `module.exports` 加上對應測試與匯出
+- 共用函式（escHtml 等）的測試從 `shared.js` import，app.js 專屬函式的測試從 `app.js` import
 - 修改 JSON 結構時，需確認 `tests/json/schema.test.js` 的驗證規則仍正確
 - 新增互動行為時，需在 `tests/e2e/trip-page.spec.js` 加上對應 E2E 測試
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com; img-src * data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.open-meteo.com https://api.github.com; img-src * data:;">
     <meta name="description" content="沖繩自由行行程規劃：每日景點、餐廳推薦、地圖導航、天氣預報、預算規劃，一頁搞定。">
     <meta name="theme-color" content="#C4704F">
     <meta property="og:title" content="沖繩旅遊行程表 — Trip Planner">
@@ -15,7 +15,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://api.open-meteo.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="shared.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="edit.css">
 </head>
 <body>
     <div class="page-layout">
@@ -45,6 +47,8 @@
         <div class="menu-grid" id="menuGrid"></div>
     </div>
     <button class="print-exit-btn" id="printExitBtn" data-action="toggle-print">✕ 結束列印模式</button>
+    <a href="edit.html" class="edit-fab" id="editFab" aria-label="AI 修改行程">✏️</a>
+    <script src="shared.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

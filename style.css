@@ -1,28 +1,3 @@
-:root {
-    --blue: #C4704F;
-    --blue-light: #F5EDE8;
-    --sand: #C4956A;
-    --sand-light: #F5EDE0;
-    --white: #FFFFFF;
-    --gray: #6B6B6B;
-    --gray-light: #FAF9F7;
-    --text: #1A1A1A;
-    --fs-lg: 1.25rem;
-    --fs-md: 1.15rem;
-    --sidebar-w: 260px;
-    --sidebar-w-collapsed: 56px;
-    --sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    --content-max-w: 800px;
-    --info-panel-w: 280px;
-}
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; scrollbar-gutter: stable; }
-body { overflow-x: hidden; }
-body { font-family: 'Noto Sans TC', sans-serif; background: var(--gray-light); font-size: var(--fs-md); color: var(--text); line-height: 1.6; max-width: 100vw; }
-
-/* ===== Page Layout ===== */
-.page-layout { display: flex; min-height: 100vh; }
-
 /* ===== Global Link Reset ===== */
 #tripContent a { color: var(--text); text-decoration: underline; }
 #tripContent a:visited { color: var(--text); }
@@ -263,20 +238,6 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 /* ===== Menu Separator ===== */
 .menu-sep { margin: 4px 0; height: 8px; }
 
-/* ===== Trip Switcher Overlay ===== */
-.trip-overlay { display: flex; position: fixed; inset: 0; background: var(--white); z-index: 400; align-items: center; justify-content: center; flex-direction: column; }
-.trip-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-.trip-close:hover { background: var(--gray-light); }
-.trip-list { display: flex; flex-direction: column; gap: 8px; width: 90%; max-width: 420px; }
-.trip-list h3 { font-size: 1.1rem; color: var(--text); margin: 0 0 4px; text-align: center; }
-.trip-btn { width: 100%; text-align: left; padding: 14px 16px; border-radius: 10px; border: none; background: var(--blue-light); cursor: pointer; font-family: inherit; font-size: var(--fs-md); color: var(--text); }
-.trip-btn:hover { opacity: 0.85; }
-.trip-btn.active { box-shadow: 0 0 0 2px var(--blue); }
-.trip-btn strong { display: block; font-size: var(--fs-lg); }
-.trip-btn .trip-sub { font-size: 0.85em; color: var(--gray); margin-top: 2px; }
-.trip-upload { width: 100%; text-align: center; padding: 10px; border: none; background: none; cursor: pointer; font-family: inherit; font-size: var(--fs-md); color: var(--gray); border-radius: 8px; }
-.trip-upload:hover { background: var(--gray-light); }
-
 /* ===== Desktop Sidebar Layout ===== */
 @media (min-width: 768px) {
     .sidebar {
@@ -381,8 +342,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 /* ===== Print / Info Panel ===== */
 .print-mode .info-panel { display: none !important; }
 
-/* ===== Dark Mode ===== */
-body.dark { --blue: #D4845E; --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --gray: #9B9590; --gray-light: #343130; --text: #E8E5E0; background: #1A1816; }
+/* ===== Dark Mode (trip-specific) ===== */
 body.dark .info-header { background: #3D3A37 !important; color: #E8E5E0 !important; }
 body.dark .map-link { color: #D4845E; background: #302A25; }
 body.dark .map-link:hover { background: #7D4A36; color: #fff; }
@@ -408,13 +368,6 @@ body.dark .info-box.parking { background: #302A25; }
 body.dark .info-box.souvenir { background: #302A25; }
 body.dark .info-box.restaurants { background: #302A22; }
 body.dark .hotel-sub { background: #302A25; }
-body.dark .trip-overlay { background: #292624; }
-body.dark .trip-close { color: #E8E5E0; }
-body.dark .trip-close:hover { background: #3D3A37; }
-body.dark .trip-btn { background: #3D3A37; }
-body.dark .trip-btn:hover { opacity: 0.85; }
-body.dark .trip-btn.active { box-shadow: 0 0 0 2px #D4845E; }
-body.dark .trip-upload:hover { background: #3D3A37; }
 body.dark .driving-stats-warning { background: rgba(245, 158, 11, 0.12); }
 body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.12); }
 body.dark .suggestion-card.high { background: rgba(220, 38, 38, 0.12); }

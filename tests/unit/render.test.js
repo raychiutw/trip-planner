@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
+const { escHtml } = require('../../shared.js');
 const {
   renderMapLinks,
   renderNavLinks,
@@ -23,7 +24,6 @@ const {
   renderTripStatsCard,
   TRANSPORT_TYPES,
   safeColor,
-  escHtml,
   APPLE_SVG,
 } = require('../../app.js');
 

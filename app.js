@@ -1,17 +1,3 @@
-/* ===== Utility ===== */
-function escHtml(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ===== URL Safe Validation ===== */
-function escUrl(url) {
-    if (!url) return '';
-    var s = String(url).trim();
-    if (/^(https?:|tel:)/i.test(s)) return s;
-    return '';
-}
-
 /* ===== Safe Color Validation ===== */
 var SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgb\(\d+,\s*\d+,\s*\d+\)|var\(--[\w-]+\)|[a-z]+)$/i;
 function safeColor(c) { return (c && SAFE_COLOR_RE.test(c)) ? c : 'var(--blue-light)'; }
@@ -661,67 +647,13 @@ function renderWarnings(warnings) {
     html += '</ul></div>';
     return html;
 }
-function sanitizeHtml(html) {
-    // Strip <script>, <iframe>, on* attributes from user-uploaded content
-    var doc = new DOMParser().parseFromString(html, 'text/html');
-    doc.querySelectorAll('script,iframe,object,embed,form').forEach(function(el) { el.remove(); });
-    doc.querySelectorAll('*').forEach(function(el) {
-        Array.from(el.attributes).forEach(function(attr) {
-            if (attr.name.indexOf('on') === 0) el.removeAttribute(attr.name);
-            if (attr.name === 'href' || attr.name === 'src' || attr.name === 'action') {
-                var val = (attr.value || '').trim().toLowerCase();
-                if (val && !/^(https?:|tel:|mailto:|#)/.test(val)) el.removeAttribute(attr.name);
-            }
-        });
-        // Add rel="noopener noreferrer" to target="_blank" links
-        if (el.tagName === 'A' && el.getAttribute('target') === '_blank') {
-            el.setAttribute('rel', 'noopener noreferrer');
-        }
-    });
-    return doc.body.innerHTML;
-}
-// Strip legacy inline onclick from trusted JSON content (defence-in-depth)
-function stripInlineHandlers(html) {
-    return html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
-}
-
-/* ===== LocalStorage Helper (trip-planner- prefix, 6-month expiry) ===== */
-var LS_PREFIX = 'trip-planner-';
-var LS_TTL = 180 * 86400000; // 6 months
-
-function lsSet(key, value) {
-    localStorage.setItem(LS_PREFIX + key, JSON.stringify({ v: value, exp: Date.now() + LS_TTL }));
-}
-function lsGet(key) {
-    try {
-        var d = JSON.parse(localStorage.getItem(LS_PREFIX + key));
-        if (d && d.exp > Date.now()) return d.v;
-        localStorage.removeItem(LS_PREFIX + key);
-        return null;
-    } catch(e) { return null; }
-}
-function lsRemove(key) {
-    localStorage.removeItem(LS_PREFIX + key);
-}
-function lsRenewAll() {
-    var newExp = Date.now() + LS_TTL;
-    for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (k && k.indexOf(LS_PREFIX) === 0) {
-            try {
-                var d = JSON.parse(localStorage.getItem(k));
-                if (d && d.exp) { d.exp = newExp; localStorage.setItem(k, JSON.stringify(d)); }
-            } catch(e) {}
-        }
-    }
-}
 // Renew all on page load
 lsRenewAll();
 
 /* ===== URL Routing ===== */
 var DEFAULT_SLUG = 'okinawa-trip-2026-Ray';
-function fileToSlug(f) { var m = f.match(/^data\/(.+)\.json$/); return m ? m[1] : null; }
-function slugToFile(s) { return 'data/' + s + '.json'; }
+function fileToSlug(f) { var m = f.match(/^data\/trips\/(.+)\.json$/); return m ? m[1] : null; }
+function slugToFile(s) { return 'data/trips/' + s + '.json'; }
 function getUrlTrip() { return new URLSearchParams(window.location.search).get('trip'); }
 function setUrlTrip(slug) {
     var url = new URL(window.location);
@@ -921,6 +853,10 @@ function renderTrip(data) {
 
     // Render info panel (desktop ≥1200px only)
     renderInfoPanel(data);
+
+    // Update FAB link with current trip slug
+    var fab = document.getElementById('editFab');
+    if (fab) fab.href = 'edit.html?trip=' + encodeURIComponent(fileToSlug(TRIP_FILE));
 }
 
 /* ===== Info Panel (desktop right sidebar) ===== */
@@ -1116,17 +1052,8 @@ function toggleCol(el) {
 }
 function toggleDark() {
     closeMobileMenuIfOpen();
-    document.body.classList.toggle('dark');
-    var isDark = document.body.classList.contains('dark');
-    lsSet('dark', isDark ? '1' : '0');
+    var isDark = toggleDarkShared();
     updateDarkBtnText(isDark);
-    var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', isDark ? '#7D4A36' : '#C4704F');
-}
-if (lsGet('dark') === '1') {
-    document.body.classList.add('dark');
-    var dmeta = document.querySelector('meta[name="theme-color"]');
-    if (dmeta) dmeta.setAttribute('content', '#7D4A36');
 }
 var _manualScrollTs = 0;
 function scrollToSec(id) {
@@ -1473,10 +1400,6 @@ resolveAndLoad();
 /* ===== Module Exports (Node.js / Vitest only) ===== */
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        escHtml: escHtml,
-        escUrl: escUrl,
-        stripInlineHandlers: stripInlineHandlers,
-        sanitizeHtml: sanitizeHtml,
         safeColor: safeColor,
         renderMapLinks: renderMapLinks,
         renderNavLinks: renderNavLinks,

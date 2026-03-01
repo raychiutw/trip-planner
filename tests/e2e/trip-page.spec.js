@@ -699,3 +699,30 @@ test.describe('桌機資訊面板', () => {
     await context.close();
   });
 });
+
+/* ===== 22. FAB 修改行程按鈕 ===== */
+test.describe('FAB 修改行程按鈕', () => {
+  test('FAB 按鈕可見且連結正確', async ({ page }) => {
+    await page.goto('/');
+    const fab = page.locator('#editFab');
+    await expect(fab).toBeVisible();
+
+    const href = await fab.getAttribute('href');
+    expect(href).toContain('edit.html?trip=');
+  });
+
+  test('FAB 連結包含當前行程 slug', async ({ page }) => {
+    await page.goto('/?trip=okinawa-trip-2026-Ray');
+    await page.waitForTimeout(500);
+    const fab = page.locator('#editFab');
+    const href = await fab.getAttribute('href');
+    expect(href).toContain('trip=okinawa-trip-2026-Ray');
+  });
+
+  test('列印模式隱藏 FAB', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#sidebarNav [data-action="toggle-print"]').click();
+    const fab = page.locator('#editFab');
+    await expect(fab).not.toBeVisible();
+  });
+});
