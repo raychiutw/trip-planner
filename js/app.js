@@ -1166,6 +1166,8 @@ function initWeather(weatherDays) {
             html+='<div class="hw-block-icon">'+iconSpan(wIcon)+'</div><div class="hw-block-temp">'+temp+'°C</div><div class="hw-block-rain'+(rain>=50?' hw-rain-high':'')+'">'+iconSpan('raindrop')+rain+'%</div></div>';
         }
         html+='</div></div>';c.innerHTML=html;
+        var nowBlock=c.querySelector('.hw-now');
+        if(nowBlock){var grid=c.querySelector('.hw-grid');if(grid)grid.scrollLeft=nowBlock.offsetLeft-grid.offsetLeft;}
     }
 
     // Batch: collect unique locations across all days, fetch once per location with full date range

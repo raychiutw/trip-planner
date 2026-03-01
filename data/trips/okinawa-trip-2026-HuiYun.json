@@ -26,6 +26,7 @@
     {
       "id": "hourly-1",
       "date": "2026-07-02",
+      "dayId": 1,
       "label": "那霸",
       "locations": [
         {
@@ -40,6 +41,7 @@
     {
       "id": "hourly-2",
       "date": "2026-07-03",
+      "dayId": 2,
       "label": "那霸→浦添→北谷",
       "locations": [
         {
@@ -68,6 +70,7 @@
     {
       "id": "hourly-3",
       "date": "2026-07-04",
+      "dayId": 3,
       "label": "恩納→殘波岬→翡翠海灘",
       "locations": [
         {
@@ -110,6 +113,7 @@
     {
       "id": "hourly-4",
       "date": "2026-07-05",
+      "dayId": 4,
       "label": "名護→美麗海→古宇利",
       "locations": [
         {
@@ -159,6 +163,7 @@
     {
       "id": "hourly-5",
       "date": "2026-07-06",
+      "dayId": 5,
       "label": "恩納→來客夢→那霸",
       "locations": [
         {
@@ -187,6 +192,7 @@
     {
       "id": "hourly-6",
       "date": "2026-07-07",
+      "dayId": 6,
       "label": "那霸→玉泉洞→瀨長島",
       "locations": [
         {
@@ -222,6 +228,7 @@
     {
       "id": "hourly-7",
       "date": "2026-07-08",
+      "dayId": 7,
       "label": "那霸",
       "locations": [
         {

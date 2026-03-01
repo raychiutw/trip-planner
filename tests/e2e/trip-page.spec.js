@@ -6,19 +6,28 @@ import { test, expect } from '@playwright/test';
  */
 
 // Mock Weather API to avoid external dependency
+function buildWeatherMock(url) {
+  var params = new URL(url).searchParams;
+  var start = params.get('start_date'), end = params.get('end_date');
+  if (!start || !end) return { hourly: { time: [], temperature_2m: [], precipitation_probability: [], weather_code: [] } };
+  var time = [], temps = [], rains = [], codes = [];
+  for (var d = new Date(start); d <= new Date(end); d.setDate(d.getDate() + 1)) {
+    for (var h = 0; h < 24; h++) {
+      time.push(d.toISOString().slice(0, 10) + 'T' + String(h).padStart(2, '0') + ':00');
+      temps.push(28 + Math.round(Math.random() * 4));
+      rains.push(Math.round(Math.random() * 40));
+      codes.push(0);
+    }
+  }
+  return { hourly: { time, temperature_2m: temps, precipitation_probability: rains, weather_code: codes } };
+}
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api.open-meteo.com/**', (route) => {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        hourly: {
-          time: [],
-          temperature_2m: [],
-          precipitation_probability: [],
-          weather_code: [],
-        },
-      }),
+      body: JSON.stringify(buildWeatherMock(route.request().url())),
     });
   });
 });
@@ -502,26 +511,23 @@ test.describe('行程切換', () => {
 test.describe('天氣元件', () => {
   test('天氣摘要點擊展開/收合', async ({ page }) => {
     await page.goto('/');
-    // 等待天氣元件載入
-    await page.waitForTimeout(1000);
-
+    // 等待天氣元件載入（mock API 回應後渲染）
     const summary = page.locator('.hw-summary').first();
-    // 只在天氣元件存在時測試
-    if (await summary.count() > 0) {
-      const container = summary.locator('..');
+    await expect(summary).toBeVisible({ timeout: 10000 });
 
-      // 點擊展開
-      await summary.click();
-      await expect(container).toHaveClass(/hw-open/);
+    const container = summary.locator('..');
 
-      // 確認詳細內容可見
-      const detail = container.locator('.hw-detail');
-      await expect(detail).toBeVisible();
+    // 點擊展開
+    await summary.click();
+    await expect(container).toHaveClass(/hw-open/);
 
-      // 點擊收合
-      await summary.click();
-      await expect(container).not.toHaveClass(/hw-open/);
-    }
+    // 確認詳細內容可見
+    const detail = container.locator('.hw-detail');
+    await expect(detail).toBeVisible();
+
+    // 點擊收合
+    await summary.click();
+    await expect(container).not.toHaveClass(/hw-open/);
   });
 
   test('天氣 API 失敗顯示錯誤訊息', async ({ page }) => {
@@ -533,10 +539,9 @@ test.describe('天氣元件', () => {
     await page.waitForTimeout(2000);
 
     // 應該顯示錯誤訊息
-    const error = page.locator('.hw-error');
-    if (await error.count() > 0) {
-      await expect(error.first()).toContainText('天氣資料載入失敗');
-    }
+    const error = page.locator('.hw-error').first();
+    await expect(error).toBeVisible();
+    await expect(error).toContainText('天氣資料載入失敗');
   });
 });
 

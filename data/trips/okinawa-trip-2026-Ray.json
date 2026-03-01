@@ -24,6 +24,7 @@
     {
       "id": "hourly-1",
       "date": "2026-07-29",
+      "dayId": 1,
       "label": "北谷",
       "locations": [
         {
@@ -45,6 +46,7 @@
     {
       "id": "hourly-2",
       "date": "2026-07-30",
+      "dayId": 2,
       "label": "恩納・名護",
       "locations": [
         {
@@ -73,6 +75,7 @@
     {
       "id": "hourly-3",
       "date": "2026-07-31",
+      "dayId": 3,
       "label": "名護・本部",
       "locations": [
         {
@@ -101,6 +104,7 @@
     {
       "id": "hourly-4",
       "date": "2026-08-01",
+      "dayId": 4,
       "label": "名護・那霸",
       "locations": [
         {
@@ -122,6 +126,7 @@
     {
       "id": "hourly-5",
       "date": "2026-08-02",
+      "dayId": 5,
       "label": "那霸",
       "locations": [
         {
