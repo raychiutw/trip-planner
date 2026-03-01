@@ -904,6 +904,21 @@ function toggleMenu() {
         document.body.style.overflow = 'hidden';
     }
 }
+/* ===== Swipe Gesture for Menu ===== */
+var _swipeStartX = 0, _swipeStartY = 0;
+document.addEventListener('touchstart', function(e) {
+    _swipeStartX = e.touches[0].clientX;
+    _swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - _swipeStartX;
+    var dy = e.changedTouches[0].clientY - _swipeStartY;
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+    var isOpen = document.body.classList.contains('menu-open');
+    if (dx > 0 && !isOpen && _swipeStartX < 40) toggleMenu();
+    else if (dx < 0 && isOpen) toggleMenu();
+}, { passive: true });
+
 function toggleHw(el) {
     var p = el.closest('.hourly-weather');
     p.classList.toggle('hw-open');
