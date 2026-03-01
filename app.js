@@ -871,12 +871,12 @@ function toggleDark() {
     var btn = document.querySelector('[data-action="toggle-dark"]');
     if (btn) btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', isDark ? '#1565C0' : '#0077B6');
+    if (meta) meta.setAttribute('content', isDark ? '#7D4A36' : '#C4704F');
 }
 if (lsGet('dark') === '1') {
     document.body.classList.add('dark');
     var dmeta = document.querySelector('meta[name="theme-color"]');
-    if (dmeta) dmeta.setAttribute('content', '#1565C0');
+    if (dmeta) dmeta.setAttribute('content', '#7D4A36');
 }
 var _manualScrollTs = 0;
 function scrollToSec(id) {
