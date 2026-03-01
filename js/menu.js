@@ -40,11 +40,11 @@ function updateDarkBtnText(isDark) {
     btns.forEach(function(btn) {
         var label = btn.querySelector('.item-label');
         if (label) {
-            btn.querySelector('.item-icon').textContent = isDark ? '☀️' : '🌙';
+            btn.querySelector('.item-icon').innerHTML = isDark ? iconSpan('sun') : iconSpan('moon');
             label.textContent = isDark ? '淺色模式' : '深色模式';
             btn.setAttribute('title', isDark ? '淺色模式' : '深色模式');
         } else {
-            btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
+            btn.innerHTML = (isDark ? iconSpan('sun') : iconSpan('moon')) + ' ' + (isDark ? '淺色模式' : '深色模式');
         }
     });
 }

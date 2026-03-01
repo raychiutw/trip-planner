@@ -20,6 +20,10 @@ Object.keys(_shared).forEach(function(k) { globalThis[k] = _shared[k]; });
 var _menu = require('../js/menu.js');
 Object.keys(_menu).forEach(function(k) { globalThis[k] = _menu[k]; });
 
+// Load icons.js and promote exports to global scope (app.js depends on icons.js functions)
+var _icons = require('../js/icons.js');
+Object.keys(_icons).forEach(function(k) { globalThis[k] = _icons[k]; });
+
 // Stub DOMParser if not available (used by sanitizeHtml)
 if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.DOMParser = class {

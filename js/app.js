@@ -18,7 +18,7 @@ function renderMapLinks(loc, inline) {
     html += '<a href="' + escUrl(aq) + '" target="_blank" rel="noopener noreferrer" class="' + cls + ' apple">'
           + '<span class="apple-icon">' + APPLE_SVG + '</span> Map</a>';
     if (loc.mapcode) {
-        html += '<span class="' + cls + ' mapcode">📟 ' + escHtml(loc.mapcode) + '</span>';
+        html += '<span class="' + cls + ' mapcode">' + iconSpan('device') + ' ' + escHtml(loc.mapcode) + '</span>';
     }
     return html;
 }
@@ -41,7 +41,7 @@ function renderRestaurant(r) {
     var nameHtml = escHtml(r.name);
     var rUrl = escUrl(r.url);
     if (rUrl) nameHtml = '<a href="' + rUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
-    html += (r.emoji ? r.emoji + ' ' : '')
+    html += (r.emoji ? emojiToIcon(r.emoji) + ' ' : '')
           + (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
           + nameHtml;
     if (r.desc) html += ' — ' + escHtml(r.desc);
@@ -49,20 +49,20 @@ function renderRestaurant(r) {
     html += '<br>';
     if (r.location) html += renderMapLinks(r.location, true);
     var meta = '';
-    if (r.hours) meta += '⏰ ' + escHtml(r.hours);
+    if (r.hours) meta += iconSpan('clock') + ' ' + escHtml(r.hours);
     if (r.reservation) {
         if (meta) meta += ' ｜ ';
         var resUrl = escUrl(r.reservationUrl);
         if (resUrl) {
-            meta += '📞 <a href="' + resUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(r.reservation) + '</a>';
+            meta += iconSpan('phone') + ' <a href="' + resUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(r.reservation) + '</a>';
         } else {
-            meta += '📞 ' + escHtml(r.reservation);
+            meta += iconSpan('phone') + ' ' + escHtml(r.reservation);
         }
     }
     var blogUrl = escUrl(r.blogUrl);
     if (blogUrl) {
         if (meta) meta += ' ｜ ';
-        meta += '📝 <a href="' + blogUrl + '" target="_blank" rel="noopener noreferrer">網誌推薦</a>';
+        meta += iconSpan('document') + ' <a href="' + blogUrl + '" target="_blank" rel="noopener noreferrer">網誌推薦</a>';
     }
     if (meta) html += '<span class="restaurant-meta">' + meta + '</span>';
     html += '</div>';
@@ -86,17 +86,17 @@ function renderInfoBox(box) {
             break;
         case 'parking':
             html += '<div class="info-box parking">';
-            if (box.title) html += '🅿️ <strong>' + escHtml(box.title) + '</strong>';
+            if (box.title) html += iconSpan('parking') + ' <strong>' + escHtml(box.title) + '</strong>';
             if (box.price) html += '：' + escHtml(box.price);
             if (box.location) html += ' ' + renderMapLinks(box.location, true);
             html += '</div>';
             break;
         case 'souvenir':
             html += '<div class="info-box souvenir">';
-            if (box.title) html += '🎁 <strong>' + escHtml(box.title) + '</strong><br>';
+            if (box.title) html += iconSpan('gift') + ' <strong>' + escHtml(box.title) + '</strong><br>';
             if (box.items && box.items.length) {
                 box.items.forEach(function(item) {
-                    html += (item.emoji || '🏪') + ' ';
+                    html += emojiToIcon(item.emoji || '\uD83C\uDFEA') + ' ';
                     var itemUrl = escUrl(item.url);
                     if (itemUrl) {
                         html += '<a href="' + itemUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(item.name) + '</a>';
@@ -113,8 +113,8 @@ function renderInfoBox(box) {
         case 'restaurants':
             html += '<div class="info-box restaurants">';
             var rCount = box.restaurants ? box.restaurants.length : 0;
-            var rTitle = box.title || (rCount > 1 ? ('🍽️ ' + rCount + '選一') : '🍽️ 推薦餐廳');
-            html += '🍽️ <strong>' + escHtml(rTitle) + '：</strong>';
+            var rTitle = box.title || (rCount > 1 ? (rCount + '選一') : '推薦餐廳');
+            html += iconSpan('utensils') + ' <strong>' + escHtml(rTitle) + '：</strong>';
             if (box.restaurants && box.restaurants.length) {
                 box.restaurants.forEach(function(r) { html += renderRestaurant(r); });
             }
@@ -135,7 +135,7 @@ function renderTimelineEvent(ev) {
     html += '<div class="' + headCls + '">';
     html += '<span class="tl-time">' + escHtml(ev.time || '') + '</span>';
     html += '<span class="tl-title">';
-    if (ev.emoji) html += ev.emoji + ' ';
+    if (ev.emoji) html += emojiToIcon(ev.emoji) + ' ';
     var titleUrl = escUrl(ev.titleUrl);
     if (titleUrl) {
         html += '<a href="' + titleUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(ev.title) + '</a>';
@@ -157,7 +157,7 @@ function renderTimelineEvent(ev) {
     }
     if (ev.transit) {
         html += '<div class="tl-transit">⤷ '
-              + (ev.transit.emoji ? ev.transit.emoji + ' ' : '')
+              + (ev.transit.emoji ? emojiToIcon(ev.transit.emoji) + ' ' : '')
               + escHtml(ev.transit.text || ev.transit)
               + '</div>';
     }
@@ -180,7 +180,7 @@ function renderHotel(hotel) {
     var nameHtml = escHtml(hotel.name || '');
     var hotelUrl = escUrl(hotel.url);
     if (hotelUrl) nameHtml = '<a href="' + hotelUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
-    html += '<div class="col-row">🏨 ' + nameHtml + ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-row">' + iconSpan('hotel') + ' ' + nameHtml + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
     if (hotel.details && hotel.details.length) {
         html += '<div class="hotel-detail-grid">';
@@ -206,7 +206,7 @@ function renderHotel(hotel) {
 /* ===== Render: Budget ===== */
 function renderBudget(budget) {
     var html = '';
-    html += '<div class="col-row">💰 ' + escHtml(budget.summary || '') + ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-row">' + iconSpan('wallet') + ' ' + escHtml(budget.summary || '') + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
     if (budget.items && budget.items.length) {
         html += '<table class="budget-table">';
@@ -220,7 +220,7 @@ function renderBudget(budget) {
     }
     if (budget.notes && budget.notes.length) {
         html += '<ul class="notes-list">';
-        budget.notes.forEach(function(n) { html += '<li>' + escHtml(n) + '</li>'; });
+        budget.notes.forEach(function(n) { html += '<li><span class="list-icon">' + iconSpan('pin') + '</span>' + escHtml(n) + '</li>'; });
         html += '</ul>';
     }
     html += '</div>';
@@ -229,9 +229,9 @@ function renderBudget(budget) {
 
 /* ===== Transport Types ===== */
 var TRANSPORT_TYPES = {
-    '\uD83D\uDE97': { label: '開車', icon: '🚗' },
-    '\uD83D\uDE9D': { label: '電車', icon: '🚝' },
-    '\uD83D\uDEB6': { label: '步行', icon: '🚶' }
+    '\uD83D\uDE97': { label: '開車', icon: 'car' },
+    '\uD83D\uDE9D': { label: '電車', icon: 'train' },
+    '\uD83D\uDEB6': { label: '步行', icon: 'walking' }
 };
 
 function formatMinutes(totalMins) {
@@ -273,9 +273,9 @@ function renderDrivingStats(stats) {
     if (!stats) return '';
     var isWarning = stats.drivingMinutes > 120;
     var cls = isWarning ? 'driving-stats driving-stats-warning' : 'driving-stats';
-    var icon = isWarning ? '\u26A0\uFE0F' : '\uD83D\uDE8C';
+    var dsIcon = isWarning ? iconSpan('warning') : iconSpan('bus');
     var html = '<div class="' + cls + '">';
-    html += '<div class="col-row" role="button" aria-expanded="false">' + icon + ' 當日交通：' + escHtml(formatMinutes(stats.totalMinutes));
+    html += '<div class="col-row" role="button" aria-expanded="false">' + dsIcon + ' 當日交通：' + escHtml(formatMinutes(stats.totalMinutes));
     if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
     html += ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
@@ -284,10 +284,10 @@ function renderDrivingStats(stats) {
         var group = stats.byType[emoji];
         if (!group) return;
         html += '<div class="transport-type-group">';
-        html += '<div class="transport-type-label">' + group.icon + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
+        html += '<div class="transport-type-label">' + iconSpan(group.icon) + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
         html += '<div class="driving-stats-detail">';
         group.segments.forEach(function(seg) {
-            html += '<span class="driving-stats-seg">' + group.icon + ' ' + escHtml(seg.text) + '</span>';
+            html += '<span class="driving-stats-seg">' + iconSpan(group.icon) + ' ' + escHtml(seg.text) + '</span>';
         });
         html += '</div></div>';
     });
@@ -325,14 +325,14 @@ function calcTripDrivingStats(days) {
 function renderTripDrivingStats(tripStats) {
     if (!tripStats) return '';
     var html = '<div class="driving-summary">';
-    html += '<div class="col-row" role="button" aria-expanded="false">🚌 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-row" role="button" aria-expanded="false">' + iconSpan('bus') + ' 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
     // Type summary
     var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
     typeOrder.forEach(function(emoji) {
         var g = tripStats.grandByType[emoji];
         if (!g) return;
-        html += '<div class="transport-type-summary">' + g.icon + ' ' + escHtml(g.label) + '：' + escHtml(formatMinutes(g.totalMinutes)) + '</div>';
+        html += '<div class="transport-type-summary">' + iconSpan(g.icon) + ' ' + escHtml(g.label) + '：' + escHtml(formatMinutes(g.totalMinutes)) + '</div>';
     });
     // Per-day breakdown
     tripStats.days.forEach(function(d) {
@@ -346,10 +346,10 @@ function renderTripDrivingStats(tripStats) {
             var group = d.stats.byType[emoji];
             if (!group) return;
             html += '<div class="transport-type-group">';
-            html += '<div class="transport-type-label">' + group.icon + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
+            html += '<div class="transport-type-label">' + iconSpan(group.icon) + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
             html += '<div class="driving-stats-detail">';
             group.segments.forEach(function(seg) {
-                html += '<span class="driving-stats-seg">' + group.icon + ' ' + escHtml(seg.text) + '</span>';
+                html += '<span class="driving-stats-seg">' + iconSpan(group.icon) + ' ' + escHtml(seg.text) + '</span>';
             });
             html += '</div></div>';
         });
@@ -363,7 +363,7 @@ function renderTripDrivingStats(tripStats) {
 function renderDayContent(content, weatherId) {
     var html = '';
     if (weatherId) {
-        html += '<div class="hourly-weather" id="' + escHtml(weatherId) + '"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>';
+        html += '<div class="hourly-weather" id="' + escHtml(weatherId) + '"><div class="hw-loading">' + iconSpan('hourglass') + ' 正在載入逐時天氣預報...</div></div>';
     }
     if (content.hotel) html += renderHotel(content.hotel);
     if (content.timeline) {
@@ -381,7 +381,7 @@ function renderFlights(data) {
     if (data.segments && data.segments.length) {
         data.segments.forEach(function(seg) {
             html += '<div class="flight-row">';
-            html += '<span class="flight-icon">' + (seg.icon || '✈️') + '</span>';
+            html += '<span class="flight-icon">' + (seg.icon ? emojiToIcon(seg.icon) : iconSpan('plane')) + '</span>';
             html += '<div class="flight-info">';
             if (seg.label) html += '<span class="flight-label">' + escHtml(seg.label) + '</span>';
             if (seg.flightNo) html += '<span class="flight-route">' + escHtml(seg.flightNo) + '</span>';
@@ -392,7 +392,7 @@ function renderFlights(data) {
     }
     if (data.airline) {
         html += '<div class="flight-row">';
-        html += '<span class="flight-icon">' + (data.airline.icon || '🏢') + '</span>';
+        html += '<span class="flight-icon">' + (data.airline.icon ? emojiToIcon(data.airline.icon) : iconSpan('building')) + '</span>';
         html += '<div class="flight-info"><span class="flight-label">' + escHtml(data.airline.name || '') + '</span>';
         if (data.airline.note) html += '<span class="flight-time">' + escHtml(data.airline.note) + '</span>';
         html += '</div></div>';
@@ -418,7 +418,7 @@ function renderChecklist(data) {
         html += '</div>';
     } else if (data.items && data.items.length) {
         html += '<ul class="notes-list">';
-        data.items.forEach(function(item) { html += '<li>' + escHtml(item) + '</li>'; });
+        data.items.forEach(function(item) { html += '<li><span class="list-icon">' + iconSpan('pin') + '</span>' + escHtml(item) + '</li>'; });
         html += '</ul>';
     }
     return html;
@@ -435,7 +435,7 @@ function renderBackup(data) {
             if (card.desc) html += '<p>' + escHtml(card.desc) + '</p>';
             if (card.weatherItems && card.weatherItems.length) {
                 html += '<ul class="weather-list">';
-                card.weatherItems.forEach(function(w) { html += '<li>' + escHtml(w) + '</li>'; });
+                card.weatherItems.forEach(function(w) { html += '<li><span class="list-icon">' + iconSpan('wave') + '</span>' + escHtml(w) + '</li>'; });
                 html += '</ul>';
             }
             if (card.items && card.items.length) {
@@ -448,7 +448,7 @@ function renderBackup(data) {
         html += '</div>';
     } else if (data.items && data.items.length) {
         html += '<ul class="notes-list">';
-        data.items.forEach(function(item) { html += '<li>' + escHtml(item) + '</li>'; });
+        data.items.forEach(function(item) { html += '<li><span class="list-icon">' + iconSpan('pin') + '</span>' + escHtml(item) + '</li>'; });
         html += '</ul>';
     }
     return html;
@@ -475,7 +475,7 @@ function renderEmergency(data) {
                     html += '</p>';
                 });
             }
-            if (card.address) html += '<p>📍 ' + escHtml(card.address) + '</p>';
+            if (card.address) html += '<p>' + iconSpan('location-pin') + ' ' + escHtml(card.address) + '</p>';
             if (card.notes && card.notes.length) {
                 card.notes.forEach(function(n) { html += '<p>' + escHtml(n) + '</p>'; });
             }
@@ -639,7 +639,7 @@ function validateDay(day) {
 function renderWarnings(warnings) {
     if (!warnings || !warnings.length) return '';
     var html = '<div class="trip-warnings">';
-    html += '<strong>⚠️ 注意事項：</strong><ul>';
+    html += '<strong>' + iconSpan('warning') + ' 注意事項：</strong><ul>';
     warnings.forEach(function(w) { html += '<li>' + w + '</li>'; });
     html += '</ul></div>';
     return html;
@@ -855,7 +855,7 @@ function renderCountdown(autoScrollDates) {
         html += '<div class="countdown-number">Day ' + dayN + '</div>';
         html += '<div class="countdown-label">旅行進行中</div>';
     } else {
-        html += '<div class="countdown-number">✈️</div>';
+        html += '<div class="countdown-number">' + iconSpan('plane') + '</div>';
         html += '<div class="countdown-label">旅程已結束</div>';
     }
     html += '</div>';
@@ -881,7 +881,7 @@ function renderTripStatsCard(data) {
         typeOrder.forEach(function(emoji) {
             var g = tripStats.grandByType[emoji];
             if (!g) return;
-            html += '<div class="stats-row"><span class="stats-label">' + g.icon + ' ' + escHtml(g.label) + '</span><span class="stats-value">' + escHtml(formatMinutes(g.totalMinutes)) + '</span></div>';
+            html += '<div class="stats-row"><span class="stats-label">' + iconSpan(g.icon) + ' ' + escHtml(g.label) + '</span><span class="stats-value">' + escHtml(formatMinutes(g.totalMinutes)) + '</span></div>';
         });
     }
     // Total budget
@@ -915,15 +915,15 @@ function renderInfoPanel(data) {
 function buildMenu(data) {
     // Drawer menu (mobile)
     var html = '';
-    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
-    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
-    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">💡 行程建議</button>';
-    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">🔄 颱風/雨天備案</button>';
-    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">🆘 緊急聯絡</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">' + iconSpan('plane') + ' 航班資訊</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">' + iconSpan('check-circle') + ' 出發前確認</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">' + iconSpan('lightbulb') + ' 行程建議</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">' + iconSpan('refresh') + ' 颱風/雨天備案</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">' + iconSpan('emergency') + ' 緊急聯絡</button>';
     html += '<div class="menu-sep"></div>';
-    html += '<button class="menu-item" data-action="toggle-dark">🌙 深色模式</button>';
-    html += '<button class="menu-item" data-action="toggle-print">🖨️ 列印模式</button>';
-    html += '<button class="menu-item" data-action="switch-trip">📂 切換行程檔</button>';
+    html += '<button class="menu-item" data-action="toggle-dark">' + iconSpan('moon') + ' 深色模式</button>';
+    html += '<button class="menu-item" data-action="toggle-print">' + iconSpan('printer') + ' 列印模式</button>';
+    html += '<button class="menu-item" data-action="switch-trip">' + iconSpan('folder') + ' 切換行程檔</button>';
     document.getElementById('menuGrid').innerHTML = html;
 
     // Sidebar menu (desktop)
@@ -931,22 +931,22 @@ function buildMenu(data) {
     if (sidebarNav) {
         var sHtml = '';
         var navItems = [
-            { icon: '✈️', label: '航班資訊', target: 'sec-flight' },
-            { icon: '✅', label: '出發前確認', target: 'sec-checklist' },
-            { icon: '💡', label: '行程建議', target: 'sec-suggestions' },
-            { icon: '🔄', label: '颱風/雨天備案', target: 'sec-backup' },
-            { icon: '🆘', label: '緊急聯絡', target: 'sec-emergency' }
+            { icon: 'plane', label: '航班資訊', target: 'sec-flight' },
+            { icon: 'check-circle', label: '出發前確認', target: 'sec-checklist' },
+            { icon: 'lightbulb', label: '行程建議', target: 'sec-suggestions' },
+            { icon: 'refresh', label: '颱風/雨天備案', target: 'sec-backup' },
+            { icon: 'emergency', label: '緊急聯絡', target: 'sec-emergency' }
         ];
         navItems.forEach(function(item) {
             sHtml += '<button class="menu-item" data-action="scroll-to" data-target="' + item.target + '" title="' + escHtml(item.label) + '">'
-                   + '<span class="item-icon">' + item.icon + '</span>'
+                   + '<span class="item-icon">' + iconSpan(item.icon) + '</span>'
                    + '<span class="item-label">' + escHtml(item.label) + '</span></button>';
         });
         sHtml += '<div class="menu-sep"></div>';
-        sHtml += '<button class="menu-item" data-action="toggle-dark" title="深色模式"><span class="item-icon">🌙</span><span class="item-label">深色模式</span></button>';
-        sHtml += '<button class="menu-item" data-action="toggle-print" title="列印模式"><span class="item-icon">🖨️</span><span class="item-label">列印模式</span></button>';
+        sHtml += '<button class="menu-item" data-action="toggle-dark" title="深色模式"><span class="item-icon">' + iconSpan('moon') + '</span><span class="item-label">深色模式</span></button>';
+        sHtml += '<button class="menu-item" data-action="toggle-print" title="列印模式"><span class="item-icon">' + iconSpan('printer') + '</span><span class="item-label">列印模式</span></button>';
         sHtml += '<div class="menu-sep" style="margin-top:auto"></div>';
-        sHtml += '<button class="menu-item" data-action="switch-trip" title="切換行程檔"><span class="item-icon">📂</span><span class="item-label">切換行程檔</span></button>';
+        sHtml += '<button class="menu-item" data-action="switch-trip" title="切換行程檔"><span class="item-icon">' + iconSpan('folder') + '</span><span class="item-label">切換行程檔</span></button>';
         sidebarNav.innerHTML = sHtml;
     }
 
@@ -1129,23 +1129,23 @@ document.addEventListener('click', function(e) {
 
 /* ===== Hourly Weather API (Open-Meteo) ===== */
 function initWeather(weatherDays) {
-    var WMO={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌦️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌧️',82:'🌧️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+    var WMO={0:'weather-clear',1:'weather-sun-cloud',2:'weather-partly',3:'weather-cloudy',45:'weather-fog',48:'weather-fog',51:'weather-rain-sun',53:'weather-rain-sun',55:'weather-rain',56:'weather-rain',57:'weather-rain',61:'weather-rain-sun',63:'weather-rain',65:'weather-rain',66:'weather-rain',67:'weather-rain',71:'weather-snow',73:'weather-snow',75:'weather-snow',77:'weather-snow',80:'weather-rain-sun',81:'weather-rain',82:'weather-rain',85:'weather-snow',86:'weather-snow',95:'weather-thunder',96:'weather-thunder',99:'weather-thunder'};
 
     function getLocIdx(day,h){for(var i=day.locations.length-1;i>=0;i--)if(h>=day.locations[i].start)return i;return 0;}
 
     function renderHourly(c,m,day){
         var now=new Date(),ch=now.getHours();
-        var minT=99,maxT=-99,minR=100,maxR=0,iconCount={},bestIcon='☀️';
-        for(var h=0;h<24;h++){var t=Math.round(m.temps[h]),r=m.rains[h],ic=WMO[m.codes[h]]||'❓';if(t<minT)minT=t;if(t>maxT)maxT=t;if(r<minR)minR=r;if(r>maxR)maxR=r;iconCount[ic]=(iconCount[ic]||0)+1;}
+        var minT=99,maxT=-99,minR=100,maxR=0,iconCount={},bestIcon='weather-clear';
+        for(var h=0;h<24;h++){var t=Math.round(m.temps[h]),r=m.rains[h],ic=WMO[m.codes[h]]||'question';if(t<minT)minT=t;if(t>maxT)maxT=t;if(r<minR)minR=r;if(r>maxR)maxR=r;iconCount[ic]=(iconCount[ic]||0)+1;}
         var maxCnt=0;for(var k in iconCount)if(iconCount[k]>maxCnt){maxCnt=iconCount[k];bestIcon=k;}
         var locs=day.locations.map(function(l){return escHtml(l.name);}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
-        var html='<div class="hw-summary" data-action="toggle-hw">'+bestIcon+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; 💧'+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
-        html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">⏱️ 逐時天氣 — '+escHtml(day.label)+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
+        var html='<div class="hw-summary" data-action="toggle-hw">'+iconSpan(bestIcon)+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; '+iconSpan('raindrop')+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
+        html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">'+iconSpan('timer')+' 逐時天氣 — '+escHtml(day.label)+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
         for(var h=0;h<=23;h++){
-            var li=getLocIdx(day,h),icon=WMO[m.codes[h]]||'❓',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);
+            var li=getLocIdx(day,h),wIcon=WMO[m.codes[h]]||'question',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);
             html+='<div class="hw-block'+(isNow?' hw-now':'')+'" data-hour="'+h+'"><div class="hw-block-time">'+(isNow?'▶ ':'')+h+':00</div>';
             if(day.locations.length>1)html+='<div class="hw-block-loc hw-loc-'+li+'">'+escHtml(day.locations[li].name)+'</div>';
-            html+='<div class="hw-block-icon">'+icon+'</div><div class="hw-block-temp">'+temp+'°C</div><div class="hw-block-rain'+(rain>=50?' hw-rain-high':'')+'">💧'+rain+'%</div></div>';
+            html+='<div class="hw-block-icon">'+iconSpan(wIcon)+'</div><div class="hw-block-temp">'+temp+'°C</div><div class="hw-block-rain'+(rain>=50?' hw-rain-high':'')+'">'+iconSpan('raindrop')+rain+'%</div></div>';
         }
         html+='</div></div>';c.innerHTML=html;
     }

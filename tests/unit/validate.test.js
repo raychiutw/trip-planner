@@ -305,7 +305,7 @@ describe('renderWarnings', () => {
   it('renders warning items', () => {
     const html = renderWarnings(['警告 1', '警告 2']);
     expect(html).toContain('trip-warnings');
-    expect(html).toContain('⚠️');
+    expect(html).toContain('svg-icon');
     expect(html).toContain('警告 1');
     expect(html).toContain('警告 2');
     expect(html).toContain('<li>');

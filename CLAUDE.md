@@ -15,7 +15,8 @@ css/
 js/
   shared.js             — 共用函式（escHtml, escUrl, localStorage helpers, dark mode, GitHub constants）
   menu.js               — 選單/側邊欄邏輯（isDesktop, toggleMenu, toggleSidebar, swipe, resize）
-  app.js                — Trip 專用邏輯（載入 JSON、渲染、導航、天氣；依賴 shared.js + menu.js）
+  icons.js              — SVG icon 集中管理（icon registry, emoji 對映, helper 函式）
+  app.js                — Trip 專用邏輯（載入 JSON、渲染、導航、天氣；依賴 shared.js + menu.js + icons.js）
   edit.js               — Edit 專用邏輯（GitHub Issues API, setup flow, request submission）
   switch.js             — Switch 專用邏輯（讀取 trips.json、渲染行程清單）
 data/
@@ -211,8 +212,9 @@ CLAUDE.md               — 開發規範
 - `index.html` 為精簡外殼，CSS 與 JS 各自獨立檔案
 - `js/shared.js` 提供共用函式（`escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, `lsSet/lsGet/lsRemove/lsRenewAll`, `toggleDarkShared`, `GH_OWNER`, `GH_REPO`），所有頁面都載入
 - `js/menu.js` 提供選單/側邊欄函式（`isDesktop`, `toggleMenu`, `toggleSidebar`, `closeMobileMenuIfOpen`, `updateDarkBtnText`），所有頁面都載入，依賴 shared.js
-- `js/app.js` 依賴 shared.js + menu.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
-- `js/edit.js` 依賴 shared.js + menu.js，處理 GitHub Issues API 與設定/編輯流程
+- `js/icons.js` 提供 SVG icon 集中管理（`ICONS` registry, `EMOJI_ICON_MAP` 對映, `icon`, `iconSpan`, `emojiToIcon`），所有頁面都載入，依賴無
+- `js/app.js` 依賴 shared.js + menu.js + icons.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
+- `js/edit.js` 依賴 shared.js + menu.js + icons.js，處理 GitHub Issues API 與設定/編輯流程
 - `js/switch.js` 依賴 shared.js + menu.js，讀取 trips.json 並渲染行程選擇清單
 - CSS class 命名慣例：
   - `.restaurant-choices` / `.restaurant-choice` — 餐廳三選一區塊
@@ -247,7 +249,8 @@ CLAUDE.md               — 開發規範
 | `css/switch.css` | switch only | switch page layout, header, list |
 | `js/shared.js` | 全部 | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
 | `js/menu.js` | 全部 | `isDesktop`, `toggleMenu`, `toggleSidebar`, `closeMobileMenuIfOpen`, swipe gesture, resize handler |
-| `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js + menu.js 的全域函式） |
+| `js/icons.js` | 全部 | `ICONS` SVG registry, `EMOJI_ICON_MAP` emoji→icon 對映, `icon`, `iconSpan`, `emojiToIcon` |
+| `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js + menu.js + icons.js 的全域函式） |
 | `js/edit.js` | edit only | GitHub API, setup flow, edit form, request history |
 | `js/switch.js` | switch only | 讀取 trips.json，渲染行程選擇清單 |
 
@@ -270,6 +273,13 @@ CLAUDE.md               — 開發規範
 - **選單標題**：顯示 "Trip Planner"（非「選單」）
 - **卡片統一風格**：所有 section 以白色圓角卡片呈現（`#tripContent section { background: var(--white); border-radius: 12px; }`），子元素（suggestion-card, ov-card, flight-row 等）不另設底色
 - **行程切換**：透過獨立頁面 `switch.html`（非 overlay dialog），由 `switchTripFile()` 導向
+- **Icon 設計**：全站使用 inline SVG（Material Symbols Rounded 風格），不使用 emoji
+  - 所有 SVG icon 集中在 `js/icons.js`，使用 `viewBox="0 0 24 24"` + `fill="currentColor"`
+  - `iconSpan(name)` 產生 `<span class="svg-icon" aria-hidden="true">...</span>` wrapper
+  - `emojiToIcon(emoji)` 將 JSON 中的 emoji 字元映射為 SVG icon，未映射者保留原字元
+  - `.svg-icon` CSS：`display: inline-flex; width: 1em; height: 1em; vertical-align: -0.125em`
+  - 顏色自動繼承 `currentColor`（Light mode 黑色、Dark mode 白色）
+  - 新增 icon 時只需在 `js/icons.js` 的 `ICONS` 物件加入 SVG path
 
 ### 內容規範
 
@@ -280,7 +290,7 @@ CLAUDE.md               — 開發規範
 
 ### 每日交通統計規範
 
-- `app.js` 的 `calcDrivingStats()` 會自動從 `timeline[].transit` 中篩選 `TRANSPORT_TYPES` 定義的 emoji（🚗 開車、🚝 電車、🚶 步行），解析分鐘數並按類型分組
+- `app.js` 的 `calcDrivingStats()` 會自動從 `timeline[].transit` 中篩選 `TRANSPORT_TYPES` 定義的 emoji key（🚗 開車、🚝 電車、🚶 步行），解析分鐘數並按類型分組（icon 值為 icon name 字串如 `'car'`、`'train'`、`'walking'`）
 - 每日統計預設只顯示總計，以 `.col-row` / `.col-detail` 可收合模式展開看明細
 - **開車超過 120 分鐘（2 小時）的天數會以警告樣式（黃底＋紅色徽章）顯示**
 - 每次新增或修改行程參數檔的 `timeline` 時，transit 的 text 必須包含分鐘數（如「約40分鐘」），才能正確計算
@@ -344,7 +354,7 @@ Cowork /render-trip → 讀 Issue → 改 trip JSON → npm test → commit push
 - 解析 body JSON → 修改對應 trip JSON → `git diff --name-only` 白名單檢查
 - 通過 → npm test → commit push → close Issue + comment
 - 失敗 → git checkout → close Issue + error comment
-- **禁止修改**：js/app.js, js/shared.js, js/menu.js, js/edit.js, js/switch.js, css/style.css, css/shared.css, css/menu.css, css/edit.css, css/switch.css, index.html, edit.html, switch.html, data/trips.json
+- **禁止修改**：js/app.js, js/shared.js, js/menu.js, js/icons.js, js/edit.js, js/switch.js, css/style.css, css/shared.css, css/menu.css, css/edit.css, css/switch.css, index.html, edit.html, switch.html, data/trips.json
 
 ## 測試
 
@@ -379,11 +389,11 @@ npm run test:watch # Vitest 監聯模式（開發時用）
 - **只有變更到程式碼（含 `data/trips/*.json`）時才需要跑測試**；僅修改 `CLAUDE.md`、`README.md` 等文件不需跑測試
 - **⚠️ 必須遵守：commit 前一定要跑測試並全數通過，不得跳過**
   - 修改 `data/trips/*.json`：至少跑 `npm test`
-  - 修改 `js/app.js` / `js/shared.js` / `css/style.css` / `css/shared.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
+  - 修改 `js/app.js` / `js/shared.js` / `js/icons.js` / `css/style.css` / `css/shared.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
   - 修改 `js/edit.js` / `css/edit.css` / `edit.html` / `js/menu.js` / `css/menu.css`：跑 `npm test`（確保共用函式未被破壞）
   - 修改 `switch.html` / `js/switch.js` / `css/switch.css`：跑 `npm test`
   - 測試失敗時必須修復後重跑，不得帶著失敗 commit
-- `tests/setup.js` 先載入 `js/shared.js`，再載入 `js/menu.js`（提供 escHtml、isDesktop 等全域函式），再載入全域 stub
+- `tests/setup.js` 先載入 `js/shared.js`，再載入 `js/menu.js`，再載入 `js/icons.js`（提供 escHtml、isDesktop、iconSpan 等全域函式），再載入全域 stub
 - `js/app.js` 和 `js/shared.js` 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
 - E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
 - 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `js/app.js` 的 `module.exports` 加上對應測試與匯出

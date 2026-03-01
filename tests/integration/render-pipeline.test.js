@@ -58,7 +58,7 @@ tripFiles.forEach(({ file, label }) => {
         data.days.forEach((day) => {
           if (day.content && day.content.hotel) {
             const html = renderDayContent(day.content, null);
-            expect(html).toContain('🏨');
+            expect(html).toContain('svg-icon');
             expect(html).toContain('col-row');
           }
         });
@@ -68,7 +68,7 @@ tripFiles.forEach(({ file, label }) => {
         data.days.forEach((day) => {
           if (day.content && day.content.budget) {
             const html = renderDayContent(day.content, null);
-            expect(html).toContain('💰');
+            expect(html).toContain('svg-icon');
             expect(html).toContain('col-row');
           }
         });
@@ -205,7 +205,7 @@ tripFiles.forEach(({ file, label }) => {
         data.days.forEach((day) => {
           if (!day.content || !day.content.hotel) return;
           const html = renderHotel(day.content.hotel);
-          expect(html).toContain('🏨');
+          expect(html).toContain('svg-icon');
           expect(html).toContain(escHtml(day.content.hotel.name));
         });
       });
@@ -217,7 +217,7 @@ tripFiles.forEach(({ file, label }) => {
         data.days.forEach((day) => {
           if (!day.content || !day.content.budget) return;
           const html = renderBudget(day.content.budget);
-          expect(html).toContain('💰');
+          expect(html).toContain('svg-icon');
           if (day.content.budget.items && day.content.budget.items.length) {
             expect(html).toContain('budget-table');
           }
@@ -321,7 +321,7 @@ tripFiles.forEach(({ file, label }) => {
           if (warnings.length) {
             const html = renderWarnings(warnings);
             expect(html).toContain('trip-warnings');
-            expect(html).toContain('⚠️');
+            expect(html).toContain('svg-icon');
           }
         });
       });

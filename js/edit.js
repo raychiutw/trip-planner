@@ -93,7 +93,7 @@
         // Bound info
         html += '<div class="edit-bound">';
         html += '<div class="edit-bound-info"><strong>' + escHtml(config.owner) + '</strong> — ' + escHtml(config.tripName) + '</div>';
-        html += '<button class="edit-gear" id="gearBtn" title="重新設定">⚙️</button>';
+        html += '<button class="edit-gear" id="gearBtn" title="重新設定">' + iconSpan('gear') + '</button>';
         html += '</div>';
 
         // Textarea
@@ -156,7 +156,7 @@
             throw new Error('送出失敗（' + r.status + '）');
         })
         .then(function(issue) {
-            document.getElementById('submitStatus').innerHTML = '<div class="edit-status success">✅ 已送出！Issue <a href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">#' + issue.number + '</a></div>';
+            document.getElementById('submitStatus').innerHTML = '<div class="edit-status success">' + iconSpan('check-circle') + ' 已送出！Issue <a href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">#' + issue.number + '</a></div>';
             document.getElementById('editText').value = '';
             btn.disabled = false;
             btn.textContent = '送出修改請求';
@@ -175,7 +175,7 @@
             }
         })
         .catch(function(err) {
-            document.getElementById('submitStatus').innerHTML = '<div class="edit-status error">❌ ' + escHtml(err.message) + '</div>';
+            document.getElementById('submitStatus').innerHTML = '<div class="edit-status error">' + iconSpan('x-circle') + ' ' + escHtml(err.message) + '</div>';
             btn.disabled = false;
             btn.textContent = '送出修改請求';
         });

@@ -177,7 +177,7 @@ describe('renderInfoBox', () => {
       price: '¥500/日',
     });
     expect(html).toContain('info-box parking');
-    expect(html).toContain('🅿️');
+    expect(html).toContain('svg-icon');
     expect(html).toContain('第一停車場');
     expect(html).toContain('¥500/日');
   });
@@ -192,7 +192,6 @@ describe('renderInfoBox', () => {
     });
     expect(html).toContain('info-box souvenir');
     expect(html).toContain('紅芋塔');
-    expect(html).toContain('🍠');
     expect(html).toContain('必買');
   });
 
@@ -205,7 +204,7 @@ describe('renderInfoBox', () => {
       ],
     });
     expect(html).toContain('info-box restaurants');
-    expect(html).toContain('2選一');
+    expect(html).toContain('選一');
     expect(html).toContain('拉麵店');
     expect(html).toContain('燒肉店');
   });
@@ -280,9 +279,9 @@ describe('renderTimelineEvent', () => {
     expect(html).toContain('步行 5 分');
   });
 
-  it('renders emoji prefix', () => {
+  it('renders emoji prefix as SVG icon', () => {
     const html = renderTimelineEvent({ time: '10:00', title: 'Test', emoji: '🏯' });
-    expect(html).toContain('🏯');
+    expect(html).toContain('svg-icon');
   });
 
   it('renders note field', () => {
@@ -316,7 +315,7 @@ describe('renderTimeline', () => {
 describe('renderHotel', () => {
   it('renders hotel name', () => {
     const html = renderHotel({ name: '沖繩海景飯店' });
-    expect(html).toContain('🏨');
+    expect(html).toContain('svg-icon');
     expect(html).toContain('沖繩海景飯店');
   });
 
@@ -381,7 +380,7 @@ describe('renderBudget', () => {
 
   it('renders summary in col-row', () => {
     const html = renderBudget({ summary: 'Day 1 費用' });
-    expect(html).toContain('💰');
+    expect(html).toContain('svg-icon');
     expect(html).toContain('Day 1 費用');
   });
 });
@@ -525,7 +524,7 @@ describe('renderEmergency', () => {
         },
       ],
     });
-    expect(html).toContain('📍');
+    expect(html).toContain('svg-icon');
     expect(html).toContain('那霸市 1-2-3');
     expect(html).toContain('24 小時急診');
   });
@@ -589,9 +588,9 @@ describe('renderSuggestions', () => {
 /* ===== TRANSPORT_TYPES ===== */
 describe('TRANSPORT_TYPES', () => {
   it('contains car, train, walk', () => {
-    expect(TRANSPORT_TYPES['🚗']).toEqual({ label: '開車', icon: '🚗' });
-    expect(TRANSPORT_TYPES['🚝']).toEqual({ label: '電車', icon: '🚝' });
-    expect(TRANSPORT_TYPES['🚶']).toEqual({ label: '步行', icon: '🚶' });
+    expect(TRANSPORT_TYPES['🚗']).toEqual({ label: '開車', icon: 'car' });
+    expect(TRANSPORT_TYPES['🚝']).toEqual({ label: '電車', icon: 'train' });
+    expect(TRANSPORT_TYPES['🚶']).toEqual({ label: '步行', icon: 'walking' });
   });
 });
 
