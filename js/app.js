@@ -743,16 +743,6 @@ function renderTrip(data) {
     // Build sections
     var html = '';
 
-    // Day nav card
-    html += '<section>';
-    html += '<div class="day-header info-header" id="sec-daynav"><h2>行程天數</h2></div>';
-    html += '<div class="day-content"><div class="day-nav-card">';
-    data.days.forEach(function(day) {
-        var navId = parseInt(day.id) || 0;
-        html += '<button class="dn" data-day="' + navId + '" data-action="scroll-to" data-target="day' + navId + '">D' + navId + '</button>';
-    });
-    html += '</div></div></section>';
-
     // Day sections
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
@@ -840,6 +830,9 @@ function renderTrip(data) {
     } else {
         autoScrollToday(data.autoScrollDates);
     }
+
+    // Dynamic scroll-margin for sticky nav offset
+    alignStickyNav();
 
     // Re-init nav scroll tracking
     initNavTracking();
@@ -1013,8 +1006,10 @@ function scrollToSec(id) {
     if (!el) return;
     _manualScrollTs = Date.now();
     closeMobileMenuIfOpen();
-    var navH = document.getElementById('stickyNav').offsetHeight;
-    var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
+    var nav = document.getElementById('stickyNav');
+    var navH = nav.offsetHeight;
+    var navTop = parseFloat(getComputedStyle(nav).top) || 0;
+    var top = el.getBoundingClientRect().top + window.pageYOffset - navH - navTop;
     window.scrollTo({ top: top, behavior: 'smooth' });
     history.replaceState(null, '', '#' + id);
 }
@@ -1061,6 +1056,21 @@ function initAria() {
     });
 }
 
+/* ===== Sticky Nav Alignment (dynamic scroll-margin) ===== */
+function alignStickyNav() {
+    var nav = document.getElementById('stickyNav');
+    if (!nav) return;
+    var navH = nav.offsetHeight;
+    var navTop = parseFloat(getComputedStyle(nav).top) || 0;
+    var margin = (navH + navTop + 4) + 'px';
+    document.querySelectorAll('.day-header, .info-header').forEach(function(h) {
+        h.style.scrollMarginTop = margin;
+    });
+}
+window.addEventListener('resize', alignStickyNav);
+var _sidebarEl = document.getElementById('sidebar');
+if (_sidebarEl) _sidebarEl.addEventListener('transitionend', alignStickyNav);
+
 /* ===== Day Nav Active Pill + Sticky Nav Update ===== */
 function initNavTracking() {
     var headers = [];
@@ -1068,7 +1078,8 @@ function initNavTracking() {
     for (var i = 1; i <= TRIP.days.length; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
     var navPills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
     if (!navPills.length) return;
-    var navH = document.getElementById('stickyNav').offsetHeight;
+    var nav = document.getElementById('stickyNav');
+    var navH = nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0);
     var infoStart = document.getElementById('sec-flight');
     // Remove old listener if any
     if (window._navScrollHandler) window.removeEventListener('scroll', window._navScrollHandler);
@@ -1106,7 +1117,8 @@ function autoScrollToday(dates) {
     if (idx >= 0) {
         var el = document.getElementById('day' + (idx + 1));
         if (el) {
-            var navH = document.getElementById('stickyNav').offsetHeight;
+            var nav = document.getElementById('stickyNav');
+            var navH = nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0);
             window.scrollTo({ top: el.offsetTop - navH, behavior: 'auto' });
         }
     }

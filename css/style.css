@@ -27,13 +27,17 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .weather-list li { font-size: var(--fs-md); padding: 3px 0; display: flex; align-items: baseline; gap: 6px; }
 .weather-list li .list-icon { flex-shrink: 0; }
 
+/* ===== Sticky Nav Card (override shared.css) ===== */
+.sticky-nav { border-radius: 12px; padding: 12px 16px; gap: 12px; margin: 12px 0; top: 12px; }
+@media (min-width: 768px) { .sticky-nav { max-width: var(--content-max-w); margin: 12px auto; } }
+
 /* ===== Day Header (section divider) ===== */
-.day-header { position: relative; z-index: 100; background: var(--white); color: var(--text); padding: 8px 12px; display: flex; align-items: center; gap: 8px; scroll-margin-top: 44px; }
+.day-header { position: relative; z-index: 100; background: var(--white); color: var(--text); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
 .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-date { font-size: var(--fs-md); opacity: 0.8; margin-left: auto; white-space: nowrap; }
-.dh-nav { display: flex; gap: 3px; flex: 1; justify-content: center; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
+.dh-nav { display: flex; gap: 6px; flex: 1; justify-content: center; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
 .dh-nav::-webkit-scrollbar { display: none; }
-.dn { background: var(--blue-light); color: var(--blue); border: none; padding: 3px 8px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
+.dn { background: var(--blue-light); color: var(--blue); border: none; padding: 6px 12px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
 .dn:hover { background: var(--blue); color: var(--white); }
 .dn.active { background: var(--blue); color: var(--white); }
 
@@ -238,7 +242,7 @@ body.dark .edit-fab { background: #C4704F; }
         top: 0;
         height: 100vh;
         overflow-y: auto;
-        padding: 16px 12px;
+        padding: 12px;
         scrollbar-width: thin;
     }
 }
@@ -279,5 +283,3 @@ body.dark .trip-warnings { background: rgba(220, 38, 38, 0.12); color: #FCA5A5; 
 body.dark .info-card { background: #292624; }
 body.dark .ov-card { background: #302A25; }
 
-/* ===== Day Nav Card ===== */
-.day-nav-card { display: flex; gap: 6px; flex-wrap: wrap; }
