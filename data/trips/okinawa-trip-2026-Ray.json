@@ -225,7 +225,7 @@
             }
           },
           {
-            "time": "13:40-14:00",
+            "time": "13:10-13:40",
             "emoji": "🏨",
             "titleUrl": "https://bobbyfun.tw/2023-04-27-2319/",
             "title": "Check in Vessel Hotel",
@@ -244,7 +244,7 @@
             }
           },
           {
-            "time": "14:00-17:30",
+            "time": "13:45-17:30",
             "emoji": "🏖",
             "titleUrl": "https://bobbyfun.tw/2024-01-08-2709/",
             "title": "美國村＋Sunset Beach",
@@ -1220,7 +1220,7 @@
             }
           },
           {
-            "time": "17:00-18:00",
+            "time": "17:10-18:00",
             "emoji": "🚗",
             "title": "加油＋還車手續",
             "description": "先到崇元寺店加油，再至美栄橋駅前店還車",
@@ -1562,7 +1562,7 @@
             }
           },
           {
-            "time": "14:05-15:30",
+            "time": "14:10-16:00",
             "emoji": "🛍",
             "titleUrl": "https://mimigo.tw/okinawa-dfs/",
             "title": "DFS T Galleria 免稅店",
@@ -1581,10 +1581,10 @@
             }
           },
           {
-            "time": "15:35",
+            "time": "16:10",
             "emoji": "🧳",
             "title": "回飯店取行李",
-            "description": "回東橫inn 領取寄放行李，傍晚前往機場",
+            "description": "回東橫inn 領取寄放行李。可在美榮橋周邊散步或到國際通最後採購，建議 18:00 搭單軌前往機場",
             "locations": [
               {
                 "name": "東横INN那覇国際通り美栄橋駅",
@@ -1599,10 +1599,10 @@
             }
           },
           {
-            "time": "18:55",
+            "time": "18:15",
             "emoji": "✈",
             "title": "️ 抵達那霸機場",
-            "description": "辦理報到＋託運行李。機場內免稅店最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味",
+            "description": "辦理報到＋託運行李（國際線櫃台 19:55 關閉）。機場免稅店最後衝刺！國內線 2F 有 Blue Seal 冰淇淋，推薦紅芋口味",
             "locations": [
               {
                 "name": "那霸機場",
