@@ -186,7 +186,27 @@ CLAUDE.md               — 開發規範
   - `.parking-info` — 停車場資訊
   - `.map-link` / `.map-link-inline` — 地圖連結（Google / Apple / Mapcode）
   - `.day-1` ~ `.day-N` — 各天主題色（天數由 JSON 決定）
+  - `.driving-summary` — 全旅程車程統計（航班資訊下方）
+  - `.driving-summary-day` — 全旅程車程統計各天明細
 - 地圖連結格式：Google Map + Apple Map + Mapcode 三組
+
+### UI 設計規範
+
+- **無框線設計**：全站不使用 `border` 作為視覺分隔，改用背景色差、間距、圓角、`box-shadow` 區分區塊
+  - 地圖連結按鈕：使用 `background` 填色取代 `border`
+  - 可收合區塊（`.col-row`）：不使用底線分隔
+  - 餐廳選項：不使用虛線分隔
+  - 建議卡片、警告卡片：不使用 `border-left` 色條
+  - 天氣方塊：不使用邊框，當前時段用 `box-shadow` 標示
+  - 行程切換按鈕：使用背景色填充，選中狀態用 `box-shadow`
+  - Footer：不使用 `border-top` 分隔線
+  - 唯一例外：`.timeline` 的 `border-left` 保留（時間軸視覺線條）
+- **字級設定**：
+  - `--fs-lg`：桌機 `1.25rem`，手機 `1.35rem`
+  - `--fs-md`：桌機 `0.95rem`，手機 `1.05rem`
+  - 選單項目（`.menu-item`）使用 `--fs-lg`（最大字級）
+- **防止水平捲動**：`html` 與 `body` 設定 `overflow-x: hidden`，`body` 設定 `max-width: 100vw`
+- **選單標題**：顯示 "Trip Planner"（非「選單」）
 
 ### 內容規範
 
@@ -201,7 +221,17 @@ CLAUDE.md               — 開發規範
 - **超過 120 分鐘（2 小時）的天數會以警告樣式（黃底＋紅色徽章）顯示**
 - 每次新增或修改行程參數檔的 `timeline` 時，transit 的 text 必須包含分鐘數（如「約40分鐘」），才能正確計算車程
 - CSS class：`.driving-stats`（正常）、`.driving-stats-warning`（超過 2 小時）
-- 位置：渲染在 timeline 之後、budget 之前
+- **位置**：渲染在住宿旅館（hotel）下方、時間軸（timeline）之前
+
+### 全旅程車程統計規範
+
+- `calcTripDrivingStats(days)` 彙總所有天的車程資料，計算全旅程總車程
+- `renderTripDrivingStats(tripStats)` 渲染為可收合區塊，包含：
+  - 全旅程總車程時間
+  - 展開後顯示每天車程明細（含分段細節）
+  - 超過 2 小時的天數顯示警告樣式
+- **位置**：渲染在航班資訊（flights）區段下方
+- 行程參數檔變更後會自動重新統計（渲染時即時計算）
 
 ### 行程 JSON 連動更新規範
 
