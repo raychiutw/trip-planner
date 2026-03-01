@@ -282,6 +282,49 @@ function renderDrivingStats(stats) {
     return html;
 }
 
+/* ===== Trip-wide Driving Stats ===== */
+function calcTripDrivingStats(days) {
+    if (!days || !days.length) return null;
+    var dayStats = [];
+    var grandTotal = 0;
+    days.forEach(function(day) {
+        var content = day.content || {};
+        var stats = calcDrivingStats(content.timeline);
+        if (stats) {
+            dayStats.push({ dayId: day.id, date: day.date, label: 'Day ' + day.id, stats: stats });
+            grandTotal += stats.totalMinutes;
+        }
+    });
+    if (!dayStats.length) return null;
+    return { grandTotal: grandTotal, days: dayStats };
+}
+
+function renderTripDrivingStats(tripStats) {
+    if (!tripStats) return '';
+    var hrs = Math.floor(tripStats.grandTotal / 60);
+    var mins = tripStats.grandTotal % 60;
+    var timeStr = hrs > 0 ? hrs + ' 小時' + (mins > 0 ? ' ' + mins + ' 分鐘' : '') : tripStats.grandTotal + ' 分鐘';
+    var html = '<div class="driving-summary">';
+    html += '<div class="col-row">🚗 全旅程車程統計：' + escHtml(timeStr) + ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-detail">';
+    tripStats.days.forEach(function(d) {
+        var dHrs = Math.floor(d.stats.totalMinutes / 60);
+        var dMins = d.stats.totalMinutes % 60;
+        var dTimeStr = dHrs > 0 ? dHrs + ' 小時' + (dMins > 0 ? ' ' + dMins + ' 分鐘' : '') : d.stats.totalMinutes + ' 分鐘';
+        var isWarning = d.stats.totalMinutes > 120;
+        html += '<div class="driving-summary-day' + (isWarning ? ' driving-stats-warning' : '') + '">';
+        html += '<strong>' + escHtml(d.label) + '（' + escHtml(d.date) + '）</strong>：' + escHtml(dTimeStr);
+        if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
+        html += '<div class="driving-stats-detail">';
+        d.stats.segments.forEach(function(seg) {
+            html += '<span class="driving-stats-seg">' + escHtml(seg.text) + '</span>';
+        });
+        html += '</div></div>';
+    });
+    html += '</div></div>';
+    return html;
+}
+
 /* ===== Render: Day Content ===== */
 function renderDayContent(content, weatherId) {
     var html = '';
@@ -289,11 +332,11 @@ function renderDayContent(content, weatherId) {
         html += '<div class="hourly-weather" id="' + escHtml(weatherId) + '"><div class="hw-loading">⏳ 正在載入逐時天氣預報...</div></div>';
     }
     if (content.hotel) html += renderHotel(content.hotel);
-    if (content.timeline) html += renderTimeline(content.timeline);
     if (content.timeline) {
         var stats = calcDrivingStats(content.timeline);
         html += renderDrivingStats(stats);
     }
+    if (content.timeline) html += renderTimeline(content.timeline);
     if (content.budget) html += renderBudget(content.budget);
     return html;
 }
@@ -564,7 +607,7 @@ function validateDay(day) {
 /* ===== Render: Warnings ===== */
 function renderWarnings(warnings) {
     if (!warnings || !warnings.length) return '';
-    var html = '<div class="trip-warnings" style="background:#FFEBEE;border-left:4px solid #D32F2F;padding:10px 14px;margin:8px 0;border-radius:6px;font-size:var(--fs-md);color:#D32F2F;">';
+    var html = '<div class="trip-warnings" style="background:#FFEBEE;padding:10px 14px;margin:8px 0;border-radius:6px;font-size:var(--fs-md);color:#D32F2F;">';
     html += '<strong>⚠️ 注意事項：</strong><ul style="margin:4px 0 0 16px;">';
     warnings.forEach(function(w) { html += '<li>' + w + '</li>'; });
     html += '</ul></div>';
@@ -787,6 +830,11 @@ function renderTrip(data) {
             else if (sec.key === 'suggestions') html += renderSuggestions(d.content || {});
             else if (sec.key === 'backup') html += renderBackup(d.content || {});
             else if (sec.key === 'emergency') html += renderEmergency(d.content || {});
+        }
+        // Insert trip-wide driving stats after flights
+        if (sec.key === 'flights') {
+            var tripDrivingStats = calcTripDrivingStats(data.days);
+            html += renderTripDrivingStats(tripDrivingStats);
         }
         html += '</div>';
         html += '</section>';
@@ -1224,6 +1272,8 @@ if (typeof module !== 'undefined' && module.exports) {
         renderSuggestions: renderSuggestions,
         calcDrivingStats: calcDrivingStats,
         renderDrivingStats: renderDrivingStats,
+        calcTripDrivingStats: calcTripDrivingStats,
+        renderTripDrivingStats: renderTripDrivingStats,
         renderWarnings: renderWarnings,
         validateTripData: validateTripData,
         validateDay: validateDay,
