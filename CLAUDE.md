@@ -4,20 +4,20 @@
 
 ```
 index.html              — HTML 外殼（載入 css/js，含 sidebar + container + info-panel 三欄佈局 + FAB）
-edit.html               — AI 修改行程頁面（載入 css/js）
+edit.html               — AI 修改行程頁面（含漢堡選單 + X 關閉，載入 css/js）
 switch.html             — 切換行程獨立頁面
 css/
-  shared.css            — 共用樣式（variables, reset, base layout, dark mode, buttons）
+  shared.css            — 共用樣式（variables, reset, base layout, container, sticky-nav, dark mode, buttons）
   menu.css              — 選單/側邊欄樣式（hamburger, drawer, sidebar, backdrop）
   style.css             — Trip 專用樣式（timeline, weather, hotel, nav, cards, FAB, info-panel, print）
-  edit.css              — Edit 專用樣式（form, setup dialog, request history）
+  edit.css              — Edit 專用樣式（form, nav title, close button, request history）
   switch.css            — Switch 專用樣式（行程清單佈局）
 js/
   shared.js             — 共用函式（escHtml, escUrl, localStorage helpers, dark mode, GitHub constants）
   menu.js               — 選單/側邊欄邏輯（isDesktop, toggleMenu, toggleSidebar, swipe, resize）
   icons.js              — SVG icon 集中管理（icon registry, emoji 對映, helper 函式）
   app.js                — Trip 專用邏輯（載入 JSON、渲染、導航、天氣；依賴 shared.js + menu.js + icons.js）
-  edit.js               — Edit 專用邏輯（GitHub Issues API, setup flow, request submission）
+  edit.js               — Edit 專用邏輯（GitHub Issues API, URL ?trip= 初始化, menu, request submission）
   switch.js             — Switch 專用邏輯（讀取 trips.json、渲染行程清單）
 data/
   trips.json            — 行程清單（供切換選單讀取，含 owner 欄位）
@@ -235,6 +235,8 @@ CLAUDE.md               — 開發規範
   - `.stats-card` — 行程統計卡
   - `.edit-fab` — 右下角 AI 修改行程 FAB 按鈕
   - `.edit-page` / `.edit-main` — 編輯頁面佈局
+  - `.edit-nav-title` — 編輯頁面 sticky-nav 標題
+  - `.edit-close` — 編輯頁面右上角 X 關閉按鈕
   - `.switch-page` / `.switch-main` — 切換行程頁面佈局
 - 地圖連結格式：Google Map + Apple Map + Mapcode 三組
 
@@ -242,16 +244,16 @@ CLAUDE.md               — 開發規範
 
 | 檔案 | 載入頁面 | 內容 |
 |------|---------|------|
-| `css/shared.css` | 全部 | variables, reset, body, `.page-layout`, `.trip-btn`, dark mode base |
+| `css/shared.css` | 全部 | variables, reset, body, `.page-layout`, `.container`, `.sticky-nav`, `.trip-btn`, dark mode base |
 | `css/menu.css` | 全部 | hamburger icon, menu drawer, sidebar, backdrop, desktop sidebar, dark/print mode |
 | `css/style.css` | index only | timeline, weather, hotel, nav, cards, FAB, info-panel, print, trip-specific dark mode |
-| `css/edit.css` | edit only | edit page form/setup/history, edit-specific dark mode |
+| `css/edit.css` | edit only | edit page form/nav title/close button/history, edit-specific dark mode |
 | `css/switch.css` | switch only | switch page layout, header, list |
 | `js/shared.js` | 全部 | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
 | `js/menu.js` | 全部 | `isDesktop`, `toggleMenu`, `toggleSidebar`, `closeMobileMenuIfOpen`, swipe gesture, resize handler |
 | `js/icons.js` | 全部 | `ICONS` SVG registry, `EMOJI_ICON_MAP` emoji→icon 對映, `icon`, `iconSpan`, `emojiToIcon` |
 | `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js + menu.js + icons.js 的全域函式） |
-| `js/edit.js` | edit only | GitHub API, setup flow, edit form, request history |
+| `js/edit.js` | edit only | GitHub API, URL ?trip= init, menu, edit form, request history |
 | `js/switch.js` | switch only | 讀取 trips.json，渲染行程選擇清單 |
 
 ### UI 設計規範
@@ -331,7 +333,7 @@ CLAUDE.md               — 開發規範
 #### 架構
 ```
 Trip 頁面 → 右下角 FAB → 導向 edit.html?trip={slug}
-Edit 頁面 → 首次選擇行程 → 輸入修改文字 → POST GitHub Issue (label: trip-edit)
+Edit 頁面 → URL ?trip= 直入（無 setup flow）→ 漢堡選單 + X 關閉 → 輸入修改文字 → POST GitHub Issue (label: trip-edit)
 Cowork /render-trip → 讀 Issue → 改 trip JSON → npm test → commit push → close Issue
 ```
 
@@ -373,7 +375,8 @@ tests/
 │   ├── schema.test.js       ← validateTripData 驗證 + 額外品質檢查
 │   └── registry.test.js     ← trips.json 檔案參照驗證
 └── e2e/                     ← E2E 測試（Playwright + Chromium）
-    └── trip-page.spec.js    ← 真實瀏覽器互動驗證
+    ├── trip-page.spec.js    ← Trip 頁面真實瀏覽器互動驗證
+    └── edit-page.spec.js   ← Edit 頁面漢堡選單/X 關閉/深色模式驗證
 ```
 
 ### 執行方式

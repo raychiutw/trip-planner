@@ -1,28 +1,16 @@
 /* ===== Edit Page Layout ===== */
-.edit-page { max-width: 520px; margin: 0 auto; padding: 0 16px; min-height: 100vh; }
-.edit-header { display: flex; align-items: center; gap: 10px; padding: 16px 0; font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
-.edit-back { text-decoration: none; color: var(--text); font-size: 1.3rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-.edit-back:hover { background: var(--blue-light); }
+.edit-page { max-width: 520px; margin: 0 auto; padding: 16px; }
 .edit-main { padding-bottom: 40px; }
 
-/* ===== Setup Flow ===== */
-.setup-step { background: var(--white); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
-.setup-step h3 { font-size: var(--fs-lg); margin-bottom: 12px; color: var(--text); }
-.setup-step p { font-size: var(--fs-md); color: var(--gray); margin-bottom: 12px; line-height: 1.6; }
-
-.setup-trip-list { display: flex; flex-direction: column; gap: 8px; }
-
-.setup-input-group { margin-bottom: 16px; }
-.setup-input-group label { display: block; font-size: var(--fs-md); font-weight: 600; margin-bottom: 6px; color: var(--text); }
-.setup-input { width: 100%; padding: 10px 12px; border: none; border-radius: 8px; background: var(--gray-light); font-family: inherit; font-size: var(--fs-md); color: var(--text); }
-.setup-input:focus { outline: none; box-shadow: 0 0 0 2px var(--blue); }
+/* ===== Edit Nav Title & Close ===== */
+.edit-nav-title { flex: 1; font-size: var(--fs-lg); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.edit-close { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; color: var(--text); text-decoration: none; }
+.edit-close:hover { background: var(--blue-light); }
 
 /* ===== Edit Form ===== */
-.edit-bound { background: var(--white); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.edit-bound { background: var(--white); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; }
 .edit-bound-info { font-size: var(--fs-md); color: var(--text); }
 .edit-bound-info strong { color: var(--blue); }
-.edit-gear { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gray); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
-.edit-gear:hover { background: var(--gray-light); }
 
 .edit-textarea { width: 100%; min-height: 120px; padding: 12px; border: none; border-radius: 12px; background: var(--white); font-family: inherit; font-size: var(--fs-md); color: var(--text); resize: vertical; line-height: 1.6; }
 .edit-textarea:focus { outline: none; box-shadow: 0 0 0 2px var(--blue); }
@@ -51,12 +39,8 @@
 .edit-history-empty { color: var(--gray); font-size: var(--fs-md); }
 
 /* ===== Dark Mode (edit-specific) ===== */
-body.dark .edit-back { color: #E8E5E0; }
-body.dark .edit-back:hover { background: #302A25; }
-body.dark .setup-step { background: #292624; }
-body.dark .setup-input { background: #343130; color: #E8E5E0; }
+body.dark .edit-close:hover { background: #302A25; }
 body.dark .edit-bound { background: #292624; }
-body.dark .edit-gear:hover { background: #343130; }
 body.dark .edit-textarea { background: #292624; color: #E8E5E0; }
 body.dark .edit-btn-primary { background: #C4704F; }
 body.dark .edit-btn-secondary { background: #302A25; color: #D4845E; }

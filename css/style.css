@@ -2,8 +2,6 @@
 #tripContent a { color: var(--text); text-decoration: underline; }
 #tripContent a:visited { color: var(--text); }
 
-.container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s; }
-
 /* ===== Section Card Style ===== */
 #tripContent section { background: var(--white); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
 .day-header { border-radius: 12px 12px 0 0; }
@@ -28,9 +26,6 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .weather-list { list-style: none; padding: 0; }
 .weather-list li { font-size: var(--fs-md); padding: 3px 0; display: flex; align-items: baseline; gap: 6px; }
 .weather-list li .list-icon { flex-shrink: 0; }
-
-/* ===== Sticky Nav ===== */
-.sticky-nav { position: sticky; top: 0; z-index: 200; background: var(--white); color: var(--text); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
 
 /* ===== Day Header (section divider) ===== */
 .day-header { position: relative; z-index: 100; background: var(--white); color: var(--text); padding: 8px 12px; display: flex; align-items: center; gap: 8px; scroll-margin-top: 44px; }

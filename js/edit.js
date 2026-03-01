@@ -7,16 +7,8 @@
     var urlParams = new URLSearchParams(window.location.search);
     var urlTrip = urlParams.get('trip') || '';
 
-    /* ===== Config Helpers ===== */
-    function getEditConfig() {
-        return lsGet('edit-config');
-    }
-    function saveEditConfig(config) {
-        lsSet('edit-config', config);
-    }
-    function clearEditConfig() {
-        lsRemove('edit-config');
-    }
+    /* ===== Module-level config ===== */
+    var currentConfig = null;
 
     /* ===== Request History Helpers ===== */
     function getHistory() {
@@ -42,58 +34,57 @@
         return fetch(url, Object.assign({ headers: headers }, opts || {}));
     }
 
-    /* ===== Render: Setup Flow ===== */
-    function renderSetup() {
-        editMain.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray);">載入行程清單...</div>';
+    /* ===== Build Menu ===== */
+    function buildEditMenu(slug) {
+        var tripUrl = 'index.html?trip=' + encodeURIComponent(slug);
 
-        fetch('data/trips.json')
-            .then(function(r) { return r.json(); })
-            .then(function(trips) {
-                renderTripSelection(trips);
-            })
-            .catch(function() {
-                editMain.innerHTML = '<div class="edit-status error">無法載入行程清單</div>';
-            });
-    }
+        var navItems = [
+            { icon: 'plane', label: '航班資訊', hash: 'sec-flight' },
+            { icon: 'check-circle', label: '出發前確認', hash: 'sec-checklist' },
+            { icon: 'lightbulb', label: '行程建議', hash: 'sec-suggestions' },
+            { icon: 'refresh', label: '颱風/雨天備案', hash: 'sec-backup' },
+            { icon: 'emergency', label: '緊急聯絡', hash: 'sec-emergency' }
+        ];
 
-    function renderTripSelection(trips) {
-        var html = '<div class="setup-step">';
-        html += '<h3>選擇你的行程</h3>';
-        html += '<p>請選擇你要編輯的行程：</p>';
-        html += '<div class="setup-trip-list">';
-        trips.forEach(function(t) {
-            var slug = t.file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
-            html += '<button class="trip-btn" data-slug="' + escHtml(slug) + '" data-name="' + escHtml(t.name) + '" data-owner="' + escHtml(t.owner) + '">';
-            html += '<strong>' + escHtml(t.name) + '</strong>';
-            html += '<span class="trip-sub">' + escHtml(t.dates) + ' · ' + escHtml(t.owner) + '</span>';
-            html += '</button>';
+        // Drawer menu (mobile)
+        var html = '';
+        navItems.forEach(function(item) {
+            html += '<a class="menu-item" href="' + tripUrl + '#' + item.hash + '">' + iconSpan(item.icon) + ' ' + escHtml(item.label) + '</a>';
         });
-        html += '</div></div>';
-        editMain.innerHTML = html;
+        html += '<div class="menu-sep"></div>';
+        html += '<button class="menu-item" data-action="toggle-dark">' + iconSpan('moon') + ' 深色模式</button>';
+        html += '<a class="menu-item" href="switch.html">' + iconSpan('folder') + ' 切換行程檔</a>';
+        document.getElementById('menuGrid').innerHTML = html;
 
-        editMain.querySelectorAll('.trip-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var slug = btn.getAttribute('data-slug');
-                var name = btn.getAttribute('data-name');
-                var owner = btn.getAttribute('data-owner');
-                saveEditConfig({
-                    owner: owner,
-                    tripSlug: slug,
-                    tripName: name
-                });
-                checkAndRender();
+        // Sidebar menu (desktop)
+        var sidebarNav = document.getElementById('sidebarNav');
+        if (sidebarNav) {
+            var sHtml = '';
+            navItems.forEach(function(item) {
+                sHtml += '<a class="menu-item" href="' + tripUrl + '#' + item.hash + '" title="' + escHtml(item.label) + '">'
+                       + '<span class="item-icon">' + iconSpan(item.icon) + '</span>'
+                       + '<span class="item-label">' + escHtml(item.label) + '</span></a>';
             });
-        });
+            sHtml += '<div class="menu-sep"></div>';
+            sHtml += '<button class="menu-item" data-action="toggle-dark" title="深色模式"><span class="item-icon">' + iconSpan('moon') + '</span><span class="item-label">深色模式</span></button>';
+            sHtml += '<div class="menu-sep" style="margin-top:auto"></div>';
+            sHtml += '<a class="menu-item" href="switch.html" title="切換行程檔"><span class="item-icon">' + iconSpan('folder') + '</span><span class="item-label">切換行程檔</span></a>';
+            sidebarNav.innerHTML = sHtml;
+        }
+
+        // Update dark mode button text
+        if (document.body.classList.contains('dark')) {
+            updateDarkBtnText(true);
+        }
     }
 
     /* ===== Render: Edit Form ===== */
     function renderEditForm(config) {
-        var html = '';
+        var html = '<div class="edit-page">';
 
         // Bound info
         html += '<div class="edit-bound">';
         html += '<div class="edit-bound-info"><strong>' + escHtml(config.owner) + '</strong> — ' + escHtml(config.tripName) + '</div>';
-        html += '<button class="edit-gear" id="gearBtn" title="重新設定">' + iconSpan('gear') + '</button>';
         html += '</div>';
 
         // Textarea
@@ -106,12 +97,8 @@
         // History
         html += renderHistory();
 
+        html += '</div>';
         editMain.innerHTML = html;
-
-        document.getElementById('gearBtn').addEventListener('click', function() {
-            clearEditConfig();
-            renderSetup();
-        });
 
         document.getElementById('submitBtn').addEventListener('click', function() {
             submitRequest();
@@ -126,7 +113,7 @@
             return;
         }
 
-        var config = getEditConfig();
+        var config = currentConfig;
         var btn = document.getElementById('submitBtn');
         btn.disabled = true;
         btn.textContent = '送出中...';
@@ -201,25 +188,58 @@
         return html;
     }
 
+    /* ===== Toggle Dark Mode ===== */
+    document.addEventListener('click', function(e) {
+        var el = e.target.closest('[data-action]');
+        if (!el) return;
+        if (el.getAttribute('data-action') === 'toggle-dark') {
+            toggleDarkShared();
+            updateDarkBtnText(document.body.classList.contains('dark'));
+        }
+    });
+
     /* ===== Main Entry ===== */
-    function checkAndRender() {
-        var config = getEditConfig();
-
-        if (!config) {
-            renderSetup();
+    function init() {
+        // No ?trip= → redirect to index.html
+        if (!urlTrip) {
+            window.location.replace('index.html');
             return;
         }
 
-        // URL 帶不同行程 → 切換到該行程
-        if (urlTrip && config.tripSlug !== urlTrip) {
-            clearEditConfig();
-            renderSetup();
-            return;
-        }
+        fetch('data/trips.json')
+            .then(function(r) { return r.json(); })
+            .then(function(trips) {
+                // Find matching trip
+                var found = null;
+                trips.forEach(function(t) {
+                    var slug = t.file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
+                    if (slug === urlTrip) {
+                        found = { owner: t.owner, tripSlug: slug, tripName: t.name };
+                    }
+                });
 
-        renderEditForm(config);
+                if (!found) {
+                    editMain.innerHTML = '<div class="edit-page"><div class="edit-status error">找不到行程「' + escHtml(urlTrip) + '」</div></div>';
+                    return;
+                }
+
+                currentConfig = found;
+
+                // Set X close button href
+                document.getElementById('editClose').href = 'index.html?trip=' + encodeURIComponent(found.tripSlug);
+
+                // Build menu & init sidebar
+                buildEditMenu(found.tripSlug);
+                initSidebar();
+
+                // Render edit form
+                renderEditForm(found);
+            })
+            .catch(function() {
+                editMain.innerHTML = '<div class="edit-page"><div class="edit-status error">無法載入行程清單</div></div>';
+            });
     }
 
     // Init
-    checkAndRender();
+    init();
 })();
