@@ -107,8 +107,8 @@ test.describe('漢堡選單', () => {
     await menuBtn.click();
     await expect(menuDrop).toHaveClass(/open/);
 
-    // 點擊 X 關閉（滿版 overlay 覆蓋漢堡按鈕）
-    await page.locator('.menu-close').click();
+    // 點擊 backdrop 關閉
+    await page.locator('#menuBackdrop').click();
     await expect(menuDrop).not.toHaveClass(/open/);
   });
 
@@ -122,7 +122,7 @@ test.describe('漢堡選單', () => {
 
     // 點擊選單中的「航班資訊」
     await page.locator('#menuDrop [data-target="sec-flight"]').click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
 
     // 選單應已關閉
     await expect(menuDrop).not.toHaveClass(/open/);
@@ -130,7 +130,7 @@ test.describe('漢堡選單', () => {
     await expect(page.locator('#sec-flight')).toBeInViewport();
   });
 
-  test('點擊 X 按鈕關閉選單', async ({ page }) => {
+  test('點擊 backdrop 關閉選單', async ({ page }) => {
     await page.goto('/');
     const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const menuDrop = page.locator('#menuDrop');
@@ -138,8 +138,30 @@ test.describe('漢堡選單', () => {
     await menuBtn.click();
     await expect(menuDrop).toHaveClass(/open/);
 
-    // 點擊選單內的 X 關閉按鈕
-    await page.locator('.menu-close').click();
+    // 點擊 backdrop 關閉選單
+    await page.locator('#menuBackdrop').click();
+    await expect(menuDrop).not.toHaveClass(/open/);
+  });
+
+  test('向左滑動關閉選單', async ({ page }) => {
+    await page.goto('/');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const menuDrop = page.locator('#menuDrop');
+
+    await menuBtn.click();
+    await expect(menuDrop).toHaveClass(/open/);
+
+    // 模擬向左滑動（dx < -50）關閉選單
+    await page.evaluate(() => {
+      const ts = (type, x, y) => new TouchEvent(type, {
+        bubbles: true,
+        [type === 'touchend' ? 'changedTouches' : 'touches']:
+          [new Touch({ identifier: 0, target: document.body, clientX: x, clientY: y })]
+      });
+      document.dispatchEvent(ts('touchstart', 200, 300));
+      document.dispatchEvent(ts('touchend', 100, 300));
+    });
+
     await expect(menuDrop).not.toHaveClass(/open/);
   });
 });
