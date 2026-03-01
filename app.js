@@ -873,6 +873,7 @@ function renderTrip(data) {
 }
 
 function buildMenu(data) {
+    // Drawer menu (mobile)
     var html = '';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
@@ -884,11 +885,89 @@ function buildMenu(data) {
     html += '<button class="menu-item" data-action="toggle-print">🖨️ 列印模式</button>';
     html += '<button class="menu-item" data-action="switch-trip">📂 切換行程檔</button>';
     document.getElementById('menuGrid').innerHTML = html;
-    // Update dark mode button text
-    if (document.body.classList.contains('dark')) {
-        var btn = document.querySelector('[data-action="toggle-dark"]');
-        if (btn) btn.textContent = '☀️ 淺色模式';
+
+    // Sidebar menu (desktop)
+    var sidebarNav = document.getElementById('sidebarNav');
+    if (sidebarNav) {
+        var sHtml = '';
+        sHtml += '<div class="sidebar-section-title">導覽</div>';
+        var navItems = [
+            { icon: '✈️', label: '航班資訊', target: 'sec-flight' },
+            { icon: '✅', label: '出發前確認', target: 'sec-checklist' },
+            { icon: '💡', label: '行程建議', target: 'sec-suggestions' },
+            { icon: '🔄', label: '颱風/雨天備案', target: 'sec-backup' },
+            { icon: '🆘', label: '緊急聯絡', target: 'sec-emergency' }
+        ];
+        navItems.forEach(function(item) {
+            sHtml += '<button class="menu-item" data-action="scroll-to" data-target="' + item.target + '" title="' + escHtml(item.label) + '">'
+                   + '<span class="item-icon">' + item.icon + '</span>'
+                   + '<span class="item-label">' + escHtml(item.label) + '</span></button>';
+        });
+        sHtml += '<div class="menu-sep"></div>';
+        sHtml += '<div class="sidebar-section-title">設定</div>';
+        sHtml += '<button class="menu-item" data-action="toggle-dark" title="深色模式"><span class="item-icon">🌙</span><span class="item-label">深色模式</span></button>';
+        sHtml += '<button class="menu-item" data-action="toggle-print" title="列印模式"><span class="item-icon">🖨️</span><span class="item-label">列印模式</span></button>';
+        sHtml += '<div class="menu-sep" style="margin-top:auto"></div>';
+        sHtml += '<button class="menu-item" data-action="switch-trip" title="切換行程檔"><span class="item-icon">📂</span><span class="item-label">切換行程檔</span></button>';
+        sidebarNav.innerHTML = sHtml;
     }
+
+    // Update dark mode button text in both menus
+    if (document.body.classList.contains('dark')) {
+        updateDarkBtnText(true);
+    }
+}
+
+function updateDarkBtnText(isDark) {
+    var btns = document.querySelectorAll('[data-action="toggle-dark"]');
+    btns.forEach(function(btn) {
+        var label = btn.querySelector('.item-label');
+        if (label) {
+            btn.querySelector('.item-icon').textContent = isDark ? '☀️' : '🌙';
+            label.textContent = isDark ? '淺色模式' : '深色模式';
+            btn.setAttribute('title', isDark ? '淺色模式' : '深色模式');
+        } else {
+            btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
+        }
+    });
+}
+
+/* ===== Desktop / Sidebar Helpers ===== */
+function isDesktop() { return window.matchMedia('(min-width: 768px)').matches; }
+
+function initSidebar() {
+    var sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    if (lsGet('sidebar-collapsed') === '1') {
+        sidebar.classList.add('collapsed');
+    }
+}
+
+function toggleSidebar() {
+    if (!isDesktop()) { toggleMenu(); return; }
+    var sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    sidebar.classList.toggle('collapsed');
+    lsSet('sidebar-collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+}
+
+function closeMobileMenuIfOpen() {
+    if (isDesktop()) return;
+    var menu = document.getElementById('menuDrop');
+    var backdrop = document.getElementById('menuBackdrop');
+    if (menu && menu.classList.contains('open')) {
+        menu.classList.remove('open');
+        backdrop.classList.remove('open');
+        document.body.classList.remove('menu-open');
+        document.body.style.overflow = '';
+    }
+}
+
+function scrollNavPillIntoView(btn) {
+    var nav = btn.closest('.dh-nav');
+    if (!nav) return;
+    var left = btn.offsetLeft - nav.offsetWidth / 2 + btn.offsetWidth / 2;
+    nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
 }
 
 /* ===== Toggle Functions ===== */
@@ -911,12 +990,11 @@ function toggleCol(el) {
     if (arrow) arrow.textContent = isOpen ? '－' : '＋';
 }
 function toggleDark() {
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
+    closeMobileMenuIfOpen();
     document.body.classList.toggle('dark');
     var isDark = document.body.classList.contains('dark');
     lsSet('dark', isDark ? '1' : '0');
-    var btn = document.querySelector('[data-action="toggle-dark"]');
-    if (btn) btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
+    updateDarkBtnText(isDark);
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', isDark ? '#7D4A36' : '#C4704F');
 }
@@ -930,7 +1008,7 @@ function scrollToSec(id) {
     var el = document.getElementById(id);
     if (!el) return;
     _manualScrollTs = Date.now();
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
+    closeMobileMenuIfOpen();
     var navH = document.getElementById('stickyNav').offsetHeight;
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
@@ -959,6 +1037,7 @@ document.addEventListener('touchstart', function(e) {
     _swipeStartY = e.touches[0].clientY;
 }, { passive: true });
 document.addEventListener('touchend', function(e) {
+    if (isDesktop()) return;
     var dx = e.changedTouches[0].clientX - _swipeStartX;
     var dy = e.changedTouches[0].clientY - _swipeStartY;
     if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
@@ -976,26 +1055,24 @@ function toggleHw(el) {
     }
 }
 function togglePrint() {
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
+    closeMobileMenuIfOpen();
     var entering = !document.body.classList.contains('print-mode');
     if (entering && document.body.classList.contains('dark')) {
         document.body.dataset.wasDark = '1';
         document.body.classList.remove('dark');
-        var btn = document.querySelector('[data-action="toggle-dark"]');
-        if (btn) btn.textContent = '🌙 深色模式';
+        updateDarkBtnText(false);
     }
     document.body.classList.toggle('print-mode');
     if (!entering && document.body.dataset.wasDark === '1') {
         document.body.classList.add('dark');
         delete document.body.dataset.wasDark;
-        var btn2 = document.querySelector('[data-action="toggle-dark"]');
-        if (btn2) btn2.textContent = '☀️ 淺色模式';
+        updateDarkBtnText(true);
     }
 }
 
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
+    closeMobileMenuIfOpen();
     fetch('data/trips.json?t=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(trips) {
@@ -1101,6 +1178,8 @@ function initNavTracking() {
             var current = -1;
             if (!inInfo) { for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; } }
             navPills.forEach(function(btn) { btn.classList.toggle('active', current >= 0 && parseInt(btn.getAttribute('data-day')) === current + 1); });
+            var activeBtn = document.querySelector('#stickyNav .dh-nav .dn.active');
+            if (activeBtn) scrollNavPillIntoView(activeBtn);
             if (current >= 0 && Date.now() - _manualScrollTs > 600) {
                 var newHash = '#day' + (current + 1);
                 if (window.location.hash !== newHash) history.replaceState(null, '', newHash);
@@ -1140,6 +1219,7 @@ document.addEventListener('click', function(e) {
     if (actionEl) {
         switch (actionEl.getAttribute('data-action')) {
             case 'toggle-menu': e.stopPropagation(); toggleMenu(actionEl); break;
+            case 'toggle-sidebar': e.stopPropagation(); toggleSidebar(); break;
             case 'scroll-to':  scrollToSec(actionEl.getAttribute('data-target')); break;
             case 'toggle-dark': toggleDark(); break;
             case 'toggle-print': togglePrint(); break;
@@ -1242,6 +1322,23 @@ window.addEventListener('afterprint', function() {
     if (document.body.dataset.wasDark === '1') {
         document.body.classList.add('dark');
         delete document.body.dataset.wasDark;
+    }
+});
+
+// Init sidebar state from localStorage
+initSidebar();
+
+// Resize: close mobile drawer when switching to desktop
+window.addEventListener('resize', function() {
+    if (isDesktop()) {
+        var menu = document.getElementById('menuDrop');
+        var backdrop = document.getElementById('menuBackdrop');
+        if (menu && menu.classList.contains('open')) {
+            menu.classList.remove('open');
+            backdrop.classList.remove('open');
+            document.body.classList.remove('menu-open');
+            document.body.style.overflow = '';
+        }
     }
 });
 

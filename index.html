@@ -18,12 +18,22 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="sticky-nav" id="stickyNav">
-            <button class="dh-menu" data-action="toggle-menu" aria-label="選單"><span class="hamburger-icon"><span></span><span></span><span></span></span></button>
-            <div class="dh-nav" id="navPills"></div>
+    <div class="page-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="收合側邊欄">
+                    <span class="hamburger-icon"><span></span><span></span><span></span></span>
+                </button>
+            </div>
+            <nav class="sidebar-nav" id="sidebarNav"></nav>
+        </aside>
+        <div class="container">
+            <div class="sticky-nav" id="stickyNav">
+                <button class="dh-menu" data-action="toggle-sidebar" aria-label="選單"><span class="hamburger-icon"><span></span><span></span><span></span></span></button>
+                <div class="dh-nav" id="navPills"></div>
+            </div>
+            <div id="tripContent"><div style="text-align:center;padding:40px;color:var(--gray);">⏳ 載入行程資料中...</div></div>
         </div>
-        <div id="tripContent"><div style="text-align:center;padding:40px;color:var(--gray);">⏳ 載入行程資料中...</div></div>
     </div>
     <div class="menu-backdrop" id="menuBackdrop"></div>
     <div class="menu-drawer" id="menuDrop">

@@ -93,11 +93,13 @@ test.describe('導航功能', () => {
   });
 });
 
-/* ===== 3. 漢堡選單 ===== */
-test.describe('漢堡選單', () => {
+/* ===== 3. 漢堡選單（手機版） ===== */
+test.describe('漢堡選單（手機版）', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
+
   test('選單按鈕開關 menu', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
     const menuDrop = page.locator('#menuDrop');
 
     // 初始關閉
@@ -114,7 +116,7 @@ test.describe('漢堡選單', () => {
 
   test('選單項目點擊後捲動並關閉選單', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
     const menuDrop = page.locator('#menuDrop');
 
     await menuBtn.click();
@@ -132,7 +134,7 @@ test.describe('漢堡選單', () => {
 
   test('點擊 backdrop 關閉選單', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
     const menuDrop = page.locator('#menuDrop');
 
     await menuBtn.click();
@@ -145,7 +147,7 @@ test.describe('漢堡選單', () => {
 
   test('向左滑動關閉選單', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
+    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
     const menuDrop = page.locator('#menuDrop');
 
     await menuBtn.click();
@@ -166,46 +168,95 @@ test.describe('漢堡選單', () => {
   });
 });
 
+/* ===== 3b. 桌機側邊欄 ===== */
+test.describe('桌機側邊欄', () => {
+  test('側邊欄預設可見且展開', async ({ page }) => {
+    await page.goto('/');
+    const sidebar = page.locator('#sidebar');
+    await expect(sidebar).toBeVisible();
+    await expect(sidebar).not.toHaveClass(/collapsed/);
+  });
+
+  test('點擊 toggle 按鈕收合/展開', async ({ page }) => {
+    await page.goto('/');
+    const sidebar = page.locator('#sidebar');
+    const toggle = page.locator('.sidebar-toggle');
+
+    // 點擊收合
+    await toggle.click();
+    await expect(sidebar).toHaveClass(/collapsed/);
+
+    // 點擊展開
+    await toggle.click();
+    await expect(sidebar).not.toHaveClass(/collapsed/);
+  });
+
+  test('collapsed 狀態存入 localStorage', async ({ page }) => {
+    await page.goto('/');
+    const toggle = page.locator('.sidebar-toggle');
+
+    // 點擊收合
+    await toggle.click();
+
+    // 檢查 localStorage
+    const collapsed = await page.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf('sidebar-collapsed') !== -1) {
+          return JSON.parse(localStorage.getItem(k)).v;
+        }
+      }
+      return null;
+    });
+    expect(collapsed).toBe('1');
+  });
+
+  test('側邊欄選單項目點擊後捲動到對應區段', async ({ page }) => {
+    await page.goto('/');
+    // 點擊側邊欄的「航班資訊」
+    await page.locator('#sidebarNav [data-target="sec-flight"]').click();
+    await page.waitForTimeout(800);
+    await expect(page.locator('#sec-flight')).toBeInViewport();
+  });
+
+  test('桌機版手機 drawer 不可見', async ({ page }) => {
+    await page.goto('/');
+    const menuDrop = page.locator('#menuDrop');
+    await expect(menuDrop).not.toBeVisible();
+  });
+});
+
 /* ===== 4. 深色模式 ===== */
 test.describe('深色模式', () => {
-  test('切換深色模式 toggle body.dark', async ({ page }) => {
+  test('切換深色模式 toggle body.dark（桌機側邊欄）', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const body = page.locator('body');
 
     // 初始無 dark
     await expect(body).not.toHaveClass(/dark/);
 
-    // 開啟選單 → 點擊深色模式
-    await menuBtn.click();
-    await page.locator('[data-action="toggle-dark"]').click();
+    // 點擊側邊欄深色模式按鈕
+    await page.locator('#sidebarNav [data-action="toggle-dark"]').click();
     await expect(body).toHaveClass(/dark/);
 
     // 再次切換回來
-    await menuBtn.click();
-    await page.locator('[data-action="toggle-dark"]').click();
+    await page.locator('#sidebarNav [data-action="toggle-dark"]').click();
     await expect(body).not.toHaveClass(/dark/);
   });
 
-  test('深色模式按鈕文字切換', async ({ page }) => {
+  test('深色模式按鈕文字切換（桌機側邊欄）', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
-
-    await menuBtn.click();
-    const darkBtn = page.locator('[data-action="toggle-dark"]');
+    const darkBtn = page.locator('#sidebarNav [data-action="toggle-dark"]');
     await expect(darkBtn).toContainText('深色模式');
 
     await darkBtn.click();
-    await menuBtn.click();
     await expect(darkBtn).toContainText('淺色模式');
   });
 
   test('深色模式保存到 localStorage', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
-    await menuBtn.click();
-    await page.locator('[data-action="toggle-dark"]').click();
+    await page.locator('#sidebarNav [data-action="toggle-dark"]').click();
 
     // 檢查 localStorage
     const darkValue = await page.evaluate(() => {
@@ -389,14 +440,12 @@ test.describe('緊急聯絡', () => {
 
 /* ===== 11. 列印模式 ===== */
 test.describe('列印模式', () => {
-  test('切換列印模式', async ({ page }) => {
+  test('切換列印模式（桌機側邊欄）', async ({ page }) => {
     await page.goto('/');
     const body = page.locator('body');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
-    // 開啟選單 → 點擊列印模式
-    await menuBtn.click();
-    await page.locator('#menuDrop [data-action="toggle-print"]').click();
+    // 點擊側邊欄列印模式按鈕
+    await page.locator('#sidebarNav [data-action="toggle-print"]').click();
     await expect(body).toHaveClass(/print-mode/);
 
     // 用頁面上的退出按鈕退出列印模式
@@ -407,12 +456,10 @@ test.describe('列印模式', () => {
 
 /* ===== 12. 行程切換 ===== */
 test.describe('行程切換', () => {
-  test('切換行程檔 dialog 出現', async ({ page }) => {
+  test('切換行程檔 dialog 出現（桌機側邊欄）', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
-    await menuBtn.click();
-    await page.locator('[data-action="switch-trip"]').click();
+    await page.locator('#sidebarNav [data-action="switch-trip"]').click();
 
     // dialog overlay 出現（switchTripFile 動態建立，等文字出現）
     await expect(page.getByText('選擇行程')).toBeVisible();
@@ -420,10 +467,8 @@ test.describe('行程切換', () => {
 
   test('點擊另一行程後載入新資料', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
-    await menuBtn.click();
-    await page.locator('[data-action="switch-trip"]').click();
+    await page.locator('#sidebarNav [data-action="switch-trip"]').click();
 
     // 等待 dialog 出現
     await expect(page.getByText('選擇行程')).toBeVisible();
@@ -439,10 +484,8 @@ test.describe('行程切換', () => {
 
   test('行程切換 dialog X 按鈕關閉', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
 
-    await menuBtn.click();
-    await page.locator('[data-action="switch-trip"]').click();
+    await page.locator('#sidebarNav [data-action="switch-trip"]').click();
     await expect(page.getByText('選擇行程')).toBeVisible();
 
     // 點擊 X 關閉 dialog
@@ -497,12 +540,10 @@ test.describe('天氣元件', () => {
 test.describe('Dark mode 持久化', () => {
   test('深色模式 reload 後仍保持', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const body = page.locator('body');
 
-    // 啟用 dark mode
-    await menuBtn.click();
-    await page.locator('[data-action="toggle-dark"]').click();
+    // 啟用 dark mode（透過側邊欄）
+    await page.locator('#sidebarNav [data-action="toggle-dark"]').click();
     await expect(body).toHaveClass(/dark/);
 
     // Reload
@@ -543,17 +584,14 @@ test.describe('無效 hash', () => {
 test.describe('Dark + Print 互動', () => {
   test('列印模式暫時移除 dark，退出後恢復', async ({ page }) => {
     await page.goto('/');
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-menu"]');
     const body = page.locator('body');
 
-    // 啟用 dark mode
-    await menuBtn.click();
-    await page.locator('[data-action="toggle-dark"]').click();
+    // 啟用 dark mode（透過側邊欄）
+    await page.locator('#sidebarNav [data-action="toggle-dark"]').click();
     await expect(body).toHaveClass(/dark/);
 
-    // 進入列印模式
-    await menuBtn.click();
-    await page.locator('#menuDrop [data-action="toggle-print"]').click();
+    // 進入列印模式（透過側邊欄）
+    await page.locator('#sidebarNav [data-action="toggle-print"]').click();
     await expect(body).toHaveClass(/print-mode/);
     // 列印模式下不應有 dark
     await expect(body).not.toHaveClass(/dark/);
