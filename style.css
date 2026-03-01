@@ -82,10 +82,10 @@ body.dark .sticky-nav { background: #7D4A36; }
 .dn { background: rgba(255,255,255,0.2); color: var(--white); border: none; padding: 3px 8px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
 .dn:hover { background: rgba(255,255,255,0.35); }
 .dn.active { background: var(--white); color: var(--blue); }
-.dh-menu { background: rgba(255,255,255,0.25); color: var(--white); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
-.dh-menu:hover { background: rgba(255,255,255,0.35); }
-body.menu-open .dh-menu { background: rgba(0,0,0,0.1); }
-body.dark.menu-open .dh-menu { background: rgba(0,0,0,0.25); }
+.dh-menu { background: none; color: var(--white); border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+.dh-menu:hover { background: rgba(255,255,255,0.2); }
+body.menu-open .dh-menu { background: none; }
+body.dark.menu-open .dh-menu { background: none; }
 .day-header .dh-right + .dh-menu { margin-left: 0; }
 
 /* ===== Day Content ===== */
@@ -355,7 +355,7 @@ body.dark .day-header { background: #7D4A36; color: #E8E5E0; }
 body.dark .info-header { background: #3D3A37 !important; color: #E8E5E0 !important; }
 body.dark .dn { color: #E8E5E0; }
 body.dark .dn.active { background: #E8E5E0; color: #7D4A36; }
-body.dark .dh-menu { background: rgba(255,255,255,0.15); color: #E8E5E0; }
+body.dark .dh-menu { background: none; color: #E8E5E0; }
 body.dark .map-link { color: #D4845E; background: #302A25; }
 body.dark .map-link:hover { background: #7D4A36; color: #fff; }
 body.dark .map-link.apple { color: #9B9590; background: #3D3A37; }
