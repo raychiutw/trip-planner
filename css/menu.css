@@ -1,0 +1,125 @@
+/* ===== Menu / Sidebar System ===== */
+
+/* Container transform when menu open (mobile) */
+body.menu-open .container { transform: translateX(min(280px, 80vw)); border-radius: 16px; height: 100vh; overflow: hidden; box-shadow: -8px 0 30px rgba(0,0,0,0.1); }
+
+/* ===== Desktop Sidebar ===== */
+.sidebar { display: none; }
+.sidebar-toggle { background: none; border: none; color: var(--text); cursor: pointer; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+.sidebar-toggle:hover { background: var(--blue-light); }
+
+/* ===== Hamburger Icon ===== */
+.hamburger-icon { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 3.5px; width: 18px; height: 18px; }
+.hamburger-icon span { display: block; width: 18px; height: 2px; background: currentColor; border-radius: 1px; transition: transform 0.25s, opacity 0.25s; }
+.hamburger-icon span:last-child { width: 12px; }
+
+/* ===== Menu Backdrop ===== */
+.menu-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.15); z-index: 290; opacity: 0; transition: opacity 0.3s; }
+.menu-backdrop.open { display: block; opacity: 1; }
+
+/* ===== Menu Drawer (slide-in sidebar) ===== */
+.menu-drawer { position: fixed; top: 0; left: 0; bottom: 0; width: 280px; max-width: 80vw; background: var(--gray-light); z-index: 300; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: none; display: flex; flex-direction: column; }
+.menu-drawer.open { transform: translateX(0); }
+.menu-drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; flex-shrink: 0; }
+.menu-drawer-title { font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
+.menu-close { display: none; }
+.menu-grid { display: flex; flex-direction: column; gap: 0; padding: 12px 8px; overflow-y: auto; flex: 1; }
+.menu-item { display: block; width: 100%; padding: 10px 12px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: var(--fs-lg); font-family: inherit; color: var(--text); text-align: left; white-space: nowrap; }
+.menu-item:hover { background: var(--blue-light); }
+
+/* ===== Hamburger in Sticky Nav ===== */
+.dh-menu { background: none; color: var(--text); border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
+.dh-menu:hover { background: var(--blue-light); }
+body.menu-open .dh-menu { background: none; }
+body.dark.menu-open .dh-menu { background: none; }
+.day-header .dh-right + .dh-menu { margin-left: 0; }
+
+/* ===== Menu Separator ===== */
+.menu-sep { margin: 4px 0; height: 8px; }
+
+/* ===== Desktop Sidebar Layout ===== */
+@media (min-width: 768px) {
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        width: var(--sidebar-w);
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        border-right: 1px solid var(--gray-light);
+        background: var(--white);
+        transition: width var(--sidebar-transition);
+        overflow: hidden;
+        flex-shrink: 0;
+        z-index: 210;
+    }
+    .sidebar.collapsed { width: var(--sidebar-w-collapsed); }
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 8px 12px;
+        min-height: 44px;
+        flex-shrink: 0;
+    }
+    .sidebar.collapsed .sidebar-header { justify-content: center; padding: 8px; }
+    .sidebar-nav {
+        overflow-y: auto;
+        flex: 1;
+        padding: 8px 6px;
+        scrollbar-width: thin;
+    }
+    .sidebar .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        overflow: hidden;
+    }
+    .sidebar .item-icon { flex-shrink: 0; width: 24px; text-align: center; font-size: 1rem; }
+    .sidebar .item-label {
+        white-space: nowrap;
+        overflow: hidden;
+        opacity: 1;
+        max-width: 200px;
+        transition: opacity 0.15s, max-width 0.15s;
+    }
+    .sidebar.collapsed .item-label { opacity: 0; max-width: 0; pointer-events: none; }
+    .sidebar .menu-sep { margin: 4px 6px; }
+    .sidebar.collapsed .menu-sep { margin: 4px 2px; }
+    .sidebar .sidebar-section-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray);
+        text-transform: uppercase;
+        padding: 8px 12px 4px;
+        letter-spacing: 0.05em;
+        overflow: hidden;
+        white-space: nowrap;
+        opacity: 1;
+        transition: opacity 0.15s;
+    }
+    .sidebar.collapsed .sidebar-section-title { opacity: 0; height: 0; padding: 0; margin: 0; }
+
+    /* Hide mobile drawer & sticky nav hamburger on desktop */
+    .menu-drawer, .menu-backdrop { display: none !important; }
+    .sticky-nav .dh-menu { display: none; }
+    body.menu-open .container { transform: none !important; border-radius: 0 !important; height: auto !important; overflow: visible !important; box-shadow: none !important; }
+}
+
+/* ===== Dark Mode (sidebar/menu) ===== */
+body.dark .sidebar { background: #1A1816; border-right-color: #3D3A37; }
+body.dark .sidebar-toggle { color: #E8E5E0; }
+body.dark .sidebar-toggle:hover { background: #302A25; }
+body.dark .sidebar .menu-item { color: #E8E5E0; }
+body.dark .sidebar .menu-item:hover { background: #302A25; }
+body.dark .sidebar .sidebar-section-title { color: #9B9590; }
+body.dark .menu-drawer { background: #1A1816; box-shadow: none; }
+body.dark.menu-open .container { box-shadow: -8px 0 30px rgba(0,0,0,0.3); }
+body.dark .menu-backdrop { background: rgba(0,0,0,0.6); }
+
+/* ===== Print Mode (menu elements) ===== */
+.print-mode .dh-menu { display: none !important; }
+.print-mode .sidebar { display: none !important; }
+@media print {
+    .menu-drawer, .menu-backdrop, .dh-menu, .sidebar { display: none !important; }
+}

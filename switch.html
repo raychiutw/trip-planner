@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self' https://api.github.com; img-src 'self' https: data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' https: data:;">
     <meta name="theme-color" content="#C4704F">
-    <title>AI 修改行程 — Trip Planner</title>
+    <title>切換行程 — Trip Planner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/shared.css">
     <link rel="stylesheet" href="css/menu.css">
-    <link rel="stylesheet" href="css/edit.css">
+    <link rel="stylesheet" href="css/switch.css">
 </head>
 <body>
-    <div class="edit-page">
-        <header class="edit-header">
-            <a href="index.html" class="edit-back" aria-label="返回行程">←</a>
-            <span>✏️ AI 修改行程</span>
+    <div class="switch-page">
+        <header class="switch-header">
+            <span>📂 選擇行程</span>
+            <a href="index.html" class="switch-close" aria-label="關閉">✕</a>
         </header>
-        <main class="edit-main" id="editMain">
+        <main class="switch-main" id="switchMain">
             <div style="text-align:center;padding:40px;color:var(--gray);">⏳ 載入中...</div>
         </main>
     </div>
     <script src="js/shared.js"></script>
     <script src="js/menu.js"></script>
-    <script src="js/edit.js"></script>
+    <script src="js/switch.js"></script>
 </body>
 </html>

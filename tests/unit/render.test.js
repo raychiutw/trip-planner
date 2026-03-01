@@ -443,12 +443,12 @@ describe('renderChecklist', () => {
     expect(renderChecklist({})).toBe('');
   });
 
-  it('uses safeColor for card background', () => {
+  it('renders cards without inline background', () => {
     const html = renderChecklist({
-      cards: [{ title: 'T', items: ['A'], color: 'red;} body{display:none' }],
+      cards: [{ title: 'T', items: ['A'], color: '#e3f2fd' }],
     });
-    expect(html).toContain('var(--blue-light)');
-    expect(html).not.toContain('display:none');
+    expect(html).toContain('ov-card');
+    expect(html).not.toContain('style=');
   });
 });
 
@@ -537,7 +537,7 @@ describe('renderEmergency', () => {
 
 /* ===== renderSuggestions ===== */
 describe('renderSuggestions', () => {
-  it('renders cards with priority classes', () => {
+  it('renders cards without priority classes (unified style)', () => {
     const html = renderSuggestions({
       cards: [
         { title: '高優先', priority: 'high', items: ['建議 1'] },
@@ -545,21 +545,12 @@ describe('renderSuggestions', () => {
         { title: '低優先', priority: 'low', items: ['建議 3'] },
       ],
     });
-    expect(html).toContain('suggestion-card high');
-    expect(html).toContain('suggestion-card medium');
-    expect(html).toContain('suggestion-card low');
-    expect(html).toContain('高優先');
-    expect(html).toContain('建議 1');
-  });
-
-  it('renders card without priority', () => {
-    const html = renderSuggestions({
-      cards: [{ title: 'General', items: ['Item'] }],
-    });
     expect(html).toContain('suggestion-card');
     expect(html).not.toContain('suggestion-card high');
     expect(html).not.toContain('suggestion-card medium');
     expect(html).not.toContain('suggestion-card low');
+    expect(html).toContain('高優先');
+    expect(html).toContain('建議 1');
   });
 
   it('returns empty for no cards', () => {
@@ -586,19 +577,12 @@ describe('renderSuggestions', () => {
     expect(html).toContain('&lt;img');
   });
 
-  it('blocks priority class injection', () => {
-    const html = renderSuggestions({
-      cards: [{ title: 'Hack', priority: 'high onclick=alert(1)', items: ['test'] }],
-    });
-    expect(html).toContain('class="suggestion-card"');
-    expect(html).not.toContain('onclick');
-  });
-
-  it('falls back color to default for CSS injection in checklist', () => {
+  it('checklist cards have no inline style', () => {
     const html = renderChecklist({
       cards: [{ title: 'T', items: ['A'], color: 'red;} body{display:none' }],
     });
-    expect(html).toContain('var(--blue-light)');
+    expect(html).toContain('ov-card');
+    expect(html).not.toContain('style=');
   });
 });
 

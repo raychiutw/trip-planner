@@ -16,6 +16,10 @@ if (typeof globalThis.fetch === 'undefined') {
 var _shared = require('../js/shared.js');
 Object.keys(_shared).forEach(function(k) { globalThis[k] = _shared[k]; });
 
+// Load menu.js and promote exports to global scope (app.js depends on menu.js functions)
+var _menu = require('../js/menu.js');
+Object.keys(_menu).forEach(function(k) { globalThis[k] = _menu[k]; });
+
 // Stub DOMParser if not available (used by sanitizeHtml)
 if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.DOMParser = class {
@@ -33,7 +37,7 @@ if (typeof globalThis.requestAnimationFrame === 'undefined') {
 }
 
 // Ensure document has required elements (app.js queries these on load)
-const requiredIds = ['tripContent', 'navPills', 'stickyNav', 'menuDrop', 'menuGrid'];
+const requiredIds = ['tripContent', 'navPills', 'stickyNav', 'menuDrop', 'menuGrid', 'sidebar', 'menuBackdrop'];
 requiredIds.forEach((id) => {
   if (!document.getElementById(id)) {
     const el = document.createElement('div');

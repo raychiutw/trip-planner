@@ -291,12 +291,12 @@ tripFiles.forEach(({ file, label }) => {
         expect(html).toContain('suggestion-card');
       });
 
-      it('包含高/中/低優先級', () => {
+      it('卡片使用統一樣式（無優先級 class）', () => {
         if (!data.suggestions || !data.suggestions.content) return;
         const html = renderSuggestions(data.suggestions.content);
-        expect(html).toContain('suggestion-card high');
-        expect(html).toContain('suggestion-card medium');
-        expect(html).toContain('suggestion-card low');
+        expect(html).not.toContain('suggestion-card high');
+        expect(html).not.toContain('suggestion-card medium');
+        expect(html).not.toContain('suggestion-card low');
       });
     });
 

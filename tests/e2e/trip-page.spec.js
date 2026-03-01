@@ -140,8 +140,8 @@ test.describe('漢堡選單（手機版）', () => {
     await menuBtn.click();
     await expect(menuDrop).toHaveClass(/open/);
 
-    // 點擊 backdrop 關閉選單
-    await page.locator('#menuBackdrop').click();
+    // 點擊 backdrop 右側（drawer 外的區域，drawer 寬 280px）
+    await page.locator('#menuBackdrop').click({ position: { x: 350, y: 400 } });
     await expect(menuDrop).not.toHaveClass(/open/);
   });
 
@@ -350,11 +350,13 @@ test.describe('可收合區塊', () => {
 
 /* ===== 7. 行程建議區段 ===== */
 test.describe('行程建議', () => {
-  test('包含高/中/低優先級卡片', async ({ page }) => {
+  test('包含建議卡片（統一風格，無優先級 class）', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.suggestion-card.high').first()).toBeAttached();
-    await expect(page.locator('.suggestion-card.medium').first()).toBeAttached();
-    await expect(page.locator('.suggestion-card.low').first()).toBeAttached();
+    await expect(page.locator('.suggestion-card').first()).toBeAttached();
+    // 統一風格：不再使用 high/medium/low class
+    await expect(page.locator('.suggestion-card.high')).toHaveCount(0);
+    await expect(page.locator('.suggestion-card.medium')).toHaveCount(0);
+    await expect(page.locator('.suggestion-card.low')).toHaveCount(0);
   });
 });
 
@@ -456,41 +458,43 @@ test.describe('列印模式', () => {
 
 /* ===== 12. 行程切換 ===== */
 test.describe('行程切換', () => {
-  test('切換行程檔 dialog 出現（桌機側邊欄）', async ({ page }) => {
+  test('點擊切換行程導向 switch.html', async ({ page }) => {
     await page.goto('/');
 
-    await page.locator('#sidebarNav [data-action="switch-trip"]').click();
+    // 攔截導航到 switch 頁面（dev server 可能將 switch.html 重寫為 /switch）
+    const [response] = await Promise.all([
+      page.waitForURL('**/switch**', { timeout: 5000 }),
+      page.locator('#sidebarNav [data-action="switch-trip"]').click(),
+    ]);
 
-    // dialog overlay 出現（switchTripFile 動態建立，等文字出現）
-    await expect(page.getByText('選擇行程')).toBeVisible();
+    expect(page.url()).toMatch(/switch/);
   });
 
-  test('點擊另一行程後載入新資料', async ({ page }) => {
-    await page.goto('/');
-
-    await page.locator('#sidebarNav [data-action="switch-trip"]').click();
-
-    // 等待 dialog 出現
-    await expect(page.getByText('選擇行程')).toBeVisible();
-
-    // 點擊包含 "Hui Yun" 的行程按鈕
-    await page.getByText('Hui Yun').click();
-
-    // 等待頁面載入新行程
+  test('switch.html 顯示行程清單', async ({ page }) => {
+    await page.goto('/switch.html');
     await page.waitForTimeout(1000);
-    // URL 應包含 HuiYun
-    expect(page.url()).toContain('HuiYun');
+
+    // 應有行程按鈕
+    const tripBtns = page.locator('.trip-btn');
+    const count = await tripBtns.count();
+    expect(count).toBeGreaterThan(0);
+
+    // 應包含「選擇行程」標題
+    await expect(page.getByText('選擇行程')).toBeVisible();
   });
 
-  test('行程切換 dialog X 按鈕關閉', async ({ page }) => {
-    await page.goto('/');
+  test('點擊行程按鈕導向對應行程', async ({ page }) => {
+    await page.goto('/switch.html');
+    await page.waitForTimeout(1000);
 
-    await page.locator('#sidebarNav [data-action="switch-trip"]').click();
-    await expect(page.getByText('選擇行程')).toBeVisible();
+    // 點擊第一個行程按鈕
+    const firstBtn = page.locator('.trip-btn').first();
+    const href = await firstBtn.getAttribute('href');
+    expect(href).toContain('index.html?trip=');
 
-    // 點擊 X 關閉 dialog
-    await page.locator('.trip-close').click();
-    await expect(page.locator('.trip-overlay')).not.toBeAttached();
+    await firstBtn.click();
+    await page.waitForTimeout(1000);
+    expect(page.url()).toContain('trip=');
   });
 });
 

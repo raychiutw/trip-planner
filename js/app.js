@@ -406,7 +406,7 @@ function renderChecklist(data) {
     if (data.cards && data.cards.length) {
         html += '<div class="ov-grid">';
         data.cards.forEach(function(card) {
-            html += '<div class="ov-card" style="background:' + safeColor(card.color) + ';">';
+            html += '<div class="ov-card">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.items && card.items.length) {
                 html += '<p>';
@@ -430,7 +430,7 @@ function renderBackup(data) {
     if (data.cards && data.cards.length) {
         html += '<div class="ov-grid">';
         data.cards.forEach(function(card) {
-            html += '<div class="ov-card" style="background:' + safeColor(card.color) + ';">';
+            html += '<div class="ov-card">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.desc) html += '<p>' + escHtml(card.desc) + '</p>';
             if (card.weatherItems && card.weatherItems.length) {
@@ -460,7 +460,7 @@ function renderEmergency(data) {
     if (data.cards && data.cards.length) {
         html += '<div class="ov-grid">';
         data.cards.forEach(function(card) {
-            html += '<div class="ov-card" style="background:' + safeColor(card.color) + ';">';
+            html += '<div class="ov-card">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.contacts && card.contacts.length) {
                 card.contacts.forEach(function(c) {
@@ -495,11 +495,8 @@ function renderEmergency(data) {
 function renderSuggestions(data) {
     var html = '';
     if (data.cards && data.cards.length) {
-        var SAFE_PRIORITY = { high: true, medium: true, low: true };
         data.cards.forEach(function(card) {
-            var cls = 'suggestion-card';
-            if (card.priority && SAFE_PRIORITY[card.priority]) cls += ' ' + card.priority;
-            html += '<div class="' + cls + '">';
+            html += '<div class="suggestion-card">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.items && card.items.length) {
                 card.items.forEach(function(item) { html += '<p>' + escHtml(item) + '</p>'; });
@@ -641,8 +638,8 @@ function validateDay(day) {
 /* ===== Render: Warnings ===== */
 function renderWarnings(warnings) {
     if (!warnings || !warnings.length) return '';
-    var html = '<div class="trip-warnings" style="background:#FFEBEE;padding:10px 14px;margin:8px 0;border-radius:6px;font-size:var(--fs-md);color:#D32F2F;">';
-    html += '<strong>⚠️ 注意事項：</strong><ul style="margin:4px 0 0 16px;">';
+    var html = '<div class="trip-warnings">';
+    html += '<strong>⚠️ 注意事項：</strong><ul>';
     warnings.forEach(function(w) { html += '<li>' + w + '</li>'; });
     html += '</ul></div>';
     return html;
@@ -666,7 +663,6 @@ function loadTripPref() { return lsGet('trip-pref'); }
 /* ===== Trip Data Loading ===== */
 var TRIP = null;
 var TRIP_FILE = '';
-var IS_CUSTOM = false;
 
 // Migrate old keys to trip-planner- prefix
 (function() {
@@ -697,54 +693,35 @@ function resolveAndLoad() {
     // 1. URL has ?trip= param
     var slug = getUrlTrip();
     if (slug && /^[\w-]+$/.test(slug)) { loadTrip(slugToFile(slug)); return; }
-    // 2. sessionStorage has custom trip (this session only)
-    var ck = sessionStorage.getItem('customTripKey');
-    if (ck && sessionStorage.getItem('tripData:' + ck)) { loadTrip(ck); return; }
-    // 3. localStorage has preference (6-month expiry)
+    // 2. localStorage has preference (6-month expiry)
     var saved = loadTripPref();
     if (saved) { loadTrip(slugToFile(saved)); return; }
-    // 4. Default
+    // 3. Default
     loadTrip(slugToFile(DEFAULT_SLUG));
 }
 
 function loadTrip(filename) {
     TRIP_FILE = filename;
-    IS_CUSTOM = filename.indexOf('custom:') === 0;
 
-    if (IS_CUSTOM) {
-        // Custom upload: sessionStorage only, no URL change
-        setUrlTrip(null);
-        var raw = sessionStorage.getItem('tripData:' + filename);
-        if (raw) {
-            try { var data = JSON.parse(raw); TRIP = data; renderTrip(data); return; }
-            catch(e) { /* fall through to error */ }
-        }
-        document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u81ea\u8a02\u884c\u7a0b\u5df2\u904e\u671f\uff0c\u8acb\u91cd\u65b0\u4e0a\u50b3</div>';
-        sessionStorage.removeItem('customTripKey');
-        return;
-    }
-
-    // Normal file: update URL + save preference
+    // Update URL + save preference
     var slug = fileToSlug(filename);
     if (slug) { setUrlTrip(slug); saveTripPref(slug); }
-    sessionStorage.removeItem('customTripKey');
 
     // Only allow relative paths (prevent fetching external URLs)
     if (/^https?:\/\//i.test(filename) || filename.indexOf('..') !== -1) {
-        document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
+        document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
         return;
     }
-    fetch(filename + '?t=' + Date.now())
+    fetch(filename)
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(data) { TRIP = data; renderTrip(data); })
         .catch(function(e) {
-            document.getElementById('tripContent').innerHTML = '<div style="text-align:center;padding:40px;color:#D32F2F;">\u274c \u8f09\u5165\u5931\u6557\uff1a' + escHtml(filename) + '</div>';
+            document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u8f09\u5165\u5931\u6557\uff1a' + escHtml(filename) + '</div>';
         });
 }
 
 function renderTrip(data) {
-    // Sanitize content: custom uploads get full sanitization, trusted JSON strips leftover inline handlers
-    var safe = IS_CUSTOM ? sanitizeHtml : stripInlineHandlers;
+    var safe = stripInlineHandlers;
 
     // Update page title & meta tags
     document.title = data.meta.title;
@@ -824,8 +801,8 @@ function renderTrip(data) {
     html += '<footer>';
     html += '<h3>' + escHtml(data.footer.title) + '</h3>';
     html += '<p>' + escHtml(data.footer.dates) + '</p>';
-    if (data.footer.budget) html += '<p style="font-weight:600;">' + escHtml(data.footer.budget) + '</p>';
-    if (data.footer.exchangeNote) html += '<p style="color:var(--gray);">' + escHtml(data.footer.exchangeNote) + '</p>';
+    if (data.footer.budget) html += '<p class="footer-budget">' + escHtml(data.footer.budget) + '</p>';
+    if (data.footer.exchangeNote) html += '<p class="footer-exchange">' + escHtml(data.footer.exchangeNote) + '</p>';
     html += '<p>' + escHtml(data.footer.tagline) + '</p>';
     html += '</footer>';
 
@@ -979,50 +956,7 @@ function buildMenu(data) {
     }
 }
 
-function updateDarkBtnText(isDark) {
-    var btns = document.querySelectorAll('[data-action="toggle-dark"]');
-    btns.forEach(function(btn) {
-        var label = btn.querySelector('.item-label');
-        if (label) {
-            btn.querySelector('.item-icon').textContent = isDark ? '☀️' : '🌙';
-            label.textContent = isDark ? '淺色模式' : '深色模式';
-            btn.setAttribute('title', isDark ? '淺色模式' : '深色模式');
-        } else {
-            btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
-        }
-    });
-}
-
-/* ===== Desktop / Sidebar Helpers ===== */
-function isDesktop() { return !/Mobi|Android.*Mobile|iPhone|iPod|Opera Mini/i.test(navigator.userAgent); }
-
-function initSidebar() {
-    var sidebar = document.getElementById('sidebar');
-    if (!sidebar) return;
-    if (lsGet('sidebar-collapsed') === '1') {
-        sidebar.classList.add('collapsed');
-    }
-}
-
-function toggleSidebar() {
-    if (!isDesktop()) { toggleMenu(); return; }
-    var sidebar = document.getElementById('sidebar');
-    if (!sidebar) return;
-    sidebar.classList.toggle('collapsed');
-    lsSet('sidebar-collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
-}
-
-function closeMobileMenuIfOpen() {
-    if (isDesktop()) return;
-    var menu = document.getElementById('menuDrop');
-    var backdrop = document.getElementById('menuBackdrop');
-    if (menu && menu.classList.contains('open')) {
-        menu.classList.remove('open');
-        backdrop.classList.remove('open');
-        document.body.classList.remove('menu-open');
-        document.body.style.overflow = '';
-    }
-}
+/* ===== Menu functions provided by menu.js: isDesktop, toggleSidebar, closeMobileMenuIfOpen, updateDarkBtnText, toggleMenu ===== */
 
 function scrollNavPillIntoView(btn) {
     var nav = btn.closest('.dh-nav');
@@ -1067,37 +1001,6 @@ function scrollToSec(id) {
     history.replaceState(null, '', '#' + id);
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
-function toggleMenu() {
-    var menu = document.getElementById('menuDrop');
-    var backdrop = document.getElementById('menuBackdrop');
-    if (menu.classList.contains('open')) {
-        menu.classList.remove('open');
-        backdrop.classList.remove('open');
-        document.body.classList.remove('menu-open');
-        document.body.style.overflow = '';
-    } else {
-        menu.classList.add('open');
-        backdrop.classList.add('open');
-        document.body.classList.add('menu-open');
-        document.body.style.overflow = 'hidden';
-    }
-}
-/* ===== Swipe Gesture for Menu ===== */
-var _swipeStartX = 0, _swipeStartY = 0;
-document.addEventListener('touchstart', function(e) {
-    _swipeStartX = e.touches[0].clientX;
-    _swipeStartY = e.touches[0].clientY;
-}, { passive: true });
-document.addEventListener('touchend', function(e) {
-    if (isDesktop()) return;
-    var dx = e.changedTouches[0].clientX - _swipeStartX;
-    var dy = e.changedTouches[0].clientY - _swipeStartY;
-    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
-    var isOpen = document.body.classList.contains('menu-open');
-    if (dx > 0 && !isOpen && _swipeStartX < 40) toggleMenu();
-    else if (dx < 0 && isOpen) toggleMenu();
-}, { passive: true });
-
 function toggleHw(el) {
     var p = el.closest('.hourly-weather');
     p.classList.toggle('hw-open');
@@ -1125,79 +1028,7 @@ function togglePrint() {
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
     closeMobileMenuIfOpen();
-    fetch('data/trips.json?t=' + Date.now())
-        .then(function(r) { return r.json(); })
-        .then(function(trips) {
-            var overlay = document.createElement('div');
-            overlay.className = 'trip-overlay';
-            // X close button
-            var xBtn = document.createElement('button');
-            xBtn.className = 'trip-close';
-            xBtn.innerHTML = '✕';
-            xBtn.onclick = function() { document.body.removeChild(overlay); document.body.style.overflow = ''; };
-            overlay.appendChild(xBtn);
-            var list = document.createElement('div');
-            list.className = 'trip-list';
-            list.innerHTML = '<h3>📂 選擇行程</h3>';
-            trips.forEach(function(t) {
-                var btn = document.createElement('button');
-                btn.className = 'trip-btn' + (TRIP_FILE === t.file ? ' active' : '');
-                btn.innerHTML = '<strong>' + escHtml(t.name) + '</strong><span class="trip-sub">' + escHtml(t.dates) + '</span>';
-                btn.onclick = function() { document.body.removeChild(overlay); document.body.style.overflow = ''; loadTrip(t.file); window.scrollTo({top:0,behavior:'smooth'}); };
-                list.appendChild(btn);
-            });
-            // Show current custom trip if active
-            if (TRIP_FILE.indexOf('custom:') === 0 && TRIP) {
-                var customBtn = document.createElement('button');
-                customBtn.className = 'trip-btn active';
-                customBtn.innerHTML = '<strong>\ud83d\udcce ' + escHtml(TRIP_FILE.replace('custom:', '')) + '</strong><span class="trip-sub">\u81ea\u8a02\u4e0a\u50b3\uff08\u50c5\u9650\u672c\u6b21 session\uff09</span>';
-                customBtn.onclick = function() { document.body.removeChild(overlay); document.body.style.overflow = ''; };
-                list.appendChild(customBtn);
-            }
-            // Upload custom
-            var upBtn = document.createElement('button');
-            upBtn.className = 'trip-upload';
-            upBtn.textContent = '📁 上傳自訂 JSON 檔案';
-            upBtn.onclick = function() {
-                document.body.removeChild(overlay); document.body.style.overflow = '';
-                var input = document.createElement('input');
-                input.type = 'file'; input.accept = '.json';
-                input.onchange = function(e) {
-                    var file = e.target.files[0]; if (!file) return;
-                    var reader = new FileReader();
-                    reader.onload = function(ev) {
-                        try {
-                            var data = JSON.parse(ev.target.result);
-                            var validation = validateTripData(data);
-                            if (validation.errors.length > 0) {
-                                alert('行程資料驗證失敗：\n\n' + validation.errors.join('\n'));
-                                return;
-                            }
-                            if (validation.warnings.length > 0) {
-                                validation.warnings.forEach(function(w) { console.warn('[trip-planner]', w); });
-                            }
-                            TRIP = data;
-                            var key = 'custom:' + file.name;
-                            TRIP_FILE = key;
-                            IS_CUSTOM = true;
-                            sessionStorage.setItem('customTripKey', key);
-                            sessionStorage.setItem('tripData:' + key, ev.target.result);
-                            setUrlTrip(null);
-                            renderTrip(data);
-                            window.scrollTo({top:0,behavior:'smooth'});
-                        }
-                        catch(err) { alert('JSON 格式錯誤：' + err.message); }
-                    };
-                    reader.readAsText(file);
-                };
-                input.click();
-            };
-            list.appendChild(upBtn);
-            overlay.appendChild(list);
-            document.body.appendChild(overlay);
-            document.body.style.overflow = 'hidden';
-        })
-        .catch(function() { alert('無法載入行程清單'); });
+    window.location.href = 'switch.html';
 }
 
 /* ===== ARIA Init ===== */
@@ -1226,9 +1057,13 @@ function initNavTracking() {
     var ticking = false;
     window._navScrollHandler = function() {
         if (!ticking) { requestAnimationFrame(function() {
-            var inInfo = infoStart && infoStart.getBoundingClientRect().top <= navH + 10;
+            // Batch reads
+            var rects = headers.map(function(h) { return h.getBoundingClientRect().top; });
+            var infoRect = infoStart ? infoStart.getBoundingClientRect().top : Infinity;
+            // Batch writes
+            var inInfo = infoRect <= navH + 10;
             var current = -1;
-            if (!inInfo) { for (var i = 0; i < headers.length; i++) { if (headers[i].getBoundingClientRect().top <= navH + 10) current = i; } }
+            if (!inInfo) { for (var i = 0; i < rects.length; i++) { if (rects[i] <= navH + 10) current = i; } }
             navPills.forEach(function(btn) { btn.classList.toggle('active', current >= 0 && parseInt(btn.getAttribute('data-day')) === current + 1); });
             var activeBtn = document.querySelector('#stickyNav .dh-nav .dn.active');
             if (activeBtn) scrollNavPillIntoView(activeBtn);
@@ -1263,15 +1098,10 @@ function autoScrollToday(dates) {
 document.addEventListener('click', function(e) {
     var t = e.target;
 
-    // 0. Backdrop click closes menu
-    if (t.id === 'menuBackdrop') { toggleMenu(); return; }
-
-    // 1. data-action buttons (menu, nav, toggles)
+    // 1. data-action buttons (nav, toggles) — menu handled by menu.js
     var actionEl = t.closest('[data-action]');
     if (actionEl) {
         switch (actionEl.getAttribute('data-action')) {
-            case 'toggle-menu': e.stopPropagation(); toggleMenu(actionEl); break;
-            case 'toggle-sidebar': e.stopPropagation(); toggleSidebar(); break;
             case 'scroll-to':  scrollToSec(actionEl.getAttribute('data-target')); break;
             case 'toggle-dark': toggleDark(); break;
             case 'toggle-print': togglePrint(); break;
@@ -1308,13 +1138,13 @@ function initWeather(weatherDays) {
         var minT=99,maxT=-99,minR=100,maxR=0,iconCount={},bestIcon='☀️';
         for(var h=0;h<24;h++){var t=Math.round(m.temps[h]),r=m.rains[h],ic=WMO[m.codes[h]]||'❓';if(t<minT)minT=t;if(t>maxT)maxT=t;if(r<minR)minR=r;if(r>maxR)maxR=r;iconCount[ic]=(iconCount[ic]||0)+1;}
         var maxCnt=0;for(var k in iconCount)if(iconCount[k]>maxCnt){maxCnt=iconCount[k];bestIcon=k;}
-        var locs=day.locations.map(function(l){return l.name;}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
+        var locs=day.locations.map(function(l){return escHtml(l.name);}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
         var html='<div class="hw-summary" data-action="toggle-hw">'+bestIcon+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; 💧'+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
-        html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">⏱️ 逐時天氣 — '+day.label+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
+        html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">⏱️ 逐時天氣 — '+escHtml(day.label)+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
         for(var h=0;h<=23;h++){
             var li=getLocIdx(day,h),icon=WMO[m.codes[h]]||'❓',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);
             html+='<div class="hw-block'+(isNow?' hw-now':'')+'" data-hour="'+h+'"><div class="hw-block-time">'+(isNow?'▶ ':'')+h+':00</div>';
-            if(day.locations.length>1)html+='<div class="hw-block-loc hw-loc-'+li+'">'+day.locations[li].name+'</div>';
+            if(day.locations.length>1)html+='<div class="hw-block-loc hw-loc-'+li+'">'+escHtml(day.locations[li].name)+'</div>';
             html+='<div class="hw-block-icon">'+icon+'</div><div class="hw-block-temp">'+temp+'°C</div><div class="hw-block-rain'+(rain>=50?' hw-rain-high':'')+'">💧'+rain+'%</div></div>';
         }
         html+='</div></div>';c.innerHTML=html;
@@ -1330,7 +1160,8 @@ function initWeather(weatherDays) {
     var locKeys=Object.keys(locMap);
     Promise.all(locKeys.map(function(k){
         var l=locMap[k];
-        return fetch('https://api.open-meteo.com/v1/forecast?latitude='+l.lat+'&longitude='+l.lon+'&hourly=temperature_2m,precipitation_probability,weather_code&start_date='+minDate+'&end_date='+maxDate+'&timezone=Asia/Tokyo')
+        var params = new URLSearchParams({ latitude: l.lat, longitude: l.lon, hourly: 'temperature_2m,precipitation_probability,weather_code', start_date: minDate, end_date: maxDate, timezone: 'Asia/Tokyo' });
+        return fetch('https://api.open-meteo.com/v1/forecast?' + params.toString())
             .then(function(r){return r.json();})
             .then(function(d){return{key:k,data:d};});
     })).then(function(results){
@@ -1377,24 +1208,7 @@ window.addEventListener('afterprint', function() {
     }
 });
 
-// Init sidebar state from localStorage
-initSidebar();
-
-// Resize: close mobile drawer when switching to desktop
-window.addEventListener('resize', function() {
-    if (isDesktop()) {
-        var menu = document.getElementById('menuDrop');
-        var backdrop = document.getElementById('menuBackdrop');
-        if (menu && menu.classList.contains('open')) {
-            menu.classList.remove('open');
-            backdrop.classList.remove('open');
-            document.body.classList.remove('menu-open');
-            document.body.style.overflow = '';
-        }
-    }
-});
-
-// Initial load — resolve from URL → sessionStorage → localStorage → default
+// Initial load — resolve from URL → localStorage → default
 resolveAndLoad();
 
 /* ===== Module Exports (Node.js / Vitest only) ===== */

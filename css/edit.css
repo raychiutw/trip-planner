@@ -50,21 +50,6 @@
 .edit-history-time { font-size: 0.85em; color: var(--gray); margin-top: 2px; }
 .edit-history-empty { color: var(--gray); font-size: var(--fs-md); }
 
-/* ===== FAB Button ===== */
-.edit-fab {
-    position: fixed; bottom: 20px; right: 20px;
-    width: 56px; height: 56px; border-radius: 50%;
-    background: #DA7756; color: #fff; border: none;
-    font-size: 1.4rem; text-decoration: none;
-    display: flex; align-items: center; justify-content: center;
-    z-index: 300; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-.edit-fab:hover { transform: scale(1.1); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
-body.dark .edit-fab { background: #C4704F; }
-.print-mode .edit-fab { display: none !important; }
-@media print { .edit-fab { display: none !important; } }
-
 /* ===== Dark Mode (edit-specific) ===== */
 body.dark .edit-back { color: #E8E5E0; }
 body.dark .edit-back:hover { background: #302A25; }

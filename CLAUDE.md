@@ -5,14 +5,19 @@
 ```
 index.html              — HTML 外殼（載入 css/js，含 sidebar + container + info-panel 三欄佈局 + FAB）
 edit.html               — AI 修改行程頁面（載入 css/js）
+switch.html             — 切換行程獨立頁面
 css/
-  shared.css            — 共用樣式（variables, reset, base layout, dark mode, overlay, buttons）
-  style.css             — Trip 專用樣式（timeline, weather, hotel, sidebar, nav, etc.）
-  edit.css              — Edit 專用樣式（form, setup dialog, FAB, request history）
+  shared.css            — 共用樣式（variables, reset, base layout, dark mode, buttons）
+  menu.css              — 選單/側邊欄樣式（hamburger, drawer, sidebar, backdrop）
+  style.css             — Trip 專用樣式（timeline, weather, hotel, nav, cards, FAB, info-panel, print）
+  edit.css              — Edit 專用樣式（form, setup dialog, request history）
+  switch.css            — Switch 專用樣式（行程清單佈局）
 js/
   shared.js             — 共用函式（escHtml, escUrl, localStorage helpers, dark mode, GitHub constants）
-  app.js                — Trip 專用邏輯（載入 JSON、渲染、導航、天氣）
+  menu.js               — 選單/側邊欄邏輯（isDesktop, toggleMenu, toggleSidebar, swipe, resize）
+  app.js                — Trip 專用邏輯（載入 JSON、渲染、導航、天氣；依賴 shared.js + menu.js）
   edit.js               — Edit 專用邏輯（GitHub Issues API, setup flow, request submission）
+  switch.js             — Switch 專用邏輯（讀取 trips.json、渲染行程清單）
 data/
   trips.json            — 行程清單（供切換選單讀取，含 owner 欄位）
   trips/                — 行程參數檔
@@ -204,9 +209,11 @@ CLAUDE.md               — 開發規範
 ### 程式碼風格
 
 - `index.html` 為精簡外殼，CSS 與 JS 各自獨立檔案
-- `js/shared.js` 提供共用函式（`escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, `lsSet/lsGet/lsRemove/lsRenewAll`, `toggleDarkShared`, `GH_OWNER`, `GH_REPO`），index.html 和 edit.html 都載入
-- `js/app.js` 依賴 shared.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
-- `js/edit.js` 依賴 shared.js，處理 GitHub Issues API 與設定/編輯流程
+- `js/shared.js` 提供共用函式（`escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, `lsSet/lsGet/lsRemove/lsRenewAll`, `toggleDarkShared`, `GH_OWNER`, `GH_REPO`），所有頁面都載入
+- `js/menu.js` 提供選單/側邊欄函式（`isDesktop`, `toggleMenu`, `toggleSidebar`, `closeMobileMenuIfOpen`, `updateDarkBtnText`），所有頁面都載入，依賴 shared.js
+- `js/app.js` 依賴 shared.js + menu.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
+- `js/edit.js` 依賴 shared.js + menu.js，處理 GitHub Issues API 與設定/編輯流程
+- `js/switch.js` 依賴 shared.js + menu.js，讀取 trips.json 並渲染行程選擇清單
 - CSS class 命名慣例：
   - `.restaurant-choices` / `.restaurant-choice` — 餐廳三選一區塊
   - `.restaurant-meta` — 營業時間與預約資訊
@@ -226,20 +233,23 @@ CLAUDE.md               — 開發規範
   - `.stats-card` — 行程統計卡
   - `.edit-fab` — 右下角 AI 修改行程 FAB 按鈕
   - `.edit-page` / `.edit-main` — 編輯頁面佈局
+  - `.switch-page` / `.switch-main` — 切換行程頁面佈局
 - 地圖連結格式：Google Map + Apple Map + Mapcode 三組
 
 ### CSS/JS 拆分規則
 
 | 檔案 | 載入頁面 | 內容 |
 |------|---------|------|
-| 檔案 | 載入頁面 | 內容 |
-|------|---------|------|
-| `css/shared.css` | index + edit | variables, reset, body, `.page-layout`, trip overlay（`.trip-btn` 等）, dark mode base |
-| `css/style.css` | index only | timeline, weather, hotel, sidebar, nav, info-panel, print, 所有 trip-specific dark mode |
-| `css/edit.css` | index + edit | FAB 按鈕、edit page form/setup/history、edit-specific dark mode |
-| `js/shared.js` | index + edit | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
-| `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js 的全域函式） |
+| `css/shared.css` | 全部 | variables, reset, body, `.page-layout`, `.trip-btn`, dark mode base |
+| `css/menu.css` | 全部 | hamburger icon, menu drawer, sidebar, backdrop, desktop sidebar, dark/print mode |
+| `css/style.css` | index only | timeline, weather, hotel, nav, cards, FAB, info-panel, print, trip-specific dark mode |
+| `css/edit.css` | edit only | edit page form/setup/history, edit-specific dark mode |
+| `css/switch.css` | switch only | switch page layout, header, list |
+| `js/shared.js` | 全部 | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
+| `js/menu.js` | 全部 | `isDesktop`, `toggleMenu`, `toggleSidebar`, `closeMobileMenuIfOpen`, swipe gesture, resize handler |
+| `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js + menu.js 的全域函式） |
 | `js/edit.js` | edit only | GitHub API, setup flow, edit form, request history |
+| `js/switch.js` | switch only | 讀取 trips.json，渲染行程選擇清單 |
 
 ### UI 設計規範
 
@@ -258,6 +268,8 @@ CLAUDE.md               — 開發規範
   - 選單項目（`.menu-item`）使用 `--fs-lg`（最大字級）
 - **防止水平捲動**：`html` 與 `body` 設定 `overflow-x: hidden`，`body` 設定 `max-width: 100vw`
 - **選單標題**：顯示 "Trip Planner"（非「選單」）
+- **卡片統一風格**：所有 section 以白色圓角卡片呈現（`#tripContent section { background: var(--white); border-radius: 12px; }`），子元素（suggestion-card, ov-card, flight-row 等）不另設底色
+- **行程切換**：透過獨立頁面 `switch.html`（非 overlay dialog），由 `switchTripFile()` 導向
 
 ### 內容規範
 
@@ -332,7 +344,7 @@ Cowork /render-trip → 讀 Issue → 改 trip JSON → npm test → commit push
 - 解析 body JSON → 修改對應 trip JSON → `git diff --name-only` 白名單檢查
 - 通過 → npm test → commit push → close Issue + comment
 - 失敗 → git checkout → close Issue + error comment
-- **禁止修改**：js/app.js, js/shared.js, js/edit.js, css/style.css, css/shared.css, css/edit.css, index.html, edit.html, data/trips.json
+- **禁止修改**：js/app.js, js/shared.js, js/menu.js, js/edit.js, js/switch.js, css/style.css, css/shared.css, css/menu.css, css/edit.css, css/switch.css, index.html, edit.html, switch.html, data/trips.json
 
 ## 測試
 
@@ -368,9 +380,10 @@ npm run test:watch # Vitest 監聯模式（開發時用）
 - **⚠️ 必須遵守：commit 前一定要跑測試並全數通過，不得跳過**
   - 修改 `data/trips/*.json`：至少跑 `npm test`
   - 修改 `js/app.js` / `js/shared.js` / `css/style.css` / `css/shared.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
-  - 修改 `js/edit.js` / `css/edit.css` / `edit.html`：跑 `npm test`（確保共用函式未被破壞）
+  - 修改 `js/edit.js` / `css/edit.css` / `edit.html` / `js/menu.js` / `css/menu.css`：跑 `npm test`（確保共用函式未被破壞）
+  - 修改 `switch.html` / `js/switch.js` / `css/switch.css`：跑 `npm test`
   - 測試失敗時必須修復後重跑，不得帶著失敗 commit
-- `tests/setup.js` 先載入 `js/shared.js`（提供 escHtml 等全域函式），再載入全域 stub
+- `tests/setup.js` 先載入 `js/shared.js`，再載入 `js/menu.js`（提供 escHtml、isDesktop 等全域函式），再載入全域 stub
 - `js/app.js` 和 `js/shared.js` 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
 - E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
 - 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `js/app.js` 的 `module.exports` 加上對應測試與匯出
