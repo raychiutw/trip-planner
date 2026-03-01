@@ -41,8 +41,7 @@ function renderRestaurant(r) {
     var nameHtml = escHtml(r.name);
     var rUrl = escUrl(r.url);
     if (rUrl) nameHtml = '<a href="' + rUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
-    html += (r.emoji ? emojiToIcon(r.emoji) + ' ' : '')
-          + (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
+    html += (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
           + nameHtml;
     if (r.desc) html += ' — ' + escHtml(r.desc);
     if (r.price) html += '，' + escHtml(r.price);
@@ -96,7 +95,7 @@ function renderInfoBox(box) {
             if (box.title) html += iconSpan('gift') + ' <strong>' + escHtml(box.title) + '</strong><br>';
             if (box.items && box.items.length) {
                 box.items.forEach(function(item) {
-                    html += emojiToIcon(item.emoji || '\uD83C\uDFEA') + ' ';
+                    html += iconSpan('gift') + ' ';
                     var itemUrl = escUrl(item.url);
                     if (itemUrl) {
                         html += '<a href="' + itemUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(item.name) + '</a>';
@@ -135,7 +134,6 @@ function renderTimelineEvent(ev) {
     html += '<div class="' + headCls + '">';
     html += '<span class="tl-time">' + escHtml(ev.time || '') + '</span>';
     html += '<span class="tl-title">';
-    if (ev.emoji) html += emojiToIcon(ev.emoji) + ' ';
     var titleUrl = escUrl(ev.titleUrl);
     if (titleUrl) {
         html += '<a href="' + titleUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(ev.title) + '</a>';
@@ -157,7 +155,6 @@ function renderTimelineEvent(ev) {
     }
     if (ev.transit) {
         html += '<div class="tl-transit">⤷ '
-              + (ev.transit.emoji ? emojiToIcon(ev.transit.emoji) + ' ' : '')
               + escHtml(ev.transit.text || ev.transit)
               + '</div>';
     }
@@ -229,9 +226,9 @@ function renderBudget(budget) {
 
 /* ===== Transport Types ===== */
 var TRANSPORT_TYPES = {
-    '\uD83D\uDE97': { label: '開車', icon: 'car' },
-    '\uD83D\uDE9D': { label: '電車', icon: 'train' },
-    '\uD83D\uDEB6': { label: '步行', icon: 'walking' }
+    'car': { label: '開車', icon: 'car' },
+    'train': { label: '電車', icon: 'train' },
+    'walking': { label: '步行', icon: 'walking' }
 };
 
 function formatMinutes(totalMins) {
@@ -249,24 +246,24 @@ function calcDrivingStats(timeline) {
     timeline.forEach(function(ev) {
         if (!ev.transit) return;
         var t = ev.transit;
-        var emoji = t.emoji || '';
+        var type = t.type || '';
         var text = t.text || (typeof t === 'string' ? t : '');
-        if (!TRANSPORT_TYPES[emoji]) return;
+        if (!TRANSPORT_TYPES[type]) return;
         var m = text.match(/(\d+)/);
         if (!m) return;
         var mins = parseInt(m[1], 10);
-        if (!byType[emoji]) {
-            byType[emoji] = { label: TRANSPORT_TYPES[emoji].label, icon: TRANSPORT_TYPES[emoji].icon, totalMinutes: 0, segments: [] };
+        if (!byType[type]) {
+            byType[type] = { label: TRANSPORT_TYPES[type].label, icon: TRANSPORT_TYPES[type].icon, totalMinutes: 0, segments: [] };
         }
-        byType[emoji].segments.push({ text: text, minutes: mins });
-        byType[emoji].totalMinutes += mins;
+        byType[type].segments.push({ text: text, minutes: mins });
+        byType[type].totalMinutes += mins;
         totalMinutes += mins;
-        if (emoji === '\uD83D\uDE97') drivingMinutes += mins;
+        if (type === 'car') drivingMinutes += mins;
     });
     if (totalMinutes === 0) return null;
     return { totalMinutes: totalMinutes, drivingMinutes: drivingMinutes, byType: byType,
         // backward-compat: flat segments list (driving only)
-        segments: byType['\uD83D\uDE97'] ? byType['\uD83D\uDE97'].segments : [] };
+        segments: byType['car'] ? byType['car'].segments : [] };
 }
 
 function renderDrivingStats(stats) {
@@ -279,7 +276,7 @@ function renderDrivingStats(stats) {
     if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
     html += ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
-    var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
+    var typeOrder = ['car', 'train', 'walking'];
     typeOrder.forEach(function(emoji) {
         var group = stats.byType[emoji];
         if (!group) return;
@@ -328,7 +325,7 @@ function renderTripDrivingStats(tripStats) {
     html += '<div class="col-row" role="button" aria-expanded="false">' + iconSpan('bus') + ' 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
     // Type summary
-    var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
+    var typeOrder = ['car', 'train', 'walking'];
     typeOrder.forEach(function(emoji) {
         var g = tripStats.grandByType[emoji];
         if (!g) return;
@@ -381,7 +378,8 @@ function renderFlights(data) {
     if (data.segments && data.segments.length) {
         data.segments.forEach(function(seg) {
             html += '<div class="flight-row">';
-            html += '<span class="flight-icon">' + (seg.icon ? emojiToIcon(seg.icon) : iconSpan('plane')) + '</span>';
+            var segIcon = (seg.label && seg.label.indexOf('回') >= 0) ? iconSpan('landing') : iconSpan('takeoff');
+            html += '<span class="flight-icon">' + segIcon + '</span>';
             html += '<div class="flight-info">';
             if (seg.label) html += '<span class="flight-label">' + escHtml(seg.label) + '</span>';
             if (seg.flightNo) html += '<span class="flight-route">' + escHtml(seg.flightNo) + '</span>';
@@ -392,7 +390,7 @@ function renderFlights(data) {
     }
     if (data.airline) {
         html += '<div class="flight-row">';
-        html += '<span class="flight-icon">' + (data.airline.icon ? emojiToIcon(data.airline.icon) : iconSpan('building')) + '</span>';
+        html += '<span class="flight-icon">' + iconSpan('building') + '</span>';
         html += '<div class="flight-info"><span class="flight-label">' + escHtml(data.airline.name || '') + '</span>';
         if (data.airline.note) html += '<span class="flight-time">' + escHtml(data.airline.note) + '</span>';
         html += '</div></div>';
@@ -877,7 +875,7 @@ function renderTripStatsCard(data) {
     // Transport summary by type
     var tripStats = calcTripDrivingStats(data.days);
     if (tripStats && tripStats.grandByType) {
-        var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
+        var typeOrder = ['car', 'train', 'walking'];
         typeOrder.forEach(function(emoji) {
             var g = tripStats.grandByType[emoji];
             if (!g) return;

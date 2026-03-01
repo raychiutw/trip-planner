@@ -109,8 +109,8 @@ test.describe('漢堡選單（手機版）', () => {
     await menuBtn.click();
     await expect(menuDrop).toHaveClass(/open/);
 
-    // 點擊 backdrop 關閉
-    await page.locator('#menuBackdrop').click();
+    // 點擊 backdrop 關閉（避開 drawer 區域）
+    await page.locator('#menuBackdrop').click({ position: { x: 350, y: 400 } });
     await expect(menuDrop).not.toHaveClass(/open/);
   });
 
