@@ -13,8 +13,8 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 
 .ov-card p { font-size: var(--fs-md); margin: 4px 0; line-height: 1.7; }
 .ov-card a { color: var(--text); font-weight: 600; text-decoration: underline; }
-.ov-grid { display: flex; flex-direction: column; gap: 0; }
-.ov-card { padding: 14px 0; }
+.ov-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.ov-card { padding: 14px; background: var(--blue-light); border-radius: 10px; }
 .ov-card h4 { margin-top: 0; }
 .flight-row { display: flex; align-items: center; padding: 10px 12px; border-radius: 12px; margin-bottom: 0; gap: 8px; }
 .flight-row .flight-icon { font-size: 1.4rem; flex-shrink: 0; display: flex; align-items: center; }
@@ -30,7 +30,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 /* ===== Day Header (section divider) ===== */
 .day-header { position: relative; z-index: 100; background: var(--white); color: var(--text); padding: 8px 12px; display: flex; align-items: center; gap: 8px; scroll-margin-top: 44px; }
 .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.day-header .dh-right { font-size: var(--fs-md); opacity: 0.7; white-space: nowrap; margin-left: auto; }
+.dh-date { font-size: var(--fs-md); opacity: 0.8; margin-left: auto; white-space: nowrap; }
 .dh-nav { display: flex; gap: 3px; flex: 1; justify-content: center; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
 .dh-nav::-webkit-scrollbar { display: none; }
 .dn { background: var(--blue-light); color: var(--blue); border: none; padding: 3px 8px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
@@ -64,7 +64,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 
 /* ===== Collapsible Row (Hotel / Budget) ===== */
 .col-row { display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 0; cursor: pointer; user-select: none; }
-.col-row:hover { color: var(--blue); }
+.col-row:hover { background: var(--blue-light); }
 .col-row .arrow { margin-left: auto; color: var(--gray); font-size: var(--fs-md); }
 .col-detail { display: none; padding: 10px 0; font-size: var(--fs-md); line-height: 1.7; }
 .col-detail.open { display: block; }
@@ -131,7 +131,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .notes-list li .list-icon { flex-shrink: 0; }
 
 /* ===== Driving Stats ===== */
-.driving-stats { margin: 10px 0; padding: 10px 14px; border-radius: 8px; background: transparent; font-size: var(--fs-md); }
+.driving-stats { margin: 10px 0; padding: 10px 0; border-radius: 8px; background: transparent; font-size: var(--fs-md); }
 .driving-stats-warning { background: transparent; }
 .driving-stats-badge { display: inline-block; background: #DC2626; color: #fff; font-size: 0.8em; padding: 1px 8px; border-radius: 10px; font-weight: 600; margin-left: 6px; }
 .driving-stats-detail { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--gray); font-size: 0.9em; }
@@ -206,6 +206,7 @@ body.dark .edit-fab { background: #C4704F; }
     .tl-time { min-width: 75px; }
     .hw-grid { gap: 5px; scroll-snap-type: x mandatory; }
     .hw-block { min-width: calc((100% - 10px) / 3); scroll-snap-align: start; }
+    .ov-grid { grid-template-columns: 1fr; }
 }
 
 /* ===== Weather Collapsible ===== */
@@ -272,7 +273,11 @@ body.dark .info-box.parking { background: #302A25; }
 body.dark .info-box.souvenir { background: #302A25; }
 body.dark .info-box.restaurants { background: #302A22; }
 body.dark .hotel-sub { background: #302A25; }
-body.dark .driving-stats-warning { background: rgba(245, 158, 11, 0.12); }
+body.dark .driving-stats-warning { background: transparent; }
 body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.12); }
 body.dark .trip-warnings { background: rgba(220, 38, 38, 0.12); color: #FCA5A5; }
 body.dark .info-card { background: #292624; }
+body.dark .ov-card { background: #302A25; }
+
+/* ===== Day Nav Card ===== */
+.day-nav-card { display: flex; gap: 6px; flex-wrap: wrap; }

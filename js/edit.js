@@ -80,21 +80,24 @@
 
     /* ===== Render: Edit Form ===== */
     function renderEditForm(config) {
+        var slug = config.tripSlug;
         var html = '<div class="edit-page">';
 
-        // Bound info
-        html += '<div class="edit-bound">';
-        html += '<div class="edit-bound-info"><strong>' + escHtml(config.owner) + '</strong> — ' + escHtml(config.tripName) + '</div>';
+        // Edit card
+        html += '<section class="edit-card">';
+        html += '<div class="edit-card-header">';
+        html += '<h2>' + iconSpan('pencil') + ' 修改行程</h2>';
+        html += '<a href="index.html?trip=' + encodeURIComponent(slug) + '" class="edit-close" aria-label="關閉"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></a>';
         html += '</div>';
-
-        // Textarea
+        html += '<div class="edit-card-body">';
+        html += '<div class="edit-bound-info"><strong>' + escHtml(config.owner) + '</strong> — ' + escHtml(config.tripName) + '</div>';
         html += '<textarea class="edit-textarea" id="editText" placeholder="例如：\n· Day 3 午餐換成通堂拉麵\n· 刪除美麗海水族館，改去萬座毛\n· Day 5 下午加一個 AEON 購物"></textarea>';
-
-        // Submit
         html += '<button class="edit-btn edit-btn-primary" id="submitBtn">送出修改請求</button>';
         html += '<div id="submitStatus"></div>';
+        html += '</div>';
+        html += '</section>';
 
-        // History
+        // History (outside card)
         html += renderHistory();
 
         html += '</div>';
@@ -224,9 +227,6 @@
                 }
 
                 currentConfig = found;
-
-                // Set X close button href
-                document.getElementById('editClose').href = 'index.html?trip=' + encodeURIComponent(found.tripSlug);
 
                 // Build menu & init sidebar
                 buildEditMenu(found.tripSlug);

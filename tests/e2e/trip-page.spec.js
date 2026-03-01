@@ -64,7 +64,7 @@ test.describe('頁面載入', () => {
 test.describe('導航功能', () => {
   test('點擊 nav pill 捲動到對應 Day', async ({ page }) => {
     await page.goto('/');
-    await page.locator('.dn[data-day="3"]').click();
+    await page.locator('#navPills .dn[data-day="3"]').click();
     // 等待捲動完成
     await page.waitForTimeout(500);
     const day3 = page.locator('#day3');
@@ -73,7 +73,7 @@ test.describe('導航功能', () => {
 
   test('點擊 nav pill 更新 URL hash', async ({ page }) => {
     await page.goto('/');
-    await page.locator('.dn[data-day="2"]').click();
+    await page.locator('#navPills .dn[data-day="2"]').click();
     await page.waitForTimeout(300);
     expect(page.url()).toContain('#day2');
   });
@@ -622,7 +622,7 @@ test.describe('Nav pill 捲動 highlight', () => {
     await page.waitForTimeout(800);
 
     // nav pill 3 應有 active class
-    const pill3 = page.locator('.dn[data-day="3"]');
+    const pill3 = page.locator('#navPills .dn[data-day="3"]');
     await expect(pill3).toHaveClass(/active/);
   });
 });

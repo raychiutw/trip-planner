@@ -523,6 +523,8 @@ function validateTripData(data) {
         data.days.forEach(function(d, i) {
             if (!d.id && d.id !== 0) errors.push('days[' + i + '] 缺少 id');
             if (!d.date) errors.push('days[' + i + '] 缺少 date');
+            if (d.label && d.label.length > 8)
+                warnings.push('days[' + i + '].label 超過 8 字（' + d.label.length + ' 字）：' + escHtml(d.label));
         });
     }
 
@@ -741,11 +743,23 @@ function renderTrip(data) {
     // Build sections
     var html = '';
 
+    // Day nav card
+    html += '<section>';
+    html += '<div class="day-header info-header" id="sec-daynav"><h2>行程天數</h2></div>';
+    html += '<div class="day-content"><div class="day-nav-card">';
+    data.days.forEach(function(day) {
+        var navId = parseInt(day.id) || 0;
+        html += '<button class="dn" data-day="' + navId + '" data-action="scroll-to" data-target="day' + navId + '">D' + navId + '</button>';
+    });
+    html += '</div></div></section>';
+
     // Day sections
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
         html += '<section>';
-        html += '<div class="day-header" id="day' + id + '"><h2>Day ' + id + '</h2><div class="dh-right">' + escHtml(day.date) + '</div></div>';
+        html += '<div class="day-header info-header" id="day' + id + '">'
+              + '<h2>Day ' + id + ' ' + escHtml(day.label || '') + '</h2>'
+              + '<span class="dh-date">' + escHtml(day.date) + '</span></div>';
         html += '<div class="day-content">';
         if (typeof day.content === 'string') {
             html += safe(day.content || '');
@@ -786,14 +800,18 @@ function renderTrip(data) {
             else if (sec.key === 'backup') html += renderBackup(d.content || {});
             else if (sec.key === 'emergency') html += renderEmergency(d.content || {});
         }
-        // Insert trip-wide driving stats after flights
-        if (sec.key === 'flights') {
-            var tripDrivingStats = calcTripDrivingStats(data.days);
-            html += renderTripDrivingStats(tripDrivingStats);
-        }
         html += '</div>';
         html += '</section>';
     });
+
+    // Trip-wide driving stats (independent card)
+    var tripDrivingStats = calcTripDrivingStats(data.days);
+    if (tripDrivingStats) {
+        html += '<section>';
+        html += '<div class="day-header info-header" id="sec-driving"><h2>' + iconSpan('bus') + ' 交通統計</h2></div>';
+        html += '<div class="day-content">' + renderTripDrivingStats(tripDrivingStats) + '</div>';
+        html += '</section>';
+    }
 
     // Footer
     html += '<footer>';
@@ -914,6 +932,7 @@ function buildMenu(data) {
     // Drawer menu (mobile)
     var html = '';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">' + iconSpan('plane') + ' 航班資訊</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-driving">' + iconSpan('bus') + ' 交通統計</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">' + iconSpan('check-circle') + ' 出發前確認</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">' + iconSpan('lightbulb') + ' 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">' + iconSpan('refresh') + ' 颱風/雨天備案</button>';
@@ -930,6 +949,7 @@ function buildMenu(data) {
         var sHtml = '';
         var navItems = [
             { icon: 'plane', label: '航班資訊', target: 'sec-flight' },
+            { icon: 'bus', label: '交通統計', target: 'sec-driving' },
             { icon: 'check-circle', label: '出發前確認', target: 'sec-checklist' },
             { icon: 'lightbulb', label: '行程建議', target: 'sec-suggestions' },
             { icon: 'refresh', label: '颱風/雨天備案', target: 'sec-backup' },

@@ -48,7 +48,7 @@ test.describe('X 關閉按鈕', () => {
     // 等待 init 完成（X 按鈕 href 在 fetch 後設定）
     await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
-    const closeBtn = page.locator('#editClose');
+    const closeBtn = page.locator('.edit-card-header .edit-close');
     await expect(closeBtn).toBeVisible();
 
     const href = await closeBtn.getAttribute('href');

@@ -49,6 +49,7 @@ tests/              unit/  integration/  json/  e2e/
 ### 內容規則
 
 - 繁體中文台灣用語，日文店名保留原文
+- `days[].label` 行程名稱不超過 8 個字
 - 用餐時段 1.5 小時，每餐三選一，標註營業時間，可預約者附連結
 - `transit` 必須含 `type`（`car`/`train`/`walking`）+ `text`（含分鐘數如「約40分鐘」）
 
