@@ -3,7 +3,7 @@
 ## 專案結構
 
 ```
-index.html              — HTML 外殼（載入 CSS / JS）
+index.html              — HTML 外殼（載入 CSS / JS，含 sidebar + container + info-panel 三欄佈局）
 style.css               — 所有樣式
 app.js                  — 所有邏輯（載入 JSON、渲染、導航、天氣）
 data/
@@ -186,8 +186,15 @@ CLAUDE.md               — 開發規範
   - `.parking-info` — 停車場資訊
   - `.map-link` / `.map-link-inline` — 地圖連結（Google / Apple / Mapcode）
   - `.day-1` ~ `.day-N` — 各天主題色（天數由 JSON 決定）
-  - `.driving-summary` — 全旅程車程統計（航班資訊下方）
-  - `.driving-summary-day` — 全旅程車程統計各天明細
+  - `.driving-summary` — 全旅程交通統計（航班資訊下方）
+  - `.driving-summary-day` — 全旅程交通統計各天明細
+  - `.transport-type-group` — 交通類型分組
+  - `.transport-type-label` — 交通類型標籤
+  - `.transport-type-summary` — 全旅程交通類型摘要
+  - `.info-panel` — 桌機右側資訊面板（≥1200px 顯示）
+  - `.info-card` — 資訊面板卡片
+  - `.countdown-card` — 行程倒數器
+  - `.stats-card` — 行程統計卡
 - 地圖連結格式：Google Map + Apple Map + Mapcode 三組
 
 ### UI 設計規範
@@ -215,23 +222,34 @@ CLAUDE.md               — 開發規範
 - 每家餐廳標註營業時間，可預約者附預約連結
 - 語言：繁體中文台灣用語，日文店名保留原文
 
-### 每日車程統計規範
+### 每日交通統計規範
 
-- `app.js` 的 `calcDrivingStats()` 會自動從 `timeline[].transit` 中篩選 emoji 為 🚗 的項目，解析分鐘數並加總
-- **超過 120 分鐘（2 小時）的天數會以警告樣式（黃底＋紅色徽章）顯示**
-- 每次新增或修改行程參數檔的 `timeline` 時，transit 的 text 必須包含分鐘數（如「約40分鐘」），才能正確計算車程
+- `app.js` 的 `calcDrivingStats()` 會自動從 `timeline[].transit` 中篩選 `TRANSPORT_TYPES` 定義的 emoji（🚗 開車、🚝 電車、🚶 步行），解析分鐘數並按類型分組
+- 每日統計預設只顯示總計，以 `.col-row` / `.col-detail` 可收合模式展開看明細
+- **開車超過 120 分鐘（2 小時）的天數會以警告樣式（黃底＋紅色徽章）顯示**
+- 每次新增或修改行程參數檔的 `timeline` 時，transit 的 text 必須包含分鐘數（如「約40分鐘」），才能正確計算
 - CSS class：`.driving-stats`（正常）、`.driving-stats-warning`（超過 2 小時）
 - **位置**：渲染在住宿旅館（hotel）下方、時間軸（timeline）之前
 
-### 全旅程車程統計規範
+### 全旅程交通統計規範
 
-- `calcTripDrivingStats(days)` 彙總所有天的車程資料，計算全旅程總車程
-- `renderTripDrivingStats(tripStats)` 渲染為可收合區塊，包含：
-  - 全旅程總車程時間
-  - 展開後顯示每天車程明細（含分段細節）
-  - 超過 2 小時的天數顯示警告樣式
+- `calcTripDrivingStats(days)` 彙總所有天的交通資料，計算全旅程總交通時間，並按類型加總 (`grandByType`)
+- `renderTripDrivingStats(tripStats)` 渲染為兩層巢狀可收合區塊，包含：
+  - 全旅程總交通時間
+  - 按交通類型摘要（🚗 開車 / 🚝 電車 / 🚶 步行）
+  - 每日交通明細（可展開，含各類型分段細節）
+  - 開車超過 2 小時的天數顯示警告樣式
 - **位置**：渲染在航班資訊（flights）區段下方
 - 行程參數檔變更後會自動重新統計（渲染時即時計算）
+
+### 桌機資訊面板規範
+
+- `isDesktop()` 使用 User-Agent 偵測：只有手機（iPhone、Android Mobile、iPod、Opera Mini）判為非桌機，平板及桌機均視為桌機
+- CSS `@media (min-width: 768px)` 控制 sidebar 顯示，`@media (min-width: 1200px)` 控制 info-panel 三欄佈局
+- 三欄佈局：sidebar (260px) + content (flex:1) + info-panel (280px)
+- `renderCountdown(autoScrollDates)`：出發前顯示倒數天數、旅行中顯示 Day N、已結束顯示提示
+- `renderTripStatsCard(data)`：顯示天數、景點數、交通統計摘要、預估預算
+- `renderInfoPanel(data)`：在 `renderTrip()` 最後呼叫，僅在面板可見時渲染
 
 ### 行程 JSON 連動更新規範
 
@@ -239,7 +257,7 @@ CLAUDE.md               — 開發規範
   - `checklist`（出發前確認清單）：依最新行程內容更新需準備的項目（如預約、門票、租車、Wi-Fi 等）
   - `backup`（雨天備案）：依最新各天行程地點，提供對應的室內替代方案
   - `suggestions`（行程建議）：依最新行程重新評估高/中/低優先建議事項
-  - **每日車程統計**：確認每個 transit 的 text 欄位包含分鐘數，讓 `calcDrivingStats()` 能正確計算；超過 2 小時的天數應考慮精簡行程
+  - **每日交通統計**：確認每個 transit 的 text 欄位包含分鐘數，讓 `calcDrivingStats()` 能正確計算；開車超過 2 小時的天數應考慮精簡行程
 - 確保以上區段的內容與最新行程一致，避免出現已刪除景點的殘留資訊或遺漏新增景點的相關提醒
 
 ## 測試

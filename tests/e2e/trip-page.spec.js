@@ -95,7 +95,7 @@ test.describe('導航功能', () => {
 
 /* ===== 3. 漢堡選單（手機版） ===== */
 test.describe('漢堡選單（手機版）', () => {
-  test.use({ viewport: { width: 375, height: 812 } });
+  test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
 
   test('選單按鈕開關 menu', async ({ page }) => {
     await page.goto('/');
@@ -620,5 +620,82 @@ test.describe('Nav pill 捲動 highlight', () => {
     // nav pill 3 應有 active class
     const pill3 = page.locator('.dn[data-day="3"]');
     await expect(pill3).toHaveClass(/active/);
+  });
+});
+
+/* ===== 19. 每日交通統計可收合 ===== */
+test.describe('每日交通統計', () => {
+  test('預設隱藏明細，點擊展開可見', async ({ page }) => {
+    await page.goto('/');
+    const drivingStats = page.locator('.driving-stats').first();
+    // 統計區塊本身應可見
+    await expect(drivingStats).toBeVisible();
+
+    // 明細預設隱藏（col-detail 未 open）
+    const detail = drivingStats.locator('.col-detail').first();
+    await expect(detail).not.toBeVisible();
+
+    // 點擊 col-row 展開
+    const colRow = drivingStats.locator('.col-row').first();
+    await colRow.click();
+    await expect(detail).toBeVisible();
+  });
+});
+
+/* ===== 20. 全旅程交通統計 ===== */
+test.describe('全旅程交通統計', () => {
+  test('航班後出現交通統計區塊', async ({ page }) => {
+    await page.goto('/');
+    const summary = page.locator('.driving-summary');
+    await expect(summary).toBeAttached();
+  });
+
+  test('包含多種交通類型', async ({ page }) => {
+    await page.goto('/');
+    const summary = page.locator('.driving-summary');
+    // 展開全旅程統計
+    await summary.locator('.col-row').first().click();
+    const detail = summary.locator('.col-detail').first();
+    await expect(detail).toBeVisible();
+    // 應包含交通類型摘要
+    await expect(detail.locator('.transport-type-summary').first()).toBeAttached();
+  });
+});
+
+/* ===== 21. 桌機資訊面板 ===== */
+test.describe('桌機資訊面板', () => {
+  test.use({ viewport: { width: 1400, height: 900 } });
+
+  test('倒數器與統計卡可見', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const panel = page.locator('#infoPanel');
+    await expect(panel).toBeVisible();
+
+    // 倒數器
+    const countdown = panel.locator('.countdown-card');
+    await expect(countdown).toBeVisible();
+
+    // 統計卡
+    const statsCard = panel.locator('.stats-card');
+    await expect(statsCard).toBeVisible();
+  });
+
+  test('中等寬度不顯示資訊面板', async ({ page, browser }) => {
+    const context = await browser.newContext({ viewport: { width: 900, height: 800 } });
+    const mediumPage = await context.newPage();
+    // Mock weather API
+    await mediumPage.route('**/api.open-meteo.com/**', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ hourly: { time: [], temperature_2m: [], precipitation_probability: [], weather_code: [] } }),
+      });
+    });
+    await mediumPage.goto('/');
+    await mediumPage.waitForTimeout(500);
+    const panel = mediumPage.locator('#infoPanel');
+    await expect(panel).not.toBeVisible();
+    await context.close();
   });
 });

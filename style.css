@@ -13,6 +13,7 @@
     --sidebar-w-collapsed: 56px;
     --sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     --content-max-w: 800px;
+    --info-panel-w: 280px;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; scrollbar-gutter: stable; overflow-x: hidden; }
@@ -183,14 +184,15 @@ body.dark.menu-open .dh-menu { background: none; }
 /* ===== Driving Stats ===== */
 .driving-stats { margin: 10px 0; padding: 10px 14px; border-radius: 8px; background: var(--blue-light); font-size: var(--fs-md); }
 .driving-stats-warning { background: #FEF3C7; }
-.driving-stats-header { font-weight: 700; margin-bottom: 4px; }
 .driving-stats-badge { display: inline-block; background: #DC2626; color: #fff; font-size: 0.8em; padding: 1px 8px; border-radius: 10px; font-weight: 600; margin-left: 6px; }
 .driving-stats-detail { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--gray); font-size: 0.9em; }
-.driving-stats-seg::before { content: '🚗 '; }
+.transport-type-group { margin-bottom: 4px; }
+.transport-type-label { font-weight: 600; margin-bottom: 2px; }
+.transport-type-summary { padding: 2px 0; font-weight: 600; font-size: var(--fs-md); }
 
 /* ===== Trip Driving Summary ===== */
 .driving-summary { margin: 8px 0; }
-.driving-summary-day { padding: 8px 0; font-size: var(--fs-md); }
+.driving-summary-day { padding: 4px 0; font-size: var(--fs-md); border-radius: 8px; }
 
 /* ===== Trip Warnings ===== */
 .trip-warnings { margin-bottom: 12px; }
@@ -228,7 +230,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 @media print {
     @page { size: A4; margin: 12mm; }
     body { --blue: #C4704F; --blue-light: #F5EDE8; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: #fff !important; }
-    .sticky-nav, .menu-drawer, .menu-backdrop, .dh-nav, .dh-menu, .print-exit-btn, .hourly-weather, .sidebar { display: none !important; }
+    .sticky-nav, .menu-drawer, .menu-backdrop, .dh-nav, .dh-menu, .print-exit-btn, .hourly-weather, .sidebar, .info-panel { display: none !important; }
     .container { max-width: 100% !important; box-shadow: none !important; }
     .tl-body, .col-detail { display: block !important; }
     .tl-arrow, .col-row .arrow { display: none !important; }
@@ -348,6 +350,38 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
     #tripContent { max-width: var(--content-max-w); margin: 0 auto; }
 }
 
+/* ===== Info Panel (hidden by default) ===== */
+.info-panel { display: none; }
+
+/* ===== Desktop Three-Column Layout (≥1200px) ===== */
+@media (min-width: 1200px) {
+    .info-panel {
+        display: block;
+        width: var(--info-panel-w);
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        padding: 16px 12px;
+        scrollbar-width: thin;
+    }
+}
+
+/* ===== Info Cards ===== */
+.info-card { background: var(--white); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.countdown-card { text-align: center; }
+.countdown-number { font-size: 2.5rem; font-weight: 700; color: var(--blue); line-height: 1.2; }
+.countdown-label { font-size: var(--fs-md); color: var(--gray); margin-top: 4px; }
+.countdown-date { font-size: var(--fs-md); color: var(--gray); margin-top: 2px; opacity: 0.7; }
+.stats-card-title { font-weight: 700; font-size: var(--fs-lg); margin-bottom: 10px; }
+.stats-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: var(--fs-md); }
+.stats-label { color: var(--gray); }
+.stats-value { font-weight: 600; }
+
+/* ===== Print / Info Panel ===== */
+.print-mode .info-panel { display: none !important; }
+
 /* ===== Dark Mode ===== */
 body.dark { --blue: #D4845E; --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --gray: #9B9590; --gray-light: #343130; --text: #E8E5E0; background: #1A1816; }
 body.dark .sticky-nav { background: #7D4A36; color: #E8E5E0; }
@@ -392,3 +426,4 @@ body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.12); }
 body.dark .suggestion-card.high { background: rgba(220, 38, 38, 0.12); }
 body.dark .suggestion-card.medium { background: rgba(245, 158, 11, 0.12); }
 body.dark .suggestion-card.low { background: rgba(16, 185, 129, 0.12); }
+body.dark .info-card { background: #292624; }

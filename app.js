@@ -241,42 +241,69 @@ function renderBudget(budget) {
     return html;
 }
 
-/* ===== Driving Stats ===== */
+/* ===== Transport Types ===== */
+var TRANSPORT_TYPES = {
+    '\uD83D\uDE97': { label: '開車', icon: '🚗' },
+    '\uD83D\uDE9D': { label: '電車', icon: '🚝' },
+    '\uD83D\uDEB6': { label: '步行', icon: '🚶' }
+};
+
+function formatMinutes(totalMins) {
+    var hrs = Math.floor(totalMins / 60);
+    var mins = totalMins % 60;
+    return hrs > 0 ? hrs + ' 小時' + (mins > 0 ? ' ' + mins + ' 分鐘' : '') : totalMins + ' 分鐘';
+}
+
+/* ===== Driving Stats (all transport types) ===== */
 function calcDrivingStats(timeline) {
     if (!timeline || !timeline.length) return null;
-    var segments = [];
-    var total = 0;
+    var byType = {};
+    var totalMinutes = 0;
+    var drivingMinutes = 0;
     timeline.forEach(function(ev) {
         if (!ev.transit) return;
         var t = ev.transit;
         var emoji = t.emoji || '';
         var text = t.text || (typeof t === 'string' ? t : '');
-        if (emoji !== '\uD83D\uDE97') return; // 🚗
+        if (!TRANSPORT_TYPES[emoji]) return;
         var m = text.match(/(\d+)/);
         if (!m) return;
         var mins = parseInt(m[1], 10);
-        segments.push({ text: text, minutes: mins });
-        total += mins;
+        if (!byType[emoji]) {
+            byType[emoji] = { label: TRANSPORT_TYPES[emoji].label, icon: TRANSPORT_TYPES[emoji].icon, totalMinutes: 0, segments: [] };
+        }
+        byType[emoji].segments.push({ text: text, minutes: mins });
+        byType[emoji].totalMinutes += mins;
+        totalMinutes += mins;
+        if (emoji === '\uD83D\uDE97') drivingMinutes += mins;
     });
-    if (!segments.length) return null;
-    return { totalMinutes: total, segments: segments };
+    if (totalMinutes === 0) return null;
+    return { totalMinutes: totalMinutes, drivingMinutes: drivingMinutes, byType: byType,
+        // backward-compat: flat segments list (driving only)
+        segments: byType['\uD83D\uDE97'] ? byType['\uD83D\uDE97'].segments : [] };
 }
 
 function renderDrivingStats(stats) {
     if (!stats) return '';
-    var isWarning = stats.totalMinutes > 120;
+    var isWarning = stats.drivingMinutes > 120;
     var cls = isWarning ? 'driving-stats driving-stats-warning' : 'driving-stats';
-    var icon = isWarning ? '\u26A0\uFE0F' : '\uD83D\uDE97';
-    var hrs = Math.floor(stats.totalMinutes / 60);
-    var mins = stats.totalMinutes % 60;
-    var timeStr = hrs > 0 ? hrs + ' 小時 ' + (mins > 0 ? mins + ' 分鐘' : '') : stats.totalMinutes + ' 分鐘';
+    var icon = isWarning ? '\u26A0\uFE0F' : '\uD83D\uDE8C';
     var html = '<div class="' + cls + '">';
-    html += '<div class="driving-stats-header">' + icon + ' 當日車程：' + escHtml(timeStr.trim());
+    html += '<div class="col-row" role="button" aria-expanded="false">' + icon + ' 當日交通：' + escHtml(formatMinutes(stats.totalMinutes));
     if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
-    html += '</div>';
-    html += '<div class="driving-stats-detail">';
-    stats.segments.forEach(function(seg) {
-        html += '<span class="driving-stats-seg">' + escHtml(seg.text) + '</span>';
+    html += ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-detail">';
+    var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
+    typeOrder.forEach(function(emoji) {
+        var group = stats.byType[emoji];
+        if (!group) return;
+        html += '<div class="transport-type-group">';
+        html += '<div class="transport-type-label">' + group.icon + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
+        html += '<div class="driving-stats-detail">';
+        group.segments.forEach(function(seg) {
+            html += '<span class="driving-stats-seg">' + group.icon + ' ' + escHtml(seg.text) + '</span>';
+        });
+        html += '</div></div>';
     });
     html += '</div></div>';
     return html;
@@ -287,37 +314,58 @@ function calcTripDrivingStats(days) {
     if (!days || !days.length) return null;
     var dayStats = [];
     var grandTotal = 0;
+    var grandByType = {};
     days.forEach(function(day) {
         var content = day.content || {};
         var stats = calcDrivingStats(content.timeline);
         if (stats) {
             dayStats.push({ dayId: day.id, date: day.date, label: 'Day ' + day.id, stats: stats });
             grandTotal += stats.totalMinutes;
+            // Aggregate by type
+            for (var emoji in stats.byType) {
+                if (!stats.byType.hasOwnProperty(emoji)) continue;
+                var g = stats.byType[emoji];
+                if (!grandByType[emoji]) {
+                    grandByType[emoji] = { label: g.label, icon: g.icon, totalMinutes: 0 };
+                }
+                grandByType[emoji].totalMinutes += g.totalMinutes;
+            }
         }
     });
     if (!dayStats.length) return null;
-    return { grandTotal: grandTotal, days: dayStats };
+    return { grandTotal: grandTotal, grandByType: grandByType, days: dayStats };
 }
 
 function renderTripDrivingStats(tripStats) {
     if (!tripStats) return '';
-    var hrs = Math.floor(tripStats.grandTotal / 60);
-    var mins = tripStats.grandTotal % 60;
-    var timeStr = hrs > 0 ? hrs + ' 小時' + (mins > 0 ? ' ' + mins + ' 分鐘' : '') : tripStats.grandTotal + ' 分鐘';
     var html = '<div class="driving-summary">';
-    html += '<div class="col-row">🚗 全旅程車程統計：' + escHtml(timeStr) + ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-row" role="button" aria-expanded="false">🚌 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
+    // Type summary
+    var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
+    typeOrder.forEach(function(emoji) {
+        var g = tripStats.grandByType[emoji];
+        if (!g) return;
+        html += '<div class="transport-type-summary">' + g.icon + ' ' + escHtml(g.label) + '：' + escHtml(formatMinutes(g.totalMinutes)) + '</div>';
+    });
+    // Per-day breakdown
     tripStats.days.forEach(function(d) {
-        var dHrs = Math.floor(d.stats.totalMinutes / 60);
-        var dMins = d.stats.totalMinutes % 60;
-        var dTimeStr = dHrs > 0 ? dHrs + ' 小時' + (dMins > 0 ? ' ' + dMins + ' 分鐘' : '') : d.stats.totalMinutes + ' 分鐘';
-        var isWarning = d.stats.totalMinutes > 120;
+        var isWarning = d.stats.drivingMinutes > 120;
         html += '<div class="driving-summary-day' + (isWarning ? ' driving-stats-warning' : '') + '">';
-        html += '<strong>' + escHtml(d.label) + '（' + escHtml(d.date) + '）</strong>：' + escHtml(dTimeStr);
+        html += '<div class="col-row" role="button" aria-expanded="false"><strong>' + escHtml(d.label) + '（' + escHtml(d.date) + '）</strong>：' + escHtml(formatMinutes(d.stats.totalMinutes));
         if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
-        html += '<div class="driving-stats-detail">';
-        d.stats.segments.forEach(function(seg) {
-            html += '<span class="driving-stats-seg">' + escHtml(seg.text) + '</span>';
+        html += ' <span class="arrow">＋</span></div>';
+        html += '<div class="col-detail">';
+        typeOrder.forEach(function(emoji) {
+            var group = d.stats.byType[emoji];
+            if (!group) return;
+            html += '<div class="transport-type-group">';
+            html += '<div class="transport-type-label">' + group.icon + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
+            html += '<div class="driving-stats-detail">';
+            group.segments.forEach(function(seg) {
+                html += '<span class="driving-stats-seg">' + group.icon + ' ' + escHtml(seg.text) + '</span>';
+            });
+            html += '</div></div>';
         });
         html += '</div></div>';
     });
@@ -870,6 +918,85 @@ function renderTrip(data) {
 
     // Re-init nav scroll tracking
     initNavTracking();
+
+    // Render info panel (desktop ≥1200px only)
+    renderInfoPanel(data);
+}
+
+/* ===== Info Panel (desktop right sidebar) ===== */
+function renderCountdown(autoScrollDates) {
+    if (!autoScrollDates || !autoScrollDates.length) return '';
+    var start = autoScrollDates[0];
+    var end = autoScrollDates[autoScrollDates.length - 1];
+    var today = new Date(); today.setHours(0,0,0,0);
+    var startDate = new Date(start + 'T00:00:00');
+    var endDate = new Date(end + 'T00:00:00');
+    var html = '<div class="info-card countdown-card">';
+    if (today < startDate) {
+        var diff = Math.ceil((startDate - today) / 86400000);
+        html += '<div class="countdown-number">' + diff + '</div>';
+        html += '<div class="countdown-label">天後出發</div>';
+        html += '<div class="countdown-date">' + escHtml(start) + '</div>';
+    } else if (today <= endDate) {
+        var dayN = Math.floor((today - startDate) / 86400000) + 1;
+        html += '<div class="countdown-number">Day ' + dayN + '</div>';
+        html += '<div class="countdown-label">旅行進行中</div>';
+    } else {
+        html += '<div class="countdown-number">✈️</div>';
+        html += '<div class="countdown-label">旅程已結束</div>';
+    }
+    html += '</div>';
+    return html;
+}
+
+function renderTripStatsCard(data) {
+    var html = '<div class="info-card stats-card">';
+    html += '<div class="stats-card-title">行程統計</div>';
+    // Total days
+    html += '<div class="stats-row"><span class="stats-label">天數</span><span class="stats-value">' + data.days.length + ' 天</span></div>';
+    // Total spots
+    var spots = 0;
+    data.days.forEach(function(day) {
+        var tl = (day.content || {}).timeline;
+        if (tl) spots += tl.length;
+    });
+    html += '<div class="stats-row"><span class="stats-label">景點數</span><span class="stats-value">' + spots + ' 個</span></div>';
+    // Transport summary by type
+    var tripStats = calcTripDrivingStats(data.days);
+    if (tripStats && tripStats.grandByType) {
+        var typeOrder = ['\uD83D\uDE97', '\uD83D\uDE9D', '\uD83D\uDEB6'];
+        typeOrder.forEach(function(emoji) {
+            var g = tripStats.grandByType[emoji];
+            if (!g) return;
+            html += '<div class="stats-row"><span class="stats-label">' + g.icon + ' ' + escHtml(g.label) + '</span><span class="stats-value">' + escHtml(formatMinutes(g.totalMinutes)) + '</span></div>';
+        });
+    }
+    // Total budget
+    var totalBudget = 0;
+    var currency = '';
+    data.days.forEach(function(day) {
+        var budget = (day.content || {}).budget;
+        if (budget && budget.items) {
+            budget.items.forEach(function(item) { totalBudget += (item.amount || 0); });
+            if (!currency && budget.currency) currency = budget.currency;
+        }
+    });
+    if (totalBudget > 0) {
+        html += '<div class="stats-row"><span class="stats-label">預估預算</span><span class="stats-value">' + escHtml(currency + ' ' + totalBudget.toLocaleString()) + '</span></div>';
+    }
+    html += '</div>';
+    return html;
+}
+
+function renderInfoPanel(data) {
+    var panel = document.getElementById('infoPanel');
+    if (!panel) return;
+    // Only render if panel is visible (≥1200px)
+    if (panel.offsetParent === null && panel.offsetWidth === 0) return;
+    var html = '';
+    html += renderCountdown(data.autoScrollDates);
+    html += renderTripStatsCard(data);
+    panel.innerHTML = html;
 }
 
 function buildMenu(data) {
@@ -933,7 +1060,7 @@ function updateDarkBtnText(isDark) {
 }
 
 /* ===== Desktop / Sidebar Helpers ===== */
-function isDesktop() { return window.matchMedia('(min-width: 768px)').matches; }
+function isDesktop() { return !/Mobi|Android.*Mobile|iPhone|iPod|Opera Mini/i.test(navigator.userAgent); }
 
 function initSidebar() {
     var sidebar = document.getElementById('sidebar');
@@ -1376,6 +1503,10 @@ if (typeof module !== 'undefined' && module.exports) {
         validateDay: validateDay,
         fileToSlug: fileToSlug,
         slugToFile: slugToFile,
-        APPLE_SVG: APPLE_SVG
+        APPLE_SVG: APPLE_SVG,
+        TRANSPORT_TYPES: TRANSPORT_TYPES,
+        formatMinutes: formatMinutes,
+        renderCountdown: renderCountdown,
+        renderTripStatsCard: renderTripStatsCard
     };
 }
