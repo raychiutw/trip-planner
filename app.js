@@ -826,17 +826,12 @@ function renderTrip(data) {
 
 function buildMenu(data) {
     var html = '<div class="menu-col">';
-    data.days.forEach(function(day) {
-        var id = parseInt(day.id) || 0;
-        html += '<button class="menu-item" data-action="scroll-to" data-target="day' + id + '">📍 Day ' + id + '</button>';
-    });
-    html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">💡 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">🔄 颱風/雨天備案</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">🆘 緊急聯絡</button>';
-    html += '<div class="menu-sep"></div>';
+    html += '</div><div class="menu-col">';
     html += '<button class="menu-item" data-action="toggle-dark">🌙 深色模式</button>';
     html += '<button class="menu-item" data-action="toggle-print">🖨️ 列印模式</button>';
     html += '<button class="menu-item" data-action="switch-trip">📂 切換行程檔</button>';
@@ -869,19 +864,19 @@ function toggleCol(el) {
     if (arrow) arrow.textContent = isOpen ? '－' : '＋';
 }
 function toggleDark() {
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
     document.body.classList.toggle('dark');
     var isDark = document.body.classList.contains('dark');
     lsSet('dark', isDark ? '1' : '0');
     var btn = document.querySelector('[data-action="toggle-dark"]');
     if (btn) btn.textContent = isDark ? '☀️ 淺色模式' : '🌙 深色模式';
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', isDark ? '#1565C0' : '#0077B6');
+    if (meta) meta.setAttribute('content', isDark ? '#7D4A36' : '#C4704F');
 }
 if (lsGet('dark') === '1') {
     document.body.classList.add('dark');
     var dmeta = document.querySelector('meta[name="theme-color"]');
-    if (dmeta) dmeta.setAttribute('content', '#1565C0');
+    if (dmeta) dmeta.setAttribute('content', '#7D4A36');
 }
 var _manualScrollTs = 0;
 function scrollToSec(id) {
@@ -892,16 +887,19 @@ function scrollToSec(id) {
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
     history.replaceState(null, '', '#' + id);
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
 function toggleMenu() {
     var menu = document.getElementById('menuDrop');
+    var backdrop = document.getElementById('menuBackdrop');
     if (menu.classList.contains('open')) {
         menu.classList.remove('open');
+        backdrop.classList.remove('open');
         document.body.style.overflow = '';
     } else {
         menu.classList.add('open');
+        backdrop.classList.add('open');
         document.body.style.overflow = 'hidden';
     }
 }
@@ -914,7 +912,7 @@ function toggleHw(el) {
     }
 }
 function togglePrint() {
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
     var entering = !document.body.classList.contains('print-mode');
     if (entering && document.body.classList.contains('dark')) {
         document.body.dataset.wasDark = '1';
@@ -933,7 +931,7 @@ function togglePrint() {
 
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
-    document.getElementById('menuDrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
     fetch('data/trips.json?t=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(trips) {
@@ -1069,6 +1067,9 @@ function autoScrollToday(dates) {
 /* ===== Central Event Delegation ===== */
 document.addEventListener('click', function(e) {
     var t = e.target;
+
+    // 0. Backdrop click closes menu
+    if (t.id === 'menuBackdrop') { toggleMenu(); return; }
 
     // 1. data-action buttons (menu, nav, toggles)
     var actionEl = t.closest('[data-action]');
