@@ -241,6 +241,47 @@ function renderBudget(budget) {
     return html;
 }
 
+/* ===== Driving Stats ===== */
+function calcDrivingStats(timeline) {
+    if (!timeline || !timeline.length) return null;
+    var segments = [];
+    var total = 0;
+    timeline.forEach(function(ev) {
+        if (!ev.transit) return;
+        var t = ev.transit;
+        var emoji = t.emoji || '';
+        var text = t.text || (typeof t === 'string' ? t : '');
+        if (emoji !== '\uD83D\uDE97') return; // 🚗
+        var m = text.match(/(\d+)/);
+        if (!m) return;
+        var mins = parseInt(m[1], 10);
+        segments.push({ text: text, minutes: mins });
+        total += mins;
+    });
+    if (!segments.length) return null;
+    return { totalMinutes: total, segments: segments };
+}
+
+function renderDrivingStats(stats) {
+    if (!stats) return '';
+    var isWarning = stats.totalMinutes > 120;
+    var cls = isWarning ? 'driving-stats driving-stats-warning' : 'driving-stats';
+    var icon = isWarning ? '\u26A0\uFE0F' : '\uD83D\uDE97';
+    var hrs = Math.floor(stats.totalMinutes / 60);
+    var mins = stats.totalMinutes % 60;
+    var timeStr = hrs > 0 ? hrs + ' 小時 ' + (mins > 0 ? mins + ' 分鐘' : '') : stats.totalMinutes + ' 分鐘';
+    var html = '<div class="' + cls + '">';
+    html += '<div class="driving-stats-header">' + icon + ' 當日車程：' + escHtml(timeStr.trim());
+    if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
+    html += '</div>';
+    html += '<div class="driving-stats-detail">';
+    stats.segments.forEach(function(seg) {
+        html += '<span class="driving-stats-seg">' + escHtml(seg.text) + '</span>';
+    });
+    html += '</div></div>';
+    return html;
+}
+
 /* ===== Render: Day Content ===== */
 function renderDayContent(content, weatherId) {
     var html = '';
@@ -249,6 +290,10 @@ function renderDayContent(content, weatherId) {
     }
     if (content.hotel) html += renderHotel(content.hotel);
     if (content.timeline) html += renderTimeline(content.timeline);
+    if (content.timeline) {
+        var stats = calcDrivingStats(content.timeline);
+        html += renderDrivingStats(stats);
+    }
     if (content.budget) html += renderBudget(content.budget);
     return html;
 }
@@ -1160,6 +1205,8 @@ if (typeof module !== 'undefined' && module.exports) {
         renderBackup: renderBackup,
         renderEmergency: renderEmergency,
         renderSuggestions: renderSuggestions,
+        calcDrivingStats: calcDrivingStats,
+        renderDrivingStats: renderDrivingStats,
         renderWarnings: renderWarnings,
         validateTripData: validateTripData,
         validateDay: validateDay,

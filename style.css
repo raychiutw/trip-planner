@@ -156,6 +156,14 @@ body.dark .sticky-nav { background: #1565C0; }
 .notes-list li { padding: 2px 0 2px 22px; position: relative; font-size: var(--fs-md); }
 .notes-list li::before { content: '📌'; position: absolute; left: 0; }
 
+/* ===== Driving Stats ===== */
+.driving-stats { margin: 10px 0; padding: 10px 14px; border-radius: 8px; background: var(--blue-light); border-left: 4px solid var(--blue); font-size: var(--fs-md); }
+.driving-stats-warning { background: #FEF3C7; border-left-color: #F59E0B; }
+.driving-stats-header { font-weight: 700; margin-bottom: 4px; }
+.driving-stats-badge { display: inline-block; background: #DC2626; color: #fff; font-size: 0.8em; padding: 1px 8px; border-radius: 10px; font-weight: 600; margin-left: 6px; }
+.driving-stats-detail { display: flex; flex-wrap: wrap; gap: 4px 10px; color: var(--gray); font-size: 0.9em; }
+.driving-stats-seg::before { content: '🚗 '; }
+
 /* ===== Trip Warnings ===== */
 .trip-warnings { margin-bottom: 12px; }
 .trip-warning-item { background: #FEE2E2; border-left: 4px solid #DC2626; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: var(--fs-md); }
@@ -277,6 +285,7 @@ body.dark .trip-btn:hover { background: #333; }
 body.dark .trip-btn.active { border-color: #4FC3F7; }
 body.dark .trip-upload:hover { background: #333; }
 body.dark footer { border-top-color: #333; }
+body.dark .driving-stats-warning { background: rgba(245, 158, 11, 0.15); border-left-color: #FBBF24; }
 body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.15); border-left-color: #F87171; }
 body.dark .suggestion-card.high { background: rgba(220, 38, 38, 0.15); border-left-color: #F87171; }
 body.dark .suggestion-card.medium { background: rgba(245, 158, 11, 0.15); border-left-color: #FBBF24; }
