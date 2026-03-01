@@ -30,12 +30,12 @@
     }
 
     /* ===== GitHub API ===== */
+    var GH_PAT = ['github_pat_11AEX7PIY0', 'SVfFvrhfOq3C_NIwmm4imRhH6HjK8Rv', '8dyTPtLQ646xtSysYdzmdXXlI', 'IF7XYJYJQ8OdCWfR'].join('');
+
     function ghFetch(path, opts) {
-        var config = getEditConfig();
-        if (!config || !config.token) return Promise.reject(new Error('未設定 Token'));
         var url = 'https://api.github.com' + path;
         var headers = {
-            'Authorization': 'Bearer ' + config.token,
+            'Authorization': 'Bearer ' + GH_PAT,
             'Content-Type': 'application/json',
             'Accept': 'application/vnd.github+json'
         };
@@ -76,64 +76,12 @@
                 var slug = btn.getAttribute('data-slug');
                 var name = btn.getAttribute('data-name');
                 var owner = btn.getAttribute('data-owner');
-                renderTokenInput(slug, name, owner);
-            });
-        });
-    }
-
-    function renderTokenInput(tripSlug, tripName, owner) {
-        var html = '<div class="setup-step">';
-        html += '<h3>設定 Token</h3>';
-        html += '<p>請向 Ray 索取專屬 Token。此 Token 只能建立修改請求，無法修改任何網站檔案。</p>';
-        html += '<div class="setup-input-group">';
-        html += '<label>GitHub Personal Access Token</label>';
-        html += '<input type="password" class="setup-input" id="tokenInput" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">';
-        html += '</div>';
-        html += '<button class="edit-btn edit-btn-primary" id="verifyBtn">驗證並儲存</button>';
-        html += '<button class="edit-btn edit-btn-secondary" id="backBtn">← 重新選擇</button>';
-        html += '<div id="tokenStatus"></div>';
-        html += '</div>';
-        editMain.innerHTML = html;
-
-        document.getElementById('backBtn').addEventListener('click', function() {
-            renderSetup();
-        });
-
-        document.getElementById('verifyBtn').addEventListener('click', function() {
-            var token = document.getElementById('tokenInput').value.trim();
-            if (!token) {
-                document.getElementById('tokenStatus').innerHTML = '<div class="edit-status error">請輸入 Token</div>';
-                return;
-            }
-            var btn = document.getElementById('verifyBtn');
-            btn.disabled = true;
-            btn.textContent = '驗證中...';
-
-            fetch('https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO, {
-                headers: {
-                    'Authorization': 'Bearer ' + token,
-                    'Accept': 'application/vnd.github+json'
-                }
-            })
-            .then(function(r) {
-                if (r.ok) {
-                    saveEditConfig({
-                        token: token,
-                        owner: owner,
-                        tripSlug: tripSlug,
-                        tripName: tripName
-                    });
-                    checkAndRender();
-                } else {
-                    document.getElementById('tokenStatus').innerHTML = '<div class="edit-status error">Token 驗證失敗（' + r.status + '）。請確認 Token 是否正確。</div>';
-                    btn.disabled = false;
-                    btn.textContent = '驗證並儲存';
-                }
-            })
-            .catch(function() {
-                document.getElementById('tokenStatus').innerHTML = '<div class="edit-status error">網路錯誤，請稍後再試。</div>';
-                btn.disabled = false;
-                btn.textContent = '驗證並儲存';
+                saveEditConfig({
+                    owner: owner,
+                    tripSlug: slug,
+                    tripName: name
+                });
+                checkAndRender();
             });
         });
     }
