@@ -309,14 +309,13 @@ CLAUDE.md               — 開發規範
 #### 架構
 ```
 Trip 頁面 → 右下角 FAB → 導向 edit.html?trip={slug}
-Edit 頁面 → 首次設定 PAT + 綁定行程 → 輸入修改文字 → POST GitHub Issue (label: trip-edit)
+Edit 頁面 → 首次選擇行程 → 輸入修改文字 → POST GitHub Issue (label: trip-edit)
 Cowork /render-trip → 讀 Issue → 改 trip JSON → npm test → commit push → close Issue
 ```
 
 #### 安全設計
-- **GitHub PAT**：Fine-Grained，僅 `Issues: Read+Write`，無 Contents 權限
+- **GitHub PAT**：Fine-Grained，僅 `Issues: Read+Write`，無 Contents 權限，寫死在 edit.js（所有旅伴共用）
 - **Cowork 白名單**：`git diff --name-only` 只允許 `data/trips/{tripSlug}.json`
-- **Web UI**：localStorage 綁定 owner + tripSlug，歸屬檢查防止改別人行程
 - **CSP**：`connect-src` 含 `https://api.github.com`
 
 #### Issue 格式
