@@ -55,11 +55,11 @@ body.dark .sticky-nav { background: #1565C0; }
 .day-header { position: relative; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; scroll-margin-top: 44px; }
 .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .day-header .dh-right { font-size: var(--fs-md); opacity: 0.9; white-space: nowrap; margin-left: auto; }
-.dh-nav { display: flex; gap: 3px; flex-shrink: 0; }
+.dh-nav { display: flex; gap: 3px; flex-shrink: 0; margin-left: auto; }
 .dn { background: rgba(255,255,255,0.2); color: var(--white); border: none; padding: 3px 8px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
 .dn:hover { background: rgba(255,255,255,0.35); }
 .dn.active { background: var(--white); color: var(--blue); }
-.dh-menu { background: rgba(255,255,255,0.2); color: var(--white); border: none; width: 32px; height: 32px; border-radius: 8px; font-size: var(--fs-lg); cursor: pointer; font-weight: 700; flex-shrink: 0; margin-left: auto; }
+.dh-menu { background: rgba(255,255,255,0.2); color: var(--white); border: none; width: 32px; height: 32px; border-radius: 8px; font-size: var(--fs-lg); cursor: pointer; font-weight: 700; flex-shrink: 0; }
 .dh-menu:hover { background: rgba(255,255,255,0.35); }
 .day-header .dh-right + .dh-menu { margin-left: 0; }
 
