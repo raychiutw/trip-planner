@@ -14,6 +14,14 @@ const {
   renderBackup,
   renderEmergency,
   renderSuggestions,
+  calcDrivingStats,
+  renderDrivingStats,
+  calcTripDrivingStats,
+  renderTripDrivingStats,
+  formatMinutes,
+  renderCountdown,
+  renderTripStatsCard,
+  TRANSPORT_TYPES,
   safeColor,
   escHtml,
   APPLE_SVG,
@@ -591,5 +599,287 @@ describe('renderSuggestions', () => {
       cards: [{ title: 'T', items: ['A'], color: 'red;} body{display:none' }],
     });
     expect(html).toContain('var(--blue-light)');
+  });
+});
+
+/* ===== TRANSPORT_TYPES ===== */
+describe('TRANSPORT_TYPES', () => {
+  it('contains car, train, walk', () => {
+    expect(TRANSPORT_TYPES['🚗']).toEqual({ label: '開車', icon: '🚗' });
+    expect(TRANSPORT_TYPES['🚝']).toEqual({ label: '電車', icon: '🚝' });
+    expect(TRANSPORT_TYPES['🚶']).toEqual({ label: '步行', icon: '🚶' });
+  });
+});
+
+/* ===== formatMinutes ===== */
+describe('formatMinutes', () => {
+  it('formats minutes only', () => {
+    expect(formatMinutes(45)).toBe('45 分鐘');
+  });
+
+  it('formats hours only', () => {
+    expect(formatMinutes(120)).toBe('2 小時');
+  });
+
+  it('formats hours and minutes', () => {
+    expect(formatMinutes(90)).toBe('1 小時 30 分鐘');
+  });
+
+  it('handles zero', () => {
+    expect(formatMinutes(0)).toBe('0 分鐘');
+  });
+});
+
+/* ===== calcDrivingStats ===== */
+describe('calcDrivingStats', () => {
+  it('returns null for empty timeline', () => {
+    expect(calcDrivingStats(null)).toBeNull();
+    expect(calcDrivingStats([])).toBeNull();
+  });
+
+  it('parses car transit', () => {
+    const result = calcDrivingStats([
+      { transit: { emoji: '🚗', text: '約30分鐘' } },
+      { transit: { emoji: '🚗', text: '約45分鐘' } },
+    ]);
+    expect(result.totalMinutes).toBe(75);
+    expect(result.drivingMinutes).toBe(75);
+    expect(result.byType['🚗'].totalMinutes).toBe(75);
+    expect(result.byType['🚗'].segments).toHaveLength(2);
+  });
+
+  it('parses multiple transport types', () => {
+    const result = calcDrivingStats([
+      { transit: { emoji: '🚗', text: '約30分鐘' } },
+      { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+      { transit: { emoji: '🚶', text: '步行約10分鐘' } },
+    ]);
+    expect(result.totalMinutes).toBe(55);
+    expect(result.drivingMinutes).toBe(30);
+    expect(result.byType['🚗'].totalMinutes).toBe(30);
+    expect(result.byType['🚝'].totalMinutes).toBe(15);
+    expect(result.byType['🚶'].totalMinutes).toBe(10);
+  });
+
+  it('ignores non-transport emoji', () => {
+    const result = calcDrivingStats([
+      { transit: { emoji: '🛫', text: '飛行約120分鐘' } },
+    ]);
+    expect(result).toBeNull();
+  });
+
+  it('ignores events without transit', () => {
+    const result = calcDrivingStats([
+      { title: '景點', time: '09:00' },
+      { transit: { emoji: '🚗', text: '約20分鐘' } },
+    ]);
+    expect(result.totalMinutes).toBe(20);
+  });
+
+  it('provides backward-compat segments (driving only)', () => {
+    const result = calcDrivingStats([
+      { transit: { emoji: '🚗', text: '約30分鐘' } },
+      { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+    ]);
+    expect(result.segments).toHaveLength(1);
+    expect(result.segments[0].minutes).toBe(30);
+  });
+});
+
+/* ===== renderDrivingStats ===== */
+describe('renderDrivingStats', () => {
+  it('returns empty for null', () => {
+    expect(renderDrivingStats(null)).toBe('');
+  });
+
+  it('renders collapsible structure', () => {
+    const stats = calcDrivingStats([
+      { transit: { emoji: '🚗', text: '約30分鐘' } },
+    ]);
+    const html = renderDrivingStats(stats);
+    expect(html).toContain('col-row');
+    expect(html).toContain('col-detail');
+    expect(html).toContain('當日交通');
+    expect(html).toContain('30 分鐘');
+  });
+
+  it('shows warning badge when driving > 120 min', () => {
+    const stats = calcDrivingStats([
+      { transit: { emoji: '🚗', text: '約80分鐘' } },
+      { transit: { emoji: '🚗', text: '約50分鐘' } },
+    ]);
+    const html = renderDrivingStats(stats);
+    expect(html).toContain('driving-stats-warning');
+    expect(html).toContain('超過 2 小時');
+  });
+
+  it('renders transport type groups', () => {
+    const stats = calcDrivingStats([
+      { transit: { emoji: '🚗', text: '約30分鐘' } },
+      { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+    ]);
+    const html = renderDrivingStats(stats);
+    expect(html).toContain('transport-type-group');
+    expect(html).toContain('開車');
+    expect(html).toContain('電車');
+  });
+});
+
+/* ===== calcTripDrivingStats ===== */
+describe('calcTripDrivingStats', () => {
+  it('returns null for empty days', () => {
+    expect(calcTripDrivingStats(null)).toBeNull();
+    expect(calcTripDrivingStats([])).toBeNull();
+  });
+
+  it('aggregates across days and types', () => {
+    const days = [
+      { id: 1, date: '2026-05-01', content: { timeline: [
+        { transit: { emoji: '🚗', text: '約30分鐘' } },
+        { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+      ] } },
+      { id: 2, date: '2026-05-02', content: { timeline: [
+        { transit: { emoji: '🚗', text: '約60分鐘' } },
+      ] } },
+    ];
+    const result = calcTripDrivingStats(days);
+    expect(result.grandTotal).toBe(105);
+    expect(result.grandByType['🚗'].totalMinutes).toBe(90);
+    expect(result.grandByType['🚝'].totalMinutes).toBe(15);
+    expect(result.days).toHaveLength(2);
+  });
+
+  it('skips days without transport', () => {
+    const days = [
+      { id: 1, date: '2026-05-01', content: { timeline: [{ title: '景點' }] } },
+      { id: 2, date: '2026-05-02', content: { timeline: [
+        { transit: { emoji: '🚗', text: '約20分鐘' } },
+      ] } },
+    ];
+    const result = calcTripDrivingStats(days);
+    expect(result.days).toHaveLength(1);
+    expect(result.grandTotal).toBe(20);
+  });
+});
+
+/* ===== renderTripDrivingStats ===== */
+describe('renderTripDrivingStats', () => {
+  it('returns empty for null', () => {
+    expect(renderTripDrivingStats(null)).toBe('');
+  });
+
+  it('renders nested collapsible structure', () => {
+    const days = [
+      { id: 1, date: '2026-05-01', content: { timeline: [
+        { transit: { emoji: '🚗', text: '約30分鐘' } },
+        { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+      ] } },
+    ];
+    const tripStats = calcTripDrivingStats(days);
+    const html = renderTripDrivingStats(tripStats);
+    expect(html).toContain('driving-summary');
+    expect(html).toContain('全旅程交通統計');
+    expect(html).toContain('transport-type-summary');
+    expect(html).toContain('driving-summary-day');
+    // Nested col-row for per-day breakdown
+    expect((html.match(/col-row/g) || []).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows warning for days with >120 min driving', () => {
+    const days = [
+      { id: 1, date: '2026-05-01', content: { timeline: [
+        { transit: { emoji: '🚗', text: '約150分鐘' } },
+      ] } },
+    ];
+    const tripStats = calcTripDrivingStats(days);
+    const html = renderTripDrivingStats(tripStats);
+    expect(html).toContain('driving-stats-warning');
+    expect(html).toContain('超過 2 小時');
+  });
+});
+
+/* ===== renderCountdown ===== */
+describe('renderCountdown', () => {
+  it('returns empty for null/empty dates', () => {
+    expect(renderCountdown(null)).toBe('');
+    expect(renderCountdown([])).toBe('');
+  });
+
+  it('shows days until departure for future trips', () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 10);
+    const dateStr = futureDate.toISOString().split('T')[0];
+    const html = renderCountdown([dateStr]);
+    expect(html).toContain('countdown-card');
+    expect(html).toContain('天後出發');
+    expect(html).toContain(dateStr);
+  });
+
+  it('shows trip ended for past trips', () => {
+    const html = renderCountdown(['2020-01-01', '2020-01-05']);
+    expect(html).toContain('旅程已結束');
+  });
+
+  it('shows traveling status for current trips', () => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const html = renderCountdown([
+      yesterday.toISOString().split('T')[0],
+      tomorrow.toISOString().split('T')[0],
+    ]);
+    expect(html).toContain('旅行進行中');
+    expect(html).toContain('Day');
+  });
+});
+
+/* ===== renderTripStatsCard ===== */
+describe('renderTripStatsCard', () => {
+  it('renders day count and spot count', () => {
+    const data = {
+      days: [
+        { id: 1, content: { timeline: [{ title: 'A' }, { title: 'B' }] } },
+        { id: 2, content: { timeline: [{ title: 'C' }] } },
+      ],
+    };
+    const html = renderTripStatsCard(data);
+    expect(html).toContain('stats-card');
+    expect(html).toContain('2 天');
+    expect(html).toContain('3 個');
+  });
+
+  it('renders transport summary', () => {
+    const data = {
+      days: [
+        { id: 1, date: '2026-05-01', content: { timeline: [
+          { transit: { emoji: '🚗', text: '約30分鐘' } },
+        ] } },
+      ],
+    };
+    const html = renderTripStatsCard(data);
+    expect(html).toContain('開車');
+    expect(html).toContain('30 分鐘');
+  });
+
+  it('renders budget', () => {
+    const data = {
+      days: [
+        { id: 1, content: { timeline: [], budget: { items: [{ label: '午餐', amount: 1500 }], currency: 'JPY' } } },
+        { id: 2, content: { timeline: [], budget: { items: [{ label: '晚餐', amount: 3000 }], currency: 'JPY' } } },
+      ],
+    };
+    const html = renderTripStatsCard(data);
+    expect(html).toContain('預估預算');
+    expect(html).toContain('JPY');
+    expect(html).toContain('4,500');
+  });
+
+  it('handles days without content', () => {
+    const data = { days: [{ id: 1 }, { id: 2 }] };
+    const html = renderTripStatsCard(data);
+    expect(html).toContain('2 天');
+    expect(html).toContain('0 個');
   });
 });
