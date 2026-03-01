@@ -882,11 +882,11 @@ function scrollToSec(id) {
     var el = document.getElementById(id);
     if (!el) return;
     _manualScrollTs = Date.now();
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
     var navH = document.getElementById('stickyNav').offsetHeight;
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
     history.replaceState(null, '', '#' + id);
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
 function toggleMenu() {

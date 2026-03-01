@@ -18,9 +18,8 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--gray-light); f
 #tripContent a { color: var(--text); text-decoration: underline; }
 #tripContent a:visited { color: var(--text); }
 
-.container { max-width: 100%; margin: 0 auto; padding: 0 24px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s; }
+.container { max-width: 100%; margin: 0 auto; padding: 0; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s; }
 body.menu-open .container { transform: translateX(min(280px, 80vw)); border-radius: 16px 0 0 16px; height: 100vh; overflow: hidden; box-shadow: -8px 0 30px rgba(0,0,0,0.1); }
-@media (max-width: 600px) { .container { padding: 0; } }
 
 
 /* ===== Hamburger Icon ===== */
