@@ -825,17 +825,16 @@ function renderTrip(data) {
 }
 
 function buildMenu(data) {
-    var html = '<div class="menu-col">';
+    var html = '';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">✈️ 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">✅ 出發前確認</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">💡 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">🔄 颱風/雨天備案</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">🆘 緊急聯絡</button>';
-    html += '</div><div class="menu-col">';
+    html += '<div class="menu-sep"></div>';
     html += '<button class="menu-item" data-action="toggle-dark">🌙 深色模式</button>';
     html += '<button class="menu-item" data-action="toggle-print">🖨️ 列印模式</button>';
     html += '<button class="menu-item" data-action="switch-trip">📂 切換行程檔</button>';
-    html += '</div>';
     document.getElementById('menuGrid').innerHTML = html;
     // Update dark mode button text
     if (document.body.classList.contains('dark')) {
@@ -864,7 +863,7 @@ function toggleCol(el) {
     if (arrow) arrow.textContent = isOpen ? '－' : '＋';
 }
 function toggleDark() {
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
     document.body.classList.toggle('dark');
     var isDark = document.body.classList.contains('dark');
     lsSet('dark', isDark ? '1' : '0');
@@ -887,7 +886,7 @@ function scrollToSec(id) {
     var top = el.getBoundingClientRect().top + window.pageYOffset - navH;
     window.scrollTo({ top: top, behavior: 'smooth' });
     history.replaceState(null, '', '#' + id);
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
 }
 function scrollToDay(n) { scrollToSec('day' + n); }
 function toggleMenu() {
@@ -896,13 +895,30 @@ function toggleMenu() {
     if (menu.classList.contains('open')) {
         menu.classList.remove('open');
         backdrop.classList.remove('open');
+        document.body.classList.remove('menu-open');
         document.body.style.overflow = '';
     } else {
         menu.classList.add('open');
         backdrop.classList.add('open');
+        document.body.classList.add('menu-open');
         document.body.style.overflow = 'hidden';
     }
 }
+/* ===== Swipe Gesture for Menu ===== */
+var _swipeStartX = 0, _swipeStartY = 0;
+document.addEventListener('touchstart', function(e) {
+    _swipeStartX = e.touches[0].clientX;
+    _swipeStartY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', function(e) {
+    var dx = e.changedTouches[0].clientX - _swipeStartX;
+    var dy = e.changedTouches[0].clientY - _swipeStartY;
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+    var isOpen = document.body.classList.contains('menu-open');
+    if (dx > 0 && !isOpen && _swipeStartX < 40) toggleMenu();
+    else if (dx < 0 && isOpen) toggleMenu();
+}, { passive: true });
+
 function toggleHw(el) {
     var p = el.closest('.hourly-weather');
     p.classList.toggle('hw-open');
@@ -912,7 +928,7 @@ function toggleHw(el) {
     }
 }
 function togglePrint() {
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
     var entering = !document.body.classList.contains('print-mode');
     if (entering && document.body.classList.contains('dark')) {
         document.body.dataset.wasDark = '1';
@@ -931,7 +947,7 @@ function togglePrint() {
 
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
-    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.style.overflow = '';
+    document.getElementById('menuDrop').classList.remove('open'); document.getElementById('menuBackdrop').classList.remove('open'); document.body.classList.remove('menu-open'); document.body.style.overflow = '';
     fetch('data/trips.json?t=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(trips) {
