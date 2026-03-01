@@ -3,14 +3,16 @@
 ## 專案結構
 
 ```
-index.html              — HTML 外殼（載入 shared + trip CSS/JS，含 sidebar + container + info-panel 三欄佈局 + FAB）
-edit.html               — AI 修改行程頁面（載入 shared + edit CSS/JS）
-shared.css              — 共用樣式（variables, reset, base layout, dark mode, overlay, buttons）
-shared.js               — 共用函式（escHtml, escUrl, localStorage helpers, dark mode, GitHub constants）
-style.css               — Trip 專用樣式（timeline, weather, hotel, sidebar, nav, etc.）
-edit.css                — Edit 專用樣式（form, setup dialog, FAB, request history）
-app.js                  — Trip 專用邏輯（載入 JSON、渲染、導航、天氣）
-edit.js                 — Edit 專用邏輯（GitHub Issues API, setup flow, request submission）
+index.html              — HTML 外殼（載入 css/js，含 sidebar + container + info-panel 三欄佈局 + FAB）
+edit.html               — AI 修改行程頁面（載入 css/js）
+css/
+  shared.css            — 共用樣式（variables, reset, base layout, dark mode, overlay, buttons）
+  style.css             — Trip 專用樣式（timeline, weather, hotel, sidebar, nav, etc.）
+  edit.css              — Edit 專用樣式（form, setup dialog, FAB, request history）
+js/
+  shared.js             — 共用函式（escHtml, escUrl, localStorage helpers, dark mode, GitHub constants）
+  app.js                — Trip 專用邏輯（載入 JSON、渲染、導航、天氣）
+  edit.js               — Edit 專用邏輯（GitHub Issues API, setup flow, request submission）
 data/
   trips.json            — 行程清單（供切換選單讀取，含 owner 欄位）
   trips/                — 行程參數檔
@@ -20,7 +22,9 @@ package.json            — npm 依賴（vitest, playwright, jsdom, serve）
 vitest.config.js        — Vitest 設定
 playwright.config.js    — Playwright 設定
 tests/                  — 測試（詳見「測試」章節）
-.claude/commands/       — Cowork Skills
+.claude/commands/       — Cowork Skills（已簽入版控）
+  add-spot.md           — 將景點/餐廳加入行程
+  deploy.md             — Commit + push + 開啟 GitHub Pages
   process-requests.md   — 處理 GitHub Issues 行程修改請求
 CLAUDE.md               — 開發規範
 ```
@@ -200,9 +204,9 @@ CLAUDE.md               — 開發規範
 ### 程式碼風格
 
 - `index.html` 為精簡外殼，CSS 與 JS 各自獨立檔案
-- `shared.js` 提供共用函式（`escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, `lsSet/lsGet/lsRemove/lsRenewAll`, `toggleDarkShared`, `GH_OWNER`, `GH_REPO`），index.html 和 edit.html 都載入
-- `app.js` 依賴 shared.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
-- `edit.js` 依賴 shared.js，處理 GitHub Issues API 與設定/編輯流程
+- `js/shared.js` 提供共用函式（`escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, `lsSet/lsGet/lsRemove/lsRenewAll`, `toggleDarkShared`, `GH_OWNER`, `GH_REPO`），index.html 和 edit.html 都載入
+- `js/app.js` 依賴 shared.js，透過 `fetch()` 載入 `data/trips/*.json` 動態渲染頁面
+- `js/edit.js` 依賴 shared.js，處理 GitHub Issues API 與設定/編輯流程
 - CSS class 命名慣例：
   - `.restaurant-choices` / `.restaurant-choice` — 餐廳三選一區塊
   - `.restaurant-meta` — 營業時間與預約資訊
@@ -228,12 +232,14 @@ CLAUDE.md               — 開發規範
 
 | 檔案 | 載入頁面 | 內容 |
 |------|---------|------|
-| `shared.css` | index + edit | variables, reset, body, `.page-layout`, trip overlay（`.trip-btn` 等）, dark mode base |
-| `style.css` | index only | timeline, weather, hotel, sidebar, nav, info-panel, print, 所有 trip-specific dark mode |
-| `edit.css` | index + edit | FAB 按鈕、edit page form/setup/history、edit-specific dark mode |
-| `shared.js` | index + edit | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
-| `app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js 的全域函式） |
-| `edit.js` | edit only | GitHub API, setup flow, edit form, request history |
+| 檔案 | 載入頁面 | 內容 |
+|------|---------|------|
+| `css/shared.css` | index + edit | variables, reset, body, `.page-layout`, trip overlay（`.trip-btn` 等）, dark mode base |
+| `css/style.css` | index only | timeline, weather, hotel, sidebar, nav, info-panel, print, 所有 trip-specific dark mode |
+| `css/edit.css` | index + edit | FAB 按鈕、edit page form/setup/history、edit-specific dark mode |
+| `js/shared.js` | index + edit | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
+| `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js 的全域函式） |
+| `js/edit.js` | edit only | GitHub API, setup flow, edit form, request history |
 
 ### UI 設計規範
 
@@ -327,7 +333,7 @@ Cowork /process-requests → 讀 Issue → 改 trip JSON → npm test → commit
 - 解析 body JSON → 修改對應 trip JSON → `git diff --name-only` 白名單檢查
 - 通過 → npm test → commit push → close Issue + comment
 - 失敗 → git checkout → close Issue + error comment
-- **禁止修改**：app.js, shared.js, edit.js, style.css, shared.css, edit.css, index.html, edit.html, data/trips.json
+- **禁止修改**：js/app.js, js/shared.js, js/edit.js, css/style.css, css/shared.css, css/edit.css, index.html, edit.html, data/trips.json
 
 ## 測試
 
@@ -362,14 +368,14 @@ npm run test:watch # Vitest 監聯模式（開發時用）
 - **只有變更到程式碼（含 `data/trips/*.json`）時才需要跑測試**；僅修改 `CLAUDE.md`、`README.md` 等文件不需跑測試
 - **⚠️ 必須遵守：commit 前一定要跑測試並全數通過，不得跳過**
   - 修改 `data/trips/*.json`：至少跑 `npm test`
-  - 修改 `app.js` / `shared.js` / `style.css` / `shared.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
-  - 修改 `edit.js` / `edit.css` / `edit.html`：跑 `npm test`（確保共用函式未被破壞）
+  - 修改 `js/app.js` / `js/shared.js` / `css/style.css` / `css/shared.css` / `index.html`：**必須同時跑 `npm test` 和 `npm run test:e2e`**
+  - 修改 `js/edit.js` / `css/edit.css` / `edit.html`：跑 `npm test`（確保共用函式未被破壞）
   - 測試失敗時必須修復後重跑，不得帶著失敗 commit
-- `tests/setup.js` 先載入 `shared.js`（提供 escHtml 等全域函式），再載入全域 stub
-- app.js 和 shared.js 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
+- `tests/setup.js` 先載入 `js/shared.js`（提供 escHtml 等全域函式），再載入全域 stub
+- `js/app.js` 和 `js/shared.js` 末尾有條件式 `module.exports`，瀏覽器忽略，Node.js/Vitest 可 require
 - E2E 測試 mock Weather API（`page.route`），避免外部網路依賴
-- 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `app.js` 的 `module.exports` 加上對應測試與匯出
-- 共用函式（escHtml 等）的測試從 `shared.js` import，app.js 專屬函式的測試從 `app.js` import
+- 新增 render 函式時，需同步在 `tests/unit/render.test.js` 和 `js/app.js` 的 `module.exports` 加上對應測試與匯出
+- 共用函式（escHtml 等）的測試從 `js/shared.js` import，app.js 專屬函式的測試從 `js/app.js` import
 - 修改 JSON 結構時，需確認 `tests/json/schema.test.js` 的驗證規則仍正確
 - 新增互動行為時，需在 `tests/e2e/trip-page.spec.js` 加上對應 E2E 測試
 

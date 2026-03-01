@@ -13,7 +13,7 @@ if (typeof globalThis.fetch === 'undefined') {
 
 // Load shared.js first and promote exports to global scope
 // (In browser, <script> tags share global scope; in Node.js require() creates module scope)
-var _shared = require('../shared.js');
+var _shared = require('../js/shared.js');
 Object.keys(_shared).forEach(function(k) { globalThis[k] = _shared[k]; });
 
 // Stub DOMParser if not available (used by sanitizeHtml)

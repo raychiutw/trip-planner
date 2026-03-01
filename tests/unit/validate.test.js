@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-const { validateDay, renderWarnings, validateTripData } = require('../../app.js');
+const { validateDay, renderWarnings, validateTripData } = require('../../js/app.js');
 
 /* ===== helper: minimal valid trip data ===== */
 function validTrip(overrides) {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-const { fileToSlug, slugToFile } = require('../../app.js');
+const { fileToSlug, slugToFile } = require('../../js/app.js');
 
 /* ===== fileToSlug ===== */
 describe('fileToSlug', () => {

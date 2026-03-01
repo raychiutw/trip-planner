@@ -6,7 +6,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const { escHtml } = require('../../shared.js');
+const { escHtml } = require('../../js/shared.js');
 const {
   renderDayContent,
   renderFlights,
@@ -22,7 +22,7 @@ const {
   renderInfoBox,
   renderWarnings,
   validateDay,
-} = require('../../app.js');
+} = require('../../js/app.js');
 
 const DATA_DIR = resolve(__dirname, '../../data/trips');
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const { validateTripData } = require('../../app.js');
+const { validateTripData } = require('../../js/app.js');
 
 const DATA_DIR = resolve(__dirname, '../../data/trips');
 
