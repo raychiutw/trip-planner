@@ -73,7 +73,7 @@ CLAUDE.md               — 開發規範
   "title": "事件標題",
   "location": Location,            // 可選
   "desc": "簡短說明",               // 可選
-  "transit": "交通資訊",            // 可選
+  "transit": { "text": "交通資訊", "type": "car|train|walking" },  // 可選
   "info": [InfoBox],               // 可選，展開後的資訊卡
   "restaurants": [Restaurant]      // 可選，餐廳選項
 }
@@ -292,10 +292,10 @@ CLAUDE.md               — 開發規範
 
 ### 每日交通統計規範
 
-- `app.js` 的 `calcDrivingStats()` 會自動從 `timeline[].transit` 中篩選 `TRANSPORT_TYPES` 定義的 emoji key（🚗 開車、🚝 電車、🚶 步行），解析分鐘數並按類型分組（icon 值為 icon name 字串如 `'car'`、`'train'`、`'walking'`）
+- `app.js` 的 `calcDrivingStats()` 會自動從 `timeline[].transit` 中篩選 `TRANSPORT_TYPES` 定義的 type key（`car` 開車、`train` 電車、`walking` 步行），解析分鐘數並按類型分組
 - 每日統計預設只顯示總計，以 `.col-row` / `.col-detail` 可收合模式展開看明細
 - **開車超過 120 分鐘（2 小時）的天數會以警告樣式（黃底＋紅色徽章）顯示**
-- 每次新增或修改行程參數檔的 `timeline` 時，transit 的 text 必須包含分鐘數（如「約40分鐘」），才能正確計算
+- 每次新增或修改行程參數檔的 `timeline` 時，transit 必須包含 `type`（`car`/`train`/`walking`）和 `text`（含分鐘數如「約40分鐘」），才能正確計算
 - CSS class：`.driving-stats`（正常）、`.driving-stats-warning`（超過 2 小時）
 - **位置**：渲染在住宿旅館（hotel）下方、時間軸（timeline）之前
 

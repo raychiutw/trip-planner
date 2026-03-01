@@ -108,7 +108,6 @@ describe('renderRestaurant', () => {
     const html = renderRestaurant({
       name: '沖繩そば',
       category: '麵類',
-      emoji: '🍜',
       desc: '手工麵條',
       price: '¥800',
       hours: '11:00–21:00',
@@ -187,7 +186,7 @@ describe('renderInfoBox', () => {
       type: 'souvenir',
       title: '伴手禮推薦',
       items: [
-        { name: '紅芋塔', emoji: '🍠', note: '必買' },
+        { name: '紅芋塔', note: '必買' },
       ],
     });
     expect(html).toContain('info-box souvenir');
@@ -264,7 +263,7 @@ describe('renderTimelineEvent', () => {
     const html = renderTimelineEvent({
       time: '10:00',
       title: 'A',
-      transit: { text: '車程 30 分', emoji: '🚗' },
+      transit: { text: '車程 30 分', type: 'car' },
     });
     expect(html).toContain('tl-transit');
     expect(html).toContain('車程 30 分');
@@ -279,9 +278,10 @@ describe('renderTimelineEvent', () => {
     expect(html).toContain('步行 5 分');
   });
 
-  it('renders emoji prefix as SVG icon', () => {
-    const html = renderTimelineEvent({ time: '10:00', title: 'Test', emoji: '🏯' });
-    expect(html).toContain('svg-icon');
+  it('does not render emoji prefix (removed)', () => {
+    const html = renderTimelineEvent({ time: '10:00', title: 'Test' });
+    expect(html).toContain('tl-title');
+    expect(html).toContain('Test');
   });
 
   it('renders note field', () => {
@@ -588,9 +588,9 @@ describe('renderSuggestions', () => {
 /* ===== TRANSPORT_TYPES ===== */
 describe('TRANSPORT_TYPES', () => {
   it('contains car, train, walk', () => {
-    expect(TRANSPORT_TYPES['🚗']).toEqual({ label: '開車', icon: 'car' });
-    expect(TRANSPORT_TYPES['🚝']).toEqual({ label: '電車', icon: 'train' });
-    expect(TRANSPORT_TYPES['🚶']).toEqual({ label: '步行', icon: 'walking' });
+    expect(TRANSPORT_TYPES['car']).toEqual({ label: '開車', icon: 'car' });
+    expect(TRANSPORT_TYPES['train']).toEqual({ label: '電車', icon: 'train' });
+    expect(TRANSPORT_TYPES['walking']).toEqual({ label: '步行', icon: 'walking' });
   });
 });
 
@@ -622,31 +622,31 @@ describe('calcDrivingStats', () => {
 
   it('parses car transit', () => {
     const result = calcDrivingStats([
-      { transit: { emoji: '🚗', text: '約30分鐘' } },
-      { transit: { emoji: '🚗', text: '約45分鐘' } },
+      { transit: { type: 'car', text: '約30分鐘' } },
+      { transit: { type: 'car', text: '約45分鐘' } },
     ]);
     expect(result.totalMinutes).toBe(75);
     expect(result.drivingMinutes).toBe(75);
-    expect(result.byType['🚗'].totalMinutes).toBe(75);
-    expect(result.byType['🚗'].segments).toHaveLength(2);
+    expect(result.byType['car'].totalMinutes).toBe(75);
+    expect(result.byType['car'].segments).toHaveLength(2);
   });
 
   it('parses multiple transport types', () => {
     const result = calcDrivingStats([
-      { transit: { emoji: '🚗', text: '約30分鐘' } },
-      { transit: { emoji: '🚝', text: '電車約15分鐘' } },
-      { transit: { emoji: '🚶', text: '步行約10分鐘' } },
+      { transit: { type: 'car', text: '約30分鐘' } },
+      { transit: { type: 'train', text: '電車約15分鐘' } },
+      { transit: { type: 'walking', text: '步行約10分鐘' } },
     ]);
     expect(result.totalMinutes).toBe(55);
     expect(result.drivingMinutes).toBe(30);
-    expect(result.byType['🚗'].totalMinutes).toBe(30);
-    expect(result.byType['🚝'].totalMinutes).toBe(15);
-    expect(result.byType['🚶'].totalMinutes).toBe(10);
+    expect(result.byType['car'].totalMinutes).toBe(30);
+    expect(result.byType['train'].totalMinutes).toBe(15);
+    expect(result.byType['walking'].totalMinutes).toBe(10);
   });
 
-  it('ignores non-transport emoji', () => {
+  it('ignores non-transport type', () => {
     const result = calcDrivingStats([
-      { transit: { emoji: '🛫', text: '飛行約120分鐘' } },
+      { transit: { type: 'flight', text: '飛行約120分鐘' } },
     ]);
     expect(result).toBeNull();
   });
@@ -654,15 +654,15 @@ describe('calcDrivingStats', () => {
   it('ignores events without transit', () => {
     const result = calcDrivingStats([
       { title: '景點', time: '09:00' },
-      { transit: { emoji: '🚗', text: '約20分鐘' } },
+      { transit: { type: 'car', text: '約20分鐘' } },
     ]);
     expect(result.totalMinutes).toBe(20);
   });
 
   it('provides backward-compat segments (driving only)', () => {
     const result = calcDrivingStats([
-      { transit: { emoji: '🚗', text: '約30分鐘' } },
-      { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+      { transit: { type: 'car', text: '約30分鐘' } },
+      { transit: { type: 'train', text: '電車約15分鐘' } },
     ]);
     expect(result.segments).toHaveLength(1);
     expect(result.segments[0].minutes).toBe(30);
@@ -677,7 +677,7 @@ describe('renderDrivingStats', () => {
 
   it('renders collapsible structure', () => {
     const stats = calcDrivingStats([
-      { transit: { emoji: '🚗', text: '約30分鐘' } },
+      { transit: { type: 'car', text: '約30分鐘' } },
     ]);
     const html = renderDrivingStats(stats);
     expect(html).toContain('col-row');
@@ -688,8 +688,8 @@ describe('renderDrivingStats', () => {
 
   it('shows warning badge when driving > 120 min', () => {
     const stats = calcDrivingStats([
-      { transit: { emoji: '🚗', text: '約80分鐘' } },
-      { transit: { emoji: '🚗', text: '約50分鐘' } },
+      { transit: { type: 'car', text: '約80分鐘' } },
+      { transit: { type: 'car', text: '約50分鐘' } },
     ]);
     const html = renderDrivingStats(stats);
     expect(html).toContain('driving-stats-warning');
@@ -698,8 +698,8 @@ describe('renderDrivingStats', () => {
 
   it('renders transport type groups', () => {
     const stats = calcDrivingStats([
-      { transit: { emoji: '🚗', text: '約30分鐘' } },
-      { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+      { transit: { type: 'car', text: '約30分鐘' } },
+      { transit: { type: 'train', text: '電車約15分鐘' } },
     ]);
     const html = renderDrivingStats(stats);
     expect(html).toContain('transport-type-group');
@@ -718,17 +718,17 @@ describe('calcTripDrivingStats', () => {
   it('aggregates across days and types', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
-        { transit: { emoji: '🚗', text: '約30分鐘' } },
-        { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+        { transit: { type: 'car', text: '約30分鐘' } },
+        { transit: { type: 'train', text: '電車約15分鐘' } },
       ] } },
       { id: 2, date: '2026-05-02', content: { timeline: [
-        { transit: { emoji: '🚗', text: '約60分鐘' } },
+        { transit: { type: 'car', text: '約60分鐘' } },
       ] } },
     ];
     const result = calcTripDrivingStats(days);
     expect(result.grandTotal).toBe(105);
-    expect(result.grandByType['🚗'].totalMinutes).toBe(90);
-    expect(result.grandByType['🚝'].totalMinutes).toBe(15);
+    expect(result.grandByType['car'].totalMinutes).toBe(90);
+    expect(result.grandByType['train'].totalMinutes).toBe(15);
     expect(result.days).toHaveLength(2);
   });
 
@@ -736,7 +736,7 @@ describe('calcTripDrivingStats', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [{ title: '景點' }] } },
       { id: 2, date: '2026-05-02', content: { timeline: [
-        { transit: { emoji: '🚗', text: '約20分鐘' } },
+        { transit: { type: 'car', text: '約20分鐘' } },
       ] } },
     ];
     const result = calcTripDrivingStats(days);
@@ -754,8 +754,8 @@ describe('renderTripDrivingStats', () => {
   it('renders nested collapsible structure', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
-        { transit: { emoji: '🚗', text: '約30分鐘' } },
-        { transit: { emoji: '🚝', text: '電車約15分鐘' } },
+        { transit: { type: 'car', text: '約30分鐘' } },
+        { transit: { type: 'train', text: '電車約15分鐘' } },
       ] } },
     ];
     const tripStats = calcTripDrivingStats(days);
@@ -771,7 +771,7 @@ describe('renderTripDrivingStats', () => {
   it('shows warning for days with >120 min driving', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
-        { transit: { emoji: '🚗', text: '約150分鐘' } },
+        { transit: { type: 'car', text: '約150分鐘' } },
       ] } },
     ];
     const tripStats = calcTripDrivingStats(days);
@@ -837,7 +837,7 @@ describe('renderTripStatsCard', () => {
     const data = {
       days: [
         { id: 1, date: '2026-05-01', content: { timeline: [
-          { transit: { emoji: '🚗', text: '約30分鐘' } },
+          { transit: { type: 'car', text: '約30分鐘' } },
         ] } },
       ],
     };
