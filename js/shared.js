@@ -79,12 +79,26 @@ function toggleDarkShared() {
     return isDark;
 }
 
-/* ===== Init Dark Mode from localStorage ===== */
-if (lsGet('dark') === '1') {
-    document.body.classList.add('dark');
-    var _dmeta = document.querySelector('meta[name="theme-color"]');
-    if (_dmeta) _dmeta.setAttribute('content', '#7D4A36');
-}
+/* ===== Init Dark Mode from localStorage (支援 color-mode: light/auto/dark) ===== */
+(function() {
+    var colorMode = lsGet('color-mode');
+    var isDark = false;
+    if (colorMode === 'dark') {
+        isDark = true;
+    } else if (colorMode === 'light') {
+        isDark = false;
+    } else if (colorMode === 'auto') {
+        isDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } else {
+        // 舊版相容
+        isDark = lsGet('dark') === '1';
+    }
+    if (isDark && typeof document !== 'undefined') {
+        document.body.classList.add('dark');
+        var _dmeta = document.querySelector('meta[name="theme-color"]');
+        if (_dmeta) _dmeta.setAttribute('content', '#7D4A36');
+    }
+})();
 
 /* ===== GitHub Repo Constants ===== */
 var GH_OWNER = 'raychiutw';

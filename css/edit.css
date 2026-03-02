@@ -1,58 +1,197 @@
 /* ===== Edit Page Layout ===== */
-.edit-page { max-width: 520px; margin: 0 auto; padding: 16px; }
-.edit-main { padding-bottom: 40px; }
+.edit-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px);
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+.edit-main { padding-bottom: 0; overflow: hidden; display: flex; flex-direction: column; }
 
-/* ===== Edit Card ===== */
-.edit-card { background: var(--white); border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
-.edit-card-header { background: var(--text); color: var(--white); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
-.edit-card-header h2 { font-size: var(--fs-lg); font-weight: 700; display: flex; align-items: center; gap: 6px; }
-.edit-card-header .edit-close { color: var(--white); }
-.edit-card-header .edit-close:hover { background: rgba(255,255,255,0.15); }
-.edit-card-body { padding: 16px; }
+/* ===== Greeting Area ===== */
+.edit-greeting {
+    text-align: center;
+    padding: 32px 16px 20px;
+    flex-shrink: 0;
+}
+.edit-spark {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    color: #C4704F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.edit-greeting-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.edit-greeting-sub {
+    font-size: var(--fs-md);
+    color: var(--gray);
+}
 
-/* ===== Edit Close ===== */
-.edit-close { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; text-decoration: none; }
+/* ===== Issues Section ===== */
+.edit-issues-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+.edit-issues-header {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 4px 8px;
+    flex-shrink: 0;
+}
+.edit-issues {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    scrollbar-width: thin;
+}
+.edit-issues-loading,
+.edit-issues-empty {
+    color: var(--gray);
+    font-size: var(--fs-md);
+    text-align: center;
+    padding: 24px 0;
+}
 
-/* ===== Edit Form ===== */
-.edit-bound-info { font-size: var(--fs-md); color: var(--text); margin-bottom: 12px; }
-.edit-bound-info strong { color: var(--blue); }
+/* ===== Issue Item ===== */
+.edit-issue-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--white);
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+.edit-issue-status {
+    flex-shrink: 0;
+    margin-top: 4px;
+}
+.edit-issue-status.open { color: #22c55e; }
+.edit-issue-status.closed { color: var(--gray); }
+.edit-issue-body { flex: 1; min-width: 0; }
+.edit-issue-title {
+    display: block;
+    color: var(--text);
+    text-decoration: none;
+    font-size: var(--fs-md);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.edit-issue-title:hover { color: #C4704F; text-decoration: underline; }
+.edit-issue-meta {
+    font-size: 0.85em;
+    color: var(--gray);
+    margin-top: 2px;
+}
 
-.edit-textarea { width: 100%; min-height: 120px; padding: 12px; border: none; border-radius: 12px; background: var(--gray-light); font-family: inherit; font-size: var(--fs-md); color: var(--text); resize: vertical; line-height: 1.6; }
-.edit-textarea:focus { outline: none; box-shadow: 0 0 0 2px var(--blue); }
+/* ===== Bottom Input Card ===== */
+.edit-input-card {
+    flex-shrink: 0;
+    background: var(--white);
+    border-radius: 16px;
+    padding: 12px 12px 8px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+}
+.edit-textarea {
+    width: 100%;
+    padding: 8px 4px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: var(--fs-md);
+    color: var(--text);
+    resize: none;
+    line-height: 1.6;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.edit-textarea:focus { outline: none; }
 
-/* ===== Buttons ===== */
-.edit-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-family: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.1s; }
-.edit-btn:active { transform: scale(0.98); }
-.edit-btn-primary { background: #DA7756; color: #fff; margin-top: 12px; }
-.edit-btn-primary:hover { opacity: 0.9; }
-.edit-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.edit-btn-secondary { background: var(--blue-light); color: var(--blue); margin-top: 8px; }
-.edit-btn-secondary:hover { opacity: 0.85; }
+/* ===== Input Toolbar ===== */
+.edit-input-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+.edit-add-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: var(--gray-light);
+    border-radius: 50%;
+    color: var(--gray);
+    cursor: not-allowed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.edit-trip-select {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: var(--gray-light);
+    border-radius: 20px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: var(--text);
+    cursor: pointer;
+}
+.edit-trip-select:focus { outline: none; }
+.edit-send-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: var(--gray-light);
+    color: var(--gray);
+    cursor: not-allowed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, color 0.2s;
+}
+.edit-send-btn:not(:disabled) {
+    background: #C4704F;
+    color: #fff;
+    cursor: pointer;
+}
+.edit-send-btn:not(:disabled):hover { opacity: 0.9; }
+.edit-send-btn:not(:disabled):active { transform: scale(0.95); }
 
 /* ===== Status Messages ===== */
-.edit-status { padding: 10px 14px; border-radius: 8px; font-size: var(--fs-md); margin-top: 12px; }
-.edit-status.success { background: #D1FAE5; color: #065F46; }
-.edit-status.error { background: #FEE2E2; color: #991B1B; }
+.edit-status { padding: 8px 4px; font-size: var(--fs-md); margin-top: 4px; border-radius: 8px; }
+.edit-status.success { color: #065F46; }
+.edit-status.error { color: #991B1B; }
 
-/* ===== Request History ===== */
-.edit-history { margin-top: 24px; }
-.edit-history h3 { font-size: var(--fs-md); font-weight: 600; color: var(--gray); margin-bottom: 8px; }
-.edit-history-item { background: var(--white); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; font-size: var(--fs-md); }
-.edit-history-item:hover { background: var(--blue-light); }
-.edit-history-item a { color: var(--blue); text-decoration: none; font-weight: 600; }
-.edit-history-item a:hover { text-decoration: underline; }
-.edit-history-time { font-size: 0.85em; color: var(--gray); margin-top: 2px; }
-.edit-history-empty { color: var(--gray); font-size: var(--fs-md); }
-
-/* ===== Dark Mode (edit-specific) ===== */
-body.dark .edit-card { background: #292624; }
-body.dark .edit-card-header { background: #3D3A37; color: #E8E5E0; }
-body.dark .edit-card-header .edit-close { color: #E8E5E0; }
-body.dark .edit-card-header .edit-close:hover { background: rgba(255,255,255,0.1); }
-body.dark .edit-textarea { background: #3D3A37; color: #E8E5E0; }
-body.dark .edit-btn-primary { background: #C4704F; }
-body.dark .edit-btn-secondary { background: #302A25; color: #D4845E; }
-body.dark .edit-history-item { background: #292624; }
-body.dark .edit-history-item:hover { background: #302A25; }
-body.dark .edit-status.success { background: rgba(16, 185, 129, 0.12); color: #6EE7B7; }
-body.dark .edit-status.error { background: rgba(220, 38, 38, 0.12); color: #FCA5A5; }
+/* ===== Dark Mode ===== */
+body.dark .edit-issue-item { background: #292624; }
+body.dark .edit-issue-title { color: #E8E5E0; }
+body.dark .edit-input-card { background: #292624; box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+body.dark .edit-textarea { color: #E8E5E0; }
+body.dark .edit-add-btn { background: #3D3A37; color: #9B9590; }
+body.dark .edit-trip-select { background: #3D3A37; color: #E8E5E0; }
+body.dark .edit-send-btn { background: #3D3A37; color: #9B9590; }
+body.dark .edit-send-btn:not(:disabled) { background: #C4704F; color: #fff; }
+body.dark .edit-status.success { color: #6EE7B7; }
+body.dark .edit-status.error { color: #FCA5A5; }

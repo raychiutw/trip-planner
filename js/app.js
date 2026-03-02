@@ -129,8 +129,8 @@ function renderInfoBox(box) {
 /* ===== Render: Timeline Event ===== */
 function renderTimelineEvent(ev) {
     var hasBody = ev.description || (ev.locations && ev.locations.length) || (ev.infoBoxes && ev.infoBoxes.length);
-    var html = '<div class="tl-event">';
-    var headCls = 'tl-head' + (hasBody ? ' clickable' : '');
+    var html = '<div class="tl-event expanded">';
+    var headCls = 'tl-head';
     html += '<div class="' + headCls + '">';
     html += '<span class="tl-time">' + escHtml(ev.time || '') + '</span>';
     html += '<span class="tl-title">';
@@ -141,7 +141,6 @@ function renderTimelineEvent(ev) {
         html += escHtml(ev.title || '');
     }
     html += '</span>';
-    if (hasBody) html += '<span class="tl-arrow">＋</span>';
     html += '</div>';
     if (ev.note) html += '<div class="tl-desc">' + escHtml(ev.note) + '</div>';
     if (hasBody) {
@@ -837,6 +836,9 @@ function renderTrip(data) {
     // Re-init nav scroll tracking
     initNavTracking();
 
+    // Init nav pills overflow arrows
+    initNavOverflow();
+
     // Render info panel (desktop ≥1200px only)
     renderInfoPanel(data);
 
@@ -922,8 +924,17 @@ function renderInfoPanel(data) {
 }
 
 function buildMenu(data) {
+    var slug = (data && data.tripSlug) ? data.tripSlug : (lsGet('trip-pref') || '');
+    var editUrl = slug ? 'edit.html?trip=' + encodeURIComponent(slug) : 'edit.html';
+
     // Drawer menu (mobile)
     var html = '';
+    // 區段一：頁面切換
+    html += '<a class="menu-item menu-item-current" href="index.html">' + iconSpan('plane') + ' 行程頁</a>';
+    html += '<a class="menu-item" href="' + editUrl + '">' + iconSpan('pencil') + ' 編輯頁</a>';
+    html += '<a class="menu-item" href="setting.html">' + iconSpan('gear') + ' 設定頁</a>';
+    html += '<div class="menu-sep"></div>';
+    // 區段二：功能跳轉
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">' + iconSpan('plane') + ' 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-driving">' + iconSpan('bus') + ' 交通統計</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">' + iconSpan('check-circle') + ' 出發前確認</button>';
@@ -931,15 +942,19 @@ function buildMenu(data) {
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">' + iconSpan('refresh') + ' 颱風/雨天備案</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">' + iconSpan('emergency') + ' 緊急聯絡</button>';
     html += '<div class="menu-sep"></div>';
-    html += '<button class="menu-item" data-action="toggle-dark">' + iconSpan('moon') + ' 深色模式</button>';
     html += '<button class="menu-item" data-action="toggle-print">' + iconSpan('printer') + ' 列印模式</button>';
-    html += '<button class="menu-item" data-action="switch-trip">' + iconSpan('folder') + ' 切換行程檔</button>';
     document.getElementById('menuGrid').innerHTML = html;
 
     // Sidebar menu (desktop)
     var sidebarNav = document.getElementById('sidebarNav');
     if (sidebarNav) {
         var sHtml = '';
+        // 區段一：頁面切換
+        sHtml += '<a class="menu-item menu-item-current" href="index.html" title="行程頁"><span class="item-icon">' + iconSpan('plane') + '</span><span class="item-label">行程頁</span></a>';
+        sHtml += '<a class="menu-item" href="' + editUrl + '" title="編輯頁"><span class="item-icon">' + iconSpan('pencil') + '</span><span class="item-label">編輯頁</span></a>';
+        sHtml += '<a class="menu-item" href="setting.html" title="設定頁"><span class="item-icon">' + iconSpan('gear') + '</span><span class="item-label">設定頁</span></a>';
+        sHtml += '<div class="menu-sep"></div>';
+        // 區段二：功能跳轉
         var navItems = [
             { icon: 'plane', label: '航班資訊', target: 'sec-flight' },
             { icon: 'bus', label: '交通統計', target: 'sec-driving' },
@@ -954,16 +969,8 @@ function buildMenu(data) {
                    + '<span class="item-label">' + escHtml(item.label) + '</span></button>';
         });
         sHtml += '<div class="menu-sep"></div>';
-        sHtml += '<button class="menu-item" data-action="toggle-dark" title="深色模式"><span class="item-icon">' + iconSpan('moon') + '</span><span class="item-label">深色模式</span></button>';
         sHtml += '<button class="menu-item" data-action="toggle-print" title="列印模式"><span class="item-icon">' + iconSpan('printer') + '</span><span class="item-label">列印模式</span></button>';
-        sHtml += '<div class="menu-sep" style="margin-top:auto"></div>';
-        sHtml += '<button class="menu-item" data-action="switch-trip" title="切換行程檔"><span class="item-icon">' + iconSpan('folder') + '</span><span class="item-label">切換行程檔</span></button>';
         sidebarNav.innerHTML = sHtml;
-    }
-
-    // Update dark mode button text in both menus
-    if (document.body.classList.contains('dark')) {
-        updateDarkBtnText(true);
     }
 }
 
@@ -1041,7 +1048,7 @@ function togglePrint() {
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
     closeMobileMenuIfOpen();
-    window.location.href = 'switch.html';
+    window.location.href = 'setting.html';
 }
 
 /* ===== ARIA Init ===== */
@@ -1050,10 +1057,7 @@ function initAria() {
         el.setAttribute('role', 'button');
         el.setAttribute('aria-expanded', 'false');
     });
-    document.querySelectorAll('.tl-head.clickable').forEach(function(el) {
-        el.setAttribute('role', 'button');
-        el.setAttribute('aria-expanded', 'false');
-    });
+
 }
 
 /* ===== Sticky Nav Alignment (dynamic scroll-margin) ===== */
@@ -1108,6 +1112,42 @@ function initNavTracking() {
     window._navScrollHandler();
 }
 
+
+/* ===== Nav Pills Overflow: Arrows & Gradient Masks ===== */
+function initNavOverflow() {
+    var wrap = document.getElementById('navWrap');
+    var nav = document.getElementById('navPills');
+    var arrowL = document.getElementById('navArrowL');
+    var arrowR = document.getElementById('navArrowR');
+    if (!wrap || !nav || !arrowL || !arrowR) return;
+
+    function updateNavOverflow() {
+        var canScrollLeft = nav.scrollLeft > 2;
+        var canScrollRight = nav.scrollLeft < nav.scrollWidth - nav.clientWidth - 2;
+        wrap.classList.toggle('can-scroll-left', canScrollLeft);
+        wrap.classList.toggle('can-scroll-right', canScrollRight);
+        arrowL.setAttribute('aria-hidden', canScrollLeft ? 'false' : 'true');
+        arrowR.setAttribute('aria-hidden', canScrollRight ? 'false' : 'true');
+    }
+
+    function scrollNavPage(dir) {
+        var pageWidth = nav.clientWidth;
+        nav.scrollBy({ left: dir * pageWidth, behavior: 'smooth' });
+    }
+
+    arrowL.addEventListener('click', function() { scrollNavPage(-1); });
+    arrowR.addEventListener('click', function() { scrollNavPage(1); });
+    nav.addEventListener('scroll', updateNavOverflow, { passive: true });
+
+    if (window._navOverflowResizeObserver) window._navOverflowResizeObserver.disconnect();
+    if (window.ResizeObserver) {
+        window._navOverflowResizeObserver = new ResizeObserver(updateNavOverflow);
+        window._navOverflowResizeObserver.observe(nav);
+    }
+    window.addEventListener('resize', updateNavOverflow, { passive: true });
+    updateNavOverflow();
+}
+
 /* ===== Auto-scroll to today ===== */
 function autoScrollToday(dates) {
     if (!dates || !dates.length) return;
@@ -1141,15 +1181,7 @@ document.addEventListener('click', function(e) {
         return;
     }
 
-    // 2. Timeline event expand/collapse (from JSON content)
-    var tlHead = t.closest('.tl-head.clickable');
-    if (tlHead) {
-        if (t.tagName === 'A' || t.closest('a')) return;
-        toggleEv(e, tlHead);
-        return;
-    }
-
-    // 3. Collapsible row expand/collapse (from JSON content)
+    // 2. Collapsible row expand/collapse (from JSON content)
     var colRow = t.closest('.col-row');
     if (colRow) {
         if (t.tagName === 'A' || t.closest('a')) return;
@@ -1170,7 +1202,7 @@ function initWeather(weatherDays) {
         var maxCnt=0;for(var k in iconCount)if(iconCount[k]>maxCnt){maxCnt=iconCount[k];bestIcon=k;}
         var locs=day.locations.map(function(l){return escHtml(l.name);}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
         var html='<div class="hw-summary" data-action="toggle-hw">'+iconSpan(bestIcon)+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; '+iconSpan('raindrop')+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">▸</span></div>';
-        html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">'+iconSpan('timer')+' 逐時天氣 — '+escHtml(day.label)+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
+        html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">'+iconSpan('timer')+' 7日內預報 — '+escHtml(day.label)+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
         for(var h=0;h<=23;h++){
             var li=getLocIdx(day,h),wIcon=WMO[m.codes[h]]||'question',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);
             html+='<div class="hw-block'+(isNow?' hw-now':'')+'" data-hour="'+h+'"><div class="hw-block-time">'+(isNow?'▶ ':'')+h+':00</div>';
@@ -1182,6 +1214,8 @@ function initWeather(weatherDays) {
         if(nowBlock){var grid=c.querySelector('.hw-grid');if(grid)grid.scrollLeft=nowBlock.offsetLeft-grid.offsetLeft;}
     }
 
+    function makeDefaultMg(){var mg={temps:[],rains:[],codes:[]};for(var h=0;h<24;h++){mg.temps.push(0);mg.rains.push(0);mg.codes.push(0);}return mg;}
+
     // Batch: collect unique locations across all days, fetch once per location with full date range
     var locMap={},minDate=null,maxDate=null;
     weatherDays.forEach(function(day){
@@ -1189,6 +1223,15 @@ function initWeather(weatherDays) {
         if(!maxDate||day.date>maxDate)maxDate=day.date;
         day.locations.forEach(function(l){var k=l.lat+','+l.lon;if(!locMap[k])locMap[k]={lat:l.lat,lon:l.lon};});
     });
+
+    // 檢查 maxDate 是否在今天 + 16 天預報範圍內
+    var todayD=new Date(),limitD=new Date(todayD.getTime()+16*24*60*60*1000);
+    var limitStr=limitD.getFullYear()+'-'+String(limitD.getMonth()+1).padStart(2,'0')+'-'+String(limitD.getDate()).padStart(2,'0');
+    if(maxDate>limitStr){
+        weatherDays.forEach(function(day){var c=document.getElementById(day.id);if(c)renderHourly(c,makeDefaultMg(),day);});
+        return;
+    }
+
     var locKeys=Object.keys(locMap);
     Promise.all(locKeys.map(function(k){
         var l=locMap[k];
@@ -1202,9 +1245,9 @@ function initWeather(weatherDays) {
             var c=document.getElementById(day.id);if(!c)return;
             // Find hour offset for this day's date in the API response
             var sample=cache[locKeys[0]];
-            if(!sample||!sample.hourly)return;
+            if(!sample||!sample.hourly){renderHourly(c,makeDefaultMg(),day);return;}
             var dayOffset=sample.hourly.time.indexOf(day.date+'T00:00');
-            if(dayOffset<0)return;
+            if(dayOffset<0){renderHourly(c,makeDefaultMg(),day);return;}
             var mg={temps:[],rains:[],codes:[]};
             for(var h=0;h<24;h++){
                 var li=getLocIdx(day,h),l=day.locations[li],d=cache[l.lat+','+l.lon];

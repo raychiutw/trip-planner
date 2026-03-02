@@ -250,12 +250,11 @@ describe('renderTimelineEvent', () => {
     });
     expect(html).toContain('tl-body');
     expect(html).toContain('很棒的地方');
-    expect(html).toContain('clickable');
+    expect(html).toContain('expanded');
   });
 
-  it('renders event without body as non-clickable', () => {
+  it('renders event without body', () => {
     const html = renderTimelineEvent({ time: '10:00', title: '路過' });
-    expect(html).not.toContain('clickable');
     expect(html).not.toContain('tl-body');
   });
 

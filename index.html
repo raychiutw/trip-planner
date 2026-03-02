@@ -32,7 +32,11 @@
         <div class="container">
             <div class="sticky-nav" id="stickyNav">
                 <button class="dh-menu" data-action="toggle-sidebar" aria-label="選單"><span class="hamburger-icon"><span></span><span></span><span></span></span></button>
-                <div class="dh-nav" id="navPills"></div>
+                <div class="dh-nav-wrap" id="navWrap">
+                    <button class="dh-nav-arrow" id="navArrowL" aria-label="向左捲動" aria-hidden="true">&#8249;</button>
+                    <div class="dh-nav" id="navPills"></div>
+                    <button class="dh-nav-arrow" id="navArrowR" aria-label="向右捲動" aria-hidden="true">&#8250;</button>
+                </div>
             </div>
             <div id="tripContent"><div style="text-align:center;padding:40px;color:var(--gray);"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20" style="vertical-align:-4px"><path d="M6 2v6h.01L6 8.01 10 12l-4 4 .01.01H6V22h12v-5.99h-.01L18 16l-4-4 4-3.99-.01-.01H18V2H6z"/></svg> 載入行程資料中...</div></div>
         </div>
