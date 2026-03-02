@@ -301,23 +301,17 @@ body.dark .edit-fab { background: #C4704F; }
 
 /* ===== Dark Mode (trip-specific) ===== */
 body.dark .info-header { background: #3D3A37 !important; color: #E8E5E0 !important; }
-body.dark .map-link { color: #D4845E; background: #302A25; }
 body.dark .map-link:hover { background: #7D4A36; color: #fff; }
 body.dark .map-link.apple { color: #9B9590; background: #3D3A37; }
 body.dark .map-link.apple .apple-icon svg { fill: #9B9590; }
 body.dark .map-link.apple:hover { background: #5A5651; color: #fff; }
 body.dark .map-link.apple:hover .apple-icon svg { fill: #fff; }
-body.dark .map-link.mapcode { color: var(--sand); background: var(--sand-light); }
 body.dark .map-link.mapcode:hover { background: var(--sand); color: #1A1816; }
 body.dark .hw-block { background: #3D3A37; }
 body.dark .info-box.reservation { background: #302A22; }
 body.dark .info-box.parking { background: #302A25; }
 body.dark .info-box.souvenir { background: #302A25; }
 body.dark .info-box.restaurants { background: #302A22; }
-body.dark .hotel-sub { background: #302A25; }
-body.dark .driving-stats-warning { background: transparent; }
 body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.12); }
 body.dark .trip-warnings { background: rgba(220, 38, 38, 0.12); color: #FCA5A5; }
-body.dark .info-card { background: #292624; }
-body.dark .ov-card { background: #302A25; }
 

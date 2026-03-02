@@ -35,7 +35,7 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--white); font-s
 .trip-btn .trip-sub { font-size: 0.85em; color: var(--gray); margin-top: 2px; display: block; }
 
 /* ===== Dark Mode (shared base) ===== */
-body.dark { --blue: #D4845E; --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --gray: #9B9590; --gray-light: #343130; --text: #E8E5E0; background: #1A1816; }
+body.dark { --blue: #D4845E; --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --card-bg: #292624; --gray: #9B9590; --gray-light: #343130; --text: #E8E5E0; background: #1A1816; }
 body.dark .trip-btn { background: #3D3A37; }
 body.dark .trip-btn:hover { opacity: 0.85; }
 body.dark .trip-btn.active { box-shadow: 0 0 0 2px #D4845E; }

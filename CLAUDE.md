@@ -22,5 +22,5 @@ tests/              unit/  integration/  json/  e2e/
 - **UI**：無框線設計、卡片統一、全站 inline SVG、設定頁用 `setting.html`（行程切換 + 色彩模式）
 - **內容**：繁體中文台灣用語、transit 含 type + 分鐘數、days 變動同步 checklist/backup/suggestions
 - **/render-trip**：只改 `data/trips/*.json`，禁改 js/css/html
-- **Agent Teams**：teammates 用 sonnet，獨立工作用 `run_in_background: true`
+- **Agent Teams**：teammates 用 sonnet，獨立工作用 `run_in_background: true`；需共享進度或 agent 間溝通時用 `TeamCreate` 建團隊（TaskList + SendMessage 協調）
 - **OpenSpec 流程**：功能開發必須遵守 openspec 流程（proposal → design → specs → tasks → apply），除非使用者明確同意跳過。主要 specs 位於 `openspec/specs/`，歷史變更封存在 `openspec/changes/archive/`
