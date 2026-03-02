@@ -19,7 +19,7 @@
     width: 48px;
     height: 48px;
     margin: 0 auto 12px;
-    color: #C4704F;
+    color: var(--blue);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -172,7 +172,7 @@
     transition: background 0.2s, color 0.2s;
 }
 .edit-send-btn:not(:disabled) {
-    background: #C4704F;
+    background: var(--blue);
     color: #fff;
     cursor: pointer;
 }
@@ -185,13 +185,9 @@
 .edit-status.error { color: #991B1B; }
 
 /* ===== Dark Mode ===== */
-body.dark .edit-issue-item { background: #292624; }
-body.dark .edit-issue-title { color: #E8E5E0; }
-body.dark .edit-input-card { background: #292624; box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
-body.dark .edit-textarea { color: #E8E5E0; }
+body.dark .edit-input-card { box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
 body.dark .edit-add-btn { background: #3D3A37; color: #9B9590; }
 body.dark .edit-trip-select { background: #3D3A37; color: #E8E5E0; }
 body.dark .edit-send-btn { background: #3D3A37; color: #9B9590; }
-body.dark .edit-send-btn:not(:disabled) { background: #C4704F; color: #fff; }
 body.dark .edit-status.success { color: #6EE7B7; }
 body.dark .edit-status.error { color: #FCA5A5; }

@@ -21,8 +21,8 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 .setting-trip-list .trip-btn.active {
-    border-left-color: #C4704F;
-    box-shadow: 0 0 0 2px #C4704F;
+    border-left-color: var(--blue);
+    box-shadow: 0 0 0 2px var(--blue);
 }
 
 /* ===== Color Mode Grid ===== */
@@ -45,7 +45,7 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 .color-mode-card:hover { border-color: rgba(196, 112, 79, 0.4); }
-.color-mode-card.active { border-color: #C4704F; box-shadow: 0 0 0 1px #C4704F; }
+.color-mode-card.active { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
 
 /* ===== Color Mode Preview ===== */
 .color-mode-preview {
@@ -113,5 +113,3 @@
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: #292624; }
 body.dark .color-mode-card:hover { border-color: rgba(212, 132, 94, 0.4); }
-body.dark .color-mode-card.active { border-color: #D4845E; box-shadow: 0 0 0 1px #D4845E; }
-body.dark .setting-trip-list .trip-btn.active { border-left-color: #D4845E; box-shadow: 0 0 0 2px #D4845E; }
