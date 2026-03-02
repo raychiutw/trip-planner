@@ -493,7 +493,8 @@ function renderSuggestions(data) {
     var html = '';
     if (data.cards && data.cards.length) {
         data.cards.forEach(function(card) {
-            html += '<div class="suggestion-card">';
+            var priorityClass = card.priority ? ' sg-priority-' + card.priority : '';
+            html += '<div class="suggestion-card' + priorityClass + '">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
             if (card.items && card.items.length) {
                 card.items.forEach(function(item) { html += '<p>' + escHtml(item) + '</p>'; });
@@ -912,6 +913,26 @@ function renderTripStatsCard(data) {
     return html;
 }
 
+function renderSuggestionSummaryCard(suggestions) {
+    if (!suggestions || !suggestions.content || !suggestions.content.cards) return '';
+    var counts = { high: 0, medium: 0, low: 0 };
+    suggestions.content.cards.forEach(function(card) {
+        var p = card.priority;
+        if (p && counts.hasOwnProperty(p) && card.items) {
+            counts[p] += card.items.length;
+        }
+    });
+    var html = '<div class="info-card">';
+    html += '<div class="info-label">建議摘要</div>';
+    html += '<div class="sg-summary">';
+    html += '<div class="sg-summary-row sg-priority-high">高優先：' + counts.high + ' 項</div>';
+    html += '<div class="sg-summary-row sg-priority-medium">中優先：' + counts.medium + ' 項</div>';
+    html += '<div class="sg-summary-row sg-priority-low">低優先：' + counts.low + ' 項</div>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+}
+
 function renderInfoPanel(data) {
     var panel = document.getElementById('infoPanel');
     if (!panel) return;
@@ -920,6 +941,7 @@ function renderInfoPanel(data) {
     var html = '';
     html += renderCountdown(data.autoScrollDates);
     html += renderTripStatsCard(data);
+    html += renderSuggestionSummaryCard(data.suggestions);
     panel.innerHTML = html;
 }
 
@@ -1320,6 +1342,7 @@ if (typeof module !== 'undefined' && module.exports) {
         TRANSPORT_TYPES: TRANSPORT_TYPES,
         formatMinutes: formatMinutes,
         renderCountdown: renderCountdown,
-        renderTripStatsCard: renderTripStatsCard
+        renderTripStatsCard: renderTripStatsCard,
+        renderSuggestionSummaryCard: renderSuggestionSummaryCard
     };
 }
