@@ -19,7 +19,7 @@ tests/              unit/  integration/  json/  e2e/
 
 ### Git
 
-- 完成修改後主動 commit + push 到 `origin/master`
+- 完成修改後主動 commit，**不要自動 push**，由使用者手動觸發
 - Commit 訊息繁體中文，格式：
   ```
   簡述改了什麼
