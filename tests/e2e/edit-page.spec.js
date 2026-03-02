@@ -20,16 +20,16 @@ test.describe('Edit 頁面載入', () => {
     await expect(main).toBeVisible();
   });
 
-  test('有效 ?trip= → 顯示問候語與行程下拉', async ({ page }) => {
+  test('有效 ?trip= → 顯示問候語', async ({ page }) => {
     await page.goto(EDIT_URL);
 
     // 等待問候語渲染
     const greeting = page.locator('.edit-greeting-text');
     await expect(greeting).toBeVisible({ timeout: 10000 });
 
-    // 應顯示行程下拉
+    // 工具列不含行程下拉（已移除）
     const tripSelect = page.locator('#tripSelect');
-    await expect(tripSelect).toBeVisible();
+    await expect(tripSelect).toHaveCount(0);
   });
 
   test('無效 ?trip= → 顯示錯誤訊息', async ({ page }) => {
