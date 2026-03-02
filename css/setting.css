@@ -1,0 +1,117 @@
+/* ===== Setting Page Layout ===== */
+.setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
+.setting-main { padding-bottom: 40px; }
+
+/* ===== Section ===== */
+.setting-section { margin-bottom: 28px; }
+.setting-section-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+    padding: 0 4px;
+}
+
+/* ===== Trip List ===== */
+.setting-trip-list { display: flex; flex-direction: column; gap: 8px; }
+.setting-trip-list .trip-btn {
+    border-left: 3px solid transparent;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.setting-trip-list .trip-btn.active {
+    border-left-color: #C4704F;
+    box-shadow: 0 0 0 2px #C4704F;
+}
+
+/* ===== Color Mode Grid ===== */
+.color-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+.color-mode-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 8px;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    background: var(--gray-light);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.color-mode-card:hover { border-color: rgba(196, 112, 79, 0.4); }
+.color-mode-card.active { border-color: #C4704F; box-shadow: 0 0 0 1px #C4704F; }
+
+/* ===== Color Mode Preview ===== */
+.color-mode-preview {
+    width: 80px;
+    height: 54px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+.cmp-top { flex: 1; }
+.cmp-bottom {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+}
+.cmp-input {
+    flex: 1;
+    height: 10px;
+    border-radius: 5px;
+}
+.cmp-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #C4704F;
+    flex-shrink: 0;
+}
+
+/* Light theme preview */
+.color-mode-light .cmp-top { background: #F5F5F5; }
+.color-mode-light .cmp-bottom { background: #FFFFFF; }
+.color-mode-light .cmp-input { background: #E0E0E0; }
+
+/* Dark theme preview */
+.color-mode-dark .cmp-top { background: #1A1816; }
+.color-mode-dark .cmp-bottom { background: #292624; }
+.color-mode-dark .cmp-input { background: #3D3A37; }
+
+/* Auto theme preview — split diagonally using gradient */
+.color-mode-auto .cmp-top {
+    background: linear-gradient(135deg, #F5F5F5 50%, #1A1816 50%);
+}
+.color-mode-auto .cmp-bottom {
+    background: linear-gradient(135deg, #FFFFFF 50%, #292624 50%);
+}
+.color-mode-auto .cmp-input {
+    background: linear-gradient(135deg, #E0E0E0 50%, #3D3A37 50%);
+}
+
+/* ===== Color Mode Labels ===== */
+.color-mode-label {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--text);
+}
+.color-mode-desc {
+    font-size: 0.82rem;
+    color: var(--gray);
+}
+
+/* ===== Dark Mode ===== */
+body.dark .color-mode-card { background: #292624; }
+body.dark .color-mode-card:hover { border-color: rgba(212, 132, 94, 0.4); }
+body.dark .color-mode-card.active { border-color: #D4845E; box-shadow: 0 0 0 1px #D4845E; }
+body.dark .setting-trip-list .trip-btn.active { border-left-color: #D4845E; box-shadow: 0 0 0 2px #D4845E; }

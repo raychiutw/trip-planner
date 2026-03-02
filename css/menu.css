@@ -24,8 +24,9 @@ body.menu-open .container { transform: translateX(min(280px, 80vw)); border-radi
 .menu-drawer-title { font-size: var(--fs-lg); font-weight: 700; color: var(--text); }
 .menu-close { display: none; }
 .menu-grid { display: flex; flex-direction: column; gap: 0; padding: 12px 8px; overflow-y: auto; flex: 1; }
-.menu-item { display: block; width: 100%; padding: 10px 12px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: var(--fs-lg); font-family: inherit; color: var(--text); text-align: left; white-space: nowrap; }
+.menu-item { display: block; width: 100%; padding: 10px 12px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: var(--fs-lg); font-family: inherit; color: var(--text); text-align: left; white-space: nowrap; text-decoration: none; }
 .menu-item:hover { background: var(--blue-light); }
+.menu-item-current { font-weight: 700; color: #C4704F; }
 
 /* ===== Hamburger in Sticky Nav ===== */
 .dh-menu { background: none; color: var(--text); border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.3s; }
@@ -47,7 +48,7 @@ body.dark.menu-open .dh-menu { background: none; }
         top: 0;
         height: 100vh;
         border-right: 1px solid var(--gray-light);
-        background: var(--white);
+        background: var(--card-bg);
         transition: width var(--sidebar-transition);
         overflow: hidden;
         flex-shrink: 0;
@@ -104,6 +105,8 @@ body.dark.menu-open .dh-menu { background: none; }
     /* Hide mobile drawer & sticky nav hamburger on desktop */
     .menu-drawer, .menu-backdrop { display: none !important; }
     .sticky-nav .dh-menu { display: none; }
+    /* Show hamburger in sticky-nav when sidebar is collapsed */
+    .sidebar.collapsed ~ .container .sticky-nav .dh-menu { display: flex; }
     body.menu-open .container { transform: none !important; border-radius: 0 !important; height: auto !important; overflow: visible !important; box-shadow: none !important; }
 }
 
@@ -114,6 +117,7 @@ body.dark .sidebar-toggle:hover { background: #302A25; }
 body.dark .sidebar .menu-item { color: #E8E5E0; }
 body.dark .sidebar .menu-item:hover { background: #302A25; }
 body.dark .sidebar .sidebar-section-title { color: #9B9590; }
+body.dark .menu-item-current { color: #D4845E; }
 body.dark .menu-drawer { background: #1A1816; box-shadow: none; }
 body.dark.menu-open .container { box-shadow: -8px 0 30px rgba(0,0,0,0.3); }
 body.dark .menu-backdrop { background: rgba(0,0,0,0.6); }
