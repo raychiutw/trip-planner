@@ -17,7 +17,7 @@ tests/              unit/  integration/  json/  e2e/
 
 詳見 memory 規則檔，以下為摘要：
 
-- **Git**：commit 後不自動 push，由使用者手動觸發；commit 訊息繁體中文
+- **Git**：commit 後不自動 push，由使用者手動觸發；push 後檢查是否需同步更新 `CLAUDE.md` 與 `openspec/config.yaml`；commit 訊息繁體中文
 - **測試**：commit 前必須測試全過（pre-commit hook 自動執行）；文件變更不跑測試
 - **UI**：無框線設計、卡片統一、全站 inline SVG、行程切換用 `switch.html`
 - **內容**：繁體中文台灣用語、transit 含 type + 分鐘數、days 變動同步 checklist/backup/suggestions
