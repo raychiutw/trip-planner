@@ -6,6 +6,20 @@
 // jsdom provides window, document, localStorage, sessionStorage automatically.
 // We just need to stub APIs that jsdom doesn't fully support.
 
+// Node.js v22+ has a built-in localStorage that lacks getItem/setItem.
+// Provide a full in-memory implementation to avoid conflicts.
+(function() {
+  var store = {};
+  globalThis.localStorage = {
+    getItem: function(k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+    setItem: function(k, v) { store[k] = String(v); },
+    removeItem: function(k) { delete store[k]; },
+    clear: function() { store = {}; },
+    get length() { return Object.keys(store).length; },
+    key: function(i) { return Object.keys(store)[i] || null; }
+  };
+})();
+
 // Stub fetch (app.js calls resolveAndLoad → loadTrip → fetch on load)
 if (typeof globalThis.fetch === 'undefined') {
   globalThis.fetch = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
