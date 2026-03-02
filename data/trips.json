@@ -10,5 +10,11 @@
     "name": "Hui Yun 的沖繩之旅",
     "dates": "2026/7/2 ~ 7/8",
     "owner": "HuiYun"
+  },
+  {
+    "file": "data/trips/banqiao-trip-2026-Onion.json",
+    "name": "Onion 的板橋之旅",
+    "dates": "2026/4/1 ~ 4/15",
+    "owner": "Onion"
   }
 ]

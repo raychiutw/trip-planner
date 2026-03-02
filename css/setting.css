@@ -5,7 +5,7 @@
 /* ===== Section ===== */
 .setting-section { margin-bottom: 28px; }
 .setting-section-title {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     font-weight: 700;
     color: var(--gray);
     text-transform: uppercase;
@@ -17,12 +17,10 @@
 /* ===== Trip List ===== */
 .setting-trip-list { display: flex; flex-direction: column; gap: 8px; }
 .setting-trip-list .trip-btn {
-    border-left: 3px solid transparent;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: box-shadow 0.15s;
 }
 .setting-trip-list .trip-btn.active {
-    border-left-color: var(--blue);
-    box-shadow: 0 0 0 2px var(--blue);
+    box-shadow: 0 0 0 2px var(--accent);
 }
 
 /* ===== Color Mode Grid ===== */
@@ -44,7 +42,7 @@
     font-family: inherit;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
-.color-mode-card:hover { border-color: rgba(196, 112, 79, 0.4); }
+.color-mode-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .color-mode-card.active { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
 
 /* ===== Color Mode Preview ===== */
@@ -74,7 +72,7 @@
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: #C4704F;
+    background: var(--accent);
     flex-shrink: 0;
 }
 
@@ -106,13 +104,13 @@
     color: var(--text);
 }
 .color-mode-desc {
-    font-size: 0.82rem;
+    font-size: var(--fs-sm);
     color: var(--gray);
 }
 
-/* ===== Desktop: hide sticky-nav ===== */
-@media (min-width: 768px) { .setting-page .sticky-nav { display: none; } }
+/* ===== Hide sticky-nav on setting page ===== */
+.sticky-nav { display: none; }
 
 /* ===== Dark Mode ===== */
-body.dark .color-mode-card { background: #292624; }
-body.dark .color-mode-card:hover { border-color: rgba(212, 132, 94, 0.4); }
+body.dark .color-mode-card { background: var(--card-bg); }
+body.dark .color-mode-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }

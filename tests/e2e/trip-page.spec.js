@@ -689,3 +689,30 @@ test.describe('FAB 修改行程按鈕', () => {
     await expect(fab).not.toBeVisible();
   });
 });
+
+/* ===== 23. Info FAB 與 Bottom Sheet（手機版） ===== */
+test.describe('Info FAB 與 Bottom Sheet（手機版）', () => {
+  test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
+
+  test('點擊 info FAB 開啟 bottom sheet', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const infoFab = page.locator('#infoFab');
+    await expect(infoFab).toBeVisible();
+    await infoFab.click();
+    const backdrop = page.locator('#infoBottomSheet');
+    await expect(backdrop).toHaveClass(/open/);
+  });
+
+  test('點擊 backdrop 關閉 bottom sheet', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const infoFab = page.locator('#infoFab');
+    await infoFab.click();
+    const backdrop = page.locator('#infoBottomSheet');
+    await expect(backdrop).toHaveClass(/open/);
+    // Click on the backdrop area (outside the panel) to close
+    await backdrop.click({ position: { x: 187, y: 50 } });
+    await expect(backdrop).not.toHaveClass(/open/);
+  });
+});

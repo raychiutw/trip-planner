@@ -917,3 +917,28 @@ describe('renderSuggestionSummaryCard', () => {
     expect(renderSuggestionSummaryCard({ content: {} })).toBe('');
   });
 });
+
+/* ===== renderCountdown + renderTripStatsCard output (for bottom sheet) ===== */
+describe('renderInfoPanel content functions', () => {
+  const sampleData = {
+    autoScrollDates: ['2099-01-01', '2099-01-05'],
+    days: [
+      { id: 1, date: '2099-01-01', content: { timeline: [{ time: '10:00', title: 'A', transit: { type: 'car', text: '30 分鐘' } }] } },
+      { id: 2, date: '2099-01-02', content: {} },
+    ],
+    suggestions: null,
+  };
+
+  it('renderCountdown returns countdown card HTML', () => {
+    const html = renderCountdown(sampleData.autoScrollDates);
+    expect(html).toContain('countdown-card');
+    expect(html).toContain('天後出發');
+  });
+
+  it('renderTripStatsCard returns stats card HTML', () => {
+    const html = renderTripStatsCard(sampleData);
+    expect(html).toContain('stats-card');
+    expect(html).toContain('行程統計');
+    expect(html).toContain('2 天');
+  });
+});

@@ -71,7 +71,8 @@ var ICONS = {
     'sunrise': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7C8.69 7 6 9.69 6 13h2a4 4 0 0 1 8 0h2c0-3.31-2.69-6-6-6zm-8 8H2v2h4v-2zm6-12h2v4h-2V3zm8 12h-2v2h4v-2zM5.64 7.05l1.41 1.41L5.64 9.88 4.22 8.46l1.42-1.41zm12.73 0l1.41 1.41-1.41 1.42-1.42-1.42 1.42-1.41zM2 19h20v2H2v-2z"/></svg>',
     'luggage': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 6h-2V3c0-.55-.45-1-1-1h-4c-.55 0-1 .45-1 1v3H7c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2 0 .55.45 1 1 1s1-.45 1-1h6c0 .55.45 1 1 1s1-.45 1-1c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 3h4v3h-4V3zm7 16H7V8h10v11z"/></svg>',
     'fish': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c0-2.35 1.86-5.55 5.74-7.5C15.56 3.06 13.06 2 12 2 6.48 2 2 6.48 2 12s4.48 10 10 10c1.06 0 3.56-1.06 5.74-2.5C13.86 17.55 12 14.35 12 12zm3-3c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/><path d="M22 12c-2.35 0-5.55 1.86-7.5 5.74 1.44.02 2.93-.33 4.24-1.13C20.43 15.53 22 13.9 22 12c0-1.9-1.57-3.53-3.26-4.61-1.31-.8-2.8-1.15-4.24-1.13C16.45 10.14 19.65 12 22 12z"/></svg>',
-    'home': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>'
+    'home': '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+    'info': '<svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'
 };
 
 /* ===== Emoji → Icon Name Mapping ===== */

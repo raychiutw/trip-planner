@@ -936,14 +936,55 @@ function renderSuggestionSummaryCard(suggestions) {
 function renderInfoPanel(data) {
     var panel = document.getElementById('infoPanel');
     if (!panel) return;
-    // Only render if panel is visible (≥1200px)
-    if (panel.offsetParent === null && panel.offsetWidth === 0) return;
     var html = '';
     html += renderCountdown(data.autoScrollDates);
     html += renderTripStatsCard(data);
     html += renderSuggestionSummaryCard(data.suggestions);
-    panel.innerHTML = html;
+    // Only render sidebar panel if visible (≥1200px)
+    if (panel.offsetParent !== null || panel.offsetWidth !== 0) {
+        panel.innerHTML = html;
+    }
+    // Also render to bottom sheet body if it exists
+    var sheetBody = document.getElementById('bottomSheetBody');
+    if (sheetBody) {
+        sheetBody.innerHTML = html;
+    }
 }
+
+/* ===== Info Bottom Sheet (mobile) ===== */
+function openInfoSheet() {
+    var backdrop = document.getElementById('infoBottomSheet');
+    if (backdrop) backdrop.classList.add('open');
+}
+function closeInfoSheet() {
+    var backdrop = document.getElementById('infoBottomSheet');
+    if (backdrop) backdrop.classList.remove('open');
+}
+
+(function initInfoSheet() {
+    // Bind info FAB click
+    var fab = document.getElementById('infoFab');
+    if (fab) fab.addEventListener('click', openInfoSheet);
+
+    // Bind backdrop click to close
+    var backdrop = document.getElementById('infoBottomSheet');
+    if (backdrop) {
+        backdrop.addEventListener('click', closeInfoSheet);
+        // Prevent sheet panel clicks from closing
+        var panel = document.getElementById('infoSheet');
+        if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
+
+        // Touch swipe down to close
+        var _touchStartY = 0;
+        panel && panel.addEventListener('touchstart', function(e) {
+            _touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        panel && panel.addEventListener('touchend', function(e) {
+            var deltaY = e.changedTouches[0].clientY - _touchStartY;
+            if (deltaY > 60) closeInfoSheet();
+        }, { passive: true });
+    }
+})();
 
 function buildMenu(data) {
     var slug = (data && data.tripSlug) ? data.tripSlug : (lsGet('trip-pref') || '');

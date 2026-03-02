@@ -41,8 +41,38 @@ test.describe('Edit 頁面載入', () => {
   });
 });
 
-/* ===== 2. 問候語 ===== */
-test.describe('Edit 問候語', () => {
+/* ===== 2. Chat UI 結構 ===== */
+test.describe('Edit Chat UI 結構', () => {
+  test('存在 .chat-container 根元素', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+
+    const container = page.locator('.chat-container');
+    await expect(container).toBeVisible();
+  });
+
+  test('存在 .chat-messages 捲動區', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+
+    const messages = page.locator('.chat-messages');
+    await expect(messages).toBeVisible();
+  });
+
+  test('存在 .chat-messages-inner wrapper', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+
+    const inner = page.locator('.chat-messages-inner');
+    await expect(inner).toBeVisible();
+  });
+
+  test('問候語為 .message-system 左對齊卡片', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    const greetingCard = page.locator('.message-system.edit-greeting');
+    await expect(greetingCard).toBeVisible({ timeout: 10000 });
+  });
+
   test('顯示問候語（早安/午安/晚安）與時段對應', async ({ page }) => {
     await page.goto(EDIT_URL);
     const greeting = page.locator('.edit-greeting-text');
@@ -74,6 +104,21 @@ test.describe('Edit 問候語', () => {
     await textarea.fill('測試修改請求');
     const submitBtn = page.locator('#submitBtn');
     await expect(submitBtn).not.toBeDisabled();
+  });
+
+  test('底部輸入列在 .chat-container 內（非 position:fixed）', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+
+    // .edit-input-bar 應為 .chat-container 的 flex 子元素
+    const inputBar = page.locator('.edit-input-bar');
+    await expect(inputBar).toBeVisible();
+
+    const position = await inputBar.evaluate(function(el) {
+      return window.getComputedStyle(el).position;
+    });
+    // 不應為 fixed（應為 static 或 relative）
+    expect(position).not.toBe('fixed');
   });
 });
 

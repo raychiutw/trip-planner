@@ -1,16 +1,23 @@
 /* ===== Shared Variables ===== */
 :root {
-    --blue: #C4704F;
+    --accent: #8B8580;
+    --blue: var(--accent);
     --blue-light: #F5EDE8;
     --sand: #C4956A;
     --sand-light: #F5EDE0;
     --white: #FFFFFF;
-    --card-bg: #EDE8E3;
+    --bg: #FFFFFF;
+    --card-bg: #F5F0E8;
+    --bubble-bg: #F0EDE8;
     --gray: #6B6B6B;
     --gray-light: #FAF9F7;
     --text: #1A1A1A;
+    --text-muted: #6B6B6B;
+    --border: #E5E0DA;
+    --fs-display: 2.5rem;
     --fs-lg: 1.25rem;
-    --fs-md: 1.15rem;
+    --fs-md: 1.125rem;
+    --fs-sm: 0.875rem;
     --sidebar-w: 260px;
     --sidebar-w-collapsed: 56px;
     --sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -32,13 +39,13 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--white); font-s
 .trip-btn:hover { opacity: 0.85; }
 .trip-btn.active { box-shadow: 0 0 0 2px var(--blue); }
 .trip-btn strong { display: block; font-size: var(--fs-lg); }
-.trip-btn .trip-sub { font-size: 0.85em; color: var(--gray); margin-top: 2px; display: block; }
+.trip-btn .trip-sub { font-size: var(--fs-sm); color: var(--gray); margin-top: 2px; display: block; }
 
 /* ===== Dark Mode (shared base) ===== */
-body.dark { --blue: #D4845E; --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --card-bg: #292624; --gray: #9B9590; --gray-light: #343130; --text: #E8E5E0; background: #1A1816; }
+body.dark { --accent: #C4845E; --blue: var(--accent); --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --bg: #1A1A1A; --card-bg: #2B2B2B; --bubble-bg: #3D3A35; --gray: #9B9590; --gray-light: #343130; --text: #E8E8E8; --text-muted: #9B9B9B; --border: #3A3A3A; background: var(--bg); }
 body.dark .trip-btn { background: #3D3A37; }
 body.dark .trip-btn:hover { opacity: 0.85; }
-body.dark .trip-btn.active { box-shadow: 0 0 0 2px #D4845E; }
+body.dark .trip-btn.active { box-shadow: 0 0 0 2px var(--accent); }
 
 /* ===== Container & Sticky Nav (shared by index + edit) ===== */
 .container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.3s; }

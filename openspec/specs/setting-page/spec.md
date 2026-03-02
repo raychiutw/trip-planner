@@ -8,12 +8,16 @@
 - **載入**: `shared.css` + `menu.css` + `setting.css` + `shared.js` + `menu.js` + `icons.js` + `setting.js`
 - **CSP**: `connect-src 'self'`（不需 GitHub API）
 
+## sticky-nav 隱藏
+
+- 設定頁 SHALL 隱藏 `.sticky-nav` 元素（不論螢幕尺寸）
+
 ## 區段一：選擇行程
 
 - 從 `data/trips.json` 讀取行程清單
 - 每個行程渲染為 `.trip-btn` 按鈕，顯示行程名稱、日期、owner
-- 選中項目加 `.active` 樣式（左側 `#C4704F` 邊框 + box-shadow）
-- 點擊後存入 `localStorage trip-pref`（slug 格式），頁面即時更新 UI
+- 選中項目加 `.active` 樣式，使用均勻的 `box-shadow` 外框（四邊等粗）
+- 點擊後存入 `localStorage trip-pref`（slug 格式），並自動導向 `index.html`
 - 無預設選中時，自動選第一筆
 
 ## 區段二：外觀（色彩模式）

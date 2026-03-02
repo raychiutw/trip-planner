@@ -1,0 +1,847 @@
+{
+  "meta": {
+    "name": "Onion 的板橋之旅",
+    "title": "2026 板橋十五日在地行程表",
+    "description": "2026 板橋十五日在地測試行程：板橋、新莊、三重、中和、永和、土城、樹林、淡水、八里。每日住家出發、開車遊覽新北景點。",
+    "ogDescription": "板橋→新莊三重→中和永和→土城樹林→淡水八里，十五日在地行程含新北各區景點",
+    "themeColor": "#8B8580"
+  },
+  "footer": {
+    "title": "2026 板橋十五日行程",
+    "dates": "4/1（三）~ 4/15（三）",
+    "budget": "",
+    "exchangeNote": "",
+    "tagline": "新北在地生活！探索家附近的好去處！"
+  },
+  "autoScrollDates": [
+    "2026-04-01",
+    "2026-04-02",
+    "2026-04-03",
+    "2026-04-04",
+    "2026-04-05",
+    "2026-04-06",
+    "2026-04-07",
+    "2026-04-08",
+    "2026-04-09",
+    "2026-04-10",
+    "2026-04-11",
+    "2026-04-12",
+    "2026-04-13",
+    "2026-04-14",
+    "2026-04-15"
+  ],
+  "weather": [
+    {
+      "id": "hourly-1",
+      "date": "2026-04-01",
+      "dayId": 1,
+      "label": "板橋",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-2",
+      "date": "2026-04-02",
+      "dayId": 2,
+      "label": "板橋",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-3",
+      "date": "2026-04-03",
+      "dayId": 3,
+      "label": "板橋",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-4",
+      "date": "2026-04-04",
+      "dayId": 4,
+      "label": "新莊・三重",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-5",
+      "date": "2026-04-05",
+      "dayId": 5,
+      "label": "新莊・三重",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-6",
+      "date": "2026-04-06",
+      "dayId": 6,
+      "label": "新莊・三重",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-7",
+      "date": "2026-04-07",
+      "dayId": 7,
+      "label": "中和・永和",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-8",
+      "date": "2026-04-08",
+      "dayId": 8,
+      "label": "中和・永和",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-9",
+      "date": "2026-04-09",
+      "dayId": 9,
+      "label": "中和・永和",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-10",
+      "date": "2026-04-10",
+      "dayId": 10,
+      "label": "土城・樹林",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-11",
+      "date": "2026-04-11",
+      "dayId": 11,
+      "label": "土城・樹林",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-12",
+      "date": "2026-04-12",
+      "dayId": 12,
+      "label": "土城・樹林",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-13",
+      "date": "2026-04-13",
+      "dayId": 13,
+      "label": "淡水・八里",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-14",
+      "date": "2026-04-14",
+      "dayId": 14,
+      "label": "淡水・八里",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-15",
+      "date": "2026-04-15",
+      "dayId": 15,
+      "label": "淡水・八里",
+      "locations": [
+        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+      ]
+    }
+  ],
+  "days": [
+    {
+      "id": 1,
+      "date": "4/1（三）",
+      "label": "板橋",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "林本源園邸",
+            "description": "國定古蹟，清代園林建築，板橋最具代表性的歷史景點",
+            "locations": [
+              {
+                "name": "林本源園邸",
+                "googleQuery": "https://maps.google.com/?q=林本源園邸",
+                "appleQuery": "https://maps.apple.com/?q=林本源園邸"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "板橋435藝文特區",
+            "description": "藝術展覽空間、溼地故事館，適合散步拍照的文創園區",
+            "locations": [
+              {
+                "name": "板橋435藝文特區",
+                "googleQuery": "https://maps.google.com/?q=板橋435藝文特區",
+                "appleQuery": "https://maps.apple.com/?q=板橋435藝文特區"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "date": "4/2（四）",
+      "label": "板橋",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "板橋車站商圈",
+            "description": "環球購物中心、板橋大遠百，三鐵共構的板橋交通樞紐商圈",
+            "locations": [
+              {
+                "name": "板橋車站",
+                "googleQuery": "https://maps.google.com/?q=板橋車站",
+                "appleQuery": "https://maps.apple.com/?q=板橋車站"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "新板特區",
+            "description": "新北市政府周邊，萬坪都會公園、市民廣場，現代化都市景觀",
+            "locations": [
+              {
+                "name": "新板特區萬坪都會公園",
+                "googleQuery": "https://maps.google.com/?q=新板特區萬坪都會公園",
+                "appleQuery": "https://maps.apple.com/?q=新板特區萬坪都會公園"
+              }
+            ],
+            "transit": {
+              "text": "開車 約5分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "date": "4/3（五）",
+      "label": "板橋",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "板橋慈惠宮",
+            "description": "板橋在地信仰中心，媽祖廟，建築雕刻精美的百年古廟",
+            "locations": [
+              {
+                "name": "板橋慈惠宮",
+                "googleQuery": "https://maps.google.com/?q=板橋慈惠宮",
+                "appleQuery": "https://maps.apple.com/?q=板橋慈惠宮"
+              }
+            ],
+            "transit": {
+              "text": "開車 約12分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "17:00-19:30",
+            "title": "湳雅觀光夜市",
+            "description": "板橋最大夜市，在地美食小吃聚集地，南雅東路上的傳統夜市",
+            "locations": [
+              {
+                "name": "湳雅觀光夜市",
+                "googleQuery": "https://maps.google.com/?q=湳雅觀光夜市",
+                "appleQuery": "https://maps.apple.com/?q=湳雅觀光夜市"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "date": "4/4（六）",
+      "label": "新莊・三重",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "新月橋",
+            "description": "橫跨大漢溪的人行景觀橋，連接板橋與新莊，夜間有LED光雕",
+            "locations": [
+              {
+                "name": "新月橋",
+                "googleQuery": "https://maps.google.com/?q=新月橋",
+                "appleQuery": "https://maps.apple.com/?q=新月橋"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:30",
+            "title": "大都會公園",
+            "description": "二重疏洪道上的大型都會公園，遼闊草地、自行車道、棒壘球場",
+            "locations": [
+              {
+                "name": "新北大都會公園",
+                "googleQuery": "https://maps.google.com/?q=新北大都會公園",
+                "appleQuery": "https://maps.apple.com/?q=新北大都會公園"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "date": "4/5（日）",
+      "label": "新莊・三重",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "新莊體育場",
+            "description": "新莊運動公園，棒球場、田徑場，職棒比賽舉辦場地",
+            "locations": [
+              {
+                "name": "新莊體育場",
+                "googleQuery": "https://maps.google.com/?q=新莊體育場",
+                "appleQuery": "https://maps.apple.com/?q=新莊體育場"
+              }
+            ],
+            "transit": {
+              "text": "開車 約20分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "新莊廟街",
+            "description": "新莊老街，慈祐宮、廣福宮等古廟群，傳統小吃與在地文化",
+            "locations": [
+              {
+                "name": "新莊廟街",
+                "googleQuery": "https://maps.google.com/?q=新莊廟街",
+                "appleQuery": "https://maps.apple.com/?q=新莊廟街"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "date": "4/6（一）",
+      "label": "新莊・三重",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "幸福水漾公園",
+            "description": "三重大台北都會公園內，彩色地景藝術、大片花海、親子遊憩空間",
+            "locations": [
+              {
+                "name": "幸福水漾公園",
+                "googleQuery": "https://maps.google.com/?q=三重幸福水漾公園",
+                "appleQuery": "https://maps.apple.com/?q=三重幸福水漾公園"
+              }
+            ],
+            "transit": {
+              "text": "開車 約20分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "空軍三重一村",
+            "description": "全台保存最完整的防砲眷村，已活化為文創園區，展覽與眷村生活體驗",
+            "locations": [
+              {
+                "name": "空軍三重一村",
+                "googleQuery": "https://maps.google.com/?q=空軍三重一村",
+                "appleQuery": "https://maps.apple.com/?q=空軍三重一村"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 7,
+      "date": "4/7（二）",
+      "label": "中和・永和",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "四號公園",
+            "description": "永和最大公園，國立台灣圖書館所在地，綠蔭步道與兒童遊戲區",
+            "locations": [
+              {
+                "name": "四號公園",
+                "googleQuery": "https://maps.google.com/?q=永和四號公園",
+                "appleQuery": "https://maps.apple.com/?q=永和四號公園"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "永安市場商圈",
+            "description": "頂溪站周邊，永和豆漿、各式小吃，在地人的美食天堂",
+            "locations": [
+              {
+                "name": "永安市場",
+                "googleQuery": "https://maps.google.com/?q=永安市場",
+                "appleQuery": "https://maps.apple.com/?q=永安市場"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "date": "4/8（三）",
+      "label": "中和・永和",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "烘爐地",
+            "description": "南山福德宮，中和知名土地公廟，山頂可俯瞰大台北夜景",
+            "locations": [
+              {
+                "name": "烘爐地南山福德宮",
+                "googleQuery": "https://maps.google.com/?q=烘爐地南山福德宮",
+                "appleQuery": "https://maps.apple.com/?q=烘爐地南山福德宮"
+              }
+            ],
+            "transit": {
+              "text": "開車 約20分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "中和環球購物中心",
+            "description": "中和地標購物中心，美食街、電影院、各式品牌商店",
+            "locations": [
+              {
+                "name": "中和環球購物中心",
+                "googleQuery": "https://maps.google.com/?q=中和環球購物中心",
+                "appleQuery": "https://maps.apple.com/?q=中和環球購物中心"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 9,
+      "date": "4/9（四）",
+      "label": "中和・永和",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "14:00-16:00",
+            "title": "仁愛公園",
+            "description": "永和大型公園，環狀步道、籃球場、兒童遊戲區，社區休閒好去處",
+            "locations": [
+              {
+                "name": "永和仁愛公園",
+                "googleQuery": "https://maps.google.com/?q=永和仁愛公園",
+                "appleQuery": "https://maps.apple.com/?q=永和仁愛公園"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "17:30-20:00",
+            "title": "樂華夜市",
+            "description": "永和最知名夜市，在地經營數十年，各式台灣小吃與服飾攤位",
+            "locations": [
+              {
+                "name": "樂華夜市",
+                "googleQuery": "https://maps.google.com/?q=樂華夜市",
+                "appleQuery": "https://maps.apple.com/?q=樂華夜市"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 10,
+      "date": "4/10（五）",
+      "label": "土城・樹林",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "桐花公園",
+            "description": "土城桐花公園，四月油桐花季賞花勝地，登山步道與觀景平台",
+            "locations": [
+              {
+                "name": "土城桐花公園",
+                "googleQuery": "https://maps.google.com/?q=土城桐花公園",
+                "appleQuery": "https://maps.apple.com/?q=土城桐花公園"
+              }
+            ],
+            "transit": {
+              "text": "開車 約20分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "承天禪寺",
+            "description": "土城山區佛教寺院，環境清幽，登山步道沿途綠意盎然",
+            "locations": [
+              {
+                "name": "承天禪寺",
+                "googleQuery": "https://maps.google.com/?q=承天禪寺",
+                "appleQuery": "https://maps.apple.com/?q=承天禪寺"
+              }
+            ],
+            "transit": {
+              "text": "開車 約5分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 11,
+      "date": "4/11（六）",
+      "label": "土城・樹林",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "大安圳步道",
+            "description": "樹林沿水圳修築的休閒步道，平坦好走，沿途自然生態豐富",
+            "locations": [
+              {
+                "name": "大安圳步道",
+                "googleQuery": "https://maps.google.com/?q=樹林大安圳步道",
+                "appleQuery": "https://maps.apple.com/?q=樹林大安圳步道"
+              }
+            ],
+            "transit": {
+              "text": "開車 約20分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "17:00-19:30",
+            "title": "樹林興仁花園夜市",
+            "description": "新北最大花園夜市，週三五六日營業，占地廣大的露天夜市",
+            "locations": [
+              {
+                "name": "樹林興仁花園夜市",
+                "googleQuery": "https://maps.google.com/?q=樹林興仁花園夜市",
+                "appleQuery": "https://maps.apple.com/?q=樹林興仁花園夜市"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 12,
+      "date": "4/12（日）",
+      "label": "土城・樹林",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "山佳車站",
+            "description": "百年日式木造車站，市定古蹟，鐵道文化園區與彩繪牆",
+            "locations": [
+              {
+                "name": "山佳車站",
+                "googleQuery": "https://maps.google.com/?q=山佳車站",
+                "appleQuery": "https://maps.apple.com/?q=山佳車站"
+              }
+            ],
+            "transit": {
+              "text": "開車 約25分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "鹿角溪人工濕地",
+            "description": "樹林環保生態濕地，水鳥棲息地，適合賞鳥與自然觀察",
+            "locations": [
+              {
+                "name": "鹿角溪人工濕地",
+                "googleQuery": "https://maps.google.com/?q=鹿角溪人工濕地",
+                "appleQuery": "https://maps.apple.com/?q=鹿角溪人工濕地"
+              }
+            ],
+            "transit": {
+              "text": "開車 約15分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 13,
+      "date": "4/13（一）",
+      "label": "淡水・八里",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "淡水老街",
+            "description": "新北最知名老街，阿給、魚丸、鐵蛋，沿河岸散步看觀音山",
+            "locations": [
+              {
+                "name": "淡水老街",
+                "googleQuery": "https://maps.google.com/?q=淡水老街",
+                "appleQuery": "https://maps.apple.com/?q=淡水老街"
+              }
+            ],
+            "transit": {
+              "text": "開車 約40分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "紅毛城",
+            "description": "國定古蹟，荷蘭人始建的城堡，見證淡水四百年歷史",
+            "locations": [
+              {
+                "name": "紅毛城",
+                "googleQuery": "https://maps.google.com/?q=淡水紅毛城",
+                "appleQuery": "https://maps.apple.com/?q=淡水紅毛城"
+              }
+            ],
+            "transit": {
+              "text": "開車 約5分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 14,
+      "date": "4/14（二）",
+      "label": "淡水・八里",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "漁人碼頭",
+            "description": "淡水漁人碼頭，情人橋、木棧道，欣賞淡水河出海口與夕陽",
+            "locations": [
+              {
+                "name": "淡水漁人碼頭",
+                "googleQuery": "https://maps.google.com/?q=淡水漁人碼頭",
+                "appleQuery": "https://maps.apple.com/?q=淡水漁人碼頭"
+              }
+            ],
+            "transit": {
+              "text": "開車 約40分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "淡水海關碼頭",
+            "description": "清代海關遺址，洋樓建築與倉庫群，河畔藝文展覽空間",
+            "locations": [
+              {
+                "name": "淡水海關碼頭",
+                "googleQuery": "https://maps.google.com/?q=淡水海關碼頭",
+                "appleQuery": "https://maps.apple.com/?q=淡水海關碼頭"
+              }
+            ],
+            "transit": {
+              "text": "開車 約10分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": 15,
+      "date": "4/15（三）",
+      "label": "淡水・八里",
+      "content": {
+        "hotel": {
+          "name": "家",
+          "details": ["新北板橋區合宜一路25號四樓之3"]
+        },
+        "timeline": [
+          {
+            "time": "10:00-12:00",
+            "title": "八里左岸",
+            "description": "八里渡船頭對岸，自行車道沿河岸延伸，河畔咖啡與小吃",
+            "locations": [
+              {
+                "name": "八里左岸",
+                "googleQuery": "https://maps.google.com/?q=八里左岸",
+                "appleQuery": "https://maps.apple.com/?q=八里左岸"
+              }
+            ],
+            "transit": {
+              "text": "開車 約45分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "14:00-16:00",
+            "title": "十三行博物館",
+            "description": "北台灣考古博物館，十三行遺址出土文物，互動式展覽與八里在地歷史",
+            "locations": [
+              {
+                "name": "十三行博物館",
+                "googleQuery": "https://maps.google.com/?q=十三行博物館",
+                "appleQuery": "https://maps.apple.com/?q=十三行博物館"
+              }
+            ],
+            "transit": {
+              "text": "開車 約5分鐘",
+              "type": "car"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

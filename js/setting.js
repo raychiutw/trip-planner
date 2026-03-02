@@ -43,10 +43,7 @@
             if (!btn) return;
             var slug = btn.getAttribute('data-slug');
             lsSet('trip-pref', slug);
-            // 更新 UI
-            container.querySelectorAll('.trip-btn').forEach(function(b) {
-                b.classList.toggle('active', b.getAttribute('data-slug') === slug);
-            });
+            window.location.href = 'index.html';
         });
     }
 

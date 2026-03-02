@@ -7,6 +7,7 @@ context: |
   資料層：data/trips.json（索引）+ data/trips/*.json（各行程 JSON）
   語言：繁體中文台灣用語，commit 訊息繁體中文
   UI 規範：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
+  字型規範：全站僅四級 font-size — --fs-display(2.5rem/40px), --fs-lg(1.25rem/20px), --fs-md(1.125rem/18px body預設), --fs-sm(0.875rem/14px)，禁用硬編碼 font-size
   Git：commit 後不自動 push，由使用者手動觸發
   測試：commit 前必須通過（pre-commit hook 自動執行），文件變更不跑測試
   /render-trip skill 只允許改 data/trips/*.json，禁改 js/css/html
@@ -20,6 +21,7 @@ rules:
     - UI 變更需符合無框線設計規範（背景色差、間距、圓角、box-shadow）
     - 新增 icon 走 js/icons.js 的 ICONS registry，不用 emoji
     - CSS/JS 拆分遵循既有架構（shared/menu/style/edit/setting）
+    - font-size 僅允許 var(--fs-display/lg/md/sm) 四級，禁止硬編碼 px/rem/em
   tasks:
     - 每個 task 應可獨立測試驗證
     - 涉及 render 函式的 task 需包含對應 unit test 更新

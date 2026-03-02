@@ -62,13 +62,6 @@
     }
 
     /* ===== Render Issues ===== */
-    function renderIssueStatus(state) {
-        if (state === 'open') {
-            return '<span class="edit-issue-status open"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><circle cx="12" cy="12" r="10"/></svg></span>';
-        }
-        return '<span class="edit-issue-status closed"><svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><circle cx="12" cy="12" r="10"/></svg></span>';
-    }
-
     function renderIssues(issues) {
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
@@ -79,12 +72,13 @@
         var html = '';
         issues.forEach(function(issue) {
             var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            html += '<div class="edit-issue-item">';
-            html += renderIssueStatus(issue.state);
-            html += '<div class="edit-issue-body">';
-            html += '<a class="edit-issue-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
-            html += '<div class="edit-issue-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
+            var dotClass = issue.state === 'open' ? 'open' : 'closed';
+            html += '<div class="message-user">';
+            html += '<div class="message-user-header">';
+            html += '<span class="status-dot ' + dotClass + '"></span>';
+            html += '<a class="message-user-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
             html += '</div>';
+            html += '<div class="message-user-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
             html += '</div>';
         });
         issueList.innerHTML = html;
@@ -109,36 +103,41 @@
 
     /* ===== Render Edit Page ===== */
     function renderEditPage(config) {
-        var html = '<div class="edit-page">';
+        var html = '<div class="chat-container">';
 
-        // 問候語區
-        html += '<div class="edit-greeting">';
-        html += '<div class="edit-spark">';
+        // 可捲動訊息區
+        html += '<div class="chat-messages">';
+        html += '<div class="chat-messages-inner">';
+
+        // 問候語 — 系統訊息卡片
+        html += '<div class="message-system edit-greeting">';
+        html += '<div class="message-system-icon">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z"/></svg>';
         html += '</div>';
-        html += '<div class="edit-greeting-text">' + getGreeting(config.owner) + '</div>';
-        html += '<div class="edit-greeting-sub">有什麼行程修改需求？</div>';
+        html += '<div class="message-system-title edit-greeting-text">' + getGreeting(config.owner) + '</div>';
+        html += '<div class="message-system-sub">有什麼行程修改需求？</div>';
         html += '</div>';
 
-        // Issue 列表區
-        html += '<div class="edit-issues-section">';
-        html += '<div class="edit-issues-header">修改紀錄</div>';
-        html += '<div class="edit-issues" id="editIssues"><div class="edit-issues-loading">載入中…</div></div>';
-        html += '</div>';
+        // Issue 列表區（單獨 id，renderIssues 只替換此區塊）
+        html += '<div id="editIssues"><div class="edit-issues-loading">載入中…</div></div>';
 
-        // 底部輸入卡片
+        html += '</div>'; // .chat-messages-inner
+        html += '</div>'; // .chat-messages
+
+        // 底部輸入列（flex child，不 fixed）
+        html += '<div class="edit-input-bar">';
         html += '<div class="edit-input-card">';
         html += '<textarea class="edit-textarea" id="editText" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="3"></textarea>';
         html += '<div class="edit-input-toolbar">';
-        // 右側送出按鈕
         html += '<button class="edit-send-btn" id="submitBtn" disabled aria-label="送出">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
         html += '</button>';
         html += '</div>';
         html += '<div id="submitStatus"></div>';
-        html += '</div>';
+        html += '</div>'; // .edit-input-card
+        html += '</div>'; // .edit-input-bar
 
-        html += '</div>';
+        html += '</div>'; // .chat-container
         editMain.innerHTML = html;
 
         // textarea 監聽
