@@ -3,7 +3,7 @@ schema: spec-driven
 context: |
   行程規劃網站（trip-planner），部署於 GitHub Pages
   Tech stack: 原生 HTML/CSS/JS（無框架），Vitest + jsdom 單元測試，Playwright E2E 測試
-  三頁式架構：index.html（行程主頁）、edit.html（AI 修改行程）、switch.html（行程切換）
+  三頁式架構：index.html（行程主頁）、edit.html（AI 修改行程）、setting.html（設定：行程切換 + 色彩模式）
   資料層：data/trips.json（索引）+ data/trips/*.json（各行程 JSON）
   語言：繁體中文台灣用語，commit 訊息繁體中文
   UI 規範：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
@@ -19,7 +19,7 @@ rules:
   design:
     - UI 變更需符合無框線設計規範（背景色差、間距、圓角、box-shadow）
     - 新增 icon 走 js/icons.js 的 ICONS registry，不用 emoji
-    - CSS/JS 拆分遵循既有架構（shared/menu/style/edit/switch）
+    - CSS/JS 拆分遵循既有架構（shared/menu/style/edit/setting）
   tasks:
     - 每個 task 應可獨立測試驗證
     - 涉及 render 函式的 task 需包含對應 unit test 更新
