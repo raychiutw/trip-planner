@@ -5,6 +5,7 @@
     --sand: #C4956A;
     --sand-light: #F5EDE0;
     --white: #FFFFFF;
+    --card-bg: #EDE8E3;
     --gray: #6B6B6B;
     --gray-light: #FAF9F7;
     --text: #1A1A1A;
@@ -21,7 +22,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 body { overflow-x: hidden; }
-body { font-family: 'Noto Sans TC', sans-serif; background: var(--gray-light); font-size: var(--fs-md); color: var(--text); line-height: 1.6; max-width: 100vw; }
+body { font-family: 'Noto Sans TC', sans-serif; background: var(--white); font-size: var(--fs-md); color: var(--text); line-height: 1.6; max-width: 100vw; }
 
 /* ===== Page Layout ===== */
 .page-layout { display: flex; min-height: 100vh; }
@@ -46,3 +47,15 @@ body.dark .trip-btn.active { box-shadow: 0 0 0 2px #D4845E; }
 /* ===== SVG Icon Wrapper ===== */
 .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
 .svg-icon svg { width: 100%; height: 100%; }
+
+/* ===== Focus Visible (remove default outline, use box-shadow) ===== */
+button:focus-visible { outline: none; }
+.sidebar-toggle:focus-visible,
+.dh-menu:focus-visible,
+.dn:focus-visible,
+.menu-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--blue); }
+
+/* ===== Desktop Page Layout Gap ===== */
+@media (min-width: 1200px) {
+    .page-layout { gap: 12px; }
+}

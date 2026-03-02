@@ -3,9 +3,9 @@
 #tripContent a:visited { color: var(--text); }
 
 /* ===== Section Card Style ===== */
-#tripContent section { background: var(--white); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+#tripContent section { background: var(--card-bg); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
 .day-header { border-radius: 12px 12px 0 0; }
-footer { background: var(--white); border-radius: 12px; padding: 16px; margin-bottom: 12px; text-align: center; }
+footer { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 12px; text-align: center; }
 footer h3 { font-size: var(--fs-lg); color: var(--blue); }
 footer p { font-size: var(--fs-md); margin-top: 4px; }
 .footer-budget { font-weight: 600; }
@@ -30,18 +30,57 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .weather-list li .list-icon { flex-shrink: 0; }
 
 /* ===== Sticky Nav Card (override shared.css) ===== */
-.sticky-nav { border-radius: 12px; padding: 12px 16px; gap: 12px; margin: 12px 0; top: 12px; }
+.sticky-nav { border-radius: 12px; padding: 12px 16px; gap: 12px; margin: 12px 0; top: 12px; background: var(--card-bg); }
 @media (min-width: 768px) { .sticky-nav { max-width: var(--content-max-w); margin: 12px auto; } }
 
 /* ===== Day Header (section divider) ===== */
-.day-header { position: relative; z-index: 100; background: var(--white); color: var(--text); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+.day-header { position: relative; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
 .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dh-date { font-size: var(--fs-md); opacity: 0.8; margin-left: auto; white-space: nowrap; }
-.dh-nav { display: flex; gap: 6px; flex: 1; justify-content: center; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
+.dh-date { font-size: var(--fs-md); opacity: 0.9; margin-left: auto; white-space: nowrap; }
+.dh-nav-wrap { position: relative; flex: 1; display: flex; align-items: center; min-width: 0; }
+.dh-nav { display: flex; gap: 6px; flex: 1; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
 .dh-nav::-webkit-scrollbar { display: none; }
 .dn { background: var(--blue-light); color: var(--blue); border: none; padding: 6px 12px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
 .dn:hover { background: var(--blue); color: var(--white); }
 .dn.active { background: var(--blue); color: var(--white); }
+
+/* ===== Nav Pills Overflow: Gradient Fade Masks ===== */
+.dh-nav-wrap::before,
+.dh-nav-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 32px;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.dh-nav-wrap::before { left: 0; background: linear-gradient(to right, var(--card-bg), transparent); }
+.dh-nav-wrap::after { right: 0; background: linear-gradient(to left, var(--card-bg), transparent); }
+.dh-nav-wrap.can-scroll-left::before { opacity: 1; }
+.dh-nav-wrap.can-scroll-right::after { opacity: 1; }
+
+/* ===== Nav Pills Overflow: Arrow Buttons ===== */
+.dh-nav-arrow {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--blue);
+    cursor: pointer;
+    padding: 0 4px;
+    font-size: 1.2rem;
+    line-height: 1;
+    flex-shrink: 0;
+    z-index: 2;
+    visibility: visible;
+    transition: visibility 0s;
+}
+.dh-nav-arrow[aria-hidden="true"] { visibility: hidden; }
+@media (min-width: 768px) {
+    .dh-nav-arrow { display: flex; align-items: center; }
+    .dh-nav { justify-content: flex-start; }
+}
 
 /* ===== Day Content ===== */
 .day-content { padding: 0 16px 16px; }
@@ -88,15 +127,11 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .tl-event { position: relative; padding: 6px 0; }
 .tl-event::before { content: ''; position: absolute; left: -24px; top: 15px; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); border: 2px solid var(--white); z-index: 1; }
 .tl-head { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px; border-radius: 8px; }
-.tl-head.clickable { cursor: pointer; }
-.tl-head.clickable:hover { background: var(--blue-light); }
 .tl-time { font-weight: 700; font-size: var(--fs-md); color: var(--blue); min-width: 95px; flex-shrink: 0; }
 .tl-title { font-weight: 600; font-size: var(--fs-lg); }
 .tl-title a { color: var(--text); text-decoration: none; }
 .tl-title a:hover { text-decoration: underline; }
-.tl-arrow { margin-left: auto; color: var(--gray); font-size: var(--fs-md); flex-shrink: 0; }
-.tl-body { display: none; padding: 4px 8px 8px; font-size: var(--fs-md); line-height: 1.7; }
-.tl-event.expanded .tl-body { display: block; }
+.tl-body { display: block; padding: 4px 8px 8px; font-size: var(--fs-md); line-height: 1.7; }
 .tl-desc { color: var(--gray); margin-bottom: 6px; }
 .tl-transit { padding: 1px 8px 1px 0; margin-left: 0; font-size: var(--fs-md); color: var(--gray); }
 
@@ -232,10 +267,11 @@ body.dark .edit-fab { background: #C4704F; }
 }
 
 /* ===== Info Panel (hidden by default) ===== */
-.info-panel { display: none; }
+.info-panel { display: none; background: var(--card-bg); }
 
 /* ===== Desktop Three-Column Layout (≥1200px) ===== */
 @media (min-width: 1200px) {
+    #tripContent { max-width: none; }
     .info-panel {
         display: block;
         width: var(--info-panel-w);
@@ -250,7 +286,7 @@ body.dark .edit-fab { background: #C4704F; }
 }
 
 /* ===== Info Cards ===== */
-.info-card { background: var(--white); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.info-card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
 .countdown-card { text-align: center; }
 .countdown-number { font-size: 2.5rem; font-weight: 700; color: var(--blue); line-height: 1.2; }
 .countdown-label { font-size: var(--fs-md); color: var(--gray); margin-top: 4px; }

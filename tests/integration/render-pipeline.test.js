@@ -117,7 +117,7 @@ tripFiles.forEach(({ file, label }) => {
             if (ev.infoBoxes && ev.infoBoxes.length) {
               const html = renderTimelineEvent(ev);
               expect(html).toContain('tl-body');
-              expect(html).toContain('clickable');
+              expect(html).toContain('expanded');
             }
           });
         });
