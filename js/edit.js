@@ -94,7 +94,7 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=trip-edit&state=all&per_page=20')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=trip-edit&state=all&per_page=15')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
@@ -107,24 +107,8 @@
             });
     }
 
-    /* ===== Render Trip Selector ===== */
-    function renderTripSelector(trips, currentSlug) {
-        var sel = document.getElementById('tripSelect');
-        if (!sel) return;
-        var html = '';
-        trips.forEach(function(t) {
-            var slug = t.file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
-            html += '<option value="' + escHtml(slug) + '"' + (slug === currentSlug ? ' selected' : '') + '>' + escHtml(t.name) + '</option>';
-        });
-        sel.innerHTML = html;
-        sel.addEventListener('change', function() {
-            var newSlug = sel.value;
-            window.location.href = 'edit.html?trip=' + encodeURIComponent(newSlug);
-        });
-    }
-
     /* ===== Render Edit Page ===== */
-    function renderEditPage(config, trips) {
+    function renderEditPage(config) {
         var html = '<div class="edit-page">';
 
         // 問候語區
@@ -146,12 +130,6 @@
         html += '<div class="edit-input-card">';
         html += '<textarea class="edit-textarea" id="editText" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="3"></textarea>';
         html += '<div class="edit-input-toolbar">';
-        // 左側 [+] 按鈕（佈局預留）
-        html += '<button class="edit-add-btn" disabled aria-label="附加" title="附加（功能開發中）">';
-        html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
-        html += '</button>';
-        // 中間：行程名稱下拉
-        html += '<select class="edit-trip-select" id="tripSelect" title="切換行程"></select>';
         // 右側送出按鈕
         html += '<button class="edit-send-btn" id="submitBtn" disabled aria-label="送出">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
@@ -162,9 +140,6 @@
 
         html += '</div>';
         editMain.innerHTML = html;
-
-        // 初始化 trip 下拉
-        renderTripSelector(trips, config.tripSlug);
 
         // textarea 監聽
         var textarea = document.getElementById('editText');
@@ -279,7 +254,7 @@
                 initSidebar();
 
                 // Render page
-                renderEditPage(found, trips);
+                renderEditPage(found);
             })
             .catch(function() {
                 editMain.innerHTML = '<div class="edit-page"><div class="edit-status error">無法載入行程清單</div></div>';
