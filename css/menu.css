@@ -68,7 +68,6 @@ body.dark.menu-open .dh-menu { background: none; }
         overflow-y: auto;
         flex: 1;
         padding: 8px 6px;
-        scrollbar-width: thin;
     }
     .sidebar .menu-item {
         display: flex;
@@ -105,8 +104,6 @@ body.dark.menu-open .dh-menu { background: none; }
     /* Hide mobile drawer & sticky nav hamburger on desktop */
     .menu-drawer, .menu-backdrop { display: none !important; }
     .sticky-nav .dh-menu { display: none; }
-    /* Show hamburger in sticky-nav when sidebar is collapsed */
-    .sidebar.collapsed ~ .container .sticky-nav .dh-menu { display: flex; }
     body.menu-open .container { transform: none !important; border-radius: 0 !important; height: auto !important; overflow: visible !important; box-shadow: none !important; }
 }
 

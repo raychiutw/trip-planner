@@ -55,6 +55,16 @@ button:focus-visible { outline: none; }
 .dn:focus-visible,
 .menu-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--blue); }
 
+/* ===== Custom Scrollbar (global) ===== */
+:root { scrollbar-width: thin; scrollbar-color: #C4C0BB transparent; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #C4C0BB; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #B0ABA6; }
+body.dark { scrollbar-color: #5A5651 transparent; }
+body.dark ::-webkit-scrollbar-thumb { background: #5A5651; }
+body.dark ::-webkit-scrollbar-thumb:hover { background: #6A6560; }
+
 /* ===== Desktop Page Layout Gap ===== */
 @media (min-width: 1200px) {
     .page-layout { gap: 12px; }
