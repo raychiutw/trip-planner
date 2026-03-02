@@ -1,5 +1,5 @@
 /* ===== Setting Page Layout ===== */
-.setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
+.setting-page { max-width: 520px; margin: 0 auto; padding: 16px; background: var(--card-bg); }
 .setting-main { padding-bottom: 40px; }
 
 /* ===== Section ===== */
@@ -109,6 +109,9 @@
     font-size: 0.82rem;
     color: var(--gray);
 }
+
+/* ===== Desktop: hide sticky-nav ===== */
+@media (min-width: 768px) { .setting-page .sticky-nav { display: none; } }
 
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: #292624; }

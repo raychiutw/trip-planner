@@ -90,8 +90,13 @@ function toggleDarkShared() {
     } else if (colorMode === 'auto') {
         isDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     } else {
-        // 舊版相容
-        isDark = lsGet('dark') === '1';
+        // 有舊版 dark key 時繼續相容；否則預設 auto（跟隨系統）
+        var oldDark = lsGet('dark');
+        if (oldDark !== null) {
+            isDark = oldDark === '1';
+        } else {
+            isDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        }
     }
     if (isDark && typeof document !== 'undefined') {
         document.body.classList.add('dark');
