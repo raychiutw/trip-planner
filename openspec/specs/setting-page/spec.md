@@ -16,7 +16,7 @@
 
 - 從 `data/trips.json` 讀取行程清單
 - 每個行程渲染為 `.trip-btn` 按鈕，顯示行程名稱、日期、owner
-- 選中項目加 `.active` 樣式，使用均勻的 `box-shadow` 外框（四邊等粗）
+- 選中項目加 `.active` 樣式，使用 `border: 2px solid` 外框（四邊等粗），預設狀態 SHALL 使用 `border: 2px solid transparent` 佔位避免版面跳動
 - 點擊後存入 `localStorage trip-pref`（slug 格式），並自動導向 `index.html`
 - 無預設選中時，自動選第一筆
 

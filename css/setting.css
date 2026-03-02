@@ -17,10 +17,10 @@
 /* ===== Trip List ===== */
 .setting-trip-list { display: flex; flex-direction: column; gap: 8px; }
 .setting-trip-list .trip-btn {
-    transition: box-shadow 0.15s;
+    transition: border-color 0.15s;
 }
 .setting-trip-list .trip-btn.active {
-    box-shadow: 0 0 0 2px var(--accent);
+    border-color: var(--accent);
 }
 
 /* ===== Color Mode Grid ===== */

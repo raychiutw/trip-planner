@@ -194,7 +194,8 @@
 .edit-status.success { color: #065F46; }
 .edit-status.error { color: #991B1B; }
 
-/* ===== Desktop: hide sticky-nav hamburger ===== */
+/* ===== Sticky-nav: transparent background, hide on desktop ===== */
+.sticky-nav { background: transparent; }
 @media (min-width: 768px) { .chat-container .sticky-nav { display: none; } }
 
 /* ===== Dark Mode ===== */
