@@ -239,7 +239,7 @@ body.dark .edit-fab { background: var(--accent); }
 @media print { .edit-fab { display: none !important; } }
 
 /* ===== Print Mode ===== */
-.print-mode { --accent: #8B8580; --blue: var(--accent); --blue-light: #F5EDE8; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: var(--gray-light) !important; }
+.print-mode { --accent: #8B8580; --blue: var(--accent); --blue-light: #F5EDE8; --sand: #C4704F; --sand-light: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: var(--gray-light) !important; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
 .print-mode .tl-body, .print-mode .col-detail { display: block !important; }
 .print-mode .tl-arrow, .print-mode .col-row .arrow { display: none !important; }
@@ -255,7 +255,7 @@ body.dark .edit-fab { background: var(--accent); }
 .print-mode .print-exit-btn { display: block; }
 @media print {
     @page { size: A4; margin: 12mm; }
-    body { --accent: #8B8580; --blue: var(--accent); --blue-light: #F5EDE8; --sand: #C4956A; --sand-light: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: #fff !important; }
+    body { --accent: #8B8580; --blue: var(--accent); --blue-light: #F5EDE8; --sand: #C4704F; --sand-light: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: #fff !important; }
     .sticky-nav, .dh-nav, .print-exit-btn, .hourly-weather, .info-panel { display: none !important; }
     .container { max-width: 100% !important; box-shadow: none !important; }
     .tl-body, .col-detail { display: block !important; }
@@ -354,7 +354,7 @@ body.dark .sg-priority-low { background: rgba(34, 197, 94, 0.15); }
     cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
 }
 .info-fab:hover { transform: scale(1.1); }
-body.dark .info-fab { background: var(--accent, #C4704F); }
+body.dark .info-fab { background: var(--accent); }
 .print-mode .info-fab { display: none !important; }
 @media print { .info-fab { display: none !important; } }
 @media (max-width: 767px) { .info-fab { display: flex; } }
