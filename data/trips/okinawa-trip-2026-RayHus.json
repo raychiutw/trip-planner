@@ -197,6 +197,36 @@
                 "googleQuery": "https://maps.google.com/?q=Living+Inn+旭橋駅前+那覇",
                 "appleQuery": "https://maps.apple.com/?q=Living+Inn+旭橋駅前+那覇"
               }
+            ],
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "飯店附近購物",
+                "shops": [
+                  {
+                    "category": "24H超市",
+                    "name": "辻スーパー",
+                    "hours": "24小時全年無休",
+                    "mustBuy": [
+                      "現炸沖繩可樂餅、炸雞（現做熟食攤）",
+                      "沖繩限定便當・熟食・生鮮食材",
+                      "ORION 啤酒、泡盛沖繩地酒"
+                    ],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/668971/"
+                  },
+                  {
+                    "category": "便利商店",
+                    "name": "FamilyMart・LAWSON（旭橋周邊）",
+                    "hours": "24小時",
+                    "mustBuy": [
+                      "沖繩限定飯糰（LAWSON 沖繩麵飯糰）",
+                      "沖繩限定香檸炸雞（LAWSON）",
+                      "ATM 換現金・SIM 卡購買"
+                    ],
+                    "blogUrl": "https://marukoblog.tw/lawson-okinawa.html"
+                  }
+                ]
+              }
             ]
           },
           {
@@ -213,6 +243,24 @@
               }
             ],
             "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "國際通購物 — 唐吉訶德",
+                "shops": [
+                  {
+                    "category": "藥妝・零食・伴手禮",
+                    "name": "唐吉訶德 國際通店",
+                    "hours": "24小時全年無休",
+                    "mustBuy": [
+                      "EVE 止痛藥・合利他命・眼藥水（旅行必備藥品）",
+                      "沖繩限定紫芋 KitKat・黑糖點心・御果子御殿紅芋塔",
+                      "安耐曬防曬乳・KOSE 雪肌精・&Honey 護髮品",
+                      "Royce 生巧克力・薯條三兄弟（北海道名產）"
+                    ],
+                    "blogUrl": "https://marktrip.tw/okinawa-kokusai-donki-guide/"
+                  }
+                ]
+              },
               {
                 "type": "restaurants",
                 "title": "晚餐推薦",
@@ -708,6 +756,36 @@
                 "name": "THE NEST NAHA",
                 "googleQuery": "https://maps.google.com/?q=THE+NEST+NAHA+Nishi+Naha",
                 "appleQuery": "https://maps.apple.com/?q=THE+NEST+NAHA+Nishi+Naha"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "飯店附近購物",
+                "shops": [
+                  {
+                    "category": "藥妝・零食・伴手禮",
+                    "name": "唐吉訶德 那霸壺川店",
+                    "hours": "08:00~翌3:00",
+                    "mustBuy": [
+                      "EVE 止痛藥・合利他命・眼藥水（旅行必備藥品）",
+                      "沖繩限定零食・紅芋點心・黑糖果子",
+                      "安耐曬防曬乳・藥妝保養品（比國際通店更寬敞好逛）"
+                    ],
+                    "blogUrl": "https://linshibi.com/?p=16331"
+                  },
+                  {
+                    "category": "便利商店",
+                    "name": "FamilyMart・LAWSON（那霸西周邊）",
+                    "hours": "24小時",
+                    "mustBuy": [
+                      "沖繩限定飯糰・沖繩麵飯糰（LAWSON）",
+                      "沖繩限定香檸炸雞・在地熟食",
+                      "隔日早餐備糧・飲料・零食"
+                    ],
+                    "blogUrl": "https://marukoblog.tw/lawson-okinawa.html"
+                  }
+                ]
               }
             ]
           }

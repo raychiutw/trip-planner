@@ -432,7 +432,8 @@
                     "hours": "11:00~22:00",
                     "mustBuy": [
                       "B1美食街伴手禮",
-                      "9F餐廳街"
+                      "9F餐廳街",
+                      "頂樓空中花園限定商品"
                     ],
                     "blogUrl": "https://bigmouthblog.tw/mega-city-banqiao/"
                   },
@@ -442,7 +443,8 @@
                     "hours": "11:00~22:00",
                     "mustBuy": [
                       "B2美食廣場",
-                      "生活雜貨樓層"
+                      "生活雜貨樓層",
+                      "4F親子童裝特賣"
                     ],
                     "blogUrl": "https://tisshuang.com/global-mall-banqiao/"
                   },
@@ -452,7 +454,8 @@
                     "hours": "10:00~22:00",
                     "mustBuy": [
                       "平價服飾",
-                      "在地小吃"
+                      "在地小吃",
+                      "流行飾品配件"
                     ],
                     "blogUrl": "https://kenalice.tw/banqiao-underground/"
                   }
@@ -875,7 +878,8 @@
                     "hours": "10:00~21:00",
                     "mustBuy": [
                       "老順香鹹光餅",
-                      "傳統糕餅"
+                      "傳統糕餅",
+                      "廟口現做米製品"
                     ],
                     "blogUrl": "https://snowhy.tw/xinzhuang-miaostreet-shopping/"
                   },
@@ -885,7 +889,8 @@
                     "hours": "17:00~00:00",
                     "mustBuy": [
                       "鹽酥雞",
-                      "豆花"
+                      "豆花",
+                      "車輪餅"
                     ],
                     "blogUrl": "https://bigmouthblog.tw/xinzhuang-night-market/"
                   },
@@ -895,9 +900,21 @@
                     "hours": "11:00~22:00",
                     "mustBuy": [
                       "影城",
-                      "美食街"
+                      "美食街",
+                      "頂樓空中廣場季節活動"
                     ],
                     "blogUrl": "https://kenalice.tw/honghui-plaza/"
+                  },
+                  {
+                    "category": "日系雜貨",
+                    "name": "唐吉軻德 新莊幸福店",
+                    "hours": "10:00~02:00",
+                    "mustBuy": [
+                      "日本進口零食與餅乾",
+                      "美妝保養特價品",
+                      "生活雜貨與廚房用品"
+                    ],
+                    "blogUrl": "https://shoppinginfo.tw/donki-xinzhuang/"
                   }
                 ]
               }
@@ -1300,7 +1317,8 @@
                     "hours": "11:00~22:00",
                     "mustBuy": [
                       "美食街",
-                      "生活用品"
+                      "生活用品",
+                      "頂樓休閒娛樂設施"
                     ],
                     "blogUrl": "https://tisshuang.com/zhonghe-global-mall/"
                   },
@@ -1310,7 +1328,8 @@
                     "hours": "08:00~23:00",
                     "mustBuy": [
                       "零食伴手禮",
-                      "生鮮食材"
+                      "生鮮食材",
+                      "台灣特產禮盒"
                     ],
                     "blogUrl": "https://bigmouthblog.tw/carrefour-zhonghe/"
                   },
@@ -1320,7 +1339,8 @@
                     "hours": "10:00~22:00",
                     "mustBuy": [
                       "平價服飾",
-                      "流行飾品"
+                      "流行飾品",
+                      "韓系美妝小舖"
                     ],
                     "blogUrl": "https://girlsplan.com/jingan-shopping/"
                   }
@@ -1685,8 +1705,9 @@
                     "name": "樹林興仁花園夜市",
                     "hours": "17:00~00:00（三五六日）",
                     "mustBuy": [
-                      "遊戲區",
-                      "服飾攤位"
+                      "遊戲區獎品",
+                      "服飾攤位",
+                      "現炸雞排與臭豆腐"
                     ],
                     "blogUrl": "https://plumpyblog.com/singren-night-market-shopping/"
                   },
@@ -1696,7 +1717,8 @@
                     "hours": "11:00~22:00",
                     "mustBuy": [
                       "平價生活百貨",
-                      "餐廳美食"
+                      "餐廳美食",
+                      "超商聯名限定商品"
                     ],
                     "blogUrl": "https://kenalice.tw/aurora-plaza-tucheng/"
                   },
@@ -1706,7 +1728,8 @@
                     "hours": "08:00~23:00",
                     "mustBuy": [
                       "在地零食",
-                      "生鮮食材"
+                      "生鮮食材",
+                      "PX自有品牌熟食便當"
                     ],
                     "blogUrl": "https://appletrees.tw/pxmart-shulin/"
                   }
@@ -1897,7 +1920,8 @@
                     "hours": "10:00~21:00",
                     "mustBuy": [
                       "手作紀念品",
-                      "河景咖啡"
+                      "河景咖啡",
+                      "情人橋周邊限定伴手禮"
                     ],
                     "blogUrl": "https://bunnyann.tw/fishermans-wharf-shopping/"
                   },

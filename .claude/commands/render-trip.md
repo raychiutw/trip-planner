@@ -48,4 +48,4 @@ hotel 物件含 blogUrl，放繁中推薦網誌。
 所有 blogUrl 以 Google「{名稱} {地區} 推薦」搜尋，取第一篇繁體中文文章。優先選 pixnet、mimigo、kafu 等台灣旅遊部落格。
 
 ### R7 購物景點推薦
-飯店附近超市/唐吉軻德以 infoBox type=shopping 結構化顯示。獨立購物行程（來客夢/iias/Outlet）同樣附 shopping infoBox。每個 shop 含 category、name、hours、mustBuy（至少 3 項）、blogUrl。
+統一使用 `infoBox type=shopping`（不使用 souvenir type）。飯店附近超市/超商/唐吉軻德以 shopping infoBox 結構化顯示（subs 僅保留停車場等非購物項）。超商（步行 5 分鐘內）含 mustBuy + blogUrl。獨立購物行程（來客夢/iias/Outlet/PARCO CITY）同樣附 shopping infoBox。景點附近步行 5~10 分鐘有超市或唐吉軻德時，在該景點 entry 加 shopping infoBox。每個 shop 含 category、name、hours、mustBuy（至少 3 項）、blogUrl。shop 不含 titleUrl。自駕行程飯店 subs 須有停車場資訊。
