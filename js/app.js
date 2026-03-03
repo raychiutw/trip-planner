@@ -993,9 +993,9 @@ function buildMenu(data) {
     // Drawer menu (mobile)
     var html = '';
     // 區段一：頁面切換
-    html += '<a class="menu-item menu-item-current" href="index.html">' + iconSpan('plane') + ' 行程頁</a>';
-    html += '<a class="menu-item" href="' + editUrl + '">' + iconSpan('pencil') + ' 編輯頁</a>';
-    html += '<a class="menu-item" href="setting.html">' + iconSpan('gear') + ' 設定頁</a>';
+    html += '<a class="menu-item menu-item-current" href="index.html">' + iconSpan('plane') + ' 我的行程</a>';
+    html += '<a class="menu-item" href="' + editUrl + '">' + iconSpan('pencil') + ' 編輯行程</a>';
+    html += '<a class="menu-item" href="setting.html">' + iconSpan('gear') + ' 設定</a>';
     html += '<div class="menu-sep"></div>';
     // 區段二：功能跳轉
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">' + iconSpan('plane') + ' 航班資訊</button>';
@@ -1013,9 +1013,9 @@ function buildMenu(data) {
     if (sidebarNav) {
         var sHtml = '';
         // 區段一：頁面切換
-        sHtml += '<a class="menu-item menu-item-current" href="index.html" title="行程頁"><span class="item-icon">' + iconSpan('plane') + '</span><span class="item-label">行程頁</span></a>';
-        sHtml += '<a class="menu-item" href="' + editUrl + '" title="編輯頁"><span class="item-icon">' + iconSpan('pencil') + '</span><span class="item-label">編輯頁</span></a>';
-        sHtml += '<a class="menu-item" href="setting.html" title="設定頁"><span class="item-icon">' + iconSpan('gear') + '</span><span class="item-label">設定頁</span></a>';
+        sHtml += '<a class="menu-item menu-item-current" href="index.html" title="我的行程"><span class="item-icon">' + iconSpan('plane') + '</span><span class="item-label">我的行程</span></a>';
+        sHtml += '<a class="menu-item" href="' + editUrl + '" title="編輯行程"><span class="item-icon">' + iconSpan('pencil') + '</span><span class="item-label">編輯行程</span></a>';
+        sHtml += '<a class="menu-item" href="setting.html" title="設定"><span class="item-icon">' + iconSpan('gear') + '</span><span class="item-label">設定</span></a>';
         sHtml += '<div class="menu-sep"></div>';
         // 區段二：功能跳轉
         var navItems = [

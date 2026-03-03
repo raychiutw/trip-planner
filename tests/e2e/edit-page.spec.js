@@ -201,7 +201,7 @@ test.describe('Edit 手機版漢堡選單', () => {
       return null;
     });
     expect(settingHref).not.toBeNull();
-    expect(settingHref).toContain('設定頁');
+    expect(settingHref).toContain('設定');
   });
 });
 
