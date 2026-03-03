@@ -4,7 +4,12 @@
     "title": "2026 沖繩六日輕旅遊行程表",
     "description": "2026 沖繩六日輕旅遊完整行程表：那霸、KKday美麗海一日遊、古宇利島、Klook沖繩西海岸一日遊、AEON Mall來客夢、iias豐崎購物。非自駕輕鬆搭巴士遊沖繩，含一日遊行程、飯店住宿、購物景點推薦。",
     "ogDescription": "那霸為基地，KKday美麗海水族館・古宇利島・鳳梨公園一日遊，Klook波上宮・殘波岬・美國村・東南植物樂園一日遊，六日輕旅行含購物與美食",
-    "themeColor": "#E07850"
+    "themeColor": "#E07850",
+    "foodPreferences": [
+      "燒肉",
+      "牛排/烤魚",
+      "當地特色"
+    ]
   },
   "footer": {
     "title": "2026 沖繩六日輕旅遊",
@@ -213,18 +218,18 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
-                    "category": "沖繩料理",
-                    "name": "琉球料理 ぬちがふぅ",
-                    "desc": "沖繩傳統料理，套餐豐富",
-                    "price": "¥1,500~",
+                    "category": "燒肉",
+                    "name": "燒肉本部牧場 國際通店",
+                    "desc": "牧場直營 A4-A5 等級本部牛，午間套餐 ¥4,500 起",
+                    "price": "¥4,500~",
                     "location": {
-                      "name": "琉球料理ぬちがふぅ 那覇",
-                      "googleQuery": "https://maps.google.com/?q=琉球料理+ぬちがふぅ+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=琉球料理+ぬちがふぅ+那覇"
+                      "name": "焼肉もとぶ牧場 国際通り店",
+                      "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+国際通り店"
                     },
-                    "hours": "11:00~22:00",
-                    "reservation": null,
-                    "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/"
+                    "hours": "17:00~22:00",
+                    "reservation": "TableCheck 線上預約",
+                    "blogUrl": "https://minako.tw/motobu-farm/"
                   },
                   {
                     "category": "牛排",
@@ -241,18 +246,18 @@
                     "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
                   },
                   {
-                    "category": "拉麵",
-                    "name": "ラーメン暖暮 那覇牧志店",
-                    "desc": "九州豚骨拉麵名店，台灣旅客最愛的沖繩拉麵首選",
-                    "price": "¥700~",
+                    "category": "當地特色",
+                    "name": "琉球料理 ぬちがふぅ",
+                    "desc": "沖繩傳統料理，套餐豐富",
+                    "price": "¥1,500~",
                     "location": {
-                      "name": "ラーメン暖暮 那覇牧志店",
-                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+那覇牧志店",
-                      "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+那覇牧志店"
+                      "name": "琉球料理ぬちがふぅ 那覇",
+                      "googleQuery": "https://maps.google.com/?q=琉球料理+ぬちがふぅ+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=琉球料理+ぬちがふぅ+那覇"
                     },
-                    "hours": "10:00~翌2:00",
+                    "hours": "11:00~22:00",
                     "reservation": null,
-                    "blogUrl": "https://hanblog.tw/ramendanbo/"
+                    "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/"
                   }
                 ]
               }
@@ -342,21 +347,21 @@
                     "blogUrl": "https://purpleswallow.pixnet.net/blog/post/45092685"
                   },
                   {
-                    "category": "沖繩麵",
-                    "name": "琉球新麺 通堂 那覇店",
-                    "desc": "沖繩人氣拉麵，鹽味豬骨湯底",
-                    "price": "¥800~",
+                    "category": "牛排",
+                    "name": "Jack's Steak House",
+                    "desc": "1953 年創業老字號美式牛排，里脊牛排嫩口多汁，CP 值極高",
+                    "price": "¥1,500~",
                     "location": {
-                      "name": "琉球新麺通堂 那覇店",
-                      "googleQuery": "https://maps.google.com/?q=琉球新麺通堂+那覇店",
-                      "appleQuery": "https://maps.apple.com/?q=琉球新麺通堂+那覇店"
+                      "name": "ジャッキーステーキハウス",
+                      "googleQuery": "https://maps.google.com/?q=ジャッキーステーキハウス+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=ジャッキーステーキハウス+那覇"
                     },
-                    "hours": "11:00~24:00",
-                    "reservation": null,
-                    "blogUrl": "https://jenniferhu1104.pixnet.net/blog/post/223210891"
+                    "hours": "11:00~翌1:30",
+                    "reservation": "不需訂位（排隊制）",
+                    "blogUrl": "https://amonblog.com/blog/post/jacks-steak"
                   },
                   {
-                    "category": "琉球料理 居酒屋",
+                    "category": "當地特色",
                     "name": "古酒と琉球料理 うりずん",
                     "desc": "1972年創業傳奇老舖，名物「どぅる天」山芋豆腐天婦羅發祥地",
                     "price": "¥2,000~",
@@ -458,35 +463,35 @@
                 "title": "晚餐推薦（深夜營業）",
                 "restaurants": [
                   {
-                    "category": "沖縄料理 居酒屋",
-                    "name": "沖縄料理 ちぬまん 国際通り牧志店",
-                    "desc": "國際通人氣居酒屋，每晚三味線島唄現場表演",
-                    "price": "¥2,500~",
+                    "category": "燒肉",
+                    "name": "焼肉きんぐ 那覇久茂地店",
+                    "desc": "人氣燒肉吃到飽，58 道起 ¥3,278，深夜 24:00 仍營業",
+                    "price": "¥3,278~/人",
                     "location": {
-                      "name": "ちぬまん 国際通り牧志店",
-                      "googleQuery": "https://maps.google.com/?q=ちぬまん+国際通り+牧志+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=ちぬまん+国際通り+牧志+那覇"
+                      "name": "焼肉きんぐ 那覇久茂地店",
+                      "googleQuery": "https://maps.google.com/?q=焼肉きんぐ+那覇久茂地店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉きんぐ+那覇久茂地店"
                     },
-                    "hours": "17:00~24:00",
-                    "reservation": "可預約（電話 098-941-0998）",
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23951/"
+                    "hours": "平日 17:00~24:00／假日 11:00~24:00",
+                    "reservation": "EPARK 線上預約",
+                    "blogUrl": "https://sweet212.pixnet.net/blog/posts/13364784554"
                   },
                   {
-                    "category": "拉麵",
-                    "name": "ラーメン暖暮 那覇牧志店",
-                    "desc": "九州豚骨拉麵名店，深夜2點仍營業",
-                    "price": "¥700~",
+                    "category": "牛排",
+                    "name": "やっぱりステーキ 国際通り店",
+                    "desc": "CP 值超高！¥1,000 起的溶岩石板牛排，深夜 1:30 仍營業",
+                    "price": "¥1,000~",
                     "location": {
-                      "name": "ラーメン暖暮 那覇牧志店",
-                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+那覇牧志店",
-                      "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+那覇牧志店"
+                      "name": "やっぱりステーキ 4th 国際通り店",
+                      "googleQuery": "https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店"
                     },
-                    "hours": "10:00~翌2:00",
+                    "hours": "11:00~翌1:30",
                     "reservation": null,
-                    "blogUrl": "https://hanblog.tw/ramendanbo/"
+                    "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
                   },
                   {
-                    "category": "沖縄そば",
+                    "category": "當地特色",
                     "name": "すばやー 松山店",
                     "desc": "深夜21時才開門的老字號沖縄麵，飲酒後收尾首選",
                     "price": "¥700~",
@@ -600,7 +605,35 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
-                    "category": "塔可飯",
+                    "category": "燒肉",
+                    "name": "焼肉なべしま ライカム店",
+                    "desc": "九州鹿兒島名店沖繩唯一分店，現切現烤搭配秘傳味噌燒肉醬",
+                    "price": "¥2,500~",
+                    "location": {
+                      "name": "焼肉なべしま イオンモール沖縄ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=焼肉なべしま+イオンモール沖縄ライカム店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉なべしま+イオンモール沖縄ライカム店"
+                    },
+                    "hours": "11:00~23:00",
+                    "reservation": "電話預約 098-923-5529",
+                    "blogUrl": "https://imksw.pixnet.net/blog/post/217994640"
+                  },
+                  {
+                    "category": "牛排",
+                    "name": "炭焼ハラミステーキ 牛米衛",
+                    "desc": "炭火燒烤宮崎牛，ライカム人氣最高餐廳之一",
+                    "price": "¥1,800~",
+                    "location": {
+                      "name": "炭焼ハラミステーキ 牛米衛 イオンモール沖縄ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=炭焼ハラミステーキ+牛米衛+ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=炭焼ハラミステーキ+牛米衛+ライカム"
+                    },
+                    "hours": "10:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://alicedaily.com/okinawa-aeonmall-gyubey-steak/"
+                  },
+                  {
+                    "category": "當地特色",
                     "name": "タコライスcafe きじむなぁ ライカム店",
                     "desc": "沖繩人氣塔可飯專賣，招牌蛋包塔可飯「オムタコ」",
                     "price": "¥780~",
@@ -608,34 +641,6 @@
                       "name": "タコライスcafe きじむなぁ ライカム店",
                       "googleQuery": "https://maps.google.com/?q=タコライスカフェきじむなぁ+イオンモール沖縄ライカム",
                       "appleQuery": "https://maps.apple.com/?q=タコライスカフェきじむなぁ+イオンモール沖縄ライカム"
-                    },
-                    "hours": "10:00~22:00",
-                    "reservation": null,
-                    "blogUrl": "https://ajunfun.tw/aeonmall/"
-                  },
-                  {
-                    "category": "味噌拉麵",
-                    "name": "麺場 田所商店 ライカム店",
-                    "desc": "全國知名味噌拉麵專門店，三種味噌湯底可選",
-                    "price": "¥900~",
-                    "location": {
-                      "name": "麺場 田所商店 ライカム店",
-                      "googleQuery": "https://maps.google.com/?q=麺場田所商店+イオンモール沖縄ライカム",
-                      "appleQuery": "https://maps.apple.com/?q=麺場田所商店+イオンモール沖縄ライカム"
-                    },
-                    "hours": "10:00~22:00",
-                    "reservation": null,
-                    "blogUrl": "https://ajunfun.tw/aeonmall/"
-                  },
-                  {
-                    "category": "迴轉壽司",
-                    "name": "くら寿司 ライカム店",
-                    "desc": "日本全國連鎖迴轉壽司，附抽獎互動遊戲，價格親民",
-                    "price": "¥1,500~",
-                    "location": {
-                      "name": "くら寿司 ライカム店",
-                      "googleQuery": "https://maps.google.com/?q=くら寿司+イオンモール沖縄ライカム",
-                      "appleQuery": "https://maps.apple.com/?q=くら寿司+イオンモール沖縄ライカム"
                     },
                     "hours": "10:00~22:00",
                     "reservation": null,
@@ -884,35 +889,35 @@
                 "title": "晚餐推薦（旭橋周邊）",
                 "restaurants": [
                   {
-                    "category": "沖縄料理 居酒屋",
-                    "name": "沖縄居酒屋 山将",
-                    "desc": "創業37年旭橋排名第一老字號，名物「山将ラフテー」東坡肉",
+                    "category": "燒肉",
+                    "name": "我那覇豚肉店 カフーナ旭橋店",
+                    "desc": "自家牧場直送阿古豬，旭橋站直結，涮涮鍋與燒肉皆可",
                     "price": "¥3,000~",
                     "location": {
-                      "name": "沖縄居酒屋 山将 旭橋",
-                      "googleQuery": "https://maps.google.com/?q=沖縄居酒屋山将+旭橋+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=沖縄居酒屋山将+旭橋+那覇"
+                      "name": "我那覇豚肉店 カフーナ旭橋店",
+                      "googleQuery": "https://maps.google.com/?q=我那覇豚肉店+カフーナ旭橋店",
+                      "appleQuery": "https://maps.apple.com/?q=我那覇豚肉店+カフーナ旭橋店"
                     },
-                    "hours": "17:00~23:30（週日及第2週一定休）",
-                    "reservation": "建議預約",
-                    "blogUrl": "https://tw.savorjapan.com/okinawa/47001/24920/list/"
+                    "hours": "平日 12:00~14:30, 17:00~22:00／假日 12:00~22:00",
+                    "reservation": "電話預約 098-917-2789",
+                    "blogUrl": "https://lailai-web.com/ganaha-yakinikuten/"
                   },
                   {
-                    "category": "海鮮居酒屋",
-                    "name": "居酒屋ひょうきん",
-                    "desc": "全國各地直送朝獲鮮魚，刺身拼盤新鮮度極高",
-                    "price": "¥2,500~",
+                    "category": "牛排",
+                    "name": "ステーキハウス88 辻本店",
+                    "desc": "1955 年創業沖繩最老牌牛排館，營業至深夜 2 點",
+                    "price": "¥2,000~",
                     "location": {
-                      "name": "居酒屋ひょうきん 泉崎 那覇",
-                      "googleQuery": "https://maps.google.com/?q=居酒屋ひょうきん+泉崎+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=居酒屋ひょうきん+泉崎+那覇"
+                      "name": "ステーキハウス88 辻本店",
+                      "googleQuery": "https://maps.google.com/?q=ステーキハウス88+辻本店",
+                      "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+辻本店"
                     },
-                    "hours": "17:00~24:00（週日定休）",
-                    "reservation": "可預約",
-                    "blogUrl": "https://matcha-jp.com/tw/11883"
+                    "hours": "11:00~翌2:00",
+                    "reservation": null,
+                    "blogUrl": "https://slowlifeinokinawa.com/steak88/"
                   },
                   {
-                    "category": "琉球料理 居酒屋",
+                    "category": "當地特色",
                     "name": "琉球家庭料理 葵屋 旭橋駅前店",
                     "desc": "每日島唄現場演奏，供應縣產和牛、海葡萄、炒苦瓜",
                     "price": "¥2,000~",
@@ -1122,7 +1127,15 @@
     "title": "AI行程亮點",
     "content": {
       "summary": "六日沖繩輕旅遊以那霸為據點，結合精心安排的一日遊體驗與自主購物時光。Day 2 搭乘 KKday 暢遊沖繩北部美麗海水族館、浪漫古宇利島與鳳梨公園；Day 3 參加 Klook 西海岸行程，從神聖的波上宮到壯觀的殘波岬燈塔，再到熱鬧的美國村與夢幻東南植物樂園燈光秀。不需自駕，全程搭乘大眾運輸輕鬆遊覽。Day 4 遠征沖繩最大 AEON Mall 來客夢，Day 5 悠遊面海的 iias 豐崎購物。兩間精選飯店各具特色，THE NEST NAHA 更有14F溫水游泳池可放鬆。是一趟兼顧知名景點、輕鬆通勤與購物享受的沖繩之旅。",
-      "tags": ["輕鬆旅遊", "大眾運輸", "一日遊體驗", "購物天堂", "那霸為據點", "海島風情", "非自駕"]
+      "tags": [
+        "輕鬆旅遊",
+        "大眾運輸",
+        "一日遊體驗",
+        "購物天堂",
+        "那霸為據點",
+        "海島風情",
+        "非自駕"
+      ]
     }
   },
   "suggestions": {

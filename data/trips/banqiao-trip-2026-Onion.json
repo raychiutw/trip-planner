@@ -4,7 +4,12 @@
     "title": "2026 板橋十五日在地行程表",
     "description": "2026 板橋十五日在地測試行程：板橋、新莊、三重、中和、永和、土城、樹林、淡水、八里。每日住家出發、開車遊覽新北景點。",
     "ogDescription": "板橋→新莊三重→中和永和→土城樹林→淡水八里，十五日在地行程含新北各區景點",
-    "themeColor": "#8B8580"
+    "themeColor": "#8B8580",
+    "foodPreferences": [
+      "拉麵",
+      "義大利麵",
+      "特色小吃"
+    ]
   },
   "footer": {
     "title": "2026 板橋十五日行程",
@@ -297,6 +302,24 @@
                 "title": "午餐推薦（府中站周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "花月嵐拉麵 板橋府中店",
+                    "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
+                    "price": "NT$230~350",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "薄多義 板橋大遠百店",
+                    "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "高記生炒魷魚",
                     "desc": "黃石市場 30 年老字號，生炒魷魚羹、蘿蔔糕",
@@ -304,24 +327,6 @@
                     "hours": "08:00~17:30（週一休）",
                     "reservation": null,
                     "blogUrl": "https://appletrees.tw/blog/post/huangshishichangyouyu"
-                  },
-                  {
-                    "category": "台式烤鴨",
-                    "name": "萬香烤鴨莊",
-                    "desc": "一鴨三吃排隊名店，外皮酥脆鴨肉鮮甜",
-                    "price": "NT$200~400",
-                    "hours": "10:00~20:30",
-                    "reservation": null,
-                    "blogUrl": "https://tisshuang.com/blog/post/duckmaker"
-                  },
-                  {
-                    "category": "潮州料理",
-                    "name": "六必居潮州沙鍋粥",
-                    "desc": "台灣第一家砂鍋粥創始店，招牌鮑魚粥、蜜汁中卷",
-                    "price": "NT$200~700",
-                    "hours": "11:30~22:00",
-                    "reservation": "建議電話預約",
-                    "blogUrl": "https://www.mecocute.com/liubiju/"
                   }
                 ]
               }
@@ -354,6 +359,24 @@
                 "title": "晚餐推薦（新埔站周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "花月嵐拉麵 板橋府中店",
+                    "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
+                    "price": "NT$230~350",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "薄多義 板橋大遠百店",
+                    "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
+                  },
+                  {
                     "category": "日式居酒屋",
                     "name": "老味噌居酒屋 新埔店",
                     "desc": "新埔站超人氣日式串燒，烤物功夫一流",
@@ -361,24 +384,6 @@
                     "hours": "18:00~01:30",
                     "reservation": null,
                     "blogUrl": "https://girlsplan.com/omiso/"
-                  },
-                  {
-                    "category": "客家料理",
-                    "name": "六堆伙房 板橋新埔店",
-                    "desc": "三猿廣場內，芋頭米粉湯、梅干扣肉 CP 值高",
-                    "price": "NT$150~350",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://doris651022.pixnet.net/blog/post/335560657"
-                  },
-                  {
-                    "category": "日式燒肉",
-                    "name": "燒惑日式炭火燒肉",
-                    "desc": "炭火燒肉吃到飽，安格斯牛肉與海鮮，明治冰淇淋無限",
-                    "price": "NT$599~799",
-                    "hours": "17:00~22:00",
-                    "reservation": "建議訂位",
-                    "blogUrl": "https://www.fonfood.com/%E6%8D%B7%E9%81%8B%E6%96%B0%E5%9F%94%E7%AB%99"
                   }
                 ]
               }
@@ -464,6 +469,24 @@
                 "title": "午餐推薦（板橋車站周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "花月嵐拉麵 板橋府中店",
+                    "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
+                    "price": "NT$230~350",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "薄多義 板橋大遠百店",
+                    "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
+                  },
+                  {
                     "category": "韓式料理",
                     "name": "涓豆腐 環球板橋店",
                     "desc": "韓國豆腐煲專賣，嫩豆腐鍋香濃入味，小菜無限續",
@@ -471,24 +494,6 @@
                     "hours": "11:00~22:00",
                     "reservation": null,
                     "blogUrl": "https://tisshuang.com/dubu-tofu-banqiao/"
-                  },
-                  {
-                    "category": "日式定食",
-                    "name": "彌生軒 YAYOI 板橋車站店",
-                    "desc": "日本定食連鎖，味噌豬排定食與薑汁燒肉人氣必點",
-                    "price": "NT$200~350",
-                    "hours": "11:00~21:30",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/yayoi-banqiao/"
-                  },
-                  {
-                    "category": "港式點心",
-                    "name": "添好運 板橋大遠百店",
-                    "desc": "米其林一星港點，酥皮焗叉燒包為鎮店之寶",
-                    "price": "NT$100~300",
-                    "hours": "11:00~21:30",
-                    "reservation": "建議電話預約",
-                    "blogUrl": "https://mrbubble.tw/tim-ho-wan-banqiao/"
                   }
                 ]
               }
@@ -521,6 +526,24 @@
                 "title": "晚餐推薦（板橋車站百貨）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "花月嵐拉麵 板橋府中店",
+                    "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
+                    "price": "NT$230~350",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "薄多義 板橋大遠百店",
+                    "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
+                  },
+                  {
                     "category": "自助餐",
                     "name": "饗食天堂 板橋店",
                     "desc": "頂級自助百匯，海鮮日料甜點超過200道料理",
@@ -528,24 +551,6 @@
                     "hours": "11:30~14:00 / 17:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/eatogether-banqiao/"
-                  },
-                  {
-                    "category": "港式飲茶",
-                    "name": "新葡苑港式飲茶 大遠百店",
-                    "desc": "大遠百9F，現點現蒸港點，蝦餃腸粉正宗道地",
-                    "price": "NT$300~600",
-                    "hours": "11:00~21:30",
-                    "reservation": "建議電話預約",
-                    "blogUrl": "https://www.walkerland.com.tw/article/view/327432"
-                  },
-                  {
-                    "category": "日式料理",
-                    "name": "藍屋和食 大遠百店",
-                    "desc": "日式定食與壽司，新鮮刺身天婦羅深受好評",
-                    "price": "NT$300~500",
-                    "hours": "11:00~21:30",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/blue-house-banqiao/"
                   }
                 ]
               }
@@ -593,6 +598,24 @@
                 "title": "午餐推薦（慈惠宮/府中站周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "花月嵐拉麵 板橋府中店",
+                    "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
+                    "price": "NT$230~350",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "薄多義 板橋大遠百店",
+                    "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "高記生炒魷魚",
                     "desc": "黃石市場30年老字號，生炒魷魚羹、蘿蔔糕必吃",
@@ -600,24 +623,6 @@
                     "hours": "08:00~17:30（週一休）",
                     "reservation": null,
                     "blogUrl": "https://appletrees.tw/huangshi-market-squid/"
-                  },
-                  {
-                    "category": "台式烤鴨",
-                    "name": "萬香烤鴨莊",
-                    "desc": "一鴨三吃排隊名店，外皮酥脆鴨肉鮮甜",
-                    "price": "NT$200~400",
-                    "hours": "10:00~20:30",
-                    "reservation": null,
-                    "blogUrl": "https://tisshuang.com/wanxiang-roast-duck/"
-                  },
-                  {
-                    "category": "泰式料理",
-                    "name": "泰樂泰國料理",
-                    "desc": "府中站人氣泰式，打拋豬飯與綠咖哩雞份量實在",
-                    "price": "NT$150~300",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/thai-le-banqiao/"
                   }
                 ]
               }
@@ -683,6 +688,24 @@
                 "title": "午餐推薦（新莊周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "博多一幸舎 新莊店",
+                    "desc": "福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵",
+                    "price": "NT$250~380",
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "歐義式 新莊店",
+                    "desc": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
+                    "price": "NT$220~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/"
+                  },
+                  {
                     "category": "台式糕點",
                     "name": "阿瑞官粿店",
                     "desc": "新莊老街百年粿店，芋粿巧、草仔粿手工現做",
@@ -690,24 +713,6 @@
                     "hours": "06:00~18:00",
                     "reservation": null,
                     "blogUrl": "https://bigmouthblog.tw/aruiguan-cake/"
-                  },
-                  {
-                    "category": "台式甜品",
-                    "name": "豆花莊 新莊店",
-                    "desc": "手工豆花綿密滑順，花生豆花與粉圓豆花最受歡迎",
-                    "price": "NT$40~80",
-                    "hours": "10:00~22:00",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/douhua-zhuang-xinzhuang/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "新莊中港路排骨飯",
-                    "desc": "在地人推薦古早味排骨飯，酥脆排骨配滷蛋",
-                    "price": "NT$80~120",
-                    "hours": "10:30~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://girlsplan.com/xinzhuang-porkchop/"
                   }
                 ]
               }
@@ -740,6 +745,24 @@
                 "title": "晚餐推薦（三重/回板橋路上）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋壹慶 三重店",
+                    "desc": "三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁",
+                    "price": "NT$220~320",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "小義大利莊園 三重店",
+                    "desc": "三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁",
+                    "price": "NT$250~420",
+                    "hours": "11:30~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/little-italy-sanchong/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "三重鵝肉李",
                     "desc": "三重在地鵝肉名店，鵝肉切盤鮮嫩，鵝肉湯麵經典",
@@ -747,24 +770,6 @@
                     "hours": "11:00~21:00",
                     "reservation": null,
                     "blogUrl": "https://supertaste.tvbs.com.tw/food/339812"
-                  },
-                  {
-                    "category": "火鍋",
-                    "name": "霸味薑母鴨 三重店",
-                    "desc": "秋冬進補名店，藥膳湯底濃郁，鴨肉丸子必加",
-                    "price": "NT$300~600",
-                    "hours": "15:00~02:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/baway-ginger-duck/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "蘆洲鼎邊銼",
-                    "desc": "蘆洲傳統小吃，手工鼎邊銼Q彈，配碗切仔麵更過癮",
-                    "price": "NT$50~100",
-                    "hours": "08:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/luzhou-dingbiancuo/"
                   }
                 ]
               }
@@ -812,6 +817,24 @@
                 "title": "午餐推薦（新莊體育場周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "博多一幸舎 新莊店",
+                    "desc": "福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵",
+                    "price": "NT$250~380",
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "歐義式 新莊店",
+                    "desc": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
+                    "price": "NT$220~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/"
+                  },
+                  {
                     "category": "麵食",
                     "name": "福壽街陽春麵",
                     "desc": "新莊在地30年老麵攤，手打陽春麵Q勁十足",
@@ -819,24 +842,6 @@
                     "hours": "06:00~14:00",
                     "reservation": null,
                     "blogUrl": "https://girlsplan.com/fushou-noodles/"
-                  },
-                  {
-                    "category": "中式糕餅",
-                    "name": "老順香餅店",
-                    "desc": "新莊百年糕餅老店，鹹光餅與綠豆椪最有名",
-                    "price": "NT$20~100",
-                    "hours": "08:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/laoshunxiang-bakery/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "阿淑當歸鴨麵線",
-                    "desc": "廟街旁溫補好味，當歸鴨肉鮮嫩，麵線軟嫩入味",
-                    "price": "NT$60~120",
-                    "hours": "10:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/ashu-angelica-duck/"
                   }
                 ]
               }
@@ -907,6 +912,24 @@
                 "title": "晚餐推薦（新莊廟街周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋壹慶 三重店",
+                    "desc": "三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁",
+                    "price": "NT$220~320",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "小義大利莊園 三重店",
+                    "desc": "三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁",
+                    "price": "NT$250~420",
+                    "hours": "11:30~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/little-italy-sanchong/"
+                  },
+                  {
                     "category": "牛肉麵",
                     "name": "新莊牛肉麵大王",
                     "desc": "紅燒牛肉麵湯頭濃醇，牛肉塊大又軟嫩",
@@ -914,24 +937,6 @@
                     "hours": "11:00~21:00",
                     "reservation": null,
                     "blogUrl": "https://tisshuang.com/xinzhuang-beef-noodle/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "阿松豬腳飯",
-                    "desc": "新莊廟街必吃，滷豬腳入味軟嫩，白飯淋醬汁超下飯",
-                    "price": "NT$80~150",
-                    "hours": "10:30~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/asong-pig-feet/"
-                  },
-                  {
-                    "category": "台式熱炒",
-                    "name": "順勝小吃",
-                    "desc": "新莊在地熱炒店，三杯雞、蒜泥白肉配啤酒最對味",
-                    "price": "NT$200~400",
-                    "hours": "17:00~00:00",
-                    "reservation": null,
-                    "blogUrl": "https://girlsplan.com/shunsheng-hotfry/"
                   }
                 ]
               }
@@ -979,6 +984,24 @@
                 "title": "午餐推薦（三重周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "博多一幸舎 新莊店",
+                    "desc": "福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵",
+                    "price": "NT$250~380",
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "歐義式 新莊店",
+                    "desc": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
+                    "price": "NT$220~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "今大魯肉飯",
                     "desc": "三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配",
@@ -986,24 +1009,6 @@
                     "hours": "07:00~20:00",
                     "reservation": null,
                     "blogUrl": "https://bigmouthblog.tw/jinda-braised-rice/"
-                  },
-                  {
-                    "category": "台式便當",
-                    "name": "五燈獎豬腳飯",
-                    "desc": "三重老字號，黃金豬腳外皮Q彈內層軟嫩",
-                    "price": "NT$80~150",
-                    "hours": "10:00~20:30",
-                    "reservation": null,
-                    "blogUrl": "https://supertaste.tvbs.com.tw/food/340155"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "正義北路排骨酥湯",
-                    "desc": "三重隱藏美食，排骨酥炸到酥脆泡在大骨湯裡入口即化",
-                    "price": "NT$50~100",
-                    "hours": "10:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/sanchong-porkrib-soup/"
                   }
                 ]
               }
@@ -1036,6 +1041,24 @@
                 "title": "晚餐推薦（三重/蘆洲）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋壹慶 三重店",
+                    "desc": "三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁",
+                    "price": "NT$220~320",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "小義大利莊園 三重店",
+                    "desc": "三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁",
+                    "price": "NT$250~420",
+                    "hours": "11:30~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/little-italy-sanchong/"
+                  },
+                  {
                     "category": "羊肉爐",
                     "name": "正羊肉榮 三重店",
                     "desc": "三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷",
@@ -1043,24 +1066,6 @@
                     "hours": "16:00~01:00",
                     "reservation": null,
                     "blogUrl": "https://tisshuang.com/zhengyangrourong/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "龍門胡椒餅",
-                    "desc": "三重人氣胡椒餅，現烤出爐香氣四溢，肉餡鮮美多汁",
-                    "price": "NT$55",
-                    "hours": "14:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/longmen-pepper-cake/"
-                  },
-                  {
-                    "category": "台式湯品",
-                    "name": "三重文化北路鱸魚湯",
-                    "desc": "鱸魚湯鮮甜清爽，薑絲提味，搭配滷肉飯實惠",
-                    "price": "NT$80~150",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://girlsplan.com/sanchong-bass-soup/"
                   }
                 ]
               }
@@ -1108,6 +1113,24 @@
                 "title": "午餐推薦（永和四號公園周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "豚骨拉麵ばかうまラーメン 永和店",
+                    "desc": "永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒",
+                    "price": "NT$240~360",
+                    "hours": "11:30~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "藍乳酪義大利餐廳",
+                    "desc": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
+                    "price": "NT$250~450",
+                    "hours": "11:30~21:30",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/"
+                  },
+                  {
                     "category": "台式早午餐",
                     "name": "世界豆漿大王",
                     "desc": "永和豆漿創始店之一，鹹豆漿、燒餅油條經典組合",
@@ -1115,24 +1138,6 @@
                     "hours": "24小時營業",
                     "reservation": null,
                     "blogUrl": "https://bigmouthblog.tw/world-soymilk-king/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "永和擔仔麵",
-                    "desc": "在地好味道，擔仔麵湯鮮肉嫩，滷肉飯也是必點",
-                    "price": "NT$50~120",
-                    "hours": "10:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://tisshuang.com/yonghe-danzai-noodle/"
-                  },
-                  {
-                    "category": "牛肉麵",
-                    "name": "汕頭牛肉劉",
-                    "desc": "永和30年牛肉麵，半筋半肉湯濃味厚",
-                    "price": "NT$120~200",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/shantou-beef-liu/"
                   }
                 ]
               }
@@ -1165,22 +1170,13 @@
                 "title": "晚餐推薦（永安市場周邊）",
                 "restaurants": [
                   {
-                    "category": "台式小吃",
-                    "name": "竹林雞肉飯",
-                    "desc": "永安市場旁超人氣，雞肉飯油蔥香氣誘人",
-                    "price": "NT$40~100",
-                    "hours": "11:00~20:00",
+                    "category": "日式拉麵",
+                    "name": "山頭火拉麵 中和環球店",
+                    "desc": "北海道系拉麵，濃厚豚骨湯底，叉燒入口即化",
+                    "price": "NT$250~380",
+                    "hours": "11:00~21:30",
                     "reservation": null,
-                    "blogUrl": "https://kenalice.tw/zhulin-chicken-rice/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "永和大腸麵線",
-                    "desc": "永和老字號，大腸處理乾淨，麵線勾芡恰到好處",
-                    "price": "NT$40~70",
-                    "hours": "10:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/yonghe-intestine-misua/"
+                    "blogUrl": "https://kenalice.tw/santouka-zhonghe/"
                   },
                   {
                     "category": "義式料理",
@@ -1190,6 +1186,15 @@
                     "hours": "11:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "竹林雞肉飯",
+                    "desc": "永安市場旁超人氣，雞肉飯油蔥香氣誘人",
+                    "price": "NT$40~100",
+                    "hours": "11:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/zhulin-chicken-rice/"
                   }
                 ]
               }
@@ -1237,6 +1242,24 @@
                 "title": "午餐推薦（烘爐地/中和周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "豚骨拉麵ばかうまラーメン 永和店",
+                    "desc": "永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒",
+                    "price": "NT$240~360",
+                    "hours": "11:30~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "藍乳酪義大利餐廳",
+                    "desc": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
+                    "price": "NT$250~450",
+                    "hours": "11:30~21:30",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "中和連城路米粉湯",
                     "desc": "中和在地早午餐，清甜米粉湯配上油豆腐黑白切",
@@ -1244,24 +1267,6 @@
                     "hours": "06:00~14:00",
                     "reservation": null,
                     "blogUrl": "https://bigmouthblog.tw/zhonghe-rice-noodle-soup/"
-                  },
-                  {
-                    "category": "越南料理",
-                    "name": "越南美食 中和店",
-                    "desc": "中和華新街異國美食區，道地越南河粉與春捲",
-                    "price": "NT$80~150",
-                    "hours": "10:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://tisshuang.com/vietnam-food-zhonghe/"
-                  },
-                  {
-                    "category": "台式便當",
-                    "name": "中和圓通路排骨飯",
-                    "desc": "中和在地排骨飯名店，炸排骨香酥多汁",
-                    "price": "NT$80~120",
-                    "hours": "10:30~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/zhonghe-porkchop/"
                   }
                 ]
               }
@@ -1341,6 +1346,15 @@
                     "blogUrl": "https://kenalice.tw/santouka-zhonghe/"
                   },
                   {
+                    "category": "義式料理",
+                    "name": "洋城義大利餐廳 中和店",
+                    "desc": "連鎖義式餐廳，白醬義大利麵與焗烤料理份量十足，適合家庭聚餐",
+                    "price": "NT$280~480",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/italianchef-zhonghe/"
+                  },
+                  {
                     "category": "台式熱炒",
                     "name": "阿男麻辣鍋",
                     "desc": "中和人氣麻辣鍋，花椒麻香十足，鴨血豆腐無限續",
@@ -1348,15 +1362,6 @@
                     "hours": "17:00~01:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/anan-mala-pot/"
-                  },
-                  {
-                    "category": "韓式料理",
-                    "name": "韓大叔正宗韓式烤肉",
-                    "desc": "景安站韓式烤肉，厚切豬五花與牛肋條炭火現烤",
-                    "price": "NT$300~500",
-                    "hours": "11:30~22:00",
-                    "reservation": "建議訂位",
-                    "blogUrl": "https://appletrees.tw/korean-uncle-zhonghe/"
                   }
                 ]
               }
@@ -1404,6 +1409,24 @@
                 "title": "午餐推薦（永和仁愛公園周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "豚骨拉麵ばかうまラーメン 永和店",
+                    "desc": "永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒",
+                    "price": "NT$240~360",
+                    "hours": "11:30~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "藍乳酪義大利餐廳",
+                    "desc": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
+                    "price": "NT$250~450",
+                    "hours": "11:30~21:30",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/"
+                  },
+                  {
                     "category": "台式便當",
                     "name": "池上木片便當 永和店",
                     "desc": "古早味木片便當，排骨飯與雞腿飯最受歡迎",
@@ -1411,24 +1434,6 @@
                     "hours": "10:30~20:00",
                     "reservation": null,
                     "blogUrl": "https://tisshuang.com/chishang-bento-yonghe/"
-                  },
-                  {
-                    "category": "日式料理",
-                    "name": "定食8 頂溪店",
-                    "desc": "平價日式定食，豬排定食與炸蝦定食份量十足",
-                    "price": "NT$150~250",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/teishoku8-dingxi/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "永和中正橋頭燒餅",
-                    "desc": "永和老字號，厚燒餅包蛋與油條，外酥內軟",
-                    "price": "NT$30~60",
-                    "hours": "05:00~11:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/yonghe-shaobing/"
                   }
                 ]
               }
@@ -1494,6 +1499,24 @@
                 "title": "午餐推薦（土城周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋武藏 樹林中山店",
+                    "desc": "日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁",
+                    "price": "NT$260~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/musashi-shulin/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "UNO 義式廚房 樹林店",
+                    "desc": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
+                    "price": "NT$230~380",
+                    "hours": "11:30~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "土城中央路四號米粉湯",
                     "desc": "土城在地人推薦，清甜米粉湯配黑白切經濟實惠",
@@ -1501,24 +1524,6 @@
                     "hours": "06:30~14:00",
                     "reservation": null,
                     "blogUrl": "https://kenalice.tw/tucheng-rice-noodle/"
-                  },
-                  {
-                    "category": "客家料理",
-                    "name": "阿婆客家粄條",
-                    "desc": "手工粄條Q彈滑順，搭配客家小炒與薑絲大腸",
-                    "price": "NT$60~150",
-                    "hours": "10:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/hakka-bantiao-tucheng/"
-                  },
-                  {
-                    "category": "台式便當",
-                    "name": "土城學府路便當街",
-                    "desc": "多家便當店聚集，排骨飯雞腿飯選擇豐富",
-                    "price": "NT$70~100",
-                    "hours": "10:30~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://girlsplan.com/tucheng-bento-street/"
                   }
                 ]
               }
@@ -1551,6 +1556,24 @@
                 "title": "晚餐推薦（土城/回板橋路上）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "一蘭拉麵 土城永寧店",
+                    "desc": "日本知名連鎖豚骨拉麵，秘製紅辣醬可自由調整，獨立隔間專注品嚐",
+                    "price": "NT$320~420",
+                    "hours": "10:00~23:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ichiran-tucheng/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "只是光在 義大利麵 土城店",
+                    "desc": "土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評",
+                    "price": "NT$220~360",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/justlight-pasta-tucheng/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "土城延和路鹽酥雞",
                     "desc": "土城超人氣鹽酥雞，蒜味十足外酥內嫩",
@@ -1558,24 +1581,6 @@
                     "hours": "16:00~00:00",
                     "reservation": null,
                     "blogUrl": "https://tisshuang.com/tucheng-popcorn-chicken/"
-                  },
-                  {
-                    "category": "火鍋",
-                    "name": "石二鍋 土城店",
-                    "desc": "王品集團平價石頭鍋，個人鍋物湯底濃郁",
-                    "price": "NT$250~350",
-                    "hours": "11:00~22:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/12hotpot-tucheng/"
-                  },
-                  {
-                    "category": "台式熱炒",
-                    "name": "土城海產攤",
-                    "desc": "在地海鮮熱炒，清蒸魚與炒蛤蜊新鮮實在",
-                    "price": "NT$200~500",
-                    "hours": "17:00~00:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/tucheng-seafood/"
                   }
                 ]
               }
@@ -1623,6 +1628,24 @@
                 "title": "午餐推薦（樹林周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋武藏 樹林中山店",
+                    "desc": "日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁",
+                    "price": "NT$260~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/musashi-shulin/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "UNO 義式廚房 樹林店",
+                    "desc": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
+                    "price": "NT$230~380",
+                    "hours": "11:30~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "樹林武林街滷肉飯",
                     "desc": "樹林在地老店，古早味滷肉飯油亮鹹香",
@@ -1630,24 +1653,6 @@
                     "hours": "06:00~14:00",
                     "reservation": null,
                     "blogUrl": "https://bigmouthblog.tw/shulin-braised-rice/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "樹林沙崙牛肉麵",
-                    "desc": "樹林火車站旁，紅燒牛肉麵湯頭濃郁牛肉軟嫩",
-                    "price": "NT$120~180",
-                    "hours": "10:30~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/shulin-beef-noodle/"
-                  },
-                  {
-                    "category": "台式便當",
-                    "name": "山佳火車站排骨飯",
-                    "desc": "山佳車站旁古早味便當，排骨酥炸香脆",
-                    "price": "NT$70~100",
-                    "hours": "10:00~19:00",
-                    "reservation": null,
-                    "blogUrl": "https://girlsplan.com/shanjia-bento/"
                   }
                 ]
               }
@@ -1751,6 +1756,24 @@
                 "title": "午餐推薦（樹林山佳周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋武藏 樹林中山店",
+                    "desc": "日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁",
+                    "price": "NT$260~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/musashi-shulin/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "UNO 義式廚房 樹林店",
+                    "desc": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
+                    "price": "NT$230~380",
+                    "hours": "11:30~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "山佳老街切仔麵",
                     "desc": "山佳車站旁小吃攤，切仔麵搭配油豆腐小菜",
@@ -1758,24 +1781,6 @@
                     "hours": "07:00~15:00",
                     "reservation": null,
                     "blogUrl": "https://tisshuang.com/shanjia-noodle/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "樹林中山路紅燒肉",
-                    "desc": "樹林在地紅燒肉名店，厚切紅燒肉外酥內軟",
-                    "price": "NT$60~120",
-                    "hours": "10:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/shulin-braised-pork/"
-                  },
-                  {
-                    "category": "日式料理",
-                    "name": "定食8 樹林店",
-                    "desc": "平價日式定食，炸豬排酥脆多汁，白飯味噌湯可續",
-                    "price": "NT$150~250",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/teishoku8-shulin/"
                   }
                 ]
               }
@@ -1808,6 +1813,24 @@
                 "title": "晚餐推薦（樹林/回板橋路上）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "一蘭拉麵 土城永寧店",
+                    "desc": "日本知名連鎖豚骨拉麵，秘製紅辣醬可自由調整，獨立隔間專注品嚐",
+                    "price": "NT$320~420",
+                    "hours": "10:00~23:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ichiran-tucheng/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "只是光在 義大利麵 土城店",
+                    "desc": "土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評",
+                    "price": "NT$220~360",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/justlight-pasta-tucheng/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "樹林保安街夜市",
                     "desc": "在地人的晚餐街，各式台灣小吃集中",
@@ -1815,24 +1838,6 @@
                     "hours": "17:00~23:00",
                     "reservation": null,
                     "blogUrl": "https://kenalice.tw/shulin-baoan-night/"
-                  },
-                  {
-                    "category": "火鍋",
-                    "name": "千葉火鍋 樹林店",
-                    "desc": "平價吃到飽火鍋，食材種類豐富",
-                    "price": "NT$350~500",
-                    "hours": "11:00~22:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/chiba-hotpot-shulin/"
-                  },
-                  {
-                    "category": "台式便當",
-                    "name": "樹林中正路排骨飯",
-                    "desc": "在地排骨飯老店，便宜大碗學生最愛",
-                    "price": "NT$70~100",
-                    "hours": "10:30~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://girlsplan.com/shulin-porkchop/"
                   }
                 ]
               }
@@ -1920,6 +1925,24 @@
                 "title": "午餐推薦（淡水老街）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋輝 淡水店",
+                    "desc": "淡水在地人推薦的日式拉麵店，雞豚混合湯底清甜，手工麵條彈牙",
+                    "price": "NT$200~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/menya-kei-tamsui/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "滬尾義式廚房",
+                    "desc": "淡水河畔的義式餐廳，手工義大利麵配淡水河景，海鮮義大利麵最受歡迎",
+                    "price": "NT$280~480",
+                    "hours": "11:30~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/huwei-italian-tamsui/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "文化阿給",
                     "desc": "淡水阿給創始店之一，冬粉塞入油豆腐再封魚漿",
@@ -1927,24 +1950,6 @@
                     "hours": "06:30~18:00",
                     "reservation": null,
                     "blogUrl": "https://kenalice.tw/wenhua-agei/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "老牌阿給",
-                    "desc": "真理街上50年老店，阿給搭配魚丸湯是經典組合",
-                    "price": "NT$35~60",
-                    "hours": "05:00~14:00",
-                    "reservation": null,
-                    "blogUrl": "https://bunnyann.tw/laopai-agei-tamsui/"
-                  },
-                  {
-                    "category": "海鮮",
-                    "name": "淡水渡船頭阿媽的酸梅湯",
-                    "desc": "淡水老街必喝，酸甜回甘搭配現炸花枝丸",
-                    "price": "NT$30~80",
-                    "hours": "10:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/tamsui-plum-drink/"
                   }
                 ]
               }
@@ -1977,6 +1982,15 @@
                 "title": "晚餐推薦（淡水/紅毛城周邊）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋輝 八里/淡水近郊店",
+                    "desc": "鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點",
+                    "price": "NT$200~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/menya-kei-bali/"
+                  },
+                  {
                     "category": "義式料理",
                     "name": "之間 茶食器",
                     "desc": "淡水河畔複合式餐廳，義式料理配淡水河景",
@@ -1993,15 +2007,6 @@
                     "hours": "11:00~21:00",
                     "reservation": null,
                     "blogUrl": "https://appletrees.tw/tamsui-seafood/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "淡水老街阿香蝦捲",
-                    "desc": "淡水老街名物，現炸蝦捲外酥內餡料豐富",
-                    "price": "NT$50~100",
-                    "hours": "10:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://www.mecocute.com/axiang-shrimp-roll/"
                   }
                 ]
               }
@@ -2049,13 +2054,13 @@
                 "title": "午餐推薦（漁人碼頭周邊）",
                 "restaurants": [
                   {
-                    "category": "海鮮",
-                    "name": "漁人碼頭海鮮餐廳",
-                    "desc": "碼頭旁現撈海鮮，清蒸鮮魚與炒蛤蜊鮮甜",
-                    "price": "NT$200~500",
+                    "category": "日式拉麵",
+                    "name": "麵屋輝 淡水店",
+                    "desc": "淡水在地人推薦的日式拉麵店，雞豚混合湯底清甜，手工麵條彈牙",
+                    "price": "NT$200~300",
                     "hours": "11:00~21:00",
                     "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/fishermans-wharf-seafood/"
+                    "blogUrl": "https://tisshuang.com/menya-kei-tamsui/"
                   },
                   {
                     "category": "義式料理",
@@ -2067,13 +2072,13 @@
                     "blogUrl": "https://kenalice.tw/ancheng-fishermans/"
                   },
                   {
-                    "category": "咖啡輕食",
-                    "name": "福容大飯店 漁人碼頭下午茶",
-                    "desc": "五星飯店下午茶，甜鹹點配無敵海景",
-                    "price": "NT$400~800",
-                    "hours": "14:00~17:00",
-                    "reservation": "建議電話預約",
-                    "blogUrl": "https://tisshuang.com/fullon-fishermans-tea/"
+                    "category": "海鮮",
+                    "name": "漁人碼頭海鮮餐廳",
+                    "desc": "碼頭旁現撈海鮮，清蒸鮮魚與炒蛤蜊鮮甜",
+                    "price": "NT$200~500",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/fishermans-wharf-seafood/"
                   }
                 ]
               }
@@ -2106,6 +2111,24 @@
                 "title": "晚餐推薦（淡水/回程）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋輝 八里/淡水近郊店",
+                    "desc": "鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點",
+                    "price": "NT$200~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/menya-kei-bali/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "八里水岸義式景觀餐廳",
+                    "desc": "八里左岸景觀義式餐廳，手工義大利麵配觀音山與淡水河視野，夕陽時分最美",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://appletrees.tw/bali-waterfront-italian/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "淡水老街許義魚酥",
                     "desc": "淡水百年魚酥店，現炸魚酥香脆，搭配阿給超滿足",
@@ -2113,24 +2136,6 @@
                     "hours": "09:00~20:00",
                     "reservation": null,
                     "blogUrl": "https://bunnyann.tw/xuyi-fish-crisp/"
-                  },
-                  {
-                    "category": "日式料理",
-                    "name": "淡水魚藏海鮮丼",
-                    "desc": "隱身巷弄的海鮮丼專賣，新鮮生魚片丼飯份量十足",
-                    "price": "NT$200~400",
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/tamsui-sashimi-don/"
-                  },
-                  {
-                    "category": "台式料理",
-                    "name": "紅樓中餐廳",
-                    "desc": "紅毛城旁百年洋樓，中西合併料理獨樹一格",
-                    "price": "NT$300~600",
-                    "hours": "11:00~21:00",
-                    "reservation": "建議訂位",
-                    "blogUrl": "https://www.mecocute.com/red-house-tamsui/"
                   }
                 ]
               }
@@ -2178,6 +2183,24 @@
                 "title": "午餐推薦（八里左岸）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋輝 淡水店",
+                    "desc": "淡水在地人推薦的日式拉麵店，雞豚混合湯底清甜，手工麵條彈牙",
+                    "price": "NT$200~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/menya-kei-tamsui/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "滬尾義式廚房",
+                    "desc": "淡水河畔的義式餐廳，手工義大利麵配淡水河景，海鮮義大利麵最受歡迎",
+                    "price": "NT$280~480",
+                    "hours": "11:30~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/huwei-italian-tamsui/"
+                  },
+                  {
                     "category": "台式小吃",
                     "name": "八里渡船頭雙胞胎",
                     "desc": "八里老街必吃炸物，雙胞胎甜甜圈外酥內軟",
@@ -2185,24 +2208,6 @@
                     "hours": "09:00~19:00",
                     "reservation": null,
                     "blogUrl": "https://kenalice.tw/bali-twin-donut/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "八里左岸姐妹花蝦捲",
-                    "desc": "八里左岸排隊小吃，現炸蝦捲鮮美可口",
-                    "price": "NT$50~100",
-                    "hours": "10:00~19:00",
-                    "reservation": null,
-                    "blogUrl": "https://bigmouthblog.tw/bali-sister-shrimp-roll/"
-                  },
-                  {
-                    "category": "咖啡輕食",
-                    "name": "BALI 左岸咖啡",
-                    "desc": "河岸景觀咖啡，配觀音山與淡水河美景",
-                    "price": "NT$150~300",
-                    "hours": "10:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://tisshuang.com/bali-left-bank-cafe/"
                   }
                 ]
               }
@@ -2235,6 +2240,24 @@
                 "title": "晚餐推薦（八里/回板橋路上）",
                 "restaurants": [
                   {
+                    "category": "日式拉麵",
+                    "name": "麵屋輝 八里/淡水近郊店",
+                    "desc": "鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點",
+                    "price": "NT$200~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/menya-kei-bali/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "八里水岸義式景觀餐廳",
+                    "desc": "八里左岸景觀義式餐廳，手工義大利麵配觀音山與淡水河視野，夕陽時分最美",
+                    "price": "NT$280~500",
+                    "hours": "11:00~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://appletrees.tw/bali-waterfront-italian/"
+                  },
+                  {
                     "category": "台式海鮮",
                     "name": "八里佘家孔雀蛤大王",
                     "desc": "八里名產孔雀蛤，九層塔大火快炒鮮甜入味",
@@ -2242,24 +2265,6 @@
                     "hours": "11:00~21:00",
                     "reservation": null,
                     "blogUrl": "https://bunnyann.tw/bali-mussel-king/"
-                  },
-                  {
-                    "category": "台式小吃",
-                    "name": "八里福州兩相好",
-                    "desc": "八里在地福州餅店，甜鹹兩相好外酥內軟",
-                    "price": "NT$15~30",
-                    "hours": "09:00~18:00",
-                    "reservation": null,
-                    "blogUrl": "https://appletrees.tw/bali-fuzhou-pastry/"
-                  },
-                  {
-                    "category": "台式料理",
-                    "name": "八里水岸四季景觀餐廳",
-                    "desc": "八里河畔景觀餐廳，合菜適合家庭聚餐",
-                    "price": "NT$300~600",
-                    "hours": "11:00~21:00",
-                    "reservation": "建議電話預約",
-                    "blogUrl": "https://www.mecocute.com/bali-riverside-restaurant/"
                   }
                 ]
               }
