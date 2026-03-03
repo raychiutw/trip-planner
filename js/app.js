@@ -321,8 +321,8 @@ function calcTripDrivingStats(days) {
 function renderTripDrivingStats(tripStats) {
     if (!tripStats) return '';
     var html = '<div class="driving-summary">';
-    html += '<div class="col-row" role="button" aria-expanded="false">' + iconSpan('bus') + ' 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + ' <span class="arrow">＋</span></div>';
-    html += '<div class="col-detail">';
+    html += '<div class="driving-summary-header">' + iconSpan('bus') + ' 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + '</div>';
+    html += '<div class="driving-summary-body">';
     // Type summary
     var typeOrder = ['car', 'train', 'walking'];
     typeOrder.forEach(function(emoji) {
@@ -334,10 +334,10 @@ function renderTripDrivingStats(tripStats) {
     tripStats.days.forEach(function(d) {
         var isWarning = d.stats.drivingMinutes > 120;
         html += '<div class="driving-summary-day' + (isWarning ? ' driving-stats-warning' : '') + '">';
-        html += '<div class="col-row" role="button" aria-expanded="false"><strong>' + escHtml(d.label) + '（' + escHtml(d.date) + '）</strong>：' + escHtml(formatMinutes(d.stats.totalMinutes));
+        html += '<div class="driving-summary-day-header"><strong>' + escHtml(d.label) + '（' + escHtml(d.date) + '）</strong>：' + escHtml(formatMinutes(d.stats.totalMinutes));
         if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
-        html += ' <span class="arrow">＋</span></div>';
-        html += '<div class="col-detail">';
+        html += '</div>';
+        html += '<div class="driving-summary-day-body">';
         typeOrder.forEach(function(emoji) {
             var group = d.stats.byType[emoji];
             if (!group) return;
@@ -940,10 +940,7 @@ function renderInfoPanel(data) {
     html += renderCountdown(data.autoScrollDates);
     html += renderTripStatsCard(data);
     html += renderSuggestionSummaryCard(data.suggestions);
-    // Only render sidebar panel if visible (≥1200px)
-    if (panel.offsetParent !== null || panel.offsetWidth !== 0) {
-        panel.innerHTML = html;
-    }
+    panel.innerHTML = html;
     // Also render to bottom sheet body if it exists
     var sheetBody = document.getElementById('bottomSheetBody');
     if (sheetBody) {
@@ -1089,7 +1086,7 @@ function toggleHw(el) {
     p.classList.toggle('hw-open');
     var isOpen = p.classList.contains('hw-open');
     var arrow = el.querySelector('.hw-summary-arrow');
-    if (arrow) arrow.textContent = isOpen ? '-' : '+';
+    if (arrow) arrow.textContent = isOpen ? '－' : '＋';
     if (isOpen) {
         var g = p.querySelector('.hw-grid');
         if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
@@ -1267,7 +1264,7 @@ function initWeather(weatherDays) {
         for(var h=0;h<24;h++){var t=Math.round(m.temps[h]),r=m.rains[h],ic=WMO[m.codes[h]]||'question';if(t<minT)minT=t;if(t>maxT)maxT=t;if(r<minR)minR=r;if(r>maxR)maxR=r;iconCount[ic]=(iconCount[ic]||0)+1;}
         var maxCnt=0;for(var k in iconCount)if(iconCount[k]>maxCnt){maxCnt=iconCount[k];bestIcon=k;}
         var locs=day.locations.map(function(l){return escHtml(l.name);}).filter(function(v,i,a){return a.indexOf(v)===i;}).join('→');
-        var html='<div class="hw-summary" data-action="toggle-hw">'+iconSpan(bestIcon)+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; '+iconSpan('raindrop')+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">+</span></div>';
+        var html='<div class="hw-summary" data-action="toggle-hw">'+iconSpan(bestIcon)+' '+minT+'~'+maxT+'°C &nbsp;・&nbsp; '+iconSpan('raindrop')+minR+'~'+maxR+'% &nbsp;・&nbsp; '+locs+'<span class="hw-summary-arrow">＋</span></div>';
         html+='<div class="hw-detail"><div class="hourly-weather-header"><span class="hourly-weather-title">'+iconSpan('timer')+' 7日內預報 — '+escHtml(day.label)+'</span><span class="hw-update-time">'+ch+':'+String(now.getMinutes()).padStart(2,'0')+'</span></div><div class="hw-grid">';
         for(var h=0;h<=23;h++){
             var li=getLocIdx(day,h),wIcon=WMO[m.codes[h]]||'question',temp=Math.round(m.temps[h]),rain=m.rains[h],isNow=(h===ch);

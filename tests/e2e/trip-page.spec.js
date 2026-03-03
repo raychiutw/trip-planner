@@ -613,15 +613,12 @@ test.describe('全旅程交通統計', () => {
     await expect(summary).toBeAttached();
   });
 
-  test('包含多種交通類型', async ({ page }) => {
+  test('包含多種交通類型（常駐展開，不需點擊）', async ({ page }) => {
     await page.goto('/');
     const summary = page.locator('.driving-summary');
-    // 展開全旅程統計
-    await summary.locator('.col-row').first().click();
-    const detail = summary.locator('.col-detail').first();
-    await expect(detail).toBeVisible();
-    // 應包含交通類型摘要
-    await expect(detail.locator('.transport-type-summary').first()).toBeAttached();
+    // 全旅程統計常駐展開，無需點擊
+    const typeSummary = summary.locator('.transport-type-summary').first();
+    await expect(typeSummary).toBeAttached();
   });
 });
 

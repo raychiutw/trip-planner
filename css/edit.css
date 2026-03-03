@@ -28,6 +28,7 @@
     .chat-messages-inner {
         max-width: 60vw;
         margin: 0 auto;
+        padding-top: 48px;
     }
 }
 
@@ -134,7 +135,7 @@
     }
 }
 .edit-input-card {
-    background: var(--card-bg);
+    background: #FFFFFF;
     border-radius: 16px;
     padding: 12px 12px 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.07);
@@ -199,7 +200,7 @@
 @media (min-width: 768px) { .chat-container .sticky-nav { display: none; } }
 
 /* ===== Dark Mode ===== */
-body.dark .edit-input-card { box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
+body.dark .edit-input-card { background: var(--card-bg); box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
 body.dark .edit-send-btn { background: #3D3A37; color: #9B9590; }
 body.dark .edit-status.success { color: #6EE7B7; }
 body.dark .edit-status.error { color: #FCA5A5; }
