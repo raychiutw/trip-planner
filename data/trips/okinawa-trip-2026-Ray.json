@@ -373,6 +373,7 @@
       "content": {
         "hotel": {
           "name": "Super Hotel 沖縄・名護",
+          "url": "https://blackcoffee00l.pixnet.net/blog/post/522773389",
           "details": [
             "名護市宮里（名護中心地段）",
             "万座深海の湯（天然温泉）",
@@ -625,7 +626,8 @@
                       "mapcode": "206 688 326*00"
                     },
                     "hours": "11:30~14:30, 18:00~22:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://hachiren.co.jp/en/"
                   },
                   {
                     "category": "燒肉",
@@ -672,6 +674,7 @@
       "content": {
         "hotel": {
           "name": "Super Hotel 沖縄・名護",
+          "url": "https://blackcoffee00l.pixnet.net/blog/post/522773389",
           "details": [
             "名護市宮里（名護中心地段）",
             "万座深海の湯（天然温泉）",
@@ -863,7 +866,8 @@
                       "mapcode": "206 313 260*00"
                     },
                     "hours": "午 11:30~15:00／夜 17:00~23:00（全年無休）",
-                    "reservation": "建議預約"
+                    "reservation": "建議預約",
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/640986/"
                   },
                   {
                     "category": "沖繩そば",
