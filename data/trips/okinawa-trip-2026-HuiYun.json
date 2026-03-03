@@ -269,7 +269,8 @@
               }
             ],
             "transit": {
-              "text": "飛行 約1小時20分"
+              "text": "飛行 約1小時20分",
+              "type": "flight"
             }
           },
           {
@@ -436,6 +437,36 @@
                     "reservation": "ホットペッパー預約",
                     "reservationUrl": "https://www.hotpepper.jp/strJ001257517/",
                     "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
+                  },
+                  {
+                    "category": "迴轉壽司",
+                    "name": "鮪魚問屋迴轉壽司",
+                    "desc": "廻転寿司まぐろ問屋やざえもん — 橫濱直送鮪魚，平板點餐新鮮有口碑",
+                    "price": "¥220~",
+                    "location": {
+                      "name": "サンエー浦添西海岸パルコシティ 3F",
+                      "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
+                      "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
+                      "mapcode": "33 394 819*12"
+                    },
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://pingu.blog/gourmet-kaitenzushi-tuna-donkey-yazaemon-parco-city/"
+                  },
+                  {
+                    "category": "漢堡排",
+                    "name": "極味屋",
+                    "desc": "極味や — 福岡發跡黑毛和牛漢堡排名店，自行在鐵板上煎至喜歡的熟度",
+                    "price": "¥990~",
+                    "location": {
+                      "name": "サンエー浦添西海岸パルコシティ 2F",
+                      "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
+                      "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
+                      "mapcode": "33 394 819*12"
+                    },
+                    "hours": "10:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://itsmypleasuretw.com/2025/08/07/san-a-parco-city/"
                   }
                 ]
               }
@@ -603,7 +634,57 @@
           {
             "time": "13:45-14:45",
             "title": "業務超市 宇流麻石川店",
-            "description": "業務スーパー うるま石川店 — 食材採買",
+            "description": "業務スーパー うるま石川店 — 食材採買（VILLA 自炊用）",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐替代方案（不自炊時）",
+                "restaurants": [
+                  {
+                    "category": "沖繩麵",
+                    "name": "花織そば",
+                    "desc": "はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "花織そば 読谷村",
+                      "googleQuery": "https://maps.google.com/?q=花織そば+読谷村",
+                      "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
+                    },
+                    "hours": "11:00~16:00（售完即止）",
+                    "reservation": null,
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
+                  },
+                  {
+                    "category": "沖繩定食",
+                    "name": "恩納そば",
+                    "desc": "おんなそば — 恩納村在地人氣食堂，手打沖繩麵與定食",
+                    "price": "¥600~",
+                    "location": {
+                      "name": "おんなそば 恩納村",
+                      "googleQuery": "https://maps.google.com/?q=おんなそば+恩納村",
+                      "appleQuery": "https://maps.apple.com/?q=おんなそば+恩納村"
+                    },
+                    "hours": "11:00~16:00（售完即止，週三公休）",
+                    "reservation": null,
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
+                  },
+                  {
+                    "category": "海景咖啡",
+                    "name": "Transit Cafe",
+                    "desc": "Transit Cafe — 北谷海景咖啡餐廳，漢堡排與義大利麵",
+                    "price": "¥1,200~",
+                    "location": {
+                      "name": "Transit Cafe 北谷",
+                      "googleQuery": "https://maps.google.com/?q=Transit+Cafe+北谷",
+                      "appleQuery": "https://maps.apple.com/?q=Transit+Cafe+北谷"
+                    },
+                    "hours": "10:30~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/top-5-recommended-restaurants-for-delicious-dishes-onna-village-okinawa"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "業務スーパー うるま石川店",
@@ -655,7 +736,57 @@
           {
             "time": "18:21",
             "title": "返回恩納村",
-            "description": "回程休息",
+            "description": "回程休息（VILLA 自炊或外食）",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐替代方案（不自炊時）",
+                "restaurants": [
+                  {
+                    "category": "沖繩創作料理",
+                    "name": "海の家",
+                    "desc": "リゾートダイニング 海の家 — 恩納村海景餐廳，沖繩料理與創作料理",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "海の家 恩納村",
+                      "googleQuery": "https://maps.google.com/?q=海の家+恩納村",
+                      "appleQuery": "https://maps.apple.com/?q=海の家+恩納村"
+                    },
+                    "hours": "17:00~23:00",
+                    "reservation": "建議預約",
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
+                  },
+                  {
+                    "category": "居酒屋",
+                    "name": "島唄居酒屋 喜瀬",
+                    "desc": "島唄ライブ居酒屋 — 邊聽沖繩三線島唄邊享用沖繩料理",
+                    "price": "¥2,500~",
+                    "location": {
+                      "name": "島唄居酒屋 恩納村",
+                      "googleQuery": "https://maps.google.com/?q=島唄+居酒屋+恩納村",
+                      "appleQuery": "https://maps.apple.com/?q=島唄+居酒屋+恩納村"
+                    },
+                    "hours": "17:30~23:00",
+                    "reservation": "建議預約",
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/top-5-recommended-restaurants-for-delicious-dishes-onna-village-okinawa"
+                  },
+                  {
+                    "category": "燒肉",
+                    "name": "琉球の牛 恩納店",
+                    "desc": "琉球の牛 — 沖繩縣產和牛燒肉，海景包廂",
+                    "price": "¥5,000~",
+                    "location": {
+                      "name": "琉球の牛 恩納店",
+                      "googleQuery": "https://maps.google.com/?q=琉球の牛+恩納店",
+                      "appleQuery": "https://maps.apple.com/?q=琉球の牛+恩納店"
+                    },
+                    "hours": "17:00~22:30",
+                    "reservation": "強烈建議預約",
+                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "HOPE VILLA Onnason",
@@ -728,6 +859,36 @@
                     "reservation": "TableCheck 預約",
                     "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
                     "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
+                  },
+                  {
+                    "category": "沖繩麵",
+                    "name": "岸本食堂",
+                    "desc": "きしもと食堂 — 明治38年創業百年老店，木灰水手打製麵，湯頭清澈鮮甜",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "きしもと食堂 本部町",
+                      "googleQuery": "https://maps.google.com/?q=きしもと食堂+本部町",
+                      "appleQuery": "https://maps.apple.com/?q=きしもと食堂+本部町",
+                      "mapcode": "206 857 712*11"
+                    },
+                    "hours": "11:00~17:00（週三公休，售完即止）",
+                    "reservation": null,
+                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45573206"
+                  },
+                  {
+                    "category": "窯烤披薩",
+                    "name": "花人逢",
+                    "desc": "花人逢 — 本部山丘上傳奇景觀餐廳，眺望東海享用薄脆披薩，起士濃郁入口即化",
+                    "price": "¥1,100~",
+                    "location": {
+                      "name": "花人逢 本部町",
+                      "googleQuery": "https://maps.google.com/?q=花人逢+本部町",
+                      "appleQuery": "https://maps.apple.com/?q=花人逢+本部町",
+                      "mapcode": "206 888 699*56"
+                    },
+                    "hours": "11:30~19:00（週二、三公休）",
+                    "reservation": null,
+                    "blogUrl": "https://akilife.tw/blog/post/okinawa-kajinhou/"
                   }
                 ]
               }
@@ -796,6 +957,35 @@
                     "hours": "11:00~18:00",
                     "reservation": null,
                     "blogUrl": "https://kafu.tw/kouri-shrimp/"
+                  },
+                  {
+                    "category": "海景創意料理",
+                    "name": "L LOTA 海景餐廳",
+                    "desc": "Restaurant L LOTA — 古宇利島高台 270 度海景，法式創意輕食與咖啡",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "Restaurant L LOTA 古宇利島",
+                      "googleQuery": "https://maps.google.com/?q=Restaurant+L+LOTA+古宇利島",
+                      "appleQuery": "https://maps.apple.com/?q=Restaurant+L+LOTA+古宇利島",
+                      "mapcode": "485 692 291*57"
+                    },
+                    "hours": "12:00~17:00（週四公休）",
+                    "reservation": null,
+                    "blogUrl": "https://kimiyo.tw/l-lota/"
+                  },
+                  {
+                    "category": "海鮮丼",
+                    "name": "白砂食堂",
+                    "desc": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化",
+                    "price": "¥3,500~",
+                    "location": {
+                      "name": "しらさ食堂 古宇利島",
+                      "googleQuery": "https://maps.google.com/?q=しらさ食堂+古宇利島",
+                      "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
+                    },
+                    "hours": "10:00~17:00（7~9月至 20:00）",
+                    "reservation": null,
+                    "blogUrl": "https://dorapig.com/shirasashokudou2025/"
                   }
                 ]
               }
@@ -846,6 +1036,34 @@
                     "hours": "10:00~24:00",
                     "reservation": null,
                     "blogUrl": "https://hanblog.tw/ramendanbo/"
+                  },
+                  {
+                    "category": "沖繩炭火燒肉",
+                    "name": "島豚七輪燒 滿味",
+                    "desc": "島豚七輪焼 満味 — 名護在地炭火燒肉，主打山原島豚（阿古豬血統），有中文菜單",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "島豚七輪焼 満味 名護",
+                      "googleQuery": "https://maps.google.com/?q=島豚七輪焼+満味+名護",
+                      "appleQuery": "https://maps.apple.com/?q=島豚七輪焼+満味+名護"
+                    },
+                    "hours": "17:00~23:00（週二、三公休）",
+                    "reservation": "建議預約",
+                    "blogUrl": "https://www.bigfang.tw/blog/post/mammi-nago-okinawa"
+                  },
+                  {
+                    "category": "沖繩牛排",
+                    "name": "牛排屋88 名護店",
+                    "desc": "ステーキハウス88 Jr. 名護店 — 沖繩牛排老字號，附湯、沙拉、白飯",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "ステーキハウス88 Jr. 名護",
+                      "googleQuery": "https://maps.google.com/?q=ステーキハウス88+名護",
+                      "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+名護"
+                    },
+                    "hours": "11:00~22:00（全年無休）",
+                    "reservation": null,
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/582485/"
                   }
                 ]
               }
@@ -981,7 +1199,38 @@
                     },
                     "hours": "17:30~24:00（週四公休）",
                     "reservation": "ホットペッパー預約",
-                    "reservationUrl": "https://www.hotpepper.jp/strJ004445055/"
+                    "reservationUrl": "https://www.hotpepper.jp/strJ004445055/",
+                    "blogUrl": "https://tabelog.com/en/okinawa/A4701/A470101/47029335/"
+                  },
+                  {
+                    "category": "燒肉",
+                    "name": "琉球の牛 那霸國際通店",
+                    "desc": "琉球の牛 — 沖繩縣產和牛燒肉名店，獨立包廂無煙烤爐，Google 4.7 分",
+                    "price": "¥6,000~",
+                    "location": {
+                      "name": "琉球の牛 那覇国際通り店",
+                      "googleQuery": "https://maps.google.com/?q=琉球の牛+那覇国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=琉球の牛+那覇国際通り店",
+                      "mapcode": "33 157 382*63"
+                    },
+                    "hours": "17:00~22:30",
+                    "reservation": "建議透過 TableCheck 預約",
+                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
+                  },
+                  {
+                    "category": "居酒屋",
+                    "name": "串角久茂地本店",
+                    "desc": "串角 — 沖繩本土居酒屋，60 種以上串燒，吃到飽喝到飽方案超值",
+                    "price": "¥3,410~",
+                    "location": {
+                      "name": "串角 久茂地本店",
+                      "googleQuery": "https://maps.google.com/?q=串角+久茂地本店+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=串角+久茂地本店+那覇",
+                      "mapcode": "33 157 206*87"
+                    },
+                    "hours": "17:00~凌晨 1:00",
+                    "reservation": "建議預約",
+                    "blogUrl": "https://ajunfun.tw/kushikado/"
                   }
                 ]
               }
@@ -1149,6 +1398,26 @@
                       "appleQuery": "https://maps.apple.com/?q=沖繩媳婦+那覇",
                       "mapcode": "33 186 300*66"
                     }
+                  },
+                  {
+                    "name": "御菓子御殿 國際通松尾店",
+                    "note": "紅芋塔（紅いもタルト）發源店，必買紅芋生塔、黑糖巧克力｜9:00~22:00",
+                    "location": {
+                      "name": "御菓子御殿 国際通り松尾店",
+                      "googleQuery": "https://maps.google.com/?q=御菓子御殿+国際通り松尾店",
+                      "appleQuery": "https://maps.apple.com/?q=御菓子御殿+国際通り松尾店",
+                      "mapcode": "33 157 353*63"
+                    }
+                  },
+                  {
+                    "name": "塩屋 國際通本店",
+                    "note": "沖繩鹽專門店，雪鹽冰淇淋必吃，可自選各種風味鹽伴手禮｜10:00~22:00",
+                    "location": {
+                      "name": "塩屋 国際通り本店",
+                      "googleQuery": "https://maps.google.com/?q=塩屋+国際通り本店",
+                      "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り本店",
+                      "mapcode": "33 157 352*24"
+                    }
                   }
                 ]
               }
@@ -1199,6 +1468,36 @@
                     "hours": "11:00~21:00（鬆餅 L.O. 19:40）",
                     "reservation": null,
                     "blogUrl": "https://kafu.tw/happy-pancake/"
+                  },
+                  {
+                    "category": "義大利料理",
+                    "name": "POSILLIPO 瀨長島店",
+                    "desc": "POSILLIPO cucina meridionale — 瀨長島 Tabelog 評分最高義式海景餐廳，柴燒披薩與義大利麵",
+                    "price": "¥1,600~",
+                    "location": {
+                      "name": "POSILLIPO 瀬長島",
+                      "googleQuery": "https://maps.google.com/?q=POSILLIPO+瀬長島",
+                      "appleQuery": "https://maps.apple.com/?q=POSILLIPO+瀬長島",
+                      "mapcode": "33 002 602*52"
+                    },
+                    "hours": "平日 11:30~15:30／17:30~22:00；週末 11:30~22:00",
+                    "reservation": "露台座位需電話預約",
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
+                  },
+                  {
+                    "category": "塔可飯",
+                    "name": "タコライスcafe きじむなぁ 瀨長島店",
+                    "desc": "きじむなぁ — 歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋",
+                    "price": "¥900~",
+                    "location": {
+                      "name": "タコライスcafe きじむなぁ 瀬長島",
+                      "googleQuery": "https://maps.google.com/?q=タコライスcafe+きじむなぁ+瀬長島",
+                      "appleQuery": "https://maps.apple.com/?q=タコライスcafe+きじむなぁ+瀬長島",
+                      "mapcode": "33 032 412*44"
+                    },
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
                   }
                 ]
               }
