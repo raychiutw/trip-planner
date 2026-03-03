@@ -187,7 +187,11 @@ body:not(.dark) .day-header {
 
 /* ===== Trip Driving Summary ===== */
 .driving-summary { margin: 8px 0; }
+.driving-summary-header { display: flex; align-items: center; gap: 8px; padding: 10px 8px 10px 0; font-weight: 600; }
+.driving-summary-body { padding: 4px 0 10px; font-size: var(--fs-md); line-height: 1.7; }
 .driving-summary-day { padding: 4px 0; font-size: var(--fs-md); border-radius: 8px; }
+.driving-summary-day-header { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-weight: 600; }
+.driving-summary-day-body { padding: 2px 0 6px; }
 
 /* ===== Trip Warnings ===== */
 .trip-warnings { background: #FFEBEE; padding: 10px 14px; margin: 8px 0; border-radius: 6px; font-size: var(--fs-md); color: #D32F2F; }
