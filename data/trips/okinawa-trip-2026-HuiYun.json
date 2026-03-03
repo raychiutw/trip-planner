@@ -259,7 +259,45 @@
             "那霸市壺川 3-3-19",
             "Day 1 Check in 22:29"
           ],
-          "subs": []
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
+              },
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用"
+            },
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "FamilyMart 那覇壺川店",
+                  "hours": "24小時",
+                  "mustBuy": ["沖繩限定飯糰", "Orion啤酒", "早餐麵包零食"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                },
+                {
+                  "category": "超市",
+                  "name": "タウンプラザかねひで 壺川店",
+                  "hours": "09:00~23:00",
+                  "mustBuy": ["沖繩縣產豬肉生鮮", "島豆腐", "沖繩泡盛"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "ドン・キホーテ 那覇国際通店",
+                  "hours": "24小時",
+                  "mustBuy": ["藥妝保養品", "日本限定零食", "雜貨生活用品"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -340,7 +378,45 @@
             "北谷町美浜",
             "Day 2 Check in 01:04（翌日深夜）"
           ],
-          "subs": []
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "Buzz Resort Chatan 駐車場",
+                "googleQuery": "https://maps.google.com/?q=Buzz+Resort+Chatan",
+                "appleQuery": "https://maps.apple.com/?q=Buzz+Resort+Chatan"
+              },
+              "note": "美浜美國村區域有免費停車場；BUZZ RESORT 請事先確認自用車停車方案"
+            },
+            {
+              "type": "shopping",
+              "title": "飯店附近購物（北谷・美浜）",
+              "shops": [
+                {
+                  "category": "超市",
+                  "name": "イオン北谷店",
+                  "hours": "07:00~00:00",
+                  "mustBuy": ["AEON自有品牌零食（90円均一）", "沖繩限定牛奶糖", "日本醬料/沙拉醬"],
+                  "blogUrl": "https://bobowin.blog/aeon-american/"
+                },
+                {
+                  "category": "超商",
+                  "name": "FamilyMart 北谷美浜店",
+                  "hours": "24小時",
+                  "mustBuy": ["沖繩限定飯糰", "早餐熱食", "Orion啤酒"],
+                  "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "MEGAドン・キホーテ 北谷店",
+                  "hours": "24小時",
+                  "mustBuy": ["藥妝保養品", "零食伴手禮", "日本限定商品"],
+                  "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -387,6 +463,35 @@
             "title": "天久琉貿樂市",
             "titleUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
             "description": "天久りうぼう — 超市採買",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "天久琉貿樂市 採買推薦",
+                "shops": [
+                  {
+                    "category": "超市",
+                    "name": "りうぼう FOOD MARKET（生鮮・熟食區）",
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["沖繩縣產水果（芒果/鳳梨）", "島豆腐、沖繩豆腐製品", "現烤麵包（marco polo）"],
+                    "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/"
+                  },
+                  {
+                    "category": "超市",
+                    "name": "りうぼう 零食・伴手禮區",
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["紅芋系列零食餅乾", "沖繩黑糖棒", "Orion啤酒6瓶裝"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/668971/"
+                  },
+                  {
+                    "category": "超市",
+                    "name": "DAISO 天久店（同商場內）",
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["旅行收納用品", "零食小物分裝袋", "日本百元雜貨"],
+                    "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "天久りうぼう楽市",
@@ -405,6 +510,35 @@
             "title": "San-A Naha Main Place",
             "titleUrl": "https://www.jathao.com/2015/10/main-placedfs-t-galleria-okinawa.html",
             "description": "サンエー那覇メインプレイス — 購物中心",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "San-A Naha Main Place 推薦店鋪",
+                "shops": [
+                  {
+                    "category": "藥妝",
+                    "name": "マツモトキヨシ（松本清）那覇メインプレイス店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["合力他命C發泡錠", "DHC護唇膏", "LuLuLun沖繩限定面膜"],
+                    "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/"
+                  },
+                  {
+                    "category": "購物中心",
+                    "name": "サンエー食品館（1F超市）",
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["沖繩縣産アグー豚熟食", "沖繩限定Calbee薯條", "島野菜、地元鮮魚"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/751316/"
+                  },
+                  {
+                    "category": "購物中心",
+                    "name": "ユニクロ（UNIQLO）那覇メインプレイス店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["AIRism涼感衣物（沖繩夏天必備）", "UV防曬涼感帽", "輕薄外套（室內冷氣強）"],
+                    "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "サンエー那覇メインプレイス",
@@ -481,6 +615,35 @@
             "title": "PARCO CITY 購物",
             "titleUrl": "https://ajunfun.tw/parco-city/",
             "description": "グラニフ 沖縄 PARCO CITY 等店家逛街購物",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "PARCO CITY 推薦店鋪",
+                "shops": [
+                  {
+                    "category": "購物中心",
+                    "name": "graniph 沖縄 PARCO CITY店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["日本設計師聯名T恤", "沖繩限定圖案服飾", "帆布手提袋"],
+                    "blogUrl": "https://ajunfun.tw/parco-city/"
+                  },
+                  {
+                    "category": "藥妝",
+                    "name": "松本清 PARCO CITY店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["合力他命C發泡錠", "防曬乳SPF50（沖繩夏天必備）", "LuLuLun沖繩限定面膜"],
+                    "blogUrl": "https://ajunfun.tw/parco-city/"
+                  },
+                  {
+                    "category": "購物中心",
+                    "name": "無印良品 PARCO CITY店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["旅行用分裝瓶組", "香薰精油系列", "輕薄涼感寢具"],
+                    "blogUrl": "https://www.bubu-jp.com/archives/45770"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "サンエー浦添西海岸パルコシティ",
@@ -517,6 +680,35 @@
             "title": "美國村",
             "titleUrl": "https://bobbyfun.tw/2024-01-08-2709/",
             "description": "アメリカンビレッジ — 異國風情商圈、逛街購物、夜景",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "美國村 推薦店鋪",
+                "shops": [
+                  {
+                    "category": "唐吉軻德",
+                    "name": "MEGAドン・キホーテ 北谷店",
+                    "hours": "24小時",
+                    "mustBuy": ["藥妝保養品免稅採購", "日本限定零食糖果", "美國村周邊雜貨"],
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                  },
+                  {
+                    "category": "購物中心",
+                    "name": "Carnival Park Mihama（摩天輪商場）",
+                    "hours": "10:00~22:00",
+                    "mustBuy": ["沖繩雜貨伴手禮", "特色美式服飾", "沖繩限定周邊商品"],
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                  },
+                  {
+                    "category": "超市",
+                    "name": "イオン北谷店（美國村旁）",
+                    "hours": "07:00~00:00",
+                    "mustBuy": ["AEON自有品牌零食（90円均一）", "日本醬料/燒肉醬", "沖繩縣産飲料"],
+                    "blogUrl": "https://bobowin.blog/aeon-american/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "美浜アメリカンビレッジ",
@@ -575,7 +767,45 @@
             "恩納村",
             "Day 3 Check in 15:14"
           ],
-          "subs": []
+          "subs": [
+            {
+              "type": "parking",
+              "title": "Villa 停車場",
+              "location": {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
+              },
+              "note": "HOPE VILLA 提供免費私人停車場（場地內停車）"
+            },
+            {
+              "type": "shopping",
+              "title": "恩納村附近購物",
+              "shops": [
+                {
+                  "category": "超市",
+                  "name": "サンエー 石川ショッピングセンター",
+                  "hours": "09:00~22:00",
+                  "mustBuy": ["新鮮海鮮熟食", "沖繩縣產蔬果", "恩納限定甜點"],
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                },
+                {
+                  "category": "超商",
+                  "name": "ローソン 恩納村店",
+                  "hours": "24小時",
+                  "mustBuy": ["熱食關東煮", "Orion啤酒", "恩納村在地牛奶布丁"],
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                },
+                {
+                  "category": "超市",
+                  "name": "業務スーパー うるま石川店",
+                  "hours": "09:00~21:00",
+                  "mustBuy": ["自炊食材（肉品、調味料）", "業務用大份量零食", "飲料汽水"],
+                  "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4"
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -814,7 +1044,45 @@
             "恩納村",
             "Day 3~4 連住"
           ],
-          "subs": []
+          "subs": [
+            {
+              "type": "parking",
+              "title": "Villa 停車場",
+              "location": {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
+              },
+              "note": "HOPE VILLA 提供免費私人停車場（場地內停車）"
+            },
+            {
+              "type": "shopping",
+              "title": "恩納村附近購物",
+              "shops": [
+                {
+                  "category": "超市",
+                  "name": "サンエー 石川ショッピングセンター",
+                  "hours": "09:00~22:00",
+                  "mustBuy": ["新鮮海鮮熟食", "沖繩縣產蔬果", "恩納限定甜點"],
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                },
+                {
+                  "category": "超商",
+                  "name": "ローソン 恩納村店",
+                  "hours": "24小時",
+                  "mustBuy": ["熱食關東煮", "Orion啤酒", "恩納村在地牛奶布丁"],
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                },
+                {
+                  "category": "超市",
+                  "name": "業務スーパー うるま石川店",
+                  "hours": "09:00~21:00",
+                  "mustBuy": ["自炊食材（肉品、調味料）", "業務用大份量零食", "飲料汽水"],
+                  "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4"
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -826,6 +1094,21 @@
             "title": "名護鳳梨園",
             "titleUrl": "https://bobbyfun.tw/2024-01-11-2732/",
             "description": "ナゴパイナップルパーク — 鳳梨主題園區、試吃區（約2小時）",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "名護鳳梨園 園內購物",
+                "shops": [
+                  {
+                    "category": "伴手禮",
+                    "name": "名護鳳梨園 Gift Shop",
+                    "hours": "09:00~18:00",
+                    "mustBuy": ["鳳梨酒（パイン酒）", "鳳梨果凍/果醬禮盒", "鳳梨夾心餅乾"],
+                    "blogUrl": "https://bobbyfun.tw/2024-01-11-2732/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "ナゴパイナップルパーク",
@@ -1102,7 +1385,45 @@
             "那霸市壺川 3-3-19",
             "Day 5 Check in 20:22"
           ],
-          "subs": []
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
+              },
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用"
+            },
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "FamilyMart 那覇壺川店",
+                  "hours": "24小時",
+                  "mustBuy": ["沖繩限定飯糰", "Orion啤酒", "早餐麵包零食"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                },
+                {
+                  "category": "超市",
+                  "name": "タウンプラザかねひで 壺川店",
+                  "hours": "09:00~23:00",
+                  "mustBuy": ["沖繩縣產豬肉生鮮", "島豆腐", "沖繩泡盛"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "ドン・キホーテ 那覇国際通店",
+                  "hours": "24小時",
+                  "mustBuy": ["藥妝保養品", "日本限定零食", "雜貨生活用品"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -1131,6 +1452,35 @@
             "title": "永旺夢樂城沖繩來客夢",
             "titleUrl": "https://tisshuang.com/blog/post/aeon-mall",
             "description": "イオンモール沖縄ライカム — 大型購物中心（約3小時）",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "來客夢 推薦店鋪",
+                "shops": [
+                  {
+                    "category": "購物中心",
+                    "name": "ポケモンセンターオキナワ（寶可夢中心）",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["沖繩限定皮卡丘公仔", "沖繩限定寶可夢文具", "寶可夢沖繩版T恤"],
+                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+                  },
+                  {
+                    "category": "超市",
+                    "name": "イオンスタイル ライカム（1F超市）",
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["沖繩縣産フルーツ（芒果、鳳梨）", "阿古豬品牌肉品", "沖繩限定零食伴手禮"],
+                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+                  },
+                  {
+                    "category": "藥妝",
+                    "name": "ウエルシア薬局 ライカム店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": ["日本藥妝採購（合力他命、眼藥水）", "防曬品SPF50+", "面膜、保養品"],
+                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "イオンモール沖縄ライカム",
@@ -1166,6 +1516,35 @@
             "title": "國際通商店街",
             "titleUrl": "https://bluehero.pixnet.net/blog/post/41779315",
             "description": "那覇国際通り — 逛街購物（約2.5小時）",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "國際通 伴手禮&購物推薦",
+                "shops": [
+                  {
+                    "category": "伴手禮",
+                    "name": "御菓子御殿 國際通松尾店",
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["紅芋生塔（現烤）", "紅芋塔禮盒（10/16入）", "黑糖巧克力"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  },
+                  {
+                    "category": "伴手禮",
+                    "name": "塩屋 國際通本店",
+                    "hours": "10:00~22:00",
+                    "mustBuy": ["雪鹽冰淇淋（現場限定）", "宮古島雪鹽棉花餅", "各式風味鹽禮盒"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  },
+                  {
+                    "category": "唐吉軻德",
+                    "name": "ドン・キホーテ 那覇国際通店",
+                    "hours": "24小時",
+                    "mustBuy": ["藥妝保養品免稅採購", "沖繩限定零食糖果", "Orion啤酒禮盒裝"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "国際通り 那覇",
@@ -1285,7 +1664,45 @@
             "那霸市壺川 3-3-19",
             "Day 5~6 連住"
           ],
-          "subs": []
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
+              },
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用"
+            },
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "FamilyMart 那覇壺川店",
+                  "hours": "24小時",
+                  "mustBuy": ["沖繩限定飯糰", "Orion啤酒", "早餐麵包零食"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                },
+                {
+                  "category": "超市",
+                  "name": "タウンプラザかねひで 壺川店",
+                  "hours": "09:00~23:00",
+                  "mustBuy": ["沖繩縣產豬肉生鮮", "島豆腐", "沖繩泡盛"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "ドン・キホーテ 那覇国際通店",
+                  "hours": "24小時",
+                  "mustBuy": ["藥妝保養品", "日本限定零食", "雜貨生活用品"],
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -1314,6 +1731,35 @@
             "title": "第一牧志公設市場",
             "titleUrl": "https://bobbyfun.tw/2024-01-07-2705/",
             "description": "鮮魚、海產、沖繩特產，2樓可代煮（約1.5小時）",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "牧志市場周邊購物推薦",
+                "shops": [
+                  {
+                    "category": "伴手禮",
+                    "name": "市場本通り 沖繩特産品店",
+                    "hours": "09:00~20:00（依店家）",
+                    "mustBuy": ["沖繩海鹽伴手禮", "沖繩泡盛（迷你瓶）", "沖繩傳統工藝品"],
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
+                  },
+                  {
+                    "category": "超市",
+                    "name": "マキシ食料品店（牧志市場内）",
+                    "hours": "08:00~21:00",
+                    "mustBuy": ["新鮮海鮮（代煮食材）", "沖繩縣産島野菜", "冷凍烤豬肉（ラフテー）"],
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
+                  },
+                  {
+                    "category": "超商",
+                    "name": "ローソン 牧志公設市場前店",
+                    "hours": "24小時",
+                    "mustBuy": ["沖繩限定甜點", "飲料補給", "行動電源充電"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "第一牧志公設市場",
@@ -1349,6 +1795,21 @@
             "title": "玉泉洞",
             "titleUrl": "https://bobowin.blog/okinawa-world/",
             "description": "沖繩世界內的鐘乳石洞穴，壯觀地質景觀",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "沖繩世界 園內購物",
+                "shops": [
+                  {
+                    "category": "伴手禮",
+                    "name": "おきなわワールド 伴手禮館",
+                    "hours": "09:00~18:00",
+                    "mustBuy": ["琉球玻璃製品（手工）", "泡盛試飲&購買", "沖繩傳統織品（紅型布）"],
+                    "blogUrl": "https://bobowin.blog/okinawa-world/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "おきなわワールド",
@@ -1386,38 +1847,29 @@
             "titleUrl": "https://spirit0926.pixnet.net/blog/post/51163360",
             "infoBoxes": [
               {
-                "type": "souvenir",
-                "title": "伴手禮推薦",
-                "items": [
+                "type": "shopping",
+                "title": "伴手禮購物推薦",
+                "shops": [
                   {
+                    "category": "伴手禮",
                     "name": "沖繩媳婦 OKINAWA SHIN BOO",
-                    "note": "台灣人經營的沖繩伴手禮專賣店｜不定休，營業日公告於IG/FB",
-                    "location": {
-                      "name": "沖繩媳婦 那覇",
-                      "googleQuery": "https://maps.google.com/?q=沖繩媳婦+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=沖繩媳婦+那覇",
-                      "mapcode": "33 186 300*66"
-                    }
+                    "hours": "不定休，營業日公告於IG/FB",
+                    "mustBuy": ["沖繩限定零食禮盒", "宮古島雪鹽系列", "沖繩三線周邊商品"],
+                    "blogUrl": "https://spirit0926.pixnet.net/blog/post/51163360"
                   },
                   {
+                    "category": "伴手禮",
                     "name": "御菓子御殿 國際通松尾店",
-                    "note": "紅芋塔（紅いもタルト）發源店，必買紅芋生塔、黑糖巧克力｜9:00~22:00",
-                    "location": {
-                      "name": "御菓子御殿 国際通り松尾店",
-                      "googleQuery": "https://maps.google.com/?q=御菓子御殿+国際通り松尾店",
-                      "appleQuery": "https://maps.apple.com/?q=御菓子御殿+国際通り松尾店",
-                      "mapcode": "33 157 353*63"
-                    }
+                    "hours": "09:00~22:00",
+                    "mustBuy": ["紅芋生塔（工廠現烤）", "黑糖巧克力塔", "紅芋塔禮盒（10入）"],
+                    "blogUrl": "https://www.kkday.com/zh-tw/blog/3545/asia-japan-okinawa-must-buy"
                   },
                   {
+                    "category": "伴手禮",
                     "name": "塩屋 國際通本店",
-                    "note": "沖繩鹽專門店，雪鹽冰淇淋必吃，可自選各種風味鹽伴手禮｜10:00~22:00",
-                    "location": {
-                      "name": "塩屋 国際通り本店",
-                      "googleQuery": "https://maps.google.com/?q=塩屋+国際通り本店",
-                      "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り本店",
-                      "mapcode": "33 157 352*24"
-                    }
+                    "hours": "10:00~22:00",
+                    "mustBuy": ["雪鹽冰淇淋（現場限定）", "宮古島雪鹽棉花餅", "各式風味鹽禮盒"],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
                   }
                 ]
               }
@@ -1511,6 +1963,35 @@
             "title": "沖繩 ASHIBINAA Outlet",
             "titleUrl": "https://jujucute88.pixnet.net/blog/post/234415008",
             "description": "沖縄アウトレットモール あしびなー — 品牌折扣購物（約2小時）",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "ASHIBINAA Outlet 推薦品牌",
+                "shops": [
+                  {
+                    "category": "Outlet",
+                    "name": "COACH Outlet あしびなー店",
+                    "hours": "10:00~20:00",
+                    "mustBuy": ["Coach手提包（約3折入手）", "皮革錢包/卡夾", "Coach托特袋"],
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2700/"
+                  },
+                  {
+                    "category": "Outlet",
+                    "name": "ABC-Mart あしびなー店",
+                    "hours": "10:00~20:00",
+                    "mustBuy": ["Nike/Adidas限定款球鞋", "New Balance日版限定", "VANS帆布鞋"],
+                    "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/"
+                  },
+                  {
+                    "category": "Outlet",
+                    "name": "Le Creuset Outlet あしびなー",
+                    "hours": "10:00~20:00",
+                    "mustBuy": ["日本傳統花紋鑄鐵鍋", "琺瑯深鍋/炒鍋折扣款", "日本限定配色餐具"],
+                    "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/"
+                  }
+                ]
+              }
+            ],
             "locations": [
               {
                 "name": "沖縄アウトレットモールあしびなー",
