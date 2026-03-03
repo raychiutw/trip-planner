@@ -9,11 +9,15 @@
     --bg: #FAF9F5;
     --card-bg: #F5F0E8;
     --bubble-bg: #F0EDE8;
+    --hover-bg: #EDE8E0;
     --gray: #6B6B6B;
-    --gray-light: #FAF9F5;
+    --gray-light: #EDEBE8;
     --text: #1A1A1A;
     --text-muted: #6B6B6B;
     --border: #E5E0DA;
+    --error: #D32F2F;
+    --error-bg: #FFEBEE;
+    --success: #10B981;
     --fs-display: 2.5rem;
     --fs-lg: 1.25rem;
     --fs-md: 1.125rem;
@@ -42,8 +46,8 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--white); font-s
 .trip-btn .trip-sub { font-size: var(--fs-sm); color: var(--gray); margin-top: 2px; display: block; }
 
 /* ===== Dark Mode (shared base) ===== */
-body.dark { --accent: #D4845E; --blue: var(--accent); --blue-light: #302A25; --sand: #D4A070; --sand-light: #302A22; --white: #292624; --bg: #1A1A1A; --card-bg: #2B2B2B; --bubble-bg: #3D3A35; --gray: #9B9590; --gray-light: #343130; --text: #E8E8E8; --text-muted: #9B9B9B; --border: #3A3A3A; background: var(--bg); }
-body.dark .trip-btn { background: #3D3A37; }
+body.dark { --accent: #D4845E; --blue: var(--accent); --blue-light: #302A25; --sand: #D4A070; --sand-light: #302A22; --white: #292624; --bg: #1A1A1A; --card-bg: #2B2B2B; --bubble-bg: #3D3A35; --gray: #9B9590; --gray-light: #343130; --text: #E8E8E8; --text-muted: #9B9B9B; --border: #3A3A3A; --hover-bg: #3D3A37; --error: #FCA5A5; --error-bg: rgba(220, 38, 38, 0.12); --success: #6EE7B7; background: var(--bg); }
+body.dark .trip-btn { background: var(--hover-bg); }
 body.dark .trip-btn:hover { opacity: 0.85; }
 body.dark .trip-btn.active { border-color: var(--accent); }
 

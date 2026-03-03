@@ -56,7 +56,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    border: 1px solid rgba(0,0,0,0.08);
+    border: 1px solid var(--border);
 }
 .cmp-top { flex: 1; }
 .cmp-bottom {

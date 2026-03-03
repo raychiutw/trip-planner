@@ -49,26 +49,37 @@
         return greet + '，' + escHtml(owner) + '！';
     }
 
+    /* ===== Build Issue Item HTML ===== */
+    function buildIssueItemHtml(issue) {
+        var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        var dotClass = issue.state === 'open' ? 'open' : 'closed';
+        var stateText = issue.state === 'open' ? 'open' : 'closed';
+        var html = '<div class="issue-item">';
+        html += '<div class="issue-item-header">';
+        html += '<span class="status-dot ' + dotClass + '"></span>';
+        html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
+        html += '</div>';
+        html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + ' · ' + stateText + '</div>';
+        html += '</div>';
+        return html;
+    }
+
     /* ===== Render Issues ===== */
     function renderIssues(issues) {
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
+        var inner = document.querySelector('.chat-messages-inner');
         if (!issues || !issues.length) {
             issueList.innerHTML = '<div class="edit-issues-empty">尚無修改紀錄</div>';
+            if (inner) inner.classList.add('chat-messages-inner--centered');
             return;
         }
-        var html = '';
+        if (inner) inner.classList.remove('chat-messages-inner--centered');
+        var html = '<div class="issue-list">';
         issues.forEach(function(issue) {
-            var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-            var dotClass = issue.state === 'open' ? 'open' : 'closed';
-            html += '<div class="message-user">';
-            html += '<div class="message-user-header">';
-            html += '<span class="status-dot ' + dotClass + '"></span>';
-            html += '<a class="message-user-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
-            html += '</div>';
-            html += '<div class="message-user-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
-            html += '</div>';
+            html += buildIssueItemHtml(issue);
         });
+        html += '</div>';
         issueList.innerHTML = html;
     }
 
@@ -115,7 +126,7 @@
         // 底部輸入列（flex child，不 fixed）
         html += '<div class="edit-input-bar">';
         html += '<div class="edit-input-card">';
-        html += '<textarea class="edit-textarea" id="editText" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="3"></textarea>';
+        html += '<textarea class="edit-textarea" id="editText" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="1"></textarea>';
         html += '<div class="edit-input-toolbar">';
         html += '<button class="edit-send-btn" id="submitBtn" disabled aria-label="送出">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M11 5.83L6.41 10.41 5 9l7-7 7 7-1.41 1.41L13 5.83V20h-2V5.83z"/></svg>';
@@ -131,14 +142,36 @@
         // textarea 監聽
         var textarea = document.getElementById('editText');
         var sendBtn = document.getElementById('submitBtn');
+
+        function autoResize() {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
         textarea.addEventListener('input', function() {
             var hasText = textarea.value.trim().length > 0;
             sendBtn.disabled = !hasText;
+            autoResize();
+        });
+
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                if (textarea.value.trim().length > 0) {
+                    e.preventDefault();
+                    submitRequest();
+                }
+            }
         });
 
         sendBtn.addEventListener('click', function() {
             submitRequest();
         });
+
+        // 標題列
+        var navTitle = document.getElementById('navTitle');
+        if (navTitle) {
+            navTitle.textContent = '編輯行程 · ' + config.tripName;
+        }
 
         // 載入 issues
         loadIssues();
@@ -180,9 +213,23 @@
         })
         .then(function(issue) {
             status.innerHTML = '<div class="edit-status success">' + iconSpan('check-circle') + ' 已送出！Issue <a href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">#' + issue.number + '</a></div>';
-            document.getElementById('editText').value = '';
+            var textarea = document.getElementById('editText');
+            textarea.value = '';
+            textarea.style.height = 'auto';
             btn.disabled = true;
-            // 重新載入 issues
+            // 樂觀插入新 issue 到列表頂部
+            var editIssues = document.getElementById('editIssues');
+            if (editIssues) {
+                var listEl = editIssues.querySelector('.issue-list');
+                if (!listEl) {
+                    editIssues.innerHTML = '<div class="issue-list">' + buildIssueItemHtml(issue) + '</div>';
+                } else {
+                    listEl.insertAdjacentHTML('afterbegin', buildIssueItemHtml(issue));
+                }
+                var inner = document.querySelector('.chat-messages-inner');
+                if (inner) inner.classList.remove('chat-messages-inner--centered');
+            }
+            // 重新載入 issues（完整資料覆蓋）
             loadIssues();
         })
         .catch(function(err) {
