@@ -135,6 +135,7 @@
       "content": {
         "hotel": {
           "name": "Living Inn 旭橋駅前",
+          "url": "https://www.imbecky.com.tw/living-inn-asahibashiekimae-premier/",
           "details": [
             "那霸市東町11-17",
             "旭橋站步行5分鐘",
@@ -196,6 +197,8 @@
           {
             "time": "19:30",
             "title": "那霸國際通晚餐",
+            "titleUrl": "https://naha-kokusaidori.okinawa/",
+            "blogUrl": "https://www.wendyjourney.com/kokusai-dori/",
             "description": "抵達第一晚，前往國際通附近覓食，感受沖繩夜晚氛圍",
             "locations": [
               {
@@ -220,10 +223,11 @@
                       "appleQuery": "https://maps.apple.com/?q=琉球料理+ぬちがふぅ+那覇"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/"
                   },
                   {
-                    "category": "拉麵",
+                    "category": "牛排",
                     "name": "やっぱりステーキ 国際通り店",
                     "desc": "CP值超高！¥1,000起的溶岩石板牛排",
                     "price": "¥1,000~",
@@ -233,7 +237,22 @@
                       "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店"
                     },
                     "hours": "11:00~翌1:30",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
+                  },
+                  {
+                    "category": "拉麵",
+                    "name": "ラーメン暖暮 那覇牧志店",
+                    "desc": "九州豚骨拉麵名店，台灣旅客最愛的沖繩拉麵首選",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "ラーメン暖暮 那覇牧志店",
+                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+那覇牧志店",
+                      "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+那覇牧志店"
+                    },
+                    "hours": "10:00~翌2:00",
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
               }
@@ -249,6 +268,7 @@
       "content": {
         "hotel": {
           "name": "Living Inn 旭橋駅前",
+          "url": "https://www.imbecky.com.tw/living-inn-asahibashiekimae-premier/",
           "details": [
             "那霸市東町11-17",
             "旭橋站步行5分鐘"
@@ -318,7 +338,8 @@
                       "appleQuery": "https://maps.apple.com/?q=焼肉きんぐ+那覇おもろまち店"
                     },
                     "hours": "平日17:00~24:00／假日11:00~24:00",
-                    "reservation": "EPARK 預約"
+                    "reservation": "EPARK 預約",
+                    "blogUrl": "https://purpleswallow.pixnet.net/blog/post/45092685"
                   },
                   {
                     "category": "沖繩麵",
@@ -331,7 +352,22 @@
                       "appleQuery": "https://maps.apple.com/?q=琉球新麺通堂+那覇店"
                     },
                     "hours": "11:00~24:00",
-                    "reservation": null
+                    "reservation": null,
+                    "blogUrl": "https://jenniferhu1104.pixnet.net/blog/post/223210891"
+                  },
+                  {
+                    "category": "琉球料理 居酒屋",
+                    "name": "古酒と琉球料理 うりずん",
+                    "desc": "1972年創業傳奇老舖，名物「どぅる天」山芋豆腐天婦羅發祥地",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "古酒と琉球料理 うりずん 安里",
+                      "googleQuery": "https://maps.google.com/?q=古酒と琉球料理+うりずん+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=古酒と琉球料理+うりずん+那覇"
+                    },
+                    "hours": "17:30~24:00",
+                    "reservation": "建議預約（電話 098-885-2178）",
+                    "blogUrl": "https://matcha-jp.com/tw/11883"
                   }
                 ]
               }
@@ -347,6 +383,7 @@
       "content": {
         "hotel": {
           "name": "Living Inn 旭橋駅前",
+          "url": "https://www.imbecky.com.tw/living-inn-asahibashiekimae-premier/",
           "details": [
             "那霸市東町11-17",
             "旭橋站步行5分鐘"
@@ -356,6 +393,8 @@
           {
             "time": "上午",
             "title": "自由活動（12:30 集合前）",
+            "titleUrl": "https://www.makishi-public-market.jp/",
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
             "description": "上午時段自由活動，可前往國際通、第一牧志公設市場或旭橋附近咖啡廳休閒。詳見 suggestions 建議。",
             "locations": [
               {
@@ -408,6 +447,61 @@
                 ]
               }
             ]
+          },
+          {
+            "time": "21:30",
+            "title": "返回那霸，晚餐",
+            "description": "一日遊結束返回那霸市區，選擇深夜營業的餐廳用餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（深夜營業）",
+                "restaurants": [
+                  {
+                    "category": "沖縄料理 居酒屋",
+                    "name": "沖縄料理 ちぬまん 国際通り牧志店",
+                    "desc": "國際通人氣居酒屋，每晚三味線島唄現場表演",
+                    "price": "¥2,500~",
+                    "location": {
+                      "name": "ちぬまん 国際通り牧志店",
+                      "googleQuery": "https://maps.google.com/?q=ちぬまん+国際通り+牧志+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=ちぬまん+国際通り+牧志+那覇"
+                    },
+                    "hours": "17:00~24:00",
+                    "reservation": "可預約（電話 098-941-0998）",
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23951/"
+                  },
+                  {
+                    "category": "拉麵",
+                    "name": "ラーメン暖暮 那覇牧志店",
+                    "desc": "九州豚骨拉麵名店，深夜2點仍營業",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "ラーメン暖暮 那覇牧志店",
+                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+那覇牧志店",
+                      "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+那覇牧志店"
+                    },
+                    "hours": "10:00~翌2:00",
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
+                  },
+                  {
+                    "category": "沖縄そば",
+                    "name": "すばやー 松山店",
+                    "desc": "深夜21時才開門的老字號沖縄麵，飲酒後收尾首選",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "すばやー 松山店 那覇",
+                      "googleQuery": "https://maps.google.com/?q=すばやー+松山店+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=すばやー+松山店+那覇"
+                    },
+                    "hours": "21:00~翌5:00",
+                    "reservation": null,
+                    "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-naha-midnight-ramen/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -419,6 +513,7 @@
       "content": {
         "hotel": {
           "name": "THE NEST NAHA",
+          "url": "https://panpanlife.com/thenestnaha/",
           "details": [
             "那霸市西1丁目6-1",
             "14F 溫水游泳池（9:00~22:00）",
@@ -479,6 +574,8 @@
           {
             "time": "11:30~18:30",
             "title": "AEON Mall 來客夢購物",
+            "titleUrl": "https://tw.aeonmall.global/mall/okinawarycom-aeonmall/",
+            "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/",
             "description": "沖繩最大購物中心！日本最大級 AEON Mall，各大品牌、美食街、超市、藥妝一次滿足",
             "locations": [
               {
@@ -496,6 +593,94 @@
                   "營業時間：10:00~22:00（餐廳至23:00）",
                   "規模：日本最大 AEON Mall",
                   "亮點：Zara、H&M、無印良品、大型超市、藥妝、美食街"
+                ]
+              },
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "category": "塔可飯",
+                    "name": "タコライスcafe きじむなぁ ライカム店",
+                    "desc": "沖繩人氣塔可飯專賣，招牌蛋包塔可飯「オムタコ」",
+                    "price": "¥780~",
+                    "location": {
+                      "name": "タコライスcafe きじむなぁ ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=タコライスカフェきじむなぁ+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=タコライスカフェきじむなぁ+イオンモール沖縄ライカム"
+                    },
+                    "hours": "10:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://ajunfun.tw/aeonmall/"
+                  },
+                  {
+                    "category": "味噌拉麵",
+                    "name": "麺場 田所商店 ライカム店",
+                    "desc": "全國知名味噌拉麵專門店，三種味噌湯底可選",
+                    "price": "¥900~",
+                    "location": {
+                      "name": "麺場 田所商店 ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=麺場田所商店+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=麺場田所商店+イオンモール沖縄ライカム"
+                    },
+                    "hours": "10:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://ajunfun.tw/aeonmall/"
+                  },
+                  {
+                    "category": "迴轉壽司",
+                    "name": "くら寿司 ライカム店",
+                    "desc": "日本全國連鎖迴轉壽司，附抽獎互動遊戲，價格親民",
+                    "price": "¥1,500~",
+                    "location": {
+                      "name": "くら寿司 ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=くら寿司+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=くら寿司+イオンモール沖縄ライカム"
+                    },
+                    "hours": "10:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://ajunfun.tw/aeonmall/"
+                  }
+                ]
+              },
+              {
+                "type": "shopping",
+                "title": "來客夢必逛推薦",
+                "shops": [
+                  {
+                    "category": "家電・美妝複合店",
+                    "name": "KOJIMA × BIC CAMERA",
+                    "hours": "10:00~22:00",
+                    "mustBuy": [
+                      "美容家電（吹風機、美容儀）",
+                      "相機、耳機、遊戲機",
+                      "沖繩限定家電周邊"
+                    ],
+                    "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/"
+                  },
+                  {
+                    "category": "大型超市",
+                    "name": "AEON STYLE 超市",
+                    "hours": "08:00~23:00",
+                    "mustBuy": [
+                      "御果子御殿紅芋塔",
+                      "石垣島辣油（邊銀食堂）",
+                      "ORION 啤酒／泡盛沖繩限定",
+                      "宮古島雪鹽、金楚糕"
+                    ],
+                    "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/"
+                  },
+                  {
+                    "category": "角色商品",
+                    "name": "寶可夢中心沖繩",
+                    "hours": "10:00~22:00",
+                    "mustBuy": [
+                      "沖繩限定寶可夢商品",
+                      "皮卡丘 × 沖繩設計周邊",
+                      "集換式卡牌"
+                    ],
+                    "blogUrl": "https://ajunfun.tw/aeonmall/"
+                  }
                 ]
               }
             ]
@@ -531,6 +716,7 @@
       "content": {
         "hotel": {
           "name": "THE NEST NAHA",
+          "url": "https://panpanlife.com/thenestnaha/",
           "details": [
             "那霸市西1丁目6-1",
             "14F 溫水游泳池（9:00~22:00）"
@@ -568,6 +754,8 @@
           {
             "time": "10:30~18:00",
             "title": "iias 沖繩豐崎購物",
+            "titleUrl": "https://toyosaki.iias.jp/",
+            "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/",
             "description": "面海的開放式購物中心，戶外廣場可遠眺海景。多家品牌店鋪、美食餐廳，鄰近豐崎美麗陽光海灘",
             "locations": [
               {
@@ -592,17 +780,154 @@
                   "交通：那霸巴士總站搭 98/55/56 號至「豐崎美麗陽光海灘前站」",
                   "特色：面海開放式商場，戶外廣場海景絕佳"
                 ]
+              },
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "category": "塔可飯",
+                    "name": "タコライスcafe きじむなぁ iias豊崎店",
+                    "desc": "沖繩塔可飯名店，招牌蛋包塔可飯「オムタコ」",
+                    "price": "¥780~",
+                    "location": {
+                      "name": "タコライスcafe きじむなぁ iias豊崎店",
+                      "googleQuery": "https://maps.google.com/?q=タコライスカフェきじむなぁ+iias沖縄豊崎",
+                      "appleQuery": "https://maps.apple.com/?q=タコライスカフェきじむなぁ+iias沖縄豊崎"
+                    },
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://adontrip.com/blog/71454/"
+                  },
+                  {
+                    "category": "沖縄そば",
+                    "name": "やっぱりちゃん iias豊崎店",
+                    "desc": "やっぱりステーキ旗下沖繩麵專門店，價格實惠",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "やっぱりちゃん iias豊崎店",
+                      "googleQuery": "https://maps.google.com/?q=やっぱりちゃん+iias沖縄豊崎",
+                      "appleQuery": "https://maps.apple.com/?q=やっぱりちゃん+iias沖縄豊崎"
+                    },
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://adontrip.com/blog/71454/"
+                  },
+                  {
+                    "category": "海鮮丼",
+                    "name": "親父のまぐろ iias豊崎店",
+                    "desc": "沖繩近海天然生鮪專門店，當日新鮮處理",
+                    "price": "¥1,050~",
+                    "location": {
+                      "name": "親父のまぐろ iias豊崎店",
+                      "googleQuery": "https://maps.google.com/?q=親父のまぐろ+iias沖縄豊崎",
+                      "appleQuery": "https://maps.apple.com/?q=親父のまぐろ+iias沖縄豊崎"
+                    },
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://adontrip.com/blog/71454/"
+                  }
+                ]
+              },
+              {
+                "type": "shopping",
+                "title": "iias 豐崎必逛推薦",
+                "shops": [
+                  {
+                    "category": "家電・電器",
+                    "name": "KOJIMA × BIC CAMERA",
+                    "hours": "10:00~21:00",
+                    "mustBuy": [
+                      "家電、相機、電腦周邊",
+                      "美容家電（吹風機、美容儀）",
+                      "遊戲機、模型周邊"
+                    ],
+                    "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/"
+                  },
+                  {
+                    "category": "藥妝・保健",
+                    "name": "札幌藥妝（サツドラ）",
+                    "hours": "10:00~21:00",
+                    "mustBuy": [
+                      "沖繩限定 LuLuLun 面膜",
+                      "ANESSA 安耐曬防曬乳",
+                      "龍角散粉包"
+                    ],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/544483/"
+                  },
+                  {
+                    "category": "大型超市・伴手禮",
+                    "name": "AEON STYLE 超市",
+                    "hours": "09:00~22:00",
+                    "mustBuy": [
+                      "沖繩紅芋塔、雪鹽夾心餅乾",
+                      "石垣島辣油、金楚糕",
+                      "ORION 啤酒、泡盛"
+                    ],
+                    "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/"
+                  }
+                ]
               }
             ]
           },
           {
             "time": "18:00",
             "title": "搭巴士返回那霸晚餐",
-            "description": "返回那霸市區享用最後一夜晚餐，可至國際通或壺川周邊",
+            "description": "返回那霸市區享用最後一夜晚餐，可至國際通或旭橋周邊",
             "transit": {
               "text": "巴士 98/55/56 號 豐崎→那霸 約30分鐘",
               "type": "bus"
-            }
+            },
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（旭橋周邊）",
+                "restaurants": [
+                  {
+                    "category": "沖縄料理 居酒屋",
+                    "name": "沖縄居酒屋 山将",
+                    "desc": "創業37年旭橋排名第一老字號，名物「山将ラフテー」東坡肉",
+                    "price": "¥3,000~",
+                    "location": {
+                      "name": "沖縄居酒屋 山将 旭橋",
+                      "googleQuery": "https://maps.google.com/?q=沖縄居酒屋山将+旭橋+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=沖縄居酒屋山将+旭橋+那覇"
+                    },
+                    "hours": "17:00~23:30（週日及第2週一定休）",
+                    "reservation": "建議預約",
+                    "blogUrl": "https://tw.savorjapan.com/okinawa/47001/24920/list/"
+                  },
+                  {
+                    "category": "海鮮居酒屋",
+                    "name": "居酒屋ひょうきん",
+                    "desc": "全國各地直送朝獲鮮魚，刺身拼盤新鮮度極高",
+                    "price": "¥2,500~",
+                    "location": {
+                      "name": "居酒屋ひょうきん 泉崎 那覇",
+                      "googleQuery": "https://maps.google.com/?q=居酒屋ひょうきん+泉崎+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=居酒屋ひょうきん+泉崎+那覇"
+                    },
+                    "hours": "17:00~24:00（週日定休）",
+                    "reservation": "可預約",
+                    "blogUrl": "https://matcha-jp.com/tw/11883"
+                  },
+                  {
+                    "category": "琉球料理 居酒屋",
+                    "name": "琉球家庭料理 葵屋 旭橋駅前店",
+                    "desc": "每日島唄現場演奏，供應縣產和牛、海葡萄、炒苦瓜",
+                    "price": "¥2,000~",
+                    "location": {
+                      "name": "琉球家庭料理 葵屋 旭橋駅前",
+                      "googleQuery": "https://maps.google.com/?q=琉球家庭料理葵屋+旭橋+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=琉球家庭料理葵屋+旭橋+那覇"
+                    },
+                    "hours": "15:00~22:00（週四定休）",
+                    "reservation": "可預約",
+                    "blogUrl": "https://matcha-jp.com/tw/11883"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -817,8 +1142,9 @@
           "title": "中優先",
           "priority": "medium",
           "items": [
-            "Day 1 晚餐計畫：抵達約18:30後，建議提早規劃晚餐地點，國際通周邊餐廳假日人多，旺季建議 18:30 前抵達或先查詢等候狀況；やっぱりステーキ 通常不需預約，快速解決晚餐首選",
-            "Day 2 晚餐預約：焼肉きんぐ おもろまち店人氣高，建議透過 EPARK 提前預約，避免一日遊回來後等待過久",
+            "Day 1 晚餐計畫：抵達約18:30後，推薦暖暮拉麵（不需預約，快速解決）或ぬちがふぅ（沖繩傳統料理體驗）；やっぱりステーキ 通常不需預約也是好選擇",
+            "Day 2 晚餐預約：焼肉きんぐ おもろまち店人氣高，建議透過 EPARK 提前預約；うりずん（安里站）為歷史名店也值得一試",
+            "Day 3 晚餐（Klook 21:30 回到那霸）：ちぬまん 有島唄表演（24:00前）、暖暮拉麵（翌2:00前）、すばやー 深夜沖縄麵（21:00起營業）皆為深夜好選擇",
             "Day 5 出發與回程時間確認：iias 豐崎巴士班次較少，建議出發前查詢 98/55/56 號實際時刻表；回程最晚建議 18:00 前搭車返回那霸"
           ]
         },
@@ -827,8 +1153,44 @@
           "priority": "low",
           "items": [
             "唐吉壺川店（那覇市壺川3丁目2番地1）：距離 THE NEST NAHA 步行約15分鐘，Day 4 或 Day 5 晚上可順路採買藥妝、零食與伴手禮",
-            "魚屋直營食堂 魚まる 小祿本店（沖縄県那覇市高良3丁目5-1）：新鮮海產直送 CP 值極高，建議安排 Day 5 晚餐，從豐崎搭巴士回那霸後前往",
+            "Day 5 晚餐推薦旭橋周邊：山将（創業37年老字號居酒屋，建議預約）、ひょうきん（鮮魚居酒屋）、葵屋（島唄現場演奏），都在旭橋站步行2分鐘內",
             "THE NEST NAHA 溫水游泳池：14F 游泳池 9:00~22:00，Day 4 晚間 Check in 後或 Day 5 早晨均可使用，為此行難得的放鬆時光"
+          ]
+        }
+      ]
+    }
+  },
+  "emergency": {
+    "title": "緊急聯絡資訊",
+    "content": {
+      "cards": [
+        {
+          "color": "var(--blue-light)",
+          "title": "急救與醫療",
+          "items": [
+            "救護車/消防：119",
+            "那霸市立病院（24H急診）：098-884-5111",
+            "地址：那霸市古島2-31-1（單軌電車 市立病院前站直通）"
+          ]
+        },
+        {
+          "color": "var(--sand-light)",
+          "title": "駐日代表處",
+          "items": [
+            "台北駐日經濟文化代表處那霸分處",
+            "電話：098-862-7008",
+            "24H 緊急聯絡：080-8056-0122",
+            "地址：那霸市久茂地3-15-9 アルテビル那覇 6F"
+          ]
+        },
+        {
+          "color": "var(--blue-light)",
+          "title": "航空公司與報案",
+          "items": [
+            "樂桃航空客服（台灣）：02-2656-3202",
+            "樂桃航空客服（日本）：03-6731-9242",
+            "警察報案：110",
+            "信用卡掛失：請事先記錄各銀行海外掛失電話"
           ]
         }
       ]
