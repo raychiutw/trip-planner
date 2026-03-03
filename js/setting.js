@@ -7,18 +7,18 @@
     function buildSettingMenu() {
         // Drawer menu (mobile)
         var html = '';
-        html += '<a class="menu-item" href="index.html">' + iconSpan('plane') + ' 行程頁</a>';
-        html += '<a class="menu-item" href="edit.html">' + iconSpan('pencil') + ' 編輯頁</a>';
-        html += '<a class="menu-item menu-item-current" href="setting.html">' + iconSpan('gear') + ' 設定頁</a>';
+        html += '<a class="menu-item" href="index.html">' + iconSpan('plane') + ' 我的行程</a>';
+        html += '<a class="menu-item" href="edit.html">' + iconSpan('pencil') + ' 編輯行程</a>';
+        html += '<a class="menu-item menu-item-current" href="setting.html">' + iconSpan('gear') + ' 設定</a>';
         document.getElementById('menuGrid').innerHTML = html;
 
         // Sidebar menu (desktop)
         var sidebarNav = document.getElementById('sidebarNav');
         if (sidebarNav) {
             var sHtml = '';
-            sHtml += '<a class="menu-item" href="index.html" title="行程頁"><span class="item-icon">' + iconSpan('plane') + '</span><span class="item-label">行程頁</span></a>';
-            sHtml += '<a class="menu-item" href="edit.html" title="編輯頁"><span class="item-icon">' + iconSpan('pencil') + '</span><span class="item-label">編輯頁</span></a>';
-            sHtml += '<a class="menu-item menu-item-current" href="setting.html" title="設定頁"><span class="item-icon">' + iconSpan('gear') + '</span><span class="item-label">設定頁</span></a>';
+            sHtml += '<a class="menu-item" href="index.html" title="我的行程"><span class="item-icon">' + iconSpan('plane') + '</span><span class="item-label">我的行程</span></a>';
+            sHtml += '<a class="menu-item" href="edit.html" title="編輯行程"><span class="item-icon">' + iconSpan('pencil') + '</span><span class="item-label">編輯行程</span></a>';
+            sHtml += '<a class="menu-item menu-item-current" href="setting.html" title="設定"><span class="item-icon">' + iconSpan('gear') + '</span><span class="item-label">設定</span></a>';
             sidebarNav.innerHTML = sHtml;
         }
     }
