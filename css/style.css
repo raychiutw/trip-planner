@@ -35,6 +35,10 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 
 /* ===== Day Header (section divider) ===== */
 .day-header { position: relative; z-index: 100; background: var(--blue); color: var(--white); padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+body:not(.dark) .day-header {
+    background: var(--card-bg);
+    color: var(--text);
+}
 .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-date { font-size: var(--fs-md); opacity: 0.9; margin-left: auto; white-space: nowrap; }
 .dh-nav-wrap { position: relative; flex: 1; display: flex; align-items: center; min-width: 0; }
@@ -193,8 +197,9 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .suggestion-card { padding: 8px 0; border-radius: 0; margin-bottom: 0; }
 .suggestion-card h4 { margin: 0 0 6px; display: flex; align-items: center; }
 .suggestion-card p { font-size: var(--fs-md); margin: 3px 0; line-height: 1.7; }
-.sg-priority-high { background: rgba(239, 68, 68, 0.08); border-radius: 6px; padding: 8px 10px; }
-.sg-priority-medium { background: rgba(234, 179, 8, 0.08); border-radius: 6px; padding: 8px 10px; }
+.sg-priority-high { background: rgba(239, 68, 68, 0.15); border-radius: 6px; padding: 8px 10px; }
+.sg-priority-medium { background: rgba(234, 179, 8, 0.15); border-radius: 6px; padding: 8px 10px; }
+.sg-priority-low { background: rgba(34, 197, 94, 0.10); border-radius: 6px; padding: 8px 10px; }
 .sg-priority-high h4::before,
 .sg-priority-medium h4::before,
 .sg-priority-low h4::before {
@@ -208,7 +213,7 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 }
 .sg-priority-high h4::before { background: #EF4444; }
 .sg-priority-medium h4::before { background: #EAB308; }
-.sg-priority-low h4::before { background: #F97316; }
+.sg-priority-low h4::before { background: #22C55E; }
 
 /* ===== Error Messages ===== */
 .trip-error { text-align: center; padding: 40px; color: #D32F2F; }
@@ -269,7 +274,7 @@ body.dark .edit-fab { background: var(--accent); }
 /* ===== Weather Collapsible ===== */
 .hw-summary { display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; font-size: var(--fs-md); color: var(--gray); user-select: none; }
 .hw-summary:hover { color: var(--blue); }
-.hw-summary-arrow { margin-left: auto; flex-shrink: 0; font-weight: 700; }
+.hw-summary-arrow { margin-left: auto; flex-shrink: 0; font-weight: 700; font-size: var(--fs-md); color: var(--gray); }
 .hw-detail { display: none; }
 .hw-open .hw-detail { display: block; }
 
@@ -331,6 +336,7 @@ body.dark .trip-warning-item { background: rgba(220, 38, 38, 0.12); }
 body.dark .trip-warnings { background: rgba(220, 38, 38, 0.12); color: #FCA5A5; }
 body.dark .sg-priority-high { background: rgba(239, 68, 68, 0.12); }
 body.dark .sg-priority-medium { background: rgba(234, 179, 8, 0.12); }
+body.dark .sg-priority-low { background: rgba(34, 197, 94, 0.15); }
 
 /* ===== Info FAB Button ===== */
 .info-fab {

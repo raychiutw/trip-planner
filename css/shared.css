@@ -1,16 +1,16 @@
 /* ===== Shared Variables ===== */
 :root {
-    --accent: #8B8580;
+    --accent: #C4956A;
     --blue: var(--accent);
     --blue-light: #F5EDE8;
     --sand: #C4956A;
     --sand-light: #F5EDE0;
-    --white: #FFFFFF;
-    --bg: #FFFFFF;
+    --white: #FAF9F5;
+    --bg: #FAF9F5;
     --card-bg: #F5F0E8;
     --bubble-bg: #F0EDE8;
     --gray: #6B6B6B;
-    --gray-light: #FAF9F7;
+    --gray-light: #FAF9F5;
     --text: #1A1A1A;
     --text-muted: #6B6B6B;
     --border: #E5E0DA;
@@ -19,7 +19,7 @@
     --fs-md: 1.125rem;
     --fs-sm: 0.875rem;
     --sidebar-w: 260px;
-    --sidebar-w-collapsed: 56px;
+    --sidebar-w-collapsed: 64px;
     --sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     --content-max-w: 800px;
     --info-panel-w: 280px;
@@ -75,4 +75,14 @@ body.dark ::-webkit-scrollbar-thumb:hover { background: #6A6560; }
 /* ===== Desktop Page Layout Gap ===== */
 @media (min-width: 1200px) {
     .page-layout { gap: 12px; }
+}
+
+/* ===== Desktop Font-size Override ===== */
+@media (min-width: 768px) {
+    :root {
+        --fs-display: 2rem;
+        --fs-lg: 1.125rem;
+        --fs-md: 1rem;
+        --fs-sm: 0.8125rem;
+    }
 }

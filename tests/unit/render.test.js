@@ -751,7 +751,7 @@ describe('renderTripDrivingStats', () => {
     expect(renderTripDrivingStats(null)).toBe('');
   });
 
-  it('renders nested collapsible structure', () => {
+  it('renders nested structure with summary and per-day breakdown', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
         { transit: { type: 'car', text: '約30分鐘' } },
@@ -764,8 +764,8 @@ describe('renderTripDrivingStats', () => {
     expect(html).toContain('全旅程交通統計');
     expect(html).toContain('transport-type-summary');
     expect(html).toContain('driving-summary-day');
-    // Nested col-row for per-day breakdown
-    expect((html.match(/col-row/g) || []).length).toBeGreaterThanOrEqual(2);
+    // Per-day breakdown header
+    expect(html).toContain('driving-summary-day-header');
   });
 
   it('shows warning for days with >120 min driving', () => {
