@@ -61,42 +61,43 @@
     color: var(--text-muted, var(--gray));
 }
 
-/* ===== User Message Bubble (right-aligned) ===== */
-.message-user {
-    align-self: flex-end;
-    margin-left: auto;
-    max-width: 80%;
-    background: var(--bubble-bg, var(--blue-light));
-    border-radius: 12px 12px 4px 12px;
-    padding: 12px 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+/* ===== Issue List (left-aligned) ===== */
+.issue-list {
+    display: flex;
+    flex-direction: column;
 }
-.message-user-header {
+.issue-item {
+    padding: 12px 0;
+    border-bottom: 1px dashed var(--border);
+}
+.issue-item:last-child {
+    border-bottom: none;
+}
+.issue-item-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 6px;
 }
-.message-user-title {
-    display: block;
+.issue-item-title {
     color: var(--text);
     text-decoration: none;
-    font-size: var(--fs-sm, var(--fs-md));
+    font-size: var(--fs-sm);
     font-weight: 600;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
     flex: 1;
     min-width: 0;
 }
-.message-user-title:hover {
-    color: var(--accent, var(--blue));
+.issue-item-title:hover {
+    color: var(--accent);
     text-decoration: underline;
 }
-.message-user-meta {
-    font-size: var(--fs-sm, 0.85em);
-    color: var(--text-muted, var(--gray));
+.issue-item-meta {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
     margin-top: 2px;
+    padding-left: 16px;
 }
 
 /* ===== Status Dot ===== */
@@ -108,10 +109,16 @@
     display: inline-block;
 }
 .status-dot.open {
-    background: #10B981;
+    background: var(--success);
 }
 .status-dot.closed {
     background: var(--text-muted, var(--gray));
+}
+
+/* ===== Centered greeting (empty state) ===== */
+.chat-messages-inner--centered {
+    justify-content: center;
+    flex: 1;
 }
 
 /* ===== Issues Loading / Empty States ===== */
@@ -135,7 +142,7 @@
     }
 }
 .edit-input-card {
-    background: #FFFFFF;
+    background: var(--white);
     border-radius: 16px;
     padding: 12px 12px 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.07);
@@ -192,17 +199,24 @@
     margin-top: 4px;
     border-radius: 8px;
 }
-.edit-status.success { color: #065F46; }
-.edit-status.error { color: #991B1B; }
+.edit-status.success { color: var(--success); }
+.edit-status.error { color: var(--error); }
 
-/* ===== Sticky-nav: transparent background, hide on desktop ===== */
-.sticky-nav { background: transparent; }
-@media (min-width: 768px) { .chat-container .sticky-nav { display: none; } }
+/* ===== Sticky-nav: title bar ===== */
+.chat-container .sticky-nav { background: var(--card-bg); }
+.nav-title {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+@media (min-width: 768px) { .chat-container .sticky-nav .dh-menu { display: none; } }
 
 /* ===== Dark Mode ===== */
 body.dark .edit-input-card { background: var(--card-bg); box-shadow: 0 2px 12px rgba(0,0,0,0.25); }
-body.dark .edit-send-btn { background: #3D3A37; color: #9B9590; }
-body.dark .edit-status.success { color: #6EE7B7; }
-body.dark .edit-status.error { color: #FCA5A5; }
+body.dark .edit-send-btn:disabled { background: var(--hover-bg); color: var(--gray); }
 body.dark .message-system { box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
-body.dark .message-user { box-shadow: 0 1px 4px rgba(0,0,0,0.2); }

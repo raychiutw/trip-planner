@@ -9,25 +9,33 @@ import { describe, it, expect } from 'vitest';
 
 const { escHtml, escUrl } = require('../../js/shared.js');
 
+/* ===== Helper: simulate buildIssueItemHtml ===== */
+function buildIssueItemHtml(issue) {
+  var date = new Date(issue.created_at).toLocaleString('zh-TW', {
+    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  var dotClass = issue.state === 'open' ? 'open' : 'closed';
+  var stateText = issue.state === 'open' ? 'open' : 'closed';
+  var html = '<div class="issue-item">';
+  html += '<div class="issue-item-header">';
+  html += '<span class="status-dot ' + dotClass + '"></span>';
+  html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
+  html += '</div>';
+  html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + ' · ' + stateText + '</div>';
+  html += '</div>';
+  return html;
+}
+
 /* ===== Helper: simulate renderIssues output ===== */
 function renderIssuesHtml(issues) {
   if (!issues || !issues.length) {
     return '<div class="edit-issues-empty">尚無修改紀錄</div>';
   }
-  var html = '';
+  var html = '<div class="issue-list">';
   issues.forEach(function(issue) {
-    var date = new Date(issue.created_at).toLocaleString('zh-TW', {
-      month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-    var dotClass = issue.state === 'open' ? 'open' : 'closed';
-    html += '<div class="message-user">';
-    html += '<div class="message-user-header">';
-    html += '<span class="status-dot ' + dotClass + '"></span>';
-    html += '<a class="message-user-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
-    html += '</div>';
-    html += '<div class="message-user-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
-    html += '</div>';
+    html += buildIssueItemHtml(issue);
   });
+  html += '</div>';
   return html;
 }
 
@@ -109,8 +117,8 @@ describe('renderEditPage chat structure', () => {
   });
 });
 
-/* ===== renderIssues — bubble rendering ===== */
-describe('renderIssues bubble rendering', () => {
+/* ===== renderIssues — list rendering ===== */
+describe('renderIssues list rendering', () => {
   it('returns empty state for no issues', () => {
     const html = renderIssuesHtml([]);
     expect(html).toContain('edit-issues-empty');
@@ -122,7 +130,7 @@ describe('renderIssues bubble rendering', () => {
     expect(html).toContain('edit-issues-empty');
   });
 
-  it('renders issue as .message-user bubble', () => {
+  it('renders issue as .issue-item in .issue-list', () => {
     const html = renderIssuesHtml([{
       number: 42,
       title: '修改 Day 3 午餐',
@@ -130,7 +138,8 @@ describe('renderIssues bubble rendering', () => {
       state: 'open',
       created_at: '2026-03-01T10:00:00Z'
     }]);
-    expect(html).toContain('message-user');
+    expect(html).toContain('issue-list');
+    expect(html).toContain('issue-item');
   });
 
   it('open issue has green status-dot', () => {
@@ -165,14 +174,14 @@ describe('renderIssues bubble rendering', () => {
       state: 'open',
       created_at: '2026-03-01T10:00:00Z'
     }]);
-    expect(html).toContain('message-user-title');
+    expect(html).toContain('issue-item-title');
     expect(html).toContain('href="https://github.com/owner/repo/issues/5"');
     expect(html).toContain('加入景點');
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
-  it('renders issue number and date in meta', () => {
+  it('renders issue number, date and state in meta', () => {
     const html = renderIssuesHtml([{
       number: 99,
       title: 'Test',
@@ -180,16 +189,17 @@ describe('renderIssues bubble rendering', () => {
       state: 'open',
       created_at: '2026-03-01T10:00:00Z'
     }]);
-    expect(html).toContain('message-user-meta');
+    expect(html).toContain('issue-item-meta');
     expect(html).toContain('#99');
+    expect(html).toContain('open');
   });
 
-  it('renders multiple issues as multiple bubbles', () => {
+  it('renders multiple issues as multiple items', () => {
     const html = renderIssuesHtml([
       { number: 1, title: 'A', html_url: 'https://github.com/x/y/issues/1', state: 'open', created_at: '2026-03-01T09:00:00Z' },
       { number: 2, title: 'B', html_url: 'https://github.com/x/y/issues/2', state: 'closed', created_at: '2026-03-01T10:00:00Z' },
     ]);
-    const matches = html.match(/class="message-user"/g);
+    const matches = html.match(/class="issue-item"/g);
     expect(matches).toHaveLength(2);
   });
 
@@ -216,7 +226,7 @@ describe('renderIssues bubble rendering', () => {
     expect(html).not.toContain('javascript:');
   });
 
-  it('message-user-header contains both status-dot and title link', () => {
+  it('issue-item-header contains both status-dot and title link', () => {
     const html = renderIssuesHtml([{
       number: 3,
       title: 'Header test',
@@ -224,11 +234,10 @@ describe('renderIssues bubble rendering', () => {
       state: 'open',
       created_at: '2026-03-01T10:00:00Z'
     }]);
-    expect(html).toContain('message-user-header');
-    // status-dot and title should both appear inside message-user-header
-    const headerIdx = html.indexOf('message-user-header');
+    expect(html).toContain('issue-item-header');
+    const headerIdx = html.indexOf('issue-item-header');
     const dotIdx = html.indexOf('status-dot', headerIdx);
-    const titleIdx = html.indexOf('message-user-title', headerIdx);
+    const titleIdx = html.indexOf('issue-item-title', headerIdx);
     expect(dotIdx).toBeGreaterThan(headerIdx);
     expect(titleIdx).toBeGreaterThan(headerIdx);
   });
