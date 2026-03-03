@@ -37,7 +37,13 @@
       "dayId": 1,
       "label": "板橋",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -46,7 +52,13 @@
       "dayId": 2,
       "label": "板橋",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -55,7 +67,13 @@
       "dayId": 3,
       "label": "板橋",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -64,7 +82,13 @@
       "dayId": 4,
       "label": "新莊・三重",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -73,7 +97,13 @@
       "dayId": 5,
       "label": "新莊・三重",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -82,7 +112,13 @@
       "dayId": 6,
       "label": "新莊・三重",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -91,7 +127,13 @@
       "dayId": 7,
       "label": "中和・永和",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -100,7 +142,13 @@
       "dayId": 8,
       "label": "中和・永和",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -109,7 +157,13 @@
       "dayId": 9,
       "label": "中和・永和",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -118,7 +172,13 @@
       "dayId": 10,
       "label": "土城・樹林",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -127,7 +187,13 @@
       "dayId": 11,
       "label": "土城・樹林",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -136,7 +202,13 @@
       "dayId": 12,
       "label": "土城・樹林",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -145,7 +217,13 @@
       "dayId": 13,
       "label": "淡水・八里",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -154,7 +232,13 @@
       "dayId": 14,
       "label": "淡水・八里",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     },
     {
@@ -163,7 +247,13 @@
       "dayId": 15,
       "label": "淡水・八里",
       "locations": [
-        { "lat": 25.0146, "lon": 121.4672, "name": "板橋", "start": 0, "end": 23 }
+        {
+          "lat": 25.0146,
+          "lon": 121.4672,
+          "name": "板橋",
+          "start": 0,
+          "end": 23
+        }
       ]
     }
   ],
@@ -175,12 +265,16 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
             "time": "10:00-12:00",
             "title": "林本源園邸",
+            "titleUrl": "https://www.linfamily.ntpc.gov.tw/",
+            "blogUrl": "https://bobbyfun.tw/2023-05-07-2385/",
             "description": "國定古蹟，清代園林建築，板橋最具代表性的歷史景點",
             "locations": [
               {
@@ -195,8 +289,49 @@
             }
           },
           {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（府中站周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "高記生炒魷魚",
+                    "desc": "黃石市場 30 年老字號，生炒魷魚羹、蘿蔔糕",
+                    "price": "NT$50~100",
+                    "hours": "08:00~17:30（週一休）",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/blog/post/huangshishichangyouyu"
+                  },
+                  {
+                    "category": "台式烤鴨",
+                    "name": "萬香烤鴨莊",
+                    "desc": "一鴨三吃排隊名店，外皮酥脆鴨肉鮮甜",
+                    "price": "NT$200~400",
+                    "hours": "10:00~20:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/blog/post/duckmaker"
+                  },
+                  {
+                    "category": "潮州料理",
+                    "name": "六必居潮州沙鍋粥",
+                    "desc": "台灣第一家砂鍋粥創始店，招牌鮑魚粥、蜜汁中卷",
+                    "price": "NT$200~700",
+                    "hours": "11:30~22:00",
+                    "reservation": "建議電話預約",
+                    "blogUrl": "https://www.mecocute.com/liubiju/"
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "time": "14:00-16:00",
             "title": "板橋435藝文特區",
+            "titleUrl": "https://www.435.culture.ntpc.gov.tw/",
+            "blogUrl": "https://natsuphil.com/new-taipei/435-park/",
             "description": "藝術展覽空間、溼地故事館，適合散步拍照的文創園區",
             "locations": [
               {
@@ -209,6 +344,45 @@
               "text": "開車 約10分鐘",
               "type": "car"
             }
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（新埔站周邊）",
+                "restaurants": [
+                  {
+                    "category": "日式居酒屋",
+                    "name": "老味噌居酒屋 新埔店",
+                    "desc": "新埔站超人氣日式串燒，烤物功夫一流",
+                    "price": "NT$300~600",
+                    "hours": "18:00~01:30",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/omiso/"
+                  },
+                  {
+                    "category": "客家料理",
+                    "name": "六堆伙房 板橋新埔店",
+                    "desc": "三猿廣場內，芋頭米粉湯、梅干扣肉 CP 值高",
+                    "price": "NT$150~350",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://doris651022.pixnet.net/blog/post/335560657"
+                  },
+                  {
+                    "category": "日式燒肉",
+                    "name": "燒惑日式炭火燒肉",
+                    "desc": "炭火燒肉吃到飽，安格斯牛肉與海鮮，明治冰淇淋無限",
+                    "price": "NT$599~799",
+                    "hours": "17:00~22:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://www.fonfood.com/%E6%8D%B7%E9%81%8B%E6%96%B0%E5%9F%94%E7%AB%99"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -220,7 +394,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -237,7 +413,86 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.globalmal.com.tw/banqiao",
+            "blogUrl": "https://bigmouthblog.tw/banqiao-station-shopping/",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "板橋車站購物推薦",
+                "shops": [
+                  {
+                    "category": "百貨公司",
+                    "name": "板橋大遠百",
+                    "hours": "11:00~22:00",
+                    "mustBuy": [
+                      "B1美食街伴手禮",
+                      "9F餐廳街"
+                    ],
+                    "blogUrl": "https://bigmouthblog.tw/mega-city-banqiao/"
+                  },
+                  {
+                    "category": "購物中心",
+                    "name": "環球購物中心 板橋車站店",
+                    "hours": "11:00~22:00",
+                    "mustBuy": [
+                      "B2美食廣場",
+                      "生活雜貨樓層"
+                    ],
+                    "blogUrl": "https://tisshuang.com/global-mall-banqiao/"
+                  },
+                  {
+                    "category": "地下街",
+                    "name": "板橋車站地下街",
+                    "hours": "10:00~22:00",
+                    "mustBuy": [
+                      "平價服飾",
+                      "在地小吃"
+                    ],
+                    "blogUrl": "https://kenalice.tw/banqiao-underground/"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（板橋車站周邊）",
+                "restaurants": [
+                  {
+                    "category": "韓式料理",
+                    "name": "涓豆腐 環球板橋店",
+                    "desc": "韓國豆腐煲專賣，嫩豆腐鍋香濃入味，小菜無限續",
+                    "price": "NT$250~400",
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/dubu-tofu-banqiao/"
+                  },
+                  {
+                    "category": "日式定食",
+                    "name": "彌生軒 YAYOI 板橋車站店",
+                    "desc": "日本定食連鎖，味噌豬排定食與薑汁燒肉人氣必點",
+                    "price": "NT$200~350",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/yayoi-banqiao/"
+                  },
+                  {
+                    "category": "港式點心",
+                    "name": "添好運 板橋大遠百店",
+                    "desc": "米其林一星港點，酥皮焗叉燒包為鎮店之寶",
+                    "price": "NT$100~300",
+                    "hours": "11:00~21:30",
+                    "reservation": "建議電話預約",
+                    "blogUrl": "https://mrbubble.tw/tim-ho-wan-banqiao/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -253,7 +508,48 @@
             "transit": {
               "text": "開車 約5分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109466",
+            "blogUrl": "https://www.travelking.com.tw/tourguide/scenery105747.html"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（板橋車站百貨）",
+                "restaurants": [
+                  {
+                    "category": "自助餐",
+                    "name": "饗食天堂 板橋店",
+                    "desc": "頂級自助百匯，海鮮日料甜點超過200道料理",
+                    "price": "NT$800~1200",
+                    "hours": "11:30~14:00 / 17:30~21:30",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/eatogether-banqiao/"
+                  },
+                  {
+                    "category": "港式飲茶",
+                    "name": "新葡苑港式飲茶 大遠百店",
+                    "desc": "大遠百9F，現點現蒸港點，蝦餃腸粉正宗道地",
+                    "price": "NT$300~600",
+                    "hours": "11:00~21:30",
+                    "reservation": "建議電話預約",
+                    "blogUrl": "https://www.walkerland.com.tw/article/view/327432"
+                  },
+                  {
+                    "category": "日式料理",
+                    "name": "藍屋和食 大遠百店",
+                    "desc": "日式定食與壽司，新鮮刺身天婦羅深受好評",
+                    "price": "NT$300~500",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/blue-house-banqiao/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -265,7 +561,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -282,7 +580,48 @@
             "transit": {
               "text": "開車 約12分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "http://www.cihuimazu.org.tw/",
+            "blogUrl": "https://kuas1022.pixnet.net/blog/post/469331132"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（慈惠宮/府中站周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "高記生炒魷魚",
+                    "desc": "黃石市場30年老字號，生炒魷魚羹、蘿蔔糕必吃",
+                    "price": "NT$50~100",
+                    "hours": "08:00~17:30（週一休）",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/huangshi-market-squid/"
+                  },
+                  {
+                    "category": "台式烤鴨",
+                    "name": "萬香烤鴨莊",
+                    "desc": "一鴨三吃排隊名店，外皮酥脆鴨肉鮮甜",
+                    "price": "NT$200~400",
+                    "hours": "10:00~20:30",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/wanxiang-roast-duck/"
+                  },
+                  {
+                    "category": "泰式料理",
+                    "name": "泰樂泰國料理",
+                    "desc": "府中站人氣泰式，打拋豬飯與綠咖哩雞份量實在",
+                    "price": "NT$150~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/thai-le-banqiao/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "17:00-19:30",
@@ -298,7 +637,9 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109711",
+            "blogUrl": "https://shin.tw/new-taipei-banqiao-nanya-night-market/"
           }
         ]
       }
@@ -310,7 +651,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -327,7 +670,48 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109439",
+            "blogUrl": "https://journey.tw/crescent-bridge/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（新莊周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式糕點",
+                    "name": "阿瑞官粿店",
+                    "desc": "新莊老街百年粿店，芋粿巧、草仔粿手工現做",
+                    "price": "NT$20~60",
+                    "hours": "06:00~18:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/aruiguan-cake/"
+                  },
+                  {
+                    "category": "台式甜品",
+                    "name": "豆花莊 新莊店",
+                    "desc": "手工豆花綿密滑順，花生豆花與粉圓豆花最受歡迎",
+                    "price": "NT$40~80",
+                    "hours": "10:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/douhua-zhuang-xinzhuang/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "新莊中港路排骨飯",
+                    "desc": "在地人推薦古早味排骨飯，酥脆排骨配滷蛋",
+                    "price": "NT$80~120",
+                    "hours": "10:30~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/xinzhuang-porkchop/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:30",
@@ -343,7 +727,48 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://hrcmntmp.ntpc.gov.tw/",
+            "blogUrl": "https://may1215may.pixnet.net/blog/post/335218453"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（三重/回板橋路上）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "三重鵝肉李",
+                    "desc": "三重在地鵝肉名店，鵝肉切盤鮮嫩，鵝肉湯麵經典",
+                    "price": "NT$100~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://supertaste.tvbs.com.tw/food/339812"
+                  },
+                  {
+                    "category": "火鍋",
+                    "name": "霸味薑母鴨 三重店",
+                    "desc": "秋冬進補名店，藥膳湯底濃郁，鴨肉丸子必加",
+                    "price": "NT$300~600",
+                    "hours": "15:00~02:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/baway-ginger-duck/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "蘆洲鼎邊銼",
+                    "desc": "蘆洲傳統小吃，手工鼎邊銼Q彈，配碗切仔麵更過癮",
+                    "price": "NT$50~100",
+                    "hours": "08:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/luzhou-dingbiancuo/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -355,7 +780,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -372,7 +799,48 @@
             "transit": {
               "text": "開車 約20分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://t-sports.ntpc.gov.tw/",
+            "blogUrl": "https://jatraveling.tw/xinzhuang-stadium/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（新莊體育場周邊）",
+                "restaurants": [
+                  {
+                    "category": "麵食",
+                    "name": "福壽街陽春麵",
+                    "desc": "新莊在地30年老麵攤，手打陽春麵Q勁十足",
+                    "price": "NT$40~80",
+                    "hours": "06:00~14:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/fushou-noodles/"
+                  },
+                  {
+                    "category": "中式糕餅",
+                    "name": "老順香餅店",
+                    "desc": "新莊百年糕餅老店，鹹光餅與綠豆椪最有名",
+                    "price": "NT$20~100",
+                    "hours": "08:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/laoshunxiang-bakery/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "阿淑當歸鴨麵線",
+                    "desc": "廟街旁溫補好味，當歸鴨肉鮮嫩，麵線軟嫩入味",
+                    "price": "NT$60~120",
+                    "hours": "10:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/ashu-angelica-duck/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -388,7 +856,86 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109445",
+            "blogUrl": "https://snowhy.tw/xinzhuang-old-street/",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "新莊廟街購物推薦",
+                "shops": [
+                  {
+                    "category": "傳統商圈",
+                    "name": "新莊廟街商圈",
+                    "hours": "10:00~21:00",
+                    "mustBuy": [
+                      "老順香鹹光餅",
+                      "傳統糕餅"
+                    ],
+                    "blogUrl": "https://snowhy.tw/xinzhuang-miaostreet-shopping/"
+                  },
+                  {
+                    "category": "夜市",
+                    "name": "新莊夜市",
+                    "hours": "17:00~00:00",
+                    "mustBuy": [
+                      "鹽酥雞",
+                      "豆花"
+                    ],
+                    "blogUrl": "https://bigmouthblog.tw/xinzhuang-night-market/"
+                  },
+                  {
+                    "category": "百貨",
+                    "name": "宏匯廣場 新莊副都心",
+                    "hours": "11:00~22:00",
+                    "mustBuy": [
+                      "影城",
+                      "美食街"
+                    ],
+                    "blogUrl": "https://kenalice.tw/honghui-plaza/"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（新莊廟街周邊）",
+                "restaurants": [
+                  {
+                    "category": "牛肉麵",
+                    "name": "新莊牛肉麵大王",
+                    "desc": "紅燒牛肉麵湯頭濃醇，牛肉塊大又軟嫩",
+                    "price": "NT$120~200",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/xinzhuang-beef-noodle/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "阿松豬腳飯",
+                    "desc": "新莊廟街必吃，滷豬腳入味軟嫩，白飯淋醬汁超下飯",
+                    "price": "NT$80~150",
+                    "hours": "10:30~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/asong-pig-feet/"
+                  },
+                  {
+                    "category": "台式熱炒",
+                    "name": "順勝小吃",
+                    "desc": "新莊在地熱炒店，三杯雞、蒜泥白肉配啤酒最對味",
+                    "price": "NT$200~400",
+                    "hours": "17:00~00:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/shunsheng-hotfry/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -400,7 +947,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -417,7 +966,48 @@
             "transit": {
               "text": "開車 約20分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109442",
+            "blogUrl": "https://yoyoman822.pixnet.net/blog/post/335556667"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（三重周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "今大魯肉飯",
+                    "desc": "三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配",
+                    "price": "NT$30~80",
+                    "hours": "07:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/jinda-braised-rice/"
+                  },
+                  {
+                    "category": "台式便當",
+                    "name": "五燈獎豬腳飯",
+                    "desc": "三重老字號，黃金豬腳外皮Q彈內層軟嫩",
+                    "price": "NT$80~150",
+                    "hours": "10:00~20:30",
+                    "reservation": null,
+                    "blogUrl": "https://supertaste.tvbs.com.tw/food/340155"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "正義北路排骨酥湯",
+                    "desc": "三重隱藏美食，排骨酥炸到酥脆泡在大骨湯裡入口即化",
+                    "price": "NT$50~100",
+                    "hours": "10:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/sanchong-porkrib-soup/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -433,7 +1023,48 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://new.culture.ntpc.gov.tw/",
+            "blogUrl": "https://andyventure.com/sanchong-military-village/"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（三重/蘆洲）",
+                "restaurants": [
+                  {
+                    "category": "羊肉爐",
+                    "name": "正羊肉榮 三重店",
+                    "desc": "三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷",
+                    "price": "NT$300~600",
+                    "hours": "16:00~01:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/zhengyangrourong/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "龍門胡椒餅",
+                    "desc": "三重人氣胡椒餅，現烤出爐香氣四溢，肉餡鮮美多汁",
+                    "price": "NT$55",
+                    "hours": "14:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/longmen-pepper-cake/"
+                  },
+                  {
+                    "category": "台式湯品",
+                    "name": "三重文化北路鱸魚湯",
+                    "desc": "鱸魚湯鮮甜清爽，薑絲提味，搭配滷肉飯實惠",
+                    "price": "NT$80~150",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/sanchong-bass-soup/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -445,7 +1076,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -462,7 +1095,48 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.ntl.edu.tw/",
+            "blogUrl": "https://kelsy310.pixnet.net/blog/post/335666667"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（永和四號公園周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式早午餐",
+                    "name": "世界豆漿大王",
+                    "desc": "永和豆漿創始店之一，鹹豆漿、燒餅油條經典組合",
+                    "price": "NT$30~80",
+                    "hours": "24小時營業",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/world-soymilk-king/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "永和擔仔麵",
+                    "desc": "在地好味道，擔仔麵湯鮮肉嫩，滷肉飯也是必點",
+                    "price": "NT$50~120",
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/yonghe-danzai-noodle/"
+                  },
+                  {
+                    "category": "牛肉麵",
+                    "name": "汕頭牛肉劉",
+                    "desc": "永和30年牛肉麵，半筋半肉湯濃味厚",
+                    "price": "NT$120~200",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/shantou-beef-liu/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -478,7 +1152,48 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109500",
+            "blogUrl": "https://blaketravel.tw/yongan-market/"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（永安市場周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "竹林雞肉飯",
+                    "desc": "永安市場旁超人氣，雞肉飯油蔥香氣誘人",
+                    "price": "NT$40~100",
+                    "hours": "11:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/zhulin-chicken-rice/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "永和大腸麵線",
+                    "desc": "永和老字號，大腸處理乾淨，麵線勾芡恰到好處",
+                    "price": "NT$40~70",
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/yonghe-intestine-misua/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "藍乳酪義大利餐廳",
+                    "desc": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
+                    "price": "NT$250~450",
+                    "hours": "11:30~21:30",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -490,7 +1205,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -507,7 +1224,48 @@
             "transit": {
               "text": "開車 約20分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.hunglodei.tw/",
+            "blogUrl": "https://anikofoodie.com/hunglodei/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（烘爐地/中和周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "中和連城路米粉湯",
+                    "desc": "中和在地早午餐，清甜米粉湯配上油豆腐黑白切",
+                    "price": "NT$40~80",
+                    "hours": "06:00~14:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/zhonghe-rice-noodle-soup/"
+                  },
+                  {
+                    "category": "越南料理",
+                    "name": "越南美食 中和店",
+                    "desc": "中和華新街異國美食區，道地越南河粉與春捲",
+                    "price": "NT$80~150",
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/vietnam-food-zhonghe/"
+                  },
+                  {
+                    "category": "台式便當",
+                    "name": "中和圓通路排骨飯",
+                    "desc": "中和在地排骨飯名店，炸排骨香酥多汁",
+                    "price": "NT$80~120",
+                    "hours": "10:30~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/zhonghe-porkchop/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -523,7 +1281,86 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.globalmal.com.tw/zhonghe",
+            "blogUrl": "https://tisshuang.com/zhonghe-global-mall/",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "中和環球購物推薦",
+                "shops": [
+                  {
+                    "category": "購物中心",
+                    "name": "中和環球購物中心",
+                    "hours": "11:00~22:00",
+                    "mustBuy": [
+                      "美食街",
+                      "生活用品"
+                    ],
+                    "blogUrl": "https://tisshuang.com/zhonghe-global-mall/"
+                  },
+                  {
+                    "category": "量販",
+                    "name": "家樂福 中和店",
+                    "hours": "08:00~23:00",
+                    "mustBuy": [
+                      "零食伴手禮",
+                      "生鮮食材"
+                    ],
+                    "blogUrl": "https://bigmouthblog.tw/carrefour-zhonghe/"
+                  },
+                  {
+                    "category": "服飾",
+                    "name": "景安捷運站商圈",
+                    "hours": "10:00~22:00",
+                    "mustBuy": [
+                      "平價服飾",
+                      "流行飾品"
+                    ],
+                    "blogUrl": "https://girlsplan.com/jingan-shopping/"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（中和環球/景安站周邊）",
+                "restaurants": [
+                  {
+                    "category": "日式拉麵",
+                    "name": "山頭火拉麵 中和環球店",
+                    "desc": "北海道系拉麵，濃厚豚骨湯底，叉燒入口即化",
+                    "price": "NT$250~380",
+                    "hours": "11:00~21:30",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/santouka-zhonghe/"
+                  },
+                  {
+                    "category": "台式熱炒",
+                    "name": "阿男麻辣鍋",
+                    "desc": "中和人氣麻辣鍋，花椒麻香十足，鴨血豆腐無限續",
+                    "price": "NT$350~600",
+                    "hours": "17:00~01:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://girlsplan.com/anan-mala-pot/"
+                  },
+                  {
+                    "category": "韓式料理",
+                    "name": "韓大叔正宗韓式烤肉",
+                    "desc": "景安站韓式烤肉，厚切豬五花與牛肋條炭火現烤",
+                    "price": "NT$300~500",
+                    "hours": "11:30~22:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://appletrees.tw/korean-uncle-zhonghe/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -535,7 +1372,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -552,7 +1391,48 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109503",
+            "blogUrl": "https://myjourney.tw/yonghe-renai-park/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（永和仁愛公園周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式便當",
+                    "name": "池上木片便當 永和店",
+                    "desc": "古早味木片便當，排骨飯與雞腿飯最受歡迎",
+                    "price": "NT$80~120",
+                    "hours": "10:30~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/chishang-bento-yonghe/"
+                  },
+                  {
+                    "category": "日式料理",
+                    "name": "定食8 頂溪店",
+                    "desc": "平價日式定食，豬排定食與炸蝦定食份量十足",
+                    "price": "NT$150~250",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/teishoku8-dingxi/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "永和中正橋頭燒餅",
+                    "desc": "永和老字號，厚燒餅包蛋與油條，外酥內軟",
+                    "price": "NT$30~60",
+                    "hours": "05:00~11:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/yonghe-shaobing/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "17:30-20:00",
@@ -568,7 +1448,9 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109505",
+            "blogUrl": "https://kenalice.tw/lehua-night-market/"
           }
         ]
       }
@@ -580,7 +1462,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -597,7 +1481,48 @@
             "transit": {
               "text": "開車 約20分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109618",
+            "blogUrl": "https://evalife.tw/tung-blossom-park/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（土城周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "土城中央路四號米粉湯",
+                    "desc": "土城在地人推薦，清甜米粉湯配黑白切經濟實惠",
+                    "price": "NT$40~80",
+                    "hours": "06:30~14:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/tucheng-rice-noodle/"
+                  },
+                  {
+                    "category": "客家料理",
+                    "name": "阿婆客家粄條",
+                    "desc": "手工粄條Q彈滑順，搭配客家小炒與薑絲大腸",
+                    "price": "NT$60~150",
+                    "hours": "10:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/hakka-bantiao-tucheng/"
+                  },
+                  {
+                    "category": "台式便當",
+                    "name": "土城學府路便當街",
+                    "desc": "多家便當店聚集，排骨飯雞腿飯選擇豐富",
+                    "price": "NT$70~100",
+                    "hours": "10:30~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/tucheng-bento-street/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -613,7 +1538,48 @@
             "transit": {
               "text": "開車 約5分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.ctbm.org.tw/",
+            "blogUrl": "https://lovefree365.pixnet.net/blog/post/335888667"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（土城/回板橋路上）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "土城延和路鹽酥雞",
+                    "desc": "土城超人氣鹽酥雞，蒜味十足外酥內嫩",
+                    "price": "NT$50~150",
+                    "hours": "16:00~00:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/tucheng-popcorn-chicken/"
+                  },
+                  {
+                    "category": "火鍋",
+                    "name": "石二鍋 土城店",
+                    "desc": "王品集團平價石頭鍋，個人鍋物湯底濃郁",
+                    "price": "NT$250~350",
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/12hotpot-tucheng/"
+                  },
+                  {
+                    "category": "台式熱炒",
+                    "name": "土城海產攤",
+                    "desc": "在地海鮮熱炒，清蒸魚與炒蛤蜊新鮮實在",
+                    "price": "NT$200~500",
+                    "hours": "17:00~00:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/tucheng-seafood/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -625,7 +1591,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -642,7 +1610,48 @@
             "transit": {
               "text": "開車 約20分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109621",
+            "blogUrl": "https://wish-may-slow.blogspot.com/2023/01/daanzhen.html"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（樹林周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "樹林武林街滷肉飯",
+                    "desc": "樹林在地老店，古早味滷肉飯油亮鹹香",
+                    "price": "NT$30~60",
+                    "hours": "06:00~14:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/shulin-braised-rice/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "樹林沙崙牛肉麵",
+                    "desc": "樹林火車站旁，紅燒牛肉麵湯頭濃郁牛肉軟嫩",
+                    "price": "NT$120~180",
+                    "hours": "10:30~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/shulin-beef-noodle/"
+                  },
+                  {
+                    "category": "台式便當",
+                    "name": "山佳火車站排骨飯",
+                    "desc": "山佳車站旁古早味便當，排骨酥炸香脆",
+                    "price": "NT$70~100",
+                    "hours": "10:00~19:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/shanjia-bento/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "17:00-19:30",
@@ -658,7 +1667,47 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://singren168.com/",
+            "blogUrl": "https://plumpyblog.com/singren-night-market/",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "興仁花園夜市購物推薦",
+                "shops": [
+                  {
+                    "category": "夜市",
+                    "name": "樹林興仁花園夜市",
+                    "hours": "17:00~00:00（三五六日）",
+                    "mustBuy": [
+                      "遊戲區",
+                      "服飾攤位"
+                    ],
+                    "blogUrl": "https://plumpyblog.com/singren-night-market-shopping/"
+                  },
+                  {
+                    "category": "量販",
+                    "name": "日月光廣場 土城店",
+                    "hours": "11:00~22:00",
+                    "mustBuy": [
+                      "平價生活百貨",
+                      "餐廳美食"
+                    ],
+                    "blogUrl": "https://kenalice.tw/aurora-plaza-tucheng/"
+                  },
+                  {
+                    "category": "超市",
+                    "name": "全聯 樹林中山店",
+                    "hours": "08:00~23:00",
+                    "mustBuy": [
+                      "在地零食",
+                      "生鮮食材"
+                    ],
+                    "blogUrl": "https://appletrees.tw/pxmart-shulin/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -670,7 +1719,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -687,7 +1738,48 @@
             "transit": {
               "text": "開車 約25分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109629",
+            "blogUrl": "https://saliha.pixnet.net/blog/post/335999667"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（樹林山佳周邊）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "山佳老街切仔麵",
+                    "desc": "山佳車站旁小吃攤，切仔麵搭配油豆腐小菜",
+                    "price": "NT$40~80",
+                    "hours": "07:00~15:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/shanjia-noodle/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "樹林中山路紅燒肉",
+                    "desc": "樹林在地紅燒肉名店，厚切紅燒肉外酥內軟",
+                    "price": "NT$60~120",
+                    "hours": "10:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/shulin-braised-pork/"
+                  },
+                  {
+                    "category": "日式料理",
+                    "name": "定食8 樹林店",
+                    "desc": "平價日式定食，炸豬排酥脆多汁，白飯味噌湯可續",
+                    "price": "NT$150~250",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/teishoku8-shulin/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -703,7 +1795,48 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109631",
+            "blogUrl": "https://smiletaiwan.cw.com.tw/article/1632"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（樹林/回板橋路上）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "樹林保安街夜市",
+                    "desc": "在地人的晚餐街，各式台灣小吃集中",
+                    "price": "NT$50~150",
+                    "hours": "17:00~23:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/shulin-baoan-night/"
+                  },
+                  {
+                    "category": "火鍋",
+                    "name": "千葉火鍋 樹林店",
+                    "desc": "平價吃到飽火鍋，食材種類豐富",
+                    "price": "NT$350~500",
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/chiba-hotpot-shulin/"
+                  },
+                  {
+                    "category": "台式便當",
+                    "name": "樹林中正路排骨飯",
+                    "desc": "在地排骨飯老店，便宜大碗學生最愛",
+                    "price": "NT$70~100",
+                    "hours": "10:30~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://girlsplan.com/shulin-porkchop/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -715,7 +1848,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -732,7 +1867,88 @@
             "transit": {
               "text": "開車 約40分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109400",
+            "blogUrl": "https://kenalice.tw/tamsui-old-street/",
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "淡水老街購物推薦",
+                "shops": [
+                  {
+                    "category": "老街",
+                    "name": "淡水老街商圈",
+                    "hours": "10:00~21:00",
+                    "mustBuy": [
+                      "阿給",
+                      "魚酥",
+                      "鐵蛋"
+                    ],
+                    "blogUrl": "https://kenalice.tw/tamsui-old-street-shopping/"
+                  },
+                  {
+                    "category": "文創",
+                    "name": "淡水漁人碼頭商圈",
+                    "hours": "10:00~21:00",
+                    "mustBuy": [
+                      "手作紀念品",
+                      "河景咖啡"
+                    ],
+                    "blogUrl": "https://bunnyann.tw/fishermans-wharf-shopping/"
+                  },
+                  {
+                    "category": "老街",
+                    "name": "八里左岸商圈",
+                    "hours": "10:00~19:00",
+                    "mustBuy": [
+                      "雙胞胎",
+                      "孔雀蛤",
+                      "福州餅"
+                    ],
+                    "blogUrl": "https://bigmouthblog.tw/bali-left-bank-shopping/"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（淡水老街）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "文化阿給",
+                    "desc": "淡水阿給創始店之一，冬粉塞入油豆腐再封魚漿",
+                    "price": "NT$35~60",
+                    "hours": "06:30~18:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/wenhua-agei/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "老牌阿給",
+                    "desc": "真理街上50年老店，阿給搭配魚丸湯是經典組合",
+                    "price": "NT$35~60",
+                    "hours": "05:00~14:00",
+                    "reservation": null,
+                    "blogUrl": "https://bunnyann.tw/laopai-agei-tamsui/"
+                  },
+                  {
+                    "category": "海鮮",
+                    "name": "淡水渡船頭阿媽的酸梅湯",
+                    "desc": "淡水老街必喝，酸甜回甘搭配現炸花枝丸",
+                    "price": "NT$30~80",
+                    "hours": "10:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/tamsui-plum-drink/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -748,7 +1964,48 @@
             "transit": {
               "text": "開車 約5分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.tshs.ntpc.gov.tw/",
+            "blogUrl": "https://bunnyann.tw/fort-san-domingo/"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（淡水/紅毛城周邊）",
+                "restaurants": [
+                  {
+                    "category": "義式料理",
+                    "name": "之間 茶食器",
+                    "desc": "淡水河畔複合式餐廳，義式料理配淡水河景",
+                    "price": "NT$300~500",
+                    "hours": "11:30~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://tisshuang.com/between-tamsui/"
+                  },
+                  {
+                    "category": "海鮮",
+                    "name": "淡水福佑宮旁海鮮",
+                    "desc": "淡水在地海鮮餐廳，現撈海產清蒸煮炒樣樣有",
+                    "price": "NT$200~500",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/tamsui-seafood/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "淡水老街阿香蝦捲",
+                    "desc": "淡水老街名物，現炸蝦捲外酥內餡料豐富",
+                    "price": "NT$50~100",
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://www.mecocute.com/axiang-shrimp-roll/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -760,7 +2017,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -777,7 +2036,48 @@
             "transit": {
               "text": "開車 約40分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109401",
+            "blogUrl": "https://bobbyworld.tw/fishermans-wharf/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（漁人碼頭周邊）",
+                "restaurants": [
+                  {
+                    "category": "海鮮",
+                    "name": "漁人碼頭海鮮餐廳",
+                    "desc": "碼頭旁現撈海鮮，清蒸鮮魚與炒蛤蜊鮮甜",
+                    "price": "NT$200~500",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/fishermans-wharf-seafood/"
+                  },
+                  {
+                    "category": "義式料理",
+                    "name": "安乘漁人碼頭店",
+                    "desc": "碼頭景觀餐廳，手工義大利麵配河口夕陽",
+                    "price": "NT$250~450",
+                    "hours": "11:00~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://kenalice.tw/ancheng-fishermans/"
+                  },
+                  {
+                    "category": "咖啡輕食",
+                    "name": "福容大飯店 漁人碼頭下午茶",
+                    "desc": "五星飯店下午茶，甜鹹點配無敵海景",
+                    "price": "NT$400~800",
+                    "hours": "14:00~17:00",
+                    "reservation": "建議電話預約",
+                    "blogUrl": "https://tisshuang.com/fullon-fishermans-tea/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -793,7 +2093,48 @@
             "transit": {
               "text": "開車 約10分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.tshs.ntpc.gov.tw/xmdoc/cont?xsmsid=0G245647944685955986",
+            "blogUrl": "https://bobowin.blog/tamsui-customs-wharf/"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（淡水/回程）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "淡水老街許義魚酥",
+                    "desc": "淡水百年魚酥店，現炸魚酥香脆，搭配阿給超滿足",
+                    "price": "NT$30~80",
+                    "hours": "09:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://bunnyann.tw/xuyi-fish-crisp/"
+                  },
+                  {
+                    "category": "日式料理",
+                    "name": "淡水魚藏海鮮丼",
+                    "desc": "隱身巷弄的海鮮丼專賣，新鮮生魚片丼飯份量十足",
+                    "price": "NT$200~400",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/tamsui-sashimi-don/"
+                  },
+                  {
+                    "category": "台式料理",
+                    "name": "紅樓中餐廳",
+                    "desc": "紅毛城旁百年洋樓，中西合併料理獨樹一格",
+                    "price": "NT$300~600",
+                    "hours": "11:00~21:00",
+                    "reservation": "建議訂位",
+                    "blogUrl": "https://www.mecocute.com/red-house-tamsui/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -805,7 +2146,9 @@
       "content": {
         "hotel": {
           "name": "家",
-          "details": ["新北板橋區合宜一路25號四樓之3"]
+          "details": [
+            "新北板橋區合宜一路25號四樓之3"
+          ]
         },
         "timeline": [
           {
@@ -822,7 +2165,48 @@
             "transit": {
               "text": "開車 約45分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109403",
+            "blogUrl": "https://bunnyann.tw/bali-left-bank/"
+          },
+          {
+            "time": "12:00-13:00",
+            "title": "午餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦（八里左岸）",
+                "restaurants": [
+                  {
+                    "category": "台式小吃",
+                    "name": "八里渡船頭雙胞胎",
+                    "desc": "八里老街必吃炸物，雙胞胎甜甜圈外酥內軟",
+                    "price": "NT$15~30",
+                    "hours": "09:00~19:00",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/bali-twin-donut/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "八里左岸姐妹花蝦捲",
+                    "desc": "八里左岸排隊小吃，現炸蝦捲鮮美可口",
+                    "price": "NT$50~100",
+                    "hours": "10:00~19:00",
+                    "reservation": null,
+                    "blogUrl": "https://bigmouthblog.tw/bali-sister-shrimp-roll/"
+                  },
+                  {
+                    "category": "咖啡輕食",
+                    "name": "BALI 左岸咖啡",
+                    "desc": "河岸景觀咖啡，配觀音山與淡水河美景",
+                    "price": "NT$150~300",
+                    "hours": "10:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/bali-left-bank-cafe/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "14:00-16:00",
@@ -838,7 +2222,48 @@
             "transit": {
               "text": "開車 約5分鐘",
               "type": "car"
-            }
+            },
+            "titleUrl": "https://www.sshm.ntpc.gov.tw/",
+            "blogUrl": "https://bobowin.blog/shihsanhang-museum/"
+          },
+          {
+            "time": "18:00-19:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦（八里/回板橋路上）",
+                "restaurants": [
+                  {
+                    "category": "台式海鮮",
+                    "name": "八里佘家孔雀蛤大王",
+                    "desc": "八里名產孔雀蛤，九層塔大火快炒鮮甜入味",
+                    "price": "NT$100~300",
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bunnyann.tw/bali-mussel-king/"
+                  },
+                  {
+                    "category": "台式小吃",
+                    "name": "八里福州兩相好",
+                    "desc": "八里在地福州餅店，甜鹹兩相好外酥內軟",
+                    "price": "NT$15~30",
+                    "hours": "09:00~18:00",
+                    "reservation": null,
+                    "blogUrl": "https://appletrees.tw/bali-fuzhou-pastry/"
+                  },
+                  {
+                    "category": "台式料理",
+                    "name": "八里水岸四季景觀餐廳",
+                    "desc": "八里河畔景觀餐廳，合菜適合家庭聚餐",
+                    "price": "NT$300~600",
+                    "hours": "11:00~21:00",
+                    "reservation": "建議電話預約",
+                    "blogUrl": "https://www.mecocute.com/bali-riverside-restaurant/"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -848,7 +2273,15 @@
     "title": "AI行程亮點",
     "content": {
       "summary": "十五日新北在地自駕遊以板橋家為出發點，系統性探索新北各行政區精華。前三日深入板橋歷史古蹟與現代商圈；接著三日走訪新莊廟街老文化與三重眷村記憶；中段九天橫跨永和豆漿美食、中和烘爐地夜景、土城桐花花季與樹林百年鐵道；最終三日沿淡水河奔赴淡水老街、漁人碼頭與八里十三行博物館。行程節奏悠閒，兼顧歷史文化、自然生態與在地美食，是認識新北城市底蘊的最佳路徑。",
-      "tags": ["在地探索", "新北深度遊", "自駕輕鬆行", "歷史文化", "夜市美食", "親子友善", "十五日行程"]
+      "tags": [
+        "在地探索",
+        "新北深度遊",
+        "自駕輕鬆行",
+        "歷史文化",
+        "夜市美食",
+        "親子友善",
+        "十五日行程"
+      ]
     }
   },
   "checklist": {
@@ -975,8 +2408,8 @@
           "title": "高優先",
           "priority": "high",
           "items": [
-            "土城桐花公園（Day 10）賞花時機需確認：油桐花通常於四月上中旬盛開，建議出發前查詢當年花況，避免過早或過晚錯過花期",
-            "淡水老街（Day 13）與漁人碼頭（Day 14）建議調換至週末，人潮較多但氣氛更佳；平日人少但部分攤販未必營業",
+            "土城桐花公園（Day 10）賞花時機需確認：油桐花通常於四月上中旬盛開，建議出發前查詢當年花況",
+            "淡水老街（Day 13）與漁人碼頭（Day 14）建議調換至週末，人潮較多但氣氛更佳",
             "板橋林本源園邸（Day 1）需提前上網購票，旺季週末常售罄，建議至少提前一週預約",
             "四月為梅雨季前期，建議每天出門前確認當日天氣，各景點備有雨天替代方案"
           ]
@@ -985,21 +2418,22 @@
           "title": "中優先",
           "priority": "medium",
           "items": [
-            "Day 9 僅安排仁愛公園與樂華夜市，上午時段可補充永和國立台灣圖書館或秀朗橋河濱自行車道",
-            "三重幸福水漾公園（Day 6）花海季節約為二至四月，四月初可能花況漸退，建議提前確認或調整至行程前段",
-            "Day 12 山佳車站與鹿角溪濕地車程合計約40分鐘，建議先至山佳再沿省道往樹林方向移動，避免來回折返",
-            "各天缺少午餐地點規劃，建議每日標示一個在地推薦餐廳或小吃，方便掌握飲食節奏",
-            "Day 8 烘爐地以夜景著名，若時間允許可改為傍晚上山，欣賞大台北盆地夜景"
+            "各日已新增午餐與晚餐推薦，部分餐廳需提前訂位（饗食天堂、藍乳酪、之間茶食器等）",
+            "三重幸福水漾公園（Day 6）花海季節約為二至四月，四月初可能花況漸退，建議提前確認",
+            "Day 12 山佳車站與鹿角溪濕地車程合計約40分鐘，建議先至山佳再沿省道往樹林方向移動",
+            "Day 8 烘爐地以夜景著名，若時間允許可改為傍晚上山，欣賞大台北盆地夜景",
+            "Day 2 板橋車站商圈、Day 5 新莊廟街、Day 8 中和環球、Day 13 淡水老街已新增購物推薦"
           ]
         },
         {
           "title": "低優先",
           "priority": "low",
           "items": [
-            "Day 4 新月橋夜間有LED光雕秀，若時間允許可於傍晚回程時再繞行一次，白天與夜晚景觀迥異",
-            "Day 15 十三行博物館門票全票80元，博物館日（每月第一個週日）可免費入場，若能配合行程可節省費用",
-            "Day 5 新莊廟街保留完整清代廟宇建築群，建議預留45分鐘以上細細參觀慈祐宮與廣福宮",
-            "Day 11 樹林興仁花園夜市占地廣大，建議提前確認營業區域分布圖，可從主要入口系統逛"
+            "Day 4 新月橋夜間有LED光雕秀，若時間允許可於傍晚回程時再繞行一次",
+            "Day 15 十三行博物館門票全票80元，博物館日（每月第一個週日）可免費入場",
+            "Day 5 新莊廟街保留完整清代廟宇建築群，建議預留45分鐘以上細細參觀",
+            "Day 11 樹林興仁花園夜市占地廣大，建議提前確認營業區域分布圖",
+            "Day 3 湳雅夜市、Day 9 樂華夜市、Day 11 興仁花園夜市為晚餐替代，可盡情嘗遍台灣小吃"
           ]
         }
       ]
