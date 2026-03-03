@@ -108,6 +108,26 @@ window.addEventListener('resize', function() {
     }
 });
 
+/* ===== Shared Page Nav Builder ===== */
+function buildPageNav(activePage, opts) {
+    opts = opts || {};
+    var pages = [
+        { key: 'index', icon: 'plane', label: '我的行程', href: opts.indexHref || 'index.html' },
+        { key: 'edit', icon: 'pencil', label: '編輯行程', href: opts.editHref || 'edit.html' },
+        { key: 'setting', icon: 'gear', label: '設定', href: 'setting.html' }
+    ];
+    var drawer = '';
+    var sidebar = '';
+    pages.forEach(function(p) {
+        var cls = p.key === activePage ? 'menu-item menu-item-current' : 'menu-item';
+        drawer += '<a class="' + cls + '" href="' + p.href + '">' + iconSpan(p.icon) + ' ' + p.label + '</a>';
+        sidebar += '<a class="' + cls + '" href="' + p.href + '" title="' + p.label + '">'
+                 + '<span class="item-icon">' + iconSpan(p.icon) + '</span>'
+                 + '<span class="item-label">' + p.label + '</span></a>';
+    });
+    return { drawer: drawer, sidebar: sidebar };
+}
+
 /* ===== Init ===== */
 initSidebar();
 
@@ -119,6 +139,7 @@ if (typeof module !== 'undefined' && module.exports) {
         toggleSidebar: toggleSidebar,
         closeMobileMenuIfOpen: closeMobileMenuIfOpen,
         updateDarkBtnText: updateDarkBtnText,
-        toggleMenu: toggleMenu
+        toggleMenu: toggleMenu,
+        buildPageNav: buildPageNav
     };
 }
