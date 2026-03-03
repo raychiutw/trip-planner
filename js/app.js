@@ -1,3 +1,10 @@
+/* ===== Constants ===== */
+var ARROW_EXPAND = '＋';
+var ARROW_COLLAPSE = '－';
+var DRIVING_WARN_MINUTES = 120;
+var DRIVING_WARN_LABEL = '超過 2 小時';
+var TRANSPORT_TYPE_ORDER = ['car', 'train', 'walking'];
+
 /* ===== Safe Color Validation ===== */
 var SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgb\(\d+,\s*\d+,\s*\d+\)|var\(--[\w-]+\)|[a-z]+)$/i;
 function safeColor(c) { return (c && SAFE_COLOR_RE.test(c)) ? c : 'var(--blue-light)'; }
@@ -265,19 +272,10 @@ function calcDrivingStats(timeline) {
         segments: byType['car'] ? byType['car'].segments : [] };
 }
 
-function renderDrivingStats(stats) {
-    if (!stats) return '';
-    var isWarning = stats.drivingMinutes > 120;
-    var cls = isWarning ? 'driving-stats driving-stats-warning' : 'driving-stats';
-    var dsIcon = isWarning ? iconSpan('warning') : iconSpan('bus');
-    var html = '<div class="' + cls + '">';
-    html += '<div class="col-row" role="button" aria-expanded="false">' + dsIcon + ' 當日交通：' + escHtml(formatMinutes(stats.totalMinutes));
-    if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
-    html += ' <span class="arrow">＋</span></div>';
-    html += '<div class="col-detail">';
-    var typeOrder = ['car', 'train', 'walking'];
-    typeOrder.forEach(function(emoji) {
-        var group = stats.byType[emoji];
+function renderTransportTypeGroups(byType) {
+    var html = '';
+    TRANSPORT_TYPE_ORDER.forEach(function(key) {
+        var group = byType[key];
         if (!group) return;
         html += '<div class="transport-type-group">';
         html += '<div class="transport-type-label">' + iconSpan(group.icon) + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
@@ -287,6 +285,20 @@ function renderDrivingStats(stats) {
         });
         html += '</div></div>';
     });
+    return html;
+}
+
+function renderDrivingStats(stats) {
+    if (!stats) return '';
+    var isWarning = stats.drivingMinutes > DRIVING_WARN_MINUTES;
+    var cls = isWarning ? 'driving-stats driving-stats-warning' : 'driving-stats';
+    var dsIcon = isWarning ? iconSpan('warning') : iconSpan('bus');
+    var html = '<div class="' + cls + '">';
+    html += '<div class="col-row" role="button" aria-expanded="false">' + dsIcon + ' 當日交通：' + escHtml(formatMinutes(stats.totalMinutes));
+    if (isWarning) html += ' <span class="driving-stats-badge">' + DRIVING_WARN_LABEL + '</span>';
+    html += ' <span class="arrow">' + ARROW_EXPAND + '</span></div>';
+    html += '<div class="col-detail">';
+    html += renderTransportTypeGroups(stats.byType);
     html += '</div></div>';
     return html;
 }
@@ -324,31 +336,20 @@ function renderTripDrivingStats(tripStats) {
     html += '<div class="driving-summary-header">' + iconSpan('bus') + ' 全旅程交通統計：' + escHtml(formatMinutes(tripStats.grandTotal)) + '</div>';
     html += '<div class="driving-summary-body">';
     // Type summary
-    var typeOrder = ['car', 'train', 'walking'];
-    typeOrder.forEach(function(emoji) {
-        var g = tripStats.grandByType[emoji];
+    TRANSPORT_TYPE_ORDER.forEach(function(key) {
+        var g = tripStats.grandByType[key];
         if (!g) return;
         html += '<div class="transport-type-summary">' + iconSpan(g.icon) + ' ' + escHtml(g.label) + '：' + escHtml(formatMinutes(g.totalMinutes)) + '</div>';
     });
     // Per-day breakdown
     tripStats.days.forEach(function(d) {
-        var isWarning = d.stats.drivingMinutes > 120;
+        var isWarning = d.stats.drivingMinutes > DRIVING_WARN_MINUTES;
         html += '<div class="driving-summary-day' + (isWarning ? ' driving-stats-warning' : '') + '">';
         html += '<div class="driving-summary-day-header"><strong>' + escHtml(d.label) + '（' + escHtml(d.date) + '）</strong>：' + escHtml(formatMinutes(d.stats.totalMinutes));
-        if (isWarning) html += ' <span class="driving-stats-badge">超過 2 小時</span>';
+        if (isWarning) html += ' <span class="driving-stats-badge">' + DRIVING_WARN_LABEL + '</span>';
         html += '</div>';
         html += '<div class="driving-summary-day-body">';
-        typeOrder.forEach(function(emoji) {
-            var group = d.stats.byType[emoji];
-            if (!group) return;
-            html += '<div class="transport-type-group">';
-            html += '<div class="transport-type-label">' + iconSpan(group.icon) + ' ' + escHtml(group.label) + '：' + escHtml(formatMinutes(group.totalMinutes)) + '</div>';
-            html += '<div class="driving-stats-detail">';
-            group.segments.forEach(function(seg) {
-                html += '<span class="driving-stats-seg">' + iconSpan(group.icon) + ' ' + escHtml(seg.text) + '</span>';
-            });
-            html += '</div></div>';
-        });
+        html += renderTransportTypeGroups(d.stats.byType);
         html += '</div></div>';
     });
     html += '</div></div>';
@@ -986,15 +987,11 @@ function closeInfoSheet() {
 function buildMenu(data) {
     var slug = (data && data.tripSlug) ? data.tripSlug : (lsGet('trip-pref') || '');
     var editUrl = slug ? 'edit.html?trip=' + encodeURIComponent(slug) : 'edit.html';
+    var nav = buildPageNav('index', { editHref: editUrl });
 
     // Drawer menu (mobile)
-    var html = '';
-    // 區段一：頁面切換
-    html += '<a class="menu-item menu-item-current" href="index.html">' + iconSpan('plane') + ' 我的行程</a>';
-    html += '<a class="menu-item" href="' + editUrl + '">' + iconSpan('pencil') + ' 編輯行程</a>';
-    html += '<a class="menu-item" href="setting.html">' + iconSpan('gear') + ' 設定</a>';
+    var html = nav.drawer;
     html += '<div class="menu-sep"></div>';
-    // 區段二：功能跳轉
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">' + iconSpan('plane') + ' 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-driving">' + iconSpan('bus') + ' 交通統計</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">' + iconSpan('check-circle') + ' 出發前確認</button>';
@@ -1008,13 +1005,8 @@ function buildMenu(data) {
     // Sidebar menu (desktop)
     var sidebarNav = document.getElementById('sidebarNav');
     if (sidebarNav) {
-        var sHtml = '';
-        // 區段一：頁面切換
-        sHtml += '<a class="menu-item menu-item-current" href="index.html" title="我的行程"><span class="item-icon">' + iconSpan('plane') + '</span><span class="item-label">我的行程</span></a>';
-        sHtml += '<a class="menu-item" href="' + editUrl + '" title="編輯行程"><span class="item-icon">' + iconSpan('pencil') + '</span><span class="item-label">編輯行程</span></a>';
-        sHtml += '<a class="menu-item" href="setting.html" title="設定"><span class="item-icon">' + iconSpan('gear') + '</span><span class="item-label">設定</span></a>';
+        var sHtml = nav.sidebar;
         sHtml += '<div class="menu-sep"></div>';
-        // 區段二：功能跳轉
         var navItems = [
             { icon: 'plane', label: '航班資訊', target: 'sec-flight' },
             { icon: 'bus', label: '交通統計', target: 'sec-driving' },
@@ -1060,7 +1052,7 @@ function toggleCol(el) {
     var isOpen = el.classList.contains('open');
     el.setAttribute('aria-expanded', isOpen);
     var arrow = el.querySelector('.arrow');
-    if (arrow) arrow.textContent = isOpen ? '－' : '＋';
+    if (arrow) arrow.textContent = isOpen ? ARROW_COLLAPSE : ARROW_EXPAND;
 }
 function toggleDark() {
     closeMobileMenuIfOpen();
@@ -1086,7 +1078,7 @@ function toggleHw(el) {
     p.classList.toggle('hw-open');
     var isOpen = p.classList.contains('hw-open');
     var arrow = el.querySelector('.hw-summary-arrow');
-    if (arrow) arrow.textContent = isOpen ? '－' : '＋';
+    if (arrow) arrow.textContent = isOpen ? ARROW_COLLAPSE : ARROW_EXPAND;
     if (isOpen) {
         var g = p.querySelector('.hw-grid');
         if (g) { var now = new Date().getHours(), tb = g.querySelector('.hw-now') || g.querySelector('[data-hour="' + Math.max(6, Math.min(21, now)) + '"]'); if (tb) g.scrollLeft = tb.offsetLeft - g.offsetLeft; }
@@ -1134,7 +1126,13 @@ function alignStickyNav() {
         h.style.scrollMarginTop = margin;
     });
 }
-window.addEventListener('resize', alignStickyNav);
+var _alignNavTicking = false;
+window.addEventListener('resize', function() {
+    if (!_alignNavTicking) {
+        requestAnimationFrame(function() { alignStickyNav(); _alignNavTicking = false; });
+        _alignNavTicking = true;
+    }
+});
 var _sidebarEl = document.getElementById('sidebar');
 if (_sidebarEl) _sidebarEl.addEventListener('transitionend', alignStickyNav);
 
@@ -1184,6 +1182,9 @@ function initNavOverflow() {
     var arrowR = document.getElementById('navArrowR');
     if (!wrap || !nav || !arrowL || !arrowR) return;
 
+    // Clean up previous listeners
+    if (window._navOverflowCleanup) window._navOverflowCleanup();
+
     function updateNavOverflow() {
         var canScrollLeft = nav.scrollLeft > 2;
         var canScrollRight = nav.scrollLeft < nav.scrollWidth - nav.clientWidth - 2;
@@ -1198,8 +1199,11 @@ function initNavOverflow() {
         nav.scrollBy({ left: dir * pageWidth, behavior: 'smooth' });
     }
 
-    arrowL.addEventListener('click', function() { scrollNavPage(-1); });
-    arrowR.addEventListener('click', function() { scrollNavPage(1); });
+    function onClickL() { scrollNavPage(-1); }
+    function onClickR() { scrollNavPage(1); }
+
+    arrowL.addEventListener('click', onClickL);
+    arrowR.addEventListener('click', onClickR);
     nav.addEventListener('scroll', updateNavOverflow, { passive: true });
 
     if (window._navOverflowResizeObserver) window._navOverflowResizeObserver.disconnect();
@@ -1208,6 +1212,18 @@ function initNavOverflow() {
         window._navOverflowResizeObserver.observe(nav);
     }
     window.addEventListener('resize', updateNavOverflow, { passive: true });
+
+    window._navOverflowCleanup = function() {
+        arrowL.removeEventListener('click', onClickL);
+        arrowR.removeEventListener('click', onClickR);
+        nav.removeEventListener('scroll', updateNavOverflow);
+        window.removeEventListener('resize', updateNavOverflow);
+        if (window._navOverflowResizeObserver) {
+            window._navOverflowResizeObserver.disconnect();
+            window._navOverflowResizeObserver = null;
+        }
+    };
+
     updateNavOverflow();
 }
 
