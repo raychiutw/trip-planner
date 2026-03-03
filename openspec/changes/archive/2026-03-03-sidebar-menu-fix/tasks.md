@@ -17,6 +17,6 @@
 ## 4. 驗證
 
 - [x] 4.1 執行完整測試套件（`npm test`），確認全數通過
-- [ ] 4.2 手動驗證：桌機瀏覽器縮小至 <768px，點擊漢堡按鈕應正確開啟 mobile drawer
-- [ ] 4.3 手動驗證：sidebar 收合後 icon 完整顯示（含捲動條出現時）
-- [ ] 4.4 手動驗證：點擊 sidebar-toggle 後無橘色/深色 outline 出現
+- [x] 4.2 手動驗證：桌機瀏覽器縮小至 <768px，點擊漢堡按鈕應正確開啟 mobile drawer
+- [x] 4.3 手動驗證：sidebar 收合後 icon 完整顯示（含捲動條出現時）
+- [x] 4.4 手動驗證：點擊 sidebar-toggle 後無橘色/深色 outline 出現

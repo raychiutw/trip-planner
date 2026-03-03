@@ -1,62 +1,92 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: 全站 CSS 色彩變數定義於 shared.css
 
 系統 SHALL 在 `css/shared.css` 的 `:root` 與 `body.dark` 兩個區塊中集中定義所有色彩 CSS variables，light mode 與 dark mode 各一套，其他 CSS 檔案 MUST 只引用這些變數，不得自行宣告色彩值。
 
+擴充變數列表：
+
+| 變數 | Light 值 | Dark 值 | 用途 |
+|------|----------|---------|------|
+| `--bg` | `#FAF9F5` | `#1A1A1A` | body 背景 |
+| `--card-bg` | `#F5F0E8` | `#2B2B2B` | 卡片背景 |
+| `--hover-bg` | `#EDE8E0` | `#3D3A37` | 互動 hover 底色 |
+| `--bubble-bg` | `#F0EDE8` | `#3D3A35` | 聊天氣泡背景 |
+| `--text` | `#1A1A1A` | `#E8E8E8` | 主要文字 |
+| `--text-muted` | `#6B6B6B` | `#9B9B9B` | 次要文字 |
+| `--border` | `#E5E0DA` | `#3A3A3A` | 邊線色 |
+| `--accent` | `#C4704F` | `#D4845E` | 強調色 |
+| `--gray` | `#6B6B6B` | `#9B9590` | 裝飾灰 |
+| `--gray-light` | `#EDEBE8` | `#343130` | 淺灰背景 |
+| `--white` | `#FAF9F5` | `#292624` | body 背景別名 |
+| `--error` | `#D32F2F` | `#FCA5A5` | 錯誤文字 |
+| `--error-bg` | `#FFEBEE` | `rgba(220,38,38,0.12)` | 錯誤背景 |
+| `--success` | `#10B981` | `#6EE7B7` | 成功狀態 |
+
 #### Scenario: Light mode 色彩變數存在且值正確
 
 - **WHEN** 載入 `css/shared.css`
-- **THEN** `:root` 中 SHALL 存在以下變數及對應值：`--bg: #FFFFFF`、`--card-bg: #F5F0E8`、`--bubble-bg: #F0EDE8`、`--text: #1A1A1A`、`--text-muted: #6B6B6B`、`--border: #E5E0DA`、`--accent: #8B8580`
+- **THEN** `:root` 中 SHALL 存在以下變數及對應值：`--bg: #FAF9F5`、`--card-bg: #F5F0E8`、`--hover-bg: #EDE8E0`、`--accent: #C4704F`、`--gray-light: #EDEBE8`、`--error: #D32F2F`、`--error-bg: #FFEBEE`、`--success: #10B981`
 
 #### Scenario: Dark mode 色彩變數存在且值正確
 
 - **WHEN** `<body>` 元素含有 `.dark` class
-- **THEN** `body.dark` 區塊 SHALL 覆蓋以下變數：`--bg: #1A1A1A`、`--card-bg: #2B2B2B`、`--bubble-bg: #3D3A35`、`--text: #E8E8E8`、`--text-muted: #9B9B9B`、`--border: #3A3A3A`
-
-#### Scenario: --blue 向後相容別名
-
-- **WHEN** 任何 CSS 選擇器引用 `var(--blue)`
-- **THEN** 顯示顏色 SHALL 等同於 `var(--accent)` 的值，因為 `--blue: var(--accent)` 別名存在於 `:root`
+- **THEN** `body.dark` 區塊 SHALL 覆蓋以下變數：`--hover-bg: #3D3A37`、`--error: #FCA5A5`、`--error-bg: rgba(220, 38, 38, 0.12)`、`--success: #6EE7B7`
 
 ---
 
-### Requirement: Day pills 與互動元素使用 accent 色
+### Requirement: 深色模式覆蓋規範
 
-系統 SHALL 將所有 Day header 背景、focus ring、按鈕強調色改為引用 `var(--accent)`，不得硬編碼顏色值。
+系統 SHALL 確保所有 `body.dark` CSS 覆蓋遵守以下規則：
 
-#### Scenario: Day header 背景色為 accent
+1. 背景色 MUST 引用 CSS 變數，不得硬寫十六進位色碼
+2. 不得使用 `!important` 除非在 print mode
+3. 深色覆蓋的 specificity MUST 精確匹配目標狀態（如 `:disabled`），不得過寬覆蓋
 
-- **WHEN** 行程頁面（`index.html`）渲染 `.day-header` 元素
-- **THEN** 元素背景色 SHALL 顯示為 `var(--accent)`（`#8B8580` 暖灰）
+#### Scenario: info-header 深色覆蓋不使用 !important
 
-#### Scenario: Focus ring 使用 accent 色
+- **WHEN** 頁面為 dark mode 且渲染 `.info-header`
+- **THEN** 背景色 SHALL 由 CSS 變數控制（`var(--hover-bg)` 或 `var(--card-bg)`），不得使用 `!important`
 
-- **WHEN** 使用者以鍵盤聚焦互動按鈕（`.sidebar-toggle`、`.dh-menu`、`.dn`、`.menu-item`）
-- **THEN** `:focus-visible` 的 `box-shadow` SHALL 使用 `var(--accent)` 作為 focus ring 顏色
+#### Scenario: edit-send-btn 深色覆蓋限定 disabled
+
+- **WHEN** 頁面為 dark mode 且 `.edit-send-btn` 為 enabled 狀態
+- **THEN** 按鈕背景色 SHALL 為 `var(--accent)`（`#D4845E`），不被 `body.dark` 覆蓋影響
 
 ---
 
-### Requirement: 卡片與頁面背景色符合暖中性色系
+### Requirement: stickyNav 與 Day 1 間隔
 
-系統 SHALL 確保各頁面卡片背景、頁面背景、邊線顏色均引用 shared.css 中定義的色彩變數，以呈現一致的暖中性風格。
+系統 SHALL 確保 `.sticky-nav` 與第一個 Day section 之間有視覺間隔。
 
-#### Scenario: 卡片背景色（light mode）
+#### Scenario: stickyNav 下方有間隔
 
-- **WHEN** 頁面為 light mode（無 `.dark` class）且顯示 `section`、`.info-card`、`.sidebar`、`.info-panel`
-- **THEN** 這些元素的背景色 SHALL 顯示為 `var(--card-bg)`（`#F5F0E8`）
+- **WHEN** 頁面渲染 `.sticky-nav` 和第一個 `#tripContent section`
+- **THEN** 兩者之間 SHALL 有至少 `12px` 的間隔（通過 margin 實現）
 
-#### Scenario: 頁面背景色（light mode）
+---
 
-- **WHEN** 頁面為 light mode
-- **THEN** `body` 背景色 SHALL 顯示為 `var(--bg)`（`#FFFFFF`）
+### Requirement: 深色模式 info-box 統一
 
-#### Scenario: 卡片背景色（dark mode）
+系統 SHALL 統一 `.info-box` 各類型（`.reservation`、`.parking`、`.souvenir`、`.restaurants`）在深色模式下的背景色，使用相同的 CSS 變數而非各自硬寫不同色碼。
 
-- **WHEN** 頁面為 dark mode（含 `.dark` class）且顯示 `section`、`.info-card`
-- **THEN** 這些元素的背景色 SHALL 顯示為 `var(--card-bg)`（`#2B2B2B`）
+#### Scenario: info-box 類型在 dark mode 背景統一
 
-#### Scenario: edit.html 使用者氣泡背景色
+- **WHEN** 頁面為 dark mode 且渲染任何 `.info-box` 類型
+- **THEN** 所有 `.info-box` 子類型背景色 SHALL 使用同一個 CSS 變數（`var(--blue-light)` 或 `var(--card-bg)`），不得各自硬寫不同色碼
 
-- **WHEN** `edit.html` 頁面顯示使用者輸入的聊天氣泡（`.user-bubble` 或同等元素）
-- **THEN** 氣泡背景色 SHALL 使用 `var(--bubble-bg)`（light: `#F0EDE8`，dark: `#3D3A35`）
+---
+
+### Requirement: sidebar 與 drawer 深色模式背景
+
+系統 SHALL 在深色模式中使用 `var(--card-bg)` 作為 `.sidebar` 與 `.menu-drawer` 的背景色，使其與頁面背景（`--bg`）有層級區分。
+
+#### Scenario: sidebar 在 dark mode 使用 card-bg
+
+- **WHEN** 頁面為 dark mode 且顯示 `.sidebar`
+- **THEN** 背景色 SHALL 為 `var(--card-bg)`（`#2B2B2B`），不得為 `var(--bg)`（`#1A1A1A`）
+
+#### Scenario: menu-drawer 在 dark mode 使用 card-bg
+
+- **WHEN** 頁面為 dark mode 且開啟 `.menu-drawer`
+- **THEN** 背景色 SHALL 為 `var(--card-bg)`（`#2B2B2B`），與頁面背景有層級區分

@@ -489,6 +489,22 @@ function renderEmergency(data) {
     return html;
 }
 
+/* ===== Render: Highlights ===== */
+function renderHighlights(data) {
+    var html = '';
+    if (data.summary) {
+        html += '<div class="hl-summary">' + escHtml(data.summary) + '</div>';
+    }
+    if (data.tags && data.tags.length) {
+        html += '<div class="hl-tags">';
+        data.tags.forEach(function(tag) {
+            html += '<span class="hl-tag">' + escHtml(tag) + '</span>';
+        });
+        html += '</div>';
+    }
+    return html;
+}
+
 /* ===== Render: Suggestions ===== */
 function renderSuggestions(data) {
     var html = '';
@@ -538,6 +554,8 @@ function validateTripData(data) {
         if (!data.footer.title) errors.push('footer 缺少 title');
         if (!data.footer.dates) errors.push('footer 缺少 dates');
     }
+    if (!data.highlights) errors.push('缺少 highlights');
+    if (!data.suggestions) errors.push('缺少 suggestions');
 
     // --- Recursive walk for warnings ---
     var URL_FIELDS = ['titleUrl', 'url', 'googleQuery', 'appleQuery', 'reservationUrl', 'blogUrl', 'reserve'];
@@ -744,6 +762,24 @@ function renderTrip(data) {
     // Build sections
     var html = '';
 
+    // AI cards (above Day 1)
+    if (data.highlights) {
+        html += '<section>';
+        html += '<div class="day-header info-header" id="sec-highlights"><h2>' + iconSpan('sparkle') + ' ' + escHtml(data.highlights.title) + '</h2></div>';
+        html += '<div class="day-content">';
+        html += renderHighlights(data.highlights.content || {});
+        html += '</div>';
+        html += '</section>';
+    }
+    if (data.suggestions) {
+        html += '<section>';
+        html += '<div class="day-header info-header" id="sec-suggestions"><h2>' + iconSpan('lightbulb') + ' ' + escHtml(data.suggestions.title) + '</h2></div>';
+        html += '<div class="day-content">';
+        html += renderSuggestions(data.suggestions.content || {});
+        html += '</div>';
+        html += '</section>';
+    }
+
     // Day sections
     data.days.forEach(function(day) {
         var id = parseInt(day.id) || 0;
@@ -772,7 +808,6 @@ function renderTrip(data) {
     var infoSections = [
         { key: 'flights', id: 'sec-flight' },
         { key: 'checklist', id: 'sec-checklist' },
-        { key: 'suggestions', id: 'sec-suggestions' },
         { key: 'backup', id: 'sec-backup' },
         { key: 'emergency', id: 'sec-emergency' }
     ];
@@ -787,7 +822,6 @@ function renderTrip(data) {
         } else {
             if (sec.key === 'flights') html += renderFlights(d.content || {});
             else if (sec.key === 'checklist') html += renderChecklist(d.content || {});
-            else if (sec.key === 'suggestions') html += renderSuggestions(d.content || {});
             else if (sec.key === 'backup') html += renderBackup(d.content || {});
             else if (sec.key === 'emergency') html += renderEmergency(d.content || {});
         }
@@ -940,6 +974,16 @@ function renderInfoPanel(data) {
     var html = '';
     html += renderCountdown(data.autoScrollDates);
     html += renderTripStatsCard(data);
+    if (data.highlights && data.highlights.content && data.highlights.content.tags) {
+        html += '<div class="info-card">';
+        html += '<div class="info-label">行程特色</div>';
+        html += '<div class="hl-tags">';
+        data.highlights.content.tags.forEach(function(tag) {
+            html += '<span class="hl-tag">' + escHtml(tag) + '</span>';
+        });
+        html += '</div>';
+        html += '</div>';
+    }
     html += renderSuggestionSummaryCard(data.suggestions);
     panel.innerHTML = html;
     // Also render to bottom sheet body if it exists
@@ -992,10 +1036,11 @@ function buildMenu(data) {
     // Drawer menu (mobile)
     var html = nav.drawer;
     html += '<div class="menu-sep"></div>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-highlights">' + iconSpan('sparkle') + ' AI行程亮點</button>';
+    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">' + iconSpan('lightbulb') + ' AI 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-flight">' + iconSpan('plane') + ' 航班資訊</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-driving">' + iconSpan('bus') + ' 交通統計</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-checklist">' + iconSpan('check-circle') + ' 出發前確認</button>';
-    html += '<button class="menu-item" data-action="scroll-to" data-target="sec-suggestions">' + iconSpan('lightbulb') + ' 行程建議</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-backup">' + iconSpan('refresh') + ' 颱風/雨天備案</button>';
     html += '<button class="menu-item" data-action="scroll-to" data-target="sec-emergency">' + iconSpan('emergency') + ' 緊急聯絡</button>';
     html += '<div class="menu-sep"></div>';
@@ -1008,10 +1053,11 @@ function buildMenu(data) {
         var sHtml = nav.sidebar;
         sHtml += '<div class="menu-sep"></div>';
         var navItems = [
+            { icon: 'sparkle', label: 'AI行程亮點', target: 'sec-highlights' },
+            { icon: 'lightbulb', label: 'AI 行程建議', target: 'sec-suggestions' },
             { icon: 'plane', label: '航班資訊', target: 'sec-flight' },
             { icon: 'bus', label: '交通統計', target: 'sec-driving' },
             { icon: 'check-circle', label: '出發前確認', target: 'sec-checklist' },
-            { icon: 'lightbulb', label: '行程建議', target: 'sec-suggestions' },
             { icon: 'refresh', label: '颱風/雨天備案', target: 'sec-backup' },
             { icon: 'emergency', label: '緊急聯絡', target: 'sec-emergency' }
         ];

@@ -1,40 +1,39 @@
-# Spec: setting-page
+## MODIFIED Requirements
 
-設定頁面，提供行程切換與色彩模式設定。
+### Requirement: 設定頁面版面結構
 
-## 頁面結構
+setting.html 的主要內容區域 SHALL 使用與 edit.html 一致的版面骨架：桌機版內容限寬 `60vw` 居中，頁面背景為 body `--bg`。
 
-- **URL**: `setting.html`
-- **載入**: `shared.css` + `menu.css` + `setting.css` + `shared.js` + `menu.js` + `icons.js` + `setting.js`
-- **CSP**: `connect-src 'self'`（不需 GitHub API）
+#### Scenario: 桌機版內容限寬 60vw 居中
 
-## sticky-nav 隱藏
+- **WHEN** viewport width ≥ 768px
+- **THEN** `.setting-page` 最大寬度 SHALL 為 `60vw`，水平居中
 
-- 設定頁 SHALL 隱藏 `.sticky-nav` 元素（不論螢幕尺寸）
+#### Scenario: 頁面背景為 body --bg
 
-## 區段一：選擇行程
+- **WHEN** setting 頁面渲染完成
+- **THEN** `.setting-page` SHALL 不自行設定背景色，讓 body `--bg` 透出
 
-- 從 `data/trips.json` 讀取行程清單
-- 每個行程渲染為 `.trip-btn` 按鈕，顯示行程名稱、日期、owner
-- 選中項目加 `.active` 樣式，使用 `border: 2px solid` 外框（四邊等粗），預設狀態 SHALL 使用 `border: 2px solid transparent` 佔位避免版面跳動
-- 點擊後存入 `localStorage trip-pref`（slug 格式），並自動導向 `index.html`
-- 無預設選中時，自動選第一筆
+#### Scenario: color-mode-card active 使用 accent 色
 
-## 區段二：外觀（色彩模式）
+- **WHEN** 使用者選擇一個色彩模式
+- **THEN** 選中的 `.color-mode-card` 邊框色 SHALL 為 `var(--accent)`，不使用 `var(--blue)`
 
-- 三選一卡片：Light（淺色）/ Auto（自動）/ Dark（深色）
-- 三欄 grid 排列，每張卡片含色彩預覽縮圖 + 標籤
-- Auto 預覽使用 135° 對角線漸層模擬半淺半深
-- 選中卡片加 `#C4704F` 邊框
-- 點擊存入 `localStorage color-mode`，即時套用
+### Requirement: Setting 頁面桌機版 Layout 留白與寬度
 
-## 色彩模式邏輯
+桌機版（viewport width ≥ 768px）的 `.setting-page` SHALL 提供充裕頂部留白（`padding-top: 48px`）與較寬的最大內容寬度（`max-width: 640px`），讓頁面風格接近 Claude 的內容頁佈局。行動版 padding 維持 `16px`，不加頂部留白。
 
-- `applyColorMode(mode)` 根據 mode 切換 `body.dark` class
-- `auto` 模式透過 `window.matchMedia('(prefers-color-scheme: dark)')` 判斷
-- 更新 `meta[name="theme-color"]` 值（dark: `#7D4A36`, light: `#C4704F`）
+#### Scenario: 桌機版頂部留白
 
-## 舊版相容
+- **WHEN** viewport width ≥ 768px 且開啟 setting.html
+- **THEN** `.setting-page` 頂部 padding SHALL 為 `48px`，內容不緊貼 viewport 頂端
 
-- 若 `localStorage color-mode` 未設定，檢查舊版 `localStorage dark` 標記
-- `lsGet('dark') === '1'` 視為 dark 模式
+#### Scenario: 桌機版最大寬度
+
+- **WHEN** viewport width ≥ 768px 且開啟 setting.html
+- **THEN** `.setting-page` 的 `max-width` SHALL 為 `640px`，水平置中（`margin: 0 auto`）
+
+#### Scenario: 行動版不受影響
+
+- **WHEN** viewport width < 768px 且開啟 setting.html
+- **THEN** `.setting-page` 的頂部留白 SHALL 維持原有 `16px`（整體 padding），最大寬度不受限制

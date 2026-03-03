@@ -1,7 +1,7 @@
 /* ===== Setting Page Layout ===== */
-.setting-page { max-width: 520px; margin: 0 auto; padding: 16px; background: var(--card-bg); }
+.setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
 @media (min-width: 768px) {
-    .setting-page { max-width: 640px; padding-top: 48px; }
+    .setting-page { max-width: 60vw; padding-top: 48px; }
 }
 .setting-main { padding-bottom: 40px; }
 
@@ -46,7 +46,7 @@
     transition: border-color 0.15s, box-shadow 0.15s;
 }
 .color-mode-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-.color-mode-card.active { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue); }
+.color-mode-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
 /* ===== Color Mode Preview ===== */
 .color-mode-preview {
@@ -111,8 +111,9 @@
     color: var(--gray);
 }
 
-/* ===== Hide sticky-nav on setting page ===== */
-.sticky-nav { display: none; }
+/* ===== Sticky-nav: title bar ===== */
+.setting-main .sticky-nav { background: var(--card-bg); }
+@media (min-width: 768px) { .setting-main .sticky-nav .dh-menu { display: none; } }
 
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: var(--card-bg); }
