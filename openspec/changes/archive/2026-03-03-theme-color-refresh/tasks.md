@@ -36,9 +36,9 @@
 ## 5. 驗證與收尾
 
 - [x] 5.1 執行 `npm test` 確認所有 unit test 通過（純 CSS 變更，預期不影響測試結果）
-- [ ] 5.2 手動目視確認 `index.html` 在 light mode 下：day-header 顯示暖米色底色（`#F5F0E8`）而非舊有暖灰色
-- [ ] 5.3 手動目視確認 `index.html` 在 dark mode 下：day-header 仍顯示橘色（`#C4845E`），未受影響
-- [ ] 5.4 手動目視確認 `index.html` 在 light mode 下：suggestion 卡片 high/medium 背景色比修改前更明顯；low 優先度卡片顯示淡綠色背景，圓點為綠色
-- [ ] 5.5 手動目視確認 `edit.html` 在 light mode 下：send 按鈕 enabled 狀態顯示 `#C4956A` 橘色
-- [ ] 5.6 手動目視確認三頁在桌機（≥768px）下整體文字密度比修改前更精緻（字型略小一級）
-- [ ] 5.7 確認 `css/shared.css` 的 `body.dark` 區塊中所有 dark mode 色彩值均未被修改
+- [x] 5.2 手動目視確認 `index.html` 在 light mode 下：day-header 顯示暖米色底色（`#F5F0E8`）而非舊有暖灰色
+- [x] 5.3 手動目視確認 `index.html` 在 dark mode 下：day-header 仍顯示橘色（`#C4845E`），未受影響
+- [x] 5.4 手動目視確認 `index.html` 在 light mode 下：suggestion 卡片 high/medium 背景色比修改前更明顯；low 優先度卡片顯示淡綠色背景，圓點為綠色
+- [x] 5.5 手動目視確認 `edit.html` 在 light mode 下：send 按鈕 enabled 狀態顯示 `#C4956A` 橘色
+- [x] 5.6 手動目視確認三頁在桌機（≥768px）下整體文字密度比修改前更精緻（字型略小一級）
+- [x] 5.7 確認 `css/shared.css` 的 `body.dark` 區塊中所有 dark mode 色彩值均未被修改

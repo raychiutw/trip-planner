@@ -43,8 +43,8 @@
 ## 7. 驗證
 
 - [x] 7.1 執行 `npm test`（Vitest 單元測試）確認全數通過
-- [ ] 7.2 執行 E2E 測試（`npx playwright test`）確認全數通過
-- [ ] 7.3 手動開啟 `index.html`：drawer 選單與側邊欄顯示「我的行程」、「編輯行程」、「設定」
-- [ ] 7.4 手動開啟 `edit.html`：瀏覽器 tab 標題顯示「編輯行程 — Trip Planner」；選單與側邊欄顯示正確新名稱
-- [ ] 7.5 手動開啟 `setting.html`：選單與側邊欄顯示正確新名稱
-- [ ] 7.6 手動查看 `index.html` 原始碼：meta description、og:title、og:description、title 標籤均無「沖繩」
+- [x] 7.2 執行 E2E 測試（`npx playwright test`）確認全數通過
+- [x] 7.3 手動開啟 `index.html`：drawer 選單與側邊欄顯示「我的行程」、「編輯行程」、「設定」
+- [x] 7.4 手動開啟 `edit.html`：瀏覽器 tab 標題顯示「編輯行程 — Trip Planner」；選單與側邊欄顯示正確新名稱
+- [x] 7.5 手動開啟 `setting.html`：選單與側邊欄顯示正確新名稱
+- [x] 7.6 手動查看 `index.html` 原始碼：meta description、og:title、og:description、title 標籤均無「沖繩」

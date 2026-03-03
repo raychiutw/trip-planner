@@ -379,3 +379,24 @@ body.dark .info-fab { background: var(--accent); }
     cursor: grab;
 }
 .info-sheet-body { overflow-y: auto; font-size: var(--fs-md); }
+
+/* ===== AI Highlights ===== */
+.hl-summary {
+    line-height: 1.7;
+    color: var(--text);
+    margin-bottom: 12px;
+}
+.hl-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.hl-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 99px;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+}
