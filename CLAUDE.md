@@ -11,7 +11,7 @@ tests/              unit/  integration/  json/  e2e/
 .claude/commands/   add-spot.md  deploy.md  render-trip.md
 ```
 
-- GitHub Pages：https://raychiutw.github.io/trip-planner/
+- Cloudflare Pages：https://trip-planner-dby.pages.dev/
 
 ## 開發規則
 
