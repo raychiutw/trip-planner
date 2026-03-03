@@ -16,5 +16,11 @@
     "name": "Onion 的板橋之旅",
     "dates": "2026/4/1 ~ 4/15",
     "owner": "Onion"
+  },
+  {
+    "file": "data/trips/okinawa-trip-2026-RayHus.json",
+    "name": "RayHus 的沖繩之旅",
+    "dates": "2026/3/6 ~ 3/11",
+    "owner": "RayHus"
   }
 ]
