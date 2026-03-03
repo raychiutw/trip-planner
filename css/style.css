@@ -38,9 +38,9 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
 .day-header h2 { font-size: var(--fs-lg); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-date { font-size: var(--fs-md); opacity: 0.9; margin-left: auto; white-space: nowrap; }
 .dh-nav-wrap { position: relative; flex: 1; display: flex; align-items: center; min-width: 0; }
-.dh-nav { display: flex; gap: 6px; flex: 1; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
+.dh-nav { display: flex; gap: 6px; flex: 1; justify-content: center; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; }
 .dh-nav::-webkit-scrollbar { display: none; }
-.dn { background: var(--blue-light); color: var(--blue); border: none; padding: 6px 12px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; }
+.dn { background: var(--blue-light); color: var(--blue); border: none; padding: 6px 12px; border-radius: 12px; font-size: var(--fs-lg); font-family: inherit; cursor: pointer; font-weight: 600; min-width: 40px; text-align: center; }
 .dn:hover { background: var(--blue); color: var(--white); }
 .dn.active { background: var(--blue); color: var(--white); }
 
@@ -68,18 +68,19 @@ footer p { font-size: var(--fs-md); margin-top: 4px; }
     border: none;
     color: var(--blue);
     cursor: pointer;
-    padding: 0 4px;
+    padding: 0 8px;
     font-size: var(--fs-lg);
     line-height: 1;
     flex-shrink: 0;
     z-index: 2;
     visibility: visible;
     transition: visibility 0s;
+    min-width: 28px;
 }
 .dh-nav-arrow[aria-hidden="true"] { visibility: hidden; }
 @media (min-width: 768px) {
     .dh-nav-arrow { display: flex; align-items: center; }
-    .dh-nav { justify-content: flex-start; }
+    .dh-nav { justify-content: center; }
 }
 
 /* ===== Day Content ===== */
@@ -287,6 +288,7 @@ body.dark .edit-fab { background: var(--accent); }
 /* ===== Desktop Three-Column Layout (≥1200px) ===== */
 @media (min-width: 1200px) {
     #tripContent { max-width: none; }
+    .sticky-nav { max-width: none; }
     .info-panel {
         display: block;
         width: var(--info-panel-w);
