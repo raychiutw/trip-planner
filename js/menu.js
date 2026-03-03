@@ -2,7 +2,7 @@
 /* Depends on shared.js (lsGet, lsSet) */
 
 /* ===== Desktop Detection ===== */
-function isDesktop() { return !/Mobi|Android.*Mobile|iPhone|iPod|Opera Mini/i.test(navigator.userAgent); }
+function isDesktop() { return window.innerWidth >= 768; }
 
 /* ===== Sidebar Init / Toggle ===== */
 function initSidebar() {
