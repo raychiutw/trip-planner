@@ -1,5 +1,8 @@
 /* ===== Setting Page Layout ===== */
 .setting-page { max-width: 520px; margin: 0 auto; padding: 16px; background: var(--card-bg); }
+@media (min-width: 768px) {
+    .setting-page { max-width: 640px; padding-top: 48px; }
+}
 .setting-main { padding-bottom: 40px; }
 
 /* ===== Section ===== */

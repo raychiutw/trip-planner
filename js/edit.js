@@ -88,7 +88,7 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=trip-edit&state=all&per_page=15')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=trip-edit&state=all&per_page=20')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
