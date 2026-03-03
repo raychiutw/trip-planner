@@ -1,9 +1,9 @@
 /* ===== Shared Variables ===== */
 :root {
-    --accent: #C4956A;
+    --accent: #C4704F;
     --blue: var(--accent);
     --blue-light: #F5EDE8;
-    --sand: #C4956A;
+    --sand: #C4704F;
     --sand-light: #F5EDE0;
     --white: #FAF9F5;
     --bg: #FAF9F5;
@@ -42,7 +42,7 @@ body { font-family: 'Noto Sans TC', sans-serif; background: var(--white); font-s
 .trip-btn .trip-sub { font-size: var(--fs-sm); color: var(--gray); margin-top: 2px; display: block; }
 
 /* ===== Dark Mode (shared base) ===== */
-body.dark { --accent: #C4845E; --blue: var(--accent); --blue-light: #302A25; --sand: #D4A373; --sand-light: #302A22; --white: #292624; --bg: #1A1A1A; --card-bg: #2B2B2B; --bubble-bg: #3D3A35; --gray: #9B9590; --gray-light: #343130; --text: #E8E8E8; --text-muted: #9B9B9B; --border: #3A3A3A; background: var(--bg); }
+body.dark { --accent: #D4845E; --blue: var(--accent); --blue-light: #302A25; --sand: #D4A070; --sand-light: #302A22; --white: #292624; --bg: #1A1A1A; --card-bg: #2B2B2B; --bubble-bg: #3D3A35; --gray: #9B9590; --gray-light: #343130; --text: #E8E8E8; --text-muted: #9B9B9B; --border: #3A3A3A; background: var(--bg); }
 body.dark .trip-btn { background: #3D3A37; }
 body.dark .trip-btn:hover { opacity: 0.85; }
 body.dark .trip-btn.active { border-color: var(--accent); }
