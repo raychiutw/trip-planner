@@ -30,9 +30,10 @@
 - **WHEN** 某日 timeline 無晚餐 entry 且非航程豁免日
 - **THEN** SHALL 在適當時間點插入 `{ title: "晚餐（餐廳未定）" }` entry，含 restaurants infoBox 推薦 3 家
 
-#### Scenario: 一日遊團不補午餐
+#### Scenario: 一日遊團午餐 entry
 - **WHEN** 某日行程為 KKday/Klook 等一日遊團體行程
-- **THEN** SHALL 不補午餐，晚餐依團體行程結束後到達地點推薦
+- **THEN** SHALL 插入午餐 timeline entry，`title` 為「午餐（團體行程已含）」，不附 `infoBoxes[type=restaurants]`
+- **AND** 晚餐依團體行程結束後到達地點推薦
 
 #### Scenario: 去程到達日餐次判斷
 - **WHEN** 行程含 flights 且該日為去程到達日
@@ -49,9 +50,11 @@
 ### Requirement: R3 餐廳推薦品質
 每個 `infoBoxes[type=restaurants]` 的 `restaurants` 陣列 SHALL 補到 3 家。每家餐廳 SHALL 包含 `hours`（營業時間）、`reservation`（訂位資訊）、`blogUrl`（繁中推薦網誌）。推薦餐廳的營業時間 MUST 與用餐時間吻合。選擇依據為行程當時地點附近、評價高的餐廳。餐廳的料理類別 SHALL 對齊 `meta.foodPreferences` 的優先順序排列。
 
-#### Scenario: 餐廳補到 3 家
-- **WHEN** 某 restaurants box 不足 3 家
-- **THEN** SHALL 以行程當時位置附近、評價高為條件補足到 3 家，每家依料理偏好排序
+#### Scenario: 餐廳數量規則
+- **WHEN** 某 restaurants infoBox 的 `restaurants` 陣列
+- **THEN** 數量 SHALL ≥ 1 且 ≤ 3
+- **AND** 使用者已提供的餐廳資料優先保留，不強制補到 3 家
+- **AND** 若使用者未提供任何餐廳，SHALL 以行程當時位置附近、評價高為條件補足到 3 家，每家依料理偏好排序
 
 #### Scenario: category 對齊偏好順序
 - **WHEN** 補齊或新增餐廳至 restaurants infoBox
@@ -80,6 +83,10 @@
 - **WHEN** 景點有營業時間限制
 - **THEN** `infoBoxes` 中 SHALL 包含營業時間項目，且 MUST 確認與行程安排的到訪時間吻合
 
+#### Scenario: 景點 blogUrl 查無結果
+- **WHEN** Google 搜尋「{景點名} {地區} 推薦」無適合的繁體中文文章
+- **THEN** `blogUrl` SHALL 為 `null`
+
 ### Requirement: R5 飯店品質
 Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 
@@ -87,12 +94,20 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 - **WHEN** 行程包含飯店
 - **THEN** hotel 物件 SHALL 含 `blogUrl`，值為 Google「{飯店名} 推薦」的第一篇繁體中文文章 URL
 
+#### Scenario: 飯店 blogUrl 查無結果
+- **WHEN** Google 搜尋「{飯店名} 推薦」無適合的繁體中文文章
+- **THEN** `blogUrl` SHALL 為 `null`
+
 ### Requirement: R6 搜尋方式
 所有 blogUrl 的搜尋 SHALL 以 Google「{名稱} {地區} 推薦」為關鍵字，取第一篇繁體中文文章。優先選擇 pixnet、mimigo、kafu 等常見台灣旅遊部落格。
 
 #### Scenario: 搜尋繁中網誌
 - **WHEN** 需填寫任一 blogUrl
 - **THEN** SHALL 以 Google 搜尋「{名稱} {地區} 推薦」，從結果中選取第一篇繁體中文文章 URL
+
+#### Scenario: 搜尋無結果
+- **WHEN** Google 搜尋無繁體中文文章結果或結果明顯不相關
+- **THEN** `blogUrl` SHALL 設為 `null`，不放不相關連結
 
 ### Requirement: R7 購物景點推薦
 飯店附近有超市、唐吉軻德、超商等購物點時，SHALL 以 `infoBox type=shopping` 結構化顯示。飯店 subs 中的購物文字 SHALL 搬到 shopping infoBox，subs 僅保留停車場等非購物資訊。獨立購物行程（來客夢/iias/Outlet/PARCO CITY/購物商圈）同樣 SHALL 附 shopping infoBox。景點附近步行 5~10 分鐘內有超市或唐吉軻德時，SHALL 在該景點 timeline entry 加 shopping infoBox。每個購物景點 SHALL 包含 `mustBuy` 必買推薦。渲染 SHALL 復用既有 `.restaurant-choice` CSS，不新增 CSS。所有 shop item 不含 `titleUrl`。不再使用 `souvenir` infoBox type，統一為 `shopping`。
@@ -136,6 +151,16 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 #### Scenario: renderShop 復用既有 CSS
 - **WHEN** app.js 渲染 shopping infoBox
 - **THEN** SHALL 使用 `renderShop()` 函式，復用 `.restaurant-choice` CSS class，不新增任何 CSS
+
+#### Scenario: 飯店購物 infoBox 生成
+- **WHEN** 飯店物件的 `infoBoxes` 不存在或不含 `type=shopping`
+- **THEN** SHALL 新建 `infoBoxes` 陣列（若不存在）並加入 `type=shopping` infoBox
+- **AND** SHALL 搜尋飯店附近超市/超商/唐吉軻德，補到 3+ shops
+- **AND** shopping infoBox SHALL 放在 `hotel.infoBoxes`，不放在 timeline entry
+
+#### Scenario: 飯店購物 infoBox 兩階段 checklist
+- **WHEN** 執行 R7 檢查
+- **THEN** SHALL 先執行「驗證既有」（category 標準化、欄位完整性），再執行「生成缺漏」（逐日檢查每間飯店是否有 shopping infoBox，缺者新建）
 
 ### Requirement: R8 早餐欄位
 每日 hotel 物件 SHALL 包含 `breakfast` 欄位，記錄該飯店早餐安排。使用者可指定飯店含早餐或自行解決；未指定時標記為「資料未提供」。若查得到飯店退房時間，SHALL 以 `checkout` 欄位記錄。
