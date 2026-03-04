@@ -1,14 +1,12 @@
 {
   "meta": {
-    "name": "Hui Yun 的沖繩之旅",
     "title": "2026 沖繩七日遊行程表",
     "description": "2026 沖繩七日遊行程表：那霸、浦添PARCO CITY、美國村、恩納、殘波岬、萬座毛、美麗海水族館、古宇利島、來客夢、國際通、瀨長島。",
     "ogDescription": "那霸→美國村→恩納→美麗海水族館→古宇利島→來客夢→國際通→瀨長島，七日完整行程",
-    "themeColor": "#2AA5A0",
     "foodPreferences": [
-      "拉麵",
-      "燒肉",
-      "當地特色"
+      "沖繩料理",
+      "海鮮",
+      "甜點"
     ],
     "tripType": "self-drive"
   },
@@ -256,6 +254,7 @@
         "hotel": {
           "name": "沖繩那霸美居飯店",
           "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
             "那霸市壺川 3-3-19",
             "Day 1 Check in 22:29"
@@ -274,7 +273,9 @@
               },
               "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
               "price": "費用未確認"
-            },
+            }
+          ],
+          "infoBoxes": [
             {
               "type": "shopping",
               "title": "飯店附近購物",
@@ -314,9 +315,65 @@
                 }
               ]
             }
-          ]
+          ],
+          "checkout": "11:00"
         },
         "timeline": [
+          {
+            "time": "13:00-14:00",
+            "title": "午餐",
+            "description": "出發前在機場或附近用餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "category": "沖繩料理（預習）",
+                    "name": "花笠食堂",
+                    "desc": "花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表（抵達沖繩後可安排）",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "花笠食堂 那覇",
+                      "googleQuery": "https://maps.google.com/?q=花笠食堂+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=花笠食堂+那覇"
+                    },
+                    "hours": "11:00~20:00（週日公休）",
+                    "reservation": null,
+                    "blogUrl": "https://dreamycat0421.pixnet.net/blog/post/410605360"
+                  },
+                  {
+                    "category": "海鮮",
+                    "name": "第一牧志公設市場 2F 代煮",
+                    "desc": "牧志市場 — 那霸最具代表性的在地市場，1F 挑選新鮮海鮮帶至 2F 代煮，石垣牛、海葡萄必嚐（抵達沖繩後可安排）",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "第一牧志公設市場",
+                      "googleQuery": "https://maps.google.com/?q=第一牧志公設市場",
+                      "appleQuery": "https://maps.apple.com/?q=第一牧志公設市場"
+                    },
+                    "hours": "08:00~21:00（二樓食堂依店家）",
+                    "reservation": null,
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
+                  },
+                  {
+                    "category": "甜點",
+                    "name": "oHacorte 那霸空港店",
+                    "desc": "oHacorté — 沖繩代表性水果塔甜點店，那霸機場國際線2F 設有分店，各式當季水果塔色彩繽紛，登機前必試",
+                    "price": "¥650~",
+                    "location": {
+                      "name": "那霸機場 国際線 2F",
+                      "googleQuery": "https://maps.google.com/?q=那霸機場+oHacorte",
+                      "appleQuery": "https://maps.apple.com/?q=那霸機場+oHacorte"
+                    },
+                    "hours": "07:00~20:00",
+                    "reservation": null,
+                    "blogUrl": "https://reyaprincess.pixnet.net/blog/post/468560756"
+                  }
+                ]
+              }
+            ]
+          },
           {
             "time": "15:20-17:20",
             "title": "桃園國際機場 出發",
@@ -391,6 +448,7 @@
         "hotel": {
           "name": "BUZZ RESORT Chatan",
           "url": "https://www.buzz-resort.com/",
+          "blogUrl": "https://bobbyfun.tw/2024-02-22-3012/",
           "details": [
             "北谷町美浜",
             "Day 2 Check in 01:04（翌日深夜）"
@@ -409,7 +467,9 @@
               },
               "note": "美浜美國村區域有免費停車場；BUZZ RESORT 請事先確認自用車停車方案",
               "price": "費用未確認"
-            },
+            }
+          ],
+          "infoBoxes": [
             {
               "type": "shopping",
               "title": "飯店附近購物（北谷・美浜）",
@@ -449,7 +509,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "checkout": "11:00"
         },
         "timeline": [
           {
@@ -619,6 +680,20 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
+                    "category": "沖繩そば",
+                    "name": "我部祖河食堂 浦添店",
+                    "desc": "我部祖河食堂 — 60年老字號，招牌軟骨そば（軟骨排骨沖繩麵）湯頭清香，最具代表性沖繩在地風味",
+                    "price": "¥750~",
+                    "location": {
+                      "name": "我部祖河食堂 浦添店",
+                      "googleQuery": "https://maps.google.com/?q=我部祖河食堂+浦添",
+                      "appleQuery": "https://maps.apple.com/?q=我部祖河食堂+浦添"
+                    },
+                    "hours": "11:00~20:00（售完即止，週三公休）",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/"
+                  },
+                  {
                     "category": "沖繩拉麵",
                     "name": "琉球新麺 通堂 PARCO CITY店",
                     "desc": "琉球新麺 通堂 — 沖繩本土拉麵名店，濃厚豚骨湯底搭配特製捲麵，PARCO CITY 3F 排隊人氣店",
@@ -648,20 +723,6 @@
                     "reservation": "ホットペッパー預約",
                     "reservationUrl": "https://www.hotpepper.jp/strJ001257517/",
                     "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
-                  },
-                  {
-                    "category": "沖繩そば",
-                    "name": "我部祖河食堂 浦添店",
-                    "desc": "我部祖河食堂 — 60年老字號，招牌軟骨そば（軟骨排骨沖繩麵）湯頭清香，最具代表性沖繩在地風味",
-                    "price": "¥750~",
-                    "location": {
-                      "name": "我部祖河食堂 浦添店",
-                      "googleQuery": "https://maps.google.com/?q=我部祖河食堂+浦添",
-                      "appleQuery": "https://maps.apple.com/?q=我部祖河食堂+浦添"
-                    },
-                    "hours": "11:00~20:00（售完即止，週三公休）",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/"
                   }
                 ]
               }
@@ -741,6 +802,66 @@
             ],
             "transit": {
               "text": "約24分鐘",
+              "type": "car"
+            }
+          },
+          {
+            "time": "20:10-21:10",
+            "title": "晚餐",
+            "description": "美國村周邊晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "category": "沖繩料理",
+                    "name": "グルメ迴轉壽司市場 美浜店",
+                    "desc": "グルメ迴轉壽司市場 — 美國村人氣迴轉壽司，沖繩在地魚料，海葡萄壽司、石垣牛壽司為招牌，一盤最低110日圓超划算",
+                    "price": "¥1,200~",
+                    "location": {
+                      "name": "グルメ迴轉壽司市場 美浜店",
+                      "googleQuery": "https://maps.google.com/?q=グルメ迴轉壽司+美浜",
+                      "appleQuery": "https://maps.apple.com/?q=グルメ迴轉壽司+美浜",
+                      "mapcode": "33 556 625*14"
+                    },
+                    "hours": "11:00~22:00（全年無休）",
+                    "reservation": null,
+                    "blogUrl": "https://mimigo.tw/gurumekaiten/"
+                  },
+                  {
+                    "category": "海鮮",
+                    "name": "浜屋沖繩麵 北谷店",
+                    "desc": "浜屋そば — 北谷地區在地人氣沖繩麵，豚骨高湯清香，搭配在地新鮮食材，店內也有海鮮定食",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "浜屋そば 北谷",
+                      "googleQuery": "https://maps.google.com/?q=浜屋そば+北谷",
+                      "appleQuery": "https://maps.apple.com/?q=浜屋そば+北谷"
+                    },
+                    "hours": "10:30~20:30（售完即止）",
+                    "reservation": null,
+                    "blogUrl": "https://mimigo.tw/okinawa-americanvillage/"
+                  },
+                  {
+                    "category": "甜點",
+                    "name": "Blue Seal Ice Cream 北谷美浜店",
+                    "desc": "Blue Seal — 沖繩代表性冰淇淋品牌，鹽金楚糕、芒果、紫芋等沖繩限定口味，美國村散步必吃",
+                    "price": "¥450~",
+                    "location": {
+                      "name": "Blue Seal アメリカンビレッジ店",
+                      "googleQuery": "https://maps.google.com/?q=Blue+Seal+美浜",
+                      "appleQuery": "https://maps.apple.com/?q=Blue+Seal+美浜"
+                    },
+                    "hours": "11:00~22:00",
+                    "reservation": null,
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                  }
+                ]
+              }
+            ],
+            "transit": {
+              "text": "約5分鐘",
               "type": "car"
             }
           },
@@ -844,6 +965,7 @@
         "hotel": {
           "name": "HOPE VILLA Onnason",
           "url": "https://hopevilla.jp/",
+          "blogUrl": "https://www.bigfang.tw/blog/post/okinawa-onnason-hotel",
           "details": [
             "恩納村",
             "Day 3 Check in 15:14"
@@ -862,7 +984,9 @@
               },
               "note": "HOPE VILLA 提供免費私人停車場（場地內停車）",
               "price": "免費"
-            },
+            }
+          ],
+          "infoBoxes": [
             {
               "type": "shopping",
               "title": "恩納村附近購物",
@@ -902,7 +1026,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "checkout": "11:00"
         },
         "timeline": [
           {
@@ -972,18 +1097,18 @@
                 "title": "午餐替代方案（不自炊時）",
                 "restaurants": [
                   {
-                    "category": "豚骨拉麵",
-                    "name": "ラーメン暖暮 北谷店",
-                    "desc": "ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃",
-                    "price": "¥750~",
+                    "category": "沖繩麵",
+                    "name": "花織そば",
+                    "desc": "はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽，最具沖繩在地風味",
+                    "price": "¥700~",
                     "location": {
-                      "name": "暖暮 北谷店",
-                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+北谷",
-                      "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+北谷"
+                      "name": "花織そば 読谷村",
+                      "googleQuery": "https://maps.google.com/?q=花織そば+読谷村",
+                      "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
                     },
-                    "hours": "11:00~翌02:00",
+                    "hours": "11:00~16:00（售完即止）",
                     "reservation": null,
-                    "blogUrl": "https://hanblog.tw/ramendanbo/"
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
                   },
                   {
                     "category": "沖繩牛排",
@@ -1000,18 +1125,18 @@
                     "blogUrl": "https://slowlifeinokinawa.com/steak88/"
                   },
                   {
-                    "category": "沖繩麵",
-                    "name": "花織そば",
-                    "desc": "はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽",
-                    "price": "¥700~",
+                    "category": "豚骨拉麵",
+                    "name": "ラーメン暖暮 北谷店",
+                    "desc": "ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃",
+                    "price": "¥750~",
                     "location": {
-                      "name": "花織そば 読谷村",
-                      "googleQuery": "https://maps.google.com/?q=花織そば+読谷村",
-                      "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
+                      "name": "暖暮 北谷店",
+                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+北谷",
+                      "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+北谷"
                     },
-                    "hours": "11:00~16:00（售完即止）",
+                    "hours": "11:00~翌02:00",
                     "reservation": null,
-                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
               }
@@ -1074,18 +1199,18 @@
                 "title": "晚餐替代方案（不自炊時）",
                 "restaurants": [
                   {
-                    "category": "豚骨拉麵",
-                    "name": "麺処 じゅん坊 恩納店",
-                    "desc": "麺処 じゅん坊 — 恩納村人氣拉麵店，濃厚豚骨醬油湯底，加麵不加價，晚餐後宵夜佳選",
-                    "price": "¥850~",
+                    "category": "沖繩創作料理",
+                    "name": "海の家",
+                    "desc": "リゾートダイニング 海の家 — 恩納村海景餐廳，沖繩料理與海鮮創作料理，夕陽景觀一流",
+                    "price": "¥2,000~",
                     "location": {
-                      "name": "麺処 じゅん坊 恩納村",
-                      "googleQuery": "https://maps.google.com/?q=麺処じゅん坊+恩納",
-                      "appleQuery": "https://maps.apple.com/?q=麺処じゅん坊+恩納"
+                      "name": "海の家 恩納村",
+                      "googleQuery": "https://maps.google.com/?q=海の家+恩納村",
+                      "appleQuery": "https://maps.apple.com/?q=海の家+恩納村"
                     },
-                    "hours": "11:00~24:00（週四公休）",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/"
+                    "hours": "17:00~23:00",
+                    "reservation": "建議預約",
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
                   },
                   {
                     "category": "燒肉",
@@ -1102,18 +1227,18 @@
                     "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
                   },
                   {
-                    "category": "沖繩創作料理",
-                    "name": "海の家",
-                    "desc": "リゾートダイニング 海の家 — 恩納村海景餐廳，沖繩料理與創作料理",
-                    "price": "¥2,000~",
+                    "category": "豚骨拉麵",
+                    "name": "麺処 じゅん坊 恩納店",
+                    "desc": "麺処 じゅん坊 — 恩納村人氣拉麵店，濃厚豚骨醬油湯底，加麵不加價，晚餐後宵夜佳選",
+                    "price": "¥850~",
                     "location": {
-                      "name": "海の家 恩納村",
-                      "googleQuery": "https://maps.google.com/?q=海の家+恩納村",
-                      "appleQuery": "https://maps.apple.com/?q=海の家+恩納村"
+                      "name": "麺処 じゅん坊 恩納村",
+                      "googleQuery": "https://maps.google.com/?q=麺処じゅん坊+恩納",
+                      "appleQuery": "https://maps.apple.com/?q=麺処じゅん坊+恩納"
                     },
-                    "hours": "17:00~23:00",
-                    "reservation": "建議預約",
-                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
+                    "hours": "11:00~24:00（週四公休）",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/"
                   }
                 ]
               }
@@ -1137,6 +1262,7 @@
         "hotel": {
           "name": "HOPE VILLA Onnason",
           "url": "https://hopevilla.jp/",
+          "blogUrl": "https://www.bigfang.tw/blog/post/okinawa-onnason-hotel",
           "details": [
             "恩納村",
             "Day 3~4 連住"
@@ -1155,7 +1281,9 @@
               },
               "note": "HOPE VILLA 提供免費私人停車場（場地內停車）",
               "price": "免費"
-            },
+            }
+          ],
+          "infoBoxes": [
             {
               "type": "shopping",
               "title": "恩納村附近購物",
@@ -1195,7 +1323,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "checkout": "11:00"
         },
         "timeline": [
           {
@@ -1249,6 +1378,22 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
+                    "category": "沖繩料理・阿古豬",
+                    "name": "百年古家 大家",
+                    "desc": "百年古家 大家 うふやー — 百年古民家餐廳，阿古豬套餐、沖繩在地料理，潺潺流水庭園用餐氛圍一流",
+                    "price": "¥1,000~",
+                    "location": {
+                      "name": "百年古家 大家",
+                      "googleQuery": "https://maps.google.com/?q=百年古家+大家",
+                      "appleQuery": "https://maps.apple.com/?q=百年古家+大家",
+                      "mapcode": "206 620 592*27"
+                    },
+                    "hours": "午 11:00~15:30／晚 17:30~21:00",
+                    "reservation": "TableCheck 預約",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
+                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
+                  },
+                  {
                     "category": "沖繩拉麵",
                     "name": "ラーメン太陽 名護店",
                     "desc": "ラーメン太陽 — 沖繩名護代表性豚骨醬油拉麵，清爽不油膩的沖繩在地風味，附炒飯半份超值",
@@ -1275,22 +1420,6 @@
                     "hours": "11:30~14:30／17:00~22:00（週二公休）",
                     "reservation": "建議預約",
                     "blogUrl": "https://bigmouthblog.tw/okinawa-nago-yakiniku-terurin/"
-                  },
-                  {
-                    "category": "沖繩料理・阿古豬",
-                    "name": "百年古家 大家",
-                    "desc": "百年古家 大家 うふやー — 古民家餐廳、阿古豬料理",
-                    "price": "¥1,000~",
-                    "location": {
-                      "name": "百年古家 大家",
-                      "googleQuery": "https://maps.google.com/?q=百年古家+大家",
-                      "appleQuery": "https://maps.apple.com/?q=百年古家+大家",
-                      "mapcode": "206 620 592*27"
-                    },
-                    "hours": "午 11:00~15:30／晚 17:30~21:00",
-                    "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
-                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
                   }
                 ]
               }
@@ -1346,6 +1475,20 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
+                    "category": "海鮮丼",
+                    "name": "白砂食堂",
+                    "desc": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化，7~9月營業至 20:00",
+                    "price": "¥3,500~",
+                    "location": {
+                      "name": "しらさ食堂 古宇利島",
+                      "googleQuery": "https://maps.google.com/?q=しらさ食堂+古宇利島",
+                      "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
+                    },
+                    "hours": "10:00~17:00（7~9月至 20:00）",
+                    "reservation": null,
+                    "blogUrl": "https://dorapig.com/shirasashokudou2025/"
+                  },
+                  {
                     "category": "豚骨拉麵",
                     "name": "ラーメン暖暮 名護店",
                     "desc": "ラーメン暖暮 名護店 — 古宇利島回程途中名護人氣豚骨拉麵，湯頭濃醇，車程約30分",
@@ -1363,7 +1506,7 @@
                   {
                     "category": "炭火燒肉",
                     "name": "炭火燒肉 海南亭 本部店",
-                    "desc": "海南亭 — 本部・名護海景炭火燒肉，縣產牛與海島豬搭配多種海鮮，景觀絕佳",
+                    "desc": "海南亭 — 本部・名護海景炭火燒肉，縣產牛與海島豬搭配多種海鮮，景觀絕佳（晚餐段可用）",
                     "price": "¥3,000~",
                     "location": {
                       "name": "炭火焼肉 海南亭 本部",
@@ -1373,20 +1516,6 @@
                     "hours": "17:00~23:00（週三公休）",
                     "reservation": "建議預約",
                     "blogUrl": "https://bigmouthblog.tw/okinawa-motobu-yakiniku-kananntei/"
-                  },
-                  {
-                    "category": "海鮮丼",
-                    "name": "白砂食堂",
-                    "desc": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化",
-                    "price": "¥3,500~",
-                    "location": {
-                      "name": "しらさ食堂 古宇利島",
-                      "googleQuery": "https://maps.google.com/?q=しらさ食堂+古宇利島",
-                      "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
-                    },
-                    "hours": "10:00~17:00（7~9月至 20:00）",
-                    "reservation": null,
-                    "blogUrl": "https://dorapig.com/shirasashokudou2025/"
                   }
                 ]
               }
@@ -1424,24 +1553,9 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
-                    "category": "豚骨拉麵",
-                    "name": "暖暮拉麵 名護店",
-                    "desc": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
-                    "price": "¥800~",
-                    "location": {
-                      "name": "暖暮 名護店",
-                      "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
-                      "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
-                      "mapcode": "206 627 464*87"
-                    },
-                    "hours": "10:00~24:00",
-                    "reservation": null,
-                    "blogUrl": "https://hanblog.tw/ramendanbo/"
-                  },
-                  {
                     "category": "沖繩炭火燒肉",
                     "name": "島豚七輪燒 滿味",
-                    "desc": "島豚七輪焼 満味 — 名護在地炭火燒肉，主打山原島豚（阿古豬血統），有中文菜單",
+                    "desc": "島豚七輪焼 満味 — 名護在地炭火燒肉，主打山原島豚（阿古豬血統），沖繩最具代表性豬肉品種，有中文菜單",
                     "price": "¥1,500~",
                     "location": {
                       "name": "島豚七輪焼 満味 名護",
@@ -1465,6 +1579,21 @@
                     "hours": "11:00~22:00（全年無休）",
                     "reservation": null,
                     "blogUrl": "https://okinawa.letsgojp.com/archives/582485/"
+                  },
+                  {
+                    "category": "豚骨拉麵",
+                    "name": "暖暮拉麵 名護店",
+                    "desc": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
+                    "price": "¥800~",
+                    "location": {
+                      "name": "暖暮 名護店",
+                      "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
+                      "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
+                      "mapcode": "206 627 464*87"
+                    },
+                    "hours": "10:00~24:00",
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
               }
@@ -1498,6 +1627,7 @@
         "hotel": {
           "name": "沖繩那霸美居飯店",
           "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
             "那霸市壺川 3-3-19",
             "Day 5 Check in 20:22"
@@ -1516,7 +1646,9 @@
               },
               "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
               "price": "費用未確認"
-            },
+            }
+          ],
+          "infoBoxes": [
             {
               "type": "shopping",
               "title": "飯店附近購物",
@@ -1556,7 +1688,8 @@
                 }
               ]
             }
-          ]
+          ],
+          "checkout": "11:00"
         },
         "timeline": [
           {
@@ -1764,6 +1897,21 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
+                    "category": "沖繩料理",
+                    "name": "花笠食堂",
+                    "desc": "花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表",
+                    "price": "¥700~",
+                    "location": {
+                      "name": "花笠食堂 那覇",
+                      "googleQuery": "https://maps.google.com/?q=花笠食堂+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=花笠食堂+那覇",
+                      "mapcode": "33 157 208*63"
+                    },
+                    "hours": "11:00~20:00（週日公休）",
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/"
+                  },
+                  {
                     "category": "沖繩拉麵",
                     "name": "琉球新麺 通堂 国際通店",
                     "desc": "琉球新麺 通堂 — 沖繩最具代表性本土拉麵，獨特豚骨×沖繩風味，那霸国際通旗艦店",
@@ -1792,21 +1940,6 @@
                     "hours": "17:00~22:30",
                     "reservation": "建議透過 TableCheck 預約",
                     "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
-                  },
-                  {
-                    "category": "沖繩料理",
-                    "name": "花笠食堂",
-                    "desc": "花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表",
-                    "price": "¥700~",
-                    "location": {
-                      "name": "花笠食堂 那覇",
-                      "googleQuery": "https://maps.google.com/?q=花笠食堂+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=花笠食堂+那覇",
-                      "mapcode": "33 157 208*63"
-                    },
-                    "hours": "11:00~20:00（週日公休）",
-                    "reservation": null,
-                    "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/"
                   }
                 ]
               }
@@ -1857,6 +1990,7 @@
         "hotel": {
           "name": "沖繩那霸美居飯店",
           "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
             "那霸市壺川 3-3-19",
             "Day 5~6 連住"
@@ -1875,7 +2009,10 @@
               },
               "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
               "price": "費用未確認"
-            },
+            }
+          ],
+          "checkout": "10:00",
+          "infoBoxes": [
             {
               "type": "shopping",
               "title": "飯店附近購物",
@@ -1915,8 +2052,7 @@
                 }
               ]
             }
-          ],
-          "checkout": "10:00"
+          ]
         },
         "timeline": [
           {
@@ -2149,6 +2285,21 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
+                    "category": "沖繩塔可飯",
+                    "name": "タコライスcafe きじむなぁ 瀨長島店",
+                    "desc": "きじむなぁ — 沖繩特色歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋，位於瀨長島商場內",
+                    "price": "¥900~",
+                    "location": {
+                      "name": "タコライスcafe きじむなぁ 瀬長島",
+                      "googleQuery": "https://maps.google.com/?q=タコライスcafe+きじむなぁ+瀬長島",
+                      "appleQuery": "https://maps.apple.com/?q=タコライスcafe+きじむなぁ+瀬長島",
+                      "mapcode": "33 032 412*44"
+                    },
+                    "hours": "11:00~21:00",
+                    "reservation": null,
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
+                  },
+                  {
                     "category": "沖繩拉麵",
                     "name": "琉球新麺 通堂 牧港本店",
                     "desc": "琉球新麺 通堂 牧港本店 — 沖繩本土拉麵旗艦店，距瀨長島約10分，沖繩豚骨醬油湯底口碑最佳",
@@ -2176,21 +2327,6 @@
                     "hours": "17:00~23:30（週三公休）",
                     "reservation": "建議預約",
                     "blogUrl": "https://bigmouthblog.tw/okinawa-naha-yakiniku-kinjo/"
-                  },
-                  {
-                    "category": "塔可飯",
-                    "name": "タコライスcafe きじむなぁ 瀨長島店",
-                    "desc": "きじむなぁ — 歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋",
-                    "price": "¥900~",
-                    "location": {
-                      "name": "タコライスcafe きじむなぁ 瀬長島",
-                      "googleQuery": "https://maps.google.com/?q=タコライスcafe+きじむなぁ+瀬長島",
-                      "appleQuery": "https://maps.apple.com/?q=タコライスcafe+きじむなぁ+瀬長島",
-                      "mapcode": "33 032 412*44"
-                    },
-                    "hours": "11:00~21:00",
-                    "reservation": null,
-                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
                   }
                 ]
               }

@@ -1,10 +1,8 @@
 {
   "meta": {
-    "name": "Ray 的沖繩之旅",
     "title": "2026 沖繩五日自駕遊行程表",
     "description": "2026 沖繩五日自駕遊完整行程表：那霸、北谷美國村、青之洞窟、萬座毛、ブセナ海中公園、美麗海水族館。含餐廳推薦、地圖導航、預算規劃。",
     "ogDescription": "那霸→北谷美國村→青之洞窟→萬座毛→名護→美麗海水族館，五日完整行程含餐廳三選一、地圖導航、預算規劃",
-    "themeColor": "#0077B6",
     "foodPreferences": [
       "拉麵",
       "燒肉",
@@ -152,7 +150,8 @@
       "label": "北谷",
       "content": {
         "hotel": {
-          "url": "https://bobbyfun.tw/2023-04-27-2319/",
+          "url": "https://www.vesselhotelcampanaokinawa.com/",
+          "blogUrl": "https://bobbyfun.tw/2023-04-27-2319/",
           "name": "Vessel Hotel Campana Okinawa",
           "details": [
             "北谷美國村內",
@@ -167,8 +166,9 @@
           "checkout": "11:00",
           "subs": [
             {
-              "label": "🅿 停車場",
-              "text": "¥500/晚（先到先得）",
+              "type": "parking",
+              "title": "停車場",
+              "price": "¥500/晚（先到先得）",
               "location": {
                 "name": "北谷町営駐車場 美浜",
                 "googleQuery": "https://maps.google.com/?q=北谷町営駐車場+美浜",
@@ -217,6 +217,24 @@
                     "googleQuery": "https://maps.google.com/?q=ローソン+北谷美浜店",
                     "appleQuery": "https://maps.apple.com/?q=ローソン+北谷美浜店",
                     "mapcode": "33 526 450*63"
+                  }
+                },
+                {
+                  "category": "藥妝",
+                  "name": "大國藥妝 北谷美國村店",
+                  "hours": "10:00~21:00",
+                  "mustBuy": [
+                    "日本藥妝免稅優惠（滿 ¥5,000）",
+                    "護膚保養品",
+                    "沖繩限定零食",
+                    "消炎止痛貼布"
+                  ],
+                  "blogUrl": "https://tisshuang.com/blog/post/daikokudrug",
+                  "location": {
+                    "name": "大国ドラッグ 北谷アメリカンビレッジ店",
+                    "googleQuery": "https://maps.google.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
+                    "appleQuery": "https://maps.apple.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
+                    "mapcode": "33 526 241*20"
                   }
                 }
               ]
@@ -283,6 +301,15 @@
                 "title": "午餐推薦三選一",
                 "restaurants": [
                   {
+                    "category": "沖繩料理",
+                    "name": "浜屋そば",
+                    "hours": "10:00~18:00",
+                    "reservation": "不需訂位",
+                    "desc": "北谷人氣沖繩麵，三層肉大塊軟嫩（當地特色）",
+                    "price": "¥650~",
+                    "blogUrl": "https://mimihan.tw/hamaya-soba/"
+                  },
+                  {
                     "category": "漢堡",
                     "name": "A&W 北谷店",
                     "hours": "09:00~23:00",
@@ -290,15 +317,6 @@
                     "desc": "沖繩限定美式速食，Root Beer 免費續杯",
                     "price": "¥700~",
                     "blogUrl": "https://mimihan.tw/aw-okinawa/"
-                  },
-                  {
-                    "category": "沖繩料理",
-                    "name": "浜屋そば",
-                    "hours": "10:00~18:00",
-                    "reservation": "不需訂位",
-                    "desc": "北谷人氣沖繩麵，三層肉大塊軟嫩",
-                    "price": "¥650~",
-                    "blogUrl": "https://mimihan.tw/hamaya-soba/"
                   },
                   {
                     "category": "墨西哥料理",
@@ -319,7 +337,7 @@
           },
           {
             "time": "13:10-13:40",
-            "titleUrl": "https://bobbyfun.tw/2023-04-27-2319/",
+            "titleUrl": "https://www.vesselhotelcampanaokinawa.com/",
             "title": "Check in Vessel Hotel",
             "description": "放行李，換裝準備玩水",
             "locations": [
@@ -337,7 +355,7 @@
           },
           {
             "time": "13:45-17:30",
-            "titleUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+            "titleUrl": "https://www.okinawa-americanvillage.com/",
             "title": "美國村＋Sunset Beach",
             "description": "美國村內逛街購物，Sunset Beach 沙灘戲水。異國風情的彩色商圈，集結服飾店、雜貨店、餐廳",
             "locations": [
@@ -396,6 +414,24 @@
                       "googleQuery": "https://maps.google.com/?q=イオン北谷店",
                       "appleQuery": "https://maps.apple.com/?q=イオン北谷店",
                       "mapcode": "33 526 084*00"
+                    }
+                  },
+                  {
+                    "category": "藥妝",
+                    "name": "大國藥妝 北谷美國村店",
+                    "hours": "10:00~21:00",
+                    "mustBuy": [
+                      "日本藥妝免稅優惠（滿 ¥5,000）",
+                      "護膚保養品",
+                      "沖繩限定零食",
+                      "消炎止痛貼布"
+                    ],
+                    "blogUrl": "https://tisshuang.com/blog/post/daikokudrug",
+                    "location": {
+                      "name": "大国ドラッグ 北谷アメリカンビレッジ店",
+                      "googleQuery": "https://maps.google.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
+                      "appleQuery": "https://maps.apple.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
+                      "mapcode": "33 526 241*20"
                     }
                   }
                 ]
@@ -480,7 +516,8 @@
       "content": {
         "hotel": {
           "name": "Super Hotel 沖縄・名護",
-          "url": "https://blackcoffee00l.pixnet.net/blog/post/522773389",
+          "url": "https://www.superhoteljapan.com/s-hotels/nago/",
+          "blogUrl": "https://blackcoffee00l.pixnet.net/blog/post/522773389",
           "details": [
             "名護市宮里（名護中心地段）",
             "万座深海の湯（天然温泉）",
@@ -493,8 +530,9 @@
           "checkout": "10:00",
           "subs": [
             {
-              "label": "🅿 停車場",
-              "text": "免費（先到先得）",
+              "type": "parking",
+              "title": "停車場",
+              "price": "免費（先到先得）",
               "location": {
                 "name": "スーパーホテル沖縄・名護",
                 "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
@@ -544,6 +582,24 @@
                     "appleQuery": "https://maps.apple.com/?q=ローソン名護宮里店",
                     "mapcode": "206 598 371*00"
                   }
+                },
+                {
+                  "category": "超市",
+                  "name": "FRESH PLAZA UNION 名護店",
+                  "hours": "07:00~24:00",
+                  "mustBuy": [
+                    "沖繩本地農產品（ゴーヤー、島野菜）",
+                    "沖繩限定飲料",
+                    "在地便當熟食",
+                    "沖繩手工泡麵"
+                  ],
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-832/",
+                  "location": {
+                    "name": "フレッシュプラザユニオン名護店",
+                    "googleQuery": "https://maps.google.com/?q=フレッシュプラザユニオン+名護",
+                    "appleQuery": "https://maps.apple.com/?q=フレッシュプラザユニオン+名護",
+                    "mapcode": "206 598 200*00"
+                  }
                 }
               ]
             }
@@ -584,7 +640,7 @@
           },
           {
             "time": "10:30-13:00",
-            "titleUrl": "https://www.klook.com/zh-TW/blog/top-tip-churaumi-aquarium-okinawa/",
+            "titleUrl": "https://churaumi.okinawa/tc/",
             "title": "美麗海水族館",
             "description": "世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。11:00 海豚秀必看",
             "locations": [
@@ -765,7 +821,7 @@
                     },
                     "hours": "11:30~14:30, 18:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://hachiren.co.jp/en/"
+                    "blogUrl": "https://tw.wamazing.com/media/article/a-832/"
                   },
                   {
                     "category": "燒肉",
@@ -812,7 +868,8 @@
       "content": {
         "hotel": {
           "name": "Super Hotel 沖縄・名護",
-          "url": "https://blackcoffee00l.pixnet.net/blog/post/522773389",
+          "url": "https://www.superhoteljapan.com/s-hotels/nago/",
+          "blogUrl": "https://blackcoffee00l.pixnet.net/blog/post/522773389",
           "details": [
             "名護市宮里（名護中心地段）",
             "万座深海の湯（天然温泉）",
@@ -825,8 +882,9 @@
           "checkout": "10:00",
           "subs": [
             {
-              "label": "🅿 停車場",
-              "text": "免費（先到先得）",
+              "type": "parking",
+              "title": "停車場",
+              "price": "免費（先到先得）",
               "location": {
                 "name": "スーパーホテル沖縄・名護",
                 "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
@@ -876,6 +934,24 @@
                     "appleQuery": "https://maps.apple.com/?q=ローソン名護宮里店",
                     "mapcode": "206 598 371*00"
                   }
+                },
+                {
+                  "category": "超市",
+                  "name": "FRESH PLAZA UNION 名護店",
+                  "hours": "07:00~24:00",
+                  "mustBuy": [
+                    "沖繩本地農產品（ゴーヤー、島野菜）",
+                    "沖繩限定飲料",
+                    "在地便當熟食",
+                    "沖繩手工泡麵"
+                  ],
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-832/",
+                  "location": {
+                    "name": "フレッシュプラザユニオン名護店",
+                    "googleQuery": "https://maps.google.com/?q=フレッシュプラザユニオン+名護",
+                    "appleQuery": "https://maps.apple.com/?q=フレッシュプラザユニオン+名護",
+                    "mapcode": "206 598 200*00"
+                  }
                 }
               ]
             }
@@ -892,7 +968,7 @@
           },
           {
             "time": "09:00-11:00",
-            "titleUrl": "https://bobbyfun.tw/2024-01-11-2731/",
+            "titleUrl": "https://maedamisaki.jp/",
             "title": "青之洞窟浮潛",
             "description": "沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁",
             "locations": [
@@ -927,7 +1003,8 @@
                       "appleQuery": "https://maps.apple.com/?q=Best+Dive+Okinawa"
                     },
                     "hours": "08:00~17:00",
-                    "reservation": "自有停車場＋接駁車"
+                    "reservation": "自有停車場＋接駁車",
+                    "category": "潛水體驗"
                   },
                   {
                     "name": "Natural Blue 自然之藍",
@@ -940,7 +1017,8 @@
                       "appleQuery": "https://maps.apple.com/?q=Natural+Blue+沖縄"
                     },
                     "hours": "08:00~17:00",
-                    "reservation": "僅收日幣現金｜6歲以上"
+                    "reservation": "僅收日幣現金｜6歲以上",
+                    "category": "潛水體驗"
                   },
                   {
                     "name": "黑潮潛水 Kuroshio Diving",
@@ -953,7 +1031,8 @@
                       "appleQuery": "https://maps.apple.com/?q=黒潮潜水+沖縄"
                     },
                     "hours": "08:00~17:00",
-                    "reservation": "9歲以上"
+                    "reservation": "9歲以上",
+                    "category": "潛水體驗"
                   }
                 ]
               },
@@ -976,7 +1055,7 @@
           },
           {
             "time": "11:15-11:45",
-            "titleUrl": "https://bobbyfun.tw/2024-01-07-2697/",
+            "titleUrl": "https://tw.blue-cave.org/manzamo/",
             "title": "萬座毛",
             "description": "沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線",
             "locations": [
@@ -1009,21 +1088,6 @@
                 "title": "午餐推薦三選一",
                 "restaurants": [
                   {
-                    "category": "蝦蝦飯",
-                    "name": "THE GARLIC SHRIMP",
-                    "desc": "粉紅小屋，6 種口味蝦蝦飯，半露天座位",
-                    "price": "¥1,450~2,100",
-                    "location": {
-                      "name": "THE GARLIC SHRIMP 恩納",
-                      "googleQuery": "https://maps.google.com/?q=THE+GARLIC+SHRIMP+恩納",
-                      "appleQuery": "https://maps.apple.com/?q=THE+GARLIC+SHRIMP+恩納",
-                      "mapcode": "206 313 585*00"
-                    },
-                    "hours": "11:00~20:30（不固定休，建議出發前確認）",
-                    "reservation": "不需訂位",
-                    "blogUrl": "https://www.markting.com.tw/564/"
-                  },
-                  {
                     "category": "燒肉",
                     "name": "焼肉げんか",
                     "desc": "原價制！入場 ¥2,200 後全餐以進貨價計算",
@@ -1041,7 +1105,7 @@
                   {
                     "category": "沖繩そば",
                     "name": "幸ちゃんそば",
-                    "desc": "Tabelog 3.49，名護 No.1 沖繩麵，售完即止",
+                    "desc": "Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色）",
                     "price": "¥700~900",
                     "location": {
                       "name": "幸ちゃんそば 名護",
@@ -1052,6 +1116,21 @@
                     "hours": "10:00~15:00 售完即止（週一休）",
                     "reservation": "不需訂位",
                     "blogUrl": "https://chrysie.pixnet.net/blog/post/119628384"
+                  },
+                  {
+                    "category": "蝦蝦飯",
+                    "name": "THE GARLIC SHRIMP",
+                    "desc": "粉紅小屋，6 種口味蝦蝦飯，半露天座位",
+                    "price": "¥1,450~2,100",
+                    "location": {
+                      "name": "THE GARLIC SHRIMP 恩納",
+                      "googleQuery": "https://maps.google.com/?q=THE+GARLIC+SHRIMP+恩納",
+                      "appleQuery": "https://maps.apple.com/?q=THE+GARLIC+SHRIMP+恩納",
+                      "mapcode": "206 313 585*00"
+                    },
+                    "hours": "11:00~20:30（不固定休，建議出發前確認）",
+                    "reservation": "不需訂位",
+                    "blogUrl": "https://www.markting.com.tw/564/"
                   }
                 ]
               }
@@ -1098,7 +1177,43 @@
                       "鳳梨餅乾零食禮盒",
                       "現場試飲限定品"
                     ],
-                    "blogUrl": "https://gogojp.tw/aeon-mall-rycom/"
+                    "blogUrl": "https://bobbyfun.tw/2024-02-03-2860/"
+                  },
+                  {
+                    "category": "伴手禮",
+                    "name": "道之驛許田（附近）",
+                    "hours": "08:30~18:00",
+                    "mustBuy": [
+                      "サーターアンダギー（沙翁）",
+                      "黑糖製品",
+                      "沖繩在地農產品",
+                      "美麗海水族館折扣票"
+                    ],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/657147/",
+                    "location": {
+                      "name": "道の駅許田",
+                      "googleQuery": "https://maps.google.com/?q=道の駅許田",
+                      "appleQuery": "https://maps.apple.com/?q=道の駅許田",
+                      "mapcode": "206 476 710*00"
+                    }
+                  },
+                  {
+                    "category": "超商",
+                    "name": "FamilyMart 名護城公園前店",
+                    "hours": "24 小時",
+                    "mustBuy": [
+                      "沖繩限定冰淇淋（紅芋、ちんすこう風味）",
+                      "飯糰便當",
+                      "飲料補給",
+                      "泡麵零食"
+                    ],
+                    "blogUrl": "https://tw.wamazing.com/media/article/a-832/",
+                    "location": {
+                      "name": "ファミリーマート 名護城公園前店",
+                      "googleQuery": "https://maps.google.com/?q=ファミリーマート+名護城",
+                      "appleQuery": "https://maps.apple.com/?q=ファミリーマート+名護城",
+                      "mapcode": "206 716 300*00"
+                    }
                   }
                 ]
               }
@@ -1189,7 +1304,8 @@
       "label": "來客夢・玉泉洞",
       "content": {
         "hotel": {
-          "url": "https://dorismaworld.com/toyokoinn-makishi/",
+          "url": "https://www.toyoko-inn.com/eng/search/detail/00055/",
+          "blogUrl": "https://dorismaworld.com/toyokoinn-makishi/",
           "name": "東橫inn 那霸國際通美榮橋站",
           "details": [
             "那霸美榮橋站旁",
@@ -1203,8 +1319,9 @@
           "checkout": "10:00",
           "subs": [
             {
-              "label": "🅿 停車場",
-              "text": "¥550/晚（先到先得）",
+              "type": "parking",
+              "title": "停車場",
+              "price": "¥550/晚（先到先得）",
               "location": {
                 "name": "東横INN那覇国際通り美栄橋駅 駐車場",
                 "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
@@ -1315,7 +1432,7 @@
           },
           {
             "time": "10:15-12:00",
-            "titleUrl": "https://gogojp.tw/aeon-mall-rycom/",
+            "titleUrl": "https://okinawarycom-aeonmall.com/",
             "title": "AEON Mall 沖繩來客夢（購物）",
             "description": "沖繩最大購物中心！寶可夢中心、UNIQLO、各樓層逛街",
             "locations": [
@@ -1402,19 +1519,19 @@
                 "title": "午餐推薦三選一",
                 "restaurants": [
                   {
-                    "category": "沖繩塔可飯",
-                    "name": "タコライスcafe きじむなぁ",
-                    "desc": "沖繩靈魂美食！獨創歐姆蛋塔可飯（オムタコ）",
-                    "price": "¥780~",
+                    "category": "拉麵",
+                    "name": "京都北白川ラーメン 魁力屋",
+                    "desc": "京都背脂醬油拉麵，青蔥＆醃蘿蔔免費續",
+                    "price": "¥800~",
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/"
                   },
                   {
-                    "category": "拉麵",
-                    "name": "京都北白川ラーメン 魁力屋",
-                    "desc": "京都背脂醬油拉麵，青蔥＆醃蘿蔔免費續",
-                    "price": "¥800~",
+                    "category": "沖繩塔可飯",
+                    "name": "タコライスcafe きじむなぁ",
+                    "desc": "沖繩靈魂美食！獨創歐姆蛋塔可飯（オムタコ）（當地特色）",
+                    "price": "¥780~",
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/"
@@ -1510,7 +1627,7 @@
           },
           {
             "time": "17:20",
-            "titleUrl": "https://dorismaworld.com/toyokoinn-makishi/",
+            "titleUrl": "https://www.toyoko-inn.com/eng/search/detail/00055/",
             "title": "Check in 東橫inn",
             "description": "放好行李後出門覓食",
             "locations": [
@@ -1560,6 +1677,24 @@
                       "googleQuery": "https://maps.google.com/?q=塩屋+国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り店",
                       "mapcode": "33 157 383*00"
+                    }
+                  },
+                  {
+                    "category": "唐吉軻德",
+                    "name": "唐吉訶德 國際通店",
+                    "hours": "09:00~翌 03:00",
+                    "mustBuy": [
+                      "沖繩限定零食",
+                      "藥妝（免稅滿 ¥5,500）",
+                      "泡盛系列禮盒",
+                      "化妝品美容儀器"
+                    ],
+                    "blogUrl": "https://sainteat.tw/%E6%B2%96%E7%B9%A9%E5%94%90%E5%90%89%E8%A8%B6%E5%BE%B7%E5%9C%8B%E9%9A%9B%E9%80%9A/",
+                    "location": {
+                      "name": "ドン・キホーテ国際通り店",
+                      "googleQuery": "https://maps.google.com/?q=ドン・キホーテ国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ国際通り店",
+                      "mapcode": "33 157 412*76"
                     }
                   }
                 ]
@@ -1652,7 +1787,7 @@
           },
           {
             "time": "09:00-10:30",
-            "titleUrl": "https://okinawa.letsgojp.com/archives/14911/",
+            "titleUrl": "https://oki-park.jp/shurijo/tc/",
             "title": "首里城公園",
             "description": "琉球王國的象徵，世界遺產。2019 年大火後正殿重建中（預計 2026 年完工），御庭＋城牆＋守禮門可參觀",
             "locations": [
@@ -1678,7 +1813,7 @@
           },
           {
             "time": "11:00-12:30",
-            "titleUrl": "https://mimihan.tw/kokusai-street/",
+            "titleUrl": "https://naha-kokusaidori.okinawa/",
             "title": "國際通逛街＋買伴手禮",
             "description": "沖繩最熱鬧的商店街，約 1.6 公里。最後衝刺採購伴手禮！",
             "locations": [

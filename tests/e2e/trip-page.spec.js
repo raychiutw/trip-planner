@@ -383,8 +383,8 @@ test.describe('地圖連結與餐廳', () => {
   test('餐廳卡片存在', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(500);
-    // timeline 預設展開，直接找餐廳卡片
-    const restaurants = page.locator('.restaurant-choice');
+    // timeline 預設展開，找 restaurants infoBox 內的餐廳卡片（排除 hotel 內折疊的 shopping 卡片）
+    const restaurants = page.locator('.info-box.restaurants .restaurant-choice');
     const count = await restaurants.count();
     expect(count).toBeGreaterThan(0);
     await expect(restaurants.first()).toBeVisible();

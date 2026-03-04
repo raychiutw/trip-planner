@@ -1,10 +1,8 @@
 {
   "meta": {
-    "name": "RayHus 的沖繩之旅",
     "title": "2026 沖繩六日輕旅遊行程表",
     "description": "2026 沖繩六日輕旅遊完整行程表：那霸、KKday美麗海一日遊、古宇利島、Klook沖繩西海岸一日遊、AEON Mall來客夢、iias豐崎購物。非自駕輕鬆搭巴士遊沖繩，含一日遊行程、飯店住宿、購物景點推薦。",
     "ogDescription": "那霸為基地，KKday美麗海水族館・古宇利島・鳳梨公園一日遊，Klook波上宮・殘波岬・美國村・東南植物樂園一日遊，六日輕旅行含購物與美食",
-    "themeColor": "#E07850",
     "foodPreferences": [
       "燒肉",
       "牛排/烤魚",
@@ -148,9 +146,11 @@
             "近那霸巴士總站"
           ],
           "breakfast": {
-            "included": null
+            "included": false,
+            "note": "不含早餐，附近便利商店或自行解決"
           },
-          "checkout": "10:00"
+          "checkout": "10:00",
+          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179"
         },
         "timeline": [
           {
@@ -209,7 +209,7 @@
                 "title": "飯店附近購物",
                 "shops": [
                   {
-                    "category": "24H超市",
+                    "category": "超市",
                     "name": "辻スーパー",
                     "hours": "24小時全年無休",
                     "mustBuy": [
@@ -220,7 +220,7 @@
                     "blogUrl": "https://okinawa.letsgojp.com/archives/668971/"
                   },
                   {
-                    "category": "便利商店",
+                    "category": "超商",
                     "name": "FamilyMart・LAWSON（旭橋周邊）",
                     "hours": "24小時",
                     "mustBuy": [
@@ -253,7 +253,7 @@
                 "title": "國際通購物 — 唐吉訶德",
                 "shops": [
                   {
-                    "category": "藥妝・零食・伴手禮",
+                    "category": "唐吉軻德",
                     "name": "唐吉訶德 國際通店",
                     "hours": "24小時全年無休",
                     "mustBuy": [
@@ -332,9 +332,11 @@
             "旭橋站步行5分鐘"
           ],
           "breakfast": {
-            "included": null
+            "included": false,
+            "note": "不含早餐，附近便利商店或自行解決"
           },
-          "checkout": "10:00"
+          "checkout": "10:00",
+          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179"
         },
         "timeline": [
           {
@@ -378,7 +380,8 @@
                   "名護鳳梨公園：全自動鳳梨號遊園車，鳳梨甜點試吃"
                 ]
               }
-            ]
+            ],
+            "blogUrl": "https://wanlu937.pixnet.net/blog/post/227218021"
           },
           {
             "time": "18:15",
@@ -451,9 +454,11 @@
             "旭橋站步行5分鐘"
           ],
           "breakfast": {
-            "included": null
+            "included": false,
+            "note": "不含早餐，附近便利商店或自行解決"
           },
-          "checkout": "10:00"
+          "checkout": "10:00",
+          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179"
         },
         "timeline": [
           {
@@ -512,7 +517,8 @@
                   "東南植物樂園：夜晚燈光秀，熱帶植物園"
                 ]
               }
-            ]
+            ],
+            "blogUrl": "https://yiping1228.pixnet.net/blog/post/576037076"
           },
           {
             "time": "21:30",
@@ -586,8 +592,11 @@
             "那霸市西區"
           ],
           "breakfast": {
-            "included": null
-          }
+            "included": true,
+            "note": "14F 泳池層自助早餐（沖繩料理為主）"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://vialife.tw/21994/"
         },
         "timeline": [
           {
@@ -717,7 +726,7 @@
                 "title": "來客夢必逛推薦",
                 "shops": [
                   {
-                    "category": "家電・美妝複合店",
+                    "category": "購物中心",
                     "name": "KOJIMA × BIC CAMERA",
                     "hours": "10:00~22:00",
                     "mustBuy": [
@@ -728,7 +737,7 @@
                     "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/"
                   },
                   {
-                    "category": "大型超市",
+                    "category": "超市",
                     "name": "AEON STYLE 超市",
                     "hours": "08:00~23:00",
                     "mustBuy": [
@@ -740,7 +749,7 @@
                     "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/"
                   },
                   {
-                    "category": "角色商品",
+                    "category": "伴手禮",
                     "name": "寶可夢中心沖繩",
                     "hours": "10:00~22:00",
                     "mustBuy": [
@@ -772,6 +781,14 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
+                    "category": "燒肉",
+                    "name": "燒肉本部牧場 那霸店",
+                    "hours": "11:30~15:00、17:00~22:00",
+                    "reservation": "建議預約（TableCheck 線上預約）",
+                    "desc": "沖繩本部牧場自家直營，本部牛肉質細嫩，是那霸國際通必吃燒肉",
+                    "blogUrl": "https://pfse64289.pixnet.net/blog/post/347219841"
+                  },
+                  {
                     "category": "牛排",
                     "name": "やっぱりステーキ 國際通り店",
                     "hours": "11:00~01:00",
@@ -781,21 +798,10 @@
                     "blogUrl": "https://mimihan.tw/yappari-steak/"
                   },
                   {
-                    "category": "拉麵",
-                    "name": "暖暮拉麵 那霸牧志店",
-                    "hours": "11:00~02:00",
-                    "reservation": "不需訂位",
-                    "desc": "九州豚骨系人氣拉麵，國際通步行可達",
-                    "price": "¥850~",
-                    "blogUrl": "https://mimihan.tw/danbo-ramen/"
-                  },
-                  {
-                    "category": "沖繩料理",
+                    "category": "當地特色",
                     "name": "琉球料理ぬちがふぅ",
                     "hours": "17:00~23:00",
                     "reservation": "建議預約",
-                    "desc": "道地沖繩家庭料理，紅芋天婦羅必點",
-                    "price": "¥1,200~",
                     "blogUrl": "https://kafuokinawa.com/nuchigafu/"
                   }
                 ]
@@ -819,7 +825,7 @@
                 "title": "飯店附近購物",
                 "shops": [
                   {
-                    "category": "藥妝・零食・伴手禮",
+                    "category": "唐吉軻德",
                     "name": "唐吉訶德 那霸壺川店",
                     "hours": "08:00~翌3:00",
                     "mustBuy": [
@@ -830,7 +836,7 @@
                     "blogUrl": "https://linshibi.com/?p=16331"
                   },
                   {
-                    "category": "便利商店",
+                    "category": "超商",
                     "name": "FamilyMart・LAWSON（那霸西周邊）",
                     "hours": "24小時",
                     "mustBuy": [
@@ -860,8 +866,11 @@
             "14F 溫水游泳池（9:00~22:00）"
           ],
           "breakfast": {
-            "included": null
-          }
+            "included": true,
+            "note": "14F 泳池層自助早餐（沖繩料理為主）"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://vialife.tw/21994/"
         },
         "timeline": [
           {
@@ -975,7 +984,7 @@
                 "title": "iias 豐崎必逛推薦",
                 "shops": [
                   {
-                    "category": "家電・電器",
+                    "category": "購物中心",
                     "name": "KOJIMA × BIC CAMERA",
                     "hours": "10:00~21:00",
                     "mustBuy": [
@@ -986,7 +995,7 @@
                     "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/"
                   },
                   {
-                    "category": "藥妝・保健",
+                    "category": "藥妝",
                     "name": "札幌藥妝（サツドラ）",
                     "hours": "10:00~21:00",
                     "mustBuy": [
@@ -997,7 +1006,7 @@
                     "blogUrl": "https://okinawa.letsgojp.com/archives/544483/"
                   },
                   {
-                    "category": "大型超市・伴手禮",
+                    "category": "超市",
                     "name": "AEON STYLE 超市",
                     "hours": "09:00~22:00",
                     "mustBuy": [

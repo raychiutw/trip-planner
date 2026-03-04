@@ -240,27 +240,43 @@ function renderHotel(hotel) {
     var hotelUrl = escUrl(hotel.url);
     if (hotelUrl) nameHtml = '<a href="' + hotelUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
     html += '<div class="col-row">' + iconSpan('hotel') + ' ' + nameHtml + ' <span class="arrow">＋</span></div>';
+    html += '<div class="col-detail">';
     var hotelBlogLink = renderBlogLink(hotel.blogUrl);
     if (hotelBlogLink) {
         html += '<div class="hotel-blog">' + hotelBlogLink + '</div>';
     }
-    html += '<div class="col-detail">';
     if (hotel.details && hotel.details.length) {
         html += '<div class="hotel-detail-grid">';
         hotel.details.forEach(function(d) { html += '<span>' + escHtml(d) + '</span>'; });
         html += '</div>';
     }
+    if (hotel.breakfast) {
+        html += '<div class="hotel-sub">' + iconSpan('utensils') + ' ';
+        if (hotel.breakfast.included === true) {
+            html += '含早餐';
+            if (hotel.breakfast.note) html += '（' + escHtml(hotel.breakfast.note) + '）';
+        } else if (hotel.breakfast.included === false) {
+            html += '不含早餐';
+        } else {
+            html += '早餐：資料未提供';
+        }
+        html += '</div>';
+    }
+    if (hotel.checkout) {
+        html += '<div class="hotel-sub">' + iconSpan('clock') + ' 退房 ' + escHtml(hotel.checkout) + '</div>';
+    }
     if (hotel.subs && hotel.subs.length) {
         hotel.subs.forEach(function(sub) {
             html += '<div class="hotel-sub">';
-            if (sub.label) html += '<strong>' + escHtml(sub.label) + '：</strong>';
-            if (sub.text) html += escHtml(sub.text);
+            if (sub.title) html += '<strong>' + escHtml(sub.title) + '</strong>';
+            if (sub.price) html += '：' + escHtml(sub.price);
+            if (sub.note) html += '（' + escHtml(sub.note) + '）';
             if (sub.location) html += ' ' + renderMapLinks(sub.location, true);
-            if (sub.items && sub.items.length) {
-                sub.items.forEach(function(item) { html += '<br>' + escHtml(item); });
-            }
             html += '</div>';
         });
+    }
+    if (hotel.infoBoxes && hotel.infoBoxes.length) {
+        hotel.infoBoxes.forEach(function(box) { html += renderInfoBox(box); });
     }
     html += '</div>';
     return html;

@@ -30,7 +30,6 @@ jsonFiles.forEach((file) => {
     it('has required root-level fields', () => {
       expect(data.meta).toBeDefined();
       expect(data.meta.title).toBeTruthy();
-      expect(data.meta.themeColor).toBeTruthy();
       expect(Array.isArray(data.days)).toBe(true);
       expect(data.days.length).toBeGreaterThan(0);
       expect(Array.isArray(data.weather)).toBe(true);
@@ -40,6 +39,13 @@ jsonFiles.forEach((file) => {
       expect(data.highlights).toBeDefined();
       expect(data.suggestions).toBeDefined();
       expect(data.checklist).toBeDefined();
+    });
+
+    // --- meta 欄位驗證 ---
+
+    it('meta does not contain removed fields (themeColor, name)', () => {
+      expect(data.meta.themeColor, 'meta.themeColor should not exist (moved to HTML)').toBeUndefined();
+      expect(data.meta.name, 'meta.name should not exist (use trips.json instead)').toBeUndefined();
     });
 
     // --- meta.tripType ---
@@ -95,6 +101,22 @@ jsonFiles.forEach((file) => {
         if (hotel.details !== undefined) expect(Array.isArray(hotel.details), `days[${i}].hotel.details`).toBe(true);
         if (hotel.subs !== undefined) expect(Array.isArray(hotel.subs), `days[${i}].hotel.subs`).toBe(true);
         if (hotel.infoBoxes !== undefined) expect(Array.isArray(hotel.infoBoxes), `days[${i}].hotel.infoBoxes`).toBe(true);
+      });
+    });
+
+    it('hotel.subs use new format (type, title) and not old format (label, text)', () => {
+      data.days.forEach((day, i) => {
+        const hotel = day.content?.hotel;
+        if (!hotel?.subs) return;
+        hotel.subs.forEach((sub, j) => {
+          const prefix = `days[${i}].hotel.subs[${j}]`;
+          expect(typeof sub.type, `${prefix}.type must be string`).toBe('string');
+          expect(sub.type.length, `${prefix}.type must not be empty`).toBeGreaterThan(0);
+          expect(typeof sub.title, `${prefix}.title must be string`).toBe('string');
+          expect(sub.title.length, `${prefix}.title must not be empty`).toBeGreaterThan(0);
+          expect(sub.label, `${prefix} must not have old field "label"`).toBeUndefined();
+          expect(sub.text, `${prefix} must not have old field "text"`).toBeUndefined();
+        });
       });
     });
 
