@@ -161,6 +161,23 @@ function renderInfoBox(box) {
             sItems.forEach(function(s) { html += renderShop(s); });
             html += '</div>';
             break;
+        case 'gasStation':
+            html += '<div class="info-box gas-station">';
+            var gsTitle = box.title || '加油站';
+            html += iconSpan('gas-station') + ' <strong>' + escHtml(gsTitle) + '</strong>';
+            if (box.station) {
+                var st = box.station;
+                html += '<div class="gas-station-detail">';
+                html += '<strong>' + escHtml(st.name) + '</strong><br>';
+                html += escHtml(st.address) + '<br>';
+                if (st.hours) html += iconSpan('clock') + ' ' + escHtml(st.hours) + '<br>';
+                if (st.service) html += escHtml(st.service) + '<br>';
+                if (st.phone) html += iconSpan('phone') + ' ' + escHtml(st.phone);
+                if (st.location) html += '<br>' + renderMapLinks(st.location, true);
+                html += '</div>';
+            }
+            html += '</div>';
+            break;
         default:
             if (box.content) html += '<div class="info-box">' + escHtml(box.content) + '</div>';
             break;

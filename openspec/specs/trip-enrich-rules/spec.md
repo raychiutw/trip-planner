@@ -20,19 +20,31 @@
 - **THEN** SHALL 以行程地點附近評價最高的餐廳補位，並在 `notes` 欄位標註「當地無符合偏好之選項，改推薦{實際料理類型}」
 
 ### Requirement: R2 餐次完整性
-每日 timeline SHALL 包含午餐和晚餐。若缺少，SHALL 插入「餐廳未定」timeline entry 並附 3 家推薦。一日遊團體行程（KKday/Klook 等含導遊的固定行程包）不補午餐，晚餐依到達地點推薦。返台日或深夜抵達日依時間判斷是否需要。
+每日 timeline SHALL 包含午餐和晚餐。若缺少，SHALL 插入「餐廳未定」timeline entry 並附 3 家推薦。一日遊團體行程（KKday/Klook 等含導遊的固定行程包）不補午餐，晚餐依到達地點推薦。**航程到達日與出發日 SHALL 依航班時間判斷餐次需求**：到達日以到達時間、出發日以出發時間為基準，11:30 前到達/出發影響午餐、17:00 前影響晚餐。無 flights 資料時退回每日皆須午晚餐的傳統檢查。
 
 #### Scenario: 缺午餐補齊
-- **WHEN** 某日 timeline 無午餐 entry 且非一日遊團
+- **WHEN** 某日 timeline 無午餐 entry 且非一日遊團且非航程豁免日
 - **THEN** SHALL 在適當時間點插入 `{ title: "午餐（餐廳未定）" }` entry，含 restaurants infoBox 推薦 3 家
 
 #### Scenario: 缺晚餐補齊
-- **WHEN** 某日 timeline 無晚餐 entry
+- **WHEN** 某日 timeline 無晚餐 entry 且非航程豁免日
 - **THEN** SHALL 在適當時間點插入 `{ title: "晚餐（餐廳未定）" }` entry，含 restaurants infoBox 推薦 3 家
 
 #### Scenario: 一日遊團不補午餐
 - **WHEN** 某日行程為 KKday/Klook 等一日遊團體行程
 - **THEN** SHALL 不補午餐，晚餐依團體行程結束後到達地點推薦
+
+#### Scenario: 去程到達日餐次判斷
+- **WHEN** 行程含 flights 且該日為去程到達日
+- **THEN** 到達時間 < 11:30 → 須補午餐 + 晚餐；11:30 ≤ 到達 < 17:00 → 須補晚餐；≥ 17:00 → 晚餐可選
+
+#### Scenario: 回程出發日餐次判斷
+- **WHEN** 行程含 flights 且該日為回程出發日
+- **THEN** 出發時間 < 11:30 → 不需午晚餐；11:30 ≤ 出發 < 17:00 → 須有午餐；≥ 17:00 → 須有午餐 + 晚餐
+
+#### Scenario: 無 flights 退回傳統檢查
+- **WHEN** 行程 JSON 不含 flights 或無法解析到達/出發時間
+- **THEN** SHALL 退回每日皆須午餐 + 晚餐的傳統檢查
 
 ### Requirement: R3 餐廳推薦品質
 每個 `infoBoxes[type=restaurants]` 的 `restaurants` 陣列 SHALL 補到 3 家。每家餐廳 SHALL 包含 `hours`（營業時間）、`reservation`（訂位資訊）、`blogUrl`（繁中推薦網誌）。推薦餐廳的營業時間 MUST 與用餐時間吻合。選擇依據為行程當時地點附近、評價高的餐廳。餐廳的料理類別 SHALL 對齊 `meta.foodPreferences` 的優先順序排列。
@@ -124,3 +136,57 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 #### Scenario: renderShop 復用既有 CSS
 - **WHEN** app.js 渲染 shopping infoBox
 - **THEN** SHALL 使用 `renderShop()` 函式，復用 `.restaurant-choice` CSS class，不新增任何 CSS
+
+### Requirement: R8 早餐欄位
+每日 hotel 物件 SHALL 包含 `breakfast` 欄位，記錄該飯店早餐安排。使用者可指定飯店含早餐或自行解決；未指定時標記為「資料未提供」。若查得到飯店退房時間，SHALL 以 `checkout` 欄位記錄。
+
+#### Scenario: 飯店含早餐
+- **WHEN** 使用者指定飯店含早餐
+- **THEN** `hotel.breakfast` SHALL 為 `{ "included": true, "note": "早餐說明（如料理類型）" }`
+
+#### Scenario: 自行解決早餐
+- **WHEN** 使用者指定自行解決早餐
+- **THEN** `hotel.breakfast` SHALL 為 `{ "included": false }`
+
+#### Scenario: 資料未提供
+- **WHEN** 使用者未指定早餐安排
+- **THEN** `hotel.breakfast` SHALL 為 `{ "included": null }`，顯示「早餐：資料未提供」
+
+#### Scenario: 退房時間
+- **WHEN** 可查到飯店最後退房時間
+- **THEN** `hotel.checkout` SHALL 記錄退房時間字串（如 `"11:00"`）
+
+#### Scenario: 退房時間未知
+- **WHEN** 無法查到飯店退房時間
+- **THEN** `hotel.checkout` SHALL 不存在（選填欄位）
+
+### Requirement: R9 AI 亮點精簡
+`highlights.content.summary` SHALL 為 50 字以內的旅程風格評語，不列舉具體景點或行程細節。`tags` 陣列保持不變。
+
+#### Scenario: 字數限制
+- **WHEN** 產生或修改 `highlights.content.summary`
+- **THEN** 字數（中英文字元含標點，不含空白）SHALL ≤ 50
+
+#### Scenario: 不列舉景點
+- **WHEN** 撰寫 summary
+- **THEN** SHALL 不包含 "Day X" 開頭的行程列舉、不列舉具體景點名稱或交通方式
+
+#### Scenario: 風格評語
+- **WHEN** 撰寫 summary
+- **THEN** SHALL 以旅程整體風格、特色、適合對象等角度撰寫評語
+
+### Requirement: R10 還車加油站
+自駕行程產生或修改還車 timeline event 時，SHALL 附上最近的加油站資訊。優先推薦フルサービス（人工加油站）。加油站以 `gasStation` infoBox 結構化呈現，包含名稱、地址、營業時間、服務類型（人工/自助）、電話。
+
+#### Scenario: 新增還車事件
+- **WHEN** 為自駕行程新增還車 timeline event
+- **THEN** SHALL 搜尋還車店鋪附近的加油站（Google「{還車地點} 附近 人工加油站」），以 `gasStation` infoBox 附上
+
+#### Scenario: 人工優先
+- **WHEN** 推薦加油站
+- **THEN** SHALL 優先選擇フルサービス（人工加油站），標註 `service: "フルサービス（人工）"`
+- **AND** 若附近僅有自助加油站，標註 `service: "セルフ（自助）"`
+
+#### Scenario: 必填資訊
+- **WHEN** 新增 gasStation infoBox
+- **THEN** SHALL 填寫 `name`、`address`、`hours`、`service`、`phone`，並盡可能附上 `location`（含 googleQuery / appleQuery）

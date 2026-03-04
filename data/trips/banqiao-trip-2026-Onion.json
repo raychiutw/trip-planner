@@ -9,7 +9,8 @@
       "拉麵",
       "義大利麵",
       "特色小吃"
-    ]
+    ],
+    "tripType": "self-drive"
   },
   "footer": {
     "title": "2026 板橋十五日行程",
@@ -272,7 +273,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -307,7 +311,7 @@
                     "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
                     "price": "NT$230~350",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
                   },
                   {
@@ -316,7 +320,7 @@
                     "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
                   },
                   {
@@ -325,7 +329,7 @@
                     "desc": "黃石市場 30 年老字號，生炒魷魚羹、蘿蔔糕",
                     "price": "NT$50~100",
                     "hours": "08:00~17:30（週一休）",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/blog/post/huangshishichangyouyu"
                   }
                 ]
@@ -364,7 +368,7 @@
                     "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
                     "price": "NT$230~350",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
                   },
                   {
@@ -373,7 +377,7 @@
                     "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
                   },
                   {
@@ -382,7 +386,7 @@
                     "desc": "新埔站超人氣日式串燒，烤物功夫一流",
                     "price": "NT$300~600",
                     "hours": "18:00~01:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/omiso/"
                   }
                 ]
@@ -401,7 +405,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -477,7 +484,7 @@
                     "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
                     "price": "NT$230~350",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
                   },
                   {
@@ -486,7 +493,7 @@
                     "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
                   },
                   {
@@ -495,7 +502,7 @@
                     "desc": "韓國豆腐煲專賣，嫩豆腐鍋香濃入味，小菜無限續",
                     "price": "NT$250~400",
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/dubu-tofu-banqiao/"
                   }
                 ]
@@ -534,7 +541,7 @@
                     "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
                     "price": "NT$230~350",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
                   },
                   {
@@ -543,7 +550,7 @@
                     "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
                   },
                   {
@@ -571,7 +578,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -606,7 +616,7 @@
                     "desc": "日本直營的京都風拉麵，雞白湯細膩清甜，叉燒入口即化",
                     "price": "NT$230~350",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/"
                   },
                   {
@@ -615,7 +625,7 @@
                     "desc": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/"
                   },
                   {
@@ -624,7 +634,7 @@
                     "desc": "黃石市場30年老字號，生炒魷魚羹、蘿蔔糕必吃",
                     "price": "NT$50~100",
                     "hours": "08:00~17:30（週一休）",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/huangshi-market-squid/"
                   }
                 ]
@@ -661,7 +671,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -696,7 +709,7 @@
                     "desc": "福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵",
                     "price": "NT$250~380",
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/"
                   },
                   {
@@ -705,7 +718,7 @@
                     "desc": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
                     "price": "NT$220~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/"
                   },
                   {
@@ -714,7 +727,7 @@
                     "desc": "新莊老街百年粿店，芋粿巧、草仔粿手工現做",
                     "price": "NT$20~60",
                     "hours": "06:00~18:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/aruiguan-cake/"
                   }
                 ]
@@ -753,7 +766,7 @@
                     "desc": "三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁",
                     "price": "NT$220~320",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/"
                   },
                   {
@@ -771,7 +784,7 @@
                     "desc": "三重在地鵝肉名店，鵝肉切盤鮮嫩，鵝肉湯麵經典",
                     "price": "NT$100~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://supertaste.tvbs.com.tw/food/339812"
                   }
                 ]
@@ -790,7 +803,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -825,7 +841,7 @@
                     "desc": "福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵",
                     "price": "NT$250~380",
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/"
                   },
                   {
@@ -834,7 +850,7 @@
                     "desc": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
                     "price": "NT$220~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/"
                   },
                   {
@@ -843,7 +859,7 @@
                     "desc": "新莊在地30年老麵攤，手打陽春麵Q勁十足",
                     "price": "NT$40~80",
                     "hours": "06:00~14:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/fushou-noodles/"
                   }
                 ]
@@ -934,7 +950,7 @@
                     "desc": "三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁",
                     "price": "NT$220~320",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/"
                   },
                   {
@@ -952,7 +968,7 @@
                     "desc": "紅燒牛肉麵湯頭濃醇，牛肉塊大又軟嫩",
                     "price": "NT$120~200",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/xinzhuang-beef-noodle/"
                   }
                 ]
@@ -971,7 +987,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1006,7 +1025,7 @@
                     "desc": "福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵",
                     "price": "NT$250~380",
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/"
                   },
                   {
@@ -1015,7 +1034,7 @@
                     "desc": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
                     "price": "NT$220~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/"
                   },
                   {
@@ -1024,7 +1043,7 @@
                     "desc": "三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配",
                     "price": "NT$30~80",
                     "hours": "07:00~20:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/jinda-braised-rice/"
                   }
                 ]
@@ -1063,7 +1082,7 @@
                     "desc": "三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁",
                     "price": "NT$220~320",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/"
                   },
                   {
@@ -1081,7 +1100,7 @@
                     "desc": "三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷",
                     "price": "NT$300~600",
                     "hours": "16:00~01:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/zhengyangrourong/"
                   }
                 ]
@@ -1100,7 +1119,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1135,7 +1157,7 @@
                     "desc": "永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒",
                     "price": "NT$240~360",
                     "hours": "11:30~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/"
                   },
                   {
@@ -1153,7 +1175,7 @@
                     "desc": "永和豆漿創始店之一，鹹豆漿、燒餅油條經典組合",
                     "price": "NT$30~80",
                     "hours": "24小時營業",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/world-soymilk-king/"
                   }
                 ]
@@ -1192,7 +1214,7 @@
                     "desc": "北海道系拉麵，濃厚豚骨湯底，叉燒入口即化",
                     "price": "NT$250~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/santouka-zhonghe/"
                   },
                   {
@@ -1210,7 +1232,7 @@
                     "desc": "永安市場旁超人氣，雞肉飯油蔥香氣誘人",
                     "price": "NT$40~100",
                     "hours": "11:00~20:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/zhulin-chicken-rice/"
                   }
                 ]
@@ -1229,7 +1251,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1264,7 +1289,7 @@
                     "desc": "永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒",
                     "price": "NT$240~360",
                     "hours": "11:30~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/"
                   },
                   {
@@ -1282,7 +1307,7 @@
                     "desc": "中和在地早午餐，清甜米粉湯配上油豆腐黑白切",
                     "price": "NT$40~80",
                     "hours": "06:00~14:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/zhonghe-rice-noodle-soup/"
                   }
                 ]
@@ -1362,7 +1387,7 @@
                     "desc": "北海道系拉麵，濃厚豚骨湯底，叉燒入口即化",
                     "price": "NT$250~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/santouka-zhonghe/"
                   },
                   {
@@ -1371,7 +1396,7 @@
                     "desc": "連鎖義式餐廳，白醬義大利麵與焗烤料理份量十足，適合家庭聚餐",
                     "price": "NT$280~480",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/italianchef-zhonghe/"
                   },
                   {
@@ -1399,7 +1424,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1434,7 +1462,7 @@
                     "desc": "永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒",
                     "price": "NT$240~360",
                     "hours": "11:30~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/"
                   },
                   {
@@ -1452,7 +1480,7 @@
                     "desc": "古早味木片便當，排骨飯與雞腿飯最受歡迎",
                     "price": "NT$80~120",
                     "hours": "10:30~20:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/chishang-bento-yonghe/"
                   }
                 ]
@@ -1489,7 +1517,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1524,7 +1555,7 @@
                     "desc": "日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁",
                     "price": "NT$260~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/musashi-shulin/"
                   },
                   {
@@ -1533,7 +1564,7 @@
                     "desc": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
                     "price": "NT$230~380",
                     "hours": "11:30~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/"
                   },
                   {
@@ -1542,7 +1573,7 @@
                     "desc": "土城在地人推薦，清甜米粉湯配黑白切經濟實惠",
                     "price": "NT$40~80",
                     "hours": "06:30~14:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/tucheng-rice-noodle/"
                   }
                 ]
@@ -1581,7 +1612,7 @@
                     "desc": "日本知名連鎖豚骨拉麵，秘製紅辣醬可自由調整，獨立隔間專注品嚐",
                     "price": "NT$320~420",
                     "hours": "10:00~23:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ichiran-tucheng/"
                   },
                   {
@@ -1590,7 +1621,7 @@
                     "desc": "土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評",
                     "price": "NT$220~360",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/justlight-pasta-tucheng/"
                   },
                   {
@@ -1599,7 +1630,7 @@
                     "desc": "土城超人氣鹽酥雞，蒜味十足外酥內嫩",
                     "price": "NT$50~150",
                     "hours": "16:00~00:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/tucheng-popcorn-chicken/"
                   }
                 ]
@@ -1618,7 +1649,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1653,7 +1687,7 @@
                     "desc": "日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁",
                     "price": "NT$260~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/musashi-shulin/"
                   },
                   {
@@ -1662,7 +1696,7 @@
                     "desc": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
                     "price": "NT$230~380",
                     "hours": "11:30~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/"
                   },
                   {
@@ -1671,7 +1705,7 @@
                     "desc": "樹林在地老店，古早味滷肉飯油亮鹹香",
                     "price": "NT$30~60",
                     "hours": "06:00~14:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/shulin-braised-rice/"
                   }
                 ]
@@ -1749,7 +1783,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1784,7 +1821,7 @@
                     "desc": "日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁",
                     "price": "NT$260~380",
                     "hours": "11:00~21:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/musashi-shulin/"
                   },
                   {
@@ -1793,7 +1830,7 @@
                     "desc": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
                     "price": "NT$230~380",
                     "hours": "11:30~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/"
                   },
                   {
@@ -1802,7 +1839,7 @@
                     "desc": "山佳車站旁小吃攤，切仔麵搭配油豆腐小菜",
                     "price": "NT$40~80",
                     "hours": "07:00~15:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/shanjia-noodle/"
                   }
                 ]
@@ -1841,7 +1878,7 @@
                     "desc": "日本知名連鎖豚骨拉麵，秘製紅辣醬可自由調整，獨立隔間專注品嚐",
                     "price": "NT$320~420",
                     "hours": "10:00~23:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ichiran-tucheng/"
                   },
                   {
@@ -1850,7 +1887,7 @@
                     "desc": "土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評",
                     "price": "NT$220~360",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/justlight-pasta-tucheng/"
                   },
                   {
@@ -1859,7 +1896,7 @@
                     "desc": "在地人的晚餐街，各式台灣小吃集中",
                     "price": "NT$50~150",
                     "hours": "17:00~23:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/shulin-baoan-night/"
                   }
                 ]
@@ -1878,7 +1915,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1954,7 +1994,7 @@
                     "desc": "淡水在地人推薦的日式拉麵店，雞豚混合湯底清甜，手工麵條彈牙",
                     "price": "NT$200~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/menya-kei-tamsui/"
                   },
                   {
@@ -1972,7 +2012,7 @@
                     "desc": "淡水阿給創始店之一，冬粉塞入油豆腐再封魚漿",
                     "price": "NT$35~60",
                     "hours": "06:30~18:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/wenhua-agei/"
                   }
                 ]
@@ -2011,7 +2051,7 @@
                     "desc": "鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點",
                     "price": "NT$200~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-kei-bali/"
                   },
                   {
@@ -2029,7 +2069,7 @@
                     "desc": "淡水在地海鮮餐廳，現撈海產清蒸煮炒樣樣有",
                     "price": "NT$200~500",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/tamsui-seafood/"
                   }
                 ]
@@ -2048,7 +2088,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -2083,7 +2126,7 @@
                     "desc": "淡水在地人推薦的日式拉麵店，雞豚混合湯底清甜，手工麵條彈牙",
                     "price": "NT$200~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/menya-kei-tamsui/"
                   },
                   {
@@ -2101,7 +2144,7 @@
                     "desc": "碼頭旁現撈海鮮，清蒸鮮魚與炒蛤蜊鮮甜",
                     "price": "NT$200~500",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/fishermans-wharf-seafood/"
                   }
                 ]
@@ -2140,7 +2183,7 @@
                     "desc": "鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點",
                     "price": "NT$200~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-kei-bali/"
                   },
                   {
@@ -2158,7 +2201,7 @@
                     "desc": "淡水百年魚酥店，現炸魚酥香脆，搭配阿給超滿足",
                     "price": "NT$30~80",
                     "hours": "09:00~20:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bunnyann.tw/xuyi-fish-crisp/"
                   }
                 ]
@@ -2177,7 +2220,10 @@
           "name": "家",
           "details": [
             "新北板橋區合宜一路25號四樓之3"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -2212,7 +2258,7 @@
                     "desc": "淡水在地人推薦的日式拉麵店，雞豚混合湯底清甜，手工麵條彈牙",
                     "price": "NT$200~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/menya-kei-tamsui/"
                   },
                   {
@@ -2230,7 +2276,7 @@
                     "desc": "八里老街必吃炸物，雙胞胎甜甜圈外酥內軟",
                     "price": "NT$15~30",
                     "hours": "09:00~19:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/bali-twin-donut/"
                   }
                 ]
@@ -2269,7 +2315,7 @@
                     "desc": "鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點",
                     "price": "NT$200~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-kei-bali/"
                   },
                   {
@@ -2287,7 +2333,7 @@
                     "desc": "八里名產孔雀蛤，九層塔大火快炒鮮甜入味",
                     "price": "NT$100~300",
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://bunnyann.tw/bali-mussel-king/"
                   }
                 ]
@@ -2301,7 +2347,7 @@
   "highlights": {
     "title": "AI行程亮點",
     "content": {
-      "summary": "十五日新北在地自駕遊以板橋家為出發點，系統性探索新北各行政區精華。前三日深入板橋歷史古蹟與現代商圈；接著三日走訪新莊廟街老文化與三重眷村記憶；中段九天橫跨永和豆漿美食、中和烘爐地夜景、土城桐花花季與樹林百年鐵道；最終三日沿淡水河奔赴淡水老街、漁人碼頭與八里十三行博物館。行程節奏悠閒，兼顧歷史文化、自然生態與在地美食，是認識新北城市底蘊的最佳路徑。",
+      "summary": "悠閒自駕深探新北各區，適合想認識城市底蘊的在地旅人",
       "tags": [
         "在地探索",
         "新北深度遊",

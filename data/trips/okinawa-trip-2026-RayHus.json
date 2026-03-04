@@ -9,7 +9,8 @@
       "燒肉",
       "牛排/烤魚",
       "當地特色"
-    ]
+    ],
+    "tripType": "transit"
   },
   "footer": {
     "title": "2026 沖繩六日輕旅遊",
@@ -145,7 +146,11 @@
             "那霸市東町11-17",
             "旭橋站步行5分鐘",
             "近那霸巴士總站"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          },
+          "checkout": "10:00"
         },
         "timeline": [
           {
@@ -290,7 +295,7 @@
                       "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店"
                     },
                     "hours": "11:00~翌1:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
                   },
                   {
@@ -304,7 +309,7 @@
                       "appleQuery": "https://maps.apple.com/?q=琉球料理+ぬちがふぅ+那覇"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/"
                   }
                 ]
@@ -317,7 +322,7 @@
     {
       "id": 2,
       "date": "3/7（六）",
-      "label": "KKday 一日遊",
+      "label": "KKday一日遊",
       "content": {
         "hotel": {
           "name": "Living Inn 旭橋駅前",
@@ -325,7 +330,11 @@
           "details": [
             "那霸市東町11-17",
             "旭橋站步行5分鐘"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          },
+          "checkout": "10:00"
         },
         "timeline": [
           {
@@ -432,7 +441,7 @@
     {
       "id": 3,
       "date": "3/8（日）",
-      "label": "Klook 一日遊",
+      "label": "Klook一日遊",
       "content": {
         "hotel": {
           "name": "Living Inn 旭橋駅前",
@@ -440,7 +449,11 @@
           "details": [
             "那霸市東町11-17",
             "旭橋站步行5分鐘"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          },
+          "checkout": "10:00"
         },
         "timeline": [
           {
@@ -535,7 +548,7 @@
                       "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店"
                     },
                     "hours": "11:00~翌1:30",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
                   },
                   {
@@ -549,7 +562,7 @@
                       "appleQuery": "https://maps.apple.com/?q=すばやー+松山店+那覇"
                     },
                     "hours": "21:00~翌5:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-naha-midnight-ramen/"
                   }
                 ]
@@ -571,7 +584,10 @@
             "那霸市西1丁目6-1",
             "14F 溫水游泳池（9:00~22:00）",
             "那霸市西區"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -677,7 +693,7 @@
                       "appleQuery": "https://maps.apple.com/?q=炭焼ハラミステーキ+牛米衛+ライカム"
                     },
                     "hours": "10:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://alicedaily.com/okinawa-aeonmall-gyubey-steak/"
                   },
                   {
@@ -691,7 +707,7 @@
                       "appleQuery": "https://maps.apple.com/?q=タコライスカフェきじむなぁ+イオンモール沖縄ライカム"
                     },
                     "hours": "10:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://ajunfun.tw/aeonmall/"
                   }
                 ]
@@ -746,6 +762,45 @@
               "text": "巴士 21 或 92 號 ライカム→那霸バスターミナル 約60分鐘",
               "type": "bus"
             }
+          },
+          {
+            "time": "18:30",
+            "title": "晚餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "category": "牛排",
+                    "name": "やっぱりステーキ 國際通り店",
+                    "hours": "11:00~01:00",
+                    "reservation": "不需訂位",
+                    "desc": "千元有找厚切牛排，白飯沙拉吃到飽",
+                    "price": "¥1,000~",
+                    "blogUrl": "https://mimihan.tw/yappari-steak/"
+                  },
+                  {
+                    "category": "拉麵",
+                    "name": "暖暮拉麵 那霸牧志店",
+                    "hours": "11:00~02:00",
+                    "reservation": "不需訂位",
+                    "desc": "九州豚骨系人氣拉麵，國際通步行可達",
+                    "price": "¥850~",
+                    "blogUrl": "https://mimihan.tw/danbo-ramen/"
+                  },
+                  {
+                    "category": "沖繩料理",
+                    "name": "琉球料理ぬちがふぅ",
+                    "hours": "17:00~23:00",
+                    "reservation": "建議預約",
+                    "desc": "道地沖繩家庭料理，紅芋天婦羅必點",
+                    "price": "¥1,200~",
+                    "blogUrl": "https://kafuokinawa.com/nuchigafu/"
+                  }
+                ]
+              }
+            ]
           },
           {
             "time": "20:00",
@@ -803,7 +858,10 @@
           "details": [
             "那霸市西1丁目6-1",
             "14F 溫水游泳池（9:00~22:00）"
-          ]
+          ],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -879,7 +937,7 @@
                       "appleQuery": "https://maps.apple.com/?q=タコライスカフェきじむなぁ+iias沖縄豊崎"
                     },
                     "hours": "10:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://adontrip.com/blog/71454/"
                   },
                   {
@@ -893,7 +951,7 @@
                       "appleQuery": "https://maps.apple.com/?q=やっぱりちゃん+iias沖縄豊崎"
                     },
                     "hours": "10:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://adontrip.com/blog/71454/"
                   },
                   {
@@ -907,7 +965,7 @@
                       "appleQuery": "https://maps.apple.com/?q=親父のまぐろ+iias沖縄豊崎"
                     },
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://adontrip.com/blog/71454/"
                   }
                 ]
@@ -991,7 +1049,7 @@
                       "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+辻本店"
                     },
                     "hours": "11:00~翌2:00",
-                    "reservation": null,
+                    "reservation": "不需訂位",
                     "blogUrl": "https://slowlifeinokinawa.com/steak88/"
                   },
                   {
@@ -1022,7 +1080,10 @@
       "content": {
         "hotel": {
           "name": "（返台）",
-          "details": []
+          "details": [],
+          "breakfast": {
+            "included": null
+          }
         },
         "timeline": [
           {
@@ -1050,6 +1111,46 @@
                 "name": "那霸機場",
                 "googleQuery": "https://maps.google.com/?q=那霸機場",
                 "appleQuery": "https://maps.apple.com/?q=那霸機場"
+              }
+            ]
+          },
+          {
+            "time": "10:30",
+            "title": "機場午餐",
+            "description": "在那霸機場國內線出發大廳用餐",
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "機場午餐推薦",
+                "restaurants": [
+                  {
+                    "category": "沖繩料理",
+                    "name": "空港食堂",
+                    "desc": "隱藏版員工食堂，在地人也愛吃，CP值超高",
+                    "price": "¥600~",
+                    "hours": "09:00~20:00",
+                    "reservation": "不需預約",
+                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/"
+                  },
+                  {
+                    "category": "沖繩そば",
+                    "name": "天龍 那覇空港店",
+                    "desc": "沖繩そば＆定食老店，機場人氣名店",
+                    "price": "¥800~",
+                    "hours": "07:00~20:30",
+                    "reservation": "不需預約",
+                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/"
+                  },
+                  {
+                    "category": "速食",
+                    "name": "A&W 那覇空港店",
+                    "desc": "沖繩限定美式漢堡，根啤酒 Root Beer 必喝",
+                    "price": "¥600~",
+                    "hours": "06:30~20:30",
+                    "reservation": "不需預約",
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
+                  }
+                ]
               }
             ]
           },
@@ -1204,7 +1305,7 @@
   "highlights": {
     "title": "AI行程亮點",
     "content": {
-      "summary": "六日沖繩輕旅遊以那霸為據點，結合精心安排的一日遊體驗與自主購物時光。Day 2 搭乘 KKday 暢遊沖繩北部美麗海水族館、浪漫古宇利島與鳳梨公園；Day 3 參加 Klook 西海岸行程，從神聖的波上宮到壯觀的殘波岬燈塔，再到熱鬧的美國村與夢幻東南植物樂園燈光秀。不需自駕，全程搭乘大眾運輸輕鬆遊覽。Day 4 遠征沖繩最大 AEON Mall 來客夢，Day 5 悠遊面海的 iias 豐崎購物。兩間精選飯店各具特色，THE NEST NAHA 更有14F溫水游泳池可放鬆。是一趟兼顧知名景點、輕鬆通勤與購物享受的沖繩之旅。",
+      "summary": "省心非自駕路線，跟團與購物穿插得宜，適合輕旅行新手或懶人派",
       "tags": [
         "輕鬆旅遊",
         "大眾運輸",
