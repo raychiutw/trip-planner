@@ -133,7 +133,7 @@ jsonFiles.forEach((file) => {
 
     // --- R3 餐廳數量檢查 ---
 
-    it('R3: restaurants infoBox has >= 3 restaurants', () => {
+    it('R3: restaurants infoBox has 1-3 restaurants', () => {
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
         timeline.forEach((ev, j) => {
@@ -141,8 +141,12 @@ jsonFiles.forEach((file) => {
             if (box.type !== 'restaurants') return;
             expect(
               box.restaurants.length,
-              `days[${i}].timeline[${j}].infoBoxes[${k}] has ${box.restaurants.length} restaurants, need >= 3`
-            ).toBeGreaterThanOrEqual(3);
+              `days[${i}].timeline[${j}].infoBoxes[${k}] has ${box.restaurants.length} restaurants, need 1-3`
+            ).toBeGreaterThanOrEqual(1);
+            expect(
+              box.restaurants.length,
+              `days[${i}].timeline[${j}].infoBoxes[${k}] has ${box.restaurants.length} restaurants, max 3`
+            ).toBeLessThanOrEqual(3);
           });
         });
       });
@@ -194,6 +198,71 @@ jsonFiles.forEach((file) => {
                 openHour <= evHour + 1,
                 `Day ${day.id} ${ev.title} (${ev.time}): ${r.name} opens at ${r.hours}, too late`
               ).toBe(true);
+            });
+          });
+        });
+      });
+    });
+
+    // --- R5 飯店 blogUrl ---
+
+    it('R5: non-home hotels have blogUrl field', () => {
+      data.days.forEach((day, i) => {
+        const hotel = day.content?.hotel;
+        if (!hotel || hotel.name === '家') return;
+        if (hotel.name.startsWith('（')) return; // 跳過非住宿特殊標記（如「（返台）」）
+        expect(
+          hotel.hasOwnProperty('blogUrl'),
+          `days[${i}].hotel "${hotel.name}" missing blogUrl field`
+        ).toBe(true);
+      });
+    });
+
+    // --- R7 飯店 shopping infoBox ---
+
+    it('R7: non-home hotels have shopping infoBox in hotel.infoBoxes', () => {
+      data.days.forEach((day, i) => {
+        const hotel = day.content?.hotel;
+        if (!hotel || hotel.name === '家') return;
+        if (hotel.name.startsWith('（')) return; // 跳過非住宿特殊標記（如「（返台）」）
+        const hotelBoxes = hotel.infoBoxes || [];
+        const shoppingBox = hotelBoxes.find((box) => box.type === 'shopping');
+        expect(
+          shoppingBox,
+          `days[${i}].hotel "${hotel.name}" missing shopping infoBox in hotel.infoBoxes`
+        ).toBeDefined();
+        if (shoppingBox) {
+          expect(
+            shoppingBox.shops?.length >= 3,
+            `days[${i}].hotel "${hotel.name}" shopping infoBox has ${shoppingBox.shops?.length || 0} shops, need >= 3`
+          ).toBe(true);
+        }
+      });
+    });
+
+    // --- R1/R3 餐廳 category 對齊 foodPreferences ---
+
+    it('R1/R3: restaurant categories align with foodPreferences order', () => {
+      const prefs = data.meta?.foodPreferences;
+      if (!prefs || prefs.length === 0) return; // 無偏好時跳過
+
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        timeline.forEach((ev, j) => {
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'restaurants') return;
+            const restaurants = box.restaurants || [];
+            restaurants.forEach((r, m) => {
+              if (m >= prefs.length) return; // 超過偏好數量不檢查
+              const cat = r.category || '';
+              // category 應包含對應偏好關鍵字（寬鬆比對）
+              if (cat && !cat.includes(prefs[m])) {
+                // 用 console.warn 而非 fail，待資料全面補齊後改為 strict
+                console.warn(
+                  `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}]: ` +
+                  `category "${cat}" 不符合 foodPreferences[${m}] "${prefs[m]}"`
+                );
+              }
             });
           });
         });

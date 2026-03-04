@@ -150,7 +150,52 @@
             "note": "不含早餐，附近便利商店或自行解決"
           },
           "checkout": "10:00",
-          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179"
+          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "藥妝/雜貨",
+                  "name": "唐吉軻德那霸店（全球最大旗艦店）",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定泡盛",
+                    "紅芋塔/紅芋餅乾",
+                    "Orion 啤酒",
+                    "沖繩黑糖",
+                    "沖繩限定零食"
+                  ],
+                  "blogUrl": "https://www.travel.taipei/zh-tw/attractions/details/114"
+                },
+                {
+                  "category": "超商",
+                  "name": "Lawson 旭橋店",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定冰淇淋（紅芋口味）",
+                    "烤地瓜",
+                    "飯糰便當",
+                    "沖繩限定飲料"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "沖繩豆腐（島豆腐）",
+                    "泡盛",
+                    "海葡萄（海ぶどう）"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -336,7 +381,52 @@
             "note": "不含早餐，附近便利商店或自行解決"
           },
           "checkout": "10:00",
-          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179"
+          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "藥妝/雜貨",
+                  "name": "唐吉軻德那霸店（全球最大旗艦店）",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定泡盛",
+                    "紅芋塔/紅芋餅乾",
+                    "Orion 啤酒",
+                    "沖繩黑糖",
+                    "沖繩限定零食"
+                  ],
+                  "blogUrl": "https://www.travel.taipei/zh-tw/attractions/details/114"
+                },
+                {
+                  "category": "超商",
+                  "name": "Lawson 旭橋店",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定冰淇淋（紅芋口味）",
+                    "烤地瓜",
+                    "飯糰便當",
+                    "沖繩限定飲料"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "沖繩豆腐（島豆腐）",
+                    "泡盛",
+                    "海葡萄（海ぶどう）"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -458,7 +548,52 @@
             "note": "不含早餐，附近便利商店或自行解決"
           },
           "checkout": "10:00",
-          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179"
+          "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "藥妝/雜貨",
+                  "name": "唐吉軻德那霸店（全球最大旗艦店）",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定泡盛",
+                    "紅芋塔/紅芋餅乾",
+                    "Orion 啤酒",
+                    "沖繩黑糖",
+                    "沖繩限定零食"
+                  ],
+                  "blogUrl": "https://www.travel.taipei/zh-tw/attractions/details/114"
+                },
+                {
+                  "category": "超商",
+                  "name": "Lawson 旭橋店",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定冰淇淋（紅芋口味）",
+                    "烤地瓜",
+                    "飯糰便當",
+                    "沖繩限定飲料"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "沖繩豆腐（島豆腐）",
+                    "泡盛",
+                    "海葡萄（海ぶどう）"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -596,7 +731,51 @@
             "note": "14F 泳池層自助早餐（沖繩料理為主）"
           },
           "checkout": "11:00",
-          "blogUrl": "https://vialife.tw/21994/"
+          "blogUrl": "https://vialife.tw/21994/",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "FamilyMart 那霸西店",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定冰淇淋",
+                    "飯糰便當",
+                    "Orion 啤酒罐裝",
+                    "沖繩限定零食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "むつみ橋かどや（牧志市場附近生鮮超市）",
+                  "hours": "10:00~20:00",
+                  "mustBuy": [
+                    "海葡萄（海ぶどう）",
+                    "沖繩豆腐（島豆腐）",
+                    "沖繩海鮮",
+                    "沖繩特產調味料"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "藥妝",
+                  "name": "ドラッグストアコスモス 那霸泊港店",
+                  "hours": "09:00~21:00",
+                  "mustBuy": [
+                    "日本藥妝免稅優惠",
+                    "護膚保養品",
+                    "沖繩限定零食",
+                    "消炎止痛貼布"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
@@ -870,7 +1049,51 @@
             "note": "14F 泳池層自助早餐（沖繩料理為主）"
           },
           "checkout": "11:00",
-          "blogUrl": "https://vialife.tw/21994/"
+          "blogUrl": "https://vialife.tw/21994/",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "FamilyMart 那霸西店",
+                  "hours": "24 小時",
+                  "mustBuy": [
+                    "沖繩限定冰淇淋",
+                    "飯糰便當",
+                    "Orion 啤酒罐裝",
+                    "沖繩限定零食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "むつみ橋かどや（牧志市場附近生鮮超市）",
+                  "hours": "10:00~20:00",
+                  "mustBuy": [
+                    "海葡萄（海ぶどう）",
+                    "沖繩豆腐（島豆腐）",
+                    "沖繩海鮮",
+                    "沖繩特產調味料"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "藥妝",
+                  "name": "ドラッグストアコスモス 那霸泊港店",
+                  "hours": "09:00~21:00",
+                  "mustBuy": [
+                    "日本藥妝免稅優惠",
+                    "護膚保養品",
+                    "沖繩限定零食",
+                    "消炎止痛貼布"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
         },
         "timeline": [
           {
