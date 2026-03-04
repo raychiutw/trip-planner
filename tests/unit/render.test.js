@@ -383,7 +383,7 @@ describe('renderHotel', () => {
     const html = renderHotel({
       name: 'Hotel',
       subs: [
-        { label: '停車場', text: '免費', location: { name: '飯店停車場' } },
+        { type: 'parking', title: '停車場', price: '免費', location: { name: '飯店停車場' } },
       ],
     });
     expect(html).toContain('hotel-sub');

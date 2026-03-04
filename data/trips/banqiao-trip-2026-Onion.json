@@ -1,10 +1,8 @@
 {
   "meta": {
-    "name": "Onion 的板橋之旅",
     "title": "2026 板橋十五日在地行程表",
     "description": "2026 板橋十五日在地測試行程：板橋、新莊、三重、中和、永和、土城、樹林、淡水、八里。每日住家出發、開車遊覽新北景點。",
     "ogDescription": "板橋→新莊三重→中和永和→土城樹林→淡水八里，十五日在地行程含新北各區景點",
-    "themeColor": "#8B8580",
     "foodPreferences": [
       "拉麵",
       "義大利麵",
@@ -434,7 +432,7 @@
                 "title": "板橋車站購物推薦",
                 "shops": [
                   {
-                    "category": "百貨公司",
+                    "category": "購物中心",
                     "name": "板橋大遠百",
                     "hours": "11:00~22:00",
                     "mustBuy": [
@@ -456,7 +454,7 @@
                     "blogUrl": "https://tisshuang.com/global-mall-banqiao/"
                   },
                   {
-                    "category": "地下街",
+                    "category": "購物中心",
                     "name": "板橋車站地下街",
                     "hours": "10:00~22:00",
                     "mustBuy": [
@@ -889,7 +887,7 @@
                 "title": "新莊廟街購物推薦",
                 "shops": [
                   {
-                    "category": "傳統商圈",
+                    "category": "伴手禮",
                     "name": "新莊廟街商圈",
                     "hours": "10:00~21:00",
                     "mustBuy": [
@@ -900,7 +898,7 @@
                     "blogUrl": "https://snowhy.tw/xinzhuang-miaostreet-shopping/"
                   },
                   {
-                    "category": "夜市",
+                    "category": "伴手禮",
                     "name": "新莊夜市",
                     "hours": "17:00~00:00",
                     "mustBuy": [
@@ -911,7 +909,7 @@
                     "blogUrl": "https://bigmouthblog.tw/xinzhuang-night-market/"
                   },
                   {
-                    "category": "百貨",
+                    "category": "購物中心",
                     "name": "宏匯廣場 新莊副都心",
                     "hours": "11:00~22:00",
                     "mustBuy": [
@@ -922,7 +920,7 @@
                     "blogUrl": "https://kenalice.tw/honghui-plaza/"
                   },
                   {
-                    "category": "日系雜貨",
+                    "category": "唐吉軻德",
                     "name": "唐吉軻德 新莊幸福店",
                     "hours": "10:00~02:00",
                     "mustBuy": [
@@ -1348,7 +1346,7 @@
                     "blogUrl": "https://tisshuang.com/zhonghe-global-mall/"
                   },
                   {
-                    "category": "量販",
+                    "category": "超市",
                     "name": "家樂福 中和店",
                     "hours": "08:00~23:00",
                     "mustBuy": [
@@ -1359,7 +1357,7 @@
                     "blogUrl": "https://bigmouthblog.tw/carrefour-zhonghe/"
                   },
                   {
-                    "category": "服飾",
+                    "category": "購物中心",
                     "name": "景安捷運站商圈",
                     "hours": "10:00~22:00",
                     "mustBuy": [
@@ -1735,7 +1733,7 @@
                 "title": "興仁花園夜市購物推薦",
                 "shops": [
                   {
-                    "category": "夜市",
+                    "category": "伴手禮",
                     "name": "樹林興仁花園夜市",
                     "hours": "17:00~00:00（三五六日）",
                     "mustBuy": [
@@ -1746,7 +1744,7 @@
                     "blogUrl": "https://plumpyblog.com/singren-night-market-shopping/"
                   },
                   {
-                    "category": "量販",
+                    "category": "購物中心",
                     "name": "日月光廣場 土城店",
                     "hours": "11:00~22:00",
                     "mustBuy": [
@@ -1944,7 +1942,7 @@
                 "title": "淡水老街購物推薦",
                 "shops": [
                   {
-                    "category": "老街",
+                    "category": "伴手禮",
                     "name": "淡水老街商圈",
                     "hours": "10:00~21:00",
                     "mustBuy": [
@@ -1955,7 +1953,7 @@
                     "blogUrl": "https://kenalice.tw/tamsui-old-street-shopping/"
                   },
                   {
-                    "category": "文創",
+                    "category": "伴手禮",
                     "name": "淡水漁人碼頭商圈",
                     "hours": "10:00~21:00",
                     "mustBuy": [
@@ -1966,7 +1964,7 @@
                     "blogUrl": "https://bunnyann.tw/fishermans-wharf-shopping/"
                   },
                   {
-                    "category": "老街",
+                    "category": "伴手禮",
                     "name": "八里左岸商圈",
                     "hours": "10:00~19:00",
                     "mustBuy": [

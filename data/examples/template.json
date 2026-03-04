@@ -1,10 +1,9 @@
 {
   "meta": {
-    "name": "",
     "title": "",
     "description": "",
     "ogDescription": "",
-    "themeColor": "#0077B6",
+    "tripType": "self-drive",
     "foodPreferences": []
   },
   "footer": {
@@ -48,7 +47,19 @@
             "included": null,
             "note": ""
           },
-          "subs": [],
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "price": "",
+              "note": "",
+              "location": {
+                "name": "",
+                "googleQuery": "",
+                "appleQuery": ""
+              }
+            }
+          ],
           "infoBoxes": []
         },
         "timeline": [
