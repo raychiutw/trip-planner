@@ -1,4 +1,4 @@
-全面重整單一行程 JSON，依 R1-R10 品質規則逐項檢查並修正。
+全面重整單一行程 JSON，依 R1-R12 品質規則逐項檢查並修正。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
@@ -10,18 +10,23 @@
 ## 步驟
 
 1. 讀取 `data/trips/{tripSlug}.json`
-2. 逐項檢查 R1-R10 品質規則，修正不合格的欄位
-3. 同步更新 checklist、backup、suggestions
-4. 確認 transit 分鐘數
-5. 執行 `git diff --name-only`：
+2. **備份**：複製到 `data/backup/{tripSlug}_{YYYY-MM-DDTHHMMSS}.json`
+   - 建立 `data/backup/` 目錄（若不存在）
+   - 同一 tripSlug 超過 10 個備份時，刪除最舊的
+3. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
+4. 逐項檢查 R1-R12 品質規則，修正不合格的欄位
+5. 同步更新 checklist、backup、suggestions
+6. 確認 transit 分鐘數
+7. 執行 `git diff --name-only`：
    → 只有 `data/trips/{tripSlug}.json` → OK
    → 有其他檔案被改 → `git checkout` 還原非白名單檔案
-6. `npm test`
-7. 不自動 commit（由使用者決定）
+8. `npm test`
+9. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
+10. 不自動 commit（由使用者決定）
 
 ## 重整範圍
 
-檢查現有行程 JSON 的每個欄位是否符合 R1-R10，修正不符規則的部分。
+檢查現有行程 JSON 的每個欄位是否符合 R1-R12，修正不符規則的部分。
 **不改 timeline 順序、不新增/移除景點**，只確保現有內容符合品質規則。
 
 ✅ 允許修改的檔案（正面表列，僅此一項）：
