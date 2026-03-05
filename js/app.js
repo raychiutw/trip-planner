@@ -57,7 +57,7 @@ function renderRestaurant(r) {
     if (rUrl) nameHtml = '<a href="' + rUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
     html += (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
           + nameHtml;
-    if (r.desc) html += ' — ' + escHtml(r.desc);
+    if (r.description) html += ' — ' + escHtml(r.description);
     if (r.price) html += '，' + escHtml(r.price);
     html += '<br>';
     if (r.location) html += renderMapLinks(r.location, true);
@@ -186,38 +186,38 @@ function renderInfoBox(box) {
 }
 
 /* ===== Render: Timeline Event ===== */
-function renderTimelineEvent(ev) {
-    var hasBody = ev.description || (ev.locations && ev.locations.length) || (ev.infoBoxes && ev.infoBoxes.length);
+function renderTimelineEvent(entry) {
+    var hasBody = entry.description || (entry.locations && entry.locations.length) || (entry.infoBoxes && entry.infoBoxes.length);
     var html = '<div class="tl-event expanded">';
     var headCls = 'tl-head';
     html += '<div class="' + headCls + '">';
-    html += '<span class="tl-time">' + escHtml(ev.time || '') + '</span>';
+    html += '<span class="tl-time">' + escHtml(entry.time || '') + '</span>';
     html += '<span class="tl-title">';
-    var titleUrl = escUrl(ev.titleUrl);
+    var titleUrl = escUrl(entry.titleUrl);
     if (titleUrl) {
-        html += '<a href="' + titleUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(ev.title) + '</a>';
+        html += '<a href="' + titleUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(entry.title) + '</a>';
     } else {
-        html += escHtml(ev.title || '');
+        html += escHtml(entry.title || '');
     }
     html += '</span>';
-    var evBlogLink = renderBlogLink(ev.blogUrl);
-    if (evBlogLink) {
-        html += ' ' + evBlogLink;
+    var entryBlogLink = renderBlogLink(entry.blogUrl);
+    if (entryBlogLink) {
+        html += ' ' + entryBlogLink;
     }
     html += '</div>';
-    if (ev.note) html += '<div class="tl-desc">' + escHtml(ev.note) + '</div>';
+    if (entry.note) html += '<div class="tl-desc">' + escHtml(entry.note) + '</div>';
     if (hasBody) {
         html += '<div class="tl-body">';
-        if (ev.description) html += '<p class="tl-desc">' + escHtml(ev.description) + '</p>';
-        if (ev.locations && ev.locations.length) html += renderNavLinks(ev.locations);
-        if (ev.infoBoxes && ev.infoBoxes.length) {
-            ev.infoBoxes.forEach(function(box) { html += renderInfoBox(box); });
+        if (entry.description) html += '<p class="tl-desc">' + escHtml(entry.description) + '</p>';
+        if (entry.locations && entry.locations.length) html += renderNavLinks(entry.locations);
+        if (entry.infoBoxes && entry.infoBoxes.length) {
+            entry.infoBoxes.forEach(function(box) { html += renderInfoBox(box); });
         }
         html += '</div>';
     }
-    if (ev.transit) {
-        html += '<div class="tl-transit">⤷ '
-              + escHtml(ev.transit.text || ev.transit)
+    if (entry.travel) {
+        html += '<div class="tl-travel">⤷ '
+              + escHtml(entry.travel.text || entry.travel)
               + '</div>';
     }
     html += '</div>';
@@ -264,16 +264,6 @@ function renderHotel(hotel) {
     }
     if (hotel.checkout) {
         html += '<div class="hotel-sub">' + iconSpan('clock') + ' 退房 ' + escHtml(hotel.checkout) + '</div>';
-    }
-    if (hotel.subs && hotel.subs.length) {
-        hotel.subs.forEach(function(sub) {
-            html += '<div class="hotel-sub">';
-            if (sub.title) html += '<strong>' + escHtml(sub.title) + '</strong>';
-            if (sub.price) html += '：' + escHtml(sub.price);
-            if (sub.note) html += '（' + escHtml(sub.note) + '）';
-            if (sub.location) html += ' ' + renderMapLinks(sub.location, true);
-            html += '</div>';
-        });
     }
     if (hotel.infoBoxes && hotel.infoBoxes.length) {
         hotel.infoBoxes.forEach(function(box) { html += renderInfoBox(box); });
@@ -325,9 +315,9 @@ function calcDrivingStats(timeline) {
     var byType = {};
     var totalMinutes = 0;
     var drivingMinutes = 0;
-    timeline.forEach(function(ev) {
-        if (!ev.transit) return;
-        var t = ev.transit;
+    timeline.forEach(function(entry) {
+        if (!entry.travel) return;
+        var t = entry.travel;
         var type = t.type || '';
         var text = t.text || (typeof t === 'string' ? t : '');
         if (!TRANSPORT_TYPES[type]) return;
@@ -506,7 +496,7 @@ function renderBackup(data) {
         data.cards.forEach(function(card) {
             html += '<div class="ov-card">';
             if (card.title) html += '<h4>' + escHtml(card.title) + '</h4>';
-            if (card.desc) html += '<p>' + escHtml(card.desc) + '</p>';
+            if (card.description) html += '<p>' + escHtml(card.description) + '</p>';
             if (card.weatherItems && card.weatherItems.length) {
                 html += '<ul class="weather-list">';
                 card.weatherItems.forEach(function(w) { html += '<li><span class="list-icon">' + iconSpan('wave') + '</span>' + escHtml(w) + '</li>'; });
@@ -704,17 +694,17 @@ function validateTripData(data) {
 function validateDay(day) {
     var warnings = [];
     if (!day || !day.content || !day.content.timeline) return warnings;
-    day.content.timeline.forEach(function(ev) {
-        if (!ev.time || !ev.infoBoxes) return;
-        var evTime = ev.time.split('-')[0].replace(':', '');
-        var evHour = parseInt(evTime.substring(0, evTime.length - 2), 10) || 0;
-        ev.infoBoxes.forEach(function(box) {
+    day.content.timeline.forEach(function(entry) {
+        if (!entry.time || !entry.infoBoxes) return;
+        var entryTime = entry.time.split('-')[0].replace(':', '');
+        var entryHour = parseInt(entryTime.substring(0, entryTime.length - 2), 10) || 0;
+        entry.infoBoxes.forEach(function(box) {
             if (box.type === 'shopping' && box.shops) {
                 box.shops.forEach(function(s) {
                     if (s.hours) {
                         var m3 = s.hours.match(/(\d{1,2}):(\d{2})/);
-                        if (m3 && evHour < parseInt(m3[1], 10)) {
-                            warnings.push(escHtml(ev.title) + ' (' + escHtml(ev.time) + ') 可能早於 ' + escHtml(s.name) + ' 營業時間 (' + escHtml(s.hours) + ')');
+                        if (m3 && entryHour < parseInt(m3[1], 10)) {
+                            warnings.push(escHtml(entry.title) + ' (' + escHtml(entry.time) + ') 可能早於 ' + escHtml(s.name) + ' 營業時間 (' + escHtml(s.hours) + ')');
                         }
                     }
                 });
@@ -723,16 +713,16 @@ function validateDay(day) {
                 box.restaurants.forEach(function(r) {
                     if (r.hours) {
                         var m = r.hours.match(/(\d{1,2}):(\d{2})/);
-                        if (m && evHour < parseInt(m[1], 10)) {
-                            warnings.push(escHtml(ev.title) + ' (' + escHtml(ev.time) + ') 可能早於 ' + escHtml(r.name) + ' 營業時間 (' + escHtml(r.hours) + ')');
+                        if (m && entryHour < parseInt(m[1], 10)) {
+                            warnings.push(escHtml(entry.title) + ' (' + escHtml(entry.time) + ') 可能早於 ' + escHtml(r.name) + ' 營業時間 (' + escHtml(r.hours) + ')');
                         }
                     }
                 });
             }
             if (box.hours) {
                 var m2 = box.hours.match(/(\d{1,2}):(\d{2})/);
-                if (m2 && evHour < parseInt(m2[1], 10)) {
-                    warnings.push(escHtml(ev.title) + ' (' + escHtml(ev.time) + ') 可能早於營業時間 (' + escHtml(box.hours) + ')');
+                if (m2 && entryHour < parseInt(m2[1], 10)) {
+                    warnings.push(escHtml(entry.title) + ' (' + escHtml(entry.time) + ') 可能早於營業時間 (' + escHtml(box.hours) + ')');
                 }
             }
         });

@@ -164,6 +164,19 @@
             "note": "沖繩料理"
           },
           "checkout": "11:00",
+          "subs": [
+            {
+              "type": "parking",
+              "title": "停車場",
+              "price": "¥500/晚（先到先得）",
+              "location": {
+                "name": "北谷町営駐車場 美浜",
+                "googleQuery": "https://maps.google.com/?q=北谷町営駐車場+美浜",
+                "appleQuery": "https://maps.apple.com/?q=北谷町営駐車場+美浜",
+                "mapcode": "33 525 382*00"
+              }
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -225,17 +238,6 @@
                   }
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "停車場",
-              "price": "¥500/晚（先到先得）",
-              "location": {
-                "name": "北谷町営駐車場 美浜",
-                "googleQuery": "https://maps.google.com/?q=北谷町営駐車場+美浜",
-                "appleQuery": "https://maps.apple.com/?q=北谷町営駐車場+美浜",
-                "mapcode": "33 525 382*00"
-              }
             }
           ]
         },
@@ -252,11 +254,10 @@
                 "mapcode": "33 002 519*00"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "單軌電車 那霸空港→歌町/美榮橋 約15~27分鐘",
               "type": "train"
-            },
-            "googleRating": 3.9
+            }
           },
           {
             "time": "12:00-12:30",
@@ -285,11 +286,10 @@
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "開車 約40分鐘（國道58號北上）",
               "type": "car"
-            },
-            "googleRating": 4
+            }
           },
           {
             "time": "12:30",
@@ -305,46 +305,35 @@
                     "name": "浜屋そば",
                     "hours": "10:00~18:00",
                     "reservation": "不需訂位",
-                    "description": "北谷人氣沖繩麵，三層肉大塊軟嫩（當地特色）",
+                    "desc": "北谷人氣沖繩麵，三層肉大塊軟嫩（當地特色）",
                     "price": "¥650~",
-                    "blogUrl": "https://mimihan.tw/hamaya-soba/",
-                    "googleRating": 4.3
+                    "blogUrl": "https://mimihan.tw/hamaya-soba/"
                   },
                   {
                     "category": "漢堡",
                     "name": "A&W 北谷店",
                     "hours": "09:00~23:00",
                     "reservation": "不需訂位",
-                    "description": "沖繩限定美式速食，Root Beer 免費續杯",
+                    "desc": "沖繩限定美式速食，Root Beer 免費續杯",
                     "price": "¥700~",
-                    "blogUrl": "https://mimihan.tw/aw-okinawa/",
-                    "googleRating": 4
+                    "blogUrl": "https://mimihan.tw/aw-okinawa/"
                   },
                   {
                     "category": "墨西哥料理",
                     "name": "Tacos-ya 北谷美國村店",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
-                    "description": "沖繩塔可名店，正宗墨西哥風味",
+                    "desc": "沖繩塔可名店，正宗墨西哥風味",
                     "price": "¥500~",
-                    "blogUrl": "https://mimihan.tw/tacos-ya/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://mimihan.tw/tacos-ya/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "開車 約40分鐘（國道58號北上）",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "北谷美國村",
-                "googleQuery": "https://maps.google.com/?q=American+Village+Chatan+Okinawa",
-                "appleQuery": "https://maps.apple.com/?q=American+Village+Chatan+Okinawa"
-              }
-            ],
-            "googleRating": 4.2
+            }
           },
           {
             "time": "13:10-13:40",
@@ -359,11 +348,10 @@
                 "mapcode": "33 526 450*63"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行 約3分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.5
+            }
           },
           {
             "time": "13:45-17:30",
@@ -449,11 +437,10 @@
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行回飯店沖洗 約3分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.2
+            }
           },
           {
             "time": "18:00-19:30",
@@ -467,7 +454,7 @@
                   {
                     "category": "拉麵",
                     "name": "琉球新麵 通堂 北谷美浜店",
-                    "description": "沖繩人氣拉麵",
+                    "desc": "沖繩人氣拉麵",
                     "price": "¥800~",
                     "location": {
                       "name": "琉球新麺通堂 北谷美浜店",
@@ -477,13 +464,12 @@
                     },
                     "hours": "11:00~24:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://bigsharkgogogo.tw/ryoji-familyaa/",
-                    "googleRating": 4.3
+                    "blogUrl": "https://bigsharkgogogo.tw/ryoji-familyaa/"
                   },
                   {
                     "category": "燒肉",
                     "name": "焼肉きんぐ 北谷店",
-                    "description": "日本人氣燒肉吃到飽",
+                    "desc": "日本人氣燒肉吃到飽",
                     "price": "¥2,980~/人（90分鐘）",
                     "location": {
                       "name": "焼肉きんぐ 北谷店",
@@ -494,13 +480,12 @@
                     "hours": "平日 17:00~24:00／假日 11:00~24:00",
                     "reservation": "EPARK 預約",
                     "reservationUrl": "https://epark.jp/shopinfo/jsp608996/",
-                    "blogUrl": "https://mimigo.tw/yakiniku-king/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://mimigo.tw/yakiniku-king/"
                   },
                   {
                     "category": "其他推薦",
                     "name": "やっぱりステーキ 北谷店",
-                    "description": "CP 值之王！溶岩石板燒牛排 ¥1,000 起",
+                    "desc": "CP 值之王！溶岩石板燒牛排 ¥1,000 起",
                     "location": {
                       "name": "やっぱりステーキ 北谷店",
                       "googleQuery": "https://maps.google.com/?q=やっぱりステーキ+北谷店",
@@ -510,33 +495,16 @@
                     "hours": "11:00~24:00",
                     "reservation": "不需訂位",
                     "price": "¥1,000~",
-                    "blogUrl": "https://slowlifeinokinawa.com/okifood-yappari/",
-                    "googleRating": 4.2
+                    "blogUrl": "https://slowlifeinokinawa.com/okifood-yappari/"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "北谷美國村",
-                "googleQuery": "https://maps.google.com/?q=American+Village+Chatan+Okinawa",
-                "appleQuery": "https://maps.apple.com/?q=American+Village+Chatan+Okinawa"
-              }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "20:00",
             "title": "飯店頂樓海景溫泉",
-            "note": "邊泡湯邊看夜景",
-            "locations": [
-              {
-                "name": "Vessel Hotel Campana Okinawa",
-                "googleQuery": "https://maps.google.com/?q=Vessel+Hotel+Campana+Okinawa",
-                "appleQuery": "https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa"
-              }
-            ],
-            "googleRating": 4.5
+            "note": "邊泡湯邊看夜景"
           }
         ]
       }
@@ -553,13 +521,26 @@
           "details": [
             "名護市宮里（名護中心地段）",
             "万座深海の湯（天然温泉）",
-            "免費停車場",
+            "🅿 免費停車場",
             "含免費早餐"
           ],
           "breakfast": {
             "included": true
           },
           "checkout": "10:00",
+          "subs": [
+            {
+              "type": "parking",
+              "title": "停車場",
+              "price": "免費（先到先得）",
+              "location": {
+                "name": "スーパーホテル沖縄・名護",
+                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
+                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護",
+                "mapcode": "206 598 283*00"
+              }
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -621,17 +602,6 @@
                   }
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "停車場",
-              "price": "免費（先到先得）",
-              "location": {
-                "name": "スーパーホテル沖縄・名護",
-                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
-                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護",
-                "mapcode": "206 598 283*00"
-              }
             }
           ]
         },
@@ -639,7 +609,7 @@
           {
             "time": "08:30",
             "title": "出發北上",
-            "travel": {
+            "transit": {
               "text": "北谷→道之驛許田 約50分鐘（沖縄自動車道）",
               "type": "car"
             }
@@ -663,12 +633,10 @@
                 "price": "免費"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "許田→美麗海水族館 約30分鐘（國道449號）",
               "type": "car"
-            },
-            "blogUrl": "https://tisshuang.com/blog/post/yanbaru-b",
-            "googleRating": 4
+            }
           },
           {
             "time": "10:30-13:00",
@@ -687,13 +655,10 @@
               {
                 "type": "reservation",
                 "items": [
-                  "門票：大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710（道之驛許田折扣票或 FunPASS 適用） 營業時間：08:30~18:30（夏季延長至20:00） 海豚秀：11:00 / 13:00 / 14:30 / 16:00（免費） 建議先逛水族館，11:00 看海豚秀 水族館伴手禮： 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品 停車場：免費（P7 最近入口）｜G Map Map 553 075 797"
-                ],
-                "title": "景點資訊"
+                  "門票：大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710（道之驛許田折扣票或 FunPASS 適用） 營業時間：08:30~18:30（夏季延長至20:00） 海豚秀：11:00 / 13:00 / 14:30 / 16:00（免費） 建議先逛水族館，11:00 看海豚秀 水族館伴手禮： 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品 🅿 停車場：免費（P7 最近入口）｜G Map Map 553 075 797"
+                ]
               }
-            ],
-            "blogUrl": "https://okinawa.letsgojp.com/archives/17071/",
-            "googleRating": 4.6
+            ]
           },
           {
             "time": "13:00-14:15",
@@ -706,7 +671,7 @@
                   {
                     "category": "拉麵",
                     "name": "きしもと食堂",
-                    "description": "明治 38 年創業！傳奇沖繩麵",
+                    "desc": "明治 38 年創業！傳奇沖繩麵",
                     "price": "¥600~",
                     "location": {
                       "name": "きしもと食堂 本部町",
@@ -716,13 +681,12 @@
                     },
                     "hours": "11:00~17:00（週三公休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://www.huihuifun.com/kishimoto-cafeteria/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://www.huihuifun.com/kishimoto-cafeteria/"
                   },
                   {
                     "category": "燒肉",
                     "name": "焼肉もとぶ牧場 本部店",
-                    "description": "沖繩品牌「もとぶ牛」直營燒肉",
+                    "desc": "沖繩品牌「もとぶ牛」直營燒肉",
                     "price": "¥1,500~",
                     "location": {
                       "name": "焼肉もとぶ牧場 本部店",
@@ -733,13 +697,12 @@
                     "hours": "午 11:30~15:00／夜 17:00~22:00",
                     "reservation": "TableCheck 預約",
                     "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm/reserve",
-                    "blogUrl": "https://carollin.tw/motobu-farm/",
-                    "googleRating": 4.3
+                    "blogUrl": "https://carollin.tw/motobu-farm/"
                   },
                   {
                     "category": "其他推薦",
                     "name": "海人食堂",
-                    "description": "本部漁港直營食堂，新鮮生魚片",
+                    "desc": "本部漁港直營食堂，新鮮生魚片",
                     "price": "¥1,000~",
                     "location": {
                       "name": "海人食堂 本部漁港",
@@ -749,24 +712,15 @@
                     },
                     "hours": "11:00~15:30",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://hanblog.tw/kaihoumaru2/",
-                    "googleRating": 4
+                    "blogUrl": "https://hanblog.tw/kaihoumaru2/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "本部→瀨底島 約15分鐘（過瀨底大橋即到）",
               "type": "car"
-            },
-            "googleRating": 4.1,
-            "locations": [
-              {
-                "name": "美ら海水族館周辺",
-                "googleQuery": "https://maps.google.com/?q=沖縄美ら海水族館",
-                "appleQuery": "https://maps.apple.com/?q=沖縄美ら海水族館"
-              }
-            ]
+            }
           },
           {
             "time": "14:30-16:00",
@@ -794,12 +748,10 @@
                 }
               }
             ],
-            "travel": {
+            "transit": {
               "text": "瀨底島→名護城公園 約25分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://lailai-web.com/sesoko-island/",
-            "googleRating": 4.3
+            }
           },
           {
             "time": "16:25-17:15",
@@ -820,17 +772,14 @@
                   "門票：免費",
                   "遊具開放：09:00~17:30",
                   "ローラー滑り台（超長滾輪溜滑梯）：建議穿長褲或帶墊子",
-                  "停車場：免費"
-                ],
-                "title": "景點資訊"
+                  "🅿 停車場：免費"
+                ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "名護城公園→Super Hotel 約5分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://lailai-web.com/nangusuku-park/",
-            "googleRating": 4.1
+            }
           },
           {
             "time": "17:20",
@@ -843,21 +792,12 @@
                 "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護",
                 "mapcode": "206 598 283*00"
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "17:30-18:30",
             "title": "飯店溫泉（万座深海の湯）",
-            "note": "天然温泉，疲勞盡消",
-            "locations": [
-              {
-                "name": "スーパーホテル沖縄・名護",
-                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
-                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護"
-              }
-            ],
-            "googleRating": 4.2
+            "note": "天然温泉，疲勞盡消"
           },
           {
             "time": "18:30-20:00",
@@ -871,7 +811,7 @@
                   {
                     "category": "拉麵",
                     "name": "麵屋 はちれん",
-                    "description": "名護人氣拉麵",
+                    "desc": "名護人氣拉麵",
                     "price": "¥800~",
                     "location": {
                       "name": "麺屋はちれん 名護",
@@ -881,13 +821,12 @@
                     },
                     "hours": "11:30~14:30, 18:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://tw.wamazing.com/media/article/a-832/",
-                    "googleRating": 4.2
+                    "blogUrl": "https://tw.wamazing.com/media/article/a-832/"
                   },
                   {
                     "category": "燒肉",
                     "name": "焼肉乃我那覇 名護店",
-                    "description": "沖繩品牌豬「あぐー豚」燒肉",
+                    "desc": "沖繩品牌豬「あぐー豚」燒肉",
                     "price": "¥2,000~",
                     "location": {
                       "name": "焼肉乃我那覇 名護店",
@@ -898,13 +837,12 @@
                     "hours": "午 11:30~15:00／夜 17:30~22:30（週三公休）",
                     "reservation": "HotPepper 預約",
                     "reservationUrl": "https://www.hotpepper.jp/strJ004248399/",
-                    "blogUrl": "https://alfie073.pixnet.net/blog/post/358808330",
-                    "googleRating": 4.1
+                    "blogUrl": "https://alfie073.pixnet.net/blog/post/358808330"
                   },
                   {
                     "category": "其他推薦",
                     "name": "レストラン ふりっぱー",
-                    "description": "1971 年創業名護老牌牛排！ヒレステーキ",
+                    "desc": "1971 年創業名護老牌牛排！ヒレステーキ",
                     "price": "¥2,700~",
                     "location": {
                       "name": "レストランふりっぱー 名護",
@@ -914,20 +852,11 @@
                     },
                     "hours": "11:00~21:00（週三公休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://boo2k.com/archives/124296",
-                    "googleRating": 4.2
+                    "blogUrl": "https://boo2k.com/archives/124296"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "名護市",
-                "googleQuery": "https://maps.google.com/?q=名護市",
-                "appleQuery": "https://maps.apple.com/?q=名護市"
-              }
-            ],
-            "googleRating": 4
+            ]
           }
         ]
       }
@@ -944,13 +873,26 @@
           "details": [
             "名護市宮里（名護中心地段）",
             "万座深海の湯（天然温泉）",
-            "免費停車場",
+            "🅿 免費停車場",
             "含免費早餐"
           ],
           "breakfast": {
             "included": true
           },
           "checkout": "10:00",
+          "subs": [
+            {
+              "type": "parking",
+              "title": "停車場",
+              "price": "免費（先到先得）",
+              "location": {
+                "name": "スーパーホテル沖縄・名護",
+                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
+                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護",
+                "mapcode": "206 598 283*00"
+              }
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -1012,17 +954,6 @@
                   }
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "停車場",
-              "price": "免費（先到先得）",
-              "location": {
-                "name": "スーパーホテル沖縄・名護",
-                "googleQuery": "https://maps.google.com/?q=スーパーホテル沖縄・名護",
-                "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護",
-                "mapcode": "206 598 283*00"
-              }
             }
           ]
         },
@@ -1030,7 +961,7 @@
           {
             "time": "08:30",
             "title": "出發前往真榮田岬",
-            "travel": {
+            "transit": {
               "text": "名護→真榮田岬 約40分鐘（國道58號南下）",
               "type": "car"
             }
@@ -1055,8 +986,7 @@
                   "須提前預約！暑假非常搶手，建議出發前 1~2 個月預約",
                   "建議預約早上場次，海況較穩定",
                   "店家提供全套裝備（面鏡、呼吸管、救生衣）＋免費水中拍照"
-                ],
-                "title": "景點資訊"
+                ]
               },
               {
                 "type": "restaurants",
@@ -1065,7 +995,7 @@
                   {
                     "name": "青潛 Best Dive Okinawa",
                     "url": "https://www.bestdiveokinawa.com/",
-                    "description": "全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加",
+                    "desc": "全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加",
                     "price": "~¥8,000/人（含船費＋拍照20張以上）",
                     "location": {
                       "name": "Best Dive Okinawa 青之洞窟",
@@ -1074,13 +1004,12 @@
                     },
                     "hours": "08:00~17:00",
                     "reservation": "自有停車場＋接駁車",
-                    "category": "潛水體驗",
-                    "googleRating": 4.8
+                    "category": "潛水體驗"
                   },
                   {
                     "name": "Natural Blue 自然之藍",
                     "url": "https://www.natural-blue.net/tw/",
-                    "description": "台灣人中文教練，沖繩安全優良店認證，CP 值最高",
+                    "desc": "台灣人中文教練，沖繩安全優良店認證，CP 值最高",
                     "price": "~¥5,500/人（未稅）",
                     "location": {
                       "name": "Natural Blue 青之洞窟",
@@ -1089,13 +1018,12 @@
                     },
                     "hours": "08:00~17:00",
                     "reservation": "僅收日幣現金｜6歲以上",
-                    "category": "潛水體驗",
-                    "googleRating": 4.8
+                    "category": "潛水體驗"
                   },
                   {
                     "name": "黑潮潛水 Kuroshio Diving",
                     "url": "https://heichaodive.com/",
-                    "description": "台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯",
+                    "desc": "台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯",
                     "price": "~¥8,000/人（全包無隱藏費用）",
                     "location": {
                       "name": "黑潮潛水 青之洞窟",
@@ -1104,8 +1032,7 @@
                     },
                     "hours": "08:00~17:00",
                     "reservation": "9歲以上",
-                    "category": "潛水體驗",
-                    "googleRating": 4.7
+                    "category": "潛水體驗"
                   }
                 ]
               },
@@ -1121,12 +1048,10 @@
                 }
               }
             ],
-            "travel": {
+            "transit": {
               "text": "真榮田岬→萬座毛 約15分鐘（國道58號北上）",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-11-2731/",
-            "googleRating": 4.4
+            }
           },
           {
             "time": "11:15-11:45",
@@ -1148,12 +1073,10 @@
                 "price": "免費｜入場費 ¥100"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "萬座毛→午餐 約10分鐘（國道58號北上）",
               "type": "car"
-            },
-            "blogUrl": "https://www.jathao.com/2024/02/okinawa-manzamo.html",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "12:00-13:00",
@@ -1167,7 +1090,7 @@
                   {
                     "category": "燒肉",
                     "name": "焼肉げんか",
-                    "description": "原價制！入場 ¥2,200 後全餐以進貨價計算",
+                    "desc": "原價制！入場 ¥2,200 後全餐以進貨價計算",
                     "price": "¥4,000~5,000/人（含入場費）",
                     "location": {
                       "name": "焼肉げんか 恩納店",
@@ -1177,13 +1100,12 @@
                     },
                     "hours": "午 11:30~15:00／夜 17:00~23:00（全年無休）",
                     "reservation": "建議預約",
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/640986/",
-                    "googleRating": 4.3
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/640986/"
                   },
                   {
                     "category": "沖繩そば",
                     "name": "幸ちゃんそば",
-                    "description": "Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色）",
+                    "desc": "Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色）",
                     "price": "¥700~900",
                     "location": {
                       "name": "幸ちゃんそば 名護",
@@ -1193,13 +1115,12 @@
                     },
                     "hours": "10:00~15:00 售完即止（週一休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://chrysie.pixnet.net/blog/post/119628384",
-                    "googleRating": 4.2
+                    "blogUrl": "https://chrysie.pixnet.net/blog/post/119628384"
                   },
                   {
                     "category": "蝦蝦飯",
                     "name": "THE GARLIC SHRIMP",
-                    "description": "粉紅小屋，6 種口味蝦蝦飯，半露天座位",
+                    "desc": "粉紅小屋，6 種口味蝦蝦飯，半露天座位",
                     "price": "¥1,450~2,100",
                     "location": {
                       "name": "THE GARLIC SHRIMP 恩納",
@@ -1209,24 +1130,15 @@
                     },
                     "hours": "11:00~20:30（不固定休，建議出發前確認）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://www.markting.com.tw/564/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://www.markting.com.tw/564/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "恩納→名護鳳梨園 約25分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "恩納村 Route 58",
-                "googleQuery": "https://maps.google.com/?q=恩納村+国道58号",
-                "appleQuery": "https://maps.apple.com/?q=恩納村+国道58号"
-              }
-            ],
-            "googleRating": 4.1
+            }
           },
           {
             "time": "13:30-14:30",
@@ -1248,9 +1160,8 @@
                   "門票：大人 ¥1,200 / 中高生 ¥600 / 小學生 ¥450（FunPASS 適用）",
                   "營業時間：10:00~18:00（最終入園 17:30）",
                   "所需時間：約60分鐘",
-                  "停車場：免費（200台）"
-                ],
-                "title": "景點資訊"
+                  "🅿 停車場：免費（200台）"
+                ]
               },
               {
                 "type": "shopping",
@@ -1307,11 +1218,10 @@
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "鳳梨園→Super Hotel 名護 約10分鐘",
               "type": "car"
-            },
-            "googleRating": 3.9
+            }
           },
           {
             "time": "14:45",
@@ -1324,8 +1234,7 @@
                 "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護",
                 "mapcode": "206 598 283*00"
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "18:30-20:00",
@@ -1339,7 +1248,7 @@
                   {
                     "category": "拉麵",
                     "name": "ラーメン暖暮 名護店",
-                    "description": "九州豚骨拉麵，曾擊敗一蘭奪冠",
+                    "desc": "九州豚骨拉麵，曾擊敗一蘭奪冠",
                     "price": "¥850~",
                     "location": {
                       "name": "ラーメン暖暮 名護店",
@@ -1349,13 +1258,12 @@
                     },
                     "hours": "10:00~24:00（無休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://g2m.tw/danbo-ramen/",
-                    "googleRating": 4
+                    "blogUrl": "https://g2m.tw/danbo-ramen/"
                   },
                   {
                     "category": "燒肉",
                     "name": "焼肉五苑 名護店",
-                    "description": "吃到飽不限時間，55~115 道可選",
+                    "desc": "吃到飽不限時間，55~115 道可選",
                     "price": "¥2,530~/人",
                     "location": {
                       "name": "焼肉五苑 名護店",
@@ -1365,13 +1273,12 @@
                     "hours": "平日 17:00~22:30／假日 16:00~22:30",
                     "reservation": "官網預約",
                     "reservationUrl": "https://www.y-goen.com/webreserve_shop",
-                    "blogUrl": "https://flyblog.cc/post-48489393/",
-                    "googleRating": 3.8
+                    "blogUrl": "https://flyblog.cc/post-48489393/"
                   },
                   {
                     "category": "其他推薦",
                     "name": "美ら花 別邸",
-                    "description": "Tabelog 3.47，名護最高分沖繩料理",
+                    "desc": "Tabelog 3.47，名護最高分沖繩料理",
                     "price": "¥1,000~2,999",
                     "location": {
                       "name": "美ら花 別邸 名護",
@@ -1382,20 +1289,11 @@
                     "hours": "17:00~22:00（週三休）",
                     "reservation": "HotPepper 預約",
                     "reservationUrl": "https://www.hotpepper.jp/strJ000597095/",
-                    "blogUrl": "https://aileen1596.pixnet.net/blog/post/48001890",
-                    "googleRating": 4
+                    "blogUrl": "https://aileen1596.pixnet.net/blog/post/48001890"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "名護市",
-                "googleQuery": "https://maps.google.com/?q=名護市",
-                "appleQuery": "https://maps.apple.com/?q=名護市"
-              }
-            ],
-            "googleRating": 4
+            ]
           }
         ]
       }
@@ -1419,6 +1317,19 @@
             "included": true
           },
           "checkout": "10:00",
+          "subs": [
+            {
+              "type": "parking",
+              "title": "停車場",
+              "price": "¥550/晚（先到先得）",
+              "location": {
+                "name": "東横INN那覇国際通り美栄橋駅 駐車場",
+                "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
+                "appleQuery": "https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅",
+                "mapcode": "33 157 382*00"
+              }
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -1479,17 +1390,6 @@
                   }
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "停車場",
-              "price": "¥550/晚（先到先得）",
-              "location": {
-                "name": "東横INN那覇国際通り美栄橋駅 駐車場",
-                "googleQuery": "https://maps.google.com/?q=東横INN那覇国際通り美栄橋駅",
-                "appleQuery": "https://maps.apple.com/?q=東横INN那覇国際通り美栄橋駅",
-                "mapcode": "33 157 382*00"
-              }
             }
           ]
         },
@@ -1497,7 +1397,7 @@
           {
             "time": "09:00",
             "title": "出發名護（沖縄自動車道）",
-            "travel": {
+            "transit": {
               "text": "名護→許田IC→沖縄自動車道→伊芸SA 約20分鐘",
               "type": "car"
             }
@@ -1521,17 +1421,14 @@
                   "必吃：月桃田芋ジューシー（SA 限定名物）",
                   "ブルーシール冰淇淋",
                   "金武灣展望台＋かりゆし門（G8 紀念拱門）",
-                  "停車場：免費（高速道路服務區）"
-                ],
-                "title": "景點資訊"
+                  "🅿 停車場：免費（高速道路服務區）"
+                ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "伊芸SA→北中城IC→AEON Mall 來客夢 約30分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://jtravel9696.pixnet.net/blog/post/101357911",
-            "googleRating": 4
+            }
           },
           {
             "time": "10:15-12:00",
@@ -1550,9 +1447,8 @@
               {
                 "type": "reservation",
                 "items": [
-                  "營業時間：10:00~22:00（專門店）｜寶可夢中心 10:00~22:00 停車場：免費，約 4,000 台｜ 33 530 406"
-                ],
-                "title": "景點資訊"
+                  "營業時間：10:00~22:00（專門店）｜寶可夢中心 10:00~22:00 🅿 停車場：免費，約 4,000 台｜ 33 530 406"
+                ]
               },
               {
                 "type": "shopping",
@@ -1611,9 +1507,7 @@
                   }
                 ]
               }
-            ],
-            "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/",
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "12:00-13:30",
@@ -1627,61 +1521,42 @@
                   {
                     "category": "拉麵",
                     "name": "京都北白川ラーメン 魁力屋",
-                    "description": "京都背脂醬油拉麵，青蔥＆醃蘿蔔免費續",
+                    "desc": "京都背脂醬油拉麵，青蔥＆醃蘿蔔免費續",
                     "price": "¥800~",
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/",
-                    "googleRating": 3.9
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/"
                   },
                   {
                     "category": "沖繩塔可飯",
                     "name": "タコライスcafe きじむなぁ",
-                    "description": "沖繩靈魂美食！獨創歐姆蛋塔可飯（オムタコ）（當地特色）",
+                    "desc": "沖繩靈魂美食！獨創歐姆蛋塔可飯（オムタコ）（當地特色）",
                     "price": "¥780~",
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/"
                   },
                   {
                     "category": "天婦羅",
                     "name": "博多天ぷら たかお",
-                    "description": "博多式現炸天婦羅定食，酥脆鮮美",
+                    "desc": "博多式現炸天婦羅定食，酥脆鮮美",
                     "price": "¥1,080~",
                     "hours": "10:00~22:00（L.O. 21:00）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://yiwutrip.tw/aeonmall/",
-                    "googleRating": 4
+                    "blogUrl": "https://yiwutrip.tw/aeonmall/"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "イオンモール沖縄ライカム",
-                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
-                "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム"
-              }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "13:30-14:00",
             "title": "繼續逛 AEON Mall",
             "description": "午餐後繼續購物、採買伴手禮",
-            "travel": {
+            "transit": {
               "text": "AEON Mall→沖繩世界 約30分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "イオンモール沖縄ライカム",
-                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
-                "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム"
-              }
-            ],
-            "googleRating": 4.2
+            }
           },
           {
             "time": "14:30-16:00",
@@ -1704,17 +1579,14 @@
                   "營業時間：09:00~17:30（最終入園 16:00）",
                   "所需時間：約90~120分鐘",
                   "洞內氣溫約 21°C，建議帶薄外套",
-                  "停車場：免費（400台）"
-                ],
-                "title": "景點資訊"
+                  "🅿 停車場：免費（400台）"
+                ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "沖繩世界→那霸（加油站＋還車）約30分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://mimigo.tw/okinawa-world/",
-            "googleRating": 4.4
+            }
           },
           {
             "time": "16:30-17:15",
@@ -1748,18 +1620,10 @@
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行至東橫inn 約5~10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4,
-            "locations": [
-              {
-                "name": "ENEOS Dr.Drive 崇元寺店",
-                "googleQuery": "https://maps.google.com/?q=ENEOS+Dr.Drive+崇元寺店+那覇",
-                "appleQuery": "https://maps.apple.com/?q=ENEOS+Dr.Drive+崇元寺店+那覇"
-              }
-            ]
+            }
           },
           {
             "time": "17:20",
@@ -1835,8 +1699,7 @@
                   }
                 ]
               }
-            ],
-            "googleRating": 3.9
+            ]
           },
           {
             "time": "18:30-20:00",
@@ -1849,7 +1712,7 @@
                   {
                     "category": "拉麵",
                     "name": "琉球新麵 通堂 小禄本店",
-                    "description": "沖繩在地人氣 No.1 拉麵",
+                    "desc": "沖繩在地人氣 No.1 拉麵",
                     "price": "¥800~",
                     "location": {
                       "name": "通堂拉麵 小禄本店",
@@ -1859,13 +1722,12 @@
                     },
                     "hours": "11:00~24:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://bigsharkgogogo.tw/ryoji-familyaa/",
-                    "googleRating": 4.4
+                    "blogUrl": "https://bigsharkgogogo.tw/ryoji-familyaa/"
                   },
                   {
                     "category": "燒肉",
                     "name": "燒肉琉球の牛 國際通店",
-                    "description": "石垣牛＋阿古豬，A5 和牛燒肉",
+                    "desc": "石垣牛＋阿古豬，A5 和牛燒肉",
                     "price": "¥2,000~",
                     "location": {
                       "name": "琉球の牛 国際通り店",
@@ -1876,13 +1738,12 @@
                     "hours": "17:00~23:00",
                     "reservation": "TableCheck 預約",
                     "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve",
-                    "blogUrl": "https://lailai-web.com/ryukyu-no-ushi-naha/",
-                    "googleRating": 4.5
+                    "blogUrl": "https://lailai-web.com/ryukyu-no-ushi-naha/"
                   },
                   {
                     "category": "其他推薦",
                     "name": "Jack's Steak House",
-                    "description": "1953 年創業！沖繩最老牌牛排",
+                    "desc": "1953 年創業！沖繩最老牌牛排",
                     "price": "¥2,000~",
                     "location": {
                       "name": "ジャッキーステーキハウス 那覇",
@@ -1892,20 +1753,11 @@
                     },
                     "hours": "11:00~翌 1:00（週三公休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://baygolee.com/jacks-steak-house/",
-                    "googleRating": 4.2
+                    "blogUrl": "https://baygolee.com/jacks-steak-house/"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "国際通り 那覇",
-                "googleQuery": "https://maps.google.com/?q=国際通り+那覇",
-                "appleQuery": "https://maps.apple.com/?q=国際通り+那覇"
-              }
-            ],
-            "googleRating": 4.1
+            ]
           }
         ]
       }
@@ -1928,11 +1780,10 @@
                 "mapcode": "33 157 413*00"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "單軌 美榮橋→首里站 約18分鐘 ¥300（ 建議購買一日券 ¥800）",
               "type": "train"
-            },
-            "googleRating": 3.9
+            }
           },
           {
             "time": "09:00-10:30",
@@ -1952,16 +1803,13 @@
                 "type": "reservation",
                 "items": [
                   "門票：大人 ¥400 / 高中生 ¥300 / 中小學生 ¥160 營業時間：08:30~18:00（夏季延長至19:30） 推薦拍照點：守禮門、歡會門、西台（展望台） 首里城伴手禮： 首里城公園商店 — 琉球王國限定周邊、紅型花紋商品 金城町石疊道周邊（琉球玻璃＋シーサー手作） G Map Map 33 161 245"
-                ],
-                "title": "景點資訊"
+                ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "首里→牧志站 約15分鐘 ¥260",
               "type": "train"
-            },
-            "blogUrl": "https://yiwutrip.tw/shurijo/",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "11:00-12:30",
@@ -2067,9 +1915,7 @@
                   }
                 ]
               }
-            ],
-            "blogUrl": "https://bobbyfun.tw/2024-01-08-2708/",
-            "googleRating": 4.1
+            ]
           },
           {
             "time": "12:30-14:00",
@@ -2083,7 +1929,7 @@
                   {
                     "category": "拉麵",
                     "name": "暖暮拉麵 那覇牧志店",
-                    "description": "九州博多濃厚豚骨拉麵",
+                    "desc": "九州博多濃厚豚骨拉麵",
                     "price": "¥800~",
                     "location": {
                       "name": "暖暮拉麵 那覇牧志店",
@@ -2093,13 +1939,12 @@
                     },
                     "hours": "平日 10:00~翌 2:00／假日 9:00~翌 2:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 4
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   },
                   {
                     "category": "燒肉",
                     "name": "燒肉本部牧場 國際通り店",
-                    "description": "本部牛自家牧場直送，午間套餐 CP 值高，農林水產大臣賞受賞和牛",
+                    "desc": "本部牛自家牧場直送，午間套餐 CP 值高，農林水產大臣賞受賞和牛",
                     "price": "¥2,800~",
                     "location": {
                       "name": "焼肉もとぶ牧場 国際通り店",
@@ -2110,13 +1955,12 @@
                     "hours": "11:30~15:00（午餐）／15:00~22:30（晚餐）",
                     "reservation": "TableCheck 預約",
                     "reservationUrl": "https://www.tablecheck.com/en/shops/motobu-farm-kokusai/reserve",
-                    "blogUrl": "https://minako.tw/motobu-farm/",
-                    "googleRating": 4.3
+                    "blogUrl": "https://minako.tw/motobu-farm/"
                   },
                   {
                     "category": "其他推薦",
                     "name": "やっぱりステーキ 國際通店",
-                    "description": "CP 值之王！",
+                    "desc": "CP 值之王！",
                     "price": "¥1,000",
                     "location": {
                       "name": "やっぱりステーキ 4th 国際通り店",
@@ -2126,24 +1970,15 @@
                     },
                     "hours": "11:00~翌 1:30",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://slowlifeinokinawa.com/okifood-yappari/",
-                    "googleRating": 4.2
+                    "blogUrl": "https://slowlifeinokinawa.com/okifood-yappari/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行回美榮橋飯店 約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.1,
-            "locations": [
-              {
-                "name": "国際通り 那覇",
-                "googleQuery": "https://maps.google.com/?q=国際通り+那覇",
-                "appleQuery": "https://maps.apple.com/?q=国際通り+那覇"
-              }
-            ]
+            }
           },
           {
             "time": "14:10",
@@ -2157,11 +1992,10 @@
                 "mapcode": "33 157 413*00"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "美榮橋→那霸空港站 約12分鐘 ¥270",
               "type": "train"
-            },
-            "googleRating": 3.9
+            }
           },
           {
             "time": "17:15",
@@ -2174,8 +2008,7 @@
                 "appleQuery": "https://maps.apple.com/?q=那霸機場",
                 "mapcode": "33 002 519*00"
               }
-            ],
-            "googleRating": 3.9
+            ]
           },
           {
             "time": "18:00",
@@ -2189,57 +2022,40 @@
                   {
                     "category": "沖繩料理",
                     "name": "天龍 那覇空港店",
-                    "description": "沖繩そば＆定食老店，機場人氣第一",
+                    "desc": "沖繩そば＆定食老店，機場人氣第一",
                     "price": "¥800~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/",
-                    "googleRating": 3.8
+                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/"
                   },
                   {
                     "category": "牛排",
                     "name": "ステーキハウス88 那覇空港店",
-                    "description": "沖繩在地牛排名店，機場也能吃到",
+                    "desc": "沖繩在地牛排名店，機場也能吃到",
                     "price": "¥1,500~",
                     "hours": "10:00~20:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/steakhouse-88/",
-                    "googleRating": 4
+                    "blogUrl": "https://mimihan.tw/steakhouse-88/"
                   },
                   {
                     "category": "速食",
                     "name": "A&W 那覇空港店",
-                    "description": "沖繩限定美式漢堡，根啤酒必喝",
+                    "desc": "沖繩限定美式漢堡，根啤酒必喝",
                     "price": "¥600~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://solomo.xinmedia.com/japan/116755",
-                    "googleRating": 3.9
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "那霸機場",
-                "googleQuery": "https://maps.google.com/?q=那霸機場",
-                "appleQuery": "https://maps.apple.com/?q=那霸機場"
-              }
-            ],
-            "googleRating": 3.9
+            ]
           },
           {
             "time": "20:55",
             "title": "CI 121 起飛回台灣",
             "note": "21:30 抵達桃園｜めんそーれ（歡迎再來）沖繩！"
           }
-        ],
-        "hotel": {
-          "name": "（返台）",
-          "breakfast": {
-            "included": null
-          }
-        }
+        ]
       }
     }
   ],
@@ -2467,7 +2283,7 @@
     }
   },
   "emergency": {
-    "title": "緊急聯絡資訊",
+    "title": "🆘 緊急聯絡資訊",
     "content": {
       "cards": [
         {

@@ -110,7 +110,7 @@ describe('renderRestaurant', () => {
     const html = renderRestaurant({
       name: '沖繩そば',
       category: '麵類',
-      desc: '手工麵條',
+      description: '手工麵條',
       price: '¥800',
       hours: '11:00–21:00',
     });
@@ -291,21 +291,21 @@ describe('renderTimelineEvent', () => {
     expect(html).not.toContain('tl-body');
   });
 
-  it('renders transit info', () => {
+  it('renders travel info', () => {
     const html = renderTimelineEvent({
       time: '10:00',
       title: 'A',
-      transit: { text: '車程 30 分', type: 'car' },
+      travel: { text: '車程 30 分', type: 'car' },
     });
-    expect(html).toContain('tl-transit');
+    expect(html).toContain('tl-travel');
     expect(html).toContain('車程 30 分');
   });
 
-  it('renders transit as plain string', () => {
+  it('renders travel as plain string', () => {
     const html = renderTimelineEvent({
       time: '10:00',
       title: 'A',
-      transit: '步行 5 分',
+      travel: '步行 5 分',
     });
     expect(html).toContain('步行 5 分');
   });
@@ -379,14 +379,14 @@ describe('renderHotel', () => {
     expect(html).toContain('Check-out 11:00');
   });
 
-  it('renders subs with location', () => {
+  it('renders infoBoxes with parking', () => {
     const html = renderHotel({
       name: 'Hotel',
-      subs: [
+      infoBoxes: [
         { type: 'parking', title: '停車場', price: '免費', location: { name: '飯店停車場' } },
       ],
     });
-    expect(html).toContain('hotel-sub');
+    expect(html).toContain('info-box parking');
     expect(html).toContain('停車場');
     expect(html).toContain('maps.google.com');
   });
@@ -671,10 +671,10 @@ describe('calcDrivingStats', () => {
     expect(calcDrivingStats([])).toBeNull();
   });
 
-  it('parses car transit', () => {
+  it('parses car travel', () => {
     const result = calcDrivingStats([
-      { transit: { type: 'car', text: '約30分鐘' } },
-      { transit: { type: 'car', text: '約45分鐘' } },
+      { travel: { type: 'car', text: '約30分鐘' } },
+      { travel: { type: 'car', text: '約45分鐘' } },
     ]);
     expect(result.totalMinutes).toBe(75);
     expect(result.drivingMinutes).toBe(75);
@@ -684,9 +684,9 @@ describe('calcDrivingStats', () => {
 
   it('parses multiple transport types', () => {
     const result = calcDrivingStats([
-      { transit: { type: 'car', text: '約30分鐘' } },
-      { transit: { type: 'train', text: '電車約15分鐘' } },
-      { transit: { type: 'walking', text: '步行約10分鐘' } },
+      { travel: { type: 'car', text: '約30分鐘' } },
+      { travel: { type: 'train', text: '電車約15分鐘' } },
+      { travel: { type: 'walking', text: '步行約10分鐘' } },
     ]);
     expect(result.totalMinutes).toBe(55);
     expect(result.drivingMinutes).toBe(30);
@@ -697,23 +697,23 @@ describe('calcDrivingStats', () => {
 
   it('ignores non-transport type', () => {
     const result = calcDrivingStats([
-      { transit: { type: 'flight', text: '飛行約120分鐘' } },
+      { travel: { type: 'flight', text: '飛行約120分鐘' } },
     ]);
     expect(result).toBeNull();
   });
 
-  it('ignores events without transit', () => {
+  it('ignores events without travel', () => {
     const result = calcDrivingStats([
       { title: '景點', time: '09:00' },
-      { transit: { type: 'car', text: '約20分鐘' } },
+      { travel: { type: 'car', text: '約20分鐘' } },
     ]);
     expect(result.totalMinutes).toBe(20);
   });
 
   it('provides backward-compat segments (driving only)', () => {
     const result = calcDrivingStats([
-      { transit: { type: 'car', text: '約30分鐘' } },
-      { transit: { type: 'train', text: '電車約15分鐘' } },
+      { travel: { type: 'car', text: '約30分鐘' } },
+      { travel: { type: 'train', text: '電車約15分鐘' } },
     ]);
     expect(result.segments).toHaveLength(1);
     expect(result.segments[0].minutes).toBe(30);
@@ -728,7 +728,7 @@ describe('renderDrivingStats', () => {
 
   it('renders collapsible structure', () => {
     const stats = calcDrivingStats([
-      { transit: { type: 'car', text: '約30分鐘' } },
+      { travel: { type: 'car', text: '約30分鐘' } },
     ]);
     const html = renderDrivingStats(stats);
     expect(html).toContain('col-row');
@@ -739,8 +739,8 @@ describe('renderDrivingStats', () => {
 
   it('shows warning badge when driving > 120 min', () => {
     const stats = calcDrivingStats([
-      { transit: { type: 'car', text: '約80分鐘' } },
-      { transit: { type: 'car', text: '約50分鐘' } },
+      { travel: { type: 'car', text: '約80分鐘' } },
+      { travel: { type: 'car', text: '約50分鐘' } },
     ]);
     const html = renderDrivingStats(stats);
     expect(html).toContain('driving-stats-warning');
@@ -749,8 +749,8 @@ describe('renderDrivingStats', () => {
 
   it('renders transport type groups', () => {
     const stats = calcDrivingStats([
-      { transit: { type: 'car', text: '約30分鐘' } },
-      { transit: { type: 'train', text: '電車約15分鐘' } },
+      { travel: { type: 'car', text: '約30分鐘' } },
+      { travel: { type: 'train', text: '電車約15分鐘' } },
     ]);
     const html = renderDrivingStats(stats);
     expect(html).toContain('transport-type-group');
@@ -769,11 +769,11 @@ describe('calcTripDrivingStats', () => {
   it('aggregates across days and types', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
-        { transit: { type: 'car', text: '約30分鐘' } },
-        { transit: { type: 'train', text: '電車約15分鐘' } },
+        { travel: { type: 'car', text: '約30分鐘' } },
+        { travel: { type: 'train', text: '電車約15分鐘' } },
       ] } },
       { id: 2, date: '2026-05-02', content: { timeline: [
-        { transit: { type: 'car', text: '約60分鐘' } },
+        { travel: { type: 'car', text: '約60分鐘' } },
       ] } },
     ];
     const result = calcTripDrivingStats(days);
@@ -787,7 +787,7 @@ describe('calcTripDrivingStats', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [{ title: '景點' }] } },
       { id: 2, date: '2026-05-02', content: { timeline: [
-        { transit: { type: 'car', text: '約20分鐘' } },
+        { travel: { type: 'car', text: '約20分鐘' } },
       ] } },
     ];
     const result = calcTripDrivingStats(days);
@@ -805,8 +805,8 @@ describe('renderTripDrivingStats', () => {
   it('renders nested structure with summary and per-day breakdown', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
-        { transit: { type: 'car', text: '約30分鐘' } },
-        { transit: { type: 'train', text: '電車約15分鐘' } },
+        { travel: { type: 'car', text: '約30分鐘' } },
+        { travel: { type: 'train', text: '電車約15分鐘' } },
       ] } },
     ];
     const tripStats = calcTripDrivingStats(days);
@@ -822,7 +822,7 @@ describe('renderTripDrivingStats', () => {
   it('shows warning for days with >120 min driving', () => {
     const days = [
       { id: 1, date: '2026-05-01', content: { timeline: [
-        { transit: { type: 'car', text: '約150分鐘' } },
+        { travel: { type: 'car', text: '約150分鐘' } },
       ] } },
     ];
     const tripStats = calcTripDrivingStats(days);
@@ -888,7 +888,7 @@ describe('renderTripStatsCard', () => {
     const data = {
       days: [
         { id: 1, date: '2026-05-01', content: { timeline: [
-          { transit: { type: 'car', text: '約30分鐘' } },
+          { travel: { type: 'car', text: '約30分鐘' } },
         ] } },
       ],
     };
@@ -974,7 +974,7 @@ describe('renderInfoPanel content functions', () => {
   const sampleData = {
     autoScrollDates: ['2099-01-01', '2099-01-05'],
     days: [
-      { id: 1, date: '2099-01-01', content: { timeline: [{ time: '10:00', title: 'A', transit: { type: 'car', text: '30 分鐘' } }] } },
+      { id: 1, date: '2099-01-01', content: { timeline: [{ time: '10:00', title: 'A', travel: { type: 'car', text: '30 分鐘' } }] } },
       { id: 2, date: '2099-01-02', content: {} },
     ],
     suggestions: null,

@@ -98,24 +98,16 @@ jsonFiles.forEach((file) => {
         if (hotel.blogUrl !== undefined) expect(typeof hotel.blogUrl, `days[${i}].hotel.blogUrl`).toBe('string');
         if (hotel.checkout !== undefined) expect(typeof hotel.checkout, `days[${i}].hotel.checkout`).toBe('string');
         if (hotel.details !== undefined) expect(Array.isArray(hotel.details), `days[${i}].hotel.details`).toBe(true);
-        if (hotel.subs !== undefined) expect(Array.isArray(hotel.subs), `days[${i}].hotel.subs`).toBe(true);
+        expect(hotel.subs, `days[${i}].hotel.subs should not exist (migrated to infoBoxes)`).toBeUndefined();
         if (hotel.infoBoxes !== undefined) expect(Array.isArray(hotel.infoBoxes), `days[${i}].hotel.infoBoxes`).toBe(true);
       });
     });
 
-    it('hotel.subs use new format (type, title) and not old format (label, text)', () => {
+    it('hotel does not contain deprecated subs field', () => {
       data.days.forEach((day, i) => {
         const hotel = day.content?.hotel;
-        if (!hotel?.subs) return;
-        hotel.subs.forEach((sub, j) => {
-          const prefix = `days[${i}].hotel.subs[${j}]`;
-          expect(typeof sub.type, `${prefix}.type must be string`).toBe('string');
-          expect(sub.type.length, `${prefix}.type must not be empty`).toBeGreaterThan(0);
-          expect(typeof sub.title, `${prefix}.title must be string`).toBe('string');
-          expect(sub.title.length, `${prefix}.title must not be empty`).toBeGreaterThan(0);
-          expect(sub.label, `${prefix} must not have old field "label"`).toBeUndefined();
-          expect(sub.text, `${prefix} must not have old field "text"`).toBeUndefined();
-        });
+        if (!hotel) return;
+        expect(hotel.subs, `days[${i}].hotel.subs should not exist (migrated to infoBoxes)`).toBeUndefined();
       });
     });
 
@@ -145,16 +137,16 @@ jsonFiles.forEach((file) => {
       });
     });
 
-    // --- Transit 結構 ---
+    // --- Travel 結構 ---
 
-    it('transit objects have text (string) and type (string)', () => {
+    it('travel objects have text (string) and type (string)', () => {
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
-        timeline.forEach((ev, j) => {
-          if (!ev.transit) return;
-          const prefix = `days[${i}].timeline[${j}].transit`;
-          expect(typeof ev.transit.text, `${prefix}.text`).toBe('string');
-          expect(typeof ev.transit.type, `${prefix}.type`).toBe('string');
+        timeline.forEach((entry, j) => {
+          if (!entry.travel) return;
+          const prefix = `days[${i}].timeline[${j}].travel`;
+          expect(typeof entry.travel.text, `${prefix}.text`).toBe('string');
+          expect(typeof entry.travel.type, `${prefix}.type`).toBe('string');
         });
       });
     });

@@ -255,6 +255,19 @@
           "breakfast": {
             "included": null
           },
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
+              },
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
+              "price": "費用未確認"
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -294,17 +307,6 @@
                   "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "飯店停車場",
-              "price": "費用未確認",
-              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
-              "location": {
-                "name": "メルキュール沖縄那覇 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇+駐車場",
-                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
-              }
             }
           ],
           "checkout": "11:00"
@@ -317,15 +319,14 @@
             "locations": [
               {
                 "name": "桃園國際機場",
-                "googleQuery": "https://www.google.com/maps/search/桃園國際機場",
+                "googleQuery": "https://maps.google.com/?q=桃園國際機場",
                 "appleQuery": "https://maps.apple.com/?q=桃園國際機場"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "飛行 約1小時20分",
               "type": "flight"
-            },
-            "googleRating": 4.2
+            }
           },
           {
             "time": "20:50-21:50",
@@ -334,16 +335,15 @@
             "locations": [
               {
                 "name": "那霸機場",
-                "googleQuery": "https://www.google.com/maps/search/那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
                 "appleQuery": "https://maps.apple.com/?q=那霸機場",
                 "mapcode": "33 122 298*54"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約37分鐘",
               "type": "car"
-            },
-            "googleRating": 4
+            }
           },
           {
             "time": "22:27-22:57",
@@ -352,16 +352,15 @@
             "locations": [
               {
                 "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "mapcode": "33 548 827*76"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約12分鐘",
               "type": "car"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "23:09",
@@ -370,12 +369,11 @@
             "locations": [
               {
                 "name": "メルキュール沖縄那覇",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇",
                 "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
                 "mapcode": "33 155 267*37"
               }
-            ],
-            "googleRating": 4
+            ]
           }
         ]
       }
@@ -396,6 +394,19 @@
           "breakfast": {
             "included": null
           },
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "Buzz Resort Chatan 駐車場",
+                "googleQuery": "https://maps.google.com/?q=Buzz+Resort+Chatan",
+                "appleQuery": "https://maps.apple.com/?q=Buzz+Resort+Chatan"
+              },
+              "note": "美浜美國村區域有免費停車場；BUZZ RESORT 請事先確認自用車停車方案",
+              "price": "費用未確認"
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -435,17 +446,6 @@
                   "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "飯店停車場",
-              "price": "費用未確認",
-              "note": "美浜美國村區域有免費停車場；BUZZ RESORT 請事先確認自用車停車方案",
-              "location": {
-                "name": "Buzz Resort Chatan 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/Buzz+Resort+Chatan",
-                "appleQuery": "https://maps.apple.com/?q=Buzz+Resort+Chatan"
-              }
             }
           ],
           "checkout": "11:00"
@@ -467,28 +467,11 @@
                   "還車：7/7 18:00 那霸新都心"
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "沖繩旅毛 那覇新都心",
-                "googleQuery": "https://www.google.com/maps/search/沖繩旅毛 那覇新都心",
-                "appleQuery": "https://maps.apple.com/?q=沖繩旅毛 那覇新都心"
-              }
-            ],
-            "googleRating": 4.8
+            ]
           },
           {
             "time": "09:00",
-            "title": "沖繩那霸美居飯店 出發",
-            "locations": [
-              {
-                "name": "メルキュール沖縄那覇",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
-                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
-                "mapcode": "33 155 267*37"
-              }
-            ],
-            "googleRating": 4
+            "title": "沖繩那霸美居飯店 出發"
           },
           {
             "time": "09:23-10:23",
@@ -497,16 +480,15 @@
             "locations": [
               {
                 "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "mapcode": "33 548 827*76"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約5分鐘",
               "type": "car"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "10:28-11:28",
@@ -557,17 +539,15 @@
             "locations": [
               {
                 "name": "天久りうぼう楽市",
-                "googleQuery": "https://www.google.com/maps/search/天久りうぼう楽市",
+                "googleQuery": "https://maps.google.com/?q=天久りうぼう楽市",
                 "appleQuery": "https://maps.apple.com/?q=天久りうぼう楽市",
                 "mapcode": "33 577 387*18"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約7分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
-            "googleRating": 3.9
+            }
           },
           {
             "time": "11:35-12:35",
@@ -618,17 +598,15 @@
             "locations": [
               {
                 "name": "サンエー那覇メインプレイス",
-                "googleQuery": "https://www.google.com/maps/search/サンエー那覇メインプレイス",
+                "googleQuery": "https://maps.google.com/?q=サンエー那覇メインプレイス",
                 "appleQuery": "https://maps.apple.com/?q=サンエー那覇メインプレイス",
                 "mapcode": "33 578 117*61"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約18分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/751316/",
-            "googleRating": 4
+            }
           },
           {
             "time": "12:53-14:53",
@@ -642,63 +620,51 @@
                   {
                     "category": "沖繩そば",
                     "name": "我部祖河食堂 浦添店",
-                    "description": "我部祖河食堂 — 60年老字號，招牌軟骨そば（軟骨排骨沖繩麵）湯頭清香，最具代表性沖繩在地風味",
+                    "desc": "我部祖河食堂 — 60年老字號，招牌軟骨そば（軟骨排骨沖繩麵）湯頭清香，最具代表性沖繩在地風味",
                     "price": "¥750~",
                     "location": {
                       "name": "我部祖河食堂 浦添店",
-                      "googleQuery": "https://www.google.com/maps/search/我部祖河食堂+浦添",
+                      "googleQuery": "https://maps.google.com/?q=我部祖河食堂+浦添",
                       "appleQuery": "https://maps.apple.com/?q=我部祖河食堂+浦添"
                     },
                     "hours": "11:00~20:00（售完即止，週三公休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/",
-                    "googleRating": 4.2
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/"
                   },
                   {
                     "category": "沖繩拉麵",
                     "name": "琉球新麺 通堂 PARCO CITY店",
-                    "description": "琉球新麺 通堂 — 沖繩本土拉麵名店，濃厚豚骨湯底搭配特製捲麵，PARCO CITY 3F 排隊人氣店",
+                    "desc": "琉球新麺 通堂 — 沖繩本土拉麵名店，濃厚豚骨湯底搭配特製捲麵，PARCO CITY 3F 排隊人氣店",
                     "price": "¥780~",
                     "location": {
                       "name": "サンエー浦添西海岸パルコシティ 3F",
-                      "googleQuery": "https://www.google.com/maps/search/琉球新麺+通堂+パルコシティ",
+                      "googleQuery": "https://maps.google.com/?q=琉球新麺+通堂+パルコシティ",
                       "appleQuery": "https://maps.apple.com/?q=琉球新麺+通堂+パルコシティ",
                       "mapcode": "33 394 819*12"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/"
                   },
                   {
                     "category": "高級燒肉",
                     "name": "敘敘苑 沖繩浦添PARCO CITY店",
-                    "description": "叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐",
+                    "desc": "叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐",
                     "price": "¥2,400~",
                     "location": {
                       "name": "サンエー浦添西海岸パルコシティ",
-                      "googleQuery": "https://www.google.com/maps/search/サンエー浦添西海岸パルコシティ",
+                      "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
                       "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
                       "mapcode": "33 394 819*12"
                     },
                     "hours": "11:00~21:00（午餐 11:00~15:00）",
                     "reservation": "ホットペッパー預約",
                     "reservationUrl": "https://www.hotpepper.jp/strJ001257517/",
-                    "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489",
-                    "googleRating": 4.3
+                    "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "サンエー浦添西海岸パルコシティ",
-                "googleQuery": "https://www.google.com/maps/search/サンエー浦添西海岸パルコシティ",
-                "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
-                "mapcode": "33 394 819*12"
-              }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "14:54-18:54",
@@ -749,17 +715,15 @@
             "locations": [
               {
                 "name": "サンエー浦添西海岸パルコシティ",
-                "googleQuery": "https://www.google.com/maps/search/サンエー浦添西海岸パルコシティ",
+                "googleQuery": "https://maps.google.com/?q=サンエー浦添西海岸パルコシティ",
                 "appleQuery": "https://maps.apple.com/?q=サンエー浦添西海岸パルコシティ",
                 "mapcode": "33 394 819*12"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約14分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://ajunfun.tw/parco-city/",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "19:08-20:08",
@@ -769,17 +733,15 @@
             "locations": [
               {
                 "name": "浦添大公園",
-                "googleQuery": "https://www.google.com/maps/search/浦添大公園",
+                "googleQuery": "https://maps.google.com/?q=浦添大公園",
                 "appleQuery": "https://maps.apple.com/?q=浦添大公園",
                 "mapcode": "33 344 367*55"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約24分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://mimigo.tw/urasoe-park/",
-            "googleRating": 4.1
+            }
           },
           {
             "time": "20:10-21:10",
@@ -793,65 +755,53 @@
                   {
                     "category": "沖繩料理",
                     "name": "グルメ迴轉壽司市場 美浜店",
-                    "description": "グルメ迴轉壽司市場 — 美國村人氣迴轉壽司，沖繩在地魚料，海葡萄壽司、石垣牛壽司為招牌，一盤最低110日圓超划算",
+                    "desc": "グルメ迴轉壽司市場 — 美國村人氣迴轉壽司，沖繩在地魚料，海葡萄壽司、石垣牛壽司為招牌，一盤最低110日圓超划算",
                     "price": "¥1,200~",
                     "location": {
                       "name": "グルメ迴轉壽司市場 美浜店",
-                      "googleQuery": "https://www.google.com/maps/search/グルメ迴轉壽司+美浜",
+                      "googleQuery": "https://maps.google.com/?q=グルメ迴轉壽司+美浜",
                       "appleQuery": "https://maps.apple.com/?q=グルメ迴轉壽司+美浜",
                       "mapcode": "33 556 625*14"
                     },
                     "hours": "11:00~22:00（全年無休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://mimigo.tw/gurumekaiten/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://mimigo.tw/gurumekaiten/"
                   },
                   {
                     "category": "海鮮",
                     "name": "浜屋沖繩麵 北谷店",
-                    "description": "浜屋そば — 北谷地區在地人氣沖繩麵，豚骨高湯清香，搭配在地新鮮食材，店內也有海鮮定食",
+                    "desc": "浜屋そば — 北谷地區在地人氣沖繩麵，豚骨高湯清香，搭配在地新鮮食材，店內也有海鮮定食",
                     "price": "¥700~",
                     "location": {
                       "name": "浜屋そば 北谷",
-                      "googleQuery": "https://www.google.com/maps/search/浜屋そば+北谷",
+                      "googleQuery": "https://maps.google.com/?q=浜屋そば+北谷",
                       "appleQuery": "https://maps.apple.com/?q=浜屋そば+北谷"
                     },
                     "hours": "10:30~20:30（售完即止）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://mimigo.tw/okinawa-americanvillage/",
-                    "googleRating": 4.2
+                    "reservation": null,
+                    "blogUrl": "https://mimigo.tw/okinawa-americanvillage/"
                   },
                   {
                     "category": "甜點",
                     "name": "Blue Seal Ice Cream 北谷美浜店",
-                    "description": "Blue Seal — 沖繩代表性冰淇淋品牌，鹽金楚糕、芒果、紫芋等沖繩限定口味，美國村散步必吃",
+                    "desc": "Blue Seal — 沖繩代表性冰淇淋品牌，鹽金楚糕、芒果、紫芋等沖繩限定口味，美國村散步必吃",
                     "price": "¥450~",
                     "location": {
                       "name": "Blue Seal アメリカンビレッジ店",
-                      "googleQuery": "https://www.google.com/maps/search/Blue+Seal+美浜",
+                      "googleQuery": "https://maps.google.com/?q=Blue+Seal+美浜",
                       "appleQuery": "https://maps.apple.com/?q=Blue+Seal+美浜"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-                    "googleRating": 4.4
+                    "reservation": null,
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約5分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "美浜アメリカンビレッジ",
-                "googleQuery": "https://www.google.com/maps/search/美浜アメリカンビレッジ",
-                "appleQuery": "https://maps.apple.com/?q=美浜アメリカンビレッジ",
-                "mapcode": "33 556 625*14"
-              }
-            ],
-            "googleRating": 4.1
+            }
           },
           {
             "time": "20:32-23:32",
@@ -902,17 +852,15 @@
             "locations": [
               {
                 "name": "美浜アメリカンビレッジ",
-                "googleQuery": "https://www.google.com/maps/search/美浜アメリカンビレッジ",
+                "googleQuery": "https://maps.google.com/?q=美浜アメリカンビレッジ",
                 "appleQuery": "https://maps.apple.com/?q=美浜アメリカンビレッジ",
                 "mapcode": "33 556 625*14"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約5分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "23:37-00:37",
@@ -921,16 +869,15 @@
             "locations": [
               {
                 "name": "plate jam 北谷",
-                "googleQuery": "https://www.google.com/maps/search/plate+jam+北谷",
+                "googleQuery": "https://maps.google.com/?q=plate+jam+北谷",
                 "appleQuery": "https://maps.apple.com/?q=plate+jam+北谷",
                 "mapcode": "33 587 527*50"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約27分鐘",
               "type": "car"
-            },
-            "googleRating": 3.8
+            }
           },
           {
             "time": "01:04",
@@ -939,12 +886,11 @@
             "locations": [
               {
                 "name": "Buzz Resort Chatan",
-                "googleQuery": "https://www.google.com/maps/search/Buzz+Resort+Chatan",
+                "googleQuery": "https://maps.google.com/?q=Buzz+Resort+Chatan",
                 "appleQuery": "https://maps.apple.com/?q=Buzz+Resort+Chatan",
                 "mapcode": "206 123 166*75"
               }
-            ],
-            "googleRating": 4.3
+            ]
           }
         ]
       }
@@ -965,6 +911,19 @@
           "breakfast": {
             "included": null
           },
+          "subs": [
+            {
+              "type": "parking",
+              "title": "Villa 停車場",
+              "location": {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
+              },
+              "note": "HOPE VILLA 提供免費私人停車場（場地內停車）",
+              "price": "免費"
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -1004,17 +963,6 @@
                   "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4"
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "Villa 停車場",
-              "price": "免費",
-              "note": "HOPE VILLA 提供免費私人停車場（場地內停車）",
-              "location": {
-                "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE+VILLA+Onnason",
-                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
-              }
             }
           ],
           "checkout": "11:00"
@@ -1022,16 +970,7 @@
         "timeline": [
           {
             "time": "08:00",
-            "title": "BUZZ RESORT 出發",
-            "locations": [
-              {
-                "name": "Buzz Resort Chatan",
-                "googleQuery": "https://www.google.com/maps/search/Buzz Resort Chatan",
-                "appleQuery": "https://maps.apple.com/?q=Buzz Resort Chatan",
-                "mapcode": "206 123 166*75"
-              }
-            ],
-            "googleRating": 4.3
+            "title": "BUZZ RESORT 出發"
           },
           {
             "time": "08:05-11:05",
@@ -1040,17 +979,15 @@
             "locations": [
               {
                 "name": "前兼久漁港",
-                "googleQuery": "https://www.google.com/maps/search/前兼久漁港",
+                "googleQuery": "https://maps.google.com/?q=前兼久漁港",
                 "appleQuery": "https://maps.apple.com/?q=前兼久漁港",
                 "mapcode": "206 123 299*87"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約20分鐘",
               "type": "car"
-            },
-            "blogUrl": "",
-            "googleRating": 4
+            }
           },
           {
             "time": "11:25-12:25",
@@ -1060,17 +997,15 @@
             "locations": [
               {
                 "name": "残波岬公園",
-                "googleQuery": "https://www.google.com/maps/search/残波岬公園",
+                "googleQuery": "https://maps.google.com/?q=残波岬公園",
                 "appleQuery": "https://maps.apple.com/?q=残波岬公園",
                 "mapcode": "1005 685 531*71"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約30分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://www.jathao.com/2015/10/gala.html",
-            "googleRating": 4.3
+            }
           },
           {
             "time": "12:55-13:25",
@@ -1080,17 +1015,15 @@
             "locations": [
               {
                 "name": "万座毛",
-                "googleQuery": "https://www.google.com/maps/search/万座毛",
+                "googleQuery": "https://maps.google.com/?q=万座毛",
                 "appleQuery": "https://maps.apple.com/?q=万座毛",
                 "mapcode": "206 312 071*08"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約20分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-07-2697/",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "13:45-14:45",
@@ -1104,47 +1037,44 @@
                   {
                     "category": "沖繩麵",
                     "name": "花織そば",
-                    "description": "はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽，最具沖繩在地風味",
+                    "desc": "はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽，最具沖繩在地風味",
                     "price": "¥700~",
                     "location": {
                       "name": "花織そば 読谷村",
-                      "googleQuery": "https://www.google.com/maps/search/花織そば+読谷村",
+                      "googleQuery": "https://maps.google.com/?q=花織そば+読谷村",
                       "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
                     },
                     "hours": "11:00~16:00（售完即止）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort",
-                    "googleRating": 4.2
+                    "reservation": null,
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
                   },
                   {
                     "category": "沖繩牛排",
                     "name": "ステーキハウス88 恩納店",
-                    "description": "STEAK HOUSE 88 恩納店 — 創業60年沖繩代表性牛排老店，從平價紅肉到縣產和牛一應俱全，前兼久漁港直送海葡萄鮮度抜群",
+                    "desc": "STEAK HOUSE 88 恩納店 — 創業60年沖繩代表性牛排老店，從平價紅肉到縣產和牛一應俱全，前兼久漁港直送海葡萄鮮度抜群",
                     "price": "¥1,800~",
                     "location": {
                       "name": "ステーキハウス88 恩納店",
-                      "googleQuery": "https://www.google.com/maps/search/ステーキハウス88+恩納店",
+                      "googleQuery": "https://maps.google.com/?q=ステーキハウス88+恩納店",
                       "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+恩納店"
                     },
                     "hours": "11:00~22:00（年中無休）",
                     "reservation": "可預約（當日取消收100%）",
-                    "blogUrl": "https://slowlifeinokinawa.com/steak88/",
-                    "googleRating": 4
+                    "blogUrl": "https://slowlifeinokinawa.com/steak88/"
                   },
                   {
                     "category": "豚骨拉麵",
                     "name": "ラーメン暖暮 北谷店",
-                    "description": "ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃",
+                    "desc": "ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃",
                     "price": "¥750~",
                     "location": {
                       "name": "暖暮 北谷店",
-                      "googleQuery": "https://www.google.com/maps/search/ラーメン暖暮+北谷",
+                      "googleQuery": "https://maps.google.com/?q=ラーメン暖暮+北谷",
                       "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+北谷"
                     },
                     "hours": "11:00~翌02:00",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 3.9
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
               }
@@ -1152,16 +1082,15 @@
             "locations": [
               {
                 "name": "業務スーパー うるま石川店",
-                "googleQuery": "https://www.google.com/maps/search/業務スーパー+うるま石川店",
+                "googleQuery": "https://maps.google.com/?q=業務スーパー+うるま石川店",
                 "appleQuery": "https://maps.apple.com/?q=業務スーパー+うるま石川店",
                 "mapcode": "206 039 648*50"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約29分鐘",
               "type": "car"
-            },
-            "googleRating": 3.8
+            }
           },
           {
             "time": "15:14-16:14",
@@ -1170,12 +1099,11 @@
             "locations": [
               {
                 "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE+VILLA+Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
                 "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason",
                 "mapcode": "206 221 372*23"
               }
-            ],
-            "googleRating": 4.5
+            ]
           },
           {
             "time": "16:14",
@@ -1189,47 +1117,44 @@
                   {
                     "category": "沖繩創作料理",
                     "name": "海の家",
-                    "description": "リゾートダイニング 海の家 — 恩納村海景餐廳，沖繩料理與海鮮創作料理，夕陽景觀一流",
+                    "desc": "リゾートダイニング 海の家 — 恩納村海景餐廳，沖繩料理與海鮮創作料理，夕陽景觀一流",
                     "price": "¥2,000~",
                     "location": {
                       "name": "海の家 恩納村",
-                      "googleQuery": "https://www.google.com/maps/search/海の家+恩納村",
+                      "googleQuery": "https://maps.google.com/?q=海の家+恩納村",
                       "appleQuery": "https://maps.apple.com/?q=海の家+恩納村"
                     },
                     "hours": "17:00~23:00",
                     "reservation": "建議預約",
-                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort",
-                    "googleRating": 4
+                    "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
                   },
                   {
                     "category": "燒肉",
                     "name": "琉球の牛 恩納店",
-                    "description": "琉球の牛 — 沖繩縣產和牛燒肉，海景包廂",
+                    "desc": "琉球の牛 — 沖繩縣產和牛燒肉，海景包廂",
                     "price": "¥5,000~",
                     "location": {
                       "name": "琉球の牛 恩納店",
-                      "googleQuery": "https://www.google.com/maps/search/琉球の牛+恩納店",
+                      "googleQuery": "https://maps.google.com/?q=琉球の牛+恩納店",
                       "appleQuery": "https://maps.apple.com/?q=琉球の牛+恩納店"
                     },
                     "hours": "17:00~22:30",
                     "reservation": "強烈建議預約",
-                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
-                    "googleRating": 4.4
+                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
                   },
                   {
                     "category": "豚骨拉麵",
                     "name": "麺処 じゅん坊 恩納店",
-                    "description": "麺処 じゅん坊 — 恩納村人氣拉麵店，濃厚豚骨醬油湯底，加麵不加價，晚餐後宵夜佳選",
+                    "desc": "麺処 じゅん坊 — 恩納村人氣拉麵店，濃厚豚骨醬油湯底，加麵不加價，晚餐後宵夜佳選",
                     "price": "¥850~",
                     "location": {
                       "name": "麺処 じゅん坊 恩納村",
-                      "googleQuery": "https://www.google.com/maps/search/麺処じゅん坊+恩納",
+                      "googleQuery": "https://maps.google.com/?q=麺処じゅん坊+恩納",
                       "appleQuery": "https://maps.apple.com/?q=麺処じゅん坊+恩納"
                     },
                     "hours": "11:00~24:00（週四公休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/",
-                    "googleRating": 3.8
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/"
                   }
                 ]
               }
@@ -1237,11 +1162,10 @@
             "locations": [
               {
                 "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE+VILLA+Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
                 "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
               }
-            ],
-            "googleRating": 4.5
+            ]
           }
         ]
       }
@@ -1262,6 +1186,19 @@
           "breakfast": {
             "included": null
           },
+          "subs": [
+            {
+              "type": "parking",
+              "title": "Villa 停車場",
+              "location": {
+                "name": "HOPE VILLA Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
+                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
+              },
+              "note": "HOPE VILLA 提供免費私人停車場（場地內停車）",
+              "price": "免費"
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -1301,17 +1238,6 @@
                   "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4"
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "Villa 停車場",
-              "price": "免費",
-              "note": "HOPE VILLA 提供免費私人停車場（場地內停車）",
-              "location": {
-                "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE+VILLA+Onnason",
-                "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
-              }
             }
           ],
           "checkout": "11:00"
@@ -1319,16 +1245,7 @@
         "timeline": [
           {
             "time": "09:00",
-            "title": "HOPE VILLA Onnason 出發",
-            "locations": [
-              {
-                "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE VILLA Onnason",
-                "appleQuery": "https://maps.apple.com/?q=HOPE VILLA Onnason",
-                "mapcode": "206 221 372*23"
-              }
-            ],
-            "googleRating": 4.5
+            "title": "HOPE VILLA Onnason 出發"
           },
           {
             "time": "09:26-11:26",
@@ -1357,17 +1274,15 @@
             "locations": [
               {
                 "name": "ナゴパイナップルパーク",
-                "googleQuery": "https://www.google.com/maps/search/ナゴパイナップルパーク",
+                "googleQuery": "https://maps.google.com/?q=ナゴパイナップルパーク",
                 "appleQuery": "https://maps.apple.com/?q=ナゴパイナップルパーク",
                 "mapcode": "206 678 684*87"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約2分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-11-2732/",
-            "googleRating": 3.9
+            }
           },
           {
             "time": "11:28-12:28",
@@ -1381,66 +1296,54 @@
                   {
                     "category": "沖繩料理・阿古豬",
                     "name": "百年古家 大家",
-                    "description": "百年古家 大家 うふやー — 百年古民家餐廳，阿古豬套餐、沖繩在地料理，潺潺流水庭園用餐氛圍一流",
+                    "desc": "百年古家 大家 うふやー — 百年古民家餐廳，阿古豬套餐、沖繩在地料理，潺潺流水庭園用餐氛圍一流",
                     "price": "¥1,000~",
                     "location": {
                       "name": "百年古家 大家",
-                      "googleQuery": "https://www.google.com/maps/search/百年古家+大家",
+                      "googleQuery": "https://maps.google.com/?q=百年古家+大家",
                       "appleQuery": "https://maps.apple.com/?q=百年古家+大家",
                       "mapcode": "206 620 592*27"
                     },
                     "hours": "午 11:00~15:30／晚 17:30~21:00",
                     "reservation": "TableCheck 預約",
                     "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
-                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://mimigo.tw/okinawa-ufuya/"
                   },
                   {
                     "category": "沖繩拉麵",
                     "name": "ラーメン太陽 名護店",
-                    "description": "ラーメン太陽 — 沖繩名護代表性豚骨醬油拉麵，清爽不油膩的沖繩在地風味，附炒飯半份超值",
+                    "desc": "ラーメン太陽 — 沖繩名護代表性豚骨醬油拉麵，清爽不油膩的沖繩在地風味，附炒飯半份超值",
                     "price": "¥700~",
                     "location": {
                       "name": "ラーメン太陽 名護店",
-                      "googleQuery": "https://www.google.com/maps/search/ラーメン太陽+名護",
+                      "googleQuery": "https://maps.google.com/?q=ラーメン太陽+名護",
                       "appleQuery": "https://maps.apple.com/?q=ラーメン太陽+名護"
                     },
                     "hours": "11:00~21:00（週二公休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://tisshuang.com/blog/post/nago-ramen-taiyou/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/blog/post/nago-ramen-taiyou/"
                   },
                   {
                     "category": "炭火燒肉",
                     "name": "焼肉 てるりん 名護店",
-                    "description": "焼肉 てるりん — 名護在地人氣炭火燒肉，縣產牛與山原豬組合套餐，午餐優惠划算",
+                    "desc": "焼肉 てるりん — 名護在地人氣炭火燒肉，縣產牛與山原豬組合套餐，午餐優惠划算",
                     "price": "¥1,800~",
                     "location": {
                       "name": "焼肉 てるりん 名護",
-                      "googleQuery": "https://www.google.com/maps/search/焼肉+てるりん+名護",
+                      "googleQuery": "https://maps.google.com/?q=焼肉+てるりん+名護",
                       "appleQuery": "https://maps.apple.com/?q=焼肉+てるりん+名護"
                     },
                     "hours": "11:30~14:30／17:00~22:00（週二公休）",
                     "reservation": "建議預約",
-                    "blogUrl": "https://bigmouthblog.tw/okinawa-nago-yakiniku-terurin/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://bigmouthblog.tw/okinawa-nago-yakiniku-terurin/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約26分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "百年古家 大家",
-                "googleQuery": "https://www.google.com/maps/search/百年古家 大家",
-                "appleQuery": "https://maps.apple.com/?q=百年古家 大家",
-                "mapcode": "206 620 592*27"
-              }
-            ],
-            "googleRating": 4.1
+            }
           },
           {
             "time": "12:54-14:54",
@@ -1450,17 +1353,15 @@
             "locations": [
               {
                 "name": "沖縄美ら海水族館",
-                "googleQuery": "https://www.google.com/maps/search/沖縄美ら海水族館",
+                "googleQuery": "https://maps.google.com/?q=沖縄美ら海水族館",
                 "appleQuery": "https://maps.apple.com/?q=沖縄美ら海水族館",
                 "mapcode": "553 075 737*66"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約34分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/17071/",
-            "googleRating": 4.6
+            }
           },
           {
             "time": "15:28-15:58",
@@ -1470,17 +1371,15 @@
             "locations": [
               {
                 "name": "古宇利オーシャンタワー",
-                "googleQuery": "https://www.google.com/maps/search/古宇利オーシャンタワー",
+                "googleQuery": "https://maps.google.com/?q=古宇利オーシャンタワー",
                 "appleQuery": "https://maps.apple.com/?q=古宇利オーシャンタワー",
                 "mapcode": "485 723 248*36"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約2分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/737284/",
-            "googleRating": 3.9
+            }
           },
           {
             "time": "16:00-17:00",
@@ -1494,64 +1393,53 @@
                   {
                     "category": "海鮮丼",
                     "name": "白砂食堂",
-                    "description": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化，7~9月營業至 20:00",
+                    "desc": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化，7~9月營業至 20:00",
                     "price": "¥3,500~",
                     "location": {
                       "name": "しらさ食堂 古宇利島",
-                      "googleQuery": "https://www.google.com/maps/search/しらさ食堂+古宇利島",
+                      "googleQuery": "https://maps.google.com/?q=しらさ食堂+古宇利島",
                       "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
                     },
                     "hours": "10:00~17:00（7~9月至 20:00）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://dorapig.com/shirasashokudou2025/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://dorapig.com/shirasashokudou2025/"
                   },
                   {
                     "category": "豚骨拉麵",
                     "name": "ラーメン暖暮 名護店",
-                    "description": "ラーメン暖暮 名護店 — 古宇利島回程途中名護人氣豚骨拉麵，湯頭濃醇，車程約30分",
+                    "desc": "ラーメン暖暮 名護店 — 古宇利島回程途中名護人氣豚骨拉麵，湯頭濃醇，車程約30分",
                     "price": "¥800~",
                     "location": {
                       "name": "暖暮 名護店",
-                      "googleQuery": "https://www.google.com/maps/search/暖暮+名護店",
+                      "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
                       "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 3.9
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   },
                   {
                     "category": "炭火燒肉",
                     "name": "炭火燒肉 海南亭 本部店",
-                    "description": "海南亭 — 本部・名護海景炭火燒肉，縣產牛與海島豬搭配多種海鮮，景觀絕佳（晚餐段可用）",
+                    "desc": "海南亭 — 本部・名護海景炭火燒肉，縣產牛與海島豬搭配多種海鮮，景觀絕佳（晚餐段可用）",
                     "price": "¥3,000~",
                     "location": {
                       "name": "炭火焼肉 海南亭 本部",
-                      "googleQuery": "https://www.google.com/maps/search/炭火焼肉+海南亭+本部",
+                      "googleQuery": "https://maps.google.com/?q=炭火焼肉+海南亭+本部",
                       "appleQuery": "https://maps.apple.com/?q=炭火焼肉+海南亭+本部"
                     },
                     "hours": "17:00~23:00（週三公休）",
                     "reservation": "建議預約",
-                    "blogUrl": "https://bigmouthblog.tw/okinawa-motobu-yakiniku-kananntei/",
-                    "googleRating": 4.2
+                    "blogUrl": "https://bigmouthblog.tw/okinawa-motobu-yakiniku-kananntei/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約1分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "しらさ食堂 古宇利島",
-                "googleQuery": "https://www.google.com/maps/search/しらさ食堂 古宇利島",
-                "appleQuery": "https://maps.apple.com/?q=しらさ食堂 古宇利島"
-              }
-            ],
-            "googleRating": 4
+            }
           },
           {
             "time": "17:01-19:01",
@@ -1561,17 +1449,15 @@
             "locations": [
               {
                 "name": "古宇利島",
-                "googleQuery": "https://www.google.com/maps/search/古宇利島",
+                "googleQuery": "https://maps.google.com/?q=古宇利島",
                 "appleQuery": "https://maps.apple.com/?q=古宇利島",
                 "mapcode": "485 692 065*25"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約29分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/392405/",
-            "googleRating": 4.4
+            }
           },
           {
             "time": "19:30-20:30",
@@ -1585,64 +1471,53 @@
                   {
                     "category": "沖繩炭火燒肉",
                     "name": "島豚七輪燒 滿味",
-                    "description": "島豚七輪焼 満味 — 名護在地炭火燒肉，主打山原島豚（阿古豬血統），沖繩最具代表性豬肉品種，有中文菜單",
+                    "desc": "島豚七輪焼 満味 — 名護在地炭火燒肉，主打山原島豚（阿古豬血統），沖繩最具代表性豬肉品種，有中文菜單",
                     "price": "¥1,500~",
                     "location": {
                       "name": "島豚七輪焼 満味 名護",
-                      "googleQuery": "https://www.google.com/maps/search/島豚七輪焼+満味+名護",
+                      "googleQuery": "https://maps.google.com/?q=島豚七輪焼+満味+名護",
                       "appleQuery": "https://maps.apple.com/?q=島豚七輪焼+満味+名護"
                     },
                     "hours": "17:00~23:00（週二、三公休）",
                     "reservation": "建議預約",
-                    "blogUrl": "https://www.bigfang.tw/blog/post/mammi-nago-okinawa",
-                    "googleRating": 4.5
+                    "blogUrl": "https://www.bigfang.tw/blog/post/mammi-nago-okinawa"
                   },
                   {
                     "category": "沖繩牛排",
                     "name": "牛排屋88 名護店",
-                    "description": "ステーキハウス88 Jr. 名護店 — 沖繩牛排老字號，附湯、沙拉、白飯",
+                    "desc": "ステーキハウス88 Jr. 名護店 — 沖繩牛排老字號，附湯、沙拉、白飯",
                     "price": "¥1,500~",
                     "location": {
                       "name": "ステーキハウス88 Jr. 名護",
-                      "googleQuery": "https://www.google.com/maps/search/ステーキハウス88+名護",
+                      "googleQuery": "https://maps.google.com/?q=ステーキハウス88+名護",
                       "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+名護"
                     },
                     "hours": "11:00~22:00（全年無休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/582485/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/582485/"
                   },
                   {
                     "category": "豚骨拉麵",
                     "name": "暖暮拉麵 名護店",
-                    "description": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
+                    "desc": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
                     "price": "¥800~",
                     "location": {
                       "name": "暖暮 名護店",
-                      "googleQuery": "https://www.google.com/maps/search/暖暮+名護店",
+                      "googleQuery": "https://maps.google.com/?q=暖暮+名護店",
                       "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 3.9
+                    "reservation": null,
+                    "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約28分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "島豚七輪焼 満味 名護",
-                "googleQuery": "https://www.google.com/maps/search/島豚七輪焼 満味 名護",
-                "appleQuery": "https://maps.apple.com/?q=島豚七輪焼 満味 名護"
-              }
-            ],
-            "googleRating": 4.3
+            }
           },
           {
             "time": "20:58",
@@ -1651,12 +1526,11 @@
             "locations": [
               {
                 "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE+VILLA+Onnason",
+                "googleQuery": "https://maps.google.com/?q=HOPE+VILLA+Onnason",
                 "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason",
                 "mapcode": "206 221 372*23"
               }
-            ],
-            "googleRating": 4.5
+            ]
           }
         ]
       }
@@ -1677,6 +1551,19 @@
           "breakfast": {
             "included": null
           },
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
+              },
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
+              "price": "費用未確認"
+            }
+          ],
           "infoBoxes": [
             {
               "type": "shopping",
@@ -1716,17 +1603,6 @@
                   "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "飯店停車場",
-              "price": "費用未確認",
-              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
-              "location": {
-                "name": "メルキュール沖縄那覇 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇+駐車場",
-                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
-              }
             }
           ],
           "checkout": "11:00"
@@ -1734,16 +1610,7 @@
         "timeline": [
           {
             "time": "09:00",
-            "title": "HOPE VILLA Onnason 出發",
-            "locations": [
-              {
-                "name": "HOPE VILLA Onnason",
-                "googleQuery": "https://www.google.com/maps/search/HOPE VILLA Onnason",
-                "appleQuery": "https://maps.apple.com/?q=HOPE VILLA Onnason",
-                "mapcode": "206 221 372*23"
-              }
-            ],
-            "googleRating": 4.5
+            "title": "HOPE VILLA Onnason 出發"
           },
           {
             "time": "09:12-10:12",
@@ -1752,17 +1619,15 @@
             "locations": [
               {
                 "name": "Ryukyu Beach Club",
-                "googleQuery": "https://www.google.com/maps/search/Ryukyu+Beach+Club",
+                "googleQuery": "https://maps.google.com/?q=Ryukyu+Beach+Club",
                 "appleQuery": "https://maps.apple.com/?q=Ryukyu+Beach+Club",
                 "mapcode": "206 185 416*17"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約36分鐘",
               "type": "car"
-            },
-            "blogUrl": "",
-            "googleRating": 4.3
+            }
           },
           {
             "time": "10:48-13:48",
@@ -1813,17 +1678,15 @@
             "locations": [
               {
                 "name": "イオンモール沖縄ライカム",
-                "googleQuery": "https://www.google.com/maps/search/イオンモール沖縄ライカム",
+                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
                 "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム",
                 "mapcode": "33 618 171*12"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約3分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/640089/",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "12:30-13:30",
@@ -1837,60 +1700,33 @@
                   {
                     "category": "沖繩料理",
                     "name": "琉球回転寿司 海來 ライカム店",
-                    "description": "沖繩在地迴轉壽司，新鮮縣產魚料",
+                    "desc": "沖繩在地迴轉壽司，新鮮縣產魚料",
                     "price": "¥1,200~",
                     "hours": "11:00~22:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/kaisen-sushi-okinawa/",
-                    "location": {
-                      "name": "琉球回転寿司 海來 ライカム店",
-                      "googleQuery": "https://www.google.com/maps/search/琉球回転寿司+海來+ライカム",
-                      "appleQuery": "https://maps.apple.com/?q=琉球回転寿司+海來+ライカム"
-                    },
-                    "googleRating": 3.7
+                    "blogUrl": "https://mimihan.tw/kaisen-sushi-okinawa/"
                   },
                   {
                     "category": "拉麵",
                     "name": "一蘭拉麵 ライカム店",
-                    "description": "天然豚骨拉麵，專注個人用餐空間",
+                    "desc": "天然豚骨拉麵，專注個人用餐空間",
                     "price": "¥980~",
                     "hours": "10:00~22:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/ichiran-ramen/",
-                    "location": {
-                      "name": "一蘭 イオンモール沖縄ライカム店",
-                      "googleQuery": "https://www.google.com/maps/search/一蘭+イオンモール沖縄ライカム",
-                      "appleQuery": "https://maps.apple.com/?q=一蘭+イオンモール沖縄ライカム"
-                    },
-                    "googleRating": 3.9
+                    "blogUrl": "https://mimihan.tw/ichiran-ramen/"
                   },
                   {
                     "category": "漢堡",
                     "name": "A&W ライカム店",
-                    "description": "沖繩限定美式速食，根啤酒 Root Beer 必喝",
+                    "desc": "沖繩限定美式速食，根啤酒 Root Beer 必喝",
                     "price": "¥700~",
                     "hours": "09:00~22:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://solomo.xinmedia.com/japan/116755",
-                    "location": {
-                      "name": "A&W イオンモール沖縄ライカム店",
-                      "googleQuery": "https://www.google.com/maps/search/A&W+イオンモール沖縄ライカム",
-                      "appleQuery": "https://maps.apple.com/?q=A&W+イオンモール沖縄ライカム"
-                    },
-                    "googleRating": 3.9
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "イオンモール沖縄ライカム",
-                "googleQuery": "https://www.google.com/maps/search/イオンモール沖縄ライカム",
-                "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム",
-                "mapcode": "33 618 171*12"
-              }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "13:51-14:51",
@@ -1899,17 +1735,15 @@
             "locations": [
               {
                 "name": "イオンモール沖縄ライカム",
-                "googleQuery": "https://www.google.com/maps/search/イオンモール沖縄ライカム",
+                "googleQuery": "https://maps.google.com/?q=イオンモール沖縄ライカム",
                 "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム",
                 "mapcode": "33 618 171*12"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約34分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "15:25-17:55",
@@ -1960,17 +1794,15 @@
             "locations": [
               {
                 "name": "国際通り 那覇",
-                "googleQuery": "https://www.google.com/maps/search/国際通り+那覇",
+                "googleQuery": "https://maps.google.com/?q=国際通り+那覇",
                 "appleQuery": "https://maps.apple.com/?q=国際通り+那覇",
                 "mapcode": "33 157 375*85"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約6分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-            "googleRating": 4.1
+            }
           },
           {
             "time": "18:01-19:01",
@@ -1983,67 +1815,55 @@
                   {
                     "category": "沖繩料理",
                     "name": "花笠食堂",
-                    "description": "花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表",
+                    "desc": "花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表",
                     "price": "¥700~",
                     "location": {
                       "name": "花笠食堂 那覇",
-                      "googleQuery": "https://www.google.com/maps/search/花笠食堂+那覇",
+                      "googleQuery": "https://maps.google.com/?q=花笠食堂+那覇",
                       "appleQuery": "https://maps.apple.com/?q=花笠食堂+那覇",
                       "mapcode": "33 157 208*63"
                     },
                     "hours": "11:00~20:00（週日公休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/",
-                    "googleRating": 3.9
+                    "reservation": null,
+                    "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/"
                   },
                   {
                     "category": "沖繩拉麵",
                     "name": "琉球新麺 通堂 国際通店",
-                    "description": "琉球新麺 通堂 — 沖繩最具代表性本土拉麵，獨特豚骨×沖繩風味，那霸国際通旗艦店",
+                    "desc": "琉球新麺 通堂 — 沖繩最具代表性本土拉麵，獨特豚骨×沖繩風味，那霸国際通旗艦店",
                     "price": "¥780~",
                     "location": {
                       "name": "琉球新麺 通堂 国際通店",
-                      "googleQuery": "https://www.google.com/maps/search/琉球新麺+通堂+国際通",
+                      "googleQuery": "https://maps.google.com/?q=琉球新麺+通堂+国際通",
                       "appleQuery": "https://maps.apple.com/?q=琉球新麺+通堂+国際通",
                       "mapcode": "33 157 466*11"
                     },
                     "hours": "11:00~23:00（全年無休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/"
                   },
                   {
                     "category": "燒肉",
                     "name": "琉球の牛 那霸國際通店",
-                    "description": "琉球の牛 — 沖繩縣產和牛燒肉名店，獨立包廂無煙烤爐，Google 4.7 分",
+                    "desc": "琉球の牛 — 沖繩縣產和牛燒肉名店，獨立包廂無煙烤爐，Google 4.7 分",
                     "price": "¥6,000~",
                     "location": {
                       "name": "琉球の牛 那覇国際通り店",
-                      "googleQuery": "https://www.google.com/maps/search/琉球の牛+那覇国際通り店",
+                      "googleQuery": "https://maps.google.com/?q=琉球の牛+那覇国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=琉球の牛+那覇国際通り店",
                       "mapcode": "33 157 382*63"
                     },
                     "hours": "17:00~22:30",
                     "reservation": "建議透過 TableCheck 預約",
-                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
-                    "googleRating": 4.4
+                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約9分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "国際通り 那覇",
-                "googleQuery": "https://www.google.com/maps/search/国際通り 那覇",
-                "appleQuery": "https://maps.apple.com/?q=国際通り 那覇",
-                "mapcode": "33 157 375*85"
-              }
-            ],
-            "googleRating": 4.1
+            }
           },
           {
             "time": "19:10-20:10",
@@ -2052,16 +1872,15 @@
             "locations": [
               {
                 "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "mapcode": "33 548 827*76"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約12分鐘",
               "type": "car"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "20:22",
@@ -2070,12 +1889,11 @@
             "locations": [
               {
                 "name": "メルキュール沖縄那覇",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇",
                 "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
                 "mapcode": "33 155 267*37"
               }
-            ],
-            "googleRating": 4
+            ]
           }
         ]
       }
@@ -2096,6 +1914,19 @@
           "breakfast": {
             "included": null
           },
+          "subs": [
+            {
+              "type": "parking",
+              "title": "飯店停車場",
+              "location": {
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://maps.google.com/?q=メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
+              },
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
+              "price": "費用未確認"
+            }
+          ],
           "checkout": "10:00",
           "infoBoxes": [
             {
@@ -2136,33 +1967,13 @@
                   "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
                 }
               ]
-            },
-            {
-              "type": "parking",
-              "title": "飯店停車場",
-              "price": "費用未確認",
-              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
-              "location": {
-                "name": "メルキュール沖縄那覇 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇+駐車場",
-                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
-              }
             }
           ]
         },
         "timeline": [
           {
             "time": "09:00",
-            "title": "沖繩那霸美居飯店 出發",
-            "locations": [
-              {
-                "name": "メルキュール沖縄那覇",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
-                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
-                "mapcode": "33 155 267*37"
-              }
-            ],
-            "googleRating": 4
+            "title": "沖繩那霸美居飯店 出發"
           },
           {
             "time": "09:12-10:12",
@@ -2171,16 +1982,15 @@
             "locations": [
               {
                 "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "mapcode": "33 548 827*76"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約9分鐘",
               "type": "car"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "10:21-11:51",
@@ -2231,17 +2041,15 @@
             "locations": [
               {
                 "name": "第一牧志公設市場",
-                "googleQuery": "https://www.google.com/maps/search/第一牧志公設市場",
+                "googleQuery": "https://maps.google.com/?q=第一牧志公設市場",
                 "appleQuery": "https://maps.apple.com/?q=第一牧志公設市場",
                 "mapcode": "33 157 199*43"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約7分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
-            "googleRating": 4.2
+            }
           },
           {
             "time": "11:58-12:58",
@@ -2250,17 +2058,15 @@
             "locations": [
               {
                 "name": "世豊商店 那覇",
-                "googleQuery": "https://www.google.com/maps/search/世豊商店+那覇",
+                "googleQuery": "https://maps.google.com/?q=世豊商店+那覇",
                 "appleQuery": "https://maps.apple.com/?q=世豊商店+那覇",
                 "mapcode": "33 128 879*17"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約29分鐘",
               "type": "car"
-            },
-            "blogUrl": "",
-            "googleRating": 4
+            }
           },
           {
             "time": "13:27-14:27",
@@ -2289,17 +2095,15 @@
             "locations": [
               {
                 "name": "おきなわワールド",
-                "googleQuery": "https://www.google.com/maps/search/おきなわワールド",
+                "googleQuery": "https://maps.google.com/?q=おきなわワールド",
                 "appleQuery": "https://maps.apple.com/?q=おきなわワールド",
                 "mapcode": "232 494 535*76"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約32分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobowin.blog/okinawa-world/",
-            "googleRating": 4.1
+            }
           },
           {
             "time": "14:59-15:59",
@@ -2309,17 +2113,15 @@
             "locations": [
               {
                 "name": "波上宮",
-                "googleQuery": "https://www.google.com/maps/search/波上宮",
+                "googleQuery": "https://maps.google.com/?q=波上宮",
                 "appleQuery": "https://maps.apple.com/?q=波上宮",
                 "mapcode": "33 155 737*43"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約6分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-07-2698/",
-            "googleRating": 4.3
+            }
           },
           {
             "time": "16:05-17:05",
@@ -2366,19 +2168,10 @@
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約21分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "国際通り 那覇",
-                "googleQuery": "https://www.google.com/maps/search/国際通り 那覇",
-                "appleQuery": "https://maps.apple.com/?q=国際通り 那覇",
-                "mapcode": "33 157 375*85"
-              }
-            ],
-            "googleRating": 4.1
+            }
           },
           {
             "time": "17:26-19:26",
@@ -2388,17 +2181,15 @@
             "locations": [
               {
                 "name": "瀬長島ウミカジテラス",
-                "googleQuery": "https://www.google.com/maps/search/瀬長島ウミカジテラス",
+                "googleQuery": "https://maps.google.com/?q=瀬長島ウミカジテラス",
                 "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス",
                 "mapcode": "33 032 412*44"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約5分鐘",
               "type": "car"
-            },
-            "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/",
-            "googleRating": 4.1
+            }
           },
           {
             "time": "19:31-20:31",
@@ -2412,66 +2203,54 @@
                   {
                     "category": "沖繩塔可飯",
                     "name": "タコライスcafe きじむなぁ 瀨長島店",
-                    "description": "きじむなぁ — 沖繩特色歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋，位於瀨長島商場內",
+                    "desc": "きじむなぁ — 沖繩特色歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋，位於瀨長島商場內",
                     "price": "¥900~",
                     "location": {
                       "name": "タコライスcafe きじむなぁ 瀬長島",
-                      "googleQuery": "https://www.google.com/maps/search/タコライスcafe+きじむなぁ+瀬長島",
+                      "googleQuery": "https://maps.google.com/?q=タコライスcafe+きじむなぁ+瀬長島",
                       "appleQuery": "https://maps.apple.com/?q=タコライスcafe+きじむなぁ+瀬長島",
                       "mapcode": "33 032 412*44"
                     },
                     "hours": "11:00~21:00",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
                   },
                   {
                     "category": "沖繩拉麵",
                     "name": "琉球新麺 通堂 牧港本店",
-                    "description": "琉球新麺 通堂 牧港本店 — 沖繩本土拉麵旗艦店，距瀨長島約10分，沖繩豚骨醬油湯底口碑最佳",
+                    "desc": "琉球新麺 通堂 牧港本店 — 沖繩本土拉麵旗艦店，距瀨長島約10分，沖繩豚骨醬油湯底口碑最佳",
                     "price": "¥780~",
                     "location": {
                       "name": "琉球新麺 通堂 牧港本店",
-                      "googleQuery": "https://www.google.com/maps/search/琉球新麺+通堂+牧港本店",
+                      "googleQuery": "https://maps.google.com/?q=琉球新麺+通堂+牧港本店",
                       "appleQuery": "https://maps.apple.com/?q=琉球新麺+通堂+牧港本店",
                       "mapcode": "33 341 059*55"
                     },
                     "hours": "11:00~24:00（全年無休）",
-                    "reservation": "不需預約",
-                    "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
-                    "googleRating": 4
+                    "reservation": null,
+                    "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/"
                   },
                   {
                     "category": "燒肉",
                     "name": "焼肉 金城 那霸南店",
-                    "description": "焼肉 金城 — 那霸南部人氣炭火燒肉，縣產牛特選部位，距瀨長島約15分，CP值高",
+                    "desc": "焼肉 金城 — 那霸南部人氣炭火燒肉，縣產牛特選部位，距瀨長島約15分，CP值高",
                     "price": "¥3,000~",
                     "location": {
                       "name": "焼肉 金城 那覇南",
-                      "googleQuery": "https://www.google.com/maps/search/焼肉+金城+那覇",
+                      "googleQuery": "https://maps.google.com/?q=焼肉+金城+那覇",
                       "appleQuery": "https://maps.apple.com/?q=焼肉+金城+那覇"
                     },
                     "hours": "17:00~23:30（週三公休）",
                     "reservation": "建議預約",
-                    "blogUrl": "https://bigmouthblog.tw/okinawa-naha-yakiniku-kinjo/",
-                    "googleRating": 4.1
+                    "blogUrl": "https://bigmouthblog.tw/okinawa-naha-yakiniku-kinjo/"
                   }
                 ]
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約9分鐘",
               "type": "car"
-            },
-            "locations": [
-              {
-                "name": "瀬長島ウミカジテラス",
-                "googleQuery": "https://www.google.com/maps/search/瀬長島ウミカジテラス",
-                "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス",
-                "mapcode": "33 032 412*44"
-              }
-            ],
-            "googleRating": 4.1
+            }
           },
           {
             "time": "20:40-22:40",
@@ -2522,13 +2301,11 @@
             "locations": [
               {
                 "name": "沖縄アウトレットモールあしびなー",
-                "googleQuery": "https://www.google.com/maps/search/沖縄アウトレットモールあしびなー",
+                "googleQuery": "https://maps.google.com/?q=沖縄アウトレットモールあしびなー",
                 "appleQuery": "https://maps.apple.com/?q=沖縄アウトレットモールあしびなー",
                 "mapcode": "232 575 810*11"
               }
-            ],
-            "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-ashibinaa-completeguide/",
-            "googleRating": 3.8
+            ]
           },
           {
             "time": "22:41-23:41",
@@ -2537,12 +2314,11 @@
             "locations": [
               {
                 "name": "沖縄アウトレットモールあしびなー",
-                "googleQuery": "https://www.google.com/maps/search/沖縄アウトレットモールあしびなー",
+                "googleQuery": "https://maps.google.com/?q=沖縄アウトレットモールあしびなー",
                 "appleQuery": "https://maps.apple.com/?q=沖縄アウトレットモールあしびなー",
                 "mapcode": "232 575 810*11"
               }
-            ],
-            "googleRating": 3.8
+            ]
           },
           {
             "time": "23:51-00:51",
@@ -2551,12 +2327,11 @@
             "locations": [
               {
                 "name": "スポーツデポ 豊崎店",
-                "googleQuery": "https://www.google.com/maps/search/スポーツデポ+豊崎店",
+                "googleQuery": "https://maps.google.com/?q=スポーツデポ+豊崎店",
                 "appleQuery": "https://maps.apple.com/?q=スポーツデポ+豊崎店",
                 "mapcode": "232 574 739*42"
               }
-            ],
-            "googleRating": 3.9
+            ]
           },
           {
             "time": "17:30-18:00",
@@ -2574,20 +2349,12 @@
                   "phone": "098-887-7712",
                   "location": {
                     "name": "ENEOS 安里バイパスSS 那覇市大道",
-                    "googleQuery": "https://www.google.com/maps/search/ENEOS+安里バイパスSS+那覇",
+                    "googleQuery": "https://maps.google.com/?q=ENEOS+安里バイパスSS+那覇",
                     "appleQuery": "https://maps.apple.com/?q=ENEOS+安里バイパスSS+那覇"
                   }
                 }
               }
-            ],
-            "locations": [
-              {
-                "name": "沖繩旅毛 那覇新都心",
-                "googleQuery": "https://www.google.com/maps/search/沖繩旅毛 那覇新都心",
-                "appleQuery": "https://maps.apple.com/?q=沖繩旅毛 那覇新都心"
-              }
-            ],
-            "googleRating": 4.8
+            ]
           }
         ]
       }
@@ -2600,16 +2367,7 @@
         "timeline": [
           {
             "time": "10:00",
-            "title": "沖繩那霸美居飯店 退房",
-            "locations": [
-              {
-                "name": "メルキュール沖縄那覇",
-                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
-                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
-                "mapcode": "33 155 267*37"
-              }
-            ],
-            "googleRating": 4
+            "title": "沖繩那霸美居飯店 退房"
           },
           {
             "time": "10:12-10:32",
@@ -2618,16 +2376,15 @@
             "locations": [
               {
                 "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
+                "googleQuery": "https://maps.google.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
                 "mapcode": "33 548 827*76"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "約42分鐘",
               "type": "car"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "11:14",
@@ -2641,60 +2398,33 @@
                   {
                     "category": "沖繩料理",
                     "name": "空港食堂",
-                    "description": "隱藏版員工食堂，在地人也愛吃",
+                    "desc": "隱藏版員工食堂，在地人也愛吃",
                     "price": "¥600~",
                     "hours": "09:00~20:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/",
-                    "location": {
-                      "name": "空港食堂 那覇空港",
-                      "googleQuery": "https://www.google.com/maps/search/空港食堂+那覇空港",
-                      "appleQuery": "https://maps.apple.com/?q=空港食堂+那覇空港"
-                    },
-                    "googleRating": 4
+                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/"
                   },
                   {
                     "category": "沖繩そば",
                     "name": "天龍 那覇空港店",
-                    "description": "沖繩そば＆定食老店，機場人氣名店",
+                    "desc": "沖繩そば＆定食老店，機場人氣名店",
                     "price": "¥800~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/",
-                    "location": {
-                      "name": "天龍 那覇空港店",
-                      "googleQuery": "https://www.google.com/maps/search/天龍+那覇空港",
-                      "appleQuery": "https://maps.apple.com/?q=天龍+那覇空港"
-                    },
-                    "googleRating": 3.8
+                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/"
                   },
                   {
                     "category": "速食",
                     "name": "A&W 那覇空港店",
-                    "description": "沖繩限定美式漢堡，根啤酒必喝",
+                    "desc": "沖繩限定美式漢堡，根啤酒必喝",
                     "price": "¥600~",
                     "hours": "06:30~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://solomo.xinmedia.com/japan/116755",
-                    "location": {
-                      "name": "A&W 那覇空港店",
-                      "googleQuery": "https://www.google.com/maps/search/A&W+那覇空港",
-                      "appleQuery": "https://maps.apple.com/?q=A&W+那覇空港"
-                    },
-                    "googleRating": 3.8
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "那覇空港 国内線ターミナル",
-                "googleQuery": "https://www.google.com/maps/search/那覇空港",
-                "appleQuery": "https://maps.apple.com/?q=那覇空港",
-                "mapcode": "33 122 298*54"
-              }
-            ],
-            "googleRating": 4
+            ]
           },
           {
             "time": "11:15-13:15",
@@ -2703,12 +2433,11 @@
             "locations": [
               {
                 "name": "那霸機場",
-                "googleQuery": "https://www.google.com/maps/search/那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
                 "appleQuery": "https://maps.apple.com/?q=那霸機場",
                 "mapcode": "33 122 298*54"
               }
-            ],
-            "googleRating": 4
+            ]
           }
         ]
       }

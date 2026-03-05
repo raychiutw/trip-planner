@@ -123,20 +123,20 @@ tripFiles.forEach(({ file, label }) => {
         });
       });
 
-      it('有 transit 的事件渲染出 transit 區塊', () => {
+      it('有 travel 的事件渲染出 travel 區塊', () => {
         let found = false;
         data.days.forEach((day) => {
           if (!day.content || !day.content.timeline) return;
-          day.content.timeline.forEach((ev) => {
-            if (ev.transit) {
+          day.content.timeline.forEach((entry) => {
+            if (entry.travel) {
               found = true;
-              const html = renderTimelineEvent(ev);
-              expect(html).toContain('tl-transit');
+              const html = renderTimelineEvent(entry);
+              expect(html).toContain('tl-travel');
             }
           });
         });
-        // 至少找到一個 transit 事件
-        expect(found, '應至少有一個 transit 事件').toBe(true);
+        // 至少找到一個 travel 事件
+        expect(found, '應至少有一個 travel 事件').toBe(true);
       });
     });
 

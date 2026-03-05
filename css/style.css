@@ -138,7 +138,7 @@ body:not(.dark) .day-header {
 .tl-title a:hover { text-decoration: underline; }
 .tl-body { display: block; padding: 4px 8px 8px; font-size: var(--fs-md); line-height: 1.7; }
 .tl-desc { color: var(--gray); margin-bottom: 6px; }
-.tl-transit { padding: 1px 8px 1px 0; margin-left: 0; font-size: var(--fs-md); color: var(--gray); }
+.tl-travel { padding: 1px 8px 1px 0; margin-left: 0; font-size: var(--fs-md); color: var(--gray); }
 
 /* ===== Nav Group (Map Links) ===== */
 .nav-links { margin: 6px 0; }

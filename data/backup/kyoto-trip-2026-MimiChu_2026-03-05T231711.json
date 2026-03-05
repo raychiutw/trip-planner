@@ -176,7 +176,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": "https://minako.tw/japan-family/"
+                  "blogUrl": null
                 },
                 {
                   "category": "超市",
@@ -216,14 +216,13 @@
                 "googleQuery": "https://maps.google.com/?q=Kansai+International+Airport",
                 "appleQuery": "https://maps.apple.com/?q=Kansai+International+Airport"
               }
-            ],
-            "googleRating": 4.0
+            ]
           },
           {
             "time": "12:00",
             "title": "搭乘 Haruka 前往京都",
             "description": "WEST QR 搭乘，約75分鐘直達京都車站",
-            "travel": {
+            "transit": {
               "text": "Haruka 特急，約75分鐘",
               "type": "train"
             }
@@ -242,63 +241,52 @@
                     "name": "京都拉麵小路",
                     "hours": "11:00~22:00",
                     "reservation": "不需預約",
-                    "description": "京都車站10F，集結全國知名拉麵店",
+                    "desc": "京都車站10F，集結全國知名拉麵店",
                     "price": "¥900~1200",
                     "blogUrl": "https://www.bigfang.tw/blog/post/42179428",
                     "location": {
                       "name": "京都拉麵小路",
                       "googleQuery": "https://maps.google.com/?q=%E4%BA%AC%E9%83%BD%E6%8B%89%E9%BA%B5%E5%B0%8F%E8%B7%AF+%E4%BA%AC%E9%83%BD%E9%A7%85",
                       "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E9%83%BD%E6%8B%89%E9%BA%B5%E5%B0%8F%E8%B7%AF"
-                    },
-                    "googleRating": 3.9
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "はしたて",
                     "hours": "11:00~16:00",
                     "reservation": "不需預約，排隊制",
-                    "description": "京都車站 The CUBE 內，京都和食人氣店",
+                    "desc": "京都車站 The CUBE 內，京都和食人氣店",
                     "price": "¥1200~1800",
-                    "blogUrl": "https://letsgokyoto.com/gourmet-around-kyoto-station/",
+                    "blogUrl": null,
                     "location": {
                       "name": "はしたて",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%AF%E3%81%97%E3%81%9F%E3%81%A6+%E4%BA%AC%E9%83%BD%E9%A7%85",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%AF%E3%81%97%E3%81%9F%E3%81%A6+%E4%BA%AC%E9%83%BD%E9%A7%85"
-                    },
-                    "googleRating": 3.8
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "志津屋 京都駅店",
                     "hours": "07:30~21:00",
                     "reservation": "不需預約",
-                    "description": "京都老牌麵包店，招牌カルネ三明治",
+                    "desc": "京都老牌麵包店，招牌カルネ三明治",
                     "price": "¥400~800",
                     "blogUrl": "https://mandyitsen.pixnet.net/blog/posts/10326521389",
                     "location": {
                       "name": "志津屋 京都駅店",
                       "googleQuery": "https://maps.google.com/?q=%E5%BF%97%E6%B4%A5%E5%B1%8B+%E4%BA%AC%E9%83%BD%E9%A7%85",
                       "appleQuery": "https://maps.apple.com/?q=%E5%BF%97%E6%B4%A5%E5%B1%8B+%E4%BA%AC%E9%83%BD%E9%A7%85"
-                    },
-                    "googleRating": 3.9
+                    }
                   }
                 ]
               }
-            ],
-            "locations": [
-              {
-                "name": "京都車站",
-                "googleQuery": "https://www.google.com/maps/search/%E4%BA%AC%E9%83%BD%E9%A7%85",
-                "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E9%83%BD%E9%A7%85"
-              }
-            ],
-            "googleRating": 4.1
+            ]
           },
           {
             "time": "14:00",
             "title": "Check-in Hotel Resol Trinity Kyoto",
             "description": "放行李後輕裝出發",
-            "travel": {
+            "transit": {
               "text": "地下鐵烏丸線 京都→烏丸御池，約5分鐘",
               "type": "train"
             },
@@ -308,8 +296,7 @@
                 "googleQuery": "https://maps.google.com/?q=Hotel+Resol+Trinity+Kyoto",
                 "appleQuery": "https://maps.apple.com/?q=Hotel+Resol+Trinity+Kyoto"
               }
-            ],
-            "googleRating": 4.3
+            ]
           },
           {
             "time": "14:30",
@@ -322,11 +309,10 @@
                 "appleQuery": "https://maps.apple.com/?q=La+Madrague+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.1
+            }
           },
           {
             "time": "15:30",
@@ -340,11 +326,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E5%BE%A1%E9%87%91%E7%A5%9E%E7%A4%BE"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約8分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "16:15",
@@ -357,11 +342,10 @@
                 "appleQuery": "https://maps.apple.com/?q=House+of+Ki+No+Bi+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.4
+            }
           },
           {
             "time": "17:00",
@@ -374,7 +358,7 @@
                 "appleQuery": "https://maps.apple.com/?q=Kawaramachi+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
             },
@@ -403,7 +387,7 @@
                       "生活雜貨",
                       "京都限定商品"
                     ],
-                    "blogUrl": "https://archerplus.pixnet.net/blog/post/234434154"
+                    "blogUrl": null
                   },
                   {
                     "category": "伴手禮",
@@ -414,12 +398,11 @@
                       "飾品",
                       "生活用品"
                     ],
-                    "blogUrl": ""
+                    "blogUrl": null
                   }
                 ]
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "20:00",
@@ -432,7 +415,7 @@
                 "appleQuery": "https://maps.apple.com/?q=%E6%9F%9A%E5%AD%90%E5%85%83+%E4%BA%AC%E9%83%BD"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
             },
@@ -446,50 +429,46 @@
                     "name": "先斗町 いづもや",
                     "hours": "17:00~22:00",
                     "reservation": "建議預約",
-                    "description": "先斗町老舖，京風鰻魚與會席料理",
+                    "desc": "先斗町老舖，京風鰻魚與會席料理",
                     "price": "¥3000~5000",
                     "blogUrl": "https://visitkyototw.pixnet.net/blog/post/110599156",
                     "location": {
                       "name": "先斗町 いづもや",
                       "googleQuery": "https://maps.google.com/?q=%E5%85%88%E6%96%97%E7%94%BA+%E3%81%84%E3%81%A5%E3%82%82%E3%82%84",
                       "appleQuery": "https://maps.apple.com/?q=%E5%85%88%E6%96%97%E7%94%BA+%E3%81%84%E3%81%A5%E3%82%82%E3%82%84"
-                    },
-                    "googleRating": 3.8
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "木屋町 串くら 本店",
                     "hours": "17:30~23:00",
                     "reservation": "建議預約",
-                    "description": "京地雞串燒名店，炭火串焼き",
+                    "desc": "京地雞串燒名店，炭火串焼き",
                     "price": "¥3000~5000",
-                    "blogUrl": "https://cpk24.pixnet.net/blog/post/14275717",
+                    "blogUrl": null,
                     "location": {
                       "name": "串くら 本店",
                       "googleQuery": "https://maps.google.com/?q=%E4%B8%B2%E3%81%8F%E3%82%89+%E6%9C%AC%E5%BA%97+%E6%9C%A8%E5%B1%8B%E7%94%BA",
                       "appleQuery": "https://maps.apple.com/?q=%E4%B8%B2%E3%81%8F%E3%82%89+%E6%9C%AC%E5%BA%97"
-                    },
-                    "googleRating": 4.1
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "壹銭洋食",
                     "hours": "11:00~翌3:00",
                     "reservation": "不需預約",
-                    "description": "京都版大阪燒，昭和懷舊風",
+                    "desc": "京都版大阪燒，昭和懷舊風",
                     "price": "¥600~1000",
                     "blogUrl": "https://geofrania.pixnet.net/blog/post/225911921",
                     "location": {
                       "name": "壹銭洋食",
                       "googleQuery": "https://maps.google.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F+%E7%A5%87%E5%9C%92",
                       "appleQuery": "https://maps.apple.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F"
-                    },
-                    "googleRating": 4.0
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.0
+            ]
           },
           {
             "time": "21:30",
@@ -502,11 +481,10 @@
                 "appleQuery": "https://maps.apple.com/?q=C-pla+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.1
+            }
           }
         ]
       }
@@ -538,7 +516,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": "https://minako.tw/japan-family/"
+                  "blogUrl": null
                 },
                 {
                   "category": "超市",
@@ -578,13 +556,12 @@
                 "googleQuery": "https://maps.google.com/?q=Stumptown+Coffee+Roasters+Kyoto",
                 "appleQuery": "https://maps.apple.com/?q=Stumptown+Coffee+Roasters+Kyoto"
               }
-            ],
-            "googleRating": 4.5
+            ]
           },
           {
             "time": "10:00",
             "title": "前往宇治",
-            "travel": {
+            "transit": {
               "text": "JR 奈良線 京都→宇治，約25分鐘",
               "type": "train"
             }
@@ -610,50 +587,46 @@
                     "name": "しゅばく",
                     "hours": "11:00~16:00",
                     "reservation": "不需預約",
-                    "description": "手打蕎麥麵名店，宇治在地推薦",
+                    "desc": "手打蕎麥麵名店，宇治在地推薦",
                     "price": "¥1000~1500",
                     "blogUrl": "https://www.travalearth.com/post-31410162/",
                     "location": {
                       "name": "しゅばく",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%97%E3%82%85%E3%81%B0%E3%81%8F+%E5%AE%87%E6%B2%BB",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%97%E3%82%85%E3%81%B0%E3%81%8F+%E5%AE%87%E6%B2%BB"
-                    },
-                    "googleRating": 4.3
+                    }
                   },
                   {
                     "category": "京都料理",
                     "name": "伊藤久右衛門 本店",
                     "hours": "10:00~18:00",
                     "reservation": "不需預約",
-                    "description": "宇治抹茶蕎麥麵與抹茶甜點",
+                    "desc": "宇治抹茶蕎麥麵與抹茶甜點",
                     "price": "¥1200~1800",
                     "blogUrl": "https://tisshuang.com/blog/post/itohkyuemon",
                     "location": {
                       "name": "伊藤久右衛門 本店",
                       "googleQuery": "https://maps.google.com/?q=%E4%BC%8A%E8%97%A4%E4%B9%85%E5%8F%B3%E8%A1%9B%E9%96%80+%E6%9C%AC%E5%BA%97+%E5%AE%87%E6%B2%BB",
                       "appleQuery": "https://maps.apple.com/?q=%E4%BC%8A%E8%97%A4%E4%B9%85%E5%8F%B3%E8%A1%9B%E9%96%80+%E6%9C%AC%E5%BA%97"
-                    },
-                    "googleRating": 4.2
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "通圓 宇治本店",
                     "hours": "09:30~17:30",
                     "reservation": "不需預約",
-                    "description": "創業 850 年茶屋，茶蕎麥與甜點",
+                    "desc": "創業 850 年茶屋，茶蕎麥與甜點",
                     "price": "¥800~1500",
                     "blogUrl": "https://monicalin0219.pixnet.net/blog/posts/5061695562",
                     "location": {
                       "name": "通圓",
                       "googleQuery": "https://maps.google.com/?q=%E9%80%9A%E5%9C%93+%E5%AE%87%E6%B2%BB%E6%9C%AC%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E9%80%9A%E5%9C%93+%E5%AE%87%E6%B2%BB%E6%9C%AC%E5%BA%97"
-                    },
-                    "googleRating": 4.1
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.3
+            ]
           },
           {
             "time": "12:30",
@@ -667,11 +640,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E4%B8%AD%E6%9D%91%E8%97%A4%E5%90%89+%E5%AE%87%E6%B2%BB%E6%9C%AC%E5%BA%97"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.4
+            }
           },
           {
             "time": "13:30",
@@ -685,11 +657,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E5%B9%B3%E7%AD%89%E9%99%A2"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.5
+            }
           },
           {
             "time": "15:00",
@@ -702,11 +673,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E5%AE%87%E6%B2%BB%E4%B8%8A%E7%A5%9E%E7%A4%BE"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "16:00",
@@ -720,16 +690,15 @@
                 "appleQuery": "https://maps.apple.com/?q=%E4%BC%8A%E8%97%A4%E4%B9%85%E5%8F%B3%E8%A1%9B%E9%96%80+%E5%AE%87%E6%B2%BB"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.2
+            }
           },
           {
             "time": "17:00",
             "title": "返回京都",
-            "travel": {
+            "transit": {
               "text": "JR 奈良線 宇治→京都，約25分鐘",
               "type": "train"
             }
@@ -745,7 +714,7 @@
                 "appleQuery": "https://maps.apple.com/?q=%E7%84%BC%E8%82%89%E7%94%B2+%E4%BA%AC%E9%83%BD"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約15分鐘",
               "type": "walking"
             },
@@ -759,50 +728,46 @@
                     "name": "弘 木屋町店",
                     "hours": "17:00~23:00",
                     "reservation": "建議預約",
-                    "description": "京都黑毛和牛燒肉名店",
+                    "desc": "京都黑毛和牛燒肉名店",
                     "price": "¥5000~8000",
                     "blogUrl": "https://kenwhitney.pixnet.net/blog/post/42052645",
                     "location": {
                       "name": "弘 木屋町店",
                       "googleQuery": "https://maps.google.com/?q=%E5%BC%98+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97+%E4%BA%AC%E9%83%BD+%E7%84%BC%E8%82%89",
                       "appleQuery": "https://maps.apple.com/?q=%E5%BC%98+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97"
-                    },
-                    "googleRating": 4.3
+                    }
                   },
                   {
                     "category": "京都料理",
                     "name": "天壇 祇園本店",
                     "hours": "17:00~23:00",
                     "reservation": "建議預約",
-                    "description": "京都燒肉名門，醬汁獨門配方",
+                    "desc": "京都燒肉名門，醬汁獨門配方",
                     "price": "¥5000~8000",
                     "blogUrl": "https://vickylife.com/tendan/",
                     "location": {
                       "name": "天壇 祇園本店",
                       "googleQuery": "https://maps.google.com/?q=%E7%84%BC%E8%82%89%E3%81%AE%E5%90%8D%E9%96%80+%E5%A4%A9%E5%A3%87+%E7%A5%87%E5%9C%92%E6%9C%AC%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E5%A4%A9%E5%A3%87+%E7%A5%87%E5%9C%92%E6%9C%AC%E5%BA%97"
-                    },
-                    "googleRating": 4.1
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "肉料理 おか",
                     "hours": "17:30~22:00",
                     "reservation": "建議預約",
-                    "description": "隱藏版肉割烹，京都和牛料理",
+                    "desc": "隱藏版肉割烹，京都和牛料理",
                     "price": "¥8000~12000",
-                    "blogUrl": "",
+                    "blogUrl": null,
                     "location": {
                       "name": "肉料理 おか",
                       "googleQuery": "https://maps.google.com/?q=%E8%82%89%E6%96%99%E7%90%86+%E3%81%8A%E3%81%8B+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E8%82%89%E6%96%99%E7%90%86+%E3%81%8A%E3%81%8B+%E4%BA%AC%E9%83%BD"
-                    },
-                    "googleRating": 4.4
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.3
+            ]
           },
           {
             "time": "21:30",
@@ -815,11 +780,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E3%83%89%E3%83%B3%E3%82%AD%E3%83%9B%E3%83%BC%E3%83%86+%E4%BA%AC%E9%83%BD%E6%B2%B3%E5%8E%9F%E7%94%BA"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.0
+            }
           }
         ]
       }
@@ -851,7 +815,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": "https://minako.tw/japan-family/"
+                  "blogUrl": null
                 },
                 {
                   "category": "超市",
@@ -891,8 +855,7 @@
                 "googleQuery": "https://maps.google.com/?q=%E9%80%B2%E3%80%85%E5%A0%82+%E4%B8%89%E6%9D%A1%E5%BA%97",
                 "appleQuery": "https://maps.apple.com/?q=%E9%80%B2%E9%80%B2%E5%A0%82+%E4%B8%89%E6%9D%A1%E5%BA%97"
               }
-            ],
-            "googleRating": 4.1
+            ]
           },
           {
             "time": "10:15",
@@ -905,11 +868,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E9%B4%A8%E5%B7%9D%E3%83%87%E3%83%AB%E3%82%BF"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約15分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.4
+            }
           },
           {
             "time": "11:00",
@@ -922,11 +884,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E6%9D%91%E4%B8%8A%E9%96%8B%E6%96%B0%E5%A0%82"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "11:30",
@@ -939,11 +900,10 @@
                 "appleQuery": "https://maps.apple.com/?q=Blue+Bottle+Coffee+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.4
+            }
           },
           {
             "time": "12:30",
@@ -956,7 +916,7 @@
                 "appleQuery": "https://maps.apple.com/?q=bigoli+kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
             },
@@ -970,50 +930,46 @@
                     "name": "麺屋猪一 離れ",
                     "hours": "11:00~15:00",
                     "reservation": "不需預約，排隊制",
-                    "description": "米其林推薦拉麵，醬油清湯系",
+                    "desc": "米其林推薦拉麵，醬油清湯系",
                     "price": "¥900~1200",
                     "blogUrl": "https://jimmraz.pixnet.net/blog/post/49866548",
                     "location": {
                       "name": "麺屋猪一 離れ",
                       "googleQuery": "https://maps.google.com/?q=%E9%BA%BA%E5%B1%8B%E7%8C%AA%E4%B8%80+%E9%9B%A2%E3%82%8C+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E9%BA%BA%E5%B1%8B%E7%8C%AA%E4%B8%80+%E9%9B%A2%E3%82%8C"
-                    },
-                    "googleRating": 4.2
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "mumokuteki cafe",
                     "hours": "11:30~21:00",
                     "reservation": "不需預約",
-                    "description": "蔬食咖啡廳，健康和風料理",
+                    "desc": "蔬食咖啡廳，健康和風料理",
                     "price": "¥1200~1800",
                     "blogUrl": "https://haruhii.pixnet.net/blog/post/45090762-mumokuteki-cafe&foods",
                     "location": {
                       "name": "mumokuteki cafe",
                       "googleQuery": "https://maps.google.com/?q=mumokuteki+cafe+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=mumokuteki+cafe"
-                    },
-                    "googleRating": 4.1
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "キルフェボン 京都",
                     "hours": "11:00~19:00",
                     "reservation": "不需預約",
-                    "description": "季節水果塔名店",
+                    "desc": "季節水果塔名店",
                     "price": "¥800~1500",
                     "blogUrl": "https://boo2k.com/%E4%BA%AC%E9%83%BD%E7%BE%8E%E9%A3%9Fquil-fait-bon%E3%82%AD%E3%83%AB%E3%83%95%E3%82%A7%E3%83%9C%E3%83%B3%E4%BA%AC%E9%83%BD%E7%94%9C%E9%BB%9E%E5%BF%85%E5%90%83%E6%96%B0%E9%AE%AE%E6%B0%B4%E6%9E%9C/",
                     "location": {
                       "name": "キルフェボン 京都",
                       "googleQuery": "https://maps.google.com/?q=%E3%82%AD%E3%83%AB%E3%83%95%E3%82%A7%E3%83%9C%E3%83%B3+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%AD%E3%83%AB%E3%83%95%E3%82%A7%E3%83%9C%E3%83%B3+%E4%BA%AC%E9%83%BD"
-                    },
-                    "googleRating": 4.2
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "14:00",
@@ -1027,11 +983,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E9%8C%A6%E5%B8%82%E5%A0%B4"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "15:00",
@@ -1043,8 +998,7 @@
                 "googleQuery": "https://maps.google.com/?q=Daiyasu+oyster+bar+%E9%8C%A6%E5%B8%82%E5%A0%B4",
                 "appleQuery": "https://maps.apple.com/?q=Daiyasu+oyster+bar"
               }
-            ],
-            "googleRating": 4.3
+            ]
           },
           {
             "time": "16:00",
@@ -1057,11 +1011,10 @@
                 "appleQuery": "https://maps.apple.com/?q=Beams+%E4%BA%AC%E9%83%BD"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.1
+            }
           },
           {
             "time": "17:00",
@@ -1074,11 +1027,10 @@
                 "appleQuery": "https://maps.apple.com/?q=WEEKENDERS+Coffee"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.5
+            }
           },
           {
             "time": "19:00",
@@ -1091,7 +1043,7 @@
                 "appleQuery": "https://maps.apple.com/?q=charlie+izakaya+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
             },
@@ -1105,50 +1057,46 @@
                     "name": "赤垣屋",
                     "hours": "17:00~22:30",
                     "reservation": "不需預約",
-                    "description": "百年居酒屋，京都在地人推薦",
+                    "desc": "百年居酒屋，京都在地人推薦",
                     "price": "¥2000~4000",
-                    "blogUrl": "",
+                    "blogUrl": null,
                     "location": {
                       "name": "赤垣屋",
                       "googleQuery": "https://maps.google.com/?q=%E8%B5%A4%E5%9E%A3%E5%B1%8B+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E8%B5%A4%E5%9E%A3%E5%B1%8B+%E4%BA%AC%E9%83%BD"
-                    },
-                    "googleRating": 4.0
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "酒陶 柳野",
                     "hours": "17:30~23:00",
                     "reservation": "建議預約",
-                    "description": "京風割烹居酒屋，當季食材",
+                    "desc": "京風割烹居酒屋，當季食材",
                     "price": "¥3000~5000",
-                    "blogUrl": "",
+                    "blogUrl": null,
                     "location": {
                       "name": "酒陶 柳野",
                       "googleQuery": "https://maps.google.com/?q=%E9%85%92%E9%99%B6+%E6%9F%B3%E9%87%8E+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E9%85%92%E9%99%B6+%E6%9F%B3%E9%87%8E"
-                    },
-                    "googleRating": 4.1
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "スタンド きのした",
                     "hours": "18:00~翌1:00",
                     "reservation": "不需預約",
-                    "description": "站立式酒場，創作料理配自然酒",
+                    "desc": "站立式酒場，創作料理配自然酒",
                     "price": "¥2000~4000",
-                    "blogUrl": "",
+                    "blogUrl": null,
                     "location": {
                       "name": "スタンド きのした",
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E3%81%8D%E3%81%AE%E3%81%97%E3%81%9F+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E3%81%8D%E3%81%AE%E3%81%97%E3%81%9F"
-                    },
-                    "googleRating": 4.2
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.3
+            ]
           },
           {
             "time": "21:00",
@@ -1161,11 +1109,10 @@
                 "appleQuery": "https://maps.apple.com/?q=L%27Escamoteur+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約5分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.6
+            }
           }
         ]
       }
@@ -1197,7 +1144,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": "https://minako.tw/japan-family/"
+                  "blogUrl": null
                 },
                 {
                   "category": "超市",
@@ -1237,8 +1184,7 @@
                 "googleQuery": "https://maps.google.com/?q=Fuglen+Kyoto",
                 "appleQuery": "https://maps.apple.com/?q=Fuglen+Kyoto"
               }
-            ],
-            "googleRating": 4.5
+            ]
           },
           {
             "time": "10:00",
@@ -1251,11 +1197,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E8%B1%AA%E9%96%80%E5%BE%A1%E5%AE%88+%E4%BA%AC%E9%83%BD"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "巴士約20分鐘",
               "type": "train"
-            },
-            "googleRating": 4.0
+            }
           },
           {
             "time": "10:30",
@@ -1269,11 +1214,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E9%87%91%E9%96%A3%E5%AF%BA"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.8
+            }
           },
           {
             "time": "12:30",
@@ -1286,7 +1230,7 @@
                 "appleQuery": "https://maps.apple.com/?q=%E7%82%AD%E7%84%BC%E3%81%86%E3%81%AA%E3%81%8E+%E4%BA%AC%E9%83%BD"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "巴士約25分鐘",
               "type": "train"
             },
@@ -1300,50 +1244,46 @@
                     "name": "かね正",
                     "hours": "11:30~14:00, 17:00~20:00",
                     "reservation": "建議預約",
-                    "description": "祇園鰻魚名店，きんし丼必吃",
+                    "desc": "祇園鰻魚名店，きんし丼必吃",
                     "price": "¥2500~4000",
                     "blogUrl": "https://mimicat1531.pixnet.net/blog/post/49379880",
                     "location": {
                       "name": "かね正",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8B%E3%81%AD%E6%AD%A3+%E4%BA%AC%E9%83%BD+%E9%B0%BB",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%8B%E3%81%AD%E6%AD%A3+%E4%BA%AC%E9%83%BD"
-                    },
-                    "googleRating": 4.0
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "京極かねよ",
                     "hours": "11:30~20:30",
                     "reservation": "不需預約",
-                    "description": "百年鰻魚老舖，巨大玉子燒蓋飯",
+                    "desc": "百年鰻魚老舖，巨大玉子燒蓋飯",
                     "price": "¥2000~3500",
                     "blogUrl": "https://www.bigfang.tw/blog/post/kyogoku-kaneyo-kyoto",
                     "location": {
                       "name": "京極かねよ",
                       "googleQuery": "https://maps.google.com/?q=%E4%BA%AC%E6%A5%B5%E3%81%8B%E3%81%AD%E3%82%88+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E6%A5%B5%E3%81%8B%E3%81%AD%E3%82%88"
-                    },
-                    "googleRating": 3.9
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "グリル小宝",
                     "hours": "11:30~21:00",
                     "reservation": "不需預約",
-                    "description": "昭和洋食名店，招牌巨大蛋包飯",
+                    "desc": "昭和洋食名店，招牌巨大蛋包飯",
                     "price": "¥1200~1800",
                     "blogUrl": "https://openchiang1113.pixnet.net/blog/post/110365034",
                     "location": {
                       "name": "グリル小宝",
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D"
-                    },
-                    "googleRating": 4.2
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "14:00",
@@ -1356,11 +1296,10 @@
                 "appleQuery": "https://maps.apple.com/?q=ARCHI+coffee+and+wine"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.3
+            }
           },
           {
             "time": "15:30",
@@ -1373,11 +1312,10 @@
                 "appleQuery": "https://maps.apple.com/?q=ACTUAL+kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.4
+            }
           },
           {
             "time": "18:30",
@@ -1390,7 +1328,7 @@
                 "appleQuery": "https://maps.apple.com/?q=Niku+no+Hiroshige+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約15分鐘",
               "type": "walking"
             },
@@ -1404,50 +1342,46 @@
                     "name": "三嶋亭 本店",
                     "hours": "11:00~21:00",
                     "reservation": "建議預約",
-                    "description": "1873年創業壽喜燒老舖",
+                    "desc": "1873年創業壽喜燒老舖",
                     "price": "¥10000~15000",
                     "blogUrl": "https://www.bigfang.tw/blog/post/kyoto-mishimatei-lunch",
                     "location": {
                       "name": "三嶋亭 本店",
                       "googleQuery": "https://maps.google.com/?q=%E4%B8%89%E5%B6%8B%E4%BA%AD+%E6%9C%AC%E5%BA%97+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E4%B8%89%E5%B6%8B%E4%BA%AD+%E6%9C%AC%E5%BA%97"
-                    },
-                    "googleRating": 4.3
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "モリタ屋 木屋町店",
                     "hours": "11:30~22:00",
                     "reservation": "建議預約",
-                    "description": "京都和牛壽喜燒涮涮鍋",
+                    "desc": "京都和牛壽喜燒涮涮鍋",
                     "price": "¥6000~10000",
                     "blogUrl": "https://jimmraz.pixnet.net/blog/post/50547156",
                     "location": {
                       "name": "モリタ屋 木屋町店",
                       "googleQuery": "https://maps.google.com/?q=%E3%83%A2%E3%83%AA%E3%82%BF%E5%B1%8B+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E3%83%A2%E3%83%AA%E3%82%BF%E5%B1%8B+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97"
-                    },
-                    "googleRating": 4.2
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "十二段家 本店",
                     "hours": "11:30~21:30",
                     "reservation": "建議預約",
-                    "description": "壽喜燒涮涮鍋老舖，白味噌風味",
+                    "desc": "壽喜燒涮涮鍋老舖，白味噌風味",
                     "price": "¥5000~8000",
                     "blogUrl": "https://www.bring-you.info/zh-tw/juunidanya",
                     "location": {
                       "name": "十二段家 本店",
                       "googleQuery": "https://maps.google.com/?q=%E5%8D%81%E4%BA%8C%E6%AE%B5%E5%AE%B6+%E6%9C%AC%E5%BA%97+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E5%8D%81%E4%BA%8C%E6%AE%B5%E5%AE%B6+%E6%9C%AC%E5%BA%97"
-                    },
-                    "googleRating": 4.0
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.5
+            ]
           },
           {
             "time": "20:30",
@@ -1460,11 +1394,10 @@
                 "appleQuery": "https://maps.apple.com/?q=Bar+Rocking+Chair+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.5
+            }
           }
         ]
       }
@@ -1496,7 +1429,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": "https://minako.tw/japan-family/"
+                  "blogUrl": null
                 },
                 {
                   "category": "超市",
@@ -1536,8 +1469,7 @@
                 "googleQuery": "https://maps.google.com/?q=%E5%85%AD%E6%9B%9C%E7%A4%BE+%E4%BA%AC%E9%83%BD",
                 "appleQuery": "https://maps.apple.com/?q=%E5%85%AD%E6%9B%9C%E7%A4%BE+%E4%BA%AC%E9%83%BD"
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "10:00",
@@ -1551,11 +1483,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E4%BC%8F%E8%A6%8B%E7%A8%BB%E8%8D%B7%E5%A4%A7%E7%A4%BE"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "JR 奈良線 京都→稲荷，約5分鐘",
               "type": "train"
-            },
-            "googleRating": 4.6
+            }
           },
           {
             "time": "12:30",
@@ -1568,7 +1499,7 @@
                 "appleQuery": "https://maps.apple.com/?q=%E5%AE%AE%E5%B7%9D%E8%B1%9A%E8%A1%9B%E9%96%80"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "JR 稲荷→京都，再步行約15分鐘，約25分鐘",
               "type": "train"
             },
@@ -1582,50 +1513,46 @@
                     "name": "名代とんかつ かつくら 四条東洞院店",
                     "hours": "11:00~21:30",
                     "reservation": "不需預約",
-                    "description": "京都在地豬排名店，麥飯白菜吃到飽",
+                    "desc": "京都在地豬排名店，麥飯白菜吃到飽",
                     "price": "¥1500~2500",
                     "blogUrl": "https://pp761211.pixnet.net/blog/post/222605554",
                     "location": {
                       "name": "かつくら 四条東洞院店",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8B%E3%81%A4%E3%81%8F%E3%82%89+%E5%9B%9B%E6%9D%A1%E6%9D%B1%E6%B4%9E%E9%99%A2%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%8B%E3%81%A4%E3%81%8F%E3%82%89+%E5%9B%9B%E6%9D%A1%E6%9D%B1%E6%B4%9E%E9%99%A2%E5%BA%97"
-                    },
-                    "googleRating": 4.1
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "祢ざめ家",
                     "hours": "10:00~18:00",
                     "reservation": "不需預約",
-                    "description": "伏見稻荷參道名物鰻魚飯與鯖壽司",
+                    "desc": "伏見稻荷參道名物鰻魚飯與鯖壽司",
                     "price": "¥1000~2000",
                     "blogUrl": "https://upssmile.com/33288/nezameya",
                     "location": {
                       "name": "祢ざめ家",
                       "googleQuery": "https://maps.google.com/?q=%E7%A5%A2%E3%81%96%E3%82%81%E5%AE%B6+%E4%BC%8F%E8%A6%8B%E7%A8%B2%E8%8D%B7",
                       "appleQuery": "https://maps.apple.com/?q=%E7%A5%A2%E3%81%96%E3%82%81%E5%AE%B6"
-                    },
-                    "googleRating": 3.8
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "グリル小宝",
                     "hours": "11:30~21:00",
                     "reservation": "不需預約",
-                    "description": "昭和洋食名店，巨大蛋包飯",
+                    "desc": "昭和洋食名店，巨大蛋包飯",
                     "price": "¥1200~1800",
                     "blogUrl": "https://openchiang1113.pixnet.net/blog/post/110365034",
                     "location": {
                       "name": "グリル小宝",
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D"
-                    },
-                    "googleRating": 4.2
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.5
+            ]
           },
           {
             "time": "14:00",
@@ -1639,11 +1566,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E6%B8%85%E6%B0%B4%E5%AF%BA"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "巴士約20分鐘",
               "type": "train"
-            },
-            "googleRating": 4.6
+            }
           },
           {
             "time": "16:00",
@@ -1656,11 +1582,10 @@
                 "appleQuery": "https://maps.apple.com/?q=%E7%A5%87%E5%9C%92%E5%8C%97%E5%B7%9D%E5%8D%8A%E5%85%B5%E8%A1%9B"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約15分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.5
+            }
           },
           {
             "time": "18:30",
@@ -1673,7 +1598,7 @@
                 "appleQuery": "https://maps.apple.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC%E3%81%8D+%E4%B8%96%E9%83%BD"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約15分鐘",
               "type": "walking"
             },
@@ -1687,50 +1612,46 @@
                     "name": "ジャンボ 本店",
                     "hours": "12:00~22:00",
                     "reservation": "不需預約",
-                    "description": "京都大阪燒名店，超大份量",
+                    "desc": "京都大阪燒名店，超大份量",
                     "price": "¥800~1500",
-                    "blogUrl": "",
+                    "blogUrl": null,
                     "location": {
                       "name": "ジャンボ 本店",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC+%E3%82%B8%E3%83%A3%E3%83%B3%E3%83%9C+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B8%E3%83%A3%E3%83%B3%E3%83%9C+%E4%BA%AC%E9%83%BD"
-                    },
-                    "googleRating": 4.1
+                    }
                   },
                   {
                     "category": "和食",
                     "name": "吉野 祇園店",
                     "hours": "11:30~22:00",
                     "reservation": "不需預約",
-                    "description": "鐵板燒/大阪燒老舖",
+                    "desc": "鐵板燒/大阪燒老舖",
                     "price": "¥800~1500",
-                    "blogUrl": "",
+                    "blogUrl": null,
                     "location": {
                       "name": "吉野 祇園店",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC+%E5%90%89%E9%87%8E+%E7%A5%87%E5%9C%92",
                       "appleQuery": "https://maps.apple.com/?q=%E5%90%89%E9%87%8E+%E7%A5%87%E5%9C%92"
-                    },
-                    "googleRating": 4.0
+                    }
                   },
                   {
                     "category": "洋食",
                     "name": "壹銭洋食",
                     "hours": "11:00~翌3:00",
                     "reservation": "不需預約",
-                    "description": "京都版大阪燒，昭和懷舊風",
+                    "desc": "京都版大阪燒，昭和懷舊風",
                     "price": "¥600~1000",
                     "blogUrl": "https://geofrania.pixnet.net/blog/post/225911921",
                     "location": {
                       "name": "壹銭洋食",
                       "googleQuery": "https://maps.google.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F+%E7%A5%87%E5%9C%92",
                       "appleQuery": "https://maps.apple.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F"
-                    },
-                    "googleRating": 4.0
+                    }
                   }
                 ]
               }
-            ],
-            "googleRating": 4.2
+            ]
           },
           {
             "time": "20:00",
@@ -1743,11 +1664,10 @@
                 "appleQuery": "https://maps.apple.com/?q=C-pla+Kyoto"
               }
             ],
-            "travel": {
+            "transit": {
               "text": "步行約10分鐘",
               "type": "walking"
-            },
-            "googleRating": 4.1
+            }
           }
         ]
       }
@@ -1774,14 +1694,13 @@
                 "googleQuery": "https://maps.google.com/?q=%E3%82%B9%E3%83%9E%E3%83%BC%E3%83%88%E7%8F%88%E7%90%B2%E5%BA%97+%E4%BA%AC%E9%83%BD",
                 "appleQuery": "https://maps.apple.com/?q=Smart+Coffee+Kyoto"
               }
-            ],
-            "googleRating": 4.3
+            ]
           },
           {
             "time": "10:30",
             "title": "退房・前往京都車站",
             "description": "收拾行李退房",
-            "travel": {
+            "transit": {
               "text": "地下鐵烏丸線 烏丸御池→京都，約5分鐘",
               "type": "train"
             }
@@ -1790,7 +1709,7 @@
             "time": "11:00",
             "title": "搭乘 Haruka 前往關西機場",
             "description": "WEST QR 搭乘，約75分鐘",
-            "travel": {
+            "transit": {
               "text": "Haruka 特急，約75分鐘",
               "type": "train"
             },
@@ -1800,8 +1719,7 @@
                 "googleQuery": "https://maps.google.com/?q=%E4%BA%AC%E9%83%BD%E9%A7%85",
                 "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E9%83%BD%E9%A7%85"
               }
-            ],
-            "googleRating": 4.0
+            ]
           },
           {
             "time": "12:30",
@@ -1810,21 +1728,14 @@
             "infoBoxes": [
               {
                 "type": "restaurants",
-                "title": "機場午餐推薦",
                 "restaurants": [
                   {
-                    "category": "洋食",
                     "name": "Town Gate Cafe",
-                    "hours": "07:00~21:00",
+                    "hours": "07:00-21:00",
                     "reservation": "不需預約",
-                    "description": "關西機場管制區內美食街",
-                    "blogUrl": "",
-                    "location": {
-                      "name": "Town Gate Cafe",
-                      "googleQuery": "https://maps.google.com/?q=Town+Gate+Kansai+Airport",
-                      "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport"
-                    },
-                    "googleRating": 3.5
+                    "googleQuery": "https://maps.google.com/?q=Town+Gate+Kansai+Airport",
+                    "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport",
+                    "blogUrl": null
                   }
                 ]
               }
@@ -1835,8 +1746,7 @@
                 "googleQuery": "https://maps.google.com/?q=Town+Gate+Kansai+Airport",
                 "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport"
               }
-            ],
-            "googleRating": 3.8
+            ]
           },
           {
             "time": "14:30",
@@ -1848,8 +1758,7 @@
                 "googleQuery": "https://maps.google.com/?q=Kansai+International+Airport",
                 "appleQuery": "https://maps.apple.com/?q=Kansai+International+Airport"
               }
-            ],
-            "googleRating": 4.0
+            ]
           }
         ]
       }
@@ -1982,7 +1891,7 @@
     }
   },
   "emergency": {
-    "title": "緊急聯絡資訊",
+    "title": "🆘 緊急聯絡資訊",
     "content": {
       "cards": [
         {

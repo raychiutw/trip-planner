@@ -24,7 +24,7 @@
 - **WHEN** 某日包含 `hotel` 欄位
 - **THEN** SHALL 確認存在必填欄位：`name`、`breakfast`（物件，含 `included` 欄位）
 - **AND** 選填欄位：`url`、`blogUrl`、`details`、`checkout`、`infoBoxes` 存在時驗證結構
-- **AND** `subs` 欄位 SHALL 不再是已知選填欄位（`hotel.subs[]` 已廢除）
+- **AND** SHALL 不包含 `subs` 欄位（已移除，停車場資料 SHALL 位於 `infoBoxes[type=parking]`）
 
 #### Scenario: hotel.breakfast 結構
 
@@ -36,12 +36,12 @@
 
 - **WHEN** 驗證 timeline 中的每個 event
 - **THEN** SHALL 確認存在必填欄位：`time`、`title`
-- **AND** 選填欄位：`titleUrl`、`blogUrl`、`desc`、`transit`、`infoBoxes`、`locations` 存在時驗證結構
+- **AND** 選填欄位：`titleUrl`、`blogUrl`、`description`、`travel`、`infoBoxes`、`locations` 存在時驗證結構
 
-#### Scenario: transit 結構
+#### Scenario: travel 結構
 
-- **WHEN** timeline event 包含 `transit`
-- **THEN** SHALL 確認包含 `type`（字串）和 `min`（數字）
+- **WHEN** timeline event 包含 `travel`
+- **THEN** SHALL 確認包含 `type`（字串）和 `text`（字串）
 
 #### Scenario: MapLocation 物件驗證
 
@@ -59,7 +59,7 @@
 
 - **WHEN** infoBox `type` 為 `restaurants`
 - **THEN** SHALL 確認 `restaurants` 為陣列，每個餐廳必填：`name`、`hours`、`reservation`
-- **AND** 選填欄位：`desc`、`price`、`url`、`reservationUrl`、`location`、`blogUrl`
+- **AND** 選填欄位：`description`、`price`、`url`、`reservationUrl`、`location`、`blogUrl`
 
 #### Scenario: shopping infoBox 結構
 
