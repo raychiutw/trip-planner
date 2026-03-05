@@ -8,7 +8,7 @@
       "牛排/烤魚",
       "當地特色"
     ],
-    "tripType": "transit"
+    "selfDrive": false
   },
   "footer": {
     "title": "2026 沖繩六日輕旅遊",
@@ -157,7 +157,7 @@
               "title": "飯店附近購物",
               "shops": [
                 {
-                  "category": "藥妝/雜貨",
+                  "category": "唐吉軻德",
                   "name": "唐吉軻德那霸店（全球最大旗艦店）",
                   "hours": "24 小時",
                   "mustBuy": [
@@ -167,7 +167,7 @@
                     "沖繩黑糖",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://www.travel.taipei/zh-tw/attractions/details/114"
+                  "blogUrl": "https://mimigo.tw/okinawa-donki/"
                 },
                 {
                   "category": "超商",
@@ -179,7 +179,7 @@
                     "飯糰便當",
                     "沖繩限定飲料"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/"
                 },
                 {
                   "category": "超市",
@@ -191,7 +191,7 @@
                     "泡盛",
                     "海葡萄（海ぶどう）"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200"
                 }
               ]
             }
@@ -327,7 +327,8 @@
                     },
                     "hours": "17:00~22:00",
                     "reservation": "TableCheck 線上預約",
-                    "blogUrl": "https://minako.tw/motobu-farm/"
+                    "blogUrl": "https://minako.tw/motobu-farm/",
+                    "googleRating": 4.3
                   },
                   {
                     "category": "牛排",
@@ -341,7 +342,8 @@
                     },
                     "hours": "11:00~翌1:30",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
+                    "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "當地特色",
@@ -355,7 +357,8 @@
                     },
                     "hours": "11:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/"
+                    "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/",
+                    "googleRating": 4.2
                   }
                 ]
               }
@@ -388,7 +391,7 @@
               "title": "飯店附近購物",
               "shops": [
                 {
-                  "category": "藥妝/雜貨",
+                  "category": "唐吉軻德",
                   "name": "唐吉軻德那霸店（全球最大旗艦店）",
                   "hours": "24 小時",
                   "mustBuy": [
@@ -398,7 +401,7 @@
                     "沖繩黑糖",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://www.travel.taipei/zh-tw/attractions/details/114"
+                  "blogUrl": "https://mimigo.tw/okinawa-donki/"
                 },
                 {
                   "category": "超商",
@@ -410,7 +413,7 @@
                     "飯糰便當",
                     "沖繩限定飲料"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/"
                 },
                 {
                   "category": "超市",
@@ -422,7 +425,7 @@
                     "泡盛",
                     "海葡萄（海ぶどう）"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200"
                 }
               ]
             }
@@ -477,6 +480,13 @@
             "time": "18:15",
             "title": "返回那霸，晚餐",
             "description": "一日遊結束，返回那霸市區享用晚餐",
+            "locations": [
+              {
+                "name": "那霸市區",
+                "googleQuery": "https://maps.google.com/?q=那覇市+国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇市+国際通り"
+              }
+            ],
             "infoBoxes": [
               {
                 "type": "restaurants",
@@ -494,7 +504,8 @@
                     },
                     "hours": "平日17:00~24:00／假日11:00~24:00",
                     "reservation": "EPARK 預約",
-                    "blogUrl": "https://purpleswallow.pixnet.net/blog/post/45092685"
+                    "blogUrl": "https://purpleswallow.pixnet.net/blog/post/45092685",
+                    "googleRating": 4.0
                   },
                   {
                     "category": "牛排",
@@ -508,7 +519,8 @@
                     },
                     "hours": "11:00~翌1:30",
                     "reservation": "不需訂位（排隊制）",
-                    "blogUrl": "https://amonblog.com/blog/post/jacks-steak"
+                    "blogUrl": "https://amonblog.com/blog/post/jacks-steak",
+                    "googleRating": 4.2
                   },
                   {
                     "category": "當地特色",
@@ -522,7 +534,8 @@
                     },
                     "hours": "17:30~24:00",
                     "reservation": "建議預約（電話 098-885-2178）",
-                    "blogUrl": "https://matcha-jp.com/tw/11883"
+                    "blogUrl": "https://matcha-jp.com/tw/11883",
+                    "googleRating": 4.2
                   }
                 ]
               }
@@ -555,7 +568,7 @@
               "title": "飯店附近購物",
               "shops": [
                 {
-                  "category": "藥妝/雜貨",
+                  "category": "唐吉軻德",
                   "name": "唐吉軻德那霸店（全球最大旗艦店）",
                   "hours": "24 小時",
                   "mustBuy": [
@@ -565,7 +578,7 @@
                     "沖繩黑糖",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://www.travel.taipei/zh-tw/attractions/details/114"
+                  "blogUrl": "https://mimigo.tw/okinawa-donki/"
                 },
                 {
                   "category": "超商",
@@ -577,7 +590,7 @@
                     "飯糰便當",
                     "沖繩限定飲料"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/"
                 },
                 {
                   "category": "超市",
@@ -589,7 +602,7 @@
                     "泡盛",
                     "海葡萄（海ぶどう）"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200"
                 }
               ]
             }
@@ -659,6 +672,13 @@
             "time": "21:30",
             "title": "返回那霸，晚餐",
             "description": "一日遊結束返回那霸市區，選擇深夜營業的餐廳用餐",
+            "locations": [
+              {
+                "name": "那霸市區",
+                "googleQuery": "https://maps.google.com/?q=那覇市+国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇市+国際通り"
+              }
+            ],
             "infoBoxes": [
               {
                 "type": "restaurants",
@@ -676,7 +696,8 @@
                     },
                     "hours": "平日 17:00~24:00／假日 11:00~24:00",
                     "reservation": "EPARK 線上預約",
-                    "blogUrl": "https://sweet212.pixnet.net/blog/posts/13364784554"
+                    "blogUrl": "https://sweet212.pixnet.net/blog/posts/13364784554",
+                    "googleRating": 4.0
                   },
                   {
                     "category": "牛排",
@@ -690,7 +711,8 @@
                     },
                     "hours": "11:00~翌1:30",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579"
+                    "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "當地特色",
@@ -704,7 +726,8 @@
                     },
                     "hours": "21:00~翌5:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-naha-midnight-ramen/"
+                    "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-naha-midnight-ramen/",
+                    "googleRating": 4.1
                   }
                 ]
               }
@@ -747,7 +770,7 @@
                     "Orion 啤酒罐裝",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759"
                 },
                 {
                   "category": "超市",
@@ -759,7 +782,7 @@
                     "沖繩海鮮",
                     "沖繩特產調味料"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://mimigo.tw/kokusai-street/"
                 },
                 {
                   "category": "藥妝",
@@ -771,7 +794,7 @@
                     "沖繩限定零食",
                     "消炎止痛貼布"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://mimigo.tw/cosmos-drug/"
                 }
               ]
             }
@@ -868,7 +891,8 @@
                     },
                     "hours": "11:00~23:00",
                     "reservation": "電話預約 098-923-5529",
-                    "blogUrl": "https://imksw.pixnet.net/blog/post/217994640"
+                    "blogUrl": "https://imksw.pixnet.net/blog/post/217994640",
+                    "googleRating": 4.0
                   },
                   {
                     "category": "牛排",
@@ -882,7 +906,8 @@
                     },
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://alicedaily.com/okinawa-aeonmall-gyubey-steak/"
+                    "blogUrl": "https://alicedaily.com/okinawa-aeonmall-gyubey-steak/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "當地特色",
@@ -896,7 +921,8 @@
                     },
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://ajunfun.tw/aeonmall/"
+                    "blogUrl": "https://ajunfun.tw/aeonmall/",
+                    "googleRating": 4.0
                   }
                 ]
               },
@@ -965,7 +991,13 @@
                     "hours": "11:30~15:00、17:00~22:00",
                     "reservation": "建議預約（TableCheck 線上預約）",
                     "desc": "沖繩本部牧場自家直營，本部牛肉質細嫩，是那霸國際通必吃燒肉",
-                    "blogUrl": "https://pfse64289.pixnet.net/blog/post/347219841"
+                    "blogUrl": "https://pfse64289.pixnet.net/blog/post/347219841",
+                    "location": {
+                      "name": "焼肉もとぶ牧場 那覇店",
+                      "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+那覇店",
+                      "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+那覇店"
+                    },
+                    "googleRating": 4.3
                   },
                   {
                     "category": "牛排",
@@ -974,16 +1006,35 @@
                     "reservation": "不需訂位",
                     "desc": "千元有找厚切牛排，白飯沙拉吃到飽",
                     "price": "¥1,000~",
-                    "blogUrl": "https://mimihan.tw/yappari-steak/"
+                    "blogUrl": "https://mimihan.tw/yappari-steak/",
+                    "location": {
+                      "name": "やっぱりステーキ 4th 国際通り店",
+                      "googleQuery": "https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店",
+                      "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店"
+                    },
+                    "googleRating": 4.1
                   },
                   {
                     "category": "當地特色",
                     "name": "琉球料理ぬちがふぅ",
                     "hours": "17:00~23:00",
                     "reservation": "建議預約",
-                    "blogUrl": "https://kafuokinawa.com/nuchigafu/"
+                    "blogUrl": "https://kafuokinawa.com/nuchigafu/",
+                    "location": {
+                      "name": "琉球料理 ぬちがふぅ 那覇",
+                      "googleQuery": "https://maps.google.com/?q=琉球料理+ぬちがふぅ+那覇",
+                      "appleQuery": "https://maps.apple.com/?q=琉球料理+ぬちがふぅ+那覇"
+                    },
+                    "googleRating": 4.2
                   }
                 ]
+              }
+            ],
+            "locations": [
+              {
+                "name": "那霸國際通周邊",
+                "googleQuery": "https://maps.google.com/?q=那覇国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇国際通り"
               }
             ]
           },
@@ -1024,6 +1075,17 @@
                       "隔日早餐備糧・飲料・零食"
                     ],
                     "blogUrl": "https://marukoblog.tw/lawson-okinawa.html"
+                  },
+                  {
+                    "category": "藥妝",
+                    "name": "ドラッグイレブン 那霸西店",
+                    "hours": "09:00~22:00",
+                    "mustBuy": [
+                      "沖繩限定 LuLuLun 面膜",
+                      "ANESSA 安耐曬防曬乳",
+                      "龍角散粉包"
+                    ],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
                   }
                 ]
               }
@@ -1065,7 +1127,7 @@
                     "Orion 啤酒罐裝",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759"
                 },
                 {
                   "category": "超市",
@@ -1077,7 +1139,7 @@
                     "沖繩海鮮",
                     "沖繩特產調味料"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://mimigo.tw/kokusai-street/"
                 },
                 {
                   "category": "藥妝",
@@ -1089,7 +1151,7 @@
                     "沖繩限定零食",
                     "消炎止痛貼布"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://mimigo.tw/cosmos-drug/"
                 }
               ]
             }
@@ -1170,7 +1232,8 @@
                     },
                     "hours": "10:00~21:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://adontrip.com/blog/71454/"
+                    "blogUrl": "https://adontrip.com/blog/71454/",
+                    "googleRating": 4.0
                   },
                   {
                     "category": "沖縄そば",
@@ -1184,7 +1247,8 @@
                     },
                     "hours": "10:00~21:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://adontrip.com/blog/71454/"
+                    "blogUrl": "https://adontrip.com/blog/71454/",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "海鮮丼",
@@ -1198,7 +1262,8 @@
                     },
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://adontrip.com/blog/71454/"
+                    "blogUrl": "https://adontrip.com/blog/71454/",
+                    "googleRating": 4.0
                   }
                 ]
               },
@@ -1268,7 +1333,8 @@
                     },
                     "hours": "平日 12:00~14:30, 17:00~22:00／假日 12:00~22:00",
                     "reservation": "電話預約 098-917-2789",
-                    "blogUrl": "https://lailai-web.com/ganaha-yakinikuten/"
+                    "blogUrl": "https://lailai-web.com/ganaha-yakinikuten/",
+                    "googleRating": 4.0
                   },
                   {
                     "category": "牛排",
@@ -1282,7 +1348,8 @@
                     },
                     "hours": "11:00~翌2:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://slowlifeinokinawa.com/steak88/"
+                    "blogUrl": "https://slowlifeinokinawa.com/steak88/",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "當地特色",
@@ -1296,7 +1363,8 @@
                     },
                     "hours": "15:00~22:00（週四定休）",
                     "reservation": "可預約",
-                    "blogUrl": "https://matcha-jp.com/tw/11883"
+                    "blogUrl": "https://matcha-jp.com/tw/11883",
+                    "googleRating": 4.0
                   }
                 ]
               }
@@ -1362,7 +1430,13 @@
                     "price": "¥600~",
                     "hours": "09:00~20:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/"
+                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/",
+                    "location": {
+                      "name": "空港食堂 那覇空港",
+                      "googleQuery": "https://maps.google.com/?q=空港食堂+那覇空港",
+                      "appleQuery": "https://maps.apple.com/?q=空港食堂+那覇空港"
+                    },
+                    "googleRating": 4.1
                   },
                   {
                     "category": "沖繩そば",
@@ -1371,7 +1445,13 @@
                     "price": "¥800~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/"
+                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/",
+                    "location": {
+                      "name": "天龍 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=天龍+那覇空港",
+                      "appleQuery": "https://maps.apple.com/?q=天龍+那覇空港"
+                    },
+                    "googleRating": 3.9
                   },
                   {
                     "category": "速食",
@@ -1380,9 +1460,22 @@
                     "price": "¥600~",
                     "hours": "06:30~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755",
+                    "location": {
+                      "name": "A&W 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=A%26W+那覇空港店",
+                      "appleQuery": "https://maps.apple.com/?q=A%26W+那覇空港店"
+                    },
+                    "googleRating": 4.0
                   }
                 ]
+              }
+            ],
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場"
               }
             ]
           },
@@ -1400,12 +1493,26 @@
                   "飛行時間：約1小時45分鐘"
                 ]
               }
+            ],
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場"
+              }
             ]
           },
           {
             "time": "14:20",
             "title": "抵達桃園國際機場",
-            "note": "めんそーれ（歡迎再來）沖繩！祝旅途愉快！"
+            "locations": [
+              {
+                "name": "桃園國際機場",
+                "googleQuery": "https://maps.google.com/?q=桃園國際機場",
+                "appleQuery": "https://maps.apple.com/?q=桃園國際機場"
+              }
+            ],
+            "description": "めんそーれ（歡迎再來）沖繩！祝旅途愉快！"
           }
         ]
       }
