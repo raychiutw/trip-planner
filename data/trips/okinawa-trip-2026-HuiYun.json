@@ -8,7 +8,7 @@
       "海鮮",
       "甜點"
     ],
-    "tripType": "self-drive"
+    "selfDrive": true
   },
   "footer": {
     "title": "2026 沖繩七日遊",
@@ -547,7 +547,8 @@
             "transit": {
               "text": "約7分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/"
           },
           {
             "time": "11:35-12:35",
@@ -606,7 +607,8 @@
             "transit": {
               "text": "約18分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://okinawa.letsgojp.com/archives/751316/"
           },
           {
             "time": "12:53-14:53",
@@ -628,7 +630,7 @@
                       "appleQuery": "https://maps.apple.com/?q=我部祖河食堂+浦添"
                     },
                     "hours": "11:00~20:00（售完即止，週三公休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/"
                   },
                   {
@@ -643,7 +645,7 @@
                       "mapcode": "33 394 819*12"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/"
                   },
                   {
@@ -723,7 +725,8 @@
             "transit": {
               "text": "約14分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://ajunfun.tw/parco-city/"
           },
           {
             "time": "19:08-20:08",
@@ -741,7 +744,8 @@
             "transit": {
               "text": "約24分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://mimigo.tw/urasoe-park/"
           },
           {
             "time": "20:10-21:10",
@@ -764,7 +768,7 @@
                       "mapcode": "33 556 625*14"
                     },
                     "hours": "11:00~22:00（全年無休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://mimigo.tw/gurumekaiten/"
                   },
                   {
@@ -778,7 +782,7 @@
                       "appleQuery": "https://maps.apple.com/?q=浜屋そば+北谷"
                     },
                     "hours": "10:30~20:30（售完即止）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://mimigo.tw/okinawa-americanvillage/"
                   },
                   {
@@ -792,7 +796,7 @@
                       "appleQuery": "https://maps.apple.com/?q=Blue+Seal+美浜"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
                   }
                 ]
@@ -860,7 +864,8 @@
             "transit": {
               "text": "約5分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
           },
           {
             "time": "23:37-00:37",
@@ -987,7 +992,8 @@
             "transit": {
               "text": "約20分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": ""
           },
           {
             "time": "11:25-12:25",
@@ -1005,7 +1011,8 @@
             "transit": {
               "text": "約30分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://www.jathao.com/2015/10/gala.html"
           },
           {
             "time": "12:55-13:25",
@@ -1023,7 +1030,8 @@
             "transit": {
               "text": "約20分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2697/"
           },
           {
             "time": "13:45-14:45",
@@ -1045,7 +1053,7 @@
                       "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
                     },
                     "hours": "11:00~16:00（售完即止）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort"
                   },
                   {
@@ -1073,7 +1081,7 @@
                       "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+北谷"
                     },
                     "hours": "11:00~翌02:00",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
@@ -1153,7 +1161,7 @@
                       "appleQuery": "https://maps.apple.com/?q=麺処じゅん坊+恩納"
                     },
                     "hours": "11:00~24:00（週四公休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/"
                   }
                 ]
@@ -1282,7 +1290,8 @@
             "transit": {
               "text": "約2分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobbyfun.tw/2024-01-11-2732/"
           },
           {
             "time": "11:28-12:28",
@@ -1320,7 +1329,7 @@
                       "appleQuery": "https://maps.apple.com/?q=ラーメン太陽+名護"
                     },
                     "hours": "11:00~21:00（週二公休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://tisshuang.com/blog/post/nago-ramen-taiyou/"
                   },
                   {
@@ -1361,7 +1370,8 @@
             "transit": {
               "text": "約34分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://okinawa.letsgojp.com/archives/17071/"
           },
           {
             "time": "15:28-15:58",
@@ -1379,7 +1389,8 @@
             "transit": {
               "text": "約2分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://okinawa.letsgojp.com/archives/737284/"
           },
           {
             "time": "16:00-17:00",
@@ -1401,7 +1412,7 @@
                       "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
                     },
                     "hours": "10:00~17:00（7~9月至 20:00）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://dorapig.com/shirasashokudou2025/"
                   },
                   {
@@ -1416,7 +1427,7 @@
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://hanblog.tw/ramendanbo/"
                   },
                   {
@@ -1457,7 +1468,8 @@
             "transit": {
               "text": "約29分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://okinawa.letsgojp.com/archives/392405/"
           },
           {
             "time": "19:30-20:30",
@@ -1493,7 +1505,7 @@
                       "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+名護"
                     },
                     "hours": "11:00~22:00（全年無休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://okinawa.letsgojp.com/archives/582485/"
                   },
                   {
@@ -1508,7 +1520,7 @@
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://hanblog.tw/ramendanbo/"
                   }
                 ]
@@ -1627,7 +1639,8 @@
             "transit": {
               "text": "約36分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": ""
           },
           {
             "time": "10:48-13:48",
@@ -1686,7 +1699,8 @@
             "transit": {
               "text": "約3分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://okinawa.letsgojp.com/archives/640089/"
           },
           {
             "time": "12:30-13:30",
@@ -1704,7 +1718,12 @@
                     "price": "¥1,200~",
                     "hours": "11:00~22:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/kaisen-sushi-okinawa/"
+                    "blogUrl": "https://mimihan.tw/kaisen-sushi-okinawa/",
+                    "location": {
+                      "name": "琉球回転寿司 海來 ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=琉球回転寿司+海來+ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=琉球回転寿司+海來+ライカム"
+                    }
                   },
                   {
                     "category": "拉麵",
@@ -1713,7 +1732,12 @@
                     "price": "¥980~",
                     "hours": "10:00~22:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/ichiran-ramen/"
+                    "blogUrl": "https://mimihan.tw/ichiran-ramen/",
+                    "location": {
+                      "name": "一蘭 イオンモール沖縄ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=一蘭+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=一蘭+イオンモール沖縄ライカム"
+                    }
                   },
                   {
                     "category": "漢堡",
@@ -1722,7 +1746,12 @@
                     "price": "¥700~",
                     "hours": "09:00~22:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755",
+                    "location": {
+                      "name": "A&W イオンモール沖縄ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=A%26W+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=A%26W+イオンモール沖縄ライカム"
+                    }
                   }
                 ]
               }
@@ -1743,7 +1772,8 @@
             "transit": {
               "text": "約34分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
           },
           {
             "time": "15:25-17:55",
@@ -1802,7 +1832,8 @@
             "transit": {
               "text": "約6分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
           },
           {
             "time": "18:01-19:01",
@@ -1824,7 +1855,7 @@
                       "mapcode": "33 157 208*63"
                     },
                     "hours": "11:00~20:00（週日公休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/"
                   },
                   {
@@ -1839,7 +1870,7 @@
                       "mapcode": "33 157 466*11"
                     },
                     "hours": "11:00~23:00（全年無休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/"
                   },
                   {
@@ -2049,7 +2080,8 @@
             "transit": {
               "text": "約7分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
           },
           {
             "time": "11:58-12:58",
@@ -2066,7 +2098,8 @@
             "transit": {
               "text": "約29分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": ""
           },
           {
             "time": "13:27-14:27",
@@ -2103,7 +2136,8 @@
             "transit": {
               "text": "約32分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobowin.blog/okinawa-world/"
           },
           {
             "time": "14:59-15:59",
@@ -2121,7 +2155,8 @@
             "transit": {
               "text": "約6分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2698/"
           },
           {
             "time": "16:05-17:05",
@@ -2189,7 +2224,8 @@
             "transit": {
               "text": "約5分鐘",
               "type": "car"
-            }
+            },
+            "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
           },
           {
             "time": "19:31-20:31",
@@ -2212,7 +2248,7 @@
                       "mapcode": "33 032 412*44"
                     },
                     "hours": "11:00~21:00",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/"
                   },
                   {
@@ -2227,7 +2263,7 @@
                       "mapcode": "33 341 059*55"
                     },
                     "hours": "11:00~24:00（全年無休）",
-                    "reservation": null,
+                    "reservation": "不需預約",
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/"
                   },
                   {
@@ -2305,7 +2341,8 @@
                 "appleQuery": "https://maps.apple.com/?q=沖縄アウトレットモールあしびなー",
                 "mapcode": "232 575 810*11"
               }
-            ]
+            ],
+            "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-ashibinaa-completeguide/"
           },
           {
             "time": "22:41-23:41",
@@ -2402,7 +2439,12 @@
                     "price": "¥600~",
                     "hours": "09:00~20:00",
                     "reservation": "不需預約",
-                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/"
+                    "blogUrl": "https://mimihan.tw/naha-airport-shokudo/",
+                    "location": {
+                      "name": "空港食堂 那覇空港",
+                      "googleQuery": "https://maps.google.com/?q=空港食堂+那覇空港",
+                      "appleQuery": "https://maps.apple.com/?q=空港食堂+那覇空港"
+                    }
                   },
                   {
                     "category": "沖繩そば",
@@ -2411,7 +2453,12 @@
                     "price": "¥800~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/"
+                    "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/",
+                    "location": {
+                      "name": "天龍 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=天龍+那覇空港",
+                      "appleQuery": "https://maps.apple.com/?q=天龍+那覇空港"
+                    }
                   },
                   {
                     "category": "速食",
@@ -2420,7 +2467,12 @@
                     "price": "¥600~",
                     "hours": "06:30~20:30",
                     "reservation": "不需預約",
-                    "blogUrl": "https://solomo.xinmedia.com/japan/116755"
+                    "blogUrl": "https://solomo.xinmedia.com/japan/116755",
+                    "location": {
+                      "name": "A&W 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=A%26W+那覇空港",
+                      "appleQuery": "https://maps.apple.com/?q=A%26W+那覇空港"
+                    }
                   }
                 ]
               }
