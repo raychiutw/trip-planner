@@ -8,7 +8,7 @@
       "義大利麵",
       "特色小吃"
     ],
-    "tripType": "self-drive"
+    "selfDrive": true
   },
   "footer": {
     "title": "2026 板橋十五日行程",
@@ -293,7 +293,8 @@
             "transit": {
               "text": "開車 約15分鐘",
               "type": "car"
-            }
+            },
+            "googleRating": 4.4
           },
           {
             "time": "12:00-13:00",
@@ -328,7 +329,8 @@
                     "price": "NT$50~100",
                     "hours": "08:00~17:30（週一休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://appletrees.tw/blog/post/huangshishichangyouyu"
+                    "blogUrl": "https://appletrees.tw/blog/post/huangshishichangyouyu",
+                    "googleRating": 4.3
                   }
                 ]
               }
@@ -633,7 +635,8 @@
                     "price": "NT$50~100",
                     "hours": "08:00~17:30（週一休）",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://appletrees.tw/huangshi-market-squid/"
+                    "blogUrl": "https://appletrees.tw/huangshi-market-squid/",
+                    "googleRating": 4.3
                   }
                 ]
               }
@@ -691,7 +694,8 @@
               "type": "car"
             },
             "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109439",
-            "blogUrl": "https://journey.tw/crescent-bridge/"
+            "blogUrl": "https://journey.tw/crescent-bridge/",
+            "googleRating": 4.4
           },
           {
             "time": "12:00-13:00",
@@ -748,7 +752,8 @@
               "type": "car"
             },
             "titleUrl": "https://hrcmntmp.ntpc.gov.tw/",
-            "blogUrl": "https://may1215may.pixnet.net/blog/post/335218453"
+            "blogUrl": "https://may1215may.pixnet.net/blog/post/335218453",
+            "googleRating": 4.6
           },
           {
             "time": "18:00-19:30",
@@ -1064,7 +1069,8 @@
               "type": "car"
             },
             "titleUrl": "https://new.culture.ntpc.gov.tw/",
-            "blogUrl": "https://andyventure.com/sanchong-military-village/"
+            "blogUrl": "https://andyventure.com/sanchong-military-village/",
+            "googleRating": 4.4
           },
           {
             "time": "18:00-19:30",
@@ -1271,7 +1277,8 @@
               "type": "car"
             },
             "titleUrl": "https://www.hunglodei.tw/",
-            "blogUrl": "https://anikofoodie.com/hunglodei/"
+            "blogUrl": "https://anikofoodie.com/hunglodei/",
+            "googleRating": 4.7
           },
           {
             "time": "12:00-13:00",
@@ -1501,7 +1508,8 @@
               "type": "car"
             },
             "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109505",
-            "blogUrl": "https://kenalice.tw/lehua-night-market/"
+            "blogUrl": "https://kenalice.tw/lehua-night-market/",
+            "googleRating": 4.3
           }
         ]
       }
@@ -1594,7 +1602,8 @@
               "type": "car"
             },
             "titleUrl": "https://www.ctbm.org.tw/",
-            "blogUrl": "https://lovefree365.pixnet.net/blog/post/335888667"
+            "blogUrl": "https://lovefree365.pixnet.net/blog/post/335888667",
+            "googleRating": 4.7
           },
           {
             "time": "18:00-19:30",
@@ -2011,7 +2020,8 @@
                     "price": "NT$35~60",
                     "hours": "06:30~18:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://kenalice.tw/wenhua-agei/"
+                    "blogUrl": "https://kenalice.tw/wenhua-agei/",
+                    "googleRating": 4.1
                   }
                 ]
               }
@@ -2033,7 +2043,8 @@
               "type": "car"
             },
             "titleUrl": "https://www.tshs.ntpc.gov.tw/",
-            "blogUrl": "https://bunnyann.tw/fort-san-domingo/"
+            "blogUrl": "https://bunnyann.tw/fort-san-domingo/",
+            "googleRating": 4.3
           },
           {
             "time": "18:00-19:30",
@@ -2108,7 +2119,8 @@
               "type": "car"
             },
             "titleUrl": "https://newtaipei.travel/zh-tw/attractions/detail/109401",
-            "blogUrl": "https://bobbyworld.tw/fishermans-wharf/"
+            "blogUrl": "https://bobbyworld.tw/fishermans-wharf/",
+            "googleRating": 4.4
           },
           {
             "time": "12:00-13:00",
@@ -2165,7 +2177,8 @@
               "type": "car"
             },
             "titleUrl": "https://www.tshs.ntpc.gov.tw/xmdoc/cont?xsmsid=0G245647944685955986",
-            "blogUrl": "https://bobowin.blog/tamsui-customs-wharf/"
+            "blogUrl": "https://bobowin.blog/tamsui-customs-wharf/",
+            "googleRating": 4.4
           },
           {
             "time": "18:00-19:30",
@@ -2332,7 +2345,8 @@
                     "price": "NT$100~300",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
-                    "blogUrl": "https://bunnyann.tw/bali-mussel-king/"
+                    "blogUrl": "https://bunnyann.tw/bali-mussel-king/",
+                    "googleRating": 4.0
                   }
                 ]
               }

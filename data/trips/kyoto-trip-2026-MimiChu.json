@@ -8,7 +8,7 @@
       "和食",
       "洋食"
     ],
-    "tripType": "transit"
+    "selfDrive": false
   },
   "footer": {
     "title": "2026 京都咪咪醬初體驗",
@@ -176,7 +176,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://minako.tw/japan-family/"
                 },
                 {
                   "category": "超市",
@@ -257,7 +257,7 @@
                     "reservation": "不需預約，排隊制",
                     "desc": "京都車站 The CUBE 內，京都和食人氣店",
                     "price": "¥1200~1800",
-                    "blogUrl": null,
+                    "blogUrl": "https://letsgokyoto.com/gourmet-around-kyoto-station/",
                     "location": {
                       "name": "はしたて",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%AF%E3%81%97%E3%81%9F%E3%81%A6+%E4%BA%AC%E9%83%BD%E9%A7%85",
@@ -387,7 +387,7 @@
                       "生活雜貨",
                       "京都限定商品"
                     ],
-                    "blogUrl": null
+                    "blogUrl": "https://archerplus.pixnet.net/blog/post/234434154"
                   },
                   {
                     "category": "伴手禮",
@@ -398,7 +398,7 @@
                       "飾品",
                       "生活用品"
                     ],
-                    "blogUrl": null
+                    "blogUrl": ""
                   }
                 ]
               }
@@ -445,7 +445,7 @@
                     "reservation": "建議預約",
                     "desc": "京地雞串燒名店，炭火串焼き",
                     "price": "¥3000~5000",
-                    "blogUrl": null,
+                    "blogUrl": "https://cpk24.pixnet.net/blog/post/14275717",
                     "location": {
                       "name": "串くら 本店",
                       "googleQuery": "https://maps.google.com/?q=%E4%B8%B2%E3%81%8F%E3%82%89+%E6%9C%AC%E5%BA%97+%E6%9C%A8%E5%B1%8B%E7%94%BA",
@@ -516,7 +516,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://minako.tw/japan-family/"
                 },
                 {
                   "category": "超市",
@@ -758,7 +758,7 @@
                     "reservation": "建議預約",
                     "desc": "隱藏版肉割烹，京都和牛料理",
                     "price": "¥8000~12000",
-                    "blogUrl": null,
+                    "blogUrl": "",
                     "location": {
                       "name": "肉料理 おか",
                       "googleQuery": "https://maps.google.com/?q=%E8%82%89%E6%96%99%E7%90%86+%E3%81%8A%E3%81%8B+%E4%BA%AC%E9%83%BD",
@@ -815,7 +815,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://minako.tw/japan-family/"
                 },
                 {
                   "category": "超市",
@@ -1059,7 +1059,7 @@
                     "reservation": "不需預約",
                     "desc": "百年居酒屋，京都在地人推薦",
                     "price": "¥2000~4000",
-                    "blogUrl": null,
+                    "blogUrl": "",
                     "location": {
                       "name": "赤垣屋",
                       "googleQuery": "https://maps.google.com/?q=%E8%B5%A4%E5%9E%A3%E5%B1%8B+%E4%BA%AC%E9%83%BD",
@@ -1073,7 +1073,7 @@
                     "reservation": "建議預約",
                     "desc": "京風割烹居酒屋，當季食材",
                     "price": "¥3000~5000",
-                    "blogUrl": null,
+                    "blogUrl": "",
                     "location": {
                       "name": "酒陶 柳野",
                       "googleQuery": "https://maps.google.com/?q=%E9%85%92%E9%99%B6+%E6%9F%B3%E9%87%8E+%E4%BA%AC%E9%83%BD",
@@ -1087,7 +1087,7 @@
                     "reservation": "不需預約",
                     "desc": "站立式酒場，創作料理配自然酒",
                     "price": "¥2000~4000",
-                    "blogUrl": null,
+                    "blogUrl": "",
                     "location": {
                       "name": "スタンド きのした",
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E3%81%8D%E3%81%AE%E3%81%97%E3%81%9F+%E4%BA%AC%E9%83%BD",
@@ -1144,7 +1144,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://minako.tw/japan-family/"
                 },
                 {
                   "category": "超市",
@@ -1429,7 +1429,7 @@
                     "抹茶甜點",
                     "おにぎり"
                   ],
-                  "blogUrl": null
+                  "blogUrl": "https://minako.tw/japan-family/"
                 },
                 {
                   "category": "超市",
@@ -1614,7 +1614,7 @@
                     "reservation": "不需預約",
                     "desc": "京都大阪燒名店，超大份量",
                     "price": "¥800~1500",
-                    "blogUrl": null,
+                    "blogUrl": "",
                     "location": {
                       "name": "ジャンボ 本店",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC+%E3%82%B8%E3%83%A3%E3%83%B3%E3%83%9C+%E4%BA%AC%E9%83%BD",
@@ -1628,7 +1628,7 @@
                     "reservation": "不需預約",
                     "desc": "鐵板燒/大阪燒老舖",
                     "price": "¥800~1500",
-                    "blogUrl": null,
+                    "blogUrl": "",
                     "location": {
                       "name": "吉野 祇園店",
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC+%E5%90%89%E9%87%8E+%E7%A5%87%E5%9C%92",
@@ -1728,14 +1728,20 @@
             "infoBoxes": [
               {
                 "type": "restaurants",
+                "title": "機場午餐推薦",
                 "restaurants": [
                   {
+                    "category": "洋食",
                     "name": "Town Gate Cafe",
-                    "hours": "07:00-21:00",
+                    "hours": "07:00~21:00",
                     "reservation": "不需預約",
-                    "googleQuery": "https://maps.google.com/?q=Town+Gate+Kansai+Airport",
-                    "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport",
-                    "blogUrl": null
+                    "desc": "關西機場管制區內美食街",
+                    "blogUrl": "",
+                    "location": {
+                      "name": "Town Gate Cafe",
+                      "googleQuery": "https://maps.google.com/?q=Town+Gate+Kansai+Airport",
+                      "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport"
+                    }
                   }
                 ]
               }
