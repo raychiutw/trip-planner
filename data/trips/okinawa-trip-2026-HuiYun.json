@@ -257,7 +257,7 @@
           "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
             "那霸市壺川 3-3-19",
-            "Day 1 Check in 22:29"
+            "Day 1 Check in 23:09"
           ],
           "breakfast": {
             "included": null
@@ -320,64 +320,9 @@
         },
         "timeline": [
           {
-            "time": "13:00-14:00",
-            "title": "午餐",
-            "description": "出發前在機場或附近用餐",
-            "infoBoxes": [
-              {
-                "type": "restaurants",
-                "title": "午餐推薦",
-                "restaurants": [
-                  {
-                    "category": "沖繩料理（預習）",
-                    "name": "花笠食堂",
-                    "desc": "花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表（抵達沖繩後可安排）",
-                    "price": "¥700~",
-                    "location": {
-                      "name": "花笠食堂 那覇",
-                      "googleQuery": "https://maps.google.com/?q=花笠食堂+那覇",
-                      "appleQuery": "https://maps.apple.com/?q=花笠食堂+那覇"
-                    },
-                    "hours": "11:00~20:00（週日公休）",
-                    "reservation": null,
-                    "blogUrl": "https://dreamycat0421.pixnet.net/blog/post/410605360"
-                  },
-                  {
-                    "category": "海鮮",
-                    "name": "第一牧志公設市場 2F 代煮",
-                    "desc": "牧志市場 — 那霸最具代表性的在地市場，1F 挑選新鮮海鮮帶至 2F 代煮，石垣牛、海葡萄必嚐（抵達沖繩後可安排）",
-                    "price": "¥1,000~",
-                    "location": {
-                      "name": "第一牧志公設市場",
-                      "googleQuery": "https://maps.google.com/?q=第一牧志公設市場",
-                      "appleQuery": "https://maps.apple.com/?q=第一牧志公設市場"
-                    },
-                    "hours": "08:00~21:00（二樓食堂依店家）",
-                    "reservation": null,
-                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
-                  },
-                  {
-                    "category": "甜點",
-                    "name": "oHacorte 那霸空港店",
-                    "desc": "oHacorté — 沖繩代表性水果塔甜點店，那霸機場國際線2F 設有分店，各式當季水果塔色彩繽紛，登機前必試",
-                    "price": "¥650~",
-                    "location": {
-                      "name": "那霸機場 国際線 2F",
-                      "googleQuery": "https://maps.google.com/?q=那霸機場+oHacorte",
-                      "appleQuery": "https://maps.apple.com/?q=那霸機場+oHacorte"
-                    },
-                    "hours": "07:00~20:00",
-                    "reservation": null,
-                    "blogUrl": "https://reyaprincess.pixnet.net/blog/post/468560756"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "time": "15:20-17:20",
+            "time": "16:30-18:30",
             "title": "桃園國際機場 出發",
-            "description": "辦理登機、出境",
+            "description": "虎航 IT232，辦理登機、出境",
             "locations": [
               {
                 "name": "桃園國際機場",
@@ -391,7 +336,7 @@
             }
           },
           {
-            "time": "19:40-20:40",
+            "time": "20:50-21:50",
             "title": "抵達那霸機場",
             "description": "入境、領取行李",
             "locations": [
@@ -408,7 +353,7 @@
             }
           },
           {
-            "time": "21:17-22:17",
+            "time": "22:27-22:57",
             "title": "NAHA新都心HOTEL",
             "description": "寄放行李",
             "locations": [
@@ -425,7 +370,7 @@
             }
           },
           {
-            "time": "22:29",
+            "time": "23:09",
             "title": "沖繩那霸美居飯店 Check in",
             "description": "Mercure Okinawa Naha",
             "locations": [
@@ -2454,9 +2399,9 @@
             "title": "沖繩那霸美居飯店 退房"
           },
           {
-            "time": "11:24-12:24",
+            "time": "10:12-10:32",
             "title": "NAHA新都心HOTEL",
-            "description": "接人、寄放行李",
+            "description": "接人、取行李",
             "locations": [
               {
                 "name": "ダイワロイネットホテル那覇おもろまち",
@@ -2471,7 +2416,7 @@
             }
           },
           {
-            "time": "12:30",
+            "time": "11:14",
             "title": "機場午餐",
             "description": "在那霸機場用午餐",
             "infoBoxes": [
@@ -2511,9 +2456,9 @@
             ]
           },
           {
-            "time": "13:06-16:06",
+            "time": "11:15-13:15",
             "title": "那霸機場",
-            "description": "辦理登機、機場購物、回程（約3小時）",
+            "description": "樂桃 MM927，辦理登機、機場購物、回程",
             "locations": [
               {
                 "name": "那霸機場",
@@ -2534,12 +2479,12 @@
         {
           "label": "去程",
           "route": "桃園 TPE → 那霸 OKA",
-          "time": "7/2（四）15:20 出發 → 19:40 抵達（日本時間）"
+          "time": "7/2（四）虎航 IT232 18:30 出發 → 20:50 抵達（日本時間）"
         },
         {
           "label": "回程",
           "route": "那霸 OKA → 桃園 TPE",
-          "time": "7/8（三）機場報到 13:06 起"
+          "time": "7/8（三）樂桃 MM927 13:15 出發 → 13:50 抵達"
         }
       ]
     }
