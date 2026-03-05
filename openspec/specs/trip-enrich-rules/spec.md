@@ -15,6 +15,11 @@
 - **WHEN** 某 restaurants infoBox 包含多家餐廳推薦
 - **THEN** 第 1 家 SHALL 對應偏好 index 0、第 2 家對應 index 1、第 3 家對應 index 2
 
+#### Scenario: R1/R3 category 嚴格對齊
+- **WHEN** restaurants infoBox 中的餐廳按順序排列
+- **THEN** 每家餐廳的 `category` SHALL 包含對應 `meta.foodPreferences` 的關鍵字（index 0 對齊偏好 0、index 1 對齊偏好 1、index 2 對齊偏好 2）
+- **AND** 不符合時 SHALL 以紅燈（fail）標示
+
 #### Scenario: 偏好料理不可得時
 - **WHEN** 某偏好料理在行程地點附近找不到評價足夠的餐廳
 - **THEN** SHALL 以行程地點附近評價最高的餐廳補位，並在 `notes` 欄位標註「當地無符合偏好之選項，改推薦{實際料理類型}」
@@ -83,9 +88,14 @@
 - **WHEN** 景點有營業時間限制
 - **THEN** `infoBoxes` 中 SHALL 包含營業時間項目，且 MUST 確認與行程安排的到訪時間吻合
 
+#### Scenario: 景點 blogUrl 必須存在
+- **WHEN** timeline event 為實體地點（非 travel、非「餐廳未定」）
+- **THEN** SHALL 包含 `blogUrl` 欄位（字串，允許空字串 `""`）
+- **AND** 缺失時 SHALL 以紅燈（fail）標示
+
 #### Scenario: 景點 blogUrl 查無結果
 - **WHEN** Google 搜尋「{景點名} {地區} 推薦」無適合的繁體中文文章
-- **THEN** `blogUrl` SHALL 為 `null`
+- **THEN** `blogUrl` SHALL 為空字串 `""`
 
 ### Requirement: R5 飯店品質
 Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
@@ -96,7 +106,7 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 
 #### Scenario: 飯店 blogUrl 查無結果
 - **WHEN** Google 搜尋「{飯店名} 推薦」無適合的繁體中文文章
-- **THEN** `blogUrl` SHALL 為 `null`
+- **THEN** `blogUrl` SHALL 為空字串 `""`
 
 ### Requirement: R6 搜尋方式
 所有 blogUrl 的搜尋 SHALL 以 Google「{名稱} {地區} 推薦」為關鍵字，取第一篇繁體中文文章。優先選擇 pixnet、mimigo、kafu 等常見台灣旅遊部落格。
@@ -107,7 +117,7 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 
 #### Scenario: 搜尋無結果
 - **WHEN** Google 搜尋無繁體中文文章結果或結果明顯不相關
-- **THEN** `blogUrl` SHALL 設為 `null`，不放不相關連結
+- **THEN** `blogUrl` SHALL 設為空字串 `""`，不放不相關連結
 
 ### Requirement: R7 購物景點推薦
 飯店附近有超市、唐吉軻德、超商等購物點時，SHALL 以 `infoBox type=shopping` 結構化顯示。停車場資訊 SHALL 以 `parking` infoBox 寫入 `hotel.infoBoxes[]`。獨立購物行程（來客夢/iias/Outlet/PARCO CITY/購物商圈）同樣 SHALL 附 shopping infoBox。景點附近步行 5~10 分鐘內有超市或唐吉軻德時，SHALL 在該景點 timeline entry 加 shopping infoBox。每個購物景點 SHALL 包含 `mustBuy` 必買推薦。渲染 SHALL 復用既有 `.restaurant-choice` CSS，不新增 CSS。所有 shop item 不含 `titleUrl`。不再使用 `souvenir` infoBox type，統一為 `shopping`。
@@ -219,7 +229,7 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 
 ### Requirement: R11 地圖導航
 
-所有景點、餐廳、加油站 SHALL 包含 location 欄位，確保使用者可直接開啟地圖導航。location 物件 SHALL 遵循 MapLocation 統一型別。R11 採 warn 級（黃燈），不強制中斷測試。
+所有景點、餐廳、加油站 SHALL 包含 location 欄位，確保使用者可直接開啟地圖導航。location 物件 SHALL 遵循 MapLocation 統一型別。R11 採 strict 級（紅燈），缺失時中斷測試。
 
 #### Scenario: timeline event 須有 location
 - **WHEN** timeline event 為實體地點（非交通、非餐廳未定、非純描述事件）
@@ -245,21 +255,29 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 - **WHEN** timeline event title 包含「餐廳未定」
 - **THEN** SHALL 略過 R11 檢查
 
-#### Scenario: location 缺失時 warn
+#### Scenario: location 缺失時 fail
 - **WHEN** 實體地點 event 不含 `location`
-- **THEN** tp-check SHALL 以黃燈（warn）標示，不以紅燈（fail）標示
+- **THEN** tp-check SHALL 以紅燈（fail）標示
 
 ### Requirement: R12 Google 評分
 
-實體地點類 timeline event 與所有餐廳 SHOULD 含 `googleRating` 欄位（數字，1.0-5.0）。R12 採 warn 級（黃燈），不強制中斷測試。
+所有 POI（實體地點類 timeline event、餐廳、商店、加油站）SHALL 含 `googleRating` 欄位（數字，1.0-5.0）。R12 採 strict 級（紅燈），缺失時中斷測試。頁面渲染 SHALL 在 POI 名稱旁顯示 `★ {rating}` 格式的評分。
 
 #### Scenario: 景點含 googleRating
 - **WHEN** timeline event 為實體地點
-- **THEN** SHOULD 含 `googleRating`（數字，1.0-5.0）
+- **THEN** SHALL 含 `googleRating`（數字，1.0-5.0）
 
 #### Scenario: 餐廳含 googleRating
 - **WHEN** restaurant 物件存在
-- **THEN** SHOULD 含 `googleRating`（數字，1.0-5.0）
+- **THEN** SHALL 含 `googleRating`（數字，1.0-5.0）
+
+#### Scenario: 商店含 googleRating
+- **WHEN** shop 物件存在
+- **THEN** SHALL 含 `googleRating`（數字，1.0-5.0）
+
+#### Scenario: 加油站含 googleRating
+- **WHEN** gasStation infoBox 存在
+- **THEN** SHALL 含 `googleRating`（數字，1.0-5.0）
 
 #### Scenario: travel event 略過 R12
 - **WHEN** timeline event 含 `travel` 物件（交通移動資訊）
@@ -269,13 +287,29 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 - **WHEN** timeline event title 包含「餐廳未定」
 - **THEN** SHALL 略過 R12 檢查
 
-#### Scenario: googleRating 缺失時 warn
-- **WHEN** 實體地點 event 或餐廳不含 `googleRating`
-- **THEN** tp-check SHALL 以黃燈（warn）標示
+#### Scenario: googleRating 缺失時 fail
+- **WHEN** 實體地點 event、餐廳、商店或加油站不含 `googleRating`
+- **THEN** tp-check SHALL 以紅燈（fail）標示
 
-#### Scenario: shop 的 googleRating 不強制
-- **WHEN** shop 物件不含 `googleRating`
-- **THEN** SHALL 不發出 R12 警告（shop 評分為選填）
+#### Scenario: 景點渲染 rating
+- **WHEN** renderTimelineEvent 渲染含 googleRating 的景點
+- **THEN** SHALL 在標題旁顯示 `★ {rating}`（一位小數）
+
+#### Scenario: 餐廳渲染 rating
+- **WHEN** renderRestaurant 渲染含 googleRating 的餐廳
+- **THEN** SHALL 在名稱行顯示 `★ {rating}`（一位小數）
+
+#### Scenario: 商店渲染 rating
+- **WHEN** renderShop 渲染含 googleRating 的商店
+- **THEN** SHALL 在名稱行顯示 `★ {rating}`（一位小數）
+
+#### Scenario: 加油站渲染 rating
+- **WHEN** renderInfoBox 渲染含 googleRating 的 gasStation
+- **THEN** SHALL 在標題旁顯示 `★ {rating}`（一位小數）
+
+#### Scenario: 無 rating 時不顯示
+- **WHEN** POI 的 googleRating 不存在或非數字
+- **THEN** SHALL 不顯示任何評分標示
 
 ### Requirement: tp-rebuild 品質檢查整合
 

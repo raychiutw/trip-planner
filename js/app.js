@@ -57,6 +57,7 @@ function renderRestaurant(r) {
     if (rUrl) nameHtml = '<a href="' + rUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
     html += (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
           + nameHtml;
+    if (typeof r.googleRating === 'number') html += ' <span class="rating">★ ' + r.googleRating.toFixed(1) + '</span>';
     if (r.description) html += ' — ' + escHtml(r.description);
     if (r.price) html += '，' + escHtml(r.price);
     html += '<br>';
@@ -87,6 +88,7 @@ function renderShop(shop) {
     var html = '<div class="restaurant-choice">';
     var nameHtml = escHtml(shop.name);
     html += (shop.category ? '<strong>' + escHtml(shop.category) + '：</strong>' : '') + nameHtml;
+    if (typeof shop.googleRating === 'number') html += ' <span class="rating">★ ' + shop.googleRating.toFixed(1) + '</span>';
     html += '<br>';
     if (shop.location) html += renderMapLinks(shop.location, true);
     var meta = '';
@@ -165,6 +167,7 @@ function renderInfoBox(box) {
             html += '<div class="info-box gas-station">';
             var gsTitle = box.title || '加油站';
             html += iconSpan('gas-station') + ' <strong>' + escHtml(gsTitle) + '</strong>';
+            if (typeof box.googleRating === 'number') html += ' <span class="rating">★ ' + box.googleRating.toFixed(1) + '</span>';
             if (box.station) {
                 var st = box.station;
                 html += '<div class="gas-station-detail">';
@@ -200,6 +203,7 @@ function renderTimelineEvent(entry) {
         html += escHtml(entry.title || '');
     }
     html += '</span>';
+    if (typeof entry.googleRating === 'number') html += ' <span class="rating">★ ' + entry.googleRating.toFixed(1) + '</span>';
     var entryBlogLink = renderBlogLink(entry.blogUrl);
     if (entryBlogLink) {
         html += ' ' + entryBlogLink;

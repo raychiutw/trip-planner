@@ -312,27 +312,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=花月嵐拉麵 板橋府中店",
+                      "appleQuery": "https://maps.apple.com/?q=花月嵐拉麵 板橋府中店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "薄多義 板橋大遠百店",
                     "description": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=薄多義 板橋大遠百店",
+                      "appleQuery": "https://maps.apple.com/?q=薄多義 板橋大遠百店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "高記生炒魷魚",
                     "description": "黃石市場 30 年老字號，生炒魷魚羹、蘿蔔糕",
                     "price": "NT$50~100",
                     "hours": "08:00~17:30（週一休）",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/blog/post/huangshishichangyouyu",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=高記生炒魷魚",
+                      "appleQuery": "https://maps.apple.com/?q=高記生炒魷魚"
+                    }
                   }
                 ]
               }
@@ -344,7 +356,8 @@
                 "googleQuery": "https://www.google.com/maps/search/板橋府中商圈",
                 "appleQuery": "https://maps.apple.com/?q=板橋府中商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -381,27 +394,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=花月嵐拉麵 板橋府中店",
+                      "appleQuery": "https://maps.apple.com/?q=花月嵐拉麵 板橋府中店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "薄多義 板橋大遠百店",
                     "description": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=薄多義 板橋大遠百店",
+                      "appleQuery": "https://maps.apple.com/?q=薄多義 板橋大遠百店"
+                    }
                   },
                   {
-                    "category": "日式居酒屋",
+                    "category": "特色小吃",
                     "name": "老味噌居酒屋 新埔店",
                     "description": "新埔站超人氣日式串燒，烤物功夫一流",
                     "price": "NT$300~600",
                     "hours": "18:00~01:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/omiso/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=老味噌居酒屋 新埔店",
+                      "appleQuery": "https://maps.apple.com/?q=老味噌居酒屋 新埔店"
+                    }
                   }
                 ]
               }
@@ -413,7 +438,8 @@
                 "googleQuery": "https://www.google.com/maps/search/板橋府中商圈",
                 "appleQuery": "https://maps.apple.com/?q=板橋府中商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -464,7 +490,8 @@
                       "9F餐廳街",
                       "頂樓空中花園限定商品"
                     ],
-                    "blogUrl": "https://bigmouthblog.tw/mega-city-banqiao/"
+                    "blogUrl": "https://bigmouthblog.tw/mega-city-banqiao/",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "購物中心",
@@ -475,7 +502,8 @@
                       "生活雜貨樓層",
                       "4F親子童裝特賣"
                     ],
-                    "blogUrl": "https://tisshuang.com/global-mall-banqiao/"
+                    "blogUrl": "https://tisshuang.com/global-mall-banqiao/",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "購物中心",
@@ -486,7 +514,8 @@
                       "在地小吃",
                       "流行飾品配件"
                     ],
-                    "blogUrl": "https://kenalice.tw/banqiao-underground/"
+                    "blogUrl": "https://kenalice.tw/banqiao-underground/",
+                    "googleRating": 4.1
                   }
                 ]
               }
@@ -509,27 +538,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=花月嵐拉麵 板橋府中店",
+                      "appleQuery": "https://maps.apple.com/?q=花月嵐拉麵 板橋府中店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "薄多義 板橋大遠百店",
                     "description": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=薄多義 板橋大遠百店",
+                      "appleQuery": "https://maps.apple.com/?q=薄多義 板橋大遠百店"
+                    }
                   },
                   {
-                    "category": "韓式料理",
+                    "category": "特色小吃",
                     "name": "涓豆腐 環球板橋店",
                     "description": "韓國豆腐煲專賣，嫩豆腐鍋香濃入味，小菜無限續",
                     "price": "NT$250~400",
                     "hours": "11:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/dubu-tofu-banqiao/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=涓豆腐 環球板橋店",
+                      "appleQuery": "https://maps.apple.com/?q=涓豆腐 環球板橋店"
+                    }
                   }
                 ]
               }
@@ -541,7 +582,8 @@
                 "googleQuery": "https://www.google.com/maps/search/板橋車站商圈",
                 "appleQuery": "https://maps.apple.com/?q=板橋車站商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -578,27 +620,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=花月嵐拉麵 板橋府中店",
+                      "appleQuery": "https://maps.apple.com/?q=花月嵐拉麵 板橋府中店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "薄多義 板橋大遠百店",
                     "description": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=薄多義 板橋大遠百店",
+                      "appleQuery": "https://maps.apple.com/?q=薄多義 板橋大遠百店"
+                    }
                   },
                   {
-                    "category": "自助餐",
+                    "category": "特色小吃",
                     "name": "饗食天堂 板橋店",
                     "description": "頂級自助百匯，海鮮日料甜點超過200道料理",
                     "price": "NT$800~1200",
                     "hours": "11:30~14:00 / 17:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/eatogether-banqiao/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=饗食天堂 板橋店",
+                      "appleQuery": "https://maps.apple.com/?q=饗食天堂 板橋店"
+                    }
                   }
                 ]
               }
@@ -610,7 +664,8 @@
                 "googleQuery": "https://www.google.com/maps/search/板橋車站商圈",
                 "appleQuery": "https://maps.apple.com/?q=板橋車站商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -665,27 +720,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/hanagetsuramen-banqiao/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=花月嵐拉麵 板橋府中店",
+                      "appleQuery": "https://maps.apple.com/?q=花月嵐拉麵 板橋府中店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "薄多義 板橋大遠百店",
                     "description": "義大利窯烤薄皮披薩名店，Margherita與黑松露口味深受好評",
                     "price": "NT$280~500",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/pytharion-banqiao/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=薄多義 板橋大遠百店",
+                      "appleQuery": "https://maps.apple.com/?q=薄多義 板橋大遠百店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "高記生炒魷魚",
                     "description": "黃石市場30年老字號，生炒魷魚羹、蘿蔔糕必吃",
                     "price": "NT$50~100",
                     "hours": "08:00~17:30（週一休）",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/huangshi-market-squid/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=高記生炒魷魚",
+                      "appleQuery": "https://maps.apple.com/?q=高記生炒魷魚"
+                    }
                   }
                 ]
               }
@@ -697,7 +764,8 @@
                 "googleQuery": "https://www.google.com/maps/search/板橋府中商圈",
                 "appleQuery": "https://maps.apple.com/?q=板橋府中商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "17:00-19:30",
@@ -771,27 +839,39 @@
                     "hours": "11:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=博多一幸舎 新莊店",
+                      "appleQuery": "https://maps.apple.com/?q=博多一幸舎 新莊店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "歐義式 新莊店",
                     "description": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
                     "price": "NT$220~380",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=歐義式 新莊店",
+                      "appleQuery": "https://maps.apple.com/?q=歐義式 新莊店"
+                    }
                   },
                   {
-                    "category": "台式糕點",
+                    "category": "特色小吃",
                     "name": "阿瑞官粿店",
                     "description": "新莊老街百年粿店，芋粿巧、草仔粿手工現做",
                     "price": "NT$20~60",
                     "hours": "06:00~18:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/aruiguan-cake/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=阿瑞官粿店",
+                      "appleQuery": "https://maps.apple.com/?q=阿瑞官粿店"
+                    }
                   }
                 ]
               }
@@ -803,7 +883,8 @@
                 "googleQuery": "https://www.google.com/maps/search/新莊中正路商圈",
                 "appleQuery": "https://maps.apple.com/?q=新莊中正路商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:30",
@@ -840,27 +921,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋壹慶 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋壹慶 三重店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "小義大利莊園 三重店",
                     "description": "三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁",
                     "price": "NT$250~420",
                     "hours": "11:30~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/little-italy-sanchong/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=小義大利莊園 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=小義大利莊園 三重店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "三重鵝肉李",
                     "description": "三重在地鵝肉名店，鵝肉切盤鮮嫩，鵝肉湯麵經典",
                     "price": "NT$100~300",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://supertaste.tvbs.com.tw/food/339812",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=三重鵝肉李",
+                      "appleQuery": "https://maps.apple.com/?q=三重鵝肉李"
+                    }
                   }
                 ]
               }
@@ -872,7 +965,8 @@
                 "googleQuery": "https://www.google.com/maps/search/新莊中正路商圈",
                 "appleQuery": "https://maps.apple.com/?q=新莊中正路商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -927,27 +1021,39 @@
                     "hours": "11:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=博多一幸舎 新莊店",
+                      "appleQuery": "https://maps.apple.com/?q=博多一幸舎 新莊店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "歐義式 新莊店",
                     "description": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
                     "price": "NT$220~380",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=歐義式 新莊店",
+                      "appleQuery": "https://maps.apple.com/?q=歐義式 新莊店"
+                    }
                   },
                   {
-                    "category": "麵食",
+                    "category": "特色小吃",
                     "name": "福壽街陽春麵",
                     "description": "新莊在地30年老麵攤，手打陽春麵Q勁十足",
                     "price": "NT$40~80",
                     "hours": "06:00~14:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/fushou-noodles/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=福壽街陽春麵",
+                      "appleQuery": "https://maps.apple.com/?q=福壽街陽春麵"
+                    }
                   }
                 ]
               }
@@ -959,7 +1065,8 @@
                 "googleQuery": "https://www.google.com/maps/search/新莊廟街",
                 "appleQuery": "https://maps.apple.com/?q=新莊廟街"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -992,7 +1099,8 @@
                       "傳統糕餅",
                       "廟口現做米製品"
                     ],
-                    "blogUrl": "https://snowhy.tw/xinzhuang-miaostreet-shopping/"
+                    "blogUrl": "https://snowhy.tw/xinzhuang-miaostreet-shopping/",
+                    "googleRating": 4
                   },
                   {
                     "category": "伴手禮",
@@ -1003,7 +1111,8 @@
                       "豆花",
                       "車輪餅"
                     ],
-                    "blogUrl": "https://bigmouthblog.tw/xinzhuang-night-market/"
+                    "blogUrl": "https://bigmouthblog.tw/xinzhuang-night-market/",
+                    "googleRating": 4
                   },
                   {
                     "category": "購物中心",
@@ -1014,7 +1123,8 @@
                       "美食街",
                       "頂樓空中廣場季節活動"
                     ],
-                    "blogUrl": "https://kenalice.tw/honghui-plaza/"
+                    "blogUrl": "https://kenalice.tw/honghui-plaza/",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "唐吉軻德",
@@ -1025,7 +1135,8 @@
                       "美妝保養特價品",
                       "生活雜貨與廚房用品"
                     ],
-                    "blogUrl": "https://shoppinginfo.tw/donki-xinzhuang/"
+                    "blogUrl": "https://shoppinginfo.tw/donki-xinzhuang/",
+                    "googleRating": 4
                   }
                 ]
               }
@@ -1048,27 +1159,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋壹慶 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋壹慶 三重店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "小義大利莊園 三重店",
                     "description": "三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁",
                     "price": "NT$250~420",
                     "hours": "11:30~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/little-italy-sanchong/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=小義大利莊園 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=小義大利莊園 三重店"
+                    }
                   },
                   {
-                    "category": "牛肉麵",
+                    "category": "特色小吃",
                     "name": "新莊牛肉麵大王",
                     "description": "紅燒牛肉麵湯頭濃醇，牛肉塊大又軟嫩",
                     "price": "NT$120~200",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/xinzhuang-beef-noodle/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=新莊牛肉麵大王",
+                      "appleQuery": "https://maps.apple.com/?q=新莊牛肉麵大王"
+                    }
                   }
                 ]
               }
@@ -1080,7 +1203,8 @@
                 "googleQuery": "https://www.google.com/maps/search/新莊廟街",
                 "appleQuery": "https://maps.apple.com/?q=新莊廟街"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -1135,27 +1259,39 @@
                     "hours": "11:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ikkousha-xinzhuang/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=博多一幸舎 新莊店",
+                      "appleQuery": "https://maps.apple.com/?q=博多一幸舎 新莊店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "歐義式 新莊店",
                     "description": "新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎",
                     "price": "NT$220~380",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ouyi-pasta-xinzhuang/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=歐義式 新莊店",
+                      "appleQuery": "https://maps.apple.com/?q=歐義式 新莊店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "今大魯肉飯",
                     "description": "三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配",
                     "price": "NT$30~80",
                     "hours": "07:00~20:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/jinda-braised-rice/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=今大魯肉飯",
+                      "appleQuery": "https://maps.apple.com/?q=今大魯肉飯"
+                    }
                   }
                 ]
               }
@@ -1167,7 +1303,8 @@
                 "googleQuery": "https://www.google.com/maps/search/三重正義北路",
                 "appleQuery": "https://maps.apple.com/?q=三重正義北路"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -1204,27 +1341,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-ikukei-sanchong/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋壹慶 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋壹慶 三重店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "小義大利莊園 三重店",
                     "description": "三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁",
                     "price": "NT$250~420",
                     "hours": "11:30~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/little-italy-sanchong/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=小義大利莊園 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=小義大利莊園 三重店"
+                    }
                   },
                   {
-                    "category": "羊肉爐",
+                    "category": "特色小吃",
                     "name": "正羊肉榮 三重店",
                     "description": "三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷",
                     "price": "NT$300~600",
                     "hours": "16:00~01:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/zhengyangrourong/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=正羊肉榮 三重店",
+                      "appleQuery": "https://maps.apple.com/?q=正羊肉榮 三重店"
+                    }
                   }
                 ]
               }
@@ -1236,7 +1385,8 @@
                 "googleQuery": "https://www.google.com/maps/search/三重正義北路",
                 "appleQuery": "https://maps.apple.com/?q=三重正義北路"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -1291,27 +1441,39 @@
                     "hours": "11:30~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=豚骨拉麵ばかうまラーメン 永和店",
+                      "appleQuery": "https://maps.apple.com/?q=豚骨拉麵ばかうまラーメン 永和店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "藍乳酪義大利餐廳",
                     "description": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
                     "price": "NT$250~450",
                     "hours": "11:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=藍乳酪義大利餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=藍乳酪義大利餐廳"
+                    }
                   },
                   {
-                    "category": "台式早午餐",
+                    "category": "特色小吃",
                     "name": "世界豆漿大王",
                     "description": "永和豆漿創始店之一，鹹豆漿、燒餅油條經典組合",
                     "price": "NT$30~80",
                     "hours": "24小時營業",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/world-soymilk-king/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=世界豆漿大王",
+                      "appleQuery": "https://maps.apple.com/?q=世界豆漿大王"
+                    }
                   }
                 ]
               }
@@ -1323,7 +1485,8 @@
                 "googleQuery": "https://www.google.com/maps/search/永安市場商圈",
                 "appleQuery": "https://maps.apple.com/?q=永安市場商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -1360,27 +1523,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/santouka-zhonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=山頭火拉麵 中和環球店",
+                      "appleQuery": "https://maps.apple.com/?q=山頭火拉麵 中和環球店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "藍乳酪義大利餐廳",
                     "description": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
                     "price": "NT$250~450",
                     "hours": "11:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=藍乳酪義大利餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=藍乳酪義大利餐廳"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "竹林雞肉飯",
                     "description": "永安市場旁超人氣，雞肉飯油蔥香氣誘人",
                     "price": "NT$40~100",
                     "hours": "11:00~20:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/zhulin-chicken-rice/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=竹林雞肉飯",
+                      "appleQuery": "https://maps.apple.com/?q=竹林雞肉飯"
+                    }
                   }
                 ]
               }
@@ -1392,7 +1567,8 @@
                 "googleQuery": "https://www.google.com/maps/search/永安市場商圈",
                 "appleQuery": "https://maps.apple.com/?q=永安市場商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -1447,27 +1623,39 @@
                     "hours": "11:30~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=豚骨拉麵ばかうまラーメン 永和店",
+                      "appleQuery": "https://maps.apple.com/?q=豚骨拉麵ばかうまラーメン 永和店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "藍乳酪義大利餐廳",
                     "description": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
                     "price": "NT$250~450",
                     "hours": "11:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=藍乳酪義大利餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=藍乳酪義大利餐廳"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "中和連城路米粉湯",
                     "description": "中和在地早午餐，清甜米粉湯配上油豆腐黑白切",
                     "price": "NT$40~80",
                     "hours": "06:00~14:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/zhonghe-rice-noodle-soup/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=中和連城路米粉湯",
+                      "appleQuery": "https://maps.apple.com/?q=中和連城路米粉湯"
+                    }
                   }
                 ]
               }
@@ -1479,7 +1667,8 @@
                 "googleQuery": "https://www.google.com/maps/search/中和環球購物中心",
                 "appleQuery": "https://maps.apple.com/?q=中和環球購物中心"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -1512,7 +1701,8 @@
                       "生活用品",
                       "頂樓休閒娛樂設施"
                     ],
-                    "blogUrl": "https://tisshuang.com/zhonghe-global-mall/"
+                    "blogUrl": "https://tisshuang.com/zhonghe-global-mall/",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "超市",
@@ -1523,7 +1713,8 @@
                       "生鮮食材",
                       "台灣特產禮盒"
                     ],
-                    "blogUrl": "https://bigmouthblog.tw/carrefour-zhonghe/"
+                    "blogUrl": "https://bigmouthblog.tw/carrefour-zhonghe/",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "購物中心",
@@ -1534,7 +1725,8 @@
                       "流行飾品",
                       "韓系美妝小舖"
                     ],
-                    "blogUrl": "https://girlsplan.com/jingan-shopping/"
+                    "blogUrl": "https://girlsplan.com/jingan-shopping/",
+                    "googleRating": 4.1
                   }
                 ]
               }
@@ -1557,27 +1749,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/santouka-zhonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=山頭火拉麵 中和環球店",
+                      "appleQuery": "https://maps.apple.com/?q=山頭火拉麵 中和環球店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "洋城義大利餐廳 中和店",
                     "description": "連鎖義式餐廳，白醬義大利麵與焗烤料理份量十足，適合家庭聚餐",
                     "price": "NT$280~480",
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/italianchef-zhonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=洋城義大利餐廳 中和店",
+                      "appleQuery": "https://maps.apple.com/?q=洋城義大利餐廳 中和店"
+                    }
                   },
                   {
-                    "category": "台式熱炒",
+                    "category": "特色小吃",
                     "name": "阿男麻辣鍋",
                     "description": "中和人氣麻辣鍋，花椒麻香十足，鴨血豆腐無限續",
                     "price": "NT$350~600",
                     "hours": "17:00~01:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/anan-mala-pot/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=阿男麻辣鍋",
+                      "appleQuery": "https://maps.apple.com/?q=阿男麻辣鍋"
+                    }
                   }
                 ]
               }
@@ -1589,7 +1793,8 @@
                 "googleQuery": "https://www.google.com/maps/search/中和環球購物中心",
                 "appleQuery": "https://maps.apple.com/?q=中和環球購物中心"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -1644,27 +1849,39 @@
                     "hours": "11:30~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/bakauma-ramen-yonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=豚骨拉麵ばかうまラーメン 永和店",
+                      "appleQuery": "https://maps.apple.com/?q=豚骨拉麵ばかうまラーメン 永和店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "藍乳酪義大利餐廳",
                     "description": "永和人氣義式餐廳，手工窯烤披薩與義大利麵",
                     "price": "NT$250~450",
                     "hours": "11:30~21:30",
                     "reservation": "建議訂位",
                     "blogUrl": "https://girlsplan.com/blue-cheese-yonghe/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=藍乳酪義大利餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=藍乳酪義大利餐廳"
+                    }
                   },
                   {
-                    "category": "台式便當",
+                    "category": "特色小吃",
                     "name": "池上木片便當 永和店",
                     "description": "古早味木片便當，排骨飯與雞腿飯最受歡迎",
                     "price": "NT$80~120",
                     "hours": "10:30~20:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/chishang-bento-yonghe/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=池上木片便當 永和店",
+                      "appleQuery": "https://maps.apple.com/?q=池上木片便當 永和店"
+                    }
                   }
                 ]
               }
@@ -1676,7 +1893,8 @@
                 "googleQuery": "https://www.google.com/maps/search/永和樂華商圈",
                 "appleQuery": "https://maps.apple.com/?q=永和樂華商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "17:30-20:00",
@@ -1750,27 +1968,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/musashi-shulin/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋武藏 樹林中山店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋武藏 樹林中山店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "UNO 義式廚房 樹林店",
                     "description": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
                     "price": "NT$230~380",
                     "hours": "11:30~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=UNO 義式廚房 樹林店",
+                      "appleQuery": "https://maps.apple.com/?q=UNO 義式廚房 樹林店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "土城中央路四號米粉湯",
                     "description": "土城在地人推薦，清甜米粉湯配黑白切經濟實惠",
                     "price": "NT$40~80",
                     "hours": "06:30~14:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/tucheng-rice-noodle/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=土城中央路四號米粉湯",
+                      "appleQuery": "https://maps.apple.com/?q=土城中央路四號米粉湯"
+                    }
                   }
                 ]
               }
@@ -1782,7 +2012,8 @@
                 "googleQuery": "https://www.google.com/maps/search/土城中央路商圈",
                 "appleQuery": "https://maps.apple.com/?q=土城中央路商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -1819,27 +2050,39 @@
                     "hours": "10:00~23:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ichiran-tucheng/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=一蘭拉麵 土城永寧店",
+                      "appleQuery": "https://maps.apple.com/?q=一蘭拉麵 土城永寧店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "只是光在 義大利麵 土城店",
                     "description": "土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評",
                     "price": "NT$220~360",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/justlight-pasta-tucheng/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=只是光在 義大利麵 土城店",
+                      "appleQuery": "https://maps.apple.com/?q=只是光在 義大利麵 土城店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "土城延和路鹽酥雞",
                     "description": "土城超人氣鹽酥雞，蒜味十足外酥內嫩",
                     "price": "NT$50~150",
                     "hours": "16:00~00:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/tucheng-popcorn-chicken/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=土城延和路鹽酥雞",
+                      "appleQuery": "https://maps.apple.com/?q=土城延和路鹽酥雞"
+                    }
                   }
                 ]
               }
@@ -1851,7 +2094,8 @@
                 "googleQuery": "https://www.google.com/maps/search/土城中央路商圈",
                 "appleQuery": "https://maps.apple.com/?q=土城中央路商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -1906,27 +2150,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/musashi-shulin/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋武藏 樹林中山店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋武藏 樹林中山店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "UNO 義式廚房 樹林店",
                     "description": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
                     "price": "NT$230~380",
                     "hours": "11:30~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=UNO 義式廚房 樹林店",
+                      "appleQuery": "https://maps.apple.com/?q=UNO 義式廚房 樹林店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "樹林武林街滷肉飯",
                     "description": "樹林在地老店，古早味滷肉飯油亮鹹香",
                     "price": "NT$30~60",
                     "hours": "06:00~14:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/shulin-braised-rice/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=樹林武林街滷肉飯",
+                      "appleQuery": "https://maps.apple.com/?q=樹林武林街滷肉飯"
+                    }
                   }
                 ]
               }
@@ -1938,7 +2194,8 @@
                 "googleQuery": "https://www.google.com/maps/search/樹林中山路商圈",
                 "appleQuery": "https://maps.apple.com/?q=樹林中山路商圈"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "17:00-19:30",
@@ -1971,7 +2228,8 @@
                       "服飾攤位",
                       "現炸雞排與臭豆腐"
                     ],
-                    "blogUrl": "https://plumpyblog.com/singren-night-market-shopping/"
+                    "blogUrl": "https://plumpyblog.com/singren-night-market-shopping/",
+                    "googleRating": 4
                   },
                   {
                     "category": "購物中心",
@@ -1982,7 +2240,8 @@
                       "餐廳美食",
                       "超商聯名限定商品"
                     ],
-                    "blogUrl": "https://kenalice.tw/aurora-plaza-tucheng/"
+                    "blogUrl": "https://kenalice.tw/aurora-plaza-tucheng/",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "超市",
@@ -1993,7 +2252,8 @@
                       "生鮮食材",
                       "PX自有品牌熟食便當"
                     ],
-                    "blogUrl": "https://appletrees.tw/pxmart-shulin/"
+                    "blogUrl": "https://appletrees.tw/pxmart-shulin/",
+                    "googleRating": 3.8
                   }
                 ]
               }
@@ -2053,27 +2313,39 @@
                     "hours": "11:00~21:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://girlsplan.com/musashi-shulin/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋武藏 樹林中山店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋武藏 樹林中山店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "UNO 義式廚房 樹林店",
                     "description": "樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實",
                     "price": "NT$230~380",
                     "hours": "11:30~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/uno-pasta-shulin/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=UNO 義式廚房 樹林店",
+                      "appleQuery": "https://maps.apple.com/?q=UNO 義式廚房 樹林店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "山佳老街切仔麵",
                     "description": "山佳車站旁小吃攤，切仔麵搭配油豆腐小菜",
                     "price": "NT$40~80",
                     "hours": "07:00~15:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/shanjia-noodle/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=山佳老街切仔麵",
+                      "appleQuery": "https://maps.apple.com/?q=山佳老街切仔麵"
+                    }
                   }
                 ]
               }
@@ -2085,7 +2357,8 @@
                 "googleQuery": "https://www.google.com/maps/search/樹林保安街",
                 "appleQuery": "https://maps.apple.com/?q=樹林保安街"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -2122,27 +2395,39 @@
                     "hours": "10:00~23:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/ichiran-tucheng/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=一蘭拉麵 土城永寧店",
+                      "appleQuery": "https://maps.apple.com/?q=一蘭拉麵 土城永寧店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "只是光在 義大利麵 土城店",
                     "description": "土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評",
                     "price": "NT$220~360",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/justlight-pasta-tucheng/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=只是光在 義大利麵 土城店",
+                      "appleQuery": "https://maps.apple.com/?q=只是光在 義大利麵 土城店"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "樹林保安街夜市",
                     "description": "在地人的晚餐街，各式台灣小吃集中",
                     "price": "NT$50~150",
                     "hours": "17:00~23:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/shulin-baoan-night/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=樹林保安街夜市",
+                      "appleQuery": "https://maps.apple.com/?q=樹林保安街夜市"
+                    }
                   }
                 ]
               }
@@ -2154,7 +2439,8 @@
                 "googleQuery": "https://www.google.com/maps/search/樹林保安街",
                 "appleQuery": "https://maps.apple.com/?q=樹林保安街"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -2205,7 +2491,8 @@
                       "魚酥",
                       "鐵蛋"
                     ],
-                    "blogUrl": "https://kenalice.tw/tamsui-old-street-shopping/"
+                    "blogUrl": "https://kenalice.tw/tamsui-old-street-shopping/",
+                    "googleRating": 4
                   },
                   {
                     "category": "伴手禮",
@@ -2216,7 +2503,8 @@
                       "河景咖啡",
                       "情人橋周邊限定伴手禮"
                     ],
-                    "blogUrl": "https://bunnyann.tw/fishermans-wharf-shopping/"
+                    "blogUrl": "https://bunnyann.tw/fishermans-wharf-shopping/",
+                    "googleRating": 4
                   },
                   {
                     "category": "伴手禮",
@@ -2227,7 +2515,8 @@
                       "孔雀蛤",
                       "福州餅"
                     ],
-                    "blogUrl": "https://bigmouthblog.tw/bali-left-bank-shopping/"
+                    "blogUrl": "https://bigmouthblog.tw/bali-left-bank-shopping/",
+                    "googleRating": 4
                   }
                 ]
               }
@@ -2250,27 +2539,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/menya-kei-tamsui/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋輝 淡水店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋輝 淡水店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "滬尾義式廚房",
                     "description": "淡水河畔的義式餐廳，手工義大利麵配淡水河景，海鮮義大利麵最受歡迎",
                     "price": "NT$280~480",
                     "hours": "11:30~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/huwei-italian-tamsui/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=滬尾義式廚房",
+                      "appleQuery": "https://maps.apple.com/?q=滬尾義式廚房"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "文化阿給",
                     "description": "淡水阿給創始店之一，冬粉塞入油豆腐再封魚漿",
                     "price": "NT$35~60",
                     "hours": "06:30~18:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/wenhua-agei/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=文化阿給",
+                      "appleQuery": "https://maps.apple.com/?q=文化阿給"
+                    }
                   }
                 ]
               }
@@ -2282,7 +2583,8 @@
                 "googleQuery": "https://www.google.com/maps/search/淡水老街",
                 "appleQuery": "https://maps.apple.com/?q=淡水老街"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -2319,27 +2621,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-kei-bali/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋輝 八里/淡水近郊店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋輝 八里/淡水近郊店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "之間 茶食器",
                     "description": "淡水河畔複合式餐廳，義式料理配淡水河景",
                     "price": "NT$300~500",
                     "hours": "11:30~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/between-tamsui/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=之間 茶食器",
+                      "appleQuery": "https://maps.apple.com/?q=之間 茶食器"
+                    }
                   },
                   {
-                    "category": "海鮮",
+                    "category": "特色小吃",
                     "name": "淡水福佑宮旁海鮮",
                     "description": "淡水在地海鮮餐廳，現撈海產清蒸煮炒樣樣有",
                     "price": "NT$200~500",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://appletrees.tw/tamsui-seafood/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=淡水福佑宮旁海鮮",
+                      "appleQuery": "https://maps.apple.com/?q=淡水福佑宮旁海鮮"
+                    }
                   }
                 ]
               }
@@ -2351,7 +2665,8 @@
                 "googleQuery": "https://www.google.com/maps/search/淡水老街",
                 "appleQuery": "https://maps.apple.com/?q=淡水老街"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -2406,27 +2721,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/menya-kei-tamsui/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋輝 淡水店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋輝 淡水店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "安乘漁人碼頭店",
                     "description": "碼頭景觀餐廳，手工義大利麵配河口夕陽",
                     "price": "NT$250~450",
                     "hours": "11:00~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://kenalice.tw/ancheng-fishermans/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=安乘漁人碼頭店",
+                      "appleQuery": "https://maps.apple.com/?q=安乘漁人碼頭店"
+                    }
                   },
                   {
-                    "category": "海鮮",
+                    "category": "特色小吃",
                     "name": "漁人碼頭海鮮餐廳",
                     "description": "碼頭旁現撈海鮮，清蒸鮮魚與炒蛤蜊鮮甜",
                     "price": "NT$200~500",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bigmouthblog.tw/fishermans-wharf-seafood/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=漁人碼頭海鮮餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=漁人碼頭海鮮餐廳"
+                    }
                   }
                 ]
               }
@@ -2438,7 +2765,8 @@
                 "googleQuery": "https://www.google.com/maps/search/淡水漁人碼頭",
                 "appleQuery": "https://maps.apple.com/?q=淡水漁人碼頭"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -2475,27 +2803,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-kei-bali/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋輝 八里/淡水近郊店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋輝 八里/淡水近郊店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "八里水岸義式景觀餐廳",
                     "description": "八里左岸景觀義式餐廳，手工義大利麵配觀音山與淡水河視野，夕陽時分最美",
                     "price": "NT$280~500",
                     "hours": "11:00~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://appletrees.tw/bali-waterfront-italian/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=八里水岸義式景觀餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=八里水岸義式景觀餐廳"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "淡水老街許義魚酥",
                     "description": "淡水百年魚酥店，現炸魚酥香脆，搭配阿給超滿足",
                     "price": "NT$30~80",
                     "hours": "09:00~20:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bunnyann.tw/xuyi-fish-crisp/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=淡水老街許義魚酥",
+                      "appleQuery": "https://maps.apple.com/?q=淡水老街許義魚酥"
+                    }
                   }
                 ]
               }
@@ -2507,7 +2847,8 @@
                 "googleQuery": "https://www.google.com/maps/search/淡水漁人碼頭",
                 "appleQuery": "https://maps.apple.com/?q=淡水漁人碼頭"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }
@@ -2562,27 +2903,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tisshuang.com/menya-kei-tamsui/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋輝 淡水店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋輝 淡水店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "滬尾義式廚房",
                     "description": "淡水河畔的義式餐廳，手工義大利麵配淡水河景，海鮮義大利麵最受歡迎",
                     "price": "NT$280~480",
                     "hours": "11:30~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://tisshuang.com/huwei-italian-tamsui/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=滬尾義式廚房",
+                      "appleQuery": "https://maps.apple.com/?q=滬尾義式廚房"
+                    }
                   },
                   {
-                    "category": "台式小吃",
+                    "category": "特色小吃",
                     "name": "八里渡船頭雙胞胎",
                     "description": "八里老街必吃炸物，雙胞胎甜甜圈外酥內軟",
                     "price": "NT$15~30",
                     "hours": "09:00~19:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/bali-twin-donut/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=八里渡船頭雙胞胎",
+                      "appleQuery": "https://maps.apple.com/?q=八里渡船頭雙胞胎"
+                    }
                   }
                 ]
               }
@@ -2594,7 +2947,8 @@
                 "googleQuery": "https://www.google.com/maps/search/八里渡船頭",
                 "appleQuery": "https://maps.apple.com/?q=八里渡船頭"
               }
-            ]
+            ],
+            "blogUrl": ""
           },
           {
             "time": "14:00-16:00",
@@ -2631,27 +2985,39 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://kenalice.tw/menya-kei-bali/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=麵屋輝 八里/淡水近郊店",
+                      "appleQuery": "https://maps.apple.com/?q=麵屋輝 八里/淡水近郊店"
+                    }
                   },
                   {
-                    "category": "義式料理",
+                    "category": "義大利麵",
                     "name": "八里水岸義式景觀餐廳",
                     "description": "八里左岸景觀義式餐廳，手工義大利麵配觀音山與淡水河視野，夕陽時分最美",
                     "price": "NT$280~500",
                     "hours": "11:00~21:00",
                     "reservation": "建議訂位",
                     "blogUrl": "https://appletrees.tw/bali-waterfront-italian/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=八里水岸義式景觀餐廳",
+                      "appleQuery": "https://maps.apple.com/?q=八里水岸義式景觀餐廳"
+                    }
                   },
                   {
-                    "category": "台式海鮮",
+                    "category": "特色小吃",
                     "name": "八里佘家孔雀蛤大王",
                     "description": "八里名產孔雀蛤，九層塔大火快炒鮮甜入味",
                     "price": "NT$100~300",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bunnyann.tw/bali-mussel-king/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "googleQuery": "https://maps.google.com/?q=八里佘家孔雀蛤大王",
+                      "appleQuery": "https://maps.apple.com/?q=八里佘家孔雀蛤大王"
+                    }
                   }
                 ]
               }
@@ -2663,7 +3029,8 @@
                 "googleQuery": "https://www.google.com/maps/search/八里渡船頭",
                 "appleQuery": "https://maps.apple.com/?q=八里渡船頭"
               }
-            ]
+            ],
+            "blogUrl": ""
           }
         ]
       }

@@ -167,7 +167,8 @@
                     "沖繩黑糖",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://mimigo.tw/okinawa-donki/"
+                  "blogUrl": "https://mimigo.tw/okinawa-donki/",
+                  "googleRating": 4.2
                 },
                 {
                   "category": "超商",
@@ -179,7 +180,8 @@
                     "飯糰便當",
                     "沖繩限定飲料"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -191,7 +193,8 @@
                     "泡盛",
                     "海葡萄（海ぶどう）"
                   ],
-                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200"
+                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200",
+                  "googleRating": 4.0
                 }
               ]
             }
@@ -202,6 +205,7 @@
             "time": "15:20",
             "title": "MM926 台北出發",
             "description": "桃園國際機場出發，飛往沖繩那霸",
+            "blogUrl": "",
             "locations": [
               {
                 "name": "桃園國際機場",
@@ -243,6 +247,7 @@
             "time": "18:30",
             "title": "Check in Living Inn 旭橋駅前",
             "description": "放置行李，休息整理",
+            "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179",
             "locations": [
               {
                 "name": "Living Inn 旭橋駅前",
@@ -264,7 +269,8 @@
                       "沖繩限定便當・熟食・生鮮食材",
                       "ORION 啤酒、泡盛沖繩地酒"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/668971/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/668971/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "超商",
@@ -275,7 +281,8 @@
                       "沖繩限定香檸炸雞（LAWSON）",
                       "ATM 換現金・SIM 卡購買"
                     ],
-                    "blogUrl": "https://marukoblog.tw/lawson-okinawa.html"
+                    "blogUrl": "https://marukoblog.tw/lawson-okinawa.html",
+                    "googleRating": 3.5
                   }
                 ]
               }
@@ -310,7 +317,8 @@
                       "安耐曬防曬乳・KOSE 雪肌精・&Honey 護髮品",
                       "Royce 生巧克力・薯條三兄弟（北海道名產）"
                     ],
-                    "blogUrl": "https://marktrip.tw/okinawa-kokusai-donki-guide/"
+                    "blogUrl": "https://marktrip.tw/okinawa-kokusai-donki-guide/",
+                    "googleRating": 4.1
                   }
                 ]
               },
@@ -334,7 +342,7 @@
                     "googleRating": 4.3
                   },
                   {
-                    "category": "牛排",
+                    "category": "牛排/烤魚",
                     "name": "やっぱりステーキ 国際通り店",
                     "description": "CP值超高！¥1,000起的溶岩石板牛排",
                     "price": "¥1,000~",
@@ -405,7 +413,8 @@
                     "沖繩黑糖",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://mimigo.tw/okinawa-donki/"
+                  "blogUrl": "https://mimigo.tw/okinawa-donki/",
+                  "googleRating": 4.2
                 },
                 {
                   "category": "超商",
@@ -417,7 +426,8 @@
                     "飯糰便當",
                     "沖繩限定飲料"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -429,7 +439,8 @@
                     "泡盛",
                     "海葡萄（海ぶどう）"
                   ],
-                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200"
+                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200",
+                  "googleRating": 4.0
                 }
               ]
             }
@@ -486,6 +497,7 @@
             "time": "18:15",
             "title": "返回那霸，晚餐",
             "description": "一日遊結束，返回那霸市區享用晚餐",
+            "blogUrl": "https://mimigo.tw/naha-hotels/",
             "locations": [
               {
                 "name": "那霸市區",
@@ -514,7 +526,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "牛排",
+                    "category": "牛排/烤魚",
                     "name": "Jack's Steak House",
                     "description": "1953 年創業老字號美式牛排，里脊牛排嫩口多汁，CP 值極高",
                     "price": "¥1,500~",
@@ -585,7 +597,8 @@
                     "沖繩黑糖",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://mimigo.tw/okinawa-donki/"
+                  "blogUrl": "https://mimigo.tw/okinawa-donki/",
+                  "googleRating": 4.2
                 },
                 {
                   "category": "超商",
@@ -597,7 +610,8 @@
                     "飯糰便當",
                     "沖繩限定飲料"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/18216/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -609,7 +623,8 @@
                     "泡盛",
                     "海葡萄（海ぶどう）"
                   ],
-                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200"
+                  "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200",
+                  "googleRating": 4.0
                 }
               ]
             }
@@ -682,6 +697,7 @@
             "time": "21:30",
             "title": "返回那霸，晚餐",
             "description": "一日遊結束返回那霸市區，選擇深夜營業的餐廳用餐",
+            "blogUrl": "https://mimigo.tw/naha-hotels/",
             "locations": [
               {
                 "name": "那霸市區",
@@ -710,7 +726,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "牛排",
+                    "category": "牛排/烤魚",
                     "name": "やっぱりステーキ 国際通り店",
                     "description": "CP 值超高！¥1,000 起的溶岩石板牛排，深夜 1:30 仍營業",
                     "price": "¥1,000~",
@@ -781,7 +797,8 @@
                     "Orion 啤酒罐裝",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759"
+                  "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -793,7 +810,8 @@
                     "沖繩海鮮",
                     "沖繩特產調味料"
                   ],
-                  "blogUrl": "https://mimigo.tw/kokusai-street/"
+                  "blogUrl": "https://mimigo.tw/kokusai-street/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "藥妝",
@@ -805,7 +823,8 @@
                     "沖繩限定零食",
                     "消炎止痛貼布"
                   ],
-                  "blogUrl": "https://mimigo.tw/cosmos-drug/"
+                  "blogUrl": "https://mimigo.tw/cosmos-drug/",
+                  "googleRating": 3.8
                 }
               ]
             }
@@ -908,7 +927,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "牛排",
+                    "category": "牛排/烤魚",
                     "name": "炭焼ハラミステーキ 牛米衛",
                     "description": "炭火燒烤宮崎牛，ライカム人氣最高餐廳之一",
                     "price": "¥1,800~",
@@ -952,7 +971,8 @@
                       "相機、耳機、遊戲機",
                       "沖繩限定家電周邊"
                     ],
-                    "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/"
+                    "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "超市",
@@ -964,7 +984,8 @@
                       "ORION 啤酒／泡盛沖繩限定",
                       "宮古島雪鹽、金楚糕"
                     ],
-                    "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/"
+                    "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/",
+                    "googleRating": 4.0
                   },
                   {
                     "category": "伴手禮",
@@ -975,7 +996,8 @@
                       "皮卡丘 × 沖繩設計周邊",
                       "集換式卡牌"
                     ],
-                    "blogUrl": "https://ajunfun.tw/aeonmall/"
+                    "blogUrl": "https://ajunfun.tw/aeonmall/",
+                    "googleRating": 4.2
                   }
                 ]
               }
@@ -992,8 +1014,9 @@
             },
             "locations": [
               {
-                "googleQuery": "https://www.google.com/maps/search/那霸巴士總站",
-                "appleQuery": "https://maps.apple.com/?q=那霸巴士總站"
+                "name": "那霸巴士總站",
+                "googleQuery": "https://maps.google.com/?q=那霸バスターミナル",
+                "appleQuery": "https://maps.apple.com/?q=那霸バスターミナル"
               }
             ],
             "googleRating": 3.8
@@ -1001,6 +1024,7 @@
           {
             "time": "18:30",
             "title": "晚餐",
+            "blogUrl": "https://mimigo.tw/naha-hotels/",
             "infoBoxes": [
               {
                 "type": "restaurants",
@@ -1021,7 +1045,7 @@
                     "googleRating": 4.3
                   },
                   {
-                    "category": "牛排",
+                    "category": "牛排/烤魚",
                     "name": "やっぱりステーキ 國際通り店",
                     "hours": "11:00~01:00",
                     "reservation": "不需訂位",
@@ -1064,6 +1088,7 @@
             "time": "20:00",
             "title": "Check in THE NEST NAHA",
             "description": "辦理 Check in，放置行李。可使用 14F 溫水游泳池（9:00~22:00）",
+            "blogUrl": "https://vialife.tw/21994/",
             "locations": [
               {
                 "name": "THE NEST NAHA",
@@ -1085,7 +1110,8 @@
                       "沖繩限定零食・紅芋點心・黑糖果子",
                       "安耐曬防曬乳・藥妝保養品（比國際通店更寬敞好逛）"
                     ],
-                    "blogUrl": "https://linshibi.com/?p=16331"
+                    "blogUrl": "https://linshibi.com/?p=16331",
+                    "googleRating": 4.1
                   },
                   {
                     "category": "超商",
@@ -1096,7 +1122,8 @@
                       "沖繩限定香檸炸雞・在地熟食",
                       "隔日早餐備糧・飲料・零食"
                     ],
-                    "blogUrl": "https://marukoblog.tw/lawson-okinawa.html"
+                    "blogUrl": "https://marukoblog.tw/lawson-okinawa.html",
+                    "googleRating": 3.5
                   },
                   {
                     "category": "藥妝",
@@ -1107,7 +1134,8 @@
                       "ANESSA 安耐曬防曬乳",
                       "龍角散粉包"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 3.7
                   }
                 ]
               }
@@ -1150,7 +1178,8 @@
                     "Orion 啤酒罐裝",
                     "沖繩限定零食"
                   ],
-                  "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759"
+                  "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -1162,7 +1191,8 @@
                     "沖繩海鮮",
                     "沖繩特產調味料"
                   ],
-                  "blogUrl": "https://mimigo.tw/kokusai-street/"
+                  "blogUrl": "https://mimigo.tw/kokusai-street/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "藥妝",
@@ -1174,7 +1204,8 @@
                     "沖繩限定零食",
                     "消炎止痛貼布"
                   ],
-                  "blogUrl": "https://mimigo.tw/cosmos-drug/"
+                  "blogUrl": "https://mimigo.tw/cosmos-drug/",
+                  "googleRating": 3.8
                 }
               ]
             }
@@ -1185,6 +1216,7 @@
             "time": "上午",
             "title": "飯店早晨・出發準備",
             "description": "在飯店享用早晨時光，可使用 14F 溫水游泳池（9:00~22:00）",
+            "blogUrl": "https://vialife.tw/21994/",
             "locations": [
               {
                 "name": "THE NEST NAHA",
@@ -1246,7 +1278,7 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
-                    "category": "塔可飯",
+                    "category": "燒肉",
                     "name": "タコライスcafe きじむなぁ iias豊崎店",
                     "description": "沖繩塔可飯名店，招牌蛋包塔可飯「オムタコ」",
                     "price": "¥780~",
@@ -1261,7 +1293,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "沖縄そば",
+                    "category": "牛排/烤魚",
                     "name": "やっぱりちゃん iias豊崎店",
                     "description": "やっぱりステーキ旗下沖繩麵專門店，價格實惠",
                     "price": "¥700~",
@@ -1276,7 +1308,7 @@
                     "googleRating": 3.8
                   },
                   {
-                    "category": "海鮮丼",
+                    "category": "當地特色",
                     "name": "親父のまぐろ iias豊崎店",
                     "description": "沖繩近海天然生鮪專門店，當日新鮮處理",
                     "price": "¥1,050~",
@@ -1305,7 +1337,8 @@
                       "美容家電（吹風機、美容儀）",
                       "遊戲機、模型周邊"
                     ],
-                    "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/"
+                    "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "藥妝",
@@ -1316,7 +1349,8 @@
                       "ANESSA 安耐曬防曬乳",
                       "龍角散粉包"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/544483/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/544483/",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "超市",
@@ -1327,7 +1361,8 @@
                       "石垣島辣油、金楚糕",
                       "ORION 啤酒、泡盛"
                     ],
-                    "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/"
+                    "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/",
+                    "googleRating": 4.0
                   }
                 ]
               }
@@ -1363,7 +1398,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "牛排",
+                    "category": "牛排/烤魚",
                     "name": "ステーキハウス88 辻本店",
                     "description": "1955 年創業沖繩最老牌牛排館，營業至深夜 2 點",
                     "price": "¥2,000~",
@@ -1398,8 +1433,9 @@
             "googleRating": 4,
             "locations": [
               {
-                "googleQuery": "https://www.google.com/maps/search/那霸國際通",
-                "appleQuery": "https://maps.apple.com/?q=那霸國際通"
+                "name": "那霸國際通周邊",
+                "googleQuery": "https://maps.google.com/?q=那覇国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇国際通り"
               }
             ]
           }
@@ -1440,6 +1476,7 @@
             "time": "10:00",
             "title": "抵達那霸機場・辦理報到",
             "description": "提早到機場辦理報到、託運行李。機場免稅店最後採購！Blue Seal 冰淇淋推薦紅芋口味",
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/",
             "locations": [
               {
                 "name": "那霸機場",
@@ -1453,13 +1490,14 @@
             "time": "10:30",
             "title": "機場午餐",
             "description": "在那霸機場國內線出發大廳用餐",
+            "blogUrl": "https://pfse64289.pixnet.net/blog/post/347093785",
             "infoBoxes": [
               {
                 "type": "restaurants",
                 "title": "機場午餐推薦",
                 "restaurants": [
                   {
-                    "category": "沖繩料理",
+                    "category": "燒肉",
                     "name": "空港食堂",
                     "description": "隱藏版員工食堂，在地人也愛吃，CP值超高",
                     "price": "¥600~",
@@ -1474,7 +1512,7 @@
                     "googleRating": 4.1
                   },
                   {
-                    "category": "沖繩そば",
+                    "category": "牛排/烤魚",
                     "name": "天龍 那覇空港店",
                     "description": "沖繩そば＆定食老店，機場人氣名店",
                     "price": "¥800~",
@@ -1489,7 +1527,7 @@
                     "googleRating": 3.9
                   },
                   {
-                    "category": "速食",
+                    "category": "當地特色",
                     "name": "A&W 那覇空港店",
                     "description": "沖繩限定美式漢堡，根啤酒 Root Beer 必喝",
                     "price": "¥600~",
@@ -1519,6 +1557,7 @@
             "time": "11:35",
             "title": "MM925 沖繩起飛",
             "description": "搭乘樂桃航空 MM925 返回台灣桃園",
+            "blogUrl": "",
             "infoBoxes": [
               {
                 "type": "reservation",
@@ -1542,6 +1581,7 @@
           {
             "time": "14:20",
             "title": "抵達桃園國際機場",
+            "blogUrl": "",
             "locations": [
               {
                 "name": "桃園國際機場",

@@ -154,6 +154,16 @@ describe('renderRestaurant', () => {
     });
     expect(html).toContain('maps.google.com');
   });
+
+  it('renders googleRating when present', () => {
+    const html = renderRestaurant({ name: '燒肉店', googleRating: 4.2 });
+    expect(html).toContain('<span class="rating">★ 4.2</span>');
+  });
+
+  it('does not render rating when googleRating is absent', () => {
+    const html = renderRestaurant({ name: '燒肉店' });
+    expect(html).not.toContain('rating');
+  });
 });
 
 /* ===== renderInfoBox ===== */
@@ -225,6 +235,17 @@ describe('renderInfoBox', () => {
     expect(html).toContain('maps.google.com');
   });
 
+  it('renders gasStation with googleRating', () => {
+    const html = renderInfoBox({
+      type: 'gasStation', title: '還車前加油', googleRating: 3.8,
+      station: { name: 'ENEOS', address: '那覇市', hours: '07:00-21:00', service: 'フルサービス（人工）', phone: '098-123-4567' }
+    });
+    expect(html).toContain('info-box gas-station');
+    expect(html).toContain('還車前加油');
+    expect(html).toContain('<span class="rating">★ 3.8</span>');
+    expect(html).toContain('ENEOS');
+  });
+
   it('renders shopping info box', () => {
     const html = renderInfoBox({
       type: 'shopping', title: '附近購物',
@@ -254,6 +275,16 @@ describe('renderShop', () => {
     expect(html).toContain('黑糖');
     expect(html).toContain('泡盛');
     expect(html).toContain('href="https://blog.example.com/sana"');
+  });
+
+  it('renders googleRating when present', () => {
+    const html = renderShop({ category: '超市', name: 'MaxValu', googleRating: 3.8 });
+    expect(html).toContain('<span class="rating">★ 3.8</span>');
+  });
+
+  it('does not render rating when googleRating is absent', () => {
+    const html = renderShop({ category: '超市', name: 'MaxValu' });
+    expect(html).not.toContain('rating');
   });
 });
 
@@ -329,6 +360,18 @@ describe('renderTimelineEvent', () => {
     });
     expect(html).toContain('href="https://blog.example.com/churaumi"');
     expect(html).toContain('網誌推薦');
+  });
+
+  it('renders googleRating when present', () => {
+    const html = renderTimelineEvent({
+      time: '10:00', title: '首里城', googleRating: 4.5
+    });
+    expect(html).toContain('<span class="rating">★ 4.5</span>');
+  });
+
+  it('does not render rating when googleRating is absent', () => {
+    const html = renderTimelineEvent({ time: '10:00', title: '首里城' });
+    expect(html).not.toContain('rating');
   });
 });
 

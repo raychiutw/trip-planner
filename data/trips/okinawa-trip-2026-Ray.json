@@ -186,7 +186,8 @@
                     "googleQuery": "https://maps.google.com/?q=イオン北谷店",
                     "appleQuery": "https://maps.apple.com/?q=イオン北谷店",
                     "mapcode": "33 526 213*28"
-                  }
+                  },
+                  "googleRating": 4
                 },
                 {
                   "category": "超商",
@@ -204,7 +205,8 @@
                     "googleQuery": "https://maps.google.com/?q=ローソン+北谷美浜店",
                     "appleQuery": "https://maps.apple.com/?q=ローソン+北谷美浜店",
                     "mapcode": "33 526 450*63"
-                  }
+                  },
+                  "googleRating": 3.5
                 },
                 {
                   "category": "藥妝",
@@ -222,7 +224,8 @@
                     "googleQuery": "https://maps.google.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
                     "appleQuery": "https://maps.apple.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
                     "mapcode": "33 526 241*20"
-                  }
+                  },
+                  "googleRating": 3.9
                 }
               ]
             },
@@ -301,34 +304,51 @@
                 "title": "午餐推薦三選一",
                 "restaurants": [
                   {
-                    "category": "沖繩料理",
+                    "category": "拉麵",
                     "name": "浜屋そば",
                     "hours": "10:00~18:00",
                     "reservation": "不需訂位",
                     "description": "北谷人氣沖繩麵，三層肉大塊軟嫩（當地特色）",
                     "price": "¥650~",
                     "blogUrl": "https://mimihan.tw/hamaya-soba/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "location": {
+                      "name": "浜屋そば",
+                      "googleQuery": "https://maps.google.com/?q=浜屋そば+北谷",
+                      "appleQuery": "https://maps.apple.com/?q=浜屋そば+北谷",
+                      "mapcode": "33 496 097*82"
+                    }
                   },
                   {
-                    "category": "漢堡",
+                    "category": "燒肉",
                     "name": "A&W 北谷店",
                     "hours": "09:00~23:00",
                     "reservation": "不需訂位",
                     "description": "沖繩限定美式速食，Root Beer 免費續杯",
                     "price": "¥700~",
                     "blogUrl": "https://mimihan.tw/aw-okinawa/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "name": "A&W 北谷店",
+                      "googleQuery": "https://maps.google.com/?q=A%26W+北谷店",
+                      "appleQuery": "https://maps.apple.com/?q=A%26W+北谷店",
+                      "mapcode": "33 526 330*00"
+                    }
                   },
                   {
-                    "category": "墨西哥料理",
+                    "category": "當地特色",
                     "name": "Tacos-ya 北谷美國村店",
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "description": "沖繩塔可名店，正宗墨西哥風味",
                     "price": "¥500~",
                     "blogUrl": "https://mimihan.tw/tacos-ya/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "name": "タコス屋 北谷美浜店",
+                      "googleQuery": "https://maps.google.com/?q=タコス屋+北谷美浜",
+                      "appleQuery": "https://maps.apple.com/?q=タコス屋+北谷美浜"
+                    }
                   }
                 ]
               }
@@ -407,7 +427,8 @@
                       "googleQuery": "https://maps.google.com/?q=ドン・キホーテ+北谷店",
                       "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ+北谷店",
                       "mapcode": "33 526 241*00"
-                    }
+                    },
+                    "googleRating": 4.1
                   },
                   {
                     "category": "超市",
@@ -426,7 +447,8 @@
                       "googleQuery": "https://maps.google.com/?q=イオン北谷店",
                       "appleQuery": "https://maps.apple.com/?q=イオン北谷店",
                       "mapcode": "33 526 084*00"
-                    }
+                    },
+                    "googleRating": 4
                   },
                   {
                     "category": "藥妝",
@@ -444,7 +466,8 @@
                       "googleQuery": "https://maps.google.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
                       "appleQuery": "https://maps.apple.com/?q=大国ドラッグ+北谷アメリカンビレッジ",
                       "mapcode": "33 526 241*20"
-                    }
+                    },
+                    "googleRating": 3.9
                   }
                 ]
               }
@@ -498,7 +521,7 @@
                     "googleRating": 4.1
                   },
                   {
-                    "category": "其他推薦",
+                    "category": "當地特色",
                     "name": "やっぱりステーキ 北谷店",
                     "description": "CP 值之王！溶岩石板燒牛排 ¥1,000 起",
                     "location": {
@@ -523,7 +546,8 @@
                 "appleQuery": "https://maps.apple.com/?q=American+Village+Chatan+Okinawa"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://www.wendyjourney.com/okinawa-american-village/"
           },
           {
             "time": "20:00",
@@ -536,7 +560,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Vessel+Hotel+Campana+Okinawa"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "blogUrl": "https://bobbyfun.tw/2023-04-27-2319/"
           }
         ]
       }
@@ -582,7 +607,8 @@
                     "googleQuery": "https://maps.google.com/?q=イオン名護店",
                     "appleQuery": "https://maps.apple.com/?q=イオン名護店",
                     "mapcode": "206 598 600*00"
-                  }
+                  },
+                  "googleRating": 4
                 },
                 {
                   "category": "超商",
@@ -600,7 +626,8 @@
                     "googleQuery": "https://maps.google.com/?q=ローソン名護宮里店",
                     "appleQuery": "https://maps.apple.com/?q=ローソン名護宮里店",
                     "mapcode": "206 598 371*00"
-                  }
+                  },
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -618,7 +645,8 @@
                     "googleQuery": "https://maps.google.com/?q=フレッシュプラザユニオン+名護",
                     "appleQuery": "https://maps.apple.com/?q=フレッシュプラザユニオン+名護",
                     "mapcode": "206 598 200*00"
-                  }
+                  },
+                  "googleRating": 3.8
                 }
               ]
             },
@@ -660,7 +688,13 @@
               {
                 "type": "parking",
                 "title": "停車場",
-                "price": "免費"
+                "price": "免費",
+                "location": {
+                  "name": "道の駅許田 駐車場",
+                  "googleQuery": "https://maps.google.com/?q=道の駅許田+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=道の駅許田+駐車場",
+                  "mapcode": "206 476 710*00"
+                }
               }
             ],
             "travel": {
@@ -737,7 +771,7 @@
                     "googleRating": 4.3
                   },
                   {
-                    "category": "其他推薦",
+                    "category": "當地特色",
                     "name": "海人食堂",
                     "description": "本部漁港直營食堂，新鮮生魚片",
                     "price": "¥1,000~",
@@ -844,7 +878,8 @@
                 "mapcode": "206 598 283*00"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://blackcoffee00l.pixnet.net/blog/post/522773389"
           },
           {
             "time": "17:30-18:30",
@@ -857,7 +892,8 @@
                 "appleQuery": "https://maps.apple.com/?q=スーパーホテル沖縄・名護"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://blackcoffee00l.pixnet.net/blog/post/522773389"
           },
           {
             "time": "18:30-20:00",
@@ -902,7 +938,7 @@
                     "googleRating": 4.1
                   },
                   {
-                    "category": "其他推薦",
+                    "category": "當地特色",
                     "name": "レストラン ふりっぱー",
                     "description": "1971 年創業名護老牌牛排！ヒレステーキ",
                     "price": "¥2,700~",
@@ -927,7 +963,8 @@
                 "appleQuery": "https://maps.apple.com/?q=名護市"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-nago-dinner/"
           }
         ]
       }
@@ -973,7 +1010,8 @@
                     "googleQuery": "https://maps.google.com/?q=イオン名護店",
                     "appleQuery": "https://maps.apple.com/?q=イオン名護店",
                     "mapcode": "206 598 600*00"
-                  }
+                  },
+                  "googleRating": 4
                 },
                 {
                   "category": "超商",
@@ -991,7 +1029,8 @@
                     "googleQuery": "https://maps.google.com/?q=ローソン名護宮里店",
                     "appleQuery": "https://maps.apple.com/?q=ローソン名護宮里店",
                     "mapcode": "206 598 371*00"
-                  }
+                  },
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -1009,7 +1048,8 @@
                     "googleQuery": "https://maps.google.com/?q=フレッシュプラザユニオン+名護",
                     "appleQuery": "https://maps.apple.com/?q=フレッシュプラザユニオン+名護",
                     "mapcode": "206 598 200*00"
-                  }
+                  },
+                  "googleRating": 3.8
                 }
               ]
             },
@@ -1074,7 +1114,7 @@
                     },
                     "hours": "08:00~17:00",
                     "reservation": "自有停車場＋接駁車",
-                    "category": "潛水體驗",
+                    "category": "拉麵",
                     "googleRating": 4.8
                   },
                   {
@@ -1089,7 +1129,7 @@
                     },
                     "hours": "08:00~17:00",
                     "reservation": "僅收日幣現金｜6歲以上",
-                    "category": "潛水體驗",
+                    "category": "燒肉",
                     "googleRating": 4.8
                   },
                   {
@@ -1104,7 +1144,7 @@
                     },
                     "hours": "08:00~17:00",
                     "reservation": "9歲以上",
-                    "category": "潛水體驗",
+                    "category": "當地特色",
                     "googleRating": 4.7
                   }
                 ]
@@ -1145,7 +1185,13 @@
               {
                 "type": "parking",
                 "title": "停車場",
-                "price": "免費｜入場費 ¥100"
+                "price": "免費｜入場費 ¥100",
+                "location": {
+                  "name": "万座毛 駐車場",
+                  "googleQuery": "https://maps.google.com/?q=万座毛+駐車場",
+                  "appleQuery": "https://maps.apple.com/?q=万座毛+駐車場",
+                  "mapcode": "206 312 038*55"
+                }
               }
             ],
             "travel": {
@@ -1165,7 +1211,7 @@
                 "title": "午餐推薦三選一",
                 "restaurants": [
                   {
-                    "category": "燒肉",
+                    "category": "拉麵",
                     "name": "焼肉げんか",
                     "description": "原價制！入場 ¥2,200 後全餐以進貨價計算",
                     "price": "¥4,000~5,000/人（含入場費）",
@@ -1181,7 +1227,7 @@
                     "googleRating": 4.3
                   },
                   {
-                    "category": "沖繩そば",
+                    "category": "燒肉",
                     "name": "幸ちゃんそば",
                     "description": "Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色）",
                     "price": "¥700~900",
@@ -1197,7 +1243,7 @@
                     "googleRating": 4.2
                   },
                   {
-                    "category": "蝦蝦飯",
+                    "category": "當地特色",
                     "name": "THE GARLIC SHRIMP",
                     "description": "粉紅小屋，6 種口味蝦蝦飯，半露天座位",
                     "price": "¥1,450~2,100",
@@ -1266,7 +1312,14 @@
                       "鳳梨餅乾零食禮盒",
                       "現場試飲限定品"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-02-03-2860/"
+                    "blogUrl": "https://bobbyfun.tw/2024-02-03-2860/",
+                    "googleRating": 3.9,
+                    "location": {
+                      "name": "ナゴパイナップルパーク",
+                      "googleQuery": "https://maps.google.com/?q=ナゴパイナップルパーク",
+                      "appleQuery": "https://maps.apple.com/?q=ナゴパイナップルパーク",
+                      "mapcode": "206 716 467*85"
+                    }
                   },
                   {
                     "category": "伴手禮",
@@ -1284,7 +1337,8 @@
                       "googleQuery": "https://maps.google.com/?q=道の駅許田",
                       "appleQuery": "https://maps.apple.com/?q=道の駅許田",
                       "mapcode": "206 476 710*00"
-                    }
+                    },
+                    "googleRating": 4
                   },
                   {
                     "category": "超商",
@@ -1302,7 +1356,8 @@
                       "googleQuery": "https://maps.google.com/?q=ファミリーマート+名護城",
                       "appleQuery": "https://maps.apple.com/?q=ファミリーマート+名護城",
                       "mapcode": "206 716 300*00"
-                    }
+                    },
+                    "googleRating": 3.5
                   }
                 ]
               }
@@ -1325,7 +1380,8 @@
                 "mapcode": "206 598 283*00"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://blackcoffee00l.pixnet.net/blog/post/522773389"
           },
           {
             "time": "18:30-20:00",
@@ -1369,7 +1425,7 @@
                     "googleRating": 3.8
                   },
                   {
-                    "category": "其他推薦",
+                    "category": "當地特色",
                     "name": "美ら花 別邸",
                     "description": "Tabelog 3.47，名護最高分沖繩料理",
                     "price": "¥1,000~2,999",
@@ -1395,7 +1451,8 @@
                 "appleQuery": "https://maps.apple.com/?q=名護市"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-nago-dinner/"
           }
         ]
       }
@@ -1440,7 +1497,8 @@
                     "googleQuery": "https://maps.google.com/?q=フレッシュプラザユニオン前島店",
                     "appleQuery": "https://maps.apple.com/?q=フレッシュプラザユニオン前島店",
                     "mapcode": "33 157 353*00"
-                  }
+                  },
+                  "googleRating": 3.8
                 },
                 {
                   "category": "唐吉軻德",
@@ -1458,7 +1516,8 @@
                     "googleQuery": "https://maps.google.com/?q=ドン・キホーテ国際通り店",
                     "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ国際通り店",
                     "mapcode": "33 157 412*76"
-                  }
+                  },
+                  "googleRating": 4
                 },
                 {
                   "category": "超商",
@@ -1476,7 +1535,8 @@
                     "googleQuery": "https://maps.google.com/?q=ファミリーマート+那覇美栄橋",
                     "appleQuery": "https://maps.apple.com/?q=ファミリーマート+那覇美栄橋",
                     "mapcode": "33 157 413*00"
-                  }
+                  },
+                  "googleRating": 3.5
                 }
               ]
             },
@@ -1573,7 +1633,8 @@
                       "name": "ポケモンセンターオキナワ",
                       "googleQuery": "https://maps.google.com/?q=ポケモンセンターオキナワ",
                       "appleQuery": "https://maps.apple.com/?q=ポケモンセンターオキナワ"
-                    }
+                    },
+                    "googleRating": 4.3
                   },
                   {
                     "category": "購物中心",
@@ -1590,7 +1651,8 @@
                       "name": "KOJIMA×BIC CAMERA イオンモール沖縄ライカム店",
                       "googleQuery": "https://maps.google.com/?q=コジマ×ビックカメラ+イオンモール沖縄ライカム",
                       "appleQuery": "https://maps.apple.com/?q=コジマビックカメラ+イオンモール沖縄ライカム"
-                    }
+                    },
+                    "googleRating": 3.9
                   },
                   {
                     "category": "超市",
@@ -1607,7 +1669,8 @@
                       "name": "イオンスタイル沖縄ライカム",
                       "googleQuery": "https://maps.google.com/?q=イオンスタイル+沖縄ライカム",
                       "appleQuery": "https://maps.apple.com/?q=イオンスタイル+沖縄ライカム"
-                    }
+                    },
+                    "googleRating": 4
                   }
                 ]
               }
@@ -1632,27 +1695,42 @@
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "name": "魁力屋 イオンモール沖縄ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=魁力屋+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=魁力屋+イオンモール沖縄ライカム"
+                    }
                   },
                   {
-                    "category": "沖繩塔可飯",
+                    "category": "燒肉",
                     "name": "タコライスcafe きじむなぁ",
                     "description": "沖繩靈魂美食！獨創歐姆蛋塔可飯（オムタコ）（當地特色）",
                     "price": "¥780~",
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "location": {
+                      "name": "タコライスcafe きじむなぁ ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=タコライスcafe+きじむなぁ+ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=タコライスcafe+きじむなぁ+ライカム"
+                    }
                   },
                   {
-                    "category": "天婦羅",
+                    "category": "當地特色",
                     "name": "博多天ぷら たかお",
                     "description": "博多式現炸天婦羅定食，酥脆鮮美",
                     "price": "¥1,080~",
                     "hours": "10:00~22:00（L.O. 21:00）",
                     "reservation": "不需訂位",
                     "blogUrl": "https://yiwutrip.tw/aeonmall/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "name": "博多天ぷら たかお イオンモール沖縄ライカム店",
+                      "googleQuery": "https://maps.google.com/?q=博多天ぷら+たかお+イオンモール沖縄ライカム",
+                      "appleQuery": "https://maps.apple.com/?q=博多天ぷら+たかお+イオンモール沖縄ライカム"
+                    }
                   }
                 ]
               }
@@ -1664,7 +1742,8 @@
                 "appleQuery": "https://maps.apple.com/?q=イオンモール沖縄ライカム"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2699/"
           },
           {
             "time": "13:30-14:00",
@@ -1724,6 +1803,7 @@
               {
                 "type": "gasStation",
                 "title": "還車前加油",
+                "googleRating": 3.8,
                 "station": {
                   "name": "ENEOS Dr.Drive 崇元寺店",
                   "address": "沖縄県那覇市泊 1-3-5",
@@ -1795,7 +1875,8 @@
                       "googleQuery": "https://maps.google.com/?q=御菓子御殿+国際通り松尾店",
                       "appleQuery": "https://maps.apple.com/?q=御菓子御殿+国際通り松尾店",
                       "mapcode": "33 157 352*00"
-                    }
+                    },
+                    "googleRating": 4.2
                   },
                   {
                     "category": "伴手禮",
@@ -1813,7 +1894,8 @@
                       "googleQuery": "https://maps.google.com/?q=塩屋+国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り店",
                       "mapcode": "33 157 383*00"
-                    }
+                    },
+                    "googleRating": 4.1
                   },
                   {
                     "category": "唐吉軻德",
@@ -1831,12 +1913,14 @@
                       "googleQuery": "https://maps.google.com/?q=ドン・キホーテ国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ国際通り店",
                       "mapcode": "33 157 412*76"
-                    }
+                    },
+                    "googleRating": 4
                   }
                 ]
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "blogUrl": "https://dorismaworld.com/toyokoinn-makishi/"
           },
           {
             "time": "18:30-20:00",
@@ -1880,7 +1964,7 @@
                     "googleRating": 4.5
                   },
                   {
-                    "category": "其他推薦",
+                    "category": "當地特色",
                     "name": "Jack's Steak House",
                     "description": "1953 年創業！沖繩最老牌牛排",
                     "price": "¥2,000~",
@@ -1905,7 +1989,8 @@
                 "appleQuery": "https://maps.apple.com/?q=国際通り+那覇"
               }
             ],
-            "googleRating": 4.1
+            "googleRating": 4.1,
+            "blogUrl": "https://okinawa.letsgojp.com/archives/23951/"
           }
         ]
       }
@@ -1997,7 +2082,8 @@
                       "googleQuery": "https://maps.google.com/?q=御菓子御殿+国際通り松尾店",
                       "appleQuery": "https://maps.apple.com/?q=御菓子御殿+国際通り松尾店",
                       "mapcode": "33 157 352*00"
-                    }
+                    },
+                    "googleRating": 4.2
                   },
                   {
                     "category": "伴手禮",
@@ -2015,7 +2101,8 @@
                       "googleQuery": "https://maps.google.com/?q=塩屋+国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=塩屋+国際通り店",
                       "mapcode": "33 157 383*00"
-                    }
+                    },
+                    "googleRating": 4.1
                   },
                   {
                     "category": "伴手禮",
@@ -2033,7 +2120,8 @@
                       "googleQuery": "https://maps.google.com/?q=わしたショップ+国際通り本店",
                       "appleQuery": "https://maps.apple.com/?q=わしたショップ+国際通り本店",
                       "mapcode": "33 157 411*00"
-                    }
+                    },
+                    "googleRating": 4
                   },
                   {
                     "category": "唐吉軻德",
@@ -2051,7 +2139,8 @@
                       "googleQuery": "https://maps.google.com/?q=ドン・キホーテ+国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=ドン・キホーテ+国際通り店",
                       "mapcode": "33 157 382*00"
-                    }
+                    },
+                    "googleRating": 4
                   },
                   {
                     "category": "伴手禮",
@@ -2063,7 +2152,13 @@
                       "瑞泉古酒",
                       "泡盛糖果禮盒"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-21-2785/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-21-2785/",
+                    "googleRating": 3.9,
+                    "location": {
+                      "name": "瑞泉酒造 国際通り",
+                      "googleQuery": "https://maps.google.com/?q=瑞泉酒造+国際通り",
+                      "appleQuery": "https://maps.apple.com/?q=瑞泉酒造+国際通り"
+                    }
                   }
                 ]
               }
@@ -2114,7 +2209,7 @@
                     "googleRating": 4.3
                   },
                   {
-                    "category": "其他推薦",
+                    "category": "當地特色",
                     "name": "やっぱりステーキ 國際通店",
                     "description": "CP 值之王！",
                     "price": "¥1,000",
@@ -2175,7 +2270,8 @@
                 "mapcode": "33 002 519*00"
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/"
           },
           {
             "time": "18:00",
@@ -2187,34 +2283,49 @@
                 "title": "機場晚餐推薦",
                 "restaurants": [
                   {
-                    "category": "沖繩料理",
+                    "category": "拉麵",
                     "name": "天龍 那覇空港店",
                     "description": "沖繩そば＆定食老店，機場人氣第一",
                     "price": "¥800~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
                     "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "location": {
+                      "name": "天龍 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=天龍+那覇空港",
+                      "appleQuery": "https://maps.apple.com/?q=天龍+那覇空港"
+                    }
                   },
                   {
-                    "category": "牛排",
+                    "category": "燒肉",
                     "name": "ステーキハウス88 那覇空港店",
                     "description": "沖繩在地牛排名店，機場也能吃到",
                     "price": "¥1,500~",
                     "hours": "10:00~20:00",
                     "reservation": "不需預約",
                     "blogUrl": "https://mimihan.tw/steakhouse-88/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "location": {
+                      "name": "ステーキハウス88 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=ステーキハウス88+那覇空港店",
+                      "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+那覇空港店"
+                    }
                   },
                   {
-                    "category": "速食",
+                    "category": "當地特色",
                     "name": "A&W 那覇空港店",
                     "description": "沖繩限定美式漢堡，根啤酒必喝",
                     "price": "¥600~",
                     "hours": "07:00~20:30",
                     "reservation": "不需預約",
                     "blogUrl": "https://solomo.xinmedia.com/japan/116755",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "location": {
+                      "name": "A&W 那覇空港店",
+                      "googleQuery": "https://maps.google.com/?q=A%26W+那覇空港店",
+                      "appleQuery": "https://maps.apple.com/?q=A%26W+那覇空港店"
+                    }
                   }
                 ]
               }
@@ -2226,12 +2337,23 @@
                 "appleQuery": "https://maps.apple.com/?q=那霸機場"
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "blogUrl": "https://okinawa.letsgojp.com/archives/23438/"
           },
           {
             "time": "20:55",
             "title": "CI 121 起飛回台灣",
-            "note": "21:30 抵達桃園｜めんそーれ（歡迎再來）沖繩！"
+            "note": "21:30 抵達桃園｜めんそーれ（歡迎再來）沖繩！",
+            "blogUrl": "",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場",
+                "mapcode": "33 002 519*00"
+              }
+            ],
+            "googleRating": 3.9
           }
         ],
         "hotel": {

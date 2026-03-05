@@ -269,7 +269,8 @@
                     "Orion啤酒",
                     "早餐麵包零食"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -280,7 +281,8 @@
                     "島豆腐",
                     "沖繩泡盛"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "唐吉軻德",
@@ -291,7 +293,8 @@
                     "日本限定零食",
                     "雜貨生活用品"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                  "googleRating": 4
                 }
               ]
             },
@@ -375,7 +378,8 @@
                 "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": ""
           }
         ]
       }
@@ -410,7 +414,8 @@
                     "沖繩限定牛奶糖",
                     "日本醬料/沙拉醬"
                   ],
-                  "blogUrl": "https://bobowin.blog/aeon-american/"
+                  "blogUrl": "https://bobowin.blog/aeon-american/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "超商",
@@ -421,7 +426,8 @@
                     "早餐熱食",
                     "Orion啤酒"
                   ],
-                  "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                  "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "唐吉軻德",
@@ -432,7 +438,8 @@
                     "零食伴手禮",
                     "日本限定商品"
                   ],
-                  "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                  "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+                  "googleRating": 4
                 }
               ]
             },
@@ -475,7 +482,8 @@
                 "appleQuery": "https://maps.apple.com/?q=沖繩旅毛 那覇新都心"
               }
             ],
-            "googleRating": 4.8
+            "googleRating": 4.8,
+            "blogUrl": ""
           },
           {
             "time": "09:00",
@@ -488,7 +496,8 @@
                 "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": ""
           },
           {
             "time": "09:23-10:23",
@@ -527,7 +536,8 @@
                       "島豆腐、沖繩豆腐製品",
                       "現烤麵包（marco polo）"
                     ],
-                    "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/"
+                    "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "超市",
@@ -538,7 +548,8 @@
                       "沖繩黑糖棒",
                       "Orion啤酒6瓶裝"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/668971/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/668971/",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "超市",
@@ -549,7 +560,8 @@
                       "零食小物分裝袋",
                       "日本百元雜貨"
                     ],
-                    "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/"
+                    "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
+                    "googleRating": 3.8
                   }
                 ]
               }
@@ -588,7 +600,8 @@
                       "DHC護唇膏",
                       "LuLuLun沖繩限定面膜"
                     ],
-                    "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/"
+                    "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "購物中心",
@@ -599,7 +612,8 @@
                       "沖繩限定Calbee薯條",
                       "島野菜、地元鮮魚"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/751316/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/751316/",
+                    "googleRating": 4
                   },
                   {
                     "category": "購物中心",
@@ -610,7 +624,8 @@
                       "UV防曬涼感帽",
                       "輕薄外套（室內冷氣強）"
                     ],
-                    "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/"
+                    "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/",
+                    "googleRating": 4
                   }
                 ]
               }
@@ -640,7 +655,7 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
-                    "category": "沖繩そば",
+                    "category": "沖繩料理",
                     "name": "我部祖河食堂 浦添店",
                     "description": "我部祖河食堂 — 60年老字號，招牌軟骨そば（軟骨排骨沖繩麵）湯頭清香，最具代表性沖繩在地風味",
                     "price": "¥750~",
@@ -655,7 +670,7 @@
                     "googleRating": 4.2
                   },
                   {
-                    "category": "沖繩拉麵",
+                    "category": "海鮮",
                     "name": "琉球新麺 通堂 PARCO CITY店",
                     "description": "琉球新麺 通堂 — 沖繩本土拉麵名店，濃厚豚骨湯底搭配特製捲麵，PARCO CITY 3F 排隊人氣店",
                     "price": "¥780~",
@@ -671,7 +686,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "高級燒肉",
+                    "category": "甜點",
                     "name": "敘敘苑 沖繩浦添PARCO CITY店",
                     "description": "叙々苑 沖縄浦添パルコシティ店 — 高級燒肉午餐",
                     "price": "¥2,400~",
@@ -698,7 +713,8 @@
                 "mapcode": "33 394 819*12"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
           },
           {
             "time": "14:54-18:54",
@@ -719,7 +735,8 @@
                       "沖繩限定圖案服飾",
                       "帆布手提袋"
                     ],
-                    "blogUrl": "https://ajunfun.tw/parco-city/"
+                    "blogUrl": "https://ajunfun.tw/parco-city/",
+                    "googleRating": 4
                   },
                   {
                     "category": "藥妝",
@@ -730,7 +747,8 @@
                       "防曬乳SPF50（沖繩夏天必備）",
                       "LuLuLun沖繩限定面膜"
                     ],
-                    "blogUrl": "https://ajunfun.tw/parco-city/"
+                    "blogUrl": "https://ajunfun.tw/parco-city/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "購物中心",
@@ -741,7 +759,8 @@
                       "香薰精油系列",
                       "輕薄涼感寢具"
                     ],
-                    "blogUrl": "https://www.bubu-jp.com/archives/45770"
+                    "blogUrl": "https://www.bubu-jp.com/archives/45770",
+                    "googleRating": 4
                   }
                 ]
               }
@@ -872,7 +891,8 @@
                       "日本限定零食糖果",
                       "美國村周邊雜貨"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+                    "googleRating": 4
                   },
                   {
                     "category": "購物中心",
@@ -883,7 +903,8 @@
                       "特色美式服飾",
                       "沖繩限定周邊商品"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
+                    "googleRating": 4
                   },
                   {
                     "category": "超市",
@@ -894,7 +915,8 @@
                       "日本醬料/燒肉醬",
                       "沖繩縣産飲料"
                     ],
-                    "blogUrl": "https://bobowin.blog/aeon-american/"
+                    "blogUrl": "https://bobowin.blog/aeon-american/",
+                    "googleRating": 3.8
                   }
                 ]
               }
@@ -944,7 +966,8 @@
                 "mapcode": "206 123 166*75"
               }
             ],
-            "googleRating": 4.3
+            "googleRating": 4.3,
+            "blogUrl": ""
           }
         ]
       }
@@ -979,7 +1002,8 @@
                     "沖繩縣產蔬果",
                     "恩納限定甜點"
                   ],
-                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "超商",
@@ -990,7 +1014,8 @@
                     "Orion啤酒",
                     "恩納村在地牛奶布丁"
                   ],
-                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -1001,7 +1026,8 @@
                     "業務用大份量零食",
                     "飲料汽水"
                   ],
-                  "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4"
+                  "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4",
+                  "googleRating": 3.8
                 }
               ]
             },
@@ -1031,7 +1057,8 @@
                 "mapcode": "206 123 166*75"
               }
             ],
-            "googleRating": 4.3
+            "googleRating": 4.3,
+            "blogUrl": ""
           },
           {
             "time": "08:05-11:05",
@@ -1102,7 +1129,7 @@
                 "title": "午餐替代方案（不自炊時）",
                 "restaurants": [
                   {
-                    "category": "沖繩麵",
+                    "category": "沖繩料理",
                     "name": "花織そば",
                     "description": "はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽，最具沖繩在地風味",
                     "price": "¥700~",
@@ -1117,7 +1144,7 @@
                     "googleRating": 4.2
                   },
                   {
-                    "category": "沖繩牛排",
+                    "category": "海鮮",
                     "name": "ステーキハウス88 恩納店",
                     "description": "STEAK HOUSE 88 恩納店 — 創業60年沖繩代表性牛排老店，從平價紅肉到縣產和牛一應俱全，前兼久漁港直送海葡萄鮮度抜群",
                     "price": "¥1,800~",
@@ -1132,7 +1159,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "豚骨拉麵",
+                    "category": "甜點",
                     "name": "ラーメン暖暮 北谷店",
                     "description": "ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃",
                     "price": "¥750~",
@@ -1175,7 +1202,8 @@
                 "mapcode": "206 221 372*23"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "blogUrl": ""
           },
           {
             "time": "16:14",
@@ -1187,7 +1215,7 @@
                 "title": "晚餐替代方案（不自炊時）",
                 "restaurants": [
                   {
-                    "category": "沖繩創作料理",
+                    "category": "沖繩料理",
                     "name": "海の家",
                     "description": "リゾートダイニング 海の家 — 恩納村海景餐廳，沖繩料理與海鮮創作料理，夕陽景觀一流",
                     "price": "¥2,000~",
@@ -1202,7 +1230,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "燒肉",
+                    "category": "海鮮",
                     "name": "琉球の牛 恩納店",
                     "description": "琉球の牛 — 沖繩縣產和牛燒肉，海景包廂",
                     "price": "¥5,000~",
@@ -1217,7 +1245,7 @@
                     "googleRating": 4.4
                   },
                   {
-                    "category": "豚骨拉麵",
+                    "category": "甜點",
                     "name": "麺処 じゅん坊 恩納店",
                     "description": "麺処 じゅん坊 — 恩納村人氣拉麵店，濃厚豚骨醬油湯底，加麵不加價，晚餐後宵夜佳選",
                     "price": "¥850~",
@@ -1241,7 +1269,8 @@
                 "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "blogUrl": ""
           }
         ]
       }
@@ -1276,7 +1305,8 @@
                     "沖繩縣產蔬果",
                     "恩納限定甜點"
                   ],
-                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "超商",
@@ -1287,7 +1317,8 @@
                     "Orion啤酒",
                     "恩納村在地牛奶布丁"
                   ],
-                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/"
+                  "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -1298,7 +1329,8 @@
                     "業務用大份量零食",
                     "飲料汽水"
                   ],
-                  "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4"
+                  "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4",
+                  "googleRating": 3.8
                 }
               ]
             },
@@ -1328,7 +1360,8 @@
                 "mapcode": "206 221 372*23"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "blogUrl": ""
           },
           {
             "time": "09:26-11:26",
@@ -1349,7 +1382,8 @@
                       "鳳梨果凍/果醬禮盒",
                       "鳳梨夾心餅乾"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-11-2732/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-11-2732/",
+                    "googleRating": 4.2
                   }
                 ]
               }
@@ -1396,7 +1430,7 @@
                     "googleRating": 4.1
                   },
                   {
-                    "category": "沖繩拉麵",
+                    "category": "海鮮",
                     "name": "ラーメン太陽 名護店",
                     "description": "ラーメン太陽 — 沖繩名護代表性豚骨醬油拉麵，清爽不油膩的沖繩在地風味，附炒飯半份超值",
                     "price": "¥700~",
@@ -1411,7 +1445,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "炭火燒肉",
+                    "category": "甜點",
                     "name": "焼肉 てるりん 名護店",
                     "description": "焼肉 てるりん — 名護在地人氣炭火燒肉，縣產牛與山原豬組合套餐，午餐優惠划算",
                     "price": "¥1,800~",
@@ -1492,7 +1526,7 @@
                 "title": "午餐推薦",
                 "restaurants": [
                   {
-                    "category": "海鮮丼",
+                    "category": "沖繩料理",
                     "name": "白砂食堂",
                     "description": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化，7~9月營業至 20:00",
                     "price": "¥3,500~",
@@ -1507,7 +1541,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "豚骨拉麵",
+                    "category": "海鮮",
                     "name": "ラーメン暖暮 名護店",
                     "description": "ラーメン暖暮 名護店 — 古宇利島回程途中名護人氣豚骨拉麵，湯頭濃醇，車程約30分",
                     "price": "¥800~",
@@ -1523,7 +1557,7 @@
                     "googleRating": 3.9
                   },
                   {
-                    "category": "炭火燒肉",
+                    "category": "甜點",
                     "name": "炭火燒肉 海南亭 本部店",
                     "description": "海南亭 — 本部・名護海景炭火燒肉，縣產牛與海島豬搭配多種海鮮，景觀絕佳（晚餐段可用）",
                     "price": "¥3,000~",
@@ -1583,7 +1617,7 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
-                    "category": "沖繩炭火燒肉",
+                    "category": "沖繩料理",
                     "name": "島豚七輪燒 滿味",
                     "description": "島豚七輪焼 満味 — 名護在地炭火燒肉，主打山原島豚（阿古豬血統），沖繩最具代表性豬肉品種，有中文菜單",
                     "price": "¥1,500~",
@@ -1598,7 +1632,7 @@
                     "googleRating": 4.5
                   },
                   {
-                    "category": "沖繩牛排",
+                    "category": "海鮮",
                     "name": "牛排屋88 名護店",
                     "description": "ステーキハウス88 Jr. 名護店 — 沖繩牛排老字號，附湯、沙拉、白飯",
                     "price": "¥1,500~",
@@ -1613,7 +1647,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "豚骨拉麵",
+                    "category": "甜點",
                     "name": "暖暮拉麵 名護店",
                     "description": "ラーメン暖暮 名護店 — 人氣豚骨拉麵",
                     "price": "¥800~",
@@ -1656,7 +1690,8 @@
                 "mapcode": "206 221 372*23"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "blogUrl": ""
           }
         ]
       }
@@ -1691,7 +1726,8 @@
                     "Orion啤酒",
                     "早餐麵包零食"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -1702,7 +1738,8 @@
                     "島豆腐",
                     "沖繩泡盛"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "唐吉軻德",
@@ -1713,7 +1750,8 @@
                     "日本限定零食",
                     "雜貨生活用品"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                  "googleRating": 4
                 }
               ]
             },
@@ -1743,7 +1781,8 @@
                 "mapcode": "206 221 372*23"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "blogUrl": ""
           },
           {
             "time": "09:12-10:12",
@@ -1783,7 +1822,8 @@
                       "沖繩限定寶可夢文具",
                       "寶可夢沖繩版T恤"
                     ],
-                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
+                    "googleRating": 4
                   },
                   {
                     "category": "超市",
@@ -1794,7 +1834,8 @@
                       "阿古豬品牌肉品",
                       "沖繩限定零食伴手禮"
                     ],
-                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "藥妝",
@@ -1805,7 +1846,8 @@
                       "防曬品SPF50+",
                       "面膜、保養品"
                     ],
-                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+                    "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
+                    "googleRating": 3.9
                   }
                 ]
               }
@@ -1850,7 +1892,7 @@
                     "googleRating": 3.7
                   },
                   {
-                    "category": "拉麵",
+                    "category": "海鮮",
                     "name": "一蘭拉麵 ライカム店",
                     "description": "天然豚骨拉麵，專注個人用餐空間",
                     "price": "¥980~",
@@ -1865,7 +1907,7 @@
                     "googleRating": 3.9
                   },
                   {
-                    "category": "漢堡",
+                    "category": "甜點",
                     "name": "A&W ライカム店",
                     "description": "沖繩限定美式速食，根啤酒 Root Beer 必喝",
                     "price": "¥700~",
@@ -1890,7 +1932,8 @@
                 "mapcode": "33 618 171*12"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
           },
           {
             "time": "13:51-14:51",
@@ -1930,7 +1973,8 @@
                       "紅芋塔禮盒（10/16入）",
                       "黑糖巧克力"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 4.2
                   },
                   {
                     "category": "伴手禮",
@@ -1941,7 +1985,8 @@
                       "宮古島雪鹽棉花餅",
                       "各式風味鹽禮盒"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 4.2
                   },
                   {
                     "category": "唐吉軻德",
@@ -1952,7 +1997,8 @@
                       "沖繩限定零食糖果",
                       "Orion啤酒禮盒裝"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 4
                   }
                 ]
               }
@@ -1997,7 +2043,7 @@
                     "googleRating": 3.9
                   },
                   {
-                    "category": "沖繩拉麵",
+                    "category": "海鮮",
                     "name": "琉球新麺 通堂 国際通店",
                     "description": "琉球新麺 通堂 — 沖繩最具代表性本土拉麵，獨特豚骨×沖繩風味，那霸国際通旗艦店",
                     "price": "¥780~",
@@ -2013,7 +2059,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "燒肉",
+                    "category": "甜點",
                     "name": "琉球の牛 那霸國際通店",
                     "description": "琉球の牛 — 沖繩縣產和牛燒肉名店，獨立包廂無煙烤爐，Google 4.7 分",
                     "price": "¥6,000~",
@@ -2075,7 +2121,8 @@
                 "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": ""
           }
         ]
       }
@@ -2111,7 +2158,8 @@
                     "Orion啤酒",
                     "早餐麵包零食"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.5
                 },
                 {
                   "category": "超市",
@@ -2122,7 +2170,8 @@
                     "島豆腐",
                     "沖繩泡盛"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.8
                 },
                 {
                   "category": "唐吉軻德",
@@ -2133,7 +2182,8 @@
                     "日本限定零食",
                     "雜貨生活用品"
                   ],
-                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                  "googleRating": 4
                 }
               ]
             },
@@ -2162,7 +2212,8 @@
                 "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": ""
           },
           {
             "time": "09:12-10:12",
@@ -2201,7 +2252,8 @@
                       "沖繩泡盛（迷你瓶）",
                       "沖繩傳統工藝品"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
+                    "googleRating": 4.2
                   },
                   {
                     "category": "超市",
@@ -2212,7 +2264,8 @@
                       "沖繩縣産島野菜",
                       "冷凍烤豬肉（ラフテー）"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
+                    "googleRating": 3.8
                   },
                   {
                     "category": "超商",
@@ -2223,7 +2276,8 @@
                       "飲料補給",
                       "行動電源充電"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 3.5
                   }
                 ]
               }
@@ -2281,7 +2335,8 @@
                       "泡盛試飲&購買",
                       "沖繩傳統織品（紅型布）"
                     ],
-                    "blogUrl": "https://bobowin.blog/okinawa-world/"
+                    "blogUrl": "https://bobowin.blog/okinawa-world/",
+                    "googleRating": 4.2
                   }
                 ]
               }
@@ -2339,7 +2394,8 @@
                       "宮古島雪鹽系列",
                       "沖繩三線周邊商品"
                     ],
-                    "blogUrl": "https://spirit0926.pixnet.net/blog/post/51163360"
+                    "blogUrl": "https://spirit0926.pixnet.net/blog/post/51163360",
+                    "googleRating": 4.2
                   },
                   {
                     "category": "伴手禮",
@@ -2350,7 +2406,8 @@
                       "黑糖巧克力塔",
                       "紅芋塔禮盒（10入）"
                     ],
-                    "blogUrl": "https://www.kkday.com/zh-tw/blog/3545/asia-japan-okinawa-must-buy"
+                    "blogUrl": "https://www.kkday.com/zh-tw/blog/3545/asia-japan-okinawa-must-buy",
+                    "googleRating": 4.2
                   },
                   {
                     "category": "伴手禮",
@@ -2361,7 +2418,8 @@
                       "宮古島雪鹽棉花餅",
                       "各式風味鹽禮盒"
                     ],
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/"
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 4.2
                   }
                 ]
               }
@@ -2410,7 +2468,7 @@
                 "title": "晚餐推薦",
                 "restaurants": [
                   {
-                    "category": "沖繩塔可飯",
+                    "category": "沖繩料理",
                     "name": "タコライスcafe きじむなぁ 瀨長島店",
                     "description": "きじむなぁ — 沖繩特色歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋，位於瀨長島商場內",
                     "price": "¥900~",
@@ -2426,7 +2484,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "沖繩拉麵",
+                    "category": "海鮮",
                     "name": "琉球新麺 通堂 牧港本店",
                     "description": "琉球新麺 通堂 牧港本店 — 沖繩本土拉麵旗艦店，距瀨長島約10分，沖繩豚骨醬油湯底口碑最佳",
                     "price": "¥780~",
@@ -2442,7 +2500,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "燒肉",
+                    "category": "甜點",
                     "name": "焼肉 金城 那霸南店",
                     "description": "焼肉 金城 — 那霸南部人氣炭火燒肉，縣產牛特選部位，距瀨長島約15分，CP值高",
                     "price": "¥3,000~",
@@ -2492,7 +2550,8 @@
                       "皮革錢包/卡夾",
                       "Coach托特袋"
                     ],
-                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2700/"
+                    "blogUrl": "https://bobbyfun.tw/2024-01-07-2700/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "Outlet",
@@ -2503,7 +2562,8 @@
                       "New Balance日版限定",
                       "VANS帆布鞋"
                     ],
-                    "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/"
+                    "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/",
+                    "googleRating": 3.9
                   },
                   {
                     "category": "Outlet",
@@ -2514,7 +2574,8 @@
                       "琺瑯深鍋/炒鍋折扣款",
                       "日本限定配色餐具"
                     ],
-                    "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/"
+                    "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/",
+                    "googleRating": 3.9
                   }
                 ]
               }
@@ -2542,7 +2603,8 @@
                 "mapcode": "232 575 810*11"
               }
             ],
-            "googleRating": 3.8
+            "googleRating": 3.8,
+            "blogUrl": "https://alwa1919.pixnet.net/blog/post/116991918"
           },
           {
             "time": "23:51-00:51",
@@ -2556,7 +2618,8 @@
                 "mapcode": "232 574 739*42"
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "blogUrl": ""
           },
           {
             "time": "17:30-18:00",
@@ -2566,6 +2629,12 @@
               {
                 "type": "gasStation",
                 "title": "還車前加油",
+                "googleRating": 3.9,
+                "location": {
+                  "name": "ENEOS 安里バイパスSS 那覇市大道",
+                  "googleQuery": "https://www.google.com/maps/search/ENEOS+安里バイパスSS+那覇",
+                  "appleQuery": "https://maps.apple.com/?q=ENEOS+安里バイパスSS+那覇"
+                },
                 "station": {
                   "name": "ENEOS 安里バイパスSS",
                   "address": "沖縄県那覇市大道75-1",
@@ -2587,7 +2656,8 @@
                 "appleQuery": "https://maps.apple.com/?q=沖繩旅毛 那覇新都心"
               }
             ],
-            "googleRating": 4.8
+            "googleRating": 4.8,
+            "blogUrl": ""
           }
         ]
       }
@@ -2609,7 +2679,8 @@
                 "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": ""
           },
           {
             "time": "10:12-10:32",
@@ -2654,7 +2725,7 @@
                     "googleRating": 4
                   },
                   {
-                    "category": "沖繩そば",
+                    "category": "海鮮",
                     "name": "天龍 那覇空港店",
                     "description": "沖繩そば＆定食老店，機場人氣名店",
                     "price": "¥800~",
@@ -2669,7 +2740,7 @@
                     "googleRating": 3.8
                   },
                   {
-                    "category": "速食",
+                    "category": "甜點",
                     "name": "A&W 那覇空港店",
                     "description": "沖繩限定美式漢堡，根啤酒必喝",
                     "price": "¥600~",
@@ -2694,7 +2765,8 @@
                 "mapcode": "33 122 298*54"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/"
           },
           {
             "time": "11:15-13:15",
@@ -2708,7 +2780,8 @@
                 "mapcode": "33 122 298*54"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/"
           }
         ]
       }

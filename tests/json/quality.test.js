@@ -204,6 +204,22 @@ jsonFiles.forEach((file) => {
       });
     });
 
+    // --- R4 景點 blogUrl ---
+
+    it('R4: non-travel/non-undecided events have blogUrl field', () => {
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return; // travel event 略過
+          if ((ev.title || '').includes('餐廳未定')) return;
+          expect(
+            ev.hasOwnProperty('blogUrl'),
+            `days[${i}].timeline[${j}] "${ev.title}" missing blogUrl field`
+          ).toBe(true);
+        });
+      });
+    });
+
     // --- R5 飯店 blogUrl ---
 
     it('R5: non-home hotels have blogUrl field', () => {
@@ -255,13 +271,12 @@ jsonFiles.forEach((file) => {
             restaurants.forEach((r, m) => {
               if (m >= prefs.length) return; // 超過偏好數量不檢查
               const cat = r.category || '';
-              // category 應包含對應偏好關鍵字（寬鬆比對）
-              if (cat && !cat.includes(prefs[m])) {
-                // 用 console.warn 而非 fail，待資料全面補齊後改為 strict
-                console.warn(
+              if (cat) {
+                expect(
+                  cat.includes(prefs[m]),
                   `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}]: ` +
                   `category "${cat}" 不符合 foodPreferences[${m}] "${prefs[m]}"`
-                );
+                ).toBe(true);
               }
             });
           });
@@ -371,6 +386,116 @@ jsonFiles.forEach((file) => {
         /Day\s*\d/i.test(summary),
         `highlights.summary should not contain "Day X" enumeration: "${summary}"`
       ).toBe(false);
+    });
+
+    // --- R11 地圖導航 ---
+
+    it('R11: physical events have locations, restaurants have location', () => {
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          if ((ev.title || '').includes('餐廳未定')) return;
+
+          // timeline event 須有 locations[]
+          expect(
+            Array.isArray(ev.locations) && ev.locations.length > 0,
+            `days[${i}].timeline[${j}] "${ev.title}" missing locations[]`
+          ).toBe(true);
+
+          // restaurants 須有 location
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'restaurants') return;
+            (box.restaurants || []).forEach((r, m) => {
+              expect(
+                r.location && typeof r.location === 'object',
+                `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}] "${r.name}" missing location`
+              ).toBe(true);
+            });
+          });
+
+          // gasStation 須有 location
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'gasStation') return;
+            expect(
+              box.location && typeof box.location === 'object',
+              `days[${i}].timeline[${j}].infoBoxes[${k}] gasStation missing location`
+            ).toBe(true);
+          });
+        });
+      });
+    });
+
+    // --- R12 Google 評分 ---
+
+    it('R12: physical events, restaurants, and shops have googleRating', () => {
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          if ((ev.title || '').includes('餐廳未定')) return;
+
+          // timeline event 須有 googleRating
+          expect(
+            typeof ev.googleRating === 'number' && ev.googleRating >= 1 && ev.googleRating <= 5,
+            `days[${i}].timeline[${j}] "${ev.title}" missing or invalid googleRating (got: ${ev.googleRating})`
+          ).toBe(true);
+
+          // restaurants 須有 googleRating
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'restaurants') return;
+            (box.restaurants || []).forEach((r, m) => {
+              expect(
+                typeof r.googleRating === 'number' && r.googleRating >= 1 && r.googleRating <= 5,
+                `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}] "${r.name}" missing or invalid googleRating`
+              ).toBe(true);
+            });
+          });
+
+          // shops 須有 googleRating
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'shopping') return;
+            (box.shops || []).forEach((s, m) => {
+              expect(
+                typeof s.googleRating === 'number' && s.googleRating >= 1 && s.googleRating <= 5,
+                `days[${i}].timeline[${j}].infoBoxes[${k}].shops[${m}] "${s.name}" missing or invalid googleRating`
+              ).toBe(true);
+            });
+          });
+
+          // gasStation 須有 googleRating
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'gasStation') return;
+            expect(
+              typeof box.googleRating === 'number' && box.googleRating >= 1 && box.googleRating <= 5,
+              `days[${i}].timeline[${j}].infoBoxes[${k}] gasStation missing or invalid googleRating`
+            ).toBe(true);
+          });
+        });
+
+        // hotel infoBoxes 中的 restaurants 和 shops 也檢查
+        const hotel = day.content?.hotel;
+        if (hotel?.infoBoxes) {
+          hotel.infoBoxes.forEach((box, k) => {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                expect(
+                  typeof r.googleRating === 'number' && r.googleRating >= 1 && r.googleRating <= 5,
+                  `days[${i}].hotel.infoBoxes[${k}].restaurants[${m}] "${r.name}" missing or invalid googleRating`
+                ).toBe(true);
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                expect(
+                  typeof s.googleRating === 'number' && s.googleRating >= 1 && s.googleRating <= 5,
+                  `days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}" missing or invalid googleRating`
+                ).toBe(true);
+              });
+            }
+          });
+        }
+      });
     });
   });
 });

@@ -137,6 +137,7 @@ body:not(.dark) .day-header {
 .tl-title a { color: var(--text); text-decoration: none; }
 .tl-title a:hover { text-decoration: underline; }
 .tl-body { display: block; padding: 4px 8px 8px; font-size: var(--fs-md); line-height: 1.7; }
+.rating { color: var(--accent); font-size: var(--fs-sm); }
 .tl-desc { color: var(--gray); margin-bottom: 6px; }
 .tl-travel { padding: 1px 8px 1px 0; margin-left: 0; font-size: var(--fs-md); color: var(--gray); }
 
