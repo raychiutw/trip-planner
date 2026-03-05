@@ -75,7 +75,7 @@
       "id": "hourly-3",
       "date": "2026-07-04",
       "dayId": 3,
-      "label": "恩納→殘波岬→翡翠海灘",
+      "label": "恩納→殘波岬→萬座毛",
       "locations": [
         {
           "lat": 26.4554,
@@ -99,17 +99,10 @@
           "end": 14
         },
         {
-          "lat": 26.6933,
-          "lon": 127.8776,
-          "name": "翡翠海灘",
-          "start": 15,
-          "end": 18
-        },
-        {
           "lat": 26.4826,
           "lon": 127.8431,
           "name": "恩納",
-          "start": 18,
+          "start": 15,
           "end": 23
         }
       ]
@@ -1110,34 +1103,12 @@
                 "appleQuery": "https://maps.apple.com/?q=HOPE+VILLA+Onnason",
                 "mapcode": "206 221 372*23"
               }
-            ],
-            "transit": {
-              "text": "約47分鐘",
-              "type": "car"
-            }
+            ]
           },
           {
-            "time": "17:01-17:31",
-            "title": "Emerald Beach 翡翠海灘",
-            "titleUrl": "https://navyblue77.pixnet.net/blog/posts/3047639241",
-            "description": "海洋博公園內的美麗海灘（約30分鐘）",
-            "locations": [
-              {
-                "name": "エメラルドビーチ",
-                "googleQuery": "https://maps.google.com/?q=エメラルドビーチ",
-                "appleQuery": "https://maps.apple.com/?q=エメラルドビーチ",
-                "mapcode": "553 075 646*08"
-              }
-            ],
-            "transit": {
-              "text": "約50分鐘",
-              "type": "car"
-            }
-          },
-          {
-            "time": "18:21",
-            "title": "返回恩納村",
-            "description": "回程休息（VILLA 自炊或外食）",
+            "time": "16:14",
+            "title": "VILLA 自由活動",
+            "description": "Check in 後自由休息（VILLA 自炊或外食）",
             "infoBoxes": [
               {
                 "type": "restaurants",
@@ -2588,7 +2559,7 @@
           "items": [
             "前兼久漁港體驗活動若因颱風取消 → 聯繫業者退款，改安排 PARCO CITY 或美國村補逛",
             "殘波岬、萬座毛為戶外景點，輕雨仍可參觀，強風颱風則跳過",
-            "翡翠海灘距恩納約 1 小時車程，若天氣差可直接略過不往北"
+            "翡翠海灘（備案）：海洋博公園內海灘，距恩納約 47 分鐘車程，若天氣好且時間充裕可於 check in 後前往（來回約 1.5 小時＋停留 30 分鐘）"
           ]
         },
         {
@@ -2645,7 +2616,7 @@
             "Day 2 行程過晚：plate jam 宵夜 23:37、BUZZ RESORT 凌晨 01:04 入住，隔天 08:00 出發僅能睡不到 6 小時，建議 Day 3 出發時間延至 09:00 或取消宵夜",
             "Day 6 還車時間衝突：還車排在 17:30，但後續行程 ASHIBINAA Outlet（20:40）、Can*Do（22:41）、SPORTS DEPO（23:51）均在還車後；若當天還車，後段需改搭計程車/巴士前往，需提前確認交通方案",
             "Day 6 ASHIBINAA Outlet 營業時間約至 20:00，排 20:40 抵達恐已關門；Can*Do 22:41、SPORTS DEPO 23:51 也需逐一確認當日實際關店時間",
-            "Day 3 路線折返嚴重：恩納→殘波岬→萬座毛→石川→恩納 check in→翡翠海灘（本部）→恩納，翡翠海灘在本部/海洋博公園旁，來回約 1.5 小時但只停 30 分鐘，建議移至 Day 4 水族館同天參觀或捨去"
+            "Day 3 翡翠海灘已移至備案：原路線折返嚴重，已將翡翠海灘改為彈性選項，天氣好且有體力時可自行前往"
           ]
         },
         {
