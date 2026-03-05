@@ -348,8 +348,7 @@ jsonFiles.forEach((file) => {
     // --- R10 還車加油站 ---
 
     it('R10: self-drive/mixed trips with 還車 event must have gasStation infoBox', () => {
-      const tripType = data.meta?.tripType;
-      if (tripType === 'transit') return; // skip for transit trips
+      if (!data.meta?.selfDrive) return; // skip for non-self-drive trips
 
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];

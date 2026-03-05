@@ -48,14 +48,13 @@ jsonFiles.forEach((file) => {
       expect(data.meta.name, 'meta.name should not exist (use trips.json instead)').toBeUndefined();
     });
 
-    // --- meta.tripType ---
+    // --- meta.selfDrive ---
 
-    it('meta.tripType exists and is a valid value', () => {
-      const validTypes = ['self-drive', 'transit', 'mixed'];
-      expect(data.meta.tripType, 'meta.tripType must exist').toBeDefined();
+    it('meta.selfDrive exists and is a boolean', () => {
+      expect(data.meta.selfDrive, 'meta.selfDrive must exist').toBeDefined();
       expect(
-        validTypes.includes(data.meta.tripType),
-        `meta.tripType must be one of ${validTypes.join('/')}, got: "${data.meta.tripType}"`
+        typeof data.meta.selfDrive === 'boolean',
+        `meta.selfDrive must be boolean, got: ${typeof data.meta.selfDrive}`
       ).toBe(true);
     });
 
