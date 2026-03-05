@@ -22,5 +22,11 @@
     "name": "RayHus 的沖繩之旅",
     "dates": "2026/3/6 ~ 3/11",
     "owner": "RayHus"
+  },
+  {
+    "file": "data/trips/kyoto-trip-2026-MimiChu.json",
+    "name": "咪咪醬的京都之旅",
+    "dates": "2026/3/6 ~ 3/11",
+    "owner": "MimiChu"
   }
 ]
