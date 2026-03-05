@@ -1,0 +1,1127 @@
+{
+  "meta": {
+    "title": "2026 沖繩五日輕旅行",
+    "description": "2026 沖繩五日輕旅行：那霸為基地，KKday北部・南部一日遊，國際通美食與散步，非自駕輕鬆遊沖繩。",
+    "ogDescription": "那霸為基地，KKday北部一日遊・南部一日遊，琉球之牛燒肉・Miyachiku宮崎牛・生魚片美食，五日輕旅行含購物與美食",
+    "foodPreferences": ["生魚片", "燒肉", "當地特色"],
+    "tripType": "transit"
+  },
+  "footer": {
+    "title": "2026 沖繩五日輕旅行",
+    "dates": "4/24（五）~ 4/28（二）",
+    "budget": "",
+    "exchangeNote": "匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準",
+    "tagline": "めんそーれ 沖繩！ 祝旅途愉快！"
+  },
+  "autoScrollDates": [
+    "2026-04-24",
+    "2026-04-25",
+    "2026-04-26",
+    "2026-04-27",
+    "2026-04-28"
+  ],
+  "weather": [
+    {
+      "id": "hourly-1",
+      "date": "2026-04-24",
+      "dayId": 1,
+      "label": "那霸",
+      "locations": [{ "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 0, "end": 23 }]
+    },
+    {
+      "id": "hourly-2",
+      "date": "2026-04-25",
+      "dayId": 2,
+      "label": "那霸・北部",
+      "locations": [
+        { "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 0, "end": 7 },
+        { "lat": 26.6577, "lon": 127.8782, "name": "本部", "start": 8, "end": 18 },
+        { "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 19, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-3",
+      "date": "2026-04-26",
+      "dayId": 3,
+      "label": "那霸・南部",
+      "locations": [
+        { "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 0, "end": 7 },
+        { "lat": 26.1125, "lon": 127.7686, "name": "南城", "start": 8, "end": 17 },
+        { "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 18, "end": 23 }
+      ]
+    },
+    {
+      "id": "hourly-4",
+      "date": "2026-04-27",
+      "dayId": 4,
+      "label": "那霸",
+      "locations": [{ "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 0, "end": 23 }]
+    },
+    {
+      "id": "hourly-5",
+      "date": "2026-04-28",
+      "dayId": 5,
+      "label": "那霸",
+      "locations": [{ "lat": 26.2066, "lon": 127.6476, "name": "那霸", "start": 0, "end": 23 }]
+    }
+  ],
+  "flights": {
+    "title": "航班資訊",
+    "content": {
+      "segments": [
+        {
+          "label": "去程",
+          "route": "台北桃園 TPE → 那霸 OKA",
+          "depart": "09:35",
+          "arrive": "12:20",
+          "flight": "MM922（樂桃航空）",
+          "date": "4/24（五）"
+        },
+        {
+          "label": "回程",
+          "route": "那霸 OKA → 台北桃園 TPE",
+          "depart": "16:45",
+          "arrive": "17:20",
+          "flight": "MM929（樂桃航空）",
+          "date": "4/28（二）"
+        }
+      ]
+    }
+  },
+  "highlights": {
+    "title": "行程亮點",
+    "content": {
+      "summary": "那霸深度美食之旅，融合北部海洋絕景與南部文化遺產，輕鬆不自駕的沖繩初體驗。",
+      "tags": ["沖繩", "那霸", "KKday一日遊", "琉球之牛", "宮崎牛", "生魚片", "國際通"]
+    }
+  },
+  "suggestions": {
+    "title": "實用建議",
+    "content": [
+      "單軌電車一日券 ¥800 適合那霸市區移動",
+      "琉球之牛建議提前線上訂位（TableCheck）",
+      "Miyachiku 週一公休，已安排在週六晚餐",
+      "花商花生豆腐下午容易售罄，建議早點去",
+      "KKday 一日遊集合地點通常在縣廳前站附近，出發前確認集合資訊"
+    ]
+  },
+  "checklist": {
+    "title": "行前清單",
+    "items": [
+      { "text": "護照效期確認（6個月以上）", "checked": false },
+      { "text": "樂桃航空行李重量確認（7kg 手提限制）", "checked": false },
+      { "text": "琉球之牛線上訂位", "checked": false },
+      { "text": "Miyachiku 訂位（電話或線上）", "checked": false },
+      { "text": "KKday 北部一日遊預訂確認", "checked": false },
+      { "text": "KKday 南部一日遊預訂確認", "checked": false },
+      { "text": "日圓現金準備", "checked": false },
+      { "text": "eSIM / WiFi 分享器", "checked": false },
+      { "text": "旅遊保險", "checked": false }
+    ]
+  },
+  "days": [
+    {
+      "id": 1,
+      "date": "4/24（五）",
+      "label": "抵達那霸",
+      "content": {
+        "hotel": {
+          "name": "La'Gent Hotel Okinawa Naha",
+          "url": "https://lagent.jp/okinawanaha/",
+          "details": [
+            "那覇市松山2-2-9",
+            "美榮橋站步行5分鐘",
+            "2025年5月新開幕，17樓頂樓休息室"
+          ],
+          "breakfast": {
+            "included": false,
+            "note": "自助早餐 ¥2,200（6:30-10:00），需另付費"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://a4031320.pixnet.net/blog/post/577916072",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "7-Eleven 松山店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定飯糰",
+                    "沖繩限定冰淇淋",
+                    "便當・輕食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "島豆腐・海葡萄",
+                    "泡盛・Orion 啤酒"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "唐吉訶德 國際通店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定紫芋 KitKat・紅芋塔",
+                    "EVE 止痛藥・合利他命",
+                    "安耐曬防曬乳・美妝"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "09:35",
+            "title": "MM922 台北出發",
+            "desc": "桃園國際機場出發，飛往沖繩那霸",
+            "locations": [
+              {
+                "name": "桃園國際機場",
+                "googleQuery": "https://maps.google.com/?q=桃園國際機場",
+                "appleQuery": "https://maps.apple.com/?q=桃園國際機場"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "航班資訊",
+                "items": [
+                  "航班：MM922（樂桃航空）",
+                  "台北（TPE）09:35 → 那霸（OKA）12:20",
+                  "飛行時間：約1小時45分鐘"
+                ]
+              }
+            ]
+          },
+          {
+            "time": "12:20",
+            "title": "抵達那霸機場",
+            "desc": "入境、領取行李",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場"
+              }
+            ],
+            "transit": { "type": "train", "min": 15, "text": "單軌電車 那霸空港→美榮橋 約15分鐘 ¥300" }
+          },
+          {
+            "time": "13:00",
+            "title": "午餐：みかど（Mikado）",
+            "desc": "沖繩老字號食堂，在地家庭料理，ゆし豆腐定食・沖繩炒苦瓜，平價大份量",
+            "locations": [
+              {
+                "name": "お食事処 みかど",
+                "googleQuery": "https://maps.google.com/?q=お食事処+みかど+那覇+松山",
+                "appleQuery": "https://maps.apple.com/?q=お食事処+みかど+那覇"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "name": "お食事処 みかど",
+                    "category": "當地特色",
+                    "hours": "10:00~21:30",
+                    "reservation": "免預約，食堂形式",
+                    "desc": "沖繩在地食堂，ゆし豆腐定食・チャンプルー・カツ丼，¥650~900",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "まぐろ問屋 やざえもん 那覇店",
+                    "category": "生魚片",
+                    "hours": "11:00~15:00 / 17:00~22:00",
+                    "reservation": "建議預約",
+                    "desc": "鮪魚專門店，生鮪魚丼・海鮮丼，午餐 ¥1,000 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "燒肉きんぐ 那覇新都心店",
+                    "category": "燒肉",
+                    "hours": "11:30~23:00",
+                    "reservation": "可線上預約",
+                    "desc": "燒肉吃到飽 ¥3,278 起，食べ放題含和牛",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ],
+            "transit": { "type": "walk", "min": 10, "text": "步行至花商" }
+          },
+          {
+            "time": "14:30",
+            "title": "花商 花生豆腐專門店",
+            "desc": "沖繩名物じーまーみ豆腐，手工花生豆腐配甜醬油，下午容易售罄要早去",
+            "locations": [
+              {
+                "name": "花商 じーまーみ豆腐 牧志本店",
+                "googleQuery": "https://maps.google.com/?q=花商+じーまーみ豆腐+牧志本店",
+                "appleQuery": "https://maps.apple.com/?q=花商+じーまーみ豆腐+牧志本店"
+              }
+            ],
+            "blogUrl": "https://ami2510.pixnet.net/blog/post/122672354",
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "店鋪資訊",
+                "items": [
+                  "營業時間：09:30~19:00（週日 10:00 起）",
+                  "地址：那覇市牧志3-4-1 新天地市場本通り",
+                  "免預約，外帶/內用皆可",
+                  "可買伴手禮（保存期限 9 天）"
+                ]
+              }
+            ],
+            "transit": { "type": "walk", "min": 5, "text": "步行至飯店" }
+          },
+          {
+            "time": "15:00",
+            "title": "Check in La'Gent Hotel",
+            "desc": "放置行李，稍作休息",
+            "locations": [
+              {
+                "name": "La'Gent Hotel Okinawa Naha",
+                "googleQuery": "https://maps.google.com/?q=ラジェントホテル沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=ラジェントホテル沖縄那覇"
+              }
+            ],
+            "transit": { "type": "walk", "min": 10, "text": "步行至國際通" }
+          },
+          {
+            "time": "16:00",
+            "title": "國際通散步 + Fontana Gelato",
+            "titleUrl": "https://naha-kokusaidori.okinawa/",
+            "blogUrl": "https://hellokids.tw/posts/x6z/fontana",
+            "desc": "漫步國際通，在 Fontana Gelato 品嚐沖繩風味義式冰淇淋（雪鹽・苦瓜・鳳梨口味）",
+            "locations": [
+              {
+                "name": "Fontana Gelato",
+                "googleQuery": "https://maps.google.com/?q=フォンタナジェラート+那覇+国際通り",
+                "appleQuery": "https://maps.apple.com/?q=フォンタナジェラート+那覇"
+              },
+              {
+                "name": "那霸國際通",
+                "googleQuery": "https://maps.google.com/?q=那覇国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇国際通り",
+                "label": "國際通"
+              }
+            ]
+          },
+          {
+            "time": "17:30",
+            "title": "晚餐：焼肉 琉球の牛 那覇國際通店",
+            "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
+            "desc": "沖繩頂級和牛燒肉，Google 評分 4.7，建議提前 TableCheck 訂位",
+            "locations": [
+              {
+                "name": "焼肉 琉球の牛 那覇国際通り店",
+                "googleQuery": "https://maps.google.com/?q=焼肉+琉球の牛+那覇国際通り店",
+                "appleQuery": "https://maps.apple.com/?q=焼肉+琉球の牛+那覇国際通り店"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "name": "焼肉 琉球の牛 那覇国際通り店",
+                    "category": "燒肉",
+                    "hours": "17:00~22:30",
+                    "reservation": "強烈建議線上訂位 TableCheck",
+                    "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve",
+                    "desc": "嚴選沖繩縣產和牛，國際通唯一提供商業午餐的分店",
+                    "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624"
+                  },
+                  {
+                    "name": "海鮮居酒屋 鰓呼吸 那覇久茂地店",
+                    "category": "生魚片",
+                    "hours": "17:00~24:00",
+                    "reservation": "可預約",
+                    "desc": "全國 260 港口直送鮮魚，刺身拼盤・炙燒・蒸籠料理，¥3,000 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "しまぶた屋 那覇店",
+                    "category": "當地特色",
+                    "hours": "17:00~23:00",
+                    "reservation": "建議預約",
+                    "desc": "沖繩阿古豬涮涮鍋・炙燒豬肉，在地食材料理",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "date": "4/25（六）",
+      "label": "北部一日遊",
+      "content": {
+        "hotel": {
+          "name": "La'Gent Hotel Okinawa Naha",
+          "url": "https://lagent.jp/okinawanaha/",
+          "details": [
+            "那覇市松山2-2-9",
+            "美榮橋站步行5分鐘"
+          ],
+          "breakfast": {
+            "included": false,
+            "note": "自助早餐 ¥2,200（6:30-10:00），需另付費"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://a4031320.pixnet.net/blog/post/577916072",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "7-Eleven 松山店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定飯糰",
+                    "沖繩限定冰淇淋",
+                    "便當・輕食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "島豆腐・海葡萄",
+                    "泡盛・Orion 啤酒"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "唐吉訶德 國際通店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定紫芋 KitKat・紅芋塔",
+                    "EVE 止痛藥・合利他命",
+                    "安耐曬防曬乳・美妝"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "07:30",
+            "title": "KKday 北部一日遊集合",
+            "desc": "於指定集合地點搭乘巴士出發，前往沖繩北部",
+            "locations": [
+              {
+                "name": "縣廳前站集合點",
+                "googleQuery": "https://maps.google.com/?q=県庁前駅+那覇",
+                "appleQuery": "https://maps.apple.com/?q=県庁前駅+那覇"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "一日遊資訊",
+                "items": [
+                  "KKday 沖繩北部一日遊",
+                  "含：美麗海水族館・古宇利島・萬座毛",
+                  "含午餐・巴士接送",
+                  "請提前確認集合時間與地點"
+                ]
+              }
+            ]
+          },
+          {
+            "time": "10:00",
+            "title": "沖繩美麗海水族館",
+            "titleUrl": "https://churaumi.okinawa/",
+            "desc": "世界最大級水族館，黑潮之海大水槽，鯨鯊・鬼蝠魟",
+            "locations": [
+              {
+                "name": "沖繩美麗海水族館",
+                "googleQuery": "https://maps.google.com/?q=沖縄美ら海水族館",
+                "appleQuery": "https://maps.apple.com/?q=沖縄美ら海水族館"
+              }
+            ]
+          },
+          {
+            "time": "12:00",
+            "title": "午餐（團體行程已含）"
+          },
+          {
+            "time": "13:30",
+            "title": "古宇利島",
+            "desc": "跨海大橋・愛心石・古宇利海灘，沖繩版亞當與夏娃傳說之島",
+            "locations": [
+              {
+                "name": "古宇利島",
+                "googleQuery": "https://maps.google.com/?q=古宇利島",
+                "appleQuery": "https://maps.apple.com/?q=古宇利島"
+              }
+            ]
+          },
+          {
+            "time": "15:30",
+            "title": "萬座毛",
+            "desc": "象鼻岩斷崖絕壁，眺望東海碧藍海景",
+            "locations": [
+              {
+                "name": "萬座毛",
+                "googleQuery": "https://maps.google.com/?q=万座毛+沖縄",
+                "appleQuery": "https://maps.apple.com/?q=万座毛+沖縄"
+              }
+            ]
+          },
+          {
+            "time": "18:00",
+            "title": "回到那霸",
+            "desc": "巴士返回那霸市區",
+            "transit": { "type": "walk", "min": 10, "text": "步行至 Miyachiku" }
+          },
+          {
+            "time": "19:00",
+            "title": "晚餐：宮崎牛專門店 那覇みやちく",
+            "desc": "日本全國和牛大賽四連霸冠軍宮崎牛，鐵板燒套餐含龍蝦",
+            "locations": [
+              {
+                "name": "宮崎牛専門店 那覇みやちく",
+                "googleQuery": "https://maps.google.com/?q=宮崎牛専門店+那覇みやちく",
+                "appleQuery": "https://maps.apple.com/?q=宮崎牛専門店+那覇みやちく"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "name": "宮崎牛専門店 那覇みやちく",
+                    "category": "燒肉",
+                    "hours": "午餐 11:00~15:00 / 晚餐 17:00~22:00（週一公休）",
+                    "reservation": "強烈建議預約（電話 098-943-2978 或線上）",
+                    "desc": "四連霸日本全國和牛冠軍宮崎牛，鐵板燒 + 龍蝦套餐，晚餐 ¥10,000 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "海鮮居酒屋 鰓呼吸 那覇久茂地店",
+                    "category": "生魚片",
+                    "hours": "17:00~24:00",
+                    "reservation": "可預約",
+                    "desc": "全國 260 港口直送鮮魚，刺身拼盤・炙燒・蒸籠料理",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "山羊料理 さかえ",
+                    "category": "當地特色",
+                    "hours": "17:00~22:00",
+                    "reservation": "建議預約",
+                    "desc": "沖繩傳統山羊料理，山羊汁・山羊刺身，在地體驗",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "date": "4/26（日）",
+      "label": "南部一日遊",
+      "content": {
+        "hotel": {
+          "name": "La'Gent Hotel Okinawa Naha",
+          "url": "https://lagent.jp/okinawanaha/",
+          "details": [
+            "那覇市松山2-2-9",
+            "美榮橋站步行5分鐘"
+          ],
+          "breakfast": {
+            "included": false,
+            "note": "自助早餐 ¥2,200（6:30-10:00），需另付費"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://a4031320.pixnet.net/blog/post/577916072",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "7-Eleven 松山店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定飯糰",
+                    "沖繩限定冰淇淋",
+                    "便當・輕食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "島豆腐・海葡萄",
+                    "泡盛・Orion 啤酒"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "唐吉訶德 國際通店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定紫芋 KitKat・紅芋塔",
+                    "EVE 止痛藥・合利他命",
+                    "安耐曬防曬乳・美妝"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "08:00",
+            "title": "KKday 南部一日遊集合",
+            "desc": "於指定集合地點搭乘巴士出發，前往沖繩南部",
+            "locations": [
+              {
+                "name": "縣廳前站集合點",
+                "googleQuery": "https://maps.google.com/?q=県庁前駅+那覇",
+                "appleQuery": "https://maps.apple.com/?q=県庁前駅+那覇"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "一日遊資訊",
+                "items": [
+                  "KKday 沖繩南部一日遊",
+                  "含：齋場御嶽・知念岬・瀨長島",
+                  "含午餐・巴士接送",
+                  "請提前確認集合時間與地點"
+                ]
+              }
+            ]
+          },
+          {
+            "time": "09:30",
+            "title": "齋場御嶽",
+            "titleUrl": "https://okinawa-nanjo.jp/sefa/",
+            "desc": "世界遺產，琉球王國最高聖地，三角岩窟神秘空間",
+            "locations": [
+              {
+                "name": "齋場御嶽",
+                "googleQuery": "https://maps.google.com/?q=斎場御嶽",
+                "appleQuery": "https://maps.apple.com/?q=斎場御嶽"
+              }
+            ]
+          },
+          {
+            "time": "11:00",
+            "title": "知念岬公園",
+            "desc": "太平洋絕景展望台，碧藍海岸線一覽無遺",
+            "locations": [
+              {
+                "name": "知念岬公園",
+                "googleQuery": "https://maps.google.com/?q=知念岬公園",
+                "appleQuery": "https://maps.apple.com/?q=知念岬公園"
+              }
+            ]
+          },
+          {
+            "time": "12:00",
+            "title": "午餐（團體行程已含）"
+          },
+          {
+            "time": "14:00",
+            "title": "瀨長島 Umikaji Terrace",
+            "titleUrl": "https://www.umikajiterrace.com/",
+            "desc": "地中海風格白色露台商場，眺望飛機起降，咖啡廳・雜貨小店",
+            "locations": [
+              {
+                "name": "瀨長島 Umikaji Terrace",
+                "googleQuery": "https://maps.google.com/?q=瀬長島ウミカジテラス",
+                "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス"
+              }
+            ]
+          },
+          {
+            "time": "17:30",
+            "title": "回到那霸",
+            "desc": "巴士返回那霸市區",
+            "transit": { "type": "walk", "min": 5, "text": "步行至 KOKO" }
+          },
+          {
+            "time": "18:30",
+            "title": "晚餐：郷土料理 こうこう（KOKO）",
+            "desc": "沖繩鄉土料理居酒屋，現場三線琴演奏，燉豬腳・島牛料理，¥3,000 起",
+            "locations": [
+              {
+                "name": "郷土料理 こうこう",
+                "googleQuery": "https://maps.google.com/?q=郷土料理+こうこう+那覇+松尾",
+                "appleQuery": "https://maps.apple.com/?q=郷土料理+こうこう+那覇"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "name": "郷土料理 こうこう",
+                    "category": "當地特色",
+                    "hours": "18:00~00:00（全年無休）",
+                    "reservation": "可電話預約 098-866-5255",
+                    "desc": "沖繩鄉土料理 + 現場三線琴演奏，おまかせコース ¥3,500",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "海鮮居酒屋 鰓呼吸 那覇久茂地店",
+                    "category": "生魚片",
+                    "hours": "17:00~24:00",
+                    "reservation": "可預約",
+                    "desc": "全國 260 港口直送鮮魚，刺身拼盤・炙燒料理",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "ステーキハウス88 那覇店",
+                    "category": "燒肉",
+                    "hours": "11:00~22:00",
+                    "reservation": "免預約",
+                    "desc": "沖繩老牌牛排館，200g 沙朗 ¥2,200 起，在地人也愛",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "date": "4/27（一）",
+      "label": "那霸自由行",
+      "content": {
+        "hotel": {
+          "name": "La'Gent Hotel Okinawa Naha",
+          "url": "https://lagent.jp/okinawanaha/",
+          "details": [
+            "那覇市松山2-2-9",
+            "美榮橋站步行5分鐘"
+          ],
+          "breakfast": {
+            "included": false,
+            "note": "自助早餐 ¥2,200（6:30-10:00），需另付費"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://a4031320.pixnet.net/blog/post/577916072",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "7-Eleven 松山店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定飯糰",
+                    "沖繩限定冰淇淋",
+                    "便當・輕食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "島豆腐・海葡萄",
+                    "泡盛・Orion 啤酒"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "唐吉訶德 國際通店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定紫芋 KitKat・紅芋塔",
+                    "EVE 止痛藥・合利他命",
+                    "安耐曬防曬乳・美妝"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "09:00",
+            "title": "首里城公園",
+            "titleUrl": "https://oki-park.jp/shurijo/",
+            "desc": "世界遺產，琉球王國的象徵，正殿復原工程進行中，守禮門・園比屋武御嶽石門",
+            "locations": [
+              {
+                "name": "首里城公園",
+                "googleQuery": "https://maps.google.com/?q=首里城公園",
+                "appleQuery": "https://maps.apple.com/?q=首里城公園"
+              }
+            ],
+            "transit": { "type": "train", "min": 30, "text": "單軌電車 美榮橋→首里 約30分鐘 ¥340" }
+          },
+          {
+            "time": "11:30",
+            "title": "壺屋通散步",
+            "desc": "陶器街，沖繩傳統壺屋燒陶瓷器，風味小店，從首里城方向步行約20分鐘",
+            "locations": [
+              {
+                "name": "壺屋やちむん通り",
+                "googleQuery": "https://maps.google.com/?q=壺屋やちむん通り",
+                "appleQuery": "https://maps.apple.com/?q=壺屋やちむん通り"
+              }
+            ],
+            "transit": { "type": "walk", "min": 5, "text": "步行至午餐" }
+          },
+          {
+            "time": "12:00",
+            "title": "午餐",
+            "desc": "牧志公設市場周邊覓食",
+            "locations": [
+              {
+                "name": "那覇牧志公設市場",
+                "googleQuery": "https://maps.google.com/?q=那覇市第一牧志公設市場",
+                "appleQuery": "https://maps.apple.com/?q=那覇市第一牧志公設市場"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "name": "牧志公設市場 2F 食堂",
+                    "category": "生魚片",
+                    "hours": "10:00~20:00",
+                    "reservation": "免預約",
+                    "desc": "1F 買海鮮 2F 代客料理，生魚片・龍蝦・夜光貝，現買現吃最新鮮",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "燒肉きんぐ 那覇新都心店",
+                    "category": "燒肉",
+                    "hours": "11:30~23:00",
+                    "reservation": "可線上預約",
+                    "desc": "燒肉吃到飽 ¥3,278 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "首里そば",
+                    "category": "當地特色",
+                    "hours": "11:30~14:00（售完為止）",
+                    "reservation": "免預約",
+                    "desc": "沖繩麵名店，手打麵條・豚骨湯頭，每日限量",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ],
+            "transit": { "type": "walk", "min": 10, "text": "步行回國際通" }
+          },
+          {
+            "time": "14:00",
+            "title": "國際通購物",
+            "desc": "伴手禮採買、逛街",
+            "locations": [
+              {
+                "name": "那霸國際通",
+                "googleQuery": "https://maps.google.com/?q=那覇国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇国際通り"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "shopping",
+                "title": "國際通購物",
+                "shops": [
+                  {
+                    "category": "伴手禮",
+                    "name": "御菓子御殿 國際通松尾店",
+                    "hours": "09:00~22:00",
+                    "mustBuy": [
+                      "紅芋塔（元祖）",
+                      "紅芋生塔（冷藏限定）",
+                      "黑糖蛋糕"
+                    ],
+                    "blogUrl": null
+                  },
+                  {
+                    "category": "藥妝",
+                    "name": "マツモトキヨシ 國際通店",
+                    "hours": "09:00~23:00",
+                    "mustBuy": [
+                      "合利他命 PLUS",
+                      "Calbee 沖繩限定薯條",
+                      "面膜・美妝小物"
+                    ],
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "time": "17:00",
+            "title": "晚餐：鳥貴族 美栄橋店（Torikizoku）",
+            "blogUrl": "https://jujucute88.pixnet.net/blog/post/234347241",
+            "desc": "日本國民串燒連鎖，全品 ¥370 均一價，國產食材，沖繩首間分店",
+            "locations": [
+              {
+                "name": "鳥貴族 美栄橋店",
+                "googleQuery": "https://maps.google.com/?q=鳥貴族+美栄橋店+那覇",
+                "appleQuery": "https://maps.apple.com/?q=鳥貴族+美栄橋店+那覇"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "晚餐推薦",
+                "restaurants": [
+                  {
+                    "name": "鳥貴族 美栄橋店",
+                    "category": "當地特色",
+                    "hours": "17:00~24:00（L.O. 23:30）",
+                    "reservation": "可線上預約",
+                    "desc": "全品 ¥370 均一價日式串燒，國產食材，美榮橋站步行1分鐘",
+                    "blogUrl": "https://jujucute88.pixnet.net/blog/post/234347241"
+                  },
+                  {
+                    "name": "海鮮居酒屋 鰓呼吸 那覇久茂地店",
+                    "category": "生魚片",
+                    "hours": "17:00~24:00",
+                    "reservation": "可預約",
+                    "desc": "全國直送鮮魚，刺身拼盤・炙燒料理，¥3,000 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "じんく屋 那覇松山店",
+                    "category": "燒肉",
+                    "hours": "17:00~23:00",
+                    "reservation": "可預約",
+                    "desc": "炭火燒肉，沖繩豚・和牛，套餐 ¥3,500 起",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "date": "4/28（二）",
+      "label": "回程",
+      "content": {
+        "hotel": {
+          "name": "La'Gent Hotel Okinawa Naha",
+          "url": "https://lagent.jp/okinawanaha/",
+          "details": [
+            "那覇市松山2-2-9",
+            "美榮橋站步行5分鐘"
+          ],
+          "breakfast": {
+            "included": false,
+            "note": "自助早餐 ¥2,200（6:30-10:00），需另付費"
+          },
+          "checkout": "11:00",
+          "blogUrl": "https://a4031320.pixnet.net/blog/post/577916072",
+          "infoBoxes": [
+            {
+              "type": "shopping",
+              "title": "飯店附近購物",
+              "shops": [
+                {
+                  "category": "超商",
+                  "name": "7-Eleven 松山店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定飯糰",
+                    "沖繩限定冰淇淋",
+                    "便當・輕食"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "超市",
+                  "name": "サンエー那霸メインプレイス",
+                  "hours": "09:00~22:00",
+                  "mustBuy": [
+                    "沖繩本地豬肉（アグー豚）",
+                    "島豆腐・海葡萄",
+                    "泡盛・Orion 啤酒"
+                  ],
+                  "blogUrl": null
+                },
+                {
+                  "category": "唐吉軻德",
+                  "name": "唐吉訶德 國際通店",
+                  "hours": "24小時",
+                  "mustBuy": [
+                    "沖繩限定紫芋 KitKat・紅芋塔",
+                    "EVE 止痛藥・合利他命",
+                    "安耐曬防曬乳・美妝"
+                  ],
+                  "blogUrl": null
+                }
+              ]
+            }
+          ]
+        },
+        "timeline": [
+          {
+            "time": "09:00",
+            "title": "波上宮",
+            "titleUrl": "https://naminouegu.jp/",
+            "desc": "沖繩總鎮守，斷崖上的神社，旁邊是波之上海灘",
+            "locations": [
+              {
+                "name": "波上宮",
+                "googleQuery": "https://maps.google.com/?q=波上宮+那覇",
+                "appleQuery": "https://maps.apple.com/?q=波上宮+那覇"
+              }
+            ],
+            "transit": { "type": "walk", "min": 15, "text": "從飯店步行約15分鐘" }
+          },
+          {
+            "time": "10:30",
+            "title": "Check out",
+            "desc": "退房，寄放行李",
+            "locations": [
+              {
+                "name": "La'Gent Hotel Okinawa Naha",
+                "googleQuery": "https://maps.google.com/?q=ラジェントホテル沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=ラジェントホテル沖縄那覇"
+              }
+            ]
+          },
+          {
+            "time": "11:30",
+            "title": "午餐",
+            "desc": "最後一餐，機場附近或國際通",
+            "locations": [
+              {
+                "name": "那霸國際通",
+                "googleQuery": "https://maps.google.com/?q=那覇国際通り",
+                "appleQuery": "https://maps.apple.com/?q=那覇国際通り"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "restaurants",
+                "title": "午餐推薦",
+                "restaurants": [
+                  {
+                    "name": "まぐろ問屋 やざえもん 那覇店",
+                    "category": "生魚片",
+                    "hours": "11:00~15:00 / 17:00~22:00",
+                    "reservation": "建議預約",
+                    "desc": "鮪魚專門店，生鮪魚丼・海鮮丼，午餐 ¥1,000 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "ステーキハウス88 那覇店",
+                    "category": "燒肉",
+                    "hours": "11:00~22:00",
+                    "reservation": "免預約",
+                    "desc": "沖繩老牌牛排館，200g 沙朗 ¥2,200 起",
+                    "blogUrl": null
+                  },
+                  {
+                    "name": "お食事処 みかど",
+                    "category": "當地特色",
+                    "hours": "10:00~21:30",
+                    "reservation": "免預約",
+                    "desc": "沖繩家庭食堂，ゆし豆腐定食・チャンプルー，¥650 起",
+                    "blogUrl": null
+                  }
+                ]
+              }
+            ],
+            "transit": { "type": "train", "min": 15, "text": "單軌電車至那霸空港 約15分鐘" }
+          },
+          {
+            "time": "14:30",
+            "title": "前往那霸機場",
+            "desc": "提前2小時到機場，辦理登機・免稅店最後購物",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場"
+              }
+            ]
+          },
+          {
+            "time": "16:45",
+            "title": "MM929 回程出發",
+            "desc": "那霸飛回台北桃園，17:20 抵達",
+            "locations": [
+              {
+                "name": "那霸機場",
+                "googleQuery": "https://maps.google.com/?q=那霸機場",
+                "appleQuery": "https://maps.apple.com/?q=那霸機場"
+              }
+            ],
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "航班資訊",
+                "items": [
+                  "航班：MM929（樂桃航空）",
+                  "那霸（OKA）16:45 → 台北（TPE）17:20",
+                  "飛行時間：約1小時35分鐘"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
