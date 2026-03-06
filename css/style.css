@@ -132,7 +132,7 @@ body:not(.dark) .day-header {
 .tl-event { position: relative; padding: 6px 0; }
 .tl-event::before { display: none; }
 .tl-head { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px; border-radius: var(--radius-sm); position: relative; }
-.tl-head::before { content: ''; position: absolute; left: -23px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card-bg); z-index: 1; }
+.tl-head::after { content: ''; position: absolute; left: -24px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--white); z-index: 1; }
 .tl-time { font-weight: 700; font-size: var(--fs-md); color: var(--accent); min-width: 95px; flex-shrink: 0; }
 .tl-title { font-weight: 600; font-size: var(--fs-lg); }
 .tl-title a { color: var(--text); text-decoration: none; }
