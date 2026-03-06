@@ -93,7 +93,7 @@ tripFiles.forEach(({ file, label }) => {
             expect(() => renderTimelineEvent(ev)).not.toThrow();
             const html = renderTimelineEvent(ev);
             expect(html).toContain('tl-event');
-            if (ev.time) expect(html).toContain('tl-time');
+            if (ev.time) expect(html).toContain('tl-time-start');
             if (ev.title) expect(html).toContain('tl-title');
           });
         });
@@ -120,7 +120,7 @@ tripFiles.forEach(({ file, label }) => {
             if (entry.travel) {
               found = true;
               const html = renderTimelineEvent(entry);
-              expect(html).toContain('tl-travel');
+              expect(html).toContain('tl-transit-bar');
             }
           });
         });
