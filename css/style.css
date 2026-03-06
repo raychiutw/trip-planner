@@ -197,7 +197,7 @@ body:not(.dark) .day-header {
 .info-box.souvenir,
 .info-box.restaurants,
 .info-box.shopping { background: var(--accent-light); }
-.restaurant-choice { padding: 10px 12px; line-height: 1.7; background: var(--accent-light); border-radius: var(--radius-sm); margin-bottom: 8px; }
+.restaurant-choice { padding: 10px 12px 10px 14px; line-height: 1.7; background: var(--accent-light); border-radius: var(--radius-sm); margin-bottom: 8px; border-left: 3px solid var(--accent); }
 .info-box-grid { display: flex; flex-direction: column; }
 @media (min-width: 768px) {
     .info-box-grid { display: grid; gap: 8px; }
