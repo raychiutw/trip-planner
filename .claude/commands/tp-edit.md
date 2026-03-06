@@ -14,15 +14,18 @@
    - 建立 `data/backup/` 目錄（若不存在）
    - 同一 tripSlug 超過 10 個備份時，刪除最舊的
 3. 依自然語言描述**局部修改**行程 JSON（只改描述涉及的部分）
-4. 修改的部分須符合 R1-R12 品質規則
-5. 若影響到 checklist、backup、suggestions，同步更新
-6. 確認 transit 分鐘數
-7. 執行 `git diff --name-only`：
+4. 新增或替換的 POI 須標記 `source` 欄位：
+   - 使用者明確指定名稱（如「換成一蘭拉麵」）→ `"source": "user"`
+   - 使用者僅給模糊描述（如「換成拉麵店」）→ `"source": "ai"`
+5. 修改的部分須符合 R1-R13 品質規則
+6. 若影響到 checklist、backup、suggestions，同步更新
+7. 確認 transit 分鐘數
+8. 執行 `git diff --name-only`：
    → 只有 `data/trips/{tripSlug}.json` → OK
    → 有其他檔案被改 → `git checkout` 還原非白名單檔案
-8. `npm test`
-9. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
-10. 不自動 commit（由使用者決定）
+9. `npm test`
+10. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
+11. 不自動 commit（由使用者決定）
 
 ## 局部修改 vs 全面重整
 
@@ -41,4 +44,4 @@
 
 ## 品質規則參照
 
-完整 R1-R12 品質規則定義在 `/tp-rebuild` skill 中。本 skill 修改的部分須符合相關規則。
+完整品質規則定義在 `trip-quality-rules.md`。本 skill 修改的部分須符合相關規則。

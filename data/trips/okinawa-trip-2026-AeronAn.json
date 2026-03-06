@@ -215,7 +215,8 @@
                     "便當・輕食"
                   ],
                   "blogUrl": "https://furikake.okinawa/other/okinawa-familymart/",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -227,7 +228,8 @@
                     "泡盛・Orion 啤酒"
                   ],
                   "blogUrl": "https://nikitarh.pixnet.net/blog/post/5673665",
-                  "googleRating": 4.1
+                  "googleRating": 4.1,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -239,12 +241,14 @@
                     "安耐曬防曬乳・美妝"
                   ],
                   "blogUrl": "https://linshibi.com/?p=16331",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "googleRating": 4.2
+          "googleRating": 4.2,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -270,7 +274,8 @@
               }
             ],
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "12:20",
@@ -319,7 +324,8 @@
                     "hours": "11:00~15:00 / 17:00~22:00",
                     "reservation": "建議預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -334,7 +340,8 @@
                     "hours": "11:00~22:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -349,7 +356,8 @@
                     "hours": "10:00~21:30",
                     "reservation": "免預約，食堂形式",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -446,7 +454,8 @@
                     "hours": "17:00~24:00",
                     "reservation": "可預約",
                     "blogUrl": "",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -462,7 +471,8 @@
                     "reservation": "強烈建議線上訂位 TableCheck",
                     "reservationUrl": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve",
                     "blogUrl": "https://mi0424.pixnet.net/blog/post/122378938",
-                    "googleRating": 4.8
+                    "googleRating": 4.8,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -477,13 +487,15 @@
                     "hours": "17:00~22:00（週日休）",
                     "reservation": "建議預約",
                     "blogUrl": "https://boo2k.com/archives/134",
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   }
                 ]
               }
             ],
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
@@ -521,7 +533,8 @@
                     "便當・輕食"
                   ],
                   "blogUrl": "https://furikake.okinawa/other/okinawa-familymart/",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -533,7 +546,8 @@
                     "泡盛・Orion 啤酒"
                   ],
                   "blogUrl": "https://nikitarh.pixnet.net/blog/post/5673665",
-                  "googleRating": 4.1
+                  "googleRating": 4.1,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -545,12 +559,14 @@
                     "安耐曬防曬乳・美妝"
                   ],
                   "blogUrl": "https://linshibi.com/?p=16331",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "googleRating": 4.2
+          "googleRating": 4.2,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -602,7 +618,8 @@
                 "appleQuery": "https://maps.apple.com/?q=知念岬公園"
               }
             ],
-            "googleRating": 4.4
+            "googleRating": 4.4,
+            "source": "ai"
           },
           {
             "time": "12:00",
@@ -633,7 +650,8 @@
                     "hours": "11:00~15:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -648,7 +666,8 @@
                     "hours": "09:00~17:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -663,7 +682,8 @@
                     "hours": "10:00~18:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -706,7 +726,8 @@
                 "appleQuery": "https://maps.apple.com/?q=那覇バスターミナル"
               }
             ],
-            "googleRating": 3.5
+            "googleRating": 3.5,
+            "source": "ai"
           },
           {
             "time": "18:30",
@@ -737,7 +758,8 @@
                     "hours": "17:00~24:00",
                     "reservation": "可預約",
                     "blogUrl": "",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -752,7 +774,8 @@
                     "hours": "午餐 11:00~15:00 / 晚餐 17:00~22:00（週一公休）",
                     "reservation": "強烈建議預約（電話 098-943-2978 或線上）",
                     "blogUrl": "https://okinawa.letsgojp.com/archives/585009/",
-                    "googleRating": 4.9
+                    "googleRating": 4.9,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -767,13 +790,15 @@
                     "hours": "17:00~23:00",
                     "reservation": "建議預約",
                     "blogUrl": "https://dreamycat0421.pixnet.net/blog/post/403190773",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   }
                 ]
               }
             ],
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
@@ -811,7 +836,8 @@
                     "便當・輕食"
                   ],
                   "blogUrl": "https://furikake.okinawa/other/okinawa-familymart/",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -823,7 +849,8 @@
                     "泡盛・Orion 啤酒"
                   ],
                   "blogUrl": "https://nikitarh.pixnet.net/blog/post/5673665",
-                  "googleRating": 4.1
+                  "googleRating": 4.1,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -835,12 +862,14 @@
                     "安耐曬防曬乳・美妝"
                   ],
                   "blogUrl": "https://linshibi.com/?p=16331",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "googleRating": 4.2
+          "googleRating": 4.2,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -886,7 +915,8 @@
                 "appleQuery": "https://maps.apple.com/?q=沖縄美ら海水族館"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "source": "ai"
           },
           {
             "time": "13:00",
@@ -917,7 +947,8 @@
                     "hours": "08:00~18:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -932,7 +963,8 @@
                     "hours": "11:00~22:00",
                     "reservation": "建議預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -947,7 +979,8 @@
                     "hours": "11:00~17:00（週三休）",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -989,7 +1022,8 @@
                 "appleQuery": "https://maps.apple.com/?q=那覇バスターミナル"
               }
             ],
-            "googleRating": 3.5
+            "googleRating": 3.5,
+            "source": "ai"
           },
           {
             "time": "19:00",
@@ -1020,7 +1054,8 @@
                     "hours": "10:00~20:00",
                     "reservation": "免預約",
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -1035,7 +1070,8 @@
                     "hours": "11:00~22:00",
                     "reservation": "免預約",
                     "blogUrl": "https://nancyik2001.pixnet.net/blog/post/234815610",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1050,13 +1086,15 @@
                     "hours": "17:00~22:00",
                     "reservation": "建議預約",
                     "blogUrl": "https://relney.pixnet.net/blog/post/300906707",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
             ],
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
@@ -1094,7 +1132,8 @@
                     "便當・輕食"
                   ],
                   "blogUrl": "https://furikake.okinawa/other/okinawa-familymart/",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1106,7 +1145,8 @@
                     "泡盛・Orion 啤酒"
                   ],
                   "blogUrl": "https://nikitarh.pixnet.net/blog/post/5673665",
-                  "googleRating": 4.1
+                  "googleRating": 4.1,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -1118,12 +1158,14 @@
                     "安耐曬防曬乳・美妝"
                   ],
                   "blogUrl": "https://linshibi.com/?p=16331",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "googleRating": 4.2
+          "googleRating": 4.2,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1156,7 +1198,8 @@
                 "appleQuery": "https://maps.apple.com/?q=美浜アメリカンビレッジ"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "12:00",
@@ -1187,7 +1230,8 @@
                     "hours": "11:00~15:00（售完為止）",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -1202,7 +1246,8 @@
                     "hours": "11:30~23:00",
                     "reservation": "可線上預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1217,7 +1262,8 @@
                     "hours": "10:00~20:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1241,7 +1287,8 @@
                 "appleQuery": "https://maps.apple.com/?q=残波岬灯台"
               }
             ],
-            "googleRating": 4.6
+            "googleRating": 4.6,
+            "source": "ai"
           },
           {
             "time": "14:45",
@@ -1270,7 +1317,8 @@
                       "黑糖蛋糕"
                     ],
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1328,7 +1376,8 @@
                     "hours": "17:00~24:00",
                     "reservation": "可預約",
                     "blogUrl": "",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -1343,7 +1392,8 @@
                     "hours": "午餐 11:30~14:30 / 晚餐 17:00~23:00",
                     "reservation": "電話或網路預約",
                     "blogUrl": "https://imccp.com/oka-shimagyu/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1358,13 +1408,15 @@
                     "hours": "18:00~00:00（全年無休）",
                     "reservation": "可電話預約 098-866-5255",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
             ],
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
@@ -1402,7 +1454,8 @@
                     "便當・輕食"
                   ],
                   "blogUrl": "https://furikake.okinawa/other/okinawa-familymart/",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1414,7 +1467,8 @@
                     "泡盛・Orion 啤酒"
                   ],
                   "blogUrl": "https://nikitarh.pixnet.net/blog/post/5673665",
-                  "googleRating": 4.1
+                  "googleRating": 4.1,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -1426,12 +1480,14 @@
                     "安耐曬防曬乳・美妝"
                   ],
                   "blogUrl": "https://linshibi.com/?p=16331",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "googleRating": 4.2
+          "googleRating": 4.2,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1484,7 +1540,8 @@
                 "appleQuery": "https://maps.apple.com/?q=瀬長島ウミカジテラス"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "source": "ai"
           },
           {
             "time": "12:00",
@@ -1515,7 +1572,8 @@
                     "hours": "11:00~15:00 / 17:00~22:00",
                     "reservation": "建議預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "燒肉",
@@ -1530,7 +1588,8 @@
                     "hours": "11:00~翌02:00",
                     "reservation": "免預約",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1545,7 +1604,8 @@
                     "hours": "10:00~21:30",
                     "reservation": "免預約，食堂形式",
                     "blogUrl": "",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1569,7 +1629,8 @@
               }
             ],
             "blogUrl": "",
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "source": "ai"
           },
           {
             "time": "16:45",
@@ -1594,7 +1655,8 @@
               }
             ],
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }

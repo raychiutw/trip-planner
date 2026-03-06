@@ -103,3 +103,15 @@ shop.category 使用標準分類（共 7 類）：超市、超商、唐吉軻德
 
 ### R12 Google 評分
 所有 POI（實體地點類 timeline event、餐廳、商店、加油站）SHALL 含 `googleRating` 欄位（數字，1.0-5.0）。travel event 和「餐廳未定」event 略過 R12 檢查。
+
+### R13 POI 來源標記
+所有非豁免 POI SHALL 含 `source` 欄位（值為 `"user"` 或 `"ai"`），與 `name` 同級。POI 類型包含：timeline event（非 travel）、restaurant、hotel（name 非「家」且不以「（」開頭）、shop、gasStation。
+
+- `"user"`：使用者明確指定名稱的 POI
+- `"ai"`：AI 自行推薦或使用者僅給模糊描述（如「找一家拉麵店」）的 POI
+
+#### 驗證等級（依 source 區分）
+- `source: "ai"` 且缺少 `googleRating` → **fail**（🔴）
+- `source: "user"` 且缺少 `googleRating` → **warning**（🟡）
+
+此規則為離線檢查（不做即時搜尋），僅檢查缺少 `googleRating` 的非豁免 POI。

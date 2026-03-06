@@ -497,5 +497,103 @@ jsonFiles.forEach((file) => {
         }
       });
     });
+    // --- R13 POI 來源標記驗證（source-based googleRating 檢查） ---
+
+    it('R13: ai-sourced POIs without googleRating are failures, user-sourced are warnings', () => {
+      const aiMissing = [];
+      const userMissing = [];
+
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+
+        // hotel 不檢查 googleRating（R12 未要求 hotel 有 googleRating）
+        const hotel = day.content?.hotel;
+
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          if ((ev.title || '').includes('餐廳未定')) return;
+          const prefix = `days[${i}].timeline[${j}]`;
+
+          // timeline event
+          if (ev.source === 'ai' && typeof ev.googleRating !== 'number') {
+            aiMissing.push(`${prefix} "${ev.title}"`);
+          } else if (ev.source === 'user' && typeof ev.googleRating !== 'number') {
+            userMissing.push(`${prefix} "${ev.title}"`);
+          }
+
+          // restaurants
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'restaurants') return;
+            (box.restaurants || []).forEach((r, m) => {
+              if (r.source === 'ai' && typeof r.googleRating !== 'number') {
+                aiMissing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+              } else if (r.source === 'user' && typeof r.googleRating !== 'number') {
+                userMissing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+              }
+            });
+          });
+
+          // shops
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'shopping') return;
+            (box.shops || []).forEach((s, m) => {
+              if (s.source === 'ai' && typeof s.googleRating !== 'number') {
+                aiMissing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+              } else if (s.source === 'user' && typeof s.googleRating !== 'number') {
+                userMissing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+              }
+            });
+          });
+
+          // gasStation
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'gasStation') return;
+            if (box.station) {
+              if (box.station.source === 'ai' && typeof box.googleRating !== 'number') {
+                aiMissing.push(`${prefix}.infoBoxes[${k}].station "${box.station.name}"`);
+              } else if (box.station.source === 'user' && typeof box.googleRating !== 'number') {
+                userMissing.push(`${prefix}.infoBoxes[${k}].station "${box.station.name}"`);
+              }
+            }
+          });
+        });
+
+        // hotel infoBoxes
+        if (hotel?.infoBoxes) {
+          hotel.infoBoxes.forEach((box, k) => {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                if (r.source === 'ai' && typeof r.googleRating !== 'number') {
+                  aiMissing.push(`days[${i}].hotel.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+                } else if (r.source === 'user' && typeof r.googleRating !== 'number') {
+                  userMissing.push(`days[${i}].hotel.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+                }
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                if (s.source === 'ai' && typeof s.googleRating !== 'number') {
+                  aiMissing.push(`days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+                } else if (s.source === 'user' && typeof s.googleRating !== 'number') {
+                  userMissing.push(`days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+                }
+              });
+            }
+          });
+        }
+      });
+
+      // ai-sourced 缺 googleRating → fail
+      expect(
+        aiMissing.length,
+        `R13 fail: ${aiMissing.length} ai-sourced POI(s) missing googleRating:\n${aiMissing.join('\n')}`
+      ).toBe(0);
+
+      // user-sourced 缺 googleRating → warning（記錄但不 fail）
+      // 此處僅記錄，不阻擋測試
+      if (userMissing.length > 0) {
+        console.warn(`R13 warning: ${userMissing.length} user-sourced POI(s) missing googleRating in ${file}:\n${userMissing.join('\n')}`);
+      }
+    });
   });
 });

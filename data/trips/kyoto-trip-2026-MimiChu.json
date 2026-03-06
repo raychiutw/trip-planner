@@ -177,7 +177,8 @@
                     "おにぎり"
                   ],
                   "blogUrl": "https://minako.tw/japan-family/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -189,7 +190,8 @@
                     "季節水果"
                   ],
                   "blogUrl": "https://mimicat1531.pixnet.net/blog/post/48930056",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -201,12 +203,14 @@
                     "京都限定伴手禮"
                   ],
                   "blogUrl": "https://visitkyototw.pixnet.net/blog/post/93112818",
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "blogUrl": "https://candicecity.com/56704/"
+          "blogUrl": "https://candicecity.com/56704/",
+          "source": "ai"
         },
         "timeline": [
           {
@@ -221,7 +225,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Kansai+International+Airport"
               }
             ],
-            "googleRating": 4.0
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "12:00",
@@ -255,7 +260,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E4%BA%AC%E9%83%BD%E6%8B%89%E9%BA%B5%E5%B0%8F%E8%B7%AF+%E4%BA%AC%E9%83%BD%E9%A7%85",
                       "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E9%83%BD%E6%8B%89%E9%BA%B5%E5%B0%8F%E8%B7%AF"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -270,7 +276,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%81%AF%E3%81%97%E3%81%9F%E3%81%A6+%E4%BA%AC%E9%83%BD%E9%A7%85",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%AF%E3%81%97%E3%81%9F%E3%81%A6+%E4%BA%AC%E9%83%BD%E9%A7%85"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -285,7 +292,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E5%BF%97%E6%B4%A5%E5%B1%8B+%E4%BA%AC%E9%83%BD%E9%A7%85",
                       "appleQuery": "https://maps.apple.com/?q=%E5%BF%97%E6%B4%A5%E5%B1%8B+%E4%BA%AC%E9%83%BD%E9%A7%85"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -297,7 +305,8 @@
                 "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E9%83%BD%E9%A7%85"
               }
             ],
-            "googleRating": 4.1
+            "googleRating": 4.1,
+            "source": "ai"
           },
           {
             "time": "14:00",
@@ -398,7 +407,8 @@
                       "生活雜貨"
                     ],
                     "blogUrl": "https://www.bigfang.tw/blog/post/42911759",
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "購物中心",
@@ -410,7 +420,8 @@
                       "京都限定商品"
                     ],
                     "blogUrl": "https://archerplus.pixnet.net/blog/post/234434154",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "伴手禮",
@@ -422,7 +433,8 @@
                       "生活用品"
                     ],
                     "blogUrl": "",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -462,7 +474,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E5%85%88%E6%96%97%E7%94%BA+%E3%81%84%E3%81%A5%E3%82%82%E3%82%84",
                       "appleQuery": "https://maps.apple.com/?q=%E5%85%88%E6%96%97%E7%94%BA+%E3%81%84%E3%81%A5%E3%82%82%E3%82%84"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -477,7 +490,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E4%B8%B2%E3%81%8F%E3%82%89+%E6%9C%AC%E5%BA%97+%E6%9C%A8%E5%B1%8B%E7%94%BA",
                       "appleQuery": "https://maps.apple.com/?q=%E4%B8%B2%E3%81%8F%E3%82%89+%E6%9C%AC%E5%BA%97"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -492,12 +506,13 @@
                       "googleQuery": "https://maps.google.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F+%E7%A5%87%E5%9C%92",
                       "appleQuery": "https://maps.apple.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F"
                     },
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4.0
+            "googleRating": 4
           },
           {
             "time": "21:30",
@@ -547,7 +562,8 @@
                     "おにぎり"
                   ],
                   "blogUrl": "https://minako.tw/japan-family/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -559,7 +575,8 @@
                     "季節水果"
                   ],
                   "blogUrl": "https://mimicat1531.pixnet.net/blog/post/48930056",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -571,12 +588,14 @@
                     "京都限定伴手禮"
                   ],
                   "blogUrl": "https://visitkyototw.pixnet.net/blog/post/93112818",
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "blogUrl": "https://candicecity.com/56704/"
+          "blogUrl": "https://candicecity.com/56704/",
+          "source": "ai"
         },
         "timeline": [
           {
@@ -591,7 +610,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Stumptown+Coffee+Roasters+Kyoto"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "source": "ai"
           },
           {
             "time": "10:00",
@@ -631,7 +651,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%81%97%E3%82%85%E3%81%B0%E3%81%8F+%E5%AE%87%E6%B2%BB",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%97%E3%82%85%E3%81%B0%E3%81%8F+%E5%AE%87%E6%B2%BB"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -646,7 +667,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E4%BC%8A%E8%97%A4%E4%B9%85%E5%8F%B3%E8%A1%9B%E9%96%80+%E6%9C%AC%E5%BA%97+%E5%AE%87%E6%B2%BB",
                       "appleQuery": "https://maps.apple.com/?q=%E4%BC%8A%E8%97%A4%E4%B9%85%E5%8F%B3%E8%A1%9B%E9%96%80+%E6%9C%AC%E5%BA%97"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -661,12 +683,14 @@
                       "googleQuery": "https://maps.google.com/?q=%E9%80%9A%E5%9C%93+%E5%AE%87%E6%B2%BB%E6%9C%AC%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E9%80%9A%E5%9C%93+%E5%AE%87%E6%B2%BB%E6%9C%AC%E5%BA%97"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4.3
+            "googleRating": 4.3,
+            "source": "ai"
           },
           {
             "time": "12:30",
@@ -780,7 +804,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E5%BC%98+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97+%E4%BA%AC%E9%83%BD+%E7%84%BC%E8%82%89",
                       "appleQuery": "https://maps.apple.com/?q=%E5%BC%98+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -795,7 +820,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E7%84%BC%E8%82%89%E3%81%AE%E5%90%8D%E9%96%80+%E5%A4%A9%E5%A3%87+%E7%A5%87%E5%9C%92%E6%9C%AC%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E5%A4%A9%E5%A3%87+%E7%A5%87%E5%9C%92%E6%9C%AC%E5%BA%97"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -810,7 +836,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E8%82%89%E6%96%99%E7%90%86+%E3%81%8A%E3%81%8B+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E8%82%89%E6%96%99%E7%90%86+%E3%81%8A%E3%81%8B+%E4%BA%AC%E9%83%BD"
                     },
-                    "googleRating": 4.4
+                    "googleRating": 4.4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -832,7 +859,7 @@
               "text": "步行約10分鐘",
               "type": "walking"
             },
-            "googleRating": 4.0
+            "googleRating": 4
           }
         ]
       }
@@ -865,7 +892,8 @@
                     "おにぎり"
                   ],
                   "blogUrl": "https://minako.tw/japan-family/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -877,7 +905,8 @@
                     "季節水果"
                   ],
                   "blogUrl": "https://mimicat1531.pixnet.net/blog/post/48930056",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -889,12 +918,14 @@
                     "京都限定伴手禮"
                   ],
                   "blogUrl": "https://visitkyototw.pixnet.net/blog/post/93112818",
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "blogUrl": "https://candicecity.com/56704/"
+          "blogUrl": "https://candicecity.com/56704/",
+          "source": "ai"
         },
         "timeline": [
           {
@@ -909,7 +940,8 @@
                 "appleQuery": "https://maps.apple.com/?q=%E9%80%B2%E9%80%B2%E5%A0%82+%E4%B8%89%E6%9D%A1%E5%BA%97"
               }
             ],
-            "googleRating": 4.1
+            "googleRating": 4.1,
+            "source": "ai"
           },
           {
             "time": "10:15",
@@ -995,7 +1027,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E9%BA%BA%E5%B1%8B%E7%8C%AA%E4%B8%80+%E9%9B%A2%E3%82%8C+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E9%BA%BA%E5%B1%8B%E7%8C%AA%E4%B8%80+%E9%9B%A2%E3%82%8C"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -1010,7 +1043,8 @@
                       "googleQuery": "https://maps.google.com/?q=mumokuteki+cafe+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=mumokuteki+cafe"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -1025,7 +1059,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%82%AD%E3%83%AB%E3%83%95%E3%82%A7%E3%83%9C%E3%83%B3+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%AD%E3%83%AB%E3%83%95%E3%82%A7%E3%83%9C%E3%83%B3+%E4%BA%AC%E9%83%BD"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1062,7 +1097,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Daiyasu+oyster+bar"
               }
             ],
-            "googleRating": 4.3
+            "googleRating": 4.3,
+            "source": "ai"
           },
           {
             "time": "16:00",
@@ -1131,7 +1167,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E8%B5%A4%E5%9E%A3%E5%B1%8B+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E8%B5%A4%E5%9E%A3%E5%B1%8B+%E4%BA%AC%E9%83%BD"
                     },
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -1146,7 +1183,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E9%85%92%E9%99%B6+%E6%9F%B3%E9%87%8E+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E9%85%92%E9%99%B6+%E6%9F%B3%E9%87%8E"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -1161,7 +1199,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E3%81%8D%E3%81%AE%E3%81%97%E3%81%9F+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89+%E3%81%8D%E3%81%AE%E3%81%97%E3%81%9F"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1216,7 +1255,8 @@
                     "おにぎり"
                   ],
                   "blogUrl": "https://minako.tw/japan-family/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1228,7 +1268,8 @@
                     "季節水果"
                   ],
                   "blogUrl": "https://mimicat1531.pixnet.net/blog/post/48930056",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -1240,12 +1281,14 @@
                     "京都限定伴手禮"
                   ],
                   "blogUrl": "https://visitkyototw.pixnet.net/blog/post/93112818",
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "blogUrl": "https://candicecity.com/56704/"
+          "blogUrl": "https://candicecity.com/56704/",
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1260,7 +1303,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Fuglen+Kyoto"
               }
             ],
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "source": "ai"
           },
           {
             "time": "10:00",
@@ -1277,7 +1321,7 @@
               "text": "巴士約20分鐘",
               "type": "train"
             },
-            "googleRating": 4.0
+            "googleRating": 4
           },
           {
             "time": "10:30",
@@ -1330,7 +1374,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8B%E3%81%AD%E6%AD%A3+%E4%BA%AC%E9%83%BD+%E9%B0%BB",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%8B%E3%81%AD%E6%AD%A3+%E4%BA%AC%E9%83%BD"
                     },
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -1345,7 +1390,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E4%BA%AC%E6%A5%B5%E3%81%8B%E3%81%AD%E3%82%88+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E6%A5%B5%E3%81%8B%E3%81%AD%E3%82%88"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -1360,7 +1406,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1434,7 +1481,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E4%B8%89%E5%B6%8B%E4%BA%AD+%E6%9C%AC%E5%BA%97+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E4%B8%89%E5%B6%8B%E4%BA%AD+%E6%9C%AC%E5%BA%97"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -1449,7 +1497,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%83%A2%E3%83%AA%E3%82%BF%E5%B1%8B+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E3%83%A2%E3%83%AA%E3%82%BF%E5%B1%8B+%E6%9C%A8%E5%B1%8B%E7%94%BA%E5%BA%97"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -1464,7 +1513,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E5%8D%81%E4%BA%8C%E6%AE%B5%E5%AE%B6+%E6%9C%AC%E5%BA%97+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E5%8D%81%E4%BA%8C%E6%AE%B5%E5%AE%B6+%E6%9C%AC%E5%BA%97"
                     },
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1519,7 +1569,8 @@
                     "おにぎり"
                   ],
                   "blogUrl": "https://minako.tw/japan-family/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1531,7 +1582,8 @@
                     "季節水果"
                   ],
                   "blogUrl": "https://mimicat1531.pixnet.net/blog/post/48930056",
-                  "googleRating": 3.7
+                  "googleRating": 3.7,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -1543,12 +1595,14 @@
                     "京都限定伴手禮"
                   ],
                   "blogUrl": "https://visitkyototw.pixnet.net/blog/post/93112818",
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
           ],
-          "blogUrl": "https://candicecity.com/56704/"
+          "blogUrl": "https://candicecity.com/56704/",
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1563,7 +1617,8 @@
                 "appleQuery": "https://maps.apple.com/?q=%E5%85%AD%E6%9B%9C%E7%A4%BE+%E4%BA%AC%E9%83%BD"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "source": "ai"
           },
           {
             "time": "10:00",
@@ -1616,7 +1671,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8B%E3%81%A4%E3%81%8F%E3%82%89+%E5%9B%9B%E6%9D%A1%E6%9D%B1%E6%B4%9E%E9%99%A2%E5%BA%97",
                       "appleQuery": "https://maps.apple.com/?q=%E3%81%8B%E3%81%A4%E3%81%8F%E3%82%89+%E5%9B%9B%E6%9D%A1%E6%9D%B1%E6%B4%9E%E9%99%A2%E5%BA%97"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -1631,7 +1687,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E7%A5%A2%E3%81%96%E3%82%81%E5%AE%B6+%E4%BC%8F%E8%A6%8B%E7%A8%BB%E8%8D%B7",
                       "appleQuery": "https://maps.apple.com/?q=%E7%A5%A2%E3%81%96%E3%82%81%E5%AE%B6"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -1646,7 +1703,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B0%E3%83%AA%E3%83%AB%E5%B0%8F%E5%AE%9D"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1721,7 +1779,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC+%E3%82%B8%E3%83%A3%E3%83%B3%E3%83%9C+%E4%BA%AC%E9%83%BD",
                       "appleQuery": "https://maps.apple.com/?q=%E3%82%B8%E3%83%A3%E3%83%B3%E3%83%9C+%E4%BA%AC%E9%83%BD"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "和食",
@@ -1736,7 +1795,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E3%81%8A%E5%A5%BD%E3%81%BF%E7%84%BC+%E5%90%89%E9%87%8E+%E7%A5%87%E5%9C%92",
                       "appleQuery": "https://maps.apple.com/?q=%E5%90%89%E9%87%8E+%E7%A5%87%E5%9C%92"
                     },
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "洋食",
@@ -1751,7 +1811,8 @@
                       "googleQuery": "https://maps.google.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F+%E7%A5%87%E5%9C%92",
                       "appleQuery": "https://maps.apple.com/?q=%E5%A3%B9%E9%8A%AD%E6%B4%8B%E9%A3%9F"
                     },
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1802,7 +1863,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Smart+Coffee+Kyoto"
               }
             ],
-            "googleRating": 4.3
+            "googleRating": 4.3,
+            "source": "ai"
           },
           {
             "time": "10:30",
@@ -1828,7 +1890,7 @@
                 "appleQuery": "https://maps.apple.com/?q=%E4%BA%AC%E9%83%BD%E9%A7%85"
               }
             ],
-            "googleRating": 4.0
+            "googleRating": 4
           },
           {
             "time": "12:30",
@@ -1852,7 +1914,8 @@
                       "googleQuery": "https://maps.google.com/?q=Town+Gate+Kansai+Airport",
                       "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport"
                     },
-                    "googleRating": 3.5
+                    "googleRating": 3.5,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1864,7 +1927,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Town+Gate+Kansai+Airport"
               }
             ],
-            "googleRating": 3.8
+            "googleRating": 3.8,
+            "source": "ai"
           },
           {
             "time": "14:30",
@@ -1878,7 +1942,8 @@
                 "appleQuery": "https://maps.apple.com/?q=Kansai+International+Airport"
               }
             ],
-            "googleRating": 4.0
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
