@@ -157,7 +157,7 @@ body:not(.dark) .day-header {
 
 /* ===== Transit Bar (between events) ===== */
 .tl-transit-bar { display: grid; grid-template-columns: 48px 36px 1fr; gap: 0; }
-.tl-transit-line { position: relative; }
+.tl-transit-line { grid-column: 2; position: relative; }
 .tl-transit-line::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); background: var(--border); }
 .tl-transit-line.tl-transit-last::after { bottom: 50%; }
 .tl-transit-content { display: flex; align-items: center; gap: 8px; padding: 6px 14px; margin: 2px 0 2px 8px; font-size: var(--fs-sm); color: var(--gray); background: var(--accent-light); border-radius: var(--radius-sm); cursor: default; }
