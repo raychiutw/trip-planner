@@ -20,16 +20,9 @@ test.describe('Edit 頁面載入', () => {
     await expect(main).toBeVisible();
   });
 
-  test('有效 ?trip= → 顯示問候語', async ({ page }) => {
+  test('有效 ?trip= → 顯示輸入框', async ({ page }) => {
     await page.goto(EDIT_URL);
-
-    // 等待問候語渲染
-    const greeting = page.locator('.edit-greeting-text');
-    await expect(greeting).toBeVisible({ timeout: 10000 });
-
-    // 工具列不含行程下拉（已移除）
-    const tripSelect = page.locator('#tripSelect');
-    await expect(tripSelect).toHaveCount(0);
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
   });
 
   test('無效 ?trip= → 顯示錯誤訊息', async ({ page }) => {
@@ -45,7 +38,7 @@ test.describe('Edit 頁面載入', () => {
 test.describe('Edit Chat UI 結構', () => {
   test('存在 .chat-container 根元素', async ({ page }) => {
     await page.goto(EDIT_URL);
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     const container = page.locator('.chat-container');
     await expect(container).toBeVisible();
@@ -53,7 +46,7 @@ test.describe('Edit Chat UI 結構', () => {
 
   test('存在 .chat-messages 捲動區', async ({ page }) => {
     await page.goto(EDIT_URL);
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     const messages = page.locator('.chat-messages');
     await expect(messages).toBeVisible();
@@ -61,26 +54,10 @@ test.describe('Edit Chat UI 結構', () => {
 
   test('存在 .chat-messages-inner wrapper', async ({ page }) => {
     await page.goto(EDIT_URL);
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     const inner = page.locator('.chat-messages-inner');
     await expect(inner).toBeVisible();
-  });
-
-  test('問候語為 .message-system 左對齊卡片', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    const greetingCard = page.locator('.message-system.edit-greeting');
-    await expect(greetingCard).toBeVisible({ timeout: 10000 });
-  });
-
-  test('顯示問候語（早安/午安/晚安）與時段對應', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    const greeting = page.locator('.edit-greeting-text');
-    await expect(greeting).toBeVisible({ timeout: 10000 });
-
-    const text = await greeting.textContent();
-    expect(text).toMatch(/早安|午安|晚安/);
-    expect(text).toContain('Ray');
   });
 
   test('底部有 textarea', async ({ page }) => {
@@ -96,7 +73,7 @@ test.describe('Edit Chat UI 結構', () => {
     await expect(textarea).toHaveAttribute('maxlength', '65536');
   });
 
-  test('textarea 字體大小為 --fs-sm', async ({ page }) => {
+  test('textarea 字體大小為 --fs-md', async ({ page }) => {
     await page.goto(EDIT_URL);
     const textarea = page.locator('#editText');
     await expect(textarea).toBeVisible({ timeout: 10000 });
@@ -104,10 +81,10 @@ test.describe('Edit Chat UI 結構', () => {
     const fontSize = await textarea.evaluate(function(el) {
       return window.getComputedStyle(el).fontSize;
     });
-    // --fs-sm 通常為 14px 或 0.875rem（=14px at 16px base）
+    // --fs-md: 手機 1.125rem(18px), 桌機 1rem(16px)
     var numericSize = parseFloat(fontSize);
-    expect(numericSize).toBeLessThanOrEqual(14);
-    expect(numericSize).toBeGreaterThanOrEqual(12);
+    expect(numericSize).toBeLessThanOrEqual(18);
+    expect(numericSize).toBeGreaterThanOrEqual(15);
   });
 
   test('送出按鈕初始 disabled', async ({ page }) => {
@@ -129,7 +106,7 @@ test.describe('Edit Chat UI 結構', () => {
 
   test('底部輸入列在 .chat-container 內（非 position:fixed）', async ({ page }) => {
     await page.goto(EDIT_URL);
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     // .edit-input-bar 應為 .chat-container 的 flex 子元素
     const inputBar = page.locator('.edit-input-bar');
@@ -169,7 +146,7 @@ test.describe('Edit 手機版漢堡選單', () => {
   test('選單項目含行程頁/編輯頁/設定頁連結', async ({ page }) => {
     await page.goto(EDIT_URL);
     // 等待問候語（表示 init + buildEditMenu 完成）
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
     await menuBtn.click();
@@ -205,7 +182,7 @@ test.describe('Edit 手機版漢堡選單', () => {
   test('設定頁連結指向 setting.html', async ({ page }) => {
     await page.goto(EDIT_URL);
     // 等待問候語（表示 init + buildEditMenu 完成）
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
     await menuBtn.click();
@@ -255,7 +232,7 @@ test.describe('Edit 桌機側邊欄', () => {
   test('側邊欄選單含行程頁/設定頁連結', async ({ page }) => {
     await page.goto(EDIT_URL);
     // 等待問候語（表示 init + buildEditMenu 完成）
-    await expect(page.locator('.edit-greeting-text')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
     const links = page.locator('#sidebarNav a.menu-item');
     const count = await links.count();

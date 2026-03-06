@@ -35,19 +35,6 @@
         if (sidebarNav) sidebarNav.innerHTML = nav.sidebar;
     }
 
-    /* ===== 時段問候語 ===== */
-    function getGreeting(owner) {
-        var hour = new Date().getHours();
-        var greet;
-        if (hour >= 6 && hour < 12) {
-            greet = '早安';
-        } else if (hour >= 12 && hour < 18) {
-            greet = '午安';
-        } else {
-            greet = '晚安';
-        }
-        return greet + '，' + escHtml(owner) + '！';
-    }
 
     /* ===== Build Issue Item HTML ===== */
     function buildIssueItemHtml(issue) {
@@ -105,15 +92,6 @@
         // 可捲動訊息區
         html += '<div class="chat-messages">';
         html += '<div class="chat-messages-inner">';
-
-        // 問候語 — 系統訊息卡片
-        html += '<div class="message-system edit-greeting">';
-        html += '<div class="message-system-icon">';
-        html += '<svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z"/></svg>';
-        html += '</div>';
-        html += '<div class="message-system-title edit-greeting-text">' + getGreeting(config.owner) + '</div>';
-        html += '<div class="message-system-sub">有什麼行程修改需求？</div>';
-        html += '</div>';
 
         // Issue 列表區（單獨 id，renderIssues 只替換此區塊）
         html += '<div id="editIssues"><div class="edit-issues-loading">載入中…</div></div>';
