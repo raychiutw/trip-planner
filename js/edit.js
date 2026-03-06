@@ -87,7 +87,7 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=trip-edit&state=all&per_page=20')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=20')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
@@ -126,7 +126,7 @@
         // 底部輸入列（flex child，不 fixed）
         html += '<div class="edit-input-bar">';
         html += '<div class="edit-input-card">';
-        html += '<textarea class="edit-textarea" id="editText" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="1"></textarea>';
+        html += '<textarea class="edit-textarea" id="editText" maxlength="65536" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="1"></textarea>';
         html += '<div class="edit-input-toolbar">';
         html += '<button class="edit-send-btn" id="submitBtn" disabled aria-label="送出">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M11 5.83L6.41 10.41 5 9l7-7 7 7-1.41 1.41L13 5.83V20h-2V5.83z"/></svg>';
@@ -201,7 +201,7 @@
             body: JSON.stringify({
                 title: title,
                 body: body,
-                labels: ['trip-edit']
+                labels: ['trip-edit', config.tripSlug]
             })
         })
         .then(function(r) {
