@@ -17,7 +17,8 @@
 4. 新增或替換的 POI 須標記 `source` 欄位：
    - 使用者明確指定名稱（如「換成一蘭拉麵」）→ `"source": "user"`
    - 使用者僅給模糊描述（如「換成拉麵店」）→ `"source": "ai"`
-5. 修改的部分須符合 R1-R13 品質規則
+5. 修改的部分須符合 R1-R14 品質規則
+5b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
 6. 若影響到 checklist、backup、suggestions，同步更新
 7. 確認 transit 分鐘數
 8. 執行 `git diff --name-only`：

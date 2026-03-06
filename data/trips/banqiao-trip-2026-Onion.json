@@ -8,7 +8,10 @@
       "義大利麵",
       "特色小吃"
     ],
-    "selfDrive": true
+    "selfDrive": true,
+    "countries": [
+      "TW"
+    ]
   },
   "footer": {
     "title": "2026 板橋十五日行程",

@@ -8,7 +8,10 @@
       "燒肉",
       "地方特色"
     ],
-    "selfDrive": false
+    "selfDrive": false,
+    "countries": [
+      "JP"
+    ]
   },
   "footer": {
     "title": "2026 沖繩五日大眾交通之旅",
