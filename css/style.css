@@ -126,12 +126,13 @@ body:not(.dark) .day-header {
 .hotel-sub { margin-top: 8px; padding: 8px 10px; background: var(--accent-light); border-radius: var(--radius-sm); }
 
 /* ===== Timeline ===== */
-.timeline { position: relative; padding-left: 18px; margin: 8px 0 0 10px; border-left: 2px solid var(--accent-light); }
+.timeline { position: relative; padding-left: 18px; margin: 8px 0 0 10px; border-left: 3px solid var(--accent); }
 
 /* ===== Timeline Event ===== */
 .tl-event { position: relative; padding: 6px 0; }
-.tl-event::before { content: ''; position: absolute; left: -22px; top: 15px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card-bg); z-index: 1; }
-.tl-head { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px; border-radius: var(--radius-sm); }
+.tl-event::before { display: none; }
+.tl-head { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px; border-radius: var(--radius-sm); position: relative; }
+.tl-head::before { content: ''; position: absolute; left: -23px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--card-bg); z-index: 1; }
 .tl-time { font-weight: 700; font-size: var(--fs-md); color: var(--accent); min-width: 95px; flex-shrink: 0; }
 .tl-title { font-weight: 600; font-size: var(--fs-lg); }
 .tl-title a { color: var(--text); text-decoration: none; }
@@ -348,8 +349,7 @@ body.dark .hw-block { background: var(--hover-bg); }
 body.dark .info-box { background: var(--accent-light); }
 
 /* ===== Tab Day Switching ===== */
-.day-section { display: none; }
-.day-section.active { display: block; }
+.day-section { display: block; }
 .print-mode .day-section { display: block !important; }
 
 /* ===== Nav Brand ===== */
@@ -393,7 +393,7 @@ body.dark .speed-dial-trigger { background: var(--accent); }
 .speed-dial.open .speed-dial-items { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
 .speed-dial-item {
-    width: 44px; height: 44px; border-radius: 50%;
+    width: 52px; height: 52px; border-radius: 50%;
     background: var(--white); color: var(--accent); border: none;
     display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow-md); cursor: pointer;

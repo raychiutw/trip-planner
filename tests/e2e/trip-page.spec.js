@@ -94,9 +94,9 @@ test.describe('導航功能（Tab 切換）', () => {
     await page.locator('#navPills .dn[data-day="3"]').click();
     await page.waitForTimeout(300);
 
-    // Day 3 可見，Day 1 隱藏
+    // Day 3 可見，Day 1 也可見（可往上捲看前面的天）
     await expect(day3).toBeVisible();
-    await expect(day1).not.toBeVisible();
+    await expect(day1).toBeVisible();
   });
 
   test('點擊 pill 更新 active class', async ({ page }) => {
@@ -551,23 +551,21 @@ test.describe('Dark + Print 互動', () => {
   });
 });
 
-/* ===== 18. Tab 切換 active 狀態 ===== */
-test.describe('Tab 切換 active', () => {
-  test('初始 Day 1 active，其餘隱藏', async ({ page }) => {
+/* ===== 18. 所有天都可見（可自由捲動） ===== */
+test.describe('Day 區段可見性', () => {
+  test('所有 Day 區段初始都可見', async ({ page }) => {
     await page.goto('/');
     const day1 = page.locator('.day-section[data-day="1"]');
     const day2 = page.locator('.day-section[data-day="2"]');
-    await expect(day1).toHaveClass(/active/);
     await expect(day1).toBeVisible();
-    await expect(day2).not.toBeVisible();
+    await expect(day2).toBeVisible();
   });
 
-  test('切換到 Day 4 後 Day 4 active', async ({ page }) => {
+  test('點擊 pill 後對應天仍可見', async ({ page }) => {
     await page.goto('/');
     await page.locator('#navPills .dn[data-day="4"]').click();
     await page.waitForTimeout(300);
     const day4 = page.locator('.day-section[data-day="4"]');
-    await expect(day4).toHaveClass(/active/);
     await expect(day4).toBeVisible();
   });
 });

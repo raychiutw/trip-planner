@@ -810,7 +810,7 @@ function renderTrip(data) {
     // Day sections
     data.days.forEach(function(day, idx) {
         var id = parseInt(day.id) || 0;
-        html += '<section class="day-section' + (idx === 0 ? ' active' : '') + '" data-day="' + id + '">';
+        html += '<section class="day-section" data-day="' + id + '">';
         html += '<div class="day-header info-header" id="day' + id + '">'
               + '<h2>Day ' + id + ' ' + escHtml(day.label || '') + '</h2>'
               + '<span class="dh-date">' + escHtml(day.date) + '</span></div>';
@@ -1088,15 +1088,18 @@ function scrollToSec(id) {
     history.replaceState(null, '', '#' + id);
 }
 function switchDay(dayId) {
-    var sections = document.querySelectorAll('.day-section');
-    sections.forEach(function(s) { s.classList.remove('active'); });
-    var target = document.querySelector('.day-section[data-day="' + dayId + '"]');
-    if (target) target.classList.add('active');
     var pills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
     pills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === dayId); });
     var activeBtn = document.querySelector('#stickyNav .dh-nav .dn.active');
     if (activeBtn) scrollNavPillIntoView(activeBtn);
-    window.scrollTo({ top: 0 });
+    // 捲到選取的那天
+    var target = document.querySelector('.day-section[data-day="' + dayId + '"]');
+    if (target) {
+        var nav = document.getElementById('stickyNav');
+        var navH = nav ? nav.offsetHeight : 0;
+        var top = target.getBoundingClientRect().top + window.pageYOffset - navH;
+        window.scrollTo({ top: Math.max(0, top) });
+    }
     history.replaceState(null, '', '#day' + dayId);
 }
 function toggleHw(el) {
