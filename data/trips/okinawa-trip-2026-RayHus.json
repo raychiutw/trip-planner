@@ -8,7 +8,10 @@
       "牛排/烤魚",
       "當地特色"
     ],
-    "selfDrive": false
+    "selfDrive": false,
+    "countries": [
+      "JP"
+    ]
   },
   "footer": {
     "title": "2026 沖繩六日輕旅遊",

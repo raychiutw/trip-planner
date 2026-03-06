@@ -8,7 +8,10 @@
       "海鮮",
       "甜點"
     ],
-    "selfDrive": true
+    "selfDrive": true,
+    "countries": [
+      "JP"
+    ]
   },
   "footer": {
     "title": "2026 沖繩七日遊",

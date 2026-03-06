@@ -12,6 +12,7 @@
 ### Phase 1：產生骨架
 
 1. 詢問使用者料理偏好（最多 3 類，依優先排序），寫入 `meta.foodPreferences`
+1b. 依目的地自動判斷 `meta.countries`（ISO 3166-1 alpha-2 國碼陣列）：日本 `["JP"]`、韓國 `["KR"]`、台灣 `["TW"]` 等。韓國行程須為所有 POI location 新增 `naverQuery`（Naver Maps URL）
 2. 讀取 `trip-quality-rules.md` 中定義的所有品質規則
 3. 讀取 `data/examples/template.json` 作為結構範本
 4. 以 template 結構為基礎，依使用者描述填入各區塊資料，產生**骨架** JSON

@@ -8,7 +8,10 @@
       "咖啡廳",
       "地方特色"
     ],
-    "selfDrive": false
+    "selfDrive": false,
+    "countries": [
+      "KR"
+    ]
   },
   "footer": {
     "title": "2026 釜山五天四夜三姊妹之旅",
@@ -181,7 +184,8 @@
                   "location": {
                     "name": "CU 남포동점",
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
-                    "appleQuery": "https://maps.apple.com/?q=CU+남포동"
+                    "appleQuery": "https://maps.apple.com/?q=CU+남포동",
+                    "naverQuery": "https://map.naver.com/v5/search/CU%20%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90"
                   },
                   "googleRating": 3.8,
                   "source": "ai"
@@ -199,7 +203,8 @@
                   "location": {
                     "name": "올리브영 광복점",
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
-                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
+                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EA%B4%91%EB%B3%B5%EC%A0%90"
                   },
                   "googleRating": 4.3,
                   "source": "ai"
@@ -217,7 +222,8 @@
                   "location": {
                     "name": "홈플러스 익스프레스 남포점",
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
-                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
+                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                   },
                   "googleRating": 3.9,
                   "source": "ai"
@@ -237,7 +243,8 @@
               {
                 "name": "金海國際機場",
                 "googleQuery": "https://maps.google.com/?q=김해국제공항",
-                "appleQuery": "https://maps.apple.com/?q=김해국제공항"
+                "appleQuery": "https://maps.apple.com/?q=김해국제공항",
+                "naverQuery": "https://map.naver.com/v5/search/%E9%87%91%E6%B5%B7%E5%9C%8B%E9%9A%9B%E6%A9%9F%E5%A0%B4"
               }
             ],
             "travel": {
@@ -255,7 +262,8 @@
               {
                 "name": "스파랜드 센텀시티",
                 "googleQuery": "https://maps.google.com/?q=스파랜드+센텀시티+부산",
-                "appleQuery": "https://maps.apple.com/?q=스파랜드+센텀시티+부산"
+                "appleQuery": "https://maps.apple.com/?q=스파랜드+센텀시티+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%8A%A4%ED%8C%8C%EB%9E%9C%EB%93%9C%20%EC%84%BC%ED%85%80%EC%8B%9C%ED%8B%B0"
               }
             ],
             "travel": {
@@ -273,7 +281,8 @@
               {
                 "name": "온천천 시민공원",
                 "googleQuery": "https://maps.google.com/?q=온천천+시민공원+부산",
-                "appleQuery": "https://maps.apple.com/?q=온천천+시민공원+부산"
+                "appleQuery": "https://maps.apple.com/?q=온천천+시민공원+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%98%A8%EC%B2%9C%EC%B2%9C%20%EC%8B%9C%EB%AF%BC%EA%B3%B5%EC%9B%90"
               }
             ],
             "travel": {
@@ -291,7 +300,8 @@
               {
                 "name": "西面商圈",
                 "googleQuery": "https://maps.google.com/?q=서면역+부산",
-                "appleQuery": "https://maps.apple.com/?q=서면역+부산"
+                "appleQuery": "https://maps.apple.com/?q=서면역+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%E8%A5%BF%E9%9D%A2%E5%95%86%E5%9C%88"
               }
             ],
             "infoBoxes": [
@@ -310,7 +320,8 @@
                     "location": {
                       "name": "고기리남자 서면점",
                       "googleQuery": "https://maps.google.com/?q=고기리남자+서면",
-                      "appleQuery": "https://maps.apple.com/?q=고기리남자+서면"
+                      "appleQuery": "https://maps.apple.com/?q=고기리남자+서면",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B3%A0%EA%B8%B0%EB%A6%AC%EB%82%A8%EC%9E%90%20%EC%84%9C%EB%A9%B4%EC%A0%90"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -326,7 +337,8 @@
                     "location": {
                       "name": "디아트커피 서면",
                       "googleQuery": "https://maps.google.com/?q=디아트커피+서면+부산",
-                      "appleQuery": "https://maps.apple.com/?q=디아트커피+서면+부산"
+                      "appleQuery": "https://maps.apple.com/?q=디아트커피+서면+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%94%94%EC%95%84%ED%8A%B8%EC%BB%A4%ED%94%BC%20%EC%84%9C%EB%A9%B4"
                     },
                     "googleRating": 4.5,
                     "source": "ai"
@@ -342,7 +354,8 @@
                     "location": {
                       "name": "김밥천국 서면점",
                       "googleQuery": "https://maps.google.com/?q=김밥천국+서면+부산",
-                      "appleQuery": "https://maps.apple.com/?q=김밥천국+서면+부산"
+                      "appleQuery": "https://maps.apple.com/?q=김밥천국+서면+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B9%80%EB%B0%A5%EC%B2%9C%EA%B5%AD%20%EC%84%9C%EB%A9%B4%EC%A0%90"
                     },
                     "googleRating": 3.8,
                     "source": "ai"
@@ -365,7 +378,8 @@
               {
                 "name": "부전시장",
                 "googleQuery": "https://maps.google.com/?q=부전시장+부산",
-                "appleQuery": "https://maps.apple.com/?q=부전시장+부산"
+                "appleQuery": "https://maps.apple.com/?q=부전시장+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EB%B6%80%EC%A0%84%EC%8B%9C%EC%9E%A5"
               }
             ],
             "travel": {
@@ -383,7 +397,8 @@
               {
                 "name": "서면 지하상가",
                 "googleQuery": "https://maps.google.com/?q=서면+지하상가+부산",
-                "appleQuery": "https://maps.apple.com/?q=서면+지하상가+부산"
+                "appleQuery": "https://maps.apple.com/?q=서면+지하상가+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%84%9C%EB%A9%B4%20%EC%A7%80%ED%95%98%EC%83%81%EA%B0%80"
               }
             ],
             "travel": {
@@ -401,7 +416,8 @@
               {
                 "name": "휘테 로스터리",
                 "googleQuery": "https://maps.google.com/?q=휘테로스터리+서면+부산",
-                "appleQuery": "https://maps.apple.com/?q=휘테로스터리+서면+부산"
+                "appleQuery": "https://maps.apple.com/?q=휘테로스터리+서면+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%ED%9C%98%ED%85%8C%20%EB%A1%9C%EC%8A%A4%ED%84%B0%EB%A6%AC"
               }
             ],
             "travel": {
@@ -419,7 +435,8 @@
               {
                 "name": "西面商圈",
                 "googleQuery": "https://maps.google.com/?q=서면역+부산",
-                "appleQuery": "https://maps.apple.com/?q=서면역+부산"
+                "appleQuery": "https://maps.apple.com/?q=서면역+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%E8%A5%BF%E9%9D%A2%E5%95%86%E5%9C%88"
               }
             ],
             "infoBoxes": [
@@ -438,7 +455,8 @@
                     "location": {
                       "name": "고택집 서면",
                       "googleQuery": "https://maps.google.com/?q=고택집+서면+부산",
-                      "appleQuery": "https://maps.apple.com/?q=고택집+서면+부산"
+                      "appleQuery": "https://maps.apple.com/?q=고택집+서면+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B3%A0%ED%83%9D%EC%A7%91%20%EC%84%9C%EB%A9%B4"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -454,7 +472,8 @@
                     "location": {
                       "name": "커피나인 서면",
                       "googleQuery": "https://maps.google.com/?q=커피나인+서면+부산",
-                      "appleQuery": "https://maps.apple.com/?q=커피나인+서면+부산"
+                      "appleQuery": "https://maps.apple.com/?q=커피나인+서면+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%BB%A4%ED%94%BC%EB%82%98%EC%9D%B8%20%EC%84%9C%EB%A9%B4"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -470,7 +489,8 @@
                     "location": {
                       "name": "할매가야밀면 서면",
                       "googleQuery": "https://maps.google.com/?q=할매가야밀면+서면+부산",
-                      "appleQuery": "https://maps.apple.com/?q=할매가야밀면+서면+부산"
+                      "appleQuery": "https://maps.apple.com/?q=할매가야밀면+서면+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%ED%95%A0%EB%A7%A4%EA%B0%80%EC%95%BC%EB%B0%80%EB%A9%B4%20%EC%84%9C%EB%A9%B4"
                     },
                     "googleRating": 3.9,
                     "source": "ai"
@@ -493,7 +513,8 @@
               {
                 "name": "롯데백화점 서면점",
                 "googleQuery": "https://maps.google.com/?q=롯데백화점+서면점+부산",
-                "appleQuery": "https://maps.apple.com/?q=롯데백화점+서면점+부산"
+                "appleQuery": "https://maps.apple.com/?q=롯데백화점+서면점+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EB%A1%AF%EB%8D%B0%EB%B0%B1%ED%99%94%EC%A0%90%20%EC%84%9C%EB%A9%B4%EC%A0%90"
               }
             ],
             "infoBoxes": [
@@ -514,7 +535,8 @@
                     "location": {
                       "name": "롯데백화점 서면점",
                       "googleQuery": "https://maps.google.com/?q=롯데백화점+서면점+부산",
-                      "appleQuery": "https://maps.apple.com/?q=롯데백화점+서면점+부산"
+                      "appleQuery": "https://maps.apple.com/?q=롯데백화점+서면점+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%A1%AF%EB%8D%B0%EB%B0%B1%ED%99%94%EC%A0%90%20%EC%84%9C%EB%A9%B4%EC%A0%90"
                     },
                     "googleRating": 4.2,
                     "source": "ai"
@@ -532,7 +554,8 @@
                     "location": {
                       "name": "올리브영 서면역점",
                       "googleQuery": "https://maps.google.com/?q=올리브영+서면역+부산",
-                      "appleQuery": "https://maps.apple.com/?q=올리브영+서면역+부산"
+                      "appleQuery": "https://maps.apple.com/?q=올리브영+서면역+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EC%84%9C%EB%A9%B4%EC%97%AD%EC%A0%90"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -550,7 +573,8 @@
                     "location": {
                       "name": "GS25 서면역점",
                       "googleQuery": "https://maps.google.com/?q=GS25+서면역+부산",
-                      "appleQuery": "https://maps.apple.com/?q=GS25+서면역+부산"
+                      "appleQuery": "https://maps.apple.com/?q=GS25+서면역+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/GS25%20%EC%84%9C%EB%A9%B4%EC%97%AD%EC%A0%90"
                     },
                     "googleRating": 3.8,
                     "source": "ai"
@@ -598,7 +622,8 @@
                   "location": {
                     "name": "CU 남포동점",
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
-                    "appleQuery": "https://maps.apple.com/?q=CU+남포동"
+                    "appleQuery": "https://maps.apple.com/?q=CU+남포동",
+                    "naverQuery": "https://map.naver.com/v5/search/CU%20%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90"
                   },
                   "googleRating": 3.8,
                   "source": "ai"
@@ -616,7 +641,8 @@
                   "location": {
                     "name": "올리브영 광복점",
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
-                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
+                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EA%B4%91%EB%B3%B5%EC%A0%90"
                   },
                   "googleRating": 4.3,
                   "source": "ai"
@@ -634,7 +660,8 @@
                   "location": {
                     "name": "홈플러스 익스프레스 남포점",
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
-                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
+                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                   },
                   "googleRating": 3.9,
                   "source": "ai"
@@ -654,7 +681,8 @@
               {
                 "name": "西面商圈",
                 "googleQuery": "https://maps.google.com/?q=서면역+부산",
-                "appleQuery": "https://maps.apple.com/?q=서면역+부산"
+                "appleQuery": "https://maps.apple.com/?q=서면역+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%E8%A5%BF%E9%9D%A2%E5%95%86%E5%9C%88"
               }
             ],
             "infoBoxes": [
@@ -673,7 +701,8 @@
                     "location": {
                       "name": "새마을식당 서면점",
                       "googleQuery": "https://maps.google.com/?q=새마을식당+서면점+부산",
-                      "appleQuery": "https://maps.apple.com/?q=새마을식당+서면점+부산"
+                      "appleQuery": "https://maps.apple.com/?q=새마을식당+서면점+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%83%88%EB%A7%88%EC%9D%84%EC%8B%9D%EB%8B%B9%20%EC%84%9C%EB%A9%B4%EC%A0%90"
                     },
                     "googleRating": 4.2,
                     "source": "ai"
@@ -689,7 +718,8 @@
                     "location": {
                       "name": "리베르타 부산",
                       "googleQuery": "https://maps.google.com/?q=리베르타+카페+부산",
-                      "appleQuery": "https://maps.apple.com/?q=리베르타+카페+부산"
+                      "appleQuery": "https://maps.apple.com/?q=리베르타+카페+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%A6%AC%EB%B2%A0%EB%A5%B4%ED%83%80%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.5,
                     "source": "ai"
@@ -705,7 +735,8 @@
                     "location": {
                       "name": "산청돼지국밥 서면점",
                       "googleQuery": "https://maps.google.com/?q=산청돼지국밥+서면+부산",
-                      "appleQuery": "https://maps.apple.com/?q=산청돼지국밥+서면+부산"
+                      "appleQuery": "https://maps.apple.com/?q=산청돼지국밥+서면+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%82%B0%EC%B2%AD%EB%8F%BC%EC%A7%80%EA%B5%AD%EB%B0%A5%20%EC%84%9C%EB%A9%B4%EC%A0%90"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -728,7 +759,8 @@
               {
                 "name": "감천문화마을",
                 "googleQuery": "https://maps.google.com/?q=감천문화마을+부산",
-                "appleQuery": "https://maps.apple.com/?q=감천문화마을+부산"
+                "appleQuery": "https://maps.apple.com/?q=감천문화마을+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EA%B0%90%EC%B2%9C%EB%AC%B8%ED%99%94%EB%A7%88%EC%9D%84"
               }
             ],
             "travel": {
@@ -746,7 +778,8 @@
               {
                 "name": "송도해상케이블카",
                 "googleQuery": "https://maps.google.com/?q=송도해상케이블카+부산",
-                "appleQuery": "https://maps.apple.com/?q=송도해상케이블카+부산"
+                "appleQuery": "https://maps.apple.com/?q=송도해상케이블카+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%86%A1%EB%8F%84%ED%95%B4%EC%83%81%EC%BC%80%EC%9D%B4%EB%B8%94%EC%B9%B4"
               }
             ],
             "travel": {
@@ -764,7 +797,8 @@
               {
                 "name": "국제시장",
                 "googleQuery": "https://maps.google.com/?q=국제시장+부산",
-                "appleQuery": "https://maps.apple.com/?q=국제시장+부산"
+                "appleQuery": "https://maps.apple.com/?q=국제시장+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A5"
               }
             ],
             "infoBoxes": [
@@ -785,7 +819,8 @@
                     "location": {
                       "name": "국제시장 기념품",
                       "googleQuery": "https://maps.google.com/?q=국제시장+부산",
-                      "appleQuery": "https://maps.apple.com/?q=국제시장+부산"
+                      "appleQuery": "https://maps.apple.com/?q=국제시장+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A5%20%EA%B8%B0%EB%85%90%ED%92%88"
                     },
                     "googleRating": 4.2,
                     "source": "ai"
@@ -803,7 +838,8 @@
                     "location": {
                       "name": "GS25 국제시장점",
                       "googleQuery": "https://maps.google.com/?q=GS25+국제시장+부산",
-                      "appleQuery": "https://maps.apple.com/?q=GS25+국제시장+부산"
+                      "appleQuery": "https://maps.apple.com/?q=GS25+국제시장+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/GS25%20%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A5%EC%A0%90"
                     },
                     "googleRating": 3.8,
                     "source": "ai"
@@ -821,7 +857,8 @@
                     "location": {
                       "name": "올리브영 남포동점",
                       "googleQuery": "https://maps.google.com/?q=올리브영+남포동+부산",
-                      "appleQuery": "https://maps.apple.com/?q=올리브영+남포동+부산"
+                      "appleQuery": "https://maps.apple.com/?q=올리브영+남포동+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -844,7 +881,8 @@
               {
                 "name": "南浦洞商圈",
                 "googleQuery": "https://maps.google.com/?q=남포동+부산",
-                "appleQuery": "https://maps.apple.com/?q=남포동+부산"
+                "appleQuery": "https://maps.apple.com/?q=남포동+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%E5%8D%97%E6%B5%A6%E6%B4%9E%E5%95%86%E5%9C%88"
               }
             ],
             "infoBoxes": [
@@ -863,7 +901,8 @@
                     "location": {
                       "name": "강호동백정 남포점",
                       "googleQuery": "https://maps.google.com/?q=강호동백정+남포+부산",
-                      "appleQuery": "https://maps.apple.com/?q=강호동백정+남포+부산"
+                      "appleQuery": "https://maps.apple.com/?q=강호동백정+남포+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B0%95%ED%98%B8%EB%8F%99%EB%B0%B1%EC%A0%95%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -879,7 +918,8 @@
                     "location": {
                       "name": "모모스커피 남포점",
                       "googleQuery": "https://maps.google.com/?q=모모스커피+남포+부산",
-                      "appleQuery": "https://maps.apple.com/?q=모모스커피+남포+부산"
+                      "appleQuery": "https://maps.apple.com/?q=모모스커피+남포+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%AA%A8%EB%AA%A8%EC%8A%A4%EC%BB%A4%ED%94%BC%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                     },
                     "googleRating": 4.5,
                     "source": "ai"
@@ -895,7 +935,8 @@
                     "location": {
                       "name": "명란김밥 남포동",
                       "googleQuery": "https://maps.google.com/?q=명란김밥+남포동+부산",
-                      "appleQuery": "https://maps.apple.com/?q=명란김밥+남포동+부산"
+                      "appleQuery": "https://maps.apple.com/?q=명란김밥+남포동+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%AA%85%EB%9E%80%EA%B9%80%EB%B0%A5%20%EB%82%A8%ED%8F%AC%EB%8F%99"
                     },
                     "googleRating": 4.1,
                     "source": "ai"
@@ -943,7 +984,8 @@
                   "location": {
                     "name": "CU 남포동점",
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
-                    "appleQuery": "https://maps.apple.com/?q=CU+남포동"
+                    "appleQuery": "https://maps.apple.com/?q=CU+남포동",
+                    "naverQuery": "https://map.naver.com/v5/search/CU%20%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90"
                   },
                   "googleRating": 3.8,
                   "source": "ai"
@@ -961,7 +1003,8 @@
                   "location": {
                     "name": "올리브영 광복점",
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
-                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
+                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EA%B4%91%EB%B3%B5%EC%A0%90"
                   },
                   "googleRating": 4.3,
                   "source": "ai"
@@ -979,7 +1022,8 @@
                   "location": {
                     "name": "홈플러스 익스프레스 남포점",
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
-                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
+                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                   },
                   "googleRating": 3.9,
                   "source": "ai"
@@ -999,7 +1043,8 @@
               {
                 "name": "에그드랍 서면점",
                 "googleQuery": "https://maps.google.com/?q=에그드랍+서면+부산",
-                "appleQuery": "https://maps.apple.com/?q=에그드랍+서면+부산"
+                "appleQuery": "https://maps.apple.com/?q=에그드랍+서면+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%97%90%EA%B7%B8%EB%93%9C%EB%9E%8D%20%EC%84%9C%EB%A9%B4%EC%A0%90"
               }
             ],
             "travel": {
@@ -1017,7 +1062,8 @@
               {
                 "name": "아르떼뮤지엄 부산",
                 "googleQuery": "https://maps.google.com/?q=아르떼뮤지엄+부산",
-                "appleQuery": "https://maps.apple.com/?q=아르떼뮤지엄+부산"
+                "appleQuery": "https://maps.apple.com/?q=아르떼뮤지엄+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%95%84%EB%A5%B4%EB%96%BC%EB%AE%A4%EC%A7%80%EC%97%84%20%EB%B6%80%EC%82%B0"
               }
             ],
             "travel": {
@@ -1035,7 +1081,8 @@
               {
                 "name": "기장 해녀촌",
                 "googleQuery": "https://maps.google.com/?q=기장+해녀촌+부산",
-                "appleQuery": "https://maps.apple.com/?q=기장+해녀촌+부산"
+                "appleQuery": "https://maps.apple.com/?q=기장+해녀촌+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EA%B8%B0%EC%9E%A5%20%ED%95%B4%EB%85%80%EC%B4%8C"
               }
             ],
             "infoBoxes": [
@@ -1054,7 +1101,8 @@
                     "location": {
                       "name": "팔색삼겹살 해운대점",
                       "googleQuery": "https://maps.google.com/?q=팔색삼겹살+해운대+부산",
-                      "appleQuery": "https://maps.apple.com/?q=팔색삼겹살+해운대+부산"
+                      "appleQuery": "https://maps.apple.com/?q=팔색삼겹살+해운대+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%ED%8C%94%EC%83%89%EC%82%BC%EA%B2%B9%EC%82%B4%20%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90"
                     },
                     "googleRating": 4.1,
                     "source": "ai"
@@ -1070,7 +1118,8 @@
                     "location": {
                       "name": "삼성커피숍 기장",
                       "googleQuery": "https://maps.google.com/?q=삼성커피숍+기장+부산",
-                      "appleQuery": "https://maps.apple.com/?q=삼성커피숍+기장+부산"
+                      "appleQuery": "https://maps.apple.com/?q=삼성커피숍+기장+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%82%BC%EC%84%B1%EC%BB%A4%ED%94%BC%EC%88%8D%20%EA%B8%B0%EC%9E%A5"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -1086,7 +1135,8 @@
                     "location": {
                       "name": "기장 해녀촌",
                       "googleQuery": "https://maps.google.com/?q=기장+해녀촌+부산",
-                      "appleQuery": "https://maps.apple.com/?q=기장+해녀촌+부산"
+                      "appleQuery": "https://maps.apple.com/?q=기장+해녀촌+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B8%B0%EC%9E%A5%20%ED%95%B4%EB%85%80%EC%B4%8C"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -1109,7 +1159,8 @@
               {
                 "name": "광안리 해변",
                 "googleQuery": "https://maps.google.com/?q=광안리해변+부산",
-                "appleQuery": "https://maps.apple.com/?q=광안리해변+부산"
+                "appleQuery": "https://maps.apple.com/?q=광안리해변+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EA%B4%91%EC%95%88%EB%A6%AC%20%ED%95%B4%EB%B3%80"
               }
             ],
             "infoBoxes": [
@@ -1128,7 +1179,8 @@
                     "location": {
                       "name": "육전식당 광안리점",
                       "googleQuery": "https://maps.google.com/?q=육전식당+광안리+부산",
-                      "appleQuery": "https://maps.apple.com/?q=육전식당+광안리+부산"
+                      "appleQuery": "https://maps.apple.com/?q=육전식당+광안리+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%9C%A1%EC%A0%84%EC%8B%9D%EB%8B%B9%20%EA%B4%91%EC%95%88%EB%A6%AC%EC%A0%90"
                     },
                     "googleRating": 4.6,
                     "source": "ai"
@@ -1144,7 +1196,8 @@
                     "location": {
                       "name": "연경재 부산",
                       "googleQuery": "https://maps.google.com/?q=연경재+카페+부산",
-                      "appleQuery": "https://maps.apple.com/?q=연경재+카페+부산"
+                      "appleQuery": "https://maps.apple.com/?q=연경재+카페+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%97%B0%EA%B2%BD%EC%9E%AC%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.5,
                     "source": "ai"
@@ -1160,7 +1213,8 @@
                     "location": {
                       "name": "명성닭한마리 부산",
                       "googleQuery": "https://maps.google.com/?q=명성닭한마리+부산",
-                      "appleQuery": "https://maps.apple.com/?q=명성닭한마리+부산"
+                      "appleQuery": "https://maps.apple.com/?q=명성닭한마리+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%AA%85%EC%84%B1%EB%8B%AD%ED%95%9C%EB%A7%88%EB%A6%AC%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.5,
                     "source": "ai"
@@ -1183,7 +1237,8 @@
               {
                 "name": "광안리해변",
                 "googleQuery": "https://maps.google.com/?q=광안리해변+부산",
-                "appleQuery": "https://maps.apple.com/?q=광안리해변+부산"
+                "appleQuery": "https://maps.apple.com/?q=광안리해변+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EA%B4%91%EC%95%88%EB%A6%AC%ED%95%B4%EB%B3%80"
               }
             ],
             "travel": {
@@ -1226,7 +1281,8 @@
                   "location": {
                     "name": "CU 남포동점",
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
-                    "appleQuery": "https://maps.apple.com/?q=CU+남포동"
+                    "appleQuery": "https://maps.apple.com/?q=CU+남포동",
+                    "naverQuery": "https://map.naver.com/v5/search/CU%20%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90"
                   },
                   "googleRating": 3.8,
                   "source": "ai"
@@ -1244,7 +1300,8 @@
                   "location": {
                     "name": "올리브영 광복점",
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
-                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
+                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EA%B4%91%EB%B3%B5%EC%A0%90"
                   },
                   "googleRating": 4.3,
                   "source": "ai"
@@ -1262,7 +1319,8 @@
                   "location": {
                     "name": "홈플러스 익스프레스 남포점",
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
-                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
+                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                   },
                   "googleRating": 3.9,
                   "source": "ai"
@@ -1282,7 +1340,8 @@
               {
                 "name": "스카이라인루지 부산",
                 "googleQuery": "https://maps.google.com/?q=스카이라인루지+부산",
-                "appleQuery": "https://maps.apple.com/?q=스카이라인루지+부산"
+                "appleQuery": "https://maps.apple.com/?q=스카이라인루지+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%8A%A4%EC%B9%B4%EC%9D%B4%EB%9D%BC%EC%9D%B8%EB%A3%A8%EC%A7%80%20%EB%B6%80%EC%82%B0"
               }
             ],
             "travel": {
@@ -1300,7 +1359,8 @@
               {
                 "name": "해리단길",
                 "googleQuery": "https://maps.google.com/?q=해리단길+해운대+부산",
-                "appleQuery": "https://maps.apple.com/?q=해리단길+해운대+부산"
+                "appleQuery": "https://maps.apple.com/?q=해리단길+해운대+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%ED%95%B4%EB%A6%AC%EB%8B%A8%EA%B8%B8"
               }
             ],
             "travel": {
@@ -1318,7 +1378,8 @@
               {
                 "name": "해운대 해리단길",
                 "googleQuery": "https://maps.google.com/?q=해리단길+해운대+부산",
-                "appleQuery": "https://maps.apple.com/?q=해리단길+해운대+부산"
+                "appleQuery": "https://maps.apple.com/?q=해리단길+해운대+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%ED%95%B4%EC%9A%B4%EB%8C%80%20%ED%95%B4%EB%A6%AC%EB%8B%A8%EA%B8%B8"
               }
             ],
             "infoBoxes": [
@@ -1337,7 +1398,8 @@
                     "location": {
                       "name": "오반장 해운대점",
                       "googleQuery": "https://maps.google.com/?q=오반장+해운대+부산",
-                      "appleQuery": "https://maps.apple.com/?q=오반장+해운대+부산"
+                      "appleQuery": "https://maps.apple.com/?q=오반장+해운대+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%98%A4%EB%B0%98%EC%9E%A5%20%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90"
                     },
                     "googleRating": 4.1,
                     "source": "ai"
@@ -1353,7 +1415,8 @@
                     "location": {
                       "name": "모모스커피 해운대점",
                       "googleQuery": "https://maps.google.com/?q=모모스커피+해운대+부산",
-                      "appleQuery": "https://maps.apple.com/?q=모모스커피+해운대+부산"
+                      "appleQuery": "https://maps.apple.com/?q=모모스커피+해운대+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%AA%A8%EB%AA%A8%EC%8A%A4%EC%BB%A4%ED%94%BC%20%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90"
                     },
                     "googleRating": 4.5,
                     "source": "ai"
@@ -1369,7 +1432,8 @@
                     "location": {
                       "name": "대해전복죽 해운대",
                       "googleQuery": "https://maps.google.com/?q=대해전복죽+해운대+부산",
-                      "appleQuery": "https://maps.apple.com/?q=대해전복죽+해운대+부산"
+                      "appleQuery": "https://maps.apple.com/?q=대해전복죽+해운대+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%8C%80%ED%95%B4%EC%A0%84%EB%B3%B5%EC%A3%BD%20%ED%95%B4%EC%9A%B4%EB%8C%80"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -1392,7 +1456,8 @@
               {
                 "name": "블루라인파크 해변열차",
                 "googleQuery": "https://maps.google.com/?q=블루라인파크+해변열차+부산",
-                "appleQuery": "https://maps.apple.com/?q=블루라인파크+해변열차+부산"
+                "appleQuery": "https://maps.apple.com/?q=블루라인파크+해변열차+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EB%B8%94%EB%A3%A8%EB%9D%BC%EC%9D%B8%ED%8C%8C%ED%81%AC%20%ED%95%B4%EB%B3%80%EC%97%B4%EC%B0%A8"
               }
             ],
             "travel": {
@@ -1410,7 +1475,8 @@
               {
                 "name": "청사포",
                 "googleQuery": "https://maps.google.com/?q=청사포+부산",
-                "appleQuery": "https://maps.apple.com/?q=청사포+부산"
+                "appleQuery": "https://maps.apple.com/?q=청사포+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%B2%AD%EC%82%AC%ED%8F%AC"
               }
             ],
             "travel": {
@@ -1428,7 +1494,8 @@
               {
                 "name": "해운대",
                 "googleQuery": "https://maps.google.com/?q=해운대역+부산",
-                "appleQuery": "https://maps.apple.com/?q=해운대역+부산"
+                "appleQuery": "https://maps.apple.com/?q=해운대역+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%ED%95%B4%EC%9A%B4%EB%8C%80"
               }
             ],
             "infoBoxes": [
@@ -1447,7 +1514,8 @@
                     "location": {
                       "name": "새마을식당 해운대점",
                       "googleQuery": "https://maps.google.com/?q=새마을식당+해운대+부산",
-                      "appleQuery": "https://maps.apple.com/?q=새마을식당+해운대+부산"
+                      "appleQuery": "https://maps.apple.com/?q=새마을식당+해운대+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%83%88%EB%A7%88%EC%9D%84%EC%8B%9D%EB%8B%B9%20%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -1463,7 +1531,8 @@
                     "location": {
                       "name": "파란집 그 계단위 부산",
                       "googleQuery": "https://maps.google.com/?q=파란집+그+계단위+부산",
-                      "appleQuery": "https://maps.apple.com/?q=파란집+그+계단위+부산"
+                      "appleQuery": "https://maps.apple.com/?q=파란집+그+계단위+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%ED%8C%8C%EB%9E%80%EC%A7%91%20%EA%B7%B8%20%EA%B3%84%EB%8B%A8%EC%9C%84%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.4,
                     "source": "ai"
@@ -1479,7 +1548,8 @@
                     "location": {
                       "name": "청사포 장어구이",
                       "googleQuery": "https://maps.google.com/?q=청사포+장어구이+부산",
-                      "appleQuery": "https://maps.apple.com/?q=청사포+장어구이+부산"
+                      "appleQuery": "https://maps.apple.com/?q=청사포+장어구이+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%B2%AD%EC%82%AC%ED%8F%AC%20%EC%9E%A5%EC%96%B4%EA%B5%AC%EC%9D%B4"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -1502,7 +1572,8 @@
               {
                 "name": "이마트 부산역점",
                 "googleQuery": "https://maps.google.com/?q=이마트+부산역점",
-                "appleQuery": "https://maps.apple.com/?q=이마트+부산역점"
+                "appleQuery": "https://maps.apple.com/?q=이마트+부산역점",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%9D%B4%EB%A7%88%ED%8A%B8%20%EB%B6%80%EC%82%B0%EC%97%AD%EC%A0%90"
               }
             ],
             "infoBoxes": [
@@ -1523,7 +1594,8 @@
                     "location": {
                       "name": "이마트 부산역점",
                       "googleQuery": "https://maps.google.com/?q=이마트+부산역점",
-                      "appleQuery": "https://maps.apple.com/?q=이마트+부산역점"
+                      "appleQuery": "https://maps.apple.com/?q=이마트+부산역점",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%9D%B4%EB%A7%88%ED%8A%B8%20%EB%B6%80%EC%82%B0%EC%97%AD%EC%A0%90"
                     },
                     "googleRating": 4.1,
                     "source": "ai"
@@ -1541,7 +1613,8 @@
                     "location": {
                       "name": "롯데마트 부산역점",
                       "googleQuery": "https://maps.google.com/?q=롯데마트+부산역점",
-                      "appleQuery": "https://maps.apple.com/?q=롯데마트+부산역점"
+                      "appleQuery": "https://maps.apple.com/?q=롯데마트+부산역점",
+                      "naverQuery": "https://map.naver.com/v5/search/%EB%A1%AF%EB%8D%B0%EB%A7%88%ED%8A%B8%20%EB%B6%80%EC%82%B0%EC%97%AD%EC%A0%90"
                     },
                     "googleRating": 4,
                     "source": "ai"
@@ -1559,7 +1632,8 @@
                     "location": {
                       "name": "삼진어묵체험관",
                       "googleQuery": "https://maps.google.com/?q=삼진어묵체험관+부산",
-                      "appleQuery": "https://maps.apple.com/?q=삼진어묵체험관+부산"
+                      "appleQuery": "https://maps.apple.com/?q=삼진어묵체험관+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%82%BC%EC%A7%84%EC%96%B4%EB%AC%B5%EC%B2%B4%ED%97%98%EA%B4%80"
                     },
                     "googleRating": 4.6,
                     "source": "ai"
@@ -1607,7 +1681,8 @@
                   "location": {
                     "name": "CU 남포동점",
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
-                    "appleQuery": "https://maps.apple.com/?q=CU+남포동"
+                    "appleQuery": "https://maps.apple.com/?q=CU+남포동",
+                    "naverQuery": "https://map.naver.com/v5/search/CU%20%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90"
                   },
                   "googleRating": 3.8,
                   "source": "ai"
@@ -1625,7 +1700,8 @@
                   "location": {
                     "name": "올리브영 광복점",
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
-                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
+                    "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81%20%EA%B4%91%EB%B3%B5%EC%A0%90"
                   },
                   "googleRating": 4.3,
                   "source": "ai"
@@ -1643,7 +1719,8 @@
                   "location": {
                     "name": "홈플러스 익스프레스 남포점",
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
-                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
+                    "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산",
+                    "naverQuery": "https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4%20%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4%20%EB%82%A8%ED%8F%AC%EC%A0%90"
                   },
                   "googleRating": 3.9,
                   "source": "ai"
@@ -1663,7 +1740,8 @@
               {
                 "name": "자갈치시장",
                 "googleQuery": "https://maps.google.com/?q=자갈치시장+부산",
-                "appleQuery": "https://maps.apple.com/?q=자갈치시장+부산"
+                "appleQuery": "https://maps.apple.com/?q=자갈치시장+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EC%9E%90%EA%B0%88%EC%B9%98%EC%8B%9C%EC%9E%A5"
               }
             ],
             "travel": {
@@ -1681,7 +1759,8 @@
               {
                 "name": "BIFF광장 남포동",
                 "googleQuery": "https://maps.google.com/?q=BIFF광장+남포동+부산",
-                "appleQuery": "https://maps.apple.com/?q=BIFF광장+남포동+부산"
+                "appleQuery": "https://maps.apple.com/?q=BIFF광장+남포동+부산",
+                "naverQuery": "https://map.naver.com/v5/search/BIFF%EA%B4%91%EC%9E%A5%20%EB%82%A8%ED%8F%AC%EB%8F%99"
               }
             ],
             "travel": {
@@ -1699,7 +1778,8 @@
               {
                 "name": "남포동",
                 "googleQuery": "https://maps.google.com/?q=남포동+부산",
-                "appleQuery": "https://maps.apple.com/?q=남포동+부산"
+                "appleQuery": "https://maps.apple.com/?q=남포동+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EB%82%A8%ED%8F%AC%EB%8F%99"
               }
             ],
             "infoBoxes": [
@@ -1718,7 +1798,8 @@
                     "location": {
                       "name": "강호동백정 광복점 부산",
                       "googleQuery": "https://maps.google.com/?q=강호동백정+광복+부산",
-                      "appleQuery": "https://maps.apple.com/?q=강호동백정+광복+부산"
+                      "appleQuery": "https://maps.apple.com/?q=강호동백정+광복+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B0%95%ED%98%B8%EB%8F%99%EB%B0%B1%EC%A0%95%20%EA%B4%91%EB%B3%B5%EC%A0%90%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.1,
                     "source": "ai"
@@ -1734,7 +1815,8 @@
                     "location": {
                       "name": "삼진어묵다락",
                       "googleQuery": "https://maps.google.com/?q=삼진어묵다락+부산",
-                      "appleQuery": "https://maps.apple.com/?q=삼진어묵다락+부산"
+                      "appleQuery": "https://maps.apple.com/?q=삼진어묵다락+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%82%BC%EC%A7%84%EC%96%B4%EB%AC%B5%EB%8B%A4%EB%9D%BD"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -1750,7 +1832,8 @@
                     "location": {
                       "name": "이재모피자 부산",
                       "googleQuery": "https://maps.google.com/?q=이재모피자+부산",
-                      "appleQuery": "https://maps.apple.com/?q=이재모피자+부산"
+                      "appleQuery": "https://maps.apple.com/?q=이재모피자+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%9D%B4%EC%9E%AC%EB%AA%A8%ED%94%BC%EC%9E%90%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.2,
                     "source": "ai"
@@ -1773,7 +1856,8 @@
               {
                 "name": "광복로 쇼핑거리",
                 "googleQuery": "https://maps.google.com/?q=광복로+쇼핑거리+부산",
-                "appleQuery": "https://maps.apple.com/?q=광복로+쇼핑거리+부산"
+                "appleQuery": "https://maps.apple.com/?q=광복로+쇼핑거리+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EA%B4%91%EB%B3%B5%EB%A1%9C%20%EC%87%BC%ED%95%91%EA%B1%B0%EB%A6%AC"
               }
             ],
             "travel": {
@@ -1791,7 +1875,8 @@
               {
                 "name": "남포동",
                 "googleQuery": "https://maps.google.com/?q=남포동+부산",
-                "appleQuery": "https://maps.apple.com/?q=남포동+부산"
+                "appleQuery": "https://maps.apple.com/?q=남포동+부산",
+                "naverQuery": "https://map.naver.com/v5/search/%EB%82%A8%ED%8F%AC%EB%8F%99"
               }
             ],
             "infoBoxes": [
@@ -1810,7 +1895,8 @@
                     "location": {
                       "name": "오반장 남포점 부산",
                       "googleQuery": "https://maps.google.com/?q=오반장+남포+부산",
-                      "appleQuery": "https://maps.apple.com/?q=오반장+남포+부산"
+                      "appleQuery": "https://maps.apple.com/?q=오반장+남포+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%98%A4%EB%B0%98%EC%9E%A5%20%EB%82%A8%ED%8F%AC%EC%A0%90%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -1826,7 +1912,8 @@
                     "location": {
                       "name": "삼진어묵다락 부산",
                       "googleQuery": "https://maps.google.com/?q=삼진어묵다락+부산",
-                      "appleQuery": "https://maps.apple.com/?q=삼진어묵다락+부산"
+                      "appleQuery": "https://maps.apple.com/?q=삼진어묵다락+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EC%82%BC%EC%A7%84%EC%96%B4%EB%AC%B5%EB%8B%A4%EB%9D%BD%20%EB%B6%80%EC%82%B0"
                     },
                     "googleRating": 4.3,
                     "source": "ai"
@@ -1842,7 +1929,8 @@
                     "location": {
                       "name": "광안리 해물칼국수",
                       "googleQuery": "https://maps.google.com/?q=해물칼국수+남포동+부산",
-                      "appleQuery": "https://maps.apple.com/?q=해물칼국수+남포동+부산"
+                      "appleQuery": "https://maps.apple.com/?q=해물칼국수+남포동+부산",
+                      "naverQuery": "https://map.naver.com/v5/search/%EA%B4%91%EC%95%88%EB%A6%AC%20%ED%95%B4%EB%AC%BC%EC%B9%BC%EA%B5%AD%EC%88%98"
                     },
                     "googleRating": 4.5,
                     "source": "ai"

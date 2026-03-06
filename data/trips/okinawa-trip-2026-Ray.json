@@ -8,7 +8,10 @@
       "燒肉",
       "當地特色"
     ],
-    "selfDrive": true
+    "selfDrive": true,
+    "countries": [
+      "JP"
+    ]
   },
   "footer": {
     "title": "2026 沖繩五日自駕遊",

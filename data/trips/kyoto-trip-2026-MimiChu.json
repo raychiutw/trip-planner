@@ -8,7 +8,10 @@
       "和食",
       "洋食"
     ],
-    "selfDrive": false
+    "selfDrive": false,
+    "countries": [
+      "JP"
+    ]
   },
   "footer": {
     "title": "2026 京都咪咪醬初體驗",
