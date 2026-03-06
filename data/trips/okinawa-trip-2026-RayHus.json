@@ -168,7 +168,8 @@
                     "沖繩限定零食"
                   ],
                   "blogUrl": "https://mimigo.tw/okinawa-donki/",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 },
                 {
                   "category": "超商",
@@ -181,7 +182,8 @@
                     "沖繩限定飲料"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/18216/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -194,11 +196,13 @@
                     "海葡萄（海ぶどう）"
                   ],
                   "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200",
-                  "googleRating": 4.0
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -224,7 +228,8 @@
                 ]
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "17:50",
@@ -270,7 +275,8 @@
                       "ORION 啤酒、泡盛沖繩地酒"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/668971/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "超商",
@@ -282,12 +288,14 @@
                       "ATM 換現金・SIM 卡購買"
                     ],
                     "blogUrl": "https://marukoblog.tw/lawson-okinawa.html",
-                    "googleRating": 3.5
+                    "googleRating": 3.5,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 3.8
+            "googleRating": 3.8,
+            "source": "ai"
           },
           {
             "time": "19:30",
@@ -318,7 +326,8 @@
                       "Royce 生巧克力・薯條三兄弟（北海道名產）"
                     ],
                     "blogUrl": "https://marktrip.tw/okinawa-kokusai-donki-guide/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   }
                 ]
               },
@@ -339,7 +348,8 @@
                     "hours": "17:00~22:00",
                     "reservation": "TableCheck 線上預約",
                     "blogUrl": "https://minako.tw/motobu-farm/",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -354,7 +364,8 @@
                     "hours": "11:00~翌1:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -369,12 +380,14 @@
                     "hours": "11:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://myokinawalife.jp/2025/08/13/nuchigafu/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4.1
+            "googleRating": 4.1,
+            "source": "ai"
           }
         ]
       }
@@ -414,7 +427,8 @@
                     "沖繩限定零食"
                   ],
                   "blogUrl": "https://mimigo.tw/okinawa-donki/",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 },
                 {
                   "category": "超商",
@@ -427,7 +441,8 @@
                     "沖繩限定飲料"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/18216/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -440,11 +455,13 @@
                     "海葡萄（海ぶどう）"
                   ],
                   "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200",
-                  "googleRating": 4.0
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -491,7 +508,8 @@
               }
             ],
             "blogUrl": "https://wanlu937.pixnet.net/blog/post/227218021",
-            "googleRating": 4.5
+            "googleRating": 4.5,
+            "source": "ai"
           },
           {
             "time": "18:15",
@@ -523,7 +541,8 @@
                     "hours": "平日17:00~24:00／假日11:00~24:00",
                     "reservation": "EPARK 預約",
                     "blogUrl": "https://purpleswallow.pixnet.net/blog/post/45092685",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -538,7 +557,8 @@
                     "hours": "11:00~翌1:30",
                     "reservation": "不需訂位（排隊制）",
                     "blogUrl": "https://amonblog.com/blog/post/jacks-steak",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -553,12 +573,14 @@
                     "hours": "17:30~24:00",
                     "reservation": "建議預約（電話 098-885-2178）",
                     "blogUrl": "https://matcha-jp.com/tw/11883",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
@@ -598,7 +620,8 @@
                     "沖繩限定零食"
                   ],
                   "blogUrl": "https://mimigo.tw/okinawa-donki/",
-                  "googleRating": 4.2
+                  "googleRating": 4.2,
+                  "source": "ai"
                 },
                 {
                   "category": "超商",
@@ -611,7 +634,8 @@
                     "沖繩限定飲料"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/18216/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -624,11 +648,13 @@
                     "海葡萄（海ぶどう）"
                   ],
                   "blogUrl": "https://popogo.pixnet.net/blog/posts/3051142200",
-                  "googleRating": 4.0
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -644,7 +670,8 @@
                 "appleQuery": "https://maps.apple.com/?q=第一牧志公設市場+那覇"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "source": "ai"
           },
           {
             "time": "12:00",
@@ -691,7 +718,8 @@
               }
             ],
             "blogUrl": "https://yiping1228.pixnet.net/blog/post/576037076",
-            "googleRating": 4.4
+            "googleRating": 4.4,
+            "source": "ai"
           },
           {
             "time": "21:30",
@@ -723,7 +751,8 @@
                     "hours": "平日 17:00~24:00／假日 11:00~24:00",
                     "reservation": "EPARK 線上預約",
                     "blogUrl": "https://sweet212.pixnet.net/blog/posts/13364784554",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -738,7 +767,8 @@
                     "hours": "11:00~翌1:30",
                     "reservation": "不需訂位",
                     "blogUrl": "https://linrosely.pixnet.net/blog/post/349942579",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -753,12 +783,14 @@
                     "hours": "21:00~翌5:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-naha-midnight-ramen/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }
@@ -798,7 +830,8 @@
                     "沖繩限定零食"
                   ],
                   "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -811,7 +844,8 @@
                     "沖繩特產調味料"
                   ],
                   "blogUrl": "https://mimigo.tw/kokusai-street/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -824,11 +858,13 @@
                     "消炎止痛貼布"
                   ],
                   "blogUrl": "https://mimigo.tw/cosmos-drug/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -924,7 +960,8 @@
                     "hours": "11:00~23:00",
                     "reservation": "電話預約 098-923-5529",
                     "blogUrl": "https://imksw.pixnet.net/blog/post/217994640",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -939,7 +976,8 @@
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://alicedaily.com/okinawa-aeonmall-gyubey-steak/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -954,7 +992,8 @@
                     "hours": "10:00~22:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://ajunfun.tw/aeonmall/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               },
@@ -972,7 +1011,8 @@
                       "沖繩限定家電周邊"
                     ],
                     "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -985,7 +1025,8 @@
                       "宮古島雪鹽、金楚糕"
                     ],
                     "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/",
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "伴手禮",
@@ -997,12 +1038,14 @@
                       "集換式卡牌"
                     ],
                     "blogUrl": "https://ajunfun.tw/aeonmall/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "source": "ai"
           },
           {
             "time": "19:00前",
@@ -1042,7 +1085,8 @@
                       "googleQuery": "https://maps.google.com/?q=焼肉もとぶ牧場+那覇店",
                       "appleQuery": "https://maps.apple.com/?q=焼肉もとぶ牧場+那覇店"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -1057,7 +1101,8 @@
                       "googleQuery": "https://maps.google.com/?q=やっぱりステーキ+4th+国際通り店",
                       "appleQuery": "https://maps.apple.com/?q=やっぱりステーキ+4th+国際通り店"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -1070,7 +1115,8 @@
                       "googleQuery": "https://maps.google.com/?q=琉球料理+ぬちがふぅ+那覇",
                       "appleQuery": "https://maps.apple.com/?q=琉球料理+ぬちがふぅ+那覇"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1082,7 +1128,8 @@
                 "appleQuery": "https://maps.apple.com/?q=那覇国際通り"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "20:00",
@@ -1111,7 +1158,8 @@
                       "安耐曬防曬乳・藥妝保養品（比國際通店更寬敞好逛）"
                     ],
                     "blogUrl": "https://linshibi.com/?p=16331",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "超商",
@@ -1123,7 +1171,8 @@
                       "隔日早餐備糧・飲料・零食"
                     ],
                     "blogUrl": "https://marukoblog.tw/lawson-okinawa.html",
-                    "googleRating": 3.5
+                    "googleRating": 3.5,
+                    "source": "ai"
                   },
                   {
                     "category": "藥妝",
@@ -1135,12 +1184,14 @@
                       "龍角散粉包"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                    "googleRating": 3.7
+                    "googleRating": 3.7,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "source": "ai"
           }
         ]
       }
@@ -1179,7 +1230,8 @@
                     "沖繩限定零食"
                   ],
                   "blogUrl": "https://tong5410.pixnet.net/blog/post/349864759",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1192,7 +1244,8 @@
                     "沖繩特產調味料"
                   ],
                   "blogUrl": "https://mimigo.tw/kokusai-street/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -1205,11 +1258,13 @@
                     "消炎止痛貼布"
                   ],
                   "blogUrl": "https://mimigo.tw/cosmos-drug/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1224,7 +1279,8 @@
                 "appleQuery": "https://maps.apple.com/?q=THE+NEST+NAHA+Nishi+Naha"
               }
             ],
-            "googleRating": 4.2
+            "googleRating": 4.2,
+            "source": "ai"
           },
           {
             "time": "10:00",
@@ -1290,7 +1346,8 @@
                     "hours": "10:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://adontrip.com/blog/71454/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -1305,7 +1362,8 @@
                     "hours": "10:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://adontrip.com/blog/71454/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -1320,7 +1378,8 @@
                     "hours": "11:00~21:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://adontrip.com/blog/71454/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               },
@@ -1338,7 +1397,8 @@
                       "遊戲機、模型周邊"
                     ],
                     "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "藥妝",
@@ -1350,7 +1410,8 @@
                       "龍角散粉包"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/544483/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -1362,12 +1423,14 @@
                       "ORION 啤酒、泡盛"
                     ],
                     "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/",
-                    "googleRating": 4.0
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "18:00",
@@ -1395,7 +1458,8 @@
                     "hours": "平日 12:00~14:30, 17:00~22:00／假日 12:00~22:00",
                     "reservation": "電話預約 098-917-2789",
                     "blogUrl": "https://lailai-web.com/ganaha-yakinikuten/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -1410,7 +1474,8 @@
                     "hours": "11:00~翌2:00",
                     "reservation": "不需訂位",
                     "blogUrl": "https://slowlifeinokinawa.com/steak88/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -1425,7 +1490,8 @@
                     "hours": "15:00~22:00（週四定休）",
                     "reservation": "可預約",
                     "blogUrl": "https://matcha-jp.com/tw/11883",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1484,7 +1550,8 @@
                 "appleQuery": "https://maps.apple.com/?q=那霸機場"
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "source": "ai"
           },
           {
             "time": "10:30",
@@ -1509,7 +1576,8 @@
                       "googleQuery": "https://maps.google.com/?q=空港食堂+那覇空港",
                       "appleQuery": "https://maps.apple.com/?q=空港食堂+那覇空港"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "牛排/烤魚",
@@ -1524,7 +1592,8 @@
                       "googleQuery": "https://maps.google.com/?q=天龍+那覇空港",
                       "appleQuery": "https://maps.apple.com/?q=天龍+那覇空港"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "當地特色",
@@ -1539,7 +1608,8 @@
                       "googleQuery": "https://maps.google.com/?q=A%26W+那覇空港店",
                       "appleQuery": "https://maps.apple.com/?q=A%26W+那覇空港店"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1551,7 +1621,8 @@
                 "appleQuery": "https://maps.apple.com/?q=那霸機場"
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "source": "ai"
           },
           {
             "time": "11:35",
@@ -1576,7 +1647,8 @@
                 "appleQuery": "https://maps.apple.com/?q=那霸機場"
               }
             ],
-            "googleRating": 3.9
+            "googleRating": 3.9,
+            "source": "ai"
           },
           {
             "time": "14:20",
@@ -1590,7 +1662,8 @@
               }
             ],
             "description": "めんそーれ（歡迎再來）沖繩！祝旅途愉快！",
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           }
         ]
       }

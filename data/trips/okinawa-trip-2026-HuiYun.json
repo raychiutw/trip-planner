@@ -270,7 +270,8 @@
                     "早餐麵包零食"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -282,7 +283,8 @@
                     "沖繩泡盛"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -294,7 +296,8 @@
                     "雜貨生活用品"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                  "googleRating": 4
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             },
@@ -311,7 +314,8 @@
             }
           ],
           "checkout": "11:00",
-          "googleRating": 4
+          "googleRating": 4,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -362,7 +366,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           }
         ]
       }
@@ -398,7 +403,8 @@
                     "日本醬料/沙拉醬"
                   ],
                   "blogUrl": "https://bobowin.blog/aeon-american/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "超商",
@@ -410,7 +416,8 @@
                     "Orion啤酒"
                   ],
                   "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -422,7 +429,8 @@
                     "日本限定商品"
                   ],
                   "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-                  "googleRating": 4
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             },
@@ -439,7 +447,8 @@
             }
           ],
           "checkout": "11:00",
-          "googleRating": 4.3
+          "googleRating": 4.3,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -467,7 +476,8 @@
               }
             ],
             "googleRating": 4.8,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "09:00",
@@ -481,7 +491,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "10:28-11:28",
@@ -503,7 +514,8 @@
                       "現烤麵包（marco polo）"
                     ],
                     "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -515,7 +527,8 @@
                       "Orion啤酒6瓶裝"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/668971/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -527,7 +540,8 @@
                       "日本百元雜貨"
                     ],
                     "blogUrl": "https://lailai-web.com/ameku-ryubo-rakuichi/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   }
                 ]
               }
@@ -567,7 +581,8 @@
                       "LuLuLun沖繩限定面膜"
                     ],
                     "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "購物中心",
@@ -579,7 +594,8 @@
                       "島野菜、地元鮮魚"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/751316/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "購物中心",
@@ -591,7 +607,8 @@
                       "輕薄外套（室內冷氣強）"
                     ],
                     "blogUrl": "https://itsmypleasuretw.com/2025/09/27/okinawa_san-a-naha-main-place/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -636,7 +653,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -655,7 +673,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -676,7 +695,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489",
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   }
                 ]
               }
@@ -690,7 +710,8 @@
               }
             ],
             "googleRating": 4.2,
-            "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489"
+            "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489",
+            "source": "ai"
           },
           {
             "time": "14:54-18:54",
@@ -712,7 +733,8 @@
                       "帆布手提袋"
                     ],
                     "blogUrl": "https://ajunfun.tw/parco-city/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "藥妝",
@@ -724,7 +746,8 @@
                       "LuLuLun沖繩限定面膜"
                     ],
                     "blogUrl": "https://ajunfun.tw/parco-city/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "購物中心",
@@ -736,7 +759,8 @@
                       "輕薄涼感寢具"
                     ],
                     "blogUrl": "https://www.bubu-jp.com/archives/45770",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -802,7 +826,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://mimigo.tw/gurumekaiten/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -820,7 +845,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://mimigo.tw/okinawa-americanvillage/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -838,7 +864,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-                    "googleRating": 4.4
+                    "googleRating": 4.4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -877,7 +904,8 @@
                       "美國村周邊雜貨"
                     ],
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "購物中心",
@@ -889,7 +917,8 @@
                       "沖繩限定周邊商品"
                     ],
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -901,7 +930,8 @@
                       "沖繩縣産飲料"
                     ],
                     "blogUrl": "https://bobowin.blog/aeon-american/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   }
                 ]
               }
@@ -952,7 +982,8 @@
               }
             ],
             "googleRating": 4.3,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           }
         ]
       }
@@ -988,7 +1019,8 @@
                     "恩納限定甜點"
                   ],
                   "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "超商",
@@ -1000,7 +1032,8 @@
                     "恩納村在地牛奶布丁"
                   ],
                   "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1012,7 +1045,8 @@
                     "飲料汽水"
                   ],
                   "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 }
               ]
             },
@@ -1029,7 +1063,8 @@
             }
           ],
           "checkout": "11:00",
-          "googleRating": 4.5
+          "googleRating": 4.5,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1044,7 +1079,8 @@
               }
             ],
             "googleRating": 4.3,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "08:00-10:30",
@@ -1167,7 +1203,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -1185,7 +1222,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://slowlifeinokinawa.com/steak88/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -1203,7 +1241,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1235,7 +1274,8 @@
               }
             ],
             "googleRating": 4.5,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "16:14",
@@ -1264,7 +1304,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -1284,7 +1325,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
-                    "googleRating": 4.4
+                    "googleRating": 4.4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -1302,7 +1344,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1315,7 +1358,8 @@
               }
             ],
             "googleRating": 4.5,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           }
         ]
       }
@@ -1351,7 +1395,8 @@
                     "恩納限定甜點"
                   ],
                   "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "超商",
@@ -1363,7 +1408,8 @@
                     "恩納村在地牛奶布丁"
                   ],
                   "blogUrl": "https://tw.wamazing.com/media/article/a-700/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1375,7 +1421,8 @@
                     "飲料汽水"
                   ],
                   "blogUrl": "https://www.funtime.com.tw/blog/funtime/%E6%B2%96%E7%B9%A9%E8%B6%85%E5%B8%82%E5%85%A8%E6%94%BB%E7%95%A5-%E6%B2%96%E7%B9%A9%E4%B8%89%E5%A4%A7%E8%B6%85%E5%B8%82%E4%BB%8B%E7%B4%B9%E5%BF%85%E8%B2%B7%E7%89%B9%E8%89%B2%E4%BC%B4",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 }
               ]
             },
@@ -1392,7 +1439,8 @@
             }
           ],
           "checkout": "11:00",
-          "googleRating": 4.5
+          "googleRating": 4.5,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1407,7 +1455,8 @@
               }
             ],
             "googleRating": 4.5,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "09:26-11:26",
@@ -1429,7 +1478,8 @@
                       "鳳梨夾心餅乾"
                     ],
                     "blogUrl": "https://bobbyfun.tw/2024-01-11-2732/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1477,7 +1527,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://mimigo.tw/okinawa-ufuya/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -1495,7 +1546,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://tisshuang.com/blog/post/nago-ramen-taiyou/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -1515,7 +1567,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://bigmouthblog.tw/okinawa-nago-yakiniku-terurin/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1621,7 +1674,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://www.bigfang.tw/blog/post/mammi-nago-okinawa",
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -1639,7 +1693,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://okinawa.letsgojp.com/archives/582485/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -1658,7 +1713,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1689,7 +1745,8 @@
               }
             ],
             "googleRating": 4.5,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           }
         ]
       }
@@ -1725,7 +1782,8 @@
                     "早餐麵包零食"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1737,7 +1795,8 @@
                     "沖繩泡盛"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -1749,7 +1808,8 @@
                     "雜貨生活用品"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                  "googleRating": 4
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             },
@@ -1766,7 +1826,8 @@
             }
           ],
           "checkout": "11:00",
-          "googleRating": 4
+          "googleRating": 4,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1781,7 +1842,8 @@
               }
             ],
             "googleRating": 4.5,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "09:12-10:12",
@@ -1822,7 +1884,8 @@
                       "寶可夢沖繩版T恤"
                     ],
                     "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -1834,7 +1897,8 @@
                       "沖繩限定零食伴手禮"
                     ],
                     "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "藥妝",
@@ -1846,7 +1910,8 @@
                       "面膜、保養品"
                     ],
                     "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1891,7 +1956,8 @@
                       "googleQuery": "https://www.google.com/maps/search/琉球回転寿司+海來+ライカム",
                       "appleQuery": "https://maps.apple.com/?q=琉球回転寿司+海來+ライカム"
                     },
-                    "googleRating": 3.7
+                    "googleRating": 3.7,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -1909,7 +1975,8 @@
                       "googleQuery": "https://www.google.com/maps/search/一蘭+イオンモール沖縄ライカム",
                       "appleQuery": "https://maps.apple.com/?q=一蘭+イオンモール沖縄ライカム"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -1927,7 +1994,8 @@
                       "googleQuery": "https://www.google.com/maps/search/A&W+イオンモール沖縄ライカム",
                       "appleQuery": "https://maps.apple.com/?q=A&W+イオンモール沖縄ライカム"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1941,7 +2009,8 @@
               }
             ],
             "googleRating": 4.2,
-            "blogUrl": "https://tisshuang.com/blog/post/aeon-mall"
+            "blogUrl": "https://tisshuang.com/blog/post/aeon-mall",
+            "source": "ai"
           },
           {
             "time": "13:51-14:51",
@@ -1982,7 +2051,8 @@
                       "黑糖巧克力"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "伴手禮",
@@ -1994,7 +2064,8 @@
                       "各式風味鹽禮盒"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "唐吉軻德",
@@ -2006,7 +2077,8 @@
                       "Orion啤酒禮盒裝"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2051,7 +2123,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -2070,7 +2143,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -2091,7 +2165,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
-                    "googleRating": 4.4
+                    "googleRating": 4.4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2123,7 +2198,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           }
         ]
       }
@@ -2160,7 +2236,8 @@
                     "早餐麵包零食"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
-                  "googleRating": 3.5
+                  "googleRating": 3.5,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -2172,7 +2249,8 @@
                     "沖繩泡盛"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "唐吉軻德",
@@ -2184,7 +2262,8 @@
                     "雜貨生活用品"
                   ],
                   "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                  "googleRating": 4
+                  "googleRating": 4,
+                  "source": "ai"
                 }
               ]
             },
@@ -2200,7 +2279,8 @@
               }
             }
           ],
-          "googleRating": 4
+          "googleRating": 4,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -2215,7 +2295,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "10:21-11:51",
@@ -2237,7 +2318,8 @@
                       "沖繩傳統工藝品"
                     ],
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -2249,7 +2331,8 @@
                       "冷凍烤豬肉（ラフテー）"
                     ],
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2705/",
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "超商",
@@ -2261,7 +2344,8 @@
                       "行動電源充電"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                    "googleRating": 3.5
+                    "googleRating": 3.5,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2320,7 +2404,8 @@
                       "沖繩傳統織品（紅型布）"
                     ],
                     "blogUrl": "https://bobowin.blog/okinawa-world/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2379,7 +2464,8 @@
                       "沖繩三線周邊商品"
                     ],
                     "blogUrl": "https://spirit0926.pixnet.net/blog/post/51163360",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "伴手禮",
@@ -2391,7 +2477,8 @@
                       "紅芋塔禮盒（10入）"
                     ],
                     "blogUrl": "https://www.kkday.com/zh-tw/blog/3545/asia-japan-okinawa-must-buy",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "伴手禮",
@@ -2403,7 +2490,8 @@
                       "各式風味鹽禮盒"
                     ],
                     "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2468,7 +2556,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -2487,7 +2576,8 @@
                       "recommended": false
                     },
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -2507,7 +2597,8 @@
                       "recommended": true
                     },
                     "blogUrl": "https://bigmouthblog.tw/okinawa-naha-yakiniku-kinjo/",
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2546,7 +2637,8 @@
                       "Coach托特袋"
                     ],
                     "blogUrl": "https://bobbyfun.tw/2024-01-07-2700/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "Outlet",
@@ -2558,7 +2650,8 @@
                       "VANS帆布鞋"
                     ],
                     "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   },
                   {
                     "category": "Outlet",
@@ -2570,7 +2663,8 @@
                       "日本限定配色餐具"
                     ],
                     "blogUrl": "https://ajunfun.tw/outlet-mall-ashibinaa/",
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2584,7 +2678,8 @@
               }
             ],
             "blogUrl": "https://tc.tabirai.net/sightseeing/article/okinawa-ashibinaa-completeguide/",
-            "googleRating": 3.8
+            "googleRating": 3.8,
+            "source": "ai"
           },
           {
             "time": "22:41-23:41",
@@ -2599,7 +2694,8 @@
               }
             ],
             "googleRating": 3.8,
-            "blogUrl": "https://alwa1919.pixnet.net/blog/post/116991918"
+            "blogUrl": "https://alwa1919.pixnet.net/blog/post/116991918",
+            "source": "ai"
           },
           {
             "time": "23:51-00:51",
@@ -2614,7 +2710,8 @@
               }
             ],
             "googleRating": 3.9,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "17:30-18:00",
@@ -2640,7 +2737,8 @@
                     "name": "ENEOS 安里バイパスSS 那覇市大道",
                     "googleQuery": "https://www.google.com/maps/search/ENEOS+安里バイパスSS+那覇",
                     "appleQuery": "https://maps.apple.com/?q=ENEOS+安里バイパスSS+那覇"
-                  }
+                  },
+                  "source": "ai"
                 }
               }
             ],
@@ -2652,7 +2750,8 @@
               }
             ],
             "googleRating": 4.8,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           }
         ]
       }
@@ -2675,7 +2774,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": ""
+            "blogUrl": "",
+            "source": "ai"
           },
           {
             "time": "11:14",
@@ -2702,7 +2802,8 @@
                       "googleQuery": "https://www.google.com/maps/search/空港食堂+那覇空港",
                       "appleQuery": "https://maps.apple.com/?q=空港食堂+那覇空港"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "海鮮",
@@ -2720,7 +2821,8 @@
                       "googleQuery": "https://www.google.com/maps/search/天龍+那覇空港",
                       "appleQuery": "https://maps.apple.com/?q=天龍+那覇空港"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "甜點",
@@ -2738,7 +2840,8 @@
                       "googleQuery": "https://www.google.com/maps/search/A&W+那覇空港",
                       "appleQuery": "https://maps.apple.com/?q=A&W+那覇空港"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   }
                 ]
               }
@@ -2752,7 +2855,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/"
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/",
+            "source": "ai"
           },
           {
             "time": "11:15-12:15",
@@ -2782,7 +2886,8 @@
                 "mapcode": "33 122 298*54"
               }
             ],
-            "googleRating": 4
+            "googleRating": 4,
+            "source": "ai"
           },
           {
             "time": "12:15-13:15",
@@ -2797,7 +2902,8 @@
               }
             ],
             "googleRating": 4,
-            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/"
+            "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/",
+            "source": "ai"
           }
         ]
       }

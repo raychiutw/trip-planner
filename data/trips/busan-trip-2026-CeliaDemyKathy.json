@@ -183,7 +183,8 @@
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
                     "appleQuery": "https://maps.apple.com/?q=CU+남포동"
                   },
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -200,7 +201,8 @@
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
                     "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
                   },
-                  "googleRating": 4.3
+                  "googleRating": 4.3,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -217,11 +219,13 @@
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
                     "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
                   },
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -308,7 +312,8 @@
                       "googleQuery": "https://maps.google.com/?q=고기리남자+서면",
                       "appleQuery": "https://maps.apple.com/?q=고기리남자+서면"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -323,7 +328,8 @@
                       "googleQuery": "https://maps.google.com/?q=디아트커피+서면+부산",
                       "appleQuery": "https://maps.apple.com/?q=디아트커피+서면+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -338,7 +344,8 @@
                       "googleQuery": "https://maps.google.com/?q=김밥천국+서면+부산",
                       "appleQuery": "https://maps.apple.com/?q=김밥천국+서면+부산"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   }
                 ]
               }
@@ -433,7 +440,8 @@
                       "googleQuery": "https://maps.google.com/?q=고택집+서면+부산",
                       "appleQuery": "https://maps.apple.com/?q=고택집+서면+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -448,7 +456,8 @@
                       "googleQuery": "https://maps.google.com/?q=커피나인+서면+부산",
                       "appleQuery": "https://maps.apple.com/?q=커피나인+서면+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -463,7 +472,8 @@
                       "googleQuery": "https://maps.google.com/?q=할매가야밀면+서면+부산",
                       "appleQuery": "https://maps.apple.com/?q=할매가야밀면+서면+부산"
                     },
-                    "googleRating": 3.9
+                    "googleRating": 3.9,
+                    "source": "ai"
                   }
                 ]
               }
@@ -506,7 +516,8 @@
                       "googleQuery": "https://maps.google.com/?q=롯데백화점+서면점+부산",
                       "appleQuery": "https://maps.apple.com/?q=롯데백화점+서면점+부산"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "藥妝",
@@ -523,7 +534,8 @@
                       "googleQuery": "https://maps.google.com/?q=올리브영+서면역+부산",
                       "appleQuery": "https://maps.apple.com/?q=올리브영+서면역+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "超商",
@@ -540,7 +552,8 @@
                       "googleQuery": "https://maps.google.com/?q=GS25+서면역+부산",
                       "appleQuery": "https://maps.apple.com/?q=GS25+서면역+부산"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   }
                 ]
               }
@@ -587,7 +600,8 @@
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
                     "appleQuery": "https://maps.apple.com/?q=CU+남포동"
                   },
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -604,7 +618,8 @@
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
                     "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
                   },
-                  "googleRating": 4.3
+                  "googleRating": 4.3,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -621,11 +636,13 @@
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
                     "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
                   },
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -658,7 +675,8 @@
                       "googleQuery": "https://maps.google.com/?q=새마을식당+서면점+부산",
                       "appleQuery": "https://maps.apple.com/?q=새마을식당+서면점+부산"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -673,7 +691,8 @@
                       "googleQuery": "https://maps.google.com/?q=리베르타+카페+부산",
                       "appleQuery": "https://maps.apple.com/?q=리베르타+카페+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -688,7 +707,8 @@
                       "googleQuery": "https://maps.google.com/?q=산청돼지국밥+서면+부산",
                       "appleQuery": "https://maps.apple.com/?q=산청돼지국밥+서면+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   }
                 ]
               }
@@ -767,7 +787,8 @@
                       "googleQuery": "https://maps.google.com/?q=국제시장+부산",
                       "appleQuery": "https://maps.apple.com/?q=국제시장+부산"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   },
                   {
                     "category": "超商",
@@ -784,7 +805,8 @@
                       "googleQuery": "https://maps.google.com/?q=GS25+국제시장+부산",
                       "appleQuery": "https://maps.apple.com/?q=GS25+국제시장+부산"
                     },
-                    "googleRating": 3.8
+                    "googleRating": 3.8,
+                    "source": "ai"
                   },
                   {
                     "category": "藥妝",
@@ -801,7 +823,8 @@
                       "googleQuery": "https://maps.google.com/?q=올리브영+남포동+부산",
                       "appleQuery": "https://maps.apple.com/?q=올리브영+남포동+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   }
                 ]
               }
@@ -842,7 +865,8 @@
                       "googleQuery": "https://maps.google.com/?q=강호동백정+남포+부산",
                       "appleQuery": "https://maps.apple.com/?q=강호동백정+남포+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -857,7 +881,8 @@
                       "googleQuery": "https://maps.google.com/?q=모모스커피+남포+부산",
                       "appleQuery": "https://maps.apple.com/?q=모모스커피+남포+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -872,7 +897,8 @@
                       "googleQuery": "https://maps.google.com/?q=명란김밥+남포동+부산",
                       "appleQuery": "https://maps.apple.com/?q=명란김밥+남포동+부산"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   }
                 ]
               }
@@ -919,7 +945,8 @@
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
                     "appleQuery": "https://maps.apple.com/?q=CU+남포동"
                   },
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -936,7 +963,8 @@
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
                     "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
                   },
-                  "googleRating": 4.3
+                  "googleRating": 4.3,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -953,11 +981,13 @@
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
                     "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
                   },
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1026,7 +1056,8 @@
                       "googleQuery": "https://maps.google.com/?q=팔색삼겹살+해운대+부산",
                       "appleQuery": "https://maps.apple.com/?q=팔색삼겹살+해운대+부산"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -1041,7 +1072,8 @@
                       "googleQuery": "https://maps.google.com/?q=삼성커피숍+기장+부산",
                       "appleQuery": "https://maps.apple.com/?q=삼성커피숍+기장+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1056,7 +1088,8 @@
                       "googleQuery": "https://maps.google.com/?q=기장+해녀촌+부산",
                       "appleQuery": "https://maps.apple.com/?q=기장+해녀촌+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1097,7 +1130,8 @@
                       "googleQuery": "https://maps.google.com/?q=육전식당+광안리+부산",
                       "appleQuery": "https://maps.apple.com/?q=육전식당+광안리+부산"
                     },
-                    "googleRating": 4.6
+                    "googleRating": 4.6,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -1112,7 +1146,8 @@
                       "googleQuery": "https://maps.google.com/?q=연경재+카페+부산",
                       "appleQuery": "https://maps.apple.com/?q=연경재+카페+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1127,7 +1162,8 @@
                       "googleQuery": "https://maps.google.com/?q=명성닭한마리+부산",
                       "appleQuery": "https://maps.apple.com/?q=명성닭한마리+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1192,7 +1228,8 @@
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
                     "appleQuery": "https://maps.apple.com/?q=CU+남포동"
                   },
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -1209,7 +1246,8 @@
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
                     "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
                   },
-                  "googleRating": 4.3
+                  "googleRating": 4.3,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1226,11 +1264,13 @@
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
                     "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
                   },
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1299,7 +1339,8 @@
                       "googleQuery": "https://maps.google.com/?q=오반장+해운대+부산",
                       "appleQuery": "https://maps.apple.com/?q=오반장+해운대+부산"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -1314,7 +1355,8 @@
                       "googleQuery": "https://maps.google.com/?q=모모스커피+해운대+부산",
                       "appleQuery": "https://maps.apple.com/?q=모모스커피+해운대+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1329,7 +1371,8 @@
                       "googleQuery": "https://maps.google.com/?q=대해전복죽+해운대+부산",
                       "appleQuery": "https://maps.apple.com/?q=대해전복죽+해운대+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1406,7 +1449,8 @@
                       "googleQuery": "https://maps.google.com/?q=새마을식당+해운대+부산",
                       "appleQuery": "https://maps.apple.com/?q=새마을식당+해운대+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -1421,7 +1465,8 @@
                       "googleQuery": "https://maps.google.com/?q=파란집+그+계단위+부산",
                       "appleQuery": "https://maps.apple.com/?q=파란집+그+계단위+부산"
                     },
-                    "googleRating": 4.4
+                    "googleRating": 4.4,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1436,7 +1481,8 @@
                       "googleQuery": "https://maps.google.com/?q=청사포+장어구이+부산",
                       "appleQuery": "https://maps.apple.com/?q=청사포+장어구이+부산"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1479,7 +1525,8 @@
                       "googleQuery": "https://maps.google.com/?q=이마트+부산역점",
                       "appleQuery": "https://maps.apple.com/?q=이마트+부산역점"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "超市",
@@ -1496,7 +1543,8 @@
                       "googleQuery": "https://maps.google.com/?q=롯데마트+부산역점",
                       "appleQuery": "https://maps.apple.com/?q=롯데마트+부산역점"
                     },
-                    "googleRating": 4
+                    "googleRating": 4,
+                    "source": "ai"
                   },
                   {
                     "category": "伴手禮",
@@ -1513,7 +1561,8 @@
                       "googleQuery": "https://maps.google.com/?q=삼진어묵체험관+부산",
                       "appleQuery": "https://maps.apple.com/?q=삼진어묵체험관+부산"
                     },
-                    "googleRating": 4.6
+                    "googleRating": 4.6,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1560,7 +1609,8 @@
                     "googleQuery": "https://maps.google.com/?q=CU+남포동",
                     "appleQuery": "https://maps.apple.com/?q=CU+남포동"
                   },
-                  "googleRating": 3.8
+                  "googleRating": 3.8,
+                  "source": "ai"
                 },
                 {
                   "category": "藥妝",
@@ -1577,7 +1627,8 @@
                     "googleQuery": "https://maps.google.com/?q=올리브영+광복점+부산",
                     "appleQuery": "https://maps.apple.com/?q=올리브영+광복점+부산"
                   },
-                  "googleRating": 4.3
+                  "googleRating": 4.3,
+                  "source": "ai"
                 },
                 {
                   "category": "超市",
@@ -1594,11 +1645,13 @@
                     "googleQuery": "https://maps.google.com/?q=홈플러스+익스프레스+남포+부산",
                     "appleQuery": "https://maps.apple.com/?q=홈플러스+익스프레스+남포+부산"
                   },
-                  "googleRating": 3.9
+                  "googleRating": 3.9,
+                  "source": "ai"
                 }
               ]
             }
-          ]
+          ],
+          "source": "ai"
         },
         "timeline": [
           {
@@ -1667,7 +1720,8 @@
                       "googleQuery": "https://maps.google.com/?q=강호동백정+광복+부산",
                       "appleQuery": "https://maps.apple.com/?q=강호동백정+광복+부산"
                     },
-                    "googleRating": 4.1
+                    "googleRating": 4.1,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -1682,7 +1736,8 @@
                       "googleQuery": "https://maps.google.com/?q=삼진어묵다락+부산",
                       "appleQuery": "https://maps.apple.com/?q=삼진어묵다락+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1697,7 +1752,8 @@
                       "googleQuery": "https://maps.google.com/?q=이재모피자+부산",
                       "appleQuery": "https://maps.apple.com/?q=이재모피자+부산"
                     },
-                    "googleRating": 4.2
+                    "googleRating": 4.2,
+                    "source": "ai"
                   }
                 ]
               }
@@ -1756,7 +1812,8 @@
                       "googleQuery": "https://maps.google.com/?q=오반장+남포+부산",
                       "appleQuery": "https://maps.apple.com/?q=오반장+남포+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "咖啡廳",
@@ -1771,7 +1828,8 @@
                       "googleQuery": "https://maps.google.com/?q=삼진어묵다락+부산",
                       "appleQuery": "https://maps.apple.com/?q=삼진어묵다락+부산"
                     },
-                    "googleRating": 4.3
+                    "googleRating": 4.3,
+                    "source": "ai"
                   },
                   {
                     "category": "地方特色",
@@ -1786,7 +1844,8 @@
                       "googleQuery": "https://maps.google.com/?q=해물칼국수+남포동+부산",
                       "appleQuery": "https://maps.apple.com/?q=해물칼국수+남포동+부산"
                     },
-                    "googleRating": 4.5
+                    "googleRating": 4.5,
+                    "source": "ai"
                   }
                 ]
               }

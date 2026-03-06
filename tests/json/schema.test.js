@@ -247,6 +247,92 @@ jsonFiles.forEach((file) => {
       });
     });
 
+    // --- R13 source 欄位 ---
+
+    it('R13: non-exempt POIs have source field with valid value ("user"|"ai")', () => {
+      const validSources = ['user', 'ai'];
+
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+
+        // hotel（非「家」且不以「（」開頭）
+        const hotel = day.content?.hotel;
+        if (hotel && hotel.name !== '家' && !hotel.name.startsWith('（')) {
+          expect(
+            validSources.includes(hotel.source),
+            `days[${i}].hotel "${hotel.name}" source must be "user" or "ai", got: ${hotel.source}`
+          ).toBe(true);
+        }
+
+        // timeline events（非 travel）
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          if ((ev.title || '').includes('餐廳未定')) return;
+          const prefix = `days[${i}].timeline[${j}]`;
+
+          expect(
+            validSources.includes(ev.source),
+            `${prefix} "${ev.title}" source must be "user" or "ai", got: ${ev.source}`
+          ).toBe(true);
+
+          // restaurants
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'restaurants') return;
+            (box.restaurants || []).forEach((r, m) => {
+              expect(
+                validSources.includes(r.source),
+                `${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}" source must be "user" or "ai", got: ${r.source}`
+              ).toBe(true);
+            });
+          });
+
+          // shops
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'shopping') return;
+            (box.shops || []).forEach((s, m) => {
+              expect(
+                validSources.includes(s.source),
+                `${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}" source must be "user" or "ai", got: ${s.source}`
+              ).toBe(true);
+            });
+          });
+
+          // gasStation
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'gasStation') return;
+            if (box.station) {
+              expect(
+                validSources.includes(box.station.source),
+                `${prefix}.infoBoxes[${k}].station "${box.station.name}" source must be "user" or "ai", got: ${box.station.source}`
+              ).toBe(true);
+            }
+          });
+        });
+
+        // hotel infoBoxes 中的 restaurants 和 shops
+        if (hotel?.infoBoxes) {
+          hotel.infoBoxes.forEach((box, k) => {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                expect(
+                  validSources.includes(r.source),
+                  `days[${i}].hotel.infoBoxes[${k}].restaurants[${m}] "${r.name}" source must be "user" or "ai", got: ${r.source}`
+                ).toBe(true);
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                expect(
+                  validSources.includes(s.source),
+                  `days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}" source must be "user" or "ai", got: ${s.source}`
+                ).toBe(true);
+              });
+            }
+          });
+        }
+      });
+    });
+
     // --- Flights 結構（選填） ---
 
     it('flights structure is valid when present', () => {

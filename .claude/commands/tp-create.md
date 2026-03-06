@@ -19,29 +19,30 @@
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：
    - blogUrl → 空字串 `""`
    - googleRating → 不放（省略欄位）
-7. 寫入 `data/trips/{slug}.json`
+7. 所有 POI 標記 `"source": "ai"`（tp-create 產生的行程全部由 AI 推薦）
+8. 寫入 `data/trips/{slug}.json`
 
 ### Phase 2：並行充填（Agent teams）
 
-8. 對每一天啟動一個 Agent（sonnet），並行執行：
+9. 對每一天啟動一個 Agent（sonnet），並行執行：
    - 用 WebSearch 搜尋該天所有餐廳的 blogUrl（「{名稱} {地區} 推薦」）
    - 用 WebSearch 搜尋該天 hotel 的 blogUrl
    - 用 WebSearch 搜尋該天所有 shop 的 blogUrl
    - 用 WebSearch 搜尋該天景點的 blogUrl
    - 用 WebSearch 查詢缺少 googleRating 的地點/餐廳評分
    - Agent 輸出格式：JSON patch（dayId + 各欄位路徑 + 值）
-9. 收集所有 Agent 回傳的 patch，合併寫回 `data/trips/{slug}.json`
-10. 合併時確保不引入 null 值（找不到 → blogUrl 維持空字串、googleRating 省略）
+10. 收集所有 Agent 回傳的 patch，合併寫回 `data/trips/{slug}.json`
+11. 合併時確保不引入 null 值（找不到 → blogUrl 維持空字串、googleRating 省略）
 
 ### Phase 3：驗證
 
-11. 更新 `data/trips.json` 索引（新增 entry，含 owner 欄位）
-12. 執行 `git diff --name-only`：
+12. 更新 `data/trips.json` 索引（新增 entry，含 owner 欄位）
+13. 執行 `git diff --name-only`：
     → 只有 `data/trips/{slug}.json` + `data/trips.json` → OK
     → 有其他檔案被改 → `git checkout` 還原非白名單檔案
-13. `npm test`
-14. 執行 `/tp-check` 完整模式驗證
-15. 不自動 commit（由使用者決定）
+14. `npm test`
+15. 執行 `/tp-check` 完整模式驗證
+16. 不自動 commit（由使用者決定）
 
 ## slug 命名規則
 
