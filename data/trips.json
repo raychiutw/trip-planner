@@ -34,5 +34,11 @@
     "name": "三姊妹的釜山之旅",
     "dates": "2026/3/20 ~ 3/24",
     "owner": "CeliaDemyKathy"
+  },
+  {
+    "file": "data/trips/okinawa-trip-2026-AeronAn.json",
+    "name": "AeronAn 的沖繩之旅",
+    "dates": "2026/4/24 ~ 4/28",
+    "owner": "AeronAn"
   }
 ]
