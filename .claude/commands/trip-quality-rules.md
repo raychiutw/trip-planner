@@ -12,10 +12,11 @@
 - 所有 URL 欄位（titleUrl、url、googleQuery、appleQuery、reservationUrl、blogUrl）的值必須以 `http://`、`https://` 或 `tel:` 開頭，否則視為不安全。
 - `googleQuery` 必須為 Google Maps URL（以 `https://maps.google.com/` 或 `https://www.google.com/maps/` 開頭）。
 - `appleQuery` 必須為 Apple Maps URL（以 `https://maps.apple.com/` 開頭）。
-- `mapcode` 格式為 `XX XXX XXX*XX`（如 `33 530 406*00`），正則：`/^\d{2,4}\s\d{3}\s\d{3}\*\d{2}$/`。
+- `naverQuery` 必須為 Naver Maps URL（以 `https://map.naver.com/` 開頭），優先使用精確 place URL `https://map.naver.com/v5/entry/place/{placeId}`，查不到時 fallback 為 `https://map.naver.com/v5/search/{韓文關鍵字}`。
+- `mapcode` 格式為 `XX XXX XXX*XX`（如 `33 530 406*00`），正則：`/^\d{2,4}\s\d{3}\s\d{3}\*\d{2}$/`。僅 `meta.countries` 含 `"JP"` 且 `meta.selfDrive === true` 時必填。
 
 #### 根層級必填欄位
-- 必填：`meta`（含 `title` 非空字串、`selfDrive` boolean）、`days`（非空陣列）、`weather`（非空陣列）、`autoScrollDates`（非空陣列）、`footer`（含 `title`、`dates`）、`highlights`、`suggestions`、`checklist`。
+- 必填：`meta`（含 `title` 非空字串、`selfDrive` boolean、`countries` 非空陣列，值為 ISO 3166-1 alpha-2 國碼如 `["JP"]`）、`days`（非空陣列）、`weather`（非空陣列）、`autoScrollDates`（非空陣列）、`footer`（含 `title`、`dates`）、`highlights`、`suggestions`、`checklist`。
 - 選填：`flights`、`emergency`（存在時驗證結構）。
 - `meta` 不得包含已移除欄位（`themeColor`、`name`）。
 
@@ -115,3 +116,8 @@ shop.category 使用標準分類（共 7 類）：超市、超商、唐吉軻德
 - `source: "user"` 且缺少 `googleRating` → **warning**（🟡）
 
 此規則為離線檢查（不做即時搜尋），僅檢查缺少 `googleRating` 的非豁免 POI。
+
+### R14 國家感知規則
+- `meta.countries` 含 `"KR"` 時，所有 POI 的 location 必填 `naverQuery`（Naver Maps URL）。
+- `naverQuery` 優先填精確 place URL：`https://map.naver.com/v5/entry/place/{placeId}`，查不到時 fallback 為 `https://map.naver.com/v5/search/{韓文關鍵字}`。
+- 非韓國行程不需要 `naverQuery` 欄位。
