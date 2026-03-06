@@ -30,6 +30,11 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify(buildWeatherMock(route.request().url())),
     });
   });
+  // Set default trip-pref so pages load a trip (no more DEFAULT_SLUG fallback)
+  await page.addInitScript(() => {
+    var exp = Date.now() + 180 * 86400000;
+    localStorage.setItem('tp-trip-pref', JSON.stringify({ v: 'okinawa-trip-2026-Ray', exp: exp }));
+  });
 });
 
 /* ===== 1. 頁面載入與內容渲染 ===== */
@@ -271,7 +276,7 @@ test.describe('深色模式', () => {
     const darkValue = await page.evaluate(() => {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && k.indexOf('trip-planner-dark') !== -1) {
+        if (k && k.indexOf('tp-dark') !== -1) {
           return JSON.parse(localStorage.getItem(k)).v;
         }
       }
@@ -365,6 +370,25 @@ test.describe('地圖連結與餐廳', () => {
     const aLinks = page.locator('a.map-link.apple');
     const count = await aLinks.count();
     expect(count).toBeGreaterThan(0);
+  });
+
+  test('Naver Map 連結存在（韓國行程）', async ({ page }) => {
+    await page.goto('/?trip=busan-trip-2026-CeliaDemyKathy');
+    await page.waitForTimeout(500);
+    const nLinks = page.locator('a.map-link.naver');
+    const count = await nLinks.count();
+    expect(count).toBeGreaterThan(0);
+
+    const href = await nLinks.first().getAttribute('href');
+    expect(href).toMatch(/map\.naver\.com/);
+  });
+
+  test('Naver Map 連結不存在（非韓國行程）', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const nLinks = page.locator('a.map-link.naver');
+    const count = await nLinks.count();
+    expect(count).toBe(0);
   });
 
   test('外部連結有 target="_blank" 和 rel="noopener noreferrer"', async ({ page }) => {
@@ -684,6 +708,41 @@ test.describe('FAB 修改行程按鈕', () => {
     await page.locator('#sidebarNav [data-action="toggle-print"]').click();
     const fab = page.locator('#editFab');
     await expect(fab).not.toBeVisible();
+  });
+});
+
+/* ===== 23a. 行程載入失敗 ===== */
+test.describe('行程載入失敗', () => {
+  test('不存在的行程顯示錯誤訊息與設定連結', async ({ page }) => {
+    await page.goto('/?trip=nonexistent-trip-999');
+    await page.waitForTimeout(1000);
+
+    const errorBlock = page.locator('.trip-error');
+    await expect(errorBlock).toBeVisible();
+    await expect(errorBlock).toContainText('行程不存在');
+
+    const settingLink = errorBlock.locator('a.trip-error-link');
+    await expect(settingLink).toBeVisible();
+    const href = await settingLink.getAttribute('href');
+    expect(href).toContain('setting.html');
+  });
+
+  test('無行程偏好時顯示選擇行程訊息', async ({ page }) => {
+    // Override the init script by adding another that clears trip-pref
+    await page.addInitScript(() => {
+      localStorage.clear();
+    });
+    await page.goto('/');
+    await page.waitForTimeout(1000);
+
+    const errorBlock = page.locator('.trip-error');
+    await expect(errorBlock).toBeVisible();
+    await expect(errorBlock).toContainText('請選擇行程');
+
+    const settingLink = errorBlock.locator('a.trip-error-link');
+    await expect(settingLink).toBeVisible();
+    const href = await settingLink.getAttribute('href');
+    expect(href).toContain('setting.html');
   });
 });
 

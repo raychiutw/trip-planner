@@ -76,6 +76,85 @@ jsonFiles.forEach((file) => {
       expect(data).toBeDefined();
     });
 
+    // --- R0/R1 meta.countries 必填 ---
+
+    it('R0/R1: meta.countries is a non-empty array', () => {
+      expect(
+        Array.isArray(data.meta.countries) && data.meta.countries.length > 0,
+        `${file} meta.countries must be a non-empty array`
+      ).toBe(true);
+    });
+
+    // --- R13 韓國行程 naverQuery 檢查 ---
+
+    it('R13: KR trips have naverQuery on all POI locations', () => {
+      if (!data.meta.countries || !data.meta.countries.includes('KR')) return;
+
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          if ((ev.title || '').includes('餐廳未定')) return;
+
+          // timeline event locations
+          if (Array.isArray(ev.locations)) {
+            ev.locations.forEach((loc, k) => {
+              expect(
+                typeof loc.naverQuery === 'string' && loc.naverQuery.length > 0,
+                `days[${i}].timeline[${j}].locations[${k}] "${loc.name}" missing naverQuery`
+              ).toBe(true);
+              expect(
+                loc.naverQuery.startsWith('https://map.naver.com/'),
+                `days[${i}].timeline[${j}].locations[${k}] "${loc.name}" naverQuery must start with https://map.naver.com/`
+              ).toBe(true);
+            });
+          }
+
+          // restaurant locations
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'restaurants') return;
+            (box.restaurants || []).forEach((r, m) => {
+              if (r.location) {
+                expect(
+                  typeof r.location.naverQuery === 'string' && r.location.naverQuery.length > 0,
+                  `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}] "${r.name}" location missing naverQuery`
+                ).toBe(true);
+              }
+            });
+          });
+
+          // shop locations
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type !== 'shopping') return;
+            (box.shops || []).forEach((s, m) => {
+              if (s.location) {
+                expect(
+                  typeof s.location.naverQuery === 'string' && s.location.naverQuery.length > 0,
+                  `days[${i}].timeline[${j}].infoBoxes[${k}].shops[${m}] "${s.name}" location missing naverQuery`
+                ).toBe(true);
+              }
+            });
+          });
+        });
+
+        // hotel shop locations
+        const hotel = day.content?.hotel;
+        if (hotel?.infoBoxes) {
+          hotel.infoBoxes.forEach((box, k) => {
+            if (box.type !== 'shopping') return;
+            (box.shops || []).forEach((s, m) => {
+              if (s.location) {
+                expect(
+                  typeof s.location.naverQuery === 'string' && s.location.naverQuery.length > 0,
+                  `days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}" location missing naverQuery`
+                ).toBe(true);
+              }
+            });
+          });
+        }
+      });
+    });
+
     // --- R2 航程感知餐次檢查 ---
 
     it('R2: each day has required meals (flight-aware)', () => {
