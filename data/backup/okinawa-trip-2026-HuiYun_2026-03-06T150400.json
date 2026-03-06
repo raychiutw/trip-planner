@@ -2305,7 +2305,7 @@
             "time": "10:21-11:51",
             "title": "第一牧志公設市場",
             "titleUrl": "https://bobbyfun.tw/2024-01-07-2705/",
-            "description": "沖繩人的廚房！1樓鮮魚海產攤位選購食材，2樓代客料理（3樣500日圓）；必吃夜光貝、石垣牛握壽司、步沙翁（約1.5小時）",
+            "description": "鮮魚、海產、沖繩特產，2樓可代煮（約1.5小時）",
             "infoBoxes": [
               {
                 "type": "shopping",
@@ -2371,7 +2371,7 @@
           {
             "time": "11:58-12:58",
             "title": "世豊商店",
-            "description": "壺屋通伴手禮雜貨店，台灣老闆溝通零障礙；必買沖繩蝦餅、邊銀食堂辣油、雪肌粹洗面乳，價格比國際通便宜",
+            "description": "壺屋燒物街陶器選購",
             "locations": [
               {
                 "name": "世豊商店 那覇",
@@ -2391,7 +2391,7 @@
             "time": "13:27-14:27",
             "title": "玉泉洞",
             "titleUrl": "https://bobowin.blog/okinawa-world/",
-            "description": "全長5公里鐘乳石洞穴（開放800m，步行約40分鐘）；必看百萬支石筍燈光造景、王國村琉球工藝體驗、SUPER EISA太鼓秀（10:30/12:30/14:30）",
+            "description": "沖繩世界內的鐘乳石洞穴，壯觀地質景觀",
             "infoBoxes": [
               {
                 "type": "shopping",
@@ -2432,7 +2432,7 @@
             "time": "14:59-15:59",
             "title": "波上宮",
             "titleUrl": "https://hugh0714.pixnet.net/blog/post/64248388",
-            "description": "沖繩八社之首，崖上絕美神社；必看紅型圖案御守（800~1200日圓）、貝殼良緣御守、波之上海灘絕景拍照點（後方臨港道路）",
+            "description": "沖繩總鎮守、崖上神社",
             "locations": [
               {
                 "name": "波上宮",
@@ -2451,96 +2451,73 @@
           {
             "time": "16:05-17:05",
             "title": "午餐",
+            "titleUrl": "https://spirit0926.pixnet.net/blog/post/51163360",
             "infoBoxes": [
               {
-                "type": "restaurants",
-                "title": "午餐推薦",
-                "restaurants": [
+                "type": "shopping",
+                "title": "伴手禮購物推薦",
+                "shops": [
                   {
-                    "category": "沖繩料理",
-                    "name": "島しゃぶしゃぶ NAKAMA 那覇久茂地",
-                    "description": "嚴選沖繩在地阿古豬與島野菜的涮涮鍋專門店，湯頭清甜鮮美，午間套餐含前菜、雜炊收尾",
-                    "price": "¥1,500~",
-                    "location": {
-                      "name": "島しゃぶしゃぶ NAKAMA 那覇久茂地",
-                      "googleQuery": "https://www.google.com/maps/search/島しゃぶしゃぶ+NAKAMA+那覇久茂地",
-                      "appleQuery": "https://maps.apple.com/?q=島しゃぶしゃぶ+NAKAMA+那覇久茂地",
-                      "mapcode": "33 157 353*14"
-                    },
-                    "hours": "11:30~23:00",
-                    "reservation": {
-                      "available": "yes",
-                      "method": "phone",
-                      "phone": "098-917-1139",
-                      "recommended": true
-                    },
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23951/",
+                    "category": "伴手禮",
+                    "name": "沖繩媳婦 OKINAWA SHIN BOO",
+                    "hours": "不定休，營業日公告於IG/FB",
+                    "mustBuy": [
+                      "沖繩限定零食禮盒",
+                      "宮古島雪鹽系列",
+                      "沖繩三線周邊商品"
+                    ],
+                    "blogUrl": "https://spirit0926.pixnet.net/blog/post/51163360",
                     "googleRating": 4.2,
                     "source": "ai"
                   },
                   {
-                    "category": "海鮮",
-                    "name": "琉家拉麵",
-                    "description": "國際通巷弄隱藏版名店，招牌琉焦蒜豬骨拉麵湯頭濃郁蒜香十足，叉燒厚切入味，麵條Q彈",
-                    "price": "¥850~",
-                    "location": {
-                      "name": "琉家 那覇国際通り",
-                      "googleQuery": "https://www.google.com/maps/search/琉家+那覇+国際通り+ラーメン",
-                      "appleQuery": "https://maps.apple.com/?q=琉家+那覇+国際通り+ラーメン",
-                      "mapcode": "33 157 332*55"
-                    },
-                    "hours": "11:30~22:00",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://okinawa.letsgojp.com/archives/23951/",
-                    "googleRating": 4.1,
+                    "category": "伴手禮",
+                    "name": "御菓子御殿 國際通松尾店",
+                    "hours": "09:00~22:00",
+                    "mustBuy": [
+                      "紅芋生塔（工廠現烤）",
+                      "黑糖巧克力塔",
+                      "紅芋塔禮盒（10入）"
+                    ],
+                    "blogUrl": "https://www.kkday.com/zh-tw/blog/3545/asia-japan-okinawa-must-buy",
+                    "googleRating": 4.2,
                     "source": "ai"
                   },
                   {
-                    "category": "甜點",
-                    "name": "oHacorte 泉崎店",
-                    "description": "沖繩人氣水果塔專賣店，使用當季沖繩水果製作，招牌芒果塔與季節限定塔款必點",
-                    "price": "¥600~",
-                    "location": {
-                      "name": "oHacorte 泉崎店",
-                      "googleQuery": "https://www.google.com/maps/search/oHacorte+泉崎店",
-                      "appleQuery": "https://maps.apple.com/?q=oHacorte+泉崎店",
-                      "mapcode": "33 156 225*41"
-                    },
-                    "hours": "11:30~19:00",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://bobbyfun.tw/2024-02-03-2860/",
-                    "googleRating": 4.3,
+                    "category": "伴手禮",
+                    "name": "塩屋 國際通本店",
+                    "hours": "10:00~22:00",
+                    "mustBuy": [
+                      "雪鹽冰淇淋（現場限定）",
+                      "宮古島雪鹽棉花餅",
+                      "各式風味鹽禮盒"
+                    ],
+                    "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
+                    "googleRating": 4.2,
                     "source": "ai"
                   }
                 ]
               }
             ],
             "travel": {
-              "text": "約6分鐘",
+              "text": "約21分鐘",
               "type": "car"
             },
             "locations": [
               {
-                "name": "那覇市久茂地 国際通り周辺",
-                "googleQuery": "https://www.google.com/maps/search/国際通り+那覇",
-                "appleQuery": "https://maps.apple.com/?q=国際通り+那覇",
+                "name": "国際通り 那覇",
+                "googleQuery": "https://www.google.com/maps/search/国際通り 那覇",
+                "appleQuery": "https://maps.apple.com/?q=国際通り 那覇",
                 "mapcode": "33 157 375*85"
               }
             ],
-            "googleRating": 4.1,
-            "source": "ai"
+            "googleRating": 4.1
           },
           {
             "time": "17:26-19:26",
             "title": "瀨長島",
             "titleUrl": "https://pfse64289.pixnet.net/blog/post/347236489",
-            "description": "沖繩小希臘白色露台商場；必吃幸福鬆餅（建議提前2週訂位）、氾濫漢堡、47Store冰淇淋；必看子寶岩打卡點、夕陽海景、飛機起降（約2小時）",
+            "description": "瀬長島 ウミカジテラス — 白色希臘風露台商場（約2小時）",
             "locations": [
               {
                 "name": "瀬長島ウミカジテラス",
@@ -2647,7 +2624,7 @@
             "time": "20:40-22:40",
             "title": "沖繩 ASHIBINAA Outlet",
             "titleUrl": "https://jujucute88.pixnet.net/blog/post/234415008",
-            "description": "沖繩最大Outlet約100間品牌店；必逛Coach（約3折）、Le Creuset日本限定、ABC-Mart球鞋；免稅櫃台可辦退稅（約2小時）",
+            "description": "沖縄アウトレットモール あしびなー — 品牌折扣購物（約2小時）",
             "infoBoxes": [
               {
                 "type": "shopping",
@@ -2710,7 +2687,7 @@
           {
             "time": "22:41-23:41",
             "title": "Can*Do",
-            "description": "百元商店 Can Do；必買日本限定文具小物、廚房收納用品、沖繩風小飾品，全品項均一價110日圓",
+            "description": "Can Do 沖縄あしびなー店 — 百元商店",
             "locations": [
               {
                 "name": "沖縄アウトレットモールあしびなー",
@@ -2726,7 +2703,7 @@
           {
             "time": "23:51-00:51",
             "title": "SPORTS DEPO 豐崎店",
-            "description": "大型運動用品專賣店；必逛日本限定Nike/Adidas運動鞋、戶外露營用品、高爾夫球具折扣區",
+            "description": "スポーツデポ 豊崎店 — 運動用品",
             "locations": [
               {
                 "name": "スポーツデポ 豊崎店",
