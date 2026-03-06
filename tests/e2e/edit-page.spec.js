@@ -89,6 +89,27 @@ test.describe('Edit Chat UI 結構', () => {
     await expect(textarea).toBeVisible({ timeout: 10000 });
   });
 
+  test('textarea 有 maxlength="65536" 屬性', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    const textarea = page.locator('#editText');
+    await expect(textarea).toBeVisible({ timeout: 10000 });
+    await expect(textarea).toHaveAttribute('maxlength', '65536');
+  });
+
+  test('textarea 字體大小為 --fs-sm', async ({ page }) => {
+    await page.goto(EDIT_URL);
+    const textarea = page.locator('#editText');
+    await expect(textarea).toBeVisible({ timeout: 10000 });
+
+    const fontSize = await textarea.evaluate(function(el) {
+      return window.getComputedStyle(el).fontSize;
+    });
+    // --fs-sm 通常為 14px 或 0.875rem（=14px at 16px base）
+    var numericSize = parseFloat(fontSize);
+    expect(numericSize).toBeLessThanOrEqual(14);
+    expect(numericSize).toBeGreaterThanOrEqual(12);
+  });
+
   test('送出按鈕初始 disabled', async ({ page }) => {
     await page.goto(EDIT_URL);
     const submitBtn = page.locator('#submitBtn');
