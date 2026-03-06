@@ -200,13 +200,53 @@ function renderInfoBox(box) {
     return html;
 }
 
+/* ===== Render: Timeline Helpers ===== */
+function parseTimeRange(timeStr) {
+    if (!timeStr) return { start: '', end: '', duration: 0 };
+    var parts = timeStr.split('-');
+    var start = parts[0].trim();
+    var end = parts.length > 1 ? parts[1].trim() : '';
+    var duration = 0;
+    if (start && end) {
+        var s = start.split(':'), e = end.split(':');
+        if (s.length === 2 && e.length === 2) {
+            duration = (parseInt(e[0]) * 60 + parseInt(e[1])) - (parseInt(s[0]) * 60 + parseInt(s[1]));
+            if (duration < 0) duration += 24 * 60;
+        }
+    }
+    return { start: start, end: end, duration: duration };
+}
+function fmtDuration(mins) {
+    if (mins <= 0) return '';
+    var h = Math.floor(mins / 60);
+    var m = mins % 60;
+    if (h > 0 && m > 0) return h + ' 小時 ' + m + ' 分';
+    if (h > 0) return h + ' 小時';
+    return m + ' 分';
+}
+
 /* ===== Render: Timeline Event ===== */
-function renderTimelineEvent(entry) {
+function renderTimelineEvent(entry, idx, isLast) {
     var hasBody = entry.description || (entry.locations && entry.locations.length) || (entry.infoBoxes && entry.infoBoxes.length);
+    var parsed = parseTimeRange(entry.time);
     var html = '<div class="tl-event expanded">';
-    var headCls = 'tl-head';
-    html += '<div class="' + headCls + '">';
-    html += '<span class="tl-time">' + escHtml(entry.time || '') + '</span>';
+
+    /* Left: times */
+    html += '<div class="tl-times">';
+    html += '<span class="tl-time-start">' + escHtml(parsed.start) + '</span>';
+    if (parsed.end) html += '<span class="tl-time-end">' + escHtml(parsed.end) + '</span>';
+    html += '</div>';
+
+    /* Center: numbered marker + vertical line */
+    html += '<div class="tl-marker' + (isLast && !entry.travel ? ' tl-marker-last' : '') + '">';
+    html += '<span class="tl-num">' + idx + '</span>';
+    html += '</div>';
+
+    /* Right: card */
+    html += '<div class="tl-card">';
+
+    /* Card header: title + duration */
+    html += '<div class="tl-card-header">';
     html += '<span class="tl-title">';
     var titleUrl = escUrl(entry.titleUrl);
     if (titleUrl) {
@@ -216,12 +256,17 @@ function renderTimelineEvent(entry) {
     }
     html += '</span>';
     if (typeof entry.googleRating === 'number') html += ' <span class="rating">★ ' + entry.googleRating.toFixed(1) + '</span>';
-    var entryBlogLink = renderBlogLink(entry.blogUrl);
-    if (entryBlogLink) {
-        html += ' ' + entryBlogLink;
-    }
+    var durationText = fmtDuration(parsed.duration);
+    if (durationText) html += '<span class="tl-duration">' + iconSpan('clock') + ' ' + durationText + '</span>';
     html += '</div>';
+
+    var entryBlogLink = renderBlogLink(entry.blogUrl);
+    if (entryBlogLink) html += '<div class="tl-blog">' + entryBlogLink + '</div>';
+
+    /* Description / note */
     if (entry.note) html += '<div class="tl-desc">' + escHtml(entry.note) + '</div>';
+
+    /* Body: description, locations, infoBoxes */
     if (hasBody) {
         html += '<div class="tl-body">';
         if (entry.description) html += '<p class="tl-desc">' + escHtml(entry.description) + '</p>';
@@ -231,12 +276,23 @@ function renderTimelineEvent(entry) {
         }
         html += '</div>';
     }
+    html += '</div>'; /* end tl-card */
+    html += '</div>'; /* end tl-event */
+
+    /* Transit bar (between events) */
     if (entry.travel) {
-        html += '<div class="tl-travel">⤷ '
-              + escHtml(entry.travel.text || entry.travel)
-              + '</div>';
+        var travelText = entry.travel.text || (typeof entry.travel === 'string' ? entry.travel : '');
+        var travelType = (entry.travel.type) || '';
+        var travelIcon = travelType ? iconSpan(travelType) : '';
+        html += '<div class="tl-transit-bar">';
+        html += '<div class="tl-transit-line' + (isLast ? ' tl-transit-last' : '') + '"></div>';
+        html += '<div class="tl-transit-content">';
+        if (travelIcon) html += '<span class="tl-transit-icon">' + travelIcon + '</span>';
+        html += '<span class="tl-transit-text">' + escHtml(travelText) + '</span>';
+        html += '<span class="tl-transit-arrow">' + iconSpan('arrow-left') + '</span>';
+        html += '</div></div>';
     }
-    html += '</div>';
+
     return html;
 }
 
@@ -244,7 +300,9 @@ function renderTimelineEvent(entry) {
 function renderTimeline(events) {
     if (!events || !events.length) return '';
     var html = '<div class="timeline">';
-    events.forEach(function(ev) { html += renderTimelineEvent(ev); });
+    events.forEach(function(ev, i) {
+        html += renderTimelineEvent(ev, i + 1, i === events.length - 1);
+    });
     html += '</div>';
     return html;
 }
