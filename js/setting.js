@@ -3,14 +3,6 @@
 (function() {
     'use strict';
 
-    /* ===== Build Menu ===== */
-    function buildSettingMenu() {
-        var nav = buildPageNav('setting');
-        document.getElementById('menuGrid').innerHTML = nav.drawer;
-        var sidebarNav = document.getElementById('sidebarNav');
-        if (sidebarNav) sidebarNav.innerHTML = nav.sidebar;
-    }
-
     /* ===== Render Trip List ===== */
     function renderTripList(trips, currentSlug) {
         var container = document.getElementById('tripList');
@@ -109,8 +101,13 @@
 
     /* ===== Main Entry ===== */
     function init() {
-        buildSettingMenu();
-        initSidebar();
+        // X close button → back to index
+        var closeBtn = document.getElementById('navCloseBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                window.location.href = 'index.html';
+            });
+        }
 
         var colorMode = initColorMode();
 

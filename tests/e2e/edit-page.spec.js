@@ -120,131 +120,31 @@ test.describe('Edit Chat UI 結構', () => {
   });
 });
 
-/* ===== 3. 手機版漢堡選單 ===== */
-test.describe('Edit 手機版漢堡選單', () => {
-  test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
-
-  test('漢堡按鈕開關 drawer', async ({ page }) => {
+/* ===== 3. X 關閉鈕 ===== */
+test.describe('Edit X 關閉鈕', () => {
+  test('X 按鈕可見', async ({ page }) => {
     await page.goto(EDIT_URL);
     await expect(page.locator('#editMain')).toBeVisible({ timeout: 10000 });
 
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
-    const menuDrop = page.locator('#menuDrop');
-
-    // 初始關閉
-    await expect(menuDrop).not.toHaveClass(/open/);
-
-    // 點擊開啟
-    await menuBtn.click();
-    await expect(menuDrop).toHaveClass(/open/);
-
-    // 點擊 backdrop 關閉
-    await page.locator('#menuBackdrop').click({ position: { x: 350, y: 400 } });
-    await expect(menuDrop).not.toHaveClass(/open/);
+    const closeBtn = page.locator('#navCloseBtn');
+    await expect(closeBtn).toBeVisible();
   });
 
-  test('選單項目含行程頁/編輯頁/設定頁連結', async ({ page }) => {
+  test('點擊 X 導向 index.html', async ({ page }) => {
     await page.goto(EDIT_URL);
-    // 等待問候語（表示 init + buildEditMenu 完成）
+    // 等 init 完成（renderEditPage 產生 editText 後 close btn listener 已掛載）
     await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
 
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
-    await menuBtn.click();
-    await expect(page.locator('#menuDrop')).toHaveClass(/open/);
+    // 點擊 X 並等待導航完成
+    await page.locator('#navCloseBtn').click();
+    await page.waitForLoadState('load', { timeout: 10000 });
 
-    // 確認 menuGrid 有設定頁連結（用 evaluate 查 DOM）
-    const hasSettingLink = await page.evaluate(function() {
-      var grid = document.getElementById('menuGrid');
-      if (!grid) return false;
-      var links = grid.querySelectorAll('a');
-      for (var i = 0; i < links.length; i++) {
-        if (links[i].getAttribute('href') === 'setting.html') return true;
-      }
-      return false;
-    });
-    expect(hasSettingLink).toBe(true);
-  });
-
-  test('點擊 backdrop 關閉', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    await expect(page.locator('#editMain')).toBeVisible({ timeout: 10000 });
-
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
-    const menuDrop = page.locator('#menuDrop');
-
-    await menuBtn.click();
-    await expect(menuDrop).toHaveClass(/open/);
-
-    await page.locator('#menuBackdrop').click({ position: { x: 350, y: 400 } });
-    await expect(menuDrop).not.toHaveClass(/open/);
-  });
-
-  test('設定頁連結指向 setting.html', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    // 等待問候語（表示 init + buildEditMenu 完成）
-    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
-
-    const menuBtn = page.locator('.dh-menu[data-action="toggle-sidebar"]');
-    await menuBtn.click();
-    await expect(page.locator('#menuDrop')).toHaveClass(/open/);
-
-    // 用 evaluate 查 DOM（避免 off-screen drawer 造成 toBeVisible 失敗）
-    const settingHref = await page.evaluate(function() {
-      var grid = document.getElementById('menuGrid');
-      if (!grid) return null;
-      var links = grid.querySelectorAll('a');
-      for (var i = 0; i < links.length; i++) {
-        if (links[i].getAttribute('href') === 'setting.html') return links[i].textContent;
-      }
-      return null;
-    });
-    expect(settingHref).not.toBeNull();
-    expect(settingHref).toContain('設定');
+    // 應離開 edit.html（可能解析為根路徑 /）
+    expect(page.url()).not.toContain('edit.html');
   });
 });
 
-/* ===== 4. 桌機側邊欄 ===== */
-test.describe('Edit 桌機側邊欄', () => {
-  test('側邊欄可見', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    await expect(page.locator('#editMain')).toBeVisible({ timeout: 10000 });
-
-    const sidebar = page.locator('#sidebar');
-    await expect(sidebar).toBeVisible();
-  });
-
-  test('toggle 收合/展開', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    await expect(page.locator('#editMain')).toBeVisible({ timeout: 10000 });
-
-    const sidebar = page.locator('#sidebar');
-    const toggle = page.locator('.sidebar-toggle');
-
-    // 點擊收合
-    await toggle.click();
-    await expect(sidebar).toHaveClass(/collapsed/);
-
-    // 點擊展開
-    await toggle.click();
-    await expect(sidebar).not.toHaveClass(/collapsed/);
-  });
-
-  test('側邊欄選單含行程頁/設定頁連結', async ({ page }) => {
-    await page.goto(EDIT_URL);
-    // 等待問候語（表示 init + buildEditMenu 完成）
-    await expect(page.locator('#editText')).toBeVisible({ timeout: 10000 });
-
-    const links = page.locator('#sidebarNav a.menu-item');
-    const count = await links.count();
-    expect(count).toBeGreaterThan(0);
-
-    // 應有設定頁連結
-    const settingLink = page.locator('#sidebarNav a[href="setting.html"]');
-    await expect(settingLink).toBeAttached();
-  });
-});
-
-/* ===== 5. 深色模式 ===== */
+/* ===== 4. 深色模式 ===== */
 test.describe('Edit 深色模式', () => {
   test('toggle-dark 切換 body.dark', async ({ page }) => {
     await page.goto(EDIT_URL);

@@ -24,18 +24,6 @@
         return fetch(url, Object.assign({ headers: headers }, opts || {}));
     }
 
-    /* ===== Build Menu ===== */
-    function buildEditMenu(slug) {
-        var nav = buildPageNav('edit', {
-            indexHref: 'index.html?trip=' + encodeURIComponent(slug),
-            editHref: 'edit.html?trip=' + encodeURIComponent(slug)
-        });
-        document.getElementById('menuGrid').innerHTML = nav.drawer;
-        var sidebarNav = document.getElementById('sidebarNav');
-        if (sidebarNav) sidebarNav.innerHTML = nav.sidebar;
-    }
-
-
     /* ===== Build Issue Item HTML ===== */
     function buildIssueItemHtml(issue) {
         var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -293,9 +281,13 @@
 
                 currentConfig = found;
 
-                // Build menu & init sidebar
-                buildEditMenu(found.tripSlug);
-                initSidebar();
+                // X close button → back to index with trip slug
+                var closeBtn = document.getElementById('navCloseBtn');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function() {
+                        window.location.href = 'index.html?trip=' + encodeURIComponent(found.tripSlug);
+                    });
+                }
 
                 // Render page
                 renderEditPage(found);

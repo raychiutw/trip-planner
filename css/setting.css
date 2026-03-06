@@ -113,7 +113,6 @@
 
 /* ===== Sticky-nav: title bar ===== */
 .setting-main .sticky-nav { background: var(--card-bg); }
-@media (min-width: 768px) { .setting-main .sticky-nav .dh-menu { display: none; } }
 
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: var(--card-bg); }

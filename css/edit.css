@@ -184,17 +184,6 @@
 
 /* ===== Sticky-nav: title bar ===== */
 .chat-container .sticky-nav { background: var(--card-bg); }
-.nav-title {
-    font-size: var(--fs-md);
-    font-weight: 700;
-    color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
-}
-@media (min-width: 768px) { .chat-container .sticky-nav .dh-menu { display: none; } }
 
 /* ===== Dark Mode ===== */
 body.dark .edit-input-card { background: var(--card-bg); box-shadow: var(--shadow-md); }

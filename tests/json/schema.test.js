@@ -36,7 +36,6 @@ jsonFiles.forEach((file) => {
       expect(data.weather.length).toBeGreaterThan(0);
       expect(Array.isArray(data.autoScrollDates)).toBe(true);
       expect(data.autoScrollDates.length).toBeGreaterThan(0);
-      expect(data.highlights).toBeDefined();
       expect(data.suggestions).toBeDefined();
       expect(data.checklist).toBeDefined();
     });
@@ -348,15 +347,6 @@ jsonFiles.forEach((file) => {
         const hasStructured = typeof seg.depart === 'string' && typeof seg.arrive === 'string';
         expect(hasTime || hasStructured, `segment[${i}] must have time or depart+arrive`).toBe(true);
       });
-    });
-
-    // --- Highlights 結構 ---
-
-    it('highlights has title, content.summary and content.tags', () => {
-      expect(data.highlights.title).toBeTruthy();
-      expect(data.highlights.content).toBeDefined();
-      expect(typeof data.highlights.content.summary).toBe('string');
-      expect(Array.isArray(data.highlights.content.tags)).toBe(true);
     });
 
     // --- 保留原有測試 ---

@@ -181,7 +181,7 @@ body:not(.dark) .day-header {
 .restaurant-meta a { color: var(--text); font-weight: 600; text-decoration: underline; }
 
 /* ===== Day Overview Zone ===== */
-.day-overview { background: var(--accent-light); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px; }
+.day-overview { background: var(--accent-lighter); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px; }
 .day-overview .hourly-weather { padding: 0 0 12px; }
 .day-overview .col-row { padding: 10px 0; }
 .day-overview .driving-stats { margin: 0; padding: 10px 0 0; }
@@ -256,7 +256,7 @@ body.dark .edit-fab { background: var(--accent); }
 @media print { .edit-fab { display: none !important; } }
 
 /* ===== Print Mode ===== */
-.print-mode { --accent: #8B8580; --accent-light: #F5EDE8; --accent-muted: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: var(--gray-light) !important; }
+.print-mode { --accent: #8B8580; --accent-lighter: #F9F3EF; --accent-light: #F5EDE8; --accent-muted: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: var(--gray-light) !important; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
 .print-mode .tl-body, .print-mode .col-detail { display: block !important; }
 .print-mode .tl-arrow, .print-mode .col-row .arrow { display: none !important; }
@@ -272,7 +272,7 @@ body.dark .edit-fab { background: var(--accent); }
 .print-mode .print-exit-btn { display: block; }
 @media print {
     @page { size: A4; margin: 12mm; }
-    body { --accent: #8B8580; --accent-light: #F5EDE8; --accent-muted: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: #fff !important; }
+    body { --accent: #8B8580; --accent-lighter: #F9F3EF; --accent-light: #F5EDE8; --accent-muted: #F5EDE0; --white: #FFFFFF; --bg: #FFFFFF; --gray: #6B6B6B; --gray-light: #FAF9F7; --text: #1A1A1A; background: #fff !important; }
     .sticky-nav, .dh-nav, .print-exit-btn, .hourly-weather, .info-panel { display: none !important; }
     .container { max-width: 100% !important; box-shadow: none !important; }
     .tl-body, .col-detail { display: block !important; }
@@ -338,9 +338,6 @@ body.dark .edit-fab { background: var(--accent); }
 .stats-label { color: var(--gray); }
 .stats-value { font-weight: 600; }
 .info-label { font-weight: 700; font-size: var(--fs-lg); margin-bottom: 10px; }
-.sg-summary { display: flex; flex-direction: column; gap: 4px; }
-.sg-summary-row { font-size: var(--fs-md); padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; }
-
 /* ===== Print / Info Panel ===== */
 .print-mode .info-panel { display: none !important; }
 
@@ -444,23 +441,3 @@ body.dark .speed-dial-item { background: var(--card-bg); }
 }
 .info-sheet-body { overflow-y: auto; font-size: var(--fs-md); }
 
-/* ===== AI Highlights ===== */
-.hl-summary {
-    line-height: 1.7;
-    color: var(--text);
-    margin-bottom: 12px;
-}
-.hl-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-.hl-tag {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: var(--radius-full);
-    background: color-mix(in srgb, var(--accent) 12%, transparent);
-    color: var(--accent);
-    font-size: var(--fs-sm);
-    font-weight: 600;
-}

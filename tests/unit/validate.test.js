@@ -10,7 +10,6 @@ function validTrip(overrides) {
     weather: [{ id: 'day1', date: '2026-07-29', locations: [{ lat: 26.21, lon: 127.68, start: '09:00', end: '18:00' }] }],
     autoScrollDates: ['2026-07-29'],
     footer: { title: '行程表', dates: '7/29' },
-    highlights: { title: 'AI行程亮點', content: { summary: '測試摘要', tags: ['測試'] } },
     suggestions: { title: 'AI 行程建議', content: { cards: [] } },
   };
   return Object.assign({}, base, overrides);

@@ -68,7 +68,6 @@ test.describe('頁面載入', () => {
     await page.goto('/');
     await expect(page.locator('#sec-flight')).toBeAttached();
     await expect(page.locator('#sec-checklist')).toBeAttached();
-    await expect(page.locator('#sec-suggestions')).toBeAttached();
     await expect(page.locator('#sec-backup')).toBeAttached();
     await expect(page.locator('#sec-emergency')).toBeAttached();
   });
@@ -285,15 +284,19 @@ test.describe('可收合區塊', () => {
   });
 });
 
-/* ===== 7. 行程建議區段 ===== */
-test.describe('行程建議', () => {
-  test('包含建議卡片（統一風格，無優先級 class）', async ({ page }) => {
+/* ===== 7. 行程建議（Speed Dial） ===== */
+test.describe('行程建議（Speed Dial）', () => {
+  test('Speed Dial 開啟建議後包含建議卡片', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.suggestion-card').first()).toBeAttached();
-    // 統一風格：不再使用 high/medium/low class
-    await expect(page.locator('.suggestion-card.high')).toHaveCount(0);
-    await expect(page.locator('.suggestion-card.medium')).toHaveCount(0);
-    await expect(page.locator('.suggestion-card.low')).toHaveCount(0);
+    await expect(page.locator('.day-section').first()).toBeAttached({ timeout: 10000 });
+
+    // 點擊 Speed Dial trigger
+    await page.locator('#speedDialTrigger').click();
+    // 點擊 suggestions item
+    await page.locator('.speed-dial-item[data-content="suggestions"]').click();
+
+    // 建議卡片出現在 bottom sheet
+    await expect(page.locator('#bottomSheetBody .suggestion-card').first()).toBeAttached();
   });
 });
 

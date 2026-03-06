@@ -548,22 +548,6 @@ function renderEmergency(data) {
     return html;
 }
 
-/* ===== Render: Highlights ===== */
-function renderHighlights(data) {
-    var html = '';
-    if (data.summary) {
-        html += '<div class="hl-summary">' + escHtml(data.summary) + '</div>';
-    }
-    if (data.tags && data.tags.length) {
-        html += '<div class="hl-tags">';
-        data.tags.forEach(function(tag) {
-            html += '<span class="hl-tag">' + escHtml(tag) + '</span>';
-        });
-        html += '</div>';
-    }
-    return html;
-}
-
 /* ===== Render: Suggestions ===== */
 function renderSuggestions(data) {
     var html = '';
@@ -616,7 +600,6 @@ function validateTripData(data) {
         if (!data.footer.title) errors.push('footer 缺少 title');
         if (!data.footer.dates) errors.push('footer 缺少 dates');
     }
-    if (!data.highlights) errors.push('缺少 highlights');
     if (!data.suggestions) errors.push('缺少 suggestions');
 
     // --- Recursive walk for warnings ---
@@ -824,24 +807,6 @@ function renderTrip(data) {
     // Build sections
     var html = '';
 
-    // AI cards (above Day 1)
-    if (data.highlights) {
-        html += '<section>';
-        html += '<div class="day-header info-header" id="sec-highlights"><h2>' + iconSpan('sparkle') + ' ' + escHtml(data.highlights.title) + '</h2></div>';
-        html += '<div class="day-content">';
-        html += renderHighlights(data.highlights.content || {});
-        html += '</div>';
-        html += '</section>';
-    }
-    if (data.suggestions) {
-        html += '<section>';
-        html += '<div class="day-header info-header" id="sec-suggestions"><h2>' + iconSpan('lightbulb') + ' ' + escHtml(data.suggestions.title) + '</h2></div>';
-        html += '<div class="day-content">';
-        html += renderSuggestions(data.suggestions.content || {});
-        html += '</div>';
-        html += '</section>';
-    }
-
     // Day sections
     data.days.forEach(function(day, idx) {
         var id = parseInt(day.id) || 0;
@@ -910,9 +875,6 @@ function renderTrip(data) {
     html += '</footer>';
 
     document.getElementById('tripContent').innerHTML = html;
-
-    // Build menu
-    buildMenu(data);
 
     // Init ARIA
     initAria();
@@ -1008,43 +970,12 @@ function renderTripStatsCard(data) {
     return html;
 }
 
-function renderSuggestionSummaryCard(suggestions) {
-    if (!suggestions || !suggestions.content || !suggestions.content.cards) return '';
-    var counts = { high: 0, medium: 0, low: 0 };
-    suggestions.content.cards.forEach(function(card) {
-        var p = card.priority;
-        if (p && counts.hasOwnProperty(p) && card.items) {
-            counts[p] += card.items.length;
-        }
-    });
-    var html = '<div class="info-card">';
-    html += '<div class="info-label">建議摘要</div>';
-    html += '<div class="sg-summary">';
-    html += '<div class="sg-summary-row sg-priority-high">高優先：' + counts.high + ' 項</div>';
-    html += '<div class="sg-summary-row sg-priority-medium">中優先：' + counts.medium + ' 項</div>';
-    html += '<div class="sg-summary-row sg-priority-low">低優先：' + counts.low + ' 項</div>';
-    html += '</div>';
-    html += '</div>';
-    return html;
-}
-
 function renderInfoPanel(data) {
     var panel = document.getElementById('infoPanel');
     if (!panel) return;
     var html = '';
     html += renderCountdown(data.autoScrollDates);
     html += renderTripStatsCard(data);
-    if (data.highlights && data.highlights.content && data.highlights.content.tags) {
-        html += '<div class="info-card">';
-        html += '<div class="info-label">行程特色</div>';
-        html += '<div class="hl-tags">';
-        data.highlights.content.tags.forEach(function(tag) {
-            html += '<span class="hl-tag">' + escHtml(tag) + '</span>';
-        });
-        html += '</div>';
-        html += '</div>';
-    }
-    html += renderSuggestionSummaryCard(data.suggestions);
     panel.innerHTML = html;
 }
 
@@ -1115,20 +1046,6 @@ function openSpeedDialContent(contentKey) {
     if (backdrop) backdrop.addEventListener('click', closeSpeedDial);
 })();
 
-function buildMenu(data) {
-    // Index page no longer uses sidebar/drawer — menu items moved to Speed Dial + nav-actions
-    var menuGrid = document.getElementById('menuGrid');
-    var sidebarNav = document.getElementById('sidebarNav');
-    if (!menuGrid && !sidebarNav) return;
-    var slug = (data && data.tripSlug) ? data.tripSlug : (lsGet('trip-pref') || '');
-    var editUrl = slug ? 'edit.html?trip=' + encodeURIComponent(slug) : 'edit.html';
-    var nav = buildPageNav('index', { editHref: editUrl });
-    if (menuGrid) menuGrid.innerHTML = nav.drawer;
-    if (sidebarNav) sidebarNav.innerHTML = nav.sidebar;
-}
-
-/* ===== Menu functions provided by menu.js: isDesktop, toggleSidebar, closeMobileMenuIfOpen, updateDarkBtnText, toggleMenu ===== */
-
 function scrollNavPillIntoView(btn) {
     var nav = btn.closest('.dh-nav');
     if (!nav) return;
@@ -1156,16 +1073,13 @@ function toggleCol(el) {
     if (arrow) arrow.textContent = isOpen ? ARROW_COLLAPSE : ARROW_EXPAND;
 }
 function toggleDark() {
-    closeMobileMenuIfOpen();
-    var isDark = toggleDarkShared();
-    updateDarkBtnText(isDark);
+    toggleDarkShared();
 }
 var _manualScrollTs = 0;
 function scrollToSec(id) {
     var el = document.getElementById(id);
     if (!el) return;
     _manualScrollTs = Date.now();
-    closeMobileMenuIfOpen();
     var nav = document.getElementById('stickyNav');
     var navH = nav.offsetHeight;
     var navTop = parseFloat(getComputedStyle(nav).top) || 0;
@@ -1183,6 +1097,7 @@ function switchDay(dayId) {
     var activeBtn = document.querySelector('#stickyNav .dh-nav .dn.active');
     if (activeBtn) scrollNavPillIntoView(activeBtn);
     window.scrollTo({ top: 0 });
+    history.replaceState(null, '', '#day' + dayId);
 }
 function toggleHw(el) {
     var p = el.closest('.hourly-weather');
@@ -1196,24 +1111,20 @@ function toggleHw(el) {
     }
 }
 function togglePrint() {
-    closeMobileMenuIfOpen();
     var entering = !document.body.classList.contains('print-mode');
     if (entering && document.body.classList.contains('dark')) {
         document.body.dataset.wasDark = '1';
         document.body.classList.remove('dark');
-        updateDarkBtnText(false);
     }
     document.body.classList.toggle('print-mode');
     if (!entering && document.body.dataset.wasDark === '1') {
         document.body.classList.add('dark');
         delete document.body.dataset.wasDark;
-        updateDarkBtnText(true);
     }
 }
 
 /* ===== Switch Trip File ===== */
 function switchTripFile() {
-    closeMobileMenuIfOpen();
     window.location.href = 'setting.html';
 }
 
@@ -1504,7 +1415,6 @@ if (typeof module !== 'undefined' && module.exports) {
         formatMinutes: formatMinutes,
         renderCountdown: renderCountdown,
         renderTripStatsCard: renderTripStatsCard,
-        renderSuggestionSummaryCard: renderSuggestionSummaryCard,
         loadTrip: loadTrip,
         resolveAndLoad: resolveAndLoad
     };

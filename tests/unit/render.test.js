@@ -23,7 +23,6 @@ const {
   formatMinutes,
   renderCountdown,
   renderTripStatsCard,
-  renderSuggestionSummaryCard,
   TRANSPORT_TYPES,
   safeColor,
   APPLE_SVG,
@@ -936,57 +935,6 @@ describe('renderTripStatsCard', () => {
     const html = renderTripStatsCard(data);
     expect(html).toContain('2 天');
     expect(html).toContain('0 個');
-  });
-});
-
-/* ===== renderSuggestionSummaryCard ===== */
-describe('renderSuggestionSummaryCard', () => {
-  it('renders summary card with correct counts', () => {
-    const suggestions = {
-      content: {
-        cards: [
-          { priority: 'high', items: ['A', 'B'] },
-          { priority: 'medium', items: ['C', 'D', 'E'] },
-          { priority: 'low', items: ['F'] },
-        ],
-      },
-    };
-    const html = renderSuggestionSummaryCard(suggestions);
-    expect(html).toContain('建議摘要');
-    expect(html).toContain('高優先：2 項');
-    expect(html).toContain('中優先：3 項');
-    expect(html).toContain('低優先：1 項');
-    expect(html).toContain('sg-priority-high');
-    expect(html).toContain('sg-priority-medium');
-    expect(html).toContain('sg-priority-low');
-  });
-
-  it('shows 0 for empty items array', () => {
-    const suggestions = {
-      content: {
-        cards: [
-          { priority: 'high', items: [] },
-          { priority: 'medium', items: ['A'] },
-          { priority: 'low', items: [] },
-        ],
-      },
-    };
-    const html = renderSuggestionSummaryCard(suggestions);
-    expect(html).toContain('高優先：0 項');
-    expect(html).toContain('中優先：1 項');
-    expect(html).toContain('低優先：0 項');
-  });
-
-  it('returns empty string when suggestions is null', () => {
-    expect(renderSuggestionSummaryCard(null)).toBe('');
-  });
-
-  it('returns empty string when suggestions has no content', () => {
-    expect(renderSuggestionSummaryCard({})).toBe('');
-  });
-
-  it('returns empty string when suggestions.content has no cards', () => {
-    expect(renderSuggestionSummaryCard({ content: {} })).toBe('');
   });
 });
 

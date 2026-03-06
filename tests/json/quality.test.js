@@ -430,15 +430,6 @@ jsonFiles.forEach((file) => {
       });
     });
 
-    // --- R9 AI 亮點字數 ---
-
-    it('R9: highlights summary <= 50 chars (excluding spaces)', () => {
-      const summary = data.highlights?.content?.summary;
-      if (!summary) return;
-      const count = charCount(summary);
-      expect(count, `highlights.summary is ${count} chars: "${summary}"`).toBeLessThanOrEqual(50);
-    });
-
     // --- R10 還車加油站 ---
 
     it('R10: self-drive/mixed trips with 還車 event must have gasStation infoBox', () => {
@@ -457,15 +448,6 @@ jsonFiles.forEach((file) => {
       });
     });
 
-    // --- R9 不列舉景點 ---
-
-    it('R9: highlights summary does not enumerate attractions with "Day"', () => {
-      const summary = data.highlights?.content?.summary || '';
-      expect(
-        /Day\s*\d/i.test(summary),
-        `highlights.summary should not contain "Day X" enumeration: "${summary}"`
-      ).toBe(false);
-    });
 
     // --- R11 地圖導航 ---
 
