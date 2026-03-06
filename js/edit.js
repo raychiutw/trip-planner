@@ -52,14 +52,12 @@
     /* ===== Build Issue Item HTML ===== */
     function buildIssueItemHtml(issue) {
         var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        var dotClass = issue.state === 'open' ? 'open' : 'closed';
-        var stateText = issue.state === 'open' ? 'open' : 'closed';
-        var html = '<div class="issue-item">';
+        var stateClass = issue.state === 'open' ? 'open' : 'closed';
+        var html = '<div class="issue-item ' + stateClass + '">';
         html += '<div class="issue-item-header">';
-        html += '<span class="status-dot ' + dotClass + '"></span>';
         html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
         html += '</div>';
-        html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + ' · ' + stateText + '</div>';
+        html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
         html += '</div>';
         return html;
     }
@@ -188,7 +186,7 @@
         btn.disabled = true;
         status.innerHTML = '';
 
-        var title = '[trip-edit] ' + config.owner + ': ' + text.substring(0, 50);
+        var title = config.owner + ': ' + text.substring(0, 50);
         var body = JSON.stringify({
             owner: config.owner,
             tripSlug: config.tripSlug,

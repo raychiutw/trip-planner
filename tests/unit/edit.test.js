@@ -14,14 +14,12 @@ function buildIssueItemHtml(issue) {
   var date = new Date(issue.created_at).toLocaleString('zh-TW', {
     month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
-  var dotClass = issue.state === 'open' ? 'open' : 'closed';
-  var stateText = issue.state === 'open' ? 'open' : 'closed';
-  var html = '<div class="issue-item">';
+  var stateClass = issue.state === 'open' ? 'open' : 'closed';
+  var html = '<div class="issue-item ' + stateClass + '">';
   html += '<div class="issue-item-header">';
-  html += '<span class="status-dot ' + dotClass + '"></span>';
   html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
   html += '</div>';
-  html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + ' · ' + stateText + '</div>';
+  html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
   html += '</div>';
   return html;
 }
@@ -142,7 +140,7 @@ describe('renderIssues list rendering', () => {
     expect(html).toContain('issue-item');
   });
 
-  it('open issue has green status-dot', () => {
+  it('open issue has .issue-item.open class', () => {
     const html = renderIssuesHtml([{
       number: 1,
       title: 'Open issue',
@@ -150,11 +148,12 @@ describe('renderIssues list rendering', () => {
       state: 'open',
       created_at: '2026-03-01T10:00:00Z'
     }]);
-    expect(html).toContain('status-dot open');
-    expect(html).not.toContain('status-dot closed');
+    expect(html).toContain('issue-item open');
+    expect(html).not.toContain('issue-item closed');
+    expect(html).not.toContain('status-dot');
   });
 
-  it('closed issue has gray status-dot', () => {
+  it('closed issue has .issue-item.closed class', () => {
     const html = renderIssuesHtml([{
       number: 2,
       title: 'Closed issue',
@@ -162,8 +161,9 @@ describe('renderIssues list rendering', () => {
       state: 'closed',
       created_at: '2026-03-01T10:00:00Z'
     }]);
-    expect(html).toContain('status-dot closed');
-    expect(html).not.toContain('status-dot open');
+    expect(html).toContain('issue-item closed');
+    expect(html).not.toContain('issue-item open');
+    expect(html).not.toContain('status-dot');
   });
 
   it('renders issue title as link', () => {
@@ -181,7 +181,7 @@ describe('renderIssues list rendering', () => {
     expect(html).toContain('rel="noopener noreferrer"');
   });
 
-  it('renders issue number, date and state in meta', () => {
+  it('renders issue number and date in meta (no state text)', () => {
     const html = renderIssuesHtml([{
       number: 99,
       title: 'Test',
@@ -191,7 +191,7 @@ describe('renderIssues list rendering', () => {
     }]);
     expect(html).toContain('issue-item-meta');
     expect(html).toContain('#99');
-    expect(html).toContain('open');
+    expect(html).not.toMatch(/issue-item-meta[^<]*open/);
   });
 
   it('renders multiple issues as multiple items', () => {
@@ -199,7 +199,7 @@ describe('renderIssues list rendering', () => {
       { number: 1, title: 'A', html_url: 'https://github.com/x/y/issues/1', state: 'open', created_at: '2026-03-01T09:00:00Z' },
       { number: 2, title: 'B', html_url: 'https://github.com/x/y/issues/2', state: 'closed', created_at: '2026-03-01T10:00:00Z' },
     ]);
-    const matches = html.match(/class="issue-item"/g);
+    const matches = html.match(/class="issue-item /g);
     expect(matches).toHaveLength(2);
   });
 
@@ -236,9 +236,8 @@ describe('renderIssues list rendering', () => {
     }]);
     expect(html).toContain('issue-item-header');
     const headerIdx = html.indexOf('issue-item-header');
-    const dotIdx = html.indexOf('status-dot', headerIdx);
     const titleIdx = html.indexOf('issue-item-title', headerIdx);
-    expect(dotIdx).toBeGreaterThan(headerIdx);
     expect(titleIdx).toBeGreaterThan(headerIdx);
+    expect(html).not.toContain('status-dot');
   });
 });
