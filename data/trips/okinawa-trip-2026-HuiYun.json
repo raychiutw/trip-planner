@@ -310,7 +310,8 @@
               }
             }
           ],
-          "checkout": "11:00"
+          "checkout": "11:00",
+          "googleRating": 4
         },
         "timeline": [
           {
@@ -347,24 +348,6 @@
               "type": "car"
             },
             "googleRating": 4
-          },
-          {
-            "time": "22:27-22:57",
-            "title": "NAHA新都心HOTEL",
-            "description": "寄放行李",
-            "locations": [
-              {
-                "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
-                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
-                "mapcode": "33 548 827*76"
-              }
-            ],
-            "travel": {
-              "text": "約12分鐘",
-              "type": "car"
-            },
-            "googleRating": 4.3
           },
           {
             "time": "23:09",
@@ -455,7 +438,8 @@
               }
             }
           ],
-          "checkout": "11:00"
+          "checkout": "11:00",
+          "googleRating": 4.3
         },
         "timeline": [
           {
@@ -498,24 +482,6 @@
             ],
             "googleRating": 4,
             "blogUrl": ""
-          },
-          {
-            "time": "09:23-10:23",
-            "title": "NAHA新都心HOTEL",
-            "description": "接人",
-            "locations": [
-              {
-                "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
-                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
-                "mapcode": "33 548 827*76"
-              }
-            ],
-            "travel": {
-              "text": "約5分鐘",
-              "type": "car"
-            },
-            "googleRating": 4.3
           },
           {
             "time": "10:28-11:28",
@@ -665,7 +631,10 @@
                       "appleQuery": "https://maps.apple.com/?q=我部祖河食堂+浦添"
                     },
                     "hours": "11:00~20:00（售完即止，週三公休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://kenalice.tw/okinawa-soba-gabusokawa/",
                     "googleRating": 4.2
                   },
@@ -681,7 +650,10 @@
                       "mapcode": "33 394 819*12"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
                     "googleRating": 4
                   },
@@ -697,8 +669,12 @@
                       "mapcode": "33 394 819*12"
                     },
                     "hours": "11:00~21:00（午餐 11:00~15:00）",
-                    "reservation": "ホットペッパー預約",
-                    "reservationUrl": "https://www.hotpepper.jp/strJ001257517/",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "website",
+                      "url": "https://booking.resty.jp/webrsv/search/s014005101/19787",
+                      "recommended": true
+                    },
                     "blogUrl": "https://christy0104.pixnet.net/blog/post/357435489",
                     "googleRating": 4.3
                   }
@@ -821,7 +797,10 @@
                       "mapcode": "33 556 625*14"
                     },
                     "hours": "11:00~22:00（全年無休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://mimigo.tw/gurumekaiten/",
                     "googleRating": 4
                   },
@@ -836,7 +815,10 @@
                       "appleQuery": "https://maps.apple.com/?q=浜屋そば+北谷"
                     },
                     "hours": "10:30~20:30（售完即止）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://mimigo.tw/okinawa-americanvillage/",
                     "googleRating": 4.2
                   },
@@ -851,7 +833,10 @@
                       "appleQuery": "https://maps.apple.com/?q=Blue+Seal+美浜"
                     },
                     "hours": "11:00~22:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2709/",
                     "googleRating": 4.4
                   }
@@ -1043,7 +1028,8 @@
               }
             }
           ],
-          "checkout": "11:00"
+          "checkout": "11:00",
+          "googleRating": 4.5
         },
         "timeline": [
           {
@@ -1061,15 +1047,15 @@
             "blogUrl": ""
           },
           {
-            "time": "08:05-11:05",
-            "title": "前兼久漁港",
-            "description": "漁港體驗活動（約3小時）",
+            "time": "08:00-10:30",
+            "title": "前兼久漁港（青之洞浮潛集合點）",
+            "description": "青之洞浮潛體驗（船潛）— 集合到解散約 2.5 小時",
             "locations": [
               {
                 "name": "前兼久漁港",
                 "googleQuery": "https://www.google.com/maps/search/前兼久漁港",
                 "appleQuery": "https://maps.apple.com/?q=前兼久漁港",
-                "mapcode": "206 123 299*87"
+                "mapcode": "206 096 016*85"
               }
             ],
             "travel": {
@@ -1077,7 +1063,44 @@
               "type": "car"
             },
             "blogUrl": "",
-            "googleRating": 4
+            "googleRating": 4,
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "青之洞浮潛體驗（船潛）",
+                "items": [
+                  "費用：每位 ¥8,500（大小同價，無年齡限制）",
+                  "2人以上同行優惠：每位 ¥7,900（需7天前預定）",
+                  "中文教練！2人以上私人小組帶領，不拼團",
+                  "活動時間：08:30（集合時間需提早15分鐘報到）",
+                  "所需時間：約2.5小時（集合到解散）",
+                  "費用包含：浮潛指導、潛點導覽、浮潛裝備一套、餵魚飼料、船資、拍照、保險費"
+                ]
+              },
+              {
+                "type": "reservation",
+                "title": "需自備物品",
+                "items": [
+                  "泳裝（穿好在一般衣服裡面）",
+                  "毛巾、換洗衣物、拖鞋",
+                  "隱形眼鏡（硬式無法使用，需軟式）",
+                  "暈船藥（容易暈船者請自備）"
+                ]
+              },
+              {
+                "type": "reservation",
+                "title": "注意事項",
+                "items": [
+                  "集合地點：恩納前兼久漁港",
+                  "導航電話：098-965-2452",
+                  "地圖碼：206 096 016",
+                  "GPS：26°26'49.0\"N 127°48'12.1\"E",
+                  "免費提供 300~900 度有度數潛水面鏡，預約時告知",
+                  "下雨天不影響水下狀況，行程照常舉行",
+                  "因海況不佳可能更改地點或取消，取消全額退還按金"
+                ]
+              }
+            ]
           },
           {
             "time": "11:25-12:25",
@@ -1139,7 +1162,10 @@
                       "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
                     },
                     "hours": "11:00~16:00（售完即止）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort",
                     "googleRating": 4.2
                   },
@@ -1154,7 +1180,10 @@
                       "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+恩納店"
                     },
                     "hours": "11:00~22:00（年中無休）",
-                    "reservation": "可預約（當日取消收100%）",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://slowlifeinokinawa.com/steak88/",
                     "googleRating": 4
                   },
@@ -1169,7 +1198,10 @@
                       "appleQuery": "https://maps.apple.com/?q=ラーメン暖暮+北谷"
                     },
                     "hours": "11:00~翌02:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://hanblog.tw/ramendanbo/",
                     "googleRating": 3.9
                   }
@@ -1225,7 +1257,12 @@
                       "appleQuery": "https://maps.apple.com/?q=海の家+恩納村"
                     },
                     "hours": "17:00~23:00",
-                    "reservation": "建議預約",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "phone",
+                      "phone": "098-966-2180",
+                      "recommended": true
+                    },
                     "blogUrl": "https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort",
                     "googleRating": 4
                   },
@@ -1240,7 +1277,12 @@
                       "appleQuery": "https://maps.apple.com/?q=琉球の牛+恩納店"
                     },
                     "hours": "17:00~22:30",
-                    "reservation": "強烈建議預約",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "website",
+                      "url": "https://www.tablecheck.com/en/shops/yakiniku-onna/reserve",
+                      "recommended": true
+                    },
                     "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
                     "googleRating": 4.4
                   },
@@ -1255,7 +1297,10 @@
                       "appleQuery": "https://maps.apple.com/?q=麺処じゅん坊+恩納"
                     },
                     "hours": "11:00~24:00（週四公休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://kenalice.tw/okinawa-onna-ramen-junbo/",
                     "googleRating": 3.8
                   }
@@ -1346,7 +1391,8 @@
               }
             }
           ],
-          "checkout": "11:00"
+          "checkout": "11:00",
+          "googleRating": 4.5
         },
         "timeline": [
           {
@@ -1424,8 +1470,12 @@
                       "mapcode": "206 620 592*27"
                     },
                     "hours": "午 11:00~15:30／晚 17:30~21:00",
-                    "reservation": "TableCheck 預約",
-                    "reservationUrl": "https://www.tablecheck.com/en/shops/ufuya/reserve",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "website",
+                      "url": "https://www.tablecheck.com/en/shops/ufuya/reserve",
+                      "recommended": true
+                    },
                     "blogUrl": "https://mimigo.tw/okinawa-ufuya/",
                     "googleRating": 4.1
                   },
@@ -1440,7 +1490,10 @@
                       "appleQuery": "https://maps.apple.com/?q=ラーメン太陽+名護"
                     },
                     "hours": "11:00~21:00（週二公休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://tisshuang.com/blog/post/nago-ramen-taiyou/",
                     "googleRating": 4
                   },
@@ -1455,7 +1508,12 @@
                       "appleQuery": "https://maps.apple.com/?q=焼肉+てるりん+名護"
                     },
                     "hours": "11:30~14:30／17:00~22:00（週二公休）",
-                    "reservation": "建議預約",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "phone",
+                      "phone": "0980-53-0066",
+                      "recommended": true
+                    },
                     "blogUrl": "https://bigmouthblog.tw/okinawa-nago-yakiniku-terurin/",
                     "googleRating": 4.1
                   }
@@ -1536,7 +1594,10 @@
                       "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
                     },
                     "hours": "10:00~17:00（7~9月至 20:00）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://dorapig.com/shirasashokudou2025/",
                     "googleRating": 4
                   },
@@ -1552,7 +1613,10 @@
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://hanblog.tw/ramendanbo/",
                     "googleRating": 3.9
                   },
@@ -1567,7 +1631,10 @@
                       "appleQuery": "https://maps.apple.com/?q=炭火焼肉+海南亭+本部"
                     },
                     "hours": "17:00~23:00（週三公休）",
-                    "reservation": "建議預約",
+                    "reservation": {
+                      "available": "unknown",
+                      "recommended": true
+                    },
                     "blogUrl": "https://bigmouthblog.tw/okinawa-motobu-yakiniku-kananntei/",
                     "googleRating": 4.2
                   }
@@ -1627,7 +1694,12 @@
                       "appleQuery": "https://maps.apple.com/?q=島豚七輪焼+満味+名護"
                     },
                     "hours": "17:00~23:00（週二、三公休）",
-                    "reservation": "建議預約",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "website",
+                      "url": "https://manmi-yanbaru.com/contact/",
+                      "recommended": true
+                    },
                     "blogUrl": "https://www.bigfang.tw/blog/post/mammi-nago-okinawa",
                     "googleRating": 4.5
                   },
@@ -1642,7 +1714,10 @@
                       "appleQuery": "https://maps.apple.com/?q=ステーキハウス88+名護"
                     },
                     "hours": "11:00~22:00（全年無休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://okinawa.letsgojp.com/archives/582485/",
                     "googleRating": 4
                   },
@@ -1658,7 +1733,10 @@
                       "mapcode": "206 627 464*87"
                     },
                     "hours": "10:00~24:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://hanblog.tw/ramendanbo/",
                     "googleRating": 3.9
                   }
@@ -1767,7 +1845,8 @@
               }
             }
           ],
-          "checkout": "11:00"
+          "checkout": "11:00",
+          "googleRating": 4
         },
         "timeline": [
           {
@@ -1882,7 +1961,10 @@
                     "description": "沖繩在地迴轉壽司，新鮮縣產魚料",
                     "price": "¥1,200~",
                     "hours": "11:00~22:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://mimihan.tw/kaisen-sushi-okinawa/",
                     "location": {
                       "name": "琉球回転寿司 海來 ライカム店",
@@ -1897,7 +1979,10 @@
                     "description": "天然豚骨拉麵，專注個人用餐空間",
                     "price": "¥980~",
                     "hours": "10:00~22:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://mimihan.tw/ichiran-ramen/",
                     "location": {
                       "name": "一蘭 イオンモール沖縄ライカム店",
@@ -1912,7 +1997,10 @@
                     "description": "沖繩限定美式速食，根啤酒 Root Beer 必喝",
                     "price": "¥700~",
                     "hours": "09:00~22:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://solomo.xinmedia.com/japan/116755",
                     "location": {
                       "name": "A&W イオンモール沖縄ライカム店",
@@ -2038,7 +2126,10 @@
                       "mapcode": "33 157 208*63"
                     },
                     "hours": "11:00~20:00（週日公休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://kenalice.tw/okinawa-hanagasa-shokudo/",
                     "googleRating": 3.9
                   },
@@ -2054,7 +2145,10 @@
                       "mapcode": "33 157 466*11"
                     },
                     "hours": "11:00~23:00（全年無休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
                     "googleRating": 4
                   },
@@ -2070,7 +2164,12 @@
                       "mapcode": "33 157 382*63"
                     },
                     "hours": "17:00~22:30",
-                    "reservation": "建議透過 TableCheck 預約",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "website",
+                      "url": "https://www.tablecheck.com/en/shops/yakiniku-naha/reserve",
+                      "recommended": true
+                    },
                     "blogUrl": "https://elisa48.pixnet.net/blog/post/45572624",
                     "googleRating": 4.4
                   }
@@ -2090,24 +2189,6 @@
               }
             ],
             "googleRating": 4.1
-          },
-          {
-            "time": "19:10-20:10",
-            "title": "NAHA新都心HOTEL",
-            "description": "送人",
-            "locations": [
-              {
-                "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
-                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
-                "mapcode": "33 548 827*76"
-              }
-            ],
-            "travel": {
-              "text": "約12分鐘",
-              "type": "car"
-            },
-            "googleRating": 4.3
           },
           {
             "time": "20:22",
@@ -2198,7 +2279,8 @@
                 "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
               }
             }
-          ]
+          ],
+          "googleRating": 4
         },
         "timeline": [
           {
@@ -2214,24 +2296,6 @@
             ],
             "googleRating": 4,
             "blogUrl": ""
-          },
-          {
-            "time": "09:12-10:12",
-            "title": "NAHA新都心HOTEL",
-            "description": "接人",
-            "locations": [
-              {
-                "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
-                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
-                "mapcode": "33 548 827*76"
-              }
-            ],
-            "travel": {
-              "text": "約9分鐘",
-              "type": "car"
-            },
-            "googleRating": 4.3
           },
           {
             "time": "10:21-11:51",
@@ -2479,7 +2543,10 @@
                       "mapcode": "33 032 412*44"
                     },
                     "hours": "11:00~21:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/",
                     "googleRating": 4
                   },
@@ -2495,7 +2562,10 @@
                       "mapcode": "33 341 059*55"
                     },
                     "hours": "11:00~24:00（全年無休）",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/",
                     "googleRating": 4
                   },
@@ -2510,7 +2580,12 @@
                       "appleQuery": "https://maps.apple.com/?q=焼肉+金城+那覇"
                     },
                     "hours": "17:00~23:30（週三公休）",
-                    "reservation": "建議預約",
+                    "reservation": {
+                      "available": "yes",
+                      "method": "phone",
+                      "phone": "098-917-1729",
+                      "recommended": true
+                    },
                     "blogUrl": "https://bigmouthblog.tw/okinawa-naha-yakiniku-kinjo/",
                     "googleRating": 4.1
                   }
@@ -2683,24 +2758,6 @@
             "blogUrl": ""
           },
           {
-            "time": "10:12-10:32",
-            "title": "NAHA新都心HOTEL",
-            "description": "接人、取行李",
-            "locations": [
-              {
-                "name": "ダイワロイネットホテル那覇おもろまち",
-                "googleQuery": "https://www.google.com/maps/search/ダイワロイネットホテル那覇おもろまち",
-                "appleQuery": "https://maps.apple.com/?q=ダイワロイネットホテル那覇おもろまち",
-                "mapcode": "33 548 827*76"
-              }
-            ],
-            "travel": {
-              "text": "約42分鐘",
-              "type": "car"
-            },
-            "googleRating": 4.3
-          },
-          {
             "time": "11:14",
             "title": "機場午餐",
             "description": "在那霸機場用午餐",
@@ -2715,7 +2772,10 @@
                     "description": "隱藏版員工食堂，在地人也愛吃",
                     "price": "¥600~",
                     "hours": "09:00~20:00",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://mimihan.tw/naha-airport-shokudo/",
                     "location": {
                       "name": "空港食堂 那覇空港",
@@ -2730,7 +2790,10 @@
                     "description": "沖繩そば＆定食老店，機場人氣名店",
                     "price": "¥800~",
                     "hours": "07:00~20:30",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://okinawatravelinfo.com/naha-airport-restaurant/",
                     "location": {
                       "name": "天龍 那覇空港店",
@@ -2745,7 +2808,10 @@
                     "description": "沖繩限定美式漢堡，根啤酒必喝",
                     "price": "¥600~",
                     "hours": "06:30~20:30",
-                    "reservation": "不需預約",
+                    "reservation": {
+                      "available": "no",
+                      "recommended": false
+                    },
                     "blogUrl": "https://solomo.xinmedia.com/japan/116755",
                     "location": {
                       "name": "A&W 那覇空港店",
@@ -2769,7 +2835,37 @@
             "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/"
           },
           {
-            "time": "11:15-13:15",
+            "time": "11:15-12:15",
+            "title": "那霸機場退稅",
+            "description": "辦理退稅手續，集中處理免稅商品",
+            "blogUrl": "",
+            "infoBoxes": [
+              {
+                "type": "reservation",
+                "title": "退稅注意事項",
+                "items": [
+                  "退稅櫃檯位於國內線 1F（出發大廳旁）",
+                  "免稅商品須以密封袋包裝，離境前不可拆封",
+                  "攜帶護照正本 + 購物收據（需附免稅單據）",
+                  "同一店家同日消費滿 ¥5,000（未稅）可退稅",
+                  "一般物品與消耗品分開計算",
+                  "建議提前整理好所有免稅單據與商品，加快流程",
+                  "退稅後商品須隨身攜帶或放入託運行李"
+                ]
+              }
+            ],
+            "locations": [
+              {
+                "name": "那覇空港 国内線ターミナル",
+                "googleQuery": "https://www.google.com/maps/search/那覇空港",
+                "appleQuery": "https://maps.apple.com/?q=那覇空港",
+                "mapcode": "33 122 298*54"
+              }
+            ],
+            "googleRating": 4
+          },
+          {
+            "time": "12:15-13:15",
             "title": "那霸機場",
             "description": "樂桃 MM927，辦理登機、機場購物、回程",
             "locations": [
@@ -2855,7 +2951,7 @@
           "color": "var(--sand-light)",
           "items": [
             "Day 2：PARCO CITY 浦添、浦添大公園（免費）",
-            "Day 3：前兼久漁港體驗活動（需事先預約）",
+            "Day 3：青之洞浮潛體驗（需7天前預約，2人以上同行優惠 ¥7,900/人）",
             "Day 4：沖繩美麗海水族館門票（建議線上預購）、名護鳳梨園",
             "Day 5：永旺夢樂城沖繩來客夢、沖繩寶可夢中心",
             "Day 6：第一牧志公設市場 2F 代煮服務（現場排號），瀨長島 ウミカジテラス"
@@ -2901,7 +2997,7 @@
           "title": "Day 3 備案（殘波岬・萬座毛）",
           "color": "var(--sand-light)",
           "items": [
-            "前兼久漁港體驗活動若因颱風取消 → 聯繫業者退款，改安排 PARCO CITY 或美國村補逛",
+            "青之洞浮潛體驗若因海況取消 → 業者全額退還按金，改安排 PARCO CITY 或美國村補逛",
             "殘波岬、萬座毛為戶外景點，輕雨仍可參觀，強風颱風則跳過",
             "翡翠海灘（備案）：海洋博公園內海灘，距恩納約 47 分鐘車程，若天氣好且時間充裕可於 check in 後前往（來回約 1.5 小時＋停留 30 分鐘）"
           ]
@@ -2977,7 +3073,7 @@
           "title": "低優先",
           "priority": "low",
           "items": [
-            "Day 3 前兼久漁港體驗活動需事先網路預約，出發前務必確認預約狀態與人數",
+            "Day 3 青之洞浮潛體驗需7天前網路預約（2人以上同行 ¥7,900/人），出發前務必確認預約狀態與人數",
             "Day 6 波上宮停留排 1 小時偏長，一般參拜 20–30 分鐘即可，省下的時間可用於瀨長島",
             "Day 6 壺屋燒物街（世豊商店）與第一牧志公設市場距離近，可合併安排，步行即可到達",
             "各天缺少每日預算估計，建議加入以方便控制旅費"
@@ -3020,7 +3116,6 @@
           "title": "住宿聯絡",
           "items": [
             "沖繩那霸美居飯店 Mercure Okinawa Naha — 3-3-19 Tsubogawa",
-            "NAHA新都心HOTEL — +81-98-894-8558",
             "BUZZ RESORT — +81-98-982-5337",
             "HOPE VILLA Onnason — 恩納村"
           ]
