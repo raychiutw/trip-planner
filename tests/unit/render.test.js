@@ -64,6 +64,32 @@ describe('renderMapLinks', () => {
     expect(html).toContain('maps.google.com');
     expect(html).not.toContain('javascript:');
   });
+
+  it('renders Naver Map link when naverQuery is provided', () => {
+    const html = renderMapLinks({ name: 'Test', naverQuery: 'https://map.naver.com/v5/search/%EA%B0%90%EC%B2%9C%EB%AC%B8%ED%99%94%EB%A7%88%EC%9D%84' });
+    expect(html).toContain('map.naver.com');
+    expect(html).toContain('n-icon');
+    expect(html).toContain('N Map');
+    expect(html).toContain('naver');
+  });
+
+  it('does not render Naver Map link when naverQuery is empty', () => {
+    const html = renderMapLinks({ name: 'Test', naverQuery: '' });
+    expect(html).not.toContain('naver');
+    expect(html).not.toContain('n-icon');
+  });
+
+  it('does not render Naver Map link when naverQuery is not https URL', () => {
+    const html = renderMapLinks({ name: 'Test', naverQuery: 'javascript:alert(1)' });
+    expect(html).not.toContain('naver');
+    expect(html).not.toContain('n-icon');
+  });
+
+  it('renders Naver Map link with inline class', () => {
+    const html = renderMapLinks({ name: 'Test', naverQuery: 'https://map.naver.com/v5/search/test' }, true);
+    expect(html).toContain('map-link-inline');
+    expect(html).toContain('naver');
+  });
 });
 
 /* ===== renderNavLinks ===== */

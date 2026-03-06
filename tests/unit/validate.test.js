@@ -5,7 +5,7 @@ const { validateDay, renderWarnings, validateTripData } = require('../../js/app.
 /* ===== helper: minimal valid trip data ===== */
 function validTrip(overrides) {
   const base = {
-    meta: { title: '測試行程' },
+    meta: { title: '測試行程', countries: ['JP'] },
     days: [{ id: 1, date: '2026-07-29' }],
     weather: [{ id: 'day1', date: '2026-07-29', locations: [{ lat: 26.21, lon: 127.68, start: '09:00', end: '18:00' }] }],
     autoScrollDates: ['2026-07-29'],
@@ -95,6 +95,51 @@ describe('validateTripData — valid', () => {
     const r = validateTripData(validTrip());
     expect(r.errors).toEqual([]);
     expect(r.warnings).toEqual([]);
+  });
+});
+
+/* ===== validateTripData — countries validation ===== */
+describe('validateTripData — countries', () => {
+  it('rejects missing meta.countries', () => {
+    const d = validTrip();
+    delete d.meta.countries;
+    const r = validateTripData(d);
+    expect(r.errors.some(e => e.includes('countries'))).toBe(true);
+  });
+
+  it('rejects empty meta.countries array', () => {
+    const d = validTrip({ meta: { title: 'Test', countries: [] } });
+    const r = validateTripData(d);
+    expect(r.errors.some(e => e.includes('countries'))).toBe(true);
+  });
+
+  it('accepts valid meta.countries', () => {
+    const r = validateTripData(validTrip());
+    expect(r.errors.filter(e => e.includes('countries'))).toEqual([]);
+  });
+});
+
+/* ===== validateTripData — naverQuery validation ===== */
+describe('validateTripData — naverQuery', () => {
+  it('warns on naverQuery with wrong prefix', () => {
+    const d = validTrip();
+    d.days[0].content = { timeline: [{ locations: [{ name: 'Test', naverQuery: 'https://evil.com/maps' }] }] };
+    const r = validateTripData(d);
+    expect(r.warnings.some(w => w.includes('Naver Maps URL'))).toBe(true);
+  });
+
+  it('accepts valid naverQuery URL', () => {
+    const d = validTrip();
+    d.days[0].content = { timeline: [{ locations: [{ name: 'Test', naverQuery: 'https://map.naver.com/v5/search/test' }] }] };
+    const r = validateTripData(d);
+    expect(r.warnings.filter(w => w.includes('Naver Maps URL'))).toEqual([]);
+  });
+
+  it('no warning for empty naverQuery', () => {
+    const d = validTrip();
+    d.days[0].content = { timeline: [{ locations: [{ name: 'Test', naverQuery: '' }] }] };
+    const r = validateTripData(d);
+    expect(r.warnings.filter(w => w.includes('naverQuery'))).toEqual([]);
   });
 });
 

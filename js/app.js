@@ -24,6 +24,10 @@ function renderMapLinks(loc, inline) {
     if (!/^https?:/i.test(aq)) aq = 'https://maps.apple.com/?q=' + encodeURIComponent(loc.name || '');
     html += '<a href="' + escUrl(aq) + '" target="_blank" rel="noopener noreferrer" class="' + cls + ' apple">'
           + '<span class="apple-icon">' + APPLE_SVG + '</span> Map</a>';
+    if (loc.naverQuery && /^https?:/i.test(loc.naverQuery)) {
+        html += '<a href="' + escUrl(loc.naverQuery) + '" target="_blank" rel="noopener noreferrer" class="' + cls + ' naver">'
+              + '<span class="n-icon">N</span> N Map</a>';
+    }
     if (loc.mapcode) {
         html += '<span class="' + cls + ' mapcode">' + iconSpan('device') + ' ' + escHtml(loc.mapcode) + '</span>';
     }
@@ -600,7 +604,10 @@ function validateTripData(data) {
 
     // --- Top-level structure (errors) ---
     if (!data.meta) errors.push('缺少 meta');
-    else if (!data.meta.title) errors.push('meta 缺少 title');
+    else {
+        if (!data.meta.title) errors.push('meta 缺少 title');
+        if (!Array.isArray(data.meta.countries) || data.meta.countries.length === 0) errors.push('meta 缺少 countries（需為非空陣列，如 ["JP"]）');
+    }
 
     if (!data.days) errors.push('缺少 days');
     else if (!Array.isArray(data.days)) errors.push('days 必須是陣列');
@@ -628,7 +635,7 @@ function validateTripData(data) {
     if (!data.suggestions) errors.push('缺少 suggestions');
 
     // --- Recursive walk for warnings ---
-    var URL_FIELDS = ['titleUrl', 'url', 'googleQuery', 'appleQuery', 'reservationUrl', 'blogUrl', 'reserve'];
+    var URL_FIELDS = ['titleUrl', 'url', 'googleQuery', 'appleQuery', 'reservationUrl', 'blogUrl', 'reserve', 'naverQuery'];
     var MAPCODE_RE = /^\d{2,4}\s\d{3}\s\d{3}\*\d{2}$/;
 
     function walk(obj, path) {
@@ -656,6 +663,12 @@ function validateTripData(data) {
             if (key === 'appleQuery' && typeof val === 'string' && val.length > 0) {
                 if (!/^https:\/\/maps\.apple\.com\//i.test(val)) {
                     warnings.push(path + '.' + key + ' 不符合 Apple Maps URL 格式：' + escHtml(val));
+                }
+            }
+            // Naver Maps URL
+            if (key === 'naverQuery' && typeof val === 'string' && val.length > 0) {
+                if (!/^https:\/\/map\.naver\.com\//i.test(val)) {
+                    warnings.push(path + '.' + key + ' 不符合 Naver Maps URL 格式：' + escHtml(val));
                 }
             }
             // Mapcode format
@@ -747,7 +760,6 @@ function renderWarnings(warnings) {
 lsRenewAll();
 
 /* ===== URL Routing ===== */
-var DEFAULT_SLUG = 'okinawa-trip-2026-Ray';
 function fileToSlug(f) { var m = f.match(/^data\/trips\/(.+)\.json$/); return m ? m[1] : null; }
 function slugToFile(s) { return 'data/trips/' + s + '.json'; }
 function getUrlTrip() { return new URLSearchParams(window.location.search).get('trip'); }
@@ -763,31 +775,6 @@ function loadTripPref() { return lsGet('trip-pref'); }
 var TRIP = null;
 var TRIP_FILE = '';
 
-// Migrate old keys to trip-planner- prefix
-(function() {
-    // Migrate old 'tripFile'
-    var old = localStorage.getItem('tripFile');
-    if (old && !lsGet('trip-pref')) {
-        var s = fileToSlug(old);
-        if (s) saveTripPref(s);
-    }
-    localStorage.removeItem('tripFile');
-    // Migrate old 'tripPref' (unprefixed)
-    try {
-        var p = JSON.parse(localStorage.getItem('tripPref'));
-        if (p && p.slug) {
-            if (!lsGet('trip-pref')) saveTripPref(p.slug);
-            localStorage.removeItem('tripPref');
-        }
-    } catch(e) {}
-    // Migrate old 'dark' (unprefixed)
-    var oldDark = localStorage.getItem('dark');
-    if (oldDark !== null) {
-        if (lsGet('dark') === null) lsSet('dark', oldDark);
-        localStorage.removeItem('dark');
-    }
-})();
-
 function resolveAndLoad() {
     // 1. URL has ?trip= param
     var slug = getUrlTrip();
@@ -795,8 +782,11 @@ function resolveAndLoad() {
     // 2. localStorage has preference (6-month expiry)
     var saved = loadTripPref();
     if (saved) { loadTrip(slugToFile(saved)); return; }
-    // 3. Default
-    loadTrip(slugToFile(DEFAULT_SLUG));
+    // 3. No trip selected — show message
+    document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
+        + '<p>請選擇行程</p>'
+        + '<a class="trip-error-link" href="setting.html">前往設定頁</a>'
+        + '</div>';
 }
 
 function loadTrip(filename) {
@@ -815,7 +805,11 @@ function loadTrip(filename) {
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(data) { TRIP = data; renderTrip(data); })
         .catch(function(e) {
-            document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u8f09\u5165\u5931\u6557\uff1a' + escHtml(filename) + '</div>';
+            lsRemove('trip-pref');
+            document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
+                + '<p>行程不存在：' + escHtml(filename) + '</p>'
+                + '<a class="trip-error-link" href="setting.html">選擇其他行程</a>'
+                + '</div>';
         });
 }
 
@@ -1525,6 +1519,8 @@ if (typeof module !== 'undefined' && module.exports) {
         formatMinutes: formatMinutes,
         renderCountdown: renderCountdown,
         renderTripStatsCard: renderTripStatsCard,
-        renderSuggestionSummaryCard: renderSuggestionSummaryCard
+        renderSuggestionSummaryCard: renderSuggestionSummaryCard,
+        loadTrip: loadTrip,
+        resolveAndLoad: resolveAndLoad
     };
 }
