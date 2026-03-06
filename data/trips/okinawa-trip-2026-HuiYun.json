@@ -1535,10 +1535,10 @@
             "googleRating": 4.1
           },
           {
-            "time": "12:54-14:54",
+            "time": "12:54-15:20",
             "title": "沖繩美麗海水族館",
             "titleUrl": "https://bobbyfun.tw/2024-01-08-2706/",
-            "description": "沖縄美ら海水族館 — 黑潮之海大水槽（約2小時）",
+            "description": "沖縄美ら海水族館 — 入場後先預約 Ocean Blue Cafe，13:00 看海豚秀（從水族館出口徒步約5分鐘，遊園車於「3.海豚劇場」下車），再返回館內參觀，15:00 看黑潮之海餵食秀。【黑潮之海】9:30（鬼蝠魟攝食）／15:00・17:00（鯨鯊垂直站立餵食）【海豚秀】10:30／11:30／13:00／15:00／17:00",
             "locations": [
               {
                 "name": "沖縄美ら海水族館",
@@ -1555,7 +1555,7 @@
             "googleRating": 4.6
           },
           {
-            "time": "15:28-15:58",
+            "time": "15:54-16:24",
             "title": "古宇利海洋塔",
             "titleUrl": "https://tsnio.com/kouri-ocean-tower/",
             "description": "古宇利オーシャンタワー — 觀景塔、眺望古宇利大橋（約30分鐘）",
@@ -1568,94 +1568,14 @@
               }
             ],
             "travel": {
-              "text": "約2分鐘",
+              "text": "約3分鐘",
               "type": "car"
             },
             "blogUrl": "https://okinawa.letsgojp.com/archives/737284/",
             "googleRating": 3.9
           },
           {
-            "time": "16:00-17:00",
-            "title": "午餐",
-            "titleUrl": "https://s2905074.pixnet.net/blog/post/576369016",
-            "infoBoxes": [
-              {
-                "type": "restaurants",
-                "title": "午餐推薦",
-                "restaurants": [
-                  {
-                    "category": "沖繩料理",
-                    "name": "白砂食堂",
-                    "description": "しらさ食堂 — 古宇利島海膽蓋飯名店，滿載新鮮海膽入口即化，7~9月營業至 20:00",
-                    "price": "¥3,500~",
-                    "location": {
-                      "name": "しらさ食堂 古宇利島",
-                      "googleQuery": "https://www.google.com/maps/search/しらさ食堂+古宇利島",
-                      "appleQuery": "https://maps.apple.com/?q=しらさ食堂+古宇利島"
-                    },
-                    "hours": "10:00~17:00（7~9月至 20:00）",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://dorapig.com/shirasashokudou2025/",
-                    "googleRating": 4
-                  },
-                  {
-                    "category": "海鮮",
-                    "name": "ラーメン暖暮 名護店",
-                    "description": "ラーメン暖暮 名護店 — 古宇利島回程途中名護人氣豚骨拉麵，湯頭濃醇，車程約30分",
-                    "price": "¥800~",
-                    "location": {
-                      "name": "暖暮 名護店",
-                      "googleQuery": "https://www.google.com/maps/search/暖暮+名護店",
-                      "appleQuery": "https://maps.apple.com/?q=暖暮+名護店",
-                      "mapcode": "206 627 464*87"
-                    },
-                    "hours": "10:00~24:00",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://hanblog.tw/ramendanbo/",
-                    "googleRating": 3.9
-                  },
-                  {
-                    "category": "甜點",
-                    "name": "炭火燒肉 海南亭 本部店",
-                    "description": "海南亭 — 本部・名護海景炭火燒肉，縣產牛與海島豬搭配多種海鮮，景觀絕佳（晚餐段可用）",
-                    "price": "¥3,000~",
-                    "location": {
-                      "name": "炭火焼肉 海南亭 本部",
-                      "googleQuery": "https://www.google.com/maps/search/炭火焼肉+海南亭+本部",
-                      "appleQuery": "https://maps.apple.com/?q=炭火焼肉+海南亭+本部"
-                    },
-                    "hours": "17:00~23:00（週三公休）",
-                    "reservation": {
-                      "available": "unknown",
-                      "recommended": true
-                    },
-                    "blogUrl": "https://bigmouthblog.tw/okinawa-motobu-yakiniku-kananntei/",
-                    "googleRating": 4.2
-                  }
-                ]
-              }
-            ],
-            "travel": {
-              "text": "約1分鐘",
-              "type": "car"
-            },
-            "locations": [
-              {
-                "name": "しらさ食堂 古宇利島",
-                "googleQuery": "https://www.google.com/maps/search/しらさ食堂 古宇利島",
-                "appleQuery": "https://maps.apple.com/?q=しらさ食堂 古宇利島"
-              }
-            ],
-            "googleRating": 4
-          },
-          {
-            "time": "17:01-19:01",
+            "time": "16:27-18:27",
             "title": "古宇利島",
             "titleUrl": "https://okinawa.letsgojp.com/archives/392405/",
             "description": "古宇利島 — 環島兜風、沙灘散步（約2小時）",
@@ -1675,7 +1595,7 @@
             "googleRating": 4.4
           },
           {
-            "time": "19:30-20:30",
+            "time": "18:56-19:56",
             "title": "晚餐",
             "titleUrl": "https://hanblog.tw/ramendanbo/",
             "infoBoxes": [
@@ -1757,7 +1677,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "20:58",
+            "time": "20:24",
             "title": "HOPE VILLA Onnason",
             "description": "返回住宿休息",
             "locations": [
