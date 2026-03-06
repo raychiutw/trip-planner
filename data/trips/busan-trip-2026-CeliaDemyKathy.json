@@ -153,6 +153,7 @@
           "name": "Central Park Hotel Busan",
           "url": "",
           "blogUrl": "https://thecoronet.pixnet.net/blog/post/358818437",
+          "checkout": "12:00",
           "details": [
             "地址：釜山廣域市中區中央大路 33",
             "地鐵：南浦站 5 號出口步行 5 分鐘",
@@ -562,6 +563,7 @@
           "name": "Central Park Hotel Busan",
           "url": "",
           "blogUrl": "https://thecoronet.pixnet.net/blog/post/358818437",
+          "checkout": "12:00",
           "breakfast": {
             "included": false
           },
@@ -893,6 +895,7 @@
           "name": "Central Park Hotel Busan",
           "url": "",
           "blogUrl": "https://thecoronet.pixnet.net/blog/post/358818437",
+          "checkout": "12:00",
           "breakfast": {
             "included": false
           },
@@ -1165,6 +1168,7 @@
           "name": "Central Park Hotel Busan",
           "url": "",
           "blogUrl": "https://thecoronet.pixnet.net/blog/post/358818437",
+          "checkout": "12:00",
           "breakfast": {
             "included": false
           },
