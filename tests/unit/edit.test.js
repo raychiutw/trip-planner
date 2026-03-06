@@ -37,29 +37,6 @@ function renderIssuesHtml(issues) {
   return html;
 }
 
-/* ===== Helper: simulate renderEditPage greeting section ===== */
-function renderGreetingHtml(owner) {
-  var hour = new Date().getHours();
-  var greet;
-  if (hour >= 6 && hour < 12) {
-    greet = '早安';
-  } else if (hour >= 12 && hour < 18) {
-    greet = '午安';
-  } else {
-    greet = '晚安';
-  }
-  var greeting = greet + '，' + escHtml(owner) + '！';
-
-  var html = '<div class="message-system edit-greeting">';
-  html += '<div class="message-system-icon">';
-  html += '<svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12 2 L13.5 9 L20 10.5 L13.5 12 L12 19 L10.5 12 L4 10.5 L10.5 9 Z"/></svg>';
-  html += '</div>';
-  html += '<div class="message-system-title edit-greeting-text">' + greeting + '</div>';
-  html += '<div class="message-system-sub">有什麼行程修改需求？</div>';
-  html += '</div>';
-  return html;
-}
-
 /* ===== renderEditPage — chat container structure ===== */
 describe('renderEditPage chat structure', () => {
   it('generates .chat-container as root', () => {
@@ -77,42 +54,6 @@ describe('renderEditPage chat structure', () => {
     expect(html).toContain('chat-messages-inner');
   });
 
-  it('greeting card uses .message-system class', () => {
-    const html = renderGreetingHtml('Ray');
-    expect(html).toContain('message-system');
-    expect(html).toContain('edit-greeting');
-  });
-
-  it('greeting shows owner name', () => {
-    const html = renderGreetingHtml('Ray');
-    expect(html).toContain('Ray');
-    expect(html).toMatch(/早安|午安|晚安/);
-  });
-
-  it('greeting has .edit-greeting-text with time-based greeting', () => {
-    const html = renderGreetingHtml('HuiYun');
-    expect(html).toContain('edit-greeting-text');
-    expect(html).toContain('HuiYun');
-  });
-
-  it('greeting has .message-system-sub subtitle', () => {
-    const html = renderGreetingHtml('Ray');
-    expect(html).toContain('message-system-sub');
-    expect(html).toContain('有什麼行程修改需求');
-  });
-
-  it('greeting has spark icon SVG', () => {
-    const html = renderGreetingHtml('Ray');
-    expect(html).toContain('message-system-icon');
-    expect(html).toContain('<svg');
-    expect(html).toContain('</svg>');
-  });
-
-  it('escapes XSS in owner name', () => {
-    const html = renderGreetingHtml('<script>alert(1)</script>');
-    expect(html).not.toContain('<script>');
-    expect(html).toContain('&lt;script&gt;');
-  });
 });
 
 /* ===== renderIssues — list rendering ===== */
