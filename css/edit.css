@@ -153,11 +153,11 @@
     border: none;
     background: transparent;
     font-family: inherit;
-    font-size: var(--fs-md);
+    font-size: var(--fs-sm);
     color: var(--text);
     resize: none;
     line-height: 1.6;
-    max-height: 160px;
+    max-height: 25vh;
     overflow-y: auto;
 }
 .edit-textarea:focus { outline: none; }
