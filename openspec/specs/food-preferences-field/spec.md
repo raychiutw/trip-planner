@@ -1,7 +1,7 @@
 ## Capability: food-preferences-field
 
 ### Overview
-定義行程 JSON 中 `meta.foodPreferences` 欄位的資料結構與語意。此欄位儲存使用者的料理偏好清單，供 `/render-trip` 產生餐廳推薦時參考。
+定義行程 JSON 中 `meta.foodPreferences` 欄位的資料結構與語意。此欄位儲存使用者的料理偏好清單，供 `/tp-create` 和 `/tp-rebuild` 產生餐廳推薦時參考。
 
 ### Field Definition
 位置：`meta.foodPreferences`

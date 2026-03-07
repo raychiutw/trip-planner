@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: R1 料理偏好詢問
-`/render-trip` 為某行程產生餐廳推薦前，SHALL 先讀取 JSON `meta.foodPreferences`；若欄位存在且非空則直接採用，否則詢問使用者並將回答寫回 JSON。後續推薦的第 1 家餐廳 SHALL 對應偏好 1、第 2 家對應偏好 2、第 3 家對應偏好 3。
+`/tp-rebuild` 為某行程產生餐廳推薦前，SHALL 先讀取 JSON `meta.foodPreferences`；若欄位存在且非空則直接採用，否則詢問使用者並將回答寫回 JSON。後續推薦的第 1 家餐廳 SHALL 對應偏好 1、第 2 家對應偏好 2、第 3 家對應偏好 3。
 
 #### Scenario: JSON 已有偏好
 - **WHEN** 行程 JSON 的 `meta.foodPreferences` 為非空陣列

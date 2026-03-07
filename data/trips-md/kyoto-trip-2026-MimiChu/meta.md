@@ -1,4 +1,6 @@
 ---
+name: 咪咪醬的京都之旅
+owner: MimiChu
 title: 2026 京都六日咪咪醬初體驗行程表
 description: 2026 京都六日五夜行程：咖啡巡禮、宇治抹茶、金閣寺、伏見稻荷、清水寺、錦市場，含精選餐廳預約與河原町購物。大阪關西機場進出，Haruka 特急直達京都。
 ogDescription: 咪咪醬京都初體驗：六日五夜咖啡×美食×神社之旅，Hotel Resol Trinity Kyoto 連住，宇治、金閣寺、伏見稻荷、清水寺全收錄

@@ -803,8 +803,8 @@ function formatDayDate(day) {
 
 /* ===== URL Routing ===== */
 function fileToSlug(f) {
-    var m = f.match(/^data\/(?:trips\/(.+)\.json|dist\/([^/]+)\/)$/);
-    return m ? (m[1] || m[2]) : null;
+    var m = f.match(/^data\/dist\/([^/]+)\/$/);
+    return m ? m[1] : null;
 }
 function slugToFile(s) { return 'data/dist/' + s + '/'; }
 function getUrlTrip() { return new URLSearchParams(window.location.search).get('trip'); }
@@ -818,7 +818,6 @@ function loadTripPref() { return lsGet('trip-pref'); }
 
 /* ===== Trip Data Loading ===== */
 var TRIP = null;
-var TRIP_FILE = '';
 var DIST_PATH = '';
 var dayCache = {};
 var weatherCache = {};
@@ -846,20 +845,10 @@ function createSkeleton(dayIds) {
         html += '<div class="slot-loading">' + iconSpan('hourglass') + ' 載入中...</div>';
         html += '</div></section>';
     });
-    html += '<div id="flights-slot"></div>';
-    html += '<div id="checklist-slot"></div>';
-    html += '<div id="backup-slot"></div>';
-    html += '<div id="emergency-slot"></div>';
-    html += '<div id="suggestions-slot"></div>';
-    html += '<div id="driving-slot"></div>';
     html += '<div id="footer-slot"></div>';
     return html;
 }
 
-function renderSlotError(slotId, message) {
-    var el = document.getElementById(slotId);
-    if (el) el.innerHTML = '<div class="slot-error">' + iconSpan('warning') + ' ' + escHtml(message) + '</div>';
-}
 
 function renderNavSlot(meta, dayIds) {
     document.title = meta.meta.title;
@@ -890,24 +879,6 @@ function renderFooterSlot(meta) {
     el.innerHTML = html;
 }
 
-function renderInfoSlot(key, data) {
-    var slotId = key + '-slot';
-    var el = document.getElementById(slotId);
-    if (!el) return;
-    TRIP[key] = data;
-    var secId = key === 'flights' ? 'sec-flight' : 'sec-' + key;
-    var html = '<section>';
-    html += '<div class="day-header info-header" id="' + escHtml(secId) + '"><h2>' + escHtml(data.title) + '</h2></div>';
-    html += '<div class="day-content">';
-    var renderFn = { flights: renderFlights, checklist: renderChecklist, backup: renderBackup, emergency: renderEmergency, suggestions: renderSuggestions };
-    if (typeof data.content === 'string') {
-        html += stripInlineHandlers(data.content || '');
-    } else if (renderFn[key]) {
-        html += renderFn[key](data.content || {});
-    }
-    html += '</div></section>';
-    el.innerHTML = html;
-}
 
 function renderDaySlot(day) {
     var slotId = 'day-slot-' + day.id;
@@ -943,9 +914,11 @@ function fetchDay(dayId) {
             initAria();
             if (day.weather) fetchWeatherForDay(day);
             tryRenderDrivingStats();
+            renderInfoPanel({ autoScrollDates: TRIP.autoScrollDates, days: TRIP.days });
         })
         .catch(function() {
-            renderSlotError('day-slot-' + dayId, 'Day ' + dayId + ' 載入失敗');
+            var el = document.getElementById('day-slot-' + dayId);
+            if (el) el.innerHTML = '<div class="slot-error">' + iconSpan('warning') + ' ' + escHtml('Day ' + dayId + ' 載入失敗') + '</div>';
         });
 }
 
@@ -953,11 +926,9 @@ function tryRenderDrivingStats() {
     if (!TRIP || !TRIP.days) return;
     var allLoaded = TRIP.days.every(function(d) { return d && d.content; });
     if (!allLoaded) return;
-    var el = document.getElementById('driving-slot');
-    if (!el) return;
     var tripStats = calcTripDrivingStats(TRIP.days);
     if (tripStats) {
-        el.innerHTML = '<section><div class="day-header info-header" id="sec-driving"><h2>全旅程交通統計</h2></div><div class="day-content">' + renderTripDrivingStats(tripStats) + '</div></section>';
+        TRIP.driving = { title: '全旅程交通統計', content: tripStats };
     }
 }
 
@@ -966,7 +937,6 @@ function loadTrip(slug) {
     dayCache = {};
     weatherCache = {};
     DIST_PATH = 'data/dist/' + slug + '/';
-    TRIP_FILE = 'data/trips/' + slug + '.json';
 
     if (!/^[\w-]+$/.test(slug)) {
         document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
@@ -1013,8 +983,8 @@ function loadTrip(slug) {
                         if (manifest.indexOf(key) === -1) return;
                         fetch(DIST_PATH + key + '.json')
                             .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-                            .then(function(data) { renderInfoSlot(key, data); })
-                            .catch(function() { renderSlotError(key + '-slot', key + ' 載入失敗'); });
+                            .then(function(data) { TRIP[key] = data; })
+                            .catch(function() { console.warn(key + ' 載入失敗'); });
                     });
 
                     var hash = window.location.hash.replace('#', '');
@@ -1028,6 +998,8 @@ function loadTrip(slug) {
                         if (idx >= 0 && dayIds[idx]) initialDay = dayIds[idx];
                     }
                     switchDay(initialDay);
+                    // Preload remaining days in background for stats & driving
+                    dayIds.forEach(function(id) { if (id !== initialDay && !dayCache[id]) fetchDay(id); });
                 });
         })
         .catch(function() {
@@ -1160,7 +1132,7 @@ function closeSpeedDial() {
 var DIAL_RENDERERS = {
     flights: renderFlights, checklist: renderChecklist,
     backup: renderBackup, emergency: renderEmergency,
-    suggestions: renderSuggestions
+    suggestions: renderSuggestions, driving: renderTripDrivingStats
 };
 function openSpeedDialContent(contentKey) {
     closeSpeedDial();
@@ -1312,19 +1284,14 @@ function initNavTracking() {
     if (!navPills.length) return;
     var nav = document.getElementById('stickyNav');
     var navH = nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0);
-    var infoStart = document.getElementById('sec-flight');
     // Remove old listener if any
     if (window._navScrollHandler) window.removeEventListener('scroll', window._navScrollHandler);
     var ticking = false;
     window._navScrollHandler = function() {
         if (!ticking) { requestAnimationFrame(function() {
-            // Batch reads
             var rects = headers.map(function(h) { return h.getBoundingClientRect().top; });
-            var infoRect = infoStart ? infoStart.getBoundingClientRect().top : Infinity;
-            // Batch writes
-            var inInfo = infoRect <= navH + 10;
             var current = -1;
-            if (!inInfo) { for (var i = 0; i < rects.length; i++) { if (rects[i] <= navH + 10) current = i; } }
+            for (var i = 0; i < rects.length; i++) { if (rects[i] <= navH + 10) current = i; }
             navPills.forEach(function(btn) { btn.classList.toggle('active', current >= 0 && parseInt(btn.getAttribute('data-day')) === current + 1); });
             var activeBtn = document.querySelector('#stickyNav .dh-nav .dn.active');
             if (activeBtn) scrollNavPillIntoView(activeBtn);
@@ -1571,7 +1538,6 @@ if (typeof module !== 'undefined' && module.exports) {
         loadTrip: loadTrip,
         resolveAndLoad: resolveAndLoad,
         createSkeleton: createSkeleton,
-        renderSlotError: renderSlotError,
         WMO: WMO,
         getLocIdx: getLocIdx,
         renderHourly: renderHourly,

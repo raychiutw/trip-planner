@@ -1,4 +1,6 @@
 ---
+name: RayHus 的沖繩之旅
+owner: RayHus
 title: 2026 沖繩六日輕旅遊行程表
 description: 2026 沖繩六日輕旅遊完整行程表：那霸、KKday美麗海一日遊、古宇利島、Klook沖繩西海岸一日遊、AEON Mall來客夢、iias豐崎購物。非自駕輕鬆搭巴士遊沖繩，含一日遊行程、飯店住宿、購物景點推薦。
 ogDescription: 那霸為基地，KKday美麗海水族館・古宇利島・鳳梨公園一日遊，Klook波上宮・殘波岬・美國村・東南植物樂園一日遊，六日輕旅行含購物與美食

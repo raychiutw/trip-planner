@@ -1,10 +1,13 @@
 # register-scheduler.ps1
 # Register TripPlanner-AutoIssue in Windows Task Scheduler (run once)
 
+$projectDir = Split-Path $PSScriptRoot
+$schedulerScript = Join-Path $PSScriptRoot "tp-issue-scheduler.ps1"
+
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""C:\Users\Ray\Desktop\ClaudeProjet\trip-planner\scripts\tp-issue-scheduler.ps1""" `
-    -WorkingDirectory "C:\Users\Ray\Desktop\ClaudeProjet\trip-planner"
+    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File ""$schedulerScript""" `
+    -WorkingDirectory $projectDir
 
 $trigger = New-ScheduledTaskTrigger `
     -Once `

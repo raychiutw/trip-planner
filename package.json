@@ -6,7 +6,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "build": "node scripts/build-all.js",
+    "build": "node scripts/build.js",
     "build:trips": "node scripts/trip-build.js"
   },
   "devDependencies": {

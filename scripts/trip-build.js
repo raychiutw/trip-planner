@@ -135,6 +135,8 @@ function parseMeta(text) {
     footer: {},
     autoScrollDates: []
   };
+  if (m.name) result.meta.name = m.name;
+  if (m.owner) result.meta.owner = m.owner;
   if (m.ogDescription) result.meta.ogDescription = m.ogDescription;
   if (m.foodPreferences) {
     result.meta.foodPreferences = m.foodPreferences.split(', ').map(function(s) { return s.trim(); });

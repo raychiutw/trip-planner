@@ -1,21 +1,64 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 const { validateTripData } = require('../../js/app.js');
 
-const DATA_DIR = resolve(__dirname, '../../data/trips');
+const DIST_DIR = resolve(__dirname, '../../data/dist');
 
-// 動態掃描所有行程 JSON
-const jsonFiles = readdirSync(DATA_DIR).filter((f) => f.endsWith('.json'));
+// 掃描 dist 子目錄（含 meta.json 的即為行程）
+const slugs = readdirSync(DIST_DIR).filter((d) => {
+  return existsSync(resolve(DIST_DIR, d, 'meta.json'));
+});
 
-jsonFiles.forEach((file) => {
-  describe(`JSON schema: ${file}`, () => {
+/** 從 dist 分檔 JSON 組合完整行程物件 */
+function loadDistTrip(slug) {
+  const dir = resolve(DIST_DIR, slug);
+  const meta = JSON.parse(readFileSync(resolve(dir, 'meta.json'), 'utf8'));
+  const result = {
+    meta: meta.meta,
+    footer: meta.footer,
+    autoScrollDates: meta.autoScrollDates,
+  };
+
+  const flightsPath = resolve(dir, 'flights.json');
+  if (existsSync(flightsPath)) {
+    result.flights = JSON.parse(readFileSync(flightsPath, 'utf8'));
+  }
+
+  const dayFiles = readdirSync(dir)
+    .filter((f) => /^day-\d+\.json$/.test(f))
+    .sort((a, b) => {
+      const na = parseInt(a.match(/\d+/)[0], 10);
+      const nb = parseInt(b.match(/\d+/)[0], 10);
+      return na - nb;
+    });
+  result.days = dayFiles.map((f) => JSON.parse(readFileSync(resolve(dir, f), 'utf8')));
+
+  const checklistPath = resolve(dir, 'checklist.json');
+  if (existsSync(checklistPath)) {
+    result.checklist = JSON.parse(readFileSync(checklistPath, 'utf8'));
+  }
+
+  const suggestionsPath = resolve(dir, 'suggestions.json');
+  if (existsSync(suggestionsPath)) {
+    result.suggestions = JSON.parse(readFileSync(suggestionsPath, 'utf8'));
+  }
+
+  const emergencyPath = resolve(dir, 'emergency.json');
+  if (existsSync(emergencyPath)) {
+    result.emergency = JSON.parse(readFileSync(emergencyPath, 'utf8'));
+  }
+
+  return result;
+}
+
+slugs.forEach((slug) => {
+  describe(`JSON schema: ${slug}`, () => {
     let data;
 
-    it('parses as valid JSON', () => {
-      const raw = readFileSync(resolve(DATA_DIR, file), 'utf8');
-      data = JSON.parse(raw);
+    it('loads from dist JSON files', () => {
+      data = loadDistTrip(slug);
       expect(data).toBeDefined();
     });
 
@@ -41,9 +84,15 @@ jsonFiles.forEach((file) => {
 
     // --- meta 欄位驗證 ---
 
-    it('meta does not contain removed fields (themeColor, name)', () => {
+    it('meta does not contain removed fields (themeColor)', () => {
       expect(data.meta.themeColor, 'meta.themeColor should not exist (moved to HTML)').toBeUndefined();
-      expect(data.meta.name, 'meta.name should not exist (use trips.json instead)').toBeUndefined();
+    });
+
+    it('meta has name and owner from registry', () => {
+      expect(typeof data.meta.name, 'meta.name must be a string').toBe('string');
+      expect(data.meta.name.length, 'meta.name must not be empty').toBeGreaterThan(0);
+      expect(typeof data.meta.owner, 'meta.owner must be a string').toBe('string');
+      expect(data.meta.owner.length, 'meta.owner must not be empty').toBeGreaterThan(0);
     });
 
     // --- meta.selfDrive ---
@@ -234,7 +283,6 @@ jsonFiles.forEach((file) => {
             expect(typeof box.station.hours, `${prefix}.station.hours`).toBe('string');
             expect(typeof box.station.service, `${prefix}.station.service`).toBe('string');
             expect(typeof box.station.phone, `${prefix}.station.phone`).toBe('string');
-            // location is optional but must be valid when present
             if (box.station.location) {
               expect(typeof box.station.location.name, `${prefix}.station.location.name`).toBe('string');
               expect(typeof box.station.location.googleQuery, `${prefix}.station.location.googleQuery`).toBe('string');
@@ -253,7 +301,6 @@ jsonFiles.forEach((file) => {
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
 
-        // hotel（非「家」且不以「（」開頭）
         const hotel = day.content?.hotel;
         if (hotel && hotel.name !== '家' && !hotel.name.startsWith('（')) {
           expect(
@@ -262,7 +309,6 @@ jsonFiles.forEach((file) => {
           ).toBe(true);
         }
 
-        // timeline events（非 travel）
         timeline.forEach((ev, j) => {
           if (ev.travel) return;
           if ((ev.title || '').includes('餐廳未定')) return;
@@ -273,32 +319,24 @@ jsonFiles.forEach((file) => {
             `${prefix} "${ev.title}" source must be "user" or "ai", got: ${ev.source}`
           ).toBe(true);
 
-          // restaurants
           (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'restaurants') return;
-            (box.restaurants || []).forEach((r, m) => {
-              expect(
-                validSources.includes(r.source),
-                `${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}" source must be "user" or "ai", got: ${r.source}`
-              ).toBe(true);
-            });
-          });
-
-          // shops
-          (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'shopping') return;
-            (box.shops || []).forEach((s, m) => {
-              expect(
-                validSources.includes(s.source),
-                `${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}" source must be "user" or "ai", got: ${s.source}`
-              ).toBe(true);
-            });
-          });
-
-          // gasStation
-          (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'gasStation') return;
-            if (box.station) {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                expect(
+                  validSources.includes(r.source),
+                  `${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}" source must be "user" or "ai", got: ${r.source}`
+                ).toBe(true);
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                expect(
+                  validSources.includes(s.source),
+                  `${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}" source must be "user" or "ai", got: ${s.source}`
+                ).toBe(true);
+              });
+            }
+            if (box.type === 'gasStation' && box.station) {
               expect(
                 validSources.includes(box.station.source),
                 `${prefix}.infoBoxes[${k}].station "${box.station.name}" source must be "user" or "ai", got: ${box.station.source}`
@@ -307,7 +345,6 @@ jsonFiles.forEach((file) => {
           });
         });
 
-        // hotel infoBoxes 中的 restaurants 和 shops
         if (hotel?.infoBoxes) {
           hotel.infoBoxes.forEach((box, k) => {
             if (box.type === 'restaurants') {

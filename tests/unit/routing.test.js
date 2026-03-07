@@ -4,8 +4,8 @@ const { fileToSlug, slugToFile } = require('../../js/app.js');
 
 /* ===== fileToSlug ===== */
 describe('fileToSlug', () => {
-  it('extracts slug from data/trips path', () => {
-    expect(fileToSlug('data/trips/okinawa-trip-2026-Ray.json')).toBe('okinawa-trip-2026-Ray');
+  it('extracts slug from data/dist path', () => {
+    expect(fileToSlug('data/dist/okinawa-trip-2026-Ray/')).toBe('okinawa-trip-2026-Ray');
   });
 
   it('returns null for non-matching path', () => {
@@ -16,11 +16,11 @@ describe('fileToSlug', () => {
     expect(fileToSlug('app.js')).toBeNull();
   });
 
-  it('handles nested slug name', () => {
-    expect(fileToSlug('data/trips/my-trip.json')).toBe('my-trip');
+  it('returns null for old data/trips path', () => {
+    expect(fileToSlug('data/trips/my-trip.json')).toBeNull();
   });
 
-  it('returns null for old data/ path (without trips/)', () => {
+  it('returns null for data/ path without dist/', () => {
     expect(fileToSlug('data/my-trip.json')).toBeNull();
   });
 });
@@ -33,12 +33,5 @@ describe('slugToFile', () => {
 
   it('works with simple slug', () => {
     expect(slugToFile('test')).toBe('data/dist/test/');
-  });
-});
-
-/* ===== fileToSlug (dist path) ===== */
-describe('fileToSlug (dist path)', () => {
-  it('extracts slug from data/dist path', () => {
-    expect(fileToSlug('data/dist/okinawa-trip-2026-Ray/')).toBe('okinawa-trip-2026-Ray');
   });
 });

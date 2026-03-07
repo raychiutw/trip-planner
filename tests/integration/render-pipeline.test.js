@@ -23,19 +23,41 @@ const {
   validateDay,
 } = require('../../js/app.js');
 
-const DATA_DIR = resolve(__dirname, '../../data/trips');
+const DIST_DIR = resolve(__dirname, '../../data/dist');
 
-const tripFiles = [
-  { file: 'okinawa-trip-2026-Ray.json', label: 'Ray' },
-  { file: 'okinawa-trip-2026-HuiYun.json', label: 'HuiYun' },
+/** 從 dist 分檔 JSON 組合完整行程物件 */
+function loadDistTrip(slug) {
+  var dir = resolve(DIST_DIR, slug);
+  var meta = JSON.parse(readFileSync(resolve(dir, 'meta.json'), 'utf8'));
+  var result = { meta: meta.meta, footer: meta.footer, autoScrollDates: meta.autoScrollDates };
+  var flightsPath = resolve(dir, 'flights.json');
+  if (require('fs').existsSync(flightsPath)) {
+    result.flights = JSON.parse(readFileSync(flightsPath, 'utf8'));
+  }
+  var dayFiles = require('fs').readdirSync(dir)
+    .filter(function(f) { return /^day-\d+\.json$/.test(f); })
+    .sort(function(a, b) { return parseInt(a.match(/\d+/)[0], 10) - parseInt(b.match(/\d+/)[0], 10); });
+  result.days = dayFiles.map(function(f) { return JSON.parse(readFileSync(resolve(dir, f), 'utf8')); });
+  ['checklist', 'backup', 'suggestions', 'emergency'].forEach(function(key) {
+    var p = resolve(dir, key + '.json');
+    if (require('fs').existsSync(p)) {
+      result[key] = JSON.parse(readFileSync(p, 'utf8'));
+    }
+  });
+  return result;
+}
+
+const tripSlugs = [
+  { slug: 'okinawa-trip-2026-Ray', label: 'Ray' },
+  { slug: 'okinawa-trip-2026-HuiYun', label: 'HuiYun' },
 ];
 
-tripFiles.forEach(({ file, label }) => {
+tripSlugs.forEach(({ slug, label }) => {
   describe(`整合測試：${label} 行程完整渲染`, () => {
     let data;
 
     beforeAll(() => {
-      data = JSON.parse(readFileSync(resolve(DATA_DIR, file), 'utf8'));
+      data = loadDistTrip(slug);
     });
 
     /* ===== 每日內容渲染 ===== */

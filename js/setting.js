@@ -9,7 +9,7 @@
         if (!container) return;
         var html = '';
         trips.forEach(function(t) {
-            var slug = t.file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
+            var slug = t.slug;
             var isActive = slug === currentSlug;
             html += '<button class="trip-btn' + (isActive ? ' active' : '') + '" data-slug="' + escHtml(slug) + '">';
             html += '<strong>' + escHtml(t.name) + '</strong>';
@@ -111,12 +111,12 @@
 
         var colorMode = initColorMode();
 
-        fetch('data/trips.json')
+        fetch('data/dist/trips.json')
             .then(function(r) { return r.json(); })
             .then(function(trips) {
                 var currentSlug = lsGet('trip-pref') || '';
                 if (!currentSlug && trips.length > 0) {
-                    currentSlug = trips[0].file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
+                    currentSlug = trips[0].slug;
                 }
                 renderTripList(trips, currentSlug);
                 renderColorMode(colorMode);

@@ -4,11 +4,11 @@ import { resolve } from 'path';
 
 const ROOT = resolve(__dirname, '../..');
 
-describe('trips.json registry', () => {
+describe('dist/trips.json registry', () => {
   let trips;
 
   it('parses as valid JSON', () => {
-    const raw = readFileSync(resolve(ROOT, 'data/trips.json'), 'utf8');
+    const raw = readFileSync(resolve(ROOT, 'data/dist/trips.json'), 'utf8');
     trips = JSON.parse(raw);
     expect(trips).toBeDefined();
   });
@@ -18,24 +18,26 @@ describe('trips.json registry', () => {
     expect(trips.length).toBeGreaterThan(0);
   });
 
-  it('each entry has name and file', () => {
+  it('each entry has slug, name, dates, and owner', () => {
     trips.forEach((entry) => {
-      expect(entry.name).toBeTruthy();
-      expect(entry.file).toBeTruthy();
+      expect(entry.slug, 'missing slug').toBeTruthy();
+      expect(entry.name, 'missing name').toBeTruthy();
+      expect(typeof entry.dates, 'dates must be string').toBe('string');
+      expect(entry.owner, 'missing owner').toBeTruthy();
     });
   });
 
-  it('each file reference points to an existing file', () => {
+  it('each slug points to an existing dist directory with meta.json', () => {
     trips.forEach((entry) => {
-      const filePath = resolve(ROOT, entry.file);
-      expect(existsSync(filePath), `File not found: ${entry.file}`).toBe(true);
+      const metaPath = resolve(ROOT, 'data/dist', entry.slug, 'meta.json');
+      expect(existsSync(metaPath), `meta.json not found for slug: ${entry.slug}`).toBe(true);
     });
   });
 
-  it('each referenced file is valid JSON', () => {
+  it('each dist directory meta.json is valid JSON', () => {
     trips.forEach((entry) => {
-      const filePath = resolve(ROOT, entry.file);
-      const raw = readFileSync(filePath, 'utf8');
+      const metaPath = resolve(ROOT, 'data/dist', entry.slug, 'meta.json');
+      const raw = readFileSync(metaPath, 'utf8');
       expect(() => JSON.parse(raw)).not.toThrow();
     });
   });

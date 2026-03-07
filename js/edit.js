@@ -256,7 +256,7 @@
     /* ===== Main Entry ===== */
     function init() {
         // 讀取所有行程
-        fetch('data/trips.json')
+        fetch('data/dist/trips.json')
             .then(function(r) { return r.json(); })
             .then(function(trips) {
                 allTrips = trips;
@@ -264,7 +264,7 @@
                 // 決定要顯示的 slug
                 var slug = urlTrip || lsGet('trip-pref') || '';
                 if (!slug && trips.length > 0) {
-                    slug = trips[0].file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
+                    slug = trips[0].slug;
                 }
 
                 if (!slug) {
@@ -275,8 +275,7 @@
                 // 找對應的 trip
                 var found = null;
                 trips.forEach(function(t) {
-                    var s = t.file.replace(/^data\/trips\//, '').replace(/\.json$/, '');
-                    if (s === slug) {
+                    if (t.slug === slug) {
                         found = { owner: t.owner, tripSlug: slug, tripName: t.name };
                     }
                 });

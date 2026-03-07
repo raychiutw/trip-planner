@@ -1,9 +1,49 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, readdirSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
-const DATA_DIR = resolve(__dirname, '../../data/trips');
-const jsonFiles = readdirSync(DATA_DIR).filter((f) => f.endsWith('.json'));
+const DIST_DIR = resolve(__dirname, '../../data/dist');
+
+const slugs = readdirSync(DIST_DIR).filter((d) => {
+  return existsSync(resolve(DIST_DIR, d, 'meta.json'));
+});
+
+/** 從 dist 分檔 JSON 組合完整行程物件 */
+function loadDistTrip(slug) {
+  const dir = resolve(DIST_DIR, slug);
+  const meta = JSON.parse(readFileSync(resolve(dir, 'meta.json'), 'utf8'));
+  const result = {
+    meta: meta.meta,
+    footer: meta.footer,
+    autoScrollDates: meta.autoScrollDates,
+  };
+
+  const flightsPath = resolve(dir, 'flights.json');
+  if (existsSync(flightsPath)) {
+    result.flights = JSON.parse(readFileSync(flightsPath, 'utf8'));
+  }
+
+  const dayFiles = readdirSync(dir)
+    .filter((f) => /^day-\d+\.json$/.test(f))
+    .sort((a, b) => {
+      const na = parseInt(a.match(/\d+/)[0], 10);
+      const nb = parseInt(b.match(/\d+/)[0], 10);
+      return na - nb;
+    });
+  result.days = dayFiles.map((f) => JSON.parse(readFileSync(resolve(dir, f), 'utf8')));
+
+  const checklistPath = resolve(dir, 'checklist.json');
+  if (existsSync(checklistPath)) {
+    result.checklist = JSON.parse(readFileSync(checklistPath, 'utf8'));
+  }
+
+  const suggestionsPath = resolve(dir, 'suggestions.json');
+  if (existsSync(suggestionsPath)) {
+    result.suggestions = JSON.parse(readFileSync(suggestionsPath, 'utf8'));
+  }
+
+  return result;
+}
 
 /**
  * 解析 flights segments 取得去程到達時間與回程出發時間
@@ -48,9 +88,7 @@ function hasMealEvent(timeline, keyword) {
   return timeline.some((ev) => {
     const t = (ev.title || '');
     const d = (ev.description || '');
-    // 標題或描述包含關鍵字
     if (t.includes(keyword) || d.includes(keyword)) return true;
-    // 有 restaurants infoBox 且其 title 含關鍵字
     if (ev.infoBoxes) {
       const hasRestBox = ev.infoBoxes.some(
         (box) => box.type === 'restaurants' && (box.title || '').includes(keyword)
@@ -61,18 +99,12 @@ function hasMealEvent(timeline, keyword) {
   });
 }
 
-/** 計算字數（含標點，不含空白） */
-function charCount(str) {
-  return str.replace(/\s/g, '').length;
-}
-
-jsonFiles.forEach((file) => {
-  describe(`Quality rules: ${file}`, () => {
+slugs.forEach((slug) => {
+  describe(`Quality rules: ${slug}`, () => {
     let data;
 
-    it('parses as valid JSON', () => {
-      const raw = readFileSync(resolve(DATA_DIR, file), 'utf8');
-      data = JSON.parse(raw);
+    it('loads from dist JSON files', () => {
+      data = loadDistTrip(slug);
       expect(data).toBeDefined();
     });
 
@@ -81,7 +113,7 @@ jsonFiles.forEach((file) => {
     it('R0/R1: meta.countries is a non-empty array', () => {
       expect(
         Array.isArray(data.meta.countries) && data.meta.countries.length > 0,
-        `${file} meta.countries must be a non-empty array`
+        `${slug} meta.countries must be a non-empty array`
       ).toBe(true);
     });
 
@@ -96,7 +128,6 @@ jsonFiles.forEach((file) => {
           if (ev.travel) return;
           if ((ev.title || '').includes('餐廳未定')) return;
 
-          // timeline event locations
           if (Array.isArray(ev.locations)) {
             ev.locations.forEach((loc, k) => {
               expect(
@@ -110,7 +141,6 @@ jsonFiles.forEach((file) => {
             });
           }
 
-          // restaurant locations
           (ev.infoBoxes || []).forEach((box, k) => {
             if (box.type !== 'restaurants') return;
             (box.restaurants || []).forEach((r, m) => {
@@ -123,7 +153,6 @@ jsonFiles.forEach((file) => {
             });
           });
 
-          // shop locations
           (ev.infoBoxes || []).forEach((box, k) => {
             if (box.type !== 'shopping') return;
             (box.shops || []).forEach((s, m) => {
@@ -137,7 +166,6 @@ jsonFiles.forEach((file) => {
           });
         });
 
-        // hotel shop locations
         const hotel = day.content?.hotel;
         if (hotel?.infoBoxes) {
           hotel.infoBoxes.forEach((box, k) => {
@@ -166,13 +194,11 @@ jsonFiles.forEach((file) => {
         const isFirstDay = i === 0;
         const isLastDay = i === totalDays - 1;
 
-        // 跳過一日遊團（KKday/Klook）的午餐檢查
         const hasGroupTour = timeline.some((ev) => {
           const t = (ev.title || '');
           return t.includes('KKday') || t.includes('Klook') || t.includes('一日遊');
         });
 
-        // 在地行程（hotel 名為「家」）跳過餐次檢查
         const isHomeStay = day.content?.hotel?.name === '家';
 
         let needLunch = true;
@@ -202,10 +228,10 @@ jsonFiles.forEach((file) => {
         const hasDinner = hasMealEvent(timeline, '晚餐') || hasMealEvent(timeline, 'dinner') || hasMealEvent(timeline, '宵夜');
 
         if (needLunch) {
-          expect(hasLunch, `Day ${day.id} (${file}) 缺少午餐`).toBe(true);
+          expect(hasLunch, `Day ${day.id} (${slug}) 缺少午餐`).toBe(true);
         }
         if (needDinner) {
-          expect(hasDinner, `Day ${day.id} (${file}) 缺少晚餐`).toBe(true);
+          expect(hasDinner, `Day ${day.id} (${slug}) 缺少晚餐`).toBe(true);
         }
       });
     });
@@ -289,7 +315,7 @@ jsonFiles.forEach((file) => {
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
         timeline.forEach((ev, j) => {
-          if (ev.travel) return; // travel event 略過
+          if (ev.travel) return;
           if ((ev.title || '').includes('餐廳未定')) return;
           expect(
             ev.hasOwnProperty('blogUrl'),
@@ -305,7 +331,7 @@ jsonFiles.forEach((file) => {
       data.days.forEach((day, i) => {
         const hotel = day.content?.hotel;
         if (!hotel || hotel.name === '家') return;
-        if (hotel.name.startsWith('（')) return; // 跳過非住宿特殊標記（如「（返台）」）
+        if (hotel.name.startsWith('（')) return;
         expect(
           hotel.hasOwnProperty('blogUrl'),
           `days[${i}].hotel "${hotel.name}" missing blogUrl field`
@@ -319,7 +345,7 @@ jsonFiles.forEach((file) => {
       data.days.forEach((day, i) => {
         const hotel = day.content?.hotel;
         if (!hotel || hotel.name === '家') return;
-        if (hotel.name.startsWith('（')) return; // 跳過非住宿特殊標記（如「（返台）」）
+        if (hotel.name.startsWith('（')) return;
         const hotelBoxes = hotel.infoBoxes || [];
         const shoppingBox = hotelBoxes.find((box) => box.type === 'shopping');
         expect(
@@ -339,7 +365,7 @@ jsonFiles.forEach((file) => {
 
     it('R1/R3: restaurant categories align with foodPreferences order', () => {
       const prefs = data.meta?.foodPreferences;
-      if (!prefs || prefs.length === 0) return; // 無偏好時跳過
+      if (!prefs || prefs.length === 0) return;
 
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
@@ -348,7 +374,7 @@ jsonFiles.forEach((file) => {
             if (box.type !== 'restaurants') return;
             const restaurants = box.restaurants || [];
             restaurants.forEach((r, m) => {
-              if (m >= prefs.length) return; // 超過偏好數量不檢查
+              if (m >= prefs.length) return;
               const cat = r.category || '';
               if (cat) {
                 expect(
@@ -433,7 +459,7 @@ jsonFiles.forEach((file) => {
     // --- R10 還車加油站 ---
 
     it('R10: self-drive/mixed trips with 還車 event must have gasStation infoBox', () => {
-      if (!data.meta?.selfDrive) return; // skip for non-self-drive trips
+      if (!data.meta?.selfDrive) return;
 
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
@@ -442,12 +468,11 @@ jsonFiles.forEach((file) => {
           const hasGasStation = (ev.infoBoxes || []).some((box) => box.type === 'gasStation');
           expect(
             hasGasStation,
-            `Day ${day.id} "${ev.title}" (${file}) 還車事件缺少 gasStation infoBox`
+            `Day ${day.id} "${ev.title}" (${slug}) 還車事件缺少 gasStation infoBox`
           ).toBe(true);
         });
       });
     });
-
 
     // --- R11 地圖導航 ---
 
@@ -458,13 +483,11 @@ jsonFiles.forEach((file) => {
           if (ev.travel) return;
           if ((ev.title || '').includes('餐廳未定')) return;
 
-          // timeline event 須有 locations[]
           expect(
             Array.isArray(ev.locations) && ev.locations.length > 0,
             `days[${i}].timeline[${j}] "${ev.title}" missing locations[]`
           ).toBe(true);
 
-          // restaurants 須有 location
           (ev.infoBoxes || []).forEach((box, k) => {
             if (box.type !== 'restaurants') return;
             (box.restaurants || []).forEach((r, m) => {
@@ -475,7 +498,6 @@ jsonFiles.forEach((file) => {
             });
           });
 
-          // gasStation 須有 station.location
           (ev.infoBoxes || []).forEach((box, k) => {
             if (box.type !== 'gasStation') return;
             expect(
@@ -496,45 +518,37 @@ jsonFiles.forEach((file) => {
           if (ev.travel) return;
           if ((ev.title || '').includes('餐廳未定')) return;
 
-          // timeline event 須有 googleRating
           expect(
             typeof ev.googleRating === 'number' && ev.googleRating >= 1 && ev.googleRating <= 5,
             `days[${i}].timeline[${j}] "${ev.title}" missing or invalid googleRating (got: ${ev.googleRating})`
           ).toBe(true);
 
-          // restaurants 須有 googleRating
           (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'restaurants') return;
-            (box.restaurants || []).forEach((r, m) => {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                expect(
+                  typeof r.googleRating === 'number' && r.googleRating >= 1 && r.googleRating <= 5,
+                  `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}] "${r.name}" missing or invalid googleRating`
+                ).toBe(true);
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                expect(
+                  typeof s.googleRating === 'number' && s.googleRating >= 1 && s.googleRating <= 5,
+                  `days[${i}].timeline[${j}].infoBoxes[${k}].shops[${m}] "${s.name}" missing or invalid googleRating`
+                ).toBe(true);
+              });
+            }
+            if (box.type === 'gasStation') {
               expect(
-                typeof r.googleRating === 'number' && r.googleRating >= 1 && r.googleRating <= 5,
-                `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}] "${r.name}" missing or invalid googleRating`
+                typeof box.googleRating === 'number' && box.googleRating >= 1 && box.googleRating <= 5,
+                `days[${i}].timeline[${j}].infoBoxes[${k}] gasStation missing or invalid googleRating`
               ).toBe(true);
-            });
-          });
-
-          // shops 須有 googleRating
-          (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'shopping') return;
-            (box.shops || []).forEach((s, m) => {
-              expect(
-                typeof s.googleRating === 'number' && s.googleRating >= 1 && s.googleRating <= 5,
-                `days[${i}].timeline[${j}].infoBoxes[${k}].shops[${m}] "${s.name}" missing or invalid googleRating`
-              ).toBe(true);
-            });
-          });
-
-          // gasStation 須有 googleRating
-          (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'gasStation') return;
-            expect(
-              typeof box.googleRating === 'number' && box.googleRating >= 1 && box.googleRating <= 5,
-              `days[${i}].timeline[${j}].infoBoxes[${k}] gasStation missing or invalid googleRating`
-            ).toBe(true);
+            }
           });
         });
 
-        // hotel infoBoxes 中的 restaurants 和 shops 也檢查
         const hotel = day.content?.hotel;
         if (hotel?.infoBoxes) {
           hotel.infoBoxes.forEach((box, k) => {
@@ -558,7 +572,8 @@ jsonFiles.forEach((file) => {
         }
       });
     });
-    // --- R13 POI 來源標記驗證（source-based googleRating 檢查） ---
+
+    // --- R13 POI 來源標記驗證 ---
 
     it('R13: ai-sourced POIs without googleRating are failures, user-sourced are warnings', () => {
       const aiMissing = [];
@@ -566,8 +581,6 @@ jsonFiles.forEach((file) => {
 
       data.days.forEach((day, i) => {
         const timeline = day.content?.timeline || [];
-
-        // hotel 不檢查 googleRating（R12 未要求 hotel 有 googleRating）
         const hotel = day.content?.hotel;
 
         timeline.forEach((ev, j) => {
@@ -575,41 +588,32 @@ jsonFiles.forEach((file) => {
           if ((ev.title || '').includes('餐廳未定')) return;
           const prefix = `days[${i}].timeline[${j}]`;
 
-          // timeline event
           if (ev.source === 'ai' && typeof ev.googleRating !== 'number') {
             aiMissing.push(`${prefix} "${ev.title}"`);
           } else if (ev.source === 'user' && typeof ev.googleRating !== 'number') {
             userMissing.push(`${prefix} "${ev.title}"`);
           }
 
-          // restaurants
           (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'restaurants') return;
-            (box.restaurants || []).forEach((r, m) => {
-              if (r.source === 'ai' && typeof r.googleRating !== 'number') {
-                aiMissing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
-              } else if (r.source === 'user' && typeof r.googleRating !== 'number') {
-                userMissing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
-              }
-            });
-          });
-
-          // shops
-          (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'shopping') return;
-            (box.shops || []).forEach((s, m) => {
-              if (s.source === 'ai' && typeof s.googleRating !== 'number') {
-                aiMissing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
-              } else if (s.source === 'user' && typeof s.googleRating !== 'number') {
-                userMissing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
-              }
-            });
-          });
-
-          // gasStation
-          (ev.infoBoxes || []).forEach((box, k) => {
-            if (box.type !== 'gasStation') return;
-            if (box.station) {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                if (r.source === 'ai' && typeof r.googleRating !== 'number') {
+                  aiMissing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+                } else if (r.source === 'user' && typeof r.googleRating !== 'number') {
+                  userMissing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+                }
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                if (s.source === 'ai' && typeof s.googleRating !== 'number') {
+                  aiMissing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+                } else if (s.source === 'user' && typeof s.googleRating !== 'number') {
+                  userMissing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+                }
+              });
+            }
+            if (box.type === 'gasStation' && box.station) {
               if (box.station.source === 'ai' && typeof box.googleRating !== 'number') {
                 aiMissing.push(`${prefix}.infoBoxes[${k}].station "${box.station.name}"`);
               } else if (box.station.source === 'user' && typeof box.googleRating !== 'number') {
@@ -619,7 +623,6 @@ jsonFiles.forEach((file) => {
           });
         });
 
-        // hotel infoBoxes
         if (hotel?.infoBoxes) {
           hotel.infoBoxes.forEach((box, k) => {
             if (box.type === 'restaurants') {
@@ -644,16 +647,13 @@ jsonFiles.forEach((file) => {
         }
       });
 
-      // ai-sourced 缺 googleRating → fail
       expect(
         aiMissing.length,
         `R13 fail: ${aiMissing.length} ai-sourced POI(s) missing googleRating:\n${aiMissing.join('\n')}`
       ).toBe(0);
 
-      // user-sourced 缺 googleRating → warning（記錄但不 fail）
-      // 此處僅記錄，不阻擋測試
       if (userMissing.length > 0) {
-        console.warn(`R13 warning: ${userMissing.length} user-sourced POI(s) missing googleRating in ${file}:\n${userMissing.join('\n')}`);
+        console.warn(`R13 warning: ${userMissing.length} user-sourced POI(s) missing googleRating in ${slug}:\n${userMissing.join('\n')}`);
       }
     });
   });

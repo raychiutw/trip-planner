@@ -4,13 +4,13 @@ context: |
   行程規劃網站（trip-planner），部署於 GitHub Pages
   Tech stack: 原生 HTML/CSS/JS（無框架），Vitest + jsdom 單元測試，Playwright E2E 測試
   三頁式架構：index.html（行程主頁）、edit.html（AI 修改行程）、setting.html（設定：行程切換 + 色彩模式）
-  資料層：data/trips.json（索引）+ data/trips/*.json（各行程 JSON）
+  資料層：data/trips-md/{slug}/（MD 原始檔）→ npm run build → data/dist/（分檔 JSON + trips.json 自動 registry）
   語言：繁體中文台灣用語，commit 訊息繁體中文
   UI 規範：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
   字型規範：全站僅四級 font-size — --fs-display(2.5rem/40px), --fs-lg(1.25rem/20px), --fs-md(1.125rem/18px body預設), --fs-sm(0.875rem/14px)，禁用硬編碼 font-size
   Git：commit 後不自動 push，由使用者手動觸發
   測試：commit 前必須通過（pre-commit hook 自動執行），文件變更不跑測試
-  /render-trip skill 只允許改 data/trips/*.json，禁改 js/css/html
+
 
 rules:
   proposal:

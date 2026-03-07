@@ -12,7 +12,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - blog: https://www.bigfang.tw/blog/post/okinawa-onnason-hotel
 - rating: 4.5
 - source: ai
-- details: 恩納村, Day 3 Check in 15:14
+- details: 恩納村, Day 3 Check in 15:50
 
 ### shopping: 恩納村附近購物
 
@@ -76,7 +76,22 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - rating: 4.3
 - travel: car 約30分鐘
 
-### 12:55-13:25 萬座毛
+### 12:30-13:15 午餐（読谷村）
+殘波岬附近午餐 — 読谷村在地美食
+- source: ai
+- maps: 花織そば 読谷村
+- mapcode: 33 854 377*55
+- travel: car 約5分鐘
+
+#### restaurants: 午餐推薦
+
+| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | appleMaps |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 花織そば | 沖繩料理 | 11:00~16:00（售完即止） | ¥700~ | {"available":"no","recommended":false} | はなういそば — 読谷村代表性沖繩麵，豚骨柴魚湯頭清爽回甘，自家製麵條Q彈有勁，在地人推薦名店 | https://www.bigfang.tw/blog/post/okinawa-hanaui-soba | 4.2 | 花織そば 読谷村 |  | ai |  |
+| 海人食堂 | 海鮮 | 11:00~16:00（售完即止） | ¥800~ | {"available":"no","recommended":false} | 都屋漁港直營食堂 — 毎朝漁港直送鮮魚，海鮮丼・刺身定食CP值極高，漁港氛圍滿點 | https://www.bigfang.tw/blog/post/okinawa-uminchu-shokudo | 4.1 | 海人食堂 読谷都屋漁港 \| 海人食堂 読谷 都屋漁港 |  | ai | 海人食堂 読谷都屋漁港 |
+| 琉球窯 残波岬店 | 甜點 | 10:00~18:00 | ¥500~ | {"available":"no","recommended":false} | 琉球窯 — 殘波岬入口處人氣甜點店，現烤紅芋塔與黑糖霜淇淋，觀光後休憩好去處 | https://janotts.pixnet.net/blog/post/31382013 | 4 | 琉球窯 残波岬店 \| 琉球窯 残波岬 |  | ai |  |
+
+### 13:35-14:05 萬座毛
 万座毛 — 象鼻岩自然景觀（約30分鐘）
 - web: https://travelholic0202.pixnet.net/blog/post/97932943
 - blog: https://bobbyfun.tw/2024-01-07-2697/
@@ -85,7 +100,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - rating: 4.2
 - travel: car 約20分鐘
 
-### 13:45-14:45 業務超市 宇流麻石川店
+### 14:30-15:30 業務超市 宇流麻石川店
 業務スーパー うるま石川店 — 食材採買（VILLA 自炊用）
 - maps: 業務スーパー うるま石川店
 - mapcode: 206 039 648*50
@@ -100,7 +115,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 | ステーキハウス88 恩納店 | 海鮮 | 11:00~22:00（年中無休） | ¥1,800~ | {"available":"no","recommended":false} | STEAK HOUSE 88 恩納店 — 創業60年沖繩代表性牛排老店，從平價紅肉到縣產和牛一應俱全，前兼久漁港直送海葡萄鮮度抜群 | https://slowlifeinokinawa.com/steak88/ | 4 | ステーキハウス88 恩納店 |  | ai |
 | ラーメン暖暮 北谷店 | 甜點 | 11:00~翌02:00 | ¥750~ | {"available":"no","recommended":false} | ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃 | https://hanblog.tw/ramendanbo/ | 3.9 | 暖暮 北谷店 \| ラーメン暖暮 北谷 |  | ai |
 
-### 15:14-16:14 HOPE VILLA Onnason
+### 15:50-16:20 HOPE VILLA Onnason
 HOPE VILLA Onnason（恩納村）— Check in
 - blog: 
 - source: ai
@@ -108,7 +123,7 @@ HOPE VILLA Onnason（恩納村）— Check in
 - mapcode: 206 221 372*23
 - rating: 4.5
 
-### 16:14 VILLA 自由活動
+### 16:20 VILLA 自由活動
 Check in 後自由休息（VILLA 自炊或外食）
 - blog: 
 - source: ai
