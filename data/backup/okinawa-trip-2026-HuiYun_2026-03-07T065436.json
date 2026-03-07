@@ -248,11 +248,11 @@
       "label": "那霸",
       "content": {
         "hotel": {
-          "name": "那霸新都心飯店",
-          "url": "",
-          "blogUrl": "",
+          "name": "沖繩那霸美居飯店",
+          "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
-            "那霸市おもろまち 4-16-27",
+            "那霸市壺川 3-3-19",
             "Day 1 Check in 23:09"
           ],
           "breakfast": {
@@ -261,44 +261,44 @@
           "infoBoxes": [
             {
               "type": "shopping",
-              "title": "飯店附近購物（新都心）",
+              "title": "飯店附近購物",
               "shops": [
                 {
                   "category": "超商",
-                  "name": "ローソン 那覇おもろまち三丁目店",
+                  "name": "FamilyMart 那覇壺川店",
                   "hours": "24小時",
                   "mustBuy": [
                     "沖繩限定飯糰",
                     "Orion啤酒",
                     "早餐麵包零食"
                   ],
-                  "blogUrl": "",
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
                   "googleRating": 3.5,
                   "source": "ai"
                 },
                 {
                   "category": "超市",
-                  "name": "サンエー那覇メインプレイス",
-                  "hours": "09:00~22:00",
+                  "name": "タウンプラザかねひで 壺川店",
+                  "hours": "09:00~23:00",
                   "mustBuy": [
-                    "沖繩縣產生鮮食品",
+                    "沖繩縣產豬肉生鮮",
                     "島豆腐",
-                    "沖繩限定零食"
+                    "沖繩泡盛"
                   ],
-                  "blogUrl": "",
-                  "googleRating": 4,
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.8,
                   "source": "ai"
                 },
                 {
-                  "category": "免稅店",
-                  "name": "DFS T ギャラリア 沖縄",
-                  "hours": "10:00~20:00",
+                  "category": "唐吉軻德",
+                  "name": "ドン・キホーテ 那覇国際通店",
+                  "hours": "24小時",
                   "mustBuy": [
-                    "國際精品免稅",
-                    "沖繩限定伴手禮",
-                    "化妝品香水"
+                    "藥妝保養品",
+                    "日本限定零食",
+                    "雜貨生活用品"
                   ],
-                  "blogUrl": "",
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
                   "googleRating": 4,
                   "source": "ai"
                 }
@@ -308,17 +308,17 @@
               "type": "parking",
               "title": "飯店停車場",
               "price": "費用未確認",
-              "note": "飯店附設停車場（先到先停）；附近另有新都心公園周邊收費停車場可選用",
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
               "location": {
-                "name": "Naha Shintoshin Hotel 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel+駐車場",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel+駐車場"
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
               }
             }
           ],
           "checkout": "11:00",
-          "googleRating": 3.9,
-          "source": "user"
+          "googleRating": 4,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -358,19 +358,19 @@
           },
           {
             "time": "23:09",
-            "title": "那霸新都心飯店 Check in",
-            "description": "Naha Shintoshin Hotel",
+            "title": "沖繩那霸美居飯店 Check in",
+            "description": "Mercure Okinawa Naha",
             "locations": [
               {
-                "name": "Naha Shintoshin Hotel",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel",
-                "mapcode": "33 188 452*63"
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 3.9,
+            "googleRating": 4,
             "blogUrl": "",
-            "source": "user"
+            "source": "ai"
           }
         ]
       }
@@ -484,18 +484,18 @@
           },
           {
             "time": "09:00",
-            "title": "那霸新都心飯店 出發",
+            "title": "沖繩那霸美居飯店 出發",
             "locations": [
               {
-                "name": "Naha Shintoshin Hotel",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel",
-                "mapcode": "33 188 452*63"
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 3.9,
+            "googleRating": 4,
             "blogUrl": "",
-            "source": "user"
+            "source": "ai"
           },
           {
             "time": "10:28-11:28",
@@ -654,7 +654,7 @@
             "source": "ai"
           },
           {
-            "time": "13:44-16:44",
+            "time": "13:44-17:44",
             "title": "PARCO CITY 購物",
             "titleUrl": "https://ajunfun.tw/parco-city/",
             "description": "グラニフ 沖縄 PARCO CITY 等店家逛街購物",
@@ -718,7 +718,7 @@
             "source": "ai"
           },
           {
-            "time": "17:08-18:08",
+            "time": "18:08-19:08",
             "title": "浦添大公園",
             "titleUrl": "https://livia1028.pixnet.net/blog/post/577990066",
             "description": "長溜滑梯等設施，適合親子",
@@ -738,7 +738,7 @@
             "googleRating": 4.1
           },
           {
-            "time": "18:13-19:13",
+            "time": "19:13-20:13",
             "title": "晚餐",
             "description": "美國村周邊晚餐",
             "infoBoxes": [
@@ -822,7 +822,7 @@
             "googleRating": 4.1
           },
           {
-            "time": "19:18-22:18",
+            "time": "20:18-23:18",
             "title": "美國村",
             "titleUrl": "https://bobbyfun.tw/2024-01-08-2709/",
             "description": "アメリカンビレッジ — 異國風情商圈、逛街購物、夜景",
@@ -889,12 +889,26 @@
             "googleRating": 4.2
           },
           {
-            "time": "22:23",
-            "title": "BUZZ RESORT Check in",
+            "time": "23:45-00:45",
+            "title": "plate jam",
+            "description": "宵夜",
+            "locations": [
+              {
+                "name": "plate jam 北谷",
+                "googleQuery": "https://www.google.com/maps/search/plate+jam+北谷",
+                "appleQuery": "https://maps.apple.com/?q=plate+jam+北谷",
+                "mapcode": "33 587 527*50"
+              }
+            ],
             "travel": {
-              "text": "約5分鐘",
+              "text": "約27分鐘",
               "type": "car"
             },
+            "googleRating": 3.8
+          },
+          {
+            "time": "01:12",
+            "title": "BUZZ RESORT Check in",
             "description": "Design Resort Nakadoma inn — 恩納村住宿",
             "locations": [
               {
@@ -1564,35 +1578,14 @@
               }
             ],
             "travel": {
-              "text": "約25分鐘",
+              "text": "約29分鐘",
               "type": "car"
             },
             "blogUrl": "https://okinawa.letsgojp.com/archives/392405/",
             "googleRating": 4.4
           },
           {
-            "time": "18:52-19:22",
-            "title": "許田休息站",
-            "titleUrl": "https://www.yanbaru-b.co.jp/",
-            "description": "道の駅許田 やんばる物産センター — 沖繩人氣第一道の駅，必買炸天婦羅、沙翁（サーターアンダギー）、新鮮果汁，可買美麗海水族館折扣門票（約30分鐘）",
-            "locations": [
-              {
-                "name": "道の駅許田",
-                "googleQuery": "https://www.google.com/maps/search/道の駅許田",
-                "appleQuery": "https://maps.apple.com/?q=道の駅許田",
-                "mapcode": "206 476 724*63"
-              }
-            ],
-            "travel": {
-              "text": "約10分鐘",
-              "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/7697/",
-            "googleRating": 4.0,
-            "source": "user"
-          },
-          {
-            "time": "19:32-20:32",
+            "time": "18:56-19:56",
             "title": "晚餐",
             "titleUrl": "https://hanblog.tw/ramendanbo/",
             "infoBoxes": [
@@ -1677,7 +1670,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "21:00",
+            "time": "20:24",
             "title": "HOPE VILLA Onnason",
             "description": "返回住宿休息",
             "locations": [
@@ -1701,11 +1694,11 @@
       "label": "來客夢・國際通",
       "content": {
         "hotel": {
-          "name": "那霸新都心飯店",
-          "url": "",
-          "blogUrl": "",
+          "name": "沖繩那霸美居飯店",
+          "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
-            "那霸市おもろまち 4-16-27",
+            "那霸市壺川 3-3-19",
             "Day 5 Check in 20:22"
           ],
           "breakfast": {
@@ -1714,44 +1707,44 @@
           "infoBoxes": [
             {
               "type": "shopping",
-              "title": "飯店附近購物（新都心）",
+              "title": "飯店附近購物",
               "shops": [
                 {
                   "category": "超商",
-                  "name": "ローソン 那覇おもろまち三丁目店",
+                  "name": "FamilyMart 那覇壺川店",
                   "hours": "24小時",
                   "mustBuy": [
                     "沖繩限定飯糰",
                     "Orion啤酒",
                     "早餐麵包零食"
                   ],
-                  "blogUrl": "",
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
                   "googleRating": 3.5,
                   "source": "ai"
                 },
                 {
                   "category": "超市",
-                  "name": "サンエー那覇メインプレイス",
-                  "hours": "09:00~22:00",
+                  "name": "タウンプラザかねひで 壺川店",
+                  "hours": "09:00~23:00",
                   "mustBuy": [
-                    "沖繩縣產生鮮食品",
+                    "沖繩縣產豬肉生鮮",
                     "島豆腐",
-                    "沖繩限定零食"
+                    "沖繩泡盛"
                   ],
-                  "blogUrl": "",
-                  "googleRating": 4,
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.8,
                   "source": "ai"
                 },
                 {
-                  "category": "免稅店",
-                  "name": "DFS T ギャラリア 沖縄",
-                  "hours": "10:00~20:00",
+                  "category": "唐吉軻德",
+                  "name": "ドン・キホーテ 那覇国際通店",
+                  "hours": "24小時",
                   "mustBuy": [
-                    "國際精品免稅",
-                    "沖繩限定伴手禮",
-                    "化妝品香水"
+                    "藥妝保養品",
+                    "日本限定零食",
+                    "雜貨生活用品"
                   ],
-                  "blogUrl": "",
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
                   "googleRating": 4,
                   "source": "ai"
                 }
@@ -1761,17 +1754,17 @@
               "type": "parking",
               "title": "飯店停車場",
               "price": "費用未確認",
-              "note": "飯店附設停車場（先到先停）；附近另有新都心公園周邊收費停車場可選用",
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
               "location": {
-                "name": "Naha Shintoshin Hotel 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel+駐車場",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel+駐車場"
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
               }
             }
           ],
           "checkout": "11:00",
-          "googleRating": 3.9,
-          "source": "user"
+          "googleRating": 4,
+          "source": "ai"
         },
         "timeline": [
           {
@@ -2131,19 +2124,19 @@
           },
           {
             "time": "20:22",
-            "title": "那霸新都心飯店 Check in",
-            "description": "Naha Shintoshin Hotel",
+            "title": "沖繩那霸美居飯店 Check in",
+            "description": "Mercure Okinawa Naha",
             "locations": [
               {
-                "name": "Naha Shintoshin Hotel",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel",
-                "mapcode": "33 188 452*63"
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 3.9,
+            "googleRating": 4,
             "blogUrl": "",
-            "source": "user"
+            "source": "ai"
           }
         ]
       }
@@ -2154,11 +2147,11 @@
       "label": "牧志・瀨長島",
       "content": {
         "hotel": {
-          "name": "那霸新都心飯店",
-          "url": "",
-          "blogUrl": "",
+          "name": "沖繩那霸美居飯店",
+          "url": "https://qday07.pixnet.net/blog/post/221688768",
+          "blogUrl": "https://kimi77228.pixnet.net/blog/posts/10358690425",
           "details": [
-            "那霸市おもろまち 4-16-27",
+            "那霸市壺川 3-3-19",
             "Day 5~6 連住"
           ],
           "breakfast": {
@@ -2168,44 +2161,44 @@
           "infoBoxes": [
             {
               "type": "shopping",
-              "title": "飯店附近購物（新都心）",
+              "title": "飯店附近購物",
               "shops": [
                 {
                   "category": "超商",
-                  "name": "ローソン 那覇おもろまち三丁目店",
+                  "name": "FamilyMart 那覇壺川店",
                   "hours": "24小時",
                   "mustBuy": [
                     "沖繩限定飯糰",
                     "Orion啤酒",
                     "早餐麵包零食"
                   ],
-                  "blogUrl": "",
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
                   "googleRating": 3.5,
                   "source": "ai"
                 },
                 {
                   "category": "超市",
-                  "name": "サンエー那覇メインプレイス",
-                  "hours": "09:00~22:00",
+                  "name": "タウンプラザかねひで 壺川店",
+                  "hours": "09:00~23:00",
                   "mustBuy": [
-                    "沖繩縣產生鮮食品",
+                    "沖繩縣產豬肉生鮮",
                     "島豆腐",
-                    "沖繩限定零食"
+                    "沖繩泡盛"
                   ],
-                  "blogUrl": "",
-                  "googleRating": 4,
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/763641/",
+                  "googleRating": 3.8,
                   "source": "ai"
                 },
                 {
-                  "category": "免稅店",
-                  "name": "DFS T ギャラリア 沖縄",
-                  "hours": "10:00~20:00",
+                  "category": "唐吉軻德",
+                  "name": "ドン・キホーテ 那覇国際通店",
+                  "hours": "24小時",
                   "mustBuy": [
-                    "國際精品免稅",
-                    "沖繩限定伴手禮",
-                    "化妝品香水"
+                    "藥妝保養品",
+                    "日本限定零食",
+                    "雜貨生活用品"
                   ],
-                  "blogUrl": "",
+                  "blogUrl": "https://okinawa.letsgojp.com/archives/23916/",
                   "googleRating": 4,
                   "source": "ai"
                 }
@@ -2215,32 +2208,32 @@
               "type": "parking",
               "title": "飯店停車場",
               "price": "費用未確認",
-              "note": "飯店附設停車場（先到先停）；附近另有新都心公園周邊收費停車場可選用",
+              "note": "飯店附設收費停車場（升降機式）；旁邊另有一般收費停車場可選用",
               "location": {
-                "name": "Naha Shintoshin Hotel 駐車場",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel+駐車場",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel+駐車場"
+                "name": "メルキュール沖縄那覇 駐車場",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇+駐車場",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇+駐車場"
               }
             }
           ],
-          "googleRating": 3.9,
-          "source": "user"
+          "googleRating": 4,
+          "source": "ai"
         },
         "timeline": [
           {
             "time": "09:00",
-            "title": "那霸新都心飯店 出發",
+            "title": "沖繩那霸美居飯店 出發",
             "locations": [
               {
-                "name": "Naha Shintoshin Hotel",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel",
-                "mapcode": "33 188 452*63"
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 3.9,
+            "googleRating": 4,
             "blogUrl": "",
-            "source": "user"
+            "source": "ai"
           },
           {
             "time": "10:21-11:51",
@@ -2869,18 +2862,18 @@
         "timeline": [
           {
             "time": "10:00",
-            "title": "那霸新都心飯店 退房",
+            "title": "沖繩那霸美居飯店 退房",
             "locations": [
               {
-                "name": "Naha Shintoshin Hotel",
-                "googleQuery": "https://www.google.com/maps/search/Naha+Shintoshin+Hotel",
-                "appleQuery": "https://maps.apple.com/?q=Naha+Shintoshin+Hotel",
-                "mapcode": "33 188 452*63"
+                "name": "メルキュール沖縄那覇",
+                "googleQuery": "https://www.google.com/maps/search/メルキュール沖縄那覇",
+                "appleQuery": "https://maps.apple.com/?q=メルキュール沖縄那覇",
+                "mapcode": "33 155 267*37"
               }
             ],
-            "googleRating": 3.9,
+            "googleRating": 4,
             "blogUrl": "",
-            "source": "user"
+            "source": "ai"
           },
           {
             "time": "11:14",
@@ -3043,7 +3036,7 @@
             "台灣駕照正本＋日文譯本（監理所 NT$100）",
             "信用卡（海外消費免手續費佳）",
             "日本 eSIM 或 WiFi 分享器",
-            "飯店訂房確認信（那霸新都心飯店、BUZZ RESORT、HOPE VILLA）"
+            "飯店訂房確認信（沖繩那霸美居飯店、BUZZ RESORT、HOPE VILLA）"
           ]
         },
         {
@@ -3072,7 +3065,7 @@
           "title": "住宿確認",
           "color": "var(--blue-light)",
           "items": [
-            "那霸新都心飯店 Naha Shintoshin Hotel（7/2、7/5、7/6 共三晚）",
+            "沖繩那霸美居飯店 Mercure（7/2、7/5、7/6 共三晚）",
             "BUZZ RESORT Chatan（7/3 一晚，凌晨 01:04 入住）",
             "HOPE VILLA Onnason（7/4–7/5 共二晚）"
           ]
@@ -3169,7 +3162,7 @@
           "title": "高優先",
           "priority": "high",
           "items": [
-            "Day 2 已優化：取消 plate jam 宵夜，PARCO CITY 購物縮為 3 小時，BUZZ RESORT 22:23 入住，睡眠時間充裕",
+            "Day 2 行程過晚：plate jam 宵夜 23:45、BUZZ RESORT 凌晨 01:12 入住，隔天出發僅能睡不到 6 小時，建議取消宵夜或 Day 3 出發時間延後",
             "Day 6 還車時間衝突：還車排在 17:30，但後續行程 ASHIBINAA Outlet（20:40）、Can*Do（22:41）、SPORTS DEPO（23:51）均在還車後；若當天還車，後段需改搭計程車/巴士前往，需提前確認交通方案",
             "Day 6 ASHIBINAA Outlet 營業時間約至 20:00，排 20:40 抵達恐已關門；Can*Do 22:41、SPORTS DEPO 23:51 也需逐一確認當日實際關店時間",
             "Day 3 翡翠海灘已移至備案：原路線折返嚴重，已將翡翠海灘改為彈性選項，天氣好且有體力時可自行前往"
@@ -3180,9 +3173,9 @@
           "priority": "medium",
           "items": [
             "Day 4 出現兩筆「午餐」（11:28 與 16:00），第二筆距離前一餐超過 3.5 小時，建議改標為「下午茶」或「晚餐前輕食」",
-            "Day 2 午餐（11:43）已有 PARCO CITY 餐廳推薦，PARCO CITY 購物已調整為 3 小時",
+            "Day 2 午餐（11:43）已有 PARCO CITY 餐廳推薦，建議提前確認營業時間",
             "Day 5 寶可夢中心僅安排 1 小時（13:51–14:51），限定商品排隊可能需要更多時間，建議預留至 1.5–2 小時",
-            "住宿確認：那霸新都心飯店共三晚為 7/2（入住）、7/5（入住）、7/6（住宿），不是 7/6–7，請更新訂房記錄"
+            "住宿確認：沖繩那霸美居飯店共三晚為 7/2（入住）、7/5（入住）、7/6（住宿），不是 7/6–7，請更新訂房記錄"
           ]
         },
         {
@@ -3231,7 +3224,7 @@
         {
           "title": "住宿聯絡",
           "items": [
-            "那霸新都心飯店 Naha Shintoshin Hotel — おもろまち 4-16-27",
+            "沖繩那霸美居飯店 Mercure Okinawa Naha — 3-3-19 Tsubogawa",
             "BUZZ RESORT — +81-98-982-5337",
             "HOPE VILLA Onnason — 恩納村"
           ]

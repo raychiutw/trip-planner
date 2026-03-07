@@ -168,11 +168,11 @@ body:not(.dark) .day-header {
 .map-link, .map-link-inline { text-decoration: none !important; }
 .map-link { display: inline-flex; align-items: center; gap: 3px; background: transparent; color: var(--accent); padding: 3px 8px; border-radius: var(--radius-sm); font-size: var(--fs-md); text-decoration: none; margin-right: 4px; margin-bottom: 3px; height: 28px; vertical-align: middle; }
 .map-link:hover { background: var(--hover-bg); color: var(--text); opacity: 1; }
-.map-link .g-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #4285F4; color: #fff; font-size: 10px; font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
-.map-link .n-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #03C75A; color: #fff; font-size: 10px; font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
+.map-link .g-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #4285F4; color: #fff; font-size: var(--fs-sm); font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
+.map-link .n-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #03C75A; color: #fff; font-size: var(--fs-sm); font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
 .map-link.naver { color: var(--text); }
 .map-link.naver:hover { background: var(--hover-bg); color: var(--text); }
-.map-link-inline .n-icon { width: 13px; height: 13px; font-size: 8px; }
+.map-link-inline .n-icon { width: 16px; height: 16px; font-size: var(--fs-sm); }
 .map-link.apple { color: var(--text); }
 .map-link.apple:hover { background: var(--hover-bg); color: var(--text); }
 .map-link.apple:hover .apple-icon svg { fill: currentColor; }
@@ -181,7 +181,7 @@ body:not(.dark) .day-header {
 .map-link.mapcode { color: var(--accent); }
 .map-link.mapcode:hover { background: var(--hover-bg); color: var(--text); }
 .map-link-inline { font-size: var(--fs-md); padding: 1px 6px; height: 22px; }
-.map-link-inline .g-icon { width: 13px; height: 13px; font-size: 8px; }
+.map-link-inline .g-icon { width: 16px; height: 16px; font-size: var(--fs-sm); }
 .map-link-inline .apple-icon, .map-link-inline .apple-icon svg { width: 11px; height: 11px; }
 
 /* ===== Info Boxes ===== */
@@ -272,7 +272,7 @@ body:not(.dark) .day-header {
     position: fixed; bottom: 20px; right: 20px;
     width: 56px; height: 56px; border-radius: 50%;
     background: var(--accent); color: #fff; border: none;
-    font-size: 1.8rem; font-weight: 300; text-decoration: none;
+    font-size: var(--fs-display); font-weight: 300; text-decoration: none;
     display: flex; align-items: center; justify-content: center;
     z-index: 300; box-shadow: var(--shadow-md);
     transition: transform 0.2s, box-shadow 0.2s;

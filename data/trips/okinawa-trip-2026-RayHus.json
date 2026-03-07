@@ -235,7 +235,7 @@
             "source": "ai"
           },
           {
-            "time": "17:50",
+            "time": "17:50-18:30",
             "title": "抵達那霸機場",
             "description": "入境、領取行李、辦理入境手續",
             "locations": [
@@ -252,7 +252,7 @@
             "googleRating": 3.9
           },
           {
-            "time": "18:30",
+            "time": "18:30-19:00",
             "title": "Check in Living Inn 旭橋駅前",
             "description": "放置行李，休息整理",
             "blogUrl": "https://eisei86.pixnet.net/blog/post/156706179",
@@ -301,7 +301,7 @@
             "source": "ai"
           },
           {
-            "time": "19:30",
+            "time": "19:30-21:00",
             "title": "那霸國際通晚餐",
             "titleUrl": "https://naha-kokusaidori.okinawa/",
             "blogUrl": "https://www.wendyjourney.com/kokusai-dori/",
@@ -468,7 +468,7 @@
         },
         "timeline": [
           {
-            "time": "07:30",
+            "time": "07:30-08:00",
             "title": "前往集合地點",
             "description": "步行或搭單軌電車前往縣民廣場（沖縄県庁前）",
             "locations": [
@@ -485,7 +485,7 @@
             "googleRating": 4.1
           },
           {
-            "time": "08:00~18:15",
+            "time": "08:00-18:15",
             "title": "KKday 沖繩北部一日遊",
             "description": "跟團遊覽沖繩北部精華景點：美麗海水族館、古宇利島、名護鳳梨公園。集合地點：縣民廣場（沖縄県庁前 Naha City Izumizaki 1-2-3）",
             "locations": [
@@ -515,7 +515,7 @@
             "source": "ai"
           },
           {
-            "time": "18:15",
+            "time": "18:15-19:45",
             "title": "返回那霸，晚餐",
             "description": "一日遊結束，返回那霸市區享用晚餐",
             "blogUrl": "https://mimigo.tw/naha-hotels/",
@@ -677,7 +677,7 @@
             "source": "ai"
           },
           {
-            "time": "12:00",
+            "time": "12:00-12:30",
             "title": "前往集合地點",
             "description": "步行或搭單軌電車前往 Blue Seal Palette 久茂地店（縣廳前站走路4分鐘）",
             "locations": [
@@ -694,7 +694,7 @@
             "googleRating": 4.1
           },
           {
-            "time": "12:30~21:30",
+            "time": "12:30-21:30",
             "title": "Klook 沖繩西海岸一日遊",
             "description": "跟團遊覽沖繩西海岸精華景點：波上宮、殘波岬燈塔、美國村、東南植物樂園燈光秀。集合地點：Blue Seal Palette 久茂地店（沖縄県那覇市久茂地1丁目1番1号）",
             "locations": [
@@ -725,7 +725,7 @@
             "source": "ai"
           },
           {
-            "time": "21:30",
+            "time": "21:30-23:00",
             "title": "返回那霸，晚餐",
             "description": "一日遊結束返回那霸市區，選擇深夜營業的餐廳用餐",
             "blogUrl": "https://mimigo.tw/naha-hotels/",
@@ -906,7 +906,7 @@
             "googleRating": 3.8
           },
           {
-            "time": "10:30",
+            "time": "10:30-11:30",
             "title": "搭巴士前往 AEON Mall 來客夢",
             "description": "那霸巴士總站搭 21 或 92 號公車前往永旺夢樂城（AEON Mall Okinawa Rycom），車程約60分鐘",
             "locations": [
@@ -923,7 +923,7 @@
             "googleRating": 3.8
           },
           {
-            "time": "11:30~18:30",
+            "time": "11:30-18:30",
             "title": "AEON Mall 來客夢購物",
             "titleUrl": "https://tw.aeonmall.global/mall/okinawarycom-aeonmall/",
             "blogUrl": "https://mimigo.tw/aeon-mall-okinawa-rycom/",
@@ -1068,7 +1068,7 @@
             "googleRating": 3.8
           },
           {
-            "time": "18:30",
+            "time": "18:30-20:00",
             "title": "晚餐",
             "blogUrl": "https://mimigo.tw/naha-hotels/",
             "infoBoxes": [
@@ -1135,7 +1135,7 @@
             "source": "ai"
           },
           {
-            "time": "20:00",
+            "time": "20:00-20:30",
             "title": "Check in THE NEST NAHA",
             "description": "辦理 Check in，放置行李。可使用 14F 溫水游泳池（9:00~22:00）",
             "blogUrl": "https://vialife.tw/21994/",
@@ -1286,7 +1286,7 @@
             "source": "ai"
           },
           {
-            "time": "10:00",
+            "time": "10:00-10:30",
             "title": "搭巴士前往 iias 沖繩豐崎",
             "description": "那霸巴士總站搭 98、55 或 56 號巴士，至「豐崎美麗陽光海灘前站」下車",
             "locations": [
@@ -1303,7 +1303,7 @@
             "googleRating": 3.8
           },
           {
-            "time": "10:30~18:00",
+            "time": "10:30-18:00",
             "title": "iias 沖繩豐崎購物",
             "titleUrl": "https://toyosaki.iias.jp/",
             "blogUrl": "https://bigsharkgogogo.tw/iias-okinawa/",
@@ -1436,7 +1436,7 @@
             "source": "ai"
           },
           {
-            "time": "18:00",
+            "time": "18:00-19:30",
             "title": "搭巴士返回那霸晚餐",
             "description": "返回那霸市區享用最後一夜晚餐，可至國際通或旭橋周邊",
             "travel": {
@@ -1525,7 +1525,7 @@
         },
         "timeline": [
           {
-            "time": "09:00",
+            "time": "09:00-09:30",
             "title": "退房 THE NEST NAHA",
             "description": "整理行李退房，前往那霸機場",
             "locations": [
@@ -1542,7 +1542,7 @@
             "googleRating": 4.2
           },
           {
-            "time": "10:00",
+            "time": "10:00-10:30",
             "title": "抵達那霸機場・辦理報到",
             "description": "提早到機場辦理報到、託運行李。機場免稅店最後採購！Blue Seal 冰淇淋推薦紅芋口味",
             "blogUrl": "https://bobbyfun.tw/2024-01-07-2702/",
@@ -1557,7 +1557,7 @@
             "source": "ai"
           },
           {
-            "time": "10:30",
+            "time": "10:30-11:35",
             "title": "機場午餐",
             "description": "在那霸機場國內線出發大廳用餐",
             "blogUrl": "https://pfse64289.pixnet.net/blog/post/347093785",
