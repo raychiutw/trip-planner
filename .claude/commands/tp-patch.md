@@ -16,13 +16,13 @@
 
 ### Phase 1：掃描
 
-1. 讀取目標行程 JSON（`--trips` 指定或全部）
-2. 遍歷所有 day，依 `--target` 定位物件：
-   - `hotel` → `day.content.hotel`（跳過 name 為「家」或以「（」開頭的）
-   - `restaurant` → timeline event infoBoxes `type: "restaurants"` 內的每個 restaurant + hotel infoBoxes 內的 restaurant
-   - `shop` → timeline event 和 hotel infoBoxes `type: "shopping"` 內的每個 shop
+1. 讀取目標行程 MD 檔案（`data/trips-md/{slug}/`，`--trips` 指定或全部）
+2. 遍歷所有 day-N.md，依 `--target` 定位物件：
+   - `hotel` → Hotel section（跳過 name 為「家」或以「（」開頭的）
+   - `restaurant` → restaurants infoBox table 內的每個 restaurant
+   - `shop` → shopping infoBox table 內的每個 shop
    - `event` → timeline event（跳過有 travel 的和「餐廳未定」）
-   - `gasStation` → infoBoxes `type: "gasStation"`
+   - `gasStation` → gasStation infoBox
 3. 檢查每個物件的 `--field` 是否需要更新：
    - `googleRating`：缺少或非 number → 需更新
    - `blogUrl`：缺少或為空字串 → 需更新
@@ -36,16 +36,16 @@
 6. 為每個行程啟動一個 Agent（sonnet），並行搜尋：
    - Agent prompt 包含該行程需更新的物件清單 + search-strategies.md 的搜尋方式
    - **依 R13 先驗證 POI 存在性**，搜不到時回報「POI 不存在：{名稱}」，不設 unknown、不繼續搜尋
-   - Agent 不直接改檔案，只回傳 JSON patch（物件路徑 + 新值）
+   - Agent 不直接改檔案，只回傳 patch 結果（物件路徑 + 新值）
 7. 收集所有 Agent 回傳的 patch 結果
 
 ### Phase 3：合併與驗證
 
-8. 為每個行程建立備份（同 tp-edit 備份邏輯，存至 `data/backup/`）
-9. 合併 patch 寫回行程 JSON：
+8. 合併 patch 寫回行程 MD 檔案：
    - 只修改目標欄位，其他欄位完全不動
    - 找不到的值不填預設（googleRating 省略、blogUrl 維持空字串、reservation 維持 unknown）
-10. `git diff --name-only` 確認只有 `data/trips/*.json` 被修改
+9. 執行 `npm run build` 更新 dist
+10. `git diff --name-only` 確認只有 `data/trips-md/**` + `data/dist/**` 被修改
 11. `npm test`
 12. 對每個修改的行程執行 tp-check 精簡模式
 13. 不自動 commit（由使用者決定）
@@ -67,8 +67,8 @@
 /tp-patch --target shop --field blogUrl
 ```
 
-✅ 允許修改的檔案（正面表列）：
-   data/trips/*.json
-   data/backup/*
+僅允許編輯：
+  data/trips-md/**
 
-🚫 其他所有檔案一律不得修改。
+以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
+  data/dist/**

@@ -1,28 +1,26 @@
-接受自然語言描述，局部修改指定行程 JSON。修改前自動備份，修改後自動執行 tp-check 精簡 report。
+接受自然語言描述，局部修改指定行程 MD 檔案。修改後執行 build + tp-check 精簡 report。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
 ## 輸入方式
 
 - 指定 tripSlug + 描述：`/tp-edit okinawa-trip-2026-Ray Day 3 午餐換成拉麵`
-- 未指定 tripSlug：讀取 `data/trips.json` 列出所有行程供選擇
+- 未指定 tripSlug：讀取 `data/dist/trips.json` 列出所有行程供選擇
 
 ## 步驟
 
-1. 讀取 `data/trips/{tripSlug}.json`
-2. **備份**：複製到 `data/backup/{tripSlug}_{YYYY-MM-DDTHHMMSS}.json`
-   - 建立 `data/backup/` 目錄（若不存在）
-   - 同一 tripSlug 超過 10 個備份時，刪除最舊的
-3. 依自然語言描述**局部修改**行程 JSON（只改描述涉及的部分）
-4. 新增或替換的 POI 須標記 `source` 欄位：
+1. 讀取 `data/trips-md/{tripSlug}/` 下的 MD 檔案（meta.md + 相關 day-N.md）
+2. 依自然語言描述**局部修改**對應的 MD 檔案（只改描述涉及的部分）
+3. 新增或替換的 POI 須標記 `source` 欄位：
    - 使用者明確指定名稱（如「換成一蘭拉麵」）→ `"source": "user"`
    - 使用者僅給模糊描述（如「換成拉麵店」）→ `"source": "ai"`
-5. 修改的部分須符合 R1-R14 品質規則
-5b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
-6. 若影響到 checklist、backup、suggestions，同步更新
-7. 確認 transit 分鐘數
+4. 修改的部分須符合 R1-R14 品質規則
+4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
+5. 若影響到 checklist、backup、suggestions，同步更新對應 MD 檔案
+6. 確認 transit 分鐘數
+7. 執行 `npm run build` 更新 dist
 8. 執行 `git diff --name-only`：
-   → 只有 `data/trips/{tripSlug}.json` → OK
+   → 只有 `data/trips-md/{tripSlug}/**` + `data/dist/**` → OK
    → 有其他檔案被改 → `git checkout` 還原非白名單檔案
 9. `npm test`
 10. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
@@ -31,17 +29,17 @@
 ## 局部修改 vs 全面重整
 
 本 skill 只處理描述涉及的修改範圍，例如：
-- 「Day 3 午餐換成拉麵」→ 只改 Day 3 午餐 entry
-- 「加一個景點到 Day 2」→ 只在 Day 2 timeline 插入
+- 「Day 3 午餐換成拉麵」→ 只改 day-3.md 午餐 entry
+- 「加一個景點到 Day 2」→ 只在 day-2.md timeline 插入
 - 「刪除 Day 4 的購物行程」→ 只移除該 entry
 
 **不全面重跑 R1-R12**。如需全面重整，使用 `/tp-rebuild`。
 
-✅ 允許修改的檔案（正面表列，僅此一項）：
-   data/trips/{tripSlug}.json
+僅允許編輯：
+  data/trips-md/{tripSlug}/**
 
-🚫 其他所有檔案一律不得修改，包括但不限於：
-   js/*, css/*, index.html, edit.html, data/trips.json, tests/*, CLAUDE.md
+以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
+  data/dist/**
 
 ## 品質規則參照
 
