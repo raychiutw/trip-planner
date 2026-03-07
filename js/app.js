@@ -231,18 +231,14 @@ function renderTimelineEvent(entry, idx, isLast) {
     var parsed = parseTimeRange(entry.time);
     var html = '<div class="tl-event expanded">';
 
-    /* Left: times */
-    html += '<div class="tl-times">';
+    /* Arrival flag */
+    html += '<div class="tl-flag tl-flag-arrive">';
+    html += '<span class="tl-flag-num">' + idx + '</span>';
     html += '<span class="tl-time-start">' + escHtml(parsed.start) + '</span>';
-    if (parsed.end) html += '<span class="tl-time-end">' + escHtml(parsed.end) + '</span>';
     html += '</div>';
 
-    /* Center: numbered marker + vertical line */
-    html += '<div class="tl-marker' + (isLast && !entry.travel ? ' tl-marker-last' : '') + '">';
-    html += '<span class="tl-num">' + idx + '</span>';
-    html += '</div>';
-
-    /* Right: card */
+    /* Segment: dashed line + card */
+    html += '<div class="tl-segment">';
     html += '<div class="tl-card">';
 
     /* Card header: title + duration */
@@ -277,15 +273,23 @@ function renderTimelineEvent(entry, idx, isLast) {
         html += '</div>';
     }
     html += '</div>'; /* end tl-card */
+    html += '</div>'; /* end tl-segment */
+
+    /* Departure flag */
+    if (parsed.end) {
+        html += '<div class="tl-flag tl-flag-depart">';
+        html += '<span class="tl-time-end">' + escHtml(parsed.end) + '</span>';
+        html += '</div>';
+    }
+
     html += '</div>'; /* end tl-event */
 
-    /* Transit bar (between events) */
+    /* Transit segment */
     if (entry.travel) {
         var travelText = entry.travel.text || (typeof entry.travel === 'string' ? entry.travel : '');
         var travelType = (entry.travel.type) || '';
         var travelIcon = travelType ? iconSpan(travelType) : '';
-        html += '<div class="tl-transit-bar">';
-        html += '<div class="tl-transit-line' + (isLast ? ' tl-transit-last' : '') + '"></div>';
+        html += '<div class="tl-segment tl-segment-transit">';
         html += '<div class="tl-transit-content">';
         if (travelIcon) html += '<span class="tl-transit-icon">' + travelIcon + '</span>';
         html += '<span class="tl-transit-text">' + escHtml(travelText) + '</span>';
