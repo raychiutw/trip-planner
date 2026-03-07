@@ -102,8 +102,7 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        // 一次撈取所有符合 trip label 的 issue，用 state + comments 過濾已處理的
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&per_page=20')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=20')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
