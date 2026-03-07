@@ -922,7 +922,7 @@
           "blogUrl": "https://www.bigfang.tw/blog/post/okinawa-onnason-hotel",
           "details": [
             "恩納村",
-            "Day 3 Check in 15:50"
+            "Day 3 Check in 15:14"
           ],
           "breakfast": {
             "included": null
@@ -1082,90 +1082,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "12:30-13:15",
-            "title": "午餐（読谷村）",
-            "description": "殘波岬附近午餐 — 読谷村在地美食",
-            "locations": [
-              {
-                "name": "花織そば 読谷村",
-                "googleQuery": "https://www.google.com/maps/search/花織そば+読谷村",
-                "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村",
-                "mapcode": "33 854 377*55"
-              }
-            ],
-            "travel": {
-              "text": "約5分鐘",
-              "type": "car"
-            },
-            "infoBoxes": [
-              {
-                "type": "restaurants",
-                "title": "午餐推薦",
-                "restaurants": [
-                  {
-                    "category": "沖繩料理",
-                    "name": "花織そば",
-                    "description": "はなういそば — 読谷村代表性沖繩麵，豚骨柴魚湯頭清爽回甘，自家製麵條Q彈有勁，在地人推薦名店",
-                    "price": "¥700~",
-                    "location": {
-                      "name": "花織そば 読谷村",
-                      "googleQuery": "https://www.google.com/maps/search/花織そば+読谷村",
-                      "appleQuery": "https://maps.apple.com/?q=花織そば+読谷村"
-                    },
-                    "hours": "11:00~16:00（售完即止）",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://www.bigfang.tw/blog/post/okinawa-hanaui-soba",
-                    "googleRating": 4.2,
-                    "source": "ai"
-                  },
-                  {
-                    "category": "海鮮",
-                    "name": "海人食堂",
-                    "description": "都屋漁港直營食堂 — 毎朝漁港直送鮮魚，海鮮丼・刺身定食CP值極高，漁港氛圍滿點",
-                    "price": "¥800~",
-                    "location": {
-                      "name": "海人食堂 読谷都屋漁港",
-                      "googleQuery": "https://www.google.com/maps/search/海人食堂+読谷+都屋漁港",
-                      "appleQuery": "https://maps.apple.com/?q=海人食堂+読谷都屋漁港"
-                    },
-                    "hours": "11:00~16:00（售完即止）",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://www.bigfang.tw/blog/post/okinawa-uminchu-shokudo",
-                    "googleRating": 4.1,
-                    "source": "ai"
-                  },
-                  {
-                    "category": "甜點",
-                    "name": "琉球窯 残波岬店",
-                    "description": "琉球窯 — 殘波岬入口處人氣甜點店，現烤紅芋塔與黑糖霜淇淋，觀光後休憩好去處",
-                    "price": "¥500~",
-                    "location": {
-                      "name": "琉球窯 残波岬店",
-                      "googleQuery": "https://www.google.com/maps/search/琉球窯+残波岬",
-                      "appleQuery": "https://maps.apple.com/?q=琉球窯+残波岬"
-                    },
-                    "hours": "10:00~18:00",
-                    "reservation": {
-                      "available": "no",
-                      "recommended": false
-                    },
-                    "blogUrl": "https://janotts.pixnet.net/blog/post/31382013",
-                    "googleRating": 4.0,
-                    "source": "ai"
-                  }
-                ]
-              }
-            ],
-            "source": "ai"
-          },
-          {
-            "time": "13:35-14:05",
+            "time": "12:55-13:25",
             "title": "萬座毛",
             "titleUrl": "https://travelholic0202.pixnet.net/blog/post/97932943",
             "description": "万座毛 — 象鼻岩自然景觀（約30分鐘）",
@@ -1185,7 +1102,7 @@
             "googleRating": 4.2
           },
           {
-            "time": "14:30-15:30",
+            "time": "13:45-14:45",
             "title": "業務超市 宇流麻石川店",
             "description": "業務スーパー うるま石川店 — 食材採買（VILLA 自炊用）",
             "infoBoxes": [
@@ -1268,7 +1185,7 @@
             "googleRating": 3.8
           },
           {
-            "time": "15:50-16:20",
+            "time": "15:14-16:14",
             "title": "HOPE VILLA Onnason",
             "description": "HOPE VILLA Onnason（恩納村）— Check in",
             "locations": [
@@ -1284,7 +1201,7 @@
             "source": "ai"
           },
           {
-            "time": "16:20",
+            "time": "16:14",
             "title": "VILLA 自由活動",
             "description": "Check in 後自由休息（VILLA 自炊或外食）",
             "infoBoxes": [
