@@ -36,7 +36,8 @@
         html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
         html += '</div>';
         html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
-        if (issue.state === 'closed' && issue.comments > 0) {
+        // 回覆區
+        if (issue.comments > 0) {
             html += '<div class="issue-reply" id="reply-' + issue.number + '">\u8B80\u53D6\u56DE\u8986\u4E2D\u2026</div>';
         }
         html += '</div>';
@@ -46,7 +47,7 @@
     /* ===== Load Issue Replies (async) ===== */
     function loadIssueReplies(issues) {
         var toFetch = issues.filter(function(issue) {
-            return issue.state === 'closed' && issue.comments > 0;
+            return issue.comments > 0;
         });
         toFetch.forEach(function(issue) {
             ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues/' + issue.number + '/comments')
@@ -58,7 +59,8 @@
                     var el = document.getElementById('reply-' + issue.number);
                     if (!el) return;
                     if (comments.length > 0) {
-                        el.textContent = comments[comments.length - 1].body;
+                        var allReplies = comments.map(function(c) { return c.body; }).join('\n\n');
+                        el.textContent = allReplies;
                     } else {
                         el.textContent = '';
                     }
@@ -94,13 +96,18 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=20')
+        // 一次撈取所有符合 trip label 的 issue，用 state + comments 過濾已處理的
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=50')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
             })
             .then(function(issues) {
-                renderIssues(issues);
+                // 只保留已關閉且有回覆的 issue（代表已處理、有 commit）
+                var processed = issues.filter(function(issue) {
+                    return issue.state === 'closed' && issue.comments > 0;
+                });
+                renderIssues(processed);
             })
             .catch(function() {
                 issueList.innerHTML = '<div class="edit-issues-empty">無法載入紀錄</div>';
