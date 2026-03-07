@@ -123,7 +123,7 @@ body:not(.dark) .day-header {
 .status-tag.pending { background: var(--accent-muted); color: var(--accent); }
 .status-tag.paid { background: var(--accent-light); color: var(--accent); }
 .hotel-detail-grid { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-bottom: 8px; }
-.hotel-sub { margin-top: 8px; padding: 8px 10px; background: var(--accent-light); border-radius: var(--radius-sm); }
+.hotel-sub { margin-top: 8px; padding: 4px 0 4px 12px; border-left: 3px solid var(--accent); }
 
 /* ===== Timeline ===== */
 .timeline { position: relative; margin: 12px 0 0; padding: 0; }
@@ -193,14 +193,16 @@ body:not(.dark) .day-header {
 .info-box.souvenir,
 .info-box.restaurants,
 .info-box.shopping { background: var(--accent-light); }
-.restaurant-choice { padding: 10px 12px; line-height: 1.7; background: var(--accent-light); border-radius: var(--radius-sm); margin-bottom: 8px; border: 1px solid var(--accent); }
+.restaurant-choice { padding: 10px 0; line-height: 1.7; border-bottom: 1px solid var(--border); }
+.restaurant-choice:last-child { border-bottom: none; padding-bottom: 0; }
 .info-box-grid { display: flex; flex-direction: column; }
 @media (min-width: 768px) {
     .info-box-grid { display: grid; gap: 8px; }
     .info-box-grid.grid-1 { grid-template-columns: 1fr; }
     .info-box-grid.grid-even { grid-template-columns: repeat(2, 1fr); }
     .info-box-grid.grid-odd { grid-template-columns: repeat(3, 1fr); }
-    .info-box-grid .restaurant-choice { margin-bottom: 0; }
+    .info-box-grid .restaurant-choice { padding: 10px 12px; border-bottom: none; background: var(--white); border-radius: var(--radius-sm); }
+    .info-box-grid .restaurant-choice:last-child { padding-bottom: 10px; }
 }
 .restaurant-choice strong { color: var(--accent); }
 .restaurant-choice a:not(.map-link) { color: var(--text); font-weight: 600; text-decoration: underline; }
@@ -316,6 +318,8 @@ body.dark .edit-fab { background: var(--accent); }
 
 /* ===== Mobile ===== */
 @media (max-width: 600px) {
+    .day-content { padding: 0 12px 12px; }
+    .day-overview { padding: 10px; }
     .day-header { top: 0; padding: 6px 8px; gap: 4px; flex-wrap: wrap; }
     .dh-nav { gap: 2px; }
     .tl-flag { padding: 4px 16px 4px 8px; }
@@ -325,6 +329,7 @@ body.dark .edit-fab { background: var(--accent); }
     .tl-card { padding: 8px 10px; }
     .tl-transit-content { padding: 5px 10px; }
     .tl-body { padding: 2px 0 2px; }
+    .info-box { padding: 6px 10px; }
     .hw-grid { gap: 5px; scroll-snap-type: x mandatory; }
     .hw-block { min-width: calc((100% - 10px) / 3); scroll-snap-align: start; }
     .ov-grid { grid-template-columns: 1fr; }
@@ -383,7 +388,7 @@ body.dark .info-header { background: var(--hover-bg); color: var(--text); }
 body.dark .map-link.apple:hover .apple-icon svg { fill: currentColor; }
 body.dark .hw-block { background: var(--hover-bg); }
 body.dark .info-box { background: var(--accent-light); }
-body.dark .tl-card { background: var(--hover-bg); }
+body.dark .tl-card { background: #403D3A; }
 body.dark .tl-transit-content { background: var(--accent-light); }
 
 /* ===== Tab Day Switching ===== */
