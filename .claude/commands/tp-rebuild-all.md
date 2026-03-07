@@ -1,14 +1,15 @@
-批次重建所有行程 JSON，逐一執行 R1-R12 品質規則全面重整。
+批次重建所有行程 MD 檔案，逐一執行 R1-R12 品質規則全面重整。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
 ## 步驟
 
-1. 讀取 `data/trips.json` 取得所有行程檔案清單
-2. 逐一對每個行程執行 `/tp-rebuild` 的重整邏輯（含備份 + before/after tp-check）
+1. 掃描 `data/trips-md/` 下所有行程目錄取得行程清單
+2. 逐一對每個行程執行 `/tp-rebuild` 的重整邏輯（含 before/after tp-check）
 3. 每完成一個行程顯示進度 + tp-check 完整模式 report（after-fix）
-4. 全部完成後執行 `npm test` 驗證
-5. 不自動 commit（由使用者決定）
+4. 全部完成後執行 `npm run build` 更新 dist
+5. `npm test` 驗證
+6. 不自動 commit（由使用者決定）
 
 ## 進度顯示格式
 
@@ -27,10 +28,11 @@ tp-check: 🟢 11  🟡 1  🔴 0
 npm test 結果：✓ 全部通過
 ```
 
-✅ 允許修改的檔案：
-   data/trips/*.json（僅行程 JSON 檔案）
+僅允許編輯：
+  data/trips-md/**
 
-🚫 其他所有檔案一律不得修改
+以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
+  data/dist/**
 
 ## 品質規則
 

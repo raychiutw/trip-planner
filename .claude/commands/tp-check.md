@@ -1,15 +1,15 @@
-對指定行程 JSON 逐項檢查 R1-R13 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何檔案。
+對指定行程逐項檢查 R1-R13 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何檔案。
 
 ⚡ 核心原則：不問問題，直接驗證。
 
 ## 輸入方式
 
 - 指定 tripSlug：`/tp-check okinawa-trip-2026-Ray`
-- 未指定：讀取 `data/trips.json` 列出所有行程供選擇
+- 未指定：讀取 `data/dist/trips.json` 列出所有行程供選擇
 
 ## 步驟
 
-1. 讀取 `data/trips/{tripSlug}.json`
+1. 讀取 `data/trips-md/{tripSlug}/` 下的 MD 檔案（meta.md + day-N.md 等）
 2. 逐項檢查 R1-R13 品質規則（定義在 `/tp-rebuild` 中）
 3. 依檢查結果輸出 report（完整模式或精簡模式）
 
