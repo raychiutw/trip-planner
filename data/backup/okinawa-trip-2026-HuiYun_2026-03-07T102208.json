@@ -1578,35 +1578,14 @@
               }
             ],
             "travel": {
-              "text": "約25分鐘",
+              "text": "約29分鐘",
               "type": "car"
             },
             "blogUrl": "https://okinawa.letsgojp.com/archives/392405/",
             "googleRating": 4.4
           },
           {
-            "time": "18:52-19:22",
-            "title": "許田休息站",
-            "titleUrl": "https://www.yanbaru-b.co.jp/",
-            "description": "道の駅許田 やんばる物産センター — 沖繩人氣第一道の駅，必買炸天婦羅、沙翁（サーターアンダギー）、新鮮果汁，可買美麗海水族館折扣門票（約30分鐘）",
-            "locations": [
-              {
-                "name": "道の駅許田",
-                "googleQuery": "https://www.google.com/maps/search/道の駅許田",
-                "appleQuery": "https://maps.apple.com/?q=道の駅許田",
-                "mapcode": "206 476 724*63"
-              }
-            ],
-            "travel": {
-              "text": "約10分鐘",
-              "type": "car"
-            },
-            "blogUrl": "https://okinawa.letsgojp.com/archives/7697/",
-            "googleRating": 4.0,
-            "source": "user"
-          },
-          {
-            "time": "19:32-20:32",
+            "time": "18:56-19:56",
             "title": "晚餐",
             "titleUrl": "https://hanblog.tw/ramendanbo/",
             "infoBoxes": [
@@ -1691,7 +1670,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "21:00",
+            "time": "20:24",
             "title": "HOPE VILLA Onnason",
             "description": "返回住宿休息",
             "locations": [
