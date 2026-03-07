@@ -24,20 +24,32 @@
         return fetch(url, Object.assign({ headers: headers }, opts || {}));
     }
 
-    /* ===== Check if issue has linked commits ===== */
-    function checkIssueHasCommits(issue) {
+    /* ===== Fetch issue events and extract commit info ===== */
+    function fetchIssueCommits(issue) {
         return ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues/' + issue.number + '/events')
             .then(function(r) {
-                if (!r.ok) return false;
+                if (!r.ok) return [];
                 return r.json();
             })
             .then(function(events) {
-                if (!events || !Array.isArray(events)) return false;
-                return events.some(function(ev) {
-                    return ev.event === 'referenced' || ev.event === 'closed' && ev.commit_id;
+                if (!events || !Array.isArray(events)) return [];
+                var commits = [];
+                var seen = {};
+                events.forEach(function(ev) {
+                    var sha = ev.commit_id;
+                    if (!sha || seen[sha]) return;
+                    if (ev.event === 'referenced' || ev.event === 'closed') {
+                        seen[sha] = true;
+                        commits.push({
+                            sha: sha,
+                            shortSha: sha.substring(0, 7),
+                            url: ev.commit_url || ''
+                        });
+                    }
                 });
+                return commits;
             })
-            .catch(function() { return false; });
+            .catch(function() { return []; });
     }
 
     /* ===== Build Issue Item HTML ===== */
@@ -52,6 +64,18 @@
         html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
         html += '</div>';
         html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
+        // Commit 資訊
+        if (issue._commits && issue._commits.length > 0) {
+            html += '<div class="issue-commits">';
+            issue._commits.forEach(function(c) {
+                var commitHtmlUrl = 'https://github.com/' + GH_OWNER + '/' + GH_REPO + '/commit/' + c.sha;
+                html += '<span class="issue-commit-sha">';
+                html += '<a href="' + escUrl(commitHtmlUrl) + '" target="_blank" rel="noopener noreferrer">' + iconSpan('git-commit') + escHtml(c.shortSha) + '</a>';
+                html += '</span>';
+            });
+            html += '</div>';
+        }
+        // 回覆區
         if (issue.comments > 0) {
             html += '<div class="issue-reply" id="reply-' + issue.number + '">\u8B80\u53D6\u56DE\u8986\u4E2D\u2026</div>';
         }
@@ -111,22 +135,27 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
+        // 1. 一次撈取所有符合 trip label 的 issue
         ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=50')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
             })
             .then(function(issues) {
-                // 對每個 issue 檢查是否有關聯 commit，只顯示有 commit 的
+                // 2. 對每個 issue 撈取 commit 資訊
                 var checks = issues.map(function(issue) {
-                    return checkIssueHasCommits(issue).then(function(hasCommits) {
-                        return hasCommits ? issue : null;
+                    return fetchIssueCommits(issue).then(function(commits) {
+                        issue._commits = commits;
+                        return issue;
                     });
                 });
                 return Promise.all(checks);
             })
-            .then(function(results) {
-                var withCommits = results.filter(function(issue) { return issue !== null; });
+            .then(function(issues) {
+                // 3. 只保留有 commit 的 issue
+                var withCommits = issues.filter(function(issue) {
+                    return issue._commits && issue._commits.length > 0;
+                });
                 renderIssues(withCommits);
             })
             .catch(function() {
