@@ -1,24 +1,22 @@
-全面重整單一行程 JSON，依 R1-R12 品質規則逐項檢查並修正。
+全面重整單一行程 MD 檔案，依 R1-R12 品質規則逐項檢查並修正。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
 ## 輸入方式
 
 - 指定 tripSlug：`/tp-rebuild okinawa-trip-2026-Ray`
-- 未指定：讀取 `data/trips.json` 列出所有行程供選擇
+- 未指定：讀取 `data/dist/trips.json` 列出所有行程供選擇
 
 ## 步驟
 
-1. 讀取 `data/trips/{tripSlug}.json`
-2. **備份**：複製到 `data/backup/{tripSlug}_{YYYY-MM-DDTHHMMSS}.json`
-   - 建立 `data/backup/` 目錄（若不存在）
-   - 同一 tripSlug 超過 10 個備份時，刪除最舊的
-3. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
-4. 逐項檢查 R1-R12 品質規則，修正不合格的欄位
-5. 同步更新 checklist、backup、suggestions
-6. 確認 transit 分鐘數
+1. 讀取 `data/trips-md/{tripSlug}/` 下的所有 MD 檔案
+2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
+3. 逐項檢查 R1-R12 品質規則，修正不合格的 MD 內容
+4. 同步更新 checklist.md、backup.md、suggestions.md
+5. 確認 transit 分鐘數
+6. 執行 `npm run build` 更新 dist
 7. 執行 `git diff --name-only`：
-   → 只有 `data/trips/{tripSlug}.json` → OK
+   → 只有 `data/trips-md/{tripSlug}/**` + `data/dist/**` → OK
    → 有其他檔案被改 → `git checkout` 還原非白名單檔案
 8. `npm test`
 9. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
@@ -26,18 +24,18 @@
 
 ## 重整範圍
 
-檢查現有行程 JSON 的每個欄位是否符合 R1-R12，修正不符規則的部分。
+檢查現有行程 MD 的每個欄位是否符合 R1-R12，修正不符規則的部分。
 **不改 timeline 順序、不新增/移除景點**，只確保現有內容符合品質規則。
 
-✅ 允許修改的檔案（正面表列，僅此一項）：
-   data/trips/{tripSlug}.json
+僅允許編輯：
+  data/trips-md/{tripSlug}/**
 
-🚫 其他所有檔案一律不得修改，包括但不限於：
-   js/*, css/*, index.html, edit.html, data/trips.json, tests/*, CLAUDE.md
+以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
+  data/dist/**
 
 ## 行程品質規則（R1-R10）
 
-產生或修改行程 JSON 時，自動遵守以下品質規則：
+產生或修改行程 MD 時，自動遵守以下品質規則：
 
 ### R1 料理偏好
 首次為某行程產生餐廳推薦前，詢問使用者料理偏好（最多 3 類，依優先排序）。第 1 家餐廳對應偏好 1、第 2 家對應偏好 2、第 3 家對應偏好 3。同一趟行程已知偏好不重複詢問。
