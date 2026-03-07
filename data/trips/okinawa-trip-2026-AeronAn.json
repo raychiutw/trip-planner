@@ -299,7 +299,7 @@
             "googleRating": 3.9
           },
           {
-            "time": "13:00",
+            "time": "13:00-14:30",
             "title": "Check in + 午餐",
             "description": "先至飯店寄放行李，附近國際通覓食",
             "locations": [
@@ -373,7 +373,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "14:30",
+            "time": "14:30-16:30",
             "title": "首里城公園",
             "titleUrl": "https://oki-park.jp/shurijo/",
             "blogUrl": "",
@@ -392,7 +392,7 @@
             "googleRating": 4.4
           },
           {
-            "time": "16:30",
+            "time": "16:30-17:30",
             "title": "國際通散步",
             "titleUrl": "https://naha-kokusaidori.okinawa/",
             "blogUrl": "",
@@ -411,7 +411,7 @@
             "googleRating": 4.2
           },
           {
-            "time": "17:30",
+            "time": "17:30-18:30",
             "title": "牧志公設市場",
             "blogUrl": "",
             "description": "那霸的廚房！1F 買鮮魚，2F 代客料理。色彩鮮豔的熱帶魚、島豆腐必體驗",
@@ -429,7 +429,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "18:30",
+            "time": "18:30-19:30",
             "title": "晚餐",
             "description": "國際通周邊晚餐",
             "locations": [
@@ -573,7 +573,7 @@
         },
         "timeline": [
           {
-            "time": "08:30",
+            "time": "08:30-10:00",
             "title": "出發前往南部",
             "description": "從那霸巴士總站搭 38 番巴士前往南城方面",
             "locations": [
@@ -591,7 +591,7 @@
             "googleRating": 3.5
           },
           {
-            "time": "10:00",
+            "time": "10:00-11:15",
             "title": "齋場御嶽",
             "titleUrl": "https://okinawa-nanjo.jp/sefa/",
             "blogUrl": "",
@@ -610,7 +610,7 @@
             "googleRating": 4.5
           },
           {
-            "time": "11:15",
+            "time": "11:15-12:00",
             "title": "知念岬公園",
             "blogUrl": "https://www.wendyjourney.com/chinenmisaki-park/",
             "description": "免費海岬公園，270度太平洋全景，可遠眺久高島和 Komaka 島",
@@ -625,7 +625,7 @@
             "source": "ai"
           },
           {
-            "time": "12:00",
+            "time": "12:00-13:30",
             "title": "午餐",
             "description": "南城周邊午餐",
             "locations": [
@@ -699,7 +699,7 @@
             "googleRating": 4
           },
           {
-            "time": "13:30",
+            "time": "13:30-16:30",
             "title": "沖繩世界（玉泉洞）",
             "titleUrl": "https://www.gyokusendo.co.jp/okinawaworld/",
             "blogUrl": "",
@@ -718,7 +718,7 @@
             "googleRating": 4.2
           },
           {
-            "time": "17:30",
+            "time": "17:30-18:30",
             "title": "回到那霸",
             "description": "巴士返回那霸市區",
             "blogUrl": "",
@@ -733,7 +733,7 @@
             "source": "ai"
           },
           {
-            "time": "18:30",
+            "time": "18:30-19:30",
             "title": "晚餐",
             "description": "回到那霸市區晚餐",
             "locations": [
@@ -876,7 +876,7 @@
         },
         "timeline": [
           {
-            "time": "07:30",
+            "time": "07:30-10:00",
             "title": "搭高速巴士前往北部",
             "description": "搭 117 番やんばる急行巴士，從縣廳前直達美麗海水族館，約2.5小時",
             "locations": [
@@ -906,7 +906,7 @@
             "googleRating": 3.5
           },
           {
-            "time": "10:00",
+            "time": "10:00-13:00",
             "title": "沖繩美麗海水族館",
             "titleUrl": "https://churaumi.okinawa/",
             "blogUrl": "https://bobbyfun.tw/2024-01-08-2706/",
@@ -922,7 +922,7 @@
             "source": "ai"
           },
           {
-            "time": "13:00",
+            "time": "13:00-14:30",
             "title": "午餐",
             "description": "水族館周邊或本部町午餐",
             "locations": [
@@ -996,7 +996,7 @@
             "googleRating": 4
           },
           {
-            "time": "14:30",
+            "time": "14:30-16:00",
             "title": "備瀨福木林道",
             "blogUrl": "",
             "description": "約2萬棵福木形成的綠色隧道，盡頭是美麗海灘。可租腳踏車悠閒遊覽",
@@ -1014,7 +1014,7 @@
             "googleRating": 4.5
           },
           {
-            "time": "16:00",
+            "time": "16:00-19:00",
             "title": "搭巴士返回那霸",
             "description": "搭 117 番回程巴士返回那霸市區",
             "blogUrl": "",
@@ -1029,7 +1029,7 @@
             "source": "ai"
           },
           {
-            "time": "19:00",
+            "time": "19:00-20:00",
             "title": "晚餐",
             "description": "回到那霸晚餐",
             "locations": [
@@ -1172,7 +1172,7 @@
         },
         "timeline": [
           {
-            "time": "08:30",
+            "time": "08:30-09:45",
             "title": "出發前往中部",
             "description": "搭 28 番或 29 番巴士前往北谷美國村",
             "locations": [
@@ -1190,7 +1190,7 @@
             "googleRating": 3.5
           },
           {
-            "time": "09:45",
+            "time": "09:45-12:00",
             "title": "美國村（北谷）",
             "blogUrl": "https://www.funtime.com.tw/blog/funtime/american-village-in-okinawa",
             "description": "充滿美式風情的商圈，彩色建築、摩天輪、海濱步道。逛街拍照看海一次滿足",
@@ -1205,7 +1205,7 @@
             "source": "ai"
           },
           {
-            "time": "12:00",
+            "time": "12:00-13:30",
             "title": "午餐",
             "description": "美國村周邊午餐",
             "locations": [
@@ -1279,7 +1279,7 @@
             "googleRating": 4
           },
           {
-            "time": "13:30",
+            "time": "13:30-14:45",
             "title": "殘波岬燈台",
             "blogUrl": "https://www.jathao.com/2015/10/gala.html",
             "description": "高30公尺白色燈塔，可登頂俯瞰東海壯闊斷崖。入場 ¥400",
@@ -1294,7 +1294,7 @@
             "source": "ai"
           },
           {
-            "time": "14:45",
+            "time": "14:45-16:00",
             "title": "御菓子御殿（讀谷店）",
             "blogUrl": "",
             "description": "紅芋塔工廠見學，免費試吃，買伴手禮的好地方",
@@ -1333,7 +1333,7 @@
             "googleRating": 4.2
           },
           {
-            "time": "16:00",
+            "time": "16:00-17:00",
             "title": "萬座毛",
             "blogUrl": "",
             "description": "象鼻岩絕景，步道約20分鐘走完一圈。入場 ¥100",
@@ -1351,7 +1351,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "18:30",
+            "time": "18:30-19:30",
             "title": "晚餐",
             "description": "回到那霸晚餐",
             "locations": [
@@ -1494,7 +1494,7 @@
         },
         "timeline": [
           {
-            "time": "09:00",
+            "time": "09:00-10:00",
             "title": "波上宮",
             "titleUrl": "https://naminouegu.jp/",
             "blogUrl": "",
@@ -1513,7 +1513,7 @@
             "googleRating": 4.2
           },
           {
-            "time": "10:00",
+            "time": "10:00-10:30",
             "title": "Check out + 寄放行李",
             "description": "退房，將行李寄放飯店",
             "locations": [
@@ -1531,7 +1531,7 @@
             "googleRating": 4.3
           },
           {
-            "time": "11:00",
+            "time": "11:00-12:00",
             "title": "瀨長島 Umikaji Terrace",
             "titleUrl": "https://www.umikajiterrace.com/",
             "blogUrl": "https://bobbyfun.tw/2024-01-08-2707/",
@@ -1547,7 +1547,7 @@
             "source": "ai"
           },
           {
-            "time": "12:00",
+            "time": "12:00-13:30",
             "title": "午餐",
             "description": "瀨長島或那霸市區最後一餐",
             "locations": [
