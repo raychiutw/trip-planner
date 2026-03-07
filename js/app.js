@@ -1056,6 +1056,10 @@ function closeInfoSheet() {
         var panel = document.getElementById('infoSheet');
         if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
 
+        // X close button
+        var closeBtn = document.getElementById('sheetCloseBtn');
+        if (closeBtn) closeBtn.addEventListener('click', closeInfoSheet);
+
         // Touch swipe down to close
         var _touchStartY = 0;
         panel && panel.addEventListener('touchstart', function(e) {
@@ -1086,12 +1090,16 @@ function openSpeedDialContent(contentKey) {
     closeSpeedDial();
     if (!TRIP) return;
     var sheetBody = document.getElementById('bottomSheetBody');
+    var sheetTitle = document.getElementById('sheetTitle');
     if (!sheetBody) return;
     var html = '';
     var section = TRIP[contentKey];
     var fn = DIAL_RENDERERS[contentKey];
     if (section && section.content && fn) {
-        html = '<h3>' + escHtml(section.title) + '</h3>' + fn(section.content);
+        if (sheetTitle) sheetTitle.textContent = section.title || '';
+        html = fn(section.content);
+    } else {
+        if (sheetTitle) sheetTitle.textContent = '';
     }
     sheetBody.innerHTML = html || '<p style="color:var(--gray);text-align:center;">無相關資料</p>';
     openInfoSheet();

@@ -475,11 +475,33 @@ body.dark .speed-dial-item { background: var(--card-bg); }
 }
 .info-sheet-backdrop.open .info-sheet-panel { transform: translateY(0); }
 .sheet-handle {
-    width: 40px; height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    margin: 0 auto 16px;
+    width: 36px; height: 5px;
+    background: var(--gray);
+    opacity: 0.35;
+    border-radius: 3px;
+    margin: 0 auto 8px;
     cursor: grab;
 }
+.sheet-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.sheet-close-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border: none; border-radius: 50%;
+    background: transparent; color: var(--text); cursor: pointer;
+    flex-shrink: 0; transition: background 0.15s, color 0.15s;
+}
+.sheet-close-btn:hover { color: var(--accent); background: var(--accent-light); }
+.sheet-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.sheet-title {
+    flex: 1; min-width: 0;
+    font-size: var(--fs-lg); font-weight: 700; color: var(--text);
+    text-align: center;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sheet-header-spacer { width: 36px; flex-shrink: 0; }
 .info-sheet-body { overflow-y: auto; font-size: var(--fs-md); }
 
