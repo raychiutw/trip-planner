@@ -353,7 +353,7 @@ describe('renderTimelineEvent', () => {
       title: 'A',
       travel: { text: '車程 30 分', type: 'car' },
     });
-    expect(html).toContain('tl-transit-bar');
+    expect(html).toContain('tl-segment-transit');
     expect(html).toContain('車程 30 分');
   });
 
