@@ -1,5 +1,6 @@
 /* ===== Setting Page Layout ===== */
 html:has(.setting-main) { scroll-behavior: auto; }
+.page-layout:has(.setting-main) { min-height: 0; }
 .setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
 @media (min-width: 768px) {
     .setting-page { max-width: 60vw; padding-top: 48px; }
