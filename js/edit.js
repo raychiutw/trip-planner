@@ -24,6 +24,22 @@
         return fetch(url, Object.assign({ headers: headers }, opts || {}));
     }
 
+    /* ===== Check if issue has linked commits ===== */
+    function checkIssueHasCommits(issue) {
+        return ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues/' + issue.number + '/events')
+            .then(function(r) {
+                if (!r.ok) return false;
+                return r.json();
+            })
+            .then(function(events) {
+                if (!events || !Array.isArray(events)) return false;
+                return events.some(function(ev) {
+                    return ev.event === 'referenced' || ev.event === 'closed' && ev.commit_id;
+                });
+            })
+            .catch(function() { return false; });
+    }
+
     /* ===== Build Issue Item HTML ===== */
     function buildIssueItemHtml(issue) {
         var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -36,7 +52,7 @@
         html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
         html += '</div>';
         html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
-        if (issue.state === 'closed' && issue.comments > 0) {
+        if (issue.comments > 0) {
             html += '<div class="issue-reply" id="reply-' + issue.number + '">\u8B80\u53D6\u56DE\u8986\u4E2D\u2026</div>';
         }
         html += '</div>';
@@ -46,7 +62,7 @@
     /* ===== Load Issue Replies (async) ===== */
     function loadIssueReplies(issues) {
         var toFetch = issues.filter(function(issue) {
-            return issue.state === 'closed' && issue.comments > 0;
+            return issue.comments > 0;
         });
         toFetch.forEach(function(issue) {
             ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues/' + issue.number + '/comments')
@@ -58,7 +74,8 @@
                     var el = document.getElementById('reply-' + issue.number);
                     if (!el) return;
                     if (comments.length > 0) {
-                        el.textContent = comments[comments.length - 1].body;
+                        var allReplies = comments.map(function(c) { return c.body; }).join('\n\n');
+                        el.textContent = allReplies;
                     } else {
                         el.textContent = '';
                     }
@@ -94,13 +111,23 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=20')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=50')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
             })
             .then(function(issues) {
-                renderIssues(issues);
+                // 對每個 issue 檢查是否有關聯 commit，只顯示有 commit 的
+                var checks = issues.map(function(issue) {
+                    return checkIssueHasCommits(issue).then(function(hasCommits) {
+                        return hasCommits ? issue : null;
+                    });
+                });
+                return Promise.all(checks);
+            })
+            .then(function(results) {
+                var withCommits = results.filter(function(issue) { return issue !== null; });
+                renderIssues(withCommits);
             })
             .catch(function() {
                 issueList.innerHTML = '<div class="edit-issues-empty">無法載入紀錄</div>';
