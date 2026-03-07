@@ -120,7 +120,7 @@ tripFiles.forEach(({ file, label }) => {
             if (entry.travel) {
               found = true;
               const html = renderTimelineEvent(entry);
-              expect(html).toContain('tl-transit-bar');
+              expect(html).toContain('tl-segment-transit');
             }
           });
         });
