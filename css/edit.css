@@ -81,6 +81,27 @@
 .issue-badge .svg-icon { width: 14px; height: 14px; }
 .issue-badge.open { background: #238636; }
 .issue-badge.closed { background: #8957e5; }
+.issue-commits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+.issue-commit-sha {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--fs-sm);
+}
+.issue-commit-sha a {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--accent);
+    text-decoration: none;
+    font-family: monospace;
+}
+.issue-commit-sha a:hover { text-decoration: underline; }
+.issue-commit-sha .svg-icon { width: 14px; height: 14px; }
 .issue-reply {
     font-size: var(--fs-sm);
     color: var(--text-muted);
