@@ -50,7 +50,13 @@
             return issue.comments > 0;
         });
         toFetch.forEach(function(issue) {
-            ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues/' + issue.number + '/comments')
+            var url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/issues/' + issue.number + '/comments';
+            fetch(url, {
+                headers: {
+                    'Authorization': 'Bearer ' + GH_PAT,
+                    'Accept': 'application/vnd.github.html+json'
+                }
+            })
                 .then(function(r) {
                     if (!r.ok) throw new Error('fetch failed');
                     return r.json();
@@ -59,8 +65,8 @@
                     var el = document.getElementById('reply-' + issue.number);
                     if (!el) return;
                     if (comments.length > 0) {
-                        var allReplies = comments.map(function(c) { return c.body; }).join('\n\n');
-                        el.textContent = allReplies;
+                        var html = comments.map(function(c) { return c.body_html || ''; }).join('<hr>');
+                        el.innerHTML = html;
                     } else {
                         el.textContent = '';
                     }
@@ -97,17 +103,13 @@
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
         // 一次撈取所有符合 trip label 的 issue，用 state + comments 過濾已處理的
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=50')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&per_page=20')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
             })
             .then(function(issues) {
-                // 只保留已關閉且有回覆的 issue（代表已處理、有 commit）
-                var processed = issues.filter(function(issue) {
-                    return issue.state === 'closed' && issue.comments > 0;
-                });
-                renderIssues(processed);
+                renderIssues(issues);
             })
             .catch(function() {
                 issueList.innerHTML = '<div class="edit-issues-empty">無法載入紀錄</div>';

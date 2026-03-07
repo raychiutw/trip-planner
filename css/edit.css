@@ -83,9 +83,23 @@
 .issue-badge.closed { background: #8957e5; }
 .issue-reply {
     font-size: var(--fs-sm);
-    color: var(--text-muted);
-    margin-top: 2px;
+    color: var(--text);
+    margin-top: 6px;
+    line-height: 1.6;
 }
+.issue-reply h2, .issue-reply h3 { font-size: var(--fs-lg); margin: 12px 0 6px; color: var(--text); }
+.issue-reply h2:first-child, .issue-reply h3:first-child { margin-top: 0; }
+.issue-reply p { margin: 4px 0; }
+.issue-reply strong { font-weight: 600; }
+.issue-reply ul, .issue-reply ol { padding-left: 20px; margin: 4px 0; }
+.issue-reply hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.issue-reply table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.issue-reply th, .issue-reply td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+.issue-reply th { background: var(--bubble-bg); font-weight: 600; }
+.issue-reply blockquote { margin: 8px 0; padding: 6px 12px; border-left: 3px solid var(--accent); background: var(--accent-lighter); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.issue-reply code { background: var(--bubble-bg); padding: 1px 4px; border-radius: 4px; font-size: var(--fs-sm); }
+.issue-reply pre { background: var(--bubble-bg); padding: 10px; border-radius: var(--radius-sm); overflow-x: auto; margin: 8px 0; }
+.issue-reply pre code { background: none; padding: 0; }
 @media (min-width: 768px) {
     .issue-item-title { font-size: var(--fs-md); }
 }
