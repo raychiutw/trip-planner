@@ -1,13 +1,13 @@
 /* ===== Setting Page — reset scroll effects ===== */
-html:has(.setting-main) {
+html.page-setting {
     scroll-behavior: auto;
     scrollbar-gutter: auto;
 }
-body:has(.setting-main) {
+.page-setting {
     overflow-x: visible;
     max-width: none;
 }
-.page-layout:has(.setting-main) { min-height: 0; }
+.page-setting .page-layout { min-height: 0; }
 
 /* ===== Setting Page Layout ===== */
 .setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
@@ -123,7 +123,7 @@ body:has(.setting-main) {
 }
 
 /* ===== Sticky-nav: title bar ===== */
-.setting-main .sticky-nav { background: var(--card-bg); }
+.page-setting .sticky-nav { background: var(--card-bg); }
 
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: var(--card-bg); }
