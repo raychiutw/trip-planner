@@ -122,8 +122,34 @@ body:has(.setting-main) {
     color: var(--gray);
 }
 
-/* ===== Sticky-nav: title bar ===== */
-.setting-main .sticky-nav { background: var(--card-bg); }
+/* ===== Setting Nav (bottom-sheet style) ===== */
+.setting-nav {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 12px 4px;
+    background: var(--card-bg);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.setting-handle {
+    width: 36px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--gray);
+    opacity: 0.35;
+    margin: 0 auto 6px;
+}
+.setting-nav-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.setting-nav-row .nav-title {
+    text-align: center;
+}
+.setting-nav-spacer {
+    width: 36px;
+    flex-shrink: 0;
+}
 
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: var(--card-bg); }
