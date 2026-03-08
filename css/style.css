@@ -42,7 +42,7 @@ body:not(.dark) .day-header {
 .day-header h2 { font-size: var(--fs-title2); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-date { font-size: var(--fs-subheadline); color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 .dh-nav-wrap { position: relative; flex: 1; display: flex; align-items: center; min-width: 0; }
-.dh-nav { display: flex; gap: 8px; flex: 1; justify-content: center; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; padding: 4px 0; }
+.dh-nav { display: flex; gap: 8px; flex: 1; overflow-x: auto; scrollbar-width: none; scroll-behavior: smooth; padding: 4px 0; }
 .dh-nav::-webkit-scrollbar { display: none; }
 .dn { background: var(--accent-bg); color: var(--accent); border: none; padding: 8px 12px; border-radius: var(--radius-md); font-size: var(--fs-body); font-family: inherit; font-weight: 600; min-width: var(--tap-min); min-height: var(--tap-min); text-align: center; transition: background var(--duration-fast), color var(--duration-fast); }
 .dn:hover { background: var(--accent); color: var(--text-on-accent); }

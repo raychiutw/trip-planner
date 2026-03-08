@@ -333,5 +333,22 @@ describe('CSS HIG Compliance', () => {
                 }
             }
         });
+
+        it('.dh-nav base style does not use justify-content: center', () => {
+            const styleCSS = CSS_FILES.style;
+            // Strip @media blocks to get only base-level rules
+            const baseCSS = styleCSS.replace(/@media[^{]*\{[^{}]*(?:\{[^}]*\}[^{}]*)*\}/g, '');
+            const rules = extractRules(baseCSS);
+            const violations = [];
+
+            for (const { selector, body } of rules) {
+                if (!/\.dh-nav\b/.test(selector)) continue;
+                if (/justify-content\s*:\s*center/.test(body)) {
+                    violations.push(`${selector}: justify-content: center (causes overflow-x left clipping on mobile)`);
+                }
+            }
+
+            expect(violations, `dh-nav base center violations:\n${violations.join('\n')}`).toEqual([]);
+        });
     });
 });

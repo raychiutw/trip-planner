@@ -110,6 +110,42 @@ test.describe('導航功能（Tab 切換）', () => {
     const pill1 = page.locator('#navPills .dn[data-day="1"]');
     await expect(pill1).not.toHaveClass(/active/);
   });
+
+  test('點擊 Day pill 後 day-header 不被 sticky-nav 遮住', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+
+    // 點擊 Day 3 pill
+    await page.locator('#navPills .dn[data-day="3"]').click();
+    await page.waitForTimeout(800);
+
+    const nav = page.locator('#stickyNav');
+    const navBox = await nav.boundingBox();
+    const header = page.locator('#day3');
+    const headerBox = await header.boundingBox();
+
+    // day-header 頂部應在 sticky-nav 底部之下（允許 2px 容差）
+    expect(headerBox.y).toBeGreaterThanOrEqual(navBox.y + navBox.height - 2);
+  });
+});
+
+/* ===== 2b. Nav Pills 手機版可見性 ===== */
+test.describe('Nav Pills 手機版可見性', () => {
+  test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
+
+  test('手機版 Day 1 pill 在視窗內可見', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+
+    const pill1 = page.locator('#navPills .dn[data-day="1"]');
+    await expect(pill1).toBeVisible();
+
+    const box = await pill1.boundingBox();
+    // Day 1 pill 左邊界應在視窗內（x >= 0）
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    // Day 1 pill 右邊界應在視窗內
+    expect(box.x + box.width).toBeLessThanOrEqual(375);
+  });
 });
 
 /* ===== 3. Speed Dial（手機版） ===== */

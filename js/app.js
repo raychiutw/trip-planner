@@ -1282,11 +1282,15 @@ function scrollToSec(id) {
 function switchDay(dayId) {
     // Ensure target day is loaded
     if (!dayCache[dayId]) fetchDay(dayId);
-    // Scroll to the day header
+    // Scroll to the day header (manual offset to avoid sticky-nav overlap)
     var header = document.getElementById('day' + dayId);
     if (header) {
         _manualScrollTs = Date.now();
-        header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var nav = document.getElementById('stickyNav');
+        var navH = nav ? nav.offsetHeight : 0;
+        var navTop = nav ? (parseFloat(getComputedStyle(nav).top) || 0) : 0;
+        var top = header.getBoundingClientRect().top + window.pageYOffset - navH - navTop - 4;
+        window.scrollTo({ top: top, behavior: 'smooth' });
     }
     // Update pill + hash
     var pills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
