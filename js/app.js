@@ -1133,35 +1133,54 @@ function closeInfoSheet() {
     var closeBtn = document.getElementById('sheetCloseBtn');
     if (closeBtn) closeBtn.addEventListener('click', closeInfoSheet);
 
-    // Drag handle to resize / close
+    // Drag handle to snap between stops (50%, 75%, 90%) or close
     var handle = panel.querySelector('.sheet-handle');
     var header = panel.querySelector('.sheet-header');
     var _dragStartY = 0;
-    var _dragStartH = 0;
     var _dragging = false;
-    var maxH = function() { return window.innerHeight * 0.75; };
-    var minH = function() { return window.innerHeight * 0.25; };
+    var STOPS = [50, 75, 90]; // vh percentages
+
+    function currentStop() {
+        var h = panel.offsetHeight;
+        var vh = window.innerHeight;
+        var pct = (h / vh) * 100;
+        // Find nearest stop
+        var best = STOPS[0];
+        STOPS.forEach(function(s) {
+            if (Math.abs(s - pct) < Math.abs(best - pct)) best = s;
+        });
+        return best;
+    }
+
+    function snapTo(stopPct) {
+        panel.style.height = stopPct + 'dvh';
+    }
 
     function onDragStart(y) {
         _dragging = true;
         _dragStartY = y;
-        _dragStartH = panel.offsetHeight;
-        panel.classList.add('dragging');
     }
-    function onDragMove(y) {
-        if (!_dragging) return;
-        var delta = _dragStartY - y; // positive = drag up
-        var newH = Math.min(Math.max(_dragStartH + delta, 0), maxH());
-        panel.style.height = newH + 'px';
-    }
-    function onDragEnd() {
+    function onDragEnd(y) {
         if (!_dragging) return;
         _dragging = false;
-        panel.classList.remove('dragging');
-        // Close if dragged below 25vh
-        if (panel.offsetHeight < minH()) {
-            panel.style.height = '';
-            closeInfoSheet();
+        var delta = _dragStartY - y; // positive = drag up
+        var threshold = 30; // px minimum to trigger snap
+        if (Math.abs(delta) < threshold) return; // ignore tiny drags
+
+        var cur = currentStop();
+        var idx = STOPS.indexOf(cur);
+
+        if (delta > 0) {
+            // Drag up → next larger stop
+            if (idx < STOPS.length - 1) snapTo(STOPS[idx + 1]);
+        } else {
+            // Drag down → next smaller stop, or close if at smallest
+            if (idx > 0) {
+                snapTo(STOPS[idx - 1]);
+            } else {
+                panel.style.height = '';
+                closeInfoSheet();
+            }
         }
     }
 
@@ -1172,12 +1191,11 @@ function closeInfoSheet() {
             onDragStart(e.touches[0].clientY);
         }, { passive: true });
         el.addEventListener('touchmove', function(e) {
-            if (_dragging) {
-                e.preventDefault();
-                onDragMove(e.touches[0].clientY);
-            }
+            if (_dragging) e.preventDefault();
         }, { passive: false });
-        el.addEventListener('touchend', onDragEnd, { passive: true });
+        el.addEventListener('touchend', function(e) {
+            onDragEnd(e.changedTouches[0].clientY);
+        }, { passive: true });
     });
 })();
 
