@@ -1236,7 +1236,11 @@ function openSpeedDialContent(contentKey) {
     var trigger = document.getElementById('speedDialTrigger');
     if (trigger) trigger.addEventListener('click', toggleSpeedDial);
     var backdrop = document.getElementById('speedDialBackdrop');
-    if (backdrop) backdrop.addEventListener('click', closeSpeedDial);
+    if (backdrop) {
+        backdrop.addEventListener('click', closeSpeedDial);
+        backdrop.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+        backdrop.addEventListener('wheel', function(e) { e.preventDefault(); }, { passive: false });
+    }
 })();
 
 function scrollNavPillIntoView(btn) {
