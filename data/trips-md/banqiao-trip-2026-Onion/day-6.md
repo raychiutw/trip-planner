@@ -23,7 +23,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 春季花海盛開時最漂亮，停車可停機捷三重站旁
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://www.welcometw.com/%E4%B8%89%E9%87%8D%E7%BE%8E%E9%A3%9F/
 - source: ai
 - maps: 三重正義北路商圈 | 三重正義北路
 - rating: 4
@@ -32,8 +32,8 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 博多一幸舎 新莊店 | 日式拉麵 | 11:00~22:00 | NT$250~380 | 不需訂位 | 福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵 | https://bigmouthblog.tw/ikkousha-xinzhuang/ | 4.1 | 博多一幸舎 新莊店 |  | ai |
-| 歐義式 新莊店 | 義大利麵 | 11:00~21:30 | NT$220~380 | 不需訂位 | 新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎 | https://bigmouthblog.tw/ouyi-pasta-xinzhuang/ | 3.9 | 歐義式 新莊店 |  | ai |
+| 赤初中華拉麵 新莊店 | 日式拉麵 | 11:30~14:30 / 17:00~22:00 | NT$260~380 | 不需訂位 | 小菜放題吃到飽，八大功夫湯料多實在，高CP值拉麵 | https://mymarcy.tw/%E3%80%90%E6%96%B0%E8%8E%8A%E6%8B%89%E9%BA%B5%E3%80%91%E8%B5%A4%E5%88%9D%E4%B8%AD%E8%8F%AF%E6%8B%89%E9%BA%B5%E6%96%B0%E8%8E%8A%E5%BA%97%EF%BD%9C%E5%B0%8F%E8%8F%9C%E6%94%BE%E9%A1%8C%E5%90%83%E5%88%B0/ | 4.4 | 赤初中華拉麵 新莊店 |  | ai |
+| 福F Pasta | 義大利麵 | 11:30~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 新莊副都心巷弄愛店，現點現做義大利麵用料實在 | https://anise.tw/269033 | 4.7 | 福F Pasta |  | ai |
 | 今大魯肉飯 | 特色小吃 | 07:00~20:00 | NT$30~80 | 不需訂位 | 三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配 | https://bigmouthblog.tw/jinda-braised-rice/ | 4.3 | 今大魯肉飯 |  | ai |
 
 ### 14:00-16:00 空軍三重一村
@@ -46,7 +46,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 免費參觀，週一休館，園區內有不少好拍的裝置藝術
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://gn0930150655.pixnet.net/blog/post/46831168
 - source: ai
 - maps: 三重正義北路商圈 | 三重正義北路
 - rating: 4
@@ -55,6 +55,6 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋壹慶 三重店 | 日式拉麵 | 11:00~21:00 | NT$220~320 | 不需訂位 | 三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁 | https://kenalice.tw/menya-ikukei-sanchong/ | 4.2 | 麵屋壹慶 三重店 |  | ai |
-| 小義大利莊園 三重店 | 義大利麵 | 11:30~21:00 | NT$250~420 | 建議訂位 | 三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁 | https://tisshuang.com/little-italy-sanchong/ | 4 | 小義大利莊園 三重店 |  | ai |
+| 丸宗拉麵屋 | 日式拉麵 | 11:30~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 全雞入湯的雞白湯拉麵，湯頭濃郁層次豐富 | https://ramenroamer.com/archives/1607 | 4.3 | 丸宗拉麵屋 |  | ai |
+| 巧巧義麵屋 | 義大利麵 | 17:00~21:30 | NT$150~250 | 不需訂位 | 三重國小站旁在地人愛店，紅茶與濃湯免費無限暢飲 | https://evanchiny.com/%E3%80%90%E4%B8%89%E9%87%8D%E5%B9%B3%E5%83%B9%E7%BE%A9%E5%A4%A7%E5%88%A9%E9%BA%B5%E3%80%91%E5%B7%A7%E5%B7%A7%E7%BE%A9%E9%BA%B5%E5%B1%8B%E2%94%82%E4%B8%89%E9%87%8D%E5%BA%97%E8%8F%9C%E5%96%AE%E2%94%82/ | 4.6 | 巧巧義麵屋 |  | ai |
 | 正羊肉榮 三重店 | 特色小吃 | 16:00~01:00 | NT$300~600 | 不需訂位 | 三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷 | https://tisshuang.com/zhengyangrourong/ | 4.2 | 正羊肉榮 三重店 |  | ai |

@@ -31,7 +31,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 
 ### 09:00 沖繩旅毛 取車
 7座車 Toyota Alphard｜4大3小（14、15、10歲）
-- blog: 
+- blog: https://bobbyfun.tw/2024-02-11-2915/
 - source: ai
 - maps: 沖繩旅毛 那覇新都心
 - rating: 4.8
@@ -44,7 +44,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - 還車：7/7 18:00 那霸新都心
 
 ### 09:00 沖繩那霸美居飯店 出發
-- blog: 
+- blog: https://kimi77228.pixnet.net/blog/posts/10358690425
 - source: ai
 - maps: メルキュール沖縄那覇
 - mapcode: 33 155 267*37
@@ -175,7 +175,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 
 ### 01:04 BUZZ RESORT Check in
 Design Resort Nakadoma inn — 恩納村住宿
-- blog: 
+- blog: https://bobbyfun.tw/2024-02-22-3012/
 - source: ai
 - maps: Buzz Resort Chatan
 - mapcode: 206 123 166*75

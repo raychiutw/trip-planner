@@ -23,7 +23,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 傍晚來看夕陽和LED光雕最美，橋上禁止騎自行車
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://www.klook.com/zh-TW/blog/Xinzhuang-foods-recommend/
 - source: ai
 - maps: 新莊中正路商圈
 - rating: 4.1
@@ -46,7 +46,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 園區很大建議租自行車遊覽，有大型兒童遊戲場
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://www.welcometw.com/%E4%B8%89%E9%87%8D%E7%BE%8E%E9%A3%9F/
 - source: ai
 - maps: 新莊中正路商圈
 - rating: 4.1

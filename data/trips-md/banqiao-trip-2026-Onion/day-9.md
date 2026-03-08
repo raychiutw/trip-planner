@@ -23,7 +23,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 適合散步放鬆，公園旁有不少咖啡廳可休息
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://www.kkday.com/zh-tw/blog/149673/asia-taiwan-taipei-lehua-night-market
 - source: ai
 - maps: 永和樂華商圈
 - rating: 4.1
@@ -32,8 +32,8 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 豚骨拉麵ばかうまラーメン 永和店 | 日式拉麵 | 11:30~21:30 | NT$240~360 | 不需訂位 | 永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒 | https://appletrees.tw/bakauma-ramen-yonghe/ | 4 | 豚骨拉麵ばかうまラーメン 永和店 |  | ai |
-| 藍乳酪義大利餐廳 | 義大利麵 | 11:30~21:30 | NT$250~450 | 建議訂位 | 永和人氣義式餐廳，手工窯烤披薩與義大利麵 | https://girlsplan.com/blue-cheese-yonghe/ | 4.1 | 藍乳酪義大利餐廳 |  | ai |
+| 麵屋鴒 | 日式拉麵 | 11:30~13:30 / 17:00~21:00 | NT$220~350 | 不需訂位 | 永安市場站旁泡系雞白湯拉麵，湯頭厚實清爽不油膩 | https://mibaoma.tw/menya_ling/ | 4.6 | 麵屋鴒 |  | ai |
+| 禾多靜巷 Herdor Near | 義大利麵 | 11:00~21:00 | NT$280~450 | 建議訂位 | 新埔站旁鬧中取靜義式餐廳，自家農場無毒米燉飯，料理水準高 | https://jotdownvoyage.com/herdor-near-italian-style-restaurant-banqiao/ | 4.3 | 禾多靜巷 Herdor Near |  | ai |
 | 池上木片便當 永和店 | 特色小吃 | 10:30~20:00 | NT$80~120 | 不需訂位 | 古早味木片便當，排骨飯與雞腿飯最受歡迎 | https://tisshuang.com/chishang-bento-yonghe/ | 4 | 池上木片便當 永和店 |  | ai |
 
 ### 17:30-20:00 樂華夜市

@@ -23,7 +23,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 全程平坦適合各年齡層，沿途有遮蔭不怕曬
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://plumpyblog.com/shulinfoodie/
 - source: ai
 - maps: 樹林中山路商圈
 - rating: 4
@@ -32,8 +32,8 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋武藏 樹林中山店 | 日式拉麵 | 11:00~21:30 | NT$260~380 | 不需訂位 | 日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁 | https://girlsplan.com/musashi-shulin/ | 4.1 | 麵屋武藏 樹林中山店 |  | ai |
-| UNO 義式廚房 樹林店 | 義大利麵 | 11:30~21:00 | NT$230~380 | 不需訂位 | 樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實 | https://bigmouthblog.tw/uno-pasta-shulin/ | 3.9 | UNO 義式廚房 樹林店 |  | ai |
+| 鬼匠拉麵 樹林店 | 日式拉麵 | 11:00~21:00 | NT$180~300 | 不需訂位 | 樹林人氣豚骨拉麵，鬼匠極究大盛系列CP值超高 | https://ihungrybear.com/restaurants/mL8XbLm/ | 4.9 | 鬼匠拉麵 樹林店 |  | ai |
+| Marcoo手工義大利麵 | 義大利麵 | 12:00~14:00 / 18:00~21:00 | NT$300~500 | 需預約 | 樹林巷弄隱藏美食，老闆堅持全手工製麵，每季換菜單 | https://plumpyblog.com/marcoo/ | 4.5 | Marcoo手工義大利麵 |  | ai |
 | 樹林武林街滷肉飯 | 特色小吃 | 06:00~14:00 | NT$30~60 | 不需訂位 | 樹林在地老店，古早味滷肉飯油亮鹹香 | https://bigmouthblog.tw/shulin-braised-rice/ | 4 | 樹林武林街滷肉飯 |  | ai |
 
 ### 17:00-19:30 樹林興仁花園夜市

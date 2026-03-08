@@ -30,7 +30,7 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 ## Timeline
 
 ### 09:00 HOPE VILLA Onnason 出發
-- blog: 
+- blog: https://www.bigfang.tw/blog/post/okinawa-onnason-hotel
 - source: ai
 - maps: HOPE VILLA Onnason
 - mapcode: 206 221 372*23
@@ -115,7 +115,7 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 
 ### 20:24 HOPE VILLA Onnason
 返回住宿休息
-- blog: 
+- blog: https://www.bigfang.tw/blog/post/okinawa-onnason-hotel
 - source: ai
 - maps: HOPE VILLA Onnason
 - mapcode: 206 221 372*23

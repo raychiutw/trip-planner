@@ -1,16 +1,18 @@
 {
   "hooks": {
-    "afterWrite": [
+    "PostToolUse": [
       {
-        "matcher": "memory/",
-        "command": "npm run memory:export --silent"
-      }
-    ],
-    "afterEdit": [
-      {
-        "matcher": "memory/",
-        "command": "npm run memory:export --silent"
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); echo \"$input\" | grep -q 'memory/' && npm run memory:export --silent || true"
+          }
+        ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true
   }
 }

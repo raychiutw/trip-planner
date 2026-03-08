@@ -23,7 +23,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 若遇職棒賽事可現場購票入場，周邊停車較方便
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://supertaste.tvbs.com.tw/pack/346934
 - source: ai
 - maps: 新莊廟街商圈 | 新莊廟街
 - rating: 4
@@ -32,8 +32,8 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 博多一幸舎 新莊店 | 日式拉麵 | 11:00~22:00 | NT$250~380 | 不需訂位 | 福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵 | https://bigmouthblog.tw/ikkousha-xinzhuang/ | 4.1 | 博多一幸舎 新莊店 |  | ai |
-| 歐義式 新莊店 | 義大利麵 | 11:00~21:30 | NT$220~380 | 不需訂位 | 新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎 | https://bigmouthblog.tw/ouyi-pasta-xinzhuang/ | 3.9 | 歐義式 新莊店 |  | ai |
+| 熊越岳 | 日式拉麵 | 11:00~14:00 / 17:00~21:00 | NT$250~420 | 不需訂位 | 新莊超人氣排隊拉麵，爆量叉燒醬油拉麵，免費加麵吃到飽 | https://travel.yam.com/article/129967 | 4.6 | 熊越岳 |  | ai |
+| 義倆義式廚房 | 義大利麵 | 11:00~14:00 / 17:00~21:00 | NT$180~350 | 建議訂位 | 新莊棒球場旁平價義大利麵，手工醬汁大份量，紅茶無限暢飲 | https://tenjo.tw/yiliangpasta/ | 4.4 | 義倆義式廚房 |  | ai |
 | 福壽街陽春麵 | 特色小吃 | 06:00~14:00 | NT$40~80 | 不需訂位 | 新莊在地30年老麵攤，手打陽春麵Q勁十足 | https://girlsplan.com/fushou-noodles/ | 4 | 福壽街陽春麵 |  | ai |
 
 ### 14:00-16:00 新莊廟街
@@ -55,7 +55,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 | 唐吉軻德 新莊幸福店 | 唐吉軻德 | 10:00~02:00 | 日本進口零食與餅乾, 美妝保養特價品, 生活雜貨與廚房用品 | https://shoppinginfo.tw/donki-xinzhuang/ | 4 |  |  | ai |
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://www.klook.com/zh-TW/blog/Xinzhuang-foods-recommend/
 - source: ai
 - maps: 新莊廟街商圈 | 新莊廟街
 - rating: 4
@@ -64,6 +64,6 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋壹慶 三重店 | 日式拉麵 | 11:00~21:00 | NT$220~320 | 不需訂位 | 三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁 | https://kenalice.tw/menya-ikukei-sanchong/ | 4.2 | 麵屋壹慶 三重店 |  | ai |
-| 小義大利莊園 三重店 | 義大利麵 | 11:30~21:00 | NT$250~420 | 建議訂位 | 三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁 | https://tisshuang.com/little-italy-sanchong/ | 4 | 小義大利莊園 三重店 |  | ai |
+| 炊煙拉麵 | 日式拉麵 | 11:30~14:00 / 17:30~20:00 | NT$200~320 | 不需訂位 | 三重國小站旁人氣拉麵，黑蒜豚骨與雞白湯濃郁鮮美 | https://muzi.com.tw/smoked-ramen/ | 4.5 | 炊煙拉麵 |  | ai |
+| Duke's Pizza 義式薄皮披薩 | 義大利麵 | 11:30~14:30 / 17:00~22:00 | NT$220~380 | 不需訂位 | 台北橋站旁義式餐廳，手工薄皮披薩與義大利麵選擇豐富 | https://tenjo.tw/dukespizza/ | 4.4 | Duke's Pizza 義式薄皮披薩 |  | ai |
 | 新莊牛肉麵大王 | 特色小吃 | 11:00~21:00 | NT$120~200 | 不需訂位 | 紅燒牛肉麵湯頭濃醇，牛肉塊大又軟嫩 | https://tisshuang.com/xinzhuang-beef-noodle/ | 4.1 | 新莊牛肉麵大王 |  | ai |

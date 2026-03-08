@@ -142,10 +142,9 @@ Phase 1 骨架生成完成後，須遍歷所有物件檢查：
 **適用 target**：hotel、restaurant、shop、event
 
 **搜尋流程**：
-1. WebSearch「{名稱} {地區} 推薦」
-2. 優先繁中部落格：pixnet、bobbyfun、boo2k、mimigo、linshibi
-3. 次選繁中旅遊網站：funtime、klook、kkday
-4. 找不到繁中文章 → 空字串 `""`
+1. WebSearch「{名稱} {地區} 推薦 {今年}」
+2. 取第一篇繁體中文文章
+3. 找不到繁中文章 → 空字串 `""`
 
 **驗證規則**：
 - 必須是合法 URL（以 `http://` 或 `https://` 開頭）或空字串 `""`
