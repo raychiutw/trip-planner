@@ -55,7 +55,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | naver |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 伍班長烤肉 海雲台店 | 燒肉 | 11:00~22:00 | ₩14,000~20,000/人 | 建議訂位 | 招牌調味烤五花，配上生菜包肉超滿足 | https://safood.tw/wubanzhang | 4.1 | 오반장 해운대점 \| 오반장 해운대 부산 |  | ai | https://map.naver.com/v5/search/%EC%98%A4%EB%B0%98%EC%9E%A5+%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90 |
-| Momos Coffee 海雲台店 | 咖啡廳 | 09:00~21:00 | ₩5,000~9,000/人 | 不需訂位 | 釜山代表性精品咖啡，手沖單品豆 | https://www.funliday.com/posts/momos-cafe/ | 4.5 | 모모스커피 해운대점 \| 모모스커피 해운대 부산 |  | ai | https://map.naver.com/v5/search/%EB%AA%A8%EB%AA%A8%EC%8A%A4%EC%BB%A4%ED%94%BC+%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90 |
+| TIDE Coffee Roasters | 咖啡廳 | 09:00~19:00 | ₩6,000~10,000/人 | 不需訂位 | 海雲台達麗海岸精品咖啡，自家烘焙、手沖單品 |  | 4.9 | 타이드커피로스터스 \| TIDE Coffee Roasters 해운대 부산 |  | ai | https://map.naver.com/v5/search/%ED%83%80%EC%9D%B4%EB%93%9C%EC%BB%A4%ED%94%BC%EB%A1%9C%EC%8A%A4%ED%84%B0%EC%8A%A4 |
 | 大海鮑魚粥 | 地方特色 | 08:00~21:00 | ₩12,000~18,000/人 | 不需訂位 | 鮮甜鮑魚粥，整顆鮑魚入粥，健康養生 | https://rebeccafoodaily.com/busan-sea-abalone-porridge/ | 4.3 | 대해전복죽 해운대 \| 대해전복죽 해운대 부산 |  | ai | https://map.naver.com/v5/search/%EB%8C%80%ED%95%B4%EC%A0%84%EB%B3%B5%EC%A3%BD+%ED%95%B4%EC%9A%B4%EB%8C%80 |
 
 ### 14:30 Blue Line Park 膠囊列車
@@ -89,7 +89,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | naver |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 新村食堂 海雲台店 | 燒肉 | 11:00~22:00 | ₩12,000~18,000/人 | 不需訂位 | 白鍾元連鎖，烤七味豬五花配大醬鍋 | https://voniblog.com/newmaul-korea/ | 4 | 새마을식당 해운대점 \| 새마을식당 해운대 부산 |  | ai | https://map.naver.com/v5/search/%EC%83%88%EB%A7%88%EC%9D%84%EC%8B%9D%EB%8B%B9+%ED%95%B4%EC%9A%B4%EB%8C%80%EC%A0%90 |
+| 맛찬들왕소금구이 海雲台店 | 燒肉 | 12:00~23:00 | ₩15,000~25,000/人 | 建議訂位 | 14天熟成豬五花專門店，全程專人代烤 |  | 4.3 | 맛찬들왕소금구이 해운대직영점 \| 맛찬들왕소금구이 해운대 부산 |  | ai | https://map.naver.com/v5/search/%EB%A7%9B%EC%B0%AC%EB%93%A4%EC%99%95%EC%86%8C%EA%B8%88%EA%B5%AC%EC%9D%B4+%ED%95%B4%EC%9A%B4%EB%8C%80 |
 | Blue House on The Stairs | 咖啡廳 | 10:00~21:00 | ₩6,000~10,000/人 | 不需訂位 | 階梯上的藍色房子，海景咖啡廳 | https://listentolu.com/2018/08/bluehouse/ | 4.4 | 파란집 그 계단위 부산 |  | ai | https://map.naver.com/v5/search/%ED%8C%8C%EB%9E%80%EC%A7%91+%EA%B7%B8+%EA%B3%84%EB%8B%A8%EC%9C%84+%EB%B6%80%EC%82%B0 |
 | 청사포 장어구이 | 地方特色 | 11:00~21:00 | ₩20,000~35,000/人 | 不需訂位 | 青沙埔名物烤鰻魚，炭火直烤鮮嫩多汁 | https://genieboy1201.pixnet.net/blog/posts/9459463924 | 4 | 청사포 장어구이 \| 청사포 장어구이 부산 |  | ai | https://map.naver.com/v5/search/%EC%B2%AD%EC%82%AC%ED%8F%AC+%EC%9E%A5%EC%96%B4%EA%B5%AC%EC%9D%B4 |
 

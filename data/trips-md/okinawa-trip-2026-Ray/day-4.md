@@ -160,6 +160,6 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | reservationUrl |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 琉球新麵 通堂 小禄本店 | 拉麵 | 11:00~24:00 | ¥800~ | 不需訂位 | 沖繩在地人氣 No.1 拉麵 | https://bigsharkgogogo.tw/ryoji-familyaa/ | 4.4 | 通堂拉麵 小禄本店 \| 琉球新麺通堂 小禄本店 | 33 096 697*00 | ai |  |
+| 琉家 松尾本店 | 拉麵 | 11:30~24:00（週四公休） | ¥750~ | 不需訂位 | 國際通人氣拉麵，招牌琉焦蒜豬骨麵黑蒜油香濃 | https://bobbyfun.tw/2023-04-30-2332/ | 4.4 | 琉家 松尾本店 \| 町の麺処 琉家 | 33 157 187*60 | ai |  |
 | 燒肉琉球の牛 國際通店 | 燒肉 | 17:00~23:00 | ¥2,000~ | TableCheck 預約 | 石垣牛＋阿古豬，A5 和牛燒肉 | https://lailai-web.com/ryukyu-no-ushi-naha/ | 4.5 | 琉球の牛 国際通り店 | 33 157 382*00 | ai | https://www.tablecheck.com/en/shops/yakiniku-naha/reserve |
 | Jack's Steak House | 當地特色 | 11:00~翌 1:00（週三公休） | ¥2,000~ | 不需訂位 | 1953 年創業！沖繩最老牌牛排 | https://baygolee.com/jacks-steak-house/ | 4.2 | ジャッキーステーキハウス 那覇 | 33 155 236*00 | ai |  |

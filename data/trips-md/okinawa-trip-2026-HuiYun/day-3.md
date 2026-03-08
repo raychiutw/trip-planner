@@ -30,7 +30,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 ## Timeline
 
 ### 08:00 BUZZ RESORT 出發
-- blog: 
+- blog: https://bobbyfun.tw/2024-02-22-3012/
 - source: ai
 - maps: Buzz Resort Chatan
 - mapcode: 206 123 166*75
@@ -38,7 +38,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 
 ### 08:00-10:30 前兼久漁港（青之洞浮潛集合點）
 青之洞浮潛體驗（船潛）— 集合到解散約 2.5 小時
-- blog: 
+- blog: https://bobbyfun.tw/2024-01-11-2731/
 - maps: 前兼久漁港
 - mapcode: 206 096 016*85
 - rating: 4
@@ -116,13 +116,13 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 花織そば | 沖繩料理 | 11:00~16:00（售完即止） | ¥700~ | {"available":"no","recommended":false} | はなういそば — 読谷村代表性沖繩麵，豚骨湯頭濃醇卻清爽，最具沖繩在地風味 | https://tw.savorjapan.com/contents/discover-oishii-japan/14-popular-restaurants-in-onna-an-okinawa-resort | 4.2 | 花織そば 読谷村 |  | ai |
+| なかむらそば | 沖繩料理 | 10:30~16:00（週四公休） | ¥700~ | {"available":"no","recommended":false} | なかむらそば — 恩納村瀬良垣の老舗沖繩麵，自家製麵條Q彈有勁，招牌アーサそば海藻風味獨特，海景座位一流 | | 4.2 | なかむらそば 恩納村 | 206 314 302*50 | ai |
 | ステーキハウス88 恩納店 | 海鮮 | 11:00~22:00（年中無休） | ¥1,800~ | {"available":"no","recommended":false} | STEAK HOUSE 88 恩納店 — 創業60年沖繩代表性牛排老店，從平價紅肉到縣產和牛一應俱全，前兼久漁港直送海葡萄鮮度抜群 | https://slowlifeinokinawa.com/steak88/ | 4 | ステーキハウス88 恩納店 |  | ai |
 | ラーメン暖暮 北谷店 | 甜點 | 11:00~翌02:00 | ¥750~ | {"available":"no","recommended":false} | ラーメン暖暮 北谷店 — 博多系豚骨拉麵名店，湯頭濃醇順口，読谷/恩納往美國村途中必吃 | https://hanblog.tw/ramendanbo/ | 3.9 | 暖暮 北谷店 \| ラーメン暖暮 北谷 |  | ai |
 
 ### 15:50-16:20 HOPE VILLA Onnason
 HOPE VILLA Onnason（恩納村）— Check in
-- blog: 
+- blog: https://www.bigfang.tw/blog/post/okinawa-onnason-hotel
 - source: ai
 - maps: HOPE VILLA Onnason
 - mapcode: 206 221 372*23
@@ -130,7 +130,7 @@ HOPE VILLA Onnason（恩納村）— Check in
 
 ### 16:20 VILLA 自由活動
 Check in 後自由休息（VILLA 自炊或外食）
-- blog: 
+- blog: https://www.bigfang.tw/blog/post/okinawa-onnason-hotel
 - source: ai
 - maps: HOPE VILLA Onnason
 - rating: 4.5

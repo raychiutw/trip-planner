@@ -29,7 +29,7 @@ WEST QR 搭乘，約75分鐘
 
 ### 12:30-13:30 午餐 Town Gate Cafe
 關西機場 Town Gate 美食街，過安檢後的餐飲區
-- blog: 
+- blog: https://beauty-upgrade.tw/23923/
 - source: ai
 - maps: 關西機場 Town Gate | Town Gate Kansai Airport
 - rating: 3.8
@@ -39,11 +39,11 @@ WEST QR 搭乘，約75分鐘
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Town Gate Cafe | 京都料理 | 07:00~21:00 |  | 不需預約 | 關西機場管制區內美食街 |  | 3.5 | Town Gate Cafe \| Town Gate Kansai Airport |  | ai |
+| Town Gate Cafe | 京都料理 | 07:00~21:00 |  | 不需預約 | 關西機場管制區內美食街 | https://beauty-upgrade.tw/23923/ | 3.5 | Town Gate Cafe \| Town Gate Kansai Airport |  | ai |
 
 ### 14:30 起飛回台北
 CI153 關西→桃園 14:30-16:45
-- blog: 
+- blog: https://nicklee.tw/2595/ci153-kix-tpe-premium/
 - source: ai
 - maps: 關西國際機場 | Kansai International Airport
 - rating: 4
