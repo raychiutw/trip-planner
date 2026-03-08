@@ -398,6 +398,29 @@ describe('renderTimelineEvent', () => {
     const html = renderTimelineEvent({ time: '10:00', title: '首里城' });
     expect(html).not.toContain('rating');
   });
+
+  it('merges end time into arrival flag', () => {
+    const html = renderTimelineEvent({ time: '16:30-18:30', title: '機場' });
+    expect(html).toContain('tl-flag-arrive');
+    expect(html).toContain('16:30-18:30');
+    expect(html).not.toContain('tl-flag-depart');
+  });
+
+  it('shows only start time when no end time', () => {
+    const html = renderTimelineEvent({ time: '10:00', title: '景點' });
+    expect(html).toContain('tl-flag-arrive');
+    expect(html).toContain('10:00');
+    expect(html).not.toContain('tl-flag-depart');
+  });
+
+  it('does not render transit arrow', () => {
+    const html = renderTimelineEvent({
+      time: '10:00', title: 'A',
+      travel: { text: '車程 30 分', type: 'car' },
+    });
+    expect(html).toContain('tl-transit-text');
+    expect(html).not.toContain('tl-transit-arrow');
+  });
 });
 
 /* ===== renderTimeline ===== */

@@ -231,10 +231,10 @@ function renderTimelineEvent(entry, idx, isLast) {
     var parsed = parseTimeRange(entry.time);
     var html = '<div class="tl-event expanded">';
 
-    /* Arrival flag */
+    /* Arrival flag (includes end time if available) */
     html += '<div class="tl-flag tl-flag-arrive">';
     html += '<span class="tl-flag-num">' + idx + '</span>';
-    html += '<span class="tl-time-start">' + escHtml(parsed.start) + '</span>';
+    html += '<span class="tl-time-start">' + escHtml(parsed.start) + (parsed.end ? '-' + escHtml(parsed.end) : '') + '</span>';
     html += '</div>';
 
     /* Segment: dashed line + card */
@@ -275,12 +275,7 @@ function renderTimelineEvent(entry, idx, isLast) {
     html += '</div>'; /* end tl-card */
     html += '</div>'; /* end tl-segment */
 
-    /* Departure flag */
-    if (parsed.end) {
-        html += '<div class="tl-flag tl-flag-depart">';
-        html += '<span class="tl-time-end">' + escHtml(parsed.end) + '</span>';
-        html += '</div>';
-    }
+    /* Departure flag removed — end time is now shown in arrival flag */
 
     html += '</div>'; /* end tl-event */
 
@@ -293,7 +288,6 @@ function renderTimelineEvent(entry, idx, isLast) {
         html += '<div class="tl-transit-content">';
         if (travelIcon) html += '<span class="tl-transit-icon">' + travelIcon + '</span>';
         html += '<span class="tl-transit-text">' + escHtml(travelText) + '</span>';
-        html += '<span class="tl-transit-arrow">' + iconSpan('arrow-left') + '</span>';
         html += '</div></div>';
     }
 
