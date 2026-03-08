@@ -10,7 +10,7 @@ data/trips-md/      {slug}/meta.md  day-*.md  flights.md  checklist.md  backup.m
 data/dist/          trips.json  {slug}/meta.json  day-*.json  ...
 scripts/            build.js  trip-build.js
 tests/              unit/  integration/  json/  e2e/
-.claude/commands/   trip-quality-rules.md  tp-create.md  tp-rebuild.md  tp-rebuild-all.md  tp-issue.md
+.claude/commands/   trip-quality-rules.md  tp-check.md  tp-create.md  tp-edit.md  tp-issue.md  tp-patch.md  tp-rebuild.md  tp-rebuild-all.md
 ```
 
 - Cloudflare Pages：https://trip-planner-dby.pages.dev/
