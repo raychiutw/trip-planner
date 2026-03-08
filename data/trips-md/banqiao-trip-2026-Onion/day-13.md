@@ -31,7 +31,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 | 八里左岸商圈 | 伴手禮 | 10:00~19:00 | 雙胞胎, 孔雀蛤, 福州餅 | https://bigmouthblog.tw/bali-left-bank-shopping/ | 4 |  |  | ai |
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://kaikk.tw/tamsui-old-street/
 - source: ai
 - maps: 淡水老街
 - rating: 4.2
@@ -54,7 +54,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 門票80元可同時參觀小白宮與滬尾砲台，週一休館
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://kaikk.tw/tamsui-cuisine/
 - source: ai
 - maps: 淡水老街
 - rating: 4.2
@@ -63,6 +63,6 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋輝 八里/淡水近郊店 | 日式拉麵 | 11:00~21:00 | NT$200~300 | 不需訂位 | 鄰近八里的日式拉麵，濃郁豚骨雞湯底，叉燒與溏心蛋是亮點 | https://kenalice.tw/menya-kei-bali/ | 4.2 | 麵屋輝 八里/淡水近郊店 |  | ai |
+| 二月拉麵 | 日式拉麵 | 11:00~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 淡水在地人公認最好吃拉麵，免費加麵，客製化麵條硬度與鹹度 | https://annyusweetgarden.com/tamsui-cuisine-february-ramen/ | 4.4 | 二月拉麵 |  | ai |
 | 之間 茶食器 | 義大利麵 | 11:30~21:00 | NT$300~500 | 建議訂位 | 淡水河畔複合式餐廳，義式料理配淡水河景 | https://tisshuang.com/between-tamsui/ | 4.3 | 之間 茶食器 |  | ai |
 | 淡水福佑宮旁海鮮 | 特色小吃 | 11:00~21:00 | NT$200~500 | 不需訂位 | 淡水在地海鮮餐廳，現撈海產清蒸煮炒樣樣有 | https://appletrees.tw/tamsui-seafood/ | 4 | 淡水福佑宮旁海鮮 |  | ai |

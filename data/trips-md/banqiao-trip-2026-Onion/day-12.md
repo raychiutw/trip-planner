@@ -23,7 +23,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 舊站體免費參觀，附近彩繪牆很適合拍照打卡
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://www.klook.com/zh-TW/blog/shulin-foods-recommend/
 - source: ai
 - maps: 樹林保安街商圈 | 樹林保安街
 - rating: 4
@@ -32,8 +32,8 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋武藏 樹林中山店 | 日式拉麵 | 11:00~21:30 | NT$260~380 | 不需訂位 | 日本名店在台分店，濃郁豚骨醬油湯底，粗直麵條吸飽湯汁 | https://girlsplan.com/musashi-shulin/ | 4.1 | 麵屋武藏 樹林中山店 |  | ai |
-| UNO 義式廚房 樹林店 | 義大利麵 | 11:30~21:00 | NT$230~380 | 不需訂位 | 樹林義式餐廳，手工義大利麵搭配現炒醬汁，牛肉義大利麵份量扎實 | https://bigmouthblog.tw/uno-pasta-shulin/ | 3.9 | UNO 義式廚房 樹林店 |  | ai |
+| 上津日式拉麵 | 日式拉麵 | 11:00~21:00 | NT$79~169 | 不需訂位 | 樹林車站旁超平價拉麵，每日限量30碗，紅燒牛肉麵也值得試 | https://savvik123.pixnet.net/blog/post/227470514 | 4.0 | 上津日式拉麵 |  | ai |
+| 享義 | 義大利麵 | 11:30~15:00 / 17:00~20:00 | NT$200~350 | 不需訂位 | 舒肥牛排番茄義大利麵與奶油野菇燉飯樣樣好吃 |  | 4.3 | 享義 |  | ai |
 | 山佳老街切仔麵 | 特色小吃 | 07:00~15:00 | NT$40~80 | 不需訂位 | 山佳車站旁小吃攤，切仔麵搭配油豆腐小菜 | https://tisshuang.com/shanjia-noodle/ | 4 | 山佳老街切仔麵 |  | ai |
 
 ### 14:00-16:00 鹿角溪人工濕地
@@ -46,7 +46,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 帶望遠鏡可賞鳥，步道平緩適合悠閒散步
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://appletrees.tw/blog/post/shulinfood
 - source: ai
 - maps: 樹林保安街商圈 | 樹林保安街
 - rating: 4
@@ -55,6 +55,6 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 一蘭拉麵 土城永寧店 | 日式拉麵 | 10:00~23:00 | NT$320~420 | 不需訂位 | 日本知名連鎖豚骨拉麵，秘製紅辣醬可自由調整，獨立隔間專注品嚐 | https://bigmouthblog.tw/ichiran-tucheng/ | 4.2 | 一蘭拉麵 土城永寧店 |  | ai |
-| 只是光在 義大利麵 土城店 | 義大利麵 | 11:00~21:00 | NT$220~360 | 不需訂位 | 土城義式輕食餐廳，手工義大利麵條口感紮實，青醬與蕃茄肉醬最受好評 | https://kenalice.tw/justlight-pasta-tucheng/ | 4 | 只是光在 義大利麵 土城店 |  | ai |
+| 桐生拉麵 土城店 | 日式拉麵 | 11:30~14:00 / 17:30~21:30 | NT$220~350 | 不需訂位 | 土城人氣拉麵，夢幻湖水藍鹽味翠雞拉麵，醬油雞湯也必點 | https://dudu2.tw/tucheng-blue-ramen/ | 4.4 | 桐生拉麵 土城店 |  | ai |
+| No.66義麵坊 土城店 | 義大利麵 | 11:00~21:00 | NT$120~200 | 不需訂位 | 土城平價義大利麵連鎖，用料實在價格親民 | https://blog.alwayslunch.com/?p=453 | 4.2 | No.66義麵坊 土城店 |  | ai |
 | 樹林保安街夜市 | 特色小吃 | 17:00~23:00 | NT$50~150 | 不需訂位 | 在地人的晚餐街，各式台灣小吃集中 | https://kenalice.tw/shulin-baoan-night/ | 4 | 樹林保安街夜市 |  | ai |

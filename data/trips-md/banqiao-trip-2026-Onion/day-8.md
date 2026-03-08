@@ -23,7 +23,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 山路階梯多建議穿好走的鞋，山頂夜景也很值得看
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://www.dalang.tw/%E4%B8%AD%E5%92%8C%E7%BE%8E%E9%A3%9F%E6%87%B6%E4%BA%BA%E5%8C%85/
 - source: ai
 - maps: 中和環球購物中心
 - rating: 4
@@ -32,8 +32,8 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 豚骨拉麵ばかうまラーメン 永和店 | 日式拉麵 | 11:30~21:30 | NT$240~360 | 不需訂位 | 永和人氣拉麵，豚骨高湯熬煮12小時，濃厚乳白湯底配軟嫩叉燒 | https://appletrees.tw/bakauma-ramen-yonghe/ | 4 | 豚骨拉麵ばかうまラーメン 永和店 |  | ai |
-| 藍乳酪義大利餐廳 | 義大利麵 | 11:30~21:30 | NT$250~450 | 建議訂位 | 永和人氣義式餐廳，手工窯烤披薩與義大利麵 | https://girlsplan.com/blue-cheese-yonghe/ | 4.1 | 藍乳酪義大利餐廳 |  | ai |
+| 麵屋和和 | 日式拉麵 | 11:00~20:30 | NT$200~320 | 不需訂位 | 中和四號公園旁文青風拉麵，雞清湯與雞白湯專賣，細麵彈牙 | https://upssmile.com/224838/hoho-ramen-house | 4.0 | 麵屋和和 |  | ai |
+| Win Win Pasta 景安店 | 義大利麵 | 11:00~21:00 | NT$150~280 | 不需訂位 | 景安站對面高CP值義式，比臉大焗烤招牌，濃湯飲料無限暢飲 | https://immandy.tw/winwinpasta/ | 4.3 | Win Win Pasta 景安店 |  | ai |
 | 中和連城路米粉湯 | 特色小吃 | 06:00~14:00 | NT$40~80 | 不需訂位 | 中和在地早午餐，清甜米粉湯配上油豆腐黑白切 | https://bigmouthblog.tw/zhonghe-rice-noodle-soup/ | 4 | 中和連城路米粉湯 |  | ai |
 
 ### 14:00-16:00 中和環球購物中心
@@ -54,7 +54,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 | 景安捷運站商圈 | 購物中心 | 10:00~22:00 | 平價服飾, 流行飾品, 韓系美妝小舖 | https://girlsplan.com/jingan-shopping/ | 4.1 |  |  | ai |
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://supertaste.tvbs.com.tw/pack/347469
 - source: ai
 - maps: 中和環球購物中心
 - rating: 4
@@ -63,6 +63,6 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 山頭火拉麵 中和環球店 | 日式拉麵 | 11:00~21:30 | NT$250~380 | 不需訂位 | 北海道系拉麵，濃厚豚骨湯底，叉燒入口即化 | https://kenalice.tw/santouka-zhonghe/ | 4 | 山頭火拉麵 中和環球店 |  | ai |
+| 一幸拉麵 中和莒光店 | 日式拉麵 | 11:30~14:00 / 17:00~21:00 | NT$170~280 | 不需訂位 | 中和最強拉麵，泡系雞白湯與柚子鹽風味獨特，免費加麵加飯 | https://pekoblog.tw/yixinglamian/ | 4.8 | 一幸拉麵 中和莒光店 |  | ai |
 | 洋城義大利餐廳 中和店 | 義大利麵 | 11:00~21:30 | NT$280~480 | 不需訂位 | 連鎖義式餐廳，白醬義大利麵與焗烤料理份量十足，適合家庭聚餐 | https://appletrees.tw/italianchef-zhonghe/ | 4 | 洋城義大利餐廳 中和店 |  | ai |
 | 阿男麻辣鍋 | 特色小吃 | 17:00~01:00 | NT$350~600 | 建議訂位 | 中和人氣麻辣鍋，花椒麻香十足，鴨血豆腐無限續 | https://girlsplan.com/anan-mala-pot/ | 4.2 | 阿男麻辣鍋 |  | ai |

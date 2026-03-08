@@ -30,7 +30,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 ## Timeline
 
 ### 09:00 HOPE VILLA Onnason 出發
-- blog: 
+- blog: https://www.bigfang.tw/blog/post/okinawa-onnason-hotel
 - source: ai
 - maps: HOPE VILLA Onnason
 - mapcode: 206 221 372*23
@@ -111,7 +111,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: 国際通り 那覇
 - mapcode: 33 157 375*85
 - rating: 4.1
-- note: 花笠食堂週日公休，琉球の牛建議提前網路訂位
+- note: 花笠食堂週日公休，もとぶ牧場建議提前網路訂位
 - travel: car 約9分鐘
 
 #### restaurants: 晚餐推薦
@@ -119,12 +119,12 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 花笠食堂 | 沖繩料理 | 11:00~20:00（週日公休） | ¥700~ | {"available":"no","recommended":false} | 花笠食堂 — 那霸牧志市場旁百年老店，沖繩日常家庭料理，炒苦瓜（ゴーヤーチャンプルー）與紅燒豬腳最具代表 | https://kenalice.tw/okinawa-hanagasa-shokudo/ | 3.9 | 花笠食堂 那覇 | 33 157 208*63 | ai |
-| 琉球新麺 通堂 国際通店 | 海鮮 | 11:00~23:00（全年無休） | ¥780~ | {"available":"no","recommended":false} | 琉球新麺 通堂 — 沖繩最具代表性本土拉麵，獨特豚骨×沖繩風味，那霸国際通旗艦店 | https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/ | 4 | 琉球新麺 通堂 国際通店 \| 琉球新麺 通堂 国際通 | 33 157 466*11 | ai |
-| 琉球の牛 那霸國際通店 | 甜點 | 17:00~22:30 | ¥6,000~ | {"available":"yes","method":"website","url":"https://www.tablecheck.com/en/shops/yakiniku-naha/reserve","recommended":true} | 琉球の牛 — 沖繩縣產和牛燒肉名店，獨立包廂無煙烤爐，Google 4.7 分 | https://elisa48.pixnet.net/blog/post/45572624 | 4.4 | 琉球の牛 那覇国際通り店 | 33 157 382*63 | ai |
+| ちょこっと寿し 国際通り牧志店 | 海鮮 | 12:00~24:00（週三公休） | ¥2,000~ | {"available":"no","recommended":false} | ちょこっと寿し — 北海道×沖繩雙產地直送鮮魚壽司，沖繩三大高級魚赤仁ミーバイ・赤マチ必點，一貫69日圓起CP值高 | https://mimihan.tw/chocotto-naha/ | 4 | ちょこっと寿し 国際通り牧志店 \| ちょこっと寿し 牧志 | 33 157 323*00 | ai |
+| 焼肉もとぶ牧場 那覇店 | 甜點 | 17:00~22:00（L.O 21:30） | ¥4,200~ | {"available":"yes","method":"website","url":"https://www.tablecheck.com/en/shops/motobu-farm-naha/reserve","recommended":true} | 焼肉もとぶ牧場 — 沖繩品牌「もとぶ牛」牧場直營燒肉，農林水産大臣賞受賞和牛，個室包廂 | https://shin.tw/jp-okinawa-motobu-farm/ | 4.3 | 焼肉もとぶ牧場 那覇店 \| もとぶ牧場 那覇 久茂地 | 33 156 170*03 | ai |
 
 ### 20:22 沖繩那霸美居飯店 Check in
 Mercure Okinawa Naha
-- blog: 
+- blog: https://kimi77228.pixnet.net/blog/posts/10358690425
 - source: ai
 - maps: メルキュール沖縄那覇
 - mapcode: 33 155 267*37

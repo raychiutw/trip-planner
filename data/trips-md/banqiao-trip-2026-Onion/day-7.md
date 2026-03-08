@@ -23,7 +23,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 國立台灣圖書館免費入館，公園內有松鼠出沒很療癒
 
 ### 12:00-13:00 午餐
-- blog: 
+- blog: https://gzifood.com/823-memorial-park-foods/
 - source: ai
 - maps: 永安市場商圈
 - rating: 4.1
@@ -46,7 +46,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - note: 永安市場周邊巷弄藏很多平價美食，可邊走邊吃
 
 ### 18:00-19:30 晚餐
-- blog: 
+- blog: https://supertaste.tvbs.com.tw/pack/344356
 - source: ai
 - maps: 永安市場商圈
 - rating: 4.1
@@ -56,5 +56,5 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 山頭火拉麵 中和環球店 | 日式拉麵 | 11:00~21:30 | NT$250~380 | 不需訂位 | 北海道系拉麵，濃厚豚骨湯底，叉燒入口即化 | https://kenalice.tw/santouka-zhonghe/ | 4 | 山頭火拉麵 中和環球店 |  | ai |
-| 藍乳酪義大利餐廳 | 義大利麵 | 11:30~21:30 | NT$250~450 | 建議訂位 | 永和人氣義式餐廳，手工窯烤披薩與義大利麵 | https://girlsplan.com/blue-cheese-yonghe/ | 4.1 | 藍乳酪義大利餐廳 |  | ai |
+| Don'ts Don'ts Pasta 懂吃懂吃 | 義大利麵 | 11:30~14:30 / 17:00~21:30 | NT$120~220 | 不需訂位 | 永和樂華夜市旁浮誇系義大利麵，蛤蜊多到爆盤CP值超高 | https://blaketravel.tw/blog/post/donts-donts-pasta | 4.5 | Don'ts Don'ts Pasta 懂吃懂吃 |  | ai |
 | 竹林雞肉飯 | 特色小吃 | 11:00~20:00 | NT$40~100 | 不需訂位 | 永安市場旁超人氣，雞肉飯油蔥香氣誘人 | https://kenalice.tw/zhulin-chicken-rice/ | 4.1 | 竹林雞肉飯 |  | ai |

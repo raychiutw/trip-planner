@@ -30,7 +30,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 ## Timeline
 
 ### 09:00 沖繩那霸美居飯店 出發
-- blog: 
+- blog: https://kimi77228.pixnet.net/blog/posts/10358690425
 - source: ai
 - maps: メルキュール沖縄那覇
 - mapcode: 33 155 267*37
@@ -56,7 +56,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 
 ### 11:58-12:58 世豊商店
 壺屋通伴手禮雜貨店，台灣老闆溝通零障礙；必買沖繩蝦餅、邊銀食堂辣油、雪肌粹洗面乳，價格比國際通便宜
-- blog: 
+- blog: https://boo2k.com/archives/28149
 - maps: 世豊商店 那覇
 - mapcode: 33 128 879*17
 - rating: 4
@@ -128,7 +128,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 | name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
 | タコライスcafe きじむなぁ 瀨長島店 | 沖繩料理 | 11:00~21:00 | ¥900~ | {"available":"no","recommended":false} | きじむなぁ — 沖繩特色歐姆蛋塔可飯名店，結合新鮮蔬菜、起司和嫩蛋，位於瀨長島商場內 | https://bobbyfun.tw/2024-01-08-2707/ | 4 | タコライスcafe きじむなぁ 瀬長島 | 33 032 412*44 | ai |
-| 琉球新麺 通堂 牧港本店 | 海鮮 | 11:00~24:00（全年無休） | ¥780~ | {"available":"no","recommended":false} | 琉球新麺 通堂 牧港本店 — 沖繩本土拉麵旗艦店，距瀨長島約10分，沖繩豚骨醬油湯底口碑最佳 | https://tisshuang.com/blog/post/tsurusai-ramen-okinawa/ | 4 | 琉球新麺 通堂 牧港本店 | 33 341 059*55 | ai |
+| 親父のまぐろ 瀬長島ウミカジテラス店 | 海鮮 | 11:00~21:00（L.O 20:30） | ¥1,580~ | {"available":"no","recommended":false} | 親父のまぐろ — 沖繩近海一本釣り天然生まぐろ專門店，從未冷凍的鮮度抜群，招牌生まぐろ丼與アヒポキライス必點 | https://snowhy.tw/tuna-oka/ | 4 | 親父のまぐろ 瀬長島ウミカジテラス店 \| 親父のまぐろ 瀬長島 | 33 002 602*06 | ai |
 | 焼肉 金城 那霸南店 | 甜點 | 17:00~23:30（週三公休） | ¥3,000~ | {"available":"yes","method":"phone","phone":"098-917-1729","recommended":true} | 焼肉 金城 — 那霸南部人氣炭火燒肉，縣產牛特選部位，距瀨長島約15分，CP值高 | https://bigmouthblog.tw/okinawa-naha-yakiniku-kinjo/ | 4.1 | 焼肉 金城 那覇南 \| 焼肉 金城 那覇 |  | ai |
 
 ### 20:40-22:40 沖繩 ASHIBINAA Outlet
@@ -160,7 +160,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 
 ### 23:51-00:51 SPORTS DEPO 豐崎店
 大型運動用品專賣店；必逛日本限定Nike/Adidas運動鞋、戶外露營用品、高爾夫球具折扣區
-- blog: 
+- blog: https://tc.tabirai.net/sightseeing/article/okinawa-sneakers-store/
 - source: ai
 - maps: スポーツデポ 豊崎店
 - mapcode: 232 574 739*42
@@ -169,7 +169,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 
 ### 17:30-18:00 沖繩旅毛 還車
 還車前先到附近人工加油站加滿油
-- blog: 
+- blog: https://bobbyfun.tw/2024-02-11-2915/
 - source: ai
 - maps: 沖繩旅毛 那覇新都心
 - rating: 4.8
