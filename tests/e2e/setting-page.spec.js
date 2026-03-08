@@ -156,7 +156,34 @@ test.describe('色彩模式切換', () => {
   });
 });
 
-/* ===== 4. 關閉按鈕 ===== */
+/* ===== 4. 捲動穩定性 ===== */
+test.describe('捲動穩定性', () => {
+  test('捲動到底部後不會彈回頂部', async ({ page }) => {
+    await page.goto('/setting.html');
+    await page.waitForSelector('.trip-btn');
+    await page.waitForSelector('.color-mode-card');
+
+    // 捲動到頁面底部
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(500);
+
+    const scrollAfter = await page.evaluate(() => window.scrollY);
+
+    // 等待確認不會彈回
+    await page.waitForTimeout(1000);
+
+    const scrollFinal = await page.evaluate(() => window.scrollY);
+
+    // 最終位置應與捲動後位置相同（允許 2px 誤差）
+    expect(Math.abs(scrollFinal - scrollAfter)).toBeLessThanOrEqual(2);
+    // 且不應在頂部（若頁面可捲動）
+    if (scrollAfter > 0) {
+      expect(scrollFinal).toBeGreaterThan(0);
+    }
+  });
+});
+
+/* ===== 5. 關閉按鈕 ===== */
 test.describe('關閉按鈕', () => {
   test('X 按鈕存在', async ({ page }) => {
     await page.goto('/setting.html');
