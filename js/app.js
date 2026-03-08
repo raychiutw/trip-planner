@@ -1106,8 +1106,11 @@ function closeInfoSheet() {
     if (!backdrop) return;
 
     backdrop.addEventListener('click', closeInfoSheet);
-    // Block touch scroll on backdrop so the trip page behind cannot scroll
+    // Block scroll on backdrop (touch + mouse wheel)
     backdrop.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+    backdrop.addEventListener('wheel', function(e) {
         e.preventDefault();
     }, { passive: false });
 
@@ -1119,6 +1122,9 @@ function closeInfoSheet() {
     var sheetBody = panel.querySelector('.info-sheet-body');
     if (sheetBody) {
         sheetBody.addEventListener('touchmove', function(e) {
+            e.stopPropagation();
+        }, { passive: true });
+        sheetBody.addEventListener('wheel', function(e) {
             e.stopPropagation();
         }, { passive: true });
     }
