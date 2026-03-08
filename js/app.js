@@ -1089,36 +1089,80 @@ function renderInfoPanel(data) {
 /* ===== Info Bottom Sheet (mobile) ===== */
 function openInfoSheet() {
     var backdrop = document.getElementById('infoBottomSheet');
-    if (backdrop) backdrop.classList.add('open');
+    if (!backdrop) return;
+    var panel = document.getElementById('infoSheet');
+    // Reset to default 50dvh
+    if (panel) panel.style.height = '';
+    backdrop.classList.add('open');
+    document.body.classList.add('sheet-open');
 }
 function closeInfoSheet() {
     var backdrop = document.getElementById('infoBottomSheet');
-    if (backdrop) backdrop.classList.remove('open');
+    if (!backdrop) return;
+    backdrop.classList.remove('open');
+    document.body.classList.remove('sheet-open');
 }
 
 (function initInfoSheet() {
-    // Bind backdrop click to close
     var backdrop = document.getElementById('infoBottomSheet');
-    if (backdrop) {
-        backdrop.addEventListener('click', closeInfoSheet);
-        // Prevent sheet panel clicks from closing
-        var panel = document.getElementById('infoSheet');
-        if (panel) panel.addEventListener('click', function(e) { e.stopPropagation(); });
+    if (!backdrop) return;
 
-        // X close button
-        var closeBtn = document.getElementById('sheetCloseBtn');
-        if (closeBtn) closeBtn.addEventListener('click', closeInfoSheet);
+    backdrop.addEventListener('click', closeInfoSheet);
 
-        // Touch swipe down to close
-        var _touchStartY = 0;
-        panel && panel.addEventListener('touchstart', function(e) {
-            _touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-        panel && panel.addEventListener('touchend', function(e) {
-            var deltaY = e.changedTouches[0].clientY - _touchStartY;
-            if (deltaY > 60) closeInfoSheet();
-        }, { passive: true });
+    var panel = document.getElementById('infoSheet');
+    if (!panel) return;
+    panel.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    // X close button
+    var closeBtn = document.getElementById('sheetCloseBtn');
+    if (closeBtn) closeBtn.addEventListener('click', closeInfoSheet);
+
+    // Drag handle to resize / close
+    var handle = panel.querySelector('.sheet-handle');
+    var header = panel.querySelector('.sheet-header');
+    var _dragStartY = 0;
+    var _dragStartH = 0;
+    var _dragging = false;
+    var maxH = function() { return window.innerHeight * 0.75; };
+    var minH = function() { return window.innerHeight * 0.25; };
+
+    function onDragStart(y) {
+        _dragging = true;
+        _dragStartY = y;
+        _dragStartH = panel.offsetHeight;
+        panel.classList.add('dragging');
     }
+    function onDragMove(y) {
+        if (!_dragging) return;
+        var delta = _dragStartY - y; // positive = drag up
+        var newH = Math.min(Math.max(_dragStartH + delta, 0), maxH());
+        panel.style.height = newH + 'px';
+    }
+    function onDragEnd() {
+        if (!_dragging) return;
+        _dragging = false;
+        panel.classList.remove('dragging');
+        // Close if dragged below 25vh
+        if (panel.offsetHeight < minH()) {
+            panel.style.height = '';
+            closeInfoSheet();
+        }
+    }
+
+    // Touch events on handle + header
+    [handle, header].forEach(function(el) {
+        if (!el) return;
+        el.addEventListener('touchstart', function(e) {
+            onDragStart(e.touches[0].clientY);
+        }, { passive: true });
+        el.addEventListener('touchmove', function(e) {
+            if (_dragging) {
+                e.preventDefault();
+                onDragMove(e.touches[0].clientY);
+            }
+        }, { passive: false });
+        el.addEventListener('touchend', onDragEnd, { passive: true });
+    });
 })();
 
 /* ===== Speed Dial ===== */
