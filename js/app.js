@@ -1094,13 +1094,13 @@ function openInfoSheet() {
     // Reset to default 50dvh
     if (panel) panel.style.height = '';
     backdrop.classList.add('open');
-    document.body.classList.add('sheet-open');
+    document.documentElement.classList.add('sheet-open');
 }
 function closeInfoSheet() {
     var backdrop = document.getElementById('infoBottomSheet');
     if (!backdrop) return;
     backdrop.classList.remove('open');
-    document.body.classList.remove('sheet-open');
+    document.documentElement.classList.remove('sheet-open');
 }
 
 (function initInfoSheet() {

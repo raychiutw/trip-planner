@@ -506,5 +506,10 @@ body.dark .speed-dial-item { background: var(--card-bg); }
 .info-sheet-body { overflow-y: auto; font-size: var(--fs-md); flex: 1; min-height: 0; }
 
 /* Lock body scroll when sheet is open */
-body.sheet-open { overflow: hidden; }
+html.sheet-open,
+html.sheet-open body {
+    overflow: hidden !important;
+    touch-action: none;
+    overscroll-behavior: none;
+}
 
