@@ -192,7 +192,8 @@ body:not(.dark) .day-header {
 .info-box.parking,
 .info-box.souvenir,
 .info-box.restaurants,
-.info-box.shopping { background: var(--accent-light); }
+.info-box.shopping,
+.info-box.gas-station { background: var(--accent-light); }
 .restaurant-choice { padding: 10px 0; line-height: 1.7; border-bottom: 1px solid var(--border); }
 .restaurant-choice:last-child { border-bottom: none; padding-bottom: 0; }
 .info-box-grid { display: flex; flex-direction: column; }
@@ -390,10 +391,6 @@ body.dark .hw-block { background: var(--hover-bg); }
 body.dark .info-box { background: var(--accent-light); }
 body.dark .tl-card { background: #403D3A; }
 body.dark .tl-transit-content { background: var(--accent-light); }
-
-/* ===== Tab Day Switching ===== */
-.day-section { display: block; }
-.print-mode .day-section { display: block !important; }
 
 /* ===== Nav Brand ===== */
 .nav-brand { font-weight: 700; font-size: var(--fs-md); color: var(--accent); white-space: nowrap; display: none; }
