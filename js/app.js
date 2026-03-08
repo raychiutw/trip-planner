@@ -1094,13 +1094,11 @@ function openInfoSheet() {
     // Reset to default 50dvh
     if (panel) panel.style.height = '';
     backdrop.classList.add('open');
-    document.body.classList.add('sheet-open');
 }
 function closeInfoSheet() {
     var backdrop = document.getElementById('infoBottomSheet');
     if (!backdrop) return;
     backdrop.classList.remove('open');
-    document.body.classList.remove('sheet-open');
 }
 
 (function initInfoSheet() {
@@ -1108,10 +1106,28 @@ function closeInfoSheet() {
     if (!backdrop) return;
 
     backdrop.addEventListener('click', closeInfoSheet);
+    // Block scroll on backdrop (touch + mouse wheel)
+    backdrop.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+    backdrop.addEventListener('wheel', function(e) {
+        e.preventDefault();
+    }, { passive: false });
 
     var panel = document.getElementById('infoSheet');
     if (!panel) return;
     panel.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    // Allow scrolling inside sheet body but block scroll passthrough to page
+    var sheetBody = panel.querySelector('.info-sheet-body');
+    if (sheetBody) {
+        sheetBody.addEventListener('touchmove', function(e) {
+            e.stopPropagation();
+        }, { passive: true });
+        sheetBody.addEventListener('wheel', function(e) {
+            e.stopPropagation();
+        }, { passive: true });
+    }
 
     // X close button
     var closeBtn = document.getElementById('sheetCloseBtn');
