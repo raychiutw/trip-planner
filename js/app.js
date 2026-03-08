@@ -839,7 +839,7 @@ function resolveAndLoad() {
 function createSkeleton(dayIds) {
     var html = '';
     dayIds.forEach(function(id) {
-        html += '<section class="day-section" data-day="' + id + '" style="display:none">';
+        html += '<section class="day-section" data-day="' + id + '">';
         html += '<div class="day-header info-header" id="day' + id + '"><h2>Day ' + id + '</h2></div>';
         html += '<div class="day-content" id="day-slot-' + id + '">';
         html += '<div class="slot-loading">' + iconSpan('hourglass') + ' 載入中...</div>';
@@ -998,6 +998,7 @@ function loadTrip(slug) {
                         if (idx >= 0 && dayIds[idx]) initialDay = dayIds[idx];
                     }
                     switchDay(initialDay);
+                    initNavTracking();
                     // Preload remaining days in background for stats & driving
                     dayIds.forEach(function(id) { if (id !== initialDay && !dayCache[id]) fetchDay(id); });
                 });
@@ -1202,17 +1203,19 @@ function scrollToSec(id) {
     history.replaceState(null, '', '#' + id);
 }
 function switchDay(dayId) {
+    // Ensure target day is loaded
+    if (!dayCache[dayId]) fetchDay(dayId);
+    // Scroll to the day header
+    var header = document.getElementById('day' + dayId);
+    if (header) {
+        _manualScrollTs = Date.now();
+        header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    // Update pill + hash
     var pills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
     pills.forEach(function(btn) { btn.classList.toggle('active', parseInt(btn.getAttribute('data-day')) === dayId); });
     var activeBtn = document.querySelector('#stickyNav .dh-nav .dn.active');
     if (activeBtn) scrollNavPillIntoView(activeBtn);
-    // Show only the selected day section
-    document.querySelectorAll('.day-section').forEach(function(sec) {
-        sec.style.display = parseInt(sec.getAttribute('data-day')) === dayId ? '' : 'none';
-    });
-    window.scrollTo({ top: 0 });
-    // Lazy load if not cached
-    if (!dayCache[dayId]) fetchDay(dayId);
     history.replaceState(null, '', '#day' + dayId);
 }
 function toggleHw(el) {
