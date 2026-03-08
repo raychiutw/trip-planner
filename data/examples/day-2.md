@@ -13,6 +13,7 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 - source: ai
 - details: 飯店位置, 天然溫泉, 免費停車, 含免費早餐
 - breakfast: true
+- note: 飯店特色或入住提醒
 
 ### shopping: 飯店附近購物
 
@@ -38,6 +39,7 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 - maps: 範例主要景點
 - mapcode: 553 075 797*00
 - rating: 4.6
+- note: 建議提早到避開人潮
 
 #### reservation: 景點資訊
 - 門票：大人 2,180 / 高中生 1,440
@@ -48,6 +50,7 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 景點附近用餐
 - maps: 範例午餐區
 - rating: 4.1
+- note:
 - travel: car 約15分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -65,6 +68,7 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 - maps: 範例戶外景點
 - mapcode: 206 822 241*00
 - rating: 4.3
+- note: 自然風景實用提示
 - travel: car 約25分鐘
 
 <!-- parking: 有停車費用的景點加 parking infoBox -->
@@ -79,6 +83,7 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 - maps: 範例室內景點
 - mapcode: 206 628 711*00
 - rating: 4.1
+- note:
 - travel: car 約5分鐘
 
 #### reservation: 景點資訊
@@ -92,6 +97,7 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 - source: ai
 - maps: 範例市區
 - rating: 4
+- note:
 
 #### restaurants: 晚餐推薦三選一
 

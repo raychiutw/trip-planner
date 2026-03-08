@@ -9,6 +9,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 新莊體育場
 - rating: 4.1
 - travel: car 開車 約20分鐘
+- note: 若遇職棒賽事可現場購票入場，周邊停車較方便
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 新莊廟街
 - rating: 4
 - travel: car 開車 約10分鐘
+- note: 老順香鹹光餅是新莊名產必買，廟街老店集中好逛
 
 #### shopping: 新莊廟街購物推薦
 

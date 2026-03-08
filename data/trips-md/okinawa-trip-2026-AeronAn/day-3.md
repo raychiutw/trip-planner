@@ -14,6 +14,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - details: 那覇市牧志1-1-2, 牧志站步行1分鐘
 - breakfast: false 自助早餐 ¥2,200（6:30-10:00），需另付費
+- note: 單軌牧志站出口直達，行李可寄放櫃台
 
 ### shopping: 飯店附近購物
 
@@ -45,12 +46,14 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - maps: 沖繩美麗海水族館 | 沖縄美ら海水族館
 - rating: 4.5
+- note: 16:00 後入場門票半價，海豚表演一天多場建議先查時刻表
 
 ### 13:00-14:30 午餐
 水族館周邊或本部町午餐
 - blog: 
 - maps: 海洋博公園周邊 | 海洋博公園 本部町
 - rating: 4
+- note: 園區內餐廳中午排隊長，可考慮開車到本部町街上用餐
 - travel: walk 步行至備瀨福木林道 約15分鐘
 
 #### restaurants: 午餐推薦
@@ -66,6 +69,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - blog: 
 - maps: 備瀨福木林道 | 備瀬のフクギ並木
 - rating: 4.5
+- note: 入口處可租腳踏車約 ¥300/小時，走到盡頭海灘可看到伊江島
 - travel: bus 117 番高速巴士回程 記念公園前→縣廳前 約150分鐘
 
 ### 16:00-19:00 搭巴士返回那霸
@@ -81,6 +85,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - maps: 那霸國際通 | 那覇国際通り
 - rating: 4
+- note: 北部回程車程長，可在巴士上先決定晚餐地點預約
 
 #### restaurants: 晚餐推薦
 

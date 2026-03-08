@@ -9,6 +9,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 淡水漁人碼頭
 - rating: 4.4
 - travel: car 開車 約40分鐘
+- note: 情人橋傍晚點燈很浪漫，碼頭有付費停車場
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 淡水海關碼頭
 - rating: 4.4
 - travel: car 開車 約10分鐘
+- note: 免費參觀，倉庫群常有特展，河畔草地可野餐
 
 ### 18:00-19:30 晚餐
 - blog: 

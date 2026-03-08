@@ -57,6 +57,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: 天久りうぼう楽市
 - mapcode: 33 577 387*18
 - rating: 3.9
+- note: 在地人常去的複合型超市，價格比觀光區便宜，適合第一天大量採買
 - travel: car 約7分鐘
 
 #### shopping: 天久琉貿樂市 採買推薦
@@ -74,6 +75,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: サンエー那覇メインプレイス
 - mapcode: 33 578 117*61
 - rating: 4
+- note: 在地人的購物中心，1F超市生鮮熟食品質好，冷氣強建議帶薄外套
 - travel: car 約18分鐘
 
 #### shopping: San-A Naha Main Place 推薦店鋪
@@ -91,6 +93,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: サンエー浦添西海岸パルコシティ
 - mapcode: 33 394 819*12
 - rating: 4.2
+- note: PARCO CITY 3F 美食街選擇多，週末午餐尖峰時段建議避開 12:00~13:00
 
 #### restaurants: 午餐推薦
 
@@ -107,6 +110,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: サンエー浦添西海岸パルコシティ
 - mapcode: 33 394 819*12
 - rating: 4.2
+- note: 沖繩最大購物中心，有海景露台可休息，免稅櫃台在 1F 服務中心旁
 - travel: car 約14分鐘
 
 #### shopping: PARCO CITY 推薦店鋪
@@ -124,6 +128,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: 浦添大公園
 - mapcode: 33 344 367*55
 - rating: 4.1
+- note: 超長滾輪溜滑梯小孩超愛，建議穿長褲或墊紙板避免摩擦燙屁股
 - travel: car 約24分鐘
 
 ### 20:10-21:10 晚餐
@@ -131,6 +136,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: 美浜アメリカンビレッジ
 - mapcode: 33 556 625*14
 - rating: 4.1
+- note: 迴轉壽司排隊人多，建議先去抽號碼牌再逛美國村
 - travel: car 約5分鐘
 
 #### restaurants: 晚餐推薦
@@ -148,6 +154,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: 美浜アメリカンビレッジ
 - mapcode: 33 556 625*14
 - rating: 4.2
+- note: 夜景拍照最佳時間為日落後30分鐘，摩天輪旁的彩色牆面是打卡熱點
 - travel: car 約5分鐘
 
 #### shopping: 美國村 推薦店鋪
@@ -163,6 +170,7 @@ weather: {"label":"那霸→浦添→北谷","locations":[{"lat":26.3344,"lon":1
 - maps: plate jam 北谷
 - mapcode: 33 587 527*50
 - rating: 3.8
+- note: 北谷深夜營業的美式餐廳，適合玩完美國村後吃宵夜
 - travel: car 約27分鐘
 
 ### 01:04 BUZZ RESORT Check in

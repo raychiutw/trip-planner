@@ -9,6 +9,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 山佳車站
 - rating: 4.2
 - travel: car 開車 約25分鐘
+- note: 舊站體免費參觀，附近彩繪牆很適合拍照打卡
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 鹿角溪人工濕地
 - rating: 4.2
 - travel: car 開車 約15分鐘
+- note: 帶望遠鏡可賞鳥，步道平緩適合悠閒散步
 
 ### 18:00-19:30 晚餐
 - blog: 

@@ -15,6 +15,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 八里左岸
 - rating: 4.2
 - travel: car 開車 約45分鐘
+- note: 可租自行車沿河岸騎到十三行博物館，沿途風景優美
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -37,6 +38,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 十三行博物館
 - rating: 4.4
 - travel: car 開車 約5分鐘
+- note: 門票80元，週一休館，頂樓觀景台可眺望淡水河出海口
 
 ### 18:00-19:30 晚餐
 - blog: 

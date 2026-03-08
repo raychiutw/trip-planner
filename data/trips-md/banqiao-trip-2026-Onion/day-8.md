@@ -9,6 +9,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 烘爐地南山福德宮
 - rating: 4.7
 - travel: car 開車 約20分鐘
+- note: 山路階梯多建議穿好走的鞋，山頂夜景也很值得看
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 中和環球購物中心
 - rating: 4
 - travel: car 開車 約15分鐘
+- note: 與中和捷運站共構，地下美食街選擇很多
 
 #### shopping: 中和環球購物推薦
 

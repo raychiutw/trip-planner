@@ -9,6 +9,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 新月橋
 - rating: 4.4
 - travel: car 開車 約15分鐘
+- note: 傍晚來看夕陽和LED光雕最美，橋上禁止騎自行車
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 新北大都會公園
 - rating: 4.6
 - travel: car 開車 約10分鐘
+- note: 園區很大建議租自行車遊覽，有大型兒童遊戲場
 
 ### 18:00-19:30 晚餐
 - blog: 

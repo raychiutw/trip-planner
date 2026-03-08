@@ -9,6 +9,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 淡水老街
 - rating: 4.2
 - travel: car 開車 約40分鐘
+- note: 假日人潮較多建議平日前往，河岸步道傍晚看夕陽最美
 
 #### shopping: 淡水老街購物推薦
 
@@ -49,6 +51,7 @@ weather: {"label":"淡水・八里","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 紅毛城 | 淡水紅毛城
 - rating: 4.3
 - travel: car 開車 約5分鐘
+- note: 門票80元可同時參觀小白宮與滬尾砲台，週一休館
 
 ### 18:00-19:30 晚餐
 - blog: 

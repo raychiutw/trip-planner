@@ -9,6 +9,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 幸福水漾公園 | 三重幸福水漾公園
 - rating: 4.2
 - travel: car 開車 約20分鐘
+- note: 春季花海盛開時最漂亮，停車可停機捷三重站旁
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 空軍三重一村
 - rating: 4.4
 - travel: car 開車 約10分鐘
+- note: 免費參觀，週一休館，園區內有不少好拍的裝置藝術
 
 ### 18:00-19:30 晚餐
 - blog: 

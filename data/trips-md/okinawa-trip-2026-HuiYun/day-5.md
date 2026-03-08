@@ -42,6 +42,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: Ryukyu Beach Club
 - mapcode: 206 185 416*17
 - rating: 4.3
+- note: 恩納村私人海灘，水質清澈適合小孩玩水，建議自備浮潛裝備
 - travel: car 約36分鐘
 
 ### 10:48-13:48 永旺夢樂城沖繩來客夢
@@ -51,6 +52,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: イオンモール沖縄ライカム
 - mapcode: 33 618 171*12
 - rating: 4.2
+- note: 沖繩最大AEON，1F 超市可買伴手禮，頂樓停車場有免費充電樁
 - travel: car 約3分鐘
 
 #### shopping: 來客夢 推薦店鋪
@@ -68,6 +70,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: イオンモール沖縄ライカム
 - mapcode: 33 618 171*12
 - rating: 4.2
+- note: 3F 美食街週末人多，建議避開 12:00 尖峰或改去 1F 超市熟食區
 
 #### restaurants: 來客夢午餐推薦
 
@@ -83,6 +86,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: イオンモール沖縄ライカム
 - mapcode: 33 618 171*12
 - rating: 4.2
+- note: 沖繩限定皮卡丘商品很搶手，週末可能需排隊入場，小孩會逛很久
 - travel: car 約34分鐘
 
 ### 15:25-17:55 國際通商店街
@@ -92,6 +96,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: 国際通り 那覇
 - mapcode: 33 157 375*85
 - rating: 4.1
+- note: 路邊停車不易，建議停「てんぶす那覇」地下停車場；伴手禮可比價，巷弄內比大街便宜
 - travel: car 約6分鐘
 
 #### shopping: 國際通 伴手禮&購物推薦
@@ -106,6 +111,7 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 - maps: 国際通り 那覇
 - mapcode: 33 157 375*85
 - rating: 4.1
+- note: 花笠食堂週日公休，琉球の牛建議提前網路訂位
 - travel: car 約9分鐘
 
 #### restaurants: 晚餐推薦

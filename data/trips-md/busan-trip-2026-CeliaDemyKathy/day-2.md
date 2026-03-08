@@ -11,6 +11,7 @@ weather: {"label":"甘川洞・松島","locations":[{"lat":35.16,"lon":129.06,"n
 - blog: https://thecoronet.pixnet.net/blog/post/358818437
 - source: ai
 - breakfast: false
+- note: 退房後行李可寄放櫃台，步行至南浦洞商圈非常方便
 
 ### shopping: 飯店周邊購物
 
@@ -28,6 +29,7 @@ weather: {"label":"甘川洞・松島","locations":[{"lat":35.16,"lon":129.06,"n
 - maps: 西面商圈 | 서면역 부산
 - naver: https://map.naver.com/v5/search/%E8%A5%BF%E9%9D%A2%E5%95%86%E5%9C%88
 - rating: 4.3
+- note: 豬肉湯飯是釜山必吃早餐，湯頭濃郁可免費續飯
 - travel: train 搭地鐵 1 號線至土城站再轉公車約 30 分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -44,6 +46,7 @@ weather: {"label":"甘川洞・松島","locations":[{"lat":35.16,"lon":129.06,"n
 - maps: 감천문화마을 | 감천문화마을 부산
 - naver: https://map.naver.com/v5/search/%EA%B0%90%EC%B2%9C%EB%AC%B8%ED%99%94%EB%A7%88%EC%9D%84
 - rating: 4.4
+- note: 入口處可購買集章地圖，坡道階梯多建議穿好走的鞋
 - travel: bus 搭公車轉地鐵至松島約 30 分鐘
 
 ### 14:00 松島海上纜車
@@ -52,6 +55,7 @@ weather: {"label":"甘川洞・松島","locations":[{"lat":35.16,"lon":129.06,"n
 - maps: 송도해상케이블카 | 송도해상케이블카 부산
 - naver: https://map.naver.com/v5/search/%EC%86%A1%EB%8F%84%ED%95%B4%EC%83%81%EC%BC%80%EC%9D%B4%EB%B8%94%EC%B9%B4
 - rating: 4.3
+- note: 推薦搭水晶車廂（透明地板），週末排隊可能超過 30 分鐘建議先線上購票
 - travel: bus 搭公車至南浦洞約 20 分鐘
 
 ### 16:00 國際市場
@@ -60,6 +64,7 @@ weather: {"label":"甘川洞・松島","locations":[{"lat":35.16,"lon":129.06,"n
 - maps: 국제시장 | 국제시장 부산
 - naver: https://map.naver.com/v5/search/%EA%B5%AD%EC%A0%9C%EC%8B%9C%EC%9E%A5
 - rating: 4.2
+- note: 必吃糖餅和魚板，可順路走到隔壁 BIFF 廣場吃街頭小吃
 - travel: walk 步行約 10 分鐘
 
 #### shopping: 國際市場購物
@@ -76,6 +81,7 @@ weather: {"label":"甘川洞・松島","locations":[{"lat":35.16,"lon":129.06,"n
 - maps: 南浦洞商圈 | 남포동 부산
 - naver: https://map.naver.com/v5/search/%E5%8D%97%E6%B5%A6%E6%B4%9E%E5%95%86%E5%9C%88
 - rating: 4.3
+- note: 南浦洞晚間很熱鬧，飯後可沿光復路散步消食
 - travel: walk 步行回飯店約 10 分鐘
 
 #### restaurants: 晚餐推薦三選一

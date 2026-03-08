@@ -13,6 +13,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - source: ai
 - details: 名護市宮里（名護中心地段）, 万座深海の湯（天然温泉）, 免費停車場, 含免費早餐
 - breakfast: true
+- note: 連住第二晚，枕頭可向櫃台更換不同款式
 
 ### shopping: 飯店附近購物
 
@@ -39,6 +40,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - maps: 真榮田岬 青の洞窟
 - mapcode: 206 062 685*77
 - rating: 4.4
+- note: 早上場海況最穩定且光線最美，建議選搭船方案免爬階梯
 - travel: car 真榮田岬→萬座毛 約15分鐘（國道58號北上）
 
 #### reservation: 景點資訊
@@ -66,6 +68,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - maps: 万座毛
 - mapcode: 206 312 038*55
 - rating: 4.2
+- note: 步道約 20 分鐘可繞一圈，入口處有紀念品商店和廁所
 - travel: car 萬座毛→午餐 約10分鐘（國道58號北上）
 
 #### parking: 停車場
@@ -77,6 +80,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 萬座毛→ブセナ之間，Route 58 沿線覓食
 - maps: 恩納村 Route 58 | 恩納村 国道58号
 - rating: 4.1
+- note: 蒜蝦飯粉紅小屋很好認，路邊有停車位
 - travel: car 恩納→名護鳳梨園 約25分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -93,6 +97,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - maps: ナゴパイナップルパーク
 - mapcode: 206 716 467*85
 - rating: 3.9
+- note: 出口前的試吃區可免費吃鳳梨和試飲鳳梨酒，小孩有果汁
 - travel: car 鳳梨園→Super Hotel 名護 約10分鐘
 
 #### reservation: 景點資訊
@@ -116,6 +121,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - maps: スーパーホテル沖縄・名護
 - mapcode: 206 598 283*00
 - rating: 4.2
+- note: 玩水後回飯店先泡溫泉恢復體力
 
 ### 18:30-20:00 名護晚餐
 名護市區覓食，與 Day 2 不重複的餐廳選擇
@@ -123,6 +129,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - source: ai
 - maps: 名護市
 - rating: 4
+- note: 暖暮拉麵晚間常排隊，建議提早或避開 19:00 尖峰
 
 #### restaurants: 晚餐推薦三選一
 

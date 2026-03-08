@@ -11,6 +11,7 @@ weather: {"label":"機張・廣安里","locations":[{"lat":35.24,"lon":129.22,"n
 - blog: https://thecoronet.pixnet.net/blog/post/358818437
 - source: ai
 - breakfast: false
+- note: 退房後行李可寄放櫃台，步行至南浦洞商圈非常方便
 
 ### shopping: 飯店周邊購物
 
@@ -28,6 +29,7 @@ weather: {"label":"機張・廣安里","locations":[{"lat":35.24,"lon":129.22,"n
 - maps: 에그드랍 서면점 | 에그드랍 서면 부산
 - naver: https://map.naver.com/v5/search/%EC%97%90%EA%B7%B8%EB%93%9C%EB%9E%8D+%EC%84%9C%EB%A9%B4%EC%A0%90
 - rating: 4.4
+- note: 推薦培根起司蛋吐司，早上人潮多建議外帶
 - travel: train 搭地鐵至 Centum City 站轉公車至機張約 50 分鐘
 
 ### 10:30 ARTE Museum 釜山
@@ -36,6 +38,7 @@ weather: {"label":"機張・廣安里","locations":[{"lat":35.24,"lon":129.22,"n
 - maps: 아르떼뮤지엄 부산
 - naver: https://map.naver.com/v5/search/%EC%95%84%EB%A5%B4%EB%96%BC%EB%AE%A4%EC%A7%80%EC%97%84+%EB%B6%80%EC%82%B0
 - rating: 4.9
+- note: 建議線上預購門票較便宜，穿深色衣服拍照效果最好
 - travel: bus 搭公車約 15 分鐘
 
 ### 12:30 午餐（機張海女村）
@@ -44,6 +47,7 @@ weather: {"label":"機張・廣安里","locations":[{"lat":35.24,"lon":129.22,"n
 - maps: 기장 해녀촌 | 기장 해녀촌 부산
 - naver: https://map.naver.com/v5/search/%EA%B8%B0%EC%9E%A5+%ED%95%B4%EB%85%80%EC%B4%8C
 - rating: 4
+- note: 海女村海鮮可現選現煮，價格可議價，建議多人合點一桌海鮮拼盤
 - travel: bus 搭公車轉地鐵至廣安里約 60 分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -60,6 +64,7 @@ weather: {"label":"機張・廣安里","locations":[{"lat":35.24,"lon":129.22,"n
 - maps: 광안리 해변 | 광안리해변 부산
 - naver: https://map.naver.com/v5/search/%EA%B4%91%EC%95%88%EB%A6%AC+%ED%95%B4%EB%B3%80
 - rating: 4.5
+- note: 海灘沿線有很多景觀餐廳，靠窗座位可邊用餐邊看廣安大橋
 - travel: walk 步行約 5 分鐘至海灘
 
 #### restaurants: 晚餐推薦三選一
@@ -76,4 +81,5 @@ weather: {"label":"機張・廣安里","locations":[{"lat":35.24,"lon":129.22,"n
 - maps: 광안리해변 | 광안리해변 부산
 - naver: https://map.naver.com/v5/search/%EA%B4%91%EC%95%88%EB%A6%AC%ED%95%B4%EB%B3%80
 - rating: 4.5
+- note: 廣安大橋每晚點燈，週末有燈光秀表演，海灘旁便利商店可買飲料坐著欣賞
 - travel: train 搭地鐵 2 號線至南浦站約 25 分鐘

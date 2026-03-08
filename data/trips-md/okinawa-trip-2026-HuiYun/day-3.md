@@ -42,6 +42,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - maps: 前兼久漁港
 - mapcode: 206 096 016*85
 - rating: 4
+- note: 早上海況較穩定，建議先吃輕食避免暈船；防水相機或手機防水袋必帶
 - travel: car 約20分鐘
 
 #### reservation: 青之洞浮潛體驗（船潛）
@@ -74,6 +75,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - maps: 残波岬公園
 - mapcode: 1005 685 531*71
 - rating: 4.3
+- note: 燈塔可付費登頂（200日圓），崖邊風大注意安全，停車場免費
 - travel: car 約30分鐘
 
 ### 12:30-13:15 午餐（読谷村）
@@ -81,6 +83,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - source: ai
 - maps: 花織そば 読谷村
 - mapcode: 33 854 377*55
+- note: 花織そば 售完即止，建議 11 點半前抵達較保險
 - travel: car 約5分鐘
 
 #### restaurants: 午餐推薦
@@ -98,6 +101,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - maps: 万座毛
 - mapcode: 206 312 071*08
 - rating: 4.2
+- note: 入場費 100 日圓，步道約 20 分鐘走完，午後逆光較難拍照建議上午來
 - travel: car 約20分鐘
 
 ### 14:30-15:30 業務超市 宇流麻石川店
@@ -105,6 +109,7 @@ weather: {"label":"恩納→殘波岬→萬座毛","locations":[{"lat":26.4554,"
 - maps: 業務スーパー うるま石川店
 - mapcode: 206 039 648*50
 - rating: 3.8
+- note: 業務超市以大份量食材為主，適合 Villa 自炊採買，冷凍肉品和調味料CP值高
 - travel: car 約29分鐘
 
 #### restaurants: 午餐替代方案（不自炊時）

@@ -13,6 +13,7 @@ weather: {"label":"那霸・來客夢","locations":[{"lat":26.2066,"lon":127.647
 - source: ai
 - details: 那霸市西1丁目6-1, 14F 溫水游泳池（9:00~22:00）, 那霸市西區
 - breakfast: true 14F 泳池層自助早餐（沖繩料理為主）
+- note: 14F 泳池可眺望那霸市景，建議傍晚回來後去游一下放鬆
 
 ### shopping: 飯店附近購物
 
@@ -51,6 +52,7 @@ weather: {"label":"那霸・來客夢","locations":[{"lat":26.2066,"lon":127.647
 - source: ai
 - maps: AEON Mall Okinawa Rycom | AEON Mall Okinawa Rycom 北中城
 - rating: 4.2
+- note: 超市在一樓最裡面，建議留最後再買冷藏伴手禮；免稅櫃台在一樓服務台
 
 #### reservation: 來客夢購物資訊
 - 地址：中頭郡北中城村字ライカム1番地
@@ -85,6 +87,7 @@ weather: {"label":"那霸・來客夢","locations":[{"lat":26.2066,"lon":127.647
 - source: ai
 - maps: 那霸國際通周邊 | 那覇国際通り
 - rating: 4
+- note: 搬完行李到新飯店後就近覓食，旭橋周邊選擇也不少
 
 #### restaurants: 晚餐推薦
 

@@ -13,6 +13,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - details: 那霸市東町11-17, 旭橋站步行5分鐘
 - breakfast: false 不含早餐，附近便利商店或自行解決
+- note: 旭橋站直結，拉行李方便；附近有辻スーパー可買宵夜
 
 ### shopping: 飯店附近購物
 
@@ -37,6 +38,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - maps: 沖縄県庁前（縣民廣場） | 沖縄県庁前 Naha City Izumizaki
 - label: 集合地點
 - rating: 4.5
+- note: 車上有中文導遊，建議帶水和輕食；水族館停留時間約2小時要把握
 
 #### reservation: KKday 一日遊行程
 - 集合：08:00 縣民廣場（沖縄県庁前 Naha City Izumizaki 1-2-3）
@@ -52,6 +54,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - maps: 那霸市區 | 那覇市 国際通り
 - rating: 4
+- note: 一日遊回來會比較累，建議選不用排隊的餐廳
 
 #### restaurants: 晚餐推薦
 

@@ -11,6 +11,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - blog: https://thecoronet.pixnet.net/blog/post/358818437
 - source: ai
 - breakfast: false
+- note: 退房後行李可寄放櫃台，步行至南浦洞商圈非常方便
 
 ### shopping: 飯店周邊購物
 
@@ -28,6 +29,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 스카이라인루지 부산
 - naver: https://map.naver.com/v5/search/%EC%8A%A4%EC%B9%B4%EC%9D%B4%EB%9D%BC%EC%9D%B8%EB%A3%A8%EC%A7%80+%EB%B6%80%EC%82%B0
 - rating: 4.5
+- note: 建議買三次以上套票較划算，開門時段去幾乎不用排隊
 - travel: walk 步行約 15 分鐘至海理團路
 
 ### 11:30 海理團路
@@ -36,6 +38,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 해리단길 | 해리단길 해운대 부산
 - naver: https://map.naver.com/v5/search/%ED%95%B4%EB%A6%AC%EB%8B%A8%EA%B8%B8
 - rating: 4.3
+- note: 巷弄裡隱藏很多特色咖啡廳和選物店，適合慢慢逛拍照
 - travel: walk 步行約 5 分鐘
 
 ### 12:30 午餐（海雲台）
@@ -44,6 +47,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 해운대 해리단길 | 해리단길 해운대 부산
 - naver: https://map.naver.com/v5/search/%ED%95%B4%EC%9A%B4%EB%8C%80+%ED%95%B4%EB%A6%AC%EB%8B%A8%EA%B8%B8
 - rating: 4
+- note: 海雲台站周邊餐廳密集，海理團路上也有不少選擇
 - travel: walk 步行至海雲台海邊列車站約 10 分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -60,6 +64,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 블루라인파크 해변열차 | 블루라인파크 해변열차 부산
 - naver: https://map.naver.com/v5/search/%EB%B8%94%EB%A3%A8%EB%9D%BC%EC%9D%B8%ED%8C%8C%ED%81%AC+%ED%95%B4%EB%B3%80%EC%97%B4%EC%B0%A8
 - rating: 4.4
+- note: 強烈建議線上預約指定時段，現場常售罄，海邊列車和膠囊列車是不同票
 - travel: train 膠囊列車至青沙埔站約 15 分鐘
 
 ### 15:30 青沙埔
@@ -68,6 +73,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 청사포 | 청사포 부산
 - naver: https://map.naver.com/v5/search/%EC%B2%AD%EC%82%AC%ED%8F%AC
 - rating: 4.5
+- note: 紅白燈塔是必拍景點，天空步道玻璃地板可俯瞰海面
 - travel: train 搭地鐵至海雲台約 20 分鐘
 
 ### 18:00 晚餐（海雲台）
@@ -76,6 +82,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 해운대 | 해운대역 부산
 - naver: https://map.naver.com/v5/search/%ED%95%B4%EC%9A%B4%EB%8C%80
 - rating: 4
+- note: 海雲台市場周邊有很多平價在地小吃店，氣氛比觀光區更道地
 - travel: train 搭地鐵至西面轉乘約 30 分鐘
 
 #### restaurants: 晚餐推薦三選一
@@ -92,6 +99,7 @@ weather: {"label":"海雲台・青沙埔","locations":[{"lat":35.16,"lon":129.16
 - maps: 이마트 부산역점
 - naver: https://map.naver.com/v5/search/%EC%9D%B4%EB%A7%88%ED%8A%B8+%EB%B6%80%EC%82%B0%EC%97%AD%EC%A0%90
 - rating: 4
+- note: 結帳時出示護照可退稅，建議帶大購物袋方便裝伴手禮
 - travel: train 搭地鐵至南浦站約 15 分鐘
 
 #### shopping: 超市採購推薦

@@ -43,6 +43,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 第一牧志公設市場
 - mapcode: 33 157 199*43
 - rating: 4.2
+- note: 1F 海鮮攤可殺價，2F 代煮料理費另計；建議 10 點開門就到比較從容
 - travel: car 約7分鐘
 
 #### shopping: 牧志市場周邊購物推薦
@@ -59,6 +60,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 世豊商店 那覇
 - mapcode: 33 128 879*17
 - rating: 4
+- note: 台灣老闆會說中文，價格比國際通便宜不少，可以一次買齊伴手禮
 - travel: car 約29分鐘
 
 ### 13:27-14:27 玉泉洞
@@ -68,6 +70,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: おきなわワールド
 - mapcode: 232 494 535*76
 - rating: 4.1
+- note: 洞內涼爽約 21°C 但濕度高，地面濕滑注意防滑；EISA太鼓秀 14:30 場次可順路看
 - travel: car 約32分鐘
 
 #### shopping: 沖繩世界 園內購物
@@ -83,6 +86,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 波上宮
 - mapcode: 33 155 737*43
 - rating: 4.3
+- note: 免費參拜，旁邊波之上海灘可順遊；從臨港道路拍神社崖壁全景最壯觀
 - travel: car 約6分鐘
 
 ### 16:05-17:05 午餐
@@ -90,6 +94,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 那覇市久茂地 国際通り周辺 | 国際通り 那覇
 - mapcode: 33 157 375*85
 - rating: 4.1
+- note: 島しゃぶしゃぶ NAKAMA 午間套餐 CP 值高，建議電話預約
 - travel: car 約6分鐘
 
 #### restaurants: 午餐推薦
@@ -107,6 +112,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 瀬長島ウミカジテラス
 - mapcode: 33 032 412*44
 - rating: 4.1
+- note: 傍晚來最美，可同時看夕陽和飛機起降；幸福鬆餅需提前 2 週網路訂位
 - travel: car 約5分鐘
 
 ### 19:31-20:31 晚餐
@@ -114,6 +120,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 瀬長島ウミカジテラス
 - mapcode: 33 032 412*44
 - rating: 4.1
+- note: 瀨長島商場內餐廳多數 21:00 前打烊，建議提早用餐
 - travel: car 約9分鐘
 
 #### restaurants: 晚餐推薦
@@ -132,6 +139,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 沖縄アウトレットモールあしびなー
 - mapcode: 232 575 810*11
 - rating: 3.8
+- note: 多數店鋪 20:00 關門，建議確認當日營業時間；服務中心可領取外國旅客優惠券
 
 #### shopping: ASHIBINAA Outlet 推薦品牌
 
@@ -148,6 +156,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: 沖縄アウトレットモールあしびなー
 - mapcode: 232 575 810*11
 - rating: 3.8
+- note: 全品項 110 日圓均一價，適合買小禮物和旅行收納用品
 
 ### 23:51-00:51 SPORTS DEPO 豐崎店
 大型運動用品專賣店；必逛日本限定Nike/Adidas運動鞋、戶外露營用品、高爾夫球具折扣區
@@ -156,6 +165,7 @@ weather: {"label":"那霸→玉泉洞→瀨長島","locations":[{"lat":26.2158,"
 - maps: スポーツデポ 豊崎店
 - mapcode: 232 574 739*42
 - rating: 3.9
+- note: 日本運動品牌價格比台灣便宜，球鞋款式多且有日本限定色
 
 ### 17:30-18:00 沖繩旅毛 還車
 還車前先到附近人工加油站加滿油

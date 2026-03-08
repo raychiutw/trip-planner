@@ -9,6 +9,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 永和仁愛公園
 - rating: 4.1
 - travel: car 開車 約15分鐘
+- note: 適合散步放鬆，公園旁有不少咖啡廳可休息
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,3 +43,4 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 樂華夜市
 - rating: 4.3
 - travel: car 開車 約10分鐘
+- note: 每天營業，蕭家下港排骨酥湯和正彰化肉圓是人氣攤位

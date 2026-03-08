@@ -14,6 +14,7 @@ weather: {"label":"那霸・南城","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - details: 那覇市牧志1-1-2, 牧志站步行1分鐘
 - breakfast: false 自助早餐 ¥2,200（6:30-10:00），需另付費
+- note: 單軌牧志站出口直達，行李可寄放櫃台
 
 ### shopping: 飯店附近購物
 
@@ -38,6 +39,7 @@ weather: {"label":"那霸・南城","locations":[{"lat":26.2066,"lon":127.6476,"
 - blog: 
 - maps: 齋場御嶽 | 斎場御嶽
 - rating: 4.5
+- note: 需在南城市地域物產館購票再步行前往，石板路滑建議穿防滑鞋
 - travel: walk 步行至知念岬公園 約5分鐘
 
 ### 11:15-12:00 知念岬公園
@@ -46,12 +48,14 @@ weather: {"label":"那霸・南城","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - maps: 知念岬公園
 - rating: 4.4
+- note: 免費入園且有停車場，風大建議抓好帽子和隨身物品
 
 ### 12:00-13:30 午餐
 南城周邊午餐
 - blog: 
 - maps: 南城市周邊 | 南城市 沖縄
 - rating: 4
+- note: 南城餐廳選擇較少，建議提早出發避免等候
 - travel: bus 搭巴士至「玉泉洞前」約30分鐘
 
 #### restaurants: 午餐推薦
@@ -68,6 +72,7 @@ weather: {"label":"那霸・南城","locations":[{"lat":26.2066,"lon":127.6476,"
 - blog: 
 - maps: 沖繩世界（玉泉洞） | おきなわワールド 玉泉洞
 - rating: 4.2
+- note: 洞內涼爽但濕滑，穿好走的鞋；太鼓表演時刻表建議入園時先確認
 - travel: bus 83 番巴士回那霸巴士總站 約50分鐘
 
 ### 17:30-18:30 回到那霸
@@ -83,6 +88,7 @@ weather: {"label":"那霸・南城","locations":[{"lat":26.2066,"lon":127.6476,"
 - source: ai
 - maps: 那霸國際通 | 那覇国際通り
 - rating: 4
+- note: 週六晚間國際通周邊居酒屋人氣高，建議預約
 
 #### restaurants: 晚餐推薦
 

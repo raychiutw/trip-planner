@@ -14,6 +14,7 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 - source: ai
 - details: 那覇市牧志1-1-2, 牧志站步行1分鐘
 - breakfast: false 自助早餐 ¥2,200（6:30-10:00），需另付費
+- note: 單軌牧志站出口直達，行李可寄放櫃台
 
 ### shopping: 飯店附近購物
 
@@ -38,12 +39,14 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 - source: ai
 - maps: 美國村（北谷） | 美浜アメリカンビレッジ
 - rating: 4
+- note: 日落海灘拍夕陽很美，摩天輪上可俯瞰整個商圈和海岸線
 
 ### 12:00-13:30 午餐
 美國村周邊午餐
 - blog: 
 - maps: 美國村（北谷） | 美浜アメリカンビレッジ
 - rating: 4
+- note: 美國村內餐廳選擇多，平日午餐較不用排隊
 - travel: bus 搭巴士至讀谷「殘波岬入口」約40分鐘
 
 #### restaurants: 午餐推薦
@@ -60,12 +63,14 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 - source: ai
 - maps: 殘波岬燈台 | 残波岬灯台
 - rating: 4.6
+- note: 燈塔螺旋樓梯較窄且陡，恐高者可在下方斷崖步道欣賞海景
 
 ### 14:45-16:00 御菓子御殿（讀谷店）
 紅芋塔工廠見學，免費試吃，買伴手禮的好地方
 - blog: 
 - maps: 御菓子御殿 讀谷店 | 御菓子御殿 読谷店
 - rating: 4.2
+- note: 工廠產線透過玻璃可參觀，免費試吃紅芋塔，伴手禮這裡買最齊全
 - travel: bus 搭巴士或計程車至萬座毛 約35分鐘
 
 #### shopping: 伴手禮購物
@@ -79,6 +84,7 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 - blog: 
 - maps: 萬座毛 | 万座毛 沖縄
 - rating: 4.3
+- note: 新設的木棧步道約20分鐘走完，傍晚夕陽西下時拍象鼻岩最美
 - travel: bus 120 番巴士回那霸 約90分鐘
 
 ### 18:30-19:30 晚餐
@@ -87,6 +93,7 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 - source: ai
 - maps: 那霸國際通 | 那覇国際通り
 - rating: 4
+- note: 週一部分餐廳公休，出發前先確認營業時間
 
 #### restaurants: 晚餐推薦
 

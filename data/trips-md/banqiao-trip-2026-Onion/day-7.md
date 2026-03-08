@@ -9,6 +9,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 四號公園 | 永和四號公園
 - rating: 4.2
 - travel: car 開車 約15分鐘
+- note: 國立台灣圖書館免費入館，公園內有松鼠出沒很療癒
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 永安市場
 - rating: 4.1
 - travel: car 開車 約10分鐘
+- note: 永安市場周邊巷弄藏很多平價美食，可邊走邊吃
 
 ### 18:00-19:30 晚餐
 - blog: 

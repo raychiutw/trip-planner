@@ -9,6 +9,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 土城桐花公園
 - rating: 4.3
 - travel: car 開車 約20分鐘
+- note: 四月正值桐花季，步道沿途落花如雪非常浪漫
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 承天禪寺
 - rating: 4.7
 - travel: car 開車 約5分鐘
+- note: 寺內環境莊嚴清幽，登山步道約30分鐘可到達
 
 ### 18:00-19:30 晚餐
 - blog: 

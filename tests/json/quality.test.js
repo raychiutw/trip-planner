@@ -656,5 +656,62 @@ slugs.forEach((slug) => {
         console.warn(`R13 warning: ${userMissing.length} user-sourced POI(s) missing googleRating in ${slug}:\n${userMissing.join('\n')}`);
       }
     });
+
+    // --- R15 必填 note 欄位 ---
+
+    it('R15: POI entities have note field (string)', () => {
+      const missing = [];
+
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        const hotel = day.content?.hotel;
+
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          const prefix = `days[${i}].timeline[${j}]`;
+
+          if (typeof ev.note !== 'string') {
+            missing.push(`${prefix} "${ev.title}" missing note`);
+          }
+
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                if (typeof r.note !== 'string') {
+                  missing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}" missing note`);
+                }
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                if (typeof s.note !== 'string') {
+                  missing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}" missing note`);
+                }
+              });
+            }
+          });
+        });
+
+        if (hotel) {
+          if (typeof hotel.note !== 'string') {
+            missing.push(`days[${i}].hotel "${hotel.name}" missing note`);
+          }
+          (hotel.infoBoxes || []).forEach((box, k) => {
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                if (typeof s.note !== 'string') {
+                  missing.push(`days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}" missing note`);
+                }
+              });
+            }
+          });
+        }
+      });
+
+      expect(
+        missing.length,
+        `R15: ${missing.length} POI(s) missing note field:\n${missing.join('\n')}`
+      ).toBe(0);
+    });
   });
 });

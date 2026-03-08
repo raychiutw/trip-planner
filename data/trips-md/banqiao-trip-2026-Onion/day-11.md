@@ -9,6 +9,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 ## Hotel: 家
 - source: ai
 - details: 新北板橋區合宜一路25號四樓之3
+- note:
 
 ## Timeline
 
@@ -19,6 +20,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 大安圳步道 | 樹林大安圳步道
 - rating: 4.1
 - travel: car 開車 約20分鐘
+- note: 全程平坦適合各年齡層，沿途有遮蔭不怕曬
 
 ### 12:00-13:00 午餐
 - blog: 
@@ -41,6 +43,7 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 - maps: 樹林興仁花園夜市
 - rating: 4
 - travel: car 開車 約15分鐘
+- note: 僅週三五六日營業，停車場寬敞免費
 
 #### shopping: 興仁花園夜市購物推薦
 

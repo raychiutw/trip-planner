@@ -12,6 +12,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - source: ai
 - details: 地址：釜山廣域市中區中央大路 33, 地鐵：南浦站 5 號出口步行 5 分鐘, 入住時間：15:00, 退房時間：12:00
 - breakfast: false
+- note: 退房後行李可寄放櫃台，步行至南浦洞商圈非常方便
 
 ### shopping: 飯店周邊購物
 
@@ -37,6 +38,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 스파랜드 센텀시티 | 스파랜드 센텀시티 부산
 - naver: https://map.naver.com/v5/search/%EC%8A%A4%ED%8C%8C%EB%9E%9C%EB%93%9C+%EC%84%BC%ED%85%80%EC%8B%9C%ED%8B%B0
 - rating: 4.5
+- note: 建議一早開門就入場人較少，可帶泳衣使用露天池，館內提供毛巾和汗蒸服
 - travel: walk 步行約 15 分鐘
 
 ### 10:30 溫泉川公園
@@ -45,6 +47,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 온천천 시민공원 | 온천천 시민공원 부산
 - naver: https://map.naver.com/v5/search/%EC%98%A8%EC%B2%9C%EC%B2%9C+%EC%8B%9C%EB%AF%BC%EA%B3%B5%EC%9B%90
 - rating: 4.5
+- note: 三月下旬正值櫻花季，沿溫泉川步道散步約需 30 分鐘
 - travel: train 搭地鐵至西面站約 10 分鐘
 
 ### 12:00 午餐（西面）
@@ -53,6 +56,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 西面商圈 | 서면역 부산
 - naver: https://map.naver.com/v5/search/%E8%A5%BF%E9%9D%A2%E5%95%86%E5%9C%88
 - rating: 4
+- note: 西面站 1 號出口出來即是美食街，平日午餐不太需要排隊
 - travel: walk 步行約 10 分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -69,6 +73,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 부전시장 | 부전시장 부산
 - naver: https://map.naver.com/v5/search/%EB%B6%80%EC%A0%84%EC%8B%9C%EC%9E%A5
 - rating: 4.2
+- note: 市場內多數攤位僅收現金，建議先準備好韓元零鈔
 - travel: walk 步行約 10 分鐘
 
 ### 15:00 西面逛街
@@ -77,6 +82,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 서면 지하상가 | 서면 지하상가 부산
 - naver: https://map.naver.com/v5/search/%EC%84%9C%EB%A9%B4+%EC%A7%80%ED%95%98%EC%83%81%EA%B0%80
 - rating: 4.1
+- note: 地下街價格平實適合挖寶，田浦咖啡街則有許多文青風格小店
 - travel: walk 步行約 5 分鐘
 
 ### 16:30 Hytte Roastery
@@ -85,6 +91,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 휘테 로스터리 | 휘테로스터리 서면 부산
 - naver: https://map.naver.com/v5/search/%ED%9C%98%ED%85%8C+%EB%A1%9C%EC%8A%A4%ED%84%B0%EB%A6%AC
 - rating: 4.7
+- note: 座位不多，假日下午常客滿，建議平日前往或外帶
 - travel: walk 步行約 10 分鐘
 
 ### 18:30 晚餐（西面）
@@ -93,6 +100,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 西面商圈 | 서면역 부산
 - naver: https://map.naver.com/v5/search/%E8%A5%BF%E9%9D%A2%E5%95%86%E5%9C%88
 - rating: 4
+- note: 週五晚間西面商圈人潮最多，熱門餐廳建議提前訂位
 - travel: walk 步行約 5 分鐘
 
 #### restaurants: 晚餐推薦三選一
@@ -109,6 +117,7 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 - maps: 롯데백화점 서면점 | 롯데백화점 서면점 부산
 - naver: https://map.naver.com/v5/search/%EB%A1%AF%EB%8D%B0%EB%B0%B1%ED%99%94%EC%A0%90+%EC%84%9C%EB%A9%B4%EC%A0%90
 - rating: 4.2
+- note: 持外國護照可至服務台領取折扣券，B1 超市適合買伴手禮
 - travel: train 搭地鐵 1 號線至南浦站約 15 分鐘
 
 #### shopping: 西面購物

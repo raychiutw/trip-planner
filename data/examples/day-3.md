@@ -13,6 +13,7 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 - maps: 範例飯店
 - mapcode: 33 157 413*00
 - rating: 3.9
+- note:
 - travel: train 約18分鐘
 
 ### 09:00-10:30 市區景點
@@ -22,6 +23,7 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 - maps: 範例市區景點
 - mapcode: 33 161 526*00
 - rating: 4.2
+- note: 市區景點實用提示
 - travel: walking 步行 約10分鐘
 
 ### 11:00-12:00 逛街購物
@@ -32,6 +34,7 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 - maps: 範例商店街
 - mapcode: 33 157 382*00
 - rating: 4.1
+- note:
 
 #### shopping: 伴手禮推薦
 
@@ -43,6 +46,7 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 最後一餐當地美食
 - maps: 範例商圈
 - rating: 4.1
+- note:
 - travel: walking 步行 約5分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -58,6 +62,7 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 先加油再到還車店鋪
 - maps: 範例加油站
 - rating: 4
+- note:
 - travel: walking 步行 約5分鐘
 
 <!-- gasStation: 僅自駕行程需要，優先推薦人工加油站 -->
@@ -84,6 +89,7 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 - maps: 範例機場
 - mapcode: 33 002 519*00
 - rating: 3.9
+- note:
 
 ### 20:55 起飛回台灣
 - blog:

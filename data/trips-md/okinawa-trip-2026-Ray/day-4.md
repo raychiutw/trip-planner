@@ -13,6 +13,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 - source: ai
 - details: 那霸美榮橋站旁, 走路 1 分到國際通, 含免費早餐, 單軌美榮橋站步行 1 分
 - breakfast: true
+- note: 退房後行李可免費寄放櫃台，地點離單軌站超近很方便
 
 ### shopping: 飯店附近購物
 
@@ -38,6 +39,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 - maps: 伊芸サービスエリア（下り） | 伊芸サービスエリア 下り
 - apple: 伊芸サービスエリア
 - rating: 4
+- note: 必吃 SA 限定月桃田芋ジューシー，展望台可看金武灣全景
 - travel: car 伊芸SA→北中城IC→AEON Mall 來客夢 約30分鐘
 
 #### reservation: 景點資訊
@@ -55,6 +57,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 - maps: イオンモール沖縄ライカム
 - mapcode: 33 530 406*00
 - rating: 4.2
+- note: 週六人潮多建議開門就到，寶可夢中心沖繩限定商品必看
 
 #### reservation: 景點資訊
 - 營業時間：10:00~22:00（專門店）｜寶可夢中心 10:00~22:00 停車場：免費，約 4,000 台｜ 33 530 406
@@ -73,6 +76,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 - source: ai
 - maps: イオンモール沖縄ライカム
 - rating: 4.2
+- note: 美食廣場座位多不用擔心，タコライス是沖繩限定必嚐
 
 #### restaurants: 午餐推薦三選一
 
@@ -86,6 +90,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 午餐後繼續購物、採買伴手禮
 - maps: イオンモール沖縄ライカム
 - rating: 4.2
+- note: 免稅櫃台在 1F，買滿 ¥5,000 記得帶護照辦退稅
 - travel: car AEON Mall→沖繩世界 約30分鐘
 
 ### 14:30-16:00 沖繩世界（玉泉洞）
@@ -95,6 +100,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 - maps: おきなわワールド
 - mapcode: 232 495 332*71
 - rating: 4.4
+- note: 洞內常年 21°C 建議帶薄外套，地面濕滑穿防滑鞋
 - travel: car 沖繩世界→那霸（加油站＋還車）約30分鐘
 
 #### reservation: 景點資訊
@@ -148,6 +154,7 @@ weather: {"label":"名護・南城・那霸","locations":[{"lat":26.5916,"lon":1
 - source: ai
 - maps: 国際通り 那覇
 - rating: 4.1
+- note: 琉球の牛建議提前線上訂位，週六晚間非常搶手
 
 #### restaurants: 晚餐推薦三選一
 

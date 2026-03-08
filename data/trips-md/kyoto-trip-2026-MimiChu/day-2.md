@@ -11,6 +11,7 @@ weather: {"label":"京都・宇治","locations":[{"lat":35.0116,"lon":135.7681,"
 - checkout: 11:00
 - blog: https://candicecity.com/56704/
 - source: ai
+- note: 地點極佳步行可達河原町與錦市場，退房後行李可寄放櫃台
 
 ### shopping: 飯店周邊購物
 
@@ -28,6 +29,7 @@ Portland 發跡的精品咖啡京都分店
 - source: ai
 - maps: Stumptown Coffee Roasters | Stumptown Coffee Roasters Kyoto
 - rating: 4.5
+- note: 町家改建空間很有氛圍，假日早上人潮多建議早到
 
 ### 10:00-11:00 前往宇治
 - travel: train JR 奈良線 京都→宇治，約25分鐘
@@ -38,6 +40,7 @@ Portland 發跡的精品咖啡京都分店
 - source: ai
 - maps: MENYA INOICHI | MENYA INOICHI 宇治
 - rating: 4.3
+- note: 開店前15分鐘到排隊通常可趕上第一輪入座
 
 #### restaurants: 宇治午餐備案
 
@@ -52,6 +55,7 @@ Portland 發跡的精品咖啡京都分店
 - web: https://www.tokichi.jp/
 - maps: 中村藤吉 宇治本店
 - rating: 4.4
+- note: 假日排隊可達1小時，建議先到店頭抽號碼牌再去逛
 - travel: walking 步行約10分鐘
 
 ### 13:30-15:00 平等院
@@ -60,12 +64,14 @@ Portland 發跡的精品咖啡京都分店
 - maps: 平等院 | 平等院 宇治
 - apple: 平等院
 - rating: 4.5
+- note: 鳳凰堂內部參觀需另外購票且有人數限制，入園後先去排內部參觀
 - travel: walking 步行約5分鐘
 
 ### 15:00-16:00 宇治神社・宇治上神社
 世界遺產宇治上神社，日本最古老的神社建築
 - maps: 宇治上神社
 - rating: 4.3
+- note: 宇治上神社的兔子御籤很受歡迎，兩間神社相鄰可一起逛
 - travel: walking 步行約10分鐘
 
 ### 16:00-17:00 伊藤久右衛門
@@ -73,6 +79,7 @@ Portland 發跡的精品咖啡京都分店
 - web: https://www.itohkyuemon.co.jp/
 - maps: 伊藤久右衛門 | 伊藤久右衛門 宇治
 - rating: 4.2
+- note: 抹茶百匯是招牌，伴手禮區可免費試吃抹茶巧克力
 - travel: walking 步行約10分鐘
 
 ### 17:00-17:30 返回京都
@@ -82,6 +89,7 @@ Portland 發跡的精品咖啡京都分店
 已預約 20:00，京都人氣燒肉
 - maps: 燒肉甲 | 焼肉甲 京都
 - rating: 4.3
+- note: 已預約建議準時到，推薦特選和牛拼盤
 - travel: walking 步行約15分鐘
 
 #### restaurants: 晚餐備案
@@ -97,4 +105,5 @@ Portland 發跡的精品咖啡京都分店
 - maps: ドン・キホーテ 京都河原町店
 - apple: ドンキホーテ 京都河原町
 - rating: 4
+- note: 免稅櫃台在1F，購買滿5000日圓可辦理退稅
 - travel: walking 步行約10分鐘

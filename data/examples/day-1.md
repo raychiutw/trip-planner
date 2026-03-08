@@ -13,6 +13,7 @@ weather: {"label":"目的地","locations":[{"lat":26.33,"lon":127.78,"name":"那
 - source: ai
 - details: 飯店位置描述, 特色設施, 含早餐
 - breakfast: true 飯店早餐說明
+- note: 飯店特色或入住提醒
 
 <!-- shopping: 飯店附近購物 infoBox，每個 shop 必填 category/name/hours/mustBuy/blog -->
 ### shopping: 飯店附近購物
@@ -36,12 +37,14 @@ weather: {"label":"目的地","locations":[{"lat":26.33,"lon":127.78,"name":"那
 <!-- mapcode: 僅沖繩行程需要 -->
 - mapcode: 33 002 519*00
 - rating: 3.9
+- note: 入境後先到觀光案內所領取資料
 - travel: train 單軌電車 約15分鐘
 
 ### 12:00 午餐
 租車後用餐
 - maps: 範例地點
 - rating: 4.2
+- note:
 - travel: car 開車 約40分鐘
 
 #### restaurants: 午餐推薦三選一
@@ -60,6 +63,7 @@ weather: {"label":"目的地","locations":[{"lat":26.33,"lon":127.78,"name":"那
 - maps: 範例景點
 - mapcode: 33 526 450*63
 - rating: 4.2
+- note: 景點實用提示或注意事項
 
 <!-- shopping: 景點附近若有超市/唐吉軻德（步行 5~10 分），加 shopping infoBox -->
 #### shopping: 景點附近購物
@@ -74,6 +78,7 @@ weather: {"label":"目的地","locations":[{"lat":26.33,"lon":127.78,"name":"那
 - source: ai
 - maps: 範例商圈
 - rating: 4.2
+- note:
 
 #### restaurants: 晚餐推薦三選一
 

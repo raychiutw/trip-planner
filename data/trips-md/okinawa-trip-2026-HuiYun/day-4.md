@@ -43,6 +43,7 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 - maps: ナゴパイナップルパーク
 - mapcode: 206 678 684*87
 - rating: 3.9
+- note: 園內自動導覽車適合小孩，試吃區鳳梨酒和鳳梨蛋糕可免費品嘗
 - travel: car 約2分鐘
 
 #### shopping: 名護鳳梨園 園內購物
@@ -56,6 +57,7 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 - maps: 百年古家 大家
 - mapcode: 206 620 592*27
 - rating: 4.1
+- note: 百年古家大家週末常排隊，建議網路訂位；庭園瀑布景觀座位氣氛佳
 - travel: car 約26分鐘
 
 #### restaurants: 午餐推薦
@@ -73,6 +75,7 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 - maps: 沖縄美ら海水族館
 - mapcode: 553 075 737*66
 - rating: 4.6
+- note: 16:00 後入場門票半價；停車場免費但暑假要早到，建議停 P7 離入口最近
 - travel: car 約34分鐘
 
 ### 15:54-16:24 古宇利海洋塔
@@ -82,6 +85,7 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 - maps: 古宇利オーシャンタワー
 - mapcode: 485 723 248*36
 - rating: 3.9
+- note: 自動導覽車上山，頂樓觀景台可 360 度眺望古宇利大橋與海景
 - travel: car 約3分鐘
 
 ### 16:27-18:27 古宇利島
@@ -91,12 +95,14 @@ weather: {"label":"名護→美麗海→古宇利","locations":[{"lat":26.4826,"
 - maps: 古宇利島
 - mapcode: 485 692 065*25
 - rating: 4.4
+- note: 心型岩在島北側 Tinu 海灘，環島一圈約 20 分鐘車程，夕陽時分大橋上拍照絕美
 - travel: car 約29分鐘
 
 ### 18:56-19:56 晚餐
 - web: https://hanblog.tw/ramendanbo/
 - maps: 島豚七輪焼 満味 名護
 - rating: 4.3
+- note: 滿味非常熱門，建議提前預約或 17:00 開門前排隊，有中文菜單
 - travel: car 約28分鐘
 
 #### restaurants: 晚餐推薦
