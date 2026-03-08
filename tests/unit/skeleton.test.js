@@ -35,8 +35,8 @@ describe('createSkeleton', () => {
     expect(html).toContain('id="day-slot-2"');
   });
 
-  it('day sections are hidden by default', () => {
+  it('day sections are visible by default (continuous scroll)', () => {
     const html = createSkeleton([1]);
-    expect(html).toContain('display:none');
+    expect(html).not.toContain('display:none');
   });
 });
