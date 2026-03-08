@@ -193,7 +193,8 @@
 .edit-status.error { color: var(--error); }
 
 /* ===== Sticky-nav: title bar ===== */
-.chat-container .sticky-nav { background: var(--card-bg); }
+.chat-container .sticky-nav { background: var(--bg); border-bottom: 1px solid var(--border); }
+.chat-container .nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
 body.dark .edit-input-card { background: var(--card-bg); box-shadow: var(--shadow-md); }
