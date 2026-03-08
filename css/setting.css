@@ -1,10 +1,11 @@
-/* ===== Setting Page — keep shared scroll foundation, only override what's needed ===== */
+/* ===== Setting Page — simple block layout (no flex needed, no sidebar) ===== */
 html.page-setting {
     scroll-behavior: auto;
 }
 .page-setting {
     max-width: none;
 }
+.page-setting .page-layout { display: block; }
 
 /* ===== Setting Page Layout ===== */
 .setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
