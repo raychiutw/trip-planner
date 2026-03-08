@@ -44,7 +44,7 @@ html { scroll-behavior: smooth; scrollbar-gutter: stable; overflow-x: clip; }
 body { font-family: 'Noto Sans TC', sans-serif; background: var(--white); font-size: var(--fs-md); color: var(--text); line-height: 1.6; max-width: 100vw; }
 
 /* ===== Page Layout ===== */
-.page-layout { display: flex; min-height: 100vh; }
+.page-layout { display: flex; min-height: 100dvh; }
 
 /* ===== Trip Buttons (shared by switch + edit) ===== */
 .trip-btn { display: block; width: 100%; text-align: left; padding: 14px 16px; border-radius: var(--radius-sm); border: 2px solid transparent; background: var(--accent-light); cursor: pointer; font-family: inherit; font-size: var(--fs-md); color: var(--text); text-decoration: none; }
