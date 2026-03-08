@@ -2,8 +2,8 @@
 id: 3
 date: 2026-07-31
 dayOfWeek: 五
-label: 浮潛・恩納
-weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"name":"名護","start":0,"end":8},{"lat":26.4969,"lon":127.8536,"name":"恩納","start":9,"end":14},{"lat":26.5916,"lon":127.9772,"name":"名護","start":15,"end":23}]}
+label: 水族館・瀨底
+weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"name":"名護","start":0,"end":8},{"lat":26.6577,"lon":127.8782,"name":"本部","start":9,"end":17},{"lat":26.5916,"lon":127.9772,"name":"名護","start":18,"end":23}]}
 ---
 
 ## Hotel: Super Hotel 沖縄・名護
@@ -30,92 +30,68 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 
 ## Timeline
 
-### 08:20 出發前往真榮田岬
-- travel: car 名護→真榮田岬 約40分鐘（國道58號南下）
+### 08:30 出發前往許田
+- travel: car 名護→道之驛許田 約10分鐘
 
-### 09:00-11:00 青之洞窟浮潛
-沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁
-- web: https://maedamisaki.jp/
-- blog: https://bobbyfun.tw/2024-01-11-2731/
-- maps: 真榮田岬 青の洞窟
-- mapcode: 206 062 685*77
-- rating: 4.4
-- note: 早上場海況最穩定且光線最美，建議選搭船方案免爬階梯
-- travel: car 真榮田岬→萬座毛 約15分鐘（國道58號北上）
+### 08:40-09:10 道之驛許田
+沖繩人氣最高休息站！必買沙翁（サーターアンダギー）、黑糖、在地農產。還有折扣水族館門票
+- blog: https://tisshuang.com/blog/post/yanbaru-b
+- maps: 道の駅許田
+- mapcode: 206 476 710*00
+- rating: 4
+- note: 水族館門票在這裡買比官網便宜，沙翁現炸的最好吃
+- travel: car 許田→美麗海水族館 約30分鐘（國道449號）
+
+#### parking: 停車場
+- price: 免費
+- maps: 道の駅許田 駐車場
+- mapcode: 206 476 710*00
+
+### 09:40-12:40 美麗海水族館
+世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。11:00 海豚秀必看
+- web: https://churaumi.okinawa/tc/
+- blog: https://okinawa.letsgojp.com/archives/17071/
+- source: ai
+- maps: 沖縄美ら海水族館
+- mapcode: 553 075 797*00
+- rating: 4.6
+- note: 停 P7 離入口最近；黑潮之海水槽旁的咖啡座可邊喝邊看鯨鯊
+- travel: car 水族館→本部午餐 約15分鐘
 
 #### reservation: 景點資訊
-- 須提前預約！暑假非常搶手，建議出發前 1~2 個月預約
-- 建議預約早上場次，海況較穩定
-- 店家提供全套裝備（面鏡、呼吸管、救生衣）＋免費水中拍照
+- 門票：大人 ¥2,180 / 高中生 ¥1,440 / 中小學生 ¥710（道之驛許田折扣票或 FunPASS 適用） 營業時間：08:30~18:30（夏季延長至20:00） 海豚秀：11:00 / 13:00 / 14:30 / 16:00（免費） 建議先逛水族館，11:00 看海豚秀 水族館伴手禮： 水族館出口禮品店 — 鯨鯊限定周邊、美麗海水族館餅乾 海洋博公園商店 — 沖繩工藝品、琉球玻璃、貝殼飾品 停車場：免費（P7 最近入口）｜G Map Map 553 075 797
 
-#### restaurants: 中文教練店家推薦
-
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | url |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 青潛 Best Dive Okinawa | 拉麵 | 08:00~17:00 | ~¥8,000/人（含船費＋拍照20張以上） | 自有停車場＋接駁車 | 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加 |  | 4.8 | Best Dive Okinawa 青之洞窟 \| Best Dive Okinawa |  | ai | https://www.bestdiveokinawa.com/ |
-| Natural Blue 自然之藍 | 燒肉 | 08:00~17:00 | ~¥5,500/人（未稅） | 僅收日幣現金｜6歲以上 | 台灣人中文教練，沖繩安全優良店認證，CP 值最高 |  | 4.8 | Natural Blue 青之洞窟 \| Natural Blue 沖縄 |  | ai | https://www.natural-blue.net/tw/ |
-| 黑潮潛水 Kuroshio Diving | 當地特色 | 08:00~17:00 | ~¥8,000/人（全包無隱藏費用） | 9歲以上 | 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯 |  | 4.7 | 黑潮潛水 青之洞窟 \| 黒潮潜水 沖縄 |  | ai | https://heichaodive.com/ |
-
-#### parking: 停車場
-- price: ¥100/次
-- maps: 真栄田岬 駐車場
-- mapcode: 206 062 685*77
-
-### 11:15-11:45 萬座毛
-沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線
-- web: https://tw.blue-cave.org/manzamo/
-- blog: https://www.jathao.com/2024/02/okinawa-manzamo.html
-- maps: 万座毛
-- mapcode: 206 312 038*55
-- rating: 4.2
-- note: 步道約 20 分鐘可繞一圈，入口處有紀念品商店和廁所
-- travel: car 萬座毛→午餐 約10分鐘（國道58號北上）
-
-#### parking: 停車場
-- price: 免費｜入場費 ¥100
-- maps: 万座毛 駐車場
-- mapcode: 206 312 038*55
-
-### 12:00-13:00 Route 58 午餐
-萬座毛→ブセナ之間，Route 58 沿線覓食
-- maps: 恩納村 Route 58 | 恩納村 国道58号
+### 12:55-13:55 水族館附近午餐
+- maps: 美ら海水族館周辺 | 沖縄美ら海水族館
 - rating: 4.1
-- note: 蒜蝦飯粉紅小屋很好認，路邊有停車位
-- travel: car 恩納→名護鳳梨園 約25分鐘
+- note: きしもと食堂是百年老店常排隊，建議避開正午尖峰
+- travel: car 本部→瀨底島 約15分鐘（過瀨底大橋即到）
 
 #### restaurants: 午餐推薦三選一
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 焼肉げんか | 拉麵 | 午 11:30~15:00／夜 17:00~23:00（全年無休） | ¥4,000~5,000/人（含入場費） | 建議預約 | 原價制！入場 ¥2,200 後全餐以進貨價計算 | https://okinawa.letsgojp.com/archives/640986/ | 4.3 | 焼肉げんか 恩納店 \| 焼肉げんか 恩納 | 206 313 260*00 | ai |
-| 幸ちゃんそば | 燒肉 | 10:00~15:00 售完即止（週一休） | ¥700~900 | 不需訂位 | Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色） | https://chrysie.pixnet.net/blog/post/119628384 | 4.2 | 幸ちゃんそば 名護 | 206 598 600*00 | ai |
-| THE GARLIC SHRIMP | 當地特色 | 11:00~20:30（不固定休，建議出發前確認） | ¥1,450~2,100 | 不需訂位 | 粉紅小屋，6 種口味蝦蝦飯，半露天座位 | https://www.markting.com.tw/564/ | 4.1 | THE GARLIC SHRIMP 恩納 | 206 313 585*00 | ai |
+| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | reservationUrl |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| きしもと食堂 | 拉麵 | 11:00~17:00（週三公休） | ¥600~ | 不需訂位 | 明治 38 年創業！傳奇沖繩麵 | https://www.huihuifun.com/kishimoto-cafeteria/ | 4.1 | きしもと食堂 本部町 | 206 857 712*00 | ai |  |
+| 焼肉もとぶ牧場 本部店 | 燒肉 | 午 11:30~15:00／夜 17:00~22:00 | ¥1,500~ | TableCheck 預約 | 沖繩品牌「もとぶ牛」直營燒肉 | https://carollin.tw/motobu-farm/ | 4.3 | 焼肉もとぶ牧場 本部店 | 206 795 582*00 | ai | https://www.tablecheck.com/en/shops/motobu-farm/reserve |
+| 海人食堂 | 當地特色 | 11:00~15:30 | ¥1,000~ | 不需訂位 | 本部漁港直營食堂，新鮮生魚片 | https://hanblog.tw/kaihoumaru2/ | 4 | 海人食堂 本部漁港 | 206 857 471*00 | ai |  |
 
-### 13:30-14:30 名護鳳梨園
-全自動駕駛「鳳梨號」遊園車穿梭亞熱帶果園，鳳梨甜點試吃、鳳梨酒試飲、伴手禮超好買
-- web: https://www.nagopine.com/
-- maps: ナゴパイナップルパーク
-- mapcode: 206 716 467*85
-- rating: 3.9
-- note: 出口前的試吃區可免費吃鳳梨和試飲鳳梨酒，小孩有果汁
-- travel: car 鳳梨園→Super Hotel 名護 約10分鐘
+### 14:10-17:10 瀨底海灘戲水
+沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，午後戲水最舒服
+- web: https://www.jathao.com/2024/11/okinawa-sesoko-island.html
+- blog: https://lailai-web.com/sesoko-island/
+- maps: 瀬底ビーチ
+- mapcode: 206 822 241*00
+- rating: 4.3
+- note: 海灘有淋浴設備和置物櫃（需付費），建議自帶浮潛面鏡
+- travel: car 瀨底島→Super Hotel 名護 約20分鐘
 
-#### reservation: 景點資訊
-- 門票：大人 ¥1,200 / 中高生 ¥600 / 小學生 ¥450（FunPASS 適用）
-- 營業時間：10:00~18:00（最終入園 17:30）
-- 所需時間：約60分鐘
-- 停車場：免費（200台）
+#### parking: 停車場
+- price: ¥1,000/次
+- maps: 瀬底ビーチ 駐車場
+- mapcode: 206 822 264*00
 
-#### shopping: 鳳梨園購物推薦
-
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| 名護鳳梨園 禮品店 | 伴手禮 | 10:00~18:00 | 鳳梨酒（鳳梨汽酒、鳳梨泡盛）, 鳳梨果醬＆果凍, 鳳梨餅乾零食禮盒, 現場試飲限定品 | https://yiwutrip.tw/nago-pineapple-park/ | 3.9 | ナゴパイナップルパーク | 206 716 467*85 | ai |
-| 道之驛許田（附近） | 伴手禮 | 08:30~18:00 | サーターアンダギー（沙翁）, 黑糖製品, 沖繩在地農產品, 美麗海水族館折扣票 | https://okinawa.letsgojp.com/archives/657147/ | 4 | 道の駅許田 | 206 476 710*00 | ai |
-| FamilyMart 名護城公園前店 | 超商 | 24 小時 | 沖繩限定冰淇淋（紅芋、ちんすこう風味）, 飯糰便當, 飲料補給, 泡麵零食 | https://tw.wamazing.com/media/article/a-832/ | 3.5 | ファミリーマート 名護城公園前店 \| ファミリーマート 名護城 | 206 716 300*00 | ai |
-
-### 14:45 回 Super Hotel 名護
-放好行李沖洗休息，傍晚出門覓食
+### 17:30 回 Super Hotel 名護
+玩水後回飯店沖洗休息，泡溫泉恢復體力
 - blog: https://blackcoffee00l.pixnet.net/blog/post/522773389
 - source: ai
 - maps: スーパーホテル沖縄・名護
@@ -124,7 +100,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.5916,"lon":127.9772,"
 - note: 玩水後回飯店先泡溫泉恢復體力
 
 ### 18:30-20:00 名護晚餐
-名護市區覓食，與 Day 2 不重複的餐廳選擇
+名護市區覓食，與 D2 不重複的餐廳選擇
 - blog: https://tc.tabirai.net/sightseeing/article/okinawa-nago-dinner/
 - source: ai
 - maps: 名護市
