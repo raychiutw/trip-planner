@@ -17,7 +17,9 @@ html.page-setting {
     transition: none;
 }
 .page-setting .sticky-nav {
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 200;
 }
 
 /* ===== Setting Page Layout ===== */
@@ -135,6 +137,7 @@ html.page-setting {
 
 /* ===== Sticky-nav: title bar ===== */
 .page-setting .sticky-nav { background: var(--bg); border-bottom: 1px solid var(--border); }
+.page-setting .sticky-nav::before { content: ''; width: 36px; flex-shrink: 0; }
 .page-setting .nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
