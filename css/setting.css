@@ -1,12 +1,10 @@
-/* ===== Setting Page — reset scroll effects ===== */
+/* ===== Setting Page — keep shared scroll foundation, only override what's needed ===== */
 html.page-setting {
     scroll-behavior: auto;
-    scrollbar-gutter: auto;
 }
 .page-setting {
     max-width: none;
 }
-.page-setting .page-layout { min-height: 0; }
 
 /* ===== Setting Page Layout ===== */
 .setting-page { max-width: 520px; margin: 0 auto; padding: 16px; }
