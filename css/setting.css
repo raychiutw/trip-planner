@@ -4,7 +4,6 @@ html.page-setting {
     scrollbar-gutter: auto;
 }
 .page-setting {
-    overflow-x: visible;
     max-width: none;
 }
 .page-setting .page-layout { min-height: 0; }
