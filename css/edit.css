@@ -194,6 +194,7 @@
 
 /* ===== Sticky-nav: title bar ===== */
 .chat-container .sticky-nav { background: var(--bg); border-bottom: 1px solid var(--border); }
+.chat-container .sticky-nav::before { content: ''; width: 36px; flex-shrink: 0; }
 .chat-container .nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
