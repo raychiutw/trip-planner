@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "afterWrite": [
+      {
+        "matcher": "memory/",
+        "command": "npm run memory:export --silent"
+      }
+    ],
+    "afterEdit": [
+      {
+        "matcher": "memory/",
+        "command": "npm run memory:export --silent"
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 .claude/*
 !.claude/commands/
 !.claude/memory-sync/
+!.claude/settings.json
 node_modules/
 test-results/
 playwright-report/

@@ -38,6 +38,7 @@
 - 標題列統一：行程頁左對齊無底線；設定頁/編輯頁居中 + `--bg` 底色 + 底線 + `::before` 36px 佔位
 - E2E 測試：`tests/e2e/setting-page.spec.js`（含捲動穩定性測試，共 13 案例）
 - Speed Dial 開啟時 backdrop 阻止背景捲動，深色模式 backdrop 加深透明度
+- 記憶檔跨機同步：`scripts/memory-sync.sh`（export/import），npm scripts `memory:export` / `memory:import`，透過 `.claude/memory-sync/` 中繼 + git 同步；hook 自動在 memory 檔變更後執行 export
 
 ## 行程 JSON 品質規則（強制）
 - 產生或修改 `data/trips-md/` 時，無論透過 skill 或自然語言，必須遵守 `.claude/commands/trip-quality-rules.md` 中定義的所有品質規則
