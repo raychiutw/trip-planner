@@ -134,7 +134,8 @@ html.page-setting {
 }
 
 /* ===== Sticky-nav: title bar ===== */
-.page-setting .sticky-nav { background: var(--card-bg); }
+.page-setting .sticky-nav { background: var(--bg); border-bottom: 1px solid var(--border); }
+.page-setting .nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
 body.dark .color-mode-card { background: var(--card-bg); }
