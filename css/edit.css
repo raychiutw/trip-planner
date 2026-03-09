@@ -84,6 +84,8 @@
     margin-top: 8px;
     line-height: var(--lh-normal);
 }
+.issue-reply a { color: var(--accent); text-decoration: none; }
+.issue-reply a:hover { text-decoration: underline; }
 .issue-reply h2, .issue-reply h3 { font-size: var(--fs-title3); margin: 12px 0 8px; color: var(--text); }
 .issue-reply h2:first-child, .issue-reply h3:first-child { margin-top: 0; }
 .issue-reply p { margin: 4px 0; }
@@ -242,7 +244,7 @@ body.dark .issue-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
     margin-top: 4px;
     border-radius: var(--radius-sm);
 }
-.edit-status.success { color: var(--success); }
+.edit-status.success { color: var(--success); display: flex; align-items: center; gap: 4px; }
 .edit-status.error { color: var(--error); }
 
 /* ===== Sticky-nav: title bar ===== */

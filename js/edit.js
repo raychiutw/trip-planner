@@ -37,7 +37,7 @@
         var badgeIcon = issue.state === 'open' ? iconSpan('circle-dot') : iconSpan('check-circle');
         var badgeText = issue.state === 'open' ? 'Open' : 'Closed';
         var mode = getIssueMode(issue);
-        var modeBadgeText = mode === 'plan' ? '問建議' : '修改';
+        var modeBadgeText = mode === 'plan' ? '問建議' : '改行程';
         var html = '<div class="issue-item ' + stateClass + '">';
         html += '<div class="issue-item-header">';
         html += '<span class="issue-badge ' + stateClass + '">' + badgeIcon + badgeText + '</span>';
@@ -241,7 +241,7 @@
             throw new Error('送出失敗（' + r.status + '）');
         })
         .then(function(issue) {
-            status.innerHTML = '<div class="edit-status success">' + iconSpan('check-circle') + ' 已送出！Issue <a href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">#' + issue.number + '</a></div>';
+            status.innerHTML = '<div class="edit-status success">' + iconSpan('check-circle') + ' 已送出</div>';
             var textarea = document.getElementById('editText');
             textarea.value = '';
             textarea.style.height = 'auto';

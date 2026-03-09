@@ -26,7 +26,7 @@ function buildIssueItemHtml(issue) {
   var badgeIcon = issue.state === 'open' ? iconSpan('circle-dot') : iconSpan('check-circle');
   var badgeText = issue.state === 'open' ? 'Open' : 'Closed';
   var mode = getIssueMode(issue);
-  var modeBadgeText = mode === 'plan' ? '問建議' : '修改';
+  var modeBadgeText = mode === 'plan' ? '問建議' : '改行程';
   var html = '<div class="issue-item ' + stateClass + '">';
   html += '<div class="issue-item-header">';
   html += '<span class="issue-badge ' + stateClass + '">' + badgeIcon + badgeText + '</span>';
@@ -240,7 +240,7 @@ describe('renderIssues list rendering', () => {
       labels: [{ name: 'trip-edit' }, { name: 'okinawa-trip-2026-Ray' }]
     }]);
     expect(html).toContain('issue-mode-badge mode-edit');
-    expect(html).toContain('修改');
+    expect(html).toContain('改行程');
   });
 
   it('trip-plan label shows plan mode badge', () => {
