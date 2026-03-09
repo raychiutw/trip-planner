@@ -9,7 +9,7 @@
 - 每日 `label` **不超過 8 字**。超過時用更簡潔的寫法，例如「甘川洞・松島」而非「甘川洞・松島・南浦」。
 
 #### URL 與格式安全性
-- 所有 URL 欄位（titleUrl、url、googleQuery、appleQuery、reservationUrl、blogUrl）的值必須以 `http://`、`https://` 或 `tel:` 開頭，否則視為不安全。
+- 所有 URL 欄位（googleQuery、appleQuery、reservationUrl）的值必須以 `http://`、`https://` 或 `tel:` 開頭，否則視為不安全。
 - `googleQuery` 必須為 Google Maps URL，格式為 `https://www.google.com/maps/search/<percent-encoded-query>`。
 - `appleQuery` 必須為 Apple Maps URL，格式為 `https://maps.apple.com/?q=<percent-encoded-query>`。
 - `naverQuery` 必須為 Naver Maps URL（以 `https://map.naver.com/` 開頭），優先使用精確 place URL `https://map.naver.com/v5/entry/place/{placeId}`，查不到時 fallback 為 `https://map.naver.com/v5/search/{韓文關鍵字}`。
@@ -28,12 +28,12 @@
 
 #### Timeline event 結構
 - 每個 event 必填：`time`（非空字串）、`title`（非空字串）。
-- 選填欄位存在時須為正確型別：`titleUrl`（string）、`blogUrl`（string）、`description`（string）、`locations`（array）、`infoBoxes`（array）。
+- 選填欄位存在時須為正確型別：`description`（string）、`locations`（array）、`infoBoxes`（array）。
 - `travel` 物件須含 `text`（string）和 `type`（string）。
 
 #### Hotel 結構
 - 必填：`name`（非空字串）、`breakfast`（物件，含 `included`）。
-- 選填欄位存在時須為正確型別：`url`（string）、`blogUrl`（string）、`checkout`（string）、`details`（array）、`infoBoxes`（array）。
+- 選填欄位存在時須為正確型別：`checkout`（string）、`details`（array）、`infoBoxes`（array）。
 - `hotel.subs` 已移除，停車場資料 SHALL 位於 `hotel.infoBoxes[type=parking]`。
 - 行程最後一天（`days` 陣列最後一個元素）不得包含 `hotel` 物件（返家日無需住宿）。
 
@@ -56,21 +56,13 @@
 **豁免：** hotel name 為「家」的在地行程，跳過該日所有餐次檢查。
 
 ### R3 餐廳推薦品質
-每個 restaurants infoBox 含 1～3 家餐廳（目標補到 3 家）。每家必填 hours（營業時間）、reservation（訂位資訊）、blogUrl（繁中網誌）。營業時間須與用餐時間吻合（餐廳開始營業時間 ≤ event 時間 + 1 小時，不推薦 17:00 開的店當午餐）。餐廳 category 須與 `meta.foodPreferences` 順序對應（第 1 家對應偏好 1，以此類推）。同一行程內不得重複推薦相同品牌/連鎖店的不同分店（如「琉球の牛 那覇店」與「琉球の牛 恩納店」視為重複）；使用者明確指定的餐廳（`source: "user"`）優先保留，AI 推薦的重複店家須替換為其他選項。
+每個 restaurants infoBox 含 1～3 家餐廳（目標補到 3 家）。每家必填 hours（營業時間）、reservation（訂位資訊）。營業時間須與用餐時間吻合（餐廳開始營業時間 ≤ event 時間 + 1 小時，不推薦 17:00 開的店當午餐）。餐廳 category 須與 `meta.foodPreferences` 順序對應（第 1 家對應偏好 1，以此類推）。同一行程內不得重複推薦相同品牌/連鎖店的不同分店（如「琉球の牛 那覇店」與「琉球の牛 恩納店」視為重複）；使用者明確指定的餐廳（`source: "user"`）優先保留，AI 推薦的重複店家須替換為其他選項。
 
 ### R4 景點品質
-titleUrl 放官網（找不到則省略欄位）。blogUrl 放繁中推薦網誌（查不到則為空字串 `""`）。infoBoxes 確認含營業時間，且與到訪時間吻合。
-
-### R5 飯店品質
-hotel 物件含 blogUrl，放繁中推薦網誌。blogUrl 查不到適合的繁中文章時為空字串 `""`。
-
-**豁免：** hotel name 為「家」或以「（」開頭的特殊標記（如「（返台）」），跳過 blogUrl 檢查。
-
-### R6 搜尋方式
-所有 blogUrl 以 Google「{名稱} {地區} 推薦 {今年}」搜尋，取第一篇繁體中文文章。
+infoBoxes 確認含營業時間，且與到訪時間吻合。
 
 ### R7 購物景點推薦
-統一使用 `infoBox type=shopping`（不使用 souvenir type）。飯店附近超市/超商/唐吉軻德以 shopping infoBox 結構化顯示。超商（步行 5 分鐘內）含 mustBuy + blogUrl。獨立購物行程（來客夢/iias/Outlet/PARCO CITY）同樣附 shopping infoBox。景點附近步行 5~10 分鐘有超市或唐吉軻德時，在該景點 entry 加 shopping infoBox。每個 shop 含 category、name、hours、mustBuy（至少 3 項）、blogUrl。shop 不含 titleUrl。自駕行程飯店 infoBoxes 須有停車場資訊（`type: "parking"`）。
+統一使用 `infoBox type=shopping`（不使用 souvenir type）。飯店附近超市/超商/唐吉軻德以 shopping infoBox 結構化顯示。超商（步行 5 分鐘內）含 mustBuy。獨立購物行程（來客夢/iias/Outlet/PARCO CITY）同樣附 shopping infoBox。景點附近步行 5~10 分鐘有超市或唐吉軻德時，在該景點 entry 加 shopping infoBox。每個 shop 含 category、name、hours、mustBuy（至少 3 項）。自駕行程飯店 infoBoxes 須有停車場資訊（`type: "parking"`）。
 
 shop.category 使用標準分類（共 7 類）：超市、超商、唐吉軻德、藥妝、伴手禮、購物中心、Outlet。
 
@@ -80,7 +72,7 @@ shop.category 使用標準分類（共 7 類）：超市、超商、唐吉軻德
 
 **階段 1：驗證既有**
 - 所有 shopping infoBox 的 shop.category 是否為 7 類標準分類之一
-- 每個 shop 是否含 category/name/hours/mustBuy(>=3)/blogUrl
+- 每個 shop 是否含 category/name/hours/mustBuy(>=3)
 - 是否有 souvenir type 殘留需改為 shopping
 
 **階段 2：生成缺漏**

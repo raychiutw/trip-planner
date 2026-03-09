@@ -7,25 +7,22 @@ weather: {"label":"京都・宇治","locations":[{"lat":35.0116,"lon":135.7681,"
 ---
 
 ## Hotel: Hotel Resol Trinity Kyoto
-- url: https://www.resol-trinity.com/kyoto/
 - checkout: 11:00
-- blog: https://candicecity.com/56704/
 - source: ai
 - note: 地點極佳步行可達河原町與錦市場，退房後行李可寄放櫃台
 
 ### shopping: 飯店周邊購物
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| FamilyMart 御池麩屋町店 | 超商 | 24小時 | 京都限定八ツ橋, 抹茶甜點, おにぎり | https://minako.tw/japan-family/ | 3.5 |  |  | ai |
-| FRESCO 御池店 | 超市 | 09:00~23:00 | 京漬物, 京都地酒, 季節水果 | https://mimicat1531.pixnet.net/blog/post/48930056 | 3.7 |  |  | ai |
-| ドン・キホーテ 京都河原町店 | 唐吉軻德 | 10:00~翌5:00 | 藥妝, 零食, 京都限定伴手禮 | https://visitkyototw.pixnet.net/blog/post/93112818 | 3.9 |  |  | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| FamilyMart 御池麩屋町店 | 超商 | 24小時 | 京都限定八ツ橋, 抹茶甜點, おにぎり | 3.5 |  |  | ai |
+| FRESCO 御池店 | 超市 | 09:00~23:00 | 京漬物, 京都地酒, 季節水果 | 3.7 |  |  | ai |
+| ドン・キホーテ 京都河原町店 | 唐吉軻德 | 10:00~翌5:00 | 藥妝, 零食, 京都限定伴手禮 | 3.9 |  |  | ai |
 
 ## Timeline
 
 ### 09:00-10:00 Stumptown Coffee Roasters
 Portland 發跡的精品咖啡京都分店
-- blog: https://www.bigfang.tw/blog/post/stumptown-kyoto
 - source: ai
 - maps: Stumptown Coffee Roasters | Stumptown Coffee Roasters Kyoto
 - rating: 4.5
@@ -36,7 +33,6 @@ Portland 發跡的精品咖啡京都分店
 
 ### 11:00-12:00 午餐 MENYA INOICHI #3
 宇治人氣拉麵，11:00 開店建議提早排隊
-- blog: https://www.bigfang.tw/blog/post/menyainoichi-kyoto
 - source: ai
 - maps: MENYA INOICHI | MENYA INOICHI 宇治
 - rating: 4.3
@@ -44,15 +40,14 @@ Portland 發跡的精品咖啡京都分店
 
 #### restaurants: 宇治午餐備案
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | appleMaps |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| しゅばく | 京都料理 | 11:00~16:00 | ¥1000~1500 | 不需預約 | 手打蕎麥麵名店，宇治在地推薦 | https://www.travalearth.com/post-31410162/ | 4.3 | しゅばく \| しゅばく 宇治 |  | ai |  |
-| 伊藤久右衛門 本店 | 和食 | 10:00~18:00 | ¥1200~1800 | 不需預約 | 宇治抹茶蕎麥麵與抹茶甜點 | https://tisshuang.com/blog/post/itohkyuemon | 4.2 | 伊藤久右衛門 本店 \| 伊藤久右衛門 本店 宇治 |  | ai | 伊藤久右衛門 本店 |
-| 通圓 宇治本店 | 洋食 | 09:30~17:30 | ¥800~1500 | 不需預約 | 創業 850 年茶屋，茶蕎麥與甜點 | https://monicalin0219.pixnet.net/blog/posts/5061695562 | 4.1 | 通圓 \| 通圓 宇治本店 |  | ai |  |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | appleMaps |
+|---|---|---|---|---|---|---|---|---|---|---|
+| しゅばく | 京都料理 | 11:00~16:00 | ¥1000~1500 | 不需預約 | 手打蕎麥麵名店，宇治在地推薦 | 4.3 | しゅばく \| しゅばく 宇治 |  | ai |  |
+| 伊藤久右衛門 本店 | 和食 | 10:00~18:00 | ¥1200~1800 | 不需預約 | 宇治抹茶蕎麥麵與抹茶甜點 | 4.2 | 伊藤久右衛門 本店 \| 伊藤久右衛門 本店 宇治 |  | ai | 伊藤久右衛門 本店 |
+| 通圓 宇治本店 | 洋食 | 09:30~17:30 | ¥800~1500 | 不需預約 | 創業 850 年茶屋，茶蕎麥與甜點 | 4.1 | 通圓 \| 通圓 宇治本店 |  | ai |  |
 
 ### 12:30-13:30 中村藤吉 宇治本店
 宇治抹茶百年名店，必吃抹茶甜點
-- web: https://www.tokichi.jp/
 - maps: 中村藤吉 宇治本店
 - rating: 4.4
 - note: 假日排隊可達1小時，建議先到店頭抽號碼牌再去逛
@@ -60,7 +55,6 @@ Portland 發跡的精品咖啡京都分店
 
 ### 13:30-15:00 平等院
 世界遺產，十圓硬幣上的鳳凰堂
-- web: https://www.byodoin.or.jp/
 - maps: 平等院 | 平等院 宇治
 - apple: 平等院
 - rating: 4.5
@@ -76,7 +70,6 @@ Portland 發跡的精品咖啡京都分店
 
 ### 16:00-17:00 伊藤久右衛門
 宇治抹茶甜點與伴手禮
-- web: https://www.itohkyuemon.co.jp/
 - maps: 伊藤久右衛門 | 伊藤久右衛門 宇治
 - rating: 4.2
 - note: 抹茶百匯是招牌，伴手禮區可免費試吃抹茶巧克力
@@ -94,11 +87,11 @@ Portland 發跡的精品咖啡京都分店
 
 #### restaurants: 晚餐備案
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | appleMaps |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 弘 木屋町店 | 京都料理 | 17:00~23:00 | ¥5000~8000 | 建議預約 | 京都黑毛和牛燒肉名店 | https://kenwhitney.pixnet.net/blog/post/42052645 | 4.3 | 弘 木屋町店 \| 弘 木屋町店 京都 焼肉 |  | ai | 弘 木屋町店 |
-| 天壇 祇園本店 | 和食 | 17:00~23:00 | ¥5000~8000 | 建議預約 | 京都燒肉名門，醬汁獨門配方 | https://vickylife.com/tendan/ | 4.1 | 天壇 祇園本店 \| 焼肉の名門 天壇 祇園本店 |  | ai | 天壇 祇園本店 |
-| 肉料理 おか | 洋食 | 17:30~22:00 | ¥8000~12000 | 建議預約 | 隱藏版肉割烹，京都和牛料理 |  | 4.4 | 肉料理 おか \| 肉料理 おか 京都 |  | ai |  |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | appleMaps |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 弘 木屋町店 | 京都料理 | 17:00~23:00 | ¥5000~8000 | 建議預約 | 京都黑毛和牛燒肉名店 | 4.3 | 弘 木屋町店 \| 弘 木屋町店 京都 焼肉 |  | ai | 弘 木屋町店 |
+| 天壇 祇園本店 | 和食 | 17:00~23:00 | ¥5000~8000 | 建議預約 | 京都燒肉名門，醬汁獨門配方 | 4.1 | 天壇 祇園本店 \| 焼肉の名門 天壇 祇園本店 |  | ai | 天壇 祇園本店 |
+| 肉料理 おか | 洋食 | 17:30~22:00 | ¥8000~12000 | 建議預約 | 隱藏版肉割烹，京都和牛料理 | 4.4 | 肉料理 おか \| 肉料理 おか 京都 |  | ai |  |
 
 ### 21:30-22:30 DONQUI 唐吉軻德
 京都河原町店，藥妝零食伴手禮

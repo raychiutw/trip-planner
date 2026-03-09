@@ -47,19 +47,10 @@ function renderNavLinks(locations) {
     return html;
 }
 
-/* ===== Render: Blog Link ===== */
-function renderBlogLink(url) {
-    var safe = escUrl(url);
-    if (!safe) return '';
-    return iconSpan('document') + ' <a href="' + safe + '" target="_blank" rel="noopener noreferrer">網誌推薦</a>';
-}
-
 /* ===== Render: Restaurant ===== */
 function renderRestaurant(r) {
     var html = '<div class="restaurant-choice">';
     var nameHtml = escHtml(r.name);
-    var rUrl = escUrl(r.url);
-    if (rUrl) nameHtml = '<a href="' + rUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
     html += (r.category ? '<strong>' + escHtml(r.category) + '：</strong>' : '')
           + nameHtml;
     if (typeof r.googleRating === 'number') html += ' <span class="rating">★ ' + r.googleRating.toFixed(1) + '</span>';
@@ -78,11 +69,6 @@ function renderRestaurant(r) {
             meta += iconSpan('phone') + ' ' + escHtml(r.reservation);
         }
     }
-    var blogLink = renderBlogLink(r.blogUrl);
-    if (blogLink) {
-        if (meta) meta += ' ｜ ';
-        meta += blogLink;
-    }
     if (meta) html += '<span class="restaurant-meta">' + meta + '</span>';
     html += '</div>';
     return html;
@@ -98,11 +84,6 @@ function renderShop(shop) {
     if (shop.location) html += renderMapLinks(shop.location, true);
     var meta = '';
     if (shop.hours) meta += iconSpan('clock') + ' ' + escHtml(shop.hours);
-    var sBlogLink = renderBlogLink(shop.blogUrl);
-    if (sBlogLink) {
-        if (meta) meta += ' ｜ ';
-        meta += sBlogLink;
-    }
     if (meta) html += '<span class="restaurant-meta">' + meta + '</span>';
     if (shop.mustBuy && shop.mustBuy.length) {
         html += '<div class="shop-must-buy">' + iconSpan('gift') + ' 必買：' + shop.mustBuy.map(escHtml).join('、') + '</div>';
@@ -245,20 +226,12 @@ function renderTimelineEvent(entry, idx, isLast) {
     /* Card header: title + duration */
     html += '<div class="tl-card-header">';
     html += '<span class="tl-title">';
-    var titleUrl = escUrl(entry.titleUrl);
-    if (titleUrl) {
-        html += '<a href="' + titleUrl + '" target="_blank" rel="noopener noreferrer">' + escHtml(entry.title) + '</a>';
-    } else {
-        html += escHtml(entry.title || '');
-    }
+    html += escHtml(entry.title || '');
     html += '</span>';
     if (typeof entry.googleRating === 'number') html += ' <span class="rating">★ ' + entry.googleRating.toFixed(1) + '</span>';
     var durationText = formatDuration(parsed.duration);
     if (durationText) html += '<span class="tl-duration">' + iconSpan('clock') + ' ' + durationText + '</span>';
     html += '</div>';
-
-    var entryBlogLink = renderBlogLink(entry.blogUrl);
-    if (entryBlogLink) html += '<div class="tl-blog">' + entryBlogLink + '</div>';
 
     /* Description / note */
     if (entry.note) html += '<div class="tl-desc">' + escHtml(entry.note) + '</div>';
@@ -310,14 +283,8 @@ function renderTimeline(events) {
 function renderHotel(hotel) {
     var html = '';
     var nameHtml = escHtml(hotel.name || '');
-    var hotelUrl = escUrl(hotel.url);
-    if (hotelUrl) nameHtml = '<a href="' + hotelUrl + '" target="_blank" rel="noopener noreferrer">' + nameHtml + '</a>';
     html += '<div class="col-row">' + iconSpan('hotel') + ' ' + nameHtml + ' <span class="arrow">＋</span></div>';
     html += '<div class="col-detail">';
-    var hotelBlogLink = renderBlogLink(hotel.blogUrl);
-    if (hotelBlogLink) {
-        html += '<div class="hotel-blog">' + hotelBlogLink + '</div>';
-    }
     if (hotel.details && hotel.details.length) {
         html += '<div class="hotel-detail-grid">';
         hotel.details.forEach(function(d) { html += '<span>' + escHtml(d) + '</span>'; });
@@ -658,7 +625,7 @@ function validateTripData(data) {
     if (!data.suggestions) errors.push('缺少 suggestions');
 
     // --- Recursive walk for warnings ---
-    var URL_FIELDS = ['titleUrl', 'url', 'googleQuery', 'appleQuery', 'reservationUrl', 'blogUrl', 'reserve', 'naverQuery'];
+    var URL_FIELDS = ['googleQuery', 'appleQuery', 'reservationUrl', 'reserve', 'naverQuery'];
     var MAPCODE_RE = /^\d{2,4}\s\d{3}\s\d{3}\*\d{2}$/;
 
     function walk(obj, path) {
@@ -1592,7 +1559,7 @@ if (typeof module !== 'undefined' && module.exports) {
         safeColor: safeColor,
         renderMapLinks: renderMapLinks,
         renderNavLinks: renderNavLinks,
-        renderBlogLink: renderBlogLink,
+
         renderRestaurant: renderRestaurant,
         renderShop: renderShop,
         renderInfoBox: renderInfoBox,

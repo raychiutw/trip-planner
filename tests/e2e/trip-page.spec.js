@@ -64,12 +64,12 @@ test.describe('頁面載入', () => {
     await expect(footer).toContainText('沖繩');
   });
 
-  test('資訊區段都存在', async ({ page }) => {
+  test('Speed Dial 資訊項目都存在', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('#sec-flight')).toBeAttached();
-    await expect(page.locator('#sec-checklist')).toBeAttached();
-    await expect(page.locator('#sec-backup')).toBeAttached();
-    await expect(page.locator('#sec-emergency')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="flights"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="checklist"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="backup"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="emergency"]')).toBeAttached();
   });
 });
 
@@ -83,20 +83,22 @@ test.describe('導航功能（Tab 切換）', () => {
     expect(text.trim()).not.toContain('D');
   });
 
-  test('點擊 nav pill 切換 Day 顯示（tab 切換）', async ({ page }) => {
+  test('點擊 nav pill 捲動到對應 Day（scroll 導航）', async ({ page }) => {
     await page.goto('/');
-    // 初始 Day 1 可見
+    // 所有 day-section 都存在且可見（scroll-based）
     const day1 = page.locator('.day-section[data-day="1"]');
     const day3 = page.locator('.day-section[data-day="3"]');
     await expect(day1).toBeVisible();
 
     // 點擊 Day 3 pill
-    await page.locator('#navPills .dn[data-day="3"]').click();
-    await page.waitForTimeout(500);
+    const pill3 = page.locator('#navPills .dn[data-day="3"]');
+    await pill3.click();
+    await page.waitForTimeout(800);
 
-    // Day 3 可見，Day 1 隱藏（tab 切換只顯示選中天）
-    await expect(day3).toBeVisible();
-    await expect(day1).not.toBeVisible();
+    // Day 3 header 應在視窗中可見
+    await expect(page.locator('#day3')).toBeVisible();
+    // Day 3 pill 應有 active class
+    await expect(pill3).toHaveClass(/active/);
   });
 
   test('點擊 pill 更新 active class', async ({ page }) => {
@@ -405,8 +407,12 @@ test.describe('地圖連結與餐廳', () => {
 test.describe('航班資訊', () => {
   test('航班區段包含航班資料', async ({ page }) => {
     await page.goto('/');
-    const flightSection = page.locator('#sec-flight').locator('..');
-    await expect(flightSection.locator('.flight-row').first()).toBeAttached();
+    // 透過 Speed Dial 開啟航班 Bottom Sheet
+    await page.locator('#speedDialTrigger').click();
+    await page.waitForTimeout(300);
+    await page.locator('.speed-dial-item[data-content="flights"]').click();
+    await page.waitForTimeout(300);
+    await expect(page.locator('#bottomSheetBody .flight-row').first()).toBeAttached();
   });
 });
 
@@ -414,8 +420,12 @@ test.describe('航班資訊', () => {
 test.describe('緊急聯絡', () => {
   test('包含 tel: 電話連結', async ({ page }) => {
     await page.goto('/');
-    const emergencySection = page.locator('#sec-emergency').locator('..');
-    const telLinks = emergencySection.locator('a[href^="tel:"]');
+    // 透過 Speed Dial 開啟緊急聯絡 Bottom Sheet
+    await page.locator('#speedDialTrigger').click();
+    await page.waitForTimeout(300);
+    await page.locator('.speed-dial-item[data-content="emergency"]').click();
+    await page.waitForTimeout(300);
+    const telLinks = page.locator('#bottomSheetBody a[href^="tel:"]');
     const count = await telLinks.count();
     expect(count).toBeGreaterThan(0);
   });
@@ -587,24 +597,24 @@ test.describe('Dark + Print 互動', () => {
   });
 });
 
-/* ===== 18. Day 區段 tab 切換 ===== */
+/* ===== 18. Day 區段可見性（scroll-based） ===== */
 test.describe('Day 區段可見性', () => {
-  test('初始只有第一天可見，其餘隱藏', async ({ page }) => {
+  test('初始所有 Day 區段都存在', async ({ page }) => {
     await page.goto('/');
-    const day1 = page.locator('.day-section[data-day="1"]');
-    const day2 = page.locator('.day-section[data-day="2"]');
-    await expect(day1).toBeVisible();
-    await expect(day2).not.toBeVisible();
+    for (let i = 1; i <= 5; i++) {
+      await expect(page.locator(`.day-section[data-day="${i}"]`)).toBeAttached();
+    }
   });
 
-  test('點擊 pill 後對應天可見、其他天隱藏', async ({ page }) => {
+  test('點擊 pill 後對應 Day pill 變 active', async ({ page }) => {
     await page.goto('/');
-    await page.locator('#navPills .dn[data-day="4"]').click();
+    const pill4 = page.locator('#navPills .dn[data-day="4"]');
+    await pill4.click();
     await page.waitForTimeout(500);
-    const day4 = page.locator('.day-section[data-day="4"]');
-    const day1 = page.locator('.day-section[data-day="1"]');
-    await expect(day4).toBeVisible();
-    await expect(day1).not.toBeVisible();
+    await expect(pill4).toHaveClass(/active/);
+    // 其他 pill 不應有 active
+    const pill1 = page.locator('#navPills .dn[data-day="1"]');
+    await expect(pill1).not.toHaveClass(/active/);
   });
 });
 
@@ -673,14 +683,22 @@ test.describe('每日交通統計', () => {
   });
 });
 
-/* ===== 20. 全旅程交通統計 ===== */
+/* ===== 20. 全旅程交通統計（Speed Dial） ===== */
 test.describe('全旅程交通統計', () => {
-  test('所有 Day 載入後出現交通統計區塊', async ({ page }) => {
+  test('所有 Day 載入後 Speed Dial 可開啟交通統計', async ({ page }) => {
     await page.goto('/');
     // 進入列印模式載入所有 Day
     await page.locator('.nav-actions [data-action="toggle-print"]').click();
     await page.waitForTimeout(3000);
-    const summary = page.locator('.driving-summary');
+    // 退出列印模式
+    await page.locator('#printExitBtn').click();
+    await page.waitForTimeout(300);
+    // 透過 Speed Dial 開啟交通統計
+    await page.locator('#speedDialTrigger').click();
+    await page.waitForTimeout(300);
+    await page.locator('.speed-dial-item[data-content="driving"]').click();
+    await page.waitForTimeout(300);
+    const summary = page.locator('#bottomSheetBody .driving-summary');
     await expect(summary).toBeAttached({ timeout: 10000 });
   });
 
@@ -688,7 +706,13 @@ test.describe('全旅程交通統計', () => {
     await page.goto('/');
     await page.locator('.nav-actions [data-action="toggle-print"]').click();
     await page.waitForTimeout(3000);
-    const summary = page.locator('.driving-summary');
+    await page.locator('#printExitBtn').click();
+    await page.waitForTimeout(300);
+    await page.locator('#speedDialTrigger').click();
+    await page.waitForTimeout(300);
+    await page.locator('.speed-dial-item[data-content="driving"]').click();
+    await page.waitForTimeout(300);
+    const summary = page.locator('#bottomSheetBody .driving-summary');
     const typeSummary = summary.locator('.transport-type-summary').first();
     await expect(typeSummary).toBeAttached({ timeout: 10000 });
   });

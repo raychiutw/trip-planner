@@ -15,46 +15,40 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 
 ### 10:00-12:00 山佳車站
 百年日式木造車站，市定古蹟，鐵道文化園區與彩繪牆
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109629
-- blog: https://saliha.pixnet.net/blog/post/335999667
 - maps: 山佳車站
 - rating: 4.2
 - travel: car 開車 約25分鐘
 - note: 舊站體免費參觀，附近彩繪牆很適合拍照打卡
 
 ### 12:00-13:00 午餐
-- blog: https://www.klook.com/zh-TW/blog/shulin-foods-recommend/
 - source: ai
 - maps: 樹林保安街商圈 | 樹林保安街
 - rating: 4
 
 #### restaurants: 午餐推薦（樹林山佳周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 上津日式拉麵 | 日式拉麵 | 11:00~21:00 | NT$79~169 | 不需訂位 | 樹林車站旁超平價拉麵，每日限量30碗，紅燒牛肉麵也值得試 | https://savvik123.pixnet.net/blog/post/227470514 | 4.0 | 上津日式拉麵 |  | ai |
-| 享義 | 義大利麵 | 11:30~15:00 / 17:00~20:00 | NT$200~350 | 不需訂位 | 舒肥牛排番茄義大利麵與奶油野菇燉飯樣樣好吃 |  | 4.3 | 享義 |  | ai |
-| 山佳老街切仔麵 | 特色小吃 | 07:00~15:00 | NT$40~80 | 不需訂位 | 山佳車站旁小吃攤，切仔麵搭配油豆腐小菜 | https://tisshuang.com/shanjia-noodle/ | 4 | 山佳老街切仔麵 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 上津日式拉麵 | 日式拉麵 | 11:00~21:00 | NT$79~169 | 不需訂位 | 樹林車站旁超平價拉麵，每日限量30碗，紅燒牛肉麵也值得試 | 4.0 | 上津日式拉麵 |  | ai |
+| 享義 | 義大利麵 | 11:30~15:00 / 17:00~20:00 | NT$200~350 | 不需訂位 | 舒肥牛排番茄義大利麵與奶油野菇燉飯樣樣好吃 | 4.3 | 享義 |  | ai |
+| 山佳老街切仔麵 | 特色小吃 | 07:00~15:00 | NT$40~80 | 不需訂位 | 山佳車站旁小吃攤，切仔麵搭配油豆腐小菜 | 4 | 山佳老街切仔麵 |  | ai |
 
 ### 14:00-16:00 鹿角溪人工濕地
 樹林環保生態濕地，水鳥棲息地，適合賞鳥與自然觀察
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109631
-- blog: https://smiletaiwan.cw.com.tw/article/1632
 - maps: 鹿角溪人工濕地
 - rating: 4.2
 - travel: car 開車 約15分鐘
 - note: 帶望遠鏡可賞鳥，步道平緩適合悠閒散步
 
 ### 18:00-19:30 晚餐
-- blog: https://appletrees.tw/blog/post/shulinfood
 - source: ai
 - maps: 樹林保安街商圈 | 樹林保安街
 - rating: 4
 
 #### restaurants: 晚餐推薦（樹林/回板橋路上）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 桐生拉麵 土城店 | 日式拉麵 | 11:30~14:00 / 17:30~21:30 | NT$220~350 | 不需訂位 | 土城人氣拉麵，夢幻湖水藍鹽味翠雞拉麵，醬油雞湯也必點 | https://dudu2.tw/tucheng-blue-ramen/ | 4.4 | 桐生拉麵 土城店 |  | ai |
-| No.66義麵坊 土城店 | 義大利麵 | 11:00~21:00 | NT$120~200 | 不需訂位 | 土城平價義大利麵連鎖，用料實在價格親民 | https://blog.alwayslunch.com/?p=453 | 4.2 | No.66義麵坊 土城店 |  | ai |
-| 樹林保安街夜市 | 特色小吃 | 17:00~23:00 | NT$50~150 | 不需訂位 | 在地人的晚餐街，各式台灣小吃集中 | https://kenalice.tw/shulin-baoan-night/ | 4 | 樹林保安街夜市 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 桐生拉麵 土城店 | 日式拉麵 | 11:30~14:00 / 17:30~21:30 | NT$220~350 | 不需訂位 | 土城人氣拉麵，夢幻湖水藍鹽味翠雞拉麵，醬油雞湯也必點 | 4.4 | 桐生拉麵 土城店 |  | ai |
+| No.66義麵坊 土城店 | 義大利麵 | 11:00~21:00 | NT$120~200 | 不需訂位 | 土城平價義大利麵連鎖，用料實在價格親民 | 4.2 | No.66義麵坊 土城店 |  | ai |
+| 樹林保安街夜市 | 特色小吃 | 17:00~23:00 | NT$50~150 | 不需訂位 | 在地人的晚餐街，各式台灣小吃集中 | 4 | 樹林保安街夜市 |  | ai |

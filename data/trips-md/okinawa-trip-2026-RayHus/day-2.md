@@ -7,9 +7,7 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 ---
 
 ## Hotel: Living Inn 旭橋駅前
-- url: https://www.imbecky.com.tw/living-inn-asahibashiekimae-premier/
 - checkout: 10:00
-- blog: https://eisei86.pixnet.net/blog/post/156706179
 - source: ai
 - details: 那霸市東町11-17, 旭橋站步行5分鐘
 - breakfast: false 不含早餐，附近便利商店或自行解決
@@ -17,11 +15,11 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 
 ### shopping: 飯店附近購物
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| 唐吉軻德那霸店（全球最大旗艦店） | 唐吉軻德 | 24 小時 | 沖繩限定泡盛, 紅芋塔/紅芋餅乾, Orion 啤酒, 沖繩黑糖, 沖繩限定零食 | https://mimigo.tw/okinawa-donki/ | 4.2 |  |  | ai |
-| Lawson 旭橋店 | 超商 | 24 小時 | 沖繩限定冰淇淋（紅芋口味）, 烤地瓜, 飯糰便當, 沖繩限定飲料 | https://okinawa.letsgojp.com/archives/18216/ | 3.5 |  |  | ai |
-| サンエー那霸メインプレイス | 超市 | 09:00~22:00 | 沖繩本地豬肉（アグー豚）, 沖繩豆腐（島豆腐）, 泡盛, 海葡萄（海ぶどう） | https://popogo.pixnet.net/blog/posts/3051142200 | 4 |  |  | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| 唐吉軻德那霸店（全球最大旗艦店） | 唐吉軻德 | 24 小時 | 沖繩限定泡盛, 紅芋塔/紅芋餅乾, Orion 啤酒, 沖繩黑糖, 沖繩限定零食 | 4.2 |  |  | ai |
+| Lawson 旭橋店 | 超商 | 24 小時 | 沖繩限定冰淇淋（紅芋口味）, 烤地瓜, 飯糰便當, 沖繩限定飲料 | 3.5 |  |  | ai |
+| サンエー那霸メインプレイス | 超市 | 09:00~22:00 | 沖繩本地豬肉（アグー豚）, 沖繩豆腐（島豆腐）, 泡盛, 海葡萄（海ぶどう） | 4 |  |  | ai |
 
 ## Timeline
 
@@ -33,7 +31,6 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 
 ### 08:00-18:15 KKday 沖繩北部一日遊
 跟團遊覽沖繩北部精華景點：美麗海水族館、古宇利島、名護鳳梨公園。集合地點：縣民廣場（沖縄県庁前 Naha City Izumizaki 1-2-3）
-- blog: https://wanlu937.pixnet.net/blog/post/227218021
 - source: ai
 - maps: 沖縄県庁前（縣民廣場） | 沖縄県庁前 Naha City Izumizaki
 - label: 集合地點
@@ -50,7 +47,6 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 
 ### 18:15-19:45 返回那霸，晚餐
 一日遊結束，返回那霸市區享用晚餐
-- blog: https://mimigo.tw/naha-hotels/
 - source: ai
 - maps: 那霸市區 | 那覇市 国際通り
 - rating: 4
@@ -58,8 +54,8 @@ weather: {"label":"那霸・本部","locations":[{"lat":26.2066,"lon":127.6476,"
 
 #### restaurants: 晚餐推薦
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 焼肉きんぐ 那覇おもろまち店 | 燒肉 | 平日17:00~24:00／假日11:00~24:00 | ¥2,980~/人（90分鐘） | EPARK 預約 | 日本人氣燒肉吃到飽 | https://purpleswallow.pixnet.net/blog/post/45092685 | 4 | 焼肉きんぐ 那覇おもろまち店 |  | ai |
-| Jack's Steak House | 牛排/烤魚 | 11:00~翌1:30 | ¥1,500~ | 不需訂位（排隊制） | 1953 年創業老字號美式牛排，里脊牛排嫩口多汁，CP 值極高 | https://amonblog.com/blog/post/jacks-steak | 4.2 | ジャッキーステーキハウス \| ジャッキーステーキハウス 那覇 |  | ai |
-| 古酒と琉球料理 うりずん | 當地特色 | 17:30~24:00 | ¥2,000~ | 建議預約（電話 098-885-2178） | 1972年創業傳奇老舖，名物「どぅる天」山芋豆腐天婦羅發祥地 | https://matcha-jp.com/tw/11883 | 4.2 | 古酒と琉球料理 うりずん 安里 \| 古酒と琉球料理 うりずん 那覇 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 焼肉きんぐ 那覇おもろまち店 | 燒肉 | 平日17:00~24:00／假日11:00~24:00 | ¥2,980~/人（90分鐘） | EPARK 預約 | 日本人氣燒肉吃到飽 | 4 | 焼肉きんぐ 那覇おもろまち店 |  | ai |
+| Jack's Steak House | 牛排/烤魚 | 11:00~翌1:30 | ¥1,500~ | 不需訂位（排隊制） | 1953 年創業老字號美式牛排，里脊牛排嫩口多汁，CP 值極高 | 4.2 | ジャッキーステーキハウス \| ジャッキーステーキハウス 那覇 |  | ai |
+| 古酒と琉球料理 うりずん | 當地特色 | 17:30~24:00 | ¥2,000~ | 建議預約（電話 098-885-2178） | 1972年創業傳奇老舖，名物「どぅる天」山芋豆腐天婦羅發祥地 | 4.2 | 古酒と琉球料理 うりずん 安里 \| 古酒と琉球料理 うりずん 那覇 |  | ai |

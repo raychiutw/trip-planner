@@ -148,7 +148,6 @@ body:not(.dark) .day-header {
 .tl-duration { font-size: var(--fs-footnote); color: var(--text-muted); white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; }
 .tl-duration .svg-icon { width: 0.9em; height: 0.9em; }
 .rating { color: var(--accent); font-size: var(--fs-caption); flex-shrink: 0; }
-.tl-blog { font-size: var(--fs-footnote); margin-top: 4px; }
 .tl-desc { color: var(--text-muted); margin: 4px 0; font-size: var(--fs-callout); }
 .tl-body { display: block; padding: 4px 0 4px; font-size: var(--fs-body); line-height: var(--lh-relaxed); }
 

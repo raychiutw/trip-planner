@@ -15,31 +15,26 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 
 ### 14:00-16:00 仁愛公園
 永和大型公園，環狀步道、籃球場、兒童遊戲區，社區休閒好去處
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109503
-- blog: https://myjourney.tw/yonghe-renai-park/
 - maps: 永和仁愛公園
 - rating: 4.1
 - travel: car 開車 約15分鐘
 - note: 適合散步放鬆，公園旁有不少咖啡廳可休息
 
 ### 12:00-13:00 午餐
-- blog: https://www.kkday.com/zh-tw/blog/149673/asia-taiwan-taipei-lehua-night-market
 - source: ai
 - maps: 永和樂華商圈
 - rating: 4.1
 
 #### restaurants: 午餐推薦（永和仁愛公園周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋鴒 | 日式拉麵 | 11:30~13:30 / 17:00~21:00 | NT$220~350 | 不需訂位 | 永安市場站旁泡系雞白湯拉麵，湯頭厚實清爽不油膩 | https://mibaoma.tw/menya_ling/ | 4.6 | 麵屋鴒 |  | ai |
-| 禾多靜巷 Herdor Near | 義大利麵 | 11:00~21:00 | NT$280~450 | 建議訂位 | 新埔站旁鬧中取靜義式餐廳，自家農場無毒米燉飯，料理水準高 | https://jotdownvoyage.com/herdor-near-italian-style-restaurant-banqiao/ | 4.3 | 禾多靜巷 Herdor Near |  | ai |
-| 池上木片便當 永和店 | 特色小吃 | 10:30~20:00 | NT$80~120 | 不需訂位 | 古早味木片便當，排骨飯與雞腿飯最受歡迎 | https://tisshuang.com/chishang-bento-yonghe/ | 4 | 池上木片便當 永和店 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 麵屋鴒 | 日式拉麵 | 11:30~13:30 / 17:00~21:00 | NT$220~350 | 不需訂位 | 永安市場站旁泡系雞白湯拉麵，湯頭厚實清爽不油膩 | 4.6 | 麵屋鴒 |  | ai |
+| 禾多靜巷 Herdor Near | 義大利麵 | 11:00~21:00 | NT$280~450 | 建議訂位 | 新埔站旁鬧中取靜義式餐廳，自家農場無毒米燉飯，料理水準高 | 4.3 | 禾多靜巷 Herdor Near |  | ai |
+| 池上木片便當 永和店 | 特色小吃 | 10:30~20:00 | NT$80~120 | 不需訂位 | 古早味木片便當，排骨飯與雞腿飯最受歡迎 | 4 | 池上木片便當 永和店 |  | ai |
 
 ### 17:30-20:00 樂華夜市
 永和最知名夜市，在地經營數十年，各式台灣小吃與服飾攤位
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109505
-- blog: https://kenalice.tw/lehua-night-market/
 - maps: 樂華夜市
 - rating: 4.3
 - travel: car 開車 約10分鐘

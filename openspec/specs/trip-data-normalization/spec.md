@@ -25,14 +25,6 @@ Splitter SHALL 對 location 輸出 `- naver: <url>`。Restaurant 和 shop 表格
 - **WHEN** restaurant location 有 `naverQuery`
 - **THEN** 表格 SHALL 有 `naver` 欄，值為完整 URL
 
-### Requirement: 空 blogUrl 保留
-`blogUrl: ""` 空字串在 MD 中不輸出，但 builder SHALL 還原為 `blogUrl: ""`。
-
-#### Scenario: 空 blogUrl round-trip
-- **WHEN** restaurant 或 shop 的 `blogUrl` 為空字串 `""`
-- **THEN** split 後 MD 表格 blogUrl cell 為空
-- **THEN** build 後 JSON 的 `blogUrl` SHALL 還原為 `""`
-
 ### Requirement: restaurant 表格 appleMaps 欄
 Restaurant 表格 SHALL 支援 `appleMaps` 欄（與 shop 表格一致），當 Apple query 與 Google query 不同時輸出。
 

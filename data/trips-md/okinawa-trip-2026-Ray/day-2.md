@@ -7,9 +7,7 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 ---
 
 ## Hotel: Super Hotel 沖縄・名護
-- url: https://www.superhoteljapan.com/s-hotels/nago/
 - checkout: 10:00
-- blog: https://blackcoffee00l.pixnet.net/blog/post/522773389
 - source: ai
 - details: 名護市宮里（名護中心地段）, 万座深海の湯（天然温泉）, 免費停車場, 含免費早餐
 - breakfast: true
@@ -17,11 +15,11 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 ### shopping: 飯店附近購物
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| AEON 名護店 | 超市 | 食品區 ~24:00 | 沖繩限定泡盛, 名護限定商品, UNIQLO 服飾（便宜）, 黑糖零食, 沖繩味噌 | https://ab716991.pixnet.net/blog/post/228763145 | 4 | イオン名護店 | 206 598 600*00 | ai |
-| Lawson 名護宮里店 | 超商 | 24 小時 | 沖繩限定冰淇淋, 飯糰便當, 泡麵零食, 飲料 | https://blackcoffee00l.pixnet.net/blog/post/522773389 | 3.5 | ローソン名護宮里店 | 206 598 371*00 | ai |
-| FRESH PLAZA UNION 名護店 | 超市 | 07:00~24:00 | 沖繩本地農產品（ゴーヤー、島野菜）, 沖繩限定飲料, 在地便當熟食, 沖繩手工泡麵 | https://tw.wamazing.com/media/article/a-832/ | 3.8 | フレッシュプラザユニオン名護店 \| フレッシュプラザユニオン 名護 | 206 598 200*00 | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| AEON 名護店 | 超市 | 食品區 ~24:00 | 沖繩限定泡盛, 名護限定商品, UNIQLO 服飾（便宜）, 黑糖零食, 沖繩味噌 | 4 | イオン名護店 | 206 598 600*00 | ai |
+| Lawson 名護宮里店 | 超商 | 24 小時 | 沖繩限定冰淇淋, 飯糰便當, 泡麵零食, 飲料 | 3.5 | ローソン名護宮里店 | 206 598 371*00 | ai |
+| FRESH PLAZA UNION 名護店 | 超市 | 07:00~24:00 | 沖繩本地農產品（ゴーヤー、島野菜）, 沖繩限定飲料, 在地便當熟食, 沖繩手工泡麵 | 3.8 | フレッシュプラザユニオン名護店 \| フレッシュプラザユニオン 名護 | 206 598 200*00 | ai |
 
 ### parking: 停車場
 - price: 免費（先到先得）
@@ -35,8 +33,6 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 ### 09:00-11:00 青之洞窟浮潛
 沖繩人氣 No.1 浮潛景點！陽光折射讓洞窟內海水呈現夢幻藍光，熱帶魚群環繞身旁
-- web: https://maedamisaki.jp/
-- blog: https://bobbyfun.tw/2024-01-11-2731/
 - maps: 真榮田岬 青の洞窟
 - mapcode: 206 062 685*77
 - rating: 4.4
@@ -50,11 +46,11 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 #### restaurants: 中文教練店家推薦
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | url |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 青潛 Best Dive Okinawa | 拉麵 | 08:00~17:00 | ~¥8,000/人（含船費＋拍照20張以上） | 自有停車場＋接駁車 | 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加 |  | 4.8 | Best Dive Okinawa 青之洞窟 \| Best Dive Okinawa |  | ai | https://www.bestdiveokinawa.com/ |
-| Natural Blue 自然之藍 | 燒肉 | 08:00~17:00 | ~¥5,500/人（未稅） | 僅收日幣現金｜6歲以上 | 台灣人中文教練，沖繩安全優良店認證，CP 值最高 |  | 4.8 | Natural Blue 青之洞窟 \| Natural Blue 沖縄 |  | ai | https://www.natural-blue.net/tw/ |
-| 黑潮潛水 Kuroshio Diving | 當地特色 | 08:00~17:00 | ~¥8,000/人（全包無隱藏費用） | 9歲以上 | 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯 |  | 4.7 | 黑潮潛水 青之洞窟 \| 黒潮潜水 沖縄 |  | ai | https://heichaodive.com/ |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | url |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 青潛 Best Dive Okinawa | 拉麵 | 08:00~17:00 | ~¥8,000/人（含船費＋拍照20張以上） | 自有停車場＋接駁車 | 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加 | 4.8 | Best Dive Okinawa 青之洞窟 \| Best Dive Okinawa |  | ai | https://www.bestdiveokinawa.com/ |
+| Natural Blue 自然之藍 | 燒肉 | 08:00~17:00 | ~¥5,500/人（未稅） | 僅收日幣現金｜6歲以上 | 台灣人中文教練，沖繩安全優良店認證，CP 值最高 | 4.8 | Natural Blue 青之洞窟 \| Natural Blue 沖縄 |  | ai | https://www.natural-blue.net/tw/ |
+| 黑潮潛水 Kuroshio Diving | 當地特色 | 08:00~17:00 | ~¥8,000/人（全包無隱藏費用） | 9歲以上 | 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯 | 4.7 | 黑潮潛水 青之洞窟 \| 黒潮潜水 沖縄 |  | ai | https://heichaodive.com/ |
 
 #### parking: 停車場
 - price: ¥100/次
@@ -63,8 +59,6 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 ### 11:15-11:45 萬座毛
 沖繩代表性景觀，象鼻形狀的珊瑚礁斷崖，可拍攝壯觀的海岸線
-- web: https://tw.blue-cave.org/manzamo/
-- blog: https://www.jathao.com/2024/02/okinawa-manzamo.html
 - maps: 万座毛
 - mapcode: 206 312 038*55
 - rating: 4.2
@@ -85,16 +79,14 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 #### restaurants: 午餐推薦三選一
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 焼肉げんか | 拉麵 | 午 11:30~15:00／夜 17:00~23:00（全年無休） | ¥4,000~5,000/人（含入場費） | 建議預約 | 原價制！入場 ¥2,200 後全餐以進貨價計算 | https://okinawa.letsgojp.com/archives/640986/ | 4.3 | 焼肉げんか 恩納店 \| 焼肉げんか 恩納 | 206 313 260*00 | ai |
-| 幸ちゃんそば | 燒肉 | 10:00~15:00 售完即止（週一休） | ¥700~900 | 不需訂位 | Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色） | https://chrysie.pixnet.net/blog/post/119628384 | 4.2 | 幸ちゃんそば 名護 | 206 598 600*00 | ai |
-| THE GARLIC SHRIMP | 當地特色 | 11:00~20:30（不固定休，建議出發前確認） | ¥1,450~2,100 | 不需訂位 | 粉紅小屋，6 種口味蝦蝦飯，半露天座位 | https://www.markting.com.tw/564/ | 4.1 | THE GARLIC SHRIMP 恩納 | 206 313 585*00 | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 焼肉げんか | 拉麵 | 午 11:30~15:00／夜 17:00~23:00（全年無休） | ¥4,000~5,000/人（含入場費） | 建議預約 | 原價制！入場 ¥2,200 後全餐以進貨價計算 | 4.3 | 焼肉げんか 恩納店 \| 焼肉げんか 恩納 | 206 313 260*00 | ai |
+| 幸ちゃんそば | 燒肉 | 10:00~15:00 售完即止（週一休） | ¥700~900 | 不需訂位 | Tabelog 3.49，名護 No.1 沖繩麵，售完即止（當地特色） | 4.2 | 幸ちゃんそば 名護 | 206 598 600*00 | ai |
+| THE GARLIC SHRIMP | 當地特色 | 11:00~20:30（不固定休，建議出發前確認） | ¥1,450~2,100 | 不需訂位 | 粉紅小屋，6 種口味蝦蝦飯，半露天座位 | 4.1 | THE GARLIC SHRIMP 恩納 | 206 313 585*00 | ai |
 
 ### 13:45-16:15 ブセナ海中公園
 沖繩本島唯一的海中展望塔！不用下水就能從水下觀賞熱帶魚群，搭配鯨型玻璃底船出海更精彩
-- web: https://www.busena-marinepark.com/chinese_t/index.html
-- blog: https://lailai-web.com/busena-marine-park/
 - maps: ブセナ海中公園
 - mapcode: 206 442 075*22
 - rating: 4.0
@@ -115,14 +107,12 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 ### 16:30 Check in Super Hotel 名護
 放好行李，享受飯店万座深海の湯溫泉
-- blog: https://blackcoffee00l.pixnet.net/blog/post/522773389
 - source: ai
 - maps: スーパーホテル沖縄・名護
 - mapcode: 206 598 283*00
 - rating: 4.2
 
 ### 17:00-18:00 飯店溫泉（万座深海の湯）
-- blog: https://blackcoffee00l.pixnet.net/blog/post/522773389
 - note: 天然温泉，疲勞盡消
 - source: ai
 - maps: スーパーホテル沖縄・名護
@@ -130,7 +120,6 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 ### 18:30-20:00 名護晚餐
 名護市區覓食，步行或短程車程可達
-- blog: https://tc.tabirai.net/sightseeing/article/okinawa-nago-dinner/
 - source: ai
 - maps: 名護市
 - rating: 4
@@ -138,8 +127,8 @@ weather: {"label":"恩納・名護","locations":[{"lat":26.3362,"lon":127.7636,"
 
 #### restaurants: 晚餐推薦三選一
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | reservationUrl |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋 はちれん | 拉麵 | 11:30~14:30, 18:00~22:00 | ¥800~ | 不需訂位 | 名護人氣拉麵 | https://tw.wamazing.com/media/article/a-832/ | 4.2 | 麺屋はちれん 名護 | 206 688 326*00 | ai |  |
-| 焼肉乃我那覇 名護店 | 燒肉 | 午 11:30~15:00／夜 17:30~22:30（週三公休） | ¥2,000~ | HotPepper 預約 | 沖繩品牌豬「あぐー豚」燒肉 | https://alfie073.pixnet.net/blog/post/358808330 | 4.1 | 焼肉乃我那覇 名護店 | 206 688 450*00 | ai | https://www.hotpepper.jp/strJ004248399/ |
-| レストラン ふりっぱー | 當地特色 | 11:00~21:00（週三公休） | ¥2,700~ | 不需訂位 | 1971 年創業名護老牌牛排！ヒレステーキ | https://furikake.okinawa/gourmet/flipper-steak/ | 4.2 | レストランふりっぱー 名護 | 206 717 028*00 | ai |  |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | reservationUrl |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 麵屋 はちれん | 拉麵 | 11:30~14:30, 18:00~22:00 | ¥800~ | 不需訂位 | 名護人氣拉麵 | 4.2 | 麺屋はちれん 名護 | 206 688 326*00 | ai |  |
+| 焼肉乃我那覇 名護店 | 燒肉 | 午 11:30~15:00／夜 17:30~22:30（週三公休） | ¥2,000~ | HotPepper 預約 | 沖繩品牌豬「あぐー豚」燒肉 | 4.1 | 焼肉乃我那覇 名護店 | 206 688 450*00 | ai | https://www.hotpepper.jp/strJ004248399/ |
+| レストラン ふりっぱー | 當地特色 | 11:00~21:00（週三公休） | ¥2,700~ | 不需訂位 | 1971 年創業名護老牌牛排！ヒレステーキ | 4.2 | レストランふりっぱー 名護 | 206 717 028*00 | ai |  |

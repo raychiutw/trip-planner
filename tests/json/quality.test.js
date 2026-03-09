@@ -309,36 +309,6 @@ slugs.forEach((slug) => {
       });
     });
 
-    // --- R4 景點 blogUrl ---
-
-    it('R4: non-travel/non-undecided events have blogUrl field', () => {
-      data.days.forEach((day, i) => {
-        const timeline = day.content?.timeline || [];
-        timeline.forEach((ev, j) => {
-          if (ev.travel) return;
-          if ((ev.title || '').includes('餐廳未定')) return;
-          expect(
-            ev.hasOwnProperty('blogUrl'),
-            `days[${i}].timeline[${j}] "${ev.title}" missing blogUrl field`
-          ).toBe(true);
-        });
-      });
-    });
-
-    // --- R5 飯店 blogUrl ---
-
-    it('R5: non-home hotels have blogUrl field', () => {
-      data.days.forEach((day, i) => {
-        const hotel = day.content?.hotel;
-        if (!hotel || hotel.name === '家') return;
-        if (hotel.name.startsWith('（')) return;
-        expect(
-          hotel.hasOwnProperty('blogUrl'),
-          `days[${i}].hotel "${hotel.name}" missing blogUrl field`
-        ).toBe(true);
-      });
-    });
-
     // --- R7 飯店 shopping infoBox ---
 
     it('R7: non-home hotels have shopping infoBox in hotel.infoBoxes', () => {

@@ -53,7 +53,7 @@
 - **THEN** SHALL 退回每日皆須午餐 + 晚餐的傳統檢查
 
 ### Requirement: R3 餐廳推薦品質
-每個 `infoBoxes[type=restaurants]` 的 `restaurants` 陣列 SHALL 補到 3 家。每家餐廳 SHALL 包含 `hours`（營業時間）、`reservation`（訂位資訊）、`blogUrl`（繁中推薦網誌）。推薦餐廳的營業時間 MUST 與用餐時間吻合。選擇依據為行程當時地點附近、評價高的餐廳。餐廳的料理類別 SHALL 對齊 `meta.foodPreferences` 的優先順序排列。
+每個 `infoBoxes[type=restaurants]` 的 `restaurants` 陣列 SHALL 補到 3 家。每家餐廳 SHALL 包含 `hours`（營業時間）、`reservation`（訂位資訊）。推薦餐廳的營業時間 MUST 與用餐時間吻合。選擇依據為行程當時地點附近、評價高的餐廳。餐廳的料理類別 SHALL 對齊 `meta.foodPreferences` 的優先順序排列。
 
 #### Scenario: 餐廳數量規則
 - **WHEN** 某 restaurants infoBox 的 `restaurants` 陣列
@@ -71,64 +71,25 @@
 
 #### Scenario: 必填欄位完整
 - **WHEN** 新增任一餐廳
-- **THEN** SHALL 填寫 `hours`、`reservation`（需訂位/不需訂位/電話等）、`blogUrl`
+- **THEN** SHALL 填寫 `hours`、`reservation`（需訂位/不需訂位/電話等）
 
 ### Requirement: R4 景點品質
-景點 timeline entry 的 `titleUrl` SHALL 放官網連結（找不到官網則不放）。景點 timeline entry SHALL 新增 `blogUrl` 欄位放繁中推薦網誌。景點 `infoBoxes` SHALL 包含營業時間資訊。
-
-#### Scenario: 景點 titleUrl 為官網
-- **WHEN** 景點有官方網站
-- **THEN** `titleUrl` SHALL 為該景點官方網站 URL
-
-#### Scenario: 景點 blogUrl 為繁中網誌
-- **WHEN** 景點 timeline entry 產生或補齊
-- **THEN** SHALL 搜尋 Google「{景點名} {地區} 推薦」，將第一篇繁體中文文章 URL 填入 `blogUrl`
+景點 `infoBoxes` SHALL 包含營業時間資訊，且與到訪時間吻合。
 
 #### Scenario: 景點含營業時間
 - **WHEN** 景點有營業時間限制
 - **THEN** `infoBoxes` 中 SHALL 包含營業時間項目，且 MUST 確認與行程安排的到訪時間吻合
-
-#### Scenario: 景點 blogUrl 必須存在
-- **WHEN** timeline event 為實體地點（非 travel、非「餐廳未定」）
-- **THEN** SHALL 包含 `blogUrl` 欄位（字串，允許空字串 `""`）
-- **AND** 缺失時 SHALL 以紅燈（fail）標示
-
-#### Scenario: 景點 blogUrl 查無結果
-- **WHEN** Google 搜尋「{景點名} {地區} 推薦」無適合的繁體中文文章
-- **THEN** `blogUrl` SHALL 為空字串 `""`
-
-### Requirement: R5 飯店品質
-Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
-
-#### Scenario: 飯店 blogUrl
-- **WHEN** 行程包含飯店
-- **THEN** hotel 物件 SHALL 含 `blogUrl`，值為 Google「{飯店名} 推薦」的第一篇繁體中文文章 URL
-
-#### Scenario: 飯店 blogUrl 查無結果
-- **WHEN** Google 搜尋「{飯店名} 推薦」無適合的繁體中文文章
-- **THEN** `blogUrl` SHALL 為空字串 `""`
-
-### Requirement: R6 搜尋方式
-所有 blogUrl 的搜尋 SHALL 以 Google「{名稱} {地區} 推薦」為關鍵字，取第一篇繁體中文文章。優先選擇 pixnet、mimigo、kafu 等常見台灣旅遊部落格。
-
-#### Scenario: 搜尋繁中網誌
-- **WHEN** 需填寫任一 blogUrl
-- **THEN** SHALL 以 Google 搜尋「{名稱} {地區} 推薦」，從結果中選取第一篇繁體中文文章 URL
-
-#### Scenario: 搜尋無結果
-- **WHEN** Google 搜尋無繁體中文文章結果或結果明顯不相關
-- **THEN** `blogUrl` SHALL 設為空字串 `""`，不放不相關連結
 
 ### Requirement: R7 購物景點推薦
 飯店附近有超市、唐吉軻德、超商等購物點時，SHALL 以 `infoBox type=shopping` 結構化顯示。停車場資訊 SHALL 以 `parking` infoBox 寫入 `hotel.infoBoxes[]`。獨立購物行程（來客夢/iias/Outlet/PARCO CITY/購物商圈）同樣 SHALL 附 shopping infoBox。景點附近步行 5~10 分鐘內有超市或唐吉軻德時，SHALL 在該景點 timeline entry 加 shopping infoBox。每個購物景點 SHALL 包含 `mustBuy` 必買推薦。渲染 SHALL 復用既有 `.restaurant-choice` CSS，不新增 CSS。所有 shop item 不含 `titleUrl`。不再使用 `souvenir` infoBox type，統一為 `shopping`。
 
 #### Scenario: 飯店附近購物 infoBox
 - **WHEN** 飯店附近有超市、唐吉軻德、超商或其他購物點
-- **THEN** 該飯店的 timeline entry SHALL 包含 `infoBox type=shopping`，每個 shop 含 `category`、`name`、`hours`、`mustBuy[]`（至少 3 項）、`blogUrl`
+- **THEN** 該飯店的 timeline entry SHALL 包含 `infoBox type=shopping`，每個 shop 含 `category`、`name`、`hours`、`mustBuy[]`（至少 3 項）
 
 #### Scenario: 飯店附近超商
 - **WHEN** 飯店步行 5 分鐘內有便利商店（7-11、FamilyMart、Lawson 等）
-- **THEN** SHALL 以 shop entry 記錄，category 為「超商」，含 `mustBuy`（當地限定商品推薦）和 `blogUrl`
+- **THEN** SHALL 以 shop entry 記錄，category 為「超商」，含 `mustBuy`（當地限定商品推薦）
 
 #### Scenario: 自駕飯店停車場
 - **WHEN** 行程為自駕且飯店有停車場
@@ -137,7 +98,7 @@ Hotel 物件 SHALL 新增 `blogUrl` 欄位，放繁中推薦網誌連結。
 
 #### Scenario: 獨立購物行程 infoBox
 - **WHEN** timeline 中有購物類景點（來客夢、iias、Outlet、PARCO CITY、購物商圈等）
-- **THEN** 該 timeline entry SHALL 包含 `infoBox type=shopping`，每個 shop 含 `category`、`name`、`hours`、`mustBuy[]`（至少 3 項）、`blogUrl`
+- **THEN** 該 timeline entry SHALL 包含 `infoBox type=shopping`，每個 shop 含 `category`、`name`、`hours`、`mustBuy[]`（至少 3 項）
 
 #### Scenario: 景點附近超市/唐吉軻德
 - **WHEN** 景點步行 5~10 分鐘內有超市或唐吉軻德

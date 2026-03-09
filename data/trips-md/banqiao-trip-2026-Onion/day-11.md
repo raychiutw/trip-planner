@@ -15,31 +15,26 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 
 ### 10:00-12:00 大安圳步道
 樹林沿水圳修築的休閒步道，平坦好走，沿途自然生態豐富
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109621
-- blog: https://wish-may-slow.blogspot.com/2023/01/daanzhen.html
 - maps: 大安圳步道 | 樹林大安圳步道
 - rating: 4.1
 - travel: car 開車 約20分鐘
 - note: 全程平坦適合各年齡層，沿途有遮蔭不怕曬
 
 ### 12:00-13:00 午餐
-- blog: https://plumpyblog.com/shulinfoodie/
 - source: ai
 - maps: 樹林中山路商圈
 - rating: 4
 
 #### restaurants: 午餐推薦（樹林周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 鬼匠拉麵 樹林店 | 日式拉麵 | 11:00~21:00 | NT$180~300 | 不需訂位 | 樹林人氣豚骨拉麵，鬼匠極究大盛系列CP值超高 | https://ihungrybear.com/restaurants/mL8XbLm/ | 4.9 | 鬼匠拉麵 樹林店 |  | ai |
-| Marcoo手工義大利麵 | 義大利麵 | 12:00~14:00 / 18:00~21:00 | NT$300~500 | 需預約 | 樹林巷弄隱藏美食，老闆堅持全手工製麵，每季換菜單 | https://plumpyblog.com/marcoo/ | 4.5 | Marcoo手工義大利麵 |  | ai |
-| 樹林武林街滷肉飯 | 特色小吃 | 06:00~14:00 | NT$30~60 | 不需訂位 | 樹林在地老店，古早味滷肉飯油亮鹹香 | https://bigmouthblog.tw/shulin-braised-rice/ | 4 | 樹林武林街滷肉飯 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 鬼匠拉麵 樹林店 | 日式拉麵 | 11:00~21:00 | NT$180~300 | 不需訂位 | 樹林人氣豚骨拉麵，鬼匠極究大盛系列CP值超高 | 4.9 | 鬼匠拉麵 樹林店 |  | ai |
+| Marcoo手工義大利麵 | 義大利麵 | 12:00~14:00 / 18:00~21:00 | NT$300~500 | 需預約 | 樹林巷弄隱藏美食，老闆堅持全手工製麵，每季換菜單 | 4.5 | Marcoo手工義大利麵 |  | ai |
+| 樹林武林街滷肉飯 | 特色小吃 | 06:00~14:00 | NT$30~60 | 不需訂位 | 樹林在地老店，古早味滷肉飯油亮鹹香 | 4 | 樹林武林街滷肉飯 |  | ai |
 
 ### 17:00-19:30 樹林興仁花園夜市
 新北最大花園夜市，週三五六日營業，占地廣大的露天夜市
-- web: https://singren168.com/
-- blog: https://plumpyblog.com/singren-night-market/
 - maps: 樹林興仁花園夜市
 - rating: 4
 - travel: car 開車 約15分鐘
@@ -47,8 +42,8 @@ weather: {"label":"土城・樹林","locations":[{"lat":25.0146,"lon":121.4672,"
 
 #### shopping: 興仁花園夜市購物推薦
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| 樹林興仁花園夜市 | 伴手禮 | 17:00~00:00（三五六日） | 遊戲區獎品, 服飾攤位, 現炸雞排與臭豆腐 | https://plumpyblog.com/singren-night-market-shopping/ | 4 |  |  | ai |
-| 日月光廣場 土城店 | 購物中心 | 11:00~22:00 | 平價生活百貨, 餐廳美食, 超商聯名限定商品 | https://kenalice.tw/aurora-plaza-tucheng/ | 4.1 |  |  | ai |
-| 全聯 樹林中山店 | 超市 | 08:00~23:00 | 在地零食, 生鮮食材, PX自有品牌熟食便當 | https://appletrees.tw/pxmart-shulin/ | 3.8 |  |  | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| 樹林興仁花園夜市 | 伴手禮 | 17:00~00:00（三五六日） | 遊戲區獎品, 服飾攤位, 現炸雞排與臭豆腐 | 4 |  |  | ai |
+| 日月光廣場 土城店 | 購物中心 | 11:00~22:00 | 平價生活百貨, 餐廳美食, 超商聯名限定商品 | 4.1 |  |  | ai |
+| 全聯 樹林中山店 | 超市 | 08:00~23:00 | 在地零食, 生鮮食材, PX自有品牌熟食便當 | 3.8 |  |  | ai |

@@ -15,46 +15,40 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 
 ### 10:00-12:00 新月橋
 橫跨大漢溪的人行景觀橋，連接板橋與新莊，夜間有LED光雕
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109439
-- blog: https://journey.tw/crescent-bridge/
 - maps: 新月橋
 - rating: 4.4
 - travel: car 開車 約15分鐘
 - note: 傍晚來看夕陽和LED光雕最美，橋上禁止騎自行車
 
 ### 12:00-13:00 午餐
-- blog: https://www.klook.com/zh-TW/blog/Xinzhuang-foods-recommend/
 - source: ai
 - maps: 新莊中正路商圈
 - rating: 4.1
 
 #### restaurants: 午餐推薦（新莊周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 博多一幸舎 新莊店 | 日式拉麵 | 11:00~22:00 | NT$250~380 | 不需訂位 | 福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵 | https://bigmouthblog.tw/ikkousha-xinzhuang/ | 4.1 | 博多一幸舎 新莊店 |  | ai |
-| 歐義式 新莊店 | 義大利麵 | 11:00~21:30 | NT$220~380 | 不需訂位 | 新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎 | https://bigmouthblog.tw/ouyi-pasta-xinzhuang/ | 3.9 | 歐義式 新莊店 |  | ai |
-| 阿瑞官粿店 | 特色小吃 | 06:00~18:00 | NT$20~60 | 不需訂位 | 新莊老街百年粿店，芋粿巧、草仔粿手工現做 | https://bigmouthblog.tw/aruiguan-cake/ | 4.3 | 阿瑞官粿店 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 博多一幸舎 新莊店 | 日式拉麵 | 11:00~22:00 | NT$250~380 | 不需訂位 | 福岡豚骨拉麵名店，濃厚博多風白湯，麵條細直可免費加麵 | 4.1 | 博多一幸舎 新莊店 |  | ai |
+| 歐義式 新莊店 | 義大利麵 | 11:00~21:30 | NT$220~380 | 不需訂位 | 新莊義大利麵專門店，現炒義大利麵配自製醬汁，奶油培根與青醬海鮮最受歡迎 | 3.9 | 歐義式 新莊店 |  | ai |
+| 阿瑞官粿店 | 特色小吃 | 06:00~18:00 | NT$20~60 | 不需訂位 | 新莊老街百年粿店，芋粿巧、草仔粿手工現做 | 4.3 | 阿瑞官粿店 |  | ai |
 
 ### 14:00-16:30 大都會公園
 二重疏洪道上的大型都會公園，遼闊草地、自行車道、棒壘球場
-- web: https://hrcmntmp.ntpc.gov.tw/
-- blog: https://may1215may.pixnet.net/blog/post/335218453
 - maps: 新北大都會公園
 - rating: 4.6
 - travel: car 開車 約10分鐘
 - note: 園區很大建議租自行車遊覽，有大型兒童遊戲場
 
 ### 18:00-19:30 晚餐
-- blog: https://www.welcometw.com/%E4%B8%89%E9%87%8D%E7%BE%8E%E9%A3%9F/
 - source: ai
 - maps: 新莊中正路商圈
 - rating: 4.1
 
 #### restaurants: 晚餐推薦（三重/回板橋路上）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋壹慶 三重店 | 日式拉麵 | 11:00~21:00 | NT$220~320 | 不需訂位 | 三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁 | https://kenalice.tw/menya-ikukei-sanchong/ | 4.2 | 麵屋壹慶 三重店 |  | ai |
-| 小義大利莊園 三重店 | 義大利麵 | 11:30~21:00 | NT$250~420 | 建議訂位 | 三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁 | https://tisshuang.com/little-italy-sanchong/ | 4 | 小義大利莊園 三重店 |  | ai |
-| 三重鵝肉李 | 特色小吃 | 11:00~21:00 | NT$100~300 | 不需訂位 | 三重在地鵝肉名店，鵝肉切盤鮮嫩，鵝肉湯麵經典 | https://supertaste.tvbs.com.tw/food/339812 | 4.1 | 三重鵝肉李 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 麵屋壹慶 三重店 | 日式拉麵 | 11:00~21:00 | NT$220~320 | 不需訂位 | 三重在地日式拉麵，濃郁豚骨湯頭搭配手工麵條，叉燒厚切多汁 | 4.2 | 麵屋壹慶 三重店 |  | ai |
+| 小義大利莊園 三重店 | 義大利麵 | 11:30~21:00 | NT$250~420 | 建議訂位 | 三重義式餐廳，窯烤披薩與義大利麵雙主打，義式燉飯香氣濃郁 | 4 | 小義大利莊園 三重店 |  | ai |
+| 三重鵝肉李 | 特色小吃 | 11:00~21:00 | NT$100~300 | 不需訂位 | 三重在地鵝肉名店，鵝肉切盤鮮嫩，鵝肉湯麵經典 | 4.1 | 三重鵝肉李 |  | ai |

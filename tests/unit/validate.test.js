@@ -140,7 +140,7 @@ describe('validateTripData — naverQuery', () => {
 describe('validateTripData — warnings', () => {
   it('warns on unsafe URL (javascript:)', () => {
     const d = validTrip();
-    d.days[0].content = { timeline: [{ titleUrl: 'javascript:alert(1)' }] };
+    d.days[0].content = { timeline: [{ reservationUrl: 'javascript:alert(1)' }] };
     const r = validateTripData(d);
     expect(r.errors).toEqual([]);
     expect(r.warnings.some(w => w.includes('不安全的 URL'))).toBe(true);
@@ -162,7 +162,7 @@ describe('validateTripData — warnings', () => {
 
   it('allows tel: URLs without warning', () => {
     const d = validTrip();
-    d.days[0].content = { timeline: [{ url: 'tel:+81-98-123-4567' }] };
+    d.days[0].content = { timeline: [{ reservationUrl: 'tel:+81-98-123-4567' }] };
     const r = validateTripData(d);
     expect(r.warnings.filter(w => w.includes('不安全的 URL'))).toEqual([]);
   });
@@ -204,19 +204,12 @@ describe('validateTripData — warnings', () => {
 
   it('escapes HTML in warning val (XSS prevention)', () => {
     const d = validTrip();
-    d.days[0].content = { timeline: [{ titleUrl: '<script>alert(1)</script>' }] };
+    d.days[0].content = { timeline: [{ reservationUrl: '<script>alert(1)</script>' }] };
     const r = validateTripData(d);
     const urlWarning = r.warnings.find(w => w.includes('不安全的 URL'));
     expect(urlWarning).toBeDefined();
     expect(urlWarning).toContain('&lt;script&gt;');
     expect(urlWarning).not.toContain('<script>');
-  });
-
-  it('warns on unsafe blogUrl', () => {
-    const d = validTrip();
-    d.days[0].content = { timeline: [{ blogUrl: 'ftp://evil.com/blog' }] };
-    const r = validateTripData(d);
-    expect(r.warnings.some(w => w.includes('不安全的 URL') && w.includes('blogUrl'))).toBe(true);
   });
 
   it('warns on unsafe reservationUrl', () => {

@@ -7,9 +7,7 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 ---
 
 ## Hotel: Super Hotel 沖縄・名護
-- url: https://www.superhoteljapan.com/s-hotels/nago/
 - checkout: 10:00
-- blog: https://blackcoffee00l.pixnet.net/blog/post/522773389
 - source: ai
 - details: 名護市宮里（名護中心地段）, 万座深海の湯（天然温泉）, 免費停車場, 含免費早餐
 - breakfast: true
@@ -17,11 +15,11 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 ### shopping: 飯店附近購物
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| AEON 名護店 | 超市 | 食品區 ~24:00 | 沖繩限定泡盛, 名護限定商品, UNIQLO 服飾（便宜）, 黑糖零食, 沖繩味噌 | https://ab716991.pixnet.net/blog/post/228763145 | 4 | イオン名護店 | 206 598 600*00 | ai |
-| Lawson 名護宮里店 | 超商 | 24 小時 | 沖繩限定冰淇淋, 飯糰便當, 泡麵零食, 飲料 | https://blackcoffee00l.pixnet.net/blog/post/522773389 | 3.5 | ローソン名護宮里店 | 206 598 371*00 | ai |
-| FRESH PLAZA UNION 名護店 | 超市 | 07:00~24:00 | 沖繩本地農產品（ゴーヤー、島野菜）, 沖繩限定飲料, 在地便當熟食, 沖繩手工泡麵 | https://tw.wamazing.com/media/article/a-832/ | 3.8 | フレッシュプラザユニオン名護店 \| フレッシュプラザユニオン 名護 | 206 598 200*00 | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| AEON 名護店 | 超市 | 食品區 ~24:00 | 沖繩限定泡盛, 名護限定商品, UNIQLO 服飾（便宜）, 黑糖零食, 沖繩味噌 | 4 | イオン名護店 | 206 598 600*00 | ai |
+| Lawson 名護宮里店 | 超商 | 24 小時 | 沖繩限定冰淇淋, 飯糰便當, 泡麵零食, 飲料 | 3.5 | ローソン名護宮里店 | 206 598 371*00 | ai |
+| FRESH PLAZA UNION 名護店 | 超市 | 07:00~24:00 | 沖繩本地農產品（ゴーヤー、島野菜）, 沖繩限定飲料, 在地便當熟食, 沖繩手工泡麵 | 3.8 | フレッシュプラザユニオン名護店 \| フレッシュプラザユニオン 名護 | 206 598 200*00 | ai |
 
 ### parking: 停車場
 - price: 免費（先到先得）
@@ -35,7 +33,6 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 ### 08:40-09:10 道之驛許田
 沖繩人氣最高休息站！必買沙翁（サーターアンダギー）、黑糖、在地農產。還有折扣水族館門票
-- blog: https://tisshuang.com/blog/post/yanbaru-b
 - maps: 道の駅許田
 - mapcode: 206 476 710*00
 - rating: 4
@@ -49,8 +46,6 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 ### 09:40-12:40 美麗海水族館
 世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。11:00 海豚秀必看
-- web: https://churaumi.okinawa/tc/
-- blog: https://okinawa.letsgojp.com/archives/17071/
 - source: ai
 - maps: 沖縄美ら海水族館
 - mapcode: 553 075 797*00
@@ -69,16 +64,14 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 #### restaurants: 午餐推薦三選一
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | reservationUrl |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| きしもと食堂 | 拉麵 | 11:00~17:00（週三公休） | ¥600~ | 不需訂位 | 明治 38 年創業！傳奇沖繩麵 | https://www.huihuifun.com/kishimoto-cafeteria/ | 4.1 | きしもと食堂 本部町 | 206 857 712*00 | ai |  |
-| 焼肉もとぶ牧場 本部店 | 燒肉 | 午 11:30~15:00／夜 17:00~22:00 | ¥1,500~ | TableCheck 預約 | 沖繩品牌「もとぶ牛」直營燒肉 | https://carollin.tw/motobu-farm/ | 4.3 | 焼肉もとぶ牧場 本部店 | 206 795 582*00 | ai | https://www.tablecheck.com/en/shops/motobu-farm/reserve |
-| 海人食堂 | 當地特色 | 11:00~15:30 | ¥1,000~ | 不需訂位 | 本部漁港直營食堂，新鮮生魚片 | https://hanblog.tw/kaihoumaru2/ | 4 | 海人食堂 本部漁港 | 206 857 471*00 | ai |  |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | reservationUrl |
+|---|---|---|---|---|---|---|---|---|---|---|
+| きしもと食堂 | 拉麵 | 11:00~17:00（週三公休） | ¥600~ | 不需訂位 | 明治 38 年創業！傳奇沖繩麵 | 4.1 | きしもと食堂 本部町 | 206 857 712*00 | ai |  |
+| 焼肉もとぶ牧場 本部店 | 燒肉 | 午 11:30~15:00／夜 17:00~22:00 | ¥1,500~ | TableCheck 預約 | 沖繩品牌「もとぶ牛」直營燒肉 | 4.3 | 焼肉もとぶ牧場 本部店 | 206 795 582*00 | ai | https://www.tablecheck.com/en/shops/motobu-farm/reserve |
+| 海人食堂 | 當地特色 | 11:00~15:30 | ¥1,000~ | 不需訂位 | 本部漁港直營食堂，新鮮生魚片 | 4 | 海人食堂 本部漁港 | 206 857 471*00 | ai |  |
 
 ### 14:10-17:10 瀨底海灘戲水
 沖繩本島數一數二美的天然海灘！白沙細緻，海水透明度極高，午後戲水最舒服
-- web: https://www.jathao.com/2024/11/okinawa-sesoko-island.html
-- blog: https://lailai-web.com/sesoko-island/
 - maps: 瀬底ビーチ
 - mapcode: 206 822 241*00
 - rating: 4.3
@@ -92,7 +85,6 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 ### 17:30 回 Super Hotel 名護
 玩水後回飯店沖洗休息，泡溫泉恢復體力
-- blog: https://blackcoffee00l.pixnet.net/blog/post/522773389
 - source: ai
 - maps: スーパーホテル沖縄・名護
 - mapcode: 206 598 283*00
@@ -101,7 +93,6 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 ### 18:30-20:00 名護晚餐
 名護市區覓食，與 D2 不重複的餐廳選擇
-- blog: https://tc.tabirai.net/sightseeing/article/okinawa-nago-dinner/
 - source: ai
 - maps: 名護市
 - rating: 4
@@ -109,8 +100,8 @@ weather: {"label":"本部・瀨底","locations":[{"lat":26.5916,"lon":127.9772,"
 
 #### restaurants: 晚餐推薦三選一
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | reservationUrl |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| ラーメン暖暮 名護店 | 拉麵 | 10:00~24:00（無休） | ¥850~ | 不需訂位 | 九州豚骨拉麵，曾擊敗一蘭奪冠 | https://g2m.tw/danbo-ramen/ | 4 | ラーメン暖暮 名護店 | 206 598 371*07 | ai |  |
-| 焼肉五苑 名護店 | 燒肉 | 平日 17:00~22:30／假日 16:00~22:30 | ¥2,530~/人 | 官網預約 | 吃到飽不限時間，55~115 道可選 | https://flyblog.cc/post-48489393/ | 3.8 | 焼肉五苑 名護店 |  | ai | https://www.y-goen.com/webreserve_shop |
-| 美ら花 別邸 | 當地特色 | 17:00~22:00（週三休） | ¥1,000~2,999 | HotPepper 預約 | Tabelog 3.47，名護最高分沖繩料理 | https://aileen1596.pixnet.net/blog/post/48001890 | 4 | 美ら花 別邸 名護 | 206 444 122*78 | ai | https://www.hotpepper.jp/strJ000597095/ |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | reservationUrl |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ラーメン暖暮 名護店 | 拉麵 | 10:00~24:00（無休） | ¥850~ | 不需訂位 | 九州豚骨拉麵，曾擊敗一蘭奪冠 | 4 | ラーメン暖暮 名護店 | 206 598 371*07 | ai |  |
+| 焼肉五苑 名護店 | 燒肉 | 平日 17:00~22:30／假日 16:00~22:30 | ¥2,530~/人 | 官網預約 | 吃到飽不限時間，55~115 道可選 | 3.8 | 焼肉五苑 名護店 |  | ai | https://www.y-goen.com/webreserve_shop |
+| 美ら花 別邸 | 當地特色 | 17:00~22:00（週三休） | ¥1,000~2,999 | HotPepper 預約 | Tabelog 3.47，名護最高分沖繩料理 | 4 | 美ら花 別邸 名護 | 206 444 122*78 | ai | https://www.hotpepper.jp/strJ000597095/ |

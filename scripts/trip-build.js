@@ -420,13 +420,9 @@ function parseHotel(heading, lines) {
       currentInfoBox = { heading: line, lines: [] };
     } else if (currentInfoBox) {
       currentInfoBox.lines.push(line);
-    } else if (line.startsWith('- url: ')) {
-      hotel.url = line.substring(7).trim();
     } else if (line.startsWith('- checkout: ')) {
       hotel.checkout = line.substring(12).trim();
       hasCheckout = true;
-    } else if (line.startsWith('- blog: ')) {
-      hotel.blogUrl = line.substring(8).trim();
     } else if (line.startsWith('- rating: ')) {
       hotel.googleRating = parseNumOrStr(line.substring(10).trim());
     } else if (line.startsWith('- source: ')) {
@@ -514,10 +510,6 @@ function buildEvent(raw) {
       currentInfoBox = { heading: line, lines: [] };
     } else if (currentInfoBox) {
       currentInfoBox.lines.push(line);
-    } else if (line.startsWith('- web: ')) {
-      ev.titleUrl = line.substring(7).trim();
-    } else if (line.startsWith('- blog: ')) {
-      ev.blogUrl = line.substring(8).trim();
     } else if (line.startsWith('- note: ')) {
       ev.note = line.substring(8).trim();
     } else if (line.startsWith('- source: ')) {
@@ -623,14 +615,12 @@ function parseRestaurantInfoBox(title, lines) {
     }
     if (r.description) rest.description = r.description;
     if (r.price) rest.price = r.price;
-    rest.blogUrl = r.blog || '';
     if (r.rating) rest.googleRating = parseNumOrStr(r.rating);
     if (r.maps) {
       rest.location = buildLocationFromMaps(r.maps, r.mapcode || null, r.appleMaps || null, null, r.naver || null);
     }
     rest.note = '';
     if (r.reservationUrl) rest.reservationUrl = r.reservationUrl;
-    if (r.url) rest.url = r.url;
     rest.source = r.source || '';
     return rest;
   });
@@ -650,7 +640,6 @@ function parseShoppingInfoBox(title, lines) {
     if (r.mustBuy) {
       shop.mustBuy = r.mustBuy.split(', ').map(function(s) { return s.trim(); });
     }
-    shop.blogUrl = r.blog || '';
     if (r.maps) {
       shop.location = buildLocationFromMaps(r.maps, r.mapcode || null, r.appleMaps || null, null, r.naver || null);
     }

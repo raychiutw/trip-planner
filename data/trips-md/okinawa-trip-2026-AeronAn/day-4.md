@@ -7,9 +7,7 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 ---
 
 ## Hotel: ダイワロイネットホテル那覇国際通り
-- url: https://www.daiwaroynet.jp/naha-kokusaidori/
 - checkout: 11:00
-- blog: https://yuziblog.pixnet.net/blog/posts/16017102822
 - rating: 4.2
 - source: ai
 - details: 那覇市牧志1-1-2, 牧志站步行1分鐘
@@ -18,24 +16,22 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 ### shopping: 飯店附近購物
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| FamilyMart 國際通り入口店 | 超商 | 24小時 | 沖繩限定飯糰（豬肉蛋）, 沖繩限定冰淇淋, 便當・輕食 | https://furikake.okinawa/other/okinawa-familymart/ | 3.7 |  |  | ai |
-| サンエー那霸メインプレイス | 超市 | 09:00~22:00 | 沖繩本地豬肉（アグー豚）, 島豆腐・海葡萄, 泡盛・Orion 啤酒 | https://nikitarh.pixnet.net/blog/post/5673665 | 4.1 |  |  | ai |
-| 唐吉軻德 國際通店 | 唐吉軻德 | 24小時 | 沖繩限定紫芋 KitKat・紅芋塔, EVE 止痛藥・合利他命, 安耐曬防曬乳・美妝 | https://linshibi.com/?p=16331 | 4.2 |  |  | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| FamilyMart 國際通り入口店 | 超商 | 24小時 | 沖繩限定飯糰（豬肉蛋）, 沖繩限定冰淇淋, 便當・輕食 | 3.7 |  |  | ai |
+| サンエー那霸メインプレイス | 超市 | 09:00~22:00 | 沖繩本地豬肉（アグー豚）, 島豆腐・海葡萄, 泡盛・Orion 啤酒 | 4.1 |  |  | ai |
+| 唐吉軻德 國際通店 | 唐吉軻德 | 24小時 | 沖繩限定紫芋 KitKat・紅芋塔, EVE 止痛藥・合利他命, 安耐曬防曬乳・美妝 | 4.2 |  |  | ai |
 
 ## Timeline
 
 ### 08:30-09:45 出發前往中部
 搭 28 番或 29 番巴士前往北谷美國村
-- blog: 
 - maps: 那霸巴士總站 | 那覇バスターミナル
 - rating: 3.5
 - travel: bus 28 番巴士至「美浜アメリカンビレッジ入口」約55分鐘
 
 ### 09:45-12:00 美國村（北谷）
 充滿美式風情的商圈，彩色建築、摩天輪、海濱步道。逛街拍照看海一次滿足
-- blog: https://www.funtime.com.tw/blog/funtime/american-village-in-okinawa
 - source: ai
 - maps: 美國村（北谷） | 美浜アメリカンビレッジ
 - rating: 4
@@ -43,7 +39,6 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 ### 12:00-13:30 午餐
 美國村周邊午餐
-- blog: 
 - maps: 美國村（北谷） | 美浜アメリカンビレッジ
 - rating: 4
 - note: 美國村內餐廳選擇多，平日午餐較不用排隊
@@ -51,15 +46,14 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 #### restaurants: 午餐推薦
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 海人食堂 | 生魚片 | 11:00~15:00（售完為止） | ¥800~¥1,500 | 免預約 | 北谷漁港直營海鮮食堂，刺身定食・海鮮丼，漁師直送 | https://shin.tw/okinawa-kaihomaru/ | 4 | 海人食堂 北谷 |  | ai |
-| 燒肉きんぐ 北谷店 | 燒肉 | 11:30~23:00 | ¥3,278~ | 可線上預約 | 燒肉吃到飽 ¥3,278 起，食べ放題含和牛 | https://mimihan.tw/yakiniku-king/ | 4 | 焼肉きんぐ 北谷店 |  | ai |
-| 浜屋そば | 地方特色 | 10:00~20:00 | ¥700~¥1,000 | 免預約 | 北谷人氣沖繩そば老店，軟骨排骨そば・三層肉そば | https://nanai.tw/hamaya-soba-okinawa/ | 4 | 浜屋そば 北谷 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 海人食堂 | 生魚片 | 11:00~15:00（售完為止） | ¥800~¥1,500 | 免預約 | 北谷漁港直營海鮮食堂，刺身定食・海鮮丼，漁師直送 | 4 | 海人食堂 北谷 |  | ai |
+| 燒肉きんぐ 北谷店 | 燒肉 | 11:30~23:00 | ¥3,278~ | 可線上預約 | 燒肉吃到飽 ¥3,278 起，食べ放題含和牛 | 4 | 焼肉きんぐ 北谷店 |  | ai |
+| 浜屋そば | 地方特色 | 10:00~20:00 | ¥700~¥1,000 | 免預約 | 北谷人氣沖繩そば老店，軟骨排骨そば・三層肉そば | 4 | 浜屋そば 北谷 |  | ai |
 
 ### 13:30-14:45 殘波岬燈台
 高30公尺白色燈塔，可登頂俯瞰東海壯闊斷崖。入場 ¥400
-- blog: https://www.jathao.com/2015/10/gala.html
 - source: ai
 - maps: 殘波岬燈台 | 残波岬灯台
 - rating: 4.6
@@ -67,7 +61,6 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 ### 14:45-16:00 御菓子御殿（讀谷店）
 紅芋塔工廠見學，免費試吃，買伴手禮的好地方
-- blog: https://oliviahaha.pixnet.net/blog/post/153272059
 - maps: 御菓子御殿 讀谷店 | 御菓子御殿 読谷店
 - rating: 4.2
 - note: 工廠產線透過玻璃可參觀，免費試吃紅芋塔，伴手禮這裡買最齊全
@@ -75,13 +68,12 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 #### shopping: 伴手禮購物
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| 御菓子御殿 讀谷本店 | 伴手禮 | 09:00~19:00 | 紅芋塔（元祖）, 紅芋生塔（冷藏限定）, 黑糖蛋糕 |  | 4 |  |  | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| 御菓子御殿 讀谷本店 | 伴手禮 | 09:00~19:00 | 紅芋塔（元祖）, 紅芋生塔（冷藏限定）, 黑糖蛋糕 | 4 |  |  | ai |
 
 ### 16:00-17:00 萬座毛
 象鼻岩絕景，步道約20分鐘走完一圈。入場 ¥100
-- blog: https://mimigo.tw/manzamou/
 - maps: 萬座毛 | 万座毛 沖縄
 - rating: 4.3
 - note: 新設的木棧步道約20分鐘走完，傍晚夕陽西下時拍象鼻岩最美
@@ -89,7 +81,6 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 ### 18:30-19:30 晚餐
 回到那霸晚餐
-- blog: 
 - source: ai
 - maps: 那霸國際通 | 那覇国際通り
 - rating: 4
@@ -97,8 +88,8 @@ weather: {"label":"北谷・讀谷・恩納","locations":[{"lat":26.2066,"lon":1
 
 #### restaurants: 晚餐推薦
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | appleMaps |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 海鮮酒場 琉星 | 生魚片 | 17:00~24:00 | ¥3,000~ | 可預約 | 國際通徒步1分鐘，店內生簀可釣魚現做刺身，縣產鮮魚料理 |  | 3.8 | 海鮮酒場 琉星 那覇久茂地 \| 海鮮酒場 琉星 那覇 |  | ai |  |
-| 焼肉本舗 島牛 | 燒肉 | 午餐 11:30~14:30 / 晚餐 17:00~23:00 | ¥3,500~ | 電話或網路預約 | 那霸松山在地老店，沖繩縣產和牛・阿古豬炭火燒肉 | https://imccp.com/oka-shimagyu/ | 3.9 | 焼肉本舗 島牛 那覇 |  | ai |  |
-| 郷土料理 ここ | 地方特色 | 18:00~00:00（全年無休） | ¥3,000~¥5,000 | 可電話預約 098-866-5255 | 沖繩鄉土料理＋現場三線琴演奏，おまかせコース ¥3,500 |  | 4 | 郷土料理 ここ 那覇松尾 \| 郷土料理 ここ 那覇 松尾 |  | ai | 郷土料理 ここ 那覇 |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | appleMaps |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 海鮮酒場 琉星 | 生魚片 | 17:00~24:00 | ¥3,000~ | 可預約 | 國際通徒步1分鐘，店內生簀可釣魚現做刺身，縣產鮮魚料理 | 3.8 | 海鮮酒場 琉星 那覇久茂地 \| 海鮮酒場 琉星 那覇 |  | ai |  |
+| 焼肉本舗 島牛 | 燒肉 | 午餐 11:30~14:30 / 晚餐 17:00~23:00 | ¥3,500~ | 電話或網路預約 | 那霸松山在地老店，沖繩縣產和牛・阿古豬炭火燒肉 | 3.9 | 焼肉本舗 島牛 那覇 |  | ai |  |
+| 郷土料理 ここ | 地方特色 | 18:00~00:00（全年無休） | ¥3,000~¥5,000 | 可電話預約 098-866-5255 | 沖繩鄉土料理＋現場三線琴演奏，おまかせコース ¥3,500 | 4 | 郷土料理 ここ 那覇松尾 \| 郷土料理 ここ 那覇 松尾 |  | ai | 郷土料理 ここ 那覇 |

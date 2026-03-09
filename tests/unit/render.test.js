@@ -147,15 +147,6 @@ describe('renderRestaurant', () => {
     expect(html).toContain('11:00–21:00');
   });
 
-  it('renders URL link when provided', () => {
-    const html = renderRestaurant({
-      name: 'Test',
-      url: 'https://example.com',
-    });
-    expect(html).toContain('href="https://example.com"');
-    expect(html).toContain('target="_blank"');
-  });
-
   it('renders reservation link', () => {
     const html = renderRestaurant({
       name: 'Test',
@@ -274,7 +265,7 @@ describe('renderInfoBox', () => {
   it('renders shopping info box', () => {
     const html = renderInfoBox({
       type: 'shopping', title: '附近購物',
-      shops: [{ category: '超市', name: 'MaxValu', hours: '08:00-24:00', mustBuy: ['泡盛'], blogUrl: 'https://blog.example.com/maxvalu' }]
+      shops: [{ category: '超市', name: 'MaxValu', hours: '08:00-24:00', mustBuy: ['泡盛'] }]
     });
     expect(html).toContain('info-box shopping');
     expect(html).toContain('附近購物');
@@ -289,8 +280,7 @@ describe('renderShop', () => {
     const html = renderShop({
       category: '超市', name: 'San-A',
       hours: '09:00-23:00',
-      mustBuy: ['黑糖', '泡盛'],
-      blogUrl: 'https://blog.example.com/sana'
+      mustBuy: ['黑糖', '泡盛']
     });
     expect(html).toContain('restaurant-choice');
     expect(html).toContain('超市');
@@ -299,7 +289,6 @@ describe('renderShop', () => {
     expect(html).toContain('必買');
     expect(html).toContain('黑糖');
     expect(html).toContain('泡盛');
-    expect(html).toContain('href="https://blog.example.com/sana"');
   });
 
   it('renders googleRating when present', () => {
@@ -320,15 +309,6 @@ describe('renderTimelineEvent', () => {
     expect(html).toContain('tl-event');
     expect(html).toContain('09:00–10:00');
     expect(html).toContain('出發');
-  });
-
-  it('renders event with titleUrl', () => {
-    const html = renderTimelineEvent({
-      time: '10:00',
-      title: '首里城',
-      titleUrl: 'https://example.com/shuri',
-    });
-    expect(html).toContain('href="https://example.com/shuri"');
   });
 
   it('renders event with description body', () => {
@@ -375,16 +355,6 @@ describe('renderTimelineEvent', () => {
   it('renders note field', () => {
     const html = renderTimelineEvent({ time: '10:00', title: 'Test', note: '小提醒' });
     expect(html).toContain('小提醒');
-  });
-
-  it('renders blogUrl link for attraction', () => {
-    const html = renderTimelineEvent({
-      time: '10:00', title: '美麗海水族館',
-      titleUrl: 'https://churaumi.okinawa/',
-      blogUrl: 'https://blog.example.com/churaumi'
-    });
-    expect(html).toContain('href="https://blog.example.com/churaumi"');
-    expect(html).toContain('網誌推薦');
   });
 
   it('renders googleRating when present', () => {
@@ -452,14 +422,6 @@ describe('renderHotel', () => {
     expect(html).toContain('沖繩海景飯店');
   });
 
-  it('renders hotel with URL link', () => {
-    const html = renderHotel({
-      name: 'Hotel',
-      url: 'https://hotel.example.com',
-    });
-    expect(html).toContain('href="https://hotel.example.com"');
-  });
-
   it('renders details grid', () => {
     const html = renderHotel({
       name: 'Hotel',
@@ -482,14 +444,6 @@ describe('renderHotel', () => {
     expect(html).toContain('maps.google.com');
   });
 
-  it('renders hotel blogUrl link', () => {
-    const html = renderHotel({
-      name: '沖繩海景飯店',
-      blogUrl: 'https://blog.example.com/hotel'
-    });
-    expect(html).toContain('href="https://blog.example.com/hotel"');
-    expect(html).toContain('網誌推薦');
-  });
 });
 
 /* ===== renderFlights ===== */

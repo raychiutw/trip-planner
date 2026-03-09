@@ -141,8 +141,6 @@ slugs.forEach((slug) => {
       data.days.forEach((day, i) => {
         const hotel = day.content?.hotel;
         if (!hotel) return;
-        if (hotel.url !== undefined) expect(typeof hotel.url, `days[${i}].hotel.url`).toBe('string');
-        if (hotel.blogUrl !== undefined) expect(typeof hotel.blogUrl, `days[${i}].hotel.blogUrl`).toBe('string');
         if (hotel.checkout !== undefined) expect(typeof hotel.checkout, `days[${i}].hotel.checkout`).toBe('string');
         if (hotel.details !== undefined) expect(Array.isArray(hotel.details), `days[${i}].hotel.details`).toBe(true);
         expect(hotel.subs, `days[${i}].hotel.subs should not exist (migrated to infoBoxes)`).toBeUndefined();
@@ -175,8 +173,6 @@ slugs.forEach((slug) => {
         const timeline = day.content?.timeline || [];
         timeline.forEach((ev, j) => {
           const prefix = `days[${i}].timeline[${j}]`;
-          if (ev.titleUrl !== undefined) expect(typeof ev.titleUrl, `${prefix}.titleUrl`).toBe('string');
-          if (ev.blogUrl !== undefined) expect(typeof ev.blogUrl, `${prefix}.blogUrl`).toBe('string');
           if (ev.description !== undefined) expect(typeof ev.description, `${prefix}.description`).toBe('string');
           if (ev.locations !== undefined) expect(Array.isArray(ev.locations), `${prefix}.locations`).toBe(true);
           if (ev.infoBoxes !== undefined) expect(Array.isArray(ev.infoBoxes), `${prefix}.infoBoxes`).toBe(true);

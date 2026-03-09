@@ -15,31 +15,26 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 
 ### 10:00-12:00 烘爐地
 南山福德宮，中和知名土地公廟，山頂可俯瞰大台北夜景
-- web: https://www.hunglodei.tw/
-- blog: https://anikofoodie.com/hunglodei/
 - maps: 烘爐地南山福德宮
 - rating: 4.7
 - travel: car 開車 約20分鐘
 - note: 山路階梯多建議穿好走的鞋，山頂夜景也很值得看
 
 ### 12:00-13:00 午餐
-- blog: https://www.dalang.tw/%E4%B8%AD%E5%92%8C%E7%BE%8E%E9%A3%9F%E6%87%B6%E4%BA%BA%E5%8C%85/
 - source: ai
 - maps: 中和環球購物中心
 - rating: 4
 
 #### restaurants: 午餐推薦（烘爐地/中和周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 麵屋和和 | 日式拉麵 | 11:00~20:30 | NT$200~320 | 不需訂位 | 中和四號公園旁文青風拉麵，雞清湯與雞白湯專賣，細麵彈牙 | https://upssmile.com/224838/hoho-ramen-house | 4.0 | 麵屋和和 |  | ai |
-| Win Win Pasta 景安店 | 義大利麵 | 11:00~21:00 | NT$150~280 | 不需訂位 | 景安站對面高CP值義式，比臉大焗烤招牌，濃湯飲料無限暢飲 | https://immandy.tw/winwinpasta/ | 4.3 | Win Win Pasta 景安店 |  | ai |
-| 中和連城路米粉湯 | 特色小吃 | 06:00~14:00 | NT$40~80 | 不需訂位 | 中和在地早午餐，清甜米粉湯配上油豆腐黑白切 | https://bigmouthblog.tw/zhonghe-rice-noodle-soup/ | 4 | 中和連城路米粉湯 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 麵屋和和 | 日式拉麵 | 11:00~20:30 | NT$200~320 | 不需訂位 | 中和四號公園旁文青風拉麵，雞清湯與雞白湯專賣，細麵彈牙 | 4.0 | 麵屋和和 |  | ai |
+| Win Win Pasta 景安店 | 義大利麵 | 11:00~21:00 | NT$150~280 | 不需訂位 | 景安站對面高CP值義式，比臉大焗烤招牌，濃湯飲料無限暢飲 | 4.3 | Win Win Pasta 景安店 |  | ai |
+| 中和連城路米粉湯 | 特色小吃 | 06:00~14:00 | NT$40~80 | 不需訂位 | 中和在地早午餐，清甜米粉湯配上油豆腐黑白切 | 4 | 中和連城路米粉湯 |  | ai |
 
 ### 14:00-16:00 中和環球購物中心
 中和地標購物中心，美食街、電影院、各式品牌商店
-- web: https://www.globalmal.com.tw/zhonghe
-- blog: https://tisshuang.com/zhonghe-global-mall/
 - maps: 中和環球購物中心
 - rating: 4
 - travel: car 開車 約15分鐘
@@ -47,22 +42,21 @@ weather: {"label":"中和・永和","locations":[{"lat":25.0146,"lon":121.4672,"
 
 #### shopping: 中和環球購物推薦
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| 中和環球購物中心 | 購物中心 | 11:00~22:00 | 美食街, 生活用品, 頂樓休閒娛樂設施 | https://tisshuang.com/zhonghe-global-mall/ | 4.1 |  |  | ai |
-| 家樂福 中和店 | 超市 | 08:00~23:00 | 零食伴手禮, 生鮮食材, 台灣特產禮盒 | https://bigmouthblog.tw/carrefour-zhonghe/ | 3.8 |  |  | ai |
-| 景安捷運站商圈 | 購物中心 | 10:00~22:00 | 平價服飾, 流行飾品, 韓系美妝小舖 | https://girlsplan.com/jingan-shopping/ | 4.1 |  |  | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| 中和環球購物中心 | 購物中心 | 11:00~22:00 | 美食街, 生活用品, 頂樓休閒娛樂設施 | 4.1 |  |  | ai |
+| 家樂福 中和店 | 超市 | 08:00~23:00 | 零食伴手禮, 生鮮食材, 台灣特產禮盒 | 3.8 |  |  | ai |
+| 景安捷運站商圈 | 購物中心 | 10:00~22:00 | 平價服飾, 流行飾品, 韓系美妝小舖 | 4.1 |  |  | ai |
 
 ### 18:00-19:30 晚餐
-- blog: https://supertaste.tvbs.com.tw/pack/347469
 - source: ai
 - maps: 中和環球購物中心
 - rating: 4
 
 #### restaurants: 晚餐推薦（中和環球/景安站周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 一幸拉麵 中和莒光店 | 日式拉麵 | 11:30~14:00 / 17:00~21:00 | NT$170~280 | 不需訂位 | 中和最強拉麵，泡系雞白湯與柚子鹽風味獨特，免費加麵加飯 | https://pekoblog.tw/yixinglamian/ | 4.8 | 一幸拉麵 中和莒光店 |  | ai |
-| 洋城義大利餐廳 中和店 | 義大利麵 | 11:00~21:30 | NT$280~480 | 不需訂位 | 連鎖義式餐廳，白醬義大利麵與焗烤料理份量十足，適合家庭聚餐 | https://appletrees.tw/italianchef-zhonghe/ | 4 | 洋城義大利餐廳 中和店 |  | ai |
-| 阿男麻辣鍋 | 特色小吃 | 17:00~01:00 | NT$350~600 | 建議訂位 | 中和人氣麻辣鍋，花椒麻香十足，鴨血豆腐無限續 | https://girlsplan.com/anan-mala-pot/ | 4.2 | 阿男麻辣鍋 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 一幸拉麵 中和莒光店 | 日式拉麵 | 11:30~14:00 / 17:00~21:00 | NT$170~280 | 不需訂位 | 中和最強拉麵，泡系雞白湯與柚子鹽風味獨特，免費加麵加飯 | 4.8 | 一幸拉麵 中和莒光店 |  | ai |
+| 洋城義大利餐廳 中和店 | 義大利麵 | 11:00~21:30 | NT$280~480 | 不需訂位 | 連鎖義式餐廳，白醬義大利麵與焗烤料理份量十足，適合家庭聚餐 | 4 | 洋城義大利餐廳 中和店 |  | ai |
+| 阿男麻辣鍋 | 特色小吃 | 17:00~01:00 | NT$350~600 | 建議訂位 | 中和人氣麻辣鍋，花椒麻香十足，鴨血豆腐無限續 | 4.2 | 阿男麻辣鍋 |  | ai |

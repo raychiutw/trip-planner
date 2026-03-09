@@ -18,8 +18,6 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 
 ### 09:00-10:30 市區景點
 最後半日觀光
-- web: https://www.example-city-spot.com/
-- blog: https://example.com/city-spot/
 - maps: 範例市區景點
 - mapcode: 33 161 526*00
 - rating: 4.2
@@ -28,8 +26,6 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 
 ### 11:00-12:00 逛街購物
 最後衝刺採購伴手禮
-- web: https://www.example-shopping.com/
-- blog: https://example.com/shopping-street/
 - source: ai
 - maps: 範例商店街
 - mapcode: 33 157 382*00
@@ -38,9 +34,9 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 
 #### shopping: 伴手禮推薦
 
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|
-| 範例伴手禮店 | 伴手禮 | 09:00~22:00 | 名產1, 名產2, 限定禮盒 | https://example.com/souvenir/ | 4.2 | 範例伴手禮店 | 33 157 352*00 | ai |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|
+| 範例伴手禮店 | 伴手禮 | 09:00~22:00 | 名產1, 名產2, 限定禮盒 | 4.2 | 範例伴手禮店 | 33 157 352*00 | ai |
 
 ### 12:00-13:30 午餐
 最後一餐當地美食
@@ -51,11 +47,11 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 
 #### restaurants: 午餐推薦三選一
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 範例拉麵 | 拉麵 | 10:00~翌 2:00 | 800~ | 不需訂位 | 濃厚豚骨拉麵 | https://example.com/last-ramen/ | 4 | 範例拉麵 | 33 157 323*00 | ai |
-| 範例燒肉 | 燒肉 | 11:30~15:00 | 2,800~ | TableCheck 預約 | 品牌牛午間套餐 | https://example.com/last-yakiniku/ | 4.3 | 範例燒肉 | 33 157 382*00 | ai |
-| 範例牛排 | 當地特色 | 11:00~翌 1:30 | 1,000~ | 不需訂位 | 人氣牛排 | https://example.com/last-steak/ | 4.2 | 範例牛排 | 33 157 383*00 | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 範例拉麵 | 拉麵 | 10:00~翌 2:00 | 800~ | 不需訂位 | 濃厚豚骨拉麵 | 4 | 範例拉麵 | 33 157 323*00 | ai |
+| 範例燒肉 | 燒肉 | 11:30~15:00 | 2,800~ | TableCheck 預約 | 品牌牛午間套餐 | 4.3 | 範例燒肉 | 33 157 382*00 | ai |
+| 範例牛排 | 當地特色 | 11:00~翌 1:30 | 1,000~ | 不需訂位 | 人氣牛排 | 4.2 | 範例牛排 | 33 157 383*00 | ai |
 
 <!-- 自駕行程（selfDrive: true）出發日需加油還車 -->
 ### 16:00 加油＋還車手續
@@ -84,7 +80,6 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 
 ### 18:00 抵達機場
 辦理報到＋託運行李
-- blog: https://example.com/airport/
 - source: ai
 - maps: 範例機場
 - mapcode: 33 002 519*00
@@ -92,7 +87,6 @@ weather: {"label":"那霸","locations":[{"lat":26.33,"lon":127.78,"name":"那霸
 - note:
 
 ### 20:55 起飛回台灣
-- blog:
 - note: 抵達桃園，旅途愉快！
 - source: ai
 - maps: 範例機場

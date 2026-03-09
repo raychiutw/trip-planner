@@ -15,46 +15,40 @@ weather: {"label":"新莊・三重","locations":[{"lat":25.0146,"lon":121.4672,"
 
 ### 10:00-12:00 幸福水漾公園
 三重大台北都會公園內，彩色地景藝術、大片花海、親子遊憩空間
-- web: https://newtaipei.travel/zh-tw/attractions/detail/109442
-- blog: https://yoyoman822.pixnet.net/blog/post/335556667
 - maps: 幸福水漾公園 | 三重幸福水漾公園
 - rating: 4.2
 - travel: car 開車 約20分鐘
 - note: 春季花海盛開時最漂亮，停車可停機捷三重站旁
 
 ### 12:00-13:00 午餐
-- blog: https://www.welcometw.com/%E4%B8%89%E9%87%8D%E7%BE%8E%E9%A3%9F/
 - source: ai
 - maps: 三重正義北路商圈 | 三重正義北路
 - rating: 4
 
 #### restaurants: 午餐推薦（三重周邊）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 赤初中華拉麵 新莊店 | 日式拉麵 | 11:30~14:30 / 17:00~22:00 | NT$260~380 | 不需訂位 | 小菜放題吃到飽，八大功夫湯料多實在，高CP值拉麵 | https://mymarcy.tw/%E3%80%90%E6%96%B0%E8%8E%8A%E6%8B%89%E9%BA%B5%E3%80%91%E8%B5%A4%E5%88%9D%E4%B8%AD%E8%8F%AF%E6%8B%89%E9%BA%B5%E6%96%B0%E8%8E%8A%E5%BA%97%EF%BD%9C%E5%B0%8F%E8%8F%9C%E6%94%BE%E9%A1%8C%E5%90%83%E5%88%B0/ | 4.4 | 赤初中華拉麵 新莊店 |  | ai |
-| 福F Pasta | 義大利麵 | 11:30~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 新莊副都心巷弄愛店，現點現做義大利麵用料實在 | https://anise.tw/269033 | 4.7 | 福F Pasta |  | ai |
-| 今大魯肉飯 | 特色小吃 | 07:00~20:00 | NT$30~80 | 不需訂位 | 三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配 | https://bigmouthblog.tw/jinda-braised-rice/ | 4.3 | 今大魯肉飯 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 赤初中華拉麵 新莊店 | 日式拉麵 | 11:30~14:30 / 17:00~22:00 | NT$260~380 | 不需訂位 | 小菜放題吃到飽，八大功夫湯料多實在，高CP值拉麵 | 4.4 | 赤初中華拉麵 新莊店 |  | ai |
+| 福F Pasta | 義大利麵 | 11:30~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 新莊副都心巷弄愛店，現點現做義大利麵用料實在 | 4.7 | 福F Pasta |  | ai |
+| 今大魯肉飯 | 特色小吃 | 07:00~20:00 | NT$30~80 | 不需訂位 | 三重排隊名店，肥瘦比例完美的魯肉飯，加顆滷蛋絕配 | 4.3 | 今大魯肉飯 |  | ai |
 
 ### 14:00-16:00 空軍三重一村
 全台保存最完整的防砲眷村，已活化為文創園區，展覽與眷村生活體驗
-- web: https://new.culture.ntpc.gov.tw/
-- blog: https://andyventure.com/sanchong-military-village/
 - maps: 空軍三重一村
 - rating: 4.4
 - travel: car 開車 約10分鐘
 - note: 免費參觀，週一休館，園區內有不少好拍的裝置藝術
 
 ### 18:00-19:30 晚餐
-- blog: https://gn0930150655.pixnet.net/blog/post/46831168
 - source: ai
 - maps: 三重正義北路商圈 | 三重正義北路
 - rating: 4
 
 #### restaurants: 晚餐推薦（三重/蘆洲）
 
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 丸宗拉麵屋 | 日式拉麵 | 11:30~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 全雞入湯的雞白湯拉麵，湯頭濃郁層次豐富 | https://ramenroamer.com/archives/1607 | 4.3 | 丸宗拉麵屋 |  | ai |
-| 巧巧義麵屋 | 義大利麵 | 17:00~21:30 | NT$150~250 | 不需訂位 | 三重國小站旁在地人愛店，紅茶與濃湯免費無限暢飲 | https://evanchiny.com/%E3%80%90%E4%B8%89%E9%87%8D%E5%B9%B3%E5%83%B9%E7%BE%A9%E5%A4%A7%E5%88%A9%E9%BA%B5%E3%80%91%E5%B7%A7%E5%B7%A7%E7%BE%A9%E9%BA%B5%E5%B1%8B%E2%94%82%E4%B8%89%E9%87%8D%E5%BA%97%E8%8F%9C%E5%96%AE%E2%94%82/ | 4.6 | 巧巧義麵屋 |  | ai |
-| 正羊肉榮 三重店 | 特色小吃 | 16:00~01:00 | NT$300~600 | 不需訂位 | 三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷 | https://tisshuang.com/zhengyangrourong/ | 4.2 | 正羊肉榮 三重店 |  | ai |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|
+| 丸宗拉麵屋 | 日式拉麵 | 11:30~14:00 / 17:00~21:00 | NT$180~300 | 不需訂位 | 全雞入湯的雞白湯拉麵，湯頭濃郁層次豐富 | 4.3 | 丸宗拉麵屋 |  | ai |
+| 巧巧義麵屋 | 義大利麵 | 17:00~21:30 | NT$150~250 | 不需訂位 | 三重國小站旁在地人愛店，紅茶與濃湯免費無限暢飲 | 4.6 | 巧巧義麵屋 |  | ai |
+| 正羊肉榮 三重店 | 特色小吃 | 16:00~01:00 | NT$300~600 | 不需訂位 | 三重人氣羊肉爐，藥膳湯底溫潤，帶皮羊肉軟嫩不騷 | 4.2 | 正羊肉榮 三重店 |  | ai |
