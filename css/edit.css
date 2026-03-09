@@ -239,9 +239,8 @@ body.dark .issue-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
 
 /* ===== Status Messages ===== */
 .edit-status {
-    padding: 8px 4px;
+    padding: 0;
     font-size: var(--fs-footnote);
-    margin-top: 4px;
     border-radius: var(--radius-sm);
 }
 .edit-status.success { color: var(--success); display: flex; align-items: center; gap: 4px; }
