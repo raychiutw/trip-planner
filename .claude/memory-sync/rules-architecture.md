@@ -5,12 +5,10 @@
 | 檔案 | 載入頁面 | 內容 |
 |------|---------|------|
 | `css/shared.css` | 全部 | variables, reset, body, `.page-layout`, `.container`, `.sticky-nav`, `.trip-btn`, dark mode base |
-| `css/menu.css` | 全部 | hamburger icon, menu drawer, sidebar, backdrop, desktop sidebar, dark/print mode |
-| `css/style.css` | index only | timeline, weather, hotel, nav, cards, FAB, info-panel, print, trip-specific dark mode |
+| `css/style.css` | index only | timeline, weather, hotel, nav, cards, FAB, info-panel, print, menu drawer, sidebar, dark/print mode |
 | `css/edit.css` | edit only | Claude 聊天風格 UI、問候語、issue 列表、底部輸入卡片, dark mode |
 | `css/setting.css` | setting only | setting page layout, trip list, color mode cards |
 | `js/shared.js` | 全部 | `escHtml`, `escUrl`, `sanitizeHtml`, `stripInlineHandlers`, LS helpers, dark mode, `GH_OWNER`/`GH_REPO` |
-| `js/menu.js` | 全部 | `isDesktop`, `toggleMenu`, `toggleSidebar`, `closeMobileMenuIfOpen`, swipe gesture, resize handler |
 | `js/icons.js` | 全部 | `ICONS` SVG registry, `EMOJI_ICON_MAP` emoji→icon, `icon`, `iconSpan`, `emojiToIcon` |
 | `js/app.js` | index only | 所有 render/weather/nav/routing 函式（依賴 shared.js + menu.js + icons.js） |
 | `js/edit.js` | edit only | Claude 聊天風格、時段問候語、GitHub API issue 列表、底部輸入區、行程切換 |
@@ -32,7 +30,7 @@
 
 ```
 Trip 頁面 → FAB → edit.html?trip={slug} → 輸入文字 → POST GitHub Issue (label: trip-edit)
-/tp-issue → 讀 Issue → 改 MD → build → test → commit push → close Issue
+/tp-request → 讀 Issue → 改 MD → build → test → commit push → close Issue
 ```
 
 - **GitHub PAT**：Fine-Grained，僅 `Issues: Read+Write`

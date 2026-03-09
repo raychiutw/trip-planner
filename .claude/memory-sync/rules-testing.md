@@ -5,7 +5,7 @@
 - 觸發規則：
   - `data/trips-md/**/*.md` → `npm test`
   - `js/app.js` / `js/shared.js` / `js/icons.js` / `css/style.css` / `css/shared.css` / `index.html` → `npm test` + `npm run test:e2e`
-  - `js/edit.js` / `css/edit.css` / `edit.html` / `js/menu.js` / `css/menu.css` → `npm test`
+  - `js/edit.js` / `css/edit.css` / `edit.html` → `npm test`
   - `setting.html` / `js/setting.js` / `css/setting.css` → `npm test`
 
 ## 測試目錄結構

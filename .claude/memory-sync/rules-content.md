@@ -15,7 +15,7 @@
 
 - `/tp-create`：從零產生完整行程 MD 檔案群
 - `/tp-edit`：自然語言描改指定行程 MD
-- `/tp-issue`：處理 GitHub Issue 修改請求
+- `/tp-request`：處理旅伴 GitHub Issue 修改請求
 - `/tp-rebuild`：全面重整單一行程 MD
 - `/tp-rebuild-all`：批次重建所有行程
 - `/tp-check`：唯讀品質規則驗證

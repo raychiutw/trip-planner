@@ -42,16 +42,14 @@ weather: {"label":"北谷","locations":[{"lat":26.33,"lon":127.78,"name":"北谷
 
 ```markdown
 ## Hotel: 飯店名稱
-- url: https://...
 - checkout: 11:00
-- blog: https://...
 - source: ai
 - details: 描述1, 描述2
 - breakfast: true 早餐說明
 - note: 備註
 
 ### shopping: 飯店附近購物
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
 
 ### parking: 停車場
 - price: 500/晚
@@ -66,8 +64,6 @@ weather: {"label":"北谷","locations":[{"lat":26.33,"lon":127.78,"name":"北谷
 
 ### 10:45 景點名稱
 描述文字
-- web: https://...        ← 官網
-- blog: https://...       ← 繁中網誌
 - source: ai
 - maps: 景點名稱         ← Google Maps 搜尋詞
 - mapcode: 33 002 519*00  ← 自駕用（沖繩行程）
@@ -76,25 +72,24 @@ weather: {"label":"北谷","locations":[{"lat":26.33,"lon":127.78,"name":"北谷
 - travel: car 開車 約40分鐘
 
 #### restaurants: 午餐推薦三選一
-| name | category | hours | price | reservation | description | blog | rating | maps | mapcode | source | reservationUrl |
+| name | category | hours | price | reservation | description | rating | maps | mapcode | source | reservationUrl |
 
 #### shopping: 附近購物
-| name | category | hours | mustBuy | blog | rating | maps | mapcode | source |
+| name | category | hours | mustBuy | rating | maps | mapcode | source |
 ```
 
 ## 特殊欄位
 
 - `maps`：Google Maps 搜尋詞（build 時自動產生 googleQuery/appleQuery URL）
 - `rating`：Google 評分（數字），build 時轉為 `googleRating`
-- `source`：`ai`（AI 搜尋）或 `manual`（手動確認），build 時不輸出
-- `blog`：繁中推薦網誌 URL，build 時轉為 `blogUrl`
+- `source`：`ai`（AI 推薦）或 `user`（使用者指定）
 - `travel`：格式 `{type} {描述}`，build 時拆為 `transit.type` + `transit.text`
 - 韓國行程（`countries: KR`）需加 `naverQuery` 欄位供 Naver Map 連結
 
 ## trips.json（build 自動產生）
 
 ```json
-[{ "slug": "okinawa-trip-2026-Ray", "name": "Ray 的沖繩之旅", "dates": "7/29（三）~ 8/2（日）", "owner": "Ray" }]
+[{ "tripId": "okinawa-trip-2026-Ray", "name": "Ray 的沖繩之旅", "dates": "7/29（三）~ 8/2（日）", "owner": "Ray" }]
 ```
 
 ## 注意事項

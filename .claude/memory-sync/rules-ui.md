@@ -4,7 +4,7 @@
 - **卡片統一**：section 白色圓角卡片，子元素不另設底色
 - **全站 inline SVG**（Material Symbols Rounded），不用 emoji；新增 icon 加到 `js/icons.js` 的 `ICONS`
 - **設定頁** `setting.html`：行程切換 + 色彩模式（Light/Auto/Dark）
-- 漢堡選單左滑 drawer、展開收合 ＋/－、Day 標籤 📍 Day N
+- 左側選單 drawer（shared.js 控制）、展開收合 ＋/－、Day 標籤 📍 Day N
 - 底部面板三段式吸附（50%/75%/90% dvh），backdrop 防捲動穿透
 - 連續捲動模式：scroll 追蹤更新 URL hash + pill highlight；手動點擊後 600ms 內不更新
 - 標題列：行程頁左對齊無底線；設定頁/編輯頁居中 + `--bg` 底色 + 底線 + `::before` 36px 佔位
