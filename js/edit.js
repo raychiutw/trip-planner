@@ -151,11 +151,11 @@
         html += '<button class="edit-mode-pill selected" data-mode="trip-edit">\u6539\u884C\u7A0B</button>';
         html += '<button class="edit-mode-pill" data-mode="trip-plan">\u554F\u5EFA\u8B70</button>';
         html += '</div>';
+        html += '<div id="submitStatus"></div>';
         html += '<button class="edit-send-btn" id="submitBtn" disabled aria-label="送出">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M11 5.83L6.41 10.41 5 9l7-7 7 7-1.41 1.41L13 5.83V20h-2V5.83z"/></svg>';
         html += '</button>';
         html += '</div>';
-        html += '<div id="submitStatus"></div>';
         html += '</div>'; // .edit-input-card
         html += '</div>'; // .edit-input-bar
 
