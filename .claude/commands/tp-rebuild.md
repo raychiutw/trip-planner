@@ -4,19 +4,19 @@
 
 ## 輸入方式
 
-- 指定 tripSlug：`/tp-rebuild okinawa-trip-2026-Ray`
+- 指定 tripId：`/tp-rebuild okinawa-trip-2026-Ray`
 - 未指定：讀取 `data/dist/trips.json` 列出所有行程供選擇
 
 ## 步驟
 
-1. 讀取 `data/trips-md/{tripSlug}/` 下的所有 MD 檔案
+1. 讀取 `data/trips-md/{tripId}/` 下的所有 MD 檔案
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
 3. 逐項檢查 R1-R12 品質規則，修正不合格的 MD 內容
 4. 同步更新 checklist.md、backup.md、suggestions.md
-5. 確認 transit 分鐘數
+5. 確認 travel 分鐘數
 6. 執行 `npm run build` 更新 dist
 7. 執行 `git diff --name-only`：
-   → 只有 `data/trips-md/{tripSlug}/**` + `data/dist/**` → OK
+   → 只有 `data/trips-md/{tripId}/**` + `data/dist/**` → OK
    → 有其他檔案被改 → `git checkout` 還原非白名單檔案
 8. `npm test`
 9. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
@@ -28,7 +28,7 @@
 **不改 timeline 順序、不新增/移除景點**，只確保現有內容符合品質規則。
 
 僅允許編輯：
-  data/trips-md/{tripSlug}/**
+  data/trips-md/{tripId}/**
 
 以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
   data/dist/**

@@ -25,16 +25,29 @@
     }
 
     /* ===== Build Issue Item HTML ===== */
+    function getIssueMode(issue) {
+        var labels = (issue.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
+        if (labels.indexOf('trip-plan') !== -1) return 'plan';
+        return 'edit';
+    }
+
     function buildIssueItemHtml(issue) {
         var date = new Date(issue.created_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         var stateClass = issue.state === 'open' ? 'open' : 'closed';
         var badgeIcon = issue.state === 'open' ? iconSpan('circle-dot') : iconSpan('check-circle');
         var badgeText = issue.state === 'open' ? 'Open' : 'Closed';
+        var mode = getIssueMode(issue);
+        var modeBadgeText = mode === 'plan' ? '問建議' : '修改';
         var html = '<div class="issue-item ' + stateClass + '">';
         html += '<div class="issue-item-header">';
         html += '<span class="issue-badge ' + stateClass + '">' + badgeIcon + badgeText + '</span>';
+        html += '<span class="issue-mode-badge mode-' + mode + '">' + escHtml(modeBadgeText) + '</span>';
         html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
         html += '</div>';
+        // body 內容
+        if (issue.body) {
+            html += '<div class="issue-item-body">' + escHtml(issue.body) + '</div>';
+        }
         html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
         // 回覆區
         if (issue.comments > 0) {
@@ -102,7 +115,7 @@
         var issueList = document.getElementById('editIssues');
         if (!issueList) return;
         issueList.innerHTML = '<div class="edit-issues-loading">載入中…</div>';
-        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripSlug) + '&state=all&per_page=20')
+        ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues?labels=' + encodeURIComponent(currentConfig.tripId) + '&state=all&per_page=20')
             .then(function(r) {
                 if (!r.ok) throw new Error('fetch failed');
                 return r.json();
@@ -134,6 +147,10 @@
         html += '<div class="edit-input-card">';
         html += '<textarea class="edit-textarea" id="editText" maxlength="65536" placeholder="例如：&#10;· Day 3 午餐換成通堂拉麵&#10;· 刪除美麗海水族館，改去萬座毛&#10;· Day 5 下午加一個 AEON 購物" rows="1"></textarea>';
         html += '<div class="edit-input-toolbar">';
+        html += '<select class="edit-mode-select" id="issueMode">';
+        html += '<option value="trip-edit">\u270F\uFE0F \u4FEE\u6539\u884C\u7A0B</option>';
+        html += '<option value="trip-plan">\uD83D\uDCA1 \u554F\u5EFA\u8B70</option>';
+        html += '</select>';
         html += '<button class="edit-send-btn" id="submitBtn" disabled aria-label="送出">';
         html += '<svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M11 5.83L6.41 10.41 5 9l7-7 7 7-1.41 1.41L13 5.83V20h-2V5.83z"/></svg>';
         html += '</button>';
@@ -195,19 +212,15 @@
         status.innerHTML = '';
 
         var title = config.owner + ': ' + text.substring(0, 50);
-        var body = JSON.stringify({
-            owner: config.owner,
-            tripSlug: config.tripSlug,
-            text: text,
-            timestamp: new Date().toISOString()
-        }, null, 2);
+        var mode = document.getElementById('issueMode');
+        var modeLabel = mode ? mode.value : 'trip-edit';
 
         ghFetch('/repos/' + GH_OWNER + '/' + GH_REPO + '/issues', {
             method: 'POST',
             body: JSON.stringify({
                 title: title,
-                body: body,
-                labels: ['trip-edit', config.tripSlug]
+                body: text,
+                labels: [modeLabel, config.tripId]
             })
         })
         .then(function(r) {
@@ -262,13 +275,13 @@
             .then(function(trips) {
                 allTrips = trips;
 
-                // 決定要顯示的 slug
-                var slug = urlTrip || lsGet('trip-pref') || '';
-                if (!slug && trips.length > 0) {
-                    slug = trips[0].slug;
+                // 決定要顯示的 tripId
+                var tripId = urlTrip || lsGet('trip-pref') || '';
+                if (!tripId && trips.length > 0) {
+                    tripId = trips[0].tripId;
                 }
 
-                if (!slug) {
+                if (!tripId) {
                     window.location.replace('index.html');
                     return;
                 }
@@ -276,23 +289,23 @@
                 // 找對應的 trip
                 var found = null;
                 trips.forEach(function(t) {
-                    if (t.slug === slug) {
-                        found = { owner: t.owner, tripSlug: slug, tripName: t.name };
+                    if (t.tripId === tripId) {
+                        found = { owner: t.owner, tripId: tripId, tripName: t.name };
                     }
                 });
 
                 if (!found) {
-                    editMain.innerHTML = '<div class="edit-page"><div class="edit-status error">找不到行程「' + escHtml(slug) + '」</div></div>';
+                    editMain.innerHTML = '<div class="edit-page"><div class="edit-status error">找不到行程「' + escHtml(tripId) + '」</div></div>';
                     return;
                 }
 
                 currentConfig = found;
 
-                // X close button → back to index with trip slug
+                // X close button → back to index with tripId
                 var closeBtn = document.getElementById('navCloseBtn');
                 if (closeBtn) {
                     closeBtn.addEventListener('click', function() {
-                        window.location.href = 'index.html?trip=' + encodeURIComponent(found.tripSlug);
+                        window.location.href = 'index.html?trip=' + encodeURIComponent(found.tripId);
                     });
                 }
 

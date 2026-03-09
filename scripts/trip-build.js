@@ -6,9 +6,9 @@ var path = require('path');
 var srcBase = path.join(__dirname, '..', 'data', 'trips-md');
 var distBase = path.join(__dirname, '..', 'data', 'dist');
 
-var slugs = process.argv.slice(2);
-if (!slugs.length) {
-  slugs = fs.readdirSync(srcBase).filter(function(d) {
+var tripIds = process.argv.slice(2);
+if (!tripIds.length) {
+  tripIds = fs.readdirSync(srcBase).filter(function(d) {
     return fs.statSync(path.join(srcBase, d)).isDirectory();
   });
 }
@@ -410,6 +410,7 @@ function parseHotel(heading, lines) {
   var hasDetails = false;
   var hasBreakfast = false;
   var hasCheckout = false;
+  var hasNote = false;
   var hotelSource = '';
   var infoBoxLines = [];
   var currentInfoBox = null;
@@ -430,6 +431,9 @@ function parseHotel(heading, lines) {
     } else if (line.startsWith('- details: ')) {
       hotel.details = line.substring(11).split(', ').map(function(s) { return s.trim(); });
       hasDetails = true;
+    } else if (line.startsWith('- note: ')) {
+      hotel.note = line.substring(8).trim();
+      hasNote = true;
     } else if (line.startsWith('- breakfast: ')) {
       var bVal = line.substring(13).trim();
       hasBreakfast = true;
@@ -441,6 +445,8 @@ function parseHotel(heading, lines) {
         hotel.breakfast = { included: false };
         var bNote2 = bVal.substring(5).trim();
         if (bNote2) hotel.breakfast.note = bNote2;
+      } else if (bVal === 'null' || bVal === '') {
+        hotel.breakfast = { included: null };
       }
     }
   });
@@ -461,7 +467,7 @@ function parseHotel(heading, lines) {
     if (!hasBreakfast) hotel.breakfast = { included: null };
   }
   hotel.source = hotelSource || 'ai';
-  hotel.note = '';
+  if (!hasNote) hotel.note = '';
 
   return hotel;
 }
@@ -619,7 +625,7 @@ function parseRestaurantInfoBox(title, lines) {
     if (r.maps) {
       rest.location = buildLocationFromMaps(r.maps, r.mapcode || null, r.appleMaps || null, null, r.naver || null);
     }
-    rest.note = '';
+    rest.note = r.note || '';
     if (r.reservationUrl) rest.reservationUrl = r.reservationUrl;
     rest.source = r.source || '';
     return rest;
@@ -644,7 +650,7 @@ function parseShoppingInfoBox(title, lines) {
       shop.location = buildLocationFromMaps(r.maps, r.mapcode || null, r.appleMaps || null, null, r.naver || null);
     }
     if (r.rating) shop.googleRating = parseNumOrStr(r.rating);
-    shop.note = '';
+    shop.note = r.note || '';
     shop.source = r.source || '';
     return shop;
   });
@@ -729,9 +735,9 @@ function parseTableRows(tableLines) {
 
 // ─── Main build ───
 
-slugs.forEach(function(slug) {
-  var srcDir = path.join(srcBase, slug);
-  var outDir = path.join(distBase, slug);
+tripIds.forEach(function(tripId) {
+  var srcDir = path.join(srcBase, tripId);
+  var outDir = path.join(distBase, tripId);
   if (fs.existsSync(outDir)) {
     fs.readdirSync(outDir).forEach(function(f) {
       fs.unlinkSync(path.join(outDir, f));
@@ -740,7 +746,7 @@ slugs.forEach(function(slug) {
     fs.mkdirSync(outDir, { recursive: true });
   }
 
-  console.log('Building ' + slug + ' ...');
+  console.log('Building ' + tripId + ' ...');
 
   var manifest = [];
 
@@ -800,5 +806,5 @@ slugs.forEach(function(slug) {
   fs.writeFileSync(path.join(outDir, 'index.json'), JSON.stringify(manifest, null, 2) + '\n');
   console.log('  index.json');
 
-  console.log('Done! Output: data/dist/' + slug + '/');
+  console.log('Done! Output: data/dist/' + tripId + '/');
 });

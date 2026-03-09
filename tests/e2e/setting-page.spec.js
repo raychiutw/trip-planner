@@ -46,8 +46,8 @@ test.describe('設定頁載入', () => {
     await page.waitForTimeout(1000);
     const activeBtn = page.locator('.trip-btn.active');
     await expect(activeBtn).toHaveCount(1);
-    const slug = await activeBtn.getAttribute('data-slug');
-    expect(slug).toBe('okinawa-trip-2026-Ray');
+    const tripId = await activeBtn.getAttribute('data-trip-id');
+    expect(tripId).toBe('okinawa-trip-2026-Ray');
   });
 
   test('顯示「外觀」區段與三張色彩模式卡片', async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe('行程切換', () => {
 
     // 找一個非 active 的行程按鈕
     const inactiveBtn = page.locator('.trip-btn:not(.active)').first();
-    const targetSlug = await inactiveBtn.getAttribute('data-slug');
+    const targetSlug = await inactiveBtn.getAttribute('data-trip-id');
 
     // 點擊後會導航到 index.html（serve 會 resolve 為 /）
     await Promise.all([

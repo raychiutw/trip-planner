@@ -1,6 +1,6 @@
 # unregister-scheduler.ps1
-# Remove TripPlanner-AutoIssue from Windows Task Scheduler (run once)
+# Remove TripPlanner-AutoRequest from Windows Task Scheduler (run once)
 
-Unregister-ScheduledTask -TaskName "TripPlanner-AutoIssue" -Confirm:$false
+Unregister-ScheduledTask -TaskName "TripPlanner-AutoRequest" -Confirm:$false
 
-Write-Host "Removed: TripPlanner-AutoIssue"
+Write-Host "Removed: TripPlanner-AutoRequest"

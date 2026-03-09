@@ -3,12 +3,12 @@
 ## 指令格式
 
 ```
-/tp-patch --target <target> --field <field> [--trips <slug,...>]
+/tp-patch --target <target> --field <field> [--trips <tripId,...>]
 ```
 
 - `--target`（必填）：`hotel` | `restaurant` | `shop` | `event` | `gasStation`
 - `--field`（必填）：`googleRating` | `blogUrl` | `reservation` | `location` 或其他合法欄位
-- `--trips`（選填）：逗號分隔的行程 slug，預設為所有行程
+- `--trips`（選填）：逗號分隔的行程 tripId，預設為所有行程
 
 未提供必填參數時顯示使用說明，不執行操作。
 
@@ -16,7 +16,7 @@
 
 ### Phase 1：掃描
 
-1. 讀取目標行程 MD 檔案（`data/trips-md/{slug}/`，`--trips` 指定或全部）
+1. 讀取目標行程 MD 檔案（`data/trips-md/{tripId}/`，`--trips` 指定或全部）
 2. 遍歷所有 day-N.md，依 `--target` 定位物件：
    - `hotel` → Hotel section（跳過 name 為「家」或以「（」開頭的）
    - `restaurant` → restaurants infoBox table 內的每個 restaurant

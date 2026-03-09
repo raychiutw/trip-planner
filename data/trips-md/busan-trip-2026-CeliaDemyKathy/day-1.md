@@ -15,11 +15,11 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 
 ### shopping: 飯店周邊購物
 
-| name | category | hours | mustBuy | rating | maps | mapcode | source | naver |
-|---|---|---|---|---|---|---|---|---|
-| CU 南浦洞店 | 超商 | 24小時 | 香蕉牛奶, 三角飯糰, 韓國燒酒 | 3.8 | CU 남포동점 \| CU 남포동 |  | ai | https://map.naver.com/v5/search/CU+%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90 |
-| Olive Young 光復路店 | 藥妝 | 10:00~22:00 | 防曬乳, 面膜, 護唇膏 | 4.3 | 올리브영 광복점 \| 올리브영 광복점 부산 |  | ai | https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81+%EA%B4%91%EB%B3%B5%EC%A0%90 |
-| Homeplus Express 南浦店 | 超市 | 09:00~24:00 | 韓國泡麵, 海苔, 辣炒年糕醬 | 3.9 | 홈플러스 익스프레스 남포점 \| 홈플러스 익스프레스 남포 부산 |  | ai | https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4+%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4+%EB%82%A8%ED%8F%AC%EC%A0%90 |
+| name | category | hours | mustBuy | note | rating | maps | mapcode | source | naver |
+|---|---|---|---|---|---|---|---|---|---|
+| CU 南浦洞店 | 超商 | 24小時 | 香蕉牛奶, 三角飯糰, 韓國燒酒 | 飯店旁最近的便利商店 | 3.8 | CU 남포동점 \| CU 남포동 |  | ai | https://map.naver.com/v5/search/CU+%EB%82%A8%ED%8F%AC%EB%8F%99%EC%A0%90 |
+| Olive Young 光復路店 | 藥妝 | 10:00~22:00 | 防曬乳, 面膜, 護唇膏 | 光復路上最大間的分店 | 4.3 | 올리브영 광복점 \| 올리브영 광복점 부산 |  | ai | https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81+%EA%B4%91%EB%B3%B5%EC%A0%90 |
+| Homeplus Express 南浦店 | 超市 | 09:00~24:00 | 韓國泡麵, 海苔, 辣炒年糕醬 | 採買零食伴手禮的好選擇 | 3.9 | 홈플러스 익스프레스 남포점 \| 홈플러스 익스프레스 남포 부산 |  | ai | https://map.naver.com/v5/search/%ED%99%88%ED%94%8C%EB%9F%AC%EC%8A%A4+%EC%9D%B5%EC%8A%A4%ED%94%84%EB%A0%88%EC%8A%A4+%EB%82%A8%ED%8F%AC%EC%A0%90 |
 
 ## Timeline
 
@@ -56,11 +56,11 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 
 #### restaurants: 午餐推薦三選一
 
-| name | category | hours | price | reservation | description | rating | maps | mapcode | source | naver |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 烤肉的男子 西面店 | 燒肉 | 11:00~22:00 | ₩15,000~25,000/人 | 現場候位 | 人氣韓式烤肉店，厚切五花肉現烤 | 4 | 고기리남자 서면점 \| 고기리남자 서면 |  | ai | https://map.naver.com/v5/search/%EA%B3%A0%EA%B8%B0%EB%A6%AC%EB%82%A8%EC%9E%90+%EC%84%9C%EB%A9%B4%EC%A0%90 |
-| DIART Coffee | 咖啡廳 | 10:00~22:00 | ₩8,000~15,000/人 | 不需訂位 | 西面人氣咖啡廳，提供早午餐與甜點 | 4.5 | 디아트커피 서면 \| 디아트커피 서면 부산 |  | ai | https://map.naver.com/v5/search/%EB%94%94%EC%95%84%ED%8A%B8%EC%BB%A4%ED%94%BC+%EC%84%9C%EB%A9%B4 |
-| 紫菜包飯天國 西面店 | 地方特色 | 24小時 | ₩3,000~6,000/人 | 不需訂位 | 平價韓式連鎖，紫菜包飯、拉麵、炒飯一應俱全 | 3.8 | 김밥천국 서면점 \| 김밥천국 서면 부산 |  | ai | https://map.naver.com/v5/search/%EA%B9%80%EB%B0%A5%EC%B2%9C%EA%B5%AD+%EC%84%9C%EB%A9%B4%EC%A0%90 |
+| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source | naver |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 烤肉的男子 西面店 | 燒肉 | 11:00~22:00 | ₩15,000~25,000/人 | 現場候位 | 人氣韓式烤肉店，厚切五花肉現烤 | 午餐時段人較少不用久等 | 4 | 고기리남자 서면점 \| 고기리남자 서면 |  | ai | https://map.naver.com/v5/search/%EA%B3%A0%EA%B8%B0%EB%A6%AC%EB%82%A8%EC%9E%90+%EC%84%9C%EB%A9%B4%EC%A0%90 |
+| DIART Coffee | 咖啡廳 | 10:00~22:00 | ₩8,000~15,000/人 | 不需訂位 | 西面人氣咖啡廳，提供早午餐與甜點 | 二樓座位空間較寬敞 | 4.5 | 디아트커피 서면 \| 디아트커피 서면 부산 |  | ai | https://map.naver.com/v5/search/%EB%94%94%EC%95%84%ED%8A%B8%EC%BB%A4%ED%94%BC+%EC%84%9C%EB%A9%B4 |
+| 紫菜包飯天國 西面店 | 地方特色 | 24小時 | ₩3,000~6,000/人 | 不需訂位 | 平價韓式連鎖，紫菜包飯、拉麵、炒飯一應俱全 | 24小時營業適合趕時間 | 3.8 | 김밥천국 서면점 \| 김밥천국 서면 부산 |  | ai | https://map.naver.com/v5/search/%EA%B9%80%EB%B0%A5%EC%B2%9C%EA%B5%AD+%EC%84%9C%EB%A9%B4%EC%A0%90 |
 
 ### 13:30 釜田市場
 釜山最大傳統市場，體驗在地市場文化
@@ -96,11 +96,11 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 
 #### restaurants: 晚餐推薦三選一
 
-| name | category | hours | price | reservation | description | rating | maps | mapcode | source | naver |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 老宅邸燒肉 | 燒肉 | 16:00~23:00 | ₩18,000~35,000/人 | 建議訂位 | 釜山人氣燒肉名店，醬燒豬五花、韓牛套餐 | 4 | 고택집 서면 \| 고택집 서면 부산 |  | ai | https://map.naver.com/v5/search/%EA%B3%A0%ED%83%9D%EC%A7%91+%EC%84%9C%EB%A9%B4 |
-| Coffee Nine | 咖啡廳 | 11:00~22:00 | ₩6,000~12,000/人 | 不需訂位 | 西面質感咖啡廳，輕食與手沖咖啡 | 4 | 커피나인 서면 \| 커피나인 서면 부산 |  | ai | https://map.naver.com/v5/search/%EC%BB%A4%ED%94%BC%EB%82%98%EC%9D%B8+%EC%84%9C%EB%A9%B4 |
-| 할매가야밀면 | 地方特色 | 10:00~21:00 | ₩7,000~9,000/人 | 不需訂位 | 釜山名物密麵（冷麵），50年老店 | 3.9 | 할매가야밀면 서면 \| 할매가야밀면 서면 부산 |  | ai | https://map.naver.com/v5/search/%ED%95%A0%EB%A7%A4%EA%B0%80%EC%95%BC%EB%B0%80%EB%A9%B4+%EC%84%9C%EB%A9%B4 |
+| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source | naver |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 老宅邸燒肉 | 燒肉 | 16:00~23:00 | ₩18,000~35,000/人 | 建議訂位 | 釜山人氣燒肉名店，醬燒豬五花、韓牛套餐 | 週五晚間建議提前訂位 | 4 | 고택집 서면 \| 고택집 서면 부산 |  | ai | https://map.naver.com/v5/search/%EA%B3%A0%ED%83%9D%EC%A7%91+%EC%84%9C%EB%A9%B4 |
+| Coffee Nine | 咖啡廳 | 11:00~22:00 | ₩6,000~12,000/人 | 不需訂位 | 西面質感咖啡廳，輕食與手沖咖啡 | 適合輕食晚餐不想吃太飽 | 4 | 커피나인 서면 \| 커피나인 서면 부산 |  | ai | https://map.naver.com/v5/search/%EC%BB%A4%ED%94%BC%EB%82%98%EC%9D%B8+%EC%84%9C%EB%A9%B4 |
+| 할매가야밀면 | 地方特色 | 10:00~21:00 | ₩7,000~9,000/人 | 不需訂位 | 釜山名物密麵（冷麵），50年老店 | 釜山必吃密麵。夏天推薦冷麵 | 3.9 | 할매가야밀면 서면 \| 할매가야밀면 서면 부산 |  | ai | https://map.naver.com/v5/search/%ED%95%A0%EB%A7%A4%EA%B0%80%EC%95%BC%EB%B0%80%EB%A9%B4+%EC%84%9C%EB%A9%B4 |
 
 ### 20:00 樂天百貨 西面店
 西面地標百貨，免稅購物、伴手禮採買
@@ -112,8 +112,8 @@ weather: {"label":"西面","locations":[{"lat":35.18,"lon":128.94,"name":"金海
 
 #### shopping: 西面購物
 
-| name | category | hours | mustBuy | rating | maps | mapcode | source | naver |
-|---|---|---|---|---|---|---|---|---|
-| 樂天百貨 西面店 | 購物中心 | 10:30~20:00 | 韓國美妝品牌, 樂天免稅商品, 韓國零食伴手禮 | 4.2 | 롯데백화점 서면점 \| 롯데백화점 서면점 부산 |  | ai | https://map.naver.com/v5/search/%EB%A1%AF%EB%8D%B0%EB%B0%B1%ED%99%94%EC%A0%90+%EC%84%9C%EB%A9%B4%EC%A0%90 |
-| Olive Young 西面站店 | 藥妝 | 10:00~23:00 | 韓國面膜, 防曬乳, 美妝小物 | 4.3 | 올리브영 서면역점 \| 올리브영 서면역 부산 |  | ai | https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81+%EC%84%9C%EB%A9%B4%EC%97%AD%EC%A0%90 |
-| GS25 西面站店 | 超商 | 24小時 | 香蕉牛奶, 韓國啤酒, 三角飯糰 | 3.8 | GS25 서면역점 \| GS25 서면역 부산 |  | ai | https://map.naver.com/v5/search/GS25+%EC%84%9C%EB%A9%B4%EC%97%AD%EC%A0%90 |
+| name | category | hours | mustBuy | note | rating | maps | mapcode | source | naver |
+|---|---|---|---|---|---|---|---|---|---|
+| 樂天百貨 西面店 | 購物中心 | 10:30~20:00 | 韓國美妝品牌, 樂天免稅商品, 韓國零食伴手禮 | 持護照可領折扣券 | 4.2 | 롯데백화점 서면점 \| 롯데백화점 서면점 부산 |  | ai | https://map.naver.com/v5/search/%EB%A1%AF%EB%8D%B0%EB%B0%B1%ED%99%94%EC%A0%90+%EC%84%9C%EB%A9%B4%EC%A0%90 |
+| Olive Young 西面站店 | 藥妝 | 10:00~23:00 | 韓國面膜, 防曬乳, 美妝小物 | 營業到23點。晚上逛也行 | 4.3 | 올리브영 서면역점 \| 올리브영 서면역 부산 |  | ai | https://map.naver.com/v5/search/%EC%98%AC%EB%A6%AC%EB%B8%8C%EC%98%81+%EC%84%9C%EB%A9%B4%EC%97%AD%EC%A0%90 |
+| GS25 西面站店 | 超商 | 24小時 | 香蕉牛奶, 韓國啤酒, 三角飯糰 | 地鐵站出口旁很方便 | 3.8 | GS25 서면역점 \| GS25 서면역 부산 |  | ai | https://map.naver.com/v5/search/GS25+%EC%84%9C%EB%A9%B4%EC%97%AD%EC%A0%90 |

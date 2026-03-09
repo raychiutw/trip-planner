@@ -26,8 +26,8 @@ const {
 const DIST_DIR = resolve(__dirname, '../../data/dist');
 
 /** 從 dist 分檔 JSON 組合完整行程物件 */
-function loadDistTrip(slug) {
-  var dir = resolve(DIST_DIR, slug);
+function loadDistTrip(tripId) {
+  var dir = resolve(DIST_DIR, tripId);
   var meta = JSON.parse(readFileSync(resolve(dir, 'meta.json'), 'utf8'));
   var result = { meta: meta.meta, footer: meta.footer, autoScrollDates: meta.autoScrollDates };
   var flightsPath = resolve(dir, 'flights.json');
@@ -47,17 +47,17 @@ function loadDistTrip(slug) {
   return result;
 }
 
-const tripSlugs = [
-  { slug: 'okinawa-trip-2026-Ray', label: 'Ray' },
-  { slug: 'okinawa-trip-2026-HuiYun', label: 'HuiYun' },
+const tripEntries = [
+  { tripId: 'okinawa-trip-2026-Ray', label: 'Ray' },
+  { tripId: 'okinawa-trip-2026-HuiYun', label: 'HuiYun' },
 ];
 
-tripSlugs.forEach(({ slug, label }) => {
+tripEntries.forEach(({ tripId, label }) => {
   describe(`整合測試：${label} 行程完整渲染`, () => {
     let data;
 
     beforeAll(() => {
-      data = loadDistTrip(slug);
+      data = loadDistTrip(tripId);
     });
 
     /* ===== 每日內容渲染 ===== */
@@ -142,7 +142,7 @@ tripSlugs.forEach(({ slug, label }) => {
             if (entry.travel) {
               found = true;
               const html = renderTimelineEvent(entry);
-              expect(html).toContain('tl-segment-transit');
+              expect(html).toContain('tl-segment-travel');
             }
           });
         });

@@ -4,14 +4,14 @@
     'use strict';
 
     /* ===== Render Trip List ===== */
-    function renderTripList(trips, currentSlug) {
+    function renderTripList(trips, currentTripId) {
         var container = document.getElementById('tripList');
         if (!container) return;
         var html = '';
         trips.forEach(function(t) {
-            var slug = t.slug;
-            var isActive = slug === currentSlug;
-            html += '<button class="trip-btn' + (isActive ? ' active' : '') + '" data-slug="' + escHtml(slug) + '">';
+            var tripId = t.tripId;
+            var isActive = tripId === currentTripId;
+            html += '<button class="trip-btn' + (isActive ? ' active' : '') + '" data-trip-id="' + escHtml(tripId) + '">';
             html += '<strong>' + escHtml(t.name) + '</strong>';
             html += '<span class="trip-sub">' + escHtml(t.dates) + ' · ' + escHtml(t.owner) + '</span>';
             html += '</button>';
@@ -19,10 +19,10 @@
         container.innerHTML = html;
 
         container.addEventListener('click', function(e) {
-            var btn = e.target.closest('[data-slug]');
+            var btn = e.target.closest('[data-trip-id]');
             if (!btn) return;
-            var slug = btn.getAttribute('data-slug');
-            lsSet('trip-pref', slug);
+            var tripId = btn.getAttribute('data-trip-id');
+            lsSet('trip-pref', tripId);
             window.location.href = 'index.html';
         });
     }
@@ -114,11 +114,11 @@
         fetch('data/dist/trips.json')
             .then(function(r) { return r.json(); })
             .then(function(trips) {
-                var currentSlug = lsGet('trip-pref') || '';
-                if (!currentSlug && trips.length > 0) {
-                    currentSlug = trips[0].slug;
+                var currentTripId = lsGet('trip-pref') || '';
+                if (!currentTripId && trips.length > 0) {
+                    currentTripId = trips[0].tripId;
                 }
-                renderTripList(trips, currentSlug);
+                renderTripList(trips, currentTripId);
                 renderColorMode(colorMode);
             })
             .catch(function() {

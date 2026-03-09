@@ -10,6 +10,13 @@ import { describe, it, expect } from 'vitest';
 const { escHtml, escUrl } = require('../../js/shared.js');
 const { iconSpan } = require('../../js/icons.js');
 
+/* ===== Helper: simulate getIssueMode ===== */
+function getIssueMode(issue) {
+  var labels = (issue.labels || []).map(function(l) { return typeof l === 'string' ? l : l.name; });
+  if (labels.indexOf('trip-plan') !== -1) return 'plan';
+  return 'edit';
+}
+
 /* ===== Helper: simulate buildIssueItemHtml ===== */
 function buildIssueItemHtml(issue) {
   var date = new Date(issue.created_at).toLocaleString('zh-TW', {
@@ -18,13 +25,19 @@ function buildIssueItemHtml(issue) {
   var stateClass = issue.state === 'open' ? 'open' : 'closed';
   var badgeIcon = issue.state === 'open' ? iconSpan('circle-dot') : iconSpan('check-circle');
   var badgeText = issue.state === 'open' ? 'Open' : 'Closed';
+  var mode = getIssueMode(issue);
+  var modeBadgeText = mode === 'plan' ? '問建議' : '修改';
   var html = '<div class="issue-item ' + stateClass + '">';
   html += '<div class="issue-item-header">';
   html += '<span class="issue-badge ' + stateClass + '">' + badgeIcon + badgeText + '</span>';
+  html += '<span class="issue-mode-badge mode-' + mode + '">' + escHtml(modeBadgeText) + '</span>';
   html += '<a class="issue-item-title" href="' + escUrl(issue.html_url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(issue.title) + '</a>';
   html += '</div>';
+  if (issue.body) {
+    html += '<div class="issue-item-body">' + escHtml(issue.body) + '</div>';
+  }
   html += '<div class="issue-item-meta">#' + issue.number + ' · ' + escHtml(date) + '</div>';
-  if (issue.state === 'closed' && issue.comments > 0) {
+  if (issue.comments > 0) {
     html += '<div class="issue-reply" id="reply-' + issue.number + '">\u8B80\u53D6\u56DE\u8986\u4E2D\u2026</div>';
   }
   html += '</div>';
@@ -191,10 +204,10 @@ describe('renderIssues list rendering', () => {
     expect(titleIdx).toBeGreaterThan(badgeIdx);
   });
 
-  it('closed issue with comments > 0 has reply placeholder', () => {
+  it('issue with comments > 0 has reply placeholder', () => {
     const html = renderIssuesHtml([{
       number: 10,
-      title: 'Closed with reply',
+      title: 'With reply',
       html_url: 'https://github.com/x/y/issues/10',
       state: 'closed',
       comments: 2,
@@ -205,27 +218,77 @@ describe('renderIssues list rendering', () => {
     expect(html).toContain('讀取回覆中…');
   });
 
-  it('open issue does not have reply placeholder', () => {
-    const html = renderIssuesHtml([{
-      number: 11,
-      title: 'Open no reply',
-      html_url: 'https://github.com/x/y/issues/11',
-      state: 'open',
-      comments: 3,
-      created_at: '2026-03-01T10:00:00Z'
-    }]);
-    expect(html).not.toContain('issue-reply');
-  });
-
-  it('closed issue with 0 comments does not have reply placeholder', () => {
+  it('issue with 0 comments does not have reply placeholder', () => {
     const html = renderIssuesHtml([{
       number: 12,
-      title: 'Closed no comments',
+      title: 'No comments',
       html_url: 'https://github.com/x/y/issues/12',
       state: 'closed',
       comments: 0,
       created_at: '2026-03-01T10:00:00Z'
     }]);
     expect(html).not.toContain('issue-reply');
+  });
+
+  it('trip-edit label shows edit mode badge', () => {
+    const html = renderIssuesHtml([{
+      number: 20,
+      title: 'Edit issue',
+      html_url: 'https://github.com/x/y/issues/20',
+      state: 'open',
+      created_at: '2026-03-01T10:00:00Z',
+      labels: [{ name: 'trip-edit' }, { name: 'okinawa-trip-2026-Ray' }]
+    }]);
+    expect(html).toContain('issue-mode-badge mode-edit');
+    expect(html).toContain('修改');
+  });
+
+  it('trip-plan label shows plan mode badge', () => {
+    const html = renderIssuesHtml([{
+      number: 21,
+      title: 'Plan issue',
+      html_url: 'https://github.com/x/y/issues/21',
+      state: 'open',
+      created_at: '2026-03-01T10:00:00Z',
+      labels: [{ name: 'trip-plan' }, { name: 'okinawa-trip-2026-Ray' }]
+    }]);
+    expect(html).toContain('issue-mode-badge mode-plan');
+    expect(html).toContain('問建議');
+  });
+
+  it('no labels defaults to edit mode badge', () => {
+    const html = renderIssuesHtml([{
+      number: 22,
+      title: 'No label issue',
+      html_url: 'https://github.com/x/y/issues/22',
+      state: 'open',
+      created_at: '2026-03-01T10:00:00Z'
+    }]);
+    expect(html).toContain('issue-mode-badge mode-edit');
+  });
+
+  it('displays issue body text', () => {
+    const html = renderIssuesHtml([{
+      number: 23,
+      title: 'Body test',
+      html_url: 'https://github.com/x/y/issues/23',
+      state: 'open',
+      created_at: '2026-03-01T10:00:00Z',
+      body: '把 D3 午餐換成拉麵'
+    }]);
+    expect(html).toContain('issue-item-body');
+    expect(html).toContain('把 D3 午餐換成拉麵');
+  });
+
+  it('does not render body div when body is empty', () => {
+    const html = renderIssuesHtml([{
+      number: 24,
+      title: 'No body',
+      html_url: 'https://github.com/x/y/issues/24',
+      state: 'open',
+      created_at: '2026-03-01T10:00:00Z',
+      body: ''
+    }]);
+    expect(html).not.toContain('issue-item-body');
   });
 });

@@ -134,7 +134,7 @@ body:not(.dark) .day-header {
 
 /* ===== Timeline Segment (dashed line + content) ===== */
 .tl-segment { margin-left: 12px; padding: 8px 0 8px 16px; border-left: 2px dashed var(--border); }
-.tl-segment-transit { padding: 8px 0 8px 16px; }
+.tl-segment-travel { padding: 8px 0 8px 16px; }
 
 /* ===== Timeline Event Wrapper ===== */
 .tl-event { position: relative; }
@@ -151,11 +151,11 @@ body:not(.dark) .day-header {
 .tl-desc { color: var(--text-muted); margin: 4px 0; font-size: var(--fs-callout); }
 .tl-body { display: block; padding: 4px 0 4px; font-size: var(--fs-body); line-height: var(--lh-relaxed); }
 
-/* ===== Transit Content ===== */
-.tl-transit-content { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: var(--fs-footnote); color: var(--text-muted); background: var(--accent-bg); border-radius: var(--radius-sm); cursor: default; }
-.tl-transit-icon { display: inline-flex; align-items: center; }
-.tl-transit-icon .svg-icon { width: 1.1em; height: 1.1em; }
-.tl-transit-text { flex: 1; }
+/* ===== Travel Content ===== */
+.tl-travel-content { display: flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: var(--fs-footnote); color: var(--text-muted); background: var(--accent-bg); border-radius: var(--radius-sm); cursor: default; }
+.tl-travel-icon { display: inline-flex; align-items: center; }
+.tl-travel-icon .svg-icon { width: 1.1em; height: 1.1em; }
+.tl-travel-text { flex: 1; }
 
 /* ===== Nav Group (Map Links) ===== */
 .nav-links { margin: 8px 0; }
@@ -284,7 +284,7 @@ body:not(.dark) .day-header {
 .print-mode .tl-card { background: #fff; }
 .print-mode .tl-flag-arrive { background: #8B8580; }
 .print-mode .tl-segment { border-left-color: #ddd; }
-.print-mode .tl-transit-content { background: #f5f5f5; }
+.print-mode .tl-travel-content { background: #f5f5f5; }
 .print-mode .tl-body, .print-mode .col-detail { display: block !important; }
 .print-mode .tl-arrow, .print-mode .col-row .arrow { display: none !important; }
 .print-mode .dh-nav { display: none !important; }
@@ -319,9 +319,9 @@ body:not(.dark) .day-header {
     .tl-flag { padding: 4px 16px 4px 8px; }
     .tl-flag-num { width: 16px; height: 16px; }
     .tl-segment { margin-left: 12px; padding: 8px 0 8px 12px; }
-    .tl-segment-transit { padding: 8px 0 8px 12px; }
+    .tl-segment-travel { padding: 8px 0 8px 12px; }
     .tl-card { padding: 8px 12px; }
-    .tl-transit-content { padding: 4px 12px; }
+    .tl-travel-content { padding: 4px 12px; }
     .tl-body { padding: 4px 0 4px; }
     .info-box { padding: 8px 12px; }
     .hw-grid { gap: 4px; scroll-snap-type: x mandatory; }

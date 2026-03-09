@@ -4,12 +4,12 @@
 
 ## 輸入方式
 
-- 指定 tripSlug：`/tp-check okinawa-trip-2026-Ray`
+- 指定 tripId：`/tp-check okinawa-trip-2026-Ray`
 - 未指定：讀取 `data/dist/trips.json` 列出所有行程供選擇
 
 ## 步驟
 
-1. 讀取 `data/trips-md/{tripSlug}/` 下的 MD 檔案（meta.md + day-N.md 等）
+1. 讀取 `data/trips-md/{tripId}/` 下的 MD 檔案（meta.md + day-N.md 等）
 2. 逐項檢查 R1-R13 品質規則（定義在 `/tp-rebuild` 中）
 3. 依檢查結果輸出 report（完整模式或精簡模式）
 
@@ -21,7 +21,7 @@
 
 ```
 ══════════════════════════════════════════════
-  tp-check Report: {tripSlug}
+  tp-check Report: {tripId}
   {YYYY-MM-DD HH:mm:ss}
 ══════════════════════════════════════════════
 
@@ -76,7 +76,7 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | `/tp-check` | 獨立執行 | 完整 |
 | `/tp-rebuild` | 修正前 + 修正後 | 完整 x2 |
 | `/tp-edit` | 修改完成後 | 精簡 |
-| `/tp-issue` | 每個 Issue 處理完後 | 精簡 |
+| `/tp-request` | 每個 Issue 處理完後 | 精簡 |
 | `/tp-deploy` | 不嵌入 | — |
 | `/tp-rebuild-all` | 每趟修正後 | 完整 |
 

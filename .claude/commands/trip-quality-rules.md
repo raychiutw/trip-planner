@@ -18,7 +18,7 @@
 #### 根層級必填欄位
 - 必填：`meta`（含 `title` 非空字串、`selfDrive` boolean、`countries` 非空陣列，值為 ISO 3166-1 alpha-2 國碼如 `["JP"]`）、`days`（非空陣列）、`autoScrollDates`（非空陣列）、`footer`（含 `title`、`dates`）、`suggestions`、`checklist`。
 - 選填：`flights`、`emergency`（存在時驗證結構）。
-- `meta` 不得包含已移除欄位（`themeColor`、`name`）。
+- `meta` 不得包含已移除欄位（`themeColor`）。
 
 #### 每日結構
 - 每日必填：`id`、`date`（非空字串）、`label`、`content.timeline`（陣列）。

@@ -15,9 +15,9 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 
 ### shopping: 飯店附近購物
 
-| name | category | hours | mustBuy | rating | maps | mapcode | source |
-|---|---|---|---|---|---|---|---|
-| 範例超市 | 超市 | ~24:00 | 限定商品1, 限定商品2, 當地特產 | 4 | 範例超市 | 206 598 600*00 | ai |
+| name | category | hours | mustBuy | note | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|
+| 範例超市 | 超市 | ~24:00 | 限定商品1, 限定商品2, 當地特產 | 飯店步行3分鐘 | 4 | 範例超市 | 206 598 600*00 | ai |
 
 ### parking: 停車場
 - price: 免費
@@ -51,11 +51,11 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 
 #### restaurants: 午餐推薦三選一
 
-| name | category | hours | price | reservation | description | rating | maps | mapcode | source | reservationUrl |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 範例麵店 | 拉麵 | 11:00~17:00 | 600~ | 不需訂位 | 百年老店沖繩麵 | 4.1 | 範例麵店 | 206 857 712*00 | ai |  |
-| 範例燒肉 | 燒肉 | 11:30~22:00 | 1,500~ | TableCheck 預約 | 品牌牛直營燒肉 | 4.3 | 範例燒肉 | 206 795 582*00 | ai | https://www.tablecheck.com/example/ |
-| 範例食堂 | 當地特色 | 11:00~15:30 | 1,000~ | 不需訂位 | 漁港直營新鮮海鮮 | 4 | 範例食堂 | 206 857 471*00 | ai |  |
+| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source | reservationUrl |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 範例麵店 | 拉麵 | 11:00~17:00 | 600~ | 不需訂位 | 百年老店沖繩麵 | 售完即止建議早到 | 4.1 | 範例麵店 | 206 857 712*00 | ai |  |
+| 範例燒肉 | 燒肉 | 11:30~22:00 | 1,500~ | TableCheck 預約 | 品牌牛直營燒肉 | 建議先線上預約 | 4.3 | 範例燒肉 | 206 795 582*00 | ai | https://www.tablecheck.com/example/ |
+| 範例食堂 | 當地特色 | 11:00~15:30 | 1,000~ | 不需訂位 | 漁港直營新鮮海鮮 | 午餐限定CP值超高 | 4 | 範例食堂 | 206 857 471*00 | ai |  |
 
 ### 14:00-16:00 戶外景點
 自然風景描述
@@ -93,8 +93,8 @@ weather: {"label":"景點區域","locations":[{"lat":26.65,"lon":127.87,"name":"
 
 #### restaurants: 晚餐推薦三選一
 
-| name | category | hours | price | reservation | description | rating | maps | mapcode | source | reservationUrl |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 範例拉麵 | 拉麵 | 11:30~22:00 | 800~ | 不需訂位 | 當地人氣拉麵 | 4.2 | 範例拉麵 | 206 688 326*00 | ai |  |
-| 範例豬肉料理 | 燒肉 | 17:30~22:30 | 2,000~ | HotPepper 預約 | 品牌豬燒肉 | 4.1 | 範例豬肉料理 | 206 688 450*00 | ai | https://www.hotpepper.jp/example/ |
-| 範例老店 | 當地特色 | 11:00~21:00 | 2,700~ | 不需訂位 | 創業老牌名店 | 4.2 | 範例老店 | 206 717 028*00 | ai |  |
+| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source | reservationUrl |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 範例拉麵 | 拉麵 | 11:30~22:00 | 800~ | 不需訂位 | 當地人氣拉麵 | 週末常排隊 | 4.2 | 範例拉麵 | 206 688 326*00 | ai |  |
+| 範例豬肉料理 | 燒肉 | 17:30~22:30 | 2,000~ | HotPepper 預約 | 品牌豬燒肉 | 有中文菜單 | 4.1 | 範例豬肉料理 | 206 688 450*00 | ai | https://www.hotpepper.jp/example/ |
+| 範例老店 | 當地特色 | 11:00~21:00 | 2,700~ | 不需訂位 | 創業老牌名店 | 50年老舖必吃 | 4.2 | 範例老店 | 206 717 028*00 | ai |  |

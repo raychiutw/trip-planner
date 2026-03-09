@@ -767,7 +767,7 @@ test.describe('FAB 修改行程按鈕', () => {
     expect(href).toContain('edit.html?trip=');
   });
 
-  test('FAB 連結包含當前行程 slug', async ({ page }) => {
+  test('FAB 連結包含當前行程 tripId', async ({ page }) => {
     await page.goto('/?trip=okinawa-trip-2026-Ray');
     await page.waitForTimeout(500);
     const fab = page.locator('#editFab');

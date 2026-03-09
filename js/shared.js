@@ -76,20 +76,21 @@ function lsRenewAll() {
     var legacyMap = { tripPref: 'trip-pref', dark: 'dark' };
     var oldTripFile = localStorage.getItem('tripFile');
     if (oldTripFile) {
-        // tripFile 存的是 'data/trips/xxx.json'，取 slug 存到 trip-pref
+        // tripFile 存的是 'data/trips/xxx.json'，取 tripId 存到 trip-pref
         var m = oldTripFile.match(/^data\/trips\/(.+)\.json$/);
         if (m && !localStorage.getItem(LS_PREFIX + 'trip-pref')) {
             lsSet('trip-pref', m[1]);
         }
         localStorage.removeItem('tripFile');
     }
-    // tripPref 是 JSON { slug: '...' }
+    // tripPref 是 JSON { tripId: '...' }（舊版可能是 slug）
     try {
         var rawPref = localStorage.getItem('tripPref');
         if (rawPref) {
             var p = JSON.parse(rawPref);
-            if (p && p.slug && !localStorage.getItem(LS_PREFIX + 'trip-pref')) {
-                lsSet('trip-pref', p.slug);
+            var legacyId = p && (p.tripId || p.slug);
+            if (legacyId && !localStorage.getItem(LS_PREFIX + 'trip-pref')) {
+                lsSet('trip-pref', legacyId);
             }
             localStorage.removeItem('tripPref');
         }

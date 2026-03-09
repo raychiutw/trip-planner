@@ -16,13 +16,13 @@
 2. 讀取 `trip-quality-rules.md` 中定義的所有品質規則
 3. 讀取 `data/examples/` 下的 MD 範例檔作為格式參考
 4. 以範例格式為基礎，依使用者描述產生 MD 檔案群：
-   - `data/trips-md/{slug}/meta.md`（含 name、owner、title 等 frontmatter + Footer section）
-   - `data/trips-md/{slug}/day-N.md`（每日一檔）
-   - `data/trips-md/{slug}/flights.md`（若有航班）
-   - `data/trips-md/{slug}/checklist.md`
-   - `data/trips-md/{slug}/backup.md`
-   - `data/trips-md/{slug}/suggestions.md`
-   - `data/trips-md/{slug}/emergency.md`（若有）
+   - `data/trips-md/{tripId}/meta.md`（含 name、owner、title 等 frontmatter + Footer section）
+   - `data/trips-md/{tripId}/day-N.md`（每日一檔）
+   - `data/trips-md/{tripId}/flights.md`（若有航班）
+   - `data/trips-md/{tripId}/checklist.md`
+   - `data/trips-md/{tripId}/backup.md`
+   - `data/trips-md/{tripId}/suggestions.md`
+   - `data/trips-md/{tripId}/emergency.md`（若有）
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：
    - blogUrl → 空字串 `""`
@@ -38,7 +38,7 @@
    - 用 WebSearch 搜尋該天所有 shop 的 blogUrl
    - 用 WebSearch 搜尋該天景點的 blogUrl
    - 用 WebSearch 查詢缺少 googleRating 的地點/餐廳評分
-   - Agent 直接修改對應的 `data/trips-md/{slug}/day-N.md` 補充資訊
+   - Agent 直接修改對應的 `data/trips-md/{tripId}/day-N.md` 補充資訊
 10. 收集所有 Agent 完成後確認 MD 檔案完整
 11. 確保不引入 null 值（找不到 → blogUrl 維持空字串、googleRating 省略）
 
@@ -46,18 +46,18 @@
 
 12. 執行 `npm run build` 產生 dist（含自動產生 `data/dist/trips.json`）
 13. 執行 `git diff --name-only`：
-    → 只有 `data/trips-md/{slug}/**` + `data/dist/**` → OK
+    → 只有 `data/trips-md/{tripId}/**` + `data/dist/**` → OK
     → 有其他檔案被改 → `git checkout` 還原非白名單檔案
 14. `npm test`
 15. 執行 `/tp-check` 完整模式驗證
 16. 不自動 commit（由使用者決定）
 
-## slug 命名規則
+## tripId 命名規則
 
 `{destination}-trip-{year}-{owner}`，例如：`okinawa-trip-2026-Ray`
 
 僅允許編輯：
-  data/trips-md/{slug}/**
+  data/trips-md/{tripId}/**
 
 以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
   data/dist/**

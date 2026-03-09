@@ -543,6 +543,90 @@ slugs.forEach((slug) => {
       });
     });
 
+    // --- R3 品牌不重複 ---
+
+    it('R3: no duplicate restaurant brand across entire trip', () => {
+      const brandMap = new Map(); // normalized → { name, dayId }
+      const duplicates = [];
+
+      data.days.forEach((day) => {
+        const timeline = day.content?.timeline || [];
+        timeline.forEach((ev) => {
+          (ev.infoBoxes || []).forEach((box) => {
+            if (box.type !== 'restaurants') return;
+            (box.restaurants || []).forEach((r) => {
+              // strip branch suffix: 本店, XX店, XX舖, XX점
+              const norm = (r.name || '').replace(/\s*(本店|.+[店舖鋪]|.+점)$/u, '').trim();
+              if (!norm) return;
+              if (brandMap.has(norm) && brandMap.get(norm).name !== r.name) {
+                // user-source gets priority — skip if either is user
+                if (r.source === 'user' || brandMap.get(norm).source === 'user') return;
+                duplicates.push(
+                  `"${r.name}" (Day ${day.id}) vs "${brandMap.get(norm).name}" (Day ${brandMap.get(norm).dayId})`
+                );
+              }
+              if (!brandMap.has(norm)) {
+                brandMap.set(norm, { name: r.name, dayId: day.id, source: r.source });
+              }
+            });
+          });
+        });
+      });
+
+      expect(
+        duplicates.length,
+        `R3 duplicate brands:\n${duplicates.join('\n')}`
+      ).toBe(0);
+    });
+
+    // --- R13 POI source 欄位存在性 ---
+
+    it('R13: all non-exempt POIs have source field', () => {
+      const missing = [];
+
+      data.days.forEach((day, i) => {
+        const timeline = day.content?.timeline || [];
+        const hotel = day.content?.hotel;
+
+        timeline.forEach((ev, j) => {
+          if (ev.travel) return;
+          if ((ev.title || '').includes('餐廳未定')) return;
+          const prefix = `days[${i}].timeline[${j}]`;
+
+          if (!ev.source) missing.push(`${prefix} "${ev.title}"`);
+
+          (ev.infoBoxes || []).forEach((box, k) => {
+            if (box.type === 'restaurants') {
+              (box.restaurants || []).forEach((r, m) => {
+                if (!r.source) missing.push(`${prefix}.infoBoxes[${k}].restaurants[${m}] "${r.name}"`);
+              });
+            }
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                if (!s.source) missing.push(`${prefix}.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+              });
+            }
+          });
+        });
+
+        if (hotel && hotel.name !== '家' && !hotel.name.startsWith('（')) {
+          if (!hotel.source) missing.push(`days[${i}].hotel "${hotel.name}"`);
+          (hotel.infoBoxes || []).forEach((box, k) => {
+            if (box.type === 'shopping') {
+              (box.shops || []).forEach((s, m) => {
+                if (!s.source) missing.push(`days[${i}].hotel.infoBoxes[${k}].shops[${m}] "${s.name}"`);
+              });
+            }
+          });
+        }
+      });
+
+      expect(
+        missing.length,
+        `R13: ${missing.length} POI(s) missing source:\n${missing.join('\n')}`
+      ).toBe(0);
+    });
+
     // --- R13 POI 來源標記驗證 ---
 
     it('R13: ai-sourced POIs without googleRating are failures, user-sourced are warnings', () => {

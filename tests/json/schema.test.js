@@ -7,13 +7,13 @@ const { validateTripData } = require('../../js/app.js');
 const DIST_DIR = resolve(__dirname, '../../data/dist');
 
 // 掃描 dist 子目錄（含 meta.json 的即為行程）
-const slugs = readdirSync(DIST_DIR).filter((d) => {
+const tripIds = readdirSync(DIST_DIR).filter((d) => {
   return existsSync(resolve(DIST_DIR, d, 'meta.json'));
 });
 
 /** 從 dist 分檔 JSON 組合完整行程物件 */
-function loadDistTrip(slug) {
-  const dir = resolve(DIST_DIR, slug);
+function loadDistTrip(tripId) {
+  const dir = resolve(DIST_DIR, tripId);
   const meta = JSON.parse(readFileSync(resolve(dir, 'meta.json'), 'utf8'));
   const result = {
     meta: meta.meta,
@@ -53,12 +53,12 @@ function loadDistTrip(slug) {
   return result;
 }
 
-slugs.forEach((slug) => {
-  describe(`JSON schema: ${slug}`, () => {
+tripIds.forEach((tripId) => {
+  describe(`JSON schema: ${tripId}`, () => {
     let data;
 
     it('loads from dist JSON files', () => {
-      data = loadDistTrip(slug);
+      data = loadDistTrip(tripId);
       expect(data).toBeDefined();
     });
 

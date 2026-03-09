@@ -258,10 +258,10 @@ function renderTimelineEvent(entry, idx, isLast) {
         var travelText = entry.travel.text || (typeof entry.travel === 'string' ? entry.travel : '');
         var travelType = (entry.travel.type) || '';
         var travelIcon = travelType ? iconSpan(travelType) : '';
-        html += '<div class="tl-segment tl-segment-transit">';
-        html += '<div class="tl-transit-content">';
-        if (travelIcon) html += '<span class="tl-transit-icon">' + travelIcon + '</span>';
-        html += '<span class="tl-transit-text">' + escHtml(travelText) + '</span>';
+        html += '<div class="tl-segment tl-segment-travel">';
+        html += '<div class="tl-travel-content">';
+        if (travelIcon) html += '<span class="tl-travel-icon">' + travelIcon + '</span>';
+        html += '<span class="tl-travel-text">' + escHtml(travelText) + '</span>';
         html += '</div></div>';
     }
 
@@ -764,18 +764,18 @@ function formatDayDate(day) {
 }
 
 /* ===== URL Routing ===== */
-function fileToSlug(f) {
+function fileToTripId(f) {
     var m = f.match(/^data\/dist\/([^/]+)\/$/);
     return m ? m[1] : null;
 }
-function slugToFile(s) { return 'data/dist/' + s + '/'; }
+function tripIdToFile(s) { return 'data/dist/' + s + '/'; }
 function getUrlTrip() { return new URLSearchParams(window.location.search).get('trip'); }
-function setUrlTrip(slug) {
+function setUrlTrip(tripId) {
     var url = new URL(window.location);
-    if (slug) url.searchParams.set('trip', slug); else url.searchParams.delete('trip');
+    if (tripId) url.searchParams.set('trip', tripId); else url.searchParams.delete('trip');
     history.replaceState(null, '', url);
 }
-function saveTripPref(slug) { lsSet('trip-pref', slug); }
+function saveTripPref(tripId) { lsSet('trip-pref', tripId); }
 function loadTripPref() { return lsGet('trip-pref'); }
 
 /* ===== Trip Data Loading ===== */
@@ -787,8 +787,8 @@ var tripStart = null;
 var tripEnd = null;
 
 function resolveAndLoad() {
-    var slug = getUrlTrip();
-    if (slug && /^[\w-]+$/.test(slug)) { loadTrip(slug); return; }
+    var tripId = getUrlTrip();
+    if (tripId && /^[\w-]+$/.test(tripId)) { loadTrip(tripId); return; }
     var saved = loadTripPref();
     if (saved) { loadTrip(saved); return; }
     document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
@@ -894,19 +894,19 @@ function tryRenderDrivingStats() {
     }
 }
 
-function loadTrip(slug) {
+function loadTrip(tripId) {
     TRIP = {};
     dayCache = {};
     weatherCache = {};
-    DIST_PATH = 'data/dist/' + slug + '/';
+    DIST_PATH = 'data/dist/' + tripId + '/';
 
-    if (!/^[\w-]+$/.test(slug)) {
+    if (!/^[\w-]+$/.test(tripId)) {
         document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
         return;
     }
 
-    setUrlTrip(slug);
-    saveTripPref(slug);
+    setUrlTrip(tripId);
+    saveTripPref(tripId);
 
     fetch(DIST_PATH + 'index.json')
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -938,7 +938,7 @@ function loadTrip(slug) {
                     renderInfoPanel({ autoScrollDates: meta.autoScrollDates, days: TRIP.days });
 
                     var fab = document.getElementById('editFab');
-                    if (fab) fab.href = 'edit.html?trip=' + encodeURIComponent(slug);
+                    if (fab) fab.href = 'edit.html?trip=' + encodeURIComponent(tripId);
 
                     var infoKeys = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'];
                     infoKeys.forEach(function(key) {
@@ -968,7 +968,7 @@ function loadTrip(slug) {
         .catch(function() {
             lsRemove('trip-pref');
             document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
-                + '<p>行程不存在：' + escHtml(slug) + '</p>'
+                + '<p>行程不存在：' + escHtml(tripId) + '</p>'
                 + '<a class="trip-error-link" href="setting.html">選擇其他行程</a>'
                 + '</div>';
         });
@@ -1579,8 +1579,8 @@ if (typeof module !== 'undefined' && module.exports) {
         renderWarnings: renderWarnings,
         validateTripData: validateTripData,
         validateDay: validateDay,
-        fileToSlug: fileToSlug,
-        slugToFile: slugToFile,
+        fileToTripId: fileToTripId,
+        tripIdToFile: tripIdToFile,
         APPLE_SVG: APPLE_SVG,
         TRANSPORT_TYPES: TRANSPORT_TYPES,
         formatMinutes: formatMinutes,

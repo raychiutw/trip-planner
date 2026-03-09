@@ -4,7 +4,7 @@ context: |
   行程規劃網站（trip-planner），部署於 Cloudflare Pages
   Tech stack: 原生 HTML/CSS/JS（無框架），Vitest + jsdom 單元測試，Playwright E2E 測試
   三頁式架構：index.html（行程主頁）、edit.html（GitHub Issue 修改行程）、setting.html（設定：行程切換 + 色彩模式）
-  資料層：data/trips-md/{slug}/（MD 原始檔）→ npm run build → data/dist/（分檔 JSON + trips.json 自動 registry）
+  資料層：data/trips-md/{tripId}/（MD 原始檔）→ npm run build → data/dist/（分檔 JSON + trips.json 自動 registry）
   語言：繁體中文台灣用語，commit 訊息繁體中文
   UI 規範：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
   字型規範：全站 11 級 Apple text style token — --fs-large-title(2.125rem) / --fs-title(1.75rem) / --fs-title2(1.375rem) / --fs-title3(1.25rem) / --fs-headline(1.0625rem) / --fs-body(1.0625rem body預設) / --fs-callout(1rem) / --fs-subheadline(0.9375rem) / --fs-footnote(0.8125rem) / --fs-caption(0.75rem) / --fs-caption2(0.6875rem)，禁用硬編碼 font-size

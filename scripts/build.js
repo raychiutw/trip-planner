@@ -7,25 +7,25 @@ var childProcess = require('child_process');
 var srcBase = path.join(__dirname, '..', 'data', 'trips-md');
 var distBase = path.join(__dirname, '..', 'data', 'dist');
 
-var slugs = fs.readdirSync(srcBase).filter(function(d) {
+var tripIds = fs.readdirSync(srcBase).filter(function(d) {
   return fs.statSync(path.join(srcBase, d)).isDirectory();
 });
 
-if (!slugs.length) {
+if (!tripIds.length) {
   console.log('No trip directories found in data/trips-md/');
   process.exit(0);
 }
 
-console.log('Building ' + slugs.length + ' trips...');
+console.log('Building ' + tripIds.length + ' trips...');
 
 var failed = [];
-slugs.forEach(function(slug) {
-  var result = childProcess.spawnSync('node', [path.join(__dirname, 'trip-build.js'), slug], { stdio: 'inherit' });
+tripIds.forEach(function(tripId) {
+  var result = childProcess.spawnSync('node', [path.join(__dirname, 'trip-build.js'), tripId], { stdio: 'inherit' });
   if (result.status !== 0) {
-    console.error('FAIL: ' + slug);
-    failed.push(slug);
+    console.error('FAIL: ' + tripId);
+    failed.push(tripId);
   } else {
-    console.log('OK: ' + slug);
+    console.log('OK: ' + tripId);
   }
 });
 
@@ -36,10 +36,10 @@ var distDirs = fs.readdirSync(distBase).filter(function(d) {
   return fs.existsSync(metaPath);
 });
 
-distDirs.forEach(function(slug) {
-  var meta = JSON.parse(fs.readFileSync(path.join(distBase, slug, 'meta.json'), 'utf8'));
+distDirs.forEach(function(tripId) {
+  var meta = JSON.parse(fs.readFileSync(path.join(distBase, tripId, 'meta.json'), 'utf8'));
   registry.push({
-    slug: slug,
+    tripId: tripId,
     name: meta.meta.name || '',
     dates: meta.footer.dates || '',
     owner: meta.meta.owner || ''
@@ -54,4 +54,4 @@ if (failed.length) {
   process.exit(1);
 }
 
-console.log('All ' + slugs.length + ' trips built successfully.');
+console.log('All ' + tripIds.length + ' trips built successfully.');

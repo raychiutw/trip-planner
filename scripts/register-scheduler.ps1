@@ -1,8 +1,8 @@
 # register-scheduler.ps1
-# Register TripPlanner-AutoIssue in Windows Task Scheduler (run once)
+# Register TripPlanner-AutoRequest in Windows Task Scheduler (run once)
 
 $projectDir = Split-Path $PSScriptRoot
-$schedulerScript = Join-Path $PSScriptRoot "tp-issue-scheduler.ps1"
+$schedulerScript = Join-Path $PSScriptRoot "tp-request-scheduler.ps1"
 
 $action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
@@ -22,11 +22,11 @@ $settings = New-ScheduledTaskSettingsSet `
     -MultipleInstances IgnoreNew
 
 Register-ScheduledTask `
-    -TaskName "TripPlanner-AutoIssue" `
+    -TaskName "TripPlanner-AutoRequest" `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
-    -Description "Auto-run Claude CLI tp-issue every 15 minutes"
+    -Description "Auto-run Claude CLI tp-request every 15 minutes"
 
-Write-Host "Registered: TripPlanner-AutoIssue (every 15 min)"
-Write-Host "  Manage: taskschd.msc > TripPlanner-AutoIssue"
+Write-Host "Registered: TripPlanner-AutoRequest (every 15 min)"
+Write-Host "  Manage: taskschd.msc > TripPlanner-AutoRequest"

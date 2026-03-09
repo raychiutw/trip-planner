@@ -18,25 +18,25 @@ describe('dist/trips.json registry', () => {
     expect(trips.length).toBeGreaterThan(0);
   });
 
-  it('each entry has slug, name, dates, and owner', () => {
+  it('each entry has tripId, name, dates, and owner', () => {
     trips.forEach((entry) => {
-      expect(entry.slug, 'missing slug').toBeTruthy();
+      expect(entry.tripId, 'missing tripId').toBeTruthy();
       expect(entry.name, 'missing name').toBeTruthy();
       expect(typeof entry.dates, 'dates must be string').toBe('string');
       expect(entry.owner, 'missing owner').toBeTruthy();
     });
   });
 
-  it('each slug points to an existing dist directory with meta.json', () => {
+  it('each tripId points to an existing dist directory with meta.json', () => {
     trips.forEach((entry) => {
-      const metaPath = resolve(ROOT, 'data/dist', entry.slug, 'meta.json');
-      expect(existsSync(metaPath), `meta.json not found for slug: ${entry.slug}`).toBe(true);
+      const metaPath = resolve(ROOT, 'data/dist', entry.tripId, 'meta.json');
+      expect(existsSync(metaPath), `meta.json not found for tripId: ${entry.tripId}`).toBe(true);
     });
   });
 
   it('each dist directory meta.json is valid JSON', () => {
     trips.forEach((entry) => {
-      const metaPath = resolve(ROOT, 'data/dist', entry.slug, 'meta.json');
+      const metaPath = resolve(ROOT, 'data/dist', entry.tripId, 'meta.json');
       const raw = readFileSync(metaPath, 'utf8');
       expect(() => JSON.parse(raw)).not.toThrow();
     });

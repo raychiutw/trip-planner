@@ -333,7 +333,7 @@ describe('renderTimelineEvent', () => {
       title: 'A',
       travel: { text: '車程 30 分', type: 'car' },
     });
-    expect(html).toContain('tl-segment-transit');
+    expect(html).toContain('tl-segment-travel');
     expect(html).toContain('車程 30 分');
   });
 
@@ -383,13 +383,13 @@ describe('renderTimelineEvent', () => {
     expect(html).not.toContain('tl-flag-depart');
   });
 
-  it('does not render transit arrow', () => {
+  it('does not render travel arrow', () => {
     const html = renderTimelineEvent({
       time: '10:00', title: 'A',
       travel: { text: '車程 30 分', type: 'car' },
     });
-    expect(html).toContain('tl-transit-text');
-    expect(html).not.toContain('tl-transit-arrow');
+    expect(html).toContain('tl-travel-text');
+    expect(html).not.toContain('tl-travel-arrow');
   });
 });
 
