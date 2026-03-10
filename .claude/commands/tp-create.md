@@ -25,7 +25,6 @@
    - `data/trips-md/{tripId}/emergency.md`（若有）
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：
-   - blogUrl → 空字串 `""`
    - googleRating → 不放（省略欄位）
 7. 所有 POI 標記 `"source": "ai"`（tp-create 產生的行程全部由 AI 推薦）
 8. 參考現有 `data/trips-md/` 下的行程 MD 格式撰寫
@@ -33,14 +32,10 @@
 ### Phase 2：並行充填（Agent teams）
 
 9. 對每一天啟動一個 Agent（sonnet），並行執行：
-   - 用 WebSearch 搜尋該天所有餐廳的 blogUrl（「{名稱} {地區} 推薦」）
-   - 用 WebSearch 搜尋該天 hotel 的 blogUrl
-   - 用 WebSearch 搜尋該天所有 shop 的 blogUrl
-   - 用 WebSearch 搜尋該天景點的 blogUrl
    - 用 WebSearch 查詢缺少 googleRating 的地點/餐廳評分
    - Agent 直接修改對應的 `data/trips-md/{tripId}/day-N.md` 補充資訊
 10. 收集所有 Agent 完成後確認 MD 檔案完整
-11. 確保不引入 null 值（找不到 → blogUrl 維持空字串、googleRating 省略）
+11. 確保不引入 null 值（找不到 → googleRating 省略）
 
 ### Phase 3：驗證
 

@@ -17,10 +17,8 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 | time | ✅ | 時間字串，如 `"10:00"` |
 | title | ✅ | 景點名稱 |
 | description | ✅ | 景點說明 |
-| blogUrl | ✅ | 部落格連結（Phase 1 設 `""`，Phase 2 搜尋填入） |
 | googleRating | ✅ | Google 評分（Phase 1 可省略，Phase 2 搜尋填入） |
 | locations | ✅ | 地圖位置陣列 `[{ name, googleQuery, appleQuery }]` |
-| titleUrl | 選填 | 官方網站連結 |
 | infoBoxes | 選填 | 附加資訊區塊 |
 
 ### Type B: 交通 Event（有 travel 屬性）
@@ -31,7 +29,7 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 | title | ✅ | 交通描述 |
 | travel | ✅ | `{ text, type, minutes }`，type 為 car/bus/train/walk/monorail |
 
-**禁填**：blogUrl、googleRating、locations — 有 travel 屬性的 event 不可包含這些欄位。
+**禁填**：googleRating、locations — 有 travel 屬性的 event 不可包含這些欄位。
 
 ### Type C: 餐廳 Event（含 restaurants infoBox）
 
@@ -39,7 +37,6 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 |------|------|------|
 | time | ✅ | 用餐時間 |
 | title | ✅ | 如「午餐」「晚餐」 |
-| blogUrl | ✅ | 設 `""` |
 | googleRating | ✅ | 設預設值或 Phase 2 搜尋 |
 | locations | ✅ | 至少一個用餐區域的位置 |
 | infoBoxes | ✅ | 至少一個 `type: "restaurants"` 的 infoBox |
@@ -54,7 +51,6 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 | price | ✅ | 價位描述 |
 | hours | ✅ | 營業時間 |
 | reservation | ✅ | 預約資訊物件 |
-| blogUrl | ✅ | Phase 1 設 `""`，Phase 2 搜尋 |
 | googleRating | ✅ | Phase 2 搜尋填入 |
 | location | ✅ | `{ name, googleQuery, appleQuery }` |
 
@@ -64,7 +60,6 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 |------|------|------|
 | time | ✅ | 起飛/降落時間 |
 | title | ✅ | 如「MM922 台北出發」 |
-| blogUrl | ✅ | 設 `""` |
 | googleRating | ✅ | 可設 4.0（機場評分） |
 | locations | ✅ | 機場位置 |
 
@@ -74,7 +69,6 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 |------|------|------|
 | name | ✅ | 飯店名稱 |
 | url | ✅ | 官方或訂房網站（可為 `""`） |
-| blogUrl | ✅ | Phase 1 設 `""`，Phase 2 搜尋 |
 | googleRating | ✅ | Phase 2 搜尋填入 |
 | checkout | ✅ | 退房時間（查不到設 `""`） |
 | details | ✅ | 飯店詳情陣列 |
@@ -89,7 +83,6 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 | name | ✅ | 商店名稱 |
 | hours | ✅ | 營業時間 |
 | mustBuy | ✅ | 必買清單（≥ 3 項） |
-| blogUrl | ✅ | Phase 1 設 `""`，Phase 2 搜尋 |
 | googleRating | ✅ | Phase 2 搜尋填入 |
 | location | ✅ | `{ name, googleQuery, appleQuery }` |
 
@@ -97,10 +90,10 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 
 Phase 1 骨架生成完成後，須遍歷所有物件檢查：
 
-1. **每個無 travel 的 event**：必須有 blogUrl（可為 `""`）、locations（可為空陣列）
+1. **每個無 travel 的 event**：必須有 locations（可為空陣列）
 2. **每個有 restaurants infoBox 的 event**：每個 restaurant 必須有所有必填欄位
-3. **每個 hotel**（name ≠ "家"）：必須有 blogUrl、checkout、breakfast、shopping infoBox（≥ 3 shops）
-4. **每個 shop**：必須有 category、name、hours、mustBuy（≥ 3）、blogUrl
+3. **每個 hotel**（name ≠ "家"）：必須有 checkout、breakfast、shopping infoBox（≥ 3 shops）
+4. **每個 shop**：必須有 category、name、hours、mustBuy（≥ 3）
 
 發現缺漏時自動補上預設值，不需手動撰寫 fix script。
 
@@ -118,7 +111,7 @@ Phase 1 骨架生成完成後，須遍歷所有物件檢查：
 2. 確認搜尋結果中有該 POI 的 Google Maps 頁面、食記、或官方網站
 3. **判斷結果**：
    - 找到 POI → 繼續搜尋該 POI 的其他欄位
-   - 找不到 POI → 回報「POI 不存在：{名稱}」，**不繼續搜尋**該 POI 的其他欄位（googleRating、blogUrl、reservation 等）
+   - 找不到 POI → 回報「POI 不存在：{名稱}」，**不繼續搜尋**該 POI 的其他欄位（googleRating、reservation 等）
 4. **來源區分處理**（由呼叫端 skill 決定）：
    - AI 產生的 POI 不存在 → 替換為真實店家
    - 使用者提供的 POI 不存在 → 保留 + warning
@@ -136,19 +129,6 @@ Phase 1 骨架生成完成後，須遍歷所有物件檢查：
 **驗證規則**：
 - 必須是 number，範圍 1.0–5.0
 - 找不到時標記待確認，不填預設值
-
-### blogUrl
-
-**適用 target**：hotel、restaurant、shop、event
-
-**搜尋流程**：
-1. WebSearch「{名稱} {地區} 推薦 {今年}」
-2. 取第一篇繁體中文文章
-3. 找不到繁中文章 → 空字串 `""`
-
-**驗證規則**：
-- 必須是合法 URL（以 `http://` 或 `https://` 開頭）或空字串 `""`
-- 不可為 null
 
 ### reservation
 

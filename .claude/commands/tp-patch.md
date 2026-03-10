@@ -7,7 +7,7 @@
 ```
 
 - `--target`（必填）：`hotel` | `restaurant` | `shop` | `event` | `gasStation`
-- `--field`（必填）：`googleRating` | `blogUrl` | `reservation` | `location` 或其他合法欄位
+- `--field`（必填）：`googleRating` | `reservation` | `location` 或其他合法欄位
 - `--trips`（選填）：逗號分隔的行程 tripId，預設為所有行程
 
 未提供必填參數時顯示使用說明，不執行操作。
@@ -25,7 +25,6 @@
    - `gasStation` → gasStation infoBox
 3. 檢查每個物件的 `--field` 是否需要更新：
    - `googleRating`：缺少或非 number → 需更新
-   - `blogUrl`：缺少或為空字串 → 需更新
    - `reservation`：非 object 或 `available === "unknown"` → 需更新
    - 其他欄位：依實際需求判斷
 4. 輸出掃描摘要：「共 N 行程、M 個 {target} 需更新 {field}」+ 每行程明細
@@ -43,7 +42,7 @@
 
 8. 合併 patch 寫回行程 MD 檔案：
    - 只修改目標欄位，其他欄位完全不動
-   - 找不到的值不填預設（googleRating 省略、blogUrl 維持空字串、reservation 維持 unknown）
+   - 找不到的值不填預設（googleRating 省略、reservation 維持 unknown）
 9. 執行 `npm run build` 更新 dist
 10. `git diff --name-only` 確認只有 `data/trips-md/**` + `data/dist/**` 被修改
 11. `npm test`
@@ -63,8 +62,8 @@
 # 為指定行程的餐廳補上 reservation 結構化資訊
 /tp-patch --target restaurant --field reservation --trips okinawa-trip-2026-Ray
 
-# 為所有行程的商店補上 blogUrl
-/tp-patch --target shop --field blogUrl
+# 為指定行程的景點補上 location
+/tp-patch --target event --field location --trips okinawa-trip-2026-Ray
 ```
 
 僅允許編輯：
