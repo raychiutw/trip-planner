@@ -46,11 +46,11 @@ weather: {"label":"恩納・瀨底","locations":[{"lat":26.3362,"lon":127.7636,"
 
 #### restaurants: 中文教練店家推薦
 
-| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source | url |
+| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source | reservationUrl |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 青潛 Best Dive Okinawa | 拉麵 | 08:00~17:00 | ~¥8,000/人（含船費＋拍照20張以上） | 自有停車場＋接駁車 | 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加 | 搭船免爬階梯。含免費拍照 | 4.8 | Best Dive Okinawa 青之洞窟 \| Best Dive Okinawa |  | ai | https://www.bestdiveokinawa.com/ |
-| Natural Blue 自然之藍 | 燒肉 | 08:00~17:00 | ~¥5,500/人（未稅） | 僅收日幣現金｜6歲以上 | 台灣人中文教練，沖繩安全優良店認證，CP 值最高 | CP值最高。僅收現金 | 4.8 | Natural Blue 青之洞窟 \| Natural Blue 沖縄 |  | ai | https://www.natural-blue.net/tw/ |
-| 黑潮潛水 Kuroshio Diving | 當地特色 | 08:00~17:00 | ~¥8,000/人（全包無隱藏費用） | 9歲以上 | 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯 | Klook預約有折扣 | 4.7 | 黑潮潛水 青之洞窟 \| 黒潮潜水 沖縄 |  | ai | https://heichaodive.com/ |
+| 青潛 Best Dive Okinawa | 浮潛 | 08:00~17:00 | ~¥8,000/人（含船費＋拍照20張以上） | 官網預約 | 全中文（國語/廣東話/台語），搭船前往免排隊，4歲可參加 | 自有停車場＋接駁車。搭船免爬階梯。含免費拍照 | 4.8 | Best Dive Okinawa 青之洞窟 \| Best Dive Okinawa |  | ai | https://www.bestdiveokinawa.com/ |
+| Natural Blue 自然之藍 | 浮潛 | 08:00~17:00 | ~¥5,500/人（未稅） | 官網預約 | 台灣人中文教練，沖繩安全優良店認證，CP 值最高 | 僅收日幣現金。6歲以上。CP值最高 | 4.8 | Natural Blue 青之洞窟 \| Natural Blue 沖縄 |  | ai | https://www.natural-blue.net/tw/ |
+| 黑潮潛水 Kuroshio Diving | 浮潛 | 08:00~17:00 | ~¥8,000/人（全包無隱藏費用） | 官網預約 | 台灣籍教練常駐，Klook 4.9 分，搭船免爬階梯 | 9歲以上。Klook預約有折扣 | 4.7 | 黑潮潛水 青之洞窟 \| 黒潮潜水 沖縄 |  | ai | https://heichaodive.com/ |
 
 #### parking: 停車場
 - price: ¥100/次
@@ -76,8 +76,8 @@ weather: {"label":"恩納・瀨底","locations":[{"lat":26.3362,"lon":127.7636,"
 
 | name | category | hours | price | reservation | description | note | rating | maps | mapcode | source |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 焼肉げんか | 拉麵 | 午 11:30~15:00／夜 17:00~23:00（全年無休） | ¥4,000~5,000/人（含入場費） | 建議預約 | 原價制！入場 ¥2,200 後全餐以進貨價計算 | 原價制越吃越划算。建議預約 | 4.3 | 焼肉げんか 恩納店 \| 焼肉げんか 恩納 | 206 313 260*00 | ai |
-| なかむらそば | 燒肉 | 11:00~17:30（週三公休・售完即止） | ¥600~ | 不需訂位 | 恩納村人氣沖繩麵！海景テラス席，手作麵條 | 海景座位很棒。售完即止 | 4.3 | なかむらそば 恩納 | 206 096 831*55 | ai |
+| なかむらそば | 沖繩麵 | 11:00~17:30（週三公休・售完即止） | ¥600~ | 不需訂位 | 恩納村人氣沖繩麵！海景テラス席，手作麵條 | 海景座位很棒。售完即止 | 4.3 | なかむらそば 恩納 | 206 096 831*55 | ai |
+| 焼肉げんか | 燒肉 | 午 11:30~15:00／夜 17:00~23:00（全年無休） | ¥4,000~5,000/人（含入場費） | 建議預約 | 原價制！入場 ¥2,200 後全餐以進貨價計算 | 原價制越吃越划算。建議預約 | 4.3 | 焼肉げんか 恩納店 \| 焼肉げんか 恩納 | 206 313 260*00 | ai |
 | THE GARLIC SHRIMP | 當地特色 | 11:00~20:30（不固定休，建議出發前確認） | ¥1,450~2,100 | 不需訂位 | 粉紅小屋，6 種口味蝦蝦飯，半露天座位 | 粉紅小屋好認。路邊有停車位 | 4.1 | THE GARLIC SHRIMP 恩納 | 206 313 585*00 | ai |
 
 ### 14:10-17:10 瀨底海灘戲水

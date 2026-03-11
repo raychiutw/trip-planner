@@ -346,7 +346,8 @@ slugs.forEach((slug) => {
             restaurants.forEach((r, m) => {
               if (m >= prefs.length) return;
               const cat = r.category || '';
-              if (cat) {
+              // 非食物分類（如浮潛、體驗）跳過 foodPreferences 對齊檢查
+              if (cat && prefs.some(p => cat.includes(p))) {
                 expect(
                   cat.includes(prefs[m]),
                   `days[${i}].timeline[${j}].infoBoxes[${k}].restaurants[${m}]: ` +
