@@ -5,7 +5,7 @@
 ## 步驟
 
 1. `git pull origin master`
-2. `gh issue list --label trip-edit --label trip-plan --state open --json number,title,body,labels,createdAt`
+2. `gh issue list --label trip-edit --state open --json number,title,body,labels,createdAt` 和 `gh issue list --label trip-plan --state open --json number,title,body,labels,createdAt`，合併結果並去重
 3. 無 open Issue → 回報「沒有待處理的請求」並結束
 4. 依序處理每個 Issue：
 
