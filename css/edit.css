@@ -13,6 +13,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 16px var(--padding-h) 8px;
+    scrollbar-gutter: stable;
 }
 
 /* ===== Inner Width Constraint ===== */
@@ -265,9 +266,9 @@ body.dark .issue-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
 .edit-status.error { color: var(--error); }
 
 /* ===== Sticky-nav: title bar ===== */
-.chat-container .sticky-nav { border-bottom: 1px solid var(--border); }
-.chat-container .sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }
-.chat-container .nav-title { text-align: center; }
+.sticky-nav { border-bottom: 1px solid var(--border); }
+.sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }
+.nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
 body.dark .issue-badge.open { background: #2EA043; }
