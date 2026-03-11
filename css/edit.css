@@ -102,9 +102,10 @@
 .issue-reply strong { font-weight: 600; }
 .issue-reply ul, .issue-reply ol { padding-left: 20px; margin: 4px 0; }
 .issue-reply hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-.issue-reply table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.issue-reply .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 8px 0; }
+.issue-reply table { width: 100%; border-collapse: collapse; margin: 0; }
 .issue-reply th, .issue-reply td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
-.issue-reply th { background: var(--bg-tertiary); font-weight: 600; }
+.issue-reply th { background: var(--bg-tertiary); font-weight: 600; white-space: nowrap; }
 .issue-reply blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .issue-reply code { background: var(--bg-tertiary); padding: 4px 4px; border-radius: var(--radius-xs); font-size: var(--fs-callout); }
 .issue-reply pre { background: var(--bg-tertiary); padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; margin: 8px 0; }

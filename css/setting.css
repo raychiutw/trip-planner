@@ -46,9 +46,6 @@ html.page-setting {
 .setting-trip-list .trip-btn {
     transition: border-color var(--duration-fast);
 }
-.setting-trip-list .trip-btn.active {
-    border-color: var(--accent);
-}
 
 /* ===== Color Mode Grid ===== */
 .color-mode-grid {
@@ -70,6 +67,7 @@ html.page-setting {
 }
 .color-mode-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .color-mode-card.active { border-color: var(--accent); box-shadow: var(--shadow-ring); }
+.color-mode-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 
 /* ===== Color Mode Preview ===== */
 .color-mode-preview {
@@ -136,9 +134,6 @@ html.page-setting {
 
 /* ===== Sticky-nav: title bar ===== */
 .page-setting .sticky-nav { border-bottom: 1px solid var(--border); }
-.page-setting .sticky-nav::before { content: ''; width: 36px; flex-shrink: 0; }
+.page-setting .sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }
 .page-setting .nav-title { text-align: center; }
 
-/* ===== Dark Mode ===== */
-body.dark .color-mode-card { background: var(--bg-secondary); }
-body.dark .color-mode-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }

@@ -294,7 +294,7 @@ body:not(.dark) .day-header {
 .print-mode .hourly-weather { display: none !important; }
 .print-mode .map-link { color: #333 !important; background: #eee !important; }
 .print-mode .status-tag { background: #ddd !important; color: #333 !important; }
-.print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 9999; background: #D32F2F; color: #fff; border: none; padding: 10px 24px; border-radius: var(--radius-sm); font-size: var(--fs-callout); font-family: inherit; font-weight: 600; box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
+.print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 9999; background: var(--error); color: var(--text-on-accent); border: none; padding: 12px 24px; border-radius: var(--radius-sm); font-size: var(--fs-callout); font-family: inherit; font-weight: 600; box-shadow: var(--shadow-md); }
 .print-exit-btn:hover { background: #B71C1C; }
 .print-mode .print-exit-btn { display: block; }
 @media print {
@@ -379,11 +379,10 @@ body:not(.dark) .day-header {
 /* ===== Dark Mode (trip-specific) ===== */
 body.dark .sticky-nav { border-bottom-color: color-mix(in srgb, var(--text-on-accent) 15%, transparent); }
 body.dark .info-header { background: var(--hover-bg); color: var(--text); }
-body.dark .map-link.apple:hover .apple-icon svg { fill: currentColor; }
 body.dark .hw-block { background: var(--bg-secondary); }
 body.dark .info-box { background: var(--accent-bg); }
 body.dark .tl-card { background: var(--bg-tertiary); }
-body.dark .tl-transit-content { background: var(--accent-bg); }
+body.dark .tl-travel-content { background: var(--accent-bg); }
 
 /* ===== Nav Brand ===== */
 .nav-brand { font-weight: 700; font-size: var(--fs-subheadline); color: var(--accent); white-space: nowrap; display: none; }
@@ -493,7 +492,7 @@ body.dark .speed-dial-item { background: var(--bg-secondary); }
     text-align: center;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.sheet-header-spacer { width: 36px; flex-shrink: 0; }
+.sheet-header-spacer { width: var(--tap-min); flex-shrink: 0; }
 .info-sheet-body { overflow-y: auto; font-size: var(--fs-body); flex: 1; min-height: 0; }
 
 
