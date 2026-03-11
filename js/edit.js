@@ -80,6 +80,13 @@
                     if (comments.length > 0) {
                         var html = comments.map(function(c) { return c.body_html || ''; }).join('<hr>');
                         el.innerHTML = html;
+                        // 表格包裝捲動容器
+                        el.querySelectorAll('table').forEach(function(tbl) {
+                            var wrap = document.createElement('div');
+                            wrap.className = 'table-wrap';
+                            tbl.parentNode.insertBefore(wrap, tbl);
+                            wrap.appendChild(tbl);
+                        });
                     } else {
                         el.textContent = '';
                     }
