@@ -29,7 +29,18 @@ openspec/                 config.yaml  specs/  changes/
 - **內容**：繁體中文台灣用語、travel 含 type + 分鐘數、days 變動同步 checklist/backup/suggestions
 - **UI**：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
 - **CSS HIG 紀律**：12 條規則由 `tests/unit/css-hig.test.js` 自動守護，完整規範（token 速查、頁面結構、新頁面 checklist）見 `.claude/commands/tp-hig.md`
-- **Agent**：sub agent 預設 sonnet，複雜邏輯實作或需判斷力時用 opus；獨立工作用 `run_in_background: true`，多 agent 並行時用 `isolation: "worktree"` 隔離；需共享進度用 `TeamCreate` 建團隊
+- **Agent / Sub Agent**：
+  - **Model**：所有 sub agent 一律使用 `model: "sonnet"`，包含 Explore、Plan、code-reviewer 等所有 subagent_type；僅在需要高度判斷力的情境（如複雜架構決策、多檔案連動重構、品質規則解釋有歧義）才指定 `model: "opus"`
+  - **並行**：獨立任務盡量同時發送多個 Agent tool call；彼此無依賴的搜尋、檢查、build 應並行執行
+  - **背景執行**：不需要立即結果的長時間任務用 `run_in_background: true`（如 build、測試、deploy 驗證）
+  - **Worktree 隔離**：多 agent 並行修改檔案時用 `isolation: "worktree"` 避免衝突；唯讀搜尋不需要
+  - **Agent Teams**：跨 agent 需共享進度或協調時用 `TeamCreate` 建團隊（如多行程同時 rebuild、大型重構拆分工作）
+  - **情境指引**：
+    - 搜尋 / 探索 codebase → `subagent_type: "Explore"`, sonnet
+    - 規劃實作方案 → `subagent_type: "Plan"`, sonnet
+    - Code review → `subagent_type: "superpowers:code-reviewer"`, sonnet
+    - 程式碼精簡 → `subagent_type: "code-simplifier:code-simplifier"`, sonnet
+    - 多步驟複雜任務（build + test + patch）→ `subagent_type: "general-purpose"`, sonnet（複雜邏輯改 opus）
 - **OpenSpec**：功能開發遵守 openspec 流程（proposal → design → specs → tasks → apply），除非使用者同意跳過
 
 ## 已知問題與解法
