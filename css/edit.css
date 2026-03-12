@@ -137,6 +137,7 @@
     flex-shrink: 0;
     padding: 8px var(--padding-h) 16px;
     padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    overflow-y: hidden;
     scrollbar-gutter: stable;
 }
 @media (min-width: 768px) {
