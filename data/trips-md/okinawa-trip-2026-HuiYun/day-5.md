@@ -115,6 +115,13 @@ weather: {"label":"恩納→來客夢→那霸","locations":[{"lat":26.4826,"lon
 | ちょこっと寿し 国際通り牧志店 | 海鮮 | 12:00~24:00（週三公休） | ¥2,000~ | {"available":"no","recommended":false} | ちょこっと寿し — 北海道×沖繩雙產地直送鮮魚壽司，沖繩三大高級魚赤仁ミーバイ・赤マチ必點，一貫69日圓起CP值高 | 一貫69日圓起CP值高 | 4 | ちょこっと寿し 国際通り牧志店 \| ちょこっと寿し 牧志 | 33 157 323*00 | ai |
 | 焼肉もとぶ牧場 那覇店 | 甜點 | 17:00~22:00（L.O 21:30） | ¥4,200~ | {"available":"yes","method":"website","url":"https://www.tablecheck.com/en/shops/motobu-farm-naha/reserve","recommended":true} | 焼肉もとぶ牧場 — 沖繩品牌「もとぶ牛」牧場直營燒肉，農林水産大臣賞受賞和牛，個室包廂 | 建議提前網路訂位 | 4.3 | 焼肉もとぶ牧場 那覇店 \| もとぶ牧場 那覇 久茂地 | 33 156 170*03 | ai |
 
+#### restaurants: 晚餐推薦（燒肉・串燒）
+
+| name | category | hours | price | reservation | description | note | rating | maps | mapcode | source |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 焼肉ここから 那覇久茂地店 | 燒肉 | 17:00~03:00（週日~24:00） | ¥3,000~ | {"available":"yes","method":"phone","recommended":true} | 焼肉ここから — 主打厚切燒肉，招牌「伝説盛り」厚切牛舌・橫隔膜・菲力三拼，深夜三點仍可入座的那霸人氣燒肉店 | 深夜營業至凌晨3點，適合晚歸 | 4 | 焼肉ここから 那覇久茂地店 |  | user |
+| 串焼きダイニング ウグイス | 居酒屋 | 17:30~24:00（週四公休） | ¥2,000~ | {"available":"yes","method":"website","recommended":true} | 串焼きダイニング ウグイス — 使用沖繩縣產山原雞與阿古豬的炭火串燒，食材產地直送鎖住肉汁精華，國際通附近地點便利 | 週四公休，位於國際通旁松尾 | 3.8 | 串焼きダイニング ウグイス 那覇 |  | user |
+
 ### 20:22 沖繩那霸美居飯店 Check in
 Mercure Okinawa Naha
 - source: ai
