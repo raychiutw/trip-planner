@@ -39,13 +39,16 @@ user-invocable: true
 ### 4c. 修改流程（trip-edit + intent=修改）
 
    a. 讀取 `data/trips-md/{tripId}/` 下的 MD 檔案
-   b. 依 Issue text 內容**局部修改**對應的 MD 檔案（只改 text 描述的部分，不全面重跑 R1-R13）
-   c. 新增或替換的 POI 須標記 `source` 欄位：
-      - 使用者明確指定名稱（如「換成一蘭拉麵」）→ `"source": "user"`
-      - 使用者僅給模糊描述（如「換成拉麵店」）→ `"source": "ai"`
-   d. 修改的部分須符合 R1-R13 品質規則
+   b. 依 Issue text 內容**局部修改**對應的 MD 檔案（只改 text 描述的部分，不全面重跑 R0-R15）
+   c. 新增或替換的 POI 須包含以下必填欄位：
+      - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
+      - `note`：有備註填內容，無備註填空字串 `""`（R15）
+      - `maps`：實體地點填搜尋文字（R11）
+      - `rating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
+   d. 修改的部分須符合 R0-R15 品質規則
+   d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
    e. 若影響到 checklist、backup、suggestions，同步更新對應 MD 檔案
-   f. 確認 travel 分鐘數
+   f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數
    g. 執行 `npm run build` 更新 dist
    h. 執行 `git diff --name-only`：
       → 只有 `data/trips-md/{tripId}/**` + `data/dist/**` → OK
@@ -53,11 +56,11 @@ user-invocable: true
    i. `npm test`
    j. **tp-check 精簡 report**：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    k. 通過 → commit push + `gh issue comment "✅ 已處理：{摘要}"` + `gh issue close`
-   l. 失敗 → `git checkout .` + `gh issue comment "❌ 處理失敗：{錯誤}"` + `gh issue close`
+   l. 失敗 → `git checkout -- data/trips-md/{tripId}/` + `gh issue comment "❌ 處理失敗：{錯誤}"` + `gh issue close`
 
 ## 局部修改 vs 全面重整
 
-本 skill 只處理 Issue text 描述的修改範圍。**不全面重跑 R1-R13**。如需全面重整，使用 `/tp-rebuild`。
+本 skill 只處理 Issue text 描述的修改範圍。**不全面重跑 R0-R15**。如需全面重整，使用 `/tp-rebuild`。
 
 僅允許編輯：
   data/trips-md/{tripId}/**

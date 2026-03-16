@@ -15,6 +15,10 @@ user-invocable: true
 
 ## 步驟（兩階段生成）
 
+### Phase 0：環境準備
+
+0. 執行 `git status --short`，記錄 pre-existing 未暫存變更（後續 Phase 3 Step 13 僅還原本次新增的非白名單檔案，不觸碰既有變更）
+
 ### Phase 1：產生骨架
 
 1. 詢問使用者料理偏好（最多 3 類，依優先排序），寫入 `meta.foodPreferences`
@@ -30,9 +34,12 @@ user-invocable: true
    - `data/trips-md/{tripId}/suggestions.md`
    - `data/trips-md/{tripId}/emergency.md`（若有）
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
-6. 骨架中尚無法確認的欄位**留空**（不使用 null）：
-   - googleRating → 不放（省略欄位）
-7. 所有 POI 標記 `"source": "ai"`（tp-create 產生的行程全部由 AI 推薦）
+6. 每個 POI 須包含以下必填欄位：
+   - `source: "ai"`（tp-create 產生的行程全部由 AI 推薦）
+   - `note: ""`（有備註填內容，無備註填空字串，R15）
+   - `maps:`（實體地點填搜尋文字，R11）
+   - `rating:` → Phase 1 先省略，Phase 2 並行查詢補充（R12）
+7. 骨架中尚無法確認的欄位**留空**（不使用 null）：rating 省略欄位，其餘欄位用空字串
 8. 參考現有 `data/trips-md/` 下的行程 MD 格式撰寫
 
 ### Phase 2：並行充填（Agent teams）
@@ -46,9 +53,9 @@ user-invocable: true
 ### Phase 3：驗證
 
 12. 執行 `npm run build` 產生 dist（含自動產生 `data/dist/trips.json`）
-13. 執行 `git diff --name-only`：
-    → 只有 `data/trips-md/{tripId}/**` + `data/dist/**` → OK
-    → 有其他檔案被改 → `git checkout` 還原非白名單檔案
+13. 執行 `git diff --name-only`，與 Phase 0 Step 0 記錄比對：
+    → 只有 `data/trips-md/{tripId}/**` + `data/dist/**` + Step 0 既有變更 → OK
+    → 有本次新增的非白名單檔案 → `git checkout` 僅還原這些檔案
 14. `npm test`
 15. 執行 `/tp-check` 完整模式驗證
 16. 不自動 commit（由使用者決定）
