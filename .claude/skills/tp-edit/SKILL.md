@@ -47,6 +47,3 @@ user-invocable: true
 以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
   data/dist/**
 
-## 品質規則參照
-
-完整品質規則定義在 `tp-quality-rules` skill 中。本 skill 修改的部分須符合相關規則。

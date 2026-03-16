@@ -40,6 +40,3 @@ npm test 結果：✓ 全部通過
 以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
   data/dist/**
 
-## 品質規則
-
-完整 R0-R15 品質規則定義在 `tp-quality-rules` skill 中。本 skill 對每個行程套用相同規則。
