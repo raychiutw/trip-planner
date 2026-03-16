@@ -37,7 +37,7 @@ user-invocable: true
 
 ### Phase 2：並行搜尋
 
-5. 讀取 `tp-search-strategies` skill 中對應 `--field` 的搜尋策略
+5. 讀取對應 `--field` 的搜尋策略
 6. 為每個行程啟動一個 Agent（sonnet），並行搜尋：
    - Agent prompt 包含該行程需更新的物件清單 + 搜尋方式
    - **依 R13 先驗證 POI 存在性**，搜不到時回報「POI 不存在：{名稱}」，不設 unknown、不繼續搜尋
@@ -54,10 +54,6 @@ user-invocable: true
 11. `npm test`
 12. 對每個修改的行程執行 tp-check 精簡模式
 13. 不自動 commit（由使用者決定）
-
-## 搜尋策略
-
-完整搜尋策略定義在 `tp-search-strategies` skill 中。Agent 搜尋時依該 skill 的搜尋流程、關鍵字模板、驗證規則執行。
 
 ## 範例
 

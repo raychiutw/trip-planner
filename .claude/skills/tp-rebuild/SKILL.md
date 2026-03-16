@@ -17,7 +17,7 @@ user-invocable: true
 
 1. 讀取 `data/trips-md/{tripId}/` 下的所有 MD 檔案
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
-3. 逐項檢查 R0-R15 品質規則（定義在 `tp-quality-rules` skill 中），修正不合格的 MD 內容
+3. 逐項檢查 R0-R15 品質規則，修正不合格的 MD 內容
 4. 同步更新 checklist.md、backup.md、suggestions.md
 5. 確認 travel 分鐘數
 6. 執行 `npm run build` 更新 dist
@@ -39,6 +39,3 @@ user-invocable: true
 以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
   data/dist/**
 
-## 品質規則參照
-
-完整 R0-R15 品質規則定義在 `tp-quality-rules` skill 中。

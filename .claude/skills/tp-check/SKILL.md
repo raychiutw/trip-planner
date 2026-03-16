@@ -16,7 +16,7 @@ user-invocable: true
 ## 步驟
 
 1. 讀取 `data/trips-md/{tripId}/` 下的 MD 檔案（meta.md + day-N.md 等）
-2. 逐項檢查 R0-R15 品質規則（定義在 `tp-quality-rules` skill 中）
+2. 逐項檢查 R0-R15 品質規則
 3. 依檢查結果輸出 report（完整模式或精簡模式）
 
 🚫 不修改任何檔案。tp-check 是純驗證工具。
@@ -140,6 +140,3 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | 5 個 POI 缺 source 但「整體覆蓋率尚可」→ 判 R13 🟢 | ❌ > 3 個缺失即 🔴 |
 | parking infoBox 無 note → 忽略 | ❌ R15 明確包含 parking infoBox |
 
-## 品質規則參照
-
-完整 R0-R15 品質規則定義在 `tp-quality-rules` skill 中。
