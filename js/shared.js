@@ -155,10 +155,6 @@ function toggleDarkShared() {
     }
 })();
 
-/* ===== GitHub Repo Constants ===== */
-var GH_OWNER = 'raychiutw';
-var GH_REPO = 'trip-planner';
-
 /* ===== Module Exports (Node.js / Vitest only) ===== */
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -173,8 +169,6 @@ if (typeof module !== 'undefined' && module.exports) {
         lsRemove: lsRemove,
         lsRenewAll: lsRenewAll,
         toggleDarkShared: toggleDarkShared,
-        GH_OWNER: GH_OWNER,
-        GH_REPO: GH_REPO,
         _LS_OLD_PREFIX: 'trip-planner-'
     };
 }
