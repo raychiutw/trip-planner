@@ -23,23 +23,27 @@
                 <div class="admin-page">
                     <div class="admin-section">
                         <div class="admin-section-title">選擇行程</div>
-                        <select class="admin-trip-select" id="tripSelect" aria-label="選擇行程">
-                            <option value="">載入中...</option>
-                        </select>
+                        <div class="admin-section-card">
+                            <select class="admin-trip-select" id="tripSelect" aria-label="選擇行程">
+                                <option value="">載入中...</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="admin-section">
                         <div class="admin-section-title">已授權成員</div>
-                        <div id="permissionList">
+                        <div class="admin-section-card" id="permissionList">
                             <div class="admin-empty">請先選擇行程</div>
                         </div>
                     </div>
                     <div class="admin-section">
                         <div class="admin-section-title">新增成員</div>
-                        <div class="admin-add-form">
-                            <input type="email" class="admin-email-input" id="emailInput" placeholder="email@example.com" autocomplete="email">
-                            <button class="admin-add-btn" id="addBtn">新增</button>
+                        <div class="admin-section-card">
+                            <div class="admin-add-form">
+                                <input type="email" class="admin-email-input" id="emailInput" placeholder="email@example.com" autocomplete="email">
+                                <button class="admin-add-btn" id="addBtn">新增</button>
+                            </div>
+                            <div id="addStatus"></div>
                         </div>
-                        <div id="addStatus"></div>
                     </div>
                 </div>
             </main>
