@@ -42,7 +42,8 @@ distDirs.forEach(function(tripId) {
     tripId: tripId,
     name: meta.meta.name || '',
     dates: meta.footer.dates || '',
-    owner: meta.meta.owner || ''
+    owner: meta.meta.owner || '',
+    published: meta.meta.published !== false
   });
 });
 

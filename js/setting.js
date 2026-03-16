@@ -114,11 +114,12 @@
         fetch('data/dist/trips.json')
             .then(function(r) { return r.json(); })
             .then(function(trips) {
+                var published = trips.filter(function(t) { return t.published !== false; });
                 var currentTripId = lsGet('trip-pref') || '';
-                if (!currentTripId && trips.length > 0) {
-                    currentTripId = trips[0].tripId;
+                if (!currentTripId && published.length > 0) {
+                    currentTripId = published[0].tripId;
                 }
-                renderTripList(trips, currentTripId);
+                renderTripList(published, currentTripId);
                 renderColorMode(colorMode);
             })
             .catch(function() {

@@ -55,39 +55,46 @@ describe('resolveAndLoad without trip-pref', () => {
         expect(content).toContain('trip-error-link');
     });
 
-    it('calls loadTrip when URL has ?trip= param', () => {
+    it('calls loadTrip when URL has ?trip= param', async () => {
         var url = new URL(window.location);
         url.searchParams.set('trip', 'test-trip');
         history.replaceState(null, '', url);
 
-        // Mock fetch
-        var fetchCalled = false;
         var originalFetch = globalThis.fetch;
+        var fetchUrls = [];
         globalThis.fetch = (url) => {
-            fetchCalled = true;
+            fetchUrls.push(url);
+            if (url.includes('trips.json')) {
+                return Promise.resolve({ ok: true, json: () => Promise.resolve([{ tripId: 'test-trip', published: true }]) });
+            }
             return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
         };
 
         app.resolveAndLoad();
+        await new Promise(r => setTimeout(r, 50));
 
-        expect(fetchCalled).toBe(true);
+        expect(fetchUrls.some(u => u.includes('trips.json'))).toBe(true);
         globalThis.fetch = originalFetch;
     });
 
-    it('calls loadTrip when localStorage has trip-pref', () => {
+    it('calls loadTrip when localStorage has trip-pref', async () => {
         lsSet('trip-pref', 'saved-trip');
 
-        var fetchCalled = false;
         var originalFetch = globalThis.fetch;
+        var fetchUrls = [];
         globalThis.fetch = (url) => {
-            fetchCalled = true;
-            expect(url).toContain('saved-trip');
+            fetchUrls.push(url);
+            if (url.includes('trips.json')) {
+                return Promise.resolve({ ok: true, json: () => Promise.resolve([{ tripId: 'saved-trip', published: true }]) });
+            }
             return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
         };
 
         app.resolveAndLoad();
+        await new Promise(r => setTimeout(r, 50));
 
-        expect(fetchCalled).toBe(true);
+        expect(fetchUrls.some(u => u.includes('trips.json'))).toBe(true);
+        expect(fetchUrls.some(u => u.includes('saved-trip'))).toBe(true);
         globalThis.fetch = originalFetch;
     });
 });

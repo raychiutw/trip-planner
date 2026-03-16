@@ -18,12 +18,13 @@ describe('dist/trips.json registry', () => {
     expect(trips.length).toBeGreaterThan(0);
   });
 
-  it('each entry has tripId, name, dates, and owner', () => {
+  it('each entry has tripId, name, dates, owner, and published', () => {
     trips.forEach((entry) => {
       expect(entry.tripId, 'missing tripId').toBeTruthy();
       expect(entry.name, 'missing name').toBeTruthy();
       expect(typeof entry.dates, 'dates must be string').toBe('string');
       expect(entry.owner, 'missing owner').toBeTruthy();
+      expect(typeof entry.published, 'published must be boolean').toBe('boolean');
     });
   });
 

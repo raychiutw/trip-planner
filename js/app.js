@@ -788,13 +788,35 @@ var tripEnd = null;
 
 function resolveAndLoad() {
     var tripId = getUrlTrip();
-    if (tripId && /^[\w-]+$/.test(tripId)) { loadTrip(tripId); return; }
-    var saved = loadTripPref();
-    if (saved) { loadTrip(saved); return; }
-    document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
-        + '<p>請選擇行程</p>'
-        + '<a class="trip-error-link" href="setting.html">前往設定頁</a>'
-        + '</div>';
+    if (!tripId || !/^[\w-]+$/.test(tripId)) tripId = loadTripPref();
+    if (!tripId) {
+        document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
+            + '<p>請選擇行程</p>'
+            + '<a class="trip-error-link" href="setting.html">前往設定頁</a>'
+            + '</div>';
+        return;
+    }
+    fetch('data/dist/trips.json')
+        .then(function(r) { return r.json(); })
+        .then(function(trips) {
+            var match = null;
+            for (var i = 0; i < trips.length; i++) {
+                if (trips[i].tripId === tripId) { match = trips[i]; break; }
+            }
+            if (match && match.published === false) {
+                lsRemove('trip-pref');
+                document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
+                    + '<p>此行程已下架</p>'
+                    + '<p style="color:var(--text-muted);margin-top:8px">2 秒後跳轉至設定頁…</p>'
+                    + '</div>';
+                setTimeout(function() { window.location.href = 'setting.html'; }, 2000);
+                return;
+            }
+            loadTrip(tripId);
+        })
+        .catch(function() {
+            loadTrip(tripId);
+        });
 }
 
 /* ===== Skeleton + Slot Rendering ===== */

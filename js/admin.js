@@ -26,7 +26,9 @@
                 trips.forEach(function(t) {
                     var opt = document.createElement('option');
                     opt.value = t.tripId;
-                    opt.textContent = t.name + ' (' + t.tripId + ')';
+                    var label = t.name || t.tripId;
+                    if (t.published === false) label = '(已下架) ' + label;
+                    opt.textContent = label;
                     tripSelect.appendChild(opt);
                 });
             })

@@ -226,34 +226,50 @@
                     return;
                 }
 
-                // 填充 dropdown
-                if (trips.length === 1) {
-                    tripSelect.style.display = 'none';
-                    var navTitle = document.getElementById('navTitle');
-                    if (navTitle) navTitle.textContent = trips[0].tripId;
-                } else {
-                    trips.forEach(function(t) {
-                        var opt = document.createElement('option');
-                        opt.value = t.tripId;
-                        opt.textContent = t.tripId;
-                        tripSelect.appendChild(opt);
-                    });
-                    tripSelect.addEventListener('change', function() {
-                        loadRequests(tripSelect.value);
-                    });
-                }
+                // 填充 dropdown — 用 trips.json 取得 name 與 published 狀態
+                fetch('../data/dist/trips.json')
+                    .then(function(r) { return r.json(); })
+                    .catch(function() { return []; })
+                    .then(function(allTrips) {
+                        var tripMap = {};
+                        allTrips.forEach(function(t) { tripMap[t.tripId] = t; });
+                        // 只保留上架且有權限的行程
+                        var filtered = trips.filter(function(t) {
+                            var info = tripMap[t.tripId];
+                            return !info || info.published !== false;
+                        });
+                        if (filtered.length === 0) {
+                            manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--padding-h);">目前沒有上架的行程</div>';
+                            tripSelect.style.display = 'none';
+                            return;
+                        }
+                        if (filtered.length === 1) {
+                            tripSelect.style.display = 'none';
+                            var navTitle = document.getElementById('navTitle');
+                            var info1 = tripMap[filtered[0].tripId];
+                            if (navTitle) navTitle.textContent = info1 ? info1.name : filtered[0].tripId;
+                        } else {
+                            filtered.forEach(function(t) {
+                                var opt = document.createElement('option');
+                                opt.value = t.tripId;
+                                var info = tripMap[t.tripId];
+                                opt.textContent = info ? info.name : t.tripId;
+                                tripSelect.appendChild(opt);
+                            });
+                            tripSelect.addEventListener('change', function() {
+                                loadRequests(tripSelect.value);
+                            });
+                        }
+                        renderPage();
+                        loadRequests(filtered[0].tripId);
 
-                // Render page + 載入第一個行程
-                renderPage();
-                loadRequests(trips[0].tripId);
-
-                // X close → back to index
-                var closeBtn = document.getElementById('navCloseBtn');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', function() {
-                        window.location.href = '../index.html';
+                        var closeBtn = document.getElementById('navCloseBtn');
+                        if (closeBtn) {
+                            closeBtn.addEventListener('click', function() {
+                                window.location.href = '../index.html';
+                            });
+                        }
                     });
-                }
             })
             .catch(function() {
                 manageMain.innerHTML = '<div class="manage-empty" style="margin:40px var(--padding-h);">無法載入行程資料</div>';

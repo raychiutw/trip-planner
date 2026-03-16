@@ -145,6 +145,7 @@ function parseMeta(text) {
   if (m.countries) {
     result.meta.countries = m.countries.split(', ').map(function(s) { return s.trim(); });
   }
+  result.meta.published = m.published !== 'false';
   if (m.autoScrollDates) {
     result.autoScrollDates = m.autoScrollDates.split(', ').map(function(s) { return s.trim(); });
   }
