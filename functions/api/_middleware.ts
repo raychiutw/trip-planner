@@ -53,7 +53,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
 
-  // Service Token 辨識
+  // Service Token 辨識（header 未被 Access 消化時）
   const clientId = request.headers.get('CF-Access-Client-Id');
   if (clientId) {
     (context.data as Record<string, unknown>).auth = {
@@ -74,7 +74,24 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 
   const payload = decodeJwtPayload(token);
-  if (!payload || !payload.email) {
+  if (!payload) {
+    return new Response(JSON.stringify({ error: '無效的認證 token' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Service Token JWT：Access 消化 header 後發 JWT，有 common_name 但無 email
+  if (!payload.email && payload.common_name) {
+    (context.data as Record<string, unknown>).auth = {
+      email: env.ADMIN_EMAIL,
+      isAdmin: true,
+      isServiceToken: true,
+    };
+    return context.next();
+  }
+
+  if (!payload.email) {
     return new Response(JSON.stringify({ error: '無效的認證 token' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
