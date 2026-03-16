@@ -1,3 +1,9 @@
+---
+name: tp-request
+description: Use when the user wants to process open GitHub Issues submitted by travel companions (labels trip-edit or trip-plan) and apply or respond to each request.
+user-invocable: true
+---
+
 處理旅伴送出的行程請求（GitHub Issue），依 label 與意圖分流處理。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
@@ -51,11 +57,7 @@
 
 ## 局部修改 vs 全面重整
 
-本 skill 只處理 Issue text 描述的修改範圍，例如：
-- 「Day 3 午餐換成拉麵」→ 只改 day-3.md 午餐 entry
-- 「加一個景點到 Day 2」→ 只在 day-2.md timeline 插入
-
-**不全面重跑 R1-R13**。如需全面重整，使用 `/tp-rebuild`。
+本 skill 只處理 Issue text 描述的修改範圍。**不全面重跑 R1-R13**。如需全面重整，使用 `/tp-rebuild`。
 
 僅允許編輯：
   data/trips-md/{tripId}/**
@@ -65,4 +67,4 @@
 
 ## 品質規則參照
 
-完整品質規則定義在 `trip-quality-rules.md`。本 skill 修改的部分須符合相關規則。
+完整品質規則定義在 `tp-quality-rules` skill 中。本 skill 修改的部分須符合相關規則。

@@ -1,3 +1,9 @@
+---
+name: tp-patch
+description: Use when the user wants to bulk-fill a specific missing field (e.g., googleRating, reservation, location) across one or more trip itineraries using web search.
+user-invocable: true
+---
+
 跨行程局部欄位更新工具。針對特定 target + field 批次掃描並搜尋補齊。
 
 ## 指令格式
@@ -31,9 +37,9 @@
 
 ### Phase 2：並行搜尋
 
-5. 讀取 `search-strategies.md` 中對應 `--field` 的搜尋策略
+5. 讀取 `tp-search-strategies` skill 中對應 `--field` 的搜尋策略
 6. 為每個行程啟動一個 Agent（sonnet），並行搜尋：
-   - Agent prompt 包含該行程需更新的物件清單 + search-strategies.md 的搜尋方式
+   - Agent prompt 包含該行程需更新的物件清單 + 搜尋方式
    - **依 R13 先驗證 POI 存在性**，搜不到時回報「POI 不存在：{名稱}」，不設 unknown、不繼續搜尋
    - Agent 不直接改檔案，只回傳 patch 結果（物件路徑 + 新值）
 7. 收集所有 Agent 回傳的 patch 結果
@@ -51,7 +57,7 @@
 
 ## 搜尋策略
 
-完整搜尋策略定義在 `search-strategies.md`。Agent 搜尋時依該文件的搜尋流程、關鍵字模板、驗證規則執行。
+完整搜尋策略定義在 `tp-search-strategies` skill 中。Agent 搜尋時依該 skill 的搜尋流程、關鍵字模板、驗證規則執行。
 
 ## 範例
 

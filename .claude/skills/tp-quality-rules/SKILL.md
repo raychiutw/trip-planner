@@ -1,3 +1,9 @@
+---
+name: tp-quality-rules
+description: Use when generating, modifying, or validating trip itinerary MD files and need to check compliance with quality rules R0–R15.
+user-invocable: false
+---
+
 # 行程品質規則
 
 產生或修改 `data/trips-md/` 下的行程 MD 檔案時，必須遵守以下所有品質規則。

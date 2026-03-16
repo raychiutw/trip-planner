@@ -1,4 +1,10 @@
-批次重建所有行程 MD 檔案，逐一執行 R1-R12 品質規則全面重整。
+---
+name: tp-rebuild-all
+description: Use when the user wants to run a full quality-rule rebuild across all trip itineraries in one batch operation.
+user-invocable: true
+---
+
+批次重建所有行程 MD 檔案，逐一執行 R0-R15 品質規則全面重整。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
@@ -36,4 +42,4 @@ npm test 結果：✓ 全部通過
 
 ## 品質規則
 
-完整 R1-R12 品質規則定義在 `/tp-rebuild` skill 中，本 skill 對每個行程套用相同規則。
+完整 R0-R15 品質規則定義在 `tp-quality-rules` skill 中。本 skill 對每個行程套用相同規則。

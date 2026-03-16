@@ -1,3 +1,9 @@
+---
+name: tp-create
+description: Use when the user wants to generate a complete new trip itinerary MD file set from scratch given a destination, duration, and travel style.
+user-invocable: true
+---
+
 從零產生符合品質規則的完整行程 MD 檔案群。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion（料理偏好除外）。
@@ -13,7 +19,7 @@
 
 1. 詢問使用者料理偏好（最多 3 類，依優先排序），寫入 `meta.foodPreferences`
 1b. 依目的地自動判斷 `meta.countries`（ISO 3166-1 alpha-2 國碼陣列）：日本 `["JP"]`、韓國 `["KR"]`、台灣 `["TW"]` 等。韓國行程須為所有 POI location 新增 `naverQuery`（Naver Maps URL）
-2. 讀取 `trip-quality-rules.md` 中定義的所有品質規則
+2. 讀取 `tp-quality-rules` skill 中定義的所有品質規則
 3. 讀取 `data/examples/` 下的 MD 範例檔作為格式參考
 4. 以範例格式為基礎，依使用者描述產生 MD 檔案群：
    - `data/trips-md/{tripId}/meta.md`（含 name、owner、title 等 frontmatter + Footer section）
@@ -59,4 +65,4 @@
 
 ## 品質規則
 
-完整品質規則定義在 `trip-quality-rules.md`。本 skill 產生的行程須符合其中所有規則。
+完整品質規則定義在 `tp-quality-rules` skill 中。本 skill 產生的行程須符合其中所有規則。

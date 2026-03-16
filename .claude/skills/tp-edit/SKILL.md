@@ -1,3 +1,9 @@
+---
+name: tp-edit
+description: Use when the user describes a partial change to an existing trip itinerary in natural language (e.g., swap a restaurant, add a stop to a specific day).
+user-invocable: true
+---
+
 接受自然語言描述，局部修改指定行程 MD 檔案。修改後執行 build + tp-check 精簡 report。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
@@ -43,4 +49,4 @@
 
 ## 品質規則參照
 
-完整品質規則定義在 `trip-quality-rules.md`。本 skill 修改的部分須符合相關規則。
+完整品質規則定義在 `tp-quality-rules` skill 中。本 skill 修改的部分須符合相關規則。

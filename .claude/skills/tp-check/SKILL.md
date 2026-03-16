@@ -1,4 +1,10 @@
-對指定行程逐項檢查 R1-R13 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何檔案。
+---
+name: tp-check
+description: Use when the user wants to validate a trip itinerary against quality rules R0-R15 and receive a red/yellow/green report without modifying any files.
+user-invocable: true
+---
+
+對指定行程逐項檢查 R0-R15 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何檔案。
 
 ⚡ 核心原則：不問問題，直接驗證。
 
@@ -10,7 +16,7 @@
 ## 步驟
 
 1. 讀取 `data/trips-md/{tripId}/` 下的 MD 檔案（meta.md + day-N.md 等）
-2. 逐項檢查 R0-R15 品質規則（定義在 `trip-quality-rules.md` 中）
+2. 逐項檢查 R0-R15 品質規則（定義在 `tp-quality-rules` skill 中）
 3. 依檢查結果輸出 report（完整模式或精簡模式）
 
 🚫 不修改任何檔案。tp-check 是純驗證工具。
@@ -136,4 +142,4 @@ tp-check: 🟢 10  🟡 2  🔴 0
 
 ## 品質規則參照
 
-完整 R0-R15 品質規則定義在 `trip-quality-rules.md` 中。
+完整 R0-R15 品質規則定義在 `tp-quality-rules` skill 中。

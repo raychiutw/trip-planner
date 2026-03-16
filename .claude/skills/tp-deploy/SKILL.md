@@ -1,3 +1,9 @@
+---
+name: tp-deploy
+description: Use when the user wants to commit all pending changes, push to GitHub, and verify the Cloudflare Pages deployment.
+user-invocable: true
+---
+
 Commit 所有變更並 push 到 GitHub，然後開啟 Cloudflare Pages 網頁確認。
 
 步驟：

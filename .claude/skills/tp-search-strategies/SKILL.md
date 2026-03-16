@@ -1,6 +1,12 @@
+---
+name: tp-search-strategies
+description: Use when searching for POI data fields (googleRating, reservation, location, naverQuery) across trip itinerary files, or generating trip skeleton with event type schema.
+user-invocable: false
+---
+
 # 行程資料策略參考
 
-本檔案供 tp-create、tp-rebuild、tp-patch 引用，分為兩部分：
+本文件供 tp-create、tp-rebuild、tp-patch 引用，分為兩部分：
 1. **Event Type Schema**：各類型物件的必填欄位定義
 2. **Search Strategies**：各欄位的搜尋方式與驗證規則
 
