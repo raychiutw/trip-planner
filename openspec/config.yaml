@@ -1,5 +1,9 @@
 schema: spec-driven
 
+env:
+  CF_ACCESS_CLIENT_ID: e5902a9d6f5181b8f70e12f1c11ebca3.access
+  CF_ACCESS_CLIENT_SECRET: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8
+
 context: |
   行程規劃網站（trip-planner），部署於 Cloudflare Pages
   Tech stack: 原生 HTML/CSS/JS（無框架），Vitest + jsdom 單元測試，Playwright E2E 測試

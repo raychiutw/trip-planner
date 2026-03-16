@@ -12,16 +12,16 @@ user-invocable: true
 
 - **Base URL**: `https://trip-planner-dby.pages.dev`
 - **認證**: Service Token headers
-  - `CF-Access-Client-Id`: 從環境變數 `CF_ACCESS_CLIENT_ID` 取得
-  - `CF-Access-Client-Secret`: 從環境變數 `CF_ACCESS_CLIENT_SECRET` 取得
+  - `CF-Access-Client-Id`: `e5902a9d6f5181b8f70e12f1c11ebca3.access`
+  - `CF-Access-Client-Secret`: `9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8`
 
 ## 步驟
 
 1. `git pull origin master`
 2. 取得所有 open 請求：
    ```bash
-   curl -s -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-        -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+   curl -s -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+        -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
         "https://trip-planner-dby.pages.dev/api/requests?status=open"
    ```
 3. 無 open 請求 → 回報「沒有待處理的請求」並結束
@@ -71,8 +71,8 @@ user-invocable: true
    k. 通過 → commit push + 回覆關閉請求：
       ```bash
       curl -s -X PATCH \
-        -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-        -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+        -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+        -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
         -H "Content-Type: application/json" \
         -d '{"reply":"✅ 已處理：{摘要}","status":"closed"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
@@ -80,8 +80,8 @@ user-invocable: true
    l. 失敗 → `git checkout -- data/trips-md/{tripId}/` + 回覆關閉：
       ```bash
       curl -s -X PATCH \
-        -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-        -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+        -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+        -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
         -H "Content-Type: application/json" \
         -d '{"reply":"❌ 處理失敗：{錯誤}","status":"closed"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
@@ -92,8 +92,8 @@ user-invocable: true
 回覆後關閉請求：
 ```bash
 curl -s -X PATCH \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+  -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
   -H "Content-Type: application/json" \
   -d '{"reply":"{回覆內容}","status":"closed"}' \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
