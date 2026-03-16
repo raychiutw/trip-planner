@@ -291,6 +291,15 @@ body.dark .request-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
     outline: none;
     box-shadow: var(--shadow-ring);
 }
+.manage-trip-select option {
+    background: var(--bg);
+    color: var(--text);
+    font-size: var(--fs-body);
+    padding: 8px 16px;
+}
+.manage-trip-select option:checked {
+    background: var(--accent-bg);
+}
 
 /* ===== Sticky-nav: title bar ===== */
 .sticky-nav { border-bottom: 1px solid var(--border); }
