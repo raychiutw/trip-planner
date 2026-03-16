@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.open-meteo.com https://api.github.com; img-src 'self' https: data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.open-meteo.com; img-src 'self' https: data:;">
     <meta name="description" content="旅遊行程規劃：每日景點、餐廳推薦、地圖導航、天氣預報、預算規劃，一頁搞定。">
     <meta name="theme-color" content="#C4704F">
     <meta property="og:title" content="Trip Planner">
@@ -50,7 +50,7 @@
         </div>
         <button class="speed-dial-trigger" id="speedDialTrigger" aria-label="快速選單"><svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 8l-6 6h12z"/></svg></button>
     </div>
-    <a href="edit.html" class="edit-fab" id="editFab" aria-label="AI 修改行程"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></a>
+    <a href="manage/" class="edit-fab" id="editFab" aria-label="AI 修改行程"><svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></a>
     <div class="info-sheet-backdrop" id="infoBottomSheet">
         <div class="info-sheet-panel" id="infoSheet">
             <div class="sheet-handle"></div>
