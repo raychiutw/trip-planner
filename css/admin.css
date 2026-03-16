@@ -1,0 +1,167 @@
+/* ===== Admin Page — 權限管理 ===== */
+
+/* ===== Override scroll infrastructure for simple page ===== */
+html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visible; overscroll-behavior: none; }
+.page-admin { max-width: none; overflow: visible; }
+.page-admin .page-layout { display: block; min-height: 0; }
+.page-admin .container { transition: none; }
+.page-admin .sticky-nav { position: relative; }
+
+/* ===== Sticky-nav ===== */
+.sticky-nav { border-bottom: 1px solid var(--border); }
+.sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }
+.nav-title { text-align: center; }
+
+/* ===== Page Layout ===== */
+.admin-page {
+    padding: 24px var(--padding-h);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* ===== Section ===== */
+.admin-section {
+    margin-bottom: 32px;
+}
+.admin-section-title {
+    font-size: var(--fs-footnote);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+
+/* ===== Trip Select ===== */
+.admin-trip-select {
+    width: 100%;
+    appearance: none;
+    border: none;
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-body);
+    padding: 12px 36px 12px 16px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+}
+.admin-trip-select:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-ring);
+}
+
+/* ===== Permission List ===== */
+.admin-permission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.admin-permission-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+.admin-permission-email {
+    font-size: var(--fs-body);
+    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.admin-permission-role {
+    font-size: var(--fs-caption);
+    color: var(--text-muted);
+    padding: 2px 8px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-full);
+    margin: 0 12px;
+    flex-shrink: 0;
+}
+.admin-remove-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    flex-shrink: 0;
+    transition: color var(--duration-fast), background var(--duration-fast);
+}
+.admin-remove-btn:hover {
+    color: var(--error);
+    background: var(--hover-bg);
+}
+
+/* ===== Empty State ===== */
+.admin-empty {
+    color: var(--text-muted);
+    font-size: var(--fs-callout);
+    text-align: center;
+    padding: 24px 16px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+/* ===== Add Form ===== */
+.admin-add-form {
+    display: flex;
+    gap: 8px;
+}
+.admin-email-input {
+    flex: 1;
+    border: none;
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-family: inherit;
+    font-size: var(--fs-body);
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+}
+.admin-email-input:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-ring);
+}
+.admin-email-input::placeholder {
+    color: var(--text-muted);
+}
+.admin-add-btn {
+    appearance: none;
+    border: none;
+    background: var(--accent);
+    color: var(--text-on-accent);
+    font-family: inherit;
+    font-size: var(--fs-body);
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: filter var(--duration-fast);
+}
+.admin-add-btn:hover { filter: brightness(1.1); }
+.admin-add-btn:active { filter: brightness(0.95); }
+.admin-add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===== Status ===== */
+.admin-status {
+    font-size: var(--fs-footnote);
+    margin-top: 8px;
+}
+.admin-status.success { color: var(--success); }
+.admin-status.error { color: var(--error); }

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' https: data:;">
+    <meta name="theme-color" content="#C4704F">
+    <link rel="icon" href="../images/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="../images/favicon-32x32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="../images/apple-touch-icon.png">
+    <title>行程請求 — Trip Planner</title>
+    <link rel="stylesheet" href="../css/shared.css">
+    <link rel="stylesheet" href="../css/manage.css">
+</head>
+<body>
+    <div class="page-layout">
+        <div class="container">
+            <div class="sticky-nav" id="stickyNav">
+                <select class="manage-trip-select" id="tripSelect" aria-label="選擇行程"></select>
+                <span class="nav-title" id="navTitle">行程請求</span>
+                <button class="nav-close-btn" id="navCloseBtn" aria-label="關閉"><svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            </div>
+            <main class="manage-main" id="manageMain">
+                <div style="text-align:center;padding:40px;color:var(--text-muted);">載入中...</div>
+            </main>
+        </div>
+    </div>
+    <script src="../js/shared.js"></script>
+    <script src="../js/icons.js"></script>
+    <script src="../js/manage.js"></script>
+</body>
+</html>

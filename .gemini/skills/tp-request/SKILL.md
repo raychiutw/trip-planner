@@ -1,0 +1,50 @@
+---
+name: tp-request
+description: 處理旅伴送出的行程請求（D1 API），依 mode 與意圖分流處理。適用於自動化處理來自 D1 database 的行程修改或諮詢請求。
+---
+
+# tp-request
+
+處理旅伴送出的行程請求（D1 database），依 mode 與意圖分流處理。
+
+## API 設定
+
+- **Base URL**: `https://trip-planner-dby.pages.dev`
+- **認證**: Service Token headers
+  - `CF-Access-Client-Id`: 從環境變數 `CF_ACCESS_CLIENT_ID` 取得
+  - `CF-Access-Client-Secret`: 從環境變數 `CF_ACCESS_CLIENT_SECRET` 取得
+
+## 步驟
+1. **更新專案**：執行 `git pull origin master`。
+2. **取得 open 請求**：
+   ```bash
+   curl -s -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+        -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+        "https://trip-planner-dby.pages.dev/api/requests?status=open"
+   ```
+3. **逐一處理**：
+   - **解析 Metadata**：取得 `mode`, `trip_id`, `body`, `id`。`owner` = `trip_id.split('-').pop()`。
+   - **判斷意圖**：區分「修改」或「諮詢」。
+   - **分流處理**：
+     - **諮詢**：回覆並關閉請求，不改檔案。
+     - **修改** (trip-edit)：
+       a. 讀取 MD 檔案。
+       b. 依描述局部修改（標記 `source: "user"` 或 `"ai"`）。
+       c. 符合 `references/trip-quality-rules.md`。
+       d. 執行 `npm run build` 並驗證變更。
+       e. 執行 `npm test` 及 `tp-check` (精簡模式)。
+       f. 通過則 commit, push, 回覆並關閉請求；失敗則還原並回覆失敗訊息。
+     - **修改** (trip-plan)：回覆建議改以 `trip-edit` 送出。
+
+4. **回覆並關閉請求**：
+   ```bash
+   curl -s -X PATCH \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+     -H "Content-Type: application/json" \
+     -d '{"reply":"{回覆內容}","status":"closed"}' \
+     "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
+   ```
+
+## 參考資源
+- 品質規則：`references/trip-quality-rules.md`
