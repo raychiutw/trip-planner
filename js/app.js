@@ -938,7 +938,7 @@ function loadTrip(tripId) {
                     renderInfoPanel({ autoScrollDates: meta.autoScrollDates, days: TRIP.days });
 
                     var fab = document.getElementById('editFab');
-                    if (fab) fab.href = 'edit.html?trip=' + encodeURIComponent(tripId);
+                    if (fab) fab.href = 'manage/';
 
                     var infoKeys = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'];
                     infoKeys.forEach(function(key) {

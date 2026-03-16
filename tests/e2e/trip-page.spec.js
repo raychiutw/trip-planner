@@ -764,15 +764,15 @@ test.describe('FAB 修改行程按鈕', () => {
     await expect(fab).toBeVisible();
 
     const href = await fab.getAttribute('href');
-    expect(href).toContain('edit.html?trip=');
+    expect(href).toContain('manage/');
   });
 
-  test('FAB 連結包含當前行程 tripId', async ({ page }) => {
+  test('FAB 連結指向 manage 頁面', async ({ page }) => {
     await page.goto('/?trip=okinawa-trip-2026-Ray');
     await page.waitForTimeout(500);
     const fab = page.locator('#editFab');
     const href = await fab.getAttribute('href');
-    expect(href).toContain('trip=okinawa-trip-2026-Ray');
+    expect(href).toContain('manage/');
   });
 
   test('列印模式隱藏 FAB', async ({ page }) => {
