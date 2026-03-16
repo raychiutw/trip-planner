@@ -7,6 +7,7 @@ ogDescription: 那霸為基地，KKday美麗海水族館・古宇利島・鳳梨
 foodPreferences: 燒肉, 牛排/烤魚, 當地特色
 selfDrive: false
 countries: JP
+published: false
 autoScrollDates: 2026-03-06, 2026-03-07, 2026-03-08, 2026-03-09, 2026-03-10, 2026-03-11
 ---
 

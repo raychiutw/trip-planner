@@ -9,6 +9,8 @@ foodPreferences: 拉麵, 燒肉, 當地特色
 selfDrive: true
 # countries: ISO 3166-1 alpha-2 國碼，韓國行程 KR（須為 POI 加 naverQuery）
 countries: JP
+# published: true 為上架，false 為下架（設定頁與 manage 頁不顯示）
+published: true
 autoScrollDates: 2026-07-01, 2026-07-02, 2026-07-03
 ---
 
