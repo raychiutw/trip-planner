@@ -1,5 +1,6 @@
 # tp-request-scheduler.ps1
-# Auto-run Claude CLI to process GitHub Requests (triggered by Windows Task Scheduler)
+# Fallback scheduler: only processes requests where webhook failed
+# (Agent Server handles normal requests via Tunnel webhook)
 
 $projectDir = Split-Path $PSScriptRoot
 $logDir = Join-Path $PSScriptRoot "logs"
@@ -18,7 +19,23 @@ Get-ChildItem -Path $logDir -File | Where-Object { $_.LastWriteTime -lt (Get-Dat
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 
-Add-Content -Path $logFile -Value "[$timestamp] Start tp-request" -Encoding UTF8
+# Check if there are webhook-failed requests before invoking Claude
+$headers = @{
+    "CF-Access-Client-Id" = $env:CF_ACCESS_CLIENT_ID
+    "CF-Access-Client-Secret" = $env:CF_ACCESS_CLIENT_SECRET
+}
+
+try {
+    $response = Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests?status=open&webhook_failed=1" -Headers $headers -ErrorAction Stop
+    if ($response.Count -eq 0) {
+        # No webhook-failed requests, skip
+        exit 0
+    }
+    Add-Content -Path $logFile -Value "[$timestamp] Found $($response.Count) webhook-failed request(s), processing..." -Encoding UTF8
+} catch {
+    Add-Content -Path $logFile -Value "[$timestamp] API check failed: $_" -Encoding UTF8
+    exit 1
+}
 
 Set-Location $projectDir
 $output = claude --dangerously-skip-permissions -p "/tp-request" 2>&1 | Out-String
