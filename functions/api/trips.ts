@@ -13,9 +13,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   let sql: string;
   if (showAll && auth?.isAdmin) {
-    sql = 'SELECT id, name, owner, title, self_drive, countries, published FROM trips ORDER BY name ASC';
+    sql = 'SELECT id, name, owner, title, self_drive, countries, published, auto_scroll, footer_json FROM trips ORDER BY name ASC';
   } else {
-    sql = 'SELECT id, name, owner, title, self_drive, countries, published FROM trips WHERE published = 1 ORDER BY name ASC';
+    sql = 'SELECT id, name, owner, title, self_drive, countries, published, auto_scroll, footer_json FROM trips WHERE published = 1 ORDER BY name ASC';
   }
 
   const { results } = await context.env.DB.prepare(sql).all();

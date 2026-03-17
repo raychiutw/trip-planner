@@ -226,17 +226,17 @@
                     return;
                 }
 
-                // 填充 dropdown — 用 trips.json 取得 name 與 published 狀態
-                fetch('../data/dist/trips.json')
+                // 填充 dropdown — 用 API 取得 name 與 published 狀態
+                fetch('/api/trips?all=1')
                     .then(function(r) { return r.json(); })
                     .catch(function() { return []; })
                     .then(function(allTrips) {
                         var tripMap = {};
-                        allTrips.forEach(function(t) { tripMap[t.tripId] = t; });
+                        allTrips.forEach(function(t) { tripMap[t.id || t.tripId] = t; });
                         // 只保留上架且有權限的行程
                         var filtered = trips.filter(function(t) {
                             var info = tripMap[t.tripId];
-                            return !info || info.published !== false;
+                            return !info || (info.published !== 0 && info.published !== false);
                         });
                         if (filtered.length === 0) {
                             manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--padding-h);">目前沒有上架的行程</div>';

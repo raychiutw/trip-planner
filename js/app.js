@@ -920,7 +920,19 @@ function mapApiDay(raw) {
         if (hotel.details && typeof hotel.details === 'string') {
             hotel.details = hotel.details.split(', ').map(function(s) { return s.trim(); });
         }
-        // Map hotel shopping fields
+        // Build hotel infoBoxes
+        hotel.infoBoxes = [];
+        // Parking infoBox
+        if (hotel.parking) {
+            var p = hotel.parking;
+            hotel.infoBoxes.push({
+                type: 'parking', title: '停車場',
+                price: p.price || null,
+                location: p.maps ? buildLocationFromMaps(p.maps, p.mapcode) : null,
+                note: p.note || ''
+            });
+        }
+        // Shopping infoBox
         if (hotel.shopping && hotel.shopping.length) {
             hotel.shopping = hotel.shopping.map(function(s) {
                 if (s.rating) s.googleRating = s.rating;
@@ -928,8 +940,9 @@ function mapApiDay(raw) {
                 if (s.must_buy) s.mustBuy = typeof s.must_buy === 'string' ? s.must_buy.split(', ') : s.must_buy;
                 return s;
             });
-            hotel.infoBoxes = [{ type: 'shopping', shops: hotel.shopping }];
+            hotel.infoBoxes.push({ type: 'shopping', shops: hotel.shopping });
         }
+        if (!hotel.infoBoxes.length) delete hotel.infoBoxes;
     }
     // Parse timeline entry JSON fields + build infoBoxes
     var timeline = (raw.timeline || []).map(function(entry) {
@@ -939,6 +952,10 @@ function mapApiDay(raw) {
             entry.locations = entry.location;
         } else if (entry.location) {
             entry.locations = [entry.location];
+        }
+        // Fallback: if no location_json but has maps, build from maps
+        if (!entry.locations && entry.maps) {
+            entry.locations = [buildLocationFromMaps(entry.maps, entry.mapcode)];
         }
         // Map restaurant fields for render
         if (entry.restaurants) {
@@ -1106,8 +1123,12 @@ function loadTrip(tripId) {
                             try { content = JSON.parse(content); } catch(e) {}
                         }
                         // trip_docs.content 存的是 { title, content: { segments/cards/... } }
-                        // render 函式期待直接拿到 { segments/cards/... }
-                        if (content && content.content) content = content.content;
+                        // 保留 title，展開 content 到同一層
+                        if (content && content.content) {
+                            var docTitle = content.title;
+                            content = content.content;
+                            content._title = docTitle;
+                        }
                         TRIP[key] = content;
                     })
                     .catch(function() { /* doc not available, silently skip */ });
@@ -1348,10 +1369,8 @@ function openSpeedDialContent(contentKey) {
     var section = TRIP[contentKey];
     var fn = DIAL_RENDERERS[contentKey];
     if (section && fn) {
-        // docs 已解包為 { segments/cards/... }，直接傳入 render
-        var renderData = section.content || section;
-        if (sheetTitle) sheetTitle.textContent = section.title || '';
-        html = fn(renderData);
+        if (sheetTitle) sheetTitle.textContent = section._title || section.title || '';
+        html = fn(section);
     } else {
         if (sheetTitle) sheetTitle.textContent = '';
     }
