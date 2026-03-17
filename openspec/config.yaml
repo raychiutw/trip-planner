@@ -63,6 +63,17 @@ naming: # 完整規範見 .claude/skills/references/naming-rules.md
       - weather_json → weather（JSON string → object）
       - parking_json → parking（JSON string → object）
 
+commit_gate:
+  # ⚠️ 強制：每次 git commit 前必須執行 /tp-code-verify
+  # 紅燈禁止 commit，必須修到綠燈。沒有例外。
+  required_skill: /tp-code-verify
+  checks:
+    - npm test（含 naming-convention.test.js、css-hig.test.js）
+    - 命名規範：references/naming-rules.md
+    - CSS HIG：references/css-hig-rules.md
+    - 程式碼標準：references/coding-standards.md
+  on_failure: 持續修改直到全部綠燈
+
 rules:
   proposal:
     - 提案用繁體中文撰寫
