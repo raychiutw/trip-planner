@@ -6,3 +6,7 @@ pages_build_output_dir = "./"
 binding = "DB"
 database_name = "trip-planner-db"
 database_id = "d61c42d5-8083-4e18-9b6c-70e133e37322"
+
+[[kv_namespaces]]
+binding = "TUNNEL_KV"
+id = "9d4ced7109da4330ad12f0d5bd88d425"

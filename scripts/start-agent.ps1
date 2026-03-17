@@ -1,5 +1,5 @@
 # start-agent.ps1 — Start agent server + Cloudflare Quick Tunnel
-# Quick Tunnel 每次啟動拿到隨機 URL，自動更新 Pages 環境變數 TUNNEL_URL
+# Quick Tunnel 每次啟動拿到隨機 URL，透過 KV 即時更新（Pages Function 立刻讀到）
 
 $projectDir = Split-Path $PSScriptRoot
 $cloudflared = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Cloudflare.cloudflared_Microsoft.Winget.Source_8wekyb3d8bbwe\cloudflared.exe"
@@ -29,13 +29,13 @@ for ($i = 0; $i -lt 30; $i++) {
 if ($tunnelUrl) {
     Write-Host "Tunnel URL: $tunnelUrl"
 
-    # Update Pages environment variable
+    # Update KV (instant, no deploy needed)
     try {
         Set-Location $projectDir
-        Write-Output $tunnelUrl | npx wrangler pages secret put TUNNEL_URL --project-name trip-planner 2>$null
-        Write-Host "Updated TUNNEL_URL in Pages"
+        npx wrangler kv key put "TUNNEL_URL" $tunnelUrl --namespace-id "9d4ced7109da4330ad12f0d5bd88d425" 2>$null
+        Write-Host "Updated TUNNEL_URL in KV (instant)"
     } catch {
-        Write-Host "WARNING: Failed to update TUNNEL_URL: $_"
+        Write-Host "WARNING: Failed to update KV: $_"
     }
 } else {
     Write-Host "WARNING: Could not detect tunnel URL after 60s"
