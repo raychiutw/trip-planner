@@ -14,6 +14,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const row = await context.env.DB.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first();
   if (!row) return json({ error: 'Not found' }, 404);
 
+  (row as any).tripId = (row as any).id;
+
   if (row.footer_json && typeof row.footer_json === 'string') {
     try {
       (row as any).footer_json = JSON.parse(row.footer_json as string);

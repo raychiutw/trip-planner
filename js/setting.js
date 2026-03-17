@@ -120,7 +120,7 @@
                     if (typeof footer === 'string') { try { footer = JSON.parse(footer); } catch(e) { footer = null; } }
                     var dates = (footer && footer.dates) ? footer.dates : (t.title || '');
                     return {
-                        tripId: t.id || t.tripId,
+                        tripId: t.tripId,
                         name: t.name,
                         owner: t.owner,
                         dates: dates,

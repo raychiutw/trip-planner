@@ -34,6 +34,10 @@ Object.keys(_shared).forEach(function(k) { globalThis[k] = _shared[k]; });
 var _icons = require('../js/icons.js');
 Object.keys(_icons).forEach(function(k) { globalThis[k] = _icons[k]; });
 
+// Load map-row.js and promote exports to global scope (app.js depends on mapRow/mapRows)
+var _mapRow = require('../js/map-row.js');
+Object.keys(_mapRow).forEach(function(k) { globalThis[k] = _mapRow[k]; });
+
 // Stub DOMParser if not available (used by sanitizeHtml)
 if (typeof globalThis.DOMParser === 'undefined') {
   globalThis.DOMParser = class {

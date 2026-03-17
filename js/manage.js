@@ -232,7 +232,7 @@
                     .catch(function() { return []; })
                     .then(function(allTrips) {
                         var tripMap = {};
-                        allTrips.forEach(function(t) { tripMap[t.id || t.tripId] = t; });
+                        allTrips.forEach(function(t) { tripMap[t.tripId] = t; });
                         // 只保留上架且有權限的行程
                         var filtered = trips.filter(function(t) {
                             var info = tripMap[t.tripId];

@@ -24,7 +24,7 @@
             .then(function(trips) {
                 tripSelect.innerHTML = '<option value="">-- 選擇行程 --</option>';
                 trips.forEach(function(t) {
-                    var tripId = t.id || t.tripId;
+                    var tripId = t.tripId;
                     var opt = document.createElement('option');
                     opt.value = tripId;
                     var label = t.name || tripId;
