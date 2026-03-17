@@ -1,9 +1,9 @@
 ---
-name: tp-code-validate
+name: tp-code-verify
 description: 在 commit 前驗證命名規範與測試狀態。掃描 JS/CSS/HTML/API 命名，若有違規則修正直到全部通過。
 ---
 
-# tp-code-validate
+# tp-code-verify
 
 Commit 前程式碼品質驗證。驗證命名規範 + 測試全過，紅燈則持續修改直到綠燈。
 
