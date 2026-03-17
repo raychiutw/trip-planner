@@ -113,34 +113,25 @@ user-invocable: true
         ```
    f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
-   h. 通過 → 回覆並關閉請求：
-      ```bash
-      curl -s -X PATCH \
-        -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
-        -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
-        -H "Content-Type: application/json" \
-        -d '{"reply":"✅ 已處理：{摘要}","status":"closed","processed_by":"scheduler"}' \
-        "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
-      ```
-   i. 失敗 → 回覆並關閉：
-      ```bash
-      curl -s -X PATCH \
-        -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
-        -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
-        -H "Content-Type: application/json" \
-        -d '{"reply":"❌ 處理失敗：{錯誤}","status":"closed","processed_by":"scheduler"}' \
-        "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
-      ```
+   h. 通過 → 回覆並關閉請求（見下方「回覆寫入方法」）
+   i. 失敗 → 回覆並關閉（見下方「回覆寫入方法」）
 
 ### 3d. 諮詢回覆流程
 
-回覆後關閉請求：
+回覆後關閉請求（見下方「回覆寫入方法」）
+
+### 回覆寫入方法
+
+⚠️ **不要把中文直接放在 curl `-d` 引號中**，Windows shell CP950 會破壞 UTF-8 編碼。
+改用 Node.js 寫暫存檔 + `curl --data @file`：
+
 ```bash
+node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'closed', processed_by:'scheduler'}), 'utf8')"
 curl -s -X PATCH \
   -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
   -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
   -H "Content-Type: application/json" \
-  -d '{"reply":"{回覆內容}","status":"closed","processed_by":"scheduler"}' \
+  --data @/tmp/reply.json \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
 ```
 

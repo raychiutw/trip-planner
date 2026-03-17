@@ -45,6 +45,7 @@ if ($tunnelUrl) {
 try {
     Set-Location (Join-Path $projectDir "server")
     $env:TUNNEL_URL = $tunnelUrl
+    $env:WEBHOOK_SECRET = "5c6046b9ed34e7b8353648841443cb801a89d78f5c6225871e243d145a9e39d9"
     node index.js
 } finally {
     # Cleanup tunnel on exit
