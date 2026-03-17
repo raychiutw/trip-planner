@@ -208,6 +208,22 @@
 .request-mode-badge.mode-plan { background: #E8F5E9; color: #2E7D32; }
 body.dark .request-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
 
+/* ===== Processed-by Badge ===== */
+.request-processed-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--fs-caption);
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.request-processed-badge.processed-agent { background: #E3F2FD; color: #1565C0; }
+.request-processed-badge.processed-scheduler { background: #FFF3E0; color: #E65100; }
+body.dark .request-processed-badge.processed-agent { background: #0D47A1; color: #64B5F6; }
+body.dark .request-processed-badge.processed-scheduler { background: #4E2A00; color: #FFB74D; }
+
 /* ===== Request Body Preview ===== */
 .request-item-body {
     font-size: var(--fs-callout);

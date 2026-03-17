@@ -119,7 +119,7 @@ user-invocable: true
         -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
         -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
         -H "Content-Type: application/json" \
-        -d '{"reply":"✅ 已處理：{摘要}","status":"closed"}' \
+        -d '{"reply":"✅ 已處理：{摘要}","status":"closed","processed_by":"scheduler"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
       ```
    i. 失敗 → 回覆並關閉：
@@ -128,7 +128,7 @@ user-invocable: true
         -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
         -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
         -H "Content-Type: application/json" \
-        -d '{"reply":"❌ 處理失敗：{錯誤}","status":"closed"}' \
+        -d '{"reply":"❌ 處理失敗：{錯誤}","status":"closed","processed_by":"scheduler"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
       ```
 
@@ -140,7 +140,7 @@ curl -s -X PATCH \
   -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
   -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
   -H "Content-Type: application/json" \
-  -d '{"reply":"{回覆內容}","status":"closed"}' \
+  -d '{"reply":"{回覆內容}","status":"closed","processed_by":"scheduler"}' \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
 ```
 
