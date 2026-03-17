@@ -11,7 +11,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
 
   const { results } = await context.env.DB
-    .prepare('SELECT id, day_num, date, dayOfWeek, label FROM days WHERE trip_id = ? ORDER BY day_num ASC')
+    .prepare('SELECT id, day_num, date, day_of_week, label FROM days WHERE trip_id = ? ORDER BY day_num ASC')
     .bind(id)
     .all();
 

@@ -26,7 +26,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (!day) return json({ error: 'Not found' }, 404);
 
-  parseJsonField(day, 'weather');
+  parseJsonField(day, 'weather_json');
 
   const dayId = day.id as number;
 
@@ -34,7 +34,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const [hotelResult, entriesResult, allRestaurantsResult, allShoppingResult] = await Promise.all([
     db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first() as Promise<Record<string, unknown> | null>,
     db.prepare('SELECT * FROM entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
-    db.prepare("SELECT * FROM restaurants WHERE parent_type = 'entry' AND parent_id IN (SELECT id FROM entries WHERE day_id = ?)").bind(dayId).all(),
+    db.prepare("SELECT * FROM restaurants WHERE entry_id IN (SELECT id FROM entries WHERE day_id = ?)").bind(dayId).all(),
     db.prepare("SELECT * FROM shopping WHERE parent_id IN (SELECT id FROM entries WHERE day_id = ?) AND parent_type = 'entry'").bind(dayId).all(),
   ]);
 
@@ -42,7 +42,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   let hotel: Record<string, unknown> | null = null;
   if (hotelResult) {
     const hotelRow = hotelResult as Record<string, unknown>;
-    parseJsonField(hotelRow, 'parking');
+    parseJsonField(hotelRow, 'parking_json');
 
     const hotelId = hotelRow.id as number;
     const { results: hotelShopping } = await db
@@ -57,7 +57,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const restaurantsByEntry = new Map<number, unknown[]>();
   for (const r of allRestaurantsResult.results) {
     const row = r as Record<string, unknown>;
-    const eid = row.parent_id as number;
+    const eid = row.entry_id as number;
     if (!restaurantsByEntry.has(eid)) restaurantsByEntry.set(eid, []);
     restaurantsByEntry.get(eid)!.push(r);
   }
@@ -73,11 +73,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // 5. Build timeline
   const timeline = entriesResult.results.map(e => {
     const entry = e as Record<string, unknown>;
-    parseJsonField(entry, 'travel');
+    parseJsonField(entry, 'location_json');
 
     const eid = entry.id as number;
+    // Assemble travel object from separate columns
+    const travel = entry.travel_type ? {
+      type: entry.travel_type,
+      desc: entry.travel_desc,
+      min: entry.travel_min,
+    } : null;
+
     return {
       ...entry,
+      travel,
       restaurants: restaurantsByEntry.get(eid) ?? [],
       shopping: shoppingByEntry.get(eid) ?? [],
     };
@@ -132,12 +140,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   // Update day fields
   stmts.push(
-    db.prepare('UPDATE days SET date = ?, dayOfWeek = ?, label = ?, weather = ? WHERE id = ?')
+    db.prepare('UPDATE days SET date = ?, day_of_week = ?, label = ?, weather_json = ? WHERE id = ?')
       .bind(
         body.date ?? null,
-        body.dayOfWeek ?? null,
+        body.day_of_week ?? null,
         body.label ?? null,
-        body.weather ? JSON.stringify(body.weather) : null,
+        body.weather_json ? JSON.stringify(body.weather_json) : null,
         dayId,
       ),
   );
