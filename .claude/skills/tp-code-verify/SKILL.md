@@ -35,6 +35,8 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 
 ## 驗證項目
 
+### A. 命名規範
+
 | # | 項目 | 掃描範圍 | 規則 |
 |---|------|---------|------|
 | 1 | JS 函式命名 | `js/*.js` `server/**/*.js` | camelCase |
@@ -47,7 +49,33 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 | 8 | API tripId | `functions/api/trips*.ts` | `id AS tripId`，不回傳裸 `id` |
 | 9 | 無防禦性 tripId | `js/*.js` | 不得出現 `.id \|\| .tripId` |
 | 10 | mapRow 統一轉換 | `js/app.js` | 不得散寫 `if (x.snake) x.camel = x.snake` |
-| 11 | Unit tests 全過 | `tests/` | `npm test` 0 failures |
+
+### B. CSS HIG 規範（12 條，由 `tests/unit/css-hig.test.js` 自動守護）
+
+| # | 規則 | 說明 |
+|---|------|------|
+| H1 | font-size 禁硬編碼 px | 僅允許 `var(--fs-*)`、`em`/`rem`/`%` |
+| H2 | transition duration 禁硬編碼 | 僅允許 `var(--duration-*)`，例外 `0s` |
+| H3-H5 | spacing 4pt grid | padding/margin/gap px 值必須為 4 的倍數 |
+| H6 | 禁 `#fff` | 改用 `var(--text-on-accent)`，例外 `.g-icon`/`.n-icon`/`.cmp-` |
+| H7 | sticky-nav frosted glass | 必須用 `color-mix` + `backdrop-filter`，不得實色 |
+| H8 | color mode preview token | 使用 `var(--cmp-*)` |
+| H9 | outline:none 搭配 shadow-ring | `outline: none` 必須搭配 `box-shadow: var(--shadow-ring)` |
+| H10 | overlay token | 使用 `var(--overlay)`，不得硬寫 `rgba(0,0,0,...)` |
+| H11 | pseudo-element 4pt grid | `::before`/`::after` 遵守 4pt grid |
+| H12 | dh-nav 禁 center | `.dh-nav` base 禁止 `justify-content: center` |
+
+**Dark mode**：優先用 `var(--token)` 寫 base 樣式，僅在 dark mode 需不同值時才加 `body.dark` 覆寫。
+
+### C. 其他
+
+| # | 項目 | 說明 |
+|---|------|------|
+| 11 | Unit tests 全過 | `npm test` 0 failures（含 naming-convention + css-hig） |
+| 12 | 觸控目標 | 互動元素最小 44px（`var(--tap-min)`） |
+| 13 | 圖示 | 全站 inline SVG（Material Symbols Rounded），不用 emoji |
+| 14 | 無框線設計 | 用背景色區分層級，不用 border |
+| 15 | border-radius | 僅用 5 級 token `--radius-xs/sm/md/lg/full` |
 
 ## 命名規範速查
 
