@@ -8,8 +8,6 @@ import { logAudit } from './_audit';
 interface Env {
   DB: D1Database;
   ADMIN_EMAIL: string;
-  TUNNEL_KV: KVNamespace;
-  WEBHOOK_SECRET: string;
 }
 
 interface AuthData {
@@ -119,43 +117,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     changedBy: auth.email,
     diffJson: JSON.stringify({ mode, title }),
   });
-
-  // Trigger local agent server via Tunnel (await inline, ~200ms overhead)
-  const reqId = newRow ? (newRow.id as number) : null;
-  if (reqId && env.TUNNEL_KV && env.WEBHOOK_SECRET) {
-    const logWebhook = (tunnelUrl: string | null, status: string, httpStatus: number | null, error: string | null) =>
-      env.DB.prepare(
-        'INSERT INTO webhook_logs (request_id, tunnel_url, status, http_status, error) VALUES (?, ?, ?, ?, ?)'
-      ).bind(reqId, tunnelUrl, status, httpStatus, error).run();
-
-    let tunnelUrl: string | null = null;
-    try {
-      tunnelUrl = await env.TUNNEL_KV.get('TUNNEL_URL');
-    } catch (e) {
-      await logWebhook(null, 'failed', null, `KV error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    if (!tunnelUrl) {
-      await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('no_tunnel', reqId).run();
-      await logWebhook(null, 'no_tunnel', null, 'KV 中無 TUNNEL_URL');
-    } else {
-      try {
-        const res = await fetch(tunnelUrl + '/process', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Webhook-Secret': env.WEBHOOK_SECRET,
-          },
-          body: JSON.stringify({ requestId: reqId }),
-        });
-        if (!res.ok) throw new Error('status ' + res.status);
-        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('sent', reqId).run();
-        await logWebhook(tunnelUrl, 'sent', res.status, null);
-      } catch (e) {
-        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run();
-        await logWebhook(tunnelUrl, 'failed', null, e instanceof Error ? e.message : String(e));
-      }
-    }
-  }
 
   return json(result, 201);
 };

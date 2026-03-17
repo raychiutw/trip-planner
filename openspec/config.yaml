@@ -1,8 +1,21 @@
 schema: spec-driven
 
 env:
+  # --- Cloudflare Account ---
+  CF_ACCOUNT_ID: d62be07e04ccd1c19ed8c496edac8ce8
+  # --- D1 Database ---
+  D1_DATABASE_ID: d61c42d5-8083-4e18-9b6c-70e133e37322
+  D1_DATABASE_NAME: trip-planner-db
+  # --- API Token（D1 查詢用，權限：D1 Edit）---
+  CLOUDFLARE_API_TOKEN: _9MwCPcXMFG1zCmkLcDUMoalf-OwvA_Rphlhv75u
+  # --- Access Service Token（CLI / scheduler 用）---
   CF_ACCESS_CLIENT_ID: e5902a9d6f5181b8f70e12f1c11ebca3.access
   CF_ACCESS_CLIENT_SECRET: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8
+  # --- Pages 環境變數（設定在 Cloudflare Dashboard，本地沒有值）---
+  # CF_API_TOKEN: (Pages env) Cloudflare API Token，用於 Access policy 同步
+  # CF_ACCESS_APP_ID: (Pages env) manage Access Application UUID
+  # CF_ACCESS_POLICY_ID: (Pages env) manage Allow policy UUID
+  # ADMIN_EMAIL: (Pages env) 管理者 email
 
 context: |
   行程規劃網站（trip-planner），部署於 Cloudflare Pages
