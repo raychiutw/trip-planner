@@ -38,20 +38,29 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const tripId = url.searchParams.get('tripId');
   const status = url.searchParams.get('status');
 
-  if (!tripId) {
+  // admin/service token 可不帶 tripId 查詢所有 requests
+  if (!tripId && !auth.isAdmin) {
     return json({ error: '缺少 tripId 參數' }, 400);
   }
 
-  if (!await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
+  if (tripId && !await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
     return json({ error: '無此行程權限' }, 403);
   }
 
-  let sql = 'SELECT * FROM requests WHERE trip_id = ?';
-  const params: string[] = [tripId];
+  let sql = 'SELECT * FROM requests';
+  const params: string[] = [];
+  const conditions: string[] = [];
 
+  if (tripId) {
+    conditions.push('trip_id = ?');
+    params.push(tripId);
+  }
   if (status) {
-    sql += ' AND status = ?';
+    conditions.push('status = ?');
     params.push(status);
+  }
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
   }
 
   sql += ' ORDER BY created_at DESC LIMIT 50';
