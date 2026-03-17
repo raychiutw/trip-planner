@@ -116,11 +116,14 @@
             .then(function(trips) {
                 // API returns { id, name, owner, ... } — map id → tripId for renderTripList
                 var mapped = trips.map(function(t) {
+                    var footer = t.footer_json;
+                    if (typeof footer === 'string') { try { footer = JSON.parse(footer); } catch(e) { footer = null; } }
+                    var dates = (footer && footer.dates) ? footer.dates : (t.title || '');
                     return {
                         tripId: t.id || t.tripId,
                         name: t.name,
                         owner: t.owner,
-                        dates: t.title || '',
+                        dates: dates,
                         published: t.published
                     };
                 });
