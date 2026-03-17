@@ -13,6 +13,13 @@ const JS_FILES = [
     'js/setting.js', 'js/manage.js', 'js/admin.js', 'js/map-row.js',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
+// src/ TypeScript files (React migration)
+const SRC_FILES = [
+    'src/lib/mapRow.ts', 'src/lib/sanitize.ts', 'src/lib/constants.ts',
+    'src/lib/formatUtils.ts', 'src/lib/localStorage.ts', 'src/lib/drivingStats.ts',
+    'src/lib/weather.ts',
+].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
+
 const CSS_FILES = [
     'css/shared.css', 'css/style.css', 'css/edit.css',
     'css/setting.css', 'css/admin.css', 'css/manage.css',
@@ -88,9 +95,11 @@ describe('JS naming — mutable state', () => {
     it('new UPPER_CASE vars not in whitelist must not be reassigned', () => {
         // Guards against introducing NEW mutable state with UPPER_CASE naming.
         // Whitelisted names (existing true constants) are exempt.
+        // Note: src/ TypeScript files use 'const' not 'var', so the var-based
+        // regex will not match them — no false positives.
         const violations = [];
 
-        for (const { path, content } of JS_FILES) {
+        for (const { path, content } of [...JS_FILES, ...SRC_FILES]) {
             const declRe = /\bvar\s+([A-Z][A-Z0-9_]+)\s*=/g;
             let m;
             while ((m = declRe.exec(content)) !== null) {
@@ -123,7 +132,7 @@ describe('JS naming — no defensive tripId fallback', () => {
         // Phase 2: After API returns tripId consistently, remove all .id || .tripId fallbacks.
         const violations = [];
 
-        for (const { path, content } of JS_FILES) {
+        for (const { path, content } of [...JS_FILES, ...SRC_FILES]) {
             const re = /\.id\s*\|\|\s*\w+\.tripId/g;
             let m;
             while ((m = re.exec(content)) !== null) {
