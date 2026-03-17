@@ -18,6 +18,7 @@ async function processRequest(requestId) {
 2. 依內容判斷「修改」或「諮詢」
 3. 修改類：GET 行程資料 → 用 PATCH/PUT API 修改 → PATCH 請求回覆關閉
 4. 諮詢類：直接 PATCH 請求回覆關閉
+5. 回覆關閉時必須帶 processed_by:'agent'，例如：-d '{"reply":"...","status":"closed","processed_by":"agent"}'
 注意：使用 Service Token headers CF-Access-Client-Id 和 CF-Access-Client-Secret（從環境變數取得）`,
     options: {
       cwd: PROJECT_ROOT,

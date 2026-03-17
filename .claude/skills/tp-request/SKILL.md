@@ -119,7 +119,7 @@ user-invocable: true
         -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
         -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
         -H "Content-Type: application/json" \
-        -d '{"reply":"✅ 已處理：{摘要}","status":"closed"}' \
+        -d '{"reply":"✅ 已處理：{摘要}","status":"closed","processed_by":"scheduler"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
       ```
    i. 失敗 → 回覆並關閉：
@@ -128,7 +128,7 @@ user-invocable: true
         -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
         -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
         -H "Content-Type: application/json" \
-        -d '{"reply":"❌ 處理失敗：{錯誤}","status":"closed"}' \
+        -d '{"reply":"❌ 處理失敗：{錯誤}","status":"closed","processed_by":"scheduler"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
       ```
 
@@ -140,7 +140,7 @@ curl -s -X PATCH \
   -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
   -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
   -H "Content-Type: application/json" \
-  -d '{"reply":"{回覆內容}","status":"closed"}' \
+  -d '{"reply":"{回覆內容}","status":"closed","processed_by":"scheduler"}' \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
 ```
 
