@@ -889,20 +889,57 @@ function renderDaySlot(day) {
     el.innerHTML = html;
 }
 
+function tryParseJson(val) {
+    if (!val || typeof val !== 'string') return val;
+    try { return JSON.parse(val); } catch(e) { return val; }
+}
+
 function mapApiDay(raw) {
     var weather = null;
     if (raw.weather_json) {
-        try { weather = JSON.parse(raw.weather_json); } catch(e) {}
+        weather = tryParseJson(raw.weather_json);
     } else if (raw.weather && typeof raw.weather === 'object') {
         weather = raw.weather;
     }
+    // Parse hotel JSON fields
+    var hotel = raw.hotel || null;
+    if (hotel) {
+        hotel.breakfast = tryParseJson(hotel.breakfast);
+        hotel.parking = tryParseJson(hotel.parking_json) || null;
+        // Build hotel infoBoxes from shopping
+        if (hotel.shopping && hotel.shopping.length) {
+            hotel.infoBoxes = [{ type: 'shopping', shops: hotel.shopping }];
+        }
+    }
+    // Parse timeline entry JSON fields + build infoBoxes
+    var timeline = (raw.timeline || []).map(function(entry) {
+        entry.location = tryParseJson(entry.location_json);
+        // Build locations array for render
+        if (entry.location && Array.isArray(entry.location)) {
+            entry.locations = entry.location;
+        } else if (entry.location) {
+            entry.locations = [entry.location];
+        }
+        // Build infoBoxes from restaurants + shopping
+        var infoBoxes = [];
+        if (entry.restaurants && entry.restaurants.length) {
+            infoBoxes.push({ type: 'restaurants', restaurants: entry.restaurants });
+        }
+        if (entry.shopping && entry.shopping.length) {
+            infoBoxes.push({ type: 'shopping', shops: entry.shopping });
+        }
+        if (infoBoxes.length) entry.infoBoxes = infoBoxes;
+        // Map rating field
+        if (entry.rating) entry.googleRating = entry.rating;
+        return entry;
+    });
     return {
         id: raw.day_num != null ? raw.day_num : raw.id,
         date: raw.date || '',
         dayOfWeek: raw.day_of_week || raw.dayOfWeek || '',
         label: raw.label || '',
         weather: weather,
-        content: { hotel: raw.hotel || null, timeline: raw.timeline || [] }
+        content: { hotel: hotel, timeline: timeline }
     };
 }
 
