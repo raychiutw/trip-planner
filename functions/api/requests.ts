@@ -123,6 +123,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Trigger local agent server via Tunnel (read URL from KV for instant updates)
   // If webhook fails, mark request as webhook_failed for tp-request scheduler fallback
   const reqId = newRow ? (newRow.id as number) : null;
+
+  // Debug: log env availability
+  const hasKV = !!env.TUNNEL_KV;
+  const hasSecret = !!env.WEBHOOK_SECRET;
+  if (reqId) {
+    context.waitUntil(
+      env.DB.prepare(
+        'INSERT INTO webhook_logs (request_id, tunnel_url, status, http_status, error) VALUES (?, ?, ?, ?, ?)'
+      ).bind(reqId, null, 'debug', null, `hasKV=${hasKV} hasSecret=${hasSecret} reqId=${reqId}`).run()
+    );
+  }
+
   if (env.TUNNEL_KV && env.WEBHOOK_SECRET && reqId) {
     const logWebhook = (tunnelUrl: string | null, status: string, httpStatus: number | null, error: string | null) =>
       env.DB.prepare(
