@@ -1,5 +1,5 @@
 import type { PagesFunction } from '@cloudflare/workers-types';
-import { logAudit, computeDiff } from '../../_audit';
+import { logAudit, computeDiff } from '../_audit';
 
 interface Env {
   DB: D1Database;
