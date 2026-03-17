@@ -15,9 +15,21 @@ user-invocable: true
   - `CF-Access-Client-Id`: `e5902a9d6f5181b8f70e12f1c11ebca3.access`
   - `CF-Access-Client-Secret`: `9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8`
 
+## 觸發模式
+
+本 skill 有兩種觸發方式：
+1. **即時（webhook）**：旅伴送出請求 → Pages Function 透過 Tunnel 呼叫本機 Agent Server → 即時處理
+2. **排程 fallback**：Windows Task Scheduler 定期執行本 skill，只處理 webhook 失敗的請求
+
 ## 步驟
 
-1. 取得所有 open 請求：
+1. 取得需要處理的請求（webhook 失敗 + open 狀態）：
+   ```bash
+   curl -s -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+        -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
+        "https://trip-planner-dby.pages.dev/api/requests?status=open&webhook_failed=1"
+   ```
+   若無結果，再查所有 open 請求（含 webhook_status 為 null 的舊資料）：
    ```bash
    curl -s -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
         -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \

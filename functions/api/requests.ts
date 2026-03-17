@@ -63,6 +63,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     conditions.push('status = ?');
     params.push(status);
   }
+  const webhookFailed = url.searchParams.get('webhook_failed');
+  if (webhookFailed === '1') {
+    conditions.push("(webhook_status = 'failed' OR webhook_status = 'no_tunnel')");
+  }
   if (conditions.length > 0) {
     sql += ' WHERE ' + conditions.join(' AND ');
   }
@@ -116,19 +120,32 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     diffJson: JSON.stringify({ mode, title }),
   });
 
-  // Fire-and-forget: trigger local agent server via Tunnel (read URL from KV for instant updates)
-  if (env.TUNNEL_KV && env.WEBHOOK_SECRET) {
-    env.TUNNEL_KV.get('TUNNEL_URL').then((tunnelUrl: string | null) => {
-      if (!tunnelUrl) return;
-      fetch(tunnelUrl + '/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Webhook-Secret': env.WEBHOOK_SECRET,
-        },
-        body: JSON.stringify({ requestId: newRow ? (newRow.id as number) : null }),
-      }).catch(() => {});
-    }).catch(() => {});
+  // Trigger local agent server via Tunnel (read URL from KV for instant updates)
+  // If webhook fails, mark request as webhook_failed for tp-request scheduler fallback
+  const reqId = newRow ? (newRow.id as number) : null;
+  if (env.TUNNEL_KV && env.WEBHOOK_SECRET && reqId) {
+    env.TUNNEL_KV.get('TUNNEL_URL').then(async (tunnelUrl: string | null) => {
+      if (!tunnelUrl) {
+        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('no_tunnel', reqId).run();
+        return;
+      }
+      try {
+        const res = await fetch(tunnelUrl + '/process', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Webhook-Secret': env.WEBHOOK_SECRET,
+          },
+          body: JSON.stringify({ requestId: reqId }),
+        });
+        if (!res.ok) throw new Error('status ' + res.status);
+        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('sent', reqId).run();
+      } catch {
+        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run();
+      }
+    }).catch(async () => {
+      try { await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run(); } catch {}
+    });
   }
 
   return json(result, 201);
