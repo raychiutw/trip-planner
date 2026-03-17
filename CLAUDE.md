@@ -6,8 +6,16 @@
 index.html          setting.html        edit.html（redirect → /manage/）
 manage/             index.html（旅伴請求頁）
 admin/              index.html（權限管理頁）
-css/                shared.css  style.css  setting.css  manage.css  admin.css
-js/                 shared.js   icons.js   app.js   setting.js   manage.js   admin.js
+src/
+  entries/          main.tsx  setting.tsx  manage.tsx  admin.tsx（各頁 React 入口）
+  pages/            TripPage.tsx  SettingPage.tsx  ManagePage.tsx  AdminPage.tsx
+  components/trip/  Timeline  DayNav  Restaurant  Hotel  MapLinks  HourlyWeather  InfoPanel  SpeedDial  Footer ...
+  components/shared/ Icon.tsx  StickyNav.tsx  TripSelect.tsx
+  hooks/            useTrip.ts  useApi.ts  usePrintMode.ts  useDarkMode.ts
+  lib/              mapRow.ts  localStorage.ts  sanitize.ts  constants.ts  weather.ts  drivingStats.ts
+  types/            trip.ts  api.ts
+css/                shared.css  style.css  setting.css  manage.css  admin.css（保持原生 CSS）
+js/                 （舊版 vanilla JS，部分測試仍依賴，逐步移除中）
 functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permissions.ts  my-trips.ts
                     trips/[id].ts  trips/[id]/days.ts  days/[num].ts  docs/[type].ts
                     entries/[eid].ts  restaurants/[rid].ts  shopping/[sid].ts  ...
@@ -16,7 +24,9 @@ scripts/            migrate-md-to-d1.js  tp-check.js  memory-sync.sh  register-s
 tests/              unit/  integration/  e2e/
 .claude/skills/     tp-check  tp-create  tp-edit  tp-request  tp-patch  tp-rebuild  tp-deploy  tp-code-verify  ...
 openspec/           config.yaml  specs/  changes/
-wrangler.toml       D1 database binding
+vite.config.ts      Vite 多入口建置（4 個 HTML）
+tsconfig.json       TypeScript strict mode
+wrangler.toml       D1 database binding + pages_build_output_dir: dist
 ```
 
 - Cloudflare Pages：https://trip-planner-dby.pages.dev/

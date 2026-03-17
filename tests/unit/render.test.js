@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
+// TODO: These tests still use the old vanilla js/app.js render functions.
+// After the React migration is complete, migrate these to use React Testing Library:
+//   import { render, screen } from '@testing-library/react';
+// and test the equivalent React components instead.
+
 const { escHtml } = require('../../js/shared.js');
 const {
   renderMapLinks,
