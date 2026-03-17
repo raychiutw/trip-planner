@@ -27,8 +27,8 @@
 ## 4. 命名規範驗證
 
 - [x] 4.1 建立 `tests/unit/naming-convention.test.js`：掃描 JS/CSS/API 命名
-- [x] 4.2 建立 `.claude/skills/tp-coding-validate/SKILL.md`：commit 前驗證 skill（命名規範 + 測試綠燈，紅燈持續修改）
-- [x] 4.3 同步建立 `.gemini/skills/tp-coding-validate/SKILL.md`
+- [x] 4.2 建立 `.claude/skills/tp-code-validate/SKILL.md`：commit 前驗證 skill（命名規範 + 測試綠燈，紅燈持續修改）
+- [x] 4.3 同步建立 `.gemini/skills/tp-code-validate/SKILL.md`
 - [x] 4.4 更新 pre-commit hook：JS/CSS 變更時跑 naming-convention 測試
-- [x] 4.5 更新 CLAUDE.md：加入 tp-coding-validate 說明
+- [x] 4.5 更新 CLAUDE.md：加入 tp-code-validate 說明
 - [x] 4.6 執行全套測試確認無 regression
