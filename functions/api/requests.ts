@@ -124,9 +124,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // If webhook fails, mark request as webhook_failed for tp-request scheduler fallback
   const reqId = newRow ? (newRow.id as number) : null;
   if (env.TUNNEL_KV && env.WEBHOOK_SECRET && reqId) {
-    env.TUNNEL_KV.get('TUNNEL_URL').then(async (tunnelUrl: string | null) => {
+    const logWebhook = (tunnelUrl: string | null, status: string, httpStatus: number | null, error: string | null) =>
+      env.DB.prepare(
+        'INSERT INTO webhook_logs (request_id, tunnel_url, status, http_status, error) VALUES (?, ?, ?, ?, ?)'
+      ).bind(reqId, tunnelUrl, status, httpStatus, error).run();
+
+    context.waitUntil(env.TUNNEL_KV.get('TUNNEL_URL').then(async (tunnelUrl: string | null) => {
       if (!tunnelUrl) {
         await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('no_tunnel', reqId).run();
+        await logWebhook(null, 'no_tunnel', null, 'KV 中無 TUNNEL_URL');
         return;
       }
       try {
@@ -140,12 +146,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         });
         if (!res.ok) throw new Error('status ' + res.status);
         await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('sent', reqId).run();
-      } catch {
+        await logWebhook(tunnelUrl, 'sent', res.status, null);
+      } catch (e) {
         await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run();
+        await logWebhook(tunnelUrl, 'failed', null, e instanceof Error ? e.message : String(e));
       }
-    }).catch(async () => {
-      try { await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run(); } catch {}
-    });
+    }).catch(async (e) => {
+      try {
+        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run();
+        await logWebhook(null, 'failed', null, e instanceof Error ? e.message : String(e));
+      } catch {}
+    }));
   }
 
   return json(result, 201);

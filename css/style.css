@@ -84,6 +84,7 @@ body:not(.dark) .day-header {
 @media (min-width: 768px) {
     .dh-nav-arrow { display: flex; align-items: center; }
     .dh-nav { justify-content: center; }
+    .dn { font-size: var(--fs-title); }
 }
 
 /* ===== Day Content ===== */
@@ -385,7 +386,7 @@ body.dark .tl-card { background: var(--bg-tertiary); }
 body.dark .tl-travel-content { background: var(--accent-bg); }
 
 /* ===== Nav Brand ===== */
-.nav-brand { font-weight: 700; font-size: var(--fs-subheadline); color: var(--accent); white-space: nowrap; display: none; }
+.nav-brand { font-weight: 700; font-size: var(--fs-title3); color: var(--accent); white-space: nowrap; display: none; }
 @media (min-width: 768px) { .nav-brand { display: inline; min-width: 140px; } }
 
 /* ===== Nav Actions ===== */
