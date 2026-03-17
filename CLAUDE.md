@@ -14,7 +14,7 @@ functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permission
 migrations/         0001_init.sql  0002_trips.sql
 scripts/            migrate-md-to-d1.js  tp-check.js  memory-sync.sh  register-scheduler.ps1
 tests/              unit/  integration/  e2e/
-.claude/skills/     tp-check  tp-create  tp-edit  tp-request  tp-patch  tp-rebuild  tp-deploy  ...
+.claude/skills/     tp-check  tp-create  tp-edit  tp-request  tp-patch  tp-rebuild  tp-deploy  tp-coding-validate  ...
 openspec/           config.yaml  specs/  changes/
 wrangler.toml       D1 database binding
 ```
@@ -75,6 +75,7 @@ D1 Tables:
 
 - **Git**：commit 後不自動 push，由使用者手動觸發；commit 訊息繁體中文
 - **測試**：commit 前必須測試全過（pre-commit hook 自動執行）；文件變更不跑測試
+- **命名規範驗證**：commit 前必須跑 `/tp-coding-validate` 驗證命名規範綠燈，紅燈則持續修改直到通過；命名規範詳見 `openspec/config.yaml` naming 區塊
 - **資料層**：D1 為唯一資料來源，透過 API 讀寫；不需 build 步驟
 - **行程品質**：產生或修改行程須遵守品質規則，完成後執行 `/tp-check`
 - **Skills**：所有 tp-* skills 透過 API 操作行程資料，不操作本地檔案，不需 git commit/push 資料變更

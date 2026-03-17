@@ -779,8 +779,8 @@ function saveTripPref(tripId) { lsSet('trip-pref', tripId); }
 function loadTripPref() { return lsGet('trip-pref'); }
 
 /* ===== Trip Data Loading ===== */
-var TRIP = null;
-var CURRENT_TRIP_ID = '';
+var trip = null;
+var currentTripId = '';
 var dayCache = {};
 var weatherCache = {};
 var tripStart = null;
@@ -801,7 +801,7 @@ function resolveAndLoad() {
         .then(function(trips) {
             var match = null;
             for (var i = 0; i < trips.length; i++) {
-                var tid = trips[i].id || trips[i].tripId;
+                var tid = trips[i].tripId;
                 if (tid === tripId) { match = trips[i]; break; }
             }
             if (match && match.published === 0) {
@@ -914,8 +914,8 @@ function mapApiDay(raw) {
     // Parse hotel JSON fields
     var hotel = raw.hotel || null;
     if (hotel) {
-        hotel.breakfast = tryParseJson(hotel.breakfast);
-        hotel.parking = tryParseJson(hotel.parking_json) || null;
+        hotel = mapRow(hotel);
+        // mapRow handles: breakfast (JSON parse), parking_json → parking (JSON parse + strip suffix)
         // details 在 DB 是逗號分隔字串，render 預期 array
         if (hotel.details && typeof hotel.details === 'string') {
             hotel.details = hotel.details.split(', ').map(function(s) { return s.trim(); });
@@ -935,10 +935,11 @@ function mapApiDay(raw) {
         // Shopping infoBox
         if (hotel.shopping && hotel.shopping.length) {
             hotel.shopping = hotel.shopping.map(function(s) {
-                if (s.rating) s.googleRating = s.rating;
-                if (s.maps) s.location = buildLocationFromMaps(s.maps, s.mapcode);
-                if (s.must_buy) s.mustBuy = typeof s.must_buy === 'string' ? s.must_buy.split(', ') : s.must_buy;
-                return s;
+                var ms = mapRow(s);
+                // mustBuy: split comma-separated string if needed
+                if (ms.mustBuy && typeof ms.mustBuy === 'string') ms.mustBuy = ms.mustBuy.split(', ');
+                if (ms.maps) ms.location = buildLocationFromMaps(ms.maps, ms.mapcode);
+                return ms;
             });
             hotel.infoBoxes.push({ type: 'shopping', shops: hotel.shopping });
         }
@@ -946,7 +947,8 @@ function mapApiDay(raw) {
     }
     // Parse timeline entry JSON fields + build infoBoxes
     var timeline = (raw.timeline || []).map(function(entry) {
-        entry.location = tryParseJson(entry.location_json);
+        entry = mapRow(entry);
+        // mapRow handles: location_json → location (JSON parse + strip suffix), body → description, rating → googleRating
         // Build locations array for render
         if (entry.location && Array.isArray(entry.location)) {
             entry.locations = entry.location;
@@ -960,19 +962,19 @@ function mapApiDay(raw) {
         // Map restaurant fields for render
         if (entry.restaurants) {
             entry.restaurants = entry.restaurants.map(function(r) {
-                if (r.rating) r.googleRating = r.rating;
-                if (r.maps) r.location = buildLocationFromMaps(r.maps, r.mapcode);
-                if (r.reservation_url) r.reservationUrl = r.reservation_url;
-                return r;
+                var mr = mapRow(r);
+                if (mr.maps) mr.location = buildLocationFromMaps(mr.maps, mr.mapcode);
+                return mr;
             });
         }
         // Map shopping fields for render
         if (entry.shopping) {
             entry.shopping = entry.shopping.map(function(s) {
-                if (s.rating) s.googleRating = s.rating;
-                if (s.maps) s.location = buildLocationFromMaps(s.maps, s.mapcode);
-                if (s.must_buy) s.mustBuy = typeof s.must_buy === 'string' ? s.must_buy.split(', ') : s.must_buy;
-                return s;
+                var ms = mapRow(s);
+                // mustBuy: split comma-separated string if needed
+                if (ms.mustBuy && typeof ms.mustBuy === 'string') ms.mustBuy = ms.mustBuy.split(', ');
+                if (ms.maps) ms.location = buildLocationFromMaps(ms.maps, ms.mapcode);
+                return ms;
             });
         }
         // Build infoBoxes from restaurants + shopping
@@ -984,10 +986,8 @@ function mapApiDay(raw) {
             infoBoxes.push({ type: 'shopping', shops: entry.shopping });
         }
         if (infoBoxes.length) entry.infoBoxes = infoBoxes;
-        // Map DB field names to render field names
-        if (entry.body) entry.description = entry.body;
+        // Map travel.desc to travel.text
         if (entry.travel && entry.travel.desc) entry.travel.text = entry.travel.desc;
-        if (entry.rating) entry.googleRating = entry.rating;
         return entry;
     });
     return {
@@ -1001,17 +1001,17 @@ function mapApiDay(raw) {
 }
 
 function fetchDay(dayId) {
-    fetch('/api/trips/' + CURRENT_TRIP_ID + '/days/' + dayId)
+    fetch('/api/trips/' + currentTripId + '/days/' + dayId)
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
         .then(function(raw) {
             var day = mapApiDay(raw);
             dayCache[dayId] = day;
-            TRIP.days[dayId - 1] = day;
+            trip.days[dayId - 1] = day;
             renderDaySlot(day);
             initAria();
             if (day.weather) fetchWeatherForDay(day);
             tryRenderDrivingStats();
-            renderInfoPanel({ autoScrollDates: TRIP.autoScrollDates, days: TRIP.days });
+            renderInfoPanel({ autoScrollDates: trip.autoScrollDates, days: trip.days });
         })
         .catch(function() {
             var el = document.getElementById('day-slot-' + dayId);
@@ -1020,32 +1020,33 @@ function fetchDay(dayId) {
 }
 
 function tryRenderDrivingStats() {
-    if (!TRIP || !TRIP.days) return;
-    var allLoaded = TRIP.days.every(function(d) { return d && d.content; });
+    if (!trip || !trip.days) return;
+    var allLoaded = trip.days.every(function(d) { return d && d.content; });
     if (!allLoaded) return;
-    var tripStats = calcTripDrivingStats(TRIP.days);
+    var tripStats = calcTripDrivingStats(trip.days);
     if (tripStats) {
         tripStats._title = '全旅程交通統計';
-        TRIP.driving = tripStats;
+        trip.driving = tripStats;
     }
 }
 
 function mapApiMeta(row) {
-    var footer = {};
-    if (row.footer_json) {
-        try { footer = typeof row.footer_json === 'string' ? JSON.parse(row.footer_json) : row.footer_json; } catch(e) {}
-    }
+    var mapped = mapRow(row);
+    // mapRow handles: footer_json → footer (JSON parse + strip suffix), og_description → ogDescription,
+    //                 self_drive → selfDrive, auto_scroll → autoScroll
+    var footer = mapped.footer || {};
     var autoScrollDates = null;
-    if (row.auto_scroll) {
-        if (typeof row.auto_scroll === 'string' && row.auto_scroll.indexOf('[') === 0) {
-            try { autoScrollDates = JSON.parse(row.auto_scroll); } catch(e) {}
-        } else if (typeof row.auto_scroll === 'string') {
-            autoScrollDates = row.auto_scroll.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-        } else if (Array.isArray(row.auto_scroll)) {
-            autoScrollDates = row.auto_scroll;
+    var autoScroll = mapped.autoScroll;
+    if (autoScroll) {
+        if (typeof autoScroll === 'string' && autoScroll.indexOf('[') === 0) {
+            try { autoScrollDates = JSON.parse(autoScroll); } catch(e) {}
+        } else if (typeof autoScroll === 'string') {
+            autoScrollDates = autoScroll.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        } else if (Array.isArray(autoScroll)) {
+            autoScrollDates = autoScroll;
         }
     }
-    var countries = row.countries;
+    var countries = mapped.countries;
     if (typeof countries === 'string' && countries.indexOf('[') === 0) {
         try { countries = JSON.parse(countries); } catch(e) { countries = [countries]; }
     } else if (typeof countries === 'string') {
@@ -1053,12 +1054,12 @@ function mapApiMeta(row) {
     }
     return {
         meta: {
-            title: row.title || row.name || '',
-            description: row.description || '',
-            name: row.name || '',
-            owner: row.owner || '',
-            ogDescription: row.og_description || '',
-            selfDrive: !!(row.self_drive || row.selfDrive),
+            title: mapped.title || mapped.name || '',
+            description: mapped.description || '',
+            name: mapped.name || '',
+            owner: mapped.owner || '',
+            ogDescription: mapped.ogDescription || '',
+            selfDrive: !!(mapped.selfDrive),
             countries: countries || []
         },
         footer: footer,
@@ -1067,10 +1068,10 @@ function mapApiMeta(row) {
 }
 
 function loadTrip(tripId) {
-    TRIP = {};
+    trip = {};
     dayCache = {};
     weatherCache = {};
-    CURRENT_TRIP_ID = tripId;
+    currentTripId = tripId;
 
     if (!/^[\w-]+$/.test(tripId)) {
         document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
@@ -1089,9 +1090,9 @@ function loadTrip(tripId) {
             var daysManifest = results[1];
             var meta = mapApiMeta(row);
 
-            TRIP.meta = meta.meta;
-            TRIP.footer = meta.footer;
-            TRIP.autoScrollDates = meta.autoScrollDates;
+            trip.meta = meta.meta;
+            trip.footer = meta.footer;
+            trip.autoScrollDates = meta.autoScrollDates;
 
             if (meta.autoScrollDates && meta.autoScrollDates.length) {
                 tripStart = meta.autoScrollDates[0];
@@ -1101,7 +1102,7 @@ function loadTrip(tripId) {
             var dayIds = daysManifest
                 .map(function(d) { return d.day_num != null ? d.day_num : d.id; })
                 .sort(function(a, b) { return a - b; });
-            TRIP.days = dayIds.map(function(id) { return { id: id }; });
+            trip.days = dayIds.map(function(id) { return { id: id }; });
 
             document.getElementById('tripContent').innerHTML = createSkeleton(dayIds);
             renderNavSlot(meta, dayIds);
@@ -1109,7 +1110,7 @@ function loadTrip(tripId) {
             initAria();
             alignStickyNav();
             initNavOverflow();
-            renderInfoPanel({ autoScrollDates: meta.autoScrollDates, days: TRIP.days });
+            renderInfoPanel({ autoScrollDates: meta.autoScrollDates, days: trip.days });
 
             var fab = document.getElementById('editFab');
             if (fab) fab.href = 'manage/';
@@ -1130,7 +1131,7 @@ function loadTrip(tripId) {
                             content = content.content;
                             content._title = docTitle;
                         }
-                        TRIP[key] = content;
+                        trip[key] = content;
                     })
                     .catch(function() { /* doc not available, silently skip */ });
             });
@@ -1362,12 +1363,12 @@ var DIAL_RENDERERS = {
 };
 function openSpeedDialContent(contentKey) {
     closeSpeedDial();
-    if (!TRIP) return;
+    if (!trip) return;
     var sheetBody = document.getElementById('bottomSheetBody');
     var sheetTitle = document.getElementById('sheetTitle');
     if (!sheetBody) return;
     var html = '';
-    var section = TRIP[contentKey];
+    var section = trip[contentKey];
     var fn = DIAL_RENDERERS[contentKey];
     if (section && fn) {
         if (sheetTitle) sheetTitle.textContent = section._title || section.title || '';
@@ -1469,8 +1470,8 @@ function togglePrint() {
         document.body.classList.remove('dark');
     }
     document.body.classList.toggle('print-mode');
-    if (entering && TRIP && TRIP.days) {
-        TRIP.days.forEach(function(d) { if (!dayCache[d.id]) fetchDay(d.id); });
+    if (entering && trip && trip.days) {
+        trip.days.forEach(function(d) { if (!dayCache[d.id]) fetchDay(d.id); });
     }
     if (!entering && document.body.dataset.wasDark === '1') {
         document.body.classList.add('dark');
@@ -1514,8 +1515,8 @@ window.addEventListener('resize', function() {
 /* ===== Day Nav Active Pill + Sticky Nav Update ===== */
 function initNavTracking() {
     var headers = [];
-    if (!TRIP) return;
-    for (var i = 1; i <= TRIP.days.length; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
+    if (!trip) return;
+    for (var i = 1; i <= trip.days.length; i++) { var h = document.getElementById('day' + i); if (h) headers.push(h); }
     var navPills = document.querySelectorAll('#stickyNav .dh-nav .dn[data-day]');
     if (!navPills.length) return;
     var nav = document.getElementById('stickyNav');

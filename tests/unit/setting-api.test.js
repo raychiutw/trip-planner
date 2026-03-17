@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 // Mirrors the mapping logic from setting.js init():
 //   var mapped = trips.map(function(t) {
 //     var footer = t.footer_json; ...
-//     return { tripId: t.id || t.tripId, name, owner, dates, published }
+//     return { tripId: t.tripId, name, owner, dates, published }
 //   })
 function mapApiTrips(trips) {
   return trips.map(function(t) {
@@ -20,7 +20,7 @@ function mapApiTrips(trips) {
     }
     var dates = (footer && footer.dates) ? footer.dates : (t.title || '');
     return {
-      tripId: t.id || t.tripId,
+      tripId: t.tripId,
       name: t.name,
       owner: t.owner,
       dates: dates,
@@ -31,27 +31,27 @@ function mapApiTrips(trips) {
 
 /* ===== setting.js trip list mapping ===== */
 describe('setting.js trip list mapping', () => {
-  it('maps id to tripId', () => {
-    const trips = [{ id: 'okinawa-trip-2026-Ray', name: '沖繩', owner: 'Ray', published: 1 }];
+  it('maps tripId field directly', () => {
+    const trips = [{ tripId: 'okinawa-trip-2026-Ray', name: '沖繩', owner: 'Ray', published: 1 }];
     const result = mapApiTrips(trips);
     expect(result[0].tripId).toBe('okinawa-trip-2026-Ray');
   });
 
-  it('falls back to t.tripId when t.id is absent', () => {
+  it('reads t.tripId from API response', () => {
     const trips = [{ tripId: 'busan-trip-2026', name: '釜山', owner: 'Celia', published: 1 }];
     const result = mapApiTrips(trips);
     expect(result[0].tripId).toBe('busan-trip-2026');
   });
 
-  it('prefers t.id over t.tripId', () => {
-    const trips = [{ id: 'id-wins', tripId: 'tripId-loses', name: 'Test', owner: 'T', published: 1 }];
+  it('uses t.tripId as canonical trip identifier', () => {
+    const trips = [{ tripId: 'my-trip', name: 'Test', owner: 'T', published: 1 }];
     const result = mapApiTrips(trips);
-    expect(result[0].tripId).toBe('id-wins');
+    expect(result[0].tripId).toBe('my-trip');
   });
 
   it('extracts dates from footer_json.dates (string input)', () => {
     const trips = [{
-      id: 'test-trip',
+      tripId: 'test-trip',
       name: 'Test',
       owner: 'Ray',
       footer_json: '{"dates":"2026-05-01 ~ 2026-05-05"}',
@@ -63,7 +63,7 @@ describe('setting.js trip list mapping', () => {
 
   it('extracts dates from footer_json.dates (object input)', () => {
     const trips = [{
-      id: 'test-trip',
+      tripId: 'test-trip',
       name: 'Test',
       owner: 'Ray',
       footer_json: { dates: '2026-05-01 ~ 2026-05-05' },
@@ -75,7 +75,7 @@ describe('setting.js trip list mapping', () => {
 
   it('falls back to title when footer_json has no dates', () => {
     const trips = [{
-      id: 'test-trip',
+      tripId: 'test-trip',
       name: 'Test',
       owner: 'Ray',
       title: '5/1~5/5',
@@ -88,7 +88,7 @@ describe('setting.js trip list mapping', () => {
 
   it('falls back to title when footer_json is malformed JSON', () => {
     const trips = [{
-      id: 'test-trip',
+      tripId: 'test-trip',
       name: 'Test',
       owner: 'Ray',
       title: '5/1~5/5',
@@ -100,14 +100,14 @@ describe('setting.js trip list mapping', () => {
   });
 
   it('returns empty string dates when footer_json and title both absent', () => {
-    const trips = [{ id: 'test-trip', name: 'Test', owner: 'Ray', published: 1 }];
+    const trips = [{ tripId: 'test-trip', name: 'Test', owner: 'Ray', published: 1 }];
     const result = mapApiTrips(trips);
     expect(result[0].dates).toBe('');
   });
 
   it('maps name and owner correctly', () => {
     const trips = [{
-      id: 'kyoto-trip-2026-MimiChu',
+      tripId: 'kyoto-trip-2026-MimiChu',
       name: '京都行程',
       owner: 'MimiChu',
       published: 1
@@ -119,8 +119,8 @@ describe('setting.js trip list mapping', () => {
 
   it('maps published field', () => {
     const trips = [
-      { id: 'trip-1', name: 'A', owner: 'X', published: 1 },
-      { id: 'trip-2', name: 'B', owner: 'Y', published: 0 },
+      { tripId: 'trip-1', name: 'A', owner: 'X', published: 1 },
+      { tripId: 'trip-2', name: 'B', owner: 'Y', published: 0 },
     ];
     const result = mapApiTrips(trips);
     expect(result[0].published).toBe(1);
@@ -129,9 +129,9 @@ describe('setting.js trip list mapping', () => {
 
   it('filters out unpublished trips correctly', () => {
     const trips = [
-      { id: 'trip-1', name: 'A', owner: 'X', published: 1 },
-      { id: 'trip-2', name: 'B', owner: 'Y', published: 0 },
-      { id: 'trip-3', name: 'C', owner: 'Z', published: 1 },
+      { tripId: 'trip-1', name: 'A', owner: 'X', published: 1 },
+      { tripId: 'trip-2', name: 'B', owner: 'Y', published: 0 },
+      { tripId: 'trip-3', name: 'C', owner: 'Z', published: 1 },
     ];
     const mapped = mapApiTrips(trips);
     const published = mapped.filter(function(t) { return t.published !== 0; });
@@ -146,8 +146,8 @@ describe('setting.js trip list mapping', () => {
 
   it('handles multiple trips in order', () => {
     const trips = [
-      { id: 'trip-a', name: 'A', owner: 'X', published: 1 },
-      { id: 'trip-b', name: 'B', owner: 'Y', published: 1 },
+      { tripId: 'trip-a', name: 'A', owner: 'X', published: 1 },
+      { tripId: 'trip-b', name: 'B', owner: 'Y', published: 1 },
     ];
     const result = mapApiTrips(trips);
     expect(result[0].tripId).toBe('trip-a');

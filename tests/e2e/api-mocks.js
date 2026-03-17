@@ -13,7 +13,7 @@
 /* ===== /api/trips (trip list) ===== */
 const MOCK_TRIPS_LIST = [
   {
-    id: 'okinawa-trip-2026-Ray',
+    tripId: 'okinawa-trip-2026-Ray',
     name: '沖繩自駕五日遊',
     owner: 'Ray',
     title: '2026 沖繩自駕五日遊',
@@ -24,7 +24,7 @@ const MOCK_TRIPS_LIST = [
     footer_json: '{"title":"沖繩自駕五日遊","dates":"2026/07/01 — 07/05","tagline":"享受沖繩的陽光與海風","budget":"預算：每人 NT$35,000","exchangeNote":"匯率：1 JPY ≈ 0.22 TWD"}',
   },
   {
-    id: 'busan-trip-2026-CeliaDemyKathy',
+    tripId: 'busan-trip-2026-CeliaDemyKathy',
     name: '釜山三日遊',
     owner: 'CeliaDemyKathy',
     title: '2026 釜山三日遊',
@@ -39,6 +39,7 @@ const MOCK_TRIPS_LIST = [
 /* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) ===== */
 const MOCK_TRIP_META_OKINAWA = {
   id: 'okinawa-trip-2026-Ray',
+  tripId: 'okinawa-trip-2026-Ray',
   name: '沖繩自駕五日遊',
   owner: 'Ray',
   title: '2026 沖繩自駕五日遊',
@@ -61,6 +62,7 @@ const MOCK_TRIP_META_OKINAWA = {
 /* ===== /api/trips/busan-trip-2026-CeliaDemyKathy (single trip meta) ===== */
 const MOCK_TRIP_META_BUSAN = {
   id: 'busan-trip-2026-CeliaDemyKathy',
+  tripId: 'busan-trip-2026-CeliaDemyKathy',
   name: '釜山三日遊',
   owner: 'CeliaDemyKathy',
   title: '2026 釜山三日遊',
