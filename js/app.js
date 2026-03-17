@@ -889,6 +889,16 @@ function renderDaySlot(day) {
     el.innerHTML = html;
 }
 
+function buildLocationFromMaps(mapsStr, mapcode) {
+    if (!mapsStr) return null;
+    var query = mapsStr.trim();
+    var loc = { name: query };
+    loc.googleQuery = 'https://www.google.com/maps/search/' + encodeURIComponent(query);
+    loc.appleQuery = 'https://maps.apple.com/?q=' + encodeURIComponent(query);
+    if (mapcode) loc.mapcode = mapcode;
+    return loc;
+}
+
 function tryParseJson(val) {
     if (!val || typeof val !== 'string') return val;
     try { return JSON.parse(val); } catch(e) { return val; }
@@ -906,8 +916,18 @@ function mapApiDay(raw) {
     if (hotel) {
         hotel.breakfast = tryParseJson(hotel.breakfast);
         hotel.parking = tryParseJson(hotel.parking_json) || null;
-        // Build hotel infoBoxes from shopping
+        // details 在 DB 是逗號分隔字串，render 預期 array
+        if (hotel.details && typeof hotel.details === 'string') {
+            hotel.details = hotel.details.split(', ').map(function(s) { return s.trim(); });
+        }
+        // Map hotel shopping fields
         if (hotel.shopping && hotel.shopping.length) {
+            hotel.shopping = hotel.shopping.map(function(s) {
+                if (s.rating) s.googleRating = s.rating;
+                if (s.maps) s.location = buildLocationFromMaps(s.maps, s.mapcode);
+                if (s.must_buy) s.mustBuy = s.must_buy;
+                return s;
+            });
             hotel.infoBoxes = [{ type: 'shopping', shops: hotel.shopping }];
         }
     }
@@ -919,6 +939,24 @@ function mapApiDay(raw) {
             entry.locations = entry.location;
         } else if (entry.location) {
             entry.locations = [entry.location];
+        }
+        // Map restaurant fields for render
+        if (entry.restaurants) {
+            entry.restaurants = entry.restaurants.map(function(r) {
+                if (r.rating) r.googleRating = r.rating;
+                if (r.maps) r.location = buildLocationFromMaps(r.maps, r.mapcode);
+                if (r.reservation_url) r.reservationUrl = r.reservation_url;
+                return r;
+            });
+        }
+        // Map shopping fields for render
+        if (entry.shopping) {
+            entry.shopping = entry.shopping.map(function(s) {
+                if (s.rating) s.googleRating = s.rating;
+                if (s.maps) s.location = buildLocationFromMaps(s.maps, s.mapcode);
+                if (s.must_buy) s.mustBuy = s.must_buy;
+                return s;
+            });
         }
         // Build infoBoxes from restaurants + shopping
         var infoBoxes = [];
@@ -979,7 +1017,13 @@ function mapApiMeta(row) {
     }
     var autoScrollDates = null;
     if (row.auto_scroll) {
-        try { autoScrollDates = JSON.parse(row.auto_scroll); } catch(e) {}
+        if (typeof row.auto_scroll === 'string' && row.auto_scroll.indexOf('[') === 0) {
+            try { autoScrollDates = JSON.parse(row.auto_scroll); } catch(e) {}
+        } else if (typeof row.auto_scroll === 'string') {
+            autoScrollDates = row.auto_scroll.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+        } else if (Array.isArray(row.auto_scroll)) {
+            autoScrollDates = row.auto_scroll;
+        }
     }
     var countries = row.countries;
     if (typeof countries === 'string' && countries.indexOf('[') === 0) {

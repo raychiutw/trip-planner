@@ -120,7 +120,7 @@
                         tripId: t.id || t.tripId,
                         name: t.name,
                         owner: t.owner,
-                        dates: t.dates || '',
+                        dates: t.title || '',
                         published: t.published
                     };
                 });
