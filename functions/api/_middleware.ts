@@ -56,7 +56,17 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   // 公開讀取：GET /api/trips/** 不需認證
   if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
-    // 嘗試解析 auth（給 admin 功能用，如 ?all=1），但不強制
+    // Service Token（CLI / scheduler）→ admin
+    const stClientId = request.headers.get('CF-Access-Client-Id');
+    if (stClientId) {
+      (context.data as Record<string, unknown>).auth = {
+        email: env.ADMIN_EMAIL,
+        isAdmin: true,
+        isServiceToken: true,
+      };
+      return context.next();
+    }
+    // 嘗試解析 JWT auth（給 admin 功能用，如 ?all=1），但不強制
     const token = getCookie(request, 'CF_Authorization');
     if (token) {
       const payload = decodeJwtPayload(token);
@@ -66,6 +76,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
           email,
           isAdmin: env.ADMIN_EMAIL ? email === env.ADMIN_EMAIL.toLowerCase() : false,
           isServiceToken: false,
+        };
+      } else if (payload?.common_name) {
+        (context.data as Record<string, unknown>).auth = {
+          email: env.ADMIN_EMAIL,
+          isAdmin: true,
+          isServiceToken: true,
         };
       }
     }
