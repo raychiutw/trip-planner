@@ -52,6 +52,25 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 
 export const onRequest: PagesFunction<Env> = async (context) => {
   const { request, env } = context;
+  const url = new URL(request.url);
+
+  // 公開讀取：GET /api/trips/** 不需認證
+  if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
+    // 嘗試解析 auth（給 admin 功能用，如 ?all=1），但不強制
+    const token = getCookie(request, 'CF_Authorization');
+    if (token) {
+      const payload = decodeJwtPayload(token);
+      if (payload?.email) {
+        const email = String(payload.email).toLowerCase();
+        (context.data as Record<string, unknown>).auth = {
+          email,
+          isAdmin: email === env.ADMIN_EMAIL.toLowerCase(),
+          isServiceToken: false,
+        };
+      }
+    }
+    return context.next();
+  }
 
   // Service Token 辨識（header 未被 Access 消化時）
   const clientId = request.headers.get('CF-Access-Client-Id');

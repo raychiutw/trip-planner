@@ -17,17 +17,18 @@
         }, opts || {}));
     }
 
-    /* ===== Load Trip List from trips.json ===== */
+    /* ===== Load Trip List from API ===== */
     function loadTrips() {
-        fetch('../data/dist/trips.json')
+        fetch('/api/trips?all=1')
             .then(function(r) { return r.json(); })
             .then(function(trips) {
                 tripSelect.innerHTML = '<option value="">-- 選擇行程 --</option>';
                 trips.forEach(function(t) {
+                    var tripId = t.id || t.tripId;
                     var opt = document.createElement('option');
-                    opt.value = t.tripId;
-                    var label = t.name || t.tripId;
-                    if (t.published === false) label = '(已下架) ' + label;
+                    opt.value = tripId;
+                    var label = t.name || tripId;
+                    if (t.published === 0 || t.published === false) label = '(已下架) ' + label;
                     opt.textContent = label;
                     tripSelect.appendChild(opt);
                 });

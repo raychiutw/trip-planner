@@ -11,23 +11,22 @@ user-invocable: true
 ## API 設定
 
 - **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers
+- **認證**: Service Token headers（寫入操作必填）
   - `CF-Access-Client-Id`: `e5902a9d6f5181b8f70e12f1c11ebca3.access`
   - `CF-Access-Client-Secret`: `9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8`
 
 ## 步驟
 
-1. `git pull origin master`
-2. 取得所有 open 請求：
+1. 取得所有 open 請求：
    ```bash
    curl -s -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
         -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
         "https://trip-planner-dby.pages.dev/api/requests?status=open"
    ```
-3. 無 open 請求 → 回報「沒有待處理的請求」並結束
-4. 依序處理每個請求：
+2. 無 open 請求 → 回報「沒有待處理的請求」並結束
+3. 依序處理每個請求：
 
-### 4a. 解析 metadata
+### 3a. 解析 metadata
 
 - **mode**：`request.mode`（`trip-edit` 或 `trip-plan`）
 - **tripId**：`request.trip_id`
@@ -36,39 +35,71 @@ user-invocable: true
 - **text**：`request.body`
 - **requestId**：`request.id`
 
-### 4b. 意圖安全矩陣
+### 3b. 意圖安全矩陣
 
 依 mode + intent 分流：
 
 | mode | intent | 處理方式 |
 |------|--------|----------|
-| trip-edit | 修改 | 修改 MD → commit → deploy（見步驟 4c） |
-| trip-edit | 諮詢 | 回覆請求，不修改檔案 |
-| trip-plan | 諮詢 | 回覆請求，不修改檔案 |
+| trip-edit | 修改 | 讀取 API 資料 → 修改 → 寫回 API（見步驟 3c） |
+| trip-edit | 諮詢 | 回覆請求，不修改資料 |
+| trip-plan | 諮詢 | 回覆請求，不修改資料 |
 | trip-plan | 修改 | 回覆建議以 trip-edit 重新送出 |
 
 - **intent 判斷**：依 text 內容判斷是「修改」（要求新增/刪除/替換行程內容）還是「諮詢」（詢問建議/比較/確認）
 
-### 4c. 修改流程（trip-edit + intent=修改）
+### 3c. 修改流程（trip-edit + intent=修改）
 
-   a. 讀取 `data/trips-md/{tripId}/` 下的 MD 檔案
-   b. 依請求 text 內容**局部修改**對應的 MD 檔案（只改 text 描述的部分，不全面重跑 R0-R15）
+   a. 讀取行程資料：
+      ```bash
+      # 讀取 meta
+      curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}"
+      # 讀取受影響的天（依請求內容判斷）
+      curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
+      ```
+   b. 依請求 text 內容**局部修改**對應資料（只改 text 描述的部分，不全面重跑 R0-R15）
    c. 新增或替換的 POI 須包含以下必填欄位：
       - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
       - `note`：有備註填內容，無備註填空字串 `""`（R15）
-      - `maps`：實體地點填搜尋文字（R11）
-      - `rating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
+      - `location.googleQuery`：實體地點填搜尋文字（R11）
+      - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
    d. 修改的部分須符合 R0-R15 品質規則
    d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
-   e. 若影響到 checklist、backup、suggestions，同步更新對應 MD 檔案
-   f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數
-   g. 執行 `npm run build` 更新 dist
-   h. 執行 `git diff --name-only`：
-      → 只有 `data/trips-md/{tripId}/**` + `data/dist/**` → OK
-      → 有其他檔案被改 → `git checkout` 還原非白名單檔案
-   i. `npm test`
-   j. **tp-check 精簡 report**：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
-   k. 通過 → commit push + 回覆關閉請求：
+   e. 依修改類型選擇對應 API：
+      - **修改單一 entry**（title/time/description/location/travel 等）：
+        ```bash
+        curl -s -X PATCH \
+          -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+          -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
+          -H "Content-Type: application/json" \
+          -d '{...修改欄位...}' \
+          "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
+        ```
+      - **覆寫整天**（插入/移除/重排 entry，或整天大幅修改）：
+        ```bash
+        curl -s -X PUT \
+          -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+          -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
+          -H "Content-Type: application/json" \
+          -d '{...完整一天資料...}' \
+          "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
+        ```
+      - **新增餐廳**：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
+      - **修改/刪除餐廳**：PATCH/DELETE `/api/trips/{tripId}/restaurants/{rid}`
+      - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
+      - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
+      - **更新 doc**（checklist/backup/suggestions 等）：
+        ```bash
+        curl -s -X PUT \
+          -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+          -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
+          -H "Content-Type: application/json" \
+          -d '{"content":"..."}' \
+          "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
+        ```
+   f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
+   g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
+   h. 通過 → 回覆並關閉請求：
       ```bash
       curl -s -X PATCH \
         -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
@@ -77,7 +108,7 @@ user-invocable: true
         -d '{"reply":"✅ 已處理：{摘要}","status":"closed"}' \
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
       ```
-   l. 失敗 → `git checkout -- data/trips-md/{tripId}/` + 回覆關閉：
+   i. 失敗 → 回覆並關閉：
       ```bash
       curl -s -X PATCH \
         -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
@@ -87,7 +118,7 @@ user-invocable: true
         "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
       ```
 
-### 4d. 諮詢回覆流程
+### 3d. 諮詢回覆流程
 
 回覆後關閉請求：
 ```bash
@@ -103,8 +134,8 @@ curl -s -X PATCH \
 
 本 skill 只處理請求 text 描述的修改範圍。**不全面重跑 R0-R15**。如需全面重整，使用 `/tp-rebuild`。
 
-僅允許編輯：
-  data/trips-md/{tripId}/**
+## 注意事項
 
-以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
-  data/dist/**
+- 所有資料讀寫均透過 API，不操作本地 MD 檔案
+- 不執行 git commit / push（資料已直接寫入 D1 database）
+- 不執行 npm run build（無 dist 產物需產生）

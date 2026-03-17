@@ -3,6 +3,8 @@
  * POST /api/requests { tripId, mode, title, body }
  */
 
+import { logAudit } from './_audit';
+
 interface Env {
   DB: D1Database;
   ADMIN_EMAIL: string;
@@ -101,6 +103,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
     .bind(tripId, mode, title, requestBody, auth.email)
     .first();
+
+  const newRow = result as Record<string, unknown>;
+  await logAudit(env.DB, {
+    tripId,
+    tableName: 'requests',
+    recordId: newRow ? (newRow.id as number) : null,
+    action: 'insert',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({ mode, title }),
+  });
 
   return json(result, 201);
 };

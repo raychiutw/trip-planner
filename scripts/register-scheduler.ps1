@@ -12,7 +12,7 @@ $action = New-ScheduledTaskAction `
 $trigger = New-ScheduledTaskTrigger `
     -Once `
     -At (Get-Date) `
-    -RepetitionInterval (New-TimeSpan -Minutes 15) `
+    -RepetitionInterval (New-TimeSpan -Minutes 1) `
     -RepetitionDuration (New-TimeSpan -Days 365)
 
 $settings = New-ScheduledTaskSettingsSet `
@@ -26,7 +26,7 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
-    -Description "Auto-run Claude CLI tp-request every 15 minutes"
+    -Description "Auto-run Claude CLI tp-request every 1 minute"
 
-Write-Host "Registered: TripPlanner-AutoRequest (every 15 min)"
+Write-Host "Registered: TripPlanner-AutoRequest (every 1 min)"
 Write-Host "  Manage: taskschd.msc > TripPlanner-AutoRequest"

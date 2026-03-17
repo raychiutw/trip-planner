@@ -4,36 +4,49 @@ description: Use when the user wants to validate a trip itinerary against qualit
 user-invocable: true
 ---
 
-對指定行程逐項檢查 R0-R15 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何檔案。
+對指定行程逐項檢查 R0-R15 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何資料。
 
 ⚡ 核心原則：不問問題，直接驗證。
+
+## API 設定
+
+- **Base URL**: `https://trip-planner-dby.pages.dev`
+- **認證**: 讀取操作為公開存取，無需認證
 
 ## 輸入方式
 
 - 指定 tripId：`/tp-check okinawa-trip-2026-Ray`
-- 未指定：讀取 `data/dist/trips.json` 列出所有行程供選擇
+- 未指定：呼叫 `GET /api/trips` 列出所有行程供選擇
 
 ## 步驟
 
-1. 讀取 `data/trips-md/{tripId}/` 下的 MD 檔案（meta.md + day-N.md 等）
-2. 逐項檢查 R0-R15 品質規則
+1. 讀取行程資料：
+   ```bash
+   # 讀取 meta
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}"
+   # 讀取所有天概要（取得天數清單）
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days"
+   # 依序讀取每天完整資料
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
+   ```
+2. 逐項檢查 R0-R15 品質規則（API 回傳 JSON，直接驗證 JSON 欄位）
 3. 依檢查結果輸出 report（完整模式或精簡模式）
 
-🚫 不修改任何檔案。tp-check 是純驗證工具。
+🚫 不修改任何資料。tp-check 是純驗證工具。
 
-## MD 欄位與 JSON 欄位對照
+## JSON 欄位對照
 
-tp-check 讀取 MD 原始檔案，品質規則以 JSON 結構定義。以下欄位由 build script 自動轉換，**檢查 MD 時使用 MD 欄位名**：
+API 回傳 JSON 格式，直接驗證以下欄位：
 
-| MD 欄位 | JSON 欄位 | 轉換說明 |
-|---------|----------|---------|
-| `maps:` | `location.googleQuery` / `appleQuery` | build 自動加 URL 前綴，MD 只需填搜尋文字 |
-| `rating:` | `googleRating` | 欄位改名，值不變 |
-| `countries: JP` | `countries: ["JP"]` | 字串轉陣列 |
-| `autoScrollDates: 2026-07-01, 2026-07-02` | `autoScrollDates: ["2026-07-01", ...]` | 逗號分隔轉陣列 |
-| `foodPreferences: 拉麵, 燒肉, 當地特色` | `foodPreferences: ["拉麵", ...]` | 逗號分隔轉陣列 |
-
-**關鍵：** 檢查 R11 時看 `maps:` 欄位是否存在（不檢查 URL 格式，那是 build 的責任）。檢查 R12 時看 `rating:` 欄位。不要因為 MD 中沒有 `googleQuery` 或 `googleRating` 就判 fail。
+| 欄位 | 說明 |
+|------|------|
+| `location.googleQuery` | R11 地圖導航（原 MD 的 `maps:` 欄位） |
+| `googleRating` | R12 評分（原 MD 的 `rating:` 欄位） |
+| `meta.countries` | 陣列格式（如 `["JP"]`） |
+| `meta.foodPreferences` | 陣列格式 |
+| `source` | R13 來源標記（`"ai"` 或 `"user"`） |
+| `note` | R15 必填備註 |
+| `location.naverQuery` | R14 韓國行程 Naver Maps URL |
 
 ## Report 模式
 
@@ -112,11 +125,11 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | R7 | 所有非家飯店有 shopping(≥3) + parking | 部分 shop 缺 mustBuy 或數量不足 | 飯店完全無 shopping infoBox |
 | R8 | 所有 hotel 有 breakfast 欄位 | — | 任一 hotel 缺 breakfast |
 | R10 | 自駕行程還車 event 有 gasStation infoBox | — | 自駕行程缺 gasStation |
-| R11 | 所有實體地點有 `maps:` 欄位 | 1~5 個地點缺 `maps:` | > 5 個地點缺 `maps:` |
-| R12 | 所有 POI 有 `rating:` | `source: user` 的 POI 缺 `rating:` | `source: ai` 的 POI 缺 `rating:` |
-| R13 | 所有非豁免 POI 有 `source:` | 1~3 個 POI 缺 `source:` | > 3 個 POI 缺 `source:` |
+| R11 | 所有實體地點有 `location.googleQuery` | 1~5 個地點缺 `location.googleQuery` | > 5 個地點缺 `location.googleQuery` |
+| R12 | 所有 POI 有 `googleRating` | `source: user` 的 POI 缺 `googleRating` | `source: ai` 的 POI 缺 `googleRating` |
+| R13 | 所有非豁免 POI 有 `source` | 1~3 個 POI 缺 `source` | > 3 個 POI 缺 `source` |
 | R14 | 韓國行程所有 POI 有 naverQuery；非韓國行程不檢查 | — | 韓國行程 POI 缺 naverQuery |
-| R15 | 所有 POI 有 `note:` 欄位（含 parking infoBox） | 1~3 個缺 `note:` | > 3 個缺 `note:` |
+| R15 | 所有 POI 有 `note` 欄位（含 parking infoBox） | 1~3 個缺 `note` | > 3 個缺 `note` |
 
 ## 嵌入其他 skill 的方式
 
@@ -125,7 +138,7 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | `/tp-check` | 獨立執行 | 完整 |
 | `/tp-rebuild` | 修正前 + 修正後 | 完整 x2 |
 | `/tp-edit` | 修改完成後 | 精簡 |
-| `/tp-request` | 每個 Issue 處理完後 | 精簡 |
+| `/tp-request` | 每個請求處理完後 | 精簡 |
 | `/tp-deploy` | 不嵌入 | — |
 | `/tp-rebuild-all` | 每趟修正後 | 完整 |
 
@@ -133,10 +146,6 @@ tp-check: 🟢 10  🟡 2  🔴 0
 
 | 誤判 | 正解 |
 |------|------|
-| MD 中 `maps:` 不是完整 URL → 判 R11 fail | ❌ `maps:` 填搜尋文字即可，build 自動補 URL |
-| MD 中 `rating:` 不是 `googleRating` → 判 R12 fail | ❌ 欄位名是 MD 格式，build 自動改名 |
-| MD 中 `countries: JP` 不是陣列 → 判 R0 fail | ❌ MD 用逗號分隔字串，build 自動轉陣列 |
-| 購物 entry「含午餐」→ 視為合格餐次 | ❌ 只有 title 含「午餐」/「晚餐」的專門 entry 才算 |
-| 5 個 POI 缺 source 但「整體覆蓋率尚可」→ 判 R13 🟢 | ❌ > 3 個缺失即 🔴 |
+| JSON 中 `location.googleQuery` 不是完整 URL → 判 R11 fail | ❌ `googleQuery` 填搜尋文字即可 |
+| JSON 中 `source` 欄位不存在但「整體覆蓋率尚可」→ 判 R13 🟢 | ❌ > 3 個缺失即 🔴 |
 | parking infoBox 無 note → 忽略 | ❌ R15 明確包含 parking infoBox |
-

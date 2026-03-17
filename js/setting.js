@@ -111,10 +111,20 @@
 
         var colorMode = initColorMode();
 
-        fetch('data/dist/trips.json')
+        fetch('/api/trips')
             .then(function(r) { return r.json(); })
             .then(function(trips) {
-                var published = trips.filter(function(t) { return t.published !== false; });
+                // API returns { id, name, owner, ... } — map id → tripId for renderTripList
+                var mapped = trips.map(function(t) {
+                    return {
+                        tripId: t.id || t.tripId,
+                        name: t.name,
+                        owner: t.owner,
+                        dates: t.dates || '',
+                        published: t.published
+                    };
+                });
+                var published = mapped.filter(function(t) { return t.published !== 0; });
                 var currentTripId = lsGet('trip-pref') || '';
                 if (!currentTripId && published.length > 0) {
                     currentTripId = published[0].tripId;

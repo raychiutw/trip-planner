@@ -2,6 +2,8 @@
  * PATCH /api/requests/:id  { reply, status }
  */
 
+import { logAudit, computeDiff } from '../_audit';
+
 interface Env {
   DB: D1Database;
 }
@@ -55,6 +57,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     return json({ error: '沒有要更新的欄位' }, 400);
   }
 
+  const oldRow = await env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
+
   values.push(id);
   const result = await env.DB
     .prepare(`UPDATE requests SET ${updates.join(', ')} WHERE id = ? RETURNING *`)
@@ -64,6 +68,19 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!result) {
     return json({ error: '找不到該請求' }, 404);
   }
+
+  const tripId = (result as Record<string, unknown>).trip_id as string;
+  const newFields = Object.fromEntries(
+    Object.entries(body).filter(([, v]) => v !== undefined)
+  );
+  await logAudit(env.DB, {
+    tripId,
+    tableName: 'requests',
+    recordId: Number(id),
+    action: 'update',
+    changedBy: auth.email,
+    diffJson: oldRow ? computeDiff(oldRow, newFields) : JSON.stringify(newFields),
+  });
 
   return json(result);
 };

@@ -4,7 +4,14 @@ description: Use when the user wants to bulk-fill a specific missing field (e.g.
 user-invocable: true
 ---
 
-跨行程局部欄位更新工具。針對特定 target + field 批次掃描並搜尋補齊。
+跨行程局部欄位更新工具。針對特定 target + field 批次掃描並搜尋補齊，透過 API 寫回。
+
+## API 設定
+
+- **Base URL**: `https://trip-planner-dby.pages.dev`
+- **認證**: Service Token headers（寫入操作必填）
+  - `CF-Access-Client-Id`: `e5902a9d6f5181b8f70e12f1c11ebca3.access`
+  - `CF-Access-Client-Secret`: `9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8`
 
 ## 指令格式
 
@@ -22,38 +29,56 @@ user-invocable: true
 
 ### Phase 1：掃描
 
-1. 讀取目標行程 MD 檔案（`data/trips-md/{tripId}/`，`--trips` 指定或全部）
-2. 遍歷所有 day-N.md，依 `--target` 定位物件：
-   - `hotel` → Hotel section（跳過 name 為「家」或以「（」開頭的）
-   - `restaurant` → restaurants infoBox table 內的每個 restaurant
-   - `shop` → shopping infoBox table 內的每個 shop
-   - `event` → timeline event（跳過有 travel 的和「餐廳未定」）
+1. 取得目標行程清單：
+   ```bash
+   # 若 --trips 未指定，取得全部行程
+   curl -s "https://trip-planner-dby.pages.dev/api/trips?all=1"
+   ```
+2. 對每個行程讀取所有天資料：
+   ```bash
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days"
+   # 依序讀取每天完整資料
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
+   ```
+3. 遍歷所有天，依 `--target` 定位物件：
+   - `hotel` → 各天的 hotel 物件（跳過 name 為「家」或以「（」開頭的）
+   - `restaurant` → restaurants 陣列內的每個 restaurant
+   - `shop` → shopping 陣列內的每個 shop
+   - `event` → timeline entries（跳過有 travel 的和「餐廳未定」）
    - `gasStation` → gasStation infoBox
-3. 檢查每個物件的 `--field` 是否需要更新：
+4. 檢查每個物件的 `--field` 是否需要更新：
    - `googleRating`：缺少或非 number → 需更新
    - `reservation`：非 object 或 `available === "unknown"` → 需更新
    - 其他欄位：依實際需求判斷
-4. 輸出掃描摘要：「共 N 行程、M 個 {target} 需更新 {field}」+ 每行程明細
+5. 輸出掃描摘要：「共 N 行程、M 個 {target} 需更新 {field}」+ 每行程明細
 
 ### Phase 2：並行搜尋
 
-5. 讀取對應 `--field` 的搜尋策略
-6. 為每個行程啟動一個 Agent（sonnet），並行搜尋：
+6. 讀取對應 `--field` 的搜尋策略
+7. 為每個行程啟動一個 Agent（sonnet），並行搜尋：
    - Agent prompt 包含該行程需更新的物件清單 + 搜尋方式
    - **依 R13 先驗證 POI 存在性**，搜不到時回報「POI 不存在：{名稱}」，不設 unknown、不繼續搜尋
-   - Agent 不直接改檔案，只回傳 patch 結果（物件路徑 + 新值）
-7. 收集所有 Agent 回傳的 patch 結果
+   - Agent 不直接呼叫 API，只回傳 patch 結果（物件 ID + 新值）
+8. 收集所有 Agent 回傳的 patch 結果
 
 ### Phase 3：合併與驗證
 
-8. 合併 patch 寫回行程 MD 檔案：
-   - 只修改目標欄位，其他欄位完全不動
-   - 找不到的值不填預設（googleRating 省略、reservation 維持 unknown）
-9. 執行 `npm run build` 更新 dist
-10. `git diff --name-only` 確認只有 `data/trips-md/**` + `data/dist/**` 被修改
-11. `npm test`
-12. 對每個修改的行程執行 tp-check 精簡模式
-13. 不自動 commit（由使用者決定）
+9. 依 patch 結果呼叫對應 API 寫回：
+   - entry（event/hotel）：PATCH `/api/trips/{tripId}/entries/{eid}`
+   - 餐廳：PATCH `/api/trips/{tripId}/restaurants/{rid}`
+   - 購物：PATCH `/api/trips/{tripId}/shopping/{sid}`
+
+   ```bash
+   curl -s -X PATCH \
+     -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+     -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
+     -H "Content-Type: application/json" \
+     -d '{"{field}": {value}}' \
+     "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
+   ```
+   - 找不到的值不填預設（`googleRating` 省略、`reservation` 維持 unknown）
+10. 對每個修改的行程執行 tp-check 精簡模式
+11. 不自動 commit（資料已直接寫入 D1 database）
 
 ## 範例
 
@@ -68,8 +93,8 @@ user-invocable: true
 /tp-patch --target event --field location --trips okinawa-trip-2026-Ray
 ```
 
-僅允許編輯：
-  data/trips-md/**
+## 注意事項
 
-以下為 build 產物，由 npm run build 自動產生，嚴禁手動編輯：
-  data/dist/**
+- 所有資料讀寫均透過 API，不操作本地 MD 檔案
+- 不執行 git commit / push（資料已直接寫入 D1 database）
+- 不執行 npm run build（無 dist 產物需產生）

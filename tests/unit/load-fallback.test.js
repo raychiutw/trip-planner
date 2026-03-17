@@ -64,7 +64,7 @@ describe('resolveAndLoad without trip-pref', () => {
         var fetchUrls = [];
         globalThis.fetch = (url) => {
             fetchUrls.push(url);
-            if (url.includes('trips.json')) {
+            if (url.includes('/api/trips')) {
                 return Promise.resolve({ ok: true, json: () => Promise.resolve([{ tripId: 'test-trip', published: true }]) });
             }
             return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
@@ -73,7 +73,7 @@ describe('resolveAndLoad without trip-pref', () => {
         app.resolveAndLoad();
         await new Promise(r => setTimeout(r, 50));
 
-        expect(fetchUrls.some(u => u.includes('trips.json'))).toBe(true);
+        expect(fetchUrls.some(u => u.includes('/api/trips'))).toBe(true);
         globalThis.fetch = originalFetch;
     });
 
@@ -84,7 +84,7 @@ describe('resolveAndLoad without trip-pref', () => {
         var fetchUrls = [];
         globalThis.fetch = (url) => {
             fetchUrls.push(url);
-            if (url.includes('trips.json')) {
+            if (url.includes('/api/trips')) {
                 return Promise.resolve({ ok: true, json: () => Promise.resolve([{ tripId: 'saved-trip', published: true }]) });
             }
             return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
@@ -93,7 +93,7 @@ describe('resolveAndLoad without trip-pref', () => {
         app.resolveAndLoad();
         await new Promise(r => setTimeout(r, 50));
 
-        expect(fetchUrls.some(u => u.includes('trips.json'))).toBe(true);
+        expect(fetchUrls.some(u => u.includes('/api/trips'))).toBe(true);
         expect(fetchUrls.some(u => u.includes('saved-trip'))).toBe(true);
         globalThis.fetch = originalFetch;
     });

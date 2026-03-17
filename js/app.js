@@ -780,7 +780,7 @@ function loadTripPref() { return lsGet('trip-pref'); }
 
 /* ===== Trip Data Loading ===== */
 var TRIP = null;
-var DIST_PATH = '';
+var CURRENT_TRIP_ID = '';
 var dayCache = {};
 var weatherCache = {};
 var tripStart = null;
@@ -796,14 +796,15 @@ function resolveAndLoad() {
             + '</div>';
         return;
     }
-    fetch('data/dist/trips.json')
+    fetch('/api/trips')
         .then(function(r) { return r.json(); })
         .then(function(trips) {
             var match = null;
             for (var i = 0; i < trips.length; i++) {
-                if (trips[i].tripId === tripId) { match = trips[i]; break; }
+                var tid = trips[i].id || trips[i].tripId;
+                if (tid === tripId) { match = trips[i]; break; }
             }
-            if (match && match.published === false) {
+            if (match && match.published === 0) {
                 lsRemove('trip-pref');
                 document.getElementById('tripContent').innerHTML = '<div class="trip-error">'
                     + '<p>此行程已下架</p>'
@@ -888,10 +889,28 @@ function renderDaySlot(day) {
     el.innerHTML = html;
 }
 
+function mapApiDay(raw) {
+    var weather = null;
+    if (raw.weather_json) {
+        try { weather = JSON.parse(raw.weather_json); } catch(e) {}
+    } else if (raw.weather && typeof raw.weather === 'object') {
+        weather = raw.weather;
+    }
+    return {
+        id: raw.day_num != null ? raw.day_num : raw.id,
+        date: raw.date || '',
+        dayOfWeek: raw.day_of_week || raw.dayOfWeek || '',
+        label: raw.label || '',
+        weather: weather,
+        content: { hotel: raw.hotel || null, timeline: raw.timeline || [] }
+    };
+}
+
 function fetchDay(dayId) {
-    fetch(DIST_PATH + 'day-' + dayId + '.json')
+    fetch('/api/trips/' + CURRENT_TRIP_ID + '/days/' + dayId)
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function(day) {
+        .then(function(raw) {
+            var day = mapApiDay(raw);
             dayCache[dayId] = day;
             TRIP.days[dayId - 1] = day;
             renderDaySlot(day);
@@ -916,11 +935,41 @@ function tryRenderDrivingStats() {
     }
 }
 
+function mapApiMeta(row) {
+    var footer = {};
+    if (row.footer_json) {
+        try { footer = typeof row.footer_json === 'string' ? JSON.parse(row.footer_json) : row.footer_json; } catch(e) {}
+    }
+    var autoScrollDates = null;
+    if (row.auto_scroll) {
+        try { autoScrollDates = JSON.parse(row.auto_scroll); } catch(e) {}
+    }
+    var countries = row.countries;
+    if (typeof countries === 'string' && countries.indexOf('[') === 0) {
+        try { countries = JSON.parse(countries); } catch(e) { countries = [countries]; }
+    } else if (typeof countries === 'string') {
+        countries = [countries];
+    }
+    return {
+        meta: {
+            title: row.title || row.name || '',
+            description: row.description || '',
+            name: row.name || '',
+            owner: row.owner || '',
+            ogDescription: row.og_description || '',
+            selfDrive: !!(row.self_drive || row.selfDrive),
+            countries: countries || []
+        },
+        footer: footer,
+        autoScrollDates: autoScrollDates
+    };
+}
+
 function loadTrip(tripId) {
     TRIP = {};
     dayCache = {};
     weatherCache = {};
-    DIST_PATH = 'data/dist/' + tripId + '/';
+    CURRENT_TRIP_ID = tripId;
 
     if (!/^[\w-]+$/.test(tripId)) {
         document.getElementById('tripContent').innerHTML = '<div class="trip-error">\u274c \u7121\u6548\u7684\u884c\u7a0b\u6a94\u8def\u5f91</div>';
@@ -930,62 +979,68 @@ function loadTrip(tripId) {
     setUrlTrip(tripId);
     saveTripPref(tripId);
 
-    fetch(DIST_PATH + 'index.json')
-        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function(manifest) {
-            return fetch(DIST_PATH + 'meta.json')
-                .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-                .then(function(meta) {
-                    TRIP.meta = meta.meta;
-                    TRIP.footer = meta.footer;
-                    TRIP.autoScrollDates = meta.autoScrollDates;
+    Promise.all([
+        fetch('/api/trips/' + tripId).then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); }),
+        fetch('/api/trips/' + tripId + '/days').then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    ])
+        .then(function(results) {
+            var row = results[0];
+            var daysManifest = results[1];
+            var meta = mapApiMeta(row);
 
-                    if (meta.autoScrollDates && meta.autoScrollDates.length) {
-                        tripStart = meta.autoScrollDates[0];
-                        tripEnd = meta.autoScrollDates[meta.autoScrollDates.length - 1];
-                    }
+            TRIP.meta = meta.meta;
+            TRIP.footer = meta.footer;
+            TRIP.autoScrollDates = meta.autoScrollDates;
 
-                    var dayIds = manifest
-                        .filter(function(k) { return k.indexOf('day-') === 0; })
-                        .map(function(k) { return parseInt(k.replace('day-', '')); })
-                        .sort(function(a, b) { return a - b; });
-                    TRIP.days = dayIds.map(function(id) { return { id: id }; });
+            if (meta.autoScrollDates && meta.autoScrollDates.length) {
+                tripStart = meta.autoScrollDates[0];
+                tripEnd = meta.autoScrollDates[meta.autoScrollDates.length - 1];
+            }
 
-                    document.getElementById('tripContent').innerHTML = createSkeleton(dayIds);
-                    renderNavSlot(meta, dayIds);
-                    renderFooterSlot(meta);
-                    initAria();
-                    alignStickyNav();
-                    initNavOverflow();
-                    renderInfoPanel({ autoScrollDates: meta.autoScrollDates, days: TRIP.days });
+            var dayIds = daysManifest
+                .map(function(d) { return d.day_num != null ? d.day_num : d.id; })
+                .sort(function(a, b) { return a - b; });
+            TRIP.days = dayIds.map(function(id) { return { id: id }; });
 
-                    var fab = document.getElementById('editFab');
-                    if (fab) fab.href = 'manage/';
+            document.getElementById('tripContent').innerHTML = createSkeleton(dayIds);
+            renderNavSlot(meta, dayIds);
+            renderFooterSlot(meta);
+            initAria();
+            alignStickyNav();
+            initNavOverflow();
+            renderInfoPanel({ autoScrollDates: meta.autoScrollDates, days: TRIP.days });
 
-                    var infoKeys = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'];
-                    infoKeys.forEach(function(key) {
-                        if (manifest.indexOf(key) === -1) return;
-                        fetch(DIST_PATH + key + '.json')
-                            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-                            .then(function(data) { TRIP[key] = data; })
-                            .catch(function() { console.warn(key + ' 載入失敗'); });
-                    });
+            var fab = document.getElementById('editFab');
+            if (fab) fab.href = 'manage/';
 
-                    var hash = window.location.hash.replace('#', '');
-                    var hashDay = hash && hash.match(/^day(\d+)$/);
-                    var initialDay = dayIds[0] || 1;
-                    if (hashDay && dayIds.indexOf(parseInt(hashDay[1])) !== -1) {
-                        initialDay = parseInt(hashDay[1]);
-                    } else if (meta.autoScrollDates) {
-                        var todayStr = new Date().toISOString().split('T')[0];
-                        var idx = meta.autoScrollDates.indexOf(todayStr);
-                        if (idx >= 0 && dayIds[idx]) initialDay = dayIds[idx];
-                    }
-                    switchDay(initialDay);
-                    initNavTracking();
-                    // Preload remaining days in background for stats & driving
-                    dayIds.forEach(function(id) { if (id !== initialDay && !dayCache[id]) fetchDay(id); });
-                });
+            var infoKeys = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'];
+            infoKeys.forEach(function(key) {
+                fetch('/api/trips/' + tripId + '/docs/' + key)
+                    .then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+                    .then(function(data) {
+                        var content = data.content;
+                        if (typeof content === 'string') {
+                            try { content = JSON.parse(content); } catch(e) {}
+                        }
+                        TRIP[key] = content;
+                    })
+                    .catch(function() { /* doc not available, silently skip */ });
+            });
+
+            var hash = window.location.hash.replace('#', '');
+            var hashDay = hash && hash.match(/^day(\d+)$/);
+            var initialDay = dayIds[0] || 1;
+            if (hashDay && dayIds.indexOf(parseInt(hashDay[1])) !== -1) {
+                initialDay = parseInt(hashDay[1]);
+            } else if (meta.autoScrollDates) {
+                var todayStr = new Date().toISOString().split('T')[0];
+                var idx = meta.autoScrollDates.indexOf(todayStr);
+                if (idx >= 0 && dayIds[idx]) initialDay = dayIds[idx];
+            }
+            switchDay(initialDay);
+            initNavTracking();
+            // Preload remaining days in background for stats & driving
+            dayIds.forEach(function(id) { if (id !== initialDay && !dayCache[id]) fetchDay(id); });
         })
         .catch(function() {
             lsRemove('trip-pref');

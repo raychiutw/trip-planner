@@ -6,8 +6,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "build": "node scripts/build.js",
-    "build:trips": "node scripts/trip-build.js",
     "memory:export": "bash scripts/memory-sync.sh export",
     "memory:import": "bash scripts/memory-sync.sh import"
   },
