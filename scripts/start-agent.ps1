@@ -32,7 +32,7 @@ if ($tunnelUrl) {
     # Update KV (instant, no deploy needed)
     try {
         Set-Location $projectDir
-        npx wrangler kv key put "TUNNEL_URL" $tunnelUrl --namespace-id "9d4ced7109da4330ad12f0d5bd88d425" 2>$null
+        npx wrangler kv key put "TUNNEL_URL" $tunnelUrl --namespace-id "9d4ced7109da4330ad12f0d5bd88d425" --remote 2>$null
         Write-Host "Updated TUNNEL_URL in KV (instant)"
     } catch {
         Write-Host "WARNING: Failed to update KV: $_"

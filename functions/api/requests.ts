@@ -65,7 +65,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
   const webhookFailed = url.searchParams.get('webhook_failed');
   if (webhookFailed === '1') {
-    conditions.push("(webhook_status = 'failed' OR webhook_status = 'no_tunnel')");
+    conditions.push("(webhook_status = 'failed' OR webhook_status = 'no_tunnel' OR webhook_status IS NULL)");
   }
   if (conditions.length > 0) {
     sql += ' WHERE ' + conditions.join(' AND ');
