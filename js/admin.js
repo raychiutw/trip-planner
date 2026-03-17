@@ -32,6 +32,12 @@
                     opt.textContent = label;
                     tripSelect.appendChild(opt);
                 });
+                // 從 localStorage 還原上次選擇的行程
+                var savedTrip = lsGet('trip-pref');
+                if (savedTrip && trips.some(function(t) { return t.tripId === savedTrip; })) {
+                    tripSelect.value = savedTrip;
+                    loadPermissions(savedTrip);
+                }
             })
             .catch(function() {
                 tripSelect.innerHTML = '<option value="">無法載入行程</option>';
@@ -132,7 +138,9 @@
     /* ===== Event Listeners ===== */
     tripSelect.addEventListener('change', function() {
         addStatus.innerHTML = '';
-        loadPermissions(tripSelect.value);
+        var tripId = tripSelect.value;
+        if (tripId) lsSet('trip-pref', tripId);
+        loadPermissions(tripId);
     });
 
     addBtn.addEventListener('click', addPermission);
