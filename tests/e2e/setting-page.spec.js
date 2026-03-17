@@ -1,11 +1,15 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+const { setupApiMocks } = require('./api-mocks');
 
 /**
  * Playwright E2E 測試：setting.html 設定頁
  */
 
 test.beforeEach(async ({ page }) => {
+  // Setup API mocks BEFORE navigation
+  await setupApiMocks(page);
+
   await page.route('**/api.open-meteo.com/**', (route) => {
     route.fulfill({
       status: 200,
