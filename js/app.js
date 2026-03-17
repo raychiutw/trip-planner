@@ -1025,7 +1025,8 @@ function tryRenderDrivingStats() {
     if (!allLoaded) return;
     var tripStats = calcTripDrivingStats(TRIP.days);
     if (tripStats) {
-        TRIP.driving = { title: '全旅程交通統計', content: tripStats };
+        tripStats._title = '全旅程交通統計';
+        TRIP.driving = tripStats;
     }
 }
 

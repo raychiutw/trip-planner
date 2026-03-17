@@ -693,11 +693,8 @@ test.describe('每日交通統計', () => {
 });
 
 /* ===== 20. 全旅程交通統計（Speed Dial） ===== */
-// NOTE: These tests are skipped because TRIP.driving stores { title, content: tripStats }
-// but renderTripDrivingStats() expects tripStats directly — the Speed Dial driving panel
-// crashes on tripStats.days.forEach. This is a pre-existing bug unrelated to E2E mocking.
 test.describe('全旅程交通統計', () => {
-  test.skip('所有 Day 載入後 Speed Dial 可開啟交通統計', async ({ page }) => {
+  test('所有 Day 載入後 Speed Dial 可開啟交通統計', async ({ page }) => {
     await page.goto('/');
     await page.locator('.nav-actions [data-action="toggle-print"]').click();
     await page.waitForTimeout(3000);
@@ -711,7 +708,7 @@ test.describe('全旅程交通統計', () => {
     await expect(summary).toBeAttached({ timeout: 10000 });
   });
 
-  test.skip('包含多種交通類型', async ({ page }) => {
+  test('包含多種交通類型', async ({ page }) => {
     await page.goto('/');
     await page.locator('.nav-actions [data-action="toggle-print"]').click();
     await page.waitForTimeout(3000);
