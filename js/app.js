@@ -925,7 +925,7 @@ function mapApiDay(raw) {
             hotel.shopping = hotel.shopping.map(function(s) {
                 if (s.rating) s.googleRating = s.rating;
                 if (s.maps) s.location = buildLocationFromMaps(s.maps, s.mapcode);
-                if (s.must_buy) s.mustBuy = s.must_buy;
+                if (s.must_buy) s.mustBuy = typeof s.must_buy === 'string' ? s.must_buy.split(', ') : s.must_buy;
                 return s;
             });
             hotel.infoBoxes = [{ type: 'shopping', shops: hotel.shopping }];
@@ -954,7 +954,7 @@ function mapApiDay(raw) {
             entry.shopping = entry.shopping.map(function(s) {
                 if (s.rating) s.googleRating = s.rating;
                 if (s.maps) s.location = buildLocationFromMaps(s.maps, s.mapcode);
-                if (s.must_buy) s.mustBuy = s.must_buy;
+                if (s.must_buy) s.mustBuy = typeof s.must_buy === 'string' ? s.must_buy.split(', ') : s.must_buy;
                 return s;
             });
         }
@@ -967,7 +967,9 @@ function mapApiDay(raw) {
             infoBoxes.push({ type: 'shopping', shops: entry.shopping });
         }
         if (infoBoxes.length) entry.infoBoxes = infoBoxes;
-        // Map rating field
+        // Map DB field names to render field names
+        if (entry.body) entry.description = entry.body;
+        if (entry.travel && entry.travel.desc) entry.travel.text = entry.travel.desc;
         if (entry.rating) entry.googleRating = entry.rating;
         return entry;
     });
@@ -1103,6 +1105,9 @@ function loadTrip(tripId) {
                         if (typeof content === 'string') {
                             try { content = JSON.parse(content); } catch(e) {}
                         }
+                        // trip_docs.content 存的是 { title, content: { segments/cards/... } }
+                        // render 函式期待直接拿到 { segments/cards/... }
+                        if (content && content.content) content = content.content;
                         TRIP[key] = content;
                     })
                     .catch(function() { /* doc not available, silently skip */ });
