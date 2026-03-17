@@ -1778,6 +1778,10 @@ if (typeof module !== 'undefined' && module.exports) {
         renderHourly: renderHourly,
         makeDefaultMg: makeDefaultMg,
         toDateStr: toDateStr,
-        fetchWeatherForDay: fetchWeatherForDay
+        fetchWeatherForDay: fetchWeatherForDay,
+        tryParseJson: tryParseJson,
+        buildLocationFromMaps: buildLocationFromMaps,
+        mapApiDay: mapApiDay,
+        mapApiMeta: mapApiMeta
     };
 }
