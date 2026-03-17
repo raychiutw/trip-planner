@@ -10,3 +10,6 @@ playwright-report/
 scripts/*.log
 scripts/logs/
 data/dist/
+server/node_modules/
+*.json.credentials
+.cloudflared/

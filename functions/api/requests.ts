@@ -8,6 +8,8 @@ import { logAudit } from './_audit';
 interface Env {
   DB: D1Database;
   ADMIN_EMAIL: string;
+  TUNNEL_URL: string;
+  WEBHOOK_SECRET: string;
 }
 
 interface AuthData {
@@ -113,6 +115,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     changedBy: auth.email,
     diffJson: JSON.stringify({ mode, title }),
   });
+
+  // Fire-and-forget: trigger local agent server via Tunnel
+  if (env.TUNNEL_URL && env.WEBHOOK_SECRET) {
+    fetch(env.TUNNEL_URL + '/process', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Webhook-Secret': env.WEBHOOK_SECRET,
+      },
+      body: JSON.stringify({ requestId: newRow ? (newRow.id as number) : null }),
+    }).catch(() => {}); // silently fail if tunnel is down
+  }
 
   return json(result, 201);
 };

@@ -1,0 +1,6 @@
+# Fill in after running: cloudflared tunnel create trip-agent
+# tunnel: YOUR_TUNNEL_UUID
+# credentials-file: C:\Users\RayChiu\.cloudflared\YOUR_TUNNEL_UUID.json
+
+ingress:
+  - service: http://localhost:3001
