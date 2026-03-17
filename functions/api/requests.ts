@@ -124,24 +124,24 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // If webhook fails, mark request as webhook_failed for tp-request scheduler fallback
   const reqId = newRow ? (newRow.id as number) : null;
 
-  // Debug: log env availability
-  const hasKV = !!env.TUNNEL_KV;
-  const hasSecret = !!env.WEBHOOK_SECRET;
   if (reqId) {
-    context.waitUntil(
-      env.DB.prepare(
-        'INSERT INTO webhook_logs (request_id, tunnel_url, status, http_status, error) VALUES (?, ?, ?, ?, ?)'
-      ).bind(reqId, null, 'debug', null, `hasKV=${hasKV} hasSecret=${hasSecret} reqId=${reqId}`).run()
-    );
-  }
-
-  if (env.TUNNEL_KV && env.WEBHOOK_SECRET && reqId) {
     const logWebhook = (tunnelUrl: string | null, status: string, httpStatus: number | null, error: string | null) =>
       env.DB.prepare(
         'INSERT INTO webhook_logs (request_id, tunnel_url, status, http_status, error) VALUES (?, ?, ?, ?, ?)'
       ).bind(reqId, tunnelUrl, status, httpStatus, error).run();
 
-    context.waitUntil(env.TUNNEL_KV.get('TUNNEL_URL').then(async (tunnelUrl: string | null) => {
+    context.waitUntil((async () => {
+      if (!env.TUNNEL_KV || !env.WEBHOOK_SECRET) {
+        await logWebhook(null, 'skip', null, `TUNNEL_KV=${!!env.TUNNEL_KV} WEBHOOK_SECRET=${!!env.WEBHOOK_SECRET}`);
+        return;
+      }
+      let tunnelUrl: string | null = null;
+      try {
+        tunnelUrl = await env.TUNNEL_KV.get('TUNNEL_URL');
+      } catch (e) {
+        await logWebhook(null, 'failed', null, `KV error: ${e instanceof Error ? e.message : String(e)}`);
+        return;
+      }
       if (!tunnelUrl) {
         await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('no_tunnel', reqId).run();
         await logWebhook(null, 'no_tunnel', null, 'KV 中無 TUNNEL_URL');
@@ -163,12 +163,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run();
         await logWebhook(tunnelUrl, 'failed', null, e instanceof Error ? e.message : String(e));
       }
-    }).catch(async (e) => {
-      try {
-        await env.DB.prepare('UPDATE requests SET webhook_status = ? WHERE id = ?').bind('failed', reqId).run();
-        await logWebhook(null, 'failed', null, e instanceof Error ? e.message : String(e));
-      } catch {}
-    }));
+    })());
   }
 
   return json(result, 201);
