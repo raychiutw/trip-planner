@@ -111,6 +111,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first();
 
   const newRow = result as Record<string, unknown>;
+
+  // Debug: log result shape to webhook_logs directly (bypass reqId check)
+  await env.DB.prepare(
+    'INSERT INTO webhook_logs (request_id, tunnel_url, status, http_status, error) VALUES (?, ?, ?, ?, ?)'
+  ).bind(0, null, 'result-debug', null, JSON.stringify({ hasResult: !!result, type: typeof result, keys: result ? Object.keys(result as object).join(',') : 'null', id: result ? (result as Record<string, unknown>).id : 'N/A' })).run();
+
   await logAudit(env.DB, {
     tripId,
     tableName: 'requests',
