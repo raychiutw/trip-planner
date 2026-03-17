@@ -16,7 +16,7 @@ context: |
   測試：commit 前必須通過（pre-commit hook 自動執行），文件變更不跑測試
   Coding：commit 前必須跑 /tp-code-verify 驗證命名規範綠燈，紅燈則持續修改直到通過
 
-naming:
+naming: # 完整規範見 .claude/skills/references/naming-rules.md
   js:
     functions: camelCase              # renderHotel, mapApiDay, fetchDay
     local_variables: camelCase        # tripId, currentConfig, dayCache
