@@ -43,7 +43,7 @@
         }
         html += '</div>';
         if (req.reply) {
-            html += '<div class="request-reply">' + sanitizeHtml(req.reply) + '</div>';
+            html += '<div class="request-reply">' + sanitizeHtml(marked.parse(req.reply)) + '</div>';
         }
         html += '</div>';
         return html;
@@ -248,6 +248,13 @@
                             tripSelect.style.display = 'none';
                             return;
                         }
+                        // 決定初始行程：localStorage > 第一筆
+                        var savedTrip = lsGet('trip-pref');
+                        var initialTrip = filtered[0].tripId;
+                        if (savedTrip && filtered.some(function(t) { return t.tripId === savedTrip; })) {
+                            initialTrip = savedTrip;
+                        }
+
                         if (filtered.length === 1) {
                             tripSelect.style.display = 'none';
                             var navTitle = document.getElementById('navTitle');
@@ -261,12 +268,14 @@
                                 opt.textContent = info ? info.name : t.tripId;
                                 tripSelect.appendChild(opt);
                             });
+                            tripSelect.value = initialTrip;
                             tripSelect.addEventListener('change', function() {
+                                lsSet('trip-pref', tripSelect.value);
                                 loadRequests(tripSelect.value);
                             });
                         }
                         renderPage();
-                        loadRequests(filtered[0].tripId);
+                        loadRequests(initialTrip);
 
                         var closeBtn = document.getElementById('navCloseBtn');
                         if (closeBtn) {
