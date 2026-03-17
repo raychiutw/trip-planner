@@ -1,5 +1,3 @@
-import type { PagesFunction } from '@cloudflare/workers-types';
-
 interface Env {
   DB: D1Database;
 }
@@ -13,17 +11,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const showAll = url.searchParams.get('all') === '1';
   const auth = (context.data as any)?.auth;
 
-  let query: string;
-  let params: unknown[];
-
+  let sql: string;
   if (showAll && auth?.isAdmin) {
-    query = 'SELECT id, name, owner, title, selfDrive, countries, published FROM trips ORDER BY name ASC';
-    params = [];
+    sql = 'SELECT id, name, owner, title, self_drive, countries, published FROM trips ORDER BY name ASC';
   } else {
-    query = 'SELECT id, name, owner, title, selfDrive, countries, published FROM trips WHERE published = 1 ORDER BY name ASC';
-    params = [];
+    sql = 'SELECT id, name, owner, title, self_drive, countries, published FROM trips WHERE published = 1 ORDER BY name ASC';
   }
 
-  const { results } = await context.env.DB.prepare(query).bind(...params).all();
+  const { results } = await context.env.DB.prepare(sql).all();
   return json(results);
 };

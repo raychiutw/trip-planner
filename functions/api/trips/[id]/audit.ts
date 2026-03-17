@@ -1,4 +1,3 @@
-import type { PagesFunction } from '@cloudflare/workers-types';
 
 interface Env {
   DB: D1Database;

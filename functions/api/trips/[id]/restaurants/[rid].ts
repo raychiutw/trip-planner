@@ -1,4 +1,3 @@
-import type { PagesFunction } from '@cloudflare/workers-types';
 import { logAudit, computeDiff } from '../../../_audit';
 
 interface Env {

@@ -64,7 +64,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         const email = String(payload.email).toLowerCase();
         (context.data as Record<string, unknown>).auth = {
           email,
-          isAdmin: email === env.ADMIN_EMAIL.toLowerCase(),
+          isAdmin: env.ADMIN_EMAIL ? email === env.ADMIN_EMAIL.toLowerCase() : false,
           isServiceToken: false,
         };
       }
