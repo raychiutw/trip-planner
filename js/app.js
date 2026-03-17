@@ -1347,9 +1347,11 @@ function openSpeedDialContent(contentKey) {
     var html = '';
     var section = TRIP[contentKey];
     var fn = DIAL_RENDERERS[contentKey];
-    if (section && section.content && fn) {
+    if (section && fn) {
+        // docs 已解包為 { segments/cards/... }，直接傳入 render
+        var renderData = section.content || section;
         if (sheetTitle) sheetTitle.textContent = section.title || '';
-        html = fn(section.content);
+        html = fn(renderData);
     } else {
         if (sheetTitle) sheetTitle.textContent = '';
     }
