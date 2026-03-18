@@ -8,13 +8,15 @@ import Hotel from '../components/trip/Hotel';
 import Footer from '../components/trip/Footer';
 import SpeedDial from '../components/trip/SpeedDial';
 import InfoSheet from '../components/trip/InfoSheet';
-import InfoPanel from '../components/trip/InfoPanel';
+import Countdown from '../components/trip/Countdown';
+import { TripDrivingStatsCard } from '../components/trip/DrivingStats';
 import Flights from '../components/trip/Flights';
 import Checklist from '../components/trip/Checklist';
 import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { calcTripDrivingStats } from '../lib/drivingStats';
 import type { TripListItem, Day } from '../types/trip';
 
@@ -59,6 +61,9 @@ export default function TripPage() {
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [printMode, setPrintMode] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+
+  /* --- Dark mode --- */
+  useDarkMode();
 
   /* --- Resolve trip ID from URL / localStorage --- */
   useEffect(() => {
@@ -359,18 +364,16 @@ export default function TripPage() {
           </div>
         </div>
 
-        {/* Desktop info panel (sidebar) */}
+        {/* Desktop info panel (sidebar) — 倒數天數 + 交通統計 */}
         {!loading && trip && (
-          <InfoPanel
-            autoScrollDates={autoScrollDates}
-            days={loadedDays}
-            flights={flightsData as never}
-            checklist={checklistData as never}
-            backup={backupData as never}
-            emergency={emergencyData as never}
-            suggestions={suggestionsData as never}
-            tripDrivingStats={tripDrivingStats}
-          />
+          <aside className="info-panel" id="infoPanel">
+            <Countdown autoScrollDates={autoScrollDates} />
+            {tripDrivingStats && (
+              <div className="info-card">
+                <TripDrivingStatsCard tripStats={tripDrivingStats} />
+              </div>
+            )}
+          </aside>
         )}
       </div>
 
