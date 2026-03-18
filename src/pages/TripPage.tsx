@@ -15,7 +15,9 @@ import Checklist from '../components/trip/Checklist';
 import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
+import HourlyWeather from '../components/trip/HourlyWeather';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
+import type { WeatherDay } from '../lib/weather';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { calcTripDrivingStats } from '../lib/drivingStats';
 import type { TripListItem, Day } from '../types/trip';
@@ -326,6 +328,10 @@ export default function TripPage() {
                 const daySummary = days.find((d) => (d.day_num ?? d.id) === dayNum);
                 const hotel = rawDay?.hotel as Record<string, unknown> | null | undefined;
                 const timeline = (rawDay?.timeline ?? []) as Record<string, unknown>[];
+                const weatherRaw = rawDay?.weather_json as Record<string, unknown> | undefined;
+                const weatherDay = weatherRaw?.locations ? (weatherRaw as unknown as WeatherDay) : null;
+                const dayDate = (rawDay?.date ?? daySummary?.date) as string | undefined;
+                const dayId = rawDay?.id as number | undefined;
 
                 return (
                   <section key={dayNum} className="day-section" data-day={dayNum}>
@@ -346,6 +352,15 @@ export default function TripPage() {
                         <div className="slot-loading">載入中...</div>
                       ) : (
                         <>
+                          {weatherDay && dayDate && dayId && (
+                            <HourlyWeather
+                              dayId={dayId}
+                              dayDate={dayDate}
+                              weatherDay={weatherDay}
+                              tripStart={autoScrollDates[0] ?? null}
+                              tripEnd={autoScrollDates[autoScrollDates.length - 1] ?? null}
+                            />
+                          )}
                           {hotel && <Hotel hotel={toHotelData(hotel)} />}
                           {timeline.length > 0 && (
                             <Timeline events={timeline.map(toTimelineEntry)} />
