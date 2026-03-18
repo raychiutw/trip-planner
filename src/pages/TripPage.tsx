@@ -3,6 +3,9 @@ import { apiFetch } from '../hooks/useApi';
 import { lsGet, lsSet, lsRemove } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
 import DayNav from '../components/trip/DayNav';
+import Timeline from '../components/trip/Timeline';
+import Hotel from '../components/trip/Hotel';
+import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import type { TripListItem } from '../types/trip';
 
 import '../../css/shared.css';
@@ -75,7 +78,7 @@ export default function TripPage() {
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
 
-  const { trip, days, currentDay, currentDayNum, switchDay, loading, error } =
+  const { trip, days, currentDay, currentDayNum, switchDay, allDays, loading, error } =
     useTrip(activeTripId);
 
   /* --- Update document title when trip meta loads --- */
@@ -210,21 +213,41 @@ export default function TripPage() {
             )}
 
             {!loading &&
-              dayNums.map((dayNum) => (
-                <section key={dayNum} className="day-section" data-day={dayNum}>
-                  <div
-                    className="day-header info-header"
-                    id={`day${dayNum}`}
-                  >
-                    <h2>Day {dayNum}</h2>
-                    {/* Placeholder: day label + date will be rendered by DaySection component */}
-                  </div>
-                  <div className="day-content" id={`day-slot-${dayNum}`}>
-                    {/* Placeholder: day content will be rendered by DayContent component */}
-                    <div className="slot-loading">載入中...</div>
-                  </div>
-                </section>
-              ))}
+              dayNums.map((dayNum) => {
+                const rawDay = allDays[dayNum] as unknown as Record<string, unknown> | undefined;
+                const daySummary = days.find((d) => (d.day_num ?? d.id) === dayNum);
+                const hotel = rawDay?.hotel as Record<string, unknown> | null | undefined;
+                const timeline = (rawDay?.timeline ?? []) as Record<string, unknown>[];
+
+                return (
+                  <section key={dayNum} className="day-section" data-day={dayNum}>
+                    <div className="day-header info-header" id={`day${dayNum}`}>
+                      <h2>Day {dayNum}</h2>
+                      {daySummary?.label && (
+                        <span className="day-label">{daySummary.label}</span>
+                      )}
+                      {daySummary?.date && (
+                        <span className="day-date">
+                          {daySummary.date}
+                          {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="day-content" id={`day-slot-${dayNum}`}>
+                      {!rawDay ? (
+                        <div className="slot-loading">載入中...</div>
+                      ) : (
+                        <>
+                          {hotel && <Hotel hotel={toHotelData(hotel)} />}
+                          {timeline.length > 0 && (
+                            <Timeline events={timeline.map(toTimelineEntry)} />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </section>
+                );
+              })}
 
             {/* Footer slot */}
             {!loading && trip && (

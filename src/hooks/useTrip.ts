@@ -16,6 +16,7 @@ export interface UseTripReturn {
   currentDayNum: number;
   switchDay: (dayNum: number) => void;
   docs: Partial<Record<DocKey, unknown>>;
+  allDays: Record<number, Day>;
   loading: boolean;
   error: string | null;
 }
@@ -30,6 +31,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const [docs, setDocs] = useState<Partial<Record<DocKey, unknown>>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [allDays, setAllDays] = useState<Record<number, Day>>({});
 
   // Cache day data to avoid re-fetching
   const dayCacheRef = useRef<Record<number, Day>>({});
@@ -65,7 +67,10 @@ export function useTrip(tripId: string | null): UseTripReturn {
       }
       // Otherwise fetch
       fetchDay(dayNum).then((day) => {
-        if (day) setCurrentDay(day);
+        if (day) {
+          setCurrentDay(day);
+          setAllDays((prev) => ({ ...prev, [dayNum]: day }));
+        }
       });
     },
     [fetchDay],
@@ -87,6 +92,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
     setError(null);
     setLoading(true);
     dayCacheRef.current = {};
+    setAllDays({});
 
     let cancelled = false;
 
@@ -117,6 +123,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
           if (!cancelled) {
             dayCacheRef.current[firstDayNum] = dayData;
             setCurrentDay(dayData);
+            setAllDays((prev) => ({ ...prev, [firstDayNum]: dayData }));
           }
         }
 
@@ -162,6 +169,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
               .then((dayData) => {
                 if (!cancelled) {
                   dayCacheRef.current[num] = dayData;
+                  setAllDays((prev) => ({ ...prev, [num]: dayData }));
                 }
               })
               .catch(() => {
@@ -186,5 +194,5 @@ export function useTrip(tripId: string | null): UseTripReturn {
     };
   }, [tripId]);
 
-  return { trip, days, currentDay, currentDayNum, switchDay, docs, loading, error };
+  return { trip, days, currentDay, currentDayNum, switchDay, docs, allDays, loading, error };
 }
