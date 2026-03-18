@@ -1,43 +1,42 @@
 import { useState, useCallback, useEffect } from 'react';
 import { lsSet, lsGet } from '../lib/localStorage';
 
+export type ColorMode = 'light' | 'auto' | 'dark';
+
+/** Resolve whether dark class should be applied for a given color mode. */
+function resolveDark(mode: ColorMode): boolean {
+  if (mode === 'dark') return true;
+  if (mode === 'light') return false;
+  // auto → follow system
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+}
+
+/** Read saved color mode from localStorage (supports legacy `dark` key). */
+function readColorMode(): ColorMode {
+  const saved = lsGet<string>('color-mode');
+  if (saved === 'light' || saved === 'dark' || saved === 'auto') return saved;
+  // Legacy key
+  const oldDark = lsGet<string>('dark');
+  if (oldDark === '1') return 'dark';
+  if (oldDark === '0') return 'light';
+  return 'auto';
+}
+
 /**
  * Hook to manage dark mode state.
  *
- * Mirrors the original `toggleDarkShared()` from shared.js:
- * - Toggles `body.dark` class
- * - Persists the preference in localStorage
- * - Updates the `<meta name="theme-color">` tag
- *
- * Initialises from localStorage (supports legacy `dark` key and newer
- * `color-mode` key with `'light'|'auto'|'dark'`), falling back to
- * system `prefers-color-scheme`.
+ * Supports three-way color mode (light / auto / dark).
+ * Applies `body.dark` class and updates `<meta name="theme-color">`.
  */
 export function useDarkMode() {
-  const [isDark, setIsDark] = useState(() => {
-    // Determine initial state (same logic as shared.js IIFE)
-    const colorMode = lsGet<string>('color-mode');
-    if (colorMode === 'dark') return true;
-    if (colorMode === 'light') return false;
-    if (colorMode === 'auto') {
-      return (
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches
-      );
-    }
-    // Legacy key
-    const oldDark = lsGet<string>('dark');
-    if (oldDark !== null) return oldDark === '1';
-    // Default: follow system
-    return (
-      typeof window !== 'undefined' &&
-      window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-    );
-  });
+  const [colorMode, setColorModeState] = useState<ColorMode>(readColorMode);
+  const [isDark, setIsDark] = useState(() => resolveDark(readColorMode()));
 
-  /* --- Apply dark class on mount and whenever isDark changes --- */
+  /* --- Apply dark class whenever isDark changes --- */
   useEffect(() => {
     if (isDark) {
       document.body.classList.add('dark');
@@ -50,14 +49,23 @@ export function useDarkMode() {
     }
   }, [isDark]);
 
-  /** Toggle dark mode on/off. */
+  /** Set color mode (persists to localStorage). */
+  const setColorMode = useCallback((mode: ColorMode) => {
+    lsSet('color-mode', mode);
+    setColorModeState(mode);
+    setIsDark(resolveDark(mode));
+  }, []);
+
+  /** Toggle dark on/off (legacy — sets color-mode to dark/light). */
   const toggleDark = useCallback(() => {
     setIsDark((prev) => {
       const next = !prev;
-      lsSet('dark', next ? '1' : '0');
+      const mode = next ? 'dark' : 'light';
+      lsSet('color-mode', mode);
+      setColorModeState(mode);
       return next;
     });
   }, []);
 
-  return { isDark, setIsDark, toggleDark };
+  return { isDark, setIsDark, colorMode, setColorMode, toggleDark };
 }

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../hooks/useApi';
+import { useDarkMode, type ColorMode } from '../hooks/useDarkMode';
 import { lsGet, lsSet } from '../lib/localStorage';
 import type { TripListItem } from '../types/trip';
 
 /* ===== Types ===== */
-
-type ColorMode = 'light' | 'auto' | 'dark';
 
 interface TripDisplay {
   tripId: string;
@@ -23,51 +22,12 @@ const COLOR_MODES: { key: ColorMode; label: string; desc: string }[] = [
   { key: 'dark', label: '深色', desc: 'Dark' },
 ];
 
-/* ===== Helpers ===== */
-
-function applyColorMode(mode: ColorMode): void {
-  if (mode === 'dark') {
-    document.body.classList.add('dark');
-  } else if (mode === 'light') {
-    document.body.classList.remove('dark');
-  } else {
-    // auto
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (prefersDark) {
-      document.body.classList.add('dark');
-    } else {
-      document.body.classList.remove('dark');
-    }
-  }
-  // update theme-color meta
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) {
-    meta.setAttribute(
-      'content',
-      document.body.classList.contains('dark') ? '#7D4A36' : '#C4704F',
-    );
-  }
-}
-
-function initColorMode(): ColorMode {
-  const saved = lsGet<string>('color-mode');
-  if (saved === 'light' || saved === 'dark' || saved === 'auto') {
-    applyColorMode(saved);
-    return saved;
-  }
-  // 舊版相容：讀取 dark 標記
-  if (lsGet<string>('dark') === '1') {
-    return 'dark';
-  }
-  return 'auto';
-}
-
 /* ===== Component ===== */
 
 export default function SettingPage() {
+  const { colorMode, setColorMode } = useDarkMode();
   const [trips, setTrips] = useState<TripDisplay[]>([]);
   const [currentTripId, setCurrentTripId] = useState<string>('');
-  const [colorMode, setColorMode] = useState<ColorMode>('auto');
   const [loadError, setLoadError] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -79,11 +39,6 @@ export default function SettingPage() {
       document.documentElement.classList.remove('page-setting');
       document.body.classList.remove('page-setting');
     };
-  }, []);
-
-  /* --- init color mode --- */
-  useEffect(() => {
-    setColorMode(initColorMode());
   }, []);
 
   /* --- fetch trips --- */
@@ -133,10 +88,8 @@ export default function SettingPage() {
   }, []);
 
   const handleColorModeClick = useCallback((mode: ColorMode) => {
-    lsSet('color-mode', mode);
-    applyColorMode(mode);
     setColorMode(mode);
-  }, []);
+  }, [setColorMode]);
 
   const handleClose = useCallback(() => {
     window.location.href = 'index.html';
