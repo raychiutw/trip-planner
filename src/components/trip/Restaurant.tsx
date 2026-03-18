@@ -5,13 +5,22 @@ import Icon from '../shared/Icon';
 import MapLinks, { type MapLocation } from './MapLinks';
 import { escUrl } from '../../lib/sanitize';
 
-/** Restaurant data shape from dist JSON infoBoxes.restaurants[]. */
+/** Structured reservation info (JSON format in D1). */
+interface ReservationInfo {
+  available?: string;
+  method?: string;
+  url?: string;
+  phone?: string;
+  recommended?: boolean;
+}
+
+/** Restaurant data shape from D1 API. */
 export interface RestaurantData {
   name: string;
   category?: string | null;
   hours?: string | null;
   price?: string | null;
-  reservation?: string | null;
+  reservation?: string | ReservationInfo | null;
   reservationUrl?: string | null;
   description?: string | null;
   note?: string | null;
@@ -23,13 +32,66 @@ interface RestaurantProps {
   restaurant: RestaurantData;
 }
 
-export default function Restaurant({ restaurant: r }: RestaurantProps) {
-  const resUrl = escUrl(r.reservationUrl);
+/** Parse reservation field — may be JSON string, object, or plain string. */
+function parseReservation(raw: string | ReservationInfo | null | undefined): ReservationInfo | string | null {
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  // Try JSON parse
+  if (typeof raw === 'string' && raw.startsWith('{')) {
+    try { return JSON.parse(raw) as ReservationInfo; } catch { /* fallback to string */ }
+  }
+  return raw;
+}
 
-  // Build meta line: hours | reservation
+/** Render reservation info based on type. */
+function ReservationDisplay({ data, fallbackUrl }: { data: ReservationInfo | string; fallbackUrl?: string }) {
+  // Plain string — legacy format
+  if (typeof data === 'string') {
+    const url = escUrl(fallbackUrl);
+    return (
+      <>
+        <Icon name="phone" />{' '}
+        {url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer">{data}</a>
+        ) : (
+          data
+        )}
+      </>
+    );
+  }
+
+  // JSON object — structured format
+  if (data.available === 'no') return null;
+
+  if (data.method === 'website' && data.url) {
+    const url = escUrl(data.url);
+    return url ? (
+      <>
+        <Icon name="phone" />{' '}
+        <a href={url} target="_blank" rel="noopener noreferrer">建議訂位</a>
+      </>
+    ) : null;
+  }
+
+  if (data.method === 'phone' && data.phone) {
+    return (
+      <>
+        <Icon name="phone" />{' '}
+        <a href={`tel:${data.phone}`}>{data.phone}</a>
+      </>
+    );
+  }
+
+  return null;
+}
+
+export default function Restaurant({ restaurant: r }: RestaurantProps) {
+  const parsed = parseReservation(r.reservation);
   const hasHours = !!r.hours;
-  const hasReservation = !!r.reservation;
-  const showMeta = hasHours || hasReservation;
+  const reservationEl = parsed ? (
+    <ReservationDisplay data={parsed} fallbackUrl={r.reservationUrl ?? undefined} />
+  ) : null;
+  const showMeta = hasHours || !!reservationEl;
 
   return (
     <div className="restaurant-choice">
@@ -47,19 +109,8 @@ export default function Restaurant({ restaurant: r }: RestaurantProps) {
           {hasHours && (
             <><Icon name="clock" /> {r.hours}</>
           )}
-          {hasHours && hasReservation && ' ｜ '}
-          {hasReservation && (
-            <>
-              <Icon name="phone" />{' '}
-              {resUrl ? (
-                <a href={resUrl} target="_blank" rel="noopener noreferrer">
-                  {r.reservation}
-                </a>
-              ) : (
-                r.reservation
-              )}
-            </>
-          )}
+          {hasHours && reservationEl && ' ｜ '}
+          {reservationEl}
         </span>
       )}
     </div>

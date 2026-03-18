@@ -525,17 +525,11 @@ export default function TripPage() {
           </div>
         </div>
 
-        {/* #5: Use InfoPanel component for desktop sidebar */}
+        {/* Desktop sidebar: Countdown + TripStatsCard only */}
         {!loading && trip && (
           <InfoPanel
             autoScrollDates={autoScrollDates}
             days={loadedDays}
-            flights={flightsData}
-            checklist={checklistData}
-            backup={backupData}
-            emergency={emergencyData}
-            suggestions={suggestionsData}
-            tripDrivingStats={tripDrivingStats}
           />
         )}
       </div>

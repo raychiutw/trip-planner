@@ -10,12 +10,12 @@ interface SpeedDialItemConfig {
 }
 
 const DIAL_ITEMS: SpeedDialItemConfig[] = [
-  { key: 'emergency', icon: 'emergency', label: '緊急聯絡' },
-  { key: 'backup', icon: 'refresh', label: '備案' },
-  { key: 'checklist', icon: 'check-circle', label: '出發前確認' },
-  { key: 'driving', icon: 'car', label: '交通統計' },
   { key: 'flights', icon: 'plane', label: '航班資訊' },
+  { key: 'checklist', icon: 'check-circle', label: '出發前確認' },
+  { key: 'backup', icon: 'refresh', label: '備案' },
+  { key: 'emergency', icon: 'emergency', label: '緊急聯絡' },
   { key: 'suggestions', icon: 'lightbulb', label: 'AI 行程建議' },
+  { key: 'driving', icon: 'car', label: '交通統計' },
 ];
 
 /* ===== Props ===== */

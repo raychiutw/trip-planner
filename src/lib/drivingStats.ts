@@ -14,6 +14,8 @@ import type { Entry } from '../types/trip';
 export interface Segment {
   text: string;
   minutes: number;
+  from?: string;
+  to?: string;
 }
 
 export interface TypeGroup {
@@ -57,7 +59,7 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
   let totalMinutes = 0;
   let drivingMinutes = 0;
 
-  timeline.forEach((entry) => {
+  timeline.forEach((entry, i) => {
     if (!entry.travel) return;
     const t = entry.travel;
     const type = t.type || '';
@@ -69,6 +71,11 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
     if (!m) return;
     const mins = parseInt(m[1], 10);
 
+    // Derive from/to from entry titles
+    const from = entry.title || undefined;
+    const nextEntry = timeline[i + 1];
+    const to = nextEntry?.title || undefined;
+
     if (!byType[type]) {
       byType[type] = {
         label: typeInfo.label,
@@ -77,7 +84,7 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
         segments: [],
       };
     }
-    byType[type].segments.push({ text: String(text), minutes: mins });
+    byType[type].segments.push({ text: String(text), minutes: mins, from, to });
     byType[type].totalMinutes += mins;
     totalMinutes += mins;
     if (type === 'car') drivingMinutes += mins;

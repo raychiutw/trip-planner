@@ -31,7 +31,11 @@ function TransportTypeGroups({ byType }: { byType: Record<string, TypeGroup> }) 
             <div className="driving-stats-detail">
               {group.segments.map((seg, i) => (
                 <span key={i} className="driving-stats-seg">
-                  <Icon name={group.icon} /> {seg.text}
+                  <Icon name={group.icon} />{' '}
+                  {seg.from && (
+                    <>{seg.from}{seg.to ? ` → ${seg.to}` : ''} </>
+                  )}
+                  {seg.text}
                 </span>
               ))}
             </div>
