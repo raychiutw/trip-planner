@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { apiFetch } from '../hooks/useApi';
-import { lsGet, lsSet, lsRemove } from '../lib/localStorage';
+import { lsGet, lsSet, lsRemove, lsRenewAll } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
+import { useDarkMode } from '../hooks/useDarkMode';
+import { usePrintMode } from '../hooks/usePrintMode';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
@@ -9,17 +11,19 @@ import Footer from '../components/trip/Footer';
 import SpeedDial from '../components/trip/SpeedDial';
 import InfoSheet from '../components/trip/InfoSheet';
 import Countdown from '../components/trip/Countdown';
-import { TripDrivingStatsCard } from '../components/trip/DrivingStats';
+import TripStatsCard from '../components/trip/TripStatsCard';
+import { DayDrivingStatsCard, TripDrivingStatsCard } from '../components/trip/DrivingStats';
+import HourlyWeather from '../components/trip/HourlyWeather';
 import Flights from '../components/trip/Flights';
 import Checklist from '../components/trip/Checklist';
 import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
-import HourlyWeather from '../components/trip/HourlyWeather';
+import Icon from '../components/shared/Icon';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
+import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
+import { validateDay } from '../lib/validateDay';
 import type { WeatherDay } from '../lib/weather';
-import { useDarkMode } from '../hooks/useDarkMode';
-import { calcTripDrivingStats } from '../lib/drivingStats';
 import type { TripListItem, Day } from '../types/trip';
 
 import '../../css/shared.css';
@@ -36,6 +40,18 @@ function setUrlTrip(tripId: string): void {
   if (tripId) url.searchParams.set('trip', tripId);
   else url.searchParams.delete('trip');
   history.replaceState(null, '', url.toString());
+}
+
+/* ===== Scroll helper ===== */
+
+function scrollToDay(dayNum: number): void {
+  const header = document.getElementById('day' + dayNum);
+  if (!header) return;
+  const nav = document.getElementById('stickyNav');
+  const navH = nav ? nav.offsetHeight : 0;
+  const navTop = nav ? (parseFloat(getComputedStyle(nav).top) || 0) : 0;
+  const top = header.getBoundingClientRect().top + window.pageYOffset - navH - navTop - 4;
+  window.scrollTo({ top, behavior: 'smooth' });
 }
 
 /* ===== Sheet content config ===== */
@@ -61,11 +77,21 @@ type ResolveState =
 
 export default function TripPage() {
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
-  const [printMode, setPrintMode] = useState(false);
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  const manualScrollTs = useRef(0);
+  const initialScrollDone = useRef(false);
 
-  /* --- Dark mode --- */
+  /* --- Dark mode + Print mode --- */
   useDarkMode();
+  const { isPrintMode, togglePrint } = usePrintMode();
+
+  /* --- lsRenewAll once per session (#9) --- */
+  useEffect(() => {
+    if (!sessionStorage.getItem('lsRenewed')) {
+      lsRenewAll();
+      sessionStorage.setItem('lsRenewed', '1');
+    }
+  }, []);
 
   /* --- Resolve trip ID from URL / localStorage --- */
   useEffect(() => {
@@ -79,26 +105,20 @@ export default function TripPage() {
       return;
     }
 
-    // Check published status
     apiFetch<TripListItem[]>('/trips')
       .then((trips) => {
         const match = trips.find((t) => t.tripId === tripId);
         if (match && match.published === 0) {
           lsRemove('trip-pref');
           setResolveState({ status: 'unpublished' });
-          // Redirect after 2s
-          setTimeout(() => {
-            window.location.href = 'setting.html';
-          }, 2000);
+          setTimeout(() => { window.location.href = 'setting.html'; }, 2000);
           return;
         }
-        // Persist choice
         setUrlTrip(tripId!);
         lsSet('trip-pref', tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
       })
       .catch(() => {
-        // If the check fails, still try to load the trip
         setUrlTrip(tripId!);
         lsSet('trip-pref', tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
@@ -111,83 +131,146 @@ export default function TripPage() {
   const { trip, days, currentDay, currentDayNum, switchDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
 
-  /* --- Update document title when trip meta loads --- */
+  /* --- Update document title --- */
   useEffect(() => {
-    if (trip?.title) {
-      document.title = trip.title;
-    }
+    if (trip?.title) document.title = trip.title;
     if (trip?.description) {
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc) metaDesc.setAttribute('content', trip.description);
+      document.querySelector('meta[name="description"]')?.setAttribute('content', trip.description);
     }
     if (trip?.title) {
-      const ogTitle = document.querySelector('meta[property="og:title"]');
-      if (ogTitle) ogTitle.setAttribute('content', trip.title);
+      document.querySelector('meta[property="og:title"]')?.setAttribute('content', trip.title);
     }
     if (trip?.ogDescription) {
-      const ogDesc = document.querySelector('meta[property="og:description"]');
-      if (ogDesc) ogDesc.setAttribute('content', trip.ogDescription);
+      document.querySelector('meta[property="og:description"]')?.setAttribute('content', trip.ogDescription);
     }
   }, [trip]);
 
-  /* --- Sorted day nums for skeleton rendering --- */
+  /* --- Sorted day nums --- */
   const dayNums = useMemo(
     () => days.map((d) => d.day_num ?? d.id).sort((a, b) => a - b),
     [days],
   );
 
-  /* --- Print mode toggle --- */
-  const togglePrint = useCallback(() => {
-    setPrintMode((prev) => {
-      const next = !prev;
-      document.body.classList.toggle('print-mode', next);
-      return next;
-    });
-  }, []);
+  /* --- Auto-scroll dates --- */
+  const autoScrollDates = useMemo(
+    () => days.map((d) => d.date).filter((d): d is string => !!d).sort(),
+    [days],
+  );
 
-  /* --- Speed Dial → InfoSheet --- */
-  const handleSpeedDialItem = useCallback((key: string) => {
-    setActiveSheet(key);
-  }, []);
+  /* --- DayNav click: scroll to day section (#4) --- */
+  const handleSwitchDay = useCallback(
+    (dayNum: number) => {
+      manualScrollTs.current = Date.now();
+      switchDay(dayNum);
+      scrollToDay(dayNum);
+      history.replaceState(null, '', '#day' + dayNum);
+    },
+    [switchDay],
+  );
 
-  const handleSheetClose = useCallback(() => {
-    setActiveSheet(null);
-  }, []);
+  /* --- Auto-scroll to today or hash on initial load (#3, #5) --- */
+  useEffect(() => {
+    if (loading || dayNums.length === 0 || initialScrollDone.current) return;
+    initialScrollDone.current = true;
 
-  /* --- Derive docs for InfoPanel / InfoSheet --- */
+    // Check URL hash first
+    const hash = window.location.hash;
+    const hashMatch = hash?.match(/^#day(\d+)$/);
+    if (hashMatch) {
+      const hashDay = parseInt(hashMatch[1], 10);
+      if (dayNums.includes(hashDay)) {
+        requestAnimationFrame(() => {
+          switchDay(hashDay);
+          scrollToDay(hashDay);
+        });
+        return;
+      }
+    }
+
+    // Auto-scroll to today
+    const today = new Date().toISOString().split('T')[0];
+    const idx = autoScrollDates.indexOf(today);
+    if (idx >= 0 && dayNums[idx]) {
+      requestAnimationFrame(() => {
+        switchDay(dayNums[idx]);
+        scrollToDay(dayNums[idx]);
+      });
+    }
+  }, [loading, dayNums, autoScrollDates, switchDay]);
+
+  /* --- scrollMarginTop dynamic alignment (#7) --- */
+  useEffect(() => {
+    function align() {
+      const nav = document.getElementById('stickyNav');
+      if (!nav) return;
+      const margin = (nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) + 4) + 'px';
+      document.querySelectorAll('.day-header, .info-header').forEach((h) => {
+        (h as HTMLElement).style.scrollMarginTop = margin;
+      });
+    }
+    align();
+    window.addEventListener('resize', align, { passive: true });
+    return () => window.removeEventListener('resize', align);
+  }, [loading]);
+
+  /* --- Scroll tracking: update active pill + hash (#6) --- */
+  useEffect(() => {
+    if (loading || dayNums.length === 0) return;
+
+    function onScroll() {
+      const nav = document.getElementById('stickyNav');
+      const navH = nav ? nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) : 0;
+      let current = -1;
+      for (let i = 0; i < dayNums.length; i++) {
+        const h = document.getElementById('day' + dayNums[i]);
+        if (h && h.getBoundingClientRect().top <= navH + 10) current = i;
+      }
+      if (current >= 0) {
+        const activeDayNum = dayNums[current];
+        // Update pill via switchDay (state update)
+        switchDay(activeDayNum);
+        // Update hash (debounced to avoid conflicts with manual scroll)
+        if (Date.now() - manualScrollTs.current > 600) {
+          const newHash = '#day' + activeDayNum;
+          if (window.location.hash !== newHash) {
+            history.replaceState(null, '', newHash);
+          }
+        }
+      }
+    }
+
+    let ticking = false;
+    function throttledScroll() {
+      if (!ticking) {
+        requestAnimationFrame(() => { onScroll(); ticking = false; });
+        ticking = true;
+      }
+    }
+
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    return () => window.removeEventListener('scroll', throttledScroll);
+  }, [loading, dayNums, switchDay]);
+
+  /* --- Docs for InfoSheet --- */
   const flightsData = docs.flights as Record<string, unknown> | undefined;
   const checklistData = docs.checklist as Record<string, unknown> | undefined;
   const backupData = docs.backup as Record<string, unknown> | undefined;
   const emergencyData = docs.emergency as Record<string, unknown> | undefined;
   const suggestionsData = docs.suggestions as Record<string, unknown> | undefined;
 
-  /* --- All loaded days as Day[] for InfoPanel --- */
+  /* --- All loaded days as Day[] --- */
   const loadedDays = useMemo(
     () => Object.values(allDays) as unknown as Day[],
     [allDays],
   );
 
-  /* --- Auto-scroll dates for Countdown --- */
-  const autoScrollDates = useMemo(
-    () =>
-      days
-        .map((d) => d.date)
-        .filter((d): d is string => !!d)
-        .sort(),
-    [days],
-  );
-
   /* --- Trip driving stats --- */
   const tripDrivingStats = useMemo(() => {
     if (loadedDays.length === 0) return null;
-    try {
-      return calcTripDrivingStats(loadedDays);
-    } catch {
-      return null;
-    }
+    try { return calcTripDrivingStats(loadedDays); } catch { return null; }
   }, [loadedDays]);
 
-  /* --- Footer data from trip.footer --- */
+  /* --- Footer data --- */
   const footerData = useMemo(() => {
     if (!trip) return null;
     const raw = trip.footer;
@@ -195,7 +278,11 @@ export default function TripPage() {
     return raw as { title?: string; dates?: string; budget?: string; exchangeNote?: string; tagline?: string };
   }, [trip]);
 
-  /* --- Sheet content renderer --- */
+  /* --- Speed Dial → InfoSheet --- */
+  const handleSpeedDialItem = useCallback((key: string) => { setActiveSheet(key); }, []);
+  const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
+
+  /* --- Sheet content (#2: driving shows actual stats) --- */
   const sheetContent = useMemo(() => {
     if (!activeSheet) return null;
     switch (activeSheet) {
@@ -210,11 +297,13 @@ export default function TripPage() {
       case 'suggestions':
         return suggestionsData ? <Suggestions data={suggestionsData as never} /> : <p>無行程建議</p>;
       case 'driving':
-        return <p>交通統計（桌面版側邊欄可見）</p>;
+        return tripDrivingStats
+          ? <TripDrivingStatsCard tripStats={tripDrivingStats} />
+          : <p>無交通資料</p>;
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData]);
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats]);
 
   /* --- No trip selected --- */
   if (resolveState.status === 'no-trip') {
@@ -224,9 +313,7 @@ export default function TripPage() {
           <div id="tripContent">
             <div className="trip-error">
               <p>請選擇行程</p>
-              <a className="trip-error-link" href="setting.html">
-                前往設定頁
-              </a>
+              <a className="trip-error-link" href="setting.html">前往設定頁</a>
             </div>
           </div>
         </div>
@@ -234,7 +321,6 @@ export default function TripPage() {
     );
   }
 
-  /* --- Unpublished trip --- */
   if (resolveState.status === 'unpublished') {
     return (
       <div className="page-layout">
@@ -242,9 +328,7 @@ export default function TripPage() {
           <div id="tripContent">
             <div className="trip-error">
               <p>此行程已下架</p>
-              <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>
-                2 秒後跳轉至設定頁…
-              </p>
+              <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>2 秒後跳轉至設定頁…</p>
             </div>
           </div>
         </div>
@@ -252,7 +336,6 @@ export default function TripPage() {
     );
   }
 
-  /* --- Loading initial resolve --- */
   if (resolveState.status === 'loading') {
     return (
       <div className="page-layout">
@@ -267,7 +350,6 @@ export default function TripPage() {
     );
   }
 
-  /* --- Trip load error --- */
   if (error && !trip) {
     return (
       <div className="page-layout">
@@ -275,9 +357,7 @@ export default function TripPage() {
           <div id="tripContent">
             <div className="trip-error">
               <p>行程不存在：{activeTripId}</p>
-              <a className="trip-error-link" href="setting.html">
-                選擇其他行程
-              </a>
+              <a className="trip-error-link" href="setting.html">選擇其他行程</a>
             </div>
           </div>
         </div>
@@ -290,7 +370,7 @@ export default function TripPage() {
       {/* Sticky Nav */}
       <div className="sticky-nav" id="stickyNav">
         <span className="nav-brand">Trip Planner</span>
-        <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={switchDay} />
+        <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} />
         <div className="nav-actions">
           <button
             className="nav-action-btn"
@@ -312,7 +392,7 @@ export default function TripPage() {
         </div>
       </div>
 
-      {/* Page Layout: main content + desktop sidebar */}
+      {/* Page Layout */}
       <div className="page-layout">
         <div className="container">
           <div id="tripContent">
@@ -333,6 +413,14 @@ export default function TripPage() {
                 const dayDate = (rawDay?.date ?? daySummary?.date) as string | undefined;
                 const dayId = rawDay?.id as number | undefined;
 
+                // Per-day driving stats (#1)
+                const dayDrivingStats = timeline.length > 0
+                  ? calcDrivingStats(timeline as never)
+                  : null;
+
+                // Per-day validation warnings (#10)
+                const warnings = validateDay(timeline as never);
+
                 return (
                   <section key={dayNum} className="day-section" data-day={dayNum}>
                     <div className="day-header info-header" id={`day${dayNum}`}>
@@ -352,6 +440,17 @@ export default function TripPage() {
                         <div className="slot-loading">載入中...</div>
                       ) : (
                         <>
+                          {/* Validation warnings (#10) */}
+                          {warnings.length > 0 && (
+                            <div className="trip-warnings">
+                              <strong><Icon name="warning" /> 注意事項：</strong>
+                              <ul>
+                                {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Weather */}
                           {weatherDay && dayDate && dayId && (
                             <HourlyWeather
                               dayId={dayId}
@@ -361,7 +460,16 @@ export default function TripPage() {
                               tripEnd={autoScrollDates[autoScrollDates.length - 1] ?? null}
                             />
                           )}
-                          {hotel && <Hotel hotel={toHotelData(hotel)} />}
+
+                          {/* Day overview: hotel + driving stats */}
+                          <div className="day-overview">
+                            {hotel && <Hotel hotel={toHotelData(hotel)} />}
+                            {dayDrivingStats && (
+                              <DayDrivingStatsCard stats={dayDrivingStats} />
+                            )}
+                          </div>
+
+                          {/* Timeline */}
                           {timeline.length > 0 && (
                             <Timeline events={timeline.map(toTimelineEntry)} />
                           )}
@@ -379,14 +487,12 @@ export default function TripPage() {
           </div>
         </div>
 
-        {/* Desktop info panel (sidebar) — 倒數天數 + 交通統計 */}
+        {/* Desktop info panel — Countdown + TripStats (交通摘要) */}
         {!loading && trip && (
           <aside className="info-panel" id="infoPanel">
             <Countdown autoScrollDates={autoScrollDates} />
-            {tripDrivingStats && (
-              <div className="info-card">
-                <TripDrivingStatsCard tripStats={tripDrivingStats} />
-              </div>
+            {loadedDays.length > 0 && (
+              <TripStatsCard days={loadedDays} />
             )}
           </aside>
         )}
@@ -416,7 +522,7 @@ export default function TripPage() {
       </InfoSheet>
 
       {/* Print exit button */}
-      {printMode && (
+      {isPrintMode && (
         <button className="print-exit-btn" id="printExitBtn" onClick={togglePrint}>
           退出列印模式
         </button>
