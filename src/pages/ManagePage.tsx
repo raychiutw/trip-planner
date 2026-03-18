@@ -4,13 +4,7 @@ import { apiFetch } from '../hooks/useApi';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet } from '../lib/localStorage';
 
-/* ===== marked import (UMD bundle → window.marked) ===== */
-import '../../js/marked.min.js';
-
-interface MarkedStatic {
-  parse(src: string): string;
-}
-const marked = (window as unknown as { marked: MarkedStatic }).marked;
+import { marked } from 'marked';
 
 /* ===== Raw API types (snake_case from D1) ===== */
 
@@ -53,7 +47,7 @@ function RequestItem({ req }: { req: RawRequest }) {
   const modeBadgeText = mode === 'plan' ? '問建議' : '改行程';
 
   const replyHtml = req.reply
-    ? sanitizeHtml(marked.parse(req.reply))
+    ? sanitizeHtml(marked.parse(req.reply) as string)
     : '';
 
   return (
