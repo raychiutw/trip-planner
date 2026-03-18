@@ -1,9 +1,10 @@
 /* ===== Hotel Component ===== */
 /* Renders a hotel card with: name, details, breakfast, checkout, info boxes */
 
+import { useState, useCallback } from 'react';
 import Icon from '../shared/Icon';
 import InfoBox, { type InfoBoxData } from './InfoBox';
-import { ARROW_EXPAND } from '../../lib/constants';
+import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
 
 /** Breakfast data shape from dist JSON. */
 interface BreakfastData {
@@ -26,13 +27,16 @@ interface HotelProps {
 }
 
 export default function Hotel({ hotel }: HotelProps) {
+  const [open, setOpen] = useState(false);
+  const toggle = useCallback(() => setOpen((v) => !v), []);
+
   return (
     <>
-      <div className="col-row">
+      <div className="col-row" onClick={toggle} style={{ cursor: 'pointer' }}>
         <Icon name="hotel" /> {hotel.name}{' '}
-        <span className="arrow">{ARROW_EXPAND}</span>
+        <span className="arrow">{open ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>
-      <div className="col-detail">
+      <div className={`col-detail${open ? ' open' : ''}`}>
         {hotel.details && hotel.details.length > 0 && (
           <div className="hotel-detail-grid">
             {hotel.details.map((d, i) => (

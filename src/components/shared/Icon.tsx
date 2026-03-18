@@ -83,11 +83,12 @@ export default function Icon({ name }: { name: string }) {
   if (!pathData) return null;
 
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: pathData }}
-    />
+    <span className="svg-icon" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        dangerouslySetInnerHTML={{ __html: pathData }}
+      />
+    </span>
   );
 }
