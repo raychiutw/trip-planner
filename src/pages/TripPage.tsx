@@ -227,7 +227,7 @@ export default function TripPage() {
                         <span className="day-label">{daySummary.label}</span>
                       )}
                       {daySummary?.date && (
-                        <span className="day-date">
+                        <span className="dh-date">
                           {daySummary.date}
                           {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
                         </span>
