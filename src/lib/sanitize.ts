@@ -69,3 +69,14 @@ export function sanitizeHtml(html: string): string {
 export function stripInlineHandlers(html: string): string {
   return html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 }
+
+/**
+ * Renders a text field that may contain markdown to sanitized HTML.
+ * Safe for `dangerouslySetInnerHTML` — runs marked.parse() then sanitizeHtml().
+ * Pure text passes through unchanged (marked doesn't alter plain text).
+ */
+import { marked } from 'marked';
+
+export function renderMarkdown(text: string): string {
+  return sanitizeHtml(marked.parse(text) as string);
+}

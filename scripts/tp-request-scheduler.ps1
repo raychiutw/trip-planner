@@ -1,12 +1,16 @@
-# tp-request-scheduler.ps1
-# Fallback scheduler: only processes requests where webhook failed
-# (Agent Server handles normal requests via Tunnel webhook)
+﻿# tp-request-scheduler.ps1
+# 每分鐘排程：查詢所有 open 請求並處理
 
 $projectDir = Split-Path $PSScriptRoot
 $logDir = Join-Path $PSScriptRoot "logs"
 $logDate = Get-Date -Format "yyyy-MM-dd"
 $logFile = Join-Path $logDir "tp-request-$logDate.log"
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+function Log($msg) {
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    [System.IO.File]::AppendAllText($logFile, "[$ts] $msg`r`n", $utf8NoBom)
+}
 
 # Create logs directory if not exists
 if (-not (Test-Path $logDir)) {
@@ -19,28 +23,58 @@ Get-ChildItem -Path $logDir -File | Where-Object { $_.LastWriteTime -lt (Get-Dat
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 
-# Check if there are webhook-failed requests before invoking Claude
+Log "--- 排程啟動 ---"
+
+# Query open requests
 $headers = @{
-    "CF-Access-Client-Id" = $env:CF_ACCESS_CLIENT_ID
-    "CF-Access-Client-Secret" = $env:CF_ACCESS_CLIENT_SECRET
+    "CF-Access-Client-Id"     = "e5902a9d6f5181b8f70e12f1c11ebca3.access"
+    "CF-Access-Client-Secret" = "9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8"
 }
 
+Log "呼叫 API: GET /api/requests?status=open"
+
 try {
-    $response = Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests?status=open&webhook_failed=1" -Headers $headers -ErrorAction Stop
-    if ($response.Count -eq 0) {
-        # No webhook-failed requests, skip
-        exit 0
-    }
-    Add-Content -Path $logFile -Value "[$timestamp] Found $($response.Count) webhook-failed request(s), processing..." -Encoding UTF8
-} catch {
-    Add-Content -Path $logFile -Value "[$timestamp] API check failed: $_" -Encoding UTF8
+    $response = Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests?status=open" -Headers $headers -ErrorAction Stop
+}
+catch {
+    Log "API 呼叫失敗: $_"
+    Log "--- 排程結束（錯誤）---"
     exit 1
 }
 
-Set-Location $projectDir
-$output = claude --dangerously-skip-permissions -p "/tp-request" 2>&1 | Out-String
-$output | Add-Content -Path $logFile -Encoding UTF8
+$count = 0
+if ($response -is [System.Array]) { $count = $response.Count } elseif ($response) { $count = 1 }
 
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-Add-Content -Path $logFile -Value "[$timestamp] Done" -Encoding UTF8
-Add-Content -Path $logFile -Value "---" -Encoding UTF8
+Log "查詢結果: $count 筆 open 請求"
+
+if ($count -eq 0) {
+    Log "--- 排程結束（無待處理）---"
+    exit 0
+}
+
+# Log each request summary
+for ($i = 0; $i -lt $count; $i++) {
+    $req = if ($response -is [System.Array]) { $response[$i] } else { $response }
+    $rid = $req.id
+    $tripId = $req.trip_id
+    $mode = $req.mode
+    $title = $req.title
+    Log "  [$($i+1)/$count] id=$rid trip=$tripId mode=$mode title=$title"
+}
+
+# Invoke Claude tp-request
+Log "開始處理: claude /tp-request"
+
+Set-Location $projectDir
+try {
+    $output = claude --dangerously-skip-permissions -p "/tp-request" 2>&1 | Out-String
+    [System.IO.File]::AppendAllText($logFile, $output + "`r`n", $utf8NoBom)
+    Log "處理完成"
+}
+catch {
+    Log "Claude 執行失敗: $_"
+    Log "--- 排程結束（錯誤）---"
+    exit 1
+}
+
+Log "--- 排程結束 ---"
