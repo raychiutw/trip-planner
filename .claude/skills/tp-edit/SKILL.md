@@ -88,3 +88,14 @@ user-invocable: true
 - 所有資料讀寫均透過 API，不操作本地 MD 檔案
 - 不執行 git commit / push（資料已直接寫入 D1 database）
 - 不執行 npm run build（無 dist 產物需產生）
+
+## Markdown 支援欄位
+
+前端會對以下欄位做 markdown 渲染，AI 寫入時**可以使用 markdown**：
+
+| 欄位 | 支援 | 說明 |
+|------|:---:|------|
+| `entry.body`（description） | ✅ | 景點描述，可用粗體、列表、連結 |
+| `entry.note` | ✅ | 備註提醒，可用粗體、列表 |
+| `restaurant.description` | ✅ | 餐廳描述 |
+| `entry.title` / `restaurant.name` / `hotel.name` | ❌ | 純文字 |

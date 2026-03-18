@@ -183,10 +183,32 @@
     min-height: var(--tap-min);
     transition: background var(--duration-fast), color var(--duration-fast), font-weight var(--duration-fast);
 }
+.manage-mode-pill:hover {
+    background: var(--hover-bg);
+}
 .manage-mode-pill.selected {
     background: var(--accent-bg);
     color: var(--accent);
     font-weight: 600;
+}
+.manage-mode-pill.selected:hover {
+    background: var(--accent-bg);
+    filter: brightness(0.95);
+}
+.manage-mode-pill.selected-plan {
+    background: #E8F5E9;
+    color: #2E7D32;
+    font-weight: 600;
+}
+.manage-mode-pill.selected-plan:hover {
+    background: #C8E6C9;
+}
+body.dark .manage-mode-pill.selected-plan {
+    background: #1B3A1F;
+    color: #66BB6A;
+}
+body.dark .manage-mode-pill.selected-plan:hover {
+    background: #2E4A32;
 }
 .manage-mode-pill:focus-visible {
     outline: none;
@@ -208,21 +230,6 @@
 .request-mode-badge.mode-plan { background: #E8F5E9; color: #2E7D32; }
 body.dark .request-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
 
-/* ===== Processed-by Badge ===== */
-.request-processed-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
-    border-radius: var(--radius-full);
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-.request-processed-badge.processed-agent { background: #E3F2FD; color: #1565C0; }
-.request-processed-badge.processed-scheduler { background: #FFF3E0; color: #E65100; }
-body.dark .request-processed-badge.processed-agent { background: #0D47A1; color: #64B5F6; }
-body.dark .request-processed-badge.processed-scheduler { background: #4E2A00; color: #FFB74D; }
 
 /* ===== Request Body Preview ===== */
 .request-item-body {
@@ -317,9 +324,13 @@ body.dark .request-processed-badge.processed-scheduler { background: #4E2A00; co
     background: var(--accent-bg);
 }
 
-/* ===== Sticky-nav: title bar ===== */
+/* ===== Sticky-nav ===== */
 .sticky-nav { border-bottom: 1px solid var(--border); }
-.nav-title { text-align: center; flex: 1; }
+.manage-trip-select--center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
 
 /* ===== Dark Mode ===== */
 body.dark .request-badge.open { background: #2EA043; }

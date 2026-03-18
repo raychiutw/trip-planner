@@ -58,15 +58,6 @@ function RequestItem({ req }: { req: RawRequest }) {
           <Icon name={badgeIconName} />
           {badgeText}
         </span>
-        {req.processed_by && (
-          <span
-            className={`request-processed-badge ${
-              req.processed_by === 'agent' ? 'processed-agent' : 'processed-scheduler'
-            }`}
-          >
-            {req.processed_by === 'agent' ? '⚡ 即時' : '🕐 排程'}
-          </span>
-        )}
         <span className={`request-mode-badge mode-${mode}`}>{modeBadgeText}</span>
         <span className="request-item-title">{req.title}</span>
       </div>
@@ -311,10 +302,6 @@ export default function ManagePage() {
 
   /* ===== Render ===== */
 
-  // Determine nav content
-  const showSelect = filteredTrips.length > 1;
-  const singleTripName = filteredTrips.length === 1 ? filteredTrips[0].name : null;
-
   // Determine whether to show empty-centered state
   const hasRequests = requests.length > 0;
   const showEmptyOrLoading = requestsLoading || requestsError !== null || !hasRequests;
@@ -324,9 +311,9 @@ export default function ManagePage() {
       <div className="container">
         {/* ----- Sticky Nav ----- */}
         <div className="sticky-nav" id="stickyNav">
-          {pageState.kind === 'ready' && showSelect ? (
+          {pageState.kind === 'ready' && (
             <select
-              className="manage-trip-select"
+              className="manage-trip-select manage-trip-select--center"
               aria-label="選擇行程"
               value={currentTripId || ''}
               onChange={handleTripChange}
@@ -337,16 +324,7 @@ export default function ManagePage() {
                 </option>
               ))}
             </select>
-          ) : (
-            <select
-              className="manage-trip-select"
-              aria-label="選擇行程"
-              style={pageState.kind !== 'ready' || filteredTrips.length <= 1 ? { display: 'none' } : undefined}
-            />
           )}
-          <span className="nav-title" id="navTitle">
-            {singleTripName || '行程請求'}
-          </span>
           <button
             className="nav-close-btn"
             id="navCloseBtn"
@@ -439,7 +417,7 @@ export default function ManagePage() {
                         改行程
                       </button>
                       <button
-                        className={`manage-mode-pill${mode === 'trip-plan' ? ' selected' : ''}`}
+                        className={`manage-mode-pill${mode === 'trip-plan' ? ' selected-plan' : ''}`}
                         data-mode="trip-plan"
                         onClick={() => setMode('trip-plan')}
                       >

@@ -1,4 +1,4 @@
-CREATE TABLE webhook_logs (
+CREATE TABLE IF NOT EXISTS webhook_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   request_id INTEGER NOT NULL,
   tunnel_url TEXT,
