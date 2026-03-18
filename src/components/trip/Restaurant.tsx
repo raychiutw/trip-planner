@@ -2,6 +2,7 @@
 /* Renders a single restaurant recommendation card (used inside InfoBox and standalone) */
 
 import Icon from '../shared/Icon';
+import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
 import { escUrl } from '../../lib/sanitize';
 
@@ -100,7 +101,7 @@ export default function Restaurant({ restaurant: r }: RestaurantProps) {
       {typeof r.googleRating === 'number' && (
         <>{' '}<span className="rating">★ {r.googleRating.toFixed(1)}</span></>
       )}
-      {r.description && <>{' — '}{r.description}</>}
+      {r.description && <>{' — '}<MarkdownText text={r.description} /></>}
       {r.price && <>，{r.price}</>}
       <br />
       {r.location && <MapLinks location={r.location} inline />}

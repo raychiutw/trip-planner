@@ -17,27 +17,17 @@ user-invocable: true
 
 ## 觸發模式
 
-本 skill 有兩種觸發方式：
-1. **即時（webhook）**：旅伴送出請求 → Pages Function 透過 Tunnel 呼叫本機 Agent Server → 即時處理
-2. **排程 fallback**：Windows Task Scheduler 定期執行本 skill，只處理 webhook 失敗的請求
+Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open 請求。
 
 ## 步驟
 
-1. **判斷處理範圍**：
-   - 使用者 prompt 包含「全部」、「所有」、「all」→ 查所有 open 請求
-   - 否則（預設）→ **只查 webhook 失敗的請求**：
-   ```bash
-   curl -s -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
-        "https://trip-planner-dby.pages.dev/api/requests?status=open&webhook_failed=1"
-   ```
-   若使用者要求處理全部：
+1. **查詢所有 open 請求**：
    ```bash
    curl -s -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
         -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
         "https://trip-planner-dby.pages.dev/api/requests?status=open"
    ```
-2. 無符合條件的請求 → 回報「沒有待處理的請求」並結束
+2. 無 open 請求 → 回報「沒有待處理的請求」並結束
 3. 依序處理每個請求：
 
 ### 3a. 解析 metadata
@@ -138,6 +128,20 @@ curl -s -X PATCH \
 ## 局部修改 vs 全面重整
 
 本 skill 只處理請求 text 描述的修改範圍。**不全面重跑 R0-R15**。如需全面重整，使用 `/tp-rebuild`。
+
+## Markdown 支援欄位
+
+前端會對以下欄位做 markdown 渲染（marked.parse + sanitizeHtml），AI 寫入時**可以使用 markdown**：
+
+| 欄位 | 支援 markdown | 說明 |
+|------|:---:|------|
+| `entry.body`（description） | ✅ | 景點描述，可用粗體、列表、連結 |
+| `entry.note` | ✅ | 備註提醒，可用粗體、列表 |
+| `restaurant.description` | ✅ | 餐廳描述 |
+| `entry.title` | ❌ | 純文字，不渲染 markdown |
+| `entry.time` | ❌ | 純文字 |
+| `restaurant.name` | ❌ | 純文字 |
+| `hotel.name` | ❌ | 純文字 |
 
 ## 注意事項
 

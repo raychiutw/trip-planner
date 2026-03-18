@@ -29,13 +29,12 @@ export interface AuthData {
  *
  * DB table: requests
  * Columns: id, trip_id, mode, title, body, submitted_by, reply, status,
- *          created_at, webhook_status (migration 0003), processed_by (migration 0004)
+ *          created_at, processed_by
  *
  * mapRow renames:
  *   trip_id      -> tripId
  *   submitted_by -> submittedBy
  *   created_at   -> createdAt
- *   webhook_status / processed_by — no FIELD_MAP entry, kept as-is
  */
 export interface Request {
   id: number;
@@ -54,13 +53,8 @@ export interface Request {
   /** DB column `created_at` */
   createdAt: string;
   /**
-   * DB column `webhook_status` (added in migration 0003).
-   * 'sent' | 'failed' | 'no_tunnel' | null
-   */
-  webhookStatus?: string | null;
-  /**
    * DB column `processed_by` (added in migration 0004).
-   * 'agent' | 'scheduler' | null
+   * 'scheduler' | null
    */
   processedBy?: string | null;
 }
@@ -134,30 +128,3 @@ export interface AuditLog {
   createdAt: string;
 }
 
-// ---------------------------------------------------------------------------
-// WebhookLog
-// ---------------------------------------------------------------------------
-
-/**
- * A webhook delivery log entry (migration 0005).
- *
- * DB table: webhook_logs
- * Columns: id, request_id, tunnel_url, status, http_status, error, created_at
- *
- * mapRow renames:
- *   request_id  -> requestId
- *   tunnel_url  -> kept as-is (no FIELD_MAP entry)
- *   http_status -> kept as-is (no FIELD_MAP entry)
- *   created_at  -> createdAt
- */
-export interface WebhookLog {
-  id: number;
-  /** DB column `request_id` — links to requests.id */
-  requestId: number;
-  tunnelUrl?: string | null;
-  /** 'sent' | 'failed' | 'no_tunnel' */
-  status: string;
-  httpStatus?: number | null;
-  error?: string | null;
-  createdAt: string;
-}

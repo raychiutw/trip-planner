@@ -3,6 +3,7 @@
 /* locations, info boxes), and optional travel segment to next entry.    */
 
 import Icon from '../shared/Icon';
+import MarkdownText from '../shared/MarkdownText';
 import { NavLinks, type NavLocation } from './MapLinks';
 import InfoBox, { type InfoBoxData } from './InfoBox';
 
@@ -129,12 +130,12 @@ export default function TimelineEvent({ entry, index }: TimelineEventProps) {
             </div>
 
             {/* Note */}
-            {entry.note && <div className="tl-desc">{entry.note}</div>}
+            {entry.note && <MarkdownText text={entry.note} as="div" className="tl-desc" />}
 
             {/* Body: description + locations + info boxes */}
             {hasBody && (
               <div className="tl-body">
-                {entry.description && <p className="tl-desc">{entry.description}</p>}
+                {entry.description && <MarkdownText text={entry.description} as="div" className="tl-desc" />}
                 {entry.locations && entry.locations.length > 0 && (
                   <NavLinks locations={entry.locations} />
                 )}

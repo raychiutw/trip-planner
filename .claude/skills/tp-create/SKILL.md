@@ -55,6 +55,11 @@ user-invocable: true
      - `note: ""`（有備註填內容，無備註填空字串，R15）
      - `location.googleQuery`：實體地點填搜尋文字（R11）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
+   - Markdown 支援欄位（前端會渲染 markdown）：
+     - `entry.body`（description）：✅ 可用粗體、列表、連結
+     - `entry.note`：✅ 可用粗體、列表
+     - `restaurant.description`：✅ 可用 markdown
+     - `entry.title` / `restaurant.name` / `hotel.name`：❌ 純文字
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：`googleRating` 省略欄位，其餘欄位用空字串
 7. 依序建立每天資料：
