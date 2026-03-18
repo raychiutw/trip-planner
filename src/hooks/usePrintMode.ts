@@ -1,14 +1,21 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+
+interface PrintModeOptions {
+  isDark: boolean;
+  setIsDark: (value: boolean) => void;
+}
 
 /**
  * Hook to manage print mode.
  *
  * - Toggles `body.print-mode` class
  * - Manages `beforeprint` / `afterprint` events
- * - Temporarily disables dark mode when entering print mode
+ * - Temporarily disables dark mode when entering print mode by coordinating
+ *   through React state (via `setIsDark`) instead of direct DOM manipulation
  */
-export function usePrintMode() {
+export function usePrintMode({ isDark, setIsDark }: PrintModeOptions) {
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const wasDarkRef = useRef(false);
 
   /** Toggle print mode on/off. */
   const togglePrint = useCallback(() => {
@@ -16,42 +23,30 @@ export function usePrintMode() {
       const entering = !prev;
 
       if (entering) {
-        // If dark mode is active, temporarily disable it
-        if (document.body.classList.contains('dark')) {
-          document.body.dataset.wasDark = '1';
-          document.body.classList.remove('dark');
-        }
+        wasDarkRef.current = isDark;
+        if (isDark) setIsDark(false);
         document.body.classList.add('print-mode');
       } else {
         document.body.classList.remove('print-mode');
-        // Restore dark mode if it was active before
-        if (document.body.dataset.wasDark === '1') {
-          document.body.classList.add('dark');
-          delete document.body.dataset.wasDark;
-        }
+        if (wasDarkRef.current) setIsDark(true);
       }
 
       return entering;
     });
-  }, []);
+  }, [isDark, setIsDark]);
 
   /** Listen for native browser print events. */
   useEffect(() => {
     function onBeforePrint() {
-      if (document.body.classList.contains('dark')) {
-        document.body.dataset.wasDark = '1';
-        document.body.classList.remove('dark');
-      }
+      wasDarkRef.current = isDark;
+      if (isDark) setIsDark(false);
       document.body.classList.add('print-mode');
       setIsPrintMode(true);
     }
 
     function onAfterPrint() {
       document.body.classList.remove('print-mode');
-      if (document.body.dataset.wasDark === '1') {
-        document.body.classList.add('dark');
-        delete document.body.dataset.wasDark;
-      }
+      if (wasDarkRef.current) setIsDark(true);
       setIsPrintMode(false);
     }
 
@@ -62,7 +57,7 @@ export function usePrintMode() {
       window.removeEventListener('beforeprint', onBeforePrint);
       window.removeEventListener('afterprint', onAfterPrint);
     };
-  }, []);
+  }, [isDark, setIsDark]);
 
   return { isPrintMode, togglePrint };
 }

@@ -14,7 +14,7 @@ export default function Timeline({ events }: TimelineProps) {
   return (
     <div className="timeline">
       {events.map((ev, i) => (
-        <TimelineEvent key={i} entry={ev} index={i + 1} />
+        <TimelineEvent key={ev.id ?? i} entry={ev} index={i + 1} />
       ))}
     </div>
   );

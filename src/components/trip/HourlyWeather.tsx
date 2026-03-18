@@ -38,6 +38,8 @@ export default function HourlyWeather({
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const gridRef = useRef<HTMLDivElement>(null);
+  const weatherDayRef = useRef(weatherDay);
+  weatherDayRef.current = weatherDay;
 
   /* --- Fetch weather data on mount --- */
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function HourlyWeather({
     setLoading(true);
     setError(null);
 
-    fetchWeatherForDay(dayDate, weatherDay, tripStart, tripEnd)
+    fetchWeatherForDay(dayDate, weatherDayRef.current, tripStart, tripEnd)
       .then((data) => {
         if (!cancelled) {
           setMg(data);
@@ -62,7 +64,7 @@ export default function HourlyWeather({
     return () => {
       cancelled = true;
     };
-  }, [dayId, dayDate, weatherDay, tripStart, tripEnd]);
+  }, [dayId, dayDate, tripStart, tripEnd]);
 
   /* --- Toggle expand/collapse --- */
   const handleToggle = useCallback(() => {

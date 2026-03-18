@@ -1,100 +1,69 @@
 schema: spec-driven
 
 env:
-  # --- Cloudflare Account ---
   CF_ACCOUNT_ID: d62be07e04ccd1c19ed8c496edac8ce8
-  # --- D1 Database ---
   D1_DATABASE_ID: d61c42d5-8083-4e18-9b6c-70e133e37322
   D1_DATABASE_NAME: trip-planner-db
-  # --- API Token（D1 查詢用，權限：D1 Edit）---
   CLOUDFLARE_API_TOKEN: _9MwCPcXMFG1zCmkLcDUMoalf-OwvA_Rphlhv75u
-  # --- Access Service Token（CLI / scheduler 用）---
   CF_ACCESS_CLIENT_ID: e5902a9d6f5181b8f70e12f1c11ebca3.access
   CF_ACCESS_CLIENT_SECRET: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8
-  # --- Pages 環境變數（設定在 Cloudflare Dashboard，本地沒有值）---
-  # CF_API_TOKEN: (Pages env) Cloudflare API Token，用於 Access policy 同步
-  # CF_ACCESS_APP_ID: (Pages env) manage Access Application UUID
-  # CF_ACCESS_POLICY_ID: (Pages env) manage Allow policy UUID
-  # ADMIN_EMAIL: (Pages env) 管理者 email
+  # Pages 環境變數（Cloudflare Dashboard 設定）：
+  # CF_API_TOKEN, CF_ACCESS_APP_ID, CF_ACCESS_POLICY_ID, ADMIN_EMAIL
 
 context: |
-  行程規劃網站（trip-planner），部署於 Cloudflare Pages
-  Tech stack: React 19 + TypeScript + Vite，Vitest + jsdom 單元測試，Playwright E2E 測試
-  四頁式架構：src/pages/index（行程主頁）、src/pages/manage（旅伴請求）、src/pages/admin（權限管理）、src/pages/setting（設定）
-  資料層：Cloudflare D1 結構化 table → Pages Functions API → 前端即時讀取（不需 build）
+  行程規劃網站（trip-planner），部署於 Cloudflare Pages + D1
+  Tech stack: React 19 + TypeScript strict + Vite 多入口，Vitest + Playwright
   語言：繁體中文台灣用語，commit 訊息繁體中文
-  UI 規範：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
-  字型規範：全站 11 級 Apple text style token — --fs-large-title(2.125rem) / --fs-title(1.75rem) / --fs-title2(1.375rem) / --fs-title3(1.25rem) / --fs-headline(1.0625rem) / --fs-body(1.0625rem body預設) / --fs-callout(1rem) / --fs-subheadline(0.9375rem) / --fs-footnote(0.8125rem) / --fs-caption(0.75rem) / --fs-caption2(0.6875rem)，禁用硬編碼 font-size
-  Git：commit 後不自動 push，由使用者手動觸發
-  測試：commit 前必須通過（pre-commit hook 自動執行），文件變更不跑測試
-  Coding：commit 前必須跑 /tp-code-verify 驗證命名規範綠燈，紅燈則持續修改直到通過
+  Git：commit 後不自動 push；文件變更不跑測試
 
-naming: # 完整規範見 .claude/skills/references/naming-rules.md
-  js:
-    functions: camelCase              # renderHotel, mapApiDay, fetchDay
-    local_variables: camelCase        # tripId, currentConfig, dayCache
-    true_constants: UPPER_SNAKE_CASE  # DRIVING_WARN_MINUTES, TRANSPORT_TYPES
-    mutable_state: camelCase          # 不得用 UPPER_CASE（TRIP → trip, CURRENT_TRIP_ID → currentTripId）
-    module_exports: camelCase         # 與函式名一致
-  css:
-    classes: kebab-case               # day-header, tl-event, admin-section
-    custom_properties: --kebab-case   # --fs-body, --radius-md, --accent
-  html:
-    element_ids: camelCase            # stickyNav, tripContent, navPills
-    dynamic_ids: kebab-case           # day-slot-1, hourly-3（JS 產生）
-    data_attributes: kebab-case       # data-trip-id, data-day, data-action
-  api:
-    db_columns: snake_case            # trip_id, day_num, travel_type
-    api_response: snake_case          # 直接回傳 DB row，不做 camelCase 轉換
-    trip_identifier: tripId           # API 統一回傳 tripId（非 id），包含 /api/trips 列表
-  db_to_js_mapping:
-    description: 使用 mapRow() 統一轉換，不散寫 if(x) y = x
-    renames:
-      - body → description
-      - rating → googleRating
-      - must_buy → mustBuy
-      - reservation_url → reservationUrl
-      - "travel: {desc} → travel: {text}"
-      - day_of_week → dayOfWeek
-      - self_drive → selfDrive
-      - og_description → ogDescription
-      - auto_scroll → autoScrollDates（逗號分隔字串 → array）
-      - footer_json → footer（JSON string → object）
-      - weather_json → weather（JSON string → object）
-      - parking_json → parking（JSON string → object）
-
+# ============================================================
+# 開發規範 + Commit Gate — 所有 AI / 開發者必須遵守
+# ============================================================
+# ⚠️ 以下 checks 中的規則在「開發過程中」就必須遵從，不是只在 commit 前才檢查。
+# commit_gate 是最後防線，確保沒有遺漏。
 commit_gate:
-  # ⚠️ 強制：每次 git commit 前必須執行 /tp-code-verify
-  # 紅燈禁止 commit，必須修到綠燈。沒有例外。
-  required_skill: /tp-code-verify
-  checks:
-    - npm test（含 naming-convention.test.js、css-hig.test.js）
-    - 命名規範：references/naming-rules.md
-    - CSS HIG：references/css-hig-rules.md
-    - 程式碼標準：references/coding-standards.md
+  required_skill: tp-code-verify    # 各 AI 平台實作同名 skill，規則檔案各自維護
+  commands:
+    - npx tsc --noEmit              # TypeScript 零錯誤
+    - npm test                      # naming-convention + css-hig + unit + integration
+  checks:                           # 開發時遵從 + commit 前驗證
+    - naming                        # 命名規範（JS/CSS/HTML/API/mapRow）
+    - css-hig                       # CSS HIG 12 條（H1-H12）
+    - coding-standards              # 觸控目標、inline SVG、無框線、border-radius token
+    - react-best-practices          # RBP-1~14（waterfall/re-render/rendering/bundle/JS 效能）
+    - code-review-rules             # CR-1~10（hook 協調/cancelled guard/apiFetch/type safety）
   on_failure: 持續修改直到全部綠燈
 
+# ============================================================
+# 其他必要 Skills
+# ============================================================
+skills:
+  tp-check: 行程品質規則驗證（R0-R15），產生或修改行程後執行
+  tp-create: 從零產生完整行程
+  tp-edit: 自然語言部分修改行程
+  tp-rebuild: 全面稽核修復單一行程
+  tp-deploy: commit + push + 驗證 Cloudflare Pages 部署
+  tp-request: 處理旅伴請求
+  tp-patch: 批次補齊缺失欄位
+  tp-ux-verify: HTML/CSS HIG 合規驗證
+
+# ============================================================
+# OpenSpec 流程規則
+# ============================================================
 rules:
   proposal:
     - 提案用繁體中文撰寫
-    - 說明影響的檔案範圍（哪些 js/css/html/json）
-    - 若涉及 JSON 結構變更，需列出對 checklist/backup/suggestions 的連動影響
+    - 說明影響的檔案範圍
+    - JSON 結構變更需列出 checklist/backup/suggestions 連動影響
   design:
-    - UI 變更需符合無框線設計規範（背景色差、間距、圓角、box-shadow）
-    - 新增 icon 走 js/icons.js 的 ICONS registry，不用 emoji
-    - CSS/JS 拆分遵循既有架構（shared/menu/style/edit/setting）
-    - font-size 僅允許 11 級 Apple text style token（--fs-large-title 至 --fs-caption2），禁止硬編碼 px/rem/em
-    - transition duration 僅允許 var(--duration-fast/normal/slow)，禁止硬編碼秒數
-    - spacing 值須為 4pt grid（4 的倍數），裝飾元素除外
-    - 互動元素須達 44px 最小觸控目標（var(--tap-min)）
-    - border-radius 僅允許 5 級 token（--radius-xs/sm/md/lg/full），50% 圓形與非對稱值除外
-    - focus-visible 移除 outline 時必須搭配 box-shadow: var(--shadow-ring)；表單輸入用文字游標不需 box-shadow
-    - overlay/backdrop 背景使用 var(--overlay) token，不得硬寫 rgba(0,0,0,...)
-    - sticky-nav 背景使用 color-mix frosted glass 效果，不得用實色 var(--bg)
-    - dark mode 覆寫：若 base 已用 var(--token)、token 在 body.dark 有覆寫值，不需額外寫 body.dark .class 規則
-    - color: #fff 改用 var(--text-on-accent)；color mode preview 用 var(--cmp-*) token
-    - CSS HIG 變更須通過 tests/unit/css-hig.test.js 12 條回歸測試
+    - UI 符合無框線設計規範（背景色差、間距、圓角、box-shadow）
+    - icon 走 ICONS registry，不用 emoji
+    - CSS/JS 拆分遵循既有架構
+    - font-size 僅允許 11 級 Apple text style token（--fs-large-title 至 --fs-caption2）
+    - transition duration 僅允許 var(--duration-fast/normal/slow)
+    - spacing 4pt grid、border-radius 5 級 token、overlay 用 var(--overlay)
+    - CSS HIG 變更須通過 css-hig.test.js
   tasks:
-    - 每個 task 應可獨立測試驗證
-    - 涉及 render 函式的 task 需包含對應 unit test 更新
-    - 涉及互動行為的 task 需包含對應 E2E test 更新
+    - 每個 task 可獨立測試驗證
+    - render 函式變更含 unit test 更新
+    - 互動行為變更含 E2E test 更新

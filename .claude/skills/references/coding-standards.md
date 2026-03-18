@@ -50,6 +50,7 @@
 js/          app.js  shared.js  icons.js  setting.js  manage.js  admin.js
 css/         shared.css  style.css  setting.css  manage.css  admin.css
 html/        index.html  setting.html  manage/index.html  admin/index.html
+src/         entries/*.tsx  pages/*.tsx  components/**/*.tsx  hooks/*.ts  lib/*.ts  types/*.ts
 functions/   api/**/*.ts（所有 Pages Functions）
 server/      index.js  lib/auth.js  routes/process.js
 tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js

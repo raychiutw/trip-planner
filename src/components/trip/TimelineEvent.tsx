@@ -58,6 +58,7 @@ export interface TravelData {
 // ---------------------------------------------------------------------------
 
 export interface TimelineEntryData {
+  id?: number | null;
   time?: string | null;
   title?: string | null;
   description?: string | null;

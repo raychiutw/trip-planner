@@ -1,5 +1,17 @@
 # 行程規劃網站（trip-planner）
 
+## ⚠️ 開發規則（強制）
+
+**所有開發規則定義在 `openspec/config.yaml`，無論是否使用 OpenSpec 流程都必須遵守。**
+
+- **Skills**：所有 tp-* skills 透過 API 操作行程資料，不操作本地檔案
+- **OpenSpec**：功能開發遵守 openspec 流程，除非使用者同意跳過
+- **Agent / Sub Agent**：
+  - sub agent 預設 `model: "sonnet"`；僅在需要高度判斷力時用 `model: "opus"`
+  - 獨立任務盡量同時發送多個 Agent tool call
+  - 長時間任務用 `run_in_background: true`
+  - 多 agent 並行修改檔案時用 `isolation: "worktree"`
+
 ## 專案結構
 
 ```
@@ -22,8 +34,7 @@ functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permission
 migrations/         0001_init.sql  0002_trips.sql
 scripts/            migrate-md-to-d1.js  tp-check.js  memory-sync.sh  register-scheduler.ps1
 tests/              unit/  integration/  e2e/
-.claude/skills/     tp-check  tp-create  tp-edit  tp-request  tp-patch  tp-rebuild  tp-deploy  tp-code-verify  ...
-openspec/           config.yaml  specs/  changes/
+openspec/           config.yaml（開發規則唯一來源）  specs/  changes/
 vite.config.ts      Vite 多入口建置（4 個 HTML）
 tsconfig.json       TypeScript strict mode
 wrangler.toml       D1 database binding + pages_build_output_dir: dist
@@ -33,8 +44,6 @@ wrangler.toml       D1 database binding + pages_build_output_dir: dist
 - 資料庫：Cloudflare D1（trip-planner-db）
 
 ## 資料架構
-
-行程資料全部儲存在 D1 結構化 table，前端透過 Pages Functions API 即時讀取：
 
 ```
 D1 Tables:
@@ -80,24 +89,6 @@ D1 Tables:
   GET /api/trips/:id/audit               修改歷史
   POST /api/trips/:id/audit/:aid/rollback 回滾
 ```
-
-## 開發規則
-
-- **Git**：commit 後不自動 push，由使用者手動觸發；commit 訊息繁體中文
-- **測試**：commit 前必須測試全過（pre-commit hook 自動執行）；文件變更不跑測試
-- **⚠️ /tp-code-verify（強制）**：**每次 git commit 前必須執行 `/tp-code-verify`**，驗證命名規範 + CSS HIG + 測試全過。紅燈禁止 commit，必須修到綠燈。這是不可跳過的強制步驟，沒有例外。命名規範詳見 `.claude/skills/references/naming-rules.md`
-- **資料層**：D1 為唯一資料來源，透過 API 讀寫；不需 build 步驟
-- **行程品質**：產生或修改行程須遵守品質規則，完成後執行 `/tp-check`
-- **Skills**：所有 tp-* skills 透過 API 操作行程資料，不操作本地檔案，不需 git commit/push 資料變更
-- **內容**：繁體中文台灣用語、travel 含 type + 分鐘數、days 變動同步 checklist/backup/suggestions
-- **UI**：無框線設計、卡片統一、全站 inline SVG（Material Symbols Rounded）
-- **CSS HIG 紀律**：12 條規則由 `tests/unit/css-hig.test.js` 自動守護，完整規範見 `.claude/commands/tp-ux-verify.md`
-- **Agent / Sub Agent**：
-  - **Model**：所有 sub agent 一律使用 `model: "sonnet"`；僅在需要高度判斷力時才指定 `model: "opus"`
-  - **並行**：獨立任務盡量同時發送多個 Agent tool call
-  - **背景執行**：不需要立即結果的長時間任務用 `run_in_background: true`
-  - **Worktree 隔離**：多 agent 並行修改檔案時用 `isolation: "worktree"` 避免衝突
-- **OpenSpec**：功能開發遵守 openspec 流程，除非使用者同意跳過
 
 ## 認證架構
 

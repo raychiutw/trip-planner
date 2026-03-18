@@ -1,6 +1,6 @@
 /* ===== Props ===== */
 
-interface FooterData {
+export interface FooterData {
   title?: string;
   dates?: string;
   budget?: string;

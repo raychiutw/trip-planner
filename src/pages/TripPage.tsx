@@ -7,11 +7,10 @@ import { usePrintMode } from '../hooks/usePrintMode';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
-import Footer from '../components/trip/Footer';
+import Footer, { type FooterData } from '../components/trip/Footer';
 import SpeedDial from '../components/trip/SpeedDial';
 import InfoSheet from '../components/trip/InfoSheet';
-import Countdown from '../components/trip/Countdown';
-import TripStatsCard from '../components/trip/TripStatsCard';
+import InfoPanel from '../components/trip/InfoPanel';
 import { DayDrivingStatsCard, TripDrivingStatsCard } from '../components/trip/DrivingStats';
 import HourlyWeather from '../components/trip/HourlyWeather';
 import Flights from '../components/trip/Flights';
@@ -24,10 +23,141 @@ import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
 import type { WeatherDay } from '../lib/weather';
-import type { TripListItem, Day } from '../types/trip';
+import type { TripListItem, Day, DaySummary } from '../types/trip';
+import type { FlightsData } from '../components/trip/Flights';
+import type { ChecklistData } from '../components/trip/Checklist';
+import type { BackupData } from '../components/trip/Backup';
+import type { EmergencyData } from '../components/trip/Emergency';
+import type { SuggestionsData } from '../components/trip/Suggestions';
 
-import '../../css/shared.css';
-import '../../css/style.css';
+/* ===== Module-level constants (#14: hoist inline styles) ===== */
+
+const LOADING_STYLE: React.CSSProperties = { textAlign: 'center', padding: 40, color: 'var(--text-muted)' };
+const UNPUBLISHED_STYLE: React.CSSProperties = { color: 'var(--text-muted)', marginTop: 8 };
+
+/* ===== Static early-return views (#13: hoist to module level) ===== */
+
+const NO_TRIP_VIEW = (
+  <div className="page-layout">
+    <div className="container">
+      <div id="tripContent">
+        <div className="trip-error">
+          <p>請選擇行程</p>
+          <a className="trip-error-link" href="setting.html">前往設定頁</a>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const UNPUBLISHED_VIEW = (
+  <div className="page-layout">
+    <div className="container">
+      <div id="tripContent">
+        <div className="trip-error">
+          <p>此行程已下架</p>
+          <p style={UNPUBLISHED_STYLE}>2 秒後跳轉至設定頁…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const LOADING_VIEW = (
+  <div className="page-layout">
+    <div className="container">
+      <div id="tripContent">
+        <div style={LOADING_STYLE}>載入行程資料中...</div>
+      </div>
+    </div>
+  </div>
+);
+
+/* ===== DaySection — memoised per-day renderer (#12) ===== */
+
+interface DaySectionProps {
+  dayNum: number;
+  day: Day | undefined;
+  daySummary: DaySummary | undefined;
+  autoScrollDates: string[];
+}
+
+const DaySection = React.memo(function DaySection({
+  dayNum,
+  day,
+  daySummary,
+  autoScrollDates,
+}: DaySectionProps) {
+  const hotel = day?.hotel;
+  const timeline = day?.timeline ?? [];
+  // API may return weather_json (raw) or weather (mapped) — handle both
+  const weatherRaw = (day as Record<string, unknown> | undefined)?.weather_json ?? day?.weather;
+  const weatherDay = weatherRaw && typeof weatherRaw === 'object' && 'locations' in (weatherRaw as object)
+    ? (weatherRaw as unknown as WeatherDay)
+    : null;
+  const dayDate = day?.date ?? daySummary?.date ?? undefined;
+  const dayId = day?.id;
+
+  const dayDrivingStats = timeline.length > 0
+    ? calcDrivingStats(timeline)
+    : null;
+
+  const warnings = validateDay(timeline);
+
+  return (
+    <section className="day-section" data-day={dayNum}>
+      <div className="day-header info-header" id={`day${dayNum}`}>
+        <h2>Day {dayNum}</h2>
+        {daySummary?.label && (
+          <span className="day-label">{daySummary.label}</span>
+        )}
+        {daySummary?.date && (
+          <span className="dh-date">
+            {daySummary.date}
+            {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
+          </span>
+        )}
+      </div>
+      <div className="day-content" id={`day-slot-${dayNum}`}>
+        {!day ? (
+          <div className="slot-loading">載入中...</div>
+        ) : (
+          <>
+            {warnings.length > 0 && (
+              <div className="trip-warnings">
+                <strong><Icon name="warning" /> 注意事項：</strong>
+                <ul>
+                  {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {weatherDay && dayDate && dayId && (
+              <HourlyWeather
+                dayId={dayId}
+                dayDate={dayDate}
+                weatherDay={weatherDay}
+                tripStart={autoScrollDates[0] ?? null}
+                tripEnd={autoScrollDates[autoScrollDates.length - 1] ?? null}
+              />
+            )}
+
+            <div className="day-overview">
+              {hotel && <Hotel hotel={toHotelData(hotel as unknown as Record<string, unknown>)} />}
+              {dayDrivingStats && (
+                <DayDrivingStatsCard stats={dayDrivingStats} />
+              )}
+            </div>
+
+            {timeline.length > 0 && (
+              <Timeline events={timeline.map((e) => toTimelineEntry(e as unknown as Record<string, unknown>))} />
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+});
 
 /* ===== URL helpers ===== */
 
@@ -80,10 +210,11 @@ export default function TripPage() {
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
+  const scrollDayRef = useRef(0);
 
-  /* --- Dark mode + Print mode --- */
-  useDarkMode();
-  const { isPrintMode, togglePrint } = usePrintMode();
+  /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
+  const { isDark, setIsDark } = useDarkMode();
+  const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /* --- lsRenewAll once per session (#9) --- */
   useEffect(() => {
@@ -93,8 +224,9 @@ export default function TripPage() {
     }
   }, []);
 
-  /* --- Resolve trip ID from URL / localStorage --- */
+  /* --- Resolve trip ID from URL / localStorage (#6: cancelled guard) --- */
   useEffect(() => {
+    let cancelled = false;
     let tripId = getUrlTrip();
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
       tripId = lsGet<string>('trip-pref');
@@ -107,6 +239,7 @@ export default function TripPage() {
 
     apiFetch<TripListItem[]>('/trips')
       .then((trips) => {
+        if (cancelled) return;
         const match = trips.find((t) => t.tripId === tripId);
         if (match && match.published === 0) {
           lsRemove('trip-pref');
@@ -119,10 +252,13 @@ export default function TripPage() {
         setResolveState({ status: 'resolved', tripId: tripId! });
       })
       .catch(() => {
+        if (cancelled) return;
         setUrlTrip(tripId!);
         lsSet('trip-pref', tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
       });
+
+    return () => { cancelled = true; };
   }, []);
 
   /* --- Derive active tripId for the hook --- */
@@ -150,6 +286,13 @@ export default function TripPage() {
     () => days.map((d) => d.day_num ?? d.id).sort((a, b) => a - b),
     [days],
   );
+
+  /* --- Day summary map for O(1) lookup (#11) --- */
+  const daySummaryMap = useMemo(() => {
+    const map = new Map<number, DaySummary>();
+    for (const d of days) map.set(d.day_num ?? d.id, d);
+    return map;
+  }, [days]);
 
   /* --- Auto-scroll dates --- */
   const autoScrollDates = useMemo(
@@ -227,8 +370,11 @@ export default function TripPage() {
       }
       if (current >= 0) {
         const activeDayNum = dayNums[current];
-        // Update pill via switchDay (state update)
-        switchDay(activeDayNum);
+        // #1: Only call switchDay when day actually changes (avoid redundant re-renders)
+        if (activeDayNum !== scrollDayRef.current) {
+          scrollDayRef.current = activeDayNum;
+          switchDay(activeDayNum);
+        }
         // Update hash (debounced to avoid conflicts with manual scroll)
         if (Date.now() - manualScrollTs.current > 600) {
           const newHash = '#day' + activeDayNum;
@@ -251,16 +397,16 @@ export default function TripPage() {
     return () => window.removeEventListener('scroll', throttledScroll);
   }, [loading, dayNums, switchDay]);
 
-  /* --- Docs for InfoSheet --- */
-  const flightsData = docs.flights as Record<string, unknown> | undefined;
-  const checklistData = docs.checklist as Record<string, unknown> | undefined;
-  const backupData = docs.backup as Record<string, unknown> | undefined;
-  const emergencyData = docs.emergency as Record<string, unknown> | undefined;
-  const suggestionsData = docs.suggestions as Record<string, unknown> | undefined;
+  /* --- Docs for InfoSheet (#4: proper types instead of unknown) --- */
+  const flightsData = docs.flights as FlightsData | undefined;
+  const checklistData = docs.checklist as ChecklistData | undefined;
+  const backupData = docs.backup as BackupData | undefined;
+  const emergencyData = docs.emergency as EmergencyData | undefined;
+  const suggestionsData = docs.suggestions as SuggestionsData | undefined;
 
-  /* --- All loaded days as Day[] --- */
+  /* --- All loaded days as Day[] (#4: allDays values are already Day) --- */
   const loadedDays = useMemo(
-    () => Object.values(allDays) as unknown as Day[],
+    () => Object.values(allDays),
     [allDays],
   );
 
@@ -270,12 +416,12 @@ export default function TripPage() {
     try { return calcTripDrivingStats(loadedDays); } catch { return null; }
   }, [loadedDays]);
 
-  /* --- Footer data --- */
-  const footerData = useMemo(() => {
+  /* --- Footer data (#4: proper FooterData type) --- */
+  const footerData = useMemo((): FooterData | null => {
     if (!trip) return null;
     const raw = trip.footer;
     if (!raw || typeof raw !== 'object') return null;
-    return raw as { title?: string; dates?: string; budget?: string; exchangeNote?: string; tagline?: string };
+    return raw as FooterData;
   }, [trip]);
 
   /* --- Speed Dial → InfoSheet --- */
@@ -287,15 +433,15 @@ export default function TripPage() {
     if (!activeSheet) return null;
     switch (activeSheet) {
       case 'flights':
-        return flightsData ? <Flights data={flightsData as never} /> : <p>無航班資料</p>;
+        return flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>;
       case 'checklist':
-        return checklistData ? <Checklist data={checklistData as never} /> : <p>無確認清單</p>;
+        return checklistData ? <Checklist data={checklistData} /> : <p>無確認清單</p>;
       case 'backup':
-        return backupData ? <Backup data={backupData as never} /> : <p>無備案資料</p>;
+        return backupData ? <Backup data={backupData} /> : <p>無備案資料</p>;
       case 'emergency':
-        return emergencyData ? <Emergency data={emergencyData as never} /> : <p>無緊急聯絡資料</p>;
+        return emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>;
       case 'suggestions':
-        return suggestionsData ? <Suggestions data={suggestionsData as never} /> : <p>無行程建議</p>;
+        return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>無行程建議</p>;
       case 'driving':
         return tripDrivingStats
           ? <TripDrivingStatsCard tripStats={tripDrivingStats} />
@@ -305,50 +451,10 @@ export default function TripPage() {
     }
   }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats]);
 
-  /* --- No trip selected --- */
-  if (resolveState.status === 'no-trip') {
-    return (
-      <div className="page-layout">
-        <div className="container">
-          <div id="tripContent">
-            <div className="trip-error">
-              <p>請選擇行程</p>
-              <a className="trip-error-link" href="setting.html">前往設定頁</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (resolveState.status === 'unpublished') {
-    return (
-      <div className="page-layout">
-        <div className="container">
-          <div id="tripContent">
-            <div className="trip-error">
-              <p>此行程已下架</p>
-              <p style={{ color: 'var(--text-muted)', marginTop: 8 }}>2 秒後跳轉至設定頁…</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (resolveState.status === 'loading') {
-    return (
-      <div className="page-layout">
-        <div className="container">
-          <div id="tripContent">
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-              載入行程資料中...
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /* --- Early returns (#13: use hoisted static views) --- */
+  if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;
+  if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
+  if (resolveState.status === 'loading') return LOADING_VIEW;
 
   if (error && !trip) {
     return (
@@ -397,88 +503,20 @@ export default function TripPage() {
         <div className="container">
           <div id="tripContent">
             {loading && (
-              <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
-                載入行程資料中...
-              </div>
+              <div style={LOADING_STYLE}>載入行程資料中...</div>
             )}
 
+            {/* #12: DaySection memo components with #11 Map lookup */}
             {!loading &&
-              dayNums.map((dayNum) => {
-                const rawDay = allDays[dayNum] as unknown as Record<string, unknown> | undefined;
-                const daySummary = days.find((d) => (d.day_num ?? d.id) === dayNum);
-                const hotel = rawDay?.hotel as Record<string, unknown> | null | undefined;
-                const timeline = (rawDay?.timeline ?? []) as Record<string, unknown>[];
-                const weatherRaw = rawDay?.weather_json as Record<string, unknown> | undefined;
-                const weatherDay = weatherRaw?.locations ? (weatherRaw as unknown as WeatherDay) : null;
-                const dayDate = (rawDay?.date ?? daySummary?.date) as string | undefined;
-                const dayId = rawDay?.id as number | undefined;
-
-                // Per-day driving stats (#1)
-                const dayDrivingStats = timeline.length > 0
-                  ? calcDrivingStats(timeline as never)
-                  : null;
-
-                // Per-day validation warnings (#10)
-                const warnings = validateDay(timeline as never);
-
-                return (
-                  <section key={dayNum} className="day-section" data-day={dayNum}>
-                    <div className="day-header info-header" id={`day${dayNum}`}>
-                      <h2>Day {dayNum}</h2>
-                      {daySummary?.label && (
-                        <span className="day-label">{daySummary.label}</span>
-                      )}
-                      {daySummary?.date && (
-                        <span className="dh-date">
-                          {daySummary.date}
-                          {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
-                        </span>
-                      )}
-                    </div>
-                    <div className="day-content" id={`day-slot-${dayNum}`}>
-                      {!rawDay ? (
-                        <div className="slot-loading">載入中...</div>
-                      ) : (
-                        <>
-                          {/* Validation warnings (#10) */}
-                          {warnings.length > 0 && (
-                            <div className="trip-warnings">
-                              <strong><Icon name="warning" /> 注意事項：</strong>
-                              <ul>
-                                {warnings.map((w, i) => <li key={i}>{w}</li>)}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Weather */}
-                          {weatherDay && dayDate && dayId && (
-                            <HourlyWeather
-                              dayId={dayId}
-                              dayDate={dayDate}
-                              weatherDay={weatherDay}
-                              tripStart={autoScrollDates[0] ?? null}
-                              tripEnd={autoScrollDates[autoScrollDates.length - 1] ?? null}
-                            />
-                          )}
-
-                          {/* Day overview: hotel + driving stats */}
-                          <div className="day-overview">
-                            {hotel && <Hotel hotel={toHotelData(hotel)} />}
-                            {dayDrivingStats && (
-                              <DayDrivingStatsCard stats={dayDrivingStats} />
-                            )}
-                          </div>
-
-                          {/* Timeline */}
-                          {timeline.length > 0 && (
-                            <Timeline events={timeline.map(toTimelineEntry)} />
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </section>
-                );
-              })}
+              dayNums.map((dayNum) => (
+                <DaySection
+                  key={dayNum}
+                  dayNum={dayNum}
+                  day={allDays[dayNum]}
+                  daySummary={daySummaryMap.get(dayNum)}
+                  autoScrollDates={autoScrollDates}
+                />
+              ))}
 
             {/* Footer */}
             {!loading && trip && footerData && (
@@ -487,14 +525,18 @@ export default function TripPage() {
           </div>
         </div>
 
-        {/* Desktop info panel — Countdown + TripStats (交通摘要) */}
+        {/* #5: Use InfoPanel component for desktop sidebar */}
         {!loading && trip && (
-          <aside className="info-panel" id="infoPanel">
-            <Countdown autoScrollDates={autoScrollDates} />
-            {loadedDays.length > 0 && (
-              <TripStatsCard days={loadedDays} />
-            )}
-          </aside>
+          <InfoPanel
+            autoScrollDates={autoScrollDates}
+            days={loadedDays}
+            flights={flightsData}
+            checklist={checklistData}
+            backup={backupData}
+            emergency={emergencyData}
+            suggestions={suggestionsData}
+            tripDrivingStats={tripDrivingStats}
+          />
         )}
       </div>
 

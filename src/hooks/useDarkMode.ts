@@ -59,5 +59,5 @@ export function useDarkMode() {
     });
   }, []);
 
-  return { isDark, toggleDark };
+  return { isDark, setIsDark, toggleDark };
 }

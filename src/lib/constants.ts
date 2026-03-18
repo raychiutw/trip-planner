@@ -46,14 +46,3 @@ export function safeColor(c: string | null | undefined): string {
   return c && SAFE_COLOR_RE.test(c) ? c : 'var(--blue-light)';
 }
 
-/**
- * Formats a total number of minutes into a human-readable Chinese string.
- * e.g. 90 → "1 小時 30 分鐘", 60 → "1 小時", 25 → "25 分鐘"
- */
-export function formatMinutes(totalMins: number): string {
-  const hrs = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
-  return hrs > 0
-    ? hrs + ' 小時' + (mins > 0 ? ' ' + mins + ' 分鐘' : '')
-    : totalMins + ' 分鐘';
-}

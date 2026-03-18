@@ -118,13 +118,24 @@ export function useTrip(tripId: string | null): UseTripReturn {
         const firstDayNum = sorted.length > 0 ? (sorted[0].day_num ?? sorted[0].id) : 0;
         if (firstDayNum > 0) {
           setCurrentDayNum(firstDayNum);
-          // Fetch the first day's full data
-          const dayData = await apiFetch<Day>(`/trips/${tripId}/days/${firstDayNum}`);
-          if (!cancelled) {
-            dayCacheRef.current[firstDayNum] = dayData;
-            setCurrentDay(dayData);
-            setAllDays((prev) => ({ ...prev, [firstDayNum]: dayData }));
-          }
+        }
+
+        // Fire ALL day fetches in parallel (non-blocking)
+        for (const d of sorted) {
+          const num = d.day_num ?? d.id;
+          apiFetch<Day>(`/trips/${tripId}/days/${num}`)
+            .then((dayData) => {
+              if (cancelled) return;
+              dayCacheRef.current[num] = dayData;
+              setAllDays((prev) => ({ ...prev, [num]: dayData }));
+              // Set currentDay when first day arrives
+              if (num === firstDayNum) {
+                setCurrentDay(dayData);
+              }
+            })
+            .catch(() => {
+              // silently skip failed day loads
+            });
         }
 
         // Fetch docs in the background (non-blocking)
@@ -159,23 +170,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
             .catch(() => {
               // doc not available, silently skip
             });
-        }
-
-        // Preload remaining days in background
-        for (const d of sorted) {
-          const num = d.day_num ?? d.id;
-          if (num !== firstDayNum) {
-            apiFetch<Day>(`/trips/${tripId}/days/${num}`)
-              .then((dayData) => {
-                if (!cancelled) {
-                  dayCacheRef.current[num] = dayData;
-                  setAllDays((prev) => ({ ...prev, [num]: dayData }));
-                }
-              })
-              .catch(() => {
-                // silently skip failed day loads
-              });
-          }
         }
 
         if (!cancelled) setLoading(false);

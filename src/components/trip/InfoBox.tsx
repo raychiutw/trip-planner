@@ -35,13 +35,15 @@ interface GasStationDetail {
 // InfoBox data — union of all known box types
 // ---------------------------------------------------------------------------
 
+export type InfoBoxType = 'reservation' | 'parking' | 'souvenir' | 'restaurants' | 'shopping' | 'gasStation';
+
 export interface InfoBoxData {
-  type: string;
+  type: InfoBoxType;
   title?: string | null;
   content?: string | null;
 
   /* reservation */
-  items?: string[] | null;
+  items?: (string | SouvenirItem)[] | null;
   notes?: string | null;
 
   /* parking */
@@ -81,7 +83,7 @@ function ReservationBox({ box }: { box: InfoBoxData }) {
     <div className="info-box reservation">
       {box.title && <><strong>{box.title}</strong><br /></>}
       {box.items && box.items.length > 0 &&
-        (box.items as string[]).map((item, i) => (
+        box.items.filter((item): item is string => typeof item === 'string').map((item, i) => (
           <span key={i}>{item}<br /></span>
         ))
       }
@@ -104,7 +106,7 @@ function ParkingBox({ box }: { box: InfoBoxData }) {
 
 function SouvenirBox({ box }: { box: InfoBoxData }) {
   // items here are SouvenirItem objects (not strings)
-  const items = (box.items ?? []) as unknown as SouvenirItem[];
+  const items = (box.items ?? []).filter((item): item is SouvenirItem => typeof item === 'object' && item !== null);
   return (
     <div className="info-box souvenir">
       {box.title && <><Icon name="gift" /> <strong>{box.title}</strong><br /></>}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Icon from '../components/shared/Icon';
+import { apiFetch } from '../hooks/useApi';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet } from '../lib/localStorage';
 
@@ -36,16 +37,6 @@ interface TripInfo {
   published: number | boolean;
 }
 
-/* ===== Icon with svg-icon wrapper (matches vanilla iconSpan) ===== */
-
-function IconSpan({ name }: { name: string }) {
-  return (
-    <span className="svg-icon" aria-hidden="true">
-      <Icon name={name} />
-    </span>
-  );
-}
-
 /* ===== Request Item Component ===== */
 
 function RequestItem({ req }: { req: RawRequest }) {
@@ -69,7 +60,7 @@ function RequestItem({ req }: { req: RawRequest }) {
     <div className={`request-item ${stateClass}`}>
       <div className="request-item-header">
         <span className={`request-badge ${stateClass}`}>
-          <IconSpan name={badgeIconName} />
+          <Icon name={badgeIconName} />
           {badgeText}
         </span>
         {req.processed_by && (
@@ -179,8 +170,7 @@ export default function ManagePage() {
       // Step 2: fetch all trips for names + published status
       let allTrips: TripInfo[] = [];
       try {
-        const allRes = await fetch('/api/trips?all=1');
-        allTrips = (await allRes.json()) as TripInfo[];
+        allTrips = await apiFetch<TripInfo[]>('/trips?all=1');
       } catch {
         // ignore — fallback to tripId as name
       }
@@ -462,8 +452,8 @@ export default function ManagePage() {
                     <div id="submitStatus">
                       {submitStatus && (
                         <div className={`manage-status ${submitStatus.type}`}>
-                          {submitStatus.type === 'success' && <IconSpan name="check-circle" />}
-                          {submitStatus.type === 'error' && <IconSpan name="x-circle" />}
+                          {submitStatus.type === 'success' && <Icon name="check-circle" />}
+                          {submitStatus.type === 'error' && <Icon name="x-circle" />}
                           {submitStatus.type === 'error' ? ' ' : ''}
                           {submitStatus.message}
                         </div>
