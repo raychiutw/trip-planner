@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Icon from '../components/shared/Icon';
 import { apiFetch } from '../hooks/useApi';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet } from '../lib/localStorage';
 
@@ -93,6 +94,8 @@ type PageState =
   | { kind: 'ready' };
 
 export default function ManagePage() {
+  useDarkMode();
+
   /* ----- State ----- */
   const [pageState, setPageState] = useState<PageState>({ kind: 'loading' });
   const [filteredTrips, setFilteredTrips] = useState<{ tripId: string; name: string }[]>([]);

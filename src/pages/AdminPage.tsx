@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { TripListItem } from '../types/trip';
 import type { Permission } from '../types/api';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { lsGet, lsSet } from '../lib/localStorage';
 
 /* ===== Raw fetch helper (need status-code inspection) ===== */
@@ -21,6 +22,8 @@ interface StatusMsg {
 }
 
 export default function AdminPage() {
+  useDarkMode();
+
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [tripsError, setTripsError] = useState('');
   const [currentTripId, setCurrentTripId] = useState('');
