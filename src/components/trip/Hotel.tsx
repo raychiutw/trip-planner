@@ -32,7 +32,7 @@ export default function Hotel({ hotel }: HotelProps) {
 
   return (
     <>
-      <div className="col-row" onClick={toggle} style={{ cursor: 'pointer' }}>
+      <div className="col-row" onClick={toggle} style={{ cursor: 'pointer' }} aria-expanded={open}>
         <Icon name="hotel" /> {hotel.name}{' '}
         <span className="arrow">{open ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>

@@ -84,7 +84,7 @@ body:not(.dark) .day-header {
 @media (min-width: 768px) {
     .dh-nav-arrow { display: flex; align-items: center; }
     .dh-nav { justify-content: center; }
-    .dn { font-size: var(--fs-title2); }
+    .dn { font-size: var(--fs-title3); }
 }
 
 /* ===== Day Content ===== */

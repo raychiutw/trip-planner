@@ -1,12 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { apiFetch } from '../hooks/useApi';
 import { lsGet, lsSet, lsRemove } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
+import Footer from '../components/trip/Footer';
+import SpeedDial from '../components/trip/SpeedDial';
+import InfoSheet from '../components/trip/InfoSheet';
+import InfoPanel from '../components/trip/InfoPanel';
+import Flights from '../components/trip/Flights';
+import Checklist from '../components/trip/Checklist';
+import Backup from '../components/trip/Backup';
+import Emergency from '../components/trip/Emergency';
+import Suggestions from '../components/trip/Suggestions';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
-import type { TripListItem } from '../types/trip';
+import { calcTripDrivingStats } from '../lib/drivingStats';
+import type { TripListItem, Day } from '../types/trip';
 
 import '../../css/shared.css';
 import '../../css/style.css';
@@ -24,6 +34,17 @@ function setUrlTrip(tripId: string): void {
   history.replaceState(null, '', url.toString());
 }
 
+/* ===== Sheet content config ===== */
+
+const SHEET_TITLES: Record<string, string> = {
+  flights: '航班資訊',
+  checklist: '出發前確認',
+  backup: '備案',
+  emergency: '緊急聯絡',
+  suggestions: 'AI 行程建議',
+  driving: '交通統計',
+};
+
 /* ===== Resolve state machine ===== */
 
 type ResolveState =
@@ -36,6 +57,8 @@ type ResolveState =
 
 export default function TripPage() {
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
+  const [printMode, setPrintMode] = useState(false);
+  const [activeSheet, setActiveSheet] = useState<string | null>(null);
 
   /* --- Resolve trip ID from URL / localStorage --- */
   useEffect(() => {
@@ -78,7 +101,7 @@ export default function TripPage() {
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
 
-  const { trip, days, currentDay, currentDayNum, switchDay, allDays, loading, error } =
+  const { trip, days, currentDay, currentDayNum, switchDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
 
   /* --- Update document title when trip meta loads --- */
@@ -105,6 +128,86 @@ export default function TripPage() {
     () => days.map((d) => d.day_num ?? d.id).sort((a, b) => a - b),
     [days],
   );
+
+  /* --- Print mode toggle --- */
+  const togglePrint = useCallback(() => {
+    setPrintMode((prev) => {
+      const next = !prev;
+      document.body.classList.toggle('print-mode', next);
+      return next;
+    });
+  }, []);
+
+  /* --- Speed Dial → InfoSheet --- */
+  const handleSpeedDialItem = useCallback((key: string) => {
+    setActiveSheet(key);
+  }, []);
+
+  const handleSheetClose = useCallback(() => {
+    setActiveSheet(null);
+  }, []);
+
+  /* --- Derive docs for InfoPanel / InfoSheet --- */
+  const flightsData = docs.flights as Record<string, unknown> | undefined;
+  const checklistData = docs.checklist as Record<string, unknown> | undefined;
+  const backupData = docs.backup as Record<string, unknown> | undefined;
+  const emergencyData = docs.emergency as Record<string, unknown> | undefined;
+  const suggestionsData = docs.suggestions as Record<string, unknown> | undefined;
+
+  /* --- All loaded days as Day[] for InfoPanel --- */
+  const loadedDays = useMemo(
+    () => Object.values(allDays) as unknown as Day[],
+    [allDays],
+  );
+
+  /* --- Auto-scroll dates for Countdown --- */
+  const autoScrollDates = useMemo(
+    () =>
+      days
+        .map((d) => d.date)
+        .filter((d): d is string => !!d)
+        .sort(),
+    [days],
+  );
+
+  /* --- Trip driving stats --- */
+  const tripDrivingStats = useMemo(() => {
+    if (loadedDays.length === 0) return null;
+    try {
+      return calcTripDrivingStats(loadedDays);
+    } catch {
+      return null;
+    }
+  }, [loadedDays]);
+
+  /* --- Footer data from trip.footer --- */
+  const footerData = useMemo(() => {
+    if (!trip) return null;
+    const raw = trip.footer;
+    if (!raw || typeof raw !== 'object') return null;
+    return raw as { title?: string; dates?: string; budget?: string; exchangeNote?: string; tagline?: string };
+  }, [trip]);
+
+  /* --- Sheet content renderer --- */
+  const sheetContent = useMemo(() => {
+    if (!activeSheet) return null;
+    switch (activeSheet) {
+      case 'flights':
+        return flightsData ? <Flights data={flightsData as never} /> : <p>無航班資料</p>;
+      case 'checklist':
+        return checklistData ? <Checklist data={checklistData as never} /> : <p>無確認清單</p>;
+      case 'backup':
+        return backupData ? <Backup data={backupData as never} /> : <p>無備案資料</p>;
+      case 'emergency':
+        return emergencyData ? <Emergency data={emergencyData as never} /> : <p>無緊急聯絡資料</p>;
+      case 'suggestions':
+        return suggestionsData ? <Suggestions data={suggestionsData as never} /> : <p>無行程建議</p>;
+      case 'driving':
+        return <p>交通統計（桌面版側邊欄可見）</p>;
+      default:
+        return null;
+    }
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData]);
 
   /* --- No trip selected --- */
   if (resolveState.status === 'no-trip') {
@@ -182,11 +285,11 @@ export default function TripPage() {
         <span className="nav-brand">Trip Planner</span>
         <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={switchDay} />
         <div className="nav-actions">
-          {/* Placeholder: print toggle button */}
           <button
             className="nav-action-btn"
             data-action="toggle-print"
             aria-label="列印模式"
+            onClick={togglePrint}
           >
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
               <path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z" />
@@ -249,22 +352,57 @@ export default function TripPage() {
                 );
               })}
 
-            {/* Footer slot */}
-            {!loading && trip && (
-              <div id="footer-slot">
-                {/* Placeholder: Footer component will render here */}
-              </div>
+            {/* Footer */}
+            {!loading && trip && footerData && (
+              <Footer footer={footerData} />
             )}
           </div>
         </div>
 
         {/* Desktop info panel (sidebar) */}
-        <aside className="info-panel" id="infoPanel">
-          {/* Placeholder: InfoPanel component will render countdown + stats */}
-        </aside>
+        {!loading && trip && (
+          <InfoPanel
+            autoScrollDates={autoScrollDates}
+            days={loadedDays}
+            flights={flightsData as never}
+            checklist={checklistData as never}
+            backup={backupData as never}
+            emergency={emergencyData as never}
+            suggestions={suggestionsData as never}
+            tripDrivingStats={tripDrivingStats}
+          />
+        )}
       </div>
 
-      {/* Placeholder: SpeedDial, EditFab, InfoBottomSheet, PrintExitBtn — to be added by other agents */}
+      {/* SpeedDial */}
+      {!loading && trip && (
+        <SpeedDial onItemClick={handleSpeedDialItem} />
+      )}
+
+      {/* Edit FAB */}
+      {!loading && trip && (
+        <a className="edit-fab" id="editFab" href="manage/" aria-label="AI 修改行程">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+          </svg>
+        </a>
+      )}
+
+      {/* InfoSheet (mobile bottom sheet) */}
+      <InfoSheet
+        open={!!activeSheet}
+        title={activeSheet ? (SHEET_TITLES[activeSheet] || '') : ''}
+        onClose={handleSheetClose}
+      >
+        {sheetContent}
+      </InfoSheet>
+
+      {/* Print exit button */}
+      {printMode && (
+        <button className="print-exit-btn" id="printExitBtn" onClick={togglePrint}>
+          退出列印模式
+        </button>
+      )}
     </>
   );
 }
