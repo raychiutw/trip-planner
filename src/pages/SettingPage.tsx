@@ -169,10 +169,10 @@ export default function SettingPage() {
               </div>
             )}
 
-            {/* Color Mode Section */}
+            {/* Appearance + Color Theme Section (merged) */}
             {(!section || section === 'appearance') && (
               <div className="setting-section">
-                <div className="setting-section-title">外觀</div>
+                <div className="setting-section-title">外觀與主題</div>
                 <div className="color-mode-grid" id="colorModeGrid">
                   {COLOR_MODES.map((m) => (
                     <button
@@ -193,18 +193,31 @@ export default function SettingPage() {
                     </button>
                   ))}
                 </div>
+                <div className="setting-subsection-title">色彩主題</div>
+                <div className="color-theme-grid" id="colorThemeGrid">
+                  {COLOR_THEMES.map((t) => (
+                    <button
+                      key={t.key}
+                      className={`color-theme-card${t.key === colorTheme ? ' active' : ''}`}
+                      data-theme={t.key}
+                      onClick={() => handleThemeClick(t.key)}
+                    >
+                      <div
+                        className="color-theme-swatch"
+                        style={{ background: isDark ? t.swatchDark : t.swatch }}
+                      />
+                      <div className="color-theme-label">{t.label}</div>
+                      <div className="color-theme-desc">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Color Theme Section */}
-            {(!section || section === 'appearance' || section === 'theme') && (
+            {/* Color Theme Section (standalone — only when section === 'theme') */}
+            {section === 'theme' && (
               <div className="setting-section">
-                {section !== 'appearance' && (
-                  <div className="setting-section-title">色彩主題</div>
-                )}
-                {section === 'appearance' && (
-                  <div className="setting-subsection-title">色彩主題</div>
-                )}
+                <div className="setting-section-title">色彩主題</div>
                 <div className="color-theme-grid" id="colorThemeGrid">
                   {COLOR_THEMES.map((t) => (
                     <button

@@ -48,7 +48,10 @@ function RequestItem({ req }: { req: RawRequest }) {
   const modeBadgeText = mode === 'plan' ? '問建議' : '改行程';
 
   const replyHtml = req.reply
-    ? sanitizeHtml(marked.parse(req.reply) as string)
+    ? sanitizeHtml(marked.parse(req.reply) as string).replace(
+        /<table([^>]*)>/g,
+        '<div class="table-wrap"><table$1>',
+      ).replace(/<\/table>/g, '</table></div>')
     : '';
 
   return (

@@ -113,6 +113,9 @@ export default function HourlyWeather({
   /* --- No data --- */
   const data = mg || makeDefaultMg();
 
+  /* --- Detect whether data is meaningful (not all-zero placeholder) --- */
+  const hasData = data.temps.some((t) => t !== 0);
+
   /* --- Compute summary values --- */
   const now = new Date();
   const currentHour = now.getHours();
@@ -156,9 +159,12 @@ export default function HourlyWeather({
     >
       {/* Summary row (clickable) */}
       <div className="hw-summary" data-action="toggle-hw" onClick={handleToggle}>
-        <Icon name={bestIcon} /> {minT}~{maxT}&deg;C &nbsp;&middot;&nbsp;{' '}
+        <Icon name={bestIcon} />{' '}
+        {hasData ? <>{minT}~{maxT}&deg;C</> : '--'}{' '}
+        &nbsp;&middot;&nbsp;{' '}
         <Icon name="raindrop" />
-        {minR}~{maxR}% &nbsp;&middot;&nbsp; {locs}
+        {hasData ? <>{minR}~{maxR}%</> : '--'}{' '}
+        &nbsp;&middot;&nbsp; {locs}
         <span className="hw-summary-arrow">
           {isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}
         </span>

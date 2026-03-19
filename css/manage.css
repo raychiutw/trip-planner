@@ -41,6 +41,8 @@
     background: var(--bg-secondary);
     border-radius: var(--radius-md);
     transition: background var(--duration-fast);
+    overflow: hidden;
+    max-width: 100%;
 }
 .request-item:hover {
     background: var(--hover-bg);
@@ -90,6 +92,8 @@
     padding-top: 12px;
     border-top: 1px solid var(--border);
     line-height: var(--lh-normal);
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 .request-reply a { color: var(--accent); text-decoration: none; }
 .request-reply a:hover { text-decoration: underline; }
