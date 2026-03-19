@@ -132,6 +132,53 @@ html.page-setting {
     color: var(--text-muted);
 }
 
+/* ===== Color Theme Grid ===== */
+.color-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.color-theme-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    font-family: inherit;
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.color-theme-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.color-theme-card.active { border-color: var(--accent); box-shadow: var(--shadow-ring); }
+.color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.color-theme-swatch {
+    width: 80px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+}
+.color-theme-label {
+    font-size: var(--fs-body);
+    font-weight: 600;
+    color: var(--text);
+}
+.color-theme-desc {
+    font-size: var(--fs-footnote);
+    color: var(--text-muted);
+}
+
+/* ===== Setting Sub-Section Title ===== */
+.setting-subsection-title {
+    font-size: var(--fs-footnote);
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    margin-top: 16px;
+    padding: 0 4px;
+}
+
 /* ===== Sticky-nav: title bar ===== */
 .page-setting .sticky-nav { border-bottom: 1px solid var(--border); }
 .page-setting .sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }

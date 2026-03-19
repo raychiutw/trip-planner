@@ -2,6 +2,16 @@ import { useState, useCallback, useEffect } from 'react';
 import { lsSet, lsGet } from '../lib/localStorage';
 
 export type ColorMode = 'light' | 'auto' | 'dark';
+export type ColorTheme = 'sun' | 'sky' | 'zen';
+
+const THEME_CLASSES = ['theme-sun', 'theme-sky', 'theme-zen'] as const;
+
+/** Theme-color values per theme × mode (light / dark). */
+const THEME_COLORS: Record<ColorTheme, { light: string; dark: string }> = {
+  sun: { light: '#F47B5E', dark: '#3D2A20' },
+  sky: { light: '#5BA4CF', dark: '#1E3040' },
+  zen: { light: '#B8856C', dark: '#342820' },
+};
 
 /** Resolve whether dark class should be applied for a given color mode. */
 function resolveDark(mode: ColorMode): boolean {
@@ -26,15 +36,44 @@ function readColorMode(): ColorMode {
   return 'auto';
 }
 
+/** Read saved color theme from localStorage. */
+function readColorTheme(): ColorTheme {
+  const saved = lsGet<string>('colorTheme');
+  if (saved === 'sun' || saved === 'sky' || saved === 'zen') return saved;
+  return 'sun';
+}
+
+/** Apply theme class to body (removes other theme classes first). */
+function applyThemeClass(theme: ColorTheme) {
+  THEME_CLASSES.forEach((cls) => document.body.classList.remove(cls));
+  document.body.classList.add(`theme-${theme}`);
+}
+
+/** Update <meta name="theme-color"> content. */
+function updateMetaThemeColor(theme: ColorTheme, dark: boolean) {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute('content', THEME_COLORS[theme][dark ? 'dark' : 'light']);
+  }
+}
+
 /**
- * Hook to manage dark mode state.
+ * Hook to manage dark mode and color theme state.
  *
- * Supports three-way color mode (light / auto / dark).
- * Applies `body.dark` class and updates `<meta name="theme-color">`.
+ * Supports three-way color mode (light / auto / dark)
+ * and three color themes (sun / sky / zen).
+ * Applies `body.theme-*` and `body.dark` classes and updates `<meta name="theme-color">`.
  */
 export function useDarkMode() {
   const [colorMode, setColorModeState] = useState<ColorMode>(readColorMode);
   const [isDark, setIsDark] = useState(() => resolveDark(readColorMode()));
+  const [colorTheme, setColorThemeState] = useState<ColorTheme>(readColorTheme);
+
+  /* --- Apply theme class whenever colorTheme changes --- */
+  useEffect(() => {
+    applyThemeClass(colorTheme);
+    updateMetaThemeColor(colorTheme, isDark);
+  }, [colorTheme, isDark]);
 
   /* --- Apply dark class whenever isDark changes --- */
   useEffect(() => {
@@ -43,10 +82,6 @@ export function useDarkMode() {
     } else {
       document.body.classList.remove('dark');
     }
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) {
-      meta.setAttribute('content', isDark ? '#243328' : '#4A7C59');
-    }
   }, [isDark]);
 
   /** Set color mode (persists to localStorage). */
@@ -54,6 +89,12 @@ export function useDarkMode() {
     lsSet('color-mode', mode);
     setColorModeState(mode);
     setIsDark(resolveDark(mode));
+  }, []);
+
+  /** Set color theme (persists to localStorage). */
+  const setTheme = useCallback((theme: ColorTheme) => {
+    lsSet('colorTheme', theme);
+    setColorThemeState(theme);
   }, []);
 
   /** Toggle dark on/off (legacy — sets color-mode to dark/light). */
@@ -67,5 +108,5 @@ export function useDarkMode() {
     });
   }, []);
 
-  return { isDark, setIsDark, colorMode, setColorMode, toggleDark };
+  return { isDark, setIsDark, colorMode, setColorMode, toggleDark, colorTheme, setTheme };
 }
