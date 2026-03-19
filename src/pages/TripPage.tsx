@@ -19,6 +19,7 @@ import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
+import { DayHeaderArt, DividerArt, FooterArt } from '../components/trip/ThemeArt';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
@@ -80,6 +81,7 @@ interface DaySectionProps {
   day: Day | undefined;
   daySummary: DaySummary | undefined;
   autoScrollDates: string[];
+  themeArt?: { theme: 'sun' | 'sky' | 'zen'; dark: boolean };
 }
 
 const DaySection = React.memo(function DaySection({
@@ -87,6 +89,7 @@ const DaySection = React.memo(function DaySection({
   day,
   daySummary,
   autoScrollDates,
+  themeArt,
 }: DaySectionProps) {
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
@@ -106,7 +109,7 @@ const DaySection = React.memo(function DaySection({
 
   return (
     <section className="day-section" data-day={dayNum}>
-      <div className="day-header info-header" id={`day${dayNum}`}>
+      <div className="day-header info-header" id={`day${dayNum}`} style={{ position: 'relative', overflow: 'hidden' }}>
         <h2>Day {dayNum}</h2>
         {daySummary?.label && (
           <span className="day-label">{daySummary.label}</span>
@@ -117,6 +120,7 @@ const DaySection = React.memo(function DaySection({
             {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
           </span>
         )}
+        {themeArt && <DayHeaderArt theme={themeArt.theme} dark={themeArt.dark} />}
       </div>
       <div className="day-content" id={`day-slot-${dayNum}`}>
         {!day ? (
@@ -213,7 +217,7 @@ export default function TripPage() {
   const scrollDayRef = useRef(0);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
-  const { isDark, setIsDark } = useDarkMode();
+  const { isDark, setIsDark, colorTheme } = useDarkMode();
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /* --- lsRenewAll once per session (#9) --- */
@@ -496,8 +500,12 @@ export default function TripPage() {
                   day={allDays[dayNum]}
                   daySummary={daySummaryMap.get(dayNum)}
                   autoScrollDates={autoScrollDates}
+                  themeArt={{ theme: colorTheme, dark: isDark }}
                 />
               ))}
+
+            {/* Footer Art */}
+            {!loading && <FooterArt theme={colorTheme} dark={isDark} />}
 
             {/* Footer */}
             {!loading && trip && footerData && (

@@ -99,9 +99,9 @@ body.theme-sun.dark {
 
 /* ===== Theme: 晴空 (Sky) — Light ===== */
 body.theme-sky {
-    --accent: #5BA4CF;
-    --accent-subtle: #EBF4FA;
-    --accent-bg: #DFF0FA;
+    --accent: #3B88B8;
+    --accent-subtle: #E5F0F8;
+    --accent-bg: #D5E8F5;
     --bg: #FFF9F0;
     --bg-secondary: #F0F7FA;
     --bg-tertiary: #E0EEF4;
@@ -164,9 +164,9 @@ body.theme-sky.dark {
 
 /* ===== Theme: 和風 (Zen) — Light ===== */
 body.theme-zen {
-    --accent: #B8856C;
-    --accent-subtle: #F5EDE8;
-    --accent-bg: #EDE2DA;
+    --accent: #9A6B50;
+    --accent-subtle: #F0E5DD;
+    --accent-bg: #E5D8CC;
     --bg: #F5F0E8;
     --bg-secondary: #ECE5DA;
     --bg-tertiary: #E0D8CC;
@@ -177,7 +177,7 @@ body.theme-zen {
     --border: #DDD5C8;
     --error: #C44040;
     --error-bg: #FDECEC;
-    --success: #9EB8A8;
+    --success: #7A9A88;
     --shadow-md: 0 4px 16px rgba(58,48,40,0.10);
     --shadow-lg: 0 6px 20px rgba(58,48,40,0.16);
     --priority-high-bg: rgba(239, 68, 68, 0.15);

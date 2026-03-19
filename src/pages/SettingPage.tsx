@@ -24,8 +24,8 @@ const COLOR_MODES: { key: ColorMode; label: string; desc: string }[] = [
 
 const COLOR_THEMES: { key: ColorTheme; label: string; desc: string; swatch: string; swatchDark: string }[] = [
   { key: 'sun', label: '陽光', desc: 'Sunshine', swatch: '#F47B5E', swatchDark: '#F4A08A' },
-  { key: 'sky', label: '晴空', desc: 'Clear Sky', swatch: '#5BA4CF', swatchDark: '#7EC0E8' },
-  { key: 'zen', label: '和風', desc: 'Japanese Zen', swatch: '#B8856C', swatchDark: '#D4A88E' },
+  { key: 'sky', label: '晴空', desc: 'Clear Sky', swatch: '#3B88B8', swatchDark: '#7EC0E8' },
+  { key: 'zen', label: '和風', desc: 'Japanese Zen', swatch: '#9A6B50', swatchDark: '#D4A88E' },
 ];
 
 /* ===== Component ===== */
