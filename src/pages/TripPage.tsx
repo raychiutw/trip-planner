@@ -280,12 +280,13 @@ export default function TripPage() {
   const { trip, days, currentDay, currentDayNum, switchDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
 
-  /** Direct download by format (no separate sheet) */
+  /** Direct download by format — complete data export */
   const handleDownloadFormat = useCallback(async (format: string) => {
     if (!activeTripId) return;
     const tripName = trip?.name || 'trip';
     const today = new Date().toISOString().slice(0, 10);
     const fileBase = `${tripName}-${today}`;
+
     const downloadBlob = (content: string, filename: string, type: string) => {
       const blob = new Blob([content], { type });
       const url = URL.createObjectURL(blob);
@@ -293,36 +294,253 @@ export default function TripPage() {
       a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
     };
+
+    // Helper: fetch all data (meta + full days + all docs)
+    const DOC_TYPES = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
+
+    type RawDay = Record<string, unknown> & {
+      day_num?: number; date?: string; day_of_week?: string; label?: string;
+      hotel?: Record<string, unknown> & { shopping?: Record<string, unknown>[] } | null;
+      timeline?: Array<Record<string, unknown> & {
+        restaurants?: Record<string, unknown>[]; shopping?: Record<string, unknown>[];
+      }>;
+    };
+
+    const fetchAllData = async () => {
+      // 1. meta + day summaries
+      const [meta, daySummaries] = await Promise.all([
+        apiFetch<Record<string, unknown>>(`/trips/${activeTripId}`),
+        apiFetch<Array<{ day_num: number; date?: string; day_of_week?: string; label?: string }>>(`/trips/${activeTripId}/days`),
+      ]);
+
+      // 2. all full days + all docs in parallel
+      const [fullDays, docResults] = await Promise.all([
+        Promise.all(
+          daySummaries.map(ds =>
+            apiFetch<RawDay>(`/trips/${activeTripId}/days/${ds.day_num}`)
+              .catch(() => null),
+          ),
+        ),
+        Promise.all(
+          DOC_TYPES.map(dtype =>
+            apiFetch<{ doc_type: string; content: string; updated_at: string }>(`/trips/${activeTripId}/docs/${dtype}`)
+              .then(d => {
+                let parsed: unknown = d.content;
+                if (typeof parsed === 'string') {
+                  try { parsed = JSON.parse(parsed); } catch { /* keep as string */ }
+                }
+                return { type: dtype, data: parsed };
+              })
+              .catch(() => ({ type: dtype, data: null })),
+          ),
+        ),
+      ]);
+
+      const daysData = fullDays.filter((d): d is RawDay => d !== null);
+      const docsMap: Record<string, unknown> = {};
+      for (const doc of docResults) {
+        if (doc.data !== null) docsMap[doc.type] = doc.data;
+      }
+
+      return { meta, daySummaries, daysData, docsMap };
+    };
+
     try {
       if (format === 'json') {
-        const [meta, fetchedDays] = await Promise.all([
-          apiFetch(`/trips/${activeTripId}`),
-          apiFetch(`/trips/${activeTripId}/days`),
-        ]);
-        downloadBlob(JSON.stringify({ meta, days: fetchedDays }, null, 2), `${fileBase}.json`, 'application/json');
+        /* ── JSON: complete dump ── */
+        const { meta, daysData, docsMap } = await fetchAllData();
+        const output = { meta, days: daysData, docs: docsMap };
+        downloadBlob(JSON.stringify(output, null, 2), `${fileBase}.json`, 'application/json');
+
       } else if (format === 'md') {
-        const [meta, daySummaries] = await Promise.all([
-          apiFetch<Record<string, unknown>>(`/trips/${activeTripId}`),
-          apiFetch<Array<Record<string, unknown>>>(`/trips/${activeTripId}/days`),
-        ]);
-        let md = `# ${(meta as Record<string, unknown>).name || tripName}\n\n`;
-        for (const ds of daySummaries) {
-          const dayData = await apiFetch<Record<string, unknown>>(`/trips/${activeTripId}/days/${ds.day_num}`);
-          md += `## Day ${ds.day_num}${ds.label ? ' ' + ds.label : ''}${ds.date ? ' — ' + ds.date : ''}\n\n`;
-          const entries = (dayData.entries || []) as Array<Record<string, unknown>>;
-          for (const e of entries) { md += `### ${e.time || ''} ${e.title || ''}\n\n`; }
+        /* ── Markdown: human-readable complete ── */
+        const { meta, daysData, docsMap } = await fetchAllData();
+        const s = (v: unknown) => (v != null && v !== '') ? String(v) : '';
+
+        let md = `# ${s(meta.name) || tripName}\n`;
+        if (meta.title) md += `${s(meta.title)}\n`;
+        md += '\n';
+
+        for (const day of daysData) {
+          // Day header
+          md += `## Day ${day.day_num}`;
+          if (day.label) md += ` ${day.label}`;
+          if (day.date) {
+            md += ` — ${day.date}`;
+            if (day.day_of_week) md += `（${day.day_of_week}）`;
+          }
+          md += '\n\n';
+
+          // Hotel
+          const hotel = day.hotel;
+          if (hotel?.name) {
+            md += `### 🏨 住宿：${s(hotel.name)}\n`;
+            if (hotel.checkout) md += `- 退房：${s(hotel.checkout)}\n`;
+            if (hotel.breakfast) md += `- 早餐：${typeof hotel.breakfast === 'object' ? JSON.stringify(hotel.breakfast) : s(hotel.breakfast)}\n`;
+            const parking = hotel.parking_json ?? hotel.parking;
+            if (parking) {
+              const pInfo = typeof parking === 'object' ? (parking as Record<string, unknown>).info ?? JSON.stringify(parking) : s(parking);
+              md += `- 停車場：${pInfo}\n`;
+            }
+            if (hotel.note) md += `- 備註：${s(hotel.note)}\n`;
+
+            // Hotel shopping
+            const hotelShopping = hotel.shopping;
+            if (Array.isArray(hotelShopping) && hotelShopping.length > 0) {
+              md += '\n#### 🛍 住宿附近購物\n';
+              md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
+              md += '|------|------|------|---------|------|\n';
+              for (const sh of hotelShopping) {
+                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+              }
+            }
+            md += '\n';
+          }
+
+          // Timeline entries
+          const timeline = day.timeline ?? [];
+          for (let i = 0; i < timeline.length; i++) {
+            const e = timeline[i];
+            md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
+            if (e.rating) md += ` ★ ${e.rating}`;
+            md += '\n';
+
+            if (e.body) md += `${s(e.body)}\n`;
+            if (e.note) md += `\n${s(e.note)}\n`;
+            if (e.maps) md += `\n📍 Map: ${s(e.maps)}\n`;
+
+            // Travel
+            const travel = e.travel as Record<string, unknown> | null | undefined;
+            if (travel?.type || e.travel_type) {
+              const tType = s(travel?.type ?? e.travel_type);
+              const tDesc = s(travel?.desc ?? e.travel_desc);
+              const tMin = travel?.min ?? e.travel_min;
+              md += `🚗 → ${tType}`;
+              if (tDesc) md += ` ${tDesc}`;
+              if (tMin) md += `（${tMin} 分）`;
+              md += '\n';
+            }
+
+            // Restaurants
+            const restaurants = e.restaurants ?? [];
+            if (restaurants.length > 0) {
+              md += '\n#### 🍽 餐廳推薦\n';
+              md += '| 餐廳 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
+              md += '|------|------|------|------|---------|------|\n';
+              for (const r of restaurants) {
+                md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.rating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
+              }
+            }
+
+            // Shopping
+            const shopping = e.shopping ?? [];
+            if (shopping.length > 0) {
+              md += '\n#### 🛍 購物推薦\n';
+              md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
+              md += '|------|------|------|---------|------|\n';
+              for (const sh of shopping) {
+                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+              }
+            }
+
+            md += '\n';
+          }
+          md += '---\n\n';
         }
+
+        // Docs
+        const docLabels: Record<string, string> = {
+          flights: '✈️ 航班資訊', checklist: '✅ 出發前確認清單',
+          backup: '🔄 備案', emergency: '🚨 緊急聯絡', suggestions: '💡 AI 行程建議',
+        };
+        for (const dtype of DOC_TYPES) {
+          const docData = docsMap[dtype];
+          if (!docData) continue;
+          md += `## ${docLabels[dtype]}\n\n`;
+          md += typeof docData === 'string' ? docData : JSON.stringify(docData, null, 2);
+          md += '\n\n';
+        }
+
         downloadBlob(md, `${fileBase}.md`, 'text/markdown');
+
       } else if (format === 'csv') {
-        const daySummaries = await apiFetch<Array<Record<string, unknown>>>(`/trips/${activeTripId}/days`);
-        const rows: string[][] = [['Day', '日期', '時間', '地點', '評分']];
-        for (const ds of daySummaries) {
-          const dayData = await apiFetch<Record<string, unknown>>(`/trips/${activeTripId}/days/${ds.day_num}`);
-          const entries = (dayData.entries || []) as Array<Record<string, unknown>>;
-          for (const e of entries) {
-            rows.push([String(ds.day_num), String(ds.date || ''), String(e.time || ''), String(e.title || ''), String(e.rating || '')]);
+        /* ── CSV: spreadsheet-friendly with expanded rows ── */
+        const { daysData, docsMap } = await fetchAllData();
+        const s = (v: unknown) => (v != null && v !== '') ? String(v).replace(/\n/g, ' ') : '';
+
+        const headers = [
+          'Day', '日期', '星期', '時間', '地點', '評分', '說明', '備註',
+          '交通方式', '交通時間(分)', '餐廳名', '餐廳類別', '餐廳評分', '餐廳價格',
+          '購物店名', '購物類別', '購物必買', '住宿名', '退房時間',
+        ];
+        const rows: string[][] = [headers];
+
+        const csvCell = (v: unknown) => s(v);
+
+        for (const day of daysData) {
+          const dayNum = s(day.day_num);
+          const dayDate = s(day.date);
+          const dayWeek = s(day.day_of_week);
+
+          // Hotel row
+          const hotel = day.hotel;
+          if (hotel?.name) {
+            rows.push([
+              dayNum, dayDate, dayWeek, '住宿', csvCell(hotel.name), '', '', csvCell(hotel.note),
+              '', '', '', '', '', '',
+              '', '', '', csvCell(hotel.name), csvCell(hotel.checkout),
+            ]);
+          }
+
+          // Timeline entries
+          const timeline = day.timeline ?? [];
+          for (const e of timeline) {
+            const travel = e.travel as Record<string, unknown> | null | undefined;
+            const travelType = csvCell(travel?.type ?? e.travel_type);
+            const travelMin = csvCell(travel?.min ?? e.travel_min);
+
+            const baseRow = [
+              dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title),
+              csvCell(e.rating), csvCell(e.body), csvCell(e.note),
+              travelType, travelMin,
+            ];
+
+            const restaurants = e.restaurants ?? [];
+            const shopping = e.shopping ?? [];
+            const maxNested = Math.max(restaurants.length, shopping.length, 1);
+
+            for (let n = 0; n < maxNested; n++) {
+              const r = restaurants[n];
+              const sh = shopping[n];
+              // For subsequent rows, repeat entry base columns
+              const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
+              // Restaurant columns
+              row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.rating) : '', r ? csvCell(r.price) : '');
+              // Shopping columns
+              row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.must_buy) : '');
+              // Hotel columns (empty for timeline entries)
+              row.push('', '');
+              rows.push(row);
+            }
           }
         }
+
+        // Append docs as separate rows
+        const DOC_LABELS: Record<string, string> = {
+          flights: '航班資訊', checklist: '出發前確認清單',
+          backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 行程建議',
+        };
+        for (const dtype of DOC_TYPES) {
+          const docData = docsMap[dtype];
+          if (!docData) continue;
+          const docStr = typeof docData === 'string' ? docData : JSON.stringify(docData);
+          const row = new Array(headers.length).fill('');
+          row[0] = '附錄';
+          row[3] = DOC_LABELS[dtype] || dtype;
+          row[6] = s(docStr);
+          rows.push(row);
+        }
+
         const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
         downloadBlob('\uFEFF' + csv, `${fileBase}.csv`, 'text/csv;charset=utf-8');
       }
