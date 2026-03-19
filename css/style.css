@@ -442,7 +442,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .speed-dial.open .speed-dial-items { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
 .speed-dial-item {
-    width: 52px; height: 52px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 50%;
     background: var(--bg); color: var(--accent); border: none;
     display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow-md);
@@ -459,7 +459,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .speed-dial.open .speed-dial-item:nth-child(7) { transition-delay: 180ms; }
 .speed-dial.open .speed-dial-item:nth-child(8) { transition-delay: 210ms; }
 .speed-dial-item:hover { transform: scale(1.15); }
-.speed-dial-item svg { width: 28px; height: 28px; }
+.speed-dial-item svg { width: 24px; height: 24px; }
 body.dark .speed-dial-item { background: var(--bg-secondary); }
 
 .print-mode .speed-dial { display: none !important; }
