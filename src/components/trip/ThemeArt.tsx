@@ -73,12 +73,12 @@ function SkyLightHeader() {
   return (
     <>
       {/* Hot air balloon */}
-      <g transform="translate(140,8)" opacity="0.60">
-        <ellipse cx="0" cy="0" rx="22" ry="28" fill="#2E7BAF" />
-        <ellipse cx="0" cy="0" rx="22" ry="28" fill="#4EA890" clipPath="inset(0 50% 0 0)" />
-        <rect x="-8" y="28" width="16" height="9" rx="3" fill="#C08030" />
-        <line x1="-9" y1="28" x2="-8" y2="37" stroke="#A06820" strokeWidth="1.5" />
-        <line x1="9" y1="28" x2="8" y2="37" stroke="#A06820" strokeWidth="1.5" />
+      <g transform="translate(140,28)" opacity="0.60">
+        <ellipse cx="0" cy="0" rx="20" ry="24" fill="#2E7BAF" />
+        <ellipse cx="0" cy="0" rx="20" ry="24" fill="#4EA890" clipPath="inset(0 50% 0 0)" />
+        <rect x="-7" y="24" width="14" height="8" rx="3" fill="#C08030" />
+        <line x1="-8" y1="24" x2="-7" y2="32" stroke="#A06820" strokeWidth="1.5" />
+        <line x1="8" y1="24" x2="7" y2="32" stroke="#A06820" strokeWidth="1.5" />
       </g>
       {/* Seagulls */}
       <g stroke="#2E7BAF" fill="none" strokeWidth="2.5" strokeLinecap="round" opacity="0.55">
