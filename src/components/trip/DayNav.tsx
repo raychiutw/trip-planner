@@ -114,7 +114,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay }: DayNavProps
       </button>
       <div className="dh-nav" id="navPills" ref={navRef}>
         {days.map((d) => {
-          const dayNum = d.day_num ?? d.id;
+          const dayNum = d.day_num;
           const isActive = dayNum === currentDayNum;
           return (
             <button

@@ -168,7 +168,7 @@ export interface Hotel {
  */
 export interface Day {
   id: number;
-  dayNum?: number;
+  dayNum: number;
   date?: string | null;
   dayOfWeek?: string | null;
   label?: string | null;
