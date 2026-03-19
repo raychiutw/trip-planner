@@ -451,15 +451,11 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 }
 .speed-dial.open .speed-dial-item { opacity: 1; transform: scale(1); }
 .speed-dial.open .speed-dial-item:nth-child(1) { transition-delay: 0ms; }
-.speed-dial.open .speed-dial-item:nth-child(2) { transition-delay: 30ms; }
-.speed-dial.open .speed-dial-item:nth-child(3) { transition-delay: 60ms; }
-.speed-dial.open .speed-dial-item:nth-child(4) { transition-delay: 90ms; }
-.speed-dial.open .speed-dial-item:nth-child(5) { transition-delay: 120ms; }
-.speed-dial.open .speed-dial-item:nth-child(6) { transition-delay: 150ms; }
-.speed-dial.open .speed-dial-item:nth-child(7) { transition-delay: 180ms; }
-.speed-dial.open .speed-dial-item:nth-child(8) { transition-delay: 210ms; }
+.speed-dial.open .speed-dial-item:nth-child(2) { transition-delay: 40ms; }
+.speed-dial.open .speed-dial-item:nth-child(3) { transition-delay: 80ms; }
+.speed-dial.open .speed-dial-item:nth-child(4) { transition-delay: 120ms; }
 .speed-dial-item:hover { transform: scale(1.15); }
-.speed-dial-item svg { width: 32px; height: 32px; }
+.speed-dial-item svg { width: 40px; height: 40px; }
 body.dark .speed-dial-item { background: var(--bg-secondary); }
 
 .print-mode .speed-dial { display: none !important; }

@@ -10,35 +10,59 @@ interface SpeedDialItemConfig {
 }
 
 const DIAL_ITEMS: SpeedDialItemConfig[] = [
-  { key: 'flights', icon: 'plane', label: '航班資訊' },
-  { key: 'checklist', icon: 'check-circle', label: '出發前確認' },
-  { key: 'backup', icon: 'refresh', label: '備案' },
-  { key: 'emergency', icon: 'emergency', label: '緊急聯絡' },
-  { key: 'suggestions', icon: 'lightbulb', label: 'AI 行程建議' },
-  { key: 'driving', icon: 'car', label: '交通統計' },
-  { key: 'download', icon: 'download', label: '下載行程' },
-  { key: 'printer', icon: 'printer', label: '列印模式' },
-  { key: 'settings', icon: 'gear', label: '設定' },
+  { key: 'prep', icon: 'plane', label: '行前準備' },
+  { key: 'emergency-group', icon: 'emergency', label: '緊急應變' },
+  { key: 'ai-group', icon: 'lightbulb', label: 'AI 分析' },
+  { key: 'tools', icon: 'gear', label: '設定' },
 ];
+
+/* ===== Group → content key mapping ===== */
+
+/** Maps speed dial group key to the content keys shown in bottom sheet */
+export const SPEED_DIAL_GROUPS: Record<string, { title: string; items: { key: string; label: string; action?: 'sheet' | 'navigate' | 'print' | 'download' }[] }> = {
+  prep: {
+    title: '行前準備',
+    items: [
+      { key: 'flights', label: '航班資訊', action: 'sheet' },
+      { key: 'checklist', label: '出發前確認', action: 'sheet' },
+    ],
+  },
+  'emergency-group': {
+    title: '緊急應變',
+    items: [
+      { key: 'emergency', label: '緊急聯絡', action: 'sheet' },
+      { key: 'backup', label: '備案', action: 'sheet' },
+    ],
+  },
+  'ai-group': {
+    title: 'AI 分析',
+    items: [
+      { key: 'suggestions', label: 'AI 行程建議', action: 'sheet' },
+      { key: 'driving', label: '交通統計', action: 'sheet' },
+    ],
+  },
+  tools: {
+    title: '設定',
+    items: [
+      { key: 'settings', label: '設定', action: 'navigate' },
+      { key: 'download', label: '下載行程', action: 'download' },
+      { key: 'printer', label: '列印模式', action: 'print' },
+    ],
+  },
+};
 
 /* ===== Props ===== */
 
 interface SpeedDialProps {
-  /** Called when a speed dial item is clicked. Receives the content key. */
   onItemClick: (contentKey: string) => void;
-  /** 可選：觸發列印模式切換 */
+  onGroupClick?: (groupKey: string) => void;
   onPrint?: () => void;
-  /** 可選：觸發下載行程 */
   onDownload?: () => void;
 }
 
 /* ===== Component ===== */
 
-/**
- * Mobile floating action button menu.
- * Renders a trigger button, backdrop, and 6 item buttons.
- */
-export default function SpeedDial({ onItemClick, onPrint, onDownload }: SpeedDialProps) {
+export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownload }: SpeedDialProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleToggle = useCallback(() => {
@@ -50,29 +74,33 @@ export default function SpeedDial({ onItemClick, onPrint, onDownload }: SpeedDia
   }, []);
 
   const handleItemClick = useCallback(
-    (contentKey: string) => {
+    (groupKey: string) => {
       setIsOpen(false);
-      /* 下載行程：呼叫 onDownload */
-      if (contentKey === 'download' && onDownload) {
-        onDownload();
+
+      const group = SPEED_DIAL_GROUPS[groupKey];
+      if (!group) return;
+
+      /* tools group: if only 1 non-sheet action, handle directly */
+      if (groupKey === 'tools') {
+        if (onGroupClick) {
+          onGroupClick(groupKey);
+        }
         return;
       }
-      /* 列印模式：呼叫 onPrint 而非 onItemClick */
-      if (contentKey === 'printer') {
-        onPrint?.();
-        return;
+
+      /* Groups with 2 sheet items: if only 1 item, open directly; otherwise open group sheet */
+      if (group.items.length === 1) {
+        onItemClick(group.items[0].key);
+      } else if (onGroupClick) {
+        onGroupClick(groupKey);
+      } else {
+        /* Fallback: open first item */
+        onItemClick(group.items[0].key);
       }
-      /* 設定頁：直接跳轉 */
-      if (contentKey === 'settings') {
-        window.location.href = 'setting.html';
-        return;
-      }
-      onItemClick(contentKey);
     },
-    [onItemClick, onPrint, onDownload],
+    [onItemClick, onGroupClick],
   );
 
-  /* --- Prevent scroll through on backdrop --- */
   const preventTouchScroll = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
   }, []);
