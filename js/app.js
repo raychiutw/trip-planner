@@ -395,7 +395,7 @@ function calcTripDrivingStats(days) {
         var content = day.content || {};
         var stats = calcDrivingStats(content.timeline);
         if (stats) {
-            dayStats.push({ dayId: day.id, date: formatDayDate(day), label: 'Day ' + day.id, stats: stats });
+            dayStats.push({ dayId: day.dayNum, date: formatDayDate(day), label: 'Day ' + day.dayNum, stats: stats });
             grandTotal += stats.totalMinutes;
             // Aggregate by type
             for (var emoji in stats.byType) {
@@ -1100,9 +1100,9 @@ function loadTrip(tripId) {
             }
 
             var dayIds = daysManifest
-                .map(function(d) { return d.day_num != null ? d.day_num : d.id; })
+                .map(function(d) { return d.day_num; })
                 .sort(function(a, b) { return a - b; });
-            trip.days = dayIds.map(function(id) { return { id: id }; });
+            trip.days = dayIds.map(function(num) { return { id: num, dayNum: num }; });
 
             document.getElementById('tripContent').innerHTML = createSkeleton(dayIds);
             renderNavSlot(meta, dayIds);

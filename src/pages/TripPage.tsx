@@ -563,14 +563,14 @@ export default function TripPage() {
 
   /* --- Sorted day nums --- */
   const dayNums = useMemo(
-    () => days.map((d) => d.day_num ?? d.id).sort((a, b) => a - b),
+    () => days.map((d) => d.day_num).sort((a, b) => a - b),
     [days],
   );
 
   /* --- Day summary map for O(1) lookup (#11) --- */
   const daySummaryMap = useMemo(() => {
     const map = new Map<number, DaySummary>();
-    for (const d of days) map.set(d.day_num ?? d.id, d);
+    for (const d of days) map.set(d.day_num, d);
     return map;
   }, [days]);
 
