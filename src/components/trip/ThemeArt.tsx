@@ -203,8 +203,9 @@ export function DayHeaderArt({ theme, dark }: ThemeArtProps) {
       aria-hidden="true"
     >
       <svg
-        viewBox="0 0 200 80"
+        viewBox="0 -10 200 100"
         xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid meet"
         style={{ width: '100%', height: '100%' }}
       >
         {content[key]}

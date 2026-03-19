@@ -459,7 +459,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .speed-dial.open .speed-dial-item:nth-child(7) { transition-delay: 180ms; }
 .speed-dial.open .speed-dial-item:nth-child(8) { transition-delay: 210ms; }
 .speed-dial-item:hover { transform: scale(1.15); }
-.speed-dial-item svg { width: 24px; height: 24px; }
+.speed-dial-item svg { width: 32px; height: 32px; }
 body.dark .speed-dial-item { background: var(--bg-secondary); }
 
 .print-mode .speed-dial { display: none !important; }

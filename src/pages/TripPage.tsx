@@ -110,7 +110,7 @@ const DaySection = React.memo(function DaySection({
 
   return (
     <section className="day-section" data-day={dayNum}>
-      <div className="day-header info-header" id={`day${dayNum}`} style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="day-header info-header" id={`day${dayNum}`} style={{ position: 'relative' }}>
         <h2>Day {dayNum}</h2>
         {daySummary?.label && (
           <span className="day-label">{daySummary.label}</span>
