@@ -29,6 +29,7 @@ jobs:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SITE_URL: 'https://trip-planner-dby.pages.dev'
+          PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
 
       - name: Send email via Gmail SMTP
         uses: dawidd6/action-send-mail@v3

@@ -22,6 +22,7 @@ var fs = require('fs');
 var path = require('path');
 var REPORT_EMAIL = process.env.REPORT_EMAIL;
 var SITE_URL = process.env.SITE_URL || 'https://trip-planner-dby.pages.dev';
+var PAGESPEED_API_KEY = process.env.PAGESPEED_API_KEY || '';
 
 // ── D1 REST API helper ──────────────────────────────────────────
 
@@ -172,7 +173,8 @@ async function queryWebAnalytics() {
 async function runLighthouse() {
   var apiUrl = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed' +
     '?url=' + encodeURIComponent(SITE_URL) +
-    '&category=performance&category=seo&category=accessibility&category=best-practices';
+    '&category=performance&category=seo&category=accessibility&category=best-practices' +
+    (PAGESPEED_API_KEY ? '&key=' + PAGESPEED_API_KEY : '');
   var res = await fetch(apiUrl);
   if (!res.ok) throw new Error('PageSpeed Insights failed: ' + res.status);
   var data = await res.json();
