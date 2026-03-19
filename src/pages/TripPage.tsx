@@ -482,7 +482,7 @@ export default function TripPage() {
   return (
     <>
       {/* Sticky Nav */}
-      <div className="sticky-nav" id="stickyNav" style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="sticky-nav" id="stickyNav">
         <span className="nav-brand">{trip?.name || 'Trip Planner'}</span>
         <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} />
         <NavArt theme={colorTheme} dark={isDark} />
