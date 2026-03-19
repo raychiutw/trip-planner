@@ -45,7 +45,7 @@ export function useDarkMode() {
     }
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute('content', isDark ? '#7D4A36' : '#C4704F');
+      meta.setAttribute('content', isDark ? '#243328' : '#4A7C59');
     }
   }, [isDark]);
 

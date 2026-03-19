@@ -2,24 +2,24 @@
 
 所有 token 定義在 `css/shared.css :root`，dark mode 覆寫在 `body.dark`。
 
-## Color
+## Color（旅行手帳風 — 墨綠 + 奶油紙）
 
 | Token | Light | Dark | 用途 |
 |-------|-------|------|------|
-| `--accent` | `#C4704F` | `#D4845E` | 主色 |
-| `--accent-subtle` | `#F9F3EF` | `#252220` | 選取背景 |
-| `--accent-bg` | `#F5EDE8` | `#3D2F27` | 卡片/按鈕背景 |
-| `--bg` | `#FAF9F5` | `#1A1A1A` | 頁面底色 |
-| `--bg-secondary` | `#F5F0E8` | `#2B2B2B` | section 卡片 |
-| `--bg-tertiary` | `#F0EDE8` | `#3D3A35` | 深層底色 |
-| `--hover-bg` | `#EDE8E0` | `#3D3A37` | hover 狀態 |
-| `--text` | `#1A1A1A` | `#E8E8E8` | 主文字 |
-| `--text-muted` | `#6B6B6B` | `#9B9B9B` | 次要文字 |
-| `--text-on-accent` | `#FFFFFF` | `#FFFFFF` | accent 上的白字 |
-| `--border` | `#E5E0DA` | `#3A3A3A` | 分隔線 |
-| `--error` | `#D32F2F` | `#FCA5A5` | 錯誤 |
-| `--error-bg` | `#FFEBEE` | `rgba(220,38,38,0.12)` | 錯誤背景 |
-| `--success` | `#10B981` | `#6EE7B7` | 成功 |
+| `--accent` | `#4A7C59` | `#7BC48E` | 主色（墨綠） |
+| `--accent-subtle` | `#EEF4EF` | `#1E2A21` | 選取背景 |
+| `--accent-bg` | `#E3EDE5` | `#243328` | 卡片/按鈕背景 |
+| `--bg` | `#FBF7F0` | `#1C1B18` | 頁面底色（奶油紙/深皮革） |
+| `--bg-secondary` | `#F3EDE2` | `#282622` | section 卡片（牛皮紙） |
+| `--bg-tertiary` | `#EBE4D6` | `#34312B` | 深層底色（舊紙） |
+| `--hover-bg` | `#E6DFCF` | `#36332D` | hover 狀態 |
+| `--text` | `#2C2416` | `#E8E2D6` | 主文字（深褐墨/奶油字） |
+| `--text-muted` | `#8A7E6E` | `#9B9588` | 次要文字（褪色墨） |
+| `--text-on-accent` | `#FFFFFF` | `#1C1B18` | accent 上的反色字 |
+| `--border` | `#D8CEBC` | `#3D3A34` | 分隔線（紙邊） |
+| `--error` | `#C44040` | `#E8A0A0` | 錯誤 |
+| `--error-bg` | `#FDECEC` | `rgba(196,64,64,0.15)` | 錯誤背景 |
+| `--success` | `#4A7C59` | `#7BC48E` | 成功（同 accent） |
 | `--overlay` | `rgba(0,0,0,0.3)` | `rgba(0,0,0,0.55)` | 遮罩 |
 
 ## Typography（11 級 Apple text style）
@@ -75,6 +75,6 @@ Line height：`--lh-tight: 1.2`、`--lh-normal: 1.5`、`--lh-relaxed: 1.7`
 
 | Token | 值 |
 |-------|----|
-| `--shadow-md` | `0 4px 12px rgba(0,0,0,0.12)` |
-| `--shadow-lg` | `0 6px 16px rgba(0,0,0,0.2)` |
+| `--shadow-md` | `0 4px 16px rgba(44,36,22,0.10)` |
+| `--shadow-lg` | `0 6px 20px rgba(44,36,22,0.16)` |
 | `--shadow-ring` | `0 0 0 2px var(--accent)` |
