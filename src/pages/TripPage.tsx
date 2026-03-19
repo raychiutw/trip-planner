@@ -548,26 +548,16 @@ export default function TripPage() {
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=appearance'; }}>
               <Icon name="palette" /><span>外觀與主題</span>
             </button>
-            <div className="tool-action-group">
-              <div className="tool-action-label">下載行程</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); window.print(); }}>
-                  <Icon name="printer" /><span>PDF</span>
-                </button>
-                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>
-                  <Icon name="doc" /><span>Markdown</span>
-                </button>
-                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>
-                  <Icon name="code" /><span>JSON</span>
-                </button>
-                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>
-                  <Icon name="table" /><span>CSV</span>
-                </button>
-              </div>
-            </div>
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
               <Icon name="printer" /><span>列印模式</span>
             </button>
+            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              <button className="export-pill" onClick={() => { handleSheetClose(); window.print(); }}>PDF</button>
+              <button className="export-pill" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>MD</button>
+              <button className="export-pill" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>JSON</button>
+              <button className="export-pill" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>CSV</button>
+            </div>
           </div>
         );
       default:

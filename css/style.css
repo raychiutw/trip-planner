@@ -500,11 +500,14 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .tool-action-btn:hover { background-color: var(--bg-tertiary); }
 .tool-action-btn .svg-icon { width: 24px; height: 24px; color: var(--accent); }
 .tool-action-btn svg { width: 24px; height: 24px; }
-.tool-action-btn.tool-action-sm { flex: 1; min-width: 0; padding: 12px 8px; justify-content: center; border-radius: var(--radius-sm); font-size: var(--fs-footnote); }
-.tool-action-btn.tool-action-sm .svg-icon { width: 20px; height: 20px; }
-.tool-action-btn.tool-action-sm svg { width: 20px; height: 20px; }
-.tool-action-group { display: flex; flex-direction: column; gap: 8px; }
-.tool-action-label { font-size: var(--fs-caption); font-weight: 500; color: var(--text-muted); padding-left: 4px; }
+.export-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 8px 16px; background: var(--bg-tertiary); border: none;
+    border-radius: var(--radius-full); color: var(--text); font-family: inherit;
+    font-size: var(--fs-caption); font-weight: 500; cursor: pointer;
+    transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+.export-pill:hover { background-color: var(--accent-bg); color: var(--accent); }
 
 /* ===== Bottom Sheet ===== */
 .info-sheet-backdrop {
@@ -516,7 +519,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .info-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
 .info-sheet-panel {
     position: fixed; bottom: 0; left: 0; right: 0;
-    height: 75dvh;
+    height: 50dvh;
     max-height: 90dvh;
     background: var(--bg-secondary);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;

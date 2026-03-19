@@ -322,6 +322,8 @@ body.dark .trip-btn:hover { background: var(--bg-tertiary); }
 .nav-title { font-size: var(--fs-title3); font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 
 /* ===== Nav Close Button (shared by edit + setting) ===== */
+.nav-back-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--text); flex-shrink: 0; cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast); }
+.nav-back-btn:hover { color: var(--accent); background: var(--accent-bg); }
 .nav-close-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--text); flex-shrink: 0; transition: background var(--duration-fast), color var(--duration-fast); }
 .nav-close-btn:hover { color: var(--accent); background: var(--accent-bg); }
 .nav-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
