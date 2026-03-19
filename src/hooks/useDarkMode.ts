@@ -9,7 +9,7 @@ const THEME_CLASSES = ['theme-sun', 'theme-sky', 'theme-zen'] as const;
 /** Theme-color values per theme × mode (light / dark). */
 const THEME_COLORS: Record<ColorTheme, { light: string; dark: string }> = {
   sun: { light: '#F47B5E', dark: '#3D2A20' },
-  sky: { light: '#3B88B8', dark: '#1E3040' },
+  sky: { light: '#2870A0', dark: '#1E3040' },
   zen: { light: '#9A6B50', dark: '#342820' },
 };
 

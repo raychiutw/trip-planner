@@ -19,7 +19,8 @@ import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
-import { DayHeaderArt, DividerArt, FooterArt } from '../components/trip/ThemeArt';
+import { DayHeaderArt, DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
+import DownloadSheet from '../components/trip/DownloadSheet';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
@@ -131,7 +132,7 @@ const DaySection = React.memo(function DaySection({
               <div className="trip-warnings">
                 <strong><Icon name="warning" /> 注意事項：</strong>
                 <ul>
-                  {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                  {warnings.map((w) => <li key={w}>{w}</li>)}
                 </ul>
               </div>
             )}
@@ -218,6 +219,9 @@ export default function TripPage() {
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorTheme } = useDarkMode();
+  const [downloadOpen, setDownloadOpen] = useState(false);
+  const handleDownloadOpen = useCallback(() => setDownloadOpen(true), []);
+  const handleDownloadClose = useCallback(() => setDownloadOpen(false), []);
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /* --- lsRenewAll once per session (#9) --- */
@@ -478,9 +482,10 @@ export default function TripPage() {
   return (
     <>
       {/* Sticky Nav */}
-      <div className="sticky-nav" id="stickyNav">
+      <div className="sticky-nav" id="stickyNav" style={{ position: 'relative', overflow: 'hidden' }}>
         <span className="nav-brand">{trip?.name || 'Trip Planner'}</span>
         <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} />
+        <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
       {/* Page Layout */}
@@ -525,7 +530,17 @@ export default function TripPage() {
 
       {/* SpeedDial */}
       {!loading && trip && (
-        <SpeedDial onItemClick={handleSpeedDialItem} onPrint={togglePrint} />
+        <SpeedDial onItemClick={handleSpeedDialItem} onPrint={togglePrint} onDownload={handleDownloadOpen} />
+      )}
+
+      {/* Download Sheet */}
+      {trip && (
+        <DownloadSheet
+          isOpen={downloadOpen}
+          onClose={handleDownloadClose}
+          tripId={activeTripId || ''}
+          tripName={trip.name || 'trip'}
+        />
       )}
 
       {/* Edit FAB */}

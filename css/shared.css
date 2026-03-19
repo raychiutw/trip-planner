@@ -99,17 +99,17 @@ body.theme-sun.dark {
 
 /* ===== Theme: 晴空 (Sky) — Light ===== */
 body.theme-sky {
-    --accent: #3B88B8;
-    --accent-subtle: #E5F0F8;
-    --accent-bg: #D5E8F5;
+    --accent: #2870A0;
+    --accent-subtle: #D0E4F2;
+    --accent-bg: #B8D4E8;
     --bg: #FFF9F0;
-    --bg-secondary: #F0F7FA;
-    --bg-tertiary: #E0EEF4;
+    --bg-secondary: #E0EDF5;
+    --bg-tertiary: #C8DDE8;
     --hover-bg: #E8F2F8;
     --text: #2A3A40;
-    --text-muted: #7A9AAA;
+    --text-muted: #587888;
     --text-on-accent: #FFFFFF;
-    --border: #D0E4EE;
+    --border: #A0C0D8;
     --error: #D44040;
     --error-bg: #FDECEC;
     --success: #7ECBB0;

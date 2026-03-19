@@ -16,6 +16,7 @@ const DIAL_ITEMS: SpeedDialItemConfig[] = [
   { key: 'emergency', icon: 'emergency', label: '緊急聯絡' },
   { key: 'suggestions', icon: 'lightbulb', label: 'AI 行程建議' },
   { key: 'driving', icon: 'car', label: '交通統計' },
+  { key: 'download', icon: 'download', label: '下載行程' },
   { key: 'printer', icon: 'printer', label: '列印模式' },
   { key: 'settings', icon: 'gear', label: '設定' },
 ];
@@ -27,6 +28,8 @@ interface SpeedDialProps {
   onItemClick: (contentKey: string) => void;
   /** 可選：觸發列印模式切換 */
   onPrint?: () => void;
+  /** 可選：觸發下載行程 */
+  onDownload?: () => void;
 }
 
 /* ===== Component ===== */
@@ -35,7 +38,7 @@ interface SpeedDialProps {
  * Mobile floating action button menu.
  * Renders a trigger button, backdrop, and 6 item buttons.
  */
-export default function SpeedDial({ onItemClick, onPrint }: SpeedDialProps) {
+export default function SpeedDial({ onItemClick, onPrint, onDownload }: SpeedDialProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleToggle = useCallback(() => {
@@ -49,6 +52,11 @@ export default function SpeedDial({ onItemClick, onPrint }: SpeedDialProps) {
   const handleItemClick = useCallback(
     (contentKey: string) => {
       setIsOpen(false);
+      /* 下載行程：呼叫 onDownload */
+      if (contentKey === 'download' && onDownload) {
+        onDownload();
+        return;
+      }
       /* 列印模式：呼叫 onPrint 而非 onItemClick */
       if (contentKey === 'printer') {
         onPrint?.();
@@ -61,11 +69,14 @@ export default function SpeedDial({ onItemClick, onPrint }: SpeedDialProps) {
       }
       onItemClick(contentKey);
     },
-    [onItemClick, onPrint],
+    [onItemClick, onPrint, onDownload],
   );
 
   /* --- Prevent scroll through on backdrop --- */
-  const preventScroll = useCallback((e: React.TouchEvent | React.WheelEvent) => {
+  const preventTouchScroll = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+  }, []);
+  const preventWheelScroll = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
   }, []);
 
@@ -75,8 +86,8 @@ export default function SpeedDial({ onItemClick, onPrint }: SpeedDialProps) {
         className="speed-dial-backdrop"
         id="speedDialBackdrop"
         onClick={handleClose}
-        onTouchMove={preventScroll as unknown as React.TouchEventHandler}
-        onWheel={preventScroll as unknown as React.WheelEventHandler}
+        onTouchMove={preventTouchScroll}
+        onWheel={preventWheelScroll}
       />
       <div className="speed-dial-items" id="speedDialItems">
         {DIAL_ITEMS.map((item) => (
