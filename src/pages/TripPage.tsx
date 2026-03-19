@@ -198,6 +198,10 @@ const SHEET_TITLES: Record<string, string> = {
   emergency: '緊急聯絡',
   suggestions: 'AI 行程建議',
   driving: '交通統計',
+  prep: '行前準備',
+  'emergency-group': '緊急應變',
+  'ai-group': 'AI 分析',
+  tools: '設定',
 };
 
 /* ===== Resolve state machine ===== */
@@ -435,11 +439,20 @@ export default function TripPage() {
   /* --- Speed Dial → InfoSheet --- */
   const handleSpeedDialItem = useCallback((key: string) => { setActiveSheet(key); }, []);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
+  const handleGroupClick = useCallback((groupKey: string) => {
+    if (groupKey === 'tools') {
+      /* tools group opens as action sheet */
+      setActiveSheet('tools');
+      return;
+    }
+    setActiveSheet(groupKey);
+  }, []);
 
   /* --- Sheet content (#2: driving shows actual stats) --- */
   const sheetContent = useMemo(() => {
     if (!activeSheet) return null;
     switch (activeSheet) {
+      /* Individual content */
       case 'flights':
         return flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>;
       case 'checklist':
@@ -454,10 +467,46 @@ export default function TripPage() {
         return tripDrivingStats
           ? <TripDrivingStatsCard tripStats={tripDrivingStats} />
           : <p>無交通資料</p>;
+      /* Grouped content */
+      case 'prep':
+        return (
+          <>
+            <div className="info-card">{flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>}</div>
+            <div className="info-card">{checklistData ? <Checklist data={checklistData} /> : <p>無確認清單</p>}</div>
+          </>
+        );
+      case 'emergency-group':
+        return (
+          <>
+            <div className="info-card">{emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>}</div>
+            <div className="info-card">{backupData ? <Backup data={backupData} /> : <p>無備案資料</p>}</div>
+          </>
+        );
+      case 'ai-group':
+        return (
+          <>
+            <div className="info-card">{suggestionsData ? <Suggestions data={suggestionsData} /> : <p>無行程建議</p>}</div>
+            <div className="info-card">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
+          </>
+        );
+      case 'tools':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html'; }}>
+              <Icon name="gear" /><span>設定</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadOpen(); }}>
+              <Icon name="download" /><span>下載行程</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
+              <Icon name="printer" /><span>列印模式</span>
+            </button>
+          </div>
+        );
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats]);
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose, handleDownloadOpen, togglePrint]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;
@@ -530,7 +579,7 @@ export default function TripPage() {
 
       {/* SpeedDial */}
       {!loading && trip && (
-        <SpeedDial onItemClick={handleSpeedDialItem} onPrint={togglePrint} onDownload={handleDownloadOpen} />
+        <SpeedDial onItemClick={handleSpeedDialItem} onGroupClick={handleGroupClick} onPrint={togglePrint} onDownload={handleDownloadOpen} />
       )}
 
       {/* Download Sheet */}
