@@ -160,7 +160,61 @@ test.describe('色彩模式切換', () => {
   });
 });
 
-/* ===== 4. 捲動穩定性 ===== */
+/* ===== 4. 色彩主題切換 ===== */
+test.describe('色彩主題切換', () => {
+  test('主題卡片可見且有三張', async ({ page }) => {
+    await page.goto('/setting.html');
+    await page.waitForTimeout(1000);
+    const themeCards = page.locator('.color-theme-card');
+    await expect(themeCards).toHaveCount(3);
+  });
+
+  test('點選主題卡片即時切換', async ({ page }) => {
+    await page.goto('/setting.html');
+    await page.waitForTimeout(1000);
+
+    const skyCard = page.locator('.color-theme-card[data-theme="sky"]');
+    await skyCard.click();
+
+    await expect(page.locator('body')).toHaveClass(/theme-sky/);
+    await expect(skyCard).toHaveClass(/active/);
+  });
+
+  test('主題切換後 reload 保持', async ({ page }) => {
+    await page.goto('/setting.html');
+    await page.waitForTimeout(1000);
+
+    await page.locator('.color-theme-card[data-theme="zen"]').click();
+    await expect(page.locator('body')).toHaveClass(/theme-zen/);
+
+    await page.reload();
+    await page.waitForTimeout(1000);
+
+    await expect(page.locator('body')).toHaveClass(/theme-zen/);
+    await expect(page.locator('.color-theme-card[data-theme="zen"]')).toHaveClass(/active/);
+  });
+
+  test('主題與深淺模式獨立運作', async ({ page }) => {
+    await page.goto('/setting.html');
+    await page.waitForTimeout(1000);
+
+    // 選晴空主題
+    await page.locator('.color-theme-card[data-theme="sky"]').click();
+    await expect(page.locator('body')).toHaveClass(/theme-sky/);
+
+    // 切換深色模式
+    await page.locator('.color-mode-card[data-mode="dark"]').click();
+    await expect(page.locator('body')).toHaveClass(/dark/);
+    await expect(page.locator('body')).toHaveClass(/theme-sky/);
+
+    // 切換主題不影響深色
+    await page.locator('.color-theme-card[data-theme="zen"]').click();
+    await expect(page.locator('body')).toHaveClass(/theme-zen/);
+    await expect(page.locator('body')).toHaveClass(/dark/);
+  });
+});
+
+/* ===== 5. 捲動穩定性 ===== */
 test.describe('捲動穩定性', () => {
   test('捲動到底部後不會彈回頂部', async ({ page }) => {
     await page.goto('/setting.html');

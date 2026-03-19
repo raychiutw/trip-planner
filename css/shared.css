@@ -1,33 +1,11 @@
-/* ===== Shared Variables ===== */
+/* ===== Shared Variables (non-color tokens) ===== */
 :root {
-    --accent: #4A7C59;
-    --accent-subtle: #EEF4EF;
-    --accent-bg: #E3EDE5;
-    --bg: #FBF7F0;
-    --bg-secondary: #F3EDE2;
-    --bg-tertiary: #EBE4D6;
-    --hover-bg: #E6DFCF;
-    --text: #2C2416;
-    --text-muted: #8A7E6E;
-    --text-on-accent: #FFFFFF;
-    --border: #D8CEBC;
-    --error: #C44040;
-    --error-bg: #FDECEC;
-    --success: #4A7C59;
-    --shadow-md: 0 4px 16px rgba(44,36,22,0.10);
-    --shadow-lg: 0 6px 20px rgba(44,36,22,0.16);
     --shadow-ring: 0 0 0 2px var(--accent);
     --radius-xs: 4px;
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
     --radius-full: 99px;
-    --priority-high-bg: rgba(239, 68, 68, 0.15);
-    --priority-high-dot: #EF4444;
-    --priority-medium-bg: rgba(234, 179, 8, 0.15);
-    --priority-medium-dot: #EAB308;
-    --priority-low-bg: rgba(34, 197, 94, 0.10);
-    --priority-low-dot: #22C55E;
     --fs-large-title: 2.125rem;
     --fs-title: 1.75rem;
     --fs-title2: 1.375rem;
@@ -52,15 +30,201 @@
     --duration-normal: 250ms;
     --duration-slow: 350ms;
     --tap-min: 44px;
-    --scrollbar-thumb: #C4BBA8;
-    --scrollbar-thumb-hover: #AEA594;
-    --cmp-light-bg: #F3EDE2;
-    --cmp-light-surface: #FBF7F0;
-    --cmp-light-input: #DDD5C8;
-    --cmp-dark-bg: #1C1B18;
-    --cmp-dark-surface: #282622;
-    --cmp-dark-input: #3D3A34;
+}
+
+/* ===== Theme: 陽光 (Sun) — Light ===== */
+body.theme-sun {
+    --accent: #F47B5E;
+    --accent-subtle: #FEF0EC;
+    --accent-bg: #FCEAE4;
+    --bg: #FFF8F0;
+    --bg-secondary: #F5E6D0;
+    --bg-tertiary: #EDD9C0;
+    --hover-bg: #F0DCC8;
+    --text: #3A3028;
+    --text-muted: #8A7B6A;
+    --text-on-accent: #FFFFFF;
+    --border: #E8DDD0;
+    --error: #D44040;
+    --error-bg: #FDECEC;
+    --success: #4A9E6A;
+    --shadow-md: 0 4px 16px rgba(58,48,40,0.10);
+    --shadow-lg: 0 6px 20px rgba(58,48,40,0.16);
+    --priority-high-bg: rgba(239, 68, 68, 0.15);
+    --priority-high-dot: #EF4444;
+    --priority-medium-bg: rgba(234, 179, 8, 0.15);
+    --priority-medium-dot: #EAB308;
+    --priority-low-bg: rgba(74, 158, 106, 0.10);
+    --priority-low-dot: #4A9E6A;
+    --scrollbar-thumb: #D0C4B0;
+    --scrollbar-thumb-hover: #BEB2A0;
+    --cmp-light-bg: #F5E6D0;
+    --cmp-light-surface: #FFF8F0;
+    --cmp-light-input: #E8DDD0;
+    --cmp-dark-bg: #1E1A16;
+    --cmp-dark-surface: #2A2520;
+    --cmp-dark-input: #3E3830;
     --overlay: rgba(0,0,0,0.3);
+}
+
+/* ===== Theme: 陽光 (Sun) — Dark ===== */
+body.theme-sun.dark {
+    --accent: #F4A08A;
+    --accent-subtle: #2A1E18;
+    --accent-bg: #3D2A20;
+    --bg: #1E1A16;
+    --bg-secondary: #2A2520;
+    --bg-tertiary: #36302A;
+    --hover-bg: #332C26;
+    --text: #EAE2D6;
+    --text-muted: #A09688;
+    --text-on-accent: #1E1A16;
+    --border: #3E3830;
+    --error: #E8A0A0;
+    --error-bg: rgba(212, 64, 64, 0.15);
+    --success: #7EC89A;
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.20);
+    --shadow-lg: 0 6px 20px rgba(0,0,0,0.30);
+    --priority-high-bg: rgba(232, 160, 160, 0.18);
+    --priority-high-dot: #E8A0A0;
+    --priority-medium-bg: rgba(234, 179, 8, 0.18);
+    --priority-medium-dot: #F0D060;
+    --priority-low-bg: rgba(126, 200, 154, 0.12);
+    --priority-low-dot: #7EC89A;
+    --scrollbar-thumb: #504840;
+    --scrollbar-thumb-hover: #605850;
+    --overlay: rgba(0,0,0,0.55);
+    background: var(--bg);
+}
+
+/* ===== Theme: 晴空 (Sky) — Light ===== */
+body.theme-sky {
+    --accent: #5BA4CF;
+    --accent-subtle: #EBF4FA;
+    --accent-bg: #DFF0FA;
+    --bg: #FFF9F0;
+    --bg-secondary: #F0F7FA;
+    --bg-tertiary: #E0EEF4;
+    --hover-bg: #E8F2F8;
+    --text: #2A3A40;
+    --text-muted: #7A9AAA;
+    --text-on-accent: #FFFFFF;
+    --border: #D0E4EE;
+    --error: #D44040;
+    --error-bg: #FDECEC;
+    --success: #7ECBB0;
+    --shadow-md: 0 4px 16px rgba(42,58,64,0.10);
+    --shadow-lg: 0 6px 20px rgba(42,58,64,0.16);
+    --priority-high-bg: rgba(239, 68, 68, 0.15);
+    --priority-high-dot: #EF4444;
+    --priority-medium-bg: rgba(234, 179, 8, 0.15);
+    --priority-medium-dot: #EAB308;
+    --priority-low-bg: rgba(126, 203, 176, 0.12);
+    --priority-low-dot: #7ECBB0;
+    --scrollbar-thumb: #B8D0DC;
+    --scrollbar-thumb-hover: #A0BCC8;
+    --cmp-light-bg: #E8F4F8;
+    --cmp-light-surface: #FFF9F0;
+    --cmp-light-input: #D0E4EE;
+    --cmp-dark-bg: #161C20;
+    --cmp-dark-surface: #202A30;
+    --cmp-dark-input: #303E46;
+    --overlay: rgba(0,0,0,0.3);
+}
+
+/* ===== Theme: 晴空 (Sky) — Dark ===== */
+body.theme-sky.dark {
+    --accent: #7EC0E8;
+    --accent-subtle: #182228;
+    --accent-bg: #1E3040;
+    --bg: #161C20;
+    --bg-secondary: #202A30;
+    --bg-tertiary: #2A363E;
+    --hover-bg: #263038;
+    --text: #E0EAF0;
+    --text-muted: #8AAAB8;
+    --text-on-accent: #161C20;
+    --border: #303E46;
+    --error: #E8A0A0;
+    --error-bg: rgba(212, 64, 64, 0.15);
+    --success: #90DCC0;
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.20);
+    --shadow-lg: 0 6px 20px rgba(0,0,0,0.30);
+    --priority-high-bg: rgba(232, 160, 160, 0.18);
+    --priority-high-dot: #E8A0A0;
+    --priority-medium-bg: rgba(234, 179, 8, 0.18);
+    --priority-medium-dot: #F0D060;
+    --priority-low-bg: rgba(144, 220, 192, 0.12);
+    --priority-low-dot: #90DCC0;
+    --scrollbar-thumb: #3E4E58;
+    --scrollbar-thumb-hover: #506068;
+    --overlay: rgba(0,0,0,0.55);
+    background: var(--bg);
+}
+
+/* ===== Theme: 和風 (Zen) — Light ===== */
+body.theme-zen {
+    --accent: #B8856C;
+    --accent-subtle: #F5EDE8;
+    --accent-bg: #EDE2DA;
+    --bg: #F5F0E8;
+    --bg-secondary: #ECE5DA;
+    --bg-tertiary: #E0D8CC;
+    --hover-bg: #E6DED2;
+    --text: #3A3028;
+    --text-muted: #8A7E6E;
+    --text-on-accent: #FFFFFF;
+    --border: #DDD5C8;
+    --error: #C44040;
+    --error-bg: #FDECEC;
+    --success: #9EB8A8;
+    --shadow-md: 0 4px 16px rgba(58,48,40,0.10);
+    --shadow-lg: 0 6px 20px rgba(58,48,40,0.16);
+    --priority-high-bg: rgba(239, 68, 68, 0.15);
+    --priority-high-dot: #EF4444;
+    --priority-medium-bg: rgba(234, 179, 8, 0.15);
+    --priority-medium-dot: #EAB308;
+    --priority-low-bg: rgba(158, 184, 168, 0.12);
+    --priority-low-dot: #9EB8A8;
+    --scrollbar-thumb: #C8BEA8;
+    --scrollbar-thumb-hover: #B0A898;
+    --cmp-light-bg: #ECE5DA;
+    --cmp-light-surface: #F5F0E8;
+    --cmp-light-input: #DDD5C8;
+    --cmp-dark-bg: #1A1816;
+    --cmp-dark-surface: #262320;
+    --cmp-dark-input: #3A3630;
+    --overlay: rgba(0,0,0,0.3);
+}
+
+/* ===== Theme: 和風 (Zen) — Dark ===== */
+body.theme-zen.dark {
+    --accent: #D4A88E;
+    --accent-subtle: #221C18;
+    --accent-bg: #342820;
+    --bg: #1A1816;
+    --bg-secondary: #262320;
+    --bg-tertiary: #32302A;
+    --hover-bg: #2E2C26;
+    --text: #E8E0D4;
+    --text-muted: #9B9080;
+    --text-on-accent: #1A1816;
+    --border: #3A3630;
+    --error: #E8A0A0;
+    --error-bg: rgba(196, 64, 64, 0.15);
+    --success: #B8D0C0;
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.20);
+    --shadow-lg: 0 6px 20px rgba(0,0,0,0.30);
+    --priority-high-bg: rgba(232, 160, 160, 0.18);
+    --priority-high-dot: #E8A0A0;
+    --priority-medium-bg: rgba(234, 179, 8, 0.18);
+    --priority-medium-dot: #F0D060;
+    --priority-low-bg: rgba(184, 208, 192, 0.12);
+    --priority-low-dot: #B8D0C0;
+    --scrollbar-thumb: #4A4640;
+    --scrollbar-thumb-hover: #5A5650;
+    --overlay: rgba(0,0,0,0.55);
+    background: var(--bg);
 }
 
 /* ===== Selection ===== */
@@ -81,8 +245,7 @@ body { font-family: var(--font-system); background: var(--bg); font-size: var(--
 .trip-btn strong { display: block; font-size: var(--fs-title3); }
 .trip-btn .trip-sub { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 4px; display: block; }
 
-/* ===== Dark Mode (shared base) ===== */
-body.dark { --accent: #7BC48E; --accent-subtle: #1E2A21; --accent-bg: #243328; --bg: #1C1B18; --bg-secondary: #282622; --bg-tertiary: #34312B; --text: #E8E2D6; --text-muted: #9B9588; --text-on-accent: #1C1B18; --border: #3D3A34; --hover-bg: #36332D; --error: #E8A0A0; --error-bg: rgba(196, 64, 64, 0.15); --success: #7BC48E; --priority-high-bg: rgba(232, 160, 160, 0.18); --priority-high-dot: #E8A0A0; --priority-medium-bg: rgba(234, 179, 8, 0.18); --priority-medium-dot: #F0D060; --priority-low-bg: rgba(123, 196, 142, 0.12); --priority-low-dot: #7BC48E; --scrollbar-thumb: #504C44; --scrollbar-thumb-hover: #605C54; --overlay: rgba(0,0,0,0.55); background: var(--bg); }
+/* ===== Dark Mode (shared base — trip-btn overrides) ===== */
 body.dark .trip-btn { background: var(--hover-bg); }
 body.dark .trip-btn:hover { background: var(--bg-tertiary); }
 body.dark .trip-btn.active { border-color: var(--accent); }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../hooks/useApi';
-import { useDarkMode, type ColorMode } from '../hooks/useDarkMode';
+import { useDarkMode, type ColorMode, type ColorTheme } from '../hooks/useDarkMode';
 import { lsGet, lsSet } from '../lib/localStorage';
 import type { TripListItem } from '../types/trip';
 
@@ -22,10 +22,16 @@ const COLOR_MODES: { key: ColorMode; label: string; desc: string }[] = [
   { key: 'dark', label: '深色', desc: 'Dark' },
 ];
 
+const COLOR_THEMES: { key: ColorTheme; label: string; desc: string; swatch: string; swatchDark: string }[] = [
+  { key: 'sun', label: '陽光', desc: 'Sunshine', swatch: '#F47B5E', swatchDark: '#F4A08A' },
+  { key: 'sky', label: '晴空', desc: 'Clear Sky', swatch: '#5BA4CF', swatchDark: '#7EC0E8' },
+  { key: 'zen', label: '和風', desc: 'Japanese Zen', swatch: '#B8856C', swatchDark: '#D4A88E' },
+];
+
 /* ===== Component ===== */
 
 export default function SettingPage() {
-  const { colorMode, setColorMode } = useDarkMode();
+  const { colorMode, setColorMode, isDark, colorTheme, setTheme } = useDarkMode();
   const [trips, setTrips] = useState<TripDisplay[]>([]);
   const [currentTripId, setCurrentTripId] = useState<string>('');
   const [loadError, setLoadError] = useState(false);
@@ -90,6 +96,10 @@ export default function SettingPage() {
   const handleColorModeClick = useCallback((mode: ColorMode) => {
     setColorMode(mode);
   }, [setColorMode]);
+
+  const handleThemeClick = useCallback((theme: ColorTheme) => {
+    setTheme(theme);
+  }, [setTheme]);
 
   const handleClose = useCallback(() => {
     window.location.href = 'index.html';
@@ -169,6 +179,26 @@ export default function SettingPage() {
                     </div>
                     <div className="color-mode-label">{m.label}</div>
                     <div className="color-mode-desc">{m.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Color Theme Sub-section */}
+              <div className="setting-subsection-title">色彩主題</div>
+              <div className="color-theme-grid" id="colorThemeGrid">
+                {COLOR_THEMES.map((t) => (
+                  <button
+                    key={t.key}
+                    className={`color-theme-card${t.key === colorTheme ? ' active' : ''}`}
+                    data-theme={t.key}
+                    onClick={() => handleThemeClick(t.key)}
+                  >
+                    <div
+                      className="color-theme-swatch"
+                      style={{ background: isDark ? t.swatchDark : t.swatch }}
+                    />
+                    <div className="color-theme-label">{t.label}</div>
+                    <div className="color-theme-desc">{t.desc}</div>
                   </button>
                 ))}
               </div>
