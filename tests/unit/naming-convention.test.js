@@ -76,16 +76,16 @@ describe('JS naming — mutable state', () => {
         'WMO', 'ICONS', 'EMOJI_ICON_MAP', 'LS_PREFIX', 'LS_TTL',
     ]);
 
-    it.todo('TRIP should be renamed to trip (camelCase mutable state) — will pass after Phase 3 completes', () => {
-        // Phase 3: TRIP → trip rename
+    it('TRIP should be renamed to trip (camelCase mutable state)', () => {
+        // Phase 3 complete: js/ legacy files no longer use 'var TRIP ='
         for (const { path, content } of JS_FILES) {
             const hasTripVarDecl = /\bvar\s+TRIP\s*=/.test(content);
             expect(hasTripVarDecl, `${path}: found 'var TRIP =' — rename to 'trip' (camelCase mutable state)`).toBe(false);
         }
     });
 
-    it.todo('CURRENT_TRIP_ID should be renamed to currentTripId — will pass after Phase 3 completes', () => {
-        // Phase 3: CURRENT_TRIP_ID → currentTripId rename
+    it('CURRENT_TRIP_ID should be renamed to currentTripId', () => {
+        // Phase 3 complete: js/ legacy files no longer use 'var CURRENT_TRIP_ID ='
         for (const { path, content } of JS_FILES) {
             const hasCTIVarDecl = /\bvar\s+CURRENT_TRIP_ID\s*=/.test(content);
             expect(hasCTIVarDecl, `${path}: found 'var CURRENT_TRIP_ID =' — rename to 'currentTripId'`).toBe(false);
@@ -128,15 +128,15 @@ describe('JS naming — mutable state', () => {
 
 describe('JS naming — no defensive tripId fallback', () => {
 
-    it.todo('No .id || .tripId fallback patterns — will pass after Phase 2 completes', () => {
-        // Phase 2: After API returns tripId consistently, remove all .id || .tripId fallbacks.
+    it('No .id || .tripId fallback patterns', () => {
+        // Phase 2 complete: API returns tripId consistently, all defensive fallbacks removed.
         const violations = [];
 
         for (const { path, content } of [...JS_FILES, ...SRC_FILES]) {
             const re = /\.id\s*\|\|\s*\w+\.tripId/g;
             let m;
             while ((m = re.exec(content)) !== null) {
-                violations.push(`${path}: found '${m[0]}' — remove defensive fallback after Phase 2`);
+                violations.push(`${path}: found '${m[0]}' — remove defensive fallback`);
             }
         }
 

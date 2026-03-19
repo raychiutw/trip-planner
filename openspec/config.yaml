@@ -15,6 +15,10 @@ context: |
   Tech stack: React 19 + TypeScript strict + Vite 多入口，Vitest + Playwright
   語言：繁體中文台灣用語，commit 訊息繁體中文
   Git：commit 後不自動 push；文件變更不跑測試
+  監控：Sentry（@sentry/react，DSN 由 VITE_SENTRY_DSN 注入，僅 PROD 啟用）
+  每日健康報告：scripts/daily-report.js，GitHub Actions UTC 00:00 觸發，Gmail SMTP 寄出
+  主題色：sun / sky / zen（ThemeArt 元件 + useDarkMode hook 控制）
+  列印：usePrintMode hook，切換後套用 print CSS，A4 排版
 
 # ============================================================
 # 開發規範 + Commit Gate — 所有 AI / 開發者必須遵守

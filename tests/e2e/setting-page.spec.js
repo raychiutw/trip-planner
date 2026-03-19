@@ -54,10 +54,10 @@ test.describe('設定頁載入', () => {
     expect(tripId).toBe('okinawa-trip-2026-Ray');
   });
 
-  test('顯示「外觀」區段與三張色彩模式卡片', async ({ page }) => {
+  test('顯示「外觀與主題」區段與三張色彩模式卡片', async ({ page }) => {
     await page.goto('/setting.html');
     await page.waitForTimeout(1000);
-    await expect(page.getByText('外觀')).toBeVisible();
+    await expect(page.getByText('外觀與主題')).toBeVisible();
     const colorCards = page.locator('.color-mode-card');
     await expect(colorCards).toHaveCount(3);
   });

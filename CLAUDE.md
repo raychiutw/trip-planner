@@ -32,7 +32,8 @@ functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permission
                     trips/[id].ts  trips/[id]/days.ts  days/[num].ts  docs/[type].ts
                     entries/[eid].ts  restaurants/[rid].ts  shopping/[sid].ts  ...
 migrations/         0001_init.sql  0002_trips.sql
-scripts/            migrate-md-to-d1.js  tp-check.js  memory-sync.sh  register-scheduler.ps1
+scripts/            migrate-md-to-d1.js  tp-check.js  daily-report.js  memory-sync.sh
+                    register-scheduler.ps1  unregister-scheduler.ps1  tp-request-scheduler.ps1
 tests/              unit/  integration/  e2e/
 openspec/           config.yaml（開發規則唯一來源）  specs/  changes/
 vite.config.ts      Vite 多入口建置（4 個 HTML）

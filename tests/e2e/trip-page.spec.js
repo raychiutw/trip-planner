@@ -72,12 +72,10 @@ test.describe('頁面載入', () => {
   test('Speed Dial 資訊項目都存在', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await expect(page.locator('.speed-dial-item[data-content="flights"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="checklist"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="backup"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="emergency"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="printer"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="settings"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="prep"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="emergency-group"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="ai-group"]')).toBeAttached();
+    await expect(page.locator('.speed-dial-item[data-content="tools"]')).toBeAttached();
   });
 
   test('Nav brand 顯示行程名稱', async ({ page }) => {
@@ -221,8 +219,8 @@ test.describe('Speed Dial（手機版）', () => {
     await trigger.click();
     await page.waitForTimeout(300);
 
-    // 點擊航班子項目
-    await page.locator('.speed-dial-item[data-content="flights"]').click();
+    // 點擊行前準備子項目
+    await page.locator('.speed-dial-item[data-content="prep"]').click();
     await page.waitForTimeout(500);
 
     // Speed Dial 應關閉
@@ -235,16 +233,16 @@ test.describe('Speed Dial（手機版）', () => {
 
 /* ===== 3b. Sticky-nav 動作按鈕 ===== */
 test.describe('Sticky-nav 動作按鈕', () => {
-  test('設定連結指向 setting.html', async ({ page }) => {
+  test('nav-actions 設定連結不存在', async ({ page }) => {
     await page.goto('/');
     const settingLink = page.locator('.nav-actions a[href="setting.html"]');
-    await expect(settingLink).toBeAttached();
+    await expect(settingLink).toHaveCount(0);
   });
 
-  test('列印按鈕存在', async ({ page }) => {
+  test('nav-actions 列印按鈕不存在', async ({ page }) => {
     await page.goto('/');
     const printBtn = page.locator('.nav-actions [data-action="toggle-print"]');
-    await expect(printBtn).toBeAttached();
+    await expect(printBtn).toHaveCount(0);
   });
 });
 
@@ -356,7 +354,7 @@ test.describe('行程建議（Speed Dial）', () => {
 
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="suggestions"]').click();
+    await page.locator('.speed-dial-item[data-content="ai-group"]').click();
     await page.waitForTimeout(500);
 
     await expect(page.locator('#bottomSheetBody .suggestion-card').first()).toBeAttached({ timeout: 10000 });
@@ -441,7 +439,7 @@ test.describe('航班資訊', () => {
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="flights"]').click();
+    await page.locator('.speed-dial-item[data-content="prep"]').click();
     await page.waitForTimeout(500);
     await expect(page.locator('#bottomSheetBody .flight-row').first()).toBeAttached({ timeout: 10000 });
   });
@@ -454,7 +452,7 @@ test.describe('緊急聯絡', () => {
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="emergency"]').click();
+    await page.locator('.speed-dial-item[data-content="emergency-group"]').click();
     await page.waitForTimeout(500);
     const telLinks = page.locator('#bottomSheetBody a[href^="tel:"]');
     const count = await telLinks.count();
@@ -468,8 +466,8 @@ test.describe('列印模式', () => {
     await page.goto('/');
     const body = page.locator('body');
 
-    // 點擊 nav-actions 列印模式按鈕
-    await page.locator('.nav-actions [data-action="toggle-print"]').click();
+    // 透過 JS 進入列印模式（nav-actions 已移除）
+    await page.evaluate(() => { document.body.classList.add('print-mode', 'theme-print'); });
     await expect(body).toHaveClass(/print-mode/);
 
     // 列印模式下所有 day-section 都可見
@@ -617,8 +615,8 @@ test.describe('Dark + Print 互動', () => {
     const body = page.locator('body');
     await expect(body).toHaveClass(/dark/);
 
-    // 進入列印模式（透過 nav-actions）
-    await page.locator('.nav-actions [data-action="toggle-print"]').click();
+    // 進入列印模式（透過 JS，nav-actions 已移除）
+    await page.evaluate(() => { document.body.classList.add('print-mode', 'theme-print'); document.body.classList.remove('dark'); });
     await expect(body).toHaveClass(/print-mode/);
     // 列印模式下不應有 dark
     await expect(body).not.toHaveClass(/dark/);
@@ -685,8 +683,8 @@ test.describe('Day Lazy Loading', () => {
     await page.goto('/');
     await expect(page.locator('.day-section[data-day="1"] .tl-event').first()).toBeAttached({ timeout: 5000 });
 
-    // Enter print mode
-    await page.locator('.nav-actions [data-action="toggle-print"]').click();
+    // Enter print mode（透過 JS，nav-actions 已移除）
+    await page.evaluate(() => { document.body.classList.add('print-mode', 'theme-print'); });
     await page.waitForTimeout(2000);
 
     // All day sections should be visible
@@ -726,7 +724,7 @@ test.describe('全旅程交通統計', () => {
     await page.waitForTimeout(3000);
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="driving"]').click();
+    await page.locator('.speed-dial-item[data-content="ai-group"]').click();
     await page.waitForTimeout(500);
     const summary = page.locator('#bottomSheetBody .driving-summary');
     await expect(summary).toBeAttached({ timeout: 10000 });
@@ -738,7 +736,7 @@ test.describe('全旅程交通統計', () => {
     await page.waitForTimeout(3000);
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="driving"]').click();
+    await page.locator('.speed-dial-item[data-content="ai-group"]').click();
     await page.waitForTimeout(300);
     const summary = page.locator('#bottomSheetBody .driving-summary');
     const typeSummary = summary.locator('.transport-type-summary').first();
@@ -812,7 +810,8 @@ test.describe('FAB 修改行程按鈕', () => {
 
   test('列印模式隱藏 FAB', async ({ page }) => {
     await page.goto('/');
-    await page.locator('.nav-actions [data-action="toggle-print"]').click();
+    // 透過 JS 進入列印模式（nav-actions 已移除）
+    await page.evaluate(() => { document.body.classList.add('print-mode', 'theme-print'); });
     const fab = page.locator('#editFab');
     await expect(fab).not.toBeVisible();
   });
@@ -864,7 +863,7 @@ test.describe('Speed Dial → Bottom Sheet（手機版）', () => {
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
 
-    await page.locator('.speed-dial-item[data-content="checklist"]').click();
+    await page.locator('.speed-dial-item[data-content="prep"]').click();
     await page.waitForTimeout(500);
 
     const backdrop = page.locator('#infoBottomSheet');
@@ -881,7 +880,7 @@ test.describe('Speed Dial → Bottom Sheet（手機版）', () => {
 
     await page.locator('#speedDialTrigger').click();
     await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="flights"]').click();
+    await page.locator('.speed-dial-item[data-content="prep"]').click();
     await page.waitForTimeout(500);
 
     const backdrop = page.locator('#infoBottomSheet');
