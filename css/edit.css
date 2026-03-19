@@ -85,8 +85,8 @@
     flex-shrink: 0;
 }
 .issue-badge .svg-icon { width: 12px; height: 12px; }
-.issue-badge.open { background: #1A7F37; }
-.issue-badge.closed { background: #6E40C9; }
+.issue-badge.open { background: var(--badge-open-bg); }
+.issue-badge.closed { background: var(--badge-closed-bg); }
 .issue-reply {
     font-size: var(--fs-body);
     color: var(--text);
@@ -210,8 +210,7 @@
     flex-shrink: 0;
 }
 .issue-mode-badge.mode-edit { background: var(--accent-bg); color: var(--accent); }
-.issue-mode-badge.mode-plan { background: #E8F5E9; color: #2E7D32; }
-body.dark .issue-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
+.issue-mode-badge.mode-plan { background: var(--plan-mode-bg); color: var(--plan-mode-text); }
 
 /* ===== Issue Body Preview ===== */
 .issue-item-body {
@@ -273,6 +272,4 @@ body.dark .issue-mode-badge.mode-plan { background: #1B3A1F; color: #66BB6A; }
 .nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
-body.dark .issue-badge.open { background: #2EA043; }
-body.dark .issue-badge.closed { background: #8B5CF6; }
 body.dark .edit-send-btn:disabled { background: var(--hover-bg); color: var(--text-muted); }

@@ -34,37 +34,42 @@
 
 /* ===== Theme: 陽光 (Sun) — Light ===== */
 body.theme-sun {
-    --accent: #F47B5E;
-    --accent-subtle: #FEF0EC;
-    --accent-bg: #FCEAE4;
-    --bg: #FFF8F0;
-    --bg-secondary: #F5E6D0;
-    --bg-tertiary: #EDD9C0;
-    --hover-bg: #F0DCC8;
-    --text: #3A3028;
-    --text-muted: #8A7B6A;
-    --text-on-accent: #FFFFFF;
-    --border: #E8DDD0;
-    --error: #D44040;
+    --accent: #E86A4A;
+    --accent-subtle: #FDE8E2;
+    --accent-bg: #F9DDD4;
+    --bg: #FBF3E8;
+    --bg-secondary: #F0DABC;
+    --bg-tertiary: #E5CBA8;
+    --hover-bg: #EACFAE;
+    --text: #2E2418;
+    --text-muted: #7A6A56;
+    --text-on-accent: #FBF3E8;
+    --border: #DDCEB8;
+    --error: #C83030;
     --error-bg: #FDECEC;
-    --success: #4A9E6A;
-    --shadow-md: 0 4px 16px rgba(58,48,40,0.10);
-    --shadow-lg: 0 6px 20px rgba(58,48,40,0.16);
+    --success: #3D8E5A;
+    --shadow-md: 0 4px 16px rgba(46,36,24,0.12);
+    --shadow-lg: 0 6px 20px rgba(46,36,24,0.18);
     --priority-high-bg: rgba(239, 68, 68, 0.15);
     --priority-high-dot: #EF4444;
     --priority-medium-bg: rgba(234, 179, 8, 0.15);
     --priority-medium-dot: #EAB308;
     --priority-low-bg: rgba(74, 158, 106, 0.10);
     --priority-low-dot: #4A9E6A;
-    --scrollbar-thumb: #D0C4B0;
-    --scrollbar-thumb-hover: #BEB2A0;
-    --cmp-light-bg: #F5E6D0;
-    --cmp-light-surface: #FFF8F0;
-    --cmp-light-input: #E8DDD0;
+    --scrollbar-thumb: #C8B89E;
+    --scrollbar-thumb-hover: #B8A88E;
+    --cmp-light-bg: #F0DABC;
+    --cmp-light-surface: #FBF3E8;
+    --cmp-light-input: #DDCEB8;
     --cmp-dark-bg: #1E1A16;
     --cmp-dark-surface: #2A2520;
     --cmp-dark-input: #3E3830;
-    --overlay: rgba(0,0,0,0.3);
+    --overlay: rgba(0,0,0,0.35);
+    --badge-open-bg: #1A7F37;
+    --badge-closed-bg: #6E40C9;
+    --plan-mode-bg: #E8F5E9;
+    --plan-mode-text: #2E7D32;
+    --plan-mode-bg-hover: #C8E6C9;
 }
 
 /* ===== Theme: 陽光 (Sun) — Dark ===== */
@@ -94,6 +99,11 @@ body.theme-sun.dark {
     --scrollbar-thumb: #504840;
     --scrollbar-thumb-hover: #605850;
     --overlay: rgba(0,0,0,0.55);
+    --badge-open-bg: #2EA043;
+    --badge-closed-bg: #8B5CF6;
+    --plan-mode-bg: #1B3A1F;
+    --plan-mode-text: #66BB6A;
+    --plan-mode-bg-hover: #2E4A32;
     background: var(--bg);
 }
 
@@ -108,7 +118,7 @@ body.theme-sky {
     --hover-bg: #E8F2F8;
     --text: #2A3A40;
     --text-muted: #587888;
-    --text-on-accent: #FFFFFF;
+    --text-on-accent: #FFF9F0;
     --border: #A0C0D8;
     --error: #D44040;
     --error-bg: #FDECEC;
@@ -130,6 +140,11 @@ body.theme-sky {
     --cmp-dark-surface: #202A30;
     --cmp-dark-input: #303E46;
     --overlay: rgba(0,0,0,0.3);
+    --badge-open-bg: #1A7F37;
+    --badge-closed-bg: #6E40C9;
+    --plan-mode-bg: #E8F5E9;
+    --plan-mode-text: #2E7D32;
+    --plan-mode-bg-hover: #C8E6C9;
 }
 
 /* ===== Theme: 晴空 (Sky) — Dark ===== */
@@ -159,6 +174,11 @@ body.theme-sky.dark {
     --scrollbar-thumb: #3E4E58;
     --scrollbar-thumb-hover: #506068;
     --overlay: rgba(0,0,0,0.55);
+    --badge-open-bg: #2EA043;
+    --badge-closed-bg: #8B5CF6;
+    --plan-mode-bg: #1B3A1F;
+    --plan-mode-text: #66BB6A;
+    --plan-mode-bg-hover: #2E4A32;
     background: var(--bg);
 }
 
@@ -173,7 +193,7 @@ body.theme-zen {
     --hover-bg: #E6DED2;
     --text: #3A3028;
     --text-muted: #8A7E6E;
-    --text-on-accent: #FFFFFF;
+    --text-on-accent: #F5F0E8;
     --border: #DDD5C8;
     --error: #C44040;
     --error-bg: #FDECEC;
@@ -195,6 +215,11 @@ body.theme-zen {
     --cmp-dark-surface: #262320;
     --cmp-dark-input: #3A3630;
     --overlay: rgba(0,0,0,0.3);
+    --badge-open-bg: #1A7F37;
+    --badge-closed-bg: #6E40C9;
+    --plan-mode-bg: #E8F5E9;
+    --plan-mode-text: #2E7D32;
+    --plan-mode-bg-hover: #C8E6C9;
 }
 
 /* ===== Theme: 和風 (Zen) — Dark ===== */
@@ -224,6 +249,11 @@ body.theme-zen.dark {
     --scrollbar-thumb: #4A4640;
     --scrollbar-thumb-hover: #5A5650;
     --overlay: rgba(0,0,0,0.55);
+    --badge-open-bg: #2EA043;
+    --badge-closed-bg: #8B5CF6;
+    --plan-mode-bg: #1B3A1F;
+    --plan-mode-text: #66BB6A;
+    --plan-mode-bg-hover: #2E4A32;
     background: var(--bg);
 }
 
@@ -248,7 +278,6 @@ body { font-family: var(--font-system); background: var(--bg); font-size: var(--
 /* ===== Dark Mode (shared base — trip-btn overrides) ===== */
 body.dark .trip-btn { background: var(--hover-bg); }
 body.dark .trip-btn:hover { background: var(--bg-tertiary); }
-body.dark .trip-btn.active { border-color: var(--accent); }
 
 /* ===== Container & Sticky Nav (shared by index + edit) ===== */
 .container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform var(--duration-slow) var(--ease-apple), border-radius var(--duration-slow); }

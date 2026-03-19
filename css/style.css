@@ -163,8 +163,8 @@ body:not(.dark) .day-header {
 .map-link, .map-link-inline { text-decoration: none !important; }
 .map-link { display: inline-flex; align-items: center; gap: 4px; background: transparent; color: var(--accent); padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--fs-callout); text-decoration: none; margin-right: 4px; margin-bottom: 4px; min-height: var(--tap-min); vertical-align: middle; transition: background var(--duration-fast), color var(--duration-fast); }
 .map-link:hover { background: var(--hover-bg); color: var(--text); }
-.map-link .g-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #4285F4; color: #fff; font-size: var(--fs-footnote); font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
-.map-link .n-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #03C75A; color: #fff; font-size: var(--fs-footnote); font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
+.map-link .g-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #4285F4; color: var(--text-on-accent); font-size: var(--fs-footnote); font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
+.map-link .n-icon { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #03C75A; color: var(--text-on-accent); font-size: var(--fs-footnote); font-weight: 700; font-family: 'Google Sans', Arial, sans-serif; line-height: 1; flex-shrink: 0; }
 .map-link.naver { color: var(--text); }
 .map-link.naver:hover { background: var(--hover-bg); color: var(--text); }
 .map-link-inline .n-icon { width: 16px; height: 16px; font-size: var(--fs-footnote); }
@@ -283,11 +283,11 @@ body:not(.dark) .day-header {
 .print-mode { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FAF9F7; --text: #1A1A1A; --text-muted: #6B6B6B; background: var(--bg-secondary) !important; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
 .print-mode .tl-card,
-.print-mode .info-card { background: #FFFFFF; border: 1px solid #E0E0E0; backdrop-filter: none; -webkit-backdrop-filter: none; }
-.print-mode .day-header { background: #FFFFFF; border-bottom: 1px solid #E0E0E0; }
+.print-mode .info-card { background: var(--bg); border: 1px solid var(--border); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.print-mode .day-header { background: var(--bg); border-bottom: 1px solid var(--border); }
 .print-mode .tl-flag-arrive { background: #8B8580; }
-.print-mode .tl-segment { border-left-color: #ddd; }
-.print-mode .tl-travel-content { background: #f5f5f5; }
+.print-mode .tl-segment { border-left-color: var(--border); }
+.print-mode .tl-travel-content { background: var(--bg-secondary); }
 .print-mode .tl-body, .print-mode .col-detail { display: block !important; }
 .print-mode .tl-arrow, .print-mode .col-row .arrow { display: none !important; }
 .print-mode .dh-nav { display: none !important; }
@@ -302,14 +302,14 @@ body:not(.dark) .day-header {
 .print-mode .print-exit-btn { display: block; }
 @media print {
     @page { size: A4; margin: 12mm; }
-    body { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FAF9F7; --text: #1A1A1A; --text-muted: #6B6B6B; background: #fff !important; }
+    body { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FAF9F7; --text: #1A1A1A; --text-muted: #6B6B6B; background: var(--bg) !important; }
     .sticky-nav, .dh-nav, .print-exit-btn, .hourly-weather, .info-panel { display: none !important; }
     .container { max-width: 100% !important; box-shadow: none !important; }
     .tl-body, .col-detail { display: block !important; }
     .tl-arrow, .col-row .arrow { display: none !important; }
-    .tl-card, .info-card { background: #FFFFFF !important; border: 1px solid #E0E0E0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    .tl-card, .info-card { background: var(--bg) !important; border: 1px solid var(--border) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
     .top-bar, .day-header { position: relative !important; }
-    .day-header { background: #FFFFFF !important; border-bottom: 1px solid #E0E0E0 !important; }
+    .day-header { background: var(--bg) !important; border-bottom: 1px solid var(--border) !important; }
     .day-content { break-inside: avoid; }
 }
 
@@ -385,7 +385,6 @@ body.dark .info-header { background: var(--hover-bg); color: var(--text); }
 body.dark .hw-block { background: var(--bg-secondary); }
 body.dark .info-box { background: var(--accent-bg); }
 body.dark .tl-card { background: var(--bg-tertiary); }
-body.dark .tl-travel-content { background: var(--accent-bg); }
 
 /* ===== 主題背景時卡片半透明化 ===== */
 /* 有背景主題時，tl-card 改為半透明 + backdrop blur */
@@ -406,7 +405,7 @@ body[class*="theme-"] .info-panel {
     -webkit-backdrop-filter: blur(8px);
 }
 /* 列印模式還原不透明 */
-body.print-mode .tl-card { background: #fff !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+body.print-mode .tl-card { background: var(--bg) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 body.print-mode .info-panel { background: var(--bg-secondary) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
 /* ===== Nav Brand ===== */
@@ -424,7 +423,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
     transition: transform var(--duration-normal);
 }
 .speed-dial-trigger:hover { transform: scale(1.1); }
-.speed-dial-trigger svg { transition: transform var(--duration-slow) var(--ease-apple); }
+.speed-dial-trigger svg { width: 28px; height: 28px; transition: transform var(--duration-slow) var(--ease-apple); }
 .speed-dial.open .speed-dial-trigger svg { transform: rotate(180deg); }
 .speed-dial-backdrop {
     position: fixed; inset: 0; background: var(--overlay);
@@ -443,7 +442,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 
 .speed-dial-item {
     width: 44px; height: 44px; border-radius: 50%;
-    background: var(--bg); color: var(--accent); border: none;
+    background: var(--bg-secondary); color: var(--accent); border: none;
     display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow-md);
     transition: transform var(--duration-fast), opacity var(--duration-fast);
@@ -455,11 +454,22 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .speed-dial.open .speed-dial-item:nth-child(3) { transition-delay: 80ms; }
 .speed-dial.open .speed-dial-item:nth-child(4) { transition-delay: 120ms; }
 .speed-dial-item:hover { transform: scale(1.15); }
-.speed-dial-item svg { width: 40px; height: 40px; }
-body.dark .speed-dial-item { background: var(--bg-secondary); }
-
+.speed-dial-item .svg-icon { width: 32px; height: 32px; }
+.speed-dial-item svg { width: 32px; height: 32px; }
 .print-mode .speed-dial { display: none !important; }
 @media print { .speed-dial { display: none !important; } }
+
+/* ===== Tool Action Buttons (in bottom sheet) ===== */
+.tool-action-btn {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; padding: 16px 20px;
+    background: var(--bg-secondary); border: none; border-radius: var(--radius-md);
+    color: var(--text); font-family: inherit; font-size: var(--fs-body);
+    cursor: pointer; transition: background-color var(--duration-fast);
+}
+.tool-action-btn:hover { background-color: var(--bg-tertiary); }
+.tool-action-btn .svg-icon { width: 24px; height: 24px; color: var(--accent); }
+.tool-action-btn svg { width: 24px; height: 24px; }
 
 /* ===== Bottom Sheet ===== */
 .info-sheet-backdrop {
@@ -471,7 +481,7 @@ body.dark .speed-dial-item { background: var(--bg-secondary); }
 .info-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
 .info-sheet-panel {
     position: fixed; bottom: 0; left: 0; right: 0;
-    height: 50dvh;
+    height: 75dvh;
     max-height: 90dvh;
     background: var(--bg-secondary);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
