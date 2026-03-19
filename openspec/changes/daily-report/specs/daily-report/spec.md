@@ -14,9 +14,9 @@
 ### Requirement: 日報彙整 7 個數據來源
 日報 SHALL 包含以下區塊：
 
-#### Scenario: 排程處理統計
+#### Scenario: 行程修改統計
 - **WHEN** 查詢 D1 requests 表
-- **THEN** 顯示昨日新增/已處理/未處理數量，區分 agent/scheduler
+- **THEN** 顯示昨日新增/已處理/未處理數量
 
 #### Scenario: Cloudflare Workers Analytics
 - **WHEN** 查詢 CF GraphQL API

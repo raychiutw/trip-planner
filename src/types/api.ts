@@ -54,7 +54,7 @@ export interface Request {
   createdAt: string;
   /**
    * DB column `processed_by` (added in migration 0004).
-   * 'scheduler' | null
+   * @deprecated No longer set by new requests. Retained for historical data only.
    */
   processedBy?: string | null;
 }

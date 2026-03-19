@@ -26,11 +26,6 @@
         var html = '<div class="request-item ' + stateClass + '">';
         html += '<div class="request-item-header">';
         html += '<span class="request-badge ' + stateClass + '">' + badgeIcon + badgeText + '</span>';
-        if (req.processed_by) {
-            var pbClass = req.processed_by === 'agent' ? 'processed-agent' : 'processed-scheduler';
-            var pbText = req.processed_by === 'agent' ? '⚡ 即時' : '🕐 排程';
-            html += '<span class="request-processed-badge ' + pbClass + '">' + pbText + '</span>';
-        }
         html += '<span class="request-mode-badge mode-' + mode + '">' + escHtml(modeBadgeText) + '</span>';
         html += '<span class="request-item-title">' + escHtml(req.title) + '</span>';
         html += '</div>';

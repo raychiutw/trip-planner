@@ -92,8 +92,8 @@
     <div class="cards">
       <div class="card">
         <div class="card-icon">📊</div>
-        <div class="card-title">排程處理統計</div>
-        <div class="card-desc">新增/已處理/未處理<br>agent vs scheduler</div>
+        <div class="card-title">行程修改統計</div>
+        <div class="card-desc">新增/已處理/未處理</div>
         <div class="card-source">D1 → requests 表</div>
       </div>
       <div class="card">
@@ -101,12 +101,6 @@
         <div class="card-title">後端 API 錯誤</div>
         <div class="card-desc">4xx/5xx 數量<br>Top 5 錯誤路徑</div>
         <div class="card-source">D1 → api_logs 表</div>
-      </div>
-      <div class="card">
-        <div class="card-icon">🔗</div>
-        <div class="card-title">Webhook 失敗</div>
-        <div class="card-desc">昨日失敗數</div>
-        <div class="card-source">D1 → webhook_logs 表</div>
       </div>
       <div class="card">
         <div class="card-icon">🚨</div>
@@ -150,7 +144,7 @@
       <div class="card wide">
         <div class="card-icon">📄</div>
         <div class="card-title">buildHtml() → report.html</div>
-        <div class="card-desc">8 個數據來源組合成 styled HTML email。任一來源失敗顯示「查詢失敗」，不影響其他區塊。</div>
+        <div class="card-desc">7 個數據來源組合成 styled HTML email。任一來源失敗顯示「查詢失敗」，不影響其他區塊。</div>
         <div class="card-source">scripts/daily-report.js</div>
       </div>
     </div>
@@ -211,9 +205,9 @@
     <div class="subject">Trip Planner 日報 — 2026-03-19</div>
   </div>
   <div class="email-body">
-    <h3>📊 排程處理統計</h3>
-    <div class="metric"><span>昨日新增請求</span><span class="val">3</span></div>
-    <div class="metric"><span>已處理</span><span class="val">2（⚡1 🕐1）</span></div>
+    <h3>📊 行程修改統計</h3>
+    <div class="metric"><span>昨日新增</span><span class="val">3</span></div>
+    <div class="metric"><span>已處理</span><span class="val">2</span></div>
     <div class="metric"><span>未處理</span><span class="val warn">1</span></div>
 
     <h3>⚡ Cloudflare Workers</h3>
@@ -237,7 +231,6 @@
     <h3>🐛 錯誤紀錄</h3>
     <div class="metric"><span>前端 JS 錯誤</span><span class="val ok">0</span></div>
     <div class="metric"><span>後端 API 錯誤</span><span class="val warn">3</span></div>
-    <div class="metric"><span>Webhook 失敗</span><span class="val warn">1</span></div>
   </div>
 </div>
 

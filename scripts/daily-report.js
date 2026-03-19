@@ -42,16 +42,14 @@ async function queryD1(sql) {
   return data.result[0].results;
 }
 
-// ── 數據來源 1: 排程處理統計 ────────────────────────────────────
+// ── 數據來源 1: 行程修改統計 ────────────────────────────────────
 
 async function queryD1Requests() {
   var rows = await queryD1(
     "SELECT " +
     "COUNT(*) as total, " +
     "SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) as open_count, " +
-    "SUM(CASE WHEN status='closed' THEN 1 ELSE 0 END) as closed_count, " +
-    "SUM(CASE WHEN processed_by='agent' THEN 1 ELSE 0 END) as agent_count, " +
-    "SUM(CASE WHEN processed_by='scheduler' THEN 1 ELSE 0 END) as scheduler_count " +
+    "SUM(CASE WHEN status='closed' THEN 1 ELSE 0 END) as closed_count " +
     "FROM requests WHERE created_at >= datetime('now', '-1 day')"
   );
   return rows[0];
@@ -292,7 +290,7 @@ function buildHtml(results) {
   var r = results;
   var sections = [];
 
-  sections.push(sectionHtml('排程處理統計', requestsHtml(r.requests)));
+  sections.push(sectionHtml('行程修改統計', requestsHtml(r.requests)));
   sections.push(sectionHtml('Workers Analytics', workersHtml(r.workers)));
   sections.push(sectionHtml('Web Analytics', webHtml(r.web)));
   sections.push(sectionHtml('Lighthouse 分數', lighthouseHtml(r.lighthouse)));
@@ -324,10 +322,8 @@ function requestsHtml(data) {
   if (!data) return failedHtml();
   return '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
     tr('昨日新增', data.total) +
-    tr('未處理 (open)', data.open_count) +
-    tr('已處理 (closed)', data.closed_count) +
-    tr('Agent 處理', data.agent_count) +
-    tr('Scheduler 處理', data.scheduler_count) +
+    tr('已處理', data.closed_count) +
+    tr('未處理', data.open_count) +
     '</table>';
 }
 

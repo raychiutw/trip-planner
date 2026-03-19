@@ -1,3 +1,3 @@
 ALTER TABLE requests ADD COLUMN processed_by TEXT DEFAULT NULL;
--- 'agent' = Agent Server 即時處理
--- 'scheduler' = tp-request 排程 fallback
+-- DEPRECATED: No longer set by new requests (webhook/agent mechanism removed).
+-- Column retained for historical data. See migration 0006_remove_webhook.sql.

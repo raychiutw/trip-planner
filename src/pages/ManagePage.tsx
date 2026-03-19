@@ -19,7 +19,6 @@ interface RawRequest {
   reply?: string | null;
   status: string;
   created_at: string;
-  processed_by?: string | null;
 }
 
 interface MyTrip {

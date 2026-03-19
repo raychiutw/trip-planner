@@ -83,9 +83,6 @@ scripts/daily-report.js
   ├── queryD1ApiLogs()         ← Cloudflare D1 REST API
   │   └── 昨天 4xx/5xx 錯誤數 + top 路徑
   │
-  ├── queryD1WebhookLogs()     ← Cloudflare D1 REST API
-  │   └── 昨天 webhook 失敗數
-  │
   ├── querySentry()            ← Sentry API
   │   └── 昨天前端錯誤數 + top 3 issue
   │

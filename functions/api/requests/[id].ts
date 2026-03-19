@@ -53,14 +53,6 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     values.push(body.status);
   }
 
-  if (body.processed_by !== undefined) {
-    if (body.processed_by !== 'agent' && body.processed_by !== 'scheduler') {
-      return json({ error: 'processed_by 必須是 agent 或 scheduler' }, 400);
-    }
-    updates.push('processed_by = ?');
-    values.push(body.processed_by);
-  }
-
   if (updates.length === 0) {
     return json({ error: '沒有要更新的欄位' }, 400);
   }

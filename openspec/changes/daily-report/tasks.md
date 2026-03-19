@@ -24,7 +24,6 @@
 - [x] 4.1 建立 `scripts/daily-report.js` 主框架
 - [x] 4.2 queryD1Requests()：排程處理統計
 - [x] 4.3 queryD1ApiLogs()：後端 API 錯誤統計
-- [x] 4.4 queryD1WebhookLogs()：webhook 失敗統計
 - [x] 4.5 querySentry()：前端錯誤統計
 - [x] 4.6 queryWorkersAnalytics()：CF Workers GraphQL
 - [x] 4.7 queryWebAnalytics()：CF Web Analytics GraphQL
