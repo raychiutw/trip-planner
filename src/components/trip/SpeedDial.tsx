@@ -44,7 +44,9 @@ export const SPEED_DIAL_GROUPS: Record<string, { title: string; items: { key: st
   tools: {
     title: '設定',
     items: [
-      { key: 'settings', label: '設定', action: 'navigate' },
+      { key: 'trip-select', label: '切換行程', action: 'navigate' },
+      { key: 'appearance', label: '外觀', action: 'navigate' },
+      { key: 'theme', label: '色彩主題', action: 'navigate' },
       { key: 'download', label: '下載行程', action: 'download' },
       { key: 'printer', label: '列印模式', action: 'print' },
     ],

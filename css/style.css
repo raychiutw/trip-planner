@@ -280,11 +280,11 @@ body:not(.dark) .day-header {
 @media print { .edit-fab { display: none !important; } }
 
 /* ===== Print Mode ===== */
-.print-mode { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FAF9F7; --text: #1A1A1A; --text-muted: #6B6B6B; background: var(--bg-secondary) !important; }
+.print-mode { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FFFFFF; --text: #1A1A1A; --text-muted: #6B6B6B; background: var(--bg-secondary) !important; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
 .print-mode .tl-card,
-.print-mode .info-card { background: var(--bg); border: 1px solid var(--border); backdrop-filter: none; -webkit-backdrop-filter: none; }
-.print-mode .day-header { background: var(--bg); border-bottom: 1px solid var(--border); }
+.print-mode .info-card { background: var(--bg); border: 1px solid var(--accent); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.print-mode .day-header { background: var(--bg); border-bottom: 1px solid var(--accent); }
 .print-mode .tl-flag-arrive { background: #8B8580; }
 .print-mode .tl-segment { border-left-color: var(--border); }
 .print-mode .tl-travel-content { background: var(--bg-secondary); }
@@ -302,14 +302,14 @@ body:not(.dark) .day-header {
 .print-mode .print-exit-btn { display: block; }
 @media print {
     @page { size: A4; margin: 12mm; }
-    body { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FAF9F7; --text: #1A1A1A; --text-muted: #6B6B6B; background: var(--bg) !important; }
+    body { --accent: #8B8580; --accent-subtle: #F9F3EF; --accent-bg: #F5EDE8; --bg: #FFFFFF; --bg-secondary: #FFFFFF; --text: #1A1A1A; --text-muted: #6B6B6B; background: var(--bg) !important; }
     .sticky-nav, .dh-nav, .print-exit-btn, .hourly-weather, .info-panel { display: none !important; }
     .container { max-width: 100% !important; box-shadow: none !important; }
     .tl-body, .col-detail { display: block !important; }
     .tl-arrow, .col-row .arrow { display: none !important; }
-    .tl-card, .info-card { background: var(--bg) !important; border: 1px solid var(--border) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    .tl-card, .info-card { background: var(--bg) !important; border: 1px solid var(--accent) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
     .top-bar, .day-header { position: relative !important; }
-    .day-header { background: var(--bg) !important; border-bottom: 1px solid var(--border) !important; }
+    .day-header { background: var(--bg) !important; border-bottom: 1px solid var(--accent) !important; }
     .day-content { break-inside: avoid; }
 }
 
@@ -454,8 +454,8 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .speed-dial.open .speed-dial-item:nth-child(3) { transition-delay: 80ms; }
 .speed-dial.open .speed-dial-item:nth-child(4) { transition-delay: 120ms; }
 .speed-dial-item:hover { transform: scale(1.15); }
-.speed-dial-item .svg-icon { width: 32px; height: 32px; }
-.speed-dial-item svg { width: 32px; height: 32px; }
+.speed-dial-item .svg-icon { width: 28px; height: 28px; }
+.speed-dial-item svg { width: 28px; height: 28px; }
 .print-mode .speed-dial { display: none !important; }
 @media print { .speed-dial { display: none !important; } }
 

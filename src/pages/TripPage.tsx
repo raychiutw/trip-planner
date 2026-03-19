@@ -492,8 +492,14 @@ export default function TripPage() {
       case 'tools':
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html'; }}>
-              <Icon name="gear" /><span>設定</span>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=trip'; }}>
+              <Icon name="swap-horiz" /><span>切換行程</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=appearance'; }}>
+              <Icon name="palette" /><span>外觀</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=theme'; }}>
+              <Icon name="color-lens" /><span>色彩主題</span>
             </button>
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadOpen(); }}>
               <Icon name="download" /><span>下載行程</span>
