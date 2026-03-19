@@ -74,14 +74,10 @@ async function queryD1ApiLogs() {
   return { summary: countRows[0], topErrors: topRows };
 }
 
-// ── 數據來源 3: Webhook 錯誤 ───────────────────────────────────
+// ── 數據來源 3: Webhook 錯誤（表已移除，回傳空值）────────────────
 
 async function queryD1WebhookLogs() {
-  var rows = await queryD1(
-    "SELECT COUNT(*) as failed_count " +
-    "FROM webhook_logs WHERE created_at >= datetime('now', '-1 day') AND status = 'failed'"
-  );
-  return rows[0];
+  return { failed_count: 0 };
 }
 
 // ── 數據來源 4: Sentry 前端錯誤 ────────────────────────────────
