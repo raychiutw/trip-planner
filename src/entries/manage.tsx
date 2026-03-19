@@ -1,3 +1,6 @@
+import { initSentry } from '../lib/sentry';
+initSentry();
+
 import '../../css/shared.css';
 import '../../css/manage.css';
 import React from 'react';

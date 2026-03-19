@@ -13,3 +13,4 @@ data/dist/
 server/node_modules/
 *.json.credentials
 .cloudflared/
+report.html

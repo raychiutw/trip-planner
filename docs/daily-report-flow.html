@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Report 流程圖</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; padding: 40px 20px; }
+  h1 { text-align: center; font-size: 28px; color: #e94560; margin-bottom: 8px; }
+  .subtitle { text-align: center; color: #888; font-size: 14px; margin-bottom: 40px; }
+  .flow { max-width: 900px; margin: 0 auto; position: relative; }
+
+  /* Timeline spine */
+  .flow::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: linear-gradient(to bottom, #e94560, #0f3460, #16213e); transform: translateX(-50%); }
+
+  .phase { margin-bottom: 48px; position: relative; }
+  .phase-label { text-align: center; position: relative; z-index: 2; margin-bottom: 24px; }
+  .phase-label span { display: inline-block; background: #e94560; color: #fff; padding: 6px 20px; border-radius: 20px; font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+  .phase-label.blue span { background: #0f3460; }
+  .phase-label.green span { background: #2d6a4f; }
+  .phase-label.purple span { background: #7b2cbf; }
+
+  .cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; position: relative; z-index: 1; }
+  .card { background: #16213e; border: 1px solid #0f3460; border-radius: 12px; padding: 16px 20px; width: 200px; transition: transform 0.2s, box-shadow 0.2s; }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(233,69,96,0.2); }
+  .card-icon { font-size: 28px; margin-bottom: 8px; }
+  .card-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .card-desc { font-size: 12px; color: #888; line-height: 1.5; }
+  .card-source { font-size: 11px; color: #e94560; margin-top: 8px; font-weight: 600; }
+
+  .card.wide { width: 420px; }
+  .card.full { width: 100%; max-width: 600px; }
+
+  /* Arrow between phases */
+  .arrow { text-align: center; margin: -12px 0 -12px; position: relative; z-index: 2; }
+  .arrow span { display: inline-block; color: #0f3460; font-size: 24px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* Secrets table */
+  .secrets { max-width: 700px; margin: 40px auto 0; }
+  .secrets h2 { color: #e94560; font-size: 18px; margin-bottom: 12px; text-align: center; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #0f3460; color: #fff; padding: 10px 16px; text-align: left; font-size: 13px; }
+  td { background: #16213e; padding: 10px 16px; border-bottom: 1px solid #0f3460; font-size: 13px; }
+  td:first-child { font-family: 'SF Mono', 'Fira Code', monospace; color: #e94560; white-space: nowrap; }
+
+  /* Email preview */
+  .email-preview { max-width: 600px; margin: 40px auto 0; background: #fff; color: #333; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  .email-header { background: #f5f5f5; padding: 16px 20px; border-bottom: 1px solid #e0e0e0; }
+  .email-header .from { font-size: 12px; color: #888; }
+  .email-header .subject { font-size: 16px; font-weight: 700; color: #333; margin-top: 4px; }
+  .email-body { padding: 20px; font-size: 13px; line-height: 1.8; }
+  .email-body h3 { color: #e94560; font-size: 14px; margin: 16px 0 8px; }
+  .email-body .metric { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+  .email-body .metric .val { font-weight: 700; color: #0f3460; }
+  .email-body .ok { color: #2d6a4f; }
+  .email-body .warn { color: #e94560; }
+
+  @media (max-width: 600px) {
+    .card { width: 100%; }
+    .card.wide { width: 100%; }
+    .cards { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Trip Planner Daily Report</h1>
+<p class="subtitle">每天 UTC 00:00（台灣 08:00）自動執行</p>
+
+<div class="flow">
+
+  <!-- Phase 1: Trigger -->
+  <div class="phase">
+    <div class="phase-label"><span>TRIGGER</span></div>
+    <div class="cards">
+      <div class="card wide">
+        <div class="card-icon">⏰</div>
+        <div class="card-title">GitHub Actions Cron</div>
+        <div class="card-desc">每天 UTC 00:00 自動觸發，也支援手動 workflow_dispatch</div>
+        <div class="card-source">.github/workflows/daily-report.yml</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span>▼</span></div>
+
+  <!-- Phase 2: Data Collection -->
+  <div class="phase">
+    <div class="phase-label blue"><span>DATA COLLECTION（並行）</span></div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">排程處理統計</div>
+        <div class="card-desc">新增/已處理/未處理<br>agent vs scheduler</div>
+        <div class="card-source">D1 → requests 表</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐛</div>
+        <div class="card-title">後端 API 錯誤</div>
+        <div class="card-desc">4xx/5xx 數量<br>Top 5 錯誤路徑</div>
+        <div class="card-source">D1 → api_logs 表</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔗</div>
+        <div class="card-title">Webhook 失敗</div>
+        <div class="card-desc">昨日失敗數</div>
+        <div class="card-source">D1 → webhook_logs 表</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🚨</div>
+        <div class="card-title">前端 JS 錯誤</div>
+        <div class="card-desc">錯誤數 + Top 3 issue</div>
+        <div class="card-source">Sentry API</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">Workers Analytics</div>
+        <div class="card-desc">API 呼叫量/錯誤率<br>P50/P99 延遲</div>
+        <div class="card-source">CF GraphQL API</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <div class="card-title">Web Analytics</div>
+        <div class="card-desc">瀏覽量/訪客數<br>LCP/CLS/INP</div>
+        <div class="card-source">CF GraphQL API</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📈</div>
+        <div class="card-title">Lighthouse 分數</div>
+        <div class="card-desc">Performance / SEO<br>Accessibility / BP</div>
+        <div class="card-source">PageSpeed Insights API</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <div class="card-title">壞連結檢查</div>
+        <div class="card-desc">爬所有 maps URL<br>HEAD 檢查 4xx/5xx</div>
+        <div class="card-source">fetch HEAD（並行 5）</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span>▼</span></div>
+
+  <!-- Phase 3: Build -->
+  <div class="phase">
+    <div class="phase-label green"><span>BUILD HTML</span></div>
+    <div class="cards">
+      <div class="card wide">
+        <div class="card-icon">📄</div>
+        <div class="card-title">buildHtml() → report.html</div>
+        <div class="card-desc">8 個數據來源組合成 styled HTML email。任一來源失敗顯示「查詢失敗」，不影響其他區塊。</div>
+        <div class="card-source">scripts/daily-report.js</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span>▼</span></div>
+
+  <!-- Phase 4: Send -->
+  <div class="phase">
+    <div class="phase-label purple"><span>SEND EMAIL</span></div>
+    <div class="cards">
+      <div class="card wide">
+        <div class="card-icon">📧</div>
+        <div class="card-title">Gmail SMTP 寄信</div>
+        <div class="card-desc">dawidd6/action-send-mail → smtp.gmail.com:587<br>from/to: lean.lean@gmail.com</div>
+        <div class="card-source">GitHub Actions step</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow"><span>▼</span></div>
+
+  <!-- Phase 5: Cleanup -->
+  <div class="phase">
+    <div class="phase-label"><span>CLEANUP</span></div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🧹</div>
+        <div class="card-title">清理舊 api_logs</div>
+        <div class="card-desc">DELETE WHERE created_at &lt; 30 天前</div>
+        <div class="card-source">D1 REST API</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Secrets Table -->
+<div class="secrets">
+  <h2>GitHub Secrets</h2>
+  <table>
+    <tr><th>Secret</th><th>說明</th></tr>
+    <tr><td>CLOUDFLARE_API_TOKEN</td><td>D1 查詢 + CF Analytics GraphQL</td></tr>
+    <tr><td>CF_ACCOUNT_ID</td><td>Cloudflare 帳號 ID</td></tr>
+    <tr><td>D1_DATABASE_ID</td><td>D1 資料庫 ID</td></tr>
+    <tr><td>GMAIL_USERNAME</td><td>lean.lean@gmail.com</td></tr>
+    <tr><td>GMAIL_APP_PASSWORD</td><td>Gmail App Password（2FA 後建立）</td></tr>
+    <tr><td>SENTRY_AUTH_TOKEN</td><td>Sentry API 查詢</td></tr>
+    <tr><td>SENTRY_ORG</td><td>Sentry organization slug</td></tr>
+    <tr><td>SENTRY_PROJECT</td><td>Sentry project slug</td></tr>
+  </table>
+</div>
+
+<!-- Email Preview -->
+<div class="email-preview">
+  <div class="email-header">
+    <div class="from">From: lean.lean@gmail.com</div>
+    <div class="subject">Trip Planner 日報 — 2026-03-19</div>
+  </div>
+  <div class="email-body">
+    <h3>📊 排程處理統計</h3>
+    <div class="metric"><span>昨日新增請求</span><span class="val">3</span></div>
+    <div class="metric"><span>已處理</span><span class="val">2（⚡1 🕐1）</span></div>
+    <div class="metric"><span>未處理</span><span class="val warn">1</span></div>
+
+    <h3>⚡ Cloudflare Workers</h3>
+    <div class="metric"><span>API 呼叫</span><span class="val">1,247</span></div>
+    <div class="metric"><span>錯誤率</span><span class="val ok">0.2%</span></div>
+    <div class="metric"><span>延遲 P50 / P99</span><span class="val">12ms / 89ms</span></div>
+
+    <h3>👥 Web Analytics</h3>
+    <div class="metric"><span>瀏覽量 / 訪客</span><span class="val">342 / 28</span></div>
+    <div class="metric"><span>LCP / CLS / INP</span><span class="val ok">1.2s / 0.05 / 120ms</span></div>
+
+    <h3>📈 Lighthouse</h3>
+    <div class="metric"><span>Performance</span><span class="val ok">92</span></div>
+    <div class="metric"><span>SEO</span><span class="val ok">100</span></div>
+    <div class="metric"><span>Accessibility</span><span class="val ok">98</span></div>
+    <div class="metric"><span>Best Practices</span><span class="val ok">95</span></div>
+
+    <h3>🔗 連結檢查</h3>
+    <div class="metric"><span>狀態</span><span class="val ok">✅ 142 個連結全部正常</span></div>
+
+    <h3>🐛 錯誤紀錄</h3>
+    <div class="metric"><span>前端 JS 錯誤</span><span class="val ok">0</span></div>
+    <div class="metric"><span>後端 API 錯誤</span><span class="val warn">3</span></div>
+    <div class="metric"><span>Webhook 失敗</span><span class="val warn">1</span></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,9 +1,21 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
+
+// Only upload source maps to Sentry in CI (when SENTRY_AUTH_TOKEN is present).
+const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
+  ? [
+      sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+      }),
+    ]
+  : [];
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), ...sentryPlugins],
   root: '.',
   build: {
     outDir: 'dist',

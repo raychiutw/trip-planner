@@ -51,6 +51,53 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
+  const start = Date.now();
+  const { request, env } = context;
+  const url = new URL(request.url);
+
+  try {
+    const response = await handleAuth(context);
+
+    // Log 4xx/5xx responses
+    const duration = Date.now() - start;
+    if (response.status >= 400) {
+      context.waitUntil(
+        env.DB.prepare(
+          'INSERT INTO api_logs (method, path, status, duration) VALUES (?, ?, ?, ?)',
+        )
+          .bind(request.method, url.pathname, response.status, duration)
+          .run(),
+      );
+    }
+    return response;
+  } catch (err) {
+    const duration = Date.now() - start;
+    context.waitUntil(
+      env.DB.prepare(
+        'INSERT INTO api_logs (method, path, status, error, duration) VALUES (?, ?, ?, ?, ?)',
+      )
+        .bind(
+          request.method,
+          url.pathname,
+          500,
+          err instanceof Error ? err.message : String(err),
+          duration,
+        )
+        .run(),
+    );
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+/**
+ * 原有的認證邏輯，抽成獨立函式以便被錯誤記錄 wrapper 包裹。
+ */
+async function handleAuth(
+  context: EventContext<Env, string, Record<string, unknown>>,
+): Promise<Response> {
   const { request, env } = context;
   const url = new URL(request.url);
 
@@ -74,7 +121,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         const email = String(payload.email).toLowerCase();
         (context.data as Record<string, unknown>).auth = {
           email,
-          isAdmin: env.ADMIN_EMAIL ? email === env.ADMIN_EMAIL.toLowerCase() : false,
+          isAdmin: env.ADMIN_EMAIL
+            ? email === env.ADMIN_EMAIL.toLowerCase()
+            : false,
           isServiceToken: false,
         };
       } else if (payload?.common_name) {
@@ -143,4 +192,4 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   };
 
   return context.next();
-};
+}

@@ -1,3 +1,6 @@
+import { initSentry } from '../lib/sentry';
+initSentry();
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../css/shared.css';
