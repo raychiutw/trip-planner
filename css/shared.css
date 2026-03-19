@@ -257,12 +257,47 @@ body.theme-zen.dark {
     background: var(--bg);
 }
 
+/* ===== Theme: 列印 (Print) ===== */
+body.theme-print {
+    --accent: #8B8580;
+    --accent-subtle: #F0EDEA;
+    --accent-bg: #E8E4E0;
+    --bg: #FFFFFF;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #F5F3F0;
+    --hover-bg: #F0EDEA;
+    --text: #1A1A1A;
+    --text-muted: #6B6B6B;
+    --text-on-accent: #FFFFFF;
+    --border: #D0CCC8;
+    --error: #C83030;
+    --error-bg: #FDECEC;
+    --success: #3D8E5A;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --priority-high-bg: rgba(239, 68, 68, 0.12);
+    --priority-high-dot: #EF4444;
+    --priority-medium-bg: rgba(234, 179, 8, 0.12);
+    --priority-medium-dot: #EAB308;
+    --priority-low-bg: rgba(74, 158, 106, 0.08);
+    --priority-low-dot: #4A9E6A;
+    --scrollbar-thumb: #C8C4C0;
+    --scrollbar-thumb-hover: #B0ACA8;
+    --overlay: rgba(0,0,0,0.2);
+    --badge-open-bg: #1A7F37;
+    --badge-closed-bg: #6E40C9;
+    --plan-mode-bg: #E8F5E9;
+    --plan-mode-text: #2E7D32;
+    --plan-mode-bg-hover: #C8E6C9;
+}
+
 /* ===== Selection ===== */
 ::selection { background: var(--accent-subtle); color: var(--text); }
 
 /* ===== Reset & Base ===== */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; scrollbar-gutter: stable; overflow-x: clip; }
+html { scroll-behavior: smooth; scrollbar-gutter: stable; }
+.page-layout { overflow-x: clip; }
 body { font-family: var(--font-system); background: var(--bg); font-size: var(--fs-body); color: var(--text); line-height: var(--lh-normal); transition: background-color var(--duration-slow) var(--ease-apple), color var(--duration-slow) var(--ease-apple); }
 
 /* ===== Page Layout ===== */

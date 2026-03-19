@@ -118,7 +118,7 @@ export default function SettingPage() {
         {/* Sticky Nav */}
         <div className="sticky-nav" id="stickyNav">
           <span className="nav-title">
-            {section === 'trip' ? '切換行程' : section === 'appearance' ? '外觀' : section === 'theme' ? '色彩主題' : '設定'}
+            {section === 'trip' ? '切換行程' : section === 'appearance' ? '外觀與主題' : '設定'}
           </span>
           <button
             className="nav-close-btn"

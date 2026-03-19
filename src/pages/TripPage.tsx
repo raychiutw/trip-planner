@@ -226,6 +226,7 @@ export default function TripPage() {
   const [downloadOpen, setDownloadOpen] = useState(false);
   const handleDownloadOpen = useCallback(() => setDownloadOpen(true), []);
   const handleDownloadClose = useCallback(() => setDownloadOpen(false), []);
+
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /* --- lsRenewAll once per session (#9) --- */
@@ -278,6 +279,55 @@ export default function TripPage() {
 
   const { trip, days, currentDay, currentDayNum, switchDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
+
+  /** Direct download by format (no separate sheet) */
+  const handleDownloadFormat = useCallback(async (format: string) => {
+    if (!activeTripId) return;
+    const tripName = trip?.name || 'trip';
+    const today = new Date().toISOString().slice(0, 10);
+    const fileBase = `${tripName}-${today}`;
+    const downloadBlob = (content: string, filename: string, type: string) => {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    };
+    try {
+      if (format === 'json') {
+        const [meta, fetchedDays] = await Promise.all([
+          apiFetch(`/trips/${activeTripId}`),
+          apiFetch(`/trips/${activeTripId}/days`),
+        ]);
+        downloadBlob(JSON.stringify({ meta, days: fetchedDays }, null, 2), `${fileBase}.json`, 'application/json');
+      } else if (format === 'md') {
+        const [meta, daySummaries] = await Promise.all([
+          apiFetch<Record<string, unknown>>(`/trips/${activeTripId}`),
+          apiFetch<Array<Record<string, unknown>>>(`/trips/${activeTripId}/days`),
+        ]);
+        let md = `# ${(meta as Record<string, unknown>).name || tripName}\n\n`;
+        for (const ds of daySummaries) {
+          const dayData = await apiFetch<Record<string, unknown>>(`/trips/${activeTripId}/days/${ds.day_num}`);
+          md += `## Day ${ds.day_num}${ds.label ? ' ' + ds.label : ''}${ds.date ? ' — ' + ds.date : ''}\n\n`;
+          const entries = (dayData.entries || []) as Array<Record<string, unknown>>;
+          for (const e of entries) { md += `### ${e.time || ''} ${e.title || ''}\n\n`; }
+        }
+        downloadBlob(md, `${fileBase}.md`, 'text/markdown');
+      } else if (format === 'csv') {
+        const daySummaries = await apiFetch<Array<Record<string, unknown>>>(`/trips/${activeTripId}/days`);
+        const rows: string[][] = [['Day', '日期', '時間', '地點', '評分']];
+        for (const ds of daySummaries) {
+          const dayData = await apiFetch<Record<string, unknown>>(`/trips/${activeTripId}/days/${ds.day_num}`);
+          const entries = (dayData.entries || []) as Array<Record<string, unknown>>;
+          for (const e of entries) {
+            rows.push([String(ds.day_num), String(ds.date || ''), String(e.time || ''), String(e.title || ''), String(e.rating || '')]);
+          }
+        }
+        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        downloadBlob('\uFEFF' + csv, `${fileBase}.csv`, 'text/csv;charset=utf-8');
+      }
+    } catch { alert('下載失敗，請稍後再試'); }
+  }, [activeTripId, trip]);
 
   /* --- Update document title --- */
   useEffect(() => {
@@ -496,14 +546,25 @@ export default function TripPage() {
               <Icon name="swap-horiz" /><span>切換行程</span>
             </button>
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=appearance'; }}>
-              <Icon name="palette" /><span>外觀</span>
+              <Icon name="palette" /><span>外觀與主題</span>
             </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=theme'; }}>
-              <Icon name="color-lens" /><span>色彩主題</span>
-            </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadOpen(); }}>
-              <Icon name="download" /><span>下載行程</span>
-            </button>
+            <div className="tool-action-group">
+              <div className="tool-action-label">下載行程</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); window.print(); }}>
+                  <Icon name="printer" /><span>PDF</span>
+                </button>
+                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>
+                  <Icon name="doc" /><span>Markdown</span>
+                </button>
+                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>
+                  <Icon name="code" /><span>JSON</span>
+                </button>
+                <button className="tool-action-btn tool-action-sm" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>
+                  <Icon name="table" /><span>CSV</span>
+                </button>
+              </div>
+            </div>
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
               <Icon name="printer" /><span>列印模式</span>
             </button>
@@ -512,7 +573,7 @@ export default function TripPage() {
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose, handleDownloadOpen, togglePrint]);
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose, handleDownloadOpen, handleDownloadFormat, togglePrint]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;
