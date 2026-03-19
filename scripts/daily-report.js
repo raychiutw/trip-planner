@@ -79,7 +79,7 @@ async function queryD1ApiLogs() {
 async function queryD1WebhookLogs() {
   var rows = await queryD1(
     "SELECT COUNT(*) as failed_count " +
-    "FROM webhook_logs WHERE created_at >= datetime('now', '-1 day') AND status != 'success'"
+    "FROM webhook_logs WHERE created_at >= datetime('now', '-1 day') AND status = 'failed'"
   );
   return rows[0];
 }
@@ -122,6 +122,9 @@ async function queryWorkersAnalytics() {
   });
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
+  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+    return { requests: 0, errors: 0, p50: 0, p99: 0 };
+  }
   var rows = data.data.viewer.accounts[0].workersInvocationsAdaptive;
   if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
   var row = rows[0];
@@ -157,6 +160,9 @@ async function queryWebAnalytics() {
   });
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
+  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+    return { visits: 0, pageViews: 0, lcp: 0, cls: 0, inp: 0 };
+  }
   var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptive;
   if (!rows || rows.length === 0) {
     return { visits: 0, pageViews: 0, lcp: 0, cls: 0, inp: 0 };
@@ -174,7 +180,7 @@ async function queryWebAnalytics() {
 // ── 數據來源 7: Lighthouse (PageSpeed Insights API) ────────────
 
 async function runLighthouse() {
-  var apiUrl = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeedTest' +
+  var apiUrl = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed' +
     '?url=' + encodeURIComponent(SITE_URL) +
     '&category=performance&category=seo&category=accessibility&category=best-practices';
   var res = await fetch(apiUrl);
