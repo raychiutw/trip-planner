@@ -196,7 +196,7 @@ export function DayHeaderArt({ theme, dark }: ThemeArtProps) {
         position: 'absolute',
         right: 0,
         top: 0,
-        width: '60%',
+        width: '80%',
         height: '100%',
         pointerEvents: 'none',
       }}
@@ -459,6 +459,96 @@ export function FooterArt({ theme, dark }: ThemeArtProps) {
         style={{ width: '100%', display: 'block' }}
       >
         {content[key]}
+      </svg>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// NavArt
+// ─────────────────────────────────────────────
+
+function getNavContent(theme: string, dark: boolean): React.ReactNode {
+  const key = `${theme}-${dark ? 'dark' : 'light'}`;
+  switch (key) {
+    case 'sun-light':
+      return (
+        <>
+          {/* Small sun */}
+          <circle cx="65" cy="12" r="8" fill="#F47B5E" opacity="0.6" />
+          <g stroke="#F47B5E" strokeWidth="1.5" strokeLinecap="round" opacity="0.6">
+            <line x1="65" y1="1" x2="65" y2="4" />
+            <line x1="65" y1="20" x2="65" y2="23" />
+            <line x1="54" y1="12" x2="57" y2="12" />
+            <line x1="73" y1="12" x2="76" y2="12" />
+          </g>
+          {/* Small cloud */}
+          <ellipse cx="25" cy="10" rx="12" ry="5" fill="#4A9EBF" opacity="0.3" />
+        </>
+      );
+    case 'sun-dark':
+      return (
+        <>
+          {/* Small crescent moon */}
+          <circle cx="62" cy="12" r="9" fill="#FFD080" opacity="0.5" />
+          <circle cx="58" cy="10" r="7.5" fill="#1E1A16" />
+          {/* Stars */}
+          <circle cx="30" cy="8" r="1.5" fill="#FFD080" opacity="0.5" />
+          <circle cx="45" cy="18" r="1.2" fill="#FFF4C0" opacity="0.5" />
+        </>
+      );
+    case 'sky-light':
+      return (
+        <>
+          {/* Small cloud */}
+          <ellipse cx="45" cy="10" rx="14" ry="6" fill="#2870A0" opacity="0.3" />
+          {/* Seagull */}
+          <path d="M20 14 Q24 9 28 14 Q32 9 36 14" stroke="#2870A0" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+        </>
+      );
+    case 'sky-dark':
+      return (
+        <>
+          {/* Small crescent moon */}
+          <circle cx="62" cy="12" r="9" fill="#E0E8FF" opacity="0.4" />
+          <circle cx="58" cy="10" r="7.5" fill="#161C20" />
+          {/* Stars */}
+          <circle cx="28" cy="8" r="1.5" fill="#B0D0FF" opacity="0.5" />
+          <circle cx="42" cy="18" r="1.2" fill="#B0D0FF" opacity="0.5" />
+        </>
+      );
+    case 'zen-light':
+      return (
+        <>
+          {/* Small cherry blossoms */}
+          <circle cx="30" cy="10" r="5" fill="#E8A0A0" opacity="0.5" />
+          <circle cx="50" cy="14" r="5" fill="#E8A0A0" opacity="0.5" />
+          {/* Small petal */}
+          <ellipse cx="65" cy="10" rx="3" ry="4.5" fill="#F0B0B0" transform="rotate(20 65 10)" opacity="0.4" />
+        </>
+      );
+    case 'zen-dark':
+      return (
+        <>
+          {/* Fireflies */}
+          <circle cx="28" cy="10" r="2.5" fill="#FFD080" opacity="0.4" />
+          <circle cx="28" cy="10" r="5" fill="#FFD080" opacity="0.12" />
+          <circle cx="48" cy="15" r="2.5" fill="#FFD080" opacity="0.4" />
+          <circle cx="48" cy="15" r="5" fill="#FFD080" opacity="0.12" />
+          {/* Star */}
+          <circle cx="65" cy="8" r="1.5" fill="#FFF4C0" opacity="0.5" />
+        </>
+      );
+    default:
+      return null;
+  }
+}
+
+export function NavArt({ theme, dark }: ThemeArtProps) {
+  return (
+    <div style={{ position: 'absolute', right: 12, top: 0, height: '100%', display: 'flex', alignItems: 'center', pointerEvents: 'none' as const, opacity: 0.3 }} aria-hidden="true">
+      <svg viewBox="0 0 80 24" style={{ height: 24, width: 'auto' }} xmlns="http://www.w3.org/2000/svg">
+        {getNavContent(theme, dark)}
       </svg>
     </div>
   );
