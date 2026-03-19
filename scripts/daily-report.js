@@ -74,11 +74,7 @@ async function queryD1ApiLogs() {
   return { summary: countRows[0], topErrors: topRows };
 }
 
-// ── 數據來源 3: Webhook 錯誤（表已移除，回傳空值）────────────────
 
-async function queryD1WebhookLogs() {
-  return { failed_count: 0 };
-}
 
 // ── 數據來源 4: Sentry 前端錯誤 ────────────────────────────────
 
@@ -302,7 +298,6 @@ function buildHtml(results) {
   sections.push(sectionHtml('Lighthouse 分數', lighthouseHtml(r.lighthouse)));
   sections.push(sectionHtml('前端錯誤 (Sentry)', sentryHtml(r.sentry)));
   sections.push(sectionHtml('後端 API 錯誤', apiLogsHtml(r.apiLogs)));
-  sections.push(sectionHtml('Webhook 錯誤', webhookHtml(r.webhookLogs)));
   sections.push(sectionHtml('壞連結檢查', linksHtml(r.links)));
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="' +
@@ -405,13 +400,6 @@ function apiLogsHtml(data) {
   return html;
 }
 
-function webhookHtml(data) {
-  if (!data) return failedHtml();
-  var count = data.failed_count || 0;
-  var color = count > 0 ? '#ef4444' : '#16a34a';
-  return '<p style="font-size:14px;margin:0;">失敗數：<span style="color:' + color +
-    ';font-weight:600;">' + count + '</span></p>';
-}
 
 function linksHtml(data) {
   if (!data) return failedHtml();
@@ -461,8 +449,7 @@ async function main() {
     runLighthouse(),          // 3
     querySentry(),            // 4
     queryD1ApiLogs(),         // 5
-    queryD1WebhookLogs(),     // 6
-    checkLinks()              // 7
+    checkLinks()              // 6
   ]);
 
   function val(idx) {
@@ -479,8 +466,7 @@ async function main() {
     lighthouse: val(3),
     sentry: val(4),
     apiLogs: val(5),
-    webhookLogs: val(6),
-    links: val(7)
+    links: val(6)
   };
 
   // 組合 HTML 並輸出檔案
