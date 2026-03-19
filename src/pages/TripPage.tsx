@@ -552,12 +552,18 @@ export default function TripPage() {
               <Icon name="printer" /><span>列印模式</span>
             </button>
             <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }} />
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-              <button className="export-pill" onClick={() => { handleSheetClose(); window.print(); }}>PDF</button>
-              <button className="export-pill" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>MD</button>
-              <button className="export-pill" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>JSON</button>
-              <button className="export-pill" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>CSV</button>
-            </div>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); setTimeout(() => window.print(), 300); }}>
+              <Icon name="download" /><span>匯出 PDF</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>
+              <Icon name="doc" /><span>匯出 Markdown</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>
+              <Icon name="code" /><span>匯出 JSON</span>
+            </button>
+            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>
+              <Icon name="table" /><span>匯出 CSV</span>
+            </button>
           </div>
         );
       default:
