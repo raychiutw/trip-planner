@@ -2,6 +2,13 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
+/* ===== FAB trigger: hardcoded SVG (expand_less not in Icon registry) ===== */
+const FAB_SVG = (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 8l-6 6h12z" />
+  </svg>
+);
+
 /* ===== Speed Dial Item Config ===== */
 
 interface SpeedDialItemConfig {
@@ -12,14 +19,14 @@ interface SpeedDialItemConfig {
 }
 
 const DIAL_ITEMS: SpeedDialItemConfig[] = [
-  { key: 'flights',     icon: 'plane',     label: '航班資訊',   action: 'sheet' },
-  { key: 'checklist',   icon: 'checklist', label: '出發確認',   action: 'sheet' },
-  { key: 'emergency',   icon: 'emergency', label: '緊急聯絡',   action: 'sheet' },
-  { key: 'backup',      icon: 'backup',    label: '備案',       action: 'sheet' },
-  { key: 'suggestions', icon: 'lightbulb', label: 'AI 建議',    action: 'sheet' },
-  { key: 'today-route', icon: 'route',     label: '今日路線',   action: 'sheet' },
-  { key: 'driving',     icon: 'car',       label: '交通統計',   action: 'sheet' },
-  { key: 'tools',       icon: 'gear',      label: '設定',       action: 'group' },
+  { key: 'flights',     icon: 'plane',        label: '航班',   action: 'sheet' },
+  { key: 'checklist',   icon: 'check-circle', label: '出發',   action: 'sheet' },
+  { key: 'emergency',   icon: 'emergency',    label: '緊急',   action: 'sheet' },
+  { key: 'backup',      icon: 'backup',       label: '備案',   action: 'sheet' },
+  { key: 'suggestions', icon: 'lightbulb',    label: '建議',   action: 'sheet' },
+  { key: 'today-route', icon: 'route',        label: '路線',   action: 'sheet' },
+  { key: 'driving',     icon: 'car',          label: '交通',   action: 'sheet' },
+  { key: 'tools',       icon: 'gear',         label: '設定',   action: 'group' },
 ];
 
 /* ===== Group → content key mapping (only for tools group) ===== */
@@ -131,7 +138,7 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
         ref={triggerRef}
         onClick={handleToggle}
       >
-        <Icon name="expand_less" />
+        {FAB_SVG}
       </button>
     </div>
   );

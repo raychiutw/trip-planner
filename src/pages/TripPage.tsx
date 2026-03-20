@@ -4,7 +4,6 @@ import { lsGet, lsSet, lsRemove, lsRenewAll } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
-import { useSwipeDay } from '../hooks/useSwipeDay';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
@@ -168,6 +167,34 @@ const DaySection = React.memo(function DaySection({
   );
 });
 
+/* ===== Timezone-aware date helper ===== */
+
+/** Known destination timezone mapping (by tripId prefix). */
+const TRIP_TIMEZONE: Record<string, string> = {
+  okinawa: 'Asia/Tokyo',
+  kyoto: 'Asia/Tokyo',
+  busan: 'Asia/Seoul',
+  banqiao: 'Asia/Taipei',
+};
+
+/** Get today's date (YYYY-MM-DD) in the trip's destination timezone. */
+function getLocalToday(tripId: string | null): string {
+  let tz: string | undefined;
+  if (tripId) {
+    const prefix = tripId.split('-')[0];
+    tz = TRIP_TIMEZONE[prefix];
+  }
+  if (tz) {
+    return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
+  }
+  // Fallback: user's local date
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /* ===== URL helpers ===== */
 
 function getUrlTrip(): string | null {
@@ -225,7 +252,6 @@ export default function TripPage() {
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
-  const tripContentRef = useRef<HTMLDivElement>(null);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorTheme } = useDarkMode();
@@ -599,37 +625,12 @@ export default function TripPage() {
     [days],
   );
 
-  /* --- Today's day_num for DayNav today marker --- */
+  /* --- Today's day_num for DayNav today marker (timezone-aware) --- */
   const todayDayNum = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday(activeTripId);
     const match = days.find((d) => d.date === today);
     return match?.day_num;
-  }, [days]);
-
-  /* --- Swipe to switch day (#10) --- */
-  const handleSwipeLeft = useCallback(() => {
-    const idx = dayNums.indexOf(currentDayNum);
-    if (idx < dayNums.length - 1) {
-      const nextDay = dayNums[idx + 1];
-      switchDay(nextDay);
-      scrollToDay(nextDay);
-    }
-  }, [dayNums, currentDayNum, switchDay]);
-
-  const handleSwipeRight = useCallback(() => {
-    const idx = dayNums.indexOf(currentDayNum);
-    if (idx > 0) {
-      const prevDay = dayNums[idx - 1];
-      switchDay(prevDay);
-      scrollToDay(prevDay);
-    }
-  }, [dayNums, currentDayNum, switchDay]);
-
-  useSwipeDay(tripContentRef, {
-    onSwipeLeft: handleSwipeLeft,
-    onSwipeRight: handleSwipeRight,
-    enabled: !loading && dayNums.length > 1,
-  });
+  }, [days, activeTripId]);
 
   /* --- DayNav click: scroll to day section (#4) --- */
   const handleSwitchDay = useCallback(
@@ -642,12 +643,12 @@ export default function TripPage() {
     [switchDay],
   );
 
-  /* --- Auto-scroll to today or hash on initial load (#3, #5) --- */
+  /* --- Auto-scroll to today or hash on initial load (#3, #5, #18) --- */
   useEffect(() => {
     if (loading || dayNums.length === 0 || initialScrollDone.current) return;
     initialScrollDone.current = true;
 
-    // Check URL hash first
+    // URL hash takes priority over auto-locate
     const hash = window.location.hash;
     const hashMatch = hash?.match(/^#day(\d+)$/);
     if (hashMatch) {
@@ -661,16 +662,23 @@ export default function TripPage() {
       }
     }
 
-    // Auto-scroll to today
-    const today = new Date().toISOString().split('T')[0];
+    // Auto-locate to today (timezone-aware)
+    const today = getLocalToday(activeTripId);
     const idx = autoScrollDates.indexOf(today);
     if (idx >= 0 && dayNums[idx]) {
       requestAnimationFrame(() => {
         switchDay(dayNums[idx]);
         scrollToDay(dayNums[idx]);
+        // Scroll to .tl-now if it exists (delayed for DOM update)
+        setTimeout(() => {
+          const nowEl = document.querySelector('.tl-now');
+          if (nowEl) {
+            nowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
       });
     }
-  }, [loading, dayNums, autoScrollDates, switchDay]);
+  }, [loading, dayNums, autoScrollDates, switchDay, activeTripId]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {
@@ -883,7 +891,7 @@ export default function TripPage() {
       {/* Page Layout */}
       <div className="page-layout">
         <div className="container">
-          <div id="tripContent" ref={tripContentRef}>
+          <div id="tripContent">
             {loading && (
               <div className={LOADING_CLASS}>載入行程資料中...</div>
             )}
@@ -917,7 +925,6 @@ export default function TripPage() {
             autoScrollDates={autoScrollDates}
             days={loadedDays}
             currentDay={currentDay}
-            onQuickAction={handleSpeedDialItem}
           />
         )}
       </div>

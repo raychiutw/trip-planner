@@ -8,11 +8,13 @@ Key User 需求 → PM 建立 OpenSpec change
   → PM 呈報 Key User（🔴高嚴重度需 Approve）
   → 工程師實作 + 勾 tasks.md
   → Code Reviewer 審查（APPROVE / REQUEST CHANGES）
-  → 🔴 Challenger 質疑技術決策 + 效能/資安/漏洞審查
   → QC 驗證（測試 + 畫面 + 操作）→ PASS / FAIL
+  → 🔴 Challenger 質疑技術決策 + 效能/資安/漏洞審查（基於 QC 結果）
   → PM 驗收 → 回報 Key User → Key User Approve
   → PM commit / push / archive
 ```
+
+**順序原則：** Challenger 在 QC 之後，因為 11 視角質疑需要 QC 的截圖、測試結果、操作驗證才能完整。沒有 QC 結果的 Challenger 只能做理論分析。
 
 **QC FAIL 時：** PM 判斷 → 派工程師修復 → 重新 Code Review → 重新 QC
 **Challenger 提出問題時：** PM 判斷嚴重度 → 🔴呈報 Key User / 🟡通知 / 🟢自行處理

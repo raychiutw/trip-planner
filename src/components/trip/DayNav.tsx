@@ -186,6 +186,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
               data-day={dayNum}
               data-action="switch-day"
               data-target={`day${dayNum}`}
+              aria-label={d.label ? `${formatPillLabel(d)} ${d.label}` : formatPillLabel(d)}
               aria-describedby={showTooltip ? tooltipId : undefined}
               onClick={() => handleDayClick(dayNum)}
               onMouseEnter={() => handleMouseEnter(dayNum)}

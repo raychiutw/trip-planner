@@ -106,15 +106,57 @@ Agent(
 先讀取：
 - .claude/skills/tp-team/references/roles.md
 
-任務：
-1. 跑 npx tsc --noEmit + npm test
-2. Playwright 截圖比對（桌機 1280px + 手機 390px）
-3. 操作驗證（按鈕、sheet、捲動、列印模式）
+任務（10 項標準檢查）：
 
-禁令：禁止修改任何檔案，發現問題只描述不修復
+1. 編譯 + 測試
+   - npx tsc --noEmit（零新錯誤）
+   - npm test（全過）
+
+2. 截圖比對（桌機 1280px + 手機 390px）
+   - 修改前後視覺差異
+   - 6 主題 × light/dark = 12 種組合全截圖
+
+3. 操作驗證
+   - 按鈕、sheet、捲動、列印模式
+   - SpeedDial 展開/收合、Bottom Sheet 開關/拖曳
+
+4. 回歸測試
+   - 修 A 沒壞 B：檢查修改檔案的相鄰功能是否正常
+   - 未修改的頁面是否仍正常（setting/manage/admin）
+
+5. 跨瀏覽器（Playwright 多 browser）
+   - Chromium + Firefox + WebKit 三引擎
+   - 至少在一個引擎做完整測試，其餘做 smoke test
+
+6. 效能基準
+   - Lighthouse 分數（Performance / Accessibility / Best Practices）
+   - 或手動測量：DOM Interactive、LCP、CLS
+   - 與修改前基準比較，不得顯著退步
+
+7. a11y 自動掃描
+   - 用 Playwright 執行 axe-core 或檢查 ARIA 屬性
+   - 重點：觸控目標 ≥44px、aria-label、role、對比度
+
+8. 邊緣情境
+   - 空資料（無行程時的 fallback）
+   - 長文字（標題/備註超長時是否截斷）
+   - 多天行程（>10 天的 DayNav 捲動）
+
+9. 列印模式
+   - 觸發 print mode 截圖
+   - 確認卡片/表格在列印時可讀
+
+10. CSS HIG 全掃
+    - 無 hardcoded font-size px
+    - 無違規 border
+    - 4pt grid 對齊
+    - token 使用一致性
+
+禁令：禁止修改任何程式碼/設定檔，發現問題只描述不修復（可寫報告檔）
 
 完成後：
-- 回報 PASS 或 FAIL + 問題清單
+- 報告寫到 openspec/changes/{change-name}/qc-report.md
+- 每項標 PASS / FAIL
 - SendMessage({to: "pm"}) 回報結果`
 )
 ```

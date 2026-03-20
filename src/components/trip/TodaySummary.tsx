@@ -24,6 +24,7 @@ export const TodaySummary = memo(function TodaySummary({ entries, onEntryClick }
               key={e.id ?? i}
               className="today-summary-item"
               onClick={() => onEntryClick?.(i)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEntryClick?.(i); } }}
               role={onEntryClick ? 'button' : undefined}
               tabIndex={onEntryClick ? 0 : undefined}
             >

@@ -21,33 +21,36 @@ export default function Countdown({ autoScrollDates }: CountdownProps) {
   const startDate = new Date(start + 'T00:00:00');
   const endDate = new Date(end + 'T00:00:00');
 
-  let numberContent: React.ReactNode;
-  let label: string;
-  let dateDisplay: string | null = null;
-
   if (today < startDate) {
-    // Before trip: show countdown
     const diff = Math.ceil((startDate.getTime() - today.getTime()) / MS_PER_DAY);
-    numberContent = diff;
-    label = '天後出發';
-    dateDisplay = start;
-  } else if (today <= endDate) {
-    // During trip: show current day
-    const dayN =
-      Math.floor((today.getTime() - startDate.getTime()) / MS_PER_DAY) + 1;
-    numberContent = `Day ${dayN}`;
-    label = '旅行進行中';
-  } else {
-    // After trip: show ended
-    numberContent = <Icon name="plane" />;
-    label = '旅程已結束';
+    return (
+      <div className="info-card countdown-card">
+        <div className="countdown-number">
+          <span className="countdown-num">{diff}</span>
+          <span className="countdown-unit">天</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (today <= endDate) {
+    const dayN = Math.floor((today.getTime() - startDate.getTime()) / MS_PER_DAY) + 1;
+    return (
+      <div className="info-card countdown-card">
+        <div className="countdown-number">
+          <span className="countdown-num">Day {dayN}</span>
+        </div>
+        <div className="countdown-label">旅行進行中</div>
+      </div>
+    );
   }
 
   return (
     <div className="info-card countdown-card">
-      <div className="countdown-number">{numberContent}</div>
-      <div className="countdown-label">{label}</div>
-      {dateDisplay && <div className="countdown-date">{dateDisplay}</div>}
+      <div className="countdown-number">
+        <Icon name="plane" />
+      </div>
+      <div className="countdown-label">旅程已結束</div>
     </div>
   );
 }

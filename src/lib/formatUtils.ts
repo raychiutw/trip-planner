@@ -3,18 +3,20 @@
  */
 
 /**
- * Converts a total number of minutes into a human-readable string.
- * - 90 => "1 小時 30 分鐘"
- * - 45 => "45 分鐘"
- * - 120 => "2 小時"
+ * Converts a total number of minutes into a compact time string.
+ * - 0   => "—"
+ * - 30  => "30m"
+ * - 90  => "1h30m"
+ * - 120 => "2h00m"
  */
 export function formatMinutes(totalMins: number): string {
+  if (totalMins === 0) return '—';
   const hrs = Math.floor(totalMins / 60);
   const mins = totalMins % 60;
-  if (hrs > 0) {
-    return mins > 0 ? `${hrs} 小時 ${mins} 分鐘` : `${hrs} 小時`;
+  if (hrs >= 1) {
+    return `${hrs}h${String(mins).padStart(2, '0')}m`;
   }
-  return `${totalMins} 分鐘`;
+  return `${mins}m`;
 }
 
 /**
