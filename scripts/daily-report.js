@@ -3,7 +3,7 @@
  * daily-report.js — 每日健康報告腳本
  *
  * 彙整 7 個數據來源，組合 HTML email，透過 Resend API 寄出。
- * 由 GitHub Actions 每天 UTC 00:00（台灣 08:00）自動觸發。
+ * 由 GitHub Actions 每天 UTC 22:23（台灣 06:23）自動觸發。
  *
  * 環境變數：
  *   CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID
