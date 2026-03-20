@@ -11,14 +11,23 @@
 | PM 驗收、回報 Key User | | ✅ | | | | |
 | 調查問題、查 log、debug | | | ✅ | | | |
 | 撰寫/修改程式碼、設定檔 | | | ✅ | | | |
+| 撰寫 unit test（TDD） | | | ✅ | | | |
+| 執行 tsc + npm test（必須全過） | | | ✅ | | | |
 | 撰寫 OpenSpec 文件內容 | | | ✅ | | | |
-| 本地建置驗證（開發中） | | | ✅ | | | |
 | 審查正確性 + 可讀性 + 測試覆蓋 | | | | ✅ | | |
-| 審查 OpenSpec 文件完整性 | | | | ✅ | | |
+| 審查架構影響 + 效能 + 安全性 | | | | ✅ | | |
+| 審查跨模組 side effect + 向後相容 | | | | ✅ | | |
+| 標記技術債 + Design Pattern 建議 | | | | ✅ | | |
+| 執行 /tp-code-verify（命名+CSS HIG+React+測試） | | | | ✅ | | |
+| 執行 /tp-ux-verify（HIG 設計規則+token+頁面結構） | | | | ✅ | | |
 | APPROVE / REQUEST CHANGES | | | | ✅ | | |
-| 執行測試（npm test / tsc） | | | | | ✅ | |
-| 畫面驗證（Playwright 截圖比對） | | | | | ✅ | |
+| 撰寫 E2E 測試腳本（Playwright .spec.ts） | | | | | ✅ | |
+| 截圖比對 + 視覺回歸（12 主題組合） | | | | | ✅ | |
 | 操作驗證（按鈕/sheet/捲動/列印） | | | | | ✅ | |
+| 跨瀏覽器驗證（Chromium/Firefox/WebKit） | | | | | ✅ | |
+| 效能基準（Lighthouse/LCP/CLS） | | | | | ✅ | |
+| a11y 自動掃描（axe-core/ARIA） | | | | | ✅ | |
+| 邊緣情境 + 回歸測試 | | | | | ✅ | |
 | 回報 QC PASS / FAIL | | | | | ✅ | |
 | 質疑 11 視角 + 產出 Challenge Report | | | | | | ✅ |
 | 勾選 tasks.md checkbox | | | ✅ | | | |
