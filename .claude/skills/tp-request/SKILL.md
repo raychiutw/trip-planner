@@ -116,7 +116,7 @@ Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open 請求
 改用 Node.js 寫暫存檔 + `curl --data @file`：
 
 ```bash
-node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'closed'}), 'utf8')"
+node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'closed', processed_by:'scheduler'}), 'utf8')"
 curl -s -X PATCH \
   -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
   -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
