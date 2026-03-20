@@ -30,6 +30,15 @@
     --duration-normal: 250ms;
     --duration-slow: 350ms;
     --tap-min: 44px;
+    --z-day-header: 100;
+    --z-sticky-nav: 200;
+    --z-fab: 300;
+    --z-speed-dial: 300;
+    --z-info-sheet-backdrop: 400;
+    --z-info-sheet: 401;
+    --z-download-backdrop: 900;
+    --z-download-sheet: 901;
+    --z-print-exit: 9999;
 }
 
 /* ===== Theme: 陽光 (Sun) — Light ===== */
@@ -73,6 +82,8 @@ body.theme-sun {
 }
 
 /* ===== Theme: 陽光 (Sun) — Dark ===== */
+/* NOTE: Dark theme inherits --cmp-* variables from the preceding light theme rule.
+   These rules must remain in order: light theme first, then dark override. */
 body.theme-sun.dark {
     --accent: #F4A08A;
     --accent-subtle: #2A1E18;
@@ -148,6 +159,8 @@ body.theme-sky {
 }
 
 /* ===== Theme: 晴空 (Sky) — Dark ===== */
+/* NOTE: Dark theme inherits --cmp-* variables from the preceding light theme rule.
+   These rules must remain in order: light theme first, then dark override. */
 body.theme-sky.dark {
     --accent: #7EC0E8;
     --accent-subtle: #182228;
@@ -223,6 +236,8 @@ body.theme-zen {
 }
 
 /* ===== Theme: 和風 (Zen) — Dark ===== */
+/* NOTE: Dark theme inherits --cmp-* variables from the preceding light theme rule.
+   These rules must remain in order: light theme first, then dark override. */
 body.theme-zen.dark {
     --accent: #D4A88E;
     --accent-subtle: #221C18;
@@ -316,7 +331,7 @@ body.dark .trip-btn:hover { background: var(--bg-tertiary); }
 
 /* ===== Container & Sticky Nav (shared by index + edit) ===== */
 .container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform var(--duration-slow) var(--ease-apple), border-radius var(--duration-slow); }
-.sticky-nav { position: sticky; top: 0; z-index: 200; background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); color: var(--text); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
+.sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); background: color-mix(in srgb, var(--bg) 85%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); color: var(--text); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
 
 /* ===== Nav Title (shared by edit + setting) ===== */
 .nav-title { font-size: var(--fs-title3); font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
@@ -334,6 +349,7 @@ body.dark .trip-btn:hover { background: var(--bg-tertiary); }
 
 /* ===== Focus Visible (remove default outline, use box-shadow) ===== */
 button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+[role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
 .dn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 
 /* ===== Custom Scrollbar (global) ===== */
@@ -353,4 +369,18 @@ button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
     :root {
         --padding-h: 20px;
     }
+}
+
+/* === Reduced Motion: disable decorative animations only === */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .arrow, .speed-dial-trigger, .edit-fab,
+  .hw-detail, .col-body, .info-sheet,
+  .info-sheet-backdrop, .download-backdrop {
+    transition-duration: 0.01ms !important;
+  }
+  .day-header, [class*="fade"], [class*="slide"] {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

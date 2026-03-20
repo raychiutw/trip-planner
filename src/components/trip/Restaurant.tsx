@@ -1,6 +1,7 @@
 /* ===== Restaurant Component ===== */
 /* Renders a single restaurant recommendation card (used inside InfoBox and standalone) */
 
+import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
@@ -86,7 +87,7 @@ function ReservationDisplay({ data, fallbackUrl }: { data: ReservationInfo | str
   return null;
 }
 
-export default function Restaurant({ restaurant: r }: RestaurantProps) {
+export const Restaurant = memo(function Restaurant({ restaurant: r }: RestaurantProps) {
   const parsed = parseReservation(r.reservation);
   const hasHours = !!r.hours;
   const reservationEl = parsed ? (
@@ -116,4 +117,6 @@ export default function Restaurant({ restaurant: r }: RestaurantProps) {
       )}
     </div>
   );
-}
+});
+
+export default Restaurant;

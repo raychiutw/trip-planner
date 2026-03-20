@@ -281,11 +281,13 @@ export default function AdminPage() {
                     新增
                   </button>
                 </div>
-                {addStatus && (
-                  <div className={`admin-status ${addStatus.type}`}>
-                    {addStatus.text}
-                  </div>
-                )}
+                <div aria-live="polite">
+                  {addStatus && (
+                    <div className={`admin-status ${addStatus.type}`}>
+                      {addStatus.text}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -696,6 +696,13 @@ export default function TripPage() {
     try { return calcTripDrivingStats(loadedDays); } catch { return null; }
   }, [loadedDays]);
 
+  /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
+  const themeArt = useMemo(() => ({ theme: colorTheme, dark: isDark }), [colorTheme, isDark]);
+
+  /* --- Stabilize currentDay-derived references to improve memo effectiveness (#13) --- */
+  const timeline = useMemo(() => currentDay?.timeline ?? [], [currentDay]);
+  const hotel = useMemo(() => currentDay?.hotel ?? null, [currentDay]);
+
   /* --- Footer data (#4: proper FooterData type) --- */
   const footerData = useMemo((): FooterData | null => {
     if (!trip) return null;
@@ -835,7 +842,7 @@ export default function TripPage() {
                   day={allDays[dayNum]}
                   daySummary={daySummaryMap.get(dayNum)}
                   autoScrollDates={autoScrollDates}
-                  themeArt={{ theme: colorTheme, dark: isDark }}
+                  themeArt={themeArt}
                 />
               ))}
 

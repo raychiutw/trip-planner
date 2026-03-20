@@ -1,4 +1,5 @@
 import { logAudit } from '../../../_audit';
+import { hasPermission } from '../../../_auth';
 
 interface Env {
   DB: D1Database;
@@ -32,7 +33,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   if (!VALID_TYPES.has(type)) return json({ error: 'Invalid doc type' }, 400);
 
-  const body = await context.request.json() as { content?: string };
+  if (!await hasPermission(context.env.DB, auth.email, id, auth.isAdmin)) {
+    return json({ error: '權限不足' }, 403);
+  }
+
+  let body: { content?: string };
+  try {
+    body = await context.request.json() as { content?: string };
+  } catch {
+    return json({ error: 'Invalid JSON' }, 400);
+  }
   const content = body.content ?? '';
   const changedBy = auth?.email || 'anonymous';
 

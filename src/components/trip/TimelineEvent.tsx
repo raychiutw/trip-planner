@@ -2,6 +2,7 @@
 /* Renders a single timeline entry: time flag, card (title, description, */
 /* locations, info boxes), and optional travel segment to next entry.    */
 
+import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import { NavLinks, type NavLocation } from './MapLinks';
@@ -81,7 +82,7 @@ interface TimelineEventProps {
   index: number;
 }
 
-export default function TimelineEvent({ entry, index }: TimelineEventProps) {
+export const TimelineEvent = memo(function TimelineEvent({ entry, index }: TimelineEventProps) {
   const parsed = parseTimeRange(entry.time);
   const hasBody =
     entry.description ||
@@ -165,4 +166,6 @@ export default function TimelineEvent({ entry, index }: TimelineEventProps) {
       )}
     </>
   );
-}
+});
+
+export default TimelineEvent;

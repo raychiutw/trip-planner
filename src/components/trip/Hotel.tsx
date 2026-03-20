@@ -1,7 +1,7 @@
 /* ===== Hotel Component ===== */
 /* Renders a hotel card with: name, details, breakfast, checkout, info boxes */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import Icon from '../shared/Icon';
 import InfoBox, { type InfoBoxData } from './InfoBox';
 import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
@@ -26,13 +26,13 @@ interface HotelProps {
   hotel: HotelData;
 }
 
-export default function Hotel({ hotel }: HotelProps) {
+export const Hotel = memo(function Hotel({ hotel }: HotelProps) {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen((v) => !v), []);
 
   return (
     <>
-      <div className="col-row" onClick={toggle} style={{ cursor: 'pointer' }} aria-expanded={open}>
+      <div className="col-row" onClick={toggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }} style={{ cursor: 'pointer' }} aria-expanded={open} aria-label={open ? '收合飯店詳情' : '展開飯店詳情'} role="button" tabIndex={0}>
         <Icon name="hotel" /> {hotel.name}{' '}
         <span className="arrow">{open ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>
@@ -72,4 +72,6 @@ export default function Hotel({ hotel }: HotelProps) {
       </div>
     </>
   );
-}
+});
+
+export default Hotel;

@@ -2,6 +2,19 @@ import React, { useState, useCallback } from 'react';
 import { apiFetch } from '../../hooks/useApi';
 import Icon from '../shared/Icon';
 
+async function pMap<T, R>(items: T[], fn: (item: T) => Promise<R>, concurrency: number): Promise<R[]> {
+  const results: R[] = [];
+  let i = 0;
+  async function next(): Promise<void> {
+    const idx = i++;
+    if (idx >= items.length) return;
+    results[idx] = await fn(items[idx]);
+    return next();
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => next()));
+  return results;
+}
+
 interface DownloadSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,7 +52,7 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
       ]);
       const data = { meta, days };
       downloadBlob(JSON.stringify(data, null, 2), `${fileBase}.json`, 'application/json');
-    } catch (e) {
+    } catch {
       alert('下載失敗，請稍後再試');
     } finally {
       setLoading(null);
@@ -49,39 +62,51 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
   const handleMarkdown = useCallback(async () => {
     setLoading('md');
     try {
+      type DaySummary = Record<string, unknown> & { day_num: number; label?: string; date?: string };
+      type DayData = Record<string, unknown> & {
+        hotel?: Record<string, unknown> | null;
+        entries?: Array<Record<string, unknown> & { restaurants?: Array<Record<string, unknown>> }>;
+      };
+
       const [meta, daySummaries] = await Promise.all([
-        apiFetch<any>(`/trips/${tripId}`),
-        apiFetch<any[]>(`/trips/${tripId}/days`),
+        apiFetch<Record<string, unknown>>(`/trips/${tripId}`),
+        apiFetch<DaySummary[]>(`/trips/${tripId}/days`),
       ]);
 
-      let md = `# ${meta.name || tripName}\n\n`;
-      if (meta.title) md += `${meta.title}\n\n`;
+      let md = `# ${String(meta.name || tripName)}\n\n`;
+      if (meta.title) md += `${String(meta.title)}\n\n`;
 
-      for (const ds of daySummaries) {
-        const dayData = await apiFetch<any>(`/trips/${tripId}/days/${ds.day_num}`);
+      const allDayData = await pMap(
+        daySummaries,
+        ds => apiFetch<DayData>(`/trips/${tripId}/days/${ds.day_num}`),
+        5,
+      );
+      for (let i = 0; i < daySummaries.length; i++) {
+        const ds = daySummaries[i];
+        const dayData = allDayData[i];
         md += `## Day ${ds.day_num}`;
-        if (ds.label) md += ` ${ds.label}`;
-        if (ds.date) md += ` — ${ds.date}`;
+        if (ds.label) md += ` ${String(ds.label)}`;
+        if (ds.date) md += ` — ${String(ds.date)}`;
         md += '\n\n';
 
-        if (dayData.hotel?.name) {
-          md += `**住宿：** ${dayData.hotel.name}\n\n`;
+        if (dayData.hotel && typeof dayData.hotel === 'object' && dayData.hotel.name) {
+          md += `**住宿：** ${String(dayData.hotel.name)}\n\n`;
         }
 
         if (dayData.entries) {
           for (const entry of dayData.entries) {
-            md += `### ${entry.time || ''} ${entry.title || ''}\n`;
-            if (entry.rating) md += `⭐ ${entry.rating}`;
+            md += `### ${String(entry.time || '')} ${String(entry.title || '')}\n`;
+            if (entry.rating) md += `⭐ ${String(entry.rating)}`;
             if (entry.travel_mode && entry.travel_duration) {
-              md += ` · ${entry.travel_mode} ${entry.travel_duration}分鐘`;
+              md += ` · ${String(entry.travel_mode)} ${String(entry.travel_duration)}分鐘`;
             }
             md += '\n';
             if (entry.restaurants && entry.restaurants.length > 0) {
               md += '\n**餐廳推薦：**\n';
               for (const r of entry.restaurants) {
-                md += `- ${r.name}`;
-                if (r.rating) md += ` ⭐${r.rating}`;
-                if (r.price) md += ` · ${r.price}`;
+                md += `- ${String(r.name || '')}`;
+                if (r.rating) md += ` ⭐${String(r.rating)}`;
+                if (r.price) md += ` · ${String(r.price)}`;
                 md += '\n';
               }
             }
@@ -91,7 +116,7 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
       }
 
       downloadBlob(md, `${fileBase}.md`, 'text/markdown');
-    } catch (e) {
+    } catch {
       alert('下載失敗，請稍後再試');
     } finally {
       setLoading(null);
@@ -101,23 +126,34 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
   const handleCSV = useCallback(async () => {
     setLoading('csv');
     try {
-      const daySummaries = await apiFetch<any[]>(`/trips/${tripId}/days`);
+      type DaySummary = Record<string, unknown> & { day_num: number; date?: string };
+      type DayData = Record<string, unknown> & {
+        entries?: Array<Record<string, unknown>>;
+      };
+
+      const daySummaries = await apiFetch<DaySummary[]>(`/trips/${tripId}/days`);
 
       const rows: string[][] = [['Day', '日期', '時間', '地點', '評分', '交通方式', '交通時間(分鐘)', '備註']];
 
-      for (const ds of daySummaries) {
-        const dayData = await apiFetch<any>(`/trips/${tripId}/days/${ds.day_num}`);
+      const allDayData = await pMap(
+        daySummaries,
+        ds => apiFetch<DayData>(`/trips/${tripId}/days/${ds.day_num}`),
+        5,
+      );
+      for (let i = 0; i < daySummaries.length; i++) {
+        const ds = daySummaries[i];
+        const dayData = allDayData[i];
         if (dayData.entries) {
           for (const entry of dayData.entries) {
             rows.push([
               String(ds.day_num),
-              ds.date || '',
-              entry.time || '',
-              entry.title || '',
+              String(ds.date || ''),
+              String(entry.time || ''),
+              String(entry.title || ''),
               entry.rating ? String(entry.rating) : '',
-              entry.travel_mode || '',
+              String(entry.travel_mode || ''),
               entry.travel_duration ? String(entry.travel_duration) : '',
-              entry.note || '',
+              String(entry.note || ''),
             ]);
           }
         }
@@ -126,7 +162,7 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
       const csv = rows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
       // Add BOM for Excel UTF-8
       downloadBlob('\uFEFF' + csv, `${fileBase}.csv`, 'text/csv;charset=utf-8');
-    } catch (e) {
+    } catch {
       alert('下載失敗，請稍後再試');
     } finally {
       setLoading(null);

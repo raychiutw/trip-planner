@@ -3,6 +3,7 @@
  */
 
 import { removeEmailFromAccessPolicy } from '../permissions';
+import { logAudit } from '../_audit';
 
 interface Env {
   DB: D1Database;
@@ -63,6 +64,16 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       return json({ error: '同步 Access policy 失敗，已回滾', detail: String(err) }, 500);
     }
   }
+
+  await logAudit(context.env.DB, {
+    tripId: record.trip_id,
+    tableName: 'permissions',
+    recordId: record.id,
+    action: 'delete',
+    changedBy: auth.email,
+    snapshot: JSON.stringify(record),
+    diffJson: JSON.stringify({ email: record.email, role: record.role }),
+  });
 
   return json({ ok: true });
 };

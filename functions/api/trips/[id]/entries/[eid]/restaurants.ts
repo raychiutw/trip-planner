@@ -1,4 +1,5 @@
 import { logAudit } from '../../../../_audit';
+import { hasPermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 
 interface Env {
   DB: D1Database;
@@ -8,6 +9,8 @@ function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
+const ALLOWED_FIELDS = ['name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'rating', 'maps', 'mapcode', 'source'] as const;
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = (context.data as any)?.auth;
   if (!auth) return json({ error: '未認證' }, 401);
@@ -15,7 +18,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { id, eid } = context.params as { id: string; eid: string };
   const db = context.env.DB;
 
-  const body = await context.request.json() as {
+  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
+    return json({ error: '權限不足' }, 403);
+  }
+
+  if (!await verifyEntryBelongsToTrip(db, Number(eid), id)) {
+    return json({ error: 'Not found' }, 404);
+  }
+
+  let body: {
     name?: string;
     category?: string;
     hours?: string;
@@ -29,6 +40,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     mapcode?: string;
     source?: string;
   };
+  try {
+    body = await context.request.json() as typeof body;
+  } catch {
+    return json({ error: 'Invalid JSON' }, 400);
+  }
 
   const maxResult = await db
     .prepare("SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM restaurants WHERE parent_type = 'entry' AND parent_id = ?")

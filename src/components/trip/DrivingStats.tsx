@@ -70,8 +70,11 @@ export function DayDrivingStatsCard({ stats }: DayDrivingStatsProps) {
       <div
         className={`col-row${isOpen ? ' open' : ''}`}
         role="button"
+        tabIndex={0}
         aria-expanded={isOpen}
+        aria-label={isOpen ? '收合交通資訊' : '展開交通資訊'}
         onClick={handleToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } }}
       >
         {isWarning ? <Icon name="warning" /> : <Icon name="bus" />} 當日交通：
         {formatMinutes(stats.totalMinutes)}

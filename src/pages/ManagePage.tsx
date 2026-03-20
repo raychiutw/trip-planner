@@ -426,7 +426,7 @@ export default function ManagePage() {
                         問建議
                       </button>
                     </div>
-                    <div id="submitStatus">
+                    <div id="submitStatus" aria-live="polite">
                       {submitStatus && (
                         <div className={`manage-status ${submitStatus.type}`}>
                           {submitStatus.type === 'success' && <Icon name="check-circle" />}

@@ -1,6 +1,7 @@
 /* ===== InfoBox Component ===== */
 /* Renders an info box — tips, notes, parking, restaurants, shopping, gas stations, etc. */
 
+import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MapLinks, { type MapLocation } from './MapLinks';
 import Restaurant, { type RestaurantData } from './Restaurant';
@@ -191,7 +192,7 @@ interface InfoBoxProps {
   box: InfoBoxData;
 }
 
-export default function InfoBox({ box }: InfoBoxProps) {
+export const InfoBox = memo(function InfoBox({ box }: InfoBoxProps) {
   switch (box.type) {
     case 'reservation':
       return <ReservationBox box={box} />;
@@ -211,4 +212,6 @@ export default function InfoBox({ box }: InfoBoxProps) {
       }
       return null;
   }
-}
+});
+
+export default InfoBox;

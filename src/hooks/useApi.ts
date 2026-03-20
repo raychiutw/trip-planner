@@ -1,12 +1,15 @@
 /* ===== Typed API Fetch Helper ===== */
 
-export async function apiFetch<T>(path: string, opts?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: AbortSignal }): Promise<T> {
+  const headers: Record<string, string> = { ...opts?.headers as Record<string, string> };
+  // Only set Content-Type for requests with a body (POST/PUT/PATCH)
+  const method = (opts?.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'DELETE') {
+    headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
+  }
   const response = await fetch('/api' + path, {
     ...opts,
-    headers: {
-      'Content-Type': 'application/json',
-      ...opts?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {

@@ -38,7 +38,7 @@ footer p { font-size: var(--fs-callout); margin-top: 4px; }
 }
 
 /* ===== Day Header (section divider) ===== */
-.day-header { position: relative; z-index: 100; background: var(--accent); color: var(--text-on-accent); padding: 8px 16px; display: flex; align-items: center; gap: 8px; min-height: 100px; }
+.day-header { position: relative; z-index: var(--z-day-header); background: var(--accent); color: var(--text-on-accent); padding: 8px 16px; display: flex; align-items: center; gap: 8px; min-height: 100px; }
 body:not(.dark) .day-header {
     background: var(--bg-secondary);
     color: var(--text);
@@ -276,7 +276,7 @@ body:not(.dark) .day-header {
     background: var(--accent); color: var(--text-on-accent); border: none;
     font-size: var(--fs-large-title); font-weight: 300; text-decoration: none;
     display: flex; align-items: center; justify-content: center;
-    z-index: 300; box-shadow: var(--shadow-md);
+    z-index: var(--z-fab); box-shadow: var(--shadow-md);
     transition: transform var(--duration-normal), box-shadow var(--duration-normal);
 }
 .edit-fab:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
@@ -309,7 +309,7 @@ body:not(.dark) .day-header {
 .print-mode .ov-card { background: var(--bg) !important; }
 /* Hide ThemeArt illustration wrappers (all use aria-hidden="true") */
 .print-mode [aria-hidden="true"] { display: none !important; }
-.print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 9999; background: var(--error); color: var(--text-on-accent); border: none; padding: 12px 24px; border-radius: var(--radius-sm); font-size: var(--fs-callout); font-family: inherit; font-weight: 600; }
+.print-exit-btn { display: none; position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: var(--z-print-exit); background: var(--error); color: var(--text-on-accent); border: none; padding: 12px 24px; border-radius: var(--radius-sm); font-size: var(--fs-callout); font-family: inherit; font-weight: 600; }
 .print-exit-btn:hover { filter: brightness(0.85); }
 .print-mode .print-exit-btn { display: block; }
 @media print {
@@ -427,7 +427,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 
 
 /* ===== Speed Dial FAB ===== */
-.speed-dial { position: fixed; bottom: max(88px, calc(68px + env(safe-area-inset-bottom))); right: 20px; z-index: 300; }
+.speed-dial { position: fixed; bottom: max(88px, calc(68px + env(safe-area-inset-bottom))); right: 20px; z-index: var(--z-speed-dial); }
 .speed-dial-trigger {
     width: 56px; height: 56px; border-radius: 50%;
     background: var(--accent); color: var(--text-on-accent); border: none;
@@ -505,7 +505,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .info-sheet-backdrop {
     position: fixed; inset: 0;
     background: var(--overlay);
-    z-index: 400; opacity: 0; pointer-events: none;
+    z-index: var(--z-info-sheet-backdrop); opacity: 0; pointer-events: none;
     transition: opacity var(--duration-slow);
 }
 .info-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
@@ -515,7 +515,7 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
     max-height: 90dvh;
     background: var(--bg-secondary);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    z-index: 401;
+    z-index: var(--z-info-sheet);
     transform: translateY(100%);
     transition: transform var(--duration-slow) var(--ease-apple);
     display: flex; flex-direction: column;
@@ -555,8 +555,8 @@ body.print-mode .info-panel { background: var(--bg-secondary) !important; backdr
 .info-sheet-body { overflow-y: auto; font-size: var(--fs-body); flex: 1; min-height: 0; }
 
 /* ===== Download Sheet ===== */
-.download-backdrop { position: fixed; inset: 0; background: var(--overlay); z-index: 900; }
-.download-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 16px; z-index: 901; max-width: 480px; margin: 0 auto; }
+.download-backdrop { position: fixed; inset: 0; background: var(--overlay); z-index: var(--z-download-backdrop); }
+.download-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 16px; z-index: var(--z-download-sheet); max-width: 480px; margin: 0 auto; }
 .download-sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 12px; }
 .download-sheet-title { font-size: var(--fs-headline); font-weight: 700; color: var(--text); margin-bottom: 12px; }
 .download-sheet-options { display: flex; flex-direction: column; gap: 8px; }

@@ -41,6 +41,13 @@ export function sanitizeHtml(html: string): string {
       if (attr.name.indexOf('on') === 0) {
         el.removeAttribute(attr.name);
       }
+      if (attr.name === 'style') {
+        const val = attr.value.toLowerCase();
+        // Remove styles that could execute JS or load external resources
+        if (/expression\s*\(|javascript:|url\s*\(|@import|behavior\s*:|binding\s*:|-moz-binding/i.test(val)) {
+          el.removeAttribute(attr.name);
+        }
+      }
       if (
         attr.name === 'href' ||
         attr.name === 'src' ||

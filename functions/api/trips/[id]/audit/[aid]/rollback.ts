@@ -4,6 +4,19 @@ interface Env {
   DB: D1Database;
 }
 
+const ALLOWED_TABLES = ['trips', 'days', 'hotels', 'entries', 'restaurants', 'shopping', 'trip_docs'] as const;
+type AllowedTable = typeof ALLOWED_TABLES[number];
+
+const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
+  trips:       ['id', 'name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer_json', 'created_at', 'updated_at'],
+  days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'weather_json', 'updated_at'],
+  hotels:      ['id', 'day_id', 'name', 'checkout', 'source', 'details', 'breakfast', 'note', 'parking_json'],
+  entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'body', 'source', 'maps', 'mapcode', 'rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location_json', 'updated_at'],
+  restaurants: ['id', 'entry_id', 'sort_order', 'name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'rating', 'maps', 'mapcode', 'source'],
+  shopping:    ['id', 'parent_type', 'parent_id', 'sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'rating', 'maps', 'mapcode', 'source'],
+  trip_docs:   ['id', 'trip_id', 'doc_type', 'content', 'updated_at'],
+};
+
 interface AuditRow {
   id: number;
   trip_id: string;
@@ -41,6 +54,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const { table_name, record_id, action, diff_json, snapshot } = auditRow;
 
+  const safeTable = ALLOWED_TABLES.find(t => t === table_name);
+  if (!safeTable) {
+    return json({ error: 'Invalid table name' }, 400);
+  }
+  const allowedCols = TABLE_COLUMNS[safeTable];
+
   if (action === 'delete') {
     // Re-INSERT using the snapshot
     if (!snapshot) return json({ error: 'No snapshot available for rollback' }, 400);
@@ -53,15 +72,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     // Remove system-managed fields that should be auto-generated, keep the original id
-    const cols = Object.keys(snapshotRow).filter(k => k !== 'updated_at' && k !== 'created_at').join(', ');
-    const placeholders = Object.keys(snapshotRow).filter(k => k !== 'updated_at' && k !== 'created_at').map(() => '?').join(', ');
-    const values = Object.keys(snapshotRow).filter(k => k !== 'updated_at' && k !== 'created_at').map(k => snapshotRow[k] ?? null);
+    // Also validate column names against the whitelist
+    const snapshotKeys = Object.keys(snapshotRow).filter(k => k !== 'updated_at' && k !== 'created_at');
+    const invalidSnapshotCols = snapshotKeys.filter(k => !allowedCols.includes(k));
+    if (invalidSnapshotCols.length > 0) {
+      return json({ error: `Invalid column(s) in snapshot: ${invalidSnapshotCols.join(', ')}` }, 400);
+    }
+    const cols = snapshotKeys.join(', ');
+    const placeholders = snapshotKeys.map(() => '?').join(', ');
+    const values = snapshotKeys.map(k => snapshotRow[k] ?? null);
 
-    await db.prepare(`INSERT OR REPLACE INTO ${table_name} (${cols}) VALUES (${placeholders})`).bind(...values).run();
+    // Check if a record with this id already exists to avoid overwriting newer data
+    if (snapshotRow.id != null) {
+      const existing = await db.prepare(`SELECT 1 FROM ${safeTable} WHERE id = ?`).bind(snapshotRow.id).first();
+      if (existing) {
+        return json({ error: 'Cannot rollback: a record with this id already exists' }, 409);
+      }
+    }
+    await db.prepare(`INSERT INTO ${safeTable} (${cols}) VALUES (${placeholders})`).bind(...values).run();
 
     await logAudit(db, {
       tripId: id,
-      tableName: table_name,
+      tableName: safeTable,
       recordId: record_id,
       action: 'insert',
       changedBy,
@@ -86,11 +118,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const revertFields = Object.keys(diff);
     if (revertFields.length === 0) return json({ error: 'No fields to revert' }, 400);
 
+    const invalidDiffCols = revertFields.filter(f => !allowedCols.includes(f));
+    if (invalidDiffCols.length > 0) {
+      return json({ error: `Invalid column(s) in diff: ${invalidDiffCols.join(', ')}` }, 400);
+    }
+
     const setClauses = [...revertFields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
     const values = [...revertFields.map(f => diff[f].old ?? null), record_id];
 
     const result = await db
-      .prepare(`UPDATE ${table_name} SET ${setClauses} WHERE id = ?`)
+      .prepare(`UPDATE ${safeTable} SET ${setClauses} WHERE id = ?`)
       .bind(...values)
       .run();
 
@@ -99,7 +136,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const revertedFields = Object.fromEntries(revertFields.map(f => [f, diff[f].old]));
     await logAudit(db, {
       tripId: id,
-      tableName: table_name,
+      tableName: safeTable,
       recordId: record_id,
       action: 'update',
       changedBy,
@@ -113,13 +150,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // DELETE the record that was inserted
     if (record_id === null) return json({ error: 'No record_id for insert rollback' }, 400);
 
-    const oldRow = await db.prepare(`SELECT * FROM ${table_name} WHERE id = ?`).bind(record_id).first() as Record<string, unknown> | null;
+    const oldRow = await db.prepare(`SELECT * FROM ${safeTable} WHERE id = ?`).bind(record_id).first() as Record<string, unknown> | null;
 
-    await db.prepare(`DELETE FROM ${table_name} WHERE id = ?`).bind(record_id).run();
+    await db.prepare(`DELETE FROM ${safeTable} WHERE id = ?`).bind(record_id).run();
 
     await logAudit(db, {
       tripId: id,
-      tableName: table_name,
+      tableName: safeTable,
       recordId: record_id,
       action: 'delete',
       changedBy,

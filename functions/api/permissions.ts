@@ -3,6 +3,8 @@
  * POST /api/permissions { email, tripId, role } — 新增權限 + Access 同步
  */
 
+import { logAudit } from './_audit';
+
 interface Env {
   DB: D1Database;
   CF_API_TOKEN: string;
@@ -134,6 +136,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .run();
     return json({ error: '同步 Access policy 失敗，已回滾', detail: String(err) }, 500);
   }
+
+  await logAudit(context.env.DB, {
+    tripId,
+    tableName: 'permissions',
+    recordId: (result as any)?.id ?? null,
+    action: 'insert',
+    changedBy: auth.email,
+    diffJson: JSON.stringify({ email: lowerEmail, role }),
+  });
 
   return json(result, 201);
 };

@@ -1,6 +1,7 @@
 /* ===== MapLinks Component ===== */
 /* Renders Google Map / Apple Map / Naver Map links + optional mapcode display */
 
+import { memo } from 'react';
 import Icon from '../shared/Icon';
 import { escUrl } from '../../lib/sanitize';
 
@@ -49,7 +50,7 @@ function resolveAppleUrl(loc: MapLocation): string {
   return aq;
 }
 
-export default function MapLinks({ location: loc, inline = false }: MapLinksProps) {
+export const MapLinks = memo(function MapLinks({ location: loc, inline = false }: MapLinksProps) {
   const cls = inline ? 'map-link map-link-inline' : 'map-link';
   const googleUrl = resolveGoogleUrl(loc);
   const appleUrl = resolveAppleUrl(loc);
@@ -80,7 +81,9 @@ export default function MapLinks({ location: loc, inline = false }: MapLinksProp
       )}
     </>
   );
-}
+});
+
+export default MapLinks;
 
 /* ===== NavLinks — renders labelled groups of map links ===== */
 
@@ -92,7 +95,7 @@ interface NavLinksProps {
   locations: NavLocation[];
 }
 
-export function NavLinks({ locations }: NavLinksProps) {
+export const NavLinks = memo(function NavLinks({ locations }: NavLinksProps) {
   if (!locations || locations.length === 0) return null;
   return (
     <div className="nav-links">
@@ -104,4 +107,4 @@ export function NavLinks({ locations }: NavLinksProps) {
       ))}
     </div>
   );
-}
+});

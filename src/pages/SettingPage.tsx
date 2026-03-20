@@ -55,8 +55,10 @@ export default function SettingPage() {
 
   /* --- fetch trips --- */
   useEffect(() => {
+    let cancelled = false;
     apiFetch<TripListItem[]>('/trips')
       .then((data) => {
+        if (cancelled) return;
         const mapped: TripDisplay[] = data.map((t) => {
           let footer = t.footer_json as string | Record<string, unknown> | null;
           if (typeof footer === 'string') {
@@ -88,9 +90,13 @@ export default function SettingPage() {
         setLoading(false);
       })
       .catch(() => {
+        if (cancelled) return;
         setLoadError(true);
         setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /* --- handlers --- */

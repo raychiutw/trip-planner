@@ -94,21 +94,22 @@ export function useTrip(tripId: string | null): UseTripReturn {
     dayCacheRef.current = {};
     setAllDays({});
 
+    const controller = new AbortController();
     let cancelled = false;
 
     async function load() {
       try {
         // Fetch meta + days list in parallel
         const [meta, daysList] = await Promise.all([
-          apiFetch<Trip>(`/trips/${tripId}`),
-          apiFetch<DaySummary[]>(`/trips/${tripId}/days`),
+          apiFetch<Trip>(`/trips/${tripId}`, { signal: controller.signal }),
+          apiFetch<DaySummary[]>(`/trips/${tripId}/days`, { signal: controller.signal }),
         ]);
 
         if (cancelled) return;
 
         setTrip(meta);
 
-        // Sort days by day_num (NOT NULL in DB — must always exist)
+        // Sort days by day_num
         const sorted = [...daysList].sort(
           (a, b) => a.day_num - b.day_num,
         );
@@ -123,7 +124,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
         // Fire ALL day fetches in parallel (non-blocking)
         for (const d of sorted) {
           const num = d.day_num;
-          apiFetch<Day>(`/trips/${tripId}/days/${num}`)
+          apiFetch<Day>(`/trips/${tripId}/days/${num}`, { signal: controller.signal })
             .then((dayData) => {
               if (cancelled) return;
               dayCacheRef.current[num] = dayData;
@@ -140,7 +141,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
 
         // Fetch docs in the background (non-blocking)
         for (const key of DOC_KEYS) {
-          apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`)
+          apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
             .then((data) => {
               if (cancelled) return;
               let content: unknown = data.content;
@@ -184,6 +185,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
     load();
 
     return () => {
+      controller.abort();
       cancelled = true;
     };
   }, [tripId]);
