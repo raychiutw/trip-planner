@@ -63,10 +63,11 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
     if (!entry.travel) return;
     const t = entry.travel;
     const type = t.type || '';
-    const text = t.desc || (typeof t === 'string' ? (t as unknown as string) : '');
+    const text = t.desc || (typeof t === 'string' ? t : '');
     const typeInfo = TRANSPORT_TYPES[type];
     if (!typeInfo) return;
 
+    if (!text) return;
     const m = String(text).match(/(\d+)/);
     if (!m) return;
     const mins = parseInt(m[1], 10);

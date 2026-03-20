@@ -6,15 +6,14 @@ import type { DaySummary } from '../../types/trip';
 
 const WEEKDAYS = '日一二三四五六';
 
-/** Format pill label: MM/DD + weekday abbreviation, >10 days omits weekday */
-export function formatPillLabel(day: DaySummary, totalDays: number): string {
+/** Format pill label: MM/DD */
+export function formatPillLabel(day: DaySummary): string {
   if (!day.date) return String(day.day_num);
   const d = new Date(day.date + 'T00:00:00');
   if (isNaN(d.getTime())) return String(day.day_num);
   const mm = d.getMonth() + 1;
   const dd = d.getDate();
-  if (totalDays > 10) return `${mm}/${dd}`;
-  return `${mm}/${dd}${WEEKDAYS[d.getDay()]}`;
+  return `${mm}/${dd}`;
 }
 
 /** Format tooltip content */
@@ -160,8 +159,6 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
     canScrollRight && 'can-scroll-right',
   );
 
-  const totalDays = days.length;
-
   return (
     <div className={wrapClassName} ref={wrapRef}>
       <button
@@ -181,6 +178,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
           const isToday = dayNum === todayDayNum;
           const showTooltip = tooltipDay === dayNum;
 
+          const tooltipId = `dn-tooltip-${dayNum}`;
           return (
             <button
               key={dayNum}
@@ -188,15 +186,19 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
               data-day={dayNum}
               data-action="switch-day"
               data-target={`day${dayNum}`}
+              aria-describedby={showTooltip ? tooltipId : undefined}
               onClick={() => handleDayClick(dayNum)}
               onMouseEnter={() => handleMouseEnter(dayNum)}
               onMouseLeave={handleMouseLeave}
               onTouchStart={() => handleTouchStart(dayNum)}
               onTouchEnd={handleTouchEnd}
             >
-              {formatPillLabel(d, totalDays)}
+              {formatPillLabel(d)}
+              {isActive && d.label && (
+                <span className="dn-active-label">{d.label}</span>
+              )}
               {showTooltip && (
-                <span className="dn-tooltip" role="tooltip">
+                <span id={tooltipId} className="dn-tooltip" role="tooltip">
                   {formatTooltip(d)}
                 </span>
               )}

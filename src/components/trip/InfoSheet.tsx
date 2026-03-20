@@ -99,6 +99,8 @@ export default function InfoSheet({
   /* --- Drag handlers --- */
   const handleDragStart = useCallback((y: number) => {
     dragging.current = true;
+    // Direct DOM mutation — React state not needed for CSS-only transition control
+    panelRef.current?.classList.add('dragging');
     dragStartY.current = y;
     dragStartTime.current = Date.now();
     lastTouchY.current = y;
@@ -109,6 +111,8 @@ export default function InfoSheet({
     (y: number) => {
       if (!dragging.current) return;
       dragging.current = false;
+      // Direct DOM mutation — React state not needed for CSS-only transition control
+      panelRef.current?.classList.remove('dragging');
       const delta = dragStartY.current - y; // positive = drag up
       const dt = Date.now() - lastTouchTime.current;
       const velocity = dt > 0 ? (lastTouchY.current - y) / dt : 0; // px/ms, positive = up
@@ -162,7 +166,11 @@ export default function InfoSheet({
   );
 
   /* --- Prevent scroll passthrough on backdrop --- */
-  const preventScroll = useCallback((e: React.TouchEvent | React.WheelEvent) => {
+  const preventTouchScroll = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const preventWheelScroll = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
   }, []);
 
@@ -207,8 +215,8 @@ export default function InfoSheet({
       className={clsx('info-sheet-backdrop', open && 'open')}
       id="infoBottomSheet"
       onClick={onClose}
-      onTouchMove={preventScroll as unknown as React.TouchEventHandler}
-      onWheel={preventScroll as unknown as React.WheelEventHandler}
+      onTouchMove={preventTouchScroll}
+      onWheel={preventWheelScroll}
     >
       <div
         className="info-sheet-panel"

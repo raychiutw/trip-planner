@@ -1,5 +1,14 @@
 # 行程規劃網站（trip-planner）
 
+## 團隊協作
+
+本專案有 6 個角色：**Key User** (使用者) → **PM** (Claude) → **工程師** / **Code Reviewer** / **QC** / **Challenger** (Teammate)
+
+- **涉及 code 變更的任務都用 Team 處理**，確保每個改動都經過完整審查流程。行程資料操作（tp-* skill）PM 直接操作，不建 Team。
+- PM 禁止改 code、跑測試、debug。要改 code 必須派工程師 Teammate。
+- 派 Teammate 或團隊協作時，PM 必須先 **invoke `/tp-team`** 載入完整團隊規則。
+- `/tp-team` 包含：權責矩陣、Challenger 11 視角、禁令、Teammate/Subagent 規則、TeamCreate 工作模式、PM 派任務模板、OpenSpec 流程。
+
 ## ⚠️ 開發規則（強制）
 
 **所有開發規則定義在 `openspec/config.yaml`，無論是否使用 OpenSpec 流程都必須遵守。**
@@ -7,7 +16,8 @@
 - **Skills**：所有 tp-* skills 透過 API 操作行程資料，不操作本地檔案
 - **OpenSpec**：功能開發遵守 openspec 流程，除非使用者同意跳過
 - **Agent / Sub Agent**：
-  - sub agent 預設 `model: "sonnet"`；僅在需要高度判斷力時用 `model: "opus"`
+  - Teammate 模型分層：**Opus**（Reviewer、Challenger）、**Sonnet**（Engineer、QC）
+  - Subagent 預設 Sonnet，需判斷力時可升 Opus
   - 獨立任務盡量同時發送多個 Agent tool call
   - 長時間任務用 `run_in_background: true`
   - 多 agent 並行修改檔案時用 `isolation: "worktree"`

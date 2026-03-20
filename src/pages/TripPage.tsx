@@ -97,9 +97,11 @@ const DaySection = React.memo(function DaySection({
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
   // API may return weather_json (raw) or weather (mapped) — handle both
-  const weatherRaw = (day as Record<string, unknown> | undefined)?.weather_json ?? day?.weather;
-  const weatherDay = weatherRaw && typeof weatherRaw === 'object' && 'locations' in (weatherRaw as object)
-    ? (weatherRaw as unknown as WeatherDay)
+  const weatherRaw = day && 'weather_json' in (day as unknown as Record<string, unknown>)
+    ? (day as unknown as Record<string, unknown>).weather_json
+    : day?.weather;
+  const weatherDay = weatherRaw !== null && typeof weatherRaw === 'object' && 'locations' in (weatherRaw as Record<string, unknown>)
+    ? (weatherRaw as WeatherDay)
     : null;
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
@@ -150,14 +152,14 @@ const DaySection = React.memo(function DaySection({
             )}
 
             <div className="day-overview">
-              {hotel && <Hotel hotel={toHotelData(hotel as unknown as Record<string, unknown>)} />}
+              {hotel && typeof hotel === 'object' && <Hotel hotel={toHotelData(hotel as unknown as Record<string, unknown>)} />}
               {dayDrivingStats && (
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               )}
             </div>
 
             {timeline.length > 0 && (
-              <Timeline events={timeline.map((e) => toTimelineEntry(e as unknown as Record<string, unknown>))} dayDate={dayDate ?? null} />
+              <Timeline events={timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({}))} dayDate={dayDate ?? null} />
             )}
           </>
         )}
@@ -302,12 +304,25 @@ export default function TripPage() {
     // Helper: fetch all data (meta + full days + all docs)
     const DOC_TYPES = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
 
-    type RawDay = Record<string, unknown> & {
+    type RawDayEntry = {
+      time?: unknown; title?: unknown; body?: unknown; note?: unknown;
+      rating?: unknown; maps?: unknown; source?: unknown;
+      travel?: unknown; travel_type?: unknown; travel_desc?: unknown; travel_min?: unknown;
+      restaurants?: Record<string, unknown>[];
+      shopping?: Record<string, unknown>[];
+      [key: string]: unknown;
+    };
+    type RawHotel = {
+      name?: unknown; checkout?: unknown; note?: unknown; breakfast?: unknown;
+      parking_json?: unknown; parking?: unknown;
+      shopping?: Record<string, unknown>[];
+      [key: string]: unknown;
+    };
+    type RawDay = {
       day_num?: number; date?: string; day_of_week?: string; label?: string;
-      hotel?: Record<string, unknown> & { shopping?: Record<string, unknown>[] } | null;
-      timeline?: Array<Record<string, unknown> & {
-        restaurants?: Record<string, unknown>[]; shopping?: Record<string, unknown>[];
-      }>;
+      hotel?: RawHotel | null;
+      timeline?: RawDayEntry[];
+      [key: string]: unknown;
     };
 
     const fetchAllData = async () => {
@@ -414,7 +429,7 @@ export default function TripPage() {
             if (e.maps) md += `\n📍 Map: ${s(e.maps)}\n`;
 
             // Travel
-            const travel = e.travel as Record<string, unknown> | null | undefined;
+            const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
             if (travel?.type || e.travel_type) {
               const tType = s(travel?.type ?? e.travel_type);
               const tDesc = s(travel?.desc ?? e.travel_desc);
@@ -499,7 +514,7 @@ export default function TripPage() {
           // Timeline entries
           const timeline = day.timeline ?? [];
           for (const e of timeline) {
-            const travel = e.travel as Record<string, unknown> | null | undefined;
+            const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
             const travelType = csvCell(travel?.type ?? e.travel_type);
             const travelMin = csvCell(travel?.min ?? e.travel_min);
 
@@ -776,7 +791,7 @@ export default function TripPage() {
         return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>無行程建議</p>;
       case 'today-route':
         return currentDay && currentDay.timeline.length > 0
-          ? <TodayRouteSheet events={currentDay.timeline.map((e) => toTimelineEntry(e as unknown as Record<string, unknown>))} />
+          ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({}))} />
           : <p>無行程資料</p>;
       case 'driving':
         return tripDrivingStats
@@ -834,7 +849,7 @@ export default function TripPage() {
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose, handleDownloadOpen, handleDownloadFormat, togglePrint]);
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose, handleDownloadFormat, togglePrint]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;

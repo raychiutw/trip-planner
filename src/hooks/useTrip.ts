@@ -2,6 +2,28 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from './useApi';
 import type { Trip, Day, DaySummary, TripDoc } from '../types/trip';
 
+
+/* ===== API response normaliser ===== */
+
+/**
+ * The API returns snake_case fields (day_num, day_of_week, updated_at).
+ * Normalise to the camelCase Day interface before storing.
+ * Each field checks camelCase first, falls back to snake_case.
+ */
+function mapDayResponse(raw: Record<string, unknown>): Day {
+  return {
+    id: raw.id as number,
+    dayNum: (raw.dayNum as number | undefined) ?? (raw.day_num as number),
+    date: (raw.date as string | null | undefined) ?? null,
+    dayOfWeek: (raw.dayOfWeek as string | undefined) ?? (raw.day_of_week as string | null | undefined) ?? null,
+    label: (raw.label as string | null | undefined) ?? null,
+    weather: (raw.weather as Day['weather']) ?? null,
+    updatedAt: (raw.updatedAt as string | undefined) ?? (raw.updated_at as string | undefined),
+    hotel: (raw.hotel as Day['hotel']) ?? null,
+    timeline: (raw.timeline as Day['timeline']) ?? [],
+  };
+}
+
 /* ===== Doc Types ===== */
 
 const DOC_KEYS = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
@@ -45,10 +67,12 @@ export function useTrip(tripId: string | null): UseTripReturn {
       if (cached) return cached;
 
       try {
-        const raw = await apiFetch<Day>(`/trips/${tripId}/days/${dayNum}`);
-        dayCacheRef.current[dayNum] = raw;
-        return raw;
-      } catch {
+        const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${dayNum}`);
+        const day = mapDayResponse(raw);
+        dayCacheRef.current[dayNum] = day;
+        return day;
+      } catch (err) {
+        console.warn('fetchDay failed:', err);
         return null;
       }
     },
@@ -124,9 +148,10 @@ export function useTrip(tripId: string | null): UseTripReturn {
         // Fire ALL day fetches in parallel (non-blocking)
         for (const d of sorted) {
           const num = d.day_num;
-          apiFetch<Day>(`/trips/${tripId}/days/${num}`, { signal: controller.signal })
-            .then((dayData) => {
+          apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal })
+            .then((raw) => {
               if (cancelled) return;
+              const dayData = mapDayResponse(raw);
               dayCacheRef.current[num] = dayData;
               setAllDays((prev) => ({ ...prev, [num]: dayData }));
               // Set currentDay when first day arrives
