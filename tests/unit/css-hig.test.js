@@ -16,9 +16,23 @@ const ALL_CSS = Object.values(CSS_FILES).join('\n');
  * Handles: :root { … }, @theme { … }, @layer base { nested… }, body.theme-* { … }
  */
 function stripTokenBlocks(css) {
-    return css
-        .replace(/@theme\s*\{[^}]*\}/g, '')
-        .replace(/@layer\s+base\s*\{[^{}]*(?:\{[^}]*\}[^{}]*)*\}/g, '')
+    let result = css
+        .replace(/@theme\s*\{[^}]*\}/g, '');
+    // Robust @layer base removal: brace-depth counting to handle any nesting
+    const layerRe = /@layer\s+base\s*\{/g;
+    let m;
+    while ((m = layerRe.exec(result)) !== null) {
+        let depth = 1;
+        let i = m.index + m[0].length;
+        while (i < result.length && depth > 0) {
+            if (result[i] === '{') depth++;
+            else if (result[i] === '}') depth--;
+            i++;
+        }
+        result = result.slice(0, m.index) + result.slice(i);
+        layerRe.lastIndex = m.index;
+    }
+    return result
         .replace(/:root\s*\{[^}]*\}/g, '')
         .replace(/body\.theme-[\w.-]*\s*\{[^}]*\}/g, '')
         .replace(/body\.dark\s*\{[^}]*\}/g, '');
