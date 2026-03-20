@@ -7,7 +7,15 @@ env:
   CLOUDFLARE_API_TOKEN: REDACTED_OLD_CF_TOKEN
   CF_ACCESS_CLIENT_ID: REDACTED_CLIENT_ID
   CF_ACCESS_CLIENT_SECRET: REDACTED_CLIENT_SECRET
-  # Pages 環境變數（Cloudflare Dashboard 設定）：
+  # --- Sentry ---
+  SENTRY_ORG: ray-team-gq
+  SENTRY_PROJECT: javascript-react
+  VITE_SENTRY_DSN: https://9b704a3b3a8d3edbd985d31a32b7b7bd@o4511070098161664.ingest.us.sentry.io/4511072117325824
+  # SENTRY_AUTH_TOKEN: (GitHub Secret，需從 sentry.io/settings/auth-tokens/ 建立)
+  # --- Gmail ---
+  # GMAIL_USERNAME: lean.lean@gmail.com
+  # GMAIL_APP_PASSWORD: (GitHub Secret，需從 Google 帳戶建立 App Password)
+  # --- Pages 環境變數（Cloudflare Dashboard 設定）---
   # CF_API_TOKEN, CF_ACCESS_APP_ID, CF_ACCESS_POLICY_ID, ADMIN_EMAIL
 
 context: |

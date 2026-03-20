@@ -841,19 +841,20 @@ export default function TripPage() {
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
               <Icon name="printer" /><span>列印模式</span>
             </button>
-            <hr className="border-none border-t border-[var(--color-border)] my-1" />
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); setTimeout(() => window.print(), 300); }}>
-              <Icon name="download" /><span>匯出 PDF</span>
-            </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>
-              <Icon name="doc" /><span>匯出 Markdown</span>
-            </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>
-              <Icon name="code" /><span>匯出 JSON</span>
-            </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>
-              <Icon name="table" /><span>匯出 CSV</span>
-            </button>
+            <div className="export-actions">
+              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); togglePrint(); setTimeout(() => window.print(), 300); }}>
+                <Icon name="download" /><span>PDF</span>
+              </button>
+              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>
+                <Icon name="doc" /><span>Markdown</span>
+              </button>
+              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>
+                <Icon name="code" /><span>JSON</span>
+              </button>
+              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>
+                <Icon name="table" /><span>CSV</span>
+              </button>
+            </div>
           </div>
         );
       default:

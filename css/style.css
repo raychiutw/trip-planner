@@ -496,12 +496,12 @@ body.dark .day-header {
 .today-summary-title { color: var(--color-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 
 /* ===== Hotel Summary Card (InfoPanel) ===== */
-.hotel-summary-card { padding: var(--spacing-3) var(--spacing-4); }
+.hotel-summary-card { padding: var(--spacing-4) var(--spacing-5); }
 .hotel-summary-name { font-weight: 600; font-size: var(--font-size-body); }
 .hotel-summary-checkout { font-size: var(--font-size-callout); color: var(--color-muted); margin-top: 4px; }
 
 /* ===== Transport Summary Card (InfoPanel) ===== */
-.transport-summary-card { padding: var(--spacing-3) var(--spacing-4); }
+.transport-summary-card { padding: var(--spacing-4) var(--spacing-5); }
 .transport-summary-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--font-size-callout); }
 .transport-summary-label { color: var(--color-muted); }
 .transport-summary-value { font-weight: 600; margin-left: auto; }
@@ -622,6 +622,12 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .tool-action-btn:hover { background-color: var(--color-tertiary); }
 .tool-action-btn .svg-icon { width: 24px; height: 24px; color: var(--color-accent); }
 .tool-action-btn svg { width: 24px; height: 24px; }
+
+/* ===== Export Actions (horizontal row in tools sheet) ===== */
+.export-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--spacing-2); padding: var(--spacing-2) 0; border-top: 1px solid var(--color-border); margin-top: var(--spacing-1); }
+.export-actions .export-btn { width: auto !important; flex: 1 1 72px; min-width: 72px; max-width: 100px; padding: 12px 8px; flex-direction: column; justify-content: center; font-size: var(--font-size-callout); gap: 4px; }
+.export-actions .export-btn .svg-icon { width: 20px; height: 20px; }
+.export-actions .export-btn svg { width: 20px; height: 20px; }
 
 /* ===== Bottom Sheet ===== */
 .info-sheet-backdrop {
