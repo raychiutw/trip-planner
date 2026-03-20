@@ -128,7 +128,7 @@ describe('CSS HIG Compliance', () => {
             expect(violations, `Hardcoded #fff found:\n${violations.join('\n')}`).toEqual([]);
         });
 
-        it('font-size only uses var(--fs-*) tokens', () => {
+        it('font-size only uses var(--font-size-*) tokens', () => {
             const cleaned = stripTokenBlocks(stripPrintBlocks(ALL_CSS));
             const rules = extractRules(cleaned);
             const violations = [];
@@ -138,8 +138,8 @@ describe('CSS HIG Compliance', () => {
                 if (!fsMatch) continue;
                 for (const fs of fsMatch) {
                     const value = fs.replace(/font-size\s*:\s*/, '').trim();
-                    // Allowed: var(--fs-*), em, rem, %, inherit, initial, unset
-                    if (/var\(--fs-/.test(value)) continue;
+                    // Allowed: var(--font-size-*), em, rem, %, inherit, initial, unset
+                    if (/var\(--font-size-/.test(value)) continue;
                     if (/^\d+(\.\d+)?(em|rem|%)$/.test(value)) continue;
                     if (/^(inherit|initial|unset)$/.test(value)) continue;
                     violations.push(`${selector}: font-size: ${value}`);

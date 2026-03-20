@@ -343,21 +343,21 @@ export default function ManagePage() {
         <main className="manage-main" id="manageMain">
           {/* Loading state */}
           {pageState.kind === 'loading' && (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-muted)' }}>
+            <div className="text-center p-10 text-[var(--color-muted)]">
               載入中...
             </div>
           )}
 
           {/* Auth required */}
           {pageState.kind === 'auth-required' && (
-            <div className="manage-no-permission" style={{ margin: '40px var(--padding-h)' }}>
+            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
               請先登入
             </div>
           )}
 
           {/* No permission / no published trips */}
           {pageState.kind === 'no-permission' && (
-            <div className="manage-no-permission" style={{ margin: '40px var(--padding-h)' }}>
+            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
               {pageState.message}
             </div>
           )}

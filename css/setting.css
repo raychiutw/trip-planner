@@ -32,7 +32,7 @@ html.page-setting {
 /* ===== Section ===== */
 .setting-section { margin-bottom: 28px; }
 .setting-section-title {
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     font-weight: 700;
     color: var(--color-muted);
     text-transform: uppercase;
@@ -44,7 +44,7 @@ html.page-setting {
 /* ===== Trip List ===== */
 .setting-trip-list { display: flex; flex-direction: column; gap: 8px; }
 .setting-trip-list .trip-btn {
-    transition: border-color var(--duration-fast);
+    transition: border-color var(--transition-duration-fast);
 }
 
 /* ===== Color Mode Grid ===== */
@@ -63,7 +63,7 @@ html.page-setting {
     border-radius: var(--radius-md);
     background: var(--color-secondary);
     font-family: inherit;
-    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
 }
 .color-mode-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
 .color-mode-card.active { border-color: var(--color-accent); box-shadow: var(--shadow-ring); }
@@ -123,12 +123,12 @@ html.page-setting {
 
 /* ===== Color Mode Labels ===== */
 .color-mode-label {
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     font-weight: 600;
     color: var(--color-foreground);
 }
 .color-mode-desc {
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     color: var(--color-muted);
 }
 
@@ -148,7 +148,7 @@ html.page-setting {
     border-radius: var(--radius-md);
     background: var(--color-secondary);
     font-family: inherit;
-    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
 }
 .color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
 .color-theme-card.active { border-color: var(--color-accent); box-shadow: var(--shadow-ring); }
@@ -160,18 +160,18 @@ html.page-setting {
     border: 1px solid var(--color-border);
 }
 .color-theme-label {
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     font-weight: 600;
     color: var(--color-foreground);
 }
 .color-theme-desc {
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     color: var(--color-muted);
 }
 
 /* ===== Setting Sub-Section Title ===== */
 .setting-subsection-title {
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     font-weight: 600;
     color: var(--color-muted);
     margin-bottom: 8px;

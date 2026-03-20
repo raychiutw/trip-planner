@@ -40,7 +40,7 @@
     padding: 12px 16px;
     background: var(--color-secondary);
     border-radius: var(--radius-md);
-    transition: background var(--duration-fast);
+    transition: background var(--transition-duration-fast);
     overflow: hidden;
     max-width: 100%;
 }
@@ -55,7 +55,7 @@
 }
 .request-item-title {
     color: var(--color-foreground);
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -64,7 +64,7 @@
     min-width: 0;
 }
 .request-item-meta {
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     color: var(--color-muted);
     margin-top: 8px;
 }
@@ -74,7 +74,7 @@
     gap: 4px;
     padding: 4px 8px;
     border-radius: var(--radius-full);
-    font-size: var(--fs-caption);
+    font-size: var(--font-size-caption);
     font-weight: 600;
     color: var(--color-accent-foreground);
     white-space: nowrap;
@@ -86,18 +86,18 @@
 .request-badge.open { background: var(--color-badge-open); }
 .request-badge.closed { background: var(--color-badge-closed); }
 .request-reply {
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     color: var(--color-foreground);
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--color-border);
-    line-height: var(--lh-normal);
+    line-height: var(--line-height-normal);
     overflow-wrap: break-word;
     word-break: break-word;
 }
 .request-reply a { color: var(--color-accent); text-decoration: none; }
 .request-reply a:hover { text-decoration: underline; }
-.request-reply h2, .request-reply h3 { font-size: var(--fs-title3); margin: 12px 0 8px; color: var(--color-foreground); }
+.request-reply h2, .request-reply h3 { font-size: var(--font-size-title3); margin: 12px 0 8px; color: var(--color-foreground); }
 .request-reply h2:first-child, .request-reply h3:first-child { margin-top: 0; }
 .request-reply p { margin: 4px 0; }
 .request-reply strong { font-weight: 600; }
@@ -108,11 +108,11 @@
 .request-reply th, .request-reply td { border: 1px solid var(--color-border); padding: 8px 12px; text-align: left; }
 .request-reply th { background: var(--color-tertiary); font-weight: 600; white-space: nowrap; }
 .request-reply blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--color-accent); background: var(--color-accent-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-.request-reply code { background: var(--color-tertiary); padding: 4px 4px; border-radius: var(--radius-xs); font-size: var(--fs-callout); }
+.request-reply code { background: var(--color-tertiary); padding: 4px 4px; border-radius: var(--radius-xs); font-size: var(--font-size-callout); }
 .request-reply pre { background: var(--color-tertiary); padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; margin: 8px 0; }
 .request-reply pre code { background: none; padding: 0; }
 @media (min-width: 768px) {
-    .request-item-title { font-size: var(--fs-title3); }
+    .request-item-title { font-size: var(--font-size-title3); }
 }
 
 /* ===== Centered empty state ===== */
@@ -126,7 +126,7 @@
 .manage-empty,
 .manage-no-permission {
     color: var(--color-muted);
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
     text-align: center;
     padding: 32px 16px;
     background: var(--color-secondary);
@@ -159,10 +159,10 @@
     border: none;
     background: transparent;
     font-family: inherit;
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     color: var(--color-foreground);
     resize: none;
-    line-height: var(--lh-normal);
+    line-height: var(--line-height-normal);
     min-height: 3.6em;
     max-height: 30vh;
     overflow-y: auto;
@@ -181,13 +181,13 @@
     background: transparent;
     color: var(--color-muted);
     font-family: inherit;
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
     font-weight: 400;
     padding: 8px 12px;
     border-radius: var(--radius-full);
     cursor: pointer;
     min-height: var(--tap-min);
-    transition: background var(--duration-fast), color var(--duration-fast), font-weight var(--duration-fast);
+    transition: background var(--transition-duration-fast), color var(--transition-duration-fast), font-weight var(--transition-duration-fast);
 }
 .manage-mode-pill:hover {
     background: var(--color-hover);
@@ -220,7 +220,7 @@
     align-items: center;
     padding: 4px 8px;
     border-radius: var(--radius-full);
-    font-size: var(--fs-caption);
+    font-size: var(--font-size-caption);
     font-weight: 600;
     white-space: nowrap;
     flex-shrink: 0;
@@ -233,7 +233,7 @@
 
 /* ===== Request Body Preview ===== */
 .request-item-body {
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
     color: var(--color-muted);
     margin-top: 8px;
     overflow: hidden;
@@ -263,7 +263,7 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: background var(--duration-normal), color var(--duration-normal), transform var(--duration-fast);
+    transition: background var(--transition-duration-normal), color var(--transition-duration-normal), transform var(--transition-duration-fast);
 }
 .manage-send-btn:disabled {
     transform: scale(0.92);
@@ -279,7 +279,7 @@
 /* ===== Status Messages ===== */
 .manage-status {
     padding: 0;
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     border-radius: var(--radius-sm);
 }
 .manage-status.success { color: var(--color-success); display: flex; align-items: center; gap: 4px; }
@@ -292,7 +292,7 @@
     background: var(--color-secondary);
     color: var(--color-foreground);
     font-family: inherit;
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
     font-weight: 600;
     padding: 8px 28px 8px 12px;
     border-radius: var(--radius-full);
@@ -305,7 +305,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    transition: background-color var(--duration-fast);
+    transition: background-color var(--transition-duration-fast);
 }
 .manage-trip-select:hover {
     background-color: var(--color-tertiary);
@@ -317,7 +317,7 @@
 .manage-trip-select option {
     background: var(--color-background);
     color: var(--color-foreground);
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     padding: 8px 16px;
 }
 .manage-trip-select option:checked {
@@ -330,7 +330,7 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
 }
 
 /* ===== Dark Mode ===== */

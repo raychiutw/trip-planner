@@ -24,7 +24,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     margin-bottom: 28px;
 }
 .admin-section-title {
-    font-size: var(--fs-caption);
+    font-size: var(--font-size-caption);
     font-weight: 500;
     color: var(--color-muted);
     text-transform: uppercase;
@@ -48,13 +48,13 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     background: transparent;
     color: var(--color-foreground);
     font-family: inherit;
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     padding: 14px 44px 14px 16px;
     cursor: pointer;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
-    transition: background-color var(--duration-fast);
+    transition: background-color var(--transition-duration-fast);
 }
 .admin-trip-select:hover {
     background-color: var(--color-tertiary);
@@ -67,7 +67,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
 .admin-trip-select option {
     background: var(--color-background);
     color: var(--color-foreground);
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     padding: 8px 16px;
 }
 .admin-trip-select option:disabled {
@@ -87,7 +87,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    transition: background-color var(--duration-fast);
+    transition: background-color var(--transition-duration-fast);
 }
 .admin-permission-item:not(:last-child) {
     border-bottom: 0.5px solid var(--color-border);
@@ -98,7 +98,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     background-color: var(--color-tertiary);
 }
 .admin-permission-email {
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     color: var(--color-foreground);
     flex: 1;
     min-width: 0;
@@ -106,7 +106,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     text-overflow: ellipsis;
 }
 .admin-permission-role {
-    font-size: var(--fs-caption2);
+    font-size: var(--font-size-caption2);
     color: var(--color-muted);
     padding: 2px 8px;
     background: var(--color-tertiary);
@@ -128,7 +128,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     min-width: var(--tap-min);
     min-height: var(--tap-min);
     flex-shrink: 0;
-    transition: color var(--duration-fast), background var(--duration-fast);
+    transition: color var(--transition-duration-fast), background var(--transition-duration-fast);
 }
 .admin-remove-btn:hover {
     color: var(--color-destructive);
@@ -138,7 +138,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
 /* ===== Empty State ===== */
 .admin-empty {
     color: var(--color-muted);
-    font-size: var(--fs-callout);
+    font-size: var(--font-size-callout);
     text-align: center;
     padding: 24px 16px;
 }
@@ -155,7 +155,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: inherit;
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     padding: 12px 16px;
     border-radius: var(--radius-md);
 }
@@ -172,13 +172,13 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
     background: var(--color-accent);
     color: var(--color-accent-foreground);
     font-family: inherit;
-    font-size: var(--fs-body);
+    font-size: var(--font-size-body);
     font-weight: 600;
     padding: 12px 20px;
     border-radius: var(--radius-md);
     cursor: pointer;
     white-space: nowrap;
-    transition: filter var(--duration-fast);
+    transition: filter var(--transition-duration-fast);
 }
 .admin-add-btn:hover { filter: brightness(1.1); }
 .admin-add-btn:active { filter: brightness(0.95); }
@@ -189,7 +189,7 @@ html.page-admin { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visib
 
 /* ===== Status ===== */
 .admin-status {
-    font-size: var(--fs-footnote);
+    font-size: var(--font-size-footnote);
     margin-top: 8px;
     padding-left: 8px;
 }

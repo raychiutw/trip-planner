@@ -41,9 +41,38 @@
     /* Shadow — generate shadow-* utilities */
     --shadow-md: 0 4px 16px rgba(46,36,24,0.12);
     --shadow-lg: 0 6px 20px rgba(46,36,24,0.18);
+
+    /* Font size — generate text-* utilities (Apple text style scale) */
+    --font-size-large-title: 2.125rem;
+    --font-size-title: 1.75rem;
+    --font-size-title2: 1.375rem;
+    --font-size-title3: 1.25rem;
+    --font-size-headline: 1.0625rem;
+    --font-size-body: 1.0625rem;
+    --font-size-callout: 1rem;
+    --font-size-subheadline: 0.9375rem;
+    --font-size-footnote: 0.8125rem;
+    --font-size-caption: 0.75rem;
+    --font-size-caption2: 0.6875rem;
+
+    /* Font family — generate font-* utilities */
+    --font-family-system: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+
+    /* Line height — generate leading-* utilities */
+    --line-height-tight: 1.2;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.7;
+
+    /* Transition duration — generate duration-* utilities */
+    --transition-duration-fast: 150ms;
+    --transition-duration-normal: 250ms;
+    --transition-duration-slow: 350ms;
+
+    /* Transition timing function — generate ease-* utilities */
+    --transition-timing-function-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ===== Non-utility tokens (no Tailwind utilities needed) ===== */
+/* ===== Non-utility tokens ===== */
 :root {
     /* Scrollbar defaults (sun-light) — must be on :root because scrollbar-color is set here */
     --scrollbar-thumb: #C8B89E;
@@ -56,29 +85,10 @@
     --cmp-dark-surface: #2A2520;
     --cmp-dark-input: #3E3830;
     --shadow-ring: 0 0 0 2px var(--color-accent);
-    --fs-large-title: 2.125rem;
-    --fs-title: 1.75rem;
-    --fs-title2: 1.375rem;
-    --fs-title3: 1.25rem;
-    --fs-headline: 1.0625rem;
-    --fs-body: 1.0625rem;
-    --fs-callout: 1rem;
-    --fs-subheadline: 0.9375rem;
-    --fs-footnote: 0.8125rem;
-    --fs-caption: 0.75rem;
-    --fs-caption2: 0.6875rem;
     --content-max-w: 720px;
     --info-panel-w: 280px;
     --nav-h: 48px;
     --padding-h: 16px;
-    --font-system: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-    --lh-tight: 1.2;
-    --lh-normal: 1.5;
-    --lh-relaxed: 1.7;
-    --ease-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
-    --duration-fast: 150ms;
-    --duration-normal: 250ms;
-    --duration-slow: 350ms;
     --tap-min: 44px;
     --z-day-header: 100;
     --z-sticky-nav: 200;
@@ -324,62 +334,62 @@
     }
 }
 
-/* ===== Selection ===== */
-::selection { background: var(--color-accent-subtle); color: var(--color-foreground); }
+/* ===== Base styles (@layer base — Tailwind utilities can override) ===== */
 
-/* ===== Reset & Base ===== */
-/* IMPORTANT: These rules are UNLAYERED and always beat @layer base in the cascade.
-   Use only var() references here — direct color values will silently override
-   @layer base theme overrides. Theme switching works because CSS custom properties
-   are resolved lazily at the point of consumption, not at definition. */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-html { scroll-behavior: smooth; scrollbar-gutter: stable; }
-.page-layout { overflow-x: clip; }
-body { font-family: var(--font-system); background: var(--color-background); font-size: var(--fs-body); color: var(--color-foreground); line-height: var(--lh-normal); transition: background-color var(--duration-slow) var(--ease-apple), color var(--duration-slow) var(--ease-apple); }
+@layer base {
+    /* Selection */
+    ::selection { background: var(--color-accent-subtle); color: var(--color-foreground); }
 
-/* ===== Page Layout ===== */
-.page-layout { display: flex; min-height: 100dvh; }
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scrollbar-gutter: stable; }
+    .page-layout { overflow-x: clip; }
+    body { font-family: var(--font-family-system); background: var(--color-background); font-size: var(--font-size-body); color: var(--color-foreground); line-height: var(--line-height-normal); transition: background-color var(--transition-duration-slow) var(--transition-timing-function-apple), color var(--transition-duration-slow) var(--transition-timing-function-apple); }
 
-/* ===== Trip Buttons (shared by switch + edit) ===== */
-.trip-btn { display: block; width: 100%; text-align: left; padding: 16px; border-radius: var(--radius-sm); border: 2px solid transparent; background: var(--color-accent-bg); font-family: inherit; font-size: var(--fs-body); color: var(--color-foreground); text-decoration: none; }
-.trip-btn:hover { background: var(--color-secondary); }
-.trip-btn.active { border-color: var(--color-accent); }
-.trip-btn strong { display: block; font-size: var(--fs-title3); }
-.trip-btn .trip-sub { font-size: var(--fs-caption); color: var(--color-muted); margin-top: 4px; display: block; }
+    /* Page Layout */
+    .page-layout { display: flex; min-height: 100dvh; }
 
-/* ===== Dark Mode (shared base — trip-btn overrides) ===== */
-body.dark .trip-btn { background: var(--color-hover); }
-body.dark .trip-btn:hover { background: var(--color-tertiary); }
+    /* Trip Buttons (shared by switch + edit) */
+    .trip-btn { display: block; width: 100%; text-align: left; padding: 16px; border-radius: var(--radius-sm); border: 2px solid transparent; background: var(--color-accent-bg); font-family: inherit; font-size: var(--font-size-body); color: var(--color-foreground); text-decoration: none; }
+    .trip-btn:hover { background: var(--color-secondary); }
+    .trip-btn.active { border-color: var(--color-accent); }
+    .trip-btn strong { display: block; font-size: var(--font-size-title3); }
+    .trip-btn .trip-sub { font-size: var(--font-size-caption); color: var(--color-muted); margin-top: 4px; display: block; }
 
-/* ===== Container & Sticky Nav (shared by index + edit) ===== */
-.container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform var(--duration-slow) var(--ease-apple), border-radius var(--duration-slow); }
-.sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); background: color-mix(in srgb, var(--color-background) 85%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); color: var(--color-foreground); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
+    /* Dark Mode (shared base — trip-btn overrides) */
+    body.dark .trip-btn { background: var(--color-hover); }
+    body.dark .trip-btn:hover { background: var(--color-tertiary); }
 
-/* ===== Nav Title (shared by edit + setting) ===== */
-.nav-title { font-size: var(--fs-title3); font-weight: 700; color: var(--color-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    /* Container & Sticky Nav (shared by index + edit) */
+    .container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform var(--transition-duration-slow) var(--transition-timing-function-apple), border-radius var(--transition-duration-slow); }
+    .sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); background: color-mix(in srgb, var(--color-background) 85%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); color: var(--color-foreground); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
 
-/* ===== Nav Close Button (shared by edit + setting) ===== */
-.nav-back-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--color-foreground); flex-shrink: 0; cursor: pointer; transition: background var(--duration-fast), color var(--duration-fast); }
-.nav-back-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
-.nav-close-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--color-foreground); flex-shrink: 0; transition: background var(--duration-fast), color var(--duration-fast); }
-.nav-close-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
-.nav-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    /* Nav Title (shared by edit + setting) */
+    .nav-title { font-size: var(--font-size-title3); font-weight: 700; color: var(--color-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 
-/* ===== SVG Icon Wrapper ===== */
-.svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
-.svg-icon svg { width: 100%; height: 100%; }
+    /* Nav Close Button (shared by edit + setting) */
+    .nav-back-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--color-foreground); flex-shrink: 0; cursor: pointer; transition: background var(--transition-duration-fast), color var(--transition-duration-fast); }
+    .nav-back-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
+    .nav-close-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--color-foreground); flex-shrink: 0; transition: background var(--transition-duration-fast), color var(--transition-duration-fast); }
+    .nav-close-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
+    .nav-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 
-/* ===== Focus Visible (remove default outline, use box-shadow) ===== */
-button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-[role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
-.dn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    /* SVG Icon Wrapper */
+    .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
+    .svg-icon svg { width: 100%; height: 100%; }
 
-/* ===== Custom Scrollbar (global) ===== */
-:root { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+    /* Focus Visible (remove default outline, use box-shadow) */
+    button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    [role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
+    .dn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+
+    /* Custom Scrollbar (global) */
+    :root { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+}
 
 /* ===== Desktop Page Layout Gap ===== */
 @media (min-width: 1200px) {

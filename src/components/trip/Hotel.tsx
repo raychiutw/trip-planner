@@ -32,7 +32,7 @@ export const Hotel = memo(function Hotel({ hotel }: HotelProps) {
 
   return (
     <>
-      <div className="col-row" onClick={toggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }} style={{ cursor: 'pointer' }} aria-expanded={open} aria-label={open ? '收合飯店詳情' : '展開飯店詳情'} role="button" tabIndex={0}>
+      <div className="col-row cursor-pointer" onClick={toggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }} aria-expanded={open} aria-label={open ? '收合飯店詳情' : '展開飯店詳情'} role="button" tabIndex={0}>
         <Icon name="hotel" /> {hotel.name}{' '}
         <span className="arrow">{open ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>

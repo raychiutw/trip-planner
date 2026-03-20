@@ -34,8 +34,8 @@ import type { SuggestionsData } from '../components/trip/Suggestions';
 
 /* ===== Module-level constants (#14: hoist inline styles) ===== */
 
-const LOADING_STYLE: React.CSSProperties = { textAlign: 'center', padding: 40, color: 'var(--color-muted)' };
-const UNPUBLISHED_STYLE: React.CSSProperties = { color: 'var(--color-muted)', marginTop: 8 };
+const LOADING_CLASS = 'text-center p-10 text-[var(--color-muted)]';
+const UNPUBLISHED_CLASS = 'text-[var(--color-muted)] mt-2';
 
 /* ===== Static early-return views (#13: hoist to module level) ===== */
 
@@ -58,7 +58,7 @@ const UNPUBLISHED_VIEW = (
       <div id="tripContent">
         <div className="trip-error">
           <p>此行程已下架</p>
-          <p style={UNPUBLISHED_STYLE}>2 秒後跳轉至設定頁…</p>
+          <p className={UNPUBLISHED_CLASS}>2 秒後跳轉至設定頁…</p>
         </div>
       </div>
     </div>
@@ -69,7 +69,7 @@ const LOADING_VIEW = (
   <div className="page-layout">
     <div className="container">
       <div id="tripContent">
-        <div style={LOADING_STYLE}>載入行程資料中...</div>
+        <div className={LOADING_CLASS}>載入行程資料中...</div>
       </div>
     </div>
   </div>
@@ -110,7 +110,7 @@ const DaySection = React.memo(function DaySection({
 
   return (
     <section className="day-section" data-day={dayNum}>
-      <div className="day-header info-header" id={`day${dayNum}`} style={{ position: 'relative' }}>
+      <div className="day-header info-header relative" id={`day${dayNum}`}>
         <h2>Day {dayNum}</h2>
         {daySummary?.label && (
           <span className="day-label">{daySummary.label}</span>
@@ -766,7 +766,7 @@ export default function TripPage() {
         );
       case 'tools':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+          <div className="flex flex-col gap-2 py-2">
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=trip'; }}>
               <Icon name="swap-horiz" /><span>切換行程</span>
             </button>
@@ -776,7 +776,7 @@ export default function TripPage() {
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
               <Icon name="printer" /><span>列印模式</span>
             </button>
-            <hr style={{ border: 'none', borderTop: '1px solid var(--color-border)', margin: '4px 0' }} />
+            <hr className="border-none border-t border-[var(--color-border)] my-1" />
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); setTimeout(() => window.print(), 300); }}>
               <Icon name="download" /><span>匯出 PDF</span>
             </button>
@@ -830,7 +830,7 @@ export default function TripPage() {
         <div className="container">
           <div id="tripContent">
             {loading && (
-              <div style={LOADING_STYLE}>載入行程資料中...</div>
+              <div className={LOADING_CLASS}>載入行程資料中...</div>
             )}
 
             {/* #12: DaySection memo components with #11 Map lookup */}
