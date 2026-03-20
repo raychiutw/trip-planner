@@ -17,10 +17,12 @@ interface InfoSheetProps {
 
 /* ===== Constants ===== */
 
-/** Sheet height stop percentages (dvh). */
-const STOPS = [50, 75, 90];
 /** Minimum drag distance (px) to trigger a snap. */
 const DRAG_THRESHOLD = 30;
+/** Step size (px) for drag-to-snap height changes. */
+const SNAP_STEP_PX = 120;
+/** Minimum continuous move (px) to switch from scroll to drag mode (C.6). */
+const SCROLL_TO_DRAG_THRESHOLD = 10;
 
 /** Selectors for focusable elements inside the panel. */
 const FOCUSABLE =
@@ -30,8 +32,11 @@ const FOCUSABLE =
 
 /**
  * Mobile bottom sheet overlay.
- * Supports drag-to-snap between 50%, 75%, 90% height stops,
- * and drag-down-to-close at the smallest stop.
+ *
+ * C.4: Height is CSS `min(fit-content, 85dvh)` — no JS measurement needed.
+ *      Drag snaps use px-based steps from the current height.
+ * C.5: Body scroll lock uses iOS Safari safe pattern (position: fixed).
+ * C.6: Scroll-to-top + pull down transitions into panel drag (shrink/close only).
  */
 export default function InfoSheet({
   open,
@@ -40,6 +45,7 @@ export default function InfoSheet({
   children,
 }: InfoSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
   const [heightStyle, setHeightStyle] = useState<string>('');
@@ -48,10 +54,36 @@ export default function InfoSheet({
   const lastTouchY = useRef(0);
   const lastTouchTime = useRef(0);
   const dragging = useRef(false);
+  // C.5: saved scroll position for iOS body lock
+  const savedBodyScrollY = useRef(0);
+  // C.6: body-to-drag transition state
+  const bodyDragMode = useRef(false);
+  const bodyDragAccumulator = useRef(0);
+  const bodyInitialScrollTop = useRef(0);
 
   /* --- Reset height when opening --- */
   useEffect(() => {
     if (open) setHeightStyle('');
+  }, [open]);
+
+  /* --- C.5: Body scroll lock (iOS Safari safe) --- */
+  useEffect(() => {
+    if (open) {
+      savedBodyScrollY.current = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${savedBodyScrollY.current}px`;
+      document.body.style.width = '100%';
+    } else {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      window.scrollTo(0, savedBodyScrollY.current);
+    }
+    return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+    };
   }, [open]);
 
   /* --- Focus management on open/close --- */
@@ -82,24 +114,9 @@ export default function InfoSheet({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  /* --- Find nearest stop --- */
-  const currentStop = useCallback((): number => {
-    const panel = panelRef.current;
-    if (!panel) return STOPS[0];
-    const h = panel.offsetHeight;
-    const vh = window.innerHeight;
-    const pct = (h / vh) * 100;
-    let best = STOPS[0];
-    STOPS.forEach((s) => {
-      if (Math.abs(s - pct) < Math.abs(best - pct)) best = s;
-    });
-    return best;
-  }, []);
-
   /* --- Drag handlers --- */
   const handleDragStart = useCallback((y: number) => {
     dragging.current = true;
-    // Direct DOM mutation — React state not needed for CSS-only transition control
     panelRef.current?.classList.add('dragging');
     dragStartY.current = y;
     dragStartTime.current = Date.now();
@@ -111,35 +128,36 @@ export default function InfoSheet({
     (y: number) => {
       if (!dragging.current) return;
       dragging.current = false;
-      // Direct DOM mutation — React state not needed for CSS-only transition control
       panelRef.current?.classList.remove('dragging');
+      const panel = panelRef.current;
       const delta = dragStartY.current - y; // positive = drag up
       const dt = Date.now() - lastTouchTime.current;
       const velocity = dt > 0 ? (lastTouchY.current - y) / dt : 0; // px/ms, positive = up
 
-      // Use velocity for fast flicks, position for slow drags
       const useVelocity = Math.abs(velocity) > 0.5;
 
       if (!useVelocity && Math.abs(delta) < DRAG_THRESHOLD) return;
 
-      const cur = currentStop();
-      const idx = STOPS.indexOf(cur);
       const goUp = useVelocity ? velocity > 0 : delta > 0;
+      const currentH = panel?.offsetHeight ?? 0;
+      const maxH = window.innerHeight * 0.85;
 
       if (goUp) {
-        if (idx < STOPS.length - 1) {
-          setHeightStyle(STOPS[idx + 1] + 'dvh');
-        }
+        // Expand: step up, clamped to max
+        const nextH = Math.min(currentH + SNAP_STEP_PX, maxH);
+        setHeightStyle(nextH + 'px');
       } else {
-        if (idx > 0) {
-          setHeightStyle(STOPS[idx - 1] + 'dvh');
-        } else {
+        // Shrink: step down, or close if already small
+        const nextH = currentH - SNAP_STEP_PX;
+        if (nextH < SNAP_STEP_PX) {
           setHeightStyle('');
           onClose();
+        } else {
+          setHeightStyle(nextH + 'px');
         }
       }
     },
-    [currentStop, onClose],
+    [onClose],
   );
 
   /* --- Touch handlers for handle + header --- */
@@ -165,6 +183,75 @@ export default function InfoSheet({
     [handleDragEnd],
   );
 
+  /* --- C.6: Native touch listener on body for { passive: false } --- */
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body || !open) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      bodyDragMode.current = false;
+      bodyDragAccumulator.current = 0;
+      bodyInitialScrollTop.current = body.scrollTop;
+      lastTouchY.current = e.touches[0].clientY;
+      lastTouchTime.current = Date.now();
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0].clientY;
+      const deltaY = lastTouchY.current - y; // positive = finger moving up
+
+      if (bodyDragMode.current) {
+        // Already in drag mode — prevent scrolling, track for panel resize
+        e.preventDefault();
+        e.stopPropagation();
+        lastTouchY.current = y;
+        lastTouchTime.current = Date.now();
+        return;
+      }
+
+      // Only transition when at scroll top and pulling down (shrink/close)
+      const atTop = body.scrollTop <= 0;
+      const fingerDown = deltaY < 0;
+
+      if (atTop && fingerDown) {
+        bodyDragAccumulator.current += Math.abs(deltaY);
+        if (bodyDragAccumulator.current > SCROLL_TO_DRAG_THRESHOLD) {
+          bodyDragMode.current = true;
+          handleDragStart(y);
+          e.preventDefault();
+          e.stopPropagation();
+          lastTouchY.current = y;
+          lastTouchTime.current = Date.now();
+          return;
+        }
+      } else {
+        bodyDragAccumulator.current = 0;
+      }
+
+      // Normal scroll — stop from reaching backdrop
+      e.stopPropagation();
+      lastTouchY.current = y;
+      lastTouchTime.current = Date.now();
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (bodyDragMode.current) {
+        bodyDragMode.current = false;
+        handleDragEnd(e.changedTouches[0].clientY);
+      }
+    };
+
+    body.addEventListener('touchstart', onTouchStart, { passive: true });
+    body.addEventListener('touchmove', onTouchMove, { passive: false });
+    body.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    return () => {
+      body.removeEventListener('touchstart', onTouchStart);
+      body.removeEventListener('touchmove', onTouchMove);
+      body.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [open, handleDragStart, handleDragEnd]);
+
   /* --- Prevent scroll passthrough on backdrop --- */
   const preventTouchScroll = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
@@ -179,11 +266,7 @@ export default function InfoSheet({
     e.stopPropagation();
   }, []);
 
-  /* --- Stop propagation for sheet body scroll --- */
-  const handleBodyTouchMove = useCallback((e: React.TouchEvent) => {
-    e.stopPropagation();
-  }, []);
-
+  /* --- Stop propagation for sheet body wheel --- */
   const handleBodyWheel = useCallback((e: React.WheelEvent) => {
     e.stopPropagation();
   }, []);
@@ -259,11 +342,11 @@ export default function InfoSheet({
           </button>
         </div>
 
-        {/* Body */}
+        {/* Body — touch events handled via native addEventListener for { passive: false } */}
         <div
           className="info-sheet-body"
           id="bottomSheetBody"
-          onTouchMove={handleBodyTouchMove}
+          ref={bodyRef}
           onWheel={handleBodyWheel}
         >
           {children}

@@ -178,6 +178,168 @@ function ZenDarkHeader() {
   );
 }
 
+function ForestLightHeader() {
+  return (
+    <>
+      {/* Pine trees */}
+      <g transform="translate(135,8)" opacity="0.50">
+        <polygon points="0,48 12,0 24,48" fill="#4A8C5C" />
+        <polygon points="4,48 12,12 20,48" fill="#3D7A4E" />
+        <rect x="9" y="48" width="6" height="12" fill="#8B6914" />
+      </g>
+      <g transform="translate(165,18)" opacity="0.45">
+        <polygon points="0,38 10,0 20,38" fill="#5A9C6C" />
+        <polygon points="3,38 10,10 17,38" fill="#4A8C5C" />
+        <rect x="7" y="38" width="5" height="10" fill="#8B6914" />
+      </g>
+      {/* Rolling hills */}
+      <path d="M0 70 Q30 45 70 60 Q110 75 150 55 Q180 42 200 50" fill="#4A8C5C" opacity="0.20" />
+      {/* Fern */}
+      <g transform="translate(30,35)" opacity="0.40">
+        <path d="M0 30 Q8 15 5 0" stroke="#5A9C6C" fill="none" strokeWidth="2" strokeLinecap="round" />
+        <path d="M3 20 Q-6 14 -4 8" stroke="#4A8C5C" fill="none" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M4 15 Q12 10 10 4" stroke="#4A8C5C" fill="none" strokeWidth="1.5" strokeLinecap="round" />
+      </g>
+      {/* Birds */}
+      <g stroke="#4A8C5C" fill="none" strokeWidth="1.8" strokeLinecap="round" opacity="0.35">
+        <path d="M80 20 Q84 14 88 20" />
+        <path d="M95 15 Q99 9 103 15" />
+      </g>
+    </>
+  );
+}
+
+function ForestDarkHeader() {
+  return (
+    <>
+      {/* Gold crescent moon */}
+      <circle cx="168" cy="18" r="14" fill="#FFD080" opacity="0.42" />
+      <circle cx="161" cy="15" r="12" fill="#1A2018" />
+      {/* Pine tree silhouettes */}
+      <g transform="translate(130,12)" opacity="0.35">
+        <polygon points="0,48 12,0 24,48" fill="#5A9C6C" />
+        <rect x="9" y="48" width="6" height="10" fill="#8B6914" />
+      </g>
+      <g transform="translate(155,22)" opacity="0.30">
+        <polygon points="0,36 9,0 18,36" fill="#4A8C5C" />
+        <rect x="6" y="36" width="5" height="8" fill="#8B6914" />
+      </g>
+      {/* Stars */}
+      <circle cx="30" cy="12" r="2" fill="#FFD080" opacity="0.48" />
+      <circle cx="60" cy="8" r="1.5" fill="#FFF4C0" opacity="0.42" />
+      <circle cx="90" cy="22" r="2.5" fill="#FFD080" opacity="0.38" />
+      <circle cx="115" cy="10" r="1.8" fill="#FFF4C0" opacity="0.44" />
+      {/* Fireflies */}
+      <circle cx="50" cy="50" r="3" fill="#B0E890" opacity="0.35" />
+      <circle cx="50" cy="50" r="6" fill="#B0E890" opacity="0.10" />
+      <circle cx="105" cy="55" r="2.5" fill="#FFD080" opacity="0.30" />
+      <circle cx="105" cy="55" r="5" fill="#FFD080" opacity="0.08" />
+    </>
+  );
+}
+
+function SakuraLightHeader() {
+  return (
+    <>
+      {/* Cherry blossom branch */}
+      <g transform="translate(100,8)" opacity="0.52">
+        <path d="M0 50 Q20 30 40 35 Q60 38 75 20 Q85 10 95 14" stroke="#8B6040" fill="none" strokeWidth="3" strokeLinecap="round" />
+        <circle cx="40" cy="32" r="6" fill="#D4708A" opacity="0.80" />
+        <circle cx="58" cy="24" r="5.5" fill="#E888A0" opacity="0.70" />
+        <circle cx="75" cy="17" r="6.5" fill="#D4708A" opacity="0.80" />
+        <circle cx="92" cy="12" r="5" fill="#E888A0" opacity="0.65" />
+        <circle cx="25" cy="40" r="4.5" fill="#D4708A" opacity="0.60" />
+      </g>
+      {/* Falling petals */}
+      <g opacity="0.42">
+        <ellipse cx="30" cy="30" rx="2.5" ry="3.5" fill="#D4708A" transform="rotate(30 30 30)" />
+        <ellipse cx="55" cy="55" rx="2" ry="3" fill="#E888A0" transform="rotate(-25 55 55)" />
+        <ellipse cx="80" cy="45" rx="2.5" ry="3.5" fill="#D4708A" transform="rotate(45 80 45)" />
+        <ellipse cx="15" cy="60" rx="2" ry="3" fill="#E888A0" transform="rotate(-15 15 60)" />
+      </g>
+    </>
+  );
+}
+
+function SakuraDarkHeader() {
+  return (
+    <>
+      {/* Gold crescent moon */}
+      <circle cx="165" cy="16" r="14" fill="#FFD080" opacity="0.40" />
+      <circle cx="158" cy="14" r="12" fill="#1E1618" />
+      {/* Night cherry branch */}
+      <g transform="translate(60,25)" opacity="0.38">
+        <path d="M0 28 Q15 15 30 20 Q42 22 52 10" stroke="#A08060" fill="none" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="30" cy="18" r="5" fill="#E888A0" opacity="0.65" />
+        <circle cx="45" cy="12" r="4.5" fill="#D4708A" opacity="0.55" />
+        <circle cx="16" cy="22" r="4" fill="#E888A0" opacity="0.50" />
+      </g>
+      {/* Stars */}
+      <circle cx="30" cy="10" r="2" fill="#FFD080" opacity="0.48" />
+      <circle cx="55" cy="6" r="1.5" fill="#FFF4C0" opacity="0.42" />
+      <circle cx="100" cy="14" r="2.5" fill="#FFD080" opacity="0.40" />
+      <circle cx="130" cy="8" r="1.8" fill="#FFF4C0" opacity="0.45" />
+      {/* Glowing petal */}
+      <ellipse cx="110" cy="55" rx="3" ry="4" fill="#E888A0" opacity="0.30" transform="rotate(20 110 55)" />
+    </>
+  );
+}
+
+function OceanLightHeader() {
+  return (
+    <>
+      {/* Waves */}
+      <path d="M0 55 Q25 42 50 55 Q75 68 100 55 Q125 42 150 55 Q175 68 200 55" fill="none" stroke="#1A6B8A" strokeWidth="2.5" opacity="0.40" />
+      <path d="M0 62 Q25 52 50 62 Q75 72 100 62 Q125 52 150 62 Q175 72 200 62" fill="none" stroke="#2A8EB0" strokeWidth="1.8" opacity="0.25" />
+      {/* Lighthouse */}
+      <g transform="translate(155,5)" opacity="0.50">
+        <rect x="0" y="18" width="12" height="35" rx="1" fill="#C0C8D0" />
+        <rect x="-2" y="14" width="16" height="6" rx="2" fill="#1A6B8A" />
+        <polygon points="6,0 -2,14 14,14" fill="#C04030" />
+        {/* Light beam */}
+        <line x1="6" y1="10" x2="-10" y2="5" stroke="#FFD080" strokeWidth="2" opacity="0.40" strokeLinecap="round" />
+        <line x1="6" y1="10" x2="22" y2="5" stroke="#FFD080" strokeWidth="2" opacity="0.40" strokeLinecap="round" />
+      </g>
+      {/* Sailboat */}
+      <g transform="translate(40,25)" opacity="0.45">
+        <path d="M0 0 L3 -20 L6 0Z" fill="#1A6B8A" />
+        <path d="M3 -16 L-7 0 L3 0Z" fill="#2A8EB0" />
+        <ellipse cx="0" cy="2" rx="10" ry="2.5" fill="#8B6040" />
+      </g>
+      {/* Seagulls */}
+      <g stroke="#1A6B8A" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.35">
+        <path d="M85 18 Q90 12 95 18 Q100 12 105 18" />
+        <path d="M70 28 Q74 23 78 28" />
+      </g>
+    </>
+  );
+}
+
+function OceanDarkHeader() {
+  return (
+    <>
+      {/* Gold crescent moon */}
+      <circle cx="170" cy="16" r="15" fill="#FFD080" opacity="0.42" />
+      <circle cx="163" cy="13" r="13" fill="#141E24" />
+      {/* Lighthouse silhouette */}
+      <g transform="translate(135,12)" opacity="0.35">
+        <rect x="0" y="16" width="10" height="32" rx="1" fill="#5090B0" />
+        <polygon points="5,0 -2,16 12,16" fill="#5090B0" />
+        {/* Light beam */}
+        <circle cx="5" cy="10" r="4" fill="#FFD080" opacity="0.40" />
+        <circle cx="5" cy="10" r="8" fill="#FFD080" opacity="0.12" />
+      </g>
+      {/* Stars */}
+      <circle cx="25" cy="12" r="2" fill="#FFD080" opacity="0.50" />
+      <circle cx="55" cy="8" r="1.8" fill="#FFF4C0" opacity="0.44" />
+      <circle cx="85" cy="18" r="2.5" fill="#FFD080" opacity="0.40" />
+      <circle cx="110" cy="10" r="1.5" fill="#FFF4C0" opacity="0.45" />
+      {/* Gentle waves */}
+      <path d="M0 58 Q25 48 50 58 Q75 68 100 58 Q125 48 150 58" fill="none" stroke="#5090B0" strokeWidth="2" opacity="0.25" />
+    </>
+  );
+}
+
 export function DayHeaderArt({ theme, dark }: ThemeArtProps) {
   const key = `${theme}-${dark ? 'dark' : 'light'}` as const;
 
@@ -188,6 +350,12 @@ export function DayHeaderArt({ theme, dark }: ThemeArtProps) {
     'sky-dark': <SkyDarkHeader />,
     'zen-light': <ZenLightHeader />,
     'zen-dark': <ZenDarkHeader />,
+    'forest-light': <ForestLightHeader />,
+    'forest-dark': <ForestDarkHeader />,
+    'sakura-light': <SakuraLightHeader />,
+    'sakura-dark': <SakuraDarkHeader />,
+    'ocean-light': <OceanLightHeader />,
+    'ocean-dark': <OceanDarkHeader />,
   };
 
   return (
@@ -301,6 +469,93 @@ function ZenDarkDivider() {
   );
 }
 
+function ForestLightDivider() {
+  return (
+    <g opacity="0.42">
+      {/* Leaf shapes */}
+      <path d="M18 12 Q22 6 26 12 Q22 10 18 12Z" fill="#4A8C5C" />
+      <path d="M48 10 Q52 4 56 10 Q52 8 48 10Z" fill="#5A9C6C" />
+      <path d="M78 14 Q82 8 86 14 Q82 12 78 14Z" fill="#4A8C5C" />
+      <path d="M105 9 Q109 3 113 9 Q109 7 105 9Z" fill="#5A9C6C" />
+      {/* Tiny fern dot */}
+      <circle cx="36" cy="12" r="1.5" fill="#3D7A4E" opacity="0.60" />
+      <circle cx="95" cy="11" r="1.5" fill="#3D7A4E" opacity="0.60" />
+    </g>
+  );
+}
+
+function ForestDarkDivider() {
+  return (
+    <>
+      {/* Fireflies */}
+      <circle cx="16" cy="12" r="2.5" fill="#B0E890" opacity="0.40" />
+      <circle cx="16" cy="12" r="5" fill="#B0E890" opacity="0.10" />
+      <circle cx="42" cy="8" r="1.5" fill="#FFD080" opacity="0.38" />
+      <circle cx="65" cy="14" r="2" fill="#B0E890" opacity="0.35" />
+      <circle cx="65" cy="14" r="4.5" fill="#B0E890" opacity="0.10" />
+      <circle cx="90" cy="10" r="1.8" fill="#FFD080" opacity="0.40" />
+      <circle cx="110" cy="13" r="1.5" fill="#FFF4C0" opacity="0.32" />
+    </>
+  );
+}
+
+function SakuraLightDivider() {
+  return (
+    <g opacity="0.42">
+      <ellipse cx="20" cy="10" rx="2.5" ry="3.5" fill="#D4708A" transform="rotate(30 20 10)" />
+      <ellipse cx="45" cy="14" rx="2" ry="3" fill="#E888A0" transform="rotate(-20 45 14)" />
+      <ellipse cx="72" cy="8" rx="2.5" ry="3.5" fill="#D4708A" transform="rotate(40 72 8)" />
+      <ellipse cx="98" cy="13" rx="2" ry="3" fill="#E888A0" transform="rotate(-30 98 13)" />
+    </g>
+  );
+}
+
+function SakuraDarkDivider() {
+  return (
+    <>
+      <circle cx="18" cy="12" r="2.5" fill="#FFD080" opacity="0.40" />
+      <circle cx="18" cy="12" r="5" fill="#FFD080" opacity="0.08" />
+      <circle cx="44" cy="8" r="1.5" fill="#FFF4C0" opacity="0.36" />
+      <circle cx="68" cy="14" r="2" fill="#E888A0" opacity="0.35" />
+      <circle cx="68" cy="14" r="4.5" fill="#E888A0" opacity="0.08" />
+      <circle cx="92" cy="10" r="2" fill="#FFD080" opacity="0.42" />
+      <circle cx="112" cy="15" r="1.5" fill="#FFF4C0" opacity="0.30" />
+    </>
+  );
+}
+
+function OceanLightDivider() {
+  return (
+    <>
+      {/* Gentle wave */}
+      <path
+        d="M0 16 Q15 8 30 16 Q45 24 60 16 Q75 8 90 16 Q105 24 120 16"
+        stroke="#1A6B8A"
+        fill="none"
+        strokeWidth="2.5"
+        opacity="0.38"
+      />
+      {/* Bubbles */}
+      <circle cx="35" cy="8" r="2" fill="#2A8EB0" opacity="0.25" />
+      <circle cx="82" cy="6" r="1.5" fill="#1A6B8A" opacity="0.20" />
+    </>
+  );
+}
+
+function OceanDarkDivider() {
+  return (
+    <>
+      <circle cx="14" cy="12" r="2" fill="#5090B0" opacity="0.42" />
+      <circle cx="14" cy="12" r="4.5" fill="#5090B0" opacity="0.10" />
+      <circle cx="40" cy="8" r="1.5" fill="#FFD080" opacity="0.38" />
+      <circle cx="62" cy="14" r="2.5" fill="#5090B0" opacity="0.38" />
+      <circle cx="62" cy="14" r="5" fill="#5090B0" opacity="0.08" />
+      <circle cx="88" cy="10" r="1.8" fill="#FFF4C0" opacity="0.42" />
+      <circle cx="108" cy="14" r="2" fill="#5090B0" opacity="0.35" />
+    </>
+  );
+}
+
 export function DividerArt({ theme, dark }: ThemeArtProps) {
   const key = `${theme}-${dark ? 'dark' : 'light'}` as const;
 
@@ -311,6 +566,12 @@ export function DividerArt({ theme, dark }: ThemeArtProps) {
     'sky-dark': <SkyDarkDivider />,
     'zen-light': <ZenLightDivider />,
     'zen-dark': <ZenDarkDivider />,
+    'forest-light': <ForestLightDivider />,
+    'forest-dark': <ForestDarkDivider />,
+    'sakura-light': <SakuraLightDivider />,
+    'sakura-dark': <SakuraDarkDivider />,
+    'ocean-light': <OceanLightDivider />,
+    'ocean-dark': <OceanDarkDivider />,
   };
 
   return (
@@ -440,6 +701,138 @@ function ZenDarkFooter() {
   );
 }
 
+function ForestLightFooter() {
+  return (
+    <>
+      {/* Mountain range */}
+      <path d="M0 60 L60 20 L120 60Z" fill="#4A8C5C" opacity="0.30" />
+      <path d="M80 60 L160 10 L240 60Z" fill="#3D7A4E" opacity="0.25" />
+      <path d="M200 60 L280 22 L360 60Z" fill="#4A8C5C" opacity="0.28" />
+      {/* Snow caps */}
+      <path d="M160 10 L150 22 L170 22Z" fill="#E8E8E0" opacity="0.28" />
+      {/* Pine tree line */}
+      <g opacity="0.35">
+        <polygon points="310,60 318,38 326,60" fill="#4A8C5C" />
+        <polygon points="340,60 347,42 354,60" fill="#5A9C6C" />
+        <polygon points="365,60 371,45 377,60" fill="#4A8C5C" />
+      </g>
+    </>
+  );
+}
+
+function ForestDarkFooter() {
+  return (
+    <>
+      {/* Mountain silhouettes */}
+      <path d="M0 60 L60 22 L120 60Z" fill="#4A8C5C" opacity="0.22" />
+      <path d="M80 60 L160 12 L240 60Z" fill="#3D7A4E" opacity="0.18" />
+      <path d="M200 60 L280 25 L360 60Z" fill="#4A8C5C" opacity="0.20" />
+      {/* Pine tree silhouettes */}
+      <g opacity="0.25">
+        <polygon points="320,60 328,40 336,60" fill="#5A9C6C" />
+        <polygon points="350,60 356,44 362,60" fill="#4A8C5C" />
+      </g>
+      {/* Stars */}
+      <circle cx="60" cy="10" r="2" fill="#FFD080" opacity="0.44" />
+      <circle cx="200" cy="6" r="2.5" fill="#FFF4C0" opacity="0.38" />
+      <circle cx="320" cy="12" r="1.8" fill="#FFD080" opacity="0.36" />
+    </>
+  );
+}
+
+function SakuraLightFooter() {
+  return (
+    <>
+      {/* Cherry blossom tree line */}
+      <g opacity="0.35">
+        <circle cx="60" cy="28" r="22" fill="#D4708A" opacity="0.35" />
+        <rect x="57" y="40" width="6" height="20" fill="#8B6040" opacity="0.40" />
+        <circle cx="160" cy="24" r="25" fill="#E888A0" opacity="0.30" />
+        <rect x="157" y="40" width="6" height="20" fill="#8B6040" opacity="0.35" />
+        <circle cx="280" cy="30" r="20" fill="#D4708A" opacity="0.32" />
+        <rect x="277" y="42" width="6" height="18" fill="#8B6040" opacity="0.38" />
+      </g>
+      {/* Petal river */}
+      <g opacity="0.30">
+        <ellipse cx="100" cy="50" rx="3" ry="4" fill="#D4708A" transform="rotate(20 100 50)" />
+        <ellipse cx="200" cy="48" rx="2.5" ry="3.5" fill="#E888A0" transform="rotate(-30 200 48)" />
+        <ellipse cx="330" cy="52" rx="3" ry="4" fill="#D4708A" transform="rotate(15 330 52)" />
+        <ellipse cx="380" cy="46" rx="2" ry="3" fill="#E888A0" transform="rotate(-20 380 46)" />
+      </g>
+    </>
+  );
+}
+
+function SakuraDarkFooter() {
+  return (
+    <>
+      {/* Tree silhouettes */}
+      <g opacity="0.25">
+        <circle cx="60" cy="30" r="20" fill="#D4708A" opacity="0.35" />
+        <rect x="57" y="42" width="6" height="18" fill="#8B6040" opacity="0.30" />
+        <circle cx="160" cy="26" r="22" fill="#E888A0" opacity="0.30" />
+        <rect x="157" y="40" width="6" height="20" fill="#8B6040" opacity="0.28" />
+        <circle cx="280" cy="32" r="18" fill="#D4708A" opacity="0.32" />
+        <rect x="277" y="44" width="6" height="16" fill="#8B6040" opacity="0.30" />
+      </g>
+      {/* Stars */}
+      <circle cx="80" cy="10" r="2" fill="#FFD080" opacity="0.42" />
+      <circle cx="220" cy="8" r="2.5" fill="#FFF4C0" opacity="0.38" />
+      <circle cx="340" cy="14" r="1.8" fill="#FFD080" opacity="0.36" />
+      {/* Glowing petals */}
+      <ellipse cx="120" cy="48" rx="2.5" ry="3.5" fill="#E888A0" opacity="0.25" transform="rotate(25 120 48)" />
+      <ellipse cx="350" cy="44" rx="2" ry="3" fill="#D4708A" opacity="0.22" transform="rotate(-20 350 44)" />
+    </>
+  );
+}
+
+function OceanLightFooter() {
+  return (
+    <>
+      {/* Ocean waves */}
+      <path
+        d="M0 28 Q40 12 80 28 Q120 44 160 28 Q200 12 240 28 Q280 44 320 28 Q360 12 400 28 L400 60 L0 60Z"
+        fill="#1A6B8A"
+        opacity="0.42"
+      />
+      <path
+        d="M0 38 Q40 25 80 38 Q120 51 160 38 Q200 25 240 38 Q280 51 320 38 Q360 25 400 38 L400 60 L0 60Z"
+        fill="#2A8EB0"
+        opacity="0.25"
+      />
+      {/* Coral hints at bottom */}
+      <g opacity="0.30">
+        <path d="M50 56 Q55 48 60 56" stroke="#C04830" fill="none" strokeWidth="2" strokeLinecap="round" />
+        <path d="M150 54 Q156 46 162 54" stroke="#C06040" fill="none" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="300" cy="52" r="3" fill="#2A8EB0" opacity="0.40" />
+        <circle cx="308" cy="50" r="2.5" fill="#1A6B8A" opacity="0.35" />
+      </g>
+    </>
+  );
+}
+
+function OceanDarkFooter() {
+  return (
+    <>
+      {/* Deep ocean waves */}
+      <path
+        d="M0 32 Q40 18 80 32 Q120 46 160 32 Q200 18 240 32 Q280 46 320 32 Q360 18 400 32 L400 60 L0 60Z"
+        fill="#1A6B8A"
+        opacity="0.30"
+      />
+      <path
+        d="M0 42 Q40 30 80 42 Q120 54 160 42 Q200 30 240 42 Q280 54 320 42 Q360 30 400 42 L400 60 L0 60Z"
+        fill="#2A8EB0"
+        opacity="0.18"
+      />
+      {/* Stars reflecting on water */}
+      <circle cx="70" cy="10" r="2" fill="#FFD080" opacity="0.44" />
+      <circle cx="190" cy="6" r="2.5" fill="#FFF4C0" opacity="0.38" />
+      <circle cx="310" cy="12" r="1.8" fill="#FFD080" opacity="0.40" />
+    </>
+  );
+}
+
 export function FooterArt({ theme, dark }: ThemeArtProps) {
   const key = `${theme}-${dark ? 'dark' : 'light'}` as const;
 
@@ -450,6 +843,12 @@ export function FooterArt({ theme, dark }: ThemeArtProps) {
     'sky-dark': <SkyDarkFooter />,
     'zen-light': <ZenLightFooter />,
     'zen-dark': <ZenDarkFooter />,
+    'forest-light': <ForestLightFooter />,
+    'forest-dark': <ForestDarkFooter />,
+    'sakura-light': <SakuraLightFooter />,
+    'sakura-dark': <SakuraDarkFooter />,
+    'ocean-light': <OceanLightFooter />,
+    'ocean-dark': <OceanDarkFooter />,
   };
 
   return (
@@ -538,6 +937,67 @@ function getNavContent(theme: string, dark: boolean): React.ReactNode {
           <circle cx="48" cy="15" r="5" fill="#FFD080" opacity="0.12" />
           {/* Star */}
           <circle cx="65" cy="8" r="1.5" fill="#FFF4C0" opacity="0.5" />
+        </>
+      );
+    case 'forest-light':
+      return (
+        <>
+          {/* Small pine tree */}
+          <g transform="translate(25,2)" opacity="0.5">
+            <polygon points="0,20 8,0 16,20" fill="#4A8C5C" />
+            <rect x="6" y="20" width="4" height="4" fill="#8B6914" />
+          </g>
+          {/* Leaf */}
+          <path d="M55 12 Q59 6 63 12 Q59 10 55 12Z" fill="#5A9C6C" opacity="0.5" />
+        </>
+      );
+    case 'forest-dark':
+      return (
+        <>
+          {/* Firefly */}
+          <circle cx="30" cy="10" r="2.5" fill="#B0E890" opacity="0.4" />
+          <circle cx="30" cy="10" r="5" fill="#B0E890" opacity="0.12" />
+          {/* Stars */}
+          <circle cx="50" cy="8" r="1.5" fill="#FFD080" opacity="0.5" />
+          <circle cx="65" cy="16" r="1.2" fill="#FFF4C0" opacity="0.5" />
+        </>
+      );
+    case 'sakura-light':
+      return (
+        <>
+          {/* Small cherry blossoms */}
+          <circle cx="28" cy="10" r="5" fill="#D4708A" opacity="0.5" />
+          <circle cx="48" cy="14" r="5" fill="#E888A0" opacity="0.45" />
+          {/* Petal */}
+          <ellipse cx="65" cy="10" rx="3" ry="4.5" fill="#D4708A" transform="rotate(20 65 10)" opacity="0.4" />
+        </>
+      );
+    case 'sakura-dark':
+      return (
+        <>
+          {/* Fireflies */}
+          <circle cx="30" cy="10" r="2.5" fill="#FFD080" opacity="0.4" />
+          <circle cx="30" cy="10" r="5" fill="#FFD080" opacity="0.12" />
+          <circle cx="50" cy="16" r="2" fill="#E888A0" opacity="0.35" />
+          {/* Star */}
+          <circle cx="65" cy="8" r="1.5" fill="#FFF4C0" opacity="0.5" />
+        </>
+      );
+    case 'ocean-light':
+      return (
+        <>
+          {/* Small wave */}
+          <path d="M18 14 Q30 6 42 14 Q54 22 66 14" stroke="#1A6B8A" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+        </>
+      );
+    case 'ocean-dark':
+      return (
+        <>
+          {/* Stars */}
+          <circle cx="28" cy="8" r="1.8" fill="#FFD080" opacity="0.5" />
+          <circle cx="48" cy="16" r="1.5" fill="#FFF4C0" opacity="0.45" />
+          {/* Small wave */}
+          <path d="M55 14 Q62 9 70 14" stroke="#5090B0" fill="none" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
         </>
       );
     default:

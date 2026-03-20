@@ -4,6 +4,10 @@ import { browserTracingIntegration } from '@sentry/react';
 // VITE_SENTRY_DSN will be set when the Sentry project is created.
 // Example: https://<key>@<org>.ingest.sentry.io/<project-id>
 // const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
+//
+// TODO: When enabling Sentry DSN, add `https://*.ingest.us.sentry.io` to
+// the CSP `connect-src` in all HTML files (index.html, setting.html,
+// admin/index.html, manage/index.html).
 
 export function initSentry(): void {
   if (!import.meta.env.PROD) {

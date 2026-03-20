@@ -30,7 +30,7 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
 .weather-list li .list-icon { flex-shrink: 0; }
 
 /* ===== Sticky Nav Card (override shared.css) ===== */
-.sticky-nav { border-radius: 0; padding: 12px 16px; gap: 12px; margin: 0 0 12px; top: 0; background: color-mix(in srgb, var(--color-background) 85%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); overflow-x: hidden; overflow-y: visible; }
+.sticky-nav { border-radius: 0; padding: 12px 16px; gap: 12px; margin: 0 0 12px; top: 0; background: color-mix(in srgb, var(--color-background) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 1px 0 var(--color-border); overflow-x: hidden; overflow-y: visible; }
 @media (min-width: 768px) { .sticky-nav { padding: 12px 24px; } }
 .sticky-nav > [aria-hidden="true"] {
     mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
@@ -624,17 +624,17 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .info-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
 .info-sheet-panel {
     position: fixed; bottom: 0; left: 0; right: 0;
-    height: 75dvh;
-    max-height: 90dvh;
+    height: min(fit-content, 85dvh);
+    max-height: 85dvh;
     background: var(--color-secondary);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     z-index: var(--z-info-sheet);
     transform: translateY(100%);
-    transition: transform var(--transition-duration-slow) var(--transition-timing-function-apple);
+    transition: transform var(--transition-duration-slow) var(--transition-timing-function-apple), height var(--transition-duration-slow) var(--transition-timing-function-apple);
     display: flex; flex-direction: column;
     padding: 12px var(--padding-h) max(24px, env(safe-area-inset-bottom));
 }
-.info-sheet-panel.dragging { transition: none; }
+.info-sheet-panel.dragging { transition: none !important; }
 .info-sheet-backdrop.open .info-sheet-panel { transform: translateY(0); }
 .sheet-handle {
     width: 36px; height: 4px;
