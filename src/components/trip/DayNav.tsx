@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState } from 'react';
+import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 
 /* ===== Props ===== */
@@ -94,13 +95,11 @@ export default function DayNav({ days, currentDayNum, onSwitchDay }: DayNavProps
   );
 
   /* --- Build wrap class names --- */
-  const wrapClassName = [
+  const wrapClassName = clsx(
     'dh-nav-wrap',
-    canScrollLeft ? 'can-scroll-left' : '',
-    canScrollRight ? 'can-scroll-right' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+    canScrollLeft && 'can-scroll-left',
+    canScrollRight && 'can-scroll-right',
+  );
 
   return (
     <div className={wrapClassName} ref={wrapRef}>
@@ -121,7 +120,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay }: DayNavProps
           return (
             <button
               key={dayNum}
-              className={`dn${isActive ? ' active' : ''}`}
+              className={clsx('dn', isActive && 'active')}
               data-day={dayNum}
               data-action="switch-day"
               data-target={`day${dayNum}`}

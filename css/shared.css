@@ -3,7 +3,12 @@
 
 /* ===== @theme: design token source of truth (default = sun-light) ===== */
 @theme {
-    /* Colors — generate bg-*, text-*, border-* utilities */
+    /* Colors — generate bg-*, text-*, border-* utilities
+       Semantic naming:
+         secondary  = surface-raised (cards, panels)
+         tertiary   = surface-sunken (inputs, recessed areas)
+         hover      = surface-hover (interactive feedback)
+    */
     --color-accent: #E86A4A;
     --color-accent-subtle: #FDE8E2;
     --color-accent-bg: #F9DDD4;
@@ -18,6 +23,13 @@
     --color-destructive: #C83030;
     --color-destructive-bg: #FDECEC;
     --color-success: #3D8E5A;
+    --color-success-bg: rgba(61, 142, 90, 0.12);
+    --color-warning: #B8860B;
+    --color-warning-bg: rgba(184, 134, 11, 0.12);
+    --color-info: #2870A0;
+    --color-info-bg: rgba(40, 112, 160, 0.12);
+    --color-disabled: #B0A090;
+    --color-disabled-foreground: #D0C8BC;
     --color-overlay: rgba(0,0,0,0.35);
     --color-priority-high-bg: rgba(239, 68, 68, 0.15);
     --color-priority-high-dot: #EF4444;
@@ -25,11 +37,6 @@
     --color-priority-medium-dot: #EAB308;
     --color-priority-low-bg: rgba(74, 158, 106, 0.10);
     --color-priority-low-dot: #4A9E6A;
-    --color-badge-open: #1A7F37;
-    --color-badge-closed: #6E40C9;
-    --color-plan-bg: #E8F5E9;
-    --color-plan-text: #2E7D32;
-    --color-plan-hover: #C8E6C9;
 
     /* Radius — generate rounded-* utilities */
     --radius-xs: 4px;
@@ -42,7 +49,22 @@
     --shadow-md: 0 4px 16px rgba(46,36,24,0.12);
     --shadow-lg: 0 6px 20px rgba(46,36,24,0.18);
 
-    /* Font size — generate text-* utilities (Apple text style scale) */
+    /* Spacing — generate p-*, m-*, gap-*, w-*, h-* utilities (4pt grid) */
+    --spacing-half: 2px;
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
+    --spacing-8: 32px;
+    --spacing-10: 40px;
+    --spacing-12: 48px;
+    --spacing-16: 64px;
+
+    /* Font size — generate text-* utilities (Apple HIG text style scale)
+       NOTE: headline and body are BOTH 1.0625rem per Apple HIG spec.
+       The distinction is weight: headline = semibold (600), body = regular (400). */
     --font-size-large-title: 2.125rem;
     --font-size-title: 1.75rem;
     --font-size-title2: 1.375rem;
@@ -58,6 +80,13 @@
     /* Font family — generate font-* utilities */
     --font-family-system: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
 
+    /* Font weight — generate font-* utilities */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
     /* Line height — generate leading-* utilities */
     --line-height-tight: 1.2;
     --line-height-normal: 1.5;
@@ -72,28 +101,41 @@
     --transition-timing-function-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* ===== Non-utility tokens ===== */
+/* ===== Non-utility tokens (no Tailwind utility generation needed) ===== */
 :root {
-    /* Scrollbar defaults (sun-light) — must be on :root because scrollbar-color is set here */
+    /* Scrollbar defaults (sun-light) */
     --scrollbar-thumb: #C8B89E;
     --scrollbar-thumb-hover: #B8A88E;
-    /* Color mode preview defaults (sun-light) — fallback before JS applies theme class */
+    /* Color mode preview defaults (sun-light) */
     --cmp-light-bg: #F0DABC;
     --cmp-light-surface: #FBF3E8;
     --cmp-light-input: #DDCEB8;
     --cmp-dark-bg: #1E1A16;
     --cmp-dark-surface: #2A2520;
     --cmp-dark-input: #3E3830;
+    /* Component-scoped color tokens (not in @theme — component-level, not design primitives) */
+    --color-badge-open: #1A7F37;
+    --color-badge-closed: #6E40C9;
+    --color-plan-bg: #E8F5E9;
+    --color-plan-text: #2E7D32;
+    --color-plan-hover: #C8E6C9;
+    /* Brand colors (third-party, not theme-dependent) */
+    --color-google-maps: #4285F4;
+    --color-naver-maps: #03C75A;
+    /* Focus ring */
     --shadow-ring: 0 0 0 2px var(--color-accent);
+    /* Layout */
     --content-max-w: 720px;
     --info-panel-w: 280px;
     --nav-h: 48px;
     --padding-h: 16px;
     --tap-min: 44px;
+    --fab-size: 56px;
+    /* Z-index scale */
     --z-day-header: 100;
     --z-sticky-nav: 200;
     --z-fab: 300;
-    --z-speed-dial: 300;
+    --z-speed-dial: 350;
     --z-info-sheet-backdrop: 400;
     --z-info-sheet: 401;
     --z-download-backdrop: 900;
@@ -105,17 +147,7 @@
 /* NOTE: Light theme first, then dark override. Dark inherits --cmp-* from light. */
 
 @layer base {
-    /* --- 陽光 (Sun) — Light --- */
-    body.theme-sun {
-        --scrollbar-thumb: #C8B89E;
-        --scrollbar-thumb-hover: #B8A88E;
-        --cmp-light-bg: #F0DABC;
-        --cmp-light-surface: #FBF3E8;
-        --cmp-light-input: #DDCEB8;
-        --cmp-dark-bg: #1E1A16;
-        --cmp-dark-surface: #2A2520;
-        --cmp-dark-input: #3E3830;
-    }
+    /* --- 陽光 (Sun) — Light: uses @theme defaults, no override needed --- */
 
     /* --- 陽光 (Sun) — Dark --- */
     body.theme-sun.dark {
@@ -144,6 +176,15 @@
         --scrollbar-thumb: #504840;
         --scrollbar-thumb-hover: #605850;
         --color-overlay: rgba(0,0,0,0.55);
+        --color-badge-open: #2EA043;
+        --color-badge-closed: #8B5CF6;
+        --color-success-bg: rgba(126, 200, 154, 0.15);
+        --color-warning: #F0D060;
+        --color-warning-bg: rgba(240, 208, 96, 0.15);
+        --color-info: #7EC0E8;
+        --color-info-bg: rgba(126, 192, 232, 0.15);
+        --color-disabled: #605850;
+        --color-disabled-foreground: #3E3830;
         --color-badge-open: #2EA043;
         --color-badge-closed: #8B5CF6;
         --color-plan-bg: #1B3A1F;
@@ -184,11 +225,8 @@
         --cmp-dark-surface: #202A30;
         --cmp-dark-input: #303E46;
         --color-overlay: rgba(0,0,0,0.3);
-        --color-badge-open: #1A7F37;
-        --color-badge-closed: #6E40C9;
-        --color-plan-bg: #E8F5E9;
-        --color-plan-text: #2E7D32;
-        --color-plan-hover: #C8E6C9;
+        --color-info: #2870A0;
+        --color-info-bg: rgba(40, 112, 160, 0.12);
     }
 
     /* --- 晴空 (Sky) — Dark --- */
@@ -218,6 +256,13 @@
         --scrollbar-thumb: #3E4E58;
         --scrollbar-thumb-hover: #506068;
         --color-overlay: rgba(0,0,0,0.55);
+        --color-success-bg: rgba(144, 220, 192, 0.15);
+        --color-warning: #F0D060;
+        --color-warning-bg: rgba(240, 208, 96, 0.15);
+        --color-info: #7EC0E8;
+        --color-info-bg: rgba(126, 192, 232, 0.15);
+        --color-disabled: #506068;
+        --color-disabled-foreground: #303E46;
         --color-badge-open: #2EA043;
         --color-badge-closed: #8B5CF6;
         --color-plan-bg: #1B3A1F;
@@ -258,11 +303,6 @@
         --cmp-dark-surface: #262320;
         --cmp-dark-input: #3A3630;
         --color-overlay: rgba(0,0,0,0.3);
-        --color-badge-open: #1A7F37;
-        --color-badge-closed: #6E40C9;
-        --color-plan-bg: #E8F5E9;
-        --color-plan-text: #2E7D32;
-        --color-plan-hover: #C8E6C9;
     }
 
     /* --- 和風 (Zen) — Dark --- */
@@ -292,6 +332,13 @@
         --scrollbar-thumb: #4A4640;
         --scrollbar-thumb-hover: #5A5650;
         --color-overlay: rgba(0,0,0,0.55);
+        --color-success-bg: rgba(184, 208, 192, 0.15);
+        --color-warning: #F0D060;
+        --color-warning-bg: rgba(240, 208, 96, 0.15);
+        --color-info: #D4A88E;
+        --color-info-bg: rgba(212, 168, 142, 0.15);
+        --color-disabled: #5A5650;
+        --color-disabled-foreground: #3A3630;
         --color-badge-open: #2EA043;
         --color-badge-closed: #8B5CF6;
         --color-plan-bg: #1B3A1F;
@@ -326,11 +373,6 @@
         --scrollbar-thumb: #C8C4C0;
         --scrollbar-thumb-hover: #B0ACA8;
         --color-overlay: rgba(0,0,0,0.2);
-        --color-badge-open: #1A7F37;
-        --color-badge-closed: #6E40C9;
-        --color-plan-bg: #E8F5E9;
-        --color-plan-text: #2E7D32;
-        --color-plan-hover: #C8E6C9;
     }
 }
 
@@ -380,8 +422,10 @@
 
     /* Focus Visible (remove default outline, use box-shadow) */
     button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    a:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
     [role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
     .dn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    .nav-back-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 
     /* Custom Scrollbar (global) */
     :root { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
@@ -389,30 +433,24 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-}
 
-/* ===== Desktop Page Layout Gap ===== */
-@media (min-width: 1200px) {
-    .page-layout { gap: 12px; }
-}
+    /* Desktop Page Layout Gap */
+    @media (min-width: 1200px) {
+        .page-layout { gap: var(--spacing-3); }
+    }
 
-/* ===== Desktop Padding Override ===== */
-@media (min-width: 768px) {
-    :root {
-        --padding-h: 20px;
+    /* Desktop Padding Override */
+    @media (min-width: 768px) {
+        :root { --padding-h: var(--spacing-5); }
     }
 }
 
-/* === Reduced Motion: disable decorative animations only === */
+/* === Reduced Motion: comprehensive reset === */
 @media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  .arrow, .speed-dial-trigger, .edit-fab,
-  .hw-detail, .col-body, .info-sheet,
-  .info-sheet-backdrop, .download-backdrop {
-    transition-duration: 0.01ms !important;
-  }
-  .day-header, [class*="fade"], [class*="slide"] {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

@@ -19,13 +19,13 @@ html.page-setting {
 .page-setting .sticky-nav {
     position: sticky;
     top: 0;
-    z-index: 200;
+    z-index: var(--z-sticky-nav);
 }
 
 /* ===== Setting Page Layout ===== */
 .setting-page { max-width: 520px; margin: 0 auto; padding: var(--padding-h); }
 @media (min-width: 768px) {
-    .setting-page { max-width: 60vw; padding-top: 48px; }
+    .setting-page { max-width: min(60vw, 900px); padding-top: 48px; }
 }
 .setting-main { padding-bottom: 40px; }
 
@@ -53,7 +53,9 @@ html.page-setting {
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
-.color-mode-card {
+/* Shared base for selectable cards */
+.color-mode-card,
+.color-theme-card {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -65,9 +67,12 @@ html.page-setting {
     font-family: inherit;
     transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
 }
-.color-mode-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
-.color-mode-card.active { border-color: var(--color-accent); box-shadow: var(--shadow-ring); }
-.color-mode-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.color-mode-card:hover,
+.color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.color-mode-card.active,
+.color-theme-card.active { border-color: var(--color-accent); box-shadow: var(--shadow-ring); }
+.color-mode-card:focus-visible,
+.color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 
 /* ===== Color Mode Preview ===== */
 .color-mode-preview {
@@ -138,21 +143,7 @@ html.page-setting {
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
-.color-theme-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
-    background: var(--color-secondary);
-    font-family: inherit;
-    transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
-}
-.color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
-.color-theme-card.active { border-color: var(--color-accent); box-shadow: var(--shadow-ring); }
-.color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+/* color-theme-card inherits from shared base above */
 .color-theme-swatch {
     width: 80px;
     height: 28px;

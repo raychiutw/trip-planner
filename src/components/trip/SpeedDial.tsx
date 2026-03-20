@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
 /* ===== Speed Dial Item Config ===== */
@@ -65,6 +66,7 @@ interface SpeedDialProps {
 
 export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownload }: SpeedDialProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -102,6 +104,20 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
     [onItemClick, onGroupClick],
   );
 
+  /* --- Escape key handler: close and return focus to trigger --- */
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   const preventTouchScroll = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
   }, []);
@@ -110,10 +126,12 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
   }, []);
 
   return (
-    <div className={`speed-dial${isOpen ? ' open' : ''}`} id="speedDial">
+    <div className={clsx('speed-dial', isOpen && 'open')} id="speedDial">
       <div
         className="speed-dial-backdrop"
         id="speedDialBackdrop"
+        role="presentation"
+        aria-hidden="true"
         onClick={handleClose}
         onTouchMove={preventTouchScroll}
         onWheel={preventWheelScroll}
@@ -136,6 +154,9 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
         className="speed-dial-trigger"
         id="speedDialTrigger"
         aria-label="快速選單"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        ref={triggerRef}
         onClick={handleToggle}
       >
         <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">

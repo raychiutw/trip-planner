@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import clsx from 'clsx';
 import Icon from '../shared/Icon';
 import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
 import {
@@ -195,11 +196,20 @@ export default function HourlyWeather({
   /* --- Render State C --- */
   return (
     <div
-      className={`hourly-weather${isOpen ? ' hw-open' : ''}`}
+      className={clsx('hourly-weather', isOpen && 'hw-open')}
       id={`hourly-${dayId}`}
     >
       {/* Summary row (clickable) */}
-      <div className="hw-summary" data-action="toggle-hw" onClick={handleToggle} role="button" tabIndex={0} aria-label="展開每小時天氣" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } }}>
+      <div
+        className="hw-summary"
+        data-action="toggle-hw"
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? '收合天氣' : '展開天氣'}
+        onClick={handleToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggle(); } }}
+      >
         <Icon name={bestIcon} />{' '}
         {minT}~{maxT}&deg;C{' '}
         &nbsp;&middot;&nbsp;{' '}
@@ -232,7 +242,7 @@ export default function HourlyWeather({
             return (
               <div
                 key={h}
-                className={`hw-block${isNow ? ' hw-now' : ''}`}
+                className={clsx('hw-block', isNow && 'hw-now')}
                 data-hour={h}
               >
                 <div className="hw-block-time">
@@ -249,7 +259,7 @@ export default function HourlyWeather({
                 </div>
                 <div className="hw-block-temp">{temp}&deg;C</div>
                 <div
-                  className={`hw-block-rain${rain >= 50 ? ' hw-rain-high' : ''}`}
+                  className={clsx('hw-block-rain', rain >= 50 && 'hw-rain-high')}
                 >
                   <Icon name="raindrop" />
                   {rain}%
