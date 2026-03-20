@@ -1,5 +1,4 @@
 @import "tailwindcss/theme" layer(theme);
-@import "tailwindcss/utilities" layer(utilities);
 
 /* ===== @theme: design token source of truth (default = sun-light) ===== */
 @theme {
@@ -45,6 +44,16 @@
 
 /* ===== Non-utility tokens (no Tailwind utilities needed) ===== */
 :root {
+    /* Scrollbar defaults (sun-light) — must be on :root because scrollbar-color is set here */
+    --scrollbar-thumb: #C8B89E;
+    --scrollbar-thumb-hover: #B8A88E;
+    /* Color mode preview defaults (sun-light) — fallback before JS applies theme class */
+    --cmp-light-bg: #F0DABC;
+    --cmp-light-surface: #FBF3E8;
+    --cmp-light-input: #DDCEB8;
+    --cmp-dark-bg: #1E1A16;
+    --cmp-dark-surface: #2A2520;
+    --cmp-dark-input: #3E3830;
     --shadow-ring: 0 0 0 2px var(--color-accent);
     --fs-large-title: 2.125rem;
     --fs-title: 1.75rem;
@@ -129,7 +138,6 @@
         --color-plan-bg: #1B3A1F;
         --color-plan-text: #66BB6A;
         --color-plan-hover: #2E4A32;
-        background: var(--color-background);
     }
 
     /* --- 晴空 (Sky) — Light --- */
@@ -204,7 +212,6 @@
         --color-plan-bg: #1B3A1F;
         --color-plan-text: #66BB6A;
         --color-plan-hover: #2E4A32;
-        background: var(--color-background);
     }
 
     /* --- 和風 (Zen) — Light --- */
@@ -279,7 +286,6 @@
         --color-plan-bg: #1B3A1F;
         --color-plan-text: #66BB6A;
         --color-plan-hover: #2E4A32;
-        background: var(--color-background);
     }
 
     /* --- 列印 (Print) --- */
@@ -321,6 +327,10 @@
 ::selection { background: var(--color-accent-subtle); color: var(--color-foreground); }
 
 /* ===== Reset & Base ===== */
+/* IMPORTANT: These rules are UNLAYERED and always beat @layer base in the cascade.
+   Use only var() references here — direct color values will silently override
+   @layer base theme overrides. Theme switching works because CSS custom properties
+   are resolved lazily at the point of consumption, not at definition. */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 .page-layout { overflow-x: clip; }
