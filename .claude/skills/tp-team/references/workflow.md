@@ -60,6 +60,23 @@ Key User 需求 → PM 建立 OpenSpec change
 
 **Challenger 只出現一次，在 QC 之後。** Proposal 階段不需要 Challenger。
 
+## 兩階段驗證策略
+
+```
+第一階段（快速、自動化、可重複執行）：
+  工程師 → unit test（TDD：先寫測試再實作）
+  QC     → E2E test script（Playwright .spec.ts，可重複跑）
+  Challenger → DOM/CSS 程式化分析（evaluate、querySelector）
+
+第二階段（強化、視覺判斷）：
+  QC     → 截圖比對（主題組合 × viewport）
+  Challenger → 截圖 UX 質疑
+```
+
+**第一階段是主要驗證手段**，快速且可重複。正常流程只跑第一階段。
+**第二階段只在被反應第一階段沒發現的問題時才使用** — 作為補強手段，不是每次都跑。
+不要每次都截圖 — 截圖慢且不可重複，只在需要時使用。
+
 **順序原則：** Challenger 在 QC 之後，因為 11 視角質疑需要 QC 的截圖、測試結果、操作驗證才能完整。沒有 QC 結果的 Challenger 只能做理論分析。
 
 **QC FAIL 時：** PM 判斷 → 派工程師修復 → 重新 Code Review → 重新 QC

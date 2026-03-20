@@ -43,7 +43,7 @@
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
-    --radius-full: 99px;
+    --radius-full: 9999px;
 
     /* Shadow — generate shadow-* utilities */
     --shadow-md: 0 4px 16px rgba(46,36,24,0.12);
@@ -131,7 +131,7 @@
     --theme-section-gap: var(--spacing-6);
     /* Layout */
     --content-max-w: 720px;
-    --info-panel-w: 350px;
+    --info-panel-w: 280px;
     --nav-h: 48px;
     --padding-h: 16px;
     --tap-min: 44px;

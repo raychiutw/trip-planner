@@ -748,19 +748,66 @@ test.describe('全旅程交通統計', () => {
 test.describe('桌機資訊面板', () => {
   test.use({ viewport: { width: 1400, height: 900 } });
 
-  test('倒數器與統計卡可見', async ({ page }) => {
+  test('資訊面板可見且包含今日行程', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(500);
     const panel = page.locator('#infoPanel');
     await expect(panel).toBeVisible();
 
-    // 倒數器
-    const countdown = panel.locator('.countdown-card');
-    await expect(countdown).toBeVisible();
+    // 今日行程區塊
+    const todaySummary = panel.locator('.today-summary');
+    await expect(todaySummary).toBeVisible();
+  });
 
-    // 統計卡
-    const statsCard = panel.locator('.stats-card');
-    await expect(statsCard).toBeVisible();
+  test('資訊面板包含飯店資訊（R3-8）', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const panel = page.locator('#infoPanel');
+    await expect(panel).toBeVisible();
+
+    // 飯店摘要卡（R3-8 新增）— 找包含「今日住宿」或飯店名稱的區塊
+    const hotelSection = panel.locator('text=/今日住宿|退房/');
+    await expect(hotelSection.first()).toBeAttached();
+  });
+
+  test('資訊面板包含當日交通摘要（R3-8）', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const panel = page.locator('#infoPanel');
+    await expect(panel).toBeVisible();
+
+    // 交通摘要卡（R3-8 新增）— 找最外層的 transport-summary-card
+    const transportCard = panel.locator('.transport-summary-card').first();
+    await expect(transportCard).toBeAttached();
+  });
+
+  test('資訊面板不含 G/N 地圖連結（R4 移除）', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const panel = page.locator('#infoPanel');
+    await expect(panel).toBeVisible();
+
+    // R4 要求：InfoPanel 內不應有 Google/Naver 地圖連結
+    const gLinks = panel.locator('a[href*="google"], a[href*="naver"]');
+    await expect(gLinks).toHaveCount(0);
+  });
+
+  test('資訊面板不含倒數器（R3-4 移除）', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const panel = page.locator('#infoPanel');
+
+    const countdown = panel.locator('.countdown-card');
+    await expect(countdown).toHaveCount(0);
+  });
+
+  test('資訊面板不含全旅程統計卡（R3-5 移除）', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(500);
+    const panel = page.locator('#infoPanel');
+
+    const statsCard = panel.locator('.stats-card, .trip-stats-card');
+    await expect(statsCard).toHaveCount(0);
   });
 
   test('中等寬度不顯示資訊面板', async ({ page, browser }) => {
@@ -856,6 +903,7 @@ test.describe('行程載入失敗', () => {
 test.describe('Speed Dial → Bottom Sheet（手機版）', () => {
   test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
 
+
   test('Speed Dial 子項目開啟 bottom sheet 並顯示內容', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
@@ -888,6 +936,159 @@ test.describe('Speed Dial → Bottom Sheet（手機版）', () => {
 
     // Click on the backdrop area (outside the panel) to close
     await backdrop.click({ position: { x: 187, y: 50 } });
+    await expect(backdrop).not.toHaveClass(/open/);
+  });
+});
+
+/* ===== 24. SpeedDial 垂直佈局（R4）===== */
+test.describe('SpeedDial 垂直佈局（R4）', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('所有 speed-dial-item 排在 FAB 左側（垂直單欄）', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    // 展開 SpeedDial
+    await page.locator('.speed-dial-trigger').click();
+    await page.waitForTimeout(400);
+
+    const fab = page.locator('.speed-dial-trigger');
+    const fabBox = await fab.boundingBox();
+    const items = page.locator('.speed-dial-item');
+    const count = await items.count();
+    expect(count).toBe(8);
+
+    // 所有 item 的 x 座標應小於 FAB 的 x 座標（在 FAB 左側）
+    for (let i = 0; i < count; i++) {
+      const box = await items.nth(i).boundingBox();
+      if (box) {
+        expect(box.x).toBeLessThan(fabBox.x);
+      }
+    }
+  });
+
+  test('速度選單有 8 個項目', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    const items = page.locator('.speed-dial-item');
+    await expect(items).toHaveCount(8);
+  });
+
+  test('FAB 觸發按鈕存在且可點擊', async ({ page }) => {
+    await page.goto('/');
+    const trigger = page.locator('.speed-dial-trigger');
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toHaveAttribute('aria-label', '快速選單');
+  });
+
+  test('SpeedDial 展開後收合正常', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    const dial = page.locator('#speedDial');
+    const trigger = page.locator('.speed-dial-trigger');
+
+    await expect(dial).not.toHaveClass(/open/);
+    await trigger.click();
+    await expect(dial).toHaveClass(/open/);
+    await trigger.click();
+    await expect(dial).not.toHaveClass(/open/);
+  });
+
+  test('320px 上 SpeedDial items 不溢出螢幕右邊界', async ({ page, browser }) => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 568 } });
+    const p = await context.newPage();
+    await setupApiMocks(p);
+    await p.route('**/api.open-meteo.com/**', (route) => {
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ hourly: { time: [], temperature_2m: [], precipitation_probability: [], weather_code: [] } }) });
+    });
+    await p.addInitScript(() => {
+      var exp = Date.now() + 180 * 86400000;
+      localStorage.setItem('tp-trip-pref', JSON.stringify({ v: 'okinawa-trip-2026-Ray', exp: exp }));
+    });
+    await p.goto('/');
+    await p.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    await p.locator('.speed-dial-trigger').click();
+    await p.waitForTimeout(400);
+
+    const items = p.locator('.speed-dial-item');
+    const count = await items.count();
+    for (let i = 0; i < count; i++) {
+      const box = await items.nth(i).boundingBox();
+      if (box) {
+        // item 右邊界不超出 320px 螢幕
+        expect(box.x + box.width).toBeLessThanOrEqual(320);
+      }
+    }
+    await context.close();
+  });
+});
+
+/* ===== 25. SpeedDial 設定 sheet + export tools（R4）===== */
+test.describe('SpeedDial 設定 sheet（R4）', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('點擊「設定」開啟 info-sheet-panel', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    // 展開 SpeedDial
+    await page.locator('.speed-dial-trigger').click();
+    await page.waitForTimeout(400);
+
+    // 點擊設定
+    const settingBtn = page.locator('.speed-dial-item[aria-label="設定"]');
+    await settingBtn.click();
+    await page.waitForTimeout(500);
+
+    // info-sheet-panel 應顯示
+    const sheet = page.locator('.info-sheet-panel');
+    await expect(sheet).toBeVisible();
+  });
+
+  test('設定 sheet 包含匯出按鈕（列印/PDF/Markdown/JSON/CSV）', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    await page.locator('.speed-dial-trigger').click();
+    await page.waitForTimeout(400);
+    await page.locator('.speed-dial-item[aria-label="設定"]').click();
+    await page.waitForTimeout(500);
+
+    // 匯出相關按鈕應存在
+    const toolBtns = page.locator('.tool-action-btn');
+    const count = await toolBtns.count();
+    expect(count).toBeGreaterThanOrEqual(4);
+
+    // 確認有列印模式按鈕
+    const printBtn = toolBtns.filter({ hasText: '列印' });
+    await expect(printBtn.first()).toBeAttached();
+
+    // 確認有 PDF 匯出按鈕
+    const pdfBtn = toolBtns.filter({ hasText: 'PDF' });
+    await expect(pdfBtn.first()).toBeAttached();
+  });
+
+  test('設定 sheet X 按鈕可關閉', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+
+    await page.locator('.speed-dial-trigger').click();
+    await page.waitForTimeout(400);
+    await page.locator('.speed-dial-item[aria-label="設定"]').click();
+    await page.waitForTimeout(500);
+
+    const sheet = page.locator('.info-sheet-panel');
+    await expect(sheet).toBeVisible();
+
+    // 點擊關閉按鈕
+    await page.locator('.sheet-close-btn').click();
+    await page.waitForTimeout(300);
+
+    // sheet 應關閉（backdrop 無 open class）
+    const backdrop = page.locator('.info-sheet-backdrop');
     await expect(backdrop).not.toHaveClass(/open/);
   });
 });

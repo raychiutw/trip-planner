@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import Icon from '../shared/Icon';
 import TodaySummary from './TodaySummary';
 import { formatMinutes } from '../../lib/formatUtils';
@@ -21,14 +21,7 @@ export default function InfoPanel({
   days,
   currentDay,
 }: InfoPanelProps) {
-  const handleEntryClick = useCallback((index: number) => {
-    const el = document.querySelector(`.tl-event[data-entry-index="${index}"]`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, []);
-
-  /* --- R3-8: Current day transport summary --- */
+  /* --- Current day transport summary --- */
   const dayTransport = useMemo(() => {
     if (!currentDay) return null;
     return calcDrivingStats(currentDay.timeline);
@@ -37,9 +30,9 @@ export default function InfoPanel({
   return (
     <aside className="info-panel" id="infoPanel">
       {currentDay && currentDay.timeline.length > 0 && (
-        <TodaySummary entries={currentDay.timeline} onEntryClick={handleEntryClick} />
+        <TodaySummary entries={currentDay.timeline} />
       )}
-      {/* R3-8: Hotel info card */}
+      {/* Hotel info card */}
       {currentDay?.hotel && (
         <div className="info-card hotel-summary-card">
           <div className="info-label"><Icon name="hotel" /> 今日住宿</div>
@@ -51,7 +44,7 @@ export default function InfoPanel({
           )}
         </div>
       )}
-      {/* R3-8: Day transport summary card */}
+      {/* Day transport summary card */}
       {dayTransport && (
         <div className="info-card transport-summary-card">
           <div className="info-label"><Icon name="bus" /> 當日交通</div>

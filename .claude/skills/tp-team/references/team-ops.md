@@ -61,6 +61,25 @@ Step 5: 完成後 shutdown
 - 避免「這個很簡單不用 review」導致的品質漏洞
 - 跨 session 繼續：team 已存在，直接派 Teammate 加入，不需 TeamCreate
 
+### 暫存檔規則
+
+**Teammate 產生的暫存檔案（截圖、snapshot MD 等）一律放在 `.temp/` 目錄內。**
+
+- QC 截圖：`.temp/qc-*.png`
+- Reviewer 截圖：`.temp/review-*.png`
+- Challenger 截圖：`.temp/challenge-*.png`
+- Snapshot MD：`.temp/snapshot-*.md`
+- 其他暫存：`.temp/*`
+
+**Key User Approve 後、PM commit 之前**，PM 必須刪除 `.temp/` 目錄：
+```bash
+rm -rf .temp/
+```
+
+`.temp/` 已加入 `.gitignore`，不會被 commit。
+
+---
+
 ### Teammate 命名規則（固定名字，重複使用）
 
 **固定 4 個角色名字，不要每次建新名字：**

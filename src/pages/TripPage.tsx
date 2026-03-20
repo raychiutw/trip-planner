@@ -19,8 +19,9 @@ import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
-import { DayHeaderArt, DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
+import { DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
+import DayArt from '../components/trip/DayArt';
 import DownloadSheet from '../components/trip/DownloadSheet';
 import TodayRouteSheet from '../components/trip/TodayRouteSheet';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
@@ -125,7 +126,7 @@ const DaySection = React.memo(function DaySection({
             {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
           </span>
         )}
-        {themeArt && <DayHeaderArt theme={themeArt.theme} dark={themeArt.dark} />}
+        {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
       </div>
       <div className="day-content" id={`day-slot-${dayNum}`}>
         {!day ? (

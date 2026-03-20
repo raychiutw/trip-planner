@@ -22,9 +22,9 @@
 
 ## F-2：Day Header 文化圖案（取代 ThemeArt，動態生成）
 
-- [ ] F2.1 定義景點關鍵字 → SVG 元素映射表
-- [ ] F2.2 建立 DayArt 生成邏輯（讀取當天 timeline entries → 提取關鍵字 → 組合 SVG）
-- [ ] F2.3 取代 DayHeaderArt 的 content map
-- [ ] F2.4 /tp-create 和 /tp-edit 時觸發生成
-- [ ] F2.5 light/dark mode
-- [ ] F2.6 截圖驗證全行程
+- [x] F2.1 定義景點關鍵字 → SVG 元素映射表（src/lib/dayArtMapping.ts）
+- [x] F2.2 建立 DayArt 生成邏輯（src/components/trip/DayArt.tsx）
+- [x] F2.3 取代 DayHeaderArt（TripPage.tsx DaySection 改用 DayArt）
+- [ ] F2.4 /tp-create 和 /tp-edit 時觸發生成（無需額外工作：DayArt 是 runtime 動態生成）
+- [x] F2.5 light/dark mode（每個 SVG 元素根據 dark prop 切換色彩+opacity）
+- [ ] F2.6 截圖驗證全行程（QC 負責）

@@ -185,10 +185,10 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
   if (!isOpen) return null;
 
   const options = [
-    { key: 'pdf', label: 'PDF（含排版）', icon: 'printer', handler: handlePDF },
-    { key: 'md', label: 'Markdown（純文字）', icon: 'doc', handler: handleMarkdown },
-    { key: 'json', label: 'JSON（結構化資料）', icon: 'code', handler: handleJSON },
-    { key: 'csv', label: 'CSV（表格格式）', icon: 'table', handler: handleCSV },
+    { key: 'pdf', label: 'PDF', sub: '含排版', icon: 'printer', handler: handlePDF },
+    { key: 'md', label: 'Markdown', sub: '純文字', icon: 'doc', handler: handleMarkdown },
+    { key: 'json', label: 'JSON', sub: '結構化', icon: 'code', handler: handleJSON },
+    { key: 'csv', label: 'CSV', sub: '表格', icon: 'table', handler: handleCSV },
   ];
 
   return (
@@ -211,7 +211,8 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
               disabled={loading !== null}
             >
               <Icon name={opt.icon} />
-              <span>{opt.label}</span>
+              <span className="download-option-label">{opt.label}</span>
+              <span className="download-option-sub">{opt.sub}</span>
               {loading === opt.key && <span className="download-spinner" />}
             </button>
           ))}

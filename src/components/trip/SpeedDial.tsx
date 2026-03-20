@@ -2,10 +2,15 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
-/* ===== FAB trigger: hardcoded SVG (expand_less not in Icon registry) ===== */
-const FAB_SVG = (
+/* ===== FAB trigger SVGs: horizontal arrows ===== */
+const FAB_CLOSED = (
   <svg viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 8l-6 6h12z" />
+    <path d="M16 6l-8 6 8 6z" />
+  </svg>
+);
+const FAB_OPEN = (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 6l8 6-8 6z" />
   </svg>
 );
 
@@ -123,8 +128,8 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
             aria-label={item.label}
             onClick={() => handleItemClick(item)}
           >
-            <Icon name={item.icon} />
             <span className="speed-dial-label">{item.label}</span>
+            <Icon name={item.icon} />
           </button>
         ))}
       </div>
@@ -138,7 +143,7 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
         ref={triggerRef}
         onClick={handleToggle}
       >
-        {FAB_SVG}
+        {isOpen ? FAB_OPEN : FAB_CLOSED}
       </button>
     </div>
   );
