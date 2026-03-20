@@ -207,14 +207,14 @@ describe('R4-11 close button no circle outline', () => {
 /* ===== R4-1: InfoPanel hotel + transport card padding ===== */
 
 describe('R4-1 InfoPanel card padding', () => {
-  it('.hotel-summary-card has spacing-3/spacing-4 padding', () => {
+  it('.hotel-summary-card has spacing-4/spacing-5 padding', () => {
     const body = ruleBody(styleCss, '.hotel-summary-card');
-    expect(body).toContain('padding: var(--spacing-3) var(--spacing-4)');
+    expect(body).toContain('padding: var(--spacing-4) var(--spacing-5)');
   });
 
-  it('.transport-summary-card has spacing-3/spacing-4 padding', () => {
+  it('.transport-summary-card has spacing-4/spacing-5 padding', () => {
     const body = ruleBody(styleCss, '.transport-summary-card');
-    expect(body).toContain('padding: var(--spacing-3) var(--spacing-4)');
+    expect(body).toContain('padding: var(--spacing-4) var(--spacing-5)');
   });
 });
 

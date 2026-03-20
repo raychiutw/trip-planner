@@ -130,6 +130,7 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
           >
             <span className="speed-dial-label">{item.label}</span>
             <Icon name={item.icon} />
+            <span className="speed-dial-label">{item.label}</span>
           </button>
         ))}
       </div>
