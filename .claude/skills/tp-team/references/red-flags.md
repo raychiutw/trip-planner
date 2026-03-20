@@ -48,3 +48,4 @@
 - PM 想「團隊搞錯了，我來修正」→ ❌ STOP，派工程師修正，PM 只協調
 - PM 想「tasks.md 我來勾比較快」→ ❌ STOP，勾 checkbox 是工程師的職責
 - PM 建了 reviewer-2、reviewer-3... → ❌ STOP，重新 spawn 同名 Teammate（name: "reviewer"），不要建新成員
+- PM commit 前沒檢查 untracked files → ❌ STOP，`git status` 的 `??` 新檔案可能是工程師建的核心檔案（如 DayArt.tsx），漏加會導致 build 失敗
