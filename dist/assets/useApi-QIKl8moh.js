@@ -1,0 +1,1 @@
+async function e(e,t){let n={...t?.headers},r=(t?.method??`GET`).toUpperCase();r!==`GET`&&r!==`HEAD`&&r!==`DELETE`&&(n[`Content-Type`]=n[`Content-Type`]??`application/json`);let i=await fetch(`/api`+e,{...t,headers:n});if(!i.ok)throw Error(`API error ${i.status}: ${i.statusText}`);return i.json()}export{e as t};
