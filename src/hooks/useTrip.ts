@@ -108,21 +108,21 @@ export function useTrip(tripId: string | null): UseTripReturn {
 
         setTrip(meta);
 
-        // Sort days by day_num
+        // Sort days by day_num (NOT NULL in DB — must always exist)
         const sorted = [...daysList].sort(
-          (a, b) => (a.day_num ?? a.id) - (b.day_num ?? b.id),
+          (a, b) => a.day_num - b.day_num,
         );
         setDays(sorted);
 
         // Determine initial day (first day by default)
-        const firstDayNum = sorted.length > 0 ? (sorted[0].day_num ?? sorted[0].id) : 0;
+        const firstDayNum = sorted.length > 0 ? sorted[0].day_num : 0;
         if (firstDayNum > 0) {
           setCurrentDayNum(firstDayNum);
         }
 
         // Fire ALL day fetches in parallel (non-blocking)
         for (const d of sorted) {
-          const num = d.day_num ?? d.id;
+          const num = d.day_num;
           apiFetch<Day>(`/trips/${tripId}/days/${num}`)
             .then((dayData) => {
               if (cancelled) return;

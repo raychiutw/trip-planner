@@ -102,8 +102,7 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
 /* ===== Trip-wide stats ===== */
 
 interface DayLike {
-  id?: number;
-  dayNum?: number;
+  dayNum: number;
   date?: string | null;
   dayOfWeek?: string | null;
   timeline: Entry[];
@@ -124,7 +123,7 @@ export function calcTripDrivingStats(days: DayLike[]): TripDrivingStats | null {
     const stats = calcDrivingStats(day.timeline);
     if (!stats) return;
 
-    const dayId = day.dayNum ?? day.id ?? 0;
+    const dayId = day.dayNum;
     const d = day.date || '';
     const dm = d.match(/^\d{4}-(\d{2})-(\d{2})$/);
     let dateStr = d;

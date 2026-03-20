@@ -91,10 +91,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     };
   });
 
-  // 6. Assemble response
-  const { id: _id, trip_id: _trip_id, ...dayFields } = day;
+  // 6. Assemble response — map snake_case to camelCase for frontend
+  const { id: _id, trip_id: _trip_id, day_num, day_of_week, weather_json, ...dayFields } = day;
   return json({
     id: dayId,
+    dayNum: day_num,
+    dayOfWeek: day_of_week,
+    weather: weather_json,
     ...dayFields,
     hotel,
     timeline,
