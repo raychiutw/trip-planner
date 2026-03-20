@@ -1,4 +1,5 @@
 @import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/utilities" layer(utilities);
 
 /* ===== @theme: design token source of truth (default = sun-light) ===== */
 @theme {
