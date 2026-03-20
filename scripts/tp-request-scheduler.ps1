@@ -1,5 +1,5 @@
 ﻿# tp-request-scheduler.ps1
-# 每分鐘排程：查詢所有 open 請求並處理
+# 每日 06:23 排程：查詢所有 open 請求並處理
 
 $projectDir = Split-Path $PSScriptRoot
 $logDir = Join-Path $PSScriptRoot "logs"
