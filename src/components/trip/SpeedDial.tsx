@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
 /* ===== Speed Dial Item Config ===== */
@@ -7,40 +8,23 @@ interface SpeedDialItemConfig {
   key: string;
   icon: string;
   label: string;
+  action: 'sheet' | 'group';
 }
 
 const DIAL_ITEMS: SpeedDialItemConfig[] = [
-  { key: 'prep', icon: 'plane', label: '行前準備' },
-  { key: 'emergency-group', icon: 'emergency', label: '緊急應變' },
-  { key: 'ai-group', icon: 'lightbulb', label: 'AI 分析' },
-  { key: 'tools', icon: 'gear', label: '設定' },
+  { key: 'flights',     icon: 'plane',     label: '航班資訊',   action: 'sheet' },
+  { key: 'checklist',   icon: 'checklist', label: '出發確認',   action: 'sheet' },
+  { key: 'emergency',   icon: 'emergency', label: '緊急聯絡',   action: 'sheet' },
+  { key: 'backup',      icon: 'backup',    label: '備案',       action: 'sheet' },
+  { key: 'suggestions', icon: 'lightbulb', label: 'AI 建議',    action: 'sheet' },
+  { key: 'today-route', icon: 'route',     label: '今日路線',   action: 'sheet' },
+  { key: 'driving',     icon: 'car',       label: '交通統計',   action: 'sheet' },
+  { key: 'tools',       icon: 'gear',      label: '設定',       action: 'group' },
 ];
 
-/* ===== Group → content key mapping ===== */
+/* ===== Group → content key mapping (only for tools group) ===== */
 
-/** Maps speed dial group key to the content keys shown in bottom sheet */
 export const SPEED_DIAL_GROUPS: Record<string, { title: string; items: { key: string; label: string; action?: 'sheet' | 'navigate' | 'print' | 'download' }[] }> = {
-  prep: {
-    title: '行前準備',
-    items: [
-      { key: 'flights', label: '航班資訊', action: 'sheet' },
-      { key: 'checklist', label: '出發前確認', action: 'sheet' },
-    ],
-  },
-  'emergency-group': {
-    title: '緊急應變',
-    items: [
-      { key: 'emergency', label: '緊急聯絡', action: 'sheet' },
-      { key: 'backup', label: '備案', action: 'sheet' },
-    ],
-  },
-  'ai-group': {
-    title: 'AI 分析',
-    items: [
-      { key: 'suggestions', label: 'AI 行程建議', action: 'sheet' },
-      { key: 'driving', label: '交通統計', action: 'sheet' },
-    ],
-  },
   tools: {
     title: '設定',
     items: [
@@ -65,6 +49,7 @@ interface SpeedDialProps {
 
 export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownload }: SpeedDialProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -75,32 +60,33 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
   }, []);
 
   const handleItemClick = useCallback(
-    (groupKey: string) => {
+    (item: SpeedDialItemConfig) => {
       setIsOpen(false);
 
-      const group = SPEED_DIAL_GROUPS[groupKey];
-      if (!group) return;
-
-      /* tools group: if only 1 non-sheet action, handle directly */
-      if (groupKey === 'tools') {
-        if (onGroupClick) {
-          onGroupClick(groupKey);
-        }
+      if (item.action === 'group' && onGroupClick) {
+        onGroupClick(item.key);
         return;
       }
 
-      /* Groups with 2 sheet items: if only 1 item, open directly; otherwise open group sheet */
-      if (group.items.length === 1) {
-        onItemClick(group.items[0].key);
-      } else if (onGroupClick) {
-        onGroupClick(groupKey);
-      } else {
-        /* Fallback: open first item */
-        onItemClick(group.items[0].key);
-      }
+      // Direct sheet action
+      onItemClick(item.key);
     },
     [onItemClick, onGroupClick],
   );
+
+  /* --- Escape key handler: close and return focus to trigger --- */
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const preventTouchScroll = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
@@ -110,10 +96,12 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
   }, []);
 
   return (
-    <div className={`speed-dial${isOpen ? ' open' : ''}`} id="speedDial">
+    <div className={clsx('speed-dial', isOpen && 'open')} id="speedDial">
       <div
         className="speed-dial-backdrop"
         id="speedDialBackdrop"
+        role="presentation"
+        aria-hidden="true"
         onClick={handleClose}
         onTouchMove={preventTouchScroll}
         onWheel={preventWheelScroll}
@@ -125,7 +113,7 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
             className="speed-dial-item"
             data-content={item.key}
             aria-label={item.label}
-            onClick={() => handleItemClick(item.key)}
+            onClick={() => handleItemClick(item)}
           >
             <Icon name={item.icon} />
             <span className="speed-dial-label">{item.label}</span>
@@ -136,6 +124,9 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
         className="speed-dial-trigger"
         id="speedDialTrigger"
         aria-label="快速選單"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        ref={triggerRef}
         onClick={handleToggle}
       >
         <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">

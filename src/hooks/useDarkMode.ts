@@ -2,15 +2,18 @@ import { useState, useCallback, useEffect } from 'react';
 import { lsSet, lsGet } from '../lib/localStorage';
 
 export type ColorMode = 'light' | 'auto' | 'dark';
-export type ColorTheme = 'sun' | 'sky' | 'zen';
+export type ColorTheme = 'sun' | 'sky' | 'zen' | 'forest' | 'sakura' | 'ocean';
 
-const THEME_CLASSES = ['theme-sun', 'theme-sky', 'theme-zen'] as const;
+const THEME_CLASSES = ['theme-sun', 'theme-sky', 'theme-zen', 'theme-forest', 'theme-sakura', 'theme-ocean'] as const;
 
 /** Theme-color values per theme × mode (light / dark). */
 const THEME_COLORS: Record<ColorTheme, { light: string; dark: string }> = {
-  sun: { light: '#F47B5E', dark: '#3D2A20' },
-  sky: { light: '#2870A0', dark: '#1E3040' },
-  zen: { light: '#9A6B50', dark: '#342820' },
+  sun:    { light: '#F47B5E', dark: '#3D2A20' },
+  sky:    { light: '#2870A0', dark: '#1E3040' },
+  zen:    { light: '#9A6B50', dark: '#342820' },
+  forest: { light: '#4A8C5C', dark: '#243D2A' },
+  sakura: { light: '#D4708A', dark: '#3D2028' },
+  ocean:  { light: '#1A6B8A', dark: '#1E3442' },
 };
 
 /** Resolve whether dark class should be applied for a given color mode. */
@@ -39,7 +42,7 @@ function readColorMode(): ColorMode {
 /** Read saved color theme from localStorage. */
 function readColorTheme(): ColorTheme {
   const saved = lsGet<string>('colorTheme');
-  if (saved === 'sun' || saved === 'sky' || saved === 'zen') return saved;
+  if (saved === 'sun' || saved === 'sky' || saved === 'zen' || saved === 'forest' || saved === 'sakura' || saved === 'ocean') return saved;
   return 'sun';
 }
 

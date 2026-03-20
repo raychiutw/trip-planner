@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { apiFetch } from '../../hooks/useApi';
 import Icon from '../shared/Icon';
 
@@ -27,6 +27,19 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
 
   const today = new Date().toISOString().slice(0, 10);
   const fileBase = `${tripName}-${today}`;
+
+  /* --- Escape key handler --- */
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const downloadBlob = useCallback((content: string, filename: string, type: string) => {
     const blob = new Blob([content], { type });
@@ -181,7 +194,12 @@ export default function DownloadSheet({ isOpen, onClose, tripId, tripName }: Dow
   return (
     <>
       <div className="download-backdrop" onClick={onClose} />
-      <div className="download-sheet">
+      <div
+        className="download-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="下載行程"
+      >
         <div className="download-sheet-handle" />
         <div className="download-sheet-title">下載行程</div>
         <div className="download-sheet-options">

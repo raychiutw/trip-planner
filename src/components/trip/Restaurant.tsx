@@ -89,29 +89,33 @@ function ReservationDisplay({ data, fallbackUrl }: { data: ReservationInfo | str
 
 export const Restaurant = memo(function Restaurant({ restaurant: r }: RestaurantProps) {
   const parsed = parseReservation(r.reservation);
-  const hasHours = !!r.hours;
   const reservationEl = parsed ? (
     <ReservationDisplay data={parsed} fallbackUrl={r.reservationUrl ?? undefined} />
   ) : null;
-  const showMeta = hasHours || !!reservationEl;
+
+  // Build meta segments: rating · price · hours
+  const metaParts: string[] = [];
+  if (typeof r.googleRating === 'number') metaParts.push(`★ ${r.googleRating.toFixed(1)}`);
+  if (r.price) metaParts.push(r.price);
+  if (r.hours) metaParts.push(r.hours);
 
   return (
     <div className="restaurant-choice">
-      {r.category && <strong>{r.category}：</strong>}
-      {r.name}
-      {typeof r.googleRating === 'number' && (
-        <>{' '}<span className="rating">★ {r.googleRating.toFixed(1)}</span></>
+      <div className="restaurant-header">
+        <span className="restaurant-name">
+          {r.name}
+        </span>
+        {r.category && <span className="restaurant-category">{r.category}</span>}
+        {r.location && <MapLinks location={r.location} inline />}
+      </div>
+      {metaParts.length > 0 && (
+        <div className="restaurant-meta-row">
+          {metaParts.join(' · ')}
+        </div>
       )}
-      {r.description && <>{' — '}<MarkdownText text={r.description} /></>}
-      {r.price && <>，{r.price}</>}
-      <br />
-      {r.location && <MapLinks location={r.location} inline />}
-      {showMeta && (
+      {r.description && <MarkdownText text={r.description} as="div" className="restaurant-desc" />}
+      {reservationEl && (
         <span className="restaurant-meta">
-          {hasHours && (
-            <><Icon name="clock" /> {r.hours}</>
-          )}
-          {hasHours && reservationEl && ' ｜ '}
           {reservationEl}
         </span>
       )}

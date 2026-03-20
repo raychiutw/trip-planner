@@ -46,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
       const canRetry = retries < MAX_RETRIES;
 
       return this.props.fallback ?? (
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <div className="p-8 text-center">
           <h2>發生錯誤</h2>
           <p>{canRetry ? '請嘗試重新載入頁面' : '重複載入失敗，請稍後再試或聯繫管理員'}</p>
           {canRetry && (

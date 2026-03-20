@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
 /* ===== Props ===== */
@@ -21,6 +22,10 @@ const STOPS = [50, 75, 90];
 /** Minimum drag distance (px) to trigger a snap. */
 const DRAG_THRESHOLD = 30;
 
+/** Selectors for focusable elements inside the panel. */
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
 /* ===== Component ===== */
 
 /**
@@ -35,14 +40,47 @@ export default function InfoSheet({
   children,
 }: InfoSheetProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<Element | null>(null);
   const [heightStyle, setHeightStyle] = useState<string>('');
   const dragStartY = useRef(0);
+  const dragStartTime = useRef(0);
+  const lastTouchY = useRef(0);
+  const lastTouchTime = useRef(0);
   const dragging = useRef(false);
 
   /* --- Reset height when opening --- */
   useEffect(() => {
     if (open) setHeightStyle('');
   }, [open]);
+
+  /* --- Focus management on open/close --- */
+  useEffect(() => {
+    if (open) {
+      previousFocusRef.current = document.activeElement;
+      requestAnimationFrame(() => {
+        closeBtnRef.current?.focus();
+      });
+    } else {
+      if (previousFocusRef.current && previousFocusRef.current instanceof HTMLElement) {
+        previousFocusRef.current.focus();
+      }
+      previousFocusRef.current = null;
+    }
+  }, [open]);
+
+  /* --- Escape key handler --- */
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   /* --- Find nearest stop --- */
   const currentStop = useCallback((): number => {
@@ -62,6 +100,9 @@ export default function InfoSheet({
   const handleDragStart = useCallback((y: number) => {
     dragging.current = true;
     dragStartY.current = y;
+    dragStartTime.current = Date.now();
+    lastTouchY.current = y;
+    lastTouchTime.current = Date.now();
   }, []);
 
   const handleDragEnd = useCallback(
@@ -69,18 +110,23 @@ export default function InfoSheet({
       if (!dragging.current) return;
       dragging.current = false;
       const delta = dragStartY.current - y; // positive = drag up
-      if (Math.abs(delta) < DRAG_THRESHOLD) return;
+      const dt = Date.now() - lastTouchTime.current;
+      const velocity = dt > 0 ? (lastTouchY.current - y) / dt : 0; // px/ms, positive = up
+
+      // Use velocity for fast flicks, position for slow drags
+      const useVelocity = Math.abs(velocity) > 0.5;
+
+      if (!useVelocity && Math.abs(delta) < DRAG_THRESHOLD) return;
 
       const cur = currentStop();
       const idx = STOPS.indexOf(cur);
+      const goUp = useVelocity ? velocity > 0 : delta > 0;
 
-      if (delta > 0) {
-        // Drag up -> next larger stop
+      if (goUp) {
         if (idx < STOPS.length - 1) {
           setHeightStyle(STOPS[idx + 1] + 'dvh');
         }
       } else {
-        // Drag down -> next smaller stop or close
         if (idx > 0) {
           setHeightStyle(STOPS[idx - 1] + 'dvh');
         } else {
@@ -101,7 +147,11 @@ export default function InfoSheet({
   );
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (dragging.current) e.preventDefault();
+    if (dragging.current) {
+      e.preventDefault();
+      lastTouchY.current = e.touches[0].clientY;
+      lastTouchTime.current = Date.now();
+    }
   }, []);
 
   const handleTouchEnd = useCallback(
@@ -130,9 +180,31 @@ export default function InfoSheet({
     e.stopPropagation();
   }, []);
 
+  /* --- Focus trap on Tab key --- */
+  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }, []);
+
   return (
     <div
-      className={`info-sheet-backdrop${open ? ' open' : ''}`}
+      className={clsx('info-sheet-backdrop', open && 'open')}
       id="infoBottomSheet"
       onClick={onClose}
       onTouchMove={preventScroll as unknown as React.TouchEventHandler}
@@ -142,8 +214,12 @@ export default function InfoSheet({
         className="info-sheet-panel"
         id="infoSheet"
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sheet-title"
         style={heightStyle ? { height: heightStyle } : undefined}
         onClick={handlePanelClick}
+        onKeyDown={handlePanelKeyDown}
       >
         {/* Drag handle */}
         <div
@@ -161,13 +237,14 @@ export default function InfoSheet({
           onTouchEnd={handleTouchEnd}
         >
           <div className="sheet-header-spacer" />
-          <span className="sheet-title" id="sheetTitle">
+          <span className="sheet-title" id="sheet-title">
             {title}
           </span>
           <button
             className="sheet-close-btn"
             id="sheetCloseBtn"
             aria-label="關閉"
+            ref={closeBtnRef}
             onClick={onClose}
           >
             <Icon name="x-mark" />

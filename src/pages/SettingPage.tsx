@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode, type ColorMode, type ColorTheme } from '../hooks/useDarkMode';
 import { lsGet, lsSet } from '../lib/localStorage';
@@ -22,10 +23,23 @@ const COLOR_MODES: { key: ColorMode; label: string; desc: string }[] = [
   { key: 'dark', label: '深色', desc: 'Dark' },
 ];
 
-const COLOR_THEMES: { key: ColorTheme; label: string; desc: string; swatch: string; swatchDark: string }[] = [
-  { key: 'sun', label: '陽光', desc: 'Sunshine', swatch: '#F47B5E', swatchDark: '#F4A08A' },
-  { key: 'sky', label: '晴空', desc: 'Clear Sky', swatch: '#2870A0', swatchDark: '#7EC0E8' },
-  { key: 'zen', label: '和風', desc: 'Japanese Zen', swatch: '#9A6B50', swatchDark: '#D4A88E' },
+/** Theme accent colors — MUST match @theme / body.theme-* values in shared.css */
+const THEME_ACCENTS: Record<string, { light: string; dark: string }> = {
+  sun:    { light: '#E86A4A', dark: '#F4A08A' },
+  sky:    { light: '#2870A0', dark: '#7EC0E8' },
+  zen:    { light: '#9A6B50', dark: '#D4A88E' },
+  forest: { light: '#4A8C5C', dark: '#7EC89A' },
+  sakura: { light: '#D4708A', dark: '#F0A0B8' },
+  ocean:  { light: '#1A6B8A', dark: '#60C0E0' },
+};
+
+const COLOR_THEMES: { key: ColorTheme; label: string; desc: string }[] = [
+  { key: 'sun',    label: '陽光', desc: 'Sunshine' },
+  { key: 'sky',    label: '晴空', desc: 'Clear Sky' },
+  { key: 'zen',    label: '和風', desc: 'Japanese Zen' },
+  { key: 'forest', label: '森林', desc: 'Deep Forest' },
+  { key: 'sakura', label: '櫻花', desc: 'Cherry Blossom' },
+  { key: 'ocean',  label: '深海', desc: 'Deep Ocean' },
 ];
 
 /* ===== Component ===== */
@@ -158,12 +172,12 @@ export default function SettingPage() {
                 <div className="setting-section-title">選擇行程</div>
                 <div className="setting-trip-list" id="tripList">
                   {loading && (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+                    <div className="text-center p-10 text-[var(--color-muted)]">
                       載入中...
                     </div>
                   )}
                   {loadError && (
-                    <div style={{ color: 'var(--text-muted)', padding: '16px' }}>
+                    <div className="text-[var(--color-muted)] p-4">
                       無法載入行程清單
                     </div>
                   )}
@@ -172,7 +186,7 @@ export default function SettingPage() {
                     trips.map((t) => (
                       <button
                         key={t.tripId}
-                        className={`trip-btn${t.tripId === currentTripId ? ' active' : ''}`}
+                        className={clsx('trip-btn', t.tripId === currentTripId && 'active')}
                         data-trip-id={t.tripId}
                         onClick={() => handleTripClick(t.tripId)}
                       >
@@ -194,7 +208,7 @@ export default function SettingPage() {
                   {COLOR_MODES.map((m) => (
                     <button
                       key={m.key}
-                      className={`color-mode-card${m.key === colorMode ? ' active' : ''}`}
+                      className={clsx('color-mode-card', m.key === colorMode && 'active')}
                       data-mode={m.key}
                       onClick={() => handleColorModeClick(m.key)}
                     >
@@ -215,13 +229,13 @@ export default function SettingPage() {
                   {COLOR_THEMES.map((t) => (
                     <button
                       key={t.key}
-                      className={`color-theme-card${t.key === colorTheme ? ' active' : ''}`}
+                      className={clsx('color-theme-card', t.key === colorTheme && 'active')}
                       data-theme={t.key}
                       onClick={() => handleThemeClick(t.key)}
                     >
                       <div
                         className="color-theme-swatch"
-                        style={{ background: isDark ? t.swatchDark : t.swatch }}
+                        style={{ background: isDark ? THEME_ACCENTS[t.key].dark : THEME_ACCENTS[t.key].light }}
                       />
                       <div className="color-theme-label">{t.label}</div>
                       <div className="color-theme-desc">{t.desc}</div>
@@ -239,13 +253,13 @@ export default function SettingPage() {
                   {COLOR_THEMES.map((t) => (
                     <button
                       key={t.key}
-                      className={`color-theme-card${t.key === colorTheme ? ' active' : ''}`}
+                      className={clsx('color-theme-card', t.key === colorTheme && 'active')}
                       data-theme={t.key}
                       onClick={() => handleThemeClick(t.key)}
                     >
                       <div
                         className="color-theme-swatch"
-                        style={{ background: isDark ? t.swatchDark : t.swatch }}
+                        style={{ background: isDark ? THEME_ACCENTS[t.key].dark : THEME_ACCENTS[t.key].light }}
                       />
                       <div className="color-theme-label">{t.label}</div>
                       <div className="color-theme-desc">{t.desc}</div>

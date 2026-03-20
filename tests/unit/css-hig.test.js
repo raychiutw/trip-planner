@@ -12,12 +12,29 @@ const CSS_FILES = {
 const ALL_CSS = Object.values(CSS_FILES).join('\n');
 
 /**
- * Strip :root { … } and body.dark { … } token definition blocks.
- * These blocks ARE the single source of truth; we only lint usage sites.
+ * Strip token definition blocks (single source of truth); we only lint usage sites.
+ * Handles: :root { … }, @theme { … }, @layer base { nested… }, body.theme-* { … }
  */
 function stripTokenBlocks(css) {
-    return css
+    let result = css
+        .replace(/@theme\s*\{[^}]*\}/g, '');
+    // Robust @layer base removal: brace-depth counting to handle any nesting
+    const layerRe = /@layer\s+base\s*\{/g;
+    let m;
+    while ((m = layerRe.exec(result)) !== null) {
+        let depth = 1;
+        let i = m.index + m[0].length;
+        while (i < result.length && depth > 0) {
+            if (result[i] === '{') depth++;
+            else if (result[i] === '}') depth--;
+            i++;
+        }
+        result = result.slice(0, m.index) + result.slice(i);
+        layerRe.lastIndex = m.index;
+    }
+    return result
         .replace(/:root\s*\{[^}]*\}/g, '')
+        .replace(/body\.theme-[\w.-]*\s*\{[^}]*\}/g, '')
         .replace(/body\.dark\s*\{[^}]*\}/g, '');
 }
 
@@ -111,7 +128,7 @@ describe('CSS HIG Compliance', () => {
             expect(violations, `Hardcoded #fff found:\n${violations.join('\n')}`).toEqual([]);
         });
 
-        it('font-size only uses var(--fs-*) tokens', () => {
+        it('font-size only uses var(--font-size-*) tokens', () => {
             const cleaned = stripTokenBlocks(stripPrintBlocks(ALL_CSS));
             const rules = extractRules(cleaned);
             const violations = [];
@@ -121,8 +138,8 @@ describe('CSS HIG Compliance', () => {
                 if (!fsMatch) continue;
                 for (const fs of fsMatch) {
                     const value = fs.replace(/font-size\s*:\s*/, '').trim();
-                    // Allowed: var(--fs-*), em, rem, %, inherit, initial, unset
-                    if (/var\(--fs-/.test(value)) continue;
+                    // Allowed: var(--font-size-*), em, rem, %, inherit, initial, unset
+                    if (/var\(--font-size-/.test(value)) continue;
                     if (/^\d+(\.\d+)?(em|rem|%)$/.test(value)) continue;
                     if (/^(inherit|initial|unset)$/.test(value)) continue;
                     violations.push(`${selector}: font-size: ${value}`);
@@ -208,7 +225,7 @@ describe('CSS HIG Compliance', () => {
 
     describe('Visual consistency', () => {
 
-        it('.sticky-nav has no solid var(--bg) or rgba() background', () => {
+        it('.sticky-nav has no solid var(--color-background) or rgba() background', () => {
             const cleaned = stripPrintBlocks(ALL_CSS);
             const rules = extractRules(cleaned);
             const violations = [];
@@ -216,8 +233,8 @@ describe('CSS HIG Compliance', () => {
             for (const { selector, body } of rules) {
                 if (!selector.includes('sticky-nav')) continue;
                 // Check for background: var(--bg) (solid, not color-mix)
-                if (/background\s*:\s*var\(--bg\)/.test(body)) {
-                    violations.push(`${selector}: background: var(--bg) [should use color-mix or inherit frosted glass]`);
+                if (/background\s*:\s*var\(--color-background\)/.test(body)) {
+                    violations.push(`${selector}: background: var(--color-background) [should use color-mix or inherit frosted glass]`);
                 }
                 // Check for rgba( background
                 if (/background\s*:\s*rgba\(/.test(body)) {

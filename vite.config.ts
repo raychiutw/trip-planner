@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 
@@ -15,7 +16,7 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
   : [];
 
 export default defineConfig({
-  plugins: [react(), ...sentryPlugins],
+  plugins: [tailwindcss(), react(), ...sentryPlugins],
   root: '.',
   build: {
     outDir: 'dist',

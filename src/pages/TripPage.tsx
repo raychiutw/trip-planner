@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { apiFetch } from '../hooks/useApi';
 import { lsGet, lsSet, lsRemove, lsRenewAll } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
-import { useDarkMode } from '../hooks/useDarkMode';
+import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
+import { useSwipeDay } from '../hooks/useSwipeDay';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
@@ -21,6 +22,7 @@ import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
 import { DayHeaderArt, DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DownloadSheet from '../components/trip/DownloadSheet';
+import TodayRouteSheet from '../components/trip/TodayRouteSheet';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
@@ -34,8 +36,8 @@ import type { SuggestionsData } from '../components/trip/Suggestions';
 
 /* ===== Module-level constants (#14: hoist inline styles) ===== */
 
-const LOADING_STYLE: React.CSSProperties = { textAlign: 'center', padding: 40, color: 'var(--text-muted)' };
-const UNPUBLISHED_STYLE: React.CSSProperties = { color: 'var(--text-muted)', marginTop: 8 };
+const LOADING_CLASS = 'text-center p-10 text-[var(--color-muted)]';
+const UNPUBLISHED_CLASS = 'text-[var(--color-muted)] mt-2';
 
 /* ===== Static early-return views (#13: hoist to module level) ===== */
 
@@ -58,7 +60,7 @@ const UNPUBLISHED_VIEW = (
       <div id="tripContent">
         <div className="trip-error">
           <p>此行程已下架</p>
-          <p style={UNPUBLISHED_STYLE}>2 秒後跳轉至設定頁…</p>
+          <p className={UNPUBLISHED_CLASS}>2 秒後跳轉至設定頁…</p>
         </div>
       </div>
     </div>
@@ -69,7 +71,7 @@ const LOADING_VIEW = (
   <div className="page-layout">
     <div className="container">
       <div id="tripContent">
-        <div style={LOADING_STYLE}>載入行程資料中...</div>
+        <div className={LOADING_CLASS}>載入行程資料中...</div>
       </div>
     </div>
   </div>
@@ -82,7 +84,7 @@ interface DaySectionProps {
   day: Day | undefined;
   daySummary: DaySummary | undefined;
   autoScrollDates: string[];
-  themeArt?: { theme: 'sun' | 'sky' | 'zen'; dark: boolean };
+  themeArt?: { theme: ColorTheme; dark: boolean };
 }
 
 const DaySection = React.memo(function DaySection({
@@ -110,7 +112,7 @@ const DaySection = React.memo(function DaySection({
 
   return (
     <section className="day-section" data-day={dayNum}>
-      <div className="day-header info-header" id={`day${dayNum}`} style={{ position: 'relative' }}>
+      <div className="day-header info-header relative" id={`day${dayNum}`}>
         <h2>Day {dayNum}</h2>
         {daySummary?.label && (
           <span className="day-label">{daySummary.label}</span>
@@ -155,7 +157,7 @@ const DaySection = React.memo(function DaySection({
             </div>
 
             {timeline.length > 0 && (
-              <Timeline events={timeline.map((e) => toTimelineEntry(e as unknown as Record<string, unknown>))} />
+              <Timeline events={timeline.map((e) => toTimelineEntry(e as unknown as Record<string, unknown>))} dayDate={dayDate ?? null} />
             )}
           </>
         )}
@@ -198,6 +200,7 @@ const SHEET_TITLES: Record<string, string> = {
   emergency: '緊急聯絡',
   suggestions: 'AI 行程建議',
   driving: '交通統計',
+  'today-route': '今日路線',
   prep: '行前準備',
   'emergency-group': '緊急應變',
   'ai-group': 'AI 分析',
@@ -220,6 +223,7 @@ export default function TripPage() {
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
+  const tripContentRef = useRef<HTMLDivElement>(null);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorTheme } = useDarkMode();
@@ -580,6 +584,38 @@ export default function TripPage() {
     [days],
   );
 
+  /* --- Today's day_num for DayNav today marker --- */
+  const todayDayNum = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const match = days.find((d) => d.date === today);
+    return match?.day_num;
+  }, [days]);
+
+  /* --- Swipe to switch day (#10) --- */
+  const handleSwipeLeft = useCallback(() => {
+    const idx = dayNums.indexOf(currentDayNum);
+    if (idx < dayNums.length - 1) {
+      const nextDay = dayNums[idx + 1];
+      switchDay(nextDay);
+      scrollToDay(nextDay);
+    }
+  }, [dayNums, currentDayNum, switchDay]);
+
+  const handleSwipeRight = useCallback(() => {
+    const idx = dayNums.indexOf(currentDayNum);
+    if (idx > 0) {
+      const prevDay = dayNums[idx - 1];
+      switchDay(prevDay);
+      scrollToDay(prevDay);
+    }
+  }, [dayNums, currentDayNum, switchDay]);
+
+  useSwipeDay(tripContentRef, {
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    enabled: !loading && dayNums.length > 1,
+  });
+
   /* --- DayNav click: scroll to day section (#4) --- */
   const handleSwitchDay = useCallback(
     (dayNum: number) => {
@@ -738,6 +774,10 @@ export default function TripPage() {
         return emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>;
       case 'suggestions':
         return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>無行程建議</p>;
+      case 'today-route':
+        return currentDay && currentDay.timeline.length > 0
+          ? <TodayRouteSheet events={currentDay.timeline.map((e) => toTimelineEntry(e as unknown as Record<string, unknown>))} />
+          : <p>無行程資料</p>;
       case 'driving':
         return tripDrivingStats
           ? <TripDrivingStatsCard tripStats={tripDrivingStats} />
@@ -766,7 +806,7 @@ export default function TripPage() {
         );
       case 'tools':
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px 0' }}>
+          <div className="flex flex-col gap-2 py-2">
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=trip'; }}>
               <Icon name="swap-horiz" /><span>切換行程</span>
             </button>
@@ -776,7 +816,7 @@ export default function TripPage() {
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
               <Icon name="printer" /><span>列印模式</span>
             </button>
-            <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }} />
+            <hr className="border-none border-t border-[var(--color-border)] my-1" />
             <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); setTimeout(() => window.print(), 300); }}>
               <Icon name="download" /><span>匯出 PDF</span>
             </button>
@@ -821,16 +861,16 @@ export default function TripPage() {
       {/* Sticky Nav */}
       <div className="sticky-nav" id="stickyNav">
         <span className="nav-brand">{trip?.name || 'Trip Planner'}</span>
-        <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} />
+        <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} todayDayNum={todayDayNum} />
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
       {/* Page Layout */}
       <div className="page-layout">
         <div className="container">
-          <div id="tripContent">
+          <div id="tripContent" ref={tripContentRef}>
             {loading && (
-              <div style={LOADING_STYLE}>載入行程資料中...</div>
+              <div className={LOADING_CLASS}>載入行程資料中...</div>
             )}
 
             {/* #12: DaySection memo components with #11 Map lookup */}
@@ -861,6 +901,8 @@ export default function TripPage() {
           <InfoPanel
             autoScrollDates={autoScrollDates}
             days={loadedDays}
+            currentDay={currentDay}
+            onQuickAction={handleSpeedDialItem}
           />
         )}
       </div>

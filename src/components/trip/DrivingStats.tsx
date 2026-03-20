@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import clsx from 'clsx';
 import Icon from '../shared/Icon';
 import {
   ARROW_EXPAND,
@@ -59,7 +60,7 @@ interface DayDrivingStatsProps {
 export function DayDrivingStatsCard({ stats }: DayDrivingStatsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isWarning = isDrivingWarning(stats.drivingMinutes);
-  const cls = isWarning ? 'driving-stats driving-stats-warning' : 'driving-stats';
+  const cls = clsx('driving-stats', isWarning && 'driving-stats-warning');
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -68,7 +69,7 @@ export function DayDrivingStatsCard({ stats }: DayDrivingStatsProps) {
   return (
     <div className={cls}>
       <div
-        className={`col-row${isOpen ? ' open' : ''}`}
+        className={clsx('col-row', isOpen && 'open')}
         role="button"
         tabIndex={0}
         aria-expanded={isOpen}
@@ -83,7 +84,7 @@ export function DayDrivingStatsCard({ stats }: DayDrivingStatsProps) {
         )}
         <span className="arrow">{isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>
-      <div className={`col-detail${isOpen ? ' open' : ''}`}>
+      <div className={clsx('col-detail', isOpen && 'open')}>
         <TransportTypeGroups byType={stats.byType} />
       </div>
     </div>
@@ -125,7 +126,7 @@ export function TripDrivingStatsCard({ tripStats }: TripDrivingStatsProps) {
           return (
             <div
               key={d.dayId}
-              className={`driving-summary-day${isWarning ? ' driving-stats-warning' : ''}`}
+              className={clsx('driving-summary-day', isWarning && 'driving-stats-warning')}
             >
               <div className="driving-summary-day-header">
                 <strong>

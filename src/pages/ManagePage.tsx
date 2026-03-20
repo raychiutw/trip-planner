@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import clsx from 'clsx';
 import Icon from '../components/shared/Icon';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -54,13 +55,13 @@ function RequestItem({ req }: { req: RawRequest }) {
     : '';
 
   return (
-    <div className={`request-item ${stateClass}`}>
+    <div className={clsx('request-item', stateClass)}>
       <div className="request-item-header">
-        <span className={`request-badge ${stateClass}`}>
+        <span className={clsx('request-badge', stateClass)}>
           <Icon name={badgeIconName} />
           {badgeText}
         </span>
-        <span className={`request-mode-badge mode-${mode}`}>{modeBadgeText}</span>
+        <span className={clsx('request-mode-badge', `mode-${mode}`)}>{modeBadgeText}</span>
         <span className="request-item-title">{req.title}</span>
       </div>
       {req.body && <div className="request-item-body">{req.body}</div>}
@@ -343,21 +344,21 @@ export default function ManagePage() {
         <main className="manage-main" id="manageMain">
           {/* Loading state */}
           {pageState.kind === 'loading' && (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
+            <div className="text-center p-10 text-[var(--color-muted)]">
               載入中...
             </div>
           )}
 
           {/* Auth required */}
           {pageState.kind === 'auth-required' && (
-            <div className="manage-no-permission" style={{ margin: '40px var(--padding-h)' }}>
+            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
               請先登入
             </div>
           )}
 
           {/* No permission / no published trips */}
           {pageState.kind === 'no-permission' && (
-            <div className="manage-no-permission" style={{ margin: '40px var(--padding-h)' }}>
+            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
               {pageState.message}
             </div>
           )}
@@ -368,9 +369,10 @@ export default function ManagePage() {
               {/* Messages area */}
               <div className="chat-messages">
                 <div
-                  className={`chat-messages-inner${
-                    showEmptyOrLoading && !hasRequests ? ' chat-messages-inner--centered' : ''
-                  }`}
+                  className={clsx(
+                    'chat-messages-inner',
+                    showEmptyOrLoading && !hasRequests && 'chat-messages-inner--centered',
+                  )}
                 >
                   <div id="manageRequests">
                     {requestsLoading && (
@@ -412,14 +414,14 @@ export default function ManagePage() {
                   <div className="manage-input-toolbar">
                     <div className="manage-mode-toggle" id="requestMode" data-value={mode}>
                       <button
-                        className={`manage-mode-pill${mode === 'trip-edit' ? ' selected' : ''}`}
+                        className={clsx('manage-mode-pill', mode === 'trip-edit' && 'selected')}
                         data-mode="trip-edit"
                         onClick={() => setMode('trip-edit')}
                       >
                         改行程
                       </button>
                       <button
-                        className={`manage-mode-pill${mode === 'trip-plan' ? ' selected-plan' : ''}`}
+                        className={clsx('manage-mode-pill', mode === 'trip-plan' && 'selected-plan')}
                         data-mode="trip-plan"
                         onClick={() => setMode('trip-plan')}
                       >
@@ -428,7 +430,7 @@ export default function ManagePage() {
                     </div>
                     <div id="submitStatus" aria-live="polite">
                       {submitStatus && (
-                        <div className={`manage-status ${submitStatus.type}`}>
+                        <div className={clsx('manage-status', submitStatus.type)}>
                           {submitStatus.type === 'success' && <Icon name="check-circle" />}
                           {submitStatus.type === 'error' && <Icon name="x-circle" />}
                           {submitStatus.type === 'error' ? ' ' : ''}
