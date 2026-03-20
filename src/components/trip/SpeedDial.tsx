@@ -97,6 +97,7 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
 
   return (
     <div className={clsx('speed-dial', isOpen && 'open')} id="speedDial">
+      {/* Backdrop: prevent scroll passthrough to page content while dial is open */}
       <div
         className="speed-dial-backdrop"
         id="speedDialBackdrop"
@@ -126,12 +127,11 @@ export default function SpeedDial({ onItemClick, onGroupClick, onPrint, onDownlo
         aria-label="快速選單"
         aria-expanded={isOpen}
         aria-haspopup="true"
+        aria-controls="speedDialItems"
         ref={triggerRef}
         onClick={handleToggle}
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-          <path d="M12 8l-6 6h12z" />
-        </svg>
+        <Icon name="expand_less" />
       </button>
     </div>
   );

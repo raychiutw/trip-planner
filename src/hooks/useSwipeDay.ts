@@ -1,4 +1,7 @@
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
+
+/** Minimum ratio of horizontal to vertical displacement to qualify as a horizontal swipe. */
+const SWIPE_DIRECTION_RATIO = 1.2;
 
 interface UseSwipeDayOptions {
   onSwipeLeft: () => void;
@@ -14,6 +17,12 @@ export function useSwipeDay(
   containerRef: RefObject<HTMLElement | null>,
   { onSwipeLeft, onSwipeRight, enabled = true }: UseSwipeDayOptions,
 ) {
+  const callbackRef = useRef({ onSwipeLeft, onSwipeRight });
+
+  useEffect(() => {
+    callbackRef.current = { onSwipeLeft, onSwipeRight };
+  });
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !enabled) return;
@@ -43,19 +52,21 @@ export function useSwipeDay(
       const dt = Date.now() - startTime;
 
       // Must be primarily horizontal
-      if (Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      if (Math.abs(dx) < Math.abs(dy) * SWIPE_DIRECTION_RATIO) return;
       // Minimum distance: 50px
       if (Math.abs(dx) < 50) return;
       // Speed threshold: 0.3px/ms
       if (dt > 0 && Math.abs(dx) / dt < 0.3) return;
 
       if (dx < 0) {
-        onSwipeLeft();
+        callbackRef.current.onSwipeLeft();
       } else {
-        onSwipeRight();
+        callbackRef.current.onSwipeRight();
       }
     }
 
+    // passive: true — we never call preventDefault() in these handlers, so passive
+    // improves scroll performance (allows browser to scroll without waiting for JS).
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
     el.addEventListener('touchend', handleTouchEnd, { passive: true });
 
@@ -63,5 +74,5 @@ export function useSwipeDay(
       el.removeEventListener('touchstart', handleTouchStart);
       el.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [containerRef, onSwipeLeft, onSwipeRight, enabled]);
+  }, [containerRef, enabled]);
 }
