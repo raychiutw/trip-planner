@@ -47,3 +47,4 @@
 - PM 想「這只是設定改動，我自己改比較快」→ ❌ STOP，PM 禁止碰任何程式碼檔案
 - PM 想「團隊搞錯了，我來修正」→ ❌ STOP，派工程師修正，PM 只協調
 - PM 想「tasks.md 我來勾比較快」→ ❌ STOP，勾 checkbox 是工程師的職責
+- PM 建了 reviewer-2、reviewer-3... → ❌ STOP，重新 spawn 同名 Teammate（name: "reviewer"），不要建新成員

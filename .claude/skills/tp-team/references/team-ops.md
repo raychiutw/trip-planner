@@ -61,6 +61,22 @@ Step 5: 完成後 shutdown
 - 避免「這個很簡單不用 review」導致的品質漏洞
 - 跨 session 繼續：team 已存在，直接派 Teammate 加入，不需 TeamCreate
 
+### Teammate 命名規則（固定名字，重複使用）
+
+**固定 4 個角色名字，不要每次建新名字：**
+
+| 角色 | 固定名字 | 並行時 |
+|------|---------|--------|
+| 工程師 | `engineer` | `engineer-a` + `engineer-b`（最多 3 人） |
+| Reviewer | `reviewer` | 只需 1 人 |
+| QC | `qc` | 只需 1 人 |
+| Challenger | `challenger` | 只需 1 人 |
+
+- ❌ 錯誤：`reviewer` → `reviewer-2` → `reviewer-3` → `reviewer-r2`
+- ✅ 正確：每次都 spawn `name: "reviewer"`，同名成員回歸 team
+- Team config 會記住成員，重新 spawn 同名 = 同一個人回來接手
+- shutdown 後再 spawn 同名，不需要建新名字
+
 ## tasks.md + Task List 雙軌
 
 ```
