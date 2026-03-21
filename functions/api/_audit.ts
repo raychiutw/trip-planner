@@ -16,9 +16,9 @@ export async function logAudit(db: D1Database, opts: {
     opts.recordId,
     opts.action,
     opts.changedBy,
-    opts.requestId || null,
-    opts.diffJson || null,
-    opts.snapshot || null,
+    opts.requestId ?? null,
+    opts.diffJson ?? null,
+    opts.snapshot ?? null,
   ).run();
 }
 
