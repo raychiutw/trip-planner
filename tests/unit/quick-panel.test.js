@@ -283,9 +283,9 @@ describe('QuickPanel sheet actions', () => {
 /* ===== Body scroll lock ===== */
 
 describe('QuickPanel scroll lock', () => {
-  it('implements body scroll lock like InfoSheet', () => {
-    expect(tsx).toContain('document.body.style.position');
-    expect(tsx).toContain('savedBodyScrollY');
+  it('implements body scroll lock via useBodyScrollLock hook', () => {
+    expect(tsx).toContain('useBodyScrollLock');
+    expect(tsx).toContain('isOpen');
   });
 });
 

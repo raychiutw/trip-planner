@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 /* ===== Panel item config ===== */
 
@@ -61,7 +62,6 @@ export default function QuickPanel({
   const sheetRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-  const savedBodyScrollY = useRef(0);
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -71,25 +71,8 @@ export default function QuickPanel({
     setIsOpen(false);
   }, []);
 
-  /* --- Body scroll lock (iOS Safari safe, same pattern as InfoSheet) --- */
-  useEffect(() => {
-    if (isOpen) {
-      savedBodyScrollY.current = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${savedBodyScrollY.current}px`;
-      document.body.style.width = '100%';
-    } else {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      window.scrollTo(0, savedBodyScrollY.current);
-    }
-    return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-    };
-  }, [isOpen]);
+  /* --- Body scroll lock (iOS Safari safe) --- */
+  useBodyScrollLock(isOpen);
 
   /* --- Focus management on open/close --- */
   useEffect(() => {

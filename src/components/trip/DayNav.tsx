@@ -70,6 +70,13 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
     nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
   }, []);
 
+  /* --- Cleanup long-press timer on unmount --- */
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    };
+  }, []);
+
   /* --- Attach scroll + resize listeners --- */
   useEffect(() => {
     const nav = navRef.current;

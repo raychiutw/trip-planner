@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 /* ===== Props ===== */
 
@@ -41,8 +42,6 @@ export default function InfoSheet({
   const bodyRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
-  // C.5: saved scroll position for iOS body lock
-  const savedBodyScrollY = useRef(0);
 
   /* --- Multi-detent state (mobile only) --- */
   const [detent, setDetent] = useState<'half' | 'full'>('half');
@@ -62,24 +61,7 @@ export default function InfoSheet({
   }, []);
 
   /* --- C.5: Body scroll lock (iOS Safari safe) --- */
-  useEffect(() => {
-    if (open) {
-      savedBodyScrollY.current = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${savedBodyScrollY.current}px`;
-      document.body.style.width = '100%';
-    } else {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      window.scrollTo(0, savedBodyScrollY.current);
-    }
-    return () => {
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-    };
-  }, [open]);
+  useBodyScrollLock(open);
 
   /* --- Focus management on open/close --- */
   useEffect(() => {
