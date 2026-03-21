@@ -116,12 +116,12 @@ describe('QuickPanel CSS structure', () => {
   });
 });
 
-/* ===== R4-7: Bottom Sheet fixed 85dvh ===== */
+/* ===== R4-7: Bottom Sheet fixed height ===== */
 
 describe('R4-7 Bottom Sheet fixed height', () => {
-  it('.info-sheet-panel has height 85dvh or 85vh', () => {
+  it('.info-sheet-panel has height 92dvh or 92vh', () => {
     const body = ruleBody(styleCss, '.info-sheet-panel');
-    expect(body).toMatch(/height:\s*85[dv]vh/);
+    expect(body).toMatch(/height:\s*92[dv]vh/);
   });
 
   it('no .dragging class in CSS', () => {

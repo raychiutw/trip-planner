@@ -681,7 +681,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .info-sheet-backdrop.open { opacity: 1; pointer-events: auto; }
 .info-sheet-panel {
     position: fixed; bottom: 0; left: 0; right: 0;
-    height: 85dvh; height: 85vh;
+    height: 92dvh; height: 92vh;
     background: var(--color-secondary);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     z-index: var(--z-info-sheet);
@@ -690,7 +690,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     display: flex; flex-direction: column;
     padding: 12px var(--padding-h) max(24px, env(safe-area-inset-bottom));
 }
-@supports (height: 85dvh) { .info-sheet-panel { height: 85dvh; } }
+@supports (height: 92dvh) { .info-sheet-panel { height: 92dvh; } }
 .info-sheet-backdrop.open .info-sheet-panel { transform: translateY(0); }
 .sheet-handle {
     width: 36px; height: 4px;
