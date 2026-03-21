@@ -42,8 +42,9 @@ functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permission
                     trips/[id].ts  trips/[id]/days.ts  days/[num].ts  docs/[type].ts
                     entries/[eid].ts  restaurants/[rid].ts  shopping/[sid].ts  ...
 migrations/         0001_init.sql  0002_trips.sql
-scripts/            migrate-md-to-d1.js  tp-check.js  daily-report.js  memory-sync.sh
+scripts/            migrate-md-to-d1.js  tp-check.js  daily-report.js  dump-d1.js  memory-sync.sh
                     register-scheduler.ps1  unregister-scheduler.ps1  tp-request-scheduler.ps1
+backups/            D1 資料快照（dump-d1.js 產出，納入版控）
 tests/              unit/  integration/  e2e/
 openspec/           config.yaml（開發規則唯一來源）  specs/  changes/
 vite.config.ts      Vite 多入口建置（4 個 HTML）
@@ -107,6 +108,15 @@ D1 Tables:
 - **Zero Trust 成員**：通過 Access 登入即可寫入行程
 - **Admin**（lean.lean@gmail.com）：可管理權限、查看 audit log、rollback
 - **Service Token**：tp-request CLI 用，等同 admin 權限
+
+## D1 安全規則
+
+**詳細規則定義在 `openspec/config.yaml` 的 `d1_safety` 區塊，以下為摘要。**
+
+- **Migration 禁止 DROP TABLE** 被 FK ON DELETE CASCADE 引用的表 — D1 預設啟用 foreign_keys，DROP 會連鎖刪除所有子表資料
+- **Migration 執行前必須先備份**：`node scripts/dump-d1.js` → `backups/{timestamp}/`
+- **備份檔納入版控**，確保可追溯
+- **還原優先用 D1 Time Travel**：`npx wrangler d1 time-travel restore trip-planner-db --timestamp <RFC3339>`
 
 ## 已知問題與解法
 
