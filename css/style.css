@@ -730,6 +730,9 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 }
 .sheet-header-spacer { width: var(--tap-min); flex-shrink: 0; }
 .info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
-.info-sheet-body > * { max-width: 600px; margin-left: auto; margin-right: auto; }
+.info-sheet-body > .setting-page { max-width: 520px; margin-left: auto; margin-right: auto; }
+@media (min-width: 768px) {
+    .info-sheet-body { display: flex; justify-content: center; }
+}
 
 
