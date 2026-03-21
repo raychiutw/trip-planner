@@ -52,14 +52,26 @@ if ($count -eq 0) {
     exit 0
 }
 
-# Log each request summary
+# Log each request summary and PATCH status → received
 for ($i = 0; $i -lt $count; $i++) {
     $req = if ($response -is [System.Array]) { $response[$i] } else { $response }
     $rid = $req.id
     $tripId = $req.trip_id
     $mode = $req.mode
-    $title = $req.title
-    Log "  [$($i+1)/$count] id=$rid trip=$tripId mode=$mode title=$title"
+    $msg = if ($req.message) { $req.message.Substring(0, [Math]::Min(50, $req.message.Length)) } else { "(empty)" }
+    Log "  [$($i+1)/$count] id=$rid trip=$tripId mode=$mode msg=$msg"
+
+    # PATCH status → received（系統已接收）
+    try {
+        $patchBody = @{ status = "received" } | ConvertTo-Json -Compress
+        Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests/$rid" `
+            -Method Patch -Headers $headers -ContentType "application/json" `
+            -Body $patchBody -ErrorAction Stop | Out-Null
+        Log "  id=$rid status → received"
+    }
+    catch {
+        Log "  id=$rid PATCH received 失敗: $_"
+    }
 }
 
 # Invoke Claude tp-request
@@ -73,6 +85,23 @@ try {
 }
 catch {
     Log "Claude 執行失敗: $_"
+
+    # 回滾：將所有已設為 received 的請求退回 open
+    for ($i = 0; $i -lt $count; $i++) {
+        $req = if ($response -is [System.Array]) { $response[$i] } else { $response }
+        $rid = $req.id
+        try {
+            $rollbackBody = @{ status = "open" } | ConvertTo-Json -Compress
+            Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests/$rid" `
+                -Method Patch -Headers $headers -ContentType "application/json" `
+                -Body $rollbackBody -ErrorAction Stop | Out-Null
+            Log "  id=$rid 回滾 status → open"
+        }
+        catch {
+            Log "  id=$rid 回滾失敗: $_"
+        }
+    }
+
     Log "--- 排程結束（錯誤）---"
     exit 1
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import clsx from 'clsx';
 import Icon from '../components/shared/Icon';
+import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { sanitizeHtml } from '../lib/sanitize';
@@ -14,11 +15,10 @@ interface RawRequest {
   id: number;
   trip_id: string;
   mode: string;
-  title: string;
-  body: string;
-  submitted_by?: string | null;
-  reply?: string | null;
-  status: string;
+  message: string;
+  submitted_by: string | null;
+  reply: string | null;
+  status: 'open' | 'received' | 'processing' | 'completed';
   created_at: string;
 }
 
@@ -34,19 +34,16 @@ interface TripInfo {
 
 /* ===== Request Item Component ===== */
 
-function RequestItem({ req }: { req: RawRequest }) {
-  const date = new Date(req.created_at + 'Z').toLocaleString('zh-TW', {
+function formatDate(iso: string): string {
+  return new Date(iso + 'Z').toLocaleString('zh-TW', {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
-  const stateClass = req.status === 'open' ? 'open' : 'closed';
-  const badgeText = req.status === 'open' ? '處理中' : '已處理';
-  const badgeIconName = req.status === 'open' ? 'circle-dot' : 'check-circle';
-  const mode = req.mode === 'trip-plan' ? 'plan' : 'edit';
-  const modeBadgeText = mode === 'plan' ? '問建議' : '改行程';
+}
 
+function RequestItem({ req }: { req: RawRequest }) {
   const replyHtml = req.reply
     ? sanitizeHtml(marked.parse(req.reply) as string).replace(
         /<table([^>]*)>/g,
@@ -55,25 +52,30 @@ function RequestItem({ req }: { req: RawRequest }) {
     : '';
 
   return (
-    <div className={clsx('request-item', stateClass)}>
+    <div className="request-item">
+      {/* Header: mode badge + time */}
       <div className="request-item-header">
-        <span className={clsx('request-badge', stateClass)}>
-          <Icon name={badgeIconName} />
-          {badgeText}
+        <span className={clsx('request-mode-badge', `mode-${req.mode === 'trip-edit' ? 'edit' : 'plan'}`)}>
+          {req.mode === 'trip-edit' ? '改行程' : '問建議'}
         </span>
-        <span className={clsx('request-mode-badge', `mode-${mode}`)}>{modeBadgeText}</span>
-        <span className="request-item-title">{req.title}</span>
+        <span className="request-item-meta">{formatDate(req.created_at)}</span>
       </div>
-      {req.body && <div className="request-item-body">{req.body}</div>}
-      <div className="request-item-meta">
-        #{req.id} · {date}
-        {req.submitted_by && <> · {req.submitted_by}</>}
-      </div>
+
+      {/* Message */}
+      <div className="request-item-message">{req.message}</div>
+
+      {/* Submitted by */}
+      {req.submitted_by && <div className="request-item-submitter">{req.submitted_by}</div>}
+
+      {/* Stepper */}
+      <RequestStepper status={req.status} />
+
+      {/* Reply (if completed) */}
       {req.reply && (
-        <div
-          className="request-reply"
-          dangerouslySetInnerHTML={{ __html: replyHtml }}
-        />
+        <>
+          <div className="request-reply-divider" />
+          <div className="request-reply" dangerouslySetInnerHTML={{ __html: replyHtml }} />
+        </>
       )}
     </div>
   );
@@ -222,8 +224,6 @@ export default function ManagePage() {
     setSubmitting(true);
     setSubmitStatus(null);
 
-    const title = trimmed.substring(0, 50);
-
     try {
       const res = await fetch('/api/requests', {
         method: 'POST',
@@ -231,8 +231,7 @@ export default function ManagePage() {
         body: JSON.stringify({
           tripId: currentTripId,
           mode,
-          title,
-          body: trimmed,
+          message: trimmed,
         }),
       });
 

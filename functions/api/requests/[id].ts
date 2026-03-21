@@ -46,8 +46,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     values.push(body.reply);
   }
   if (body.status !== undefined) {
-    if (body.status !== 'open' && body.status !== 'closed') {
-      return json({ error: 'status 必須是 open 或 closed' }, 400);
+    const validStatuses = ['open', 'received', 'processing', 'completed'];
+    if (!validStatuses.includes(body.status)) {
+      return json({ error: 'status 必須是 open、received、processing 或 completed' }, 400);
     }
     updates.push('status = ?');
     values.push(body.status);

@@ -1,6 +1,7 @@
 /**
  * GET /api/requests?tripId=xxx&status=open
- * POST /api/requests { tripId, mode, title, body }
+ * POST /api/requests { tripId, mode, message }
+ *   (legacy fallback: title + body → message)
  */
 
 import { logAudit } from './_audit';
@@ -76,17 +77,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
   const auth = (context.data as Record<string, unknown>).auth as AuthData;
 
-  let body: { tripId?: string; mode?: string; title?: string; body?: string };
+  let body: { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
   try {
     body = await request.json();
   } catch {
     return json({ error: '無效的 JSON' }, 400);
   }
 
-  const { tripId, mode, title, body: requestBody } = body;
+  const { tripId, mode } = body;
+  // 優先使用 message，若未提供則 fallback 合併 title + body（向下相容）
+  const message = body.message
+    || [body.title, body.body].filter(Boolean).join('\n')
+    || '';
 
-  if (!tripId || !mode || !title || !requestBody) {
-    return json({ error: '缺少必要欄位：tripId, mode, title, body' }, 400);
+  if (!tripId || !mode || !message) {
+    return json({ error: '缺少必要欄位：tripId, mode, message' }, 400);
   }
 
   if (mode !== 'trip-edit' && mode !== 'trip-plan') {
@@ -99,9 +104,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const result = await env.DB
     .prepare(
-      'INSERT INTO requests (trip_id, mode, title, body, submitted_by) VALUES (?, ?, ?, ?, ?) RETURNING *'
+      'INSERT INTO requests (trip_id, mode, message, submitted_by) VALUES (?, ?, ?, ?) RETURNING *'
     )
-    .bind(tripId, mode, title, requestBody, auth.email)
+    .bind(tripId, mode, message, auth.email)
     .first();
 
   const newRow = result as Record<string, unknown>;
@@ -111,7 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     recordId: newRow ? (newRow.id as number) : null,
     action: 'insert',
     changedBy: auth.email,
-    diffJson: JSON.stringify({ mode, title }),
+    diffJson: JSON.stringify({ mode, message: message.substring(0, 100) }),
   });
 
   return json(result, 201);

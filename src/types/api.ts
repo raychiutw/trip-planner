@@ -24,11 +24,14 @@ export interface AuthData {
 // Request
 // ---------------------------------------------------------------------------
 
+/** Valid request status values (four-state stepper) */
+export type RequestStatus = 'open' | 'received' | 'processing' | 'completed';
+
 /**
  * A trip-edit / trip-plan request submitted by a traveller.
  *
  * DB table: requests
- * Columns: id, trip_id, mode, title, body, submitted_by, reply, status,
+ * Columns: id, trip_id, mode, message, submitted_by, reply, status,
  *          created_at, processed_by
  *
  * mapRow renames:
@@ -42,14 +45,17 @@ export interface Request {
   tripId: string;
   /** 'trip-edit' | 'trip-plan' */
   mode: string;
-  title: string;
-  /** The request body text */
-  body: string;
+  /** Combined message (merged from legacy title + body) */
+  message: string;
+  /** @deprecated Use `message` instead. Kept for legacy compatibility. */
+  title?: string;
+  /** @deprecated Use `message` instead. Kept for legacy compatibility. */
+  body?: string;
   /** DB column `submitted_by` — email of the submitter */
   submittedBy?: string | null;
   reply?: string | null;
-  /** 'open' | 'closed' */
-  status: string;
+  /** Four-state status: open → received → processing → completed */
+  status: RequestStatus;
   /** DB column `created_at` */
   createdAt: string;
   /**

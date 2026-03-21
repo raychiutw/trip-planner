@@ -17,42 +17,65 @@ user-invocable: true
 
 ## 觸發模式
 
-Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open 請求。
+Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open/received 請求。
+
+## 四態 Status 流程
+
+```
+排程撈到 open 請求 → PATCH status=received（排程負責）
+→ 啟動 Claude tp-request → PATCH status=processing（skill 負責）
+→ 處理完成 → PATCH status=completed + reply（skill 負責）
+```
 
 ## 步驟
 
-1. **查詢所有 open 請求**：
+1. **查詢待處理請求**（open 或 received）：
    ```bash
    curl -s -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
         -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
-        "https://trip-planner-dby.pages.dev/api/requests?status=open"
+        "https://trip-planner-dby.pages.dev/api/requests?status=received"
    ```
-2. 無 open 請求 → 回報「沒有待處理的請求」並結束
+   若無結果，也查 `status=open`（防排程未更新的情況）
+2. 無待處理請求 → 回報「沒有待處理的請求」並結束
 3. 依序處理每個請求：
 
-### 3a. 解析 metadata
+### 3a. 更新 status → processing
 
-- **mode**：`request.mode`（`trip-edit` 或 `trip-plan`）
+處理每個請求前，先 PATCH status 為 `processing`：
+```bash
+node -e "require('fs').writeFileSync('/tmp/status.json', JSON.stringify({status:'processing'}), 'utf8')"
+curl -s -X PATCH \
+  -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
+  -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
+  -H "Content-Type: application/json" \
+  --data @/tmp/status.json \
+  "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
+```
+
+### 3b. 解析 metadata
+
+- **mode**：`request.mode`（`trip-edit` = 改行程、`trip-plan` = 問建議）
 - **tripId**：`request.trip_id`
 - **owner**：`tripId.split('-').pop()`
 - **timestamp**：`request.created_at`
-- **text**：`request.body`
+- **text**：`request.message`
 - **requestId**：`request.id`
 
-### 3b. 意圖安全矩陣
+### 3c. 意圖安全矩陣
 
 依 mode + intent 分流：
 
 | mode | intent | 處理方式 |
 |------|--------|----------|
-| trip-edit | 修改 | 讀取 API 資料 → 修改 → 寫回 API（見步驟 3c） |
-| trip-edit | 諮詢 | 回覆請求，不修改資料 |
-| trip-plan | 諮詢 | 回覆請求，不修改資料 |
-| trip-plan | 修改 | 回覆建議以 trip-edit 重新送出 |
+| trip-edit（改行程） | 修改 | 讀取 API 資料 → 修改 → 寫回 API（見步驟 3d） |
+| trip-edit（改行程） | 諮詢 | 回覆請求，不修改資料 |
+| trip-plan（問建議） | 諮詢 | 回覆請求，不修改資料 |
+| trip-plan（問建議） | 修改 | 回覆建議以**改行程**重新送出 |
 
 - **intent 判斷**：依 text 內容判斷是「修改」（要求新增/刪除/替換行程內容）還是「諮詢」（詢問建議/比較/確認）
+- **回覆中文化**：回覆內文中使用「改行程」和「問建議」，不得出現英文 mode 值（`trip-edit` / `trip-plan`）
 
-### 3c. 修改流程（trip-edit + intent=修改）
+### 3d. 修改流程（改行程 + intent=修改）
 
    a. 讀取行程資料：
       ```bash
@@ -103,12 +126,12 @@ Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open 請求
         ```
    f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
-   h. 通過 → 回覆並關閉請求（見下方「回覆寫入方法」）
-   i. 失敗 → 回覆並關閉（見下方「回覆寫入方法」）
+   h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
+   i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）
 
-### 3d. 諮詢回覆流程
+### 3e. 諮詢回覆流程
 
-回覆後關閉請求（見下方「回覆寫入方法」）
+回覆後完成請求（見下方「回覆寫入方法」）
 
 ### 回覆寫入方法
 
@@ -116,7 +139,7 @@ Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open 請求
 改用 Node.js 寫暫存檔 + `curl --data @file`：
 
 ```bash
-node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'closed', processed_by:'scheduler'}), 'utf8')"
+node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'completed', processed_by:'scheduler'}), 'utf8')"
 curl -s -X PATCH \
   -H "CF-Access-Client-Id: e5902a9d6f5181b8f70e12f1c11ebca3.access" \
   -H "CF-Access-Client-Secret: 9c7d873d558eaf65cdc4160f9ec8f0c06d4f387fc069c7a7e1add0b8196b43a8" \
