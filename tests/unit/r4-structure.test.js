@@ -193,10 +193,15 @@ describe('R4-11 close button no circle outline', () => {
     expect(body).toContain('box-shadow: none');
   });
 
-  it('.sheet-close-btn:focus-visible restores ring', () => {
-    const rules = rulesFor(styleCss, '.sheet-close-btn:focus-visible');
-    expect(rules.length).toBeGreaterThan(0);
-    expect(rules[0].body).toContain('box-shadow: var(--shadow-ring)');
+  it('.sheet-close-btn:focus and :focus-visible both suppress outline', () => {
+    const focusRules = rulesFor(styleCss, '.sheet-close-btn:focus');
+    expect(focusRules.length).toBeGreaterThan(0);
+    expect(focusRules[0].body).toContain('outline: none');
+    expect(focusRules[0].body).toContain('box-shadow: none');
+    const fvRules = rulesFor(styleCss, '.sheet-close-btn:focus-visible');
+    expect(fvRules.length).toBeGreaterThan(0);
+    expect(fvRules[0].body).toContain('outline: none');
+    expect(fvRules[0].body).toContain('box-shadow: none');
   });
 });
 

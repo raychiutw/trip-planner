@@ -823,8 +823,11 @@
 /* --- Color Theme Grid --- */
 .color-theme-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 12px;
+}
+@media (max-width: 480px) {
+    .color-theme-grid { grid-template-columns: repeat(3, 1fr); }
 }
 /* color-theme-card inherits from shared base above */
 .color-theme-swatch {

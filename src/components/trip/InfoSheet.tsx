@@ -65,8 +65,10 @@ export default function InfoSheet({
   useEffect(() => {
     if (open) {
       previousFocusRef.current = document.activeElement;
+      // Focus the sheet panel itself for keyboard accessibility (Escape key)
+      // without focusing the close button (avoids orange focus ring issue)
       requestAnimationFrame(() => {
-        closeBtnRef.current?.focus();
+        panelRef.current?.focus();
       });
     } else {
       if (previousFocusRef.current && previousFocusRef.current instanceof HTMLElement) {
@@ -97,7 +99,10 @@ export default function InfoSheet({
     const backdrop = backdropRef.current;
     if (!backdrop) return;
 
-    const prevent = (e: Event) => { e.preventDefault(); };
+    // Only prevent scroll on the backdrop itself, not on child elements (panel body)
+    const prevent = (e: Event) => {
+      if (e.target === backdrop) e.preventDefault();
+    };
     backdrop.addEventListener('wheel', prevent, { passive: false });
     backdrop.addEventListener('touchmove', prevent, { passive: false });
 
@@ -145,7 +150,7 @@ export default function InfoSheet({
       id="infoBottomSheet"
       ref={backdropRef}
       onClick={onClose}
-      style={{ touchAction: 'none', overscrollBehavior: 'contain' }}
+      style={{ overscrollBehavior: 'contain' }}
     >
       <div
         className="info-sheet-panel"
@@ -154,6 +159,7 @@ export default function InfoSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="sheet-title"
+        tabIndex={-1}
         onClick={handlePanelClick}
         onKeyDown={handlePanelKeyDown}
       >

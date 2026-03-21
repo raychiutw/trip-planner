@@ -314,8 +314,8 @@ describe('QuickPanel 無障礙', () => {
     expect(tsx).toContain('closeBtnRef');
   });
 
-  it('focuses close button on open', () => {
-    expect(tsx).toContain('closeBtnRef.current?.focus()');
+  it('focuses sheet on open (not close button, to avoid focus ring)', () => {
+    expect(tsx).toContain('sheetRef.current?.focus()');
   });
 });
 

@@ -94,8 +94,10 @@ export default function QuickPanel({
   /* --- Focus management on open/close --- */
   useEffect(() => {
     if (isOpen) {
+      // Focus the sheet itself for keyboard accessibility (Escape key)
+      // without focusing the close button (avoids orange focus ring issue)
       requestAnimationFrame(() => {
-        closeBtnRef.current?.focus();
+        sheetRef.current?.focus();
       });
     } else {
       triggerRef.current?.focus();
@@ -199,6 +201,7 @@ export default function QuickPanel({
         aria-modal="true"
         aria-label="快速選單"
         ref={sheetRef}
+        tabIndex={-1}
         onKeyDown={handleSheetKeyDown}
       >
         {/* #2b: X close button (same style as InfoSheet) */}

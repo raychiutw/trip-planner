@@ -606,6 +606,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 }
 .quick-panel.open .quick-panel-sheet { transform: translateY(0); }
 .quick-panel-sheet :focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.quick-panel-sheet:focus { outline: none; box-shadow: none; }
 
 .quick-panel-header {
     display: flex;
@@ -717,8 +718,10 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .sheet-close-btn .svg-icon { width: 20px; height: 20px; }
 .sheet-close-btn svg { width: 20px; height: 20px; }
 .sheet-close-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
-.sheet-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.sheet-close-btn:focus,
+.sheet-close-btn:focus-visible { outline: none; box-shadow: none; }
 .info-sheet-panel :focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.info-sheet-panel:focus { outline: none; box-shadow: none; }
 .sheet-title {
     flex: 1; min-width: 0;
     font-size: var(--font-size-title3); font-weight: 700; color: var(--color-foreground);
@@ -726,6 +729,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .sheet-header-spacer { width: var(--tap-min); flex-shrink: 0; }
-.info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; }
+.info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+.info-sheet-body > * { max-width: 600px; margin-left: auto; margin-right: auto; }
 
 
