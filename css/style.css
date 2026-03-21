@@ -734,8 +734,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .sheet-header-spacer { width: var(--tap-min); flex-shrink: 0; }
 .info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 @media (min-width: 768px) {
-    .info-sheet-body { display: flex; flex-direction: column; align-items: center; }
-    .info-sheet-body > * { width: 100%; max-width: 680px; }
+    .info-sheet-body { display: flex; flex-direction: column; align-items: center; padding: 0 var(--spacing-8); }
 }
 
 
