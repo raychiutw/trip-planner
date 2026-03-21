@@ -153,11 +153,23 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     return json({ error: validation.error }, validation.status);
   }
 
-  // Build batch statements: delete old data, then insert new
-  const stmts: D1PreparedStatement[] = [];
+  // Write snapshot audit log BEFORE any batch operations (for recovery if batch fails)
+  await logAudit(db, {
+    tripId: id,
+    tableName: 'days',
+    recordId: dayId,
+    action: 'update',
+    changedBy,
+    snapshot,
+    diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
+  });
 
-  // Delete old nested data
-  stmts.push(
+  // --- Batch 1: delete all old sub-data + update day + INSERT hotel + INSERT entries ---
+  // Statements are tracked in order so we can extract RETURNING ids from results.
+  const batch1: D1PreparedStatement[] = [];
+
+  // Delete old nested data (5 statements, indices 0-4)
+  batch1.push(
     db.prepare("DELETE FROM shopping WHERE parent_type = 'hotel' AND parent_id IN (SELECT id FROM hotels WHERE day_id = ?)").bind(dayId),
     db.prepare('DELETE FROM hotels WHERE day_id = ?').bind(dayId),
     db.prepare("DELETE FROM restaurants WHERE entry_id IN (SELECT id FROM entries WHERE day_id = ?)").bind(dayId),
@@ -165,8 +177,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     db.prepare('DELETE FROM entries WHERE day_id = ?').bind(dayId),
   );
 
-  // Update day fields
-  stmts.push(
+  // Update day fields (index 5)
+  batch1.push(
     db.prepare('UPDATE days SET date = ?, day_of_week = ?, label = ?, weather_json = ? WHERE id = ?')
       .bind(
         body.date!,
@@ -177,14 +189,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       ),
   );
 
-  try {
-    await db.batch(stmts);
-
-    // Insert hotel (must get inserted id, so do separately)
-    if (body.hotel) {
-      const h = body.hotel;
-      const hotelResult = await db
-        .prepare('INSERT INTO hotels (day_id, name, checkout, details, breakfast, note, parking_json) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  // Track where hotel and entries start in batch1 results
+  const HOTEL_IDX = body.hotel ? batch1.length : -1;
+  if (body.hotel) {
+    const h = body.hotel;
+    batch1.push(
+      db.prepare('INSERT INTO hotels (day_id, name, checkout, details, breakfast, note, parking_json) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId,
           h.name ?? null,
@@ -193,82 +203,93 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           h.breakfast ?? null,
           h.note ?? null,
           h.parking ? JSON.stringify(h.parking) : null,
-        )
-        .run();
+        ),
+    );
+  }
 
-      const hotelId = hotelResult.meta.last_row_id as number;
+  const ENTRIES_START_IDX = batch1.length;
+  const timeline = Array.isArray(body.timeline) ? body.timeline : [];
+  for (let i = 0; i < timeline.length; i++) {
+    const e = timeline[i];
+    const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
+    batch1.push(
+      db.prepare('INSERT INTO entries (day_id, sort_order, time, title, body, maps, rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+        .bind(
+          dayId, i,
+          e.time ?? null, e.title ?? null, e.body ?? null,
+          e.maps ?? null, e.rating ?? null, e.note ?? null,
+          travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null,
+        ),
+    );
+  }
 
-      if (Array.isArray(h.shopping) && h.shopping.length > 0) {
-        const shopStmts = (h.shopping as Record<string, unknown>[]).map((s, idx) =>
+  try {
+    const batch1Results = await db.batch(batch1);
+
+    // Extract hotel id from RETURNING result
+    let hotelId: number | null = null;
+    if (HOTEL_IDX >= 0) {
+      const hotelRows = batch1Results[HOTEL_IDX].results as { id: number }[];
+      hotelId = hotelRows[0]?.id ?? null;
+    }
+
+    // Extract entry ids from RETURNING results
+    const entryIds: number[] = [];
+    for (let i = 0; i < timeline.length; i++) {
+      const entryRows = batch1Results[ENTRIES_START_IDX + i].results as { id: number }[];
+      entryIds.push(entryRows[0]?.id ?? 0);
+    }
+
+    // --- Batch 2: INSERT all restaurants + shopping using ids from Batch 1 ---
+    const batch2: D1PreparedStatement[] = [];
+
+    // Hotel shopping
+    if (body.hotel && hotelId !== null && Array.isArray(body.hotel.shopping)) {
+      for (const [idx, s] of (body.hotel.shopping as Record<string, unknown>[]).entries()) {
+        batch2.push(
           db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, rating, maps, mapcode, source) VALUES ('hotel', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null)
+            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
         );
-        await db.batch(shopStmts);
       }
     }
 
-    // Insert entries
-    if (Array.isArray(body.timeline) && body.timeline.length > 0) {
-      for (let i = 0; i < body.timeline.length; i++) {
-        const e = body.timeline[i];
-        const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
-        const entryResult = await db
-          .prepare('INSERT INTO entries (day_id, sort_order, time, title, body, maps, rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-          .bind(
-            dayId, i,
-            e.time ?? null, e.title ?? null, e.body ?? null,
-            e.maps ?? null, e.rating ?? null, e.note ?? null,
-            travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null,
-          )
-          .run();
+    // Entry restaurants + shopping
+    for (let i = 0; i < timeline.length; i++) {
+      const e = timeline[i];
+      const entryId = entryIds[i];
 
-        const entryId = entryResult.meta.last_row_id as number;
-
-        const nestedStmts: D1PreparedStatement[] = [];
-
-        if (Array.isArray(e.restaurants)) {
-          for (const r of e.restaurants as Record<string, unknown>[]) {
-            nestedStmts.push(
-              db.prepare("INSERT INTO restaurants (entry_id, name, category, hours, price, reservation, reservation_url, description, note, rating, maps, mapcode, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null)
-            );
-          }
+      if (Array.isArray(e.restaurants)) {
+        for (const r of e.restaurants as Record<string, unknown>[]) {
+          batch2.push(
+            db.prepare("INSERT INTO restaurants (entry_id, name, category, hours, price, reservation, reservation_url, description, note, rating, maps, mapcode, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null),
+          );
         }
+      }
 
-        if (Array.isArray(e.shopping)) {
-          for (const [sIdx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
-            nestedStmts.push(
-              db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, rating, maps, mapcode, source) VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null)
-            );
-          }
+      if (Array.isArray(e.shopping)) {
+        for (const [sIdx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
+          batch2.push(
+            db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, rating, maps, mapcode, source) VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
+          );
         }
-
-        if (nestedStmts.length > 0) await db.batch(nestedStmts);
       }
     }
+
+    if (batch2.length > 0) await db.batch(batch2);
   } catch (err) {
-    // Log snapshot for manual recovery
+    // Snapshot already saved before batch; log additional error context
     await logAudit(db, {
       tripId: id,
       tableName: 'days',
       recordId: dayId,
       action: 'update',
       changedBy,
-      snapshot,
       diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),
     });
     return json({ error: 'Write failed, snapshot saved for recovery' }, 500);
   }
-
-  await logAudit(db, {
-    tripId: id,
-    tableName: 'days',
-    recordId: dayId,
-    action: 'update',
-    changedBy,
-    diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
-  });
 
   return json({ ok: true });
 };

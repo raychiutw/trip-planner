@@ -51,15 +51,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!validation.ok) return json({ error: validation.error }, validation.status);
 
   const maxResult = await db
-    .prepare("SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM restaurants WHERE parent_type = 'entry' AND parent_id = ?")
+    .prepare("SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM restaurants WHERE entry_id = ?")
     .bind(Number(eid))
     .first() as { max_sort: number } | null;
 
   const sortOrder = (maxResult?.max_sort ?? -1) + 1;
 
   const row = await db
-    .prepare(`INSERT INTO restaurants (parent_type, parent_id, sort_order, name, category, hours, price, reservation, reservation_url, description, note, rating, maps, mapcode, source)
-              VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+    .prepare(`INSERT INTO restaurants (entry_id, sort_order, name, category, hours, price, reservation, reservation_url, description, note, rating, maps, mapcode, source)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
     .bind(
       Number(eid), sortOrder,
       body.name ?? null, body.category ?? null, body.hours ?? null,

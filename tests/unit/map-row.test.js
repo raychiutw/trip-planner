@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-const { mapRow, mapRows, FIELD_MAP, JSON_FIELDS } = require('../../src/lib/mapRow.ts');
+import { mapRow, mapRows, FIELD_MAP, JSON_FIELDS } from '../../src/lib/mapRow.ts';
 
 /* ===== FIELD_MAP renames ===== */
 describe('mapRow — FIELD_MAP renames', () => {

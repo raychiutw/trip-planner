@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-
-const { escHtml, escUrl, stripInlineHandlers, sanitizeHtml } = require('../../src/lib/sanitize.ts');
-const { safeColor } = require('../../src/lib/constants.ts');
+import { escHtml, escUrl, stripInlineHandlers, sanitizeHtml } from '../../src/lib/sanitize.ts';
+import { safeColor } from '../../src/lib/constants.ts';
 
 /* ===== escHtml ===== */
 describe('escHtml', () => {

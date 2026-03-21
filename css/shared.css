@@ -726,7 +726,7 @@
     font-size: var(--font-size-footnote);
     font-weight: 600;
     color: var(--color-muted);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     margin-top: 8px;
     padding: 0 4px;
 }

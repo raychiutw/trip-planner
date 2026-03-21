@@ -5,6 +5,7 @@
  */
 
 import { logAudit } from './_audit';
+import { hasPermission } from './_auth';
 
 interface Env {
   DB: D1Database;
@@ -22,15 +23,6 @@ function json(data: unknown, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
-}
-
-async function hasPermission(db: D1Database, email: string, tripId: string, isAdmin: boolean): Promise<boolean> {
-  if (isAdmin) return true;
-  const row = await db
-    .prepare('SELECT 1 FROM permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?)')
-    .bind(email.toLowerCase(), tripId, '*')
-    .first();
-  return !!row;
 }
 
 // GET /api/requests

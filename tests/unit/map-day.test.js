@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-const { toHotelData, toTimelineEntry } = require('../../src/lib/mapDay.ts');
+import { toHotelData, toTimelineEntry } from '../../src/lib/mapDay.ts';
 
 /* ===== buildLocation（透過 toHotelData 停車場情境間接測試）===== */
 
