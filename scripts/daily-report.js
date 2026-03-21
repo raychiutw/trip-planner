@@ -97,7 +97,8 @@ async function querySentry() {
 
 async function queryWorkersAnalytics() {
   var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
-    'workersInvocationsAdaptive(limit: 1, filter: { ' +
+    'pagesFunctionsInvocationsAdaptive(limit: 10000, filter: { ' +
+    'scriptName: "trip-planner", ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
     'sum { requests errors } ' +
@@ -116,14 +117,23 @@ async function queryWorkersAnalytics() {
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
     return { requests: 0, errors: 0, p50: 0, p99: 0 };
   }
-  var rows = data.data.viewer.accounts[0].workersInvocationsAdaptive;
+  var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptive;
   if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
-  var row = rows[0];
+  var totalRequests = 0;
+  var totalErrors = 0;
+  var maxP50 = 0;
+  var maxP99 = 0;
+  rows.forEach(function(row) {
+    totalRequests += row.sum.requests;
+    totalErrors += row.sum.errors;
+    if (row.quantiles.cpuTimeP50 > maxP50) maxP50 = row.quantiles.cpuTimeP50;
+    if (row.quantiles.cpuTimeP99 > maxP99) maxP99 = row.quantiles.cpuTimeP99;
+  });
   return {
-    requests: row.sum.requests,
-    errors: row.sum.errors,
-    p50: row.quantiles.cpuTimeP50,
-    p99: row.quantiles.cpuTimeP99
+    requests: totalRequests,
+    errors: totalErrors,
+    p50: maxP50,
+    p99: maxP99
   };
 }
 
