@@ -1,0 +1,492 @@
+[
+  {
+    "id": 51,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 1,
+    "date": "2026-04-01",
+    "day_of_week": "三",
+    "label": "板橋",
+    "weather_json": "{\"label\":\"板橋\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 52,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 2,
+    "date": "2026-04-02",
+    "day_of_week": "四",
+    "label": "板橋",
+    "weather_json": "{\"label\":\"板橋\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 53,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 3,
+    "date": "2026-04-03",
+    "day_of_week": "五",
+    "label": "板橋",
+    "weather_json": "{\"label\":\"板橋\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 54,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 4,
+    "date": "2026-04-04",
+    "day_of_week": "六",
+    "label": "新莊・三重",
+    "weather_json": "{\"label\":\"新莊・三重\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 55,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 5,
+    "date": "2026-04-05",
+    "day_of_week": "日",
+    "label": "新莊・三重",
+    "weather_json": "{\"label\":\"新莊・三重\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 56,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 6,
+    "date": "2026-04-06",
+    "day_of_week": "一",
+    "label": "新莊・三重",
+    "weather_json": "{\"label\":\"新莊・三重\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 57,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 7,
+    "date": "2026-04-07",
+    "day_of_week": "二",
+    "label": "中和・永和",
+    "weather_json": "{\"label\":\"中和・永和\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 58,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 8,
+    "date": "2026-04-08",
+    "day_of_week": "三",
+    "label": "中和・永和",
+    "weather_json": "{\"label\":\"中和・永和\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 59,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 9,
+    "date": "2026-04-09",
+    "day_of_week": "四",
+    "label": "中和・永和",
+    "weather_json": "{\"label\":\"中和・永和\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 60,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 10,
+    "date": "2026-04-10",
+    "day_of_week": "五",
+    "label": "土城・樹林",
+    "weather_json": "{\"label\":\"土城・樹林\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 61,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 11,
+    "date": "2026-04-11",
+    "day_of_week": "六",
+    "label": "土城・樹林",
+    "weather_json": "{\"label\":\"土城・樹林\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 62,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 12,
+    "date": "2026-04-12",
+    "day_of_week": "日",
+    "label": "土城・樹林",
+    "weather_json": "{\"label\":\"土城・樹林\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 63,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 13,
+    "date": "2026-04-13",
+    "day_of_week": "一",
+    "label": "淡水・八里",
+    "weather_json": "{\"label\":\"淡水・八里\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 64,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 14,
+    "date": "2026-04-14",
+    "day_of_week": "二",
+    "label": "淡水・八里",
+    "weather_json": "{\"label\":\"淡水・八里\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 65,
+    "trip_id": "banqiao-trip-2026-Onion",
+    "day_num": 15,
+    "date": "2026-04-15",
+    "day_of_week": "三",
+    "label": "淡水・八里",
+    "weather_json": "{\"label\":\"淡水・八里\",\"locations\":[{\"lat\":25.0146,\"lon\":121.4672,\"name\":\"板橋\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:19"
+  },
+  {
+    "id": 66,
+    "trip_id": "busan-trip-2026-CeliaDemyKathy",
+    "day_num": 1,
+    "date": "2026-03-20",
+    "day_of_week": "五",
+    "label": "西面・汗蒸",
+    "weather_json": "{\"label\":\"西面\",\"locations\":[{\"lat\":35.18,\"lon\":128.94,\"name\":\"金海機場\",\"start\":0,\"end\":7},{\"lat\":35.17,\"lon\":129.13,\"name\":\"西面\",\"start\":8,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:24"
+  },
+  {
+    "id": 67,
+    "trip_id": "busan-trip-2026-CeliaDemyKathy",
+    "day_num": 2,
+    "date": "2026-03-21",
+    "day_of_week": "六",
+    "label": "甘川洞・松島",
+    "weather_json": "{\"label\":\"甘川洞・松島\",\"locations\":[{\"lat\":35.16,\"lon\":129.06,\"name\":\"西面\",\"start\":0,\"end\":10},{\"lat\":35.1,\"lon\":129.01,\"name\":\"甘川洞\",\"start\":11,\"end\":16},{\"lat\":35.1,\"lon\":129.03,\"name\":\"南浦洞\",\"start\":17,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:24"
+  },
+  {
+    "id": 68,
+    "trip_id": "busan-trip-2026-CeliaDemyKathy",
+    "day_num": 3,
+    "date": "2026-03-22",
+    "day_of_week": "日",
+    "label": "機張・廣安里",
+    "weather_json": "{\"label\":\"機張・廣安里\",\"locations\":[{\"lat\":35.24,\"lon\":129.22,\"name\":\"機張\",\"start\":0,\"end\":14},{\"lat\":35.15,\"lon\":129.12,\"name\":\"廣安里\",\"start\":15,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:24"
+  },
+  {
+    "id": 69,
+    "trip_id": "busan-trip-2026-CeliaDemyKathy",
+    "day_num": 4,
+    "date": "2026-03-23",
+    "day_of_week": "一",
+    "label": "海雲台・青沙埔",
+    "weather_json": "{\"label\":\"海雲台・青沙埔\",\"locations\":[{\"lat\":35.16,\"lon\":129.16,\"name\":\"海雲台\",\"start\":0,\"end\":14},{\"lat\":35.16,\"lon\":129.19,\"name\":\"青沙埔\",\"start\":15,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:24"
+  },
+  {
+    "id": 70,
+    "trip_id": "busan-trip-2026-CeliaDemyKathy",
+    "day_num": 5,
+    "date": "2026-03-24",
+    "day_of_week": "二",
+    "label": "南浦洞・返台",
+    "weather_json": "{\"label\":\"南浦洞\",\"locations\":[{\"lat\":35.1,\"lon\":129.03,\"name\":\"南浦洞\",\"start\":0,\"end\":18},{\"lat\":35.18,\"lon\":128.94,\"name\":\"金海機場\",\"start\":19,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:24"
+  },
+  {
+    "id": 71,
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "day_num": 1,
+    "date": "2026-03-06",
+    "day_of_week": "五",
+    "label": "抵達京都",
+    "weather_json": "{\"label\":\"京都\",\"locations\":[{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:30"
+  },
+  {
+    "id": 72,
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "day_num": 2,
+    "date": "2026-03-07",
+    "day_of_week": "六",
+    "label": "宇治一日遊",
+    "weather_json": "{\"label\":\"京都・宇治\",\"locations\":[{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":0,\"end\":9},{\"lat\":34.8842,\"lon\":135.8048,\"name\":\"宇治\",\"start\":10,\"end\":17},{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":18,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:30"
+  },
+  {
+    "id": 73,
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "day_num": 3,
+    "date": "2026-03-08",
+    "day_of_week": "日",
+    "label": "鴨川・錦市場",
+    "weather_json": "{\"label\":\"京都\",\"locations\":[{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:30"
+  },
+  {
+    "id": 74,
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "day_num": 4,
+    "date": "2026-03-09",
+    "day_of_week": "一",
+    "label": "金閣寺・壽喜燒",
+    "weather_json": "{\"label\":\"京都\",\"locations\":[{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:30"
+  },
+  {
+    "id": 75,
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "day_num": 5,
+    "date": "2026-03-10",
+    "day_of_week": "二",
+    "label": "稻荷・清水寺",
+    "weather_json": "{\"label\":\"京都\",\"locations\":[{\"lat\":34.9671,\"lon\":135.7727,\"name\":\"伏見\",\"start\":9,\"end\":12},{\"lat\":34.9948,\"lon\":135.785,\"name\":\"清水寺\",\"start\":13,\"end\":17},{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":18,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:30"
+  },
+  {
+    "id": 76,
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "day_num": 6,
+    "date": "2026-03-11",
+    "day_of_week": "三",
+    "label": "返回台北",
+    "weather_json": "{\"label\":\"京都\",\"locations\":[{\"lat\":35.0116,\"lon\":135.7681,\"name\":\"京都\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:30"
+  },
+  {
+    "id": 77,
+    "trip_id": "okinawa-trip-2026-AeronAn",
+    "day_num": 1,
+    "date": "2026-04-24",
+    "day_of_week": "五",
+    "label": "抵達那霸",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:35"
+  },
+  {
+    "id": 78,
+    "trip_id": "okinawa-trip-2026-AeronAn",
+    "day_num": 2,
+    "date": "2026-04-25",
+    "day_of_week": "六",
+    "label": "南部遺產",
+    "weather_json": "{\"label\":\"那霸・南城\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":8},{\"lat\":26.1125,\"lon\":127.7686,\"name\":\"南城\",\"start\":9,\"end\":17},{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":18,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:35"
+  },
+  {
+    "id": 79,
+    "trip_id": "okinawa-trip-2026-AeronAn",
+    "day_num": 3,
+    "date": "2026-04-26",
+    "day_of_week": "日",
+    "label": "北部水族館",
+    "weather_json": "{\"label\":\"那霸・本部\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":7},{\"lat\":26.6577,\"lon\":127.8782,\"name\":\"本部\",\"start\":8,\"end\":17},{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":18,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:35"
+  },
+  {
+    "id": 80,
+    "trip_id": "okinawa-trip-2026-AeronAn",
+    "day_num": 4,
+    "date": "2026-04-27",
+    "day_of_week": "一",
+    "label": "中部巡遊",
+    "weather_json": "{\"label\":\"北谷・讀谷・恩納\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":8},{\"lat\":26.3159,\"lon\":127.754,\"name\":\"北谷\",\"start\":9,\"end\":12},{\"lat\":26.4411,\"lon\":127.7137,\"name\":\"讀谷\",\"start\":13,\"end\":15},{\"lat\":26.5052,\"lon\":127.8505,\"name\":\"恩納\",\"start\":16,\"end\":17},{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":18,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:35"
+  },
+  {
+    "id": 81,
+    "trip_id": "okinawa-trip-2026-AeronAn",
+    "day_num": 5,
+    "date": "2026-04-28",
+    "day_of_week": "二",
+    "label": "回程",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:35"
+  },
+  {
+    "id": 82,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 1,
+    "date": "2026-07-02",
+    "day_of_week": "四",
+    "label": "那霸",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 83,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 2,
+    "date": "2026-07-03",
+    "day_of_week": "五",
+    "label": "浦添・美國村",
+    "weather_json": "{\"label\":\"那霸→浦添→北谷\",\"locations\":[{\"lat\":26.3344,\"lon\":127.7809,\"name\":\"那霸\",\"start\":0,\"end\":12},{\"lat\":26.2867,\"lon\":127.6591,\"name\":\"浦添\",\"start\":12,\"end\":18},{\"lat\":26.3264,\"lon\":127.7636,\"name\":\"北谷\",\"start\":19,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 84,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 3,
+    "date": "2026-07-04",
+    "day_of_week": "",
+    "label": "殘波岬・萬座毛",
+    "weather_json": "{\"label\":\"恩納→殘波岬→萬座毛\",\"locations\":[{\"lat\":26.4554,\"lon\":127.7777,\"name\":\"恩納\",\"start\":0,\"end\":10},{\"lat\":26.4421,\"lon\":127.7125,\"name\":\"殘波岬\",\"start\":11,\"end\":12},{\"lat\":26.5047,\"lon\":127.8512,\"name\":\"萬座毛\",\"start\":13,\"end\":14},{\"lat\":26.4826,\"lon\":127.8431,\"name\":\"恩納\",\"start\":15,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 85,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 4,
+    "date": "2026-07-05",
+    "day_of_week": "日",
+    "label": "美麗海・古宇利",
+    "weather_json": "{\"label\":\"名護→美麗海→古宇利\",\"locations\":[{\"lat\":26.4826,\"lon\":127.8431,\"name\":\"恩納\",\"start\":0,\"end\":9},{\"lat\":26.6102,\"lon\":127.9048,\"name\":\"名護\",\"start\":9,\"end\":12},{\"lat\":26.694,\"lon\":127.8779,\"name\":\"本部\",\"start\":12,\"end\":15},{\"lat\":26.7064,\"lon\":128.0254,\"name\":\"古宇利\",\"start\":15,\"end\":19},{\"lat\":26.5916,\"lon\":127.977,\"name\":\"名護\",\"start\":19,\"end\":21},{\"lat\":26.4826,\"lon\":127.8431,\"name\":\"恩納\",\"start\":21,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 86,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 5,
+    "date": "",
+    "day_of_week": "",
+    "label": "",
+    "weather_json": null,
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 87,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 6,
+    "date": "2026-07-07",
+    "day_of_week": "二",
+    "label": "牧志・瀨長島",
+    "weather_json": "{\"label\":\"那霸→玉泉洞→瀨長島\",\"locations\":[{\"lat\":26.2158,\"lon\":127.6856,\"name\":\"那霸\",\"start\":0,\"end\":12},{\"lat\":26.1421,\"lon\":127.7469,\"name\":\"南城\",\"start\":13,\"end\":14},{\"lat\":26.2193,\"lon\":127.6697,\"name\":\"那霸\",\"start\":14,\"end\":17},{\"lat\":26.1829,\"lon\":127.6461,\"name\":\"瀨長島\",\"start\":17,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 88,
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "day_num": 7,
+    "date": "2026-07-08",
+    "day_of_week": "三",
+    "label": "回程",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:41"
+  },
+  {
+    "id": 89,
+    "trip_id": "okinawa-trip-2026-Ray",
+    "day_num": 1,
+    "date": "2026-07-29",
+    "day_of_week": "三",
+    "label": "北谷",
+    "weather_json": "{\"label\":\"北谷\",\"locations\":[{\"lat\":26.3344,\"lon\":127.7809,\"name\":\"那霸\",\"start\":0,\"end\":13},{\"lat\":26.3362,\"lon\":127.7636,\"name\":\"北谷\",\"start\":14,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:47"
+  },
+  {
+    "id": 90,
+    "trip_id": "okinawa-trip-2026-Ray",
+    "day_num": 2,
+    "date": "2026-07-30",
+    "day_of_week": "四",
+    "label": "浮潛・瀨底",
+    "weather_json": "{\"label\":\"恩納・瀨底\",\"locations\":[{\"lat\":26.3362,\"lon\":127.7636,\"name\":\"北谷\",\"start\":0,\"end\":8},{\"lat\":26.4969,\"lon\":127.8536,\"name\":\"恩納\",\"start\":9,\"end\":13},{\"lat\":26.6577,\"lon\":127.8782,\"name\":\"瀨底\",\"start\":14,\"end\":17},{\"lat\":26.5916,\"lon\":127.9772,\"name\":\"名護\",\"start\":18,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:47"
+  },
+  {
+    "id": 91,
+    "trip_id": "okinawa-trip-2026-Ray",
+    "day_num": 3,
+    "date": "2026-07-31",
+    "day_of_week": "五",
+    "label": "水族館・古宇利",
+    "weather_json": "{\"label\":\"水族館・古宇利\",\"locations\":[{\"lat\":26.5916,\"lon\":127.9772,\"name\":\"名護\",\"start\":0,\"end\":7},{\"lat\":26.6577,\"lon\":127.8782,\"name\":\"本部\",\"start\":8,\"end\":14},{\"lat\":26.7028,\"lon\":127.9828,\"name\":\"古宇利\",\"start\":15,\"end\":19},{\"lat\":26.5916,\"lon\":127.9772,\"name\":\"名護\",\"start\":20,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:47"
+  },
+  {
+    "id": 92,
+    "trip_id": "okinawa-trip-2026-Ray",
+    "day_num": 4,
+    "date": "2026-08-01",
+    "day_of_week": "六",
+    "label": "來客夢",
+    "weather_json": "{\"label\":\"來客夢・那霸\",\"locations\":[{\"lat\":26.5916,\"lon\":127.9772,\"name\":\"名護\",\"start\":0,\"end\":8},{\"lat\":26.3394,\"lon\":127.7936,\"name\":\"北中城\",\"start\":9,\"end\":15},{\"lat\":26.3344,\"lon\":127.7809,\"name\":\"那霸\",\"start\":16,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:47"
+  },
+  {
+    "id": 93,
+    "trip_id": "okinawa-trip-2026-Ray",
+    "day_num": 5,
+    "date": "2026-08-02",
+    "day_of_week": "日",
+    "label": "首里城",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.3344,\"lon\":127.7809,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:47"
+  },
+  {
+    "id": 94,
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "day_num": 1,
+    "date": "2026-03-06",
+    "day_of_week": "五",
+    "label": "抵達那霸",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:53"
+  },
+  {
+    "id": 95,
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "day_num": 2,
+    "date": "2026-03-07",
+    "day_of_week": "六",
+    "label": "KKday一日遊",
+    "weather_json": "{\"label\":\"那霸・本部\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":7},{\"lat\":26.6577,\"lon\":127.8782,\"name\":\"本部\",\"start\":8,\"end\":18},{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":19,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:53"
+  },
+  {
+    "id": 96,
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "day_num": 3,
+    "date": "2026-03-08",
+    "day_of_week": "日",
+    "label": "Klook一日遊",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:53"
+  },
+  {
+    "id": 97,
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "day_num": 4,
+    "date": "2026-03-09",
+    "day_of_week": "一",
+    "label": "換飯店・來客夢",
+    "weather_json": "{\"label\":\"那霸・來客夢\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:53"
+  },
+  {
+    "id": 98,
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "day_num": 5,
+    "date": "2026-03-10",
+    "day_of_week": "二",
+    "label": "iias 豐崎",
+    "weather_json": "{\"label\":\"豐崎\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:53"
+  },
+  {
+    "id": 99,
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "day_num": 6,
+    "date": "2026-03-11",
+    "day_of_week": "三",
+    "label": "返台",
+    "weather_json": "{\"label\":\"那霸\",\"locations\":[{\"lat\":26.2066,\"lon\":127.6476,\"name\":\"那霸\",\"start\":0,\"end\":23}]}",
+    "updated_at": "2026-03-17 02:18:53"
+  }
+]
