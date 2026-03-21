@@ -1,8 +1,6 @@
 import { logAudit } from '../../../../_audit';
-
-interface Env {
-  DB: D1Database;
-}
+import { json } from '../../../../_utils';
+import type { Env } from '../../../../_types';
 
 const ALLOWED_TABLES = ['trips', 'days', 'hotels', 'entries', 'restaurants', 'shopping', 'trip_docs'] as const;
 type AllowedTable = typeof ALLOWED_TABLES[number];
@@ -28,10 +26,6 @@ interface AuditRow {
   diff_json: string | null;
   snapshot: string | null;
   created_at: string;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
 // POST /api/trips/:id/audit/:aid/rollback

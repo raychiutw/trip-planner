@@ -4,27 +4,8 @@
 
 import { removeEmailFromAccessPolicy } from '../permissions';
 import { logAudit } from '../_audit';
-
-interface Env {
-  DB: D1Database;
-  CF_API_TOKEN: string;
-  CF_ACCOUNT_ID: string;
-  CF_ACCESS_APP_ID: string;
-  CF_ACCESS_POLICY_ID: string;
-  ADMIN_EMAIL: string;
-}
-
-interface AuthData {
-  email: string;
-  isAdmin: boolean;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { json } from '../_utils';
+import type { Env, AuthData } from '../_types';
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = (context.data as Record<string, unknown>).auth as AuthData;

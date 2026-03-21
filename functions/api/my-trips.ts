@@ -2,21 +2,8 @@
  * GET /api/my-trips — 回傳使用者有權限的 tripId 列表
  */
 
-interface Env {
-  DB: D1Database;
-}
-
-interface AuthData {
-  email: string;
-  isAdmin: boolean;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { json } from './_utils';
+import type { Env, AuthData } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env } = context;

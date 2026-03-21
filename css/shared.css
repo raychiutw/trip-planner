@@ -188,8 +188,6 @@
         --color-info-bg: rgba(126, 192, 232, 0.15);
         --color-disabled: #605850;
         --color-disabled-foreground: #3E3830;
-        --color-badge-open: #2EA043;
-        --color-badge-closed: #8B5CF6;
         --color-plan-bg: #1B3A1F;
         --color-plan-text: #66BB6A;
         --color-plan-hover: #2E4A32;
@@ -231,6 +229,11 @@
         --color-overlay: rgba(0,0,0,0.3);
         --color-info: #2870A0;
         --color-info-bg: rgba(40, 112, 160, 0.12);
+        --color-badge-open: #1A7F37;
+        --color-badge-closed: #6E40C9;
+        --color-plan-bg: #E8F5E9;
+        --color-plan-text: #2E7D32;
+        --color-plan-hover: #C8E6C9;
     }
 
     /* --- 晴空 (Sky) — Dark --- */
@@ -311,6 +314,11 @@
         --cmp-dark-surface: #262320;
         --cmp-dark-input: #3A3630;
         --color-overlay: rgba(0,0,0,0.3);
+        --color-badge-open: #1A7F37;
+        --color-badge-closed: #6E40C9;
+        --color-plan-bg: #EAF2E8;
+        --color-plan-text: #2E6E32;
+        --color-plan-hover: #D0E6CC;
     }
 
     /* --- 和風 (Zen) — Dark --- */
@@ -393,6 +401,11 @@
         --color-overlay: rgba(0,0,0,0.3);
         --color-info: #2870A0;
         --color-info-bg: rgba(40, 112, 160, 0.12);
+        --color-badge-open: #1A6B30;
+        --color-badge-closed: #6E40C9;
+        --color-plan-bg: #DDF0E2;
+        --color-plan-text: #1E5E2A;
+        --color-plan-hover: #C0DEC8;
     }
 
     /* --- 森林 (Forest) — Dark --- */
@@ -473,6 +486,11 @@
         --color-overlay: rgba(0,0,0,0.3);
         --color-info: #2870A0;
         --color-info-bg: rgba(40, 112, 160, 0.12);
+        --color-badge-open: #1A7F37;
+        --color-badge-closed: #6E40C9;
+        --color-plan-bg: #EEF5EE;
+        --color-plan-text: #2E7D32;
+        --color-plan-hover: #D4E8D4;
     }
 
     /* --- 櫻花 (Sakura) — Dark --- */
@@ -553,6 +571,11 @@
         --color-overlay: rgba(0,0,0,0.3);
         --color-info: #6B6B6B;
         --color-info-bg: rgba(107, 107, 107, 0.12);
+        --color-badge-open: #1A7F37;
+        --color-badge-closed: #6E40C9;
+        --color-plan-bg: #E8F5E9;
+        --color-plan-text: #2E7D32;
+        --color-plan-hover: #C8E6C9;
     }
 
     /* --- 星夜 (Night) — Dark --- */

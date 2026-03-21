@@ -5,21 +5,7 @@
  * 或從 CF-Access-Client-Id header 辨識 Service Token（視為 admin）。
  */
 
-interface Env {
-  DB: D1Database;
-  CF_API_TOKEN: string;
-  CF_ACCOUNT_ID: string;
-  CF_ACCESS_APP_ID: string;
-  CF_ACCESS_POLICY_ID: string;
-  ADMIN_EMAIL: string;
-  ALLOWED_ORIGIN?: string;
-}
-
-interface AuthData {
-  email: string;
-  isAdmin: boolean;
-  isServiceToken: boolean;
-}
+import type { Env, AuthData } from './_types';
 
 // 擴充 EventContext data
 declare module '@cloudflare/workers-types' {

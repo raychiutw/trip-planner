@@ -1,10 +1,5 @@
-interface Env {
-  DB: D1Database;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-}
+import { json } from './_utils';
+import type { Env } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);

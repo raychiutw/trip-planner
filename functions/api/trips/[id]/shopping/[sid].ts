@@ -1,13 +1,7 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyShoppingBelongsToTrip } from '../../../_auth';
-
-interface Env {
-  DB: D1Database;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-}
+import { json } from '../../../_utils';
+import type { Env } from '../../../_types';
 
 const ALLOWED_FIELDS = ['sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'rating', 'maps', 'mapcode', 'source'] as const;
 

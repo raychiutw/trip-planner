@@ -1,14 +1,8 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
 import { validateDayBody } from '../../../_validate';
-
-interface Env {
-  DB: D1Database;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-}
+import { json } from '../../../_utils';
+import type { Env } from '../../../_types';
 
 function parseJsonField(row: Record<string, unknown>, field: string) {
   if (row[field] && typeof row[field] === 'string') {
@@ -108,7 +102,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = (context.data as any)?.auth;
-  if (!auth) return new Response(JSON.stringify({ error: '未認證' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  if (!auth) return json({ error: '未認證' }, 401);
 
   const { id, num } = context.params as { id: string; num: string };
   const changedBy = auth?.email || 'anonymous';

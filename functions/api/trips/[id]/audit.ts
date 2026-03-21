@@ -1,11 +1,6 @@
 
-interface Env {
-  DB: D1Database;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-}
+import { json } from '../../_utils';
+import type { Env } from '../../_types';
 
 // GET /api/trips/:id/audit
 // Query params: limit (default 20), request_id (optional filter)

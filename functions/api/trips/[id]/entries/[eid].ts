@@ -1,14 +1,8 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../_auth';
 import { validateEntryBody } from '../../../_validate';
-
-interface Env {
-  DB: D1Database;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-}
+import { json } from '../../../_utils';
+import type { Env } from '../../../_types';
 
 const ALLOWED_FIELDS = ['sort_order', 'time', 'title', 'body', 'source', 'maps', 'mapcode', 'rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location_json'] as const;
 

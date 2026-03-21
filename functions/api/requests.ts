@@ -6,24 +6,8 @@
 
 import { logAudit } from './_audit';
 import { hasPermission } from './_auth';
-
-interface Env {
-  DB: D1Database;
-  ADMIN_EMAIL: string;
-}
-
-interface AuthData {
-  email: string;
-  isAdmin: boolean;
-  isServiceToken: boolean;
-}
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+import { json } from './_utils';
+import type { Env, AuthData } from './_types';
 
 // GET /api/requests
 export const onRequestGet: PagesFunction<Env> = async (context) => {

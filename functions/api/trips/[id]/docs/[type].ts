@@ -1,15 +1,9 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
-
-interface Env {
-  DB: D1Database;
-}
+import { json } from '../../../_utils';
+import type { Env } from '../../../_types';
 
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
-
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
-}
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, type } = context.params as { id: string; type: string };
@@ -27,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = (context.data as any)?.auth;
-  if (!auth) return new Response(JSON.stringify({ error: '未認證' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  if (!auth) return json({ error: '未認證' }, 401);
 
   const { id, type } = context.params as { id: string; type: string };
 
