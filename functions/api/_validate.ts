@@ -1,5 +1,5 @@
 /**
- * validateDayBody — days PUT 端點的 server-side 必填驗證邏輯
+ * _validate.ts — server-side 必填驗證邏輯
  * 抽成獨立函式以便 unit test 直接覆蓋，不需啟動完整 server。
  */
 
@@ -40,5 +40,37 @@ export function validateDayBody(body: DayBody): ValidationResult {
     return { ok: false, status: 400, error: 'label 不得超過 8 字' };
   }
 
+  return { ok: true, status: 200 };
+}
+
+export interface EntryBody {
+  title?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * 驗證 PATCH /entries/:eid 的 request body。
+ * 回傳 { ok: true } 表示驗證通過；否則回傳 { ok: false, status, error }。
+ */
+export function validateEntryBody(body: EntryBody): ValidationResult {
+  if (!body.title) {
+    return { ok: false, status: 400, error: '必填欄位缺失: title' };
+  }
+  return { ok: true, status: 200 };
+}
+
+export interface RestaurantBody {
+  name?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * 驗證 POST /restaurants 和 PATCH /restaurants/:rid 的 request body。
+ * 回傳 { ok: true } 表示驗證通過；否則回傳 { ok: false, status, error }。
+ */
+export function validateRestaurantBody(body: RestaurantBody): ValidationResult {
+  if (!body.name) {
+    return { ok: false, status: 400, error: '必填欄位缺失: name' };
+  }
   return { ok: true, status: 200 };
 }

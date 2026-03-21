@@ -1,5 +1,6 @@
 import { logAudit } from '../../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../../_auth';
+import { validateRestaurantBody } from '../../../../_validate';
 
 interface Env {
   DB: D1Database;
@@ -45,6 +46,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
+
+  const validation = validateRestaurantBody(body);
+  if (!validation.ok) return json({ error: validation.error }, validation.status);
 
   const maxResult = await db
     .prepare("SELECT COALESCE(MAX(sort_order), -1) AS max_sort FROM restaurants WHERE parent_type = 'entry' AND parent_id = ?")

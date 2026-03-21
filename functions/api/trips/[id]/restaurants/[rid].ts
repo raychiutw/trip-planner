@@ -1,5 +1,6 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyRestaurantBelongsToTrip } from '../../../_auth';
+import { validateRestaurantBody } from '../../../_validate';
 
 interface Env {
   DB: D1Database;
@@ -36,6 +37,13 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   } catch {
     return json({ error: 'Invalid JSON' }, 400);
   }
+
+  // 驗證必填欄位（name 若包含在更新欄位中則不得為空）
+  if ('name' in body) {
+    const validation = validateRestaurantBody(body);
+    if (!validation.ok) return json({ error: validation.error }, validation.status);
+  }
+
   const fields = Object.keys(body).filter(k => (ALLOWED_FIELDS as readonly string[]).includes(k));
   if (fields.length === 0) return json({ error: 'No valid fields to update' }, 400);
 
