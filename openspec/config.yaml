@@ -62,6 +62,20 @@ skills:
 # ============================================================
 # OpenSpec 流程規則
 # ============================================================
+d1_safety:
+  migration:
+    - "禁止 DROP TABLE 有被 FK ON DELETE CASCADE 引用的表 — D1 預設啟用 foreign_keys，DROP 會連鎖刪除所有子表資料"
+    - "SQLite recreate table 策略（CREATE new → COPY → DROP old → RENAME）在 D1 不安全，改用 UPDATE + API 層驗證"
+    - "PRAGMA foreign_keys = OFF 在 D1 可能無效，不可依賴此指令防止 CASCADE"
+    - "migration 執行前必須先備份：node scripts/dump-d1.js"
+  backup:
+    - "手動備份：node scripts/dump-d1.js → backups/{timestamp}/ 含所有表 JSON"
+    - "備份檔納入版控，確保可追溯"
+    - "D1 Time Travel 可回溯 30 天：npx wrangler d1 time-travel restore trip-planner-db --timestamp <RFC3339>"
+  restore:
+    - "優先用 D1 Time Travel 還原（最快、最完整）"
+    - "次選從 backups/ 的 JSON 重建（需寫入腳本）"
+
 rules:
   proposal:
     - 提案用繁體中文撰寫
