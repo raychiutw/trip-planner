@@ -30,7 +30,7 @@ const THEME_ACCENTS: Record<string, { light: string; dark: string }> = {
   zen:    { light: '#9A6B50', dark: '#D4A88E' },
   forest: { light: '#4A8C5C', dark: '#7EC89A' },
   sakura: { light: '#D4708A', dark: '#F0A0B8' },
-  ocean:  { light: '#1A6B8A', dark: '#60C0E0' },
+  night:  { light: '#6B6B6B', dark: '#A0A0A0' },
 };
 
 const COLOR_THEMES: { key: ColorTheme; label: string; desc: string }[] = [
@@ -39,7 +39,7 @@ const COLOR_THEMES: { key: ColorTheme; label: string; desc: string }[] = [
   { key: 'zen',    label: '和風', desc: 'Japanese Zen' },
   { key: 'forest', label: '森林', desc: 'Deep Forest' },
   { key: 'sakura', label: '櫻花', desc: 'Cherry Blossom' },
-  { key: 'ocean',  label: '深海', desc: 'Deep Ocean' },
+  { key: 'night',  label: '夜城', desc: 'Night City' },
 ];
 
 /* ===== Component ===== */

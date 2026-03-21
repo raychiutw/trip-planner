@@ -5,7 +5,7 @@ const { setupApiMocks } = require('./api-mocks');
 /**
  * R4 QC E2E 測試
  * 覆蓋 R4-1~R4-6 全 11 項驗收條件：
- *   SpeedDial、InfoPanel、Bottom Sheet、匯出佈局、X 按鈕
+ *   QuickPanel、InfoPanel、Bottom Sheet、匯出佈局、X 按鈕
  */
 
 function buildWeatherMock(url) {
@@ -34,137 +34,6 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     const exp = Date.now() + 180 * 86400000;
     localStorage.setItem('tp-trip-pref', JSON.stringify({ v: 'okinawa-trip-2026-Ray', exp }));
-  });
-});
-
-/* ===== R4-5: SpeedDial 垂直單欄設計 ===== */
-test.describe('R4-5: SpeedDial 垂直單欄（手機版）', () => {
-  test.use({ viewport: { width: 390, height: 844 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
-
-  // (1) SpeedDial 垂直單欄：items 排成一列，x 座標全部相同（同一欄）
-  test('(1) speed-dial-items 使用 flex-direction:column 單欄佈局', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    // 展開
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(500);
-
-    // 取得 computed style 驗證 flex-direction
-    const flexDir = await page.locator('.speed-dial-items').evaluate(el => getComputedStyle(el).flexDirection);
-    expect(flexDir).toBe('column');
-  });
-
-  // (2) label 在左、icon 在右（JSX 結構：<span.speed-dial-label> 先於 svg/Icon）
-  test('(2) speed-dial-item 結構：label 在 icon 之前（左 label 右 icon）', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    const item = page.locator('.speed-dial-item').first();
-    // 確認 label 和 icon 都存在
-    const label = item.locator('.speed-dial-label');
-    const icon = item.locator('svg, .svg-icon');
-    await expect(label).toBeAttached();
-    await expect(icon.first()).toBeAttached();
-
-    // 用 getBoundingClientRect 確認 label 的 x 小於 icon 的 x（label 在左）
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-
-    const labelBox = await item.locator('.speed-dial-label').boundingBox();
-    const iconBox = await item.locator('svg').first().boundingBox();
-    if (labelBox && iconBox) {
-      expect(labelBox.x).toBeLessThan(iconBox.x);
-    }
-  });
-
-  // (3) FAB 關閉時顯示 ◁（左箭頭），展開時顯示 ▷（右箭頭）
-  test('(3) FAB 關閉狀態顯示左箭頭 SVG path（◁）', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    // 關閉狀態：trigger 的 SVG path 應是 ◁ = "M16 6l-8 6 8 6z"
-    const closedPath = await page.locator('.speed-dial-trigger svg path').getAttribute('d');
-    expect(closedPath).toBe('M16 6l-8 6 8 6z');
-  });
-
-  test('(3b) FAB 展開狀態顯示右箭頭 SVG path（▷）', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(300);
-
-    // 展開狀態：path 應是 ▷ = "M8 6l8 6-8 6z"
-    const openPath = await page.locator('.speed-dial-trigger svg path').getAttribute('d');
-    expect(openPath).toBe('M8 6l8 6-8 6z');
-  });
-
-  // (4) 點擊 item 含 label 可觸發（label 是按鈕一部分，不再是 position:absolute + pointer-events:none）
-  test('(4) 點擊 speed-dial-item label 可觸發 bottom sheet 開啟', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-
-    // 點擊 label 文字（不是 icon）來觸發
-    const firstItem = page.locator('.speed-dial-item').first();
-    const label = firstItem.locator('.speed-dial-label');
-    await label.click();
-    await page.waitForTimeout(500);
-
-    // SpeedDial 應關閉
-    await expect(page.locator('#speedDial')).not.toHaveClass(/open/);
-    // Bottom sheet 或設定 sheet 應開啟
-    const sheetOpen = await page.locator('#infoBottomSheet.open, .info-sheet-backdrop.open').count();
-    expect(sheetOpen).toBeGreaterThan(0);
-  });
-
-  // (5) stagger：child(8) = 0ms（最靠近 FAB），child(1) = 210ms（最遠）
-  test('(5) stagger delay：child(8) 最短、child(1) 最長（底部優先出現）', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    // 驗證 CSS transition-delay via computed style（需在 open state）
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-
-    const items = page.locator('.speed-dial.open .speed-dial-item');
-    const count = await items.count();
-    expect(count).toBe(8);
-
-    // child 8 (index 7) 的 transition-delay 應為 0ms，child 1 (index 0) 應為 210ms
-    const delay8 = await items.nth(7).evaluate(el => getComputedStyle(el).transitionDelay);
-    const delay1 = await items.nth(0).evaluate(el => getComputedStyle(el).transitionDelay);
-
-    // transition-delay 可能是 "0s" 或 "0ms"
-    const ms8 = parseFloat(delay8) * (delay8.includes('ms') ? 1 : 1000);
-    const ms1 = parseFloat(delay1) * (delay1.includes('ms') ? 1 : 1000);
-
-    expect(ms8).toBe(0);
-    expect(ms1).toBeCloseTo(210, -1); // 允許 ±10ms 誤差
-  });
-
-  // items 位置在 FAB 左側
-  test('所有 speed-dial-item 位於 FAB 左側', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-
-    const fabBox = await page.locator('.speed-dial-trigger').boundingBox();
-    const items = page.locator('.speed-dial-item');
-    const count = await items.count();
-
-    for (let i = 0; i < count; i++) {
-      const box = await items.nth(i).boundingBox();
-      if (box && fabBox) {
-        // item 的右邊界應小於 FAB 的左邊界
-        expect(box.x + box.width).toBeLessThanOrEqual(fabBox.x + 2); // +2 容差
-      }
-    }
   });
 });
 
@@ -232,10 +101,11 @@ test.describe('R4-4: Bottom Sheet（手機版）', () => {
   async function openSheet(page) {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     // 點擊第一個 sheet 類型 item（航班）
-    await page.locator('.speed-dial-item[data-content="flights"]').click();
+    await page.locator('.quick-panel-item[data-content="flights"]').click();
     await page.waitForTimeout(600);
     await expect(page.locator('#infoBottomSheet')).toHaveClass(/open/, { timeout: 5000 });
   }
@@ -334,10 +204,11 @@ test.describe('R4-6: 匯出 sheet 分隔線 + tool-action-btn 佈局', () => {
   async function openToolsSheet(page) {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     // 點擊 tools 群組（設定）
-    await page.locator('.speed-dial-item[data-content="tools"]').click();
+    await page.locator('.quick-panel-item[data-content="tools"]').click();
     await page.waitForTimeout(500);
     // 確認 tools sheet 開啟
     await expect(page.locator('#infoBottomSheet')).toHaveClass(/open/, { timeout: 5000 });
@@ -389,9 +260,10 @@ test.describe('X 按鈕無圓形外框', () => {
   async function openSheetForXBtn(page) {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-    await page.locator('.speed-dial-item[data-content="flights"]').click();
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    await page.locator('.quick-panel-item[data-content="flights"]').click();
     await page.waitForTimeout(600);
     await expect(page.locator('#infoBottomSheet')).toHaveClass(/open/, { timeout: 5000 });
   }
@@ -433,29 +305,4 @@ test.describe('DOM/CSS 結構靜態驗證', () => {
     expect(val).toBe('280px');
   });
 
-  test('speed-dial-items position:absolute，bottom:0（底部對齊 FAB）', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(300);
-    const pos = await page.locator('.speed-dial-items').evaluate(el => ({
-      position: getComputedStyle(el).position,
-      bottom: getComputedStyle(el).bottom,
-    }));
-    expect(pos.position).toBe('absolute');
-    expect(pos.bottom).toBe('0px');
-  });
-
-  test('speed-dial-item 的 flex-direction:row（橫向 pill）', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(300);
-    const flexDir = await page.locator('.speed-dial-item').first().evaluate(el => getComputedStyle(el).flexDirection);
-    expect(flexDir).toBe('row');
-  });
-
-  test('speed-dial-item 的 border-radius 為 full（pill 形狀）', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForTimeout(300);
-    const br = await page.locator('.speed-dial-item').first().evaluate(el => parseFloat(getComputedStyle(el).borderRadius));
-    // --radius-full 可能是 9999px 或 99px，確保是充分圓角（pill 效果）
-    expect(br).toBeGreaterThanOrEqual(99);
-  });
 });

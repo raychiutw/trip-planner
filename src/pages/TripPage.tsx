@@ -8,7 +8,7 @@ import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
 import Footer, { type FooterData } from '../components/trip/Footer';
-import SpeedDial from '../components/trip/SpeedDial';
+import QuickPanel from '../components/trip/QuickPanel';
 import InfoSheet from '../components/trip/InfoSheet';
 import InfoPanel from '../components/trip/InfoPanel';
 import { DayDrivingStatsCard, TripDrivingStatsCard } from '../components/trip/DrivingStats';
@@ -22,7 +22,6 @@ import Icon from '../components/shared/Icon';
 import { DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
 import DayArt from '../components/trip/DayArt';
-import DownloadSheet from '../components/trip/DownloadSheet';
 import TodayRouteSheet from '../components/trip/TodayRouteSheet';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
@@ -235,7 +234,6 @@ const SHEET_TITLES: Record<string, string> = {
   prep: '行前準備',
   'emergency-group': '緊急應變',
   'ai-group': 'AI 分析',
-  tools: '設定',
 };
 
 /* ===== Resolve state machine ===== */
@@ -250,16 +248,14 @@ type ResolveState =
 
 export default function TripPage() {
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
+  const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
-  const { isDark, setIsDark, colorTheme } = useDarkMode();
-  const [downloadOpen, setDownloadOpen] = useState(false);
-  const handleDownloadOpen = useCallback(() => setDownloadOpen(true), []);
-  const handleDownloadClose = useCallback(() => setDownloadOpen(false), []);
+  const { isDark, setIsDark, colorMode, setColorMode, colorTheme, setTheme } = useDarkMode();
 
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
@@ -272,10 +268,12 @@ export default function TripPage() {
   }, []);
 
   /* --- Resolve trip ID from URL / localStorage (#6: cancelled guard) --- */
+  /* Fix 5: resolveKey in deps allows re-triggering without full page reload */
   useEffect(() => {
     let cancelled = false;
     let tripId = getUrlTrip();
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
+      // 僅在 URL 無合法 trip 參數時才 fallback 到 localStorage
       tripId = lsGet<string>('trip-pref');
     }
 
@@ -283,6 +281,9 @@ export default function TripPage() {
       setResolveState({ status: 'no-trip' });
       return;
     }
+
+    // Reset scroll tracking for new trip
+    initialScrollDone.current = false;
 
     apiFetch<TripListItem[]>('/trips')
       .then((trips) => {
@@ -306,7 +307,7 @@ export default function TripPage() {
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [resolveKey]);
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
@@ -772,16 +773,16 @@ export default function TripPage() {
     return raw as FooterData;
   }, [trip]);
 
-  /* --- Speed Dial → InfoSheet --- */
-  const handleSpeedDialItem = useCallback((key: string) => { setActiveSheet(key); }, []);
+  /* --- QuickPanel → InfoSheet --- */
+  const handlePanelItem = useCallback((key: string) => { setActiveSheet(key); }, []);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
-  const handleGroupClick = useCallback((groupKey: string) => {
-    if (groupKey === 'tools') {
-      /* tools group opens as action sheet */
-      setActiveSheet('tools');
-      return;
-    }
-    setActiveSheet(groupKey);
+
+  /* --- Fix 5: Trip change without full page reload --- */
+  const handleTripChange = useCallback((tripId: string) => {
+    setUrlTrip(tripId);
+    lsSet('trip-pref', tripId);
+    setActiveSheet(null);
+    setResolveKey((k) => k + 1);
   }, []);
 
   /* --- Sheet content (#2: driving shows actual stats) --- */
@@ -829,38 +830,10 @@ export default function TripPage() {
             <div className="info-card">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
           </>
         );
-      case 'tools':
-        return (
-          <div className="flex flex-col gap-2 py-2">
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=trip'; }}>
-              <Icon name="swap-horiz" /><span>切換行程</span>
-            </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); window.location.href = 'setting.html?section=appearance'; }}>
-              <Icon name="palette" /><span>外觀與主題</span>
-            </button>
-            <button className="tool-action-btn" onClick={() => { handleSheetClose(); togglePrint(); }}>
-              <Icon name="printer" /><span>列印模式</span>
-            </button>
-            <div className="export-actions">
-              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); togglePrint(); setTimeout(() => window.print(), 300); }}>
-                <Icon name="download" /><span>PDF</span>
-              </button>
-              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('md'); }}>
-                <Icon name="doc" /><span>Markdown</span>
-              </button>
-              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('json'); }}>
-                <Icon name="code" /><span>JSON</span>
-              </button>
-              <button className="tool-action-btn export-btn" onClick={() => { handleSheetClose(); handleDownloadFormat('csv'); }}>
-                <Icon name="table" /><span>CSV</span>
-              </button>
-            </div>
-          </div>
-        );
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose, handleDownloadFormat, togglePrint]);
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;
@@ -932,18 +905,18 @@ export default function TripPage() {
         )}
       </div>
 
-      {/* SpeedDial */}
+      {/* QuickPanel */}
       {!loading && trip && (
-        <SpeedDial onItemClick={handleSpeedDialItem} onGroupClick={handleGroupClick} onPrint={togglePrint} onDownload={handleDownloadOpen} />
-      )}
-
-      {/* Download Sheet */}
-      {trip && (
-        <DownloadSheet
-          isOpen={downloadOpen}
-          onClose={handleDownloadClose}
-          tripId={activeTripId || ''}
-          tripName={trip.name || 'trip'}
+        <QuickPanel
+          onItemClick={handlePanelItem}
+          onPrint={togglePrint}
+          onDownload={handleDownloadFormat}
+          onTripChange={handleTripChange}
+          currentTripId={activeTripId}
+          colorMode={colorMode}
+          onColorModeChange={setColorMode}
+          colorTheme={colorTheme}
+          onThemeChange={setTheme}
         />
       )}
 

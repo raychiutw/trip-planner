@@ -2,9 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import { lsSet, lsGet } from '../lib/localStorage';
 
 export type ColorMode = 'light' | 'auto' | 'dark';
-export type ColorTheme = 'sun' | 'sky' | 'zen' | 'forest' | 'sakura' | 'ocean';
+export type ColorTheme = 'sun' | 'sky' | 'zen' | 'forest' | 'sakura' | 'night';
 
-const THEME_CLASSES = ['theme-sun', 'theme-sky', 'theme-zen', 'theme-forest', 'theme-sakura', 'theme-ocean'] as const;
+const THEME_CLASSES = ['theme-sun', 'theme-sky', 'theme-zen', 'theme-forest', 'theme-sakura', 'theme-night'] as const;
 
 /** Theme-color values per theme × mode (light / dark). */
 const THEME_COLORS: Record<ColorTheme, { light: string; dark: string }> = {
@@ -13,7 +13,7 @@ const THEME_COLORS: Record<ColorTheme, { light: string; dark: string }> = {
   zen:    { light: '#9A6B50', dark: '#342820' },
   forest: { light: '#4A8C5C', dark: '#243D2A' },
   sakura: { light: '#D4708A', dark: '#3D2028' },
-  ocean:  { light: '#1A6B8A', dark: '#1E3442' },
+  night:  { light: '#6B6B6B', dark: '#A0A0A0' },
 };
 
 /** Resolve whether dark class should be applied for a given color mode. */
@@ -42,7 +42,11 @@ function readColorMode(): ColorMode {
 /** Read saved color theme from localStorage. */
 function readColorTheme(): ColorTheme {
   const saved = lsGet<string>('colorTheme');
-  if (saved === 'sun' || saved === 'sky' || saved === 'zen' || saved === 'forest' || saved === 'sakura' || saved === 'ocean') return saved;
+  if (saved === 'ocean') {
+    lsSet('colorTheme', 'night');  // 一次性持久化遷移
+    return 'night';
+  }
+  if (saved === 'sun' || saved === 'sky' || saved === 'zen' || saved === 'forest' || saved === 'sakura' || saved === 'night') return saved;
   return 'sun';
 }
 

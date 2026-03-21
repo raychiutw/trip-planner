@@ -140,11 +140,9 @@
     --z-day-header: 100;
     --z-sticky-nav: 200;
     --z-fab: 300;
-    --z-speed-dial: 350;
+    --z-quick-panel: 350;
     --z-info-sheet-backdrop: 400;
     --z-info-sheet: 401;
-    --z-download-backdrop: 900;
-    --z-download-sheet: 901;
     --z-print-exit: 9999;
 }
 
@@ -519,58 +517,58 @@
         --color-plan-hover: #2E4A32;
     }
 
-    /* --- 深海 (Ocean) — Light --- */
-    body.theme-ocean {
+    /* --- 星夜 (Night) — Light --- */
+    body.theme-night {
         --theme-header-gradient: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 20%, transparent) 0%, color-mix(in srgb, var(--color-accent) 50%, transparent) 100%);
-        --color-accent: #1A6B8A;
-        --color-accent-subtle: #D8EEF5;
-        --color-accent-bg: #C0DEE8;
-        --color-background: #EFF7FA;
-        --color-secondary: #D4E8F0;
-        --color-tertiary: #B8D4E0;
-        --color-hover: #CCE0EA;
-        --color-foreground: #0E2830;
-        --color-muted: #4A7888;
-        --color-accent-foreground: #EFF7FA;
-        --color-border: #A0C4D4;
+        --color-accent: #6B6B6B;
+        --color-accent-subtle: #EEEEEE;
+        --color-accent-bg: #DCDCDC;
+        --color-background: #F5F5F5;
+        --color-secondary: #E8E8E8;
+        --color-tertiary: #D8D8D8;
+        --color-hover: #E0E0E0;
+        --color-foreground: #1A1A1A;
+        --color-muted: #5A5A5A;
+        --color-accent-foreground: #F5F5F5;
+        --color-border: #BEBEBE;
         --color-destructive: #D44040;
         --color-destructive-bg: #FDECEC;
         --color-success: #3D8E6A;
-        --shadow-md: 0 4px 16px rgba(14,40,48,0.10);
-        --shadow-lg: 0 6px 20px rgba(14,40,48,0.16);
+        --shadow-md: 0 4px 16px rgba(26,26,26,0.10);
+        --shadow-lg: 0 6px 20px rgba(26,26,26,0.16);
         --color-priority-high-bg: rgba(239, 68, 68, 0.15);
         --color-priority-high-dot: #EF4444;
         --color-priority-medium-bg: rgba(234, 179, 8, 0.15);
         --color-priority-medium-dot: #EAB308;
         --color-priority-low-bg: rgba(61, 142, 106, 0.12);
         --color-priority-low-dot: #3D8E6A;
-        --scrollbar-thumb: #98BCC8;
-        --scrollbar-thumb-hover: #80A8B8;
-        --cmp-light-bg: #D4E8F0;
-        --cmp-light-surface: #EFF7FA;
-        --cmp-light-input: #A0C4D4;
-        --cmp-dark-bg: #101A1E;
-        --cmp-dark-surface: #1A2830;
-        --cmp-dark-input: #2A3E48;
+        --scrollbar-thumb: #ABABAB;
+        --scrollbar-thumb-hover: #909090;
+        --cmp-light-bg: #DCDCDC;
+        --cmp-light-surface: #F5F5F5;
+        --cmp-light-input: #BEBEBE;
+        --cmp-dark-bg: #141414;
+        --cmp-dark-surface: #1E1E1E;
+        --cmp-dark-input: #2A2A2A;
         --color-overlay: rgba(0,0,0,0.3);
-        --color-info: #1A6B8A;
-        --color-info-bg: rgba(26, 107, 138, 0.12);
+        --color-info: #6B6B6B;
+        --color-info-bg: rgba(107, 107, 107, 0.12);
     }
 
-    /* --- 深海 (Ocean) — Dark --- */
-    body.theme-ocean.dark {
+    /* --- 星夜 (Night) — Dark --- */
+    body.theme-night.dark {
         --theme-header-gradient: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 10%, transparent) 0%, color-mix(in srgb, var(--color-accent) 25%, transparent) 100%);
-        --color-accent: #60C0E0;
-        --color-accent-subtle: #142028;
-        --color-accent-bg: #1E3442;
-        --color-background: #101A1E;
-        --color-secondary: #1A2830;
-        --color-tertiary: #243440;
-        --color-hover: #202E38;
-        --color-foreground: #D0E8F0;
-        --color-muted: #80B8C8;
-        --color-accent-foreground: #101A1E;
-        --color-border: #2A3E48;
+        --color-accent: #A0A0A0;
+        --color-accent-subtle: #1C1C1C;
+        --color-accent-bg: #282828;
+        --color-background: #111111;
+        --color-secondary: #1C1C1C;
+        --color-tertiary: #252525;
+        --color-hover: #202020;
+        --color-foreground: #E0E0E0;
+        --color-muted: #909090;
+        --color-accent-foreground: #111111;
+        --color-border: #333333;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(212, 64, 64, 0.15);
         --color-success: #70D0A0;
@@ -582,16 +580,16 @@
         --color-priority-medium-dot: #F0D060;
         --color-priority-low-bg: rgba(112, 208, 160, 0.12);
         --color-priority-low-dot: #70D0A0;
-        --scrollbar-thumb: #2A4450;
-        --scrollbar-thumb-hover: #3A5460;
+        --scrollbar-thumb: #383838;
+        --scrollbar-thumb-hover: #484848;
         --color-overlay: rgba(0,0,0,0.55);
         --color-success-bg: rgba(112, 208, 160, 0.15);
         --color-warning: #F0D060;
         --color-warning-bg: rgba(240, 208, 96, 0.15);
-        --color-info: #60C0E0;
-        --color-info-bg: rgba(96, 192, 224, 0.15);
-        --color-disabled: #2A4450;
-        --color-disabled-foreground: #2A3E48;
+        --color-info: #A0A0A0;
+        --color-info-bg: rgba(160, 160, 160, 0.15);
+        --color-disabled: #2A2A2A;
+        --color-disabled-foreground: #333333;
         --color-badge-open: #2EA043;
         --color-badge-closed: #8B5CF6;
         --color-plan-bg: #1B3A1F;

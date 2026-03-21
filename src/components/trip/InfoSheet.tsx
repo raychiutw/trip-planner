@@ -89,14 +89,23 @@ export default function InfoSheet({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  /* --- Prevent scroll passthrough on backdrop --- */
-  const preventTouchScroll = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-  }, []);
+  /* --- Fix 2: Passive event listener for scroll prevention on backdrop --- */
+  const backdropRef = useRef<HTMLDivElement>(null);
 
-  const preventWheelScroll = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-  }, []);
+  useEffect(() => {
+    if (!open) return;
+    const backdrop = backdropRef.current;
+    if (!backdrop) return;
+
+    const prevent = (e: Event) => { e.preventDefault(); };
+    backdrop.addEventListener('wheel', prevent, { passive: false });
+    backdrop.addEventListener('touchmove', prevent, { passive: false });
+
+    return () => {
+      backdrop.removeEventListener('wheel', prevent);
+      backdrop.removeEventListener('touchmove', prevent);
+    };
+  }, [open]);
 
   /* --- Stop propagation on panel click --- */
   const handlePanelClick = useCallback((e: React.MouseEvent) => {
@@ -134,9 +143,9 @@ export default function InfoSheet({
     <div
       className={clsx('info-sheet-backdrop', open && 'open')}
       id="infoBottomSheet"
+      ref={backdropRef}
       onClick={onClose}
-      onTouchMove={preventTouchScroll}
-      onWheel={preventWheelScroll}
+      style={{ touchAction: 'none', overscrollBehavior: 'contain' }}
     >
       <div
         className="info-sheet-panel"

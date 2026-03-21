@@ -18,9 +18,13 @@ function buildLocation(
   name?: string | null,
 ): NavLocation | null {
   if (!maps && !mapcode) return null;
+  // maps 是 URL 時作為 googleQuery；非 URL（地名）時作為 name fallback，避免產生空查詢 `?q=`
+  const isUrl = maps ? /^https?:/i.test(maps) : false;
+  const nameValue: string | undefined =
+    (name ?? undefined) || (!isUrl && maps ? maps : undefined) || undefined;
   return {
-    name: name || undefined,
-    googleQuery: maps || undefined,
+    name: nameValue,
+    googleQuery: isUrl ? (maps ?? undefined) : undefined,
     mapcode: mapcode || undefined,
   };
 }

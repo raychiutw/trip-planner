@@ -69,15 +69,6 @@ test.describe('頁面載入', () => {
     await expect(footer).toContainText('沖繩');
   });
 
-  test('Speed Dial 資訊項目都存在', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await expect(page.locator('.speed-dial-item[data-content="prep"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="emergency-group"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="ai-group"]')).toBeAttached();
-    await expect(page.locator('.speed-dial-item[data-content="tools"]')).toBeAttached();
-  });
-
   test('Nav brand 顯示行程名稱', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
@@ -168,66 +159,6 @@ test.describe('Nav Pills 手機版可見性', () => {
     expect(box.x).toBeGreaterThanOrEqual(0);
     // Day 1 pill 右邊界應在視窗內
     expect(box.x + box.width).toBeLessThanOrEqual(375);
-  });
-});
-
-/* ===== 3. Speed Dial（手機版） ===== */
-test.describe('Speed Dial（手機版）', () => {
-  test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
-
-  test('Speed Dial 觸發按鈕可見', async ({ page }) => {
-    await page.goto('/');
-    const trigger = page.locator('#speedDialTrigger');
-    await expect(trigger).toBeVisible();
-  });
-
-  test('點擊 trigger 展開/收合 Speed Dial', async ({ page }) => {
-    await page.goto('/');
-    const speedDial = page.locator('#speedDial');
-    const trigger = page.locator('#speedDialTrigger');
-
-    // 初始收合
-    await expect(speedDial).not.toHaveClass(/open/);
-
-    // 點擊展開
-    await trigger.click();
-    await expect(speedDial).toHaveClass(/open/);
-
-    // 再次點擊收合
-    await trigger.click();
-    await expect(speedDial).not.toHaveClass(/open/);
-  });
-
-  test('點擊 backdrop 關閉 Speed Dial', async ({ page }) => {
-    await page.goto('/');
-    const speedDial = page.locator('#speedDial');
-    const trigger = page.locator('#speedDialTrigger');
-
-    await trigger.click();
-    await expect(speedDial).toHaveClass(/open/);
-
-    await page.locator('#speedDialBackdrop').click({ force: true });
-    await expect(speedDial).not.toHaveClass(/open/);
-  });
-
-  test('子項目點擊開啟 Bottom Sheet', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    const trigger = page.locator('#speedDialTrigger');
-
-    // 展開 Speed Dial
-    await trigger.click();
-    await page.waitForTimeout(300);
-
-    // 點擊行前準備子項目
-    await page.locator('.speed-dial-item[data-content="prep"]').click();
-    await page.waitForTimeout(500);
-
-    // Speed Dial 應關閉
-    await expect(page.locator('#speedDial')).not.toHaveClass(/open/);
-
-    // Bottom Sheet 應開啟
-    await expect(page.locator('#infoBottomSheet')).toHaveClass(/open/, { timeout: 5000 });
   });
 });
 
@@ -346,15 +277,15 @@ test.describe('可收合區塊', () => {
   });
 });
 
-/* ===== 7. 行程建議（Speed Dial） ===== */
-test.describe('行程建議（Speed Dial）', () => {
-  test('Speed Dial 開啟建議後包含建議卡片', async ({ page }) => {
+/* ===== 7. 行程建議（QuickPanel） ===== */
+test.describe('行程建議（QuickPanel）', () => {
+  test('QuickPanel 開啟建議後包含建議卡片', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
 
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="ai-group"]').click();
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    await page.locator('.quick-panel-item[data-content="suggestions"]').click();
     await page.waitForTimeout(500);
 
     await expect(page.locator('#bottomSheetBody .suggestion-card').first()).toBeAttached({ timeout: 10000 });
@@ -437,9 +368,9 @@ test.describe('航班資訊', () => {
   test('航班區段包含航班資料', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="prep"]').click();
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    await page.locator('.quick-panel-item[data-content="flights"]').click();
     await page.waitForTimeout(500);
     await expect(page.locator('#bottomSheetBody .flight-row').first()).toBeAttached({ timeout: 10000 });
   });
@@ -450,9 +381,9 @@ test.describe('緊急聯絡', () => {
   test('包含 tel: 電話連結', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="emergency-group"]').click();
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    await page.locator('.quick-panel-item[data-content="emergency"]').click();
     await page.waitForTimeout(500);
     const telLinks = page.locator('#bottomSheetBody a[href^="tel:"]');
     const count = await telLinks.count();
@@ -477,8 +408,8 @@ test.describe('列印模式', () => {
       await expect(daySections.nth(i)).toBeVisible();
     }
 
-    // Speed Dial 隱藏
-    await expect(page.locator('#speedDial')).not.toBeVisible();
+    // QuickPanel 隱藏
+    await expect(page.locator('#quickPanel')).not.toBeVisible();
 
     // 用頁面上的退出按鈕退出列印模式
     await page.locator('#printExitBtn').click();
@@ -715,16 +646,16 @@ test.describe('每日交通統計', () => {
   });
 });
 
-/* ===== 20. 全旅程交通統計（Speed Dial） ===== */
+/* ===== 20. 全旅程交通統計（QuickPanel） ===== */
 test.describe('全旅程交通統計', () => {
-  test('所有 Day 載入後 Speed Dial 可開啟交通統計', async ({ page }) => {
+  test('所有 Day 載入後 QuickPanel 可開啟交通統計', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
     // 等待 preload 完成（所有 Day 自動載入）
     await page.waitForTimeout(3000);
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="ai-group"]').click();
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    await page.locator('.quick-panel-item[data-content="driving"]').click();
     await page.waitForTimeout(500);
     const summary = page.locator('#bottomSheetBody .driving-summary');
     await expect(summary).toBeAttached({ timeout: 10000 });
@@ -734,9 +665,9 @@ test.describe('全旅程交通統計', () => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
     await page.waitForTimeout(3000);
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="ai-group"]').click();
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    await page.locator('.quick-panel-item[data-content="driving"]').click();
     await page.waitForTimeout(300);
     const summary = page.locator('#bottomSheetBody .driving-summary');
     const typeSummary = summary.locator('.transport-type-summary').first();
@@ -899,104 +830,68 @@ test.describe('行程載入失敗', () => {
   });
 });
 
-/* ===== 23. Speed Dial → Bottom Sheet（手機版） ===== */
-test.describe('Speed Dial → Bottom Sheet（手機版）', () => {
-  test.use({ viewport: { width: 375, height: 812 }, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) Mobile/15E148' });
-
-
-  test('Speed Dial 子項目開啟 bottom sheet 並顯示內容', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-
-    await page.locator('.speed-dial-item[data-content="prep"]').click();
-    await page.waitForTimeout(500);
-
-    const backdrop = page.locator('#infoBottomSheet');
-    await expect(backdrop).toHaveClass(/open/, { timeout: 5000 });
-
-    const body = page.locator('#bottomSheetBody');
-    const text = await body.textContent();
-    expect(text.length).toBeGreaterThan(0);
-  });
-
-  test('點擊 backdrop 關閉 bottom sheet', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('#speedDialTrigger').click();
-    await page.waitForTimeout(300);
-    await page.locator('.speed-dial-item[data-content="prep"]').click();
-    await page.waitForTimeout(500);
-
-    const backdrop = page.locator('#infoBottomSheet');
-    await expect(backdrop).toHaveClass(/open/);
-
-    // Click on the backdrop area (outside the panel) to close
-    await backdrop.click({ position: { x: 187, y: 50 } });
-    await expect(backdrop).not.toHaveClass(/open/);
-  });
-});
-
-/* ===== 24. SpeedDial 垂直佈局（R4）===== */
-test.describe('SpeedDial 垂直佈局（R4）', () => {
+/* ===== 24. QuickPanel 垂直佈局（R4）===== */
+test.describe('QuickPanel 垂直佈局（R4）', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('所有 speed-dial-item 排在 FAB 左側（垂直單欄）', async ({ page }) => {
+  test('所有 quick-panel-item 在 FAB 上方顯示（panel 開啟）', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
 
-    // 展開 SpeedDial
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
+    // 展開 QuickPanel
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
 
-    const fab = page.locator('.speed-dial-trigger');
+    const fab = page.locator('.quick-panel-trigger');
     const fabBox = await fab.boundingBox();
-    const items = page.locator('.speed-dial-item');
+    const items = page.locator('.quick-panel-item');
     const count = await items.count();
-    expect(count).toBe(8);
+    expect(count).toBe(14);
 
-    // 所有 item 的 x 座標應小於 FAB 的 x 座標（在 FAB 左側）
-    for (let i = 0; i < count; i++) {
-      const box = await items.nth(i).boundingBox();
-      if (box) {
-        expect(box.x).toBeLessThan(fabBox.x);
-      }
+    // panel sheet 應在 FAB 上方（y 座標小於 FAB）
+    const sheet = page.locator('.quick-panel-sheet');
+    const sheetBox = await sheet.boundingBox();
+    if (sheetBox && fabBox) {
+      expect(sheetBox.y).toBeLessThan(fabBox.y);
     }
   });
 
-  test('速度選單有 8 個項目', async ({ page }) => {
+  test('QuickPanel 有 14 個項目', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
 
-    const items = page.locator('.speed-dial-item');
-    await expect(items).toHaveCount(8);
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+    const items = page.locator('.quick-panel-item');
+    await expect(items).toHaveCount(14);
   });
 
   test('FAB 觸發按鈕存在且可點擊', async ({ page }) => {
     await page.goto('/');
-    const trigger = page.locator('.speed-dial-trigger');
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
+    const trigger = page.locator('.quick-panel-trigger');
     await expect(trigger).toBeVisible();
     await expect(trigger).toHaveAttribute('aria-label', '快速選單');
   });
 
-  test('SpeedDial 展開後收合正常', async ({ page }) => {
+  test('QuickPanel 展開後收合正常', async ({ page }) => {
     await page.goto('/');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
+    await page.locator('#quickPanel').waitFor({ timeout: 10000 });
 
-    const dial = page.locator('#speedDial');
-    const trigger = page.locator('.speed-dial-trigger');
+    const panel = page.locator('#quickPanel');
+    const trigger = page.locator('.quick-panel-trigger');
 
-    await expect(dial).not.toHaveClass(/open/);
+    await expect(panel).not.toHaveClass(/open/);
     await trigger.click();
-    await expect(dial).toHaveClass(/open/);
+    await expect(panel).toHaveClass(/open/);
     await trigger.click();
-    await expect(dial).not.toHaveClass(/open/);
+    await expect(panel).not.toHaveClass(/open/);
   });
 
-  test('320px 上 SpeedDial items 不溢出螢幕右邊界', async ({ page, browser }) => {
+  test('320px 上 QuickPanel items 不溢出螢幕右邊界', async ({ page, browser }) => {
     const context = await browser.newContext({ viewport: { width: 320, height: 568 } });
     const p = await context.newPage();
     await setupApiMocks(p);
@@ -1009,11 +904,12 @@ test.describe('SpeedDial 垂直佈局（R4）', () => {
     });
     await p.goto('/');
     await p.locator('.day-section').first().waitFor({ timeout: 10000 });
+    await p.locator('#quickPanel').waitFor({ timeout: 10000 });
 
-    await p.locator('.speed-dial-trigger').click();
-    await p.waitForTimeout(400);
+    await p.locator('.quick-panel-trigger').click();
+    await p.locator('#quickPanel.open').waitFor({ timeout: 3000 });
 
-    const items = p.locator('.speed-dial-item');
+    const items = p.locator('.quick-panel-item');
     const count = await items.count();
     for (let i = 0; i < count; i++) {
       const box = await items.nth(i).boundingBox();
@@ -1026,69 +922,3 @@ test.describe('SpeedDial 垂直佈局（R4）', () => {
   });
 });
 
-/* ===== 25. SpeedDial 設定 sheet + export tools（R4）===== */
-test.describe('SpeedDial 設定 sheet（R4）', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  test('點擊「設定」開啟 info-sheet-panel', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    // 展開 SpeedDial
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-
-    // 點擊設定
-    const settingBtn = page.locator('.speed-dial-item[aria-label="設定"]');
-    await settingBtn.click();
-    await page.waitForTimeout(500);
-
-    // info-sheet-panel 應顯示
-    const sheet = page.locator('.info-sheet-panel');
-    await expect(sheet).toBeVisible();
-  });
-
-  test('設定 sheet 包含匯出按鈕（列印/PDF/Markdown/JSON/CSV）', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-    await page.locator('.speed-dial-item[aria-label="設定"]').click();
-    await page.waitForTimeout(500);
-
-    // 匯出相關按鈕應存在
-    const toolBtns = page.locator('.tool-action-btn');
-    const count = await toolBtns.count();
-    expect(count).toBeGreaterThanOrEqual(4);
-
-    // 確認有列印模式按鈕
-    const printBtn = toolBtns.filter({ hasText: '列印' });
-    await expect(printBtn.first()).toBeAttached();
-
-    // 確認有 PDF 匯出按鈕
-    const pdfBtn = toolBtns.filter({ hasText: 'PDF' });
-    await expect(pdfBtn.first()).toBeAttached();
-  });
-
-  test('設定 sheet X 按鈕可關閉', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-
-    await page.locator('.speed-dial-trigger').click();
-    await page.waitForTimeout(400);
-    await page.locator('.speed-dial-item[aria-label="設定"]').click();
-    await page.waitForTimeout(500);
-
-    const sheet = page.locator('.info-sheet-panel');
-    await expect(sheet).toBeVisible();
-
-    // 點擊關閉按鈕
-    await page.locator('.sheet-close-btn').click();
-    await page.waitForTimeout(300);
-
-    // sheet 應關閉（backdrop 無 open class）
-    const backdrop = page.locator('.info-sheet-backdrop');
-    await expect(backdrop).not.toHaveClass(/open/);
-  });
-});

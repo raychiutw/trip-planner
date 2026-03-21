@@ -285,57 +285,55 @@ function SakuraDarkHeader() {
   );
 }
 
-function OceanLightHeader() {
+function NightLightHeader() {
   return (
     <>
-      {/* Waves */}
-      <path d="M0 55 Q25 42 50 55 Q75 68 100 55 Q125 42 150 55 Q175 68 200 55" fill="none" stroke="#1A6B8A" strokeWidth="2.5" opacity="0.40" />
-      <path d="M0 62 Q25 52 50 62 Q75 72 100 62 Q125 52 150 62 Q175 72 200 62" fill="none" stroke="#2A8EB0" strokeWidth="1.8" opacity="0.25" />
-      {/* Lighthouse */}
-      <g transform="translate(155,5)" opacity="0.50">
-        <rect x="0" y="18" width="12" height="35" rx="1" fill="#C0C8D0" />
-        <rect x="-2" y="14" width="16" height="6" rx="2" fill="#1A6B8A" />
-        <polygon points="6,0 -2,14 14,14" fill="#C04030" />
-        {/* Light beam */}
-        <line x1="6" y1="10" x2="-10" y2="5" stroke="#FFD080" strokeWidth="2" opacity="0.40" strokeLinecap="round" />
-        <line x1="6" y1="10" x2="22" y2="5" stroke="#FFD080" strokeWidth="2" opacity="0.40" strokeLinecap="round" />
-      </g>
-      {/* Sailboat */}
-      <g transform="translate(40,25)" opacity="0.45">
-        <path d="M0 0 L3 -20 L6 0Z" fill="#1A6B8A" />
-        <path d="M3 -16 L-7 0 L3 0Z" fill="#2A8EB0" />
-        <ellipse cx="0" cy="2" rx="10" ry="2.5" fill="#8B6040" />
-      </g>
-      {/* Seagulls */}
-      <g stroke="#1A6B8A" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.35">
-        <path d="M85 18 Q90 12 95 18 Q100 12 105 18" />
-        <path d="M70 28 Q74 23 78 28" />
+      {/* Crescent moon */}
+      <circle cx="168" cy="18" r="16" fill="#6B6B6B" opacity="0.45" />
+      <circle cx="160" cy="15" r="14" fill="#F5F5F5" />
+      {/* Stars */}
+      <circle cx="30" cy="12" r="2" fill="#6B6B6B" opacity="0.50" />
+      <circle cx="55" cy="8" r="1.5" fill="#8C8C8C" opacity="0.45" />
+      <circle cx="85" cy="22" r="2.5" fill="#6B6B6B" opacity="0.40" />
+      <circle cx="115" cy="10" r="1.8" fill="#8C8C8C" opacity="0.50" />
+      <circle cx="140" cy="30" r="1.5" fill="#6B6B6B" opacity="0.35" />
+      {/* City skyline silhouette */}
+      <g transform="translate(8,20)" opacity="0.35">
+        <rect x="0" y="20" width="8" height="30" fill="#6B6B6B" />
+        <rect x="10" y="10" width="10" height="40" fill="#8C8C8C" />
+        <rect x="22" y="16" width="7" height="34" fill="#6B6B6B" />
+        <rect x="31" y="5" width="6" height="45" fill="#8C8C8C" />
+        <rect x="39" y="18" width="9" height="32" fill="#6B6B6B" />
       </g>
     </>
   );
 }
 
-function OceanDarkHeader() {
+function NightDarkHeader() {
   return (
     <>
-      {/* Gold crescent moon */}
-      <circle cx="170" cy="16" r="15" fill="#FFD080" opacity="0.42" />
-      <circle cx="163" cy="13" r="13" fill="#141E24" />
-      {/* Lighthouse silhouette */}
-      <g transform="translate(135,12)" opacity="0.35">
-        <rect x="0" y="16" width="10" height="32" rx="1" fill="#5090B0" />
-        <polygon points="5,0 -2,16 12,16" fill="#5090B0" />
-        {/* Light beam */}
-        <circle cx="5" cy="10" r="4" fill="#FFD080" opacity="0.40" />
-        <circle cx="5" cy="10" r="8" fill="#FFD080" opacity="0.12" />
-      </g>
+      {/* Crescent moon */}
+      <circle cx="168" cy="18" r="16" fill="#A0A0A0" opacity="0.42" />
+      <circle cx="160" cy="15" r="14" fill="#141414" />
       {/* Stars */}
-      <circle cx="25" cy="12" r="2" fill="#FFD080" opacity="0.50" />
-      <circle cx="55" cy="8" r="1.8" fill="#FFF4C0" opacity="0.44" />
-      <circle cx="85" cy="18" r="2.5" fill="#FFD080" opacity="0.40" />
-      <circle cx="110" cy="10" r="1.5" fill="#FFF4C0" opacity="0.45" />
-      {/* Gentle waves */}
-      <path d="M0 58 Q25 48 50 58 Q75 68 100 58 Q125 48 150 58" fill="none" stroke="#5090B0" strokeWidth="2" opacity="0.25" />
+      <circle cx="30" cy="12" r="2" fill="#A0A0A0" opacity="0.50" />
+      <circle cx="55" cy="8" r="1.5" fill="#C8C8C8" opacity="0.45" />
+      <circle cx="85" cy="22" r="2.5" fill="#A0A0A0" opacity="0.40" />
+      <circle cx="115" cy="10" r="1.8" fill="#C8C8C8" opacity="0.50" />
+      <circle cx="140" cy="30" r="1.5" fill="#A0A0A0" opacity="0.35" />
+      <circle cx="45" cy="40" r="2" fill="#C8C8C8" opacity="0.30" />
+      {/* City skyline silhouette */}
+      <g transform="translate(8,20)" opacity="0.28">
+        <rect x="0" y="20" width="8" height="30" fill="#A0A0A0" />
+        <rect x="10" y="10" width="10" height="40" fill="#C8C8C8" />
+        <rect x="22" y="16" width="7" height="34" fill="#A0A0A0" />
+        <rect x="31" y="5" width="6" height="45" fill="#C8C8C8" />
+        <rect x="39" y="18" width="9" height="32" fill="#A0A0A0" />
+      </g>
+      {/* Window lights */}
+      <rect x="14" y="22" width="2" height="2" fill="#A0A0A0" opacity="0.40" />
+      <rect x="18" y="16" width="2" height="2" fill="#C8C8C8" opacity="0.35" />
+      <rect x="34" y="12" width="2" height="2" fill="#A0A0A0" opacity="0.40" />
     </>
   );
 }
@@ -354,8 +352,8 @@ export function DayHeaderArt({ theme, dark }: ThemeArtProps) {
     'forest-dark': <ForestDarkHeader />,
     'sakura-light': <SakuraLightHeader />,
     'sakura-dark': <SakuraDarkHeader />,
-    'ocean-light': <OceanLightHeader />,
-    'ocean-dark': <OceanDarkHeader />,
+    'night-light': <NightLightHeader />,
+    'night-dark': <NightDarkHeader />,
   };
 
   return (
@@ -524,34 +522,30 @@ function SakuraDarkDivider() {
   );
 }
 
-function OceanLightDivider() {
+function NightLightDivider() {
   return (
     <>
-      {/* Gentle wave */}
-      <path
-        d="M0 16 Q15 8 30 16 Q45 24 60 16 Q75 8 90 16 Q105 24 120 16"
-        stroke="#1A6B8A"
-        fill="none"
-        strokeWidth="2.5"
-        opacity="0.38"
-      />
-      {/* Bubbles */}
-      <circle cx="35" cy="8" r="2" fill="#2A8EB0" opacity="0.25" />
-      <circle cx="82" cy="6" r="1.5" fill="#1A6B8A" opacity="0.20" />
+      {/* Subtle star dots */}
+      <circle cx="18" cy="12" r="1.8" fill="#6B6B6B" opacity="0.42" />
+      <circle cx="40" cy="8" r="1.5" fill="#8C8C8C" opacity="0.38" />
+      <circle cx="62" cy="14" r="2" fill="#6B6B6B" opacity="0.38" />
+      <circle cx="84" cy="9" r="1.5" fill="#8C8C8C" opacity="0.40" />
+      <circle cx="106" cy="13" r="1.8" fill="#6B6B6B" opacity="0.35" />
     </>
   );
 }
 
-function OceanDarkDivider() {
+function NightDarkDivider() {
   return (
     <>
-      <circle cx="14" cy="12" r="2" fill="#5090B0" opacity="0.42" />
-      <circle cx="14" cy="12" r="4.5" fill="#5090B0" opacity="0.10" />
-      <circle cx="40" cy="8" r="1.5" fill="#FFD080" opacity="0.38" />
-      <circle cx="62" cy="14" r="2.5" fill="#5090B0" opacity="0.38" />
-      <circle cx="62" cy="14" r="5" fill="#5090B0" opacity="0.08" />
-      <circle cx="88" cy="10" r="1.8" fill="#FFF4C0" opacity="0.42" />
-      <circle cx="108" cy="14" r="2" fill="#5090B0" opacity="0.35" />
+      {/* Glowing star dots */}
+      <circle cx="16" cy="12" r="2" fill="#A0A0A0" opacity="0.45" />
+      <circle cx="16" cy="12" r="4.5" fill="#A0A0A0" opacity="0.10" />
+      <circle cx="42" cy="8" r="1.5" fill="#C8C8C8" opacity="0.40" />
+      <circle cx="65" cy="14" r="2.5" fill="#A0A0A0" opacity="0.40" />
+      <circle cx="65" cy="14" r="5" fill="#A0A0A0" opacity="0.08" />
+      <circle cx="90" cy="10" r="1.8" fill="#C8C8C8" opacity="0.42" />
+      <circle cx="110" cy="14" r="2" fill="#A0A0A0" opacity="0.35" />
     </>
   );
 }
@@ -570,8 +564,8 @@ export function DividerArt({ theme, dark }: ThemeArtProps) {
     'forest-dark': <ForestDarkDivider />,
     'sakura-light': <SakuraLightDivider />,
     'sakura-dark': <SakuraDarkDivider />,
-    'ocean-light': <OceanLightDivider />,
-    'ocean-dark': <OceanDarkDivider />,
+    'night-light': <NightLightDivider />,
+    'night-dark': <NightDarkDivider />,
   };
 
   return (
@@ -786,49 +780,72 @@ function SakuraDarkFooter() {
   );
 }
 
-function OceanLightFooter() {
+function NightLightFooter() {
   return (
     <>
-      {/* Ocean waves */}
-      <path
-        d="M0 28 Q40 12 80 28 Q120 44 160 28 Q200 12 240 28 Q280 44 320 28 Q360 12 400 28 L400 60 L0 60Z"
-        fill="#1A6B8A"
-        opacity="0.42"
-      />
-      <path
-        d="M0 38 Q40 25 80 38 Q120 51 160 38 Q200 25 240 38 Q280 51 320 38 Q360 25 400 38 L400 60 L0 60Z"
-        fill="#2A8EB0"
-        opacity="0.25"
-      />
-      {/* Coral hints at bottom */}
-      <g opacity="0.30">
-        <path d="M50 56 Q55 48 60 56" stroke="#C04830" fill="none" strokeWidth="2" strokeLinecap="round" />
-        <path d="M150 54 Q156 46 162 54" stroke="#C06040" fill="none" strokeWidth="2" strokeLinecap="round" />
-        <circle cx="300" cy="52" r="3" fill="#2A8EB0" opacity="0.40" />
-        <circle cx="308" cy="50" r="2.5" fill="#1A6B8A" opacity="0.35" />
+      {/* City skyline silhouette */}
+      <g opacity="0.28">
+        <rect x="0" y="30" width="30" height="30" fill="#6B6B6B" />
+        <rect x="32" y="20" width="20" height="40" fill="#8C8C8C" />
+        <rect x="54" y="26" width="16" height="34" fill="#6B6B6B" />
+        <rect x="72" y="14" width="14" height="46" fill="#8C8C8C" />
+        <rect x="88" y="24" width="18" height="36" fill="#6B6B6B" />
+        <rect x="108" y="32" width="22" height="28" fill="#8C8C8C" />
+        <rect x="132" y="18" width="16" height="42" fill="#6B6B6B" />
+        <rect x="150" y="28" width="20" height="32" fill="#8C8C8C" />
+        <rect x="172" y="22" width="14" height="38" fill="#6B6B6B" />
+        <rect x="188" y="36" width="24" height="24" fill="#8C8C8C" />
+        <rect x="214" y="16" width="18" height="44" fill="#6B6B6B" />
+        <rect x="234" y="28" width="16" height="32" fill="#8C8C8C" />
+        <rect x="252" y="20" width="20" height="40" fill="#6B6B6B" />
+        <rect x="274" y="30" width="26" height="30" fill="#8C8C8C" />
+        <rect x="302" y="18" width="14" height="42" fill="#6B6B6B" />
+        <rect x="318" y="24" width="18" height="36" fill="#8C8C8C" />
+        <rect x="338" y="34" width="22" height="26" fill="#6B6B6B" />
+        <rect x="362" y="20" width="16" height="40" fill="#8C8C8C" />
+        <rect x="380" y="28" width="20" height="32" fill="#6B6B6B" />
       </g>
+      {/* Stars */}
+      <circle cx="80" cy="10" r="2" fill="#6B6B6B" opacity="0.44" />
+      <circle cx="200" cy="6" r="2.5" fill="#8C8C8C" opacity="0.38" />
+      <circle cx="320" cy="12" r="1.8" fill="#6B6B6B" opacity="0.40" />
     </>
   );
 }
 
-function OceanDarkFooter() {
+function NightDarkFooter() {
   return (
     <>
-      {/* Deep ocean waves */}
-      <path
-        d="M0 32 Q40 18 80 32 Q120 46 160 32 Q200 18 240 32 Q280 46 320 32 Q360 18 400 32 L400 60 L0 60Z"
-        fill="#1A6B8A"
-        opacity="0.30"
-      />
-      <path
-        d="M0 42 Q40 30 80 42 Q120 54 160 42 Q200 30 240 42 Q280 54 320 42 Q360 30 400 42 L400 60 L0 60Z"
-        fill="#2A8EB0"
-        opacity="0.18"
-      />
-      {/* Stars reflecting on water */}
-      <circle cx="70" cy="10" r="2" fill="#FFD080" opacity="0.44" />
-      <circle cx="190" cy="6" r="2.5" fill="#FFF4C0" opacity="0.38" />
-      <circle cx="310" cy="12" r="1.8" fill="#FFD080" opacity="0.40" />
+      {/* City skyline silhouette */}
+      <g opacity="0.22">
+        <rect x="0" y="30" width="30" height="30" fill="#A0A0A0" />
+        <rect x="32" y="20" width="20" height="40" fill="#C8C8C8" />
+        <rect x="54" y="26" width="16" height="34" fill="#A0A0A0" />
+        <rect x="72" y="14" width="14" height="46" fill="#C8C8C8" />
+        <rect x="88" y="24" width="18" height="36" fill="#A0A0A0" />
+        <rect x="108" y="32" width="22" height="28" fill="#C8C8C8" />
+        <rect x="132" y="18" width="16" height="42" fill="#A0A0A0" />
+        <rect x="150" y="28" width="20" height="32" fill="#C8C8C8" />
+        <rect x="172" y="22" width="14" height="38" fill="#A0A0A0" />
+        <rect x="188" y="36" width="24" height="24" fill="#C8C8C8" />
+        <rect x="214" y="16" width="18" height="44" fill="#A0A0A0" />
+        <rect x="234" y="28" width="16" height="32" fill="#C8C8C8" />
+        <rect x="252" y="20" width="20" height="40" fill="#A0A0A0" />
+        <rect x="274" y="30" width="26" height="30" fill="#C8C8C8" />
+        <rect x="302" y="18" width="14" height="42" fill="#A0A0A0" />
+        <rect x="318" y="24" width="18" height="36" fill="#C8C8C8" />
+        <rect x="338" y="34" width="22" height="26" fill="#A0A0A0" />
+        <rect x="362" y="20" width="16" height="40" fill="#C8C8C8" />
+        <rect x="380" y="28" width="20" height="32" fill="#A0A0A0" />
+      </g>
+      {/* Stars */}
+      <circle cx="70" cy="10" r="2" fill="#A0A0A0" opacity="0.48" />
+      <circle cx="190" cy="6" r="2.5" fill="#C8C8C8" opacity="0.42" />
+      <circle cx="310" cy="12" r="1.8" fill="#A0A0A0" opacity="0.44" />
+      {/* Window lights */}
+      <rect x="76" y="22" width="2" height="2" fill="#C8C8C8" opacity="0.35" />
+      <rect x="136" y="24" width="2" height="2" fill="#A0A0A0" opacity="0.38" />
+      <rect x="216" y="22" width="2" height="2" fill="#C8C8C8" opacity="0.35" />
     </>
   );
 }
@@ -847,8 +864,8 @@ export function FooterArt({ theme, dark }: ThemeArtProps) {
     'forest-dark': <ForestDarkFooter />,
     'sakura-light': <SakuraLightFooter />,
     'sakura-dark': <SakuraDarkFooter />,
-    'ocean-light': <OceanLightFooter />,
-    'ocean-dark': <OceanDarkFooter />,
+    'night-light': <NightLightFooter />,
+    'night-dark': <NightDarkFooter />,
   };
 
   return (
@@ -983,21 +1000,26 @@ function getNavContent(theme: string, dark: boolean): React.ReactNode {
           <circle cx="65" cy="8" r="1.5" fill="#FFF4C0" opacity="0.5" />
         </>
       );
-    case 'ocean-light':
-      return (
-        <>
-          {/* Small wave */}
-          <path d="M18 14 Q30 6 42 14 Q54 22 66 14" stroke="#1A6B8A" fill="none" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
-        </>
-      );
-    case 'ocean-dark':
+    case 'night-light':
       return (
         <>
           {/* Stars */}
-          <circle cx="28" cy="8" r="1.8" fill="#FFD080" opacity="0.5" />
-          <circle cx="48" cy="16" r="1.5" fill="#FFF4C0" opacity="0.45" />
-          {/* Small wave */}
-          <path d="M55 14 Q62 9 70 14" stroke="#5090B0" fill="none" strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
+          <circle cx="28" cy="10" r="1.5" fill="#6B6B6B" opacity="0.5" />
+          <circle cx="44" cy="16" r="1.2" fill="#8C8C8C" opacity="0.45" />
+          {/* Small crescent */}
+          <circle cx="62" cy="12" r="7" fill="#6B6B6B" opacity="0.35" />
+          <circle cx="59" cy="10" r="5.5" fill="#F5F5F5" />
+        </>
+      );
+    case 'night-dark':
+      return (
+        <>
+          {/* Stars */}
+          <circle cx="28" cy="8" r="1.8" fill="#A0A0A0" opacity="0.5" />
+          <circle cx="48" cy="16" r="1.5" fill="#C8C8C8" opacity="0.45" />
+          {/* Small crescent */}
+          <circle cx="65" cy="12" r="7" fill="#A0A0A0" opacity="0.40" />
+          <circle cx="62" cy="10" r="5.5" fill="#141414" />
         </>
       );
     default:

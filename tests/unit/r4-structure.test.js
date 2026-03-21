@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 
 /**
  * R4 structural validations — CSS + TSX structure checks
- * for SpeedDial, Bottom Sheet, and Download Sheet changes.
+ * for QuickPanel, Bottom Sheet changes.
  */
 
 const styleCss = readFileSync('css/style.css', 'utf-8');
@@ -31,92 +31,87 @@ function ruleBody(css, selector) {
   return exact ? exact.body : (rules[0]?.body ?? '');
 }
 
-/* ===== R4-5: SpeedDial vertical column layout ===== */
+/* ===== QuickPanel CSS structure ===== */
 
-describe('R4-5 SpeedDial vertical column', () => {
-  it('.speed-dial-items uses flex-direction: column', () => {
-    const body = ruleBody(styleCss, '.speed-dial-items');
-    expect(body).toContain('flex-direction: column');
+describe('QuickPanel CSS structure', () => {
+  it('.quick-panel-trigger has FAB styling (fixed, border-radius 50%)', () => {
+    const body = ruleBody(styleCss, '.quick-panel-trigger');
+    expect(body).toContain('position: fixed');
+    expect(body).toContain('border-radius: 50%');
+    expect(body).toContain('width: var(--fab-size)');
   });
 
-  it('.speed-dial-items positioned right of FAB', () => {
-    const body = ruleBody(styleCss, '.speed-dial-items');
-    expect(body).toMatch(/right:\s*calc\(var\(--fab-size\)\s*\+\s*12px\)/);
+  it('.quick-panel-grid uses 4-column grid', () => {
+    const body = ruleBody(styleCss, '.quick-panel-grid');
+    expect(body).toContain('grid-template-columns: repeat(4, 1fr)');
   });
 
-  it('.speed-dial-item uses flex-direction: row (label left, icon right)', () => {
-    const body = ruleBody(styleCss, '.speed-dial-item');
-    expect(body).toContain('flex-direction: row');
-  });
-
-  it('.speed-dial-item has min-height: var(--tap-min)', () => {
-    const body = ruleBody(styleCss, '.speed-dial-item');
+  it('.quick-panel-item has min-height: var(--tap-min)', () => {
+    const body = ruleBody(styleCss, '.quick-panel-item');
     expect(body).toContain('min-height: var(--tap-min)');
   });
 
-  it('.speed-dial-item has cursor: pointer', () => {
-    const body = ruleBody(styleCss, '.speed-dial-item');
+  it('.quick-panel-item has cursor: pointer', () => {
+    const body = ruleBody(styleCss, '.quick-panel-item');
     expect(body).toContain('cursor: pointer');
   });
 
-  it('.speed-dial-label has no pointer-events: none', () => {
-    const body = ruleBody(styleCss, '.speed-dial-label');
-    expect(body).not.toContain('pointer-events: none');
+  it('.quick-panel-sheet has bottom sheet positioning', () => {
+    const body = ruleBody(styleCss, '.quick-panel-sheet');
+    expect(body).toContain('position: fixed');
+    expect(body).toContain('bottom: 0');
+    expect(body).toContain('transform: translateY(100%)');
   });
 
-  it('no grid-template-rows or grid-auto-flow remnants', () => {
-    const speedDialSection = styleCss.slice(
-      styleCss.indexOf('Speed Dial FAB'),
-      styleCss.indexOf('Tool Action Buttons'),
-    );
-    expect(speedDialSection).not.toContain('grid-template-rows');
-    expect(speedDialSection).not.toContain('grid-auto-flow');
+  it('.quick-panel.open .quick-panel-sheet transforms to visible', () => {
+    const body = ruleBody(styleCss, '.quick-panel.open .quick-panel-sheet');
+    expect(body).toContain('transform: translateY(0)');
   });
 
-  it('SpeedDial.tsx renders label before icon in JSX', () => {
-    const tsx = readFileSync('src/components/trip/SpeedDial.tsx', 'utf-8');
-    const labelIdx = tsx.indexOf('speed-dial-label');
-    const iconIdx = tsx.indexOf('<Icon name={item.icon}');
-    expect(labelIdx).toBeGreaterThan(-1);
-    expect(iconIdx).toBeGreaterThan(-1);
-    expect(labelIdx).toBeLessThan(iconIdx);
+  it('.quick-panel-divider spans full grid width', () => {
+    const body = ruleBody(styleCss, '.quick-panel-divider');
+    expect(body).toContain('height: 1px');
+    expect(body).toContain('background: var(--color-border)');
   });
 
-  it('FAB uses left-pointing arrow when closed', () => {
-    const tsx = readFileSync('src/components/trip/SpeedDial.tsx', 'utf-8');
-    // FAB_CLOSED should have path pointing left: M16 6l-8 6 8 6z
-    const closedMatch = tsx.match(/FAB_CLOSED[\s\S]*?<path d="([^"]+)"/);
-    expect(closedMatch).not.toBeNull();
-    expect(closedMatch[1]).toContain('M16');
-  });
-});
-
-/* ===== R4-6: Download Sheet flex-wrap ===== */
-
-describe('R4-6 Download Sheet flex-wrap', () => {
-  it('.download-sheet-options uses flex-wrap: wrap', () => {
-    const body = ruleBody(styleCss, '.download-sheet-options');
-    expect(body).toContain('flex-wrap: wrap');
+  it('no old speed-dial CSS remnants', () => {
+    expect(styleCss).not.toContain('.speed-dial-trigger');
+    expect(styleCss).not.toContain('.speed-dial-items');
+    expect(styleCss).not.toContain('.speed-dial-item');
+    expect(styleCss).not.toContain('.speed-dial-label');
+    expect(styleCss).not.toContain('.speed-dial-backdrop');
   });
 
-  it('.download-sheet-options has border-top separator', () => {
-    const body = ruleBody(styleCss, '.download-sheet-options');
-    expect(body).toContain('border-top');
+  it('no old download-sheet CSS remnants', () => {
+    expect(styleCss).not.toContain('.download-backdrop');
+    expect(styleCss).not.toContain('.download-sheet');
+    expect(styleCss).not.toContain('.download-option');
   });
 
-  it('.download-sheet-options has justify-content: center', () => {
-    const body = ruleBody(styleCss, '.download-sheet-options');
-    expect(body).toContain('justify-content: center');
+  it('QuickPanel.tsx has 14 panel items', () => {
+    const tsx = readFileSync('src/components/trip/QuickPanel.tsx', 'utf-8');
+    // Match PANEL_ITEMS entries: { key: '...', icon: '...', label: '...', action: '...'
+    const matches = tsx.match(/\{ key: '[^']+', icon: '[^']+', label: '[^']+', action: '/g);
+    expect(matches).not.toBeNull();
+    expect(matches.length).toBe(14);
   });
 
-  it('.download-option has min-width for wrapping', () => {
-    const body = ruleBody(styleCss, '.download-option');
-    expect(body).toMatch(/min-width:\s*\d+px/);
+  it('QuickPanel.tsx FAB uses upward triangle path', () => {
+    const tsx = readFileSync('src/components/trip/QuickPanel.tsx', 'utf-8');
+    expect(tsx).toContain('M12 8l-6 6h12z');
   });
 
-  it('no border-right on .download-option', () => {
-    const body = ruleBody(styleCss, '.download-option');
-    expect(body).not.toContain('border-right');
+  it('QuickPanel.tsx has no old SpeedDial references', () => {
+    const tsx = readFileSync('src/components/trip/QuickPanel.tsx', 'utf-8');
+    expect(tsx).not.toContain('speed-dial');
+    expect(tsx).not.toContain('SpeedDial');
+  });
+
+  it('TripPage.tsx imports QuickPanel (not SpeedDial)', () => {
+    const tsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
+    expect(tsx).toContain("import QuickPanel from '../components/trip/QuickPanel'");
+    expect(tsx).not.toContain("import SpeedDial from");
+    expect(tsx).not.toContain("import DownloadSheet from");
   });
 });
 
