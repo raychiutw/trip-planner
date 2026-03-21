@@ -56,10 +56,13 @@ function parsePanelItems(source) {
 }
 
 /**
- * 解析 THEME_OPTIONS 陣列（從 TSX 原始碼抽取 key）
+ * 解析 theme 陣列（從原始碼抽取 key）
+ * @param {string} source - 原始碼
+ * @param {string} [varName='COLOR_THEMES'] - 常數名稱
  */
-function parseThemeKeys(source) {
-  const blockStart = source.indexOf('const THEME_OPTIONS');
+function parseThemeKeys(source, varName = 'COLOR_THEMES') {
+  const blockStart = source.indexOf(`const ${varName}`);
+  if (blockStart === -1) return [];
   const blockEnd = source.indexOf('];', blockStart);
   const block = source.slice(blockStart, blockEnd + 2);
   const keys = [];
@@ -104,8 +107,8 @@ describe('PANEL_ITEMS 結構完整性', () => {
     const expectedOrder = [
       'flights', 'checklist', 'emergency', 'backup',
       'suggestions', 'today-route', 'driving',
-      'trip-select', 'appearance', 'printer',
-      'download-pdf', 'download-md', 'download-json', 'download-csv',
+      'trip-select', 'appearance',
+      'printer', 'download-pdf', 'download-md', 'download-json', 'download-csv',
     ];
     expect(items.map(i => i.key)).toEqual(expectedOrder);
   });
@@ -125,13 +128,13 @@ describe('PANEL_ITEMS 結構完整性', () => {
     expect(uniqueKeys.size).toBe(keys.length);
   });
 
-  it('Section 分布正確：A=4, B=6, C=4', () => {
+  it('Section 分布正確：A=4, B=5, C=5', () => {
     const sectionA = items.filter(i => i.section === 'A');
     const sectionB = items.filter(i => i.section === 'B');
     const sectionC = items.filter(i => i.section === 'C');
     expect(sectionA).toHaveLength(4);
-    expect(sectionB).toHaveLength(6);
-    expect(sectionC).toHaveLength(4);
+    expect(sectionB).toHaveLength(5);
+    expect(sectionC).toHaveLength(5);
   });
 
   it('download action 的 key 都以 "download-" 開頭', () => {
@@ -143,24 +146,65 @@ describe('PANEL_ITEMS 結構完整性', () => {
   });
 });
 
-/* ===== THEME_OPTIONS 驗證 ===== */
+/* ===== #9: 標題一致性 — trip-select 和 appearance label 與 InfoSheet title 一致 ===== */
 
-describe('THEME_OPTIONS 驗證', () => {
-  const themeKeys = parseThemeKeys(tsx);
+describe('QuickPanel 標題一致性', () => {
+  const items = parsePanelItems(tsx);
 
-  it('THEME_OPTIONS 有 night 主題', () => {
+  it('trip-select label 為「切換行程」（與 InfoSheet title 一致）', () => {
+    const tripSelect = items.find(i => i.key === 'trip-select');
+    expect(tripSelect?.label).toBe('切換行程');
+  });
+
+  it('appearance label 為「外觀主題」（與 InfoSheet title 一致）', () => {
+    const appearance = items.find(i => i.key === 'appearance');
+    expect(appearance?.label).toBe('外觀主題');
+  });
+});
+
+/* ===== COLOR_THEMES 驗證（DRY — now in src/lib/appearance.ts） ===== */
+
+describe('COLOR_THEMES 驗證（appearance.ts）', () => {
+  const appearanceTs = readFileSync('src/lib/appearance.ts', 'utf-8');
+  const themeKeys = parseThemeKeys(appearanceTs);
+
+  it('COLOR_THEMES 有 night 主題', () => {
     expect(themeKeys).toContain('night');
   });
 
-  it('THEME_OPTIONS 沒有 ocean 主題', () => {
+  it('COLOR_THEMES 沒有 ocean 主題', () => {
     expect(themeKeys).not.toContain('ocean');
   });
 
-  it('THEME_OPTIONS 包含所有預期主題（sun/sky/zen/forest/sakura/night）', () => {
+  it('COLOR_THEMES 包含所有預期主題（sun/sky/zen/forest/sakura/night）', () => {
     const expected = ['sun', 'sky', 'zen', 'forest', 'sakura', 'night'];
     for (const key of expected) {
       expect(themeKeys).toContain(key);
     }
+  });
+});
+
+/* ===== #1: DRY — TripPage 和 SettingPage 都 import from appearance.ts ===== */
+
+describe('DRY: 常數不重複定義', () => {
+  const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
+  const settingPageTsx = readFileSync('src/pages/SettingPage.tsx', 'utf-8');
+
+  it('TripPage imports from appearance.ts', () => {
+    expect(tripPageTsx).toContain("from '../lib/appearance'");
+  });
+
+  it('SettingPage imports from appearance.ts', () => {
+    expect(settingPageTsx).toContain("from '../lib/appearance'");
+  });
+
+  it('TripPage 不再本地定義 COLOR_THEMES', () => {
+    // 不應有 const COLOR_THEMES 定義（但 import 是允許的）
+    expect(tripPageTsx).not.toMatch(/const COLOR_THEMES/);
+  });
+
+  it('SettingPage 不再本地定義 COLOR_THEMES', () => {
+    expect(settingPageTsx).not.toMatch(/const COLOR_THEMES/);
   });
 });
 
@@ -205,40 +249,34 @@ describe('QuickPanel FAB trigger', () => {
   });
 });
 
-/* ===== Drill-down views ===== */
+/* ===== Sheet actions for trip-select and appearance ===== */
 
-describe('QuickPanel drill-down', () => {
-  it('supports grid, trip-select, appearance views', () => {
-    expect(tsx).toContain("'grid'");
-    expect(tsx).toContain("'trip-select'");
-    expect(tsx).toContain("'appearance'");
+describe('QuickPanel sheet actions', () => {
+  it('trip-select and appearance use sheet action (delegated to InfoSheet)', () => {
+    const items = parsePanelItems(tsx);
+    const tripSelect = items.find(i => i.key === 'trip-select');
+    const appearance = items.find(i => i.key === 'appearance');
+    expect(tripSelect?.action).toBe('sheet');
+    expect(appearance?.action).toBe('sheet');
   });
 
-  it('has back button in drill-down views', () => {
-    expect(tsx).toContain('quick-panel-back');
-    expect(tsx).toContain('arrow-left');
+  it('no drill-down action remains in PANEL_ITEMS', () => {
+    const items = parsePanelItems(tsx);
+    const drillDown = items.filter(i => i.action === 'drill-down');
+    expect(drillDown).toHaveLength(0);
   });
 
-  it('trip-select view fetches /trips endpoint', () => {
-    expect(tsx).toContain("apiFetch<TripListItem[]>('/trips')");
+  it('trip-select and appearance content is in TripPage', () => {
+    const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
+    expect(tripPageTsx).toContain("case 'trip-select':");
+    expect(tripPageTsx).toContain("case 'appearance':");
   });
 
-  it('appearance view shows color mode and theme selectors', () => {
-    expect(tsx).toContain('quick-panel-mode-group');
-    expect(tsx).toContain('quick-panel-theme-group');
-  });
-
-  it('appearance view has all 6 theme options', () => {
-    const themes = ['sun', 'sky', 'zen', 'forest', 'sakura', 'night'];
-    for (const t of themes) {
-      expect(tsx).toContain(`key: '${t}'`);
-    }
-  });
-
-  it('appearance view has 3 color mode options', () => {
-    expect(tsx).toContain("key: 'light'");
-    expect(tsx).toContain("key: 'dark'");
-    expect(tsx).toContain("key: 'auto'");
+  it('TripPage imports appearance theme/color mode options from appearance.ts', () => {
+    const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
+    expect(tripPageTsx).toContain('COLOR_MODE_OPTIONS');
+    expect(tripPageTsx).toContain('THEME_ACCENTS');
+    expect(tripPageTsx).toContain('COLOR_THEMES');
   });
 });
 
@@ -257,6 +295,59 @@ describe('QuickPanel keyboard', () => {
   it('handles Escape key to close', () => {
     expect(tsx).toContain("e.key === 'Escape'");
     expect(tsx).toContain('triggerRef.current?.focus()');
+  });
+});
+
+/* ===== #2: 無障礙 — focus trap + X close button ===== */
+
+describe('QuickPanel 無障礙', () => {
+  it('has focus trap using FOCUSABLE selector (same as InfoSheet)', () => {
+    expect(tsx).toContain('FOCUSABLE');
+    expect(tsx).toContain("e.key !== 'Tab'");
+    expect(tsx).toContain('first.focus()');
+    expect(tsx).toContain('last.focus()');
+  });
+
+  it('has X close button with aria-label', () => {
+    expect(tsx).toContain('sheet-close-btn');
+    expect(tsx).toContain('aria-label="關閉"');
+    expect(tsx).toContain('closeBtnRef');
+  });
+
+  it('focuses close button on open', () => {
+    expect(tsx).toContain('closeBtnRef.current?.focus()');
+  });
+});
+
+/* ===== #11: sheet-handle 移除 ===== */
+
+describe('QuickPanel sheet-handle 移除', () => {
+  it('does not render sheet-handle (no drag, use X button)', () => {
+    expect(tsx).not.toContain('sheet-handle');
+  });
+
+  it('has quick-panel-header with close button instead', () => {
+    expect(tsx).toContain('quick-panel-header');
+  });
+});
+
+/* ===== #5: trips API 快取 ===== */
+
+describe('TripPage trips 快取', () => {
+  const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
+
+  it('skips fetch when sheetTrips already has data', () => {
+    expect(tripPageTsx).toContain('sheetTrips.length > 0');
+  });
+});
+
+/* ===== #6: 小螢幕響應式 ===== */
+
+describe('QuickPanel 小螢幕響應式', () => {
+  it('has 2-column grid for max-width: 350px', () => {
+    expect(styleCss).toContain('max-width: 350px');
+    // 在 350px 斷點內，grid 改為 2 欄
+    expect(styleCss).toContain('repeat(2, 1fr)');
   });
 });
 

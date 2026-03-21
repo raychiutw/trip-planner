@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
 import { lsGet, lsSet, lsRemove, lsRenewAll } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
+import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../lib/appearance';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
 import Hotel from '../components/trip/Hotel';
@@ -231,10 +233,14 @@ const SHEET_TITLES: Record<string, string> = {
   suggestions: 'AI 行程建議',
   driving: '交通統計',
   'today-route': '今日路線',
+  'trip-select': '切換行程',
+  appearance: '外觀與主題',
   prep: '行前準備',
   'emergency-group': '緊急應變',
   'ai-group': 'AI 分析',
 };
+
+/* ===== Appearance sheet config — imported from ../lib/appearance ===== */
 
 /* ===== Resolve state machine ===== */
 
@@ -257,6 +263,10 @@ export default function TripPage() {
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorMode, setColorMode, colorTheme, setTheme } = useDarkMode();
 
+  /* --- Trips list for trip-select sheet --- */
+  const [sheetTrips, setSheetTrips] = useState<TripListItem[]>([]);
+  const [sheetTripsLoading, setSheetTripsLoading] = useState(false);
+
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
   /* --- lsRenewAll once per session (#9) --- */
@@ -266,6 +276,26 @@ export default function TripPage() {
       sessionStorage.setItem('lsRenewed', '1');
     }
   }, []);
+
+  /* --- Fetch trips when trip-select sheet opens (cached: skip if already loaded) --- */
+  useEffect(() => {
+    if (activeSheet !== 'trip-select') return;
+    if (sheetTrips.length > 0) return;  // 已有快取，不重複請求
+    let cancelled = false;
+    setSheetTripsLoading(true);
+    apiFetch<TripListItem[]>('/trips')
+      .then((data) => {
+        if (cancelled) return;
+        setSheetTrips(data.filter((t) => t.published === 1));
+      })
+      .catch(() => {
+        // ignore
+      })
+      .finally(() => {
+        if (!cancelled) setSheetTripsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeSheet, sheetTrips.length]);
 
   /* --- Resolve trip ID from URL / localStorage (#6: cancelled guard) --- */
   /* Fix 5: resolveKey in deps allows re-triggering without full page reload */
@@ -830,10 +860,78 @@ export default function TripPage() {
             <div className="info-card">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
           </>
         );
+      /* Settings sheets */
+      case 'trip-select':
+        return (
+          <div className="setting-page">
+            <div className="setting-section">
+              <div className="setting-trip-list">
+                {sheetTripsLoading && (
+                  <div className={LOADING_CLASS}>載入中...</div>
+                )}
+                {!sheetTripsLoading && sheetTrips.map((t) => (
+                  <button
+                    key={t.tripId}
+                    className={clsx('trip-btn', t.tripId === activeTripId && 'active')}
+                    onClick={() => handleTripChange(t.tripId)}
+                  >
+                    <strong>{t.name}</strong>
+                    {t.title && <span className="trip-sub">{t.title}</span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      case 'appearance':
+        return (
+          <div className="setting-page">
+            <div className="setting-section">
+              <div className="setting-section-title">色彩模式</div>
+              <div className="color-mode-grid">
+                {COLOR_MODE_OPTIONS.map((m) => (
+                  <button
+                    key={m.key}
+                    className={clsx('color-mode-card', m.key === colorMode && 'active')}
+                    onClick={() => setColorMode(m.key)}
+                  >
+                    <div className={`color-mode-preview color-mode-${m.key}`}>
+                      <div className="cmp-top"></div>
+                      <div className="cmp-bottom">
+                        <div className="cmp-input"></div>
+                        <div className="cmp-dot"></div>
+                      </div>
+                    </div>
+                    <div className="color-mode-label">{m.label}</div>
+                    <div className="color-mode-desc">{m.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="setting-subsection-title">色彩主題</div>
+              <div className="color-theme-grid">
+                {COLOR_THEMES.map((t) => (
+                  <button
+                    key={t.key}
+                    className={clsx('color-theme-card', t.key === colorTheme && 'active')}
+                    data-theme={t.key}
+                    onClick={() => setTheme(t.key)}
+                  >
+                    <div
+                      className="color-theme-swatch"
+                      style={{ background: isDark ? THEME_ACCENTS[t.key].dark : THEME_ACCENTS[t.key].light }}
+                    />
+                    <div className="color-theme-label">{t.label}</div>
+                    <div className="color-theme-desc">{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, handleSheetClose]);
+  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, handleTripChange, colorMode, setColorMode, colorTheme, setTheme, isDark]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;
@@ -911,12 +1009,6 @@ export default function TripPage() {
           onItemClick={handlePanelItem}
           onPrint={togglePrint}
           onDownload={handleDownloadFormat}
-          onTripChange={handleTripChange}
-          currentTripId={activeTripId}
-          colorMode={colorMode}
-          onColorModeChange={setColorMode}
-          colorTheme={colorTheme}
-          onThemeChange={setTheme}
         />
       )}
 

@@ -10,13 +10,23 @@ const { setupApiMocks } = require('./api-mocks');
  *   2.  點擊 FAB → panel 開啟，顯示 14 項 grid
  *   3.  點擊 backdrop → panel 關閉
  *   4.  點擊「航班」→ InfoSheet 開啟
- *   5.  點擊「切換行程」→ drill-down 顯示行程列表
- *   6.  點擊「返回」→ 回到 grid
- *   7.  點擊「外觀」→ drill-down 顯示主題選擇器
+ *   5.  點擊「切換行程」→ InfoSheet 顯示行程列表
+ *   6.  FAB 開啟後隱藏
+ *   7.  點擊「外觀主題」→ InfoSheet 顯示主題選擇器
  *   8.  主題切換即時生效（body class 更新）
  *   9.  Night 主題選擇（body 加 theme-night class）
  *   10. FAB 在列印模式下隱藏
+ *   11. QuickPanel → InfoSheet 過渡連貫性
+ *   12. 鍵盤 Escape 關閉 + X 按鈕關閉
  */
+
+/**
+ * PANEL_ITEMS 總數：14 項
+ *   Section A (行程資訊): flights, checklist, emergency, backup = 4
+ *   Section B (工具+設定): suggestions, today-route, driving, trip-select, appearance = 5
+ *   Section C (匯出): printer, download-pdf, download-md, download-json, download-csv = 5
+ */
+const PANEL_ITEMS_COUNT = 14;
 
 function buildWeatherMock(url) {
   const params = new URL(url).searchParams;
@@ -87,14 +97,14 @@ test.describe('(2) 點擊 FAB 開啟 panel', () => {
     await expect(page.locator('#quickPanel')).toHaveClass(/open/, { timeout: 3000 });
   });
 
-  test('panel 開啟後顯示 14 個 grid 項目', async ({ page }) => {
+  test(`panel 開啟後顯示 ${PANEL_ITEMS_COUNT} 個 grid 項目`, async ({ page }) => {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
 
-    // PANEL_ITEMS 共 14 項（section A: 4, section B: 6, section C: 4）
+    // PANEL_ITEMS 共 14 項（section A: 4, section B: 5, section C: 5）
     const items = page.locator('.quick-panel-item');
-    await expect(items).toHaveCount(14);
+    await expect(items).toHaveCount(PANEL_ITEMS_COUNT);
   });
 
   test('panel 開啟後 quick-panel-sheet 可見', async ({ page }) => {
@@ -171,37 +181,35 @@ test.describe('(4) 點擊「航班」→ InfoSheet 開啟', () => {
 });
 
 // ─────────────────────────────────────────────
-// 5. 點擊「切換行程」→ drill-down 顯示行程列表
+// 5. 點擊「切換行程」→ InfoSheet 顯示行程列表
 // ─────────────────────────────────────────────
-test.describe('(5) 點擊「切換行程」→ drill-down', () => {
+test.describe('(5) 點擊「切換行程」→ InfoSheet', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('點擊 trip-select 後進入 drill-down 視圖', async ({ page }) => {
+  test('點擊 trip-select 後 InfoSheet 開啟並顯示「切換行程」標題', async ({ page }) => {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
 
     await page.locator('.quick-panel-item[data-content="trip-select"]').click();
 
-    // drill-down 視圖應出現，顯示「切換行程」標題
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
-    await expect(page.locator('.quick-panel-drilldown-title')).toContainText('切換行程');
+    // QuickPanel 關閉
+    await expect(page.locator('#quickPanel')).not.toHaveClass(/open/, { timeout: 3000 });
+    // InfoSheet 開啟
+    await expect(page.locator('#infoBottomSheet')).toHaveClass(/open/, { timeout: 5000 });
+    // 標題顯示「切換行程」
+    await expect(page.locator('.sheet-title')).toContainText('切換行程');
   });
 
-  test('drill-down 顯示行程列表（mock 有 2 筆已發布行程）', async ({ page }) => {
+  test('InfoSheet 顯示行程列表（mock 有 2 筆已發布行程）', async ({ page }) => {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     await page.locator('.quick-panel-item[data-content="trip-select"]').click();
-
-    // 等待 drill-down 標題出現後再等載入完成
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
-
-    // 等待載入完成（tripsLoading: false）
-    await expect(page.locator('.quick-panel-trip-loading')).toHaveCount(0, { timeout: 5000 });
+    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
 
     // mock data 有 2 筆 published=1 的行程
-    const tripItems = page.locator('.quick-panel-trip-item');
+    const tripItems = page.locator('.trip-btn');
     await expect(tripItems).toHaveCount(2, { timeout: 5000 });
   });
 
@@ -210,84 +218,60 @@ test.describe('(5) 點擊「切換行程」→ drill-down', () => {
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     await page.locator('.quick-panel-item[data-content="trip-select"]').click();
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
-    await expect(page.locator('.quick-panel-trip-loading')).toHaveCount(0, { timeout: 5000 });
+    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
 
-    const activeTrip = page.locator('.quick-panel-trip-item.active');
+    const activeTrip = page.locator('.trip-btn.active');
     await expect(activeTrip).toHaveCount(1);
   });
 });
 
 // ─────────────────────────────────────────────
-// 6. 點擊「返回」→ 回到 grid
+// 6. FAB 開啟後隱藏
 // ─────────────────────────────────────────────
-test.describe('(6) 點擊「返回」→ 回到 grid', () => {
+test.describe('(6) FAB 開啟後隱藏', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  async function openDrillDown(page) {
+  test('panel 開啟後 FAB 透明且不可點擊', async ({ page }) => {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="trip-select"]').click();
-    await expect(page.locator('.quick-panel-drilldown')).toBeVisible();
-  }
 
-  test('點擊「返回」後 drilldown 消失、grid 重現', async ({ page }) => {
-    await openDrillDown(page);
-
-    await page.locator('.quick-panel-back').click();
-
-    // drilldown 不可見
-    await expect(page.locator('.quick-panel-drilldown')).toHaveCount(0);
-    // grid 容器重現
-    await expect(page.locator('.quick-panel-grid-container')).toBeVisible();
-  });
-
-  test('返回後 14 個 grid 項目再次出現', async ({ page }) => {
-    await openDrillDown(page);
-    await page.locator('.quick-panel-back').click();
-
-    // 等待 grid 容器出現後再驗證項目數
-    await expect(page.locator('.quick-panel-grid-container')).toBeVisible();
-    const items = page.locator('.quick-panel-item');
-    await expect(items).toHaveCount(14);
+    // FAB 應透過 CSS 隱藏（opacity: 0, pointer-events: none）
+    const fab = page.locator('.quick-panel-trigger');
+    await expect(fab).toHaveCSS('opacity', '0');
+    await expect(fab).toHaveCSS('pointer-events', 'none');
   });
 });
 
 // ─────────────────────────────────────────────
-// 7. 點擊「外觀」→ drill-down 顯示主題選擇器
+// 7. 點擊「外觀主題」→ InfoSheet 顯示主題選擇器
 // ─────────────────────────────────────────────
-test.describe('(7) 點擊「外觀」→ 主題選擇器', () => {
+test.describe('(7) 點擊「外觀主題」→ 主題選擇器', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  async function openAppearance(page) {
+  async function openAppearanceSheet(page) {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    // 等待 drill-down 標題出現，取代硬性延遲
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
+    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
   }
 
-  test('點擊 appearance 後顯示「外觀主題」標題', async ({ page }) => {
-    await openAppearance(page);
-    await expect(page.locator('.quick-panel-drilldown-title')).toContainText('外觀主題');
+  test('點擊 appearance 後 InfoSheet 顯示「外觀與主題」標題', async ({ page }) => {
+    await openAppearanceSheet(page);
+    await expect(page.locator('.sheet-title')).toContainText('外觀與主題');
   });
 
-  test('顯示色彩模式選擇器（3 個 mode btn）', async ({ page }) => {
-    await openAppearance(page);
-    const modeBtns = page.locator('.quick-panel-mode-btn');
-    await expect(modeBtns).toHaveCount(3);
-    // 三個選項：淺色、深色、自動
-    await expect(modeBtns.nth(0)).toContainText('淺色');
-    await expect(modeBtns.nth(1)).toContainText('深色');
-    await expect(modeBtns.nth(2)).toContainText('自動');
+  test('顯示色彩模式選擇器（3 個 color-mode-card）', async ({ page }) => {
+    await openAppearanceSheet(page);
+    const modeCards = page.locator('.color-mode-card');
+    await expect(modeCards).toHaveCount(3);
   });
 
-  test('顯示主題色選擇器（6 個 theme btn）', async ({ page }) => {
-    await openAppearance(page);
-    const themeBtns = page.locator('.quick-panel-theme-btn');
-    await expect(themeBtns).toHaveCount(6);
+  test('顯示主題色選擇器（6 個 color-theme-card）', async ({ page }) => {
+    await openAppearanceSheet(page);
+    const themeCards = page.locator('.color-theme-card');
+    await expect(themeCards).toHaveCount(6);
   });
 });
 
@@ -297,32 +281,24 @@ test.describe('(7) 點擊「外觀」→ 主題選擇器', () => {
 test.describe('(8) 主題切換即時生效', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('切換到「晴空」主題後 body 有 theme-sky class', async ({ page }) => {
+  async function openAppearanceSheet(page) {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    // 等待 drill-down 就緒
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
+    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
+  }
 
+  test('切換到「晴空」主題後 body 有 theme-sky class', async ({ page }) => {
+    await openAppearanceSheet(page);
     // 點擊「晴空（sky）」主題按鈕
-    await page.locator('.quick-panel-theme-btn[aria-label="晴空"]').click();
-
-    // 等待 body class 更新（assertion-based）
+    await page.locator('.color-theme-card[data-theme="sky"]').click();
     await expect(page.locator('body')).toHaveClass(/theme-sky/);
   });
 
   test('切換到「和風」主題後 body 有 theme-zen class', async ({ page }) => {
-    await waitForPage(page);
-    await page.locator('.quick-panel-trigger').click();
-    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    // 等待 drill-down 就緒
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
-
-    await page.locator('.quick-panel-theme-btn[aria-label="和風"]').click();
-
-    // 等待 body class 更新（assertion-based）
+    await openAppearanceSheet(page);
+    await page.locator('.color-theme-card[data-theme="zen"]').click();
     await expect(page.locator('body')).toHaveClass(/theme-zen/);
   });
 });
@@ -333,33 +309,25 @@ test.describe('(8) 主題切換即時生效', () => {
 test.describe('(9) Night 主題選擇', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('選擇「星夜」主題後 body 有 theme-night class', async ({ page }) => {
+  async function openAppearanceSheet(page) {
     await waitForPage(page);
     await page.locator('.quick-panel-trigger').click();
     await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
     await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    // 等待 drill-down 就緒
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
+    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
+  }
 
-    await page.locator('.quick-panel-theme-btn[aria-label="星夜"]').click();
-
-    // 等待 body class 更新（assertion-based）
+  test('選擇「星夜」主題後 body 有 theme-night class', async ({ page }) => {
+    await openAppearanceSheet(page);
+    await page.locator('.color-theme-card[data-theme="night"]').click();
     await expect(page.locator('body')).toHaveClass(/theme-night/);
   });
 
-  test('選擇「星夜」後主題按鈕獲得 active class', async ({ page }) => {
-    await waitForPage(page);
-    await page.locator('.quick-panel-trigger').click();
-    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    // 等待 drill-down 就緒
-    await expect(page.locator('.quick-panel-drilldown-title')).toBeVisible();
-
-    const nightBtn = page.locator('.quick-panel-theme-btn[aria-label="星夜"]');
-    await nightBtn.click();
-
-    // 等待 active class 出現（assertion-based）
-    await expect(nightBtn).toHaveClass(/active/);
+  test('選擇「星夜」後主題卡片獲得 active class', async ({ page }) => {
+    await openAppearanceSheet(page);
+    const nightCard = page.locator('.color-theme-card[data-theme="night"]');
+    await nightCard.click();
+    await expect(nightCard).toHaveClass(/active/);
   });
 });
 
@@ -397,9 +365,36 @@ test.describe('(10) FAB 在列印模式下隱藏', () => {
 });
 
 // ─────────────────────────────────────────────
-// 額外：鍵盤 Escape 關閉
+// 11. QuickPanel → InfoSheet 過渡連貫性 (#4b)
 // ─────────────────────────────────────────────
-test.describe('Escape 鍵關閉 panel', () => {
+test.describe('(11) QuickPanel → InfoSheet 過渡連貫性', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('點擊 sheet item 後 QuickPanel 關閉同時 InfoSheet 開啟（無明顯延遲）', async ({ page }) => {
+    await waitForPage(page);
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+
+    // 記錄點擊時間
+    const startTime = Date.now();
+    await page.locator('.quick-panel-item[data-content="flights"]').click();
+
+    // 同時驗證 QuickPanel 關閉和 InfoSheet 開啟
+    await Promise.all([
+      expect(page.locator('#quickPanel')).not.toHaveClass(/open/, { timeout: 3000 }),
+      expect(page.locator('#infoBottomSheet')).toHaveClass(/open/, { timeout: 5000 }),
+    ]);
+
+    // 整體過渡應在 2 秒內完成（含動畫時間）
+    const elapsed = Date.now() - startTime;
+    expect(elapsed).toBeLessThan(2000);
+  });
+});
+
+// ─────────────────────────────────────────────
+// 12. 鍵盤 Escape 關閉 + X 按鈕關閉 (#4c + #2b)
+// ─────────────────────────────────────────────
+test.describe('(12) 鍵盤 Escape 關閉 + X 按鈕關閉', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test('panel 開啟時按 Escape 鍵關閉', async ({ page }) => {
@@ -409,5 +404,26 @@ test.describe('Escape 鍵關閉 panel', () => {
 
     await page.keyboard.press('Escape');
     await expect(page.locator('#quickPanel')).not.toHaveClass(/open/, { timeout: 3000 });
+  });
+
+  test('點擊 X 關閉按鈕關閉 panel', async ({ page }) => {
+    await waitForPage(page);
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+
+    // X close button 在 quick-panel-sheet 內
+    const closeBtn = page.locator('.quick-panel-sheet .sheet-close-btn');
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.click();
+    await expect(page.locator('#quickPanel')).not.toHaveClass(/open/, { timeout: 3000 });
+  });
+
+  test('X 關閉按鈕有正確的 aria-label', async ({ page }) => {
+    await waitForPage(page);
+    await page.locator('.quick-panel-trigger').click();
+    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
+
+    const closeBtn = page.locator('.quick-panel-sheet .sheet-close-btn');
+    await expect(closeBtn).toHaveAttribute('aria-label', '關閉');
   });
 });

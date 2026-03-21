@@ -41,9 +41,9 @@ describe('QuickPanel CSS structure', () => {
     expect(body).toContain('width: var(--fab-size)');
   });
 
-  it('.quick-panel-grid uses 4-column grid', () => {
+  it('.quick-panel-grid uses 3-column grid', () => {
     const body = ruleBody(styleCss, '.quick-panel-grid');
-    expect(body).toContain('grid-template-columns: repeat(4, 1fr)');
+    expect(body).toContain('grid-template-columns: repeat(3, 1fr)');
   });
 
   it('.quick-panel-item has min-height: var(--tap-min)', () => {
