@@ -56,6 +56,8 @@ user-invocable: true
        -d '{...完整一天資料...}' \
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
      ```
+
+   **注意**：覆寫整天（PUT）時，必須保留原始的 `date`、`dayOfWeek`、`label`，不得送出 null。缺少任一欄位 API 將回傳 400。
    - **新增餐廳**：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
    - **修改/刪除餐廳**：PATCH/DELETE `/api/trips/{tripId}/restaurants/{rid}`
    - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`

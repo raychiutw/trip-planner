@@ -1,5 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
+import { validateDayBody } from '../../../_validate';
 
 interface Env {
   DB: D1Database;
@@ -147,6 +148,11 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
+  const validation = validateDayBody(body);
+  if (!validation.ok) {
+    return json({ error: validation.error }, validation.status);
+  }
+
   // Build batch statements: delete old data, then insert new
   const stmts: D1PreparedStatement[] = [];
 
@@ -163,9 +169,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   stmts.push(
     db.prepare('UPDATE days SET date = ?, day_of_week = ?, label = ?, weather_json = ? WHERE id = ?')
       .bind(
-        body.date ?? null,
-        body.dayOfWeek ?? null,
-        body.label ?? null,
+        body.date!,
+        body.dayOfWeek!,
+        body.label!,
         body.weather ? JSON.stringify(body.weather) : null,
         dayId,
       ),

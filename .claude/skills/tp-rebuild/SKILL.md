@@ -33,6 +33,13 @@ user-invocable: true
    ```
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
 3. 逐項檢查 R0-R15 品質規則，修正不合格的資料
+
+   **days meta 缺漏修復**（必先於其他修復執行）：
+   - 檢查每天的 `date`、`day_of_week`、`label` 是否為 null 或空字串
+   - 若 `date` 缺漏：根據 trip `startDate` + `day_num` 推算（startDate + day_num - 1 天）
+   - 若 `day_of_week` 缺漏：從推算出的 date 計算中文星期（一/二/三/四/五/六/日）
+   - 若 `label` 缺漏：根據當天 timeline 內容摘要，≤ 8 字
+   - 修復後透過 PUT `/api/trips/{tripId}/days/{N}` 整天覆寫寫回（含 date、dayOfWeek、label 三個必填欄位）
 4. 依修改類型選擇對應 API 寫回：
    - **修改單一 entry**：PATCH `/api/trips/{tripId}/entries/{eid}`
    - **覆寫整天**（結構性問題）：PUT `/api/trips/{tripId}/days/{N}`

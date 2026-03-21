@@ -63,6 +63,12 @@ user-invocable: true
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：`googleRating` 省略欄位，其餘欄位用空字串
 7. 依序建立每天資料：
+
+   每天 PUT 的 request body **必須**包含以下三個欄位，缺少任一欄位 API 將回傳 400：
+   - `date`（YYYY-MM-DD 格式，必填）：當天日期，例如 `"2026-07-01"`
+   - `dayOfWeek`（中文星期，必填）：`"一"` / `"二"` / `"三"` / `"四"` / `"五"` / `"六"` / `"日"`
+   - `label`（≤ 8 字，必填）：當日主題，例如 `"抵達那霸"` / `"美麗海水族館"`
+
    ```bash
    curl -s -X PUT \
      -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
