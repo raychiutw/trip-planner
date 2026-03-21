@@ -17,6 +17,12 @@ export function usePrintMode({ isDark, setIsDark }: PrintModeOptions) {
   const wasDarkRef = useRef(false);
   const prevThemeRef = useRef<string | null>(null);
 
+  /* Keep ref in sync so handlers always read the latest isDark without re-binding */
+  const isDarkRef = useRef(isDark);
+  useEffect(() => {
+    isDarkRef.current = isDark;
+  }, [isDark]);
+
   /** Save current theme class and switch to theme-print */
   function enterPrintTheme() {
     const body = document.body;
@@ -39,8 +45,8 @@ export function usePrintMode({ isDark, setIsDark }: PrintModeOptions) {
       const entering = !prev;
 
       if (entering) {
-        wasDarkRef.current = isDark;
-        if (isDark) setIsDark(false);
+        wasDarkRef.current = isDarkRef.current;
+        if (isDarkRef.current) setIsDark(false);
         enterPrintTheme();
         document.body.classList.add('print-mode');
       } else {
@@ -51,13 +57,13 @@ export function usePrintMode({ isDark, setIsDark }: PrintModeOptions) {
 
       return entering;
     });
-  }, [isDark, setIsDark]);
+  }, [setIsDark]);
 
   /** Listen for native browser print events. */
   useEffect(() => {
     function onBeforePrint() {
-      wasDarkRef.current = isDark;
-      if (isDark) setIsDark(false);
+      wasDarkRef.current = isDarkRef.current;
+      if (isDarkRef.current) setIsDark(false);
       enterPrintTheme();
       document.body.classList.add('print-mode');
       setIsPrintMode(true);
@@ -77,7 +83,7 @@ export function usePrintMode({ isDark, setIsDark }: PrintModeOptions) {
       window.removeEventListener('beforeprint', onBeforePrint);
       window.removeEventListener('afterprint', onAfterPrint);
     };
-  }, [isDark, setIsDark]);
+  }, [setIsDark]);
 
   return { isPrintMode, togglePrint };
 }

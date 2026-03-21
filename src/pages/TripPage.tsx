@@ -87,6 +87,7 @@ interface DaySectionProps {
   daySummary: DaySummary | undefined;
   autoScrollDates: string[];
   themeArt?: { theme: ColorTheme; dark: boolean };
+  localToday?: string;
 }
 
 const DaySection = React.memo(function DaySection({
@@ -95,6 +96,7 @@ const DaySection = React.memo(function DaySection({
   daySummary,
   autoScrollDates,
   themeArt,
+  localToday,
 }: DaySectionProps) {
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
@@ -113,6 +115,13 @@ const DaySection = React.memo(function DaySection({
     : null;
 
   const warnings = validateDay(timeline);
+
+  /* Memoised timeline entries — avoids new array reference on every render */
+  const timelineEntries = useMemo(
+    () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({})),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [day?.timeline],
+  );
 
   return (
     <section className="day-section" data-day={dayNum}>
@@ -161,7 +170,7 @@ const DaySection = React.memo(function DaySection({
             </div>
 
             {timeline.length > 0 && (
-              <Timeline events={timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({}))} dayDate={dayDate ?? null} />
+              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />
             )}
           </>
         )}
@@ -658,12 +667,14 @@ export default function TripPage() {
     [days],
   );
 
+  /* --- Today's date (timezone-aware) — shared by DayNav and Timeline --- */
+  const localToday = useMemo(() => getLocalToday(activeTripId), [activeTripId]);
+
   /* --- Today's day_num for DayNav today marker (timezone-aware) --- */
   const todayDayNum = useMemo(() => {
-    const today = getLocalToday(activeTripId);
-    const match = days.find((d) => d.date === today);
+    const match = days.find((d) => d.date === localToday);
     return match?.day_num;
-  }, [days, activeTripId]);
+  }, [days, localToday]);
 
   /* --- DayNav click: scroll to day section (#4) --- */
   const handleSwitchDay = useCallback(
@@ -696,8 +707,7 @@ export default function TripPage() {
     }
 
     // Auto-locate to today (timezone-aware)
-    const today = getLocalToday(activeTripId);
-    const idx = autoScrollDates.indexOf(today);
+    const idx = autoScrollDates.indexOf(localToday);
     if (idx >= 0 && dayNums[idx]) {
       requestAnimationFrame(() => {
         switchDay(dayNums[idx]);
@@ -711,7 +721,7 @@ export default function TripPage() {
         }, 300);
       });
     }
-  }, [loading, dayNums, autoScrollDates, switchDay, activeTripId]);
+  }, [loading, dayNums, autoScrollDates, switchDay, localToday]);
 
   /* --- scrollMarginTop dynamic alignment (#7) --- */
   useEffect(() => {
@@ -979,6 +989,7 @@ export default function TripPage() {
                   daySummary={daySummaryMap.get(dayNum)}
                   autoScrollDates={autoScrollDates}
                   themeArt={themeArt}
+                  localToday={localToday}
                 />
               ))}
 

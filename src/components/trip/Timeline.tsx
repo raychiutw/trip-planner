@@ -9,6 +9,9 @@ interface TimelineProps {
   events: TimelineEntryData[];
   /** The day's date (ISO format "YYYY-MM-DD"). When it matches today, "now" tracking is enabled. */
   dayDate?: string | null;
+  /** Today's date (ISO format "YYYY-MM-DD") provided by parent for stable comparison.
+   *  Falls back to new Date() if not provided. */
+  localToday?: string | null;
 }
 
 /** Parse start time "HH:MM" to minutes since midnight */
@@ -31,10 +34,12 @@ function parseEndMinutes(time?: string | null): number {
   return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
 }
 
-export default function Timeline({ events, dayDate }: TimelineProps) {
-  if (!events || events.length === 0) return null;
-
-  const isToday = dayDate === new Date().toISOString().split('T')[0];
+export default function Timeline({ events, dayDate, localToday }: TimelineProps) {
+  /* Compute isToday via useMemo to avoid new Date() on every render (keeps useMemo stable) */
+  const isToday = useMemo(() => {
+    const today = localToday ?? new Date().toISOString().split('T')[0];
+    return dayDate === today;
+  }, [dayDate, localToday]);
 
   /* Compute now index: only if this is today's timeline */
   const { nowIndex } = useMemo(() => {
@@ -61,6 +66,8 @@ export default function Timeline({ events, dayDate }: TimelineProps) {
     }
     return { nowIndex: foundNow };
   }, [isToday, events]);
+
+  if (!events || events.length === 0) return null;
 
   return (
     <div className="timeline">
