@@ -903,7 +903,6 @@ export default function TripPage() {
                       </div>
                     </div>
                     <div className="color-mode-label">{m.label}</div>
-                    <div className="color-mode-desc">{m.desc}</div>
                   </button>
                 ))}
               </div>
@@ -921,7 +920,6 @@ export default function TripPage() {
                       style={{ background: isDark ? THEME_ACCENTS[t.key].dark : THEME_ACCENTS[t.key].light }}
                     />
                     <div className="color-theme-label">{t.label}</div>
-                    <div className="color-theme-desc">{t.desc}</div>
                   </button>
                 ))}
               </div>

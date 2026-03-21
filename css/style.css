@@ -507,11 +507,12 @@ body.dark .day-header {
 .transport-summary-value { font-weight: 600; margin-left: auto; }
 
 /* ===== Today Route Sheet ===== */
-.today-route-list { display: flex; flex-direction: column; gap: 8px; }
-.today-route-item { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--color-accent-subtle); border-radius: var(--radius-sm); }
+.today-route-list { display: flex; flex-direction: column; gap: var(--spacing-2); }
+.today-route-item { display: flex; flex-direction: column; gap: var(--spacing-1); padding: var(--spacing-3); background: var(--color-accent-subtle); border-radius: var(--radius-sm); }
+.today-route-header { display: flex; align-items: baseline; gap: var(--spacing-2); }
 .today-route-time { font-weight: 600; font-size: var(--font-size-footnote); color: var(--color-accent); white-space: nowrap; min-width: 40px; }
-.today-route-title { font-size: var(--font-size-callout); font-weight: 600; color: var(--color-foreground); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.today-route-links { flex-shrink: 0; }
+.today-route-title { font-size: var(--font-size-callout); font-weight: 600; color: var(--color-foreground); }
+.today-route-links { display: flex; gap: var(--spacing-2); padding-left: calc(40px + var(--spacing-2)); }
 .today-route-links .nav-links { margin: 0; }
 
 /* ===== Print / Info Panel ===== */
@@ -642,8 +643,29 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     font-size: var(--font-size-footnote); color: var(--color-foreground); line-height: 1;
 }
 
+.quick-panel-grid-bottom {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--spacing-2);
+}
+@media (max-width: 390px) {
+    .quick-panel-grid-bottom .quick-panel-item-bottom {
+        padding: var(--spacing-1) var(--spacing-half);
+        font-size: var(--font-size-caption2);
+    }
+}
+@media (max-width: 350px) {
+    .quick-panel-grid-bottom { grid-template-columns: repeat(3, 1fr); }
+}
+.quick-panel-item-bottom {
+    background: var(--color-tertiary);
+}
+.quick-panel-item-bottom .svg-icon,
+.quick-panel-item-bottom svg { color: var(--color-muted); }
+.quick-panel-item-bottom .quick-panel-label { color: var(--color-muted); }
+
 .quick-panel-divider {
-    height: 1px; background: var(--color-border); margin: var(--spacing-2) 0;
+    margin: var(--spacing-3) 0;
 }
 
 .print-mode .quick-panel, .print-mode .quick-panel-trigger { display: none !important; }

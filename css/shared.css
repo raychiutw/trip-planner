@@ -162,7 +162,7 @@
         --color-tertiary: #36302A;
         --color-hover: #332C26;
         --color-foreground: #EAE2D6;
-        --color-muted: #A09688;
+        --color-muted: #B0A698; /* was #A09688, adjusted for WCAG AA 4.5:1 on --color-tertiary */
         --color-accent-foreground: #1E1A16;
         --color-border: #3E3830;
         --color-destructive: #E8A0A0;
@@ -704,4 +704,148 @@
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+}
+
+/* ===== Setting Layout (shared by SettingPage + QuickPanel AppearanceSheet) ===== */
+.setting-page { max-width: 520px; margin: 0 auto; padding: var(--padding-h); }
+.setting-section { margin-bottom: 28px; }
+.setting-section-title {
+    font-size: var(--font-size-footnote);
+    font-weight: 700;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+.setting-trip-list { display: flex; flex-direction: column; gap: 8px; }
+.setting-trip-list .trip-btn {
+    transition: border-color var(--transition-duration-fast);
+}
+.setting-subsection-title {
+    font-size: var(--font-size-footnote);
+    font-weight: 600;
+    color: var(--color-muted);
+    margin-bottom: 8px;
+    margin-top: 16px;
+    padding: 0 4px;
+}
+
+/* ===== Appearance UI (shared by SettingPage + QuickPanel AppearanceSheet) ===== */
+
+/* --- Color Mode Grid --- */
+.color-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+/* --- Shared base for selectable cards --- */
+.color-mode-card,
+.color-theme-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--color-secondary);
+    font-family: inherit;
+    transition: border-color var(--transition-duration-fast), box-shadow var(--transition-duration-fast);
+}
+.color-mode-card:hover,
+.color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.color-mode-card.active,
+.color-theme-card.active { border-color: var(--color-accent); box-shadow: var(--shadow-ring); }
+.color-mode-card:focus-visible,
+.color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+
+/* --- Color Mode Preview --- */
+.color-mode-preview {
+    width: 80px;
+    height: 54px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--color-border);
+}
+.cmp-top { flex: 1; }
+.cmp-bottom {
+    height: 20px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+}
+.cmp-input {
+    flex: 1;
+    height: 10px;
+    border-radius: var(--radius-xs);
+}
+.cmp-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    flex-shrink: 0;
+}
+
+/* Light theme preview */
+.color-mode-light .cmp-top { background: var(--cmp-light-bg); }
+.color-mode-light .cmp-bottom { background: var(--cmp-light-surface); }
+.color-mode-light .cmp-input { background: var(--cmp-light-input); }
+
+/* Dark theme preview */
+.color-mode-dark .cmp-top { background: var(--cmp-dark-bg); }
+.color-mode-dark .cmp-bottom { background: var(--cmp-dark-surface); }
+.color-mode-dark .cmp-input { background: var(--cmp-dark-input); }
+
+/* Auto theme preview — split diagonally using gradient */
+.color-mode-auto .cmp-top {
+    background: linear-gradient(135deg, var(--cmp-light-bg) 50%, var(--cmp-dark-bg) 50%);
+}
+.color-mode-auto .cmp-bottom {
+    background: linear-gradient(135deg, var(--cmp-light-surface) 50%, var(--cmp-dark-surface) 50%);
+}
+.color-mode-auto .cmp-input {
+    background: linear-gradient(135deg, var(--cmp-light-input) 50%, var(--cmp-dark-input) 50%);
+}
+
+/* --- Color Mode Labels --- */
+.color-mode-label {
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    color: var(--color-foreground);
+}
+
+/* --- Color Theme Grid --- */
+.color-theme-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+@media (min-width: 480px) {
+    .color-theme-grid { grid-template-columns: repeat(3, 1fr); }
+}
+/* color-theme-card inherits from shared base above */
+.color-theme-swatch {
+    width: 80px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+.color-theme-label {
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    color: var(--color-foreground);
+}
+
+/* --- Desktop responsive --- */
+@media (min-width: 768px) {
+    .color-mode-grid { gap: 16px; }
+    .color-theme-grid { gap: 16px; }
+    .color-mode-preview { width: 100px; height: 66px; }
+    .color-theme-swatch { width: 100px; height: 34px; }
 }

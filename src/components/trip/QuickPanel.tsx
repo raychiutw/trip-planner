@@ -239,11 +239,11 @@ export default function QuickPanel({
             ))}
           </div>
           <div className="quick-panel-divider" />
-          <div className="quick-panel-grid">
+          <div className="quick-panel-grid-bottom">
             {sectionC.map((item) => (
               <button
                 key={item.key}
-                className="quick-panel-item"
+                className="quick-panel-item quick-panel-item-bottom"
                 data-content={item.key}
                 onClick={() => handleItemClick(item)}
               >

@@ -22,8 +22,10 @@ export const TodayRouteSheet = memo(function TodayRouteSheet({ events }: TodayRo
     <div className="today-route-list">
       {routeEvents.map((ev, i) => (
         <div key={ev.id ?? i} className="today-route-item">
-          <span className="today-route-time">{ev.time?.split('-')[0]?.trim() || ''}</span>
-          <span className="today-route-title">{ev.title || ''}</span>
+          <div className="today-route-header">
+            <span className="today-route-time">{ev.time?.split('-')[0]?.trim() || ''}</span>
+            <span className="today-route-title">{ev.title || ''}</span>
+          </div>
           <div className="today-route-links">
             <NavLinks locations={ev.locations as NavLocation[]} />
           </div>

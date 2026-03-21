@@ -68,10 +68,11 @@ describe('QuickPanel CSS structure', () => {
     expect(body).toContain('transform: translateY(0)');
   });
 
-  it('.quick-panel-divider spans full grid width', () => {
+  it('.quick-panel-divider uses spacing (no border line)', () => {
     const body = ruleBody(styleCss, '.quick-panel-divider');
-    expect(body).toContain('height: 1px');
-    expect(body).toContain('background: var(--color-border)');
+    expect(body).toContain('margin: var(--spacing-3) 0');
+    expect(body).not.toContain('height: 1px');
+    expect(body).not.toContain('background:');
   });
 
   it('no old speed-dial CSS remnants', () => {
