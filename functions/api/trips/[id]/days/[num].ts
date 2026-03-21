@@ -126,7 +126,28 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first(),
     db.prepare('SELECT * FROM entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
   ]);
-  const snapshot = JSON.stringify({ dayId, hotel: oldHotel, entries: oldEntries.results });
+
+  // 查詢所有 restaurants（透過 entries）
+  const oldRestaurants = await db.prepare(
+    'SELECT r.* FROM restaurants r JOIN entries e ON r.entry_id = e.id WHERE e.day_id = ?'
+  ).bind(dayId).all();
+
+  // 查詢所有 entry shopping
+  const oldEntryShopping = await db.prepare(
+    "SELECT s.* FROM shopping s JOIN entries e ON s.parent_id = e.id WHERE s.parent_type = 'entry' AND e.day_id = ?"
+  ).bind(dayId).all();
+
+  // 查詢 hotel shopping
+  const oldHotelShopping = oldHotel ? await db.prepare(
+    "SELECT * FROM shopping WHERE parent_type = 'hotel' AND parent_id = ?"
+  ).bind((oldHotel as { id: number }).id).all() : { results: [] };
+
+  const snapshot = JSON.stringify({
+    dayId, hotel: oldHotel, entries: oldEntries.results,
+    restaurants: oldRestaurants.results,
+    entryShopping: oldEntryShopping.results,
+    hotelShopping: oldHotelShopping.results,
+  });
 
   let body: {
     date?: string;
@@ -282,7 +303,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       changedBy,
       diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),
     });
-    return json({ error: 'Write failed, snapshot saved for recovery' }, 500);
+    return json({ error: '儲存失敗，請稍後再試' }, 500);
   }
 
   return json({ ok: true });

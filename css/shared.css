@@ -547,6 +547,7 @@
         --color-hover: #E0E0E0;
         --color-foreground: #1A1A1A;
         --color-muted: #5A5A5A;
+        /* NOTE: badge-open 使用 #1A6B30（而非預設 #1A7F37）以確保與 accent-foreground #F5F5F5 的 WCAG AA 對比度（~5.6:1 > 4.5:1） */
         --color-accent-foreground: #F5F5F5;
         --color-border: #BEBEBE;
         --color-destructive: #D44040;
@@ -571,7 +572,7 @@
         --color-overlay: rgba(0,0,0,0.3);
         --color-info: #6B6B6B;
         --color-info-bg: rgba(107, 107, 107, 0.12);
-        --color-badge-open: #1A7F37;
+        --color-badge-open: #1A6B30;
         --color-badge-closed: #6E40C9;
         --color-plan-bg: #E8F5E9;
         --color-plan-text: #2E7D32;

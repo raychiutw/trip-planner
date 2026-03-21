@@ -33,6 +33,10 @@ FROM restaurants;
 DROP TABLE restaurants;
 ALTER TABLE restaurants_new RENAME TO restaurants;
 
+-- 確保 AUTOINCREMENT 序列延續原始值（避免 ID 重置衝突）
+INSERT OR REPLACE INTO sqlite_sequence (name, seq)
+VALUES ('restaurants', (SELECT COALESCE(MAX(id), 0) FROM restaurants));
+
 CREATE INDEX IF NOT EXISTS idx_restaurants_entry ON restaurants(entry_id);
 
 -- ============================================================
@@ -61,5 +65,9 @@ FROM shopping;
 
 DROP TABLE shopping;
 ALTER TABLE shopping_new RENAME TO shopping;
+
+-- 確保 AUTOINCREMENT 序列延續原始值（避免 ID 重置衝突）
+INSERT OR REPLACE INTO sqlite_sequence (name, seq)
+VALUES ('shopping', (SELECT COALESCE(MAX(id), 0) FROM shopping));
 
 CREATE INDEX IF NOT EXISTS idx_shopping_parent ON shopping(parent_type, parent_id);
