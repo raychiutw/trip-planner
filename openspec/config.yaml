@@ -13,7 +13,7 @@ env:
   SENTRY_ORG: ray-team-gq
   SENTRY_PROJECT: javascript-react
   VITE_SENTRY_DSN: https://9b704a3b3a8d3edbd985d31a32b7b7bd@o4511070098161664.ingest.us.sentry.io/4511072117325824
-  # SENTRY_AUTH_TOKEN: (GitHub Secret，需從 sentry.io/settings/auth-tokens/ 建立)
+  # SENTRY_AUTH_TOKEN: (GitHub Secret + 本機環境變數，不可存入版控)
   # --- Gmail ---
   # GMAIL_USERNAME: lean.lean@gmail.com
   # GMAIL_APP_PASSWORD: (GitHub Secret，需從 Google 帳戶建立 App Password)

@@ -2,7 +2,7 @@
 /**
  * daily-check.js — 每日問題報告腳本
  *
- * 查詢 6 個數據來源，產出 JSON 報告，並可選發送 Telegram 摘要。
+ * 查詢 7 個數據來源，產出 JSON 報告，並可選發送 Telegram 摘要。
  * 由 GitHub Actions 每天 UTC 22:13（台灣 06:13）自動觸發。
  *
  * 環境變數：
@@ -12,15 +12,55 @@
  */
 'use strict';
 
-var CF_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-var CF_ACCOUNT = process.env.CF_ACCOUNT_ID;
-var D1_DB = process.env.D1_DATABASE_ID;
-var SENTRY_TOKEN = process.env.SENTRY_AUTH_TOKEN;
-var SENTRY_ORG = process.env.SENTRY_ORG;
-var SENTRY_PROJECT = process.env.SENTRY_PROJECT;
 var fs = require('fs');
 var path = require('path');
 var { execSync } = require('child_process');
+
+// 從 openspec/config.yaml 讀取 env（fallback for 本機執行）
+function loadConfigYaml() {
+  try {
+    var configPath = path.join(__dirname, '..', 'openspec', 'config.yaml');
+    var content = fs.readFileSync(configPath, 'utf8');
+    var env = {};
+    var inEnv = false;
+    content.split('\n').forEach(function(line) {
+      if (/^env:/.test(line)) { inEnv = true; return; }
+      if (inEnv && /^\S/.test(line)) { inEnv = false; return; }
+      if (inEnv) {
+        var m = line.match(/^\s+(\w+):\s*(.+)/);
+        if (m && !m[2].startsWith('#') && !m[2].startsWith('(')) {
+          env[m[1]] = m[2].replace(/^["']|["']$/g, '').replace(/#.*$/, '').trim();
+        }
+      }
+    });
+    return env;
+  } catch(e) { return {}; }
+}
+
+// 從 .env.local 讀取本機 secrets（不進版控）
+function loadEnvLocal() {
+  try {
+    var envPath = path.join(__dirname, '..', '.env.local');
+    var content = fs.readFileSync(envPath, 'utf8');
+    var env = {};
+    content.split('\n').forEach(function(line) {
+      var m = line.match(/^(\w+)=(.+)/);
+      if (m) env[m[1]] = m[2].trim();
+    });
+    return env;
+  } catch(e) { return {}; }
+}
+
+var yamlEnv = loadConfigYaml();
+var localEnv = loadEnvLocal();
+function env(key) { return process.env[key] || localEnv[key] || yamlEnv[key] || ''; }
+
+var CF_TOKEN = env('CLOUDFLARE_API_TOKEN');
+var CF_ACCOUNT = env('CF_ACCOUNT_ID');
+var D1_DB = env('D1_DATABASE_ID');
+var SENTRY_TOKEN = env('SENTRY_AUTH_TOKEN');
+var SENTRY_ORG = env('SENTRY_ORG');
+var SENTRY_PROJECT = env('SENTRY_PROJECT');
 
 // ── D1 REST API helper ──────────────────────────────────────────
 
@@ -307,10 +347,76 @@ function queryNpmAudit() {
   }
 }
 
+// ── 數據來源 7: tp-request 錯誤統計 ─────────────────────────────
+
+async function queryRequestErrors() {
+  // 查詢非 completed 的請求（含 open 超過 1 小時未處理）
+  var rows = await queryD1(
+    "SELECT id, trip_id, mode, status, substr(message, 1, 80) as message, " +
+    "substr(reply, 1, 80) as reply, created_at " +
+    "FROM requests " +
+    "WHERE status != 'completed' " +
+    "ORDER BY created_at DESC " +
+    "LIMIT 20"
+  );
+
+  // 額外篩出 status='open' 超過 1 小時未處理（視為排程失敗）
+  var stale = rows.filter(function(r) {
+    if (r.status !== 'open') return false;
+    var created = new Date(r.created_at);
+    var ageMs = Date.now() - created.getTime();
+    return ageMs > 60 * 60 * 1000; // > 1 小時
+  });
+
+  var status = 'ok';
+  if (rows.length > 0) status = 'warning';
+
+  return {
+    status: status,
+    total: rows.length,
+    staleCount: stale.length,
+    pending: rows.map(function(r) {
+      return {
+        id: r.id,
+        tripId: r.trip_id,
+        mode: r.mode,
+        status: r.status,
+        message: r.message || '',
+        reply: r.reply || '',
+        createdAt: r.created_at
+      };
+    })
+  };
+}
+
+// ── 數據來源 8: D1 統計（api_logs + audit_log）─────────────────
+
+async function queryD1Stats() {
+  var rows = await queryD1(
+    "SELECT " +
+    "(SELECT COUNT(*) FROM api_logs WHERE status >= 500) as server_errors, " +
+    "(SELECT COUNT(*) FROM api_logs WHERE status >= 400 AND status < 500) as client_errors, " +
+    "(SELECT COUNT(*) FROM api_logs) as total_logs, " +
+    "(SELECT COUNT(*) FROM audit_log WHERE created_at >= datetime('now', '-1 day')) as audit_count"
+  );
+
+  var row = rows && rows[0] ? rows[0] : {};
+  var serverErrors = row.server_errors || 0;
+  var status = serverErrors > 0 ? 'warning' : 'ok';
+
+  return {
+    status: status,
+    totalLogs: row.total_logs || 0,
+    serverErrors: serverErrors,
+    clientErrors: row.client_errors || 0,
+    auditCount: row.audit_count || 0
+  };
+}
+
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAudit) {
-  var sections = [sentry, apiErrors, encodingWarnings, workers, npmAudit];
+function calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAudit, requestErrors, d1Stats) {
+  var sections = [sentry, apiErrors, encodingWarnings, workers, npmAudit, requestErrors, d1Stats];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -322,11 +428,42 @@ function calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAudit) {
   };
 }
 
+// ── 流水編號產生器 ───────────────────────────────────────────────
+
+function makeCounter() {
+  var n = 0;
+  return function() { return ++n; };
+}
+
+// ── JSON 加編號（就地修改各來源的 issue/error 項目）──────────────
+
+function assignNums(report) {
+  var counter = makeCounter();
+
+  if (report.sentry && report.sentry.issues) {
+    report.sentry.issues.forEach(function(i) { i.num = counter(); });
+  }
+  if (report.apiErrors && report.apiErrors.errors) {
+    report.apiErrors.errors.forEach(function(e) { e.num = counter(); });
+  }
+  if (report.requestErrors && report.requestErrors.pending) {
+    report.requestErrors.pending.forEach(function(p) { p.num = counter(); });
+  }
+  if (report.encodingWarnings && report.encodingWarnings.records) {
+    report.encodingWarnings.records.forEach(function(r) { r.num = counter(); });
+  }
+  if (report.npmAudit && report.npmAudit.vulnerabilities) {
+    report.npmAudit.vulnerabilities.forEach(function(v) { v.num = counter(); });
+  }
+
+  report._maxNum = counter() - 1;
+}
+
 // ── Telegram 發送 ────────────────────────────────────────────────
 
 async function sendTelegram(summary) {
-  var token = process.env.TELEGRAM_BOT_TOKEN;
-  var chatId = process.env.TELEGRAM_CHAT_ID;
+  var token = env('TELEGRAM_BOT_TOKEN');
+  var chatId = env('TELEGRAM_CHAT_ID');
   if (!token || !chatId) return;
 
   await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
@@ -338,62 +475,98 @@ async function sendTelegram(summary) {
 
 function buildTelegramText(report) {
   var lines = [];
+  var num = makeCounter();
+
   lines.push('📋 <b>每日問題報告</b> — ' + report.date);
   lines.push('');
 
+  // Sentry
+  if (report.sentry && report.sentry.total > 0) {
+    lines.push('🟡 Sentry: ' + report.sentry.total + ' issues');
+    report.sentry.issues.slice(0, 5).forEach(function(i) {
+      var n = num();
+      lines.push('  [' + n + '] ' + i.title.substring(0, 60) + (i.count ? '（' + i.count + ' 次）' : ''));
+    });
+  } else {
+    lines.push('✅ Sentry：無未解決 issues');
+  }
+
   // API 錯誤
+  lines.push('');
   if (report.apiErrors && report.apiErrors.total > 0) {
     var icon = report.apiErrors.status === 'critical' ? '🔴' : '🟡';
-    lines.push(icon + ' API 錯誤 ' + report.apiErrors.total + ' 次');
+    lines.push(icon + ' API 錯誤: ' + report.apiErrors.total + ' 次');
     report.apiErrors.errors.slice(0, 5).forEach(function(e) {
-      lines.push('  • ' + e.method + ' ' + e.path + ' → ' + e.status + ' x' + e.count);
+      var n = num();
+      lines.push('  [' + n + '] ' + e.method + ' ' + e.path + ' → ' + e.status + ' x' + e.count);
     });
   } else {
     lines.push('✅ API 錯誤：無');
   }
 
-  // Sentry
-  if (report.sentry && report.sentry.total > 0) {
+  // 未完成請求
+  if (report.requestErrors && report.requestErrors.total > 0) {
     lines.push('');
-    lines.push('🟡 Sentry ' + report.sentry.total + ' issues');
-    report.sentry.issues.slice(0, 3).forEach(function(i) {
-      lines.push('  • ' + i.title.substring(0, 60) + (i.count ? ' (' + i.count + '次)' : ''));
+    lines.push('🟡 未完成請求: ' + report.requestErrors.total + ' 筆');
+    report.requestErrors.pending.slice(0, 5).forEach(function(p) {
+      var n = num();
+      var msg = p.message ? '「' + p.message.substring(0, 20) + '」' : '';
+      lines.push('  [' + n + '] #' + p.id + ' ' + p.mode + ' ' + p.status + msg);
     });
-  } else {
-    lines.push('✅ Sentry：無未解決 issues');
   }
 
   // encoding warnings
   if (report.encodingWarnings && report.encodingWarnings.total > 0) {
     lines.push('');
     lines.push('🟡 Encoding 警告 ' + report.encodingWarnings.total + ' 筆');
+    report.encodingWarnings.records.slice(0, 3).forEach(function(r) {
+      var n = num();
+      lines.push('  [' + n + '] #' + r.id + ' ' + r.table + ' ' + r.action);
+    });
+  }
+
+  // D1 統計
+  lines.push('');
+  if (report.d1Stats) {
+    var d1Icon = report.d1Stats.serverErrors > 0 ? '🟡' : '✅';
+    var n = num();
+    lines.push(d1Icon + ' [' + n + '] D1: ' + (report.d1Stats.totalLogs || 0).toLocaleString() + ' API logs, ' +
+      (report.d1Stats.serverErrors || 0) + ' server errors, ' +
+      (report.d1Stats.clientErrors || 0) + ' client errors, ' +
+      (report.d1Stats.auditCount || 0) + ' audits (24h)');
   }
 
   // Workers
-  lines.push('');
   if (report.workers) {
     var wIcon = report.workers.status === 'ok' ? '✅' : '🟡';
-    lines.push(wIcon + ' Workers: ' + (report.workers.requests || 0).toLocaleString() + ' req, ' +
-      (report.workers.errors || 0) + ' errors');
+    var nw = num();
+    lines.push(wIcon + ' [' + nw + '] Workers: ' + (report.workers.requests || 0).toLocaleString() + ' req, ' +
+      (report.workers.errors || 0) + ' errors, P50=' + (report.workers.p50 || 0) + 'μs, P99=' + (report.workers.p99 || 0) + 'μs');
   }
 
   // Web
   if (report.web) {
-    lines.push('✅ Web: ' + (report.web.visits || 0) + ' visits');
+    var nweb = num();
+    lines.push('✅ [' + nweb + '] Web: ' + (report.web.visits || 0) + ' visits, ' + (report.web.pageViews || 0) + ' pageViews');
   }
 
   // npm audit
   if (report.npmAudit) {
     if (report.npmAudit.total === 0) {
-      lines.push('✅ npm audit: 無漏洞');
+      var nnpm = num();
+      lines.push('✅ [' + nnpm + '] npm audit: 0 漏洞');
     } else {
       var nIcon = report.npmAudit.status === 'critical' ? '🔴' : '🟡';
       lines.push(nIcon + ' npm audit: ' + report.npmAudit.total + ' 個漏洞');
+      report.npmAudit.vulnerabilities.slice(0, 3).forEach(function(v) {
+        var n = num();
+        lines.push('  [' + n + '] ' + v.package + ' (' + v.severity + ')');
+      });
     }
   }
 
   lines.push('');
-  lines.push('詳情見 JSON：daily-check-' + report.date + '.json');
+  lines.push('回覆編號操作，例如：「看 1」「修 2 5」');
 
   return lines.join('\n');
 }
@@ -432,6 +605,8 @@ async function main() {
     queryEncodingWarnings(), // 2
     queryWorkersAnalytics(), // 3
     queryWebAnalytics(),     // 4
+    queryRequestErrors(),    // 5
+    queryD1Stats(),          // 6
   ]);
 
   // npm audit 同步執行（不影響其他）
@@ -449,8 +624,10 @@ async function main() {
   var encodingWarnings = val(2, { status: 'ok', total: 0, records: [] });
   var workers = val(3, { status: 'ok', requests: 0, errors: 0, errorRate: '0%', p50: 0, p99: 0 });
   var web = val(4, { visits: 0, pageViews: 0 });
+  var requestErrors = val(5, { status: 'ok', total: 0, staleCount: 0, pending: [] });
+  var d1Stats = val(6, { status: 'ok', totalLogs: 0, serverErrors: 0, clientErrors: 0, auditCount: 0 });
 
-  var summary = calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAuditResult);
+  var summary = calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAuditResult, requestErrors, d1Stats);
 
   var report = {
     date: today,
@@ -459,10 +636,15 @@ async function main() {
     sentry: sentry,
     apiErrors: apiErrors,
     encodingWarnings: encodingWarnings,
+    requestErrors: requestErrors,
+    d1Stats: d1Stats,
     workers: workers,
     web: web,
     npmAudit: npmAuditResult
   };
+
+  // 為所有 issue/error 項目加流水編號
+  assignNums(report);
 
   // 確保 logs 目錄存在
   var logsDir = path.join(__dirname, 'logs');
@@ -482,7 +664,7 @@ async function main() {
   var telegramText = buildTelegramText(report);
   try {
     await sendTelegram(telegramText);
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID) {
+    if (env('TELEGRAM_BOT_TOKEN') && env('TELEGRAM_CHAT_ID')) {
       console.log('Telegram sent');
     }
   } catch (err) {
