@@ -456,6 +456,20 @@ function writeReport(html) {
 async function main() {
   console.log('Daily report starting — ' + formatDate());
 
+  // DEBUG: introspect available GraphQL fields
+  try {
+    var introQuery = '{ __schema { queryType { fields { name type { name fields { name } } } } } }';
+    var introRes = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + CF_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: introQuery })
+    });
+    var introData = await introRes.json();
+    var allFields = JSON.stringify(introData);
+    var matches = allFields.match(/"name":"[^"]*(?:pages|worker|rum|web|invocation|pageload|analytic|function)[^"]*"/gi);
+    console.log('Available analytics fields:', JSON.stringify([...new Set(matches || [])]));
+  } catch(e) { console.log('Introspection failed:', e.message); }
+
   // 並行查詢所有數據來源（任一失敗不影響其他）
   var settled = await Promise.allSettled([
     queryD1Requests(),        // 0
