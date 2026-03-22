@@ -29,6 +29,7 @@ Log "--- 排程啟動 ---"
 $headers = @{
     "CF-Access-Client-Id"     = "REDACTED_CLIENT_ID"
     "CF-Access-Client-Secret" = "REDACTED_CLIENT_SECRET"
+    "Origin"                  = "https://trip-planner-dby.pages.dev"
 }
 
 Log "呼叫 API: GET /api/requests?status=open"
