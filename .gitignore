@@ -16,6 +16,7 @@ server/node_modules/
 .cloudflared/
 report.html
 .temp/
+.workflow-stage
 
 # Stray npm CLI bin scripts leaked to project root
 baseline-browser-mapping
