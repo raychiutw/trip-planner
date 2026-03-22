@@ -23,12 +23,22 @@ Get-ChildItem -Path $logDir -File | Where-Object { $_.LastWriteTime -lt (Get-Dat
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $env:PYTHONIOENCODING = "utf-8"
 
+# 從 .env.local 讀取環境變數（Service Token 等敏感資料）
+$envFile = Join-Path $projectDir ".env.local"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        if ($_ -match '^(\w+)=(.+)$') {
+            [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
+        }
+    }
+}
+
 Log "--- 排程啟動 ---"
 
 # Query open requests
 $headers = @{
-    "CF-Access-Client-Id"     = "$CF_ACCESS_CLIENT_ID"
-    "CF-Access-Client-Secret" = "$CF_ACCESS_CLIENT_SECRET"
+    "CF-Access-Client-Id"     = "$env:CF_ACCESS_CLIENT_ID"
+    "CF-Access-Client-Secret" = "$env:CF_ACCESS_CLIENT_SECRET"
     "Origin"                  = "https://trip-planner-dby.pages.dev"
 }
 
@@ -36,8 +46,8 @@ Log "呼叫 API: GET /api/requests?status=open"
 
 try {
     $rawJson = curl.exe -s `
-        -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" `
-        -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" `
+        -H "CF-Access-Client-Id: $env:CF_ACCESS_CLIENT_ID" `
+        -H "CF-Access-Client-Secret: $env:CF_ACCESS_CLIENT_SECRET" `
         "https://trip-planner-dby.pages.dev/api/requests?status=open"
     $response = $rawJson | ConvertFrom-Json
 }
@@ -69,8 +79,8 @@ for ($i = 0; $i -lt $count; $i++) {
     # PATCH status → received（系統已接收）— 使用 curl 避免 PowerShell 過濾 headers
     try {
         $patchResult = curl.exe -s -X PATCH `
-            -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" `
-            -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" `
+            -H "CF-Access-Client-Id: $env:CF_ACCESS_CLIENT_ID" `
+            -H "CF-Access-Client-Secret: $env:CF_ACCESS_CLIENT_SECRET" `
             -H "Content-Type: application/json" `
             -d "{`"status`":`"received`"}" `
             "https://trip-planner-dby.pages.dev/api/requests/$rid"
@@ -99,8 +109,8 @@ catch {
         $rid = $req.id
         try {
             $rollbackResult = curl.exe -s -X PATCH `
-                -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" `
-                -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" `
+                -H "CF-Access-Client-Id: $env:CF_ACCESS_CLIENT_ID" `
+                -H "CF-Access-Client-Secret: $env:CF_ACCESS_CLIENT_SECRET" `
                 -H "Content-Type: application/json" `
                 -d "{`"status`":`"open`"}" `
                 "https://trip-planner-dby.pages.dev/api/requests/$rid"
