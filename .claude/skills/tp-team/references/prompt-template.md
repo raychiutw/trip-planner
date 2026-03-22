@@ -38,6 +38,16 @@ PM 每次派 Teammate 時，prompt 必須包含以下 6 個區塊。
 
 ## 各角色範例
 
+### PM 建立 Change（init 旗標）
+
+PM 建立 OpenSpec change 後，執行旗標初始化：
+
+```bash
+node scripts/workflow-stage.js init "change-name"
+```
+
+這會建立 `.workflow-stage`（stage=1），啟動流程追蹤。
+
 ### 派工程師
 
 ```
@@ -67,6 +77,8 @@ Agent(
 完成後：
 - 勾 tasks.md checkbox
 - TaskUpdate 標記 completed
+- 執行旗標推進：node scripts/workflow-stage.js advance engineer --tasks N --tsc --test
+  （N = 完成的 tasks 數，--tsc 代表 tsc 通過，--test 代表 test 通過）
 - SendMessage({to: "reviewer"}) 通知 review
 - 踩坑寫入 notes.md
 - 報告中附上 tsc + test 結果`
@@ -141,6 +153,8 @@ Agent(
 完成後：
 - 報告寫到 openspec/changes/{change-name}/review-report.md
 - APPROVE 或 REQUEST CHANGES
+- 若 APPROVE：執行旗標推進：node scripts/workflow-stage.js advance reviewer --result APPROVE
+- 若 REQUEST CHANGES：執行 node scripts/workflow-stage.js reject reviewer 2（退回工程師）
 - SendMessage({to: "pm"}) 回報結果`
 )
 ```
@@ -216,6 +230,9 @@ Agent(
 完成後：
 - 報告寫到 openspec/changes/{change-name}/qc-report.md
 - 每項標 PASS / FAIL
+- 若全 PASS：執行旗標推進：node scripts/workflow-stage.js advance qc --result PASS --tests N
+  （N = 測試數量）
+- 若有 FAIL：執行 node scripts/workflow-stage.js reject qc 2（退回工程師修復）
 - SendMessage({to: "pm"}) 回報結果`
 )
 ```
@@ -242,7 +259,9 @@ Agent(
 
 完成後：
 - SendMessage({to: "pm"}) 傳送完整 Challenge Report 內容
-- 由 PM 代寫到 notes.md（Challenger 禁止改檔案）`
+- 由 PM 代寫到 notes.md（Challenger 禁止改檔案）
+- PM 收到後執行旗標推進：node scripts/workflow-stage.js advance challenger --high H --medium M --low L
+  （H/M/L = 各嚴重度問題數量）`
 )
 ```
 
@@ -263,6 +282,7 @@ Agent(
 2. [ ] tsc + npm test 通過？
 3. [ ] Reviewer APPROVE？
 4. [ ] QC PASS？
+5. [ ] .workflow-stage stage == 5？（Challenger 完成，hook 自動放行並清除旗標）
 → 任一未通過 = STOP，不得 commit
 ```
 
