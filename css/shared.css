@@ -107,6 +107,9 @@
     --ease-sheet-close: cubic-bezier(0.4, 0, 1, 1);
     --duration-sheet-open: 420ms;
     --duration-sheet-close: 280ms;
+    --duration-tap: 80ms;
+    --duration-nav-fade: 200ms;
+    --duration-indicator: 350ms;
 }
 
 /* ===== Non-utility tokens (no Tailwind utility generation needed) ===== */
@@ -743,7 +746,7 @@
 .nav-close-btn:active, .edit-fab:active, .quick-panel-trigger:active {
     transform: scale(0.97);
     opacity: 0.7;
-    transition: transform 80ms, opacity 80ms;
+    transition: transform var(--duration-tap), opacity var(--duration-tap);
 }
 
 /* === Reduced Motion: comprehensive reset === */
