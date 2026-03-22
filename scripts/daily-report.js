@@ -97,8 +97,7 @@ async function querySentry() {
 
 async function queryWorkersAnalytics() {
   var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
-    'pagesFunctionsInvocationsAdaptive(limit: 10000, filter: { ' +
-    'scriptName: "trip-planner", ' +
+    'workersInvocationsAdaptive(limit: 10000, filter: { ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
     'sum { requests errors } ' +
@@ -115,12 +114,12 @@ async function queryWorkersAnalytics() {
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
   if (data.errors) console.error('Workers Analytics GraphQL errors:', JSON.stringify(data.errors));
-  console.log('Workers Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.pagesFunctionsInvocationsAdaptive?.length ?? 'no rows'));
+  console.log('Workers Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive?.length ?? 'no rows'));
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
     console.log('Workers Analytics: no account data');
     return { requests: 0, errors: 0, p50: 0, p99: 0 };
   }
-  var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptive;
+  var rows = data.data.viewer.accounts[0].workersInvocationsAdaptive;
   if (!rows || rows.length === 0) { console.log('Workers Analytics: empty rows'); return { requests: 0, errors: 0, p50: 0, p99: 0 }; }
   var totalRequests = 0;
   var totalErrors = 0;
@@ -140,48 +139,47 @@ async function queryWorkersAnalytics() {
   };
 }
 
-// ── 數據來源 6: Web Analytics ──────────────────────────────────
+// ── 數據來源 6: Web Analytics（Cloudflare Web Analytics REST API）──
 
 async function queryWebAnalytics() {
-  var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
-    'rumPageloadEventsAdaptive(limit: 1, filter: { ' +
-    'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
-    'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { visits pageViews } ' +
-    'quantiles { ' +
-    'largestContentfulPaintP75 ' +
-    'cumulativeLayoutShiftP75 ' +
-    'interactionToNextPaintP75 ' +
-    '} ' +
-    '} } } }';
-  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: query })
+  // Web Analytics 使用 REST API 而非 GraphQL（GraphQL 的 rumPageloadEventsAdaptive 在此帳戶不可用）
+  var url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/rum/site_info/list';
+  var res = await fetch(url, {
+    headers: { 'Authorization': 'Bearer ' + CF_TOKEN }
   });
-  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
-  var data = await res.json();
-  if (data.errors) console.error('Web Analytics GraphQL errors:', JSON.stringify(data.errors));
-  console.log('Web Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptive?.length ?? 'no rows'));
-  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    console.log('Web Analytics: no account data');
-    return { visits: 0, pageViews: 0, lcp: 0, cls: 0, inp: 0 };
+  if (!res.ok) {
+    console.log('Web Analytics site list failed:', res.status);
+    // Fallback: Web Analytics 可能未啟用或 API 不支援，回傳 null 顯示「查詢失敗」
+    return null;
   }
-  var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptive;
-  if (!rows || rows.length === 0) {
-    console.log('Web Analytics: empty rows');
-    return { visits: 0, pageViews: 0, lcp: 0, cls: 0, inp: 0 };
+  var siteData = await res.json();
+  console.log('Web Analytics sites:', JSON.stringify(siteData.result?.length ?? 0));
+  if (!siteData.result || siteData.result.length === 0) {
+    console.log('Web Analytics: no sites configured');
+    return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
   }
-  var row = rows[0];
+  // 找到 trip-planner 的 site
+  var site = siteData.result.find(function(s) { return s.host === 'trip-planner-dby.pages.dev' || s.auto_install; }) || siteData.result[0];
+  var siteTag = site.site_tag || site.tag;
+  if (!siteTag) {
+    console.log('Web Analytics: no site_tag found');
+    return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
+  }
+  // 查詢該 site 的 summary
+  var summaryUrl = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/rum/site_info?site_tag=' + siteTag;
+  var summaryRes = await fetch(summaryUrl, {
+    headers: { 'Authorization': 'Bearer ' + CF_TOKEN }
+  });
+  console.log('Web Analytics summary status:', summaryRes.status);
+  if (!summaryRes.ok) return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
+  var summary = await summaryRes.json();
+  console.log('Web Analytics summary:', JSON.stringify(summary.result));
   return {
-    visits: row.sum.visits,
-    pageViews: row.sum.pageViews,
-    lcp: row.quantiles.largestContentfulPaintP75,
-    cls: row.quantiles.cumulativeLayoutShiftP75,
-    inp: row.quantiles.interactionToNextPaintP75
+    visits: summary.result?.visits || 0,
+    pageViews: summary.result?.pageViews || 0,
+    lcp: '—',
+    cls: '—',
+    inp: '—'
   };
 }
 
@@ -362,9 +360,9 @@ function webHtml(data) {
   return '<table style="border-collapse:collapse;width:100%;font-size:14px;">' +
     tr('瀏覽量', data.pageViews.toLocaleString()) +
     tr('訪客數', data.visits.toLocaleString()) +
-    tr('LCP (P75)', data.lcp + ' ms') +
-    tr('CLS (P75)', data.cls) +
-    tr('INP (P75)', data.inp + ' ms') +
+    tr('LCP (P75)', data.lcp === '—' ? '—' : data.lcp + ' ms') +
+    tr('CLS (P75)', data.cls === '—' ? '—' : data.cls) +
+    tr('INP (P75)', data.inp === '—' ? '—' : data.inp + ' ms') +
     '</table>';
 }
 
@@ -476,7 +474,7 @@ async function main() {
     if (accountFields.length > 50) console.log('Account fields (50+):', JSON.stringify(accountFields.slice(50)));
 
     // 直接試不同 dataset 名稱
-    var datasets = ['workersInvocationsAdaptive','pagesFunctionsInvocationsAdaptive','workersAnalyticsEngineAdaptive','httpRequestsAdaptive','rumPageloadEventsAdaptive','rumPerformanceEventsAdaptive','webAnalyticsAdaptive'];
+    var datasets = ['workersInvocationsAdaptive','workersInvocationsAdaptive','workersAnalyticsEngineAdaptive','httpRequestsAdaptive','httpRequestsAdaptive','rumPerformanceEventsAdaptive','webAnalyticsAdaptive'];
     for (var ds of datasets) {
       var tq = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' + ds + '(limit:1, filter:{datetime_geq:"' + yesterdayISO() + 'T00:00:00Z"}) { sum { __typename } } } } }';
       var tr2 = await fetch('https://api.cloudflare.com/client/v4/graphql', { method:'POST', headers:{'Authorization':'Bearer '+CF_TOKEN,'Content-Type':'application/json'}, body:JSON.stringify({query:tq}) });
