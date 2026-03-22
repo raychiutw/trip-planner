@@ -49,12 +49,13 @@ PM 不只被動執行，主動建議優先順序：
 
 ```
 Key User 需求 → PM 建立 OpenSpec change
+  → PM 執行 node scripts/workflow-stage.js init "change-name"（stage=1）
   → Key User Approve 方案
-  → 工程師實作（feature branch）+ 勾 tasks.md
-  → Code Reviewer 審查（APPROVE / REQUEST CHANGES）
-  → QC 驗證（測試 + 截圖 + 操作）→ PASS / FAIL
-  → 🔴 Challenger 質疑（基於 QC 結果，11 視角全面質疑）
-  → PM commit（不 push）
+  → 工程師實作（feature branch）+ 勾 tasks.md + advance engineer（stage=2）
+  → Code Reviewer 審查（APPROVE / REQUEST CHANGES）+ advance reviewer（stage=3）
+  → QC 驗證（測試 + 截圖 + 操作）→ PASS / FAIL + advance qc（stage=4）
+  → 🔴 Challenger 質疑（基於 QC 結果，11 視角全面質疑）→ PM advance challenger（stage=5）
+  → PM commit（hook 檢查 stage==5 → 放行 + 自動刪除 .workflow-stage）
   → PM 提出進度報告（完成摘要 + tasks 勾選 + Reviewer/QC 結果 + 忽略項目）
   → Key User 審閱報告 + Approve
   → PM git push feature branch（hook 第二次確認 → Key User 再次同意放行）
@@ -62,6 +63,55 @@ Key User 需求 → PM 建立 OpenSpec change
   → CI 全綠 + Key User review → merge master → production deploy
   → archive
 ```
+
+### .workflow-stage 旗標說明
+
+ 是單一 JSON 檔案，追蹤目前 change 的流程進度。
+
+
+
+階段值：
+- 0 = 未開始
+- 1 = PM 完成（init）
+- 2 = 工程師完成
+- 3 = Reviewer 完成（APPROVE）
+- 4 = QC 完成（PASS）
+- 5 = Challenger 完成 → 可 commit
+
+管理工具：用法：node scripts/workflow-stage.js <command> [args]
+
+命令：
+  init "change-name"
+      PM 建立新 change，初始化 .workflow-stage（stage=1）
+
+  advance engineer [--tasks N] [--tsc] [--test]
+      工程師完成實作，推進到 stage 2
+
+  advance reviewer --result APPROVE
+      Reviewer 完成審查，推進到 stage 3
+
+  advance qc --result PASS [--tests N]
+      QC 完成驗證，推進到 stage 4
+
+  advance challenger [--high N] [--medium N] [--low N]
+      Challenger 完成質疑，推進到 stage 5（可 commit）
+
+  reject <role> [target-stage]
+      退回到指定階段，清除後續 history
+      範例：reject reviewer 2  → 退回到 stage 2
+
+  status
+      顯示目前 stage + history
+
+階段說明：
+  0 = 未開始
+  1 = PM 完成（init）
+  2 = 工程師完成
+  3 = Reviewer 完成（APPROVE）
+  4 = QC 完成（PASS）
+  5 = Challenger 完成 → 可 commit（詳見 help）
+
+旗標不進版控（.gitignore 排除），commit hook 在 stage==5 時自動刪除。
 
 ### Staging 開發流程
 
