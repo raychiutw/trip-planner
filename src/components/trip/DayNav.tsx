@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useState, useLayoutEffect } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 
@@ -50,6 +50,9 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [tooltipDay, setTooltipDay] = useState<number | null>(null);
+
+  /* --- Sliding indicator state --- */
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
 
   /* --- Update arrow visibility based on scroll position --- */
   const updateOverflow = useCallback(() => {
@@ -113,6 +116,18 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
     );
     if (btn) scrollPillIntoView(btn);
   }, [currentDayNum, scrollPillIntoView]);
+
+  /* --- Sliding indicator: compute position after layout --- */
+  useLayoutEffect(() => {
+    if (!navRef.current) return;
+    const nav = navRef.current;
+    const activeBtn = nav.querySelector<HTMLElement>(`.dn[data-day="${currentDayNum}"]`);
+    if (!activeBtn) {
+      setIndicatorStyle(null);
+      return;
+    }
+    setIndicatorStyle({ left: activeBtn.offsetLeft, width: activeBtn.offsetWidth });
+  }, [currentDayNum, days]);
 
   /* --- Arrow click handlers --- */
   const handleArrowLeft = useCallback(() => {
@@ -179,6 +194,16 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
         &#8249;
       </button>
       <div className="dh-nav" id="navPills" ref={navRef}>
+        {indicatorStyle && (
+          <div
+            className="dn-indicator"
+            aria-hidden="true"
+            style={{
+              transform: `translateX(${indicatorStyle.left}px)`,
+              width: indicatorStyle.width,
+            }}
+          />
+        )}
         {days.map((d) => {
           const dayNum = d.day_num;
           const isActive = dayNum === currentDayNum;

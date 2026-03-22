@@ -88,6 +88,7 @@ interface DaySectionProps {
   autoScrollDates: string[];
   themeArt?: { theme: ColorTheme; dark: boolean };
   localToday?: string;
+  isActive?: boolean;
 }
 
 const DaySection = React.memo(function DaySection({
@@ -97,7 +98,18 @@ const DaySection = React.memo(function DaySection({
   autoScrollDates,
   themeArt,
   localToday,
+  isActive,
 }: DaySectionProps) {
+  /* Track whether this section has been activated to trigger enter animation */
+  const [animKey, setAnimKey] = useState(0);
+  const prevActiveRef = useRef(false);
+  useEffect(() => {
+    if (isActive && !prevActiveRef.current) {
+      setAnimKey((k) => k + 1);
+    }
+    prevActiveRef.current = !!isActive;
+  }, [isActive]);
+
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
   // API may return weather_json (raw) or weather (mapped) — handle both
@@ -138,7 +150,7 @@ const DaySection = React.memo(function DaySection({
         )}
         {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
       </div>
-      <div className="day-content" id={`day-slot-${dayNum}`}>
+      <div key={animKey} className={clsx('day-content', animKey > 0 && 'day-content-enter')} id={`day-slot-${dayNum}`}>
         {!day ? (
           <div className="slot-loading">載入中...</div>
         ) : (
@@ -265,6 +277,8 @@ export default function TripPage() {
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  const [showNavTitle, setShowNavTitle] = useState(false);
+  const largeTitleRef = useRef<HTMLDivElement>(null);
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
@@ -284,6 +298,17 @@ export default function TripPage() {
       lsRenewAll();
       sessionStorage.setItem('lsRenewed', '1');
     }
+  }, []);
+
+  /* --- Large title IntersectionObserver: show inline title when large title scrolls out --- */
+  useEffect(() => {
+    if (!largeTitleRef.current) return;
+    const obs = new IntersectionObserver(
+      ([e]) => setShowNavTitle(!e.isIntersecting),
+      { threshold: [0] },
+    );
+    obs.observe(largeTitleRef.current);
+    return () => obs.disconnect();
   }, []);
 
   /* --- Fetch trips when trip-select sheet opens (cached: skip if already loaded) --- */
@@ -667,6 +692,15 @@ export default function TripPage() {
     [days],
   );
 
+  /* --- Date range for large title subtitle --- */
+  const dateRange = useMemo(() => {
+    if (autoScrollDates.length === 0) return '';
+    const first = autoScrollDates[0];
+    const last = autoScrollDates[autoScrollDates.length - 1];
+    if (first === last) return first;
+    return `${first} — ${last}`;
+  }, [autoScrollDates]);
+
   /* --- Today's date (timezone-aware) — shared by DayNav and Timeline --- */
   const localToday = useMemo(() => getLocalToday(activeTripId), [activeTripId]);
 
@@ -967,6 +1001,9 @@ export default function TripPage() {
       <div className="sticky-nav" id="stickyNav">
         {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
         <span className="nav-brand">{trip?.name || 'Trip Planner'}</span>
+        <span className={clsx('nav-inline-title', showNavTitle && 'visible')}>
+          {trip?.title || trip?.name}
+        </span>
         <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} todayDayNum={todayDayNum} />
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
@@ -975,6 +1012,14 @@ export default function TripPage() {
       <div className="page-layout">
         <div className="container">
           <div id="tripContent">
+            {/* Large Title (mobile only) */}
+            {!loading && trip && (
+              <div className="large-title-area" ref={largeTitleRef}>
+                <h1 className="large-title">{trip.title || trip.name}</h1>
+                {dateRange && <p className="large-subtitle">{dateRange}</p>}
+              </div>
+            )}
+
             {loading && (
               <div className={LOADING_CLASS}>載入行程資料中...</div>
             )}
@@ -990,6 +1035,7 @@ export default function TripPage() {
                   autoScrollDates={autoScrollDates}
                   themeArt={themeArt}
                   localToday={localToday}
+                  isActive={dayNum === currentDayNum}
                 />
               ))}
 
