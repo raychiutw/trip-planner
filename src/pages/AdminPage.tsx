@@ -5,6 +5,8 @@ import type { Permission } from '../types/api';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { lsGet, lsSet } from '../lib/localStorage';
+import TpLogo from '../components/shared/TpLogo';
+import Toast from '../components/shared/Toast';
 
 /* ===== Raw fetch helper (need status-code inspection) ===== */
 function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response> {
@@ -230,6 +232,7 @@ export default function AdminPage() {
     <div className="page-layout">
       <div className="container">
         <div className="sticky-nav" id="stickyNav">
+          <TpLogo isOnline={isOnline} />
           <span className="nav-title">權限管理</span>
           <button className="nav-close-btn" id="navCloseBtn" aria-label="關閉" onClick={handleClose}>
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
@@ -237,12 +240,12 @@ export default function AdminPage() {
             </svg>
           </button>
         </div>
-        {/* Offline Banner */}
-        {!isOnline && (
-          <div className="offline-banner" role="status" aria-live="polite">
-            📶 離線模式 — 無法管理權限
-          </div>
-        )}
+        {/* Toast notification */}
+        <Toast
+          message="已離線 — 無法管理權限"
+          icon="offline"
+          visible={!isOnline}
+        />
 
         <main className={clsx('admin-main', !isOnline && 'offline-disabled')} id="adminMain">
           <div className="admin-page">

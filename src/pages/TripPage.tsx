@@ -22,6 +22,8 @@ import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
+import TpLogo from '../components/shared/TpLogo';
+import Toast from '../components/shared/Toast';
 import { DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
 import DayArt from '../components/trip/DayArt';
@@ -288,17 +290,28 @@ export default function TripPage() {
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
 
-  /* --- Online status + offline banner --- */
+  /* --- Online status + offline/reconnect toasts --- */
   const isOnline = useOnlineStatus();
+  const [showOffline, setShowOffline] = useState(false);
   const [showReconnect, setShowReconnect] = useState(false);
   const wasOffline = useRef(false);
+  // Stable ref so the effect below can call refetchCurrentDay without re-running
+  // when refetchCurrentDay identity changes (it is declared after useTrip below).
+  const refetchCurrentDayRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!isOnline) {
       wasOffline.current = true;
+      // Show offline toast for 2 s then hide (TP Logo badge persists as status indicator)
+      setShowOffline(true);
+      const t = setTimeout(() => setShowOffline(false), 2000);
+      return () => clearTimeout(t);
     } else if (wasOffline.current) {
       wasOffline.current = false;
+      setShowOffline(false);
       setShowReconnect(true);
+      // Refresh stale data now that connection is restored
+      refetchCurrentDayRef.current?.();
       const t = setTimeout(() => setShowReconnect(false), 2000);
       return () => clearTimeout(t);
     }
@@ -397,8 +410,11 @@ export default function TripPage() {
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
 
-  const { trip, days, currentDay, currentDayNum, switchDay, allDays, docs, loading, error } =
+  const { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
+
+  // Keep ref in sync so the online-status effect can call it without a stale closure
+  refetchCurrentDayRef.current = refetchCurrentDay;
 
   /** Direct download by format — complete data export */
   const handleDownloadFormat = useCallback(async (format: string) => {
@@ -1021,7 +1037,7 @@ export default function TripPage() {
       {/* Sticky Nav */}
       <div className="sticky-nav" id="stickyNav">
         {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-        <span className="nav-brand">{trip?.name || 'Trip Planner'}</span>
+        <TpLogo isOnline={isOnline} />
         <span className={clsx('nav-inline-title', showNavTitle && 'visible')}>
           {trip?.title || trip?.name}
         </span>
@@ -1029,17 +1045,21 @@ export default function TripPage() {
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
-      {/* Offline Banner */}
-      <div
-        className={clsx(
-          'offline-banner',
-          isOnline && !showReconnect && 'hidden',
-        )}
-        role="status"
-        aria-live="polite"
-      >
-        {isOnline ? '✅ 已恢復連線' : '📶 離線模式 — 顯示快取資料'}
-      </div>
+      {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
+      {showOffline && (
+        <Toast
+          message="已離線 — 顯示快取資料"
+          icon="offline"
+          visible={showOffline}
+        />
+      )}
+      {showReconnect && (
+        <Toast
+          message="已恢復連線"
+          icon="online"
+          visible={showReconnect}
+        />
+      )}
 
       {/* Page Layout */}
       <div className="page-layout">

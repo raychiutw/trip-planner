@@ -17,6 +17,8 @@ export function registerNetworkCallbacks(onOffline: () => void, onOnline: () => 
  * Called by apiFetch after each request.
  * success=true  → signal online immediately
  * success=false → signal offline (debounced inside the hook)
+ *
+ * @internal — only call from useApi.ts apiFetch
  */
 export function reportFetchResult(success: boolean) {
   if (success) {
@@ -66,6 +68,8 @@ export function useOnlineStatus(): boolean {
 
     // Listen for SW postMessage NETWORK_STATUS notifications
     const handleMessage = (event: MessageEvent) => {
+      // Validate message source: must be a ServiceWorker, not a page/iframe/window
+      if (event.source && !(event.source instanceof ServiceWorker)) return;
       if (event.data?.type === 'NETWORK_STATUS') {
         updateStatus(event.data.online as boolean);
       }

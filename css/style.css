@@ -38,21 +38,88 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
     -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 }
 
-/* ===== Offline Banner ===== */
-.offline-banner {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
-  text-align: center;
-  padding: 6px var(--padding-h);
-  font-size: var(--font-size-footnote);
-  transition: opacity var(--transition-duration-normal) ease, max-height var(--transition-duration-normal) ease, padding var(--transition-duration-normal) ease;
-  overflow: hidden;
-  max-height: 3rem;
+/* ===== Toast Notification ===== */
+@keyframes toast-slide-down {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
-.offline-banner.hidden {
+
+@keyframes toast-slide-up {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+}
+
+.toast-notification {
+  position: fixed;
+  top: calc(var(--nav-h) + var(--spacing-3));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--z-sticky-nav) + 50);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-secondary); /* fallback for browsers without color-mix */
+  background: color-mix(in srgb, var(--color-secondary) 85%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border); /* fallback */
+  box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
+  font-size: var(--font-size-subheadline);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  color: var(--color-foreground);
+  pointer-events: none;
+}
+
+.toast-notification--visible {
+  animation: toast-slide-down var(--transition-duration-slow) var(--transition-timing-function-apple) forwards;
+}
+
+.toast-notification--hidden {
+  animation: toast-slide-up var(--transition-duration-normal) ease forwards;
   opacity: 0;
-  max-height: 0;
-  padding: 0;
+  pointer-events: none;
+}
+
+.toast-notification-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toast-notification--offline .toast-notification-icon {
+  color: var(--color-warning);
+}
+
+.toast-notification--online .toast-notification-icon {
+  color: var(--color-success);
+}
+
+/* ===== TP Logo ===== */
+.tp-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  line-height: 0;
+}
+
+.tp-logo--offline {
+  /* offline state uses --color-disabled for the TP strokes (applied inline in SVG) */
 }
 
 /* ===== Offline disabled main content ===== */
