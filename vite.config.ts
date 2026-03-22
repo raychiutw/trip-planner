@@ -31,8 +31,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
         // 排除 Cloudflare Access 保護的頁面（未登入會被重定向，導致 precache 失敗）
         globIgnores: ['manage/**', 'admin/**'],
-        // 排除 manage/admin 的 navigation fallback（讓瀏覽器正常導航到這些頁面，不被 SW 攔截）
-        navigateFallbackDenylist: [/^\/manage/, /^\/admin/],
+        // 排除 manage/admin/cdn-cgi 的 navigation fallback（讓瀏覽器正常導航，不被 SW 攔截）
+        // cdn-cgi: Cloudflare Access 認證回調路徑
+        navigateFallbackDenylist: [/^\/manage/, /^\/admin/, /^\/cdn-cgi/],
         runtimeCaching: [
           {
             // Production API — 只快取公開行程端點，排除 /api/permissions、/api/requests 等需認證的端點
