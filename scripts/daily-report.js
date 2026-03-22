@@ -148,7 +148,7 @@ async function queryWebAnalytics() {
     'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { visits pageViews } ' +
+    'sum { visits } ' +
     '} } } }';
   var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
@@ -175,7 +175,7 @@ async function queryWebAnalytics() {
   // Core Web Vitals 在 rumWebVitalsEventsAdaptiveGroups，這裡先用 pageload 的 visits/pageViews
   return {
     visits: row.sum?.visits || 0,
-    pageViews: row.sum?.pageViews || 0,
+    pageViews: row.sum?.visits || 0,  // rumPageloadEvents 只有 visits，用 visits 代替 pageViews
     lcp: '—',
     cls: '—',
     inp: '—'
