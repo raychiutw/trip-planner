@@ -114,11 +114,14 @@ async function queryWorkersAnalytics() {
   });
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
+  if (data.errors) console.error('Workers Analytics GraphQL errors:', JSON.stringify(data.errors));
+  console.log('Workers Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.pagesFunctionsInvocationsAdaptive?.length ?? 'no rows'));
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+    console.log('Workers Analytics: no account data');
     return { requests: 0, errors: 0, p50: 0, p99: 0 };
   }
   var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptive;
-  if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
+  if (!rows || rows.length === 0) { console.log('Workers Analytics: empty rows'); return { requests: 0, errors: 0, p50: 0, p99: 0 }; }
   var totalRequests = 0;
   var totalErrors = 0;
   var maxP50 = 0;
@@ -161,11 +164,15 @@ async function queryWebAnalytics() {
   });
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
+  if (data.errors) console.error('Web Analytics GraphQL errors:', JSON.stringify(data.errors));
+  console.log('Web Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptive?.length ?? 'no rows'));
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+    console.log('Web Analytics: no account data');
     return { visits: 0, pageViews: 0, lcp: 0, cls: 0, inp: 0 };
   }
   var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptive;
   if (!rows || rows.length === 0) {
+    console.log('Web Analytics: empty rows');
     return { visits: 0, pageViews: 0, lcp: 0, cls: 0, inp: 0 };
   }
   var row = rows[0];
