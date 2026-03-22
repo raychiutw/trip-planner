@@ -35,7 +35,11 @@ $headers = @{
 Log "呼叫 API: GET /api/requests?status=open"
 
 try {
-    $response = Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests?status=open" -Headers $headers -ErrorAction Stop
+    $rawJson = curl -s `
+        -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" `
+        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" `
+        "https://trip-planner-dby.pages.dev/api/requests?status=open"
+    $response = $rawJson | ConvertFrom-Json
 }
 catch {
     Log "API 呼叫失敗: $_"
@@ -62,13 +66,15 @@ for ($i = 0; $i -lt $count; $i++) {
     $msg = if ($req.message) { $req.message.Substring(0, [Math]::Min(50, $req.message.Length)) } else { "(empty)" }
     Log "  [$($i+1)/$count] id=$rid trip=$tripId mode=$mode msg=$msg"
 
-    # PATCH status → received（系統已接收）
+    # PATCH status → received（系統已接收）— 使用 curl 避免 PowerShell 過濾 headers
     try {
-        $patchBody = @{ status = "received" } | ConvertTo-Json -Compress
-        Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests/$rid" `
-            -Method Patch -Headers $headers -ContentType "application/json" `
-            -Body $patchBody -ErrorAction Stop | Out-Null
-        Log "  id=$rid status → received"
+        $patchResult = curl -s -X PATCH `
+            -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" `
+            -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" `
+            -H "Content-Type: application/json" `
+            -d "{`"status`":`"received`"}" `
+            "https://trip-planner-dby.pages.dev/api/requests/$rid"
+        Log "  id=$rid status → received ($patchResult)"
     }
     catch {
         Log "  id=$rid PATCH received 失敗: $_"
@@ -92,11 +98,13 @@ catch {
         $req = if ($response -is [System.Array]) { $response[$i] } else { $response }
         $rid = $req.id
         try {
-            $rollbackBody = @{ status = "open" } | ConvertTo-Json -Compress
-            Invoke-RestMethod -Uri "https://trip-planner-dby.pages.dev/api/requests/$rid" `
-                -Method Patch -Headers $headers -ContentType "application/json" `
-                -Body $rollbackBody -ErrorAction Stop | Out-Null
-            Log "  id=$rid 回滾 status → open"
+            $rollbackResult = curl -s -X PATCH `
+                -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" `
+                -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" `
+                -H "Content-Type: application/json" `
+                -d "{`"status`":`"open`"}" `
+                "https://trip-planner-dby.pages.dev/api/requests/$rid"
+            Log "  id=$rid 回滾 status → open ($rollbackResult)"
         }
         catch {
             Log "  id=$rid 回滾失敗: $_"
