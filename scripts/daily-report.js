@@ -104,7 +104,6 @@ async function queryWorkersAnalytics() {
     'quantiles { cpuTimeP50 cpuTimeP99 } ' +
     'dimensions { scriptName } ' +
     '} } } }';
-  console.log('Workers query scriptName filter: none (listing all)');
   var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
     headers: {
@@ -115,14 +114,11 @@ async function queryWorkersAnalytics() {
   });
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
-  if (data.errors) console.error('Workers Analytics GraphQL errors:', JSON.stringify(data.errors));
-  console.log('Workers Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive?.length ?? 'no rows'));
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    console.log('Workers Analytics: no account data');
     return { requests: 0, errors: 0, p50: 0, p99: 0 };
   }
   var rows = data.data.viewer.accounts[0].workersInvocationsAdaptive;
-  if (!rows || rows.length === 0) { console.log('Workers Analytics: empty rows'); return { requests: 0, errors: 0, p50: 0, p99: 0 }; }
+  if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
   var totalRequests = 0;
   var totalErrors = 0;
   var maxP50 = 0;
@@ -160,15 +156,11 @@ async function queryWebAnalytics() {
   });
   if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
   var data = await res.json();
-  if (data.errors) console.error('Web Analytics GraphQL errors:', JSON.stringify(data.errors));
-  console.log('Web Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptiveGroups));
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    console.log('Web Analytics: no account data');
     return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
   }
   var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptiveGroups;
   if (!rows || rows.length === 0) {
-    console.log('Web Analytics: empty rows');
     return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
   }
   var row = rows[0];
@@ -452,34 +444,6 @@ function writeReport(html) {
 
 async function main() {
   console.log('Daily report starting — ' + formatDate());
-
-  // DEBUG: introspect available GraphQL fields
-  try {
-    var introQuery = '{ __schema { queryType { fields { name type { name fields { name } } } } } }';
-    var introRes = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + CF_TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: introQuery })
-    });
-    var introData = await introRes.json();
-    var allFields = JSON.stringify(introData);
-    // List ALL fields on viewer.accounts
-    var accountFields = introData?.data?.__schema?.queryType?.fields
-      ?.find(function(f){return f.name === 'viewer'})?.type?.fields
-      ?.find(function(f){return f.name === 'accounts'})?.type?.fields
-      ?.map(function(f){return f.name}) || [];
-    console.log('Account fields count:', accountFields.length);
-    console.log('Account fields:', JSON.stringify(accountFields.slice(0, 50)));
-    if (accountFields.length > 50) console.log('Account fields (50+):', JSON.stringify(accountFields.slice(50)));
-
-    // introspection: 查 schema 中所有含 analytics 關鍵字的 type 名稱
-    var tq3 = '{ __schema { types { name } } }';
-    var tr3 = await fetch('https://api.cloudflare.com/client/v4/graphql', { method:'POST', headers:{'Authorization':'Bearer '+CF_TOKEN,'Content-Type':'application/json'}, body:JSON.stringify({query:tq3}) });
-    var td3 = await tr3.json();
-    var allTypes = (td3?.data?.__schema?.types?.map(function(t){return t.name}) || []);
-    var analyticsTypes = allTypes.filter(function(n){return /worker|page|rum|web|http|analytic|invocation|request/i.test(n)});
-    console.log('Schema types total:', allTypes.length, 'analytics-related:', JSON.stringify(analyticsTypes));
-  } catch(e) { console.log('Introspection failed:', e.message); }
 
   // 並行查詢所有數據來源（任一失敗不影響其他）
   var settled = await Promise.allSettled([
