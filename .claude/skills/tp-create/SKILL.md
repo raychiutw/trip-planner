@@ -28,22 +28,16 @@ user-invocable: true
 1b. 依目的地自動判斷 `meta.countries`（ISO 3166-1 alpha-2 國碼陣列）：日本 `["JP"]`、韓國 `["KR"]`、台灣 `["TW"]` 等。韓國行程須為所有 POI location 新增 `naverQuery`（Naver Maps URL）
 2. 讀取品質規則（tp-quality-rules skill）
 3. 建立行程 meta：
+
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
    ```bash
+   node -e "require('fs').writeFileSync('/tmp/meta.json', JSON.stringify({id:'{tripId}', name:'{owner}', title:'{行程標題}', startDate:'{YYYY-MM-DD}', endDate:'{YYYY-MM-DD}', countries:['{ISO碼}'], transportMode:'car|transit', foodPreferences:['{偏好1}','{偏好2}'], published:false}), 'utf8')"
    curl -s -X POST \
      -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
      -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
-     -d '{
-       "id": "{tripId}",
-       "name": "{owner}",
-       "title": "{行程標題}",
-       "startDate": "{YYYY-MM-DD}",
-       "endDate": "{YYYY-MM-DD}",
-       "countries": ["{ISO碼}"],
-       "transportMode": "car|transit",
-       "foodPreferences": ["{偏好1}", "{偏好2}"],
-       "published": false
-     }' \
+     --data @/tmp/meta.json \
      "https://trip-planner-dby.pages.dev/api/trips"
    ```
 4. 為每一天產生完整內容（JSON 格式），包含：
@@ -69,21 +63,28 @@ user-invocable: true
    - `dayOfWeek`（中文星期，必填）：`"一"` / `"二"` / `"三"` / `"四"` / `"五"` / `"六"` / `"日"`
    - `label`（≤ 8 字，必填）：當日主題，例如 `"抵達那霸"` / `"美麗海水族館"`
 
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
    ```bash
+   node -e "require('fs').writeFileSync('/tmp/day.json', JSON.stringify({...完整一天資料...}), 'utf8')"
    curl -s -X PUT \
      -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
      -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
-     -d '{...完整一天資料...}' \
+     --data @/tmp/day.json \
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
    ```
 8. 建立 docs（flights、checklist、backup、suggestions、emergency）：
+
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
    ```bash
+   node -e "require('fs').writeFileSync('/tmp/doc.json', JSON.stringify({content:'...'}), 'utf8')"
    curl -s -X PUT \
      -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
      -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
-     -d '{"content":"..."}' \
+     --data @/tmp/doc.json \
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
    ```
 
@@ -92,12 +93,16 @@ user-invocable: true
 9. 對每一天啟動一個 Agent（sonnet），並行執行：
    - 用 WebSearch 查詢缺少 `googleRating` 的地點/餐廳評分
    - Agent 透過 PATCH API 補充各 entry 的評分資訊：
+
+     > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
      ```bash
+     node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({googleRating:4.5}), 'utf8')"
      curl -s -X PATCH \
        -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
        -H "Content-Type: application/json" \
-       -d '{"googleRating": 4.5}' \
+       --data @/tmp/patch.json \
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
      ```
 10. 收集所有 Agent 完成後確認資料完整

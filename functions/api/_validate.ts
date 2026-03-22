@@ -59,6 +59,21 @@ export function validateEntryBody(body: EntryBody): ValidationResult {
   return { ok: true, status: 200 };
 }
 
+/**
+ * 啟發式偵測疑似亂碼字串（常見於 CP950/Big5 → UTF-8 誤轉）。
+ * 回傳 true 表示偵測到亂碼特徵。
+ */
+export function detectGarbledText(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  // U+FFFD replacement character
+  if (text.includes('\uFFFD')) return true;
+  // 連續 3+ 個 Latin Extended bytes（常見於 Big5→UTF-8 誤轉）
+  if (/[\u0080-\u00FF]{3,}/.test(text)) return true;
+  // C1 控制字元（除了常見的 \t \n \r）
+  if (/[\x80-\x9F]/.test(text)) return true;
+  return false;
+}
+
 export interface RestaurantBody {
   name?: string | null;
   [key: string]: unknown;

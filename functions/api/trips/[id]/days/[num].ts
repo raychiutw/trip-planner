@@ -1,6 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
-import { validateDayBody } from '../../../_validate';
+import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json } from '../../../_utils';
 import type { Env } from '../../../_types';
 
@@ -166,6 +166,19 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const validation = validateDayBody(body);
   if (!validation.ok) {
     return json({ error: validation.error }, validation.status);
+  }
+
+  // 亂碼偵測：對 timeline entries 的文字欄位逐一檢查
+  const entryTextFields = ['title', 'body', 'note', 'travel_desc'] as const;
+  const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
+  for (let i = 0; i < timelineEntries.length; i++) {
+    const e = timelineEntries[i];
+    for (const f of entryTextFields) {
+      const val = f === 'travel_desc' ? (e.travel as { desc?: unknown } | undefined)?.desc : e[f];
+      if (typeof val === 'string' && detectGarbledText(val)) {
+        return json({ error: `timeline[${i}].${f} 包含疑似亂碼，請確認 encoding 為 UTF-8` }, 400);
+      }
+    }
   }
 
   // Write snapshot audit log BEFORE any batch operations (for recovery if batch fails)

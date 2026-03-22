@@ -1,6 +1,6 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../_auth';
-import { validateEntryBody } from '../../../_validate';
+import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json } from '../../../_utils';
 import type { Env } from '../../../_types';
 
@@ -36,6 +36,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if ('title' in body) {
     const validation = validateEntryBody(body);
     if (!validation.ok) return json({ error: validation.error }, validation.status);
+  }
+
+  // 亂碼偵測：寫入 DB 前檢查文字欄位
+  const textFields = ['title', 'body', 'note', 'travel_desc'];
+  for (const f of textFields) {
+    if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
+      return json({ error: `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8` }, 400);
+    }
   }
 
   const fields = Object.keys(body).filter(k => (ALLOWED_FIELDS as readonly string[]).includes(k));

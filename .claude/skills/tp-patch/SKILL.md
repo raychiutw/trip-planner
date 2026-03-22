@@ -68,12 +68,15 @@ user-invocable: true
    - 餐廳：PATCH `/api/trips/{tripId}/restaurants/{rid}`
    - 購物：PATCH `/api/trips/{tripId}/shopping/{sid}`
 
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
    ```bash
+   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({'{field}':{value}}), 'utf8')"
    curl -s -X PATCH \
      -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
      -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
-     -d '{"{field}": {value}}' \
+     --data @/tmp/patch.json \
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
    ```
    - 找不到的值不填預設（`googleRating` 省略、`reservation` 維持 unknown）

@@ -38,22 +38,26 @@ user-invocable: true
 4. 修改的部分須符合 R0-R15 品質規則
 4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
 5. 依修改類型選擇對應 API：
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
    - **修改單一 entry**（title/time/description/location/travel 等）：
      ```bash
+     node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({...修改欄位...}), 'utf8')"
      curl -s -X PATCH \
        -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
        -H "Content-Type: application/json" \
-       -d '{...修改欄位...}' \
+       --data @/tmp/patch.json \
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
      ```
    - **覆寫整天**（插入/移除/重排 entry，或整天大幅修改）：
      ```bash
+     node -e "require('fs').writeFileSync('/tmp/day.json', JSON.stringify({...完整一天資料...}), 'utf8')"
      curl -s -X PUT \
        -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
        -H "Content-Type: application/json" \
-       -d '{...完整一天資料...}' \
+       --data @/tmp/day.json \
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
      ```
 
@@ -64,11 +68,12 @@ user-invocable: true
    - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
    - **更新 doc**（checklist/backup/suggestions 等）：
      ```bash
+     node -e "require('fs').writeFileSync('/tmp/doc.json', JSON.stringify({content:'...'}), 'utf8')"
      curl -s -X PUT \
        -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
        -H "Content-Type: application/json" \
-       -d '{"content":"..."}' \
+       --data @/tmp/doc.json \
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
      ```
 6. 若影響到 checklist、backup、suggestions，同步更新對應 doc
