@@ -35,7 +35,7 @@ $headers = @{
 Log "呼叫 API: GET /api/requests?status=open"
 
 try {
-    $rawJson = curl -s `
+    $rawJson = curl.exe -s `
         -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" `
         -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" `
         "https://trip-planner-dby.pages.dev/api/requests?status=open"
@@ -68,7 +68,7 @@ for ($i = 0; $i -lt $count; $i++) {
 
     # PATCH status → received（系統已接收）— 使用 curl 避免 PowerShell 過濾 headers
     try {
-        $patchResult = curl -s -X PATCH `
+        $patchResult = curl.exe -s -X PATCH `
             -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" `
             -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" `
             -H "Content-Type: application/json" `
@@ -98,7 +98,7 @@ catch {
         $req = if ($response -is [System.Array]) { $response[$i] } else { $response }
         $rid = $req.id
         try {
-            $rollbackResult = curl -s -X PATCH `
+            $rollbackResult = curl.exe -s -X PATCH `
                 -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" `
                 -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" `
                 -H "Content-Type: application/json" `
