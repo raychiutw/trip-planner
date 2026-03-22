@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import clsx from 'clsx';
 import Icon from '../components/shared/Icon';
+import TpLogo from '../components/shared/TpLogo';
+import Toast from '../components/shared/Toast';
 import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -315,6 +317,7 @@ export default function ManagePage() {
       <div className="container">
         {/* ----- Sticky Nav ----- */}
         <div className="sticky-nav" id="stickyNav">
+          <TpLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
               className="manage-trip-select manage-trip-select--center"
@@ -341,12 +344,12 @@ export default function ManagePage() {
           </button>
         </div>
 
-        {/* Offline Banner */}
-        {!isOnline && (
-          <div className="offline-banner" role="status" aria-live="polite">
-            📶 離線模式 — 無法送出修改請求
-          </div>
-        )}
+        {/* Toast notification */}
+        <Toast
+          message="已離線 — 無法送出修改請求"
+          icon="offline"
+          visible={!isOnline}
+        />
 
         {/* ----- Main Content ----- */}
         <main className={clsx('manage-main', !isOnline && 'offline-disabled')} id="manageMain">

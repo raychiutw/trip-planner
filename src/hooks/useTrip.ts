@@ -37,6 +37,7 @@ export interface UseTripReturn {
   currentDay: Day | null;
   currentDayNum: number;
   switchDay: (dayNum: number) => void;
+  refetchCurrentDay: () => void;
   docs: Partial<Record<DocKey, unknown>>;
   allDays: Record<number, Day>;
   loading: boolean;
@@ -215,5 +216,18 @@ export function useTrip(tripId: string | null): UseTripReturn {
     };
   }, [tripId]);
 
-  return { trip, days, currentDay, currentDayNum, switchDay, docs, allDays, loading, error };
+  /* --- Refetch the current day (bypass cache) --- */
+  const refetchCurrentDay = useCallback(() => {
+    if (!currentDayNum) return;
+    // Remove from cache so fetchDay goes to network
+    delete dayCacheRef.current[currentDayNum];
+    fetchDay(currentDayNum).then((day) => {
+      if (day) {
+        setCurrentDay(day);
+        setAllDays((prev) => ({ ...prev, [currentDayNum]: day }));
+      }
+    });
+  }, [currentDayNum, fetchDay]);
+
+  return { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, docs, allDays, loading, error };
 }

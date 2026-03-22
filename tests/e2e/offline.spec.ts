@@ -2,7 +2,7 @@
  * E2E Tests：Service Worker / 離線 / 快取行為驗證
  *
  * 測試情境：
- *   8. 離線 banner 顯示
+ *   8. 離線 Toast 通知顯示
  *   9. 離線時 FAB disabled
  *  10. SW navigateFallbackDenylist — /manage/ 不被 SW 攔截回 index.html
  *
@@ -28,14 +28,10 @@ async function injectTripPref(page: Page) {
   });
 }
 
-// ===== Helper：等候離線 banner 出現（含文字驗證）=====
+// ===== Helper：等候離線 Toast 通知出現（含文字驗證）=====
 async function waitForOfflineBanner(page: Page) {
-  // 等候 .offline-banner 不含 'hidden' class（max-height 展開）
-  await page.waitForFunction(() => {
-    const banner = document.querySelector('.offline-banner');
-    if (!banner) return false;
-    return !banner.classList.contains('hidden');
-  }, { timeout: 10000 });
+  // 等候 .toast-notification--visible 出現（Toast 已掛載並可見）
+  await page.waitForSelector('.toast-notification--visible', { timeout: 10000 });
 }
 
 // ===== 測試情境 8 & 9：主頁（TripPage）離線行為 =====
@@ -66,15 +62,15 @@ test.describe('TripPage 離線行為', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await injectTripPref(page);
 
-    // 等候離線 banner 出現
+    // 等候離線 Toast 通知出現
     await waitForOfflineBanner(page);
 
-    const banner = page.locator('.offline-banner');
+    const banner = page.locator('.toast-notification--offline');
     await expect(banner).toBeVisible();
 
     // 驗證包含離線相關中文提示文字
     const bannerText = await banner.textContent();
-    expect(bannerText).toMatch(/離線模式|已恢復/);
+    expect(bannerText).toMatch(/已離線 — 顯示快取資料/);
   });
 
   test('9. 離線狀態下 .edit-fab 應有 disabled class，且 opacity < 1', async () => {
