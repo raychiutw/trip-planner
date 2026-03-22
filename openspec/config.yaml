@@ -17,6 +17,9 @@ env:
   # --- Gmail ---
   # GMAIL_USERNAME: lean.lean@gmail.com
   # GMAIL_APP_PASSWORD: (GitHub Secret，需從 Google 帳戶建立 App Password)
+  # --- Telegram ---
+  TELEGRAM_BOT_TOKEN: REDACTED_TG_TOKEN
+  TELEGRAM_CHAT_ID: "6527604594"
   # --- Pages 環境變數（Cloudflare Dashboard 設定）---
   # CF_API_TOKEN, CF_ACCESS_APP_ID, CF_ACCESS_POLICY_ID, ADMIN_EMAIL
 
