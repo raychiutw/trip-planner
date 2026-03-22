@@ -474,6 +474,18 @@ async function main() {
     console.log('Account fields count:', accountFields.length);
     console.log('Account fields:', JSON.stringify(accountFields.slice(0, 50)));
     if (accountFields.length > 50) console.log('Account fields (50+):', JSON.stringify(accountFields.slice(50)));
+
+    // 也試直接列出 viewer 下的 fields
+    var viewerFields = introData?.data?.__schema?.queryType?.fields
+      ?.find(function(f){return f.name === 'viewer'})?.type?.fields
+      ?.map(function(f){return f.name}) || [];
+    console.log('Viewer fields:', JSON.stringify(viewerFields));
+
+    // 試 accounts 的 type name
+    var accountsField = introData?.data?.__schema?.queryType?.fields
+      ?.find(function(f){return f.name === 'viewer'})?.type?.fields
+      ?.find(function(f){return f.name === 'accounts'});
+    console.log('Accounts type:', JSON.stringify(accountsField?.type?.name));
   } catch(e) { console.log('Introspection failed:', e.message); }
 
   // 並行查詢所有數據來源（任一失敗不影響其他）
