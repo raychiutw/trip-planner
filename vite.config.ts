@@ -27,6 +27,8 @@ export default defineConfig({
         // "browserslist" in the project root that confuses workbox-build).
         babelPresetEnvTargets: ['chrome >= 87', 'safari >= 14', 'firefox >= 78', 'edge >= 88'],
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+        // 排除 Cloudflare Access 保護的頁面（未登入會被重定向，導致 precache 失敗）
+        globIgnores: ['manage/**', 'admin/**'],
         runtimeCaching: [
           {
             // Production API — 只快取公開行程端點，排除 /api/permissions、/api/requests 等需認證的端點
