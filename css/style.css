@@ -672,7 +672,9 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .quick-panel-sheet {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: var(--color-secondary);
+    background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    backdrop-filter: saturate(180%) blur(28px);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     padding: var(--spacing-3) var(--spacing-4) calc(var(--spacing-4) + env(safe-area-inset-bottom));
     transform: translateY(100%);
@@ -766,7 +768,9 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .info-sheet-panel {
     position: fixed; bottom: 0; left: 0; right: 0;
     height: 92dvh; height: 92vh;
-    background: var(--color-secondary);
+    background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+    backdrop-filter: saturate(180%) blur(28px);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     z-index: var(--z-info-sheet);
     transform: translateY(100%);
@@ -853,4 +857,99 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     }
 }
 
+/* ===== Skeleton Loading ===== */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.skeleton-bone {
+  background: linear-gradient(90deg, var(--color-tertiary) 25%, var(--color-secondary) 50%, var(--color-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+.day-skeleton {
+  padding: var(--padding-h);
+}
+
+.skeleton-header {
+  padding: 12px 0 16px;
+}
+
+.skeleton-weather {
+  width: 100%;
+  height: 56px;
+  margin-bottom: 16px;
+}
+
+.skeleton-event {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.skeleton-flag {
+  width: 24px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.skeleton-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  flex: 1;
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.trip-loading {
+  padding: var(--padding-h);
+}
+
+.day-content-loaded {
+  animation: fadeIn 300ms var(--transition-timing-function-apple) both;
+}
+
+/* ===== Dark Mode — Elevated Surface ===== */
+body.dark .tl-card {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+}
+body.dark .info-sheet-panel {
+  background: color-mix(in srgb, var(--color-secondary) 95%, var(--color-accent) 5%);
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.06);
+}
+body.dark .quick-panel-item {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.04) inset;
+}
+
+/* ===== Dark Mode — Shadow → Glow ===== */
+body.dark .edit-fab,
+body.dark .quick-panel-trigger {
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent) 30%, transparent),
+              0 2px 8px rgba(0,0,0,0.4);
+}
+body.dark .info-sheet-panel,
+body.dark .quick-panel-sheet {
+  box-shadow: 0 -1px 0 rgba(255,255,255,0.06),
+              0 -8px 30px rgba(0,0,0,0.5);
+}
+
+/* ===== Dark Mode — Separator ===== */
+body.dark .tl-segment {
+  border-left-color: rgba(255,255,255,0.12);
+}
 

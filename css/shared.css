@@ -338,16 +338,16 @@
         --theme-line-height-body: var(--line-height-relaxed);
         --theme-section-gap: var(--spacing-8);
         --color-accent: #D4A88E;
-        --color-accent-subtle: #221C18;
+        --color-accent-subtle: #201C1A;
         --color-accent-bg: #342820;
-        --color-background: #1A1816;
-        --color-secondary: #262320;
-        --color-tertiary: #32302A;
-        --color-hover: #2E2C26;
-        --color-foreground: #E8E0D4;
-        --color-muted: #9B9080;
-        --color-accent-foreground: #1A1816;
-        --color-border: #3A3630;
+        --color-background: #1B1918;
+        --color-secondary: #242220;
+        --color-tertiary: #302E2A;
+        --color-hover: #2C2A26;
+        --color-foreground: #E4DED4;
+        --color-muted: #908580;
+        --color-accent-foreground: #1B1918;
+        --color-border: #363330;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(196, 64, 64, 0.15);
         --color-success: #B8D0C0;
@@ -359,16 +359,16 @@
         --color-priority-medium-dot: #F0D060;
         --color-priority-low-bg: rgba(184, 208, 192, 0.12);
         --color-priority-low-dot: #B8D0C0;
-        --scrollbar-thumb: #4A4640;
-        --scrollbar-thumb-hover: #5A5650;
+        --scrollbar-thumb: #403C38;
+        --scrollbar-thumb-hover: #504C48;
         --color-overlay: rgba(0,0,0,0.55);
         --color-success-bg: rgba(184, 208, 192, 0.15);
         --color-warning: #F0D060;
         --color-warning-bg: rgba(240, 208, 96, 0.15);
         --color-info: #D4A88E;
         --color-info-bg: rgba(212, 168, 142, 0.15);
-        --color-disabled: #5A5650;
-        --color-disabled-foreground: #3A3630;
+        --color-disabled: #565250;
+        --color-disabled-foreground: #363330;
         --color-badge-open: #2EA043;
         --color-badge-closed: #8B5CF6;
         --color-plan-bg: #1B3A1F;
@@ -425,13 +425,13 @@
         --color-accent: #7EC89A;
         --color-accent-subtle: #1A2A1E;
         --color-accent-bg: #243D2A;
-        --color-background: #161C18;
+        --color-background: #141A16;
         --color-secondary: #202A22;
         --color-tertiary: #2A362E;
         --color-hover: #263028;
         --color-foreground: #D8E8DC;
-        --color-muted: #8AB090;
-        --color-accent-foreground: #161C18;
+        --color-muted: #80A888;
+        --color-accent-foreground: #141A16;
         --color-border: #304038;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(196, 64, 64, 0.15);
@@ -697,7 +697,7 @@
         transition: transform var(--duration-sheet-open) var(--ease-spring),
                     border-radius var(--duration-sheet-open) var(--ease-spring);
     }
-    .sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); background: color-mix(in srgb, var(--color-background) 85%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); color: var(--color-foreground); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
+    .sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); background: color-mix(in srgb, var(--color-background) 72%, transparent); -webkit-backdrop-filter: saturate(200%) blur(24px); backdrop-filter: saturate(200%) blur(24px); color: var(--color-foreground); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
 
     /* Nav Title (shared by edit + setting) */
     .nav-title { font-size: var(--font-size-title3); font-weight: 700; color: var(--color-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
