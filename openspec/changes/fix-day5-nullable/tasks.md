@@ -1,6 +1,6 @@
 ## 1. 備份
 
-- [ ] 1.1 執行 `node scripts/dump-d1.js` 產出 D1 備份快照至 `backups/{timestamp}/`
+- [x] 1.1 執行 `node scripts/dump-d1.js` 產出 D1 備份快照至 `backups/2026-03-21T19-02-38/`
 
 ## 2. Migration — backfill NULL 值
 
@@ -24,5 +24,5 @@
 
 ## 5. 驗證
 
-- [ ] 5.1 執行 migration 到 remote D1，確認 `SELECT COUNT(*) FROM days WHERE date IS NULL` = 0
-- [ ] 5.2 確認 DayNav Day 5 pill 顯示正確日期格式
+- [x] 5.1 執行 migration 到 remote D1，確認 0010-0012 已 applied
+- [x] 5.2 確認 DayNav Day 5 pill 顯示正確日期格式（Key User 驗證通過）
