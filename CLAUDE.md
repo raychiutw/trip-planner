@@ -31,12 +31,16 @@
 
 ## CI/CD 流程
 
-- **Feature branch 開發**：所有開發一律在 feature branch，不直接 push master
-- **GitHub Actions CI**（`.github/workflows/ci.yml`）：PR 觸發，執行 tsc + unit test + build + verify-sw
-- **SW 驗證**：`scripts/verify-sw.js` 驗證 `dist/sw.js` 的 6 項規則（no NavigationRoute、has precacheAndRoute 等）
-  - 本地執行：`npm run verify-sw`
-- **Cloudflare Preview Deploy**：feature branch push 後自動部署 Preview URL（不受 Access 保護，方便測試）
-- **Production Deploy**：merge master 後自動部署至 https://trip-planner-dby.pages.dev/
+1. **建立 feature branch**：改檔案前先從 master 建立新分支，所有開發一律在 feature branch，不直接 push master
+2. **開發 + Commit**：在 feature branch 上開發、commit
+3. **Push**：Key User 同意後 push feature branch
+4. **開 PR**：對 master 開 PR
+5. **GitHub Actions CI**（`.github/workflows/ci.yml`）：PR 觸發，執行 tsc + unit test + build + verify-sw
+   - **SW 驗證**：`scripts/verify-sw.js` 驗證 `dist/sw.js` 的 6 項規則（no NavigationRoute、has precacheAndRoute 等）
+   - 本地執行：`npm run verify-sw`
+6. **Cloudflare Preview Deploy**：feature branch push 後自動部署 Preview URL（不受 Access 保護，方便測試）
+7. **CI 全綠 + review** → merge master
+8. **Production Deploy**：merge master 後自動部署至 https://trip-planner-dby.pages.dev/
 
 ## ⚠️ 開發規則（強制）
 
