@@ -71,6 +71,14 @@ export default function QuickPanel({
     setIsOpen(false);
   }, []);
 
+  /* --- Container scale-down when panel is open --- */
+  useEffect(() => {
+    document.querySelector('.container')?.classList.toggle('sheet-open', isOpen);
+    return () => {
+      document.querySelector('.container')?.classList.remove('sheet-open');
+    };
+  }, [isOpen]);
+
   /* --- Body scroll lock (iOS Safari safe) --- */
   useBodyScrollLock(isOpen);
 

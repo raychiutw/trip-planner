@@ -60,6 +60,14 @@ export default function InfoSheet({
     onCloseRef.current();
   }, []);
 
+  /* --- Container scale-down when sheet is open --- */
+  useEffect(() => {
+    document.querySelector('.container')?.classList.toggle('sheet-open', open);
+    return () => {
+      document.querySelector('.container')?.classList.remove('sheet-open');
+    };
+  }, [open]);
+
   /* --- C.5: Body scroll lock (iOS Safari safe) --- */
   useBodyScrollLock(open);
 

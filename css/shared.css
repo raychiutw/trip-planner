@@ -101,6 +101,14 @@
     --transition-timing-function-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* ===== Sheet animation tokens ===== */
+:root {
+    --ease-spring: cubic-bezier(0.32, 1.28, 0.60, 1.00);
+    --ease-sheet-close: cubic-bezier(0.4, 0, 1, 1);
+    --duration-sheet-open: 420ms;
+    --duration-sheet-close: 280ms;
+}
+
 /* ===== Non-utility tokens (no Tailwind utility generation needed) ===== */
 :root {
     /* Scrollbar defaults (sun-light) */
@@ -678,7 +686,14 @@
     body.dark .trip-btn:hover { background: var(--color-tertiary); }
 
     /* Container & Sticky Nav (shared by index + edit) */
-    .container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform var(--transition-duration-slow) var(--transition-timing-function-apple), border-radius var(--transition-duration-slow); }
+    .container { flex: 1; min-width: 0; max-width: 100%; margin: 0 auto; padding: 0; transition: transform var(--duration-sheet-close) var(--ease-sheet-close), border-radius var(--duration-sheet-close) var(--ease-sheet-close); }
+    .container.sheet-open {
+        transform: scale(0.95) translateY(10px);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: transform var(--duration-sheet-open) var(--ease-spring),
+                    border-radius var(--duration-sheet-open) var(--ease-spring);
+    }
     .sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); background: color-mix(in srgb, var(--color-background) 85%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); color: var(--color-foreground); padding: 8px var(--padding-h); display: flex; align-items: center; gap: 8px; }
 
     /* Nav Title (shared by edit + setting) */
@@ -718,6 +733,17 @@
     @media (min-width: 768px) {
         :root { --padding-h: var(--spacing-5); }
     }
+}
+
+/* ===== iOS-like tap feedback ===== */
+* { -webkit-tap-highlight-color: transparent; }
+
+.dn:active, .quick-panel-item:active, .map-link:active,
+.tl-card:active, .col-row:active, .nav-back-btn:active,
+.nav-close-btn:active, .edit-fab:active, .quick-panel-trigger:active {
+    transform: scale(0.97);
+    opacity: 0.7;
+    transition: transform 80ms, opacity 80ms;
 }
 
 /* === Reduced Motion: comprehensive reset === */
