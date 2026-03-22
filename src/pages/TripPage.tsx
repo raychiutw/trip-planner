@@ -26,6 +26,7 @@ import { DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
 import DayArt from '../components/trip/DayArt';
 import TodayRouteSheet from '../components/trip/TodayRouteSheet';
+import DaySkeleton from '../components/trip/DaySkeleton';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
@@ -74,7 +75,10 @@ const LOADING_VIEW = (
   <div className="page-layout">
     <div className="container">
       <div id="tripContent">
-        <div className={LOADING_CLASS}>載入行程資料中...</div>
+        <div className="trip-loading">
+          <DaySkeleton />
+          <DaySkeleton />
+        </div>
       </div>
     </div>
   </div>
@@ -151,9 +155,9 @@ const DaySection = React.memo(function DaySection({
         )}
         {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
       </div>
-      <div key={animKey} className={clsx('day-content', animKey > 0 && 'day-content-enter')} id={`day-slot-${dayNum}`}>
+      <div key={animKey} className={clsx('day-content', animKey > 0 && 'day-content-enter', day && 'day-content-loaded')} id={`day-slot-${dayNum}`}>
         {!day ? (
-          <div className="slot-loading">載入中...</div>
+          <DaySkeleton />
         ) : (
           <>
             {warnings.length > 0 && (
@@ -1050,7 +1054,10 @@ export default function TripPage() {
             )}
 
             {loading && (
-              <div className={LOADING_CLASS}>載入行程資料中...</div>
+              <div className="trip-loading">
+                <DaySkeleton />
+                <DaySkeleton />
+              </div>
             )}
 
             {/* #12: DaySection memo components with #11 Map lookup */}
