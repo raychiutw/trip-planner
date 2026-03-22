@@ -49,6 +49,7 @@ export interface InfoBoxData {
 
   /* parking */
   price?: string | null;
+  note?: string | null;
   location?: MapLocation | null;
 
   /* souvenir */
@@ -96,11 +97,16 @@ function ReservationBox({ box }: { box: InfoBoxData }) {
 function ParkingBox({ box }: { box: InfoBoxData }) {
   return (
     <div className="info-box parking">
-      {box.title && (
-        <><Icon name="parking" /> <strong>{box.title}</strong></>
+      <div>
+        {box.title && (
+          <><Icon name="parking" /> <strong>{box.title}</strong></>
+        )}
+        {box.price && <>：{box.price}</>}
+        {box.location && <>{' '}<MapLinks location={box.location} inline /></>}
+      </div>
+      {box.note && (
+        <div className="parking-note">{box.note}</div>
       )}
-      {box.price && <>：{box.price}</>}
-      {box.location && <>{' '}<MapLinks location={box.location} inline /></>}
     </div>
   );
 }
