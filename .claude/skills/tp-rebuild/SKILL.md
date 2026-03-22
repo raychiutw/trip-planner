@@ -48,12 +48,16 @@ user-invocable: true
    - **更新 doc**（checklist/backup/suggestions）：PUT `/api/trips/{tripId}/docs/{type}`
 
    所有寫入操作須帶認證 headers：
+
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
    ```bash
+   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({...修改欄位...}), 'utf8')"
    curl -s -X PATCH \
      -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
      -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
-     -d '{...}' \
+     --data @/tmp/patch.json \
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
    ```
 5. 同步更新 checklist、backup、suggestions docs（若 timeline 有變動）

@@ -149,6 +149,21 @@ async function handleAuth(
   const csrfError = checkCsrf(request, env);
   if (csrfError) return csrfError;
 
+  // UTF-8 body validation for mutating requests
+  const method = request.method.toUpperCase();
+  if (['POST', 'PUT', 'PATCH'].includes(method)) {
+    const cloned = request.clone();
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: true });
+      decoder.decode(new Uint8Array(await cloned.arrayBuffer()));
+    } catch {
+      return new Response(JSON.stringify({ error: 'Request body is not valid UTF-8' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
   // 公開讀取：GET /api/trips/** 不需認證
   if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
     // Service Token（CLI / scheduler）→ admin
