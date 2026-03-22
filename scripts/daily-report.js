@@ -100,9 +100,11 @@ async function queryWorkersAnalytics() {
     'workersInvocationsAdaptive(limit: 10000, filter: { ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { requests errors } ' +
+    'sum { requests errors subrequests } ' +
     'quantiles { cpuTimeP50 cpuTimeP99 } ' +
+    'dimensions { scriptName } ' +
     '} } } }';
+  console.log('Workers query scriptName filter: none (listing all)');
   var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
     headers: {
@@ -139,44 +141,41 @@ async function queryWorkersAnalytics() {
   };
 }
 
-// ── 數據來源 6: Web Analytics（Cloudflare Web Analytics REST API）──
+// ── 數據來源 6: Web Analytics（GraphQL rumPageloadEventsAdaptiveGroups）──
 
 async function queryWebAnalytics() {
-  // Web Analytics 使用 REST API 而非 GraphQL（GraphQL 的 rumPageloadEventsAdaptive 在此帳戶不可用）
-  var url = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/rum/site_info/list';
-  var res = await fetch(url, {
-    headers: { 'Authorization': 'Bearer ' + CF_TOKEN }
+  var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
+    'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
+    'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
+    'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
+    'sum { visits pageViews } ' +
+    '} } } }';
+  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + CF_TOKEN,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query: query })
   });
-  if (!res.ok) {
-    console.log('Web Analytics site list failed:', res.status);
-    // Fallback: Web Analytics 可能未啟用或 API 不支援，回傳 null 顯示「查詢失敗」
-    return null;
-  }
-  var siteData = await res.json();
-  console.log('Web Analytics sites:', JSON.stringify(siteData.result?.length ?? 0));
-  if (!siteData.result || siteData.result.length === 0) {
-    console.log('Web Analytics: no sites configured');
+  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
+  var data = await res.json();
+  if (data.errors) console.error('Web Analytics GraphQL errors:', JSON.stringify(data.errors));
+  console.log('Web Analytics raw:', JSON.stringify(data.data?.viewer?.accounts?.[0]?.rumPageloadEventsAdaptiveGroups));
+  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
+    console.log('Web Analytics: no account data');
     return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
   }
-  // 找到 trip-planner 的 site
-  var site = siteData.result.find(function(s) { return s.host === 'trip-planner-dby.pages.dev' || s.auto_install; }) || siteData.result[0];
-  var siteTag = site.site_tag || site.tag;
-  if (!siteTag) {
-    console.log('Web Analytics: no site_tag found');
+  var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptiveGroups;
+  if (!rows || rows.length === 0) {
+    console.log('Web Analytics: empty rows');
     return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
   }
-  // 查詢該 site 的 summary
-  var summaryUrl = 'https://api.cloudflare.com/client/v4/accounts/' + CF_ACCOUNT + '/rum/site_info?site_tag=' + siteTag;
-  var summaryRes = await fetch(summaryUrl, {
-    headers: { 'Authorization': 'Bearer ' + CF_TOKEN }
-  });
-  console.log('Web Analytics summary status:', summaryRes.status);
-  if (!summaryRes.ok) return { visits: 0, pageViews: 0, lcp: '—', cls: '—', inp: '—' };
-  var summary = await summaryRes.json();
-  console.log('Web Analytics summary:', JSON.stringify(summary.result));
+  var row = rows[0];
+  // Core Web Vitals 在 rumWebVitalsEventsAdaptiveGroups，這裡先用 pageload 的 visits/pageViews
   return {
-    visits: summary.result?.visits || 0,
-    pageViews: summary.result?.pageViews || 0,
+    visits: row.sum?.visits || 0,
+    pageViews: row.sum?.pageViews || 0,
     lcp: '—',
     cls: '—',
     inp: '—'
