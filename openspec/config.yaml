@@ -1,25 +1,24 @@
 schema: spec-driven
 
 env:
-  CF_ACCOUNT_ID: d62be07e04ccd1c19ed8c496edac8ce8
-  D1_DATABASE_ID: d61c42d5-8083-4e18-9b6c-70e133e37322
+  # ⚠️ 所有 key/token/secret 已移至 .env.local（不進版控）
+  # 本檔案只保留非敏感的名稱/ID 參考
   D1_DATABASE_NAME: trip-planner-db
-  D1_STAGING_DATABASE_ID: 53f38e2c-e17d-4961-ba9e-f61e63477ecc
   D1_STAGING_DATABASE_NAME: trip-planner-db-staging
-  CLOUDFLARE_API_TOKEN: REDACTED_CF_TOKEN  # token name: trip-planner-apps, rolled 2026-03-22
-  CF_ACCESS_CLIENT_ID: REDACTED_CLIENT_ID
-  CF_ACCESS_CLIENT_SECRET: REDACTED_CLIENT_SECRET
-  # --- Sentry ---
-  SENTRY_ORG: ray-team-gq
-  SENTRY_PROJECT: javascript-react
-  VITE_SENTRY_DSN: https://9b704a3b3a8d3edbd985d31a32b7b7bd@o4511070098161664.ingest.us.sentry.io/4511072117325824
-  # SENTRY_AUTH_TOKEN: (GitHub Secret + 本機環境變數，不可存入版控)
-  # --- Gmail ---
-  # GMAIL_USERNAME: lean.lean@gmail.com
-  # GMAIL_APP_PASSWORD: (GitHub Secret，需從 Google 帳戶建立 App Password)
-  # --- Telegram ---
-  TELEGRAM_BOT_TOKEN: REDACTED_TG_TOKEN
-  TELEGRAM_CHAT_ID: "6527604594"
+  # --- 敏感值位置 ---
+  # CF_ACCOUNT_ID: → .env.local
+  # D1_DATABASE_ID: → .env.local
+  # CLOUDFLARE_API_TOKEN: → .env.local + GitHub Secret
+  # CF_ACCESS_CLIENT_ID: → .env.local
+  # CF_ACCESS_CLIENT_SECRET: → .env.local
+  # SENTRY_ORG: → .env.local
+  # SENTRY_PROJECT: → .env.local
+  # SENTRY_AUTH_TOKEN: → .env.local + GitHub Secret
+  # VITE_SENTRY_DSN: → .env.local
+  # TELEGRAM_BOT_TOKEN: → .env.local + GitHub Secret
+  # TELEGRAM_CHAT_ID: → .env.local
+  # GMAIL_USERNAME: → GitHub Secret
+  # GMAIL_APP_PASSWORD: → GitHub Secret
   # --- Pages 環境變數（Cloudflare Dashboard 設定）---
   # CF_API_TOKEN, CF_ACCESS_APP_ID, CF_ACCESS_POLICY_ID, ADMIN_EMAIL
 

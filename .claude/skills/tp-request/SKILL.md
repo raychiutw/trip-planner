@@ -12,8 +12,8 @@ user-invocable: true
 
 - **Base URL**: `https://trip-planner-dby.pages.dev`
 - **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `REDACTED_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `REDACTED_CLIENT_SECRET`
+  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
+  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
 
 ## 觸發模式
 
@@ -31,8 +31,8 @@ Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open/receiv
 
 1. **查詢待處理請求**（open 或 received）：
    ```bash
-   curl -s -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-        -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+   curl -s -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+        -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
         "https://trip-planner-dby.pages.dev/api/requests?status=received"
    ```
    若無結果，也查 `status=open`（防排程未更新的情況）
@@ -45,8 +45,8 @@ Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open/receiv
 ```bash
 node -e "require('fs').writeFileSync('/tmp/status.json', JSON.stringify({status:'processing'}), 'utf8')"
 curl -s -X PATCH \
-  -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
   -H "Content-Type: application/json" \
   --data @/tmp/status.json \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
@@ -96,8 +96,8 @@ curl -s -X PATCH \
       - **修改單一 entry**（title/time/description/location/travel 等）：
         ```bash
         curl -s -X PATCH \
-          -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-          -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+          -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+          -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
           -H "Content-Type: application/json" \
           -d '{...修改欄位...}' \
           "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
@@ -105,8 +105,8 @@ curl -s -X PATCH \
       - **覆寫整天**（插入/移除/重排 entry，或整天大幅修改）：
         ```bash
         curl -s -X PUT \
-          -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-          -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+          -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+          -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
           -H "Content-Type: application/json" \
           -d '{...完整一天資料...}' \
           "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
@@ -118,8 +118,8 @@ curl -s -X PATCH \
       - **更新 doc**（checklist/backup/suggestions 等）：
         ```bash
         curl -s -X PUT \
-          -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-          -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+          -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+          -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
           -H "Content-Type: application/json" \
           -d '{"content":"..."}' \
           "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
@@ -141,8 +141,8 @@ curl -s -X PATCH \
 ```bash
 node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'completed', processed_by:'scheduler'}), 'utf8')"
 curl -s -X PATCH \
-  -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
   -H "Content-Type: application/json" \
   --data @/tmp/reply.json \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"

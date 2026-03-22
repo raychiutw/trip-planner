@@ -12,8 +12,8 @@ user-invocable: true
 
 - **Base URL**: `https://trip-planner-dby.pages.dev`
 - **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `REDACTED_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `REDACTED_CLIENT_SECRET`
+  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
+  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
 
 ## 輸入方式
 
@@ -34,8 +34,8 @@ user-invocable: true
    ```bash
    node -e "require('fs').writeFileSync('/tmp/meta.json', JSON.stringify({id:'{tripId}', name:'{owner}', title:'{行程標題}', startDate:'{YYYY-MM-DD}', endDate:'{YYYY-MM-DD}', countries:['{ISO碼}'], transportMode:'car|transit', foodPreferences:['{偏好1}','{偏好2}'], published:false}), 'utf8')"
    curl -s -X POST \
-     -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
      --data @/tmp/meta.json \
      "https://trip-planner-dby.pages.dev/api/trips"
@@ -68,8 +68,8 @@ user-invocable: true
    ```bash
    node -e "require('fs').writeFileSync('/tmp/day.json', JSON.stringify({...完整一天資料...}), 'utf8')"
    curl -s -X PUT \
-     -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
      --data @/tmp/day.json \
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
@@ -81,8 +81,8 @@ user-invocable: true
    ```bash
    node -e "require('fs').writeFileSync('/tmp/doc.json', JSON.stringify({content:'...'}), 'utf8')"
    curl -s -X PUT \
-     -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
      --data @/tmp/doc.json \
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
@@ -99,8 +99,8 @@ user-invocable: true
      ```bash
      node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({googleRating:4.5}), 'utf8')"
      curl -s -X PATCH \
-       -H "CF-Access-Client-Id: REDACTED_CLIENT_ID" \
-       -H "CF-Access-Client-Secret: REDACTED_CLIENT_SECRET" \
+       -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+       -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
        -H "Content-Type: application/json" \
        --data @/tmp/patch.json \
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"

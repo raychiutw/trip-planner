@@ -30,8 +30,8 @@ PM 每次派 Teammate 時，prompt 必須包含以下 6 個區塊。
 
 ⑥ 完成後動作
   「完成後：
+   - ⚠️ 勾 tasks.md checkbox — 每完成一個 task 立即勾選，不要等全部做完才勾（hook 會在 commit 前檢查，漏勾 = commit 被攔截）
    - TaskUpdate 標記任務 completed
-   - 勾 tasks.md checkbox（僅工程師）
    - SendMessage({to: "pm"}) 回報結果
    - 重要決策寫入 notes.md」
 ```
@@ -254,6 +254,16 @@ Agent(
 3. [ ] 🔴 高嚴重度問題已呈報 Key User Approve？
 4. [ ] Key User 已 Approve 方案（或明確同意跳過某步驟）？
 → 任一未通過 = STOP，不得派工程師
+```
+
+## ⛔ Hard Gate — commit 前必須全部通過
+
+```
+1. [ ] tasks.md 所有 checkbox 已勾選 ✅？（hook 自動檢查，漏勾會被攔截）
+2. [ ] tsc + npm test 通過？
+3. [ ] Reviewer APPROVE？
+4. [ ] QC PASS？
+→ 任一未通過 = STOP，不得 commit
 ```
 
 ## PM 派任務 Checklist
