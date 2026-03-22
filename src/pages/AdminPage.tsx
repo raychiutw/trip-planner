@@ -42,6 +42,25 @@ export default function AdminPage() {
   const currentTripIdRef = useRef(currentTripId);
   currentTripIdRef.current = currentTripId;
 
+  const [showOffline, setShowOffline] = useState(false);
+  const [showReconnect, setShowReconnect] = useState(false);
+  const wasOffline = useRef(false);
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOffline.current = true;
+      setShowOffline(true);
+      const t = setTimeout(() => setShowOffline(false), 2000);
+      return () => clearTimeout(t);
+    } else if (wasOffline.current) {
+      wasOffline.current = false;
+      setShowOffline(false);
+      setShowReconnect(true);
+      const t = setTimeout(() => setShowReconnect(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [isOnline]);
+
   /* ===== Load Permissions ===== */
   const loadPermissions = useCallback(async (tripId: string) => {
     if (!tripId) {
@@ -240,12 +259,21 @@ export default function AdminPage() {
             </svg>
           </button>
         </div>
-        {/* Toast notification */}
-        <Toast
-          message="已離線 — 無法管理權限"
-          icon="offline"
-          visible={!isOnline}
-        />
+        {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
+        {showOffline && (
+          <Toast
+            message="已離線 — 無法管理權限"
+            icon="offline"
+            visible={showOffline}
+          />
+        )}
+        {showReconnect && (
+          <Toast
+            message="已恢復連線"
+            icon="online"
+            visible={showReconnect}
+          />
+        )}
 
         <main className={clsx('admin-main', !isOnline && 'offline-disabled')} id="adminMain">
           <div className="admin-page">

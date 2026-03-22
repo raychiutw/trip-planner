@@ -108,6 +108,25 @@ export default function ManagePage() {
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [showOffline, setShowOffline] = useState(false);
+  const [showReconnect, setShowReconnect] = useState(false);
+  const wasOffline = useRef(false);
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOffline.current = true;
+      setShowOffline(true);
+      const t = setTimeout(() => setShowOffline(false), 2000);
+      return () => clearTimeout(t);
+    } else if (wasOffline.current) {
+      wasOffline.current = false;
+      setShowOffline(false);
+      setShowReconnect(true);
+      const t = setTimeout(() => setShowReconnect(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [isOnline]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   /* ----- Auto-resize textarea ----- */
@@ -344,12 +363,21 @@ export default function ManagePage() {
           </button>
         </div>
 
-        {/* Toast notification */}
-        <Toast
-          message="已離線 — 無法送出修改請求"
-          icon="offline"
-          visible={!isOnline}
-        />
+        {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
+        {showOffline && (
+          <Toast
+            message="已離線 — 無法送出修改請求"
+            icon="offline"
+            visible={showOffline}
+          />
+        )}
+        {showReconnect && (
+          <Toast
+            message="已恢復連線"
+            icon="online"
+            visible={showReconnect}
+          />
+        )}
 
         {/* ----- Main Content ----- */}
         <main className={clsx('manage-main', !isOnline && 'offline-disabled')} id="manageMain">
