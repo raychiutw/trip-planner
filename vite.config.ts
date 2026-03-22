@@ -39,7 +39,9 @@ export default defineConfig({
             options: {
               cacheName: 'api-cache',
               expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
-              networkTimeoutSeconds: 3,
+              networkTimeoutSeconds: 2,
+              cacheableResponse: { statuses: [0, 200] },
+              fetchOptions: { cache: 'no-cache' },
             },
             method: 'GET',
           },
@@ -50,7 +52,9 @@ export default defineConfig({
             options: {
               cacheName: 'api-cache-dev',
               expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
-              networkTimeoutSeconds: 3,
+              networkTimeoutSeconds: 2,
+              cacheableResponse: { statuses: [0, 200] },
+              fetchOptions: { cache: 'no-cache' },
             },
             method: 'GET',
           },
