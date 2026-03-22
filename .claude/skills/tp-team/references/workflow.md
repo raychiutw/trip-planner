@@ -50,12 +50,37 @@ PM 不只被動執行，主動建議優先順序：
 ```
 Key User 需求 → PM 建立 OpenSpec change
   → Key User Approve 方案
-  → 工程師實作 + 勾 tasks.md
+  → 工程師實作（feature branch）+ 勾 tasks.md
   → Code Reviewer 審查（APPROVE / REQUEST CHANGES）
   → QC 驗證（測試 + 截圖 + 操作）→ PASS / FAIL
   → 🔴 Challenger 質疑（基於 QC 結果，11 視角全面質疑）
-  → PM 驗收 → 回報 Key User → Key User Approve
-  → PM commit / push / archive
+  → PM commit（不 push）
+  → PM 提出進度報告（完成摘要 + tasks 勾選 + Reviewer/QC 結果 + 忽略項目）
+  → Key User 審閱報告 + Approve
+  → PM git push feature branch（hook 第二次確認 → Key User 再次同意放行）
+  → 開 PR → CI 自動執行（tsc + unit test + build + verify-sw）
+  → CI 全綠 + Key User review → merge master → production deploy
+  → archive
+```
+
+### Staging 開發流程
+
+```
+現在（staging-ci-cd 後）：
+  feature branch → push → Cloudflare Preview Deploy（自動）+ GitHub Actions CI（自動）
+  → PR → CI 全綠 → review → merge master → production deploy
+
+CI Pipeline（PR 觸發）：
+  1. npm ci
+  2. npx tsc --noEmit       # TypeScript 型別檢查
+  3. npm test               # Unit tests
+  4. npm run build          # Vite build
+  5. node scripts/verify-sw.js  # SW 驗證（6 項檢查）
+
+SW 變更注意：
+  - verify-sw.js 在 CI 自動驗證 dist/sw.js
+  - SW 含離線功能變更，需在 Preview URL 手動測試離線行為
+  - Preview URL 預設不受 Cloudflare Access 保護，manage/admin 可直接測試
 ```
 
 **Challenger 只出現一次，在 QC 之後。** Proposal 階段不需要 Challenger。

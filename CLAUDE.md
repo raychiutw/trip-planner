@@ -9,6 +9,35 @@
 - 派 Teammate 或團隊協作時，PM 必須先 **invoke `/tp-team`** 載入完整團隊規則。
 - `/tp-team` 包含：權責矩陣、Challenger 11 視角、禁令、Teammate/Subagent 規則、TeamCreate 工作模式、PM 派任務模板、OpenSpec 流程。
 
+## ⚠️ Git Push 管控（強制）
+
+- **`git push` 必須經 Key User 明確同意**，由 PreToolUse hook 強制攔截
+- 同意方式（二擇一）：
+  1. **Telegram**：Key User 在 Telegram 回覆同意（approve/同意/好/可以等）
+  2. **CLI**：Key User 在 CLI 輸入同意（我同意/同意/approve/push 等）
+- 收到同意後，PM 建立 `.push-approved` 旗標檔案，再重新執行 `git push`
+- Hook 看到旗標 → 放行 → 旗標自動刪除（一次性）
+- **嚴禁繞過此機制**（不得刪除 hook、不得手動 push）
+
+### 團隊開發完成流程
+
+完整流程定義在 `.claude/skills/tp-team/references/workflow.md`，摘要：
+
+1. **Commit**：每個 change 完成團隊流程後 commit（**不 push**）
+2. **進度報告**：向 Key User 提出完成摘要 + tasks 勾選 + Reviewer/QC 結果 + 忽略項目
+3. **Key User 同意**：審閱報告後回覆同意
+4. **Push**：`git push` feature branch（hook 第二次確認 → Key User 再次同意放行）
+5. **PR + CI**：開 PR → GitHub Actions 自動跑 CI（tsc + test + build + verify-sw）→ CI 全綠 + review → merge master
+
+## CI/CD 流程
+
+- **Feature branch 開發**：所有開發一律在 feature branch，不直接 push master
+- **GitHub Actions CI**（`.github/workflows/ci.yml`）：PR 觸發，執行 tsc + unit test + build + verify-sw
+- **SW 驗證**：`scripts/verify-sw.js` 驗證 `dist/sw.js` 的 6 項規則（no NavigationRoute、has precacheAndRoute 等）
+  - 本地執行：`npm run verify-sw`
+- **Cloudflare Preview Deploy**：feature branch push 後自動部署 Preview URL（不受 Access 保護，方便測試）
+- **Production Deploy**：merge master 後自動部署至 https://trip-planner-dby.pages.dev/
+
 ## ⚠️ 開發規則（強制）
 
 **所有開發規則定義在 `openspec/config.yaml`，無論是否使用 OpenSpec 流程都必須遵守。**
