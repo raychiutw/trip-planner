@@ -97,7 +97,7 @@ async function querySentry() {
 
 async function queryWorkersAnalytics() {
   var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
-    'workersInvocationsAdaptive(limit: 10000, filter: { ' +
+    'pagesFunctionsInvocationsAdaptiveGroups(limit: 10000, filter: { ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
     'sum { requests errors subrequests } ' +
@@ -117,7 +117,7 @@ async function queryWorkersAnalytics() {
   if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
     return { requests: 0, errors: 0, p50: 0, p99: 0 };
   }
-  var rows = data.data.viewer.accounts[0].workersInvocationsAdaptive;
+  var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups;
   if (!rows || rows.length === 0) return { requests: 0, errors: 0, p50: 0, p99: 0 };
   var totalRequests = 0;
   var totalErrors = 0;
