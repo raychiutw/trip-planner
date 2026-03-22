@@ -57,11 +57,15 @@ Key User 需求 → PM 建立 OpenSpec change
   → 🔴 Challenger 質疑（基於 QC 結果，11 視角全面質疑）→ PM advance challenger（stage=5）
   → PM commit（hook 檢查 stage==5 → 放行 + 自動刪除 .workflow-stage）
   → PM 提出進度報告（完成摘要 + tasks 勾選 + Reviewer/QC 結果 + 忽略項目）
-  → Key User 審閱報告 + Approve
-  → PM git push feature branch（hook 第二次確認 → Key User 再次同意放行）
+  → 🔑 Key User 第一次 Approve（同意 push）
+  → PM git push feature branch（hook 確認 → Key User 同意放行）
   → 開 PR → CI 自動執行（tsc + unit test + build + verify-sw）
-  → CI 全綠 + Key User review → merge master → production deploy
+  → CI 全綠 → PM 回報 CI 結果
+  → 🔑 Key User 第二次 Approve（同意 merge PR）
+  → PM merge PR → production deploy
   → archive
+
+⚠️ PM 禁止自動 merge PR — 必須等 Key User 明確同意 merge 才能執行 gh pr merge
 ```
 
 ### .workflow-stage 旗標說明

@@ -25,9 +25,13 @@
 
 1. **Commit**：每個 change 完成團隊流程後 commit（**不 push**）
 2. **進度報告**：向 Key User 提出完成摘要 + tasks 勾選 + Reviewer/QC 結果 + 忽略項目
-3. **Key User 同意**：審閱報告後回覆同意
-4. **Push**：`git push` feature branch（hook 第二次確認 → Key User 再次同意放行）
-5. **PR + CI**：開 PR → GitHub Actions 自動跑 CI（tsc + test + build + verify-sw）→ CI 全綠 + review → merge master
+3. **🔑 Key User 第一次 Approve**：審閱報告後回覆同意 push
+4. **Push**：`git push` feature branch（hook 確認 → Key User 同意放行）
+5. **PR + CI**：開 PR → GitHub Actions 自動跑 CI（tsc + test + build + verify-sw）
+6. **CI 結果回報**：PM 回報 CI 結果給 Key User
+7. **🔑 Key User 第二次 Approve**：同意 merge PR
+8. **Merge**：PM 執行 `gh pr merge` → production deploy
+- **⚠️ PM 禁止自動 merge PR** — 必須等 Key User 明確同意 merge 才能執行
 
 ## CI/CD 流程
 
