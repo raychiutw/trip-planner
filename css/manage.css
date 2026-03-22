@@ -363,7 +363,8 @@
 }
 
 /* ===== Sticky-nav ===== */
-.sticky-nav { border-bottom: 1px solid var(--color-border); justify-content: flex-end; }
+.sticky-nav { border-bottom: 1px solid var(--color-border); }
+.sticky-nav .nav-close-btn { margin-left: auto; }
 .manage-trip-select--center {
     position: absolute;
     left: 50%;
