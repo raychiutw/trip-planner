@@ -473,15 +473,13 @@ async function main() {
     console.log('Account fields:', JSON.stringify(accountFields.slice(0, 50)));
     if (accountFields.length > 50) console.log('Account fields (50+):', JSON.stringify(accountFields.slice(50)));
 
-    // 直接試不同 dataset 名稱
-    var datasets = ['workersInvocationsAdaptive','workersInvocationsAdaptive','workersAnalyticsEngineAdaptive','httpRequestsAdaptive','httpRequestsAdaptive','rumPerformanceEventsAdaptive','webAnalyticsAdaptive'];
-    for (var ds of datasets) {
-      var tq = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' + ds + '(limit:1, filter:{datetime_geq:"' + yesterdayISO() + 'T00:00:00Z"}) { sum { __typename } } } } }';
-      var tr2 = await fetch('https://api.cloudflare.com/client/v4/graphql', { method:'POST', headers:{'Authorization':'Bearer '+CF_TOKEN,'Content-Type':'application/json'}, body:JSON.stringify({query:tq}) });
-      var td = await tr2.json();
-      var ok = !td.errors;
-      console.log('Dataset ' + ds + ':', ok ? 'OK' : td.errors[0]?.message);
-    }
+    // introspection: 查 schema 中所有含 analytics 關鍵字的 type 名稱
+    var tq3 = '{ __schema { types { name } } }';
+    var tr3 = await fetch('https://api.cloudflare.com/client/v4/graphql', { method:'POST', headers:{'Authorization':'Bearer '+CF_TOKEN,'Content-Type':'application/json'}, body:JSON.stringify({query:tq3}) });
+    var td3 = await tr3.json();
+    var allTypes = (td3?.data?.__schema?.types?.map(function(t){return t.name}) || []);
+    var analyticsTypes = allTypes.filter(function(n){return /worker|page|rum|web|http|analytic|invocation|request/i.test(n)});
+    console.log('Schema types total:', allTypes.length, 'analytics-related:', JSON.stringify(analyticsTypes));
   } catch(e) { console.log('Introspection failed:', e.message); }
 
   // 並行查詢所有數據來源（任一失敗不影響其他）
