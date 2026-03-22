@@ -23,6 +23,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         // Bypass browserslist file detection (there is a stray CLI script named
         // "browserslist" in the project root that confuses workbox-build).
         babelPresetEnvTargets: ['chrome >= 87', 'safari >= 14', 'firefox >= 78', 'edge >= 88'],
