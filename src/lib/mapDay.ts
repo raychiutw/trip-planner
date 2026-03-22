@@ -160,6 +160,7 @@ export function toHotelData(hotel: Record<string, unknown>): HotelData {
       type: 'parking',
       title: ((parking.info ?? parking.name) as string) || '停車場',
       price: (parking.price as string) ?? null,
+      note: (parking.note as string) ?? null,
       location: buildLocation(
         parking.maps as string,
         parking.mapcode as string,

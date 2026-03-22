@@ -372,6 +372,7 @@ body.dark .day-header {
 .info-box.restaurants,
 .info-box.shopping,
 .info-box.gas-station { background: var(--color-accent-bg); }
+.parking-note { margin-top: 8px; font-size: var(--font-size-footnote); color: var(--color-muted); line-height: var(--line-height-relaxed); }
 .restaurant-choice { padding: var(--spacing-3) var(--spacing-4); line-height: var(--line-height-normal); background: var(--color-accent-subtle); border-radius: var(--radius-sm); margin: var(--spacing-2) 0; }
 .restaurant-choice:last-child { margin-bottom: 0; }
 .info-box-grid { display: flex; flex-direction: column; }
@@ -395,7 +396,7 @@ body.dark .day-header {
 /* ===== Day Overview Zone ===== */
 .day-overview { background: var(--color-accent-subtle); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px; }
 .day-overview .hourly-weather { padding: 0 0 12px; }
-.day-overview .col-row { padding: 12px 0; }
+.day-overview .col-row { padding: 12px; margin: 0 -12px; min-height: 44px; }
 .day-overview .driving-stats { margin: 0; padding: 12px 0 0; }
 
 .notes-list { list-style: none; padding: 0; margin-top: 8px; }
