@@ -7,9 +7,9 @@ binding = "DB"
 database_name = "trip-planner-db"
 database_id = "d61c42d5-8083-4e18-9b6c-70e133e37322"
 
-# Staging environment — Preview Deploy 使用
-[env.staging]
-[[env.staging.d1_databases]]
+# Preview environment — Preview Deploy 使用（Pages 只支援 preview/production）
+[env.preview]
+[[env.preview.d1_databases]]
 binding = "DB"
 database_name = "trip-planner-db-staging"
 database_id = "53f38e2c-e17d-4961-ba9e-f61e63477ecc"
