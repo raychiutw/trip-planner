@@ -38,6 +38,42 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
     -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 }
 
+/* ===== Offline Banner ===== */
+.offline-banner {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  text-align: center;
+  padding: 6px var(--padding-h);
+  font-size: var(--font-size-footnote);
+  transition: opacity var(--transition-duration-normal) ease, max-height var(--transition-duration-normal) ease, padding var(--transition-duration-normal) ease;
+  overflow: hidden;
+  max-height: 3rem;
+}
+.offline-banner.hidden {
+  opacity: 0;
+  max-height: 0;
+  padding: 0;
+}
+
+/* ===== Offline disabled main content ===== */
+.offline-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ===== Edit FAB disabled state ===== */
+.edit-fab.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ===== QuickPanel item disabled state ===== */
+.quick-panel-item.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* ===== Destination Art (sticky-nav background) ===== */
 .destination-art {
     position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;

@@ -4,6 +4,7 @@ import Icon from '../components/shared/Icon';
 import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet } from '../lib/localStorage';
 
@@ -91,6 +92,7 @@ type PageState =
 
 export default function ManagePage() {
   useDarkMode();
+  const isOnline = useOnlineStatus();
 
   /* ----- State ----- */
   const [pageState, setPageState] = useState<PageState>({ kind: 'loading' });
@@ -339,8 +341,15 @@ export default function ManagePage() {
           </button>
         </div>
 
+        {/* Offline Banner */}
+        {!isOnline && (
+          <div className="offline-banner" role="status" aria-live="polite">
+            📶 離線模式 — 無法送出修改請求
+          </div>
+        )}
+
         {/* ----- Main Content ----- */}
-        <main className="manage-main" id="manageMain">
+        <main className={clsx('manage-main', !isOnline && 'offline-disabled')} id="manageMain">
           {/* Loading state */}
           {pageState.kind === 'loading' && (
             <div className="text-center p-10 text-[var(--color-muted)]">

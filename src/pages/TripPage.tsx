@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
 import { lsGet, lsSet, lsRemove, lsRenewAll } from '../lib/localStorage';
@@ -282,6 +283,22 @@ export default function TripPage() {
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
+
+  /* --- Online status + offline banner --- */
+  const isOnline = useOnlineStatus();
+  const [showReconnect, setShowReconnect] = useState(false);
+  const wasOffline = useRef(false);
+
+  useEffect(() => {
+    if (!isOnline) {
+      wasOffline.current = true;
+    } else if (wasOffline.current) {
+      wasOffline.current = false;
+      setShowReconnect(true);
+      const t = setTimeout(() => setShowReconnect(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [isOnline]);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorMode, setColorMode, colorTheme, setTheme } = useDarkMode();
@@ -1008,6 +1025,18 @@ export default function TripPage() {
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
+      {/* Offline Banner */}
+      <div
+        className={clsx(
+          'offline-banner',
+          isOnline && !showReconnect && 'hidden',
+        )}
+        role="status"
+        aria-live="polite"
+      >
+        {isOnline ? '✅ 已恢復連線' : '📶 離線模式 — 顯示快取資料'}
+      </div>
+
       {/* Page Layout */}
       <div className="page-layout">
         <div className="container">
@@ -1064,12 +1093,20 @@ export default function TripPage() {
           onItemClick={handlePanelItem}
           onPrint={togglePrint}
           onDownload={handleDownloadFormat}
+          isOnline={isOnline}
         />
       )}
 
       {/* Edit FAB */}
       {!loading && trip && (
-        <a className="edit-fab" id="editFab" href="manage/" aria-label="AI 修改行程">
+        <a
+          className={clsx('edit-fab', !isOnline && 'disabled')}
+          id="editFab"
+          href="manage/"
+          aria-label="AI 修改行程"
+          aria-disabled={!isOnline}
+          tabIndex={isOnline ? undefined : -1}
+        >
           <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
           </svg>

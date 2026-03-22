@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import clsx from 'clsx';
 import type { TripListItem } from '../types/trip';
 import type { Permission } from '../types/api';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { lsGet, lsSet } from '../lib/localStorage';
 
 /* ===== Raw fetch helper (need status-code inspection) ===== */
@@ -23,6 +25,7 @@ interface StatusMsg {
 
 export default function AdminPage() {
   useDarkMode();
+  const isOnline = useOnlineStatus();
 
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [tripsError, setTripsError] = useState('');
@@ -234,7 +237,14 @@ export default function AdminPage() {
             </svg>
           </button>
         </div>
-        <main className="admin-main" id="adminMain">
+        {/* Offline Banner */}
+        {!isOnline && (
+          <div className="offline-banner" role="status" aria-live="polite">
+            📶 離線模式 — 無法管理權限
+          </div>
+        )}
+
+        <main className={clsx('admin-main', !isOnline && 'offline-disabled')} id="adminMain">
           <div className="admin-page">
             {/* Section: Trip Select */}
             <div className="admin-section">

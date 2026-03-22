@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // Only upload source maps to Sentry in CI (when SENTRY_AUTH_TOKEN is present).
 const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
@@ -16,7 +17,45 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
   : [];
 
 export default defineConfig({
-  plugins: [tailwindcss(), react(), ...sentryPlugins],
+  plugins: [
+    tailwindcss(),
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      workbox: {
+        // Bypass browserslist file detection (there is a stray CLI script named
+        // "browserslist" in the project root that confuses workbox-build).
+        babelPresetEnvTargets: ['chrome >= 87', 'safari >= 14', 'firefox >= 78', 'edge >= 88'],
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
+        runtimeCaching: [
+          {
+            // Production API
+            urlPattern: /^https:\/\/trip-planner-dby\.pages\.dev\/api\/.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              networkTimeoutSeconds: 3,
+            },
+            method: 'GET',
+          },
+          {
+            // Dev proxy (localhost /api/*)
+            urlPattern: /^http:\/\/localhost:\d+\/api\/.*/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache-dev',
+              expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
+              networkTimeoutSeconds: 3,
+            },
+            method: 'GET',
+          },
+        ],
+      },
+      manifest: false, // manifest.json already exists in public/
+    }),
+    ...sentryPlugins,
+  ],
   root: '.',
   build: {
     outDir: 'dist',

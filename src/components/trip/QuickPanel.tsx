@@ -48,14 +48,19 @@ interface QuickPanelProps {
   onItemClick: (contentKey: string) => void;
   onPrint: () => void;
   onDownload: (format: string) => void;
+  isOnline?: boolean;
 }
 
 /* ===== Component ===== */
+
+/** Write actions that should be disabled when offline. */
+const WRITE_KEYS = new Set(['trip-select']);
 
 export default function QuickPanel({
   onItemClick,
   onPrint,
   onDownload,
+  isOnline = true,
 }: QuickPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -209,42 +214,54 @@ export default function QuickPanel({
         </div>
         <div className="quick-panel-grid-container">
           <div className="quick-panel-grid">
-            {sectionA.map((item) => (
-              <button
-                key={item.key}
-                className="quick-panel-item"
-                data-content={item.key}
-                onClick={() => handleItemClick(item)}
-              >
-                <Icon name={item.icon} />
-                <span className="quick-panel-label">{item.label}</span>
-              </button>
-            ))}
-            {sectionB.map((item) => (
-              <button
-                key={item.key}
-                className="quick-panel-item"
-                data-content={item.key}
-                onClick={() => handleItemClick(item)}
-              >
-                <Icon name={item.icon} />
-                <span className="quick-panel-label">{item.label}</span>
-              </button>
-            ))}
+            {sectionA.map((item) => {
+              const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
+              return (
+                <button
+                  key={item.key}
+                  className={clsx('quick-panel-item', isDisabled && 'disabled')}
+                  data-content={item.key}
+                  disabled={isDisabled}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <Icon name={item.icon} />
+                  <span className="quick-panel-label">{item.label}</span>
+                </button>
+              );
+            })}
+            {sectionB.map((item) => {
+              const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
+              return (
+                <button
+                  key={item.key}
+                  className={clsx('quick-panel-item', isDisabled && 'disabled')}
+                  data-content={item.key}
+                  disabled={isDisabled}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <Icon name={item.icon} />
+                  <span className="quick-panel-label">{item.label}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="quick-panel-divider" />
           <div className="quick-panel-grid-bottom">
-            {sectionC.map((item) => (
-              <button
-                key={item.key}
-                className="quick-panel-item quick-panel-item-bottom"
-                data-content={item.key}
-                onClick={() => handleItemClick(item)}
-              >
-                <Icon name={item.icon} />
-                <span className="quick-panel-label">{item.label}</span>
-              </button>
-            ))}
+            {sectionC.map((item) => {
+              const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
+              return (
+                <button
+                  key={item.key}
+                  className={clsx('quick-panel-item quick-panel-item-bottom', isDisabled && 'disabled')}
+                  data-content={item.key}
+                  disabled={isDisabled}
+                  onClick={() => handleItemClick(item)}
+                >
+                  <Icon name={item.icon} />
+                  <span className="quick-panel-label">{item.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
