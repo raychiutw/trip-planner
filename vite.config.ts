@@ -29,8 +29,8 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
         runtimeCaching: [
           {
-            // Production API
-            urlPattern: /^https:\/\/trip-planner-dby\.pages\.dev\/api\/.*/,
+            // Production API — 只快取公開行程端點，排除 /api/permissions、/api/requests 等需認證的端點
+            urlPattern: /^https:\/\/trip-planner-dby\.pages\.dev\/api\/trips\/.*/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -40,8 +40,8 @@ export default defineConfig({
             method: 'GET',
           },
           {
-            // Dev proxy (localhost /api/*)
-            urlPattern: /^http:\/\/localhost:\d+\/api\/.*/,
+            // Dev proxy (localhost /api/trips/*) — 同上，只快取公開行程端點
+            urlPattern: /^http:\/\/localhost:\d+\/api\/trips\/.*/,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache-dev',

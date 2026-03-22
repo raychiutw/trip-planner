@@ -2,7 +2,7 @@ import { memo } from 'react';
 
 const DaySkeleton = memo(function DaySkeleton() {
   return (
-    <div className="day-skeleton">
+    <div className="day-skeleton" role="status" aria-label="行程載入中" aria-busy="true">
       {/* Day header */}
       <div className="skeleton-header">
         <div className="skeleton-bone" style={{ width: '40%', height: 24 }} />
@@ -10,8 +10,8 @@ const DaySkeleton = memo(function DaySkeleton() {
       </div>
       {/* Weather bar */}
       <div className="skeleton-bone skeleton-weather" />
-      {/* Timeline events */}
-      {[1, 2, 3].map(i => (
+      {/* Timeline events — 2 items closer to median, reduces layout shift */}
+      {[1, 2].map(i => (
         <div key={i} className="skeleton-event">
           <div className="skeleton-flag">
             <div className="skeleton-bone skeleton-dot" />

@@ -65,12 +65,21 @@ export function validateEntryBody(body: EntryBody): ValidationResult {
  */
 export function detectGarbledText(text: string): boolean {
   if (!text || typeof text !== 'string') return false;
-  // U+FFFD replacement character
+
+  // 規則一：U+FFFD（Unicode Replacement Character）
+  // 瀏覽器/平台在無法解析某 byte 時插入此字元，出現即代表原始 bytes 非合法 UTF-8。
   if (text.includes('\uFFFD')) return true;
-  // 連續 3+ 個 Latin Extended bytes（常見於 Big5→UTF-8 誤轉）
+
+  // 規則二：連續 3+ 個 Latin Extended（U+0080–U+00FF）
+  // CP950/Big5 多位元組字元誤當 ISO-8859-1 解碼後，常產生一串 Latin Extended 字元；
+  // 合法中文 UTF-8 不會產生此特徵，故 3 個以上視為亂碼。
   if (/[\u0080-\u00FF]{3,}/.test(text)) return true;
-  // C1 控制字元（除了常見的 \t \n \r）
+
+  // 規則三：C1 控制字元（U+0080–U+009F）
+  // 這段範圍在 UTF-8 正常文字內容中不應出現；
+  // 若有則表示原始資料含有 Windows-1252 或其他單位元組編碼的殘留。
   if (/[\x80-\x9F]/.test(text)) return true;
+
   return false;
 }
 

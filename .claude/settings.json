@@ -1,5 +1,27 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const j=JSON.parse(d);const cmd=j.tool_input?.command||'';if(!/^git\\s+push/.test(cmd)){console.log(JSON.stringify({continue:true}));return}const fs=require('fs');const flag='.push-approved';if(fs.existsSync(flag)){fs.unlinkSync(flag);console.log(JSON.stringify({continue:true}))}else{console.log(JSON.stringify({continue:false,stopReason:'⛔ git push 被攔截！請先透過 Telegram 或 CLI 取得 Key User 同意，收到同意後建立 .push-approved 旗標檔案再重試。'}))}})\"",
+            "statusMessage": "檢查 git push 權限..."
+          },
+          {
+            "type": "command",
+            "command": "node scripts/check-commit-approved.js",
+            "statusMessage": "檢查團隊流程完成..."
+          },
+          {
+            "type": "command",
+            "command": "node scripts/check-tasks-complete.js",
+            "statusMessage": "檢查 tasks.md 勾選狀態..."
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

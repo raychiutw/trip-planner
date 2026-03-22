@@ -6,6 +6,8 @@
  */
 
 import type { Env, AuthData } from './_types';
+import { detectGarbledText } from './_validate';
+import { json } from './_utils';
 
 // 擴充 EventContext data
 declare module '@cloudflare/workers-types' {
@@ -162,6 +164,15 @@ async function handleAuth(
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // 亂碼偵測（常見於 CP950/Big5 → UTF-8 誤轉），統一在 middleware 層阻擋
+    const cloned2 = request.clone();
+    try {
+      const bodyText = await cloned2.text();
+      if (detectGarbledText(bodyText)) {
+        return json({ error: 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8' }, 400);
+      }
+    } catch { /* ignore */ }
   }
 
   // 公開讀取：GET /api/trips/** 不需認證

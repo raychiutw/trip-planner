@@ -672,6 +672,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .quick-panel-sheet {
     position: fixed;
     bottom: 0; left: 0; right: 0;
+    background: var(--color-secondary); /* fallback for browsers without color-mix */
     background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
     -webkit-backdrop-filter: saturate(180%) blur(28px);
     backdrop-filter: saturate(180%) blur(28px);
@@ -768,6 +769,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .info-sheet-panel {
     position: fixed; bottom: 0; left: 0; right: 0;
     height: 92dvh; height: 92vh;
+    background: var(--color-secondary); /* fallback for browsers without color-mix */
     background: color-mix(in srgb, var(--color-secondary) 88%, transparent);
     -webkit-backdrop-filter: saturate(180%) blur(28px);
     backdrop-filter: saturate(180%) blur(28px);
