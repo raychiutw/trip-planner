@@ -163,7 +163,7 @@ body.dark .day-header {
 .dh-nav-wrap { position: relative; display: flex; align-items: center; min-width: 0; margin-left: auto; }
 .dh-nav { display: flex; gap: 8px; flex: 1; overflow-x: auto; overflow-y: visible; scrollbar-width: none; scroll-behavior: smooth; padding: 4px 0; }
 .dh-nav::-webkit-scrollbar { display: none; }
-.dn { position: relative; background: var(--color-accent-bg); color: var(--color-accent); border: none; padding: 8px 12px; border-radius: var(--radius-md); font-size: var(--font-size-footnote); font-family: inherit; font-weight: 600; min-width: var(--tap-min); min-height: var(--tap-min); text-align: center; white-space: nowrap; transition: background var(--transition-duration-fast) var(--transition-timing-function-apple), color var(--transition-duration-fast) var(--transition-timing-function-apple); }
+.dn { position: relative; display: flex; align-items: center; justify-content: center; background: var(--color-accent-bg); color: var(--color-accent); border: none; padding: 8px 12px; border-radius: var(--radius-md); font-size: var(--font-size-footnote); font-family: inherit; font-weight: 600; min-width: var(--tap-min); min-height: var(--tap-min); text-align: center; white-space: nowrap; transition: background var(--transition-duration-fast) var(--transition-timing-function-apple), color var(--transition-duration-fast) var(--transition-timing-function-apple); }
 .dn:hover { background: var(--color-accent); color: var(--color-accent-foreground); }
 .dn.active { background: var(--color-accent); color: var(--color-accent-foreground); }
 
