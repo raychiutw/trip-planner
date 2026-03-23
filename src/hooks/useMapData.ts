@@ -62,15 +62,20 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   let missingCount = 0;
   let entryIndex = 0;
 
-  /* --- 取 location 座標（location 可能是物件或陣列，取第一個有效座標）--- */
-  const resolveLocation = (loc: unknown): { lat: number; lng: number } | null => {
-    if (Array.isArray(loc)) return isValidCoords(loc[0]) ? loc[0] : null;
-    return isValidCoords(loc as { lat?: unknown; lng?: unknown }) ? (loc as { lat: number; lng: number }) : null;
+  /* --- 取 location 座標 ---
+   * API 回傳的欄位名可能是 `location`（前端型別）或 `location_json`（DB 原始名）。
+   * 值可能是陣列 [{lat,lng,...}] 或物件 {lat,lng,...}。
+   */
+  const resolveLocation = (obj: Record<string, unknown>): { lat: number; lng: number } | null => {
+    const loc = obj.location ?? (obj as Record<string, unknown>).location_json;
+    if (!loc) return null;
+    const target = Array.isArray(loc) ? loc[0] : loc;
+    return isValidCoords(target as { lat?: unknown; lng?: unknown }) ? (target as { lat: number; lng: number }) : null;
   };
 
   /* --- Hotel pin（顯示在最前，index=0）--- */
   const hotel: Hotel | null = day.hotel;
-  const hotelCoords = hotel ? resolveLocation(hotel.location) : null;
+  const hotelCoords = hotel ? resolveLocation(hotel as unknown as Record<string, unknown>) : null;
   if (hotel && hotelCoords) {
     pins.push({
       id: hotel.id,
@@ -86,7 +91,7 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   /* --- Entry pins --- */
   const timeline: Entry[] = day.timeline ?? [];
   for (const entry of timeline) {
-    const coords = resolveLocation(entry.location);
+    const coords = resolveLocation(entry as unknown as Record<string, unknown>);
     if (coords) {
       entryIndex++;
       pins.push({
