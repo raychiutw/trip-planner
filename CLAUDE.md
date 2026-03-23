@@ -145,23 +145,36 @@ D1 Tables:
 
 ## 已知問題與解法
 
-### Chrome 手機版捲動彈回（設定頁）
+### Chrome 手機版捲動彈回（非行程頁）
 
-**問題**：`setting.html` 在 Chrome 手機版捲到底部會彈回頂部。
+**問題**：非行程頁（設定、Admin）在 Chrome 手機版捲到底部會彈回頂部。
 
-**根因**：`shared.css` 的捲動基礎設施為行程頁設計，與設定頁簡單結構在 Chrome 合成層計算中衝突。
+**根因**：`shared.css` 的捲動基礎設施為行程頁設計，與簡單頁面結構在 Chrome 合成層計算中衝突。
 
-**解法**（`css/setting.css`）：
+**解法**（`css/shared.css` 的 `.page-simple` class）：
 
 ```css
-html.page-setting { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visible; overscroll-behavior: none; }
-.page-setting { max-width: none; overflow: visible; }
-.page-setting .page-layout { display: block; min-height: 0; }
-.page-setting .container { transition: none; }
-.page-setting .sticky-nav { position: relative; }
+html.page-simple { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visible; overscroll-behavior: none; }
+.page-simple { max-width: none; overflow: visible; }
+.page-simple .page-layout { display: block; min-height: 0; }
+.page-simple .container { transition: none; }
+.page-simple .sticky-nav { position: relative; }
 ```
 
-**教訓**：新增頁面時，若結構與行程頁差異大，須一次性重置所有捲動相關屬性。
+在 HTML 加上 `<html class="page-simple">` + `<body class="page-simple">`。
+設定頁另外在 `setting.css` 覆寫 `.page-simple .sticky-nav { position: sticky }` 保留 sticky 行為。
+
+**教訓**：新增頁面時，若結構與行程頁差異大，在 HTML 加 `page-simple` class 即可。
+
+### 未解決：`@googlemaps/js-api-loader` 缺少
+
+**問題**：`npx tsc --noEmit` 和 `npm run build` 均因缺少 `@googlemaps/js-api-loader` 套件而失敗。
+
+**影響**：DayMap / MapMarker / MapRoute / TripMap 相關元件的型別檢查失敗、production build 中斷。
+
+**暫行方案**：CI 的 tsc 和 build 在此問題修復前會繼續失敗。
+
+**修復方向**：`npm install @googlemaps/js-api-loader` 或在 tsconfig 排除相關檔案。
 
 ## gstack
 
