@@ -3,17 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' https: data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.ingest.us.sentry.io https://cloudflareinsights.com; img-src 'self' https: data:;">
     <meta name="theme-color" content="#F47B5E">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="旅行規劃師">
     <link rel="icon" href="/assets/favicon-mKvmZc2T.svg" type="image/svg+xml">
     <link rel="icon" href="/assets/favicon-32x32-i003JSV2.png" sizes="32x32" type="image/png">
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon-Cays5dCY.png">
+    <link rel="manifest" href="/manifest.json">
     <title>權限管理 — Trip Planner</title>
-  <script type="module" crossorigin src="/assets/admin-C7Y37hWg.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/shared-rtRdXuxj.js">
-  <link rel="stylesheet" crossorigin href="/assets/shared-DwMdktj7.css">
+  <script type="module" crossorigin src="/assets/admin-B10pGJli.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/localStorage-Buqiwda6.js">
+  <link rel="modulepreload" crossorigin href="/assets/shared-Da6kBtn5.js">
+  <link rel="modulepreload" crossorigin href="/assets/Toast-Be_SqYf9.js">
+  <link rel="stylesheet" crossorigin href="/assets/shared-Dzulb-8o.css">
   <link rel="stylesheet" crossorigin href="/assets/admin-BuFl9RPx.css">
-</head>
+<script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body class="page-admin">
     <main>
         <div id="reactRoot"></div>
