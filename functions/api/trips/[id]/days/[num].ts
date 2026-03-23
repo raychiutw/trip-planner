@@ -8,6 +8,12 @@ function parseJsonField(row: Record<string, unknown>, field: string) {
   if (row[field] && typeof row[field] === 'string') {
     try { row[field] = JSON.parse(row[field] as string); } catch { /* leave as-is */ }
   }
+  // Strip _json suffix: location_json → location, parking_json → parking
+  if (field.endsWith('_json') && field in row) {
+    const shortName = field.slice(0, -5);
+    row[shortName] = row[field];
+    delete row[field];
+  }
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -95,7 +101,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     date: day.date,
     day_of_week: day.day_of_week,
     label: day.label,
-    weather: day.weather_json,
+    weather: day.weather,
     hotel,
     timeline,
   });
