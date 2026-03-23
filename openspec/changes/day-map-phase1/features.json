@@ -1,0 +1,46 @@
+{
+  "change": "day-map-phase1",
+  "created": "2026-03-23",
+  "features": [
+    {
+      "id": "F002",
+      "title": "DayMap 基礎元件：Google Maps JS SDK 載入 + 基本 map render + 收合/展開 + 所有狀態處理",
+      "priority": 1,
+      "status": "done",
+      "session": 1,
+      "e2e": true
+    },
+    {
+      "id": "F003",
+      "title": "Markers + InfoWindow：自訂圓形 marker + 編號 + 輕量卡片 + Timeline 雙向聯動",
+      "priority": 2,
+      "status": "done",
+      "session": 2,
+      "e2e": true
+    },
+    {
+      "id": "F004",
+      "title": "動線連線：直線 Polyline 依 sort_order 連接 markers",
+      "priority": 3,
+      "status": "done",
+      "session": 3,
+      "e2e": true
+    },
+    {
+      "id": "F005",
+      "title": "車程資訊：Polyline 中點顯示 travel_min 耗時 label",
+      "priority": 4,
+      "status": "done",
+      "session": 4,
+      "e2e": true
+    },
+    {
+      "id": "F006",
+      "title": "多天總覽：TripMap + 固定 8 色色盤 + 日期圖例 + 全覽模式切換",
+      "priority": 5,
+      "status": "done",
+      "session": 5,
+      "e2e": true
+    }
+  ]
+}

@@ -34,14 +34,22 @@ Step 0: 檢查 team 是否已存在
 Step 1: 建立 Team（僅首次）
   TeamCreate("change-xxx")
 
-Step 2: 派 Teammate（各自 run_in_background）
-  Agent(name: "engineer",   team_name: "change-xxx", prompt: 模板)
-  Agent(name: "reviewer",   team_name: "change-xxx", prompt: 模板)
-  Agent(name: "qc",         team_name: "change-xxx", prompt: 模板)
-  Agent(name: "challenger", team_name: "change-xxx", prompt: 模板)
+Step 2: 派 Teammate
+  常駐角色（每個 change 都派）：
+    Agent(name: "architect",  team_name: "change-xxx", model: "opus",   ...)
+    Agent(name: "designer",   team_name: "change-xxx", model: "opus",   ...)
+    Agent(name: "engineer",   team_name: "change-xxx", model: "sonnet", ...)
+    Agent(name: "reviewer",   team_name: "change-xxx", model: "opus",   ...)
+    Agent(name: "qa",         team_name: "change-xxx", model: "sonnet", ...)
+    Agent(name: "security",   team_name: "change-xxx", model: "opus",   ...)
+
+  按需角色（特定情境才派）：
+    Agent(name: "devops",     team_name: "change-xxx", model: "sonnet", ...)
+    Agent(name: "debugger",   team_name: "change-xxx", model: "opus",   ...)
 
   ※ 跨 session 重新 spawn 同名 Teammate 即可加入既有 team
   ※ Teammate 讀 TaskList + notes.md 恢復之前的進度和記憶
+  ※ 並行派遣：獨立角色盡量同時發送多個 Agent tool call
 
 Step 3: 用 TaskCreate 建立任務，TaskUpdate 指派 owner
   Teammate 完成後 TaskUpdate status=completed
@@ -56,8 +64,8 @@ Step 5: 完成後 shutdown
 
 ### 所有任務都用 Team 處理
 
-**不分簡單或複雜，任何任務都建 Team 走完整流程。**
-- 確保每個改動都經過 Review + QC + Challenger 檢查
+**不分簡單或複雜，任何 code 變更都建 Team 走完整流程。**
+- 確保每個改動都經過 Reviewer + QA + Security 檢查
 - 避免「這個很簡單不用 review」導致的品質漏洞
 - 跨 session 繼續：team 已存在，直接派 Teammate 加入，不需 TeamCreate
 
@@ -65,9 +73,11 @@ Step 5: 完成後 shutdown
 
 **Teammate 產生的暫存檔案（截圖、snapshot MD 等）一律放在 `.temp/` 目錄內。**
 
-- QC 截圖：`.temp/qc-*.png`
+- QA 截圖：`.temp/qa-*.png`
 - Reviewer 截圖：`.temp/review-*.png`
-- Challenger 截圖：`.temp/challenge-*.png`
+- Security 報告：`.temp/security-*.md`
+- Designer 截圖：`.temp/design-*.png`
+- Architect 圖表：`.temp/architect-*.md`
 - Snapshot MD：`.temp/snapshot-*.md`
 - 其他暫存：`.temp/*`
 
@@ -82,19 +92,43 @@ rm -rf .temp/
 
 ### Teammate 命名規則（固定名字，重複使用）
 
-**固定 4 個角色名字，不要每次建新名字：**
+**固定 8 個角色名字，不要每次建新名字：**
 
-| 角色 | 固定名字 | 並行時 |
-|------|---------|--------|
-| 工程師 | `engineer` | `engineer-a` + `engineer-b`（最多 3 人） |
-| Reviewer | `reviewer` | 只需 1 人 |
-| QC | `qc` | 只需 1 人 |
-| Challenger | `challenger` | 只需 1 人 |
+| 角色 | 固定名字 | 模型 | 並行時 |
+|------|---------|------|--------|
+| Architect | `architect` | Opus | 只需 1 人 |
+| Designer | `designer` | Opus | 只需 1 人 |
+| Engineer | `engineer` | Sonnet | `engineer-a` + `engineer-b`（最多 3 人） |
+| Reviewer | `reviewer` | Opus | 只需 1 人 |
+| QA | `qa` | Sonnet | 只需 1 人 |
+| Security | `security` | Opus | 只需 1 人 |
+| DevOps | `devops` | Sonnet | 只需 1 人（按需） |
+| Debugger | `debugger` | Opus | 只需 1 人（按需） |
 
 - ❌ 錯誤：`reviewer` → `reviewer-2` → `reviewer-3` → `reviewer-r2`
 - ✅ 正確：每次都 spawn `name: "reviewer"`，同名成員回歸 team
 - Team config 會記住成員，重新 spawn 同名 = 同一個人回來接手
 - shutdown 後再 spawn 同名，不需要建新名字
+
+### 派遣時機表
+
+```
+Stage 1（PM init）：
+  → 派 Architect + Designer（並行審查計畫）
+
+Stage 2（計畫審查完成）：
+  → 派 Engineer（實作）
+
+Stage 3（Engineer 完成）：
+  → 派 Reviewer + QA + Security（並行審查，三路同時出發）
+
+Stage 4（審查閘門通過）：
+  → PM commit → 報告 Key User
+
+按需：
+  → DevOps：push/PR/部署時
+  → Debugger：發現 bug 時
+```
 
 ## tasks.md + Task List 雙軌
 
@@ -102,7 +136,7 @@ rm -rf .temp/
 tasks.md（OpenSpec，git 追蹤）     Task List（Agent Teams，本機）
 ──────────────────────────       ─────────────────────────
 紀錄「做什麼」（需求層）            紀錄「誰在做」（執行層）
-PM + 工程師勾 checkbox             Teammate 用 TaskUpdate 更新
+PM + Engineer 勾 checkbox          Teammate 用 TaskUpdate 更新
 change 完成後 archive              team 完成後 shutdown
 跨 session 持久（git）             跨 session 持久（~/.claude/tasks/）
 驗收依據                           即時協調
@@ -111,7 +145,7 @@ change 完成後 archive              team 完成後 shutdown
 **規則：**
 - tasks.md = 唯一的需求來源（Source of Truth）
 - PM 從 tasks.md 拆出 Task List 細任務
-- 工程師完成後同時更新兩邊（TaskUpdate + 勾 tasks.md）
+- Engineer 完成後同時更新兩邊（TaskUpdate + 勾 tasks.md）
 - archive 時驗證 tasks.md 全勾
 
 ## notes.md（跨 session 記憶）
@@ -129,9 +163,9 @@ change 完成後 archive              team 完成後 shutdown
 - **替代方案**：{考慮過但放棄的}
 - **原因**：{為什麼選這個}
 
-## 挑戰紀錄
+## 審查紀錄
 
-### {日期} — Challenger: {視角}
+### {日期} — {角色}: {視角}
 - **問題**：{質疑內容}
 - **嚴重度**：🔴高 / 🟡中 / 🟢低
 - **PM 裁決**：修 / 接受風險 / 延後
@@ -158,9 +192,11 @@ change 完成後 archive              team 完成後 shutdown
 | 角色 | 可寫？ | 說明 |
 |------|:------:|------|
 | PM | ✅ | 決策、裁決、交接 |
-| 工程師 | ✅ | 踩坑紀錄 |
-| Challenger | ✅ | 挑戰紀錄（notes.md + challenge-report.md） |
-| Reviewer | ✅ | 審查報告（review-findings.md） |
-| QC | ✅ | 測試報告（qc-report.md） |
+| Architect | ✅ | 架構決策（architect-report.md） |
+| Designer | ✅ | 設計決策（design-report.md） |
+| Engineer | ✅ | 踩坑紀錄 |
+| Reviewer | ✅ | 審查報告（review-report.md） |
+| QA | ✅ | 測試報告（qa-report.md） |
+| Security | ✅ | 安全報告（security-report.md） |
 
-**規則澄清**：報告檔（notes.md、*-report.md、*-findings.md）是資訊傳遞，不是程式碼。所有角色都可以寫報告檔。禁止的是修改程式碼（.tsx/.ts/.css/.html）和設定檔。
+**規則澄清**：報告檔（notes.md、*-report.md）是資訊傳遞，不是程式碼。所有角色都可以寫報告檔。禁止的是修改程式碼（.tsx/.ts/.css/.html）和設定檔。

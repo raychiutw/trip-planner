@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6 套主題 v2 — 高透明度 + 深色用原色</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif; background: #111; color: #e0e0e0; padding: 20px; }
+  h1 { text-align: center; font-size: 1.4rem; margin-bottom: 6px; color: #fff; }
+  .subtitle { text-align: center; color: #aaa; margin-bottom: 24px; font-size: 0.85rem; }
+  .row-label { font-size: 1rem; font-weight: 700; color: #fff; margin: 24px auto 10px; max-width: 880px; }
+  .row-label:first-of-type { margin-top: 8px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 880px; margin: 0 auto 8px; }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+  .phone { border-radius: 20px; overflow: hidden; border: 2px solid rgba(255,255,255,0.1); }
+  .phone-label { background: rgba(0,0,0,0.6); padding: 8px 12px; }
+  .phone-label h3 { font-size: 0.85rem; color: #fff; }
+  .phone-label p { font-size: 0.7rem; color: #999; margin-top: 2px; }
+  .screen { width: 100%; height: 520px; overflow: hidden; }
+  .nav { padding: 8px 12px; display: flex; align-items: center; gap: 6px; position: sticky; top: 0; z-index: 10; }
+  .nav .brand { font-weight: 700; font-size: 0.8rem; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill { padding: 3px 10px; border-radius: 16px; font-size: 0.7rem; font-weight: 600; }
+  .content { padding: 0 12px 12px; }
+  .day-header { position: relative; padding: 16px 12px; margin: 0 -12px 10px; overflow: hidden; display: flex; align-items: flex-end; min-height: 80px; }
+  .day-header .day-text { position: relative; z-index: 2; }
+  .day-header .day-num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+  .day-header .day-date { font-size: 0.7rem; margin-top: 2px; }
+  .day-header svg { position: absolute; right: 0; top: 0; height: 100%; width: 60%; z-index: 0; }
+  .card { border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .card .time { font-weight: 700; font-size: 0.8rem; }
+  .card .meta { font-size: 0.65rem; margin-top: 2px; }
+  .card .tags { display: flex; gap: 4px; margin-top: 5px; }
+  .card .tag { padding: 2px 7px; border-radius: 4px; font-size: 0.6rem; }
+  .divider-art { text-align: center; padding: 6px 0; }
+  .divider-art svg { height: 24px; }
+  .footer-art { margin: 0 -12px; overflow: hidden; }
+  .footer-art svg { width: 100%; display: block; }
+
+  /* ===== SUN LIGHT ===== */
+  .sun-l .screen { background: #FFF8F0; }
+  .sun-l .nav { background: rgba(255,248,240,0.90); backdrop-filter: blur(8px); }
+  .sun-l .nav .brand { color: #3A3028; }
+  .sun-l .pill-a { background: #F47B5E; color: #fff; }
+  .sun-l .pill-i { background: #F5E6D0; color: #8A7B6A; }
+  .sun-l .day-header { background: linear-gradient(135deg, rgba(244,123,94,0.15), rgba(244,123,94,0.05)); }
+  .sun-l .day-num { color: #F47B5E; }
+  .sun-l .day-date { color: #8A7B6A; }
+  .sun-l .card { background: rgba(255,255,255,0.90); }
+  .sun-l .card .time { color: #3A3028; }
+  .sun-l .card .meta { color: #8A7B6A; }
+  .sun-l .tag-p { background: #F47B5E; color: #fff; }
+  .sun-l .tag-s { background: #F5E6D0; color: #8A7B6A; }
+
+  /* ===== SUN DARK ===== */
+  .sun-d .screen { background: #1E1A16; }
+  .sun-d .nav { background: rgba(30,26,22,0.90); backdrop-filter: blur(8px); }
+  .sun-d .nav .brand { color: #EAE2D6; }
+  .sun-d .pill-a { background: #F4A08A; color: #1E1A16; }
+  .sun-d .pill-i { background: #3E3830; color: #A09688; }
+  .sun-d .day-header { background: linear-gradient(135deg, rgba(244,160,138,0.15), rgba(244,160,138,0.05)); }
+  .sun-d .day-num { color: #F4A08A; }
+  .sun-d .day-date { color: #A09688; }
+  .sun-d .card { background: rgba(42,37,32,0.90); }
+  .sun-d .card .time { color: #EAE2D6; }
+  .sun-d .card .meta { color: #A09688; }
+  .sun-d .tag-p { background: #F4A08A; color: #1E1A16; }
+  .sun-d .tag-s { background: #3E3830; color: #A09688; }
+
+  /* ===== SKY LIGHT ===== */
+  .sky-l .screen { background: #FFF9F0; }
+  .sky-l .nav { background: rgba(255,249,240,0.90); backdrop-filter: blur(8px); }
+  .sky-l .nav .brand { color: #2A3A40; }
+  .sky-l .pill-a { background: #3B88B8; color: #fff; }
+  .sky-l .pill-i { background: #E0F0F8; color: #7A9AAA; }
+  .sky-l .day-header { background: linear-gradient(135deg, rgba(59,136,184,0.15), rgba(59,136,184,0.05)); }
+  .sky-l .day-num { color: #3B88B8; }
+  .sky-l .day-date { color: #7A9AAA; }
+  .sky-l .card { background: rgba(255,255,255,0.90); }
+  .sky-l .card .time { color: #2A3A40; }
+  .sky-l .card .meta { color: #7A9AAA; }
+  .sky-l .tag-p { background: #3B88B8; color: #fff; }
+  .sky-l .tag-s { background: #E0F0F8; color: #7A9AAA; }
+
+  /* ===== SKY DARK ===== */
+  .sky-d .screen { background: #161C20; }
+  .sky-d .nav { background: rgba(22,28,32,0.90); backdrop-filter: blur(8px); }
+  .sky-d .nav .brand { color: #E0EAF0; }
+  .sky-d .pill-a { background: #7EC0E8; color: #161C20; }
+  .sky-d .pill-i { background: #303E46; color: #8AAAB8; }
+  .sky-d .day-header { background: linear-gradient(135deg, rgba(126,192,232,0.15), rgba(126,192,232,0.05)); }
+  .sky-d .day-num { color: #7EC0E8; }
+  .sky-d .day-date { color: #8AAAB8; }
+  .sky-d .card { background: rgba(32,42,48,0.90); }
+  .sky-d .card .time { color: #E0EAF0; }
+  .sky-d .card .meta { color: #8AAAB8; }
+  .sky-d .tag-p { background: #7EC0E8; color: #161C20; }
+  .sky-d .tag-s { background: #303E46; color: #8AAAB8; }
+
+  /* ===== ZEN LIGHT ===== */
+  .zen-l .screen { background: #F5F0E8; }
+  .zen-l .nav { background: rgba(245,240,232,0.90); backdrop-filter: blur(8px); }
+  .zen-l .nav .brand { color: #3A3028; }
+  .zen-l .pill-a { background: #9A6B50; color: #fff; }
+  .zen-l .pill-i { background: #E8E2D8; color: #8A7E6E; }
+  .zen-l .day-header { background: linear-gradient(135deg, rgba(154,107,80,0.15), rgba(154,107,80,0.05)); }
+  .zen-l .day-num { color: #9A6B50; }
+  .zen-l .day-date { color: #8A7E6E; }
+  .zen-l .card { background: rgba(253,251,247,0.90); }
+  .zen-l .card .time { color: #3A3028; }
+  .zen-l .card .meta { color: #8A7E6E; }
+  .zen-l .tag-p { background: #7A9A88; color: #fff; }
+  .zen-l .tag-s { background: #E8E2D8; color: #8A7E6E; }
+
+  /* ===== ZEN DARK ===== */
+  .zen-d .screen { background: #1A1816; }
+  .zen-d .nav { background: rgba(26,24,22,0.90); backdrop-filter: blur(8px); }
+  .zen-d .nav .brand { color: #E8E0D4; }
+  .zen-d .pill-a { background: #D4A88E; color: #1A1816; }
+  .zen-d .pill-i { background: #3A3630; color: #9B9080; }
+  .zen-d .day-header { background: linear-gradient(135deg, rgba(212,168,142,0.15), rgba(212,168,142,0.05)); }
+  .zen-d .day-num { color: #D4A88E; }
+  .zen-d .day-date { color: #9B9080; }
+  .zen-d .card { background: rgba(38,35,32,0.90); }
+  .zen-d .card .time { color: #E8E0D4; }
+  .zen-d .card .meta { color: #9B9080; }
+  .zen-d .tag-p { background: #D4A88E; color: #1A1816; }
+  .zen-d .tag-s { background: #3A3630; color: #9B9080; }
+</style>
+</head>
+<body>
+
+<h1>插畫嵌入 v2 — 高透明度 + 深色用鮮豔原色</h1>
+<p class="subtitle">淺色 opacity 50-60% / 深色用原色（非暗色系）opacity 35-45%</p>
+
+<!-- ===== SUN ===== -->
+<div class="row-label">☀️ 陽光</div>
+<div class="grid2">
+  <div class="phone sun-l">
+    <div class="screen">
+      <div class="nav"><span class="brand">沖繩自駕 5 日</span><span class="pill pill-a">1</span><span class="pill pill-i">2</span><span class="pill pill-i">3</span></div>
+      <div class="content">
+        <div class="day-header">
+          <div class="day-text"><div class="day-num">Day 1</div><div class="day-date">3/25（二）那霸 → 北部</div></div>
+          <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="170" cy="20" r="20" fill="#F47B5E" opacity="0.55"/>
+            <g stroke="#F47B5E" stroke-width="3" stroke-linecap="round" opacity="0.50"><line x1="170" y1="-5" x2="170" y2="3"/><line x1="170" y1="37" x2="170" y2="45"/><line x1="145" y1="20" x2="152" y2="20"/><line x1="188" y1="20" x2="195" y2="20"/><line x1="152" y1="2" x2="157" y2="7"/><line x1="183" y1="33" x2="188" y2="38"/><line x1="152" y1="38" x2="157" y2="33"/><line x1="183" y1="7" x2="188" y2="2"/></g>
+            <g transform="translate(65,12)" opacity="0.50"><rect x="6" y="22" width="5" height="48" rx="2.5" fill="#8B6914"/><ellipse cx="8" cy="22" rx="25" ry="8" fill="#2D8A2D" transform="rotate(-30 8 22)"/><ellipse cx="8" cy="22" rx="22" ry="7" fill="#3CA03C" transform="rotate(25 8 22)"/><ellipse cx="8" cy="22" rx="20" ry="7" fill="#2D8A2D" transform="rotate(-60 8 22)"/><ellipse cx="8" cy="22" rx="18" ry="6" fill="#3CA03C" transform="rotate(50 8 22)"/></g>
+            <g transform="translate(15,40) rotate(-8) scale(1.4)" opacity="0.40"><path d="M0 0 L-5 2.5 L-18 2.5 L-22 6 L-18 2.5 L-30 3.5 L-30 1 L-18 1 L-5 -2.5Z" fill="#F47B5E"/></g>
+          </svg>
+        </div>
+        <div class="card"><div class="time">09:00 美麗海水族館</div><div class="meta">⭐ 4.5 · 🚗 30 分鐘</div><div class="tags"><span class="tag tag-p">Google Map</span><span class="tag tag-s">Apple Map</span></div></div>
+        <div class="divider-art"><svg viewBox="0 0 120 24" xmlns="http://www.w3.org/2000/svg"><path d="M0 18 Q15 8 30 18 Q45 28 60 18 Q75 8 90 18 Q105 28 120 18" stroke="#2A8EB0" fill="none" stroke-width="2.5" opacity="0.40"/><path d="M10 20 Q25 12 40 20 Q55 28 70 20 Q85 12 100 20" stroke="#40B8D0" fill="none" stroke-width="1.8" opacity="0.25"/></svg></div>
+        <div class="card"><div class="time">12:00 花人逢</div><div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div></div>
+        <div class="card"><div class="time">14:30 古宇利島</div><div class="meta">⭐ 4.6 · 🚗 25 分鐘</div></div>
+        <div class="footer-art"><svg viewBox="0 0 400 60" xmlns="http://www.w3.org/2000/svg"><path d="M0 28 Q40 12 80 28 Q120 44 160 28 Q200 12 240 28 Q280 44 320 28 Q360 12 400 28 L400 60 L0 60Z" fill="#2A8EB0" opacity="0.45"/><path d="M0 38 Q40 25 80 38 Q120 51 160 38 Q200 25 240 38 Q280 51 320 38 Q360 25 400 38 L400 60 L0 60Z" fill="#40C0D8" opacity="0.25"/></svg></div>
+      </div>
+    </div>
+    <div class="phone-label"><h3>陽光 · 淺色</h3><p>opacity 50-55%</p></div>
+  </div>
+
+  <div class="phone sun-d">
+    <div class="screen">
+      <div class="nav"><span class="brand">沖繩自駕 5 日</span><span class="pill pill-a">1</span><span class="pill pill-i">2</span><span class="pill pill-i">3</span></div>
+      <div class="content">
+        <div class="day-header">
+          <div class="day-text"><div class="day-num">Day 1</div><div class="day-date">3/25（二）那霸 → 北部</div></div>
+          <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <!-- 弦月用亮色 -->
+            <circle cx="168" cy="18" r="16" fill="#FFD080" opacity="0.45"/>
+            <circle cx="160" cy="15" r="14" fill="#1E1A16"/>
+            <!-- 星星用亮黃 -->
+            <circle cx="30" cy="12" r="2" fill="#FFD080" opacity="0.50"/><circle cx="55" cy="8" r="1.5" fill="#FFF4C0" opacity="0.45"/><circle cx="85" cy="22" r="2.5" fill="#FFD080" opacity="0.40"/><circle cx="115" cy="10" r="1.8" fill="#FFF4C0" opacity="0.50"/><circle cx="140" cy="30" r="1.5" fill="#FFD080" opacity="0.35"/><circle cx="45" cy="40" r="2" fill="#FFF4C0" opacity="0.30"/>
+            <!-- 椰子樹剪影用原色 -->
+            <g transform="translate(65,15)" opacity="0.40"><rect x="6" y="20" width="4" height="45" rx="2" fill="#8B6914"/><ellipse cx="8" cy="20" rx="20" ry="7" fill="#2D8A2D" transform="rotate(-30 8 20)"/><ellipse cx="8" cy="20" rx="18" ry="6" fill="#3CA03C" transform="rotate(25 8 20)"/><ellipse cx="8" cy="20" rx="16" ry="6" fill="#2D8A2D" transform="rotate(-60 8 20)"/></g>
+            <!-- 螢火蟲 -->
+            <circle cx="100" cy="55" r="3" fill="#F4A08A" opacity="0.35"/><circle cx="100" cy="55" r="6" fill="#F4A08A" opacity="0.10"/>
+            <circle cx="150" cy="60" r="2.5" fill="#FFD080" opacity="0.30"/><circle cx="150" cy="60" r="5" fill="#FFD080" opacity="0.08"/>
+          </svg>
+        </div>
+        <div class="card"><div class="time">09:00 美麗海水族館</div><div class="meta">⭐ 4.5 · 🚗 30 分鐘</div><div class="tags"><span class="tag tag-p">Google Map</span><span class="tag tag-s">Apple Map</span></div></div>
+        <div class="divider-art"><svg viewBox="0 0 120 24" xmlns="http://www.w3.org/2000/svg"><circle cx="15" cy="12" r="2" fill="#FFD080" opacity="0.40"/><circle cx="15" cy="12" r="4.5" fill="#FFD080" opacity="0.10"/><circle cx="42" cy="8" r="1.5" fill="#FFF4C0" opacity="0.35"/><circle cx="65" cy="15" r="2" fill="#F4A08A" opacity="0.35"/><circle cx="65" cy="15" r="4.5" fill="#F4A08A" opacity="0.10"/><circle cx="90" cy="10" r="1.8" fill="#FFD080" opacity="0.40"/><circle cx="110" cy="14" r="1.5" fill="#FFF4C0" opacity="0.30"/></svg></div>
+        <div class="card"><div class="time">12:00 花人逢</div><div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div></div>
+        <div class="card"><div class="time">14:30 古宇利島</div><div class="meta">⭐ 4.6 · 🚗 25 分鐘</div></div>
+        <div class="footer-art"><svg viewBox="0 0 400 60" xmlns="http://www.w3.org/2000/svg"><path d="M0 32 Q40 18 80 32 Q120 46 160 32 Q200 18 240 32 Q280 46 320 32 Q360 18 400 32 L400 60 L0 60Z" fill="#2A8EB0" opacity="0.35"/><path d="M0 42 Q40 30 80 42 Q120 54 160 42 Q200 30 240 42 Q280 54 320 42 Q360 30 400 42 L400 60 L0 60Z" fill="#40A8C8" opacity="0.20"/><circle cx="80" cy="12" r="2" fill="#FFD080" opacity="0.40"/><circle cx="200" cy="8" r="1.5" fill="#FFF4C0" opacity="0.35"/><circle cx="320" cy="15" r="2.5" fill="#FFD080" opacity="0.40"/></svg></div>
+      </div>
+    </div>
+    <div class="phone-label"><h3>陽光 · 深色</h3><p>弦月(金) · 亮星 · 螢火蟲 · 原色椰子樹 · 海浪</p></div>
+  </div>
+</div>
+
+<!-- ===== SKY ===== -->
+<div class="row-label">🌤️ 晴空</div>
+<div class="grid2">
+  <div class="phone sky-l">
+    <div class="screen">
+      <div class="nav"><span class="brand">釜山美食 4 日</span><span class="pill pill-a">1</span><span class="pill pill-i">2</span><span class="pill pill-i">3</span></div>
+      <div class="content">
+        <div class="day-header">
+          <div class="day-text"><div class="day-num">Day 1</div><div class="day-date">4/10（四）釜山市區</div></div>
+          <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(140,8)" opacity="0.60"><ellipse cx="0" cy="0" rx="22" ry="28" fill="#2E7BAF"/><ellipse cx="0" cy="0" rx="22" ry="28" fill="#4EA890" clip-path="inset(0 50% 0 0)"/><rect x="-8" y="28" width="16" height="9" rx="3" fill="#C08030"/><line x1="-9" y1="28" x2="-8" y2="37" stroke="#A06820" stroke-width="1.5"/><line x1="9" y1="28" x2="8" y2="37" stroke="#A06820" stroke-width="1.5"/></g>
+            <g stroke="#2E7BAF" fill="none" stroke-width="2.5" stroke-linecap="round" opacity="0.55"><path d="M25 22 Q31 14 37 22 Q43 14 49 22"/><path d="M58 32 Q63 25 68 32 Q73 25 78 32"/><path d="M10 42 Q15 36 20 42 Q25 36 30 42"/></g>
+            <g opacity="0.30"><ellipse cx="90" cy="15" rx="28" ry="11" fill="#2E7BAF"/><ellipse cx="108" cy="9" rx="18" ry="9" fill="#5090C0"/></g>
+          </svg>
+        </div>
+        <div class="card"><div class="time">09:00 海雲台海灘</div><div class="meta">⭐ 4.6 · 🚶 10 分鐘</div><div class="tags"><span class="tag tag-p">Google Map</span><span class="tag tag-s">Naver Map</span></div></div>
+        <div class="divider-art"><svg viewBox="0 0 120 24" xmlns="http://www.w3.org/2000/svg"><g stroke="#2E7BAF" fill="none" stroke-width="2" stroke-linecap="round" opacity="0.50"><path d="M22 12 Q28 5 34 12 Q40 5 46 12"/><path d="M68 10 Q73 4 78 10 Q83 4 88 10"/></g></svg></div>
+        <div class="card"><div class="time">12:00 密陽血腸豬肉湯飯</div><div class="meta">⭐ 4.4 · 🚶 5 分鐘</div></div>
+        <div class="card"><div class="time">15:00 甘川洞文化村</div><div class="meta">⭐ 4.3 · 🚌 20 分鐘</div></div>
+        <div class="footer-art"><svg viewBox="0 0 400 60" xmlns="http://www.w3.org/2000/svg"><path d="M0 28 Q40 12 80 28 Q120 44 160 28 Q200 12 240 28 Q280 44 320 28 Q360 12 400 28 L400 60 L0 60Z" fill="#2E7BAF" opacity="0.50"/><path d="M0 40 Q40 28 80 40 Q120 52 160 40 Q200 28 240 40 Q280 52 320 40 Q360 28 400 40 L400 60 L0 60Z" fill="#4EA890" opacity="0.28"/><g transform="translate(340,8)" opacity="0.50"><path d="M0 0 L4 -30 L8 0Z" fill="#2E7BAF"/><path d="M4 -26 L-10 0 L4 0Z" fill="#4EA890"/><ellipse cx="0" cy="2" rx="14" ry="3.5" fill="#B08040"/></g></svg></div>
+      </div>
+    </div>
+    <div class="phone-label"><h3>晴空 · 淺色</h3><p>opacity 45-55%</p></div>
+  </div>
+
+  <div class="phone sky-d">
+    <div class="screen">
+      <div class="nav"><span class="brand">釜山美食 4 日</span><span class="pill pill-a">1</span><span class="pill pill-i">2</span><span class="pill pill-i">3</span></div>
+      <div class="content">
+        <div class="day-header">
+          <div class="day-text"><div class="day-num">Day 1</div><div class="day-date">4/10（四）釜山市區</div></div>
+          <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <!-- 弦月 -->
+            <circle cx="165" cy="16" r="14" fill="#E0E8FF" opacity="0.40"/>
+            <circle cx="158" cy="14" r="12" fill="#161C20"/>
+            <!-- 亮星 -->
+            <circle cx="25" cy="15" r="2.5" fill="#E0E8FF" opacity="0.50"/><circle cx="50" cy="8" r="1.8" fill="#B0D0FF" opacity="0.45"/><circle cx="80" cy="20" r="2" fill="#E0E8FF" opacity="0.40"/><circle cx="110" cy="10" r="2.5" fill="#B0D0FF" opacity="0.50"/><circle cx="135" cy="28" r="1.5" fill="#E0E8FF" opacity="0.35"/><circle cx="40" cy="35" r="2" fill="#B0D0FF" opacity="0.30"/><circle cx="95" cy="45" r="1.8" fill="#E0E8FF" opacity="0.35"/>
+            <!-- 帆船剪影用原色 -->
+            <g transform="translate(60,40)" opacity="0.35"><path d="M0 0 L3 -22 L6 0Z" fill="#5BA4CF"/><path d="M3 -18 L-8 0 L3 0Z" fill="#7ECBB0"/><ellipse cx="0" cy="2" rx="10" ry="2.5" fill="#B08040"/></g>
+          </svg>
+        </div>
+        <div class="card"><div class="time">09:00 海雲台海灘</div><div class="meta">⭐ 4.6 · 🚶 10 分鐘</div><div class="tags"><span class="tag tag-p">Google Map</span><span class="tag tag-s">Naver Map</span></div></div>
+        <div class="divider-art"><svg viewBox="0 0 120 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2" fill="#B0D0FF" opacity="0.45"/><circle cx="12" cy="12" r="4.5" fill="#B0D0FF" opacity="0.10"/><circle cx="38" cy="8" r="1.5" fill="#E0E8FF" opacity="0.40"/><circle cx="60" cy="14" r="2.5" fill="#7EC0E8" opacity="0.40"/><circle cx="60" cy="14" r="5" fill="#7EC0E8" opacity="0.08"/><circle cx="85" cy="10" r="1.8" fill="#E0E8FF" opacity="0.45"/><circle cx="108" cy="15" r="2" fill="#B0D0FF" opacity="0.35"/></svg></div>
+        <div class="card"><div class="time">12:00 密陽血腸豬肉湯飯</div><div class="meta">⭐ 4.4 · 🚶 5 分鐘</div></div>
+        <div class="card"><div class="time">15:00 甘川洞文化村</div><div class="meta">⭐ 4.3 · 🚌 20 分鐘</div></div>
+        <div class="footer-art"><svg viewBox="0 0 400 60" xmlns="http://www.w3.org/2000/svg"><path d="M0 32 Q40 18 80 32 Q120 46 160 32 Q200 18 240 32 Q280 46 320 32 Q360 18 400 32 L400 60 L0 60Z" fill="#5BA4CF" opacity="0.30"/><path d="M0 42 Q40 30 80 42 Q120 54 160 42 Q200 30 240 42 Q280 54 320 42 Q360 30 400 42 L400 60 L0 60Z" fill="#7ECBB0" opacity="0.18"/><circle cx="60" cy="10" r="2" fill="#E0E8FF" opacity="0.45"/><circle cx="180" cy="6" r="2.5" fill="#B0D0FF" opacity="0.40"/><circle cx="300" cy="12" r="1.8" fill="#E0E8FF" opacity="0.38"/></svg></div>
+      </div>
+    </div>
+    <div class="phone-label"><h3>晴空 · 深色</h3><p>弦月(銀白) · 亮星(藍白) · 原色帆船 · 海浪</p></div>
+  </div>
+</div>
+
+<!-- ===== ZEN ===== -->
+<div class="row-label">🍵 和風</div>
+<div class="grid2">
+  <div class="phone zen-l">
+    <div class="screen">
+      <div class="nav"><span class="brand">京都文化 5 日</span><span class="pill pill-a">1</span><span class="pill pill-i">2</span><span class="pill pill-i">3</span></div>
+      <div class="content">
+        <div class="day-header">
+          <div class="day-text"><div class="day-num">Day 1</div><div class="day-date">5/1（四）東山區</div></div>
+          <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(140,5)" opacity="0.50"><rect x="-16" y="8" width="6" height="42" fill="#B8856C"/><rect x="10" y="8" width="6" height="42" fill="#B8856C"/><rect x="-22" y="0" width="44" height="7" rx="2" fill="#B8856C"/><rect x="-19" y="11" width="38" height="4" fill="#B8856C"/></g>
+            <g transform="translate(8,12)" opacity="0.55"><path d="M0 38 Q18 20 35 28 Q50 33 62 16 Q70 8 80 11" stroke="#705020" fill="none" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="25" r="5.5" fill="#E8A0A0" opacity="0.80"/><circle cx="50" cy="20" r="5" fill="#F0B0B0" opacity="0.70"/><circle cx="65" cy="13" r="6" fill="#E8A0A0" opacity="0.80"/><circle cx="80" cy="10" r="4.5" fill="#F0B0B0" opacity="0.65"/><circle cx="22" cy="32" r="4" fill="#E8A0A0" opacity="0.60"/></g>
+            <g opacity="0.40"><ellipse cx="110" cy="55" rx="2.5" ry="3.5" fill="#E8A0A0" transform="rotate(25 110 55)"/><ellipse cx="135" cy="65" rx="2" ry="3" fill="#F0B0B0" transform="rotate(-20 135 65)"/></g>
+          </svg>
+        </div>
+        <div class="card"><div class="time">09:00 伏見稻荷大社</div><div class="meta">⭐ 4.7 · 🚃 20 分鐘</div><div class="tags"><span class="tag tag-p">Google Map</span><span class="tag tag-s">Apple Map</span></div></div>
+        <div class="divider-art"><svg viewBox="0 0 120 24" xmlns="http://www.w3.org/2000/svg"><g opacity="0.40"><ellipse cx="22" cy="10" rx="2.5" ry="3.5" fill="#E8A0A0" transform="rotate(35 22 10)"/><ellipse cx="50" cy="14" rx="2" ry="3" fill="#F0B0B0" transform="rotate(-15 50 14)"/><ellipse cx="78" cy="8" rx="2.5" ry="3.5" fill="#E8A0A0" transform="rotate(45 78 8)"/><ellipse cx="105" cy="13" rx="2" ry="3" fill="#F0B0B0" transform="rotate(-25 105 13)"/></g></svg></div>
+        <div class="card"><div class="time">12:00 にしんそば 松葉</div><div class="meta">⭐ 4.2 · 🚶 8 分鐘</div></div>
+        <div class="card"><div class="time">15:00 清水寺</div><div class="meta">⭐ 4.8 · 🚌 15 分鐘</div></div>
+        <div class="footer-art"><svg viewBox="0 0 400 60" xmlns="http://www.w3.org/2000/svg"><path d="M0 60 L90 22 L180 60Z" fill="#9EB8A8" opacity="0.28"/><path d="M70 60 L180 12 L290 60Z" fill="#7A8B9A" opacity="0.22"/><path d="M180 12 L168 26 L192 26Z" fill="#E8E2D8" opacity="0.30"/><circle cx="340" cy="32" r="24" stroke="#B8856C" fill="none" stroke-width="3" opacity="0.28"/></svg></div>
+      </div>
+    </div>
+    <div class="phone-label"><h3>和風 · 淺色</h3><p>opacity 50-55%</p></div>
+  </div>
+
+  <div class="phone zen-d">
+    <div class="screen">
+      <div class="nav"><span class="brand">京都文化 5 日</span><span class="pill pill-a">1</span><span class="pill pill-i">2</span><span class="pill pill-i">3</span></div>
+      <div class="content">
+        <div class="day-header">
+          <div class="day-text"><div class="day-num">Day 1</div><div class="day-date">5/1（四）東山區</div></div>
+          <svg viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+            <!-- 鳥居用原色 -->
+            <g transform="translate(140,5)" opacity="0.38"><rect x="-16" y="8" width="6" height="42" fill="#D4A88E"/><rect x="10" y="8" width="6" height="42" fill="#D4A88E"/><rect x="-22" y="0" width="44" height="7" rx="2" fill="#D4A88E"/><rect x="-19" y="11" width="38" height="4" fill="#D4A88E"/></g>
+            <!-- 月亮金色 -->
+            <circle cx="40" cy="15" r="12" fill="#FFD080" opacity="0.38"/>
+            <circle cx="35" cy="13" r="10" fill="#1A1816"/>
+            <!-- 夜櫻用粉色原色 -->
+            <g transform="translate(60,30)" opacity="0.35"><path d="M0 22 Q12 12 24 16 Q34 18 40 8" stroke="#A08060" fill="none" stroke-width="2" stroke-linecap="round"/><circle cx="24" cy="14" r="4.5" fill="#F0A0A0" opacity="0.70"/><circle cx="35" cy="10" r="4" fill="#FFB0B0" opacity="0.60"/><circle cx="12" cy="18" r="3.5" fill="#F0A0A0" opacity="0.55"/></g>
+            <!-- 螢火蟲 -->
+            <circle cx="100" cy="55" r="3" fill="#FFD080" opacity="0.35"/><circle cx="100" cy="55" r="6" fill="#FFD080" opacity="0.10"/>
+            <!-- 星 -->
+            <circle cx="80" cy="10" r="2" fill="#FFD080" opacity="0.45"/><circle cx="115" cy="8" r="1.5" fill="#FFF4C0" opacity="0.40"/><circle cx="20" cy="45" r="1.8" fill="#FFD080" opacity="0.35"/>
+          </svg>
+        </div>
+        <div class="card"><div class="time">09:00 伏見稻荷大社</div><div class="meta">⭐ 4.7 · 🚃 20 分鐘</div><div class="tags"><span class="tag tag-p">Google Map</span><span class="tag tag-s">Apple Map</span></div></div>
+        <div class="divider-art"><svg viewBox="0 0 120 24" xmlns="http://www.w3.org/2000/svg"><circle cx="18" cy="12" r="2.5" fill="#FFD080" opacity="0.40"/><circle cx="18" cy="12" r="5" fill="#FFD080" opacity="0.08"/><circle cx="45" cy="8" r="1.5" fill="#FFF4C0" opacity="0.38"/><circle cx="70" cy="14" r="2" fill="#F0A0A0" opacity="0.35"/><circle cx="70" cy="14" r="4.5" fill="#F0A0A0" opacity="0.08"/><circle cx="95" cy="10" r="2" fill="#FFD080" opacity="0.42"/><circle cx="115" cy="15" r="1.5" fill="#FFF4C0" opacity="0.32"/></svg></div>
+        <div class="card"><div class="time">12:00 にしんそば 松葉</div><div class="meta">⭐ 4.2 · 🚶 8 分鐘</div></div>
+        <div class="card"><div class="time">15:00 清水寺</div><div class="meta">⭐ 4.8 · 🚌 15 分鐘</div></div>
+        <div class="footer-art"><svg viewBox="0 0 400 60" xmlns="http://www.w3.org/2000/svg"><path d="M0 60 L90 25 L180 60Z" fill="#9EB8A8" opacity="0.20"/><path d="M70 60 L180 15 L290 60Z" fill="#7A8B9A" opacity="0.16"/><circle cx="340" cy="32" r="22" stroke="#D4A88E" fill="none" stroke-width="2.5" opacity="0.22"/><circle cx="60" cy="12" r="2" fill="#FFD080" opacity="0.42"/><circle cx="200" cy="8" r="2.5" fill="#FFF4C0" opacity="0.38"/><circle cx="300" cy="15" r="1.8" fill="#FFD080" opacity="0.35"/></svg></div>
+      </div>
+    </div>
+    <div class="phone-label"><h3>和風 · 深色</h3><p>金月 · 夜櫻(粉原色) · 原色鳥居 · 螢火蟲 · 亮星</p></div>
+  </div>
+</div>
+
+</body>
+</html>

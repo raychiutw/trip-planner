@@ -39,6 +39,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (hotelResult) {
     const hotelRow = hotelResult as Record<string, unknown>;
     parseJsonField(hotelRow, 'parking_json');
+    parseJsonField(hotelRow, 'location_json');
 
     const hotelId = hotelRow.id as number;
     const { results: hotelShopping } = await db
@@ -154,7 +155,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     dayOfWeek?: string;
     label?: string;
     weather?: unknown;
-    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; details?: unknown; address?: unknown; breakfast?: unknown };
+    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; details?: unknown; address?: unknown; breakfast?: unknown; location?: unknown };
     timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
   };
   try {
@@ -222,7 +223,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (body.hotel) {
     const h = body.hotel;
     batch1.push(
-      db.prepare('INSERT INTO hotels (day_id, name, checkout, details, breakfast, note, parking_json) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id')
+      db.prepare('INSERT INTO hotels (day_id, name, checkout, details, breakfast, note, parking_json, location_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId,
           h.name ?? null,
@@ -231,6 +232,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           h.breakfast ?? null,
           h.note ?? null,
           h.parking ? JSON.stringify(h.parking) : null,
+          h.location ? JSON.stringify(h.location) : null,
         ),
     );
   }

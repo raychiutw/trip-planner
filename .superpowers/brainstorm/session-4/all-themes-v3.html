@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6 套主題底圖 v3 — 40-50%</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif; background: #111; color: #e0e0e0; padding: 24px; }
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 6px; color: #fff; }
+  .subtitle { text-align: center; color: #aaa; margin-bottom: 28px; font-size: 0.9rem; }
+  .row-label { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 28px 0 12px; max-width: 1100px; margin-left: auto; margin-right: auto; }
+  .row-label:first-of-type { margin-top: 8px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1100px; margin: 0 auto 8px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+  .card { border-radius: 14px; overflow: hidden; border: 2px solid rgba(255,255,255,0.08); }
+  .card-label { background: rgba(0,0,0,0.65); padding: 10px 14px; }
+  .card-label h3 { font-size: 0.9rem; color: #fff; }
+  .card-label p { font-size: 0.75rem; color: #aaa; margin-top: 2px; }
+  .mockup { height: 380px; padding: 14px; position: relative; overflow: hidden; }
+  .mock-nav { padding: 8px 14px; border-radius: 10px; display: flex; align-items: center; gap: 6px; margin-bottom: 10px; position: relative; z-index: 2; }
+  .mock-nav .title { font-weight: 700; font-size: 0.85rem; flex: 1; }
+  .mock-pill { padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .mock-card { border-radius: 10px; padding: 12px; margin-bottom: 8px; position: relative; z-index: 2; }
+  .mock-card .time { font-weight: 700; font-size: 0.85rem; }
+  .mock-card .meta { font-size: 0.7rem; margin-top: 3px; }
+  .mock-card .tags { display: flex; gap: 5px; margin-top: 6px; }
+  .mock-card .tag { padding: 2px 8px; border-radius: 5px; font-size: 0.65rem; }
+
+  /* ===== SUN LIGHT 40-50% ===== */
+  .sun-light { background-color: #FFF8F0; }
+  .sun-light .mock-nav { background: rgba(255,248,240,0.92); backdrop-filter: blur(8px); }
+  .sun-light .mock-nav .title { color: #3A3028; }
+  .sun-light .pa { background: #F47B5E; color: #fff; }
+  .sun-light .pi { background: #F5E6D0; color: #8A7B6A; }
+  .sun-light .mock-card { background: rgba(255,255,255,0.94); backdrop-filter: blur(6px); }
+  .sun-light .mock-card .time { color: #3A3028; }
+  .sun-light .mock-card .meta { color: #8A7B6A; }
+  .sun-light .tp { background: #F47B5E; color: #fff; }
+  .sun-light .ts { background: #F5E6D0; color: #8A7B6A; }
+  .sun-light::before {
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cg transform='translate(430,50)'%3E%3Ccircle r='60' fill='%23F47B5E' opacity='0.45'/%3E%3Cg stroke='%23F47B5E' stroke-width='5' stroke-linecap='round' opacity='0.40'%3E%3Cline x1='-78' y1='0' x2='-65' y2='0'/%3E%3Cline x1='65' y1='0' x2='78' y2='0'/%3E%3Cline x1='0' y1='-78' x2='0' y2='-65'/%3E%3Cline x1='0' y1='65' x2='0' y2='78'/%3E%3Cline x1='-55' y1='-55' x2='-46' y2='-46'/%3E%3Cline x1='46' y1='-46' x2='55' y2='-55'/%3E%3Cline x1='-55' y1='55' x2='-46' y2='46'/%3E%3Cline x1='46' y1='46' x2='55' y2='55'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(20,200)' opacity='0.45'%3E%3Crect x='14' y='60' width='12' height='140' rx='6' fill='%23806020'/%3E%3Cellipse cx='20' cy='60' rx='60' ry='18' fill='%232D7A2D' transform='rotate(-30 20 60)'/%3E%3Cellipse cx='20' cy='60' rx='55' ry='16' fill='%23348A34' transform='rotate(25 20 60)'/%3E%3Cellipse cx='20' cy='60' rx='52' ry='16' fill='%232D7A2D' transform='rotate(-65 20 60)'/%3E%3Cellipse cx='20' cy='60' rx='46' ry='14' fill='%23348A34' transform='rotate(55 20 60)'/%3E%3Cellipse cx='20' cy='60' rx='42' ry='13' fill='%232D7A2D' transform='rotate(-10 20 60)'/%3E%3C/g%3E%3Cg transform='translate(445,270) scale(0.65)' opacity='0.35'%3E%3Crect x='14' y='60' width='10' height='120' rx='5' fill='%23806020'/%3E%3Cellipse cx='19' cy='60' rx='52' ry='16' fill='%232D7A2D' transform='rotate(-35 19 60)'/%3E%3Cellipse cx='19' cy='60' rx='46' ry='14' fill='%23348A34' transform='rotate(20 19 60)'/%3E%3Cellipse cx='19' cy='60' rx='42' ry='13' fill='%232D7A2D' transform='rotate(-60 19 60)'/%3E%3C/g%3E%3Cg opacity='0.42'%3E%3Cpath d='M0 390 Q50 358 100 390 Q150 422 200 390 Q250 358 300 390 Q350 422 400 390 Q450 358 500 390 L500 500 L0 500Z' fill='%232A8EB0'/%3E%3Cpath d='M0 418 Q50 395 100 418 Q150 441 200 418 Q250 395 300 418 Q350 441 400 418 Q450 395 500 418 L500 500 L0 500Z' fill='%2340A8C8' opacity='0.6'/%3E%3Cpath d='M0 445 Q50 432 100 445 Q150 458 200 445 Q250 432 300 445 Q350 458 400 445 Q450 432 500 445 L500 500 L0 500Z' fill='%2360C0D8' opacity='0.35'/%3E%3C/g%3E%3Cg transform='translate(195,72) rotate(-12) scale(2.8)' opacity='0.35'%3E%3Cpath d='M0 0 L-8 4 L-30 4 L-35 10 L-30 4 L-50 6 L-50 2 L-30 2 L-8 -4Z' fill='%23F47B5E'/%3E%3Cpath d='M-15 2 L-20 12 L-18 12 L-12 2' fill='%23F47B5E'/%3E%3C/g%3E%3Cg opacity='0.20'%3E%3Cellipse cx='145' cy='130' rx='60' ry='24' fill='%2380B8D0'/%3E%3Cellipse cx='178' cy='115' rx='46' ry='22' fill='%2390C0D8'/%3E%3Cellipse cx='118' cy='122' rx='35' ry='18' fill='%2380B8D0'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* ===== SUN DARK 25-30% ===== */
+  .sun-dark { background-color: #1E1A16; }
+  .sun-dark .mock-nav { background: rgba(42,37,32,0.92); backdrop-filter: blur(8px); }
+  .sun-dark .mock-nav .title { color: #EAE2D6; }
+  .sun-dark .pa { background: #F4A08A; color: #1E1A16; }
+  .sun-dark .pi { background: #3E3830; color: #A09688; }
+  .sun-dark .mock-card { background: rgba(42,37,32,0.94); backdrop-filter: blur(6px); }
+  .sun-dark .mock-card .time { color: #EAE2D6; }
+  .sun-dark .mock-card .meta { color: #A09688; }
+  .sun-dark .tp { background: #F4A08A; color: #1E1A16; }
+  .sun-dark .ts { background: #3E3830; color: #A09688; }
+  .sun-dark::before {
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cg transform='translate(430,50)'%3E%3Ccircle r='58' fill='%23F4A08A' opacity='0.25'/%3E%3Cg stroke='%23F4A08A' stroke-width='4.5' stroke-linecap='round' opacity='0.22'%3E%3Cline x1='-76' y1='0' x2='-63' y2='0'/%3E%3Cline x1='63' y1='0' x2='76' y2='0'/%3E%3Cline x1='0' y1='-76' x2='0' y2='-63'/%3E%3Cline x1='0' y1='63' x2='0' y2='76'/%3E%3Cline x1='-54' y1='-54' x2='-45' y2='-45'/%3E%3Cline x1='45' y1='-45' x2='54' y2='-54'/%3E%3Cline x1='-54' y1='54' x2='-45' y2='45'/%3E%3Cline x1='45' y1='45' x2='54' y2='54'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(22,210)' opacity='0.25'%3E%3Crect x='14' y='58' width='11' height='130' rx='5.5' fill='%23504020'/%3E%3Cellipse cx='19' cy='58' rx='56' ry='17' fill='%23204820' transform='rotate(-30 19 58)'/%3E%3Cellipse cx='19' cy='58' rx='50' ry='15' fill='%23285028' transform='rotate(25 19 58)'/%3E%3Cellipse cx='19' cy='58' rx='48' ry='15' fill='%23204820' transform='rotate(-65 19 58)'/%3E%3Cellipse cx='19' cy='58' rx='42' ry='13' fill='%23285028' transform='rotate(55 19 58)'/%3E%3C/g%3E%3Cg opacity='0.22'%3E%3Cpath d='M0 395 Q50 365 100 395 Q150 425 200 395 Q250 365 300 395 Q350 425 400 395 Q450 365 500 395 L500 500 L0 500Z' fill='%23183848'/%3E%3Cpath d='M0 422 Q50 400 100 422 Q150 444 200 422 Q250 400 300 422 Q350 444 400 422 Q450 400 500 422 L500 500 L0 500Z' fill='%23204858' opacity='0.6'/%3E%3C/g%3E%3Cg transform='translate(198,75) rotate(-12) scale(2.5)' opacity='0.20'%3E%3Cpath d='M0 0 L-8 4 L-30 4 L-35 10 L-30 4 L-50 6 L-50 2 L-30 2 L-8 -4Z' fill='%23F4A08A'/%3E%3Cpath d='M-15 2 L-20 12 L-18 12 L-12 2' fill='%23F4A08A'/%3E%3C/g%3E%3Ccircle cx='150' cy='50' r='2.5' fill='%23F4A08A' opacity='0.25'/%3E%3Ccircle cx='300' cy='80' r='2' fill='%23fff' opacity='0.15'/%3E%3Ccircle cx='80' cy='120' r='2.2' fill='%23fff' opacity='0.12'/%3E%3Ccircle cx='350' cy='200' r='1.8' fill='%23fff' opacity='0.10'/%3E%3Ccircle cx='250' cy='150' r='1.5' fill='%23fff' opacity='0.12'/%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* ===== SKY LIGHT 40-50% ===== */
+  .sky-light { background-color: #FFF9F0; }
+  .sky-light .mock-nav { background: rgba(255,249,240,0.92); backdrop-filter: blur(8px); }
+  .sky-light .mock-nav .title { color: #2A3A40; }
+  .sky-light .pa { background: #5BA4CF; color: #fff; }
+  .sky-light .pi { background: #E0F0F8; color: #7A9AAA; }
+  .sky-light .mock-card { background: rgba(255,255,255,0.94); backdrop-filter: blur(6px); }
+  .sky-light .mock-card .time { color: #2A3A40; }
+  .sky-light .mock-card .meta { color: #7A9AAA; }
+  .sky-light .tp { background: #5BA4CF; color: #fff; }
+  .sky-light .ts { background: #E0F0F8; color: #7A9AAA; }
+  .sky-light::before {
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cg opacity='0.30'%3E%3Cellipse cx='395' cy='48' rx='90' ry='36' fill='%235BA4CF'/%3E%3Cellipse cx='435' cy='28' rx='62' ry='30' fill='%236BB4D8'/%3E%3Cellipse cx='355' cy='38' rx='50' ry='25' fill='%235BA4CF'/%3E%3C/g%3E%3Cg opacity='0.18'%3E%3Cellipse cx='85' cy='125' rx='60' ry='24' fill='%235BA4CF'/%3E%3Cellipse cx='115' cy='112' rx='42' ry='20' fill='%236BB4D8'/%3E%3C/g%3E%3Cg transform='translate(50,35)' opacity='0.45'%3E%3Cellipse cx='0' cy='0' rx='42' ry='54' fill='%235BA4CF'/%3E%3Cellipse cx='0' cy='0' rx='42' ry='54' fill='%237ECBB0' clip-path='inset(0 50%25 0 0)'/%3E%3Crect x='-5' y='-18' width='10' height='54' fill='none' stroke='%23fff' stroke-width='2' opacity='0.35' rx='2'/%3E%3Crect x='-15' y='54' width='30' height='16' rx='5' fill='%23A07030'/%3E%3Cline x1='-18' y1='54' x2='-15' y2='70' stroke='%23806020' stroke-width='2.5'/%3E%3Cline x1='18' y1='54' x2='15' y2='70' stroke='%23806020' stroke-width='2.5'/%3E%3C/g%3E%3Cg stroke='%235BA4CF' fill='none' stroke-width='3' stroke-linecap='round' opacity='0.35'%3E%3Cpath d='M280 100 Q288 88 296 100 Q304 88 312 100'/%3E%3Cpath d='M335 72 Q342 62 349 72 Q356 62 363 72'/%3E%3Cpath d='M240 125 Q247 116 254 125 Q261 116 268 125'/%3E%3Cpath d='M195 148 Q201 140 207 148 Q213 140 219 148'/%3E%3C/g%3E%3Cg opacity='0.42'%3E%3Cpath d='M0 395 Q50 365 100 395 Q150 425 200 395 Q250 365 300 395 Q350 425 400 395 Q450 365 500 395 L500 500 L0 500Z' fill='%235BA4CF'/%3E%3Cpath d='M0 420 Q50 400 100 420 Q150 440 200 420 Q250 400 300 420 Q350 440 400 420 Q450 400 500 420 L500 500 L0 500Z' fill='%237ECBB0' opacity='0.55'/%3E%3Cpath d='M0 448 Q50 436 100 448 Q150 460 200 448 Q250 436 300 448 Q350 460 400 448 Q450 436 500 448 L500 500 L0 500Z' fill='%235BA4CF' opacity='0.25'/%3E%3C/g%3E%3Cg transform='translate(375,355)' opacity='0.35'%3E%3Cpath d='M0 0 L7 -58 L14 0Z' fill='%235BA4CF'/%3E%3Cpath d='M7 -52 L-20 0 L7 0Z' fill='%237ECBB0'/%3E%3Cellipse cx='0' cy='4' rx='28' ry='7' fill='%23906830'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* ===== SKY DARK 25-30% ===== */
+  .sky-dark { background-color: #161C20; }
+  .sky-dark .mock-nav { background: rgba(32,42,48,0.92); backdrop-filter: blur(8px); }
+  .sky-dark .mock-nav .title { color: #E0EAF0; }
+  .sky-dark .pa { background: #7EC0E8; color: #161C20; }
+  .sky-dark .pi { background: #303E46; color: #8AAAB8; }
+  .sky-dark .mock-card { background: rgba(32,42,48,0.94); backdrop-filter: blur(6px); }
+  .sky-dark .mock-card .time { color: #E0EAF0; }
+  .sky-dark .mock-card .meta { color: #8AAAB8; }
+  .sky-dark .tp { background: #7EC0E8; color: #161C20; }
+  .sky-dark .ts { background: #303E46; color: #8AAAB8; }
+  .sky-dark::before {
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cg opacity='0.16'%3E%3Cellipse cx='395' cy='48' rx='85' ry='34' fill='%237EC0E8'/%3E%3Cellipse cx='432' cy='30' rx='58' ry='28' fill='%237EC0E8'/%3E%3Cellipse cx='358' cy='40' rx='45' ry='22' fill='%237EC0E8'/%3E%3C/g%3E%3Cg transform='translate(50,38)' opacity='0.25'%3E%3Cellipse cx='0' cy='0' rx='40' ry='50' fill='%23305868'/%3E%3Cellipse cx='0' cy='0' rx='40' ry='50' fill='%23306848' clip-path='inset(0 50%25 0 0)'/%3E%3Crect x='-14' y='50' width='28' height='15' rx='5' fill='%23504020'/%3E%3Cline x1='-16' y1='50' x2='-14' y2='65' stroke='%23403018' stroke-width='2'/%3E%3Cline x1='16' y1='50' x2='14' y2='65' stroke='%23403018' stroke-width='2'/%3E%3C/g%3E%3Cg stroke='%237EC0E8' fill='none' stroke-width='2.5' stroke-linecap='round' opacity='0.22'%3E%3Cpath d='M280 100 Q288 88 296 100 Q304 88 312 100'/%3E%3Cpath d='M335 72 Q342 62 349 72 Q356 62 363 72'/%3E%3Cpath d='M240 125 Q247 116 254 125 Q261 116 268 125'/%3E%3C/g%3E%3Cg opacity='0.22'%3E%3Cpath d='M0 400 Q50 372 100 400 Q150 428 200 400 Q250 372 300 400 Q350 428 400 400 Q450 372 500 400 L500 500 L0 500Z' fill='%23203848'/%3E%3Cpath d='M0 428 Q50 408 100 428 Q150 448 200 428 Q250 408 300 428 Q350 448 400 428 Q450 408 500 428 L500 500 L0 500Z' fill='%23285040' opacity='0.5'/%3E%3C/g%3E%3Cg transform='translate(378,360)' opacity='0.18'%3E%3Cpath d='M0 0 L6 -52 L12 0Z' fill='%23406878'/%3E%3Cpath d='M6 -46 L-16 0 L6 0Z' fill='%23406050'/%3E%3Cellipse cx='0' cy='3' rx='25' ry='6' fill='%23403828'/%3E%3C/g%3E%3Ccircle cx='200' cy='55' r='2.5' fill='%23fff' opacity='0.20'/%3E%3Ccircle cx='320' cy='160' r='2' fill='%23fff' opacity='0.18'/%3E%3Ccircle cx='440' cy='200' r='2.2' fill='%23fff' opacity='0.15'/%3E%3Ccircle cx='150' cy='250' r='1.8' fill='%23fff' opacity='0.12'/%3E%3Ccircle cx='280' cy='300' r='2.5' fill='%23fff' opacity='0.10'/%3E%3Ccircle cx='100' cy='180' r='1.5' fill='%23fff' opacity='0.18'/%3E%3Ccircle cx='400' cy='130' r='1.8' fill='%23fff' opacity='0.14'/%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* ===== ZEN LIGHT 40-50% ===== */
+  .zen-light { background-color: #F5F0E8; }
+  .zen-light .mock-nav { background: rgba(245,240,232,0.92); backdrop-filter: blur(8px); }
+  .zen-light .mock-nav .title { color: #3A3028; }
+  .zen-light .pa { background: #B8856C; color: #fff; }
+  .zen-light .pi { background: #E8E2D8; color: #8A7E6E; }
+  .zen-light .mock-card { background: rgba(253,251,247,0.94); backdrop-filter: blur(6px); }
+  .zen-light .mock-card .time { color: #3A3028; }
+  .zen-light .mock-card .meta { color: #8A7E6E; }
+  .zen-light .tp { background: #9EB8A8; color: #fff; }
+  .zen-light .ts { background: #E8E2D8; color: #8A7E6E; }
+  .zen-light::before {
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cg transform='translate(392,35)' opacity='0.42'%3E%3Crect x='-40' y='14' width='12' height='95' fill='%23B8856C'/%3E%3Crect x='28' y='14' width='12' height='95' fill='%23B8856C'/%3E%3Crect x='-50' y='0' width='100' height='12' rx='3' fill='%23B8856C'/%3E%3Crect x='-46' y='18' width='92' height='7' fill='%23B8856C'/%3E%3C/g%3E%3Cg opacity='0.28'%3E%3Cpath d='M-30 500 L120 300 L270 500Z' fill='%239EB8A8'/%3E%3Cpath d='M70 500 L240 260 L410 500Z' fill='%237A8B9A'/%3E%3Cpath d='M240 260 L215 300 L265 300Z' fill='%23E8E2D8'/%3E%3Cpath d='M290 500 L410 345 L530 500Z' fill='%239EB8A8' opacity='0.6'/%3E%3C/g%3E%3Cg transform='translate(5,55)' opacity='0.45'%3E%3Cpath d='M0 80 Q40 50 80 62 Q115 68 150 32 Q168 16 185 22 Q198 18 205 12' stroke='%23705020' fill='none' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M75 62 Q62 48 68 36' stroke='%23705020' fill='none' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='32' r='10' fill='%23E8A0A0' opacity='0.75'/%3E%3Ccircle cx='62' cy='37' r='7' fill='%23D89090' opacity='0.6'/%3E%3Ccircle cx='95' cy='52' r='9' fill='%23E8A0A0' opacity='0.70'/%3E%3Ccircle cx='125' cy='40' r='11' fill='%23E8A0A0' opacity='0.75'/%3E%3Ccircle cx='118' cy='45' r='7.5' fill='%23D89090' opacity='0.6'/%3E%3Ccircle cx='155' cy='26' r='10' fill='%23E8A0A0' opacity='0.75'/%3E%3Ccircle cx='180' cy='18' r='9' fill='%23E8A0A0' opacity='0.70'/%3E%3Ccircle cx='186' cy='22' r='6' fill='%23D89090' opacity='0.55'/%3E%3Ccircle cx='205' cy='11' r='7.5' fill='%23E8A0A0' opacity='0.65'/%3E%3Ccircle cx='50' cy='65' r='7' fill='%23E8A0A0' opacity='0.55'/%3E%3C/g%3E%3Cg opacity='0.35'%3E%3Cellipse cx='220' cy='130' rx='5' ry='7' fill='%23E8A0A0' transform='rotate(30 220 130)'/%3E%3Cellipse cx='280' cy='190' rx='4.5' ry='6.5' fill='%23E8A0A0' transform='rotate(-25 280 190)'/%3E%3Cellipse cx='370' cy='155' rx='5' ry='7' fill='%23E8A0A0' transform='rotate(50 370 155)'/%3E%3Cellipse cx='320' cy='240' rx='4' ry='6' fill='%23E8A0A0' transform='rotate(-15 320 240)'/%3E%3Cellipse cx='180' cy='210' rx='4.5' ry='6.5' fill='%23E8A0A0' transform='rotate(40 180 210)'/%3E%3Cellipse cx='440' cy='230' rx='4' ry='5.5' fill='%23E8A0A0' transform='rotate(-30 440 230)'/%3E%3Cellipse cx='120' cy='290' rx='4.5' ry='6.5' fill='%23E8A0A0' transform='rotate(20 120 290)'/%3E%3Cellipse cx='350' cy='300' rx='3.5' ry='5' fill='%23E8A0A0' transform='rotate(-40 350 300)'/%3E%3C/g%3E%3Ccircle cx='435' cy='420' r='60' stroke='%23B8856C' fill='none' stroke-width='5' opacity='0.25'/%3E%3Cpath d='M418 470 Q435 455 452 470' stroke='%23B8856C' fill='none' stroke-width='3' opacity='0.18'/%3E%3Cpath d='M408 484 Q435 462 462 484' stroke='%23B8856C' fill='none' stroke-width='2.5' opacity='0.12'/%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  /* ===== ZEN DARK 25-30% ===== */
+  .zen-dark { background-color: #1A1816; }
+  .zen-dark .mock-nav { background: rgba(38,35,32,0.92); backdrop-filter: blur(8px); }
+  .zen-dark .mock-nav .title { color: #E8E0D4; }
+  .zen-dark .pa { background: #D4A88E; color: #1A1816; }
+  .zen-dark .pi { background: #3A3630; color: #9B9080; }
+  .zen-dark .mock-card { background: rgba(38,35,32,0.94); backdrop-filter: blur(6px); }
+  .zen-dark .mock-card .time { color: #E8E0D4; }
+  .zen-dark .mock-card .meta { color: #9B9080; }
+  .zen-dark .tp { background: #D4A88E; color: #1A1816; }
+  .zen-dark .ts { background: #3A3630; color: #9B9080; }
+  .zen-dark::before {
+    content:''; position:absolute; inset:0; z-index:0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3Cg transform='translate(392,35)' opacity='0.22'%3E%3Crect x='-40' y='14' width='12' height='95' fill='%23D4A88E'/%3E%3Crect x='28' y='14' width='12' height='95' fill='%23D4A88E'/%3E%3Crect x='-50' y='0' width='100' height='12' rx='3' fill='%23D4A88E'/%3E%3Crect x='-46' y='18' width='92' height='7' fill='%23D4A88E'/%3E%3C/g%3E%3Cg opacity='0.15'%3E%3Cpath d='M-30 500 L120 310 L270 500Z' fill='%23405040'/%3E%3Cpath d='M70 500 L240 270 L410 500Z' fill='%23384858'/%3E%3Cpath d='M290 500 L410 355 L530 500Z' fill='%23405040' opacity='0.5'/%3E%3C/g%3E%3Cg transform='translate(5,58)' opacity='0.25'%3E%3Cpath d='M0 78 Q38 48 78 60 Q112 66 148 32 Q165 18 182 22 Q195 18 202 13' stroke='%23504020' fill='none' stroke-width='4.5' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='33' r='9' fill='%23685050' opacity='0.65'/%3E%3Ccircle cx='95' cy='50' r='8' fill='%23685050' opacity='0.55'/%3E%3Ccircle cx='125' cy='38' r='10' fill='%23685050' opacity='0.65'/%3E%3Ccircle cx='155' cy='25' r='9' fill='%23685050' opacity='0.65'/%3E%3Ccircle cx='182' cy='18' r='8' fill='%23685050' opacity='0.55'/%3E%3Ccircle cx='202' cy='12' r='7' fill='%23685050' opacity='0.50'/%3E%3C/g%3E%3Cg opacity='0.18'%3E%3Cellipse cx='220' cy='130' rx='4.5' ry='6.5' fill='%23685050' transform='rotate(30 220 130)'/%3E%3Cellipse cx='370' cy='155' rx='4.5' ry='6.5' fill='%23685050' transform='rotate(50 370 155)'/%3E%3Cellipse cx='320' cy='240' rx='3.5' ry='5.5' fill='%23685050' transform='rotate(-15 320 240)'/%3E%3Cellipse cx='180' cy='210' rx='4' ry='6' fill='%23685050' transform='rotate(40 180 210)'/%3E%3Cellipse cx='440' cy='230' rx='3.5' ry='5' fill='%23685050' transform='rotate(-30 440 230)'/%3E%3C/g%3E%3Ccircle cx='435' cy='420' r='56' stroke='%23D4A88E' fill='none' stroke-width='4.5' opacity='0.14'/%3E%3Cpath d='M418 468 Q435 454 452 468' stroke='%23D4A88E' fill='none' stroke-width='2.5' opacity='0.10'/%3E%3C/svg%3E");
+    background-size: cover;
+  }
+</style>
+</head>
+<body>
+
+<h1>6 套主題底圖 — 超強對比版</h1>
+<p class="subtitle">淺色 40-50% / 深色 22-30%，卡片加 backdrop-filter 確保可讀性</p>
+
+<div class="row-label">☀️ 陽光 — 椰子樹 · 太陽 · 海浪 · 飛機</div>
+<div class="grid2">
+  <div class="card"><div class="mockup sun-light"><div class="mock-nav"><span class="title">沖繩自駕 5 日</span><span class="mock-pill pa">1</span><span class="mock-pill pi">2</span><span class="mock-pill pi">3</span></div><div class="mock-card"><div class="time">09:00 美麗海水族館</div><div class="meta">⭐ 4.5 · 🚗 30 分鐘</div><div class="tags"><span class="tag tp">Google Map</span><span class="tag ts">Apple Map</span></div></div><div class="mock-card"><div class="time">12:00 花人逢</div><div class="meta">⭐ 4.3 · 🚗 15 分鐘</div></div></div><div class="card-label"><h3>陽光 · 淺色</h3><p>40-50% opacity</p></div></div>
+  <div class="card"><div class="mockup sun-dark"><div class="mock-nav"><span class="title">沖繩自駕 5 日</span><span class="mock-pill pa">1</span><span class="mock-pill pi">2</span><span class="mock-pill pi">3</span></div><div class="mock-card"><div class="time">09:00 美麗海水族館</div><div class="meta">⭐ 4.5 · 🚗 30 分鐘</div><div class="tags"><span class="tag tp">Google Map</span><span class="tag ts">Apple Map</span></div></div><div class="mock-card"><div class="time">12:00 花人逢</div><div class="meta">⭐ 4.3 · 🚗 15 分鐘</div></div></div><div class="card-label"><h3>陽光 · 深色</h3><p>22-25% opacity + 星點</p></div></div>
+</div>
+
+<div class="row-label">🌤️ 晴空 — 熱氣球 · 海鷗 · 雲朵 · 帆船</div>
+<div class="grid2">
+  <div class="card"><div class="mockup sky-light"><div class="mock-nav"><span class="title">釜山美食 4 日</span><span class="mock-pill pa">1</span><span class="mock-pill pi">2</span><span class="mock-pill pi">3</span></div><div class="mock-card"><div class="time">09:00 海雲台海灘</div><div class="meta">⭐ 4.6 · 🚶 10 分鐘</div><div class="tags"><span class="tag tp">Google Map</span><span class="tag ts">Naver Map</span></div></div><div class="mock-card"><div class="time">12:00 密陽血腸豬肉湯飯</div><div class="meta">⭐ 4.4 · 🚶 5 分鐘</div></div></div><div class="card-label"><h3>晴空 · 淺色</h3><p>40-45% opacity</p></div></div>
+  <div class="card"><div class="mockup sky-dark"><div class="mock-nav"><span class="title">釜山美食 4 日</span><span class="mock-pill pa">1</span><span class="mock-pill pi">2</span><span class="mock-pill pi">3</span></div><div class="mock-card"><div class="time">09:00 海雲台海灘</div><div class="meta">⭐ 4.6 · 🚶 10 分鐘</div><div class="tags"><span class="tag tp">Google Map</span><span class="tag ts">Naver Map</span></div></div><div class="mock-card"><div class="time">12:00 密陽血腸豬肉湯飯</div><div class="meta">⭐ 4.4 · 🚶 5 分鐘</div></div></div><div class="card-label"><h3>晴空 · 深色</h3><p>22-25% opacity + 星點</p></div></div>
+</div>
+
+<div class="row-label">🍵 和風 — 鳥居 · 櫻花 · 遠山 · 禪圓</div>
+<div class="grid2">
+  <div class="card"><div class="mockup zen-light"><div class="mock-nav"><span class="title">京都文化 5 日</span><span class="mock-pill pa">1</span><span class="mock-pill pi">2</span><span class="mock-pill pi">3</span></div><div class="mock-card"><div class="time">09:00 伏見稻荷大社</div><div class="meta">⭐ 4.7 · 🚃 20 分鐘</div><div class="tags"><span class="tag tp">Google Map</span><span class="tag ts">Apple Map</span></div></div><div class="mock-card"><div class="time">12:00 にしんそば 松葉</div><div class="meta">⭐ 4.2 · 🚶 8 分鐘</div></div></div><div class="card-label"><h3>和風 · 淺色</h3><p>42-45% opacity + 飄落花瓣</p></div></div>
+  <div class="card"><div class="mockup zen-dark"><div class="mock-nav"><span class="title">京都文化 5 日</span><span class="mock-pill pa">1</span><span class="mock-pill pi">2</span><span class="mock-pill pi">3</span></div><div class="mock-card"><div class="time">09:00 伏見稻荷大社</div><div class="meta">⭐ 4.7 · 🚃 20 分鐘</div><div class="tags"><span class="tag tp">Google Map</span><span class="tag ts">Apple Map</span></div></div><div class="mock-card"><div class="time">12:00 にしんそば 松葉</div><div class="meta">⭐ 4.2 · 🚶 8 分鐘</div></div></div><div class="card-label"><h3>和風 · 深色</h3><p>22-25% 水墨風</p></div></div>
+</div>
+
+</body>
+</html>

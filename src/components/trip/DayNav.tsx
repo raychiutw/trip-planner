@@ -38,11 +38,15 @@ interface DayNavProps {
   currentDayNum: number;
   onSwitchDay: (dayNum: number) => void;
   todayDayNum?: number;
+  /** 全覽模式是否啟用 */
+  isTripMapMode?: boolean;
+  /** 切換全覽模式的 callback */
+  onToggleTripMap?: () => void;
 }
 
 /* ===== Component ===== */
 
-export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }: DayNavProps) {
+export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, isTripMapMode = false, onToggleTripMap }: DayNavProps) {
   const navRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -120,14 +124,24 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
   /* --- Sliding indicator: compute position after layout --- */
   useLayoutEffect(() => {
     if (!navRef.current) return;
+    // 全覽模式時，indicator 跟著「全覽」按鈕
     const nav = navRef.current;
+    if (isTripMapMode) {
+      const overviewBtn = nav.querySelector<HTMLElement>('.dn-overview');
+      if (!overviewBtn) {
+        setIndicatorStyle(null);
+        return;
+      }
+      setIndicatorStyle({ left: overviewBtn.offsetLeft, width: overviewBtn.offsetWidth });
+      return;
+    }
     const activeBtn = nav.querySelector<HTMLElement>(`.dn[data-day="${currentDayNum}"]`);
     if (!activeBtn) {
       setIndicatorStyle(null);
       return;
     }
     setIndicatorStyle({ left: activeBtn.offsetLeft, width: activeBtn.offsetWidth });
-  }, [currentDayNum, days]);
+  }, [currentDayNum, days, isTripMapMode]);
 
   /* --- Arrow click handlers --- */
   const handleArrowLeft = useCallback(() => {
@@ -206,7 +220,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
         )}
         {days.map((d) => {
           const dayNum = d.day_num;
-          const isActive = dayNum === currentDayNum;
+          const isActive = !isTripMapMode && dayNum === currentDayNum;
           const isToday = dayNum === todayDayNum;
           const showTooltip = tooltipDay === dayNum;
 
@@ -235,6 +249,20 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum }
             </button>
           );
         })}
+
+        {/* 全覽按鈕（F006.5）：只在有切換 callback 時顯示 */}
+        {onToggleTripMap && (
+          <button
+            className={clsx('dn', 'dn-overview', isTripMapMode && 'active')}
+            aria-label="全覽地圖"
+            aria-pressed={isTripMapMode}
+            onClick={onToggleTripMap}
+            data-testid="dn-overview-btn"
+            type="button"
+          >
+            全覽
+          </button>
+        )}
       </div>
       <button
         className="dh-nav-arrow"

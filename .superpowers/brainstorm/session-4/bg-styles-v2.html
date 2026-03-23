@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>背景風格比較 v2</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 24px; }
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 8px; color: #fff; }
+  .subtitle { text-align: center; color: #aaa; margin-bottom: 32px; font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover { border-color: #F47B5E; transform: translateY(-2px); }
+  .card.selected { border-color: #F47B5E; box-shadow: 0 0 0 3px rgba(244,123,94,0.3); }
+  .card-label {
+    background: rgba(0,0,0,0.7);
+    padding: 12px 16px;
+  }
+  .card-label h3 { font-size: 1rem; color: #fff; margin-bottom: 4px; }
+  .card-label p { font-size: 0.8rem; color: #aaa; line-height: 1.4; }
+
+  .mockup {
+    height: 380px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mock-nav {
+    background: rgba(255,248,240,0.88);
+    backdrop-filter: blur(12px);
+    padding: 10px 16px;
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+    position: relative; z-index: 2;
+  }
+  .mock-nav .title { font-weight: 700; font-size: 0.95rem; color: #3A3028; flex: 1; }
+  .mock-pill { padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+  .mock-pill.active { background: #F47B5E; color: #fff; }
+  .mock-pill.inactive { background: #F5E6D0; color: #8A7B6A; }
+  .mock-card {
+    background: rgba(255,255,255,0.92);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative; z-index: 2;
+  }
+  .mock-card .time { font-weight: 700; color: #3A3028; font-size: 0.9rem; }
+  .mock-card .meta { color: #8A7B6A; font-size: 0.75rem; margin-top: 4px; }
+  .mock-card .tags { display: flex; gap: 6px; margin-top: 8px; }
+  .mock-card .tag { padding: 3px 10px; border-radius: 6px; font-size: 0.7rem; }
+  .mock-card .tag.primary { background: #F47B5E; color: #fff; }
+  .mock-card .tag.secondary { background: #F5E6D0; color: #8A7B6A; }
+
+  /* ===== A: 紋理 — 明顯的重複圖案 ===== */
+  .bg-texture {
+    background-color: #FFF8F0;
+    background-image:
+      radial-gradient(circle at 15% 85%, rgba(244,123,94,0.06) 0%, transparent 40%),
+      radial-gradient(circle at 85% 15%, rgba(74,158,191,0.06) 0%, transparent 40%),
+      url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1.5' fill='%23F47B5E' opacity='0.12'/%3E%3Ccircle cx='0' cy='0' r='1.5' fill='%234A9EBF' opacity='0.08'/%3E%3Ccircle cx='40' cy='0' r='1.5' fill='%234A9EBF' opacity='0.08'/%3E%3Ccircle cx='0' cy='40' r='1.5' fill='%234A9EBF' opacity='0.08'/%3E%3Ccircle cx='40' cy='40' r='1.5' fill='%234A9EBF' opacity='0.08'/%3E%3C/svg%3E");
+  }
+
+  /* ===== B: 插畫 — 大而明顯的旅遊圖案 ===== */
+  .bg-illustration {
+    background-color: #FFF8F0;
+    position: relative;
+  }
+  .bg-illustration::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    opacity: 1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3C!-- palm tree left --%3E%3Cg transform='translate(20,260)' opacity='0.12'%3E%3Crect x='8' y='40' width='6' height='80' rx='3' fill='%238B6914'/%3E%3Cellipse cx='11' cy='40' rx='35' ry='12' fill='%234A9E6A' transform='rotate(-30 11 40)'/%3E%3Cellipse cx='11' cy='40' rx='32' ry='10' fill='%234A9E6A' transform='rotate(20 11 40)'/%3E%3Cellipse cx='11' cy='40' rx='30' ry='10' fill='%234A9E6A' transform='rotate(-60 11 40)'/%3E%3Cellipse cx='11' cy='40' rx='28' ry='9' fill='%234A9E6A' transform='rotate(50 11 40)'/%3E%3C/g%3E%3C!-- sun top right --%3E%3Cg transform='translate(410,30)' opacity='0.10'%3E%3Ccircle cx='0' cy='0' r='40' fill='%23F47B5E'/%3E%3Cline x1='-55' y1='0' x2='-48' y2='0' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='48' y1='0' x2='55' y2='0' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='0' y1='-55' x2='0' y2='-48' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='0' y1='48' x2='0' y2='55' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='-39' y1='-39' x2='-34' y2='-34' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='34' y1='-34' x2='39' y2='-39' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='-39' y1='39' x2='-34' y2='34' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3Cline x1='34' y1='34' x2='39' y2='39' stroke='%23F47B5E' stroke-width='3' stroke-linecap='round'/%3E%3C/g%3E%3C!-- waves bottom --%3E%3Cg opacity='0.10'%3E%3Cpath d='M0 430 Q60 410 120 430 Q180 450 240 430 Q300 410 360 430 Q420 450 500 430 L500 500 L0 500 Z' fill='%234A9EBF'/%3E%3Cpath d='M0 445 Q60 425 120 445 Q180 465 240 445 Q300 425 360 445 Q420 465 500 445 L500 500 L0 500 Z' fill='%234A9EBF' opacity='0.6'/%3E%3Cpath d='M0 460 Q60 445 120 460 Q180 475 240 460 Q300 445 360 460 Q420 475 500 460 L500 500 L0 500 Z' fill='%234A9EBF' opacity='0.3'/%3E%3C/g%3E%3C!-- airplane --%3E%3Cg transform='translate(200,80) rotate(-15)' opacity='0.09'%3E%3Cpath d='M0 0 L-8 4 L-30 4 L-35 10 L-30 4 L-50 6 L-50 2 L-30 2 L-8 -4 L0 0 Z' fill='%23F47B5E'/%3E%3Cpath d='M-15 2 L-20 12 L-18 12 L-12 2' fill='%23F47B5E'/%3E%3C/g%3E%3C!-- cloud --%3E%3Cg opacity='0.06'%3E%3Cellipse cx='340' cy='160' rx='40' ry='18' fill='%234A9EBF'/%3E%3Cellipse cx='360' cy='150' rx='30' ry='16' fill='%234A9EBF'/%3E%3Cellipse cx='320' cy='155' rx='25' ry='14' fill='%234A9EBF'/%3E%3C/g%3E%3C!-- palm tree right --%3E%3Cg transform='translate(440,300)' opacity='0.08'%3E%3Crect x='8' y='30' width='5' height='60' rx='2.5' fill='%238B6914'/%3E%3Cellipse cx='10' cy='30' rx='28' ry='10' fill='%234A9E6A' transform='rotate(-25 10 30)'/%3E%3Cellipse cx='10' cy='30' rx='25' ry='8' fill='%234A9E6A' transform='rotate(30 10 30)'/%3E%3Cellipse cx='10' cy='30' rx='22' ry='8' fill='%234A9E6A' transform='rotate(-55 10 30)'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+
+  /* ===== C: 漸層 ===== */
+  .bg-gradient {
+    background:
+      linear-gradient(180deg,
+        #FFDEC8 0%,
+        #FFE8D6 12%,
+        #FFF4EC 25%,
+        #FFF8F0 45%,
+        #FFF8F0 60%,
+        #F0F7FA 80%,
+        #D8EDF8 100%
+      );
+  }
+
+  /* ===== D: 混搭 ===== */
+  .bg-mixed {
+    background-color: #FFF8F0;
+    position: relative;
+  }
+  .bg-mixed::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+      linear-gradient(180deg,
+        rgba(244,123,94,0.10) 0%,
+        transparent 18%,
+        transparent 82%,
+        rgba(74,158,191,0.08) 100%
+      ),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 500 500'%3E%3C!-- waves bottom --%3E%3Cg opacity='0.08'%3E%3Cpath d='M0 440 Q60 420 120 440 Q180 460 240 440 Q300 420 360 440 Q420 460 500 440 L500 500 L0 500 Z' fill='%234A9EBF'/%3E%3Cpath d='M0 455 Q60 440 120 455 Q180 470 240 455 Q300 440 360 455 Q420 470 500 455 L500 500 L0 500 Z' fill='%234A9EBF' opacity='0.5'/%3E%3C/g%3E%3C!-- sun corner --%3E%3Ccircle cx='450' cy='35' r='30' fill='%23F47B5E' opacity='0.07'/%3E%3C!-- airplane --%3E%3Cg transform='translate(120,50) rotate(-10)' opacity='0.06'%3E%3Cpath d='M0 0 L-8 4 L-30 4 L-35 10 L-30 4 L-50 6 L-50 2 L-30 2 L-8 -4 L0 0 Z' fill='%23F47B5E'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: cover;
+  }
+
+  .indicator { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #F47B5E; color: #fff; padding: 10px 24px; border-radius: 99px; font-size: 0.9rem; font-weight: 600; z-index: 100; }
+  .indicator.show { display: block; }
+</style>
+</head>
+<body>
+
+<h1>背景風格比較 v2</h1>
+<p class="subtitle">差異加強版 — 點選你喜歡的風格</p>
+
+<div class="grid">
+  <div class="card" data-choice="a" onclick="select(this)">
+    <div class="mockup bg-texture">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags"><span class="tag primary">Google Map</span><span class="tag secondary">Apple Map</span></div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A. 微妙紋理</h3>
+      <p>規律的小圓點 + 角落微光暈。低調、乾淨，不搶內容焦點。適合偏好簡潔的使用者。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="select(this)">
+    <div class="mockup bg-illustration">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags"><span class="tag primary">Google Map</span><span class="tag secondary">Apple Map</span></div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B. 主題插畫</h3>
+      <p>椰子樹、太陽光芒、海浪、飛機。旅遊感最強，背景有故事性。每個主題可以有不同插畫。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="select(this)">
+    <div class="mockup bg-gradient">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags"><span class="tag primary">Google Map</span><span class="tag secondary">Apple Map</span></div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>C. 漸層暈染</h3>
+      <p>頂部暖橘 → 中間白 → 底部淡藍。像日出到海平線的天空，簡單但有氛圍。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="d" onclick="select(this)">
+    <div class="mockup bg-mixed">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags"><span class="tag primary">Google Map</span><span class="tag secondary">Apple Map</span></div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>D. 混搭</h3>
+      <p>漸層底 + 淡淡的海浪和飛機。比 C 多一點故事，比 B 更收斂。平衡版。</p>
+    </div>
+  </div>
+</div>
+
+<div class="indicator" id="indicator"></div>
+
+<script>
+  let selected = null;
+  function select(el) {
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selected = el.dataset.choice;
+    const names = { a: 'A. 微妙紋理', b: 'B. 主題插畫', c: 'C. 漸層暈染', d: 'D. 混搭' };
+    const ind = document.getElementById('indicator');
+    ind.textContent = '已選：' + names[selected];
+    ind.classList.add('show');
+    if (window.__recordEvent) {
+      window.__recordEvent({ type: 'click', choice: selected, text: names[selected] });
+    }
+  }
+</script>
+</body>
+</html>

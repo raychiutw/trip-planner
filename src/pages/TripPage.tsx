@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
@@ -9,6 +9,11 @@ import { usePrintMode } from '../hooks/usePrintMode';
 import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../lib/appearance';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
+
+/* DayMap — React.lazy code-split（D1：SDK lazy load）*/
+const DayMap = lazy(() => import('../components/trip/DayMap'));
+/* TripMap — React.lazy code-split（F006：多天總覽）*/
+const TripMap = lazy(() => import('../components/trip/TripMap'));
 import Hotel from '../components/trip/Hotel';
 import Footer, { type FooterData } from '../components/trip/Footer';
 import QuickPanel from '../components/trip/QuickPanel';
@@ -96,6 +101,8 @@ interface DaySectionProps {
   themeArt?: { theme: ColorTheme; dark: boolean };
   localToday?: string;
   isActive?: boolean;
+  /** 全覽模式時隱藏 DayMap（避免與 TripMap 重複）*/
+  hideDayMap?: boolean;
 }
 
 const DaySection = React.memo(function DaySection({
@@ -106,6 +113,7 @@ const DaySection = React.memo(function DaySection({
   themeArt,
   localToday,
   isActive,
+  hideDayMap = false,
 }: DaySectionProps) {
   /* Track whether this section has been activated to trigger enter animation */
   const [animKey, setAnimKey] = useState(0);
@@ -187,6 +195,14 @@ const DaySection = React.memo(function DaySection({
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               )}
             </div>
+
+            {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
+                全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代 */}
+            {!hideDayMap && (
+              <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
+                <DayMap day={day} dayNum={dayNum} />
+              </Suspense>
+            )}
 
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />
@@ -747,9 +763,18 @@ export default function TripPage() {
     return match?.day_num;
   }, [days, localToday]);
 
+  /* --- 全覽模式狀態（F006）--- */
+  const [isTripMapMode, setIsTripMapMode] = useState(false);
+
+  const handleToggleTripMap = useCallback(() => {
+    setIsTripMapMode((prev) => !prev);
+  }, []);
+
   /* --- DayNav click: scroll to day section (#4) --- */
   const handleSwitchDay = useCallback(
     (dayNum: number) => {
+      // 切換天數時同時退出全覽模式
+      setIsTripMapMode(false);
       manualScrollTs.current = Date.now();
       switchDay(dayNum);
       scrollToDay(dayNum);
@@ -1041,7 +1066,14 @@ export default function TripPage() {
         <span className={clsx('nav-inline-title', showNavTitle && 'visible')}>
           {trip?.title || trip?.name}
         </span>
-        <DayNav days={days} currentDayNum={currentDayNum} onSwitchDay={handleSwitchDay} todayDayNum={todayDayNum} />
+        <DayNav
+          days={days}
+          currentDayNum={currentDayNum}
+          onSwitchDay={handleSwitchDay}
+          todayDayNum={todayDayNum}
+          isTripMapMode={isTripMapMode}
+          onToggleTripMap={days.length > 0 ? handleToggleTripMap : undefined}
+        />
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
@@ -1080,6 +1112,13 @@ export default function TripPage() {
               </div>
             )}
 
+            {/* TripMap 全覽地圖（F006）：全覽模式時顯示於 DaySections 上方 */}
+            {!loading && isTripMapMode && (
+              <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
+                <TripMap allDays={allDays} dayNums={dayNums} />
+              </Suspense>
+            )}
+
             {/* #12: DaySection memo components with #11 Map lookup */}
             {!loading &&
               dayNums.map((dayNum) => (
@@ -1092,6 +1131,7 @@ export default function TripPage() {
                   themeArt={themeArt}
                   localToday={localToday}
                   isActive={dayNum === currentDayNum}
+                  hideDayMap={isTripMapMode}
                 />
               ))}
 

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speed Dial Icon 對照</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", sans-serif; background: #FFF8F0; padding: 40px 20px; }
+  h1 { text-align: center; font-size: 1.3rem; margin-bottom: 8px; color: #3A3028; }
+  .subtitle { text-align: center; color: #8A7B6A; margin-bottom: 32px; font-size: 0.85rem; }
+  .compare { display: flex; gap: 48px; justify-content: center; flex-wrap: wrap; }
+  .group { text-align: center; }
+  .group h2 { font-size: 0.9rem; color: #3A3028; margin-bottom: 16px; }
+  .group .desc { font-size: 0.75rem; color: #8A7B6A; margin-top: 8px; }
+  .dial-mock { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .dial-btn {
+    border-radius: 50%;
+    background: #FFF8F0;
+    color: #F47B5E;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(58,48,40,0.10);
+  }
+  .label { font-size: 0.65rem; color: #8A7B6A; }
+
+  /* Current: 52px circle, 28px icon */
+  .current .dial-btn { width: 52px; height: 52px; }
+  .current .dial-btn svg { width: 28px; height: 28px; }
+
+  /* Option A: 44px circle, 24px icon (original default) */
+  .opt-a .dial-btn { width: 44px; height: 44px; }
+  .opt-a .dial-btn svg { width: 24px; height: 24px; }
+
+  /* Option B: 44px circle, 20px icon (old default) */
+  .opt-b .dial-btn { width: 44px; height: 44px; }
+  .opt-b .dial-btn svg { width: 20px; height: 20px; }
+
+  /* Option C: 48px circle, 24px icon */
+  .opt-c .dial-btn { width: 48px; height: 48px; }
+  .opt-c .dial-btn svg { width: 24px; height: 24px; }
+
+  .highlight { border: 2px solid #F47B5E; border-radius: 12px; padding: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Speed Dial 尺寸對照</h1>
+<p class="subtitle">圓圈 vs icon 大小比較</p>
+
+<div class="compare">
+  <!-- Current -->
+  <div class="group current">
+    <h2>目前（52px / 28px icon）</h2>
+    <div class="dial-mock">
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+      <span class="label">航班資訊</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></div>
+      <span class="label">列印模式</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></div>
+      <span class="label">下載行程</span>
+    </div>
+    <p class="desc">圓圈 52px · icon 28px</p>
+  </div>
+
+  <!-- Option A: recommended -->
+  <div class="group opt-a highlight">
+    <h2>建議 A（44px / 24px icon）</h2>
+    <div class="dial-mock">
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+      <span class="label">航班資訊</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></div>
+      <span class="label">列印模式</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></div>
+      <span class="label">下載行程</span>
+    </div>
+    <p class="desc">圓圈 44px · icon 24px<br>（圓圈縮小、icon 比例更飽滿）</p>
+  </div>
+
+  <!-- Option B -->
+  <div class="group opt-b">
+    <h2>原版（44px / 20px icon）</h2>
+    <div class="dial-mock">
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+      <span class="label">航班資訊</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></div>
+      <span class="label">列印模式</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></div>
+      <span class="label">下載行程</span>
+    </div>
+    <p class="desc">圓圈 44px · icon 20px<br>（改動前的原始尺寸）</p>
+  </div>
+
+  <!-- Option C -->
+  <div class="group opt-c">
+    <h2>選項 C（48px / 24px icon）</h2>
+    <div class="dial-mock">
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg></div>
+      <span class="label">航班資訊</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></div>
+      <span class="label">列印模式</span>
+      <div class="dial-btn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></div>
+      <span class="label">下載行程</span>
+    </div>
+    <p class="desc">圓圈 48px · icon 24px<br>（中間尺寸）</p>
+  </div>
+</div>
+
+</body>
+</html>

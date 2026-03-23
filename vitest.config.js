@@ -2,7 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    setupFiles: ['./tests/setup.js'],
+    globals: true,
+    setupFiles: ['./tests/setup.js', './tests/setup-jest-dom.js'],
     environment: 'jsdom',
     exclude: ['tests/e2e/**', 'node_modules/**', 'server/node_modules/**', '.claude/**'],
   },

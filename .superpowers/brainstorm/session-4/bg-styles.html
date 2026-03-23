@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>背景風格比較</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 24px; }
+  h1 { text-align: center; font-size: 1.5rem; margin-bottom: 8px; color: #fff; }
+  .subtitle { text-align: center; color: #aaa; margin-bottom: 32px; font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .card:hover { border-color: #F47B5E; transform: translateY(-2px); }
+  .card.selected { border-color: #F47B5E; box-shadow: 0 0 0 3px rgba(244,123,94,0.3); }
+  .card-label {
+    background: rgba(0,0,0,0.7);
+    padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .card-label h3 { font-size: 1rem; color: #fff; }
+  .card-label span { font-size: 0.8rem; color: #aaa; }
+
+  /* ===== Mockup base ===== */
+  .mockup {
+    height: 360px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mock-nav {
+    background: rgba(255,248,240,0.85);
+    backdrop-filter: blur(12px);
+    padding: 10px 16px;
+    border-radius: 10px;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+    position: relative; z-index: 2;
+  }
+  .mock-nav .title { font-weight: 700; font-size: 0.95rem; color: #3A3028; flex: 1; }
+  .mock-pill { padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+  .mock-pill.active { background: #F47B5E; color: #fff; }
+  .mock-pill.inactive { background: #F5E6D0; color: #8A7B6A; }
+  .mock-card {
+    background: rgba(255,255,255,0.92);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    position: relative; z-index: 2;
+  }
+  .mock-card .time { font-weight: 700; color: #3A3028; font-size: 0.9rem; }
+  .mock-card .meta { color: #8A7B6A; font-size: 0.75rem; margin-top: 4px; }
+  .mock-card .tags { display: flex; gap: 6px; margin-top: 8px; }
+  .mock-card .tag { padding: 3px 10px; border-radius: 6px; font-size: 0.7rem; }
+  .mock-card .tag.primary { background: #F47B5E; color: #fff; }
+  .mock-card .tag.secondary { background: #F5E6D0; color: #8A7B6A; }
+
+  /* ===== A: 紋理底圖 ===== */
+  .bg-texture {
+    background-color: #FFF8F0;
+    background-image:
+      radial-gradient(circle at 20% 80%, rgba(244,123,94,0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(74,158,191,0.04) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54.627 0l.83.828-1.415 1.415L51.8 0h2.827zM5.373 0l-.83.828L5.96 2.243 8.2 0H5.373zM48.97 0l3.657 3.657-1.414 1.414L46.143 0h2.828zM11.03 0L7.372 3.657 8.787 5.07 13.857 0H11.03zm32.284 0L49.8 6.485 48.384 7.9l-7.9-7.9h2.83zM16.686 0L10.2 6.485 11.616 7.9l7.9-7.9h-2.83zM22.344 0L13.858 8.485 15.272 9.9l9.9-9.9h-2.828zM27.03 0l-9.9 9.9 1.414 1.414L28.444 1.414 27.03 0zm5.657 0l-9.9 9.9 1.415 1.414 9.9-9.9-1.415-1.414zM37.344 0l-9.9 9.9 1.415 1.414 9.9-9.9-1.415-1.414zM42.03 0l-9.9 9.9 1.414 1.414 9.9-9.9L42.03 0z' fill='%23E8DDD0' fill-opacity='0.3' fill-rule='evenodd'/%3E%3C/svg%3E");
+  }
+
+  /* ===== B: 主題插畫 ===== */
+  .bg-illustration {
+    background-color: #FFF8F0;
+    position: relative;
+  }
+  .bg-illustration::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' opacity='0.06'%3E%3Cpath d='M50 350 L70 300 L90 350 Z' fill='%23F47B5E'/%3E%3Cpath d='M60 350 L70 280 L80 350 Z' fill='%234A9EBF'/%3E%3Ccircle cx='320' cy='60' r='30' fill='%23F47B5E'/%3E%3Cpath d='M310 60 Q320 20 330 60' stroke='%23F47B5E' fill='none' stroke-width='2'/%3E%3Cpath d='M150 370 Q200 340 250 370' stroke='%234A9EBF' fill='none' stroke-width='3'/%3E%3Cpath d='M160 368 Q200 345 240 368' stroke='%234A9EBF' fill='none' stroke-width='2'/%3E%3Cpath d='M340 320 L355 290 L360 310 L375 280 L380 320 Z' fill='%234A9EBF'/%3E%3Cpath d='M20 80 C30 60 50 60 60 80' stroke='%23F47B5E' fill='none' stroke-width='2'/%3E%3Cpath d='M10 85 C25 55 55 55 70 85' stroke='%23F47B5E' fill='none' stroke-width='1.5'/%3E%3Cpath d='M280 180 L290 160 L295 175 L305 155 L310 180 Z' fill='%23F47B5E' opacity='0.8'/%3E%3Ccircle cx='60' cy='200' r='3' fill='%234A9EBF'/%3E%3Ccircle cx='350' cy='150' r='2' fill='%23F47B5E'/%3E%3Ccircle cx='200' cy='50' r='2.5' fill='%234A9EBF'/%3E%3Cpath d='M100 100 L102 90 L104 100 M101 95 L99 97 M103 95 L105 97' stroke='%23F47B5E' fill='none' stroke-width='1.5'/%3E%3Cpath d='M250 300 L252 290 L254 300 M251 295 L249 297 M253 295 L255 297' stroke='%234A9EBF' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") center/cover no-repeat;
+    z-index: 0;
+  }
+
+  /* ===== C: 漸層色塊 ===== */
+  .bg-gradient {
+    background:
+      linear-gradient(180deg, #FFE8D6 0%, #FFF8F0 25%, #FFF8F0 75%, #E0F0F8 100%);
+  }
+
+  /* ===== D: 混搭 ===== */
+  .bg-mixed {
+    background-color: #FFF8F0;
+    background-image:
+      linear-gradient(180deg, rgba(244,123,94,0.08) 0%, transparent 20%, transparent 80%, rgba(74,158,191,0.06) 100%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400' opacity='0.05'%3E%3Cpath d='M50 350 L70 300 L90 350 Z' fill='%23F47B5E'/%3E%3Ccircle cx='330' cy='50' r='25' fill='%23F47B5E'/%3E%3Cpath d='M160 380 Q200 350 240 380' stroke='%234A9EBF' fill='none' stroke-width='2.5'/%3E%3Cpath d='M170 377 Q200 355 230 377' stroke='%234A9EBF' fill='none' stroke-width='1.5'/%3E%3Cpath d='M100 90 L102 80 L104 90 M101 85 L99 87 M103 85 L105 87' stroke='%23F47B5E' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+    position: relative;
+  }
+  .bg-mixed::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 80px;
+    background: linear-gradient(transparent, rgba(74,158,191,0.05));
+    z-index: 0;
+  }
+
+  .indicator { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #F47B5E; color: #fff; padding: 10px 24px; border-radius: 99px; font-size: 0.9rem; font-weight: 600; z-index: 100; }
+  .indicator.show { display: block; }
+</style>
+</head>
+<body>
+
+<h1>背景風格比較</h1>
+<p class="subtitle">點選你喜歡的風格（以陽光主題為例）</p>
+
+<div class="grid">
+  <!-- A: Texture -->
+  <div class="card" data-choice="a" onclick="select(this)">
+    <div class="mockup bg-texture">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags">
+          <span class="tag primary">Google Map</span>
+          <span class="tag secondary">Apple Map</span>
+        </div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>A. 微妙紋理</h3>
+      <span>幾何紋理 + 微光暈</span>
+    </div>
+  </div>
+
+  <!-- B: Illustration -->
+  <div class="card" data-choice="b" onclick="select(this)">
+    <div class="mockup bg-illustration">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags">
+          <span class="tag primary">Google Map</span>
+          <span class="tag secondary">Apple Map</span>
+        </div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>B. 主題插畫</h3>
+      <span>椰子樹、太陽、海浪剪影</span>
+    </div>
+  </div>
+
+  <!-- C: Gradient -->
+  <div class="card" data-choice="c" onclick="select(this)">
+    <div class="mockup bg-gradient">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags">
+          <span class="tag primary">Google Map</span>
+          <span class="tag secondary">Apple Map</span>
+        </div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>C. 漸層暈染</h3>
+      <span>暖橘 → 白 → 淡藍，天空感</span>
+    </div>
+  </div>
+
+  <!-- D: Mixed -->
+  <div class="card" data-choice="d" onclick="select(this)">
+    <div class="mockup bg-mixed">
+      <div class="mock-nav">
+        <span class="title">沖繩自駕 5 日</span>
+        <span class="mock-pill active">1</span>
+        <span class="mock-pill inactive">2</span>
+        <span class="mock-pill inactive">3</span>
+      </div>
+      <div class="mock-card">
+        <div class="time">09:00 美麗海水族館</div>
+        <div class="meta">⭐ 4.5 · 🚗 30 分鐘</div>
+        <div class="tags">
+          <span class="tag primary">Google Map</span>
+          <span class="tag secondary">Apple Map</span>
+        </div>
+      </div>
+      <div class="mock-card">
+        <div class="time">12:00 花人逢</div>
+        <div class="meta">⭐ 4.3 · 🚗 15 分鐘 · 午餐</div>
+      </div>
+    </div>
+    <div class="card-label">
+      <h3>D. 混搭</h3>
+      <span>漸層 + 淡插畫，兩者融合</span>
+    </div>
+  </div>
+</div>
+
+<div class="indicator" id="indicator"></div>
+
+<script>
+  let selected = null;
+  function select(el) {
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selected = el.dataset.choice;
+    const names = { a: 'A. 微妙紋理', b: 'B. 主題插畫', c: 'C. 漸層暈染', d: 'D. 混搭' };
+    const ind = document.getElementById('indicator');
+    ind.textContent = '已選：' + names[selected];
+    ind.classList.add('show');
+
+    // Record event for brainstorm server
+    if (window.__recordEvent) {
+      window.__recordEvent({ type: 'click', choice: selected, text: names[selected] });
+    }
+  }
+</script>
+</body>
+</html>

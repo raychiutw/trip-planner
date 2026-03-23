@@ -154,6 +154,8 @@ export interface Hotel {
   note?: string | null;
   /** DB column `parking_json`, parsed + _json stripped */
   parking?: Parking | null;
+  /** DB column `location_json`, parsed + _json stripped */
+  location?: Location | null;
   shopping: Shopping[];
 }
 

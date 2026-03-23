@@ -1,0 +1,464 @@
+/* ============================================================
+   map.css — 地圖元件樣式
+   Day Map Phase 1 — F002 DayMap 基礎元件
+   ============================================================ */
+
+/* ===== 多天色盤 CSS 變數 ===== */
+
+:root {
+  --map-day-1: #4285F4;
+  --map-day-2: #EA4335;
+  --map-day-3: #34A853;
+  --map-day-4: #FBBC04;
+  --map-day-5: #9C27B0;
+  --map-day-6: #00ACC1;
+  --map-day-7: #FF7043;
+  --map-day-8: #78909C;
+}
+
+/* ===== 地圖外框（wrap + 收合動畫） ===== */
+
+.day-map-wrap {
+  overflow: hidden;
+  transition: max-height var(--transition-duration-normal) var(--transition-timing-function-apple);
+}
+
+.day-map-wrap--expanded {
+  max-height: 420px;
+}
+
+.day-map-wrap--collapsed {
+  max-height: 0;
+}
+
+/* ===== 地圖容器 ===== */
+
+.day-map-container {
+  position: relative;
+  touch-action: none;
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* ===== 響應式高度 ===== */
+
+.day-map {
+  height: 250px;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+@media (min-width: 768px) {
+  .day-map {
+    height: 300px;
+  }
+
+  .day-map-wrap--expanded {
+    max-height: 460px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map {
+    height: 350px;
+  }
+
+  .day-map-wrap--expanded {
+    max-height: 520px;
+  }
+}
+
+/* ===== Loading skeleton ===== */
+
+.day-map-skeleton {
+  height: 250px;
+  background: var(--color-tertiary);
+  border-radius: var(--radius-md);
+  animation: day-map-pulse var(--transition-duration-normal) ease-in-out infinite alternate;
+}
+
+@media (min-width: 768px) {
+  .day-map-skeleton {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map-skeleton {
+    height: 350px;
+  }
+}
+
+@keyframes day-map-pulse {
+  from { opacity: 1; }
+  to   { opacity: 0.5; }
+}
+
+/* ===== Error fallback ===== */
+
+.day-map-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8);
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  height: 250px;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .day-map-error {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map-error {
+    height: 350px;
+  }
+}
+
+.day-map-error-title {
+  font-size: var(--font-size-subheadline);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+.day-map-error-desc {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+}
+
+.day-map-error-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  text-decoration: none;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  justify-content: center;
+}
+
+/* ===== Empty state ===== */
+
+.day-map-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 250px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  text-align: center;
+  padding: var(--spacing-4);
+}
+
+@media (min-width: 768px) {
+  .day-map-empty {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map-empty {
+    height: 350px;
+  }
+}
+
+/* ===== 收合切換按鈕 ===== */
+
+.day-map-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
+  cursor: pointer;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  transition: color var(--transition-duration-fast) var(--transition-timing-function-apple),
+              background var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+.day-map-toggle-btn:hover {
+  color: var(--color-foreground);
+  background: var(--color-tertiary);
+}
+
+.day-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-2) var(--spacing-1);
+  margin-bottom: var(--spacing-2);
+}
+
+.day-map-header-label {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ===== 部分座標缺失提示條 ===== */
+
+.day-map-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  margin-top: var(--spacing-2);
+}
+
+/* ===== 日期圖例（TripMap，F006）===== */
+
+/* 圖例定位在地圖左下角 */
+.trip-map-legend {
+  position: absolute;
+  bottom: var(--spacing-3);
+  left: var(--spacing-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+  padding: 0;
+  max-width: calc(100% - var(--spacing-6));
+  z-index: 5;
+}
+
+.trip-map-legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  cursor: pointer;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  background: var(--color-secondary);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-foreground);
+  transition: opacity var(--transition-duration-fast) var(--transition-timing-function-apple),
+              background var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+.trip-map-legend-pill:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.trip-map-legend-pill--dimmed {
+  opacity: 0.4;
+}
+
+.trip-map-legend-pill--active {
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+}
+
+.trip-map-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+/* ===== DayNav 全覽按鈕（F006.5）===== */
+
+/* dn-overview 繼承 .dn 樣式，不需要額外覆蓋 */
+/* 全覽模式下 sliding indicator 跟著 .dn-overview */
+
+/* ===== F003：MapMarker + InfoWindow ===== */
+
+/* Marker wrap — 相對定位，讓 InfoWindow 能用 absolute 定位 */
+.map-marker-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+/* 圓形 marker dot — 32px 預設，accent 填充 */
+/* HIG：觸控目標最小 44px，用 min-width/min-height 保證觸控區域 */
+.map-marker-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    width var(--transition-duration-fast) var(--transition-timing-function-apple),
+    height var(--transition-duration-fast) var(--transition-timing-function-apple),
+    box-shadow var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+/* 選中狀態：40px + shadow-lg + 2px 白邊框 */
+.map-marker-dot--selected {
+  width: 40px;
+  height: 40px;
+  box-shadow: var(--shadow-lg);
+  outline: 2px solid var(--color-accent-foreground);
+  outline-offset: 0px;
+}
+
+.map-marker-dot:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* 編號文字 */
+.map-marker-num {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-accent-foreground);
+  pointer-events: none;
+}
+
+/* ===== InfoWindow 卡片 ===== */
+
+.map-info-window {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-3);
+  z-index: 10;
+  /* HIG：不加 border，用背景色差區分 */
+}
+
+/* 關閉按鈕 */
+.map-info-close {
+  position: absolute;
+  top: var(--spacing-2);
+  right: var(--spacing-2);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: background var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+.map-info-close:hover {
+  background: var(--color-tertiary);
+  color: var(--color-foreground);
+}
+
+/* 站序標籤 */
+.map-info-label {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-1);
+  padding-right: var(--spacing-6);
+}
+
+/* 景點名稱 */
+.map-info-title {
+  font-size: var(--font-size-headline);
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-bottom: var(--spacing-1);
+  overflow-wrap: break-word;
+}
+
+/* 時間 */
+.map-info-time {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-1);
+}
+
+/* 評分 */
+.map-info-rating {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin-bottom: var(--spacing-2);
+}
+
+/* 「滾到此處」按鈕 — HIG：44px touch target */
+.map-info-scroll-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+.map-info-scroll-btn:hover {
+  opacity: 0.85;
+}
+
+/* ===== F005：車程資訊 label（OverlayView）===== */
+
+.map-route-label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: var(--color-secondary);
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  /* HIG：不加 border，用背景色差區分 */
+}
+
+/* ===== Timeline entry highlight（map → timeline 聯動）===== */
+
+.map-highlight {
+  animation: map-highlight-pulse var(--transition-duration-slow) ease-in-out;
+}
+
+@keyframes map-highlight-pulse {
+  0%   { background: transparent; }
+  25%  { background: var(--color-accent-subtle); }
+  75%  { background: var(--color-accent-subtle); }
+  100% { background: transparent; }
+}
