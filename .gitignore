@@ -77,3 +77,4 @@ day3.json
 *.exe
 .claude/skills/gstack/browse/dist/
 .claude/skills/gstack/bin/gstack-global-discover.exe
+.claude/skills/gstack/
