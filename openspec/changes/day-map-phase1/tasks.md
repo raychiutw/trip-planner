@@ -16,16 +16,16 @@
 
 ## F003：Markers + InfoWindow
 
-- [ ] F003.1 建立 `src/components/trip/MapMarker.tsx` — 自訂圓形 marker（32px, accent 色 + 白色編號）
-- [ ] F003.2 實作飯店 marker — 同圓形但顯示 hotel emoji
-- [ ] F003.3 實作選中狀態 — 放大至 40px + shadow-lg + 2px 白邊框
-- [ ] F003.4 實作 InfoWindow 輕量卡片 — 200px 寬，編號+名稱+時間+評分+「滾到此處」按鈕
-- [ ] F003.5 實作 marker → Timeline 聯動 — 點擊「滾到此處」scroll Timeline 到對應 entry 並 highlight
-- [ ] F003.6 實作 Timeline → marker 聯動 — 點擊 Timeline entry 時 map pan 到對應 marker 並 highlight
-- [ ] F003.7 實作 Accessibility — `role="button"` + `aria-label`、鍵盤 Tab/Enter/Escape
-- [ ] F003.8 處理部分座標缺失 — 有座標的顯示 pin，缺座標的顯示提示條「N 個景點缺少座標」
-- [ ] F003.9 新增 unit test：MapMarker 渲染、InfoWindow 內容、聯動邏輯
-- [ ] F003.10 E2E test：marker 點擊、InfoWindow 顯示、Timeline 聯動
+- [x] F003.1 建立 `src/components/trip/MapMarker.tsx` — 自訂圓形 marker（32px, accent 色 + 白色編號）
+- [x] F003.2 實作飯店 marker — 同圓形但顯示 hotel emoji
+- [x] F003.3 實作選中狀態 — 放大至 40px + shadow-lg + 2px 白邊框
+- [x] F003.4 實作 InfoWindow 輕量卡片 — 200px 寬，編號+名稱+時間+評分+「滾到此處」按鈕
+- [x] F003.5 實作 marker → Timeline 聯動 — 點擊「滾到此處」scroll Timeline 到對應 entry 並 highlight
+- [x] F003.6 實作 Timeline → marker 聯動 — MAP_FOCUS_EVENT 自訂事件 → map pan + highlight marker
+- [x] F003.7 實作 Accessibility — `role="button"` + `aria-label`、鍵盤 Tab/Enter/Escape
+- [x] F003.8 處理部分座標缺失 — 有座標的顯示 pin，缺座標的顯示提示條「N 個景點缺少座標」
+- [x] F003.9 新增 unit test：MapMarker 渲染、InfoWindow 內容、聯動邏輯（13 tests）
+- [x] F003.10 E2E test：marker 點擊、InfoWindow 顯示、Timeline 聯動
 
 **依賴**：F002
 

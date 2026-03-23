@@ -2,14 +2,19 @@
  * DayMap — 單天互動地圖元件
  *
  * F002：基礎 Google Maps 渲染 + 收合/展開 + 所有狀態處理
+ * F003：MapMarker + InfoWindow + Timeline 雙向聯動
  * - Loading skeleton（SDK 載入中）
  * - Empty state（無座標景點）
  * - Error fallback（SDK 載入失敗）
  * - Partial warning（部分景點缺少座標）
- * - Success（地圖渲染）
+ * - Success（地圖渲染 + markers）
  *
  * 使用 React.lazy + Suspense code-split（由 TripPage 管理）。
  * 收合狀態存 localStorage，key: map-collapsed。
+ *
+ * 雙向聯動：
+ * - 點擊 marker → scroll Timeline 到對應 entry（data-entry-id 屬性）
+ * - 點擊 Timeline entry（透過自訂 event）→ pan 地圖到對應 marker 並 highlight
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -18,12 +23,17 @@ import { useGoogleMaps } from '../../hooks/useGoogleMaps';
 import { useMapData } from '../../hooks/useMapData';
 import { lsGet, lsSet } from '../../lib/localStorage';
 import Icon from '../shared/Icon';
+import { MapMarker } from './MapMarker';
 import type { Day } from '../../types/trip';
 
 /* ===== Constants ===== */
 
 const LS_KEY_COLLAPSED = 'map-collapsed';
 const GOOGLE_MAPS_URL_BASE = 'https://www.google.com/maps/search/';
+
+/* ===== Custom event for Timeline → map bidirectional communication ===== */
+/** Timeline entry 點擊時發出的自訂事件 */
+export const MAP_FOCUS_EVENT = 'tp:map-focus-entry';
 
 /* ===== Props ===== */
 
@@ -36,6 +46,21 @@ interface DayMapProps {
 
 function buildFallbackUrl(dayNum: number): string {
   return `${GOOGLE_MAPS_URL_BASE}?api=1&query=day+${dayNum}+sightseeing`;
+}
+
+/* ===== Helper: scroll Timeline to entry ===== */
+
+function scrollToEntry(entryId: number): void {
+  const el = document.querySelector(`[data-entry-id="${entryId}"]`);
+  if (!el) return;
+
+  /* highlight 效果 */
+  el.classList.add('map-highlight');
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  setTimeout(() => {
+    el.classList.remove('map-highlight');
+  }, 2000);
 }
 
 /* ===== Component ===== */
@@ -62,6 +87,9 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
 
+  /* --- 選中的 marker ID (F003 雙向聯動) --- */
+  const [activePinId, setActivePinId] = useState<number | null>(null);
+
   /* --- 地圖初始化 --- */
   useEffect(() => {
     if (status !== 'ready' || !mapRef.current || !hasData) return;
@@ -82,7 +110,6 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
       streetViewControl: false,
       fullscreenControl: false,
       gestureHandling: 'greedy',
-      // 暗色模式：使用 Google Maps styles（預留，F002 先不套暗色主題）
     });
 
     mapInstanceRef.current = map;
@@ -95,7 +122,48 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
       }
       map.fitBounds(bounds, 40); // 40px padding
     }
+
+    /* --- 點擊地圖空白處關閉選中 --- */
+    map.addListener('click', () => {
+      setActivePinId(null);
+    });
   }, [status, hasData, pins]);
+
+  /* --- Timeline → marker 聯動：監聽自訂事件 --- */
+  useEffect(() => {
+    function handleFocusEntry(e: Event) {
+      const detail = (e as CustomEvent<{ entryId: number }>).detail;
+      if (!detail?.entryId) return;
+
+      const pin = pins.find((p) => p.id === detail.entryId);
+      if (!pin || !mapInstanceRef.current) return;
+
+      /* pan 地圖到 marker 位置 */
+      mapInstanceRef.current.panTo({ lat: pin.lat, lng: pin.lng });
+
+      /* highlight marker */
+      setActivePinId(pin.id);
+    }
+
+    document.addEventListener(MAP_FOCUS_EVENT, handleFocusEntry);
+    return () => {
+      document.removeEventListener(MAP_FOCUS_EVENT, handleFocusEntry);
+    };
+  }, [pins]);
+
+  /* --- Marker 點擊：選中 + pan --- */
+  const handleMarkerSelect = useCallback((pinId: number) => {
+    setActivePinId(pinId);
+    const pin = pins.find((p) => p.id === pinId);
+    if (pin && mapInstanceRef.current) {
+      mapInstanceRef.current.panTo({ lat: pin.lat, lng: pin.lng });
+    }
+  }, [pins]);
+
+  /* --- InfoWindow「滾到此處」點擊 --- */
+  const handleScrollToEntry = useCallback((pinId: number) => {
+    scrollToEntry(pinId);
+  }, []);
 
   /* --- 地圖 instance cleanup --- */
   useEffect(() => {
@@ -184,7 +252,7 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
           </div>
         ) : null}
 
-        {/* Case 4：SDK ready + 有資料 → 地圖容器 */}
+        {/* Case 4：SDK ready + 有資料 → 地圖容器 + markers */}
         {status === 'ready' && hasData ? (
           <div className="day-map-container" data-testid="day-map-container">
             <div
@@ -193,6 +261,18 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
               aria-label={`第 ${dayNum} 天互動地圖`}
               data-testid="day-map-canvas"
             />
+
+            {/* MapMarkers（F003）：只在地圖 instance 存在時渲染 */}
+            {mapInstanceRef.current && pins.map((pin) => (
+              <MapMarker
+                key={pin.id}
+                map={mapInstanceRef.current!}
+                pin={pin}
+                isSelected={activePinId === pin.id}
+                onSelect={handleMarkerSelect}
+                onScrollToEntry={handleScrollToEntry}
+              />
+            ))}
           </div>
         ) : null}
       </div>

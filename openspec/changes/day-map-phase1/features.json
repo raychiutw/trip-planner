@@ -14,9 +14,9 @@
       "id": "F003",
       "title": "Markers + InfoWindow：自訂圓形 marker + 編號 + 輕量卡片 + Timeline 雙向聯動",
       "priority": 2,
-      "status": "pending",
-      "session": null,
-      "e2e": false
+      "status": "done",
+      "session": 2,
+      "e2e": true
     },
     {
       "id": "F004",

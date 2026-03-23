@@ -109,7 +109,10 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, index, isNow, 
   return (
     <>
       {/* ---- Main event ---- */}
-      <div className={clsx('tl-event', 'expanded', isNow && 'tl-now', isPast && 'tl-past')}>
+      <div
+        className={clsx('tl-event', 'expanded', isNow && 'tl-now', isPast && 'tl-past')}
+        data-entry-id={entry.id ?? undefined}
+      >
         {/* Arrival flag */}
         <div className="tl-flag tl-flag-arrive">
           <span className="tl-flag-num">{index}</span>
