@@ -45,6 +45,11 @@ import type { BackupData } from '../components/trip/Backup';
 import type { EmergencyData } from '../components/trip/Emergency';
 import type { SuggestionsData } from '../components/trip/Suggestions';
 
+/* ===== Feature flags ===== */
+
+/** 地圖功能預設隱藏，URL 加 ?showmap=1 顯示 */
+const ENABLE_DAY_MAP = new URLSearchParams(window.location.search).get('showmap') === '1';
+
 /* ===== Module-level constants (#14: hoist inline styles) ===== */
 
 const LOADING_CLASS = 'text-center p-10 text-[var(--color-muted)]';
@@ -197,8 +202,9 @@ const DaySection = React.memo(function DaySection({
             </div>
 
             {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
-                全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代 */}
-            {!hideDayMap && (
+                全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
+                ENABLE_DAY_MAP=false 時完全隱藏（feature flag）*/}
+            {ENABLE_DAY_MAP && !hideDayMap && (
               <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
                 <DayMap day={day} dayNum={dayNum} />
               </Suspense>
@@ -1072,7 +1078,7 @@ export default function TripPage() {
           onSwitchDay={handleSwitchDay}
           todayDayNum={todayDayNum}
           isTripMapMode={isTripMapMode}
-          onToggleTripMap={days.length > 0 ? handleToggleTripMap : undefined}
+          onToggleTripMap={ENABLE_DAY_MAP && days.length > 0 ? handleToggleTripMap : undefined}
         />
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
@@ -1112,8 +1118,9 @@ export default function TripPage() {
               </div>
             )}
 
-            {/* TripMap 全覽地圖（F006）：全覽模式時顯示於 DaySections 上方 */}
-            {!loading && isTripMapMode && (
+            {/* TripMap 全覽地圖（F006）：全覽模式時顯示於 DaySections 上方
+                ENABLE_DAY_MAP=false 時完全隱藏（feature flag）*/}
+            {ENABLE_DAY_MAP && !loading && isTripMapMode && (
               <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
                 <TripMap allDays={allDays} dayNums={dayNums} />
               </Suspense>
