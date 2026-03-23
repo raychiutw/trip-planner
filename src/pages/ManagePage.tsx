@@ -258,24 +258,32 @@ export default function ManagePage() {
         }),
       });
 
-      if (res.status === 201) {
+      if (res.status === 201 || res.status === 200) {
         const req = (await res.json()) as RawRequest;
         setSubmitStatus({ type: 'success', message: '已送出' });
         setText('');
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
         }
-        // Optimistic insert to top
-        setRequests((prev) => [req, ...prev]);
+        // Reload list to reflect latest state (including dedup 200 case)
+        if (currentTripId) {
+          await loadRequests(currentTripId);
+        } else {
+          setRequests((prev) => [req, ...prev]);
+        }
       } else if (res.status === 403) {
         throw new Error('你沒有此行程的權限');
       } else {
         throw new Error('送出失敗（' + res.status + '）');
       }
     } catch (err) {
+      // 失敗後重新載入列表，讓使用者確認是否已送出
+      if (currentTripId) {
+        await loadRequests(currentTripId).catch(() => {/* ignore reload error */});
+      }
       setSubmitStatus({
         type: 'error',
-        message: err instanceof Error ? err.message : '送出失敗',
+        message: (err instanceof Error ? err.message : '送出失敗') + '（請重新整理確認是否已送出）',
       });
     } finally {
       setSubmitting(false);

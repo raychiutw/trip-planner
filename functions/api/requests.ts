@@ -78,6 +78,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return json({ error: '無此行程權限' }, 403);
   }
 
+  // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入
+  const dupCheck = await env.DB
+    .prepare(
+      'SELECT COUNT(*) as cnt FROM requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND created_at > datetime(\'now\', \'-30 seconds\')'
+    )
+    .bind(tripId, message, auth.email)
+    .first<{ cnt: number }>();
+
+  if (dupCheck && dupCheck.cnt > 0) {
+    // 已存在近期相同請求，回傳最新一筆（200 而非 201）
+    const existing = await env.DB
+      .prepare(
+        'SELECT * FROM requests WHERE trip_id = ? AND message = ? AND submitted_by = ? ORDER BY created_at DESC LIMIT 1'
+      )
+      .bind(tripId, message, auth.email)
+      .first();
+    return json(existing, 200);
+  }
+
   const result = await env.DB
     .prepare(
       'INSERT INTO requests (trip_id, mode, message, submitted_by) VALUES (?, ?, ?, ?) RETURNING *'
@@ -86,14 +105,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first();
 
   const newRow = result as Record<string, unknown>;
-  await logAudit(env.DB, {
-    tripId,
-    tableName: 'requests',
-    recordId: newRow ? (newRow.id as number) : null,
-    action: 'insert',
-    changedBy: auth.email,
-    diffJson: JSON.stringify({ mode, message: message.substring(0, 100) }),
-  });
+  // logAudit 失敗不阻擋主流程，INSERT 已成功
+  try {
+    await logAudit(env.DB, {
+      tripId,
+      tableName: 'requests',
+      recordId: newRow ? (newRow.id as number) : null,
+      action: 'insert',
+      changedBy: auth.email,
+      diffJson: JSON.stringify({ mode, message: message.substring(0, 100) }),
+    });
+  } catch (auditErr) {
+    console.error('[requests] logAudit failed (non-fatal):', auditErr);
+  }
 
   return json(result, 201);
 };
