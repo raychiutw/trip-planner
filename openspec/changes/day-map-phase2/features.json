@@ -1,0 +1,22 @@
+{
+  "change": "day-map-phase2",
+  "created": "2026-03-23",
+  "features": [
+    {
+      "id": "F007",
+      "title": "動態路線播放：播放/暫停/重播控制 + marker 依序亮起 + polyline 漸進繪製 + 速度 1x/2x/3x",
+      "priority": 1,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F008",
+      "title": "拖曳排序：Timeline entry 拖曳調整順序 + 樂觀更新 + PATCH API 回寫 sort_order + 認證保護",
+      "priority": 2,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    }
+  ]
+}
