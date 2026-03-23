@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
@@ -9,6 +9,9 @@ import { usePrintMode } from '../hooks/usePrintMode';
 import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../lib/appearance';
 import DayNav from '../components/trip/DayNav';
 import Timeline from '../components/trip/Timeline';
+
+/* DayMap — React.lazy code-split（D1：SDK lazy load）*/
+const DayMap = lazy(() => import('../components/trip/DayMap'));
 import Hotel from '../components/trip/Hotel';
 import Footer, { type FooterData } from '../components/trip/Footer';
 import QuickPanel from '../components/trip/QuickPanel';
@@ -187,6 +190,11 @@ const DaySection = React.memo(function DaySection({
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               )}
             </div>
+
+            {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）*/}
+            <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
+              <DayMap day={day} dayNum={dayNum} />
+            </Suspense>
 
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />

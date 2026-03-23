@@ -1,0 +1,264 @@
+/* ============================================================
+   map.css — 地圖元件樣式
+   Day Map Phase 1 — F002 DayMap 基礎元件
+   ============================================================ */
+
+/* ===== 多天色盤 CSS 變數 ===== */
+
+:root {
+  --map-day-1: #4285F4;
+  --map-day-2: #EA4335;
+  --map-day-3: #34A853;
+  --map-day-4: #FBBC04;
+  --map-day-5: #9C27B0;
+  --map-day-6: #00ACC1;
+  --map-day-7: #FF7043;
+  --map-day-8: #78909C;
+}
+
+/* ===== 地圖外框（wrap + 收合動畫） ===== */
+
+.day-map-wrap {
+  overflow: hidden;
+  transition: max-height var(--transition-duration-normal) var(--transition-timing-function-apple);
+}
+
+.day-map-wrap--expanded {
+  max-height: 420px;
+}
+
+.day-map-wrap--collapsed {
+  max-height: 0;
+}
+
+/* ===== 地圖容器 ===== */
+
+.day-map-container {
+  position: relative;
+  touch-action: none;
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* ===== 響應式高度 ===== */
+
+.day-map {
+  height: 250px;
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+@media (min-width: 768px) {
+  .day-map {
+    height: 300px;
+  }
+
+  .day-map-wrap--expanded {
+    max-height: 460px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map {
+    height: 350px;
+  }
+
+  .day-map-wrap--expanded {
+    max-height: 520px;
+  }
+}
+
+/* ===== Loading skeleton ===== */
+
+.day-map-skeleton {
+  height: 250px;
+  background: var(--color-tertiary);
+  border-radius: var(--radius-md);
+  animation: day-map-pulse var(--transition-duration-normal) ease-in-out infinite alternate;
+}
+
+@media (min-width: 768px) {
+  .day-map-skeleton {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map-skeleton {
+    height: 350px;
+  }
+}
+
+@keyframes day-map-pulse {
+  from { opacity: 1; }
+  to   { opacity: 0.5; }
+}
+
+/* ===== Error fallback ===== */
+
+.day-map-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8);
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  height: 250px;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .day-map-error {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map-error {
+    height: 350px;
+  }
+}
+
+.day-map-error-title {
+  font-size: var(--font-size-subheadline);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+.day-map-error-desc {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+}
+
+.day-map-error-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  text-decoration: none;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  justify-content: center;
+}
+
+/* ===== Empty state ===== */
+
+.day-map-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 250px;
+  background: var(--color-secondary);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  text-align: center;
+  padding: var(--spacing-4);
+}
+
+@media (min-width: 768px) {
+  .day-map-empty {
+    height: 300px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .day-map-empty {
+    height: 350px;
+  }
+}
+
+/* ===== 收合切換按鈕 ===== */
+
+.day-map-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-4);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
+  cursor: pointer;
+  min-height: var(--tap-min);
+  min-width: var(--tap-min);
+  transition: color var(--transition-duration-fast) var(--transition-timing-function-apple),
+              background var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+.day-map-toggle-btn:hover {
+  color: var(--color-foreground);
+  background: var(--color-tertiary);
+}
+
+.day-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-2) var(--spacing-1);
+  margin-bottom: var(--spacing-2);
+}
+
+.day-map-header-label {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ===== 部分座標缺失提示條 ===== */
+
+.day-map-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-accent-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  margin-top: var(--spacing-2);
+}
+
+/* ===== 日期圖例（TripMap，F006 預留） ===== */
+
+.trip-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2);
+}
+
+.trip-map-legend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  cursor: pointer;
+  min-height: var(--tap-min);
+  transition: opacity var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+
+.trip-map-legend-pill--dimmed {
+  opacity: 0.4;
+}
+
+.trip-map-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}

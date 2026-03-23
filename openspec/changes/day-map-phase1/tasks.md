@@ -1,16 +1,16 @@
 ## F002：DayMap 基礎元件
 
-- [ ] F002.1 安裝 `@googlemaps/js-api-loader` 依賴
-- [ ] F002.2 建立 `src/hooks/useGoogleMaps.ts` — Google Maps JS SDK 動態載入 hook（singleton pattern，避免重複載入）
-- [ ] F002.3 建立 `src/hooks/useMapData.ts` — 從 useTrip 資料提取有 lat/lng 的 entries + hotel 座標
-- [ ] F002.4 建立 `src/components/trip/DayMap.tsx` — 基本地圖渲染，React.lazy + Suspense code-split
-- [ ] F002.5 建立 `css/map.css` — 地圖容器樣式、響應式高度（250/300/350px）、loading skeleton
-- [ ] F002.6 實作收合/展開機制 — 預設展開，localStorage 記住偏好，max-height transition 250ms
-- [ ] F002.7 實作所有狀態：loading skeleton、empty state（「今天沒有排程景點」）、error fallback（「地圖無法載入」+ 外連按鈕）
-- [ ] F002.8 修改 `src/pages/TripPage.tsx` — 整合 DayMap 區塊於 DayNav 與 Timeline 之間
+- [x] F002.1 安裝 `@googlemaps/js-api-loader` 依賴
+- [x] F002.2 建立 `src/hooks/useGoogleMaps.ts` — Google Maps JS SDK 動態載入 hook（singleton pattern，避免重複載入）
+- [x] F002.3 建立 `src/hooks/useMapData.ts` — 從 useTrip 資料提取有 lat/lng 的 entries + hotel 座標
+- [x] F002.4 建立 `src/components/trip/DayMap.tsx` — 基本地圖渲染，React.lazy + Suspense code-split
+- [x] F002.5 建立 `css/map.css` — 地圖容器樣式、響應式高度（250/300/350px）、loading skeleton
+- [x] F002.6 實作收合/展開機制 — 預設展開，localStorage 記住偏好，max-height transition 250ms
+- [x] F002.7 實作所有狀態：loading skeleton、empty state（「今天沒有排程景點」）、error fallback（「地圖無法載入」+ 外連按鈕）
+- [x] F002.8 修改 `src/pages/TripPage.tsx` — 整合 DayMap 區塊於 DayNav 與 Timeline 之間
 - [ ] F002.9 設定 `VITE_GOOGLE_MAPS_API_KEY` 環境變數（`.env.local` + Cloudflare Dashboard）
-- [ ] F002.10 新增 unit test：useGoogleMaps hook、DayMap 渲染、收合狀態
-- [ ] F002.11 E2E test：地圖區塊存在、收合/展開行為
+- [x] F002.10 新增 unit test：useGoogleMaps hook、DayMap 渲染、收合狀態
+- [x] F002.11 E2E test：地圖區塊存在、收合/展開行為
 
 **依賴**：F001（lat/lng 資料已完成）
 

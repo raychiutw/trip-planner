@@ -23,6 +23,7 @@ const SRC_FILES = [
 const CSS_FILES = [
     'css/shared.css', 'css/style.css', 'css/edit.css',
     'css/setting.css', 'css/admin.css', 'css/manage.css',
+    'css/map.css',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const HTML_FILES = [

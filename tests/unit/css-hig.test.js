@@ -8,6 +8,7 @@ const CSS_FILES = {
     style:  readFileSync('css/style.css',  'utf-8'),
     edit:   readFileSync('css/edit.css',   'utf-8'),
     setting:readFileSync('css/setting.css','utf-8'),
+    map:    readFileSync('css/map.css',    'utf-8'),
 };
 const ALL_CSS = Object.values(CSS_FILES).join('\n');
 

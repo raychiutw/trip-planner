@@ -6,9 +6,9 @@
       "id": "F002",
       "title": "DayMap 基礎元件：Google Maps JS SDK 載入 + 基本 map render + 收合/展開 + 所有狀態處理",
       "priority": 1,
-      "status": "pending",
-      "session": null,
-      "e2e": false
+      "status": "done",
+      "session": 1,
+      "e2e": true
     },
     {
       "id": "F003",

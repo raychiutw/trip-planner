@@ -15,6 +15,7 @@ import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 
 import '../../css/shared.css';
 import '../../css/style.css';
+import '../../css/map.css';
 
 const el = document.getElementById('reactRoot');
 if (el) {
