@@ -24,9 +24,9 @@
 }
 @media (min-width: 768px) {
     .chat-messages-inner {
-        max-width: 60vw;
+        max-width: var(--page-max-w);
         margin: 0 auto;
-        padding-top: 24px;
+        padding-top: var(--page-pt);
     }
 }
 
@@ -142,7 +142,7 @@
 }
 @media (min-width: 768px) {
     .edit-input-card {
-        max-width: 60vw;
+        max-width: var(--page-max-w);
         margin: 0 auto;
     }
 }
@@ -265,11 +265,6 @@
 }
 .edit-status.success { color: var(--color-success); display: flex; align-items: center; gap: 4px; }
 .edit-status.error { color: var(--color-destructive); }
-
-/* ===== Sticky-nav: title bar ===== */
-.sticky-nav { border-bottom: 1px solid var(--color-border); }
-.sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }
-.nav-title { text-align: center; }
 
 /* ===== Dark Mode ===== */
 body.dark .edit-send-btn:disabled { background: var(--color-hover); color: var(--color-muted); }

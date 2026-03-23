@@ -31,7 +31,7 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
 .weather-list li .list-icon { flex-shrink: 0; }
 
 /* ===== Sticky Nav Card (override shared.css) ===== */
-.sticky-nav { border-radius: 0; padding: 12px 16px; gap: 12px; margin: 0; top: 0; background: color-mix(in srgb, var(--color-background) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 1px 0 var(--color-border); overflow-x: hidden; overflow-y: visible; }
+.sticky-nav { border-radius: 0; border-bottom: none; padding: 12px 16px; gap: 12px; margin: 0; top: 0; background: color-mix(in srgb, var(--color-background) 92%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: 0 1px 0 var(--color-border); overflow-x: hidden; overflow-y: visible; }
 @media (min-width: 768px) { .sticky-nav { padding: 12px 24px; } }
 .sticky-nav > [aria-hidden="true"] {
     mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
@@ -630,7 +630,6 @@ body.dark .day-header {
 .print-mode .info-panel { display: none !important; }
 
 /* ===== Dark Mode (trip-specific) ===== */
-body.dark .sticky-nav { border-bottom-color: color-mix(in srgb, var(--color-accent-foreground) 15%, transparent); }
 body.dark .info-header { background: var(--color-hover); color: var(--color-foreground); }
 body.dark .hw-block { background: var(--color-secondary); }
 body.dark .info-box { background: var(--color-accent-bg); }

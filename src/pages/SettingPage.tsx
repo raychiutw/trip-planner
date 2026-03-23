@@ -33,16 +33,6 @@ export default function SettingPage() {
     [],
   );
 
-  /* --- page-setting class on html + body --- */
-  useEffect(() => {
-    document.documentElement.classList.add('page-setting');
-    document.body.classList.add('page-setting');
-    return () => {
-      document.documentElement.classList.remove('page-setting');
-      document.body.classList.remove('page-setting');
-    };
-  }, []);
-
   /* --- fetch trips --- */
   useEffect(() => {
     let cancelled = false;
