@@ -62,16 +62,23 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   let missingCount = 0;
   let entryIndex = 0;
 
+  /* --- 取 location 座標（location 可能是物件或陣列，取第一個有效座標）--- */
+  const resolveLocation = (loc: unknown): { lat: number; lng: number } | null => {
+    if (Array.isArray(loc)) return isValidCoords(loc[0]) ? loc[0] : null;
+    return isValidCoords(loc as { lat?: unknown; lng?: unknown }) ? (loc as { lat: number; lng: number }) : null;
+  };
+
   /* --- Hotel pin（顯示在最前，index=0）--- */
   const hotel: Hotel | null = day.hotel;
-  if (hotel && isValidCoords(hotel.location)) {
+  const hotelCoords = hotel ? resolveLocation(hotel.location) : null;
+  if (hotel && hotelCoords) {
     pins.push({
       id: hotel.id,
       type: 'hotel',
       index: 0,
       title: hotel.name,
-      lat: hotel.location.lat,
-      lng: hotel.location.lng,
+      lat: hotelCoords.lat,
+      lng: hotelCoords.lng,
       sortOrder: -1,
     });
   }
@@ -79,15 +86,16 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   /* --- Entry pins --- */
   const timeline: Entry[] = day.timeline ?? [];
   for (const entry of timeline) {
-    if (isValidCoords(entry.location)) {
+    const coords = resolveLocation(entry.location);
+    if (coords) {
       entryIndex++;
       pins.push({
         id: entry.id,
         type: 'entry',
         index: entryIndex,
         title: entry.title,
-        lat: entry.location.lat,
-        lng: entry.location.lng,
+        lat: coords.lat,
+        lng: coords.lng,
         time: entry.time,
         googleRating: entry.googleRating,
         travelMin: entry.travel?.min,
