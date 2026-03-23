@@ -97,3 +97,103 @@ rules:
     - 每個 task 可獨立測試驗證
     - render 函式變更含 unit test 更新
     - 互動行為變更含 E2E test 更新
+
+# ============================================================
+# 測試體系（gstack 對齊）
+# ============================================================
+testing:
+  # --- 職責分工 ---
+  responsibilities:
+    engineer:
+      - "Unit / Integration test（TDD — 先寫測試再實作）"
+      - "自我清理：/simplify（code reuse + quality + efficiency）"
+      - "E2E 驗證：用 /browse 實際操作確認功能 work"
+    qa:
+      - "功能 QA：/qa（互動測試 + bug 修復循環）"
+      - "QA 報告：/qa-only（僅出報告不修改）"
+      - "效能基準：/benchmark（LCP / CLS / bundle size 回歸偵測）"
+      - "瀏覽器截圖：/browse（跨 viewport 截圖驗證）"
+    designer:
+      - "視覺稽核：/design-review（設計合規 + CSS 修復）"
+    security:
+      - "安全稽核：/cso（OWASP + STRIDE + CVE + secret 掃描）"
+    reviewer:
+      - "程式碼審查：/review（Claude diff 分析）"
+      - "交叉驗證：/codex（OpenAI 獨立 review — 重疊 findings = 高信心）"
+    devops:
+      - "部署驗證：/canary（console errors + 效能回歸 + 頁面失敗）"
+
+  # --- 三層驗證（每層獨立有價值，重疊覆蓋是核心） ---
+  layers:
+    layer_1_self_review:
+      who: Engineer
+      when: 實作完每個 feature 後立即執行
+      tools:
+        - "/simplify — 3 平行 agent（code reuse / quality / efficiency）"
+        - "unit test — TDD，npx tsc --noEmit + npm test"
+    layer_2_formal_review:
+      who: Reviewer + Security（並行）
+      when: Engineer 全部 features done 後
+      tools:
+        - "/review — PR-level diff 分析（Claude）"
+        - "/codex — cross-model 獨立 review（OpenAI）"
+        - "/cso — OWASP + STRIDE + CVE"
+      confidence: "[overlap] 兩模型重疊 = 🔴必修 / [claude-only] [codex-only] = 🟡PM判斷"
+    layer_3_e2e:
+      who: QA
+      when: 與 Layer 2 並行
+      tools:
+        - "/qa — 真瀏覽器 Playwright E2E（互動 + 截圖 + 修 bug）"
+        - "/browse — 手動互動驗證、截圖比對"
+        - "/benchmark — 效能基準（回歸偵測）"
+    post_deploy:
+      who: DevOps
+      when: merge PR 後
+      tools:
+        - "/canary — 金絲雀監控（5 分鐘週期截圖 + console + 效能）"
+
+  # --- CI 自動 vs gstack Teammate ---
+  ci_auto:
+    - "npx tsc --noEmit"
+    - "npm test（unit + integration + naming + css-hig）"
+    - "npm run build"
+    - "node scripts/verify-sw.js"
+  gstack_teammate:
+    - "/qa（互動 QA — QA Teammate）"
+    - "/benchmark（效能基準 — QA Teammate）"
+    - "/cso（安全稽核 — Security Teammate）"
+    - "/design-review（視覺稽核 — Designer Teammate）"
+    - "/canary（部署監控 — DevOps Teammate）"
+
+  # --- QA 標準測試案例（/qa 執行時必跑） ---
+  qa_test_cases:
+    navigation:
+      - "Day Nav 5 天 + 全覽切換，URL hash 更新正確"
+      - "StickyNav 捲動時固定在頂部"
+      - "行程選擇器切換不同行程"
+    panels:
+      - "快速選單開關（desktop + mobile bottom sheet）"
+      - "航班 / 出發 / 緊急 / 備案 / 建議 / 路線 / 交通 面板開關 + 內容完整"
+      - "面板 Escape 關閉 + 點擊 backdrop 關閉"
+    timeline:
+      - "飯店詳情展開/收合"
+      - "交通資訊展開/收合"
+      - "地圖展開/收合 + Google Maps marker 正確"
+      - "時間軸項目順序正確、時間顯示正確"
+    links:
+      - "G Map / Map / 預約連結可點擊（不驗外部頁面）"
+      - "MapCode 顯示正確格式"
+    responsive:
+      - "Desktop 1280px — 側欄 + 主內容排版正確"
+      - "Mobile 375px — 單欄、FAB 位置正確、bottom sheet 正常"
+      - "Tablet 768px — 排版不破版"
+    theme:
+      - "淺色 / 深色 / 自動 切換正常"
+      - "6 個主題色（sun/sky/zen/forest/sakura/night）套用正確"
+    export:
+      - "PDF / MD / JSON / CSV 下載不報錯"
+      - "列印模式排版正確"
+    errors:
+      - "Console 無 JS 錯誤（Google Maps CSP 警告可忽略）"
+      - "Network 無 4xx/5xx 失敗請求"
+      - "空行程 / 無資料時顯示適當 fallback"
