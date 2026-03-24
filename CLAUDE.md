@@ -166,15 +166,6 @@ html.page-simple { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visi
 
 **教訓**：新增頁面時，若結構與行程頁差異大，在 HTML 加 `page-simple` class 即可。
 
-### 未解決：`@googlemaps/js-api-loader` 缺少
-
-**問題**：`npx tsc --noEmit` 和 `npm run build` 均因缺少 `@googlemaps/js-api-loader` 套件而失敗。
-
-**影響**：DayMap / MapMarker / MapRoute / TripMap 相關元件的型別檢查失敗、production build 中斷。
-
-**暫行方案**：CI 的 tsc 和 build 在此問題修復前會繼續失敗。
-
-**修復方向**：`npm install @googlemaps/js-api-loader` 或在 tsconfig 排除相關檔案。
 
 ## gstack
 
