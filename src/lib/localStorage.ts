@@ -4,6 +4,9 @@ export const LS_PREFIX = 'tp-';
 /** Time-to-live in milliseconds: 6 months (180 days). */
 export const LS_TTL = 180 * 86400000;
 
+/** localStorage key for the user's last selected trip. */
+export const LS_KEY_TRIP_PREF = 'trip-pref';
+
 interface LsEntry<T> {
   v: T;
   exp: number;

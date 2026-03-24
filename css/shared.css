@@ -46,6 +46,7 @@
     --radius-full: 9999px;
 
     /* Shadow — generate shadow-* utilities */
+    --shadow-sm: 0 1px 4px rgba(46,36,24,0.08);
     --shadow-md: 0 4px 16px rgba(46,36,24,0.12);
     --shadow-lg: 0 6px 20px rgba(46,36,24,0.18);
 
@@ -914,4 +915,42 @@
     .color-theme-grid { gap: 16px; }
     .color-mode-preview { width: 100px; height: 66px; }
     .color-theme-swatch { width: 100px; height: 34px; }
+}
+
+/* ===== Chat UI Layout (shared by edit + manage pages) ===== */
+
+/* ===== Chat Container ===== */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--nav-h));
+    height: calc(100dvh - var(--nav-h));
+}
+
+/* ===== Scrollable Messages Area ===== */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px var(--padding-h) 8px;
+    scrollbar-gutter: stable;
+}
+
+/* ===== Inner Width Constraint ===== */
+.chat-messages-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+@media (min-width: 768px) {
+    .chat-messages-inner {
+        max-width: var(--page-max-w);
+        margin: 0 auto;
+        padding-top: var(--page-pt);
+    }
+}
+
+/* ===== Centered empty state ===== */
+.chat-messages-inner--centered {
+    justify-content: center;
+    flex: 1;
 }

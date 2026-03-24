@@ -4,7 +4,7 @@
  */
 
 import { logAudit } from './_audit';
-import { json } from './_utils';
+import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env, AuthData } from './_types';
 
 /** 取得目前 Access policy 的 include email 列表 */
@@ -54,7 +54,7 @@ export async function removeEmailFromAccessPolicy(env: Env, email: string): Prom
 
 // GET /api/permissions?tripId=xxx
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context) as AuthData;
   if (!auth.isAdmin) return json({ error: '僅管理者可操作' }, 403);
 
   const url = new URL(context.request.url);
@@ -74,15 +74,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 // POST /api/permissions { email, tripId, role? }
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context) as AuthData;
   if (!auth.isAdmin) return json({ error: '僅管理者可操作' }, 403);
 
-  let body: { email?: string; tripId?: string; role?: string };
-  try {
-    body = await context.request.json();
-  } catch {
-    return json({ error: '無效的 JSON' }, 400);
-  }
+  const bodyOrError = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
   const { email, tripId, role = 'member' } = body;
   if (!email || !tripId) {

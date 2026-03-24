@@ -302,7 +302,7 @@ body.dark .day-header {
 /* ===== Timeline Now / Past ===== */
 .tl-now .tl-flag-arrive { box-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 50%, transparent); }
 .tl-now .tl-card {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 0 0 1.5px var(--color-accent);
+    box-shadow: var(--shadow-md), 0 0 0 1.5px var(--color-accent);
     transform: scale(1.01);
 }
 .tl-now .tl-segment { border-left-color: var(--color-accent); border-left-style: solid; }
@@ -633,7 +633,6 @@ body.dark .day-header {
 body.dark .info-header { background: var(--color-hover); color: var(--color-foreground); }
 body.dark .hw-block { background: var(--color-secondary); }
 body.dark .info-box { background: var(--color-accent-bg); }
-body.dark .tl-card { background: var(--color-tertiary); }
 
 /* ===== 主題背景時卡片半透明化 ===== */
 /* 有背景主題時，tl-card 改為半透明 + backdrop blur */
@@ -888,7 +887,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .sheet-header-spacer { width: var(--tap-min); flex-shrink: 0; }
-.info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+.info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; touch-action: pan-y; }
 @media (min-width: 768px) {
     .info-sheet-body > * { max-width: 600px; margin-left: auto; margin-right: auto; }
 }
