@@ -28,7 +28,7 @@ import Backup from '../components/trip/Backup';
 import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
-import TpLogo from '../components/shared/TpLogo';
+import TriplineLogo from '../components/shared/TriplineLogo';
 import Toast from '../components/shared/Toast';
 import { FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
@@ -1065,7 +1065,7 @@ export default function TripPage() {
       {/* Sticky Nav */}
       <div className="sticky-nav" id="stickyNav">
         {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-        <TpLogo isOnline={isOnline} />
+        <TriplineLogo isOnline={isOnline} />
         <span className={clsx('nav-inline-title', showNavTitle && 'visible')}>
           {trip?.title || trip?.name}
         </span>
