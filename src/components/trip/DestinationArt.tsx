@@ -25,20 +25,17 @@ function OkinawaLight() {
       <g transform="translate(200,28)" opacity="0.15">
         <path d="M0 16 Q2 8 0 0 M0 10 Q6 6 10 0 M0 12 Q-5 8 -8 2" stroke="#E86A4A" fill="none" strokeWidth="1.5" strokeLinecap="round" />
       </g>
-      {/* Tropical fish */}
-      <g transform="translate(340,20)" opacity="0.18">
-        <ellipse cx="0" cy="0" rx="10" ry="6" fill="#2A8EB0" />
-        <polygon points="10,-5 18,0 10,5" fill="#2A8EB0" />
-        <circle cx="-4" cy="-1" r="1.5" fill="#FBF3E8" />
+      {/* Tropical fish — outline only */}
+      <g transform="translate(340,20)" opacity="0.15">
+        <path d="M-10 0 Q-6 -6, 0 -6 Q8 -6, 10 0 Q8 6, 0 6 Q-6 6, -10 0 Z" stroke="#2A8EB0" fill="none" strokeWidth="1.2" />
+        <path d="M10 -4 L18 0 L10 4" stroke="#2A8EB0" fill="none" strokeWidth="1.2" strokeLinejoin="round" />
       </g>
-      {/* Hibiscus */}
-      <g transform="translate(440,6)" opacity="0.15">
-        <circle cx="0" cy="0" r="3" fill="#E86A4A" />
-        <circle cx="5" cy="-3" r="3" fill="#E86A4A" />
-        <circle cx="5" cy="3" r="3" fill="#E86A4A" />
-        <circle cx="-5" cy="-3" r="3" fill="#E86A4A" />
-        <circle cx="-5" cy="3" r="3" fill="#E86A4A" />
-        <circle cx="0" cy="0" r="2" fill="#FFD080" />
+      {/* Hibiscus — outline petals */}
+      <g transform="translate(440,6)" opacity="0.12">
+        <path d="M0 -6 Q3 -3, 0 0 Q-3 -3, 0 -6" stroke="#E86A4A" fill="none" strokeWidth="1" />
+        <path d="M6 0 Q3 3, 0 0 Q3 -3, 6 0" stroke="#E86A4A" fill="none" strokeWidth="1" />
+        <path d="M0 6 Q-3 3, 0 0 Q3 3, 0 6" stroke="#E86A4A" fill="none" strokeWidth="1" />
+        <path d="M-6 0 Q-3 -3, 0 0 Q-3 3, -6 0" stroke="#E86A4A" fill="none" strokeWidth="1" />
       </g>
     </>
   );
@@ -53,15 +50,14 @@ function OkinawaDark() {
       <g transform="translate(200,28)" opacity="0.08">
         <path d="M0 16 Q2 8 0 0 M0 10 Q6 6 10 0 M0 12 Q-5 8 -8 2" stroke="#F4A08A" fill="none" strokeWidth="1.5" strokeLinecap="round" />
       </g>
-      {/* Fish */}
-      <g transform="translate(340,20)" opacity="0.10">
-        <ellipse cx="0" cy="0" rx="10" ry="6" fill="#5090B0" />
-        <polygon points="10,-5 18,0 10,5" fill="#5090B0" />
-        <circle cx="-4" cy="-1" r="1.5" fill="#FFD080" />
+      {/* Fish — outline only */}
+      <g transform="translate(340,20)" opacity="0.08">
+        <path d="M-10 0 Q-6 -6, 0 -6 Q8 -6, 10 0 Q8 6, 0 6 Q-6 6, -10 0 Z" stroke="#5090B0" fill="none" strokeWidth="1.2" />
+        <path d="M10 -4 L18 0 L10 4" stroke="#5090B0" fill="none" strokeWidth="1.2" strokeLinejoin="round" />
       </g>
-      {/* Stars */}
-      <circle cx="440" cy="10" r="1.5" fill="#FFD080" opacity="0.15" />
-      <circle cx="460" cy="20" r="1" fill="#FFF4C0" opacity="0.12" />
+      {/* Stars — tiny dots, won't be confused with UI */}
+      <path d="M438 10 L440 8 L442 10 L440 12 Z" stroke="#FFD080" fill="none" strokeWidth="0.8" opacity="0.12" />
+      <path d="M458 20 L460 18 L462 20 L460 22 Z" stroke="#FFF4C0" fill="none" strokeWidth="0.6" opacity="0.10" />
     </>
   );
 }
