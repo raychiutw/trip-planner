@@ -53,7 +53,7 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
           fontFamily="Comfortaa, 'Nunito', sans-serif"
           fontWeight="700"
           fontSize="14"
-          fill="var(--color-primary)"
+          fill="var(--color-foreground)"
         >
           Tripline
         </text>
