@@ -9,9 +9,7 @@ interface TriplineLogoProps {
  * Font: Caveat (Google Fonts handwriting), 43px
  */
 export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
-  const mainColor = isOnline ? 'var(--color-accent)' : 'var(--color-disabled)';
-  const midColor = isOnline ? '#C4704F' : 'var(--color-disabled)';
-  const lightColor = isOnline ? '#D4815A' : 'var(--color-disabled)';
+  const lineColor = isOnline ? 'var(--color-accent)' : 'var(--color-disabled)';
 
   return (
     <span
@@ -30,7 +28,7 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
         {/* Wave line 1: through text upper body */}
         <path
           d="M4 16 Q28 11, 54 16 Q80 21, 106 16 Q132 11, 150 16"
-          stroke={midColor}
+          stroke={lineColor}
           strokeWidth="2"
           fill="none"
           strokeLinecap="round"
@@ -39,7 +37,7 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
         {/* Wave line 2: through text lower body */}
         <path
           d="M4 23 Q20 19, 38 23 Q56 27, 74 23 Q92 19, 110 23 Q124 27, 135 23"
-          stroke={lightColor}
+          stroke={lineColor}
           strokeWidth="1.6"
           fill="none"
           strokeLinecap="round"
@@ -59,15 +57,15 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
         {/* Main arc below text, extends beyond */}
         <path
           d="M4 40 Q48 35, 90 40 Q135 45, 175 38"
-          stroke={mainColor}
+          stroke={lineColor}
           strokeWidth="2.5"
           fill="none"
           strokeLinecap="round"
         />
         {/* Start dot */}
-        <circle cx="4" cy="40" r="2.5" fill={mainColor} />
+        <circle cx="4" cy="40" r="2.5" fill={lineColor} />
         {/* End dot */}
-        <circle cx="175" cy="38" r="2.5" fill={mainColor} />
+        <circle cx="175" cy="38" r="2.5" fill={lineColor} />
         {/* WiFi-off badge */}
         {!isOnline && (
           <g transform="translate(158, 10)">
