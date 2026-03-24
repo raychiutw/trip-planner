@@ -109,24 +109,7 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
   color: var(--color-success);
 }
 
-/* ===== Tripline Logo ===== */
-.tripline-logo {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  position: relative;
-  line-height: 0;
-}
-.tripline-logo-mobile { display: block; }
-.tripline-logo-desktop { display: none; }
-@media (min-width: 768px) {
-  .tripline-logo-mobile { display: none; }
-  .tripline-logo-desktop { display: block; }
-}
-
-.tripline-logo--offline {
-  /* offline state uses --color-disabled for the Tripline strokes (applied inline in SVG) */
-}
+/* ===== Tripline Logo (base rules in shared.css) ===== */
 
 /* ===== Offline disabled main content ===== */
 .offline-disabled {

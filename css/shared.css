@@ -720,6 +720,13 @@
     .nav-close-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
     .nav-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 
+    /* Tripline Logo (responsive: mobile=wave mark, desktop=full text) */
+    .tripline-logo { flex-shrink: 0; display: flex; align-items: center; position: relative; line-height: 0; }
+    .tripline-logo-mobile { display: block; }
+    .tripline-logo-desktop { display: none; }
+    @media (min-width: 768px) { .tripline-logo-mobile { display: none; } .tripline-logo-desktop { display: block; } }
+    .tripline-logo--offline { /* offline state uses --color-disabled for strokes (applied inline in SVG) */ }
+
     /* SVG Icon Wrapper */
     .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
     .svg-icon svg { width: 100%; height: 100%; }
