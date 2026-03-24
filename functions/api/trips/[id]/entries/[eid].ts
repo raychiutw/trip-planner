@@ -52,10 +52,18 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const setClauses = [...fields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
   const values = [...fields.map(f => body[f]), Number(eid)];
 
-  const row = await db
-    .prepare(`UPDATE entries SET ${setClauses} WHERE id = ? RETURNING *`)
-    .bind(...values)
-    .first();
+  let row;
+  try {
+    row = await db
+      .prepare(`UPDATE entries SET ${setClauses} WHERE id = ? RETURNING *`)
+      .bind(...values)
+      .first();
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: 'DB 暫時無法處理，請稍後重試' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '2' },
+    });
+  }
 
   if (!row) return json({ error: 'Not found' }, 404);
 
@@ -91,11 +99,18 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(Number(eid)).first() as Record<string, unknown> | null;
 
   // Cascade delete restaurants and shopping before deleting the entry
-  await db.batch([
-    db.prepare("DELETE FROM restaurants WHERE entry_id = ?").bind(Number(eid)),
-    db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id = ?").bind(Number(eid)),
-    db.prepare('DELETE FROM entries WHERE id = ?').bind(Number(eid)),
-  ]);
+  try {
+    await db.batch([
+      db.prepare("DELETE FROM restaurants WHERE entry_id = ?").bind(Number(eid)),
+      db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id = ?").bind(Number(eid)),
+      db.prepare('DELETE FROM entries WHERE id = ?').bind(Number(eid)),
+    ]);
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: 'DB 暫時無法處理，請稍後重試' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '2' },
+    });
+  }
 
   await logAudit(db, {
     tripId: id,
