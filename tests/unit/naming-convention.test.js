@@ -9,7 +9,7 @@ function readFile(path) {
 }
 
 const JS_FILES = [
-    'js/app.js', 'js/shared.js', 'js/icons.js', 'js/edit.js',
+    'js/app.js', 'js/shared.js', 'js/icons.js',
     'js/setting.js', 'js/manage.js', 'js/admin.js', 'js/map-row.js',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
@@ -21,7 +21,7 @@ const SRC_FILES = [
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const CSS_FILES = [
-    'css/shared.css', 'css/style.css', 'css/edit.css',
+    'css/shared.css', 'css/style.css',
     'css/setting.css', 'css/admin.css', 'css/manage.css',
     'css/map.css',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);

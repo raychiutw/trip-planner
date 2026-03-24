@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode, type ColorMode, type ColorTheme } from '../hooks/useDarkMode';
-import { lsGet, lsSet } from '../lib/localStorage';
+import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../lib/appearance';
 import type { TripListItem } from '../types/trip';
 
@@ -28,10 +28,7 @@ export default function SettingPage() {
   const [loading, setLoading] = useState(true);
 
   /* --- URL section filter --- */
-  const section = useMemo(
-    () => new URLSearchParams(window.location.search).get('section'),
-    [],
-  );
+  const section = new URLSearchParams(window.location.search).get('section');
 
   /* --- fetch trips --- */
   useEffect(() => {
@@ -61,7 +58,7 @@ export default function SettingPage() {
           };
         });
         const published = mapped.filter((t) => t.published !== 0);
-        let savedTrip = lsGet<string>('trip-pref') || '';
+        let savedTrip = lsGet<string>(LS_KEY_TRIP_PREF) || '';
         if (!savedTrip && published.length > 0) {
           savedTrip = published[0].tripId;
         }
@@ -81,7 +78,7 @@ export default function SettingPage() {
 
   /* --- handlers --- */
   const handleTripClick = useCallback((tripId: string) => {
-    lsSet('trip-pref', tripId);
+    lsSet(LS_KEY_TRIP_PREF, tripId);
     window.location.href = 'index.html';
   }, []);
 

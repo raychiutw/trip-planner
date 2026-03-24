@@ -1,6 +1,6 @@
 import { logAudit, computeDiff } from '../_audit';
 import { hasPermission } from '../_auth';
-import { json } from '../_utils';
+import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
 const ALLOWED_FIELDS = ['name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer_json'] as const;
@@ -25,7 +25,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
 
   const { id } = context.params as { id: string };
@@ -37,22 +37,17 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const existing = await context.env.DB.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
   if (!existing) return json({ error: 'Not found' }, 404);
 
-  let body: Record<string, unknown>;
-  try {
-    body = await context.request.json() as Record<string, unknown>;
-  } catch {
-    return json({ error: 'Invalid JSON' }, 400);
-  }
-  const fields = Object.keys(body).filter(k => (ALLOWED_FIELDS as readonly string[]).includes(k));
-  if (fields.length === 0) return json({ error: 'No valid fields to update' }, 400);
+  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
-  const setClauses = [...fields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
-  const values = [...fields.map(f => body[f]), id];
+  const update = buildUpdateClause(body, ALLOWED_FIELDS);
+  if (!update) return json({ error: 'No valid fields to update' }, 400);
 
-  const changedBy = (context.data as any)?.auth?.email || 'anonymous';
-  const newFields = Object.fromEntries(fields.map(f => [f, body[f]]));
+  const changedBy = auth.email;
+  const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));
 
-  await context.env.DB.prepare(`UPDATE trips SET ${setClauses} WHERE id = ?`).bind(...values).run();
+  await context.env.DB.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id).run();
 
   await logAudit(context.env.DB, {
     tripId: id,

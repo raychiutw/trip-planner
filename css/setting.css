@@ -6,4 +6,4 @@
 
 /* ===== Sticky-nav: restore sticky + spacer for title centering ===== */
 .page-simple .sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); }
-.sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }
+.page-simple .sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }

@@ -2,12 +2,12 @@
  * GET /api/my-trips — 回傳使用者有權限的 tripId 列表
  */
 
-import { json } from './_utils';
+import { json, getAuth } from './_utils';
 import type { Env, AuthData } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env } = context;
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context) as AuthData;
 
   let results;
   if (auth.isAdmin) {
