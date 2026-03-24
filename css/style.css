@@ -767,6 +767,12 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .quick-panel-sheet :focus:not(:focus-visible) { outline: none; box-shadow: none; }
 .quick-panel-sheet:focus { outline: none; box-shadow: none; }
 
+.quick-panel-handle {
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--color-muted); opacity: 0.4;
+    margin: 8px auto 0;
+}
+
 .quick-panel-header {
     display: flex;
     align-items: center;
@@ -826,7 +832,6 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 
 .quick-panel-divider {
     margin: var(--spacing-3) 0;
-    border-top: 1px solid var(--color-border);
 }
 
 .print-mode .quick-panel, .print-mode .quick-panel-trigger { display: none !important; }
