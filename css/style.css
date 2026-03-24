@@ -111,14 +111,15 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
 
 /* ===== Tripline Logo ===== */
 .tripline-logo {
-  flex-shrink: 1;
-  min-width: 60px;
-  display: flex;
+  flex-shrink: 0;
+  display: none;
   align-items: center;
   position: relative;
   line-height: 0;
 }
-.tripline-logo svg { width: 100%; height: auto; }
+@media (min-width: 768px) {
+  .tripline-logo { display: flex; }
+}
 
 .tripline-logo--offline {
   /* offline state uses --color-disabled for the Tripline strokes (applied inline in SVG) */
