@@ -358,11 +358,20 @@ export default function ManagePage() {
 
   /* ===== Render ===== */
 
+  /* ----- page-simple class for manage page layout ----- */
+  useEffect(() => {
+    document.documentElement.classList.add('page-simple');
+    document.body.classList.add('page-simple');
+    return () => {
+      document.documentElement.classList.remove('page-simple');
+      document.body.classList.remove('page-simple');
+    };
+  }, []);
+
   return (
-    <div className="page-layout">
-      <div className="container">
-        {/* ----- Sticky Nav ----- */}
-        <div className="sticky-nav" id="stickyNav">
+    <div>
+      {/* ----- Sticky Nav ----- */}
+      <div className="sticky-nav" id="stickyNav">
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
@@ -573,7 +582,6 @@ export default function ManagePage() {
             </div>
           )}
         </main>
-      </div>
     </div>
   );
 }
