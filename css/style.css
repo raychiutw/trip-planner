@@ -769,10 +769,9 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 
 .quick-panel-handle {
     width: 36px; height: 4px; border-radius: 2px;
-    background: var(--color-foreground); opacity: 0.25;
+    background: var(--color-muted);
     margin: 12px auto 0;
 }
-body.dark .quick-panel-handle { opacity: 0.6; }
 
 .quick-panel-header {
     display: flex;
@@ -867,14 +866,12 @@ body.dark .quick-panel-handle { opacity: 0.6; }
 }
 .sheet-handle {
     width: 36px; height: 4px;
-    background: var(--color-foreground);
-    opacity: 0.25;
+    background: var(--color-muted);
     border-radius: 2px;
     margin: 12px auto 4px;
     padding: 8px 0;
     background-clip: content-box;
 }
-body.dark .sheet-handle { opacity: 0.6; }
 .sheet-header {
     display: flex;
     align-items: center;
