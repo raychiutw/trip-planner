@@ -229,6 +229,9 @@ export default function QuickPanel({
                 </button>
               );
             })}
+          </div>
+          <div className="quick-panel-divider" />
+          <div className="quick-panel-grid">
             {sectionB.map((item) => {
               const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
               return (
