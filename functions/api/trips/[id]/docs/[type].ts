@@ -1,12 +1,12 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
-import { json } from '../../../_utils';
+import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   const { id, type } = context.params as { id: string; type: string };
 
   if (!VALID_TYPES.has(type)) return json({ error: 'Invalid doc type' }, 400);
@@ -25,7 +25,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
 
   const { id, type } = context.params as { id: string; type: string };
@@ -36,14 +36,11 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     return json({ error: '權限不足' }, 403);
   }
 
-  let body: { content?: string };
-  try {
-    body = await context.request.json() as { content?: string };
-  } catch {
-    return json({ error: 'Invalid JSON' }, 400);
-  }
+  const bodyOrError = await parseJsonBody<{ content?: string }>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
   const content = body.content ?? '';
-  const changedBy = auth?.email || 'anonymous';
+  const changedBy = auth.email;
 
   await context.env.DB
     .prepare('INSERT OR REPLACE INTO trip_docs (trip_id, doc_type, content, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)')

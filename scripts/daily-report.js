@@ -50,7 +50,7 @@ async function queryD1Requests() {
     "SELECT " +
     "COUNT(*) as total, " +
     "SUM(CASE WHEN status='open' THEN 1 ELSE 0 END) as open_count, " +
-    "SUM(CASE WHEN status='closed' THEN 1 ELSE 0 END) as closed_count " +
+    "SUM(CASE WHEN status IN ('received','processing','completed') THEN 1 ELSE 0 END) as closed_count " +
     "FROM requests WHERE created_at >= datetime('now', '-1 day')"
   );
   return rows[0];
@@ -244,8 +244,8 @@ async function checkLinks() {
 function collectMapsUrls(days, out) {
   if (!Array.isArray(days)) return;
   days.forEach(function(day) {
-    if (!day.entries) return;
-    day.entries.forEach(function(entry) {
+    if (!day.timeline) return;
+    day.timeline.forEach(function(entry) {
       if (entry.location) {
         if (entry.location.googleQuery) out.push(entry.location.googleQuery);
         if (entry.location.appleQuery) out.push(entry.location.appleQuery);

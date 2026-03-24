@@ -4,11 +4,11 @@
 
 import { removeEmailFromAccessPolicy } from '../permissions';
 import { logAudit } from '../_audit';
-import { json } from '../_utils';
+import { json, getAuth } from '../_utils';
 import type { Env, AuthData } from '../_types';
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context) as AuthData;
   if (!auth.isAdmin) return json({ error: '僅管理者可操作' }, 403);
 
   const id = context.params.id as string;
