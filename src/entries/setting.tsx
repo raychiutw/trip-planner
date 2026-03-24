@@ -4,7 +4,6 @@ initSentry();
 import '../../css/shared.css';
 import '../../css/setting.css';
 
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import SettingPage from '../pages/SettingPage';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';

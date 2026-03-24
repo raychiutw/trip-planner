@@ -6,7 +6,7 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
-import TpLogo from '../components/shared/TpLogo';
+import TriplineLogo from '../components/shared/TriplineLogo';
 import Toast from '../components/shared/Toast';
 
 /* ===== Raw fetch helper (need status-code inspection) ===== */
@@ -164,7 +164,8 @@ export default function AdminPage() {
 
   /* ===== Close button ===== */
   function handleClose() {
-    window.location.href = '../index.html';
+    const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
+    window.location.href = tripId ? `/trip/${tripId}` : '/';
   }
 
   /* ===== Render Permission Content ===== */
@@ -232,7 +233,7 @@ export default function AdminPage() {
     <div className="page-layout">
       <div className="container">
         <div className="sticky-nav" id="stickyNav">
-          <TpLogo isOnline={isOnline} />
+          <TriplineLogo isOnline={isOnline} />
           <span className="nav-title">權限管理</span>
           <button className="nav-close-btn" id="navCloseBtn" aria-label="關閉" onClick={handleClose}>
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">

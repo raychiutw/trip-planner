@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "include": ["/api/*", "/trip/*", "/"],
+  "exclude": ["/assets/*", "/icons/*", "/manifest.json"]
+}

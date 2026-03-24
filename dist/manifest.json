@@ -1,6 +1,6 @@
 {
-  "name": "旅行規劃師",
-  "short_name": "旅行規劃",
+  "name": "Tripline",
+  "short_name": "Tripline",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FBF3E8",

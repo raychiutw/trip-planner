@@ -4,7 +4,6 @@ import Icon from '../shared/Icon';
 import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
 import {
   WMO,
-  getLocIdx,
   makeDefaultMg,
   fetchWeatherForDay,
 } from '../../lib/weather';
@@ -233,7 +232,6 @@ export default function HourlyWeather({
         </div>
         <div className="hw-grid" ref={gridRef}>
           {Array.from({ length: 24 }, (_, h) => {
-            const li = getLocIdx(weatherDay, h);
             const wIcon = WMO[data.codes[h]] || 'question';
             const temp = Math.round(data.temps[h]);
             const rain = data.rains[h];

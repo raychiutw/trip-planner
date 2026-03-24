@@ -75,7 +75,7 @@ test.describe('頁面載入', () => {
     const brand = page.locator('.nav-brand');
     await expect(brand).toBeVisible();
     const text = await brand.textContent();
-    expect(text).not.toBe('Trip Planner');
+    expect(text).not.toBe('Tripline');
     expect(text?.length).toBeGreaterThan(0);
   });
 
@@ -320,7 +320,7 @@ test.describe('地圖連結與餐廳', () => {
       var exp = Date.now() + 180 * 86400000;
       localStorage.setItem('tp-trip-pref', JSON.stringify({ v: 'busan-trip-2026-CeliaDemyKathy', exp: exp }));
     });
-    await page.goto('/?trip=busan-trip-2026-CeliaDemyKathy');
+    await page.goto('/trip/busan-trip-2026-CeliaDemyKathy');
     await page.locator('.day-section').first().waitFor({ timeout: 10000 });
     await page.waitForTimeout(1000);
     const nLinks = page.locator('a.map-link.naver');
@@ -508,16 +508,16 @@ test.describe('Dark mode 持久化', () => {
   });
 });
 
-/* ===== 15. ?trip= URL 參數載入 ===== */
-test.describe('?trip= URL 參數', () => {
-  test('?trip= 參數載入對應行程', async ({ page }) => {
-    await page.goto('/?trip=okinawa-trip-2026-Ray');
+/* ===== 15. /trip/{id} 路徑載入 ===== */
+test.describe('/trip/{id} 路徑載入', () => {
+  test('/trip/{id} 路徑載入對應行程', async ({ page }) => {
+    await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.waitForTimeout(1000);
 
     // 頁面應載入行程內容
     await expect(page.locator('body')).toBeAttached();
-    // URL 應維持 trip 參數
-    expect(page.url()).toContain('trip=okinawa-trip-2026-Ray');
+    // URL 應包含 /trip/ 路徑
+    expect(page.url()).toContain('/trip/okinawa-trip-2026-Ray');
   });
 });
 
@@ -779,7 +779,7 @@ test.describe('FAB 修改行程按鈕', () => {
   });
 
   test('FAB 連結指向 manage 頁面', async ({ page }) => {
-    await page.goto('/?trip=okinawa-trip-2026-Ray');
+    await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.waitForTimeout(500);
     const fab = page.locator('#editFab');
     const href = await fab.getAttribute('href');
@@ -798,7 +798,7 @@ test.describe('FAB 修改行程按鈕', () => {
 /* ===== 23a. 行程載入失敗 ===== */
 test.describe('行程載入失敗', () => {
   test('不存在的行程顯示錯誤訊息與設定連結', async ({ page }) => {
-    await page.goto('/?trip=nonexistent-trip-999');
+    await page.goto('/trip/nonexistent-trip-999');
     await page.waitForTimeout(1000);
 
     const errorBlock = page.locator('.trip-error');

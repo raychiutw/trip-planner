@@ -30,7 +30,7 @@ import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
 import TpLogo from '../components/shared/TpLogo';
 import Toast from '../components/shared/Toast';
-import { DividerArt, FooterArt, NavArt } from '../components/trip/ThemeArt';
+import { FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
 import DayArt from '../components/trip/DayArt';
 import TodayRouteSheet from '../components/trip/TodayRouteSheet';
@@ -253,15 +253,22 @@ function getLocalToday(tripId: string | null): string {
 
 /* ===== URL helpers ===== */
 
+/** Extract tripId from pathname /trip/{tripId} */
+function getTripIdFromPath(): string | null {
+  const match = window.location.pathname.match(/^\/trip\/(.+?)(?:\/|$)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function getUrlTrip(): string | null {
+  // Priority 1: pathname /trip/{tripId}
+  const fromPath = getTripIdFromPath();
+  if (fromPath) return fromPath;
+  // Priority 2: query string ?trip=xxx (backwards compat)
   return new URLSearchParams(window.location.search).get('trip');
 }
 
 function setUrlTrip(tripId: string): void {
-  const url = new URL(window.location.href);
-  if (tripId) url.searchParams.set('trip', tripId);
-  else url.searchParams.delete('trip');
-  history.replaceState(null, '', url.toString());
+  window.history.replaceState(null, '', `/trip/${tripId}${window.location.search}`);
 }
 
 /* ===== Scroll helper ===== */
@@ -896,9 +903,6 @@ export default function TripPage() {
 
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ theme: colorTheme, dark: isDark }), [colorTheme, isDark]);
-
-  /* --- Stabilize currentDay-derived references to improve memo effectiveness (#13) --- */
-  const timeline = useMemo(() => currentDay?.timeline ?? [], [currentDay]);
 
   /* --- Footer data (#4: proper FooterData type) --- */
   const footerData = useMemo((): FooterData | null => {

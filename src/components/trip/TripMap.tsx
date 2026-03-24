@@ -14,7 +14,7 @@
  *   Day 5: #9C27B0  Day 6: #00ACC1  Day 7: #FF7043  Day 8+: #78909C（循環）
  */
 
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import clsx from 'clsx';
 import { useGoogleMaps } from '../../hooks/useGoogleMaps';
 import { lsGet, lsSet } from '../../lib/localStorage';

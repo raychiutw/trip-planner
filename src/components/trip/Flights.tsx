@@ -1,5 +1,4 @@
 import Icon from '../shared/Icon';
-import { escUrl } from '../../lib/sanitize';
 
 /* ===== Types ===== */
 

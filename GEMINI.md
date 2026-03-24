@@ -1,7 +1,7 @@
-# Trip Planner
+# Tripline
 
 ## Project Overview
-Trip Planner is a frontend web application for creating, managing, and viewing travel itineraries. It uses a custom build process to convert Markdown-based trip data (`data/trips-md/`) into JSON format (`data/dist/`) for the frontend to consume.
+Tripline is a frontend web application for creating, managing, and viewing travel itineraries. It uses a custom build process to convert Markdown-based trip data (`data/trips-md/`) into JSON format (`data/dist/`) for the frontend to consume.
 
 ### Technologies
 - **Frontend**: HTML, CSS (Custom Design System), Vanilla JavaScript.
