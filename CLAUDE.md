@@ -1,4 +1,4 @@
-# 行程規劃網站（trip-planner）
+# Tripline — 行程共享網站
 
 ## gstack Sprint Pipeline
 

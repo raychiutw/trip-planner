@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import clsx from 'clsx';
 import Icon from '../components/shared/Icon';
-import TpLogo from '../components/shared/TpLogo';
+import TriplineLogo from '../components/shared/TriplineLogo';
 import Toast from '../components/shared/Toast';
 import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch } from '../hooks/useApi';
@@ -313,7 +313,8 @@ export default function ManagePage() {
 
   /* ----- Close button ----- */
   const handleClose = useCallback(() => {
-    window.location.href = '../index.html';
+    const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
+    window.location.href = tripId ? `/trip/${tripId}` : '/';
   }, []);
 
   /* ===== Render ===== */
@@ -323,7 +324,7 @@ export default function ManagePage() {
       <div className="container">
         {/* ----- Sticky Nav ----- */}
         <div className="sticky-nav" id="stickyNav">
-          <TpLogo isOnline={isOnline} />
+          <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
               className="manage-trip-select manage-trip-select--center"

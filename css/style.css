@@ -109,8 +109,8 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
   color: var(--color-success);
 }
 
-/* ===== TP Logo ===== */
-.tp-logo {
+/* ===== Tripline Logo ===== */
+.tripline-logo {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -118,8 +118,8 @@ footer p { font-size: var(--font-size-callout); margin-top: 4px; }
   line-height: 0;
 }
 
-.tp-logo--offline {
-  /* offline state uses --color-disabled for the TP strokes (applied inline in SVG) */
+.tripline-logo--offline {
+  /* offline state uses --color-disabled for the Tripline strokes (applied inline in SVG) */
 }
 
 /* ===== Offline disabled main content ===== */

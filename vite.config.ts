@@ -86,6 +86,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // ⚠️ WARNING: proxies to PRODUCTION — writes during dev hit real data
+      // Use staging: 'https://trip-planner-db-staging.pages.dev' for safe testing
       '/api': {
         target: 'https://trip-planner-dby.pages.dev',
         changeOrigin: true,

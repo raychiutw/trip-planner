@@ -18,7 +18,7 @@ interface InfoPanelProps {
 /* ===== Component ===== */
 
 export default function InfoPanel({
-  days,
+  days: _days,
   currentDay,
 }: InfoPanelProps) {
   /* --- Current day transport summary --- */

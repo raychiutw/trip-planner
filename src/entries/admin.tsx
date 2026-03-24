@@ -8,7 +8,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import '../../css/shared.css';
 import '../../css/admin.css';

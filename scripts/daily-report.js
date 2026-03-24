@@ -309,7 +309,7 @@ function buildHtml(results) {
   return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="' +
     'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;' +
     'max-width:640px;margin:0 auto;padding:16px;color:#1a1a1a;background:#f8f9fa;">' +
-    '<h1 style="font-size:20px;margin:0 0 16px;color:#0f172a;">Trip Planner 日報 — ' +
+    '<h1 style="font-size:20px;margin:0 0 16px;color:#0f172a;">Tripline 日報 — ' +
     formatDate() + '</h1>' +
     sections.join('') +
     '<p style="margin-top:24px;font-size:12px;color:#94a3b8;">自動產生，由 GitHub Actions 寄出</p>' +

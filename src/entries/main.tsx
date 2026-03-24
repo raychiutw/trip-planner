@@ -8,7 +8,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 import TripPage from '../pages/TripPage';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';

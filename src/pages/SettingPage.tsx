@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode, type ColorMode, type ColorTheme } from '../hooks/useDarkMode';
@@ -79,7 +79,7 @@ export default function SettingPage() {
   /* --- handlers --- */
   const handleTripClick = useCallback((tripId: string) => {
     lsSet(LS_KEY_TRIP_PREF, tripId);
-    window.location.href = 'index.html';
+    window.location.href = `/trip/${tripId}`;
   }, []);
 
   const handleColorModeClick = useCallback((mode: ColorMode) => {
@@ -91,7 +91,8 @@ export default function SettingPage() {
   }, [setTheme]);
 
   const handleClose = useCallback(() => {
-    window.location.href = 'index.html';
+    const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
+    window.location.href = tripId ? `/trip/${tripId}` : '/';
   }, []);
 
   /* --- render --- */

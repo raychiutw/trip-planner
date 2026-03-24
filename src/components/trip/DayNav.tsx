@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState, useLayoutEffect } from 'react';
+import { useRef, useCallback, useEffect, useState, useLayoutEffect } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 
