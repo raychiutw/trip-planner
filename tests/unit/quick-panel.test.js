@@ -184,27 +184,18 @@ describe('COLOR_THEMES 驗證（appearance.ts）', () => {
   });
 });
 
-/* ===== #1: DRY — TripPage 和 SettingPage 都 import from appearance.ts ===== */
+/* ===== #1: DRY — TripPage imports from appearance.ts ===== */
 
 describe('DRY: 常數不重複定義', () => {
   const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
-  const settingPageTsx = readFileSync('src/pages/SettingPage.tsx', 'utf-8');
 
   it('TripPage imports from appearance.ts', () => {
     expect(tripPageTsx).toContain("from '../lib/appearance'");
   });
 
-  it('SettingPage imports from appearance.ts', () => {
-    expect(settingPageTsx).toContain("from '../lib/appearance'");
-  });
-
   it('TripPage 不再本地定義 COLOR_THEMES', () => {
     // 不應有 const COLOR_THEMES 定義（但 import 是允許的）
     expect(tripPageTsx).not.toMatch(/const COLOR_THEMES/);
-  });
-
-  it('SettingPage 不再本地定義 COLOR_THEMES', () => {
-    expect(settingPageTsx).not.toMatch(/const COLOR_THEMES/);
   });
 });
 

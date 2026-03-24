@@ -1,9 +1,0 @@
-/* ===== Setting Page Layout (desktop override — base rules in shared.css) ===== */
-@media (min-width: 768px) {
-    .setting-page { max-width: var(--page-max-w); padding-top: 48px; }
-}
-.setting-main { padding-bottom: 40px; }
-
-/* ===== Sticky-nav: restore sticky + spacer for title centering ===== */
-.page-simple .sticky-nav { position: sticky; top: 0; z-index: var(--z-sticky-nav); }
-.page-simple .sticky-nav::before { content: ''; width: var(--tap-min); flex-shrink: 0; }

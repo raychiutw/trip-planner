@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import clsx from 'clsx';
@@ -64,7 +65,7 @@ const NO_TRIP_VIEW = (
       <div id="tripContent">
         <div className="trip-error">
           <p>請選擇行程</p>
-          <a className="trip-error-link" href="/setting.html">前往設定頁</a>
+          <a className="trip-error-link" href="/">前往首頁</a>
         </div>
       </div>
     </div>
@@ -253,22 +254,9 @@ function getLocalToday(tripId: string | null): string {
 
 /* ===== URL helpers ===== */
 
-/** Extract tripId from pathname /trip/{tripId} */
-function getTripIdFromPath(): string | null {
-  const match = window.location.pathname.match(/^\/trip\/(.+?)(?:\/|$)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-function getUrlTrip(): string | null {
-  // Priority 1: pathname /trip/{tripId}
-  const fromPath = getTripIdFromPath();
-  if (fromPath) return fromPath;
-  // Priority 2: query string ?trip=xxx (backwards compat)
+// Legacy query-string compat (React Router handles path-based routing)
+function getQueryTrip(): string | null {
   return new URLSearchParams(window.location.search).get('trip');
-}
-
-function setUrlTrip(tripId: string): void {
-  window.history.replaceState(null, '', `/trip/${tripId}${window.location.search}`);
 }
 
 /* ===== Scroll helper ===== */
@@ -313,6 +301,8 @@ type ResolveState =
 /* ===== Component ===== */
 
 export default function TripPage() {
+  const { tripId: urlTripId } = useParams<{ tripId: string }>();
+  const navigate = useNavigate();
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
@@ -390,9 +380,12 @@ export default function TripPage() {
   /* Fix 5: resolveKey in deps allows re-triggering without full page reload */
   useEffect(() => {
     let cancelled = false;
-    let tripId = getUrlTrip();
+    // Priority 1: React Router params (/trip/:tripId)
+    // Priority 2: legacy query string ?trip=xxx
+    // Priority 3: localStorage
+    let tripId: string | null = (urlTripId && /^[\w-]+$/.test(urlTripId)) ? urlTripId : null;
+    if (!tripId) tripId = getQueryTrip();
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
-      // 僅在 URL 無合法 trip 參數時才 fallback 到 localStorage
       tripId = lsGet<string>(LS_KEY_TRIP_PREF);
     }
 
@@ -411,22 +404,20 @@ export default function TripPage() {
         if (match && match.published === 0) {
           lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
-          setTimeout(() => { window.location.href = '/setting.html'; }, 2000);
+          setTimeout(() => { navigate('/trip/okinawa-trip-2026-Ray', { replace: true }); }, 2000);
           return;
         }
-        setUrlTrip(tripId!);
         lsSet(LS_KEY_TRIP_PREF, tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
       })
       .catch(() => {
         if (cancelled) return;
-        setUrlTrip(tripId!);
         lsSet(LS_KEY_TRIP_PREF, tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
       });
 
     return () => { cancelled = true; };
-  }, [resolveKey]);
+  }, [resolveKey, urlTripId, navigate]);
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
@@ -918,11 +909,11 @@ export default function TripPage() {
 
   /* --- Fix 5: Trip change without full page reload --- */
   const handleTripChange = useCallback((tripId: string) => {
-    setUrlTrip(tripId);
+    navigate(`/trip/${tripId}${window.location.search}`, { replace: true });
     lsSet(LS_KEY_TRIP_PREF, tripId);
     setActiveSheet(null);
     setResolveKey((k) => k + 1);
-  }, []);
+  }, [navigate]);
 
   /* --- Sheet content (#2: driving shows actual stats) --- */
   const sheetContent = useMemo(() => {
@@ -1052,7 +1043,7 @@ export default function TripPage() {
           <div id="tripContent">
             <div className="trip-error">
               <p>行程不存在：{activeTripId}</p>
-              <a className="trip-error-link" href="/setting.html">選擇其他行程</a>
+              <a className="trip-error-link" href="/">選擇其他行程</a>
             </div>
           </div>
         </div>

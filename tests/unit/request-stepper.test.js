@@ -3,25 +3,10 @@ import { describe, it, expect } from 'vitest';
 
 /**
  * RequestStepper structural validations — TSX source checks.
+ * CSS classes replaced with Tailwind utilities (manage.css removed).
  */
 
 const tsx = readFileSync('src/components/shared/RequestStepper.tsx', 'utf-8');
-const css = readFileSync('css/manage.css', 'utf-8');
-
-/* ===== Helpers ===== */
-
-/** Extract all CSS rules containing a given selector substring */
-function rulesFor(source, selector) {
-  const rules = [];
-  const re = /([^{}]+)\{([^}]*)\}/g;
-  let m;
-  while ((m = re.exec(source))) {
-    if (m[1].includes(selector)) {
-      rules.push({ selector: m[1].trim(), body: m[2].trim() });
-    }
-  }
-  return rules;
-}
 
 /* ===== STEPS 定義驗證 ===== */
 
@@ -55,87 +40,67 @@ describe('RequestStepper STEPS', () => {
   });
 });
 
-/* ===== 圓點 class 驗證 ===== */
+/* ===== 圓點 Tailwind class 驗證 ===== */
 
-describe('RequestStepper dot classes', () => {
-  it('renders stepper-dot--done for completed steps', () => {
-    expect(tsx).toContain("'stepper-dot--done'");
+describe('RequestStepper dot Tailwind classes', () => {
+  it('renders done dot with accent background color', () => {
+    expect(tsx).toContain('bg-[var(--color-accent)]');
   });
 
-  it('renders stepper-dot--active for current step', () => {
-    expect(tsx).toContain("'stepper-dot--active'");
+  it('renders active dot with accent border', () => {
+    expect(tsx).toContain('border-[var(--color-accent)]');
   });
 
-  it('renders stepper-dot--pending for future steps', () => {
-    expect(tsx).toContain("'stepper-dot--pending'");
-  });
-});
-
-/* ===== 連接線 class 驗證 ===== */
-
-describe('RequestStepper line classes', () => {
-  it('renders stepper-line--done for completed connections', () => {
-    expect(tsx).toContain("'stepper-line--done'");
-  });
-
-  it('renders stepper-line--pending for future connections', () => {
-    expect(tsx).toContain("'stepper-line--pending'");
+  it('renders pending dot with border color', () => {
+    expect(tsx).toContain('border-[var(--color-border)]');
   });
 });
 
-/* ===== Label class 驗證 ===== */
+/* ===== 連接線 Tailwind class 驗證 ===== */
 
-describe('RequestStepper label classes', () => {
-  it('renders stepper-label--active for current step', () => {
-    expect(tsx).toContain("'stepper-label--active'");
+describe('RequestStepper line Tailwind classes', () => {
+  it('renders done/active line with accent background', () => {
+    expect(tsx).toContain("'bg-[var(--color-accent)]'");
   });
 
-  it('renders stepper-label--done for completed steps', () => {
-    expect(tsx).toContain("'stepper-label--done'");
-  });
-
-  it('renders stepper-label--pending for future steps', () => {
-    expect(tsx).toContain("'stepper-label--pending'");
+  it('renders pending line with border background', () => {
+    expect(tsx).toContain("'bg-[var(--color-border)]'");
   });
 });
 
-/* ===== CSS 規則驗證 ===== */
+/* ===== Label Tailwind class 驗證 ===== */
 
-describe('RequestStepper CSS', () => {
-  it('defines .request-stepper with flex layout', () => {
-    const rules = rulesFor(css, '.request-stepper');
-    expect(rules.length).toBeGreaterThan(0);
-    expect(rules[0].body).toContain('display: flex');
+describe('RequestStepper label Tailwind classes', () => {
+  it('renders active label with accent color and semibold', () => {
+    expect(tsx).toContain('text-[var(--color-accent)] font-semibold');
   });
 
-  it('defines stepper-dot base with border-radius 50%', () => {
-    const rules = rulesFor(css, '.stepper-dot');
-    const base = rules.find(r => r.selector === '.stepper-dot');
-    expect(base).toBeDefined();
-    expect(base.body).toContain('border-radius: 50%');
+  it('renders done/pending labels with muted color', () => {
+    expect(tsx).toContain('text-[var(--color-muted)]');
+  });
+});
+
+/* ===== Animation 驗證 ===== */
+
+describe('RequestStepper animation', () => {
+  it('defines stepper-pulse keyframes inline', () => {
+    expect(tsx).toContain('@keyframes stepper-pulse');
   });
 
-  it('defines stepper-dot--done with accent background', () => {
-    const rules = rulesFor(css, '.stepper-dot--done');
-    expect(rules.length).toBeGreaterThan(0);
-    expect(rules[0].body).toContain('var(--color-accent)');
+  it('applies stepper-pulse animation to active dot', () => {
+    expect(tsx).toContain('stepper-dot-active');
+    expect(tsx).toContain('stepper-pulse');
+  });
+});
+
+/* ===== 結構驗證 ===== */
+
+describe('RequestStepper structure', () => {
+  it('uses flex layout for stepper container', () => {
+    expect(tsx).toContain('flex items-center');
   });
 
-  it('defines stepper-dot--active with accent border', () => {
-    const rules = rulesFor(css, '.stepper-dot--active');
-    const borderRule = rules.find(r => r.body.includes('border'));
-    expect(borderRule).toBeDefined();
-    expect(borderRule.body).toContain('var(--color-accent)');
-  });
-
-  it('defines stepper-pulse keyframes', () => {
-    expect(css).toContain('@keyframes stepper-pulse');
-  });
-
-  it('defines stepper-label with caption2 font size', () => {
-    const rules = rulesFor(css, '.stepper-label');
-    const base = rules.find(r => r.selector === '.stepper-label');
-    expect(base).toBeDefined();
-    expect(base.body).toContain('var(--font-size-caption2)');
+  it('uses caption2 font size for labels', () => {
+    expect(tsx).toContain('var(--font-size-caption2)');
   });
 });

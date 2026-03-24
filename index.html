@@ -23,15 +23,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&display=swap" rel="stylesheet">
     <link rel="preconnect" href="https://api.open-meteo.com">
-    <script>
-    // Root redirect: /?trip=xxx → /trip/xxx, / → /trip/{default}
-    (function() {
-      var p = new URLSearchParams(location.search);
-      var t = p.get('trip');
-      if (t) { p.delete('trip'); var q = p.toString(); location.replace('/trip/' + t + (q ? '?' + q : '')); }
-      else if (location.pathname === '/') { fetch('/api/trips').then(function(r){return r.json()}).then(function(d){var f=d.find(function(x){return x.is_default})||d[0];if(f)location.replace('/trip/'+f.tripId)}).catch(function(){}); }
-    })();
-    </script>
 </head>
 <body>
     <div id="reactRoot"></div>
