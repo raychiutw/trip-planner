@@ -855,9 +855,9 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     border-top: 4px solid var(--color-muted);
 }
 .sheet-header {
-    display: flex;
+    display: grid;
+    grid-template-columns: var(--tap-min) 1fr var(--tap-min);
     align-items: center;
-    gap: 8px;
     margin-bottom: 8px;
 }
 .sheet-close-btn {
