@@ -59,19 +59,6 @@ const UNPUBLISHED_CLASS = 'text-[var(--color-muted)] mt-2';
 
 /* ===== Static early-return views (#13: hoist to module level) ===== */
 
-const NO_TRIP_VIEW = (
-  <div className="page-layout">
-    <div className="container">
-      <div id="tripContent">
-        <div className="trip-error">
-          <p>請選擇行程</p>
-          <a className="trip-error-link" href="/">前往首頁</a>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
 const UNPUBLISHED_VIEW = (
   <div className="page-layout">
     <div className="container">
@@ -294,7 +281,6 @@ const SHEET_TITLES: Record<string, string> = {
 
 type ResolveState =
   | { status: 'loading' }
-  | { status: 'no-trip' }
   | { status: 'unpublished' }
   | { status: 'resolved'; tripId: string };
 
@@ -376,7 +362,7 @@ export default function TripPage() {
     return () => { cancelled = true; };
   }, [activeSheet, sheetTrips.length]);
 
-  /* --- Resolve trip ID from URL / localStorage (#6: cancelled guard) --- */
+  /* --- Resolve trip ID from URL / localStorage / default (#6: cancelled guard) --- */
   /* Fix 5: resolveKey in deps allows re-triggering without full page reload */
   useEffect(() => {
     let cancelled = false;
@@ -389,31 +375,39 @@ export default function TripPage() {
       tripId = lsGet<string>(LS_KEY_TRIP_PREF);
     }
 
-    if (!tripId) {
-      setResolveState({ status: 'no-trip' });
-      return;
-    }
-
     // Reset scroll tracking for new trip
     initialScrollDone.current = false;
 
     apiFetch<TripListItem[]>('/trips')
       .then((trips) => {
         if (cancelled) return;
-        const match = trips.find((t) => t.tripId === tripId);
+
+        // 找出預設行程（is_default=1）作為最終 fallback
+        const defaultTrip = trips.find((t) => t.is_default === 1);
+
+        // 比對 tripId 是否存在於已發布行程中
+        const match = tripId ? trips.find((t) => t.tripId === tripId) : null;
+
         if (match && match.published === 0) {
           lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
           setTimeout(() => { navigate('/trip/okinawa-trip-2026-Ray', { replace: true }); }, 2000);
           return;
         }
-        lsSet(LS_KEY_TRIP_PREF, tripId!);
-        setResolveState({ status: 'resolved', tripId: tripId! });
+
+        // 優先用 URL/localStorage 比對到的行程，比對不到則用預設行程
+        const resolvedId = match ? match.tripId : defaultTrip!.tripId;
+
+        lsSet(LS_KEY_TRIP_PREF, resolvedId);
+        setResolveState({ status: 'resolved', tripId: resolvedId });
       })
       .catch(() => {
         if (cancelled) return;
-        lsSet(LS_KEY_TRIP_PREF, tripId!);
-        setResolveState({ status: 'resolved', tripId: tripId! });
+        // API 失敗時仍嘗試用現有 tripId（離線容錯）
+        if (tripId) {
+          lsSet(LS_KEY_TRIP_PREF, tripId);
+          setResolveState({ status: 'resolved', tripId });
+        }
       });
 
     return () => { cancelled = true; };
@@ -1032,7 +1026,6 @@ export default function TripPage() {
   }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, handleTripChange, colorMode, setColorMode, colorTheme, setTheme, isDark]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
-  if (resolveState.status === 'no-trip') return NO_TRIP_VIEW;
   if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
   if (resolveState.status === 'loading') return LOADING_VIEW;
 

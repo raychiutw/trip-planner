@@ -231,6 +231,8 @@ export interface TripListItem {
   auto_scroll?: string | null;
   /** DB column `footer_json` — raw JSON string at list endpoint */
   footer_json?: string | null;
+  /** DB column `is_default` (INTEGER 0|1) */
+  is_default?: number;
 }
 
 /**
