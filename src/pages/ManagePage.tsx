@@ -191,8 +191,9 @@ export default function ManagePage() {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      if (myRes.status === 401) {
-        if (!cancelled) setPageState({ kind: 'auth-required' });
+      if (myRes.status === 401 || myRes.status === 403) {
+        // Trigger Cloudflare Access login via full page reload
+        window.location.replace('/manage');
         return;
       }
       if (!myRes.ok) {

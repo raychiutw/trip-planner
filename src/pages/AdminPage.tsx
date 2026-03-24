@@ -63,6 +63,7 @@ export default function AdminPage() {
 
     try {
       const r = await apiFetchRaw('/permissions?tripId=' + encodeURIComponent(tripId));
+      if (r.status === 401) { window.location.replace('/admin'); return; }
       if (r.status === 403) throw new Error('僅管理者可操作');
       if (!r.ok) throw new Error('載入失敗');
       const perms: Permission[] = await r.json();
