@@ -22,7 +22,7 @@ const PANEL_ITEMS: PanelItemConfig[] = [
   { key: 'emergency', icon: 'emergency', label: '緊急', action: 'sheet', section: 'A' },
   { key: 'backup', icon: 'backup', label: '備案', action: 'sheet', section: 'A' },
   // Section B row 1: 行程工具
-  { key: 'suggestions', icon: 'lightbulb', label: '建議', action: 'sheet', section: 'B' },
+  { key: 'suggestions', icon: 'lightbulb', label: '解籤', action: 'sheet', section: 'B' },
   { key: 'today-route', icon: 'route', label: '路線', action: 'sheet', section: 'B' },
   { key: 'driving', icon: 'car', label: '交通', action: 'sheet', section: 'B' },
   // Section B row 2: 快捷設定（#9: 標題與 InfoSheet 一致）

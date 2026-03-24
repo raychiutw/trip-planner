@@ -265,7 +265,7 @@ const SHEET_TITLES: Record<string, string> = {
   checklist: '出發前確認',
   backup: '備案',
   emergency: '緊急聯絡',
-  suggestions: 'AI 行程建議',
+  suggestions: 'AI 解籤',
   driving: '交通統計',
   'today-route': '今日路線',
   'trip-select': '切換行程',
@@ -606,7 +606,7 @@ export default function TripPage() {
         // Docs
         const docLabels: Record<string, string> = {
           flights: '✈️ 航班資訊', checklist: '✅ 出發前確認清單',
-          backup: '🔄 備案', emergency: '🚨 緊急聯絡', suggestions: '💡 AI 行程建議',
+          backup: '🔄 備案', emergency: '🚨 緊急聯絡', suggestions: '🔮 AI 解籤',
         };
         for (const dtype of DOC_TYPES) {
           const docData = docsMap[dtype];
@@ -683,7 +683,7 @@ export default function TripPage() {
         // Append docs as separate rows
         const DOC_LABELS: Record<string, string> = {
           flights: '航班資訊', checklist: '出發前確認清單',
-          backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 行程建議',
+          backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 解籤',
         };
         for (const dtype of DOC_TYPES) {
           const docData = docsMap[dtype];
@@ -923,7 +923,7 @@ export default function TripPage() {
       case 'emergency':
         return emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>;
       case 'suggestions':
-        return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>無行程建議</p>;
+        return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>;
       case 'today-route':
         return currentDay && currentDay.timeline.length > 0
           ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({}))} />
@@ -950,7 +950,7 @@ export default function TripPage() {
       case 'ai-group':
         return (
           <>
-            <div className="info-card">{suggestionsData ? <Suggestions data={suggestionsData} /> : <p>無行程建議</p>}</div>
+            <div className="info-card">{suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>}</div>
             <div className="info-card">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
           </>
         );
