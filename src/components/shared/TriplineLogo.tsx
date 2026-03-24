@@ -4,10 +4,9 @@ interface TriplineLogoProps {
 }
 
 /**
- * Tripline Logo — V3 style: "Tripline" text with triple wave lines.
+ * Tripline Logo — V3 style: handwritten "Tripline" text with triple wave lines.
  * Two wave lines pass through text body, one main arc below text with endpoint dots.
- * Online:  accent color
- * Offline: grey strokes + red WiFi-off badge
+ * Font: Caveat (Google Fonts handwriting)
  */
 export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
   const mainColor = isOnline ? 'var(--color-accent)' : 'var(--color-disabled)';
@@ -20,9 +19,9 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
       aria-label={isOnline ? 'Tripline' : 'Tripline（離線）'}
     >
       <svg
-        width="160"
-        height="32"
-        viewBox="0 0 160 32"
+        width="130"
+        height="36"
+        viewBox="0 0 130 36"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
@@ -30,7 +29,7 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
       >
         {/* Wave line 1: through text upper body */}
         <path
-          d="M4 10 Q24 7, 44 10 Q64 13, 84 10 Q104 7, 118 10"
+          d="M3 12 Q22 8, 42 12 Q62 16, 82 12 Q102 8, 115 12"
           stroke={midColor}
           strokeWidth="1.8"
           fill="none"
@@ -39,39 +38,39 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
         />
         {/* Wave line 2: through text lower body */}
         <path
-          d="M4 15 Q18 12.5, 32 15 Q46 17.5, 60 15 Q74 12.5, 88 15 Q98 17.5, 108 15"
+          d="M3 17 Q16 14, 30 17 Q44 20, 58 17 Q72 14, 86 17 Q96 20, 105 17"
           stroke={lightColor}
           strokeWidth="1.5"
           fill="none"
           strokeLinecap="round"
           opacity="0.45"
         />
-        {/* Text: Tripline */}
+        {/* Text: Tripline — Caveat handwriting font */}
         <text
-          x="4"
-          y="21"
-          fontFamily="Comfortaa, 'Nunito', sans-serif"
-          fontWeight="700"
-          fontSize="22"
+          x="3"
+          y="24"
+          fontFamily="Caveat, 'Patrick Hand', cursive"
+          fontWeight="600"
+          fontSize="29"
           fill="var(--color-foreground)"
         >
           Tripline
         </text>
         {/* Main arc below text, extends beyond */}
         <path
-          d="M4 26 Q42 22, 80 26 Q118 30, 155 25"
+          d="M3 29 Q35 25, 65 29 Q100 33, 128 27"
           stroke={mainColor}
           strokeWidth="2.2"
           fill="none"
           strokeLinecap="round"
         />
         {/* Start dot */}
-        <circle cx="4" cy="26" r="2.2" fill={mainColor} />
+        <circle cx="3" cy="29" r="2.2" fill={mainColor} />
         {/* End dot */}
-        <circle cx="155" cy="25" r="2.2" fill={mainColor} />
+        <circle cx="128" cy="27" r="2.2" fill={mainColor} />
         {/* WiFi-off badge */}
         {!isOnline && (
-          <g transform="translate(138, 6)">
+          <g transform="translate(112, 8)">
             <circle cx="7" cy="7" r="7.5" fill="var(--color-destructive)" />
             <path d="M4 5.5 a5 5 0 0 1 6 0" stroke="var(--color-accent-foreground)" strokeWidth="1.2" strokeLinecap="round" />
             <path d="M5 7.5 a3 3 0 0 1 4 0" stroke="var(--color-accent-foreground)" strokeWidth="1.2" strokeLinecap="round" />
