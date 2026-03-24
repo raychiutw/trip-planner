@@ -20,9 +20,9 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
       aria-label={isOnline ? 'Tripline' : 'Tripline（離線）'}
     >
       <svg
-        width="130"
-        height="26"
-        viewBox="0 0 130 26"
+        width="160"
+        height="32"
+        viewBox="0 0 160 32"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         aria-hidden="true"
@@ -30,18 +30,18 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
       >
         {/* Wave line 1: through text upper body */}
         <path
-          d="M4 8 Q20 5.5, 36 8 Q52 10.5, 68 8 Q84 5.5, 95 8"
+          d="M4 10 Q24 7, 44 10 Q64 13, 84 10 Q104 7, 118 10"
           stroke={midColor}
-          strokeWidth="1.6"
+          strokeWidth="1.8"
           fill="none"
           strokeLinecap="round"
           opacity="0.6"
         />
         {/* Wave line 2: through text lower body */}
         <path
-          d="M4 12 Q16 10, 26 12 Q36 14, 46 12 Q56 10, 66 12 Q76 14, 86 12"
+          d="M4 15 Q18 12.5, 32 15 Q46 17.5, 60 15 Q74 12.5, 88 15 Q98 17.5, 108 15"
           stroke={lightColor}
-          strokeWidth="1.3"
+          strokeWidth="1.5"
           fill="none"
           strokeLinecap="round"
           opacity="0.45"
@@ -49,29 +49,29 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
         {/* Text: Tripline */}
         <text
           x="4"
-          y="17"
+          y="21"
           fontFamily="Comfortaa, 'Nunito', sans-serif"
           fontWeight="700"
-          fontSize="18"
+          fontSize="22"
           fill="var(--color-foreground)"
         >
           Tripline
         </text>
         {/* Main arc below text, extends beyond */}
         <path
-          d="M4 21 Q35 18, 65 21 Q95 24, 126 20"
+          d="M4 26 Q42 22, 80 26 Q118 30, 155 25"
           stroke={mainColor}
-          strokeWidth="2"
+          strokeWidth="2.2"
           fill="none"
           strokeLinecap="round"
         />
         {/* Start dot */}
-        <circle cx="4" cy="21" r="2" fill={mainColor} />
+        <circle cx="4" cy="26" r="2.2" fill={mainColor} />
         {/* End dot */}
-        <circle cx="126" cy="20" r="2" fill={mainColor} />
+        <circle cx="155" cy="25" r="2.2" fill={mainColor} />
         {/* WiFi-off badge */}
         {!isOnline && (
-          <g transform="translate(110, 4)">
+          <g transform="translate(138, 6)">
             <circle cx="7" cy="7" r="7.5" fill="var(--color-destructive)" />
             <path d="M4 5.5 a5 5 0 0 1 6 0" stroke="var(--color-accent-foreground)" strokeWidth="1.2" strokeLinecap="round" />
             <path d="M5 7.5 a3 3 0 0 1 4 0" stroke="var(--color-accent-foreground)" strokeWidth="1.2" strokeLinecap="round" />

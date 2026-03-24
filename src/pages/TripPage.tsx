@@ -1064,6 +1064,7 @@ export default function TripPage() {
     <>
       {/* Sticky Nav */}
       <div className="sticky-nav" id="stickyNav">
+        {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
         <TriplineLogo isOnline={isOnline} />
         <span className={clsx('nav-inline-title', showNavTitle && 'visible')}>
           {trip?.title || trip?.name}

@@ -21,13 +21,6 @@ function OkinawaLight() {
       {/* Waves */}
       <path d="M0 38 Q60 28 120 38 Q180 48 240 38 Q300 28 360 38 Q420 48 480 38" stroke="#2A8EB0" fill="none" strokeWidth="1.5" opacity="0.35" />
       <path d="M0 42 Q60 34 120 42 Q180 50 240 42 Q300 34 360 42 Q420 50 480 42" stroke="#40C0D8" fill="none" strokeWidth="1" opacity="0.20" />
-      {/* Shisa */}
-      <g transform="translate(60,8)" opacity="0.18">
-        <circle cx="0" cy="12" r="10" fill="#D4856C" />
-        <circle cx="-6" cy="9" r="2.5" fill="#2E2418" />
-        <circle cx="6" cy="9" r="2.5" fill="#2E2418" />
-        <path d="M-5 16 Q0 20 5 16" stroke="#2E2418" fill="none" strokeWidth="1.5" />
-      </g>
       {/* Coral */}
       <g transform="translate(200,28)" opacity="0.15">
         <path d="M0 16 Q2 8 0 0 M0 10 Q6 6 10 0 M0 12 Q-5 8 -8 2" stroke="#E86A4A" fill="none" strokeWidth="1.5" strokeLinecap="round" />
@@ -56,13 +49,6 @@ function OkinawaDark() {
     <>
       {/* Waves */}
       <path d="M0 38 Q60 28 120 38 Q180 48 240 38 Q300 28 360 38 Q420 48 480 38" stroke="#5090B0" fill="none" strokeWidth="1.5" opacity="0.20" />
-      {/* Shisa */}
-      <g transform="translate(60,8)" opacity="0.10">
-        <circle cx="0" cy="12" r="10" fill="#F4A08A" />
-        <circle cx="-6" cy="9" r="2.5" fill="#FBF3E8" />
-        <circle cx="6" cy="9" r="2.5" fill="#FBF3E8" />
-        <path d="M-5 16 Q0 20 5 16" stroke="#FBF3E8" fill="none" strokeWidth="1.5" />
-      </g>
       {/* Coral */}
       <g transform="translate(200,28)" opacity="0.08">
         <path d="M0 16 Q2 8 0 0 M0 10 Q6 6 10 0 M0 12 Q-5 8 -8 2" stroke="#F4A08A" fill="none" strokeWidth="1.5" strokeLinecap="round" />
