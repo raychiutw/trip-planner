@@ -768,7 +768,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .quick-panel-sheet:focus { outline: none; box-shadow: none; }
 
 .quick-panel-handle {
-    width: 36px; height: 4px; border-radius: 2px;
+    width: 40px; height: 4px; border-radius: 2px;
     background: var(--color-muted);
     margin: 12px auto 0;
 }
@@ -865,7 +865,7 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
     transition: transform var(--duration-sheet-open) var(--ease-spring);
 }
 .sheet-handle {
-    width: 36px; height: 4px;
+    width: 40px; height: 4px;
     background: var(--color-muted);
     border-radius: 2px;
     margin: 12px auto 4px;
