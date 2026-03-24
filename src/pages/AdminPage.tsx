@@ -265,19 +265,10 @@ export default function AdminPage() {
     );
   }
 
-  /* ----- page-simple class for admin page layout ----- */
-  useEffect(() => {
-    document.documentElement.classList.add('page-simple');
-    document.body.classList.add('page-simple');
-    return () => {
-      document.documentElement.classList.remove('page-simple');
-      document.body.classList.remove('page-simple');
-    };
-  }, []);
-
   return (
-    <div>
-      <div className="sticky-nav" id="stickyNav">
+    <div className="page-layout">
+      <div className="container">
+        <div className="sticky-nav" id="stickyNav">
           <TriplineLogo isOnline={isOnline} />
           <span className="nav-title">權限管理</span>
           <button className="nav-close-btn" id="navCloseBtn" aria-label="關閉" onClick={handleClose}>
@@ -380,6 +371,7 @@ export default function AdminPage() {
 
           </div>
         </main>
+      </div>
     </div>
   );
 }
