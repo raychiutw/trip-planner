@@ -64,7 +64,7 @@ const NO_TRIP_VIEW = (
       <div id="tripContent">
         <div className="trip-error">
           <p>請選擇行程</p>
-          <a className="trip-error-link" href="setting.html">前往設定頁</a>
+          <a className="trip-error-link" href="/setting.html">前往設定頁</a>
         </div>
       </div>
     </div>
@@ -411,7 +411,7 @@ export default function TripPage() {
         if (match && match.published === 0) {
           lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
-          setTimeout(() => { window.location.href = 'setting.html'; }, 2000);
+          setTimeout(() => { window.location.href = '/setting.html'; }, 2000);
           return;
         }
         setUrlTrip(tripId!);
@@ -1052,7 +1052,7 @@ export default function TripPage() {
           <div id="tripContent">
             <div className="trip-error">
               <p>行程不存在：{activeTripId}</p>
-              <a className="trip-error-link" href="setting.html">選擇其他行程</a>
+              <a className="trip-error-link" href="/setting.html">選擇其他行程</a>
             </div>
           </div>
         </div>
@@ -1174,7 +1174,7 @@ export default function TripPage() {
         <a
           className={clsx('edit-fab', !isOnline && 'disabled')}
           id="editFab"
-          href="manage/"
+          href="/manage/"
           aria-label="AI 修改行程"
           aria-disabled={!isOnline}
           tabIndex={isOnline ? undefined : -1}
