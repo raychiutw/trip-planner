@@ -1,5 +1,5 @@
 import { logAudit } from '../../../../_audit';
-import { json } from '../../../../_utils';
+import { json, getAuth } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 const ALLOWED_TABLES = ['trips', 'days', 'hotels', 'entries', 'restaurants', 'shopping', 'trip_docs'] as const;
@@ -31,13 +31,13 @@ interface AuditRow {
 // POST /api/trips/:id/audit/:aid/rollback
 // Only admin can rollback
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
   if (!auth.isAdmin) return json({ error: '僅管理者可執行回滾' }, 403);
 
   const { id, aid } = context.params as { id: string; aid: string };
   const db = context.env.DB;
-  const changedBy = auth?.email || 'anonymous';
+  const changedBy = auth.email;
 
   const auditRow = await db
     .prepare('SELECT * FROM audit_log WHERE id = ? AND trip_id = ?')

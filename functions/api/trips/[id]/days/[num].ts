@@ -1,7 +1,7 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
-import { json } from '../../../_utils';
+import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 function parseJsonField(row: Record<string, unknown>, field: string) {
@@ -20,7 +20,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, num } = context.params as { id: string; num: string };
   const db = context.env.DB;
 
-  // 1. Fetch the day row
   const day = await db
     .prepare('SELECT * FROM days WHERE trip_id = ? AND day_num = ?')
     .bind(id, Number(num))
@@ -32,7 +31,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const dayId = day.id as number;
 
-  // 2. Fetch hotel, entries, restaurants, shopping in parallel
   const [hotelResult, entriesResult, allRestaurantsResult, allShoppingResult] = await Promise.all([
     db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first() as Promise<Record<string, unknown> | null>,
     db.prepare('SELECT * FROM entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
@@ -40,7 +38,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     db.prepare("SELECT * FROM shopping WHERE parent_id IN (SELECT id FROM entries WHERE day_id = ?) AND parent_type = 'entry'").bind(dayId).all(),
   ]);
 
-  // 3. Hotel shopping + parking
   let hotel: Record<string, unknown> | null = null;
   if (hotelResult) {
     const hotelRow = hotelResult as Record<string, unknown>;
@@ -56,7 +53,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     hotel = { ...hotelRow, shopping: hotelShopping };
   }
 
-  // 4. Group restaurants and shopping by entry_id
   const restaurantsByEntry = new Map<number, unknown[]>();
   for (const r of allRestaurantsResult.results) {
     const row = r as Record<string, unknown>;
@@ -73,7 +69,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     shoppingByEntry.get(eid)!.push(s);
   }
 
-  // 5. Build timeline
   const timeline = entriesResult.results.map(e => {
     const entry = e as Record<string, unknown>;
     parseJsonField(entry, 'location_json');
@@ -94,7 +89,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     };
   });
 
-  // 6. Assemble response
   return json({
     id: dayId,
     day_num: day.day_num,
@@ -108,12 +102,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
 
   const { id, num } = context.params as { id: string; num: string };
-  const changedBy = auth?.email || 'anonymous';
+  const changedBy = auth.email;
   const db = context.env.DB;
+
+  // T6: hasPermission BEFORE existence check
+  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
+    return json({ error: '權限不足' }, 403);
+  }
 
   const day = await db
     .prepare('SELECT id FROM days WHERE trip_id = ? AND day_num = ?')
@@ -122,27 +121,19 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   if (!day) return json({ error: 'Not found' }, 404);
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
-  }
-
   const dayId = day.id;
 
-  // Snapshot old data for recovery in case of partial failure
-  const [oldHotel, oldEntries] = await Promise.all([
+  // T8: Snapshot old data using Promise.all (3 parallel queries + conditional hotel shopping)
+  const [oldHotel, oldEntries, oldRestaurants, oldEntryShopping] = await Promise.all([
     db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first(),
     db.prepare('SELECT * FROM entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
+    db.prepare(
+      'SELECT r.* FROM restaurants r JOIN entries e ON r.entry_id = e.id WHERE e.day_id = ?'
+    ).bind(dayId).all(),
+    db.prepare(
+      "SELECT s.* FROM shopping s JOIN entries e ON s.parent_id = e.id WHERE s.parent_type = 'entry' AND e.day_id = ?"
+    ).bind(dayId).all(),
   ]);
-
-  // 查詢所有 restaurants（透過 entries）
-  const oldRestaurants = await db.prepare(
-    'SELECT r.* FROM restaurants r JOIN entries e ON r.entry_id = e.id WHERE e.day_id = ?'
-  ).bind(dayId).all();
-
-  // 查詢所有 entry shopping
-  const oldEntryShopping = await db.prepare(
-    "SELECT s.* FROM shopping s JOIN entries e ON s.parent_id = e.id WHERE s.parent_type = 'entry' AND e.day_id = ?"
-  ).bind(dayId).all();
 
   // 查詢 hotel shopping
   const oldHotelShopping = oldHotel ? await db.prepare(
@@ -156,7 +147,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     hotelShopping: oldHotelShopping.results,
   });
 
-  let body: {
+  type DayBody = {
     date?: string;
     dayOfWeek?: string;
     label?: string;
@@ -164,11 +155,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; details?: unknown; address?: unknown; breakfast?: unknown; location?: unknown };
     timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
   };
-  try {
-    body = await context.request.json() as typeof body;
-  } catch {
-    return json({ error: 'Invalid JSON' }, 400);
-  }
+  const bodyOrError = await parseJsonBody<DayBody>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
   const validation = validateDayBody(body);
   if (!validation.ok) {

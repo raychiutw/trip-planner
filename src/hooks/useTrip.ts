@@ -63,7 +63,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const fetchDay = useCallback(
     async (dayNum: number): Promise<Day | null> => {
       if (!tripId) return null;
-      // Return cached if available
       const cached = dayCacheRef.current[dayNum];
       if (cached) return cached;
 
@@ -84,13 +83,11 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const switchDay = useCallback(
     (dayNum: number) => {
       setCurrentDayNum(dayNum);
-      // If cached, set immediately
       const cached = dayCacheRef.current[dayNum];
       if (cached) {
         setCurrentDay(cached);
         return;
       }
-      // Otherwise fetch
       fetchDay(dayNum).then((day) => {
         if (day) {
           setCurrentDay(day);
@@ -108,7 +105,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
       return;
     }
 
-    // Reset state for new trip
     setTrip(null);
     setDays([]);
     setCurrentDay(null);
@@ -134,7 +130,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
 
         setTrip(meta);
 
-        // Sort days by day_num
         const sorted = [...daysList].sort(
           (a, b) => a.day_num - b.day_num,
         );
@@ -219,7 +214,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
   /* --- Refetch the current day (bypass cache) --- */
   const refetchCurrentDay = useCallback(() => {
     if (!currentDayNum) return;
-    // Remove from cache so fetchDay goes to network
     delete dayCacheRef.current[currentDayNum];
     fetchDay(currentDayNum).then((day) => {
       if (day) {

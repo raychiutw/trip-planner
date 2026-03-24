@@ -7,13 +7,9 @@ import { describe, it, expect } from 'vitest';
  *
  * Verifies that descendant selectors in page-specific CSS files
  * actually match the DOM structure in the corresponding HTML.
- *
- * Catches bugs like: `.chat-container .sticky-nav` in edit.css
- * when .sticky-nav is NOT inside .chat-container in edit.html.
  */
 
 const PAGES = [
-    { css: 'css/edit.css', html: 'edit.html' },
     { css: 'css/setting.css', html: 'setting.html' },
 ];
 

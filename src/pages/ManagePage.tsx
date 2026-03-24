@@ -7,8 +7,9 @@ import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useOfflineToast } from '../hooks/useOfflineToast';
 import { sanitizeHtml } from '../lib/sanitize';
-import { lsGet, lsSet } from '../lib/localStorage';
+import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 
 import { marked } from 'marked';
 
@@ -108,24 +109,7 @@ export default function ManagePage() {
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [showOffline, setShowOffline] = useState(false);
-  const [showReconnect, setShowReconnect] = useState(false);
-  const wasOffline = useRef(false);
-
-  useEffect(() => {
-    if (!isOnline) {
-      wasOffline.current = true;
-      setShowOffline(true);
-      const t = setTimeout(() => setShowOffline(false), 2000);
-      return () => clearTimeout(t);
-    } else if (wasOffline.current) {
-      wasOffline.current = false;
-      setShowOffline(false);
-      setShowReconnect(true);
-      const t = setTimeout(() => setShowReconnect(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [isOnline]);
+  const { showOffline, showReconnect } = useOfflineToast(isOnline);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -212,7 +196,7 @@ export default function ManagePage() {
       }));
 
       // Decide initial trip: localStorage > first
-      const savedTrip = lsGet<string>('trip-pref');
+      const savedTrip = lsGet<string>(LS_KEY_TRIP_PREF);
       let initialTrip = filtered[0].tripId;
       if (savedTrip && filtered.some((t) => t.tripId === savedTrip)) {
         initialTrip = savedTrip;
@@ -294,7 +278,7 @@ export default function ManagePage() {
   const handleTripChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
       const val = e.target.value;
-      lsSet('trip-pref', val);
+      lsSet(LS_KEY_TRIP_PREF, val);
       setCurrentTripId(val);
     },
     [],
@@ -304,7 +288,6 @@ export default function ManagePage() {
   const handleTextChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setText(e.target.value);
-      // clear submit status when typing
       setSubmitStatus(null);
     },
     [],
@@ -334,10 +317,6 @@ export default function ManagePage() {
   }, []);
 
   /* ===== Render ===== */
-
-  // Determine whether to show empty-centered state
-  const hasRequests = requests.length > 0;
-  const showEmptyOrLoading = requestsLoading || requestsError !== null || !hasRequests;
 
   return (
     <div className="page-layout">
@@ -418,7 +397,7 @@ export default function ManagePage() {
                 <div
                   className={clsx(
                     'chat-messages-inner',
-                    showEmptyOrLoading && !hasRequests && 'chat-messages-inner--centered',
+                    requests.length === 0 && 'chat-messages-inner--centered',
                   )}
                 >
                   <div id="manageRequests">
@@ -428,10 +407,10 @@ export default function ManagePage() {
                     {!requestsLoading && requestsError && (
                       <div className="manage-empty">{requestsError}</div>
                     )}
-                    {!requestsLoading && !requestsError && !hasRequests && (
+                    {!requestsLoading && !requestsError && requests.length === 0 && (
                       <div className="manage-empty">尚無請求紀錄</div>
                     )}
-                    {!requestsLoading && !requestsError && hasRequests && (
+                    {!requestsLoading && !requestsError && requests.length > 0 && (
                       <div className="request-list">
                         {requests.map((req) => (
                           <RequestItem key={req.id} req={req} />

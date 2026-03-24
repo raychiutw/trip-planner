@@ -102,13 +102,9 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
       observer.observe(nav);
     }
 
-    // Window resize fallback
-    window.addEventListener('resize', updateOverflow, { passive: true });
-
     return () => {
       nav.removeEventListener('scroll', updateOverflow);
       if (observer) observer.disconnect();
-      window.removeEventListener('resize', updateOverflow);
     };
   }, [updateOverflow, days]);
 

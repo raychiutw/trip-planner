@@ -1,10 +1,10 @@
-import { json } from './_utils';
+import { json, getAuth } from './_utils';
 import type { Env } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const showAll = url.searchParams.get('all') === '1';
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
 
   let sql: string;
   if (showAll && auth?.isAdmin) {
