@@ -359,20 +359,11 @@ export default function ManagePage() {
 
   /* ===== Render ===== */
 
-  /* ----- page-simple class for manage page layout ----- */
-  useEffect(() => {
-    document.documentElement.classList.add('page-simple');
-    document.body.classList.add('page-simple');
-    return () => {
-      document.documentElement.classList.remove('page-simple');
-      document.body.classList.remove('page-simple');
-    };
-  }, []);
-
   return (
-    <div>
-      {/* ----- Sticky Nav ----- */}
-      <div className="sticky-nav" id="stickyNav">
+    <div className="page-layout">
+      <div className="container">
+        {/* ----- Sticky Nav ----- */}
+        <div className="sticky-nav" id="stickyNav">
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
@@ -384,7 +375,7 @@ export default function ManagePage() {
                 'transition-colors duration-150 hover:bg-[var(--color-tertiary)]',
                 'focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]',
                 '[background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D\'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg\'%20width%3D\'10\'%20height%3D\'7\'%20fill%3D\'none\'%3E%3Cpath%20d%3D\'M1%201.5l4%204%204-4\'%20stroke%3D\'%236B6B6B\'%20stroke-width%3D\'1.5\'%20stroke-linecap%3D\'round\'%20stroke-linejoin%3D\'round\'%2F%3E%3C%2Fsvg%3E")]',
-                'mx-auto',
+                'absolute left-1/2 -translate-x-1/2',
               )}
               aria-label="選擇行程"
               value={currentTripId || ''}
@@ -583,6 +574,7 @@ export default function ManagePage() {
             </div>
           )}
         </main>
+      </div>
     </div>
   );
 }

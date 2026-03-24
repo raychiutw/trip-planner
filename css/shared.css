@@ -719,6 +719,7 @@
     .nav-close-btn { display: flex; align-items: center; justify-content: center; width: var(--tap-min); height: var(--tap-min); border: none; border-radius: var(--radius-full); background: transparent; color: var(--color-foreground); flex-shrink: 0; transition: background var(--transition-duration-fast), color var(--transition-duration-fast); }
     .nav-close-btn:hover { color: var(--color-accent); background: var(--color-accent-bg); }
     .nav-close-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    .sticky-nav .nav-close-btn { margin-left: auto; }
 
     /* Tripline Logo (responsive: mobile=wave mark, desktop=full text) */
     .tripline-logo { flex-shrink: 0; display: flex; align-items: center; position: relative; line-height: 0; }
