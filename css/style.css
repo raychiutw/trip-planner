@@ -769,8 +769,8 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 
 .quick-panel-handle {
     width: 36px; height: 4px; border-radius: 2px;
-    background: var(--color-muted); opacity: 0.4;
-    margin: 8px auto 0;
+    background: var(--color-foreground); opacity: 0.35;
+    margin: 12px auto 0;
 }
 
 .quick-panel-header {
@@ -866,10 +866,10 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 }
 .sheet-handle {
     width: 36px; height: 4px;
-    background: var(--color-muted);
-    opacity: 0.5;
-    border-radius: var(--radius-full);
-    margin: 0 auto 4px;
+    background: var(--color-foreground);
+    opacity: 0.35;
+    border-radius: 2px;
+    margin: 12px auto 4px;
     padding: 8px 0;
     background-clip: content-box;
 }
