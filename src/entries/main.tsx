@@ -20,6 +20,15 @@ const TripPage = lazy(() => import('../pages/TripPage'));
 const ManagePage = lazy(() => import('../pages/ManagePage'));
 const AdminPage = lazy(() => import('../pages/AdminPage'));
 
+const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
+
+/** 相容舊版 ?trip=xxx query string，轉為 /trip/:tripId 路由 */
+function LegacyRedirect() {
+  const queryTrip = new URLSearchParams(window.location.search).get('trip');
+  const tripId = (queryTrip && /^[\w-]+$/.test(queryTrip)) ? queryTrip : DEFAULT_TRIP;
+  return <Navigate to={`/trip/${tripId}`} replace />;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   createRoot(el).render(
@@ -30,7 +39,7 @@ if (el) {
             <Route path="/trip/:tripId" element={<TripPage />} />
             <Route path="/manage" element={<ManagePage />} />
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="*" element={<Navigate to="/trip/okinawa-trip-2026-Ray" replace />} />
+            <Route path="*" element={<LegacyRedirect />} />
           </Routes>
         </Suspense>
       </BrowserRouter>
