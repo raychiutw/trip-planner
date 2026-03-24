@@ -68,7 +68,7 @@ function RequestItem({ req }: { req: RawRequest }) {
               : 'bg-[var(--color-plan-bg)] text-[var(--color-plan-text)]',
           )}
         >
-          {req.mode === 'trip-edit' ? '改行程' : '問建議'}
+          {req.mode === 'trip-edit' ? '改行程' : '問事情'}
         </span>
         <span className="text-[var(--font-size-footnote)] text-[var(--color-muted)] ml-auto">
           {formatDate(req.created_at)}
@@ -530,7 +530,7 @@ export default function ManagePage() {
                         data-mode="trip-plan"
                         onClick={() => setMode('trip-plan')}
                       >
-                        問建議
+                        問事情
                       </button>
                     </div>
                     <div id="submitStatus" aria-live="polite">
