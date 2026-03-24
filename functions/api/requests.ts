@@ -6,13 +6,14 @@
 
 import { logAudit } from './_audit';
 import { hasPermission } from './_auth';
-import { json } from './_utils';
-import type { Env, AuthData } from './_types';
+import { json, getAuth, parseJsonBody } from './_utils';
+import type { Env } from './_types';
 
 // GET /api/requests
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context);
+  if (!auth) return json({ error: '未認證' }, 401);
   const url = new URL(request.url);
   const tripId = url.searchParams.get('tripId');
   const status = url.searchParams.get('status');
@@ -51,14 +52,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 // POST /api/requests
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context);
+  if (!auth) return json({ error: '未認證' }, 401);
 
-  let body: { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: '無效的 JSON' }, 400);
-  }
+  type RequestBody = { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
+  const bodyOrError = await parseJsonBody<RequestBody>(request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
   const { tripId, mode } = body;
   // 優先使用 message，若未提供則 fallback 合併 title + body（向下相容）
@@ -79,21 +79,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入
-  const dupCheck = await env.DB
+  const existing = await env.DB
     .prepare(
-      'SELECT COUNT(*) as cnt FROM requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND created_at > datetime(\'now\', \'-30 seconds\')'
+      'SELECT * FROM requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND created_at > datetime(\'now\', \'-30 seconds\') ORDER BY created_at DESC LIMIT 1'
     )
     .bind(tripId, message, auth.email)
-    .first<{ cnt: number }>();
+    .first();
 
-  if (dupCheck && dupCheck.cnt > 0) {
+  if (existing) {
     // 已存在近期相同請求，回傳最新一筆（200 而非 201）
-    const existing = await env.DB
-      .prepare(
-        'SELECT * FROM requests WHERE trip_id = ? AND message = ? AND submitted_by = ? ORDER BY created_at DESC LIMIT 1'
-      )
-      .bind(tripId, message, auth.email)
-      .first();
     return json(existing, 200);
   }
 

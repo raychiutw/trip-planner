@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import React, { memo } from 'react';
 
 /* ===== Destination Art SVG backgrounds for sticky-nav ===== */
 
@@ -299,6 +299,16 @@ function GenericDark() {
   );
 }
 
+/* ===== Destination content map (hoisted to module level to avoid recreation on every render) ===== */
+
+const DESTINATION_CONTENT: Record<string, Record<string, React.ReactNode>> = {
+  okinawa: { light: <OkinawaLight />, dark: <OkinawaDark /> },
+  busan: { light: <BusanLight />, dark: <BusanDark /> },
+  kyoto: { light: <KyotoLight />, dark: <KyotoDark /> },
+  banqiao: { light: <BanqiaoLight />, dark: <BanqiaoDark /> },
+  generic: { light: <GenericLight />, dark: <GenericDark /> },
+};
+
 /* ===== Main Component ===== */
 
 interface DestinationArtProps {
@@ -308,15 +318,6 @@ interface DestinationArtProps {
 
 export const DestinationArt = memo(function DestinationArt({ tripId, dark }: DestinationArtProps) {
   const dest = resolveDestination(tripId);
-
-  const content: Record<string, Record<string, React.ReactNode>> = {
-    okinawa: { light: <OkinawaLight />, dark: <OkinawaDark /> },
-    busan: { light: <BusanLight />, dark: <BusanDark /> },
-    kyoto: { light: <KyotoLight />, dark: <KyotoDark /> },
-    banqiao: { light: <BanqiaoLight />, dark: <BanqiaoDark /> },
-    generic: { light: <GenericLight />, dark: <GenericDark /> },
-  };
-
   const mode = dark ? 'dark' : 'light';
 
   return (
@@ -327,7 +328,7 @@ export const DestinationArt = memo(function DestinationArt({ tripId, dark }: Des
         preserveAspectRatio="xMidYMid slice"
         style={{ width: '100%', height: '100%' }}
       >
-        {content[dest][mode]}
+        {DESTINATION_CONTENT[dest][mode]}
       </svg>
     </div>
   );

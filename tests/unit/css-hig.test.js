@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 const CSS_FILES = {
     shared: readFileSync('css/shared.css', 'utf-8'),
     style:  readFileSync('css/style.css',  'utf-8'),
-    edit:   readFileSync('css/edit.css',   'utf-8'),
     setting:readFileSync('css/setting.css','utf-8'),
     map:    readFileSync('css/map.css',    'utf-8'),
 };

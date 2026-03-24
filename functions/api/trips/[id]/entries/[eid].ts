@@ -1,36 +1,35 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../_auth';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
-import { json } from '../../../_utils';
+import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 const ALLOWED_FIELDS = ['sort_order', 'time', 'title', 'body', 'source', 'maps', 'mapcode', 'rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location_json'] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
 
-  const { id, eid } = context.params as { id: string; eid: string };
+  const { id, eid: eidStr } = context.params as { id: string; eid: string };
+  const eid = parseIntParam(eidStr);
+  if (!eid) return json({ error: 'Invalid id' }, 400);
   const db = context.env.DB;
-  const changedBy = auth?.email || 'anonymous';
+  const changedBy = auth.email;
 
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
     return json({ error: '權限不足' }, 403);
   }
 
-  if (!await verifyEntryBelongsToTrip(db, Number(eid), id)) {
+  if (!await verifyEntryBelongsToTrip(db, eid, id)) {
     return json({ error: 'Not found' }, 404);
   }
 
-  const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(Number(eid)).first() as Record<string, unknown> | null;
+  const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) return json({ error: 'Not found' }, 404);
 
-  let body: Record<string, unknown>;
-  try {
-    body = await context.request.json() as Record<string, unknown>;
-  } catch {
-    return json({ error: 'Invalid JSON' }, 400);
-  }
+  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
   // 驗證必填欄位（title 若包含在更新欄位中則不得為空）
   if ('title' in body) {
@@ -46,17 +45,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
   }
 
-  const fields = Object.keys(body).filter(k => (ALLOWED_FIELDS as readonly string[]).includes(k));
-  if (fields.length === 0) return json({ error: 'No valid fields to update' }, 400);
-
-  const setClauses = [...fields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
-  const values = [...fields.map(f => body[f]), Number(eid)];
+  const update = buildUpdateClause(body, ALLOWED_FIELDS);
+  if (!update) return json({ error: 'No valid fields to update' }, 400);
 
   let row;
   try {
     row = await db
-      .prepare(`UPDATE entries SET ${setClauses} WHERE id = ? RETURNING *`)
-      .bind(...values)
+      .prepare(`UPDATE entries SET ${update.setClauses} WHERE id = ? RETURNING *`)
+      .bind(...update.values, eid)
       .first();
   } catch (err: any) {
     return new Response(JSON.stringify({ error: 'DB 暫時無法處理，請稍後重試' }), {
@@ -67,11 +63,11 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   if (!row) return json({ error: 'Not found' }, 404);
 
-  const newFields = Object.fromEntries(fields.map(f => [f, body[f]]));
+  const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));
   await logAudit(db, {
     tripId: id,
     tableName: 'entries',
-    recordId: Number(eid),
+    recordId: eid,
     action: 'update',
     changedBy,
     diffJson: computeDiff(oldRow, newFields),
@@ -81,29 +77,33 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
 
-  const { id, eid } = context.params as { id: string; eid: string };
+  const { id, eid: eidStr } = context.params as { id: string; eid: string };
+  const eid = parseIntParam(eidStr);
+  if (!eid) return json({ error: 'Invalid id' }, 400);
   const db = context.env.DB;
-  const changedBy = auth?.email || 'anonymous';
+  const changedBy = auth.email;
 
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
     return json({ error: '權限不足' }, 403);
   }
 
-  if (!await verifyEntryBelongsToTrip(db, Number(eid), id)) {
+  if (!await verifyEntryBelongsToTrip(db, eid, id)) {
     return json({ error: 'Not found' }, 404);
   }
 
-  const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(Number(eid)).first() as Record<string, unknown> | null;
+  // T11: null guard before delete
+  const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
+  if (!oldRow) return json({ error: 'Not found' }, 404);
 
   // Cascade delete restaurants and shopping before deleting the entry
   try {
     await db.batch([
-      db.prepare("DELETE FROM restaurants WHERE entry_id = ?").bind(Number(eid)),
-      db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id = ?").bind(Number(eid)),
-      db.prepare('DELETE FROM entries WHERE id = ?').bind(Number(eid)),
+      db.prepare("DELETE FROM restaurants WHERE entry_id = ?").bind(eid),
+      db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id = ?").bind(eid),
+      db.prepare('DELETE FROM entries WHERE id = ?').bind(eid),
     ]);
   } catch (err: any) {
     return new Response(JSON.stringify({ error: 'DB 暫時無法處理，請稍後重試' }), {
@@ -115,10 +115,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   await logAudit(db, {
     tripId: id,
     tableName: 'entries',
-    recordId: Number(eid),
+    recordId: eid,
     action: 'delete',
     changedBy,
-    snapshot: oldRow ? JSON.stringify(oldRow) : undefined,
+    snapshot: JSON.stringify(oldRow),
   });
 
   return json({ ok: true });

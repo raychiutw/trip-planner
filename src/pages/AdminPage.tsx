@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import type { TripListItem } from '../types/trip';
 import type { Permission } from '../types/api';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import { lsGet, lsSet } from '../lib/localStorage';
+import { useOfflineToast } from '../hooks/useOfflineToast';
+import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import TpLogo from '../components/shared/TpLogo';
 import Toast from '../components/shared/Toast';
 
@@ -39,27 +40,7 @@ export default function AdminPage() {
   const [addingDisabled, setAddingDisabled] = useState(false);
   const [addStatus, setAddStatus] = useState<StatusMsg | null>(null);
 
-  const currentTripIdRef = useRef(currentTripId);
-  currentTripIdRef.current = currentTripId;
-
-  const [showOffline, setShowOffline] = useState(false);
-  const [showReconnect, setShowReconnect] = useState(false);
-  const wasOffline = useRef(false);
-
-  useEffect(() => {
-    if (!isOnline) {
-      wasOffline.current = true;
-      setShowOffline(true);
-      const t = setTimeout(() => setShowOffline(false), 2000);
-      return () => clearTimeout(t);
-    } else if (wasOffline.current) {
-      wasOffline.current = false;
-      setShowOffline(false);
-      setShowReconnect(true);
-      const t = setTimeout(() => setShowReconnect(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [isOnline]);
+  const { showOffline, showReconnect } = useOfflineToast(isOnline);
 
   /* ===== Load Permissions ===== */
   const loadPermissions = useCallback(async (tripId: string) => {
@@ -80,17 +61,17 @@ export default function AdminPage() {
       if (!r.ok) throw new Error('載入失敗');
       const perms: Permission[] = await r.json();
       // Only update if this tripId is still the selected one
-      if (currentTripIdRef.current === tripId) {
+      if (currentTripId === tripId) {
         setPermissions(perms || []);
         setPermLoading(false);
       }
     } catch (err) {
-      if (currentTripIdRef.current === tripId) {
+      if (currentTripId === tripId) {
         setPermError((err as Error).message);
         setPermLoading(false);
       }
     }
-  }, []);
+  }, [currentTripId]);
 
   /* ===== Load Trip List ===== */
   useEffect(() => {
@@ -104,7 +85,7 @@ export default function AdminPage() {
         setTrips(data);
 
         // Restore last selected trip from localStorage
-        const savedTrip = lsGet<string>('trip-pref');
+        const savedTrip = lsGet<string>(LS_KEY_TRIP_PREF);
         if (savedTrip && data.some((t) => t.tripId === savedTrip)) {
           setCurrentTripId(savedTrip);
           loadPermissions(savedTrip);
@@ -123,7 +104,7 @@ export default function AdminPage() {
     const tripId = e.target.value;
     setCurrentTripId(tripId);
     setAddStatus(null);
-    if (tripId) lsSet('trip-pref', tripId);
+    if (tripId) lsSet(LS_KEY_TRIP_PREF, tripId);
     loadPermissions(tripId);
   }
 

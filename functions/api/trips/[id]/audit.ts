@@ -1,12 +1,12 @@
 
-import { json } from '../../_utils';
+import { json, getAuth } from '../../_utils';
 import type { Env } from '../../_types';
 
 // GET /api/trips/:id/audit
 // Query params: limit (default 20), request_id (optional filter)
 // Only admin can access
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = (context.data as any)?.auth;
+  const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
   if (!auth.isAdmin) return json({ error: '僅管理者可存取' }, 403);
 
@@ -14,7 +14,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const url = new URL(context.request.url);
-  const limit = Math.min(Number(url.searchParams.get('limit') || '20'), 100);
+  const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') || '20'), 100));
   const requestId = url.searchParams.get('request_id');
 
   let sql = 'SELECT * FROM audit_log WHERE trip_id = ?';

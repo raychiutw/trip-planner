@@ -3,12 +3,13 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
-import { json } from '../_utils';
-import type { Env, AuthData } from '../_types';
+import { json, getAuth, parseJsonBody } from '../_utils';
+import type { Env } from '../_types';
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
-  const auth = (context.data as Record<string, unknown>).auth as AuthData;
+  const auth = getAuth(context);
+  if (!auth) return json({ error: '未認證' }, 401);
   const id = params.id as string;
 
   // 僅 admin / service token 可 PATCH（Claude CLI 回覆用）
@@ -16,12 +17,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     return json({ error: '僅管理者可更新請求' }, 403);
   }
 
-  let body: { reply?: string; status?: string };
-  try {
-    body = await context.request.json();
-  } catch {
-    return json({ error: '無效的 JSON' }, 400);
-  }
+  const bodyOrError = await parseJsonBody<{ reply?: string; status?: string }>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
   const updates: string[] = [];
   const values: string[] = [];

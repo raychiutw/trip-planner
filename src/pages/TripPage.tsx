@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { useOfflineToast } from '../hooks/useOfflineToast';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
-import { lsGet, lsSet, lsRemove, lsRenewAll } from '../lib/localStorage';
+import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -102,7 +103,8 @@ interface DaySectionProps {
   dayNum: number;
   day: Day | undefined;
   daySummary: DaySummary | undefined;
-  autoScrollDates: string[];
+  tripStart: string | null;
+  tripEnd: string | null;
   themeArt?: { theme: ColorTheme; dark: boolean };
   localToday?: string;
   isActive?: boolean;
@@ -114,7 +116,8 @@ const DaySection = React.memo(function DaySection({
   dayNum,
   day,
   daySummary,
-  autoScrollDates,
+  tripStart,
+  tripEnd,
   themeArt,
   localToday,
   isActive,
@@ -189,8 +192,8 @@ const DaySection = React.memo(function DaySection({
                 dayId={dayId}
                 dayDate={dayDate}
                 weatherDay={weatherDay}
-                tripStart={autoScrollDates[0] ?? null}
-                tripEnd={autoScrollDates[autoScrollDates.length - 1] ?? null}
+                tripStart={tripStart}
+                tripEnd={tripEnd}
               />
             )}
 
@@ -314,29 +317,18 @@ export default function TripPage() {
 
   /* --- Online status + offline/reconnect toasts --- */
   const isOnline = useOnlineStatus();
-  const [showOffline, setShowOffline] = useState(false);
-  const [showReconnect, setShowReconnect] = useState(false);
-  const wasOffline = useRef(false);
+  const { showOffline, showReconnect } = useOfflineToast(isOnline);
   // Stable ref so the effect below can call refetchCurrentDay without re-running
   // when refetchCurrentDay identity changes (it is declared after useTrip below).
   const refetchCurrentDayRef = useRef<(() => void) | null>(null);
 
+  // Refresh stale data when connection is restored
+  const prevIsOnlineRef = useRef(isOnline);
   useEffect(() => {
-    if (!isOnline) {
-      wasOffline.current = true;
-      // Show offline toast for 2 s then hide (TP Logo badge persists as status indicator)
-      setShowOffline(true);
-      const t = setTimeout(() => setShowOffline(false), 2000);
-      return () => clearTimeout(t);
-    } else if (wasOffline.current) {
-      wasOffline.current = false;
-      setShowOffline(false);
-      setShowReconnect(true);
-      // Refresh stale data now that connection is restored
+    if (!prevIsOnlineRef.current && isOnline) {
       refetchCurrentDayRef.current?.();
-      const t = setTimeout(() => setShowReconnect(false), 2000);
-      return () => clearTimeout(t);
     }
+    prevIsOnlineRef.current = isOnline;
   }, [isOnline]);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
@@ -394,7 +386,7 @@ export default function TripPage() {
     let tripId = getUrlTrip();
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
       // 僅在 URL 無合法 trip 參數時才 fallback 到 localStorage
-      tripId = lsGet<string>('trip-pref');
+      tripId = lsGet<string>(LS_KEY_TRIP_PREF);
     }
 
     if (!tripId) {
@@ -410,19 +402,19 @@ export default function TripPage() {
         if (cancelled) return;
         const match = trips.find((t) => t.tripId === tripId);
         if (match && match.published === 0) {
-          lsRemove('trip-pref');
+          lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
           setTimeout(() => { window.location.href = 'setting.html'; }, 2000);
           return;
         }
         setUrlTrip(tripId!);
-        lsSet('trip-pref', tripId!);
+        lsSet(LS_KEY_TRIP_PREF, tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
       })
       .catch(() => {
         if (cancelled) return;
         setUrlTrip(tripId!);
-        lsSet('trip-pref', tripId!);
+        lsSet(LS_KEY_TRIP_PREF, tripId!);
         setResolveState({ status: 'resolved', tripId: tripId! });
       });
 
@@ -751,14 +743,16 @@ export default function TripPage() {
     [days],
   );
 
+  /* --- Trip start/end scalars for HourlyWeather (T3) --- */
+  const tripStart = autoScrollDates[0] ?? null;
+  const tripEnd = autoScrollDates[autoScrollDates.length - 1] ?? null;
+
   /* --- Date range for large title subtitle --- */
   const dateRange = useMemo(() => {
     if (autoScrollDates.length === 0) return '';
-    const first = autoScrollDates[0];
-    const last = autoScrollDates[autoScrollDates.length - 1];
-    if (first === last) return first;
-    return `${first} — ${last}`;
-  }, [autoScrollDates]);
+    if (tripStart === tripEnd) return tripStart ?? '';
+    return `${tripStart} — ${tripEnd}`;
+  }, [autoScrollDates, tripStart, tripEnd]);
 
   /* --- Today's date (timezone-aware) — shared by DayNav and Timeline --- */
   const localToday = useMemo(() => getLocalToday(activeTripId), [activeTripId]);
@@ -905,7 +899,6 @@ export default function TripPage() {
 
   /* --- Stabilize currentDay-derived references to improve memo effectiveness (#13) --- */
   const timeline = useMemo(() => currentDay?.timeline ?? [], [currentDay]);
-  const hotel = useMemo(() => currentDay?.hotel ?? null, [currentDay]);
 
   /* --- Footer data (#4: proper FooterData type) --- */
   const footerData = useMemo((): FooterData | null => {
@@ -922,7 +915,7 @@ export default function TripPage() {
   /* --- Fix 5: Trip change without full page reload --- */
   const handleTripChange = useCallback((tripId: string) => {
     setUrlTrip(tripId);
-    lsSet('trip-pref', tripId);
+    lsSet(LS_KEY_TRIP_PREF, tripId);
     setActiveSheet(null);
     setResolveKey((k) => k + 1);
   }, []);
@@ -1134,7 +1127,8 @@ export default function TripPage() {
                   dayNum={dayNum}
                   day={allDays[dayNum]}
                   daySummary={daySummaryMap.get(dayNum)}
-                  autoScrollDates={autoScrollDates}
+                  tripStart={tripStart}
+                  tripEnd={tripEnd}
                   themeArt={themeArt}
                   localToday={localToday}
                   isActive={dayNum === currentDayNum}
