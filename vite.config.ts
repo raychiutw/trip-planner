@@ -73,9 +73,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        setting: resolve(__dirname, 'setting.html'),
-        manage: resolve(__dirname, 'manage/index.html'),
-        admin: resolve(__dirname, 'admin/index.html'),
       },
     },
   },

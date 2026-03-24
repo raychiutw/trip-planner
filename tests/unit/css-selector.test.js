@@ -9,9 +9,8 @@ import { describe, it, expect } from 'vitest';
  * actually match the DOM structure in the corresponding HTML.
  */
 
-const PAGES = [
-    { css: 'css/setting.css', html: 'setting.html' },
-];
+// Setting page deleted in SPA migration — CSS selector tests no longer applicable
+const PAGES = [];
 
 function extractRules(css) {
     const rules = [];
@@ -32,6 +31,11 @@ function getStaticClasses(doc) {
 }
 
 describe('CSS selector DOM validation', () => {
+    it('SPA migration: setting.css and setting.html removed', () => {
+        // setting page was deleted in SPA migration — no page-specific CSS to validate
+        expect(PAGES).toHaveLength(0);
+    });
+
     PAGES.forEach(({ css, html }) => {
         it(`descendant selectors in ${css} match ${html} DOM`, () => {
             const cssContent = readFileSync(css, 'utf-8');

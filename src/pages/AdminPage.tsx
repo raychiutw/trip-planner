@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import type { TripListItem } from '../types/trip';
 import type { Permission } from '../types/api';
@@ -26,9 +27,14 @@ interface StatusMsg {
   type: 'success' | 'error';
 }
 
+/* ===== Tailwind class constants ===== */
+const SELECT_BG_SVG =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5l5 5 5-5' stroke='%236B6B6B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")";
+
 export default function AdminPage() {
   useDarkMode();
   const isOnline = useOnlineStatus();
+  const navigate = useNavigate();
 
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [tripsError, setTripsError] = useState('');
@@ -165,32 +171,61 @@ export default function AdminPage() {
   /* ===== Close button ===== */
   function handleClose() {
     const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
-    window.location.href = tripId ? `/trip/${tripId}` : '/';
+    navigate(tripId ? `/trip/${tripId}` : '/');
   }
 
   /* ===== Render Permission Content ===== */
   function renderPermissions() {
     if (!currentTripId) {
-      return <div className="admin-empty">請先選擇行程</div>;
+      return (
+        <div className="text-[var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-6 px-4">
+          請先選擇行程
+        </div>
+      );
     }
     if (permLoading) {
-      return <div className="admin-empty">載入中…</div>;
+      return (
+        <div className="text-[var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-6 px-4">
+          載入中…
+        </div>
+      );
     }
     if (permError) {
-      return <div className="admin-empty">{permError}</div>;
+      return (
+        <div className="text-[var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-6 px-4">
+          {permError}
+        </div>
+      );
     }
     if (permissions.length === 0) {
-      return <div className="admin-empty">尚未授權任何成員</div>;
+      return (
+        <div className="text-[var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-6 px-4">
+          尚未授權任何成員
+        </div>
+      );
     }
 
     return (
-      <div className="admin-permission-list">
-        {permissions.map((p) => (
-          <div className="admin-permission-item" key={p.id}>
-            <span className="admin-permission-email">{p.email}</span>
-            <span className="admin-permission-role">{p.role}</span>
+      <div className="flex flex-col">
+        {permissions.map((p, idx) => (
+          <div
+            className={clsx(
+              'flex items-center justify-between py-3 pr-4 transition-colors duration-150',
+              'hover:bg-[var(--color-tertiary)]',
+              idx < permissions.length - 1
+                ? 'border-b border-[var(--color-border)] ml-4 pl-0'
+                : 'pl-4'
+            )}
+            key={p.id}
+          >
+            <span className="text-[length:var(--font-size-body)] text-[var(--color-foreground)] flex-1 min-w-0 overflow-hidden text-ellipsis">
+              {p.email}
+            </span>
+            <span className="text-[length:var(--font-size-caption2)] text-[var(--color-muted)] py-0.5 px-2 bg-[var(--color-tertiary)] rounded-[var(--radius-full)] mx-3 shrink-0">
+              {p.role}
+            </span>
             <button
-              className="admin-remove-btn"
+              className="appearance-none border-0 bg-transparent text-[var(--color-muted)] cursor-pointer p-1 rounded-[var(--radius-sm)] flex items-center justify-center min-w-[var(--tap-min)] min-h-[var(--tap-min)] shrink-0 transition-colors duration-150 hover:text-[var(--color-destructive)] hover:bg-[var(--color-hover)]"
               aria-label="移除"
               onClick={() => handleRemove(p.id, p.email)}
             >
@@ -258,13 +293,21 @@ export default function AdminPage() {
         )}
 
         <main className={clsx('admin-main', !isOnline && 'offline-disabled')} id="adminMain">
-          <div className="admin-page">
+          {/* admin-page */}
+          <div className="pt-[var(--page-pt)] px-[var(--padding-h)] mx-auto md:max-w-[var(--page-max-w)]">
+
             {/* Section: Trip Select */}
-            <div className="admin-section">
-              <div className="admin-section-title">選擇行程</div>
-              <div className="admin-section-card">
+            <div className="mb-7">
+              <div className="text-[length:var(--font-size-caption)] font-medium text-[var(--color-muted)] uppercase tracking-[0.05em] mb-2 pl-4">
+                選擇行程
+              </div>
+              <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] overflow-hidden">
                 <select
-                  className="admin-trip-select"
+                  className="w-full appearance-none border-0 bg-transparent text-[var(--color-foreground)] font-[inherit] text-[length:var(--font-size-body)] py-3 pl-4 pr-11 cursor-pointer bg-no-repeat transition-colors duration-150 hover:bg-[var(--color-tertiary)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] focus-visible:rounded-[var(--radius-lg)]"
+                  style={{
+                    backgroundImage: SELECT_BG_SVG,
+                    backgroundPosition: 'right 16px center',
+                  }}
                   aria-label="選擇行程"
                   value={currentTripId}
                   onChange={handleTripChange}
@@ -275,21 +318,25 @@ export default function AdminPage() {
             </div>
 
             {/* Section: Permission List */}
-            <div className="admin-section">
-              <div className="admin-section-title">已授權成員</div>
-              <div className="admin-section-card">
+            <div className="mb-7">
+              <div className="text-[length:var(--font-size-caption)] font-medium text-[var(--color-muted)] uppercase tracking-[0.05em] mb-2 pl-4">
+                已授權成員
+              </div>
+              <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] overflow-hidden">
                 {renderPermissions()}
               </div>
             </div>
 
             {/* Section: Add Member */}
-            <div className="admin-section">
-              <div className="admin-section-title">新增成員</div>
-              <div className="admin-section-card">
-                <div className="admin-add-form">
+            <div className="mb-7">
+              <div className="text-[length:var(--font-size-caption)] font-medium text-[var(--color-muted)] uppercase tracking-[0.05em] mb-2 pl-4">
+                新增成員
+              </div>
+              <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] overflow-hidden">
+                <div className="flex gap-2 p-2">
                   <input
                     type="email"
-                    className="admin-email-input"
+                    className="flex-1 border-0 bg-[var(--color-background)] text-[var(--color-foreground)] font-[inherit] text-[length:var(--font-size-body)] py-3 px-4 rounded-[var(--radius-md)] placeholder:text-[var(--color-muted)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]"
                     placeholder="email@example.com"
                     autoComplete="email"
                     value={email}
@@ -297,7 +344,7 @@ export default function AdminPage() {
                     onKeyDown={handleEmailKeyDown}
                   />
                   <button
-                    className="admin-add-btn"
+                    className="appearance-none border-0 bg-[var(--color-accent)] text-[var(--color-accent-foreground)] font-[inherit] text-[length:var(--font-size-body)] font-semibold py-3 px-5 rounded-[var(--radius-md)] cursor-pointer whitespace-nowrap transition-[filter] duration-150 hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={addingDisabled}
                     onClick={handleAdd}
                   >
@@ -306,13 +353,21 @@ export default function AdminPage() {
                 </div>
                 <div aria-live="polite">
                   {addStatus && (
-                    <div className={`admin-status ${addStatus.type}`}>
+                    <div
+                      className={clsx(
+                        'text-[length:var(--font-size-footnote)] mt-2 pl-2 pb-2',
+                        addStatus.type === 'success'
+                          ? 'text-[var(--color-success)]'
+                          : 'text-[var(--color-destructive)]'
+                      )}
+                    >
                       {addStatus.text}
                     </div>
                   )}
                 </div>
               </div>
             </div>
+
           </div>
         </main>
       </div>
