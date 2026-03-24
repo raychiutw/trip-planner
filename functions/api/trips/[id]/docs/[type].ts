@@ -6,14 +6,9 @@ import type { Env } from '../../../_types';
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context);
   const { id, type } = context.params as { id: string; type: string };
 
   if (!VALID_TYPES.has(type)) return json({ error: 'Invalid doc type' }, 400);
-
-  if (!auth || !await hasPermission(context.env.DB, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
-  }
 
   const row = await context.env.DB
     .prepare('SELECT doc_type, content, updated_at FROM trip_docs WHERE trip_id = ? AND doc_type = ?')
