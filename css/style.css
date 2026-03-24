@@ -857,15 +857,18 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .sheet-header {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    position: relative;
     margin-bottom: 8px;
+    min-height: var(--tap-min);
 }
 .sheet-close-btn {
     display: flex; align-items: center; justify-content: center;
     width: var(--tap-min); height: var(--tap-min); border: none; border-radius: 50%;
     background: transparent; color: var(--color-foreground);
     outline: none; box-shadow: none;
-    flex-shrink: 0; transition: background var(--transition-duration-fast) var(--transition-timing-function-apple), color var(--transition-duration-fast) var(--transition-timing-function-apple);
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    transition: background var(--transition-duration-fast) var(--transition-timing-function-apple), color var(--transition-duration-fast) var(--transition-timing-function-apple);
 }
 .sheet-close-btn .svg-icon { width: 20px; height: 20px; }
 .sheet-close-btn svg { width: 20px; height: 20px; }
@@ -875,12 +878,12 @@ body.print-mode .info-panel { background: var(--color-secondary) !important; bac
 .info-sheet-panel :focus:not(:focus-visible) { outline: none; box-shadow: none; }
 .info-sheet-panel:focus { outline: none; box-shadow: none; }
 .sheet-title {
-    flex: 1; min-width: 0;
     font-size: var(--font-size-title3); font-weight: 700; color: var(--color-foreground);
     text-align: center;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    padding: 0 var(--tap-min);
 }
-.sheet-header-spacer { width: var(--tap-min); flex-shrink: 0; }
+.sheet-header-spacer { display: none; }
 .info-sheet-body { overflow-y: auto; font-size: var(--font-size-body); flex: 1; min-height: 0; overscroll-behavior: contain; touch-action: pan-y; }
 @media (min-width: 768px) {
     .info-sheet-body > * { max-width: 600px; margin-left: auto; margin-right: auto; }
