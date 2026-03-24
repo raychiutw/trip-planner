@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
@@ -56,20 +57,35 @@ function RequestItem({ req }: { req: RawRequest }) {
     : '';
 
   return (
-    <div className="request-item">
+    <div className="px-4 py-3 bg-[var(--color-secondary)] rounded-[var(--radius-md)] transition-colors duration-150 hover:bg-[var(--color-hover)] overflow-hidden max-w-full">
       {/* Header: mode badge + time */}
-      <div className="request-item-header">
-        <span className={clsx('request-mode-badge', `mode-${req.mode === 'trip-edit' ? 'edit' : 'plan'}`)}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span
+          className={clsx(
+            'inline-flex items-center px-2 py-1 rounded-full text-[var(--font-size-caption)] font-semibold whitespace-nowrap shrink-0 min-h-6 leading-none',
+            req.mode === 'trip-edit'
+              ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent)]'
+              : 'bg-[var(--color-plan-bg)] text-[var(--color-plan-text)]',
+          )}
+        >
           {req.mode === 'trip-edit' ? '改行程' : '問建議'}
         </span>
-        <span className="request-item-meta">{formatDate(req.created_at)}</span>
+        <span className="text-[var(--font-size-footnote)] text-[var(--color-muted)] ml-auto">
+          {formatDate(req.created_at)}
+        </span>
       </div>
 
       {/* Message */}
-      <div className="request-item-message">{req.message}</div>
+      <div className="text-[var(--font-size-callout)] text-[var(--color-foreground)] mt-2 leading-[var(--line-height-normal)] break-words md:text-[var(--font-size-title3)]">
+        {req.message}
+      </div>
 
       {/* Submitted by */}
-      {req.submitted_by && <div className="request-item-submitter">{req.submitted_by}</div>}
+      {req.submitted_by && (
+        <div className="text-[var(--font-size-footnote)] text-[var(--color-muted)] mt-1">
+          {req.submitted_by}
+        </div>
+      )}
 
       {/* Stepper */}
       <RequestStepper status={req.status} />
@@ -77,8 +93,30 @@ function RequestItem({ req }: { req: RawRequest }) {
       {/* Reply (if completed) */}
       {req.reply && (
         <>
-          <div className="request-reply-divider" />
-          <div className="request-reply" dangerouslySetInnerHTML={{ __html: replyHtml }} />
+          <hr className="border-none border-t border-[var(--color-border)] my-3" />
+          <div
+            className={clsx(
+              'text-[var(--font-size-body)] text-[var(--color-foreground)] leading-[var(--line-height-normal)] break-words',
+              '[&_a]:text-[var(--color-accent)] [&_a]:no-underline [&_a:hover]:underline',
+              '[&_h2]:text-[var(--font-size-title3)] [&_h2]:mt-3 [&_h2]:mb-2 [&_h2]:text-[var(--color-foreground)]',
+              '[&_h3]:text-[var(--font-size-title3)] [&_h3]:mt-3 [&_h3]:mb-2 [&_h3]:text-[var(--color-foreground)]',
+              '[&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0',
+              '[&_p]:my-1',
+              '[&_strong]:font-semibold',
+              '[&_ul]:pl-5 [&_ul]:my-1',
+              '[&_ol]:pl-5 [&_ol]:my-1',
+              '[&_hr]:border-none [&_hr]:border-t [&_hr]:border-[var(--color-border)] [&_hr]:my-3',
+              '[&_.table-wrap]:overflow-x-auto [&_.table-wrap]:my-2',
+              '[&_table]:w-full [&_table]:border-collapse [&_table]:m-0',
+              '[&_th]:border [&_th]:border-[var(--color-border)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:bg-[var(--color-tertiary)] [&_th]:font-semibold [&_th]:whitespace-nowrap',
+              '[&_td]:border [&_td]:border-[var(--color-border)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-left',
+              '[&_blockquote]:my-2 [&_blockquote]:py-2 [&_blockquote]:px-3 [&_blockquote]:border-l-[3px] [&_blockquote]:border-l-[var(--color-accent)] [&_blockquote]:bg-[var(--color-accent-subtle)] [&_blockquote]:rounded-r-[var(--radius-sm)]',
+              '[&_code]:bg-[var(--color-tertiary)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded-[var(--radius-xs)] [&_code]:text-[var(--font-size-callout)]',
+              '[&_pre]:bg-[var(--color-tertiary)] [&_pre]:p-3 [&_pre]:rounded-[var(--radius-sm)] [&_pre]:overflow-x-auto [&_pre]:my-2',
+              '[&_pre_code]:bg-transparent [&_pre_code]:p-0',
+            )}
+            dangerouslySetInnerHTML={{ __html: replyHtml }}
+          />
         </>
       )}
     </div>
@@ -96,6 +134,7 @@ type PageState =
 export default function ManagePage() {
   useDarkMode();
   const isOnline = useOnlineStatus();
+  const navigate = useNavigate();
 
   /* ----- State ----- */
   const [pageState, setPageState] = useState<PageState>({ kind: 'loading' });
@@ -314,8 +353,8 @@ export default function ManagePage() {
   /* ----- Close button ----- */
   const handleClose = useCallback(() => {
     const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
-    window.location.href = tripId ? `/trip/${tripId}` : '/';
-  }, []);
+    navigate(tripId ? `/trip/${tripId}` : '/');
+  }, [navigate]);
 
   /* ===== Render ===== */
 
@@ -327,7 +366,16 @@ export default function ManagePage() {
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
-              className="manage-trip-select manage-trip-select--center"
+              className={clsx(
+                'appearance-none border-none bg-[var(--color-secondary)] text-[var(--color-foreground)]',
+                'font-[inherit] text-[var(--font-size-callout)] font-semibold',
+                'py-2 pl-3 pr-7 rounded-full cursor-pointer min-h-[var(--tap-min)]',
+                'bg-no-repeat bg-[right_10px_center] max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap',
+                'transition-colors duration-150 hover:bg-[var(--color-tertiary)]',
+                'focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]',
+                '[background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D\'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg\'%20width%3D\'10\'%20height%3D\'7\'%20fill%3D\'none\'%3E%3Cpath%20d%3D\'M1%201.5l4%204%204-4\'%20stroke%3D\'%236B6B6B\'%20stroke-width%3D\'1.5\'%20stroke-linecap%3D\'round\'%20stroke-linejoin%3D\'round\'%2F%3E%3C%2Fsvg%3E")]',
+                'absolute left-1/2 -translate-x-1/2',
+              )}
               aria-label="選擇行程"
               value={currentTripId || ''}
               onChange={handleTripChange}
@@ -340,7 +388,7 @@ export default function ManagePage() {
             </select>
           )}
           <button
-            className="nav-close-btn"
+            className="nav-close-btn ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -368,7 +416,7 @@ export default function ManagePage() {
         )}
 
         {/* ----- Main Content ----- */}
-        <main className={clsx('manage-main', !isOnline && 'offline-disabled')} id="manageMain">
+        <main className={clsx(!isOnline && 'offline-disabled')} id="manageMain">
           {/* Loading state */}
           {pageState.kind === 'loading' && (
             <div className="text-center p-10 text-[var(--color-muted)]">
@@ -378,14 +426,14 @@ export default function ManagePage() {
 
           {/* Auth required */}
           {pageState.kind === 'auth-required' && (
-            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
+            <div className="text-[var(--color-muted)] text-[var(--font-size-callout)] text-center py-8 px-4 bg-[var(--color-secondary)] rounded-[var(--radius-md)] mx-[var(--padding-h)] my-10">
               請先登入
             </div>
           )}
 
           {/* No permission / no published trips */}
           {pageState.kind === 'no-permission' && (
-            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
+            <div className="text-[var(--color-muted)] text-[var(--font-size-callout)] text-center py-8 px-4 bg-[var(--color-secondary)] rounded-[var(--radius-md)] mx-[var(--padding-h)] my-10">
               {pageState.message}
             </div>
           )}
@@ -403,16 +451,22 @@ export default function ManagePage() {
                 >
                   <div id="manageRequests">
                     {requestsLoading && (
-                      <div className="manage-loading">載入中…</div>
+                      <div className="text-[var(--color-muted)] text-[var(--font-size-callout)] text-center py-8 px-4 bg-[var(--color-secondary)] rounded-[var(--radius-md)]">
+                        載入中…
+                      </div>
                     )}
                     {!requestsLoading && requestsError && (
-                      <div className="manage-empty">{requestsError}</div>
+                      <div className="text-[var(--color-muted)] text-[var(--font-size-callout)] text-center py-8 px-4 bg-[var(--color-secondary)] rounded-[var(--radius-md)]">
+                        {requestsError}
+                      </div>
                     )}
                     {!requestsLoading && !requestsError && requests.length === 0 && (
-                      <div className="manage-empty">尚無請求紀錄</div>
+                      <div className="text-[var(--color-muted)] text-[var(--font-size-callout)] text-center py-8 px-4 bg-[var(--color-secondary)] rounded-[var(--radius-md)]">
+                        尚無請求紀錄
+                      </div>
                     )}
                     {!requestsLoading && !requestsError && requests.length > 0 && (
-                      <div className="request-list">
+                      <div className="flex flex-col gap-2">
                         {requests.map((req) => (
                           <RequestItem key={req.id} req={req} />
                         ))}
@@ -423,11 +477,19 @@ export default function ManagePage() {
               </div>
 
               {/* Input bar */}
-              <div className="manage-input-bar">
-                <div className="manage-input-card">
+              <div
+                className="shrink-0 px-[var(--padding-h)] pt-2 overflow-y-hidden [scrollbar-gutter:stable]"
+                style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))' }}
+              >
+                <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] px-3 pt-3 pb-2 shadow-[var(--shadow-md)] md:max-w-[var(--page-max-w)] md:mx-auto">
                   <textarea
                     ref={textareaRef}
-                    className="manage-textarea"
+                    className={clsx(
+                      'w-full py-2 px-1 border-none bg-transparent font-[inherit]',
+                      'text-[var(--font-size-body)] text-[var(--color-foreground)] resize-none',
+                      'leading-[var(--line-height-normal)] min-h-[3.6em] max-h-[30vh] overflow-y-auto',
+                      'focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] focus-visible:rounded-[var(--radius-xs)]',
+                    )}
                     id="manageText"
                     maxLength={65536}
                     placeholder={
@@ -438,17 +500,33 @@ export default function ManagePage() {
                     onChange={handleTextChange}
                     onKeyDown={handleKeyDown}
                   />
-                  <div className="manage-input-toolbar">
-                    <div className="manage-mode-toggle" id="requestMode" data-value={mode}>
+                  <div className="flex items-center gap-2 mt-2 justify-between">
+                    <div className="flex items-center gap-1" id="requestMode" data-value={mode}>
                       <button
-                        className={clsx('manage-mode-pill', mode === 'trip-edit' && 'selected')}
+                        className={clsx(
+                          'appearance-none border-none font-[inherit] text-[var(--font-size-callout)] font-normal',
+                          'py-2 px-3 rounded-full cursor-pointer min-h-[var(--tap-min)]',
+                          'transition-colors duration-150',
+                          'focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]',
+                          mode === 'trip-edit'
+                            ? 'bg-[var(--color-accent-bg)] text-[var(--color-accent)] !font-semibold hover:bg-[var(--color-accent-bg)] hover:brightness-95'
+                            : 'bg-transparent text-[var(--color-muted)] hover:bg-[var(--color-hover)]',
+                        )}
                         data-mode="trip-edit"
                         onClick={() => setMode('trip-edit')}
                       >
                         改行程
                       </button>
                       <button
-                        className={clsx('manage-mode-pill', mode === 'trip-plan' && 'selected-plan')}
+                        className={clsx(
+                          'appearance-none border-none font-[inherit] text-[var(--font-size-callout)] font-normal',
+                          'py-2 px-3 rounded-full cursor-pointer min-h-[var(--tap-min)]',
+                          'transition-colors duration-150',
+                          'focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]',
+                          mode === 'trip-plan'
+                            ? 'bg-[var(--color-plan-bg)] text-[var(--color-plan-text)] !font-semibold hover:bg-[var(--color-plan-hover)]'
+                            : 'bg-transparent text-[var(--color-muted)] hover:bg-[var(--color-hover)]',
+                        )}
                         data-mode="trip-plan"
                         onClick={() => setMode('trip-plan')}
                       >
@@ -457,7 +535,13 @@ export default function ManagePage() {
                     </div>
                     <div id="submitStatus" aria-live="polite">
                       {submitStatus && (
-                        <div className={clsx('manage-status', submitStatus.type)}>
+                        <div
+                          className={clsx(
+                            'text-[var(--font-size-footnote)] rounded-[var(--radius-sm)]',
+                            submitStatus.type === 'success' && 'text-[var(--color-success)] flex items-center gap-1',
+                            submitStatus.type === 'error' && 'text-[var(--color-destructive)]',
+                          )}
+                        >
                           {submitStatus.type === 'success' && <Icon name="check-circle" />}
                           {submitStatus.type === 'error' && <Icon name="x-circle" />}
                           {submitStatus.type === 'error' ? ' ' : ''}
@@ -466,7 +550,14 @@ export default function ManagePage() {
                       )}
                     </div>
                     <button
-                      className="manage-send-btn"
+                      className={clsx(
+                        'w-[var(--tap-min)] h-[var(--tap-min)] border-none rounded-full',
+                        'flex items-center justify-center shrink-0',
+                        'transition-[background-color,color,transform] duration-[250ms]',
+                        text.trim().length === 0 || submitting
+                          ? 'bg-[var(--color-border)] text-[var(--color-muted)] cursor-not-allowed scale-[0.92] dark:bg-[var(--color-hover)] dark:text-[var(--color-muted)]'
+                          : 'bg-[var(--color-accent)] text-[var(--color-accent-foreground)] cursor-pointer scale-100 hover:brightness-110 active:scale-[0.95]',
+                      )}
                       id="submitBtn"
                       disabled={text.trim().length === 0 || submitting}
                       aria-label="送出"
