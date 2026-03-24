@@ -190,7 +190,7 @@ export default function QuickPanel({
         style={{ touchAction: 'none', overscrollBehavior: 'contain' }}
       />
 
-      {/* Sheet (#11: drag handle removed, use X button to close) */}
+      {/* Sheet */}
       <div
         className="quick-panel-sheet"
         role="dialog"
@@ -200,7 +200,9 @@ export default function QuickPanel({
         tabIndex={-1}
         onKeyDown={handleSheetKeyDown}
       >
-        {/* #2b: X close button (same style as InfoSheet) */}
+        {/* Drag handle — swipe-up affordance */}
+        <div className="quick-panel-handle" aria-hidden="true" />
+        {/* X close button (same style as InfoSheet) */}
         <div className="quick-panel-header">
           <div className="quick-panel-header-spacer" />
           <button
@@ -229,9 +231,6 @@ export default function QuickPanel({
                 </button>
               );
             })}
-          </div>
-          <div className="quick-panel-divider" />
-          <div className="quick-panel-grid">
             {sectionB.map((item) => {
               const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
               return (
