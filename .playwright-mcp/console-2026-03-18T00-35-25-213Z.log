@@ -1,3 +1,0 @@
-[     144ms] [ERROR] Refused to execute script from 'https://trip-planner-dby.pages.dev/js/shared.js' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled. @ https://trip-planner-dby.pages.dev/:0
-[     241ms] ReferenceError: lsRenewAll is not defined
-    at https://trip-planner-dby.pages.dev/js/app.js:750:45
