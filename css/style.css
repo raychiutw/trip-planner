@@ -573,8 +573,8 @@ body.dark .dn:not(.active) { background: transparent; border: 1.5px solid var(--
         padding: 12px;
         z-index: var(--z-day-header);
     }
-    /* 為 fixed info-panel 預留右側空間 */
-    .page-layout { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
+    /* 為 fixed info-panel 預留右側空間（僅有 info-panel 時） */
+    .page-layout:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
 }
 
 /* ===== Info Cards ===== */
