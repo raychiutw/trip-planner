@@ -1158,7 +1158,7 @@ export default function TripPage() {
         <a
           className={clsx('edit-fab', !isOnline && 'disabled')}
           id="editFab"
-          href="/manage"
+          href="/manage/"
           aria-label="AI 修改行程"
           aria-disabled={!isOnline}
           tabIndex={isOnline ? undefined : -1}
