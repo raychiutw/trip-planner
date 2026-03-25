@@ -9,7 +9,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import '../../css/tokens.css';
 
 const AdminPage = lazy(() => import('../pages/AdminPage'));
-const ManagePage = lazy(() => import('../pages/ManagePageV2'));
+const ManagePage = lazy(() => import('../pages/ManagePage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
