@@ -23,7 +23,7 @@ const V2_CUTOVER_PATHS = ['/admin'];
 const isCutover = V2_CUTOVER_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
 /* V2-ready 但尚未 cutover 的路由（未來 ManagePage 等加入此列） */
-const V2_READY_PATHS: string[] = [];
+const V2_READY_PATHS = ['/manage'];
 const isV2Ready = V2_READY_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
 if (isCutover || (useV2 && isV2Ready)) {
