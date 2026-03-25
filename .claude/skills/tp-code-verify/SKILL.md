@@ -4,7 +4,7 @@ description: Use before committing code changes to validate naming conventions, 
 user-invocable: true
 ---
 
-Commit 前程式碼品質驗證。驗證命名規範 + React Best Practices + Code Review 規則 + 測試全過，紅燈則持續修改直到綠燈。CSS HIG 由 `/tp-ux-verify` 負責，本 skill 不重複檢查。
+Commit 前程式碼品質驗證。驗證命名規範 + React Best Practices + Code Review 規則 + CSS HIG + 測試全過，紅燈則持續修改直到綠燈。
 
 ⚡ prompt 有指定檔案或範圍時，以 prompt 為準；否則使用以下預設範圍。
 
@@ -14,7 +14,7 @@ Commit 前程式碼品質驗證。驗證命名規範 + React Best Practices + Co
 
 - 命名規範：`references/naming-rules.md`
 - 程式碼標準：`references/coding-standards.md`
-- ※ CSS HIG 已移至 `/tp-ux-verify`，本 skill 不重複檢查
+- CSS HIG 規則（H1-H12）：skill `tp-ux-verify`（`../references/css-hig-rules.md` + `references/tokens.md` + `references/page-structure.md`）
 - React Best Practices（完整 62 條）：skill `react-best-practices`（`SKILL.md` 索引 + `rules/*.md` 各規則詳情）
 - Code Review 規則（完整 10 條）：`references/code-review-rules.md`
 
@@ -39,16 +39,17 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 1. 執行 `npx tsc --noEmit` — TypeScript 型別檢查（src/ 有變更時）
 2. 執行 `npm test` — 包含 naming-convention.test.js 和所有 unit/integration 測試
 3. 若 src/ 有變更，掃描 React Best Practices（RBP-1 ~ RBP-14）+ Code Review 規則（CR-1 ~ CR-10）
-4. 若全過 → 🟢 綠燈，可以 commit
-5. 若有失敗 → 🔴 紅燈：
+4. 若 css/ 或 src/ 或 html/ 有變更，掃描 CSS HIG 規則（H1-H12）— 讀取 skill `tp-ux-verify` 的規則來源
+5. 若全過 → 🟢 綠燈，可以 commit
+6. 若有失敗 → 🔴 紅燈：
    a. 列出所有失敗的測試名稱、錯誤訊息、違規規則
    b. 根據錯誤類型自動修正：
       - 命名違規：根據 `references/naming-rules.md` 修正
-      - CSS HIG 違規：交由 `/tp-ux-verify` 處理
+      - CSS HIG 違規：根據 skill `tp-ux-verify` 的 `../references/css-hig-rules.md` 修正
       - React 違規：根據 skill `react-best-practices` 的 `rules/*.md` 修正
       - Code Review 違規：根據 `references/code-review-rules.md` 修正
       - 測試失敗：分析原因並修正程式碼
-   c. 重新跑步驟 1-3
+   c. 重新跑步驟 1-4
    d. 重複直到全過
 
 ## 驗證項目
@@ -67,7 +68,7 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 | 8 | API tripId（`SELECT id AS tripId`） | `references/naming-rules.md` |
 | 9 | 無防禦性 tripId（不得 `.id \|\| .tripId`） | `references/naming-rules.md` |
 | 10 | mapRow 統一轉換 | `references/naming-rules.md` |
-| ~~11~~ | ~~CSS HIG 12 條~~ | 已移至 `/tp-ux-verify` |
+| 11 | CSS HIG 12 條（H1-H12） | skill `tp-ux-verify` → `../references/css-hig-rules.md` |
 | 12 | Unit tests 全過 | — |
 | 13 | 觸控目標 44px | `references/coding-standards.md` |
 | 14 | 圖示 inline SVG | `references/coding-standards.md` |
