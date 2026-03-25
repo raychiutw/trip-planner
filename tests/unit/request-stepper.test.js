@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 
 /**
  * RequestStepper structural validations — TSX source checks.
- * CSS classes replaced with Tailwind utilities (manage.css removed).
+ * Uses CSS classes defined in shared.css (restored from manage.css).
  */
 
 const tsx = readFileSync('src/components/shared/RequestStepper.tsx', 'utf-8');
@@ -40,67 +40,70 @@ describe('RequestStepper STEPS', () => {
   });
 });
 
-/* ===== 圓點 Tailwind class 驗證 ===== */
+/* ===== 圓點 CSS class 驗證 ===== */
 
-describe('RequestStepper dot Tailwind classes', () => {
-  it('renders done dot with accent background color', () => {
-    expect(tsx).toContain('bg-[var(--color-accent)]');
+describe('RequestStepper dot CSS classes', () => {
+  it('renders done dot with stepper-dot--done class', () => {
+    expect(tsx).toContain('stepper-dot--done');
   });
 
-  it('renders active dot with accent border', () => {
-    expect(tsx).toContain('border-[var(--color-accent)]');
+  it('renders active dot with stepper-dot--active class', () => {
+    expect(tsx).toContain('stepper-dot--active');
   });
 
-  it('renders pending dot with border color', () => {
-    expect(tsx).toContain('border-[var(--color-border)]');
-  });
-});
-
-/* ===== 連接線 Tailwind class 驗證 ===== */
-
-describe('RequestStepper line Tailwind classes', () => {
-  it('renders done/active line with accent background', () => {
-    expect(tsx).toContain("'bg-[var(--color-accent)]'");
-  });
-
-  it('renders pending line with border background', () => {
-    expect(tsx).toContain("'bg-[var(--color-border)]'");
+  it('renders pending dot with stepper-dot--pending class', () => {
+    expect(tsx).toContain('stepper-dot--pending');
   });
 });
 
-/* ===== Label Tailwind class 驗證 ===== */
+/* ===== 連接線 CSS class 驗證 ===== */
 
-describe('RequestStepper label Tailwind classes', () => {
-  it('renders active label with accent color and semibold', () => {
-    expect(tsx).toContain('text-[var(--color-accent)] font-semibold');
+describe('RequestStepper line CSS classes', () => {
+  it('renders done/active line with stepper-line--done class', () => {
+    expect(tsx).toContain('stepper-line--done');
   });
 
-  it('renders done/pending labels with muted color', () => {
-    expect(tsx).toContain('text-[var(--color-muted)]');
+  it('renders pending line with stepper-line--pending class', () => {
+    expect(tsx).toContain('stepper-line--pending');
   });
 });
 
-/* ===== Animation 驗證 ===== */
+/* ===== Label CSS class 驗證 ===== */
 
-describe('RequestStepper animation', () => {
-  it('defines stepper-pulse keyframes inline', () => {
-    expect(tsx).toContain('@keyframes stepper-pulse');
+describe('RequestStepper label CSS classes', () => {
+  it('renders active label with stepper-label--active class', () => {
+    expect(tsx).toContain('stepper-label--active');
   });
 
-  it('applies stepper-pulse animation to active dot', () => {
-    expect(tsx).toContain('stepper-dot-active');
-    expect(tsx).toContain('stepper-pulse');
+  it('renders done label with stepper-label--done class', () => {
+    expect(tsx).toContain('stepper-label--done');
+  });
+
+  it('renders pending label with stepper-label--pending class', () => {
+    expect(tsx).toContain('stepper-label--pending');
   });
 });
 
 /* ===== 結構驗證 ===== */
 
 describe('RequestStepper structure', () => {
-  it('uses flex layout for stepper container', () => {
-    expect(tsx).toContain('flex items-center');
+  it('uses request-stepper container class', () => {
+    expect(tsx).toContain('request-stepper');
   });
 
-  it('uses caption2 font size for labels', () => {
-    expect(tsx).toContain('var(--font-size-caption2)');
+  it('uses stepper-step class for each step', () => {
+    expect(tsx).toContain('stepper-step');
+  });
+
+  it('uses stepper-dot base class', () => {
+    expect(tsx).toContain('stepper-dot');
+  });
+
+  it('uses stepper-label base class', () => {
+    expect(tsx).toContain('stepper-label');
+  });
+
+  it('uses stepper-line base class', () => {
+    expect(tsx).toContain('stepper-line');
   });
 });
