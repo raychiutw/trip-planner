@@ -19,7 +19,7 @@ if (new URLSearchParams(search).get('v1') === '1' && typeof localStorage !== 'un
 }
 
 /* Admin 永遠走 V2（已 cutover），其他頁面依 V1/V2 切換 */
-const V2_CUTOVER_PATHS = ['/admin'];
+const V2_CUTOVER_PATHS = ['/admin', '/manage'];
 const isCutover = V2_CUTOVER_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
 /* V2-ready 但尚未 cutover 的路由（未來 ManagePage 等加入此列） */

@@ -8,7 +8,6 @@ import '../../css/style.css';
 import '../../css/map.css';
 
 const TripPage = lazy(() => import('../pages/TripPage'));
-const ManagePage = lazy(() => import('../pages/ManagePage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -28,7 +27,6 @@ if (el) {
         <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
           <Routes>
             <Route path="/trip/:tripId" element={<TripPage />} />
-            <Route path="/manage" element={<ManagePage />} />
             <Route path="*" element={<LegacyRedirect />} />
           </Routes>
         </Suspense>
