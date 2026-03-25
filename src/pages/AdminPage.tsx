@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import clsx from 'clsx';
+import '../../css/tokens.css';
 import type { TripListItem } from '../types/trip';
 import type { Permission } from '../types/api';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -8,17 +8,26 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import Toast from '../components/shared/Toast';
+import ToastV2 from '../components/shared/ToastV2';
 
 /* ===== Raw fetch helper (need status-code inspection) ===== */
 function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response> {
-  return fetch('/api' + path, {
-    ...opts,
-    headers: {
-      'Content-Type': 'application/json',
-      ...opts?.headers,
-    },
-  });
+  const headers: Record<string, string> = { ...opts?.headers as Record<string, string> };
+  // 只在有 body 時加 Content-Type（GET/DELETE 不應帶）
+  if (opts?.body) headers['Content-Type'] = 'application/json';
+  return fetch('/api' + path, { ...opts, headers });
+}
+
+/* ===== 401 redirect 防無限循環 ===== */
+const AUTH_REDIRECT_KEY = 'tripline-auth-redirect';
+function redirectToLogin() {
+  const count = Number(sessionStorage.getItem(AUTH_REDIRECT_KEY) || '0');
+  if (count >= 3) {
+    sessionStorage.removeItem(AUTH_REDIRECT_KEY);
+    return; // 放棄 redirect，顯示錯誤
+  }
+  sessionStorage.setItem(AUTH_REDIRECT_KEY, String(count + 1));
+  window.location.replace('/admin');
 }
 
 /* ===== Status message state ===== */
@@ -27,10 +36,17 @@ interface StatusMsg {
   type: 'success' | 'error';
 }
 
+/* ===== Chevron SVG as background-image for the select ===== */
+const SELECT_STYLE = { backgroundImage:
+  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 24 24\' fill=\'%23888\'%3E%3Cpath d=\'M7 10l5 5 5-5z\'/%3E%3C/svg%3E")' } as const;
+
 export default function AdminPage() {
   useDarkMode();
   const isOnline = useOnlineStatus();
   const navigate = useNavigate();
+
+  // 頁面成功載入代表 Access 通過，清除 redirect 計數
+  useEffect(() => { sessionStorage.removeItem(AUTH_REDIRECT_KEY); }, []);
 
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [tripsError, setTripsError] = useState('');
@@ -41,11 +57,19 @@ export default function AdminPage() {
   const [email, setEmail] = useState('');
   const [addingDisabled, setAddingDisabled] = useState(false);
   const [addStatus, setAddStatus] = useState<StatusMsg | null>(null);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [removeStatus, setRemoveStatus] = useState<StatusMsg | null>(null);
+  const currentTripIdRef = useRef(currentTripId);
+  currentTripIdRef.current = currentTripId;
 
   const { showOffline, showReconnect } = useOfflineToast(isOnline);
 
   /* ===== Load Permissions ===== */
+  const abortRef = useRef<AbortController | null>(null);
   const loadPermissions = useCallback(async (tripId: string) => {
+    // 取消前一次未完成的請求
+    abortRef.current?.abort();
+
     if (!tripId) {
       setPermissions([]);
       setPermError('');
@@ -53,36 +77,44 @@ export default function AdminPage() {
       return;
     }
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setPermLoading(true);
     setPermError('');
     setPermissions([]);
 
     try {
-      const r = await apiFetchRaw('/permissions?tripId=' + encodeURIComponent(tripId));
-      if (r.status === 401) { window.location.replace('/admin'); return; }
+      const r = await apiFetchRaw('/permissions?tripId=' + encodeURIComponent(tripId), {
+        signal: controller.signal,
+      });
+      // 401 redirect 觸發 Cloudflare Access 登入（含防無限循環）
+      if (r.status === 401) { redirectToLogin(); return; }
       if (r.status === 403) throw new Error('僅管理者可操作');
       if (!r.ok) throw new Error('載入失敗');
       const perms: Permission[] = await r.json();
-      // Only update if this tripId is still the selected one
-      if (currentTripId === tripId) {
+      // 用 ref 取最新值，避免 stale closure
+      if (currentTripIdRef.current === tripId) {
         setPermissions(perms || []);
         setPermLoading(false);
       }
     } catch (err) {
-      if (currentTripId === tripId) {
+      if ((err as Error).name === 'AbortError') return;
+      if (currentTripIdRef.current === tripId) {
         setPermError((err as Error).message);
         setPermLoading(false);
       }
     }
-  }, [currentTripId]);
+  }, []);
 
-  /* ===== Load Trip List ===== */
+  /* ===== Load Trip List（mount only） ===== */
   useEffect(() => {
     let cancelled = false;
 
     async function loadTrips() {
       try {
-        const r = await fetch('/api/trips?all=1');
+        const r = await apiFetchRaw('/trips?all=1');
+        if (!r.ok) throw new Error('無法載入行程');
         const data: TripListItem[] = await r.json();
         if (cancelled) return;
         setTrips(data);
@@ -91,7 +123,6 @@ export default function AdminPage() {
         const savedTrip = lsGet<string>(LS_KEY_TRIP_PREF);
         if (savedTrip && data.some((t) => t.tripId === savedTrip)) {
           setCurrentTripId(savedTrip);
-          loadPermissions(savedTrip);
         }
       } catch {
         if (!cancelled) setTripsError('無法載入行程');
@@ -100,21 +131,28 @@ export default function AdminPage() {
 
     loadTrips();
     return () => { cancelled = true; };
-  }, [loadPermissions]);
+  }, []);
+
+  /* ===== Load Permissions when trip changes ===== */
+  useEffect(() => {
+    if (currentTripId) loadPermissions(currentTripId);
+  }, [currentTripId, loadPermissions]);
 
   /* ===== Trip Select Change ===== */
   function handleTripChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const tripId = e.target.value;
     setCurrentTripId(tripId);
     setAddStatus(null);
+    setRemoveStatus(null);
     if (tripId) lsSet(LS_KEY_TRIP_PREF, tripId);
-    loadPermissions(tripId);
+    // permissions 會透過 useEffect[currentTripId] 自動載入
   }
 
   /* ===== Add Permission ===== */
   async function handleAdd() {
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed || !currentTripId) return;
+    const tripId = currentTripIdRef.current;
+    if (!trimmed || !tripId) return;
 
     setAddingDisabled(true);
     setAddStatus(null);
@@ -124,7 +162,7 @@ export default function AdminPage() {
         method: 'POST',
         body: JSON.stringify({
           email: trimmed,
-          tripId: currentTripId,
+          tripId,
           role: 'member',
         }),
       });
@@ -133,7 +171,7 @@ export default function AdminPage() {
         await r.json();
         setAddStatus({ text: '已新增 ' + trimmed, type: 'success' });
         setEmail('');
-        loadPermissions(currentTripId);
+        loadPermissions(currentTripIdRef.current);
         return;
       }
       if (r.status === 409) throw new Error('此 email 已有權限');
@@ -151,12 +189,17 @@ export default function AdminPage() {
   async function handleRemove(id: number, permEmail: string) {
     if (!window.confirm('確定移除 ' + permEmail + ' 的權限？')) return;
 
+    setRemovingId(id);
+    setRemoveStatus(null);
     try {
       const r = await apiFetchRaw('/permissions/' + id, { method: 'DELETE' });
       if (!r.ok) throw new Error('移除失敗');
-      loadPermissions(currentTripId);
+      setRemoveStatus({ text: '已移除 ' + permEmail, type: 'success' });
+      loadPermissions(currentTripIdRef.current);
     } catch (err) {
-      alert((err as Error).message);
+      setRemoveStatus({ text: (err as Error).message, type: 'error' });
+    } finally {
+      setRemovingId(null);
     }
   }
 
@@ -174,27 +217,56 @@ export default function AdminPage() {
   /* ===== Render Permission Content ===== */
   function renderPermissions() {
     if (!currentTripId) {
-      return <div className="admin-empty">請先選擇行程</div>;
+      return (
+        <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[24px] px-[16px]">
+          請先選擇行程
+        </div>
+      );
     }
     if (permLoading) {
-      return <div className="admin-empty">載入中…</div>;
+      return (
+        <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[24px] px-[16px]">
+          載入中…
+        </div>
+      );
     }
     if (permError) {
-      return <div className="admin-empty">{permError}</div>;
+      return (
+        <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[24px] px-[16px]">
+          {permError}
+        </div>
+      );
     }
     if (permissions.length === 0) {
-      return <div className="admin-empty">尚未授權任何成員</div>;
+      return (
+        <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[24px] px-[16px]">
+          尚未授權任何成員
+        </div>
+      );
     }
 
     return (
-      <div className="admin-permission-list">
-        {permissions.map((p) => (
-          <div className="admin-permission-item" key={p.id}>
-            <span className="admin-permission-email">{p.email}</span>
-            <span className="admin-permission-role">{p.role}</span>
+      <div className="flex flex-col">
+        {permissions.map((p, index) => (
+          <div
+            className={[
+              'flex items-center justify-between py-[12px] px-[16px] transition-[background-color] duration-[var(--transition-duration-fast)] hover:bg-[var(--color-tertiary)]',
+              index < permissions.length - 1
+                ? 'border-b border-[var(--color-border)] ml-[16px] pl-0'
+                : '',
+            ].join(' ')}
+            key={p.id}
+          >
+            <span className="text-[length:var(--font-size-body)] text-[color:var(--color-foreground)] flex-1 min-w-0 overflow-hidden text-ellipsis">
+              {p.email}
+            </span>
+            <span className="text-[length:var(--font-size-caption2)] text-[color:var(--color-muted)] py-[4px] px-[8px] bg-[var(--color-tertiary)] rounded-full mx-[12px] shrink-0">
+              {p.role}
+            </span>
             <button
-              className="admin-remove-btn"
+              className="appearance-none border-none bg-transparent text-[color:var(--color-muted)] cursor-pointer p-[4px] rounded-[var(--radius-sm)] flex items-center justify-center min-w-[var(--tap-min)] min-h-[var(--tap-min)] shrink-0 transition-[color,background] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-destructive)] hover:bg-[var(--color-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="移除"
+              disabled={removingId === p.id}
               onClick={() => handleRemove(p.id, p.email)}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
@@ -233,88 +305,132 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="page-layout">
-      <div className="container">
-        <div className="sticky-nav" id="stickyNav">
+    <div className="flex min-h-dvh">
+      <div className="flex-1 min-w-0 max-w-full mx-auto">
+        {/* Sticky Nav */}
+        <div
+          className="sticky top-0 z-[var(--z-sticky-nav)] border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-[color:var(--color-foreground)] py-[8px] px-[var(--padding-h)] flex items-center gap-[8px]"
+          id="stickyNav"
+        >
           <TriplineLogo isOnline={isOnline} />
-          <span className="nav-title">權限管理</span>
-          <button className="nav-close-btn" id="navCloseBtn" aria-label="關閉" onClick={handleClose}>
+          <span className="text-[length:var(--font-size-title3)] font-bold text-[color:var(--color-foreground)] flex-1 min-w-0 text-center">
+            權限管理
+          </span>
+          <button
+            className="flex items-center justify-center w-[var(--tap-min)] h-[var(--tap-min)] p-0 border-none rounded-full bg-transparent text-[color:var(--color-foreground)] shrink-0 transition-[background,color] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-accent)] hover:bg-[var(--color-accent-bg)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] ml-auto"
+            id="navCloseBtn"
+            aria-label="關閉"
+            onClick={handleClose}
+          >
             <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
             </svg>
           </button>
         </div>
+
         {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
         {showOffline && (
-          <Toast
+          <ToastV2
             message="已離線 — 無法管理權限"
             icon="offline"
             visible={showOffline}
           />
         )}
         {showReconnect && (
-          <Toast
+          <ToastV2
             message="已恢復連線"
             icon="online"
             visible={showReconnect}
           />
         )}
 
-        <main className={clsx('admin-main', !isOnline && 'offline-disabled')} id="adminMain">
-          <div className="admin-page">
-            {/* Section: Trip Select */}
-            <div className="admin-section">
-              <div className="admin-section-title">選擇行程</div>
-              <div className="admin-section-card">
-                <select
-                  className="admin-trip-select"
-                  aria-label="選擇行程"
-                  value={currentTripId}
-                  onChange={handleTripChange}
+        <main
+          className={[
+            'py-[var(--page-pt)] px-[var(--padding-h)] mx-auto md:max-w-[var(--page-max-w)]',
+            !isOnline ? 'opacity-50 pointer-events-none' : '',
+          ].join(' ')}
+          id="adminMain"
+        >
+          {/* Section: Trip Select */}
+          <div className="mb-[28px]">
+            <div className="text-[length:var(--font-size-caption)] font-medium text-[color:var(--color-muted)] uppercase tracking-wide mb-[8px] pl-[16px]">
+              選擇行程
+            </div>
+            <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] overflow-hidden">
+              <select
+                className="w-full appearance-none border-none bg-transparent text-[color:var(--color-foreground)] font-[inherit] text-[length:var(--font-size-body)] py-[12px] pl-[16px] pr-[44px] cursor-pointer bg-no-repeat bg-[position:right_16px_center] transition-[background-color] duration-[var(--transition-duration-fast)] hover:bg-[var(--color-tertiary)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] focus-visible:rounded-[var(--radius-lg)]"
+                style={SELECT_STYLE}
+                aria-label="選擇行程"
+                value={currentTripId}
+                onChange={handleTripChange}
+              >
+                {renderTripOptions()}
+              </select>
+            </div>
+          </div>
+
+          {/* Section: Permission List */}
+          <div className="mb-[28px]">
+            <div className="text-[length:var(--font-size-caption)] font-medium text-[color:var(--color-muted)] uppercase tracking-wide mb-[8px] pl-[16px]">
+              已授權成員
+            </div>
+            <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] overflow-hidden">
+              {renderPermissions()}
+            </div>
+            <div aria-live="polite">
+              {removeStatus && (
+                <div
+                  className={[
+                    'text-[length:var(--font-size-footnote)] mt-[8px] pl-[16px]',
+                    removeStatus.type === 'success'
+                      ? 'text-[color:var(--color-success)]'
+                      : 'text-[color:var(--color-destructive)]',
+                  ].join(' ')}
                 >
-                  {renderTripOptions()}
-                </select>
+                  {removeStatus.text}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section: Add Member */}
+          <div className="mb-[28px]">
+            <div className="text-[length:var(--font-size-caption)] font-medium text-[color:var(--color-muted)] uppercase tracking-wide mb-[8px] pl-[16px]">
+              新增成員
+            </div>
+            <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] overflow-hidden">
+              <div className="flex gap-[8px] p-[8px]">
+                <input
+                  type="email"
+                  className="flex-1 border-none bg-[var(--color-background)] text-[color:var(--color-foreground)] font-[inherit] text-[length:var(--font-size-body)] py-[12px] px-[16px] rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] placeholder:text-[color:var(--color-muted)]"
+                  placeholder="email@example.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={handleEmailKeyDown}
+                />
+                <button
+                  className="appearance-none border-none bg-[var(--color-accent)] text-[color:var(--color-accent-foreground)] font-[inherit] text-[length:var(--font-size-body)] font-semibold py-[12px] px-[16px] min-w-[64px] rounded-[var(--radius-md)] cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-[var(--transition-duration-fast)] hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={addingDisabled}
+                  onClick={handleAdd}
+                >
+                  新增
+                </button>
               </div>
             </div>
-
-            {/* Section: Permission List */}
-            <div className="admin-section">
-              <div className="admin-section-title">已授權成員</div>
-              <div className="admin-section-card">
-                {renderPermissions()}
-              </div>
-            </div>
-
-            {/* Section: Add Member */}
-            <div className="admin-section">
-              <div className="admin-section-title">新增成員</div>
-              <div className="admin-section-card">
-                <div className="admin-add-form">
-                  <input
-                    type="email"
-                    className="admin-email-input"
-                    placeholder="email@example.com"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={handleEmailKeyDown}
-                  />
-                  <button
-                    className="admin-add-btn"
-                    disabled={addingDisabled}
-                    onClick={handleAdd}
-                  >
-                    新增
-                  </button>
+            <div aria-live="polite">
+              {addStatus && (
+                <div
+                  className={[
+                    'text-[length:var(--font-size-footnote)] mt-[8px] pl-[16px]',
+                    addStatus.type === 'success'
+                      ? 'text-[color:var(--color-success)]'
+                      : 'text-[color:var(--color-destructive)]',
+                  ].join(' ')}
+                >
+                  {addStatus.text}
                 </div>
-                <div aria-live="polite">
-                  {addStatus && (
-                    <div className={`admin-status ${addStatus.type}`}>
-                      {addStatus.text}
-                    </div>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </main>

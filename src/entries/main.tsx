@@ -18,11 +18,15 @@ if (new URLSearchParams(search).get('v1') === '1' && typeof localStorage !== 'un
   localStorage.removeItem('tripline-v2');
 }
 
-/* V2 模式：僅 V2-ready 路由才 redirect（Phase 1: 只有 /admin） */
-const V2_READY_PATHS = ['/admin'];
+/* Admin 永遠走 V2（已 cutover），其他頁面依 V1/V2 切換 */
+const V2_CUTOVER_PATHS = ['/admin'];
+const isCutover = V2_CUTOVER_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
+
+/* V2-ready 但尚未 cutover 的路由（未來 ManagePage 等加入此列） */
+const V2_READY_PATHS: string[] = [];
 const isV2Ready = V2_READY_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
-if (useV2 && isV2Ready) {
+if (isCutover || (useV2 && isV2Ready)) {
   const v2Url = new URL(window.location.href);
   v2Url.pathname = '/v2.html';
   v2Url.hash = window.location.pathname + window.location.search;
