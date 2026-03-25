@@ -1,2 +1,4 @@
-/manage  /index.html  200
-/admin   /index.html  200
+/manage   /index.html  200
+/manage/  /index.html  200
+/admin    /index.html  200
+/admin/   /index.html  200
