@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Tripline favicon: three waves (triple line) -->
-  <rect width="64" height="64" rx="14" fill="#C4704F"/>
-  <path d="M12 28 Q22 24, 32 28 Q42 32, 52 28" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M12 36 Q18 33, 24 36 Q30 39, 36 36 Q42 33, 48 36" stroke="white" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.7"/>
-  <path d="M12 43 Q16 41, 20 43 Q24 45, 28 43 Q32 41, 36 43 Q40 45, 44 43" stroke="white" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.45"/>
-</svg>
