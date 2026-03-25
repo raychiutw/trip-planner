@@ -27,10 +27,7 @@ const V2_READY_PATHS: string[] = [];
 const isV2Ready = V2_READY_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
 if (isCutover || (useV2 && isV2Ready)) {
-  const v2Url = new URL(window.location.href);
-  v2Url.pathname = '/v2.html';
-  v2Url.hash = window.location.pathname + window.location.search;
-  window.location.replace(v2Url.toString());
+  import('./mainV2');
 } else {
   import('./mainV1');
 }
