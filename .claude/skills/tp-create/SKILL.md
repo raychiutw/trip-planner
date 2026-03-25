@@ -47,8 +47,19 @@ user-invocable: true
    - 每個 POI 須包含以下必填欄位：
      - `source: "ai"`（tp-create 產生的行程全部由 AI 推薦）
      - `note: ""`（有備註填內容，無備註填空字串，R15）
-     - `location.googleQuery`：實體地點填搜尋文字（R11）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
+     - `location`：實體地點必須包含完整結構（R11）：
+       ```json
+       {
+         "name": "原文地名（日文/韓文/中文）",
+         "googleQuery": "https://www.google.com/maps/search/{percent-encoded}",
+         "appleQuery": "https://maps.apple.com/?q={percent-encoded}",
+         "lat": 26.2109, "lng": 127.6820,
+         "geocode_status": "review"
+       }
+       ```
+     - **JP 自駕行程**（`selfDrive`）：entry 層級補 `mapcode`（格式 `"XXX XXX XXX*XX"`，WebSearch 查詢；查不到時省略）
+     - **KR 行程**：`location.naverQuery` 必填（Naver Maps URL，R14；優先 place URL，查不到用搜尋式 URL）
    - Markdown 支援欄位（前端會渲染 markdown）：
      - `entry.body`（description）：✅ 可用粗體、列表、連結
      - `entry.note`：✅ 可用粗體、列表
