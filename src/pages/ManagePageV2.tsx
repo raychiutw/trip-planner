@@ -29,7 +29,7 @@ function redirectToLogin(): boolean {
     return false; // 放棄 redirect，caller 應顯示錯誤
   }
   sessionStorage.setItem(AUTH_REDIRECT_KEY, String(count + 1));
-  window.location.replace('/manage');
+  window.location.replace('/manage/');
   return true;
 }
 
@@ -196,11 +196,10 @@ export default function ManagePageV2() {
       const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId), {
         signal: controller.signal,
       });
-      // TODO: 暫時停用 auth redirect，debug staging
-      // if (res.status === 401) {
-      //   if (!redirectToLogin()) throw new Error('需要重新登入，請重新整理頁面');
-      //   return;
-      // }
+      if (res.status === 401) {
+        if (!redirectToLogin()) throw new Error('需要重新登入，請重新整理頁面');
+        return;
+      }
       if (res.status === 403) throw new Error('你沒有此行程的權限');
       if (!res.ok) throw new Error('載入失敗');
       const data = (await res.json()) as RawRequest[];
@@ -229,13 +228,12 @@ export default function ManagePageV2() {
         apiFetch<TripInfo[]>('/trips?all=1').catch(() => [] as TripInfo[]),
       ]);
 
-      // TODO: 暫時停用 auth redirect，debug staging
-      // if (myRes.status === 401 || myRes.status === 403) {
-      //   if (!redirectToLogin() && !cancelled) {
-      //     setPageState({ kind: 'no-permission', message: '需要重新登入，請重新整理頁面' });
-      //   }
-      //   return;
-      // }
+      if (myRes.status === 401 || myRes.status === 403) {
+        if (!redirectToLogin() && !cancelled) {
+          setPageState({ kind: 'no-permission', message: '需要重新登入，請重新整理頁面' });
+        }
+        return;
+      }
       if (!myRes.ok) {
         if (!cancelled) setPageState({ kind: 'no-permission', message: '無法載入行程資料' });
         return;
