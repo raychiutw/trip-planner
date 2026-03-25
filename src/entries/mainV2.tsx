@@ -8,7 +8,7 @@ import { lazy, Suspense, useEffect } from 'react';
 
 import '../../css/tokens.css';
 
-const AdminPageV2 = lazy(() => import('../pages/AdminPageV2'));
+const AdminPage = lazy(() => import('../pages/AdminPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -40,7 +40,7 @@ if (el) {
       <HashRouter>
         <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
           <Routes>
-            <Route path="/admin" element={<AdminPageV2 />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="/trip/:tripId" element={<V1Fallback />} />
             <Route path="/manage" element={<V1Fallback />} />
             <Route path="*" element={<LegacyRedirect />} />

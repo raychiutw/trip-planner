@@ -17,12 +17,13 @@
 - [x] 2.2 ToastV2 unit test — visible/hidden 切換 + icon 種類 + a11y 屬性驗證
 - [x] 2.3 E2E 截圖比對 — V1 vs V2 computed styles + 滑入/滑出動畫
 
-## 3. AdminPageV2
+## 3. AdminPage（V2 cutover 完成）
 
-- [x] 3.1 新建 `src/pages/AdminPageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline
+- [x] 3.1 新建 `src/pages/AdminPageV2.tsx` — import tokens.css + ToastV2，全 Tailwind inline
 - [x] 3.2 AdminPageV2 unit test — 權限列表渲染 + 新增/刪除操作 + 錯誤處理
 - [x] 3.3 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式 + 6 主題）
 - [x] 3.4 互動狀態檢查 — hover/focus/active/disabled + 所有 aria-* 屬性
+- [x] 3.5 Cutover — 刪除 V1 AdminPage，rename AdminPageV2→AdminPage，main.tsx /admin 永遠走 V2，移除 V1/V2 比對 E2E
 
 ## 4. ManagePageV2
 

@@ -9,7 +9,6 @@ import '../../css/map.css';
 
 const TripPage = lazy(() => import('../pages/TripPage'));
 const ManagePage = lazy(() => import('../pages/ManagePage'));
-const AdminPage = lazy(() => import('../pages/AdminPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -30,7 +29,6 @@ if (el) {
           <Routes>
             <Route path="/trip/:tripId" element={<TripPage />} />
             <Route path="/manage" element={<ManagePage />} />
-            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<LegacyRedirect />} />
           </Routes>
         </Suspense>
