@@ -287,8 +287,8 @@ export default function AdminPageV2() {
           className="sticky top-0 z-[var(--z-sticky-nav)] border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-[color:var(--color-foreground)] py-[8px] px-[var(--padding-h)] flex items-center gap-[8px]"
           id="stickyNav"
         >
-          <TriplineLogo isOnline={isOnline} />
-          <span className="text-[length:var(--font-size-title3)] font-bold text-[color:var(--color-foreground)] overflow-hidden text-ellipsis whitespace-nowrap flex-1 min-w-0 text-center">
+          <TriplineLogo isOnline={isOnline} compact />
+          <span className="text-[length:var(--font-size-title3)] font-bold text-[color:var(--color-foreground)] flex-1 min-w-0 text-center">
             權限管理
           </span>
           <button
@@ -378,7 +378,7 @@ export default function AdminPageV2() {
                   onKeyDown={handleEmailKeyDown}
                 />
                 <button
-                  className="appearance-none border-none bg-[var(--color-accent)] text-[color:var(--color-accent-foreground)] font-[inherit] text-[length:var(--font-size-body)] font-semibold py-[12px] px-[20px] rounded-[var(--radius-md)] cursor-pointer whitespace-nowrap transition-[filter] duration-[var(--transition-duration-fast)] hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="appearance-none border-none bg-[var(--color-accent)] text-[color:var(--color-accent-foreground)] font-[inherit] text-[length:var(--font-size-body)] font-semibold py-[12px] px-[16px] min-w-[60px] rounded-[var(--radius-md)] cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-[var(--transition-duration-fast)] hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={addingDisabled}
                   onClick={handleAdd}
                 >
