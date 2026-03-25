@@ -20,19 +20,6 @@ function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response> {
   return fetch('/api' + path, { ...opts, headers });
 }
 
-/* ===== 401 redirect 防無限循環 ===== */
-const AUTH_REDIRECT_KEY = 'tripline-auth-redirect';
-function redirectToLogin(): boolean {
-  const count = Number(sessionStorage.getItem(AUTH_REDIRECT_KEY) || '0');
-  if (count >= 3) {
-    sessionStorage.removeItem(AUTH_REDIRECT_KEY);
-    return false; // 放棄 redirect，caller 應顯示錯誤
-  }
-  sessionStorage.setItem(AUTH_REDIRECT_KEY, String(count + 1));
-  window.location.replace('/manage/');
-  return true;
-}
-
 /* ===== API types ===== */
 interface RawRequest {
   id: number;
@@ -153,9 +140,6 @@ export default function ManagePageV2() {
   const isOnline = useOnlineStatus();
   const navigate = useNavigate();
 
-  // 不在 mount 時清除 auth redirect 計數器 — 等 API 成功後才清除
-  // 否則每次 mount 都重置，導致無限 redirect loop
-
   /* ----- State ----- */
   const [pageState, setPageState] = useState<PageState>({ kind: 'loading' });
   const [filteredTrips, setFilteredTrips] = useState<{ tripId: string; name: string }[]>([]);
@@ -197,10 +181,7 @@ export default function ManagePageV2() {
       const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId), {
         signal: controller.signal,
       });
-      if (res.status === 401) {
-        if (!redirectToLogin()) throw new Error('需要重新登入，請重新整理頁面');
-        return;
-      }
+      if (res.status === 401) throw new Error('認證失敗，請重新整理頁面');
       if (res.status === 403) throw new Error('你沒有此行程的權限');
       if (!res.ok) throw new Error('載入失敗');
       const data = (await res.json()) as RawRequest[];
@@ -230,9 +211,7 @@ export default function ManagePageV2() {
       ]);
 
       if (myRes.status === 401 || myRes.status === 403) {
-        if (!redirectToLogin() && !cancelled) {
-          setPageState({ kind: 'no-permission', message: '需要重新登入，請重新整理頁面' });
-        }
+        if (!cancelled) setPageState({ kind: 'no-permission', message: '無法存取，請重新整理頁面' });
         return;
       }
       if (!myRes.ok) {
@@ -273,8 +252,6 @@ export default function ManagePageV2() {
       }
 
       if (!cancelled) {
-        // API 成功 = Access 認證通過，清除 redirect 計數器
-        sessionStorage.removeItem(AUTH_REDIRECT_KEY);
         setFilteredTrips(displayList);
         setCurrentTripId(initialTrip);
         setPageState({ kind: 'ready' });
