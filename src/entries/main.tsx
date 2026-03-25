@@ -16,6 +16,13 @@ import '../../css/shared.css';
 import '../../css/style.css';
 import '../../css/map.css';
 
+/* V1/V2 路由切換 — Blue-Green Tailwind 遷移 */
+const params = new URLSearchParams(window.location.search);
+const forceV1 = params.get('v1') === '1';
+const forceV2 = params.get('v2') === '1';
+const storedV2 = typeof localStorage !== 'undefined' && localStorage.getItem('tripline-v2') === '1';
+export const useV2 = !forceV1 && (forceV2 || storedV2);
+
 const TripPage = lazy(() => import('../pages/TripPage'));
 const ManagePage = lazy(() => import('../pages/ManagePage'));
 const AdminPage = lazy(() => import('../pages/AdminPage'));
