@@ -153,7 +153,8 @@ export default function ManagePageV2() {
   const isOnline = useOnlineStatus();
   const navigate = useNavigate();
 
-  useEffect(() => { sessionStorage.removeItem(AUTH_REDIRECT_KEY); }, []);
+  // 不在 mount 時清除 auth redirect 計數器 — 等 API 成功後才清除
+  // 否則每次 mount 都重置，導致無限 redirect loop
 
   /* ----- State ----- */
   const [pageState, setPageState] = useState<PageState>({ kind: 'loading' });
@@ -272,6 +273,8 @@ export default function ManagePageV2() {
       }
 
       if (!cancelled) {
+        // API 成功 = Access 認證通過，清除 redirect 計數器
+        sessionStorage.removeItem(AUTH_REDIRECT_KEY);
         setFilteredTrips(displayList);
         setCurrentTripId(initialTrip);
         setPageState({ kind: 'ready' });
