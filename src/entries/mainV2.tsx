@@ -29,7 +29,9 @@ if (el) {
         <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
           <Routes>
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/" element={<AdminPage />} />
             <Route path="/manage" element={<ManagePage />} />
+            <Route path="/manage/" element={<ManagePage />} />
             <Route path="*" element={<LegacyRedirect />} />
           </Routes>
         </Suspense>
