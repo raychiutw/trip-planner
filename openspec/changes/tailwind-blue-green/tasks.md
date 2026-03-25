@@ -25,12 +25,12 @@
 - [x] 3.4 互動狀態檢查 — hover/focus/active/disabled + 所有 aria-* 屬性
 - [x] 3.5 Cutover — 刪除 V1 AdminPage，rename AdminPageV2→AdminPage，main.tsx /admin 永遠走 V2，移除 V1/V2 比對 E2E
 
-## 4. ManagePageV2
+## 4. ManagePage（V2 cutover 完成）
 
-- [ ] 4.1 新建 `src/pages/ManagePageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline，含 chat layout + input bar
-- [ ] 4.2 ManagePageV2 unit test — 請求清單渲染 + 送出流程 + chat input 狀態
-- [ ] 4.3 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式）+ Markdown 渲染一致性
-- [ ] 4.4 互動狀態檢查 — hover/focus/active/disabled + input focus 狀態
+- [x] 4.1 新建 `src/pages/ManagePageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline，含 chat layout + input bar + scoped markdown reply styles
+- [x] 4.2 Cutover — main.tsx 加 /manage 到 V2_CUTOVER_PATHS，mainV2 加 ManagePageV2 route，mainV1 移除 manage route
+- [ ] 4.3 ManagePageV2 unit test — 請求清單渲染 + 送出流程 + chat input 狀態
+- [ ] 4.4 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式）+ Markdown 渲染一致性
 
 ## 5. TripPageV2
 
