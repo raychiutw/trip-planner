@@ -13,8 +13,9 @@ export default defineConfig({
     { name: 'chromium', use: { browserName: 'chromium' } },
   ],
   webServer: {
-    command: 'npx serve -l 3000 --no-clipboard',
+    command: 'npm run build && npx vite preview --port 3000',
     port: 3000,
     reuseExistingServer: true,
+    timeout: 60000,
   },
 });

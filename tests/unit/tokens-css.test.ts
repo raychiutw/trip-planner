@@ -70,7 +70,10 @@ describe('tokens.css', () => {
     expect(tokens).not.toContain('.request-item');
     expect(tokens).not.toContain('.chat-container');
     expect(tokens).not.toContain('.admin-');
-    expect(tokens).not.toContain('@keyframes stepper-pulse');
+    // stepper-pulse 和 toast-slide-* 已搬到 tokens.css（V2 元件需要）
+    expect(tokens).toContain('@keyframes stepper-pulse');
+    expect(tokens).toContain('@keyframes toast-slide-down');
+    expect(tokens).toContain('@keyframes toast-slide-up');
   });
 
   it('token values match shared.css @theme block', () => {

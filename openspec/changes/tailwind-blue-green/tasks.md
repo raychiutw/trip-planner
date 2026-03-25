@@ -7,22 +7,22 @@
 
 ## 1. RequestStepperV2
 
-- [ ] 1.1 新建 `src/components/shared/RequestStepperV2.tsx` — import tokens.css，所有樣式改 Tailwind inline，功能邏輯從 V1 複製，保留所有 aria-*/role 屬性
-- [ ] 1.2 RequestStepperV2 unit test — 4 種狀態渲染（open, received, processing, completed）+ a11y 屬性驗證
-- [ ] 1.3 E2E 截圖比對 — V1 vs V2 computed styles 比對（7 個屬性），手機 + 桌機 + 深色模式
+- [x] 1.1 新建 `src/components/shared/RequestStepperV2.tsx` — import tokens.css，所有樣式改 Tailwind inline，功能邏輯從 V1 複製，保留所有 aria-*/role 屬性
+- [x] 1.2 RequestStepperV2 unit test — 4 種狀態渲染（open, received, processing, completed）+ a11y 屬性驗證
+- [x] 1.3 E2E 截圖比對 — V1 vs V2 computed styles 比對（7 個屬性），手機 + 桌機 + 深色模式
 
 ## 2. ToastV2
 
-- [ ] 2.1 新建 `src/components/shared/ToastV2.tsx` — import tokens.css，Tailwind inline，保留 role="status" + aria-live="polite" + aria-atomic="true"
-- [ ] 2.2 ToastV2 unit test — visible/hidden 切換 + icon 種類 + a11y 屬性驗證
-- [ ] 2.3 E2E 截圖比對 — V1 vs V2 computed styles + 滑入/滑出動畫
+- [x] 2.1 新建 `src/components/shared/ToastV2.tsx` — import tokens.css，Tailwind inline，保留 role="status" + aria-live="polite" + aria-atomic="true"
+- [x] 2.2 ToastV2 unit test — visible/hidden 切換 + icon 種類 + a11y 屬性驗證
+- [x] 2.3 E2E 截圖比對 — V1 vs V2 computed styles + 滑入/滑出動畫
 
 ## 3. AdminPageV2
 
-- [ ] 3.1 新建 `src/pages/AdminPageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline
-- [ ] 3.2 AdminPageV2 unit test — 權限列表渲染 + 新增/刪除操作 + 錯誤處理
-- [ ] 3.3 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式 + 6 主題）
-- [ ] 3.4 互動狀態檢查 — hover/focus/active/disabled + 所有 aria-* 屬性
+- [x] 3.1 新建 `src/pages/AdminPageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline
+- [x] 3.2 AdminPageV2 unit test — 權限列表渲染 + 新增/刪除操作 + 錯誤處理
+- [x] 3.3 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式 + 6 主題）
+- [x] 3.4 互動狀態檢查 — hover/focus/active/disabled + 所有 aria-* 屬性
 
 ## 4. ManagePageV2
 

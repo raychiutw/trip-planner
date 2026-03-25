@@ -25,7 +25,7 @@ export const useV2 = !forceV1 && (forceV2 || storedV2);
 
 const TripPage = lazy(() => import('../pages/TripPage'));
 const ManagePage = lazy(() => import('../pages/ManagePage'));
-const AdminPage = lazy(() => import('../pages/AdminPage'));
+const AdminPage = lazy(() => useV2 ? import('../pages/AdminPageV2') : import('../pages/AdminPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 
