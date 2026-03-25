@@ -7,42 +7,26 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ErrorBoundary } from '../components/shared/ErrorBoundary';
-import { lazy, Suspense } from 'react';
+import { resolveV2 } from '../lib/v2routing';
 
-import '../../css/shared.css';
-import '../../css/style.css';
-import '../../css/map.css';
+const search = window.location.search;
+const lsValue = typeof localStorage !== 'undefined' ? localStorage.getItem('tripline-v2') : null;
+const useV2 = resolveV2(search, lsValue);
 
-const TripPage = lazy(() => import('../pages/TripPage'));
-const ManagePage = lazy(() => import('../pages/ManagePage'));
-const AdminPage = lazy(() => import('../pages/AdminPage'));
-
-const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
-
-/** 相容舊版 ?trip=xxx query string，轉為 /trip/:tripId 路由 */
-function LegacyRedirect() {
-  const queryTrip = new URLSearchParams(window.location.search).get('trip');
-  const tripId = (queryTrip && /^[\w-]+$/.test(queryTrip)) ? queryTrip : DEFAULT_TRIP;
-  return <Navigate to={`/trip/${tripId}`} replace />;
+/* ?v1=1 時清除 localStorage V2 偏好，避免使用者被困在 V2 */
+if (new URLSearchParams(search).get('v1') === '1' && typeof localStorage !== 'undefined') {
+  localStorage.removeItem('tripline-v2');
 }
 
-const el = document.getElementById('reactRoot');
-if (el) {
-  createRoot(el).render(
-    <ErrorBoundary>
-      <BrowserRouter>
-        <Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center' }}>載入中…</div>}>
-          <Routes>
-            <Route path="/trip/:tripId" element={<TripPage />} />
-            <Route path="/manage" element={<ManagePage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="*" element={<LegacyRedirect />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </ErrorBoundary>
-  );
+/* V2 模式：僅 V2-ready 路由才 redirect（Phase 1: 只有 /admin） */
+const V2_READY_PATHS = ['/admin'];
+const isV2Ready = V2_READY_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
+
+if (useV2 && isV2Ready) {
+  const v2Url = new URL(window.location.href);
+  v2Url.pathname = '/v2.html';
+  v2Url.hash = window.location.pathname + window.location.search;
+  window.location.replace(v2Url.toString());
+} else {
+  import('./mainV1');
 }
