@@ -20,7 +20,7 @@ interface RequestStepperProps {
 
 const DOT_BASE = 'w-2 h-2 rounded-full mx-auto mb-1';
 const DOT_DONE = `${DOT_BASE} bg-accent`;
-const DOT_ACTIVE = `${DOT_BASE} border-2 border-accent animate-[stepper-pulse_2s_infinite]`;
+const DOT_ACTIVE = `${DOT_BASE} border-2 border-accent animate-stepper-pulse`;
 const DOT_PENDING = `${DOT_BASE} border-2 border-border`;
 
 const LINE_BASE = 'flex-1 h-0.5 mx-1 mb-4';
