@@ -25,7 +25,7 @@ const DOT_PENDING = `${DOT_BASE} border-2 border-border`;
 
 const LINE_BASE = 'flex-1 h-0.5 mx-1 mb-4';
 const LINE_DONE = `${LINE_BASE} bg-accent`;
-const LINE_PENDING = `${LINE_BASE} bg-(--color-border)`;
+const LINE_PENDING = `${LINE_BASE} bg-border`;
 
 const LABEL_BASE = 'text-caption2';
 const LABEL_DONE = `${LABEL_BASE} text-muted`;

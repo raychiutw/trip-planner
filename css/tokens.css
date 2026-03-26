@@ -30,6 +30,9 @@
     --color-warning-bg: rgba(184, 134, 11, 0.12);
     --color-info: #2870A0;
     --color-info-bg: rgba(40, 112, 160, 0.12);
+    --color-plan-bg: #E8F5E9;
+    --color-plan-text: #2E7D32;
+    --color-plan-hover: #C8E6C9;
     --color-disabled: #B0A090;
     --color-disabled-foreground: #D0C8BC;
     --color-overlay: rgba(0,0,0,0.35);

@@ -21,7 +21,7 @@ export default function ToastV2({ message, icon, visible }: ToastProps) {
     <div
       className={[
         'fixed left-1/2 -translate-x-1/2 flex items-center pointer-events-none',
-        'gap-[var(--spacing-2)] px-[var(--spacing-5)] py-[var(--spacing-3)]',
+        'gap-2 px-5 py-3',
         'rounded-lg',
         'bg-[color-mix(in_srgb,var(--color-secondary)_85%,transparent)]',
         'backdrop-blur-[20px] [-webkit-backdrop-filter:blur(20px)]',
