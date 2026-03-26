@@ -129,13 +129,9 @@ body.dark .day-header-v2 {
     overflow-y: auto; padding: var(--spacing-3);
   }
 }
-/* Desktop layout: info-panel offset */
-@media (min-width: 1024px) {
-  #tripContent-v2 { max-width: var(--content-max-w); margin: 0 auto; }
+/* Desktop layout: info-panel offset (no content max-width — match V1 full-width) */
+@media (min-width: 1200px) {
   .page-layout-v2:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
-}
-@media (min-width: 1024px) and (max-width: 1279px) {
-  #tripContent-v2 { max-width: none; }
 }
 /* day-header sticky on desktop */
 @media (min-width: 768px) {
