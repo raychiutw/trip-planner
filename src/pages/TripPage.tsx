@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import clsx from 'clsx';
@@ -1155,18 +1155,19 @@ export default function TripPage() {
 
       {/* Edit FAB */}
       {!loading && trip && (
-        <Link
+        <a
           className={clsx('edit-fab', !isOnline && 'disabled')}
           id="editFab"
-          to="/manage"
+          href="/manage/"
           aria-label="AI 修改行程"
           aria-disabled={!isOnline}
           tabIndex={isOnline ? undefined : -1}
+          onClick={!isOnline ? (e: React.MouseEvent) => e.preventDefault() : undefined}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
           </svg>
-        </Link>
+        </a>
       )}
 
       {/* InfoSheet (mobile bottom sheet) */}
