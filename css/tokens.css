@@ -679,7 +679,7 @@
     ::selection { background: var(--color-accent-subtle); color: var(--color-foreground); }
 
     /* Reset */
-    * { margin: 0; box-sizing: border-box; }
+    * { box-sizing: border-box; }
     html { scroll-behavior: smooth; scrollbar-gutter: stable; }
     body { font-family: var(--font-family-system); background: var(--color-background); font-size: var(--font-size-body); color: var(--color-foreground); line-height: var(--line-height-normal); transition: background-color var(--transition-duration-slow) var(--transition-timing-function-apple), color var(--transition-duration-slow) var(--transition-timing-function-apple); }
 
