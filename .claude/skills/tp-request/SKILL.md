@@ -88,29 +88,10 @@ curl -s -X PATCH \
    c. 新增或替換的 POI 須包含以下必填欄位：
       - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
       - `note`：有備註填內容，無備註填空字串 `""`（R15）
+      - `location.googleQuery`：實體地點填搜尋文字（R11）
       - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-      - `location`：實體地點必須包含完整結構（R11）：
-        ```json
-        {
-          "name": "原文地名（日文/韓文/中文）",
-          "googleQuery": "https://www.google.com/maps/search/{percent-encoded}",
-          "appleQuery": "https://maps.apple.com/?q={percent-encoded}",
-          "lat": 26.2109, "lng": 127.6820,
-          "geocode_status": "review"
-        }
-        ```
-        - `name`：使用原文地名（日文用日文、韓文用韓文）
-        - `googleQuery` / `appleQuery`：用 `encodeURIComponent(name)` 組 URL
-        - `lat` / `lng`：AI 根據地名提供近似座標（小數點後 4 位）
-        - `geocode_status`：AI 提供的座標一律填 `"review"`
-      - **JP 自駕行程**（`meta.countries` 含 `"JP"` 且 `meta.selfDrive === true`）：
-        - entry 層級的 `mapcode`：格式 `"XXX XXX XXX*XX"`（R0），用 WebSearch 查詢
-        - 查不到時省略（不填錯誤值）
-      - **KR 行程**（`meta.countries` 含 `"KR"`）：
-        - `location.naverQuery`：Naver Maps URL（R14）
-        - 優先：`https://map.naver.com/v5/entry/place/{placeId}`
-        - 查不到時：`https://map.naver.com/v5/search/{韓文關鍵字}`
    d. 修改的部分須符合 R0-R15 品質規則
+   d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
    e. 依修改類型選擇對應 API：
       - **修改單一 entry**（title/time/description/location/travel 等）：
         ```bash
@@ -143,11 +124,7 @@ curl -s -X PATCH \
           -d '{"content":"..."}' \
           "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
         ```
-   f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新：
-      - 優先用 WebSearch 查詢「{A地} から {B地} 車で何分」取實際車程
-      - 無法查時粗估：市區 3~4 分/km、郊區高速 1.5~2 分/km、步行 12~15 分/km
-      - `travel_desc` 的分鐘數必須與時間軸間隔一致
-   f2. 覆寫整天（PUT）時，**先 GET 現有資料**，未修改的 entry 必須保留原始 `location`、`mapcode`、`source`、`rating`。每個 entry 的 `location` 欄位會存入 `location_json`，省略則變 null（導航按鈕消失）
+   f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
    i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）

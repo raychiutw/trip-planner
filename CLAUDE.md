@@ -166,50 +166,6 @@ html.page-simple { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visi
 
 **教訓**：新增頁面時，若結構與行程頁差異大，在 HTML 加 `page-simple` class 即可。
 
-### Cloudflare Pages Pretty URLs 與 V2 Cutover Routing
-
-**問題**：V2 cutover 後，行程頁的 + 號（EditFab）點了閃回行程頁。
-
-**根因鏈**：
-1. Cloudflare Pages 的 **Pretty URLs** 功能會把 `/manage` 308 redirect 到 `/`（找不到 `manage.html`）
-2. `_redirects` 的 `/manage /index.html 200` rewrite 被 Pretty URLs **覆蓋**（Pretty URLs 優先級更高）
-3. 只有 `/manage/`（帶 trailing slash）能正確 serve `manage/index.html`
-4. V1 的 `<Link to="/manage">`（React Router client-side nav）在 mainV1 移除 `/manage` route 後會 fallback 到 `LegacyRedirect` → 跳回行程頁
-
-**解法**（完整 V2 Cutover 清單）：
-
-```
-1. main.tsx：把路徑加到 V2_CUTOVER_PATHS
-   → cutover 路徑直接 import('./mainV2')
-
-2. mainV2.tsx：用 BrowserRouter（不是 HashRouter）
-   → 加 trailing slash route：<Route path="/manage/" ...>
-
-3. mainV1.tsx：移除該路徑的 route + import
-
-4. TripPage EditFab：<Link to="/manage"> 改 <a href="/manage/">
-   → 必須用 <a>（full page nav），不能用 <Link>（client-side nav）
-   → href 必須帶 trailing slash
-
-5. _redirects：加 /manage /manage/ 301
-   → 讓無 slash 版本也正確
-
-6. manage/index.html：build 後自動複製（package.json build script）
-```
-
-**教訓**：
-- Cloudflare Pages 的 Pretty URLs 會干擾 `_redirects` 的 200 rewrite
-- V2 cutover 的頁面，從 V1 頁面跳過去必須用 `<a href>`（full page nav），不能用 React Router `<Link>`
-- URL 必須帶 trailing slash（`/manage/` 不是 `/manage`）
-- mainV2 不能用 HashRouter + v2.html，要用 BrowserRouter 直接在 index.html 裡 dynamic import
-- 本機 dev server 不受 Pretty URLs 影響，所以本機測試正常但 production/staging 會壞 — 必須用 `wrangler pages deploy` 測 staging
-
-### Mock API 開發模式
-
-**用法**：`MOCK_API=1 npx vite dev`
-
-啟用後 `/api/*` 請求返回假資料（`scripts/vite-mock-api.ts`），不會 proxy 到 production。
-用於本機測試需要認證的頁面（ManagePage、AdminPage）。
 
 ## gstack
 
