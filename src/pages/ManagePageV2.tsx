@@ -89,29 +89,29 @@ const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
   );
 
   return (
-    <div className="py-[12px] px-[16px] bg-[var(--color-secondary)] rounded-[var(--radius-md)] transition-[background] duration-[var(--transition-duration-fast)] overflow-hidden max-w-full hover:bg-[var(--color-hover)]">
+    <div className="py-[12px] px-[16px] bg-(--color-secondary) rounded-(--radius-md) transition-[background] duration-(--transition-duration-fast) overflow-hidden max-w-full hover:bg-(--color-hover)">
       <div className="flex items-center gap-[8px] flex-wrap">
         <span
           className={[
-            'inline-flex items-center py-[4px] px-[8px] rounded-full text-[length:var(--font-size-caption)] font-semibold whitespace-nowrap shrink-0 min-h-[24px] leading-none',
+            'inline-flex items-center py-[4px] px-[8px] rounded-full text-(length:--font-size-caption) font-semibold whitespace-nowrap shrink-0 min-h-[24px] leading-none',
             req.mode === 'trip-edit'
-              ? 'bg-[var(--color-accent-bg)] text-[color:var(--color-accent)]'
-              : 'bg-[var(--color-plan-bg)] text-[color:var(--color-plan-text)]',
+              ? 'bg-(--color-accent-bg) text-(color:--color-accent)'
+              : 'bg-(--color-plan-bg) text-(color:--color-plan-text)',
           ].join(' ')}
         >
           {req.mode === 'trip-edit' ? '改行程' : '問建議'}
         </span>
-        <span className="text-[length:var(--font-size-footnote)] text-[color:var(--color-muted)] ml-auto">
+        <span className="text-(length:--font-size-footnote) text-(color:--color-muted) ml-auto">
           {formatDate(req.created_at)}
         </span>
       </div>
 
-      <div className="text-[length:var(--font-size-callout)] md:text-[length:var(--font-size-title3)] text-[color:var(--color-foreground)] mt-[8px] leading-[var(--line-height-normal)] break-words">
+      <div className="text-(length:--font-size-callout) md:text-[length:var(--font-size-title3)] text-(color:--color-foreground) mt-[8px] leading-(--line-height-normal) break-words">
         {req.message}
       </div>
 
       {req.submitted_by && (
-        <div className="text-[length:var(--font-size-footnote)] text-[color:var(--color-muted)] mt-[4px]">
+        <div className="text-(length:--font-size-footnote) text-(color:--color-muted) mt-[4px]">
           {req.submitted_by}
         </div>
       )}
@@ -120,7 +120,7 @@ const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
 
       {req.reply && (
         <>
-          <div className="border-none border-t border-[var(--color-border)] my-[12px]" />
+          <div className="border-none border-t border-(--color-border) my-[12px]" />
           <div data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
         </>
       )}
@@ -349,13 +349,13 @@ export default function ManagePageV2() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-[var(--z-sticky-nav)] border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-[color:var(--color-foreground)] py-[8px] px-[var(--padding-h)] flex items-center gap-[8px]"
+          className="sticky top-0 z-(--z-sticky-nav) border-b border-(--color-border) bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-(color:--color-foreground) py-[8px] px-(--padding-h) flex items-center gap-[8px]"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
-              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-[var(--color-secondary)] text-[color:var(--color-foreground)] font-[inherit] text-[length:var(--font-size-callout)] font-semibold py-[8px] pl-[12px] pr-[28px] cursor-pointer bg-no-repeat bg-[position:right_10px_center] rounded-[var(--radius-full)] min-h-[var(--tap-min)] max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-[background-color] duration-[var(--transition-duration-fast)] hover:bg-[var(--color-tertiary)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]"
+              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-(--color-secondary) text-(color:--color-foreground) font-[inherit] text-(length:--font-size-callout) font-semibold py-[8px] pl-[12px] pr-[28px] cursor-pointer bg-no-repeat bg-[position:right_10px_center] rounded-(--radius-full) min-h-(--tap-min) max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-[background-color] duration-(--transition-duration-fast) hover:bg-(--color-tertiary) focus-visible:outline-none focus-visible:shadow-(--shadow-ring)"
               style={{ backgroundImage: SELECT_CHEVRON }}
               aria-label="選擇行程"
               value={currentTripId || ''}
@@ -367,7 +367,7 @@ export default function ManagePageV2() {
             </select>
           )}
           <button
-            className="flex items-center justify-center w-[var(--tap-min)] h-[var(--tap-min)] p-0 border-none rounded-full bg-transparent text-[color:var(--color-foreground)] shrink-0 transition-[background,color] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-accent)] hover:bg-[var(--color-accent-bg)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] ml-auto"
+            className="flex items-center justify-center w-(--tap-min) h-(--tap-min) p-0 border-none rounded-full bg-transparent text-(color:--color-foreground) shrink-0 transition-[background,color] duration-(--transition-duration-fast) hover:text-(color:--color-accent) hover:bg-(--color-accent-bg) focus-visible:outline-none focus-visible:shadow-(--shadow-ring) ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -387,17 +387,17 @@ export default function ManagePageV2() {
           id="manageMain"
         >
           {pageState.kind === 'loading' && (
-            <div className="text-center py-[40px] text-[color:var(--color-muted)]">載入中...</div>
+            <div className="text-center py-[40px] text-(color:--color-muted)">載入中...</div>
           )}
 
           {pageState.kind === 'auth-required' && (
-            <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[32px] px-[16px] bg-[var(--color-secondary)] rounded-[var(--radius-md)] mx-[var(--padding-h)] my-[40px]">
+            <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md) mx-(--padding-h) my-[40px]">
               請先登入
             </div>
           )}
 
           {pageState.kind === 'no-permission' && (
-            <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[32px] px-[16px] bg-[var(--color-secondary)] rounded-[var(--radius-md)] mx-[var(--padding-h)] my-[40px]">
+            <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md) mx-(--padding-h) my-[40px]">
               {pageState.message}
             </div>
           )}
@@ -406,27 +406,27 @@ export default function ManagePageV2() {
           {pageState.kind === 'ready' && (
             <div className="flex flex-col h-[calc(100dvh-var(--nav-h))]">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto py-[16px] px-[var(--padding-h)]">
+              <div className="flex-1 overflow-y-auto py-[16px] px-(--padding-h)">
                 <div
                   className={[
-                    'flex flex-col gap-[12px] md:max-w-[var(--page-max-w)] md:mx-auto md:pt-[var(--page-pt)]',
+                    'flex flex-col gap-[12px] md:max-w-(--page-max-w) md:mx-auto md:pt-(--page-pt)',
                     requests.length === 0 ? 'justify-center flex-1' : '',
                   ].join(' ')}
                   style={requests.length === 0 ? { minHeight: '100%' } : undefined}
                 >
                   <div id="manageRequests">
                     {requestsLoading && (
-                      <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[32px] px-[16px] bg-[var(--color-secondary)] rounded-[var(--radius-md)]">
+                      <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md)">
                         載入中…
                       </div>
                     )}
                     {!requestsLoading && requestsError && (
-                      <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[32px] px-[16px] bg-[var(--color-secondary)] rounded-[var(--radius-md)]">
+                      <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md)">
                         {requestsError}
                       </div>
                     )}
                     {!requestsLoading && !requestsError && requests.length === 0 && (
-                      <div className="text-[color:var(--color-muted)] text-[length:var(--font-size-callout)] text-center py-[32px] px-[16px] bg-[var(--color-secondary)] rounded-[var(--radius-md)]">
+                      <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md)">
                         尚無請求紀錄
                       </div>
                     )}
@@ -442,11 +442,11 @@ export default function ManagePageV2() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 py-[8px] px-[var(--padding-h)] pb-[max(16px,env(safe-area-inset-bottom,16px))] overflow-y-hidden">
-                <div className="bg-[var(--color-secondary)] rounded-[var(--radius-lg)] pt-[12px] px-[12px] pb-[8px] shadow-[var(--shadow-md)] md:max-w-[var(--page-max-w)] md:mx-auto">
+              <div className="shrink-0 py-[8px] px-(--padding-h) pb-[max(16px,env(safe-area-inset-bottom,16px))] overflow-y-hidden">
+                <div className="bg-(--color-secondary) rounded-(--radius-lg) pt-[12px] px-[12px] pb-[8px] shadow-(--shadow-md) md:max-w-(--page-max-w) md:mx-auto">
                   <textarea
                     ref={textareaRef}
-                    className="w-full py-[8px] px-[4px] border-none bg-transparent font-[inherit] text-[length:var(--font-size-body)] text-[color:var(--color-foreground)] resize-none leading-[var(--line-height-normal)] min-h-[3.6em] max-h-[30vh] overflow-y-auto focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] focus-visible:rounded-[var(--radius-xs)] placeholder:text-[color:var(--color-muted)]"
+                    className="w-full py-[8px] px-[4px] border-none bg-transparent font-[inherit] text-(length:--font-size-body) text-(color:--color-foreground) resize-none leading-(--line-height-normal) min-h-[3.6em] max-h-[30vh] overflow-y-auto focus-visible:outline-none focus-visible:shadow-(--shadow-ring) focus-visible:rounded-(--radius-xs) placeholder:text-(color:--color-muted)"
                     id="manageText"
                     maxLength={65536}
                     placeholder={'例如：\n· Day 3 午餐換成通堂拉麵\n· 刪除美麗海水族館，改去萬座毛\n· Day 5 下午加一個 AEON 購物'}
@@ -459,10 +459,10 @@ export default function ManagePageV2() {
                     <div className="flex items-center gap-[4px]">
                       <button
                         className={[
-                          'appearance-none border-none bg-transparent text-[color:var(--color-muted)] font-[inherit] text-[length:var(--font-size-callout)] font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-[var(--tap-min)] transition-[background,color] duration-[var(--transition-duration-fast)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]',
+                          'appearance-none border-none bg-transparent text-(color:--color-muted) font-[inherit] text-(length:--font-size-callout) font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-(--tap-min) transition-[background,color] duration-(--transition-duration-fast) focus-visible:outline-none focus-visible:shadow-(--shadow-ring)',
                           mode === 'trip-edit'
-                            ? 'bg-[var(--color-accent-bg)] !text-[color:var(--color-accent)] !font-semibold hover:brightness-95'
-                            : 'hover:bg-[var(--color-hover)]',
+                            ? 'bg-(--color-accent-bg) !text-(color:--color-accent) !font-semibold hover:brightness-95'
+                            : 'hover:bg-(--color-hover)',
                         ].join(' ')}
                         onClick={() => setMode('trip-edit')}
                       >
@@ -470,10 +470,10 @@ export default function ManagePageV2() {
                       </button>
                       <button
                         className={[
-                          'appearance-none border-none bg-transparent text-[color:var(--color-muted)] font-[inherit] text-[length:var(--font-size-callout)] font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-[var(--tap-min)] transition-[background,color] duration-[var(--transition-duration-fast)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)]',
+                          'appearance-none border-none bg-transparent text-(color:--color-muted) font-[inherit] text-(length:--font-size-callout) font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-(--tap-min) transition-[background,color] duration-(--transition-duration-fast) focus-visible:outline-none focus-visible:shadow-(--shadow-ring)',
                           mode === 'trip-plan'
-                            ? 'bg-[var(--color-plan-bg)] !text-[color:var(--color-plan-text)] !font-semibold hover:bg-[var(--color-plan-hover)]'
-                            : 'hover:bg-[var(--color-hover)]',
+                            ? 'bg-(--color-plan-bg) !text-(color:--color-plan-text) !font-semibold hover:bg-(--color-plan-hover)'
+                            : 'hover:bg-(--color-hover)',
                         ].join(' ')}
                         onClick={() => setMode('trip-plan')}
                       >
@@ -485,10 +485,10 @@ export default function ManagePageV2() {
                       {submitStatus && (
                         <div
                           className={[
-                            'text-[length:var(--font-size-footnote)] rounded-[var(--radius-sm)]',
+                            'text-(length:--font-size-footnote) rounded-(--radius-sm)',
                             submitStatus.type === 'success'
-                              ? 'text-[color:var(--color-success)] flex items-center gap-[4px]'
-                              : 'text-[color:var(--color-destructive)]',
+                              ? 'text-(color:--color-success) flex items-center gap-[4px]'
+                              : 'text-(color:--color-destructive)',
                           ].join(' ')}
                         >
                           {submitStatus.type === 'success' && (
@@ -503,10 +503,10 @@ export default function ManagePageV2() {
 
                     <button
                       className={[
-                        'w-[var(--tap-min)] h-[var(--tap-min)] border-none rounded-full flex items-center justify-center shrink-0 transition-[background,color,transform] duration-[var(--transition-duration-normal)]',
+                        'w-(--tap-min) h-(--tap-min) border-none rounded-full flex items-center justify-center shrink-0 transition-[background,color,transform] duration-(--transition-duration-normal)',
                         text.trim().length === 0 || submitting
-                          ? 'bg-[var(--color-border)] text-[color:var(--color-muted)] cursor-not-allowed scale-[0.92]'
-                          : 'bg-[var(--color-accent)] text-[color:var(--color-accent-foreground)] cursor-pointer scale-100 hover:brightness-110 active:scale-95',
+                          ? 'bg-(--color-border) text-(color:--color-muted) cursor-not-allowed scale-[0.92]'
+                          : 'bg-(--color-accent) text-(color:--color-accent-foreground) cursor-pointer scale-100 hover:brightness-110 active:scale-95',
                       ].join(' ')}
                       id="submitBtn"
                       data-send-btn=""

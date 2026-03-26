@@ -19,18 +19,18 @@ interface RequestStepperProps {
 /* ===== Tailwind class mappings ===== */
 
 const DOT_BASE = 'w-2 h-2 rounded-full mx-auto mb-1';
-const DOT_DONE = `${DOT_BASE} bg-[var(--color-accent)]`;
-const DOT_ACTIVE = `${DOT_BASE} border-2 border-[var(--color-accent)] animate-[stepper-pulse_2s_infinite]`;
-const DOT_PENDING = `${DOT_BASE} border-2 border-[var(--color-border)]`;
+const DOT_DONE = `${DOT_BASE} bg-(--color-accent)`;
+const DOT_ACTIVE = `${DOT_BASE} border-2 border-(--color-accent) animate-[stepper-pulse_2s_infinite]`;
+const DOT_PENDING = `${DOT_BASE} border-2 border-(--color-border)`;
 
 const LINE_BASE = 'flex-1 h-0.5 mx-1 mb-4';
-const LINE_DONE = `${LINE_BASE} bg-[var(--color-accent)]`;
-const LINE_PENDING = `${LINE_BASE} bg-[var(--color-border)]`;
+const LINE_DONE = `${LINE_BASE} bg-(--color-accent)`;
+const LINE_PENDING = `${LINE_BASE} bg-(--color-border)`;
 
 const LABEL_BASE = 'text-[length:var(--font-size-caption2)]';
-const LABEL_DONE = `${LABEL_BASE} text-[color:var(--color-muted)]`;
-const LABEL_ACTIVE = `${LABEL_BASE} text-[color:var(--color-accent)] font-semibold`;
-const LABEL_PENDING = `${LABEL_BASE} text-[color:var(--color-muted)]`;
+const LABEL_DONE = `${LABEL_BASE} text-(color:--color-muted)`;
+const LABEL_ACTIVE = `${LABEL_BASE} text-(color:--color-accent) font-semibold`;
+const LABEL_PENDING = `${LABEL_BASE} text-(color:--color-muted)`;
 
 /* ===== RequestStepperV2 Component ===== */
 

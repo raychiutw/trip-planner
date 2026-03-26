@@ -102,6 +102,20 @@
 
     /* Transition timing function — generate ease-* utilities */
     --transition-timing-function-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+    /* Layout — V2 頁面需要 Tailwind utility（從 :root 提升到 @theme） */
+    --padding-h: 16px;
+    --tap-min: 44px;
+    --page-max-w: min(60vw, 900px);
+    --page-pt: 24px;
+    --nav-h: 48px;
+
+    /* Z-index — V2 頁面需要 */
+    --z-sticky-nav: 200;
+    --z-fab: 300;
+
+    /* Focus ring — V2 頁面需要 */
+    --shadow-ring: 0 0 0 2px var(--color-accent);
 }
 
 /* ===== Sheet animation tokens ===== */
@@ -136,26 +150,17 @@
     /* Brand colors (third-party, not theme-dependent) */
     --color-google-maps: #4285F4;
     --color-naver-maps: #03C75A;
-    /* Focus ring */
-    --shadow-ring: 0 0 0 2px var(--color-accent);
     /* Theme personality (overridden per theme) */
     --theme-header-gradient: none;
     --theme-font-weight-headline: var(--font-weight-semibold);
     --theme-line-height-body: var(--line-height-normal);
     --theme-section-gap: var(--spacing-6);
-    /* Layout */
-    --page-max-w: min(60vw, 900px);
-    --page-pt: var(--spacing-6);
+    /* Layout（padding-h, tap-min, page-max-w, page-pt, nav-h 已移至 @theme） */
     --content-max-w: 720px;
     --info-panel-w: 280px;
-    --nav-h: 48px;
-    --padding-h: 16px;
-    --tap-min: 44px;
     --fab-size: 56px;
-    /* Z-index scale */
+    /* Z-index scale（z-sticky-nav, z-fab 已移至 @theme） */
     --z-day-header: 100;
-    --z-sticky-nav: 200;
-    --z-fab: 300;
     --z-quick-panel: 350;
     --z-info-sheet-backdrop: 400;
     --z-info-sheet: 401;

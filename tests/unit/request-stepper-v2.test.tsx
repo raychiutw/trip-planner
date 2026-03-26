@@ -22,13 +22,13 @@ describe('RequestStepperV2', () => {
     it('first dot has active class (border accent)', () => {
       const { container } = render(<RequestStepperV2 status="open" />);
       const dots = container.querySelectorAll('.rounded-full');
-      expect(dots[0]?.className).toContain('border-[var(--color-accent)]');
+      expect(dots[0]?.className).toContain('border-(--color-accent)');
     });
 
     it('first label has accent color and semibold', () => {
       const { getByText } = render(<RequestStepperV2 status="open" />);
       const label = getByText('送出');
-      expect(label.className).toContain('text-[color:var(--color-accent)]');
+      expect(label.className).toContain('text-(color:--color-accent)');
       expect(label.className).toContain('font-semibold');
     });
   });
@@ -38,21 +38,21 @@ describe('RequestStepperV2', () => {
       const { container } = render(<RequestStepperV2 status="processing" />);
       const dots = container.querySelectorAll('.rounded-full');
       // 送出 = done, 接收 = done
-      expect(dots[0]?.className).toContain('bg-[var(--color-accent)]');
-      expect(dots[1]?.className).toContain('bg-[var(--color-accent)]');
+      expect(dots[0]?.className).toContain('bg-(--color-accent)');
+      expect(dots[1]?.className).toContain('bg-(--color-accent)');
     });
 
     it('third dot is active (border accent + animation)', () => {
       const { container } = render(<RequestStepperV2 status="processing" />);
       const dots = container.querySelectorAll('.rounded-full');
-      expect(dots[2]?.className).toContain('border-[var(--color-accent)]');
+      expect(dots[2]?.className).toContain('border-(--color-accent)');
       expect(dots[2]?.className).toContain('animate-');
     });
 
     it('fourth dot is pending (border)', () => {
       const { container } = render(<RequestStepperV2 status="processing" />);
       const dots = container.querySelectorAll('.rounded-full');
-      expect(dots[3]?.className).toContain('border-[var(--color-border)]');
+      expect(dots[3]?.className).toContain('border-(--color-border)');
     });
   });
 
@@ -61,17 +61,17 @@ describe('RequestStepperV2', () => {
       const { container } = render(<RequestStepperV2 status="completed" />);
       const dots = container.querySelectorAll('.rounded-full');
       // completed = index 3, 所以 0,1,2 是 done, 3 是 active
-      expect(dots[0]?.className).toContain('bg-[var(--color-accent)]');
-      expect(dots[1]?.className).toContain('bg-[var(--color-accent)]');
-      expect(dots[2]?.className).toContain('bg-[var(--color-accent)]');
+      expect(dots[0]?.className).toContain('bg-(--color-accent)');
+      expect(dots[1]?.className).toContain('bg-(--color-accent)');
+      expect(dots[2]?.className).toContain('bg-(--color-accent)');
       // 第四個是 active（最後一步）
-      expect(dots[3]?.className).toContain('border-[var(--color-accent)]');
+      expect(dots[3]?.className).toContain('border-(--color-accent)');
     });
 
     it('done labels have muted color', () => {
       const { getByText } = render(<RequestStepperV2 status="completed" />);
-      expect(getByText('送出').className).toContain('text-[color:var(--color-muted)]');
-      expect(getByText('接收').className).toContain('text-[color:var(--color-muted)]');
+      expect(getByText('送出').className).toContain('text-(color:--color-muted)');
+      expect(getByText('接收').className).toContain('text-(color:--color-muted)');
     });
   });
 
@@ -82,11 +82,11 @@ describe('RequestStepperV2', () => {
       const lines = container.querySelectorAll('.h-0\\.5');
       expect(lines).toHaveLength(3);
       // Line 1 (open→received): done
-      expect(lines[0]?.className).toContain('bg-[var(--color-accent)]');
+      expect(lines[0]?.className).toContain('bg-(--color-accent)');
       // Line 2 (received→processing): pending
-      expect(lines[1]?.className).toContain('bg-[var(--color-border)]');
+      expect(lines[1]?.className).toContain('bg-(--color-border)');
       // Line 3 (processing→completed): pending
-      expect(lines[2]?.className).toContain('bg-[var(--color-border)]');
+      expect(lines[2]?.className).toContain('bg-(--color-border)');
     });
   });
 });
