@@ -225,7 +225,7 @@ export default function AdminPageV2() {
               {p.role}
             </span>
             <button
-              className="appearance-none border-none bg-transparent text-[color:var(--color-muted)] cursor-pointer p-1 rounded-[var(--radius-sm)] flex items-center justify-center min-w-[var(--tap-min)] min-h-[var(--tap-min)] shrink-0 transition-[color,background] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-destructive)] hover:bg-[var(--color-hover)]"
+              className="appearance-none border-none bg-transparent text-[color:var(--color-muted)] cursor-pointer p-1 rounded-[var(--radius-sm)] flex items-center justify-center min-w-[var(--spacing-tap-min)] min-h-[var(--spacing-tap-min)] shrink-0 transition-[color,background] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-destructive)] hover:bg-[var(--color-hover)]"
               aria-label="移除"
               onClick={() => handleRemove(p.id, p.email)}
             >
@@ -269,7 +269,7 @@ export default function AdminPageV2() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-[var(--z-sticky-nav)] border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-[color:var(--color-foreground)] py-2 px-[var(--padding-h)] flex items-center gap-2"
+          className="sticky top-0 z-[var(--z-sticky-nav)] border-b border-[var(--color-border)] bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-[color:var(--color-foreground)] py-2 px-[var(--spacing-padding-h)] flex items-center gap-2"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
@@ -277,7 +277,7 @@ export default function AdminPageV2() {
             權限管理
           </span>
           <button
-            className="flex items-center justify-center w-[var(--tap-min)] h-[var(--tap-min)] border-none rounded-full bg-transparent text-[color:var(--color-foreground)] shrink-0 transition-[background,color] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-accent)] hover:bg-[var(--color-accent-bg)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] ml-auto"
+            className="flex items-center justify-center w-[var(--spacing-tap-min)] h-[var(--spacing-tap-min)] border-none rounded-full bg-transparent text-[color:var(--color-foreground)] shrink-0 transition-[background,color] duration-[var(--transition-duration-fast)] hover:text-[color:var(--color-accent)] hover:bg-[var(--color-accent-bg)] focus-visible:outline-none focus-visible:shadow-[var(--shadow-ring)] ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -306,7 +306,7 @@ export default function AdminPageV2() {
 
         <main
           className={[
-            'py-[var(--page-pt)] px-[var(--padding-h)] mx-auto md:max-w-[var(--page-max-w)]',
+            'py-[var(--spacing-page-pt)] px-[var(--spacing-padding-h)] mx-auto md:max-w-[var(--spacing-page-max-w)]',
             !isOnline ? 'opacity-50 pointer-events-none' : '',
           ].join(' ')}
           id="adminMain"

@@ -51,13 +51,13 @@ describe('ToastV2', () => {
   it('offline icon has warning color', () => {
     const { container } = render(<ToastV2 message="test" icon="offline" visible={true} />);
     const iconSpan = container.querySelector('[aria-hidden="true"]') as HTMLElement;
-    expect(iconSpan.className).toContain('text-(color:--color-warning)');
+    expect(iconSpan.className).toContain('text-warning');
   });
 
   it('online icon has success color', () => {
     const { container } = render(<ToastV2 message="test" icon="online" visible={true} />);
     const iconSpan = container.querySelector('[aria-hidden="true"]') as HTMLElement;
-    expect(iconSpan.className).toContain('text-(color:--color-success)');
+    expect(iconSpan.className).toContain('text-success');
   });
 
   it('icon span has aria-hidden="true"', () => {

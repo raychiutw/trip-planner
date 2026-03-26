@@ -144,8 +144,8 @@
   font-size: var(--font-size-footnote);
   font-weight: 600;
   text-decoration: none;
-  min-height: var(--tap-min);
-  min-width: var(--tap-min);
+  min-height: var(--spacing-tap-min);
+  min-width: var(--spacing-tap-min);
   justify-content: center;
 }
 
@@ -189,8 +189,8 @@
   font-size: var(--font-size-footnote);
   font-weight: 500;
   cursor: pointer;
-  min-height: var(--tap-min);
-  min-width: var(--tap-min);
+  min-height: var(--spacing-tap-min);
+  min-width: var(--spacing-tap-min);
   transition: color var(--transition-duration-fast) var(--transition-timing-function-apple),
               background var(--transition-duration-fast) var(--transition-timing-function-apple);
 }
@@ -254,8 +254,8 @@
   font-size: var(--font-size-caption);
   font-weight: 500;
   cursor: pointer;
-  min-height: var(--tap-min);
-  min-width: var(--tap-min);
+  min-height: var(--spacing-tap-min);
+  min-width: var(--spacing-tap-min);
   background: var(--color-secondary);
   box-shadow: var(--shadow-sm);
   color: var(--color-foreground);
@@ -304,8 +304,8 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  min-width: var(--tap-min);
-  min-height: var(--tap-min);
+  min-width: var(--spacing-tap-min);
+  min-height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
   background: var(--color-accent);
   color: var(--color-accent-foreground);
@@ -418,7 +418,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: var(--tap-min);
+  min-height: var(--spacing-tap-min);
   padding: var(--spacing-2) var(--spacing-3);
   background: var(--color-accent);
   color: var(--color-accent-foreground);

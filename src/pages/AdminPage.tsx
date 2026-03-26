@@ -205,28 +205,28 @@ export default function AdminPage() {
   function renderPermissions() {
     if (!currentTripId) {
       return (
-        <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
           請先選擇行程
         </div>
       );
     }
     if (permLoading) {
       return (
-        <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
           載入中…
         </div>
       );
     }
     if (permError) {
       return (
-        <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
           {permError}
         </div>
       );
     }
     if (permissions.length === 0) {
       return (
-        <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
           尚未授權任何成員
         </div>
       );
@@ -237,21 +237,21 @@ export default function AdminPage() {
         {permissions.map((p, index) => (
           <div
             className={[
-              'flex items-center justify-between py-[12px] px-[16px] transition-[background-color] duration-(--transition-duration-fast) hover:bg-(--color-tertiary)',
+              'flex items-center justify-between py-[12px] px-[16px] transition-[background-color] duration-fast hover:bg-tertiary',
               index < permissions.length - 1
-                ? 'border-b border-(--color-border) ml-[16px] pl-0'
+                ? 'border-b border-border ml-[16px] pl-0'
                 : '',
             ].join(' ')}
             key={p.id}
           >
-            <span className="text-(length:--font-size-body) text-(color:--color-foreground) flex-1 min-w-0 overflow-hidden text-ellipsis">
+            <span className="text-body text-foreground flex-1 min-w-0 overflow-hidden text-ellipsis">
               {p.email}
             </span>
-            <span className="text-[length:var(--font-size-caption2)] text-(color:--color-muted) py-[4px] px-[8px] bg-(--color-tertiary) rounded-full mx-[12px] shrink-0">
+            <span className="text-caption2 text-muted py-[4px] px-[8px] bg-tertiary rounded-full mx-[12px] shrink-0">
               {p.role}
             </span>
             <button
-              className="appearance-none border-none bg-transparent text-(color:--color-muted) cursor-pointer p-[4px] rounded-(--radius-sm) flex items-center justify-center min-w-(--tap-min) min-h-(--tap-min) shrink-0 transition-[color,background] duration-(--transition-duration-fast) hover:text-(color:--color-destructive) hover:bg-(--color-hover) disabled:opacity-50 disabled:cursor-not-allowed"
+              className="appearance-none border-none bg-transparent text-muted cursor-pointer p-[4px] rounded-sm flex items-center justify-center min-w-tap-min min-h-tap-min shrink-0 transition-[color,background] duration-fast hover:text-destructive hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="移除"
               disabled={removingId === p.id}
               onClick={() => handleRemove(p.id, p.email)}
@@ -296,15 +296,15 @@ export default function AdminPage() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-(--color-border) bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-(color:--color-foreground) py-[8px] px-(--padding-h) flex items-center gap-[8px]"
+          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-foreground py-[8px] px-padding-h flex items-center gap-[8px]"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
-          <span className="text-[length:var(--font-size-title3)] font-bold text-(color:--color-foreground) flex-1 min-w-0 text-center">
+          <span className="text-title3 font-bold text-foreground flex-1 min-w-0 text-center">
             權限管理
           </span>
           <button
-            className="flex items-center justify-center w-(--tap-min) h-(--tap-min) p-0 border-none rounded-full bg-transparent text-(color:--color-foreground) shrink-0 transition-[background,color] duration-(--transition-duration-fast) hover:text-(color:--color-accent) hover:bg-(--color-accent-bg) focus-visible:outline-none focus-visible:shadow-(--shadow-ring) ml-auto"
+            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-[background,color] duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -333,19 +333,19 @@ export default function AdminPage() {
 
         <main
           className={[
-            'py-(--page-pt) px-(--padding-h) mx-auto md:max-w-(--page-max-w)',
+            'py-page-pt px-padding-h mx-auto md:max-w-page-max-w',
             !isOnline ? 'opacity-50 pointer-events-none' : '',
           ].join(' ')}
           id="adminMain"
         >
           {/* Section: Trip Select */}
           <div className="mb-[28px]">
-            <div className="text-(length:--font-size-caption) font-medium text-(color:--color-muted) uppercase tracking-wide mb-[8px] pl-[16px]">
+            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-[8px] pl-[16px]">
               選擇行程
             </div>
-            <div className="bg-(--color-secondary) rounded-(--radius-lg) overflow-hidden">
+            <div className="bg-secondary rounded-lg overflow-hidden">
               <select
-                className="w-full appearance-none border-none bg-transparent text-(color:--color-foreground) font-[inherit] text-(length:--font-size-body) py-[12px] pl-[16px] pr-[44px] cursor-pointer bg-no-repeat bg-[position:right_16px_center] transition-[background-color] duration-(--transition-duration-fast) hover:bg-(--color-tertiary) focus-visible:outline-none focus-visible:shadow-(--shadow-ring) focus-visible:rounded-(--radius-lg)"
+                className="w-full appearance-none border-none bg-transparent text-foreground font-[inherit] text-body py-[12px] pl-[16px] pr-[44px] cursor-pointer bg-no-repeat bg-[position:right_16px_center] transition-[background-color] duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
                 style={SELECT_STYLE}
                 aria-label="選擇行程"
                 value={currentTripId}
@@ -358,20 +358,20 @@ export default function AdminPage() {
 
           {/* Section: Permission List */}
           <div className="mb-[28px]">
-            <div className="text-(length:--font-size-caption) font-medium text-(color:--color-muted) uppercase tracking-wide mb-[8px] pl-[16px]">
+            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-[8px] pl-[16px]">
               已授權成員
             </div>
-            <div className="bg-(--color-secondary) rounded-(--radius-lg) overflow-hidden">
+            <div className="bg-secondary rounded-lg overflow-hidden">
               {renderPermissions()}
             </div>
             <div aria-live="polite">
               {removeStatus && (
                 <div
                   className={[
-                    'text-(length:--font-size-footnote) mt-[8px] pl-[16px]',
+                    'text-footnote mt-[8px] pl-[16px]',
                     removeStatus.type === 'success'
-                      ? 'text-(color:--color-success)'
-                      : 'text-(color:--color-destructive)',
+                      ? 'text-success'
+                      : 'text-destructive',
                   ].join(' ')}
                 >
                   {removeStatus.text}
@@ -382,14 +382,14 @@ export default function AdminPage() {
 
           {/* Section: Add Member */}
           <div className="mb-[28px]">
-            <div className="text-(length:--font-size-caption) font-medium text-(color:--color-muted) uppercase tracking-wide mb-[8px] pl-[16px]">
+            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-[8px] pl-[16px]">
               新增成員
             </div>
-            <div className="bg-(--color-secondary) rounded-(--radius-lg) overflow-hidden">
+            <div className="bg-secondary rounded-lg overflow-hidden">
               <div className="flex gap-[8px] p-[8px]">
                 <input
                   type="email"
-                  className="flex-1 border-none bg-(--color-background) text-(color:--color-foreground) font-[inherit] text-(length:--font-size-body) py-[12px] px-[16px] rounded-(--radius-md) focus-visible:outline-none focus-visible:shadow-(--shadow-ring) placeholder:text-(color:--color-muted)"
+                  className="flex-1 border-none bg-background text-foreground font-[inherit] text-body py-[12px] px-[16px] rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
                   placeholder="email@example.com"
                   autoComplete="email"
                   value={email}
@@ -397,7 +397,7 @@ export default function AdminPage() {
                   onKeyDown={handleEmailKeyDown}
                 />
                 <button
-                  className="appearance-none border-none bg-(--color-accent) text-(color:--color-accent-foreground) font-[inherit] text-(length:--font-size-body) font-semibold py-[12px] px-[16px] min-w-[64px] rounded-(--radius-md) cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-(--transition-duration-fast) hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="appearance-none border-none bg-accent text-accent-foreground font-[inherit] text-body font-semibold py-[12px] px-[16px] min-w-[64px] rounded-md cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-fast hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={addingDisabled}
                   onClick={handleAdd}
                 >
@@ -409,10 +409,10 @@ export default function AdminPage() {
               {addStatus && (
                 <div
                   className={[
-                    'text-(length:--font-size-footnote) mt-[8px] pl-[16px]',
+                    'text-footnote mt-[8px] pl-[16px]',
                     addStatus.type === 'success'
-                      ? 'text-(color:--color-success)'
-                      : 'text-(color:--color-destructive)',
+                      ? 'text-success'
+                      : 'text-destructive',
                   ].join(' ')}
                 >
                   {addStatus.text}

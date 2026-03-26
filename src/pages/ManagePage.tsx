@@ -381,14 +381,14 @@ export default function ManagePage() {
 
           {/* Auth required */}
           {pageState.kind === 'auth-required' && (
-            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
+            <div className="manage-no-permission mx-[var(--spacing-padding-h)] my-10">
               請先登入
             </div>
           )}
 
           {/* No permission / no published trips */}
           {pageState.kind === 'no-permission' && (
-            <div className="manage-no-permission mx-[var(--padding-h)] my-10">
+            <div className="manage-no-permission mx-[var(--spacing-padding-h)] my-10">
               {pageState.message}
             </div>
           )}

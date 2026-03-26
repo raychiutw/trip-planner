@@ -89,29 +89,29 @@ const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
   );
 
   return (
-    <div className="py-[12px] px-[16px] bg-(--color-secondary) rounded-(--radius-md) transition-[background] duration-(--transition-duration-fast) overflow-hidden max-w-full hover:bg-(--color-hover)">
+    <div className="py-[12px] px-[16px] bg-secondary rounded-md transition-[background] duration-fast overflow-hidden max-w-full hover:bg-hover">
       <div className="flex items-center gap-[8px] flex-wrap">
         <span
           className={[
-            'inline-flex items-center py-[4px] px-[8px] rounded-full text-(length:--font-size-caption) font-semibold whitespace-nowrap shrink-0 min-h-[24px] leading-none',
+            'inline-flex items-center py-[4px] px-[8px] rounded-full text-caption font-semibold whitespace-nowrap shrink-0 min-h-[24px] leading-none',
             req.mode === 'trip-edit'
-              ? 'bg-(--color-accent-bg) text-(color:--color-accent)'
+              ? 'bg-accent-bg text-accent'
               : 'bg-(--color-plan-bg) text-(color:--color-plan-text)',
           ].join(' ')}
         >
           {req.mode === 'trip-edit' ? '改行程' : '問建議'}
         </span>
-        <span className="text-(length:--font-size-footnote) text-(color:--color-muted) ml-auto">
+        <span className="text-footnote text-muted ml-auto">
           {formatDate(req.created_at)}
         </span>
       </div>
 
-      <div className="text-(length:--font-size-callout) md:text-[length:var(--font-size-title3)] text-(color:--color-foreground) mt-[8px] leading-(--line-height-normal) break-words">
+      <div className="text-callout md:text-title3 text-foreground mt-[8px] leading-normal break-words">
         {req.message}
       </div>
 
       {req.submitted_by && (
-        <div className="text-(length:--font-size-footnote) text-(color:--color-muted) mt-[4px]">
+        <div className="text-footnote text-muted mt-[4px]">
           {req.submitted_by}
         </div>
       )}
@@ -120,7 +120,7 @@ const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
 
       {req.reply && (
         <>
-          <div className="border-none border-t border-(--color-border) my-[12px]" />
+          <div className="border-none border-t border-border my-[12px]" />
           <div data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
         </>
       )}
@@ -349,13 +349,13 @@ export default function ManagePageV2() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-(--color-border) bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-(color:--color-foreground) py-[8px] px-(--padding-h) flex items-center gap-[8px]"
+          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-foreground py-[8px] px-padding-h flex items-center gap-[8px]"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
-              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-(--color-secondary) text-(color:--color-foreground) font-[inherit] text-(length:--font-size-callout) font-semibold py-[8px] pl-[12px] pr-[28px] cursor-pointer bg-no-repeat bg-[position:right_10px_center] rounded-(--radius-full) min-h-(--tap-min) max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-[background-color] duration-(--transition-duration-fast) hover:bg-(--color-tertiary) focus-visible:outline-none focus-visible:shadow-(--shadow-ring)"
+              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-secondary text-foreground font-[inherit] text-callout font-semibold py-[8px] pl-[12px] pr-[28px] cursor-pointer bg-no-repeat bg-[position:right_10px_center] rounded-full min-h-tap-min max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-[background-color] duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring"
               style={{ backgroundImage: SELECT_CHEVRON }}
               aria-label="選擇行程"
               value={currentTripId || ''}
@@ -367,7 +367,7 @@ export default function ManagePageV2() {
             </select>
           )}
           <button
-            className="flex items-center justify-center w-(--tap-min) h-(--tap-min) p-0 border-none rounded-full bg-transparent text-(color:--color-foreground) shrink-0 transition-[background,color] duration-(--transition-duration-fast) hover:text-(color:--color-accent) hover:bg-(--color-accent-bg) focus-visible:outline-none focus-visible:shadow-(--shadow-ring) ml-auto"
+            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-[background,color] duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -387,46 +387,46 @@ export default function ManagePageV2() {
           id="manageMain"
         >
           {pageState.kind === 'loading' && (
-            <div className="text-center py-[40px] text-(color:--color-muted)">載入中...</div>
+            <div className="text-center py-[40px] text-muted">載入中...</div>
           )}
 
           {pageState.kind === 'auth-required' && (
-            <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md) mx-(--padding-h) my-[40px]">
+            <div className="text-muted text-callout text-center py-[32px] px-[16px] bg-secondary rounded-md mx-padding-h my-[40px]">
               請先登入
             </div>
           )}
 
           {pageState.kind === 'no-permission' && (
-            <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md) mx-(--padding-h) my-[40px]">
+            <div className="text-muted text-callout text-center py-[32px] px-[16px] bg-secondary rounded-md mx-padding-h my-[40px]">
               {pageState.message}
             </div>
           )}
 
           {/* Ready: chat UI */}
           {pageState.kind === 'ready' && (
-            <div className="flex flex-col h-[calc(100dvh-var(--nav-h))]">
+            <div className="flex flex-col h-[calc(100dvh-var(--spacing-nav-h))]">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto py-[16px] px-(--padding-h)">
+              <div className="flex-1 overflow-y-auto py-[16px] px-padding-h">
                 <div
                   className={[
-                    'flex flex-col gap-[12px] md:max-w-(--page-max-w) md:mx-auto md:pt-(--page-pt)',
+                    'flex flex-col gap-[12px] md:max-w-page-max-w md:mx-auto md:pt-page-pt',
                     requests.length === 0 ? 'justify-center flex-1' : '',
                   ].join(' ')}
                   style={requests.length === 0 ? { minHeight: '100%' } : undefined}
                 >
                   <div id="manageRequests">
                     {requestsLoading && (
-                      <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md)">
+                      <div className="text-muted text-callout text-center py-[32px] px-[16px] bg-secondary rounded-md">
                         載入中…
                       </div>
                     )}
                     {!requestsLoading && requestsError && (
-                      <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md)">
+                      <div className="text-muted text-callout text-center py-[32px] px-[16px] bg-secondary rounded-md">
                         {requestsError}
                       </div>
                     )}
                     {!requestsLoading && !requestsError && requests.length === 0 && (
-                      <div className="text-(color:--color-muted) text-(length:--font-size-callout) text-center py-[32px] px-[16px] bg-(--color-secondary) rounded-(--radius-md)">
+                      <div className="text-muted text-callout text-center py-[32px] px-[16px] bg-secondary rounded-md">
                         尚無請求紀錄
                       </div>
                     )}
@@ -442,11 +442,11 @@ export default function ManagePageV2() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 py-[8px] px-(--padding-h) pb-[max(16px,env(safe-area-inset-bottom,16px))] overflow-y-hidden">
-                <div className="bg-(--color-secondary) rounded-(--radius-lg) pt-[12px] px-[12px] pb-[8px] shadow-(--shadow-md) md:max-w-(--page-max-w) md:mx-auto">
+              <div className="shrink-0 py-[8px] px-padding-h pb-[max(16px,env(safe-area-inset-bottom,16px))] overflow-y-hidden">
+                <div className="bg-secondary rounded-lg pt-[12px] px-[12px] pb-[8px] shadow-md md:max-w-page-max-w md:mx-auto">
                   <textarea
                     ref={textareaRef}
-                    className="w-full py-[8px] px-[4px] border-none bg-transparent font-[inherit] text-(length:--font-size-body) text-(color:--color-foreground) resize-none leading-(--line-height-normal) min-h-[3.6em] max-h-[30vh] overflow-y-auto focus-visible:outline-none focus-visible:shadow-(--shadow-ring) focus-visible:rounded-(--radius-xs) placeholder:text-(color:--color-muted)"
+                    className="w-full py-[8px] px-[4px] border-none bg-transparent font-[inherit] text-body text-foreground resize-none leading-normal min-h-[3.6em] max-h-[30vh] overflow-y-auto focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs placeholder:text-muted"
                     id="manageText"
                     maxLength={65536}
                     placeholder={'例如：\n· Day 3 午餐換成通堂拉麵\n· 刪除美麗海水族館，改去萬座毛\n· Day 5 下午加一個 AEON 購物'}
@@ -459,10 +459,10 @@ export default function ManagePageV2() {
                     <div className="flex items-center gap-[4px]">
                       <button
                         className={[
-                          'appearance-none border-none bg-transparent text-(color:--color-muted) font-[inherit] text-(length:--font-size-callout) font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-(--tap-min) transition-[background,color] duration-(--transition-duration-fast) focus-visible:outline-none focus-visible:shadow-(--shadow-ring)',
+                          'appearance-none border-none bg-transparent text-muted font-[inherit] text-callout font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-tap-min transition-[background,color] duration-fast focus-visible:outline-none focus-visible:shadow-ring',
                           mode === 'trip-edit'
-                            ? 'bg-(--color-accent-bg) !text-(color:--color-accent) !font-semibold hover:brightness-95'
-                            : 'hover:bg-(--color-hover)',
+                            ? 'bg-accent-bg !text-accent !font-semibold hover:brightness-95'
+                            : 'hover:bg-hover',
                         ].join(' ')}
                         onClick={() => setMode('trip-edit')}
                       >
@@ -470,10 +470,10 @@ export default function ManagePageV2() {
                       </button>
                       <button
                         className={[
-                          'appearance-none border-none bg-transparent text-(color:--color-muted) font-[inherit] text-(length:--font-size-callout) font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-(--tap-min) transition-[background,color] duration-(--transition-duration-fast) focus-visible:outline-none focus-visible:shadow-(--shadow-ring)',
+                          'appearance-none border-none bg-transparent text-muted font-[inherit] text-callout font-normal py-[8px] px-[12px] rounded-full cursor-pointer min-h-tap-min transition-[background,color] duration-fast focus-visible:outline-none focus-visible:shadow-ring',
                           mode === 'trip-plan'
                             ? 'bg-(--color-plan-bg) !text-(color:--color-plan-text) !font-semibold hover:bg-(--color-plan-hover)'
-                            : 'hover:bg-(--color-hover)',
+                            : 'hover:bg-hover',
                         ].join(' ')}
                         onClick={() => setMode('trip-plan')}
                       >
@@ -485,10 +485,10 @@ export default function ManagePageV2() {
                       {submitStatus && (
                         <div
                           className={[
-                            'text-(length:--font-size-footnote) rounded-(--radius-sm)',
+                            'text-footnote rounded-sm',
                             submitStatus.type === 'success'
-                              ? 'text-(color:--color-success) flex items-center gap-[4px]'
-                              : 'text-(color:--color-destructive)',
+                              ? 'text-success flex items-center gap-[4px]'
+                              : 'text-destructive',
                           ].join(' ')}
                         >
                           {submitStatus.type === 'success' && (
@@ -503,10 +503,10 @@ export default function ManagePageV2() {
 
                     <button
                       className={[
-                        'w-(--tap-min) h-(--tap-min) border-none rounded-full flex items-center justify-center shrink-0 transition-[background,color,transform] duration-(--transition-duration-normal)',
+                        'w-tap-min h-tap-min border-none rounded-full flex items-center justify-center shrink-0 transition-[background,color,transform] duration-normal',
                         text.trim().length === 0 || submitting
-                          ? 'bg-(--color-border) text-(color:--color-muted) cursor-not-allowed scale-[0.92]'
-                          : 'bg-(--color-accent) text-(color:--color-accent-foreground) cursor-pointer scale-100 hover:brightness-110 active:scale-95',
+                          ? 'bg-border text-muted cursor-not-allowed scale-[0.92]'
+                          : 'bg-accent text-accent-foreground cursor-pointer scale-100 hover:brightness-110 active:scale-95',
                       ].join(' ')}
                       id="submitBtn"
                       data-send-btn=""

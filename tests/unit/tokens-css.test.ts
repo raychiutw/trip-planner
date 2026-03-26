@@ -50,9 +50,9 @@ describe('tokens.css', () => {
   it('includes non-utility tokens (z-index, layout)', () => {
     expect(tokens).toContain('--z-sticky-nav:');
     expect(tokens).toContain('--z-fab:');
-    expect(tokens).toContain('--page-max-w:');
-    expect(tokens).toContain('--nav-h:');
-    expect(tokens).toContain('--tap-min:');
+    expect(tokens).toContain('--spacing-page-max-w:');
+    expect(tokens).toContain('--spacing-nav-h:');
+    expect(tokens).toContain('--spacing-tap-min:');
   });
 
   it('includes global reset', () => {

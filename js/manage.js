@@ -211,7 +211,7 @@
         apiFetch('/my-trips')
             .then(function(r) {
                 if (r.status === 401) {
-                    manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--padding-h);">請先登入</div>';
+                    manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--spacing-padding-h);">請先登入</div>';
                     return null;
                 }
                 if (!r.ok) throw new Error('載入失敗');
@@ -221,7 +221,7 @@
                 if (!trips) return;
 
                 if (trips.length === 0) {
-                    manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--padding-h);">你目前沒有任何行程權限，請聯繫管理者</div>';
+                    manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--spacing-padding-h);">你目前沒有任何行程權限，請聯繫管理者</div>';
                     tripSelect.style.display = 'none';
                     return;
                 }
@@ -239,7 +239,7 @@
                             return !info || (info.published !== 0 && info.published !== false);
                         });
                         if (filtered.length === 0) {
-                            manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--padding-h);">目前沒有上架的行程</div>';
+                            manageMain.innerHTML = '<div class="manage-no-permission" style="margin:40px var(--spacing-padding-h);">目前沒有上架的行程</div>';
                             tripSelect.style.display = 'none';
                             return;
                         }
@@ -281,7 +281,7 @@
                     });
             })
             .catch(function() {
-                manageMain.innerHTML = '<div class="manage-empty" style="margin:40px var(--padding-h);">無法載入行程資料</div>';
+                manageMain.innerHTML = '<div class="manage-empty" style="margin:40px var(--spacing-padding-h);">無法載入行程資料</div>';
             });
     }
 

@@ -104,11 +104,11 @@
     --transition-timing-function-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
 
     /* Layout — V2 頁面需要 Tailwind utility（從 :root 提升到 @theme） */
-    --padding-h: 16px;
-    --tap-min: 44px;
-    --page-max-w: min(60vw, 900px);
-    --page-pt: 24px;
-    --nav-h: 48px;
+    --spacing-padding-h: 16px;
+    --spacing-tap-min: 44px;
+    --spacing-page-max-w: min(60vw, 900px);
+    --spacing-page-pt: 24px;
+    --spacing-nav-h: 48px;
 
     /* Z-index — V2 頁面需要 */
     --z-sticky-nav: 200;
@@ -155,11 +155,11 @@
     --theme-font-weight-headline: var(--font-weight-semibold);
     --theme-line-height-body: var(--line-height-normal);
     --theme-section-gap: var(--spacing-6);
-    /* Layout（padding-h, tap-min, page-max-w, page-pt, nav-h 已移至 @theme） */
+    /* Layout（spacing-padding-h, spacing-tap-min, spacing-page-max-w, spacing-page-pt, spacing-nav-h 已移至 @theme） */
     --content-max-w: 720px;
     --info-panel-w: 280px;
     --fab-size: 56px;
-    /* Z-index scale（z-sticky-nav, z-fab 已移至 @theme） */
+    /* Z-index scale */
     --z-day-header: 100;
     --z-quick-panel: 350;
     --z-info-sheet-backdrop: 400;

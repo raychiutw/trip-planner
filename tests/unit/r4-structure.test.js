@@ -46,9 +46,9 @@ describe('QuickPanel CSS structure', () => {
     expect(body).toContain('grid-template-columns: repeat(3, 1fr)');
   });
 
-  it('.quick-panel-item has min-height: var(--tap-min)', () => {
+  it('.quick-panel-item has min-height: var(--spacing-tap-min)', () => {
     const body = ruleBody(styleCss, '.quick-panel-item');
-    expect(body).toContain('min-height: var(--tap-min)');
+    expect(body).toContain('min-height: var(--spacing-tap-min)');
   });
 
   it('.quick-panel-item has cursor: pointer', () => {
@@ -171,16 +171,16 @@ describe('R4-10 close button icon size consistency', () => {
     expect(svgRule.body).toContain('height: 20px');
   });
 
-  it('.nav-close-btn button is var(--tap-min)', () => {
+  it('.nav-close-btn button is var(--spacing-tap-min)', () => {
     const body = ruleBody(sharedCss, '.nav-close-btn');
-    expect(body).toContain('width: var(--tap-min)');
-    expect(body).toContain('height: var(--tap-min)');
+    expect(body).toContain('width: var(--spacing-tap-min)');
+    expect(body).toContain('height: var(--spacing-tap-min)');
   });
 
-  it('.sheet-close-btn button is var(--tap-min)', () => {
+  it('.sheet-close-btn button is var(--spacing-tap-min)', () => {
     const body = ruleBody(styleCss, '.sheet-close-btn');
-    expect(body).toContain('width: var(--tap-min)');
-    expect(body).toContain('height: var(--tap-min)');
+    expect(body).toContain('width: var(--spacing-tap-min)');
+    expect(body).toContain('height: var(--spacing-tap-min)');
   });
 });
 

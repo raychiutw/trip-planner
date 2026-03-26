@@ -7,8 +7,8 @@ interface ToastProps {
 }
 
 const ICON_COLOR = {
-  offline: 'text-(color:--color-warning)',
-  online: 'text-(color:--color-success)',
+  offline: 'text-warning',
+  online: 'text-success',
 } as const;
 
 /**
@@ -22,13 +22,13 @@ export default function ToastV2({ message, icon, visible }: ToastProps) {
       className={[
         'fixed left-1/2 -translate-x-1/2 flex items-center pointer-events-none',
         'gap-[var(--spacing-2)] px-[var(--spacing-5)] py-[var(--spacing-3)]',
-        'rounded-(--radius-lg)',
+        'rounded-lg',
         'bg-[color-mix(in_srgb,var(--color-secondary)_85%,transparent)]',
         'backdrop-blur-[20px] [-webkit-backdrop-filter:blur(20px)]',
         'shadow-[var(--shadow-lg),0_0_0_1px_color-mix(in_srgb,var(--color-border)_60%,transparent)]',
-        'text-(length:--font-size-subheadline) font-semibold whitespace-nowrap',
-        'text-(color:--color-foreground)',
-        'top-[calc(var(--nav-h)+var(--spacing-3))]',
+        'text-subheadline font-semibold whitespace-nowrap',
+        'text-foreground',
+        'top-[calc(var(--spacing-nav-h)+var(--spacing-3))]',
         'z-[calc(var(--z-sticky-nav)+50)]',
         visible
           ? 'animate-[toast-slide-down_var(--transition-duration-slow)_var(--transition-timing-function-apple)_forwards]'
