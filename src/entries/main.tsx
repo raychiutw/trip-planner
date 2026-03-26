@@ -45,7 +45,9 @@ if (el) {
           <Routes>
             <Route path="/trip/:tripId" element={<TripPage />} />
             <Route path="/manage" element={<ManagePage />} />
+            <Route path="/manage/" element={<ManagePage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/" element={<AdminPage />} />
             <Route path="*" element={<LegacyRedirect />} />
           </Routes>
         </Suspense>
