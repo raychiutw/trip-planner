@@ -26,19 +26,19 @@
 
 ## 4. ManagePageV2
 
-- [ ] 4.1 新建 `src/pages/ManagePageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline，含 chat layout + input bar
-- [ ] 4.2 ManagePageV2 unit test — 請求清單渲染 + 送出流程 + chat input 狀態
-- [ ] 4.3 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式）+ Markdown 渲染一致性
-- [ ] 4.4 互動狀態檢查 — hover/focus/active/disabled + input focus 狀態
+- [x] 4.1 新建 `src/pages/ManagePageV2.tsx` — import tokens.css + RequestStepperV2 + ToastV2，全 Tailwind inline，含 chat layout + input bar
+- [x] 4.2 ManagePageV2 unit test — 請求清單渲染 + 送出流程 + chat input 狀態
+- [x] 4.3 E2E 截圖比對 — V1 vs V2（手機 + 桌機 + 深色模式）+ Markdown 渲染一致性
+- [x] 4.4 互動狀態檢查 — hover/focus/active/disabled + input focus 狀態
 
 ## 5. TripPageV2
 
-- [ ] 5.1 盤點 TripPage 所有子元件清單（20+ 個），決定各自 V2 策略（全 Tailwind / 沿用）
-- [ ] 5.2 逐一新建子元件 V2 版本（由小到大）— 每個元件 import tokens.css，Tailwind inline
-- [ ] 5.3 新建 `src/pages/TripPageV2.tsx` — 整合所有子元件 V2 版本
-- [ ] 5.4 TripPageV2 unit test — 各子元件 V2 渲染 + 狀態管理
-- [ ] 5.5 E2E 截圖比對 — V1 vs V2 行程頁主版面（手機 + 桌機 + 深色模式）
-- [ ] 5.6 E2E 功能驗證 — QuickPanel / InfoSheet / 地圖載入 / 列印模式
+- [x] 5.1 盤點 TripPage 所有子元件清單（20+ 個），決定各自 V2 策略（全 Tailwind / 沿用）
+- [x] 5.2 逐一新建子元件 V2 版本（由小到大）— 每個元件 import tokens.css，Tailwind inline
+- [x] 5.3 新建 `src/pages/TripPageV2.tsx` — 整合所有子元件 V2 版本
+- [x] 5.4 TripPageV2 unit test — 各子元件 V2 渲染 + 狀態管理
+- [x] 5.5 E2E 截圖比對 — V1 vs V2 行程頁主版面（手機 + 桌機 + 深色模式）
+- [x] 5.6 E2E 功能驗證 — QuickPanel / InfoSheet / 地圖載入 / 列印模式
 
 ## 6. 切換預設 + 線上驗證
 
