@@ -74,10 +74,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        v2: resolve(__dirname, 'v2.html'),
-      },
+      input: resolve(__dirname, 'index.html'),
     },
   },
   resolve: {

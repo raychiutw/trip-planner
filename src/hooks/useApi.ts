@@ -1,9 +1,19 @@
-/* ===== Typed API Fetch Helper ===== */
+/* ===== API Fetch Helpers ===== */
 
 import { reportFetchResult } from './useOnlineStatus';
 
+/** Raw fetch that returns the Response — for callers that need status-code inspection. */
+export function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = { ...(opts?.headers ?? {}) as Record<string, string> };
+  if (opts?.body) headers['Content-Type'] = 'application/json';
+  return fetch('/api' + path, { ...opts, headers }).then(
+    (r) => { reportFetchResult(true); return r; },
+    (e) => { reportFetchResult(false); throw e; },
+  );
+}
+
 export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: AbortSignal }): Promise<T> {
-  const headers: Record<string, string> = { ...opts?.headers as Record<string, string> };
+  const headers: Record<string, string> = { ...(opts?.headers ?? {}) as Record<string, string> };
   // Only set Content-Type for requests with a body (POST/PUT/PATCH)
   const method = (opts?.method ?? 'GET').toUpperCase();
   if (method !== 'GET' && method !== 'HEAD' && method !== 'DELETE') {

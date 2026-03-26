@@ -47,6 +47,8 @@ import type { BackupData } from '../components/trip/Backup';
 import type { EmergencyData } from '../components/trip/Emergency';
 import type { SuggestionsData } from '../components/trip/Suggestions';
 
+import '../../css/tokens.css';
+
 /* ===== Feature flags ===== */
 
 /** 地圖功能預設隱藏，URL 加 ?showmap=1 顯示 */
@@ -54,17 +56,171 @@ const ENABLE_DAY_MAP = new URLSearchParams(window.location.search).get('showmap'
 
 /* ===== Module-level constants (#14: hoist inline styles) ===== */
 
-const LOADING_CLASS = 'text-center p-10 text-[var(--color-muted)]';
-const UNPUBLISHED_CLASS = 'text-[var(--color-muted)] mt-2';
+const LOADING_CLASS = 'text-center p-10 text-muted';
+const UNPUBLISHED_CLASS = 'text-muted mt-2';
+
+/** Pre-built style objects for theme swatches (avoid per-render allocation). */
+const SWATCH_STYLES: Record<string, { light: React.CSSProperties; dark: React.CSSProperties }> =
+  Object.fromEntries(
+    Object.entries(THEME_ACCENTS).map(([key, { light, dark }]) => [
+      key,
+      { light: { background: light }, dark: { background: dark } },
+    ]),
+  );
+
+/* ===== Scoped styles for classes that need CSS-level selectors (animations, print, dark overrides) ===== */
+const SCOPED_STYLES = `
+/* day-header — match V1: subtle background + optional theme gradient overlay */
+body:not(.dark) .day-header {
+  background: var(--color-accent-subtle);
+  background-image: var(--theme-header-gradient);
+  color: var(--color-foreground);
+}
+body.dark .day-header {
+  background: var(--color-accent-bg);
+  background-image: var(--theme-header-gradient);
+}
+/* day-content enter animation */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.day-content-enter {
+  animation: fadeSlideIn var(--transition-duration-normal) var(--transition-timing-function-apple) both;
+}
+.day-content-loaded {
+  animation: fadeIn 300ms var(--transition-timing-function-apple) both;
+}
+/* sticky-nav children z-index layering above DestinationArt */
+.sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
+/* nav-inline-title fade */
+.nav-inline-title { opacity: 0; transition: opacity var(--duration-nav-fade, 250ms) ease; }
+.nav-inline-title.visible { opacity: 1; }
+/* edit-fab hover */
+.edit-fab:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
+/* print mode */
+.print-mode .sticky-nav { display: none; }
+.print-mode .edit-fab { display: none !important; }
+.print-mode .print-exit-btn { display: block; }
+@media print {
+  .sticky-nav, .edit-fab, .print-exit-btn { display: none !important; }
+}
+/* skeleton-bone shimmer (not in tokens.css — needs keyframe + gradient) */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-bone {
+  background: linear-gradient(90deg, var(--color-tertiary) 25%, var(--color-secondary) 50%, var(--color-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+/* Timeline card glass effect (V1: body[class*="theme-"] .tl-card) */
+[data-tl-card] {
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+body.dark [data-tl-card] {
+  background: color-mix(in srgb, var(--color-tertiary) 88%, transparent);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+}
+/* Timeline segment dashed line — dark mode uses subtle white instead of solid border token */
+body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
+/* tripContent link styles */
+#tripContent a:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); text-decoration: underline; }
+#tripContent a:visited:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); }
+/* tripContent section cards */
+#tripContent section { background: var(--color-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-3); overflow: clip; }
+/* print-mode overrides */
+.print-mode #tripContent section { background: var(--color-background) !important; }
+.print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
+.print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
+/* Info panel: hidden by default, visible on desktop */
+.info-panel { display: none; background: var(--color-secondary); border-radius: var(--radius-lg); }
+@media (min-width: 1200px) {
+  .info-panel {
+    display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-10));
+    width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-10));
+    overflow-y: auto; padding: var(--spacing-4) var(--spacing-3);
+  }
+}
+/* Desktop layout: info-panel offset (no content max-width — match V1 full-width) */
+@media (min-width: 1200px) {
+  .page-layout:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
+}
+/* day-header sticky on desktop */
+@media (min-width: 768px) {
+  .day-header {
+    position: sticky;
+    top: calc(var(--spacing-nav-h) + var(--spacing-3));
+    z-index: var(--z-day-header);
+  }
+}
+/* Appearance settings cards */
+.color-mode-card,
+.color-theme-card {
+  appearance: none; border: 2px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-secondary); padding: 8px; text-align: center; cursor: pointer;
+  transition: border-color var(--transition-duration-fast) var(--transition-timing-function-apple);
+}
+.color-mode-card:hover,
+.color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+.color-mode-card.active,
+.color-theme-card.active { border-color: var(--color-accent); }
+.color-mode-card:focus-visible,
+.color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+/* Color mode preview mini UI */
+.color-mode-preview {
+  width: 80px; height: 52px; border-radius: var(--radius-xs); overflow: hidden; margin: 0 auto 4px;
+  display: flex; flex-direction: column;
+}
+.color-mode-preview .cmp-top { flex: 1; }
+.color-mode-preview .cmp-bottom { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 6px; }
+.color-mode-preview .cmp-input { flex: 1; height: 8px; border-radius: 4px; }
+.color-mode-preview .cmp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
+.color-mode-light .cmp-top { background: var(--cmp-light-bg); }
+.color-mode-light .cmp-bottom { background: var(--cmp-light-surface); }
+.color-mode-light .cmp-input { background: var(--cmp-light-input); }
+.color-mode-dark .cmp-top { background: var(--cmp-dark-bg); }
+.color-mode-dark .cmp-bottom { background: var(--cmp-dark-surface); }
+.color-mode-dark .cmp-input { background: var(--cmp-dark-input); }
+.color-mode-auto .cmp-top { background: linear-gradient(135deg, var(--cmp-light-bg) 50%, var(--cmp-dark-bg) 50%); }
+.color-mode-auto .cmp-bottom { background: linear-gradient(135deg, var(--cmp-light-surface) 50%, var(--cmp-dark-surface) 50%); }
+.color-mode-auto .cmp-input { background: linear-gradient(135deg, var(--cmp-light-input) 50%, var(--cmp-dark-input) 50%); }
+/* color-theme-swatch */
+.color-theme-swatch {
+  width: 80px; height: 28px; border-radius: var(--radius-xs); margin: 0 auto 4px;
+}
+@media (min-width: 768px) {
+  .color-mode-preview { width: 100px; height: 66px; }
+  .color-theme-swatch { width: 100px; height: 34px; }
+}
+/* trip-btn in info sheet */
+.trip-btn {
+  display: block; width: 100%; text-align: left; padding: 16px; border-radius: var(--radius-sm);
+  border: 2px solid transparent; background: var(--color-accent-bg); font-family: inherit;
+  font-size: var(--font-size-body); color: var(--color-foreground); text-decoration: none; cursor: pointer;
+}
+.trip-btn:hover { background: var(--color-secondary); }
+.trip-btn.active { border-color: var(--color-accent); }
+body.dark .trip-btn { background: var(--color-hover); }
+body.dark .trip-btn:hover { background: var(--color-tertiary); }
+`;
 
 /* ===== Static early-return views (#13: hoist to module level) ===== */
 
 const UNPUBLISHED_VIEW = (
-  <div className="page-layout">
-    <div className="container">
+  <div className="flex min-h-dvh">
+    <div className="flex-1 min-w-0 max-w-full mx-auto">
       <div id="tripContent">
-        <div className="trip-error">
-          <p>此行程已下架</p>
+        <div className="text-center p-10 text-foreground">
+          <p className="mb-4 text-title2">此行程已下架</p>
           <p className={UNPUBLISHED_CLASS}>2 秒後跳轉至設定頁…</p>
         </div>
       </div>
@@ -73,10 +229,10 @@ const UNPUBLISHED_VIEW = (
 );
 
 const LOADING_VIEW = (
-  <div className="page-layout">
-    <div className="container">
+  <div className="flex min-h-dvh">
+    <div className="flex-1 min-w-0 max-w-full mx-auto">
       <div id="tripContent">
-        <div className="trip-loading">
+        <div className="px-padding-h">
           <DaySkeleton />
           <DaySkeleton />
         </div>
@@ -124,12 +280,12 @@ const DaySection = React.memo(function DaySection({
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
   // API may return weather_json (raw) or weather (mapped) — handle both
-  const weatherRaw = day && 'weather_json' in (day as unknown as Record<string, unknown>)
-    ? (day as unknown as Record<string, unknown>).weather_json
+  const dayRecord = day as (Day & Record<string, unknown>) | undefined;
+  const weatherRaw = dayRecord && 'weather_json' in dayRecord
+    ? dayRecord.weather_json
     : day?.weather;
-  const weatherDay = weatherRaw !== null && typeof weatherRaw === 'object' && 'locations' in (weatherRaw as Record<string, unknown>)
-    ? (weatherRaw as WeatherDay)
-    : null;
+  const weatherObj = weatherRaw !== null && typeof weatherRaw === 'object' ? weatherRaw : null;
+  const weatherDay = weatherObj && 'locations' in weatherObj ? (weatherObj as WeatherDay) : null;
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
@@ -141,35 +297,35 @@ const DaySection = React.memo(function DaySection({
 
   /* Memoised timeline entries — avoids new array reference on every render */
   const timelineEntries = useMemo(
-    () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({})),
+    () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({})),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [day?.timeline],
   );
 
   return (
     <section className="day-section" data-day={dayNum}>
-      <div className="day-header info-header relative" id={`day${dayNum}`}>
-        <h2>Day {dayNum}</h2>
+      <div className="day-header relative z-(--z-day-header) py-2 px-4 flex items-center gap-2 min-h-[100px] rounded-t-md" id={`day${dayNum}`}>
+        <h2 className="text-title2 font-bold whitespace-nowrap overflow-hidden text-ellipsis m-0">Day {dayNum}</h2>
         {daySummary?.label && (
-          <span className="day-label">{daySummary.label}</span>
+          <span>{daySummary.label}</span>
         )}
         {daySummary?.date && (
-          <span className="dh-date">
+          <span className="text-subheadline text-muted ml-auto whitespace-nowrap">
             {daySummary.date}
             {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
           </span>
         )}
         {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
       </div>
-      <div key={animKey} className={clsx('day-content', animKey > 0 && 'day-content-enter', day && 'day-content-loaded')} id={`day-slot-${dayNum}`}>
+      <div key={animKey} className={clsx('px-padding-h pb-4', animKey > 0 && 'day-content-enter', day && 'day-content-loaded')} id={`day-slot-${dayNum}`}>
         {!day ? (
           <DaySkeleton />
         ) : (
           <>
             {warnings.length > 0 && (
-              <div className="trip-warnings">
+              <div className="bg-destructive-bg py-3 px-4 my-2 rounded-sm text-callout text-destructive">
                 <strong><Icon name="warning" /> 注意事項：</strong>
-                <ul>
+                <ul className="mt-1 ml-4">
                   {warnings.map((w) => <li key={w}>{w}</li>)}
                 </ul>
               </div>
@@ -185,8 +341,8 @@ const DaySection = React.memo(function DaySection({
               />
             )}
 
-            <div className="day-overview">
-              {hotel && typeof hotel === 'object' && <Hotel hotel={toHotelData(hotel as unknown as Record<string, unknown>)} />}
+            <div className="bg-accent-subtle rounded-sm p-3 mb-3">
+              {hotel && typeof hotel === 'object' && <Hotel hotel={toHotelData(hotel)} />}
               {dayDrivingStats && (
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               )}
@@ -196,7 +352,7 @@ const DaySection = React.memo(function DaySection({
                 全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
                 ENABLE_DAY_MAP=false 時完全隱藏（feature flag）*/}
             {ENABLE_DAY_MAP && !hideDayMap && (
-              <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
+              <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
                 <DayMap day={day} dayNum={dayNum} />
               </Suspense>
             )}
@@ -780,6 +936,10 @@ export default function TripPage() {
     if (loading || dayNums.length === 0 || initialScrollDone.current) return;
     initialScrollDone.current = true;
 
+    // Reset browser scroll restoration to prevent stale position
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+
     // URL hash takes priority over auto-locate
     const hash = window.location.hash;
     const hashMatch = hash?.match(/^#day(\d+)$/);
@@ -817,7 +977,7 @@ export default function TripPage() {
       const nav = document.getElementById('stickyNav');
       if (!nav) return;
       const margin = (nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) + 4) + 'px';
-      document.querySelectorAll('.day-header, .info-header').forEach((h) => {
+      document.querySelectorAll('.day-header').forEach((h) => {
         (h as HTMLElement).style.scrollMarginTop = margin;
       });
     }
@@ -926,7 +1086,7 @@ export default function TripPage() {
         return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>;
       case 'today-route':
         return currentDay && currentDay.timeline.length > 0
-          ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e as unknown as Record<string, unknown>) : toTimelineEntry({}))} />
+          ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({}))} />
           : <p>無行程資料</p>;
       case 'driving':
         return tripDrivingStats
@@ -936,30 +1096,30 @@ export default function TripPage() {
       case 'prep':
         return (
           <>
-            <div className="info-card">{flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>}</div>
-            <div className="info-card">{checklistData ? <Checklist data={checklistData} /> : <p>無確認清單</p>}</div>
+            <div className="bg-secondary rounded-md p-4 mb-3">{flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>}</div>
+            <div className="bg-secondary rounded-md p-4 mb-3">{checklistData ? <Checklist data={checklistData} /> : <p>無確認清單</p>}</div>
           </>
         );
       case 'emergency-group':
         return (
           <>
-            <div className="info-card">{emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>}</div>
-            <div className="info-card">{backupData ? <Backup data={backupData} /> : <p>無備案資料</p>}</div>
+            <div className="bg-secondary rounded-md p-4 mb-3">{emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>}</div>
+            <div className="bg-secondary rounded-md p-4 mb-3">{backupData ? <Backup data={backupData} /> : <p>無備案資料</p>}</div>
           </>
         );
       case 'ai-group':
         return (
           <>
-            <div className="info-card">{suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>}</div>
-            <div className="info-card">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
+            <div className="bg-secondary rounded-md p-4 mb-3">{suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>}</div>
+            <div className="bg-secondary rounded-md p-4 mb-3">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
           </>
         );
       /* Settings sheets */
       case 'trip-select':
         return (
-          <div className="setting-page">
-            <div className="setting-section">
-              <div className="setting-trip-list">
+          <div className="max-w-[520px] mx-auto p-padding-h">
+            <div className="mb-3">
+              <div className="flex flex-col gap-2">
                 {sheetTripsLoading && (
                   <div className={LOADING_CLASS}>載入中...</div>
                 )}
@@ -969,8 +1129,8 @@ export default function TripPage() {
                     className={clsx('trip-btn', t.tripId === activeTripId && 'active')}
                     onClick={() => handleTripChange(t.tripId)}
                   >
-                    <strong>{t.name}</strong>
-                    {t.title && <span className="trip-sub">{t.title}</span>}
+                    <strong className="block text-title3">{t.name}</strong>
+                    {t.title && <span className="text-caption text-muted mt-1 block">{t.title}</span>}
                   </button>
                 ))}
               </div>
@@ -979,10 +1139,10 @@ export default function TripPage() {
         );
       case 'appearance':
         return (
-          <div className="setting-page">
-            <div className="setting-section">
-              <div className="setting-section-title">色彩模式</div>
-              <div className="color-mode-grid">
+          <div className="max-w-[520px] mx-auto p-padding-h">
+            <div className="mb-3">
+              <div className="text-footnote font-semibold text-muted uppercase tracking-wider mb-3 pb-2 border-b border-border">色彩模式</div>
+              <div className="grid grid-cols-3 gap-3">
                 {COLOR_MODE_OPTIONS.map((m) => (
                   <button
                     key={m.key}
@@ -996,12 +1156,12 @@ export default function TripPage() {
                         <div className="cmp-dot"></div>
                       </div>
                     </div>
-                    <div className="color-mode-label">{m.label}</div>
+                    <div className="text-caption text-muted mt-1">{m.label}</div>
                   </button>
                 ))}
               </div>
-              <div className="setting-subsection-title">色彩主題</div>
-              <div className="color-theme-grid">
+              <div className="text-caption font-semibold text-muted mt-4 mb-2">色彩主題</div>
+              <div className="grid grid-cols-4 gap-2">
                 {COLOR_THEMES.map((t) => (
                   <button
                     key={t.key}
@@ -1011,9 +1171,9 @@ export default function TripPage() {
                   >
                     <div
                       className="color-theme-swatch"
-                      style={{ background: isDark ? THEME_ACCENTS[t.key].dark : THEME_ACCENTS[t.key].light }}
+                      style={isDark ? SWATCH_STYLES[t.key]?.dark : SWATCH_STYLES[t.key]?.light}
                     />
-                    <div className="color-theme-label">{t.label}</div>
+                    <div className="text-caption text-muted mt-1">{t.label}</div>
                   </button>
                 ))}
               </div>
@@ -1031,12 +1191,12 @@ export default function TripPage() {
 
   if (error && !trip) {
     return (
-      <div className="page-layout">
-        <div className="container">
+      <div className="flex min-h-dvh">
+        <div className="flex-1 min-w-0 max-w-full mx-auto">
           <div id="tripContent">
-            <div className="trip-error">
-              <p>行程不存在：{activeTripId}</p>
-              <a className="trip-error-link" href="/">選擇其他行程</a>
+            <div className="text-center p-10 text-foreground">
+              <p className="mb-4 text-title2">行程不存在：{activeTripId}</p>
+              <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/">選擇其他行程</a>
             </div>
           </div>
         </div>
@@ -1046,11 +1206,13 @@ export default function TripPage() {
 
   return (
     <>
+      <style>{SCOPED_STYLES}</style>
+
       {/* Sticky Nav */}
-      <div className="sticky-nav" id="stickyNav">
+      <div className="sticky-nav sticky top-0 z-(--z-sticky-nav) bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] backdrop-blur-xl backdrop-saturate-200 shadow-[0_1px_0_var(--color-border)] text-foreground py-3 px-padding-h md:px-6 flex items-center gap-3 overflow-x-hidden overflow-y-visible" id="stickyNav">
         {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
         <TriplineLogo isOnline={isOnline} />
-        <span className={clsx('nav-inline-title', showNavTitle && 'visible')}>
+        <span className={clsx('nav-inline-title text-subheadline font-semibold text-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px] md:hidden', showNavTitle && 'visible')}>
           {trip?.title || trip?.name}
         </span>
         <DayNav
@@ -1081,19 +1243,19 @@ export default function TripPage() {
       )}
 
       {/* Page Layout */}
-      <div className="page-layout">
-        <div className="container">
-          <div id="tripContent">
+      <div className="page-layout flex min-h-dvh">
+        <div className="container flex-1 min-w-0 max-w-full">
+          <div id="tripContent" className="pt-3">
             {/* Large Title (mobile only) */}
             {!loading && trip && (
-              <div className="large-title-area" ref={largeTitleRef}>
-                <h1 className="large-title">{trip.title || trip.name}</h1>
-                {dateRange && <p className="large-subtitle">{dateRange}</p>}
+              <div className="py-2 px-padding-h pb-4 block md:hidden" ref={largeTitleRef}>
+                <h1 className="text-large-title font-bold leading-tight text-foreground">{trip.title || trip.name}</h1>
+                {dateRange && <p className="text-subheadline text-muted mt-1">{dateRange}</p>}
               </div>
             )}
 
             {loading && (
-              <div className="trip-loading">
+              <div className="px-padding-h">
                 <DaySkeleton />
                 <DaySkeleton />
               </div>
@@ -1102,7 +1264,7 @@ export default function TripPage() {
             {/* TripMap 全覽地圖（F006）：全覽模式時顯示於 DaySections 上方
                 ENABLE_DAY_MAP=false 時完全隱藏（feature flag）*/}
             {ENABLE_DAY_MAP && !loading && isTripMapMode && (
-              <Suspense fallback={<div className="day-map-skeleton" aria-label="地圖載入中" />}>
+              <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
                 <TripMap allDays={allDays} dayNums={dayNums} />
               </Suspense>
             )}
@@ -1156,7 +1318,11 @@ export default function TripPage() {
       {/* Edit FAB */}
       {!loading && trip && (
         <a
-          className={clsx('edit-fab', !isOnline && 'disabled')}
+          className={clsx(
+            'edit-fab fixed right-5 w-(--fab-size) h-(--fab-size) rounded-full bg-accent text-accent-foreground border-none text-large-title font-light no-underline flex items-center justify-center z-(--z-fab) shadow-md transition-[transform,box-shadow] duration-normal ease-apple',
+            'bottom-[max(20px,env(safe-area-inset-bottom))]',
+            !isOnline && 'opacity-40 pointer-events-none',
+          )}
           id="editFab"
           href="/manage/"
           aria-label="AI 修改行程"
@@ -1181,7 +1347,11 @@ export default function TripPage() {
 
       {/* Print exit button */}
       {isPrintMode && (
-        <button className="print-exit-btn" id="printExitBtn" onClick={togglePrint}>
+        <button
+          className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none focus-visible:shadow-ring"
+          id="printExitBtn"
+          onClick={togglePrint}
+        >
           退出列印模式
         </button>
       )}

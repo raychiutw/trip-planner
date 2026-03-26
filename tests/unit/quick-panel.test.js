@@ -6,29 +6,6 @@ import { describe, it, expect } from 'vitest';
  */
 
 const tsx = readFileSync('src/components/trip/QuickPanel.tsx', 'utf-8');
-const styleCss = readFileSync('css/style.css', 'utf-8');
-
-/* ===== Helpers ===== */
-
-/** Extract all CSS rules containing a given selector substring */
-function rulesFor(css, selector) {
-  const rules = [];
-  const re = /([^{}]+)\{([^}]*)\}/g;
-  let m;
-  while ((m = re.exec(css))) {
-    if (m[1].includes(selector)) {
-      rules.push({ selector: m[1].trim(), body: m[2].trim() });
-    }
-  }
-  return rules;
-}
-
-/** Get the body of the first rule matching a selector */
-function ruleBody(css, selector) {
-  const rules = rulesFor(css, selector);
-  const exact = rules.find(r => r.selector === selector);
-  return exact ? exact.body : (rules[0]?.body ?? '');
-}
 
 /* ===== PANEL_ITEMS 邏輯驗證（直接 import） ===== */
 
@@ -203,7 +180,7 @@ describe('DRY: 常數不重複定義', () => {
 
 describe('QuickPanel single label per item', () => {
   it('each quick-panel-item renders one Icon and one label span', () => {
-    // In V2, each button has data-qp-item and a label <span> with Tailwind classes
+    // Each button has data-qp-item and a label <span> with Tailwind classes
     // Count occurrences of label spans in the item rendering sections
     const labelMatches = tsx.match(/leading-none">{item\.label}<\/span>/g);
     // There are 3 grid rendering sections (sectionA, sectionB, sectionC), each with one label per item
@@ -229,11 +206,6 @@ describe('QuickPanel single label per item', () => {
 describe('QuickPanel FAB trigger', () => {
   it('uses upward triangle SVG path', () => {
     expect(tsx).toContain('M12 8l-6 6h12z');
-  });
-
-  it('arrow rotates 180deg when open via CSS class', () => {
-    const body = ruleBody(styleCss, '.quick-panel.open .quick-panel-arrow');
-    expect(body).toContain('transform: rotate(180deg)');
   });
 });
 
@@ -297,7 +269,7 @@ describe('QuickPanel 無障礙', () => {
   });
 
   it('has X close button with aria-label', () => {
-    // V2: sheet-close-btn replaced by Tailwind inline classes
+    // sheet-close-btn replaced by Tailwind inline classes
     expect(tsx).toContain('aria-label="關閉"');
     expect(tsx).toContain('closeBtnRef');
     expect(tsx).toContain('rounded-full');
@@ -316,7 +288,7 @@ describe('QuickPanel sheet-handle 移除', () => {
   });
 
   it('has header with close button instead', () => {
-    // V2: quick-panel-header replaced by Tailwind flex layout
+    // quick-panel-header replaced by Tailwind flex layout
     expect(tsx).toContain('flex items-center justify-end');
     expect(tsx).toContain('aria-label="關閉"');
   });
@@ -332,16 +304,6 @@ describe('TripPage trips 快取', () => {
   });
 });
 
-/* ===== #6: 小螢幕響應式 ===== */
-
-describe('QuickPanel 小螢幕響應式', () => {
-  it('has 2-column grid for max-width: 350px', () => {
-    expect(styleCss).toContain('max-width: 350px');
-    // 在 350px 斷點內，grid 改為 2 欄
-    expect(styleCss).toContain('repeat(2, 1fr)');
-  });
-});
-
 /* ===== CSS: no old remnants ===== */
 
 describe('QuickPanel cleanup', () => {
@@ -351,15 +313,5 @@ describe('QuickPanel cleanup', () => {
 
   it('DownloadSheet.tsx is deleted', () => {
     expect(() => readFileSync('src/components/trip/DownloadSheet.tsx', 'utf-8')).toThrow();
-  });
-
-  it('no .speed-dial CSS rules remain', () => {
-    expect(styleCss).not.toContain('.speed-dial');
-  });
-
-  it('no .download-sheet CSS rules remain', () => {
-    expect(styleCss).not.toContain('.download-sheet');
-    expect(styleCss).not.toContain('.download-backdrop');
-    expect(styleCss).not.toContain('.download-option');
   });
 });

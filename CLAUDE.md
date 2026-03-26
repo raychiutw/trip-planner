@@ -54,14 +54,14 @@ index.html          setting.html        edit.html（redirect → /manage/）
 manage/             index.html（旅伴請求頁）
 admin/              index.html（權限管理頁）
 src/
-  entries/          main.tsx  setting.tsx  manage.tsx  admin.tsx（各頁 React 入口）
-  pages/            TripPage.tsx  SettingPage.tsx  ManagePage.tsx  AdminPage.tsx
-  components/trip/  Timeline  DayNav  Restaurant  Hotel  MapLinks  HourlyWeather  InfoPanel  SpeedDial  Footer ...
-  components/shared/ Icon.tsx  StickyNav.tsx  TripSelect.tsx
+  entries/          main.tsx（SPA 單一入口，BrowserRouter）
+  pages/            TripPage.tsx  ManagePage.tsx  AdminPage.tsx
+  components/trip/  Timeline  DayNav  Restaurant  Hotel  MapLinks  HourlyWeather  InfoPanel  QuickPanel  Footer ...
+  components/shared/ Icon.tsx  Toast.tsx  RequestStepper.tsx  TriplineLogo.tsx  ErrorBoundary.tsx
   hooks/            useTrip.ts  useApi.ts  usePrintMode.ts  useDarkMode.ts
-  lib/              mapRow.ts  localStorage.ts  sanitize.ts  constants.ts  weather.ts  drivingStats.ts
+  lib/              mapRow.ts  localStorage.ts  sanitize.ts  constants.ts  weather.ts  drivingStats.ts  appearance.ts
   types/            trip.ts  api.ts
-css/                shared.css  style.css  setting.css  manage.css  admin.css（保持原生 CSS）
+css/                tokens.css（Tailwind CSS 4 @theme design tokens — 唯一 CSS 檔案）
 js/                 （舊版 vanilla JS，部分測試仍依賴，逐步移除中）
 functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permissions.ts  my-trips.ts
                     trips/[id].ts  trips/[id]/days.ts  days/[num].ts  docs/[type].ts
@@ -145,26 +145,10 @@ D1 Tables:
 
 ## 已知問題與解法
 
-### Chrome 手機版捲動彈回（非行程頁）
+### Chrome 手機版捲動彈回（已解決）
 
-**問題**：非行程頁（設定、Admin）在 Chrome 手機版捲到底部會彈回頂部。
-
-**根因**：`shared.css` 的捲動基礎設施為行程頁設計，與簡單頁面結構在 Chrome 合成層計算中衝突。
-
-**解法**（`css/shared.css` 的 `.page-simple` class）：
-
-```css
-html.page-simple { scroll-behavior: auto; scrollbar-gutter: auto; overflow: visible; overscroll-behavior: none; }
-.page-simple { max-width: none; overflow: visible; }
-.page-simple .page-layout { display: block; min-height: 0; }
-.page-simple .container { transition: none; }
-.page-simple .sticky-nav { position: relative; }
-```
-
-在 HTML 加上 `<html class="page-simple">` + `<body class="page-simple">`。
-設定頁另外在 `setting.css` 覆寫 `.page-simple .sticky-nav { position: sticky }` 保留 sticky 行為。
-
-**教訓**：新增頁面時，若結構與行程頁差異大，在 HTML 加 `page-simple` class 即可。
+V2 cutover 後全部頁面使用 Tailwind inline + `tokens.css`，不再依賴 `shared.css` 的 `page-simple` class。
+Admin/Manage 頁面使用獨立的 Tailwind layout，不會與行程頁的捲動設定衝突。
 
 
 ## gstack
