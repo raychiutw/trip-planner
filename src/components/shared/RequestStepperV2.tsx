@@ -18,12 +18,12 @@ interface RequestStepperProps {
 
 /* ===== Tailwind class mappings ===== */
 
-const DOT_BASE = 'w-2 h-2 rounded-full mx-auto mb-1';
+const DOT_BASE = 'w-2 h-2 rounded-full mx-auto mb-[4px]';
 const DOT_DONE = `${DOT_BASE} bg-[var(--color-accent)]`;
 const DOT_ACTIVE = `${DOT_BASE} border-2 border-[var(--color-accent)] animate-[stepper-pulse_2s_infinite]`;
 const DOT_PENDING = `${DOT_BASE} border-2 border-[var(--color-border)]`;
 
-const LINE_BASE = 'flex-1 h-0.5 mx-1 mb-4';
+const LINE_BASE = 'flex-1 h-0.5 mx-[4px] mb-[16px]';
 const LINE_DONE = `${LINE_BASE} bg-[var(--color-accent)]`;
 const LINE_PENDING = `${LINE_BASE} bg-[var(--color-border)]`;
 
@@ -37,11 +37,14 @@ const LABEL_PENDING = `${LABEL_BASE} text-[color:var(--color-muted)]`;
 export default function RequestStepperV2({ status }: RequestStepperProps) {
   const currentIndex = STEPS.findIndex((s) => s.key === status);
 
+  /* 未知 status（API 回傳新值、或 runtime 型別不符）→ 顯示全部完成 */
+  const safeIndex = currentIndex === -1 ? STEPS.length : currentIndex;
+
   return (
-    <div className="flex items-center mt-3" role="group" aria-label="請求進度">
+    <div className="flex items-center mt-[12px]" role="group" aria-label="請求進度">
       {STEPS.map((step, i) => {
-        const isDone = i < currentIndex;
-        const isActive = i === currentIndex;
+        const isDone = i < safeIndex;
+        const isActive = i === safeIndex;
 
         return (
           <React.Fragment key={step.key}>

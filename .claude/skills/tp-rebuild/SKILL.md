@@ -61,7 +61,13 @@ user-invocable: true
      "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
    ```
 5. 同步更新 checklist、backup、suggestions docs（若 timeline 有變動）
-6. 驗證所有 travel 的 type + 分鐘數是否合理（不改路線順序，但修正明顯錯誤的交通方式或時間）
+6. 驗證並修正 location 與 travel 資料：
+   - **location 完整性**：每個實體景點的 `location` 必須包含 `name`、`googleQuery`、`appleQuery`、`lat`（小數4位）、`lng`（小數4位）、`geocode_status`（AI 填 `"review"`）
+   - **JP 自駕 mapcode**（`meta.countries` 含 `"JP"` 且 `selfDrive`）：entry 層級補上 `mapcode`（格式 `"XXX XXX XXX*XX"`，WebSearch 查詢），查不到時省略
+   - **KR naverQuery**（`meta.countries` 含 `"KR"`）：`location.naverQuery` 必填（Naver Maps URL，R14）
+   - **travel 合理性**：用 WebSearch 驗證明顯可疑的交通時間（如跨區域標記 10 分鐘），粗估公式：市區 3~4 分/km、郊區 1.5~2 分/km、步行 12~15 分/km
+   - `travel_desc` 的分鐘數必須與時間軸間隔一致
+   - 覆寫整天（PUT）時，**先 GET 現有資料**，未修改的 entry 保留原始 `location`、`mapcode`、`source`
 7. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
 8. 不自動 commit（資料已直接寫入 D1 database）
 
