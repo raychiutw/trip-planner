@@ -127,7 +127,7 @@ body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
 #tripContent-v2 a:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); text-decoration: underline; }
 #tripContent-v2 a:visited:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); }
 /* tripContent-v2 section cards */
-#tripContent-v2 section { background: var(--color-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-3); overflow: hidden; }
+#tripContent-v2 section { background: var(--color-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-3); overflow: clip; }
 /* print-mode overrides */
 .print-mode #tripContent-v2 section { background: var(--color-background) !important; }
 .print-mode .day-header-v2 { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
@@ -136,8 +136,8 @@ body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
 .info-panel { display: none; background: var(--color-secondary); border-radius: var(--radius-lg); }
 @media (min-width: 1200px) {
   .info-panel {
-    display: block; position: fixed; right: 0; top: var(--spacing-nav-h);
-    width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h));
+    display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-6));
+    width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-6));
     overflow-y: auto; padding: var(--spacing-3);
   }
 }
