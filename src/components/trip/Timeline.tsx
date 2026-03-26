@@ -70,7 +70,7 @@ export default function Timeline({ events, dayDate, localToday }: TimelineProps)
   if (!events || events.length === 0) return null;
 
   return (
-    <div className="timeline">
+    <div className="relative mt-3">
       {events.map((ev, i) => (
         <TimelineEvent
           key={ev.id ?? i}

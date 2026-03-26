@@ -16,7 +16,7 @@ interface FooterProps {
 
 export default function Footer({ footer }: FooterProps) {
   return (
-    <div className="trip-footer" id="footer-slot">
+    <div id="footer-slot">
       <footer>
         {footer.title && <h3>{footer.title}</h3>}
         {footer.dates && <p>{footer.dates}</p>}

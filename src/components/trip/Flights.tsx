@@ -36,36 +36,36 @@ export default function Flights({ data }: FlightsProps) {
         data.segments.map((seg, i) => {
           const isReturn = seg.label && seg.label.indexOf('回') >= 0;
           return (
-            <div key={i} className="flight-row">
-              <span className="flight-icon">
+            <div key={i} className="flex items-center p-3 rounded-md gap-2">
+              <span className="text-title3 shrink-0 flex items-center">
                 {isReturn ? <Icon name="landing" /> : <Icon name="takeoff" />}
               </span>
-              <div className="flight-info">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 flex-1 min-w-0">
                 {seg.label && (
-                  <span className="flight-label">{seg.label}</span>
+                  <span className="font-bold text-headline whitespace-nowrap">{seg.label}</span>
                 )}
                 {seg.flightNo && (
-                  <span className="flight-route">{seg.flightNo}</span>
+                  <span className="font-semibold text-title3 whitespace-nowrap">{seg.flightNo}</span>
                 )}
                 {seg.route && (
-                  <span className="flight-route">{seg.route}</span>
+                  <span className="font-semibold text-title3 whitespace-nowrap">{seg.route}</span>
                 )}
                 {seg.time && (
-                  <span className="flight-time">{seg.time}</span>
+                  <span className="text-callout text-muted whitespace-nowrap">{seg.time}</span>
                 )}
               </div>
             </div>
           );
         })}
       {data.airline && (
-        <div className="flight-row">
-          <span className="flight-icon">
+        <div className="flex items-center p-3 rounded-md gap-2">
+          <span className="text-title3 shrink-0 flex items-center">
             <Icon name="building" />
           </span>
-          <div className="flight-info">
-            <span className="flight-label">{data.airline.name || ''}</span>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 flex-1 min-w-0">
+            <span className="font-bold text-headline whitespace-nowrap">{data.airline.name || ''}</span>
             {data.airline.note && (
-              <span className="flight-time">{data.airline.note}</span>
+              <span className="text-callout text-muted whitespace-nowrap">{data.airline.note}</span>
             )}
           </div>
         </div>

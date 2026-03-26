@@ -117,8 +117,8 @@ export default function HourlyWeather({
   /* ===== State A: more than 16 days away — no API call ===== */
   if (tooFarAway) {
     return (
-      <div className="hourly-weather" id={`hourly-${dayId}`}>
-        <div className="hw-summary">
+      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
+        <div className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover">
           ☀️ 天氣預報將於出發前 16 天開放 &nbsp;&middot;&nbsp; {locs}
         </div>
       </div>
@@ -128,8 +128,8 @@ export default function HourlyWeather({
   /* --- Loading state --- */
   if (loading) {
     return (
-      <div className="hourly-weather" id={`hourly-${dayId}`}>
-        <div className="hw-loading">
+      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
+        <div className="text-center py-3 text-muted text-callout">
           <Icon name="hourglass" /> 正在載入逐時天氣預報...
         </div>
       </div>
@@ -139,8 +139,8 @@ export default function HourlyWeather({
   /* --- Error state --- */
   if (error) {
     return (
-      <div className="hourly-weather" id={`hourly-${dayId}`}>
-        <div className="hw-error">天氣資料載入失敗：{error}</div>
+      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
+        <div className="text-center py-3 text-foreground text-callout bg-accent-bg rounded-sm">天氣資料載入失敗：{error}</div>
       </div>
     );
   }
@@ -154,8 +154,8 @@ export default function HourlyWeather({
   /* ===== State B: within 16 days but API returned all-zero data ===== */
   if (!hasData) {
     return (
-      <div className="hourly-weather" id={`hourly-${dayId}`}>
-        <div className="hw-summary">
+      <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
+        <div className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover">
           ☁️ 超出預報範圍，暫無資料 &nbsp;&middot;&nbsp; {locs}
         </div>
       </div>
@@ -195,12 +195,12 @@ export default function HourlyWeather({
   /* --- Render State C --- */
   return (
     <div
-      className={clsx('hourly-weather', isOpen && 'hw-open')}
+      className="py-3 overflow-hidden"
       id={`hourly-${dayId}`}
     >
       {/* Summary row (clickable) */}
       <div
-        className="hw-summary"
+        className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs"
         data-action="toggle-hw"
         role="button"
         tabIndex={0}
@@ -215,22 +215,22 @@ export default function HourlyWeather({
         <Icon name="raindrop" />
         {minR}~{maxR}%{' '}
         &nbsp;&middot;&nbsp; {locs}
-        <span className="hw-summary-arrow">
+        <span className="ml-auto shrink-0 font-bold text-subheadline text-muted">
           {isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}
         </span>
       </div>
 
       {/* Detail panel */}
-      <div className="hw-detail">
-        <div className="hourly-weather-header">
-          <span className="hourly-weather-title">
+      <div className={isOpen ? 'block' : 'hidden'}>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-subheadline font-semibold text-muted">
             <Icon name="timer" /> 7日內預報 &mdash; {weatherDay.label}
           </span>
-          <span className="hw-update-time">
+          <span className="text-subheadline text-muted">
             {currentHour}:{String(now.getMinutes()).padStart(2, '0')}
           </span>
         </div>
-        <div className="hw-grid" ref={gridRef}>
+        <div className="flex gap-2 overflow-x-auto pt-1 pb-1 scroll-smooth" ref={gridRef}>
           {Array.from({ length: 24 }, (_, h) => {
             const wIcon = WMO[data.codes[h]] || 'question';
             const temp = Math.round(data.temps[h]);
@@ -240,19 +240,25 @@ export default function HourlyWeather({
             return (
               <div
                 key={h}
-                className={clsx('hw-block', isNow && 'hw-now')}
+                className={clsx(
+                  'bg-background rounded-sm py-2 px-1 text-center min-w-[52px] shrink-0',
+                  isNow && 'bg-accent-bg shadow-ring',
+                )}
                 data-hour={h}
               >
-                <div className="hw-block-time">
+                <div className="text-subheadline font-semibold text-muted mb-1">
                   {isNow ? '\u25B6 ' : ''}
                   {h}:00
                 </div>
-                <div className="hw-block-icon-temp">
+                <div className="flex items-center justify-center gap-1 text-callout font-bold text-foreground leading-tight">
                   <Icon name={wIcon} />
                   <span>{temp}&deg;</span>
                 </div>
                 <div
-                  className={clsx('hw-block-rain', rain >= 50 && 'hw-rain-high')}
+                  className={clsx(
+                    'text-callout text-accent',
+                    rain >= 50 && 'text-foreground font-bold bg-info-bg rounded-xs px-1',
+                  )}
                 >
                   {rain}%
                 </div>

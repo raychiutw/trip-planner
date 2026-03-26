@@ -733,3 +733,8 @@ body {
     0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-accent) 40%, transparent); }
     50% { box-shadow: 0 0 8px 4px color-mix(in srgb, var(--color-accent) 20%, transparent); }
 }
+
+@keyframes tl-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+}

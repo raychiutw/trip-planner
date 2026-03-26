@@ -21,21 +21,21 @@ interface ShopProps {
 
 export default function Shop({ shop }: ShopProps) {
   return (
-    <div className="restaurant-choice">
+    <div className="p-3 px-4 leading-normal bg-accent-subtle rounded-sm my-2 last:mb-0">
       {shop.category && <strong>{shop.category}：</strong>}
       {shop.name}
       {typeof shop.googleRating === 'number' && (
-        <>{' '}<span className="rating">★ {shop.googleRating.toFixed(1)}</span></>
+        <>{' '}<span className="text-accent text-caption shrink-0">★ {shop.googleRating.toFixed(1)}</span></>
       )}
       <br />
       {shop.location && <MapLinks location={shop.location} inline />}
       {shop.hours && (
-        <span className="restaurant-meta">
+        <span className="block mt-1 text-callout text-muted">
           <Icon name="clock" /> {shop.hours}
         </span>
       )}
       {shop.mustBuy && shop.mustBuy.length > 0 && (
-        <div className="shop-must-buy">
+        <div className="mt-1 text-callout">
           <Icon name="gift" /> 必買：{shop.mustBuy.join('、')}
         </div>
       )}

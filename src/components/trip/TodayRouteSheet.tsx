@@ -15,18 +15,18 @@ export const TodayRouteSheet = memo(function TodayRouteSheet({ events }: TodayRo
   );
 
   if (routeEvents.length === 0) {
-    return <p className="text-[var(--color-muted)]">今日行程沒有地圖連結</p>;
+    return <p className="text-muted">今日行程沒有地圖連結</p>;
   }
 
   return (
-    <div className="today-route-list">
+    <div className="flex flex-col gap-2">
       {routeEvents.map((ev, i) => (
-        <div key={ev.id ?? i} className="today-route-item">
-          <div className="today-route-header">
-            <span className="today-route-time">{ev.time?.split('-')[0]?.trim() || ''}</span>
-            <span className="today-route-title">{ev.title || ''}</span>
+        <div key={ev.id ?? i} className="flex flex-col gap-1 p-3 bg-accent-subtle rounded-sm">
+          <div className="flex items-baseline gap-2">
+            <span className="font-semibold text-footnote text-accent whitespace-nowrap min-w-[40px]">{ev.time?.split('-')[0]?.trim() || ''}</span>
+            <span className="text-callout font-semibold text-foreground">{ev.title || ''}</span>
           </div>
-          <div className="today-route-links">
+          <div className="flex gap-2 pl-[calc(40px+var(--spacing-2))]">
             <NavLinks locations={ev.locations as NavLocation[]} />
           </div>
         </div>

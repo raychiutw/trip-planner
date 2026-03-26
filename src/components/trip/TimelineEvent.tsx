@@ -110,41 +110,74 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, index, isNow, 
     <>
       {/* ---- Main event ---- */}
       <div
-        className={clsx('tl-event', 'expanded', isNow && 'tl-now', isPast && 'tl-past')}
+        className={clsx(
+          'relative',
+          isPast && 'opacity-55',
+        )}
         data-entry-id={entry.id ?? undefined}
+        data-now={isNow || undefined}
       >
         {/* Arrival flag */}
-        <div className="tl-flag tl-flag-arrive">
-          <span className="tl-flag-num">{index}</span>
-          <span className="tl-time-start">
+        <div
+          className="inline-flex items-center gap-2 py-1 pr-5 pl-3 font-bold text-(length:--font-size-footnote) leading-tight bg-(--color-accent) text-(--color-accent-foreground) rounded-l-(--radius-xs)"
+          style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)' }}
+        >
+          <span
+            className={clsx(
+              'relative text-[0.8em] bg-white/25 w-5 h-5 rounded-full inline-flex items-center justify-center shrink-0',
+              isNow && 'shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_50%,transparent)]',
+            )}
+          >
+            {index}
+            {/* Pulse dot for "now" indicator — replaces ::after pseudo-element */}
+            {isNow && (
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-(--color-accent) animate-[tl-pulse_2s_infinite]" />
+            )}
+          </span>
+          <span>
             {parsed.start}
             {parsed.end ? `-${parsed.end}` : ''}
           </span>
         </div>
 
         {/* Segment: dashed line + card */}
-        <div className="tl-segment">
-          <div className="tl-card">
+        <div
+          className={clsx(
+            'ml-3 py-2 pl-4 border-l-2 border-dashed border-(--color-border)',
+            isNow && 'border-solid! border-(--color-accent)!',
+          )}
+        >
+          <div
+            className={clsx(
+              'bg-(--color-background) rounded-(--radius-sm) px-4 py-3',
+              'shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]',
+              'dark:shadow-[0_1px_0_rgba(255,255,255,0.04)]',
+              isNow && 'shadow-(--shadow-md) ring-[1.5px] ring-(--color-accent) scale-[1.01]',
+              isPast && 'shadow-none opacity-75',
+            )}
+          >
             {/* Card header */}
-            <div className="tl-card-header">
-              <span className="tl-title">{entry.title ?? ''}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-(length:--font-size-title3) leading-tight text-(--color-accent) flex-1 min-w-0">
+                {entry.title ?? ''}
+              </span>
               {typeof entry.googleRating === 'number' && (
-                <>{' '}<span className="rating">★ {entry.googleRating.toFixed(1)}</span></>
+                <>{' '}<span className="text-(--color-accent) text-(length:--font-size-caption) shrink-0">★ {entry.googleRating.toFixed(1)}</span></>
               )}
               {durationText && (
-                <span className="tl-duration">
+                <span className="text-(length:--font-size-footnote) text-(--color-muted) whitespace-nowrap shrink-0 inline-flex items-center gap-1">
                   <Icon name="clock" /> {durationText}
                 </span>
               )}
             </div>
 
             {/* Note */}
-            {entry.note && <MarkdownText text={entry.note} as="div" className="tl-desc" />}
+            {entry.note && <MarkdownText text={entry.note} as="div" className="text-(--color-muted) my-1 text-(length:--font-size-callout)" />}
 
             {/* Body: description + locations + info boxes */}
             {hasBody && (
-              <div className="tl-body">
-                {entry.description && <MarkdownText text={entry.description} as="div" className="tl-desc" />}
+              <div className="grid grid-rows-[1fr] py-1 text-(length:--font-size-body) leading-relaxed transition-[grid-template-rows] duration-(--transition-duration-normal) ease-(--transition-timing-function-apple) [&>*]:overflow-hidden">
+                {entry.description && <MarkdownText text={entry.description} as="div" className="text-(--color-muted) my-1 text-(length:--font-size-callout)" />}
                 {entry.locations && entry.locations.length > 0 && (
                   <NavLinks locations={entry.locations} />
                 )}
@@ -155,20 +188,20 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, index, isNow, 
                 }
               </div>
             )}
-          </div>{/* end tl-card */}
-        </div>{/* end tl-segment */}
-      </div>{/* end tl-event */}
+          </div>{/* end card */}
+        </div>{/* end segment */}
+      </div>{/* end event */}
 
       {/* ---- Travel segment to next entry ---- */}
       {travel && travelText && (
-        <div className="tl-segment tl-segment-travel">
-          <div className="tl-travel-content">
+        <div className="ml-3 py-2 pl-4 border-l-2 border-dashed border-(--color-border)">
+          <div className="flex items-center gap-2 py-2 px-4 text-(length:--font-size-footnote) text-(--color-muted) bg-(--color-accent-bg) rounded-(--radius-sm) cursor-default">
             {travelType && (
-              <span className="tl-travel-icon">
+              <span className="inline-flex items-center [&_.svg-icon]:w-[1.1em] [&_.svg-icon]:h-[1.1em]">
                 <Icon name={travelType} />
               </span>
             )}
-            <span className="tl-travel-text">{travelText}</span>
+            <span className="flex-1">{travelText}</span>
           </div>
         </div>
       )}

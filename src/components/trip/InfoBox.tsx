@@ -72,8 +72,8 @@ export interface InfoBoxData {
 // ---------------------------------------------------------------------------
 
 function gridClass(count: number): string {
-  if (count === 1) return 'info-box-grid grid-1';
-  return count % 2 === 0 ? 'info-box-grid grid-even' : 'info-box-grid grid-odd';
+  if (count === 1) return 'flex flex-col md:grid md:grid-cols-1 md:gap-2';
+  return count % 2 === 0 ? 'flex flex-col md:grid md:grid-cols-2 md:gap-2' : 'flex flex-col md:grid md:grid-cols-3 md:gap-2';
 }
 
 // ---------------------------------------------------------------------------
@@ -82,8 +82,8 @@ function gridClass(count: number): string {
 
 function ReservationBox({ box }: { box: InfoBoxData }) {
   return (
-    <div className="info-box reservation">
-      {box.title && <><strong>{box.title}</strong><br /></>}
+    <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
+      {box.title && <><strong className="font-semibold">{box.title}</strong><br /></>}
       {box.items && box.items.length > 0 &&
         box.items.filter((item): item is string => typeof item === 'string').map((item, i) => (
           <span key={i}>{item}<br /></span>
@@ -96,16 +96,16 @@ function ReservationBox({ box }: { box: InfoBoxData }) {
 
 function ParkingBox({ box }: { box: InfoBoxData }) {
   return (
-    <div className="info-box parking">
+    <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
       <div>
         {box.title && (
-          <><Icon name="parking" /> <strong>{box.title}</strong></>
+          <><Icon name="parking" /> <strong className="font-semibold">{box.title}</strong></>
         )}
         {box.price && <>：{box.price}</>}
         {box.location && <>{' '}<MapLinks location={box.location} inline /></>}
       </div>
       {box.note && (
-        <div className="parking-note">{box.note}</div>
+        <div className="mt-2 text-footnote text-muted leading-relaxed">{box.note}</div>
       )}
     </div>
   );
@@ -115,15 +115,15 @@ function SouvenirBox({ box }: { box: InfoBoxData }) {
   // items here are SouvenirItem objects (not strings)
   const items = (box.items ?? []).filter((item): item is SouvenirItem => typeof item === 'object' && item !== null);
   return (
-    <div className="info-box souvenir">
-      {box.title && <><Icon name="gift" /> <strong>{box.title}</strong><br /></>}
+    <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
+      {box.title && <><Icon name="gift" /> <strong className="font-semibold">{box.title}</strong><br /></>}
       {items.map((item, i) => {
         const itemUrl = escUrl(item.url);
         return (
           <span key={i}>
             <Icon name="gift" />{' '}
             {itemUrl ? (
-              <a href={itemUrl} target="_blank" rel="noopener noreferrer">{item.name}</a>
+              <a href={itemUrl} target="_blank" rel="noopener noreferrer" className="text-foreground font-semibold underline">{item.name}</a>
             ) : (
               item.name
             )}
@@ -141,8 +141,8 @@ function RestaurantsBox({ box }: { box: InfoBoxData }) {
   const rItems = box.restaurants ?? [];
   const rTitle = box.title || (rItems.length > 1 ? `${rItems.length}選一` : '推薦餐廳');
   return (
-    <div className="info-box restaurants">
-      <Icon name="utensils" /> <strong>{rTitle}：</strong>
+    <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
+      <Icon name="utensils" /> <strong className="font-semibold">{rTitle}：</strong>
       <div className={gridClass(rItems.length)}>
         {rItems.map((r, i) => (
           <Restaurant key={i} restaurant={r} />
@@ -156,8 +156,8 @@ function ShoppingBox({ box }: { box: InfoBoxData }) {
   const sItems = box.shops ?? [];
   const sTitle = box.title || (sItems.length > 1 ? '推薦購物' : '附近購物');
   return (
-    <div className="info-box shopping">
-      <Icon name="shopping" /> <strong>{sTitle}：</strong>
+    <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
+      <Icon name="shopping" /> <strong className="font-semibold">{sTitle}：</strong>
       <div className={gridClass(sItems.length)}>
         {sItems.map((s, i) => (
           <Shop key={i} shop={s} />
@@ -171,14 +171,14 @@ function GasStationBox({ box }: { box: InfoBoxData }) {
   const gsTitle = box.title || '加油站';
   const st = box.station;
   return (
-    <div className="info-box gas-station">
-      <Icon name="gas-station" /> <strong>{gsTitle}</strong>
+    <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
+      <Icon name="gas-station" /> <strong className="font-semibold">{gsTitle}</strong>
       {typeof box.googleRating === 'number' && (
-        <>{' '}<span className="rating">★ {box.googleRating.toFixed(1)}</span></>
+        <>{' '}<span className="text-accent text-caption shrink-0">★ {box.googleRating.toFixed(1)}</span></>
       )}
       {st && (
-        <div className="gas-station-detail">
-          <strong>{st.name}</strong><br />
+        <div className="mt-2">
+          <strong className="font-semibold">{st.name}</strong><br />
           {st.address && <>{st.address}<br /></>}
           {st.hours && <><Icon name="clock" /> {st.hours}<br /></>}
           {st.service && <>{st.service}<br /></>}
@@ -214,7 +214,7 @@ export const InfoBox = memo(function InfoBox({ box }: InfoBoxProps) {
       return <GasStationBox box={box} />;
     default:
       if (box.content) {
-        return <div className="info-box">{box.content}</div>;
+        return <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed">{box.content}</div>;
       }
       return null;
   }
