@@ -144,7 +144,7 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, index, isNow, 
         <div
           data-tl-segment
           className={clsx(
-            'ml-3 py-2 pl-4 border-l-2 border-dashed border-(--color-border)',
+            'ml-3 py-2 pl-4 border-0 border-l-2 border-dashed border-(--color-border)',
             isNow && 'border-solid! border-(--color-accent)!',
           )}
         >

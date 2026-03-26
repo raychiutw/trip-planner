@@ -136,8 +136,8 @@ body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
 .info-panel { display: none; background: var(--color-secondary); border-radius: var(--radius-lg); }
 @media (min-width: 1200px) {
   .info-panel {
-    display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-6));
-    width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-6));
+    display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-8));
+    width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-8));
     overflow-y: auto; padding: var(--spacing-4) var(--spacing-3);
   }
 }
