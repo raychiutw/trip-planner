@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { VitePWA } from 'vite-plugin-pwa';
+import { mockApiPlugin } from './scripts/vite-mock-api';
 
 // Only upload source maps to Sentry in CI (when SENTRY_AUTH_TOKEN is present).
 const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
@@ -18,6 +19,8 @@ const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
 
 export default defineConfig({
   plugins: [
+    // MOCK_API=1 npx vite dev → 攔截 /api/* 返回假資料
+    ...(process.env.MOCK_API ? [mockApiPlugin()] : []),
     tailwindcss(),
     react(),
     VitePWA({
@@ -73,6 +76,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
+        v2: resolve(__dirname, 'v2.html'),
       },
     },
   },
@@ -82,9 +86,8 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: {
+    proxy: process.env.MOCK_API ? {} : {
       // ⚠️ WARNING: proxies to PRODUCTION — writes during dev hit real data
-      // Use staging: 'https://trip-planner-db-staging.pages.dev' for safe testing
       '/api': {
         target: 'https://trip-planner-dby.pages.dev',
         changeOrigin: true,
