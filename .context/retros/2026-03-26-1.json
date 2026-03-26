@@ -1,0 +1,36 @@
+{
+  "date": "2026-03-26",
+  "window": "7d",
+  "metrics": {
+    "commits": 241,
+    "contributors": 1,
+    "prs_merged": 45,
+    "insertions": 229845,
+    "deletions": 33180,
+    "net_loc": 196665,
+    "test_loc": 30495,
+    "test_ratio": 0.133,
+    "active_days": 8,
+    "sessions": 53,
+    "deep_sessions": 17,
+    "avg_session_minutes": 45,
+    "loc_per_session_hour": 5650,
+    "feat_pct": 0.178,
+    "fix_pct": 0.456,
+    "peak_hour": 6,
+    "ai_assisted_commits": 17
+  },
+  "authors": {
+    "Ray Chiu": { "commits": 224, "insertions": 210000, "deletions": 30000, "test_ratio": 0.13, "top_area": "src/pages/" },
+    "Claude": { "commits": 17, "insertions": 19845, "deletions": 3180, "test_ratio": 0.15, "top_area": "src/components/" }
+  },
+  "version_range": ["0.0.0", "1.0.0.0"],
+  "streak_days": 11,
+  "test_health": {
+    "total_test_files": 82,
+    "tests_added_this_period": 50,
+    "regression_test_commits": 0,
+    "test_files_changed": 50
+  },
+  "tweetable": "Week of Mar 19: 241 commits, 45 PRs, 230k LOC, 13% tests, peak: 6am | Trip Page V2 + Tailwind CSS 4 + PWA + SPA | Streak: 11d"
+}

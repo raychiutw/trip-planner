@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 
 /**
  * RequestStepper structural validations — TSX source checks.
- * Uses CSS classes defined in shared.css (restored from manage.css).
+ * Uses Tailwind inline classes with tokens from tokens.css.
  */
 
 const tsx = readFileSync('src/components/shared/RequestStepper.tsx', 'utf-8');
@@ -12,7 +12,6 @@ const tsx = readFileSync('src/components/shared/RequestStepper.tsx', 'utf-8');
 
 describe('RequestStepper STEPS', () => {
   it('defines exactly 4 steps', () => {
-    // Match the STEPS array items
     const stepMatches = tsx.match(/\{\s*key:\s*'[^']+',\s*label:\s*'[^']+'\s*\}/g);
     expect(stepMatches).toHaveLength(4);
   });
@@ -40,70 +39,21 @@ describe('RequestStepper STEPS', () => {
   });
 });
 
-/* ===== 圓點 CSS class 驗證 ===== */
+/* ===== Tailwind class 驗證 ===== */
 
-describe('RequestStepper dot CSS classes', () => {
-  it('renders done dot with stepper-dot--done class', () => {
-    expect(tsx).toContain('stepper-dot--done');
+describe('RequestStepper Tailwind structure', () => {
+  it('has role="group" with aria-label', () => {
+    expect(tsx).toContain('role="group"');
+    expect(tsx).toContain('aria-label="請求進度"');
   });
 
-  it('renders active dot with stepper-dot--active class', () => {
-    expect(tsx).toContain('stepper-dot--active');
+  it('uses Tailwind utility classes for dot styling', () => {
+    expect(tsx).toContain('bg-accent');
+    expect(tsx).toContain('border-accent');
+    expect(tsx).toContain('rounded-full');
   });
 
-  it('renders pending dot with stepper-dot--pending class', () => {
-    expect(tsx).toContain('stepper-dot--pending');
-  });
-});
-
-/* ===== 連接線 CSS class 驗證 ===== */
-
-describe('RequestStepper line CSS classes', () => {
-  it('renders done/active line with stepper-line--done class', () => {
-    expect(tsx).toContain('stepper-line--done');
-  });
-
-  it('renders pending line with stepper-line--pending class', () => {
-    expect(tsx).toContain('stepper-line--pending');
-  });
-});
-
-/* ===== Label CSS class 驗證 ===== */
-
-describe('RequestStepper label CSS classes', () => {
-  it('renders active label with stepper-label--active class', () => {
-    expect(tsx).toContain('stepper-label--active');
-  });
-
-  it('renders done label with stepper-label--done class', () => {
-    expect(tsx).toContain('stepper-label--done');
-  });
-
-  it('renders pending label with stepper-label--pending class', () => {
-    expect(tsx).toContain('stepper-label--pending');
-  });
-});
-
-/* ===== 結構驗證 ===== */
-
-describe('RequestStepper structure', () => {
-  it('uses request-stepper container class', () => {
-    expect(tsx).toContain('request-stepper');
-  });
-
-  it('uses stepper-step class for each step', () => {
-    expect(tsx).toContain('stepper-step');
-  });
-
-  it('uses stepper-dot base class', () => {
-    expect(tsx).toContain('stepper-dot');
-  });
-
-  it('uses stepper-label base class', () => {
-    expect(tsx).toContain('stepper-label');
-  });
-
-  it('uses stepper-line base class', () => {
-    expect(tsx).toContain('stepper-line');
+  it('uses Tailwind utility classes for line styling', () => {
+    expect(tsx).toContain('h-0.5');
   });
 });

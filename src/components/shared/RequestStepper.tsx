@@ -1,5 +1,5 @@
 import React from 'react';
-import clsx from 'clsx';
+import '../../../css/tokens.css';
 
 /* ===== Step definitions ===== */
 
@@ -16,47 +16,52 @@ interface RequestStepperProps {
   status: StepKey;
 }
 
+/* ===== Tailwind class mappings ===== */
+
+const DOT_BASE = 'w-2 h-2 rounded-full mx-auto mb-1';
+const DOT_DONE = `${DOT_BASE} bg-accent`;
+const DOT_ACTIVE = `${DOT_BASE} border-2 border-accent animate-stepper-pulse`;
+const DOT_PENDING = `${DOT_BASE} border-2 border-border`;
+
+const LINE_BASE = 'flex-1 h-0.5 mx-1 mb-4';
+const LINE_DONE = `${LINE_BASE} bg-accent`;
+const LINE_PENDING = `${LINE_BASE} bg-border`;
+
+const LABEL_BASE = 'text-caption2';
+const LABEL_DONE = `${LABEL_BASE} text-muted`;
+const LABEL_ACTIVE = `${LABEL_BASE} text-accent font-semibold`;
+const LABEL_PENDING = `${LABEL_BASE} text-muted`;
+
 /* ===== RequestStepper Component ===== */
 
 export default function RequestStepper({ status }: RequestStepperProps) {
   const currentIndex = STEPS.findIndex((s) => s.key === status);
 
   return (
-    <div className="request-stepper" role="group" aria-label="請求進度">
+    <div className="flex items-center mt-3" role="group" aria-label="請求進度">
       {STEPS.map((step, i) => {
         const isDone = i < currentIndex;
         const isActive = i === currentIndex;
-        const isPending = i > currentIndex;
 
         return (
           <React.Fragment key={step.key}>
-            {/* Connecting line before step (except first) */}
             {i > 0 && (
-              <div
-                className={clsx(
-                  'stepper-line',
-                  (isDone || isActive) ? 'stepper-line--done' : 'stepper-line--pending',
-                )}
-              />
+              <div className={(isDone || isActive) ? LINE_DONE : LINE_PENDING} />
             )}
-
-            {/* Step: dot + label */}
-            <div className="stepper-step">
+            <div className="text-center shrink-0">
               <div
-                className={clsx(
-                  'stepper-dot',
-                  isDone && 'stepper-dot--done',
-                  isActive && 'stepper-dot--active',
-                  isPending && 'stepper-dot--pending',
-                )}
+                className={
+                  isDone ? DOT_DONE :
+                  isActive ? DOT_ACTIVE :
+                  DOT_PENDING
+                }
               />
               <div
-                className={clsx(
-                  'stepper-label',
-                  isDone && 'stepper-label--done',
-                  isActive && 'stepper-label--active',
-                  isPending && 'stepper-label--pending',
-                )}
+                className={
+                  isDone ? LABEL_DONE :
+                  isActive ? LABEL_ACTIVE :
+                  LABEL_PENDING
+                }
               >
                 {step.label}
               </div>

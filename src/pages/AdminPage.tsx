@@ -7,16 +7,9 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { apiFetchRaw } from '../hooks/useApi';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import ToastV2 from '../components/shared/ToastV2';
-
-/* ===== Raw fetch helper (need status-code inspection) ===== */
-function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response> {
-  const headers: Record<string, string> = { ...opts?.headers as Record<string, string> };
-  // 只在有 body 時加 Content-Type（GET/DELETE 不應帶）
-  if (opts?.body) headers['Content-Type'] = 'application/json';
-  return fetch('/api' + path, { ...opts, headers });
-}
+import Toast from '../components/shared/Toast';
 
 /* Cloudflare Access 在 infrastructure 層處理認證，不需要 JS redirect */
 
@@ -318,14 +311,14 @@ export default function AdminPage() {
 
         {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
         {showOffline && (
-          <ToastV2
+          <Toast
             message="已離線 — 無法管理權限"
             icon="offline"
             visible={showOffline}
           />
         )}
         {showReconnect && (
-          <ToastV2
+          <Toast
             message="已恢復連線"
             icon="online"
             visible={showReconnect}

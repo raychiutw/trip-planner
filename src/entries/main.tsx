@@ -7,29 +7,43 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-import { resolveV2 } from '../lib/v2routing';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from '../components/shared/ErrorBoundary';
+import { lazy, Suspense } from 'react';
 
-const search = window.location.search;
-const lsValue = typeof localStorage !== 'undefined' ? localStorage.getItem('tripline-v2') : null;
-const useV2 = resolveV2(search, lsValue);
+import '../../css/tokens.css';
 
-/* ?v1=1 時清除 localStorage V2 偏好，避免使用者被困在 V2 */
-if (new URLSearchParams(search).get('v1') === '1' && typeof localStorage !== 'undefined') {
-  localStorage.removeItem('tripline-v2');
+const AdminPage = lazy(() => import('../pages/AdminPage'));
+const ManagePage = lazy(() => import('../pages/ManagePage'));
+const TripPage = lazy(() => import('../pages/TripPage'));
+
+const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
+const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
+
+/** 相容舊版 ?trip=xxx query string，轉為 /trip/:tripId 路由 */
+function LegacyRedirect() {
+  const queryTrip = new URLSearchParams(window.location.search).get('trip');
+  const tripId = (queryTrip && /^[\w-]+$/.test(queryTrip)) ? queryTrip : DEFAULT_TRIP;
+  return <Navigate to={`/trip/${tripId}`} replace />;
 }
 
-/* Admin 永遠走 V2（已 cutover），其他頁面依 V1/V2 切換 */
-const V2_CUTOVER_PATHS = ['/admin', '/manage'];
-const isCutover = V2_CUTOVER_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
-
-/* V2-ready 但尚未 cutover 的路由（未來 ManagePage 等加入此列） */
-const V2_READY_PATHS: string[] = ['/trip'];
-const isV2Ready = V2_READY_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
-
-/* 分離 import 避免 Vite preload-helper 合併兩個分支的 CSS deps */
-if (isCutover || (useV2 && isV2Ready)) {
-  import('./mainV2');
-}
-if (!isCutover && !(useV2 && isV2Ready)) {
-  import('./mainV1');
+const el = document.getElementById('reactRoot');
+if (el) {
+  createRoot(el).render(
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
+          <Routes>
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/" element={<AdminPage />} />
+            <Route path="/manage" element={<ManagePage />} />
+            <Route path="/manage/" element={<ManagePage />} />
+            <Route path="/trip/:tripId" element={<TripPage />} />
+            <Route path="*" element={<LegacyRedirect />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
+  );
 }

@@ -3,11 +3,9 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const tokensPath = resolve(__dirname, '../../css/tokens.css');
-const sharedPath = resolve(__dirname, '../../css/shared.css');
 
 describe('tokens.css', () => {
   const tokens = readFileSync(tokensPath, 'utf-8');
-  const shared = readFileSync(sharedPath, 'utf-8');
 
   it('includes Tailwind imports', () => {
     expect(tokens).toContain('@import "tailwindcss/theme" layer(theme)');
@@ -70,20 +68,17 @@ describe('tokens.css', () => {
     expect(tokens).not.toContain('.request-item');
     expect(tokens).not.toContain('.chat-container');
     expect(tokens).not.toContain('.admin-');
-    // stepper-pulse 和 toast-slide-* 已搬到 tokens.css（V2 元件需要）
+    // stepper-pulse 和 toast-slide-* 定義在 tokens.css
     expect(tokens).toContain('@keyframes stepper-pulse');
     expect(tokens).toContain('@keyframes toast-slide-down');
     expect(tokens).toContain('@keyframes toast-slide-up');
   });
 
-  it('token values match shared.css @theme block', () => {
-    // Verify key token values are identical
+  it('has essential token values', () => {
     const tokenAccent = tokens.match(/--color-accent:\s*([^;]+);/)?.[1]?.trim();
-    const sharedAccent = shared.match(/--color-accent:\s*([^;]+);/)?.[1]?.trim();
-    expect(tokenAccent).toBe(sharedAccent);
+    expect(tokenAccent).toBeTruthy();
 
     const tokenBody = tokens.match(/--font-size-body:\s*([^;]+);/)?.[1]?.trim();
-    const sharedBody = shared.match(/--font-size-body:\s*([^;]+);/)?.[1]?.trim();
-    expect(tokenBody).toBe(sharedBody);
+    expect(tokenBody).toBeTruthy();
   });
 });

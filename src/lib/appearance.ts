@@ -7,7 +7,7 @@ export const COLOR_MODE_OPTIONS: { key: ColorMode; label: string; desc: string }
   { key: 'dark', label: '深色', desc: 'Dark' },
 ];
 
-/** Theme accent colors — MUST match @theme / body.theme-* values in shared.css */
+/** Theme accent colors — MUST match @theme / body.theme-* values in tokens.css */
 export const THEME_ACCENTS: Record<string, { light: string; dark: string }> = {
   sun:    { light: '#E86A4A', dark: '#F4A08A' },
   sky:    { light: '#2870A0', dark: '#7EC0E8' },
