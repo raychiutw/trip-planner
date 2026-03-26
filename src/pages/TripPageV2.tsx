@@ -138,7 +138,7 @@ body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
   .info-panel {
     display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-6));
     width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-6));
-    overflow-y: auto; padding: var(--spacing-3);
+    overflow-y: auto; padding: var(--spacing-4) var(--spacing-3);
   }
 }
 /* Desktop layout: info-panel offset (no content max-width — match V1 full-width) */
@@ -926,6 +926,10 @@ export default function TripPageV2() {
   useEffect(() => {
     if (loading || dayNums.length === 0 || initialScrollDone.current) return;
     initialScrollDone.current = true;
+
+    // Reset browser scroll restoration to prevent stale position
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
 
     // URL hash takes priority over auto-locate
     const hash = window.location.hash;
