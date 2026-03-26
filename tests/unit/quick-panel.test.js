@@ -203,13 +203,10 @@ describe('DRY: 常數不重複定義', () => {
 
 describe('QuickPanel single label per item', () => {
   it('each quick-panel-item renders one Icon and one label span', () => {
-    // In the JSX, each button should have exactly one <Icon> and one <span className="quick-panel-label">
-    // The pattern for rendering items is: <Icon .../> then <span className="quick-panel-label">
-    // Count occurrences of quick-panel-label in the item rendering sections
-    const labelMatches = tsx.match(/className="quick-panel-label"/g);
+    // In V2, each button has data-qp-item and a label <span> with Tailwind classes
+    // Count occurrences of label spans in the item rendering sections
+    const labelMatches = tsx.match(/leading-none">{item\.label}<\/span>/g);
     // There are 3 grid rendering sections (sectionA, sectionB, sectionC), each with one label per item
-    // But labels appear in the map functions, so there should be exactly 3 occurrences
-    // (one per map: sectionA+B map and sectionC map) - actually it's 3 map calls
     expect(labelMatches).not.toBeNull();
     // Each map renders one label per item — 3 separate map() calls
     expect(labelMatches.length).toBe(3);
@@ -300,9 +297,10 @@ describe('QuickPanel 無障礙', () => {
   });
 
   it('has X close button with aria-label', () => {
-    expect(tsx).toContain('sheet-close-btn');
+    // V2: sheet-close-btn replaced by Tailwind inline classes
     expect(tsx).toContain('aria-label="關閉"');
     expect(tsx).toContain('closeBtnRef');
+    expect(tsx).toContain('rounded-full');
   });
 
   it('focuses sheet on open (not close button, to avoid focus ring)', () => {
@@ -317,8 +315,10 @@ describe('QuickPanel sheet-handle 移除', () => {
     expect(tsx).not.toContain('sheet-handle');
   });
 
-  it('has quick-panel-header with close button instead', () => {
-    expect(tsx).toContain('quick-panel-header');
+  it('has header with close button instead', () => {
+    // V2: quick-panel-header replaced by Tailwind flex layout
+    expect(tsx).toContain('flex items-center justify-end');
+    expect(tsx).toContain('aria-label="關閉"');
   });
 });
 

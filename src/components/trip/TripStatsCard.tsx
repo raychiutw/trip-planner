@@ -54,19 +54,19 @@ export default function TripStatsCard({ days }: TripStatsCardProps) {
   });
 
   return (
-    <div className="info-card stats-card">
-      <div className="stats-card-title">行程統計</div>
+    <div className="bg-secondary rounded-md p-4 mb-3">
+      <div className="font-bold text-title3 mb-3">行程統計</div>
 
       {/* Total days */}
-      <div className="stats-row">
-        <span className="stats-label">天數</span>
-        <span className="stats-value">{days.length} 天</span>
+      <div className="flex justify-between items-center py-1 text-callout">
+        <span className="text-muted">天數</span>
+        <span className="font-semibold">{days.length} 天</span>
       </div>
 
       {/* Total spots */}
-      <div className="stats-row">
-        <span className="stats-label">景點數</span>
-        <span className="stats-value">{spots} 個</span>
+      <div className="flex justify-between items-center py-1 text-callout">
+        <span className="text-muted">景點數</span>
+        <span className="font-semibold">{spots} 個</span>
       </div>
 
       {/* Transport summary by type */}
@@ -76,11 +76,11 @@ export default function TripStatsCard({ days }: TripStatsCardProps) {
           const g = tripStats.grandByType[key];
           if (!g) return null;
           return (
-            <div key={key} className="stats-row">
-              <span className="stats-label">
+            <div key={key} className="flex justify-between items-center py-1 text-callout">
+              <span className="text-muted">
                 <Icon name={g.icon} /> {g.label}
               </span>
-              <span className="stats-value">
+              <span className="font-semibold">
                 {formatMinutes(g.totalMinutes)}
               </span>
             </div>
@@ -89,9 +89,9 @@ export default function TripStatsCard({ days }: TripStatsCardProps) {
 
       {/* Total budget */}
       {totalBudget > 0 && (
-        <div className="stats-row">
-          <span className="stats-label">預估預算</span>
-          <span className="stats-value">
+        <div className="flex justify-between items-center py-1 text-callout">
+          <span className="text-muted">預估預算</span>
+          <span className="font-semibold">
             {currency} {totalBudget.toLocaleString()}
           </span>
         </div>

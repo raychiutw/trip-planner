@@ -29,14 +29,20 @@ export default function Suggestions({ data }: SuggestionsProps) {
     return (
       <>
         {data.cards.map((card, i) => {
-          const priorityClass = card.priority
-            ? ` sg-priority-${card.priority}`
-            : '';
+          const priorityStyles: Record<string, string> = {
+            high: 'bg-priority-high-bg rounded-sm p-3',
+            medium: 'bg-priority-medium-bg rounded-sm p-3',
+            low: 'bg-priority-low-bg rounded-sm p-3',
+          };
+          const base = 'py-2';
+          const cls = card.priority && priorityStyles[card.priority]
+            ? priorityStyles[card.priority]
+            : base;
           return (
-            <div key={i} className={`suggestion-card${priorityClass}`}>
-              {card.title && <h4>{card.title}</h4>}
+            <div key={i} className={cls}>
+              {card.title && <h4 className="m-0 mb-2 flex items-center">{card.title}</h4>}
               {card.items &&
-                card.items.map((item, j) => <p key={j}>{item}</p>)}
+                card.items.map((item, j) => <p key={j} className="text-body my-1 leading-relaxed">{item}</p>)}
             </div>
           );
         })}
@@ -48,7 +54,7 @@ export default function Suggestions({ data }: SuggestionsProps) {
   if (data.content) {
     return (
       <div
-        className="suggestions-markdown"
+        className="text-body leading-relaxed"
         dangerouslySetInnerHTML={{ __html: renderMarkdown(data.content) }}
       />
     );

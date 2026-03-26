@@ -1,0 +1,52 @@
+{
+  "feature": "trip-page-v2",
+  "branch": "feat/trip-page-v2",
+  "description": "TripPage V1 → V2 全面改造：31 個子元件 + TripPage 本身從 shared.css/style.css 改為 Tailwind inline (tokens.css)",
+  "status": "in-progress",
+  "created": "2026-03-26",
+  "scope": {
+    "tripPage": "src/pages/TripPage.tsx (1190 lines)",
+    "components": "src/components/trip/*.tsx (31 files, ~5800 lines)",
+    "sharedComponents": ["Icon.tsx", "TriplineLogo.tsx", "Toast.tsx"],
+    "css": ["shared.css", "style.css", "map.css"],
+    "target_css": "tokens.css (Tailwind @theme)"
+  },
+  "approach": {
+    "method": "一次全改，不分 phase",
+    "steps": [
+      "1. 建立 TripPageV2.tsx — copy TripPage.tsx，改所有 CSS class 為 Tailwind inline",
+      "2. 逐一改 31 個子元件 — 每個元件的 CSS class 改為 Tailwind inline + @theme token",
+      "3. 更新 mainV2.tsx — route /trip/:tripId 到 TripPageV2",
+      "4. 更新 main.tsx — /trip 加入 V2_CUTOVER_PATHS",
+      "5. 驗證：tsc + vitest + build",
+      "6. 驗證：localhost dev server V1 vs V2 比對",
+      "7. 驗證：production build (vite preview) 截圖比對",
+      "8. 驗證：CSS computed styles 比對（7 個關鍵屬性）",
+      "9. 驗證：HTML 結構比對",
+      "10. 驗證：手機版 (375px) 截圖比對",
+      "11. 驗證：功能測試 — DayNav 切換、InfoSheet 開關、QuickPanel、SpeedDial",
+      "12. Push preview → staging 測試",
+      "13. PR → production"
+    ],
+    "verification": {
+      "compare_v1_v2": "localhost 同時開 V1 和 V2 做完整比對",
+      "css_properties": ["background-color", "color", "font-size", "font-family", "padding", "margin", "border-radius", "gap", "max-width", "backdrop-filter", "box-shadow", "border"],
+      "viewports": ["1280x900 (desktop)", "375x812 (mobile)"],
+      "functional": ["DayNav 切天", "Timeline 捲動", "InfoSheet 展開/收合", "QuickPanel 開關", "SpeedDial 按鈕", "EditFab 連結", "Toast 離線通知", "Dark mode 切換", "行程切換 select"]
+    }
+  },
+  "tailwind_rules": {
+    "namespace": "用 @theme token 直接 utility（bg-accent、text-muted、px-4），不用 arbitrary [var(--xxx)]",
+    "exceptions": ["color-mix → bg-(--color-glass-*)", "calc → 保留 arbitrary", "animate 自訂 keyframe → @theme --animate-*", "vendor prefix → Tailwind auto-prefix"],
+    "css_layer": "@layer base 的 reset 不可用 shorthand margin/padding（會覆蓋 Tailwind longhand）",
+    "dark_mode": "composite tokens (color-mix) 定義在 body 不是 :root（讓 dark theme override 生效）"
+  },
+  "known_issues": [
+    "Tailwind CSS 4 @theme 只認 namespace prefix（--color-*, --spacing-*, --radius-* 等）",
+    "production build 的 CSS 是靜態的，dev server (HMR) 是即時的 — 必須用 vite preview 測 production",
+    "V2 cutover 頁面從 V1 跳過去必須用 <a href>（full page nav），不能用 React Router <Link>",
+    "manage/admin 子目錄的 index.html 複製自 v2.html（build script）",
+    "Cloudflare Pages Pretty URLs 會把 /manage 308 redirect 到 /（找不到 manage.html）— 必須帶 trailing slash",
+    "global reset * { padding: 0; margin: 0 } 會覆蓋 Tailwind utilities — 已移除"
+  ]
+}

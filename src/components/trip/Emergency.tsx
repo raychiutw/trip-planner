@@ -36,10 +36,10 @@ export default function Emergency({ data }: EmergencyProps) {
   if (!data.cards || !data.cards.length) return null;
 
   return (
-    <div className="ov-grid">
+    <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
       {data.cards.map((card, i) => (
-        <div key={i} className="ov-card">
-          {card.title && <h4>{card.title}</h4>}
+        <div key={i} className="bg-accent-bg rounded-sm p-4">
+          {card.title && <h4 className="relative pl-4 mt-0"><span className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-accent" />{card.title}</h4>}
           {card.contacts &&
             card.contacts.map((c, j) => {
               const cUrl = escUrl(c.url || (c.phone ? 'tel:' + c.phone : ''));

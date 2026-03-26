@@ -38,13 +38,13 @@ function InfoWindowCard({ pin, onScrollToEntry, onClose }: InfoWindowCardProps) 
 
   return (
     <div
-      className="map-info-window"
+      className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-[200px] bg-secondary rounded-sm shadow-md p-3 z-10"
       role="dialog"
       aria-label={`${label}：${pin.title ?? ''}`}
     >
       {/* 關閉按鈕 */}
       <button
-        className="map-info-close"
+        className="absolute top-2 right-2 bg-transparent text-muted text-caption cursor-pointer w-6 h-6 flex items-center justify-center rounded-full transition-colors duration-fast ease-apple hover:bg-tertiary hover:text-foreground"
         type="button"
         aria-label="關閉"
         onClick={onClose}
@@ -53,23 +53,23 @@ function InfoWindowCard({ pin, onScrollToEntry, onClose }: InfoWindowCardProps) 
       </button>
 
       {/* 編號 + 名稱 */}
-      <div className="map-info-label">{label}</div>
-      <div className="map-info-title">{pin.title}</div>
+      <div className="text-caption text-muted mb-1 pr-6">{label}</div>
+      <div className="text-headline font-semibold text-foreground mb-1 break-words">{pin.title}</div>
 
       {/* 時間（entry only）*/}
       {!isHotel && pin.time && (
-        <div className="map-info-time">{pin.time}</div>
+        <div className="text-footnote text-muted mb-1">{pin.time}</div>
       )}
 
       {/* 評分（entry only）*/}
       {!isHotel && typeof pin.googleRating === 'number' && (
-        <div className="map-info-rating">★ {pin.googleRating.toFixed(1)}</div>
+        <div className="text-footnote text-muted mb-2">★ {pin.googleRating.toFixed(1)}</div>
       )}
 
       {/* 滾到此處按鈕（entry only）*/}
       {!isHotel && (
         <button
-          className="map-info-scroll-btn"
+          className="flex items-center justify-center w-full min-h-tap-min py-2 px-3 bg-accent text-accent-foreground rounded-sm text-footnote font-semibold cursor-pointer transition-opacity duration-fast ease-apple hover:opacity-85"
           type="button"
           aria-label={`在時間軸中查看 ${pin.title ?? ''}`}
           onClick={onScrollToEntry}
@@ -110,7 +110,7 @@ function MarkerDot({ pin, isSelected, onClick, onScrollToEntry, onCloseInfo, sho
   }, [onClick, onCloseInfo, showInfo]);
 
   return (
-    <div className="map-marker-wrap">
+    <div className="relative inline-block">
       {/* Marker circle */}
       <div
         role="button"
@@ -118,11 +118,11 @@ function MarkerDot({ pin, isSelected, onClick, onScrollToEntry, onCloseInfo, sho
         aria-label={ariaLabel}
         aria-expanded={showInfo}
         aria-haspopup="dialog"
-        className={`map-marker-dot${isSelected ? ' map-marker-dot--selected' : ''}`}
+        className={`flex items-center justify-center rounded-full bg-accent text-accent-foreground text-caption font-bold cursor-pointer select-none transition-[width,height,box-shadow] duration-fast ease-apple min-w-[var(--spacing-tap-min)] min-h-[var(--spacing-tap-min)] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px] ${isSelected ? 'w-10 h-10 shadow-lg outline-2 outline-accent-foreground outline-offset-0' : 'w-8 h-8'}`}
         onClick={onClick}
         onKeyDown={handleKeyDown}
       >
-        {isHotel ? '🏨' : <span className="map-marker-num">{pin.index}</span>}
+        {isHotel ? '🏨' : <span className="text-caption font-bold leading-none text-accent-foreground pointer-events-none">{pin.index}</span>}
       </div>
 
       {/* InfoWindow */}

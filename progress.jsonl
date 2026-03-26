@@ -1,0 +1,8 @@
+{"ts":"2026-03-26T13:20:00+08:00","step":"init","status":"done","detail":"分支 feat/trip-page-v2 建立，features.json 交班檔完成"}
+{"ts":"2026-03-26T14:45:00+08:00","step":"build","status":"done","detail":"31 元件 + TripPageV2 全面 Tailwind 轉換，hybrid CSS class 消除，tsc/build/724 tests 全過"}
+{"ts":"2026-03-26T15:00:00+08:00","step":"review","status":"done","detail":"/tp-code-verify 🟢 + /review 16 issues all fixed + adversarial review 14 findings resolved"}
+{"ts":"2026-03-26T15:30:00+08:00","step":"test-qa","status":"done","detail":"/qa 10 issues found+fixed: svg-icon、InfoSheet pointer-events/z-index、Day header gradient、layout width、card glass、segment color、body margin、pill font、DestinationArt selector、card shadow"}
+{"ts":"2026-03-26T15:45:00+08:00","step":"test-cso","status":"done","detail":"/cso CLEAN — CSS-only changes, zero security findings"}
+{"ts":"2026-03-26T15:50:00+08:00","step":"test-benchmark","status":"done","detail":"/benchmark Grade A, NET -8.1kB gzip improvement"}
+{"ts":"2026-03-26T18:15:00+08:00","step":"visual-parity","status":"done","detail":"V1 vs V2 逐元素比對完成：nav glass 92%、card glass、layout offset、segment dark color、body margin reset、pill desktop font、DestinationArt position、InfoPanel bg、sheet handle iOS style、card shadow 移除"}
+{"ts":"2026-03-26T18:20:00+08:00","step":"next","status":"pending","detail":"待做：SCOPED_STYLES 重構（搬到 tokens.css @layer base）→ /ship → /retro → archive"}

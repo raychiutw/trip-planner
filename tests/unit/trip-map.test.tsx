@@ -263,12 +263,12 @@ describe('TripMap — 圖例 pill 互動', () => {
     // pill-2 和 pill-3 應有 dimmed
     const pill2 = screen.getByTestId('trip-map-legend-pill-2');
     const pill3 = screen.getByTestId('trip-map-legend-pill-3');
-    expect(pill2).toHaveClass('trip-map-legend-pill--dimmed');
-    expect(pill3).toHaveClass('trip-map-legend-pill--dimmed');
+    expect(pill2).toHaveClass('opacity-40');
+    expect(pill3).toHaveClass('opacity-40');
 
     // pill-1 不應有 dimmed
     const pill1 = screen.getByTestId('trip-map-legend-pill-1');
-    expect(pill1).not.toHaveClass('trip-map-legend-pill--dimmed');
+    expect(pill1).not.toHaveClass('opacity-40');
   });
 });
 

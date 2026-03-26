@@ -100,22 +100,22 @@ export const Restaurant = memo(function Restaurant({ restaurant: r }: Restaurant
   if (r.hours) metaParts.push(r.hours);
 
   return (
-    <div className="restaurant-choice">
-      <div className="restaurant-header">
-        <span className="restaurant-name">
+    <div className="p-3 px-4 leading-normal bg-accent-subtle rounded-sm my-2 last:mb-0">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="font-semibold text-accent text-headline">
           {r.name}
         </span>
-        {r.category && <span className="restaurant-category">{r.category}</span>}
+        {r.category && <span className="text-footnote text-muted bg-secondary py-1 px-2 rounded-full">{r.category}</span>}
         {r.location && <MapLinks location={r.location} inline />}
       </div>
       {metaParts.length > 0 && (
-        <div className="restaurant-meta-row">
+        <div className="text-footnote text-muted mt-1">
           {metaParts.join(' · ')}
         </div>
       )}
-      {r.description && <MarkdownText text={r.description} as="div" className="restaurant-desc" />}
+      {r.description && <MarkdownText text={r.description} as="div" className="text-callout text-muted mt-1 line-clamp-2" />}
       {reservationEl && (
-        <span className="restaurant-meta">
+        <span className="block mt-1 text-callout text-muted">
           {reservationEl}
         </span>
       )}

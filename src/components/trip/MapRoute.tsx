@@ -127,7 +127,7 @@ export function createTravelLabelOverlay(
 
     override onAdd() {
       this.div = document.createElement('div');
-      this.div.className = 'map-route-label';
+      this.div.className = 'absolute -translate-x-1/2 -translate-y-1/2 bg-secondary text-muted text-caption py-1 px-2 rounded-xs shadow-sm whitespace-nowrap pointer-events-none select-none';
       this.div.textContent = this.labelText;
       this.div.setAttribute('aria-hidden', 'true');
 

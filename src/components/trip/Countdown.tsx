@@ -24,10 +24,10 @@ export default function Countdown({ autoScrollDates }: CountdownProps) {
   if (today < startDate) {
     const diff = Math.ceil((startDate.getTime() - today.getTime()) / MS_PER_DAY);
     return (
-      <div className="info-card countdown-card">
-        <div className="countdown-number">
-          <span className="countdown-num">{diff}</span>
-          <span className="countdown-unit">天</span>
+      <div className="bg-secondary rounded-md p-4 mb-3 text-center">
+        <div className="font-bold text-accent leading-tight flex items-baseline justify-center gap-1">
+          <span className="text-title2">{diff}</span>
+          <span className="text-body font-semibold">天</span>
         </div>
       </div>
     );
@@ -36,21 +36,21 @@ export default function Countdown({ autoScrollDates }: CountdownProps) {
   if (today <= endDate) {
     const dayN = Math.floor((today.getTime() - startDate.getTime()) / MS_PER_DAY) + 1;
     return (
-      <div className="info-card countdown-card">
-        <div className="countdown-number">
-          <span className="countdown-num">Day {dayN}</span>
+      <div className="bg-secondary rounded-md p-4 mb-3 text-center">
+        <div className="font-bold text-accent leading-tight flex items-baseline justify-center gap-1">
+          <span className="text-title2">Day {dayN}</span>
         </div>
-        <div className="countdown-label">旅行進行中</div>
+        <div className="text-callout text-muted mt-1">旅行進行中</div>
       </div>
     );
   }
 
   return (
-    <div className="info-card countdown-card">
-      <div className="countdown-number">
+    <div className="bg-secondary rounded-md p-4 mb-3 text-center">
+      <div className="font-bold text-accent leading-tight flex items-baseline justify-center gap-1">
         <Icon name="plane" />
       </div>
-      <div className="countdown-label">旅程已結束</div>
+      <div className="text-callout text-muted mt-1">旅程已結束</div>
     </div>
   );
 }

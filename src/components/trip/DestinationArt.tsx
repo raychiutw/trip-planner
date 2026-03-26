@@ -303,7 +303,7 @@ export const DestinationArt = memo(function DestinationArt({ tripId, dark }: Des
   const mode = dark ? 'dark' : 'light';
 
   return (
-    <div className="destination-art" aria-hidden="true">
+    <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
       <svg
         viewBox="0 0 480 48"
         xmlns="http://www.w3.org/2000/svg"

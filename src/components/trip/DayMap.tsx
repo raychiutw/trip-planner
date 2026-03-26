@@ -206,15 +206,15 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
   const mapId = `day-map-${dayNum}`;
 
   return (
-    <div className="day-map-section" data-testid="day-map-section">
+    <div data-testid="day-map-section">
       {/* Header：標籤 + 收合按鈕 */}
-      <div className="day-map-header">
-        <span className="day-map-header-label">
+      <div className="flex items-center justify-between p-2 px-1 mb-2">
+        <span className="text-footnote font-semibold text-muted uppercase tracking-[0.04em]">
           <Icon name="map" />
           動線地圖
         </span>
         <button
-          className="day-map-toggle-btn"
+          className="flex items-center gap-2 py-2 px-4 bg-transparent rounded-sm text-muted text-footnote font-medium cursor-pointer min-h-tap-min min-w-[var(--spacing-tap-min)] transition-colors duration-fast ease-apple hover:text-foreground hover:bg-tertiary"
           aria-expanded={!collapsed}
           aria-controls={mapId}
           onClick={handleToggle}
@@ -231,15 +231,15 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
         role="region"
         aria-label={`第 ${dayNum} 天動線地圖`}
         className={clsx(
-          'day-map-wrap',
-          collapsed ? 'day-map-wrap--collapsed' : 'day-map-wrap--expanded',
+          'overflow-hidden transition-[max-height] duration-normal ease-apple',
+          collapsed ? 'max-h-0' : 'max-h-[420px] md:max-h-[460px] lg:max-h-[520px]',
         )}
         aria-hidden={collapsed}
       >
         {/* Case 1：SDK 載入中 → skeleton */}
         {status === 'loading' || status === 'idle' ? (
           <div
-            className="day-map-skeleton"
+            className="h-[250px] md:h-[300px] lg:h-[350px] bg-tertiary rounded-md animate-pulse"
             role="status"
             aria-label="地圖載入中"
             data-testid="day-map-skeleton"
@@ -249,17 +249,17 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
         {/* Case 2：SDK 載入失敗 → error fallback */}
         {status === 'error' ? (
           <div
-            className="day-map-error"
+            className="flex flex-col items-center justify-center gap-3 p-8 bg-secondary rounded-md h-[250px] md:h-[300px] lg:h-[350px] text-center"
             role="alert"
             data-testid="day-map-error"
           >
             <Icon name="warning" />
-            <p className="day-map-error-title">地圖無法載入</p>
-            <p className="day-map-error-desc">
+            <p className="text-subheadline font-semibold text-foreground">地圖無法載入</p>
+            <p className="text-footnote text-muted">
               {error ?? 'Google Maps SDK 無法載入，請確認網路連線。'}
             </p>
             <a
-              className="day-map-error-link"
+              className="inline-flex items-center gap-2 py-2 px-4 bg-accent text-accent-foreground rounded-sm text-footnote font-semibold no-underline min-h-tap-min min-w-[var(--spacing-tap-min)] justify-center"
               href={buildFallbackUrl(dayNum)}
               target="_blank"
               rel="noopener noreferrer"
@@ -274,7 +274,7 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
         {/* Case 3：SDK ready + 無座標資料 → empty state */}
         {status === 'ready' && !hasData ? (
           <div
-            className="day-map-empty"
+            className="flex items-center justify-center h-[250px] md:h-[300px] lg:h-[350px] bg-secondary rounded-md text-footnote text-muted text-center p-4"
             data-testid="day-map-empty"
           >
             今天沒有排程景點座標
@@ -283,10 +283,10 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
 
         {/* Case 4：SDK ready + 有資料 → 地圖容器 + markers */}
         {status === 'ready' && hasData ? (
-          <div className="day-map-container" data-testid="day-map-container">
+          <div className="relative touch-none bg-secondary rounded-md overflow-hidden" data-testid="day-map-container">
             <div
               ref={mapRef}
-              className="day-map"
+              className="h-[250px] md:h-[300px] lg:h-[350px] w-full rounded-md"
               aria-label={`第 ${dayNum} 天互動地圖`}
               data-testid="day-map-canvas"
             />
@@ -317,7 +317,7 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
       {/* 部分座標缺失提示條（展開時顯示） */}
       {!collapsed && status === 'ready' && missingCount > 0 && (
         <div
-          className="day-map-warning"
+          className="flex items-center gap-2 py-2 px-3 bg-accent-subtle rounded-sm text-caption text-muted mt-2"
           role="status"
           data-testid="day-map-warning"
         >

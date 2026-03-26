@@ -24,14 +24,14 @@ function TransportTypeGroups({ byType }: { byType: Record<string, TypeGroup> }) 
         const group = byType[key];
         if (!group) return null;
         return (
-          <div key={key} className="transport-type-group">
-            <div className="transport-type-label">
+          <div key={key} className="mb-1">
+            <div className="font-semibold mb-1">
               <Icon name={group.icon} /> {group.label}：
               {formatMinutes(group.totalMinutes)}
             </div>
-            <div className="driving-stats-detail">
+            <div className="flex flex-wrap gap-1 gap-x-3 text-muted text-callout">
               {group.segments.map((seg, i) => (
-                <span key={i} className="driving-stats-seg">
+                <span key={i}>
                   <Icon name={group.icon} />{' '}
                   {seg.from && (
                     <>{seg.from}{seg.to ? ` → ${seg.to}` : ''} </>
@@ -60,16 +60,15 @@ interface DayDrivingStatsProps {
 export function DayDrivingStatsCard({ stats }: DayDrivingStatsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isWarning = isDrivingWarning(stats.drivingMinutes);
-  const cls = clsx('driving-stats', isWarning && 'driving-stats-warning');
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
   }, []);
 
   return (
-    <div className={cls}>
+    <div className="my-3 py-3 rounded-sm bg-transparent text-callout">
       <div
-        className={clsx('col-row', isOpen && 'open')}
+        className="flex items-center gap-2 py-2 px-3 -mx-3 select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:bg-accent-bg"
         role="button"
         tabIndex={0}
         aria-expanded={isOpen}
@@ -80,11 +79,11 @@ export function DayDrivingStatsCard({ stats }: DayDrivingStatsProps) {
         {isWarning ? <Icon name="warning" /> : <Icon name="bus" />} 當日交通：
         {formatMinutes(stats.totalMinutes)}
         {isWarning && (
-          <span className="driving-stats-badge">{DRIVING_WARN_LABEL}</span>
+          <span className="inline-block bg-destructive text-accent-foreground text-footnote py-1 px-2 rounded-sm font-semibold ml-2">{DRIVING_WARN_LABEL}</span>
         )}
-        <span className="arrow">{isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
+        <span className="ml-auto text-muted text-subheadline">{isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>
-      <div className={clsx('col-detail', isOpen && 'open')}>
+      <div className={clsx('hidden print:block py-3 text-body leading-relaxed', isOpen && '!block')}>
         <TransportTypeGroups byType={stats.byType} />
       </div>
     </div>
@@ -106,7 +105,7 @@ function getTypeMinutes(stats: DayDrivingStats, type: string): number {
 function StatCell({ minutes, type }: { minutes: number; type: string }) {
   const warn = type === 'car' && isDrivingWarning(minutes);
   return (
-    <span className={clsx('ds-cell-value', warn && 'ds-cell-warn')}>
+    <span className={clsx('font-semibold ml-auto flex items-center gap-1', warn && 'text-warning')}>
       {warn && <Icon name="warning" />}
       {formatMinutes(minutes)}
     </span>
@@ -122,26 +121,26 @@ export function TripDrivingStatsCard({ tripStats }: TripDrivingStatsProps) {
   const activeTypes = TRANSPORT_TYPE_ORDER.filter((k) => tripStats.grandByType[k]);
 
   return (
-    <div className="driving-summary">
-      <div className="driving-summary-header">
+    <div className="my-2">
+      <div className="flex items-center gap-2 py-3 font-semibold text-headline">
         <Icon name="bus" /> 交通統計
       </div>
 
       {/* Mobile: card layout */}
-      <div className="ds-cards">
+      <div className="flex flex-col gap-2 md:hidden">
         {tripStats.days.map((d) => {
           const isWarning = isDrivingWarning(d.stats.drivingMinutes);
           return (
-            <div key={d.dayId} className={clsx('ds-card', isWarning && 'ds-card-warn')}>
-              <div className="ds-card-label">{d.label} {d.date}</div>
+            <div key={d.dayId} className={clsx('bg-secondary rounded-sm p-3', isWarning && 'bg-warning-bg')}>
+              <div className="font-semibold text-callout mb-2">{d.label} {d.date}</div>
               {activeTypes.map((type) => {
                 const g = d.stats.byType[type];
                 if (!g) return null;
                 const mins = g.totalMinutes;
                 return (
-                  <div key={type} className="ds-card-row">
+                  <div key={type} className="flex items-center gap-2 py-1 text-callout">
                     <Icon name={g.icon} />
-                    <span className="ds-card-type">{g.label}</span>
+                    <span className="text-muted min-w-8">{g.label}</span>
                     <StatCell minutes={mins} type={type} />
                   </div>
                 );
@@ -152,25 +151,25 @@ export function TripDrivingStatsCard({ tripStats }: TripDrivingStatsProps) {
       </div>
 
       {/* Desktop: table layout */}
-      <div className="ds-table-wrap">
-        <table className="ds-table">
+      <div className="hidden md:block">
+        <table className="w-full border-collapse text-callout">
           <thead>
             <tr>
               <th></th>
               {activeTypes.map((type) => {
                 const g = tripStats.grandByType[type];
                 return (
-                  <th key={type}><Icon name={g.icon} /> {g.label}</th>
+                  <th key={type} className="text-center p-2 font-semibold text-muted whitespace-nowrap"><Icon name={g.icon} /> {g.label}</th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
             {tripStats.days.map((d) => (
-              <tr key={d.dayId}>
-                <td className="ds-table-label">{d.label} {d.date}</td>
+              <tr key={d.dayId} className="border-t border-border">
+                <td className="text-left font-semibold whitespace-nowrap p-2">{d.label} {d.date}</td>
                 {activeTypes.map((type) => (
-                  <td key={type}>
+                  <td key={type} className="text-center p-2">
                     <StatCell minutes={getTypeMinutes(d.stats, type)} type={type} />
                   </td>
                 ))}
@@ -178,10 +177,10 @@ export function TripDrivingStatsCard({ tripStats }: TripDrivingStatsProps) {
             ))}
           </tbody>
           <tfoot>
-            <tr className={clsx(isDrivingWarning(tripStats.grandByType['car']?.totalMinutes ?? 0) && 'ds-row-warn')}>
-              <td className="ds-table-label">合計</td>
+            <tr className={clsx('border-t-2 border-border font-bold', isDrivingWarning(tripStats.grandByType['car']?.totalMinutes ?? 0) && 'bg-warning-bg')}>
+              <td className="text-left font-semibold whitespace-nowrap p-2">合計</td>
               {activeTypes.map((type) => (
-                <td key={type}>
+                <td key={type} className="text-center p-2">
                   <StatCell minutes={tripStats.grandByType[type]?.totalMinutes ?? 0} type={type} />
                 </td>
               ))}
