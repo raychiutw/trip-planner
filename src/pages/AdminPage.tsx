@@ -27,7 +27,7 @@ function redirectToLogin() {
     return; // 放棄 redirect，顯示錯誤
   }
   sessionStorage.setItem(AUTH_REDIRECT_KEY, String(count + 1));
-  window.location.replace('/admin');
+  window.location.replace('/admin/');
 }
 
 /* ===== Status message state ===== */
