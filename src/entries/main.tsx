@@ -23,11 +23,13 @@ const V2_CUTOVER_PATHS = ['/admin', '/manage'];
 const isCutover = V2_CUTOVER_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
 /* V2-ready 但尚未 cutover 的路由（未來 ManagePage 等加入此列） */
-const V2_READY_PATHS: string[] = [];
+const V2_READY_PATHS: string[] = ['/trip'];
 const isV2Ready = V2_READY_PATHS.some(p => window.location.pathname === p || window.location.pathname.startsWith(p + '/'));
 
+/* 分離 import 避免 Vite preload-helper 合併兩個分支的 CSS deps */
 if (isCutover || (useV2 && isV2Ready)) {
   import('./mainV2');
-} else {
+}
+if (!isCutover && !(useV2 && isV2Ready)) {
   import('./mainV1');
 }

@@ -25,10 +25,10 @@ interface ChecklistProps {
 export default function Checklist({ data }: ChecklistProps) {
   if (data.cards && data.cards.length) {
     return (
-      <div className="ov-grid">
+      <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
         {data.cards.map((card, i) => (
-          <div key={i} className="ov-card">
-            {card.title && <h4>{card.title}</h4>}
+          <div key={i} className="bg-accent-bg rounded-sm p-4">
+            {card.title && <h4 className="relative pl-4 mt-0"><span className="absolute left-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-accent" />{card.title}</h4>}
             {card.items && card.items.length > 0 && (
               <p>
                 {card.items.map((item, j) => (
@@ -47,10 +47,10 @@ export default function Checklist({ data }: ChecklistProps) {
 
   if (data.items && data.items.length) {
     return (
-      <ul className="notes-list">
+      <ul className="list-none p-0 mt-2">
         {data.items.map((item, i) => (
-          <li key={i}>
-            <span className="list-icon">
+          <li key={i} className="py-1 text-body flex items-baseline gap-2">
+            <span className="shrink-0">
               <Icon name="pin" />
             </span>
             {item}

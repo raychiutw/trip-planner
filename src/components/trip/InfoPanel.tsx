@@ -34,8 +34,8 @@ export default function InfoPanel({
       )}
       {/* Hotel info card */}
       {currentDay?.hotel && (
-        <div className="info-card hotel-summary-card">
-          <div className="info-label"><Icon name="hotel" /> 今日住宿</div>
+        <div className="hotel-summary-card bg-secondary rounded-md p-4 mb-3">
+          <div className="font-bold text-title3 mb-3"><Icon name="hotel" /> 今日住宿</div>
           <div className="hotel-summary-name">{currentDay.hotel.name}</div>
           {currentDay.hotel.checkout && (
             <div className="hotel-summary-checkout">
@@ -46,8 +46,8 @@ export default function InfoPanel({
       )}
       {/* Day transport summary card */}
       {dayTransport && (
-        <div className="info-card transport-summary-card">
-          <div className="info-label"><Icon name="bus" /> 當日交通</div>
+        <div className="transport-summary-card bg-secondary rounded-md p-4 mb-3">
+          <div className="font-bold text-title3 mb-3"><Icon name="bus" /> 當日交通</div>
           {TRANSPORT_TYPE_ORDER.map((key) => {
             const g = dayTransport.byType[key];
             if (!g) return null;

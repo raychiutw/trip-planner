@@ -235,15 +235,15 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
   /* ===== Render ===== */
 
   return (
-    <div className="day-map-section" data-testid="trip-map-section">
+    <div data-testid="trip-map-section">
       {/* Header：標籤 + 收合按鈕 */}
-      <div className="day-map-header">
-        <span className="day-map-header-label">
+      <div className="flex items-center justify-between p-2 px-1 mb-2">
+        <span className="text-footnote font-semibold text-muted uppercase tracking-[0.04em]">
           <Icon name="map" />
           全覽地圖
         </span>
         <button
-          className="day-map-toggle-btn"
+          className="flex items-center gap-2 py-2 px-4 bg-transparent rounded-sm text-muted text-footnote font-medium cursor-pointer min-h-tap-min min-w-[var(--spacing-tap-min)] transition-colors duration-fast ease-apple hover:text-foreground hover:bg-tertiary"
           aria-expanded={!collapsed}
           aria-controls="trip-map"
           onClick={handleToggle}
@@ -260,15 +260,15 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
         role="region"
         aria-label="全行程總覽地圖"
         className={clsx(
-          'day-map-wrap',
-          collapsed ? 'day-map-wrap--collapsed' : 'day-map-wrap--expanded',
+          'overflow-hidden transition-[max-height] duration-normal ease-apple',
+          collapsed ? 'max-h-0' : 'max-h-[420px] md:max-h-[460px] lg:max-h-[520px]',
         )}
         aria-hidden={collapsed}
       >
         {/* Case 1：SDK 載入中 → skeleton */}
         {status === 'loading' || status === 'idle' ? (
           <div
-            className="day-map-skeleton"
+            className="h-[250px] md:h-[300px] lg:h-[350px] bg-tertiary rounded-md animate-pulse"
             role="status"
             aria-label="地圖載入中"
             data-testid="trip-map-skeleton"
@@ -278,17 +278,17 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
         {/* Case 2：SDK 載入失敗 → error fallback */}
         {status === 'error' ? (
           <div
-            className="day-map-error"
+            className="flex flex-col items-center justify-center gap-3 p-8 bg-secondary rounded-md h-[250px] md:h-[300px] lg:h-[350px] text-center"
             role="alert"
             data-testid="trip-map-error"
           >
             <Icon name="warning" />
-            <p className="day-map-error-title">地圖無法載入</p>
-            <p className="day-map-error-desc">
+            <p className="text-subheadline font-semibold text-foreground">地圖無法載入</p>
+            <p className="text-footnote text-muted">
               {error ?? 'Google Maps SDK 無法載入，請確認網路連線。'}
             </p>
             <a
-              className="day-map-error-link"
+              className="inline-flex items-center gap-2 py-2 px-4 bg-accent text-accent-foreground rounded-sm text-footnote font-semibold no-underline min-h-tap-min min-w-[var(--spacing-tap-min)] justify-center"
               href={buildFallbackUrl()}
               target="_blank"
               rel="noopener noreferrer"
@@ -303,7 +303,7 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
         {/* Case 3：SDK ready + 無資料 → empty state */}
         {status === 'ready' && !hasData ? (
           <div
-            className="day-map-empty"
+            className="flex items-center justify-center h-[250px] md:h-[300px] lg:h-[350px] bg-secondary rounded-md text-footnote text-muted text-center p-4"
             data-testid="trip-map-empty"
           >
             尚無地點資料
@@ -312,17 +312,17 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
 
         {/* Case 4：SDK ready + 有資料 → 地圖容器 */}
         {status === 'ready' && hasData ? (
-          <div className="day-map-container" data-testid="trip-map-container">
+          <div className="relative touch-none bg-secondary rounded-md overflow-hidden" data-testid="trip-map-container">
             <div
               ref={mapRef}
-              className="day-map"
+              className="h-[250px] md:h-[300px] lg:h-[350px] w-full rounded-md"
               aria-label="全行程互動地圖"
               data-testid="trip-map-canvas"
             />
 
             {/* 日期圖例（左下角，F006.3）*/}
             <div
-              className="trip-map-legend"
+              className="absolute bottom-3 left-3 flex flex-wrap gap-1 p-0 max-w-[calc(100%-var(--spacing-6))] z-[5]"
               role="list"
               aria-label="天數圖例"
               data-testid="trip-map-legend"
@@ -338,9 +338,9 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
                     key={dayNum}
                     role="listitem"
                     className={clsx(
-                      'trip-map-legend-pill',
-                      isDimmed && 'trip-map-legend-pill--dimmed',
-                      isHighlighted && 'trip-map-legend-pill--active',
+                      'inline-flex items-center gap-1 py-1 px-2 rounded-full text-caption font-medium cursor-pointer min-h-tap-min min-w-[var(--spacing-tap-min)] bg-secondary shadow-sm text-foreground transition-[opacity,background] duration-fast ease-apple hover:shadow-md',
+                      isDimmed && 'opacity-40',
+                      isHighlighted && 'font-semibold shadow-md',
                     )}
                     style={{ background: isHighlighted ? color + '22' : 'var(--color-secondary)' }}
                     onClick={() => handleLegendPillClick(dayNum)}
@@ -350,7 +350,7 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
                     type="button"
                   >
                     <span
-                      className="trip-map-legend-dot"
+                      className="w-2 h-2 rounded-full shrink-0"
                       style={{ background: color }}
                       aria-hidden="true"
                     />

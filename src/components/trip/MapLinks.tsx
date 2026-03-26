@@ -52,31 +52,38 @@ function resolveAppleUrl(loc: MapLocation): string {
 }
 
 export const MapLinks = memo(function MapLinks({ location: loc, inline = false }: MapLinksProps) {
-  const cls = clsx('map-link', inline && 'map-link-inline');
+  const baseCls = clsx(
+    'inline-flex items-center gap-1 bg-transparent text-accent py-2 px-3 rounded-sm text-callout no-underline mr-1 mb-1 min-h-tap-min align-middle transition-colors duration-fast ease-apple hover:bg-hover hover:text-foreground',
+    inline && 'text-callout py-2 px-2 min-h-tap-min',
+  );
   const googleUrl = resolveGoogleUrl(loc);
   const appleUrl = resolveAppleUrl(loc);
   const naverUrl = escUrl(loc.naverQuery || '');
   const showNaver = naverUrl && /^https?:/i.test(naverUrl);
 
+  const iconSizeCls = inline ? 'w-4 h-4' : 'w-5 h-5';
+  const appleIconSizeCls = inline ? 'w-3 h-3' : 'w-4 h-4';
+
   return (
     <>
-      <a href={googleUrl} target="_blank" rel="noopener noreferrer" className={cls}>
-        <span className="g-icon">G</span> Map
+      <a href={googleUrl} target="_blank" rel="noopener noreferrer" className={baseCls}>
+        <span className={clsx('inline-flex items-center justify-center rounded-full bg-[var(--color-google-maps)] text-accent-foreground text-footnote font-bold leading-none shrink-0', iconSizeCls)} style={{ fontFamily: "'Google Sans', Arial, sans-serif" }}>G</span> Map
       </a>
-      <a href={appleUrl} target="_blank" rel="noopener noreferrer" className={clsx(cls, 'apple')}>
+      <a href={appleUrl} target="_blank" rel="noopener noreferrer" className={clsx(baseCls, 'text-foreground hover:bg-hover hover:text-foreground')}>
         <span
-          className="apple-icon"
+          className={clsx('inline-flex items-center shrink-0', appleIconSizeCls)}
           dangerouslySetInnerHTML={{ __html: APPLE_SVG }}
+          style={{ width: inline ? 12 : 16, height: inline ? 12 : 16 }}
         />
         {' '}Map
       </a>
       {showNaver && (
-        <a href={naverUrl} target="_blank" rel="noopener noreferrer" className={clsx(cls, 'naver')}>
-          <span className="n-icon">N</span> N Map
+        <a href={naverUrl} target="_blank" rel="noopener noreferrer" className={clsx(baseCls, 'text-foreground hover:bg-hover hover:text-foreground')}>
+          <span className={clsx('inline-flex items-center justify-center rounded-full bg-[var(--color-naver-maps)] text-accent-foreground text-footnote font-bold leading-none shrink-0', iconSizeCls)} style={{ fontFamily: "'Google Sans', Arial, sans-serif" }}>N</span> N Map
         </a>
       )}
       {loc.mapcode && (
-        <span className={clsx(cls, 'mapcode')}>
+        <span className={clsx(baseCls, 'text-accent hover:bg-hover hover:text-foreground')}>
           <Icon name="device" /> {loc.mapcode}
         </span>
       )}
@@ -99,7 +106,7 @@ interface NavLinksProps {
 export const NavLinks = memo(function NavLinks({ locations }: NavLinksProps) {
   if (!locations || locations.length === 0) return null;
   return (
-    <div className="nav-links">
+    <div className="my-2">
       {locations.map((loc, i) => (
         <span key={i}>
           {loc.label && <strong>{loc.label}：</strong>}
