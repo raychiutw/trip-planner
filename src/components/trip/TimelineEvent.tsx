@@ -152,9 +152,8 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, index, isNow, 
             data-tl-card
             className={clsx(
               'rounded-(--radius-sm) px-4 py-3',
-              'shadow-[0_1px_3px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04)]',
               isNow && 'shadow-(--shadow-md) ring-[1.5px] ring-(--color-accent) scale-[1.01]',
-              isPast && 'shadow-none opacity-75',
+              isPast && '!shadow-none opacity-75',
             )}
           >
             {/* Card header */}
