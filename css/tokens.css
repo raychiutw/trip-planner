@@ -142,8 +142,8 @@
     --duration-indicator: 350ms;
 }
 
-/* ===== Composite tokens (reference other CSS vars, cannot be in @theme) ===== */
-:root {
+/* ===== Composite tokens (on body, not :root — 讓 dark mode body.theme-*.dark 覆寫生效) ===== */
+body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 72%, transparent);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 85%, transparent);
     --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
