@@ -1235,7 +1235,7 @@ export default function TripPageV2() {
           <div id="tripContent-v2" className="pt-3">
             {/* Large Title (mobile only) */}
             {!loading && trip && (
-              <div className="py-2 px-padding-h pb-4" ref={largeTitleRef}>
+              <div className="py-2 px-padding-h pb-4 block md:hidden" ref={largeTitleRef}>
                 <h1 className="text-large-title font-bold leading-tight text-foreground">{trip.title || trip.name}</h1>
                 {dateRange && <p className="text-subheadline text-muted mt-1">{dateRange}</p>}
               </div>

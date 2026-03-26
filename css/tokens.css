@@ -187,6 +187,11 @@ body {
     --z-print-exit: 9999;
 }
 
+/* ===== Global reset (shared.css 替代 — 不可用 * shorthand，會覆蓋 Tailwind longhand) ===== */
+@layer base {
+    body { margin: 0; }
+}
+
 /* ===== Global component base (shared.css 替代) ===== */
 @layer base {
     .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }

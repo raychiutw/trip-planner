@@ -7,6 +7,7 @@ import type { DaySummary } from '../../types/trip';
 const SCOPED_STYLES = `
 .dn-today-dot { width: 6px; height: 6px; }
 body.dark [data-dn]:not(.active) { background: transparent; border: 1.5px solid var(--color-accent); }
+@media (min-width: 1280px) { [data-dn] { font-size: var(--font-size-title3); } }
 @keyframes dn-tooltip-in {
   from { opacity: 0; transform: translateX(-50%) translateY(4px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -253,7 +254,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               <button
                 key={dayNum}
                 className={clsx(
-                  'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote md:text-title3 font-semibold font-inherit min-w-tap-min min-h-tap-min text-center whitespace-nowrap transition-[background,color] duration-fast ease-apple',
+                  'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote font-semibold font-inherit min-w-tap-min min-h-tap-min text-center whitespace-nowrap transition-[background,color] duration-fast ease-apple',
                   isActive
                     ? 'active bg-accent text-accent-foreground'
                     : 'bg-accent-bg text-accent hover:bg-accent hover:text-accent-foreground',
@@ -298,7 +299,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
           {onToggleTripMap && (
             <button
               className={clsx(
-                'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote md:text-title3 font-semibold font-inherit min-w-tap-min min-h-tap-min text-center whitespace-nowrap transition-[background,color] duration-fast ease-apple',
+                'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote font-semibold font-inherit min-w-tap-min min-h-tap-min text-center whitespace-nowrap transition-[background,color] duration-fast ease-apple',
                 isTripMapMode
                   ? 'active bg-accent text-accent-foreground'
                   : 'bg-accent-bg text-accent hover:bg-accent hover:text-accent-foreground',
