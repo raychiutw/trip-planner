@@ -85,6 +85,7 @@
 
     /* Font family — generate font-* utilities */
     --font-family-system: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --font-family-inherit: inherit;
 
     /* Font weight — generate font-* utilities */
     --font-weight-light: 300;
@@ -119,6 +120,15 @@
 
     /* Focus ring — V2 頁面需要 */
     --shadow-ring: 0 0 0 2px var(--color-accent);
+
+    /* Animate — generate animate-* utilities */
+    --animate-stepper-pulse: stepper-pulse 2s infinite;
+    --animate-toast-slide-down: toast-slide-down var(--transition-duration-slow) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    --animate-toast-slide-up: toast-slide-up var(--transition-duration-normal) ease forwards;
+
+    /* Layout composite — generate spacing utilities */
+    --spacing-toast-top: calc(var(--spacing-nav-h) + var(--spacing-3));
+    --spacing-content-h: calc(100dvh - var(--spacing-nav-h));
 }
 
 /* ===== Sheet animation tokens ===== */
@@ -130,6 +140,13 @@
     --duration-tap: 80ms;
     --duration-nav-fade: 200ms;
     --duration-indicator: 350ms;
+}
+
+/* ===== Composite tokens (reference other CSS vars, cannot be in @theme) ===== */
+:root {
+    --color-glass-nav: color-mix(in srgb, var(--color-background) 72%, transparent);
+    --color-glass-toast: color-mix(in srgb, var(--color-secondary) 85%, transparent);
+    --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
 }
 
 /* ===== Non-utility tokens (no Tailwind utility generation needed) ===== */

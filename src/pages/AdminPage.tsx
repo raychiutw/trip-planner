@@ -28,7 +28,8 @@ interface StatusMsg {
 
 /* ===== Chevron SVG as background-image for the select ===== */
 const SELECT_STYLE = { backgroundImage:
-  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 24 24\' fill=\'%23888\'%3E%3Cpath d=\'M7 10l5 5 5-5z\'/%3E%3C/svg%3E")' } as const;
+  'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 24 24\' fill=\'%23888\'%3E%3Cpath d=\'M7 10l5 5 5-5z\'/%3E%3C/svg%3E")',
+  backgroundPosition: 'right 16px center' } as const;
 
 export default function AdminPage() {
   useDarkMode();
@@ -237,7 +238,7 @@ export default function AdminPage() {
         {permissions.map((p, index) => (
           <div
             className={[
-              'flex items-center justify-between py-3 px-4 transition-[background-color] duration-fast hover:bg-tertiary',
+              'flex items-center justify-between py-3 px-4 transition-colors duration-fast hover:bg-tertiary',
               index < permissions.length - 1
                 ? 'border-b border-border ml-4 pl-0'
                 : '',
@@ -251,7 +252,7 @@ export default function AdminPage() {
               {p.role}
             </span>
             <button
-              className="appearance-none border-none bg-transparent text-muted cursor-pointer p-1 rounded-sm flex items-center justify-center min-w-tap-min min-h-tap-min shrink-0 transition-[color,background] duration-fast hover:text-destructive hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              className="appearance-none border-none bg-transparent text-muted cursor-pointer p-1 rounded-sm flex items-center justify-center min-w-tap-min min-h-tap-min shrink-0 transition-colors duration-fast hover:text-destructive hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="移除"
               disabled={removingId === p.id}
               onClick={() => handleRemove(p.id, p.email)}
@@ -296,7 +297,7 @@ export default function AdminPage() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-foreground py-2 px-padding-h flex items-center gap-2"
+          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-[24px] backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
@@ -304,7 +305,7 @@ export default function AdminPage() {
             權限管理
           </span>
           <button
-            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-[background,color] duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
+            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -345,7 +346,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-secondary rounded-lg overflow-hidden">
               <select
-                className="w-full appearance-none border-none bg-transparent text-foreground font-[inherit] text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat bg-[position:right_16px_center] transition-[background-color] duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
+                className="w-full appearance-none border-none bg-transparent text-foreground font-inherit text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
                 style={SELECT_STYLE}
                 aria-label="選擇行程"
                 value={currentTripId}
@@ -389,7 +390,7 @@ export default function AdminPage() {
               <div className="flex gap-2 p-2">
                 <input
                   type="email"
-                  className="flex-1 border-none bg-background text-foreground font-[inherit] text-body py-3 px-4 rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
+                  className="flex-1 border-none bg-background text-foreground font-inherit text-body py-3 px-4 rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
                   placeholder="email@example.com"
                   autoComplete="email"
                   value={email}
@@ -397,7 +398,7 @@ export default function AdminPage() {
                   onKeyDown={handleEmailKeyDown}
                 />
                 <button
-                  className="appearance-none border-none bg-accent text-accent-foreground font-[inherit] text-body font-semibold py-3 px-4 min-w-16 rounded-md cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-fast hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="appearance-none border-none bg-accent text-accent-foreground font-inherit text-body font-semibold py-3 px-4 min-w-16 rounded-md cursor-pointer whitespace-nowrap shrink-0 transition-all duration-fast hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={addingDisabled}
                   onClick={handleAdd}
                 >

@@ -23,16 +23,16 @@ export default function ToastV2({ message, icon, visible }: ToastProps) {
         'fixed left-1/2 -translate-x-1/2 flex items-center pointer-events-none',
         'gap-2 px-5 py-3',
         'rounded-lg',
-        'bg-[color-mix(in_srgb,var(--color-secondary)_85%,transparent)]',
-        'backdrop-blur-[20px] [-webkit-backdrop-filter:blur(20px)]',
-        'shadow-[var(--shadow-lg),0_0_0_1px_color-mix(in_srgb,var(--color-border)_60%,transparent)]',
+        'bg-(--color-glass-toast)',
+        'backdrop-blur-[20px]',
+        'shadow-(--shadow-toast)',
         'text-subheadline font-semibold whitespace-nowrap',
         'text-foreground',
-        'top-[calc(var(--spacing-nav-h)+var(--spacing-3))]',
-        'z-[calc(var(--z-sticky-nav)+50)]',
+        'top-toast-top',
+        'z-250',
         visible
-          ? 'animate-[toast-slide-down_var(--transition-duration-slow)_var(--transition-timing-function-apple)_forwards]'
-          : 'animate-[toast-slide-up_var(--transition-duration-normal)_ease_forwards] opacity-0',
+          ? 'animate-toast-slide-down'
+          : 'animate-toast-slide-up opacity-0',
       ].join(' ')}
       role="status"
       aria-live="polite"
