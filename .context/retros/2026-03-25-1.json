@@ -1,0 +1,28 @@
+{
+  "date": "2026-03-25",
+  "window": "7d",
+  "metrics": {
+    "commits": 235,
+    "contributors": 3,
+    "prs_merged": 39,
+    "insertions": 2938,
+    "deletions": 227864,
+    "net_loc": -224926,
+    "active_days": 8,
+    "sessions": 28,
+    "feat_pct": 0.15,
+    "fix_pct": 0.41,
+    "peak_hour": 6,
+    "ai_assisted_commits": 17
+  },
+  "authors": {
+    "Ray Chiu": { "commits": 125, "top_area": "src/pages/" },
+    "ray": { "commits": 81, "top_area": "css/" },
+    "Claude": { "commits": 17, "top_area": "src/" }
+  },
+  "streak_days": 10,
+  "test_health": {
+    "total_test_files": 98
+  },
+  "tweetable": "Week of Mar 18: 235 commits, 39 PRs, 98 test files, 10-day streak | React 遷移 + SPA 改造 + PWA + 品牌重塑 🔥"
+}
