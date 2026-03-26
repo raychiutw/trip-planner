@@ -1,8 +1,5 @@
 /* ===== tokens.css — Design tokens + Tailwind (V2 元件的樣式基礎) ===== */
 
-/* Layer 順序宣告：base < theme < utilities，確保 Tailwind utilities 永遠覆蓋 base reset */
-@layer base, theme, utilities;
-
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
 
@@ -671,28 +668,31 @@
 }
 
 /* ===== Global reset (V2 元件共用) ===== */
-/* 注意：不用 @layer，讓 Tailwind @layer utilities 能覆蓋這些 reset */
-::selection { background: var(--color-accent-subtle); color: var(--color-foreground); }
-* { box-sizing: border-box; }
-/* button/input 預設 reset — 放在 @layer base 讓 @layer utilities 能覆蓋 */
+
 @layer base {
-  button, input, select, textarea { margin: 0; padding: 0; font: inherit; }
+    /* Selection */
+    ::selection { background: var(--color-accent-subtle); color: var(--color-foreground); }
+
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; scrollbar-gutter: stable; }
+    body { font-family: var(--font-family-system); background: var(--color-background); font-size: var(--font-size-body); color: var(--color-foreground); line-height: var(--line-height-normal); transition: background-color var(--transition-duration-slow) var(--transition-timing-function-apple), color var(--transition-duration-slow) var(--transition-timing-function-apple); }
+
+    /* Custom Scrollbar (global) */
+    :root { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+    /* Focus Visible (remove default outline, use box-shadow) */
+    button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    a:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
+    [role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
+
+    /* iOS tap highlight */
+    * { -webkit-tap-highlight-color: transparent; }
 }
-html { scroll-behavior: smooth; scrollbar-gutter: stable; }
-body { font-family: var(--font-family-system); background: var(--color-background); font-size: var(--font-size-body); color: var(--color-foreground); line-height: var(--line-height-normal); transition: background-color var(--transition-duration-slow) var(--transition-timing-function-apple), color var(--transition-duration-slow) var(--transition-timing-function-apple); }
-
-:root { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-
-button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-a:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
-[role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
-
-/* iOS tap highlight */
-* { -webkit-tap-highlight-color: transparent; }
 
 /* ===== Keyframes（V2 元件共用） ===== */
 @keyframes toast-slide-down {

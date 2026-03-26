@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import AdminPage from '../../src/pages/AdminPage';
+import AdminPageV2 from '../../src/pages/AdminPageV2';
 
 vi.mock('../../src/hooks/useDarkMode', () => ({ useDarkMode: () => {} }));
 vi.mock('../../src/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
@@ -20,7 +20,7 @@ const MOCK_TRIPS = [
 function renderAdmin() {
   return render(
     <MemoryRouter>
-      <AdminPage />
+      <AdminPageV2 />
     </MemoryRouter>
   );
 }
@@ -32,7 +32,7 @@ beforeEach(() => {
   });
 });
 
-describe('AdminPage', () => {
+describe('AdminPageV2', () => {
   it('renders page title', () => {
     const { getByText } = renderAdmin();
     expect(getByText('權限管理')).toBeTruthy();

@@ -1,5 +1,20 @@
-import { describe, it, expect } from 'vitest';
-import { resolveV2 } from '../../src/lib/v2routing';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
+/**
+ * Test the V1/V2 routing logic independently.
+ * The logic in main.tsx:
+ *   const forceV1 = params.get('v1') === '1';
+ *   const forceV2 = params.get('v2') === '1';
+ *   const storedV2 = localStorage.getItem('tripline-v2') === '1';
+ *   const useV2 = !forceV1 && (forceV2 || storedV2);
+ */
+function resolveV2(search: string, lsValue: string | null): boolean {
+  const params = new URLSearchParams(search);
+  const forceV1 = params.get('v1') === '1';
+  const forceV2 = params.get('v2') === '1';
+  const storedV2 = lsValue === '1';
+  return !forceV1 && (forceV2 || storedV2);
+}
 
 describe('V1/V2 路由切換邏輯', () => {
   it('預設使用 V1（無 query string、無 localStorage）', () => {

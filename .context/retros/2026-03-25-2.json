@@ -1,0 +1,26 @@
+{
+  "date": "2026-03-25",
+  "window": "7d",
+  "metrics": {
+    "commits": 224,
+    "contributors": 1,
+    "prs_merged": 40,
+    "insertions": 175000,
+    "deletions": 8000,
+    "net_loc": 167000,
+    "active_days": 8,
+    "sessions": 30,
+    "feat_pct": 0.10,
+    "fix_pct": 0.53,
+    "peak_hour": 7,
+    "ai_assisted_commits": 17
+  },
+  "authors": {
+    "Ray Chiu": { "commits": 224, "top_area": "src/pages/" }
+  },
+  "streak_days": 10,
+  "test_health": {
+    "total_test_files": 97
+  },
+  "tweetable": "Week of Mar 18: 224 commits, 40 PRs, 97 test files, 10-day streak | PUT 修復 + Blue-Green Phase 0/1 + SPA hotfix + 互動地圖 🔥"
+}

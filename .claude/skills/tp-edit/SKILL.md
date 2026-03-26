@@ -33,30 +33,10 @@ user-invocable: true
 3. 新增或替換的 POI 須包含以下必填欄位：
    - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
    - `note`：有備註填內容，無備註填空字串 `""`（R15）
+   - `location.googleQuery`：實體地點填搜尋文字（R11）
    - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-   - `location`：實體地點必須包含完整結構（R11）：
-     ```json
-     {
-       "name": "原文地名（日文/韓文/中文）",
-       "googleQuery": "https://www.google.com/maps/search/{percent-encoded}",
-       "appleQuery": "https://maps.apple.com/?q={percent-encoded}",
-       "lat": 26.2109,
-       "lng": 127.6820,
-       "geocode_status": "review"
-     }
-     ```
-     - `name`：使用原文地名（日文用日文、韓文用韓文）
-     - `googleQuery` / `appleQuery`：用 `encodeURIComponent(name)` 組 URL
-     - `lat` / `lng`：AI 根據地名提供近似座標（小數點後 4 位）
-     - `geocode_status`：AI 提供的座標一律填 `"review"`
-   - **JP 自駕行程**（`meta.countries` 含 `"JP"` 且 `meta.selfDrive === true`）：
-     - entry 層級的 `mapcode`：格式 `"XXX XXX XXX*XX"`（R0），用 WebSearch 查詢「{地名} mapcode」
-     - 查不到時省略（不填錯誤值）
-   - **KR 行程**（`meta.countries` 含 `"KR"`）：
-     - `location.naverQuery`：Naver Maps URL（R14）
-     - 優先：`https://map.naver.com/v5/entry/place/{placeId}`
-     - 查不到時：`https://map.naver.com/v5/search/{韓文關鍵字}`
 4. 修改的部分須符合 R0-R15 品質規則
+4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
 5. 依修改類型選擇對應 API：
    > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
 
@@ -81,10 +61,7 @@ user-invocable: true
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
      ```
 
-   **注意**：覆寫整天（PUT）時：
-   - 必須保留原始的 `date`、`dayOfWeek`、`label`，不得送出 null。缺少任一欄位 API 將回傳 400
-   - **先 GET 現有資料**，未修改的 entry 必須保留其原始 `location`、`mapcode`、`source`、`rating` 等欄位
-   - 每個 entry 的 `location` 欄位會存入 `location_json`，省略則變 null（導航按鈕消失）
+   **注意**：覆寫整天（PUT）時，必須保留原始的 `date`、`dayOfWeek`、`label`，不得送出 null。缺少任一欄位 API 將回傳 400。
    - **新增餐廳**：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
    - **修改/刪除餐廳**：PATCH/DELETE `/api/trips/{tripId}/restaurants/{rid}`
    - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
@@ -100,11 +77,7 @@ user-invocable: true
        "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
      ```
 6. 若影響到 checklist、backup、suggestions，同步更新對應 doc
-7. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新：
-   - 優先用 WebSearch 查詢「{A地} から {B地} 車で何分」取實際車程
-   - 無法查時粗估：市區 3~4 分/km、郊區高速 1.5~2 分/km、步行 12~15 分/km
-   - `travel_desc` 的分鐘數必須與時間軸間隔一致
-   - 同地點（如同商場內）`travel_min` 為 0 或 null，`travel_desc` 寫「同商場」
+7. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 

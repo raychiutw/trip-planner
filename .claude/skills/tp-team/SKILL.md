@@ -23,7 +23,7 @@ code 變更前 invoke 本 skill，確認完整 pipeline。
 ✅ Think   — /office-hours（探索需求，選用）
 ✅ Plan    — /autoplan → 三審完成
 ✅ Build   — 寫 code + TDD + /simplify
-✅ Review  — /tp-code-verify + /tp-ux-verify → /review → /codex
+✅ Review  — /tp-code-verify（含 HIG）→ /review → /codex
 ✅ Test    — /qa → /cso → /benchmark
 ✅ Ship    — /ship → CI → /land-and-deploy → /canary
 ✅ Reflect — /retro → archive ← 不到這裡就不算完成
@@ -50,7 +50,7 @@ code 變更前 invoke 本 skill，確認完整 pipeline。
 | Think | `references/stage-1-think.md` | `/office-hours` | YC Office Hours Partner |
 | Plan | `references/stage-2-plan.md` | `/autoplan` | 自動三審（CEO + Eng + Design） |
 | Build | `references/stage-3-build.md` | 寫 code + `/simplify` | Engineer + Code Quality Reviewer |
-| Review | `references/stage-4-review.md` | `/tp-code-verify` + `/tp-ux-verify` → `/review` → `/codex` | 專案規範 + Staff Engineer + OpenAI 獨立審查 |
+| Review | `references/stage-4-review.md` | `/tp-code-verify`（含 HIG）→ `/review` → `/codex` | 專案規範 + Staff Engineer + OpenAI 獨立審查 |
 | Test | `references/stage-5-test.md` | `/qa` → `/cso` → `/benchmark` | QA Engineer + CSO + Performance Engineer |
 | Ship | `references/stage-6-ship.md` | `/ship` → `/land-and-deploy` → `/canary` | Release Engineer + SRE |
 | Reflect | `references/stage-7-reflect.md` | `/retro` → archive | Retro Analyst |

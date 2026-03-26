@@ -238,14 +238,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const e = timeline[i];
     const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
     batch1.push(
-      db.prepare('INSERT INTO entries (day_id, sort_order, time, title, body, source, maps, mapcode, rating, note, travel_type, travel_desc, travel_min, location_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+      db.prepare('INSERT INTO entries (day_id, sort_order, time, title, body, maps, rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId, i,
           e.time ?? null, e.title ?? null, e.body ?? null,
-          e.source ?? null, e.maps ?? null, e.mapcode ?? null,
-          e.rating ?? null, e.note ?? null,
+          e.maps ?? null, e.rating ?? null, e.note ?? null,
           travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null,
-          e.location ? JSON.stringify(e.location) : null,
         ),
     );
   }

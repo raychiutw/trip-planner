@@ -104,24 +104,7 @@ const ManagePage = lazy(() => useV2 ? import('../pages/ManagePageV2') : import('
 - `?v1=1` 強制回退已切換的元件
 - Phase 2 前所有舊 CSS 檔案仍存在
 
-### D6：Cutover 部署規則（Admin/Manage 實戰經驗）
-
-**選擇**：mainV2 用 BrowserRouter + main.tsx dynamic import，不再依賴 v2.html + HashRouter。
-
-**放棄方案**：v2.html 獨立入口 + HashRouter（被 Cloudflare Pages Pretty URLs 的 308 redirect 破壞）
-
-**理由**：Cloudflare Pages Pretty URLs 把 `/v2.html` 308 redirect 到 `/v2`，導致 v2.html 永遠無法被正確載入。改用 BrowserRouter + dynamic import 完全迴避此問題。
-
-**Cutover Checklist（每個頁面必做）**：
-1. `main.tsx`：路徑加到 `V2_CUTOVER_PATHS` → `import('./mainV2')`
-2. `mainV2.tsx`：BrowserRouter + 加 trailing slash route（`/manage/`）
-3. `mainV1.tsx`：移除該路徑 route + import
-4. V1 頁面的跨頁連結：`<Link>` 改 `<a href="/path/">`（full page nav + trailing slash）
-5. `_redirects`：加 `/path /path/ 301`
-6. Build script：確保 `path/index.html` 存在
-
 ## Open Questions
 
 1. **TripPage V2 的巢狀元件**：timeline/entry card 用 Tailwind 可讀性是否可接受？實作時視情況決定。
-2. ~~**Service Worker 快取**：切換 V2 後 SW precache manifest 會自動更新（Workbox 處理），需實際驗證。~~ 已驗證，Workbox 正確處理。
-3. ~~**Cloudflare Pages Pretty URLs**~~：已解決，見 D6。
+2. **Service Worker 快取**：切換 V2 後 SW precache manifest 會自動更新（Workbox 處理），需實際驗證。
