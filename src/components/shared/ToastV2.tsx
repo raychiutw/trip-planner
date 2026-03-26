@@ -24,7 +24,7 @@ export default function ToastV2({ message, icon, visible }: ToastProps) {
         'gap-2 px-5 py-3',
         'rounded-lg',
         'bg-(--color-glass-toast)',
-        'backdrop-blur-[20px]',
+        'backdrop-blur-xl',
         'shadow-(--shadow-toast)',
         'text-subheadline font-semibold whitespace-nowrap',
         'text-foreground',

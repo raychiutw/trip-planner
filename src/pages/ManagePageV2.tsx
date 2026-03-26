@@ -349,7 +349,7 @@ export default function ManagePageV2() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-[24px] backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
+          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-xl backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
