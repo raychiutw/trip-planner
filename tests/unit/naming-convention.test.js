@@ -8,12 +8,8 @@ function readFile(path) {
     return readFileSync(path, 'utf-8');
 }
 
-const JS_FILES = [
-    'js/app.js', 'js/shared.js', 'js/icons.js',
-    'js/setting.js', 'js/manage.js', 'js/admin.js', 'js/map-row.js',
-].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
+const JS_FILES = [];
 
-// src/ TypeScript files (React migration)
 const SRC_FILES = [
     'src/lib/mapRow.ts', 'src/lib/sanitize.ts', 'src/lib/constants.ts',
     'src/lib/formatUtils.ts', 'src/lib/localStorage.ts', 'src/lib/drivingStats.ts',
