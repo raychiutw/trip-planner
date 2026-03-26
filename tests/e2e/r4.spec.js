@@ -298,7 +298,7 @@ test.describe('X 按鈕無圓形外框', () => {
 test.describe('DOM/CSS 結構靜態驗證', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('CSS --info-panel-w 正確設為 280px（shared.css 變數）', async ({ page }) => {
+  test('CSS --info-panel-w 正確設為 280px（tokens.css 變數）', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(300);
     const val = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--info-panel-w').trim());

@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1.0] - 2026-03-26
+
+V2 Cutover — 移除所有 V1 程式碼，V2 成為唯一正式版。
+
+### Changed
+- SPA 單一入口 — main.tsx 移除 V1/V2 switching，直接載入 BrowserRouter
+- Vite 單入口建置 — 移除 v2.html 雙入口，統一由 index.html 出發
+- CSS 統一 — tokens.css 成為唯一 CSS 檔案（Tailwind CSS 4 @theme）
+- apiFetchRaw 抽至 useApi.ts 共用模組，加入 reportFetchResult 離線偵測
+- toTimelineEntry/toHotelData 改接 object 型別，消除 5 個 `as unknown as` 型別斷言
+- TripPage 清除 15 組 `-v2` CSS class 後綴
+
+### Removed
+- V1 入口：mainV1.tsx、mainV2.tsx、v2.html
+- V1 頁面：TripPage(V1)、ManagePage(V1)、AdminPageV2（冗餘）
+- V1 元件：Toast(V1)、RequestStepper(V1)
+- V1 CSS：style.css、shared.css、map.css、manage.css、admin.css、setting.css
+- 過渡程式：v2routing.ts、features.json、progress.jsonl
+- V1/V2 比較測試和 CSS 依賴測試
+
+### Fixed
+- scroll-to-now 選擇器從 `.tl-now` 修正為 `[data-now]`
+- ManagePage 回覆分隔線 `border-none` 與 `border-t` 衝突
+- map-highlight 動畫遷移至 tokens.css（從已刪除的 map.css）
+
 ## [1.0.0.0] - 2026-03-25
 
 React SPA 架構完成里程碑 — 從 vanilla JS 全面遷移至 React + TypeScript。

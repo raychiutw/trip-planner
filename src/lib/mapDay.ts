@@ -82,7 +82,8 @@ function toShopData(s: Record<string, unknown>): ShopData {
 
 /* ===== Timeline Entry ===== */
 
-export function toTimelineEntry(entry: Record<string, unknown>): TimelineEntryData {
+export function toTimelineEntry(raw: object): TimelineEntryData {
+  const entry = raw as Record<string, unknown>;
   const travel = entry.travel as Record<string, unknown> | null;
   const travelData: TravelData | null = travel
     ? { type: (travel.type as string) || '', text: formatTravelText(travel) }
@@ -128,7 +129,8 @@ export function toTimelineEntry(entry: Record<string, unknown>): TimelineEntryDa
 
 /* ===== Hotel ===== */
 
-export function toHotelData(hotel: Record<string, unknown>): HotelData {
+export function toHotelData(raw: object): HotelData {
+  const hotel = raw as Record<string, unknown>;
   let details: string[] | null = null;
   if (typeof hotel.details === 'string' && hotel.details) {
     try {

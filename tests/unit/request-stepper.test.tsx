@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import RequestStepperV2 from '../../src/components/shared/RequestStepperV2';
+import RequestStepper from '../../src/components/shared/RequestStepper';
 
-describe('RequestStepperV2', () => {
+describe('RequestStepper', () => {
   it('renders 4 step labels', () => {
-    const { getByText } = render(<RequestStepperV2 status="open" />);
+    const { getByText } = render(<RequestStepper status="open" />);
     expect(getByText('送出')).toBeTruthy();
     expect(getByText('接收')).toBeTruthy();
     expect(getByText('處理中')).toBeTruthy();
@@ -12,7 +12,7 @@ describe('RequestStepperV2', () => {
   });
 
   it('has role="group" and aria-label', () => {
-    const { container } = render(<RequestStepperV2 status="open" />);
+    const { container } = render(<RequestStepper status="open" />);
     const group = container.querySelector('[role="group"]');
     expect(group).toBeTruthy();
     expect(group?.getAttribute('aria-label')).toBe('請求進度');
@@ -20,13 +20,13 @@ describe('RequestStepperV2', () => {
 
   describe('status: open — 第一步 active', () => {
     it('first dot has active class (border accent)', () => {
-      const { container } = render(<RequestStepperV2 status="open" />);
+      const { container } = render(<RequestStepper status="open" />);
       const dots = container.querySelectorAll('.rounded-full');
       expect(dots[0]?.className).toContain('border-accent');
     });
 
     it('first label has accent color and semibold', () => {
-      const { getByText } = render(<RequestStepperV2 status="open" />);
+      const { getByText } = render(<RequestStepper status="open" />);
       const label = getByText('送出');
       expect(label.className).toContain('text-accent');
       expect(label.className).toContain('font-semibold');
@@ -35,7 +35,7 @@ describe('RequestStepperV2', () => {
 
   describe('status: processing — 第三步 active', () => {
     it('first two dots are done (bg accent)', () => {
-      const { container } = render(<RequestStepperV2 status="processing" />);
+      const { container } = render(<RequestStepper status="processing" />);
       const dots = container.querySelectorAll('.rounded-full');
       // 送出 = done, 接收 = done
       expect(dots[0]?.className).toContain('bg-accent');
@@ -43,14 +43,14 @@ describe('RequestStepperV2', () => {
     });
 
     it('third dot is active (border accent + animation)', () => {
-      const { container } = render(<RequestStepperV2 status="processing" />);
+      const { container } = render(<RequestStepper status="processing" />);
       const dots = container.querySelectorAll('.rounded-full');
       expect(dots[2]?.className).toContain('border-accent');
       expect(dots[2]?.className).toContain('animate-');
     });
 
     it('fourth dot is pending (border)', () => {
-      const { container } = render(<RequestStepperV2 status="processing" />);
+      const { container } = render(<RequestStepper status="processing" />);
       const dots = container.querySelectorAll('.rounded-full');
       expect(dots[3]?.className).toContain('border-border');
     });
@@ -58,7 +58,7 @@ describe('RequestStepperV2', () => {
 
   describe('status: completed — 全部 done', () => {
     it('all 4 dots are done (bg accent)', () => {
-      const { container } = render(<RequestStepperV2 status="completed" />);
+      const { container } = render(<RequestStepper status="completed" />);
       const dots = container.querySelectorAll('.rounded-full');
       // completed = index 3, 所以 0,1,2 是 done, 3 是 active
       expect(dots[0]?.className).toContain('bg-accent');
@@ -69,7 +69,7 @@ describe('RequestStepperV2', () => {
     });
 
     it('done labels have muted color', () => {
-      const { getByText } = render(<RequestStepperV2 status="completed" />);
+      const { getByText } = render(<RequestStepper status="completed" />);
       expect(getByText('送出').className).toContain('text-muted');
       expect(getByText('接收').className).toContain('text-muted');
     });
@@ -77,7 +77,7 @@ describe('RequestStepperV2', () => {
 
   describe('status: received — 第二步 active', () => {
     it('connecting lines have correct state', () => {
-      const { container } = render(<RequestStepperV2 status="received" />);
+      const { container } = render(<RequestStepper status="received" />);
       // 3 connecting lines between 4 steps
       const lines = container.querySelectorAll('.h-0\\.5');
       expect(lines).toHaveLength(3);

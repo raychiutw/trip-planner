@@ -21,14 +21,11 @@ const SRC_FILES = [
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const CSS_FILES = [
-    'css/shared.css', 'css/style.css',
-    'css/setting.css', 'css/admin.css', 'css/manage.css',
-    'css/map.css',
+    'css/tokens.css',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const HTML_FILES = [
-    'index.html', 'setting.html', 'edit.html',
-    'manage/index.html', 'admin/index.html',
+    'index.html',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 /* ───── CSS helpers ───── */
