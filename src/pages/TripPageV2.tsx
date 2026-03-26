@@ -121,6 +121,8 @@ body.dark [data-tl-card] {
   background: color-mix(in srgb, var(--color-tertiary) 88%, transparent);
   box-shadow: 0 1px 0 rgba(255,255,255,0.04);
 }
+/* Timeline segment dashed line — dark mode uses subtle white instead of solid border token */
+body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
 /* tripContent-v2 link styles */
 #tripContent-v2 a:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); text-decoration: underline; }
 #tripContent-v2 a:visited:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); }
