@@ -88,8 +88,8 @@ export default function AdminPage() {
       const r = await apiFetchRaw('/permissions?tripId=' + encodeURIComponent(tripId), {
         signal: controller.signal,
       });
-      // 401 redirect 觸發 Cloudflare Access 登入（含防無限循環）
-      if (r.status === 401) { redirectToLogin(); return; }
+      // 401 → 顯示錯誤（Cloudflare Access 保護頁面，不需 JS redirect）
+      if (r.status === 401) throw new Error('未登入，請重新整理頁面');
       if (r.status === 403) throw new Error('僅管理者可操作');
       if (!r.ok) throw new Error('載入失敗');
       const perms: Permission[] = await r.json();
