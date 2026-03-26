@@ -204,6 +204,124 @@ body {
     @media (min-width: 768px) { .tripline-logo-mobile { display: none; } .tripline-logo-desktop { display: block; } }
 }
 
+/* ===== TripPage base styles (migrated from SCOPED_STYLES) ===== */
+@layer base {
+    /* Day header — subtle background + optional theme gradient overlay */
+    body:not(.dark) .day-header {
+        background: var(--color-accent-subtle);
+        background-image: var(--theme-header-gradient);
+        color: var(--color-foreground);
+    }
+    body.dark .day-header {
+        background: var(--color-accent-bg);
+        background-image: var(--theme-header-gradient);
+    }
+
+    /* Skeleton shimmer */
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    .skeleton-bone {
+        background: linear-gradient(90deg, var(--color-tertiary) 25%, var(--color-secondary) 50%, var(--color-tertiary) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: var(--radius-sm);
+    }
+
+    /* Timeline card glass effect */
+    [data-tl-card] {
+        background: color-mix(in srgb, var(--color-background) 92%, transparent);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+    body.dark [data-tl-card] {
+        background: color-mix(in srgb, var(--color-tertiary) 88%, transparent);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+    }
+    body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
+
+    /* tripContent section cards + link styles */
+    #tripContent section { background: var(--color-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-3); overflow: clip; }
+    #tripContent a:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); text-decoration: underline; }
+    #tripContent a:visited:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); }
+
+    /* Nav inline title fade */
+    .nav-inline-title { opacity: 0; transition: opacity var(--duration-nav-fade, 250ms) ease; }
+    .nav-inline-title.visible { opacity: 1; }
+
+    /* Info panel: hidden by default, visible on desktop */
+    .info-panel { display: none; background: var(--color-secondary); border-radius: var(--radius-lg); }
+    @media (min-width: 1200px) {
+        .info-panel {
+            display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-10));
+            width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-10));
+            overflow-y: auto; padding: var(--spacing-4) var(--spacing-3);
+        }
+        .page-layout:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
+    }
+
+    /* Day header sticky on desktop */
+    @media (min-width: 768px) {
+        .day-header {
+            position: sticky;
+            top: calc(var(--spacing-nav-h) + var(--spacing-3));
+            z-index: var(--z-day-header);
+        }
+    }
+
+    /* Appearance settings cards */
+    .color-mode-card,
+    .color-theme-card {
+        appearance: none; border: 2px solid var(--color-border); border-radius: var(--radius-sm);
+        background: var(--color-secondary); padding: 8px; text-align: center; cursor: pointer;
+        transition: border-color var(--transition-duration-fast) var(--transition-timing-function-apple);
+    }
+    .color-mode-card:hover,
+    .color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
+    .color-mode-card.active,
+    .color-theme-card.active { border-color: var(--color-accent); }
+    .color-mode-card:focus-visible,
+    .color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+
+    /* Color mode preview mini UI */
+    .color-mode-preview {
+        width: 80px; height: 52px; border-radius: var(--radius-xs); overflow: hidden; margin: 0 auto 4px;
+        display: flex; flex-direction: column;
+    }
+    .color-mode-preview .cmp-top { flex: 1; }
+    .color-mode-preview .cmp-bottom { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 6px; }
+    .color-mode-preview .cmp-input { flex: 1; height: 8px; border-radius: 4px; }
+    .color-mode-preview .cmp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
+    .color-mode-light .cmp-top { background: var(--cmp-light-bg); }
+    .color-mode-light .cmp-bottom { background: var(--cmp-light-surface); }
+    .color-mode-light .cmp-input { background: var(--cmp-light-input); }
+    .color-mode-dark .cmp-top { background: var(--cmp-dark-bg); }
+    .color-mode-dark .cmp-bottom { background: var(--cmp-dark-surface); }
+    .color-mode-dark .cmp-input { background: var(--cmp-dark-input); }
+    .color-mode-auto .cmp-top { background: linear-gradient(135deg, var(--cmp-light-bg) 50%, var(--cmp-dark-bg) 50%); }
+    .color-mode-auto .cmp-bottom { background: linear-gradient(135deg, var(--cmp-light-surface) 50%, var(--cmp-dark-surface) 50%); }
+    .color-mode-auto .cmp-input { background: linear-gradient(135deg, var(--cmp-light-input) 50%, var(--cmp-dark-input) 50%); }
+    .color-theme-swatch {
+        width: 80px; height: 28px; border-radius: var(--radius-xs); margin: 0 auto 4px;
+    }
+    @media (min-width: 768px) {
+        .color-mode-preview { width: 100px; height: 66px; }
+        .color-theme-swatch { width: 100px; height: 34px; }
+    }
+
+    /* Trip button (info sheet) */
+    .trip-btn {
+        display: block; width: 100%; text-align: left; padding: 16px; border-radius: var(--radius-sm);
+        border: 2px solid transparent; background: var(--color-accent-bg); font-family: inherit;
+        font-size: var(--font-size-body); color: var(--color-foreground); text-decoration: none; cursor: pointer;
+    }
+    .trip-btn:hover { background: var(--color-secondary); }
+    .trip-btn.active { border-color: var(--color-accent); }
+    body.dark .trip-btn { background: var(--color-hover); }
+    body.dark .trip-btn:hover { background: var(--color-tertiary); }
+}
+
 /* ===== Map highlight (DayMap → timeline scroll highlight) ===== */
 .map-highlight {
     animation: map-highlight-pulse var(--transition-duration-slow) ease-in-out;

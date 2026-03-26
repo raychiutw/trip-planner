@@ -59,19 +59,24 @@ describe('tokens.css', () => {
     expect(tokens).toContain('background: var(--color-background)');
   });
 
-  it('does NOT include component classes', () => {
-    expect(tokens).not.toContain('.page-layout');
-    expect(tokens).not.toContain('.container');
-    expect(tokens).not.toContain('.sticky-nav');
-    expect(tokens).not.toContain('.trip-btn');
-    expect(tokens).not.toContain('.nav-title');
+  it('does NOT include old V1 component classes', () => {
     expect(tokens).not.toContain('.request-item');
     expect(tokens).not.toContain('.chat-container');
     expect(tokens).not.toContain('.admin-');
-    // stepper-pulse 和 toast-slide-* 定義在 tokens.css
+    // keyframes 定義在 tokens.css
     expect(tokens).toContain('@keyframes stepper-pulse');
     expect(tokens).toContain('@keyframes toast-slide-down');
     expect(tokens).toContain('@keyframes toast-slide-up');
+    expect(tokens).toContain('@keyframes shimmer');
+  });
+
+  it('includes page-level base styles (migrated from SCOPED_STYLES)', () => {
+    expect(tokens).toContain('.day-header');
+    expect(tokens).toContain('.info-panel');
+    expect(tokens).toContain('.trip-btn');
+    expect(tokens).toContain('.color-mode-card');
+    expect(tokens).toContain('.skeleton-bone');
+    expect(tokens).toContain('#tripContent section');
   });
 
   it('has essential token values', () => {

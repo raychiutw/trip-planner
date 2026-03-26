@@ -68,19 +68,9 @@ const SWATCH_STYLES: Record<string, { light: React.CSSProperties; dark: React.CS
     ]),
   );
 
-/* ===== Scoped styles for classes that need CSS-level selectors (animations, print, dark overrides) ===== */
+/* ===== Scoped styles — only rules Tailwind/tokens.css cannot express ===== */
 const SCOPED_STYLES = `
-/* day-header — match V1: subtle background + optional theme gradient overlay */
-body:not(.dark) .day-header {
-  background: var(--color-accent-subtle);
-  background-image: var(--theme-header-gradient);
-  color: var(--color-foreground);
-}
-body.dark .day-header {
-  background: var(--color-accent-bg);
-  background-image: var(--theme-header-gradient);
-}
-/* day-content enter animation */
+/* Day-content enter animations */
 @keyframes fadeSlideIn {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
@@ -95,122 +85,18 @@ body.dark .day-header {
 .day-content-loaded {
   animation: fadeIn 300ms var(--transition-timing-function-apple) both;
 }
-/* sticky-nav children z-index layering above DestinationArt */
+/* Sticky-nav children z-index layering above DestinationArt */
 .sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
-/* nav-inline-title fade */
-.nav-inline-title { opacity: 0; transition: opacity var(--duration-nav-fade, 250ms) ease; }
-.nav-inline-title.visible { opacity: 1; }
-/* edit-fab hover */
-.edit-fab:hover { transform: scale(1.1); box-shadow: var(--shadow-lg); }
-/* print mode */
+/* Print mode */
 .print-mode .sticky-nav { display: none; }
 .print-mode .edit-fab { display: none !important; }
 .print-mode .print-exit-btn { display: block; }
-@media print {
-  .sticky-nav, .edit-fab, .print-exit-btn { display: none !important; }
-}
-/* skeleton-bone shimmer (not in tokens.css — needs keyframe + gradient) */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.skeleton-bone {
-  background: linear-gradient(90deg, var(--color-tertiary) 25%, var(--color-secondary) 50%, var(--color-tertiary) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
-}
-/* Timeline card glass effect (V1: body[class*="theme-"] .tl-card) */
-[data-tl-card] {
-  background: color-mix(in srgb, var(--color-background) 92%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-body.dark [data-tl-card] {
-  background: color-mix(in srgb, var(--color-tertiary) 88%, transparent);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
-}
-/* Timeline segment dashed line — dark mode uses subtle white instead of solid border token */
-body.dark [data-tl-segment] { border-left-color: rgba(255,255,255,0.12); }
-/* tripContent link styles */
-#tripContent a:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); text-decoration: underline; }
-#tripContent a:visited:not(.map-link):not(.map-link-inline) { color: var(--color-foreground); }
-/* tripContent section cards */
-#tripContent section { background: var(--color-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-3); overflow: clip; }
-/* print-mode overrides */
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
-/* Info panel: hidden by default, visible on desktop */
-.info-panel { display: none; background: var(--color-secondary); border-radius: var(--radius-lg); }
-@media (min-width: 1200px) {
-  .info-panel {
-    display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-10));
-    width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-10));
-    overflow-y: auto; padding: var(--spacing-4) var(--spacing-3);
-  }
+@media print {
+  .sticky-nav, .edit-fab, .print-exit-btn { display: none !important; }
 }
-/* Desktop layout: info-panel offset (no content max-width — match V1 full-width) */
-@media (min-width: 1200px) {
-  .page-layout:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
-}
-/* day-header sticky on desktop */
-@media (min-width: 768px) {
-  .day-header {
-    position: sticky;
-    top: calc(var(--spacing-nav-h) + var(--spacing-3));
-    z-index: var(--z-day-header);
-  }
-}
-/* Appearance settings cards */
-.color-mode-card,
-.color-theme-card {
-  appearance: none; border: 2px solid var(--color-border); border-radius: var(--radius-sm);
-  background: var(--color-secondary); padding: 8px; text-align: center; cursor: pointer;
-  transition: border-color var(--transition-duration-fast) var(--transition-timing-function-apple);
-}
-.color-mode-card:hover,
-.color-theme-card:hover { border-color: color-mix(in srgb, var(--color-accent) 40%, transparent); }
-.color-mode-card.active,
-.color-theme-card.active { border-color: var(--color-accent); }
-.color-mode-card:focus-visible,
-.color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-/* Color mode preview mini UI */
-.color-mode-preview {
-  width: 80px; height: 52px; border-radius: var(--radius-xs); overflow: hidden; margin: 0 auto 4px;
-  display: flex; flex-direction: column;
-}
-.color-mode-preview .cmp-top { flex: 1; }
-.color-mode-preview .cmp-bottom { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 6px; }
-.color-mode-preview .cmp-input { flex: 1; height: 8px; border-radius: 4px; }
-.color-mode-preview .cmp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
-.color-mode-light .cmp-top { background: var(--cmp-light-bg); }
-.color-mode-light .cmp-bottom { background: var(--cmp-light-surface); }
-.color-mode-light .cmp-input { background: var(--cmp-light-input); }
-.color-mode-dark .cmp-top { background: var(--cmp-dark-bg); }
-.color-mode-dark .cmp-bottom { background: var(--cmp-dark-surface); }
-.color-mode-dark .cmp-input { background: var(--cmp-dark-input); }
-.color-mode-auto .cmp-top { background: linear-gradient(135deg, var(--cmp-light-bg) 50%, var(--cmp-dark-bg) 50%); }
-.color-mode-auto .cmp-bottom { background: linear-gradient(135deg, var(--cmp-light-surface) 50%, var(--cmp-dark-surface) 50%); }
-.color-mode-auto .cmp-input { background: linear-gradient(135deg, var(--cmp-light-input) 50%, var(--cmp-dark-input) 50%); }
-/* color-theme-swatch */
-.color-theme-swatch {
-  width: 80px; height: 28px; border-radius: var(--radius-xs); margin: 0 auto 4px;
-}
-@media (min-width: 768px) {
-  .color-mode-preview { width: 100px; height: 66px; }
-  .color-theme-swatch { width: 100px; height: 34px; }
-}
-/* trip-btn in info sheet */
-.trip-btn {
-  display: block; width: 100%; text-align: left; padding: 16px; border-radius: var(--radius-sm);
-  border: 2px solid transparent; background: var(--color-accent-bg); font-family: inherit;
-  font-size: var(--font-size-body); color: var(--color-foreground); text-decoration: none; cursor: pointer;
-}
-.trip-btn:hover { background: var(--color-secondary); }
-.trip-btn.active { border-color: var(--color-accent); }
-body.dark .trip-btn { background: var(--color-hover); }
-body.dark .trip-btn:hover { background: var(--color-tertiary); }
 `;
 
 /* ===== Static early-return views (#13: hoist to module level) ===== */
@@ -1319,7 +1205,7 @@ export default function TripPage() {
       {!loading && trip && (
         <a
           className={clsx(
-            'edit-fab fixed right-5 w-(--fab-size) h-(--fab-size) rounded-full bg-accent text-accent-foreground border-none text-large-title font-light no-underline flex items-center justify-center z-(--z-fab) shadow-md transition-[transform,box-shadow] duration-normal ease-apple',
+            'edit-fab fixed right-5 w-(--fab-size) h-(--fab-size) rounded-full bg-accent text-accent-foreground border-none text-large-title font-light no-underline flex items-center justify-center z-(--z-fab) shadow-md hover:shadow-lg hover:scale-110 transition-[transform,box-shadow] duration-normal ease-apple',
             'bottom-[max(20px,env(safe-area-inset-bottom))]',
             !isOnline && 'opacity-40 pointer-events-none',
           )}
