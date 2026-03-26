@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "cross-env BROWSERSLIST=\"last 2 Chrome versions\" vite build && node -e \"const fs=require('fs');const p=require('path');['admin','manage'].forEach(d=>{fs.mkdirSync(p.join('dist',d),{recursive:true});fs.copyFileSync(p.join('dist','index.html'),p.join('dist',d,'index.html'))})\"",
+    "build": "cross-env BROWSERSLIST=\"last 2 Chrome versions\" vite build && node -e \"const fs=require('fs');const p=require('path');['admin','manage'].forEach(d=>{fs.mkdirSync(p.join('dist',d),{recursive:true});fs.copyFileSync(p.join('dist','v2.html'),p.join('dist',d,'index.html'))})\"",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "typecheck:functions": "tsc --noEmit -p tsconfig.functions.json",
