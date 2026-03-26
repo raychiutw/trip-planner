@@ -84,9 +84,9 @@ describe('RequestStepperV2', () => {
       // Line 1 (open→received): done
       expect(lines[0]?.className).toContain('bg-accent');
       // Line 2 (received→processing): pending
-      expect(lines[1]?.className).toContain('bg-(--color-border)');
+      expect(lines[1]?.className).toContain('bg-border');
       // Line 3 (processing→completed): pending
-      expect(lines[2]?.className).toContain('bg-(--color-border)');
+      expect(lines[2]?.className).toContain('bg-border');
     });
   });
 });

@@ -205,28 +205,28 @@ export default function AdminPage() {
   function renderPermissions() {
     if (!currentTripId) {
       return (
-        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-6 px-4">
           請先選擇行程
         </div>
       );
     }
     if (permLoading) {
       return (
-        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-6 px-4">
           載入中…
         </div>
       );
     }
     if (permError) {
       return (
-        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-6 px-4">
           {permError}
         </div>
       );
     }
     if (permissions.length === 0) {
       return (
-        <div className="text-muted text-callout text-center py-[24px] px-[16px]">
+        <div className="text-muted text-callout text-center py-6 px-4">
           尚未授權任何成員
         </div>
       );
@@ -237,9 +237,9 @@ export default function AdminPage() {
         {permissions.map((p, index) => (
           <div
             className={[
-              'flex items-center justify-between py-[12px] px-[16px] transition-[background-color] duration-fast hover:bg-tertiary',
+              'flex items-center justify-between py-3 px-4 transition-[background-color] duration-fast hover:bg-tertiary',
               index < permissions.length - 1
-                ? 'border-b border-border ml-[16px] pl-0'
+                ? 'border-b border-border ml-4 pl-0'
                 : '',
             ].join(' ')}
             key={p.id}
@@ -247,11 +247,11 @@ export default function AdminPage() {
             <span className="text-body text-foreground flex-1 min-w-0 overflow-hidden text-ellipsis">
               {p.email}
             </span>
-            <span className="text-caption2 text-muted py-[4px] px-[8px] bg-tertiary rounded-full mx-[12px] shrink-0">
+            <span className="text-caption2 text-muted py-1 px-2 bg-tertiary rounded-full mx-3 shrink-0">
               {p.role}
             </span>
             <button
-              className="appearance-none border-none bg-transparent text-muted cursor-pointer p-[4px] rounded-sm flex items-center justify-center min-w-tap-min min-h-tap-min shrink-0 transition-[color,background] duration-fast hover:text-destructive hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              className="appearance-none border-none bg-transparent text-muted cursor-pointer p-1 rounded-sm flex items-center justify-center min-w-tap-min min-h-tap-min shrink-0 transition-[color,background] duration-fast hover:text-destructive hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="移除"
               disabled={removingId === p.id}
               onClick={() => handleRemove(p.id, p.email)}
@@ -296,7 +296,7 @@ export default function AdminPage() {
       <div className="flex-1 min-w-0 max-w-full mx-auto">
         {/* Sticky Nav */}
         <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-foreground py-[8px] px-padding-h flex items-center gap-[8px]"
+          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-[color-mix(in_srgb,var(--color-background)_72%,transparent)] backdrop-blur-[24px] [-webkit-backdrop-filter:saturate(200%)_blur(24px)] text-foreground py-2 px-padding-h flex items-center gap-2"
           id="stickyNav"
         >
           <TriplineLogo isOnline={isOnline} />
@@ -339,13 +339,13 @@ export default function AdminPage() {
           id="adminMain"
         >
           {/* Section: Trip Select */}
-          <div className="mb-[28px]">
-            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-[8px] pl-[16px]">
+          <div className="mb-7">
+            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-2 pl-4">
               選擇行程
             </div>
             <div className="bg-secondary rounded-lg overflow-hidden">
               <select
-                className="w-full appearance-none border-none bg-transparent text-foreground font-[inherit] text-body py-[12px] pl-[16px] pr-[44px] cursor-pointer bg-no-repeat bg-[position:right_16px_center] transition-[background-color] duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
+                className="w-full appearance-none border-none bg-transparent text-foreground font-[inherit] text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat bg-[position:right_16px_center] transition-[background-color] duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
                 style={SELECT_STYLE}
                 aria-label="選擇行程"
                 value={currentTripId}
@@ -357,8 +357,8 @@ export default function AdminPage() {
           </div>
 
           {/* Section: Permission List */}
-          <div className="mb-[28px]">
-            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-[8px] pl-[16px]">
+          <div className="mb-7">
+            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-2 pl-4">
               已授權成員
             </div>
             <div className="bg-secondary rounded-lg overflow-hidden">
@@ -368,7 +368,7 @@ export default function AdminPage() {
               {removeStatus && (
                 <div
                   className={[
-                    'text-footnote mt-[8px] pl-[16px]',
+                    'text-footnote mt-2 pl-4',
                     removeStatus.type === 'success'
                       ? 'text-success'
                       : 'text-destructive',
@@ -381,15 +381,15 @@ export default function AdminPage() {
           </div>
 
           {/* Section: Add Member */}
-          <div className="mb-[28px]">
-            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-[8px] pl-[16px]">
+          <div className="mb-7">
+            <div className="text-caption font-medium text-muted uppercase tracking-wide mb-2 pl-4">
               新增成員
             </div>
             <div className="bg-secondary rounded-lg overflow-hidden">
-              <div className="flex gap-[8px] p-[8px]">
+              <div className="flex gap-2 p-2">
                 <input
                   type="email"
-                  className="flex-1 border-none bg-background text-foreground font-[inherit] text-body py-[12px] px-[16px] rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
+                  className="flex-1 border-none bg-background text-foreground font-[inherit] text-body py-3 px-4 rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
                   placeholder="email@example.com"
                   autoComplete="email"
                   value={email}
@@ -397,7 +397,7 @@ export default function AdminPage() {
                   onKeyDown={handleEmailKeyDown}
                 />
                 <button
-                  className="appearance-none border-none bg-accent text-accent-foreground font-[inherit] text-body font-semibold py-[12px] px-[16px] min-w-[64px] rounded-md cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-fast hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="appearance-none border-none bg-accent text-accent-foreground font-[inherit] text-body font-semibold py-3 px-4 min-w-16 rounded-md cursor-pointer whitespace-nowrap shrink-0 transition-[filter] duration-fast hover:brightness-110 active:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={addingDisabled}
                   onClick={handleAdd}
                 >
@@ -409,7 +409,7 @@ export default function AdminPage() {
               {addStatus && (
                 <div
                   className={[
-                    'text-footnote mt-[8px] pl-[16px]',
+                    'text-footnote mt-2 pl-4',
                     addStatus.type === 'success'
                       ? 'text-success'
                       : 'text-destructive',
