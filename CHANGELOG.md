@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2.0] - 2026-03-27
+
+### Added
+- Requests API cursor-based 分頁 — `limit`/`before`/`beforeId` 參數，回傳 `{ items, hasMore }`
+- ManagePage infinite scroll — IntersectionObserver 觸底自動載入下一頁
+- Request message Markdown 渲染 — marked.js + sanitizeHtml（原本為純文字）
+- Hotel details Markdown 渲染 — marked.parseInline + sanitizeHtml
+- `renderMarkdown()` 共用 helper（ManagePage reply + message 共用）
+
 ## [1.0.1.1] - 2026-03-27
 
 ### Changed
