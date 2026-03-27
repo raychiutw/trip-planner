@@ -1,0 +1,38 @@
+{
+  "change": "requests-pagination-markdown",
+  "created": "2026-03-27",
+  "features": [
+    {
+      "id": "F001",
+      "title": "Cursor-based API 分頁 — GET /api/requests 支援 limit + before 參數",
+      "priority": 1,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F002",
+      "title": "前端 Infinite Scroll — IntersectionObserver + append 載入",
+      "priority": 2,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F003",
+      "title": "Request message Markdown 渲染 — marked.js + sanitizeHtml",
+      "priority": 3,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F004",
+      "title": "飯店 details Markdown 渲染 — marked.js + sanitizeHtml",
+      "priority": 4,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    }
+  ]
+}
