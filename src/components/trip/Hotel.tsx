@@ -3,9 +3,11 @@
 
 import { useState, useCallback, memo } from 'react';
 import clsx from 'clsx';
+import { marked } from 'marked';
 import Icon from '../shared/Icon';
 import InfoBox, { type InfoBoxData } from './InfoBox';
 import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 /** Breakfast data shape from dist JSON. */
 interface BreakfastData {
@@ -41,7 +43,7 @@ export const Hotel = memo(function Hotel({ hotel }: HotelProps) {
         {hotel.details && hotel.details.length > 0 && (
           <div className="flex flex-wrap gap-2 gap-x-4 mb-2">
             {hotel.details.map((d, i) => (
-              <span key={i}>{d}</span>
+              <span key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(marked.parseInline(d) as string) }} />
             ))}
           </div>
         )}
