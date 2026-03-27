@@ -62,6 +62,13 @@ const SELECT_CHEVRON = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org
 const SELECT_STYLE: React.CSSProperties = { backgroundImage: SELECT_CHEVRON, backgroundPosition: 'right 10px center' };
 const EMPTY_LIST_STYLE: React.CSSProperties = { minHeight: '100%' };
 
+/** Render Markdown text to sanitized HTML with table wrapping. */
+function renderMarkdown(text: string): string {
+  return sanitizeHtml(marked.parse(text) as string)
+    .replace(/<table([^>]*)>/g, '<div class="table-wrap"><table$1>')
+    .replace(/<\/table>/g, '</table></div>');
+}
+
 /* ===== Helpers ===== */
 function formatDate(iso: string): string {
   return new Date(iso + 'Z').toLocaleString('zh-TW', {
@@ -73,15 +80,8 @@ function formatDate(iso: string): string {
 }
 
 const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
-  const replyHtml = useMemo(() =>
-    req.reply
-      ? sanitizeHtml(marked.parse(req.reply) as string).replace(
-          /<table([^>]*)>/g,
-          '<div class="table-wrap"><table$1>',
-        ).replace(/<\/table>/g, '</table></div>')
-      : '',
-    [req.reply],
-  );
+  const messageHtml = useMemo(() => renderMarkdown(req.message), [req.message]);
+  const replyHtml = useMemo(() => req.reply ? renderMarkdown(req.reply) : '', [req.reply]);
 
   return (
     <div className="py-3 px-4 bg-secondary rounded-md transition-colors duration-fast overflow-hidden max-w-full hover:bg-hover">
@@ -101,9 +101,7 @@ const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
         </span>
       </div>
 
-      <div className="text-callout md:text-title3 text-foreground mt-2 leading-normal break-words">
-        {req.message}
-      </div>
+      <div className="text-callout md:text-title3 text-foreground mt-2 leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: messageHtml }} />
 
       {req.submitted_by && (
         <div className="text-footnote text-muted mt-1">
@@ -142,6 +140,9 @@ export default function ManagePage() {
   const [requests, setRequests] = useState<RawRequest[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [requestsError, setRequestsError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'trip-edit' | 'trip-plan'>('trip-edit');
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -162,7 +163,7 @@ export default function ManagePage() {
     ta.style.height = ta.scrollHeight + 'px';
   }, []);
 
-  /* ----- Load requests for a trip ----- */
+  /* ----- Load requests for a trip (first page) ----- */
   const loadRequests = useCallback(async (tripId: string) => {
     abortRef.current?.abort();
     const controller = new AbortController();
@@ -171,17 +172,19 @@ export default function ManagePage() {
     setRequestsLoading(true);
     setRequestsError(null);
     setRequests([]);
+    setHasMore(false);
 
     try {
-      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId), {
+      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId) + '&limit=10', {
         signal: controller.signal,
       });
       if (res.status === 401) throw new Error('認證失敗，請重新整理頁面');
       if (res.status === 403) throw new Error('你沒有此行程的權限');
       if (!res.ok) throw new Error('載入失敗');
-      const data = (await res.json()) as RawRequest[];
+      const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
       if (currentTripIdRef.current === tripId) {
-        setRequests(data);
+        setRequests(data.items);
+        setHasMore(data.hasMore);
       }
     } catch (err) {
       if ((err as Error).name === 'AbortError') return;
@@ -189,10 +192,39 @@ export default function ManagePage() {
         setRequestsError(err instanceof Error ? err.message : '載入失敗');
       }
     } finally {
-      // 不 guard tripId — 確保 loading 狀態永遠被清除，避免 rapid switch 卡住
       setRequestsLoading(false);
     }
   }, []);
+
+  /* ----- Load more requests (next page) ----- */
+  const loadMore = useCallback(async () => {
+    const tripId = currentTripIdRef.current;
+    if (!tripId || loadingMore || !hasMore) return;
+
+    const last = requests[requests.length - 1];
+    if (!last) return;
+
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams({
+        tripId,
+        limit: '10',
+        before: last.created_at,
+        beforeId: String(last.id),
+      });
+      const res = await apiFetchRaw('/requests?' + params.toString());
+      if (!res.ok) throw new Error('載入失敗');
+      const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
+      if (currentTripIdRef.current === tripId) {
+        setRequests(prev => [...prev, ...data.items]);
+        setHasMore(data.hasMore);
+      }
+    } catch {
+      // 靜默失敗 — 使用者可再次滾動觸發
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [requests, loadingMore, hasMore]);
 
   /* ----- Init: fetch trips ----- */
   useEffect(() => {
@@ -266,6 +298,18 @@ export default function ManagePage() {
       loadRequests(currentTripId);
     }
   }, [currentTripId, pageState.kind, loadRequests]);
+
+  /* ----- Infinite scroll: IntersectionObserver ----- */
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      { rootMargin: '200px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   /* ----- Submit request ----- */
   const submitRequest = useCallback(async () => {
@@ -430,6 +474,13 @@ export default function ManagePage() {
                         {requests.map((req) => (
                           <RequestItem key={req.id} req={req} />
                         ))}
+                        {loadingMore && (
+                          <div className="text-muted text-caption text-center py-4">載入更多…</div>
+                        )}
+                        {!hasMore && requests.length >= 10 && (
+                          <div className="text-muted text-caption text-center py-4">沒有更多了</div>
+                        )}
+                        <div ref={sentinelRef} aria-hidden="true" />
                       </div>
                     )}
                   </div>

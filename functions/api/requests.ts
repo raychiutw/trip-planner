@@ -1,7 +1,14 @@
 /**
- * GET /api/requests?tripId=xxx&status=open
+ * GET /api/requests?tripId=xxx&status=open&limit=10&before=<created_at>&beforeId=<id>
  * POST /api/requests { tripId, mode, message }
  *   (legacy fallback: title + body → message)
+ *
+ * 分頁：cursor-based (created_at DESC, id DESC)
+ *   - limit: 每頁筆數（預設 10，最大 50）
+ *   - before: created_at cursor（ISO timestamp）
+ *   - beforeId: id cursor（同秒 tiebreaker）
+ *   - 回傳 { items: [...], hasMore: boolean }
+ *   - 不帶 limit/before 時向下相容（回傳全部，LIMIT 50）
  */
 
 import { logAudit } from './_audit';
@@ -17,6 +24,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(request.url);
   const tripId = url.searchParams.get('tripId');
   const status = url.searchParams.get('status');
+  const limitParam = url.searchParams.get('limit');
+  const before = url.searchParams.get('before');
+  const beforeId = url.searchParams.get('beforeId');
 
   // admin/service token 可不帶 tripId 查詢所有 requests
   if (!tripId && !auth.isAdmin) {
@@ -27,8 +37,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return json({ error: '無此行程權限' }, 403);
   }
 
+  const isPaginated = limitParam !== null || before !== null;
+  const limit = Math.min(Math.max(parseInt(limitParam || '10', 10) || 10, 1), 50);
+
   let sql = 'SELECT * FROM requests';
-  const params: string[] = [];
+  const params: (string | number)[] = [];
   const conditions: string[] = [];
 
   if (tripId) {
@@ -39,13 +52,31 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     conditions.push('status = ?');
     params.push(status);
   }
+  if (before) {
+    if (beforeId) {
+      conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
+      params.push(before, before, parseInt(beforeId, 10) || 0);
+    } else {
+      conditions.push('created_at < ?');
+      params.push(before);
+    }
+  }
   if (conditions.length > 0) {
     sql += ' WHERE ' + conditions.join(' AND ');
   }
 
-  sql += ' ORDER BY created_at DESC LIMIT 50';
+  sql += ' ORDER BY created_at DESC, id DESC';
+  sql += isPaginated ? ` LIMIT ${limit + 1}` : ' LIMIT 50';
 
   const { results } = await env.DB.prepare(sql).bind(...params).all();
+
+  if (isPaginated) {
+    const hasMore = (results ?? []).length > limit;
+    const items = hasMore ? (results ?? []).slice(0, limit) : (results ?? []);
+    return json({ items, hasMore });
+  }
+
+  // 向下相容：不帶分頁參數時回傳陣列
   return json(results);
 };
 
