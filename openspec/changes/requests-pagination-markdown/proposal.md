@@ -26,6 +26,12 @@ ManagePage 的旅伴請求列表目前一次載入全部（LIMIT 50），message
 - 使用已有的 sanitizeHtml 防 XSS
 - 共用 `[data-reply-content]` 的 CSS 樣式（或改名為更通用的 `[data-md-content]`）
 
+### F4: 飯店 details Markdown 渲染
+- Hotel 元件的 details 欄位用 marked.js 渲染
+- 目前 details 是字串陣列（JSON），渲染為純文字列表
+- 改為支援 Markdown 格式（表格、粗體、連結等）
+- 使用 sanitizeHtml 防 XSS
+
 ## Non-Goals
 - 不做 pull-to-refresh（已有）
 - 不做搜尋/過濾（未來需求）
