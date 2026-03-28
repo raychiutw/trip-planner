@@ -1095,13 +1095,17 @@ export default function TripPage() {
     <>
       <style>{SCOPED_STYLES}</style>
 
-      {/* Sticky Nav */}
-      <div className="sticky-nav relative bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] shadow-[0_1px_0_var(--color-border)] text-foreground py-3 px-padding-h md:px-6 flex items-center gap-3 overflow-x-auto overflow-y-visible" id="stickyNav">
+      {/* Header bar — scrolls away */}
+      <div className="sticky-nav relative bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] text-foreground py-3 px-padding-h md:px-6 flex items-center gap-3" id="stickyNav">
         {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
         <TriplineLogo isOnline={isOnline} />
         <span className={clsx('nav-inline-title text-subheadline font-semibold text-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px] md:hidden', showNavTitle && 'visible')}>
           {trip?.title || trip?.name}
         </span>
+        <NavArt theme={colorTheme} dark={isDark} />
+      </div>
+      {/* Day pills — sticky */}
+      <div className="sticky top-0 z-(--z-sticky-nav) bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] backdrop-blur-xl backdrop-saturate-200 shadow-[0_1px_0_var(--color-border)] px-padding-h md:px-6 py-2 overflow-x-auto overflow-y-visible">
         <DayNav
           days={days}
           currentDayNum={currentDayNum}
@@ -1110,7 +1114,6 @@ export default function TripPage() {
           isTripMapMode={isTripMapMode}
           onToggleTripMap={ENABLE_DAY_MAP && days.length > 0 ? handleToggleTripMap : undefined}
         />
-        <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
       {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
