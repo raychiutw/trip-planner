@@ -113,7 +113,8 @@ export const Restaurant = memo(function Restaurant({ restaurant: r }: Restaurant
           {metaParts.join(' · ')}
         </div>
       )}
-      {r.description && <MarkdownText text={r.description} as="div" className="text-callout text-muted mt-1 line-clamp-2" />}
+      {r.description && <MarkdownText text={r.description} as="div" className="text-callout text-muted mt-1 line-clamp-2" inline />}
+      {r.note && <MarkdownText text={r.note} as="div" className="text-callout text-muted mt-1" inline />}
       {reservationEl && (
         <span className="block mt-1 text-callout text-muted">
           {reservationEl}

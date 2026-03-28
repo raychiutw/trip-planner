@@ -50,7 +50,7 @@ function toRestaurantData(r: Record<string, unknown>): RestaurantData {
     reservationUrl: ((r.reservation_url ?? r.reservationUrl) as string) ?? null,
     description: (r.description as string) ?? null,
     note: (r.note as string) ?? null,
-    googleRating: ((r.rating ?? r.googleRating) as number) ?? null,
+    googleRating: ((r.google_rating ?? r.googleRating) as number) ?? null,
     location: buildLocation(r.maps as string, r.mapcode as string, r.name as string),
   };
 }
@@ -74,8 +74,9 @@ function toShopData(s: Record<string, unknown>): ShopData {
     category: (s.category as string) ?? null,
     hours: (s.hours as string) ?? null,
     mustBuy,
+    description: (s.description as string) ?? null,
     note: (s.note as string) ?? null,
-    googleRating: ((s.rating ?? s.googleRating) as number) ?? null,
+    googleRating: ((s.google_rating ?? s.googleRating) as number) ?? null,
     location: buildLocation(s.maps as string, s.mapcode as string, s.name as string),
   };
 }
@@ -117,9 +118,9 @@ export function toTimelineEntry(raw: object): TimelineEntryData {
   return {
     time: (entry.time as string) ?? null,
     title: (entry.title as string) ?? null,
-    description: ((entry.body ?? entry.description) as string) ?? null,
+    description: (entry.description as string) ?? null,
     note: (entry.note as string) ?? null,
-    googleRating: ((entry.rating ?? entry.googleRating) as number) ?? null,
+    googleRating: ((entry.google_rating ?? entry.googleRating) as number) ?? null,
     source: (entry.source as string) ?? null,
     travel: travelData,
     locations: locations.length > 0 ? locations : null,
@@ -131,17 +132,7 @@ export function toTimelineEntry(raw: object): TimelineEntryData {
 
 export function toHotelData(raw: object): HotelData {
   const hotel = raw as Record<string, unknown>;
-  let details: string[] | null = null;
-  if (typeof hotel.details === 'string' && hotel.details) {
-    try {
-      const parsed = JSON.parse(hotel.details);
-      details = Array.isArray(parsed) ? parsed : [hotel.details];
-    } catch {
-      details = [hotel.details];
-    }
-  } else if (Array.isArray(hotel.details)) {
-    details = hotel.details as string[];
-  }
+  const description = (hotel.description as string) ?? null;
 
   let breakfast: { included?: boolean; note?: string | null } | null = null;
   const rawBf = hotel.breakfast;
@@ -156,7 +147,7 @@ export function toHotelData(raw: object): HotelData {
   }
 
   const infoBoxes: InfoBoxData[] = [];
-  const parking = (hotel.parking_json ?? hotel.parking) as Record<string, unknown> | null;
+  const parking = (hotel.parking as Record<string, unknown>) ?? null;
   if (parking && typeof parking === 'object') {
     infoBoxes.push({
       type: 'parking',
@@ -181,7 +172,7 @@ export function toHotelData(raw: object): HotelData {
   return {
     name: (hotel.name as string) || '',
     checkout: (hotel.checkout as string) ?? null,
-    details,
+    description,
     breakfast,
     note: (hotel.note as string) ?? null,
     infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,

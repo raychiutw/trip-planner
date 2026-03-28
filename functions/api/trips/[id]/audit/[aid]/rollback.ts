@@ -2,17 +2,19 @@ import { logAudit } from '../../../../_audit';
 import { json, getAuth } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
-const ALLOWED_TABLES = ['trips', 'days', 'hotels', 'entries', 'restaurants', 'shopping', 'trip_docs'] as const;
+const ALLOWED_TABLES = ['trips', 'trip_days', 'hotels', 'trip_entries', 'restaurants', 'shopping', 'trip_docs', 'trip_requests', 'trip_permissions'] as const;
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
-  trips:       ['id', 'name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer_json', 'created_at', 'updated_at'],
-  days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'weather_json', 'updated_at'],
-  hotels:      ['id', 'day_id', 'name', 'checkout', 'source', 'details', 'breakfast', 'note', 'parking_json'],
-  entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'body', 'source', 'maps', 'mapcode', 'rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location_json', 'updated_at'],
-  restaurants: ['id', 'entry_id', 'sort_order', 'name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'rating', 'maps', 'mapcode', 'source'],
-  shopping:    ['id', 'parent_type', 'parent_id', 'sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'rating', 'maps', 'mapcode', 'source'],
-  trip_docs:   ['id', 'trip_id', 'doc_type', 'content', 'updated_at'],
+  trips:            ['id', 'name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer', 'created_at', 'updated_at'],
+  trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'updated_at'],
+  hotels:           ['id', 'day_id', 'name', 'checkout', 'source', 'description', 'breakfast', 'note', 'parking', 'location'],
+  trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'maps', 'mapcode', 'google_rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location', 'updated_at'],
+  restaurants:      ['id', 'entry_id', 'sort_order', 'name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'google_rating', 'maps', 'mapcode', 'source'],
+  shopping:         ['id', 'parent_type', 'parent_id', 'sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'google_rating', 'maps', 'mapcode', 'source'],
+  trip_docs:        ['id', 'trip_id', 'doc_type', 'content', 'updated_at'],
+  trip_requests:    ['id', 'trip_id', 'mode', 'message', 'submitted_by', 'reply', 'status', 'created_at'],
+  trip_permissions: ['id', 'email', 'trip_id', 'role', 'created_at'],
 };
 
 interface AuditRow {

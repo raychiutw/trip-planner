@@ -4,7 +4,7 @@ import { validateRestaurantBody } from '../../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
-const ALLOWED_FIELDS = ['name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'rating', 'maps', 'mapcode', 'source'] as const;
+const ALLOWED_FIELDS = ['name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'google_rating', 'maps', 'mapcode', 'source'] as const;
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
@@ -32,7 +32,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     reservation_url?: string;
     description?: string;
     note?: string;
-    rating?: number;
+    google_rating?: number;
     maps?: string;
     mapcode?: string;
     source?: string;
@@ -52,13 +52,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const sortOrder = (maxResult?.max_sort ?? -1) + 1;
 
   const row = await db
-    .prepare(`INSERT INTO restaurants (entry_id, sort_order, name, category, hours, price, reservation, reservation_url, description, note, rating, maps, mapcode, source)
+    .prepare(`INSERT INTO restaurants (entry_id, sort_order, name, category, hours, price, reservation, reservation_url, description, note, google_rating, maps, mapcode, source)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
     .bind(
       eid, sortOrder,
       body.name ?? null, body.category ?? null, body.hours ?? null,
       body.price ?? null, body.reservation ?? null, body.reservation_url ?? null,
-      body.description ?? null, body.note ?? null, body.rating ?? null,
+      body.description ?? null, body.note ?? null, body.google_rating ?? null,
       body.maps ?? null, body.mapcode ?? null, body.source ?? null,
     )
     .first();

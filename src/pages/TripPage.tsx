@@ -4,6 +4,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
+import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
@@ -39,7 +40,7 @@ import DaySkeleton from '../components/trip/DaySkeleton';
 import { toTimelineEntry, toHotelData } from '../lib/mapDay';
 import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
-import type { WeatherDay } from '../lib/weather';
+import { buildWeatherDay } from '../lib/weather';
 import type { TripListItem, Day, DaySummary } from '../types/trip';
 import type { FlightsData } from '../components/trip/Flights';
 import type { ChecklistData } from '../components/trip/Checklist';
@@ -165,13 +166,11 @@ const DaySection = React.memo(function DaySection({
 
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
-  // API may return weather_json (raw) or weather (mapped) — handle both
-  const dayRecord = day as (Day & Record<string, unknown>) | undefined;
-  const weatherRaw = dayRecord && 'weather_json' in dayRecord
-    ? dayRecord.weather_json
-    : day?.weather;
-  const weatherObj = weatherRaw !== null && typeof weatherRaw === 'object' ? weatherRaw : null;
-  const weatherDay = weatherObj && 'locations' in weatherObj ? (weatherObj as WeatherDay) : null;
+  // Derive weather locations from entries (no longer stored in DB)
+  const weatherDay = useMemo(
+    () => buildWeatherDay(day?.label, timeline),
+    [day?.label, timeline],
+  );
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
@@ -390,9 +389,10 @@ export default function TripPage() {
     if (sheetTrips.length > 0) return;  // 已有快取，不重複請求
     let cancelled = false;
     setSheetTripsLoading(true);
-    apiFetch<TripListItem[]>('/trips')
-      .then((data) => {
+    apiFetch<Record<string, unknown>[]>('/trips')
+      .then((raw) => {
         if (cancelled) return;
+        const data = raw.map(r => mapRow(r)) as unknown as TripListItem[];
         setSheetTrips(data.filter((t) => t.published === 1));
       })
       .catch(() => {
@@ -420,12 +420,13 @@ export default function TripPage() {
     // Reset scroll tracking for new trip
     initialScrollDone.current = false;
 
-    apiFetch<TripListItem[]>('/trips')
-      .then((trips) => {
+    apiFetch<Record<string, unknown>[]>('/trips')
+      .then((raw) => {
         if (cancelled) return;
+        const trips = raw.map(r => mapRow(r)) as unknown as TripListItem[];
 
-        // 找出預設行程（is_default=1）作為最終 fallback
-        const defaultTrip = trips.find((t) => t.is_default === 1);
+        // 找出預設行程（isDefault=1）作為最終 fallback
+        const defaultTrip = trips.find((t) => t.isDefault === 1);
 
         // 比對 tripId 是否存在於已發布行程中
         const match = tripId ? trips.find((t) => t.tripId === tripId) : null;
@@ -483,8 +484,8 @@ export default function TripPage() {
     const DOC_TYPES = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
 
     type RawDayEntry = {
-      time?: unknown; title?: unknown; body?: unknown; note?: unknown;
-      rating?: unknown; maps?: unknown; source?: unknown;
+      time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
+      google_rating?: unknown; rating?: unknown; maps?: unknown; source?: unknown;
       travel?: unknown; travel_type?: unknown; travel_desc?: unknown; travel_min?: unknown;
       restaurants?: Record<string, unknown>[];
       shopping?: Record<string, unknown>[];
@@ -492,7 +493,7 @@ export default function TripPage() {
     };
     type RawHotel = {
       name?: unknown; checkout?: unknown; note?: unknown; breakfast?: unknown;
-      parking_json?: unknown; parking?: unknown;
+      parking?: unknown;
       shopping?: Record<string, unknown>[];
       [key: string]: unknown;
     };
@@ -574,7 +575,7 @@ export default function TripPage() {
             md += `### 🏨 住宿：${s(hotel.name)}\n`;
             if (hotel.checkout) md += `- 退房：${s(hotel.checkout)}\n`;
             if (hotel.breakfast) md += `- 早餐：${typeof hotel.breakfast === 'object' ? JSON.stringify(hotel.breakfast) : s(hotel.breakfast)}\n`;
-            const parking = hotel.parking_json ?? hotel.parking;
+            const parking = hotel.parking;
             if (parking) {
               const pInfo = typeof parking === 'object' ? (parking as Record<string, unknown>).info ?? JSON.stringify(parking) : s(parking);
               md += `- 停車場：${pInfo}\n`;
@@ -588,7 +589,7 @@ export default function TripPage() {
               md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
               md += '|------|------|------|---------|------|\n';
               for (const sh of hotelShopping) {
-                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.google_rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
               }
             }
             md += '\n';
@@ -599,10 +600,10 @@ export default function TripPage() {
           for (let i = 0; i < timeline.length; i++) {
             const e = timeline[i];
             md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
-            if (e.rating) md += ` ★ ${e.rating}`;
+            if (e.google_rating) md += ` ★ ${e.google_rating}`;
             md += '\n';
 
-            if (e.body) md += `${s(e.body)}\n`;
+            if (e.description) md += `${s(e.description)}\n`;
             if (e.note) md += `\n${s(e.note)}\n`;
             if (e.maps) md += `\n📍 Map: ${s(e.maps)}\n`;
 
@@ -625,7 +626,7 @@ export default function TripPage() {
               md += '| 餐廳 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
               md += '|------|------|------|------|---------|------|\n';
               for (const r of restaurants) {
-                md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.rating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
+                md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.google_rating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
               }
             }
 
@@ -636,7 +637,7 @@ export default function TripPage() {
               md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
               md += '|------|------|------|---------|------|\n';
               for (const sh of shopping) {
-                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.google_rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
               }
             }
 
@@ -698,7 +699,7 @@ export default function TripPage() {
 
             const baseRow = [
               dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title),
-              csvCell(e.rating), csvCell(e.body), csvCell(e.note),
+              csvCell(e.google_rating), csvCell(e.description), csvCell(e.note),
               travelType, travelMin,
             ];
 
@@ -712,7 +713,7 @@ export default function TripPage() {
               // For subsequent rows, repeat entry base columns
               const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
               // Restaurant columns
-              row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.rating) : '', r ? csvCell(r.price) : '');
+              row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.google_rating) : '', r ? csvCell(r.price) : '');
               // Shopping columns
               row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.must_buy) : '');
               // Hotel columns (empty for timeline entries)

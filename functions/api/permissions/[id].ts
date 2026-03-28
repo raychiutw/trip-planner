@@ -15,7 +15,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   // 先查要刪的記錄
   const record = await context.env.DB
-    .prepare('SELECT * FROM permissions WHERE id = ?')
+    .prepare('SELECT * FROM trip_permissions WHERE id = ?')
     .bind(id)
     .first<{ id: number; email: string; trip_id: string; role: string }>();
 
@@ -24,11 +24,11 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   }
 
   // 刪除 D1 記錄
-  await context.env.DB.prepare('DELETE FROM permissions WHERE id = ?').bind(id).run();
+  await context.env.DB.prepare('DELETE FROM trip_permissions WHERE id = ?').bind(id).run();
 
   // 檢查該 email 是否還有其他行程權限
   const remaining = await context.env.DB
-    .prepare('SELECT 1 FROM permissions WHERE email = ? AND trip_id != ?')
+    .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND trip_id != ?')
     .bind(record.email, '*')
     .first();
 
@@ -39,7 +39,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     } catch (err) {
       // 回滾：重新 INSERT
       await context.env.DB
-        .prepare('INSERT INTO permissions (id, email, trip_id, role) VALUES (?, ?, ?, ?)')
+        .prepare('INSERT INTO trip_permissions (id, email, trip_id, role) VALUES (?, ?, ?, ?)')
         .bind(record.id, record.email, record.trip_id, record.role)
         .run();
       return json({ error: '同步 Access policy 失敗，已回滾', detail: String(err) }, 500);
@@ -48,7 +48,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   await logAudit(context.env.DB, {
     tripId: record.trip_id,
-    tableName: 'permissions',
+    tableName: 'trip_permissions',
     recordId: record.id,
     action: 'delete',
     changedBy: auth.email,

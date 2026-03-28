@@ -8,7 +8,7 @@ function parseJsonField(row: Record<string, unknown>, field: string) {
   if (row[field] && typeof row[field] === 'string') {
     try { row[field] = JSON.parse(row[field] as string); } catch { /* leave as-is */ }
   }
-  // Strip _json suffix: location_json → location, parking_json → parking
+  // Strip _json suffix for legacy columns still using it
   if (field.endsWith('_json') && field in row) {
     const shortName = field.slice(0, -5);
     row[shortName] = row[field];
@@ -21,28 +21,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const day = await db
-    .prepare('SELECT * FROM days WHERE trip_id = ? AND day_num = ?')
+    .prepare('SELECT * FROM trip_days WHERE trip_id = ? AND day_num = ?')
     .bind(id, Number(num))
     .first() as Record<string, unknown> | null;
 
   if (!day) return json({ error: 'Not found' }, 404);
 
-  parseJsonField(day, 'weather_json');
+  // weather_json column dropped; weather is no longer in trip_days
 
   const dayId = day.id as number;
 
   const [hotelResult, entriesResult, allRestaurantsResult, allShoppingResult] = await Promise.all([
     db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first() as Promise<Record<string, unknown> | null>,
-    db.prepare('SELECT * FROM entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
-    db.prepare("SELECT * FROM restaurants WHERE entry_id IN (SELECT id FROM entries WHERE day_id = ?)").bind(dayId).all(),
-    db.prepare("SELECT * FROM shopping WHERE parent_id IN (SELECT id FROM entries WHERE day_id = ?) AND parent_type = 'entry'").bind(dayId).all(),
+    db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
+    db.prepare("SELECT * FROM restaurants WHERE entry_id IN (SELECT id FROM trip_entries WHERE day_id = ?)").bind(dayId).all(),
+    db.prepare("SELECT * FROM shopping WHERE parent_id IN (SELECT id FROM trip_entries WHERE day_id = ?) AND parent_type = 'entry'").bind(dayId).all(),
   ]);
 
   let hotel: Record<string, unknown> | null = null;
   if (hotelResult) {
     const hotelRow = hotelResult as Record<string, unknown>;
-    parseJsonField(hotelRow, 'parking_json');
-    parseJsonField(hotelRow, 'location_json');
+    parseJsonField(hotelRow, 'parking');
+    parseJsonField(hotelRow, 'location');
 
     const hotelId = hotelRow.id as number;
     const { results: hotelShopping } = await db
@@ -71,7 +71,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const timeline = entriesResult.results.map(e => {
     const entry = e as Record<string, unknown>;
-    parseJsonField(entry, 'location_json');
+    parseJsonField(entry, 'location');
 
     const eid = entry.id as number;
     // Assemble travel object from separate columns
@@ -95,7 +95,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     date: day.date,
     day_of_week: day.day_of_week,
     label: day.label,
-    weather: day.weather,
     hotel,
     timeline,
   });
@@ -115,7 +114,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   const day = await db
-    .prepare('SELECT id FROM days WHERE trip_id = ? AND day_num = ?')
+    .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = ?')
     .bind(id, Number(num))
     .first() as { id: number } | null;
 
@@ -126,12 +125,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   // T8: Snapshot old data using Promise.all (3 parallel queries + conditional hotel shopping)
   const [oldHotel, oldEntries, oldRestaurants, oldEntryShopping] = await Promise.all([
     db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first(),
-    db.prepare('SELECT * FROM entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
+    db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
     db.prepare(
-      'SELECT r.* FROM restaurants r JOIN entries e ON r.entry_id = e.id WHERE e.day_id = ?'
+      'SELECT r.* FROM restaurants r JOIN trip_entries e ON r.entry_id = e.id WHERE e.day_id = ?'
     ).bind(dayId).all(),
     db.prepare(
-      "SELECT s.* FROM shopping s JOIN entries e ON s.parent_id = e.id WHERE s.parent_type = 'entry' AND e.day_id = ?"
+      "SELECT s.* FROM shopping s JOIN trip_entries e ON s.parent_id = e.id WHERE s.parent_type = 'entry' AND e.day_id = ?"
     ).bind(dayId).all(),
   ]);
 
@@ -152,7 +151,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     dayOfWeek?: string;
     label?: string;
     weather?: unknown;
-    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; details?: unknown; address?: unknown; breakfast?: unknown; location?: unknown };
+    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; description?: unknown; breakfast?: unknown; location?: unknown };
     timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
   };
   const bodyOrError = await parseJsonBody<DayBody>(context.request);
@@ -165,7 +164,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   }
 
   // 亂碼偵測：對 timeline entries 的文字欄位逐一檢查
-  const entryTextFields = ['title', 'body', 'note', 'travel_desc'] as const;
+  const entryTextFields = ['title', 'description', 'note', 'travel_desc'] as const;
   const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
   for (let i = 0; i < timelineEntries.length; i++) {
     const e = timelineEntries[i];
@@ -180,7 +179,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   // Write snapshot audit log BEFORE any batch operations (for recovery if batch fails)
   await logAudit(db, {
     tripId: id,
-    tableName: 'days',
+    tableName: 'trip_days',
     recordId: dayId,
     action: 'update',
     changedBy,
@@ -196,19 +195,18 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   batch1.push(
     db.prepare("DELETE FROM shopping WHERE parent_type = 'hotel' AND parent_id IN (SELECT id FROM hotels WHERE day_id = ?)").bind(dayId),
     db.prepare('DELETE FROM hotels WHERE day_id = ?').bind(dayId),
-    db.prepare("DELETE FROM restaurants WHERE entry_id IN (SELECT id FROM entries WHERE day_id = ?)").bind(dayId),
-    db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id IN (SELECT id FROM entries WHERE day_id = ?)").bind(dayId),
-    db.prepare('DELETE FROM entries WHERE day_id = ?').bind(dayId),
+    db.prepare("DELETE FROM restaurants WHERE entry_id IN (SELECT id FROM trip_entries WHERE day_id = ?)").bind(dayId),
+    db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id IN (SELECT id FROM trip_entries WHERE day_id = ?)").bind(dayId),
+    db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
   );
 
   // Update day fields (index 5)
   batch1.push(
-    db.prepare('UPDATE days SET date = ?, day_of_week = ?, label = ?, weather_json = ? WHERE id = ?')
+    db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ? WHERE id = ?')
       .bind(
         body.date!,
         body.dayOfWeek!,
         body.label!,
-        body.weather ? JSON.stringify(body.weather) : null,
         dayId,
       ),
   );
@@ -218,12 +216,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (body.hotel) {
     const h = body.hotel;
     batch1.push(
-      db.prepare('INSERT INTO hotels (day_id, name, checkout, details, breakfast, note, parking_json, location_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+      db.prepare('INSERT INTO hotels (day_id, name, checkout, description, breakfast, note, parking, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId,
           h.name ?? null,
           h.checkout ?? null,
-          h.details ?? h.address ?? null,
+          h.description ?? null,
           h.breakfast ?? null,
           h.note ?? null,
           h.parking ? JSON.stringify(h.parking) : null,
@@ -238,11 +236,11 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const e = timeline[i];
     const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
     batch1.push(
-      db.prepare('INSERT INTO entries (day_id, sort_order, time, title, body, maps, rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+      db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, maps, google_rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId, i,
-          e.time ?? null, e.title ?? null, e.body ?? null,
-          e.maps ?? null, e.rating ?? null, e.note ?? null,
+          e.time ?? null, e.title ?? null, e.description ?? null,
+          e.maps ?? null, e.google_rating ?? null, e.note ?? null,
           travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null,
         ),
     );
@@ -272,8 +270,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     if (body.hotel && hotelId !== null && Array.isArray(body.hotel.shopping)) {
       for (const [idx, s] of (body.hotel.shopping as Record<string, unknown>[]).entries()) {
         batch2.push(
-          db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, rating, maps, mapcode, source) VALUES ('hotel', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
+          db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, google_rating, maps, mapcode, source) VALUES ('hotel', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
         );
       }
     }
@@ -286,8 +284,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       if (Array.isArray(e.restaurants)) {
         for (const r of e.restaurants as Record<string, unknown>[]) {
           batch2.push(
-            db.prepare("INSERT INTO restaurants (entry_id, name, category, hours, price, reservation, reservation_url, description, note, rating, maps, mapcode, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null),
+            db.prepare("INSERT INTO restaurants (entry_id, name, category, hours, price, reservation, reservation_url, description, note, google_rating, maps, mapcode, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.google_rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null),
           );
         }
       }
@@ -295,8 +293,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       if (Array.isArray(e.shopping)) {
         for (const [sIdx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
           batch2.push(
-            db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, rating, maps, mapcode, source) VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
+            db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, google_rating, maps, mapcode, source) VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+              .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
           );
         }
       }
@@ -307,7 +305,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Snapshot already saved before batch; log additional error context
     await logAudit(db, {
       tripId: id,
-      tableName: 'days',
+      tableName: 'trip_days',
       recordId: dayId,
       action: 'update',
       changedBy,

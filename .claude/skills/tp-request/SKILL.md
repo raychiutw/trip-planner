@@ -158,7 +158,7 @@ curl -s -X PATCH \
 
 | 欄位 | 支援 markdown | 說明 |
 |------|:---:|------|
-| `entry.body`（description） | ✅ | 景點描述，可用粗體、列表、連結 |
+| `entry.description`（description） | ✅ | 景點描述，可用粗體、列表、連結 |
 | `entry.note` | ✅ | 備註提醒，可用粗體、列表 |
 | `restaurant.description` | ✅ | 餐廳描述 |
 | `entry.title` | ❌ | 純文字，不渲染 markdown |

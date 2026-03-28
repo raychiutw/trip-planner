@@ -1,9 +1,10 @@
 /* ===== Hotel Component ===== */
-/* Renders a hotel card with: name, details, breakfast, checkout, info boxes */
+/* Renders a hotel card with: name, description, breakfast, checkout, info boxes */
 
 import { useState, useCallback, memo } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
+import MarkdownText from '../shared/MarkdownText';
 import InfoBox, { type InfoBoxData } from './InfoBox';
 import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
 
@@ -13,11 +14,11 @@ interface BreakfastData {
   note?: string | null;
 }
 
-/** Hotel data shape from dist JSON content.hotel. */
+/** Hotel data shape for rendering. */
 export interface HotelData {
   name: string;
   checkout?: string | null;
-  details?: string[] | null;
+  description?: string | null;
   breakfast?: BreakfastData | null;
   note?: string | null;
   infoBoxes?: InfoBoxData[] | null;
@@ -38,11 +39,14 @@ export const Hotel = memo(function Hotel({ hotel }: HotelProps) {
         <span className="ml-auto text-muted text-subheadline">{open ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>
       <div className={clsx('hidden print:block py-3 text-body leading-relaxed', open && '!block')}>
-        {hotel.details && hotel.details.length > 0 && (
-          <div className="flex flex-wrap gap-2 gap-x-4 mb-2">
-            {hotel.details.map((d, i) => (
-              <span key={i}>{d}</span>
-            ))}
+        {hotel.description && (
+          <div className="mb-2">
+            <MarkdownText text={hotel.description} as="div" inline />
+          </div>
+        )}
+        {hotel.note && (
+          <div className="mt-2 py-1 pl-4 text-callout text-muted">
+            <MarkdownText text={hotel.note} as="div" />
           </div>
         )}
         {hotel.breakfast && (

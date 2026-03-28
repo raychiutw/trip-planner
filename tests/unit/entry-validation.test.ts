@@ -41,8 +41,8 @@ describe('validateEntryBody — 必填欄位完整', () => {
     const result = validateEntryBody({
       title: '美麗海水族館',
       time: '10:00',
-      body: '世界第二大的水族館',
-      rating: 4.5,
+      description: '世界第二大的水族館',
+      googleRating: 4.5,
     });
     expect(result.ok).toBe(true);
     expect(result.status).toBe(200);

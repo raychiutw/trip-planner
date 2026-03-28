@@ -2,6 +2,7 @@
 /* Renders a single shopping recommendation card (used inside InfoBox) */
 
 import Icon from '../shared/Icon';
+import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
 
 /** Shop data shape from dist JSON infoBoxes.shops[]. */
@@ -10,6 +11,7 @@ export interface ShopData {
   category?: string | null;
   hours?: string | null;
   mustBuy?: string[] | null;
+  description?: string | null;
   note?: string | null;
   googleRating?: number | null;
   location?: MapLocation | null;
@@ -38,6 +40,12 @@ export default function Shop({ shop }: ShopProps) {
         <div className="mt-1 text-callout">
           <Icon name="gift" /> 必買：{shop.mustBuy.join('、')}
         </div>
+      )}
+      {shop.description && (
+        <MarkdownText text={shop.description} as="div" className="mt-1 text-callout text-muted" inline />
+      )}
+      {shop.note && (
+        <MarkdownText text={shop.note} as="div" className="mt-1 text-callout text-muted" inline />
       )}
     </div>
   );

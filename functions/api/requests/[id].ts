@@ -41,11 +41,11 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     return json({ error: '沒有要更新的欄位' }, 400);
   }
 
-  const oldRow = await env.DB.prepare('SELECT * FROM requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
+  const oldRow = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
 
   values.push(id);
   const result = await env.DB
-    .prepare(`UPDATE requests SET ${updates.join(', ')} WHERE id = ? RETURNING *`)
+    .prepare(`UPDATE trip_requests SET ${updates.join(', ')} WHERE id = ? RETURNING *`)
     .bind(...values)
     .first();
 
@@ -59,7 +59,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   );
   await logAudit(env.DB, {
     tripId,
-    tableName: 'requests',
+    tableName: 'trip_requests',
     recordId: Number(id),
     action: 'update',
     changedBy: auth.email,

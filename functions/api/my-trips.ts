@@ -13,13 +13,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (auth.isAdmin) {
     // admin 可看所有行程（從 permissions 中取 distinct trip_id）
     const { results: rows } = await env.DB
-      .prepare('SELECT DISTINCT trip_id AS tripId FROM permissions WHERE trip_id != ? ORDER BY trip_id')
+      .prepare('SELECT DISTINCT trip_id AS tripId FROM trip_permissions WHERE trip_id != ? ORDER BY trip_id')
       .bind('*')
       .all();
     results = rows;
   } else {
     const { results: rows } = await env.DB
-      .prepare('SELECT trip_id AS tripId FROM permissions WHERE email = ? AND trip_id != ? ORDER BY trip_id')
+      .prepare('SELECT trip_id AS tripId FROM trip_permissions WHERE email = ? AND trip_id != ? ORDER BY trip_id')
       .bind(auth.email.toLowerCase(), '*')
       .all();
     results = rows;

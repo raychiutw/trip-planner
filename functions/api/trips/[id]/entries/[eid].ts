@@ -4,7 +4,7 @@ import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-const ALLOWED_FIELDS = ['sort_order', 'time', 'title', 'body', 'source', 'maps', 'mapcode', 'rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location_json'] as const;
+const ALLOWED_FIELDS = ['sort_order', 'time', 'title', 'description', 'source', 'maps', 'mapcode', 'google_rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location'] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
@@ -24,7 +24,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     return json({ error: 'Not found' }, 404);
   }
 
-  const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
+  const oldRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) return json({ error: 'Not found' }, 404);
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
@@ -38,7 +38,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   // 亂碼偵測：寫入 DB 前檢查文字欄位
-  const textFields = ['title', 'body', 'note', 'travel_desc'];
+  const textFields = ['title', 'description', 'note', 'travel_desc'];
   for (const f of textFields) {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       return json({ error: `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8` }, 400);
@@ -51,7 +51,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   let row;
   try {
     row = await db
-      .prepare(`UPDATE entries SET ${update.setClauses} WHERE id = ? RETURNING *`)
+      .prepare(`UPDATE trip_entries SET ${update.setClauses} WHERE id = ? RETURNING *`)
       .bind(...update.values, eid)
       .first();
   } catch (err: any) {
@@ -66,7 +66,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));
   await logAudit(db, {
     tripId: id,
-    tableName: 'entries',
+    tableName: 'trip_entries',
     recordId: eid,
     action: 'update',
     changedBy,
@@ -95,7 +95,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   }
 
   // T11: null guard before delete
-  const oldRow = await db.prepare('SELECT * FROM entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
+  const oldRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) return json({ error: 'Not found' }, 404);
 
   // Cascade delete restaurants and shopping before deleting the entry
@@ -103,7 +103,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     await db.batch([
       db.prepare("DELETE FROM restaurants WHERE entry_id = ?").bind(eid),
       db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id = ?").bind(eid),
-      db.prepare('DELETE FROM entries WHERE id = ?').bind(eid),
+      db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(eid),
     ]);
   } catch (err: any) {
     return new Response(JSON.stringify({ error: 'DB 暫時無法處理，請稍後重試' }), {
@@ -114,7 +114,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   await logAudit(db, {
     tripId: id,
-    tableName: 'entries',
+    tableName: 'trip_entries',
     recordId: eid,
     action: 'delete',
     changedBy,

@@ -3,6 +3,7 @@
 
 import { memo } from 'react';
 import Icon from '../shared/Icon';
+import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
 import Restaurant, { type RestaurantData } from './Restaurant';
 import Shop, { type ShopData } from './Shop';
@@ -89,7 +90,7 @@ function ReservationBox({ box }: { box: InfoBoxData }) {
           <span key={i}>{item}<br /></span>
         ))
       }
-      {box.notes && <>{box.notes}</>}
+      {box.notes && <MarkdownText text={box.notes} as="div" />}
     </div>
   );
 }
@@ -105,7 +106,7 @@ function ParkingBox({ box }: { box: InfoBoxData }) {
         {box.location && <>{' '}<MapLinks location={box.location} inline /></>}
       </div>
       {box.note && (
-        <div className="mt-2 text-footnote text-muted leading-relaxed">{box.note}</div>
+        <MarkdownText text={box.note} as="div" className="mt-2 text-footnote text-muted leading-relaxed" inline />
       )}
     </div>
   );
@@ -214,7 +215,7 @@ export const InfoBox = memo(function InfoBox({ box }: InfoBoxProps) {
       return <GasStationBox box={box} />;
     default:
       if (box.content) {
-        return <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed">{box.content}</div>;
+        return <MarkdownText text={box.content} as="div" className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed" />;
       }
       return null;
   }

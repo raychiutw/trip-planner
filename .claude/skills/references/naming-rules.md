@@ -53,27 +53,21 @@
 
 使用 `mapRow()` 統一轉換，不散寫 `if (x.snake) x.camel = x.snake`。
 
-### FIELD_MAP（snake_case → camelCase 重命名）
+### snakeToCamel 自動轉換（取代 FIELD_MAP）
 
-| DB 欄位 | JS 屬性 |
-|---------|---------|
-| `body` | `description` |
-| `rating` | `googleRating` |
-| `must_buy` | `mustBuy` |
-| `reservation_url` | `reservationUrl` |
-| `travel` (desc) | `travel` (text) |
-| `day_of_week` | `dayOfWeek` |
-| `self_drive` | `selfDrive` |
-| `og_description` | `ogDescription` |
+DB 欄位一律 snake_case，`mapRow()` 自動轉 camelCase。不再有手動映射表。
+例如：`google_rating` → `googleRating`、`day_of_week` → `dayOfWeek`、`must_buy` → `mustBuy`
 
 ### JSON_FIELDS（JSON string → object，自動 parse）
 
 | DB 欄位 | 說明 |
 |---------|------|
-| `auto_scroll` | 逗號分隔字串 → array，映射為 `autoScrollDates` |
-| `footer_json` | JSON string → object，映射為 `footer` |
-| `weather_json` | JSON string → object，映射為 `weather` |
-| `parking_json` | JSON string → object，映射為 `parking` |
+| `parking` | 停車場 JSON → object |
+| `footer` | 頁尾 JSON → object |
+| `location` | 座標 JSON → object |
+| `attrs` | POI 類型專屬欄位 JSON → object |
+| `trip_attrs` | 行程專屬 POI 欄位 JSON → object |
+| `breakfast` | 早餐 JSON → object |
 
 ---
 

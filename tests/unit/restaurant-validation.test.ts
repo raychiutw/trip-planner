@@ -43,7 +43,7 @@ describe('validateRestaurantBody — 必填欄位完整', () => {
       category: '沖繩料理',
       hours: '11:00-20:00',
       price: '¥800',
-      rating: 4.2,
+      googleRating: 4.2,
     });
     expect(result.ok).toBe(true);
     expect(result.status).toBe(200);
