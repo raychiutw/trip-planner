@@ -1,6 +1,6 @@
 /**
  * Maps raw API day response data to component-expected shapes.
- * Bridges snake_case DB columns → component prop interfaces.
+ * POI Schema V2: API returns merged pois + trip_pois rows.
  */
 
 import type { TimelineEntryData, TravelData } from '../components/trip/TimelineEvent';
@@ -16,9 +16,10 @@ function buildLocation(
   maps?: string | null,
   mapcode?: string | null,
   name?: string | null,
+  _lat?: number | null,
+  _lng?: number | null,
 ): NavLocation | null {
-  if (!maps && !mapcode) return null;
-  // maps 是 URL 時作為 googleQuery；非 URL（地名）時作為 name fallback，避免產生空查詢 `?q=`
+  if (!maps && !mapcode && !_lat) return null;
   const isUrl = maps ? /^https?:/i.test(maps) : false;
   const nameValue: string | undefined =
     (name ?? undefined) || (!isUrl && maps ? maps : undefined) || undefined;
@@ -38,7 +39,7 @@ function formatTravelText(travel: Record<string, unknown>): string {
   return '';
 }
 
-/* ===== Restaurant ===== */
+/* ===== Restaurant (from merged POI) ===== */
 
 function toRestaurantData(r: Record<string, unknown>): RestaurantData {
   return {
@@ -51,20 +52,17 @@ function toRestaurantData(r: Record<string, unknown>): RestaurantData {
     description: (r.description as string) ?? null,
     note: (r.note as string) ?? null,
     googleRating: ((r.google_rating ?? r.googleRating) as number) ?? null,
-    location: buildLocation(r.maps as string, r.mapcode as string, r.name as string),
+    location: buildLocation(r.maps as string, r.mapcode as string, r.name as string, r.lat as number, r.lng as number),
   };
 }
 
-/* ===== Shopping ===== */
+/* ===== Shopping (from merged POI) ===== */
 
 function toShopData(s: Record<string, unknown>): ShopData {
   const raw = s.must_buy ?? s.mustBuy;
   let mustBuy: string[] | null = null;
   if (typeof raw === 'string' && raw) {
-    mustBuy = raw
-      .split(/[,、]/)
-      .map((v) => v.trim())
-      .filter(Boolean);
+    mustBuy = raw.split(/[,、]/).map((v) => v.trim()).filter(Boolean);
   } else if (Array.isArray(raw)) {
     mustBuy = raw;
   }
@@ -77,7 +75,7 @@ function toShopData(s: Record<string, unknown>): ShopData {
     description: (s.description as string) ?? null,
     note: (s.note as string) ?? null,
     googleRating: ((s.google_rating ?? s.googleRating) as number) ?? null,
-    location: buildLocation(s.maps as string, s.mapcode as string, s.name as string),
+    location: buildLocation(s.maps as string, s.mapcode as string, s.name as string, s.lat as number, s.lng as number),
   };
 }
 
@@ -128,39 +126,58 @@ export function toTimelineEntry(raw: object): TimelineEntryData {
   };
 }
 
-/* ===== Hotel ===== */
+/* ===== Hotel (from merged POI — V2 flattened fields) ===== */
 
 export function toHotelData(raw: object): HotelData {
   const hotel = raw as Record<string, unknown>;
   const description = (hotel.description as string) ?? null;
 
+  // V2: breakfast is flattened into breakfast_included + breakfast_note
   let breakfast: { included?: boolean; note?: string | null } | null = null;
-  const rawBf = hotel.breakfast;
-  if (typeof rawBf === 'string' && rawBf) {
-    try {
-      breakfast = JSON.parse(rawBf);
-    } catch {
-      breakfast = { included: true, note: rawBf };
+  const bfIncluded = hotel.breakfast_included ?? hotel.breakfastIncluded;
+  const bfNote = (hotel.breakfast_note ?? hotel.breakfastNote) as string | null;
+  if (bfIncluded != null || bfNote) {
+    breakfast = {
+      included: bfIncluded === 1 ? true : bfIncluded === 0 ? false : undefined,
+      note: bfNote,
+    };
+  } else {
+    // Legacy: breakfast may still be JSON string from old API
+    const rawBf = hotel.breakfast;
+    if (typeof rawBf === 'string' && rawBf) {
+      try { breakfast = JSON.parse(rawBf); } catch { breakfast = { included: true, note: rawBf }; }
+    } else if (rawBf && typeof rawBf === 'object') {
+      breakfast = rawBf as { included?: boolean; note?: string | null };
     }
-  } else if (rawBf && typeof rawBf === 'object') {
-    breakfast = rawBf as { included?: boolean; note?: string | null };
   }
 
   const infoBoxes: InfoBoxData[] = [];
-  const parking = (hotel.parking as Record<string, unknown>) ?? null;
-  if (parking && typeof parking === 'object') {
+
+  // V2: parking is an array of merged POI objects
+  const parkingArr = hotel.parking as Record<string, unknown>[] | null;
+  if (Array.isArray(parkingArr) && parkingArr.length > 0) {
+    for (const p of parkingArr) {
+      infoBoxes.push({
+        type: 'parking',
+        title: (p.name as string) || '停車場',
+        price: (p.description as string) ?? null, // parking description often contains price
+        note: (p.note as string) ?? null,
+        location: buildLocation(p.maps as string, p.mapcode as string, p.name as string, p.lat as number, p.lng as number),
+      });
+    }
+  } else if (hotel.parking && typeof hotel.parking === 'object' && !Array.isArray(hotel.parking)) {
+    // Legacy: parking was a single object
+    const parking = hotel.parking as Record<string, unknown>;
     infoBoxes.push({
       type: 'parking',
       title: ((parking.info ?? parking.name) as string) || '停車場',
       price: (parking.price as string) ?? null,
       note: (parking.note as string) ?? null,
-      location: buildLocation(
-        parking.maps as string,
-        parking.mapcode as string,
-        (parking.name as string) ?? null,
-      ),
+      location: buildLocation(parking.maps as string, parking.mapcode as string, (parking.name as string) ?? null),
     });
   }
+
+  // Hotel shopping from trip_pois (passed as hotel.shopping)
   const shopping = (hotel.shopping ?? []) as Record<string, unknown>[];
   if (shopping.length > 0) {
     infoBoxes.push({
@@ -171,7 +188,7 @@ export function toHotelData(raw: object): HotelData {
 
   return {
     name: (hotel.name as string) || '',
-    checkout: (hotel.checkout as string) ?? null,
+    checkout: ((hotel.checkout as string) ?? null),
     description,
     breakfast,
     note: (hotel.note as string) ?? null,

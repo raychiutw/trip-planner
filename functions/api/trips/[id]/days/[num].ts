@@ -4,16 +4,47 @@ import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-function parseJsonField(row: Record<string, unknown>, field: string) {
-  if (row[field] && typeof row[field] === 'string') {
-    try { row[field] = JSON.parse(row[field] as string); } catch { /* leave as-is */ }
-  }
-  // Strip _json suffix for legacy columns still using it
-  if (field.endsWith('_json') && field in row) {
-    const shortName = field.slice(0, -5);
-    row[shortName] = row[field];
-    delete row[field];
-  }
+// ---------------------------------------------------------------------------
+// GET /api/trips/:id/days/:num — POI Schema V2 (pois + trip_pois)
+// ---------------------------------------------------------------------------
+
+/**
+ * Merge a pois row + trip_pois row into a single object.
+ * trip_pois fields override pois fields when non-null (COALESCE convention).
+ */
+function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Record<string, unknown> {
+  return {
+    // POI master fields
+    poi_id: poi.id,
+    type: poi.type,
+    name: poi.name,
+    description: tp.description ?? poi.description,
+    note: tp.note ?? poi.note,
+    address: poi.address,
+    phone: poi.phone,
+    email: poi.email,
+    website: poi.website,
+    hours: tp.hours ?? poi.hours,
+    google_rating: poi.google_rating,
+    category: poi.category,
+    maps: poi.maps,
+    mapcode: poi.mapcode,
+    source: poi.source,
+    // trip_pois fields
+    trip_poi_id: tp.id,
+    context: tp.context,
+    day_id: tp.day_id,
+    entry_id: tp.entry_id,
+    sort_order: tp.sort_order,
+    // Type-specific (flattened in trip_pois)
+    checkout: tp.checkout,
+    breakfast_included: tp.breakfast_included,
+    breakfast_note: tp.breakfast_note,
+    price: tp.price,
+    reservation: tp.reservation,
+    reservation_url: tp.reservation_url,
+    must_buy: tp.must_buy,
+  };
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -27,54 +58,65 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (!day) return json({ error: 'Not found' }, 404);
 
-  // weather_json column dropped; weather is no longer in trip_days
-
   const dayId = day.id as number;
 
-  const [hotelResult, entriesResult, allRestaurantsResult, allShoppingResult] = await Promise.all([
-    db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first() as Promise<Record<string, unknown> | null>,
+  // Query trip_pois and pois SEPARATELY to avoid D1 schema cache + JOIN column conflicts
+  const [entriesResult, allTripPois] = await Promise.all([
     db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
-    db.prepare("SELECT * FROM restaurants WHERE entry_id IN (SELECT id FROM trip_entries WHERE day_id = ?)").bind(dayId).all(),
-    db.prepare("SELECT * FROM shopping WHERE parent_id IN (SELECT id FROM trip_entries WHERE day_id = ?) AND parent_type = 'entry'").bind(dayId).all(),
+    db.prepare('SELECT * FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId).all(),
   ]);
 
+  // Build poi lookup: poi_id → pois row
+  const poiIds = [...new Set((allTripPois.results as Record<string, unknown>[]).map(tp => tp.poi_id as number))];
+  const poiMap = new Map<number, Record<string, unknown>>();
+  if (poiIds.length > 0) {
+    // Query all needed pois in one go
+    const { results: poisRows } = await db.prepare(
+      `SELECT * FROM pois WHERE id IN (${poiIds.join(',')})`
+    ).all();
+    for (const p of poisRows as Record<string, unknown>[]) {
+      poiMap.set(p.id as number, p);
+    }
+  }
+
+  // Merge and categorize trip_pois
   let hotel: Record<string, unknown> | null = null;
-  if (hotelResult) {
-    const hotelRow = hotelResult as Record<string, unknown>;
-    parseJsonField(hotelRow, 'parking');
-    parseJsonField(hotelRow, 'location');
+  const parkingList: Record<string, unknown>[] = [];
+  const restByEntry = new Map<number, unknown[]>();
+  const shopByEntry = new Map<number, unknown[]>();
 
-    const hotelId = hotelRow.id as number;
-    const { results: hotelShopping } = await db
-      .prepare("SELECT * FROM shopping WHERE parent_type = 'hotel' AND parent_id = ?")
-      .bind(hotelId)
-      .all();
+  for (const tp of allTripPois.results as Record<string, unknown>[]) {
+    const poi = poiMap.get(tp.poi_id as number);
+    if (!poi) continue;
+    const merged = mergePoi(poi, tp);
+    const poiType = poi.type as string;
+    const context = tp.context as string;
 
-    hotel = { ...hotelRow, shopping: hotelShopping };
+    if (context === 'hotel' && poiType === 'hotel' && !hotel) {
+      hotel = merged;
+    } else if (context === 'hotel' && poiType === 'parking') {
+      parkingList.push(merged);
+    } else if (context === 'timeline') {
+      const eid = tp.entry_id as number;
+      if (!restByEntry.has(eid)) restByEntry.set(eid, []);
+      restByEntry.get(eid)!.push(merged);
+    } else if (context === 'shopping') {
+      const eid = tp.entry_id as number;
+      if (eid) {
+        if (!shopByEntry.has(eid)) shopByEntry.set(eid, []);
+        shopByEntry.get(eid)!.push(merged);
+      }
+    }
   }
 
-  const restaurantsByEntry = new Map<number, unknown[]>();
-  for (const r of allRestaurantsResult.results) {
-    const row = r as Record<string, unknown>;
-    const eid = row.entry_id as number;
-    if (!restaurantsByEntry.has(eid)) restaurantsByEntry.set(eid, []);
-    restaurantsByEntry.get(eid)!.push(r);
-  }
-
-  const shoppingByEntry = new Map<number, unknown[]>();
-  for (const s of allShoppingResult.results) {
-    const row = s as Record<string, unknown>;
-    const eid = row.parent_id as number;
-    if (!shoppingByEntry.has(eid)) shoppingByEntry.set(eid, []);
-    shoppingByEntry.get(eid)!.push(s);
+  // Attach parking to hotel
+  if (hotel) {
+    hotel.parking = parkingList;
   }
 
   const timeline = entriesResult.results.map(e => {
     const entry = e as Record<string, unknown>;
-    parseJsonField(entry, 'location');
-
     const eid = entry.id as number;
-    // Assemble travel object from separate columns
     const travel = entry.travel_type ? {
       type: entry.travel_type,
       desc: entry.travel_desc,
@@ -84,8 +126,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return {
       ...entry,
       travel,
-      restaurants: restaurantsByEntry.get(eid) ?? [],
-      shopping: shoppingByEntry.get(eid) ?? [],
+      restaurants: restByEntry.get(eid) ?? [],
+      shopping: shopByEntry.get(eid) ?? [],
     };
   });
 
@@ -100,6 +142,35 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   });
 };
 
+// ---------------------------------------------------------------------------
+// PUT /api/trips/:id/days/:num — POI Schema V2 (find-or-create pois + trip_pois)
+// ---------------------------------------------------------------------------
+
+/** Find existing pois by (name, type) or INSERT new. Returns poi_id. */
+async function findOrCreatePoi(
+  db: D1Database,
+  data: { name: string; type: string; description?: string | null; maps?: string | null; mapcode?: string | null; lat?: number | null; lng?: number | null; google_rating?: number | null; category?: string | null; hours?: string | null; source?: string | null },
+): Promise<number> {
+  // Try exact match first (E5: dedup key = name + type + maps)
+  const existing = await db.prepare(
+    'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
+  ).bind(data.name, data.type).first<{ id: number }>();
+
+  if (existing) return existing.id;
+
+  // Not found → INSERT
+  const result = await db.prepare(
+    'INSERT INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+  ).bind(
+    data.type, data.name, data.description ?? null, data.hours ?? null,
+    data.google_rating ?? null, data.category ?? null,
+    data.maps ?? null, data.mapcode ?? null,
+    data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
+  ).first<{ id: number }>();
+
+  return result!.id;
+}
+
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) return json({ error: '未認證' }, 401);
@@ -108,7 +179,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
   const db = context.env.DB;
 
-  // T6: hasPermission BEFORE existence check
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
     return json({ error: '權限不足' }, 403);
   }
@@ -119,39 +189,20 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     .first() as { id: number } | null;
 
   if (!day) return json({ error: 'Not found' }, 404);
-
   const dayId = day.id;
 
-  // T8: Snapshot old data using Promise.all (3 parallel queries + conditional hotel shopping)
-  const [oldHotel, oldEntries, oldRestaurants, oldEntryShopping] = await Promise.all([
-    db.prepare('SELECT * FROM hotels WHERE day_id = ?').bind(dayId).first(),
+  // Snapshot old data for audit
+  const [oldTripPois, oldEntries] = await Promise.all([
+    db.prepare('SELECT * FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId).all(),
     db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
-    db.prepare(
-      'SELECT r.* FROM restaurants r JOIN trip_entries e ON r.entry_id = e.id WHERE e.day_id = ?'
-    ).bind(dayId).all(),
-    db.prepare(
-      "SELECT s.* FROM shopping s JOIN trip_entries e ON s.parent_id = e.id WHERE s.parent_type = 'entry' AND e.day_id = ?"
-    ).bind(dayId).all(),
   ]);
-
-  // 查詢 hotel shopping
-  const oldHotelShopping = oldHotel ? await db.prepare(
-    "SELECT * FROM shopping WHERE parent_type = 'hotel' AND parent_id = ?"
-  ).bind((oldHotel as { id: number }).id).all() : { results: [] };
-
-  const snapshot = JSON.stringify({
-    dayId, hotel: oldHotel, entries: oldEntries.results,
-    restaurants: oldRestaurants.results,
-    entryShopping: oldEntryShopping.results,
-    hotelShopping: oldHotelShopping.results,
-  });
+  const snapshot = JSON.stringify({ dayId, tripPois: oldTripPois.results, entries: oldEntries.results });
 
   type DayBody = {
     date?: string;
     dayOfWeek?: string;
     label?: string;
-    weather?: unknown;
-    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; description?: unknown; breakfast?: unknown; location?: unknown };
+    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown[]; description?: unknown };
     timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
   };
   const bodyOrError = await parseJsonBody<DayBody>(context.request);
@@ -159,120 +210,109 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const body = bodyOrError;
 
   const validation = validateDayBody(body);
-  if (!validation.ok) {
-    return json({ error: validation.error }, validation.status);
-  }
+  if (!validation.ok) return json({ error: validation.error }, validation.status);
 
-  // 亂碼偵測：對 timeline entries 的文字欄位逐一檢查
-  const entryTextFields = ['title', 'description', 'note', 'travel_desc'] as const;
+  // Garbled text detection
   const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
   for (let i = 0; i < timelineEntries.length; i++) {
     const e = timelineEntries[i];
-    for (const f of entryTextFields) {
-      const val = f === 'travel_desc' ? (e.travel as { desc?: unknown } | undefined)?.desc : e[f];
+    for (const f of ['title', 'description', 'note'] as const) {
+      const val = e[f];
       if (typeof val === 'string' && detectGarbledText(val)) {
-        return json({ error: `timeline[${i}].${f} 包含疑似亂碼，請確認 encoding 為 UTF-8` }, 400);
+        return json({ error: `timeline[${i}].${f} 包含疑似亂碼` }, 400);
       }
     }
   }
 
-  // Write snapshot audit log BEFORE any batch operations (for recovery if batch fails)
   await logAudit(db, {
-    tripId: id,
-    tableName: 'trip_days',
-    recordId: dayId,
-    action: 'update',
-    changedBy,
-    snapshot,
-    diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
+    tripId: id, tableName: 'trip_days', recordId: dayId, action: 'update', changedBy,
+    snapshot, diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
   });
 
-  // --- Batch 1: delete all old sub-data + update day + INSERT hotel + INSERT entries ---
-  // Statements are tracked in order so we can extract RETURNING ids from results.
-  const batch1: D1PreparedStatement[] = [];
-
-  // Delete old nested data (5 statements, indices 0-4)
-  batch1.push(
-    db.prepare("DELETE FROM shopping WHERE parent_type = 'hotel' AND parent_id IN (SELECT id FROM hotels WHERE day_id = ?)").bind(dayId),
-    db.prepare('DELETE FROM hotels WHERE day_id = ?').bind(dayId),
-    db.prepare("DELETE FROM restaurants WHERE entry_id IN (SELECT id FROM trip_entries WHERE day_id = ?)").bind(dayId),
-    db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id IN (SELECT id FROM trip_entries WHERE day_id = ?)").bind(dayId),
-    db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
-  );
-
-  // Update day fields (index 5)
-  batch1.push(
-    db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ? WHERE id = ?')
-      .bind(
-        body.date!,
-        body.dayOfWeek!,
-        body.label!,
-        dayId,
-      ),
-  );
-
-  // Track where hotel and entries start in batch1 results
-  const HOTEL_IDX = body.hotel ? batch1.length : -1;
-  if (body.hotel) {
-    const h = body.hotel;
-    batch1.push(
-      db.prepare('INSERT INTO hotels (day_id, name, checkout, description, breakfast, note, parking, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
-        .bind(
-          dayId,
-          h.name ?? null,
-          h.checkout ?? null,
-          h.description ?? null,
-          h.breakfast ?? null,
-          h.note ?? null,
-          h.parking ? JSON.stringify(h.parking) : null,
-          h.location ? JSON.stringify(h.location) : null,
-        ),
-    );
-  }
-
-  const ENTRIES_START_IDX = batch1.length;
-  const timeline = Array.isArray(body.timeline) ? body.timeline : [];
-  for (let i = 0; i < timeline.length; i++) {
-    const e = timeline[i];
-    const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
-    batch1.push(
-      db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, maps, google_rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
-        .bind(
-          dayId, i,
-          e.time ?? null, e.title ?? null, e.description ?? null,
-          e.maps ?? null, e.google_rating ?? null, e.note ?? null,
-          travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null,
-        ),
-    );
-  }
-
   try {
+    // Batch 1: delete old trip_pois + entries, update day, insert entries
+    const batch1: D1PreparedStatement[] = [];
+
+    batch1.push(
+      db.prepare('DELETE FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId),
+      db.prepare('DELETE FROM trip_entries WHERE day_id = ?').bind(dayId),
+      db.prepare('UPDATE trip_days SET date = ?, day_of_week = ?, label = ? WHERE id = ?')
+        .bind(body.date!, body.dayOfWeek!, body.label!, dayId),
+    );
+
+    const timeline = Array.isArray(body.timeline) ? body.timeline : [];
+    const ENTRIES_START = batch1.length;
+    for (let i = 0; i < timeline.length; i++) {
+      const e = timeline[i];
+      const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
+      batch1.push(
+        db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, maps, google_rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+          .bind(dayId, i, e.time ?? null, e.title ?? null, e.description ?? null,
+            e.maps ?? null, e.google_rating ?? null, e.note ?? null,
+            travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null),
+      );
+    }
+
     const batch1Results = await db.batch(batch1);
 
-    // Extract hotel id from RETURNING result
-    let hotelId: number | null = null;
-    if (HOTEL_IDX >= 0) {
-      const hotelRows = batch1Results[HOTEL_IDX].results as { id: number }[];
-      hotelId = hotelRows[0]?.id ?? null;
-    }
-
-    // Extract entry ids from RETURNING results
     const entryIds: number[] = [];
     for (let i = 0; i < timeline.length; i++) {
-      const entryRows = batch1Results[ENTRIES_START_IDX + i].results as { id: number }[];
-      entryIds.push(entryRows[0]?.id ?? 0);
+      const rows = batch1Results[ENTRIES_START + i].results as { id: number }[];
+      entryIds.push(rows[0]?.id ?? 0);
     }
 
-    // --- Batch 2: INSERT all restaurants + shopping using ids from Batch 1 ---
+    // Find-or-create pois + collect trip_pois inserts
     const batch2: D1PreparedStatement[] = [];
 
-    // Hotel shopping
-    if (body.hotel && hotelId !== null && Array.isArray(body.hotel.shopping)) {
-      for (const [idx, s] of (body.hotel.shopping as Record<string, unknown>[]).entries()) {
-        batch2.push(
-          db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, google_rating, maps, mapcode, source) VALUES ('hotel', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
-        );
+    // Hotel
+    if (body.hotel) {
+      const h = body.hotel;
+      const poiId = await findOrCreatePoi(db, {
+        name: (h.name as string) || '', type: 'hotel',
+        description: h.description as string, maps: h.maps as string,
+        lat: h.lat as number, lng: h.lng as number, source: 'ai',
+      });
+      batch2.push(
+        db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note, hours, checkout, breakfast_included, breakfast_note) VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?, ?)`)
+          .bind(poiId, id, dayId,
+            h.description as string ?? null, h.note as string ?? null, h.hours as string ?? null,
+            h.checkout as string ?? null, h.breakfast_included as number ?? null, h.breakfast_note as string ?? null),
+      );
+
+      // Hotel parking POIs
+      if (Array.isArray(h.parking)) {
+        for (const p of h.parking as Record<string, unknown>[]) {
+          const parkPoiId = await findOrCreatePoi(db, {
+            name: (p.name as string) || '停車場', type: 'parking',
+            description: p.price ? `費用：${p.price}` : null,
+            maps: p.maps as string, mapcode: p.mapcode as string,
+            lat: p.lat as number, lng: p.lng as number, source: 'ai',
+          });
+          batch2.push(
+            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note) VALUES (?, ?, 'hotel', ?, ?, ?)`)
+              .bind(parkPoiId, id, dayId, p.price ? `費用：${p.price}` : null, p.note as string ?? null),
+          );
+          // poi_relations: hotel → parking
+          batch2.push(
+            db.prepare(`INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type) VALUES (?, ?, 'parking')`)
+              .bind(poiId, parkPoiId),
+          );
+        }
+      }
+
+      // Hotel shopping
+      if (Array.isArray(h.shopping)) {
+        for (const [idx, s] of (h.shopping as Record<string, unknown>[]).entries()) {
+          const shopPoiId = await findOrCreatePoi(db, {
+            name: (s.name as string) || '', type: 'shopping',
+            google_rating: s.google_rating as number, maps: s.maps as string,
+            category: s.category as string, hours: s.hours as string, source: 'ai',
+          });
+          batch2.push(
+            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, sort_order, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?)`)
+              .bind(shopPoiId, id, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
+          );
+        }
       }
     }
 
@@ -282,19 +322,32 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const entryId = entryIds[i];
 
       if (Array.isArray(e.restaurants)) {
-        for (const r of e.restaurants as Record<string, unknown>[]) {
+        for (const [idx, r] of (e.restaurants as Record<string, unknown>[]).entries()) {
+          const poiId = await findOrCreatePoi(db, {
+            name: (r.name as string) || '', type: 'restaurant',
+            description: r.description as string, google_rating: r.google_rating as number,
+            maps: r.maps as string, category: r.category as string,
+            hours: r.hours as string, source: 'ai',
+          });
           batch2.push(
-            db.prepare("INSERT INTO restaurants (entry_id, name, category, hours, price, reservation, reservation_url, description, note, google_rating, maps, mapcode, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.google_rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null),
+            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, price, reservation, reservation_url) VALUES (?, ?, 'timeline', ?, ?, ?, ?, ?, ?, ?, ?)`)
+              .bind(poiId, id, entryId, dayId, idx,
+                r.description as string ?? null, r.note as string ?? null,
+                r.price as string ?? null, r.reservation as string ?? null, r.reservation_url as string ?? null),
           );
         }
       }
 
       if (Array.isArray(e.shopping)) {
-        for (const [sIdx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
+        for (const [idx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
+          const poiId = await findOrCreatePoi(db, {
+            name: (s.name as string) || '', type: 'shopping',
+            google_rating: s.google_rating as number, maps: s.maps as string,
+            category: s.category as string, hours: s.hours as string, source: 'ai',
+          });
           batch2.push(
-            db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, google_rating, maps, mapcode, source) VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
+            db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?, ?)`)
+              .bind(poiId, id, entryId, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
           );
         }
       }
@@ -302,13 +355,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     if (batch2.length > 0) await db.batch(batch2);
   } catch (err) {
-    // Snapshot already saved before batch; log additional error context
     await logAudit(db, {
-      tripId: id,
-      tableName: 'trip_days',
-      recordId: dayId,
-      action: 'update',
-      changedBy,
+      tripId: id, tableName: 'trip_days', recordId: dayId, action: 'update', changedBy,
       diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),
     });
     return json({ error: '儲存失敗，請稍後再試' }, 500);

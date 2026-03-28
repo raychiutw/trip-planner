@@ -59,13 +59,13 @@ src/
   components/trip/  Timeline  DayNav  Restaurant  Hotel  MapLinks  HourlyWeather  InfoPanel  QuickPanel  Footer ...
   components/shared/ Icon.tsx  Toast.tsx  RequestStepper.tsx  TriplineLogo.tsx  ErrorBoundary.tsx
   hooks/            useTrip.ts  useApi.ts  usePrintMode.ts  useDarkMode.ts
-  lib/              mapRow.ts  localStorage.ts  sanitize.ts  constants.ts  weather.ts  drivingStats.ts  appearance.ts
+  lib/              mapRow.ts  mapDay.ts  mergePoi.ts  localStorage.ts  sanitize.ts  constants.ts  weather.ts  drivingStats.ts  appearance.ts
   types/            trip.ts  api.ts
 css/                tokens.css（Tailwind CSS 4 @theme design tokens — 唯一 CSS 檔案）
 js/                 （舊版 vanilla JS，部分測試仍依賴，逐步移除中）
 functions/api/      _middleware.ts  _audit.ts  trips.ts  requests.ts  permissions.ts  my-trips.ts
                     trips/[id].ts  trips/[id]/days.ts  days/[num].ts  docs/[type].ts
-                    entries/[eid].ts  restaurants/[rid].ts  shopping/[sid].ts  ...
+                    entries/[eid].ts  entries/[eid]/trip-pois.ts  trip-pois/[tpid].ts  pois/[id].ts
 migrations/         0001_init.sql  0002_trips.sql
 scripts/            migrate-md-to-d1.js  tp-check.js  daily-report.js  dump-d1.js  memory-sync.sh
                     register-scheduler.ps1  unregister-scheduler.ps1  tp-request-scheduler.ps1
@@ -84,16 +84,18 @@ wrangler.toml       D1 database binding + pages_build_output_dir: dist
 
 ```
 D1 Tables:
-  trips           行程主表（id, name, owner, title, selfDrive, countries, ...）
-  days            天（trip_id FK, day_num, date, label, weather_json）
-  hotels          飯店（day_id FK, name, checkout, parking_json）
-  entries         時間軸項目（day_id FK, sort_order, time, title, maps, rating, travel_*）
-  restaurants     餐廳推薦（entry_id FK, name, category, hours, price, rating）
-  shopping        購物推薦（parent_type, parent_id, name, category, mustBuy）
-  trip_docs       附屬文件（trip_id, doc_type, content）— flights/checklist/backup/suggestions/emergency
-  audit_log       修改審計（trip_id, table_name, action, diff_json, snapshot）
-  requests        旅伴請求（trip_id, mode, title, body, reply, status）
-  permissions     權限（email, trip_id, role）
+  trips             行程主表（id, name, owner, title, self_drive, countries, ...）
+  trip_days         天（trip_id FK, day_num, date, day_of_week, label）
+  trip_entries      時間軸項目（day_id FK, sort_order, time, title, description, maps, google_rating, travel_*）
+  pois              POI master（type, name, description, lat, lng, google_rating, hours, ...）— AI 維護，user 不可直接改
+  trip_pois         行程 POI 引用（trip_id, poi_id, context, day_id, entry_id, 覆寫欄位 + 類型專屬欄位）
+  poi_relations     POI 關聯（poi_id, related_poi_id, relation_type）— 停車場↔飯店 多對多
+  trip_docs         附屬文件（trip_id, doc_type, content）— flights/checklist/backup/suggestions/emergency
+  audit_log         修改審計（trip_id, table_name, action, diff_json, snapshot）
+  trip_requests     旅伴請求（trip_id, mode, message, reply, status）
+  trip_permissions  權限（email, trip_id, role）
+  --- legacy（遷移後保留，不再使用）---
+  hotels_legacy / restaurants_legacy / shopping_legacy
 ```
 
 ## API 端點
@@ -103,17 +105,17 @@ D1 Tables:
   GET /api/trips                         行程列表
   GET /api/trips/:id                     行程 meta
   GET /api/trips/:id/days                所有天概要
-  GET /api/trips/:id/days/:num           完整一天（hotel + entries + restaurants + shopping）
+  GET /api/trips/:id/days/:num           完整一天（pois + trip_pois JOIN）
   GET /api/trips/:id/docs/:type          附屬文件
 
 需認證寫入（Zero Trust 成員或 Service Token）：
   PUT    /api/trips/:id                  更新 meta
-  PUT    /api/trips/:id/days/:num        覆寫整天
+  PUT    /api/trips/:id/days/:num        覆寫整天（find-or-create pois + insert trip_pois）
   PATCH  /api/trips/:id/entries/:eid     修改 entry
-  DELETE /api/trips/:id/entries/:eid     刪除 entry
-  POST   /api/trips/:id/entries/:eid/restaurants  新增餐廳
-  PATCH  /api/trips/:id/restaurants/:rid          修改餐廳
-  POST/PATCH/DELETE shopping 同理
+  DELETE /api/trips/:id/entries/:eid     刪除 entry（cascade delete trip_pois）
+  POST   /api/trips/:id/entries/:eid/trip-pois  新增 POI 到 entry
+  PATCH  /api/trips/:id/trip-pois/:tpid  修改 trip_pois（user 覆寫）
+  DELETE /api/trips/:id/trip-pois/:tpid  刪除 trip_pois 引用
   PUT    /api/trips/:id/docs/:type       更新文件
 
 旅伴請求（Access 認證）：
@@ -123,6 +125,7 @@ D1 Tables:
 
 管理（僅 admin）：
   GET/POST/DELETE /api/permissions       權限 CRUD
+  PATCH  /api/pois/:id                   修改 POI master（僅 admin）
   GET /api/trips/:id/audit               修改歷史
   POST /api/trips/:id/audit/:aid/rollback 回滾
 ```

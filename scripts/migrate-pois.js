@@ -1,24 +1,20 @@
 #!/usr/bin/env node
 /**
- * migrate-pois.js — Migrate hotels/restaurants/shopping → pois + trip_pois
+ * migrate-pois.js — Migrate hotels/restaurants/shopping → pois + trip_pois (V2 Schema)
  *
- * Reads from D1 (or backup JSON with --from-backup), deduplicates by normalized
- * name, inserts into `pois` and `trip_pois`, then renames old tables to *_legacy.
+ * V2 changes vs V1:
+ * - pois: lat/lng REAL columns (no JSON), no attrs/meta_json
+ * - trip_pois: flattened type-specific columns (checkout, price, must_buy, etc.)
+ * - poi_relations: parking↔hotel many-to-many at master level
+ * - Parking with name+location → separate pois(type='parking') + poi_relations
  *
  * Usage:
  *   node scripts/migrate-pois.js [--dry-run] [--local] [--from-backup <dir>]
- *
- * Flags:
- *   --dry-run      Print what would be done without writing to D1
- *   --local        Use `wrangler d1 execute --local` instead of --remote
- *   --from-backup  Read source data from backup JSON files instead of D1
- *                  e.g. --from-backup backups/2026-03-28T01-36-39
  */
 
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 // ---------------------------------------------------------------------------
 // CLI flags
@@ -32,7 +28,7 @@ const BACKUP_DIR = backupIdx !== -1 ? path.resolve(args[backupIdx + 1]) : null;
 const DB_NAME = 'trip-planner-db';
 const ENV_FLAG = LOCAL ? '--local' : '--remote';
 
-console.log(`migrate-pois.js`);
+console.log('migrate-pois.js (V2 Schema)');
 console.log(`  dry-run:  ${DRY_RUN}`);
 console.log(`  target:   ${LOCAL ? 'local' : 'remote'}`);
 console.log(`  source:   ${BACKUP_DIR ? `backup (${BACKUP_DIR})` : 'D1 live'}`);
@@ -42,7 +38,6 @@ console.log('');
 // Helpers: D1 interaction
 // ---------------------------------------------------------------------------
 
-/** Execute a SQL command against D1 and return the parsed results array. */
 function d1Query(sql) {
   const escaped = sql.replace(/"/g, '\\"');
   const cmd = `npx wrangler d1 execute ${DB_NAME} ${ENV_FLAG} --command "${escaped}" --json`;
@@ -53,21 +48,6 @@ function d1Query(sql) {
   return parsed[0]?.results || [];
 }
 
-/** Execute a SQL command against D1 (no return value needed). */
-function d1Exec(sql) {
-  if (DRY_RUN) {
-    console.log(`  [DRY-RUN SQL] ${sql.slice(0, 120)}${sql.length > 120 ? '...' : ''}`);
-    return;
-  }
-  const escaped = sql.replace(/"/g, '\\"');
-  const cmd = `npx wrangler d1 execute ${DB_NAME} ${ENV_FLAG} --command "${escaped}"`;
-  execSync(cmd, { encoding: 'utf8', timeout: 60000 });
-}
-
-/**
- * Execute multiple SQL statements in a single wrangler call using --file.
- * Writes statements to a temp file, executes, then cleans up.
- */
 function d1ExecBatch(statements) {
   if (statements.length === 0) return;
   if (DRY_RUN) {
@@ -108,82 +88,61 @@ function readTable(tableName) {
 // Helpers: name normalization for dedup
 // ---------------------------------------------------------------------------
 
-/**
- * Normalize a name for dedup comparison:
- *   1. Full-width alphanumeric → half-width (Ａ→A, １→1)
- *   2. Full-width space (U+3000) → half-width space
- *   3. Full-width punctuation → half-width equivalents
- *   4. Collapse multiple spaces into one, trim
- *   5. Lowercase
- *   6. Strip trailing 「店」 for comparison only
- */
 function normalizeName(name) {
   if (!name) return '';
   let s = name;
-
-  // Full-width alphanumeric → half-width (U+FF01..U+FF5E → U+0021..U+007E)
+  // Full-width alphanumeric → half-width
   s = s.replace(/[\uFF01-\uFF5E]/g, (ch) =>
     String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)
   );
-
   // Full-width space → half-width
   s = s.replace(/\u3000/g, ' ');
-
   // Collapse whitespace
   s = s.replace(/\s+/g, ' ').trim();
-
   // Lowercase
   s = s.toLowerCase();
-
   // Strip trailing 「店」 for comparison
   s = s.replace(/店$/, '');
-
   return s;
 }
 
 // ---------------------------------------------------------------------------
-// Helpers: merge logic
+// Helpers: SQL escaping + merge
 // ---------------------------------------------------------------------------
 
-/** Pick the more complete (non-null, non-empty) value between two. */
 function pickBest(a, b) {
   if (a === null || a === undefined || a === '') return b;
   if (b === null || b === undefined || b === '') return a;
-  // Prefer longer strings (more detail)
-  if (typeof a === 'string' && typeof b === 'string') {
-    return a.length >= b.length ? a : b;
-  }
+  if (typeof a === 'string' && typeof b === 'string') return a.length >= b.length ? a : b;
   return a;
 }
 
-/** Generate a UUID v4 for POI ids. */
-function uuid() {
-  return crypto.randomUUID();
-}
-
-/** Escape a string for SQL single-quote literals. */
 function sqlStr(val) {
   if (val === null || val === undefined) return 'NULL';
-  const s = String(val).replace(/'/g, "''");
-  return `'${s}'`;
+  return `'${String(val).replace(/'/g, "''")}'`;
 }
 
-/** Escape a number or null. */
 function sqlNum(val) {
   if (val === null || val === undefined) return 'NULL';
   return String(val);
 }
 
+function parseJson(val) {
+  if (!val) return null;
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch { return null; }
+}
+
 // ---------------------------------------------------------------------------
-// Build lookup maps
+// Read source data
 // ---------------------------------------------------------------------------
 
 console.log('Reading source data...');
 const hotels = readTable('hotels');
 const restaurants = readTable('restaurants');
 const shopping = readTable('shopping');
-const days = readTable('days');
-const entries = readTable('entries');
+const days = readTable(BACKUP_DIR ? 'days' : 'trip_days');
+const entries = readTable(BACKUP_DIR ? 'entries' : 'trip_entries');
 
 console.log(`  hotels:      ${hotels.length} rows`);
 console.log(`  restaurants: ${restaurants.length} rows`);
@@ -192,422 +151,394 @@ console.log(`  days:        ${days.length} rows`);
 console.log(`  entries:     ${entries.length} rows`);
 console.log('');
 
-// day_id → { trip_id, day_num }
+// Build lookup maps
 const dayMap = new Map();
-for (const d of days) {
-  dayMap.set(d.id, { trip_id: d.trip_id, day_num: d.day_num });
-}
+for (const d of days) dayMap.set(d.id, { trip_id: d.trip_id, day_num: d.day_num });
 
-// entry_id → { day_id }
 const entryMap = new Map();
-for (const e of entries) {
-  entryMap.set(e.id, { day_id: e.day_id });
-}
+for (const e of entries) entryMap.set(e.id, { day_id: e.day_id });
 
 // ---------------------------------------------------------------------------
-// Phase 1: Build POI candidates grouped by (type, normalizedName)
+// Phase 1: Build POI groups by (type, normalizedName, maps)
+// Dedup key: (type, normalizedName, maps) — 審查 E5
 // ---------------------------------------------------------------------------
+
 console.log('Building POI candidates...');
 
-/**
- * Each candidate: {
- *   type: 'hotel' | 'restaurant' | 'shopping',
- *   name: string (original, best version),
- *   normalizedName: string,
- *   category: string | null,
- *   hours: string | null,
- *   description: string | null,
- *   rating: number | null,
- *   maps: string | null,
- *   mapcode: string | null,
- *   location_json: string | null,
- *   meta_json: object,
- *   source: string | null,
- *   originals: [ { ...original row data, _context } ]
- * }
- */
-const poiGroups = new Map(); // key: `${type}::${normalizedName}` → candidate
+const poiGroups = new Map();
 
-function getGroupKey(type, name) {
-  return `${type}::${normalizeName(name)}`;
+function getGroupKey(type, name, maps) {
+  const normName = normalizeName(name);
+  // Include maps URL in key to distinguish same-name different-location POIs
+  const mapsKey = maps ? maps.replace(/https?:\/\//g, '').toLowerCase() : '';
+  return `${type}::${normName}::${mapsKey}`;
 }
 
 // --- Hotels ---
 for (const h of hotels) {
-  const key = getGroupKey('hotel', h.name);
+  const key = getGroupKey('hotel', h.name, h.maps);
   const dayInfo = dayMap.get(h.day_id);
-  if (!dayInfo) {
-    console.warn(`  Warning: hotel id=${h.id} has unknown day_id=${h.day_id}, skipping`);
-    continue;
-  }
+  if (!dayInfo) { console.warn(`  Skip hotel id=${h.id}: unknown day_id=${h.day_id}`); continue; }
 
-  // Parse breakfast JSON if it's a string
-  let breakfast = null;
-  if (h.breakfast) {
-    try { breakfast = typeof h.breakfast === 'string' ? JSON.parse(h.breakfast) : h.breakfast; } catch { breakfast = null; }
-  }
-
-  // Parse parking_json if it's a string
-  let parking = null;
-  if (h.parking_json) {
-    try { parking = typeof h.parking_json === 'string' ? JSON.parse(h.parking_json) : h.parking_json; } catch { parking = null; }
-  }
-
-  // Parse location_json
-  let location = null;
-  if (h.location_json) {
-    try { location = typeof h.location_json === 'string' ? JSON.parse(h.location_json) : h.location_json; } catch { location = null; }
-  }
-
-  const meta = {
-    checkout: h.checkout || null,
-    breakfast: breakfast,
-    parking: parking,
-    booking_source: h.source === 'ai' ? null : h.source,
-  };
+  const breakfast = parseJson(h.breakfast);
+  const parking = parseJson(BACKUP_DIR ? h.parking_json : h.parking);
+  const location = parseJson(BACKUP_DIR ? h.location_json : h.location);
 
   const original = {
-    _source_table: 'hotels',
-    _source_id: h.id,
-    _context: 'hotel',
-    _trip_id: dayInfo.trip_id,
-    _day_id: h.day_id,
-    _entry_id: null,
-    _sort_order: null,
+    _table: 'hotels', _id: h.id, _context: 'hotel',
+    _trip_id: dayInfo.trip_id, _day_id: h.day_id, _entry_id: null, _sort_order: null,
     name: h.name,
-    description: h.details || null,
+    description: (BACKUP_DIR ? h.details : h.description) || null,
     note: h.note || null,
-    meta,
-    location,
+    checkout: h.checkout || null,
+    breakfast_included: breakfast?.included != null ? (breakfast.included ? 1 : 0) : null,
+    breakfast_note: breakfast?.note || null,
+    parking, location,
+    google_rating: null, maps: h.maps || null, mapcode: h.mapcode || null,
+    category: null, hours: null, source: h.source || null,
   };
 
   if (!poiGroups.has(key)) {
+    const lat = location && Array.isArray(location) ? location[0]?.lat : location?.lat;
+    const lng = location && Array.isArray(location) ? location[0]?.lng : location?.lng;
     poiGroups.set(key, {
-      type: 'hotel',
-      name: h.name,
-      normalizedName: normalizeName(h.name),
-      category: null,
-      hours: null,
-      description: h.details || null,
-      rating: null,
-      maps: null,
-      mapcode: null,
-      location_json: h.location_json || null,
-      meta_json: meta,
-      source: h.source || null,
-      originals: [original],
+      type: 'hotel', name: h.name, normalizedName: normalizeName(h.name),
+      description: original.description, note: null,
+      category: null, hours: null, google_rating: null,
+      maps: h.maps || null, mapcode: h.mapcode || null,
+      lat: lat ?? null, lng: lng ?? null,
+      source: h.source || null, originals: [original],
     });
   } else {
-    const group = poiGroups.get(key);
-    // Merge: prefer most complete
-    group.name = pickBest(group.name, h.name);
-    group.description = pickBest(group.description, h.details);
-    group.location_json = pickBest(group.location_json, h.location_json);
-    group.source = pickBest(group.source, h.source);
-    // Merge meta fields
-    group.meta_json.checkout = pickBest(group.meta_json.checkout, meta.checkout);
-    group.meta_json.breakfast = pickBest(group.meta_json.breakfast, meta.breakfast);
-    group.meta_json.parking = pickBest(group.meta_json.parking, meta.parking);
-    group.meta_json.booking_source = pickBest(group.meta_json.booking_source, meta.booking_source);
-    group.originals.push(original);
+    const g = poiGroups.get(key);
+    g.name = pickBest(g.name, h.name);
+    g.description = pickBest(g.description, original.description);
+    g.source = pickBest(g.source, h.source);
+    g.originals.push(original);
   }
 }
 
 // --- Restaurants ---
 for (const r of restaurants) {
-  const key = getGroupKey('restaurant', r.name);
+  const key = getGroupKey('restaurant', r.name, r.maps);
   const entryInfo = entryMap.get(r.entry_id);
-  if (!entryInfo) {
-    console.warn(`  Warning: restaurant id=${r.id} has unknown entry_id=${r.entry_id}, skipping`);
-    continue;
-  }
+  if (!entryInfo) { console.warn(`  Skip restaurant id=${r.id}: unknown entry_id=${r.entry_id}`); continue; }
   const dayInfo = dayMap.get(entryInfo.day_id);
-  if (!dayInfo) {
-    console.warn(`  Warning: restaurant id=${r.id} entry_id=${r.entry_id} has unknown day_id=${entryInfo.day_id}, skipping`);
-    continue;
-  }
-
-  const meta = {
-    price: r.price || null,
-    reservation: r.reservation || null,
-    reservation_url: r.reservation_url || null,
-  };
+  if (!dayInfo) { console.warn(`  Skip restaurant id=${r.id}: unknown day_id=${entryInfo.day_id}`); continue; }
 
   const original = {
-    _source_table: 'restaurants',
-    _source_id: r.id,
-    _context: 'timeline',
-    _trip_id: dayInfo.trip_id,
-    _day_id: entryInfo.day_id,
-    _entry_id: r.entry_id,
-    _sort_order: r.sort_order,
+    _table: 'restaurants', _id: r.id, _context: 'timeline',
+    _trip_id: dayInfo.trip_id, _day_id: entryInfo.day_id, _entry_id: r.entry_id, _sort_order: r.sort_order,
     name: r.name,
-    description: r.description || null,
-    note: r.note || null,
-    meta,
-    location: null,
+    description: r.description || null, note: r.note || null,
+    price: r.price || null, reservation: r.reservation || null,
+    reservation_url: r.reservation_url || null,
+    google_rating: (BACKUP_DIR ? r.rating : r.google_rating) ?? null,
+    maps: r.maps || null, mapcode: r.mapcode || null,
+    category: r.category || null, hours: r.hours || null, source: r.source || null,
   };
 
   if (!poiGroups.has(key)) {
     poiGroups.set(key, {
-      type: 'restaurant',
-      name: r.name,
-      normalizedName: normalizeName(r.name),
-      category: r.category || null,
-      hours: r.hours || null,
-      description: r.description || null,
-      rating: r.rating ?? null,
-      maps: r.maps || null,
-      mapcode: r.mapcode || null,
-      location_json: null,
-      meta_json: meta,
-      source: r.source || null,
-      originals: [original],
+      type: 'restaurant', name: r.name, normalizedName: normalizeName(r.name),
+      description: original.description, note: null,
+      category: r.category || null, hours: r.hours || null,
+      google_rating: original.google_rating,
+      maps: r.maps || null, mapcode: r.mapcode || null,
+      lat: null, lng: null,
+      source: r.source || null, originals: [original],
     });
   } else {
-    const group = poiGroups.get(key);
-    group.name = pickBest(group.name, r.name);
-    group.category = pickBest(group.category, r.category);
-    group.hours = pickBest(group.hours, r.hours);
-    group.description = pickBest(group.description, r.description);
-    group.rating = pickBest(group.rating, r.rating);
-    group.maps = pickBest(group.maps, r.maps);
-    group.mapcode = pickBest(group.mapcode, r.mapcode);
-    group.source = pickBest(group.source, r.source);
-    group.meta_json.price = pickBest(group.meta_json.price, meta.price);
-    group.meta_json.reservation = pickBest(group.meta_json.reservation, meta.reservation);
-    group.meta_json.reservation_url = pickBest(group.meta_json.reservation_url, meta.reservation_url);
-    group.originals.push(original);
+    const g = poiGroups.get(key);
+    g.name = pickBest(g.name, r.name);
+    g.category = pickBest(g.category, r.category);
+    g.hours = pickBest(g.hours, r.hours);
+    g.description = pickBest(g.description, original.description);
+    g.google_rating = pickBest(g.google_rating, original.google_rating);
+    g.maps = pickBest(g.maps, r.maps);
+    g.mapcode = pickBest(g.mapcode, r.mapcode);
+    g.originals.push(original);
   }
 }
 
 // --- Shopping ---
 for (const s of shopping) {
-  const key = getGroupKey('shopping', s.name);
+  const key = getGroupKey('shopping', s.name, s.maps);
 
-  // Shopping can be parented to entry or hotel (parent_type: 'entry' | 'hotel')
-  let tripId = null;
-  let dayId = null;
-  let entryId = null;
-
+  let tripId = null, dayId = null, entryId = null;
   if (s.parent_type === 'entry') {
     const entryInfo = entryMap.get(s.parent_id);
-    if (!entryInfo) {
-      console.warn(`  Warning: shopping id=${s.id} has unknown entry parent_id=${s.parent_id}, skipping`);
-      continue;
-    }
+    if (!entryInfo) { console.warn(`  Skip shopping id=${s.id}: unknown entry parent_id=${s.parent_id}`); continue; }
     const dayInfo = dayMap.get(entryInfo.day_id);
-    if (!dayInfo) {
-      console.warn(`  Warning: shopping id=${s.id} parent entry day_id=${entryInfo.day_id} unknown, skipping`);
-      continue;
-    }
-    tripId = dayInfo.trip_id;
-    dayId = entryInfo.day_id;
-    entryId = s.parent_id;
+    if (!dayInfo) { console.warn(`  Skip shopping id=${s.id}: unknown day_id`); continue; }
+    tripId = dayInfo.trip_id; dayId = entryInfo.day_id; entryId = s.parent_id;
   } else if (s.parent_type === 'hotel') {
-    // Hotel-parented shopping: find hotel's day → trip
-    // parent_id references hotels.id; we need to find the hotel's day_id
     const parentHotel = hotels.find(h => h.id === s.parent_id);
-    if (!parentHotel) {
-      console.warn(`  Warning: shopping id=${s.id} has unknown hotel parent_id=${s.parent_id}, skipping`);
-      continue;
-    }
+    if (!parentHotel) { console.warn(`  Skip shopping id=${s.id}: unknown hotel parent_id=${s.parent_id}`); continue; }
     const dayInfo = dayMap.get(parentHotel.day_id);
-    if (!dayInfo) {
-      console.warn(`  Warning: shopping id=${s.id} hotel parent day_id=${parentHotel.day_id} unknown, skipping`);
-      continue;
-    }
-    tripId = dayInfo.trip_id;
-    dayId = parentHotel.day_id;
-    entryId = null;
-  } else {
-    console.warn(`  Warning: shopping id=${s.id} has unknown parent_type=${s.parent_type}, skipping`);
-    continue;
-  }
-
-  const meta = {
-    must_buy: s.must_buy || null,
-  };
+    if (!dayInfo) { console.warn(`  Skip shopping id=${s.id}: unknown day_id`); continue; }
+    tripId = dayInfo.trip_id; dayId = parentHotel.day_id;
+  } else { console.warn(`  Skip shopping id=${s.id}: unknown parent_type=${s.parent_type}`); continue; }
 
   const original = {
-    _source_table: 'shopping',
-    _source_id: s.id,
-    _context: 'shopping',
-    _trip_id: tripId,
-    _day_id: dayId,
-    _entry_id: entryId,
-    _sort_order: s.sort_order,
-    name: s.name,
-    description: null,
-    note: s.note || null,
-    meta,
-    location: null,
+    _table: 'shopping', _id: s.id, _context: 'shopping',
+    _trip_id: tripId, _day_id: dayId, _entry_id: entryId, _sort_order: s.sort_order,
+    name: s.name, description: null, note: s.note || null,
+    must_buy: s.must_buy || null,
+    google_rating: (BACKUP_DIR ? s.rating : s.google_rating) ?? null,
+    maps: s.maps || null, mapcode: s.mapcode || null,
+    category: s.category || null, hours: s.hours || null, source: s.source || null,
   };
 
   if (!poiGroups.has(key)) {
     poiGroups.set(key, {
-      type: 'shopping',
-      name: s.name,
-      normalizedName: normalizeName(s.name),
-      category: s.category || null,
-      hours: s.hours || null,
-      description: null,
-      rating: s.rating ?? null,
-      maps: s.maps || null,
-      mapcode: s.mapcode || null,
-      location_json: null,
-      meta_json: meta,
-      source: s.source || null,
-      originals: [original],
+      type: 'shopping', name: s.name, normalizedName: normalizeName(s.name),
+      description: null, note: null,
+      category: s.category || null, hours: s.hours || null,
+      google_rating: original.google_rating,
+      maps: s.maps || null, mapcode: s.mapcode || null,
+      lat: null, lng: null,
+      source: s.source || null, originals: [original],
     });
   } else {
-    const group = poiGroups.get(key);
-    group.name = pickBest(group.name, s.name);
-    group.category = pickBest(group.category, s.category);
-    group.hours = pickBest(group.hours, s.hours);
-    group.rating = pickBest(group.rating, s.rating);
-    group.maps = pickBest(group.maps, s.maps);
-    group.mapcode = pickBest(group.mapcode, s.mapcode);
-    group.source = pickBest(group.source, s.source);
-    group.meta_json.must_buy = pickBest(group.meta_json.must_buy, meta.must_buy);
-    group.originals.push(original);
+    const g = poiGroups.get(key);
+    g.name = pickBest(g.name, s.name);
+    g.category = pickBest(g.category, s.category);
+    g.hours = pickBest(g.hours, s.hours);
+    g.google_rating = pickBest(g.google_rating, original.google_rating);
+    g.maps = pickBest(g.maps, s.maps);
+    g.mapcode = pickBest(g.mapcode, s.mapcode);
+    g.originals.push(original);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Phase 2: Generate SQL statements
+// Phase 2: Generate SQL — pois + trip_pois + poi_relations + parking
 // ---------------------------------------------------------------------------
-console.log('Generating SQL...');
 
-const totalOriginals = hotels.length + restaurants.length + shopping.length;
-const totalPois = poiGroups.size;
-const totalDuplicatesMerged = totalOriginals - totalPois;
+console.log('Generating SQL...');
 
 const poiInserts = [];
 const tripPoiInserts = [];
+const poiRelationInserts = [];
 
-let tripPoiCount = 0;
+// Assign sequential IDs (table is empty, AUTOINCREMENT starts from 1)
+let nextPoiId = 1;
+const poiIdMap = new Map(); // groupKey → poiId
 
-for (const [, group] of poiGroups) {
-  const poiId = uuid();
-
-  // Build meta_json — remove null-valued keys for cleanliness
-  const metaClean = {};
-  for (const [k, v] of Object.entries(group.meta_json)) {
-    if (v !== null && v !== undefined) {
-      metaClean[k] = v;
-    }
-  }
-  const metaJsonStr = Object.keys(metaClean).length > 0 ? JSON.stringify(metaClean) : null;
-
-  // Parse location_json to extract lat/lng for the POI master
-  let lat = null;
-  let lng = null;
-  if (group.location_json) {
-    try {
-      const locs = typeof group.location_json === 'string'
-        ? JSON.parse(group.location_json)
-        : group.location_json;
-      if (Array.isArray(locs) && locs.length > 0) {
-        lat = locs[0].lat ?? null;
-        lng = locs[0].lng ?? null;
-      }
-    } catch { /* ignore parse errors */ }
-  }
+// First pass: create all POI groups
+for (const [key, group] of poiGroups) {
+  const poiId = nextPoiId++;
+  poiIdMap.set(key, poiId);
 
   poiInserts.push(
-    `INSERT INTO pois (id, type, name, category, hours, description, rating, maps, mapcode, lat, lng, meta_json, source) VALUES (` +
-    `${sqlStr(poiId)}, ${sqlStr(group.type)}, ${sqlStr(group.name)}, ${sqlStr(group.category)}, ` +
-    `${sqlStr(group.hours)}, ${sqlStr(group.description)}, ${sqlNum(group.rating)}, ` +
-    `${sqlStr(group.maps)}, ${sqlStr(group.mapcode)}, ${sqlNum(lat)}, ${sqlNum(lng)}, ` +
-    `${sqlStr(metaJsonStr)}, ${sqlStr(group.source)});`
+    `INSERT INTO pois (id, type, name, description, note, hours, google_rating, category, maps, mapcode, lat, lng, source) VALUES (` +
+    `${poiId}, ${sqlStr(group.type)}, ${sqlStr(group.name)}, ${sqlStr(group.description)}, ` +
+    `NULL, ${sqlStr(group.hours)}, ${sqlNum(group.google_rating)}, ${sqlStr(group.category)}, ` +
+    `${sqlStr(group.maps)}, ${sqlStr(group.mapcode)}, ${sqlNum(group.lat)}, ${sqlNum(group.lng)}, ${sqlStr(group.source)});`
   );
+}
 
-  // For each original record, create a trip_pois row
+// Second pass: parking splitting + poi_relations
+// 審查 E6: parking with name + (lat/lng or maps) → separate POI
+const parkingPoiIds = new Map(); // hotelPoiId → [parkingPoiId]
+
+for (const [key, group] of poiGroups) {
+  if (group.type !== 'hotel') continue;
+  const hotelPoiId = poiIdMap.get(key);
+
   for (const orig of group.originals) {
-    tripPoiCount++;
+    if (!orig.parking) continue;
+    const p = orig.parking;
+    const hasName = !!p.name || !!p.info;
+    const hasLocation = (p.lat && p.lng) || p.maps || p.mapcode;
 
-    // Compute description override: only set if different from master
-    const descOverride = (orig.description && orig.description !== group.description)
-      ? orig.description
-      : null;
+    if (hasName && hasLocation) {
+      // Situation A: create independent parking POI
+      const parkingName = p.name || p.info || '停車場';
+      const parkingKey = getGroupKey('parking', parkingName, p.maps);
 
-    // Compute note override (always per-trip, so include if non-empty)
-    const noteOverride = orig.note || null;
+      if (!poiIdMap.has(parkingKey)) {
+        const parkingId = nextPoiId++;
+        poiIdMap.set(parkingKey, parkingId);
 
-    // Compute meta override: fields that differ from master
-    const metaOverride = {};
-    if (orig.meta) {
-      for (const [k, v] of Object.entries(orig.meta)) {
-        if (v === null || v === undefined) continue;
-        const masterVal = group.meta_json[k];
-        // Compare JSON-serialized for objects
-        const vStr = typeof v === 'object' ? JSON.stringify(v) : String(v);
-        const mStr = masterVal && typeof masterVal === 'object' ? JSON.stringify(masterVal) : String(masterVal ?? '');
-        if (vStr !== mStr) {
-          metaOverride[k] = v;
-        }
+        poiInserts.push(
+          `INSERT INTO pois (id, type, name, description, note, maps, mapcode, lat, lng, source) VALUES (` +
+          `${parkingId}, 'parking', ${sqlStr(parkingName)}, ${sqlStr(p.price ? `費用：${p.price}` : null)}, ` +
+          `${sqlStr(p.note || null)}, ${sqlStr(p.maps || null)}, ${sqlStr(p.mapcode || null)}, ` +
+          `${sqlNum(p.lat || null)}, ${sqlNum(p.lng || null)}, 'ai');`
+        );
+
+        // poi_relations: hotel → parking
+        poiRelationInserts.push(
+          `INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type, note) VALUES (` +
+          `${hotelPoiId}, ${parkingId}, 'parking', ${sqlStr(p.note || null)});`
+        );
+      } else {
+        // Parking POI already exists (dedup), just add relation
+        const existingParkingId = poiIdMap.get(parkingKey);
+        poiRelationInserts.push(
+          `INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type, note) VALUES (` +
+          `${hotelPoiId}, ${existingParkingId}, 'parking', ${sqlStr(p.note || null)});`
+        );
       }
     }
-    const metaOverrideStr = Object.keys(metaOverride).length > 0 ? JSON.stringify(metaOverride) : null;
+    // Situation B: parking without name/location → will be in hotel description
+    // (handled by skills when regenerating descriptions)
+  }
+}
+
+// Third pass: trip_pois with flattened type-specific columns
+for (const [key, group] of poiGroups) {
+  const poiId = poiIdMap.get(key);
+
+  for (const orig of group.originals) {
+    // Description override: only if different from master
+    const descOverride = (orig.description && orig.description !== group.description)
+      ? orig.description : null;
+
+    // Build INSERT based on context
+    const baseCols = 'poi_id, trip_id, context, day_id, entry_id, sort_order, description, note, hours';
+    const baseVals = `${poiId}, ${sqlStr(orig._trip_id)}, ${sqlStr(orig._context)}, ` +
+      `${sqlNum(orig._day_id)}, ${sqlNum(orig._entry_id)}, ${sqlNum(orig._sort_order)}, ` +
+      `${sqlStr(descOverride)}, ${sqlStr(orig.note)}, ${sqlStr(orig.hours || null)}`;
+
+    if (group.type === 'hotel') {
+      tripPoiInserts.push(
+        `INSERT INTO trip_pois (${baseCols}, checkout, breakfast_included, breakfast_note) VALUES (` +
+        `${baseVals}, ${sqlStr(orig.checkout)}, ${sqlNum(orig.breakfast_included)}, ${sqlStr(orig.breakfast_note)});`
+      );
+    } else if (group.type === 'restaurant') {
+      tripPoiInserts.push(
+        `INSERT INTO trip_pois (${baseCols}, price, reservation, reservation_url) VALUES (` +
+        `${baseVals}, ${sqlStr(orig.price)}, ${sqlStr(orig.reservation)}, ${sqlStr(orig.reservation_url)});`
+      );
+    } else if (group.type === 'shopping') {
+      tripPoiInserts.push(
+        `INSERT INTO trip_pois (${baseCols}, must_buy) VALUES (` +
+        `${baseVals}, ${sqlStr(orig.must_buy)});`
+      );
+    }
+  }
+}
+
+// Also create trip_pois for parking POIs that were split out
+for (const [key, group] of poiGroups) {
+  if (group.type !== 'hotel') continue;
+  for (const orig of group.originals) {
+    if (!orig.parking) continue;
+    const p = orig.parking;
+    const hasName = !!p.name || !!p.info;
+    const hasLocation = (p.lat && p.lng) || p.maps || p.mapcode;
+    if (!hasName || !hasLocation) continue;
+
+    const parkingName = p.name || p.info || '停車場';
+    const parkingKey = getGroupKey('parking', parkingName, p.maps);
+    const parkingPoiId = poiIdMap.get(parkingKey);
+    if (!parkingPoiId) continue;
 
     tripPoiInserts.push(
-      `INSERT INTO trip_pois (poi_id, trip_id, context, day_id, entry_id, sort_order, description, note, meta_json) VALUES (` +
-      `${sqlStr(poiId)}, ${sqlStr(orig._trip_id)}, ${sqlStr(orig._context)}, ` +
-      `${sqlNum(orig._day_id)}, ${sqlNum(orig._entry_id)}, ${sqlNum(orig._sort_order)}, ` +
-      `${sqlStr(descOverride)}, ${sqlStr(noteOverride)}, ${sqlStr(metaOverrideStr)});`
+      `INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note) VALUES (` +
+      `${parkingPoiId}, ${sqlStr(orig._trip_id)}, 'hotel', ${sqlNum(orig._day_id)}, ` +
+      `${sqlStr(p.price ? `費用：${p.price}` : null)}, ${sqlStr(p.note || null)});`
     );
   }
 }
 
-// Rename old tables
-const renameStatements = [
-  `ALTER TABLE hotels RENAME TO hotels_legacy;`,
-  `ALTER TABLE restaurants RENAME TO restaurants_legacy;`,
-  `ALTER TABLE shopping RENAME TO shopping_legacy;`,
-];
-
-// ---------------------------------------------------------------------------
-// Phase 3: Execute
-// ---------------------------------------------------------------------------
-console.log('');
-console.log('=== Migration Summary ===');
-console.log(`  POIs to create:       ${totalPois}`);
-console.log(`  trip_pois to create:  ${tripPoiCount}`);
-console.log(`  Duplicates merged:    ${totalDuplicatesMerged}`);
-console.log(`  Tables to rename:     hotels → hotels_legacy, restaurants → restaurants_legacy, shopping → shopping_legacy`);
-console.log('');
-
-if (DRY_RUN) {
-  console.log('[DRY-RUN MODE] No changes will be written to D1.\n');
+// Rename old tables (last step — 審查 E8)
+// Skip if already renamed (idempotent)
+const renameStatements = [];
+if (!DRY_RUN) {
+  try {
+    d1Query('SELECT 1 FROM hotels LIMIT 1');
+    renameStatements.push('ALTER TABLE hotels RENAME TO hotels_legacy;');
+  } catch { console.log('  hotels already renamed to _legacy, skipping'); }
+  try {
+    d1Query('SELECT 1 FROM restaurants LIMIT 1');
+    renameStatements.push('ALTER TABLE restaurants RENAME TO restaurants_legacy;');
+  } catch { console.log('  restaurants already renamed to _legacy, skipping'); }
+  try {
+    d1Query('SELECT 1 FROM shopping LIMIT 1');
+    renameStatements.push('ALTER TABLE shopping RENAME TO shopping_legacy;');
+  } catch { console.log('  shopping already renamed to _legacy, skipping'); }
 }
 
-// Show dedup details
+// ---------------------------------------------------------------------------
+// Phase 3: Execute with verification (審查 E8)
+// ---------------------------------------------------------------------------
+
+const totalOriginals = hotels.length + restaurants.length + shopping.length;
+const totalPois = poiInserts.length;
+const totalTripPois = tripPoiInserts.length;
+const totalRelations = poiRelationInserts.length;
+const totalDuplicatesMerged = totalOriginals - [...poiGroups.values()].reduce((sum, g) => sum + g.originals.length, 0);
+
+console.log('');
+console.log('=== Migration Summary ===');
+console.log(`  Source records:      ${totalOriginals} (${hotels.length} hotels, ${restaurants.length} restaurants, ${shopping.length} shopping)`);
+console.log(`  POIs to create:      ${totalPois} (${totalDuplicatesMerged < 0 ? 0 : totalDuplicatesMerged} duplicates merged)`);
+console.log(`  trip_pois to create: ${totalTripPois}`);
+console.log(`  poi_relations:       ${totalRelations}`);
+console.log(`  Tables to rename:    hotels, restaurants, shopping → *_legacy`);
+console.log('');
+
+// Dedup details
 console.log('--- Dedup details ---');
-for (const [key, group] of poiGroups) {
+let dedupCount = 0;
+for (const [, group] of poiGroups) {
   if (group.originals.length > 1) {
+    dedupCount++;
     const trips = [...new Set(group.originals.map(o => o._trip_id))];
     console.log(`  "${group.name}" (${group.type}): ${group.originals.length} records → 1 POI (trips: ${trips.join(', ')})`);
   }
 }
+if (dedupCount === 0) console.log('  (no duplicates found)');
 console.log('');
 
-// Execute in order: pois first, then trip_pois, then renames
-console.log('Step 1/3: Inserting POIs...');
-d1ExecBatch(poiInserts);
-console.log(`  ${DRY_RUN ? 'Would insert' : 'Inserted'} ${poiInserts.length} POIs`);
-
-console.log('Step 2/3: Inserting trip_pois...');
-d1ExecBatch(tripPoiInserts);
-console.log(`  ${DRY_RUN ? 'Would insert' : 'Inserted'} ${tripPoiInserts.length} trip_pois`);
-
-console.log('Step 3/3: Renaming old tables...');
-d1ExecBatch(renameStatements);
-console.log(`  ${DRY_RUN ? 'Would rename' : 'Renamed'} hotels, restaurants, shopping → *_legacy`);
-
-console.log('');
-console.log('=== Done! ===');
-console.log(`  ${totalPois} pois created, ${tripPoiCount} trip_pois created, ${totalDuplicatesMerged} duplicates merged`);
 if (DRY_RUN) {
-  console.log('  (dry-run: nothing was actually written)');
+  console.log('[DRY-RUN] No changes written.\n');
+  console.log('Sample POI INSERT:');
+  if (poiInserts.length > 0) console.log(`  ${poiInserts[0]}`);
+  console.log('Sample trip_pois INSERT:');
+  if (tripPoiInserts.length > 0) console.log(`  ${tripPoiInserts[0]}`);
+  if (poiRelationInserts.length > 0) {
+    console.log('Sample poi_relations INSERT:');
+    console.log(`  ${poiRelationInserts[0]}`);
+  }
+  process.exit(0);
 }
+
+// Execute in order: pois → poi_relations → trip_pois → rename
+console.log('Step 1/4: Inserting POIs...');
+d1ExecBatch(poiInserts);
+console.log(`  Inserted ${poiInserts.length} POIs`);
+
+console.log('Step 2/4: Inserting poi_relations...');
+d1ExecBatch(poiRelationInserts);
+console.log(`  Inserted ${poiRelationInserts.length} relations`);
+
+console.log('Step 3/4: Inserting trip_pois...');
+d1ExecBatch(tripPoiInserts);
+console.log(`  Inserted ${tripPoiInserts.length} trip_pois`);
+
+// Verify row counts (審查 E8)
+console.log('');
+console.log('--- Verification ---');
+const poisCount = d1Query('SELECT COUNT(*) as cnt FROM pois')[0]?.cnt;
+const tripPoisCount = d1Query('SELECT COUNT(*) as cnt FROM trip_pois')[0]?.cnt;
+const relationsCount = d1Query('SELECT COUNT(*) as cnt FROM poi_relations')[0]?.cnt;
+console.log(`  pois:          ${poisCount} (expected ${totalPois})`);
+console.log(`  trip_pois:     ${tripPoisCount} (expected ${totalTripPois})`);
+console.log(`  poi_relations: ${relationsCount} (expected ${totalRelations})`);
+
+if (poisCount !== totalPois || tripPoisCount !== totalTripPois) {
+  console.error('\n❌ Row count mismatch! NOT renaming old tables. Investigate and retry.');
+  process.exit(1);
+}
+
+console.log('\nStep 4/4: Renaming old tables...');
+d1ExecBatch(renameStatements);
+console.log('  Renamed hotels, restaurants, shopping → *_legacy');
+
+console.log('\n=== Done! ===');
+console.log(`  ${poisCount} pois, ${tripPoisCount} trip_pois, ${relationsCount} relations`);

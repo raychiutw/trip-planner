@@ -145,7 +145,7 @@ export interface Hotel {
 // POI types (normalized schema)
 // ---------------------------------------------------------------------------
 
-/** POI master record — source of truth, shared across trips */
+/** POI master record — source of truth, shared across trips. AI-maintained, user cannot edit directly. */
 export interface Poi {
   id: number;
   type: 'hotel' | 'restaurant' | 'shopping' | 'parking' | 'attraction' | 'transport' | 'other';
@@ -161,16 +161,15 @@ export interface Poi {
   category?: string | null;
   maps?: string | null;
   mapcode?: string | null;
-  location?: Location | null;
-  /** Type-specific fields (hotel: checkout/breakfast/parking, restaurant: price/reservation, shopping: mustBuy) */
-  attrs?: Record<string, unknown> | null;
+  lat?: number | null;
+  lng?: number | null;
   country?: string | null;
   source?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-/** Trip-specific POI reference (fork) — overridable fields */
+/** Trip-specific POI reference (fork) — user can override description/note/hours */
 export interface TripPoi {
   id: number;
   tripId: string;
@@ -179,26 +178,44 @@ export interface TripPoi {
   dayId?: number | null;
   entryId?: number | null;
   sortOrder: number;
-  /** Override description (NULL = use master) */
+  /** Override description (NULL = inherit master) */
   description?: string | null;
-  /** Trip-specific note (never synced to master) */
+  /** Trip-specific note */
   note?: string | null;
-  /** Override hours (NULL = use master) */
+  /** Override hours (NULL = inherit master) */
   hours?: string | null;
+  /** Hotel-specific (flattened) */
+  checkout?: string | null;
+  breakfastIncluded?: number | null;
+  breakfastNote?: string | null;
+  /** Restaurant-specific (flattened) */
+  price?: string | null;
+  reservation?: string | null;
+  reservationUrl?: string | null;
+  /** Shopping-specific (flattened) */
+  mustBuy?: string | null;
   source?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-/** Merged POI view — API returns COALESCE'd values, frontend reads directly */
+/** Merged POI view — COALESCE(trip_pois.field, pois.field), frontend reads directly */
 export interface MergedPoi extends Poi {
   sortOrder: number;
   tripPoiId: number;
   context: 'hotel' | 'timeline' | 'shopping';
   dayId?: number | null;
   entryId?: number | null;
-  /** Trip-specific attrs (checkout, breakfast, reservation, etc.) */
-  tripAttrs?: Record<string, unknown> | null;
+  /** Hotel-specific (from trip_pois flattened columns) */
+  checkout?: string | null;
+  breakfastIncluded?: number | null;
+  breakfastNote?: string | null;
+  /** Restaurant-specific */
+  price?: string | null;
+  reservation?: string | null;
+  reservationUrl?: string | null;
+  /** Shopping-specific */
+  mustBuy?: string | null;
 }
 
 /**

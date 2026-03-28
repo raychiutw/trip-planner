@@ -98,11 +98,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) return json({ error: 'Not found' }, 404);
 
-  // Cascade delete restaurants and shopping before deleting the entry
+  // Cascade delete trip_pois referencing this entry, then the entry itself
   try {
     await db.batch([
-      db.prepare("DELETE FROM restaurants WHERE entry_id = ?").bind(eid),
-      db.prepare("DELETE FROM shopping WHERE parent_type = 'entry' AND parent_id = ?").bind(eid),
+      db.prepare('DELETE FROM trip_pois WHERE entry_id = ?').bind(eid),
       db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(eid),
     ]);
   } catch (err: any) {

@@ -61,45 +61,20 @@ describe('mapRow — snake_case to camelCase conversion', () => {
 
 /* ===== JSON_FIELDS parsing (DB 欄位不再有 _json 後綴) ===== */
 describe('mapRow — JSON string fields get parsed', () => {
-  it('parses parking string to object', () => {
-    const result = mapRow({ parking: '{"price":"免費","note":"B1"}' });
-    expect(result.parking).toEqual({ price: '免費', note: 'B1' });
-  });
-
   it('parses footer string to object', () => {
     const result = mapRow({ footer: '{"dates":"2026-05-01 ~ 2026-05-05"}' });
     expect(result.footer).toEqual({ dates: '2026-05-01 ~ 2026-05-05' });
   });
 
-  it('parses location string to object', () => {
-    const result = mapRow({ location: '{"name":"首里城","googleQuery":"https://maps.google.com/q=test"}' });
-    expect(result.location).toEqual({ name: '首里城', googleQuery: 'https://maps.google.com/q=test' });
-  });
-
-  it('parses breakfast string to object', () => {
-    const result = mapRow({ breakfast: '{"included":true,"time":"07:00-10:00"}' });
-    expect(result.breakfast).toEqual({ included: true, time: '07:00-10:00' });
-  });
-
-  it('passes breakfast already as object through unchanged', () => {
-    const obj = { included: false };
-    const result = mapRow({ breakfast: obj });
-    expect(result.breakfast).toBe(obj);
-  });
-
-  it('parses attrs string to object', () => {
-    const result = mapRow({ attrs: '{"checkout":"11:00"}' });
-    expect(result.attrs).toEqual({ checkout: '11:00' });
-  });
-
-  it('parses trip_attrs string to object', () => {
-    const result = mapRow({ trip_attrs: '{"reservation":"已訂位"}' });
-    expect(result.tripAttrs).toEqual({ reservation: '已訂位' });
-  });
-
   it('keeps malformed JSON string as-is', () => {
-    const result = mapRow({ parking: '{not json}' });
-    expect(result.parking).toBe('{not json}');
+    const result = mapRow({ footer: '{not json}' });
+    expect(result.footer).toBe('{not json}');
+  });
+
+  it('non-JSON fields are not parsed even if they look like JSON', () => {
+    // parking/location/attrs/breakfast are no longer in JSON_FIELDS (V2 schema)
+    const result = mapRow({ parking: '{"price":"free"}' });
+    expect(result.parking).toBe('{"price":"free"}');
   });
 
   it('non-JSON_FIELDS string is not parsed', () => {
@@ -208,13 +183,8 @@ describe('exported constants', () => {
     expect(Array.isArray(JSON_FIELDS)).toBe(true);
   });
 
-  it('JSON_FIELDS contains expected fields', () => {
-    // weather removed — derived at runtime from entries
-    expect(JSON_FIELDS).toContain('parking');
+  it('JSON_FIELDS contains only footer (V2: all others eliminated)', () => {
     expect(JSON_FIELDS).toContain('footer');
-    expect(JSON_FIELDS).toContain('location');
-    expect(JSON_FIELDS).toContain('attrs');
-    expect(JSON_FIELDS).toContain('trip_attrs');
-    expect(JSON_FIELDS).toContain('breakfast');
+    expect(JSON_FIELDS).toHaveLength(1);
   });
 });
