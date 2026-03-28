@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2.1] - 2026-03-28
+
+### Fixed
+- 文字反白（::selection）背景色與頁面底色太接近，改用 `color-mix(accent, 30%)` 確保所有主題可見
+
 ## [1.0.2.0] - 2026-03-27
 
 ### Added
