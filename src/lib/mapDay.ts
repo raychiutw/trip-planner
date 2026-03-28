@@ -74,6 +74,7 @@ function toShopData(s: Record<string, unknown>): ShopData {
     category: (s.category as string) ?? null,
     hours: (s.hours as string) ?? null,
     mustBuy,
+    description: (s.description as string) ?? null,
     note: (s.note as string) ?? null,
     googleRating: (s.googleRating as number) ?? null,
     location: buildLocation(s.maps as string, s.mapcode as string, s.name as string),

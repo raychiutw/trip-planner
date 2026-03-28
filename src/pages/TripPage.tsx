@@ -490,7 +490,7 @@ export default function TripPage() {
     };
     type RawHotel = {
       name?: unknown; checkout?: unknown; note?: unknown; breakfast?: unknown;
-      parking_json?: unknown; parking?: unknown;
+      parking?: unknown;
       shopping?: Record<string, unknown>[];
       [key: string]: unknown;
     };
@@ -572,7 +572,7 @@ export default function TripPage() {
             md += `### 🏨 住宿：${s(hotel.name)}\n`;
             if (hotel.checkout) md += `- 退房：${s(hotel.checkout)}\n`;
             if (hotel.breakfast) md += `- 早餐：${typeof hotel.breakfast === 'object' ? JSON.stringify(hotel.breakfast) : s(hotel.breakfast)}\n`;
-            const parking = hotel.parking_json ?? hotel.parking;
+            const parking = hotel.parking;
             if (parking) {
               const pInfo = typeof parking === 'object' ? (parking as Record<string, unknown>).info ?? JSON.stringify(parking) : s(parking);
               md += `- 停車場：${pInfo}\n`;
@@ -586,7 +586,7 @@ export default function TripPage() {
               md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
               md += '|------|------|------|---------|------|\n';
               for (const sh of hotelShopping) {
-                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
               }
             }
             md += '\n';
@@ -597,10 +597,10 @@ export default function TripPage() {
           for (let i = 0; i < timeline.length; i++) {
             const e = timeline[i];
             md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
-            if (e.rating) md += ` ★ ${e.rating}`;
+            if (e.googleRating) md += ` ★ ${e.googleRating}`;
             md += '\n';
 
-            if (e.body) md += `${s(e.body)}\n`;
+            if (e.description) md += `${s(e.description)}\n`;
             if (e.note) md += `\n${s(e.note)}\n`;
             if (e.maps) md += `\n📍 Map: ${s(e.maps)}\n`;
 
@@ -623,7 +623,7 @@ export default function TripPage() {
               md += '| 餐廳 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
               md += '|------|------|------|------|---------|------|\n';
               for (const r of restaurants) {
-                md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.rating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
+                md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.googleRating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
               }
             }
 
@@ -634,7 +634,7 @@ export default function TripPage() {
               md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
               md += '|------|------|------|---------|------|\n';
               for (const sh of shopping) {
-                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
               }
             }
 
@@ -696,7 +696,7 @@ export default function TripPage() {
 
             const baseRow = [
               dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title),
-              csvCell(e.rating), csvCell(e.body), csvCell(e.note),
+              csvCell(e.googleRating), csvCell(e.description), csvCell(e.note),
               travelType, travelMin,
             ];
 
@@ -710,7 +710,7 @@ export default function TripPage() {
               // For subsequent rows, repeat entry base columns
               const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
               // Restaurant columns
-              row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.rating) : '', r ? csvCell(r.price) : '');
+              row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.googleRating) : '', r ? csvCell(r.price) : '');
               // Shopping columns
               row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.must_buy) : '');
               // Hotel columns (empty for timeline entries)
