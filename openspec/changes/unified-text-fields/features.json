@@ -1,0 +1,70 @@
+{
+  "change": "unified-text-fields",
+  "created": "2026-03-28",
+  "features": [
+    {
+      "id": "F001",
+      "title": "DB Migration — CREATE TABLE pois/trip_pois + entries RENAME COLUMN body→description, rating→google_rating",
+      "priority": 1,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F002",
+      "title": "資料遷移腳本 — hotels/restaurants/shopping 去重合併進 pois + trip_pois 引用建立",
+      "priority": 1,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F003",
+      "title": "mapRow 改造 — snakeToCamel 自動轉換取代 FIELD_MAP 手動映射",
+      "priority": 1,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F004",
+      "title": "API 端點重寫 — JOIN pois+trip_pois 查詢 + sync fork→master + 新 /api/pois 端點",
+      "priority": 1,
+      "status": "pending",
+      "session": null,
+      "e2e": true
+    },
+    {
+      "id": "F005",
+      "title": "TypeScript 型別 + 前端資料層 — Poi/TripPoi/MergedPoi + mapDay 重寫 + TripPage export",
+      "priority": 2,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F006",
+      "title": "前端 MarkdownText 統一 — inline prop + Hotel/InfoBox/Shop/Restaurant 渲染更新",
+      "priority": 2,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    },
+    {
+      "id": "F007",
+      "title": "測試更新 — mapRow/entry/restaurant/mock 欄位名 + pois CRUD + mergePoi + inline MD",
+      "priority": 2,
+      "status": "pending",
+      "session": null,
+      "e2e": true
+    },
+    {
+      "id": "F008",
+      "title": "Skills 更新 — tp-edit/tp-patch/tp-create/tp-rebuild 適配 pois + trip_pois schema",
+      "priority": 3,
+      "status": "pending",
+      "session": null,
+      "e2e": false
+    }
+  ]
+}

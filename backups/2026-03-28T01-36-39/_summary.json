@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-03-28T01-36-39",
+  "summary": {
+    "trips": 7,
+    "days": 49,
+    "hotels": 42,
+    "entries": 292,
+    "restaurants": 281,
+    "shopping": 162,
+    "trip_docs": 34,
+    "requests": 90,
+    "permissions": 9
+  }
+}

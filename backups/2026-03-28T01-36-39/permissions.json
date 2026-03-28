@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "*",
+    "role": "admin"
+  },
+  {
+    "id": 2,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "okinawa-trip-2026-Ray",
+    "role": "member"
+  },
+  {
+    "id": 3,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "role": "member"
+  },
+  {
+    "id": 4,
+    "email": "penyin@gmail.com",
+    "trip_id": "okinawa-trip-2026-HuiYun",
+    "role": "member"
+  },
+  {
+    "id": 5,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "busan-trip-2026-CeliaDemyKathy",
+    "role": "member"
+  },
+  {
+    "id": 6,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "banqiao-trip-2026-Onion",
+    "role": "member"
+  },
+  {
+    "id": 7,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "kyoto-trip-2026-MimiChu",
+    "role": "member"
+  },
+  {
+    "id": 8,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "okinawa-trip-2026-AeronAn",
+    "role": "member"
+  },
+  {
+    "id": 9,
+    "email": "lean.lean@gmail.com",
+    "trip_id": "okinawa-trip-2026-RayHus",
+    "role": "member"
+  }
+]

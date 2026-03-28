@@ -1,0 +1,1 @@
+{"session":0,"ts":"2026-03-28T01:30:00Z","type":"init","done":0,"total":8,"commit":null,"notes":"Initialized unified-text-fields change — POI 正規化 + 欄位統一 + FIELD_MAP 廢除 + MarkdownText 渲染。autoplan 三審通過（CEO + Eng CLEAR）。D1 備份完成。8 features: F001 migration, F002 資料遷移, F003 mapRow, F004 API, F005 types, F006 MarkdownText, F007 tests, F008 skills。"}

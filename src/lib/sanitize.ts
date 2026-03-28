@@ -87,3 +87,14 @@ import { marked } from 'marked';
 export function renderMarkdown(text: string): string {
   return sanitizeHtml(marked.parse(text) as string);
 }
+
+/**
+ * Renders inline markdown (no block-level <p> wrapping).
+ * Use for fields that contain TEL/URL/address — marked.parse() would
+ * wrap them in <p> and break formatting. marked.parseInline() preserves
+ * line breaks as \n which we convert to <br>.
+ */
+export function renderMarkdownInline(text: string): string {
+  const html = (marked.parseInline(text) as string).replace(/\n/g, '<br>');
+  return sanitizeHtml(html);
+}

@@ -1,30 +1,7 @@
-/** Maps snake_case DB column names to camelCase JS property names. */
-export const FIELD_MAP: Record<string, string> = {
-  body: 'description',
-  rating: 'googleRating',
-  must_buy: 'mustBuy',
-  reservation_url: 'reservationUrl',
-  day_of_week: 'dayOfWeek',
-  self_drive: 'selfDrive',
-  og_description: 'ogDescription',
-  day_num: 'dayNum',
-  sort_order: 'sortOrder',
-  parent_type: 'parentType',
-  parent_id: 'parentId',
-  entry_id: 'entryId',
-  trip_id: 'tripId',
-  doc_type: 'docType',
-  created_at: 'createdAt',
-  updated_at: 'updatedAt',
-  submitted_by: 'submittedBy',
-  changed_by: 'changedBy',
-  table_name: 'tableName',
-  record_id: 'recordId',
-  diff_json: 'diffJson',
-  request_id: 'requestId',
-  food_prefs: 'foodPrefs',
-  auto_scroll: 'autoScroll',
-};
+/** Converts a snake_case key to camelCase. */
+export function snakeToCamel(key: string): string {
+  return key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
 
 /** Fields whose string values should be JSON-parsed before mapping. */
 export const JSON_FIELDS: string[] = [
@@ -32,6 +9,7 @@ export const JSON_FIELDS: string[] = [
   'parking_json',
   'footer_json',
   'location_json',
+  'meta_json',
   'breakfast',
 ];
 
@@ -39,7 +17,7 @@ export const JSON_FIELDS: string[] = [
  * Maps a single DB row object:
  * - JSON-parses fields listed in JSON_FIELDS
  * - Strips `_json` suffix from field names
- * - Renames snake_case keys to camelCase via FIELD_MAP
+ * - Converts snake_case keys to camelCase via snakeToCamel
  */
 export function mapRow(row: Record<string, unknown>): Record<string, unknown>;
 export function mapRow(row: unknown): unknown;
@@ -59,8 +37,8 @@ export function mapRow(row: unknown): unknown {
     }
     // Strip _json suffix after parsing
     let outKey = key.replace(/_json$/, '');
-    // Rename snake_case to camelCase
-    if (FIELD_MAP[outKey]) outKey = FIELD_MAP[outKey];
+    // Convert snake_case to camelCase
+    outKey = snakeToCamel(outKey);
     result[outKey] = val;
   }
   return result;

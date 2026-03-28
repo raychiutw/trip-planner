@@ -102,12 +102,12 @@ export interface Restaurant {
 
 /**
  * Timeline entry (activity / spot).
- * DB columns: id, day_id, sort_order, time, title, body, source, maps,
- *             mapcode, rating, note, travel_type, travel_desc, travel_min,
+ * DB columns: id, day_id, sort_order, time, title, description, source, maps,
+ *             mapcode, google_rating, note, travel_type, travel_desc, travel_min,
  *             location_json, updated_at
  * Notes:
- *   - body          -> description  (FIELD_MAP)
- *   - rating        -> googleRating (FIELD_MAP)
+ *   - description   (renamed from body in 0014_poi_normalization)
+ *   - google_rating (renamed from rating in 0014_poi_normalization)
  *   - location_json -> location     (JSON parsed + _json stripped)
  *   - travel_* cols -> travel       (assembled in [num].ts GET handler)
  */
@@ -117,12 +117,12 @@ export interface Entry {
   sortOrder: number;
   time?: string | null;
   title: string;
-  /** DB column `body`, renamed via FIELD_MAP */
+  /** DB column `description` (renamed from `body`) */
   description?: string | null;
   source?: string | null;
   maps?: string | null;
   mapcode?: string | null;
-  /** DB column `rating`, renamed via FIELD_MAP */
+  /** DB column `google_rating` (renamed from `rating`) */
   googleRating?: number | null;
   note?: string | null;
   /** Assembled from travel_type / travel_desc / travel_min columns */
@@ -136,11 +136,8 @@ export interface Entry {
 
 /**
  * Hotel — at most one per day.
- * DB columns: id, day_id, name, checkout, source, details, breakfast,
- *             note, parking_json
- * Notes:
- *   - parking_json -> parking (JSON parsed + _json stripped)
- *   - breakfast is listed in JSON_FIELDS so it's also parsed if stored as JSON
+ * Now stored as pois (type=hotel) + trip_pois (context=hotel).
+ * This interface represents the merged view for frontend rendering.
  */
 export interface Hotel {
   id: number;
@@ -148,15 +145,74 @@ export interface Hotel {
   name: string;
   checkout?: string | null;
   source?: string | null;
-  details?: string | null;
-  /** May be a string or parsed JSON object (listed in JSON_FIELDS) */
+  description?: string | null;
+  /** May be a string or parsed JSON object */
   breakfast?: string | object | null;
   note?: string | null;
-  /** DB column `parking_json`, parsed + _json stripped */
   parking?: Parking | null;
-  /** DB column `location_json`, parsed + _json stripped */
   location?: Location | null;
   shopping: Shopping[];
+}
+
+// ---------------------------------------------------------------------------
+// POI types (normalized schema)
+// ---------------------------------------------------------------------------
+
+/** POI master record — source of truth, shared across trips */
+export interface Poi {
+  id: number;
+  type: 'hotel' | 'restaurant' | 'shopping' | 'parking' | 'attraction' | 'transport' | 'other';
+  name: string;
+  description?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  hours?: string | null;
+  googleRating?: number | null;
+  category?: string | null;
+  maps?: string | null;
+  mapcode?: string | null;
+  location?: Location | null;
+  /** Type-specific fields (hotel: checkout/breakfast/parking, restaurant: price/reservation, shopping: mustBuy) */
+  meta?: Record<string, unknown> | null;
+  country?: string | null;
+  source?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Trip-specific POI reference (fork) — overridable fields */
+export interface TripPoi {
+  id: number;
+  tripId: string;
+  poiId: number;
+  context: 'hotel' | 'timeline' | 'shopping';
+  dayId?: number | null;
+  entryId?: number | null;
+  sortOrder: number;
+  /** Override description (NULL = use master) */
+  description?: string | null;
+  /** Trip-specific note (never synced to master) */
+  note?: string | null;
+  /** Override hours (NULL = use master) */
+  hours?: string | null;
+  source?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Merged POI view — master + trip overrides */
+export interface MergedPoi extends Poi {
+  /** Trip-specific note */
+  tripNote?: string | null;
+  /** Trip-specific sort order */
+  sortOrder: number;
+  /** Which trip_pois record this came from */
+  tripPoiId: number;
+  context: 'hotel' | 'timeline' | 'shopping';
+  dayId?: number | null;
+  entryId?: number | null;
 }
 
 /**
