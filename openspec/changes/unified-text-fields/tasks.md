@@ -103,3 +103,18 @@
 - [ ] F008.5 更新 naming-rules.md — 移除 FIELD_MAP 相關說明
 
 **依賴**：F004
+
+---
+
+## F009：trip_docs content JSON → Markdown
+
+- [ ] F009.1 建立 `scripts/migrate-trip-docs.js` — 讀取所有 trip_docs，將 JSON content 轉成 markdown
+- [ ] F009.2 flights：segments 轉 markdown 表格 + airline 資訊
+- [ ] F009.3 checklist：cards + items 轉 `- [ ]` checklist（按分類分段）
+- [ ] F009.4 backup：cards + weatherItems 轉按天分段列表
+- [ ] F009.5 suggestions：cards + priority 轉按優先級分段列表
+- [ ] F009.6 emergency：cards + contacts 轉列表（含 `[電話](tel:xxx)` 連結）
+- [ ] F009.7 更新前端渲染元件 — 移除 JSON 解析邏輯，改用 MarkdownText
+- [ ] F009.8 更新 tp-create / tp-rebuild skill — AI 生成時直接輸出 markdown
+
+**依賴**：F006（MarkdownText）

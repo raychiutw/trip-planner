@@ -355,6 +355,30 @@ export default function MarkdownText({ text, as: Tag = 'span', className, inline
 - 舊表刪除前需確認所有引用已遷移
 - audit_log 的 diff_json 含舊欄位名 — 接受歷史不一致
 
+## Phase 8: trip_docs content JSON → Markdown
+
+trip_docs 的 content 目前存 JSON blob（AI 生成的結構化資料），改成存 markdown 純文字。
+
+**變更：**
+- content 從 JSON 轉成 markdown 格式
+- 前端用 MarkdownText 統一渲染，移除 JSON 解析邏輯
+- AI 生成時直接輸出 markdown
+
+**轉換規則：**
+| doc_type | JSON 結構 | Markdown 格式 |
+|----------|----------|--------------|
+| flights | segments 陣列 + airline | markdown 表格 |
+| checklist | cards + items 陣列 | `- [ ]` checklist |
+| backup | cards + weatherItems | 按天分段列表 |
+| suggestions | cards + priority items | 按優先級分段列表 |
+| emergency | cards + contacts | 列表 + `tel:` 連結 |
+
+**不改的：**
+- 表名 `trip_docs` — 已有 trip_ 前綴
+- 欄位結構 — 只改 content 的儲存格式
+
+---
+
 ## 不做的事
 
 - ❌ 不建 POI 搜尋/瀏覽功能（只建 master 資料）
