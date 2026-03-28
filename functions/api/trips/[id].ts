@@ -8,10 +8,8 @@ const ALLOWED_FIELDS = ['name', 'owner', 'title', 'description', 'og_description
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
 
-  const row = await context.env.DB.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first();
+  const row = await context.env.DB.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first();
   if (!row) return json({ error: 'Not found' }, 404);
-
-  (row as any).tripId = (row as any).id;
 
   if (row.footer && typeof row.footer === 'string') {
     try {

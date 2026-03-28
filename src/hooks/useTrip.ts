@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from './useApi';
+import { mapRow } from '../lib/mapRow';
 import type { Trip, Day, DaySummary, TripDoc } from '../types/trip';
 
 
@@ -120,13 +121,14 @@ export function useTrip(tripId: string | null): UseTripReturn {
     async function load() {
       try {
         // Fetch meta + days list in parallel
-        const [meta, daysList] = await Promise.all([
-          apiFetch<Trip>(`/trips/${tripId}`, { signal: controller.signal }),
+        const [rawMeta, daysList] = await Promise.all([
+          apiFetch<Record<string, unknown>>(`/trips/${tripId}`, { signal: controller.signal }),
           apiFetch<DaySummary[]>(`/trips/${tripId}/days`, { signal: controller.signal }),
         ]);
 
         if (cancelled) return;
 
+        const meta = mapRow(rawMeta) as unknown as Trip;
         setTrip(meta);
 
         const sorted = [...daysList].sort(

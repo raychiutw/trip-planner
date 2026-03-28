@@ -8,7 +8,7 @@ type AllowedTable = typeof ALLOWED_TABLES[number];
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   trips:            ['id', 'name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer', 'created_at', 'updated_at'],
   trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'updated_at'],
-  hotels:           ['id', 'day_id', 'name', 'checkout', 'source', 'details', 'breakfast', 'note', 'parking'],
+  hotels:           ['id', 'day_id', 'name', 'checkout', 'source', 'description', 'breakfast', 'note', 'parking', 'location'],
   trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'maps', 'mapcode', 'google_rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location', 'updated_at'],
   restaurants:      ['id', 'entry_id', 'sort_order', 'name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'google_rating', 'maps', 'mapcode', 'source'],
   shopping:         ['id', 'parent_type', 'parent_id', 'sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'google_rating', 'maps', 'mapcode', 'source'],

@@ -50,7 +50,7 @@ function toRestaurantData(r: Record<string, unknown>): RestaurantData {
     reservationUrl: ((r.reservation_url ?? r.reservationUrl) as string) ?? null,
     description: (r.description as string) ?? null,
     note: (r.note as string) ?? null,
-    googleRating: (r.googleRating as number) ?? null,
+    googleRating: ((r.google_rating ?? r.googleRating) as number) ?? null,
     location: buildLocation(r.maps as string, r.mapcode as string, r.name as string),
   };
 }
@@ -76,7 +76,7 @@ function toShopData(s: Record<string, unknown>): ShopData {
     mustBuy,
     description: (s.description as string) ?? null,
     note: (s.note as string) ?? null,
-    googleRating: (s.googleRating as number) ?? null,
+    googleRating: ((s.google_rating ?? s.googleRating) as number) ?? null,
     location: buildLocation(s.maps as string, s.mapcode as string, s.name as string),
   };
 }
@@ -120,7 +120,7 @@ export function toTimelineEntry(raw: object): TimelineEntryData {
     title: (entry.title as string) ?? null,
     description: (entry.description as string) ?? null,
     note: (entry.note as string) ?? null,
-    googleRating: (entry.googleRating as number) ?? null,
+    googleRating: ((entry.google_rating ?? entry.googleRating) as number) ?? null,
     source: (entry.source as string) ?? null,
     travel: travelData,
     locations: locations.length > 0 ? locations : null,

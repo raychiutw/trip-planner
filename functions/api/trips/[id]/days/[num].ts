@@ -95,7 +95,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     date: day.date,
     day_of_week: day.day_of_week,
     label: day.label,
-    weather: day.weather,
     hotel,
     timeline,
   });
@@ -152,7 +151,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     dayOfWeek?: string;
     label?: string;
     weather?: unknown;
-    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; details?: unknown; address?: unknown; breakfast?: unknown; location?: unknown };
+    hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown; description?: unknown; breakfast?: unknown; location?: unknown };
     timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
   };
   const bodyOrError = await parseJsonBody<DayBody>(context.request);
@@ -217,12 +216,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (body.hotel) {
     const h = body.hotel;
     batch1.push(
-      db.prepare('INSERT INTO hotels (day_id, name, checkout, details, breakfast, note, parking, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+      db.prepare('INSERT INTO hotels (day_id, name, checkout, description, breakfast, note, parking, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId,
           h.name ?? null,
           h.checkout ?? null,
-          h.details ?? h.address ?? null,
+          h.description ?? null,
           h.breakfast ?? null,
           h.note ?? null,
           h.parking ? JSON.stringify(h.parking) : null,
@@ -240,8 +239,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, maps, google_rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
         .bind(
           dayId, i,
-          e.time ?? null, e.title ?? null, e.body ?? e.description ?? null,
-          e.maps ?? null, e.rating ?? e.google_rating ?? null, e.note ?? null,
+          e.time ?? null, e.title ?? null, e.description ?? null,
+          e.maps ?? null, e.google_rating ?? null, e.note ?? null,
           travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null,
         ),
     );
@@ -272,7 +271,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       for (const [idx, s] of (body.hotel.shopping as Record<string, unknown>[]).entries()) {
         batch2.push(
           db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, google_rating, maps, mapcode, source) VALUES ('hotel', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
+            .bind(hotelId, idx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
         );
       }
     }
@@ -286,7 +285,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         for (const r of e.restaurants as Record<string, unknown>[]) {
           batch2.push(
             db.prepare("INSERT INTO restaurants (entry_id, name, category, hours, price, reservation, reservation_url, description, note, google_rating, maps, mapcode, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.rating ?? r.google_rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null),
+              .bind(entryId, r.name ?? null, r.category ?? null, r.hours ?? null, r.price ?? null, r.reservation ?? null, r.reservation_url ?? null, r.description ?? null, r.note ?? null, r.google_rating ?? null, r.maps ?? null, r.mapcode ?? null, r.source ?? null),
           );
         }
       }
@@ -295,7 +294,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         for (const [sIdx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
           batch2.push(
             db.prepare("INSERT INTO shopping (parent_type, parent_id, sort_order, name, category, hours, must_buy, note, google_rating, maps, mapcode, source) VALUES ('entry', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-              .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.rating ?? s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
+              .bind(entryId, sIdx, s.name ?? null, s.category ?? null, s.hours ?? null, s.must_buy ?? null, s.note ?? null, s.google_rating ?? null, s.maps ?? null, s.mapcode ?? null, s.source ?? null),
           );
         }
       }
