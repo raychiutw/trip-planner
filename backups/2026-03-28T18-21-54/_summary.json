@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-03-28T18-21-54",
+  "summary": {
+    "trips": 7,
+    "trip_days": 49,
+    "trip_entries": 293,
+    "pois": 386,
+    "trip_pois": 481,
+    "poi_relations": 0,
+    "trip_docs": 34,
+    "trip_requests": 97,
+    "trip_permissions": 9,
+    "audit_log": "ERROR"
+  }
+}
