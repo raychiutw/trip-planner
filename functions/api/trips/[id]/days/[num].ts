@@ -8,8 +8,44 @@ import type { Env } from '../../../_types';
 // GET /api/trips/:id/days/:num — POI Schema V2 (pois + trip_pois)
 // ---------------------------------------------------------------------------
 
-/** Common SELECT for trip_pois JOIN pois — returns merged fields */
-const POI_SELECT = 'p.id, p.type, p.name, p.description, p.note, p.address, p.phone, p.email, p.website, p.hours, p.google_rating, p.category, p.maps, p.mapcode, p.lat, p.lng, p.source, tp.id AS trip_poi_id, tp.context, tp.day_id, tp.entry_id, tp.sort_order, tp.description AS tp_description, tp.note AS tp_note, tp.hours AS tp_hours, tp.checkout, tp.breakfast_included, tp.breakfast_note, tp.price, tp.reservation, tp.reservation_url, tp.must_buy';
+/**
+ * Merge a pois row + trip_pois row into a single object.
+ * trip_pois fields override pois fields when non-null (COALESCE convention).
+ */
+function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Record<string, unknown> {
+  return {
+    // POI master fields
+    poi_id: poi.id,
+    type: poi.type,
+    name: poi.name,
+    description: tp.description ?? poi.description,
+    note: tp.note ?? poi.note,
+    address: poi.address,
+    phone: poi.phone,
+    email: poi.email,
+    website: poi.website,
+    hours: tp.hours ?? poi.hours,
+    google_rating: poi.google_rating,
+    category: poi.category,
+    maps: poi.maps,
+    mapcode: poi.mapcode,
+    source: poi.source,
+    // trip_pois fields
+    trip_poi_id: tp.id,
+    context: tp.context,
+    day_id: tp.day_id,
+    entry_id: tp.entry_id,
+    sort_order: tp.sort_order,
+    // Type-specific (flattened in trip_pois)
+    checkout: tp.checkout,
+    breakfast_included: tp.breakfast_included,
+    breakfast_note: tp.breakfast_note,
+    price: tp.price,
+    reservation: tp.reservation,
+    reservation_url: tp.reservation_url,
+    must_buy: tp.must_buy,
+  };
+}
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
@@ -25,53 +61,58 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const dayId = day.id as number;
 
-  // D1 schema cache workaround: DROP+CREATE doesn't invalidate D1's internal cache
-  // Use SELECT * on both tables to avoid referencing specific new columns by name
-  const poiJoinSql = (where: string) =>
-    `SELECT * FROM trip_pois tp JOIN pois p ON tp.poi_id = p.id WHERE ${where}`;
-
-  const [entriesResult, hotelPois, parkingPois, allRestPois, allShopPois] = await Promise.all([
+  // Query trip_pois and pois SEPARATELY to avoid D1 schema cache + JOIN column conflicts
+  const [entriesResult, allTripPois] = await Promise.all([
     db.prepare('SELECT * FROM trip_entries WHERE day_id = ? ORDER BY sort_order ASC').bind(dayId).all(),
-    db.prepare(poiJoinSql("tp.trip_id = ? AND tp.day_id = ? AND tp.context = 'hotel' AND p.type = 'hotel'")).bind(id, dayId).all(),
-    db.prepare(poiJoinSql("tp.trip_id = ? AND tp.day_id = ? AND tp.context = 'hotel' AND p.type = 'parking'")).bind(id, dayId).all(),
-    db.prepare(poiJoinSql("tp.trip_id = ? AND tp.context = 'timeline' AND tp.entry_id IN (SELECT id FROM trip_entries WHERE day_id = ?) ORDER BY tp.entry_id, tp.sort_order")).bind(id, dayId).all(),
-    db.prepare(poiJoinSql("tp.trip_id = ? AND tp.context = 'shopping' AND tp.entry_id IN (SELECT id FROM trip_entries WHERE day_id = ?) ORDER BY tp.entry_id, tp.sort_order")).bind(id, dayId).all(),
+    db.prepare('SELECT * FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId).all(),
   ]);
 
-  // Build hotel object (at most one per day)
+  // Build poi lookup: poi_id → pois row
+  const poiIds = [...new Set((allTripPois.results as Record<string, unknown>[]).map(tp => tp.poi_id as number))];
+  const poiMap = new Map<number, Record<string, unknown>>();
+  if (poiIds.length > 0) {
+    // Query all needed pois in one go
+    const { results: poisRows } = await db.prepare(
+      `SELECT * FROM pois WHERE id IN (${poiIds.join(',')})`
+    ).all();
+    for (const p of poisRows as Record<string, unknown>[]) {
+      poiMap.set(p.id as number, p);
+    }
+  }
+
+  // Merge and categorize trip_pois
   let hotel: Record<string, unknown> | null = null;
-  if (hotelPois.results.length > 0) {
-    const h = hotelPois.results[0] as Record<string, unknown>;
-    hotel = {
-      ...h,
-      // Merge overrides: tp_description/tp_note/tp_hours override master
-      description: h.tp_description ?? h.description,
-      note: h.tp_note ?? h.note,
-      hours: h.tp_hours ?? h.hours,
-      parking: parkingPois.results.map(p => {
-        const pr = p as Record<string, unknown>;
-        return { ...pr, description: pr.tp_description ?? pr.description, note: pr.tp_note ?? pr.note };
-      }),
-    };
-  }
-
-  // Group restaurants + shopping by entry_id
+  const parkingList: Record<string, unknown>[] = [];
   const restByEntry = new Map<number, unknown[]>();
-  for (const r of allRestPois.results) {
-    const row = r as Record<string, unknown>;
-    const eid = row.entry_id as number;
-    if (!restByEntry.has(eid)) restByEntry.set(eid, []);
-    const merged = { ...row, description: row.tp_description ?? row.description, note: row.tp_note ?? row.note };
-    restByEntry.get(eid)!.push(merged);
+  const shopByEntry = new Map<number, unknown[]>();
+
+  for (const tp of allTripPois.results as Record<string, unknown>[]) {
+    const poi = poiMap.get(tp.poi_id as number);
+    if (!poi) continue;
+    const merged = mergePoi(poi, tp);
+    const poiType = poi.type as string;
+    const context = tp.context as string;
+
+    if (context === 'hotel' && poiType === 'hotel' && !hotel) {
+      hotel = merged;
+    } else if (context === 'hotel' && poiType === 'parking') {
+      parkingList.push(merged);
+    } else if (context === 'timeline') {
+      const eid = tp.entry_id as number;
+      if (!restByEntry.has(eid)) restByEntry.set(eid, []);
+      restByEntry.get(eid)!.push(merged);
+    } else if (context === 'shopping') {
+      const eid = tp.entry_id as number;
+      if (eid) {
+        if (!shopByEntry.has(eid)) shopByEntry.set(eid, []);
+        shopByEntry.get(eid)!.push(merged);
+      }
+    }
   }
 
-  const shopByEntry = new Map<number, unknown[]>();
-  for (const s of allShopPois.results) {
-    const row = s as Record<string, unknown>;
-    const eid = row.entry_id as number;
-    if (!shopByEntry.has(eid)) shopByEntry.set(eid, []);
-    const merged = { ...row, description: row.tp_description ?? row.description, note: row.tp_note ?? row.note };
-    shopByEntry.get(eid)!.push(merged);
+  // Attach parking to hotel
+  if (hotel) {
+    hotel.parking = parkingList;
   }
 
   const timeline = entriesResult.results.map(e => {
