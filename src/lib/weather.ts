@@ -77,6 +77,49 @@ export function getLocIdx(day: WeatherDay, h: number): number {
   return 0;
 }
 
+/**
+ * Build a WeatherDay from day label + timeline entries.
+ * Derives weather locations from entries that have coordinates + time.
+ * Replaces the old weather_json column — no longer stored in DB.
+ */
+export function buildWeatherDay(
+  dayLabel: string | null | undefined,
+  timeline: Array<{ time?: string | null; title: string; location?: { lat?: number; lng?: number } | null }>,
+): WeatherDay | null {
+  if (!timeline || timeline.length === 0) return null;
+
+  const locations: WeatherLocation[] = [];
+  let lastLat = 0;
+  let lastLon = 0;
+
+  for (const entry of timeline) {
+    const lat = entry.location?.lat;
+    const lng = entry.location?.lng;
+    if (typeof lat !== 'number' || typeof lng !== 'number') continue;
+
+    // Skip if same location as previous (within ~1km)
+    if (locations.length > 0 && Math.abs(lat - lastLat) < 0.01 && Math.abs(lng - lastLon) < 0.01) continue;
+
+    // Parse start hour from time field (e.g., "09:00-11:00" → 9)
+    let start = 0;
+    if (entry.time) {
+      const match = entry.time.match(/(\d{1,2}):/);
+      if (match) start = parseInt(match[1], 10);
+    }
+
+    locations.push({ name: entry.title, lat, lon: lng, start });
+    lastLat = lat;
+    lastLon = lng;
+  }
+
+  if (locations.length === 0) return null;
+
+  return {
+    label: dayLabel || locations[0].name,
+    locations,
+  };
+}
+
 /** Format a date as "YYYY-MM-DD". */
 export function toDateStr(d: Date): string {
   return (

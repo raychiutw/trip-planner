@@ -24,8 +24,8 @@ describe('POST /api/requests', () => {
   });
 
   it('inserts message column (not title + body)', () => {
-    expect(requestsTs).toContain('INSERT INTO requests (trip_id, mode, message');
-    expect(requestsTs).not.toContain("INSERT INTO requests (trip_id, mode, title, body");
+    expect(requestsTs).toContain('INSERT INTO trip_requests (trip_id, mode, message');
+    expect(requestsTs).not.toContain("INSERT INTO trip_requests (trip_id, mode, title, body");
   });
 
   it('validates mode as trip-edit or trip-plan', () => {

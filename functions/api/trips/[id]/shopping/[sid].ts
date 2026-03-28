@@ -3,7 +3,7 @@ import { hasPermission, verifyShoppingBelongsToTrip } from '../../../_auth';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-const ALLOWED_FIELDS = ['sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'rating', 'maps', 'mapcode', 'source'] as const;
+const ALLOWED_FIELDS = ['sort_order', 'name', 'category', 'hours', 'must_buy', 'note', 'google_rating', 'maps', 'mapcode', 'source'] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);

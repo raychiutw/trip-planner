@@ -40,7 +40,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const isPaginated = limitParam !== null || before !== null;
   const limit = Math.min(Math.max(parseInt(limitParam || '10', 10) || 10, 1), 50);
 
-  let sql = 'SELECT * FROM requests';
+  let sql = 'SELECT * FROM trip_requests';
   const params: (string | number)[] = [];
   const conditions: string[] = [];
 
@@ -112,7 +112,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入
   const existing = await env.DB
     .prepare(
-      'SELECT * FROM requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND created_at > datetime(\'now\', \'-30 seconds\') ORDER BY created_at DESC LIMIT 1'
+      'SELECT * FROM trip_requests WHERE trip_id = ? AND message = ? AND submitted_by = ? AND created_at > datetime(\'now\', \'-30 seconds\') ORDER BY created_at DESC LIMIT 1'
     )
     .bind(tripId, message, auth.email)
     .first();
@@ -124,7 +124,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const result = await env.DB
     .prepare(
-      'INSERT INTO requests (trip_id, mode, message, submitted_by) VALUES (?, ?, ?, ?) RETURNING *'
+      'INSERT INTO trip_requests (trip_id, mode, message, submitted_by) VALUES (?, ?, ?, ?) RETURNING *'
     )
     .bind(tripId, mode, message, auth.email)
     .first();
@@ -134,7 +134,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     await logAudit(env.DB, {
       tripId,
-      tableName: 'requests',
+      tableName: 'trip_requests',
       recordId: newRow ? (newRow.id as number) : null,
       action: 'insert',
       changedBy: auth.email,

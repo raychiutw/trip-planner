@@ -3,7 +3,7 @@ import { hasPermission, verifyHotelBelongsToTrip } from '../../../../_auth';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
-const ALLOWED_FIELDS = ['name', 'category', 'hours', 'must_buy', 'note', 'rating', 'maps', 'mapcode', 'source'] as const;
+const ALLOWED_FIELDS = ['name', 'category', 'hours', 'must_buy', 'note', 'google_rating', 'maps', 'mapcode', 'source'] as const;
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);

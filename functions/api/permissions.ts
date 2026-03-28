@@ -65,7 +65,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   const { results } = await context.env.DB
-    .prepare('SELECT * FROM permissions WHERE trip_id = ? ORDER BY email')
+    .prepare('SELECT * FROM trip_permissions WHERE trip_id = ? ORDER BY email')
     .bind(tripId)
     .all();
 
@@ -90,7 +90,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // 檢查重複
   const existing = await context.env.DB
-    .prepare('SELECT 1 FROM permissions WHERE email = ? AND trip_id = ?')
+    .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND trip_id = ?')
     .bind(lowerEmail, tripId)
     .first();
   if (existing) {
@@ -99,7 +99,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // 寫入 D1
   const result = await context.env.DB
-    .prepare('INSERT INTO permissions (email, trip_id, role) VALUES (?, ?, ?) RETURNING *')
+    .prepare('INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?) RETURNING *')
     .bind(lowerEmail, tripId, role)
     .first();
 
@@ -109,7 +109,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   } catch (err) {
     // 回滾 D1
     await context.env.DB
-      .prepare('DELETE FROM permissions WHERE email = ? AND trip_id = ?')
+      .prepare('DELETE FROM trip_permissions WHERE email = ? AND trip_id = ?')
       .bind(lowerEmail, tripId)
       .run();
     return json({ error: '同步 Access policy 失敗，已回滾', detail: String(err) }, 500);
@@ -117,7 +117,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   await logAudit(context.env.DB, {
     tripId,
-    tableName: 'permissions',
+    tableName: 'trip_permissions',
     recordId: (result as any)?.id ?? null,
     action: 'insert',
     changedBy: auth.email,

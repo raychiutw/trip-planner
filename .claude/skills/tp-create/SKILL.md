@@ -50,7 +50,7 @@ user-invocable: true
      - `location.googleQuery`：實體地點填搜尋文字（R11）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
    - Markdown 支援欄位（前端會渲染 markdown）：
-     - `entry.body`（description）：✅ 可用粗體、列表、連結
+     - `entry.description`（description）：✅ 可用粗體、列表、連結
      - `entry.note`：✅ 可用粗體、列表
      - `restaurant.description`：✅ 可用 markdown
      - `entry.title` / `restaurant.name` / `hotel.name`：❌ 純文字

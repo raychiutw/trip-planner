@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from './useApi';
+import { mapRow } from '../lib/mapRow';
 import type { Trip, Day, DaySummary, TripDoc } from '../types/trip';
 
 
@@ -17,7 +18,6 @@ function mapDayResponse(raw: Record<string, unknown>): Day {
     date: (raw.date as string | null | undefined) ?? null,
     dayOfWeek: (raw.dayOfWeek as string | undefined) ?? (raw.day_of_week as string | null | undefined) ?? null,
     label: (raw.label as string | null | undefined) ?? null,
-    weather: (raw.weather as Day['weather']) ?? null,
     updatedAt: (raw.updatedAt as string | undefined) ?? (raw.updated_at as string | undefined),
     hotel: (raw.hotel as Day['hotel']) ?? null,
     timeline: (raw.timeline as Day['timeline']) ?? [],
@@ -121,13 +121,14 @@ export function useTrip(tripId: string | null): UseTripReturn {
     async function load() {
       try {
         // Fetch meta + days list in parallel
-        const [meta, daysList] = await Promise.all([
-          apiFetch<Trip>(`/trips/${tripId}`, { signal: controller.signal }),
+        const [rawMeta, daysList] = await Promise.all([
+          apiFetch<Record<string, unknown>>(`/trips/${tripId}`, { signal: controller.signal }),
           apiFetch<DaySummary[]>(`/trips/${tripId}/days`, { signal: controller.signal }),
         ]);
 
         if (cancelled) return;
 
+        const meta = mapRow(rawMeta) as unknown as Trip;
         setTrip(meta);
 
         const sorted = [...daysList].sort(

@@ -4,7 +4,7 @@ import { validateRestaurantBody } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-const ALLOWED_FIELDS = ['sort_order', 'name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'rating', 'maps', 'mapcode', 'source'] as const;
+const ALLOWED_FIELDS = ['sort_order', 'name', 'category', 'hours', 'price', 'reservation', 'reservation_url', 'description', 'note', 'google_rating', 'maps', 'mapcode', 'source'] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);

@@ -7,7 +7,7 @@ describe('buildLocation — maps 非 URL（地名）時 name fallback', () => {
   it('停車場 maps 是地名時，location.name 應為地名而非空', () => {
     const hotel = toHotelData({
       name: 'Hotel A',
-      parking_json: { maps: '北谷町営駐車場 美浜', price: '免費' },
+      parking: { maps: '北谷町営駐車場 美浜', price: '免費' },
     });
     const parking = hotel.infoBoxes?.find((b) => b.type === 'parking');
     expect(parking).toBeDefined();
@@ -21,7 +21,7 @@ describe('buildLocation — maps 非 URL（地名）時 name fallback', () => {
   it('停車場 maps 是地名但 parking.name 有值時，location.name 應為 parking.name', () => {
     const hotel = toHotelData({
       name: 'Hotel A',
-      parking_json: { maps: '北谷町営駐車場 美浜', name: '美浜停車場', price: '免費' },
+      parking: { maps: '北谷町営駐車場 美浜', name: '美浜停車場', price: '免費' },
     });
     const parking = hotel.infoBoxes?.find((b) => b.type === 'parking');
     expect(parking.location.name).toBe('美浜停車場');
@@ -51,7 +51,7 @@ describe('buildLocation — maps 是 URL 時 googleQuery', () => {
   it('停車場 maps 是 URL 時，location.googleQuery 應為該 URL', () => {
     const hotel = toHotelData({
       name: 'Hotel A',
-      parking_json: { maps: 'https://maps.google.com/?q=parking', price: '¥500' },
+      parking: { maps: 'https://maps.google.com/?q=parking', price: '¥500' },
     });
     const parking = hotel.infoBoxes?.find((b) => b.type === 'parking');
     expect(parking.location.googleQuery).toBe('https://maps.google.com/?q=parking');
