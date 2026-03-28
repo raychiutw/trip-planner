@@ -9,14 +9,7 @@ import type { Env } from '../../../_types';
 // ---------------------------------------------------------------------------
 
 /** Common SELECT for trip_pois JOIN pois — returns merged fields */
-const POI_SELECT = `
-  p.id, p.type, p.name, p.description, p.note, p.address, p.phone, p.email, p.website,
-  p.hours, p.google_rating, p.category, p.maps, p.mapcode, p.lat, p.lng, p.source,
-  tp.id AS trip_poi_id, tp.context, tp.day_id, tp.entry_id, tp.sort_order,
-  tp.description AS tp_description, tp.note AS tp_note, tp.hours AS tp_hours,
-  tp.checkout, tp.breakfast_included, tp.breakfast_note,
-  tp.price, tp.reservation, tp.reservation_url, tp.must_buy
-`;
+const POI_SELECT = 'p.id, p.type, p.name, p.description, p.note, p.address, p.phone, p.email, p.website, p.hours, p.google_rating, p.category, p.maps, p.mapcode, p.lat, p.lng, p.source, tp.id AS trip_poi_id, tp.context, tp.day_id, tp.entry_id, tp.sort_order, tp.description AS tp_description, tp.note AS tp_note, tp.hours AS tp_hours, tp.checkout, tp.breakfast_included, tp.breakfast_note, tp.price, tp.reservation, tp.reservation_url, tp.must_buy';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, num } = context.params as { id: string; num: string };
