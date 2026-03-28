@@ -1,8 +1,18 @@
--- POI 正規化 + 欄位統一 + 移除 _json 後綴
+-- POI 正規化 + 欄位統一 + 移除 _json 後綴 + 表名統一
 -- 所有 DB 欄位名 = 前端欄位名（經 snakeToCamel 自動轉換）
+-- 行程相關表統一加 trip_ 前綴
 
 -- =============================================
--- 1. 新表：pois master + trip_pois fork
+-- 1. 表名統一：行程相關表加 trip_ 前綴
+-- =============================================
+
+ALTER TABLE days RENAME TO trip_days;
+ALTER TABLE entries RENAME TO trip_entries;
+ALTER TABLE requests RENAME TO trip_requests;
+ALTER TABLE permissions RENAME TO trip_permissions;
+
+-- =============================================
+-- 2. 新表：pois master + trip_pois fork
 -- =============================================
 
 CREATE TABLE IF NOT EXISTS pois (
@@ -37,8 +47,8 @@ CREATE TABLE IF NOT EXISTS trip_pois (
   trip_id       TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
   poi_id        INTEGER NOT NULL REFERENCES pois(id),
   context       TEXT NOT NULL CHECK (context IN ('hotel','timeline','shopping')),
-  day_id        INTEGER REFERENCES days(id) ON DELETE CASCADE,
-  entry_id      INTEGER REFERENCES entries(id) ON DELETE CASCADE,
+  day_id        INTEGER REFERENCES trip_days(id) ON DELETE CASCADE,
+  entry_id      INTEGER REFERENCES trip_entries(id) ON DELETE CASCADE,
   sort_order    INTEGER DEFAULT 0,
   description   TEXT,
   note          TEXT,
@@ -59,17 +69,17 @@ CREATE INDEX IF NOT EXISTS idx_trip_pois_day ON trip_pois(day_id);
 CREATE INDEX IF NOT EXISTS idx_trip_pois_entry ON trip_pois(entry_id);
 
 -- =============================================
--- 2. entries 欄位統一
+-- 3. trip_entries 欄位統一
 -- =============================================
 
-ALTER TABLE entries RENAME COLUMN body TO description;
-ALTER TABLE entries RENAME COLUMN rating TO google_rating;
-ALTER TABLE entries RENAME COLUMN location_json TO location;
+ALTER TABLE trip_entries RENAME COLUMN body TO description;
+ALTER TABLE trip_entries RENAME COLUMN rating TO google_rating;
+ALTER TABLE trip_entries RENAME COLUMN location_json TO location;
 
 -- =============================================
--- 3. 移除 _json 後綴（所有現有表）
+-- 4. 移除 _json 後綴（所有現有表）
 -- =============================================
 
-ALTER TABLE days RENAME COLUMN weather_json TO weather;
+ALTER TABLE trip_days RENAME COLUMN weather_json TO weather;
 ALTER TABLE hotels RENAME COLUMN parking_json TO parking;
 ALTER TABLE trips RENAME COLUMN footer_json TO footer;
