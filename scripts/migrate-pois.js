@@ -446,11 +446,22 @@ for (const [key, group] of poiGroups) {
 }
 
 // Rename old tables (last step — 審查 E8)
-const renameStatements = [
-  'ALTER TABLE hotels RENAME TO hotels_legacy;',
-  'ALTER TABLE restaurants RENAME TO restaurants_legacy;',
-  'ALTER TABLE shopping RENAME TO shopping_legacy;',
-];
+// Skip if already renamed (idempotent)
+const renameStatements = [];
+if (!DRY_RUN) {
+  try {
+    d1Query('SELECT 1 FROM hotels LIMIT 1');
+    renameStatements.push('ALTER TABLE hotels RENAME TO hotels_legacy;');
+  } catch { console.log('  hotels already renamed to _legacy, skipping'); }
+  try {
+    d1Query('SELECT 1 FROM restaurants LIMIT 1');
+    renameStatements.push('ALTER TABLE restaurants RENAME TO restaurants_legacy;');
+  } catch { console.log('  restaurants already renamed to _legacy, skipping'); }
+  try {
+    d1Query('SELECT 1 FROM shopping LIMIT 1');
+    renameStatements.push('ALTER TABLE shopping RENAME TO shopping_legacy;');
+  } catch { console.log('  shopping already renamed to _legacy, skipping'); }
+}
 
 // ---------------------------------------------------------------------------
 // Phase 3: Execute with verification (審查 E8)
