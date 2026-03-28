@@ -1096,7 +1096,7 @@ export default function TripPage() {
       <style>{SCOPED_STYLES}</style>
 
       {/* Sticky Nav */}
-      <div className="sticky-nav relative bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] shadow-[0_1px_0_var(--color-border)] text-foreground py-3 px-padding-h md:px-6 flex items-center gap-3 overflow-x-auto overflow-y-visible" id="stickyNav">
+      <div className="sticky-nav relative z-(--z-sticky-nav) bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] backdrop-blur-xl backdrop-saturate-200 shadow-[0_1px_0_var(--color-border)] text-foreground py-3 px-padding-h md:px-6 flex items-center gap-3 overflow-x-hidden overflow-y-visible" id="stickyNav">
         {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
         <TriplineLogo isOnline={isOnline} />
         <span className={clsx('nav-inline-title text-subheadline font-semibold text-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px] md:hidden', showNavTitle && 'visible')}>
