@@ -140,6 +140,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     label: day.label,
     hotel,
     timeline,
+    _debug: { tripPoiCount: allTripPois.results.length, poiIds, poiMapSize: poiMap.size },
   });
   } catch (err) {
     return json({ error: 'GET days failed', detail: err instanceof Error ? err.message : String(err) }, 500);
