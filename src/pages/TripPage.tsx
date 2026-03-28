@@ -92,11 +92,14 @@ const SCOPED_STYLES = `
 .print-mode .sticky-nav { display: none; }
 .print-mode .edit-fab { display: none !important; }
 .print-mode .print-exit-btn { display: block; }
+.print-mode .info-panel { display: none !important; }
+.print-mode .page-layout { padding-right: 0 !important; }
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
 @media print {
-  .sticky-nav, .edit-fab, .print-exit-btn { display: none !important; }
+  .sticky-nav, .edit-fab, .print-exit-btn, .info-panel { display: none !important; }
+  .page-layout { padding-right: 0 !important; }
 }
 `;
 
@@ -741,6 +744,14 @@ export default function TripPage() {
 
         const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
         downloadBlob('\uFEFF' + csv, `${fileBase}.csv`, 'text/csv;charset=utf-8');
+
+      } else if (format === 'pdf') {
+        /* ── PDF: trigger browser print dialog (Save as PDF) ── */
+        document.body.classList.add('print-mode');
+        setTimeout(() => {
+          window.print();
+          document.body.classList.remove('print-mode');
+        }, 300);
       }
     } catch { alert('下載失敗，請稍後再試'); }
   }, [activeTripId, trip]);
