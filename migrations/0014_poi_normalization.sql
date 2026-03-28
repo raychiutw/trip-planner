@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS pois (
   type          TEXT NOT NULL CHECK (type IN ('hotel','restaurant','shopping','parking','attraction','transport','other')),
   name          TEXT NOT NULL,
   description   TEXT,
+  note          TEXT,
   address       TEXT,
   phone         TEXT,
   email         TEXT,

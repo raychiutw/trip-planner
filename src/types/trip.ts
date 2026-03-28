@@ -164,6 +164,7 @@ export interface Poi {
   type: 'hotel' | 'restaurant' | 'shopping' | 'parking' | 'attraction' | 'transport' | 'other';
   name: string;
   description?: string | null;
+  note?: string | null;
   address?: string | null;
   phone?: string | null;
   email?: string | null;
