@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0.0] - 2026-03-28
+
+### Added
+- POI 正規化：新增 `pois` master 表（跨行程共用 source of truth）+ `trip_pois` fork 引用表
+- `pois.attrs` 類型專屬欄位（hotel: checkout/breakfast/parking, restaurant: price/reservation, shopping: must_buy）
+- `trip_pois.trip_attrs` 行程專屬 POI 欄位（per-trip checkout、reservation 狀態等）
+- MarkdownText `inline` 模式 — 使用 `marked.parseInline()` 避免破壞 TEL/URL 格式
+- `buildWeatherDay()` — 從 entries 座標 + 時間即時推導天氣查詢位置（取代 DB 存儲）
+- `migrate-pois.js` 資料遷移腳本（POI 去重 + 名稱正規化 + trip_pois 引用建立）
+- `migrate-trip-docs.js` trip_docs content JSON → Markdown 遷移腳本
+
+### Changed
+- **DB 表名統一**：`days`→`trip_days`、`entries`→`trip_entries`、`requests`→`trip_requests`、`permissions`→`trip_permissions`
+- **DB 欄位統一**：`entries.body`→`description`、`entries.rating`→`google_rating`、`entries.location_json`→`location`
+- **移除 `_json` 後綴**：`weather_json`→刪除、`parking_json`→`parking`、`footer_json`→`footer`、`location_json`→`location`
+- **FIELD_MAP 廢除**：改用 `snakeToCamel()` 自動轉換，DB 欄位名直接對應前端屬性名
+- Hotel/InfoBox/Shop/Restaurant 統一使用 MarkdownText 渲染文字欄位
+- TripPage CSV/Markdown export 欄位名更新
+- API 端點全面更新（15 檔案 — 表名 + 欄位名 + rollback column list）
+- Skills 文件更新（naming-rules、tp-edit、tp-create、tp-request）
+
+### Removed
+- `FIELD_MAP` 手動映射常數
+- `Weather` interface（types/trip.ts）— 天氣改為即時推導
+- `weather_json` DB 欄位（trip_days 表）
+
 ## [1.0.2.1] - 2026-03-28
 
 ### Fixed
