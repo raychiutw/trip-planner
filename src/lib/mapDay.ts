@@ -132,7 +132,7 @@ export function toTimelineEntry(raw: object): TimelineEntryData {
 
 export function toHotelData(raw: object): HotelData {
   const hotel = raw as Record<string, unknown>;
-  const description = ((hotel.description ?? hotel.details) as string) ?? null;
+  const description = (hotel.description as string) ?? null;
 
   let breakfast: { included?: boolean; note?: string | null } | null = null;
   const rawBf = hotel.breakfast;
@@ -147,7 +147,7 @@ export function toHotelData(raw: object): HotelData {
   }
 
   const infoBoxes: InfoBoxData[] = [];
-  const parking = (hotel.parking_json ?? hotel.parking) as Record<string, unknown> | null;
+  const parking = (hotel.parking as Record<string, unknown>) ?? null;
   if (parking && typeof parking === 'object') {
     infoBoxes.push({
       type: 'parking',
