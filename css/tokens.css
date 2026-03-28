@@ -261,14 +261,7 @@ body {
         .page-layout:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
     }
 
-    /* Day header sticky on desktop */
-    @media (min-width: 768px) {
-        .day-header {
-            position: sticky;
-            top: calc(var(--spacing-nav-h) + var(--spacing-3));
-            z-index: var(--z-day-header);
-        }
-    }
+    /* Day header — not sticky (scrolls with content) */
 
     /* Appearance settings cards */
     .color-mode-card,

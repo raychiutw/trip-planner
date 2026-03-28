@@ -38,6 +38,7 @@
     "@sentry/vite-plugin": "^5.1.1",
     "@vitejs/plugin-react": "^6.0.1",
     "clsx": "^2.1.1",
+    "html2pdf.js": "^0.14.0",
     "marked": "^17.0.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

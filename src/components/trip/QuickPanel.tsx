@@ -282,7 +282,7 @@ export default function QuickPanel({
                     key={item.key}
                     data-qp-item
                     className={clsx(
-                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-background text-foreground cursor-pointer rounded-sm shadow-md p-3 font-inherit text-footnote transition-colors duration-fast',
+                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-background text-foreground cursor-pointer rounded-sm shadow-md p-3 font-inherit text-base transition-colors duration-fast',
                       'active:bg-hover',
                       isDisabled && 'opacity-50 cursor-not-allowed',
                     )}
@@ -291,7 +291,7 @@ export default function QuickPanel({
                     onClick={() => handleItemClick(item)}
                   >
                     <Icon name={item.icon} />
-                    <span className="text-footnote text-foreground leading-none">{item.label}</span>
+                    <span className="text-base text-foreground leading-none">{item.label}</span>
                   </button>
                 );
               })}
@@ -302,7 +302,7 @@ export default function QuickPanel({
                     key={item.key}
                     data-qp-item
                     className={clsx(
-                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-background text-foreground cursor-pointer rounded-sm shadow-md p-3 font-inherit text-footnote transition-colors duration-fast',
+                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-background text-foreground cursor-pointer rounded-sm shadow-md p-3 font-inherit text-base transition-colors duration-fast',
                       'active:bg-hover',
                       isDisabled && 'opacity-50 cursor-not-allowed',
                     )}
@@ -311,7 +311,7 @@ export default function QuickPanel({
                     onClick={() => handleItemClick(item)}
                   >
                     <Icon name={item.icon} />
-                    <span className="text-footnote text-foreground leading-none">{item.label}</span>
+                    <span className="text-base text-foreground leading-none">{item.label}</span>
                   </button>
                 );
               })}
@@ -330,7 +330,7 @@ export default function QuickPanel({
                     data-qp-item
                     data-qp-item-bottom
                     className={clsx(
-                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-tertiary text-muted cursor-pointer rounded-sm shadow-md p-3 font-inherit text-footnote transition-colors duration-fast',
+                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-tertiary text-muted cursor-pointer rounded-sm shadow-md p-3 font-inherit text-base transition-colors duration-fast',
                       'active:bg-hover',
                       isDisabled && 'opacity-50 cursor-not-allowed',
                     )}
@@ -339,7 +339,7 @@ export default function QuickPanel({
                     onClick={() => handleItemClick(item)}
                   >
                     <Icon name={item.icon} />
-                    <span className="text-footnote text-muted leading-none">{item.label}</span>
+                    <span className="text-base text-muted leading-none">{item.label}</span>
                   </button>
                 );
               })}
