@@ -91,6 +91,15 @@ export function useDarkMode() {
     }
   }, [isDark]);
 
+  /* --- Listen for system dark mode changes when in auto mode --- */
+  useEffect(() => {
+    if (colorMode !== 'auto') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [colorMode]);
+
   /** Set color mode (persists to localStorage). */
   const setColorMode = useCallback((mode: ColorMode) => {
     lsSet('color-mode', mode);

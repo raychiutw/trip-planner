@@ -30,11 +30,24 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     updates.push('reply = ?');
     values.push(sanitizeReply(body.reply));
   }
+  // Fetch once for both status validation and audit diff
+  const oldRow = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
+
   if (body.status !== undefined) {
-    const validStatuses = ['open', 'received', 'processing', 'completed'];
-    if (!validStatuses.includes(body.status)) {
+    const STATUS_ORDER = ['open', 'received', 'processing', 'completed'] as const;
+    if (!STATUS_ORDER.includes(body.status as typeof STATUS_ORDER[number])) {
       throw new AppError('DATA_VALIDATION', 'status 必須是 open、received、processing 或 completed');
     }
+
+    // 驗證 status 只能往前推進，不可回退
+    if (oldRow) {
+      const oldIdx = STATUS_ORDER.indexOf((oldRow.status as string) as typeof STATUS_ORDER[number]);
+      const newIdx = STATUS_ORDER.indexOf(body.status as typeof STATUS_ORDER[number]);
+      if (newIdx >= 0 && oldIdx >= 0 && newIdx < oldIdx) {
+        throw new AppError('DATA_VALIDATION', `status 不可從 ${oldRow.status} 退回 ${body.status}`);
+      }
+    }
+
     updates.push('status = ?');
     values.push(body.status);
   }
@@ -42,8 +55,6 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (updates.length === 0) {
     throw new AppError('DATA_VALIDATION', '沒有要更新的欄位');
   }
-
-  const oldRow = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
 
   values.push(id);
   const result = await env.DB

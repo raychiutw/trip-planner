@@ -65,9 +65,7 @@ const PANEL_ITEMS: PanelItemConfig[] = [
 
 /* ===== Constants ===== */
 
-/** Selectors for focusable elements inside the panel (same as InfoSheet). */
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../../lib/constants';
 
 /* ===== Props ===== */
 

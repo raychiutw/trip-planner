@@ -143,6 +143,8 @@ export default function ManagePage() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const requestsRef = useRef(requests);
+  requestsRef.current = requests;
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'trip-edit' | 'trip-plan'>('trip-edit');
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -201,7 +203,7 @@ export default function ManagePage() {
     const tripId = currentTripIdRef.current;
     if (!tripId || loadingMore || !hasMore) return;
 
-    const last = requests[requests.length - 1];
+    const last = requestsRef.current[requestsRef.current.length - 1];
     if (!last) return;
 
     setLoadingMore(true);
@@ -224,7 +226,7 @@ export default function ManagePage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [requests, loadingMore, hasMore]);
+  }, [loadingMore, hasMore]);
 
   /* ----- Init: fetch trips ----- */
   useEffect(() => {

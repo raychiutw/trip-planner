@@ -1,6 +1,7 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
 import { AppError } from '../../../_errors';
+import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -147,62 +148,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 // PUT /api/trips/:id/days/:num — POI Schema V2 (find-or-create pois + trip_pois)
 // ---------------------------------------------------------------------------
 
-/** Find existing pois by (name, type) or INSERT new. Returns poi_id. */
-async function findOrCreatePoi(
-  db: D1Database,
-  data: {
-    name: string; type: string; description?: string | null; maps?: string | null;
-    mapcode?: string | null; lat?: number | null; lng?: number | null;
-    google_rating?: number | null; category?: string | null; hours?: string | null;
-    source?: string | null;
-    address?: string | null; phone?: string | null; email?: string | null;
-    website?: string | null; country?: string | null;
-  },
-): Promise<number> {
-  // Try exact match first (E5: dedup key = name + type)
-  const existing = await db.prepare(
-    'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
-  ).bind(data.name, data.type).first<{ id: number }>();
-
-  if (existing) {
-    // COALESCE update: only fill NULL fields, never overwrite existing values
-    const fills: string[] = [];
-    const vals: unknown[] = [];
-    const coalesceFields = [
-      ['description', data.description], ['maps', data.maps], ['mapcode', data.mapcode],
-      ['lat', data.lat], ['lng', data.lng], ['google_rating', data.google_rating],
-      ['category', data.category], ['hours', data.hours],
-      ['address', data.address], ['phone', data.phone], ['email', data.email],
-      ['website', data.website], ['country', data.country],
-    ] as const;
-    for (const [col, val] of coalesceFields) {
-      if (val != null) {
-        fills.push(`${col} = COALESCE(${col}, ?)`);
-        vals.push(val);
-      }
-    }
-    if (fills.length > 0) {
-      await db.prepare(`UPDATE pois SET ${fills.join(', ')}, updated_at = datetime('now') WHERE id = ?`)
-        .bind(...vals, existing.id).run();
-    }
-    return existing.id;
-  }
-
-  // Not found → INSERT with all fields
-  const result = await db.prepare(
-    'INSERT INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
-  ).bind(
-    data.type, data.name, data.description ?? null, data.hours ?? null,
-    data.google_rating ?? null, data.category ?? null,
-    data.maps ?? null, data.mapcode ?? null,
-    data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
-    data.address ?? null, data.phone ?? null, data.email ?? null,
-    data.website ?? null, data.country ?? 'JP',
-  ).first<{ id: number }>();
-
-  return result!.id;
-}
-
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
@@ -256,11 +201,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
   }
 
-  await logAudit(db, {
-    tripId: id, tableName: 'trip_days', recordId: dayId, action: 'update', changedBy,
-    snapshot, diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
-  });
-
   try {
     // Batch 1: delete old trip_pois + entries, update day, insert entries
     const batch1: D1PreparedStatement[] = [];
@@ -293,57 +233,62 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       entryIds.push(rows[0]?.id ?? 0);
     }
 
-    // Find-or-create pois + collect trip_pois inserts
-    const batch2: D1PreparedStatement[] = [];
+    // Collect all POI data for batch find-or-create (eliminates N+1 sequential queries)
+    type PoiTask = { data: FindOrCreatePoiData; poiIdx: number };
+    type TripPoiBuilder = (poiIds: number[]) => D1PreparedStatement[];
+    const poiItems: FindOrCreatePoiData[] = [];
+    const tripPoiBuilders: TripPoiBuilder[] = [];
+    let hotelPoiIdx = -1;
 
     // Hotel
     if (body.hotel) {
       const h = body.hotel;
-      const poiId = await findOrCreatePoi(db, {
+      hotelPoiIdx = poiItems.length;
+      poiItems.push({
         name: (h.name as string) || '', type: 'hotel',
         description: h.description as string, maps: h.maps as string,
         lat: h.lat as number, lng: h.lng as number, source: 'ai',
       });
-      batch2.push(
+      const hCopy = h; // capture for closure
+      tripPoiBuilders.push((ids) => [
         db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note, hours, checkout, breakfast_included, breakfast_note) VALUES (?, ?, 'hotel', ?, ?, ?, ?, ?, ?, ?)`)
-          .bind(poiId, id, dayId,
-            h.description as string ?? null, h.note as string ?? null, h.hours as string ?? null,
-            h.checkout as string ?? null, h.breakfast_included as number ?? null, h.breakfast_note as string ?? null),
-      );
+          .bind(ids[hotelPoiIdx], id, dayId,
+            hCopy.description as string ?? null, hCopy.note as string ?? null, hCopy.hours as string ?? null,
+            hCopy.checkout as string ?? null, hCopy.breakfast_included as number ?? null, hCopy.breakfast_note as string ?? null),
+      ]);
 
-      // Hotel parking POIs
+      // Hotel parking
       if (Array.isArray(h.parking)) {
         for (const p of h.parking as Record<string, unknown>[]) {
-          const parkPoiId = await findOrCreatePoi(db, {
+          const parkIdx = poiItems.length;
+          poiItems.push({
             name: (p.name as string) || '停車場', type: 'parking',
             description: p.price ? `費用：${p.price}` : null,
             maps: p.maps as string, mapcode: p.mapcode as string,
             lat: p.lat as number, lng: p.lng as number, source: 'ai',
           });
-          batch2.push(
+          tripPoiBuilders.push((ids) => [
             db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, description, note) VALUES (?, ?, 'hotel', ?, ?, ?)`)
-              .bind(parkPoiId, id, dayId, p.price ? `費用：${p.price}` : null, p.note as string ?? null),
-          );
-          // poi_relations: hotel → parking
-          batch2.push(
+              .bind(ids[parkIdx], id, dayId, p.price ? `費用：${p.price}` : null, p.note as string ?? null),
             db.prepare(`INSERT OR IGNORE INTO poi_relations (poi_id, related_poi_id, relation_type) VALUES (?, ?, 'parking')`)
-              .bind(poiId, parkPoiId),
-          );
+              .bind(ids[hotelPoiIdx], ids[parkIdx]),
+          ]);
         }
       }
 
       // Hotel shopping
       if (Array.isArray(h.shopping)) {
         for (const [idx, s] of (h.shopping as Record<string, unknown>[]).entries()) {
-          const shopPoiId = await findOrCreatePoi(db, {
+          const shopIdx = poiItems.length;
+          poiItems.push({
             name: (s.name as string) || '', type: 'shopping',
             google_rating: s.google_rating as number, maps: s.maps as string,
             category: s.category as string, hours: s.hours as string, source: 'ai',
           });
-          batch2.push(
+          tripPoiBuilders.push((ids) => [
             db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, day_id, sort_order, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?)`)
-              .bind(shopPoiId, id, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
-          );
+              .bind(ids[shopIdx], id, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
+          ]);
         }
       }
     }
@@ -355,40 +300,56 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
       if (Array.isArray(e.restaurants)) {
         for (const [idx, r] of (e.restaurants as Record<string, unknown>[]).entries()) {
-          const poiId = await findOrCreatePoi(db, {
+          const rIdx = poiItems.length;
+          poiItems.push({
             name: (r.name as string) || '', type: 'restaurant',
             description: r.description as string, google_rating: r.google_rating as number,
             maps: r.maps as string, category: r.category as string,
             hours: r.hours as string, source: 'ai',
           });
-          batch2.push(
+          tripPoiBuilders.push((ids) => [
             db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, description, note, price, reservation, reservation_url) VALUES (?, ?, 'timeline', ?, ?, ?, ?, ?, ?, ?, ?)`)
-              .bind(poiId, id, entryId, dayId, idx,
+              .bind(ids[rIdx], id, entryId, dayId, idx,
                 r.description as string ?? null, r.note as string ?? null,
                 r.price as string ?? null, r.reservation as string ?? null, r.reservation_url as string ?? null),
-          );
+          ]);
         }
       }
 
       if (Array.isArray(e.shopping)) {
         for (const [idx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
-          const poiId = await findOrCreatePoi(db, {
+          const sIdx = poiItems.length;
+          poiItems.push({
             name: (s.name as string) || '', type: 'shopping',
             google_rating: s.google_rating as number, maps: s.maps as string,
             category: s.category as string, hours: s.hours as string, source: 'ai',
           });
-          batch2.push(
+          tripPoiBuilders.push((ids) => [
             db.prepare(`INSERT INTO trip_pois (poi_id, trip_id, context, entry_id, day_id, sort_order, note, must_buy) VALUES (?, ?, 'shopping', ?, ?, ?, ?, ?)`)
-              .bind(poiId, id, entryId, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
-          );
+              .bind(ids[sIdx], id, entryId, dayId, idx, s.note as string ?? null, s.must_buy as string ?? null),
+          ]);
         }
       }
     }
 
+    // Batch resolve all POIs (2–3 DB round-trips instead of N)
+    const poiIds = await batchFindOrCreatePois(db, poiItems);
+
+    // Build batch2 trip_pois from resolved IDs
+    const batch2: D1PreparedStatement[] = [];
+    for (const builder of tripPoiBuilders) {
+      batch2.push(...builder(poiIds));
+    }
     if (batch2.length > 0) await db.batch(batch2);
-  } catch (err) {
+
+    // Audit log AFTER both batches succeed (prevents phantom audit entries on failure)
     await logAudit(db, {
       tripId: id, tableName: 'trip_days', recordId: dayId, action: 'update', changedBy,
+      snapshot, diffJson: JSON.stringify({ day_num: Number(num), overwrite: true }),
+    });
+  } catch (err) {
+    await logAudit(db, {
+      tripId: id, tableName: 'trip_days', recordId: dayId, action: 'error', changedBy,
       diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),
     });
     throw new AppError('DATA_SAVE_FAILED', '儲存失敗，請稍後再試');

@@ -6,6 +6,7 @@
 import { logAudit } from '../../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { findOrCreatePoi } from '../../../../_poi';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
@@ -57,24 +58,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const entry = await db.prepare('SELECT day_id FROM trip_entries WHERE id = ?').bind(entryId).first<{ day_id: number }>();
   if (!entry) throw new AppError('DATA_NOT_FOUND', '找不到此 entry');
 
-  // Find or create POI master
-  let poiId: number;
-  const existing = await db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1')
-    .bind(body.name, body.type).first<{ id: number }>();
-
-  if (existing) {
-    poiId = existing.id;
-  } else {
-    const result = await db.prepare(
-      'INSERT INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
-    ).bind(
-      body.type, body.name, body.description ?? null, body.hours ?? null,
-      body.google_rating ?? null, body.category ?? null,
-      body.maps ?? null, body.mapcode ?? null,
-      body.lat ?? null, body.lng ?? null, 'ai',
-    ).first<{ id: number }>();
-    poiId = result!.id;
-  }
+  // Find or create POI master (shared helper, race-safe with UNIQUE index)
+  const poiId = await findOrCreatePoi(db, {
+    name: body.name, type: body.type,
+    description: body.description as string, hours: body.hours as string,
+    google_rating: body.google_rating as number, category: body.category as string,
+    maps: body.maps as string, mapcode: body.mapcode as string,
+    lat: body.lat as number, lng: body.lng as number, source: 'ai',
+  });
 
   // Get next sort_order
   const maxSort = await db.prepare(

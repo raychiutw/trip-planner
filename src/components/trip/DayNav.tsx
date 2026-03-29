@@ -62,6 +62,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
   const navRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -89,10 +90,11 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
     nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
   }, []);
 
-  /* --- Cleanup long-press timer on unmount --- */
+  /* --- Cleanup timers on unmount --- */
   useEffect(() => {
     return () => {
       if (longPressTimer.current) clearTimeout(longPressTimer.current);
+      if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
     };
   }, []);
 
@@ -193,7 +195,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
       longPressTimer.current = null;
     }
     // Hide tooltip after a brief delay on touch
-    setTimeout(() => setTooltipDay(null), 2000);
+    tooltipTimer.current = setTimeout(() => setTooltipDay(null), 2000);
   }, []);
 
   return (

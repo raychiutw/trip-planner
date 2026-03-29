@@ -53,9 +53,7 @@ interface InfoSheetProps {
 /** Mobile breakpoint — keep in sync with @media (max-width: 767px) in SCOPED_STYLES */
 const MOBILE_BREAKPOINT = 768;
 
-/** Selectors for focusable elements inside the panel. */
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../../lib/constants';
 
 /* ===== Component ===== */
 

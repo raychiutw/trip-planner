@@ -9,8 +9,6 @@ import type { Day } from '../../types/trip';
 /* ===== Props ===== */
 
 interface InfoPanelProps {
-  /** All day data. */
-  days: Day[];
   /** Currently displayed day (for today summary + hotel + transport). */
   currentDay?: Day | null;
 }
@@ -18,7 +16,6 @@ interface InfoPanelProps {
 /* ===== Component ===== */
 
 export default function InfoPanel({
-  days: _days,
   currentDay,
 }: InfoPanelProps) {
   /* --- Current day transport summary --- */

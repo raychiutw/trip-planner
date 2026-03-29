@@ -83,15 +83,13 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
   const changedBy = auth.email;
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    throw new AppError('PERM_DENIED');
-  }
+  const [hasPerm2, belongsToTrip2] = await Promise.all([
+    hasPermission(db, auth.email, id, auth.isAdmin),
+    verifyEntryBelongsToTrip(db, eid, id),
+  ]);
+  if (!hasPerm2) throw new AppError('PERM_DENIED');
+  if (!belongsToTrip2) throw new AppError('DATA_NOT_FOUND');
 
-  if (!await verifyEntryBelongsToTrip(db, eid, id)) {
-    throw new AppError('DATA_NOT_FOUND');
-  }
-
-  // T11: null guard before delete
   const oldRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
 

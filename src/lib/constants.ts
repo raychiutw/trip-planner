@@ -46,3 +46,7 @@ export function safeColor(c: string | null | undefined): string {
   return c && SAFE_COLOR_RE.test(c) ? c : 'var(--blue-light)';
 }
 
+/** Selectors for focusable elements inside modal/sheet panels. */
+export const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
