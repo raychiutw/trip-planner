@@ -17,13 +17,73 @@ env:
 context: |
   行程共享網站（Tripline），部署於 Cloudflare Pages + D1
   Tech stack: React 19 SPA + TypeScript strict + Vite 8 + Tailwind CSS 4
-  測試: Vitest + Playwright，CI: GitHub Actions（tsc + test + build + verify-sw）
+  測試: Vitest + Playwright，CI: GitHub Actions（tsc + test + test:api + build + verify-sw）
   語言：繁體中文台灣用語，commit 訊息繁體中文
   Git：commit 後不自動 push；文件變更不跑測試
-  監控：Sentry（@sentry/react），每日健康檢查（daily-check.js + Telegram）
+  監控：Sentry（@sentry/react），每日健康檢查（daily-report.js + Telegram 異常通知）
   設計：DESIGN.md（暖色有機風、Apple HIG、6 套主題、tokens.css）
   本機開發：npm run dev（vite + wrangler pages dev + mock auth + 本機 SQLite）
   資料架構：POI Schema V2（pois + trip_pois + poi_relations，零 JSON 欄位）
+  錯誤處理：ErrorCode enum + AppError（後端 throw）+ ApiError（前端 parse）+ Toast + Sentry
+
+# ============================================================
+# 系統架構 — Production / Staging / Dev
+# ============================================================
+architecture:
+  environments:
+    production:
+      url: https://trip-planner-dby.pages.dev
+      d1_database: trip-planner-db
+      deploy: master push → Cloudflare Pages 自動部署
+      auth: Cloudflare Access（Zero Trust）
+      monitoring:
+        - Sentry（SYS_* 自動上報）
+        - daily-report.js（GitHub Actions UTC 22:23 = 台灣 06:23）
+        - Telegram 異常通知（TELEGRAM_BOT_TOKEN in GitHub Secrets）
+    staging:
+      url: PR Preview Deploy（自動）
+      d1_database: trip-planner-db-staging
+      deploy: PR push → Cloudflare Pages Preview
+      auth: Cloudflare Access（preview 環境）
+      config: wrangler.toml [env.preview]
+    dev:
+      url: http://localhost:5173（Vite）+ http://localhost:8788（API）
+      d1_database: 本機 SQLite（.wrangler/state/）
+      deploy: npm run dev（concurrently vite + wrangler pages dev）
+      auth: DEV_MOCK_EMAIL（.env.local）→ 免 Cloudflare Access
+      init: npm run dev:init（初始化本機 D1 schema）
+
+  d1_migration_流程:
+    順序: "dev → staging → production（三環境都要跑）"
+    指令:
+      dev: "npx wrangler d1 execute trip-planner-db --file=migrations/XXXX.sql --local"
+      staging: "npx wrangler d1 execute trip-planner-db-staging --file=migrations/XXXX.sql --remote"
+      production: "npx wrangler d1 execute trip-planner-db --file=migrations/XXXX.sql --remote"
+    前置: "node scripts/dump-d1.js（備份 production）"
+
+  error_handling:
+    後端:
+      pattern: "throw new AppError('ERROR_CODE', 'detail') — middleware catch 轉 JSON Response"
+      codes: "16 碼：NET_(2) + AUTH_(3) + PERM_(3) + DATA_(5) + SYS_(3)"
+      定義: "src/types/api.ts（ErrorCode enum + ERROR_MESSAGES，前後端共用）"
+      實作: "functions/api/_errors.ts（AppError class + errorResponse helper）"
+    前端:
+      pattern: "apiFetch throw ApiError — 支援新舊格式 sniff + severity 自動分類"
+      UI: "Toast（堆疊 + 自動消失）+ ErrorPlaceholder（原位提示 + ReportButton）"
+      Sentry: "SYS_* 自動上報 + errorCode tag"
+      離線: "savePendingReport → localStorage → flushPendingReports（上線自動送）"
+    公開端點: "POST /api/reports（蜜罐 + 30s rate limit，不需認證）"
+
+  notifications:
+    telegram:
+      bot: tripline_home_bot（TELEGRAM_BOT_HOME_TOKEN）
+      chat_id: TELEGRAM_CHAT_ID
+      觸發: daily-report 偵測到資料異常時自動發送
+      異常類型:
+        - 空行程（有 trip 但 0 天）
+        - 孤立 trip_pois（poi 不存在）
+        - 使用者錯誤回報（24h 統計）
+        - POI 缺 google_rating 超過 30%
 
 # ============================================================
 # 開發規範 + Commit Gate
@@ -46,7 +106,7 @@ commit_gate:
 # tp-* Skills（行程資料操作，不走 code pipeline）
 # ============================================================
 skills:
-  tp-check: 行程品質規則驗證（R0-R15）
+  tp-check: 行程品質規則驗證（R0-R18）
   tp-create: 從零產生完整行程
   tp-edit: 自然語言部分修改行程
   tp-rebuild: 全面稽核修復單一行程
@@ -132,9 +192,18 @@ testing:
 
   ci_auto:
     - "npx tsc --noEmit"
+    - "npx tsc --noEmit -p tsconfig.functions.json"
     - "npm test（unit + integration + naming + css-hig）"
+    - "npm run test:api（Miniflare D1 integration — 全 16 handler）"
     - "npm run build"
     - "node scripts/verify-sw.js"
+
+  api_tests:
+    runner: "vitest --config vitest.config.api.mts"
+    infra: "Miniflare programmatic API（D1 singleton + migration seeding）"
+    coverage: "19 files, 153 tests — 純函式 + integration（全 16 handler + reports）"
+    helpers: "tests/api/helpers.ts — mockEnv, mockAuth, mockContext, callHandler, seedTrip"
+    注意: "@cloudflare/vitest-pool-workers 有 node:os bug（#9719），不可用"
 
   qa_test_cases:
     navigation:
