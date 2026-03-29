@@ -29,21 +29,21 @@ vi.mock('../../src/hooks/useMapData', () => ({
 
 /* ===== Mock MapMarker — 避免 OverlayView 相依 google.maps ===== */
 vi.mock('../../src/components/trip/MapMarker', () => ({
-  MapMarker: vi.fn(() => null),
+  MapMarker: vi.fn(function() { return null; }),
 }));
 
 /* ===== Mock google.maps (不需要實際 SDK) ===== */
 
 const mockFitBounds = vi.fn();
 const mockAddListener = vi.fn();
-const mockMap = vi.fn(() => ({ fitBounds: mockFitBounds, panTo: vi.fn(), addListener: mockAddListener }));
+const mockMap = vi.fn(function() { return { fitBounds: mockFitBounds, panTo: vi.fn(), addListener: mockAddListener }; });
 
 beforeEach(() => {
   // @ts-expect-error — 模擬 global google.maps
   globalThis.google = {
     maps: {
       Map: mockMap,
-      LatLngBounds: vi.fn(() => ({ extend: vi.fn() })),
+      LatLngBounds: vi.fn(function() { return { extend: vi.fn() }; }),
       ControlPosition: { RIGHT_BOTTOM: 7 },
       // F005：createTravelLabelOverlay 工廠需要 OverlayView
       OverlayView: class { setMap = vi.fn(); onAdd() {} draw() {} onRemove() {} },
