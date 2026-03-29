@@ -114,6 +114,6 @@ Explore → Propose → Apply → Archive（缺一不可）
 
 ## tp-* Skill（行程資料操作，不走 pipeline）
 
-`/tp-request` `/tp-create` `/tp-edit` `/tp-check` `/tp-deploy` `/tp-rebuild` `/tp-patch`
+`/tp-request` `/tp-create` `/tp-edit` `/tp-check` `/tp-rebuild` `/tp-patch`
 
 **判斷原則：改 code → 走 7 階段 pipeline；改行程資料 → 直接操作。**
