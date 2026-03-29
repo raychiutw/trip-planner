@@ -5,21 +5,25 @@
 **Claude 直接做事，invoke 不同 gstack skill 換帽子。** 沒有 PM、沒有 Agent 派遣。
 code 變更前 invoke `/tp-team` 確認 pipeline。
 
-### 7 階段 Pipeline
+### 7 階段 Pipeline（每步必做，不可跳過）
 
 ```
 Think → Plan → Build → Review → Test → Ship → Reflect
 ```
 
-| 階段 | gstack skill | 做什麼 |
-|------|-------------|--------|
-| Think | `/office-hours` | 探索需求（選用） |
-| Plan | `/autoplan` | CEO + Eng + Design 三審 |
-| Build | 寫 code + `/simplify` | TDD + 程式碼精簡 |
-| Review | `/review` → `/codex` | 程式碼審查 + cross-model 驗證 |
-| Test | `/qa` → `/cso` → `/benchmark` | E2E 測試 + 安全掃描 + 效能基準 |
-| Ship | `/ship` → `/land-and-deploy` → `/canary` | push + PR + merge + 部署監控 |
-| Reflect | `/retro` → archive | 回顧 + 歸檔 |
+| 階段 | gstack skill | 做什麼 | ⚠️ 注意 |
+|------|-------------|--------|---------|
+| Think | `/office-hours` | 探索需求（選用） | |
+| Plan | `/autoplan` | CEO + Eng + Design 三審 | 小改動也要有 plan |
+| Build | 寫 code + TDD + **`/simplify`** | 程式碼精簡 | ⚠️ /simplify 不可跳過 |
+| Review | `/tp-code-verify` → `/review` → `/codex` | 命名+HIG+程式碼審查 | /codex 沒裝可跳 |
+| Test | `/qa` → `/cso` → `/benchmark` | E2E + 安全掃描 + 效能 | 至少跑 /cso --diff |
+| Ship | `/ship` → `/land-and-deploy` → `/canary` | push + PR + merge + 部署 | |
+| Reflect | `/retro` → **archive** | 回顧 + 歸檔 | ⚠️ archive 不可跳過 |
+
+**archive 包含：** OpenSpec change 歸檔 + memory 更新 + design doc 標記完成
+
+**開始 code 變更前，必須先輸出 7 階段 Gate 確認（✅/⬜ 狀態表）。**
 
 完整規則：`.claude/skills/tp-team/SKILL.md` + `references/stage-*.md`
 
