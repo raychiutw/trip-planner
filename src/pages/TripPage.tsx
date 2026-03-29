@@ -24,11 +24,7 @@ import InfoSheet from '../components/trip/InfoSheet';
 import InfoPanel from '../components/trip/InfoPanel';
 import { DayDrivingStatsCard, TripDrivingStatsCard } from '../components/trip/DrivingStats';
 import HourlyWeather from '../components/trip/HourlyWeather';
-import Flights from '../components/trip/Flights';
-import Checklist from '../components/trip/Checklist';
-import Backup from '../components/trip/Backup';
-import Emergency from '../components/trip/Emergency';
-import Suggestions from '../components/trip/Suggestions';
+import DocCard from '../components/trip/DocCard';
 import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer from '../components/shared/Toast';
@@ -42,11 +38,7 @@ import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
 import { validateDay } from '../lib/validateDay';
 import { buildWeatherDay } from '../lib/weather';
 import type { TripListItem, Day, DaySummary } from '../types/trip';
-import type { FlightsData } from '../components/trip/Flights';
-import type { ChecklistData } from '../components/trip/Checklist';
-import type { BackupData } from '../components/trip/Backup';
-import type { EmergencyData } from '../components/trip/Emergency';
-import type { SuggestionsData } from '../components/trip/Suggestions';
+import type { DocEntry } from '../components/trip/DocCard';
 
 import '../../css/tokens.css';
 
@@ -943,11 +935,6 @@ export default function TripPage() {
   }, [loading, dayNums, switchDay]);
 
   /* --- Docs for InfoSheet (#4: proper types instead of unknown) --- */
-  const flightsData = docs.flights as FlightsData | undefined;
-  const checklistData = docs.checklist as ChecklistData | undefined;
-  const backupData = docs.backup as BackupData | undefined;
-  const emergencyData = docs.emergency as EmergencyData | undefined;
-  const suggestionsData = docs.suggestions as SuggestionsData | undefined;
 
   /* --- All loaded days as Day[] (#4: allDays values are already Day) --- */
   const loadedDays = useMemo(
@@ -990,15 +977,15 @@ export default function TripPage() {
     switch (activeSheet) {
       /* Individual content */
       case 'flights':
-        return flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>;
       case 'checklist':
-        return checklistData ? <Checklist data={checklistData} /> : <p>無確認清單</p>;
       case 'backup':
-        return backupData ? <Backup data={backupData} /> : <p>無備案資料</p>;
       case 'emergency':
-        return emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>;
-      case 'suggestions':
-        return suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>;
+      case 'suggestions': {
+        const docData = docs[activeSheet] as { title?: string; entries?: DocEntry[] } | undefined;
+        return docData?.entries?.length
+          ? <DocCard entries={docData.entries} />
+          : <p className="text-callout text-muted text-center py-4">尚無資料</p>;
+      }
       case 'today-route':
         return currentDay && currentDay.timeline.length > 0
           ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({}))} />
@@ -1011,21 +998,25 @@ export default function TripPage() {
       case 'prep':
         return (
           <>
-            <div className="bg-secondary rounded-md p-4 mb-3">{flightsData ? <Flights data={flightsData} /> : <p>無航班資料</p>}</div>
-            <div className="bg-secondary rounded-md p-4 mb-3">{checklistData ? <Checklist data={checklistData} /> : <p>無確認清單</p>}</div>
+            {(['flights', 'checklist'] as const).map(k => {
+              const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
+              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
+            })}
           </>
         );
       case 'emergency-group':
         return (
           <>
-            <div className="bg-secondary rounded-md p-4 mb-3">{emergencyData ? <Emergency data={emergencyData} /> : <p>無緊急聯絡資料</p>}</div>
-            <div className="bg-secondary rounded-md p-4 mb-3">{backupData ? <Backup data={backupData} /> : <p>無備案資料</p>}</div>
+            {(['emergency', 'backup'] as const).map(k => {
+              const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
+              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
+            })}
           </>
         );
       case 'ai-group':
         return (
           <>
-            <div className="bg-secondary rounded-md p-4 mb-3">{suggestionsData ? <Suggestions data={suggestionsData} /> : <p>AI 沒意見喔</p>}</div>
+            {(() => { const d = docs.suggestions as { title?: string; entries?: DocEntry[] } | undefined; return <div className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>; })()}
             <div className="bg-secondary rounded-md p-4 mb-3">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
           </>
         );
@@ -1098,7 +1089,7 @@ export default function TripPage() {
       default:
         return null;
     }
-  }, [activeSheet, flightsData, checklistData, backupData, emergencyData, suggestionsData, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, handleTripChange, colorMode, setColorMode, colorTheme, setTheme, isDark]);
+  }, [activeSheet, docs, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, handleTripChange, colorMode, setColorMode, colorTheme, setTheme, isDark]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;

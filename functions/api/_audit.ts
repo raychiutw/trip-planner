@@ -4,7 +4,7 @@ export async function logAudit(db: D1Database, opts: {
   tripId: string;
   tableName: string;
   recordId: number | null;
-  action: 'insert' | 'update' | 'delete';
+  action: 'insert' | 'update' | 'delete' | 'error';
   changedBy: string;
   requestId?: number | null;
   diffJson?: string;

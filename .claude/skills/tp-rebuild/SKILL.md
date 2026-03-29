@@ -42,11 +42,11 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    - **覆寫整天**（結構性問題）：PUT `/api/trips/{tripId}/days/{N}`
    - **修改餐廳**：PATCH `/api/trips/{tripId}/restaurants/{rid}`
    - **修改購物**：PATCH `/api/trips/{tripId}/shopping/{sid}`
-   - **更新 doc**（checklist/backup/suggestions）：PUT `/api/trips/{tripId}/docs/{type}`
+   - **更新 doc**（checklist/backup/suggestions）：PUT `/api/trips/{tripId}/docs/{type}`（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
 
    所有寫入操作須帶認證 headers（curl 模板見 tp-shared/references.md）。
 5. 同步更新 checklist、backup、suggestions docs（若 timeline 有變動）
-6. 驗證所有 travel 的 type + 分鐘數是否合理（不改路線順序，但修正明顯錯誤的交通方式或時間）
+6. 驗證所有 travel 語意是否正確（travel = 從此地出發去下一站，見 tp-shared/references.md）。修正放反或缺漏的 travel，不改路線順序
 7. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
 8. 不自動 commit（資料已直接寫入 D1 database）
 

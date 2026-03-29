@@ -248,16 +248,6 @@ export interface DaySummary {
   label?: string | null;
 }
 
-/**
- * Trip document from GET /api/trips/:id/docs/:type
- * DB columns: doc_type, content, updated_at (trip_id not returned)
- */
-export interface TripDoc {
-  /** One of: 'flights' | 'checklist' | 'backup' | 'suggestions' | 'emergency' */
-  docType: string;
-  content: string;
-  updatedAt: string;
-}
 
 // ---------------------------------------------------------------------------
 // Trip list / single trip

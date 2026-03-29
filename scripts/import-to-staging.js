@@ -85,6 +85,8 @@ DELETE FROM shopping;
 DELETE FROM restaurants;
 DELETE FROM entries;
 DELETE FROM hotels;
+DELETE FROM trip_doc_entries;
+DELETE FROM trip_docs_v2;
 DELETE FROM trip_docs;
 DELETE FROM requests;
 DELETE FROM permissions;
@@ -104,6 +106,8 @@ DELETE FROM trips;
     'restaurants',
     'shopping',
     'trip_docs',
+    'trip_docs_v2',
+    'trip_doc_entries',
     'requests',
     'permissions',
   ];

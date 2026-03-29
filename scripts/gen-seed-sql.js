@@ -83,13 +83,36 @@ for (const s of shopping) {
 }
 lines.push('');
 
-// --- trip_docs ---
+// --- trip_docs (legacy) ---
 const docs = JSON.parse(fs.readFileSync(`${backupDir}/trip_docs.json`, 'utf8'));
 lines.push('-- trip_docs');
 for (const d of docs) {
   lines.push(`INSERT OR IGNORE INTO trip_docs (id,trip_id,doc_type,content) VALUES (${d.id},${esc(d.trip_id)},${esc(d.doc_type)},${esc(d.content)});`);
 }
 lines.push('');
+
+// --- trip_docs_v2 ---
+const docsV2Path = `${backupDir}/trip_docs_v2.json`;
+if (fs.existsSync(docsV2Path)) {
+  const docsV2 = JSON.parse(fs.readFileSync(docsV2Path, 'utf8'));
+  lines.push('-- trip_docs_v2');
+  for (const d of docsV2) {
+    lines.push(`INSERT OR IGNORE INTO trip_docs_v2 (id,trip_id,doc_type,title,updated_at) VALUES (${d.id},${esc(d.trip_id)},${esc(d.doc_type)},${esc(d.title)},${esc(d.updated_at)});`);
+  }
+  lines.push('');
+}
+
+// --- trip_doc_entries ---
+const docEntriesPath = `${backupDir}/trip_doc_entries.json`;
+if (fs.existsSync(docEntriesPath)) {
+  const docEntries = JSON.parse(fs.readFileSync(docEntriesPath, 'utf8'));
+  lines.push('-- trip_doc_entries');
+  for (const e of docEntries) {
+    lines.push(`INSERT OR IGNORE INTO trip_doc_entries (id,doc_id,sort_order,section,title,content) VALUES (${e.id},${e.doc_id},${e.sort_order},${esc(e.section)},${esc(e.title)},${esc(e.content)});`);
+  }
+  lines.push('');
+}
+
 
 // --- trip_requests (was: requests) ---
 const requests = JSON.parse(fs.readFileSync(`${backupDir}/requests.json`, 'utf8'));

@@ -4,7 +4,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const tables = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_requests', 'trip_permissions', 'audit_log'];
+const tables = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_docs_v2', 'trip_doc_entries', 'trip_requests', 'trip_permissions', 'audit_log'];
 const backupDir = path.join(__dirname, '..', 'backups');
 
 if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });

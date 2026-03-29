@@ -3,7 +3,7 @@ import { apiFetch } from './useApi';
 import { mapRow } from '../lib/mapRow';
 import { ApiError } from '../lib/errors';
 import { showErrorToast } from '../components/shared/Toast';
-import type { Trip, Day, DaySummary, TripDoc } from '../types/trip';
+import type { Trip, Day, DaySummary } from '../types/trip';
 
 
 /* ===== API response normaliser ===== */
@@ -171,7 +171,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
         async function fetchAllDocs() {
           const results = await Promise.allSettled(
             DOC_KEYS.map((key) =>
-              apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
+              apiFetch<{ doc_type: string; title: string; entries: unknown[] }>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
                 .then((data) => ({ key, data }))
             ),
           );
@@ -185,27 +185,8 @@ export function useTrip(tripId: string | null): UseTripReturn {
               continue;
             }
             const { key, data } = result.value;
-            let content: unknown = data.content;
-            if (typeof content === 'string') {
-              try {
-                content = JSON.parse(content);
-              } catch {
-                // keep as string
-              }
-            }
-            if (
-              content &&
-              typeof content === 'object' &&
-              'content' in (content as Record<string, unknown>)
-            ) {
-              const outer = content as Record<string, unknown>;
-              const docTitle = outer.title;
-              content = outer.content;
-              if (content && typeof content === 'object') {
-                (content as Record<string, unknown>)._title = docTitle;
-              }
-            }
-            setDocs((prev) => ({ ...prev, [key]: content }));
+            // 新格式：API 直接回傳 { title, entries }，不需 JSON unwrap
+            setDocs((prev) => ({ ...prev, [key]: data }));
           }
         }
         fetchAllDocs();
