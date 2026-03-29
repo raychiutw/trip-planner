@@ -228,6 +228,12 @@ async function handleAuth(
     } catch { /* ignore */ }
   }
 
+  // 公開端點：POST /api/reports（使用者錯誤回報，不需認證）
+  if (request.method === 'POST' && url.pathname === '/api/reports') {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // 公開讀取：GET /api/trips/** 不需認證
   if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
     // Service Token（CLI / scheduler）→ admin
