@@ -109,6 +109,7 @@ D1 Tables:
   GET /api/trips/:id/docs/:type          附屬文件
 
 需認證寫入（Zero Trust 成員或 Service Token）：
+  POST   /api/trips                      建立行程（含 trip_days + permissions）
   PUT    /api/trips/:id                  更新 meta
   PUT    /api/trips/:id/days/:num        覆寫整天（find-or-create pois + insert trip_pois）
   PATCH  /api/trips/:id/entries/:eid     修改 entry

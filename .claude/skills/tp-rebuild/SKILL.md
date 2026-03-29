@@ -4,7 +4,7 @@ description: Use when the user wants to fully audit and fix all quality rule vio
 user-invocable: true
 ---
 
-全面重整單一行程資料，依 R0-R15 品質規則逐項檢查並透過 API 修正。
+全面重整單一行程資料，依 R0-R18 品質規則逐項檢查並透過 API 修正。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
@@ -29,7 +29,7 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
    ```
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
-3. 逐項檢查 R0-R15 品質規則，修正不合格的資料
+3. 逐項檢查 R0-R18 品質規則，修正不合格的資料
 
    **days meta 缺漏修復**（必先於其他修復執行）：
    - 檢查每天的 `date`、`day_of_week`、`label` 是否為 null 或空字串
@@ -52,7 +52,7 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
 
 ## 重整範圍
 
-檢查現有行程的每個欄位是否符合 R0-R15，修正不符規則的部分。
+檢查現有行程的每個欄位是否符合 R0-R18，修正不符規則的部分。
 **不改 timeline 順序、不新增/移除景點**，只確保現有內容符合品質規則。
 
 ## 注意事項

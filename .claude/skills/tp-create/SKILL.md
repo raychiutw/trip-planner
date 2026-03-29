@@ -19,24 +19,62 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
 
 ## 步驟（兩階段生成）
 
+### Phase 0：收集行程基本資訊
+
+建立行程前**必須確認**以下資訊（使用者未提供時詢問）：
+
+| 欄位 | 說明 | 範例 |
+|------|------|------|
+| **owner** | 行程主人名稱（英文，用於 tripId 和 name） | `Ray`、`HuiYun`、`AeronAn` |
+| **destination** | 目的地 | `沖繩`、`釜山`、`板橋` |
+| **startDate** | 出發日（YYYY-MM-DD） | `2026-07-29` |
+| **endDate** | 回程日（YYYY-MM-DD） | `2026-08-02` |
+| **self_drive** | 自駕 or 大眾交通 | `true`（自駕）/ `false`（大眾交通） |
+| **food_prefs** | 料理偏好（最多 3 類，依優先排序） | `拉麵, 燒肉, 當地特色` |
+
+以下欄位**自動推導**，不需詢問：
+
+| 欄位 | 推導規則 |
+|------|----------|
+| `id` (tripId) | `{destination}-trip-{year}-{owner}`（destination 用英文） |
+| `name` | `{owner} 的{destination}之旅` |
+| `title` | `{year} {destination}{天數}日{自駕遊/大眾交通之旅}行程表` |
+| `countries` | 依目的地判斷 ISO 3166-1 alpha-2（日本 `JP`、韓國 `KR`、台灣 `TW`） |
+| `description` | 行程完成後自動產生 SEO 摘要（含主要景點、天數、特色） |
+| `og_description` | 精簡版 description（≤ 100 字，用於 Open Graph meta） |
+| `auto_scroll` | 從 startDate 到 endDate 的逗號分隔日期列表 |
+| `footer` | JSON 物件（見下方範例） |
+| `published` | 預設 `0`（未發布），行程完成驗證通過後改 `1` |
+| `is_default` | 預設 `0` |
+
+#### footer 自動產生規則
+
+```json
+{
+  "title": "{year} {destination}{天數}日{自駕遊/之旅}",
+  "dates": "{M/D（星期）} ~ {M/D（星期）}",
+  "budget": "",
+  "exchangeNote": "{依國家產生}",
+  "tagline": "{依國家產生}"
+}
+```
+
+| 國家 | exchangeNote | tagline |
+|------|-------------|---------|
+| JP | `匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準` | `めんそーれ 沖繩！ 祝旅途愉快！`（依地區調整） |
+| KR | `匯率以 1 KRW ≈ 0.025 TWD 估算｜實際費用依當時匯率及消費為準` | `{韓文歡迎語}！祝旅途愉快！` |
+| TW | `""` | `{依地區調整}` |
+
 ### Phase 1：產生骨架
 
-1. 詢問使用者料理偏好（最多 3 類，依優先排序），寫入 `meta.foodPreferences`
-1b. 依目的地自動判斷 `meta.countries`（ISO 3166-1 alpha-2 國碼陣列）：日本 `["JP"]`、韓國 `["KR"]`、台灣 `["TW"]` 等。韓國行程須為所有 POI location 新增 `naverQuery`（Naver Maps URL）
+1. 確認 Phase 0 所有必填資訊已收集完畢
+1b. 韓國行程須為所有 POI location 新增 `naverQuery`（Naver Maps URL）
 2. 讀取品質規則（tp-quality-rules skill）
-3. 建立行程 meta：
+3. 建立行程（`POST /api/trips`，curl 模板見 tp-shared/references.md）：
 
-   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+   Body: `{id, name, owner, title, description, og_description, self_drive, countries, food_prefs, auto_scroll, footer, published:0, startDate, endDate}`
 
-   ```bash
-   node -e "require('fs').writeFileSync('/tmp/meta.json', JSON.stringify({id:'{tripId}', name:'{owner}', title:'{行程標題}', startDate:'{YYYY-MM-DD}', endDate:'{YYYY-MM-DD}', countries:['{ISO碼}'], transportMode:'car|transit', foodPreferences:['{偏好1}','{偏好2}'], published:false}), 'utf8')"
-   curl -s -X POST \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "Content-Type: application/json" \
-     --data @/tmp/meta.json \
-     "https://trip-planner-dby.pages.dev/api/trips"
-   ```
+   POST 會自動建立 trips + trip_days + trip_permissions 記錄。回傳 `{ ok: true, tripId, daysCreated }`。
 4. 為每一天產生完整內容（JSON 格式），包含：
    - timeline entries（含 type、title、time、description、location、travel、hotels 等）
    - restaurants infoBox（午餐/晚餐 entry 下各 3 家推薦）
@@ -57,49 +95,17 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    - `dayOfWeek`（中文星期，必填）：`"一"` / `"二"` / `"三"` / `"四"` / `"五"` / `"六"` / `"日"`
    - `label`（≤ 8 字，必填）：當日主題，例如 `"抵達那霸"` / `"美麗海水族館"`
 
-   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
-
-   ```bash
-   node -e "require('fs').writeFileSync('/tmp/day.json', JSON.stringify({...完整一天資料...}), 'utf8')"
-   curl -s -X PUT \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "Content-Type: application/json" \
-     --data @/tmp/day.json \
-     "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
-   ```
+   使用 `PUT /api/trips/{tripId}/days/{N}`（curl 模板見 tp-shared/references.md）
 8. 建立 docs（flights、checklist、backup、suggestions、emergency）：
 
-   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
-
-   ```bash
-   node -e "require('fs').writeFileSync('/tmp/doc.json', JSON.stringify({content:'...'}), 'utf8')"
-   curl -s -X PUT \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "Content-Type: application/json" \
-     --data @/tmp/doc.json \
-     "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
-   ```
+   使用 `PUT /api/trips/{tripId}/docs/{type}`，Body: `{content:'...'}`
 
 ### Phase 2：並行充填（Agent teams）
 
 9. 對每一天啟動一個 Agent（sonnet），並行執行：
    - 查詢缺少 `googleRating` 的地點/餐廳評分
    - googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
-   - Agent 透過 PATCH API 補充各 entry 的評分資訊：
-
-     > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
-
-     ```bash
-     node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({googleRating:4.5}), 'utf8')"
-     curl -s -X PATCH \
-       -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-       -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-       -H "Content-Type: application/json" \
-       --data @/tmp/patch.json \
-       "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
-     ```
+   - Agent 透過 `PATCH /api/trips/{tripId}/entries/{eid}` 補充各 entry 的評分資訊（Body: `{googleRating:4.5}`）
 10. 收集所有 Agent 完成後確認資料完整
 11. 確保不引入 null 值（找不到 → `googleRating` 省略）
 

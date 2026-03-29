@@ -4,7 +4,7 @@ description: Use when the user wants to run a full quality-rule rebuild across a
 user-invocable: true
 ---
 
-批次重建所有行程 MD 檔案，逐一執行 R0-R15 品質規則全面重整。
+批次重建所有行程 MD 檔案，逐一執行 R0-R18 品質規則全面重整。
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
