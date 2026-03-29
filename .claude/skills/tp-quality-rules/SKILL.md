@@ -119,11 +119,12 @@ shop.category 使用標準分類（共 7 類）：超市、超商、唐吉軻德
 - `naverQuery` 優先填精確 place URL：`https://map.naver.com/v5/entry/place/{placeId}`，查不到時 fallback 為 `https://map.naver.com/v5/search/{韓文關鍵字}`。
 - 非韓國行程不需要 `naverQuery` 欄位。
 
-### R16 飯店 POI 必填 google_rating
-type 為 `hotel` 的 pois 必須有 `google_rating`（數字 1.0-5.0）。缺少 → **warning**（🟡）。
+### R16 飯店 POI 建議填 maps + address
+type 為 `hotel` 的 pois 建議有 `maps`（導航用）和 `address`（地址）。缺少 → **warning**（🟡）。
+（google_rating 已由 R12/R13 涵蓋，不重複檢查。）
 
 ### R17 POI 必填導航資訊
 所有 POI 必須至少有一種導航方式：`maps`（Google Maps URL 或搜尋文字）或 `lat` + `lng`。兩者都缺 → **fail**（🔴）。
 
-### R18 飯店 POI 建議填 address
-type 為 `hotel` 的 pois 建議有 `address` 和 `phone`。缺少 → **warning**（🟡）。
+### R18 飯店 POI 建議填 phone
+type 為 `hotel` 的 pois 建議有 `phone`（電話）。缺少 → **warning**（🟡）。
