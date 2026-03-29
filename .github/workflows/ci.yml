@@ -20,10 +20,13 @@ jobs:
         run: npx tsc --noEmit
 
       - name: TypeScript check (functions)
-        run: npx tsc --noEmit -p tsconfig.functions.json || true
+        run: npx tsc --noEmit -p tsconfig.functions.json
 
       - name: Unit tests
         run: npm test
+
+      - name: API tests
+        run: npm run test:api
 
       - name: Build
         run: npm run build
