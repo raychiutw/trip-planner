@@ -89,30 +89,38 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const lowerEmail = email.toLowerCase();
 
-  // 檢查重複
-  const existing = await context.env.DB
-    .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND trip_id = ?')
-    .bind(lowerEmail, tripId)
-    .first();
-  if (existing) {
-    throw new AppError('DATA_CONFLICT', '此 email 已有此行程的權限');
+  // 寫入 D1（UNIQUE index 保護 race condition）
+  let result;
+  try {
+    result = await context.env.DB
+      .prepare('INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?) RETURNING *')
+      .bind(lowerEmail, tripId, role)
+      .first();
+  } catch (err) {
+    // UNIQUE constraint violation → already exists
+    if (err instanceof Error && err.message.includes('UNIQUE')) {
+      throw new AppError('DATA_CONFLICT', '此 email 已有此行程的權限');
+    }
+    throw err;
   }
-
-  // 寫入 D1
-  const result = await context.env.DB
-    .prepare('INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?) RETURNING *')
-    .bind(lowerEmail, tripId, role)
-    .first();
 
   // 同步 Access policy
   try {
     await addEmailToAccessPolicy(context.env, lowerEmail);
   } catch (err) {
     // 回滾 D1
-    await context.env.DB
-      .prepare('DELETE FROM trip_permissions WHERE email = ? AND trip_id = ?')
-      .bind(lowerEmail, tripId)
-      .run();
+    try {
+      await context.env.DB
+        .prepare('DELETE FROM trip_permissions WHERE email = ? AND trip_id = ?')
+        .bind(lowerEmail, tripId)
+        .run();
+    } catch (rollbackErr) {
+      await logAudit(context.env.DB, {
+        tripId, tableName: 'trip_permissions', recordId: (result as any)?.id ?? null,
+        action: 'error', changedBy: auth.email,
+        diffJson: JSON.stringify({ error: 'Rollback failed', message: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr) }),
+      });
+    }
     throw new AppError('DATA_SAVE_FAILED', '同步 Access policy 失敗，已回滾');
   }
 

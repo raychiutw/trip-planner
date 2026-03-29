@@ -29,11 +29,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const { id } = context.params as { id: string };
 
-  if (!await hasPermission(context.env.DB, auth.email, id, auth.isAdmin)) {
-    throw new AppError('PERM_DENIED');
-  }
-
-  const existing = await context.env.DB.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
+  const db = db;
+  const [hasPerm, existing] = await Promise.all([
+    hasPermission(db, auth.email, id, auth.isAdmin),
+    db.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Promise<Record<string, unknown> | null>,
+  ]);
+  if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!existing) throw new AppError('DATA_NOT_FOUND');
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
@@ -46,9 +47,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
   const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));
 
-  await context.env.DB.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id).run();
+  await db.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id).run();
 
-  await logAudit(context.env.DB, {
+  await logAudit(db, {
     tripId: id,
     tableName: 'trips',
     recordId: null,

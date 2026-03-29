@@ -46,7 +46,7 @@ describe('PATCH /api/requests/:id', () => {
 
   it('does NOT accept legacy "closed" status', () => {
     // The valid statuses array should not contain 'closed'
-    const validLine = requestIdTs.match(/validStatuses\s*=\s*\[([^\]]+)\]/);
+    const validLine = requestIdTs.match(/STATUS_ORDER\s*=\s*\[([^\]]+)\]/);
     expect(validLine).not.toBeNull();
     expect(validLine[1]).not.toContain("'closed'");
   });

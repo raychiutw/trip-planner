@@ -57,20 +57,21 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [allDays, setAllDays] = useState<Record<number, Day>>({});
-
-  const dayCacheRef = useRef<Record<number, Day>>({});
+  // Single ref mirrors allDays for sync cache lookups (avoids stale closures)
+  const allDaysRef = useRef(allDays);
+  allDaysRef.current = allDays;
 
   /* --- Fetch a single day --- */
   const fetchDay = useCallback(
     async (dayNum: number): Promise<Day | null> => {
       if (!tripId) return null;
-      const cached = dayCacheRef.current[dayNum];
+      const cached = allDaysRef.current[dayNum];
       if (cached) return cached;
 
       try {
         const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${dayNum}`);
         const day = mapDayResponse(raw);
-        dayCacheRef.current[dayNum] = day;
+        allDaysRef.current[dayNum] = day;
         return day;
       } catch (err) {
         if (err instanceof ApiError) {
@@ -86,7 +87,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const switchDay = useCallback(
     (dayNum: number) => {
       setCurrentDayNum(dayNum);
-      const cached = dayCacheRef.current[dayNum];
+      const cached = allDaysRef.current[dayNum];
       if (cached) {
         setCurrentDay(cached);
         return;
@@ -115,7 +116,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
     setDocs({});
     setError(null);
     setLoading(true);
-    dayCacheRef.current = {};
+    allDaysRef.current = {};
     setAllDays({});
 
     const controller = new AbortController();
@@ -155,7 +156,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
               const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal });
               if (cancelled) return;
               const dayData = mapDayResponse(raw);
-              dayCacheRef.current[num] = dayData;
+              allDaysRef.current[num] = dayData;
               setAllDays((prev) => ({ ...prev, [num]: dayData }));
               if (num === firstDayNum) {
                 setCurrentDay(dayData);
@@ -231,7 +232,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
   /* --- Refetch the current day (bypass cache) --- */
   const refetchCurrentDay = useCallback(() => {
     if (!currentDayNum) return;
-    delete dayCacheRef.current[currentDayNum];
+    delete allDaysRef.current[currentDayNum];
     fetchDay(currentDayNum).then((day) => {
       if (day) {
         setCurrentDay(day);

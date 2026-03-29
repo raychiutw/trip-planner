@@ -177,11 +177,12 @@ const DaySection = React.memo(function DaySection({
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
-  const dayDrivingStats = timeline.length > 0
-    ? calcDrivingStats(timeline)
-    : null;
+  const dayDrivingStats = useMemo(
+    () => timeline.length > 0 ? calcDrivingStats(timeline) : null,
+    [timeline],
+  );
 
-  const warnings = validateDay(timeline);
+  const warnings = useMemo(() => validateDay(timeline), [timeline]);
 
   /* Memoised timeline entries — avoids new array reference on every render */
   const timelineEntries = useMemo(
@@ -437,7 +438,7 @@ export default function TripPage() {
         if (match && match.published === 0) {
           lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
-          setTimeout(() => { navigate('/trip/okinawa-trip-2026-Ray', { replace: true }); }, 2000);
+          setTimeout(() => { navigate(defaultTrip ? `/trip/${defaultTrip.tripId}` : '/', { replace: true }); }, 2000);
           return;
         }
 
@@ -484,7 +485,6 @@ export default function TripPage() {
     };
 
     // Helper: fetch all data (meta + full days + all docs)
-    const DOC_TYPES = DOC_KEYS;
 
     type RawDayEntry = {
       time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
@@ -523,7 +523,7 @@ export default function TripPage() {
           ),
         ),
         Promise.all(
-          DOC_TYPES.map(dtype =>
+          DOC_KEYS.map(dtype =>
             apiFetch<{ doc_type: string; content: string; updated_at: string }>(`/trips/${activeTripId}/docs/${dtype}`)
               .then(d => {
                 let parsed: unknown = d.content;
@@ -544,6 +544,14 @@ export default function TripPage() {
       }
 
       return { meta, daySummaries, daysData, docsMap };
+    };
+
+    const DOC_LABEL_MAP: Record<string, string> = {
+      flights: '航班資訊', checklist: '出發前確認清單',
+      backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 解籤',
+    };
+    const DOC_EMOJI: Record<string, string> = {
+      flights: '✈️', checklist: '✅', backup: '🔄', emergency: '🚨', suggestions: '🔮',
     };
 
     try {
@@ -650,14 +658,10 @@ export default function TripPage() {
         }
 
         // Docs
-        const docLabels: Record<string, string> = {
-          flights: '✈️ 航班資訊', checklist: '✅ 出發前確認清單',
-          backup: '🔄 備案', emergency: '🚨 緊急聯絡', suggestions: '🔮 AI 解籤',
-        };
-        for (const dtype of DOC_TYPES) {
+        for (const dtype of DOC_KEYS) {
           const docData = docsMap[dtype];
           if (!docData) continue;
-          md += `## ${docLabels[dtype]}\n\n`;
+          md += `## ${DOC_EMOJI[dtype]} ${DOC_LABEL_MAP[dtype]}\n\n`;
           md += typeof docData === 'string' ? docData : JSON.stringify(docData, null, 2);
           md += '\n\n';
         }
@@ -727,17 +731,13 @@ export default function TripPage() {
         }
 
         // Append docs as separate rows
-        const DOC_LABELS: Record<string, string> = {
-          flights: '航班資訊', checklist: '出發前確認清單',
-          backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 解籤',
-        };
-        for (const dtype of DOC_TYPES) {
+        for (const dtype of DOC_KEYS) {
           const docData = docsMap[dtype];
           if (!docData) continue;
           const docStr = typeof docData === 'string' ? docData : JSON.stringify(docData);
           const row = new Array(headers.length).fill('');
           row[0] = '附錄';
-          row[3] = DOC_LABELS[dtype] || dtype;
+          row[3] = DOC_LABEL_MAP[dtype] || dtype;
           row[6] = s(docStr);
           rows.push(row);
         }
@@ -767,7 +767,10 @@ export default function TripPage() {
         }
         document.body.classList.remove('print-mode');
       }
-    } catch { alert('下載失敗，請稍後再試'); }
+    } catch {
+      document.body.classList.remove('print-mode');
+      alert('下載失敗，請稍後再試');
+    }
   }, [activeTripId, trip]);
 
   /* --- Update document title --- */
@@ -1197,7 +1200,6 @@ export default function TripPage() {
         {/* Desktop sidebar: TodaySummary + Hotel + Transport */}
         {!loading && trip && (
           <InfoPanel
-            days={loadedDays}
             currentDay={currentDay}
           />
         )}

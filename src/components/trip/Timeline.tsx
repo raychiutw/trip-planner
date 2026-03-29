@@ -1,5 +1,4 @@
 /* ===== Timeline Component ===== */
-/* Renders the full day timeline — maps each entry to a <TimelineEvent>. */
 
 import { useMemo } from 'react';
 import TimelineEvent, { type TimelineEntryData } from './TimelineEvent';
@@ -41,29 +40,21 @@ export default function Timeline({ events, dayDate, localToday }: TimelineProps)
   }, [dayDate, localToday]);
 
   /* Compute now index: only if this is today's timeline */
-  const { nowIndex } = useMemo(() => {
-    if (!isToday) return { nowIndex: -1 };
+  const nowIndex = useMemo(() => {
+    if (!isToday) return -1;
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
 
-    let foundNow = -1;
     for (let i = 0; i < events.length; i++) {
       const start = parseStartMinutes(events[i].time);
       const end = parseEndMinutes(events[i].time);
-      // Entry has explicit end time and we're within range
-      if (start >= 0 && end >= 0 && nowMin >= start && nowMin <= end) {
-        foundNow = i;
-        break;
-      }
-      // Entry has start time, check against next entry's start
+      if (start >= 0 && end >= 0 && nowMin >= start && nowMin <= end) return i;
       if (start >= 0 && nowMin >= start) {
         const nextStart = i + 1 < events.length ? parseStartMinutes(events[i + 1].time) : -1;
-        if (nextStart < 0 || nowMin < nextStart) {
-          foundNow = i;
-        }
+        if (nextStart < 0 || nowMin < nextStart) return i;
       }
     }
-    return { nowIndex: foundNow };
+    return -1;
   }, [isToday, events]);
 
   if (!events || events.length === 0) return null;
