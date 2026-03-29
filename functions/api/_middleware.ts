@@ -141,6 +141,36 @@ function checkCsrf(request: Request, env: Env): Response | null {
   return null;
 }
 
+/**
+ * Companion scope restriction — limits operations when X-Request-Scope: companion is set.
+ * Used by tp-request scheduler to prevent prompt injection from escalating privileges.
+ */
+const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
+  { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+$/ },
+  { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/trip-pois$/ },
+  { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
+  { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
+  { method: 'PUT',   pattern: /^\/api\/trips\/[^/]+\/docs\/\w+$/ },
+  { method: 'PATCH', pattern: /^\/api\/requests\/\d+$/ },
+  { method: 'GET',   pattern: /^\/api\/trips\// },
+  { method: 'GET',   pattern: /^\/api\/requests/ },
+];
+
+function checkCompanionScope(request: Request, url: URL): Response | null {
+  const scope = request.headers.get('X-Request-Scope');
+  if (scope !== 'companion') return null;
+
+  const method = request.method.toUpperCase();
+  const path = url.pathname;
+  const allowed = COMPANION_ALLOWED.some(r => r.method === method && r.pattern.test(path));
+  if (allowed) return null;
+
+  return new Response(JSON.stringify({ error: '此操作超出旅伴請求範圍' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 async function handleAuth(
   context: EventContext<Env, string, Record<string, unknown>>,
 ): Promise<Response> {
@@ -161,6 +191,10 @@ async function handleAuth(
   // CSRF protection for all mutating requests
   const csrfError = checkCsrf(request, env);
   if (csrfError) return csrfError;
+
+  // Companion scope restriction — tp-request scheduler sends this header
+  const scopeError = checkCompanionScope(request, url);
+  if (scopeError) return scopeError;
 
   // UTF-8 body validation for mutating requests
   const method = request.method.toUpperCase();
