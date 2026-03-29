@@ -1,5 +1,4 @@
 /* ===== Hotel Component ===== */
-/* Renders a hotel card with: name, description, breakfast, checkout, info boxes */
 
 import { useState, useCallback, memo } from 'react';
 import clsx from 'clsx';

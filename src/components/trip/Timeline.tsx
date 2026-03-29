@@ -14,7 +14,6 @@ interface TimelineProps {
   localToday?: string | null;
 }
 
-/** Parse start time "HH:MM" to minutes since midnight */
 function parseStartMinutes(time?: string | null): number {
   if (!time) return -1;
   const start = time.split('-')[0].trim();

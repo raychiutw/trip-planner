@@ -28,7 +28,7 @@ function mapDayResponse(raw: Record<string, unknown>): Day {
 
 /* ===== Doc Types ===== */
 
-const DOC_KEYS = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
+export const DOC_KEYS = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
 export type DocKey = (typeof DOC_KEYS)[number];
 
 /* ===== Hook Return Type ===== */
@@ -58,7 +58,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const [error, setError] = useState<string | null>(null);
   const [allDays, setAllDays] = useState<Record<number, Day>>({});
 
-  // Cache day data to avoid re-fetching
   const dayCacheRef = useRef<Record<number, Day>>({});
 
   /* --- Fetch a single day --- */
@@ -168,40 +167,44 @@ export function useTrip(tripId: string | null): UseTripReturn {
         }
         fetchAllDays();
 
-        // Fetch docs sequentially in the background
         async function fetchAllDocs() {
-          for (const key of DOC_KEYS) {
-            if (cancelled) return;
-            try {
-              const data = await apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal });
-              if (cancelled) return;
-              let content: unknown = data.content;
-              if (typeof content === 'string') {
-                try {
-                  content = JSON.parse(content);
-                } catch {
-                  // keep as string
-                }
-              }
-              if (
-                content &&
-                typeof content === 'object' &&
-                'content' in (content as Record<string, unknown>)
-              ) {
-                const outer = content as Record<string, unknown>;
-                const docTitle = outer.title;
-                content = outer.content;
-                if (content && typeof content === 'object') {
-                  (content as Record<string, unknown>)._title = docTitle;
-                }
-              }
-              setDocs((prev) => ({ ...prev, [key]: content }));
-            } catch (err) {
-              // doc 載入失敗為輕微錯誤，不跳 Toast
+          const results = await Promise.allSettled(
+            DOC_KEYS.map((key) =>
+              apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
+                .then((data) => ({ key, data }))
+            ),
+          );
+          if (cancelled) return;
+          for (const result of results) {
+            if (result.status === 'rejected') {
+              const err = result.reason;
               if (err instanceof ApiError && err.severity !== 'minor') {
                 showErrorToast(err.message, err.severity);
               }
+              continue;
             }
+            const { key, data } = result.value;
+            let content: unknown = data.content;
+            if (typeof content === 'string') {
+              try {
+                content = JSON.parse(content);
+              } catch {
+                // keep as string
+              }
+            }
+            if (
+              content &&
+              typeof content === 'object' &&
+              'content' in (content as Record<string, unknown>)
+            ) {
+              const outer = content as Record<string, unknown>;
+              const docTitle = outer.title;
+              content = outer.content;
+              if (content && typeof content === 'object') {
+                (content as Record<string, unknown>)._title = docTitle;
+              }
+            }
+            setDocs((prev) => ({ ...prev, [key]: content }));
           }
         }
         fetchAllDocs();

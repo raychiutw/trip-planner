@@ -6,7 +6,7 @@
 import { logAudit } from '../../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
-import { json, getAuth, parseJsonBody } from '../../../../_utils';
+import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -14,16 +14,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, eid } = context.params as { id: string; eid: string };
-  const entryId = Number(eid);
+  const entryId = parseIntParam(eid);
+  if (!entryId) throw new AppError('DATA_VALIDATION', 'entry ID 格式錯誤');
   const db = context.env.DB;
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    throw new AppError('PERM_DENIED');
-  }
-
-  if (!await verifyEntryBelongsToTrip(db, entryId, id)) {
-    throw new AppError('PERM_DENIED', '此 entry 不屬於該行程');
-  }
+  const [hasPerm, belongsToTrip] = await Promise.all([
+    hasPermission(db, auth.email, id, auth.isAdmin),
+    verifyEntryBelongsToTrip(db, entryId, id),
+  ]);
+  if (!hasPerm) throw new AppError('PERM_DENIED');
+  if (!belongsToTrip) throw new AppError('PERM_DENIED', '此 entry 不屬於該行程');
 
   type AddPoiBody = {
     name: string;

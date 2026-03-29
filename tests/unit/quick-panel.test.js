@@ -183,10 +183,10 @@ describe('QuickPanel single label per item', () => {
     // Each button has data-qp-item and a label <span> with Tailwind classes
     // Count occurrences of label spans in the item rendering sections
     const labelMatches = tsx.match(/leading-none">{item\.label}<\/span>/g);
-    // There are 3 grid rendering sections (sectionA, sectionB, sectionC), each with one label per item
+    // There are 2 grid rendering sections (sectionA+B merged, sectionC), each with one label per item
     expect(labelMatches).not.toBeNull();
-    // Each map renders one label per item — 3 separate map() calls
-    expect(labelMatches.length).toBe(3);
+    // Each map renders one label per item — 2 separate map() calls
+    expect(labelMatches.length).toBe(2);
   });
 
   it('does not have duplicate label spans in the same button (no speed-dial bug)', () => {

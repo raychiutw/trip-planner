@@ -275,27 +275,7 @@ export default function QuickPanel({
               className="grid gap-2"
               style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}
             >
-              {sectionA.map((item) => {
-                const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
-                return (
-                  <button
-                    key={item.key}
-                    data-qp-item
-                    className={clsx(
-                      'flex flex-col items-center justify-center gap-1 min-h-tap-min border-none bg-background text-foreground cursor-pointer rounded-sm shadow-md p-3 font-inherit text-base transition-colors duration-fast',
-                      'active:bg-hover',
-                      isDisabled && 'opacity-50 cursor-not-allowed',
-                    )}
-                    data-content={item.key}
-                    disabled={isDisabled}
-                    onClick={() => handleItemClick(item)}
-                  >
-                    <Icon name={item.icon} />
-                    <span className="text-base text-foreground leading-none">{item.label}</span>
-                  </button>
-                );
-              })}
-              {sectionB.map((item) => {
+              {[...sectionA, ...sectionB].map((item) => {
                 const isDisabled = !isOnline && WRITE_KEYS.has(item.key);
                 return (
                   <button

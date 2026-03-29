@@ -210,22 +210,17 @@ async function handleAuth(
     const cloned = request.clone();
     try {
       const decoder = new TextDecoder('utf-8', { fatal: true });
-      decoder.decode(new Uint8Array(await cloned.arrayBuffer()));
+      const bodyText = decoder.decode(new Uint8Array(await cloned.arrayBuffer()));
+      // 亂碼偵測（常見於 CP950/Big5 → UTF-8 誤轉），統一在 middleware 層阻擋
+      if (detectGarbledText(bodyText)) {
+        return json({ error: 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8' }, 400);
+      }
     } catch {
       return new Response(JSON.stringify({ error: 'Request body is not valid UTF-8' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    // 亂碼偵測（常見於 CP950/Big5 → UTF-8 誤轉），統一在 middleware 層阻擋
-    const cloned2 = request.clone();
-    try {
-      const bodyText = await cloned2.text();
-      if (detectGarbledText(bodyText)) {
-        return json({ error: 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8' }, 400);
-      }
-    } catch { /* ignore */ }
   }
 
   // 公開端點：POST /api/reports（使用者錯誤回報，不需認證）
