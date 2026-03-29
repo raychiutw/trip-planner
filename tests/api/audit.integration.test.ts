@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, seedTrip , callHandler } from './helpers';
 import { onRequestGet } from '../../functions/api/trips/[id]/audit';
 import type { Env } from '../../functions/api/_types';
 
@@ -30,7 +30,7 @@ describe('GET /api/trips/:id/audit', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
       params: { id: 'trip-audit' },
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBeGreaterThanOrEqual(1);
@@ -44,7 +44,7 @@ describe('GET /api/trips/:id/audit', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-audit' },
     });
-    expect((await onRequestGet(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
   });
 
   it('未認證 → 401', async () => {
@@ -53,6 +53,6 @@ describe('GET /api/trips/:id/audit', () => {
       env,
       params: { id: 'trip-audit' },
     });
-    expect((await onRequestGet(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(401);
   });
 });

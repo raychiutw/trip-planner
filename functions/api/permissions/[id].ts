@@ -4,12 +4,13 @@
 
 import { removeEmailFromAccessPolicy } from '../permissions';
 import { logAudit } from '../_audit';
+import { AppError } from '../_errors';
 import { json, getAuth } from '../_utils';
 import type { Env, AuthData } from '../_types';
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context) as AuthData;
-  if (!auth.isAdmin) return json({ error: '僅管理者可操作' }, 403);
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const id = context.params.id as string;
 
@@ -20,7 +21,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .first<{ id: number; email: string; trip_id: string; role: string }>();
 
   if (!record) {
-    return json({ error: '找不到該權限記錄' }, 404);
+    throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');
   }
 
   // 刪除 D1 記錄
@@ -42,7 +43,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
         .prepare('INSERT INTO trip_permissions (id, email, trip_id, role) VALUES (?, ?, ?, ?)')
         .bind(record.id, record.email, record.trip_id, record.role)
         .run();
-      return json({ error: '同步 Access policy 失敗，已回滾', detail: String(err) }, 500);
+      throw new AppError('DATA_SAVE_FAILED', '同步 Access policy 失敗，已回滾');
     }
   }
 

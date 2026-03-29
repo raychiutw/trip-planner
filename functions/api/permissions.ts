@@ -4,6 +4,7 @@
  */
 
 import { logAudit } from './_audit';
+import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env, AuthData } from './_types';
 
@@ -55,13 +56,13 @@ export async function removeEmailFromAccessPolicy(env: Env, email: string): Prom
 // GET /api/permissions?tripId=xxx
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context) as AuthData;
-  if (!auth.isAdmin) return json({ error: '僅管理者可操作' }, 403);
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const url = new URL(context.request.url);
   const tripId = url.searchParams.get('tripId');
 
   if (!tripId) {
-    return json({ error: '缺少 tripId 參數' }, 400);
+    throw new AppError('DATA_VALIDATION', '缺少 tripId 參數');
   }
 
   const { results } = await context.env.DB
@@ -75,7 +76,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 // POST /api/permissions { email, tripId, role? }
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context) as AuthData;
-  if (!auth.isAdmin) return json({ error: '僅管理者可操作' }, 403);
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const bodyOrError = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
@@ -83,7 +84,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const { email, tripId, role = 'member' } = body;
   if (!email || !tripId) {
-    return json({ error: '缺少必要欄位：email, tripId' }, 400);
+    throw new AppError('DATA_VALIDATION', '缺少必要欄位：email, tripId');
   }
 
   const lowerEmail = email.toLowerCase();
@@ -94,7 +95,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(lowerEmail, tripId)
     .first();
   if (existing) {
-    return json({ error: '此 email 已有此行程的權限' }, 409);
+    throw new AppError('DATA_CONFLICT', '此 email 已有此行程的權限');
   }
 
   // 寫入 D1
@@ -112,7 +113,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .prepare('DELETE FROM trip_permissions WHERE email = ? AND trip_id = ?')
       .bind(lowerEmail, tripId)
       .run();
-    return json({ error: '同步 Access policy 失敗，已回滾', detail: String(err) }, 500);
+    throw new AppError('DATA_SAVE_FAILED', '同步 Access policy 失敗，已回滾');
   }
 
   await logAudit(context.env.DB, {

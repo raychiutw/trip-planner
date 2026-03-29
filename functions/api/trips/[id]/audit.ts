@@ -1,4 +1,5 @@
 
+import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
 import type { Env } from '../../_types';
 
@@ -7,8 +8,8 @@ import type { Env } from '../../_types';
 // Only admin can access
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
-  if (!auth.isAdmin) return json({ error: '僅管理者可存取' }, 403);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const { id } = context.params as { id: string };
   const db = context.env.DB;

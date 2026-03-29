@@ -1,4 +1,5 @@
 import { logAudit } from './_audit';
+import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
 
@@ -16,7 +17,7 @@ function str(val: unknown, fallback = ''): string {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
@@ -29,30 +30,30 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const endDate = body.endDate as string | undefined;
 
   if (!id || !name || !owner || !startDate || !endDate) {
-    return json({ error: '缺必填欄位：id, name, owner, startDate, endDate' }, 400);
+    throw new AppError('DATA_VALIDATION', '缺必填欄位：id, name, owner, startDate, endDate');
   }
   if (!TRIPID_RE.test(id) || id.length > 100) {
-    return json({ error: 'tripId 格式錯誤：僅允許小寫英數字與連字號，最長 100 字元' }, 400);
+    throw new AppError('DATA_VALIDATION', 'tripId 格式錯誤：僅允許小寫英數字與連字號，最長 100 字元');
   }
   if (!DATE_RE.test(startDate) || !DATE_RE.test(endDate)) {
-    return json({ error: '日期格式錯誤：須為 YYYY-MM-DD' }, 400);
+    throw new AppError('DATA_VALIDATION', '日期格式錯誤：須為 YYYY-MM-DD');
   }
   const start = new Date(startDate + 'T00:00:00Z');
   const end = new Date(endDate + 'T00:00:00Z');
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    return json({ error: '日期無效' }, 400);
+    throw new AppError('DATA_VALIDATION', '日期無效');
   }
   if (end < start) {
-    return json({ error: 'endDate 必須 ≥ startDate' }, 400);
+    throw new AppError('DATA_VALIDATION', 'endDate 必須 ≥ startDate');
   }
   const totalDays = Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
   if (totalDays > MAX_DAYS) {
-    return json({ error: `行程天數不可超過 ${MAX_DAYS} 天` }, 400);
+    throw new AppError('DATA_VALIDATION', `行程天數不可超過 ${MAX_DAYS} 天`);
   }
 
   const db = context.env.DB;
   const existing = await db.prepare('SELECT 1 FROM trips WHERE id = ?').bind(id).first();
-  if (existing) return json({ error: 'tripId 已存在' }, 409);
+  if (existing) throw new AppError('DATA_CONFLICT', 'tripId 已存在');
 
   const stmts: D1PreparedStatement[] = [];
 

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/requests';
 import { onRequestPatch } from '../../functions/api/requests/[id]';
 import type { Env } from '../../functions/api/_types';
@@ -31,7 +31,7 @@ describe('POST /api/requests', () => {
       env,
       auth: mockAuth({ email: 'user@test.com' }),
     });
-    const resp = await onRequestPost(ctx);
+    const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
     const data = await resp.json() as Record<string, unknown>;
     requestId = data.id as number;
@@ -46,7 +46,7 @@ describe('POST /api/requests', () => {
       env,
       auth: mockAuth(),
     });
-    expect((await onRequestPost(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
   });
 
   it('未認證 → 401', async () => {
@@ -56,7 +56,7 @@ describe('POST /api/requests', () => {
       }),
       env,
     });
-    expect((await onRequestPost(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 });
 
@@ -67,7 +67,7 @@ describe('GET /api/requests', () => {
       env,
       auth: mockAuth({ email: 'user@test.com' }),
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBeGreaterThanOrEqual(1);
@@ -78,7 +78,7 @@ describe('GET /api/requests', () => {
       request: new Request('https://test.com/api/requests?tripId=trip-req'),
       env,
     });
-    expect((await onRequestGet(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(401);
   });
 });
 
@@ -93,7 +93,7 @@ describe('PATCH /api/requests/:id', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
       params: { id: String(requestId) },
     });
-    const resp = await onRequestPatch(ctx);
+    const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Record<string, unknown>;
     expect(data.status).toBe('completed');
@@ -115,7 +115,7 @@ describe('PATCH /api/requests/:id', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true, isServiceToken: true }),
       params: { id: String(row!.id) },
     });
-    const resp = await onRequestPatch(ctx);
+    const resp = await callHandler(onRequestPatch, ctx);
     const data = await resp.json() as Record<string, unknown>;
     expect(data.reply).toBe('已處理您的請求。如有問題請直接聯繫行程主人。');
   });
@@ -127,6 +127,6 @@ describe('PATCH /api/requests/:id', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: String(requestId) },
     });
-    expect((await onRequestPatch(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
   });
 });

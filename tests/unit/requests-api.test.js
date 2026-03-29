@@ -51,8 +51,8 @@ describe('PATCH /api/requests/:id', () => {
     expect(validLine[1]).not.toContain("'closed'");
   });
 
-  it('returns 400 for invalid status', () => {
-    expect(requestIdTs).toContain('400');
+  it('validates status with AppError', () => {
+    expect(requestIdTs).toContain('DATA_VALIDATION');
   });
 });
 

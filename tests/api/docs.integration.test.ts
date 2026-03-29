@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
 import { onRequestGet, onRequestPut } from '../../functions/api/trips/[id]/docs/[type]';
 import type { Env } from '../../functions/api/_types';
 
@@ -25,7 +25,7 @@ describe('GET /api/trips/:id/docs/:type', () => {
       env,
       params: { id: 'trip-docs', type: 'flights' },
     });
-    expect((await onRequestGet(ctx)).status).toBe(404);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(404);
   });
 });
 
@@ -39,7 +39,7 @@ describe('PUT /api/trips/:id/docs/:type', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-docs', type: 'flights' },
     });
-    const resp = await onRequestPut(ctx);
+    const resp = await callHandler(onRequestPut, ctx);
     expect(resp.status).toBe(200);
 
     // 驗證可以讀取
@@ -48,7 +48,7 @@ describe('PUT /api/trips/:id/docs/:type', () => {
       env,
       params: { id: 'trip-docs', type: 'flights' },
     });
-    const getResp = await onRequestGet(getCtx);
+    const getResp = await callHandler(onRequestGet, getCtx);
     expect(getResp.status).toBe(200);
     const data = await getResp.json() as Record<string, unknown>;
     expect(data.content).toContain('CI123');
@@ -61,7 +61,7 @@ describe('PUT /api/trips/:id/docs/:type', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-docs', type: 'invalid' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
   });
 
   it('未認證 → 401', async () => {
@@ -70,6 +70,6 @@ describe('PUT /api/trips/:id/docs/:type', () => {
       env,
       params: { id: 'trip-docs', type: 'flights' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(401);
   });
 });

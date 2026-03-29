@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId , callHandler } from './helpers';
 import { onRequestPost } from '../../functions/api/trips/[id]/entries/[eid]/trip-pois';
 import { onRequestPatch, onRequestDelete } from '../../functions/api/trips/[id]/trip-pois/[tpid]';
 import type { Env } from '../../functions/api/_types';
@@ -35,7 +35,7 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-tp', eid: String(entryId) },
     });
-    const resp = await onRequestPost(ctx);
+    const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
     const data = await resp.json() as Record<string, unknown>;
     tripPoiId = data.id as number;
@@ -56,7 +56,7 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-tp', eid: String(entryId) },
     });
-    expect((await onRequestPost(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
   });
 
   it('未認證 → 401', async () => {
@@ -67,7 +67,7 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
       env,
       params: { id: 'trip-tp', eid: String(entryId) },
     });
-    expect((await onRequestPost(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 });
 
@@ -81,7 +81,7 @@ describe('PATCH /api/trips/:id/trip-pois/:tpid', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-tp', tpid: String(tripPoiId) },
     });
-    expect((await onRequestPatch(ctx)).status).toBe(200);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(200);
   });
 });
 
@@ -96,6 +96,6 @@ describe('DELETE /api/trips/:id/trip-pois/:tpid', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-tp', tpid: String(tripPoiId) },
     });
-    expect((await onRequestDelete(ctx)).status).toBe(200);
+    expect((await callHandler(onRequestDelete, ctx)).status).toBe(200);
   });
 });

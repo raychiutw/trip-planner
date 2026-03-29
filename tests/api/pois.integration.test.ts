@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedPoi } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedPoi , callHandler } from './helpers';
 import { onRequestPatch } from '../../functions/api/pois/[id]';
 import type { Env } from '../../functions/api/_types';
 
@@ -30,7 +30,7 @@ describe('PATCH /api/pois/:id', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
       params: { id: String(poiId) },
     });
-    const resp = await onRequestPatch(ctx);
+    const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
     const poi = await db.prepare('SELECT google_rating, address FROM pois WHERE id = ?').bind(poiId).first();
     expect((poi as Record<string, unknown>).google_rating).toBe(4.5);
@@ -44,7 +44,7 @@ describe('PATCH /api/pois/:id', () => {
       auth: mockAuth({ email: 'user@test.com', isAdmin: false }),
       params: { id: String(poiId) },
     });
-    expect((await onRequestPatch(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
   });
 
   it('不存在 → 404', async () => {
@@ -54,6 +54,6 @@ describe('PATCH /api/pois/:id', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
       params: { id: '99999' },
     });
-    expect((await onRequestPatch(ctx)).status).toBe(404);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(404);
   });
 });

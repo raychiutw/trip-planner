@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockContext, seedTrip } from './helpers';
+import { mockEnv, mockContext, seedTrip , callHandler } from './helpers';
 import { onRequestGet } from '../../functions/api/trips/[id]/days';
 import type { Env } from '../../functions/api/_types';
 
@@ -25,7 +25,7 @@ describe('GET /api/trips/:id/days', () => {
       env,
       params: { id: 'trip-days' },
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data).toHaveLength(5);
@@ -39,7 +39,7 @@ describe('GET /api/trips/:id/days', () => {
       env,
       params: { id: 'nope' },
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     const data = await resp.json() as Array<unknown>;
     expect(data).toHaveLength(0);
   });

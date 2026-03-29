@@ -4,6 +4,7 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
+import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
@@ -15,21 +16,21 @@ const ALLOWED_FIELDS = [
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
-  if (!auth.isAdmin) return json({ error: '僅管理者可修改 POI master' }, 403);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const poiId = Number(context.params.id);
-  if (!poiId || isNaN(poiId)) return json({ error: 'Invalid POI id' }, 400);
+  if (!poiId || isNaN(poiId)) throw new AppError('DATA_VALIDATION', 'Invalid POI id');
 
   const db = context.env.DB;
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
-  if (!oldRow) return json({ error: 'POI not found' }, 404);
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND', 'POI not found');
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
 
   const update = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
-  if (!update) return json({ error: '無有效欄位可更新' }, 400);
+  if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   await db.prepare(`UPDATE pois SET ${update.setClauses} WHERE id = ?`)
     .bind(...update.values, poiId).run();

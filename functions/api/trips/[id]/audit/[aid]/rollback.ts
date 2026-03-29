@@ -1,4 +1,5 @@
 import { logAudit } from '../../../../_audit';
+import { AppError } from '../../../../_errors';
 import { json, getAuth } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
@@ -34,8 +35,8 @@ interface AuditRow {
 // Only admin can rollback
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
-  if (!auth.isAdmin) return json({ error: '僅管理者可執行回滾' }, 403);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const { id, aid } = context.params as { id: string; aid: string };
   const db = context.env.DB;
@@ -46,25 +47,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(Number(aid), id)
     .first() as AuditRow | null;
 
-  if (!auditRow) return json({ error: 'Audit log entry not found' }, 404);
+  if (!auditRow) throw new AppError('DATA_NOT_FOUND', 'Audit log entry not found');
 
   const { table_name, record_id, action, diff_json, snapshot } = auditRow;
 
   const safeTable = ALLOWED_TABLES.find(t => t === table_name);
   if (!safeTable) {
-    return json({ error: 'Invalid table name' }, 400);
+    throw new AppError('DATA_VALIDATION', 'Invalid table name');
   }
   const allowedCols = TABLE_COLUMNS[safeTable];
 
   if (action === 'delete') {
     // Re-INSERT using the snapshot
-    if (!snapshot) return json({ error: 'No snapshot available for rollback' }, 400);
+    if (!snapshot) throw new AppError('DATA_VALIDATION', 'No snapshot available for rollback');
 
     let snapshotRow: Record<string, unknown>;
     try {
       snapshotRow = JSON.parse(snapshot);
     } catch {
-      return json({ error: 'Invalid snapshot JSON' }, 400);
+      throw new AppError('DATA_VALIDATION', 'Invalid snapshot JSON');
     }
 
     // Remove system-managed fields that should be auto-generated, keep the original id
@@ -72,7 +73,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const snapshotKeys = Object.keys(snapshotRow).filter(k => k !== 'updated_at' && k !== 'created_at');
     const invalidSnapshotCols = snapshotKeys.filter(k => !allowedCols.includes(k));
     if (invalidSnapshotCols.length > 0) {
-      return json({ error: `Invalid column(s) in snapshot: ${invalidSnapshotCols.join(', ')}` }, 400);
+      throw new AppError('DATA_VALIDATION', `Invalid column(s) in snapshot: ${invalidSnapshotCols.join(', ')}`);
     }
     const cols = snapshotKeys.join(', ');
     const placeholders = snapshotKeys.map(() => '?').join(', ');
@@ -82,7 +83,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (snapshotRow.id != null) {
       const existing = await db.prepare(`SELECT 1 FROM ${safeTable} WHERE id = ?`).bind(snapshotRow.id).first();
       if (existing) {
-        return json({ error: 'Cannot rollback: a record with this id already exists' }, 409);
+        throw new AppError('DATA_CONFLICT', 'Cannot rollback: a record with this id already exists');
       }
     }
     await db.prepare(`INSERT INTO ${safeTable} (${cols}) VALUES (${placeholders})`).bind(...values).run();
@@ -101,22 +102,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (action === 'update') {
     // Revert fields using diff_json old values
-    if (!diff_json) return json({ error: 'No diff_json available for rollback' }, 400);
-    if (record_id === null) return json({ error: 'No record_id for update rollback' }, 400);
+    if (!diff_json) throw new AppError('DATA_VALIDATION', 'No diff_json available for rollback');
+    if (record_id === null) throw new AppError('DATA_VALIDATION', 'No record_id for update rollback');
 
     let diff: Record<string, { old: unknown; new: unknown }>;
     try {
       diff = JSON.parse(diff_json);
     } catch {
-      return json({ error: 'Invalid diff_json' }, 400);
+      throw new AppError('DATA_VALIDATION', 'Invalid diff_json');
     }
 
     const revertFields = Object.keys(diff);
-    if (revertFields.length === 0) return json({ error: 'No fields to revert' }, 400);
+    if (revertFields.length === 0) throw new AppError('DATA_VALIDATION', 'No fields to revert');
 
     const invalidDiffCols = revertFields.filter(f => !allowedCols.includes(f));
     if (invalidDiffCols.length > 0) {
-      return json({ error: `Invalid column(s) in diff: ${invalidDiffCols.join(', ')}` }, 400);
+      throw new AppError('DATA_VALIDATION', `Invalid column(s) in diff: ${invalidDiffCols.join(', ')}`);
     }
 
     const setClauses = [...revertFields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
@@ -127,7 +128,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .bind(...values)
       .run();
 
-    if (result.meta.changes === 0) return json({ error: 'Record not found for revert' }, 404);
+    if (result.meta.changes === 0) throw new AppError('DATA_NOT_FOUND', 'Record not found for revert');
 
     const revertedFields = Object.fromEntries(revertFields.map(f => [f, diff[f].old]));
     await logAudit(db, {
@@ -144,7 +145,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (action === 'insert') {
     // DELETE the record that was inserted
-    if (record_id === null) return json({ error: 'No record_id for insert rollback' }, 400);
+    if (record_id === null) throw new AppError('DATA_VALIDATION', 'No record_id for insert rollback');
 
     const oldRow = await db.prepare(`SELECT * FROM ${safeTable} WHERE id = ?`).bind(record_id).first() as Record<string, unknown> | null;
 
@@ -163,5 +164,5 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return json({ ok: true, rolled_back: 'insert->delete' });
   }
 
-  return json({ error: `Unknown action: ${action}` }, 400);
+  throw new AppError('DATA_VALIDATION', `Unknown action: ${action}`);
 };

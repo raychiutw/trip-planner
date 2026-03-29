@@ -1,5 +1,6 @@
 import { logAudit, computeDiff } from '../_audit';
 import { hasPermission } from '../_auth';
+import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
@@ -9,7 +10,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
 
   const row = await context.env.DB.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first();
-  if (!row) return json({ error: 'Not found' }, 404);
+  if (!row) throw new AppError('DATA_NOT_FOUND');
 
   if (row.footer && typeof row.footer === 'string') {
     try {
@@ -24,23 +25,23 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id } = context.params as { id: string };
 
   if (!await hasPermission(context.env.DB, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   const existing = await context.env.DB.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
-  if (!existing) return json({ error: 'Not found' }, 404);
+  if (!existing) throw new AppError('DATA_NOT_FOUND');
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
   const body = bodyOrError;
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
-  if (!update) return json({ error: 'No valid fields to update' }, 400);
+  if (!update) throw new AppError('DATA_VALIDATION', 'No valid fields to update');
 
   const changedBy = auth.email;
   const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));

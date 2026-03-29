@@ -5,23 +5,24 @@
 
 import { logAudit } from '../../../../_audit';
 import { hasPermission, verifyEntryBelongsToTrip } from '../../../../_auth';
+import { AppError } from '../../../../_errors';
 import { json, getAuth, parseJsonBody } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, eid } = context.params as { id: string; eid: string };
   const entryId = Number(eid);
   const db = context.env.DB;
 
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   if (!await verifyEntryBelongsToTrip(db, entryId, id)) {
-    return json({ error: '此 entry 不屬於該行程' }, 403);
+    throw new AppError('PERM_DENIED', '此 entry 不屬於該行程');
   }
 
   type AddPoiBody = {
@@ -49,12 +50,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = bodyOrError;
 
   if (!body.name || !body.type) {
-    return json({ error: 'name and type are required' }, 400);
+    throw new AppError('DATA_VALIDATION', 'name and type are required');
   }
 
   // Find day_id from entry
   const entry = await db.prepare('SELECT day_id FROM trip_entries WHERE id = ?').bind(entryId).first<{ day_id: number }>();
-  if (!entry) return json({ error: 'Entry not found' }, 404);
+  if (!entry) throw new AppError('DATA_NOT_FOUND', 'Entry not found');
 
   // Find or create POI master
   let poiId: number;

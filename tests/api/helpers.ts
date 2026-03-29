@@ -2,6 +2,23 @@
  * API Test Helpers — 共用 mock 建構工具
  */
 import type { Env, AuthData } from '../../functions/api/_types';
+import { AppError, errorResponse } from '../../functions/api/_errors';
+
+/**
+ * 包裹 handler 呼叫 — 模擬 middleware 的 AppError catch 行為。
+ * handler throw AppError → 轉為 Response（跟 production 行為一致）
+ */
+export async function callHandler(
+  handler: (ctx: unknown) => Promise<Response>,
+  ctx: unknown,
+): Promise<Response> {
+  try {
+    return await handler(ctx);
+  } catch (err) {
+    if (err instanceof AppError) return errorResponse(err);
+    throw err;
+  }
+}
 
 /** 建立 mock Env 物件 */
 export function mockEnv(db: D1Database, overrides: Partial<Env> = {}): Env {
