@@ -10,10 +10,7 @@ user-invocable: true
 
 ## API 設定
 
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
 
 ## 輸入方式
 
@@ -49,18 +46,8 @@ user-invocable: true
      - `note: ""`（有備註填內容，無備註填空字串，R15）
      - `location.googleQuery`：實體地點填搜尋文字（R11）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
-   - **POI V2 欄位規格（PUT /days/:num 時傳入）**：
-     | type | 必填 | 建議填 |
-     |------|------|--------|
-     | hotel | name, description, checkout, breakfast_included, google_rating, maps | address, phone, mapcode |
-     | restaurant | name, category, hours, google_rating, maps, price | reservation, reservation_url |
-     | shopping | name, category, hours, google_rating, maps, must_buy | description |
-     | parking | name, description, maps | mapcode |
-   - Markdown 支援欄位（前端會渲染 markdown）：
-     - `entry.description`（description）：✅ 可用粗體、列表、連結
-     - `entry.note`：✅ 可用粗體、列表
-     - `restaurant.description`：✅ 可用 markdown
-     - `entry.title` / `restaurant.name` / `hotel.name`：❌ 純文字
+   - POI V2 各 type 必填/建議欄位見 tp-shared/references.md
+   - Markdown 支援欄位見 tp-shared/references.md
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：`googleRating` 省略欄位，其餘欄位用空字串
 7. 依序建立每天資料：
@@ -99,7 +86,7 @@ user-invocable: true
 
 9. 對每一天啟動一個 Agent（sonnet），並行執行：
    - 查詢缺少 `googleRating` 的地點/餐廳評分
-   - **google_rating 查詢策略**：優先用 `/browse` 開 Google Maps（`https://www.google.com/maps/search/{POI名稱}`），從頁面文字抽取 rating。WebSearch 拿不到 Google 評分（動態渲染）。如果 browse 不可用才 fallback WebSearch。
+   - googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
    - Agent 透過 PATCH API 補充各 entry 的評分資訊：
 
      > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file

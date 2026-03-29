@@ -10,10 +10,7 @@ user-invocable: true
 
 ## API 設定
 
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
 
 ## 觸發模式
 
@@ -90,7 +87,7 @@ curl -s -X PATCH \
       - `note`：有備註填內容，無備註填空字串 `""`（R15）
       - `location.googleQuery`：實體地點填搜尋文字（R11）
       - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-        **查詢策略**：見 `tp-search-strategies` — 優先 `/browse` Google Maps，WebSearch 是 fallback。
+        googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
    d. 修改的部分須符合 R0-R18 品質規則（含 R16 飯店 rating、R17 導航資訊、R18 飯店 address）
    d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
    e. 依修改類型選擇對應 API：
@@ -136,9 +133,6 @@ curl -s -X PATCH \
 
 ### 回覆寫入方法
 
-⚠️ **不要把中文直接放在 curl `-d` 引號中**，Windows shell CP950 會破壞 UTF-8 編碼。
-改用 Node.js 寫暫存檔 + `curl --data @file`：
-
 ```bash
 node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'completed', processed_by:'scheduler'}), 'utf8')"
 curl -s -X PATCH \
@@ -155,17 +149,7 @@ curl -s -X PATCH \
 
 ## Markdown 支援欄位
 
-前端會對以下欄位做 markdown 渲染（marked.parse + sanitizeHtml），AI 寫入時**可以使用 markdown**：
-
-| 欄位 | 支援 markdown | 說明 |
-|------|:---:|------|
-| `entry.description`（description） | ✅ | 景點描述，可用粗體、列表、連結 |
-| `entry.note` | ✅ | 備註提醒，可用粗體、列表 |
-| `restaurant.description` | ✅ | 餐廳描述 |
-| `entry.title` | ❌ | 純文字，不渲染 markdown |
-| `entry.time` | ❌ | 純文字 |
-| `restaurant.name` | ❌ | 純文字 |
-| `hotel.name` | ❌ | 純文字 |
+Markdown 支援欄位見 tp-shared/references.md
 
 ## 注意事項
 

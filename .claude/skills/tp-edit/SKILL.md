@@ -10,10 +10,7 @@ user-invocable: true
 
 ## API 設定
 
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
 
 ## 輸入方式
 
@@ -35,39 +32,16 @@ user-invocable: true
    - `note`：有備註填內容，無備註填空字串 `""`（R15）
    - `location.googleQuery`：實體地點填搜尋文字（R11）
    - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-     **查詢策略**：優先用 `/browse` 開 Google Maps（`https://www.google.com/maps/search/{POI名稱}`），從頁面文字抽取 rating。WebSearch 拿不到動態渲染的評分。
+     googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
    - **POI V2 欄位規格**（同 tp-create）：
-     | type | 必填 | 建議填 |
-     |------|------|--------|
-     | hotel | name, description, checkout, breakfast_included, google_rating, maps | address, phone, mapcode |
-     | restaurant | name, category, hours, google_rating, maps, price | reservation, reservation_url |
-     | shopping | name, category, hours, google_rating, maps, must_buy | description |
-     | parking | name, description, maps | mapcode |
+     POI V2 各 type 必填/建議欄位見 tp-shared/references.md
 4. 修改的部分須符合 R0-R15 品質規則
 4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
 5. 依修改類型選擇對應 API：
-   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
-
    - **修改單一 entry**（title/time/description/location/travel 等）：
-     ```bash
-     node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({...修改欄位...}), 'utf8')"
-     curl -s -X PATCH \
-       -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-       -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-       -H "Content-Type: application/json" \
-       --data @/tmp/patch.json \
-       "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
-     ```
+     `PATCH /api/trips/{tripId}/entries/{eid}` + JSON body（curl 模板見 tp-shared/references.md）
    - **覆寫整天**（插入/移除/重排 entry，或整天大幅修改）：
-     ```bash
-     node -e "require('fs').writeFileSync('/tmp/day.json', JSON.stringify({...完整一天資料...}), 'utf8')"
-     curl -s -X PUT \
-       -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-       -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-       -H "Content-Type: application/json" \
-       --data @/tmp/day.json \
-       "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
-     ```
+     `PUT /api/trips/{tripId}/days/{dayNum}` + JSON body
 
    **注意**：覆寫整天（PUT）時，必須保留原始的 `date`、`dayOfWeek`、`label`，不得送出 null。缺少任一欄位 API 將回傳 400。
    - **新增餐廳**：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
@@ -75,15 +49,7 @@ user-invocable: true
    - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
    - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
    - **更新 doc**（checklist/backup/suggestions 等）：
-     ```bash
-     node -e "require('fs').writeFileSync('/tmp/doc.json', JSON.stringify({content:'...'}), 'utf8')"
-     curl -s -X PUT \
-       -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-       -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-       -H "Content-Type: application/json" \
-       --data @/tmp/doc.json \
-       "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
-     ```
+     `PUT /api/trips/{tripId}/docs/{type}` + JSON body
 6. 若影響到 checklist、backup、suggestions，同步更新對應 doc
 7. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
@@ -106,11 +72,4 @@ user-invocable: true
 
 ## Markdown 支援欄位
 
-前端會對以下欄位做 markdown 渲染，AI 寫入時**可以使用 markdown**：
-
-| 欄位 | 支援 | 說明 |
-|------|:---:|------|
-| `entry.description`（description） | ✅ | 景點描述，可用粗體、列表、連結 |
-| `entry.note` | ✅ | 備註提醒，可用粗體、列表 |
-| `restaurant.description` | ✅ | 餐廳描述 |
-| `entry.title` / `restaurant.name` / `hotel.name` | ❌ | 純文字 |
+Markdown 支援欄位見 tp-shared/references.md

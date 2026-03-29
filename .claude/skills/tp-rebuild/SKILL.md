@@ -10,10 +10,7 @@ user-invocable: true
 
 ## API 設定
 
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
 
 ## 輸入方式
 
@@ -47,19 +44,7 @@ user-invocable: true
    - **修改購物**：PATCH `/api/trips/{tripId}/shopping/{sid}`
    - **更新 doc**（checklist/backup/suggestions）：PUT `/api/trips/{tripId}/docs/{type}`
 
-   所有寫入操作須帶認證 headers：
-
-   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
-
-   ```bash
-   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({...修改欄位...}), 'utf8')"
-   curl -s -X PATCH \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "Content-Type: application/json" \
-     --data @/tmp/patch.json \
-     "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
-   ```
+   所有寫入操作須帶認證 headers（curl 模板見 tp-shared/references.md）。
 5. 同步更新 checklist、backup、suggestions docs（若 timeline 有變動）
 6. 驗證所有 travel 的 type + 分鐘數是否合理（不改路線順序，但修正明顯錯誤的交通方式或時間）
 7. **tp-check（after-fix）**：執行完整模式 report，確認修正結果
