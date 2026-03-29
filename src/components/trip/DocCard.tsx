@@ -12,7 +12,6 @@ export interface DocEntry {
 }
 
 interface DocCardProps {
-  title: string;
   entries: DocEntry[];
 }
 

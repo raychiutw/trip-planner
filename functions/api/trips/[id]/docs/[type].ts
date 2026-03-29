@@ -31,7 +31,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     doc_type: doc.doc_type,
     title: doc.title,
     updated_at: doc.updated_at,
-    entries: entries.results,
+    entries: entries.results ?? [],
   });
 };
 

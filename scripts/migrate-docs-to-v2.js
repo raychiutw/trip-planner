@@ -154,7 +154,7 @@ async function main() {
         const { title, entries } = parseDoc(dt, doc.content);
 
         // PUT to new v2 endpoint
-        const result = await api('PUT', `/api/trips/${trip.tripId}/docs-v2/${dt}`, {
+        const result = await api('PUT', `/api/trips/${trip.tripId}/docs/${dt}`, {
           title,
           entries: entries.map((e, i) => ({ ...e, sort_order: i })),
         });

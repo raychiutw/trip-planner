@@ -983,7 +983,7 @@ export default function TripPage() {
       case 'suggestions': {
         const docData = docs[activeSheet] as { title?: string; entries?: DocEntry[] } | undefined;
         return docData?.entries?.length
-          ? <DocCard title={docData.title || ''} entries={docData.entries} />
+          ? <DocCard entries={docData.entries} />
           : <p className="text-callout text-muted text-center py-4">尚無資料</p>;
       }
       case 'today-route':
@@ -1000,7 +1000,7 @@ export default function TripPage() {
           <>
             {(['flights', 'checklist'] as const).map(k => {
               const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
-              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard title={d.title || ''} entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
+              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
             })}
           </>
         );
@@ -1009,14 +1009,14 @@ export default function TripPage() {
           <>
             {(['emergency', 'backup'] as const).map(k => {
               const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
-              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard title={d.title || ''} entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
+              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
             })}
           </>
         );
       case 'ai-group':
         return (
           <>
-            {(() => { const d = docs.suggestions as { title?: string; entries?: DocEntry[] } | undefined; return <div className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard title={d.title || ''} entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>; })()}
+            {(() => { const d = docs.suggestions as { title?: string; entries?: DocEntry[] } | undefined; return <div className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>; })()}
             <div className="bg-secondary rounded-md p-4 mb-3">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
           </>
         );
