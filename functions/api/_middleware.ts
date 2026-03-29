@@ -147,6 +147,17 @@ async function handleAuth(
   const { request, env } = context;
   const url = new URL(request.url);
 
+  // Mock auth for local development — DEV_MOCK_EMAIL set in .env.local (not in version control)
+  if (env.DEV_MOCK_EMAIL) {
+    const email = env.DEV_MOCK_EMAIL.toLowerCase();
+    (context.data as Record<string, unknown>).auth = {
+      email,
+      isAdmin: email === (env.ADMIN_EMAIL || '').toLowerCase(),
+      isServiceToken: false,
+    };
+    return context.next();
+  }
+
   // CSRF protection for all mutating requests
   const csrfError = checkCsrf(request, env);
   if (csrfError) return csrfError;

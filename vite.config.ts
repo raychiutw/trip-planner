@@ -84,9 +84,8 @@ export default defineConfig({
   },
   server: {
     proxy: process.env.MOCK_API ? {} : {
-      // ⚠️ WARNING: proxies to PRODUCTION — writes during dev hit real data
       '/api': {
-        target: 'https://trip-planner-dby.pages.dev',
+        target: 'http://localhost:8788',
         changeOrigin: true,
       },
     },

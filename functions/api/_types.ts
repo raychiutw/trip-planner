@@ -10,6 +10,7 @@ export interface Env {
   CF_ACCESS_POLICY_ID: string;
   ADMIN_EMAIL: string;
   ALLOWED_ORIGIN?: string;
+  DEV_MOCK_EMAIL?: string;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
 }
 
