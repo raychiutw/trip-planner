@@ -1,0 +1,35 @@
+{
+  "date": "2026-03-29",
+  "window": "7d",
+  "metrics": {
+    "commits": 191,
+    "contributors": 1,
+    "prs_merged": 48,
+    "insertions": 268647,
+    "deletions": 33180,
+    "net_loc": 235467,
+    "test_loc": 15822,
+    "test_ratio": 0.059,
+    "active_days": 8,
+    "sessions": 42,
+    "deep_sessions": 14,
+    "avg_session_minutes": 55,
+    "loc_per_session_hour": 6950,
+    "feat_pct": 0.183,
+    "fix_pct": 0.482,
+    "peak_hour": 21,
+    "ai_assisted_commits": 48
+  },
+  "authors": {
+    "Ray Chiu": { "commits": 191, "insertions": 268647, "deletions": 33180, "test_ratio": 0.059, "top_area": "src/pages/" }
+  },
+  "version_range": ["1.0.0.0", "1.1.1.0"],
+  "streak_days": 14,
+  "test_health": {
+    "total_test_files": 69,
+    "tests_added_this_period": 57,
+    "regression_test_commits": 1,
+    "test_files_changed": 57
+  },
+  "tweetable": "Week of Mar 22: 191 commits, 48 PRs, 269k LOC, v1.0→v1.1 | POI V2 + Local Dev + Tailwind Cutover + Day Map | Streak: 14d"
+}

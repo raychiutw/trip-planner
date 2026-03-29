@@ -1,6 +1,6 @@
 # Plan: 本機開發環境 — 多環境切換 + Mock Auth + 一鍵初始化
 
-**Status: APPROVED**
+**Status: ARCHIVED** (merged PR #138, 2026-03-29)
 
 ## 動機
 
