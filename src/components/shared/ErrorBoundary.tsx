@@ -48,12 +48,27 @@ export class ErrorBoundary extends Component<Props, State> {
       const canRetry = retries < MAX_RETRIES;
 
       return this.props.fallback ?? (
-        <div className="p-8 text-center">
-          <h2>發生錯誤</h2>
-          <p>{canRetry ? '請嘗試重新載入頁面' : '重複載入失敗，請稍後再試或聯繫管理員'}</p>
+        <div className="flex flex-col items-center justify-center min-h-dvh bg-background px-6">
+          {/* Decorative wave */}
+          <svg width="80" height="40" viewBox="0 0 80 40" fill="none" className="mb-6 opacity-30">
+            <path d="M0 20 Q20 5 40 20 T80 20" stroke="var(--color-accent)" strokeWidth="3" fill="none" />
+            <path d="M0 28 Q20 13 40 28 T80 28" stroke="var(--color-accent)" strokeWidth="2" fill="none" opacity="0.5" />
+          </svg>
+          <h2 className="text-title2 font-semibold text-foreground mb-2">哎呀，出了點狀況</h2>
+          <p className="text-callout text-muted mb-6 max-w-xs text-center leading-relaxed">
+            {canRetry
+              ? '頁面遇到了意外的問題，重新載入通常可以解決'
+              : '多次嘗試後仍然失敗，請稍後再試或聯繫管理員'}
+          </p>
           {canRetry && (
-            <button onClick={this.handleReload}>重新載入</button>
+            <button
+              onClick={this.handleReload}
+              className="min-h-tap-min px-6 py-3 rounded-md bg-accent text-white text-callout font-medium shadow-sm transition-colors duration-fast active:opacity-80"
+            >
+              重新載入
+            </button>
           )}
+          <p className="text-caption text-muted mt-8 opacity-60">Tripline</p>
         </div>
       );
     }
