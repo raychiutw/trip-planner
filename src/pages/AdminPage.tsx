@@ -9,7 +9,7 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { apiFetchRaw } from '../hooks/useApi';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import Toast from '../components/shared/Toast';
+import ToastContainer from '../components/shared/Toast';
 
 /* Cloudflare Access 在 infrastructure 層處理認證，不需要 JS redirect */
 
@@ -44,7 +44,7 @@ export default function AdminPage() {
   const currentTripIdRef = useRef(currentTripId);
   currentTripIdRef.current = currentTripId;
 
-  const { showOffline, showReconnect } = useOfflineToast(isOnline);
+  useOfflineToast(isOnline);
 
   /* ===== Load Permissions ===== */
   const abortRef = useRef<AbortController | null>(null);
@@ -309,21 +309,7 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
-        {showOffline && (
-          <Toast
-            message="已離線 — 無法管理權限"
-            icon="offline"
-            visible={showOffline}
-          />
-        )}
-        {showReconnect && (
-          <Toast
-            message="已恢復連線"
-            icon="online"
-            visible={showReconnect}
-          />
-        )}
+        <ToastContainer />
 
         <main
           className={[

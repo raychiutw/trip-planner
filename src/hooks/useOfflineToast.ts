@@ -1,30 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
+import { showToast } from '../components/shared/Toast';
 
 /**
- * Tracks online/offline transitions and surfaces two short-lived toast flags.
- *
- * - showOffline  – true for ~2 s after going offline
- * - showReconnect – true for ~2 s after coming back online
+ * 監控 online/offline 變化，自動觸發 Toast 通知。
+ * 不再回傳 state — 由 ToastContainer 統一管理顯示。
  */
-export function useOfflineToast(isOnline: boolean): { showOffline: boolean; showReconnect: boolean } {
-  const [showOffline, setShowOffline] = useState(false);
-  const [showReconnect, setShowReconnect] = useState(false);
+export function useOfflineToast(isOnline: boolean): void {
   const wasOffline = useRef(false);
 
   useEffect(() => {
     if (!isOnline) {
       wasOffline.current = true;
-      setShowOffline(true);
-      const t = setTimeout(() => setShowOffline(false), 2000);
-      return () => clearTimeout(t);
+      showToast('已離線 — 顯示快取資料', 'offline', 3000);
     } else if (wasOffline.current) {
       wasOffline.current = false;
-      setShowOffline(false);
-      setShowReconnect(true);
-      const t = setTimeout(() => setShowReconnect(false), 2000);
-      return () => clearTimeout(t);
+      showToast('已恢復連線', 'online', 2000);
     }
   }, [isOnline]);
-
-  return { showOffline, showReconnect };
 }

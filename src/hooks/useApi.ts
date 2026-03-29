@@ -1,6 +1,7 @@
 /* ===== API Fetch Helpers ===== */
 
 import { reportFetchResult } from './useOnlineStatus';
+import { ApiError } from '../lib/errors';
 
 /** Raw fetch that returns the Response — for callers that need status-code inspection. */
 export function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response> {
@@ -8,13 +9,12 @@ export function apiFetchRaw(path: string, opts?: RequestInit): Promise<Response>
   if (opts?.body) headers['Content-Type'] = 'application/json';
   return fetch('/api' + path, { ...opts, headers }).then(
     (r) => { reportFetchResult(true); return r; },
-    (e) => { reportFetchResult(false); throw e; },
+    (e) => { reportFetchResult(false); throw ApiError.fromNetworkError(e); },
   );
 }
 
 export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: AbortSignal }): Promise<T> {
   const headers: Record<string, string> = { ...(opts?.headers ?? {}) as Record<string, string> };
-  // Only set Content-Type for requests with a body (POST/PUT/PATCH)
   const method = (opts?.method ?? 'GET').toUpperCase();
   if (method !== 'GET' && method !== 'HEAD' && method !== 'DELETE') {
     headers['Content-Type'] = headers['Content-Type'] ?? 'application/json';
@@ -27,17 +27,15 @@ export async function apiFetch<T>(path: string, opts?: RequestInit & { signal?: 
       headers,
     });
   } catch (networkError) {
-    // fetch() itself threw — genuine network failure (offline, DNS, etc.)
     reportFetchResult(false);
-    throw networkError;
+    throw ApiError.fromNetworkError(networkError);
   }
 
   if (!response.ok) {
-    // HTTP error — could be a server issue; don't treat as offline
-    throw new Error(`API error ${response.status}: ${response.statusText}`);
+    // 解析結構化錯誤（支援新舊格式）
+    throw await ApiError.fromResponse(response);
   }
 
-  // Successful response — signal that we are online
   reportFetchResult(true);
   return response.json() as Promise<T>;
 }

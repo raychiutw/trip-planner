@@ -8,6 +8,7 @@
 import type { Env } from './_types';
 import { detectGarbledText } from './_validate';
 import { json } from './_utils';
+import { AppError, errorResponse } from './_errors';
 
 function getCookie(request: Request, name: string): string | null {
   const cookieHeader = request.headers.get('Cookie');
@@ -55,6 +56,20 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return response;
   } catch (err) {
     const duration = Date.now() - start;
+
+    // AppError = 預期錯誤（handler throw）→ 結構化回應
+    if (err instanceof AppError) {
+      context.waitUntil(
+        env.DB.prepare(
+          'INSERT INTO api_logs (method, path, status, error, duration) VALUES (?, ?, ?, ?, ?)',
+        )
+          .bind(request.method, url.pathname, err.status, err.code, duration)
+          .run(),
+      );
+      return errorResponse(err);
+    }
+
+    // 非預期錯誤 → 500 + log
     context.waitUntil(
       env.DB.prepare(
         'INSERT INTO api_logs (method, path, status, error, duration) VALUES (?, ?, ?, ?, ?)',
@@ -68,10 +83,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         )
         .run(),
     );
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError('SYS_INTERNAL'));
   }
 };
 
