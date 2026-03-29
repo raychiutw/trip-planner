@@ -23,6 +23,7 @@
     "memory:import": "bash scripts/memory-sync.sh import"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260329.1",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.2",
     "@testing-library/dom": "^10.4.1",
