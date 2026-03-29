@@ -1,4 +1,8 @@
-# tp-daily-check
+---
+name: tp-daily-check
+description: Use when running the daily health check that generates a problem report, sends Telegram summary, and waits for user instructions.
+user-invocable: true
+---
 
 每日問題報告 — 執行 daily-check.js，讀取報告，發送 Telegram 摘要，等待 Key User 指示。
 

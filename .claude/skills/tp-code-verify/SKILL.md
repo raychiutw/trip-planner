@@ -37,11 +37,14 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 ## 步驟
 
 1. 執行 `npx tsc --noEmit` — TypeScript 型別檢查（src/ 有變更時）
-2. 執行 `npm test` — 包含 naming-convention.test.js 和所有 unit/integration 測試
-3. 若 src/ 有變更，掃描 React Best Practices（RBP-1 ~ RBP-14）+ Code Review 規則（CR-1 ~ CR-10）
-4. 若 css/ 或 src/ 或 html/ 有變更，掃描 CSS HIG 規則（H1-H12）— 讀取 skill `tp-ux-verify` 的規則來源
-5. 若全過 → 🟢 綠燈，可以 commit
-6. 若有失敗 → 🔴 紅燈：
+2. 執行 `npx tsc --noEmit -p tsconfig.functions.json` — Functions 型別檢查（functions/ 有變更時）
+3. 執行 `npm test` — 前端 unit/integration 測試
+4. 執行 `npm run test:api` — API integration 測試（Miniflare D1，functions/ 有變更時）
+5. 若 src/ 有變更，掃描 React Best Practices（RBP-1 ~ RBP-14）+ Code Review 規則（CR-1 ~ CR-10）
+6. 若 css/ 或 src/ 或 html/ 有變更，掃描 CSS HIG 規則（H1-H12）— 讀取 skill `tp-ux-verify` 的規則來源
+7. 若 functions/ 有變更，確認 API handler 用 `throw new AppError('CODE')` 而非 `return json({error}, status)`
+8. 若全過 → 🟢 綠燈，可以 commit
+9. 若有失敗 → 🔴 紅燈：
    a. 列出所有失敗的測試名稱、錯誤訊息、違規規則
    b. 根據錯誤類型自動修正：
       - 命名違規：根據 `references/naming-rules.md` 修正
