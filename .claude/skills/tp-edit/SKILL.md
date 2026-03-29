@@ -49,9 +49,9 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
    - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
    - **更新 doc**（checklist/backup/suggestions 等）：
-     `PUT /api/trips/{tripId}/docs/{type}` + JSON body
-6. 若影響到 checklist、backup、suggestions，同步更新對應 doc
-7. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
+     `PUT /api/trips/{tripId}/docs/{type}` + JSON body（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
+6. 若影響到 checklist、backup、suggestions，同步更新對應 doc（結構必須對齊前端元件，見 tp-shared/references.md）
+7. 若插入、移除或移動 entry，重新估算相鄰 entry 的 travel 並更新（travel 語意見 tp-shared/references.md：travel = 從此地出發去下一站）
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 

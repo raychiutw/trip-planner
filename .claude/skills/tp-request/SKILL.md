@@ -150,15 +150,8 @@ curl -s -X PATCH \
       - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
       - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
       - **更新 doc**（checklist/backup/suggestions 等）：
-        ```bash
-        curl -s -X PUT \
-          -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-          -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-          -H "Content-Type: application/json" \
-          -d '{"content":"..."}' \
-          "https://trip-planner-dby.pages.dev/api/trips/{tripId}/docs/{type}"
-        ```
-   f. 若插入、移除或移動 entry，重新估算相鄰 travel 的 type + 分鐘數並更新
+        `PUT /api/trips/{tripId}/docs/{type}` + JSON body（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
+   f. 若插入、移除或移動 entry，重新估算相鄰 entry 的 travel 並更新（travel = 從此地出發去下一站，見 tp-shared/references.md）
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
    i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）

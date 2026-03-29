@@ -15,6 +15,8 @@ tp-create Phase 1 骨架生成時，依據以下 schema 判斷每個物件的必
 
 ## Type B: 交通 Event（有 travel 屬性）
 
+> ⚠️ **travel 語意：從此地「出發」去下一站**（不是「到達此地」）。詳見 tp-shared/references.md。
+
 | 欄位 | 必填 | 說明 |
 |------|------|------|
 | time | ✅ | 出發時間 |

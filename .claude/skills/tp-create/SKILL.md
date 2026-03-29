@@ -8,9 +8,46 @@ user-invocable: true
 
 ⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion（料理偏好除外）。
 
-## API 設定
+## API 呼叫方式
 
-API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
+> ⚠️ **Windows 環境禁止使用 curl**（中文 body 會亂碼被 middleware 擋）。一律用 node https 模組打 API。
+
+### API helper 腳本（Phase 1 第一步建立）
+
+在 `C:\tmp\api-helper.js` 建立共用 helper，後續所有 API 呼叫都透過它：
+
+```js
+const https = require('https');
+const TRIP_ID = '{tripId}';  // Phase 0 產生後填入
+const BASE = 'trip-planner-dby.pages.dev';
+const HEADERS = {
+  'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+  'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+  'Content-Type': 'application/json',
+  'Origin': 'https://trip-planner-dby.pages.dev',
+};
+function apiCall(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : '';
+    const req = https.request({
+      hostname: BASE, path, method,
+      headers: { ...HEADERS, 'Content-Length': Buffer.byteLength(data) },
+    }, (res) => {
+      let b = '';
+      res.on('data', c => b += c);
+      res.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(b); } });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+module.exports = { apiCall, TRIP_ID };
+```
+
+呼叫時先 `export $(grep CF_ACCESS .env.local | xargs)`，再 `node -e "..."` 引用 helper。
+
+其他 API 設定、POI 欄位規格見 tp-shared/references.md
 
 ## 輸入方式
 
@@ -77,6 +114,12 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    POST 會自動建立 trips + trip_days + trip_permissions 記錄。回傳 `{ ok: true, tripId, daysCreated }`。
 4. 為每一天產生完整內容（JSON 格式），包含：
    - timeline entries（含 type、title、time、description、location、travel、hotels 等）
+
+   > ⚠️ **travel 語意：從此地出發到下一站**
+   > `travel` 欄位放在「出發地」entry 上，表示「離開此地去下一站的交通方式」。
+   > 例：「板橋出發」entry 的 travel={car, 國道五號, 60min} 表示從板橋開車 60 分到下一站。
+   > 「幾米廣場」entry 的 travel 若為 null，表示到幾米廣場後不需移動（下一站在附近）。
+   > 最後一個 entry（如「返回板橋」）travel 應為 null（已到終點）。
    - restaurants infoBox（午餐/晚餐 entry 下各 3 家推薦）
    - shopping infoBox（非家飯店 entry 下）
    - 每個 POI 須包含以下必填欄位：
@@ -98,15 +141,69 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    使用 `PUT /api/trips/{tripId}/days/{N}`（curl 模板見 tp-shared/references.md）
 8. 建立 docs（flights、checklist、backup、suggestions、emergency）：
 
-   使用 `PUT /api/trips/{tripId}/docs/{type}`，Body: `{content:'...'}`
+   使用 `PUT /api/trips/{tripId}/docs/{type}`，Body: `{content: JSON.stringify({title, content: {...}})}`
 
-### Phase 2：並行充填（Agent teams）
+   > ⚠️ **doc content 結構必須對齊前端元件**，完整規格見 tp-shared/references.md「Doc 結構規格」。
 
-9. 對每一天啟動一個 Agent（sonnet），並行執行：
-   - 查詢缺少 `googleRating` 的地點/餐廳評分
-   - googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
-   - Agent 透過 `PATCH /api/trips/{tripId}/entries/{eid}` 補充各 entry 的評分資訊（Body: `{googleRating:4.5}`）
-10. 收集所有 Agent 完成後確認資料完整
+### Phase 2：Google 評分充填（browse-first）
+
+> ⚠️ **必須用 `/browse` 打 Google Maps 取評分**，不用 Agent + WebSearch。
+> WebSearch 拿不到 Google 評分（評分是頁面動態渲染，不在搜尋摘要中）。
+
+#### Step 2a：收集所有需要評分的 POI
+
+用 `GET /api/trips/{tripId}/days/{N}` 取得每天資料，列出：
+- entry（需 PATCH entry）：`{ entryId, title }`
+- restaurant/shop（需 PATCH pois）：`{ poiId, name }`
+
+排除不需評分的 entry：travel event、「午餐」「餐廳未定」、「出發」「返回」「退房」等非實體地點。
+
+#### Step 2b：browse 批次查詢腳本
+
+用 `/browse` 的 `$B goto` + `$B text` 批次查詢所有 POI。寫一個 node 腳本串接 browse daemon：
+
+```js
+const { execSync } = require('child_process');
+const B = process.env.HOME + '/.claude/skills/gstack/browse/dist/browse';
+
+const queries = [
+  // [搜尋關鍵字, entryId or null, poiId or null]
+  ['景點名稱+地區', entryId, null],
+  ['餐廳名稱+地區', null, poiId],
+];
+
+for (const [query, eid, pid] of queries) {
+  execSync(`"${B}" goto "https://www.google.com/maps/search/${encodeURIComponent(query)}"`, { timeout: 10000 });
+  // 等 Maps 渲染
+  await new Promise(r => setTimeout(r, 1500));
+  const text = execSync(`"${B}" text`, { timeout: 10000, encoding: 'utf8' });
+  // 抽取第一個 1.0-5.0 的數字
+  const matches = text.match(/(\d\.\d)/g);
+  let rating = null;
+  if (matches) for (const m of matches) {
+    const n = parseFloat(m);
+    if (n >= 1.0 && n <= 5.0) { rating = n; break; }
+  }
+  console.log(`${query} → ${rating || 'not found'}`);
+}
+```
+
+#### Step 2c：PATCH 評分
+
+browse 結果分兩類 PATCH：
+- **entry 評分**：`PATCH /api/trips/{tripId}/entries/{eid}` Body: `{ google_rating: X.X }`
+- **POI 評分**（餐廳/商店）：`PATCH /api/pois/{poiId}` Body: `{ google_rating: X.X }`
+
+用一次 node 腳本 `Promise.all` 批次 PATCH 所有評分。
+
+#### Step 2d：WebSearch fallback
+
+browse 查不到的 POI（評分為 null），才用 WebSearch 補查：
+- 搜尋「{名稱} Google Maps 評分」或「{名稱} 評價」
+- 仍查不到 → 不填（R13 source=ai 缺 rating 會被 tp-check 標記）
+
+9. 執行 Step 2a-2d
+10. 確認所有 POI 評分完整
 11. 確保不引入 null 值（找不到 → `googleRating` 省略）
 
 ### Phase 3：驗證
@@ -116,7 +213,8 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
 
 ## tripId 命名規則
 
-`{destination}-trip-{year}-{owner}`，例如：`okinawa-trip-2026-Ray`
+`{destination}-trip-{year}-{owner}`，**全部小寫**（API 驗證只允許 `[a-z0-9-]`）。
+例如：`okinawa-trip-2026-ray`、`yilan-trip-2026-banqiaocircle`
 
 ## 注意事項
 
