@@ -1,6 +1,6 @@
 ---
 name: tp-code-verify
-description: Use before committing code changes to validate naming conventions, coding standards, React best practices, code review rules, and test green status. Runs validation loop until all checks pass.
+description: Use before committing code changes to validate naming, coding standards, React best practices, code review rules, and test status.
 user-invocable: true
 ---
 

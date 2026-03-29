@@ -1,6 +1,6 @@
 ---
 name: tp-edit
-description: Use when the user describes a partial change to an existing trip itinerary in natural language (e.g., swap a restaurant, add a stop to a specific day).
+description: Use when modifying an existing trip itinerary partially via natural language (e.g., swap a restaurant, add a stop).
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tp-request
-description: Use when the user wants to process open requests submitted by travel companions via the D1 API and apply or respond to each request.
+description: Use when processing open trip requests submitted by travel companions via the D1 API.
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tp-search-strategies
-description: Use when searching for POI data fields (googleRating, reservation, location, naverQuery) across trip itinerary files, or generating trip skeleton with event type schema.
+description: Use when searching for POI data fields or generating trip skeleton structures.
 user-invocable: false
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tp-rebuild-all
-description: Use when the user wants to run a full quality-rule rebuild across all trip itineraries in one batch operation.
+description: Use when batch-rebuilding all trip itineraries to fix quality rule violations.
 user-invocable: true
 ---
 
