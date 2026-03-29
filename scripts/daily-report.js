@@ -267,10 +267,77 @@ function chunk(arr, size) {
   return out;
 }
 
+// ── 資料異常偵測 ───────────────────────────────────────────────
+
+async function checkDataAnomalies() {
+  var anomalies = [];
+  try {
+    // 1. 空行程（有 trip 但 0 天）
+    var emptyTrips = await queryD1(
+      "SELECT t.id FROM trips t LEFT JOIN trip_days td ON t.id = td.trip_id WHERE td.id IS NULL AND t.published = 1"
+    );
+    if (emptyTrips && emptyTrips.length > 0) {
+      anomalies.push('空行程（無天數）：' + emptyTrips.map(function(r) { return r.id; }).join(', '));
+    }
+
+    // 2. 孤立 POI（trip_pois 引用不存在的 poi_id）
+    var orphanPois = await queryD1(
+      "SELECT tp.id, tp.poi_id FROM trip_pois tp LEFT JOIN pois p ON tp.poi_id = p.id WHERE p.id IS NULL LIMIT 10"
+    );
+    if (orphanPois && orphanPois.length > 0) {
+      anomalies.push('孤立 trip_pois（poi 不存在）：' + orphanPois.length + ' 筆');
+    }
+
+    // 3. 使用者錯誤回報（過去 24 小時）
+    var recentReports = await queryD1(
+      "SELECT COUNT(*) as c FROM error_reports WHERE created_at > datetime('now', '-1 day')"
+    );
+    if (recentReports && recentReports[0] && recentReports[0].c > 0) {
+      anomalies.push('使用者錯誤回報（24h）：' + recentReports[0].c + ' 筆');
+    }
+
+    // 4. POI 缺 google_rating 比例
+    var poiStats = await queryD1(
+      "SELECT COUNT(*) as total, SUM(CASE WHEN google_rating IS NULL THEN 1 ELSE 0 END) as missing FROM pois WHERE type IN ('hotel','restaurant','shopping')"
+    );
+    if (poiStats && poiStats[0] && poiStats[0].total > 0) {
+      var pct = Math.round(poiStats[0].missing / poiStats[0].total * 100);
+      if (pct > 30) {
+        anomalies.push('POI 缺 google_rating：' + poiStats[0].missing + '/' + poiStats[0].total + ' (' + pct + '%)');
+      }
+    }
+  } catch (e) {
+    anomalies.push('偵測失敗：' + e.message);
+  }
+  return anomalies;
+}
+
 // ── 清理舊 api_logs ────────────────────────────────────────────
 
 async function cleanupOldLogs() {
   await queryD1("DELETE FROM api_logs WHERE created_at < datetime('now', '-30 days')");
+}
+
+// ── Telegram 通知 ──────────────────────────────────────────────
+
+async function sendTelegramAlert(anomalies) {
+  var token = process.env.TELEGRAM_BOT_TOKEN;
+  var chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) {
+    console.log('Telegram not configured, skipping alert');
+    return;
+  }
+  var text = '⚠️ Tripline 資料異常\n\n' + anomalies.join('\n');
+  try {
+    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' }),
+    });
+    console.log('Telegram alert sent');
+  } catch (e) {
+    console.error('Telegram alert failed:', e.message);
+  }
 }
 
 // ── 日期工具 ────────────────────────────────────────────────────
@@ -305,6 +372,10 @@ function buildHtml(results) {
   sections.push(sectionHtml('前端錯誤 (Sentry)', sentryHtml(r.sentry)));
   sections.push(sectionHtml('後端 API 錯誤', apiLogsHtml(r.apiLogs)));
   sections.push(sectionHtml('壞連結檢查', linksHtml(r.links)));
+  if (r.anomalies && r.anomalies.length > 0) {
+    sections.push(sectionHtml('⚠️ 資料異常', '<ul style="margin:0;padding-left:20px;font-size:14px;">' +
+      r.anomalies.map(function(a) { return '<li>' + a + '</li>'; }).join('') + '</ul>'));
+  }
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="' +
     'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;' +
@@ -453,7 +524,8 @@ async function main() {
     runLighthouse(),          // 3
     querySentry(),            // 4
     queryD1ApiLogs(),         // 5
-    checkLinks()              // 6
+    checkLinks(),             // 6
+    checkDataAnomalies()      // 7
   ]);
 
   function val(idx) {
@@ -470,12 +542,18 @@ async function main() {
     lighthouse: val(3),
     sentry: val(4),
     apiLogs: val(5),
-    links: val(6)
+    links: val(6),
+    anomalies: val(7)
   };
 
   // 組合 HTML 並輸出檔案
   var html = buildHtml(results);
   writeReport(html);
+
+  // Telegram 通知（異常時）
+  if (results.anomalies && results.anomalies.length > 0) {
+    await sendTelegramAlert(results.anomalies);
+  }
 
   // 清理舊 api_logs（>30 天）
   try {
