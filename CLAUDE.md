@@ -13,7 +13,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 | Think | `/office-hours` | 探索需求（選用） |
 | Plan | `/autoplan` | CEO + Eng + Design 三審 |
 | Build | 寫 code + `/simplify` | TDD + 精簡 |
-| Review | `/review` → `/codex` | 審查 + cross-model |
+| Review | `/tp-code-verify` → `/review` → `/codex` | 命名+HIG+測試 → diff 審查 → cross-model |
 | Test | `/qa` → `/cso` → `/benchmark` | E2E + 安全 + 效能 |
 | Ship | `/ship` → `/land-and-deploy` → `/canary` | PR + merge + 監控 |
 | Reflect | `/retro` → archive | 回顧 + 歸檔 |
