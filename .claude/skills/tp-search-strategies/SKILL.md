@@ -25,9 +25,14 @@ Event type schema（各類型物件必填欄位）見 `references/event-schema.m
 
 適用：hotel、restaurant、shop、event、gasStation
 
-1. WebSearch「{名稱} Google Maps 評分」
-2. WebSearch「{名稱} Google rating」
-3. 從 Wanderlog / TripAdvisor / Tabelog 交叉比對
+**優先用 `/browse` 開 Google Maps**（WebSearch 拿不到 Google 評分 — 評分是頁面動態渲染，不在搜尋摘要中）：
+
+1. `/browse` 開 `https://www.google.com/maps/search/{POI名稱}`
+2. 從頁面文字抽取第一個 `X.X` 格式數字即為 rating
+3. 如果 `/browse` 不可用，fallback：
+   a. WebSearch「{名稱} Google Maps 評分」
+   b. WebSearch「{名稱} Google rating」
+   c. 從 Wanderlog / TripAdvisor / Tabelog 交叉比對
 4. 必須是 number 1.0–5.0，找不到時不填預設值
 
 ### reservation
