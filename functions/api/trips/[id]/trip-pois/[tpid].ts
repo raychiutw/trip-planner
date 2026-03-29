@@ -8,7 +8,7 @@
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyTripPoiBelongsToTrip } from '../../../_auth';
 import { AppError } from '../../../_errors';
-import { json, getAuth, parseJsonBody, buildUpdateClause } from '../../../_utils';
+import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 // trip_pois 可更新的欄位（覆寫 + 類型專屬）
@@ -24,32 +24,31 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, tpid } = context.params as { id: string; tpid: string };
-  const tripPoiId = Number(tpid);
-  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'trip_poi ID 格式錯誤');
+  const tripPoiId = parseIntParam(tpid);
+  if (!tripPoiId) throw new AppError('DATA_VALIDATION', 'trip_poi ID 格式錯誤');
 
   const db = context.env.DB;
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    throw new AppError('PERM_DENIED');
-  }
+  const [hasPerm, belongsToTrip] = await Promise.all([
+    hasPermission(db, auth.email, id, auth.isAdmin),
+    verifyTripPoiBelongsToTrip(db, tripPoiId, id),
+  ]);
+  if (!hasPerm) throw new AppError('PERM_DENIED');
+  if (!belongsToTrip) throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
 
-  if (!await verifyTripPoiBelongsToTrip(db, tripPoiId, id)) {
-    throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
-  }
-
-  const oldRow = await db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first() as Record<string, unknown> | null;
+  const [oldRow, bodyOrError] = await Promise.all([
+    db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first() as Promise<Record<string, unknown> | null>,
+    parseJsonBody<Record<string, unknown>>(context.request),
+  ]);
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
-
-  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
 
   const updateResult = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
   if (!updateResult) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
-  await db.prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ?`)
-    .bind(...updateResult.values, tripPoiId).run();
-
-  const newRow = await db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first();
+  const newRow = await db.prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ? RETURNING *`)
+    .bind(...updateResult.values, tripPoiId).first();
+  if (!newRow) throw new AppError('SYS_INTERNAL', 'UPDATE RETURNING 未回傳資料');
   const diffJson = computeDiff(oldRow, newRow as Record<string, unknown>);
 
   await logAudit(db, {
@@ -65,18 +64,17 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, tpid } = context.params as { id: string; tpid: string };
-  const tripPoiId = Number(tpid);
-  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'trip_poi ID 格式錯誤');
+  const tripPoiId = parseIntParam(tpid);
+  if (!tripPoiId) throw new AppError('DATA_VALIDATION', 'trip_poi ID 格式錯誤');
 
   const db = context.env.DB;
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    throw new AppError('PERM_DENIED');
-  }
-
-  if (!await verifyTripPoiBelongsToTrip(db, tripPoiId, id)) {
-    throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
-  }
+  const [hasPerm, belongsToTrip] = await Promise.all([
+    hasPermission(db, auth.email, id, auth.isAdmin),
+    verifyTripPoiBelongsToTrip(db, tripPoiId, id),
+  ]);
+  if (!hasPerm) throw new AppError('PERM_DENIED');
+  if (!belongsToTrip) throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
 
   const oldRow = await db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first();
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');

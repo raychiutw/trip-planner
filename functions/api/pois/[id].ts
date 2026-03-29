@@ -5,7 +5,7 @@
 
 import { logAudit, computeDiff } from '../_audit';
 import { AppError } from '../_errors';
-import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
+import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
 
 const ALLOWED_FIELDS = [
@@ -19,8 +19,8 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
-  const poiId = Number(context.params.id);
-  if (!poiId || isNaN(poiId)) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
+  const poiId = parseIntParam(context.params.id as string);
+  if (!poiId) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
 
   const db = context.env.DB;
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
@@ -32,10 +32,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const update = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
   if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
-  await db.prepare(`UPDATE pois SET ${update.setClauses} WHERE id = ?`)
-    .bind(...update.values, poiId).run();
-
-  const newRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
+  const newRow = await db.prepare(`UPDATE pois SET ${update.setClauses} WHERE id = ? RETURNING *`)
+    .bind(...update.values, poiId).first();
+  if (!newRow) throw new AppError('SYS_INTERNAL', 'UPDATE RETURNING 未回傳資料');
   const diffJson = computeDiff(oldRow as Record<string, unknown>, newRow as Record<string, unknown>);
 
   await logAudit(db, {

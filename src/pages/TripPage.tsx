@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { apiFetch } from '../hooks/useApi';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
-import { useTrip } from '../hooks/useTrip';
+import { useTrip, DOC_KEYS } from '../hooks/useTrip';
 import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
 import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../lib/appearance';
@@ -484,7 +484,7 @@ export default function TripPage() {
     };
 
     // Helper: fetch all data (meta + full days + all docs)
-    const DOC_TYPES = ['flights', 'checklist', 'backup', 'emergency', 'suggestions'] as const;
+    const DOC_TYPES = DOC_KEYS;
 
     type RawDayEntry = {
       time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
