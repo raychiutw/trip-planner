@@ -149,23 +149,54 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 /** Find existing pois by (name, type) or INSERT new. Returns poi_id. */
 async function findOrCreatePoi(
   db: D1Database,
-  data: { name: string; type: string; description?: string | null; maps?: string | null; mapcode?: string | null; lat?: number | null; lng?: number | null; google_rating?: number | null; category?: string | null; hours?: string | null; source?: string | null },
+  data: {
+    name: string; type: string; description?: string | null; maps?: string | null;
+    mapcode?: string | null; lat?: number | null; lng?: number | null;
+    google_rating?: number | null; category?: string | null; hours?: string | null;
+    source?: string | null;
+    address?: string | null; phone?: string | null; email?: string | null;
+    website?: string | null; country?: string | null;
+  },
 ): Promise<number> {
-  // Try exact match first (E5: dedup key = name + type + maps)
+  // Try exact match first (E5: dedup key = name + type)
   const existing = await db.prepare(
     'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
   ).bind(data.name, data.type).first<{ id: number }>();
 
-  if (existing) return existing.id;
+  if (existing) {
+    // COALESCE update: only fill NULL fields, never overwrite existing values
+    const fills: string[] = [];
+    const vals: unknown[] = [];
+    const coalesceFields = [
+      ['description', data.description], ['maps', data.maps], ['mapcode', data.mapcode],
+      ['lat', data.lat], ['lng', data.lng], ['google_rating', data.google_rating],
+      ['category', data.category], ['hours', data.hours],
+      ['address', data.address], ['phone', data.phone], ['email', data.email],
+      ['website', data.website], ['country', data.country],
+    ] as const;
+    for (const [col, val] of coalesceFields) {
+      if (val != null) {
+        fills.push(`${col} = COALESCE(${col}, ?)`);
+        vals.push(val);
+      }
+    }
+    if (fills.length > 0) {
+      await db.prepare(`UPDATE pois SET ${fills.join(', ')}, updated_at = datetime('now') WHERE id = ?`)
+        .bind(...vals, existing.id).run();
+    }
+    return existing.id;
+  }
 
-  // Not found → INSERT
+  // Not found → INSERT with all fields
   const result = await db.prepare(
-    'INSERT INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+    'INSERT INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
   ).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
     data.google_rating ?? null, data.category ?? null,
     data.maps ?? null, data.mapcode ?? null,
     data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
+    data.address ?? null, data.phone ?? null, data.email ?? null,
+    data.website ?? null, data.country ?? 'JP',
   ).first<{ id: number }>();
 
   return result!.id;
