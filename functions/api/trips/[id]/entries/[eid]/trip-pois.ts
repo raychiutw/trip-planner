@@ -50,12 +50,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = bodyOrError;
 
   if (!body.name || !body.type) {
-    throw new AppError('DATA_VALIDATION', 'name and type are required');
+    throw new AppError('DATA_VALIDATION', '缺少必要欄位：name, type');
   }
 
   // Find day_id from entry
   const entry = await db.prepare('SELECT day_id FROM trip_entries WHERE id = ?').bind(entryId).first<{ day_id: number }>();
-  if (!entry) throw new AppError('DATA_NOT_FOUND', 'Entry not found');
+  if (!entry) throw new AppError('DATA_NOT_FOUND', '找不到此 entry');
 
   // Find or create POI master
   let poiId: number;

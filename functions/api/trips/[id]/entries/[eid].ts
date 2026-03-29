@@ -13,7 +13,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);
-  if (!eid) throw new AppError('DATA_VALIDATION', 'Invalid id');
+  if (!eid) throw new AppError('DATA_VALIDATION', 'ID 格式錯誤');
   const db = context.env.DB;
   const changedBy = auth.email;
 
@@ -47,7 +47,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
-  if (!update) throw new AppError('DATA_VALIDATION', 'No valid fields to update');
+  if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   let row;
   try {
@@ -80,7 +80,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   const { id, eid: eidStr } = context.params as { id: string; eid: string };
   const eid = parseIntParam(eidStr);
-  if (!eid) throw new AppError('DATA_VALIDATION', 'Invalid id');
+  if (!eid) throw new AppError('DATA_VALIDATION', 'ID 格式錯誤');
   const db = context.env.DB;
   const changedBy = auth.email;
 

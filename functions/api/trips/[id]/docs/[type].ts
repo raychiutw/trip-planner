@@ -9,7 +9,7 @@ const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'e
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, type } = context.params as { id: string; type: string };
 
-  if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', 'Invalid doc type');
+  if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', '無效的文件類型');
 
   const row = await context.env.DB
     .prepare('SELECT doc_type, content, updated_at FROM trip_docs WHERE trip_id = ? AND doc_type = ?')
@@ -26,7 +26,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const { id, type } = context.params as { id: string; type: string };
 
-  if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', 'Invalid doc type');
+  if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', '無效的文件類型');
 
   if (!await hasPermission(context.env.DB, auth.email, id, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');

@@ -14,7 +14,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     body = await request.json() as Record<string, unknown>;
   } catch {
-    throw new AppError('DATA_VALIDATION', 'Invalid JSON');
+    throw new AppError('DATA_VALIDATION', 'JSON 格式無效');
   }
 
   // 蜜罐欄位 — bot 會填這個欄位

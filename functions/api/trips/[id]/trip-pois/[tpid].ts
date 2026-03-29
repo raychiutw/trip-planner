@@ -25,7 +25,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   const { id, tpid } = context.params as { id: string; tpid: string };
   const tripPoiId = Number(tpid);
-  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'Invalid trip_poi id');
+  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'trip_poi ID 格式錯誤');
 
   const db = context.env.DB;
 
@@ -66,7 +66,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   const { id, tpid } = context.params as { id: string; tpid: string };
   const tripPoiId = Number(tpid);
-  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'Invalid trip_poi id');
+  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'trip_poi ID 格式錯誤');
 
   const db = context.env.DB;
 

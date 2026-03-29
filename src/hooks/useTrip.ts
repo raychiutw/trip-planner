@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { apiFetch } from './useApi';
 import { mapRow } from '../lib/mapRow';
+import { ApiError } from '../lib/errors';
+import { showErrorToast } from '../components/shared/Toast';
 import type { Trip, Day, DaySummary, TripDoc } from '../types/trip';
 
 
@@ -72,7 +74,9 @@ export function useTrip(tripId: string | null): UseTripReturn {
         dayCacheRef.current[dayNum] = day;
         return day;
       } catch (err) {
-        console.warn('fetchDay failed:', err);
+        if (err instanceof ApiError) {
+          showErrorToast(err.message, err.severity);
+        }
         return null;
       }
     },
@@ -157,8 +161,8 @@ export function useTrip(tripId: string | null): UseTripReturn {
               if (num === firstDayNum) {
                 setCurrentDay(dayData);
               }
-            } catch {
-              // silently skip failed day loads
+            } catch (err) {
+              if (err instanceof ApiError) showErrorToast(err.message, err.severity);
             }
           }
         }
@@ -192,8 +196,11 @@ export function useTrip(tripId: string | null): UseTripReturn {
                 }
               }
               setDocs((prev) => ({ ...prev, [key]: content }));
-            } catch {
-              // doc not available, silently skip
+            } catch (err) {
+              // doc 載入失敗為輕微錯誤，不跳 Toast
+              if (err instanceof ApiError && err.severity !== 'minor') {
+                showErrorToast(err.message, err.severity);
+              }
             }
           }
         }
@@ -202,7 +209,9 @@ export function useTrip(tripId: string | null): UseTripReturn {
         if (!cancelled) setLoading(false);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : '載入行程失敗');
+          const msg = err instanceof ApiError ? err.message : (err instanceof Error ? err.message : '載入行程失敗');
+          setError(msg);
+          if (err instanceof ApiError) showErrorToast(msg, err.severity);
           setLoading(false);
         }
       }

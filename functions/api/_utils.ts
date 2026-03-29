@@ -18,7 +18,7 @@ export async function parseJsonBody<T = Record<string, unknown>>(request: Reques
   try {
     return await request.json() as T;
   } catch {
-    return json({ error: 'Invalid JSON' }, 400);
+    return json({ error: 'JSON 格式無效' }, 400);
   }
 }
 

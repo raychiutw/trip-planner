@@ -47,25 +47,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(Number(aid), id)
     .first() as AuditRow | null;
 
-  if (!auditRow) throw new AppError('DATA_NOT_FOUND', 'Audit log entry not found');
+  if (!auditRow) throw new AppError('DATA_NOT_FOUND', '找不到此 audit 記錄');
 
   const { table_name, record_id, action, diff_json, snapshot } = auditRow;
 
   const safeTable = ALLOWED_TABLES.find(t => t === table_name);
   if (!safeTable) {
-    throw new AppError('DATA_VALIDATION', 'Invalid table name');
+    throw new AppError('DATA_VALIDATION', '無效的表格名稱');
   }
   const allowedCols = TABLE_COLUMNS[safeTable];
 
   if (action === 'delete') {
     // Re-INSERT using the snapshot
-    if (!snapshot) throw new AppError('DATA_VALIDATION', 'No snapshot available for rollback');
+    if (!snapshot) throw new AppError('DATA_VALIDATION', '無可用的快照進行回滾');
 
     let snapshotRow: Record<string, unknown>;
     try {
       snapshotRow = JSON.parse(snapshot);
     } catch {
-      throw new AppError('DATA_VALIDATION', 'Invalid snapshot JSON');
+      throw new AppError('DATA_VALIDATION', '快照 JSON 格式無效');
     }
 
     // Remove system-managed fields that should be auto-generated, keep the original id
@@ -83,7 +83,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (snapshotRow.id != null) {
       const existing = await db.prepare(`SELECT 1 FROM ${safeTable} WHERE id = ?`).bind(snapshotRow.id).first();
       if (existing) {
-        throw new AppError('DATA_CONFLICT', 'Cannot rollback: a record with this id already exists');
+        throw new AppError('DATA_CONFLICT', '無法回滾：此 ID 的記錄已存在');
       }
     }
     await db.prepare(`INSERT INTO ${safeTable} (${cols}) VALUES (${placeholders})`).bind(...values).run();
@@ -102,18 +102,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (action === 'update') {
     // Revert fields using diff_json old values
-    if (!diff_json) throw new AppError('DATA_VALIDATION', 'No diff_json available for rollback');
-    if (record_id === null) throw new AppError('DATA_VALIDATION', 'No record_id for update rollback');
+    if (!diff_json) throw new AppError('DATA_VALIDATION', '無 diff 資料可回滾');
+    if (record_id === null) throw new AppError('DATA_VALIDATION', '缺少 record_id 無法回滾');
 
     let diff: Record<string, { old: unknown; new: unknown }>;
     try {
       diff = JSON.parse(diff_json);
     } catch {
-      throw new AppError('DATA_VALIDATION', 'Invalid diff_json');
+      throw new AppError('DATA_VALIDATION', 'diff JSON 格式無效');
     }
 
     const revertFields = Object.keys(diff);
-    if (revertFields.length === 0) throw new AppError('DATA_VALIDATION', 'No fields to revert');
+    if (revertFields.length === 0) throw new AppError('DATA_VALIDATION', '無欄位可還原');
 
     const invalidDiffCols = revertFields.filter(f => !allowedCols.includes(f));
     if (invalidDiffCols.length > 0) {
@@ -128,7 +128,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       .bind(...values)
       .run();
 
-    if (result.meta.changes === 0) throw new AppError('DATA_NOT_FOUND', 'Record not found for revert');
+    if (result.meta.changes === 0) throw new AppError('DATA_NOT_FOUND', '找不到要還原的記錄');
 
     const revertedFields = Object.fromEntries(revertFields.map(f => [f, diff[f].old]));
     await logAudit(db, {
@@ -145,7 +145,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (action === 'insert') {
     // DELETE the record that was inserted
-    if (record_id === null) throw new AppError('DATA_VALIDATION', 'No record_id for insert rollback');
+    if (record_id === null) throw new AppError('DATA_VALIDATION', '缺少 record_id 無法回滾');
 
     const oldRow = await db.prepare(`SELECT * FROM ${safeTable} WHERE id = ?`).bind(record_id).first() as Record<string, unknown> | null;
 

@@ -41,7 +41,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const body = bodyOrError;
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
-  if (!update) throw new AppError('DATA_VALIDATION', 'No valid fields to update');
+  if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   const changedBy = auth.email;
   const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));

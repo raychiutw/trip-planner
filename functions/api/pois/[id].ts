@@ -20,11 +20,11 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const poiId = Number(context.params.id);
-  if (!poiId || isNaN(poiId)) throw new AppError('DATA_VALIDATION', 'Invalid POI id');
+  if (!poiId || isNaN(poiId)) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
 
   const db = context.env.DB;
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
-  if (!oldRow) throw new AppError('DATA_NOT_FOUND', 'POI not found');
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到此 POI');
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
