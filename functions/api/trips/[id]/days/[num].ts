@@ -234,7 +234,6 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     // Collect all POI data for batch find-or-create (eliminates N+1 sequential queries)
-    type PoiTask = { data: FindOrCreatePoiData; poiIdx: number };
     type TripPoiBuilder = (poiIds: number[]) => D1PreparedStatement[];
     const poiItems: FindOrCreatePoiData[] = [];
     const tripPoiBuilders: TripPoiBuilder[] = [];
