@@ -3,6 +3,7 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
+import { sanitizeReply } from '../_validate';
 import { json, getAuth, parseJsonBody } from '../_utils';
 import type { Env } from '../_types';
 
@@ -26,7 +27,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   if (body.reply !== undefined) {
     updates.push('reply = ?');
-    values.push(body.reply);
+    values.push(sanitizeReply(body.reply));
   }
   if (body.status !== undefined) {
     const validStatuses = ['open', 'received', 'processing', 'completed'];

@@ -83,6 +83,26 @@ export function detectGarbledText(text: string): boolean {
   return false;
 }
 
+const SENSITIVE_REPLY_PATTERNS = [
+  /\/api\/\w/i,
+  /trip_(days|entries|pois|permissions|requests|docs)|audit_log|poi_relations/,
+  /\bSELECT\s+\w+\s+FROM\b/i,
+  /\bINSERT\s+INTO\b/i,
+  /CF-Access|Service.Token|middleware/i,
+  /functions\/api/,
+  /\.bind\(|\.prepare\(/,
+  /onRequest(Get|Post|Put|Patch|Delete)/,
+];
+
+const SANITIZED_FALLBACK = '已處理您的請求。如有問題請直接聯繫行程主人。';
+
+export function sanitizeReply(reply: string): string {
+  for (const pattern of SENSITIVE_REPLY_PATTERNS) {
+    if (pattern.test(reply)) return SANITIZED_FALLBACK;
+  }
+  return reply;
+}
+
 export interface RestaurantBody {
   name?: string | null;
   [key: string]: unknown;
