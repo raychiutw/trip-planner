@@ -27,11 +27,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少 tripId');
   }
 
-  // 簡易 rate limit — 同 IP 30 秒內不可重複
-  const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+  // 簡易 rate limit — 同 tripId + URL 30 秒內不可重複
+  const url = (body.url as string) || '';
   const recent = await db.prepare(
-    "SELECT 1 FROM error_reports WHERE trip_id = ? AND user_agent = ? AND created_at > datetime('now', '-30 seconds')"
-  ).bind(tripId, clientIp).first();
+    "SELECT 1 FROM error_reports WHERE trip_id = ? AND url = ? AND created_at > datetime('now', '-30 seconds')"
+  ).bind(tripId, url).first();
   if (recent) {
     throw new AppError('SYS_RATE_LIMIT');
   }
@@ -43,7 +43,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     (body.url as string) || null,
     (body.errorCode as string) || null,
     (body.errorMessage as string) || null,
-    (body.userAgent as string) || clientIp,
+    (body.userAgent as string) || null,
     (body.context as string) || null,
   ).run();
 
