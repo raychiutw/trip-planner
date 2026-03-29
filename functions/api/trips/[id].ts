@@ -29,7 +29,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const { id } = context.params as { id: string };
 
-  const db = db;
+  const db = context.env.DB;
   const [hasPerm, existing] = await Promise.all([
     hasPermission(db, auth.email, id, auth.isAdmin),
     db.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Promise<Record<string, unknown> | null>,
