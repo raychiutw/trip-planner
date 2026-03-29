@@ -28,11 +28,11 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
 
-  const { clause, values } = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
-  if (!clause) return json({ error: '無有效欄位可更新' }, 400);
+  const update = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
+  if (!update) return json({ error: '無有效欄位可更新' }, 400);
 
-  await db.prepare(`UPDATE pois SET ${clause}, updated_at = datetime('now') WHERE id = ?`)
-    .bind(...values, poiId).run();
+  await db.prepare(`UPDATE pois SET ${update.setClauses} WHERE id = ?`)
+    .bind(...update.values, poiId).run();
 
   const newRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
   const diffJson = computeDiff(oldRow as Record<string, unknown>, newRow as Record<string, unknown>);
