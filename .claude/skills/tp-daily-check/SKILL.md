@@ -1,6 +1,6 @@
 ---
 name: tp-daily-check
-description: Use when running the daily health check that generates a problem report, sends Telegram summary, and waits for user instructions.
+description: Use when running the daily automated health check for trip data and API status.
 user-invocable: true
 ---
 

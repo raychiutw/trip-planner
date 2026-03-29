@@ -1,6 +1,6 @@
 ---
 name: tp-team
-description: Use when starting any code change, feature implementation, bug fix, or refactoring. Ensures gstack sprint stages are followed through to archive.
+description: Use when starting any code change, feature, bug fix, or refactoring in the trip-planner project.
 user-invocable: true
 ---
 

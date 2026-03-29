@@ -1,6 +1,6 @@
 ---
 name: tp-check
-description: Use when the user wants to validate a trip itinerary against quality rules R0-R18 and receive a red/yellow/green report without modifying any files.
+description: Use when validating a trip itinerary against quality rules R0-R18 without modifying files.
 user-invocable: true
 ---
 

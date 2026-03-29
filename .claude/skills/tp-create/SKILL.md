@@ -1,6 +1,6 @@
 ---
 name: tp-create
-description: Use when the user wants to generate a complete new trip itinerary from scratch given a destination, duration, and travel style.
+description: Use when generating a new trip itinerary from scratch given destination, dates, and travel style.
 user-invocable: true
 ---
 

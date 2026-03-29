@@ -1,6 +1,6 @@
 ---
 name: tp-shutdown
-description: Use when the user wants to stop the local development server (Vite + wrangler pages dev).
+description: Use when stopping the local dev server (Vite port 5173 + wrangler port 8788).
 user-invocable: true
 ---
 

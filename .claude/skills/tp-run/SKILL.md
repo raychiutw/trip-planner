@@ -1,6 +1,6 @@
 ---
 name: tp-run
-description: Use when the user wants to start the local development server with hot reload, mock auth, and local D1 database.
+description: Use when starting the local dev server (Vite + wrangler pages dev + mock auth + local D1).
 user-invocable: true
 ---
 

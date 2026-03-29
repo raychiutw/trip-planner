@@ -1,6 +1,6 @@
 ---
 name: tp-deploy
-description: Use when the user wants to commit all pending changes, push to GitHub, and verify the Cloudflare Pages deployment.
+description: Use when committing trip data or skill changes and pushing to GitHub for deployment.
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tp-quality-rules
-description: Use when generating, modifying, or validating trip itinerary MD files and need to check compliance with quality rules R0–R18.
+description: Use when checking trip itinerary compliance with quality rules R0-R18.
 user-invocable: false
 ---
 

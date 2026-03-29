@@ -1,6 +1,6 @@
 ---
 name: tp-rebuild
-description: Use when the user wants to fully audit and fix all quality rule violations in a single trip itinerary without changing the timeline order or adding/removing stops.
+description: Use when auditing and fixing quality rule violations in a single trip itinerary without changing timeline order.
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tp-patch
-description: Use when the user wants to bulk-fill a specific missing field (e.g., googleRating, reservation, location) across one or more trip itineraries using web search.
+description: Use when bulk-filling missing POI fields (google_rating, maps, address, phone, hours) across trips via web search.
 user-invocable: true
 ---
 
