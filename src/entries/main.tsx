@@ -30,7 +30,12 @@ function LegacyRedirect() {
 
 const el = document.getElementById('reactRoot');
 if (el) {
-  createRoot(el).render(
+  // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
+  const existingRoot = (el as unknown as { _reactRoot?: ReturnType<typeof createRoot> })._reactRoot;
+  const root = existingRoot ?? createRoot(el);
+  (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
+
+  root.render(
     <ErrorBoundary>
       <BrowserRouter>
         <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>

@@ -142,32 +142,36 @@ export function useTrip(tripId: string | null): UseTripReturn {
           setCurrentDayNum(firstDayNum);
         }
 
-        // Fire ALL day fetches in parallel (non-blocking)
-        for (const d of sorted) {
-          const num = d.day_num;
-          apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal })
-            .then((raw) => {
+        // Fetch days sequentially — first day first, then remaining.
+        // Serialized to avoid saturating the Vite proxy / browser connection limit in dev.
+        async function fetchAllDays() {
+          for (const d of sorted) {
+            if (cancelled) return;
+            const num = d.day_num;
+            try {
+              const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal });
               if (cancelled) return;
               const dayData = mapDayResponse(raw);
               dayCacheRef.current[num] = dayData;
               setAllDays((prev) => ({ ...prev, [num]: dayData }));
-              // Set currentDay when first day arrives
               if (num === firstDayNum) {
                 setCurrentDay(dayData);
               }
-            })
-            .catch(() => {
+            } catch {
               // silently skip failed day loads
-            });
+            }
+          }
         }
+        fetchAllDays();
 
-        // Fetch docs in the background (non-blocking)
-        for (const key of DOC_KEYS) {
-          apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
-            .then((data) => {
+        // Fetch docs sequentially in the background
+        async function fetchAllDocs() {
+          for (const key of DOC_KEYS) {
+            if (cancelled) return;
+            try {
+              const data = await apiFetch<TripDoc>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal });
               if (cancelled) return;
               let content: unknown = data.content;
-              // Parse JSON string if needed
               if (typeof content === 'string') {
                 try {
                   content = JSON.parse(content);
@@ -175,7 +179,6 @@ export function useTrip(tripId: string | null): UseTripReturn {
                   // keep as string
                 }
               }
-              // Unwrap nested content structure: { title, content: { ... } }
               if (
                 content &&
                 typeof content === 'object' &&
@@ -189,11 +192,12 @@ export function useTrip(tripId: string | null): UseTripReturn {
                 }
               }
               setDocs((prev) => ({ ...prev, [key]: content }));
-            })
-            .catch(() => {
+            } catch {
               // doc not available, silently skip
-            });
+            }
+          }
         }
+        fetchAllDocs();
 
         if (!cancelled) setLoading(false);
       } catch (err) {
