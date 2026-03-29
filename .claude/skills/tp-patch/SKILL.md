@@ -50,13 +50,24 @@ user-invocable: true
 4. 依 `--field` 檢查哪些 POI 缺漏該欄位（NULL 或空字串）
 5. 輸出掃描摘要：「共 N 個 {target} 需補齊 {field}」+ 明細
 
-### Phase 2：WebSearch 補齊
+### Phase 2：查詢補齊（依欄位選擇最佳工具）
 
-6. 為每個缺漏 POI，用 name + type 組合 WebSearch 查詢
-   - google_rating → 搜尋 "Google Maps {POI name} rating"
-   - maps → 搜尋 "Google Maps {POI name}"，取 URL
-   - address → 搜尋 "{POI name} 地址"
-   - phone → 搜尋 "{POI name} 電話"
+6. 依欄位類型選擇查詢策略：
+
+   **google_rating → 優先用 `/browse` 開 Google Maps**
+   - WebSearch 拿不到 Google 評分（評分是頁面動態渲染，不在搜尋摘要中）
+   - 用 `/browse` 開 `https://www.google.com/maps/search/{POI name}`
+   - 從頁面文字抽取第一個 `X.X` 格式的數字即為 rating
+   - 如果 browse 不可用，才 fallback 到 WebSearch
+
+   **maps → 用 POI 名稱作為 Google Maps 搜尋文字**
+   - 直接填入 POI 的日文/原文名稱（例如「スーパーホテル沖縄・名護」）
+   - 前端會將此文字組成 Google Maps 搜尋 URL
+
+   **address / phone → WebSearch 即可**
+   - 搜尋 "{POI name} 住所" 或 "{POI name} 地址"
+   - 這類資訊在搜尋摘要中通常有
+
 7. 搜尋不到 → 跳過，不填預設值
 
 ### Phase 3：寫入（PATCH /pois/:id）
