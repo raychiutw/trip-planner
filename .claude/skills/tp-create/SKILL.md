@@ -98,7 +98,8 @@ user-invocable: true
 ### Phase 2：並行充填（Agent teams）
 
 9. 對每一天啟動一個 Agent（sonnet），並行執行：
-   - 用 WebSearch 查詢缺少 `googleRating` 的地點/餐廳評分
+   - 查詢缺少 `googleRating` 的地點/餐廳評分
+   - **google_rating 查詢策略**：優先用 `/browse` 開 Google Maps（`https://www.google.com/maps/search/{POI名稱}`），從頁面文字抽取 rating。WebSearch 拿不到 Google 評分（動態渲染）。如果 browse 不可用才 fallback WebSearch。
    - Agent 透過 PATCH API 補充各 entry 的評分資訊：
 
      > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file

@@ -35,6 +35,7 @@ user-invocable: true
    - `note`：有備註填內容，無備註填空字串 `""`（R15）
    - `location.googleQuery`：實體地點填搜尋文字（R11）
    - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
+     **查詢策略**：優先用 `/browse` 開 Google Maps（`https://www.google.com/maps/search/{POI名稱}`），從頁面文字抽取 rating。WebSearch 拿不到動態渲染的評分。
    - **POI V2 欄位規格**（同 tp-create）：
      | type | 必填 | 建議填 |
      |------|------|--------|
