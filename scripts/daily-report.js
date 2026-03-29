@@ -321,7 +321,7 @@ async function cleanupOldLogs() {
 // ── Telegram 通知 ──────────────────────────────────────────────
 
 async function sendTelegramAlert(anomalies) {
-  var token = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_FETCI_TOKEN;
+  var token = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_HOME_TOKEN || process.env.TELEGRAM_BOT_FETCI_TOKEN;
   var chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
     console.log('Telegram not configured, skipping alert');
