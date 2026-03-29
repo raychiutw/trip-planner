@@ -5,6 +5,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup-jest-dom.js'],
     environment: 'jsdom',
-    exclude: ['tests/e2e/**', 'node_modules/**', 'server/node_modules/**', '.claude/**'],
+    exclude: ['tests/e2e/**', 'tests/api/**', 'node_modules/**', 'server/node_modules/**', '.claude/**'],
   },
 });

@@ -5,16 +5,9 @@
  * 或從 CF-Access-Client-Id header 辨識 Service Token（視為 admin）。
  */
 
-import type { Env, AuthData } from './_types';
+import type { Env } from './_types';
 import { detectGarbledText } from './_validate';
 import { json } from './_utils';
-
-// 擴充 EventContext data
-declare module '@cloudflare/workers-types' {
-  interface EventContext<Env, P, Data> {
-    data: Data & { auth: AuthData };
-  }
-}
 
 function getCookie(request: Request, name: string): string | null {
   const cookieHeader = request.headers.get('Cookie');
@@ -92,7 +85,8 @@ const PRODUCTION_ORIGIN = 'https://trip-planner-dby.pages.dev';
  * Accepts the configured production origin, localhost origins for dev, and
  * any origin override supplied via the ALLOWED_ORIGIN env var.
  */
-function isAllowedOrigin(origin: string, env: Env): boolean {
+/** @internal — exported for unit testing */
+export function isAllowedOrigin(origin: string, env: Env): boolean {
   // Allow any localhost origin for local development
   if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
   // Allow production origin
@@ -115,7 +109,8 @@ function isAllowedOrigin(origin: string, env: Env): boolean {
  * CF-Access-Client-Id header (i.e. service-token CLI calls that don't set
  * Origin).
  */
-function checkCsrf(request: Request, env: Env): Response | null {
+/** @internal — exported for unit testing */
+export function checkCsrf(request: Request, env: Env): Response | null {
   const method = request.method.toUpperCase();
   const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
   if (!mutating) return null;
@@ -156,7 +151,8 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET',   pattern: /^\/api\/requests/ },
 ];
 
-function checkCompanionScope(request: Request, url: URL): Response | null {
+/** @internal — exported for unit testing */
+export function checkCompanionScope(request: Request, url: URL): Response | null {
   const scope = request.headers.get('X-Request-Scope');
   if (scope !== 'companion') return null;
 
