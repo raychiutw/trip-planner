@@ -6,194 +6,159 @@ env:
   D1_DATABASE_NAME: trip-planner-db
   D1_STAGING_DATABASE_NAME: trip-planner-db-staging
   # --- 敏感值位置 ---
-  # CF_ACCOUNT_ID: → .env.local
-  # D1_DATABASE_ID: → .env.local
-  # CLOUDFLARE_API_TOKEN: → .env.local + GitHub Secret
-  # CF_ACCESS_CLIENT_ID: → .env.local
-  # CF_ACCESS_CLIENT_SECRET: → .env.local
-  # SENTRY_ORG: → .env.local
-  # SENTRY_PROJECT: → .env.local
-  # SENTRY_AUTH_TOKEN: → .env.local + GitHub Secret
-  # VITE_SENTRY_DSN: → .env.local
-  # TELEGRAM_BOT_TOKEN: → .env.local + GitHub Secret
-  # TELEGRAM_CHAT_ID: → .env.local
-  # GMAIL_USERNAME: → GitHub Secret
-  # GMAIL_APP_PASSWORD: → GitHub Secret
-  # --- Pages 環境變數（Cloudflare Dashboard 設定）---
+  # CF_ACCOUNT_ID / D1_DATABASE_ID / CLOUDFLARE_API_TOKEN: → .env.local
+  # CF_ACCESS_CLIENT_ID / CF_ACCESS_CLIENT_SECRET: → .env.local
+  # SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN / VITE_SENTRY_DSN: → .env.local
+  # TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID: → .env.local
+  # DEV_MOCK_EMAIL / ADMIN_EMAIL: → .env.local
+  # --- Pages 環境變數（Cloudflare Dashboard）---
   # CF_API_TOKEN, CF_ACCESS_APP_ID, CF_ACCESS_POLICY_ID, ADMIN_EMAIL
 
 context: |
-  行程規劃網站（trip-planner），部署於 Cloudflare Pages + D1
-  Tech stack: React 19 + TypeScript strict + Vite 多入口，Vitest + Playwright
+  行程共享網站（Tripline），部署於 Cloudflare Pages + D1
+  Tech stack: React 19 SPA + TypeScript strict + Vite 8 + Tailwind CSS 4
+  測試: Vitest + Playwright，CI: GitHub Actions（tsc + test + build + verify-sw）
   語言：繁體中文台灣用語，commit 訊息繁體中文
   Git：commit 後不自動 push；文件變更不跑測試
-  監控：Sentry（@sentry/react，DSN 由 VITE_SENTRY_DSN 注入，僅 PROD 啟用）
-  每日健康報告：scripts/daily-report.js，GitHub Actions UTC 00:00 觸發，Gmail SMTP 寄出
-  主題色：sun / sky / zen（ThemeArt 元件 + useDarkMode hook 控制）
-  列印：usePrintMode hook，切換後套用 print CSS，A4 排版
+  監控：Sentry（@sentry/react），每日健康檢查（daily-check.js + Telegram）
+  設計：DESIGN.md（暖色有機風、Apple HIG、6 套主題、tokens.css）
+  本機開發：npm run dev（vite + wrangler pages dev + mock auth + 本機 SQLite）
+  資料架構：POI Schema V2（pois + trip_pois + poi_relations，零 JSON 欄位）
 
 # ============================================================
-# 開發規範 + Commit Gate — 所有 AI / 開發者必須遵守
+# 開發規範 + Commit Gate
 # ============================================================
-# ⚠️ 以下 checks 中的規則在「開發過程中」就必須遵從，不是只在 commit 前才檢查。
-# commit_gate 是最後防線，確保沒有遺漏。
+# ⚠️ 以下規則在開發過程中就必須遵從，commit_gate 是最後防線。
 commit_gate:
-  required_skill: tp-code-verify    # 各 AI 平台實作同名 skill，規則檔案各自維護
+  required_skill: tp-code-verify
   commands:
     - npx tsc --noEmit              # TypeScript 零錯誤
     - npm test                      # naming-convention + css-hig + unit + integration
-  checks:                           # 開發時遵從 + commit 前驗證
+  checks:
     - naming                        # 命名規範（JS/CSS/HTML/API/mapRow）
     - css-hig                       # CSS HIG 12 條（H1-H12）
-    - coding-standards              # 觸控目標、inline SVG、無框線、border-radius token
+    - coding-standards              # 觸控目標 44px、inline SVG、無框線、border-radius token
     - react-best-practices          # RBP-1~14（waterfall/re-render/rendering/bundle/JS 效能）
     - code-review-rules             # CR-1~10（hook 協調/cancelled guard/apiFetch/type safety）
   on_failure: 持續修改直到全部綠燈
 
 # ============================================================
-# 其他必要 Skills
+# tp-* Skills（行程資料操作，不走 code pipeline）
 # ============================================================
 skills:
-  tp-check: 行程品質規則驗證（R0-R15），產生或修改行程後執行
+  tp-check: 行程品質規則驗證（R0-R15）
   tp-create: 從零產生完整行程
   tp-edit: 自然語言部分修改行程
   tp-rebuild: 全面稽核修復單一行程
-  tp-deploy: commit + push + 驗證 Cloudflare Pages 部署
+  tp-deploy: commit + push + 驗證部署
   tp-request: 處理旅伴請求
   tp-patch: 批次補齊缺失欄位
-  tp-ux-verify: HTML/CSS HIG 合規驗證
 
 # ============================================================
-# OpenSpec 流程規則
+# D1 安全規則
 # ============================================================
 d1_safety:
   migration:
-    - "禁止 DROP TABLE 有被 FK ON DELETE CASCADE 引用的表 — D1 預設啟用 foreign_keys，DROP 會連鎖刪除所有子表資料"
-    - "SQLite recreate table 策略（CREATE new → COPY → DROP old → RENAME）在 D1 不安全，改用 UPDATE + API 層驗證"
-    - "PRAGMA foreign_keys = OFF 在 D1 可能無效，不可依賴此指令防止 CASCADE"
+    - "禁止 DROP TABLE 有被 FK ON DELETE CASCADE 引用的表"
     - "migration 執行前必須先備份：node scripts/dump-d1.js"
+    - "staging 和 production 是不同 D1 — wrangler.toml [env.preview] 指向 staging"
   backup:
-    - "手動備份：node scripts/dump-d1.js → backups/{timestamp}/ 含所有表 JSON"
+    - "手動備份：node scripts/dump-d1.js → backups/{timestamp}/"
     - "備份檔納入版控，確保可追溯"
-    - "D1 Time Travel 可回溯 30 天：npx wrangler d1 time-travel restore trip-planner-db --timestamp <RFC3339>"
+    - "D1 Time Travel 可回溯 30 天"
   restore:
-    - "優先用 D1 Time Travel 還原（最快、最完整）"
-    - "次選從 backups/ 的 JSON 重建（需寫入腳本）"
+    - "優先用 D1 Time Travel 還原"
+    - "次選從 backups/ 的 JSON 重建"
 
+# ============================================================
+# 設計規範
+# ============================================================
 rules:
   proposal:
     - 提案用繁體中文撰寫
     - 說明影響的檔案範圍
-    - JSON 結構變更需列出 checklist/backup/suggestions 連動影響
   design:
-    - UI 符合無框線設計規範（背景色差、間距、圓角、box-shadow）
-    - icon 走 ICONS registry，不用 emoji
-    - CSS/JS 拆分遵循既有架構
-    - font-size 僅允許 11 級 Apple text style token（--fs-large-title 至 --fs-caption2）
-    - transition duration 僅允許 var(--duration-fast/normal/slow)
-    - spacing 4pt grid、border-radius 5 級 token、overlay 用 var(--overlay)
-    - CSS HIG 變更須通過 css-hig.test.js
+    - "所有視覺決定參照 DESIGN.md — 字型、色彩、間距、動效"
+    - "UI 符合無框線設計（背景色差 + 間距 + 圓角 + box-shadow）"
+    - "icon 用 inline SVG，不用 emoji 或 icon font"
+    - "font-size 僅允許 Apple HIG text style token（tokens.css @theme 定義的 10 級）"
+    - "spacing 4pt grid、border-radius 5 級 token（xs/sm/md/lg/full）"
+    - "transition duration 僅允許 fast(150ms) / normal(250ms) / slow(350ms)"
+    - "觸控目標最小 44x44px"
+    - "色彩對比度 WCAG AA 4.5:1"
   tasks:
     - 每個 task 可獨立測試驗證
     - render 函式變更含 unit test 更新
     - 互動行為變更含 E2E test 更新
 
 # ============================================================
-# 測試體系（gstack 對齊）
+# 測試體系
 # ============================================================
 testing:
-  # --- 職責分工 ---
   responsibilities:
     engineer:
-      - "Unit / Integration test（TDD — 先寫測試再實作）"
-      - "自我清理：/simplify（code reuse + quality + efficiency）"
-      - "E2E 驗證：用 /browse 實際操作確認功能 work"
+      - "Unit / Integration test（TDD）"
+      - "/simplify（code reuse + quality + efficiency）"
+      - "/browse 實際操作確認功能"
     qa:
-      - "功能 QA：/qa（互動測試 + bug 修復循環）"
-      - "QA 報告：/qa-only（僅出報告不修改）"
-      - "效能基準：/benchmark（LCP / CLS / bundle size 回歸偵測）"
-      - "瀏覽器截圖：/browse（跨 viewport 截圖驗證）"
+      - "/qa（互動測試 + bug 修復循環）"
+      - "/benchmark（LCP / CLS / bundle size 回歸偵測）"
     designer:
-      - "視覺稽核：/design-review（設計合規 + CSS 修復）"
+      - "/design-review（視覺稽核 + CSS 修復）"
     security:
-      - "安全稽核：/cso（OWASP + STRIDE + CVE + secret 掃描）"
+      - "/cso（OWASP + STRIDE + CVE + secret 掃描）"
     reviewer:
-      - "程式碼審查：/review（Claude diff 分析）"
-      - "交叉驗證：/codex（OpenAI 獨立 review — 重疊 findings = 高信心）"
+      - "/review（Claude diff 分析）"
+      - "/codex（OpenAI 獨立 review）"
     devops:
-      - "部署驗證：/canary（console errors + 效能回歸 + 頁面失敗）"
+      - "/canary（部署後監控）"
 
-  # --- 三層驗證（每層獨立有價值，重疊覆蓋是核心） ---
   layers:
     layer_1_self_review:
       who: Engineer
-      when: 實作完每個 feature 後立即執行
-      tools:
-        - "/simplify — 3 平行 agent（code reuse / quality / efficiency）"
-        - "unit test — TDD，npx tsc --noEmit + npm test"
+      when: 實作完每個 feature 後
+      tools: ["/simplify", "unit test — tsc + npm test"]
     layer_2_formal_review:
       who: Reviewer + Security（並行）
-      when: Engineer 全部 features done 後
-      tools:
-        - "/review — PR-level diff 分析（Claude）"
-        - "/codex — cross-model 獨立 review（OpenAI）"
-        - "/cso — OWASP + STRIDE + CVE"
-      confidence: "[overlap] 兩模型重疊 = 🔴必修 / [claude-only] [codex-only] = 🟡PM判斷"
+      when: features done 後
+      tools: ["/review", "/codex", "/cso"]
     layer_3_e2e:
-      who: QA
-      when: 與 Layer 2 並行
-      tools:
-        - "/qa — 真瀏覽器 Playwright E2E（互動 + 截圖 + 修 bug）"
-        - "/browse — 手動互動驗證、截圖比對"
-        - "/benchmark — 效能基準（回歸偵測）"
+      who: QA（與 Layer 2 並行）
+      tools: ["/qa", "/browse", "/benchmark"]
     post_deploy:
       who: DevOps
       when: merge PR 後
-      tools:
-        - "/canary — 金絲雀監控（5 分鐘週期截圖 + console + 效能）"
+      tools: ["/canary"]
 
-  # --- CI 自動 vs gstack Teammate ---
   ci_auto:
     - "npx tsc --noEmit"
     - "npm test（unit + integration + naming + css-hig）"
     - "npm run build"
     - "node scripts/verify-sw.js"
-  gstack_teammate:
-    - "/qa（互動 QA — QA Teammate）"
-    - "/benchmark（效能基準 — QA Teammate）"
-    - "/cso（安全稽核 — Security Teammate）"
-    - "/design-review（視覺稽核 — Designer Teammate）"
-    - "/canary（部署監控 — DevOps Teammate）"
 
-  # --- QA 標準測試案例（/qa 執行時必跑） ---
   qa_test_cases:
     navigation:
-      - "Day Nav 5 天 + 全覽切換，URL hash 更新正確"
-      - "StickyNav 捲動時固定在頂部"
-      - "行程選擇器切換不同行程"
+      - "Day Nav 切換 + 全覽模式"
+      - "StickyNav 捲動固定"
+      - "行程選擇器切換"
     panels:
-      - "快速選單開關（desktop + mobile bottom sheet）"
-      - "航班 / 出發 / 緊急 / 備案 / 建議 / 路線 / 交通 面板開關 + 內容完整"
-      - "面板 Escape 關閉 + 點擊 backdrop 關閉"
+      - "QuickPanel / InfoSheet 開關 + Escape 關閉 + backdrop 關閉"
+      - "航班 / 清單 / 備案 / 緊急 / 建議 / 路線 面板內容完整"
     timeline:
-      - "飯店詳情展開/收合"
-      - "交通資訊展開/收合"
-      - "地圖展開/收合 + Google Maps marker 正確"
-      - "時間軸項目順序正確、時間顯示正確"
-    links:
-      - "G Map / Map / 預約連結可點擊（不驗外部頁面）"
-      - "MapCode 顯示正確格式"
+      - "飯店 / 交通 / 地圖 展開收合"
+      - "時間軸項目順序 + 時間顯示正確"
+      - "餐廳 / 購物 POI 資訊完整"
     responsive:
-      - "Desktop 1280px — 側欄 + 主內容排版正確"
-      - "Mobile 375px — 單欄、FAB 位置正確、bottom sheet 正常"
-      - "Tablet 768px — 排版不破版"
+      - "Desktop 1280px — 側欄 + 主內容"
+      - "Mobile 375px — 單欄 + FAB + bottom sheet"
+      - "Tablet 768px — 不破版"
     theme:
-      - "淺色 / 深色 / 自動 切換正常"
-      - "6 個主題色（sun/sky/zen/forest/sakura/night）套用正確"
+      - "淺色 / 深色 / 自動 切換"
+      - "6 主題（sun/sky/zen/forest/sakura/night）套用正確"
     export:
-      - "PDF / MD / JSON / CSV 下載不報錯"
-      - "列印模式排版正確"
+      - "PDF / MD / JSON / CSV 下載"
+      - "列印模式排版"
     errors:
-      - "Console 無 JS 錯誤（Google Maps CSP 警告可忽略）"
-      - "Network 無 4xx/5xx 失敗請求"
-      - "空行程 / 無資料時顯示適當 fallback"
+      - "Console 無 JS 錯誤"
+      - "Network 無 4xx/5xx"
+      - "空行程 / 無資料 fallback"
