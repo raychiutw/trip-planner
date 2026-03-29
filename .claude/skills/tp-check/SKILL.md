@@ -1,10 +1,10 @@
 ---
 name: tp-check
-description: Use when the user wants to validate a trip itinerary against quality rules R0-R15 and receive a red/yellow/green report without modifying any files.
+description: Use when the user wants to validate a trip itinerary against quality rules R0-R18 and receive a red/yellow/green report without modifying any files.
 user-invocable: true
 ---
 
-對指定行程逐項檢查 R0-R15 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何資料。
+對指定行程逐項檢查 R0-R18 品質規則，輸出紅綠燈驗證 report。只讀不改，不修改任何資料。
 
 ⚡ 核心原則：不問問題，直接驗證。
 
@@ -29,7 +29,7 @@ user-invocable: true
    # 依序讀取每天完整資料
    curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
    ```
-2. 逐項檢查 R0-R15 品質規則（API 回傳 JSON，直接驗證 JSON 欄位）
+2. 逐項檢查 R0-R18 品質規則（API 回傳 JSON，直接驗證 JSON 欄位）
 3. 依檢查結果輸出 report（完整模式或精簡模式）
 
 🚫 不修改任何資料。tp-check 是純驗證工具。
@@ -76,6 +76,9 @@ API 回傳 JSON 格式，直接驗證以下欄位：
   R13 來源標記   🟢
   R14 國家感知   🟢
   R15 必填note   🟢
+  R16 飯店maps   🟡     2 個飯店缺 maps/address
+  R17 POI導航    🟢
+  R18 飯店phone  🟡     1 個飯店缺 phone
 ──────────────────────────────────────────────
 
   🟡 Warnings (N):
@@ -130,6 +133,9 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | R13 | 所有非豁免 POI 有 `source` | 1~3 個 POI 缺 `source` | > 3 個 POI 缺 `source` |
 | R14 | 韓國行程所有 POI 有 naverQuery；非韓國行程不檢查 | — | 韓國行程 POI 缺 naverQuery |
 | R15 | 所有 POI 有 `note` 欄位（含 parking infoBox） | 1~3 個缺 `note` | > 3 個缺 `note` |
+| R16 | 所有 hotel POI 有 `maps` + `address` | 1+ 個 hotel 缺 `maps` 或 `address` | — |
+| R17 | 所有 POI 至少有 `maps` 或 `lat`+`lng` | — | 任一 POI 兩者皆缺 |
+| R18 | 所有 hotel POI 有 `phone` | 1+ 個 hotel 缺 `phone` | — |
 
 ## 嵌入其他 skill 的方式
 

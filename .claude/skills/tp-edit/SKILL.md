@@ -35,7 +35,7 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
      googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
    - **POI V2 欄位規格**（同 tp-create）：
      POI V2 各 type 必填/建議欄位見 tp-shared/references.md
-4. 修改的部分須符合 R0-R15 品質規則
+4. 修改的部分須符合 R0-R18 品質規則
 4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
 5. 依修改類型選擇對應 API：
    - **修改單一 entry**（title/time/description/location/travel 等）：
@@ -62,7 +62,7 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
 - 「加一個景點到 Day 2」→ 只在 Day 2 timeline 插入
 - 「刪除 Day 4 的購物行程」→ 只移除該 entry
 
-**不全面重跑 R0-R15**。如需全面重整，使用 `/tp-rebuild`。
+**不全面重跑 R0-R18**。如需全面重整，使用 `/tp-rebuild`。
 
 ## 注意事項
 

@@ -81,7 +81,7 @@ curl -s -X PATCH \
       # 讀取受影響的天（依請求內容判斷）
       curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
       ```
-   b. 依請求 text 內容**局部修改**對應資料（只改 text 描述的部分，不全面重跑 R0-R15）
+   b. 依請求 text 內容**局部修改**對應資料（只改 text 描述的部分，不全面重跑 R0-R18）
    c. 新增或替換的 POI 須包含以下必填欄位：
       - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
       - `note`：有備註填內容，無備註填空字串 `""`（R15）
@@ -145,7 +145,7 @@ curl -s -X PATCH \
 
 ## 局部修改 vs 全面重整
 
-本 skill 只處理請求 text 描述的修改範圍。**不全面重跑 R0-R15**。如需全面重整，使用 `/tp-rebuild`。
+本 skill 只處理請求 text 描述的修改範圍。**不全面重跑 R0-R18**。如需全面重整，使用 `/tp-rebuild`。
 
 ## Markdown 支援欄位
 
