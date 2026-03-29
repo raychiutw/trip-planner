@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.2.0] - 2026-03-30
+
+### Added
+- `trip_docs_v2` + `trip_doc_entries` 正規化表 — 取代 JSON blob 的 `trip_docs.content`
+- `DocCard` 統一文件渲染元件 — 按 section 分組，支援 markdown content
+- Migration 0019 `normalize_docs.sql` — 建立新 relational schema
+- `migrate-docs-to-v2.js` 遷移腳本 — 直接操作 D1（wrangler d1 execute）
+- API backward compat：PUT 仍接受舊 JSON 格式，自動展開為 entries
+- entries 數量上限 200 防護
+
+### Changed
+- `GET/PUT /api/trips/:id/docs/:type` 改讀寫 `trip_docs_v2 + trip_doc_entries`
+- `useTrip` 移除 JSON double-unwrap，直接使用 API 回傳的 `{ title, entries }`
+- `TripPage` 5 個 doc switch case 統一用 `DocCard` 渲染
+- `rollback.ts` ALLOWED_TABLES 加入新表
+- `dump-d1 / init-local-db / import-to-staging / gen-seed-sql` 同步新表
+
+### Removed
+- `Flights.tsx` / `Checklist.tsx` / `Backup.tsx` / `Suggestions.tsx` / `Emergency.tsx` 舊元件
+- `TripDoc` type interface（已無用）
+
 ## [1.1.1.0] - 2026-03-28
 
 ### Added
