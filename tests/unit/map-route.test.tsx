@@ -31,10 +31,12 @@ import { render } from '@testing-library/react';
 const { mockSetPath, mockSetMap, mockPolyline, mockOverlaySetMap, MockOverlayView } = vi.hoisted(() => {
   const mockSetPath = vi.fn();
   const mockSetMap = vi.fn();
-  const mockPolyline = vi.fn(() => ({
-    setPath: mockSetPath,
-    setMap: mockSetMap,
-  }));
+  const mockPolyline = vi.fn(function() {
+    return {
+      setPath: mockSetPath,
+      setMap: mockSetMap,
+    };
+  });
 
   // OverlayView mock：記錄每次 setMap 呼叫
   const mockOverlaySetMap = vi.fn();

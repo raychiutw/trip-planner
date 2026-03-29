@@ -30,7 +30,7 @@ vi.mock('../../src/hooks/useMapData', () => ({
 /* ===== Mock MapMarker — 避免 OverlayView 相依 google.maps ===== */
 
 vi.mock('../../src/components/trip/MapMarker', () => ({
-  MapMarker: vi.fn(() => null),
+  MapMarker: vi.fn(function() { return null; }),
 }));
 
 /* ===== Mock google.maps ===== */
@@ -38,20 +38,22 @@ vi.mock('../../src/components/trip/MapMarker', () => ({
 const mockPanTo = vi.fn();
 const mockAddListener = vi.fn();
 const mockFitBounds = vi.fn();
-const mockMap = vi.fn(() => ({
-  fitBounds: mockFitBounds,
-  panTo: mockPanTo,
-  addListener: mockAddListener,
-}));
+const mockMap = vi.fn(function() {
+  return {
+    fitBounds: mockFitBounds,
+    panTo: mockPanTo,
+    addListener: mockAddListener,
+  };
+});
 
 beforeEach(() => {
   // @ts-expect-error — 模擬 global google.maps
   globalThis.google = {
     maps: {
       Map: mockMap,
-      LatLngBounds: vi.fn(() => ({ extend: vi.fn() })),
+      LatLngBounds: vi.fn(function() { return { extend: vi.fn() }; }),
       ControlPosition: { RIGHT_BOTTOM: 7 },
-      Polyline: vi.fn(() => ({ setMap: vi.fn() })),
+      Polyline: vi.fn(function() { return { setMap: vi.fn() }; }),
       OverlayView: class {
         setMap = vi.fn();
         getProjection = vi.fn(() => ({

@@ -33,26 +33,32 @@ const mockMarkerSetMap = vi.fn();
 const mockMarkerGetIcon = vi.fn();
 const mockMarkerSetIcon = vi.fn();
 
-const mockPolyline = vi.fn(() => ({
-  setMap: mockPolylineSetMap,
-  setOptions: mockSetOptions,
-}));
+const mockPolyline = vi.fn(function() {
+  return {
+    setMap: mockPolylineSetMap,
+    setOptions: mockSetOptions,
+  };
+});
 
-const mockMarker = vi.fn(() => ({
-  setMap: mockMarkerSetMap,
-  getIcon: mockMarkerGetIcon,
-  setIcon: mockMarkerSetIcon,
-}));
+const mockMarker = vi.fn(function() {
+  return {
+    setMap: mockMarkerSetMap,
+    getIcon: mockMarkerGetIcon,
+    setIcon: mockMarkerSetIcon,
+  };
+});
 
 beforeEach(() => {
   // @ts-expect-error — 模擬 global google.maps
   globalThis.google = {
     maps: {
-      Map: vi.fn(() => ({
-        fitBounds: mockFitBounds,
-        addListener: mockAddListener,
-      })),
-      LatLngBounds: vi.fn(() => ({ extend: vi.fn() })),
+      Map: vi.fn(function() {
+        return {
+          fitBounds: mockFitBounds,
+          addListener: mockAddListener,
+        };
+      }),
+      LatLngBounds: vi.fn(function() { return { extend: vi.fn() }; }),
       Polyline: mockPolyline,
       Marker: mockMarker,
       ControlPosition: { RIGHT_BOTTOM: 7 },
