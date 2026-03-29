@@ -30,6 +30,8 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
           SITE_URL: 'https://trip-planner-dby.pages.dev'
           PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Send email via Gmail SMTP
         uses: dawidd6/action-send-mail@v3
