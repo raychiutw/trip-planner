@@ -25,6 +25,8 @@
 | skill 欄位規格 | 寫在各 skill 的 SKILL.md | 每個 skill 自己知道該填什麼 |
 | 品質規則 | tp-check 新增 R16-R18 | 和現有 R0-R15 一致 |
 | 飯店 google_rating 補齊 | WebSearch 查詢 | Nominatim 沒有 rating 資料 |
+| 方案選擇 | 三端同修（API + Skill + Backfill） | P1 completeness — 只修 API，skill 下次還會漏 |
+| COALESCE 語義 | `UPDATE SET col = COALESCE(col, ?)` | P5 explicit — 只填 NULL 不覆蓋已有值 |
 
 ## findOrCreatePoi 擴充
 
@@ -41,7 +43,17 @@ findOrCreatePoi(db, { name, type, description, maps, mapcode, lat, lng, google_r
   address, phone, email, website, country })
 ```
 
-找到現有 POI 時（name + type 相同），用 COALESCE 邏輯更新：只更新目前為 NULL 的欄位。
+找到現有 POI 時（name + type 相同），用 COALESCE 邏輯更新：
+```sql
+UPDATE pois SET
+  address = COALESCE(address, ?),
+  phone = COALESCE(phone, ?),
+  email = COALESCE(email, ?),
+  website = COALESCE(website, ?),
+  country = COALESCE(country, ?)
+WHERE id = ?
+```
+只填入目前為 NULL 的欄位，不覆蓋已有值。
 
 ## 新增品質規則
 

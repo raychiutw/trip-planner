@@ -19,6 +19,8 @@
 - [ ] T3.4: 驗證結果（缺漏數降到 0）
 
 ### 測試
-- [ ] T4.1: integration — findOrCreatePoi 帶 address → pois.address 有值
-- [ ] T4.2: integration — findOrCreatePoi COALESCE 不覆蓋已有值
-- [ ] T4.3: unit — backfill-pois --dry-run 輸出格式正確
+- [ ] T4.1: integration — findOrCreatePoi INSERT 新 POI 帶 address → pois.address 有值
+- [ ] T4.2: integration — findOrCreatePoi SELECT 已有 POI + COALESCE → 只填 NULL 不覆蓋
+- [ ] T4.3: unit — backfill-pois --dry-run 輸出缺漏清單格式正確
+- [ ] T4.4: unit — backfill-pois PATCH 成功更新
+- [ ] T4.5: unit — backfill-pois WebSearch 失敗 → 跳過不中斷
