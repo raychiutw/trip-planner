@@ -42,7 +42,7 @@ describe('PUT /api/trips/:id/docs/:type', () => {
     const resp = await callHandler(onRequestPut, ctx);
     expect(resp.status).toBe(200);
 
-    // 驗證可以讀取
+    // 驗證可以讀取（新格式：{ doc_type, title, entries }）
     const getCtx = mockContext({
       request: new Request('https://test.com/api/trips/trip-docs/docs/flights'),
       env,
@@ -50,8 +50,41 @@ describe('PUT /api/trips/:id/docs/:type', () => {
     });
     const getResp = await callHandler(onRequestGet, getCtx);
     expect(getResp.status).toBe(200);
-    const data = await getResp.json() as Record<string, unknown>;
-    expect(data.content).toContain('CI123');
+    const data = await getResp.json() as { doc_type: string; title: string; entries: { content: string }[] };
+    expect(data.doc_type).toBe('flights');
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0].content).toContain('CI123');
+  });
+
+  it('新格式 entries → 200', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-docs/docs/checklist', 'PUT', {
+        title: '出發清單',
+        entries: [
+          { section: '證件', title: '護照', content: '' },
+          { section: '證件', title: '簽證', content: '' },
+          { section: '電子票', title: '機票 QR', content: '' },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-docs', type: 'checklist' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+
+    const getCtx = mockContext({
+      request: new Request('https://test.com/api/trips/trip-docs/docs/checklist'),
+      env,
+      params: { id: 'trip-docs', type: 'checklist' },
+    });
+    const getResp = await callHandler(onRequestGet, getCtx);
+    expect(getResp.status).toBe(200);
+    const data = await getResp.json() as { doc_type: string; title: string; entries: { section: string; title: string }[] };
+    expect(data.title).toBe('出發清單');
+    expect(data.entries).toHaveLength(3);
+    expect(data.entries[0].section).toBe('證件');
+    expect(data.entries[2].title).toBe('機票 QR');
   });
 
   it('無效 type → 400', async () => {
