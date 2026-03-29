@@ -1,0 +1,37 @@
+{
+  "active": {
+    "id": "error-ux-redesign",
+    "branch": "feat/error-ux-redesign",
+    "title": "錯誤體驗重構 — 分類引導 + 主動監控",
+    "openspec": "openspec/changes/error-ux-redesign/",
+    "design_doc": "~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260329-120000.md",
+    "reviews": {
+      "office_hours": "2026-03-29 — APPROVED",
+      "ceo": "2026-03-29 — HOLD SCOPE, 0 critical gaps",
+      "eng": "2026-03-29 — CLEAR, 2 issues resolved (throw+catch, instanceof)",
+      "design": "2026-03-29 — 6/10 → 9/10, Toast token 統一"
+    },
+    "phase": "build",
+    "tasks_total": 22,
+    "tasks_done": 0,
+    "current_task": "T1.1",
+    "key_decisions": [
+      "throw + catch pattern（非 helper function）",
+      "單一 catch + instanceof（預期 AppError vs 非預期 runtime）",
+      "Toast 頂部 iOS 風格，可堆疊，不合併",
+      "不做自動重試，提示重新整理",
+      "ReportButton 在 ErrorPlaceholder 內部",
+      "/api/reports 公開端點 + rate limit + 蜜罐",
+      "離線回報 localStorage 暫存（上限 10 筆）",
+      "D1 主路徑，Telegram 靜默",
+      "Toast color 用 tokens.css token",
+      "同一個 PR，migration 先跑",
+      "ErrorCode enum 在 src/types/api.ts（前後端共用）"
+    ],
+    "handoff_notes": [
+      "2026-03-29: rebase 到 master 完成（含 PR #138-#144）",
+      "CLAUDE.md 衝突已解決（保留 master 版本）",
+      "下個 session 從 T1.1 開始：src/types/api.ts 新增 ErrorCode enum"
+    ]
+  }
+}

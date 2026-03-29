@@ -13,6 +13,7 @@
 
 import { logAudit } from './_audit';
 import { hasPermission } from './_auth';
+import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
 
@@ -20,7 +21,7 @@ import type { Env } from './_types';
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
   const url = new URL(request.url);
   const tripId = url.searchParams.get('tripId');
   const status = url.searchParams.get('status');
@@ -30,11 +31,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   // admin/service token 可不帶 tripId 查詢所有 requests
   if (!tripId && !auth.isAdmin) {
-    return json({ error: '缺少 tripId 參數' }, 400);
+    throw new AppError('DATA_VALIDATION', '缺少 tripId 參數');
   }
 
   if (tripId && !await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
-    return json({ error: '無此行程權限' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   const isPaginated = limitParam !== null || before !== null;
@@ -84,7 +85,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env, request } = context;
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   type RequestBody = { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
   const bodyOrError = await parseJsonBody<RequestBody>(request);
@@ -98,15 +99,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     || '';
 
   if (!tripId || !mode || !message) {
-    return json({ error: '缺少必要欄位：tripId, mode, message' }, 400);
+    throw new AppError('DATA_VALIDATION', '缺少必要欄位：tripId, mode, message');
   }
 
   if (mode !== 'trip-edit' && mode !== 'trip-plan') {
-    return json({ error: 'mode 必須是 trip-edit 或 trip-plan' }, 400);
+    throw new AppError('DATA_VALIDATION', 'mode 必須是 trip-edit 或 trip-plan');
   }
 
   if (!await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
-    return json({ error: '無此行程權限' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   // 30 秒去重保護：防止因網路重試或使用者重複點擊造成重複寫入

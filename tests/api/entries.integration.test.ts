@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId , callHandler } from './helpers';
 import { onRequestPatch, onRequestDelete } from '../../functions/api/trips/[id]/entries/[eid]';
 import type { Env } from '../../functions/api/_types';
 
@@ -32,7 +32,7 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-e', eid: String(entryId) },
     });
-    const resp = await onRequestPatch(ctx);
+    const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
     const row = await db.prepare('SELECT title, note FROM trip_entries WHERE id = ?').bind(entryId).first();
     expect((row as Record<string, unknown>).title).toBe('Updated');
@@ -48,7 +48,7 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-e', eid: String(entryId) },
     });
-    expect((await onRequestPatch(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
   });
 
   it('未認證 → 401', async () => {
@@ -57,7 +57,7 @@ describe('PATCH /api/trips/:id/entries/:eid', () => {
       env,
       params: { id: 'trip-e', eid: String(entryId) },
     });
-    expect((await onRequestPatch(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(401);
   });
 });
 
@@ -71,7 +71,7 @@ describe('DELETE /api/trips/:id/entries/:eid', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-e', eid: String(eid) },
     });
-    const resp = await onRequestDelete(ctx);
+    const resp = await callHandler(onRequestDelete, ctx);
     expect(resp.status).toBe(200);
     const row = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first();
     expect(row).toBeNull();

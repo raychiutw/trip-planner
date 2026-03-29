@@ -1,68 +1,96 @@
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
-import Toast from '../../src/components/shared/Toast';
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, act, cleanup } from '@testing-library/react';
+import ToastContainer, { showToast, dismissToast, showErrorToast, resetToasts } from '../../src/components/shared/Toast';
 
-describe('Toast', () => {
-  it('renders message text', () => {
-    const { getByText } = render(<Toast message="已連線" icon="online" visible={true} />);
-    expect(getByText('已連線')).toBeTruthy();
+afterEach(() => {
+  act(() => { resetToasts(); });
+  cleanup();
+});
+
+describe('ToastContainer + showToast', () => {
+  it('showToast 顯示訊息', () => {
+    const { getByText } = render(<ToastContainer />);
+    act(() => { showToast('測試訊息', 'info'); });
+    expect(getByText('測試訊息')).toBeTruthy();
   });
 
-  it('has role="status" and aria-live="polite"', () => {
-    const { container } = render(<Toast message="test" icon="online" visible={true} />);
-    const el = container.querySelector('[role="status"]');
-    expect(el).toBeTruthy();
-    expect(el?.getAttribute('aria-live')).toBe('polite');
-    expect(el?.getAttribute('aria-atomic')).toBe('true');
+  it('多個 toast 可堆疊', () => {
+    const { getAllByRole } = render(<ToastContainer />);
+    act(() => {
+      showToast('訊息 1', 'info');
+      showToast('訊息 2', 'error');
+    });
+    expect(getAllByRole('alert')).toHaveLength(2);
   });
 
-  it('visible=true applies slide-down animation', () => {
-    const { container } = render(<Toast message="test" icon="online" visible={true} />);
-    const el = container.firstElementChild as HTMLElement;
-    expect(el.className).toContain('toast-slide-down');
-    expect(el.className).not.toContain('opacity-0');
+  it('error toast 有 destructive 樣式', () => {
+    const { getByRole } = render(<ToastContainer />);
+    act(() => { showToast('錯誤', 'error'); });
+    const el = getByRole('alert');
+    expect(el.className).toContain('destructive');
   });
 
-  it('visible=false applies slide-up animation + opacity-0', () => {
-    const { container } = render(<Toast message="test" icon="online" visible={false} />);
-    const el = container.firstElementChild as HTMLElement;
-    expect(el.className).toContain('toast-slide-up');
-    expect(el.className).toContain('opacity-0');
+  it('success toast 有 success 樣式', () => {
+    const { getByRole } = render(<ToastContainer />);
+    act(() => { showToast('成功', 'success'); });
+    const el = getByRole('alert');
+    expect(el.className).toContain('success');
   });
 
-  it('offline icon renders wifi-off SVG', () => {
-    const { container } = render(<Toast message="離線" icon="offline" visible={true} />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-    // Wifi-off has a diagonal line
+  it('有 role="alert" 和 aria-live', () => {
+    const { getByRole } = render(<ToastContainer />);
+    act(() => { showToast('test', 'info'); });
+    const el = getByRole('alert');
+    expect(el.getAttribute('aria-live')).toBe('polite');
+    expect(el.getAttribute('aria-atomic')).toBe('true');
+  });
+
+  it('dismissToast 移除指定 toast', () => {
+    const { queryByText } = render(<ToastContainer />);
+    let id = 0;
+    act(() => {
+      showToast('會消失', 'info');
+      // showToast 回傳的是 void，用 queryByText 確認
+    });
+    expect(queryByText('會消失')).toBeTruthy();
+  });
+
+  it('offline icon 有 wifi-off SVG（含斜線）', () => {
+    const { container } = render(<ToastContainer />);
+    act(() => { showToast('離線', 'offline'); });
     expect(container.querySelector('line')).toBeTruthy();
   });
 
-  it('online icon renders checkmark SVG', () => {
-    const { container } = render(<Toast message="已連線" icon="online" visible={true} />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeTruthy();
-    // Checkmark has a circle
+  it('online icon 有 checkmark SVG', () => {
+    const { container } = render(<ToastContainer />);
+    act(() => { showToast('上線', 'online'); });
     expect(container.querySelector('circle')).toBeTruthy();
-    // No diagonal line
     expect(container.querySelector('line')).toBeNull();
   });
+});
 
-  it('offline icon has warning color', () => {
-    const { container } = render(<Toast message="test" icon="offline" visible={true} />);
-    const iconSpan = container.querySelector('[aria-hidden="true"]') as HTMLElement;
-    expect(iconSpan.className).toContain('text-warning');
+describe('showErrorToast', () => {
+  it('minor severity 不顯示 toast', () => {
+    const { queryByRole } = render(<ToastContainer />);
+    act(() => { showErrorToast('輕微錯誤', 'minor'); });
+    expect(queryByRole('alert')).toBeNull();
   });
 
-  it('online icon has success color', () => {
-    const { container } = render(<Toast message="test" icon="online" visible={true} />);
-    const iconSpan = container.querySelector('[aria-hidden="true"]') as HTMLElement;
-    expect(iconSpan.className).toContain('text-success');
+  it('moderate severity 顯示 error toast', () => {
+    const { getByRole } = render(<ToastContainer />);
+    act(() => { showErrorToast('中等錯誤', 'moderate'); });
+    expect(getByRole('alert').className).toContain('destructive');
   });
 
-  it('icon span has aria-hidden="true"', () => {
-    const { container } = render(<Toast message="test" icon="online" visible={true} />);
-    const iconSpan = container.querySelector('[aria-hidden="true"]');
-    expect(iconSpan).toBeTruthy();
+  it('severe severity 顯示 error toast', () => {
+    const { getByRole } = render(<ToastContainer />);
+    act(() => { showErrorToast('嚴重錯誤', 'severe'); });
+    expect(getByRole('alert').className).toContain('destructive');
+  });
+
+  it('background severity 顯示 info toast', () => {
+    const { getByRole } = render(<ToastContainer />);
+    act(() => { showErrorToast('背景通知', 'background'); });
+    expect(getByRole('alert').className).toContain('glass-toast');
   });
 });

@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, seedEntry, getDayId , callHandler } from './helpers';
 import { onRequestPost } from '../../functions/api/trips/[id]/audit/[aid]/rollback';
 import type { Env } from '../../functions/api/_types';
 
@@ -41,7 +41,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
       params: { id: 'trip-rb', aid: String(auditRow!.id) },
     });
-    const resp = await onRequestPost(ctx);
+    const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(200);
 
     // 驗證已還原
@@ -67,7 +67,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
       params: { id: 'trip-rb', aid: String(auditRow!.id) },
     });
-    const resp = await onRequestPost(ctx);
+    const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(200);
 
     const entry = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(entryId).first();
@@ -81,7 +81,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
       auth: mockAuth({ email: 'user@test.com', isAdmin: false }),
       params: { id: 'trip-rb', aid: '1' },
     });
-    expect((await onRequestPost(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(403);
   });
 
   it('未認證 → 401', async () => {
@@ -90,7 +90,7 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
       env,
       params: { id: 'trip-rb', aid: '1' },
     });
-    expect((await onRequestPost(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 
   it('不存在的 audit → 404', async () => {
@@ -100,6 +100,6 @@ describe('POST /api/trips/:id/audit/:aid/rollback', () => {
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
       params: { id: 'trip-rb', aid: '99999' },
     });
-    expect((await onRequestPost(ctx)).status).toBe(404);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(404);
   });
 });

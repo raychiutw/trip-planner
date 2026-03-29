@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { useNavigate } from 'react-router-dom';
 import '../../css/tokens.css';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import Toast from '../components/shared/Toast';
+import ToastContainer from '../components/shared/Toast';
 import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch, apiFetchRaw } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -148,7 +148,7 @@ export default function ManagePage() {
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const { showOffline, showReconnect } = useOfflineToast(isOnline);
+  useOfflineToast(isOnline);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const currentTripIdRef = useRef(currentTripId);
@@ -417,8 +417,7 @@ export default function ManagePage() {
           </button>
         </div>
 
-        {showOffline && <Toast message="已離線 — 無法送出修改請求" icon="offline" visible={showOffline} />}
-        {showReconnect && <Toast message="已恢復連線" icon="online" visible={showReconnect} />}
+        <ToastContainer />
 
         {/* Main Content */}
         <main

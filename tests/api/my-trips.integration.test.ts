@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, seedTrip , callHandler } from './helpers';
 import { onRequestGet } from '../../functions/api/my-trips';
 import type { Env } from '../../functions/api/_types';
 
@@ -27,7 +27,7 @@ describe('GET /api/my-trips', () => {
       env,
       auth: mockAuth({ email: 'me@test.com' }),
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBe(2);
@@ -40,7 +40,7 @@ describe('GET /api/my-trips', () => {
       env,
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBeGreaterThanOrEqual(3);
   });

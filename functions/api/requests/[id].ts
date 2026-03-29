@@ -3,6 +3,7 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
+import { AppError } from '../_errors';
 import { sanitizeReply } from '../_validate';
 import { json, getAuth, parseJsonBody } from '../_utils';
 import type { Env } from '../_types';
@@ -10,12 +11,12 @@ import type { Env } from '../_types';
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
   const id = params.id as string;
 
   // 僅 admin / service token 可 PATCH（Claude CLI 回覆用）
   if (!auth.isAdmin) {
-    return json({ error: '僅管理者可更新請求' }, 403);
+    throw new AppError('PERM_ADMIN_ONLY');
   }
 
   const bodyOrError = await parseJsonBody<{ reply?: string; status?: string }>(context.request);
@@ -32,14 +33,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (body.status !== undefined) {
     const validStatuses = ['open', 'received', 'processing', 'completed'];
     if (!validStatuses.includes(body.status)) {
-      return json({ error: 'status 必須是 open、received、processing 或 completed' }, 400);
+      throw new AppError('DATA_VALIDATION', 'status 必須是 open、received、processing 或 completed');
     }
     updates.push('status = ?');
     values.push(body.status);
   }
 
   if (updates.length === 0) {
-    return json({ error: '沒有要更新的欄位' }, 400);
+    throw new AppError('DATA_VALIDATION', '沒有要更新的欄位');
   }
 
   const oldRow = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first() as Record<string, unknown> | null;
@@ -51,7 +52,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     .first();
 
   if (!result) {
-    return json({ error: '找不到該請求' }, 404);
+    throw new AppError('DATA_NOT_FOUND', '找不到該請求');
   }
 
   const tripId = (result as Record<string, unknown>).trip_id as string;

@@ -1,5 +1,9 @@
 import { initSentry } from '../lib/sentry';
+import { flushPendingReports } from '../components/shared/ErrorPlaceholder';
 initSentry();
+
+// 上線後自動送出離線暫存的錯誤回報
+flushPendingReports();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistration().then((reg) => {

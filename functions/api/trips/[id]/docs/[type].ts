@@ -1,5 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
+import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
@@ -8,27 +9,27 @@ const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'e
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, type } = context.params as { id: string; type: string };
 
-  if (!VALID_TYPES.has(type)) return json({ error: 'Invalid doc type' }, 400);
+  if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', 'Invalid doc type');
 
   const row = await context.env.DB
     .prepare('SELECT doc_type, content, updated_at FROM trip_docs WHERE trip_id = ? AND doc_type = ?')
     .bind(id, type)
     .first();
 
-  if (!row) return json({ error: 'Not found' }, 404);
+  if (!row) throw new AppError('DATA_NOT_FOUND');
   return json(row);
 };
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, type } = context.params as { id: string; type: string };
 
-  if (!VALID_TYPES.has(type)) return json({ error: 'Invalid doc type' }, 400);
+  if (!VALID_TYPES.has(type)) throw new AppError('DATA_VALIDATION', 'Invalid doc type');
 
   if (!await hasPermission(context.env.DB, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   const bodyOrError = await parseJsonBody<{ content?: string }>(context.request);

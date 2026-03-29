@@ -7,6 +7,55 @@
  */
 
 // ---------------------------------------------------------------------------
+// Error Codes（前後端共用）
+// ---------------------------------------------------------------------------
+
+export const ErrorCode = {
+  // 網路（前端產生）
+  NET_TIMEOUT: 'NET_TIMEOUT',
+  NET_OFFLINE: 'NET_OFFLINE',
+  // 認證
+  AUTH_REQUIRED: 'AUTH_REQUIRED',
+  AUTH_EXPIRED: 'AUTH_EXPIRED',
+  AUTH_INVALID: 'AUTH_INVALID',
+  // 權限
+  PERM_DENIED: 'PERM_DENIED',
+  PERM_ADMIN_ONLY: 'PERM_ADMIN_ONLY',
+  PERM_NOT_OWNER: 'PERM_NOT_OWNER',
+  // 資料
+  DATA_NOT_FOUND: 'DATA_NOT_FOUND',
+  DATA_VALIDATION: 'DATA_VALIDATION',
+  DATA_CONFLICT: 'DATA_CONFLICT',
+  DATA_ENCODING: 'DATA_ENCODING',
+  DATA_SAVE_FAILED: 'DATA_SAVE_FAILED',
+  // 系統
+  SYS_INTERNAL: 'SYS_INTERNAL',
+  SYS_DB_ERROR: 'SYS_DB_ERROR',
+  SYS_RATE_LIMIT: 'SYS_RATE_LIMIT',
+} as const;
+
+export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
+
+export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
+  NET_TIMEOUT: '連線逾時，請檢查網路',
+  NET_OFFLINE: '目前離線，顯示快取資料',
+  AUTH_REQUIRED: '請先登入',
+  AUTH_EXPIRED: '登入已過期，請重新登入',
+  AUTH_INVALID: '認證失敗，請重新登入',
+  PERM_DENIED: '你沒有此操作的權限',
+  PERM_ADMIN_ONLY: '僅管理員可操作',
+  PERM_NOT_OWNER: '這不是你的行程',
+  DATA_NOT_FOUND: '找不到這筆資料',
+  DATA_VALIDATION: '資料格式不正確',
+  DATA_CONFLICT: '這筆資料已經存在',
+  DATA_ENCODING: '文字編碼有誤，請用 UTF-8',
+  DATA_SAVE_FAILED: '儲存失敗，請再試一次',
+  SYS_INTERNAL: '系統發生錯誤，已通知開發團隊',
+  SYS_DB_ERROR: '資料庫忙碌中，請稍後再試',
+  SYS_RATE_LIMIT: '操作太頻繁，請稍等',
+};
+
+// ---------------------------------------------------------------------------
 // Auth
 // ---------------------------------------------------------------------------
 

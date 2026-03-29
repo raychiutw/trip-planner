@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, getDayId } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, getDayId , callHandler } from './helpers';
 import { onRequestGet, onRequestPut } from '../../functions/api/trips/[id]/days/[num]';
 import type { Env } from '../../functions/api/_types';
 
@@ -25,7 +25,7 @@ describe('GET /api/trips/:id/days/:num', () => {
       env,
       params: { id: 'trip-dn', num: '1' },
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Record<string, unknown>;
     expect(data.day_num).toBe(1);
@@ -38,7 +38,7 @@ describe('GET /api/trips/:id/days/:num', () => {
       env,
       params: { id: 'trip-dn', num: '99' },
     });
-    expect((await onRequestGet(ctx)).status).toBe(404);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(404);
   });
 });
 
@@ -73,7 +73,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-dn', num: '1' },
     });
-    const resp = await onRequestPut(ctx);
+    const resp = await callHandler(onRequestPut, ctx);
     expect(resp.status).toBe(200);
 
     // 驗證 entries 已建立
@@ -107,7 +107,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-dn', num: '1' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
   });
 
   it('未認證 → 401', async () => {
@@ -118,7 +118,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
       env,
       params: { id: 'trip-dn', num: '1' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(401);
   });
 
   it('無權限 → 403', async () => {
@@ -130,7 +130,7 @@ describe('PUT /api/trips/:id/days/:num', () => {
       auth: mockAuth({ email: 'stranger@test.com' }),
       params: { id: 'trip-dn', num: '1' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(403);
   });
 
   it('亂碼偵測 → 400', async () => {
@@ -143,6 +143,6 @@ describe('PUT /api/trips/:id/days/:num', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-dn', num: '2' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
   });
 });

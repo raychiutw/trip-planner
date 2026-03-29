@@ -7,6 +7,7 @@
 
 import { logAudit, computeDiff } from '../../../_audit';
 import { hasPermission, verifyTripPoiBelongsToTrip } from '../../../_auth';
+import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
@@ -20,30 +21,30 @@ const ALLOWED_FIELDS = [
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, tpid } = context.params as { id: string; tpid: string };
   const tripPoiId = Number(tpid);
-  if (!tripPoiId || isNaN(tripPoiId)) return json({ error: 'Invalid trip_poi id' }, 400);
+  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'Invalid trip_poi id');
 
   const db = context.env.DB;
 
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   if (!await verifyTripPoiBelongsToTrip(db, tripPoiId, id)) {
-    return json({ error: '此 trip_poi 不屬於該行程' }, 403);
+    throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
   }
 
   const oldRow = await db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first() as Record<string, unknown> | null;
-  if (!oldRow) return json({ error: 'Not found' }, 404);
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND');
 
   const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
   if (bodyOrError instanceof Response) return bodyOrError;
 
   const updateResult = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
-  if (!updateResult) return json({ error: '無有效欄位可更新' }, 400);
+  if (!updateResult) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   await db.prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ?`)
     .bind(...updateResult.values, tripPoiId).run();
@@ -61,24 +62,24 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, tpid } = context.params as { id: string; tpid: string };
   const tripPoiId = Number(tpid);
-  if (!tripPoiId || isNaN(tripPoiId)) return json({ error: 'Invalid trip_poi id' }, 400);
+  if (!tripPoiId || isNaN(tripPoiId)) throw new AppError('DATA_VALIDATION', 'Invalid trip_poi id');
 
   const db = context.env.DB;
 
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   if (!await verifyTripPoiBelongsToTrip(db, tripPoiId, id)) {
-    return json({ error: '此 trip_poi 不屬於該行程' }, 403);
+    throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
   }
 
   const oldRow = await db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first();
-  if (!oldRow) return json({ error: 'Not found' }, 404);
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND');
 
   await db.prepare('DELETE FROM trip_pois WHERE id = ?').bind(tripPoiId).run();
 

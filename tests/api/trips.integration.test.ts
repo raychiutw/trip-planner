@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip, callHandler } from './helpers';
 import { onRequestPost, onRequestGet } from '../../functions/api/trips';
 import type { Env } from '../../functions/api/_types';
 
@@ -35,7 +35,7 @@ describe('POST /api/trips', () => {
       env,
       auth: mockAuth({ email: 'test@test.com' }),
     });
-    const resp = await onRequestPost(ctx);
+    const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
     const data = await resp.json() as { ok: boolean; tripId: string; daysCreated: number };
     expect(data.ok).toBe(true);
@@ -61,7 +61,7 @@ describe('POST /api/trips', () => {
       env,
       auth: mockAuth(),
     });
-    const resp = await onRequestPost(ctx);
+    const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(400);
   });
 
@@ -73,7 +73,7 @@ describe('POST /api/trips', () => {
       env,
       auth: mockAuth(),
     });
-    expect((await onRequestPost(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
   });
 
   it('endDate < startDate → 400', async () => {
@@ -84,7 +84,7 @@ describe('POST /api/trips', () => {
       env,
       auth: mockAuth(),
     });
-    expect((await onRequestPost(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
   });
 
   it('超過 30 天 → 400', async () => {
@@ -95,7 +95,7 @@ describe('POST /api/trips', () => {
       env,
       auth: mockAuth(),
     });
-    expect((await onRequestPost(ctx)).status).toBe(400);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
   });
 
   it('重複 tripId → 409', async () => {
@@ -106,7 +106,7 @@ describe('POST /api/trips', () => {
       env,
       auth: mockAuth(),
     });
-    expect((await onRequestPost(ctx)).status).toBe(409);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(409);
   });
 
   it('未認證 → 401', async () => {
@@ -117,7 +117,7 @@ describe('POST /api/trips', () => {
       env,
       // 不設定 auth
     });
-    expect((await onRequestPost(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 });
 
@@ -129,7 +129,7 @@ describe('GET /api/trips', () => {
       request: new Request('https://test.com/api/trips'),
       env,
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBeGreaterThanOrEqual(1);
@@ -144,7 +144,7 @@ describe('GET /api/trips', () => {
       env,
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.some(t => t.published === 0)).toBe(true);
   });

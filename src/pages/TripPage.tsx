@@ -31,7 +31,7 @@ import Emergency from '../components/trip/Emergency';
 import Suggestions from '../components/trip/Suggestions';
 import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import Toast from '../components/shared/Toast';
+import ToastContainer from '../components/shared/Toast';
 import { FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
 import DayArt from '../components/trip/DayArt';
@@ -344,7 +344,7 @@ export default function TripPage() {
 
   /* --- Online status + offline/reconnect toasts --- */
   const isOnline = useOnlineStatus();
-  const { showOffline, showReconnect } = useOfflineToast(isOnline);
+  useOfflineToast(isOnline);
   // Stable ref so the effect below can call refetchCurrentDay without re-running
   // when refetchCurrentDay identity changes (it is declared after useTrip below).
   const refetchCurrentDayRef = useRef<(() => void) | null>(null);
@@ -1138,21 +1138,7 @@ export default function TripPage() {
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
 
-      {/* Toast notifications — conditionally rendered to avoid hidden DOM nodes */}
-      {showOffline && (
-        <Toast
-          message="已離線 — 顯示快取資料"
-          icon="offline"
-          visible={showOffline}
-        />
-      )}
-      {showReconnect && (
-        <Toast
-          message="已恢復連線"
-          icon="online"
-          visible={showReconnect}
-        />
-      )}
+      <ToastContainer />
 
       {/* Page Layout */}
       <div className="page-layout flex min-h-dvh">

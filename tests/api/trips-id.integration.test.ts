@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
 import { onRequestGet, onRequestPut } from '../../functions/api/trips/[id]';
 import type { Env } from '../../functions/api/_types';
 
@@ -25,7 +25,7 @@ describe('GET /api/trips/:id', () => {
       env,
       params: { id: 'trip-1' },
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Record<string, unknown>;
     expect(data.tripId).toBe('trip-1');
@@ -37,7 +37,7 @@ describe('GET /api/trips/:id', () => {
       env,
       params: { id: 'nope' },
     });
-    expect((await onRequestGet(ctx)).status).toBe(404);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(404);
   });
 });
 
@@ -49,7 +49,7 @@ describe('PUT /api/trips/:id', () => {
       auth: mockAuth({ email: 'user@test.com' }),
       params: { id: 'trip-1' },
     });
-    const resp = await onRequestPut(ctx);
+    const resp = await callHandler(onRequestPut, ctx);
     expect(resp.status).toBe(200);
     const trip = await db.prepare('SELECT title FROM trips WHERE id = ?').bind('trip-1').first();
     expect((trip as Record<string, unknown>).title).toBe('新標題');
@@ -61,7 +61,7 @@ describe('PUT /api/trips/:id', () => {
       env,
       params: { id: 'trip-1' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(401);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(401);
   });
 
   it('無權限 → 403', async () => {
@@ -71,6 +71,6 @@ describe('PUT /api/trips/:id', () => {
       auth: mockAuth({ email: 'stranger@test.com' }),
       params: { id: 'trip-1' },
     });
-    expect((await onRequestPut(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(403);
   });
 });

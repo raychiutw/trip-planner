@@ -1,5 +1,6 @@
 import { logAudit } from '../../../_audit';
 import { hasPermission } from '../../../_auth';
+import { AppError } from '../../../_errors';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -56,7 +57,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .bind(id, Number(num))
     .first() as Record<string, unknown> | null;
 
-  if (!day) return json({ error: 'Not found' }, 404);
+  if (!day) throw new AppError('DATA_NOT_FOUND');
 
   const dayId = day.id as number;
 
@@ -204,14 +205,14 @@ async function findOrCreatePoi(
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
-  if (!auth) return json({ error: '未認證' }, 401);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   const { id, num } = context.params as { id: string; num: string };
   const changedBy = auth.email;
   const db = context.env.DB;
 
   if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
-    return json({ error: '權限不足' }, 403);
+    throw new AppError('PERM_DENIED');
   }
 
   const day = await db
@@ -219,7 +220,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     .bind(id, Number(num))
     .first() as { id: number } | null;
 
-  if (!day) return json({ error: 'Not found' }, 404);
+  if (!day) throw new AppError('DATA_NOT_FOUND');
   const dayId = day.id;
 
   // Snapshot old data for audit
@@ -241,7 +242,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const body = bodyOrError;
 
   const validation = validateDayBody(body);
-  if (!validation.ok) return json({ error: validation.error }, validation.status);
+  if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);
 
   // Garbled text detection
   const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
@@ -250,7 +251,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     for (const f of ['title', 'description', 'note'] as const) {
       const val = e[f];
       if (typeof val === 'string' && detectGarbledText(val)) {
-        return json({ error: `timeline[${i}].${f} 包含疑似亂碼` }, 400);
+        throw new AppError('DATA_ENCODING', `timeline[${i}].${f} 包含疑似亂碼`);
       }
     }
   }
@@ -390,7 +391,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       tripId: id, tableName: 'trip_days', recordId: dayId, action: 'update', changedBy,
       diffJson: JSON.stringify({ error: 'Partial write failure', message: err instanceof Error ? err.message : String(err) }),
     });
-    return json({ error: '儲存失敗，請稍後再試' }, 500);
+    throw new AppError('DATA_SAVE_FAILED', '儲存失敗，請稍後再試');
   }
 
   return json({ ok: true });

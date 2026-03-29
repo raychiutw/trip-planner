@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedTrip , callHandler } from './helpers';
 import { onRequestGet } from '../../functions/api/permissions';
 import type { Env } from '../../functions/api/_types';
 
@@ -27,7 +27,7 @@ describe('GET /api/permissions', () => {
       env,
       auth: mockAuth({ email: 'admin@test.com', isAdmin: true }),
     });
-    const resp = await onRequestGet(ctx);
+    const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data.length).toBeGreaterThanOrEqual(1);
@@ -39,7 +39,7 @@ describe('GET /api/permissions', () => {
       env,
       auth: mockAuth({ email: 'user@test.com' }),
     });
-    expect((await onRequestGet(ctx)).status).toBe(403);
+    expect((await callHandler(onRequestGet, ctx)).status).toBe(403);
   });
 
   it('未認證 → handler crash（middleware 已在前攔截）', async () => {
