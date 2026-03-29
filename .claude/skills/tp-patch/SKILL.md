@@ -4,7 +4,7 @@ description: Use when the user wants to bulk-fill a specific missing field (e.g.
 user-invocable: true
 ---
 
-跨行程局部欄位更新工具。針對特定 target + field 批次掃描並搜尋補齊，透過 API 寫回。
+跨行程 POI 欄位批次補齊工具。掃描 pois 表缺漏欄位，WebSearch 查詢後用 PATCH /pois/:id 更新。
 
 ## API 設定
 
@@ -16,88 +16,84 @@ user-invocable: true
 ## 指令格式
 
 ```
-/tp-patch --target <target> --field <field> [--trips <tripId,...>]
+/tp-patch --target <target> --field <field> [--trips <tripId,...>] [--dry-run]
 ```
 
-- `--target`（必填）：`hotel` | `restaurant` | `shop` | `event` | `gasStation`
-- `--field`（必填）：`googleRating` | `reservation` | `location` 或其他合法欄位
+- `--target`（必填）：`hotel` | `restaurant` | `shopping` | `parking` | `all`
+- `--field`（必填）：`google_rating` | `maps` | `address` | `phone` | `hours` | `all`
 - `--trips`（選填）：逗號分隔的行程 tripId，預設為所有行程
+- `--dry-run`（選填）：只輸出缺漏報告，不修改資料
 
 未提供必填參數時顯示使用說明，不執行操作。
 
+## POI V2 欄位規格
+
+| type | 必填 | 建議填 |
+|------|------|--------|
+| hotel | name, description, google_rating, maps, checkout | address, phone, mapcode |
+| restaurant | name, category, hours, google_rating, maps | price, reservation |
+| shopping | name, category, hours, google_rating, maps | must_buy, description |
+| parking | name, description, maps | mapcode |
+
 ## 步驟
 
-### Phase 1：掃描
+### Phase 1：掃描 pois 表
 
 1. 取得目標行程清單：
    ```bash
-   # 若 --trips 未指定，取得全部行程
-   curl -s "https://trip-planner-dby.pages.dev/api/trips?all=1"
+   curl -s "https://trip-planner-dby.pages.dev/api/trips?all=1" \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
    ```
-2. 對每個行程讀取所有天資料：
-   ```bash
-   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days"
-   # 依序讀取每天完整資料
-   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
-   ```
-3. 遍歷所有天，依 `--target` 定位物件：
-   - `hotel` → 各天的 hotel 物件（跳過 name 為「家」或以「（」開頭的）
-   - `restaurant` → restaurants 陣列內的每個 restaurant
-   - `shop` → shopping 陣列內的每個 shop
-   - `event` → timeline entries（跳過有 travel 的和「餐廳未定」）
-   - `gasStation` → gasStation infoBox
-4. 檢查每個物件的 `--field` 是否需要更新：
-   - `googleRating`：缺少或非 number → 需更新
-   - `reservation`：非 object 或 `available === "unknown"` → 需更新
-   - 其他欄位：依實際需求判斷
-5. 輸出掃描摘要：「共 N 行程、M 個 {target} 需更新 {field}」+ 每行程明細
+2. 對每個行程讀取所有天資料，收集所有 POI（含 poi_id）
+3. 依 `--target` 篩選 POI type
+4. 依 `--field` 檢查哪些 POI 缺漏該欄位（NULL 或空字串）
+5. 輸出掃描摘要：「共 N 個 {target} 需補齊 {field}」+ 明細
 
-### Phase 2：並行搜尋
+### Phase 2：WebSearch 補齊
 
-6. 讀取對應 `--field` 的搜尋策略
-7. 為每個行程啟動一個 Agent（sonnet），並行搜尋：
-   - Agent prompt 包含該行程需更新的物件清單 + 搜尋方式
-   - **依 R13 先驗證 POI 存在性**，搜不到時回報「POI 不存在：{名稱}」，不設 unknown、不繼續搜尋
-   - Agent 不直接呼叫 API，只回傳 patch 結果（物件 ID + 新值）
-8. 收集所有 Agent 回傳的 patch 結果
+6. 為每個缺漏 POI，用 name + type 組合 WebSearch 查詢
+   - google_rating → 搜尋 "Google Maps {POI name} rating"
+   - maps → 搜尋 "Google Maps {POI name}"，取 URL
+   - address → 搜尋 "{POI name} 地址"
+   - phone → 搜尋 "{POI name} 電話"
+7. 搜尋不到 → 跳過，不填預設值
 
-### Phase 3：合併與驗證
+### Phase 3：寫入（PATCH /pois/:id）
 
-9. 依 patch 結果呼叫對應 API 寫回：
-   - entry（event/hotel）：PATCH `/api/trips/{tripId}/entries/{eid}`
-   - 餐廳：PATCH `/api/trips/{tripId}/restaurants/{rid}`
-   - 購物：PATCH `/api/trips/{tripId}/shopping/{sid}`
+8. 用 `PATCH /pois/:id` 更新 master POI：
 
    > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
 
    ```bash
-   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({'{field}':{value}}), 'utf8')"
+   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({google_rating: 4.5, address: '...'}), 'utf8')"
    curl -s -X PATCH \
      -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
      -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
      -H "Content-Type: application/json" \
+     -H "Origin: https://trip-planner-dby.pages.dev" \
      --data @/tmp/patch.json \
-     "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
+     "https://trip-planner-dby.pages.dev/api/pois/{poiId}"
    ```
-   - 找不到的值不填預設（`googleRating` 省略、`reservation` 維持 unknown）
-10. 對每個修改的行程執行 tp-check 精簡模式
-11. 不自動 commit（資料已直接寫入 D1 database）
+
+9. 輸出結果報告：補齊數 / 失敗數 / 仍缺漏數
+10. 不自動 commit（資料已直接寫入 D1 database）
 
 ## 範例
 
 ```bash
-# 為所有行程的 hotel 補上 googleRating
-/tp-patch --target hotel --field googleRating
+# 為所有飯店補上 google_rating
+/tp-patch --target hotel --field google_rating
 
-# 為指定行程的餐廳補上 reservation 結構化資訊
-/tp-patch --target restaurant --field reservation --trips okinawa-trip-2026-Ray
+# 只看缺漏報告不修改
+/tp-patch --target all --field all --dry-run
 
-# 為指定行程的景點補上 location
-/tp-patch --target event --field location --trips okinawa-trip-2026-Ray
+# 為指定行程的 POI 補齊所有欄位
+/tp-patch --target all --field all --trips okinawa-trip-2026-HuiYun
 ```
 
 ## 注意事項
 
-- 所有資料讀寫均透過 API，不操作本地 MD 檔案
-- 不執行 git commit / push（資料已直接寫入 D1 database）
-- 不執行 npm run build（無 dist 產物需產生）
+- 所有資料讀寫均透過 API，不操作本地檔案
+- 使用 `PATCH /pois/:id`（admin 端點）更新 master POI，不是 trip_pois
+- 不執行 git commit / push

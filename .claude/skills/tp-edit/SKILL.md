@@ -35,6 +35,13 @@ user-invocable: true
    - `note`：有備註填內容，無備註填空字串 `""`（R15）
    - `location.googleQuery`：實體地點填搜尋文字（R11）
    - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
+   - **POI V2 欄位規格**（同 tp-create）：
+     | type | 必填 | 建議填 |
+     |------|------|--------|
+     | hotel | name, description, checkout, breakfast_included, google_rating, maps | address, phone, mapcode |
+     | restaurant | name, category, hours, google_rating, maps, price | reservation, reservation_url |
+     | shopping | name, category, hours, google_rating, maps, must_buy | description |
+     | parking | name, description, maps | mapcode |
 4. 修改的部分須符合 R0-R15 品質規則
 4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
 5. 依修改類型選擇對應 API：
