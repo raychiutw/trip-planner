@@ -90,7 +90,7 @@ curl -s -X PATCH \
       - `note`：有備註填內容，無備註填空字串 `""`（R15）
       - `location.googleQuery`：實體地點填搜尋文字（R11）
       - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-   d. 修改的部分須符合 R0-R15 品質規則
+   d. 修改的部分須符合 R0-R18 品質規則（含 R16 飯店 rating、R17 導航資訊、R18 飯店 address）
    d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
    e. 依修改類型選擇對應 API：
       - **修改單一 entry**（title/time/description/location/travel 等）：

@@ -1,6 +1,6 @@
 ---
 name: tp-quality-rules
-description: Use when generating, modifying, or validating trip itinerary MD files and need to check compliance with quality rules R0–R15.
+description: Use when generating, modifying, or validating trip itinerary MD files and need to check compliance with quality rules R0–R18.
 user-invocable: false
 ---
 
@@ -118,3 +118,12 @@ shop.category 使用標準分類（共 7 類）：超市、超商、唐吉軻德
 - `meta.countries` 含 `"KR"` 時，所有 POI 的 location 必填 `naverQuery`（Naver Maps URL）。
 - `naverQuery` 優先填精確 place URL：`https://map.naver.com/v5/entry/place/{placeId}`，查不到時 fallback 為 `https://map.naver.com/v5/search/{韓文關鍵字}`。
 - 非韓國行程不需要 `naverQuery` 欄位。
+
+### R16 飯店 POI 必填 google_rating
+type 為 `hotel` 的 pois 必須有 `google_rating`（數字 1.0-5.0）。缺少 → **warning**（🟡）。
+
+### R17 POI 必填導航資訊
+所有 POI 必須至少有一種導航方式：`maps`（Google Maps URL 或搜尋文字）或 `lat` + `lng`。兩者都缺 → **fail**（🔴）。
+
+### R18 飯店 POI 建議填 address
+type 為 `hotel` 的 pois 建議有 `address` 和 `phone`。缺少 → **warning**（🟡）。

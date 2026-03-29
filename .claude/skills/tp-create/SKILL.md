@@ -49,6 +49,13 @@ user-invocable: true
      - `note: ""`（有備註填內容，無備註填空字串，R15）
      - `location.googleQuery`：實體地點填搜尋文字（R11）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
+   - **POI V2 欄位規格（PUT /days/:num 時傳入）**：
+     | type | 必填 | 建議填 |
+     |------|------|--------|
+     | hotel | name, description, checkout, breakfast_included, google_rating, maps | address, phone, mapcode |
+     | restaurant | name, category, hours, google_rating, maps, price | reservation, reservation_url |
+     | shopping | name, category, hours, google_rating, maps, must_buy | description |
+     | parking | name, description, maps | mapcode |
    - Markdown 支援欄位（前端會渲染 markdown）：
      - `entry.description`（description）：✅ 可用粗體、列表、連結
      - `entry.note`：✅ 可用粗體、列表
