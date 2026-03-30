@@ -35,8 +35,6 @@ interface TripInfo {
 }
 
 /* ===== Chevron SVG ===== */
-const SELECT_CHEVRON = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\' fill=\'none\'%3E%3Cpath d=\'M1 1.5l4 4 4-4\' stroke=\'%236B6B6B\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/%3E%3C/svg%3E")';
-const SELECT_STYLE: React.CSSProperties = { backgroundImage: SELECT_CHEVRON, backgroundPosition: 'right 10px center' };
 
 /** Render Markdown text to sanitized HTML with table wrapping. */
 function renderMarkdown(text: string): string {
@@ -155,6 +153,8 @@ export default function ManagePage() {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'trip-edit' | 'trip-plan'>('trip-edit');
   const [submitting, setSubmitting] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useOfflineToast(isOnline);
 
@@ -361,11 +361,23 @@ export default function ManagePage() {
   }, [text, mode, submitting, loadRequests]);
 
   /* ----- Trip select change ----- */
-  function handleTripChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const val = e.target.value;
-    lsSet(LS_KEY_TRIP_PREF, val);
-    setCurrentTripId(val);
+  function handleTripSelect(tripId: string) {
+    lsSet(LS_KEY_TRIP_PREF, tripId);
+    setCurrentTripId(tripId);
+    setDropdownOpen(false);
   }
+
+  /* ----- Close dropdown on click outside ----- */
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
 
   /* ----- Textarea handlers ----- */
   function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
@@ -398,17 +410,36 @@ export default function ManagePage() {
         >
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
-            <select
-              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-secondary text-foreground font-inherit text-[length:var(--font-size-body)] font-semibold py-2 pl-3 pr-7 cursor-pointer bg-no-repeat rounded-full min-h-tap-min max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
-              style={SELECT_STYLE}
-              aria-label="選擇行程"
-              value={currentTripId || ''}
-              onChange={handleTripChange}
-            >
-              {filteredTrips.map((t) => (
-                <option key={t.tripId} value={t.tripId}>{t.name}</option>
-              ))}
-            </select>
+            <div ref={dropdownRef} className="absolute left-1/2 -translate-x-1/2">
+              <button
+                className="flex items-center gap-1.5 bg-secondary text-foreground text-[length:var(--font-size-body)] font-semibold py-2 pl-3 pr-2.5 rounded-full min-h-tap-min cursor-pointer border-none transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
+                aria-label="選擇行程"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+              >
+                <span className="truncate max-w-[60vw] md:max-w-[300px]">
+                  {filteredTrips.find(t => t.tripId === currentTripId)?.name || ''}
+                </span>
+                <svg viewBox="0 0 10 7" fill="none" width="10" height="7" className={`shrink-0 transition-transform duration-fast ${dropdownOpen ? 'rotate-180' : ''}`}>
+                  <path d="M1 1.5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+                </svg>
+              </button>
+              {dropdownOpen && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-secondary rounded-lg shadow-lg border border-border/50 py-1 min-w-full max-h-[50vh] overflow-y-auto z-(--z-sticky-nav)">
+                  {filteredTrips.map((t) => (
+                    <button
+                      key={t.tripId}
+                      className={[
+                        'w-full text-left px-4 py-2.5 border-none bg-transparent cursor-pointer text-[length:var(--font-size-body)] transition-colors duration-fast whitespace-nowrap hover:bg-hover focus-visible:outline-none',
+                        t.tripId === currentTripId ? 'text-accent font-semibold' : 'text-foreground',
+                      ].join(' ')}
+                      onClick={() => handleTripSelect(t.tripId)}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <button
             className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none ml-auto"
@@ -493,7 +524,7 @@ export default function ManagePage() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1">
+              <div className="shrink-0 pb-[max(20px,env(safe-area-inset-bottom,20px))] pt-2">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2 px-1">
                     <button
