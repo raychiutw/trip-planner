@@ -2,12 +2,14 @@
  * GET /api/my-trips — 回傳使用者有權限的 tripId 列表
  */
 
+import { AppError } from './_errors';
 import { json, getAuth } from './_utils';
-import type { Env, AuthData } from './_types';
+import type { Env } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { env } = context;
-  const auth = getAuth(context) as AuthData;
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
 
   let results;
   if (auth.isAdmin) {

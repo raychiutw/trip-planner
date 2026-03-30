@@ -54,7 +54,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
       .prepare(`UPDATE trip_entries SET ${update.setClauses} WHERE id = ? RETURNING *`)
       .bind(...update.values, eid)
       .first();
-  } catch (err: any) {
+  } catch (err: unknown) {
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
 
@@ -99,7 +99,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
       db.prepare('DELETE FROM trip_pois WHERE entry_id = ?').bind(eid),
       db.prepare('DELETE FROM trip_entries WHERE id = ?').bind(eid),
     ]);
-  } catch (err: any) {
+  } catch (err: unknown) {
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
 

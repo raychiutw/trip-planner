@@ -136,6 +136,8 @@ interface DaySectionProps {
   isActive?: boolean;
   /** 全覽模式時隱藏 DayMap（避免與 TripMap 重複）*/
   hideDayMap?: boolean;
+  /** IANA timezone for weather API (derived from trip destination). */
+  timezone?: string;
 }
 
 const DaySection = React.memo(function DaySection({
@@ -148,6 +150,7 @@ const DaySection = React.memo(function DaySection({
   localToday,
   isActive,
   hideDayMap = false,
+  timezone,
 }: DaySectionProps) {
   /* Track whether this section has been activated to trigger enter animation */
   const [animKey, setAnimKey] = useState(0);
@@ -219,6 +222,7 @@ const DaySection = React.memo(function DaySection({
                 weatherDay={weatherDay}
                 tripStart={tripStart}
                 tripEnd={tripEnd}
+                timezone={timezone}
               />
             )}
 
@@ -433,6 +437,11 @@ export default function TripPage() {
           lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
           setTimeout(() => { navigate(defaultTrip ? `/trip/${defaultTrip.tripId}` : '/', { replace: true }); }, 2000);
+          return;
+        }
+
+        if (!match && !defaultTrip) {
+          setResolveState({ status: 'unpublished' });
           return;
         }
 
@@ -803,6 +812,13 @@ export default function TripPage() {
   /* --- Trip start/end scalars for HourlyWeather (T3) --- */
   const tripStart = autoScrollDates[0] ?? null;
   const tripEnd = autoScrollDates[autoScrollDates.length - 1] ?? null;
+
+  /* --- Weather timezone derived from trip destination --- */
+  const weatherTimezone = useMemo(() => {
+    if (!activeTripId) return undefined;
+    const prefix = activeTripId.split('-')[0];
+    return TRIP_TIMEZONE[prefix];
+  }, [activeTripId]);
 
   /* --- Date range for large title subtitle --- */
   const dateRange = useMemo(() => {
@@ -1177,6 +1193,7 @@ export default function TripPage() {
                   localToday={localToday}
                   isActive={dayNum === currentDayNum}
                   hideDayMap={isTripMapMode}
+                  timezone={weatherTimezone}
                 />
               ))}
 

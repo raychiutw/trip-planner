@@ -37,8 +37,8 @@ export async function logAudit(db: D1Database, opts: {
   }
 }
 
-export function computeDiff(oldRow: Record<string, any>, newFields: Record<string, any>): string {
-  const diff: Record<string, { old: any; new: any }> = {};
+export function computeDiff(oldRow: Record<string, unknown>, newFields: Record<string, unknown>): string {
+  const diff: Record<string, { old: unknown; new: unknown }> = {};
   for (const key of Object.keys(newFields)) {
     const oldVal = oldRow[key];
     const newVal = newFields[key];

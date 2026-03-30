@@ -155,6 +155,7 @@ export async function fetchWeatherForDay(
   weatherDay: WeatherDay,
   tripStart?: string | null,
   tripEnd?: string | null,
+  timezone: string = 'Asia/Tokyo',
 ): Promise<MergedHourly> {
   if (!weatherDay.locations || !weatherDay.locations.length) {
     return makeDefaultMg();
@@ -198,11 +199,12 @@ export async function fetchWeatherForDay(
         hourly: 'temperature_2m,precipitation_probability,weather_code',
         start_date: fetchStart,
         end_date: fetchEnd,
-        timezone: 'Asia/Tokyo',
+        timezone,
       });
       const resp = await fetch(
         'https://api.open-meteo.com/v1/forecast?' + params.toString(),
       );
+      if (!resp.ok) return null;
       const data = (await resp.json()) as OpenMeteoResponse;
       weatherCache[k] = data;
       results[k] = data;
