@@ -478,7 +478,7 @@ export default function ManagePage() {
 
           {/* Ready: chat UI */}
           {pageState.kind === 'ready' && (
-            <div className="flex flex-col h-content-h max-w-page-max-w mx-auto px-padding-h">
+            <div className="flex flex-col h-content-h md:max-w-page-max-w mx-auto px-padding-h">
               {/* Messages area */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="py-4">
