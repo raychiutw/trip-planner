@@ -159,16 +159,9 @@ export default function ManagePage() {
   useOfflineToast(isOnline);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isInitialLoadRef = useRef(true);
   const currentTripIdRef = useRef(currentTripId);
   currentTripIdRef.current = currentTripId;
   const abortRef = useRef<AbortController | null>(null);
-
-  /* ----- Scroll to bottom ----- */
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
 
   /* ----- Auto-resize textarea (1→5 lines) ----- */
   const autoResize = useCallback(() => {
@@ -180,9 +173,6 @@ export default function ManagePage() {
     ta.style.height = Math.min(ta.scrollHeight, maxHeight) + 'px';
     ta.style.overflowY = ta.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }, []);
-
-  /* ----- Display messages: reversed (oldest first) ----- */
-  const displayMessages = useMemo(() => [...requests].reverse(), [requests]);
 
   /* ----- Load requests for a trip (first page) ----- */
   const loadRequests = useCallback(async (tripId: string) => {
@@ -315,20 +305,11 @@ export default function ManagePage() {
   /* ----- Load requests when trip changes ----- */
   useEffect(() => {
     if (currentTripId && pageState.kind === 'ready') {
-      isInitialLoadRef.current = true;
       loadRequests(currentTripId);
     }
   }, [currentTripId, pageState.kind, loadRequests]);
 
-  /* ----- Scroll to bottom after initial load (not loadMore) ----- */
-  useEffect(() => {
-    if (!requestsLoading && requests.length > 0 && isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-      setTimeout(() => scrollToBottom(), 100);
-    }
-  }, [requestsLoading, requests.length, scrollToBottom]);
-
-  /* ----- Infinite scroll: sentinel at TOP for loading older messages ----- */
+  /* ----- Infinite scroll: sentinel at BOTTOM for loading older messages ----- */
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -363,7 +344,6 @@ export default function ManagePage() {
           textareaRef.current.style.overflowY = 'hidden';
         }
         await loadRequests(tripId);
-        setTimeout(() => scrollToBottom(), 150);
       } else if (res.status === 403) {
         throw new Error('你沒有此行程的權限');
       } else {
@@ -378,7 +358,7 @@ export default function ManagePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [text, mode, submitting, loadRequests, scrollToBottom]);
+  }, [text, mode, submitting, loadRequests]);
 
   /* ----- Trip select change ----- */
   function handleTripChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -419,7 +399,7 @@ export default function ManagePage() {
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
-              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-secondary text-foreground font-inherit text-callout font-semibold py-2 pl-3 pr-7 cursor-pointer bg-no-repeat rounded-full min-h-tap-min max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
+              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-secondary text-foreground font-inherit text-[length:var(--font-size-body)] font-semibold py-2 pl-3 pr-7 cursor-pointer bg-no-repeat rounded-full min-h-tap-min max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
               style={SELECT_STYLE}
               aria-label="選擇行程"
               value={currentTripId || ''}
@@ -471,14 +451,6 @@ export default function ManagePage() {
               {/* Messages area */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="py-4">
-                  {hasMore && (
-                    <div ref={sentinelRef} className="py-2" aria-hidden="true">
-                      {loadingMore && (
-                        <div className="text-muted text-caption text-center">載入更多…</div>
-                      )}
-                    </div>
-                  )}
-
                   {requestsLoading && (
                     <div className="text-muted text-callout text-center py-8">
                       載入中…
@@ -501,15 +473,22 @@ export default function ManagePage() {
                       <span className="text-callout">開始跟 Tripline 聊天吧</span>
                     </div>
                   )}
-                  {!requestsLoading && !requestsError && displayMessages.length > 0 && (
+                  {!requestsLoading && !requestsError && requests.length > 0 && (
                     <div className="flex flex-col gap-4">
-                      {displayMessages.map((req) => (
+                      {requests.map((req) => (
                         <ChatBubble key={req.id} req={req} />
                       ))}
                     </div>
                   )}
 
-                  <div ref={messagesEndRef} aria-hidden="true" />
+                  {/* Sentinel at bottom for loading older messages */}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="py-2" aria-hidden="true">
+                      {loadingMore && (
+                        <div className="text-muted text-caption text-center">載入更多…</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
