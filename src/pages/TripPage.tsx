@@ -136,6 +136,8 @@ interface DaySectionProps {
   isActive?: boolean;
   /** 全覽模式時隱藏 DayMap（避免與 TripMap 重複）*/
   hideDayMap?: boolean;
+  /** IANA timezone for weather API (derived from trip destination). */
+  timezone?: string;
 }
 
 const DaySection = React.memo(function DaySection({
@@ -148,6 +150,7 @@ const DaySection = React.memo(function DaySection({
   localToday,
   isActive,
   hideDayMap = false,
+  timezone,
 }: DaySectionProps) {
   /* Track whether this section has been activated to trigger enter animation */
   const [animKey, setAnimKey] = useState(0);
@@ -219,15 +222,18 @@ const DaySection = React.memo(function DaySection({
                 weatherDay={weatherDay}
                 tripStart={tripStart}
                 tripEnd={tripEnd}
+                timezone={timezone}
               />
             )}
 
-            <div className="bg-accent-subtle rounded-sm p-3 mb-3">
-              {hotel && typeof hotel === 'object' && <Hotel hotel={toHotelData(hotel)} />}
-              {dayDrivingStats && (
-                <DayDrivingStatsCard stats={dayDrivingStats} />
-              )}
-            </div>
+            {hotel && typeof hotel === 'object' && (
+              <div className="mb-3">
+                <Hotel hotel={toHotelData(hotel)} />
+              </div>
+            )}
+            {dayDrivingStats && (
+              <DayDrivingStatsCard stats={dayDrivingStats} />
+            )}
 
             {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
                 全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
@@ -431,6 +437,11 @@ export default function TripPage() {
           lsRemove(LS_KEY_TRIP_PREF);
           setResolveState({ status: 'unpublished' });
           setTimeout(() => { navigate(defaultTrip ? `/trip/${defaultTrip.tripId}` : '/', { replace: true }); }, 2000);
+          return;
+        }
+
+        if (!match && !defaultTrip) {
+          setResolveState({ status: 'unpublished' });
           return;
         }
 
@@ -801,6 +812,13 @@ export default function TripPage() {
   /* --- Trip start/end scalars for HourlyWeather (T3) --- */
   const tripStart = autoScrollDates[0] ?? null;
   const tripEnd = autoScrollDates[autoScrollDates.length - 1] ?? null;
+
+  /* --- Weather timezone derived from trip destination --- */
+  const weatherTimezone = useMemo(() => {
+    if (!activeTripId) return undefined;
+    const prefix = activeTripId.split('-')[0];
+    return TRIP_TIMEZONE[prefix];
+  }, [activeTripId]);
 
   /* --- Date range for large title subtitle --- */
   const dateRange = useMemo(() => {
@@ -1175,6 +1193,7 @@ export default function TripPage() {
                   localToday={localToday}
                   isActive={dayNum === currentDayNum}
                   hideDayMap={isTripMapMode}
+                  timezone={weatherTimezone}
                 />
               ))}
 
@@ -1239,7 +1258,7 @@ export default function TripPage() {
       {/* Print exit button */}
       {isPrintMode && (
         <button
-          className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none focus-visible:shadow-ring"
+          className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none"
           id="printExitBtn"
           onClick={togglePrint}
         >

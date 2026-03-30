@@ -3,6 +3,7 @@
  * Race-safe: uses INSERT OR IGNORE + re-fetch with UNIQUE(name, type) index.
  * COALESCE update: fills NULL fields on existing rows without overwriting.
  */
+import { AppError } from './_errors';
 
 export interface FindOrCreatePoiData {
   name: string;
@@ -74,7 +75,8 @@ export async function findOrCreatePoi(
   const reFetch = await db.prepare(
     'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
   ).bind(data.name, data.type).first<{ id: number }>();
-  return reFetch!.id;
+  if (!reFetch) throw new AppError('SYS_DB_ERROR', 'POI lost after INSERT OR IGNORE');
+  return reFetch.id;
 }
 
 /**
@@ -189,5 +191,9 @@ export async function batchFindOrCreatePois(
   }
 
   // Map back: input order → poiId
-  return items.map((item) => uniqueMap.get(keyOf(item))!.poiId!);
+  return items.map((item) => {
+    const entry = uniqueMap.get(keyOf(item));
+    if (!entry?.poiId) throw new AppError('SYS_DB_ERROR', 'POI ID missing after batch upsert');
+    return entry.poiId;
+  });
 }
