@@ -149,16 +149,23 @@ export default function AdminPage() {
       });
 
       if (r.status === 201) {
-        await r.json();
-        setAddStatus({ text: '已新增 ' + trimmed, type: 'success' });
+        const body = await r.json() as Record<string, unknown>;
+        const msg = body._accessSyncFailed
+          ? '已新增 ' + trimmed + '（⚠️ Access policy 同步失敗，需手動加入）'
+          : '已新增 ' + trimmed;
+        setAddStatus({ text: msg, type: body._accessSyncFailed ? 'error' : 'success' });
         setEmail('');
         loadPermissions(currentTripIdRef.current);
         return;
       }
       if (r.status === 409) throw new Error('此 email 已有權限');
       if (r.status === 403) throw new Error('僅管理者可操作');
-      const data = await r.json();
-      throw new Error(data.error || '新增失敗');
+      // 結構化錯誤格式：{ error: { code, message, detail } }
+      const data = await r.json().catch(() => null);
+      const errObj = data?.error;
+      const errMsg = typeof errObj === 'string' ? errObj
+        : errObj?.message ?? errObj?.detail ?? '新增失敗';
+      throw new Error(errMsg);
     } catch (err) {
       setAddStatus({ text: (err as Error).message, type: 'error' });
     } finally {
@@ -174,7 +181,13 @@ export default function AdminPage() {
     setRemoveStatus(null);
     try {
       const r = await apiFetchRaw('/permissions/' + id, { method: 'DELETE' });
-      if (!r.ok) throw new Error('移除失敗');
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const errObj = data?.error;
+        const errMsg = typeof errObj === 'string' ? errObj
+          : errObj?.message ?? errObj?.detail ?? '移除失敗';
+        throw new Error(errMsg);
+      }
       setRemoveStatus({ text: '已移除 ' + permEmail, type: 'success' });
       loadPermissions(currentTripIdRef.current);
     } catch (err) {
