@@ -467,10 +467,10 @@ export default function ManagePage() {
 
           {/* Ready: chat UI */}
           {pageState.kind === 'ready' && (
-            <div className="flex flex-col h-content-h">
+            <div className="flex flex-col h-content-h max-w-page-max-w mx-auto px-padding-h">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden px-padding-h scrollbar-gutter-stable">
-                <div className="max-w-page-max-w mx-auto py-4">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                <div className="py-4">
                   {hasMore && (
                     <div ref={sentinelRef} className="py-2" aria-hidden="true">
                       {loadingMore && (
@@ -514,8 +514,8 @@ export default function ManagePage() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 px-padding-h pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1 scrollbar-gutter-stable">
-                <div className="max-w-page-max-w mx-auto">
+              <div className="shrink-0 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1">
+                <div>
                   <div className="flex items-center gap-1.5 mb-2 px-1">
                     <button
                       className={[
