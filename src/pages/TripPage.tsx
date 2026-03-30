@@ -227,12 +227,14 @@ const DaySection = React.memo(function DaySection({
             )}
 
             {hotel && typeof hotel === 'object' && (
-              <div className="mb-3">
+              <div className="mb-3 bg-secondary rounded-md p-padding-h">
                 <Hotel hotel={toHotelData(hotel)} />
               </div>
             )}
             {dayDrivingStats && (
-              <DayDrivingStatsCard stats={dayDrivingStats} />
+              <div className="mb-3 bg-secondary rounded-md p-padding-h">
+                <DayDrivingStatsCard stats={dayDrivingStats} />
+              </div>
             )}
 
             {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
