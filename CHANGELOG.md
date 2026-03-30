@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.3.0] - 2026-03-30
+
+### Changed
+- ManagePage 重設計為 iMessage chat 氣泡風格 — 用戶訊息右側 coral 氣泡，AI 回覆左側 sand 氣泡含引用條
+- 輸入框改為 pill 形狀，1→5 行自動撐高，修改/提問 toggle 移到輸入框上方
+- 訊息排序改為最新在下，開啟時自動捲到底部，往上捲載入舊訊息
+- Status 顯示從 stepper 進度條改為氣泡下方小 badge
+- `[data-reply-content]` CSS 從 inline `<style>` 遷移到 `tokens.css`
+
+### Removed
+- `RequestStepper` 不再由 ManagePage 使用（元件保留供未來使用）
+- `SCOPED_STYLES` inline style block
+
 ## [1.1.2.0] - 2026-03-30
 
 ### Added

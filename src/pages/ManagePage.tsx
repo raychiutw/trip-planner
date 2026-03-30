@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import '../../css/tokens.css';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch, apiFetchRaw } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -35,32 +34,9 @@ interface TripInfo {
   published: number | boolean;
 }
 
-/* ===== Scoped styles ===== */
-const SCOPED_STYLES = `
-body.dark [data-send-btn]:disabled { background: var(--color-hover); color: var(--color-muted); }
-[data-reply-content] { font-size: var(--font-size-body); color: var(--color-foreground); line-height: var(--line-height-normal); overflow-wrap: break-word; word-break: break-word; }
-[data-reply-content] a { color: var(--color-accent); text-decoration: none; }
-[data-reply-content] a:hover { text-decoration: underline; }
-[data-reply-content] h2, [data-reply-content] h3 { font-size: var(--font-size-title3); margin: 12px 0 8px; color: var(--color-foreground); }
-[data-reply-content] h2:first-child, [data-reply-content] h3:first-child { margin-top: 0; }
-[data-reply-content] p { margin: 4px 0; }
-[data-reply-content] strong { font-weight: 600; }
-[data-reply-content] ul, [data-reply-content] ol { padding-left: 20px; margin: 4px 0; }
-[data-reply-content] hr { border: none; border-top: 1px solid var(--color-border); margin: 12px 0; }
-[data-reply-content] .table-wrap { overflow-x: auto; margin: 8px 0; }
-[data-reply-content] table { width: 100%; border-collapse: collapse; margin: 0; }
-[data-reply-content] th, [data-reply-content] td { border: 1px solid var(--color-border); padding: 8px 12px; text-align: left; }
-[data-reply-content] th { background: var(--color-tertiary); font-weight: 600; white-space: nowrap; }
-[data-reply-content] blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--color-accent); background: var(--color-accent-subtle); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-[data-reply-content] code { background: var(--color-tertiary); padding: 4px 4px; border-radius: var(--radius-xs); font-size: var(--font-size-callout); }
-[data-reply-content] pre { background: var(--color-tertiary); padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; margin: 8px 0; }
-[data-reply-content] pre code { background: none; padding: 0; }
-`;
-
 /* ===== Chevron SVG ===== */
 const SELECT_CHEVRON = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'7\' fill=\'none\'%3E%3Cpath d=\'M1 1.5l4 4 4-4\' stroke=\'%236B6B6B\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/%3E%3C/svg%3E")';
 const SELECT_STYLE: React.CSSProperties = { backgroundImage: SELECT_CHEVRON, backgroundPosition: 'right 10px center' };
-const EMPTY_LIST_STYLE: React.CSSProperties = { minHeight: '100%' };
 
 /** Render Markdown text to sanitized HTML with table wrapping. */
 function renderMarkdown(text: string): string {
@@ -79,43 +55,74 @@ function formatDate(iso: string): string {
   });
 }
 
-const RequestItem = memo(function RequestItem({ req }: { req: RawRequest }) {
+const MARKDOWN_STRIP_RE = /[#*_~`>\-|[\]()]/g;
+function truncate(text: string, max: number): string {
+  const plain = text.replace(MARKDOWN_STRIP_RE, '').trim();
+  return plain.length > max ? plain.slice(0, max) + '…' : plain;
+}
+
+/* ===== Status Badge ===== */
+const STATUS_STYLES: Record<RawRequest['status'], string> = {
+  completed: 'bg-[#D4EDDA] text-[#155724]',
+  processing: 'bg-plan-bg text-plan-text',
+  received: 'bg-[#FFF3CD] text-[#856404]',
+  open: 'bg-[#FFF3CD] text-[#856404]',
+};
+const STATUS_LABELS: Record<RawRequest['status'], string> = {
+  completed: '已回覆',
+  processing: '處理中',
+  received: '已接收',
+  open: '等待中',
+};
+
+/* ===== Chat Bubble ===== */
+const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
   const messageHtml = useMemo(() => renderMarkdown(req.message), [req.message]);
   const replyHtml = useMemo(() => req.reply ? renderMarkdown(req.reply) : '', [req.reply]);
 
   return (
-    <div className="py-3 px-4 bg-secondary rounded-md transition-colors duration-fast overflow-hidden max-w-full hover:bg-hover">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span
-          className={[
-            'inline-flex items-center py-1 px-2 rounded-full text-caption font-semibold whitespace-nowrap shrink-0 min-h-6 leading-none',
-            req.mode === 'trip-edit'
-              ? 'bg-accent-bg text-accent'
-              : 'bg-plan-bg text-plan-text',
-          ].join(' ')}
-        >
-          {req.mode === 'trip-edit' ? '改行程' : '問建議'}
-        </span>
-        <span className="text-footnote text-muted ml-auto">
-          {formatDate(req.created_at)}
-        </span>
+    <div className="flex flex-col gap-2">
+      {/* User bubble — right aligned, coral */}
+      <div className="flex justify-end">
+        <div className="max-w-[85%] md:max-w-[70%]">
+          <div className="bg-accent text-accent-foreground rounded-2xl rounded-br-sm px-4 py-2.5">
+            <div className="text-callout md:text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: messageHtml }} />
+          </div>
+          {/* Meta: time + mode + status */}
+          <div className="flex items-center gap-2 mt-1 justify-end px-1">
+            <span className="text-caption2 text-muted">{formatDate(req.created_at)}</span>
+            <span className={`text-caption2 font-medium ${req.mode === 'trip-edit' ? 'text-accent' : 'text-plan-text'}`}>
+              {req.mode === 'trip-edit' ? '改行程' : '問建議'}
+            </span>
+            <span className={`inline-flex items-center py-0.5 px-1.5 rounded-full text-caption2 font-semibold ${STATUS_STYLES[req.status]}`}>
+              {STATUS_LABELS[req.status]}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div className="text-callout md:text-title3 text-foreground mt-2 leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: messageHtml }} />
-
-      {req.submitted_by && (
-        <div className="text-footnote text-muted mt-1">
-          {req.submitted_by}
-        </div>
-      )}
-
-      <RequestStepper status={req.status} />
-
+      {/* AI reply bubble — left aligned, sand */}
       {req.reply && (
-        <>
-          <div className="border-t border-border my-3" />
-          <div data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
-        </>
+        <div className="flex justify-start">
+          <div className="max-w-[85%] md:max-w-[70%]">
+            {/* Avatar + name */}
+            <div className="flex items-center gap-1.5 mb-1 px-1">
+              <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                <svg viewBox="0 0 32 32" fill="none" width="14" height="14">
+                  <path d="M4 16 Q10 11, 16 16 Q22 21, 28 16" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+                </svg>
+              </div>
+              <span className="text-caption2 font-semibold text-muted">Tripline</span>
+            </div>
+            <div className="bg-secondary text-foreground rounded-2xl rounded-bl-sm px-4 py-2.5">
+              {/* Quote reply bar */}
+              <div className="border-l-[3px] border-accent bg-black/[0.06] rounded-r-sm px-2.5 py-1.5 mb-2 text-caption text-muted line-clamp-2">
+                {truncate(req.message, 80)}
+              </div>
+              <div className="text-callout md:text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -152,17 +159,30 @@ export default function ManagePage() {
   useOfflineToast(isOnline);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialLoadRef = useRef(true);
   const currentTripIdRef = useRef(currentTripId);
   currentTripIdRef.current = currentTripId;
   const abortRef = useRef<AbortController | null>(null);
 
-  /* ----- Auto-resize textarea ----- */
+  /* ----- Scroll to bottom ----- */
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  /* ----- Auto-resize textarea (1→5 lines) ----- */
   const autoResize = useCallback(() => {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
-    ta.style.height = ta.scrollHeight + 'px';
+    const lineHeight = parseFloat(getComputedStyle(ta).lineHeight) || 20;
+    const maxHeight = lineHeight * 5 + 16; // 5 lines + padding
+    ta.style.height = Math.min(ta.scrollHeight, maxHeight) + 'px';
+    ta.style.overflowY = ta.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }, []);
+
+  /* ----- Display messages: reversed (oldest first) ----- */
+  const displayMessages = useMemo(() => [...requests].reverse(), [requests]);
 
   /* ----- Load requests for a trip (first page) ----- */
   const loadRequests = useCallback(async (tripId: string) => {
@@ -197,11 +217,12 @@ export default function ManagePage() {
     }
   }, []);
 
-  /* ----- Load more requests (next page) ----- */
+  /* ----- Load more requests (older, prepend) ----- */
   const loadMore = useCallback(async () => {
     const tripId = currentTripIdRef.current;
     if (!tripId || loadingMore || !hasMore) return;
 
+    // "requests" is newest-first from API; oldest item is last in array
     const last = requestsRef.current[requestsRef.current.length - 1];
     if (!last) return;
 
@@ -232,7 +253,6 @@ export default function ManagePage() {
     let cancelled = false;
 
     async function init() {
-      // 並行發送：my-trips（需 auth）+ trips（公開）
       const [myRes, allTripsResult] = await Promise.all([
         apiFetchRaw('/my-trips'),
         apiFetch<TripInfo[]>('/trips?all=1').catch(() => [] as TripInfo[]),
@@ -254,7 +274,6 @@ export default function ManagePage() {
       }
 
       const allTrips = allTripsResult;
-
       const tripMap: Record<string, TripInfo> = {};
       allTrips.forEach((t) => { tripMap[t.tripId] = t; });
 
@@ -296,11 +315,20 @@ export default function ManagePage() {
   /* ----- Load requests when trip changes ----- */
   useEffect(() => {
     if (currentTripId && pageState.kind === 'ready') {
+      isInitialLoadRef.current = true;
       loadRequests(currentTripId);
     }
   }, [currentTripId, pageState.kind, loadRequests]);
 
-  /* ----- Infinite scroll: IntersectionObserver ----- */
+  /* ----- Scroll to bottom after initial load (not loadMore) ----- */
+  useEffect(() => {
+    if (!requestsLoading && requests.length > 0 && isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [requestsLoading, requests.length, scrollToBottom]);
+
+  /* ----- Infinite scroll: sentinel at TOP for loading older messages ----- */
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -330,16 +358,18 @@ export default function ManagePage() {
         await res.json();
         showToast('已送出', 'success');
         setText('');
-        if (textareaRef.current) textareaRef.current.style.height = 'auto';
-        // 用 captured tripId，不 re-read ref — 避免 async gap 期間 trip 被切換
+        if (textareaRef.current) {
+          textareaRef.current.style.height = 'auto';
+          textareaRef.current.style.overflowY = 'hidden';
+        }
         await loadRequests(tripId);
+        setTimeout(() => scrollToBottom(), 150);
       } else if (res.status === 403) {
         throw new Error('你沒有此行程的權限');
       } else {
         throw new Error('送出失敗（' + res.status + '）');
       }
     } catch (err) {
-      // 只在非 auth 錯誤時重載列表
       if (!(err instanceof Error && err.message.includes('權限'))) {
         await loadRequests(tripId).catch(() => {/* ignore */});
       }
@@ -348,7 +378,7 @@ export default function ManagePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [text, mode, submitting, loadRequests]);
+  }, [text, mode, submitting, loadRequests, scrollToBottom]);
 
   /* ----- Trip select change ----- */
   function handleTripChange(e: React.ChangeEvent<HTMLSelectElement>) {
@@ -380,9 +410,8 @@ export default function ManagePage() {
   /* ===== Render ===== */
   return (
     <div className="flex min-h-dvh">
-      <style>{SCOPED_STYLES}</style>
       <div className="flex-1 min-w-0 max-w-full mx-auto">
-        {/* Sticky Nav */}
+        {/* Sticky Nav — glassmorphism */}
         <div
           className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-xl backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
           id="stickyNav"
@@ -440,90 +469,94 @@ export default function ManagePage() {
           {pageState.kind === 'ready' && (
             <div className="flex flex-col h-content-h">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto py-4 px-padding-h">
-                <div
-                  className={[
-                    'flex flex-col gap-3 md:max-w-page-max-w md:mx-auto md:pt-page-pt',
-                    requests.length === 0 ? 'justify-center flex-1' : '',
-                  ].join(' ')}
-                  style={requests.length === 0 ? EMPTY_LIST_STYLE : undefined}
-                >
-                  <div id="manageRequests">
-                    {requestsLoading && (
-                      <div className="text-muted text-callout text-center py-8 px-4 bg-secondary rounded-md">
-                        載入中…
-                      </div>
-                    )}
-                    {!requestsLoading && requestsError && (
-                      <div className="text-muted text-callout text-center py-8 px-4 bg-secondary rounded-md">
-                        {requestsError}
-                      </div>
-                    )}
-                    {!requestsLoading && !requestsError && requests.length === 0 && (
-                      <div className="text-muted text-callout text-center py-8 px-4 bg-secondary rounded-md">
-                        尚無請求紀錄
-                      </div>
-                    )}
-                    {!requestsLoading && !requestsError && requests.length > 0 && (
-                      <div className="flex flex-col gap-2">
-                        {requests.map((req) => (
-                          <RequestItem key={req.id} req={req} />
-                        ))}
-                        {loadingMore && (
-                          <div className="text-muted text-caption text-center py-4">載入更多…</div>
-                        )}
-                        {!hasMore && requests.length >= 10 && (
-                          <div className="text-muted text-caption text-center py-4">沒有更多了</div>
-                        )}
-                        <div ref={sentinelRef} aria-hidden="true" />
-                      </div>
-                    )}
-                  </div>
+              <div className="flex-1 overflow-y-auto px-padding-h">
+                <div className="md:max-w-[720px] md:mx-auto py-4">
+                  {/* Sentinel at top for loading older messages */}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="py-2" aria-hidden="true">
+                      {loadingMore && (
+                        <div className="text-muted text-caption text-center">載入更多…</div>
+                      )}
+                    </div>
+                  )}
+
+                  {requestsLoading && (
+                    <div className="text-muted text-callout text-center py-8">
+                      載入中…
+                    </div>
+                  )}
+                  {!requestsLoading && requestsError && (
+                    <div className="text-muted text-callout text-center py-8 px-4 bg-secondary rounded-md">
+                      {requestsError}
+                    </div>
+                  )}
+                  {!requestsLoading && !requestsError && requests.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20 text-muted">
+                      <svg viewBox="0 0 48 48" fill="none" width="48" height="48" className="mb-3 opacity-40">
+                        <rect x="4" y="8" width="40" height="32" rx="8" stroke="currentColor" strokeWidth="2" />
+                        <path d="M4 16h40" stroke="currentColor" strokeWidth="2" />
+                        <circle cx="12" cy="28" r="2" fill="currentColor" />
+                        <circle cx="20" cy="28" r="2" fill="currentColor" />
+                        <circle cx="28" cy="28" r="2" fill="currentColor" />
+                      </svg>
+                      <span className="text-callout">開始跟 Tripline 聊天吧</span>
+                    </div>
+                  )}
+                  {!requestsLoading && !requestsError && displayMessages.length > 0 && (
+                    <div className="flex flex-col gap-4">
+                      {displayMessages.map((req) => (
+                        <ChatBubble key={req.id} req={req} />
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Scroll anchor */}
+                  <div ref={messagesEndRef} aria-hidden="true" />
                 </div>
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 py-2 px-padding-h pb-[max(16px,env(safe-area-inset-bottom,16px))] overflow-y-hidden">
-                <div className="bg-secondary rounded-lg pt-3 px-3 pb-2 shadow-md md:max-w-page-max-w md:mx-auto">
-                  <textarea
-                    ref={textareaRef}
-                    className="w-full py-2 px-1 border-none bg-transparent font-inherit text-body md:text-title3 text-foreground resize-none leading-normal min-h-[5em] max-h-[30vh] overflow-y-auto focus-visible:outline-none placeholder:text-muted"
-                    id="manageText"
-                    maxLength={65536}
-                    placeholder={'例如：\n· Day 3 午餐換成通堂拉麵\n· 刪除美麗海水族館，改去萬座毛\n· Day 5 下午加一個 AEON 購物'}
-                    rows={1}
-                    value={text}
-                    onChange={handleTextChange}
-                    onKeyDown={handleKeyDown}
-                  />
-                  <div className="flex items-center gap-2 mt-2 justify-between">
-                    <div className="flex items-center gap-1">
-                      <button
-                        className={[
-                          'appearance-none border-none bg-transparent text-muted font-inherit text-callout font-normal py-2 px-3 rounded-full cursor-pointer min-h-tap-min transition-colors duration-fast focus-visible:outline-none',
-                          mode === 'trip-edit'
-                            ? 'bg-accent-bg !text-accent !font-semibold hover:brightness-95'
-                            : 'hover:bg-hover',
-                        ].join(' ')}
-                        onClick={() => setMode('trip-edit')}
-                      >
-                        改行程
-                      </button>
-                      <button
-                        className={[
-                          'appearance-none border-none bg-transparent text-muted font-inherit text-callout font-normal py-2 px-3 rounded-full cursor-pointer min-h-tap-min transition-colors duration-fast focus-visible:outline-none',
-                          mode === 'trip-plan'
-                            ? 'bg-plan-bg !text-plan-text !font-semibold hover:bg-plan-hover'
-                            : 'hover:bg-hover',
-                        ].join(' ')}
-                        onClick={() => setMode('trip-plan')}
-                      >
-                        問建議
-                      </button>
-                    </div>
+              <div className="shrink-0 px-padding-h pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1">
+                <div className="md:max-w-[720px] md:mx-auto">
+                  {/* Floating toggle pills */}
+                  <div className="flex items-center gap-1.5 mb-2 px-1">
+                    <button
+                      className={[
+                        'text-caption font-medium py-1 px-3 rounded-full border transition-colors duration-fast focus-visible:outline-none',
+                        mode === 'trip-edit'
+                          ? 'border-accent bg-accent-bg text-accent'
+                          : 'border-border bg-transparent text-muted hover:bg-hover',
+                      ].join(' ')}
+                      onClick={() => setMode('trip-edit')}
+                    >
+                      修改
+                    </button>
+                    <button
+                      className={[
+                        'text-caption font-medium py-1 px-3 rounded-full border transition-colors duration-fast focus-visible:outline-none',
+                        mode === 'trip-plan'
+                          ? 'border-plan-text bg-plan-bg text-plan-text'
+                          : 'border-border bg-transparent text-muted hover:bg-hover',
+                      ].join(' ')}
+                      onClick={() => setMode('trip-plan')}
+                    >
+                      提問
+                    </button>
+                  </div>
 
-                    <div className="flex-1" />
-
+                  {/* Pill-shaped input */}
+                  <div className="flex items-end gap-2 bg-secondary rounded-full pl-4 pr-1 py-1 shadow-md border border-border/50">
+                    <textarea
+                      ref={textareaRef}
+                      className="flex-1 py-1.5 border-none bg-transparent font-inherit text-body text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
+                      id="manageText"
+                      maxLength={65536}
+                      placeholder="輸入你的請求…"
+                      rows={1}
+                      value={text}
+                      onChange={handleTextChange}
+                      onKeyDown={handleKeyDown}
+                    />
                     <button
                       className={[
                         'w-tap-min h-tap-min border-none rounded-full flex items-center justify-center shrink-0 transition-all duration-normal',
@@ -532,13 +565,12 @@ export default function ManagePage() {
                           : 'bg-accent text-accent-foreground cursor-pointer scale-100 hover:brightness-110 active:scale-95',
                       ].join(' ')}
                       id="submitBtn"
-                      data-send-btn=""
                       disabled={text.trim().length === 0 || submitting}
                       aria-label="送出"
                       onClick={submitRequest}
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-                        <path d="M11 5.83L6.41 10.41 5 9l7-7 7 7-1.41 1.41L13 5.83V20h-2V5.83z" />
+                      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                        <path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z" />
                       </svg>
                     </button>
                   </div>
