@@ -3,7 +3,7 @@
  * handler 用 throw new AppError('CODE') 取代手動 json({error}, status)
  * middleware catch 用 instanceof AppError 判斷
  */
-import { ErrorCode, ERROR_MESSAGES } from '../../src/types/api';
+import { ERROR_MESSAGES } from '../../src/types/api';
 import type { ErrorCodeType } from '../../src/types/api';
 
 const STATUS_MAP: Partial<Record<ErrorCodeType, number>> = {
@@ -52,5 +52,3 @@ export function errorResponse(err: AppError): Response {
     },
   );
 }
-
-export { ErrorCode };

@@ -103,18 +103,3 @@ export function sanitizeReply(reply: string): string {
   return reply;
 }
 
-export interface RestaurantBody {
-  name?: string | null;
-  [key: string]: unknown;
-}
-
-/**
- * 驗證 POST /restaurants 和 PATCH /restaurants/:rid 的 request body。
- * 回傳 { ok: true } 表示驗證通過；否則回傳 { ok: false, status, error }。
- */
-export function validateRestaurantBody(body: RestaurantBody): ValidationResult {
-  if (!body.name) {
-    return { ok: false, status: 400, error: '必填欄位缺失: name' };
-  }
-  return { ok: true, status: 200 };
-}
