@@ -469,8 +469,8 @@ export default function ManagePage() {
           {pageState.kind === 'ready' && (
             <div className="flex flex-col h-content-h">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto px-padding-h">
-                <div className="md:max-w-[720px] md:mx-auto py-4">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden px-padding-h">
+                <div className="max-w-page-max-w mx-auto py-4">
                   {/* Sentinel at top for loading older messages */}
                   {hasMore && (
                     <div ref={sentinelRef} className="py-2" aria-hidden="true">
@@ -517,7 +517,7 @@ export default function ManagePage() {
 
               {/* Input bar */}
               <div className="shrink-0 px-padding-h pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1">
-                <div className="md:max-w-[720px] md:mx-auto">
+                <div className="max-w-page-max-w mx-auto">
                   {/* Floating toggle pills */}
                   <div className="flex items-center gap-1.5 mb-2 px-1">
                     <button
