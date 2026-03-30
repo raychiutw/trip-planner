@@ -86,7 +86,7 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
       <div className="flex justify-end">
         <div className="max-w-[85%] md:max-w-[70%]">
           <div className="bg-accent text-accent-foreground rounded-2xl rounded-br-sm px-4 py-2.5">
-            <div className="text-callout md:text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: messageHtml }} />
+            <div className="text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: messageHtml }} />
           </div>
           {/* Meta: time + mode + status */}
           <div className="flex items-center gap-2 mt-1 justify-end px-1">
@@ -119,7 +119,7 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
               <div className="border-l-[3px] border-accent bg-black/[0.06] rounded-r-sm px-2.5 py-1.5 mb-2 text-caption text-muted line-clamp-2">
                 {truncate(req.message, 80)}
               </div>
-              <div className="text-callout md:text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
+              <div className="text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
             </div>
           </div>
         </div>
@@ -548,7 +548,7 @@ export default function ManagePage() {
                   <div className="flex items-end gap-2 bg-secondary rounded-full pl-4 pr-1 py-1 shadow-md border border-border/50">
                     <textarea
                       ref={textareaRef}
-                      className="flex-1 py-1.5 border-none bg-transparent font-inherit text-body md:text-title3 text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
+                      className="flex-1 py-1.5 border-none bg-transparent font-inherit text-body text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
                       id="manageText"
                       maxLength={65536}
                       placeholder="輸入你的請求…"
