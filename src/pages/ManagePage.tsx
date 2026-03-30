@@ -390,7 +390,7 @@ export default function ManagePage() {
           <TriplineLogo isOnline={isOnline} />
           {pageState.kind === 'ready' && (
             <select
-              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-secondary text-foreground font-inherit text-callout font-semibold py-2 pl-3 pr-7 cursor-pointer bg-no-repeat rounded-full min-h-tap-min max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring"
+              className="absolute left-1/2 -translate-x-1/2 appearance-none border-none bg-secondary text-foreground font-inherit text-callout font-semibold py-2 pl-3 pr-7 cursor-pointer bg-no-repeat rounded-full min-h-tap-min max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
               style={SELECT_STYLE}
               aria-label="選擇行程"
               value={currentTripId || ''}
@@ -402,7 +402,7 @@ export default function ManagePage() {
             </select>
           )}
           <button
-            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
+            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -487,7 +487,7 @@ export default function ManagePage() {
                 <div className="bg-secondary rounded-lg pt-3 px-3 pb-2 shadow-md md:max-w-page-max-w md:mx-auto">
                   <textarea
                     ref={textareaRef}
-                    className="w-full py-2 px-1 border-none bg-transparent font-inherit text-body text-foreground resize-none leading-normal min-h-[3.6em] max-h-[30vh] overflow-y-auto focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs placeholder:text-muted"
+                    className="w-full py-2 px-1 border-none bg-transparent font-inherit text-body text-foreground resize-none leading-normal min-h-[5em] max-h-[30vh] overflow-y-auto focus-visible:outline-none placeholder:text-muted"
                     id="manageText"
                     maxLength={65536}
                     placeholder={'例如：\n· Day 3 午餐換成通堂拉麵\n· 刪除美麗海水族館，改去萬座毛\n· Day 5 下午加一個 AEON 購物'}
@@ -500,7 +500,7 @@ export default function ManagePage() {
                     <div className="flex items-center gap-1">
                       <button
                         className={[
-                          'appearance-none border-none bg-transparent text-muted font-inherit text-callout font-normal py-2 px-3 rounded-full cursor-pointer min-h-tap-min transition-colors duration-fast focus-visible:outline-none focus-visible:shadow-ring',
+                          'appearance-none border-none bg-transparent text-muted font-inherit text-callout font-normal py-2 px-3 rounded-full cursor-pointer min-h-tap-min transition-colors duration-fast focus-visible:outline-none',
                           mode === 'trip-edit'
                             ? 'bg-accent-bg !text-accent !font-semibold hover:brightness-95'
                             : 'hover:bg-hover',
@@ -511,7 +511,7 @@ export default function ManagePage() {
                       </button>
                       <button
                         className={[
-                          'appearance-none border-none bg-transparent text-muted font-inherit text-callout font-normal py-2 px-3 rounded-full cursor-pointer min-h-tap-min transition-colors duration-fast focus-visible:outline-none focus-visible:shadow-ring',
+                          'appearance-none border-none bg-transparent text-muted font-inherit text-callout font-normal py-2 px-3 rounded-full cursor-pointer min-h-tap-min transition-colors duration-fast focus-visible:outline-none',
                           mode === 'trip-plan'
                             ? 'bg-plan-bg !text-plan-text !font-semibold hover:bg-plan-hover'
                             : 'hover:bg-hover',

@@ -222,12 +222,14 @@ const DaySection = React.memo(function DaySection({
               />
             )}
 
-            <div className="bg-accent-subtle rounded-sm p-3 mb-3">
-              {hotel && typeof hotel === 'object' && <Hotel hotel={toHotelData(hotel)} />}
-              {dayDrivingStats && (
-                <DayDrivingStatsCard stats={dayDrivingStats} />
-              )}
-            </div>
+            {hotel && typeof hotel === 'object' && (
+              <div className="mb-3">
+                <Hotel hotel={toHotelData(hotel)} />
+              </div>
+            )}
+            {dayDrivingStats && (
+              <DayDrivingStatsCard stats={dayDrivingStats} />
+            )}
 
             {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
                 全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
@@ -1239,7 +1241,7 @@ export default function TripPage() {
       {/* Print exit button */}
       {isPrintMode && (
         <button
-          className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none focus-visible:shadow-ring"
+          className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none"
           id="printExitBtn"
           onClick={togglePrint}
         >
