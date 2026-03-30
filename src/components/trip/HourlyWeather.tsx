@@ -22,6 +22,8 @@ interface HourlyWeatherProps {
   tripStart?: string | null;
   /** Trip end date (ISO format). */
   tripEnd?: string | null;
+  /** IANA timezone for the trip destination (default: 'Asia/Tokyo'). */
+  timezone?: string;
 }
 
 /* ===== Helpers ===== */
@@ -43,6 +45,7 @@ export default function HourlyWeather({
   weatherDay,
   tripStart,
   tripEnd,
+  timezone,
 }: HourlyWeatherProps) {
   /* --- Days until this day (computed at render time) --- */
   const diff = daysUntil(dayDate);
@@ -71,7 +74,7 @@ export default function HourlyWeather({
     setLoading(true);
     setError(null);
 
-    fetchWeatherForDay(dayDate, weatherDayRef.current, tripStart, tripEnd)
+    fetchWeatherForDay(dayDate, weatherDayRef.current, tripStart, tripEnd, timezone)
       .then((data) => {
         if (!cancelled) {
           setMg(data);
@@ -88,7 +91,7 @@ export default function HourlyWeather({
     return () => {
       cancelled = true;
     };
-  }, [dayId, dayDate, tripStart, tripEnd, tooFarAway]);
+  }, [dayId, dayDate, tripStart, tripEnd, tooFarAway, timezone]);
 
   /* --- Toggle expand/collapse --- */
   const handleToggle = useCallback(() => {
@@ -200,7 +203,7 @@ export default function HourlyWeather({
     >
       {/* Summary row (clickable) */}
       <div
-        className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs"
+        className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover focus-visible:outline-none"
         data-action="toggle-hw"
         role="button"
         tabIndex={0}

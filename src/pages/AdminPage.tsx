@@ -299,7 +299,7 @@ export default function AdminPage() {
             權限管理
           </span>
           <button
-            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
+            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -326,7 +326,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-secondary rounded-lg overflow-hidden">
               <select
-                className="w-full appearance-none border-none bg-transparent text-foreground font-inherit text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
+                className="w-full appearance-none border-none bg-transparent text-foreground font-inherit text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:rounded-lg"
                 style={SELECT_STYLE}
                 aria-label="選擇行程"
                 value={currentTripId}
@@ -356,7 +356,7 @@ export default function AdminPage() {
               <div className="flex gap-2 p-2">
                 <input
                   type="email"
-                  className="flex-1 border-none bg-background text-foreground font-inherit text-body py-3 px-4 rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
+                  className="flex-1 border-none bg-background text-foreground font-inherit text-body py-3 px-4 rounded-md focus-visible:outline-none placeholder:text-muted"
                   placeholder="email@example.com"
                   autoComplete="email"
                   value={email}

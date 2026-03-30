@@ -220,7 +220,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
         />
 
         <button
-          className="hidden md:flex items-center bg-transparent border-none text-accent text-title3 cursor-pointer p-2 min-w-tap-min focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs aria-hidden:invisible"
+          className="hidden md:flex items-center bg-transparent border-none text-accent text-title3 cursor-pointer p-2 min-w-tap-min focus-visible:outline-none aria-hidden:invisible"
           aria-label="向左捲動"
           aria-hidden={!canScrollLeft}
           tabIndex={canScrollLeft ? 0 : -1}
@@ -318,7 +318,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
           )}
         </div>
         <button
-          className="hidden md:flex items-center bg-transparent border-none text-accent text-title3 cursor-pointer p-2 min-w-tap-min focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs aria-hidden:invisible"
+          className="hidden md:flex items-center bg-transparent border-none text-accent text-title3 cursor-pointer p-2 min-w-tap-min focus-visible:outline-none aria-hidden:invisible"
           aria-label="向右捲動"
           aria-hidden={!canScrollRight}
           tabIndex={canScrollRight ? 0 : -1}

@@ -33,7 +33,7 @@ export const Hotel = memo(function Hotel({ hotel }: HotelProps) {
 
   return (
     <>
-      <div className="flex items-center gap-2 py-2 px-3 -mx-3 select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:bg-accent-bg" onClick={toggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }} aria-expanded={open} aria-label={open ? '收合飯店詳情' : '展開飯店詳情'} role="button" tabIndex={0}>
+      <div className="flex items-center gap-2 py-2 select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:bg-accent-bg" onClick={toggle} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }} aria-expanded={open} aria-label={open ? '收合飯店詳情' : '展開飯店詳情'} role="button" tabIndex={0}>
         <Icon name="hotel" /> {hotel.name}{' '}
         <span className="ml-auto text-muted text-subheadline">{open ? ARROW_COLLAPSE : ARROW_EXPAND}</span>
       </div>

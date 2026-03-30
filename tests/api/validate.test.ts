@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 import {
   validateDayBody,
   validateEntryBody,
-  validateRestaurantBody,
   detectGarbledText,
   sanitizeReply,
 } from '../../functions/api/_validate';
@@ -64,16 +63,6 @@ describe('validateEntryBody', () => {
 
   it('失敗：title 為空字串', () => {
     expect(validateEntryBody({ title: '' }).ok).toBe(false);
-  });
-});
-
-describe('validateRestaurantBody', () => {
-  it('通過：有 name', () => {
-    expect(validateRestaurantBody({ name: 'すし屋' })).toEqual({ ok: true, status: 200 });
-  });
-
-  it('失敗：缺 name', () => {
-    expect(validateRestaurantBody({}).ok).toBe(false);
   });
 });
 

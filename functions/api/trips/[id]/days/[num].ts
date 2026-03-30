@@ -73,9 +73,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const poiMap = new Map<number, Record<string, unknown>>();
   if (poiIds.length > 0) {
     // Query all needed pois in one go
+    const placeholders = poiIds.map(() => '?').join(',');
     const { results: poisRows } = await db.prepare(
-      `SELECT * FROM pois WHERE id IN (${poiIds.join(',')})`
-    ).all();
+      `SELECT * FROM pois WHERE id IN (${placeholders})`
+    ).bind(...poiIds).all();
     for (const p of poisRows as Record<string, unknown>[]) {
       poiMap.set(p.id as number, p);
     }
