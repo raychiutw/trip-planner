@@ -487,7 +487,7 @@ export default function ManagePage() {
                 <div className="bg-secondary rounded-lg pt-3 px-3 pb-2 shadow-md md:max-w-page-max-w md:mx-auto">
                   <textarea
                     ref={textareaRef}
-                    className="w-full py-2 px-1 border-none bg-transparent font-inherit text-body text-foreground resize-none leading-normal min-h-[5em] max-h-[30vh] overflow-y-auto focus-visible:outline-none placeholder:text-muted"
+                    className="w-full py-2 px-1 border-none bg-transparent font-inherit text-body md:text-title3 text-foreground resize-none leading-normal min-h-[5em] max-h-[30vh] overflow-y-auto focus-visible:outline-none placeholder:text-muted"
                     id="manageText"
                     maxLength={65536}
                     placeholder={'例如：\n· Day 3 午餐換成通堂拉麵\n· 刪除美麗海水族館，改去萬座毛\n· Day 5 下午加一個 AEON 購物'}
