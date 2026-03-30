@@ -524,7 +524,7 @@ export default function ManagePage() {
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 pb-[max(20px,env(safe-area-inset-bottom,20px))] pt-2">
+              <div className="shrink-0 pb-[max(32px,env(safe-area-inset-bottom,32px))] pt-3">
                 <div>
                   <div className="flex items-center gap-1.5 mb-2 px-1">
                     <button
