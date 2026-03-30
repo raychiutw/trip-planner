@@ -40,5 +40,3 @@ export function buildUpdateClause(
   const values = fields.map(f => body[f]);
   return { fields, setClauses, values };
 }
-
-export const ANONYMOUS_USER = 'anonymous';
