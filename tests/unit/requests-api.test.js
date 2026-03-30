@@ -86,7 +86,7 @@ describe('Request type definition', () => {
 
 describe('Migration 0009', () => {
   const migration = readFileSync('migrations/0009_request_message.sql', 'utf-8');
-  const rollback = readFileSync('migrations/0009_rollback_request_message.sql', 'utf-8');
+  const rollback = readFileSync('migrations/_archived/0009_rollback_request_message.sql', 'utf-8');
 
   it('creates requests_new table with message column', () => {
     expect(migration).toContain('CREATE TABLE requests_new');

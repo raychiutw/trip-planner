@@ -2,7 +2,7 @@
  * 純函式測試 — _utils.ts
  */
 import { describe, it, expect } from 'vitest';
-import { json, parseIntParam, buildUpdateClause, getAuth, ANONYMOUS_USER } from '../../functions/api/_utils';
+import { json, parseIntParam, buildUpdateClause, getAuth } from '../../functions/api/_utils';
 
 describe('json', () => {
   it('回傳 JSON Response', async () => {
@@ -69,8 +69,3 @@ describe('getAuth', () => {
   });
 });
 
-describe('ANONYMOUS_USER', () => {
-  it('值為 anonymous', () => {
-    expect(ANONYMOUS_USER).toBe('anonymous');
-  });
-});
