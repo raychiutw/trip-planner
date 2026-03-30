@@ -9,15 +9,9 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { apiFetchRaw } from '../hooks/useApi';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import ToastContainer from '../components/shared/Toast';
+import ToastContainer, { showToast } from '../components/shared/Toast';
 
 /* Cloudflare Access 在 infrastructure 層處理認證，不需要 JS redirect */
-
-/* ===== Status message state ===== */
-interface StatusMsg {
-  text: string;
-  type: 'success' | 'error';
-}
 
 /* ===== Chevron SVG as background-image for the select ===== */
 const SELECT_STYLE = { backgroundImage:
@@ -38,9 +32,7 @@ export default function AdminPage() {
   const [permError, setPermError] = useState('');
   const [email, setEmail] = useState('');
   const [addingDisabled, setAddingDisabled] = useState(false);
-  const [addStatus, setAddStatus] = useState<StatusMsg | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const [removeStatus, setRemoveStatus] = useState<StatusMsg | null>(null);
   const currentTripIdRef = useRef(currentTripId);
   currentTripIdRef.current = currentTripId;
 
@@ -123,8 +115,6 @@ export default function AdminPage() {
   function handleTripChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const tripId = e.target.value;
     setCurrentTripId(tripId);
-    setAddStatus(null);
-    setRemoveStatus(null);
     if (tripId) lsSet(LS_KEY_TRIP_PREF, tripId);
     // permissions 會透過 useEffect[currentTripId] 自動載入
   }
@@ -136,7 +126,6 @@ export default function AdminPage() {
     if (!trimmed || !tripId) return;
 
     setAddingDisabled(true);
-    setAddStatus(null);
 
     try {
       const r = await apiFetchRaw('/permissions', {
@@ -150,24 +139,24 @@ export default function AdminPage() {
 
       if (r.status === 201) {
         const body = await r.json() as Record<string, unknown>;
-        const msg = body._accessSyncFailed
-          ? '已新增 ' + trimmed + '（⚠️ Access policy 同步失敗，需手動加入）'
-          : '已新增 ' + trimmed;
-        setAddStatus({ text: msg, type: body._accessSyncFailed ? 'error' : 'success' });
+        if (body._accessSyncFailed) {
+          showToast('已新增 ' + trimmed + '（Access policy 需手動加入）', 'error', 5000);
+        } else {
+          showToast('已新增 ' + trimmed, 'success');
+        }
         setEmail('');
         loadPermissions(currentTripIdRef.current);
         return;
       }
       if (r.status === 409) throw new Error('此 email 已有權限');
       if (r.status === 403) throw new Error('僅管理者可操作');
-      // 結構化錯誤格式：{ error: { code, message, detail } }
       const data = await r.json().catch(() => null);
       const errObj = data?.error;
       const errMsg = typeof errObj === 'string' ? errObj
         : errObj?.message ?? errObj?.detail ?? '新增失敗';
       throw new Error(errMsg);
     } catch (err) {
-      setAddStatus({ text: (err as Error).message, type: 'error' });
+      showToast((err as Error).message, 'error');
     } finally {
       setAddingDisabled(false);
     }
@@ -178,7 +167,6 @@ export default function AdminPage() {
     if (!window.confirm('確定移除 ' + permEmail + ' 的權限？')) return;
 
     setRemovingId(id);
-    setRemoveStatus(null);
     try {
       const r = await apiFetchRaw('/permissions/' + id, { method: 'DELETE' });
       if (!r.ok) {
@@ -188,10 +176,10 @@ export default function AdminPage() {
           : errObj?.message ?? errObj?.detail ?? '移除失敗';
         throw new Error(errMsg);
       }
-      setRemoveStatus({ text: '已移除 ' + permEmail, type: 'success' });
+      showToast('已移除 ' + permEmail, 'success');
       loadPermissions(currentTripIdRef.current);
     } catch (err) {
-      setRemoveStatus({ text: (err as Error).message, type: 'error' });
+      showToast((err as Error).message, 'error');
     } finally {
       setRemovingId(null);
     }
@@ -357,20 +345,6 @@ export default function AdminPage() {
             <div className="bg-secondary rounded-lg overflow-hidden">
               {renderPermissions()}
             </div>
-            <div aria-live="polite">
-              {removeStatus && (
-                <div
-                  className={[
-                    'text-footnote mt-2 pl-4',
-                    removeStatus.type === 'success'
-                      ? 'text-success'
-                      : 'text-destructive',
-                  ].join(' ')}
-                >
-                  {removeStatus.text}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Section: Add Member */}
@@ -397,20 +371,6 @@ export default function AdminPage() {
                   新增
                 </button>
               </div>
-            </div>
-            <div aria-live="polite">
-              {addStatus && (
-                <div
-                  className={[
-                    'text-footnote mt-2 pl-4',
-                    addStatus.type === 'success'
-                      ? 'text-success'
-                      : 'text-destructive',
-                  ].join(' ')}
-                >
-                  {addStatus.text}
-                </div>
-              )}
             </div>
           </div>
         </main>
