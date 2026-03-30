@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { useNavigate } from 'react-router-dom';
 import '../../css/tokens.css';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import ToastContainer from '../components/shared/Toast';
+import ToastContainer, { showToast } from '../components/shared/Toast';
 import RequestStepper from '../components/shared/RequestStepper';
 import { apiFetch, apiFetchRaw } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -147,7 +147,6 @@ export default function ManagePage() {
   requestsRef.current = requests;
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'trip-edit' | 'trip-plan'>('trip-edit');
-  const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useOfflineToast(isOnline);
@@ -320,7 +319,6 @@ export default function ManagePage() {
     if (!trimmed || !tripId || submitting) return;
 
     setSubmitting(true);
-    setSubmitStatus(null);
 
     try {
       const res = await apiFetchRaw('/requests', {
@@ -330,7 +328,7 @@ export default function ManagePage() {
 
       if (res.status === 201 || res.status === 200) {
         await res.json();
-        setSubmitStatus({ type: 'success', message: '已送出' });
+        showToast('已送出', 'success');
         setText('');
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
         // 用 captured tripId，不 re-read ref — 避免 async gap 期間 trip 被切換
@@ -341,14 +339,12 @@ export default function ManagePage() {
         throw new Error('送出失敗（' + res.status + '）');
       }
     } catch (err) {
-      // #4: 只在非 auth 錯誤時重載列表
+      // 只在非 auth 錯誤時重載列表
       if (!(err instanceof Error && err.message.includes('權限'))) {
         await loadRequests(tripId).catch(() => {/* ignore */});
       }
-      setSubmitStatus({
-        type: 'error',
-        message: (err instanceof Error ? err.message : '送出失敗') + '（請重新整理確認是否已送出）',
-      });
+      const errMsg = (err instanceof Error ? err.message : '送出失敗') + '（請重新整理確認是否已送出）';
+      showToast(errMsg, 'error', 5000);
     } finally {
       setSubmitting(false);
     }
@@ -359,13 +355,11 @@ export default function ManagePage() {
     const val = e.target.value;
     lsSet(LS_KEY_TRIP_PREF, val);
     setCurrentTripId(val);
-    setSubmitStatus(null);
   }
 
   /* ----- Textarea handlers ----- */
   function handleTextChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setText(e.target.value);
-    setSubmitStatus(null);
   }
 
   useEffect(() => { autoResize(); }, [text, autoResize]);
@@ -528,25 +522,7 @@ export default function ManagePage() {
                       </button>
                     </div>
 
-                    <div aria-live="polite" className="flex-1 min-w-0">
-                      {submitStatus && (
-                        <div
-                          className={[
-                            'text-footnote rounded-sm',
-                            submitStatus.type === 'success'
-                              ? 'text-success flex items-center gap-1'
-                              : 'text-destructive',
-                          ].join(' ')}
-                        >
-                          {submitStatus.type === 'success' && (
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                            </svg>
-                          )}
-                          {submitStatus.message}
-                        </div>
-                      )}
-                    </div>
+                    <div className="flex-1" />
 
                     <button
                       className={[
