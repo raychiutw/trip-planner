@@ -75,3 +75,17 @@ echo "✅ Smoke test passed — app is healthy"
 | `tasks.md`（markdown checkbox） | `features.json`（JSON） | 雙軌：tasks.md 給人看，features.json 給 agent 讀 |
 | `notes.md`（決策/踩坑） | `progress.jsonl`（session 日誌） | 互補：notes.md 記「為什麼」，progress.jsonl 記「做了什麼」 |
 | git log | git log | 同一個，不重複 |
+| `/learn`（gstack） | progress.jsonl | 互補：`/learn` 持久化技術決策和踩坑經驗，跨 session 可搜尋 |
+
+## 跨 Session 經驗管理
+
+每個 session 結束時，除了 append progress.jsonl，也建議：
+
+```
+/learn
+```
+
+`/learn` 會將本次 session 的技術決策、踩坑、解法記錄為可搜尋的 learnings。
+下一個 session 開始時可以用 `/learn` 搜尋相關經驗，避免重蹈覆轍。
+
+**區別**：progress.jsonl 記「做了什麼」（事實），`/learn` 記「學到什麼」（經驗）。

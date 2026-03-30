@@ -2,16 +2,16 @@
 
 ⚠️ 這個流程在 archive 之前是不完整的。
 
-## Step 1 — `/tp-code-verify` + `/tp-ux-verify`
+## Step 1 — `/tp-code-verify`
 
 ```
 /tp-code-verify
-/tp-ux-verify
 ```
 
-專案規範驗證：
-- `/tp-code-verify`：命名規範、coding standards、React best practices、code review rules、tsc + test 全綠
-- `/tp-ux-verify`：Apple HIG 設計規則、token、頁面結構
+專案規範驗證（已整合 HIG）：
+- 命名規範、coding standards、React best practices、code review rules
+- Apple HIG 設計規則 H1-H12、design tokens、頁面結構
+- tsc + test 全綠
 - 驗證循環直到全部通過
 
 ## Step 2 — `/review`
@@ -39,7 +39,16 @@ OpenAI Codex 獨立 review。不先透露 `/review` 的結果。
 - `[claude-only]` / `[codex-only]` → 🟡 判斷
 
 ─── 🛑 CHECKPOINT ───
-- [ ] `/tp-code-verify` + `/tp-ux-verify` 全綠？
-- [ ] `/review` PASS？auto-fix 已套用？
+- [ ] `/tp-code-verify` 全綠（含 HIG）？
+- [ ] `/review` PASS？auto-fix 已套用？scope drift 已檢查？
 - [ ] `/codex` PASS？overlap findings 已修？
 ──────────────────────
+
+## 與 Stage 6 `/ship` 的關係
+
+`/ship` 內建 adversarial review，會根據 diff size 自動調整強度：
+- diff < 50 行：跳過
+- 50-199 行：cross-model review
+- 200+ 行：完整 4-pass
+
+**如果 Stage 4 已跑過 `/codex`，`/ship` 可引用其結果，不必重複跑相同審查。**
