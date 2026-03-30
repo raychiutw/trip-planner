@@ -92,10 +92,6 @@
 - **WHEN** `/tp-issue` 處理完每個 Issue 後
 - **THEN** SHALL 執行一次 tp-check（精簡模式）
 
-#### Scenario: tp-deploy 不嵌入
-
-- **WHEN** `/tp-deploy` 執行
-- **THEN** SHALL NOT 執行 tp-check
 
 #### Scenario: tp-rebuild-all 嵌入
 

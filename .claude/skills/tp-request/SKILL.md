@@ -126,32 +126,23 @@ curl -s -X PATCH \
         googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
    d. 修改的部分須符合 R0-R18 品質規則（含 R16 飯店 rating、R17 導航資訊、R18 飯店 address）
    d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
-   e. 依修改類型選擇對應 API：
+   e. 依修改類型選擇對應 API（限白名單內操作）：
       - **修改單一 entry**（title/time/description/location/travel 等）：
         ```bash
         curl -s -X PATCH \
           -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
           -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+          -H "X-Request-Scope: companion" \
           -H "Content-Type: application/json" \
           -d '{...修改欄位...}' \
           "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
         ```
-      - **覆寫整天**（插入/移除/重排 entry，或整天大幅修改）：
-        ```bash
-        curl -s -X PUT \
-          -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-          -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-          -H "Content-Type: application/json" \
-          -d '{...完整一天資料...}' \
-          "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
-        ```
-      - **新增餐廳**：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
-      - **修改/刪除餐廳**：PATCH/DELETE `/api/trips/{tripId}/restaurants/{rid}`
-      - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
-      - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
+      - **新增 POI（餐廳/購物）**：POST `/api/trips/{tripId}/entries/{eid}/trip-pois`
+      - **修改/刪除 POI**：PATCH/DELETE `/api/trips/{tripId}/trip-pois/{tpid}`
       - **更新 doc**（checklist/backup/suggestions 等）：
         `PUT /api/trips/{tripId}/docs/{type}` + JSON body（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
    f. 若插入、移除或移動 entry，重新估算相鄰 entry 的 travel 並更新（travel = 從此地出發去下一站，見 tp-shared/references.md）
+   f2. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與本次修改不一致的內容（規則見 tp-shared/references.md「Doc 連動規則」）
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
    i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）

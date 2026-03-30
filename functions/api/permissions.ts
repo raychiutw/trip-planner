@@ -6,7 +6,7 @@
 import { logAudit } from './_audit';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
-import type { Env, AuthData } from './_types';
+import type { Env } from './_types';
 
 /** 取得目前 Access policy 的 include email 列表 */
 async function getAccessPolicyEmails(env: Env): Promise<string[]> {
@@ -55,7 +55,8 @@ export async function removeEmailFromAccessPolicy(env: Env, email: string): Prom
 
 // GET /api/permissions?tripId=xxx
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context) as AuthData;
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const url = new URL(context.request.url);
@@ -75,7 +76,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 // POST /api/permissions { email, tripId, role? }
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context) as AuthData;
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const bodyOrError = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
@@ -104,24 +106,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw err;
   }
 
-  // 同步 Access policy
+  // 同步 Access policy（best-effort：失敗不 rollback D1，回傳 warning）
+  let accessSyncFailed = false;
   try {
     await addEmailToAccessPolicy(context.env, lowerEmail);
   } catch (err) {
-    // 回滾 D1
-    try {
-      await context.env.DB
-        .prepare('DELETE FROM trip_permissions WHERE email = ? AND trip_id = ?')
-        .bind(lowerEmail, tripId)
-        .run();
-    } catch (rollbackErr) {
-      await logAudit(context.env.DB, {
-        tripId, tableName: 'trip_permissions', recordId: (result as any)?.id ?? null,
-        action: 'error', changedBy: auth.email,
-        diffJson: JSON.stringify({ error: 'Rollback failed', message: rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr) }),
-      });
-    }
-    throw new AppError('DATA_SAVE_FAILED', '同步 Access policy 失敗，已回滾');
+    accessSyncFailed = true;
+    const accessErr = err instanceof Error ? err.message : String(err);
+    console.error('Access policy sync failed:', accessErr);
+    await logAudit(context.env.DB, {
+      tripId, tableName: 'trip_permissions', recordId: (result as any)?.id ?? null,
+      action: 'error', changedBy: auth.email,
+      diffJson: JSON.stringify({ warning: 'Access policy sync failed', message: accessErr }),
+    });
   }
 
   await logAudit(context.env.DB, {
@@ -133,5 +130,5 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     diffJson: JSON.stringify({ email: lowerEmail, role }),
   });
 
-  return json(result, 201);
+  return json({ ...result as object, _accessSyncFailed: accessSyncFailed }, 201);
 };

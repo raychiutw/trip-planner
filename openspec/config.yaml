@@ -110,7 +110,6 @@ skills:
   tp-create: 從零產生完整行程
   tp-edit: 自然語言部分修改行程
   tp-rebuild: 全面稽核修復單一行程
-  tp-deploy: commit + push + 驗證部署
   tp-request: 處理旅伴請求
   tp-patch: 批次補齊缺失欄位
 

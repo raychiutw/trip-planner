@@ -63,14 +63,11 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
     if (!entry.travel) return;
     const t = entry.travel;
     const type = t.type || '';
-    const text = t.desc || (typeof t === 'string' ? t : '');
     const typeInfo = TRANSPORT_TYPES[type];
     if (!typeInfo) return;
 
-    if (!text) return;
-    const m = String(text).match(/(\d+)/);
-    if (!m) return;
-    const mins = parseInt(m[1], 10);
+    const mins = t.min;
+    if (!mins || mins <= 0) return;
 
     // Derive from/to from entry titles
     const from = entry.title || undefined;
@@ -85,7 +82,7 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
         segments: [],
       };
     }
-    byType[type].segments.push({ text: String(text), minutes: mins, from, to });
+    byType[type].segments.push({ text: t.desc || '', minutes: mins, from, to });
     byType[type].totalMinutes += mins;
     totalMinutes += mins;
     if (type === 'car') drivingMinutes += mins;

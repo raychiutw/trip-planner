@@ -196,7 +196,7 @@ body {
 @layer base {
     .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
     .svg-icon svg { width: 100%; height: 100%; }
-    button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    button:focus-visible { outline: none; }
     /* Tripline logo — responsive mobile/desktop SVG switch */
     .tripline-logo { flex-shrink: 0; display: flex; align-items: center; position: relative; line-height: 0; }
     .tripline-logo-mobile { display: block; }
@@ -275,7 +275,7 @@ body {
     .color-mode-card.active,
     .color-theme-card.active { border-color: var(--color-accent); }
     .color-mode-card:focus-visible,
-    .color-theme-card:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+    .color-theme-card:focus-visible { outline: none; }
 
     /* Color mode preview mini UI */
     .color-mode-preview {
@@ -849,10 +849,10 @@ body {
     ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
-    /* Focus Visible (remove default outline, use box-shadow) */
-    button:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
-    a:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
-    [role="button"]:focus-visible { outline: none; box-shadow: var(--shadow-ring); border-radius: var(--radius-xs); }
+    /* Focus Visible (remove default outline) */
+    button:focus-visible { outline: none; }
+    a:focus-visible { outline: none; }
+    [role="button"]:focus-visible { outline: none; }
 
     /* iOS tap highlight */
     * { -webkit-tap-highlight-color: transparent; }

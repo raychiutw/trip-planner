@@ -56,7 +56,7 @@ code 變更前 invoke 本 skill，確認完整 pipeline。
 | Review | `/codex` | 未安裝時記錄「跳過（未安裝）」 |
 | Test | `/cso --diff` | **不可跳過** — 至少跑 --diff 模式 |
 | Test | `/qa` | 使用者授權跳過 |
-| Test | `/benchmark` | 使用者授權跳過 |
+| Test | `/benchmark` | 非 UI 變更自動跳過；UI 變更必跑 |
 | Ship | `/ship` | **不可跳過** — 必須走 feature branch + PR |
 | Ship | `/land-and-deploy` | **不可跳過** — merge + 部署驗證 |
 | Ship | `/canary` | 使用者授權跳過 |
@@ -76,6 +76,10 @@ code 變更前 invoke 本 skill，確認完整 pipeline。
 | 「context 快滿了，跳過剩下的」 | ❌ 存交班文件，下個 session 接續 |
 | 「直接 push master 比較快」 | ❌ 必須走 feature branch + PR |
 | 「/review 已經做過了不用再跑」 | ❌ 不同階段的 review 目的不同 |
+| 「WTF 太多但繼續修」 | ❌ /qa WTF-likelihood > 20% 必須停止，回頭檢查架構 |
+| 「test fail 先跳過」 | ❌ 必須做 Ownership Triage：本 branch 引入 vs pre-existing |
+| 「改完就 commit」 | ❌ 必須比對 stated intent vs actual diff（scope drift detection） |
+| 「非 UI 也跑 /benchmark」 | ❌ 用 diff scope 判斷，非 UI 變更不必跑 |
 
 ## 7 階段 × gstack skill
 
@@ -98,10 +102,16 @@ code 變更前 invoke 本 skill，確認完整 pipeline。
 
 | gstack skill | 角色 | 何時用 |
 |-------------|------|--------|
-| `/investigate` | Systematic Debugger | bug 調查 |
-| `/design-review` | Senior Designer + Frontend Engineer | 視覺稽核 + CSS 修復 |
-| `/design-consultation` | Senior Product Designer | 建立設計系統 |
+| `/investigate` | Systematic Debugger | bug 調查（自動 /freeze 限制範圍） |
+| `/design-review` | Senior Designer + Frontend Engineer | 視覺稽核 + CSS 修復（atomic commit + before/after 截圖） |
+| `/design-consultation` | Senior Product Designer | 建立設計系統（產出 DESIGN.md） |
+| `/design-shotgun` | Design Explorer | 方向不確定時出多個設計方案比較 |
+| `/qa-only` | QA Reporter | 純報告不修改，適合輕量驗證或非 owner review |
 | `/browse` | QA Tester | 手動瀏覽器測試 |
+| `/connect-chrome` | Chrome Controller | `/browse` 卡住或需要看真實瀏覽器時切換 |
+| `/setup-browser-cookies` | Session Manager | 匯入真實瀏覽器 cookie，測試需認證頁面 |
+| `/learn` | Knowledge Manager | 跨 session 經驗管理（記錄、搜尋、清理） |
+| `/setup-deploy` | Deploy Configurator | 首次使用 `/land-and-deploy` 前一次性配置 |
 | `/careful` | Safety Guardian | 破壞性指令護欄 |
 | `/freeze` / `/unfreeze` | Edit Boundary | 限制編輯範圍 |
 | `/guard` | careful + freeze | 最大安全模式 |

@@ -145,7 +145,6 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | `/tp-rebuild` | 修正前 + 修正後 | 完整 x2 |
 | `/tp-edit` | 修改完成後 | 精簡 |
 | `/tp-request` | 每個請求處理完後 | 精簡 |
-| `/tp-deploy` | 不嵌入 | — |
 | `/tp-rebuild-all` | 每趟修正後 | 完整 |
 
 ## 常見誤判

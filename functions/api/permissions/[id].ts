@@ -6,10 +6,11 @@ import { removeEmailFromAccessPolicy } from '../permissions';
 import { logAudit } from '../_audit';
 import { AppError } from '../_errors';
 import { json, getAuth } from '../_utils';
-import type { Env, AuthData } from '../_types';
+import type { Env } from '../_types';
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
-  const auth = getAuth(context) as AuthData;
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const id = context.params.id as string;

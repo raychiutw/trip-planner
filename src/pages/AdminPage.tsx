@@ -9,15 +9,9 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { apiFetchRaw } from '../hooks/useApi';
 import TriplineLogo from '../components/shared/TriplineLogo';
-import ToastContainer from '../components/shared/Toast';
+import ToastContainer, { showToast } from '../components/shared/Toast';
 
 /* Cloudflare Access 在 infrastructure 層處理認證，不需要 JS redirect */
-
-/* ===== Status message state ===== */
-interface StatusMsg {
-  text: string;
-  type: 'success' | 'error';
-}
 
 /* ===== Chevron SVG as background-image for the select ===== */
 const SELECT_STYLE = { backgroundImage:
@@ -38,9 +32,7 @@ export default function AdminPage() {
   const [permError, setPermError] = useState('');
   const [email, setEmail] = useState('');
   const [addingDisabled, setAddingDisabled] = useState(false);
-  const [addStatus, setAddStatus] = useState<StatusMsg | null>(null);
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const [removeStatus, setRemoveStatus] = useState<StatusMsg | null>(null);
   const currentTripIdRef = useRef(currentTripId);
   currentTripIdRef.current = currentTripId;
 
@@ -123,8 +115,6 @@ export default function AdminPage() {
   function handleTripChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const tripId = e.target.value;
     setCurrentTripId(tripId);
-    setAddStatus(null);
-    setRemoveStatus(null);
     if (tripId) lsSet(LS_KEY_TRIP_PREF, tripId);
     // permissions 會透過 useEffect[currentTripId] 自動載入
   }
@@ -136,7 +126,6 @@ export default function AdminPage() {
     if (!trimmed || !tripId) return;
 
     setAddingDisabled(true);
-    setAddStatus(null);
 
     try {
       const r = await apiFetchRaw('/permissions', {
@@ -149,18 +138,25 @@ export default function AdminPage() {
       });
 
       if (r.status === 201) {
-        await r.json();
-        setAddStatus({ text: '已新增 ' + trimmed, type: 'success' });
+        const body = await r.json() as Record<string, unknown>;
+        if (body._accessSyncFailed) {
+          showToast('已新增 ' + trimmed + '（Access policy 需手動加入）', 'error', 5000);
+        } else {
+          showToast('已新增 ' + trimmed, 'success');
+        }
         setEmail('');
         loadPermissions(currentTripIdRef.current);
         return;
       }
       if (r.status === 409) throw new Error('此 email 已有權限');
       if (r.status === 403) throw new Error('僅管理者可操作');
-      const data = await r.json();
-      throw new Error(data.error || '新增失敗');
+      const data = await r.json().catch(() => null);
+      const errObj = data?.error;
+      const errMsg = typeof errObj === 'string' ? errObj
+        : errObj?.message ?? errObj?.detail ?? '新增失敗';
+      throw new Error(errMsg);
     } catch (err) {
-      setAddStatus({ text: (err as Error).message, type: 'error' });
+      showToast((err as Error).message, 'error');
     } finally {
       setAddingDisabled(false);
     }
@@ -171,14 +167,19 @@ export default function AdminPage() {
     if (!window.confirm('確定移除 ' + permEmail + ' 的權限？')) return;
 
     setRemovingId(id);
-    setRemoveStatus(null);
     try {
       const r = await apiFetchRaw('/permissions/' + id, { method: 'DELETE' });
-      if (!r.ok) throw new Error('移除失敗');
-      setRemoveStatus({ text: '已移除 ' + permEmail, type: 'success' });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const errObj = data?.error;
+        const errMsg = typeof errObj === 'string' ? errObj
+          : errObj?.message ?? errObj?.detail ?? '移除失敗';
+        throw new Error(errMsg);
+      }
+      showToast('已移除 ' + permEmail, 'success');
       loadPermissions(currentTripIdRef.current);
     } catch (err) {
-      setRemoveStatus({ text: (err as Error).message, type: 'error' });
+      showToast((err as Error).message, 'error');
     } finally {
       setRemovingId(null);
     }
@@ -298,7 +299,7 @@ export default function AdminPage() {
             權限管理
           </span>
           <button
-            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none focus-visible:shadow-ring ml-auto"
+            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none ml-auto"
             id="navCloseBtn"
             aria-label="關閉"
             onClick={handleClose}
@@ -325,7 +326,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-secondary rounded-lg overflow-hidden">
               <select
-                className="w-full appearance-none border-none bg-transparent text-foreground font-inherit text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-lg"
+                className="w-full appearance-none border-none bg-transparent text-foreground font-inherit text-body py-3 pl-4 pr-11 cursor-pointer bg-no-repeat transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none focus-visible:rounded-lg"
                 style={SELECT_STYLE}
                 aria-label="選擇行程"
                 value={currentTripId}
@@ -344,20 +345,6 @@ export default function AdminPage() {
             <div className="bg-secondary rounded-lg overflow-hidden">
               {renderPermissions()}
             </div>
-            <div aria-live="polite">
-              {removeStatus && (
-                <div
-                  className={[
-                    'text-footnote mt-2 pl-4',
-                    removeStatus.type === 'success'
-                      ? 'text-success'
-                      : 'text-destructive',
-                  ].join(' ')}
-                >
-                  {removeStatus.text}
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Section: Add Member */}
@@ -369,7 +356,7 @@ export default function AdminPage() {
               <div className="flex gap-2 p-2">
                 <input
                   type="email"
-                  className="flex-1 border-none bg-background text-foreground font-inherit text-body py-3 px-4 rounded-md focus-visible:outline-none focus-visible:shadow-ring placeholder:text-muted"
+                  className="flex-1 border-none bg-background text-foreground font-inherit text-body py-3 px-4 rounded-md focus-visible:outline-none placeholder:text-muted"
                   placeholder="email@example.com"
                   autoComplete="email"
                   value={email}
@@ -384,20 +371,6 @@ export default function AdminPage() {
                   新增
                 </button>
               </div>
-            </div>
-            <div aria-live="polite">
-              {addStatus && (
-                <div
-                  className={[
-                    'text-footnote mt-2 pl-4',
-                    addStatus.type === 'success'
-                      ? 'text-success'
-                      : 'text-destructive',
-                  ].join(' ')}
-                >
-                  {addStatus.text}
-                </div>
-              )}
             </div>
           </div>
         </main>
