@@ -13,8 +13,8 @@ body.dark [data-info-sheet-panel] {
 [data-info-sheet-panel] :focus:not(:focus-visible) { outline: none; box-shadow: none; }
 [data-info-sheet-panel]:focus { outline: none; box-shadow: none; }
 @media (max-width: 767px) {
-  [data-info-sheet-panel] { height: 50vh; min-height: 280px; }
-  @supports (height: 1dvh) { [data-info-sheet-panel] { height: 50dvh; } }
+  [data-info-sheet-panel] { height: 75vh; min-height: 280px; }
+  @supports (height: 1dvh) { [data-info-sheet-panel] { height: 75dvh; } }
   [data-info-sheet-panel].detent-full { height: 100vh; }
   @supports (height: 1dvh) { [data-info-sheet-panel].detent-full { height: 100dvh; } }
   [data-info-sheet-panel] {
@@ -314,7 +314,7 @@ export default function InfoSheet({
             bottom: 0,
             left: 0,
             right: 0,
-            height: '92vh',
+            height: '75vh',
             background: 'color-mix(in srgb, var(--color-secondary) 88%, transparent)',
             WebkitBackdropFilter: 'saturate(180%) blur(28px)',
             backdropFilter: 'saturate(180%) blur(28px)',
