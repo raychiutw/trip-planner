@@ -548,7 +548,7 @@ export default function ManagePage() {
                   <div className="flex items-end gap-2 bg-secondary rounded-full pl-4 pr-1 py-1 shadow-md border border-border/50">
                     <textarea
                       ref={textareaRef}
-                      className="flex-1 py-1.5 border-none bg-transparent font-inherit text-callout md:text-body text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
+                      className="flex-1 py-1.5 border-none bg-transparent font-inherit text-body md:text-title3 text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
                       id="manageText"
                       maxLength={65536}
                       placeholder="輸入你的請求…"
