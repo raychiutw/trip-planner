@@ -873,7 +873,7 @@ export function FooterArt({ theme, dark }: ThemeArtProps) {
       <svg
         viewBox="0 0 400 60"
         xmlns="http://www.w3.org/2000/svg"
-        style={{ width: '100%', display: 'block' }}
+        style={{ width: '100%', maxHeight: '80px', display: 'block' }}
       >
         {content[key]}
       </svg>

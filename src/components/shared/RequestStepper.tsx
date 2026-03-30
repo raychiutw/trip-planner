@@ -23,7 +23,7 @@ const DOT_DONE = `${DOT_BASE} bg-accent`;
 const DOT_ACTIVE = `${DOT_BASE} border-2 border-accent animate-stepper-pulse`;
 const DOT_PENDING = `${DOT_BASE} border-2 border-border`;
 
-const LINE_BASE = 'flex-1 h-0.5 mx-1 mb-4';
+const LINE_BASE = 'flex-1 h-0.5 mx-1 mt-[3px]';
 const LINE_DONE = `${LINE_BASE} bg-accent`;
 const LINE_PENDING = `${LINE_BASE} bg-border`;
 
@@ -38,7 +38,7 @@ export default function RequestStepper({ status }: RequestStepperProps) {
   const currentIndex = STEPS.findIndex((s) => s.key === status);
 
   return (
-    <div className="flex items-center mt-3" role="group" aria-label="請求進度">
+    <div className="flex items-start mt-3" role="group" aria-label="請求進度">
       {STEPS.map((step, i) => {
         const isDone = i < currentIndex;
         const isActive = i === currentIndex;
@@ -48,7 +48,7 @@ export default function RequestStepper({ status }: RequestStepperProps) {
             {i > 0 && (
               <div className={(isDone || isActive) ? LINE_DONE : LINE_PENDING} />
             )}
-            <div className="text-center shrink-0">
+            <div className="text-center min-w-[3rem]">
               <div
                 className={
                   isDone ? DOT_DONE :

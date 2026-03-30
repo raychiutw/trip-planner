@@ -23,10 +23,7 @@ import type { Day } from '../../types/trip';
 import { extractPinsFromDay } from '../../hooks/useMapData';
 import type { MapPin } from '../../hooks/useMapData';
 import { LS_KEY_MAP_COLLAPSED } from './DayMap';
-
-/* ===== Constants ===== */
-
-const GOOGLE_MAPS_URL_BASE = 'https://www.google.com/maps/search/';
+import { GOOGLE_MAPS_URL_BASE } from '../../lib/constants';
 
 /** 固定 8 色色盤（D6：不隨主題變化）*/
 export const DAY_COLORS: readonly string[] = [

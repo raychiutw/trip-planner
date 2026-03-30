@@ -26,11 +26,11 @@ import Icon from '../shared/Icon';
 import { MapMarker } from './MapMarker';
 import { MapRoute } from './MapRoute';
 import type { Day } from '../../types/trip';
+import { GOOGLE_MAPS_URL_BASE } from '../../lib/constants';
 
 /* ===== Constants ===== */
 
 export const LS_KEY_MAP_COLLAPSED = 'map-collapsed';
-const GOOGLE_MAPS_URL_BASE = 'https://www.google.com/maps/search/';
 
 /* ===== Custom event for Timeline → map bidirectional communication ===== */
 /** Timeline entry 點擊時發出的自訂事件 */

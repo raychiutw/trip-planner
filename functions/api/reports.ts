@@ -2,20 +2,17 @@
  * POST /api/reports — 使用者錯誤回報（公開端點）
  * 不需認證，但有 rate limit + 蜜罐欄位防護
  */
-import { json } from './_utils';
+import { json, parseJsonBody } from './_utils';
 import { AppError } from './_errors';
 import type { Env } from './_types';
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const { request, env } = context;
+  const { env } = context;
   const db = env.DB;
 
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json() as Record<string, unknown>;
-  } catch {
-    throw new AppError('DATA_VALIDATION', 'JSON 格式無效');
-  }
+  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
+  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = bodyOrError;
 
   // 蜜罐欄位 — bot 會填這個欄位
   if (body.website || body.email_confirm) {

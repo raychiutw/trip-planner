@@ -73,7 +73,7 @@ module.exports = { apiCall, TRIP_ID };
 
 | 欄位 | 推導規則 |
 |------|----------|
-| `id` (tripId) | `{destination}-trip-{year}-{owner}`（destination 用英文） |
+| `id` (tripId) | `{destination}-trip-{year}-{owner}`（全部小寫，API 驗證 `/^[a-z0-9-]+$/`） |
 | `name` | `{owner} 的{destination}之旅` |
 | `title` | `{year} {destination}{天數}日{自駕遊/大眾交通之旅}行程表` |
 | `countries` | 依目的地判斷 ISO 3166-1 alpha-2（日本 `JP`、韓國 `KR`、台灣 `TW`） |
@@ -168,24 +168,24 @@ const B = process.env.HOME + '/.claude/skills/gstack/browse/dist/browse';
 
 const queries = [
   // [搜尋關鍵字, entryId or null, poiId or null]
-  ['景點名稱+地區', entryId, null],
-  ['餐廳名稱+地區', null, poiId],
+  ['景點名稱+地區', 'entryId', null],
+  ['餐廳名稱+地區', null, 'poiId'],
 ];
 
-for (const [query, eid, pid] of queries) {
-  execSync(`"${B}" goto "https://www.google.com/maps/search/${encodeURIComponent(query)}"`, { timeout: 10000 });
-  // 等 Maps 渲染
-  await new Promise(r => setTimeout(r, 1500));
-  const text = execSync(`"${B}" text`, { timeout: 10000, encoding: 'utf8' });
-  // 抽取第一個 1.0-5.0 的數字
-  const matches = text.match(/(\d\.\d)/g);
-  let rating = null;
-  if (matches) for (const m of matches) {
-    const n = parseFloat(m);
-    if (n >= 1.0 && n <= 5.0) { rating = n; break; }
+(async () => {
+  for (const [query, eid, pid] of queries) {
+    execSync(`"${B}" goto "https://www.google.com/maps/search/${encodeURIComponent(query)}"`, { timeout: 10000 });
+    await new Promise(r => setTimeout(r, 1500));
+    const text = execSync(`"${B}" text`, { timeout: 10000, encoding: 'utf8' });
+    const matches = text.match(/(\d\.\d)/g);
+    let rating = null;
+    if (matches) for (const m of matches) {
+      const n = parseFloat(m);
+      if (n >= 1.0 && n <= 5.0) { rating = n; break; }
+    }
+    console.log(`${query} → ${rating || 'not found'}`);
   }
-  console.log(`${query} → ${rating || 'not found'}`);
-}
+})();
 ```
 
 #### Step 2c：PATCH 評分

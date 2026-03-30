@@ -72,9 +72,10 @@ describe('AdminPage', () => {
     expect(getByText('新增成員')).toBeTruthy();
   });
 
-  it('has aria-live region for add status', () => {
+  it('has ToastContainer for status feedback', () => {
     const { container } = renderAdmin();
-    expect(container.querySelector('[aria-live="polite"]')).toBeTruthy();
+    // ToastContainer renders a fixed div; Toast bubbles use aria-live="polite"
+    expect(container.querySelector('.fixed')).toBeTruthy();
   });
 
   it('uses zero legacy CSS class names', () => {
