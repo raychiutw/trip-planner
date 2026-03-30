@@ -545,7 +545,7 @@ export default function ManagePage() {
                   </div>
 
                   {/* Pill-shaped input */}
-                  <div className="flex items-end gap-2 bg-secondary rounded-full pl-4 pr-1 py-1 shadow-md border border-border/50">
+                  <div className="flex items-end gap-2 bg-secondary rounded-2xl pl-4 pr-1 py-2 shadow-md border border-border/50">
                     <textarea
                       ref={textareaRef}
                       className="flex-1 py-1.5 border-none bg-transparent text-[length:var(--font-size-body)] font-[family-name:var(--font-family-system)] text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
