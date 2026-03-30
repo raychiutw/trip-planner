@@ -200,7 +200,7 @@ export default function HourlyWeather({
     >
       {/* Summary row (clickable) */}
       <div
-        className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover focus-visible:outline-none focus-visible:shadow-ring focus-visible:rounded-xs"
+        className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover focus-visible:outline-none"
         data-action="toggle-hw"
         role="button"
         tabIndex={0}
