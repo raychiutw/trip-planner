@@ -469,9 +469,8 @@ export default function ManagePage() {
           {pageState.kind === 'ready' && (
             <div className="flex flex-col h-content-h">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden px-padding-h">
+              <div className="flex-1 overflow-y-auto overflow-x-hidden px-padding-h scrollbar-gutter-stable">
                 <div className="max-w-page-max-w mx-auto py-4">
-                  {/* Sentinel at top for loading older messages */}
                   {hasMore && (
                     <div ref={sentinelRef} className="py-2" aria-hidden="true">
                       {loadingMore && (
@@ -510,15 +509,13 @@ export default function ManagePage() {
                     </div>
                   )}
 
-                  {/* Scroll anchor */}
                   <div ref={messagesEndRef} aria-hidden="true" />
                 </div>
               </div>
 
               {/* Input bar */}
-              <div className="shrink-0 px-padding-h pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1">
+              <div className="shrink-0 px-padding-h pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-1 scrollbar-gutter-stable">
                 <div className="max-w-page-max-w mx-auto">
-                  {/* Floating toggle pills */}
                   <div className="flex items-center gap-1.5 mb-2 px-1">
                     <button
                       className={[
@@ -544,7 +541,6 @@ export default function ManagePage() {
                     </button>
                   </div>
 
-                  {/* Pill-shaped input */}
                   <div className="flex items-end gap-2 bg-secondary rounded-2xl pl-4 pr-1 py-2 shadow-md border border-border/50">
                     <textarea
                       ref={textareaRef}

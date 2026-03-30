@@ -192,6 +192,10 @@ body {
     body { margin: 0; }
 }
 
+@utility scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
+}
+
 /* ===== Global component base (shared.css 替代) ===== */
 @layer base {
     .svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; flex-shrink: 0; vertical-align: -0.125em; }
