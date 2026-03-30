@@ -44,13 +44,11 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
      `PUT /api/trips/{tripId}/days/{dayNum}` + JSON body
 
    **注意**：覆寫整天（PUT）時，必須保留原始的 `date`、`dayOfWeek`、`label`，不得送出 null。缺少任一欄位 API 將回傳 400。
-   - **新增餐廳**：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
-   - **修改/刪除餐廳**：PATCH/DELETE `/api/trips/{tripId}/restaurants/{rid}`
-   - **新增購物（entry 下）**：POST `/api/trips/{tripId}/entries/{eid}/shopping`
-   - **修改/刪除購物**：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
+   - **新增 POI（餐廳/購物）**：POST `/api/trips/{tripId}/entries/{eid}/trip-pois`
+   - **修改/刪除 POI**：PATCH/DELETE `/api/trips/{tripId}/trip-pois/{tpid}`
    - **更新 doc**（checklist/backup/suggestions 等）：
      `PUT /api/trips/{tripId}/docs/{type}` + JSON body（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
-6. 若影響到 checklist、backup、suggestions，同步更新對應 doc（結構必須對齊前端元件，見 tp-shared/references.md）
+6. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與本次修改不一致的內容（規則見 tp-shared/references.md「Doc 連動規則」）
 7. 若插入、移除或移動 entry，重新估算相鄰 entry 的 travel 並更新（travel 語意見 tp-shared/references.md：travel = 從此地出發去下一站）
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
