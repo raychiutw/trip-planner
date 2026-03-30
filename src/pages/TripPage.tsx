@@ -227,12 +227,12 @@ const DaySection = React.memo(function DaySection({
             )}
 
             {hotel && typeof hotel === 'object' && (
-              <div className="mb-3 bg-secondary rounded-md p-padding-h">
+              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
                 <Hotel hotel={toHotelData(hotel)} />
               </div>
             )}
             {dayDrivingStats && (
-              <div className="mb-3 bg-secondary rounded-md p-padding-h">
+              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               </div>
             )}
