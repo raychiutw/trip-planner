@@ -6,60 +6,34 @@ import clsx from 'clsx';
 import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
-import { useTrip, DOC_KEYS } from '../hooks/useTrip';
-import { useDarkMode, type ColorTheme } from '../hooks/useDarkMode';
+import { useTrip } from '../hooks/useTrip';
+import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
-import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../lib/appearance';
+import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
+import { downloadTripFormat } from '../lib/tripExport';
+import { calcTripDrivingStats } from '../lib/drivingStats';
 import DayNav from '../components/trip/DayNav';
-import Timeline from '../components/trip/Timeline';
+import DaySection from '../components/trip/DaySection';
+import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
 
-/* DayMap — React.lazy code-split（D1：SDK lazy load）*/
-const DayMap = lazy(() => import('../components/trip/DayMap'));
 /* TripMap — React.lazy code-split（F006：多天總覽）*/
 const TripMap = lazy(() => import('../components/trip/TripMap'));
-import Hotel from '../components/trip/Hotel';
 import Footer, { type FooterData } from '../components/trip/Footer';
 import QuickPanel from '../components/trip/QuickPanel';
 import InfoSheet from '../components/trip/InfoSheet';
 import InfoPanel from '../components/trip/InfoPanel';
-import { DayDrivingStatsCard, TripDrivingStatsCard } from '../components/trip/DrivingStats';
-import HourlyWeather from '../components/trip/HourlyWeather';
-import DocCard from '../components/trip/DocCard';
-import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt, NavArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
-import DayArt from '../components/trip/DayArt';
-import TodayRouteSheet from '../components/trip/TodayRouteSheet';
 import DaySkeleton from '../components/trip/DaySkeleton';
-import { toTimelineEntry, toHotelData } from '../lib/mapDay';
-import { calcTripDrivingStats, calcDrivingStats } from '../lib/drivingStats';
-import { validateDay } from '../lib/validateDay';
-import { buildWeatherDay } from '../lib/weather';
-import type { TripListItem, Day, DaySummary } from '../types/trip';
-import type { DocEntry } from '../components/trip/DocCard';
+import type { TripListItem } from '../types/trip';
 
 import '../../css/tokens.css';
 
-/* ===== Feature flags ===== */
-
-/** 地圖功能預設隱藏，URL 加 ?showmap=1 顯示 */
-const ENABLE_DAY_MAP = new URLSearchParams(window.location.search).get('showmap') === '1';
-
 /* ===== Module-level constants (#14: hoist inline styles) ===== */
 
-const LOADING_CLASS = 'text-center p-10 text-muted';
 const UNPUBLISHED_CLASS = 'text-muted mt-2';
-
-/** Pre-built style objects for theme swatches (avoid per-render allocation). */
-const SWATCH_STYLES: Record<string, { light: React.CSSProperties; dark: React.CSSProperties }> =
-  Object.fromEntries(
-    Object.entries(THEME_ACCENTS).map(([key, { light, dark }]) => [
-      key,
-      { light: { background: light }, dark: { background: dark } },
-    ]),
-  );
 
 /* ===== Scoped styles — only rules Tailwind/tokens.css cannot express ===== */
 const SCOPED_STYLES = `
@@ -123,167 +97,6 @@ const LOADING_VIEW = (
   </div>
 );
 
-/* ===== DaySection — memoised per-day renderer (#12) ===== */
-
-interface DaySectionProps {
-  dayNum: number;
-  day: Day | undefined;
-  daySummary: DaySummary | undefined;
-  tripStart: string | null;
-  tripEnd: string | null;
-  themeArt?: { theme: ColorTheme; dark: boolean };
-  localToday?: string;
-  isActive?: boolean;
-  /** 全覽模式時隱藏 DayMap（避免與 TripMap 重複）*/
-  hideDayMap?: boolean;
-  /** IANA timezone for weather API (derived from trip destination). */
-  timezone?: string;
-}
-
-const DaySection = React.memo(function DaySection({
-  dayNum,
-  day,
-  daySummary,
-  tripStart,
-  tripEnd,
-  themeArt,
-  localToday,
-  isActive,
-  hideDayMap = false,
-  timezone,
-}: DaySectionProps) {
-  /* Track whether this section has been activated to trigger enter animation */
-  const [animKey, setAnimKey] = useState(0);
-  const prevActiveRef = useRef(false);
-  useEffect(() => {
-    if (isActive && !prevActiveRef.current) {
-      setAnimKey((k) => k + 1);
-    }
-    prevActiveRef.current = !!isActive;
-  }, [isActive]);
-
-  const hotel = day?.hotel;
-  const timeline = day?.timeline ?? [];
-  // Derive weather locations from entries (no longer stored in DB)
-  const weatherDay = useMemo(
-    () => buildWeatherDay(day?.label, timeline),
-    [day?.label, timeline],
-  );
-  const dayDate = day?.date ?? daySummary?.date ?? undefined;
-  const dayId = day?.id;
-
-  const dayDrivingStats = useMemo(
-    () => timeline.length > 0 ? calcDrivingStats(timeline) : null,
-    [timeline],
-  );
-
-  const warnings = useMemo(() => validateDay(timeline), [timeline]);
-
-  /* Memoised timeline entries — avoids new array reference on every render */
-  const timelineEntries = useMemo(
-    () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({})),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [day?.timeline],
-  );
-
-  return (
-    <section className="day-section" data-day={dayNum}>
-      <div className="day-header relative z-(--z-day-header) py-2 px-4 flex items-center gap-2 min-h-[100px] rounded-t-md" id={`day${dayNum}`}>
-        <h2 className="text-title2 font-bold whitespace-nowrap overflow-hidden text-ellipsis m-0">Day {dayNum}</h2>
-        {daySummary?.label && (
-          <span>{daySummary.label}</span>
-        )}
-        {daySummary?.date && (
-          <span className="text-subheadline text-muted ml-auto whitespace-nowrap">
-            {daySummary.date}
-            {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
-          </span>
-        )}
-        {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
-      </div>
-      <div key={animKey} className={clsx('px-padding-h pb-4', animKey > 0 && 'day-content-enter', day && 'day-content-loaded')} id={`day-slot-${dayNum}`}>
-        {!day ? (
-          <DaySkeleton />
-        ) : (
-          <>
-            {warnings.length > 0 && (
-              <div className="bg-destructive-bg py-3 px-4 my-2 rounded-sm text-callout text-destructive">
-                <strong><Icon name="warning" /> 注意事項：</strong>
-                <ul className="mt-1 ml-4">
-                  {warnings.map((w) => <li key={w}>{w}</li>)}
-                </ul>
-              </div>
-            )}
-
-            {weatherDay && dayDate && dayId && (
-              <HourlyWeather
-                dayId={dayId}
-                dayDate={dayDate}
-                weatherDay={weatherDay}
-                tripStart={tripStart}
-                tripEnd={tripEnd}
-                timezone={timezone}
-              />
-            )}
-
-            {hotel && typeof hotel === 'object' && (
-              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
-                <Hotel hotel={toHotelData(hotel)} />
-              </div>
-            )}
-            {dayDrivingStats && (
-              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
-                <DayDrivingStatsCard stats={dayDrivingStats} />
-              </div>
-            )}
-
-            {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
-                全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
-                ENABLE_DAY_MAP=false 時完全隱藏（feature flag）*/}
-            {ENABLE_DAY_MAP && !hideDayMap && (
-              <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-                <DayMap day={day} dayNum={dayNum} />
-              </Suspense>
-            )}
-
-            {timeline.length > 0 && (
-              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />
-            )}
-          </>
-        )}
-      </div>
-    </section>
-  );
-});
-
-/* ===== Timezone-aware date helper ===== */
-
-/** Known destination timezone mapping (by tripId prefix). */
-const TRIP_TIMEZONE: Record<string, string> = {
-  okinawa: 'Asia/Tokyo',
-  kyoto: 'Asia/Tokyo',
-  busan: 'Asia/Seoul',
-  banqiao: 'Asia/Taipei',
-};
-
-/** Get today's date (YYYY-MM-DD) in the trip's destination timezone. */
-function getLocalToday(tripId: string | null): string {
-  let tz: string | undefined;
-  if (tripId) {
-    const prefix = tripId.split('-')[0] ?? '';
-    tz = TRIP_TIMEZONE[prefix];
-  }
-  if (tz) {
-    return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
-  }
-  // Fallback: user's local date
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 /* ===== URL helpers ===== */
 
 // Legacy query-string compat (React Router handles path-based routing)
@@ -302,25 +115,6 @@ function scrollToDay(dayNum: number): void {
   const top = header.getBoundingClientRect().top + window.pageYOffset - navH - navTop - 4;
   window.scrollTo({ top, behavior: 'smooth' });
 }
-
-/* ===== Sheet content config ===== */
-
-const SHEET_TITLES: Record<string, string> = {
-  flights: '航班資訊',
-  checklist: '出發前確認',
-  backup: '備案',
-  emergency: '緊急聯絡',
-  suggestions: 'AI 解籤',
-  driving: '交通統計',
-  'today-route': '今日路線',
-  'trip-select': '切換行程',
-  appearance: '外觀與主題',
-  prep: '行前準備',
-  'emergency-group': '緊急應變',
-  'ai-group': 'AI 分析',
-};
-
-/* ===== Appearance sheet config — imported from ../lib/appearance ===== */
 
 /* ===== Resolve state machine ===== */
 
@@ -342,6 +136,12 @@ export default function TripPage() {
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
+
+  /* --- Feature flag: DayMap (read from URL once) --- */
+  const enableDayMap = useMemo(
+    () => new URLSearchParams(window.location.search).get('showmap') === '1',
+    [],
+  );
 
   /* --- Online status + offline/reconnect toasts --- */
   const isOnline = useOnlineStatus();
@@ -474,309 +274,10 @@ export default function TripPage() {
   // Keep ref in sync so the online-status effect can call it without a stale closure
   refetchCurrentDayRef.current = refetchCurrentDay;
 
-  /** Direct download by format — complete data export */
+  /** Direct download by format — delegates to tripExport module */
   const handleDownloadFormat = useCallback(async (format: string) => {
     if (!activeTripId) return;
-    const tripName = trip?.name || 'trip';
-    const today = new Date().toISOString().slice(0, 10);
-    const fileBase = `${tripName}-${today}`;
-
-    const downloadBlob = (content: string, filename: string, type: string) => {
-      const blob = new Blob([content], { type });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-    };
-
-    // Helper: fetch all data (meta + full days + all docs)
-
-    type RawDayEntry = {
-      time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
-      google_rating?: unknown; rating?: unknown; maps?: unknown; source?: unknown;
-      travel?: unknown; travel_type?: unknown; travel_desc?: unknown; travel_min?: unknown;
-      restaurants?: Record<string, unknown>[];
-      shopping?: Record<string, unknown>[];
-      [key: string]: unknown;
-    };
-    type RawHotel = {
-      name?: unknown; checkout?: unknown; note?: unknown; breakfast?: unknown;
-      parking?: unknown;
-      shopping?: Record<string, unknown>[];
-      [key: string]: unknown;
-    };
-    type RawDay = {
-      day_num?: number; date?: string; day_of_week?: string; label?: string;
-      hotel?: RawHotel | null;
-      timeline?: RawDayEntry[];
-      [key: string]: unknown;
-    };
-
-    const fetchAllData = async () => {
-      // 1. meta + day summaries
-      const [meta, daySummaries] = await Promise.all([
-        apiFetch<Record<string, unknown>>(`/trips/${activeTripId}`),
-        apiFetch<Array<{ day_num: number; date?: string; day_of_week?: string; label?: string }>>(`/trips/${activeTripId}/days`),
-      ]);
-
-      // 2. all full days + all docs in parallel
-      const [fullDays, docResults] = await Promise.all([
-        Promise.all(
-          daySummaries.map(ds =>
-            apiFetch<RawDay>(`/trips/${activeTripId}/days/${ds.day_num}`)
-              .catch(() => null),
-          ),
-        ),
-        Promise.all(
-          DOC_KEYS.map(dtype =>
-            apiFetch<{ doc_type: string; content: string; updated_at: string }>(`/trips/${activeTripId}/docs/${dtype}`)
-              .then(d => {
-                let parsed: unknown = d.content;
-                if (typeof parsed === 'string') {
-                  try { parsed = JSON.parse(parsed); } catch { /* keep as string */ }
-                }
-                return { type: dtype, data: parsed };
-              })
-              .catch(() => ({ type: dtype, data: null })),
-          ),
-        ),
-      ]);
-
-      const daysData = fullDays.filter((d): d is RawDay => d !== null);
-      const docsMap: Record<string, unknown> = {};
-      for (const doc of docResults) {
-        if (doc.data !== null) docsMap[doc.type] = doc.data;
-      }
-
-      return { meta, daySummaries, daysData, docsMap };
-    };
-
-    const DOC_LABEL_MAP: Record<string, string> = {
-      flights: '航班資訊', checklist: '出發前確認清單',
-      backup: '備案', emergency: '緊急聯絡', suggestions: 'AI 解籤',
-    };
-    const DOC_EMOJI: Record<string, string> = {
-      flights: '✈️', checklist: '✅', backup: '🔄', emergency: '🚨', suggestions: '🔮',
-    };
-
-    try {
-      if (format === 'json') {
-        /* ── JSON: complete dump ── */
-        const { meta, daysData, docsMap } = await fetchAllData();
-        const output = { meta, days: daysData, docs: docsMap };
-        downloadBlob(JSON.stringify(output, null, 2), `${fileBase}.json`, 'application/json');
-
-      } else if (format === 'md') {
-        /* ── Markdown: human-readable complete ── */
-        const { meta, daysData, docsMap } = await fetchAllData();
-        const s = (v: unknown) => (v != null && v !== '') ? String(v) : '';
-
-        let md = `# ${s(meta.name) || tripName}\n`;
-        if (meta.title) md += `${s(meta.title)}\n`;
-        md += '\n';
-
-        for (const day of daysData) {
-          // Day header
-          md += `## Day ${day.day_num}`;
-          if (day.label) md += ` ${day.label}`;
-          if (day.date) {
-            md += ` — ${day.date}`;
-            if (day.day_of_week) md += `（${day.day_of_week}）`;
-          }
-          md += '\n\n';
-
-          // Hotel
-          const hotel = day.hotel;
-          if (hotel?.name) {
-            md += `### 🏨 住宿：${s(hotel.name)}\n`;
-            if (hotel.checkout) md += `- 退房：${s(hotel.checkout)}\n`;
-            if (hotel.breakfast) md += `- 早餐：${typeof hotel.breakfast === 'object' ? JSON.stringify(hotel.breakfast) : s(hotel.breakfast)}\n`;
-            const parking = hotel.parking;
-            if (parking) {
-              const pInfo = typeof parking === 'object' ? (parking as Record<string, unknown>).info ?? JSON.stringify(parking) : s(parking);
-              md += `- 停車場：${pInfo}\n`;
-            }
-            if (hotel.note) md += `- 備註：${s(hotel.note)}\n`;
-
-            // Hotel shopping
-            const hotelShopping = hotel.shopping;
-            if (Array.isArray(hotelShopping) && hotelShopping.length > 0) {
-              md += '\n#### 🛍 住宿附近購物\n';
-              md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
-              md += '|------|------|------|---------|------|\n';
-              for (const sh of hotelShopping) {
-                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.google_rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
-              }
-            }
-            md += '\n';
-          }
-
-          // Timeline entries
-          const timeline = day.timeline ?? [];
-          for (let i = 0; i < timeline.length; i++) {
-            const e = timeline[i];
-            if (!e) continue;
-            md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
-            if (e.google_rating) md += ` ★ ${e.google_rating}`;
-            md += '\n';
-
-            if (e.description) md += `${s(e.description)}\n`;
-            if (e.note) md += `\n${s(e.note)}\n`;
-            if (e.maps) md += `\n📍 Map: ${s(e.maps)}\n`;
-
-            // Travel
-            const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
-            if (travel?.type || e.travel_type) {
-              const tType = s(travel?.type ?? e.travel_type);
-              const tDesc = s(travel?.desc ?? e.travel_desc);
-              const tMin = travel?.min ?? e.travel_min;
-              md += `🚗 → ${tType}`;
-              if (tDesc) md += ` ${tDesc}`;
-              if (tMin) md += `（${tMin} 分）`;
-              md += '\n';
-            }
-
-            // Restaurants
-            const restaurants = e.restaurants ?? [];
-            if (restaurants.length > 0) {
-              md += '\n#### 🍽 餐廳推薦\n';
-              md += '| 餐廳 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
-              md += '|------|------|------|------|---------|------|\n';
-              for (const r of restaurants) {
-                md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.google_rating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
-              }
-            }
-
-            // Shopping
-            const shopping = e.shopping ?? [];
-            if (shopping.length > 0) {
-              md += '\n#### 🛍 購物推薦\n';
-              md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
-              md += '|------|------|------|---------|------|\n';
-              for (const sh of shopping) {
-                md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.google_rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
-              }
-            }
-
-            md += '\n';
-          }
-          md += '---\n\n';
-        }
-
-        // Docs
-        for (const dtype of DOC_KEYS) {
-          const docData = docsMap[dtype];
-          if (!docData) continue;
-          md += `## ${DOC_EMOJI[dtype]} ${DOC_LABEL_MAP[dtype]}\n\n`;
-          md += typeof docData === 'string' ? docData : JSON.stringify(docData, null, 2);
-          md += '\n\n';
-        }
-
-        downloadBlob(md, `${fileBase}.md`, 'text/markdown');
-
-      } else if (format === 'csv') {
-        /* ── CSV: spreadsheet-friendly with expanded rows ── */
-        const { daysData, docsMap } = await fetchAllData();
-        const s = (v: unknown) => (v != null && v !== '') ? String(v).replace(/\n/g, ' ') : '';
-
-        const headers = [
-          'Day', '日期', '星期', '時間', '地點', '評分', '說明', '備註',
-          '交通方式', '交通時間(分)', '餐廳名', '餐廳類別', '餐廳評分', '餐廳價格',
-          '購物店名', '購物類別', '購物必買', '住宿名', '退房時間',
-        ];
-        const rows: string[][] = [headers];
-
-        const csvCell = (v: unknown) => s(v);
-
-        for (const day of daysData) {
-          const dayNum = s(day.day_num);
-          const dayDate = s(day.date);
-          const dayWeek = s(day.day_of_week);
-
-          // Hotel row
-          const hotel = day.hotel;
-          if (hotel?.name) {
-            rows.push([
-              dayNum, dayDate, dayWeek, '住宿', csvCell(hotel.name), '', '', csvCell(hotel.note),
-              '', '', '', '', '', '',
-              '', '', '', csvCell(hotel.name), csvCell(hotel.checkout),
-            ]);
-          }
-
-          // Timeline entries
-          const timeline = day.timeline ?? [];
-          for (const e of timeline) {
-            const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
-            const travelType = csvCell(travel?.type ?? e.travel_type);
-            const travelMin = csvCell(travel?.min ?? e.travel_min);
-
-            const baseRow = [
-              dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title),
-              csvCell(e.google_rating), csvCell(e.description), csvCell(e.note),
-              travelType, travelMin,
-            ];
-
-            const restaurants = e.restaurants ?? [];
-            const shopping = e.shopping ?? [];
-            const maxNested = Math.max(restaurants.length, shopping.length, 1);
-
-            for (let n = 0; n < maxNested; n++) {
-              const r = restaurants[n];
-              const sh = shopping[n];
-              // For subsequent rows, repeat entry base columns
-              const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
-              // Restaurant columns
-              row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.google_rating) : '', r ? csvCell(r.price) : '');
-              // Shopping columns
-              row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.must_buy) : '');
-              // Hotel columns (empty for timeline entries)
-              row.push('', '');
-              rows.push(row);
-            }
-          }
-        }
-
-        // Append docs as separate rows
-        for (const dtype of DOC_KEYS) {
-          const docData = docsMap[dtype];
-          if (!docData) continue;
-          const docStr = typeof docData === 'string' ? docData : JSON.stringify(docData);
-          const row = new Array(headers.length).fill('');
-          row[0] = '附錄';
-          row[3] = DOC_LABEL_MAP[dtype] || dtype;
-          row[6] = s(docStr);
-          rows.push(row);
-        }
-
-        const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-        downloadBlob('\uFEFF' + csv, `${fileBase}.csv`, 'text/csv;charset=utf-8');
-
-      } else if (format === 'pdf') {
-        /* ── PDF: generate and download via html2pdf.js ── */
-        const html2pdf = (await import('html2pdf.js')).default;
-        document.body.classList.add('print-mode');
-        await new Promise(r => setTimeout(r, 300));
-        const el = document.getElementById('tripContent');
-        if (el) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (html2pdf as any)()
-            .set({
-              margin: [10, 10, 10, 10],
-              filename: `${fileBase}.pdf`,
-              image: { type: 'jpeg', quality: 0.95 },
-              html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-            })
-            .from(el)
-            .save();
-        }
-        document.body.classList.remove('print-mode');
-      }
-    } catch {
-      document.body.classList.remove('print-mode');
-      alert('下載失敗，請稍後再試');
-    }
+    await downloadTripFormat(format, { tripId: activeTripId, trip });
   }, [activeTripId, trip]);
 
   /* --- Update document title --- */
@@ -801,7 +302,7 @@ export default function TripPage() {
 
   /* --- Day summary map for O(1) lookup (#11) --- */
   const daySummaryMap = useMemo(() => {
-    const map = new Map<number, DaySummary>();
+    const map = new Map<number, (typeof days)[number]>();
     for (const d of days) map.set(d.day_num, d);
     return map;
   }, [days]);
@@ -956,8 +457,6 @@ export default function TripPage() {
     return () => window.removeEventListener('scroll', throttledScroll);
   }, [loading, dayNums, switchDay]);
 
-  /* --- Docs for InfoSheet (#4: proper types instead of unknown) --- */
-
   /* --- All loaded days as Day[] (#4: allDays values are already Day) --- */
   const loadedDays = useMemo(
     () => Object.values(allDays),
@@ -981,7 +480,7 @@ export default function TripPage() {
     return raw as FooterData;
   }, [trip]);
 
-  /* --- QuickPanel → InfoSheet --- */
+  /* --- QuickPanel -> InfoSheet --- */
   const handlePanelItem = useCallback((key: string) => { setActiveSheet(key); }, []);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
@@ -992,126 +491,6 @@ export default function TripPage() {
     setActiveSheet(null);
     setResolveKey((k) => k + 1);
   }, [navigate]);
-
-  /* --- Sheet content (#2: driving shows actual stats) --- */
-  const sheetContent = useMemo(() => {
-    if (!activeSheet) return null;
-    switch (activeSheet) {
-      /* Individual content */
-      case 'flights':
-      case 'checklist':
-      case 'backup':
-      case 'emergency':
-      case 'suggestions': {
-        const docData = docs[activeSheet] as { title?: string; entries?: DocEntry[] } | undefined;
-        return docData?.entries?.length
-          ? <DocCard entries={docData.entries} />
-          : <p className="text-callout text-muted text-center py-4">尚無資料</p>;
-      }
-      case 'today-route':
-        return currentDay && currentDay.timeline.length > 0
-          ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({}))} />
-          : <p>無行程資料</p>;
-      case 'driving':
-        return tripDrivingStats
-          ? <TripDrivingStatsCard tripStats={tripDrivingStats} />
-          : <p>無交通資料</p>;
-      /* Grouped content */
-      case 'prep':
-        return (
-          <>
-            {(['flights', 'checklist'] as const).map(k => {
-              const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
-              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
-            })}
-          </>
-        );
-      case 'emergency-group':
-        return (
-          <>
-            {(['emergency', 'backup'] as const).map(k => {
-              const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
-              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
-            })}
-          </>
-        );
-      case 'ai-group':
-        return (
-          <>
-            {(() => { const d = docs.suggestions as { title?: string; entries?: DocEntry[] } | undefined; return <div className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>; })()}
-            <div className="bg-secondary rounded-md p-4 mb-3">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
-          </>
-        );
-      /* Settings sheets */
-      case 'trip-select':
-        return (
-          <div className="max-w-[520px] mx-auto p-padding-h">
-            <div className="mb-3">
-              <div className="flex flex-col gap-2">
-                {sheetTripsLoading && (
-                  <div className={LOADING_CLASS}>載入中...</div>
-                )}
-                {!sheetTripsLoading && sheetTrips.map((t) => (
-                  <button
-                    key={t.tripId}
-                    className={clsx('trip-btn', t.tripId === activeTripId && 'active')}
-                    onClick={() => handleTripChange(t.tripId)}
-                  >
-                    <strong className="block text-title3">{t.name}</strong>
-                    {t.title && <span className="text-caption text-muted mt-1 block">{t.title}</span>}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      case 'appearance':
-        return (
-          <div className="max-w-[520px] mx-auto p-padding-h">
-            <div className="mb-3">
-              <div className="text-footnote font-semibold text-muted uppercase tracking-wider mb-3 pb-2 border-b border-border">色彩模式</div>
-              <div className="grid grid-cols-3 gap-3">
-                {COLOR_MODE_OPTIONS.map((m) => (
-                  <button
-                    key={m.key}
-                    className={clsx('color-mode-card', m.key === colorMode && 'active')}
-                    onClick={() => setColorMode(m.key)}
-                  >
-                    <div className={`color-mode-preview color-mode-${m.key}`}>
-                      <div className="cmp-top"></div>
-                      <div className="cmp-bottom">
-                        <div className="cmp-input"></div>
-                        <div className="cmp-dot"></div>
-                      </div>
-                    </div>
-                    <div className="text-caption text-muted mt-1">{m.label}</div>
-                  </button>
-                ))}
-              </div>
-              <div className="text-caption font-semibold text-muted mt-4 mb-2">色彩主題</div>
-              <div className="grid grid-cols-4 gap-2">
-                {COLOR_THEMES.map((t) => (
-                  <button
-                    key={t.key}
-                    className={clsx('color-theme-card', t.key === colorTheme && 'active')}
-                    data-theme={t.key}
-                    onClick={() => setTheme(t.key)}
-                  >
-                    <div
-                      className="color-theme-swatch"
-                      style={isDark ? SWATCH_STYLES[t.key]?.dark : SWATCH_STYLES[t.key]?.light}
-                    />
-                    <div className="text-caption text-muted mt-1">{t.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  }, [activeSheet, docs, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, handleTripChange, colorMode, setColorMode, colorTheme, setTheme, isDark]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
@@ -1149,7 +528,7 @@ export default function TripPage() {
           onSwitchDay={handleSwitchDay}
           todayDayNum={todayDayNum}
           isTripMapMode={isTripMapMode}
-          onToggleTripMap={ENABLE_DAY_MAP && days.length > 0 ? handleToggleTripMap : undefined}
+          onToggleTripMap={enableDayMap && days.length > 0 ? handleToggleTripMap : undefined}
         />
         <NavArt theme={colorTheme} dark={isDark} />
       </div>
@@ -1176,8 +555,8 @@ export default function TripPage() {
             )}
 
             {/* TripMap 全覽地圖（F006）：全覽模式時顯示於 DaySections 上方
-                ENABLE_DAY_MAP=false 時完全隱藏（feature flag）*/}
-            {ENABLE_DAY_MAP && !loading && isTripMapMode && (
+                enableDayMap=false 時完全隱藏（feature flag）*/}
+            {enableDayMap && !loading && isTripMapMode && (
               <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
                 <TripMap allDays={allDays} dayNums={dayNums} />
               </Suspense>
@@ -1198,6 +577,7 @@ export default function TripPage() {
                   isActive={dayNum === currentDayNum}
                   hideDayMap={isTripMapMode}
                   timezone={weatherTimezone}
+                  enableDayMap={enableDayMap}
                 />
               ))}
 
@@ -1256,7 +636,21 @@ export default function TripPage() {
         title={activeSheet ? (SHEET_TITLES[activeSheet] || '') : ''}
         onClose={handleSheetClose}
       >
-        {sheetContent}
+        <TripSheetContent
+          activeSheet={activeSheet}
+          docs={docs}
+          tripDrivingStats={tripDrivingStats}
+          currentDay={currentDay}
+          sheetTrips={sheetTrips}
+          sheetTripsLoading={sheetTripsLoading}
+          activeTripId={activeTripId}
+          onTripChange={handleTripChange}
+          colorMode={colorMode}
+          setColorMode={setColorMode}
+          colorTheme={colorTheme}
+          setTheme={setTheme}
+          isDark={isDark}
+        />
       </InfoSheet>
 
       {/* Print exit button */}
