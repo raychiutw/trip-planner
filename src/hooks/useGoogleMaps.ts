@@ -5,7 +5,7 @@
  * 使用 @googlemaps/js-api-loader v2 的 setOptions + importLibrary API。
  */
 
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 
 /* ===== 載入狀態 ===== */
@@ -67,23 +67,24 @@ export function loadGoogleMapsSDK(): void {
 
 /* ===== Hook ===== */
 
-export function useGoogleMaps(): UseGoogleMapsReturn {
-  const [, forceUpdate] = useState(0);
+/** subscribe callback for useSyncExternalStore */
+function subscribe(callback: () => void): () => void {
+  subscribers.add(callback);
+  return () => {
+    subscribers.delete(callback);
+  };
+}
 
-  useEffect(() => {
-    /* 訂閱狀態改變 */
-    const cb = () => forceUpdate((n) => n + 1);
-    subscribers.add(cb);
-
-    /* 若尚未開始載入，觸發載入 */
-    if (cachedStatus === 'idle') {
-      loadGoogleMapsSDK();
-    }
-
-    return () => {
-      subscribers.delete(cb);
-    };
-  }, []);
-
+/** snapshot of the current status+error pair */
+function getSnapshot(): UseGoogleMapsReturn {
   return { status: cachedStatus, error: cachedError };
+}
+
+export function useGoogleMaps(): UseGoogleMapsReturn {
+  /* 若尚未開始載入，提前觸發載入（idempotent）*/
+  if (cachedStatus === 'idle') {
+    loadGoogleMapsSDK();
+  }
+
+  return useSyncExternalStore(subscribe, getSnapshot);
 }

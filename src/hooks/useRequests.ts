@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { apiFetchRaw } from './useApi';
+import { apiFetchRaw } from '../lib/apiClient';
 
 export interface RawRequest {
   id: number;
@@ -109,7 +109,7 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      ([entry]) => { if (entry?.isIntersecting) loadMore(); },
       { rootMargin: '200px' },
     );
     observer.observe(el);

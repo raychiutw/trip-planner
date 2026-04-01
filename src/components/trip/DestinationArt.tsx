@@ -310,7 +310,7 @@ export const DestinationArt = memo(function DestinationArt({ tripId, dark }: Des
         preserveAspectRatio="xMidYMid slice"
         style={{ width: '100%', height: '100%' }}
       >
-        {DESTINATION_CONTENT[dest][mode]}
+        {DESTINATION_CONTENT[dest]?.[mode]}
       </svg>
     </div>
   );

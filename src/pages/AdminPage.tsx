@@ -7,7 +7,7 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { usePermissions } from '../hooks/usePermissions';
 import { useTripSelector } from '../hooks/useTripSelector';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
-import { apiFetchRaw } from '../hooks/useApi';
+import { apiFetchRaw } from '../lib/apiClient';
 import PageNav from '../components/shared/PageNav';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 

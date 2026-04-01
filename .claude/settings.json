@@ -1,4 +1,6 @@
 {
   "hooks": {},
-  "enabledPlugins": {}
+  "enabledPlugins": {
+    "oh-my-claudecode@omc": true
+  }
 }
