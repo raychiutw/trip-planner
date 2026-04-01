@@ -1,17 +1,4 @@
 /**
- * Escapes a value for safe insertion into HTML text content or attribute values.
- * Returns an empty string for falsy input.
- */
-export function escHtml(s: unknown): string {
-  if (!s) return '';
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/**
  * Validates a URL and returns it only if it starts with `https?:` or `tel:`.
  * Returns an empty string for unsafe or missing values.
  */
@@ -67,14 +54,6 @@ export function sanitizeHtml(html: string): string {
     }
   });
   return (doc.body as HTMLElement).innerHTML;
-}
-
-/**
- * Removes inline event-handler attributes from an HTML string using a regex.
- * Lighter-weight alternative to `sanitizeHtml` when DOM parsing is unavailable.
- */
-export function stripInlineHandlers(html: string): string {
-  return html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '');
 }
 
 /**

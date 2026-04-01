@@ -145,6 +145,7 @@ interface OpenMeteoResponse {
 
 /** In-memory cache for weather API responses keyed by "lat,lon". */
 const weatherCache: Record<string, OpenMeteoResponse> = {};
+const MAX_WEATHER_CACHE = 20;
 
 /**
  * Fetches hourly weather from Open-Meteo for a given day.
@@ -206,6 +207,9 @@ export async function fetchWeatherForDay(
       );
       if (!resp.ok) return null;
       const data = (await resp.json()) as OpenMeteoResponse;
+      if (Object.keys(weatherCache).length >= MAX_WEATHER_CACHE) {
+        delete weatherCache[Object.keys(weatherCache)[0]];
+      }
       weatherCache[k] = data;
       results[k] = data;
     }),

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
 import { ARROW_EXPAND, ARROW_COLLAPSE } from '../../lib/constants';
@@ -39,7 +39,7 @@ function daysUntil(dateStr: string): number {
 
 /* ===== Component ===== */
 
-export default function HourlyWeather({
+const HourlyWeather = memo(function HourlyWeather({
   dayId,
   dayDate,
   weatherDay,
@@ -272,4 +272,6 @@ export default function HourlyWeather({
       </div>
     </div>
   );
-}
+});
+
+export default HourlyWeather;

@@ -10,9 +10,6 @@ export const DRIVING_WARN_MINUTES = 120;
 /** Human-readable label shown when the driving warning threshold is exceeded. */
 export const DRIVING_WARN_LABEL = '超過 2 小時';
 
-/** Milliseconds in one day (24 * 60 * 60 * 1000). */
-export const MS_PER_DAY = 86400000;
-
 /** Canonical display order for transport types in the driving-stats panel. */
 export const TRANSPORT_TYPE_ORDER: readonly string[] = ['car', 'train', 'walking'];
 
