@@ -62,10 +62,14 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   let missingCount = 0;
   let entryIndex = 0;
 
-  /* --- 取 location 座標（location 可能是物件或陣列，取第一個有效座標）--- */
+  /* --- 取 location 座標（location 可能是 JSON 字串、物件或陣列，取第一個有效座標）--- */
   const resolveLocation = (loc: unknown): { lat: number; lng: number } | null => {
     if (!loc) return null;
-    const target = Array.isArray(loc) ? loc[0] : loc;
+    let parsed = loc;
+    if (typeof loc === 'string') {
+      try { parsed = JSON.parse(loc); } catch { return null; }
+    }
+    const target = Array.isArray(parsed) ? parsed[0] : parsed;
     return isValidCoords(target as { lat?: unknown; lng?: unknown }) ? (target as { lat: number; lng: number }) : null;
   };
 

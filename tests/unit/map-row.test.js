@@ -183,8 +183,9 @@ describe('exported constants', () => {
     expect(Array.isArray(JSON_FIELDS)).toBe(true);
   });
 
-  it('JSON_FIELDS contains only footer (V2: all others eliminated)', () => {
+  it('JSON_FIELDS contains footer and location', () => {
     expect(JSON_FIELDS).toContain('footer');
-    expect(JSON_FIELDS).toHaveLength(1);
+    expect(JSON_FIELDS).toContain('location');
+    expect(JSON_FIELDS).toHaveLength(2);
   });
 });
