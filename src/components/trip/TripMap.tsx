@@ -40,7 +40,7 @@ export const DAY_COLORS: readonly string[] = [
 /** 取得 Day N 的色盤顏色（1-based dayIndex，超過 8 天循環）*/
 export function getDayColor(dayIndex: number): string {
   const idx = ((dayIndex - 1) % DAY_COLORS.length + DAY_COLORS.length) % DAY_COLORS.length;
-  return DAY_COLORS[idx];
+  return DAY_COLORS[idx]!;
 }
 
 /* ===== Types ===== */
@@ -122,7 +122,7 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
 
     const map = new google.maps.Map(mapRef.current, {
       zoom: 10,
-      center: { lat: allDayPins[0].pins[0].lat, lng: allDayPins[0].pins[0].lng },
+      center: { lat: allDayPins[0]!.pins[0]!.lat, lng: allDayPins[0]!.pins[0]!.lng },
       disableDefaultUI: true,
       zoomControl: true,
       zoomControlOptions: {
@@ -140,7 +140,7 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
     const bounds = new google.maps.LatLngBounds();
 
     for (let i = 0; i < allDayPins.length; i++) {
-      const { dayNum, pins } = allDayPins[i];
+      const { dayNum, pins } = allDayPins[i]!;
       const color = getDayColor(dayNums.indexOf(dayNum) + 1);
 
       // Markers
@@ -202,7 +202,7 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
     }
 
     for (const [key, marker] of markersRef.current) {
-      const markerDayNum = parseInt(key.split('-')[0], 10);
+      const markerDayNum = parseInt(key.split('-')[0] ?? '0', 10);
       const icon = marker.getIcon() as google.maps.Symbol;
       if (icon) {
         if (highlightDay === null || markerDayNum === highlightDay) {

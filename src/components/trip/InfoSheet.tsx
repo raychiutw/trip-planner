@@ -156,7 +156,7 @@ export default function InfoSheet({
       // Half detent: drag from anywhere
       // Full detent: drag from handle, or from body when scrolled to top
       if (d === 'half' || isOnHandle || (d === 'full' && isAtTop)) {
-        startY = e.touches[0].clientY;
+        startY = e.touches[0]!.clientY;
         isDragging.current = true;
         currentTranslateY = 0;
         panel.style.transition = 'none'; // Remove animation during drag
@@ -165,7 +165,7 @@ export default function InfoSheet({
 
     const onTouchMove = (e: TouchEvent) => {
       if (!isDragging.current) return;
-      const deltaY = e.touches[0].clientY - startY;
+      const deltaY = e.touches[0]!.clientY - startY;
       const d = detentRef.current;
 
       // Full detent: only allow downward drag (positive delta)
@@ -273,14 +273,14 @@ export default function InfoSheet({
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (e.shiftKey) {
-      if (document.activeElement === first) {
+      if (first && document.activeElement === first) {
         e.preventDefault();
-        last.focus();
+        last?.focus();
       }
     } else {
-      if (document.activeElement === last) {
+      if (last && document.activeElement === last) {
         e.preventDefault();
-        first.focus();
+        first?.focus();
       }
     }
   }, []);

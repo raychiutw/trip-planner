@@ -177,20 +177,21 @@ export default function HourlyWeather({
   let bestIcon = 'weather-clear';
 
   for (let h = 0; h < 24; h++) {
-    const t = Math.round(data.temps[h]);
-    const r = data.rains[h];
-    const ic = WMO[data.codes[h]] || 'question';
+    const t = Math.round(data.temps[h]!);
+    const r = data.rains[h]!;
+    const ic = WMO[data.codes[h]!] || 'question';
     if (t < minT) minT = t;
     if (t > maxT) maxT = t;
     if (r < minR) minR = r;
     if (r > maxR) maxR = r;
-    iconCount[ic] = (iconCount[ic] || 0) + 1;
+    iconCount[ic] = (iconCount[ic] ?? 0) + 1;
   }
 
   let maxCnt = 0;
   for (const k in iconCount) {
-    if (iconCount[k] > maxCnt) {
-      maxCnt = iconCount[k];
+    const cnt = iconCount[k] ?? 0;
+    if (cnt > maxCnt) {
+      maxCnt = cnt;
       bestIcon = k;
     }
   }
@@ -235,9 +236,9 @@ export default function HourlyWeather({
         </div>
         <div className="flex gap-2 overflow-x-auto pt-1 pb-1 scroll-smooth" ref={gridRef}>
           {Array.from({ length: 24 }, (_, h) => {
-            const wIcon = WMO[data.codes[h]] || 'question';
-            const temp = Math.round(data.temps[h]);
-            const rain = data.rains[h];
+            const wIcon = WMO[data.codes[h]!] || 'question';
+            const temp = Math.round(data.temps[h]!);
+            const rain = data.rains[h]!;
             const isNow = h === currentHour;
 
             return (

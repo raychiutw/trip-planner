@@ -112,7 +112,7 @@ export async function flushPendingReports() {
     );
 
     // 只保留失敗的
-    const remaining = pending.filter((_, i) => results[i].status === 'rejected');
+    const remaining = pending.filter((_, i) => results[i]?.status === 'rejected');
     if (remaining.length === 0) {
       localStorage.removeItem(PENDING_KEY);
     } else {

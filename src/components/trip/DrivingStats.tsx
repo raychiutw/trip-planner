@@ -159,7 +159,7 @@ export function TripDrivingStatsCard({ tripStats }: TripDrivingStatsProps) {
               {activeTypes.map((type) => {
                 const g = tripStats.grandByType[type];
                 return (
-                  <th key={type} className="text-center p-2 font-semibold text-muted whitespace-nowrap"><Icon name={g.icon} /> {g.label}</th>
+                  <th key={type} className="text-center p-2 font-semibold text-muted whitespace-nowrap"><Icon name={g?.icon ?? ''} /> {g?.label}</th>
                 );
               })}
             </tr>

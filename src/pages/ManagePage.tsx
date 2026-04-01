@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import '../../css/tokens.css';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-import { apiFetch, apiFetchRaw } from '../hooks/useApi';
+import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
@@ -283,7 +283,7 @@ export default function ManagePage() {
       }));
 
       const savedTrip = lsGet<string>(LS_KEY_TRIP_PREF);
-      let initialTrip = filtered[0].tripId;
+      let initialTrip = filtered[0]?.tripId ?? '';
       if (savedTrip && filtered.some((t) => t.tripId === savedTrip)) {
         initialTrip = savedTrip;
       }
@@ -314,7 +314,7 @@ export default function ManagePage() {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) loadMore(); },
+      ([entry]) => { if (entry?.isIntersecting) loadMore(); },
       { rootMargin: '200px' },
     );
     observer.observe(el);

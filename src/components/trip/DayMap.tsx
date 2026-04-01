@@ -117,7 +117,7 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
     if (status !== 'ready' || !mapRef.current || !hasData) return;
     if (mapInstanceRef.current) return; // 已初始化
 
-    const center = { lat: pins[0].lat, lng: pins[0].lng };
+    const center = { lat: pins[0]!.lat, lng: pins[0]!.lng };
     const mapEl = mapRef.current;
 
     const map = new google.maps.Map(mapEl, {
