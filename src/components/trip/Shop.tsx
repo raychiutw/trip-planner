@@ -1,6 +1,7 @@
 /* ===== Shop Component ===== */
 /* Renders a single shopping recommendation card (used inside InfoBox) */
 
+import { memo } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
@@ -21,7 +22,7 @@ interface ShopProps {
   shop: ShopData;
 }
 
-export default function Shop({ shop }: ShopProps) {
+const Shop = memo(function Shop({ shop }: ShopProps) {
   return (
     <div className="p-3 px-4 leading-normal bg-accent-subtle rounded-sm my-2 last:mb-0">
       {shop.category && <strong>{shop.category}：</strong>}
@@ -49,4 +50,6 @@ export default function Shop({ shop }: ShopProps) {
       )}
     </div>
   );
-}
+});
+
+export default Shop;

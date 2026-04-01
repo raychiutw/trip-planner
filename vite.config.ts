@@ -75,6 +75,12 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: resolve(__dirname, 'index.html'),
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          sentry: ['@sentry/react'],
+        },
+      },
     },
   },
   resolve: {

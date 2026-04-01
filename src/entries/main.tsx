@@ -14,7 +14,7 @@ if ('serviceWorker' in navigator) {
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, StrictMode } from 'react';
 
 import '../../css/tokens.css';
 
@@ -40,19 +40,21 @@ if (el) {
   (el as unknown as { _reactRoot: typeof root })._reactRoot = root;
 
   root.render(
-    <ErrorBoundary>
-      <BrowserRouter>
-        <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
-          <Routes>
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/" element={<AdminPage />} />
-            <Route path="/manage" element={<ManagePage />} />
-            <Route path="/manage/" element={<ManagePage />} />
-            <Route path="/trip/:tripId" element={<TripPage />} />
-            <Route path="*" element={<LegacyRedirect />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </ErrorBoundary>
+    <StrictMode>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
+            <Routes>
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin/" element={<AdminPage />} />
+              <Route path="/manage" element={<ManagePage />} />
+              <Route path="/manage/" element={<ManagePage />} />
+              <Route path="/trip/:tripId" element={<TripPage />} />
+              <Route path="*" element={<LegacyRedirect />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </ErrorBoundary>
+    </StrictMode>
   );
 }

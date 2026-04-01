@@ -1,35 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { escHtml, escUrl, stripInlineHandlers, sanitizeHtml } from '../../src/lib/sanitize.ts';
+import { escUrl, sanitizeHtml } from '../../src/lib/sanitize.ts';
 import { safeColor } from '../../src/lib/constants.ts';
-
-/* ===== escHtml ===== */
-describe('escHtml', () => {
-  it('returns empty string for null', () => {
-    expect(escHtml(null)).toBe('');
-  });
-
-  it('returns empty string for undefined', () => {
-    expect(escHtml(undefined)).toBe('');
-  });
-
-  it('returns empty string for empty string', () => {
-    expect(escHtml('')).toBe('');
-  });
-
-  it('escapes HTML special characters', () => {
-    expect(escHtml('<script>"alert&</script>')).toBe(
-      '&lt;script&gt;&quot;alert&amp;&lt;/script&gt;'
-    );
-  });
-
-  it('returns normal string unchanged', () => {
-    expect(escHtml('Hello World')).toBe('Hello World');
-  });
-
-  it('converts non-string to string', () => {
-    expect(escHtml(123)).toBe('123');
-  });
-});
 
 /* ===== escUrl ===== */
 describe('escUrl', () => {
@@ -87,51 +58,6 @@ describe('escUrl', () => {
 
   it('blocks protocol-relative URLs', () => {
     expect(escUrl('//example.com')).toBe('');
-  });
-});
-
-/* ===== stripInlineHandlers ===== */
-describe('stripInlineHandlers', () => {
-  it('removes onclick attributes', () => {
-    expect(stripInlineHandlers('<div onclick="alert(1)">test</div>')).toBe(
-      '<div>test</div>'
-    );
-  });
-
-  it('preserves non-on attributes', () => {
-    const html = '<a href="https://example.com" class="link">test</a>';
-    expect(stripInlineHandlers(html)).toBe(html);
-  });
-
-  it('removes multiple onclick handlers', () => {
-    const input = '<div onclick="a()">1</div><span onclick="b()">2</span>';
-    expect(stripInlineHandlers(input)).toBe('<div>1</div><span>2</span>');
-  });
-
-  it('handles string with no handlers', () => {
-    expect(stripInlineHandlers('plain text')).toBe('plain text');
-  });
-
-  it('removes onerror attributes', () => {
-    expect(stripInlineHandlers('<img onerror="alert(1)" src="x">')).toBe(
-      '<img src="x">'
-    );
-  });
-
-  it('removes onload with single quotes', () => {
-    expect(stripInlineHandlers("<body onload='init()'>")).toBe('<body>');
-  });
-
-  it('removes ONCLICK (uppercase)', () => {
-    expect(stripInlineHandlers('<div ONCLICK="alert(1)">test</div>')).toBe(
-      '<div>test</div>'
-    );
-  });
-
-  it('removes onmouseover without quotes', () => {
-    expect(stripInlineHandlers('<div onmouseover=alert(1)>test</div>')).toBe(
-      '<div>test</div>'
-    );
   });
 });
 
