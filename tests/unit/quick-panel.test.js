@@ -243,8 +243,9 @@ describe('QuickPanel sheet actions', () => {
 /* ===== Body scroll lock ===== */
 
 describe('QuickPanel scroll lock', () => {
-  it('implements body scroll lock via useBodyScrollLock hook', () => {
-    expect(tsx).toContain('useBodyScrollLock');
+  it('implements body scroll lock via useSheetBehavior hook (which calls useBodyScrollLock)', () => {
+    // scroll lock is delegated to useSheetBehavior
+    expect(tsx).toContain('useSheetBehavior');
     expect(tsx).toContain('isOpen');
   });
 });
@@ -252,20 +253,24 @@ describe('QuickPanel scroll lock', () => {
 /* ===== Escape key ===== */
 
 describe('QuickPanel keyboard', () => {
-  it('handles Escape key to close', () => {
-    expect(tsx).toContain("e.key === 'Escape'");
-    expect(tsx).toContain('triggerRef.current?.focus()');
+  it('handles Escape key to close via useSheetBehavior', () => {
+    // Escape handling is delegated to useSheetBehavior; triggerRef is passed so it gets focus on Escape
+    const sheetBehaviorTs = readFileSync('src/hooks/useSheetBehavior.ts', 'utf-8');
+    expect(sheetBehaviorTs).toContain("e.key === 'Escape'");
+    expect(tsx).toContain('triggerRef');
   });
 });
 
 /* ===== #2: 無障礙 — focus trap + X close button ===== */
 
 describe('QuickPanel 無障礙', () => {
-  it('has focus trap using FOCUSABLE selector (same as InfoSheet)', () => {
-    expect(tsx).toContain('FOCUSABLE');
-    expect(tsx).toContain("e.key !== 'Tab'");
-    expect(tsx).toContain('first.focus()');
-    expect(tsx).toContain('last.focus()');
+  it('has focus trap using FOCUSABLE selector (same as InfoSheet) via useSheetBehavior', () => {
+    // focus trap is delegated to useSheetBehavior
+    const sheetBehaviorTs = readFileSync('src/hooks/useSheetBehavior.ts', 'utf-8');
+    expect(sheetBehaviorTs).toContain('FOCUSABLE');
+    expect(sheetBehaviorTs).toContain("e.key !== 'Tab'");
+    expect(sheetBehaviorTs).toContain('first.focus()');
+    expect(sheetBehaviorTs).toContain('last.focus()');
   });
 
   it('has X close button with aria-label', () => {
@@ -275,8 +280,10 @@ describe('QuickPanel 無障礙', () => {
     expect(tsx).toContain('rounded-full');
   });
 
-  it('focuses sheet on open (not close button, to avoid focus ring)', () => {
-    expect(tsx).toContain('sheetRef.current?.focus()');
+  it('focuses sheet on open (not close button, to avoid focus ring) via useSheetBehavior', () => {
+    // focus management is delegated to useSheetBehavior
+    const sheetBehaviorTs = readFileSync('src/hooks/useSheetBehavior.ts', 'utf-8');
+    expect(sheetBehaviorTs).toContain('panelRef.current?.focus()');
   });
 });
 

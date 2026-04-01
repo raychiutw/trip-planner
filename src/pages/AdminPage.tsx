@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import '../../css/tokens.css';
 import type { TripListItem } from '../types/trip';
-import type { Permission } from '../types/api';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
+import { usePermissions } from '../hooks/usePermissions';
+import { useTripSelector } from '../hooks/useTripSelector';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { apiFetchRaw } from '../hooks/useApi';
-import TriplineLogo from '../components/shared/TriplineLogo';
+import PageNav from '../components/shared/PageNav';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 
 /* Cloudflare Access 在 infrastructure 層處理認證，不需要 JS redirect */
@@ -21,64 +21,23 @@ const SELECT_STYLE = { backgroundImage:
 export default function AdminPage() {
   useDarkMode();
   const isOnline = useOnlineStatus();
-  const navigate = useNavigate();
-
 
   const [trips, setTrips] = useState<TripListItem[]>([]);
   const [tripsError, setTripsError] = useState('');
   const [currentTripId, setCurrentTripId] = useState('');
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [permLoading, setPermLoading] = useState(false);
-  const [permError, setPermError] = useState('');
   const [email, setEmail] = useState('');
   const [addingDisabled, setAddingDisabled] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
-  const currentTripIdRef = useRef(currentTripId);
-  currentTripIdRef.current = currentTripId;
 
   useOfflineToast(isOnline);
 
-  /* ===== Load Permissions ===== */
-  const abortRef = useRef<AbortController | null>(null);
-  const loadPermissions = useCallback(async (tripId: string) => {
-    // 取消前一次未完成的請求
-    abortRef.current?.abort();
+  /* ----- Shared trip selector hook ----- */
+  const { currentTripIdRef, handleClose } = useTripSelector(currentTripId);
 
-    if (!tripId) {
-      setPermissions([]);
-      setPermError('');
-      setPermLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setPermLoading(true);
-    setPermError('');
-    setPermissions([]);
-
-    try {
-      const r = await apiFetchRaw('/permissions?tripId=' + encodeURIComponent(tripId), {
-        signal: controller.signal,
-      });
-      if (r.status === 401) throw new Error('未登入，請重新整理頁面');
-      if (r.status === 403) throw new Error('僅管理者可操作');
-      if (!r.ok) throw new Error('載入失敗');
-      const perms: Permission[] = await r.json();
-      // 用 ref 取最新值，避免 stale closure
-      if (currentTripIdRef.current === tripId) {
-        setPermissions(perms || []);
-        setPermLoading(false);
-      }
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-      if (currentTripIdRef.current === tripId) {
-        setPermError((err as Error).message);
-        setPermLoading(false);
-      }
-    }
-  }, []);
+  /* ----- Permissions hook ----- */
+  const { permissions, permLoading, permError, loadPermissions } = usePermissions(
+    currentTripIdRef as React.RefObject<string>,
+  );
 
   /* ===== Load Trip List（mount only） ===== */
   useEffect(() => {
@@ -145,7 +104,7 @@ export default function AdminPage() {
           showToast('已新增 ' + trimmed, 'success');
         }
         setEmail('');
-        loadPermissions(currentTripIdRef.current);
+        if (currentTripIdRef.current) loadPermissions(currentTripIdRef.current);
         return;
       }
       if (r.status === 409) throw new Error('此 email 已有權限');
@@ -177,7 +136,7 @@ export default function AdminPage() {
         throw new Error(errMsg);
       }
       showToast('已移除 ' + permEmail, 'success');
-      loadPermissions(currentTripIdRef.current);
+      if (currentTripIdRef.current) loadPermissions(currentTripIdRef.current);
     } catch (err) {
       showToast((err as Error).message, 'error');
     } finally {
@@ -188,12 +147,6 @@ export default function AdminPage() {
   /* ===== Email input key handler ===== */
   function handleEmailKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') handleAdd();
-  }
-
-  /* ===== Close button ===== */
-  function handleClose() {
-    const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
-    navigate(tripId ? `/trip/${tripId}` : '/');
   }
 
   /* ===== Render Permission Content ===== */
@@ -286,29 +239,17 @@ export default function AdminPage() {
     );
   }
 
+  /* ===== Nav center: title ===== */
+  const navCenter = (
+    <span className="text-title3 font-bold text-foreground flex-1 min-w-0 text-center">
+      權限管理
+    </span>
+  );
+
   return (
     <div className="flex min-h-dvh">
       <div className="flex-1 min-w-0 max-w-full mx-auto">
-        {/* Sticky Nav */}
-        <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-xl backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
-          id="stickyNav"
-        >
-          <TriplineLogo isOnline={isOnline} />
-          <span className="text-title3 font-bold text-foreground flex-1 min-w-0 text-center">
-            權限管理
-          </span>
-          <button
-            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none ml-auto"
-            id="navCloseBtn"
-            aria-label="關閉"
-            onClick={handleClose}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-            </svg>
-          </button>
-        </div>
+        <PageNav isOnline={isOnline} onClose={handleClose} center={navCenter} />
 
         <ToastContainer />
 
