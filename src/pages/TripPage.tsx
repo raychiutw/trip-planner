@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import clsx from 'clsx';
-import { apiFetch } from '../hooks/useApi';
+import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { useTrip, DOC_KEYS } from '../hooks/useTrip';
@@ -270,7 +270,7 @@ const TRIP_TIMEZONE: Record<string, string> = {
 function getLocalToday(tripId: string | null): string {
   let tz: string | undefined;
   if (tripId) {
-    const prefix = tripId.split('-')[0];
+    const prefix = tripId.split('-')[0] ?? '';
     tz = TRIP_TIMEZONE[prefix];
   }
   if (tz) {
@@ -380,7 +380,7 @@ export default function TripPage() {
   useEffect(() => {
     if (!largeTitleRef.current) return;
     const obs = new IntersectionObserver(
-      ([e]) => setShowNavTitle(!e.isIntersecting),
+      ([e]) => setShowNavTitle(!e?.isIntersecting),
       { threshold: [0] },
     );
     obs.observe(largeTitleRef.current);
@@ -615,6 +615,7 @@ export default function TripPage() {
           const timeline = day.timeline ?? [];
           for (let i = 0; i < timeline.length; i++) {
             const e = timeline[i];
+            if (!e) continue;
             md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
             if (e.google_rating) md += ` ★ ${e.google_rating}`;
             md += '\n';
@@ -818,7 +819,7 @@ export default function TripPage() {
   /* --- Weather timezone derived from trip destination --- */
   const weatherTimezone = useMemo(() => {
     if (!activeTripId) return undefined;
-    const prefix = activeTripId.split('-')[0];
+    const prefix = activeTripId.split('-')[0] ?? '';
     return TRIP_TIMEZONE[prefix];
   }, [activeTripId]);
 
@@ -871,7 +872,7 @@ export default function TripPage() {
     const hash = window.location.hash;
     const hashMatch = hash?.match(/^#day(\d+)$/);
     if (hashMatch) {
-      const hashDay = parseInt(hashMatch[1], 10);
+      const hashDay = parseInt(hashMatch[1] ?? '0', 10);
       if (dayNums.includes(hashDay)) {
         requestAnimationFrame(() => {
           switchDay(hashDay);
@@ -883,10 +884,11 @@ export default function TripPage() {
 
     // Auto-locate to today (timezone-aware)
     const idx = autoScrollDates.indexOf(localToday);
-    if (idx >= 0 && dayNums[idx]) {
+    const todayDayNum = idx >= 0 ? dayNums[idx] : undefined;
+    if (todayDayNum !== undefined) {
       requestAnimationFrame(() => {
-        switchDay(dayNums[idx]);
-        scrollToDay(dayNums[idx]);
+        switchDay(todayDayNum);
+        scrollToDay(todayDayNum);
         // Scroll to [data-now] if it exists (delayed for DOM update)
         setTimeout(() => {
           const nowEl = document.querySelector('[data-now]');
@@ -922,13 +924,13 @@ export default function TripPage() {
       const navH = nav ? nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) : 0;
       let current = -1;
       for (let i = 0; i < dayNums.length; i++) {
-        const h = document.getElementById('day' + dayNums[i]);
+        const h = document.getElementById('day' + (dayNums[i] ?? ''));
         if (h && h.getBoundingClientRect().top <= navH + 10) current = i;
       }
       if (current >= 0) {
-        const activeDayNum = dayNums[current];
+        const activeDayNum = dayNums[current] ?? -1;
         // #1: Only call switchDay when day actually changes (avoid redundant re-renders)
-        if (activeDayNum !== scrollDayRef.current) {
+        if (activeDayNum >= 0 && activeDayNum !== scrollDayRef.current) {
           scrollDayRef.current = activeDayNum;
           switchDay(activeDayNum);
         }

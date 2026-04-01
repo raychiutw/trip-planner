@@ -71,7 +71,7 @@ export function calcDrivingStats(timeline: Entry[] | undefined | null): DayDrivi
 
     // Derive from/to from entry titles
     const from = entry.title || undefined;
-    const nextEntry = timeline[i + 1];
+    const nextEntry = i + 1 < timeline.length ? timeline[i + 1] : undefined;
     const to = nextEntry?.title || undefined;
 
     if (!byType[type]) {
@@ -126,8 +126,8 @@ export function calcTripDrivingStats(days: DayLike[]): TripDrivingStats | null {
     const dm = d.match(/^\d{4}-(\d{2})-(\d{2})$/);
     let dateStr = d;
     if (dm) {
-      const month = parseInt(dm[1], 10);
-      const date = parseInt(dm[2], 10);
+      const month = parseInt(dm[1] ?? '0', 10);
+      const date = parseInt(dm[2] ?? '0', 10);
       const dow = day.dayOfWeek ? `（${day.dayOfWeek}）` : '';
       dateStr = `${month}/${date}${dow}`;
     }

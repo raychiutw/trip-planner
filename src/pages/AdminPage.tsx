@@ -7,7 +7,7 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
-import { apiFetchRaw } from '../hooks/useApi';
+import { apiFetchRaw } from '../lib/apiClient';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 

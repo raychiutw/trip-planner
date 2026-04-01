@@ -93,7 +93,7 @@ export function buildTravelSegments(pins: MapPin[]): TravelSegment[] {
     const curr = sorted[i];
 
     // 只有 travelMin > 0 才顯示 label
-    if (!curr.travelMin || curr.travelMin <= 0) continue;
+    if (!prev || !curr || !curr.travelMin || curr.travelMin <= 0) continue;
 
     const midLat = (prev.lat + curr.lat) / 2;
     const midLng = (prev.lng + curr.lng) / 2;
@@ -239,7 +239,7 @@ export function MapRoute({ map, pins, routePath, legMidpoints, routeLoading }: M
     const sorted = sortPinsByOrder(pins);
     for (let i = 1; i < sorted.length; i++) {
       const curr = sorted[i];
-      if (!curr.travelMin || curr.travelMin <= 0) continue;
+      if (!curr || !curr.travelMin || curr.travelMin <= 0) continue;
 
       const emoji = getTravelEmoji(curr.travelType);
       const label = `${emoji} ${curr.travelMin}min`;

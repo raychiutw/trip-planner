@@ -14,7 +14,6 @@
 export interface Location {
   lat?: number;
   lng?: number;
-  [key: string]: unknown;
 }
 
 /** Travel leg assembled from entries.travel_type / travel_desc / travel_min */
@@ -27,16 +26,24 @@ export interface Travel {
 /** Parking object stored in hotels.parking (JSON parsed by mapRow) */
 export interface Parking {
   info?: string;
-  [key: string]: unknown;
+  name?: string;
+  price?: string;
+  note?: string;
+  maps?: string;
+  mapcode?: string;
 }
 
 /**
  * Footer object stored in trips.footer (JSON parsed by mapRow).
- * Shape is free-form JSON, but common keys are listed here.
+ * Fields used by the Footer component.
  */
 export interface Footer {
+  title?: string;
+  dates?: string;
+  budget?: string;
+  exchangeNote?: string;
+  tagline?: string;
   note?: string;
-  [key: string]: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,8 +57,7 @@ export interface Footer {
  */
 export interface Shopping {
   id: number;
-  /** 'hotel' | 'entry' */
-  parentType: string;
+  parentType: 'hotel' | 'entry';
   parentId: number;
   sortOrder: number;
   name: string;
@@ -133,8 +139,8 @@ export interface Hotel {
   checkout?: string | null;
   source?: string | null;
   description?: string | null;
-  /** May be a string or parsed JSON object */
-  breakfast?: string | object | null;
+  /** Parsed breakfast info — included flag + optional note */
+  breakfast?: { included?: boolean; note?: string | null } | null;
   note?: string | null;
   parking?: Parking | null;
   location?: Location | null;
@@ -288,7 +294,7 @@ export interface Trip {
   published?: number | null;
   foodPrefs?: string | null;
   autoScroll?: string | null;
-  footer?: Footer | string | null;
+  footer?: Footer | null;
   createdAt?: string;
   updatedAt?: string;
 }

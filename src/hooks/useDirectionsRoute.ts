@@ -104,8 +104,8 @@ export function useDirectionsRoute(
         serviceRef.current = new google.maps.DirectionsService();
       }
 
-      const origin = { lat: sorted[0].lat, lng: sorted[0].lng };
-      const destination = { lat: sorted[sorted.length - 1].lat, lng: sorted[sorted.length - 1].lng };
+      const origin = { lat: sorted[0]!.lat, lng: sorted[0]!.lng };
+      const destination = { lat: sorted[sorted.length - 1]!.lat, lng: sorted[sorted.length - 1]!.lng };
       /* Google Directions API 限制 25 waypoints；超過則截斷 */
       const intermediates = sorted.slice(1, -1);
       const waypoints: google.maps.DirectionsWaypoint[] = intermediates.slice(0, 25).map(p => ({
@@ -143,7 +143,8 @@ export function useDirectionsRoute(
           const legEnd = path.length;
           const midIdx = Math.floor((legStart + legEnd) / 2);
           if (midIdx < path.length) {
-            midpoints.push(path[midIdx]);
+            const midPoint = path[midIdx];
+            if (midPoint) midpoints.push(midPoint);
           }
         }
 

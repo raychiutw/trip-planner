@@ -15,10 +15,10 @@ interface TimelineProps {
 
 function parseStartMinutes(time?: string | null): number {
   if (!time) return -1;
-  const start = time.split('-')[0].trim();
+  const start = (time.split('-')[0] ?? '').trim();
   const parts = start.split(':');
   if (parts.length !== 2) return -1;
-  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
 }
 
 /** Parse end time from "HH:MM-HH:MM" to minutes since midnight */
@@ -26,10 +26,10 @@ function parseEndMinutes(time?: string | null): number {
   if (!time) return -1;
   const segments = time.split('-');
   if (segments.length < 2) return -1;
-  const end = segments[1].trim();
+  const end = (segments[1] ?? '').trim();
   const parts = end.split(':');
   if (parts.length !== 2) return -1;
-  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
 }
 
 export default function Timeline({ events, dayDate, localToday }: TimelineProps) {
@@ -46,11 +46,13 @@ export default function Timeline({ events, dayDate, localToday }: TimelineProps)
     const nowMin = now.getHours() * 60 + now.getMinutes();
 
     for (let i = 0; i < events.length; i++) {
-      const start = parseStartMinutes(events[i].time);
-      const end = parseEndMinutes(events[i].time);
+      const ev = events[i];
+      const start = parseStartMinutes(ev?.time);
+      const end = parseEndMinutes(ev?.time);
       if (start >= 0 && end >= 0 && nowMin >= start && nowMin <= end) return i;
       if (start >= 0 && nowMin >= start) {
-        const nextStart = i + 1 < events.length ? parseStartMinutes(events[i + 1].time) : -1;
+        const nextEv = i + 1 < events.length ? events[i + 1] : undefined;
+        const nextStart = nextEv ? parseStartMinutes(nextEv.time) : -1;
         if (nextStart < 0 || nowMin < nextStart) return i;
       }
     }

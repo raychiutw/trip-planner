@@ -22,16 +22,16 @@ interface ParsedTime {
 function parseTimeRange(timeStr?: string | null): ParsedTime {
   if (!timeStr) return { start: '', end: '', duration: 0 };
   const parts = timeStr.split('-');
-  const start = parts[0].trim();
-  const end = parts.length > 1 ? parts[1].trim() : '';
+  const start = (parts[0] ?? '').trim();
+  const end = parts.length > 1 ? (parts[1] ?? '').trim() : '';
   let duration = 0;
   if (start && end) {
     const s = start.split(':');
     const e = end.split(':');
     if (s.length === 2 && e.length === 2) {
       duration =
-        (parseInt(e[0], 10) * 60 + parseInt(e[1], 10)) -
-        (parseInt(s[0], 10) * 60 + parseInt(s[1], 10));
+        (parseInt(e[0] ?? '0', 10) * 60 + parseInt(e[1] ?? '0', 10)) -
+        (parseInt(s[0] ?? '0', 10) * 60 + parseInt(s[1] ?? '0', 10));
       if (duration < 0) duration += 24 * 60;
     }
   }

@@ -1,9 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { apiFetch } from './useApi';
+import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { ApiError } from '../lib/errors';
 import { showErrorToast } from '../components/shared/Toast';
 import type { Trip, Day, DaySummary } from '../types/trip';
+import type { DocEntry } from '../components/trip/DocCard';
+
+/** Shape of a single doc returned from /api/trips/:id/docs/:key */
+export interface DocData {
+  doc_type?: string;
+  title?: string;
+  entries?: DocEntry[];
+}
 
 
 /* ===== API response normaliser ===== */
@@ -40,7 +48,7 @@ export interface UseTripReturn {
   currentDayNum: number;
   switchDay: (dayNum: number) => void;
   refetchCurrentDay: () => void;
-  docs: Partial<Record<DocKey, unknown>>;
+  docs: Partial<Record<DocKey, DocData>>;
   allDays: Record<number, Day>;
   loading: boolean;
   error: string | null;
@@ -53,7 +61,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
   const [days, setDays] = useState<DaySummary[]>([]);
   const [currentDay, setCurrentDay] = useState<Day | null>(null);
   const [currentDayNum, setCurrentDayNum] = useState<number>(0);
-  const [docs, setDocs] = useState<Partial<Record<DocKey, unknown>>>({});
+  const [docs, setDocs] = useState<Partial<Record<DocKey, DocData>>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [allDays, setAllDays] = useState<Record<number, Day>>({});
@@ -141,7 +149,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
         setDays(sorted);
 
         // Determine initial day (first day by default)
-        const firstDayNum = sorted.length > 0 ? sorted[0].day_num : 0;
+        const firstDayNum = sorted.length > 0 ? (sorted[0]?.day_num ?? 0) : 0;
         if (firstDayNum > 0) {
           setCurrentDayNum(firstDayNum);
         }
@@ -171,7 +179,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
         async function fetchAllDocs() {
           const results = await Promise.allSettled(
             DOC_KEYS.map((key) =>
-              apiFetch<{ doc_type: string; title: string; entries: unknown[] }>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
+              apiFetch<DocData>(`/trips/${tripId}/docs/${key}`, { signal: controller.signal })
                 .then((data) => ({ key, data }))
             ),
           );

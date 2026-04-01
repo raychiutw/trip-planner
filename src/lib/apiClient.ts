@@ -1,7 +1,7 @@
 /* ===== API Fetch Helpers ===== */
 
-import { reportFetchResult } from './useOnlineStatus';
-import { ApiError } from '../lib/errors';
+import { reportFetchResult } from '../hooks/useOnlineStatus';
+import { ApiError } from './errors';
 import * as Sentry from '@sentry/react';
 
 /** Raw fetch that returns the Response — for callers that need status-code inspection. */
