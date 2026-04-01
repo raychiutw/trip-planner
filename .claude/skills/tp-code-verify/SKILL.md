@@ -10,26 +10,24 @@ Commit 前程式碼品質驗證。驗證命名規範 + React Best Practices + Co
 
 ## 驗證規則來源
 
-規則範疇定義在 `openspec/config.yaml` 的 `commit_gate.checks`，以下為 Claude 平台的實作檔案：
+規則範疇定義在 `openspec/config.yaml` 的 `commit_gate.checks`，以下為各規則實作檔案：
 
-- 命名規範：`references/naming-rules.md`
-- 程式碼標準：`references/coding-standards.md`
-- CSS HIG 規則（H1-H12）：skill `tp-ux-verify`（`../references/css-hig-rules.md` + `references/tokens.md` + `references/page-structure.md`）
+- 命名規範：`../references/naming-rules.md`
+- 程式碼標準：`../references/coding-standards.md`
+- CSS HIG 規則（H1-H12）：skill `tp-ux-verify`（`../references/css-hig-rules.md` + `../tp-ux-verify/references/tokens.md` + `../tp-ux-verify/references/page-structure.md`）
 - React Best Practices（完整 62 條）：skill `react-best-practices`（`SKILL.md` 索引 + `rules/*.md` 各規則詳情）
-- Code Review 規則（完整 10 條）：`references/code-review-rules.md`
+- Code Review 規則（完整 10 條）：`../references/code-review-rules.md`
 
 ## 預設檢查範圍
 
-檢查範圍定義詳見 `references/coding-standards.md`。
+檢查範圍定義詳見 `../references/coding-standards.md`。
 
 ```
-js/          app.js  shared.js  icons.js  setting.js  manage.js  admin.js
-css/         shared.css  style.css  setting.css  manage.css  admin.css
-html/        index.html  setting.html  manage/index.html  admin/index.html
 src/         entries/*.tsx  pages/*.tsx  components/**/*.tsx  hooks/*.ts  lib/*.ts  types/*.ts
+css/         tokens.css（Tailwind CSS 4 @theme）
 functions/   api/**/*.ts（所有 Pages Functions）
-server/      index.js  lib/auth.js  routes/process.js
-tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
+tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js
+*.html       index.html  manage/index.html  admin/index.html（根目錄）
 ```
 
 **排除**：`node_modules/`、`.wrangler/`、`.playwright-mcp/`、`openspec/`、`.claude/`、`.gemini/`、`package*.json`、`wrangler.toml`、`migrations/*.sql`、`scripts/*.ps1`、`scripts/*.sh`、`tests/e2e/api-mocks.js`（mock 資料）
@@ -47,10 +45,10 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 9. 若有失敗 → 🔴 紅燈：
    a. 列出所有失敗的測試名稱、錯誤訊息、違規規則
    b. 根據錯誤類型自動修正：
-      - 命名違規：根據 `references/naming-rules.md` 修正
+      - 命名違規：根據 `../references/naming-rules.md` 修正
       - CSS HIG 違規：根據 skill `tp-ux-verify` 的 `../references/css-hig-rules.md` 修正
       - React 違規：根據 skill `react-best-practices` 的 `rules/*.md` 修正
-      - Code Review 違規：根據 `references/code-review-rules.md` 修正
+      - Code Review 違規：根據 `../references/code-review-rules.md` 修正
       - 測試失敗：分析原因並修正程式碼
    c. 重新跑步驟 1-4
    d. 重複直到全過
@@ -61,22 +59,22 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 
 | # | 項目 | 參照 |
 |---|------|------|
-| 1 | JS 函式命名（camelCase） | `references/naming-rules.md` |
-| 2 | JS 常數命名（UPPER_SNAKE_CASE） | `references/naming-rules.md` |
-| 3 | JS 可變狀態（camelCase，不得 UPPER_CASE） | `references/naming-rules.md` |
-| 4 | CSS class（kebab-case） | `references/naming-rules.md` |
-| 5 | CSS custom property（--kebab-case） | `references/naming-rules.md` |
-| 6 | HTML 靜態 ID（camelCase） | `references/naming-rules.md` |
-| 7 | HTML data 屬性（kebab-case） | `references/naming-rules.md` |
-| 8 | API tripId（`SELECT id AS tripId`） | `references/naming-rules.md` |
-| 9 | 無防禦性 tripId（不得 `.id \|\| .tripId`） | `references/naming-rules.md` |
-| 10 | mapRow 統一轉換 | `references/naming-rules.md` |
+| 1 | JS 函式命名（camelCase） | `../references/naming-rules.md` |
+| 2 | JS 常數命名（UPPER_SNAKE_CASE） | `../references/naming-rules.md` |
+| 3 | JS 可變狀態（camelCase，不得 UPPER_CASE） | `../references/naming-rules.md` |
+| 4 | CSS class（kebab-case） | `../references/naming-rules.md` |
+| 5 | CSS custom property（--kebab-case） | `../references/naming-rules.md` |
+| 6 | HTML 靜態 ID（camelCase） | `../references/naming-rules.md` |
+| 7 | HTML data 屬性（kebab-case） | `../references/naming-rules.md` |
+| 8 | API tripId（`SELECT id AS tripId`） | `../references/naming-rules.md` |
+| 9 | 無防禦性 tripId（不得 `.id \|\| .tripId`） | `../references/naming-rules.md` |
+| 10 | mapRow 統一轉換 | `../references/naming-rules.md` |
 | 11 | CSS HIG 12 條（H1-H12） | skill `tp-ux-verify` → `../references/css-hig-rules.md` |
 | 12 | Unit tests 全過 | — |
-| 13 | 觸控目標 44px | `references/coding-standards.md` |
-| 14 | 圖示 inline SVG | `references/coding-standards.md` |
-| 15 | 無框線設計 | `references/coding-standards.md` |
-| 16 | border-radius 5 級 token | `references/coding-standards.md` |
+| 13 | 觸控目標 44px | `../references/coding-standards.md` |
+| 14 | 圖示 inline SVG | `../references/coding-standards.md` |
+| 15 | 無框線設計 | `../references/coding-standards.md` |
+| 16 | border-radius 5 級 token | `../references/coding-standards.md` |
 
 ### React Best Practices（#17-31，僅 src/ 變更時檢查）
 
@@ -105,13 +103,13 @@ tests/       unit/*.test.js  integration/*.test.js  e2e/*.spec.js  setup.js
 
 | # | 規則 | 檢查方式 | 參照 |
 |---|------|----------|------|
-| 32 | CR-1 Hook 不可直接操作同一 DOM | 掃描多個 hook 中的 `classList.add/remove` 同一 class | `references/code-review-rules.md` |
-| 33 | CR-2 useEffect cancelled guard | 掃描含 async 的 useEffect 是否有 cancelled flag | `references/code-review-rules.md` |
-| 34 | CR-3 無重複函式定義 | Grep 新增/修改的函式名稱，確認無 duplicate | `references/code-review-rules.md` |
-| 35 | CR-4 共用 apiFetch | 掃描 `src/` 中的 raw `fetch('/api` 呼叫 | `references/code-review-rules.md` |
-| 36 | CR-5 元件包裝不重複 | 檢查 wrapper 元件是否雙重包裝 | `references/code-review-rules.md` |
-| 37 | CR-6 建好的元件必須接入 | 掃描 export 但未 import 的元件 | `references/code-review-rules.md` |
-| 38 | CR-7 type assertions 最小化 | 計算 `as never` 和 `as unknown as` 數量 | `references/code-review-rules.md` |
-| 39 | CR-8 render loop 無 O(n²) | 掃描 `.map()` 內的 `.find()` | `references/code-review-rules.md` |
-| 40 | CR-9 React key 穩定唯一 | 掃描有 `id` 欄位的資料仍用 `key={i}` | `references/code-review-rules.md` |
-| 41 | CR-10 多態型別用 discriminated union | 掃描 `as unknown as SomeType[]` 強制轉型 | `references/code-review-rules.md` |
+| 32 | CR-1 Hook 不可直接操作同一 DOM | 掃描多個 hook 中的 `classList.add/remove` 同一 class | `../references/code-review-rules.md` |
+| 33 | CR-2 useEffect cancelled guard | 掃描含 async 的 useEffect 是否有 cancelled flag | `../references/code-review-rules.md` |
+| 34 | CR-3 無重複函式定義 | Grep 新增/修改的函式名稱，確認無 duplicate | `../references/code-review-rules.md` |
+| 35 | CR-4 共用 apiFetch | 掃描 `src/` 中的 raw `fetch('/api` 呼叫 | `../references/code-review-rules.md` |
+| 36 | CR-5 元件包裝不重複 | 檢查 wrapper 元件是否雙重包裝 | `../references/code-review-rules.md` |
+| 37 | CR-6 建好的元件必須接入 | 掃描 export 但未 import 的元件 | `../references/code-review-rules.md` |
+| 38 | CR-7 type assertions 最小化 | 計算 `as never` 和 `as unknown as` 數量 | `../references/code-review-rules.md` |
+| 39 | CR-8 render loop 無 O(n²) | 掃描 `.map()` 內的 `.find()` | `../references/code-review-rules.md` |
+| 40 | CR-9 React key 穩定唯一 | 掃描有 `id` 欄位的資料仍用 `key={i}` | `../references/code-review-rules.md` |
+| 41 | CR-10 多態型別用 discriminated union | 掃描 `as unknown as SomeType[]` 強制轉型 | `../references/code-review-rules.md` |

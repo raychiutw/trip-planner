@@ -10,7 +10,7 @@ user-invocable: true
 
 ## API 設定
 
-API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
+API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/references.md
 
 ## 輸入方式
 
@@ -27,31 +27,12 @@ API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references
    curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
    ```
 2. 依自然語言描述**局部修改**對應資料（只改描述涉及的部分）
-3. 新增或替換的 POI 須包含以下必填欄位：
-   - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
-   - `note`：有備註填內容，無備註填空字串 `""`（R15）
-   - `location.googleQuery`：實體地點填搜尋文字（R11）
-   - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-     googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
-   - **POI V2 欄位規格**（同 tp-create）：
-     POI V2 各 type 必填/建議欄位見 tp-shared/references.md
+3. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
 4. 修改的部分須符合 R0-R18 品質規則
-4b. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（Naver Maps URL，優先精確 place URL，查不到時用搜尋式 URL `https://map.naver.com/v5/search/{韓文關鍵字}`）
-5. 依修改類型選擇對應 API：
-   - **修改單一 entry**（title/time/description/location/travel 等）：
-     `PATCH /api/trips/{tripId}/entries/{eid}` + JSON body（curl 模板見 tp-shared/references.md）
-   - **覆寫整天**（插入/移除/重排 entry，或整天大幅修改）：
-     `PUT /api/trips/{tripId}/days/{dayNum}` + JSON body
-
-   **注意**：覆寫整天（PUT）時，必須保留原始的 `date`、`dayOfWeek`、`label`，不得送出 null。缺少任一欄位 API 將回傳 400。
-   - **新增 POI（餐廳/購物）**：POST `/api/trips/{tripId}/entries/{eid}/trip-pois`
-   - **修改/刪除 POI**：PATCH/DELETE `/api/trips/{tripId}/trip-pois/{tpid}`
-   - **更新 doc**（checklist/backup/suggestions 等）：
-     `PUT /api/trips/{tripId}/docs/{type}` + JSON body（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
-6. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與本次修改不一致的內容（規則見 tp-shared/references.md「Doc 連動規則」）
-7. 若插入、移除或移動 entry，重新估算相鄰 entry 的 travel 並更新（travel 語意見 tp-shared/references.md：travel = 從此地出發去下一站）
-8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
-9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
+5. 依修改類型選擇 API（PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
+6. **Doc 連動（鐵律）**+ **travel 重算** — 規則見 tp-shared/references.md
+7. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
+8. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 
 ## 局部修改 vs 全面重整
 

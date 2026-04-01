@@ -26,14 +26,16 @@ user-invocable: true
 
 未提供必填參數時顯示使用說明，不執行操作。
 
-## POI V2 欄位規格
+## POI V2 欄位規格（pois master — PATCH /pois/:id 可修改）
 
 | type | 必填 | 建議填 |
 |------|------|--------|
-| hotel | name, description, google_rating, maps, checkout | address, phone, mapcode |
-| restaurant | name, category, hours, google_rating, maps | price, reservation |
-| shopping | name, category, hours, google_rating, maps | must_buy, description |
+| hotel | name, google_rating, maps | description, address, phone, mapcode |
+| restaurant | name, category, hours, google_rating, maps | description |
+| shopping | name, category, hours, google_rating, maps | description |
 | parking | name, description, maps | mapcode |
+
+> ⚠️ `checkout`、`price`、`reservation`、`must_buy` 是 trip_pois 欄位，本 skill 的 PATCH /pois/:id 不接受。需修改這些欄位用 PATCH /trip-pois/:tpid。完整拆分見 tp-shared/references.md。
 
 ## 步驟
 
@@ -54,11 +56,7 @@ user-invocable: true
 
 6. 依欄位類型選擇查詢策略：
 
-   **google_rating → 優先用 `/browse` 開 Google Maps**
-   - WebSearch 拿不到 Google 評分（評分是頁面動態渲染，不在搜尋摘要中）
-   - 用 `/browse` 開 `https://www.google.com/maps/search/{POI name}`
-   - 從頁面文字抽取第一個 `X.X` 格式的數字即為 rating
-   - 如果 browse 不可用，才 fallback 到 WebSearch
+   **google_rating → 查詢策略見 tp-shared/references.md「googleRating 查詢策略」**（browse-first，WebSearch 僅做 fallback）
 
    **maps → 用 POI 名稱作為 Google Maps 搜尋文字**
    - 直接填入 POI 的日文/原文名稱（例如「スーパーホテル沖縄・名護」）

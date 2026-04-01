@@ -14,7 +14,7 @@ user-invocable: true
 
 ### API helper 腳本（Phase 1 第一步建立）
 
-在 `C:\tmp\api-helper.js` 建立共用 helper，後續所有 API 呼叫都透過它：
+在 `/tmp/api-helper.js` 建立共用 helper，後續所有 API 呼叫都透過它：
 
 ```js
 const https = require('https');
@@ -82,7 +82,7 @@ module.exports = { apiCall, TRIP_ID };
 | `auto_scroll` | 從 startDate 到 endDate 的逗號分隔日期列表 |
 | `footer` | JSON 物件（見下方範例） |
 | `published` | 預設 `0`（未發布），行程完成驗證通過後改 `1` |
-| `is_default` | 預設 `0` |
+| `is_default` | 預設 `0`（DB 自動設定，POST 不需傳） |
 
 #### footer 自動產生規則
 
@@ -107,7 +107,7 @@ module.exports = { apiCall, TRIP_ID };
 1. 確認 Phase 0 所有必填資訊已收集完畢
 1b. 韓國行程須為所有 POI location 新增 `naverQuery`（Naver Maps URL）
 2. 讀取品質規則（tp-quality-rules skill）
-3. 建立行程（`POST /api/trips`，curl 模板見 tp-shared/references.md）：
+3. 建立行程（`POST /api/trips`，API 格式見 tp-shared/references.md）：
 
    Body: `{id, name, owner, title, description, og_description, self_drive, countries, food_prefs, auto_scroll, footer, published:0, startDate, endDate}`
 
@@ -117,16 +117,16 @@ module.exports = { apiCall, TRIP_ID };
 
    > ⚠️ **travel 語意：從此地出發到下一站**
    > `travel` 欄位放在「出發地」entry 上，表示「離開此地去下一站的交通方式」。
-   > 例：「板橋出發」entry 的 travel={car, 國道五號, 60min} 表示從板橋開車 60 分到下一站。
+   > 例：「板橋出發」entry 的 `travel: {type: "car", desc: "國道五號", min: 60}` 表示從板橋開車 60 分到下一站。
    > 「幾米廣場」entry 的 travel 若為 null，表示到幾米廣場後不需移動（下一站在附近）。
    > 最後一個 entry（如「返回板橋」）travel 應為 null（已到終點）。
    - restaurants infoBox（午餐/晚餐 entry 下各 3 家推薦）
    - shopping infoBox（非家飯店 entry 下）
    - 每個 POI 須包含以下必填欄位：
-     - `source: "ai"`（tp-create 產生的行程全部由 AI 推薦）
      - `note: ""`（有備註填內容，無備註填空字串，R15）
-     - `location.googleQuery`：實體地點填搜尋文字（R11）
+     - `maps`：實體地點填 Google Maps 搜尋文字（R11，PUT /days/:num 用 `maps` 欄位）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
+     > ⚠️ PUT /days/:num 不接受 `location` 物件和 `source` 欄位。`source` 由 findOrCreatePoi 自動設為 `'ai'`；`location` JSON 如需設定，須在建立後用 PATCH /entries/:eid 補寫。
    - POI V2 各 type 必填/建議欄位見 tp-shared/references.md
    - Markdown 支援欄位見 tp-shared/references.md
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
@@ -138,17 +138,16 @@ module.exports = { apiCall, TRIP_ID };
    - `dayOfWeek`（中文星期，必填）：`"一"` / `"二"` / `"三"` / `"四"` / `"五"` / `"六"` / `"日"`
    - `label`（≤ 8 字，必填）：當日主題，例如 `"抵達那霸"` / `"美麗海水族館"`
 
-   使用 `PUT /api/trips/{tripId}/days/{N}`（curl 模板見 tp-shared/references.md）
+   使用 `PUT /api/trips/{tripId}/days/{N}`（API 格式見 tp-shared/references.md）
 8. 建立 docs（flights、checklist、backup、suggestions、emergency）：
 
-   使用 `PUT /api/trips/{tripId}/docs/{type}`，Body: `{content: JSON.stringify({title, content: {...}})}`
+   使用 `PUT /api/trips/{tripId}/docs/{type}`，Body: `{title: "...", entries: [{section, title, content}, ...]}`
 
-   > ⚠️ **doc content 結構必須對齊前端元件**，完整規格見 tp-shared/references.md「Doc 結構規格」。
+   > ⚠️ **新建行程一律用新格式**（`entries` 陣列），不用舊格式（`content: JSON字串`）。完整規格見 tp-shared/references.md「Doc 結構規格」。
 
 ### Phase 2：Google 評分充填（browse-first）
 
-> ⚠️ **必須用 `/browse` 打 Google Maps 取評分**，不用 Agent + WebSearch。
-> WebSearch 拿不到 Google 評分（評分是頁面動態渲染，不在搜尋摘要中）。
+> ⚠️ **googleRating 查詢策略見 tp-shared/references.md**（browse-first，WebSearch 僅做 fallback）。
 
 #### Step 2a：收集所有需要評分的 POI
 
@@ -164,7 +163,7 @@ module.exports = { apiCall, TRIP_ID };
 
 ```js
 const { execSync } = require('child_process');
-const B = process.env.HOME + '/.claude/skills/gstack/browse/dist/browse';
+const B = process.env.BROWSE_BIN || (process.env.HOME || process.env.USERPROFILE) + '/.claude/skills/gstack/browse/dist/browse';
 
 const queries = [
   // [搜尋關鍵字, entryId or null, poiId or null]
@@ -198,9 +197,7 @@ browse 結果分兩類 PATCH：
 
 #### Step 2d：WebSearch fallback
 
-browse 查不到的 POI（評分為 null），才用 WebSearch 補查：
-- 搜尋「{名稱} Google Maps 評分」或「{名稱} 評價」
-- 仍查不到 → 不填（R13 source=ai 缺 rating 會被 tp-check 標記）
+browse 查不到的 POI，依 tp-shared/references.md「googleRating 查詢策略」的 fallback 步驟補查。仍查不到 → 不填（R13 source=ai 缺 rating 會被 tp-check 標記）。
 
 9. 執行 Step 2a-2d
 10. 確認所有 POI 評分完整

@@ -1,44 +1,108 @@
 ---
 name: tp-patch
-description: 跨行程局部欄位更新工具（D1 API）。針對特定 target + field 批次掃描並搜尋補齊。適用於需要針對特定類別物件（如飯店、餐廳）更新特定欄位（如評分、位置）時。
+description: Use when bulk-filling missing POI fields (google_rating, maps, address, phone, hours) across trips via web search.
+user-invocable: true
 ---
 
-# tp-patch
-
-跨行程局部欄位更新工具（D1 API）。
-
-## 指令格式
-`/tp-patch --target <target> --field <field> [--trips <tripId,...>]`
-- **target**: `hotel` | `restaurant` | `shop` | `event` | `gasStation`
-- **field**: `googleRating` | `reservation` | `location` 等
-- **trips**: 指定行程 ID（預設全部）
+跨行程 POI 欄位批次補齊工具。掃描 pois 表缺漏欄位，WebSearch 查詢後用 PATCH /pois/:id 更新。
 
 ## API 設定
 
 - **Base URL**: `https://trip-planner-dby.pages.dev`
 - **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `e5902a9d6f5181b8f70e12f1c11ebca3.access`
-  - `CF-Access-Client-Secret`: 從環境變數 `CF_ACCESS_CLIENT_SECRET` 取得
+  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
+  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+
+## 指令格式
+
+```
+/tp-patch --target <target> --field <field> [--trips <tripId,...>] [--dry-run]
+```
+
+- `--target`（必填）：`hotel` | `restaurant` | `shopping` | `parking` | `all`
+- `--field`（必填）：`google_rating` | `maps` | `address` | `phone` | `hours` | `all`
+- `--trips`（選填）：逗號分隔的行程 tripId，預設為所有行程
+- `--dry-run`（選填）：只輸出缺漏報告，不修改資料
+
+未提供必填參數時顯示使用說明，不執行操作。
+
+## POI V2 欄位規格（pois master — PATCH /pois/:id 可修改）
+
+| type | 必填 | 建議填 |
+|------|------|--------|
+| hotel | name, google_rating, maps | description, address, phone, mapcode |
+| restaurant | name, category, hours, google_rating, maps | description |
+| shopping | name, category, hours, google_rating, maps | description |
+| parking | name, description, maps | mapcode |
+
+> ⚠️ `checkout`、`price`、`reservation`、`must_buy` 是 trip_pois 欄位，本 skill 的 PATCH /pois/:id 不接受。需修改這些欄位用 PATCH /trip-pois/:tpid。完整拆分見 tp-shared/references.md。
 
 ## 步驟
-1. **掃描**：
-   - GET `/api/trips?all=1` 取得行程清單（若未指定 --trips）
-   - GET `/api/trips/{tripId}/days/{N}` 讀取每天資料，定位目標物件，檢查欄位是否需更新
-2. **搜尋**：參考 `references/search-strategies.md` 並行搜尋新值。
-   - 依 R13 驗證 POI 存在性。
-   - 搜不到則不繼續搜尋該物件的其他欄位。
-3. **合併與驗證**：
-   - 依物件類型選擇 API 寫回：
-     - entry：PATCH `/api/trips/{tripId}/entries/{eid}`
-     - 餐廳：PATCH `/api/trips/{tripId}/restaurants/{rid}`
-     - 購物：PATCH `/api/trips/{tripId}/shopping/{sid}`
-   - `tp-check`（精簡模式）驗證每個修改的行程
-4. **不自動 commit**：資料已直接寫入 D1 database，無需 git 操作。
+
+### Phase 1：掃描 pois 表
+
+1. 取得目標行程清單：
+   ```bash
+   curl -s "https://trip-planner-dby.pages.dev/api/trips?all=1" \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET"
+   ```
+2. 對每個行程讀取所有天資料，收集所有 POI（含 poi_id）
+3. 依 `--target` 篩選 POI type
+4. 依 `--field` 檢查哪些 POI 缺漏該欄位（NULL 或空字串）
+5. 輸出掃描摘要：「共 N 個 {target} 需補齊 {field}」+ 明細
+
+### Phase 2：查詢補齊（依欄位選擇最佳工具）
+
+6. 依欄位類型選擇查詢策略：
+
+   **google_rating → 查詢策略見 tp-shared/references.md「googleRating 查詢策略」**（browse-first，WebSearch 僅做 fallback）
+
+   **maps → 用 POI 名稱作為 Google Maps 搜尋文字**
+   - 直接填入 POI 的日文/原文名稱（例如「スーパーホテル沖縄・名護」）
+   - 前端會將此文字組成 Google Maps 搜尋 URL
+
+   **address / phone → WebSearch 即可**
+   - 搜尋 "{POI name} 住所" 或 "{POI name} 地址"
+   - 這類資訊在搜尋摘要中通常有
+
+7. 搜尋不到 → 跳過，不填預設值
+
+### Phase 3：寫入（PATCH /pois/:id）
+
+8. 用 `PATCH /pois/:id` 更新 master POI：
+
+   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
+
+   ```bash
+   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({google_rating: 4.5, address: '...'}), 'utf8')"
+   curl -s -X PATCH \
+     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+     -H "Content-Type: application/json" \
+     -H "Origin: https://trip-planner-dby.pages.dev" \
+     --data @/tmp/patch.json \
+     "https://trip-planner-dby.pages.dev/api/pois/{poiId}"
+   ```
+
+9. 輸出結果報告：補齊數 / 失敗數 / 仍缺漏數
+10. 不自動 commit（資料已直接寫入 D1 database）
+
+## 範例
+
+```bash
+# 為所有飯店補上 google_rating
+/tp-patch --target hotel --field google_rating
+
+# 只看缺漏報告不修改
+/tp-patch --target all --field all --dry-run
+
+# 為指定行程的 POI 補齊所有欄位
+/tp-patch --target all --field all --trips okinawa-trip-2026-HuiYun
+```
 
 ## 注意事項
-- 所有資料讀寫均透過 API，不操作本地 MD 檔案
-- 不執行 git commit / push，不執行 npm run build
 
-## 參考資源
-- 搜尋策略：`references/search-strategies.md`
-- 品質規則：`references/trip-quality-rules.md`
+- 所有資料讀寫均透過 API，不操作本地檔案
+- 使用 `PATCH /pois/:id`（admin 端點）更新 master POI，不是 trip_pois
+- 不執行 git commit / push

@@ -40,8 +40,8 @@ API 回傳 JSON 格式，直接驗證以下欄位：
 
 | 欄位 | 說明 |
 |------|------|
-| `location.googleQuery` | R11 地圖導航（原 MD 的 `maps:` 欄位） |
-| `googleRating` | R12 評分（原 MD 的 `rating:` 欄位） |
+| `maps` 或 `location.googleQuery` | R11 地圖導航（entry 有 `maps` 即合格，`location` JSON 為加分） |
+| `googleRating` | R12 評分 |
 | `meta.countries` | 陣列格式（如 `["JP"]`） |
 | `meta.foodPreferences` | 陣列格式 |
 | `source` | R13 來源標記（`"ai"` 或 `"user"`） |
@@ -128,7 +128,7 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | R7 | 所有非家飯店有 shopping(≥3) + parking | 部分 shop 缺 mustBuy 或數量不足 | 飯店完全無 shopping infoBox |
 | R8 | 所有 hotel 有 breakfast 欄位 | — | 任一 hotel 缺 breakfast |
 | R10 | 自駕行程還車 event 有 gasStation infoBox | — | 自駕行程缺 gasStation |
-| R11 | 所有實體地點有 `location.googleQuery` | 1~5 個地點缺 `location.googleQuery` | > 5 個地點缺 `location.googleQuery` |
+| R11 | 所有實體地點有 `maps` 或 `location.googleQuery` | 1~5 個地點兩者皆缺 | > 5 個地點兩者皆缺 |
 | R12 | 所有 POI 有 `googleRating` | `source: user` 的 POI 缺 `googleRating` | `source: ai` 的 POI 缺 `googleRating` |
 | R13 | 所有非豁免 POI 有 `source` | 1~3 個 POI 缺 `source` | > 3 個 POI 缺 `source` |
 | R14 | 韓國行程所有 POI 有 naverQuery；非韓國行程不檢查 | — | 韓國行程 POI 缺 naverQuery |
@@ -145,12 +145,13 @@ tp-check: 🟢 10  🟡 2  🔴 0
 | `/tp-rebuild` | 修正前 + 修正後 | 完整 x2 |
 | `/tp-edit` | 修改完成後 | 精簡 |
 | `/tp-request` | 每個請求處理完後 | 精簡 |
-| `/tp-rebuild-all` | 每趟修正後 | 完整 |
+| `/tp-rebuild --all` | 每趟修正後 | 完整 |
 
 ## 常見誤判
 
 | 誤判 | 正解 |
 |------|------|
-| JSON 中 `location.googleQuery` 不是完整 URL → 判 R11 fail | ❌ `googleQuery` 填搜尋文字即可 |
+| entry 有 `maps` 但無 `location.googleQuery` → 判 R11 fail | ❌ `maps` 即合格（PUT /days/:num 只接受 `maps`） |
+| `maps` 或 `googleQuery` 不是完整 URL → 判 R11 fail | ❌ 填搜尋文字即可 |
 | JSON 中 `source` 欄位不存在但「整體覆蓋率尚可」→ 判 R13 🟢 | ❌ > 3 個缺失即 🔴 |
 | parking infoBox 無 note → 忽略 | ❌ R15 明確包含 parking infoBox |

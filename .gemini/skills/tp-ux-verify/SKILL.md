@@ -1,11 +1,12 @@
 ---
 name: tp-ux-verify
-description: 網頁 HIG 設計規範（Apple-inspired）。適用於新增或修改 HTML/CSS 時，確保 UI 符合專案的視覺與互動標準。
+description: Use when adding or modifying HTML/CSS in the trip-planner project for HIG compliance.
+user-invocable: false
 ---
 
-# tp-ux-verify
+# 網頁 HIG 設計規範（Apple-inspired）
 
-網頁 HIG 設計規範（Apple-inspired）。
+新增或修改 HTML/CSS 時的設計規範參考。由 `tests/unit/css-hig.test.js` 自動守護。
 
 ## 規則來源
 
@@ -13,11 +14,7 @@ description: 網頁 HIG 設計規範（Apple-inspired）。適用於新增或修
 → `../references/css-hig-rules.md`
 
 Design tokens 速查表（Color、Typography、Spacing、Radius、Motion、Shadow）：
-→ `references/css-hig.md`（含 tokens）
+→ `references/tokens.md`
 
-## 核心原則
-
-- 所有 px 值必須符合 4pt grid（4 的倍數）。
-- 嚴格限定 `font-size` 與 `transition duration` 使用指定的 token。
-- `color: #fff` 改用 `var(--text-on-accent)`。
-- `.sticky-nav` 永遠用 `color-mix` + `backdrop-filter` frosted glass。
+頁面結構模式（共用骨架、模式 A/B/C）：
+→ `references/page-structure.md`
