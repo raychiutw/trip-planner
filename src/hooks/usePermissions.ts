@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { apiFetchRaw } from './useApi';
+import { apiFetchRaw } from '../lib/apiClient';
 import type { Permission } from '../types/api';
 
 interface UsePermissionsResult {

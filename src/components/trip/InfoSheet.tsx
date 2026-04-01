@@ -112,7 +112,7 @@ export default function InfoSheet({
       const d = detentRef.current;
 
       if (d === 'half' || isOnHandle || (d === 'full' && isAtTop)) {
-        startY = e.touches[0].clientY;
+        startY = e.touches[0]!.clientY;
         isDragging.current = true;
         currentTranslateY = 0;
         panel.style.transition = 'none';
@@ -121,7 +121,7 @@ export default function InfoSheet({
 
     const onTouchMove = (e: TouchEvent) => {
       if (!isDragging.current) return;
-      const deltaY = e.touches[0].clientY - startY;
+      const deltaY = e.touches[0]!.clientY - startY;
       const d = detentRef.current;
 
       if (d === 'full' && deltaY < 0) {

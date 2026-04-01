@@ -72,7 +72,7 @@ export function makeDefaultMg(): MergedHourly {
  */
 export function getLocIdx(day: WeatherDay, h: number): number {
   for (let i = day.locations.length - 1; i >= 0; i--) {
-    if (h >= day.locations[i].start) return i;
+    if (h >= day.locations[i]!.start) return i;
   }
   return 0;
 }
@@ -104,7 +104,7 @@ export function buildWeatherDay(
     let start = 0;
     if (entry.time) {
       const match = entry.time.match(/(\d{1,2}):/);
-      if (match) start = parseInt(match[1], 10);
+      if (match) start = parseInt(match[1] ?? '0', 10);
     }
 
     locations.push({ name: entry.title, lat, lon: lng, start });
@@ -115,7 +115,7 @@ export function buildWeatherDay(
   if (locations.length === 0) return null;
 
   return {
-    label: dayLabel || locations[0].name,
+    label: dayLabel || locations[0]?.name || '',
     locations,
   };
 }
@@ -195,8 +195,8 @@ export async function fetchWeatherForDay(
       }
       const parts = k.split(',');
       const params = new URLSearchParams({
-        latitude: parts[0],
-        longitude: parts[1],
+        latitude: parts[0] ?? '',
+        longitude: parts[1] ?? '',
         hourly: 'temperature_2m,precipitation_probability,weather_code',
         start_date: fetchStart,
         end_date: fetchEnd,
@@ -208,14 +208,15 @@ export async function fetchWeatherForDay(
       if (!resp.ok) return null;
       const data = (await resp.json()) as OpenMeteoResponse;
       if (Object.keys(weatherCache).length >= MAX_WEATHER_CACHE) {
-        delete weatherCache[Object.keys(weatherCache)[0]];
+        const oldest = Object.keys(weatherCache)[0];
+        if (oldest) delete weatherCache[oldest];
       }
       weatherCache[k] = data;
       results[k] = data;
     }),
   );
 
-  const sample = results[locKeys[0]];
+  const sample = results[locKeys[0] ?? ''];
   if (!sample || !sample.hourly) return makeDefaultMg();
 
   const dayOffset = sample.hourly.time.indexOf(dayDate + 'T00:00');
@@ -225,12 +226,12 @@ export async function fetchWeatherForDay(
   for (let h = 0; h < 24; h++) {
     const li = getLocIdx(weatherDay, h);
     const l = weatherDay.locations[li];
-    const d = results[l.lat + ',' + l.lon];
+    const d = l ? results[l.lat + ',' + l.lon] : undefined;
     const idx = dayOffset + h;
     if (d && d.hourly && idx < d.hourly.temperature_2m.length) {
-      mg.temps.push(d.hourly.temperature_2m[idx]);
-      mg.rains.push(d.hourly.precipitation_probability[idx]);
-      mg.codes.push(d.hourly.weather_code[idx]);
+      mg.temps.push(d.hourly.temperature_2m[idx] ?? 0);
+      mg.rains.push(d.hourly.precipitation_probability[idx] ?? 0);
+      mg.codes.push(d.hourly.weather_code[idx] ?? 0);
     } else {
       mg.temps.push(0);
       mg.rains.push(0);

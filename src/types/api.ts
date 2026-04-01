@@ -92,8 +92,7 @@ export interface Request {
   id: number;
   /** DB column `trip_id` */
   tripId: string;
-  /** 'trip-edit' | 'trip-plan' */
-  mode: string;
+  mode: 'trip-edit' | 'trip-plan' | 'trip-info';
   /** Combined message (merged from legacy title + body) */
   message: string;
   /** @deprecated Use `message` instead. Kept for legacy compatibility. */
@@ -134,8 +133,7 @@ export interface Permission {
   email: string;
   /** DB column `trip_id`; '*' means all trips */
   tripId: string;
-  /** 'admin' | 'member' */
-  role: string;
+  role: 'admin' | 'member';
 }
 
 // ---------------------------------------------------------------------------
@@ -166,8 +164,7 @@ export interface AuditLog {
   tableName: string;
   /** DB column `record_id` — PK of the affected row (null for trip-level ops) */
   recordId?: number | null;
-  /** 'insert' | 'update' | 'delete' */
-  action: string;
+  action: 'insert' | 'update' | 'delete';
   /** DB column `changed_by` — email of the actor */
   changedBy?: string | null;
   /** DB column `request_id` — links to requests.id if triggered by a request */

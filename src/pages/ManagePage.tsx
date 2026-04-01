@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import '../../css/tokens.css';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import PageNav from '../components/shared/PageNav';
-import { apiFetchRaw } from '../hooks/useApi';
+import { apiFetchRaw } from '../lib/apiClient';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
@@ -209,7 +209,7 @@ export default function ManagePage() {
       }));
 
       const savedTrip = lsGet<string>(LS_KEY_TRIP_PREF);
-      let initialTrip = filtered[0].tripId;
+      let initialTrip = filtered[0]?.tripId ?? '';
       if (savedTrip && filtered.some((t) => t.tripId === savedTrip)) {
         initialTrip = savedTrip;
       }
