@@ -3,8 +3,8 @@
  *
  * F003：
  * - 使用 Google Maps OverlayView 將 React 元素渲染在地圖上
- * - 圓形 32px，accent 色 + 白色編號；飯店用 🏨 emoji
- * - 選中狀態：放大至 40px + shadow-lg + 2px 白邊框
+ * - 圓形 24px，accent 色 + 白色編號；飯店用 🏨 emoji
+ * - 選中狀態：放大至 32px + shadow-lg + 2px 白邊框
  * - InfoWindow：200px 卡片，編號 + 名稱 + 時間 + 評分 + 「滾到此處」按鈕
  * - Accessibility：role="button" + aria-label，Tab/Enter/Escape 鍵盤支援
  */
@@ -110,7 +110,7 @@ function MarkerDot({ pin, isSelected, onClick, onScrollToEntry, onCloseInfo, sho
   }, [onClick, onCloseInfo, showInfo]);
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-flex min-w-[var(--spacing-tap-min)] min-h-[var(--spacing-tap-min)] items-center justify-center">
       {/* Marker circle */}
       <div
         role="button"
@@ -118,7 +118,7 @@ function MarkerDot({ pin, isSelected, onClick, onScrollToEntry, onCloseInfo, sho
         aria-label={ariaLabel}
         aria-expanded={showInfo}
         aria-haspopup="dialog"
-        className={`flex items-center justify-center rounded-full bg-accent text-accent-foreground text-caption font-bold cursor-pointer select-none transition-[width,height,box-shadow] duration-fast ease-apple min-w-[var(--spacing-tap-min)] min-h-[var(--spacing-tap-min)] focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px] ${isSelected ? 'w-10 h-10 shadow-lg outline-2 outline-accent-foreground outline-offset-0' : 'w-8 h-8'}`}
+        className={`flex items-center justify-center rounded-full bg-accent text-accent-foreground text-caption font-bold cursor-pointer select-none transition-[width,height,box-shadow] duration-fast ease-apple focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[3px] ${isSelected ? 'w-8 h-8 shadow-lg outline-2 outline-accent-foreground outline-offset-0' : 'w-6 h-6'}`}
         onClick={onClick}
         onKeyDown={handleKeyDown}
       >

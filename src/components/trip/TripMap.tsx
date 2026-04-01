@@ -154,7 +154,7 @@ export default function TripMap({ allDays, dayNums }: TripMapProps) {
           map,
           icon: {
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 8,
+            scale: 6,
             fillColor: color,
             fillOpacity: 0.9,
             strokeColor: '#ffffff',
