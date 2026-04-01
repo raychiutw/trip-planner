@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock modules before importing useTrip
-vi.mock('../../src/hooks/useApi', () => ({
+vi.mock('../../src/lib/apiClient', () => ({
   apiFetch: vi.fn(),
 }));
 
@@ -18,7 +18,7 @@ vi.mock('../../src/lib/mapRow', () => ({
   mapRow: (x: unknown) => x,
 }));
 
-import { apiFetch } from '../../src/hooks/useApi';
+import { apiFetch } from '../../src/lib/apiClient';
 import { showErrorToast } from '../../src/components/shared/Toast';
 import { ApiError } from '../../src/lib/errors';
 

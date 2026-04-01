@@ -269,8 +269,8 @@ describe('QuickPanel 無障礙', () => {
     const sheetBehaviorTs = readFileSync('src/hooks/useSheetBehavior.ts', 'utf-8');
     expect(sheetBehaviorTs).toContain('FOCUSABLE');
     expect(sheetBehaviorTs).toContain("e.key !== 'Tab'");
-    expect(sheetBehaviorTs).toContain('first.focus()');
-    expect(sheetBehaviorTs).toContain('last.focus()');
+    expect(sheetBehaviorTs).toContain('first?.focus()');
+    expect(sheetBehaviorTs).toContain('last?.focus()');
   });
 
   it('has X close button with aria-label', () => {
