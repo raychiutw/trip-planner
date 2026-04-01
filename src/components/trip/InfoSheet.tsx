@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 /* ===== Scoped styles (dark mode + focus management) ===== */
 
@@ -53,8 +53,6 @@ interface InfoSheetProps {
 /** Mobile breakpoint — keep in sync with @media (max-width: 767px) in SCOPED_STYLES */
 const MOBILE_BREAKPOINT = 768;
 
-import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../../lib/constants';
-
 /* ===== Component ===== */
 
 /**
@@ -68,75 +66,36 @@ export default function InfoSheet({
   onClose,
   children,
 }: InfoSheetProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
-  const previousFocusRef = useRef<Element | null>(null);
 
   /* --- Multi-detent state (mobile only) --- */
   const [detent, setDetent] = useState<'half' | 'full'>('half');
 
-  // 2-2: ref to avoid re-binding touch listeners on every detent change
+  // ref to avoid re-binding touch listeners on every detent change
   const detentRef = useRef(detent);
   detentRef.current = detent;
 
-  // 2-3: ref wrapper so touch/escape effects don't re-bind when onClose identity changes
+  // ref wrapper so touch/escape effects don't re-bind when onClose identity changes
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  // 2-4: reset detent synchronously on close to avoid flash when re-opening
+  // reset detent synchronously on close to avoid flash when re-opening
   const handleClose = useCallback(() => {
     setDetent('half');
     onCloseRef.current();
   }, []);
 
-  /* --- Container scale-down when sheet is open --- */
-  useEffect(() => {
-    document.querySelector('.container')?.classList.toggle('sheet-open', open);
-    return () => {
-      document.querySelector('.container')?.classList.remove('sheet-open');
-    };
-  }, [open]);
-
-  /* --- C.5: Body scroll lock (iOS Safari safe) --- */
-  useBodyScrollLock(open);
-
-  /* --- Focus management on open/close --- */
-  useEffect(() => {
-    if (open) {
-      previousFocusRef.current = document.activeElement;
-      // Focus the sheet panel itself for keyboard accessibility (Escape key)
-      // without focusing the close button (avoids orange focus ring issue)
-      requestAnimationFrame(() => {
-        panelRef.current?.focus();
-      });
-    } else {
-      if (previousFocusRef.current && previousFocusRef.current instanceof HTMLElement) {
-        previousFocusRef.current.focus();
-      }
-      previousFocusRef.current = null;
-    }
-  }, [open]);
-
-  /* --- Escape key handler --- */
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [open, handleClose]);
+  /* --- useSheetBehavior: container class, scroll lock, focus, escape, focus trap, backdrop scroll --- */
+  const { panelRef, backdropRef, handlePanelKeyDown } = useSheetBehavior(open, handleClose, {
+    restorePreviousFocus: true,
+  });
 
   /* --- Touch gesture for multi-detent (mobile only) --- */
   const isDragging = useRef(false);
 
   useEffect(() => {
     if (!open) return;
-    // 2-1: use shared constant for breakpoint
     if (window.innerWidth >= MOBILE_BREAKPOINT) return;
 
     const panel = panelRef.current;
@@ -146,20 +105,17 @@ export default function InfoSheet({
     let startY = 0;
     let currentTranslateY = 0;
 
-    // 8-3: passive: false so subsequent touchmove preventDefault works in Chrome
     const onTouchStart = (e: TouchEvent) => {
       const handle = panel.querySelector('[data-sheet-handle]');
       const isOnHandle = handle?.contains(e.target as Node);
       const isAtTop = body.scrollTop <= 0;
       const d = detentRef.current;
 
-      // Half detent: drag from anywhere
-      // Full detent: drag from handle, or from body when scrolled to top
       if (d === 'half' || isOnHandle || (d === 'full' && isAtTop)) {
         startY = e.touches[0].clientY;
         isDragging.current = true;
         currentTranslateY = 0;
-        panel.style.transition = 'none'; // Remove animation during drag
+        panel.style.transition = 'none';
       }
     };
 
@@ -168,7 +124,6 @@ export default function InfoSheet({
       const deltaY = e.touches[0].clientY - startY;
       const d = detentRef.current;
 
-      // Full detent: only allow downward drag (positive delta)
       if (d === 'full' && deltaY < 0) {
         isDragging.current = false;
         panel.style.transition = '';
@@ -176,8 +131,6 @@ export default function InfoSheet({
         return;
       }
 
-      // Half detent: allow both up (negative) and down (positive)
-      // Clamp upward drag so panel doesn't go above viewport
       if (d === 'half' && deltaY > 0) {
         e.preventDefault();
         currentTranslateY = deltaY;
@@ -185,7 +138,6 @@ export default function InfoSheet({
       } else if (d === 'half' && deltaY < 0) {
         e.preventDefault();
         currentTranslateY = deltaY;
-        // Resist upward pull slightly — don't move, just track delta
         panel.style.transform = `translateY(${deltaY * 0.3}px)`;
       } else if (d === 'full' && deltaY > 0) {
         e.preventDefault();
@@ -201,19 +153,19 @@ export default function InfoSheet({
       panel.style.transform = '';
 
       const d = detentRef.current;
-      const expandThreshold = 60;   // swipe up to expand
-      const closeThreshold = 100;   // 11-2: raised from 60px to reduce accidental close
-      const collapseThreshold = 60; // swipe down from full → half
+      const expandThreshold = 60;
+      const closeThreshold = 100;
+      const collapseThreshold = 60;
 
       if (d === 'half') {
         if (currentTranslateY < -expandThreshold) {
-          setDetent('full'); // Swipe up → full
+          setDetent('full');
         } else if (currentTranslateY > closeThreshold) {
-          handleClose(); // Swipe down → close
+          handleClose();
         }
       } else if (d === 'full') {
         if (currentTranslateY > collapseThreshold) {
-          setDetent('half'); // Swipe down → half
+          setDetent('half');
         }
       }
 
@@ -229,29 +181,7 @@ export default function InfoSheet({
       panel.removeEventListener('touchmove', onTouchMove);
       panel.removeEventListener('touchend', onTouchEnd);
     };
-    // 2-2/2-3: detent & onClose tracked via refs — only re-bind when sheet opens/closes
-  }, [open, handleClose]);
-
-  /* --- Fix 2: Passive event listener for scroll prevention on backdrop --- */
-  const backdropRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const backdrop = backdropRef.current;
-    if (!backdrop) return;
-
-    // Only prevent scroll on the backdrop itself, not on child elements (panel body)
-    const prevent = (e: Event) => {
-      if (e.target === backdrop) e.preventDefault();
-    };
-    backdrop.addEventListener('wheel', prevent, { passive: false });
-    backdrop.addEventListener('touchmove', prevent, { passive: false });
-
-    return () => {
-      backdrop.removeEventListener('wheel', prevent);
-      backdrop.removeEventListener('touchmove', prevent);
-    };
-  }, [open]);
+  }, [open, handleClose, panelRef]);
 
   /* --- Stop propagation on panel click --- */
   const handlePanelClick = useCallback((e: React.MouseEvent) => {
@@ -261,28 +191,6 @@ export default function InfoSheet({
   /* --- Stop propagation for sheet body wheel --- */
   const handleBodyWheel = useCallback((e: React.WheelEvent) => {
     e.stopPropagation();
-  }, []);
-
-  /* --- Focus trap on Tab key --- */
-  const handlePanelKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
   }, []);
 
   return (

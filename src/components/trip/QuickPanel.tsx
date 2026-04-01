@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useSheetBehavior } from '../../hooks/useSheetBehavior';
 
 /* ===== Scoped styles (dark mode + focus management + print) ===== */
 
@@ -63,10 +63,6 @@ const PANEL_ITEMS: PanelItemConfig[] = [
   { key: 'download-csv', icon: 'table', label: 'CSV', action: 'download', section: 'C' },
 ];
 
-/* ===== Constants ===== */
-
-import { FOCUSABLE_SELECTOR as FOCUSABLE } from '../../lib/constants';
-
 /* ===== Props ===== */
 
 interface QuickPanelProps {
@@ -89,9 +85,7 @@ export default function QuickPanel({
 }: QuickPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
 
   const handleToggle = useCallback(() => {
     setIsOpen((prev) => !prev);
@@ -101,65 +95,13 @@ export default function QuickPanel({
     setIsOpen(false);
   }, []);
 
-  /* --- Container scale-down when panel is open --- */
-  useEffect(() => {
-    document.querySelector('.container')?.classList.toggle('sheet-open', isOpen);
-    return () => {
-      document.querySelector('.container')?.classList.remove('sheet-open');
-    };
-  }, [isOpen]);
+  /* --- useSheetBehavior: container class, scroll lock, focus, escape, focus trap, backdrop scroll --- */
+  const { panelRef: sheetRef, backdropRef, handlePanelKeyDown: handleSheetKeyDown } = useSheetBehavior(
+    isOpen,
+    handleClose,
+    { restorePreviousFocus: false, triggerRef, preventAllBackdropScroll: true },
+  );
 
-  /* --- Body scroll lock (iOS Safari safe) --- */
-  useBodyScrollLock(isOpen);
-
-  /* --- Focus management on open/close --- */
-  useEffect(() => {
-    if (isOpen) {
-      // Focus the sheet itself for keyboard accessibility (Escape key)
-      // without focusing the close button (avoids orange focus ring issue)
-      requestAnimationFrame(() => {
-        sheetRef.current?.focus();
-      });
-    } else {
-      triggerRef.current?.focus();
-    }
-  }, [isOpen]);
-
-  /* --- Escape key: close and return focus to FAB --- */
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setIsOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
-
-  /* --- Focus trap on Tab key (same pattern as InfoSheet) --- */
-  const handleSheetKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key !== 'Tab') return;
-    const sheet = sheetRef.current;
-    if (!sheet) return;
-    const focusable = Array.from(sheet.querySelectorAll<HTMLElement>(FOCUSABLE));
-    if (focusable.length === 0) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (e.shiftKey) {
-      if (document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      }
-    } else {
-      if (document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  }, []);
 
   /* --- Grid item click handler --- */
   const handleItemClick = useCallback(
@@ -183,20 +125,6 @@ export default function QuickPanel({
     },
     [onItemClick, onPrint, onDownload, handleClose],
   );
-
-  /* --- Prevent scroll passthrough on backdrop (native listeners, passive: false) --- */
-  useEffect(() => {
-    if (!isOpen) return;
-    const backdrop = backdropRef.current;
-    if (!backdrop) return;
-    const prevent = (e: Event) => { e.preventDefault(); };
-    backdrop.addEventListener('wheel', prevent, { passive: false });
-    backdrop.addEventListener('touchmove', prevent, { passive: false });
-    return () => {
-      backdrop.removeEventListener('wheel', prevent);
-      backdrop.removeEventListener('touchmove', prevent);
-    };
-  }, [isOpen]);
 
   /* --- Grid View --- */
   const sectionA = PANEL_ITEMS.filter((i) => i.section === 'A');

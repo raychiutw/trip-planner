@@ -1,29 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import '../../css/tokens.css';
-import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-import { apiFetch, apiFetchRaw } from '../hooks/useApi';
+import PageNav from '../components/shared/PageNav';
+import { apiFetchRaw } from '../hooks/useApi';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
+import { useRequests, RawRequest } from '../hooks/useRequests';
+import { useTripSelector } from '../hooks/useTripSelector';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 
 import { marked } from 'marked';
 
 /* ===== API types ===== */
-interface RawRequest {
-  id: number;
-  trip_id: string;
-  mode: string;
-  message: string;
-  submitted_by: string | null;
-  reply: string | null;
-  status: 'open' | 'received' | 'processing' | 'completed';
-  created_at: string;
-}
-
 interface MyTrip {
   tripId: string;
 }
@@ -33,8 +23,6 @@ interface TripInfo {
   name: string;
   published: number | boolean;
 }
-
-/* ===== Chevron SVG ===== */
 
 /** Render Markdown text to sanitized HTML with table wrapping. */
 function renderMarkdown(text: string): string {
@@ -136,20 +124,11 @@ type PageState =
 export default function ManagePage() {
   useDarkMode();
   const isOnline = useOnlineStatus();
-  const navigate = useNavigate();
 
   /* ----- State ----- */
   const [pageState, setPageState] = useState<PageState>({ kind: 'loading' });
   const [filteredTrips, setFilteredTrips] = useState<{ tripId: string; name: string }[]>([]);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
-  const [requests, setRequests] = useState<RawRequest[]>([]);
-  const [requestsLoading, setRequestsLoading] = useState(false);
-  const [requestsError, setRequestsError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const requestsRef = useRef(requests);
-  requestsRef.current = requests;
   const [text, setText] = useState('');
   const [mode, setMode] = useState<'trip-edit' | 'trip-plan'>('trip-edit');
   const [submitting, setSubmitting] = useState(false);
@@ -159,9 +138,20 @@ export default function ManagePage() {
   useOfflineToast(isOnline);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const currentTripIdRef = useRef(currentTripId);
-  currentTripIdRef.current = currentTripId;
-  const abortRef = useRef<AbortController | null>(null);
+
+  /* ----- Shared trip selector hook ----- */
+  const { currentTripIdRef, handleClose } = useTripSelector(currentTripId);
+
+  /* ----- Requests hook ----- */
+  const {
+    requests,
+    requestsLoading,
+    requestsError,
+    hasMore,
+    loadingMore,
+    loadRequests,
+    sentinelRef,
+  } = useRequests(currentTripIdRef);
 
   /* ----- Auto-resize textarea (1→5 lines) ----- */
   const autoResize = useCallback(() => {
@@ -174,70 +164,6 @@ export default function ManagePage() {
     ta.style.overflowY = ta.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }, []);
 
-  /* ----- Load requests for a trip (first page) ----- */
-  const loadRequests = useCallback(async (tripId: string) => {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setRequestsLoading(true);
-    setRequestsError(null);
-    setRequests([]);
-    setHasMore(false);
-
-    try {
-      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId) + '&limit=10', {
-        signal: controller.signal,
-      });
-      if (res.status === 401) throw new Error('認證失敗，請重新整理頁面');
-      if (res.status === 403) throw new Error('你沒有此行程的權限');
-      if (!res.ok) throw new Error('載入失敗');
-      const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
-      if (currentTripIdRef.current === tripId) {
-        setRequests(data.items);
-        setHasMore(data.hasMore);
-      }
-    } catch (err) {
-      if ((err as Error).name === 'AbortError') return;
-      if (currentTripIdRef.current === tripId) {
-        setRequestsError(err instanceof Error ? err.message : '載入失敗');
-      }
-    } finally {
-      setRequestsLoading(false);
-    }
-  }, []);
-
-  /* ----- Load more requests (older, prepend) ----- */
-  const loadMore = useCallback(async () => {
-    const tripId = currentTripIdRef.current;
-    if (!tripId || loadingMore || !hasMore) return;
-
-    // "requests" is newest-first from API; oldest item is last in array
-    const last = requestsRef.current[requestsRef.current.length - 1];
-    if (!last) return;
-
-    setLoadingMore(true);
-    try {
-      const params = new URLSearchParams({
-        tripId,
-        limit: '10',
-        before: last.created_at,
-        beforeId: String(last.id),
-      });
-      const res = await apiFetchRaw('/requests?' + params.toString());
-      if (!res.ok) throw new Error('載入失敗');
-      const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
-      if (currentTripIdRef.current === tripId) {
-        setRequests(prev => [...prev, ...data.items]);
-        setHasMore(data.hasMore);
-      }
-    } catch {
-      // 靜默失敗 — 使用者可再次滾動觸發
-    } finally {
-      setLoadingMore(false);
-    }
-  }, [loadingMore, hasMore]);
-
   /* ----- Init: fetch trips ----- */
   useEffect(() => {
     let cancelled = false;
@@ -245,7 +171,7 @@ export default function ManagePage() {
     async function init() {
       const [myRes, allTripsResult] = await Promise.all([
         apiFetchRaw('/my-trips'),
-        apiFetch<TripInfo[]>('/trips?all=1').catch(() => [] as TripInfo[]),
+        apiFetchRaw('/trips?all=1').then(r => r.ok ? r.json() as Promise<TripInfo[]> : Promise.resolve([] as TripInfo[])).catch(() => [] as TripInfo[]),
       ]);
 
       if (myRes.status === 401 || myRes.status === 403) {
@@ -309,18 +235,6 @@ export default function ManagePage() {
     }
   }, [currentTripId, pageState.kind, loadRequests]);
 
-  /* ----- Infinite scroll: sentinel at BOTTOM for loading older messages ----- */
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) loadMore(); },
-      { rootMargin: '200px' },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [loadMore]);
-
   /* ----- Submit request ----- */
   const submitRequest = useCallback(async () => {
     const trimmed = text.trim();
@@ -358,7 +272,7 @@ export default function ManagePage() {
     } finally {
       setSubmitting(false);
     }
-  }, [text, mode, submitting, loadRequests]);
+  }, [text, mode, submitting, loadRequests, currentTripIdRef]);
 
   /* ----- Trip select change ----- */
   function handleTripSelect(tripId: string) {
@@ -393,65 +307,45 @@ export default function ManagePage() {
     }
   }
 
-  /* ----- Close button ----- */
-  function handleClose() {
-    const tripId = lsGet<string>(LS_KEY_TRIP_PREF);
-    navigate(tripId ? `/trip/${tripId}` : '/');
-  }
+  /* ===== Nav center: trip dropdown ===== */
+  const navCenter = pageState.kind === 'ready' ? (
+    <div ref={dropdownRef}>
+      <button
+        className="flex items-center gap-1.5 bg-secondary text-foreground text-[length:var(--font-size-body)] font-semibold py-2 pl-3 pr-2.5 rounded-full min-h-tap-min cursor-pointer border-none transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
+        aria-label="選擇行程"
+        onClick={() => setDropdownOpen(!dropdownOpen)}
+      >
+        <span className="truncate max-w-[60vw] md:max-w-[300px]">
+          {filteredTrips.find(t => t.tripId === currentTripId)?.name || ''}
+        </span>
+        <svg viewBox="0 0 10 7" fill="none" width="10" height="7" className={`shrink-0 transition-transform duration-fast ${dropdownOpen ? 'rotate-180' : ''}`}>
+          <path d="M1 1.5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
+        </svg>
+      </button>
+      {dropdownOpen && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-secondary rounded-lg shadow-lg border border-border/50 py-1 min-w-full max-h-[50vh] overflow-y-auto z-(--z-sticky-nav)">
+          {filteredTrips.map((t) => (
+            <button
+              key={t.tripId}
+              className={[
+                'w-full text-left px-4 py-2.5 border-none bg-transparent cursor-pointer text-[length:var(--font-size-body)] transition-colors duration-fast whitespace-nowrap hover:bg-hover focus-visible:outline-none',
+                t.tripId === currentTripId ? 'text-accent font-semibold' : 'text-foreground',
+              ].join(' ')}
+              onClick={() => handleTripSelect(t.tripId)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  ) : null;
 
   /* ===== Render ===== */
   return (
     <div className="flex min-h-dvh">
       <div className="flex-1 min-w-0 max-w-full mx-auto">
-        {/* Sticky Nav — glassmorphism */}
-        <div
-          className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-xl backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
-          id="stickyNav"
-        >
-          <TriplineLogo isOnline={isOnline} />
-          {pageState.kind === 'ready' && (
-            <div ref={dropdownRef} className="absolute left-1/2 -translate-x-1/2">
-              <button
-                className="flex items-center gap-1.5 bg-secondary text-foreground text-[length:var(--font-size-body)] font-semibold py-2 pl-3 pr-2.5 rounded-full min-h-tap-min cursor-pointer border-none transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
-                aria-label="選擇行程"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-              >
-                <span className="truncate max-w-[60vw] md:max-w-[300px]">
-                  {filteredTrips.find(t => t.tripId === currentTripId)?.name || ''}
-                </span>
-                <svg viewBox="0 0 10 7" fill="none" width="10" height="7" className={`shrink-0 transition-transform duration-fast ${dropdownOpen ? 'rotate-180' : ''}`}>
-                  <path d="M1 1.5l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-                </svg>
-              </button>
-              {dropdownOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-secondary rounded-lg shadow-lg border border-border/50 py-1 min-w-full max-h-[50vh] overflow-y-auto z-(--z-sticky-nav)">
-                  {filteredTrips.map((t) => (
-                    <button
-                      key={t.tripId}
-                      className={[
-                        'w-full text-left px-4 py-2.5 border-none bg-transparent cursor-pointer text-[length:var(--font-size-body)] transition-colors duration-fast whitespace-nowrap hover:bg-hover focus-visible:outline-none',
-                        t.tripId === currentTripId ? 'text-accent font-semibold' : 'text-foreground',
-                      ].join(' ')}
-                      onClick={() => handleTripSelect(t.tripId)}
-                    >
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          <button
-            className="flex items-center justify-center w-tap-min h-tap-min p-0 border-none rounded-full bg-transparent text-foreground shrink-0 transition-colors duration-fast hover:text-accent hover:bg-accent-bg focus-visible:outline-none ml-auto"
-            id="navCloseBtn"
-            aria-label="關閉"
-            onClick={handleClose}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-            </svg>
-          </button>
-        </div>
+        <PageNav isOnline={isOnline} onClose={handleClose} center={navCenter} />
 
         <ToastContainer />
 
