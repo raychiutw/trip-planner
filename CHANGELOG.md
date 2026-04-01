@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.4.0] - 2026-04-01
+
+### Changed
+- DayMap 路線從直線 Polyline 改為 Google Maps Directions API 實際道路路線
+- 路線載入完成前不渲染連線（不再顯示直線 fallback）
+- 車程 label 位置改用 Directions API leg 路徑中點
+
+### Added
+- `useDirectionsRoute` hook — Directions API 整合、快取、自動 fallback
+- `sortPinsByOrder` 共用排序工具函式
+- 路線快取（LRU 20 entry 上限）、routes library 按需載入
+- Directions API 回傳空路線防護 + console.warn 錯誤日誌
+- waypoints 上限 25（Google API 硬限制防護）
+
 ## [1.1.3.0] - 2026-03-30
 
 ### Changed

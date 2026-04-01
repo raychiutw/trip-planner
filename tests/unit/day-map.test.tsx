@@ -32,6 +32,15 @@ vi.mock('../../src/components/trip/MapMarker', () => ({
   MapMarker: vi.fn(function() { return null; }),
 }));
 
+/* ===== Mock useDirectionsRoute — 避免 Directions API 相依 ===== */
+vi.mock('../../src/hooks/useDirectionsRoute', () => ({
+  useDirectionsRoute: () => ({
+    routePath: null,
+    legMidpoints: [],
+    loading: false,
+  }),
+}));
+
 /* ===== Mock google.maps (不需要實際 SDK) ===== */
 
 const mockFitBounds = vi.fn();

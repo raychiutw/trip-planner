@@ -25,6 +25,7 @@ import { lsGet, lsSet } from '../../lib/localStorage';
 import Icon from '../shared/Icon';
 import { MapMarker } from './MapMarker';
 import { MapRoute } from './MapRoute';
+import { useDirectionsRoute } from '../../hooks/useDirectionsRoute';
 import type { Day } from '../../types/trip';
 import { GOOGLE_MAPS_URL_BASE } from '../../lib/constants';
 
@@ -104,6 +105,12 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
 
   /* --- 選中的 marker ID (F003 雙向聯動) --- */
   const [activePinId, setActivePinId] = useState<number | null>(null);
+
+  /* --- Directions API 路線（F006） --- */
+  const { routePath, legMidpoints, loading: routeLoading } = useDirectionsRoute(
+    pins,
+    !collapsed && mapReady && pins.length >= 2,
+  );
 
   /* --- 地圖初始化 --- */
   useEffect(() => {
@@ -303,11 +310,14 @@ export default function DayMap({ day, dayNum }: DayMapProps) {
               />
             ))}
 
-            {/* MapRoute（F004）：直線 Polyline 連接 markers */}
+            {/* MapRoute（F006）：Directions API 實際道路路線 */}
             {mapReady && pins.length >= 2 && (
               <MapRoute
                 map={mapInstanceRef.current!}
                 pins={pins}
+                routePath={routePath}
+                legMidpoints={legMidpoints}
+                routeLoading={routeLoading}
               />
             )}
           </div>

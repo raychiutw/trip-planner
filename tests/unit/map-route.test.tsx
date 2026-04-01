@@ -78,6 +78,19 @@ const HOTEL_PIN = {
 
 const mockMap = {} as google.maps.Map;
 
+/** Directions API 路線模擬 */
+const makeRoutePath = (count: number): google.maps.LatLngLiteral[] =>
+  Array.from({ length: count }, (_, i) => ({
+    lat: 26.2 + i * 0.005,
+    lng: 127.7 + i * 0.005,
+  }));
+
+const makeLegMidpoints = (count: number): google.maps.LatLngLiteral[] =>
+  Array.from({ length: count }, (_, i) => ({
+    lat: 26.205 + i * 0.01,
+    lng: 127.705 + i * 0.01,
+  }));
+
 /* ===== Setup ===== */
 
 beforeEach(() => {
@@ -107,30 +120,37 @@ async function getMapRoute() {
 /* ===== Tests ===== */
 
 describe('MapRoute — Polyline 建立', () => {
-  it('1. 0 個 pin → 不建立 Polyline', async () => {
+  it('1. 無 routePath → 不建立 Polyline', async () => {
     const MapRoute = await getMapRoute();
     render(<MapRoute map={mockMap} pins={[]} />);
 
     expect(mockPolyline).not.toHaveBeenCalled();
   });
 
-  it('2. 1 個 pin → 不建立 Polyline', async () => {
+  it('2. routePath 點數不足 → 不建立 Polyline', async () => {
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={makePins(1)} />);
+    render(<MapRoute map={mockMap} pins={makePins(1)} routePath={makeRoutePath(1)} />);
 
     expect(mockPolyline).not.toHaveBeenCalled();
   });
 
-  it('3. 2 個 pins → 建立 Polyline', async () => {
+  it('2b. routeLoading=true → 不建立 Polyline', async () => {
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={makePins(2)} />);
+    render(<MapRoute map={mockMap} pins={makePins(2)} routePath={makeRoutePath(5)} routeLoading={true} />);
+
+    expect(mockPolyline).not.toHaveBeenCalled();
+  });
+
+  it('3. routePath 提供 → 建立 Polyline', async () => {
+    const MapRoute = await getMapRoute();
+    render(<MapRoute map={mockMap} pins={makePins(2)} routePath={makeRoutePath(5)} />);
 
     expect(mockPolyline).toHaveBeenCalledTimes(1);
   });
 
   it('4. Polyline 樣式：strokeWeight=2, strokeOpacity=0.7, geodesic=false', async () => {
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={makePins(3)} />);
+    render(<MapRoute map={mockMap} pins={makePins(3)} routePath={makeRoutePath(5)} />);
 
     expect(mockPolyline).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -143,67 +163,66 @@ describe('MapRoute — Polyline 建立', () => {
   });
 });
 
-describe('MapRoute — path 排序', () => {
-  it('5. 依 sort_order 升序排列 path（亂序輸入 → 排序後輸出）', async () => {
-    const pins = [
-      { id: 3, type: 'entry' as const, index: 3, title: '景點 C', lat: 26.22, lng: 127.72, sortOrder: 3 },
-      { id: 1, type: 'entry' as const, index: 1, title: '景點 A', lat: 26.20, lng: 127.70, sortOrder: 1 },
-      { id: 2, type: 'entry' as const, index: 2, title: '景點 B', lat: 26.21, lng: 127.71, sortOrder: 2 },
+describe('MapRoute — routePath 使用', () => {
+  it('5. routePath 直接作為 Polyline path', async () => {
+    const routePath = [
+      { lat: 26.22, lng: 127.72 },
+      { lat: 26.20, lng: 127.70 },
+      { lat: 26.21, lng: 127.71 },
     ];
 
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={pins} />);
+    render(<MapRoute map={mockMap} pins={makePins(2)} routePath={routePath} />);
 
     const callArg = mockPolyline.mock.calls[0][0];
-    expect(callArg.path).toEqual([
-      { lat: 26.20, lng: 127.70 }, // sort_order 1
-      { lat: 26.21, lng: 127.71 }, // sort_order 2
-      { lat: 26.22, lng: 127.72 }, // sort_order 3
-    ]);
+    expect(callArg.path).toEqual(routePath);
   });
 
-  it('6. 飯店（sortOrder=-1）排在最前，entry 依序跟隨', async () => {
+  it('6. routePath 用於飯店 + entry 混合路線', async () => {
+    const routePath = makeRoutePath(10);
     const entryPins = makePins(2);
-    const pins = [entryPins[1], HOTEL_PIN, entryPins[0]]; // 故意亂序
+    const pins = [entryPins[1], HOTEL_PIN, entryPins[0]];
 
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={pins} />);
+    render(<MapRoute map={mockMap} pins={pins} routePath={routePath} />);
 
     const callArg = mockPolyline.mock.calls[0][0];
-    expect(callArg.path[0]).toEqual({ lat: HOTEL_PIN.lat, lng: HOTEL_PIN.lng });
+    expect(callArg.path).toEqual(routePath);
   });
 });
 
 describe('MapRoute — 動態更新', () => {
-  it('7. pins 增加 → 呼叫 setPath 更新，不重新建立 Polyline', async () => {
+  it('7. routePath 更新 → 呼叫 setPath，不重新建立 Polyline', async () => {
     const MapRoute = await getMapRoute();
-    const { rerender } = render(<MapRoute map={mockMap} pins={makePins(2)} />);
+    const routePath1 = makeRoutePath(5);
+    const routePath2 = makeRoutePath(8);
+    const { rerender } = render(<MapRoute map={mockMap} pins={makePins(2)} routePath={routePath1} />);
 
     expect(mockPolyline).toHaveBeenCalledTimes(1);
 
-    rerender(<MapRoute map={mockMap} pins={makePins(3)} />);
+    rerender(<MapRoute map={mockMap} pins={makePins(2)} routePath={routePath2} />);
 
-    // 不重建 Polyline，只更新路徑
     expect(mockPolyline).toHaveBeenCalledTimes(1);
     expect(mockSetPath).toHaveBeenCalledTimes(1);
+    expect(mockSetPath).toHaveBeenCalledWith(routePath2);
   });
 });
 
 describe('MapRoute — cleanup', () => {
   it('8. unmount → setMap(null) 清除 Polyline', async () => {
     const MapRoute = await getMapRoute();
-    const { unmount } = render(<MapRoute map={mockMap} pins={makePins(2)} />);
+    const { unmount } = render(<MapRoute map={mockMap} pins={makePins(2)} routePath={makeRoutePath(5)} />);
 
     unmount();
 
     expect(mockSetMap).toHaveBeenCalledWith(null);
   });
 
-  it('9. pins 從 2 降到 1 → 清除現有 Polyline（setMap(null)）', async () => {
+  it('9. routePath 變 null → 清除現有 Polyline（setMap(null)）', async () => {
     const MapRoute = await getMapRoute();
-    const { rerender } = render(<MapRoute map={mockMap} pins={makePins(2)} />);
+    const { rerender } = render(<MapRoute map={mockMap} pins={makePins(2)} routePath={makeRoutePath(5)} />);
 
-    rerender(<MapRoute map={mockMap} pins={makePins(1)} />);
+    rerender(<MapRoute map={mockMap} pins={makePins(2)} routePath={null} />);
 
     expect(mockSetMap).toHaveBeenCalledWith(null);
   });
@@ -216,7 +235,7 @@ describe('MapRoute — strokeColor', () => {
     } as unknown as CSSStyleDeclaration);
 
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={makePins(2)} />);
+    render(<MapRoute map={mockMap} pins={makePins(2)} routePath={makeRoutePath(5)} />);
 
     const callArg = mockPolyline.mock.calls[0][0];
     expect(callArg.strokeColor).toBe('#007AFF');
@@ -228,7 +247,7 @@ describe('MapRoute — strokeColor', () => {
     } as unknown as CSSStyleDeclaration);
 
     const MapRoute = await getMapRoute();
-    render(<MapRoute map={mockMap} pins={makePins(2)} />);
+    render(<MapRoute map={mockMap} pins={makePins(2)} routePath={makeRoutePath(5)} />);
 
     const callArg = mockPolyline.mock.calls[0][0];
     expect(callArg.strokeColor).toBe('#FF6B35');
@@ -348,30 +367,29 @@ describe('getTravelEmoji — F005 交通方式圖示', () => {
 });
 
 describe('MapRoute — F005 OverlayView label 管理', () => {
-  it('21. 有 travelMin 的 pins → OverlayView setMap 被呼叫', async () => {
+  it('21. 有 travelMin + legMidpoints → OverlayView setMap 被呼叫', async () => {
     const MapRoute = await getMapRoute();
     const pinsWithTravel = [
       { id: 1, type: 'entry' as const, index: 1, title: 'A', lat: 26.20, lng: 127.70, sortOrder: 1 },
       { id: 2, type: 'entry' as const, index: 2, title: 'B', lat: 26.21, lng: 127.71, travelMin: 15, travelType: 'car', sortOrder: 2 },
     ];
+    const legMidpoints = [{ lat: 26.205, lng: 127.705 }];
 
-    render(<MapRoute map={mockMap} pins={pinsWithTravel} />);
+    render(<MapRoute map={mockMap} pins={pinsWithTravel} routePath={makeRoutePath(5)} legMidpoints={legMidpoints} />);
 
-    // OverlayView.setMap(map) 應被呼叫一次（建立 1 個 label）
     expect(mockOverlaySetMap).toHaveBeenCalledWith(mockMap);
     expect(mockOverlaySetMap).toHaveBeenCalledTimes(1);
   });
 
-  it('22. 無 travelMin 的 pins → OverlayView setMap 不被呼叫', async () => {
+  it('22. 無 travelMin → OverlayView setMap 不被呼叫', async () => {
     const MapRoute = await getMapRoute();
     const pinsNoTravel = [
       { id: 1, type: 'entry' as const, index: 1, title: 'A', lat: 26.20, lng: 127.70, sortOrder: 1 },
       { id: 2, type: 'entry' as const, index: 2, title: 'B', lat: 26.21, lng: 127.71, sortOrder: 2 },
     ];
 
-    render(<MapRoute map={mockMap} pins={pinsNoTravel} />);
+    render(<MapRoute map={mockMap} pins={pinsNoTravel} routePath={makeRoutePath(5)} />);
 
-    // 沒有 travelMin → 沒有 OverlayView
     expect(mockOverlaySetMap).not.toHaveBeenCalled();
   });
 
@@ -381,13 +399,13 @@ describe('MapRoute — F005 OverlayView label 管理', () => {
       { id: 1, type: 'entry' as const, index: 1, title: 'A', lat: 26.20, lng: 127.70, sortOrder: 1 },
       { id: 2, type: 'entry' as const, index: 2, title: 'B', lat: 26.21, lng: 127.71, travelMin: 15, sortOrder: 2 },
     ];
+    const legMidpoints = [{ lat: 26.205, lng: 127.705 }];
 
-    const { unmount } = render(<MapRoute map={mockMap} pins={pinsWithTravel} />);
+    const { unmount } = render(<MapRoute map={mockMap} pins={pinsWithTravel} routePath={makeRoutePath(5)} legMidpoints={legMidpoints} />);
 
     vi.clearAllMocks();
     unmount();
 
-    // unmount 後，OverlayView 應被 setMap(null) 清除
     expect(mockOverlaySetMap).toHaveBeenCalledWith(null);
   });
 });

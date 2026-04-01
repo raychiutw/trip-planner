@@ -1,18 +1,18 @@
 /**
- * MapRoute — 直線 Polyline 連接 markers + 車程資訊 label
+ * MapRoute — Directions API 路線 Polyline + 車程資訊 label
  *
- * F004：
- * - 使用 Google Maps Polyline API 直線連接所有 MapPin，依 sort_order 排序
- * - 飯店也參與連線（sortOrder = -1，顯示在最前）
+ * F004 → F006：
+ * - 使用 Directions API 取得實際道路路線（取代直線 Polyline）
+ * - routePath（從 useDirectionsRoute hook）作為 Polyline path
+ * - 載入中或無路線 → 不渲染任何連線（只顯示 markers）
  * - 線條樣式：accent 色，2px 寬，opacity 0.7
- * - pins 增減時動態更新路徑（setPath，不重建 Polyline）
+ * - routePath 更新時動態 setPath（不重建 Polyline）
  * - 元件 unmount 時清除 Polyline（setMap(null)）
  *
  * F005：
- * - 在相鄰兩點 Polyline 中點位置顯示車程耗時 label（例如「🚗 15min」）
- * - 使用 Google Maps OverlayView 自訂 label 元件
+ * - 車程 label 位置改用 Directions API 的 leg 路徑中點（legMidpoints）
+ * - label 文字仍來自 pins 的 travelMin / travelType
  * - 只有 travelMin > 0 的 segment 才顯示 label
- * - 無 travelMin → 不顯示 label
  *
  * 顏色策略：
  * - Google Maps Polyline 需要 hex/rgb 顏色字串，無法直接傳 CSS 變數
@@ -22,12 +22,19 @@
 
 import { useEffect, useRef } from 'react';
 import type { MapPin } from '../../hooks/useMapData';
+import { sortPinsByOrder } from '../../hooks/useDirectionsRoute';
 
 /* ===== Props ===== */
 
 export interface MapRouteProps {
   map: google.maps.Map;
   pins: MapPin[];
+  /** Directions API 回傳的完整路線 path，null = 載入中或失敗 */
+  routePath?: google.maps.LatLngLiteral[] | null;
+  /** 每段 leg 的路徑中點（用於 travel label 定位） */
+  legMidpoints?: google.maps.LatLngLiteral[];
+  /** 是否正在載入路線 */
+  routeLoading?: boolean;
 }
 
 /* ===== 讀取 CSS 變數 color（hex/rgb 字串）===== */
@@ -178,19 +185,12 @@ export function createTravelLabelOverlay(
 /**
  * MapRoute 是純副作用元件（無 DOM 輸出）。
  *
- * Effect 依賴 [map, pins]。
- * 使用 prevMapRef 追蹤 map 實例是否改變：
- * - map 改變（含初始）→ 建立新 Polyline，並直接 setPath（不在 cleanup 清 ref）
- * - 只有 pins 改變 → setPath 更新路徑
- * - pins < 2 → 清除 Polyline
- *
- * F005：每次 pins 更新時同步更新 TravelLabelOverlay：
- * - 清除舊 overlays → 重新建立新 overlays
- *
- * **重要**：cleanup 只在 unmount 時才清除 Polyline（透過 isMounted flag）。
- * pins 變化觸發 cleanup 時，不清除 Polyline，讓下次 effect 直接 setPath。
+ * Effect 依賴 [map, pins, routePath, legMidpoints, routeLoading]。
+ * - routeLoading 或無 routePath → 清除 Polyline + labels
+ * - routePath 提供 → 建立/更新 Polyline
+ * - labels 位置來自 legMidpoints，文字來自 pins
  */
-export function MapRoute({ map, pins }: MapRouteProps) {
+export function MapRoute({ map, pins, routePath, legMidpoints, routeLoading }: MapRouteProps) {
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const prevMapRef = useRef<google.maps.Map | null>(null);
   const labelsRef = useRef<ReturnType<typeof createTravelLabelOverlay>[]>([]);
@@ -207,8 +207,8 @@ export function MapRoute({ map, pins }: MapRouteProps) {
     const mapChanged = prevMapRef.current !== map;
     prevMapRef.current = map;
 
-    if (pins.length < 2) {
-      // 不足 2 個 pin → 清除現有 Polyline 和 labels
+    /* 載入中或無路線 → 清除 Polyline + labels，不渲染任何連線 */
+    if (routeLoading || !routePath || routePath.length < 2) {
       if (polylineRef.current) {
         polylineRef.current.setMap(null);
         polylineRef.current = null;
@@ -217,15 +217,13 @@ export function MapRoute({ map, pins }: MapRouteProps) {
       return;
     }
 
-    const path = buildPath(pins);
-
+    /* 建立/更新 Polyline（使用 Directions API 的實際道路路線） */
     if (mapChanged || !polylineRef.current) {
-      // map 換掉或 Polyline 不存在 → 清除舊的（如有），建新的
       if (polylineRef.current) {
         polylineRef.current.setMap(null);
       }
       polylineRef.current = new google.maps.Polyline({
-        path,
+        path: routePath,
         geodesic: false,
         strokeColor: getAccentColor(),
         strokeOpacity: 0.7,
@@ -233,22 +231,26 @@ export function MapRoute({ map, pins }: MapRouteProps) {
         map,
       });
     } else {
-      // map 未變，Polyline 存在 → 只更新路徑
-      polylineRef.current.setPath(path);
+      polylineRef.current.setPath(routePath);
     }
 
-    /* --- F005：更新 travel label overlays --- */
+    /* Travel labels：text from pins, position from legMidpoints */
     clearLabels();
-    const segments = buildTravelSegments(pins);
-    for (const seg of segments) {
-      const overlay = createTravelLabelOverlay(
-        { lat: seg.midLat, lng: seg.midLng },
-        seg.label,
-      );
+    const sorted = sortPinsByOrder(pins);
+    for (let i = 1; i < sorted.length; i++) {
+      const curr = sorted[i];
+      if (!curr.travelMin || curr.travelMin <= 0) continue;
+
+      const emoji = getTravelEmoji(curr.travelType);
+      const label = `${emoji} ${curr.travelMin}min`;
+      const pos = legMidpoints?.[i - 1];
+      if (!pos) continue;
+
+      const overlay = createTravelLabelOverlay(pos, label);
       overlay.setMap(map);
       labelsRef.current.push(overlay);
     }
-  }, [map, pins]);
+  }, [map, pins, routePath, legMidpoints, routeLoading]);
 
   /* --- Unmount cleanup：清除 Polyline + labels --- */
   useEffect(() => {
