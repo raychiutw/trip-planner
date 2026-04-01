@@ -50,3 +50,29 @@ export const FOCUSABLE_SELECTOR =
 /** Base URL for Google Maps search links. */
 export const GOOGLE_MAPS_URL_BASE = 'https://www.google.com/maps/search/';
 
+/** Known destination timezone mapping (by tripId prefix). */
+export const TRIP_TIMEZONE: Record<string, string> = {
+  okinawa: 'Asia/Tokyo',
+  kyoto: 'Asia/Tokyo',
+  busan: 'Asia/Seoul',
+  banqiao: 'Asia/Taipei',
+};
+
+/** Get today's date (YYYY-MM-DD) in the trip's destination timezone. */
+export function getLocalToday(tripId: string | null): string {
+  let tz: string | undefined;
+  if (tripId) {
+    const prefix = tripId.split('-')[0] ?? '';
+    tz = TRIP_TIMEZONE[prefix];
+  }
+  if (tz) {
+    return new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
+  }
+  // Fallback: user's local date
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+

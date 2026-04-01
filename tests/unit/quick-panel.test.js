@@ -165,9 +165,11 @@ describe('COLOR_THEMES 驗證（appearance.ts）', () => {
 
 describe('DRY: 常數不重複定義', () => {
   const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
+  const sheetContentTsx = readFileSync('src/components/trip/TripSheetContent.tsx', 'utf-8');
 
-  it('TripPage imports from appearance.ts', () => {
-    expect(tripPageTsx).toContain("from '../lib/appearance'");
+  it('TripSheetContent imports from appearance.ts (used by TripPage)', () => {
+    expect(sheetContentTsx).toContain("from '../../lib/appearance'");
+    expect(tripPageTsx).toContain('TripSheetContent');
   });
 
   it('TripPage 不再本地定義 COLOR_THEMES', () => {
@@ -226,17 +228,20 @@ describe('QuickPanel sheet actions', () => {
     expect(drillDown).toHaveLength(0);
   });
 
-  it('trip-select and appearance content is in TripPage', () => {
+  it('trip-select and appearance content is in TripSheetContent (used by TripPage)', () => {
+    const sheetContentTsx = readFileSync('src/components/trip/TripSheetContent.tsx', 'utf-8');
+    expect(sheetContentTsx).toContain("case 'trip-select':");
+    expect(sheetContentTsx).toContain("case 'appearance':");
+    // TripPage imports TripSheetContent
     const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
-    expect(tripPageTsx).toContain("case 'trip-select':");
-    expect(tripPageTsx).toContain("case 'appearance':");
+    expect(tripPageTsx).toContain('TripSheetContent');
   });
 
-  it('TripPage imports appearance theme/color mode options from appearance.ts', () => {
-    const tripPageTsx = readFileSync('src/pages/TripPage.tsx', 'utf-8');
-    expect(tripPageTsx).toContain('COLOR_MODE_OPTIONS');
-    expect(tripPageTsx).toContain('THEME_ACCENTS');
-    expect(tripPageTsx).toContain('COLOR_THEMES');
+  it('TripSheetContent imports appearance theme/color mode options from appearance.ts', () => {
+    const sheetContentTsx = readFileSync('src/components/trip/TripSheetContent.tsx', 'utf-8');
+    expect(sheetContentTsx).toContain('COLOR_MODE_OPTIONS');
+    expect(sheetContentTsx).toContain('THEME_ACCENTS');
+    expect(sheetContentTsx).toContain('COLOR_THEMES');
   });
 });
 
