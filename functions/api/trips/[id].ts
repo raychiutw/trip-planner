@@ -9,12 +9,12 @@ const ALLOWED_FIELDS = ['name', 'owner', 'title', 'description', 'og_description
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
 
-  const row = await context.env.DB.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first();
+  const row = await context.env.DB.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first<Record<string, unknown>>();
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
   if (row.footer && typeof row.footer === 'string') {
     try {
-      (row as any).footer = JSON.parse(row.footer as string);
+      row.footer = JSON.parse(row.footer);
     } catch {
       // leave as-is if parse fails
     }
@@ -37,9 +37,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!existing) throw new AppError('DATA_NOT_FOUND');
 
-  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
   if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');

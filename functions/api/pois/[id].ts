@@ -26,10 +26,9 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到此 POI');
 
-  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
+  const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
-  const update = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
+  const update = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
   if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   const newRow = await db.prepare(`UPDATE pois SET ${update.setClauses} WHERE id = ? RETURNING *`)

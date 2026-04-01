@@ -2,6 +2,8 @@
  * API 共用型別定義
  */
 
+export type { AuthData } from '../../src/types/api';
+
 export interface Env {
   DB: D1Database;
   CF_API_TOKEN: string;
@@ -12,10 +14,4 @@ export interface Env {
   ALLOWED_ORIGIN?: string;
   DEV_MOCK_EMAIL?: string;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
-}
-
-export interface AuthData {
-  email: string;
-  isAdmin: boolean;
-  isServiceToken: boolean;
 }

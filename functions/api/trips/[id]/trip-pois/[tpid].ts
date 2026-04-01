@@ -36,14 +36,13 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('PERM_DENIED', '此 trip_poi 不屬於該行程');
 
-  const [oldRow, bodyOrError] = await Promise.all([
+  const [oldRow, body] = await Promise.all([
     db.prepare('SELECT * FROM trip_pois WHERE id = ?').bind(tripPoiId).first() as Promise<Record<string, unknown> | null>,
     parseJsonBody<Record<string, unknown>>(context.request),
   ]);
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
-  if (bodyOrError instanceof Response) return bodyOrError;
 
-  const updateResult = buildUpdateClause(bodyOrError, ALLOWED_FIELDS as unknown as string[]);
+  const updateResult = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
   if (!updateResult) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   const newRow = await db.prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ? RETURNING *`)

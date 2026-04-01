@@ -10,9 +10,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const { env } = context;
   const db = env.DB;
 
-  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
   // 蜜罐欄位 — bot 會填這個欄位
   if (body.website || body.email_confirm) {

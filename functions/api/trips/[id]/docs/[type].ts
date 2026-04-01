@@ -51,14 +51,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  const bodyOrError = await parseJsonBody<{
+  const body = await parseJsonBody<{
     title?: string;
     entries?: { sort_order?: number; section?: string; title?: string; content?: string }[];
     // 向舊格式相容：如果 body 有 content 字串，自動轉換
     content?: string;
   }>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
 
   let docTitle = body.title ?? '';
   let entries = body.entries ?? [];

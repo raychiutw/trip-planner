@@ -1,6 +1,19 @@
 /**
  * Shared authorization helper for API write handlers.
  */
+import { AppError } from './_errors';
+import { getAuth } from './_utils';
+import type { AuthData } from './_types';
+
+/**
+ * Returns the authenticated AuthData or throws AUTH_REQUIRED.
+ * Use in place of the repeated `const auth = getAuth(context); if (!auth) throw ...` pattern.
+ */
+export function requireAuth(context: { data: unknown }): AuthData {
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+  return auth;
+}
 
 /**
  * Returns true if the authenticated user has permission to write to the given trip.

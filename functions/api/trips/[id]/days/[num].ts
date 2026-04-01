@@ -183,9 +183,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     hotel?: Record<string, unknown> & { shopping?: unknown[]; parking?: unknown[]; description?: unknown };
     timeline?: Array<Record<string, unknown> & { restaurants?: unknown[]; shopping?: unknown[]; travel?: { type?: unknown; desc?: unknown; min?: unknown } }>;
   };
-  const bodyOrError = await parseJsonBody<DayBody>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<DayBody>(context.request);
 
   const validation = validateDayBody(body);
   if (!validation.ok) throw new AppError('DATA_VALIDATION', validation.error);

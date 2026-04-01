@@ -7,7 +7,7 @@
 
 import type { Env } from './_types';
 import { detectGarbledText } from './_validate';
-import { json } from './_utils';
+
 import { AppError, errorResponse } from './_errors';
 
 function getCookie(request: Request, name: string): string | null {
@@ -132,17 +132,11 @@ export function checkCsrf(request: Request, env: Env): Response | null {
     // Allow service-token requests that omit Origin (e.g. CLI / scheduler)
     const hasServiceToken = !!request.headers.get('CF-Access-Client-Id') && !!request.headers.get('CF-Access-Client-Secret');
     if (hasServiceToken) return null;
-    return new Response(JSON.stringify({ error: 'Origin header required' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError('PERM_DENIED', 'Origin header required'));
   }
 
   if (!isAllowedOrigin(origin, env)) {
-    return new Response(JSON.stringify({ error: 'Forbidden: invalid origin' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError('PERM_DENIED', 'Invalid origin'));
   }
 
   return null;
@@ -173,10 +167,7 @@ export function checkCompanionScope(request: Request, url: URL): Response | null
   const allowed = COMPANION_ALLOWED.some(r => r.method === method && r.pattern.test(path));
   if (allowed) return null;
 
-  return new Response(JSON.stringify({ error: '此操作超出旅伴請求範圍' }), {
-    status: 403,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return errorResponse(new AppError('PERM_DENIED', '此操作超出旅伴請求範圍'));
 }
 
 async function handleAuth(
@@ -213,13 +204,10 @@ async function handleAuth(
       const bodyText = decoder.decode(new Uint8Array(await cloned.arrayBuffer()));
       // 亂碼偵測（常見於 CP950/Big5 → UTF-8 誤轉），統一在 middleware 層阻擋
       if (detectGarbledText(bodyText)) {
-        return json({ error: 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8' }, 400);
+        return errorResponse(new AppError('DATA_ENCODING', 'Request body 包含疑似亂碼，請確認 encoding 為 UTF-8'));
       }
     } catch {
-      return new Response(JSON.stringify({ error: 'Request body is not valid UTF-8' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return errorResponse(new AppError('DATA_ENCODING', 'Request body is not valid UTF-8'));
     }
   }
 
@@ -287,18 +275,12 @@ async function handleAuth(
   // JWT 認證（Cloudflare Access 設定的 cookie）
   const token = getCookie(request, 'CF_Authorization');
   if (!token) {
-    return new Response(JSON.stringify({ error: '未認證' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError('AUTH_REQUIRED'));
   }
 
   const payload = decodeJwtPayload(token);
   if (!payload) {
-    return new Response(JSON.stringify({ error: '無效的認證 token' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError('AUTH_INVALID'));
   }
 
   // Service Token JWT：Access 消化 header 後發 JWT，有 common_name 但無 email
@@ -312,10 +294,7 @@ async function handleAuth(
   }
 
   if (!payload.email) {
-    return new Response(JSON.stringify({ error: '無效的認證 token' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError('AUTH_INVALID'));
   }
 
   const email = String(payload.email).toLowerCase();

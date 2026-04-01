@@ -19,9 +19,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
-  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
   const id = body.id as string | undefined;
   const name = body.name as string | undefined;

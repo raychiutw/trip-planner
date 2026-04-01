@@ -88,9 +88,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
   type RequestBody = { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
-  const bodyOrError = await parseJsonBody<RequestBody>(request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<RequestBody>(request);
 
   const { tripId, mode } = body;
   // 優先使用 message，若未提供則 fallback 合併 title + body（向下相容）

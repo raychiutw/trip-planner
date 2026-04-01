@@ -19,9 +19,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_ADMIN_ONLY');
   }
 
-  const bodyOrError = await parseJsonBody<{ reply?: string; status?: string }>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<{ reply?: string; status?: string }>(context.request);
 
   const updates: string[] = [];
   const values: string[] = [];

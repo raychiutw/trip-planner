@@ -80,25 +80,30 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
   if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
-  const bodyOrError = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
 
   const { email, tripId, role = 'member' } = body;
   if (!email || !tripId) {
     throw new AppError('DATA_VALIDATION', '缺少必要欄位：email, tripId');
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new AppError('DATA_VALIDATION', 'email 格式不正確');
+  }
+
   const lowerEmail = email.toLowerCase();
 
   // 寫入 D1（UNIQUE index 保護 race condition）
-  let result;
+  let result: Record<string, unknown> & { id: number };
   try {
-    result = await context.env.DB
+    const row = await context.env.DB
       .prepare('INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?) RETURNING *')
       .bind(lowerEmail, tripId, role)
-      .first();
+      .first<Record<string, unknown> & { id: number }>();
+    if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
+    result = row;
   } catch (err) {
+    if (err instanceof AppError) throw err;
     // UNIQUE constraint violation → already exists
     if (err instanceof Error && err.message.includes('UNIQUE')) {
       throw new AppError('DATA_CONFLICT', '此 email 已有此行程的權限');
@@ -115,7 +120,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const accessErr = err instanceof Error ? err.message : String(err);
     console.error('Access policy sync failed:', accessErr);
     await logAudit(context.env.DB, {
-      tripId, tableName: 'trip_permissions', recordId: (result as any)?.id ?? null,
+      tripId, tableName: 'trip_permissions', recordId: result.id,
       action: 'error', changedBy: auth.email,
       diffJson: JSON.stringify({ warning: 'Access policy sync failed', message: accessErr }),
     });
@@ -124,11 +129,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   await logAudit(context.env.DB, {
     tripId,
     tableName: 'trip_permissions',
-    recordId: (result as any)?.id ?? null,
+    recordId: result.id,
     action: 'insert',
     changedBy: auth.email,
     diffJson: JSON.stringify({ email: lowerEmail, role }),
   });
 
-  return json({ ...result as object, _accessSyncFailed: accessSyncFailed }, 201);
+  return json({ ...result, _accessSyncFailed: accessSyncFailed }, 201);
 };

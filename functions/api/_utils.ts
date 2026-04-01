@@ -3,6 +3,7 @@
  */
 
 import type { AuthData } from './_types';
+import { AppError } from './_errors';
 
 export function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
@@ -13,12 +14,12 @@ export function getAuth(context: { data: unknown }): AuthData | null {
   return ((context.data as Record<string, unknown>)?.auth as AuthData) ?? null;
 }
 
-/** 解析 JSON body，失敗回 400 Response */
-export async function parseJsonBody<T = Record<string, unknown>>(request: Request): Promise<T | Response> {
+/** 解析 JSON body，失敗 throw AppError('DATA_VALIDATION') */
+export async function parseJsonBody<T = Record<string, unknown>>(request: Request): Promise<T> {
   try {
     return await request.json() as T;
   } catch {
-    return json({ error: 'JSON 格式無效' }, 400);
+    throw new AppError('DATA_VALIDATION', 'JSON 格式無效');
   }
 }
 

@@ -27,9 +27,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const oldRow = await db.prepare('SELECT * FROM trip_entries WHERE id = ?').bind(eid).first() as Record<string, unknown> | null;
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
 
-  const bodyOrError = await parseJsonBody<Record<string, unknown>>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
   // 驗證必填欄位（title 若包含在更新欄位中則不得為空）
   if ('title' in body) {

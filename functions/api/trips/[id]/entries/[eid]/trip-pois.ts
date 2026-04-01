@@ -46,9 +46,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     must_buy?: string;
   };
 
-  const bodyOrError = await parseJsonBody<AddPoiBody>(context.request);
-  if (bodyOrError instanceof Response) return bodyOrError;
-  const body = bodyOrError;
+  const body = await parseJsonBody<AddPoiBody>(context.request);
 
   if (!body.name || !body.type) {
     throw new AppError('DATA_VALIDATION', '缺少必要欄位：name, type');

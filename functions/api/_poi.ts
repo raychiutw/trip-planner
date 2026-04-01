@@ -24,6 +24,26 @@ export interface FindOrCreatePoiData {
   country?: string | null;
 }
 
+const COALESCE_FIELDS = [
+  'description', 'maps', 'mapcode', 'lat', 'lng', 'google_rating',
+  'category', 'hours', 'address', 'phone', 'email', 'website', 'country',
+] as const;
+
+type CoalesceField = typeof COALESCE_FIELDS[number];
+
+function buildCoalesceUpdate(data: FindOrCreatePoiData): { fills: string[]; vals: unknown[] } {
+  const fills: string[] = [];
+  const vals: unknown[] = [];
+  for (const col of COALESCE_FIELDS) {
+    const val = data[col as CoalesceField];
+    if (val != null) {
+      fills.push(`${col} = COALESCE(${col}, ?)`);
+      vals.push(val);
+    }
+  }
+  return { fills, vals };
+}
+
 export async function findOrCreatePoi(
   db: D1Database,
   data: FindOrCreatePoiData,
@@ -35,21 +55,7 @@ export async function findOrCreatePoi(
 
   if (existing) {
     // COALESCE update: only fill NULL fields, never overwrite existing values
-    const fills: string[] = [];
-    const vals: unknown[] = [];
-    const coalesceFields = [
-      ['description', data.description], ['maps', data.maps], ['mapcode', data.mapcode],
-      ['lat', data.lat], ['lng', data.lng], ['google_rating', data.google_rating],
-      ['category', data.category], ['hours', data.hours],
-      ['address', data.address], ['phone', data.phone], ['email', data.email],
-      ['website', data.website], ['country', data.country],
-    ] as const;
-    for (const [col, val] of coalesceFields) {
-      if (val != null) {
-        fills.push(`${col} = COALESCE(${col}, ?)`);
-        vals.push(val);
-      }
-    }
+    const { fills, vals } = buildCoalesceUpdate(data);
     if (fills.length > 0) {
       await db.prepare(`UPDATE pois SET ${fills.join(', ')}, updated_at = datetime('now') WHERE id = ?`)
         .bind(...vals, existing.id).run();
@@ -121,22 +127,7 @@ export async function batchFindOrCreatePois(
   if (toUpdate.length > 0) {
     const updateStmts: D1PreparedStatement[] = [];
     for (const { idx, id } of toUpdate) {
-      const data = uniqueItems[idx].data;
-      const fills: string[] = [];
-      const vals: unknown[] = [];
-      const coalesceFields = [
-        ['description', data.description], ['maps', data.maps], ['mapcode', data.mapcode],
-        ['lat', data.lat], ['lng', data.lng], ['google_rating', data.google_rating],
-        ['category', data.category], ['hours', data.hours],
-        ['address', data.address], ['phone', data.phone], ['email', data.email],
-        ['website', data.website], ['country', data.country],
-      ] as const;
-      for (const [col, val] of coalesceFields) {
-        if (val != null) {
-          fills.push(`${col} = COALESCE(${col}, ?)`);
-          vals.push(val);
-        }
-      }
+      const { fills, vals } = buildCoalesceUpdate(uniqueItems[idx].data);
       if (fills.length > 0) {
         updateStmts.push(
           db.prepare(`UPDATE pois SET ${fills.join(', ')}, updated_at = datetime('now') WHERE id = ?`)
