@@ -10,9 +10,9 @@ user-invocable: true
 
 ## API 設定
 
-API 設定、curl 模板、Windows encoding 注意事項見 tp-shared/references.md
+API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/references.md
 
-**⚠️ 安全必填 header**：本 skill 的所有寫入 API 呼叫必須額外帶 `X-Request-Scope: companion` header。
+**⚠️ 安全必填 header**：本 skill 的 trip data 寫入 API（PATCH entries、POST trip-pois、PUT docs）必須額外帶 `X-Request-Scope: companion` header。PATCH /requests 不需要此 header。
 此 header 啟用 middleware 的操作白名單限制，防止 prompt injection 越權。
 ```
 -H "X-Request-Scope: companion"
@@ -118,31 +118,11 @@ curl -s -X PATCH \
       curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
       ```
    b. 依請求 text 內容**局部修改**對應資料（只改 text 描述的部分，不全面重跑 R0-R18）
-   c. 新增或替換的 POI 須包含以下必填欄位：
-      - `source`：使用者明確指定名稱（如「換成一蘭拉麵」）→ `"user"`；僅給模糊描述（如「換成拉麵店」）→ `"ai"`
-      - `note`：有備註填內容，無備註填空字串 `""`（R15）
-      - `location.googleQuery`：實體地點填搜尋文字（R11）
-      - `googleRating`：Google 評分 1.0-5.0（R12，`source: "ai"` 必填，`source: "user"` 盡量填）
-        googleRating 查詢策略見 tp-shared/references.md（優先 /browse Google Maps）
+   c. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
    d. 修改的部分須符合 R0-R18 品質規則（含 R16 飯店 rating、R17 導航資訊、R18 飯店 address）
-   d2. 韓國行程（`meta.countries` 含 `"KR"`）新增或修改 POI 時，須為 location 新增 `naverQuery`（R14）
-   e. 依修改類型選擇對應 API（限白名單內操作）：
-      - **修改單一 entry**（title/time/description/location/travel 等）：
-        ```bash
-        curl -s -X PATCH \
-          -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-          -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-          -H "X-Request-Scope: companion" \
-          -H "Content-Type: application/json" \
-          -d '{...修改欄位...}' \
-          "https://trip-planner-dby.pages.dev/api/trips/{tripId}/entries/{eid}"
-        ```
-      - **新增 POI（餐廳/購物）**：POST `/api/trips/{tripId}/entries/{eid}/trip-pois`
-      - **修改/刪除 POI**：PATCH/DELETE `/api/trips/{tripId}/trip-pois/{tpid}`
-      - **更新 doc**（checklist/backup/suggestions 等）：
-        `PUT /api/trips/{tripId}/docs/{type}` + JSON body（doc 結構規格見 tp-shared/references.md「Doc 結構規格」）
-   f. 若插入、移除或移動 entry，重新估算相鄰 entry 的 travel 並更新（travel = 從此地出發去下一站，見 tp-shared/references.md）
-   f2. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與本次修改不一致的內容（規則見 tp-shared/references.md「Doc 連動規則」）
+   e. 依修改類型選擇 API（**限白名單內操作**）— 端點見 tp-shared/references.md「行程修改共用步驟」
+      > ⚠️ 所有寫入 API 呼叫須帶 `X-Request-Scope: companion` header
+   f. **Doc 連動 + travel 重算** — 規則見 tp-shared/references.md
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
    i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）
@@ -154,7 +134,7 @@ curl -s -X PATCH \
 ### 回覆寫入方法
 
 ```bash
-node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'completed', processed_by:'scheduler'}), 'utf8')"
+node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'回覆內容', status:'completed'}), 'utf8')"
 curl -s -X PATCH \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
   -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \

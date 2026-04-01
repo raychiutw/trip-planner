@@ -1,49 +1,54 @@
 ---
 name: tp-edit
-description: 接受自然語言描述，局部修改指定行程資料（D1 API）。適用於使用者要求修改現有行程中的景點、餐廳或活動時。
+description: Use when modifying an existing trip itinerary partially via natural language (e.g., swap a restaurant, add a stop).
+user-invocable: true
 ---
 
-# tp-edit
+接受自然語言描述，局部修改指定行程資料（D1 API）。修改後執行 tp-check 精簡 report。
 
-接受自然語言描述，局部修改指定行程資料（D1 API）。
-
-## 核心原則
-- 不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 `ask_user`。
-- 嚴格遵守 `references/trip-quality-rules.md` 中的品質規則。
+⚡ 核心原則：不問問題，直接給最佳解法。遇到模糊需求時自行判斷最合理的方案執行，不使用 AskUserQuestion。
 
 ## API 設定
 
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `e5902a9d6f5181b8f70e12f1c11ebca3.access`
-  - `CF-Access-Client-Secret`: 從環境變數 `CF_ACCESS_CLIENT_SECRET` 取得
+API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/references.md
+
+## 輸入方式
+
+- 指定 tripId + 描述：`/tp-edit okinawa-trip-2026-Ray Day 3 午餐換成拉麵`
+- 未指定 tripId：呼叫 `GET /api/trips` 列出所有行程供選擇
 
 ## 步驟
 
-1. **讀取資料**：GET `/api/trips/{tripId}` + GET `/api/trips/{tripId}/days/{N}`
-2. **局部修改**：依自然語言描述局部修改（只改涉及的部分）
-3. **標記來源**：新增或替換的 POI 須標記 `source`：
-   - 使用者明確指定名稱 → `"user"`
-   - 使用者僅給模糊描述 → `"ai"`
-4. **符合規範**：修改部分須符合 `references/trip-quality-rules.md`
-5. **寫回 API**：依修改類型選擇對應端點：
-   - 修改單一 entry：PATCH `/api/trips/{tripId}/entries/{eid}`
-   - 覆寫整天：PUT `/api/trips/{tripId}/days/{N}`
-   - 新增餐廳：POST `/api/trips/{tripId}/entries/{eid}/restaurants`
-   - 修改/刪除餐廳：PATCH/DELETE `/api/trips/{tripId}/restaurants/{rid}`
-   - 新增購物：POST `/api/trips/{tripId}/entries/{eid}/shopping`
-   - 修改/刪除購物：PATCH/DELETE `/api/trips/{tripId}/shopping/{sid}`
-   - 更新 doc：PUT `/api/trips/{tripId}/docs/{type}`
-6. **連動更新**：若影響到 checklist、backup、suggestions，同步更新對應 doc
-7. **品質檢查**：執行 `tp-check` 技能進行精簡模式驗證
-8. **不自動 commit**：資料已直接寫入 D1 database，無需 git 操作
+1. 讀取行程資料：
+   ```bash
+   # 讀取 meta（取得基本資訊、countries 等）
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}"
+   # 讀取受影響的天
+   curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
+   ```
+2. 依自然語言描述**局部修改**對應資料（只改描述涉及的部分）
+3. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
+4. 修改的部分須符合 R0-R18 品質規則
+5. 依修改類型選擇 API（PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
+6. **Doc 連動（鐵律）**+ **travel 重算** — 規則見 tp-shared/references.md
+7. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
+8. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 
 ## 局部修改 vs 全面重整
-本技能只處理描述涉及的修改範圍。如需全面重整，使用 `tp-rebuild`。
+
+本 skill 只處理描述涉及的修改範圍，例如：
+- 「Day 3 午餐換成拉麵」→ 只改 Day 3 午餐 entry
+- 「加一個景點到 Day 2」→ 只在 Day 2 timeline 插入
+- 「刪除 Day 4 的購物行程」→ 只移除該 entry
+
+**不全面重跑 R0-R18**。如需全面重整，使用 `/tp-rebuild`。
 
 ## 注意事項
-- 所有資料讀寫均透過 API，不操作本地 MD 檔案
-- 不執行 git commit / push，不執行 npm run build
 
-## 參考資源
-- 品質規則：`references/trip-quality-rules.md`
+- 所有資料讀寫均透過 API，不操作本地 MD 檔案
+- 不執行 git commit / push（資料已直接寫入 D1 database）
+- 不執行 npm run build（無 dist 產物需產生）
+
+## Markdown 支援欄位
+
+Markdown 支援欄位見 tp-shared/references.md
