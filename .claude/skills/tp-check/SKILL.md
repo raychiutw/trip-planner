@@ -1,6 +1,6 @@
 ---
 name: tp-check
-description: Use when validating a trip itinerary against quality rules R0-R18 without modifying files.
+description: Use when validating a trip itinerary against quality rules R0-R18 without modifying data. Read-only — use /tp-rebuild to fix violations or /tp-edit for changes.
 user-invocable: true
 ---
 
@@ -10,8 +10,7 @@ user-invocable: true
 
 ## API 設定
 
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: 讀取操作為公開存取，無需認證
+讀取操作為公開存取，無需認證。完整 API 設定見 `tp-shared/references.md`。
 
 ## 輸入方式
 

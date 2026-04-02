@@ -1,6 +1,6 @@
 ---
 name: tp-code-verify
-description: Use before committing code changes to validate naming, coding standards, React best practices, code review rules, and test status.
+description: Use before committing code changes to validate naming, coding standards, React best practices, code review rules, CSS HIG, and test status. Not for trip data — use /tp-check for itinerary validation.
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: tp-create
-description: Use when generating a new trip itinerary from scratch given destination, dates, and travel style.
+description: Use when generating a new trip itinerary from scratch given destination, dates, and travel style. Not for modifying existing trips — use /tp-edit or /tp-rebuild.
 user-invocable: true
 ---
 
@@ -115,11 +115,7 @@ module.exports = { apiCall, TRIP_ID };
 4. 為每一天產生完整內容（JSON 格式），包含：
    - timeline entries（含 type、title、time、description、location、travel、hotels 等）
 
-   > ⚠️ **travel 語意：從此地出發到下一站**
-   > `travel` 欄位放在「出發地」entry 上，表示「離開此地去下一站的交通方式」。
-   > 例：「板橋出發」entry 的 `travel: {type: "car", desc: "國道五號", min: 60}` 表示從板橋開車 60 分到下一站。
-   > 「幾米廣場」entry 的 travel 若為 null，表示到幾米廣場後不需移動（下一站在附近）。
-   > 最後一個 entry（如「返回板橋」）travel 應為 null（已到終點）。
+   > ⚠️ **travel 語意見 tp-shared/references.md**：travel = 從此地「出發」到下一站，放在出發地 entry 上。最後一個 entry 的 travel 為 null。
    - restaurants infoBox（午餐/晚餐 entry 下各 3 家推薦）
    - shopping infoBox（非家飯店 entry 下）
    - 每個 POI 須包含以下必填欄位：

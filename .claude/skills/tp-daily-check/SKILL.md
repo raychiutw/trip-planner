@@ -1,6 +1,6 @@
 ---
 name: tp-daily-check
-description: Use when running the daily automated health check for trip data and API status.
+description: Use when running the daily automated health check — covers R0-R18, API health, Sentry errors, and sends Telegram summary. For single-trip R0-R18 validation only, use /tp-check.
 user-invocable: true
 ---
 
