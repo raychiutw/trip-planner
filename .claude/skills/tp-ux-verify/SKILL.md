@@ -1,6 +1,6 @@
 ---
 name: tp-ux-verify
-description: Use when adding or modifying HTML/CSS in the trip-planner project for HIG compliance.
+description: Internal HIG design reference (H1-H12) for trip-planner HTML/CSS. Not invoked directly — loaded by /tp-code-verify during CSS review.
 user-invocable: false
 ---
 

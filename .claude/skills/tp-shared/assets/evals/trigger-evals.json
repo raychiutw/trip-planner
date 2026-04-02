@@ -299,11 +299,11 @@
     },
     {
       "id": "T42",
-      "type": "should_trigger",
+      "type": "near_miss",
       "query": "查一下這間餐廳的 Google 評分",
-      "expected_skill": "tp-search-strategies",
-      "lang": "zh",
-      "note": "non-invocable, 被其他 skill 引用"
+      "expected_skill": "tp-patch",
+      "not_skill": "tp-search-strategies",
+      "note": "tp-search-strategies 是 non-invocable reference，單一 POI 評分查詢走 tp-edit 或 tp-patch"
     },
     {
       "id": "T43",

@@ -1,6 +1,6 @@
 ---
 name: tp-team
-description: Use when starting any code change, feature, bug fix, or refactoring in the trip-planner project.
+description: Use when starting any code change, feature, bug fix, or refactoring in the trip-planner project. Not for trip data changes — those use tp-* data skills directly.
 user-invocable: true
 ---
 

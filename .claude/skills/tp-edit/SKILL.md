@@ -1,6 +1,6 @@
 ---
 name: tp-edit
-description: Use when modifying an existing trip itinerary partially via natural language (e.g., swap a restaurant, add a stop).
+description: Use when modifying an existing trip itinerary partially via natural language — swap a restaurant, add a stop, update a single POI field. For bulk POI field updates across trips use /tp-patch; for full R0-R18 audit use /tp-rebuild.
 user-invocable: true
 ---
 

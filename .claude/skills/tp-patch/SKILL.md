@@ -1,17 +1,12 @@
 ---
 name: tp-patch
-description: Use when bulk-filling missing POI fields (google_rating, maps, address, phone, hours) across trips via web search.
+description: Use when bulk-filling missing POI fields (google_rating, maps, address, phone, hours) across trips via web search. For single-trip content changes use /tp-edit.
 user-invocable: true
 ---
 
 跨行程 POI 欄位批次補齊工具。掃描 pois 表缺漏欄位，WebSearch 查詢後用 PATCH /pois/:id 更新。
 
-## API 設定
-
-- **Base URL**: `https://trip-planner-dby.pages.dev`
-- **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+API 設定見 `tp-shared/references.md`。
 
 ## 指令格式
 
@@ -26,16 +21,7 @@ user-invocable: true
 
 未提供必填參數時顯示使用說明，不執行操作。
 
-## POI V2 欄位規格（pois master — PATCH /pois/:id 可修改）
-
-| type | 必填 | 建議填 |
-|------|------|--------|
-| hotel | name, google_rating, maps | description, address, phone, mapcode |
-| restaurant | name, category, hours, google_rating, maps | description |
-| shopping | name, category, hours, google_rating, maps | description |
-| parking | name, description, maps | mapcode |
-
-> ⚠️ `checkout`、`price`、`reservation`、`must_buy` 是 trip_pois 欄位，本 skill 的 PATCH /pois/:id 不接受。需修改這些欄位用 PATCH /trip-pois/:tpid。完整拆分見 tp-shared/references.md。
+POI V2 欄位規格見 `tp-shared/references.md`（pois master vs trip_pois 完整拆分）。
 
 ## 步驟
 
@@ -72,18 +58,7 @@ user-invocable: true
 
 8. 用 `PATCH /pois/:id` 更新 master POI：
 
-   > ⚠️ Windows encoding 注意：curl -d 中的中文在 Windows shell 會變亂碼，一律用 node writeFileSync + --data @file
-
-   ```bash
-   node -e "require('fs').writeFileSync('/tmp/patch.json', JSON.stringify({google_rating: 4.5, address: '...'}), 'utf8')"
-   curl -s -X PATCH \
-     -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-     -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-     -H "Content-Type: application/json" \
-     -H "Origin: https://trip-planner-dby.pages.dev" \
-     --data @/tmp/patch.json \
-     "https://trip-planner-dby.pages.dev/api/pois/{poiId}"
-   ```
+   curl 模板見 `tp-shared/references.md`（Windows encoding：用 node writeFileSync + --data @file）。
 
 9. 輸出結果報告：補齊數 / 失敗數 / 仍缺漏數
 10. 不自動 commit（資料已直接寫入 D1 database）

@@ -81,8 +81,6 @@ pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`
    c. 從 Wanderlog / TripAdvisor / Tabelog 交叉比對
 4. 必須是 number 1.0–5.0，找不到時不填預設值
 
-完整搜尋策略詳見 `tp-search-strategies/SKILL.md`。
-
 ## Markdown 支援欄位
 
 前端會渲染 markdown 的欄位（可用粗體、列表、連結）：

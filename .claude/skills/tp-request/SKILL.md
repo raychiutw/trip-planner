@@ -1,6 +1,6 @@
 ---
 name: tp-request
-description: Use when processing open trip requests submitted by travel companions via the D1 API.
+description: Use when processing trip requests (旅伴請求) already queued in D1 database. Triggered by scheduler or manually invoked. For direct modifications on behalf of companions, use /tp-edit.
 user-invocable: true
 ---
 
