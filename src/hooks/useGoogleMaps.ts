@@ -21,12 +21,14 @@ export interface UseGoogleMapsReturn {
 
 let cachedStatus: GoogleMapsStatus = 'idle';
 let cachedError: string | null = null;
+let cachedSnapshot: UseGoogleMapsReturn = { status: cachedStatus, error: cachedError };
 let initialized = false;
 
 /** 狀態改變時通知所有訂閱者 (re-render) */
 const subscribers = new Set<() => void>();
 
 function notify(): void {
+  cachedSnapshot = { status: cachedStatus, error: cachedError };
   subscribers.forEach((cb) => cb());
 }
 
@@ -75,9 +77,9 @@ function subscribe(callback: () => void): () => void {
   };
 }
 
-/** snapshot of the current status+error pair */
+/** snapshot of the current status+error pair (must return stable reference) */
 function getSnapshot(): UseGoogleMapsReturn {
-  return { status: cachedStatus, error: cachedError };
+  return cachedSnapshot;
 }
 
 export function useGoogleMaps(): UseGoogleMapsReturn {
