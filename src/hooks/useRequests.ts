@@ -58,7 +58,8 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     setHasMore(false);
 
     try {
-      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId) + '&limit=10&sort=asc', {
+      // 初始載入用 DESC（拿最新 N 筆），收到後 reverse 成 ASC 顯示（聊天式：最新在底部）
+      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId) + '&limit=10', {
         signal: controller.signal,
       });
       if (res.status === 401) throw new Error('認證失敗，請重新整理頁面');
@@ -66,7 +67,7 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
       if (!res.ok) throw new Error('載入失敗');
       const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
       if (currentTripIdRef.current === tripId) {
-        setRequests(data.items);
+        setRequests(data.items.reverse());
         setHasMore(data.hasMore);
       }
     } catch (err) {
@@ -79,12 +80,12 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     }
   }, [currentTripIdRef]);
 
-  /* ----- Load more requests (older, prepend to top in ASC mode) ----- */
+  /* ----- Load more requests (older, prepend to top) ----- */
   const loadMore = useCallback(async () => {
     const tripId = currentTripIdRef.current;
     if (!tripId || loadingMore || !hasMore) return;
 
-    // ASC mode: requests[0] is the oldest visible item; load items older than it
+    // requests[0] 是目前最舊的，用 before cursor 載入更舊的
     const oldest = requestsRef.current[0];
     if (!oldest) return;
 
@@ -93,16 +94,15 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
       const params = new URLSearchParams({
         tripId,
         limit: '10',
-        sort: 'asc',
-        after: oldest.created_at,
-        afterId: String(oldest.id),
+        before: oldest.created_at,
+        beforeId: String(oldest.id),
       });
       const res = await apiFetchRaw('/requests?' + params.toString());
       if (!res.ok) throw new Error('載入失敗');
       const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
       if (currentTripIdRef.current === tripId) {
-        // Prepend older items to the top
-        setRequests(prev => [...data.items, ...prev]);
+        // DESC 回來的 reverse 成 ASC，prepend 到頂部
+        setRequests(prev => [...data.items.reverse(), ...prev]);
         setHasMore(data.hasMore);
       }
     } catch {
