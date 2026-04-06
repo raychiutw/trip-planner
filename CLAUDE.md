@@ -51,7 +51,7 @@ openspec/           config.yaml  specs/  changes/
 - Cloudflare Pages + D1（trip-planner-db / staging）
 - 設計系統：`DESIGN.md`（暖色有機風、Apple HIG、6 套主題）
 
-## 資料架構（POI Schema V2）
+## 資料架構（POI Schema）
 
 ```
 trips → trip_days → trip_entries        時間軸結構
