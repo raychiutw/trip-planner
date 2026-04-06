@@ -30,8 +30,7 @@ const Shop = memo(function Shop({ shop }: ShopProps) {
       {typeof shop.googleRating === 'number' && (
         <>{' '}<span className="text-accent text-caption shrink-0">★ {shop.googleRating.toFixed(1)}</span></>
       )}
-      <br />
-      {shop.location && <MapLinks location={shop.location} inline />}
+      {shop.location && <>{' '}<MapLinks location={shop.location} inline /></>}
       {shop.hours && (
         <span className="block mt-1 text-callout text-muted">
           <Icon name="clock" /> {shop.hours}
