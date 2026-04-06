@@ -7,6 +7,7 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { useRequests, RawRequest } from '../hooks/useRequests';
+import { useRequestSSE } from '../hooks/useRequestSSE';
 import { useTripSelector } from '../hooks/useTripSelector';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
@@ -48,18 +49,65 @@ function truncate(text: string, max: number): string {
 }
 
 /* ===== Status Badge ===== */
-const STATUS_STYLES: Record<RawRequest['status'], string> = {
-  completed: 'bg-[#D4EDDA] text-[#155724]',
-  processing: 'bg-plan-bg text-plan-text',
-  received: 'bg-[#FFF3CD] text-[#856404]',
-  open: 'bg-[#FFF3CD] text-[#856404]',
+const STATUS_STYLES: Record<string, string> = {
+  completed: 'bg-[var(--badge-completed-bg)] text-[var(--badge-completed-text)]',
+  processing: 'bg-[var(--badge-processing-bg)] text-[var(--badge-processing-text)]',
+  failed: 'bg-[var(--badge-failed-bg)] text-[var(--badge-failed-text)]',
+  open: 'bg-[var(--badge-open-bg)] text-[var(--badge-open-text)]',
 };
-const STATUS_LABELS: Record<RawRequest['status'], string> = {
-  completed: '已回覆',
+const STATUS_LABELS: Record<string, string> = {
+  completed: '已完成',
   processing: '處理中',
-  received: '已接收',
-  open: '等待中',
+  failed: '處理失敗',
+  open: '已送出',
 };
+function getStatusStyle(status: string): string {
+  return STATUS_STYLES[status] || 'bg-[var(--badge-open-bg)] text-[var(--badge-open-text)]';
+}
+function getStatusLabel(status: string): string {
+  return STATUS_LABELS[status] || '已送出';
+}
+
+/* ===== Processor Icons ===== */
+function ProcessorIcon({ processedBy }: { processedBy: string | null }) {
+  if (!processedBy) return null;
+  if (processedBy === 'api') {
+    return (
+      <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="inline-block text-muted" aria-hidden="true">
+        <title>即時處理</title>
+        <path d="M6 1v5l2.5 2.5" /><path d="M2 6a4 4 0 1 0 0-.01" /><path d="M10 3l-1 2.5-2.5-1" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="inline-block text-muted" aria-hidden="true">
+      <title>排程處理</title>
+      <circle cx="6" cy="6" r="4.5" /><path d="M6 3.5v3l2 1.5" />
+    </svg>
+  );
+}
+
+/* ===== Processing Spinner ===== */
+function ProcessingSpinner() {
+  return <span className="inline-block w-2.5 h-2.5 border-[1.5px] border-[var(--badge-processing-text)] border-t-transparent rounded-full animate-spin" />;
+}
+
+/* ===== Processing elapsed time ===== */
+function ElapsedTime({ updatedAt }: { updatedAt: string | null }) {
+  const [elapsed, setElapsed] = useState('');
+  useEffect(() => {
+    if (!updatedAt) return;
+    const update = () => {
+      const ts = updatedAt.endsWith('Z') || updatedAt.includes('+') ? updatedAt : updatedAt + 'Z';
+      const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+      setElapsed(diff > 0 ? ` · ${diff} 分鐘` : '');
+    };
+    update();
+    const timer = setInterval(update, 30000);
+    return () => clearInterval(timer);
+  }, [updatedAt]);
+  return <>{elapsed}</>;
+}
 
 /* ===== Chat Bubble ===== */
 const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
@@ -74,15 +122,20 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
           <div className="bg-accent text-accent-foreground rounded-2xl rounded-br-sm px-4 py-2.5">
             <div className="text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: messageHtml }} />
           </div>
-          {/* Meta: time + mode + status */}
-          <div className="flex items-center gap-2 mt-1 justify-end px-1">
+          {/* Meta: time + mode + status + processor */}
+          <div className="flex items-center gap-2 mt-1 justify-end px-1 flex-wrap">
             <span className="text-caption2 text-muted">{formatDate(req.created_at)}</span>
             <span className={`text-caption2 font-medium ${req.mode === 'trip-edit' ? 'text-accent' : 'text-plan-text'}`}>
               {req.mode === 'trip-edit' ? '改行程' : '問建議'}
             </span>
-            <span className={`inline-flex items-center py-0.5 px-1.5 rounded-full text-caption2 font-semibold ${STATUS_STYLES[req.status]}`}>
-              {STATUS_LABELS[req.status]}
+            <span className={`inline-flex items-center gap-1 py-0.5 px-1.5 rounded-full text-caption2 font-semibold ${getStatusStyle(req.status)}`}>
+              {req.status === 'processing' && <ProcessingSpinner />}
+              {req.status === 'completed' && <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2.5 6l2.5 2.5 4.5-5" /></svg>}
+              {req.status === 'failed' && <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l6 6M9 3l-6 6" /></svg>}
+              {getStatusLabel(req.status)}
+              {req.status === 'processing' && <ElapsedTime updatedAt={req.updated_at} />}
             </span>
+            {(req.status === 'completed' || req.status === 'failed') && <ProcessorIcon processedBy={req.processed_by} />}
           </div>
         </div>
       </div>
@@ -150,8 +203,58 @@ export default function ManagePage() {
     hasMore,
     loadingMore,
     loadRequests,
+    appendRequest,
+    updateRequestStatus,
     sentinelRef,
   } = useRequests(currentTripIdRef);
+
+  /* ----- SSE for latest request ----- */
+  const [sseRequestId, setSseRequestId] = useState<number | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  /* ----- SSE: track status of the latest non-terminal request ----- */
+  const sse = useRequestSSE(sseRequestId);
+  useEffect(() => {
+    if (sse.status && sseRequestId) {
+      updateRequestStatus(sseRequestId, sse.status, sse.processedBy);
+      if (sse.status === 'completed') {
+        showToast('你的請求已處理完成！', 'success', 3000);
+        setSseRequestId(null);
+      } else if (sse.status === 'failed') {
+        showToast('處理失敗，請稍後重新提交', 'error', 5000);
+        setSseRequestId(null);
+      }
+    }
+  }, [sse.status, sse.processedBy, sseRequestId, updateRequestStatus]);
+
+  /* ----- SSE disconnect warning ----- */
+  const sseWasConnectedRef = useRef(false);
+  useEffect(() => {
+    if (sse.isConnected) {
+      sseWasConnectedRef.current = true;
+    } else if (sseWasConnectedRef.current && sseRequestId) {
+      showToast('連線中斷，狀態可能延遲', 'info');
+    }
+  }, [sse.isConnected, sseRequestId]);
+  // Reset on new SSE session
+  useEffect(() => { sseWasConnectedRef.current = false; }, [sseRequestId]);
+
+  /* ----- Scroll to bottom helper ----- */
+  const scrollToBottom = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+
+  /* ----- Scroll to bottom on initial load (not on loadMore) ----- */
+  const isInitialLoadRef = useRef(true);
+  useEffect(() => {
+    if (requestsLoading) {
+      isInitialLoadRef.current = true;
+    } else if (isInitialLoadRef.current && requests.length > 0) {
+      isInitialLoadRef.current = false;
+      scrollToBottom();
+    }
+  }, [requestsLoading, requests.length, scrollToBottom]);
 
   /* ----- Auto-resize textarea (1→5 lines) ----- */
   const autoResize = useCallback(() => {
@@ -250,29 +353,29 @@ export default function ManagePage() {
       });
 
       if (res.status === 201 || res.status === 200) {
-        await res.json();
+        const newReq = (await res.json()) as RawRequest;
         showToast('已送出', 'success');
         setText('');
         if (textareaRef.current) {
           textareaRef.current.style.height = 'auto';
           textareaRef.current.style.overflowY = 'hidden';
         }
-        await loadRequests(tripId);
+        // Optimistic append + start SSE
+        appendRequest(newReq);
+        setSseRequestId(newReq.id);
+        setTimeout(scrollToBottom, 50);
       } else if (res.status === 403) {
         throw new Error('你沒有此行程的權限');
       } else {
         throw new Error('送出失敗（' + res.status + '）');
       }
     } catch (err) {
-      if (!(err instanceof Error && err.message.includes('權限'))) {
-        await loadRequests(tripId).catch(() => {/* ignore */});
-      }
       const errMsg = (err instanceof Error ? err.message : '送出失敗') + '（請重新整理確認是否已送出）';
       showToast(errMsg, 'error', 5000);
     } finally {
       setSubmitting(false);
     }
-  }, [text, mode, submitting, loadRequests, currentTripIdRef]);
+  }, [text, mode, submitting, appendRequest, scrollToBottom, currentTripIdRef]);
 
   /* ----- Trip select change ----- */
   function handleTripSelect(tripId: string) {
@@ -374,8 +477,17 @@ export default function ManagePage() {
           {pageState.kind === 'ready' && (
             <div className="flex flex-col h-content-h md:max-w-page-max-w mx-auto px-padding-h">
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
                 <div className="py-4">
+                  {/* Sentinel at TOP for loading older messages (ASC mode) */}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="py-2" aria-hidden="true">
+                      {loadingMore && (
+                        <div className="text-muted text-caption text-center">載入更多…</div>
+                      )}
+                    </div>
+                  )}
+
                   {requestsLoading && (
                     <div className="text-muted text-callout text-center py-8">
                       載入中…
@@ -406,14 +518,6 @@ export default function ManagePage() {
                     </div>
                   )}
 
-                  {/* Sentinel at bottom for loading older messages */}
-                  {hasMore && (
-                    <div ref={sentinelRef} className="py-2" aria-hidden="true">
-                      {loadingMore && (
-                        <div className="text-muted text-caption text-center">載入更多…</div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 

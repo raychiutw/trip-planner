@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.5.0] - 2026-04-07
+
+### Added
+- 事件驅動請求處理：CF Workers POST 後 webhook 觸發 Mac Mini API server 即時處理（取代 cron 輪詢）
+- SSE 即時狀態推送：`/api/requests/:id/events` endpoint，前端自動收到 open → processing → completed/failed 狀態更新
+- `useRequestSSE` React hook：EventSource 連線 + 自動降級 10 秒短輪詢
+- Mac Mini API server (`scripts/tripline-api-server.ts`)：Bun HTTP server，D1 即佇列，mutex 處理迴圈，15 分鐘 Claude CLI timeout
+- launchd job (`scripts/tripline-job.sh`)：每 15 分鐘卡住偵測（20 分鐘 stale threshold）+ 遺漏處理
+- 處理者追蹤：`processed_by` 欄位記錄 `'api'`（即時）或 `'job'`（排程），前端顯示對應 icon
+- iOS 原生風格狀態 badge：pill 形 rounded-full，4 態 + spinner + elapsed time + checkmark/X SVG
+- 聊天式請求列表：最新在底部，sentinel 頂部向上捲載入更舊，optimistic append 取代 reload
+
+### Changed
+- 請求狀態機簡化為 4 態：open → processing → completed/failed（移除 received）
+- PATCH handler：自動更新 `updated_at`，支援 `processed_by` 欄位，`failed` 狀態繞過 forward-only
+- GET /api/requests 支援 `sort=asc` + `after/afterId` cursor（ASC 分頁）
+- Badge 顏色改用 CSS 變數，支援 6 主題 x light/dark mode
+- SSE endpoint 加 `hasPermission` 權限檢查
+
+### Fixed
+- Node.js 25 localStorage polyfill（修復 78 個 pre-existing 測試失敗）
+- `mapRow` 測試：JSON_FIELDS 同步 V2 cleanup
+- SSE hook：移除 `status` 從 useEffect deps（防止重複連線）
+- SSE endpoint：加 `cancel()` 清理 timer（防止 client 斷線後 timer 洩漏）
+- API server：`TRIPLINE_API_SECRET` 空字串改為 reject（fail-closed）
+- .env.local 解析：修正 base64 `=` 截斷問題
+
 ## [1.1.4.3] - 2026-04-06
 
 ### Changed

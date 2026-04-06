@@ -147,6 +147,17 @@ body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 72%, transparent);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 85%, transparent);
     --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
+    /* Request status badge tokens (light mode defaults) */
+    --badge-open-bg: #E8E0D4;        --badge-open-text: #7A6A56;
+    --badge-processing-bg: #FFF3CD;   --badge-processing-text: #856404;
+    --badge-completed-bg: #D4EDDA;    --badge-completed-text: #155724;
+    --badge-failed-bg: #F8D7DA;       --badge-failed-text: #721C24;
+}
+body.dark {
+    --badge-open-bg: #3A3530;         --badge-open-text: #B0A698;
+    --badge-processing-bg: #3D3520;   --badge-processing-text: #D4A520;
+    --badge-completed-bg: #1A3D2A;    --badge-completed-text: #7EC89A;
+    --badge-failed-bg: #3D1A1A;       --badge-failed-text: #E8A0A0;
 }
 
 /* ===== Non-utility tokens (no Tailwind utility generation needed) ===== */
