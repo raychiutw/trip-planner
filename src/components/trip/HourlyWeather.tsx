@@ -121,7 +121,7 @@ const HourlyWeather = memo(function HourlyWeather({
   if (tooFarAway) {
     return (
       <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
-        <div className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover">
+        <div className="py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover line-clamp-2">
           ☀️ 天氣預報將於出發前 16 天開放 &nbsp;&middot;&nbsp; {locs}
         </div>
       </div>
@@ -158,7 +158,7 @@ const HourlyWeather = memo(function HourlyWeather({
   if (!hasData) {
     return (
       <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
-        <div className="flex justify-start items-center gap-2 py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover">
+        <div className="py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover line-clamp-2">
           ☁️ 超出預報範圍，暫無資料 &nbsp;&middot;&nbsp; {locs}
         </div>
       </div>
