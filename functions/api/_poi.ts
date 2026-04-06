@@ -114,10 +114,10 @@ export async function batchFindOrCreatePois(
   const toUpdate: { idx: number; id: number }[] = [];
   const toInsert: number[] = [];
   for (let i = 0; i < uniqueItems.length; i++) {
-    const rows = selectResults[i].results as { id: number }[];
+    const rows = selectResults[i]!.results as { id: number }[];
     if (rows.length > 0) {
-      uniqueItems[i].poiId = rows[0].id;
-      toUpdate.push({ idx: i, id: rows[0].id });
+      uniqueItems[i]!.poiId = rows[0]!.id;
+      toUpdate.push({ idx: i, id: rows[0]!.id });
     } else {
       toInsert.push(i);
     }
@@ -127,7 +127,7 @@ export async function batchFindOrCreatePois(
   if (toUpdate.length > 0) {
     const updateStmts: D1PreparedStatement[] = [];
     for (const { idx, id } of toUpdate) {
-      const { fills, vals } = buildCoalesceUpdate(uniqueItems[idx].data);
+      const { fills, vals } = buildCoalesceUpdate(uniqueItems[idx]!.data);
       if (fills.length > 0) {
         updateStmts.push(
           db.prepare(`UPDATE pois SET ${fills.join(', ')}, updated_at = datetime('now') WHERE id = ?`)
@@ -141,7 +141,7 @@ export async function batchFindOrCreatePois(
   // Step 3: Batch INSERT OR IGNORE for missing POIs
   if (toInsert.length > 0) {
     const insertStmts = toInsert.map((idx) => {
-      const data = uniqueItems[idx].data;
+      const data = uniqueItems[idx]!.data;
       return db.prepare(
         'INSERT OR IGNORE INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
       ).bind(
@@ -158,25 +158,25 @@ export async function batchFindOrCreatePois(
     // Collect IDs; race-collisions (INSERT OR IGNORE) return empty results
     const reFetchIndices: number[] = [];
     for (let i = 0; i < toInsert.length; i++) {
-      const rows = insertResults[i].results as { id: number }[];
+      const rows = insertResults[i]!.results as { id: number }[];
       if (rows.length > 0) {
-        uniqueItems[toInsert[i]].poiId = rows[0].id;
+        uniqueItems[toInsert[i]!]!.poiId = rows[0]!.id;
       } else {
-        reFetchIndices.push(toInsert[i]);
+        reFetchIndices.push(toInsert[i]!);
       }
     }
 
     // Step 4: Re-fetch any race-collision rows
     if (reFetchIndices.length > 0) {
       const reFetchStmts = reFetchIndices.map((idx) => {
-        const data = uniqueItems[idx].data;
+        const data = uniqueItems[idx]!.data;
         return db.prepare('SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1')
           .bind(data.name, data.type);
       });
       const reFetchResults = await db.batch(reFetchStmts);
       for (let i = 0; i < reFetchIndices.length; i++) {
-        const rows = reFetchResults[i].results as { id: number }[];
-        uniqueItems[reFetchIndices[i]].poiId = rows[0].id;
+        const rows = reFetchResults[i]!.results as { id: number }[];
+        uniqueItems[reFetchIndices[i]!]!.poiId = rows[0]!.id;
       }
     }
   }

@@ -122,7 +122,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const setClauses = [...revertFields.map(f => `${f} = ?`), 'updated_at = CURRENT_TIMESTAMP'].join(', ');
-    const values = [...revertFields.map(f => diff[f].old ?? null), record_id];
+    const values = [...revertFields.map(f => diff[f]?.old ?? null), record_id];
 
     const result = await db
       .prepare(`UPDATE ${safeTable} SET ${setClauses} WHERE id = ?`)
@@ -131,7 +131,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     if (result.meta.changes === 0) throw new AppError('DATA_NOT_FOUND', '找不到要還原的記錄');
 
-    const revertedFields = Object.fromEntries(revertFields.map(f => [f, diff[f].old]));
+    const revertedFields = Object.fromEntries(revertFields.map(f => [f, diff[f]?.old]));
     await logAudit(db, {
       tripId: id,
       tableName: safeTable,

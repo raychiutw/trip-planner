@@ -200,9 +200,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   // Garbled text detection
   const timelineEntries = Array.isArray(body.timeline) ? body.timeline : [];
   for (let i = 0; i < timelineEntries.length; i++) {
-    const e = timelineEntries[i];
+    const e = timelineEntries[i]!;
     for (const f of ['title', 'description', 'note'] as const) {
-      const val = e[f];
+      const val = e[f as keyof typeof e];
       if (typeof val === 'string' && detectGarbledText(val)) {
         throw new AppError('DATA_ENCODING', `timeline[${i}].${f} 包含疑似亂碼`);
       }
@@ -223,7 +223,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const timeline = Array.isArray(body.timeline) ? body.timeline : [];
     const ENTRIES_START = batch1.length;
     for (let i = 0; i < timeline.length; i++) {
-      const e = timeline[i];
+      const e = timeline[i]!;
       const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
       batch1.push(
         db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, maps, google_rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
@@ -237,7 +237,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     const entryIds: number[] = [];
     for (let i = 0; i < timeline.length; i++) {
-      const rows = batch1Results[ENTRIES_START + i].results as { id: number }[];
+      const rows = batch1Results[ENTRIES_START + i]!.results as { id: number }[];
       entryIds.push(rows[0]?.id ?? 0);
     }
 
@@ -302,8 +302,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     // Entry restaurants + shopping
     for (let i = 0; i < timeline.length; i++) {
-      const e = timeline[i];
-      const entryId = entryIds[i];
+      const e = timeline[i]!;
+      const entryId = entryIds[i]!;
 
       if (Array.isArray(e.restaurants)) {
         for (const [idx, r] of (e.restaurants as Record<string, unknown>[]).entries()) {
@@ -323,8 +323,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         }
       }
 
-      if (Array.isArray(e.shopping)) {
-        for (const [idx, s] of (e.shopping as Record<string, unknown>[]).entries()) {
+      if (Array.isArray((e as Record<string, unknown>).shopping)) {
+        for (const [idx, s] of ((e as Record<string, unknown>).shopping as Record<string, unknown>[]).entries()) {
           const sIdx = poiItems.length;
           poiItems.push({
             name: (s.name as string) || '', type: 'shopping',

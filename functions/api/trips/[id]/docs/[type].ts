@@ -107,7 +107,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   ];
 
   for (let i = 0; i < entries.length; i++) {
-    const e = entries[i];
+    const e = entries[i]!;
     batch.push(
       db.prepare('INSERT INTO trip_doc_entries (doc_id, sort_order, section, title, content) VALUES (?, ?, ?, ?, ?)')
         .bind(docId, e.sort_order ?? i, e.section ?? '', e.title ?? '', e.content ?? '')
