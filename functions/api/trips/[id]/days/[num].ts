@@ -126,8 +126,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       min: entry.travel_min,
     } : null;
 
+    let location = entry.location;
+    if (typeof location === 'string') {
+      try {
+        const parsed = JSON.parse(location);
+        location = Array.isArray(parsed) ? parsed[0] ?? null : parsed;
+      } catch { location = null; }
+    }
+
     return {
       ...entry,
+      location,
       travel,
       restaurants: restByEntry.get(eid) ?? [],
       shopping: shopByEntry.get(eid) ?? [],

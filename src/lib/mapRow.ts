@@ -7,11 +7,11 @@ export function snakeToCamel(key: string): string {
  * Fields whose string values should be JSON-parsed.
  * V2 cleanup (E10): removed parking/attrs/trip_attrs/breakfast
  * — these are now scalar columns or eliminated in POI Schema V2.
- * Remaining JSON TEXT columns: footer (trips), location (trip_entries).
+ * Remaining JSON TEXT columns: footer (trips).
+ * location (trip_entries) is now parsed in the API handler ([num].ts).
  */
 export const JSON_FIELDS: string[] = [
   'footer',
-  'location',
 ];
 
 /**

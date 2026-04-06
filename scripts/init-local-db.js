@@ -18,7 +18,7 @@ const path = require('path');
 
 const RESET = process.argv.includes('--reset');
 const DB_NAME = 'trip-planner-db';
-const TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_docs_v2', 'trip_doc_entries', 'trip_requests', 'trip_permissions'];
+const TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs_v2', 'trip_doc_entries', 'trip_requests', 'trip_permissions'];
 
 console.log('init-local-db.js — 本機 SQLite 初始化\n');
 

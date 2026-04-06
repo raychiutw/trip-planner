@@ -10,10 +10,15 @@
 // Nested value types
 // ---------------------------------------------------------------------------
 
-/** Location object stored in entries.location, exposed as `location` */
+/** Location object stored in entries.location, parsed by API handler */
 export interface Location {
+  name?: string;
   lat?: number;
   lng?: number;
+  googleQuery?: string;
+  appleQuery?: string;
+  mapcode?: string;
+  geocode_status?: string;
 }
 
 /** Travel leg assembled from entries.travel_type / travel_desc / travel_min */
