@@ -26,7 +26,7 @@ user-invocable: true
 
 未提供必填參數時顯示使用說明，不執行操作。
 
-## POI V2 欄位規格（pois master — PATCH /pois/:id 可修改）
+## POI 欄位規格（pois master — PATCH /pois/:id 可修改）
 
 | type | 必填 | 建議填 |
 |------|------|--------|

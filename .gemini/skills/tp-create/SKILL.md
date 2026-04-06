@@ -127,7 +127,7 @@ module.exports = { apiCall, TRIP_ID };
      - `maps`：實體地點填 Google Maps 搜尋文字（R11，PUT /days/:num 用 `maps` 欄位）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
      > ⚠️ PUT /days/:num 不接受 `location` 物件和 `source` 欄位。`source` 由 findOrCreatePoi 自動設為 `'ai'`；`location` JSON 如需設定，須在建立後用 PATCH /entries/:eid 補寫。
-   - POI V2 各 type 必填/建議欄位見 tp-shared/references.md
+   - POI 各 type 必填/建議欄位見 tp-shared/references.md
    - Markdown 支援欄位見 tp-shared/references.md
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）
 6. 骨架中尚無法確認的欄位**留空**（不使用 null）：`googleRating` 省略欄位，其餘欄位用空字串

@@ -1,6 +1,6 @@
 /**
  * Maps raw API day response data to component-expected shapes.
- * POI Schema V2: API returns merged pois + trip_pois rows.
+ * POI Schema: API returns merged pois + trip_pois rows.
  */
 
 import type { TimelineEntryData, TravelData } from '../components/trip/TimelineEvent';
@@ -48,7 +48,7 @@ interface RawShop {
   lng?: number | null;
 }
 
-/** Raw parking POI (V2 array element or legacy object). */
+/** Raw parking POI (array element from merged trip_pois). */
 interface RawParking {
   name?: string | null;
   description?: string | null;
@@ -84,7 +84,7 @@ interface RawEntry {
   shopping?: RawShop[];
 }
 
-/** Raw hotel POI as returned by the API (V2 flattened fields). */
+/** Raw hotel POI as returned by the API (flattened pois + trip_pois fields). */
 interface RawHotel {
   name?: string | null;
   checkout?: string | null;
@@ -214,12 +214,12 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   };
 }
 
-/* ===== Hotel (from merged POI — V2 flattened fields) ===== */
+/* ===== Hotel (from merged pois + trip_pois) ===== */
 
 export function toHotelData(raw: RawHotel): HotelData {
   const description = raw.description ?? null;
 
-  // V2: breakfast is flattened into breakfast_included + breakfast_note
+  // breakfast is flattened into breakfast_included + breakfast_note
   let breakfast: { included?: boolean; note?: string | null } | null = null;
   const bfIncluded = raw.breakfast_included ?? raw.breakfastIncluded;
   const bfNote = raw.breakfast_note ?? raw.breakfastNote ?? null;
@@ -240,7 +240,7 @@ export function toHotelData(raw: RawHotel): HotelData {
 
   const infoBoxes: InfoBoxData[] = [];
 
-  // V2: parking is an array of merged POI objects
+  // parking is an array of merged POI objects
   const parkingVal = raw.parking;
   if (Array.isArray(parkingVal) && parkingVal.length > 0) {
     for (const p of parkingVal as RawParking[]) {
