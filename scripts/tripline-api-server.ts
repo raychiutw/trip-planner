@@ -11,8 +11,21 @@
  */
 
 import { spawn } from 'child_process';
-import { appendFileSync, mkdirSync } from 'fs';
+import { appendFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+
+// --- Load .env.local ---
+const envPath = join(import.meta.dir, '..', '.env.local');
+try {
+  for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
+    if (!line || line.startsWith('#')) continue;
+    const idx = line.indexOf('=');
+    if (idx < 0) continue;
+    const key = line.slice(0, idx).trim();
+    const val = line.slice(idx + 1).trim();
+    if (key && !process.env[key]) process.env[key] = val;
+  }
+} catch {}
 
 // --- Config ---
 const PORT = parseInt(process.env.TRIPLINE_PORT || '6688', 10);
