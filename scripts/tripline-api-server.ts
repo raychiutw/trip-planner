@@ -54,6 +54,7 @@ function cfHeaders(): Record<string, string> {
     'CF-Access-Client-Id': CF_CLIENT_ID,
     'CF-Access-Client-Secret': CF_CLIENT_SECRET,
     'Content-Type': 'application/json',
+    'Origin': API_BASE.replace('/api', ''),
   };
 }
 
@@ -100,10 +101,11 @@ async function patchStatus(
 
 function runClaude(): Promise<boolean> {
   return new Promise((resolve) => {
-    const proc = spawn('claude', ['--dangerously-skip-permissions', '-p', '/tp-request'], {
+    const claudePath = '/Users/ray/.local/bin/claude';
+    const proc = spawn(claudePath, ['--dangerously-skip-permissions', '-p', '/tp-request'], {
       cwd: PROJECT_DIR,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, HOME: process.env.HOME },
+      env: { ...process.env, HOME: process.env.HOME, PATH: `${process.env.PATH}:/Users/ray/.local/bin` },
     });
 
     const MAX_BUF = 10_000; // cap buffer to avoid unbounded memory
