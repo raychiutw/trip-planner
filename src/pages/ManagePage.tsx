@@ -141,7 +141,7 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
       </div>
 
       {/* AI reply bubble — left aligned, sand */}
-      {req.reply && (
+      {(req.reply || req.status === 'open' || req.status === 'processing') && (
         <div className="flex justify-start">
           <div className="max-w-[85%] md:max-w-[70%]">
             {/* Avatar + name */}
@@ -154,11 +154,20 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
               <span className="text-caption2 font-semibold text-muted">Tripline</span>
             </div>
             <div className="bg-secondary text-foreground rounded-2xl rounded-bl-sm px-4 py-2.5">
-              {/* Quote reply bar */}
-              <div className="border-l-[3px] border-accent bg-black/[0.06] rounded-r-sm px-2.5 py-1.5 mb-2 text-caption text-muted line-clamp-2">
-                {truncate(req.message, 80)}
-              </div>
-              <div className="text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
+              {req.reply ? (
+                <>
+                  <div className="border-l-[3px] border-accent bg-black/[0.06] rounded-r-sm px-2.5 py-1.5 mb-2 text-caption text-muted line-clamp-2">
+                    {truncate(req.message, 80)}
+                  </div>
+                  <div className="text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
+                </>
+              ) : (
+                <div className="flex items-center gap-1 py-1">
+                  <span className="inline-block w-2 h-2 rounded-full bg-muted animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="inline-block w-2 h-2 rounded-full bg-muted animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="inline-block w-2 h-2 rounded-full bg-muted animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              )}
             </div>
           </div>
         </div>
