@@ -53,8 +53,8 @@ function resolveAppleUrl(loc: MapLocation): string {
 
 export const MapLinks = memo(function MapLinks({ location: loc, inline = false }: MapLinksProps) {
   const baseCls = clsx(
-    'inline-flex items-center gap-1 bg-transparent text-accent py-2 px-3 rounded-sm text-callout no-underline mr-1 mb-1 min-h-tap-min align-middle transition-colors duration-fast ease-apple hover:bg-hover hover:text-foreground',
-    inline && 'text-callout py-2 px-2 min-h-tap-min',
+    'inline-flex items-center gap-1 bg-transparent text-accent rounded-sm text-callout no-underline align-middle transition-colors duration-fast ease-apple hover:bg-hover hover:text-foreground',
+    inline ? 'py-1 px-2 mr-1' : 'py-2 px-3 mr-1 mb-1 min-h-tap-min',
   );
   const googleUrl = resolveGoogleUrl(loc);
   const appleUrl = resolveAppleUrl(loc);
@@ -106,7 +106,7 @@ interface NavLinksProps {
 export const NavLinks = memo(function NavLinks({ locations }: NavLinksProps) {
   if (!locations || locations.length === 0) return null;
   return (
-    <div className="my-2">
+    <div className="my-1 flex flex-wrap items-center">
       {locations.map((loc, i) => (
         <span key={i}>
           {loc.label && <strong>{loc.label}：</strong>}
