@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tripline.request-job</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/ray/Desktop/Source/trip-planner/scripts/tripline-job.sh</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/ray/Desktop/Source/trip-planner</string>
+    <key>StartInterval</key>
+    <integer>900</integer>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/Users/ray/Desktop/Source/trip-planner/scripts/logs/request-job-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/ray/Desktop/Source/trip-planner/scripts/logs/request-job-stderr.log</string>
+</dict>
+</plist>

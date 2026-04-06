@@ -13,5 +13,7 @@ export interface Env {
   ADMIN_EMAIL: string;
   ALLOWED_ORIGIN?: string;
   DEV_MOCK_EMAIL?: string;
+  TRIPLINE_API_URL?: string;
+  TRIPLINE_API_SECRET?: string;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
 }

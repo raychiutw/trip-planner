@@ -1,14 +1,15 @@
 /**
- * GET /api/requests?tripId=xxx&status=open&limit=10&before=<created_at>&beforeId=<id>
+ * GET /api/requests?tripId=xxx&status=open&limit=10&sort=desc&before=<created_at>&beforeId=<id>&after=<created_at>&afterId=<id>
  * POST /api/requests { tripId, mode, message }
  *   (legacy fallback: title + body → message)
  *
- * 分頁：cursor-based (created_at DESC, id DESC)
+ * 分頁：cursor-based
  *   - limit: 每頁筆數（預設 10，最大 50）
- *   - before: created_at cursor（ISO timestamp）
- *   - beforeId: id cursor（同秒 tiebreaker）
+ *   - sort: asc | desc（預設 desc）
+ *   - before/beforeId: 往舊方向 cursor（DESC 模式）
+ *   - after/afterId: 往舊方向 cursor（ASC 模式，用於聊天式列表向上載入）
  *   - 回傳 { items: [...], hasMore: boolean }
- *   - 不帶 limit/before 時向下相容（回傳全部，LIMIT 50）
+ *   - 不帶 limit/before/after 時向下相容（回傳全部，LIMIT 50）
  */
 
 import { logAudit } from './_audit';
@@ -26,8 +27,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const tripId = url.searchParams.get('tripId');
   const status = url.searchParams.get('status');
   const limitParam = url.searchParams.get('limit');
+  const sort = url.searchParams.get('sort') === 'asc' ? 'asc' : 'desc';
   const before = url.searchParams.get('before');
   const beforeId = url.searchParams.get('beforeId');
+  const after = url.searchParams.get('after');
+  const afterId = url.searchParams.get('afterId');
 
   // admin/service token 可不帶 tripId 查詢所有 requests
   if (!tripId && !auth.isAdmin) {
@@ -38,7 +42,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  const isPaginated = limitParam !== null || before !== null;
+  const isPaginated = limitParam !== null || before !== null || after !== null;
   const limit = Math.min(Math.max(parseInt(limitParam || '10', 10) || 10, 1), 50);
 
   let sql = 'SELECT * FROM trip_requests';
@@ -62,11 +66,24 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       params.push(before);
     }
   }
+  if (after) {
+    if (afterId) {
+      conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
+      params.push(after, after, parseInt(afterId, 10) || 0);
+    } else {
+      conditions.push('created_at < ?');
+      params.push(after);
+    }
+  }
   if (conditions.length > 0) {
     sql += ' WHERE ' + conditions.join(' AND ');
   }
 
-  sql += ' ORDER BY created_at DESC, id DESC';
+  if (sort === 'asc') {
+    sql += ' ORDER BY created_at ASC, id ASC';
+  } else {
+    sql += ' ORDER BY created_at DESC, id DESC';
+  }
   sql += isPaginated ? ` LIMIT ${limit + 1}` : ' LIMIT 50';
 
   const { results } = await env.DB.prepare(sql).bind(...params).all();
@@ -141,6 +158,27 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
   } catch (auditErr) {
     console.error('[requests] logAudit failed (non-fatal):', auditErr);
+  }
+
+  // Fire-and-forget: 觸發 Mac Mini API server 處理
+  if (env.TRIPLINE_API_URL) {
+    context.waitUntil(
+      (async () => {
+        try {
+          const ctrl = new AbortController();
+          setTimeout(() => ctrl.abort(), 3000);
+          await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.TRIPLINE_API_SECRET}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ requestId: newRow ? (newRow as Record<string, unknown>).id : null }),
+            signal: ctrl.signal,
+          });
+        } catch {} // 靜默失敗，launchd job 備援
+      })()
+    );
   }
 
   return json(result, 201);

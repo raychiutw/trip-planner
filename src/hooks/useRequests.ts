@@ -8,8 +8,10 @@ export interface RawRequest {
   message: string;
   submitted_by: string | null;
   reply: string | null;
-  status: 'open' | 'received' | 'processing' | 'completed';
+  status: 'open' | 'processing' | 'completed' | 'failed';
+  processed_by: 'api' | 'job' | null;
   created_at: string;
+  updated_at: string | null;
 }
 
 interface UseRequestsResult {
@@ -20,6 +22,8 @@ interface UseRequestsResult {
   loadingMore: boolean;
   loadRequests: (tripId: string) => Promise<void>;
   loadMore: () => Promise<void>;
+  appendRequest: (req: RawRequest) => void;
+  updateRequestStatus: (id: number, status: RawRequest['status'], processedBy?: RawRequest['processed_by']) => void;
   sentinelRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -53,7 +57,7 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     setHasMore(false);
 
     try {
-      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId) + '&limit=10', {
+      const res = await apiFetchRaw('/requests?tripId=' + encodeURIComponent(tripId) + '&limit=10&sort=asc', {
         signal: controller.signal,
       });
       if (res.status === 401) throw new Error('認證失敗，請重新整理頁面');
@@ -74,27 +78,30 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     }
   }, [currentTripIdRef]);
 
-  /* ----- Load more requests (older, append) ----- */
+  /* ----- Load more requests (older, prepend to top in ASC mode) ----- */
   const loadMore = useCallback(async () => {
     const tripId = currentTripIdRef.current;
     if (!tripId || loadingMore || !hasMore) return;
 
-    const last = requestsRef.current[requestsRef.current.length - 1];
-    if (!last) return;
+    // ASC mode: requests[0] is the oldest visible item; load items older than it
+    const oldest = requestsRef.current[0];
+    if (!oldest) return;
 
     setLoadingMore(true);
     try {
       const params = new URLSearchParams({
         tripId,
         limit: '10',
-        before: last.created_at,
-        beforeId: String(last.id),
+        sort: 'asc',
+        after: oldest.created_at,
+        afterId: String(oldest.id),
       });
       const res = await apiFetchRaw('/requests?' + params.toString());
       if (!res.ok) throw new Error('載入失敗');
       const data = (await res.json()) as { items: RawRequest[]; hasMore: boolean };
       if (currentTripIdRef.current === tripId) {
-        setRequests(prev => [...prev, ...data.items]);
+        // Prepend older items to the top
+        setRequests(prev => [...data.items, ...prev]);
         setHasMore(data.hasMore);
       }
     } catch {
@@ -104,17 +111,33 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     }
   }, [currentTripIdRef, loadingMore, hasMore]);
 
-  /* ----- Infinite scroll: sentinel at BOTTOM for loading older messages ----- */
+  /* ----- Infinite scroll: sentinel at TOP for loading older messages (ASC mode) ----- */
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry?.isIntersecting) loadMore(); },
-      { rootMargin: '200px' },
+      { rootMargin: '200px 0px 0px 0px' },
     );
     observer.observe(el);
     return () => observer.disconnect();
   }, [loadMore]);
+
+  /* ----- Optimistic append (after submit) ----- */
+  const appendRequest = useCallback((req: RawRequest) => {
+    setRequests(prev => [...prev, req]);
+  }, []);
+
+  /* ----- In-place status update (from SSE) ----- */
+  const updateRequestStatus = useCallback((
+    id: number,
+    status: RawRequest['status'],
+    processedBy?: RawRequest['processed_by'],
+  ) => {
+    setRequests(prev => prev.map(r =>
+      r.id === id ? { ...r, status, ...(processedBy !== undefined ? { processed_by: processedBy } : {}) } : r
+    ));
+  }, []);
 
   return {
     requests,
@@ -124,6 +147,8 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     loadingMore,
     loadRequests,
     loadMore,
+    appendRequest,
+    updateRequestStatus,
     sentinelRef,
   };
 }

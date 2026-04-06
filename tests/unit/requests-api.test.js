@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
  */
 
 const requestsTs = readFileSync('functions/api/requests.ts', 'utf-8');
-const requestIdTs = readFileSync('functions/api/requests/[id].ts', 'utf-8');
+const requestIdTs = readFileSync('functions/api/requests/[id]/index.ts', 'utf-8');
 const apiTypes = readFileSync('src/types/api.ts', 'utf-8');
 
 /* ===== POST /api/requests — message 欄位 ===== */
@@ -39,9 +39,9 @@ describe('POST /api/requests', () => {
 describe('PATCH /api/requests/:id', () => {
   it('validates four status values', () => {
     expect(requestIdTs).toContain('open');
-    expect(requestIdTs).toContain('received');
     expect(requestIdTs).toContain('processing');
     expect(requestIdTs).toContain('completed');
+    expect(requestIdTs).toContain('failed');
   });
 
   it('does NOT accept legacy "closed" status', () => {
