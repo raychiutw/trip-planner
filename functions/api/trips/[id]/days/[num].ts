@@ -7,7 +7,7 @@ import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
 
 // ---------------------------------------------------------------------------
-// GET /api/trips/:id/days/:num — POI Schema V2 (pois + trip_pois)
+// GET /api/trips/:id/days/:num — POI Schema (pois + trip_pois)
 // ---------------------------------------------------------------------------
 
 /**
@@ -155,7 +155,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 };
 
 // ---------------------------------------------------------------------------
-// PUT /api/trips/:id/days/:num — POI Schema V2 (find-or-create pois + trip_pois)
+// PUT /api/trips/:id/days/:num — POI Schema (find-or-create pois + trip_pois)
 // ---------------------------------------------------------------------------
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
