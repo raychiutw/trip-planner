@@ -3,7 +3,7 @@ import { AppError } from '../../../../_errors';
 import { json, getAuth } from '../../../../_utils';
 import type { Env } from '../../../../_types';
 
-const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_docs_v2', 'trip_doc_entries', 'trip_requests', 'trip_permissions'] as const;
+const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs_v2', 'trip_doc_entries', 'trip_requests', 'trip_permissions'] as const;
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
@@ -13,7 +13,6 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'google_rating', 'category', 'maps', 'mapcode', 'lat', 'lng', 'country', 'source', 'created_at', 'updated_at'],
   trip_pois:        ['id', 'trip_id', 'poi_id', 'context', 'day_id', 'entry_id', 'sort_order', 'description', 'note', 'hours', 'checkout', 'breakfast_included', 'breakfast_note', 'price', 'reservation', 'reservation_url', 'must_buy', 'source', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
-  trip_docs:        ['id', 'trip_id', 'doc_type', 'content', 'updated_at'],
   trip_docs_v2:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
   trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],
   trip_requests:    ['id', 'trip_id', 'mode', 'message', 'submitted_by', 'reply', 'status', 'created_at'],

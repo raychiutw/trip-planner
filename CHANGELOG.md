@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.4.1] - 2026-04-06
+
+### Removed
+- Legacy V1 表 hotels / restaurants / shopping / trip_docs（migration 0021 DROP）
+- rollback.ts 移除 trip_docs 白名單
+- dump-d1.js / init-local-db.js 移除 4 張 legacy 表
+- mapRow JSON_FIELDS 移除 'location'（改由 API handler parse）
+
+### Fixed
+- 天氣功能不顯示：API handler 解析 trip_entries.location JSON string 為物件
+
+### Changed
+- Location interface 擴充完整欄位（name, googleQuery, appleQuery, mapcode, geocode_status）
+
 ## [1.1.4.0] - 2026-04-01
 
 ### Changed
