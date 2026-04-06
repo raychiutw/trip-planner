@@ -20,7 +20,13 @@ CREATE TABLE trip_requests_new (
 INSERT INTO trip_requests_new (id, trip_id, mode, message, submitted_by, reply, status, created_at, processed_by)
 SELECT id, trip_id, mode, message, submitted_by, reply,
   CASE WHEN status = 'received' THEN 'open' ELSE status END,
-  created_at, processed_by
+  created_at,
+  CASE
+    WHEN processed_by = 'agent' THEN 'api'
+    WHEN processed_by = 'scheduler' THEN 'job'
+    WHEN processed_by IN ('api', 'job') THEN processed_by
+    ELSE NULL
+  END
 FROM trip_requests;
 
 DROP TABLE trip_requests;
