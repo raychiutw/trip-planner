@@ -16,7 +16,7 @@ function getCookie(request: Request, name: string): string | null {
   const cookies = cookieHeader.split(';').map(c => c.trim());
   for (const cookie of cookies) {
     const [key, ...valueParts] = cookie.split('=');
-    if (key.trim() === name) return valueParts.join('=');
+    if (key?.trim() === name) return valueParts.join('=');
   }
   return null;
 }
@@ -26,7 +26,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
     const decoded = atob(payload);
     return JSON.parse(decoded) as Record<string, unknown>;
   } catch {
