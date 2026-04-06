@@ -23,6 +23,8 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
   const esRef = useRef<EventSource | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sseFailedRef = useRef(false);
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   const cleanup = useCallback(() => {
     if (esRef.current) {
@@ -52,7 +54,9 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
             pollingRef.current = null;
           }
         }
-      } catch {}
+      } catch {
+        // network error — keep polling, next tick will retry
+      }
     }, 10_000);
   }, []);
 
@@ -62,25 +66,22 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
       setStatus(null);
       setProcessedBy(null);
       setError(null);
+      sseFailedRef.current = false;
       return;
     }
 
-    // Don't SSE for terminal states
-    if (status === 'completed' || status === 'failed') {
+    // Terminal check via ref (avoids status in deps causing reconnects)
+    if (statusRef.current === 'completed' || statusRef.current === 'failed') {
       cleanup();
       return;
     }
 
-    // If SSE previously failed, use polling
     if (sseFailedRef.current) {
       startPolling(requestId);
       return;
     }
 
-    // Build SSE URL (same origin)
-    const baseUrl = import.meta.env.DEV
-      ? 'http://localhost:8788'
-      : '';
+    const baseUrl = import.meta.env.DEV ? 'http://localhost:8788' : '';
     const url = `${baseUrl}/api/requests/${requestId}/events`;
 
     const es = new EventSource(url, { withCredentials: true });
@@ -111,12 +112,13 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
             setIsConnected(false);
           }
         }
-      } catch {}
+      } catch {
+        // malformed SSE data — ignore
+      }
     };
 
     es.onerror = () => {
       setIsConnected(false);
-      // After 3 reconnect attempts (EventSource auto-retries), fall back to polling
       sseFailedRef.current = true;
       es.close();
       esRef.current = null;
@@ -125,7 +127,7 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
     };
 
     return cleanup;
-  }, [requestId, status, cleanup, startPolling]);
+  }, [requestId, cleanup, startPolling]); // status removed from deps
 
   return { status, processedBy, error, isConnected };
 }

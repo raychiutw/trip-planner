@@ -227,13 +227,16 @@ export default function ManagePage() {
   }, [sse.status, sse.processedBy, sseRequestId, updateRequestStatus]);
 
   /* ----- SSE disconnect warning ----- */
-  const [sseWasConnected, setSseWasConnected] = useState(false);
+  const sseWasConnectedRef = useRef(false);
   useEffect(() => {
-    if (sse.isConnected) setSseWasConnected(true);
-    if (!sse.isConnected && sseWasConnected && sseRequestId) {
+    if (sse.isConnected) {
+      sseWasConnectedRef.current = true;
+    } else if (sseWasConnectedRef.current && sseRequestId) {
       showToast('連線中斷，狀態可能延遲', 'info');
     }
-  }, [sse.isConnected, sseWasConnected, sseRequestId]);
+  }, [sse.isConnected, sseRequestId]);
+  // Reset on new SSE session
+  useEffect(() => { sseWasConnectedRef.current = false; }, [sseRequestId]);
 
   /* ----- Scroll to bottom helper ----- */
   const scrollToBottom = useCallback(() => {
@@ -241,12 +244,16 @@ export default function ManagePage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, []);
 
-  /* ----- Scroll to bottom on initial load ----- */
+  /* ----- Scroll to bottom on initial load (not on loadMore) ----- */
+  const isInitialLoadRef = useRef(true);
   useEffect(() => {
-    if (requests.length > 0 && !requestsLoading) {
+    if (requestsLoading) {
+      isInitialLoadRef.current = true;
+    } else if (isInitialLoadRef.current && requests.length > 0) {
+      isInitialLoadRef.current = false;
       scrollToBottom();
     }
-  }, [requestsLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [requestsLoading, requests.length, scrollToBottom]);
 
   /* ----- Auto-resize textarea (1→5 lines) ----- */
   const autoResize = useCallback(() => {

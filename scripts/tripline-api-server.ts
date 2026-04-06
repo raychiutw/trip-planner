@@ -93,10 +93,11 @@ function runClaude(): Promise<boolean> {
       env: { ...process.env, HOME: process.env.HOME },
     });
 
+    const MAX_BUF = 10_000; // cap buffer to avoid unbounded memory
     let stdout = '';
     let stderr = '';
-    proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
-    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+    proc.stdout.on('data', (d: Buffer) => { if (stdout.length < MAX_BUF) stdout += d.toString().slice(0, MAX_BUF - stdout.length); });
+    proc.stderr.on('data', (d: Buffer) => { if (stderr.length < MAX_BUF) stderr += d.toString().slice(0, MAX_BUF - stderr.length); });
 
     const timer = setTimeout(() => {
       log('Claude timeout — killing process');

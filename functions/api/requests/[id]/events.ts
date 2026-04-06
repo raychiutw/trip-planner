@@ -24,6 +24,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   let lastStatus = '';
   let lastProcessedBy = '';
   const startTime = Date.now();
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
+  let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -74,7 +76,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       }
 
       // Poll + keepalive loop
-      const pollTimer = setInterval(async () => {
+      pollTimer = setInterval(async () => {
         if (Date.now() - startTime > MAX_DURATION_MS) {
           clearInterval(pollTimer);
           clearInterval(keepaliveTimer);
@@ -93,9 +95,13 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         }
       }, POLL_INTERVAL_MS);
 
-      const keepaliveTimer = setInterval(() => {
+      keepaliveTimer = setInterval(() => {
         try { ping(); } catch {}
       }, KEEPALIVE_INTERVAL_MS);
+    },
+    cancel() {
+      if (pollTimer) clearInterval(pollTimer);
+      if (keepaliveTimer) clearInterval(keepaliveTimer);
     },
   });
 
