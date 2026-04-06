@@ -25,26 +25,29 @@ Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open/receiv
 ## 四態 Status 流程
 
 ```
-排程撈到 open 請求 → PATCH status=received（排程負責）
-→ 啟動 Claude tp-request → PATCH status=processing（skill 負責）
+旅伴送出 → status=open
+→ API server 觸發 → PATCH status=processing（API server 負責）
+→ 啟動 Claude tp-request（本 skill）
 → 處理完成 → PATCH status=completed + reply（skill 負責）
 ```
 
+**注意：** `received` 狀態已移除。API server 在呼叫本 skill 前已將 status 改為 `processing`。
+
 ## 步驟
 
-1. **查詢待處理請求**（open 或 received）：
+1. **查詢待處理請求**（processing、open、或 received）：
    ```bash
    curl -s -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
         -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
-        "https://trip-planner-dby.pages.dev/api/requests?status=received"
+        "https://trip-planner-dby.pages.dev/api/requests?status=processing"
    ```
-   若無結果，也查 `status=open`（防排程未更新的情況）
+   若無結果，也依序查 `status=open` 和 `status=received`（向下相容）
 2. 無待處理請求 → 回報「沒有待處理的請求」並結束
 3. 依序處理每個請求：
 
 ### 3a. 更新 status → processing
 
-處理每個請求前，先 PATCH status 為 `processing`：
+處理每個請求前，確認 status 為 `processing`（API server 可能已設定，若尚未則由 skill 設定）：
 ```bash
 node -e "require('fs').writeFileSync('/tmp/status.json', JSON.stringify({status:'processing'}), 'utf8')"
 curl -s -X PATCH \
