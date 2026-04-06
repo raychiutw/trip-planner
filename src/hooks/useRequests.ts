@@ -24,6 +24,7 @@ interface UseRequestsResult {
   loadMore: () => Promise<void>;
   appendRequest: (req: RawRequest) => void;
   updateRequestStatus: (id: number, status: RawRequest['status'], processedBy?: RawRequest['processed_by']) => void;
+  refreshRequest: (id: number) => Promise<void>;
   sentinelRef: React.RefObject<HTMLDivElement | null>;
 }
 
@@ -139,6 +140,16 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     ));
   }, []);
 
+  /* ----- Refresh single request (fetch reply after completed) ----- */
+  const refreshRequest = useCallback(async (id: number) => {
+    try {
+      const res = await apiFetchRaw(`/requests/${id}`);
+      if (!res.ok) return;
+      const updated = (await res.json()) as RawRequest;
+      setRequests(prev => prev.map(r => r.id === id ? updated : r));
+    } catch {}
+  }, []);
+
   return {
     requests,
     requestsLoading,
@@ -149,6 +160,7 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
     loadMore,
     appendRequest,
     updateRequestStatus,
+    refreshRequest,
     sentinelRef,
   };
 }

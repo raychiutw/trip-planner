@@ -205,6 +205,7 @@ export default function ManagePage() {
     loadRequests,
     appendRequest,
     updateRequestStatus,
+    refreshRequest,
     sentinelRef,
   } = useRequests(currentTripIdRef);
 
@@ -218,6 +219,7 @@ export default function ManagePage() {
     if (sse.status && sseRequestId) {
       updateRequestStatus(sseRequestId, sse.status, sse.processedBy);
       if (sse.status === 'completed') {
+        refreshRequest(sseRequestId);
         showToast('你的請求已處理完成！', 'success', 3000);
         setSseRequestId(null);
       } else if (sse.status === 'failed') {
