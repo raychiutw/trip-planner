@@ -297,7 +297,8 @@ export async function downloadTripFormat(
       /* -- PDF: generate and download via html2pdf.js -- */
       const html2pdf = (await import('html2pdf.js')).default;
       document.body.classList.add('print-mode');
-      await new Promise(r => setTimeout(r, 300));
+      window.scrollTo(0, 0);
+      await new Promise(r => setTimeout(r, 500));
       const el = document.getElementById('tripContent');
       if (el) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -305,10 +306,10 @@ export async function downloadTripFormat(
           .set({
             margin: [10, 10, 10, 10],
             filename: `${fileBase}.pdf`,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+            image: { type: 'jpeg', quality: 0.92 },
+            html2canvas: { scale: 2, useCORS: true, scrollY: -window.scrollY, windowWidth: el.scrollWidth },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+            pagebreak: { mode: ['css', 'legacy'] },
           })
           .from(el)
           .save();
