@@ -24,7 +24,7 @@ curl -s -X {METHOD} \
   "https://trip-planner-dby.pages.dev/api/{endpoint}"
 ```
 
-## POI V2 欄位規格
+## POI 欄位規格
 
 ### findOrCreatePoi 支援的完整欄位
 
@@ -177,7 +177,7 @@ tp-edit、tp-request、tp-rebuild 修改行程資料時的共用流程：
 | `location.googleQuery` 或 `maps` | R11 | PATCH /entries 用 `location`（JSON 字串 `{"name":"...", "googleQuery":"..."}`）；PUT /days 用 `maps`（純搜尋文字） |
 | `googleRating` | R12 | 1.0-5.0，`source: "ai"` 必填，`source: "user"` 盡量填。查詢策略見上方「googleRating 查詢策略」 |
 
-POI V2 各 type 必填/建議欄位見上方「POI V2 欄位規格」。
+POI 各 type 必填/建議欄位見上方「POI 欄位規格」。
 
 ### 2. 韓國行程 naverQuery（R14）
 

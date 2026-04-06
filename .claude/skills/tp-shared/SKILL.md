@@ -1,6 +1,6 @@
 ---
 name: tp-shared
-description: Shared API settings, POI V2 field specs, doc structure, and travel semantics for all tp-* skills. Not invoked directly — referenced by other tp-* skills.
+description: Shared API settings, POI field specs, doc structure, and travel semantics for all tp-* skills. Not invoked directly — referenced by other tp-* skills.
 user-invocable: false
 ---
 
@@ -9,7 +9,7 @@ user-invocable: false
 完整內容見 `references.md`，涵蓋：
 - API Base URL + 認證 headers
 - curl 模板（Windows encoding 解法）
-- POI V2 欄位規格（各 type 必填/建議欄位）
+- POI 欄位規格（各 type 必填/建議欄位）
 - 資料所有權（pois vs trip_pois）
 - API 操作端點
 - Markdown 支援欄位

@@ -30,7 +30,8 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 3. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
 4. 修改的部分須符合 R0-R18 品質規則
 5. 依修改類型選擇 API（PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
-6. **Doc 連動（鐵律）**+ **travel 重算** — 規則見 tp-shared/references.md
+6. **location 座標更新**：新增或替換景點時，必須用 `PATCH /entries/:eid` 補寫 `location` JSON（含 lat/lng），否則天氣功能無法顯示。格式：`[{"name":"地點名","lat":24.xx,"lng":121.xx,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。座標可用 WebSearch 查詢「{地點名} 座標 經緯度」取得。
+7. **Doc 連動（鐵律）**+ **travel 重算** — 規則見 tp-shared/references.md
 7. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 8. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 
