@@ -51,11 +51,8 @@ const HourlyWeather = memo(function HourlyWeather({
   const diff = daysUntil(dayDate);
   const tooFarAway = diff > 16;
 
-  /* --- Location chain (used by all 3 states) --- */
-  const locs = weatherDay.locations
-    .map((l) => l.name)
-    .filter((v, i, a) => a.indexOf(v) === i)
-    .join('\u2192');
+  /* --- Location count (for detail panel label) --- */
+  const locCount = new Set(weatherDay.locations.map((l) => l.name)).size;
 
   /* --- All hooks declared unconditionally (Rules of Hooks) --- */
   const [mg, setMg] = useState<MergedHourly | null>(null);
@@ -122,7 +119,7 @@ const HourlyWeather = memo(function HourlyWeather({
     return (
       <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
         <div className="py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover line-clamp-2">
-          ☀️ 天氣預報將於出發前 16 天開放 &nbsp;&middot;&nbsp; {locs}
+          ☀️ 天氣預報將於出發前 16 天開放
         </div>
       </div>
     );
@@ -159,7 +156,7 @@ const HourlyWeather = memo(function HourlyWeather({
     return (
       <div className="py-3 overflow-hidden" id={`hourly-${dayId}`}>
         <div className="py-2 px-3 -mx-3 text-subheadline text-muted select-none cursor-pointer rounded-sm transition-colors duration-fast ease-apple hover:text-accent hover:bg-hover line-clamp-2">
-          ☁️ 超出預報範圍，暫無資料 &nbsp;&middot;&nbsp; {locs}
+          ☁️ 超出預報範圍，暫無資料
         </div>
       </div>
     );
@@ -218,7 +215,6 @@ const HourlyWeather = memo(function HourlyWeather({
         &nbsp;&middot;&nbsp;{' '}
         <Icon name="raindrop" />
         {minR}~{maxR}%{' '}
-        &nbsp;&middot;&nbsp; {locs}
         <span className="ml-auto shrink-0 font-bold text-subheadline text-muted">
           {isOpen ? ARROW_COLLAPSE : ARROW_EXPAND}
         </span>
@@ -228,7 +224,7 @@ const HourlyWeather = memo(function HourlyWeather({
       <div className={isOpen ? 'block' : 'hidden'}>
         <div className="flex justify-between items-center mb-2">
           <span className="text-subheadline font-semibold text-muted">
-            <Icon name="timer" /> 7日內預報 &mdash; {weatherDay.label}
+            <Icon name="timer" /> 逐時預報（{locCount} 個地點）
           </span>
           <span className="text-subheadline text-muted">
             {currentHour}:{String(now.getMinutes()).padStart(2, '0')}
