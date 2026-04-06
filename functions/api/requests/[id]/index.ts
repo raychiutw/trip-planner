@@ -1,12 +1,32 @@
 /**
+ * GET /api/requests/:id
  * PATCH /api/requests/:id  { reply, status, processed_by }
  */
 
 import { logAudit, computeDiff } from '../../_audit';
+import { hasPermission } from '../../_auth';
 import { AppError } from '../../_errors';
 import { sanitizeReply } from '../../_validate';
 import { json, getAuth, parseJsonBody } from '../../_utils';
 import type { Env } from '../../_types';
+
+// GET /api/requests/:id
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const { env, params } = context;
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+  const id = params.id as string;
+
+  const row = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first();
+  if (!row) throw new AppError('DATA_NOT_FOUND');
+
+  const tripId = (row as Record<string, unknown>).trip_id as string;
+  if (!await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
+    throw new AppError('PERM_DENIED');
+  }
+
+  return json(row);
+};
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { env, params } = context;
