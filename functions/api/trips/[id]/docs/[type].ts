@@ -16,7 +16,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const doc = await db
-    .prepare('SELECT id, doc_type, title, updated_at FROM trip_docs_v2 WHERE trip_id = ? AND doc_type = ?')
+    .prepare('SELECT id, doc_type, title, updated_at FROM trip_docs WHERE trip_id = ? AND doc_type = ?')
     .bind(id, type)
     .first<{ id: number; doc_type: string; title: string; updated_at: string }>();
 
@@ -94,7 +94,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   // Upsert doc
   const docResult = await db
-    .prepare('INSERT INTO trip_docs_v2 (trip_id, doc_type, title, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(trip_id, doc_type) DO UPDATE SET title = excluded.title, updated_at = CURRENT_TIMESTAMP RETURNING id')
+    .prepare('INSERT INTO trip_docs (trip_id, doc_type, title, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(trip_id, doc_type) DO UPDATE SET title = excluded.title, updated_at = CURRENT_TIMESTAMP RETURNING id')
     .bind(id, type, docTitle)
     .first<{ id: number }>();
 
@@ -118,7 +118,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   await logAudit(db, {
     tripId: id,
-    tableName: 'trip_docs_v2',
+    tableName: 'trip_docs',
     recordId: docId,
     action: 'update',
     changedBy,

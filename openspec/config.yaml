@@ -23,7 +23,7 @@ context: |
   監控：Sentry（@sentry/react），每日健康檢查（daily-report.js + Telegram 異常通知）
   設計：DESIGN.md（暖色有機風、Apple HIG、6 套主題、tokens.css）
   本機開發：npm run dev（vite + wrangler pages dev + mock auth + 本機 SQLite）
-  資料架構：POI Schema V2（pois + trip_pois + poi_relations，零 JSON 欄位）
+  資料架構：POI Schema（pois + trip_pois + poi_relations，零 JSON 欄位）
   錯誤處理：ErrorCode enum + AppError（後端 throw）+ ApiError（前端 parse）+ Toast + Sentry
 
 # ============================================================

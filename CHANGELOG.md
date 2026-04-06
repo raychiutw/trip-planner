@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.4.3] - 2026-04-06
+
+### Changed
+- `trip_docs_v2` 表重命名為 `trip_docs`（migration 0022），移除 V2 後綴
+- 所有 API handlers / scripts / docs 中的 `trip_docs_v2` 參照更新為 `trip_docs`
+- "POI Schema V2" 標記改為 "POI Schema"
+
 ## [1.1.4.2] - 2026-04-06
 
 ### Fixed
