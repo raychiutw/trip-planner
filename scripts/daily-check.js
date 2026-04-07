@@ -8,13 +8,13 @@
  * 環境變數：
  *   CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID
  *   SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT
- *   TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID（可選，有則發送 Telegram）
+ *   TELEGRAM_BOT_TOKEN / TELEGRAM_BOT_HOME_TOKEN, TELEGRAM_CHAT_ID（可選）
  */
 'use strict';
 
 var fs = require('fs');
 var path = require('path');
-var { execSync } = require('child_process');
+var { execSync, spawn } = require('child_process');
 
 // 從 openspec/config.yaml 讀取 env（fallback for 本機執行）
 function loadConfigYaml() {
@@ -462,7 +462,7 @@ function assignNums(report) {
 // ── Telegram 發送 ────────────────────────────────────────────────
 
 async function sendTelegram(summary) {
-  var token = env('TELEGRAM_BOT_TOKEN');
+  var token = env('TELEGRAM_BOT_TOKEN') || env('TELEGRAM_BOT_HOME_TOKEN');
   var chatId = env('TELEGRAM_CHAT_ID');
   if (!token || !chatId) return;
 
@@ -592,6 +592,149 @@ function rotateOldLogs(logsDir) {
   }
 }
 
+// ── 自動修復 ────────────────────────────────────────────────────
+
+var PROJECT_DIR = path.join(__dirname, '..');
+var AUTOFIX_TIMEOUT_MS = 20 * 60 * 1000; // Concern #9: 20 分鐘
+
+function analyzeForAutofix(report) {
+  var issues = [];
+
+  // npm audit moderate/low（Concern #2: critical 排除，需人工）
+  if (report.npmAudit && report.npmAudit.total > 0 && report.npmAudit.vulnerabilities) {
+    var fixable = report.npmAudit.vulnerabilities.filter(function(v) {
+      return v.severity !== 'critical';
+    });
+    if (fixable.length > 0) {
+      issues.push({ source: 'npmAudit', type: 'audit_fix', severity: 'moderate', count: fixable.length, detail: 'npm audit fix（排除 critical）' });
+    }
+  }
+
+  // D1 query fail（表名/欄位過時）
+  if (report.d1Stats && report.d1Stats.status === 'warning' && report.d1Stats.serverErrors > 100) {
+    issues.push({ source: 'd1Stats', type: 'query_fail', severity: 'warning', detail: report.d1Stats.serverErrors + ' server errors in api_logs' });
+  }
+
+  // Stale requests（Concern #2: 對齊現有 1 小時門檻）
+  if (report.requestErrors && report.requestErrors.staleCount > 0) {
+    issues.push({ source: 'requestErrors', type: 'stale', severity: 'warning', count: report.requestErrors.staleCount, detail: '卡住的 request（>1 小時）' });
+  }
+
+  return issues;
+}
+
+function runAutofix(issues) {
+  return new Promise(function(resolve) {
+    // Guard: 檢查是否有遺留的 autofix PR
+    try {
+      var openPRs = execSync('gh pr list --search "daily-check-autofix" --state open --json number', { encoding: 'utf8', cwd: PROJECT_DIR, timeout: 10000 });
+      if (JSON.parse(openPRs).length > 0) {
+        resolve({ success: false, reason: 'existing_pr', detail: '昨天的 autofix PR 還沒 merge' });
+        return;
+      }
+    } catch (e) {
+      // gh 失敗不阻擋
+    }
+
+    // Concern #3: 具體的 Claude prompt，走 /tp-team pipeline
+    var prompt = [
+      '根據 daily-check 報告，用 /tp-team 修復以下問題：',
+      JSON.stringify(issues, null, 2),
+      '',
+      '規則：',
+      '- invoke /tp-team 開始，讓它自動路由',
+      '- branch 名稱用 fix/daily-check-autofix-' + Date.now(),
+      '- 只修報告中列出的問題，不要擴大範圍',
+      '- 只允許修改 scripts/ 和 package*.json',
+      '- /ship 時 PR title 用 "fix: daily-check 自動修復"',
+      '- /ship 完成後跑 /land-and-deploy 自動 merge'
+    ].join('\n');
+
+    // Concern #4: 全部用 Node.js spawn
+    var proc = spawn('/Users/ray/.local/bin/claude', [
+      '--dangerously-skip-permissions',
+      '-p', prompt
+    ], {
+      cwd: PROJECT_DIR,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: Object.assign({}, process.env, {
+        PATH: (process.env.PATH || '') + ':/Users/ray/.local/bin:/opt/homebrew/bin'
+      })
+    });
+
+    var stdout = '';
+    var stderr = '';
+    proc.stdout.on('data', function(d) { if (stdout.length < 10000) stdout += d.toString(); });
+    proc.stderr.on('data', function(d) { if (stderr.length < 5000) stderr += d.toString(); });
+
+    var timer = setTimeout(function() {
+      proc.kill('SIGTERM');
+      setTimeout(function() { if (!proc.killed) proc.kill('SIGKILL'); }, 5000);
+    }, AUTOFIX_TIMEOUT_MS);
+
+    proc.on('close', function(code) {
+      clearTimeout(timer);
+
+      // Concern #8: 檢查 diff 是否超出預期範圍
+      try {
+        var diffStat = execSync('git diff --name-only HEAD', { encoding: 'utf8', cwd: PROJECT_DIR });
+        var changedFiles = diffStat.trim().split('\n').filter(Boolean);
+        var unexpected = changedFiles.filter(function(f) {
+          return !f.startsWith('scripts/') && !f.startsWith('package') && f !== 'CLAUDE.md';
+        });
+        if (unexpected.length > 0) {
+          execSync('git checkout .', { cwd: PROJECT_DIR });
+          resolve({ success: false, reason: 'scope_violation', detail: '修改了預期外的檔案: ' + unexpected.join(', ') });
+          return;
+        }
+      } catch (e) {}
+
+      // 檢查 PR
+      try {
+        var prJson = execSync('gh pr list --author @me --state all --limit 1 --json url,state,title', { encoding: 'utf8', cwd: PROJECT_DIR, timeout: 10000 });
+        var pr = JSON.parse(prJson)[0];
+        resolve({ success: code === 0, prUrl: pr && pr.url, prState: pr && pr.state, prTitle: pr && pr.title });
+      } catch (e) {
+        resolve({ success: code === 0, reason: 'no_pr' });
+      }
+    });
+
+    proc.on('error', function(err) {
+      clearTimeout(timer);
+      resolve({ success: false, reason: err.message });
+    });
+  });
+}
+
+// Concern #6: autofix 通知是獨立訊息，不取代 buildTelegramText
+function buildAutofixTelegramText(issues, result) {
+  var lines = [];
+
+  if (result.success) {
+    lines.push('🔧 <b>Tripline daily-check 自動修復</b>');
+    lines.push('━━━━━━━━━━━━━━━');
+    lines.push('修復 ' + issues.length + ' 個問題：');
+    issues.forEach(function(i) { lines.push('• ' + i.detail); });
+    lines.push('');
+    if (result.prUrl) lines.push('PR: ' + result.prUrl);
+    lines.push('狀態: ✅ 已送出（CI + auto-merge）');
+  } else {
+    lines.push('⚠️ <b>Tripline daily-check 修復失敗</b>');
+    lines.push('━━━━━━━━━━━━━━━');
+    lines.push('原因: ' + (result.detail || result.reason || 'unknown'));
+    if (result.reason === 'existing_pr') {
+      lines.push('動作: 請手動處理遺留的 autofix PR');
+    } else if (result.reason === 'scope_violation') {
+      lines.push('動作: Claude 修改了預期外的檔案，已 rollback');
+    } else {
+      lines.push('動作: 需要手動處理');
+    }
+  }
+
+  lines.push('━━━━━━━━━━━━━━━');
+  return lines.join('\n');
+}
+
 // ── 主流程 ──────────────────────────────────────────────────────
 
 async function main() {
@@ -669,6 +812,25 @@ async function main() {
     }
   } catch (err) {
     console.error('Telegram send failed:', err.message);
+  }
+
+  // ── 自動修復階段 ──────────────────────────────────
+  var autofixIssues = analyzeForAutofix(report);
+  if (autofixIssues.length > 0) {
+    console.log('Autofix: found ' + autofixIssues.length + ' fixable issues, starting...');
+    try {
+      var fixResult = await runAutofix(autofixIssues);
+      console.log('Autofix result: ' + JSON.stringify(fixResult));
+
+      // Concern #6: autofix 結果作為第二則 Telegram 訊息
+      var autofixText = buildAutofixTelegramText(autofixIssues, fixResult);
+      await sendTelegram(autofixText);
+    } catch (err) {
+      console.error('Autofix failed:', err.message);
+      await sendTelegram('⚠️ <b>Autofix 異常</b>\n' + err.message).catch(function() {});
+    }
+  } else {
+    console.log('Autofix: no fixable issues');
   }
 
   console.log('Daily check done — ' + JSON.stringify(summary));
