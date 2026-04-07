@@ -394,8 +394,8 @@ async function queryRequestErrors() {
 async function queryD1Stats() {
   var rows = await queryD1(
     "SELECT " +
-    "(SELECT COUNT(*) FROM api_logs WHERE status >= 500) as server_errors, " +
-    "(SELECT COUNT(*) FROM api_logs WHERE status >= 400 AND status < 500) as client_errors, " +
+    "(SELECT COUNT(*) FROM api_logs WHERE status >= 500 AND created_at >= datetime('now', '-1 day')) as server_errors, " +
+    "(SELECT COUNT(*) FROM api_logs WHERE status >= 400 AND status < 500 AND created_at >= datetime('now', '-1 day')) as client_errors, " +
     "(SELECT COUNT(*) FROM api_logs) as total_logs, " +
     "(SELECT COUNT(*) FROM audit_log WHERE created_at >= datetime('now', '-1 day')) as audit_count"
   );
@@ -610,10 +610,8 @@ function analyzeForAutofix(report) {
     }
   }
 
-  // D1 query fail（表名/欄位過時）
-  if (report.d1Stats && report.d1Stats.status === 'warning' && report.d1Stats.serverErrors > 100) {
-    issues.push({ source: 'd1Stats', type: 'query_fail', severity: 'warning', detail: report.d1Stats.serverErrors + ' server errors in api_logs' });
-  }
+  // D1 query fail — 只在 daily-check 本身的 Source query 失敗時觸發
+  // d1Stats.serverErrors 是歷史累積的 api_logs，不是可修的 code 問題，不觸發 autofix
 
   // Stale requests（Concern #2: 對齊現有 1 小時門檻）
   if (report.requestErrors && report.requestErrors.staleCount > 0) {
@@ -689,11 +687,12 @@ function runAutofix(issues) {
         }
       } catch (e) {}
 
-      // 檢查 PR
+      // 檢查本次 autofix 建立的 PR（用 branch 名稱搜尋，避免撈到舊 PR）
       try {
-        var prJson = execSync('gh pr list --author @me --state all --limit 1 --json url,state,title', { encoding: 'utf8', cwd: PROJECT_DIR, timeout: 10000 });
-        var pr = JSON.parse(prJson)[0];
-        resolve({ success: code === 0, prUrl: pr && pr.url, prState: pr && pr.state, prTitle: pr && pr.title });
+        var prJson = execSync('gh pr list --search "daily-check-autofix" --state all --limit 1 --json url,state,title --sort created', { encoding: 'utf8', cwd: PROJECT_DIR, timeout: 10000 });
+        var prs = JSON.parse(prJson);
+        var pr = prs.length > 0 ? prs[0] : null;
+        resolve({ success: code === 0 && pr !== null, prUrl: pr && pr.url, prState: pr && pr.state, prTitle: pr && pr.title });
       } catch (e) {
         resolve({ success: code === 0, reason: 'no_pr' });
       }
