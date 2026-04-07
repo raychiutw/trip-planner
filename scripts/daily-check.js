@@ -295,12 +295,12 @@ async function queryWebAnalytics() {
 
 function queryNpmAudit() {
   try {
-    var output = execSync('npm audit --json --production 2>/dev/null || npm audit --json 2>/dev/null || echo "{}"', {
+    var output = execSync('npm audit --json --production 2>/dev/null; true', {
       encoding: 'utf8',
       timeout: 60000,
       cwd: path.join(__dirname, '..')
     });
-    var parsed = JSON.parse(output);
+    var parsed = output.trim() ? JSON.parse(output) : {};
 
     var vulns = [];
     if (parsed.vulnerabilities) {
@@ -354,7 +354,7 @@ async function queryRequestErrors() {
   var rows = await queryD1(
     "SELECT id, trip_id, mode, status, substr(message, 1, 80) as message, " +
     "substr(reply, 1, 80) as reply, created_at " +
-    "FROM requests " +
+    "FROM trip_requests " +
     "WHERE status != 'completed' " +
     "ORDER BY created_at DESC " +
     "LIMIT 20"

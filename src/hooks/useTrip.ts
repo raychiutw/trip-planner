@@ -154,24 +154,40 @@ export function useTrip(tripId: string | null): UseTripReturn {
           setCurrentDayNum(firstDayNum);
         }
 
-        // Fetch days sequentially — first day first, then remaining.
-        // Serialized to avoid saturating the Vite proxy / browser connection limit in dev.
+        // Fetch first day immediately, then remaining days in parallel.
         async function fetchAllDays() {
-          for (const d of sorted) {
+          async function fetchDay(num: number) {
+            const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal });
             if (cancelled) return;
-            const num = d.day_num;
+            const dayData = mapDayResponse(raw);
+            allDaysRef.current[num] = dayData;
+            setAllDays((prev) => ({ ...prev, [num]: dayData }));
+            if (num === firstDayNum) {
+              setCurrentDay(dayData);
+            }
+          }
+
+          // First day: fetch immediately so user sees content fast
+          const first = sorted[0];
+          if (first) {
             try {
-              const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal });
-              if (cancelled) return;
-              const dayData = mapDayResponse(raw);
-              allDaysRef.current[num] = dayData;
-              setAllDays((prev) => ({ ...prev, [num]: dayData }));
-              if (num === firstDayNum) {
-                setCurrentDay(dayData);
-              }
+              await fetchDay(first.day_num);
             } catch (err) {
               if (err instanceof ApiError) showErrorToast(err.message, err.severity);
             }
+          }
+          if (cancelled) return;
+
+          // Remaining days: fetch in parallel
+          const remaining = sorted.slice(1);
+          if (remaining.length > 0) {
+            await Promise.allSettled(
+              remaining.map((d) =>
+                fetchDay(d.day_num).catch((err) => {
+                  if (err instanceof ApiError) showErrorToast(err.message, err.severity);
+                }),
+              ),
+            );
           }
         }
         fetchAllDays();
