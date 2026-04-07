@@ -2,7 +2,7 @@
 # tripline-job.sh — 15 分鐘排程：卡住偵測 + 遺漏處理
 set -eo pipefail
 
-PROJECT_DIR="/Users/ray/Desktop/Source/trip-planner"
+PROJECT_DIR="/Users/ray/Projects/trip-planner"
 LOG_DIR="$PROJECT_DIR/scripts/logs"
 LOG_FILE="$LOG_DIR/tripline-job-$(date +%Y-%m-%d).log"
 STALE_THRESHOLD_MIN=20  # > Claude 15 min timeout，避免 race
