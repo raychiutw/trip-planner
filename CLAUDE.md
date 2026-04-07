@@ -42,7 +42,7 @@ src/types/          trip.ts  api.ts
 css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，含 6 套主題）
 functions/api/      _middleware  _auth  _audit  _utils  _validate  _types
                     trips/  pois/  requests/  permissions/（RESTful nested routes）
-migrations/         0001 ~ 0016（D1 schema）
+migrations/         0001 ~ 0023（D1 schema）
 scripts/            init-local-db  dump-d1  daily-check  migrate-pois  tp-check ...
 tests/              unit/  integration/  e2e/
 openspec/           config.yaml  specs/  changes/
