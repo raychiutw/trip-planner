@@ -1,16 +1,22 @@
 # Tripline — 行程共享網站
 
-## gstack 智慧路由 Pipeline
+## gstack Sprint Pipeline
 
-**Claude 直接做事，invoke 不同 gstack skill 換帽子。** code 變更前 invoke `/tp-team`，自動路由到適合的流程。
+**Claude 直接做事，invoke 不同 gstack skill 換帽子。** code 變更前 invoke `/tp-team`。
 
 ```
-MICRO (<50行)     Build → /tp-code-verify → /ship
-STANDARD (50-500) Build → /simplify → /tp-code-verify → /ship → /land-and-deploy
-MAJOR (>500)      /office-hours → /autoplan → Build → /simplify → /tp-code-verify → /ship → /land-and-deploy → /canary
+Think → Plan → Build → Review → Test → Ship → Reflect
 ```
 
-週期性任務（非 per-PR）：`/retro`（weekly）、`/cso`（weekly）、`/health`（需要時）
+| 階段 | gstack skill | 做什麼 |
+|------|-------------|--------|
+| Think | `/office-hours` | 探索需求（新功能/架構跑） |
+| Plan | `/autoplan` | CEO + Eng + Design 三審 |
+| Build | 寫 code + `/simplify` | TDD + 精簡 |
+| Review | `/tp-code-verify` → `/review` | 專案規範 + diff 審查 ← 不可跳過 |
+| Test | `/cso --diff` + `/qa` | 安全掃描 + QA ← `/cso --diff` 不可跳 |
+| Ship | `/ship` → `/land-and-deploy` → `/canary` | PR + merge + 監控 |
+| Reflect | `/retro` | 回顧（weekly） |
 
 ## CI/CD
 
