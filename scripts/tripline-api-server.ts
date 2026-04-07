@@ -143,11 +143,14 @@ function runClaude(): Promise<boolean> {
 let isRunning = false;
 let lastProcessed: string | null = null;
 let processedCount = 0;
+const MAX_CONSECUTIVE_FAILURES = 3;
 
 async function processLoop(source: 'api' | 'job') {
   if (isRunning) return false;
   isRunning = true;
   log(`Process loop started (source: ${source})`);
+
+  let consecutiveFailures = 0;
 
   try {
     while (true) {
@@ -158,11 +161,24 @@ async function processLoop(source: 'api' | 'job') {
       }
 
       log(`Processing request ${req.id} (trip: ${req.trip_id}, mode: ${req.mode})`);
-      await patchStatus(req.id, 'processing', { processed_by: source });
+      const claimed = await patchStatus(req.id, 'processing', { processed_by: source });
+      if (!claimed) {
+        log(`Request ${req.id}: failed to claim (patchStatus → false), skipping`);
+        consecutiveFailures++;
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          log(`${MAX_CONSECUTIVE_FAILURES} consecutive failures, stopping loop`);
+          break;
+        }
+        continue;
+      }
 
+      consecutiveFailures = 0;
       const success = await runClaude();
       const finalStatus = success ? 'completed' : 'failed';
-      await patchStatus(req.id, finalStatus);
+      const patched = await patchStatus(req.id, finalStatus);
+      if (!patched) {
+        log(`Request ${req.id}: failed to patch final status '${finalStatus}'`);
+      }
 
       log(`Request ${req.id} → ${finalStatus}`);
       lastProcessed = new Date().toISOString();

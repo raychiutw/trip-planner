@@ -295,12 +295,12 @@ async function queryWebAnalytics() {
 
 function queryNpmAudit() {
   try {
-    var output = execSync('npm audit --json --production 2>/dev/null || npm audit --json 2>/dev/null || echo "{}"', {
+    var output = execSync('npm audit --json --production 2>/dev/null; true', {
       encoding: 'utf8',
       timeout: 60000,
       cwd: path.join(__dirname, '..')
     });
-    var parsed = JSON.parse(output);
+    var parsed = output.trim() ? JSON.parse(output) : {};
 
     var vulns = [];
     if (parsed.vulnerabilities) {
