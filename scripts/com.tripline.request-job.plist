@@ -6,10 +6,10 @@
     <string>com.tripline.request-job</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/ray/Desktop/Source/trip-planner/scripts/tripline-job.sh</string>
+        <string>/Users/ray/Projects/trip-planner/scripts/tripline-job.sh</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/ray/Desktop/Source/trip-planner</string>
+    <string>/Users/ray/Projects/trip-planner</string>
     <key>StartInterval</key>
     <integer>900</integer>
     <key>EnvironmentVariables</key>
@@ -18,8 +18,8 @@
         <string>/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/ray/Desktop/Source/trip-planner/scripts/logs/request-job-stdout.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/request-job-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/ray/Desktop/Source/trip-planner/scripts/logs/request-job-stderr.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/request-job-stderr.log</string>
 </dict>
 </plist>

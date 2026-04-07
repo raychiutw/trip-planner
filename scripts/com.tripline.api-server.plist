@@ -8,10 +8,10 @@
     <array>
         <string>/opt/homebrew/bin/bun</string>
         <string>run</string>
-        <string>/Users/ray/Desktop/Source/trip-planner/scripts/tripline-api-server.ts</string>
+        <string>/Users/ray/Projects/trip-planner/scripts/tripline-api-server.ts</string>
     </array>
     <key>WorkingDirectory</key>
-    <string>/Users/ray/Desktop/Source/trip-planner</string>
+    <string>/Users/ray/Projects/trip-planner</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
@@ -22,8 +22,8 @@
         <string>/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/ray/Desktop/Source/trip-planner/scripts/logs/api-server-stdout.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/ray/Desktop/Source/trip-planner/scripts/logs/api-server-stderr.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server-stderr.log</string>
 </dict>
 </plist>
