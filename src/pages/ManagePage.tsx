@@ -415,7 +415,7 @@ export default function ManagePage() {
   useEffect(() => { autoResize(); }, [text, autoResize]);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey && text.trim().length > 0) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && text.trim().length > 0) {
       e.preventDefault();
       submitRequest();
     }
