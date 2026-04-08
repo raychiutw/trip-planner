@@ -10,6 +10,23 @@ import Shop, { type ShopData } from './Shop';
 import { escUrl } from '../../lib/sanitize';
 
 // ---------------------------------------------------------------------------
+// Safe text extraction — API may return objects like {text, checked} or {label, text}
+// ---------------------------------------------------------------------------
+
+function safeText(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.text === 'string') return obj.text;
+    if (typeof obj.label === 'string' && typeof obj.text === 'string') return `${obj.label}: ${obj.text}`;
+    if (typeof obj.name === 'string') return obj.name;
+  }
+  return String(value);
+}
+
+// ---------------------------------------------------------------------------
 // Souvenir item shape
 // ---------------------------------------------------------------------------
 
@@ -84,13 +101,13 @@ function gridClass(count: number): string {
 function ReservationBox({ box }: { box: InfoBoxData }) {
   return (
     <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
-      {box.title && <><strong className="font-semibold">{box.title}</strong><br /></>}
+      {box.title && <><strong className="font-semibold">{safeText(box.title)}</strong><br /></>}
       {box.items && box.items.length > 0 &&
-        box.items.filter((item): item is string => typeof item === 'string').map((item, i) => (
-          <span key={i}>{item}<br /></span>
+        box.items.map((item, i) => (
+          <span key={i}>{safeText(item)}<br /></span>
         ))
       }
-      {box.notes && <MarkdownText text={box.notes} as="div" />}
+      {box.notes && <MarkdownText text={safeText(box.notes)} as="div" />}
     </div>
   );
 }
@@ -100,9 +117,9 @@ function ParkingBox({ box }: { box: InfoBoxData }) {
     <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
       <div>
         {box.title && (
-          <><Icon name="parking" /> <strong className="font-semibold">{box.title}</strong></>
+          <><Icon name="parking" /> <strong className="font-semibold">{safeText(box.title)}</strong></>
         )}
-        {box.price && <>：{box.price}</>}
+        {box.price && <>：{safeText(box.price)}</>}
         {box.location && <>{' '}<MapLinks location={box.location} inline /></>}
       </div>
       {box.note && (
@@ -117,7 +134,7 @@ function SouvenirBox({ box }: { box: InfoBoxData }) {
   const items = (box.items ?? []).filter((item): item is SouvenirItem => typeof item === 'object' && item !== null);
   return (
     <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
-      {box.title && <><Icon name="gift" /> <strong className="font-semibold">{box.title}</strong><br /></>}
+      {box.title && <><Icon name="gift" /> <strong className="font-semibold">{safeText(box.title)}</strong><br /></>}
       {items.map((item, i) => {
         const itemUrl = escUrl(item.url);
         return (
