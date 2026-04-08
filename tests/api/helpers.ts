@@ -148,3 +148,16 @@ export async function getDayId(db: D1Database, tripId: string, dayNum: number): 
   ).bind(tripId, dayNum).first<{ id: number }>();
   return row!.id;
 }
+
+/** 插入測試 trip_pois 關聯 */
+export async function seedTripPoi(db: D1Database, opts: {
+  poiId: number;
+  tripId: string;
+  entryId: number;
+  dayId: number;
+}) {
+  const result = await db.prepare(
+    'INSERT INTO trip_pois (poi_id, trip_id, entry_id, day_id, sort_order, context) VALUES (?, ?, ?, ?, 0, ?) RETURNING id'
+  ).bind(opts.poiId, opts.tripId, opts.entryId, opts.dayId, 'timeline').first<{ id: number }>();
+  return result!.id;
+}
