@@ -45,11 +45,24 @@ const PRIORITY_BADGE: Record<Priority, { label: string; class: string } | null> 
   neutral: null,
 };
 
+/** Defensive: ensure a value is a renderable string (legacy data may contain objects) */
+function safeStr(v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (v == null) return '';
+  if (typeof v === 'object') {
+    const obj = v as Record<string, unknown>;
+    if (typeof obj.text === 'string') return obj.text;
+    if (typeof obj.label === 'string') return obj.label;
+    return JSON.stringify(v);
+  }
+  return String(v);
+}
+
 export default function DocCard({ entries }: DocCardProps) {
   const groups = useMemo(() => {
     const map = new Map<string, DocEntry[]>();
     for (const e of entries) {
-      const key = e.section || '';
+      const key = safeStr(e.section);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
@@ -70,7 +83,10 @@ export default function DocCard({ entries }: DocCardProps) {
           )}
           <div className="flex flex-col gap-2">
             {items.map((e, i) => {
-              const priority = detectPriority(e.section, e.title, e.content);
+              const title = safeStr(e.title);
+              const content = safeStr(e.content);
+              const section = safeStr(e.section);
+              const priority = detectPriority(section, title, content);
               const badge = PRIORITY_BADGE[priority];
               return (
                 <div key={e.id ?? i} className={`rounded-md px-3.5 py-2.5 ${PRIORITY_CARD_CLASS[priority]}`}>
@@ -80,12 +96,12 @@ export default function DocCard({ entries }: DocCardProps) {
                         {badge.label}
                       </span>
                     )}
-                    {e.title && <span className="font-semibold text-body">{e.title}</span>}
+                    {title && <span className="font-semibold text-body">{title}</span>}
                   </div>
-                  {e.content && (
+                  {content && (
                     <div
                       className="text-callout text-muted mt-1 leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: renderMarkdown(e.content) }}
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
                     />
                   )}
                 </div>
