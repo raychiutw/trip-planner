@@ -224,31 +224,24 @@ export default function ManagePage() {
 
   /* ----- SSE: track status of the latest non-terminal request ----- */
   const sse = useRequestSSE(sseRequestId);
-  // Update local request status optimistically on every SSE status change
+  // Ref guard: track last processed status+id to prevent re-processing
+  const lastProcessedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (sse.status && sseRequestId) {
-      updateRequestStatus(sseRequestId, sse.status, sse.processedBy);
-      if (sse.status === 'completed') {
-        showToast('你的請求已處理完成！', 'success', 3000);
-        setSseRequestId(null);
-      } else if (sse.status === 'failed') {
-        showToast('處理失敗，請稍後重新提交', 'error', 5000);
-        setSseRequestId(null);
-      }
-    }
-  }, [sse.status, sse.processedBy, sseRequestId, updateRequestStatus]);
+    if (!sse.status || !sseRequestId) return;
+    const key = `${sseRequestId}:${sse.status}`;
+    if (key === lastProcessedRef.current) return;
+    lastProcessedRef.current = key;
 
-  // Fetch full request data from server only when status reaches 'completed'
-  // Separated from the above effect to avoid cascading setRequests() calls
-  const completedRequestIdRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (sse.status === 'completed' && sseRequestId && sseRequestId !== completedRequestIdRef.current) {
-      completedRequestIdRef.current = sseRequestId;
+    updateRequestStatus(sseRequestId, sse.status, sse.processedBy);
+    if (sse.status === 'completed') {
+      showToast('你的請求已處理完成！', 'success', 3000);
       refreshRequest(sseRequestId);
-    } else if (sse.status !== 'completed') {
-      completedRequestIdRef.current = null;
+      setSseRequestId(null);
+    } else if (sse.status === 'failed') {
+      showToast('處理失敗，請稍後重新提交', 'error', 5000);
+      setSseRequestId(null);
     }
-  }, [sse.status, sseRequestId, refreshRequest]);
+  }, [sse.status, sse.processedBy, sseRequestId, updateRequestStatus, refreshRequest]);
 
   /* ----- SSE disconnect warning ----- */
   const sseWasConnectedRef = useRef(false);
