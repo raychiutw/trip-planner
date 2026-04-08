@@ -224,11 +224,11 @@ export default function ManagePage() {
 
   /* ----- SSE: track status of the latest non-terminal request ----- */
   const sse = useRequestSSE(sseRequestId);
+  // Update local request status optimistically on every SSE status change
   useEffect(() => {
     if (sse.status && sseRequestId) {
       updateRequestStatus(sseRequestId, sse.status, sse.processedBy);
       if (sse.status === 'completed') {
-        refreshRequest(sseRequestId);
         showToast('你的請求已處理完成！', 'success', 3000);
         setSseRequestId(null);
       } else if (sse.status === 'failed') {
@@ -237,6 +237,18 @@ export default function ManagePage() {
       }
     }
   }, [sse.status, sse.processedBy, sseRequestId, updateRequestStatus]);
+
+  // Fetch full request data from server only when status reaches 'completed'
+  // Separated from the above effect to avoid cascading setRequests() calls
+  const completedRequestIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (sse.status === 'completed' && sseRequestId && sseRequestId !== completedRequestIdRef.current) {
+      completedRequestIdRef.current = sseRequestId;
+      refreshRequest(sseRequestId);
+    } else if (sse.status !== 'completed') {
+      completedRequestIdRef.current = null;
+    }
+  }, [sse.status, sseRequestId, refreshRequest]);
 
   /* ----- SSE disconnect warning ----- */
   const sseWasConnectedRef = useRef(false);
