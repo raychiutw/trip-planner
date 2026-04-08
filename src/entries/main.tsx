@@ -18,9 +18,45 @@ import { lazy, Suspense, StrictMode } from 'react';
 
 import '../../css/tokens.css';
 
-const AdminPage = lazy(() => import('../pages/AdminPage'));
-const ManagePage = lazy(() => import('../pages/ManagePage'));
-const TripPage = lazy(() => import('../pages/TripPage'));
+/**
+ * Wrap dynamic import with retry + reload fallback.
+ * After a deployment with new chunk hashes, users on the old version get
+ * a "Failed to fetch dynamically imported module" error. This retries once,
+ * then reloads to fetch fresh HTML with new chunk references.
+ * sessionStorage key prevents infinite reload loops.
+ */
+function lazyWithRetry(
+  importFn: () => Promise<{ default: React.ComponentType<unknown> }>,
+) {
+  return lazy(() =>
+    importFn().catch(
+      () =>
+        new Promise<{ default: React.ComponentType<unknown> }>((resolve, reject) => {
+          // Retry once after a short delay
+          setTimeout(() => {
+            importFn()
+              .then(resolve)
+              .catch(() => {
+                const key = 'lazyWithRetry_reloaded';
+                if (!sessionStorage.getItem(key)) {
+                  sessionStorage.setItem(key, '1');
+                  window.location.reload();
+                  // Return a never-resolving promise while reload happens
+                  return;
+                }
+                // Already reloaded once — clear flag and surface the error
+                sessionStorage.removeItem(key);
+                reject(new Error('Failed to load module after retry and reload'));
+              });
+          }, 1500);
+        }),
+    ),
+  );
+}
+
+const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
+const ManagePage = lazyWithRetry(() => import('../pages/ManagePage'));
+const TripPage = lazyWithRetry(() => import('../pages/TripPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
