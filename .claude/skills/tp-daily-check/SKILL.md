@@ -26,9 +26,11 @@ user-invocable: true
    - **API 4xx 必須 grep 呼叫端** — 查是哪個 script/skill 發的，auth header 有沒有帶對
    - 對每個可修 issue：`claude -p` 開新 session → fix branch → `/tp-code-verify` → `/ship` → `/land-and-deploy`
    - 修不了的必須附上「嘗試了什麼 + grep 結果 + 為什麼修不了」
-4. 組裝精簡 Telegram 訊息
-5. 用 Telegram MCP 發送摘要給 Key User（chat_id: 6527604594）
-6. 結束（全自動，不等待回覆）
+4. 將修復結果寫入 `scripts/logs/daily-check/YYYY-MM-DD-fix-result.json`：
+   ```json
+   {"total": 3, "fixed": 2, "failed": 1, "pr_url": "https://github.com/.../pull/160", "details": [...]}
+   ```
+5. 結束（Telegram 由 scheduler.sh Phase 2 + Phase 4 發送，本 skill 不發 Telegram）
 
 ## Phase B 判斷標準
 
