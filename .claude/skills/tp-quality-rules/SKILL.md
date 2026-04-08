@@ -1,6 +1,6 @@
 ---
 name: tp-quality-rules
-description: Reference library defining quality rules R0-R18 — used by tp-check, tp-create, tp-edit, tp-rebuild.
+description: R0-R18 品質規則定義庫 — 被 tp-check、tp-create、tp-edit、tp-rebuild 引用，不直接 invoke。
 user-invocable: false
 ---
 

@@ -44,6 +44,11 @@ pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`
 | 修改 trip_pois | `PATCH /api/trips/{id}/trip-pois/{tpid}` | 覆寫欄位（NULL = 繼承 master） |
 | 刪除 trip_pois | `DELETE /api/trips/{id}/trip-pois/{tpid}` | 移除關聯 |
 | 修改 pois master | `PATCH /api/pois/{id}` | admin 或帶 `tripId` 的有權限使用者 |
+| 刪除 pois master | `DELETE /api/pois/{id}` | admin only，會一併刪除所有關聯 trip_pois |
+
+## Google Maps 驗證（鐵律）
+
+**Google Maps 是所有 POI 資料的 source of truth。** 新增或更新 POI 前，必須先確認 Google Maps 上存在該 POI。查不到 = 無效，不得新增或保留。完整驗證流程見 `tp-search-strategies` SKILL.md「前置步驟：Google Maps 驗證」。
 
 ## googleRating 查詢策略
 
@@ -51,8 +56,9 @@ pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`
 
 1. `/browse` 開 `https://www.google.com/maps/search/{POI名稱}`
 2. 從頁面文字抽取第一個 `X.X` 格式數字即為 rating
-3. 如果 `/browse` 不可用，fallback：
-   a. WebSearch「{名稱} Google Maps 評分」
+3. 同時提取 lat/lng 座標（Google Maps URL 含座標參數）
+4. 如果 `/browse` 不可用，fallback：
+   a. WebSearch「{名稱} {地區} Google Maps」— 確認存在 + 取座標
    b. WebSearch「{名稱} Google rating」
    c. 從 Wanderlog / TripAdvisor / Tabelog 交叉比對
-4. 必須是 number 1.0–5.0，找不到時不填預設值
+5. 必須是 number 1.0–5.0，找不到時不填預設值

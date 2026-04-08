@@ -1,6 +1,6 @@
 ---
 name: tp-create
-description: Use when generating a new trip itinerary from scratch given destination, dates, and travel style. Not for modifying existing trips — use /tp-edit or /tp-rebuild.
+description: 建立新行程時使用 — 從零產生完整行程（建行程、新行程、規劃旅遊、plan a trip）。提供目的地、日期、旅行方式即可。修改既有行程用 /tp-edit，重整品質用 /tp-rebuild。
 user-invocable: true
 ---
 
@@ -14,38 +14,9 @@ user-invocable: true
 
 ### API helper 腳本（Phase 1 第一步建立）
 
-在 `/tmp/api-helper.js` 建立共用 helper，後續所有 API 呼叫都透過它：
+在 `/tmp/api-helper.js` 建立共用 helper，後續所有 API 呼叫都透過它。模板見 `references/api-helper-template.md`。
 
-```js
-const https = require('https');
-const TRIP_ID = '{tripId}';  // Phase 0 產生後填入
-const BASE = 'trip-planner-dby.pages.dev';
-const HEADERS = {
-  'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
-  'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
-  'Content-Type': 'application/json',
-  'Origin': 'https://trip-planner-dby.pages.dev',
-};
-function apiCall(method, path, body) {
-  return new Promise((resolve, reject) => {
-    const data = body ? JSON.stringify(body) : '';
-    const req = https.request({
-      hostname: BASE, path, method,
-      headers: { ...HEADERS, 'Content-Length': Buffer.byteLength(data) },
-    }, (res) => {
-      let b = '';
-      res.on('data', c => b += c);
-      res.on('end', () => { try { resolve(JSON.parse(b)); } catch { resolve(b); } });
-    });
-    req.on('error', reject);
-    if (data) req.write(data);
-    req.end();
-  });
-}
-module.exports = { apiCall, TRIP_ID };
-```
-
-呼叫時先 `export $(grep CF_ACCESS .env.local | xargs)`，再 `node -e "..."` 引用 helper。
+呼叫前先 `export $(grep CF_ACCESS .env.local | xargs)`，再 `node -e "..."` 引用 helper。
 
 其他 API 設定、POI 欄位規格見 tp-shared/references.md
 
@@ -118,6 +89,7 @@ module.exports = { apiCall, TRIP_ID };
    > ⚠️ **travel 語意見 tp-shared/references.md**：travel = 從此地「出發」到下一站，放在出發地 entry 上。最後一個 entry 的 travel 為 null。
    - restaurants infoBox（午餐/晚餐 entry 下各 3 家推薦）
    - shopping infoBox（非家飯店 entry 下）
+   - **Google Maps 驗證（鐵律）**：所有 POI 必須先確認 Google Maps 上存在。查不到 = 無效，不得新增。驗證流程見 `tp-search-strategies`。
    - 每個 POI 須包含以下必填欄位：
      - `note: ""`（有備註填內容，無備註填空字串，R15）
      - `maps`：實體地點填 Google Maps 搜尋文字（R11，PUT /days/:num 用 `maps` 欄位）
@@ -156,41 +128,7 @@ module.exports = { apiCall, TRIP_ID };
 
 #### Step 2b：browse 批次查詢腳本
 
-用 `/browse` 的 `$B goto` + `$B text` 批次查詢所有 POI。寫一個 node 腳本串接 browse daemon：
-
-```js
-const { execSync } = require('child_process');
-const B = process.env.BROWSE_BIN || (process.env.HOME || process.env.USERPROFILE) + '/.claude/skills/gstack/browse/dist/browse';
-
-const queries = [
-  // [搜尋關鍵字, entryId or null, poiId or null]
-  ['景點名稱+地區', 'entryId', null],
-  ['餐廳名稱+地區', null, 'poiId'],
-];
-
-(async () => {
-  for (const [query, eid, pid] of queries) {
-    execSync(`"${B}" goto "https://www.google.com/maps/search/${encodeURIComponent(query)}"`, { timeout: 10000 });
-    await new Promise(r => setTimeout(r, 1500));
-    const text = execSync(`"${B}" text`, { timeout: 10000, encoding: 'utf8' });
-    const matches = text.match(/(\d\.\d)/g);
-    let rating = null;
-    if (matches) for (const m of matches) {
-      const n = parseFloat(m);
-      if (n >= 1.0 && n <= 5.0) { rating = n; break; }
-    }
-    console.log(`${query} → ${rating || 'not found'}`);
-  }
-})();
-```
-
-#### Step 2c：PATCH 評分
-
-browse 結果分兩類 PATCH：
-- **entry 評分**：`PATCH /api/trips/{tripId}/entries/{eid}` Body: `{ google_rating: X.X }`
-- **POI 評分**（餐廳/商店）：`PATCH /api/pois/{poiId}` Body: `{ google_rating: X.X }`
-
-用一次 node 腳本 `Promise.all` 批次 PATCH 所有評分。
+用 `/browse` 的 `$B goto` + `$B text` 批次查詢所有 POI。腳本模板與 PATCH 方式見 `references/browse-rating-script.md`。
 
 #### Step 2d：WebSearch fallback
 

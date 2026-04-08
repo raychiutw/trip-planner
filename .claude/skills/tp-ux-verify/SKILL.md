@@ -1,6 +1,6 @@
 ---
 name: tp-ux-verify
-description: Internal HIG design reference (H1-H12) for trip-planner HTML/CSS. Not invoked directly — loaded by /tp-code-verify during CSS review.
+description: H1-H12 HIG 設計規範內部參考 — trip-planner HTML/CSS 規範。不直接 invoke，由 /tp-code-verify 在 CSS 審查時載入。
 user-invocable: false
 ---
 

@@ -1,18 +1,19 @@
 ---
 name: tp-shared
-description: Shared API settings, POI field specs, doc structure, and travel semantics for all tp-* skills. Not invoked directly — referenced by other tp-* skills.
+description: 所有 tp-* skill 共用的 API 設定、POI 欄位規格、Doc 結構、travel 語意。不直接 invoke，被其他 tp-* skill 引用。
 user-invocable: false
 ---
 
 所有 tp-* skill 共用的定義和規範集中地。
 
-完整內容見 `references.md`，涵蓋：
-- API Base URL + 認證 headers
-- curl 模板（Windows encoding 解法）
-- POI 欄位規格（各 type 必填/建議欄位）
-- 資料所有權（pois vs trip_pois）
-- API 操作端點
-- Markdown 支援欄位
-- travel 欄位語意（鐵律）
-- Doc 結構規格 + 連動規則（鐵律）
-- 品質規則索引（→ tp-quality-rules）
+### 文件結構
+
+| 檔案 | 角色 |
+|------|------|
+| `references.md` | 快速索引 — API 設定 + curl 模板 + 子檔案導航 |
+| `references/poi-spec.md` | POI 欄位規格、型別必填欄位、googleRating 查詢策略 |
+| `references/doc-spec.md` | Doc 結構規格、Markdown 支援欄位、Doc 連動規則（鐵律） |
+| `references/modify-steps.md` | 行程修改共用步驟、travel 語意（鐵律）、歇業偵測規則 |
+| `references/quality_checklist.md` | portfolio-level 品質 checklist（PASS/FAIL gate） |
+
+其他 tp-* skill 引用時一律用 `tp-shared/references.md` 或 `tp-shared/references/{filename}` 路徑。品質規則定義在 `tp-quality-rules/SKILL.md`。

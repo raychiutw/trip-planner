@@ -1,6 +1,6 @@
 ---
 name: tp-request
-description: Use when processing trip requests (旅伴請求) already queued in D1 database. Triggered by scheduler or manually invoked. For direct modifications on behalf of companions, use /tp-edit.
+description: 處理旅伴請求時使用 — 從 D1 database 讀取排隊中的請求（處理請求、旅伴請求、pending request、request scheduler）。直接幫旅伴改行程用 /tp-edit。
 user-invocable: true
 ---
 
@@ -20,7 +20,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 
 ## 觸發模式
 
-Windows Task Scheduler 每分鐘排程執行本 skill，處理所有 open/received 請求。
+本機排程（cron / Claude Code schedule）自動執行本 skill，處理所有 open/received 請求。
 
 ## 四態 Status 流程
 
@@ -99,8 +99,9 @@ curl -s -X PATCH \
       curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{dayNum}"
       ```
    b. 依請求 text 內容**局部修改**對應資料（只改 text 描述的部分，不全面重跑 R0-R18）
-   c. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
-   c2. 搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md），直接刪除 trip_pois 並在回覆中告知旅伴
+   c. **Google Maps 驗證（鐵律）**：新增或替換 POI 前必須先確認 Google Maps 上存在，查不到 = 無效，不得新增（見 tp-search-strategies）。
+   c2. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
+   c3. 搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md §5），刪除 trip_pois 並在回覆中告知旅伴（旅伴不可刪 pois master，僅 admin 或歇業偵測流程可刪）
    d. 修改的部分須符合 R0-R18 品質規則（含 R16 飯店 rating、R17 導航資訊、R18 飯店 address）
    e. 依修改類型選擇 API（**限白名單內操作**）— 端點見 tp-shared/references.md「行程修改共用步驟」
       > ⚠️ 所有寫入 API 呼叫須帶 `X-Request-Scope: companion` header

@@ -1,5 +1,7 @@
 /**
  * PATCH /api/pois/:id — 修改 master POI (C2)
+ * DELETE /api/pois/:id — 刪除 master POI（admin only，會先刪除所有關聯 trip_pois）
+ *
  * Admin: 可不帶 tripId（向下相容 tp-patch/tp-rebuild）
  * 非 Admin: 必須帶 tripId，檢查 hasPermission + POI 屬於該 trip
  */
@@ -62,4 +64,48 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   });
 
   return json(newRow);
+};
+
+/**
+ * DELETE /api/pois/:id — 刪除 master POI + 所有關聯 trip_pois
+ * Admin only（Service Token 視為 admin）
+ */
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+  if (!auth.isAdmin) throw new AppError('PERM_DENIED', '僅 admin 可刪除 master POI');
+
+  const poiId = parseIntParam(context.params.id as string);
+  if (!poiId) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
+
+  const db = context.env.DB;
+
+  const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
+  if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到此 POI');
+
+  // 先刪除所有關聯的 trip_pois
+  const relatedTripPois = await db.prepare(
+    'SELECT id, trip_id FROM trip_pois WHERE poi_id = ?'
+  ).bind(poiId).all<{ id: number; trip_id: string }>();
+
+  if (relatedTripPois.results.length > 0) {
+    await db.prepare('DELETE FROM trip_pois WHERE poi_id = ?').bind(poiId).run();
+  }
+
+  // 刪除 pois master
+  await db.prepare('DELETE FROM pois WHERE id = ?').bind(poiId).run();
+
+  await logAudit(db, {
+    tripId: 'global',
+    tableName: 'pois',
+    recordId: poiId,
+    action: 'delete',
+    changedBy: auth.email,
+    snapshot: JSON.stringify(oldRow),
+  });
+
+  return json({
+    ok: true,
+    deleted_trip_pois: relatedTripPois.results.length,
+  });
 };

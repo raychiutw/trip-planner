@@ -57,21 +57,28 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 - **Doc 連動（鐵律）**：每次修改後檢視 5 種 doc（checklist/backup/suggestions/flights/emergency），更新不一致內容。規則見 `references/doc-spec.md`。
 - **travel 重算**：插入/移除/移動 entry 時，重新估算相鄰 entry 的 travel。語意見上方「travel 欄位語意」。
 
-### 5. 歇業/不存在 POI 偵測與清理
+### 5. Google Maps 驗證與歇業偵測（鐵律）
 
-搜尋 POI 資料（座標、評分、地址等）時，若符合以下任一條件，判定為「歇業或不存在」：
+**Google Maps 是 POI 的 source of truth。** 所有 tp-* skills（含 tp-create）新增或更新 POI 時，必須先通過 Google Maps 驗證。驗證流程見 `tp-search-strategies` SKILL.md「前置步驟：Google Maps 驗證」。
 
-1. **完全查無資料** — WebSearch 搜尋 POI 名稱，在 Tabelog、Google Maps、Hot Pepper、Retty 等平台均無任何結果
+若 Google Maps 查不到，或符合以下任一條件，判定為「無效 / 歇業 / 不存在」：
+
+1. **Google Maps 查無此 POI** — WebSearch「{名稱} {地區} Google Maps」無法找到對應的 Google Maps 頁面
 2. **明確標示閉店** — 搜尋結果出現「閉店」「closed」「permanently closed」等關鍵字
 3. **分店不存在** — 搜尋結果顯示該品牌在目的地無此分店（如「一蘭沖繩只有國際通店」→ ライカム店不存在）
 
 **處理流程：**
 
-1. 用 `DELETE /api/trips/{tripId}/trip-pois/{tpid}` 刪除該 POI 的 trip_pois 關聯
-2. 在結果報告中列出已移除的 POI 及判定原因
-3. pois master 不刪除（保留紀錄，且可能被其他行程引用）
-
-**注意：** 僅在「搜尋 POI 資料」的場景觸發（tp-patch、tp-rebuild、tp-request 補資料時）。tp-create 建立新行程時不會觸發（因為是新增 POI，不是查既有的）。
+- **tp-create（新增行程）**：不新增該 POI，改用 Google Maps 上可查到的替代店家
+- **tp-edit / tp-request（修改行程）**：不新增該 POI，回報無效原因，建議替代
+- **tp-request（旅伴觸發）**：
+  1. 用 `DELETE /api/trips/{tripId}/trip-pois/{tpid}` 刪除該 POI 的 trip_pois 關聯
+  2. **不可刪 pois master**（旅伴無此權限）
+  3. 在回覆中告知旅伴該 POI 已移除及原因
+- **tp-patch / tp-rebuild / admin 指示（歇業偵測或 admin 要求）**：
+  1. 用 `DELETE /api/trips/{tripId}/trip-pois/{tpid}` 刪除該 POI 的所有 trip_pois 關聯
+  2. 用 `DELETE /api/pois/{poi_id}` 刪除 pois master（Google Maps 不存在/歇業，或 admin 明確要求時）
+  3. 在結果報告中列出已移除的 POI 及判定原因
 
 ### 6. 驗證
 

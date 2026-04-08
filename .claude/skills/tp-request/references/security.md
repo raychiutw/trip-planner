@@ -7,6 +7,7 @@
 - ✅ PUT /api/trips/{tripId}/docs/{type} — 更新 doc
 - ✅ PATCH /api/requests/{id} — 更新請求 reply/status
 - ✅ PATCH /api/pois/{id} — 更新 POI master（必須帶 tripId，僅限 AI 查詢結果）
+- ❌ DELETE /api/pois/{id} — 旅伴不可刪除 pois master（僅 admin 或歇業偵測流程可刪）
 
 ## 禁止的 API 操作（硬限制，任何情況都不可執行）
 - ❌ DELETE /api/trips/{tripId}/entries/{eid} — 不可刪除 entry

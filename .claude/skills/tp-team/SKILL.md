@@ -1,6 +1,6 @@
 ---
 name: tp-team
-description: Use when starting any code change, feature, bug fix, or refactoring in the trip-planner project. Not for trip data changes — those use tp-* data skills directly.
+description: 開始任何程式碼變更時使用 — 新功能、bug 修復、refactor、migration、CSS、API endpoint（加功能、修 bug、改 component、寫 endpoint、fix error）。行程資料變更不走此 pipeline，直接用 tp-* data skills。
 user-invocable: true
 ---
 

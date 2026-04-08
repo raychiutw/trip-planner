@@ -1,6 +1,6 @@
 ---
 name: tp-daily-check
-description: Use when running the daily automated health check — covers R0-R18, API health, Sentry errors, and sends Telegram summary. For single-trip R0-R18 validation only, use /tp-check.
+description: 每日健康檢查時使用 — 執行 daily-check.js，涵蓋 R0-R18、API 狀態、Sentry 錯誤，發送 Telegram 摘要（每日檢查、daily check、健康檢查）。單趟行程驗證用 /tp-check。
 user-invocable: true
 ---
 
@@ -27,12 +27,12 @@ user-invocable: true
 ## 環境需求
 
 - daily-check.js 需要環境變數：CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT
-- 這些變數應在 PowerShell 排程中設定，或從 openspec/config.yaml 讀取
+- 這些變數應在排程環境中設定（`.env.local` 或 shell profile），或從 openspec/config.yaml 讀取
 
 ## 排程方式
 
-Windows Task Scheduler 每天 06:13 執行（scripts/register-scheduler.ps1 註冊）：
-```powershell
+macOS 排程（launchd / cron）每天 06:13 執行：
+```bash
 # 排程啟動 Claude 互動模式，由 session hook 觸發 /tp-daily-check
 claude
 ```

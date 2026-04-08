@@ -1,0 +1,22 @@
+[
+  {"query": "跑一下沖繩行程的品質檢查，看看目前紅綠燈", "should_trigger": true},
+  {"query": "/tp-check okinawa-trip-2026-ray", "should_trigger": true},
+  {"query": "宜蘭行程的 R0-R18 狀態怎樣了", "should_trigger": true},
+  {"query": "看一下釜山行程有沒有缺 googleRating，R12 的部分", "should_trigger": true},
+  {"query": "給我沖繩行程的品質報告", "should_trigger": true},
+  {"query": "validate the yilan trip against quality rules", "should_trigger": true},
+  {"query": "沖繩行程目前通過幾條規則？紅燈有哪些？", "should_trigger": true},
+  {"query": "檢查所有行程的品質，列出每趟的狀態", "should_trigger": true},
+  {"query": "Day 2 的餐次安排有齊全嗎？R2 檢查", "should_trigger": true},
+  {"query": "行程驗證一下", "should_trigger": true},
+  {"query": "沖繩行程有好多紅燈，幫我全面修掉", "should_trigger": false},
+  {"query": "全面重整沖繩行程的品質問題", "should_trigger": false},
+  {"query": "Day 3 午餐換一家評分高的", "should_trigger": false},
+  {"query": "所有飯店補上 phone 跟 address", "should_trigger": false},
+  {"query": "每日健康檢查，含 API 跟 Sentry", "should_trigger": false},
+  {"query": "新建一個大阪行程給 HuiYun", "should_trigger": false},
+  {"query": "旅伴要改行程內容，查一下 requests", "should_trigger": false},
+  {"query": "commit 前跑一下程式碼品質檢查", "should_trigger": false},
+  {"query": "TypeScript 有 error，幫我修", "should_trigger": false},
+  {"query": "CSS 的 H1-H12 規範有沒有違反", "should_trigger": false}
+]

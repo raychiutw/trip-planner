@@ -1,0 +1,22 @@
+[
+  {"query": "TripPage 要加一個顯示天氣的功能", "should_trigger": true},
+  {"query": "useTrip hook 有個 race condition bug，頁面偶爾白屏", "should_trigger": true},
+  {"query": "refactor Timeline component 把 infoBox 邏輯拆出來", "should_trigger": true},
+  {"query": "API handler 的 permission check 有問題，companion 可以刪 trip", "should_trigger": true},
+  {"query": "要寫一個新的 migration，trips 表加 theme 欄位", "should_trigger": true},
+  {"query": "tokens.css 要加一個新的 theme color", "should_trigger": true},
+  {"query": "寫一個 PATCH /pois/:id 的新 endpoint", "should_trigger": true},
+  {"query": "fix the TypeScript error in ManagePage.tsx line 42", "should_trigger": true},
+  {"query": "useApi 的 fetch 要加 retry 機制，timeout 後自動重試", "should_trigger": true},
+  {"query": "把 ErrorBoundary 改成顯示自訂錯誤訊息不要白屏", "should_trigger": true},
+  {"query": "沖繩行程 Day 3 換一家拉麵餐廳", "should_trigger": false},
+  {"query": "跑品質檢查看沖繩行程紅綠燈", "should_trigger": false},
+  {"query": "建一個新的釜山四日行程", "should_trigger": false},
+  {"query": "所有行程的飯店補齊 phone", "should_trigger": false},
+  {"query": "沖繩行程全面重整 R0-R18", "should_trigger": false},
+  {"query": "處理旅伴送的修改請求", "should_trigger": false},
+  {"query": "每日健康檢查跑一下", "should_trigger": false},
+  {"query": "行程的 google rating 需要批次更新", "should_trigger": false},
+  {"query": "deploy 到 production，建 PR", "should_trigger": false},
+  {"query": "寫 weekly retro 回顧", "should_trigger": false}
+]

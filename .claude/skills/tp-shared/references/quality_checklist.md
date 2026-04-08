@@ -1,6 +1,6 @@
 # tp-* Skills Quality Checklist
 
-最後更新：2026-04-01 | 審計範圍：13 個 tp-* skills + tp-shared
+最後更新：2026-04-08 | 審計範圍：13 個 tp-* skills + tp-shared
 
 ## 格式確認
 
@@ -9,7 +9,7 @@
 | 所有 SKILL.md 有 YAML frontmatter | ✅ | name + description 齊全 |
 | frontmatter name 與目錄名一致 | ✅ | 13/13 |
 | description ≤ 3 句 | ✅ | 全部 1 句 |
-| description 含 trigger language | ✅ | 全部以 "Use when..." 或 "Reference library..." 開頭 |
+| description 含 trigger language | ✅ | 全部中文 + 括號內含觸發關鍵詞（2026-04-08 從英文改為中文） |
 | user-invocable 標註正確 | ✅ | 10 個 true、3 個 false（quality-rules, search-strategies, ux-verify） |
 | format_check.py 結果 | ⚠️ | `user-invocable` 非 OpenClaw 標準 key → Claude Code 平台專用，非錯誤 |
 
@@ -33,11 +33,11 @@
 |-----------|------|-----------|------|
 | `CF_ACCESS_CLIENT_ID` | D1 API 認證 | tp-create, tp-patch, tp-request | `.env.local` |
 | `CF_ACCESS_CLIENT_SECRET` | D1 API 認證 | tp-create, tp-patch, tp-request | `.env.local` |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API | tp-daily-check | PowerShell 排程環境 |
-| `CF_ACCOUNT_ID` | Cloudflare account | tp-daily-check | PowerShell 排程環境 |
-| `D1_DATABASE_ID` | D1 database ID | tp-daily-check | PowerShell 排程環境 |
-| `SENTRY_AUTH_TOKEN` | Sentry API | tp-daily-check | PowerShell 排程環境 |
-| `SENTRY_ORG` / `SENTRY_PROJECT` | Sentry project | tp-daily-check | PowerShell 排程環境 |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API | tp-daily-check | shell profile / `.env.local` |
+| `CF_ACCOUNT_ID` | Cloudflare account | tp-daily-check | shell profile / `.env.local` |
+| `D1_DATABASE_ID` | D1 database ID | tp-daily-check | shell profile / `.env.local` |
+| `SENTRY_AUTH_TOKEN` | Sentry API | tp-daily-check | shell profile / `.env.local` |
+| `SENTRY_ORG` / `SENTRY_PROJECT` | Sentry project | tp-daily-check | shell profile / `.env.local` |
 | `BROWSE_BIN`（選填） | browse binary 路徑 | tp-create | 自動 fallback |
 | `/tmp/*.json` | curl --data @file 暫存 | tp-create, tp-patch, tp-request | 自動清理 |
 | `/tmp/api-helper.js` | API 呼叫 helper | tp-create | session 內有效 |
@@ -69,7 +69,7 @@
 
 ## 已知限制（非錯誤，記錄備查）
 
-1. **tp-create Phase 2 browse 腳本仍內嵌** — ~20 行 node template，可後續移到 references/ 但不影響功能
+1. ~~**tp-create Phase 2 browse 腳本仍內嵌**~~ → ✅ 已移至 `tp-create/references/browse-rating-script.md`（2026-04-08）
 2. **tp-patch 保留自己的 API 設定段** — 與 tp-shared 重複但含 target/field 指令格式，暫不合併
 3. **tp-request 保留 inline curl 範例** — 安全邊界的 X-Request-Scope header 是獨特的，保留有助於強調
 
@@ -90,4 +90,19 @@
 
 ## 最終判定
 
-**PASS** — 13 個 tp-* skills + tp-shared 已通過 portfolio audit、format check、credential audit、overlap eval、API/schema 深度交叉比對。
+## 2026-04-08 Portfolio Audit 修正紀錄
+
+| # | 嚴重度 | 問題 | 修正 |
+|---|:---:|------|------|
+| C1 | 🔴 | tp-edit 步驟 7 編號重複 | ✅ 修正為 7→8→9 |
+| C2 | 🔴 | tp-daily-check 引用 Windows Task Scheduler | ✅ 更新為 macOS 排程 |
+| C3 | 🔴 | tp-request 引用 Windows Task Scheduler | ✅ 更新為本機排程 |
+| R1 | 🟡 | tp-create 218 行無 references/，inline JS 模板 | ✅ 拆出 api-helper-template.md + browse-rating-script.md（155 行，-29%） |
+| R2 | 🟡 | tp-check 156 行無 references/，report + severity inline | ✅ 拆出 report-format.md + severity-thresholds.md（89 行，-43%） |
+| R3 | 🟡 | tp-shared references.md vs references/ 角色不清 | ✅ SKILL.md 加文件結構表 |
+| R4 | 🟡 | quality_checklist Credential 表引用 PowerShell | ✅ 更新為 shell profile / .env.local |
+| T1 | 🔴 | 全英文 description 導致中文查詢 under-trigger（trigger eval baseline: 20% hit rate） | ✅ 13 個 skill description 全部改為中文 + 觸發關鍵詞 |
+
+## 最終判定
+
+**PASS** — 13 個 tp-* skills + tp-shared 已通過 portfolio audit、format check、credential audit、overlap eval、API/schema 深度交叉比對。progressive disclosure 改善後 SKILL.md 總行數降至 1,167（-10%）。

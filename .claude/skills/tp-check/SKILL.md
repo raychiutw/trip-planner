@@ -1,6 +1,6 @@
 ---
 name: tp-check
-description: Use when validating a trip itinerary against quality rules R0-R18 without modifying data. Read-only — use /tp-rebuild to fix violations or /tp-edit for changes.
+description: 驗證行程品質時使用 — 對照 R0-R18 規則檢查，輸出紅綠燈報告，唯讀不改資料（品質檢查、驗證、紅綠燈、validate）。要修復違規用 /tp-rebuild，要改資料用 /tp-edit。
 user-invocable: true
 ---
 
@@ -49,52 +49,10 @@ API 回傳 JSON 格式，直接驗證以下欄位：
 
 ## Report 模式
 
-### 完整模式（standalone 或 before/after-fix）
+完整模式 / 精簡模式的格式模板見 `references/report-format.md`。
 
-```
-══════════════════════════════════════════════
-  tp-check Report: {tripId}
-  {YYYY-MM-DD HH:mm:ss}
-══════════════════════════════════════════════
-
-  Summary:  🟢 N passed  🟡 N warnings  🔴 N failed
-
-──────────────────────────────────────────────
-  Rule          Status   Detail
-──────────────────────────────────────────────
-  R0  JSON結構   🟢
-  R1  偏好       🟢
-  R2  餐次       🟢
-  R3  餐廳品質   🟡     Day 2 午餐只有 2 家推薦
-  R4  景點品質   🟢
-  R7  購物       🟢
-  R8  早餐       🟢
-  R10 加油站     🟢
-  R11 地圖導航   🟡     12 個景點缺 location
-  R12 評分       🔴     28 個地點缺 googleRating
-  R13 來源標記   🟢
-  R14 國家感知   🟢
-  R15 必填note   🟢
-  R16 飯店maps   🟡     2 個飯店缺 maps/address
-  R17 POI導航    🟢
-  R18 飯店phone  🟡     1 個飯店缺 phone
-──────────────────────────────────────────────
-
-  🟡 Warnings (N):
-  ├── RX: {具體描述}
-  └── RY: {具體描述}
-
-  🔴 Failures (N):
-  └── RZ: {具體描述}
-
-══════════════════════════════════════════════
-```
-
-### 精簡模式（after-edit，嵌入其他 skill 尾部）
-
-```
-tp-check: 🟢 10  🟡 2  🔴 0
-```
+- **完整模式**：standalone 或 before/after-fix，含 summary + rule table + detail
+- **精簡模式**：`tp-check: 🟢 N  🟡 N  🔴 N`（嵌入其他 skill 尾部）
 
 ## R2 合格餐次 entry 判定
 
@@ -109,32 +67,7 @@ tp-check: 🟢 10  🟡 2  🔴 0
 
 ## 紅綠燈狀態定義
 
-| 狀態 | 符號 | 判定條件 |
-|------|------|----------|
-| passed | 🟢 | 規則完全符合 |
-| warning | 🟡 | 有瑕疵但屬 warn 級，或部分缺失 |
-| failed | 🔴 | 不符合 strict 級規則 |
-
-### 各規則嚴重度閾值
-
-| 規則 | 🟢 passed | 🟡 warning | 🔴 failed |
-|------|-----------|------------|-----------|
-| R0 | 結構完全正確 | — | 任一結構違規 |
-| R1 | foodPreferences 存在且餐廳順序對應 | — | 缺 foodPreferences 或順序錯誤 |
-| R2 | 所有天數餐次齊全 | — | 任一天缺少應有餐次 |
-| R3 | 所有 restaurants infoBox 達 3 家且資料完整 | 部分 infoBox < 3 家，或 category 錯標 | 餐廳缺 hours/reservation |
-| R4 | 所有景點有營業時間且吻合 | 開放場所（公共海灘、商圈）無正式 hours | 景點到訪時間在營業時間外 |
-| R7 | 所有非家飯店有 shopping(≥3) + parking | 部分 shop 缺 mustBuy 或數量不足 | 飯店完全無 shopping infoBox |
-| R8 | 所有 hotel 有 breakfast 欄位 | — | 任一 hotel 缺 breakfast |
-| R10 | 自駕行程還車 event 有 gasStation infoBox | — | 自駕行程缺 gasStation |
-| R11 | 所有實體地點有 `maps` 或 `location.googleQuery` | 1~5 個地點兩者皆缺 | > 5 個地點兩者皆缺 |
-| R12 | 所有 POI 有 `googleRating` | `source: user` 的 POI 缺 `googleRating` | `source: ai` 的 POI 缺 `googleRating` |
-| R13 | 所有非豁免 POI 有 `source` | 1~3 個 POI 缺 `source` | > 3 個 POI 缺 `source` |
-| R14 | 韓國行程所有 POI 有 naverQuery；非韓國行程不檢查 | — | 韓國行程 POI 缺 naverQuery |
-| R15 | 所有 POI 有 `note` 欄位（含 parking infoBox） | 1~3 個缺 `note` | > 3 個缺 `note` |
-| R16 | 所有 hotel POI 有 `maps` + `address` | 1+ 個 hotel 缺 `maps` 或 `address` | — |
-| R17 | 所有 POI 至少有 `maps` 或 `lat`+`lng` | — | 任一 POI 兩者皆缺 |
-| R18 | 所有 hotel POI 有 `phone` | 1+ 個 hotel 缺 `phone` | — |
+各規則的 🟢/🟡/🔴 閾值與判定條件見 `references/severity-thresholds.md`。
 
 ## 嵌入其他 skill 的方式
 

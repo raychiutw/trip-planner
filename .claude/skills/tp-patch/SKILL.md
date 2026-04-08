@@ -1,6 +1,6 @@
 ---
 name: tp-patch
-description: Use when bulk-filling missing POI fields (google_rating, maps, address, phone, hours, location) across trips via web search. For single-trip content changes use /tp-edit.
+description: 批量補齊 POI 欄位時使用 — 跨行程填入 google_rating、maps、address、phone、hours、location（補齊、批次更新、缺 phone、缺 rating）。單一行程內容修改用 /tp-edit。
 user-invocable: true
 ---
 

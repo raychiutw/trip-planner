@@ -1,6 +1,6 @@
 ---
 name: tp-rebuild
-description: Use when auditing and fixing (重整/修復) quality rule violations in trip itineraries (single or all) without changing timeline order. For partial changes use /tp-edit.
+description: 全面重整行程品質時使用 — 逐項檢查 R0-R18 並修正違規，不改時間軸順序（重整、修復品質、修紅燈、rebuild）。局部修改用 /tp-edit。
 user-invocable: true
 ---
 
