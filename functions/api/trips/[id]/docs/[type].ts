@@ -6,6 +6,19 @@ import type { Env } from '../../../_types';
 
 const VALID_TYPES = new Set(['flights', 'checklist', 'backup', 'suggestions', 'emergency']);
 
+/** Safely extract a string from a value that might be an object with .text/.label property */
+function toStr(v: unknown): string {
+  if (v == null) return '';
+  if (typeof v === 'string') return v;
+  if (typeof v === 'object') {
+    const obj = v as Record<string, unknown>;
+    if (typeof obj.text === 'string') return obj.text;
+    if (typeof obj.label === 'string') return obj.label;
+    return JSON.stringify(v);
+  }
+  return String(v);
+}
+
 // ---------------------------------------------------------------------------
 // GET /api/trips/:id/docs/:type — 回傳 { doc_type, title, entries }
 // ---------------------------------------------------------------------------
@@ -69,17 +82,17 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const inner = parsed.content || parsed;
       // 嘗試展開 cards/segments/items 結構為 entries
       if (inner.segments) {
-        for (const s of inner.segments) entries.push({ section: '', title: s.label || '', content: [s.route, s.time].filter(Boolean).join('\n') });
-        if (inner.airline) entries.push({ section: '', title: inner.airline.name || '', content: inner.airline.note || '' });
+        for (const s of inner.segments) entries.push({ section: '', title: toStr(s.label), content: [toStr(s.route), toStr(s.time)].filter(Boolean).join('\n') });
+        if (inner.airline) entries.push({ section: '', title: toStr(inner.airline.name), content: toStr(inner.airline.note) });
       } else if (inner.cards) {
         for (const c of inner.cards) {
-          const sec = c.title || '';
-          if (c.contacts) { for (const ct of c.contacts) entries.push({ section: sec, title: ct.label || ct.phone || '', content: ct.phone ? `[${ct.phone}](tel:${ct.phone})` : '' }); }
-          else if (c.items) { for (const it of c.items) entries.push({ section: sec, title: typeof it === 'string' ? it : (it.text || ''), content: '' }); }
-          else if (c.description) entries.push({ section: sec, title: '', content: c.description });
+          const sec = toStr(c.title);
+          if (c.contacts) { for (const ct of c.contacts) entries.push({ section: sec, title: toStr(ct.label || ct.phone), content: ct.phone ? `[${ct.phone}](tel:${ct.phone})` : '' }); }
+          else if (c.items) { for (const it of c.items) entries.push({ section: sec, title: toStr(it), content: '' }); }
+          else if (c.description) entries.push({ section: sec, title: '', content: toStr(c.description) });
         }
       } else if (inner.items) {
-        for (const it of inner.items) entries.push({ section: '', title: typeof it === 'string' ? it : (it.text || ''), content: '' });
+        for (const it of inner.items) entries.push({ section: '', title: toStr(it), content: '' });
       } else {
         entries = [{ section: '', title: '', content: typeof inner === 'string' ? inner : JSON.stringify(inner) }];
       }
