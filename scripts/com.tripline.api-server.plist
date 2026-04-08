@@ -22,8 +22,8 @@
         <string>/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server-stdout.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server/stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server-stderr.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/api-server/stderr.log</string>
 </dict>
 </plist>

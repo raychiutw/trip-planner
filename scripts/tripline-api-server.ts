@@ -34,18 +34,29 @@ const CF_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID || '';
 const CF_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET || '';
 const API_BASE = 'https://trip-planner-dby.pages.dev/api';
 const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
-const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs');
+const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
 const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 // --- Logging ---
 mkdirSync(LOG_DIR, { recursive: true });
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function log(msg: string) {
   const ts = new Date().toISOString();
   const line = `[${ts}] ${msg}\n`;
   process.stdout.write(line);
-  const logFile = join(LOG_DIR, `tripline-api-${new Date().toISOString().slice(0, 10)}.log`);
-  try { appendFileSync(logFile, line); } catch {}
+  try { appendFileSync(join(LOG_DIR, `${todayStr()}.log`), line); } catch {}
+}
+
+function logError(msg: string) {
+  const ts = new Date().toISOString();
+  const line = `[${ts}] [error] ${msg}\n`;
+  process.stderr.write(line);
+  try { appendFileSync(join(LOG_DIR, `${todayStr()}.log`), line); } catch {}
+  try { appendFileSync(join(LOG_DIR, `${todayStr()}.error.log`), line); } catch {}
 }
 
 // --- API helpers ---
@@ -71,7 +82,7 @@ async function fetchOldestOpen(): Promise<TripRequest | null> {
     headers: cfHeaders(),
   });
   if (!res.ok) {
-    log(`fetchOldestOpen failed: ${res.status}`);
+    logError(`fetchOldestOpen failed: ${res.status}`);
     return null;
   }
   const data = await res.json() as { items?: TripRequest[] } | TripRequest[];
@@ -93,7 +104,7 @@ async function patchStatus(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    log(`patchStatus(${id}, ${status}) failed: ${res.status}`);
+    logError(`patchStatus(${id}, ${status}) failed: ${res.status}`);
     return false;
   }
   return true;
@@ -115,7 +126,7 @@ function runClaude(): Promise<boolean> {
     proc.stderr.on('data', (d: Buffer) => { if (stderr.length < MAX_BUF) stderr += d.toString().slice(0, MAX_BUF - stderr.length); });
 
     const timer = setTimeout(() => {
-      log('Claude timeout — killing process');
+      logError('Claude timeout — killing process');
       proc.kill('SIGTERM');
       setTimeout(() => { if (!proc.killed) proc.kill('SIGKILL'); }, 5000);
     }, CLAUDE_TIMEOUT_MS);
@@ -126,14 +137,14 @@ function runClaude(): Promise<boolean> {
         log(`Claude completed (${stdout.length} bytes output)`);
         resolve(true);
       } else {
-        log(`Claude failed (exit ${code}): ${stderr.slice(0, 200)}`);
+        logError(`Claude failed (exit ${code}): ${stderr.slice(0, 200)}`);
         resolve(false);
       }
     });
 
     proc.on('error', (err) => {
       clearTimeout(timer);
-      log(`Claude spawn error: ${err.message}`);
+      logError(`Claude spawn error: ${err.message}`);
       resolve(false);
     });
   });
@@ -163,10 +174,10 @@ async function processLoop(source: 'api' | 'job') {
       log(`Processing request ${req.id} (trip: ${req.trip_id}, mode: ${req.mode})`);
       const claimed = await patchStatus(req.id, 'processing', { processed_by: source });
       if (!claimed) {
-        log(`Request ${req.id}: failed to claim (patchStatus → false), skipping`);
+        logError(`Request ${req.id}: failed to claim (patchStatus → false), skipping`);
         consecutiveFailures++;
         if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-          log(`${MAX_CONSECUTIVE_FAILURES} consecutive failures, stopping loop`);
+          logError(`${MAX_CONSECUTIVE_FAILURES} consecutive failures, stopping loop`);
           break;
         }
         continue;
@@ -177,7 +188,7 @@ async function processLoop(source: 'api' | 'job') {
       const finalStatus = success ? 'completed' : 'failed';
       const patched = await patchStatus(req.id, finalStatus);
       if (!patched) {
-        log(`Request ${req.id}: failed to patch final status '${finalStatus}'`);
+        logError(`Request ${req.id}: failed to patch final status '${finalStatus}'`);
       }
 
       log(`Request ${req.id} → ${finalStatus}`);
@@ -185,7 +196,7 @@ async function processLoop(source: 'api' | 'job') {
       processedCount++;
     }
   } catch (err) {
-    log(`Process loop error: ${err instanceof Error ? err.message : String(err)}`);
+    logError(`Process loop error: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     isRunning = false;
     log('Process loop ended');
@@ -196,7 +207,7 @@ async function processLoop(source: 'api' | 'job') {
 // --- HTTP Server ---
 function verifyAuth(req: Request): boolean {
   if (!API_SECRET) {
-    log('WARNING: TRIPLINE_API_SECRET not set — rejecting all requests');
+    logError('WARNING: TRIPLINE_API_SECRET not set — rejecting all requests');
     return false;
   }
   const authHeader = req.headers.get('Authorization') || '';
@@ -235,7 +246,7 @@ Bun.serve({
 
       // 非同步啟動，立即回傳
       processLoop(source).catch((err) => {
-        log(`processLoop unhandled: ${err}`);
+        logError(`processLoop unhandled: ${err}`);
       });
 
       return Response.json({ triggered: true, source });

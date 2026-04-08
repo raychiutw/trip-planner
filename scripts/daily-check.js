@@ -2,19 +2,18 @@
 /**
  * daily-check.js — 每日問題報告腳本
  *
- * 查詢 7 個數據來源，產出 JSON 報告，並可選發送 Telegram 摘要。
- * 由 GitHub Actions 每天 UTC 22:13（台灣 06:13）自動觸發。
+ * 查詢 7 個數據來源 + 排程 error log，產出 JSON 報告。
+ * Telegram 發送由 daily-check-scheduler.sh → /tp-daily-check 處理。
  *
  * 環境變數：
  *   CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID
  *   SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT
- *   TELEGRAM_BOT_TOKEN / TELEGRAM_BOT_HOME_TOKEN, TELEGRAM_CHAT_ID（可選）
  */
 'use strict';
 
 var fs = require('fs');
 var path = require('path');
-var { execSync, spawn } = require('child_process');
+var { execSync } = require('child_process');
 
 // 從 openspec/config.yaml 讀取 env（fallback for 本機執行）
 function loadConfigYaml() {
@@ -176,35 +175,7 @@ async function queryApiErrors() {
   };
 }
 
-// ── 數據來源 3: D1 audit_log — encoding_warning ─────────────────
-
-async function queryEncodingWarnings() {
-  var rows = await queryD1(
-    "SELECT id, trip_id, table_name, action, created_at " +
-    "FROM audit_log " +
-    "WHERE created_at >= datetime('now', '-1 day') " +
-    "AND json_extract(diff_json, '$.encoding_warning') IS NOT NULL " +
-    "ORDER BY created_at DESC LIMIT 20"
-  );
-
-  var status = rows.length > 0 ? 'warning' : 'ok';
-
-  return {
-    status: status,
-    total: rows.length,
-    records: rows.map(function(r) {
-      return {
-        id: r.id,
-        tripId: r.trip_id,
-        table: r.table_name,
-        action: r.action,
-        createdAt: r.created_at
-      };
-    })
-  };
-}
-
-// ── 數據來源 4: Workers Analytics ───────────────────────────────
+// ── 數據來源 3: Workers Analytics ───────────────────────────────
 
 async function queryWorkersAnalytics() {
   var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
@@ -265,7 +236,7 @@ async function queryWebAnalytics() {
     'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
     'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
     'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { visits } ' +
+    'sum { visits pageViews } ' +
     '} } } }';
   var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
     method: 'POST',
@@ -287,7 +258,7 @@ async function queryWebAnalytics() {
   var row = rows[0];
   return {
     visits: row.sum && row.sum.visits ? row.sum.visits : 0,
-    pageViews: row.sum && row.sum.visits ? row.sum.visits : 0
+    pageViews: row.sum && row.sum.pageViews ? row.sum.pageViews : 0
   };
 }
 
@@ -389,34 +360,86 @@ async function queryRequestErrors() {
   };
 }
 
-// ── 數據來源 8: D1 統計（api_logs + audit_log）─────────────────
+// ── 數據來源 8: D1 統計（api_logs total + audit_log）─────────────
 
-async function queryD1Stats() {
+async function queryD1Stats(apiErrorsResult) {
+  // server/client error counts 從 apiErrors 推導，省掉重複 D1 subquery
+  var serverErrors = 0;
+  var clientErrors = 0;
+  if (apiErrorsResult && apiErrorsResult.errors) {
+    apiErrorsResult.errors.forEach(function(e) {
+      if (e.status >= 500) serverErrors += (e.count || 0);
+      else if (e.status >= 400) clientErrors += (e.count || 0);
+    });
+  }
+
   var rows = await queryD1(
     "SELECT " +
-    "(SELECT COUNT(*) FROM api_logs WHERE status >= 500 AND created_at >= datetime('now', '-1 day')) as server_errors, " +
-    "(SELECT COUNT(*) FROM api_logs WHERE status >= 400 AND status < 500 AND created_at >= datetime('now', '-1 day')) as client_errors, " +
     "(SELECT COUNT(*) FROM api_logs) as total_logs, " +
     "(SELECT COUNT(*) FROM audit_log WHERE created_at >= datetime('now', '-1 day')) as audit_count"
   );
 
   var row = rows && rows[0] ? rows[0] : {};
-  var serverErrors = row.server_errors || 0;
   var status = serverErrors > 0 ? 'warning' : 'ok';
 
   return {
     status: status,
     totalLogs: row.total_logs || 0,
     serverErrors: serverErrors,
-    clientErrors: row.client_errors || 0,
+    clientErrors: clientErrors,
     auditCount: row.audit_count || 0
+  };
+}
+
+// ── 數據來源 8: 排程 error log ────────────────────────────────
+
+function querySchedulerErrors() {
+  var baseDir = path.join(__dirname, 'logs');
+  var dirs = ['tp-request', 'daily-check', 'api-server'];
+  var cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  var results = {};
+  var totalErrors = 0;
+
+  dirs.forEach(function(dir) {
+    var dirPath = path.join(baseDir, dir);
+    var errors = [];
+    try {
+      var files = fs.readdirSync(dirPath).filter(function(f) {
+        return f.endsWith('.error.log');
+      });
+      files.forEach(function(f) {
+        var filePath = path.join(dirPath, f);
+        var stat = fs.statSync(filePath);
+        if (stat.mtime < cutoff) return;
+        var content = fs.readFileSync(filePath, 'utf8').trim();
+        if (!content) return;
+        var lines = content.split('\n');
+        lines.forEach(function(line) {
+          var match = line.match(/^\[(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+Z?)?)\] \[error\] (.+)/);
+          if (match) {
+            var ts = new Date(match[1].replace(' ', 'T'));
+            if (ts >= cutoff && errors.length < 5) {
+              errors.push({ time: match[1], message: match[2].substring(0, 100) });
+            }
+          }
+        });
+      });
+    } catch (e) {}
+    results[dir] = { count: errors.length, errors: errors };
+    totalErrors += errors.length;
+  });
+
+  return {
+    status: totalErrors > 0 ? 'warning' : 'ok',
+    total: totalErrors,
+    details: results
   };
 }
 
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAudit, requestErrors, d1Stats) {
-  var sections = [sentry, apiErrors, encodingWarnings, workers, npmAudit, requestErrors, d1Stats];
+function calcSummary(sentry, apiErrors, workers, npmAudit, requestErrors, d1Stats, schedulerErrors) {
+  var sections = [sentry, apiErrors, workers, npmAudit, requestErrors, d1Stats, schedulerErrors];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -449,9 +472,6 @@ function assignNums(report) {
   if (report.requestErrors && report.requestErrors.pending) {
     report.requestErrors.pending.forEach(function(p) { p.num = counter(); });
   }
-  if (report.encodingWarnings && report.encodingWarnings.records) {
-    report.encodingWarnings.records.forEach(function(r) { r.num = counter(); });
-  }
   if (report.npmAudit && report.npmAudit.vulnerabilities) {
     report.npmAudit.vulnerabilities.forEach(function(v) { v.num = counter(); });
   }
@@ -459,114 +479,83 @@ function assignNums(report) {
   report._maxNum = counter() - 1;
 }
 
-// ── Telegram 發送 ────────────────────────────────────────────────
-
-async function sendTelegram(summary) {
-  var token = env('TELEGRAM_BOT_TOKEN') || env('TELEGRAM_BOT_HOME_TOKEN');
-  var chatId = env('TELEGRAM_CHAT_ID');
-  if (!token || !chatId) return;
-
-  await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text: summary, parse_mode: 'HTML' })
-  });
-}
-
 function buildTelegramText(report) {
+  var today = report.date.slice(5).replace('-', '/');
   var lines = [];
-  var num = makeCounter();
 
-  lines.push('📋 <b>每日問題報告</b> — ' + report.date);
-  lines.push('');
-
-  // Sentry
-  if (report.sentry && report.sentry.total > 0) {
-    lines.push('🟡 Sentry: ' + report.sentry.total + ' issues');
-    report.sentry.issues.slice(0, 5).forEach(function(i) {
-      var n = num();
-      lines.push('  [' + n + '] ' + i.title.substring(0, 60) + (i.count ? '（' + i.count + ' 次）' : ''));
-    });
-  } else {
-    lines.push('✅ Sentry：無未解決 issues');
-  }
-
-  // API 錯誤
-  lines.push('');
+  // 收集問題項目
+  var issues = [];
   if (report.apiErrors && report.apiErrors.total > 0) {
-    var icon = report.apiErrors.status === 'critical' ? '🔴' : '🟡';
-    lines.push(icon + ' API 錯誤: ' + report.apiErrors.total + ' 次');
-    report.apiErrors.errors.slice(0, 5).forEach(function(e) {
-      var n = num();
-      lines.push('  [' + n + '] ' + e.method + ' ' + e.path + ' → ' + e.status + ' x' + e.count);
-    });
-  } else {
-    lines.push('✅ API 錯誤：無');
+    var icon = report.apiErrors.status === 'critical' ? '🔴' : '⚠️';
+    issues.push(icon + ' API errors: ' + report.apiErrors.total + ' 筆');
   }
-
-  // 未完成請求
+  if (report.sentry && report.sentry.total > 0) {
+    issues.push('⚠️ Sentry: ' + report.sentry.total + ' 筆');
+  }
   if (report.requestErrors && report.requestErrors.total > 0) {
-    lines.push('');
-    lines.push('🟡 未完成請求: ' + report.requestErrors.total + ' 筆');
-    report.requestErrors.pending.slice(0, 5).forEach(function(p) {
-      var n = num();
-      var msg = p.message ? '「' + p.message.substring(0, 20) + '」' : '';
-      lines.push('  [' + n + '] #' + p.id + ' ' + p.mode + ' ' + p.status + msg);
+    issues.push('⚠️ 未完成請求: ' + report.requestErrors.total + ' 筆');
+  }
+  if (report.d1Stats && report.d1Stats.serverErrors > 0) {
+    issues.push('⚠️ D1 server errors: ' + report.d1Stats.serverErrors + ' 筆');
+  }
+  if (report.schedulerErrors && report.schedulerErrors.total > 0) {
+    var se = report.schedulerErrors.details;
+    var parts = [];
+    ['tp-request', 'daily-check', 'api-server'].forEach(function(k) {
+      if (se[k] && se[k].count > 0) parts.push(k + ' ' + se[k].count + ' 筆');
     });
+    issues.push('⚠️ 排程錯誤: ' + parts.join(', '));
+  }
+  if (report.npmAudit && report.npmAudit.total > 0) {
+    issues.push('⚠️ npm vulnerabilities: ' + report.npmAudit.total + ' 個');
   }
 
-  // encoding warnings
-  if (report.encodingWarnings && report.encodingWarnings.total > 0) {
-    lines.push('');
-    lines.push('🟡 Encoding 警告 ' + report.encodingWarnings.total + ' 筆');
-    report.encodingWarnings.records.slice(0, 3).forEach(function(r) {
-      var n = num();
-      lines.push('  [' + n + '] #' + r.id + ' ' + r.table + ' ' + r.action);
-    });
-  }
-
-  // D1 統計
-  lines.push('');
-  if (report.d1Stats) {
-    var d1Icon = report.d1Stats.serverErrors > 0 ? '🟡' : '✅';
-    var n = num();
-    lines.push(d1Icon + ' [' + n + '] D1: ' + (report.d1Stats.totalLogs || 0).toLocaleString() + ' API logs, ' +
-      (report.d1Stats.serverErrors || 0) + ' server errors, ' +
-      (report.d1Stats.clientErrors || 0) + ' client errors, ' +
-      (report.d1Stats.auditCount || 0) + ' audits (24h)');
-  }
-
-  // Workers
+  // 指標數據
+  var metrics = [];
   if (report.workers) {
-    var wIcon = report.workers.status === 'ok' ? '✅' : '🟡';
-    var nw = num();
-    lines.push(wIcon + ' [' + nw + '] Workers: ' + (report.workers.requests || 0).toLocaleString() + ' req, ' +
-      (report.workers.errors || 0) + ' errors, P50=' + (report.workers.p50 || 0) + 'μs, P99=' + (report.workers.p99 || 0) + 'μs');
+    var p50 = report.workers.p50 || 0;
+    var p99 = report.workers.p99 || 0;
+    metrics.push('📈 Workers: ' + (report.workers.requests || 0).toLocaleString() + ' req | err ' +
+      (report.workers.errorRate || '0%') + ' | P50 ' + Math.round(p50 / 1000) + 'ms P99 ' + Math.round(p99 / 1000) + 'ms');
   }
-
-  // Web
   if (report.web) {
-    var nweb = num();
-    lines.push('✅ [' + nweb + '] Web: ' + (report.web.visits || 0) + ' visits, ' + (report.web.pageViews || 0) + ' pageViews');
+    metrics.push('📈 Analytics: ' + (report.web.visits || 0) + ' visits, ' + (report.web.pageViews || 0) + ' views');
+  }
+  if (report.npmAudit && report.npmAudit.total === 0) {
+    metrics.push('📈 npm: 0 vulnerabilities');
   }
 
-  // npm audit
-  if (report.npmAudit) {
-    if (report.npmAudit.total === 0) {
-      var nnpm = num();
-      lines.push('✅ [' + nnpm + '] npm audit: 0 漏洞');
-    } else {
-      var nIcon = report.npmAudit.status === 'critical' ? '🔴' : '🟡';
-      lines.push(nIcon + ' npm audit: ' + report.npmAudit.total + ' 個漏洞');
-      report.npmAudit.vulnerabilities.slice(0, 3).forEach(function(v) {
-        var n = num();
-        lines.push('  [' + n + '] ' + v.package + ' (' + v.severity + ')');
-      });
-    }
+  // OK 項目
+  var okItems = [];
+  var schedulerDirs = ['api-server', 'daily-check', 'tp-request'];
+  schedulerDirs.forEach(function(k) {
+    if (!report.schedulerErrors || !report.schedulerErrors.details[k] || report.schedulerErrors.details[k].count === 0) okItems.push(k);
+  });
+
+  // 全綠判定
+  if (issues.length === 0) {
+    lines.push('📊 ' + today + ' ✅ 全綠');
+  } else {
+    lines.push('📊 Tripline 每日報告 ' + today);
+    lines.push('──────────────');
+    issues.forEach(function(i) { lines.push(i); });
   }
 
-  lines.push('');
-  lines.push('回覆編號操作，例如：「看 1」「修 2 5」');
+  // 自動修復（由 tp-daily-check skill 填入，這裡先放 placeholder）
+  lines.push(report.autofix
+    ? '🔧 自動修復: ' + report.autofix.completed + ' 項完成'
+    : '🔧 無需修復');
+
+  // 指標固定顯示
+  if (metrics.length > 0) {
+    lines.push('──────────────');
+    metrics.forEach(function(m) { lines.push(m); });
+  }
+
+  // OK 合併
+  if (okItems.length > 0) {
+    lines.push('✅ OK: ' + okItems.join(', '));
+  }
 
   return lines.join('\n');
 }
@@ -579,7 +568,7 @@ function rotateOldLogs(logsDir) {
     cutoff.setDate(cutoff.getDate() - 7);
     var files = fs.readdirSync(logsDir);
     files.forEach(function(f) {
-      if (!f.startsWith('daily-check-') || !f.endsWith('.json')) return;
+      if (!f.endsWith('-report.json') && !(f.startsWith('daily-check-') && f.endsWith('.json'))) return;
       var fullPath = path.join(logsDir, f);
       var stat = fs.statSync(fullPath);
       if (stat.mtimeMs < cutoff.getTime()) {
@@ -592,167 +581,24 @@ function rotateOldLogs(logsDir) {
   }
 }
 
-// ── 自動修復 ────────────────────────────────────────────────────
-
-var PROJECT_DIR = path.join(__dirname, '..');
-var AUTOFIX_TIMEOUT_MS = 20 * 60 * 1000; // Concern #9: 20 分鐘
-
-function analyzeForAutofix(report) {
-  var issues = [];
-
-  // npm audit moderate/low（Concern #2: critical 排除，需人工）
-  if (report.npmAudit && report.npmAudit.total > 0 && report.npmAudit.vulnerabilities) {
-    var fixable = report.npmAudit.vulnerabilities.filter(function(v) {
-      return v.severity !== 'critical';
-    });
-    if (fixable.length > 0) {
-      issues.push({ source: 'npmAudit', type: 'audit_fix', severity: 'moderate', count: fixable.length, detail: 'npm audit fix（排除 critical）' });
-    }
-  }
-
-  // D1 query fail — 只在 daily-check 本身的 Source query 失敗時觸發
-  // d1Stats.serverErrors 是歷史累積的 api_logs，不是可修的 code 問題，不觸發 autofix
-
-  // Stale requests（Concern #2: 對齊現有 1 小時門檻）
-  if (report.requestErrors && report.requestErrors.staleCount > 0) {
-    issues.push({ source: 'requestErrors', type: 'stale', severity: 'warning', count: report.requestErrors.staleCount, detail: '卡住的 request（>1 小時）' });
-  }
-
-  return issues;
-}
-
-function runAutofix(issues) {
-  return new Promise(function(resolve) {
-    // Guard: 檢查是否有遺留的 autofix PR
-    try {
-      var openPRs = execSync('gh pr list --search "daily-check-autofix" --state open --json number', { encoding: 'utf8', cwd: PROJECT_DIR, timeout: 10000 });
-      if (JSON.parse(openPRs).length > 0) {
-        resolve({ success: false, reason: 'existing_pr', detail: '昨天的 autofix PR 還沒 merge' });
-        return;
-      }
-    } catch (e) {
-      // gh 失敗不阻擋
-    }
-
-    // Concern #3: 具體的 Claude prompt，走 /tp-team pipeline
-    var prompt = [
-      '根據 daily-check 報告，用 /tp-team 修復以下問題：',
-      JSON.stringify(issues, null, 2),
-      '',
-      '規則：',
-      '- invoke /tp-team 開始，讓它自動路由',
-      '- branch 名稱用 fix/daily-check-autofix-' + Date.now(),
-      '- 只修報告中列出的問題，不要擴大範圍',
-      '- 只允許修改 scripts/ 和 package*.json',
-      '- /ship 時 PR title 用 "fix: daily-check 自動修復"',
-      '- /ship 完成後跑 /land-and-deploy 自動 merge'
-    ].join('\n');
-
-    // Concern #4: 全部用 Node.js spawn
-    var proc = spawn('/Users/ray/.local/bin/claude', [
-      '--dangerously-skip-permissions',
-      '-p', prompt
-    ], {
-      cwd: PROJECT_DIR,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: Object.assign({}, process.env, {
-        PATH: (process.env.PATH || '') + ':/Users/ray/.local/bin:/opt/homebrew/bin'
-      })
-    });
-
-    var stdout = '';
-    var stderr = '';
-    proc.stdout.on('data', function(d) { if (stdout.length < 10000) stdout += d.toString(); });
-    proc.stderr.on('data', function(d) { if (stderr.length < 5000) stderr += d.toString(); });
-
-    var timer = setTimeout(function() {
-      proc.kill('SIGTERM');
-      setTimeout(function() { if (!proc.killed) proc.kill('SIGKILL'); }, 5000);
-    }, AUTOFIX_TIMEOUT_MS);
-
-    proc.on('close', function(code) {
-      clearTimeout(timer);
-
-      // Concern #8: 檢查 diff 是否超出預期範圍
-      try {
-        var diffStat = execSync('git diff --name-only HEAD', { encoding: 'utf8', cwd: PROJECT_DIR });
-        var changedFiles = diffStat.trim().split('\n').filter(Boolean);
-        var unexpected = changedFiles.filter(function(f) {
-          return !f.startsWith('scripts/') && !f.startsWith('package') && f !== 'CLAUDE.md';
-        });
-        if (unexpected.length > 0) {
-          execSync('git checkout .', { cwd: PROJECT_DIR });
-          resolve({ success: false, reason: 'scope_violation', detail: '修改了預期外的檔案: ' + unexpected.join(', ') });
-          return;
-        }
-      } catch (e) {}
-
-      // 檢查本次 autofix 建立的 PR（用 branch 名稱搜尋，避免撈到舊 PR）
-      try {
-        var prJson = execSync('gh pr list --search "daily-check-autofix" --state all --limit 1 --json url,state,title --sort created', { encoding: 'utf8', cwd: PROJECT_DIR, timeout: 10000 });
-        var prs = JSON.parse(prJson);
-        var pr = prs.length > 0 ? prs[0] : null;
-        resolve({ success: code === 0 && pr !== null, prUrl: pr && pr.url, prState: pr && pr.state, prTitle: pr && pr.title });
-      } catch (e) {
-        resolve({ success: code === 0, reason: 'no_pr' });
-      }
-    });
-
-    proc.on('error', function(err) {
-      clearTimeout(timer);
-      resolve({ success: false, reason: err.message });
-    });
-  });
-}
-
-// Concern #6: autofix 通知是獨立訊息，不取代 buildTelegramText
-function buildAutofixTelegramText(issues, result) {
-  var lines = [];
-
-  if (result.success) {
-    lines.push('🔧 <b>Tripline daily-check 自動修復</b>');
-    lines.push('━━━━━━━━━━━━━━━');
-    lines.push('修復 ' + issues.length + ' 個問題：');
-    issues.forEach(function(i) { lines.push('• ' + i.detail); });
-    lines.push('');
-    if (result.prUrl) lines.push('PR: ' + result.prUrl);
-    lines.push('狀態: ✅ 已送出（CI + auto-merge）');
-  } else {
-    lines.push('⚠️ <b>Tripline daily-check 修復失敗</b>');
-    lines.push('━━━━━━━━━━━━━━━');
-    lines.push('原因: ' + (result.detail || result.reason || 'unknown'));
-    if (result.reason === 'existing_pr') {
-      lines.push('動作: 請手動處理遺留的 autofix PR');
-    } else if (result.reason === 'scope_violation') {
-      lines.push('動作: Claude 修改了預期外的檔案，已 rollback');
-    } else {
-      lines.push('動作: 需要手動處理');
-    }
-  }
-
-  lines.push('━━━━━━━━━━━━━━━');
-  return lines.join('\n');
-}
-
 // ── 主流程 ──────────────────────────────────────────────────────
 
 async function main() {
   var today = todayISO();
   console.log('Daily check starting — ' + today);
 
-  // 並行查詢所有數據來源（任一失敗不影響其他）
+  // 同步查詢（不影響 event loop）
+  var npmAuditResult = queryNpmAudit();
+  var schedulerErrors = querySchedulerErrors();
+
+  // 並行查詢所有網路數據來源（任一失敗不影響其他）
   var settled = await Promise.allSettled([
     querySentry(),           // 0
     queryApiErrors(),        // 1
-    queryEncodingWarnings(), // 2
-    queryWorkersAnalytics(), // 3
-    queryWebAnalytics(),     // 4
-    queryRequestErrors(),    // 5
-    queryD1Stats(),          // 6
+    queryWorkersAnalytics(), // 2
+    queryWebAnalytics(),     // 3
+    queryRequestErrors(),    // 4
   ]);
-
-  // npm audit 同步執行（不影響其他）
-  var npmAuditResult = queryNpmAudit();
 
   function val(idx, fallback) {
     var r = settled[idx];
@@ -763,13 +609,20 @@ async function main() {
 
   var sentry = val(0, { status: 'ok', total: 0, issues: [] });
   var apiErrors = val(1, { status: 'ok', total: 0, errors: [] });
-  var encodingWarnings = val(2, { status: 'ok', total: 0, records: [] });
-  var workers = val(3, { status: 'ok', requests: 0, errors: 0, errorRate: '0%', p50: 0, p99: 0 });
-  var web = val(4, { visits: 0, pageViews: 0 });
-  var requestErrors = val(5, { status: 'ok', total: 0, staleCount: 0, pending: [] });
-  var d1Stats = val(6, { status: 'ok', totalLogs: 0, serverErrors: 0, clientErrors: 0, auditCount: 0 });
+  var workers = val(2, { status: 'ok', requests: 0, errors: 0, errorRate: '0%', p50: 0, p99: 0 });
+  var web = val(3, { visits: 0, pageViews: 0 });
+  var requestErrors = val(4, { status: 'ok', total: 0, staleCount: 0, pending: [] });
 
-  var summary = calcSummary(sentry, apiErrors, encodingWarnings, workers, npmAuditResult, requestErrors, d1Stats);
+  // D1Stats 依賴 apiErrors 結果（推導 server/client error counts），序列執行
+  var d1Stats;
+  try {
+    d1Stats = await queryD1Stats(apiErrors);
+  } catch (e) {
+    console.error('D1Stats failed:', e.message);
+    d1Stats = { status: 'ok', totalLogs: 0, serverErrors: 0, clientErrors: 0, auditCount: 0 };
+  }
+
+  var summary = calcSummary(sentry, apiErrors, workers, npmAuditResult, requestErrors, d1Stats, schedulerErrors);
 
   var report = {
     date: today,
@@ -777,60 +630,30 @@ async function main() {
     summary: summary,
     sentry: sentry,
     apiErrors: apiErrors,
-    encodingWarnings: encodingWarnings,
     requestErrors: requestErrors,
     d1Stats: d1Stats,
     workers: workers,
     web: web,
-    npmAudit: npmAuditResult
+    npmAudit: npmAuditResult,
+    schedulerErrors: schedulerErrors
   };
 
   // 為所有 issue/error 項目加流水編號
   assignNums(report);
 
   // 確保 logs 目錄存在
-  var logsDir = path.join(__dirname, 'logs');
+  var logsDir = path.join(__dirname, 'logs', 'daily-check');
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir, { recursive: true });
   }
 
   // 寫出 JSON
-  var outPath = path.join(logsDir, 'daily-check-' + today + '.json');
+  var outPath = path.join(logsDir, today + '-report.json');
   fs.writeFileSync(outPath, JSON.stringify(report, null, 2), 'utf8');
   console.log('Report written to: ' + outPath);
 
   // Log rotation（刪除 7 天前的 JSON）
   rotateOldLogs(logsDir);
-
-  // 發送 Telegram 摘要
-  var telegramText = buildTelegramText(report);
-  try {
-    await sendTelegram(telegramText);
-    if (env('TELEGRAM_BOT_TOKEN') && env('TELEGRAM_CHAT_ID')) {
-      console.log('Telegram sent');
-    }
-  } catch (err) {
-    console.error('Telegram send failed:', err.message);
-  }
-
-  // ── 自動修復階段 ──────────────────────────────────
-  var autofixIssues = analyzeForAutofix(report);
-  if (autofixIssues.length > 0) {
-    console.log('Autofix: found ' + autofixIssues.length + ' fixable issues, starting...');
-    try {
-      var fixResult = await runAutofix(autofixIssues);
-      console.log('Autofix result: ' + JSON.stringify(fixResult));
-
-      // Concern #6: autofix 結果作為第二則 Telegram 訊息
-      var autofixText = buildAutofixTelegramText(autofixIssues, fixResult);
-      await sendTelegram(autofixText);
-    } catch (err) {
-      console.error('Autofix failed:', err.message);
-      await sendTelegram('⚠️ <b>Autofix 異常</b>\n' + err.message).catch(function() {});
-    }
-  } else {
-    console.log('Autofix: no fixable issues');
-  }
 
   console.log('Daily check done — ' + JSON.stringify(summary));
 }
