@@ -541,6 +541,11 @@ function buildTelegramText(report) {
     issues.forEach(function(i) { lines.push(i); });
   }
 
+  // 自動修復（由 tp-daily-check skill 填入，這裡先放 placeholder）
+  lines.push(report.autofix
+    ? '🔧 自動修復: ' + report.autofix.completed + ' 項完成'
+    : '🔧 無需修復');
+
   // 指標固定顯示
   if (metrics.length > 0) {
     lines.push('──────────────');
