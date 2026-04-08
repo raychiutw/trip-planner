@@ -1,40 +1,68 @@
 ---
 name: tp-daily-check
-description: 每日健康檢查時使用 — 執行 daily-check.js，涵蓋 R0-R18、API 狀態、Sentry 錯誤，發送 Telegram 摘要（每日檢查、daily check、健康檢查）。單趟行程驗證用 /tp-check。
+description: 每日健康檢查時使用 — 讀取 daily-check report JSON，執行自動修復，發送精簡 Telegram 摘要（每日檢查、daily check、健康檢查）。單趟行程驗證用 /tp-check。
 user-invocable: true
 ---
 
-每日問題報告 — 執行 daily-check.js，讀取報告，發送 Telegram 摘要，等待 Key User 指示。
+每日健康報告 — 讀取 report JSON，自動修復可修項目，發送精簡 Telegram 摘要。
 
-本 skill 由本機排程每天 06:13 在**互動模式**啟動，session 保持開著等待回覆。
+本 skill 由 `daily-check-scheduler.sh` 在 Phase 2 呼叫（Phase 1 已執行 daily-check.js 產出 JSON）。
 
 ## 步驟
 
-1. 執行 `node scripts/daily-check.js` 產出問題報告 JSON
-2. 讀取最新的 `scripts/logs/daily-check-*.json`
-3. 整理成 Telegram 摘要（只含重點：🔴critical / 🟡warning / ✅ok）
-4. 用 Telegram MCP reply 發送摘要給 Key User（chat_id: 6527604594）
-5. **等待 Key User 在 Telegram 回覆**，根據回覆執行：
-   - 「修 #1 #3」→ 讀 JSON 完整資料，分析問題，派工程師修復
-   - 「看 #2 詳情」→ 讀 JSON 完整資料，發送該問題的詳細資訊
-   - 「全部看」→ 發送完整報告
-   - 「沒事」或「結束」→ 結束 session
-6. 修復完成後：
-   - commit（遵守團隊流程：Reviewer → QC → commit）
-   - 發 Telegram 通知修復結果
-   - 等 Key User approve → push
+1. 讀取最新的 `scripts/logs/daily-check/YYYY-MM-DD-report.json`
+2. 判斷可自動修復的項目：
+   - tp-request error log 中 status 卡在 received/processing → PATCH → open
+   - api-server error log 中 request 卡住 → PATCH → open
+   - daily-check error log 中上次修復失敗 → 重試一次
+3. 執行自動修復（API 呼叫）
+4. 組裝精簡 Telegram 訊息（10-15 行）：
+   - 🔴/⚠️ 只顯示總筆數
+   - 🔧 自動修復只顯示完成項數
+   - 📈 Workers / Analytics / npm 固定顯示數據
+   - ✅ OK 項目合併一行
+   - 全綠：`📊 MM/DD ✅ 全綠`
+5. 用 Telegram MCP 發送摘要給 Key User（chat_id: 6527604594）
+6. 結束（全自動，不等待回覆）
+
+## Telegram 格式
+
+有問題時：
+```
+📊 Tripline 每日報告 04/08
+──────────────
+🔴 API errors: 12 筆
+⚠️ Sentry: 3 筆
+⚠️ 排程錯誤: tp-request 2 筆
+🔧 自動修復: 3 項完成
+──────────────
+📈 Workers: 1,234 req | err 0.1% | P50 45ms P99 320ms
+📈 Analytics: 89 visits, 234 views
+📈 npm: 0 vulnerabilities
+✅ OK: api-server, daily-check
+```
+
+全綠時：
+```
+📊 04/08 ✅ 全綠
+📈 Workers: 1,234 req | err 0.1% | P50 45ms P99 320ms
+📈 Analytics: 89 visits, 234 views
+📈 npm: 0 vulnerabilities
+```
+
+## 自動修復範圍
+
+| 來源 | 可修復的錯誤 | 修復動作 |
+|------|------------|---------|
+| tp-request | status 卡在 received/processing | PATCH → open |
+| api-server | process loop crash 後 request 卡住 | PATCH 卡住的 request → open |
+| daily-check | 上次修復失敗的項目 | 重試一次 |
 
 ## 環境需求
 
-- daily-check.js 需要環境變數：CLOUDFLARE_API_TOKEN, CF_ACCOUNT_ID, D1_DATABASE_ID, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT
-- 這些變數應在排程環境中設定（`.env.local` 或 shell profile），或從 openspec/config.yaml 讀取
+- report JSON 由 `daily-check-scheduler.sh` Phase 1 產出
+- Telegram 需要 MCP 連線
 
 ## 排程方式
 
-macOS 排程（launchd / cron）每天 06:13 執行：
-```bash
-# 排程啟動 Claude 互動模式，由 session hook 觸發 /tp-daily-check
-claude
-```
-
-手動觸發：直接在 Claude Code 中輸入 `/tp-daily-check`。
+`daily-check-scheduler.sh`（cron 06:13）自動呼叫。手動觸發：直接在 Claude Code 中輸入 `/tp-daily-check`。
