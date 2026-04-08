@@ -1,9 +1,11 @@
 /**
- * PATCH /api/pois/:id — Admin only: fix factual errors in master POI (C2)
- * Only admin can edit pois master. Regular users override via trip_pois.
+ * PATCH /api/pois/:id — 修改 master POI (C2)
+ * Admin: 可不帶 tripId（向下相容 tp-patch/tp-rebuild）
+ * 非 Admin: 必須帶 tripId，檢查 hasPermission + POI 屬於該 trip
  */
 
 import { logAudit, computeDiff } from '../_audit';
+import { hasPermission } from '../_auth';
 import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
@@ -17,16 +19,30 @@ const ALLOWED_FIELDS = [
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const poiId = parseIntParam(context.params.id as string);
   if (!poiId) throw new AppError('DATA_VALIDATION', 'POI ID 格式錯誤');
 
   const db = context.env.DB;
+  const body = await parseJsonBody<Record<string, unknown>>(context.request);
+
+  // --- 權限檢查 ---
+  const tripId = body.tripId as string | undefined;
+  delete body.tripId; // tripId 不是 POI 欄位，從 update payload 移除
+
   const oldRow = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first();
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到此 POI');
 
-  const body = await parseJsonBody<Record<string, unknown>>(context.request);
+  if (!auth.isAdmin) {
+    if (!tripId) throw new AppError('DATA_VALIDATION', '非 admin 必須提供 tripId');
+    if (!await hasPermission(db, auth.email, tripId, false)) {
+      throw new AppError('PERM_DENIED');
+    }
+    const link = await db.prepare(
+      'SELECT 1 FROM trip_pois WHERE poi_id = ? AND trip_id = ?'
+    ).bind(poiId, tripId).first();
+    if (!link) throw new AppError('PERM_DENIED', '此 POI 不屬於該行程');
+  }
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
   if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
@@ -37,7 +53,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const diffJson = computeDiff(oldRow as Record<string, unknown>, newRow as Record<string, unknown>);
 
   await logAudit(db, {
-    tripId: 'global',
+    tripId: tripId || 'global',
     tableName: 'pois',
     recordId: poiId,
     action: 'update',

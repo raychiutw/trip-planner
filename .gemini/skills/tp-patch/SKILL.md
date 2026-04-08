@@ -104,5 +104,5 @@ user-invocable: true
 ## 注意事項
 
 - 所有資料讀寫均透過 API，不操作本地檔案
-- 使用 `PATCH /pois/:id`（admin 端點）更新 master POI，不是 trip_pois
+- 使用 `PATCH /pois/:id`（admin 或帶 tripId 的有權限使用者）更新 master POI，不是 trip_pois
 - 不執行 git commit / push

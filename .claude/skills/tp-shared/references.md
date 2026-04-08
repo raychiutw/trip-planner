@@ -29,7 +29,7 @@ curl -s -X {METHOD} \
 ### findOrCreatePoi 支援的完整欄位
 
 pois 表 20 個欄位（id, type, name, description, note, address, phone, email, website, hours, google_rating, category, maps, mapcode, lat, lng, country, source, created_at, updated_at），API `PUT /days/:num` 的 `findOrCreatePoi` 全部支援。
-`PATCH /pois/:id`（admin 端點）也支援所有欄位。
+`PATCH /pois/:id`（admin 或帶 tripId 的有權限使用者）也支援所有欄位。
 
 ### 各 type 必填 / 建議欄位
 
@@ -67,7 +67,7 @@ pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`
 | 新增 POI 到 entry | `POST /api/trips/{id}/entries/{eid}/trip-pois` | 餐廳、購物統一端點 |
 | 修改 trip_pois | `PATCH /api/trips/{id}/trip-pois/{tpid}` | 覆寫欄位（NULL = 繼承 master） |
 | 刪除 trip_pois | `DELETE /api/trips/{id}/trip-pois/{tpid}` | 移除關聯 |
-| 修改 pois master | `PATCH /api/pois/{id}` | admin 端點 |
+| 修改 pois master | `PATCH /api/pois/{id}` | admin 或帶 `tripId` 的有權限使用者 |
 
 ## googleRating 查詢策略
 

@@ -1,5 +1,5 @@
 /**
- * Integration test — PATCH /api/pois/:id (admin only)
+ * Integration test — PATCH /api/pois/:id
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
@@ -37,14 +37,14 @@ describe('PATCH /api/pois/:id', () => {
     expect((poi as Record<string, unknown>).address).toBe('沖繩縣那霸市');
   });
 
-  it('非 admin → 403', async () => {
+  it('非 admin 不帶 tripId → 400', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}`, 'PATCH', { name: 'x' }),
       env,
       auth: mockAuth({ email: 'user@test.com', isAdmin: false }),
       params: { id: String(poiId) },
     });
-    expect((await callHandler(onRequestPatch, ctx)).status).toBe(403);
+    expect((await callHandler(onRequestPatch, ctx)).status).toBe(400);
   });
 
   it('不存在 → 404', async () => {

@@ -153,6 +153,7 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'DELETE', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
   { method: 'PUT',   pattern: /^\/api\/trips\/[^/]+\/docs\/\w+$/ },
   { method: 'PATCH', pattern: /^\/api\/requests\/\d+$/ },
+  { method: 'PATCH', pattern: /^\/api\/pois\/\d+$/ },
   { method: 'GET',   pattern: /^\/api\/trips\// },
   { method: 'GET',   pattern: /^\/api\/requests/ },
 ];

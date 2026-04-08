@@ -137,6 +137,10 @@ describe('checkCompanionScope', () => {
     expect(check('GET', '/api/requests?tripId=test', 'companion')).toBeNull();
   });
 
+  it('companion: PATCH pois → 放行', () => {
+    expect(check('PATCH', '/api/pois/123', 'companion')).toBeNull();
+  });
+
   // 白名單外 → 403
   it('companion: DELETE trip → 403', () => {
     const resp = check('DELETE', '/api/trips/test-trip', 'companion');
