@@ -66,7 +66,7 @@ user-invocable: true
    - 搜尋 "{POI name} 住所" 或 "{POI name} 地址"
    - 這類資訊在搜尋摘要中通常有
 
-7. 搜尋不到 → 跳過，不填預設值
+7. 搜尋不到 → 執行「歇業/不存在 POI 偵測與清理」（見 tp-shared/references.md）：符合條件則刪除 trip_pois，否則跳過不填預設值
 
 ### Phase 3：寫入（PATCH /pois/:id）
 

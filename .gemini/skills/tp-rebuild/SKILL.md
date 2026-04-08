@@ -30,7 +30,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
    curl -s "https://trip-planner-dby.pages.dev/api/trips/{tripId}/days/{N}"
    ```
 2. **tp-check（before-fix）**：執行完整模式 report，顯示修正前的品質狀態
-3. 逐項檢查 R0-R18 品質規則，修正不合格的資料
+3. 逐項檢查 R0-R18 品質規則，修正不合格的資料。搜尋 POI 資料時若符合「歇業/不存在」條件（見 tp-shared/references.md），直接刪除 trip_pois
 
    **days meta 缺漏修復**（必先於其他修復執行）：
    - 檢查每天的 `date`、`day_of_week`（GET 回傳 snake_case）、`label` 是否為 null 或空字串
