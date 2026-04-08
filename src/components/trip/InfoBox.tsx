@@ -19,8 +19,8 @@ function safeText(value: unknown): string {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
-    if (typeof obj.text === 'string') return obj.text;
     if (typeof obj.label === 'string' && typeof obj.text === 'string') return `${obj.label}: ${obj.text}`;
+    if (typeof obj.text === 'string') return obj.text;
     if (typeof obj.name === 'string') return obj.name;
   }
   return String(value);
