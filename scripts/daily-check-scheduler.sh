@@ -84,25 +84,21 @@ else
   exit 1
 fi
 
-# Phase 2: 發 Telegram 報告摘要
-log "Phase 2: 發送 Telegram 報告"
-TELEGRAM_MSG=$(build_telegram_msg "$REPORT_JSON")
-send_telegram "$TELEGRAM_MSG"
-
-# Phase 3: 呼叫 Claude tp-daily-check（自動修復）
-log "Phase 3: claude /tp-daily-check（自動修復）"
+# Phase 2: 呼叫 Claude tp-daily-check（自動修復）
+log "Phase 2: claude /tp-daily-check（自動修復）"
 if claude --dangerously-skip-permissions -p "/tp-daily-check" >> "$LOG_FILE" 2>&1; then
-  log "Phase 3 完成"
+  log "Phase 2 完成"
 else
   log_error "Claude /tp-daily-check 執行失敗"
-  send_telegram "🔧 自動修復 ❌ 執行失敗，請查看 log"
-  log_error "--- 排程結束（錯誤）---"
-  exit 1
 fi
 
-# Phase 4: 發 Telegram 修復結果
+# Phase 3: 發 Telegram（報告 + 修復結果合併一則）
+log "Phase 3: 發送 Telegram"
+TELEGRAM_MSG=$(build_telegram_msg "$REPORT_JSON")
+
+# 附加修復結果
 if [ -f "$FIX_RESULT" ]; then
-  FIX_MSG=$(node -e "
+  FIX_PART=$(node -e "
     var r = JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
     if (r.total === 0) { console.log('🔧 無需修復'); }
     else {
@@ -114,9 +110,13 @@ if [ -f "$FIX_RESULT" ]; then
       console.log(lines.join('\n'));
     }
   " "$FIX_RESULT" 2>/dev/null)
-  send_telegram "${FIX_MSG:-🔧 無需修復}"
+  TELEGRAM_MSG="${TELEGRAM_MSG}
+${FIX_PART:-🔧 無需修復}"
 else
-  send_telegram "🔧 無需修復"
+  TELEGRAM_MSG="${TELEGRAM_MSG}
+🔧 無需修復"
 fi
+
+send_telegram "$TELEGRAM_MSG"
 
 log "--- 排程結束 ---"
