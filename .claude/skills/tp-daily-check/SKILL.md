@@ -28,8 +28,17 @@ user-invocable: true
    - 修不了的必須附上「嘗試了什麼 + grep 結果 + 為什麼修不了」
 4. 將修復結果寫入 `scripts/logs/daily-check/YYYY-MM-DD-fix-result.json`：
    ```json
-   {"total": 3, "fixed": 2, "failed": 1, "pr_url": "https://github.com/.../pull/160", "details": [...]}
+   {
+     "total": 3, "fixed": 2, "failed": 1,
+     "pr_url": "https://github.com/.../pull/160",
+     "details": [
+       {"status": "fixed", "summary": "ManagePage SSE infinite loop"},
+       {"status": "fixed", "summary": "InfoBox render object as child"},
+       {"status": "skipped", "summary": "N+1 需架構重構"}
+     ]
+   }
    ```
+   `details` 每項必填 `status`（fixed/skipped/failed）和 `summary`（一行摘要）。
 5. 結束（Telegram 由 scheduler.sh Phase 2 + Phase 4 發送，本 skill 不發 Telegram）
 
 ## Phase B 判斷標準

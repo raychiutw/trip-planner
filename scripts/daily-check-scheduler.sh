@@ -52,7 +52,7 @@ build_telegram_msg() {
     else { lines.push('📊 Tripline 每日報告 ' + today); lines.push('──────────────'); issues.forEach(function(i) { lines.push(i); }); }
     lines.push(r.autofix ? '🔧 自動修復: ' + r.autofix.completed + ' 項完成' : '🔧 無需修復');
     lines.push('──────────────');
-    if (r.workers) { var p50 = Math.round((r.workers.p50||0)/1000), p99 = Math.round((r.workers.p99||0)/1000); lines.push('📈 Workers: ' + (r.workers.requests||0).toLocaleString() + ' req | err ' + (r.workers.errorRate||'0%') + ' | P50 ' + p50 + 'ms P99 ' + p99 + 'ms'); }
+    if (r.workers) { var p50 = Math.round((r.workers.p50||0)/1000), p99 = Math.round((r.workers.p99||0)/1000); lines.push('📈 Workers: ' + (r.workers.requests||0).toLocaleString() + ' req | err ' + (r.workers.errors||0) + ' 筆 | P50 ' + p50 + 'ms P99 ' + p99 + 'ms'); }
     if (r.web) lines.push('📈 Analytics: ' + (r.web.visits||0) + ' visits, ' + (r.web.pageViews||0) + ' views');
     if (r.npmAudit && r.npmAudit.total === 0) lines.push('📈 npm: 0 vulnerabilities');
     var okItems = [];
@@ -105,7 +105,14 @@ if [ -f "$FIX_RESULT" ]; then
   FIX_MSG=$(node -e "
     var r = JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));
     if (r.total === 0) { console.log('🔧 無需修復'); }
-    else { console.log('🔨 Code fix: ' + r.fixed + '/' + r.total + ' 項完成' + (r.pr_url ? ' ' + r.pr_url : '')); }
+    else {
+      var lines = ['🔨 自動修復 ' + r.fixed + '/' + r.total + ' 項' + (r.pr_url ? ' ' + r.pr_url : '')];
+      if (r.details) r.details.forEach(function(d) {
+        var icon = d.status === 'fixed' ? '✅' : d.status === 'skipped' ? '⏭️' : '❌';
+        lines.push('  ' + icon + ' ' + d.summary);
+      });
+      console.log(lines.join('\n'));
+    }
   " "$FIX_RESULT" 2>/dev/null)
   send_telegram "${FIX_MSG:-🔧 無需修復}"
 else
