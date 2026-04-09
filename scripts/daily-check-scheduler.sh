@@ -50,7 +50,6 @@ build_telegram_msg() {
     if (r.npmAudit && r.npmAudit.total > 0) issues.push('⚠️ npm: ' + r.npmAudit.total + ' 個漏洞');
     if (issues.length === 0) { lines.push('📊 ' + today + ' ✅ 全綠'); }
     else { lines.push('📊 Tripline 每日報告 ' + today); lines.push('──────────────'); issues.forEach(function(i) { lines.push(i); }); }
-    lines.push(r.autofix ? '🔧 自動修復: ' + r.autofix.completed + ' 項完成' : '🔧 無需修復');
     lines.push('──────────────');
     if (r.workers) { var p50 = Math.round((r.workers.p50||0)/1000), p99 = Math.round((r.workers.p99||0)/1000); lines.push('📈 Workers: ' + (r.workers.requests||0).toLocaleString() + ' req | err ' + (r.workers.errors||0) + ' 筆 | P50 ' + p50 + 'ms P99 ' + p99 + 'ms'); }
     if (r.web) lines.push('📈 Analytics: ' + (r.web.visits||0) + ' visits, ' + (r.web.pageViews||0) + ' views');
