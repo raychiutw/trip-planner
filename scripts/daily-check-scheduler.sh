@@ -40,22 +40,36 @@ build_telegram_msg() {
       issues.push(icon + ' API errors: ' + r.apiErrors.total + ' 筆');
     }
     if (r.sentry && r.sentry.total > 0) issues.push('⚠️ Sentry: ' + r.sentry.total + ' 筆');
-    if (r.requestErrors && r.requestErrors.total > 0) issues.push('⚠️ 未完成請求: ' + r.requestErrors.total + ' 筆');
-    if (r.d1Stats && r.d1Stats.serverErrors > 0) issues.push('⚠️ D1 server errors: ' + r.d1Stats.serverErrors + ' 筆');
+    if (r.requestErrors && r.requestErrors.total > 0) {
+      var sc = r.requestErrors.statusCounts || {};
+      var line = '⚠️ 未完成請求: open:' + (sc.open||0) + ' processing:' + (sc.processing||0) + ' failed:' + (sc.failed||0);
+      if (r.requestErrors.stuckProcessing > 0) line += ' (' + r.requestErrors.stuckProcessing + ' 卡住>15m)';
+      issues.push(line);
+    }
     if (r.schedulerErrors && r.schedulerErrors.total > 0) {
       var se = r.schedulerErrors.details, parts = [];
-      ['tp-request','daily-check','api-server'].forEach(function(k) { if (se[k] && se[k].count > 0) parts.push(k + ' ' + se[k].count + ' 筆'); });
+      Object.keys(se).forEach(function(k) { if (se[k] && se[k].count > 0) parts.push(k + ' ' + se[k].count + ' 筆'); });
       issues.push('⚠️ 排程錯誤: ' + parts.join(', '));
     }
-    if (r.npmAudit && r.npmAudit.total > 0) issues.push('⚠️ npm: ' + r.npmAudit.total + ' 個漏洞');
+    if (r.npmAudit && r.npmAudit.error) {
+      issues.push('🔴 npm audit 失敗: ' + r.npmAudit.error);
+    } else if (r.npmAudit && r.npmAudit.total > 0) {
+      var sc = r.npmAudit.severityCounts || {};
+      var breakdown = [];
+      ['critical','high','moderate','low'].forEach(function(k) { if (sc[k] > 0) breakdown.push(k + ':' + sc[k]); });
+      var icon = r.npmAudit.status === 'critical' ? '🔴' : '⚠️';
+      issues.push(icon + ' npm: ' + r.npmAudit.total + ' 個漏洞 (' + breakdown.join(' ') + ')');
+    }
     if (issues.length === 0) { lines.push('📊 ' + today + ' ✅ 全綠'); }
     else { lines.push('📊 Tripline 每日報告 ' + today); lines.push('──────────────'); issues.forEach(function(i) { lines.push(i); }); }
     lines.push('──────────────');
     if (r.workers) { var p50 = Math.round((r.workers.p50||0)/1000), p99 = Math.round((r.workers.p99||0)/1000); lines.push('📈 Workers: ' + (r.workers.requests||0).toLocaleString() + ' req | err ' + (r.workers.errors||0) + ' 筆 | P50 ' + p50 + 'ms P99 ' + p99 + 'ms'); }
-    if (r.web) lines.push('📈 Analytics: ' + (r.web.visits||0) + ' visits, ' + (r.web.pageViews||0) + ' views');
-    if (r.npmAudit && r.npmAudit.total === 0) lines.push('📈 npm: 0 vulnerabilities');
+    if (r.web && ((r.web.visits||0) + (r.web.pageViews||0)) > 0) lines.push('📈 Analytics: ' + r.web.visits + ' visits, ' + r.web.pageViews + ' views');
+    if (r.npmAudit && !r.npmAudit.error && r.npmAudit.total === 0) lines.push('📈 npm: 0 個漏洞');
     var okItems = [];
-    ['api-server','daily-check','tp-request'].forEach(function(k) { if (!r.schedulerErrors || !r.schedulerErrors.details[k] || r.schedulerErrors.details[k].count === 0) okItems.push(k); });
+    if (r.schedulerErrors && r.schedulerErrors.details) {
+      Object.keys(r.schedulerErrors.details).forEach(function(k) { if (r.schedulerErrors.details[k].count === 0) okItems.push(k); });
+    }
     if (okItems.length > 0) lines.push('✅ OK: ' + okItems.join(', '));
     console.log(lines.join('\n'));
   " "$report_path"
@@ -113,7 +127,7 @@ if [ -f "$FIX_RESULT" ]; then
 ${FIX_PART:-🔧 無需修復}"
 else
   TELEGRAM_MSG="${TELEGRAM_MSG}
-🔧 無需修復"
+⚠️ 修復結果缺失（fix-result.json 不存在，Phase 2 可能失敗）"
 fi
 
 send_telegram "$TELEGRAM_MSG"

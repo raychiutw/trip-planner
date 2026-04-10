@@ -5,26 +5,29 @@
 ```
 📊 Tripline 每日報告 04/08
 ──────────────
-⚠️ Sentry: 3 筆
 ⚠️ API errors: 24 筆
-⚠️ 未完成請求: 2 筆
-🔧 自動修復: 3 項完成
-🔨 Code fix: 1 PR merged, 1 需人工
+⚠️ Sentry: 3 筆
+⚠️ 未完成請求: open:1 processing:0 failed:1
+⚠️ 排程錯誤: tp-request 2 筆
+⚠️ npm: 3 個漏洞
 ──────────────
-📈 Workers: 1,234 req | err 0.1% | P50 45ms P99 320ms
+📈 Workers: 1,234 req | err 0 筆 | P50 3ms P99 13ms
 📈 Analytics: 89 visits, 234 views
 📈 npm: 0 vulnerabilities
 ✅ OK: api-server, daily-check
+🔨 自動修復 2/3 項
 ```
 
 ## 全綠時
 
 ```
 📊 04/08 ✅ 全綠
-🔧 無需修復
-📈 Workers: 1,234 req | err 0.1% | P50 45ms P99 320ms
+──────────────
+📈 Workers: 1,234 req | err 0 筆 | P50 3ms P99 13ms
 📈 Analytics: 89 visits, 234 views
 📈 npm: 0 vulnerabilities
+✅ OK: api-server, daily-check, tp-request
+🔧 無需修復
 ```
 
 ## 自動修復範圍

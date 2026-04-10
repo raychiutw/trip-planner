@@ -82,21 +82,40 @@ async function queryD1(sql) {
 
 // ── 日期工具 ────────────────────────────────────────────────────
 
+var DAY_MS = 24 * 60 * 60 * 1000;
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function yesterdayISO() {
-  var d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+function pastDayWindow() {
+  return {
+    since: new Date(Date.now() - DAY_MS).toISOString(),
+    until: new Date().toISOString()
+  };
+}
+
+// ── CF GraphQL 共用 fetch helper ─────────────────────────────────
+
+async function cfGraphQL(queryStr) {
+  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + CF_TOKEN,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query: queryStr })
+  });
+  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
+  var data = await res.json();
+  return data?.data?.viewer?.accounts?.[0] || null;
 }
 
 // ── 數據來源 1: Sentry 未解決 issues ────────────────────────────
 
 async function querySentry() {
   var url = 'https://sentry.io/api/0/projects/' + SENTRY_ORG + '/' + SENTRY_PROJECT +
-    '/issues/?query=is:unresolved&statsPeriod=24h';
+    '/issues/?query=' + encodeURIComponent('is:unresolved lastSeen:-24h');
   var res = await fetch(url, {
     headers: { 'Authorization': 'Bearer ' + SENTRY_TOKEN }
   });
@@ -104,39 +123,18 @@ async function querySentry() {
   var issues = await res.json();
 
   var mapped = issues.map(function(i) {
-    // 取出最頂層 frame（file + lineno）
-    var file = '';
-    try {
-      var frames = i.firstSeen &&
-        i.entries &&
-        i.entries[0] &&
-        i.entries[0].data &&
-        i.entries[0].data.values &&
-        i.entries[0].data.values[0] &&
-        i.entries[0].data.values[0].stacktrace &&
-        i.entries[0].data.values[0].stacktrace.frames;
-      if (frames && frames.length > 0) {
-        var top = frames[frames.length - 1];
-        file = (top.filename || '') + (top.lineno ? ':' + top.lineno : '');
-      }
-    } catch (_) { /* ignore */ }
-
     return {
       id: i.id,
       title: i.title,
       count: parseInt(i.count, 10) || 0,
       users: (i.userCount) || 0,
       lastSeen: i.lastSeen || '',
-      file: file,
       link: i.permalink || ''
     };
   });
 
-  var status = 'ok';
-  if (mapped.length > 0) status = 'warning';
-
   return {
-    status: status,
+    status: mapped.length > 0 ? 'warning' : 'ok',
     total: mapped.length,
     issues: mapped
   };
@@ -145,12 +143,15 @@ async function querySentry() {
 // ── 數據來源 2: D1 api_logs — 昨日 4xx/5xx ──────────────────────
 
 async function queryApiErrors() {
+  // 過濾可預期的 auth/rate-limit 錯誤（401/403/429 屬正常流程）
   var rows = await queryD1(
     "SELECT path, method, status, COUNT(*) as count, MAX(created_at) as lastOccurred " +
     "FROM api_logs " +
-    "WHERE created_at >= datetime('now', '-1 day') AND status >= 400 " +
+    "WHERE created_at >= datetime('now', '-1 day') " +
+    "  AND status >= 400 " +
+    "  AND status NOT IN (401, 403, 429) " +
     "GROUP BY path, method, status " +
-    "ORDER BY count DESC LIMIT 20"
+    "ORDER BY count DESC"
   );
 
   var total = rows.reduce(function(sum, r) { return sum + (r.count || 0); }, 0);
@@ -163,7 +164,7 @@ async function queryApiErrors() {
   return {
     status: status,
     total: total,
-    errors: rows.map(function(r) {
+    errors: rows.slice(0, 20).map(function(r) {
       return {
         path: r.path,
         method: r.method || 'UNKNOWN',
@@ -178,87 +179,40 @@ async function queryApiErrors() {
 // ── 數據來源 3: Workers Analytics ───────────────────────────────
 
 async function queryWorkersAnalytics() {
+  // 絕對 24h 避開 UTC 時區偏移
+  var w = pastDayWindow();
   var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
     'pagesFunctionsInvocationsAdaptiveGroups(limit: 10000, filter: { ' +
-    'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
-    'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
-    'sum { requests errors subrequests } ' +
+    'datetime_geq: "' + w.since + '", ' +
+    'datetime_lt: "' + w.until + '" }) { ' +
+    'sum { requests errors } ' +
     'quantiles { cpuTimeP50 cpuTimeP99 } ' +
-    'dimensions { scriptName } ' +
     '} } } }';
-  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: query })
-  });
-  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
-  var data = await res.json();
-  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    return { status: 'ok', requests: 0, errors: 0, errorRate: '0%', p50: 0, p99: 0 };
-  }
-  var rows = data.data.viewer.accounts[0].pagesFunctionsInvocationsAdaptiveGroups;
-  if (!rows || rows.length === 0) {
-    return { status: 'ok', requests: 0, errors: 0, errorRate: '0%', p50: 0, p99: 0 };
-  }
-  var totalRequests = 0;
-  var totalErrors = 0;
-  var maxP50 = 0;
-  var maxP99 = 0;
-  rows.forEach(function(row) {
-    totalRequests += row.sum.requests;
-    totalErrors += row.sum.errors;
-    if (row.quantiles.cpuTimeP50 > maxP50) maxP50 = row.quantiles.cpuTimeP50;
-    if (row.quantiles.cpuTimeP99 > maxP99) maxP99 = row.quantiles.cpuTimeP99;
-  });
-
-  var errorRate = totalRequests > 0
-    ? ((totalErrors / totalRequests) * 100).toFixed(2) + '%'
-    : '0%';
-  var status = totalErrors > 0 ? 'warning' : 'ok';
-
+  var account = await cfGraphQL(query);
+  var row = account?.pagesFunctionsInvocationsAdaptiveGroups?.[0];
   return {
-    status: status,
-    requests: totalRequests,
-    errors: totalErrors,
-    errorRate: errorRate,
-    p50: Math.round(maxP50 * 10) / 10,
-    p99: Math.round(maxP99 * 10) / 10
+    requests: row?.sum?.requests ?? 0,
+    errors: row?.sum?.errors ?? 0,
+    p50: Math.round((row?.quantiles?.cpuTimeP50 ?? 0) * 10) / 10,
+    p99: Math.round((row?.quantiles?.cpuTimeP99 ?? 0) * 10) / 10
   };
 }
 
 // ── 數據來源 5: Web Analytics ────────────────────────────────────
 
 async function queryWebAnalytics() {
+  var w = pastDayWindow();
   var query = '{ viewer { accounts(filter: {accountTag: "' + CF_ACCOUNT + '"}) { ' +
     'rumPageloadEventsAdaptiveGroups(limit: 1, filter: { ' +
-    'datetime_geq: "' + yesterdayISO() + 'T00:00:00Z", ' +
-    'datetime_lt: "' + todayISO() + 'T00:00:00Z" }) { ' +
+    'datetime_geq: "' + w.since + '", ' +
+    'datetime_lt: "' + w.until + '" }) { ' +
     'sum { visits pageViews } ' +
     '} } } }';
-  var res = await fetch('https://api.cloudflare.com/client/v4/graphql', {
-    method: 'POST',
-    headers: {
-      'Authorization': 'Bearer ' + CF_TOKEN,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ query: query })
-  });
-  if (!res.ok) throw new Error('CF GraphQL failed: ' + res.status);
-  var data = await res.json();
-  if (!data.data || !data.data.viewer || !data.data.viewer.accounts || !data.data.viewer.accounts[0]) {
-    return { visits: 0, pageViews: 0 };
-  }
-  var rows = data.data.viewer.accounts[0].rumPageloadEventsAdaptiveGroups;
-  if (!rows || rows.length === 0) {
-    return { visits: 0, pageViews: 0 };
-  }
-  var row = rows[0];
+  var account = await cfGraphQL(query);
+  var row = account?.rumPageloadEventsAdaptiveGroups?.[0];
   return {
-    visits: row.sum && row.sum.visits ? row.sum.visits : 0,
-    pageViews: row.sum && row.sum.pageViews ? row.sum.pageViews : 0
+    visits: row?.sum?.visits ?? 0,
+    pageViews: row?.sum?.pageViews ?? 0
   };
 }
 
@@ -266,7 +220,7 @@ async function queryWebAnalytics() {
 
 function queryNpmAudit() {
   try {
-    var output = execSync('npm audit --json --production 2>/dev/null; true', {
+    var output = execSync('npm audit --json --omit=dev 2>/dev/null; true', {
       encoding: 'utf8',
       timeout: 60000,
       cwd: path.join(__dirname, '..')
@@ -275,45 +229,38 @@ function queryNpmAudit() {
 
     var vulns = [];
     if (parsed.vulnerabilities) {
-      // npm audit v2 format
       Object.keys(parsed.vulnerabilities).forEach(function(pkgName) {
         var v = parsed.vulnerabilities[pkgName];
         if (v.severity && v.severity !== 'info') {
-          vulns.push({
-            name: pkgName,
-            severity: v.severity,
-            package: pkgName,
-            fixAvailable: v.fixAvailable ? (typeof v.fixAvailable === 'object' ? v.fixAvailable.name + '@' + v.fixAvailable.version : 'yes') : 'no'
-          });
+          vulns.push({ package: pkgName, severity: v.severity });
         }
-      });
-    } else if (parsed.advisories) {
-      // npm audit v1 format
-      Object.values(parsed.advisories).forEach(function(a) {
-        vulns.push({
-          name: a.title,
-          severity: a.severity,
-          package: a.module_name,
-          fixAvailable: a.recommendation || ''
-        });
       });
     }
 
-    var hasCritical = vulns.some(function(v) { return v.severity === 'critical' || v.severity === 'high'; });
-    var status = vulns.length === 0 ? 'ok' : (hasCritical ? 'critical' : 'warning');
+    var severityCounts = { critical: 0, high: 0, moderate: 0, low: 0 };
+    vulns.forEach(function(v) {
+      if (severityCounts[v.severity] !== undefined) severityCounts[v.severity]++;
+    });
+
+    var status = vulns.length === 0
+      ? 'ok'
+      : (severityCounts.critical + severityCounts.high > 0 ? 'critical' : 'warning');
 
     return {
       status: status,
       total: vulns.length,
+      severityCounts: severityCounts,
       vulnerabilities: vulns
     };
   } catch (err) {
     console.error('npm audit failed:', err.message);
+    // Fail loud: critical + error message in Telegram
     return {
-      status: 'ok',
+      status: 'critical',
       total: 0,
+      severityCounts: { critical: 0, high: 0, moderate: 0, low: 0 },
       vulnerabilities: [],
-      note: 'npm audit 執行失敗: ' + err.message
+      error: 'npm audit 執行失敗: ' + String(err.message || err).slice(0, 120)
     };
   }
 }
@@ -321,32 +268,35 @@ function queryNpmAudit() {
 // ── 數據來源 7: tp-request 錯誤統計 ─────────────────────────────
 
 async function queryRequestErrors() {
-  // 查詢非 completed 的請求（含 open 超過 1 小時未處理）
+  // 只看過去 24h 內的非 completed 請求（陳年 failed 會自然淡出）
   var rows = await queryD1(
     "SELECT id, trip_id, mode, status, substr(message, 1, 80) as message, " +
     "substr(reply, 1, 80) as reply, created_at " +
     "FROM trip_requests " +
     "WHERE status != 'completed' " +
-    "ORDER BY created_at DESC " +
-    "LIMIT 20"
+    "  AND created_at >= datetime('now', '-1 day') " +
+    "ORDER BY created_at DESC"
   );
 
-  // 額外篩出 status='open' 超過 1 小時未處理（視為排程失敗）
-  var stale = rows.filter(function(r) {
-    if (r.status !== 'open') return false;
-    var created = new Date(r.created_at);
-    var ageMs = Date.now() - created.getTime();
-    return ageMs > 60 * 60 * 1000; // > 1 小時
+  var statusCounts = { open: 0, processing: 0, failed: 0 };
+  rows.forEach(function(r) {
+    if (statusCounts[r.status] !== undefined) statusCounts[r.status]++;
   });
 
-  var status = 'ok';
-  if (rows.length > 0) status = 'warning';
+  // processing > 15min 視為卡住（Claude CLI 執行途中掛掉）
+  var stuckCutoff = Date.now() - 15 * 60 * 1000;
+  var stuckProcessing = rows.filter(function(r) {
+    return r.status === 'processing' && new Date(r.created_at).getTime() < stuckCutoff;
+  }).length;
+
+  var status = rows.length > 0 ? 'warning' : 'ok';
 
   return {
     status: status,
     total: rows.length,
-    staleCount: stale.length,
-    pending: rows.map(function(r) {
+    statusCounts: statusCounts,
+    stuckProcessing: stuckProcessing,
+    pending: rows.slice(0, 20).map(function(r) {
       return {
         id: r.id,
         tripId: r.trip_id,
@@ -360,86 +310,91 @@ async function queryRequestErrors() {
   };
 }
 
-// ── 數據來源 8: D1 統計（api_logs total + audit_log）─────────────
-
-async function queryD1Stats(apiErrorsResult) {
-  // server/client error counts 從 apiErrors 推導，省掉重複 D1 subquery
-  var serverErrors = 0;
-  var clientErrors = 0;
-  if (apiErrorsResult && apiErrorsResult.errors) {
-    apiErrorsResult.errors.forEach(function(e) {
-      if (e.status >= 500) serverErrors += (e.count || 0);
-      else if (e.status >= 400) clientErrors += (e.count || 0);
-    });
-  }
-
-  var rows = await queryD1(
-    "SELECT " +
-    "(SELECT COUNT(*) FROM api_logs) as total_logs, " +
-    "(SELECT COUNT(*) FROM audit_log WHERE created_at >= datetime('now', '-1 day')) as audit_count"
-  );
-
-  var row = rows && rows[0] ? rows[0] : {};
-  var status = serverErrors > 0 ? 'warning' : 'ok';
-
-  return {
-    status: status,
-    totalLogs: row.total_logs || 0,
-    serverErrors: serverErrors,
-    clientErrors: clientErrors,
-    auditCount: row.audit_count || 0
-  };
-}
-
-// ── 數據來源 8: 排程 error log ────────────────────────────────
+// ── 數據來源 7: 排程 error log ────────────────────────────────
 
 function querySchedulerErrors() {
+  // 每 dir 最多收集 N 筆錯誤樣本顯示，但 count 記錄真實總數（不受上限影響）
+  var MAX_ERROR_SAMPLES = 5;
+  var MAX_MESSAGE_LEN = 100;
+  var cutoff = new Date(Date.now() - DAY_MS);
   var baseDir = path.join(__dirname, 'logs');
-  var dirs = ['tp-request', 'daily-check', 'api-server'];
-  var cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  var results = {};
+
+  // error-log = cron scheduler（scheduler-common.sh log_error() → YYYY-MM-DD.error.log）
+  // stderr    = long-running process（tripline-api-server → stderr.log，無時戳用 mtime 近似）
+  var schedulers = [
+    { name: 'tp-request',  type: 'error-log' },
+    { name: 'daily-check', type: 'error-log' },
+    { name: 'api-server',  type: 'stderr' },
+  ];
+
+  var details = {};
   var totalErrors = 0;
 
-  dirs.forEach(function(dir) {
-    var dirPath = path.join(baseDir, dir);
-    var errors = [];
+  schedulers.forEach(function(s) {
+    var result = { count: 0, errors: [] };
     try {
-      var files = fs.readdirSync(dirPath).filter(function(f) {
-        return f.endsWith('.error.log');
-      });
-      files.forEach(function(f) {
-        var filePath = path.join(dirPath, f);
-        var stat = fs.statSync(filePath);
-        if (stat.mtime < cutoff) return;
-        var content = fs.readFileSync(filePath, 'utf8').trim();
-        if (!content) return;
-        var lines = content.split('\n');
-        lines.forEach(function(line) {
-          var match = line.match(/^\[(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+Z?)?)\] \[error\] (.+)/);
-          if (match) {
-            var ts = new Date(match[1].replace(' ', 'T'));
-            if (ts >= cutoff && errors.length < 5) {
-              errors.push({ time: match[1], message: match[2].substring(0, 100) });
+      if (s.type === 'error-log') {
+        var dirPath = path.join(baseDir, s.name);
+        var files = fs.readdirSync(dirPath).filter(function(f) { return f.endsWith('.error.log'); });
+        files.forEach(function(f) {
+          var filePath = path.join(dirPath, f);
+          var stat = fs.statSync(filePath);
+          if (stat.mtime < cutoff) return;
+          var content = fs.readFileSync(filePath, 'utf8').trim();
+          if (!content) return;
+          content.split('\n').forEach(function(line) {
+            var match = line.match(/^\[(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+Z?)?)\] \[error\] (.+)/);
+            if (match) {
+              var ts = new Date(match[1].replace(' ', 'T'));
+              if (ts >= cutoff) {
+                result.count++;
+                if (result.errors.length < MAX_ERROR_SAMPLES) {
+                  result.errors.push({ time: match[1], message: match[2].substring(0, MAX_MESSAGE_LEN) });
+                }
+              }
             }
-          }
+          });
         });
-      });
-    } catch (e) {}
-    results[dir] = { count: errors.length, errors: errors };
-    totalErrors += errors.length;
+      } else if (s.type === 'stderr') {
+        // Long-running process 無時戳 stderr：用 mtime 近似「24h 內被寫入」，
+        // 只讀檔尾 8KB 避免大檔案 OOM
+        var stderrPath = path.join(baseDir, s.name, 'stderr.log');
+        var stat = fs.statSync(stderrPath);
+        if (stat.size > 0 && stat.mtime >= cutoff) {
+          var tailSize = Math.min(stat.size, 8192);
+          var buf = Buffer.alloc(tailSize);
+          var fd = fs.openSync(stderrPath, 'r');
+          try {
+            fs.readSync(fd, buf, 0, tailSize, stat.size - tailSize);
+          } finally {
+            fs.closeSync(fd);
+          }
+          var lastLine = buf.toString('utf8').trim().split('\n').pop() || '';
+          result.count = 1;
+          result.errors = [{ time: '', message: lastLine.substring(0, MAX_MESSAGE_LEN) }];
+        }
+      }
+    } catch (e) {
+      // ENOENT = 檔案/目錄不存在 = 健康狀態，其他 error 才 log
+      if (e.code !== 'ENOENT') {
+        console.error('schedulerErrors scan failed for ' + s.name + ':', e.message);
+      }
+    }
+    details[s.name] = result;
+    totalErrors += result.count;
   });
 
   return {
     status: totalErrors > 0 ? 'warning' : 'ok',
     total: totalErrors,
-    details: results
+    details: details
   };
 }
 
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, workers, npmAudit, requestErrors, d1Stats, schedulerErrors) {
-  var sections = [sentry, apiErrors, workers, npmAudit, requestErrors, d1Stats, schedulerErrors];
+function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors) {
+  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -472,92 +427,8 @@ function assignNums(report) {
   if (report.requestErrors && report.requestErrors.pending) {
     report.requestErrors.pending.forEach(function(p) { p.num = counter(); });
   }
-  if (report.npmAudit && report.npmAudit.vulnerabilities) {
-    report.npmAudit.vulnerabilities.forEach(function(v) { v.num = counter(); });
-  }
 
   report._maxNum = counter() - 1;
-}
-
-function buildTelegramText(report) {
-  var today = report.date.slice(5).replace('-', '/');
-  var lines = [];
-
-  // 收集問題項目
-  var issues = [];
-  if (report.apiErrors && report.apiErrors.total > 0) {
-    var icon = report.apiErrors.status === 'critical' ? '🔴' : '⚠️';
-    issues.push(icon + ' API errors: ' + report.apiErrors.total + ' 筆');
-  }
-  if (report.sentry && report.sentry.total > 0) {
-    issues.push('⚠️ Sentry: ' + report.sentry.total + ' 筆');
-  }
-  if (report.requestErrors && report.requestErrors.total > 0) {
-    issues.push('⚠️ 未完成請求: ' + report.requestErrors.total + ' 筆');
-  }
-  if (report.d1Stats && report.d1Stats.serverErrors > 0) {
-    issues.push('⚠️ D1 server errors: ' + report.d1Stats.serverErrors + ' 筆');
-  }
-  if (report.schedulerErrors && report.schedulerErrors.total > 0) {
-    var se = report.schedulerErrors.details;
-    var parts = [];
-    ['tp-request', 'daily-check', 'api-server'].forEach(function(k) {
-      if (se[k] && se[k].count > 0) parts.push(k + ' ' + se[k].count + ' 筆');
-    });
-    issues.push('⚠️ 排程錯誤: ' + parts.join(', '));
-  }
-  if (report.npmAudit && report.npmAudit.total > 0) {
-    issues.push('⚠️ npm vulnerabilities: ' + report.npmAudit.total + ' 個');
-  }
-
-  // 指標數據
-  var metrics = [];
-  if (report.workers) {
-    var p50 = report.workers.p50 || 0;
-    var p99 = report.workers.p99 || 0;
-    metrics.push('📈 Workers: ' + (report.workers.requests || 0).toLocaleString() + ' req | err ' +
-      (report.workers.errorRate || '0%') + ' | P50 ' + Math.round(p50 / 1000) + 'ms P99 ' + Math.round(p99 / 1000) + 'ms');
-  }
-  if (report.web) {
-    metrics.push('📈 Analytics: ' + (report.web.visits || 0) + ' visits, ' + (report.web.pageViews || 0) + ' views');
-  }
-  if (report.npmAudit && report.npmAudit.total === 0) {
-    metrics.push('📈 npm: 0 vulnerabilities');
-  }
-
-  // OK 項目
-  var okItems = [];
-  var schedulerDirs = ['api-server', 'daily-check', 'tp-request'];
-  schedulerDirs.forEach(function(k) {
-    if (!report.schedulerErrors || !report.schedulerErrors.details[k] || report.schedulerErrors.details[k].count === 0) okItems.push(k);
-  });
-
-  // 全綠判定
-  if (issues.length === 0) {
-    lines.push('📊 ' + today + ' ✅ 全綠');
-  } else {
-    lines.push('📊 Tripline 每日報告 ' + today);
-    lines.push('──────────────');
-    issues.forEach(function(i) { lines.push(i); });
-  }
-
-  // 自動修復（由 tp-daily-check skill 填入，這裡先放 placeholder）
-  lines.push(report.autofix
-    ? '🔧 自動修復: ' + report.autofix.completed + ' 項完成'
-    : '🔧 無需修復');
-
-  // 指標固定顯示
-  if (metrics.length > 0) {
-    lines.push('──────────────');
-    metrics.forEach(function(m) { lines.push(m); });
-  }
-
-  // OK 合併
-  if (okItems.length > 0) {
-    lines.push('✅ OK: ' + okItems.join(', '));
-  }
-
-  return lines.join('\n');
 }
 
 // ── Log rotation ────────────────────────────────────────────────
@@ -609,20 +480,11 @@ async function main() {
 
   var sentry = val(0, { status: 'ok', total: 0, issues: [] });
   var apiErrors = val(1, { status: 'ok', total: 0, errors: [] });
-  var workers = val(2, { status: 'ok', requests: 0, errors: 0, errorRate: '0%', p50: 0, p99: 0 });
+  var workers = val(2, { requests: 0, errors: 0, p50: 0, p99: 0 });
   var web = val(3, { visits: 0, pageViews: 0 });
-  var requestErrors = val(4, { status: 'ok', total: 0, staleCount: 0, pending: [] });
+  var requestErrors = val(4, { status: 'ok', total: 0, statusCounts: { open: 0, processing: 0, failed: 0 }, stuckProcessing: 0, pending: [] });
 
-  // D1Stats 依賴 apiErrors 結果（推導 server/client error counts），序列執行
-  var d1Stats;
-  try {
-    d1Stats = await queryD1Stats(apiErrors);
-  } catch (e) {
-    console.error('D1Stats failed:', e.message);
-    d1Stats = { status: 'ok', totalLogs: 0, serverErrors: 0, clientErrors: 0, auditCount: 0 };
-  }
-
-  var summary = calcSummary(sentry, apiErrors, workers, npmAuditResult, requestErrors, d1Stats, schedulerErrors);
+  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors);
 
   var report = {
     date: today,
@@ -631,7 +493,6 @@ async function main() {
     sentry: sentry,
     apiErrors: apiErrors,
     requestErrors: requestErrors,
-    d1Stats: d1Stats,
     workers: workers,
     web: web,
     npmAudit: npmAuditResult,
