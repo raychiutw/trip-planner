@@ -147,6 +147,7 @@ export function checkCsrf(request: Request, env: Env): Response | null {
  * Used by tp-request scheduler to prevent prompt injection from escalating privileges.
  */
 const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
+  { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/days\/\d+\/entries$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/entries\/\d+$/ },
   { method: 'POST',  pattern: /^\/api\/trips\/[^/]+\/entries\/\d+\/trip-pois$/ },
   { method: 'PATCH', pattern: /^\/api\/trips\/[^/]+\/trip-pois\/\d+$/ },
