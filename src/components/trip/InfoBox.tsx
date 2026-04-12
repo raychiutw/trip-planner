@@ -1,7 +1,7 @@
 /* ===== InfoBox Component ===== */
 /* Renders an info box — tips, notes, parking, restaurants, shopping, gas stations, etc. */
 
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import MapLinks, { type MapLocation } from './MapLinks';
@@ -157,15 +157,47 @@ function SouvenirBox({ box }: { box: InfoBoxData }) {
 
 function RestaurantsBox({ box }: { box: InfoBoxData }) {
   const rItems = box.restaurants ?? [];
-  const rTitle = box.title || (rItems.length > 1 ? `${rItems.length}選一` : '推薦餐廳');
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  // Single restaurant or legacy title override — render flat
+  if (rItems.length <= 1 || box.title) {
+    const rTitle = box.title || '推薦餐廳';
+    return (
+      <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
+        <Icon name="utensils" /> <strong className="font-semibold">{rTitle}：</strong>
+        <div className={gridClass(rItems.length)}>
+          {rItems.map((r, i) => (
+            <Restaurant key={i} restaurant={r} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Multiple restaurants — hero (first) + backup list (rest)
+  const hero = rItems[0]!;
+  const backups = rItems.slice(1);
+
   return (
     <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
-      <Icon name="utensils" /> <strong className="font-semibold">{rTitle}：</strong>
-      <div className={gridClass(rItems.length)}>
-        {rItems.map((r, i) => (
-          <Restaurant key={i} restaurant={r} />
-        ))}
-      </div>
+      <Icon name="utensils" /> <strong className="font-semibold">推薦餐廳：</strong>
+      <Restaurant restaurant={hero} />
+      {backups.map((r, i) => (
+        <div key={i}>
+          <div
+            className="flex items-center justify-between px-4 py-2 cursor-pointer text-callout text-muted hover:text-accent transition-colors"
+            style={{ borderBottom: i < backups.length - 1 ? '1px solid var(--color-border)' : undefined }}
+            onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
+          >
+            <span>{r.name}</span>
+            <span className="flex items-center gap-2">
+              {typeof r.googleRating === 'number' && <span className="text-footnote">★ {r.googleRating.toFixed(1)}</span>}
+              <span className="text-caption text-muted/50" style={{ transition: 'transform 0.2s', transform: expandedIdx === i ? 'rotate(90deg)' : 'none' }}>›</span>
+            </span>
+          </div>
+          {expandedIdx === i && <Restaurant restaurant={r} />}
+        </div>
+      ))}
     </div>
   );
 }
