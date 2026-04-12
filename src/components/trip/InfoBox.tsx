@@ -183,16 +183,15 @@ function RestaurantsBox({ box }: { box: InfoBoxData }) {
       <Icon name="utensils" /> <strong className="font-semibold">推薦餐廳：</strong>
       <Restaurant restaurant={hero} />
       {backups.map((r, i) => (
-        <div key={i}>
+        <div key={r.name}>
           <div
-            className="flex items-center justify-between px-4 py-2 cursor-pointer text-callout text-muted hover:text-accent transition-colors"
-            style={{ borderBottom: i < backups.length - 1 ? '1px solid var(--color-border)' : undefined }}
+            className={`flex items-center justify-between px-4 py-2 cursor-pointer text-callout text-muted hover:text-accent transition-colors${i < backups.length - 1 ? ' border-b border-border' : ''}`}
             onClick={() => setExpandedIdx(expandedIdx === i ? null : i)}
           >
             <span>{r.name}</span>
             <span className="flex items-center gap-2">
               {typeof r.googleRating === 'number' && <span className="text-footnote">★ {r.googleRating.toFixed(1)}</span>}
-              <span className="text-caption text-muted/50" style={{ transition: 'transform 0.2s', transform: expandedIdx === i ? 'rotate(90deg)' : 'none' }}>›</span>
+              <span className={`text-caption text-muted/50 transition-transform duration-200${expandedIdx === i ? ' rotate-90' : ''}`}>›</span>
             </span>
           </div>
           {expandedIdx === i && <Restaurant restaurant={r} />}
