@@ -16,7 +16,6 @@ import type { HotelData } from '../components/trip/Hotel';
 interface RawRestaurant {
   name?: string | null;
   sort_order?: number | null;
-  sortOrder?: number | null;
   category?: string | null;
   hours?: string | null;
   price?: string | null;
@@ -135,7 +134,7 @@ function formatTravelText(travel: RawTravel): string {
 function toRestaurantData(r: RawRestaurant): RestaurantData {
   return {
     name: r.name || '',
-    sortOrder: (r.sort_order ?? r.sortOrder) ?? null,
+    sortOrder: r.sort_order ?? null,
     category: r.category ?? null,
     hours: r.hours ?? null,
     price: r.price ?? null,
