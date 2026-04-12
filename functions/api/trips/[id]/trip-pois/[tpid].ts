@@ -6,7 +6,7 @@
  */
 
 import { logAudit, computeDiff } from '../../../_audit';
-import { hasPermission, verifyTripPoiBelongsToTrip } from '../../../_auth';
+import { hasPermission, verifyTripPoiBelongsToTrip, verifyEntryBelongsToTrip } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -16,7 +16,7 @@ const ALLOWED_FIELDS = [
   'description', 'note', 'hours', 'sort_order',
   'checkout', 'breakfast_included', 'breakfast_note',
   'price', 'reservation', 'reservation_url',
-  'must_buy',
+  'must_buy', 'entry_id',
 ] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
@@ -41,6 +41,14 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     parseJsonBody<Record<string, unknown>>(context.request),
   ]);
   if (!oldRow) throw new AppError('DATA_NOT_FOUND');
+
+  if (body.entry_id != null) {
+    const entryId = parseIntParam(String(body.entry_id));
+    if (!entryId) throw new AppError('DATA_VALIDATION', 'entry_id 格式錯誤');
+    if (!await verifyEntryBelongsToTrip(db, entryId, id)) {
+      throw new AppError('DATA_VALIDATION', '目標 entry 不屬於此行程');
+    }
+  }
 
   const updateResult = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
   if (!updateResult) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');

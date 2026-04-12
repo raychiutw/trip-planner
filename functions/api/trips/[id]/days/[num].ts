@@ -31,6 +31,8 @@ function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Re
     category: poi.category,
     maps: poi.maps,
     mapcode: poi.mapcode,
+    lat: poi.lat,
+    lng: poi.lng,
     source: poi.source,
     // trip_pois fields
     trip_poi_id: tp.id,

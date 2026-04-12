@@ -99,6 +99,8 @@ export interface Restaurant {
   googleRating?: number | null;
   maps?: string | null;
   mapcode?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   source?: string | null;
 }
 
