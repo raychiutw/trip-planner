@@ -30,7 +30,8 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 3. **Google Maps 驗證（鐵律）**：新增或替換 POI 前必須先確認 Google Maps 上存在，查不到 = 無效，不得新增（見 tp-search-strategies）。若發現既有 POI 無效，依 tp-shared/references.md §5 執行刪除（pois master + trip_pois）。
 3b. 新增或替換 POI 的必填欄位（source、note、googleQuery、googleRating）+ 韓國 naverQuery — **詳見 tp-shared/references.md「行程修改共用步驟」**
 4. 修改的部分須符合 R0-R18 品質規則
-5. 依修改類型選擇 API（PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
+5. 依修改類型選擇 API（POST entry / PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
+   > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但需要加入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `title`），取得 `eid` 後再掛 POI。
 6. **location 座標更新**：新增或替換景點時，必須用 `PATCH /entries/:eid` 補寫 `location` JSON（含 lat/lng），否則天氣功能無法顯示。格式：`[{"name":"地點名","lat":24.xx,"lng":121.xx,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。座標可用 WebSearch 查詢「{地點名} 座標 經緯度」取得。
 7. **Doc 連動（鐵律）**+ **travel 重算** — 規則見 tp-shared/references.md
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`

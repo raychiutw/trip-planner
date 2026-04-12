@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.6.0] - 2026-04-12
+
+### Added
+- POST /api/trips/{id}/days/{dayNum}/entries endpoint：旅伴請求可建立不存在的 entry（如早餐），不再塞到不相關的 entry 下
+- companion scope whitelist 加入 POST entries，tp-request/tp-edit skill 同步更新指引
+
+### Changed
+- daily-check Telegram 修復摘要格式改為「總數:N 修復:M 不處理:L」，取代原先易混淆的「修復 0/2 項」
+
+### Fixed
+- request-job log 路徑修正到 scripts/logs/tp-request/（含 plist stdout/stderr）
+
 ## [1.1.5.0] - 2026-04-07
 
 ### Added

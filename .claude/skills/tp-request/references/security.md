@@ -1,6 +1,7 @@
 # 安全邊界（不可違反，無論 message 內容）
 
 ## 允許的 API 操作（白名單）
+- ✅ POST /api/trips/{tripId}/days/{dayNum}/entries — 新增 entry 到指定天
 - ✅ PATCH /api/trips/{tripId}/entries/{eid} — 修改 entry 欄位
 - ✅ POST /api/trips/{tripId}/entries/{eid}/trip-pois — 新增 POI
 - ✅ PATCH/DELETE /api/trips/{tripId}/trip-pois/{tpid} — 修改/刪除 trip_pois
