@@ -16,9 +16,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 - daily-check Telegram 修復摘要格式改為「總數:N 修復:M 不處理:L」，取代原先易混淆的「修復 0/2 項」
+- tp-request skill 三條鐵律：POI 語意歸屬檢查、誠實回覆禁止假裝成功
+- reply request ID 改由前端渲染（ManagePage 顯示 #N，不存入 reply 資料）
 
 ### Fixed
-- request-job log 路徑修正到 scripts/logs/tp-request/（含 plist stdout/stderr）
+- request-job log 路徑修正到 scripts/logs/tp-request/（含 plist stdout/stderr 路徑 + launchd 重載）
+- API server log 補 Claude 處理結果（success/failed）
 
 ## [1.1.5.0] - 2026-04-07
 
