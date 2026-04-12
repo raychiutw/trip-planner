@@ -10,7 +10,7 @@ import type { RestaurantData } from '../components/trip/Restaurant';
 import type { ShopData } from '../components/trip/Shop';
 import type { HotelData } from '../components/trip/Hotel';
 
-/* ===== Raw input interfaces (accept both camelCase and snake_case) ===== */
+/* ===== Raw input interfaces (snake_case, matching API response from mergePoi) ===== */
 
 /** Raw restaurant POI as returned by the API (merged pois + trip_pois). */
 interface RawRestaurant {
@@ -21,11 +21,9 @@ interface RawRestaurant {
   price?: string | null;
   reservation?: string | null;
   reservation_url?: string | null;
-  reservationUrl?: string | null;
   description?: string | null;
   note?: string | null;
   google_rating?: number | null;
-  googleRating?: number | null;
   maps?: string | null;
   mapcode?: string | null;
   lat?: number | null;
@@ -38,11 +36,9 @@ interface RawShop {
   category?: string | null;
   hours?: string | null;
   must_buy?: string | string[] | null;
-  mustBuy?: string | string[] | null;
   description?: string | null;
   note?: string | null;
   google_rating?: number | null;
-  googleRating?: number | null;
   maps?: string | null;
   mapcode?: string | null;
   lat?: number | null;
@@ -76,7 +72,6 @@ interface RawEntry {
   description?: string | null;
   note?: string | null;
   google_rating?: number | null;
-  googleRating?: number | null;
   source?: string | null;
   maps?: string | null;
   mapcode?: string | null;
@@ -93,9 +88,7 @@ interface RawHotel {
   note?: string | null;
   breakfast?: string | { included?: boolean; note?: string | null } | null;
   breakfast_included?: number | null;
-  breakfastIncluded?: number | null;
   breakfast_note?: string | null;
-  breakfastNote?: string | null;
   parking?: RawParking[] | RawParking | null;
   shopping?: RawShop[];
 }
@@ -139,10 +132,10 @@ function toRestaurantData(r: RawRestaurant): RestaurantData {
     hours: r.hours ?? null,
     price: r.price ?? null,
     reservation: r.reservation ?? null,
-    reservationUrl: (r.reservation_url ?? r.reservationUrl) ?? null,
+    reservationUrl: r.reservation_url ?? null,
     description: r.description ?? null,
     note: r.note ?? null,
-    googleRating: (r.google_rating ?? r.googleRating) ?? null,
+    googleRating: r.google_rating ?? null,
     location: buildLocation(r.maps ?? null, r.mapcode ?? null, r.name ?? null, r.lat ?? null, r.lng ?? null),
   };
 }
@@ -150,7 +143,7 @@ function toRestaurantData(r: RawRestaurant): RestaurantData {
 /* ===== Shopping (from merged POI) ===== */
 
 function toShopData(s: RawShop): ShopData {
-  const raw = s.must_buy ?? s.mustBuy;
+  const raw = s.must_buy;
   let mustBuy: string[] | null = null;
   if (typeof raw === 'string' && raw) {
     mustBuy = raw.split(/[,、]/).map((v) => v.trim()).filter(Boolean);
@@ -165,7 +158,7 @@ function toShopData(s: RawShop): ShopData {
     mustBuy,
     description: s.description ?? null,
     note: s.note ?? null,
-    googleRating: (s.google_rating ?? s.googleRating) ?? null,
+    googleRating: s.google_rating ?? null,
     location: buildLocation(s.maps ?? null, s.mapcode ?? null, s.name ?? null, s.lat ?? null, s.lng ?? null),
   };
 }
@@ -208,7 +201,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     title: raw.title ?? null,
     description: raw.description ?? null,
     note: raw.note ?? null,
-    googleRating: (raw.google_rating ?? raw.googleRating) ?? null,
+    googleRating: raw.google_rating ?? null,
     source: raw.source ?? null,
     travel: travelData,
     locations: locations.length > 0 ? locations : null,
@@ -223,8 +216,8 @@ export function toHotelData(raw: RawHotel): HotelData {
 
   // breakfast is flattened into breakfast_included + breakfast_note
   let breakfast: { included?: boolean; note?: string | null } | null = null;
-  const bfIncluded = raw.breakfast_included ?? raw.breakfastIncluded;
-  const bfNote = raw.breakfast_note ?? raw.breakfastNote ?? null;
+  const bfIncluded = raw.breakfast_included;
+  const bfNote = raw.breakfast_note ?? null;
   if (bfIncluded != null || bfNote) {
     breakfast = {
       included: bfIncluded === 1 ? true : bfIncluded === 0 ? false : undefined,
