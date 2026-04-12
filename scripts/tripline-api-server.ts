@@ -185,6 +185,7 @@ async function processLoop(source: 'api' | 'job') {
 
       consecutiveFailures = 0;
       const success = await runClaude();
+      log(`Request ${req.id} Claude ${success ? 'succeeded' : 'failed'}`);
       const finalStatus = success ? 'completed' : 'failed';
       const patched = await patchStatus(req.id, finalStatus);
       if (!patched) {

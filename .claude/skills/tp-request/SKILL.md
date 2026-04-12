@@ -106,10 +106,12 @@ curl -s -X PATCH \
    e. 依修改類型選擇 API（**限白名單內操作**）— 端點見 tp-shared/references.md「行程修改共用步驟」
       > ⚠️ 所有寫入 API 呼叫須帶 `X-Request-Scope: companion` header
       > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但旅伴要求排入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `title`），取得 `eid` 後再用 `POST /entries/{eid}/trip-pois` 掛 POI。**禁止將 POI 塞到不相關的 entry 下。**
+      > ⚠️ **POI 語意歸屬檢查（鐵律）**：修改前必須確認 POI 所掛的 entry title 語意正確。早餐 POI 必須掛在「早餐」entry 下，不得掛在「出發」「景點」等不相關 entry。若發現 POI 掛錯 entry，須先建立正確 entry 再搬移 POI。僅確認 sort_order 不夠，必須同時確認 entry 歸屬。
    f. **Doc 連動 + travel 重算** — 規則見 tp-shared/references.md
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
    i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）
+   > ⚠️ **誠實回覆（鐵律）**：reply 必須如實反映實際執行結果。若 API 呼叫失敗、無法建立 entry、或 POI 掛在錯誤位置，必須在 reply 中明確告知旅伴，**禁止假裝成功**。未實際寫入資料就說「已完成」是最嚴重的違規。
 
 ### 3e. 諮詢回覆流程
 

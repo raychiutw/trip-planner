@@ -3,10 +3,12 @@
 **⚠️ 重要**：reply 內容含 markdown 換行（`\n`），必須用 `node -e` + `JSON.stringify` 生成 JSON。
 **禁止** `printf`、`echo`、或 backtick template literal（Windows bash 會把 literal newline 寫成 0x0A，curl `--data` 再把它去掉，導致 markdown 渲染失敗）。
 
+**⚠️ reply 開頭必須帶 request ID**：格式為 `#N`（N 為 request ID），後接一個換行再寫正文。方便 admin 追蹤。
+
 reply 字串中的換行用 JS 單引號內的 `\n` 表示（會被 JSON.stringify 正確轉義為 `\n`）：
 
 ```bash
-node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'第一行\n\n第二行', status:'completed'}), 'utf8')"
+node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'#42\n第一行\n\n第二行', status:'completed'}), 'utf8')"
 curl -s -X PATCH \
   -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
   -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
