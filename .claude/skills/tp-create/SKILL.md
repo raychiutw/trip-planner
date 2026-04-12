@@ -85,9 +85,14 @@ user-invocable: true
    POST 會自動建立 trips + trip_days + trip_permissions 記錄。回傳 `{ ok: true, tripId, daysCreated }`。
 4. 為每一天產生完整內容（JSON 格式），包含：
    - timeline entries（含 type、title、time、description、location、travel、hotels 等）
+   - **每天必建三餐 entry**（使用者可自行刪除不需要的）：
+     - 早餐 `08:00`（title: `"早餐"`，附 restaurants 推薦；飯店含早則在 description 註明）
+     - 午餐 `12:00`（title: `"午餐"`，附 3 家 restaurants 推薦）
+     - 晚餐 `18:00`（title: `"晚餐"`，附 3 家 restaurants 推薦）
+   - 三餐 entry 的 travel：以 sort_order=0（首選）餐廳的 location 計算車程，而非 entry 本身的 location
 
    > ⚠️ **travel 語意見 tp-shared/references.md**：travel = 從此地「出發」到下一站，放在出發地 entry 上。最後一個 entry 的 travel 為 null。
-   - restaurants infoBox（午餐/晚餐 entry 下各 3 家推薦）
+   - restaurants infoBox（早餐/午餐/晚餐 entry 下各 3 家推薦）
    - shopping infoBox（非家飯店 entry 下）
    - **Google Maps 驗證（鐵律）**：所有 POI 必須先確認 Google Maps 上存在。查不到 = 無效，不得新增。驗證流程見 `tp-search-strategies`。
    - 每個 POI 須包含以下必填欄位：
