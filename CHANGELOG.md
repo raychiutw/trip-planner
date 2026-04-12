@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.8.1] - 2026-04-12
+
+### Fixed
+- 餐廳首選/備案排序改用 sortOrder 判斷，不再依賴 API 回傳陣列順序（修正 sort_order=0 的首選餐廳被顯示為備案的問題）
+
 ## [1.1.8.0] - 2026-04-12
 
 ### Added

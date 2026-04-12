@@ -174,9 +174,10 @@ function RestaurantsBox({ box }: { box: InfoBoxData }) {
     );
   }
 
-  // Multiple restaurants — hero (first) + backup list (rest)
-  const hero = rItems[0]!;
-  const backups = rItems.slice(1);
+  // Multiple restaurants — sort by sortOrder, hero (first) + backup list (rest)
+  const sorted = [...rItems].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+  const hero = sorted[0]!;
+  const backups = sorted.slice(1);
 
   return (
     <div className="my-2 py-2 px-3 rounded-sm text-body leading-relaxed bg-accent-bg">
