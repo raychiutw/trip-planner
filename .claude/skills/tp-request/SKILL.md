@@ -120,7 +120,6 @@ curl -s -X PATCH \
 ### 回覆寫入方法
 
 reply 必須用 `node -e` + `JSON.stringify` 生成 JSON，禁止 printf/echo/backtick。
-**reply 開頭第一行必須是 `#N`**（N = request ID），後接換行再寫正文。範例：`'#42\n已更新 Day2 餐廳排序...'`。
 詳見 `references/reply-format.md`。
 
 ## 局部修改 vs 全面重整
