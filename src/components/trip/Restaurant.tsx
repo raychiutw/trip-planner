@@ -19,6 +19,7 @@ interface ReservationInfo {
 /** Restaurant data shape from D1 API. */
 export interface RestaurantData {
   name: string;
+  sortOrder?: number | null;
   category?: string | null;
   hours?: string | null;
   price?: string | null;
