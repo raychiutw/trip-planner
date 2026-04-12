@@ -45,6 +45,7 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 
 | 操作 | 端點 | 注意 |
 |------|------|------|
+| 新增 entry | `POST /api/trips/{tripId}/days/{dayNum}/entries` | 必填 `title`；選填 `sort_order`（省略則 append 到最後）、`time`、`description`、`maps` 等。回 201 |
 | 修改單一 entry | `PATCH /api/trips/{tripId}/entries/{eid}` | travel 用 flat fields：`travel_type` / `travel_desc` / `travel_min` |
 | 刪除單一 entry | `DELETE /api/trips/{tripId}/entries/{eid}` | **tp-request 禁止此操作**。刪除後須重算相鄰 travel |
 | 覆寫整天 | `PUT /api/trips/{tripId}/days/{N}` | 必須含 date + dayOfWeek + label，缺一回 400。travel 用巢狀：`travel: {type, desc, min}`。**tp-request 禁止此操作** |
