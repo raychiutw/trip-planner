@@ -5,8 +5,27 @@
 import type { AuthData } from './_types';
 import { AppError } from './_errors';
 
+/** snake_case → camelCase key conversion */
+function snakeToCamel(key: string): string {
+  return key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+}
+
+/** Recursively convert all object keys from snake_case to camelCase */
+function deepCamel(obj: unknown): unknown {
+  if (Array.isArray(obj)) return obj.map(deepCamel);
+  if (obj !== null && typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
+      result[snakeToCamel(key)] = deepCamel(val);
+    }
+    return result;
+  }
+  return obj;
+}
+
+/** JSON response with automatic deep snake_case → camelCase key conversion */
 export function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify(deepCamel(data)), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
 /** 型別安全的 auth 擷取 */

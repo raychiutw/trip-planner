@@ -55,7 +55,7 @@ export interface DayPinsData {
 interface TripMapProps {
   /** 所有天的資料（用於提取 pins）*/
   allDays: Record<number, Day>;
-  /** 天數概要列表（用於取得 day_num 排序）*/
+  /** 天數概要列表（用於取得 dayNum 排序）*/
   dayNums: number[];
 }
 

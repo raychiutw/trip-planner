@@ -42,7 +42,7 @@ describe('PUT /api/trips/:id/docs/:type', () => {
     const resp = await callHandler(onRequestPut, ctx);
     expect(resp.status).toBe(200);
 
-    // 驗證可以讀取（新格式：{ doc_type, title, entries }）
+    // 驗證可以讀取（新格式：{ docType, title, entries }）
     const getCtx = mockContext({
       request: new Request('https://test.com/api/trips/trip-docs/docs/flights'),
       env,
@@ -50,8 +50,8 @@ describe('PUT /api/trips/:id/docs/:type', () => {
     });
     const getResp = await callHandler(onRequestGet, getCtx);
     expect(getResp.status).toBe(200);
-    const data = await getResp.json() as { doc_type: string; title: string; entries: { content: string }[] };
-    expect(data.doc_type).toBe('flights');
+    const data = await getResp.json() as { docType: string; title: string; entries: { content: string }[] };
+    expect(data.docType).toBe('flights');
     expect(data.entries).toHaveLength(1);
     expect(data.entries[0].content).toContain('CI123');
   });
@@ -80,7 +80,7 @@ describe('PUT /api/trips/:id/docs/:type', () => {
     });
     const getResp = await callHandler(onRequestGet, getCtx);
     expect(getResp.status).toBe(200);
-    const data = await getResp.json() as { doc_type: string; title: string; entries: { section: string; title: string }[] };
+    const data = await getResp.json() as { docType: string; title: string; entries: { section: string; title: string }[] };
     expect(data.title).toBe('出發清單');
     expect(data.entries).toHaveLength(3);
     expect(data.entries[0].section).toBe('證件');

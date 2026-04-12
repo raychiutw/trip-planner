@@ -3,15 +3,15 @@ import { apiFetchRaw } from '../lib/apiClient';
 
 export interface RawRequest {
   id: number;
-  trip_id: string;
+  tripId: string;
   mode: string;
   message: string;
-  submitted_by: string | null;
+  submittedBy: string | null;
   reply: string | null;
   status: 'open' | 'processing' | 'completed' | 'failed';
-  processed_by: 'api' | 'job' | null;
-  created_at: string;
-  updated_at: string | null;
+  processedBy: 'api' | 'job' | null;
+  createdAt: string;
+  updatedAt: string | null;
 }
 
 interface UseRequestsResult {
@@ -23,7 +23,7 @@ interface UseRequestsResult {
   loadRequests: (tripId: string) => Promise<void>;
   loadMore: () => Promise<void>;
   appendRequest: (req: RawRequest) => void;
-  updateRequestStatus: (id: number, status: RawRequest['status'], processedBy?: RawRequest['processed_by']) => void;
+  updateRequestStatus: (id: number, status: RawRequest['status'], processedBy?: RawRequest['processedBy']) => void;
   refreshRequest: (id: number) => Promise<void>;
   sentinelRef: React.RefObject<HTMLDivElement | null>;
 }
@@ -94,7 +94,7 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
       const params = new URLSearchParams({
         tripId,
         limit: '10',
-        before: oldest.created_at,
+        before: oldest.createdAt,
         beforeId: String(oldest.id),
       });
       const res = await apiFetchRaw('/requests?' + params.toString());
@@ -133,10 +133,10 @@ export function useRequests(currentTripIdRef: React.RefObject<string | null>): U
   const updateRequestStatus = useCallback((
     id: number,
     status: RawRequest['status'],
-    processedBy?: RawRequest['processed_by'],
+    processedBy?: RawRequest['processedBy'],
   ) => {
     setRequests(prev => prev.map(r =>
-      r.id === id ? { ...r, status, ...(processedBy !== undefined ? { processed_by: processedBy } : {}) } : r
+      r.id === id ? { ...r, status, ...(processedBy !== undefined ? { processedBy } : {}) } : r
     ));
   }, []);
 

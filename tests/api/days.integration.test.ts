@@ -29,8 +29,8 @@ describe('GET /api/trips/:id/days', () => {
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<Record<string, unknown>>;
     expect(data).toHaveLength(5);
-    expect(data[0].day_num).toBe(1);
-    expect(data[4].day_num).toBe(5);
+    expect(data[0].dayNum).toBe(1);
+    expect(data[4].dayNum).toBe(5);
   });
 
   it('不存在的行程 → 空陣列', async () => {

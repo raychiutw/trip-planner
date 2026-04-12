@@ -8,7 +8,7 @@ import type { DocEntry } from '../components/trip/DocCard';
 
 /** Shape of a single doc returned from /api/trips/:id/docs/:key */
 export interface DocData {
-  doc_type?: string;
+  docType?: string;
   title?: string;
   entries?: DocEntry[];
 }
@@ -17,18 +17,17 @@ export interface DocData {
 /* ===== API response normaliser ===== */
 
 /**
- * The API returns snake_case fields (day_num, day_of_week, updated_at).
- * Normalise to the camelCase Day interface before storing.
- * Each field checks camelCase first, falls back to snake_case.
+ * The API now returns camelCase fields (dayNum, dayOfWeek, updatedAt).
+ * Normalise to the Day interface before storing.
  */
 function mapDayResponse(raw: Record<string, unknown>): Day {
   return {
     id: raw.id as number,
-    dayNum: (raw.dayNum as number | undefined) ?? (raw.day_num as number),
+    dayNum: raw.dayNum as number,
     date: (raw.date as string | null | undefined) ?? null,
-    dayOfWeek: (raw.dayOfWeek as string | undefined) ?? (raw.day_of_week as string | null | undefined) ?? null,
+    dayOfWeek: (raw.dayOfWeek as string | null | undefined) ?? null,
     label: (raw.label as string | null | undefined) ?? null,
-    updatedAt: (raw.updatedAt as string | undefined) ?? (raw.updated_at as string | undefined),
+    updatedAt: raw.updatedAt as string | undefined,
     hotel: (raw.hotel as Day['hotel']) ?? null,
     timeline: (raw.timeline as Day['timeline']) ?? [],
   };
@@ -144,12 +143,12 @@ export function useTrip(tripId: string | null): UseTripReturn {
         setTrip(meta);
 
         const sorted = [...daysList].sort(
-          (a, b) => a.day_num - b.day_num,
+          (a, b) => a.dayNum - b.dayNum,
         );
         setDays(sorted);
 
         // Determine initial day (first day by default)
-        const firstDayNum = sorted.length > 0 ? (sorted[0]?.day_num ?? 0) : 0;
+        const firstDayNum = sorted.length > 0 ? (sorted[0]?.dayNum ?? 0) : 0;
         if (firstDayNum > 0) {
           setCurrentDayNum(firstDayNum);
         }
@@ -171,7 +170,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
           const first = sorted[0];
           if (first) {
             try {
-              await fetchDay(first.day_num);
+              await fetchDay(first.dayNum);
             } catch (err) {
               if (err instanceof ApiError) showErrorToast(err.message, err.severity);
             }
@@ -183,7 +182,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
           if (remaining.length > 0) {
             await Promise.allSettled(
               remaining.map((d) =>
-                fetchDay(d.day_num).catch((err) => {
+                fetchDay(d.dayNum).catch((err) => {
                   if (err instanceof ApiError) showErrorToast(err.message, err.severity);
                 }),
               ),

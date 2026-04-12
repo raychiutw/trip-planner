@@ -5,9 +5,9 @@
  * The mock data mirrors the REAL D1 API response format:
  * - trips.ts      → GET /api/trips       → array of trip rows
  * - trips/[id].ts → GET /api/trips/:id   → single trip row (footer parsed to object)
- * - days.ts       → GET /api/trips/:id/days → array of { id, day_num, date, day_of_week, label }
+ * - days.ts       → GET /api/trips/:id/days → array of { id, dayNum, date, dayOfWeek, label }
  * - days/[num].ts → GET /api/trips/:id/days/:num → full day with hotel, timeline, restaurants, shopping
- * - docs/[type].ts → GET /api/trips/:id/docs/:type → { doc_type, content (JSON string), updated_at }
+ * - docs/[type].ts → GET /api/trips/:id/docs/:type → { docType, content (JSON string), updatedAt }
  */
 
 /* ===== /api/trips (trip list) ===== */
@@ -17,10 +17,10 @@ const MOCK_TRIPS_LIST = [
     name: '沖繩自駕五日遊',
     owner: 'Ray',
     title: '2026 沖繩自駕五日遊',
-    self_drive: 1,
+    selfDrive: 1,
     countries: '["JP"]',
     published: 1,
-    auto_scroll: '["2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05"]',
+    autoScroll: '["2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05"]',
     footer: '{"title":"沖繩自駕五日遊","dates":"2026/07/01 — 07/05","tagline":"享受沖繩的陽光與海風","budget":"預算：每人 NT$35,000","exchangeNote":"匯率：1 JPY ≈ 0.22 TWD"}',
   },
   {
@@ -28,10 +28,10 @@ const MOCK_TRIPS_LIST = [
     name: '釜山三日遊',
     owner: 'CeliaDemyKathy',
     title: '2026 釜山三日遊',
-    self_drive: 0,
+    selfDrive: 0,
     countries: '["KR"]',
     published: 1,
-    auto_scroll: '["2026-08-10","2026-08-11","2026-08-12"]',
+    autoScroll: '["2026-08-10","2026-08-11","2026-08-12"]',
     footer: '{"title":"釜山三日遊","dates":"2026/08/10 — 08/12","tagline":"韓國美食之旅","budget":"預算：每人 NT$25,000"}',
   },
 ];
@@ -44,11 +44,11 @@ const MOCK_TRIP_META_OKINAWA = {
   owner: 'Ray',
   title: '2026 沖繩自駕五日遊',
   description: '五天四夜沖繩自駕行程',
-  og_description: '沖繩自駕五日遊行程規劃',
-  self_drive: 1,
+  ogDescription: '沖繩自駕五日遊行程規劃',
+  selfDrive: 1,
   countries: '["JP"]',
   published: 1,
-  auto_scroll: '["2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05"]',
+  autoScroll: '["2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05"]',
   // footer is parsed to object by the API handler
   footer: {
     title: '沖繩自駕五日遊',
@@ -67,11 +67,11 @@ const MOCK_TRIP_META_BUSAN = {
   owner: 'CeliaDemyKathy',
   title: '2026 釜山三日遊',
   description: '三天兩夜釜山美食行程',
-  og_description: '釜山三日遊行程規劃',
-  self_drive: 0,
+  ogDescription: '釜山三日遊行程規劃',
+  selfDrive: 0,
   countries: '["KR"]',
   published: 1,
-  auto_scroll: '["2026-08-10","2026-08-11","2026-08-12"]',
+  autoScroll: '["2026-08-10","2026-08-11","2026-08-12"]',
   footer: {
     title: '釜山三日遊',
     dates: '2026/08/10 — 08/12',
@@ -82,29 +82,29 @@ const MOCK_TRIP_META_BUSAN = {
 
 /* ===== /api/trips/:id/days (days summary) ===== */
 const MOCK_DAYS_OKINAWA = [
-  { id: 1, day_num: 1, date: '2026-07-01', day_of_week: '三', label: '那霸市區' },
-  { id: 2, day_num: 2, date: '2026-07-02', day_of_week: '四', label: '美國村' },
-  { id: 3, day_num: 3, date: '2026-07-03', day_of_week: '五', label: '海洋博公園' },
-  { id: 4, day_num: 4, date: '2026-07-04', day_of_week: '六', label: '北谷・恩納' },
-  { id: 5, day_num: 5, date: '2026-07-05', day_of_week: '日', label: '回程' },
+  { id: 1, dayNum: 1, date: '2026-07-01', dayOfWeek: '三', label: '那霸市區' },
+  { id: 2, dayNum: 2, date: '2026-07-02', dayOfWeek: '四', label: '美國村' },
+  { id: 3, dayNum: 3, date: '2026-07-03', dayOfWeek: '五', label: '海洋博公園' },
+  { id: 4, dayNum: 4, date: '2026-07-04', dayOfWeek: '六', label: '北谷・恩納' },
+  { id: 5, dayNum: 5, date: '2026-07-05', dayOfWeek: '日', label: '回程' },
 ];
 
 const MOCK_DAYS_BUSAN = [
-  { id: 1, day_num: 1, date: '2026-08-10', day_of_week: '一', label: '海雲臺' },
-  { id: 2, day_num: 2, date: '2026-08-11', day_of_week: '二', label: '南浦洞' },
-  { id: 3, day_num: 3, date: '2026-08-12', day_of_week: '三', label: '回程' },
+  { id: 1, dayNum: 1, date: '2026-08-10', dayOfWeek: '一', label: '海雲臺' },
+  { id: 2, dayNum: 2, date: '2026-08-11', dayOfWeek: '二', label: '南浦洞' },
+  { id: 3, dayNum: 3, date: '2026-08-12', dayOfWeek: '三', label: '回程' },
 ];
 
 /* ===== /api/trips/okinawa-trip-2026-Ray/days/1 (full day) ===== */
 const MOCK_DAY1_OKINAWA = {
   id: 1,
-  day_num: 1,
+  dayNum: 1,
   date: '2026-07-01',
-  day_of_week: '三',
+  dayOfWeek: '三',
   label: '那霸市區',
   hotel: {
     id: 1,
-    day_id: 1,
+    dayId: 1,
     name: 'Hilton 沖繩那霸首里城',
     checkout: '11:00',
     address: '沖繩縣那霸市首里山川町 1-132-1',
@@ -116,14 +116,14 @@ const MOCK_DAY1_OKINAWA = {
     shopping: [
       {
         id: 1,
-        parent_type: 'hotel',
-        parent_id: 1,
+        parentType: 'hotel',
+        parentId: 1,
         name: '那霸國際通購物',
         category: '購物',
         maps: '國際通商店街',
-        google_rating: 4.2,
+        googleRating: 4.2,
         hours: '10:00-22:00',
-        must_buy: '紅芋塔, 金楚糕, 黑糖',
+        mustBuy: '紅芋塔, 金楚糕, 黑糖',
         note: '附近步行 10 分鐘',
       },
     ],
@@ -131,50 +131,50 @@ const MOCK_DAY1_OKINAWA = {
   timeline: [
     {
       id: 101,
-      day_id: 1,
-      sort_order: 0,
+      dayId: 1,
+      sortOrder: 0,
       time: '09:00-10:30',
       title: '首里城',
       description: '世界遺產，琉球王朝的象徵',
       maps: '首里城公園',
       mapcode: '33 161 526*71',
-      google_rating: 4.5,
+      googleRating: 4.5,
       note: '建議早上前往避開人潮',
-      travel_type: 'car',
-      travel_desc: '從飯店開車 15 分鐘',
-      travel_min: 15,
+      travelType: 'car',
+      travelDesc: '從飯店開車 15 分鐘',
+      travelMin: 15,
       // No location — tests fallback to maps+mapcode
       location: null,
       travel: { type: 'car', desc: '從飯店開車 15 分鐘', min: 15 },
       restaurants: [
         {
           id: 201,
-          entry_id: 101,
+          entryId: 101,
           name: '首里そば',
           category: '午餐',
           address: '沖繩縣那霸市首里赤田町 1-7',
           maps: '首里そば',
-          google_rating: 4.3,
+          googleRating: 4.3,
           hours: '11:30-14:00',
           price: '¥800-1200',
           description: '沖繩傳統麵食',
           reservation: '不需預約',
-          reservation_url: null,
+          reservationUrl: null,
           note: null,
         },
         {
           id: 202,
-          entry_id: 101,
+          entryId: 101,
           name: '花笠食堂',
           category: '午餐',
           address: '沖繩縣那霸市牧志 3-2-48',
           maps: '花笠食堂',
-          google_rating: 4.1,
+          googleRating: 4.1,
           hours: '11:00-21:00',
           price: '¥600-1000',
           description: '家庭料理定食',
           reservation: null,
-          reservation_url: null,
+          reservationUrl: null,
           note: null,
         },
       ],
@@ -182,50 +182,50 @@ const MOCK_DAY1_OKINAWA = {
     },
     {
       id: 102,
-      day_id: 1,
-      sort_order: 1,
+      dayId: 1,
+      sortOrder: 1,
       time: '11:00-12:30',
       title: '波上宮',
       description: '沖繩最古老的神社',
       maps: null,
       mapcode: null,
-      google_rating: 4.0,
+      googleRating: 4.0,
       note: null,
-      travel_type: 'car',
-      travel_desc: '開車 20 分鐘',
-      travel_min: 20,
+      travelType: 'car',
+      travelDesc: '開車 20 分鐘',
+      travelMin: 20,
       location: '[{"name":"波上宮","googleQuery":"https://www.google.com/maps/search/波上宮","appleQuery":"https://maps.apple.com/?q=波上宮"}]',
       travel: { type: 'car', desc: '開車 20 分鐘', min: 20 },
       restaurants: [],
       shopping: [
         {
           id: 301,
-          parent_type: 'entry',
-          parent_id: 102,
+          parentType: 'entry',
+          parentId: 102,
           name: '波上宮御守',
           category: '紀念品',
           maps: '波上宮',
-          google_rating: null,
+          googleRating: null,
           hours: '09:00-17:00',
-          must_buy: '御守, 繪馬',
+          mustBuy: '御守, 繪馬',
           note: '境內販售',
         },
       ],
     },
     {
       id: 103,
-      day_id: 1,
-      sort_order: 2,
+      dayId: 1,
+      sortOrder: 2,
       time: '14:00-16:00',
       title: '國際通散步',
       description: '沖繩最熱鬧的商店街',
       maps: '國際通',
       mapcode: null,
-      google_rating: null,
+      googleRating: null,
       note: '適合下午閒逛購物',
-      travel_type: 'walking',
-      travel_desc: '步行 10 分鐘',
-      travel_min: 10,
+      travelType: 'walking',
+      travelDesc: '步行 10 分鐘',
+      travelMin: 10,
       location: null,
       travel: { type: 'walking', desc: '步行 10 分鐘', min: 10 },
       restaurants: [],
@@ -233,34 +233,34 @@ const MOCK_DAY1_OKINAWA = {
     },
     {
       id: 104,
-      day_id: 1,
-      sort_order: 3,
+      dayId: 1,
+      sortOrder: 3,
       time: '17:00-18:30',
       title: '牧志公設市場',
       description: '當地人的廚房，品嚐新鮮海產',
       maps: '牧志公設市場',
       mapcode: null,
-      google_rating: 4.2,
+      googleRating: 4.2,
       note: null,
-      travel_type: 'walking',
-      travel_desc: '步行 5 分鐘',
-      travel_min: 5,
+      travelType: 'walking',
+      travelDesc: '步行 5 分鐘',
+      travelMin: 5,
       location: '{"name":"牧志公設市場","googleQuery":"https://www.google.com/maps/search/牧志公設市場","appleQuery":"https://maps.apple.com/?q=牧志公設市場"}',
       travel: { type: 'walking', desc: '步行 5 分鐘', min: 5 },
       restaurants: [
         {
           id: 203,
-          entry_id: 104,
+          entryId: 104,
           name: '市場二樓食堂',
           category: '晚餐',
           address: '沖繩縣那霸市松尾 2-10-1',
           maps: '牧志公設市場二樓',
-          google_rating: 4.4,
+          googleRating: 4.4,
           hours: '11:00-20:00',
           price: '¥1500-3000',
           description: '一樓買海鮮二樓代煮',
           reservation: '不需預約',
-          reservation_url: null,
+          reservationUrl: null,
           note: null,
         },
       ],
@@ -275,13 +275,13 @@ const MOCK_DAY1_OKINAWA = {
 function buildMinimalDay(dayNum, date, dayOfWeek, label) {
   return {
     id: dayNum,
-    day_num: dayNum,
+    dayNum: dayNum,
     date: date,
-    day_of_week: dayOfWeek,
+    dayOfWeek: dayOfWeek,
     label: label,
     hotel: {
       id: dayNum * 10,
-      day_id: dayNum,
+      dayId: dayNum,
       name: 'Day ' + dayNum + ' Hotel',
       checkout: '11:00',
       address: '沖繩',
@@ -295,18 +295,18 @@ function buildMinimalDay(dayNum, date, dayOfWeek, label) {
     timeline: [
       {
         id: dayNum * 100 + 1,
-        day_id: dayNum,
-        sort_order: 0,
+        dayId: dayNum,
+        sortOrder: 0,
         time: '09:00-12:00',
         title: label + '景點',
         description: '第' + dayNum + '天行程',
         maps: label,
         mapcode: null,
-        google_rating: null,
+        googleRating: null,
         note: null,
-        travel_type: 'car',
-        travel_desc: '開車 30 分鐘',
-        travel_min: 30,
+        travelType: 'car',
+        travelDesc: '開車 30 分鐘',
+        travelMin: 30,
         location: null,
         travel: { type: 'car', desc: '開車 30 分鐘', min: 30 },
         restaurants: [],
@@ -324,13 +324,13 @@ const MOCK_DAY5_OKINAWA = buildMinimalDay(5, '2026-07-05', '日', '回程');
 /* ===== Busan Day 1 (with Naver links) ===== */
 const MOCK_DAY1_BUSAN = {
   id: 1,
-  day_num: 1,
+  dayNum: 1,
   date: '2026-08-10',
-  day_of_week: '一',
+  dayOfWeek: '一',
   label: '海雲臺',
   hotel: {
     id: 50,
-    day_id: 1,
+    dayId: 1,
     name: 'Park Hyatt Busan',
     checkout: '12:00',
     address: '釜山廣域市海雲臺區',
@@ -344,18 +344,18 @@ const MOCK_DAY1_BUSAN = {
   timeline: [
     {
       id: 501,
-      day_id: 1,
-      sort_order: 0,
+      dayId: 1,
+      sortOrder: 0,
       time: '10:00-12:00',
       title: '海雲臺海水浴場',
       description: '釜山最著名的海灘',
       maps: null,
       mapcode: null,
-      google_rating: 4.5,
+      googleRating: 4.5,
       note: null,
-      travel_type: 'train',
-      travel_desc: '地鐵 20 分鐘',
-      travel_min: 20,
+      travelType: 'train',
+      travelDesc: '地鐵 20 分鐘',
+      travelMin: 20,
       location: '{"name":"海雲臺海水浴場","googleQuery":"https://www.google.com/maps/search/해운대해수욕장","appleQuery":"https://maps.apple.com/?q=해운대해수욕장","naverQuery":"https://map.naver.com/v5/search/해운대해수욕장"}',
       travel: { type: 'train', desc: '地鐵 20 分鐘', min: 20 },
       restaurants: [],
@@ -369,7 +369,7 @@ const MOCK_DAY3_BUSAN = buildMinimalDay(3, '2026-08-12', '三', '回程');
 
 /* ===== /api/trips/:id/docs/:type ===== */
 const MOCK_DOC_FLIGHTS_OKINAWA = {
-  doc_type: 'flights',
+  docType: 'flights',
   content: JSON.stringify({
     title: '航班資訊',
     content: {
@@ -380,11 +380,11 @@ const MOCK_DOC_FLIGHTS_OKINAWA = {
       airline: { name: '中華航空', note: '託運行李 30kg' },
     },
   }),
-  updated_at: '2026-01-15T10:00:00Z',
+  updatedAt: '2026-01-15T10:00:00Z',
 };
 
 const MOCK_DOC_CHECKLIST_OKINAWA = {
-  doc_type: 'checklist',
+  docType: 'checklist',
   content: JSON.stringify({
     title: '出發前確認',
     content: {
@@ -395,11 +395,11 @@ const MOCK_DOC_CHECKLIST_OKINAWA = {
       ],
     },
   }),
-  updated_at: '2026-01-15T10:00:00Z',
+  updatedAt: '2026-01-15T10:00:00Z',
 };
 
 const MOCK_DOC_BACKUP_OKINAWA = {
-  doc_type: 'backup',
+  docType: 'backup',
   content: JSON.stringify({
     title: '備案行程',
     content: {
@@ -409,11 +409,11 @@ const MOCK_DOC_BACKUP_OKINAWA = {
       ],
     },
   }),
-  updated_at: '2026-01-15T10:00:00Z',
+  updatedAt: '2026-01-15T10:00:00Z',
 };
 
 const MOCK_DOC_EMERGENCY_OKINAWA = {
-  doc_type: 'emergency',
+  docType: 'emergency',
   content: JSON.stringify({
     title: '緊急聯絡',
     content: {
@@ -436,11 +436,11 @@ const MOCK_DOC_EMERGENCY_OKINAWA = {
       ],
     },
   }),
-  updated_at: '2026-01-15T10:00:00Z',
+  updatedAt: '2026-01-15T10:00:00Z',
 };
 
 const MOCK_DOC_SUGGESTIONS_OKINAWA = {
-  doc_type: 'suggestions',
+  docType: 'suggestions',
   content: JSON.stringify({
     title: '行程建議',
     content: {
@@ -450,7 +450,7 @@ const MOCK_DOC_SUGGESTIONS_OKINAWA = {
       ],
     },
   }),
-  updated_at: '2026-01-15T10:00:00Z',
+  updatedAt: '2026-01-15T10:00:00Z',
 };
 
 /* ===== Route lookup table ===== */

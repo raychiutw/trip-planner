@@ -11,8 +11,8 @@ import type { Trip } from '../types/trip';
 
 type RawDayEntry = {
   time?: unknown; title?: unknown; description?: unknown; body?: unknown; note?: unknown;
-  google_rating?: unknown; rating?: unknown; maps?: unknown; source?: unknown;
-  travel?: unknown; travel_type?: unknown; travel_desc?: unknown; travel_min?: unknown;
+  googleRating?: unknown; rating?: unknown; maps?: unknown; source?: unknown;
+  travel?: unknown; travelType?: unknown; travelDesc?: unknown; travelMin?: unknown;
   restaurants?: Record<string, unknown>[];
   shopping?: Record<string, unknown>[];
   [key: string]: unknown;
@@ -24,7 +24,7 @@ type RawHotel = {
   [key: string]: unknown;
 };
 type RawDay = {
-  day_num?: number; date?: string; day_of_week?: string; label?: string;
+  dayNum?: number; date?: string; dayOfWeek?: string; label?: string;
   hotel?: RawHotel | null;
   timeline?: RawDayEntry[];
   [key: string]: unknown;
@@ -52,20 +52,20 @@ async function fetchAllData(tripId: string) {
   // 1. meta + day summaries
   const [meta, daySummaries] = await Promise.all([
     apiFetch<Record<string, unknown>>(`/trips/${tripId}`),
-    apiFetch<Array<{ day_num: number; date?: string; day_of_week?: string; label?: string }>>(`/trips/${tripId}/days`),
+    apiFetch<Array<{ dayNum: number; date?: string; dayOfWeek?: string; label?: string }>>(`/trips/${tripId}/days`),
   ]);
 
   // 2. all full days + all docs in parallel
   const [fullDays, docResults] = await Promise.all([
     Promise.all(
       daySummaries.map(ds =>
-        apiFetch<RawDay>(`/trips/${tripId}/days/${ds.day_num}`)
+        apiFetch<RawDay>(`/trips/${tripId}/days/${ds.dayNum}`)
           .catch(() => null),
       ),
     ),
     Promise.all(
       DOC_KEYS.map(dtype =>
-        apiFetch<{ doc_type: string; content: string; updated_at: string }>(`/trips/${tripId}/docs/${dtype}`)
+        apiFetch<{ docType: string; content: string; updatedAt: string }>(`/trips/${tripId}/docs/${dtype}`)
           .then(d => {
             let parsed: unknown = d.content;
             if (typeof parsed === 'string') {
@@ -120,11 +120,11 @@ export async function downloadTripFormat(
 
       for (const day of daysData) {
         // Day header
-        md += `## Day ${day.day_num}`;
+        md += `## Day ${day.dayNum}`;
         if (day.label) md += ` ${day.label}`;
         if (day.date) {
           md += ` — ${day.date}`;
-          if (day.day_of_week) md += `（${day.day_of_week}）`;
+          if (day.dayOfWeek) md += `（${day.dayOfWeek}）`;
         }
         md += '\n\n';
 
@@ -148,7 +148,7 @@ export async function downloadTripFormat(
             md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
             md += '|------|------|------|---------|------|\n';
             for (const sh of hotelShopping) {
-              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.google_rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating)} | ${s(sh.hours)} | ${s(sh.mustBuy)} |\n`;
             }
           }
           md += '\n';
@@ -160,7 +160,7 @@ export async function downloadTripFormat(
           const e = timeline[i];
           if (!e) continue;
           md += `### ${i + 1} ${s(e.time)} ${s(e.title)}`;
-          if (e.google_rating) md += ` ★ ${e.google_rating}`;
+          if (e.googleRating) md += ` ★ ${e.googleRating}`;
           md += '\n';
 
           if (e.description) md += `${s(e.description)}\n`;
@@ -169,10 +169,10 @@ export async function downloadTripFormat(
 
           // Travel
           const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
-          if (travel?.type || e.travel_type) {
-            const tType = s(travel?.type ?? e.travel_type);
-            const tDesc = s(travel?.desc ?? e.travel_desc);
-            const tMin = travel?.min ?? e.travel_min;
+          if (travel?.type || e.travelType) {
+            const tType = s(travel?.type ?? e.travelType);
+            const tDesc = s(travel?.desc ?? e.travelDesc);
+            const tMin = travel?.min ?? e.travelMin;
             md += `🚗 → ${tType}`;
             if (tDesc) md += ` ${tDesc}`;
             if (tMin) md += `（${tMin} 分）`;
@@ -186,7 +186,7 @@ export async function downloadTripFormat(
             md += '| 餐廳 | 類別 | 評分 | 價格 | 營業時間 | 備註 |\n';
             md += '|------|------|------|------|---------|------|\n';
             for (const r of restaurants) {
-              md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.google_rating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
+              md += `| ${s(r.name)} | ${s(r.category)} | ${s(r.googleRating)} | ${s(r.price)} | ${s(r.hours)} | ${s(r.note)} |\n`;
             }
           }
 
@@ -197,7 +197,7 @@ export async function downloadTripFormat(
             md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
             md += '|------|------|------|---------|------|\n';
             for (const sh of shopping) {
-              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.google_rating)} | ${s(sh.hours)} | ${s(sh.must_buy)} |\n`;
+              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating)} | ${s(sh.hours)} | ${s(sh.mustBuy)} |\n`;
             }
           }
 
@@ -231,9 +231,9 @@ export async function downloadTripFormat(
       const csvCell = (v: unknown) => s(v);
 
       for (const day of daysData) {
-        const dayNum = s(day.day_num);
+        const dayNum = s(day.dayNum);
         const dayDate = s(day.date);
-        const dayWeek = s(day.day_of_week);
+        const dayWeek = s(day.dayOfWeek);
 
         // Hotel row
         const hotel = day.hotel;
@@ -249,12 +249,12 @@ export async function downloadTripFormat(
         const timeline = day.timeline ?? [];
         for (const e of timeline) {
           const travel = e.travel !== null && typeof e.travel === 'object' ? e.travel as Record<string, unknown> : null;
-          const travelType = csvCell(travel?.type ?? e.travel_type);
-          const travelMin = csvCell(travel?.min ?? e.travel_min);
+          const travelType = csvCell(travel?.type ?? e.travelType);
+          const travelMin = csvCell(travel?.min ?? e.travelMin);
 
           const baseRow = [
             dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title),
-            csvCell(e.google_rating), csvCell(e.description), csvCell(e.note),
+            csvCell(e.googleRating), csvCell(e.description), csvCell(e.note),
             travelType, travelMin,
           ];
 
@@ -268,9 +268,9 @@ export async function downloadTripFormat(
             // For subsequent rows, repeat entry base columns
             const row = n === 0 ? [...baseRow] : [dayNum, dayDate, dayWeek, csvCell(e.time), csvCell(e.title), '', '', '', '', ''];
             // Restaurant columns
-            row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.google_rating) : '', r ? csvCell(r.price) : '');
+            row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.googleRating) : '', r ? csvCell(r.price) : '');
             // Shopping columns
-            row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.must_buy) : '');
+            row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.mustBuy) : '');
             // Hotel columns (empty for timeline entries)
             row.push('', '');
             rows.push(row);

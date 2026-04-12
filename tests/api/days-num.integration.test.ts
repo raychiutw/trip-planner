@@ -28,7 +28,7 @@ describe('GET /api/trips/:id/days/:num', () => {
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
     const data = await resp.json() as Record<string, unknown>;
-    expect(data.day_num).toBe(1);
+    expect(data.dayNum).toBe(1);
     expect(data.timeline).toBeDefined();
   });
 

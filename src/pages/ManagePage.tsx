@@ -124,7 +124,7 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
           </div>
           {/* Meta: time + mode + status + processor */}
           <div className="flex items-center gap-2 mt-1 justify-end px-1 flex-wrap">
-            <span className="text-caption2 text-muted">{formatDate(req.created_at)}</span>
+            <span className="text-caption2 text-muted">{formatDate(req.createdAt)}</span>
             <span className={`text-caption2 font-medium ${req.mode === 'trip-edit' ? 'text-accent' : 'text-plan-text'}`}>
               {req.mode === 'trip-edit' ? '改行程' : '問建議'}
             </span>
@@ -133,9 +133,9 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
               {req.status === 'completed' && <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M2.5 6l2.5 2.5 4.5-5" /></svg>}
               {req.status === 'failed' && <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 3l6 6M9 3l-6 6" /></svg>}
               {getStatusLabel(req.status)}
-              {req.status === 'processing' && <ElapsedTime updatedAt={req.updated_at} />}
+              {req.status === 'processing' && <ElapsedTime updatedAt={req.updatedAt} />}
             </span>
-            {(req.status === 'completed' || req.status === 'failed') && <ProcessorIcon processedBy={req.processed_by} />}
+            {(req.status === 'completed' || req.status === 'failed') && <ProcessorIcon processedBy={req.processedBy} />}
           </div>
         </div>
       </div>

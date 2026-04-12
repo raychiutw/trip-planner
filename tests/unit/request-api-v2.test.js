@@ -173,9 +173,9 @@ describe('useRequests hook — v2 methods', () => {
     expect(useRequestsTs).toContain('rootMargin: \'200px 0px 0px 0px\'');
   });
 
-  it('includes processed_by and updated_at in RawRequest', () => {
-    expect(useRequestsTs).toContain("processed_by:");
-    expect(useRequestsTs).toContain("updated_at:");
+  it('includes processedBy and updatedAt in RawRequest', () => {
+    expect(useRequestsTs).toContain("processedBy:");
+    expect(useRequestsTs).toContain("updatedAt:");
   });
 });
 
