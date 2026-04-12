@@ -18,8 +18,8 @@
         <string>/Users/ray/.bun/bin:/usr/local/bin:/usr/bin:/bin</string>
     </dict>
     <key>StandardOutPath</key>
-    <string>/Users/ray/Projects/trip-planner/scripts/logs/request-job-stdout.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/tp-request/request-job-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/ray/Projects/trip-planner/scripts/logs/request-job-stderr.log</string>
+    <string>/Users/ray/Projects/trip-planner/scripts/logs/tp-request/request-job-stderr.log</string>
 </dict>
 </plist>

@@ -3,7 +3,7 @@
 set -eo pipefail
 
 PROJECT_DIR="/Users/ray/Projects/trip-planner"
-LOG_DIR="$PROJECT_DIR/scripts/logs"
+LOG_DIR="$PROJECT_DIR/scripts/logs/tp-request"
 LOG_FILE="$LOG_DIR/tripline-job-$(date +%Y-%m-%d).log"
 STALE_THRESHOLD_MIN=20  # > Claude 15 min timeout，避免 race
 
