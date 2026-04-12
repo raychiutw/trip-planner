@@ -96,7 +96,7 @@ const DaySection = React.memo(function DaySection({
         {daySummary?.date && (
           <span className="text-subheadline text-muted ml-auto whitespace-nowrap">
             {daySummary.date}
-            {daySummary.day_of_week && `（${daySummary.day_of_week}）`}
+            {daySummary.dayOfWeek && `（${daySummary.dayOfWeek}）`}
           </span>
         )}
         {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}

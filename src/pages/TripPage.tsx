@@ -296,14 +296,14 @@ export default function TripPage() {
 
   /* --- Sorted day nums --- */
   const dayNums = useMemo(
-    () => days.map((d) => d.day_num).sort((a, b) => a - b),
+    () => days.map((d) => d.dayNum).sort((a, b) => a - b),
     [days],
   );
 
   /* --- Day summary map for O(1) lookup (#11) --- */
   const daySummaryMap = useMemo(() => {
     const map = new Map<number, (typeof days)[number]>();
-    for (const d of days) map.set(d.day_num, d);
+    for (const d of days) map.set(d.dayNum, d);
     return map;
   }, [days]);
 
@@ -337,7 +337,7 @@ export default function TripPage() {
   /* --- Today's day_num for DayNav today marker (timezone-aware) --- */
   const todayDayNum = useMemo(() => {
     const match = days.find((d) => d.date === localToday);
-    return match?.day_num;
+    return match?.dayNum;
   }, [days, localToday]);
 
   /* --- 全覽模式狀態（F006）--- */

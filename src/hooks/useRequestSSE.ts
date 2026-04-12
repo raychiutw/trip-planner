@@ -45,9 +45,9 @@ export function useRequestSSE(requestId: number | null): UseRequestSSEResult {
       try {
         const res = await apiFetchRaw(`/requests/${id}`);
         if (!res.ok) return;
-        const data = await res.json() as { status: RequestStatus; processed_by: string | null };
+        const data = await res.json() as { status: RequestStatus; processedBy: string | null };
         setStatus(data.status);
-        setProcessedBy((data.processed_by as ProcessedBy) ?? null);
+        setProcessedBy((data.processedBy as ProcessedBy) ?? null);
         if (data.status === 'completed' || data.status === 'failed') {
           if (pollingRef.current) {
             clearInterval(pollingRef.current);

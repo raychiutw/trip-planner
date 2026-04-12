@@ -20,9 +20,9 @@ const WEEKDAYS = '日一二三四五六';
 
 /** Format pill label: MM/DD */
 export function formatPillLabel(day: DaySummary): string {
-  if (!day.date) return String(day.day_num);
+  if (!day.date) return String(day.dayNum);
   const d = new Date(day.date + 'T00:00:00');
-  if (isNaN(d.getTime())) return String(day.day_num);
+  if (isNaN(d.getTime())) return String(day.dayNum);
   const mm = d.getMonth() + 1;
   const dd = d.getDate();
   return `${mm}/${dd}`;
@@ -30,7 +30,7 @@ export function formatPillLabel(day: DaySummary): string {
 
 /** Format tooltip content */
 function formatTooltip(day: DaySummary): string {
-  const parts: string[] = [`Day ${day.day_num}`];
+  const parts: string[] = [`Day ${day.dayNum}`];
   if (day.date) {
     const d = new Date(day.date + 'T00:00:00');
     if (!isNaN(d.getTime())) {
@@ -246,7 +246,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
             />
           )}
           {days.map((d) => {
-            const dayNum = d.day_num;
+            const dayNum = d.dayNum;
             const isActive = !isTripMapMode && dayNum === currentDayNum;
             const isToday = dayNum === todayDayNum;
             const showTooltip = tooltipDay === dayNum;

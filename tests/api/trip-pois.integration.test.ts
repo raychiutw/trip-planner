@@ -39,7 +39,7 @@ describe('POST /api/trips/:id/entries/:eid/trip-pois', () => {
     expect(resp.status).toBe(201);
     const data = await resp.json() as Record<string, unknown>;
     tripPoiId = data.id as number;
-    expect(data.poi_id).toBeDefined();
+    expect(data.poiId).toBeDefined();
 
     // 驗證 pois master 已建立
     const poi = await db.prepare('SELECT * FROM pois WHERE name = ?').bind('すし三昧').first();

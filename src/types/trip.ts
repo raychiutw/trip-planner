@@ -18,7 +18,7 @@ export interface Location {
   googleQuery?: string;
   appleQuery?: string;
   mapcode?: string;
-  geocode_status?: string;
+  geocodeStatus?: string;
 }
 
 /** Travel leg assembled from entries.travel_type / travel_desc / travel_min */
@@ -254,10 +254,9 @@ export interface Day {
  */
 export interface DaySummary {
   id: number;
-  /** DB column `day_num` — not renamed via mapRow at this endpoint */
-  day_num: number;
+  dayNum: number;
   date?: string | null;
-  day_of_week?: string | null;
+  dayOfWeek?: string | null;
   label?: string | null;
 }
 
