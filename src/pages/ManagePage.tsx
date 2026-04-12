@@ -152,6 +152,7 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
                 </svg>
               </div>
               <span className="text-caption2 font-semibold text-muted">Tripline</span>
+              <span className="text-caption2 text-muted/50">#{req.id}</span>
             </div>
             <div className="bg-secondary text-foreground rounded-2xl rounded-bl-sm px-4 py-2.5">
               {req.reply ? (
