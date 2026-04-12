@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.0.0] - 2026-04-12
+
+### Changed
+- **API 統一 camelCase 回應**：`json()` 內建 `deepCamel` 轉換，所有 API response key 自動從 snake_case 轉為 camelCase（如 `sort_order` → `sortOrder`、`day_num` → `dayNum`）
+- 前端 `mapDay.ts` Raw interfaces 全面改用 camelCase，移除所有 snake_case 欄位
+- `useTrip`、`useRequests`、`ManagePage` 等同步更新
+
 ## [1.1.8.1] - 2026-04-12
 
 ### Fixed
