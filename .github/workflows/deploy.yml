@@ -1,0 +1,84 @@
+name: Deploy — D1 migrations
+
+# Closes the race window where Cloudflare Pages deploys new Worker code
+# before a schema migration has been applied to production D1.
+#
+# Before this workflow: migrations were applied manually (`wrangler d1
+# migrations apply --remote`). Any schema-dependent PR landed with a gap
+# where new middleware referenced columns that didn't exist yet — INSERTs
+# would silently fail inside `context.waitUntil()` until a human ran the
+# migration.
+#
+# After this workflow: every master push kicks off the migration in
+# parallel with CF Pages build. Migration finishes in ~10-30s, CF Pages
+# build typically takes 60-120s, so the migration lands first in the
+# common case. Not a hard serial guarantee (CF Pages is triggered by the
+# same push event independently), but narrows the race window from
+# "until a human notices" to "≤30s best-effort".
+#
+# Idempotency: `wrangler d1 migrations apply` tracks applied migrations
+# in the d1_migrations table. No-op case (nothing pending) runs in ~3s.
+#
+# Migration author contract: D1 does NOT wrap multi-statement migrations
+# in cross-statement transactions. If a migration is killed mid-sequence
+# (timeout, SIGKILL), the DB is left half-applied. Migrations MUST be
+# idempotent (use IF NOT EXISTS / IF EXISTS) so re-running is safe.
+
+on:
+  push:
+    branches: [master]
+    # Only run when migration files or this workflow itself changed.
+    # Other pushes (code-only, docs-only) are no-ops anyway; skipping
+    # avoids wasted CI minutes and keeps the GitHub UI less noisy.
+    paths:
+      - 'migrations/**'
+      - '.github/workflows/deploy.yml'
+
+  # Manual trigger for ad-hoc re-runs (e.g. rerun after a failure)
+  workflow_dispatch:
+
+# Prevent concurrent migration runs from racing the d1_migrations tracking
+# table. cancel-in-progress: false means "queue the next run", do NOT kill
+# an in-flight migration mid-sequence (would leave D1 half-applied).
+concurrency:
+  group: d1-migrations-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply pending D1 migrations (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply pending migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply trip-planner-db --remote
+
+      # Fail-loud: the whole point of this workflow is closing a race
+      # window. A silent failure defeats the purpose. Telegram alert so
+      # you see it within seconds instead of the next daily-check run.
+      - name: Notify on failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          RUN_URL="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl -sf -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"${TELEGRAM_CHAT_ID}\",\"text\":\"🚨 D1 migration workflow FAILED on master\\nCommit: ${SHORT_SHA}\\nRun: ${RUN_URL}\"}" \
+            || true
