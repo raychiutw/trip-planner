@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1.3] - 2026-04-13
+
+### Changed
+- daily-check Telegram 修復摘要格式：`總數:N 修復:M 不處理:L` → `總計:N 已處理:M 不處理:L`。「已處理」更精準涵蓋實際修復 + skipped（含合理不修的項目均算已處理過）
+
 ## [1.2.1.2] - 2026-04-13
 
 ### Fixed
