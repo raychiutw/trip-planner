@@ -116,7 +116,7 @@ if [ -f "$FIX_RESULT" ]; then
     if (r.total === 0) { console.log('🔧 無需修復'); }
     else {
       var skipped = (r.details||[]).filter(function(d){return d.status==='skipped'}).length;
-      var lines = ['🔨 總數:' + r.total + ' 修復:' + r.fixed + ' 不處理:' + skipped + (r.pr_url ? ' ' + r.pr_url : '')];
+      var lines = ['🔨 總計:' + r.total + ' 已處理:' + r.fixed + ' 不處理:' + skipped + (r.pr_url ? ' ' + r.pr_url : '')];
       if (r.details) r.details.forEach(function(d) {
         var icon = d.status === 'fixed' ? '✅' : d.status === 'skipped' ? '⏭️' : '❌';
         lines.push('  ' + icon + ' ' + d.summary);
