@@ -100,7 +100,7 @@ user-invocable: true
      - `maps`：實體地點填 Google Maps 搜尋文字（R11，PUT /days/:num 用 `maps` 欄位）
      - `googleRating`：Phase 1 先省略，Phase 2 並行查詢補充（R12）
      > ⚠️ PUT /days/:num 不接受 `location` 物件和 `source` 欄位。`source` 由 findOrCreatePoi 自動設為 `'ai'`。
-     > ⚠️ **必須在建立後用 `PATCH /entries/:eid` 補寫 `location` 座標**，否則天氣功能無法顯示。格式：`[{"name":"地點名","lat":24.7563,"lng":121.7494,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。也可建立後跑 `/tp-patch --target entry --field location` 批次補齊。
+     > ⚠️ **每天 PUT 完成後，立即用 `PATCH /entries/:eid` 補寫所有實體地點 entry 的 `location` 座標（鐵律，不得延遲到其他 Phase）。** 用 Google Maps 查詢 `maps` 欄位文字取得 lat/lng。格式：`[{"name":"地點名","lat":24.7563,"lng":121.7494,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。缺座標 = 天氣失效 + 地圖無法顯示 + travel 無法計算。
    - POI 各 type 必填/建議欄位見 tp-shared/references.md
    - Markdown 支援欄位見 tp-shared/references.md
 5. 每天 hotel 須包含 `checkout` 欄位（從 details 退房時間提取，查不到則為空字串 `""`）

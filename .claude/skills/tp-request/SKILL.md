@@ -107,7 +107,9 @@ curl -s -X PATCH \
       > ⚠️ 所有寫入 API 呼叫須帶 `X-Request-Scope: companion` header
       > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但旅伴要求排入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `title`），取得 `eid` 後再用 `POST /entries/{eid}/trip-pois` 掛 POI。**禁止將 POI 塞到不相關的 entry 下。**
       > ⚠️ **POI 語意歸屬檢查（鐵律）**：修改前必須確認 POI 所掛的 entry title 語意正確。早餐 POI 必須掛在「早餐」entry 下，不得掛在「出發」「景點」等不相關 entry。若發現 POI 掛錯 entry，須先建立正確 entry 再搬移 POI。僅確認 sort_order 不夠，必須同時確認 entry 歸屬。
-   f. **Doc 連動 + travel 重算** — 規則見 tp-shared/references.md
+   f. **location 座標（鐵律）**：新增或替換景點/餐廳時，用 Google Maps 查 lat/lng，PATCH entry 的 location。規則見 tp-shared/references.md §1b
+   f2. **travel 重算（鐵律）**：插入/替換 entry 或餐廳首選（sort_order=0）變動時，重算前一站→本站和本站→下一站兩段車程。規則見 tp-shared/references.md §4
+   f3. **Doc 連動（鐵律）**：規則見 tp-shared/references.md
    g. 執行 tp-check 精簡 report：輸出 `tp-check: 🟢 N  🟡 N  🔴 N`
    h. 通過 → 回覆並完成請求（見下方「回覆寫入方法」）
    i. 失敗 → 回覆並完成（見下方「回覆寫入方法」）

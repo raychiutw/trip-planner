@@ -35,6 +35,25 @@ tp-edit、tp-request、tp-rebuild 修改行程資料時的共用流程：
 | `location.googleQuery` 或 `maps` | R11 | PATCH /entries 用 `location`（JSON 字串 `{"name":"...", "googleQuery":"..."}`）；PUT /days 用 `maps`（純搜尋文字） |
 | `googleRating` | R12 | 1.0-5.0，`source: "ai"` 必填，`source: "user"` 盡量填。查詢策略見 `references/poi-spec.md` |
 
+### 1b. Entry location 座標（鐵律）
+
+> ⚠️ **每個實體地點 entry 必須有 lat/lng 座標。** 缺座標 = 天氣功能失效 + 地圖無法顯示 + travel 無法計算。
+
+**查詢方式**：用 Google Maps 搜尋 `maps` 欄位的文字，從結果取得 lat/lng。WebSearch 查「{地點名} 座標」或「{地點名} Google Maps」。
+
+**PATCH 格式**：
+```json
+PATCH /entries/:eid
+{"location": "[{\"name\":\"地點名\",\"lat\":26.xx,\"lng\":127.xx,\"geocode_status\":\"ok\"}]"}
+```
+
+**時機**：
+- tp-create：PUT /days 建立 entry 後，同 Phase 內立即 PATCH 補座標（不得延遲到其他 Phase）
+- tp-edit：新增或替換 entry 時，一併 PATCH location
+- tp-patch：`--target entry --field location` 批次補齊
+
+**排除**：純交通 entry（「出發」「搭巴士」「起飛」）且無固定地點者可省略。有明確地點的交通 entry（如「那霸機場」「道之驛許田」）仍須填座標。
+
 POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 
 ### 2. 韓國行程 naverQuery（R14）
@@ -56,7 +75,12 @@ POI 各 type 必填/建議欄位見 `references/poi-spec.md`。
 ### 4. Doc 連動 + travel 重算
 
 - **Doc 連動（鐵律）**：每次修改後檢視 5 種 doc（checklist/backup/suggestions/flights/emergency），更新不一致內容。規則見 `references/doc-spec.md`。
-- **travel 重算**：插入/移除/移動 entry 時，重新估算相鄰 entry 的 travel。語意見上方「travel 欄位語意」。
+- **travel 重算（鐵律）**：以下情況須重新估算 **前一站→本站** 和 **本站→下一站** 兩段 travel，語意見上方「travel 欄位語意」：
+  1. **插入/移除/移動 entry 時** — 前一站的 travel 指向變了，必須重算
+  2. **替換 entry 地點時** — 景點換了位置，前後車程都變
+  3. **餐廳首選變動時** — meal entry（早餐/午餐/晚餐）的 sort_order=0 餐廳新增、替換或刪除時，用新首選餐廳的 lat/lng 重算前後兩段車程
+  
+  **計算方式**：用前後 entry 的 location lat/lng（meal entry 用首選餐廳的 lat/lng），以 Haversine 距離估算。自駕 ~30km/h，步行 ~5km/h，同區域 <500m 用 walk。PATCH `travel_type` / `travel_desc` / `travel_min`。
 
 ### 5. Google Maps 驗證與歇業偵測（鐵律）
 

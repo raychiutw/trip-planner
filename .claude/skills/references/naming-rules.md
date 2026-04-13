@@ -39,35 +39,31 @@
 
 ## API 命名
 
-| 情境 | 規範 | 說明 |
+| 層級 | 規範 | 說明 |
 |------|------|------|
-| DB 欄位 | snake_case | `trip_id`, `day_num`, `travel_type` |
-| API response | snake_case | 直接回傳 DB row，不做 camelCase 轉換 |
-| trip identifier | tripId | API 統一回傳 `tripId`（非裸 `id`）；`SELECT id AS tripId` |
+| DB 欄位 | snake_case | `trip_id`, `day_num`, `travel_type`（SQL / migration 用） |
+| API handler 內部 | snake_case | 與 DB 欄位對應，`mergePoi`、`buildUpdateClause` 等用 snake_case |
+| **API response** | **camelCase** | `json()` 內建 `deepCamel` 遞迴轉換，所有回應自動 snake→camel |
+| API request body | snake_case | 寫入 API 仍接受 snake_case（直接對應 DB 欄位） |
+| trip identifier | tripId | API 回傳 `tripId`（非裸 `id`）；`SELECT id AS tripId` |
+
+**轉換機制**：`_utils.ts` 的 `json()` 函式內建 `deepCamel`，遞迴轉換所有 response object key。API handler 不需手動轉換。
 
 **防禦性 tripId 禁則**：前端不得出現 `.id || .tripId`，統一用 `.tripId`。
 
+**前端禁止 snake_case**：`src/` 下的所有 `.ts` / `.tsx` 檔案不得有 snake_case 欄位存取（如 `.sort_order`、`.google_rating`），一律用 camelCase（`.sortOrder`、`.googleRating`）。唯一例外是 JSDoc 註解描述 DB 欄位名稱。
+
 ---
 
-## DB→JS 映射（mapRow 規則）
+## DB→前端 資料流
 
-使用 `mapRow()` 統一轉換，不散寫 `if (x.snake) x.camel = x.snake`。
+```
+DB (snake_case) → API handler (snake_case) → json(deepCamel) → Response (camelCase) → 前端 (camelCase)
+```
 
-### snakeToCamel 自動轉換（取代 FIELD_MAP）
-
-DB 欄位一律 snake_case，`mapRow()` 自動轉 camelCase。不再有手動映射表。
-例如：`google_rating` → `googleRating`、`day_of_week` → `dayOfWeek`、`must_buy` → `mustBuy`
-
-### JSON_FIELDS（JSON string → object，自動 parse）
-
-| DB 欄位 | 說明 |
-|---------|------|
-| `parking` | 停車場 JSON → object |
-| `footer` | 頁尾 JSON → object |
-| `location` | 座標 JSON → object |
-| `attrs` | POI 類型專屬欄位 JSON → object |
-| `trip_attrs` | 行程專屬 POI 欄位 JSON → object |
-| `breakfast` | 早餐 JSON → object |
+- `json()` 負責統一轉換，開發者不需手動呼叫 `mapRow` 或 `snakeToCamel`
+- 前端 interface / type 全部用 camelCase（如 `sortOrder`、`dayNum`、`googleRating`）
+- 前端 `mapDay.ts` 的 `Raw*` interface 用 camelCase（匹配 API response）
 
 ---
 
@@ -84,5 +80,8 @@ DB 欄位一律 snake_case，`mapRow()` 自動轉 camelCase。不再有手動映
 | HTML 靜態 ID | camelCase | `stickyNav`, `tripContent` |
 | HTML 動態 ID | kebab-case | `day-slot-1`, `hourly-3` |
 | HTML data 屬性 | kebab-case | `data-trip-id` |
-| API DB 欄位 | snake_case | `trip_id`, `day_num` |
-| API trip identifier | tripId | `SELECT id AS tripId` |
+| DB 欄位 | snake_case | `trip_id`, `day_num` |
+| API handler | snake_case | 內部與 DB 欄位對應 |
+| **API response** | **camelCase** | `json()` 自動轉（`sortOrder`, `dayNum`） |
+| API request body | snake_case | 寫入用（`sort_order`, `travel_type`） |
+| 前端 interface | camelCase | `sortOrder`, `googleRating`, `dayNum` |

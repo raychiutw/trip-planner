@@ -32,8 +32,11 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 4. 修改的部分須符合 R0-R18 品質規則
 5. 依修改類型選擇 API（POST entry / PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
    > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但需要加入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `title`），取得 `eid` 後再掛 POI。
-6. **location 座標更新**：新增或替換景點時，必須用 `PATCH /entries/:eid` 補寫 `location` JSON（含 lat/lng），否則天氣功能無法顯示。格式：`[{"name":"地點名","lat":24.xx,"lng":121.xx,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。座標可用 WebSearch 查詢「{地點名} 座標 經緯度」取得。
-7. **Doc 連動（鐵律）**+ **travel 重算** — 規則見 tp-shared/references.md
+6. **location 座標更新（鐵律）**：新增或替換景點時，必須用 `PATCH /entries/:eid` 補寫 `location` JSON（含 lat/lng）。用 Google Maps 查詢取得座標。格式：`[{"name":"地點名","lat":24.xx,"lng":121.xx,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。缺座標 = 天氣失效 + 地圖無法顯示 + travel 無法計算。
+7. **Doc 連動 + travel 重算（鐵律）** — 規則見 tp-shared/references.md。特別注意：
+   - 插入/移除/替換 entry 時，重算 **前一站→本站** 和 **本站→下一站** 兩段 travel
+   - 餐廳首選（sort_order=0）變動時，用新餐廳的 lat/lng 重算前後兩段 travel
+   - 計算方式：用前後 entry 的 location lat/lng，meal entry 用首選餐廳 lat/lng
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 
