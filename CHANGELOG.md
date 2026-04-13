@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.0] - 2026-04-13
+
+### Changed
+- **行程載入 N+1 修復**：useTrip 從「每天發一個 API 請求」改為「一次批次請求取得所有天」。7 天行程從 9 次 API call 降為 2 次，後端 DB query 從 N×3 降為 4 次固定。
+- 新增 `GET /api/trips/:id/days?all=1` 批次端點，一次回傳完整行程資料（含 hotel + timeline + POI 歸類）。既有 `?all=0`（預設）行為不變。
+- 共用 POI 組裝邏輯抽到 `functions/api/trips/[id]/days/_merge.ts`（`mergePoi` / `assembleDay` / `fetchPoiMap`），`days/:num` 與 `days?all=1` 兩個 endpoint 共用。
+
 ## [1.2.2.0] - 2026-04-13
 
 ### Changed
