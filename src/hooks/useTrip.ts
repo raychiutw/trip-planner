@@ -131,10 +131,10 @@ export function useTrip(tripId: string | null): UseTripReturn {
 
     async function load() {
       try {
-        // Fetch meta + days list in parallel
-        const [rawMeta, daysList] = await Promise.all([
+        // Fetch meta + all days (batch endpoint) in parallel — 2 calls total, not N+1
+        const [rawMeta, rawDays] = await Promise.all([
           apiFetch<Record<string, unknown>>(`/trips/${tripId}`, { signal: controller.signal }),
-          apiFetch<DaySummary[]>(`/trips/${tripId}/days`, { signal: controller.signal }),
+          apiFetch<Record<string, unknown>[]>(`/trips/${tripId}/days?all=1`, { signal: controller.signal }),
         ]);
 
         if (cancelled) return;
@@ -142,54 +142,28 @@ export function useTrip(tripId: string | null): UseTripReturn {
         const meta = mapRow(rawMeta) as unknown as Trip;
         setTrip(meta);
 
-        const sorted = [...daysList].sort(
-          (a, b) => a.dayNum - b.dayNum,
-        );
-        setDays(sorted);
+        // Parse all days once, derive summaries and full day cache from same response
+        const allDaysData = rawDays.map(mapDayResponse).sort((a, b) => a.dayNum - b.dayNum);
+        const summaries: DaySummary[] = allDaysData.map(d => ({
+          id: d.id,
+          dayNum: d.dayNum,
+          date: d.date,
+          dayOfWeek: d.dayOfWeek,
+          label: d.label,
+        }));
+        setDays(summaries);
 
-        // Determine initial day (first day by default)
-        const firstDayNum = sorted.length > 0 ? (sorted[0]?.dayNum ?? 0) : 0;
-        if (firstDayNum > 0) {
-          setCurrentDayNum(firstDayNum);
+        const byNum: Record<number, Day> = {};
+        for (const d of allDaysData) byNum[d.dayNum] = d;
+        allDaysRef.current = byNum;
+        setAllDays(byNum);
+
+        // Set first day as current
+        const first = allDaysData[0];
+        if (first) {
+          setCurrentDayNum(first.dayNum);
+          setCurrentDay(first);
         }
-
-        // Fetch first day immediately, then remaining days in parallel.
-        async function fetchAllDays() {
-          async function fetchDay(num: number) {
-            const raw = await apiFetch<Record<string, unknown>>(`/trips/${tripId}/days/${num}`, { signal: controller.signal });
-            if (cancelled) return;
-            const dayData = mapDayResponse(raw);
-            allDaysRef.current[num] = dayData;
-            setAllDays((prev) => ({ ...prev, [num]: dayData }));
-            if (num === firstDayNum) {
-              setCurrentDay(dayData);
-            }
-          }
-
-          // First day: fetch immediately so user sees content fast
-          const first = sorted[0];
-          if (first) {
-            try {
-              await fetchDay(first.dayNum);
-            } catch (err) {
-              if (err instanceof ApiError) showErrorToast(err.message, err.severity);
-            }
-          }
-          if (cancelled) return;
-
-          // Remaining days: fetch in parallel
-          const remaining = sorted.slice(1);
-          if (remaining.length > 0) {
-            await Promise.allSettled(
-              remaining.map((d) =>
-                fetchDay(d.dayNum).catch((err) => {
-                  if (err instanceof ApiError) showErrorToast(err.message, err.severity);
-                }),
-              ),
-            );
-          }
-        }
-        fetchAllDays();
 
         async function fetchAllDocs() {
           const results = await Promise.allSettled(

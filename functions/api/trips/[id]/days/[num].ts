@@ -5,51 +5,11 @@ import { batchFindOrCreatePois, type FindOrCreatePoiData } from '../../../_poi';
 import { validateDayBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
+import { assembleDay, fetchPoiMap } from './_merge';
 
 // ---------------------------------------------------------------------------
 // GET /api/trips/:id/days/:num — POI Schema (pois + trip_pois)
 // ---------------------------------------------------------------------------
-
-/**
- * Merge a pois row + trip_pois row into a single object.
- * trip_pois fields override pois fields when non-null (COALESCE convention).
- */
-function mergePoi(poi: Record<string, unknown>, tp: Record<string, unknown>): Record<string, unknown> {
-  return {
-    // POI master fields
-    poi_id: poi.id,
-    type: poi.type,
-    name: poi.name,
-    description: tp.description ?? poi.description,
-    note: tp.note ?? poi.note,
-    address: poi.address,
-    phone: poi.phone,
-    email: poi.email,
-    website: poi.website,
-    hours: tp.hours ?? poi.hours,
-    google_rating: poi.google_rating,
-    category: poi.category,
-    maps: poi.maps,
-    mapcode: poi.mapcode,
-    lat: poi.lat,
-    lng: poi.lng,
-    source: poi.source,
-    // trip_pois fields
-    trip_poi_id: tp.id,
-    context: tp.context,
-    day_id: tp.day_id,
-    entry_id: tp.entry_id,
-    sort_order: tp.sort_order,
-    // Type-specific (flattened in trip_pois)
-    checkout: tp.checkout,
-    breakfast_included: tp.breakfast_included,
-    breakfast_note: tp.breakfast_note,
-    price: tp.price,
-    reservation: tp.reservation,
-    reservation_url: tp.reservation_url,
-    must_buy: tp.must_buy,
-  };
-}
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id, num } = context.params as { id: string; num: string };
@@ -70,90 +30,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     db.prepare('SELECT * FROM trip_pois WHERE trip_id = ? AND day_id = ?').bind(id, dayId).all(),
   ]);
 
-  // Build poi lookup: poi_id → pois row
-  const poiIds = [...new Set((allTripPois.results as Record<string, unknown>[]).map(tp => tp.poi_id as number))];
-  const poiMap = new Map<number, Record<string, unknown>>();
-  if (poiIds.length > 0) {
-    // Query all needed pois in one go
-    const placeholders = poiIds.map(() => '?').join(',');
-    const { results: poisRows } = await db.prepare(
-      `SELECT * FROM pois WHERE id IN (${placeholders})`
-    ).bind(...poiIds).all();
-    for (const p of poisRows as Record<string, unknown>[]) {
-      poiMap.set(p.id as number, p);
-    }
-  }
+  const tripPoiRows = allTripPois.results as Record<string, unknown>[];
+  const poiMap = await fetchPoiMap(db, tripPoiRows);
 
-  // Merge and categorize trip_pois
-  let hotel: Record<string, unknown> | null = null;
-  const parkingList: Record<string, unknown>[] = [];
-  const restByEntry = new Map<number, unknown[]>();
-  const shopByEntry = new Map<number, unknown[]>();
+  const assembled = assembleDay(
+    day,
+    entriesResult.results as Record<string, unknown>[],
+    tripPoiRows,
+    poiMap,
+  );
 
-  for (const tp of allTripPois.results as Record<string, unknown>[]) {
-    const poi = poiMap.get(tp.poi_id as number);
-    if (!poi) continue;
-    const merged = mergePoi(poi, tp);
-    const poiType = poi.type as string;
-    const context = tp.context as string;
-
-    if (context === 'hotel' && poiType === 'hotel' && !hotel) {
-      hotel = merged;
-    } else if (context === 'hotel' && poiType === 'parking') {
-      parkingList.push(merged);
-    } else if (context === 'timeline') {
-      const eid = tp.entry_id as number;
-      if (!restByEntry.has(eid)) restByEntry.set(eid, []);
-      restByEntry.get(eid)!.push(merged);
-    } else if (context === 'shopping') {
-      const eid = tp.entry_id as number;
-      if (eid) {
-        if (!shopByEntry.has(eid)) shopByEntry.set(eid, []);
-        shopByEntry.get(eid)!.push(merged);
-      }
-    }
-  }
-
-  // Attach parking to hotel
-  if (hotel) {
-    hotel.parking = parkingList;
-  }
-
-  const timeline = entriesResult.results.map(e => {
-    const entry = e as Record<string, unknown>;
-    const eid = entry.id as number;
-    const travel = entry.travel_type ? {
-      type: entry.travel_type,
-      desc: entry.travel_desc,
-      min: entry.travel_min,
-    } : null;
-
-    let location = entry.location;
-    if (typeof location === 'string') {
-      try {
-        const parsed = JSON.parse(location);
-        location = Array.isArray(parsed) ? parsed[0] ?? null : parsed;
-      } catch { location = null; }
-    }
-
-    return {
-      ...entry,
-      location,
-      travel,
-      restaurants: restByEntry.get(eid) ?? [],
-      shopping: shopByEntry.get(eid) ?? [],
-    };
-  });
-
-  return json({
-    id: dayId,
-    day_num: day.day_num,
-    date: day.date,
-    day_of_week: day.day_of_week,
-    label: day.label,
-    hotel,
-    timeline,
-  });
+  return json(assembled);
 };
 
 // ---------------------------------------------------------------------------
