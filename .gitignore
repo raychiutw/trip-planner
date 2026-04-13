@@ -19,6 +19,19 @@ report.html
 .temp/
 .workflow-stage
 
+# macOS
+.DS_Store
+
+# Wrangler local state & build cache
+.wrangler/state/
+.wrangler/tmp/
+
+# Daily-check runtime logs
+.context/daily-check-*.log
+
+# tp-workspace runtime trigger outputs
+.claude/skills/tp-workspace/trigger-results/
+
 # Stray npm CLI bin scripts leaked to project root
 baseline-browser-mapping
 baseline-browser-mapping.cmd
