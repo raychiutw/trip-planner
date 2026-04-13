@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.3] - 2026-04-13
+
+### Added
+- **CI 自動套用 D1 migrations**：新增 `.github/workflows/deploy.yml`，每次 master push 若 `migrations/**` 有變更就自動跑 `wrangler d1 migrations apply --remote`，關閉原本「CF Pages 部署 code 但 schema 還沒更新」的 race window
+- **Concurrency lock**：`concurrency: d1-migrations-production` + `cancel-in-progress: false`，防止連續 master push 讓兩個 migration workflow 同時撞 `d1_migrations` tracking table（會造成重複套用或 half-applied 狀態）
+- **Fail-loud Telegram 告警**：`if: failure()` step 會在 migration 失敗時立刻推 🚨 到 Telegram，含 commit SHA 和 workflow run URL。不用等到隔天 daily-check 才發現
+
+### Notes
+- **起因**：Tier 1 (PR #169) 部署時踩到這個坑 — 新 middleware 預期 `api_logs.source` 欄位存在，但 CF Pages 不會自動 apply D1 migrations，造成 ~2 分鐘的 schema gap，期間所有 4xx/5xx 的 INSERT 靜默失敗（被 `context.waitUntil()` 吞掉，不回 500 但 log 遺失）
+- **並行性**：Workflow 並行於 CF Pages build 執行，migration apply 通常 10-30s 完成，CF Pages build 通常 60-120s，因此 migration 在正常情況下會先落地
+- **Paths filter**：只在 `migrations/**` 或 workflow 自身變更時觸發，一般 code-only PR 不會浪費 CI 分鐘
+- **Manual fallback**：`workflow_dispatch` 允許 GitHub UI 上一鍵重跑（例如失敗後重試）
+- **Idempotent**：`wrangler d1 migrations apply` 會追蹤已套用的 migration，no-op case 約 3 秒完成
+- **Lockfile-pinned wrangler**：用 `npm ci + npx wrangler`（不是 `npx -y wrangler@4`），吃 `package.json` devDep 的 `^4.80.0` 版本，避免任意 4.x 版本漂移
+- **Migration 作者 contract**：D1 不支援跨 statement transaction；若 migration 被 timeout 殺掉，DB 會 half-applied。所有 migration 必須 idempotent（用 `IF NOT EXISTS` / `IF EXISTS`），保證重跑安全
+- **Follow-up 未做**：`environment: production` + 環境 scope secrets（supply-chain hardening），需搭配手動 GH settings 變更，未來再做
+
 ## [1.2.3.2] - 2026-04-13
 
 ### Changed
