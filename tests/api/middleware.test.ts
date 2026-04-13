@@ -3,7 +3,7 @@
  * isAllowedOrigin, checkCsrf, checkCompanionScope
  */
 import { describe, it, expect } from 'vitest';
-import { isAllowedOrigin, checkCsrf, checkCompanionScope } from '../../functions/api/_middleware';
+import { isAllowedOrigin, checkCsrf, checkCompanionScope, detectSource } from '../../functions/api/_middleware';
 import type { Env } from '../../functions/api/_types';
 
 const baseEnv = {
@@ -158,5 +158,72 @@ describe('checkCompanionScope', () => {
 
   it('companion: PUT days → 403', () => {
     expect(check('PUT', '/api/trips/test-trip/days/1', 'companion')!.status).toBe(403);
+  });
+});
+
+describe('detectSource', () => {
+  it('scheduler: X-Tripline-Source header → scheduler', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: { 'X-Tripline-Source': 'scheduler' },
+    });
+    expect(detectSource(req)).toBe('scheduler');
+  });
+
+  it('scheduler 優先於 service_token（同時帶兩個 header）', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: {
+        'X-Tripline-Source': 'scheduler',
+        'CF-Access-Client-Id': 'id',
+        'CF-Access-Client-Secret': 'secret',
+      },
+    });
+    expect(detectSource(req)).toBe('scheduler');
+  });
+
+  it('companion: X-Request-Scope=companion → companion', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: { 'X-Request-Scope': 'companion' },
+    });
+    expect(detectSource(req)).toBe('companion');
+  });
+
+  it('companion 優先於 service_token', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: {
+        'X-Request-Scope': 'companion',
+        'CF-Access-Client-Id': 'id',
+        'CF-Access-Client-Secret': 'secret',
+      },
+    });
+    expect(detectSource(req)).toBe('companion');
+  });
+
+  it('service_token: 只有 CF-Access-Client-Id + Secret → service_token', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: {
+        'CF-Access-Client-Id': 'id',
+        'CF-Access-Client-Secret': 'secret',
+      },
+    });
+    expect(detectSource(req)).toBe('service_token');
+  });
+
+  it('service_token: 只有 Client-Id 沒 Secret → 不算 service_token（anonymous）', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: { 'CF-Access-Client-Id': 'id' },
+    });
+    expect(detectSource(req)).toBe('anonymous');
+  });
+
+  it('user_jwt: CF_Authorization cookie → user_jwt', () => {
+    const req = new Request('https://test.com/api/trips', {
+      headers: { Cookie: 'CF_Authorization=eyJhbGciOiJIUzI1NiJ9.abc.sig' },
+    });
+    expect(detectSource(req)).toBe('user_jwt');
+  });
+
+  it('anonymous: 完全沒帶任何 auth → anonymous', () => {
+    const req = new Request('https://test.com/api/reports', { method: 'POST' });
+    expect(detectSource(req)).toBe('anonymous');
   });
 });
