@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1.0] - 2026-04-13
+
+### Added
+- **api_logs 來源標籤**：middleware 在寫入 4xx/5xx log 時分類 request 來源（scheduler / companion / service_token / user_jwt / anonymous），為後續 daily-check 的錯誤來源分析與 scheduler 問題升級鋪路
+- `migrations/0024_api_logs_source.sql`：新增 `api_logs.source TEXT DEFAULT NULL`，nullable + 向後相容
+- `functions/api/_middleware.ts` `detectSource()` helper：lazy-compute，2xx 成功路徑完全跳過（僅在錯誤路徑寫 log 時才讀 headers）
+
+### Notes
+- Tier 1 純基礎建設：source 欄位尚未被 `daily-check.js` 消費，使用者看不到行為變化。消費端會在後續 PR（Tier 2）實作
+- 已知 trust boundary：`X-Tripline-Source` / `X-Request-Scope` 為 self-reported，僅作 telemetry 分類，不得用於 auth 決策
+
 ## [1.2.0.0] - 2026-04-12
 
 ### Changed

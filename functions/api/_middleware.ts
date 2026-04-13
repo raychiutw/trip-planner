@@ -21,6 +21,31 @@ function getCookie(request: Request, name: string): string | null {
   return null;
 }
 
+/**
+ * 偵測 request source，用於 api_logs.source 欄位。
+ * 優先順序: scheduler > companion > service_token > user_jwt > anonymous
+ *
+ * 此函式不驗 token — Cloudflare Access 已在邊緣驗過。
+ * 只做 request shape 的分類，給 daily-check 做錯誤來源統計。
+ *
+ * ⚠️ Trust boundary: source 值是 **self-reported telemetry**，不是 auth decision。
+ * X-Tripline-Source 跟 X-Request-Scope 都可被 anonymous 呼叫端偽造。消費端
+ * (daily-check) 對 scheduler/companion 做 escalation 時必須結合 path / error
+ * code 等 secondary signal，不能單憑 source 來 gate。
+ */
+/** @internal — exported for unit testing */
+export function detectSource(
+  request: Request,
+): 'scheduler' | 'companion' | 'service_token' | 'user_jwt' | 'anonymous' {
+  if (request.headers.get('X-Tripline-Source') === 'scheduler') return 'scheduler';
+  if (request.headers.get('X-Request-Scope') === 'companion') return 'companion';
+  const clientId = request.headers.get('CF-Access-Client-Id');
+  const clientSecret = request.headers.get('CF-Access-Client-Secret');
+  if (clientId && clientSecret) return 'service_token';
+  if (getCookie(request, 'CF_Authorization')) return 'user_jwt';
+  return 'anonymous';
+}
+
 /** Decodes a JWT payload without signature verification. Cloudflare Access validates the JWT at the edge. */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
@@ -38,6 +63,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const start = Date.now();
   const { request, env } = context;
   const url = new URL(request.url);
+  // Lazy: 只在寫 api_logs 時才算 source（2xx 成功路徑完全跳過 detectSource 的 header/cookie 讀取）
+  let cachedSource: ReturnType<typeof detectSource> | undefined;
+  const getSource = () => (cachedSource ??= detectSource(request));
 
   try {
     const response = await handleAuth(context);
@@ -47,9 +75,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (response.status >= 400) {
       context.waitUntil(
         env.DB.prepare(
-          'INSERT INTO api_logs (method, path, status, duration) VALUES (?, ?, ?, ?)',
+          'INSERT INTO api_logs (method, path, status, duration, source) VALUES (?, ?, ?, ?, ?)',
         )
-          .bind(request.method, url.pathname, response.status, duration)
+          .bind(request.method, url.pathname, response.status, duration, getSource())
           .run(),
       );
     }
@@ -61,9 +89,9 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     if (err instanceof AppError) {
       context.waitUntil(
         env.DB.prepare(
-          'INSERT INTO api_logs (method, path, status, error, duration) VALUES (?, ?, ?, ?, ?)',
+          'INSERT INTO api_logs (method, path, status, error, duration, source) VALUES (?, ?, ?, ?, ?, ?)',
         )
-          .bind(request.method, url.pathname, err.status, err.code, duration)
+          .bind(request.method, url.pathname, err.status, err.code, duration, getSource())
           .run(),
       );
       return errorResponse(err);
@@ -72,7 +100,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     // 非預期錯誤 → 500 + log
     context.waitUntil(
       env.DB.prepare(
-        'INSERT INTO api_logs (method, path, status, error, duration) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO api_logs (method, path, status, error, duration, source) VALUES (?, ?, ?, ?, ?, ?)',
       )
         .bind(
           request.method,
@@ -80,6 +108,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
           500,
           err instanceof Error ? err.message : String(err),
           duration,
+          getSource(),
         )
         .run(),
     );
