@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.2.0] - 2026-04-13
+
+### Changed
+- Weather API 從逐座標 N+1 查詢改為批次查詢 Open-Meteo，一天多個景點只發一次 API call，降低外部請求量
+
 ## [1.2.1.3] - 2026-04-13
 
 ### Changed
