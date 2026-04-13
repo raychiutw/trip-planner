@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.2] - 2026-04-13
+
+### Changed
+- `.gitignore` 擴充：排除 `.DS_Store`、`.wrangler/state/`、`.wrangler/tmp/`、`.context/daily-check-*.log`、`.claude/skills/tp-workspace/trigger-results/` 等本地噪音檔，`git status` 不再被 cache/log 淹沒
+- 清除誤 commit 的 `.wrangler/tmp/` build cache（af696df 遺留的 7 個 stale 檔）
+
 ## [1.2.3.1] - 2026-04-13
 
 ### Changed
