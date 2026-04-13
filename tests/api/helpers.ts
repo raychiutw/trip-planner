@@ -123,10 +123,24 @@ export async function seedTrip(db: D1Database, opts: {
 export async function seedEntry(db: D1Database, dayId: number, opts: {
   sortOrder?: number;
   title?: string;
+  travelType?: string | null;
+  travelDesc?: string | null;
+  travelMin?: number | null;
+  location?: string | null;
 } = {}) {
   const result = await db.prepare(
-    'INSERT INTO trip_entries (day_id, sort_order, time, title) VALUES (?, ?, ?, ?) RETURNING id'
-  ).bind(dayId, opts.sortOrder || 1, '10:00', opts.title || 'Test Entry').first<{ id: number }>();
+    `INSERT INTO trip_entries (day_id, sort_order, time, title, travel_type, travel_desc, travel_min, location)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+  ).bind(
+    dayId,
+    opts.sortOrder ?? 1,
+    '10:00',
+    opts.title || 'Test Entry',
+    opts.travelType ?? null,
+    opts.travelDesc ?? null,
+    opts.travelMin ?? null,
+    opts.location ?? null,
+  ).first<{ id: number }>();
   return result!.id;
 }
 
@@ -149,15 +163,29 @@ export async function getDayId(db: D1Database, tripId: string, dayNum: number): 
   return row!.id;
 }
 
-/** 插入測試 trip_pois 關聯 */
+/** 插入測試 trip_pois 關聯。
+ * hotel context 的 entry_id 可為 null（attached to day, not entry）。
+ */
 export async function seedTripPoi(db: D1Database, opts: {
   poiId: number;
   tripId: string;
-  entryId: number;
+  entryId: number | null;
   dayId: number;
+  context?: 'timeline' | 'hotel' | 'shopping';
+  sortOrder?: number;
+  must_buy?: string | null;
 }) {
   const result = await db.prepare(
-    'INSERT INTO trip_pois (poi_id, trip_id, entry_id, day_id, sort_order, context) VALUES (?, ?, ?, ?, 0, ?) RETURNING id'
-  ).bind(opts.poiId, opts.tripId, opts.entryId, opts.dayId, 'timeline').first<{ id: number }>();
+    `INSERT INTO trip_pois (poi_id, trip_id, entry_id, day_id, sort_order, context, must_buy)
+     VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+  ).bind(
+    opts.poiId,
+    opts.tripId,
+    opts.entryId,
+    opts.dayId,
+    opts.sortOrder ?? 0,
+    opts.context ?? 'timeline',
+    opts.must_buy ?? null,
+  ).first<{ id: number }>();
   return result!.id;
 }

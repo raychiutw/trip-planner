@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.1] - 2026-04-13
+
+### Changed
+- 測試覆蓋率強化：`?all=1` batch endpoint 新增 7 個測試（hotel+parking / shopping / travel / location 解析 / 空行程 / batch vs single-day regression guard）
+- helpers.ts `seedEntry` 支援 travel + location 欄位，`seedTripPoi` 支援 hotel/shopping context + nullable entry_id
+
 ## [1.2.3.0] - 2026-04-13
 
 ### Changed
