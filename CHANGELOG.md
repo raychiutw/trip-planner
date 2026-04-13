@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1.1] - 2026-04-13
+
+### Fixed
+- daily-check 日期使用本地時區，修正 06:13 CST 執行時產出檔名標成昨天（UTC）的 bug。原本 `todayISO()` 用 `toISOString().slice(0,10)` 取 UTC 日期，在 CST 凌晨 6 點時 UTC 仍是前一天。
+
 ## [1.2.1.0] - 2026-04-13
 
 ### Added

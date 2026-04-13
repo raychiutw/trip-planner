@@ -85,7 +85,12 @@ async function queryD1(sql) {
 var DAY_MS = 24 * 60 * 60 * 1000;
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  // 使用本地時區（避免 UTC 早上跑時取到昨天的日期）
+  var d = new Date();
+  var yyyy = d.getFullYear();
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return yyyy + '-' + mm + '-' + dd;
 }
 
 function pastDayWindow() {
