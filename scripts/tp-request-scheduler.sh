@@ -55,7 +55,7 @@ done <<< "$IDS"
 log "開始處理: claude /tp-request"
 cd "$PROJECT_DIR"
 
-if claude --dangerously-skip-permissions -p "/tp-request" >> "$LOG_FILE" 2>&1; then
+if "$CLAUDE_BIN" --dangerously-skip-permissions -p "/tp-request" >> "$LOG_FILE" 2>&1; then
   log "處理完成"
 else
   log_error "Claude 執行失敗，回滾 status → open"

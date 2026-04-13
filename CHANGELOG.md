@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.1.2] - 2026-04-13
+
+### Fixed
+- `scheduler-common.sh` 新增 `CLAUDE_BIN` 常數（絕對路徑 `$HOME/.local/bin/claude`），解決 launchd PATH 找不到 `claude` 指令導致 Phase 2 autofix 失敗
+- `daily-check-scheduler.sh` 和 `tp-request-scheduler.sh` 改用 `$CLAUDE_BIN`
+
 ## [1.2.1.1] - 2026-04-13
 
 ### Fixed
