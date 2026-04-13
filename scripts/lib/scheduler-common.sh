@@ -1,6 +1,9 @@
 # scheduler-common.sh — 排程共用函式（由各 scheduler source）
 # 使用前必須設定: LOG_DIR, LOG_FILE, ERR_LOG_FILE
 
+# Claude CLI 絕對路徑（launchd PATH 不含 ~/.local/bin，必須寫絕對路徑）
+CLAUDE_BIN="${CLAUDE_BIN:-$HOME/.local/bin/claude}"
+
 mkdir -p "$LOG_DIR"
 
 log()      { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }

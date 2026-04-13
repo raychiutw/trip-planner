@@ -99,7 +99,7 @@ fi
 
 # Phase 2: 呼叫 Claude tp-daily-check（自動修復）
 log "Phase 2: claude /tp-daily-check（自動修復）"
-if claude --dangerously-skip-permissions -p "/tp-daily-check" >> "$LOG_FILE" 2>&1; then
+if "$CLAUDE_BIN" --dangerously-skip-permissions -p "/tp-daily-check" >> "$LOG_FILE" 2>&1; then
   log "Phase 2 完成"
 else
   log_error "Claude /tp-daily-check 執行失敗"
