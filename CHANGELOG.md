@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.4] - 2026-04-15
+
+### Fixed
+- **API error logging 含 detail**：middleware 記錄 `err.code: err.detail` 到 api_logs error 欄位，取代原本只記 error code，方便 daily-check 診斷具體驗證失敗原因
+- **trip-pois PATCH 驗證訊息改善**：validation error 現在列出被拒絕的欄位名稱（例如 `無有效欄位可更新（收到: google_rating, maps）`），幫助 caller 快速修正
+- **tripExport N+1 改用 batch days endpoint**：匯出行程資料從逐天 fetch 改為 `?all=1` 批次查詢，減少 API 呼叫次數
+
 ## [1.2.3.3] - 2026-04-13
 
 ### Added
