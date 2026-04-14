@@ -91,7 +91,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
         env.DB.prepare(
           'INSERT INTO api_logs (method, path, status, error, duration, source) VALUES (?, ?, ?, ?, ?, ?)',
         )
-          .bind(request.method, url.pathname, err.status, err.code, duration, getSource())
+          .bind(request.method, url.pathname, err.status, err.detail ? `${err.code}: ${err.detail}` : err.code, duration, getSource())
           .run(),
       );
       return errorResponse(err);

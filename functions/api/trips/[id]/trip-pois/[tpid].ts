@@ -51,7 +51,10 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   }
 
   const updateResult = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
-  if (!updateResult) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
+  if (!updateResult) {
+    const rejected = Object.keys(body).filter(k => !(ALLOWED_FIELDS as readonly string[]).includes(k));
+    throw new AppError('DATA_VALIDATION', `無有效欄位可更新（收到: ${rejected.join(', ') || 'empty body'}）`);
+  }
 
   const newRow = await db.prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ? RETURNING *`)
     .bind(...updateResult.values, tripPoiId).first();
