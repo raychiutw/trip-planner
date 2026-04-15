@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.4] - 2026-04-16
+
+### Fixed
+- **防止 GET /days/undefined 404 錯誤**：`fetchDay` 加入 `Number.isInteger` + 最小值檢查，阻擋 undefined / NaN / 浮點數等無效 dayNum 發出 API 請求
+
 ## [1.2.3.3] - 2026-04-13
 
 ### Added
