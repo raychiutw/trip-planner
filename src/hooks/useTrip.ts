@@ -71,7 +71,7 @@ export function useTrip(tripId: string | null): UseTripReturn {
   /* --- Fetch a single day --- */
   const fetchDay = useCallback(
     async (dayNum: number): Promise<Day | null> => {
-      if (!tripId) return null;
+      if (!tripId || !Number.isInteger(dayNum) || dayNum < 1) return null;
       const cached = allDaysRef.current[dayNum];
       if (cached) return cached;
 
