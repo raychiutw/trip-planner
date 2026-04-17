@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { computeActiveDayIndex } from '../../src/lib/scrollSpy';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../../src/lib/scrollSpy';
 
 describe('computeActiveDayIndex', () => {
   it('Day 2 header 進入視窗頂部時標 Day 2（regression：舊 navH+10 閾值在 top=88 會誤回 Day 1）', () => {
@@ -55,5 +55,75 @@ describe('computeActiveDayIndex', () => {
     // vh=103, navH=100 → threshold = 100 + 3/3 = 101
     expect(computeActiveDayIndex([0, 101], 100, 103)).toBe(1);  // 101 > 101 為 false → 納入
     expect(computeActiveDayIndex([0, 102], 100, 103)).toBe(0);  // 102 > 101 為 true → break
+  });
+});
+
+describe('getStableViewportH', () => {
+  let originalInner: number;
+  let originalClientH: number | undefined;
+
+  beforeEach(() => {
+    originalInner = window.innerHeight;
+    originalClientH = document.documentElement.clientHeight;
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'innerHeight', { value: originalInner, configurable: true });
+    if (originalClientH !== undefined) {
+      Object.defineProperty(document.documentElement, 'clientHeight', {
+        value: originalClientH,
+        configurable: true,
+      });
+    }
+  });
+
+  it('優先回傳 documentElement.clientHeight（mobile 穩定）', () => {
+    // 模擬 mobile：innerHeight 抖動（600→660）、clientHeight 穩定 720
+    Object.defineProperty(window, 'innerHeight', { value: 600, configurable: true });
+    Object.defineProperty(document.documentElement, 'clientHeight', {
+      value: 720,
+      configurable: true,
+    });
+    expect(getStableViewportH()).toBe(720);
+
+    Object.defineProperty(window, 'innerHeight', { value: 660, configurable: true });
+    expect(getStableViewportH()).toBe(720); // clientHeight 穩定 → 結果穩定
+  });
+
+  it('clientHeight 為 0（exotic SSR / detached DOM）時 fallback 到 innerHeight', () => {
+    Object.defineProperty(window, 'innerHeight', { value: 720, configurable: true });
+    Object.defineProperty(document.documentElement, 'clientHeight', {
+      value: 0,
+      configurable: true,
+    });
+    expect(getStableViewportH()).toBe(720);
+  });
+});
+
+describe('computeInitialHash', () => {
+  it('URL 已有 #dayN 且 N 存在於 dayNums → 回傳 null（不覆寫）', () => {
+    expect(computeInitialHash([1, 2, 3], '#day2', null, [])).toBeNull();
+  });
+
+  it('URL 已有 #dayN 但 N 不存在 → 回傳 fallback（第一天）', () => {
+    expect(computeInitialHash([1, 2, 3], '#day9', null, [])).toBe('#day1');
+  });
+
+  it('URL 無 hash、今日在行程中 → 回傳 #day{today}', () => {
+    const today = '2026-07-30';
+    const dates = ['2026-07-29', '2026-07-30', '2026-07-31'];
+    expect(computeInitialHash([1, 2, 3], '', today, dates)).toBe('#day2');
+  });
+
+  it('URL 無 hash、今日不在行程中 → fallback 到第一天', () => {
+    expect(computeInitialHash([1, 2, 3], '', '2030-01-01', ['2026-07-29'])).toBe('#day1');
+  });
+
+  it('單天行程無 hash 時回傳 #day1（fix 單天永不更新 hash bug）', () => {
+    expect(computeInitialHash([1], '', null, [])).toBe('#day1');
+  });
+
+  it('空 dayNums（尚未載入）回傳 null', () => {
+    expect(computeInitialHash([], '', null, [])).toBeNull();
   });
 });
