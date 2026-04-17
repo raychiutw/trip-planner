@@ -239,7 +239,10 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               className="absolute top-0 h-full bg-accent rounded-md opacity-15 pointer-events-none will-change-[transform,width]"
               aria-hidden="true"
               style={{
-                transition: `transform var(--duration-indicator) var(--ease-spring, cubic-bezier(0.32, 1.28, 0.60, 1.00)), width var(--duration-indicator) var(--ease-spring, cubic-bezier(0.32, 1.28, 0.60, 1.00))`,
+                // 用 apple ease-out 不 overshoot：sliding indicator 是橫向位置指示，
+                // 不是 bottom sheet 的彈出感；spring overshoot（y1=1.28）會讓指示器
+                // 在切換日期時衝過目標 pill 到隔壁格再彈回，視覺上像隔壁 pill 被錯標。
+                transition: `transform var(--duration-indicator) var(--transition-timing-function-apple), width var(--duration-indicator) var(--transition-timing-function-apple)`,
                 transform: `translateX(${indicatorStyle.left}px)`,
                 width: indicatorStyle.width,
               }}
