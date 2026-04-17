@@ -3,6 +3,11 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.4.0] - 2026-04-17
+
+### Changed
+- **DayNav 日期 pill 等寬**：原本不同字元數的日期（`7/30` 4 chars vs `8/1` 3 chars）pill 寬度不同（63 vs 52px），視覺上一排大小不一、跳動不整齊。改用 `min-w-[4.5em]` 相對單位（mobile 60px / desktop 90px），**所有 pill 等寬**，跟著字體 size responsive 縮放。也加上 `tabular-nums` 讓日期數字等寬顯示，避免 `1` vs `9` 字形寬度差異造成視覺錯位。
+
 ## [1.2.3.9] - 2026-04-17
 
 ### Removed
