@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.9] - 2026-04-17
+
+### Removed
+- **DayNav sliding indicator**：PR #187 改了 transition curve 想淡化 ghost trail，但使用者實測仍不滿意（切換時視覺上還是「有東西滑過不相干的 pill」）。直接移除整個半透明 indicator layer（`{indicatorStyle && <div>...</div>}` + `useLayoutEffect` + state）。active pill 本身已是實心橘色背景 + 高對比文字（`bg-accent text-accent-foreground`），辨識當前日期完全夠用。移掉這層 additive 效果讓 DayNav 變得乾淨直接。
+
+### For contributors
+- `DayNav.tsx` 少了 25 行（state、useLayoutEffect、indicator JSX、相關 transition 註解），也不再 import `useLayoutEffect`。
+
 ## [1.2.3.8] - 2026-04-17
 
 ### Fixed
