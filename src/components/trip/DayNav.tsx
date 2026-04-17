@@ -220,7 +220,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               <button
                 key={dayNum}
                 className={clsx(
-                  'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote font-semibold font-inherit min-w-tap-min min-h-tap-min text-center whitespace-nowrap transition-[background,color] duration-fast ease-apple',
+                  'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote font-semibold font-inherit min-w-[4.5em] min-h-tap-min text-center whitespace-nowrap tabular-nums transition-[background,color] duration-fast ease-apple',
                   isActive
                     ? 'active bg-accent text-accent-foreground'
                     : 'bg-accent-bg text-accent hover:bg-accent hover:text-accent-foreground',
@@ -265,7 +265,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
           {onToggleTripMap && (
             <button
               className={clsx(
-                'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote font-semibold font-inherit min-w-tap-min min-h-tap-min text-center whitespace-nowrap transition-[background,color] duration-fast ease-apple',
+                'dn relative z-1 flex items-center justify-center border-none py-2 px-3 rounded-md text-footnote font-semibold font-inherit min-w-[4.5em] min-h-tap-min text-center whitespace-nowrap tabular-nums transition-[background,color] duration-fast ease-apple',
                 isTripMapMode
                   ? 'active bg-accent text-accent-foreground'
                   : 'bg-accent-bg text-accent hover:bg-accent hover:text-accent-foreground',
