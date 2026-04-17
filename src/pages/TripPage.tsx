@@ -12,6 +12,7 @@ import { usePrintMode } from '../hooks/usePrintMode';
 import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripFormat } from '../lib/tripExport';
 import { calcTripDrivingStats } from '../lib/drivingStats';
+import { computeActiveDayIndex } from '../lib/scrollSpy';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
@@ -423,11 +424,11 @@ export default function TripPage() {
     function onScroll() {
       const nav = document.getElementById('stickyNav');
       const navH = nav ? nav.offsetHeight + (parseFloat(getComputedStyle(nav).top) || 0) : 0;
-      let current = -1;
-      for (let i = 0; i < dayNums.length; i++) {
-        const h = document.getElementById('day' + (dayNums[i] ?? ''));
-        if (h && h.getBoundingClientRect().top <= navH + 10) current = i;
-      }
+      const headerTops = dayNums.map((n) => {
+        const h = document.getElementById('day' + n);
+        return h ? h.getBoundingClientRect().top : null;
+      });
+      const current = computeActiveDayIndex(headerTops, navH, window.innerHeight);
       if (current >= 0) {
         const activeDayNum = dayNums[current] ?? -1;
         // #1: Only call switchDay when day actually changes (avoid redundant re-renders)
