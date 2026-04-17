@@ -34,6 +34,22 @@
 
 ## Completed
 
+### DayNav 日期 pill 等寬
+
+**Priority:** P2（使用者回報）
+**Completed:** v1.2.4.0 (2026-04-17)
+**PR:** [#190](https://github.com/raychiutw/trip-planner/pull/190)
+
+使用者回報：4 字元日期 pill（`7/29`、`7/30`、`7/31`）63px 寬，3 字元（`8/1`、`8/2`）52px 寬，一排大小不一。改 `min-w-tap-min` → `min-w-[4.5em]`（相對 em，mobile 60px / desktop 90px，兩邊都等寬），加上 `tabular-nums` 讓數字字形等寬避免左右抖動。保留 44px 觸控下限（4.5em 一定 > 44px）。
+
+### DayNav sliding indicator 移除
+
+**Priority:** P2（使用者回報）
+**Completed:** v1.2.3.9 (2026-04-17)
+**PR:** [#189](https://github.com/raychiutw/trip-planner/pull/189)
+
+PR #187 把 spring overshoot 改成 Apple ease-out 仍不滿意 — 只要 `translateX` 有 350ms 動畫就會經過中間 pill，使用者要求「移除這個效果」。直接砍掉整個半透明 indicator layer（`useState` + `useLayoutEffect` + JSX div），active pill 本身實心 `bg-accent` 已足夠辨識。DayNav.tsx 322 → 297 行。
+
 ### DayNav 指示器 spring overshoot 污染隔壁 pill
 
 **Priority:** P2（使用者回報，非原 TODOS 項目）
