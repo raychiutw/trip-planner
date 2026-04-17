@@ -34,6 +34,14 @@
 
 ## Completed
 
+### DayNav 指示器 spring overshoot 污染隔壁 pill
+
+**Priority:** P2（使用者回報，非原 TODOS 項目）
+**Completed:** v1.2.3.8 (2026-04-17)
+**PR:** [#187](https://github.com/raychiutw/trip-planner/pull/187)
+
+使用者捲動時發現「紅框處有個底圖變大效果」。根因：sliding indicator 的 easing 是 `cubic-bezier(0.32, 1.28, 0.60, 1.00)`（`--ease-spring`，y1=1.28 overshoot 28%），切換日期時 `translateX` 衝過目標 pill 到隔壁格短暫停留再彈回，加上 `width` 也 spring overshoot，視覺上像隔壁 pill 被錯標成 active 背景。改用 `--transition-timing-function-apple`（`cubic-bezier(0.2, 0.8, 0.2, 1)`，Apple HIG ease-out 無 overshoot）。`--ease-spring` token 保留給 `InfoSheet` / `QuickPanel` 的 bottom sheet 彈出動畫（那裡 overshoot 是對的 UX）。
+
 ### TODOS #5 誤報：docs/daily-report-flow.png 存在
 
 **Priority:** P3（誤報）
