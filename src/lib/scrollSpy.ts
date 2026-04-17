@@ -26,3 +26,51 @@ export function computeActiveDayIndex(
   }
   return current;
 }
+
+/**
+ * 回傳 scroll-spy 用的穩定可視區高度。
+ *
+ * mobile Chrome / Safari 捲動時 URL bar 會收縮，`window.innerHeight` 可能從 ~600
+ * 跳到 ~660。`document.documentElement.clientHeight` 是 layout viewport，在
+ * 現代瀏覽器更穩定。兩者都取用並以 clientHeight 優先，退而求其次 innerHeight。
+ */
+export function getStableViewportH(): number {
+  const clientH = document.documentElement.clientHeight;
+  return clientH > 0 ? clientH : window.innerHeight;
+}
+
+/**
+ * 計算行程載入後應使用的初始 URL hash。
+ *
+ * 優先序：現有合法 hash → 今日在行程中 → 第一天 fallback。
+ * 若 dayNums 為空（尚未載入）回傳 null，呼叫端應略過 push。
+ *
+ * 解決：單天行程頁面短於 viewport 時，onScroll 從不觸發，hash 永遠不更新。
+ *
+ * @param dayNums 行程的 day_num 陣列（已排序）
+ * @param currentHash `window.location.hash`
+ * @param localToday 今日日期字串 `YYYY-MM-DD` 或 null
+ * @param autoScrollDates 行程各天的日期字串陣列（index 對應 dayNums）
+ */
+export function computeInitialHash(
+  dayNums: ReadonlyArray<number>,
+  currentHash: string,
+  localToday: string | null,
+  autoScrollDates: ReadonlyArray<string>,
+): string | null {
+  if (dayNums.length === 0) return null;
+
+  const match = currentHash.match(/^#day(\d+)$/);
+  if (match) {
+    const hashDay = parseInt(match[1] ?? '0', 10);
+    if (dayNums.includes(hashDay)) return null;
+  }
+
+  if (localToday) {
+    const idx = autoScrollDates.indexOf(localToday);
+    const todayDayNum = idx >= 0 ? dayNums[idx] : undefined;
+    if (todayDayNum !== undefined) return `#day${todayDayNum}`;
+  }
+
+  return `#day${dayNums[0]}`;
+}
