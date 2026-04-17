@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.3.7] - 2026-04-17
+
+### Changed
+- **`scripts/lib/local-date.js`（新）**：把 `daily-check.js` 內聯的 `todayISO()` 抽成共用模組，支援注入時間（`todayISO(now)`）方便測試。`daily-check.js` 改用 `require('./lib/local-date')`。
+- **`tests/unit/local-date.test.js`（新）**：6 條單元測試，包含 PR #171 的 regression（凌晨本地 06:13 屬「今天」而非 UTC 前一天）、月日補 0、月初年尾邊界、無參數 smoke。**時區無關**（用 `new Date(y, m, d, h, m)` 本地建構式）在任何 CI runner TZ 下皆穩定。
+
+### For contributors
+- 以後修排程 / 時區相關 bug 時請新增對應 regression test 到 `tests/unit/local-date.test.js` 或兄弟檔。
+
 ## [1.2.3.6] - 2026-04-17
 
 ### Fixed

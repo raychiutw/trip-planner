@@ -13,6 +13,7 @@
 
 var fs = require('fs');
 var path = require('path');
+var todayISO = require('./lib/local-date').todayISO;
 var { execSync } = require('child_process');
 
 // 從 openspec/config.yaml 讀取 env（fallback for 本機執行）
@@ -83,15 +84,6 @@ async function queryD1(sql) {
 // ── 日期工具 ────────────────────────────────────────────────────
 
 var DAY_MS = 24 * 60 * 60 * 1000;
-
-function todayISO() {
-  // 使用本地時區（避免 UTC 早上跑時取到昨天的日期）
-  var d = new Date();
-  var yyyy = d.getFullYear();
-  var mm = String(d.getMonth() + 1).padStart(2, '0');
-  var dd = String(d.getDate()).padStart(2, '0');
-  return yyyy + '-' + mm + '-' + dd;
-}
 
 function pastDayWindow() {
   return {
