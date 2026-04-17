@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState, useLayoutEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 
@@ -68,9 +68,6 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [tooltipDay, setTooltipDay] = useState<number | null>(null);
 
-  /* --- Sliding indicator state --- */
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
-
   /* --- Update arrow visibility based on scroll position --- */
   const updateOverflow = useCallback(() => {
     const nav = navRef.current;
@@ -130,28 +127,6 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
     );
     if (btn) scrollPillIntoView(btn);
   }, [currentDayNum, scrollPillIntoView]);
-
-  /* --- Sliding indicator: compute position after layout --- */
-  useLayoutEffect(() => {
-    if (!navRef.current) return;
-    // 全覽模式時，indicator 跟著「全覽」按鈕
-    const nav = navRef.current;
-    if (isTripMapMode) {
-      const overviewBtn = nav.querySelector<HTMLElement>('[data-testid="dn-overview-btn"]');
-      if (!overviewBtn) {
-        setIndicatorStyle(null);
-        return;
-      }
-      setIndicatorStyle({ left: overviewBtn.offsetLeft, width: overviewBtn.offsetWidth });
-      return;
-    }
-    const activeBtn = nav.querySelector<HTMLElement>(`[data-dn][data-day="${currentDayNum}"]`);
-    if (!activeBtn) {
-      setIndicatorStyle(null);
-      return;
-    }
-    setIndicatorStyle({ left: activeBtn.offsetLeft, width: activeBtn.offsetWidth });
-  }, [currentDayNum, days, isTripMapMode]);
 
   /* --- Arrow click handlers --- */
   const handleArrowLeft = useCallback(() => {
@@ -234,20 +209,6 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
           id="navPills"
           ref={navRef}
         >
-          {indicatorStyle && (
-            <div
-              className="absolute top-0 h-full bg-accent rounded-md opacity-15 pointer-events-none will-change-[transform,width]"
-              aria-hidden="true"
-              style={{
-                // 用 apple ease-out 不 overshoot：sliding indicator 是橫向位置指示，
-                // 不是 bottom sheet 的彈出感；spring overshoot（y1=1.28）會讓指示器
-                // 在切換日期時衝過目標 pill 到隔壁格再彈回，視覺上像隔壁 pill 被錯標。
-                transition: `transform var(--duration-indicator) var(--transition-timing-function-apple), width var(--duration-indicator) var(--transition-timing-function-apple)`,
-                transform: `translateX(${indicatorStyle.left}px)`,
-                width: indicatorStyle.width,
-              }}
-            />
-          )}
           {days.map((d) => {
             const dayNum = d.dayNum;
             const isActive = !isTripMapMode && dayNum === currentDayNum;
