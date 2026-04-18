@@ -24,7 +24,7 @@ import InfoSheet from '../components/trip/InfoSheet';
 import InfoPanel from '../components/trip/InfoPanel';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer from '../components/shared/Toast';
-import { FooterArt, NavArt } from '../components/trip/ThemeArt';
+import { FooterArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
 import type { TripListItem } from '../types/trip';
@@ -131,7 +131,7 @@ export default function TripPage() {
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
-  const [showNavTitle, setShowNavTitle] = useState(false);
+  // showNavTitle removed along with old sticky-nav inline title
   const largeTitleRef = useRef<HTMLDivElement>(null);
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
@@ -174,17 +174,6 @@ export default function TripPage() {
       lsRenewAll();
       sessionStorage.setItem('lsRenewed', '1');
     }
-  }, []);
-
-  /* --- Large title IntersectionObserver: show inline title when large title scrolls out --- */
-  useEffect(() => {
-    if (!largeTitleRef.current) return;
-    const obs = new IntersectionObserver(
-      ([e]) => setShowNavTitle(!e?.isIntersecting),
-      { threshold: [0] },
-    );
-    obs.observe(largeTitleRef.current);
-    return () => obs.disconnect();
   }, []);
 
   /* --- Fetch trips when trip-select sheet opens (cached: skip if already loaded) --- */
@@ -512,59 +501,102 @@ export default function TripPage() {
   }
 
   return (
-    <>
+    <div className="ocean-shell">
       <style>{SCOPED_STYLES}</style>
 
-      {/* Sticky Nav */}
-      <div className="sticky-nav sticky top-0 z-(--z-sticky-nav) bg-[color-mix(in_srgb,var(--color-background)_92%,transparent)] backdrop-blur-xl backdrop-saturate-200 shadow-[0_1px_0_var(--color-border)] text-foreground py-3 px-padding-h md:px-6 flex items-center gap-3 overflow-x-hidden overflow-y-visible" id="stickyNav">
-        {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-        <TriplineLogo isOnline={isOnline} />
-        <span className={clsx('nav-inline-title text-subheadline font-semibold text-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[160px] md:hidden', showNavTitle && 'visible')}>
-          {trip?.title || trip?.name}
-        </span>
-        <DayNav
-          days={days}
-          currentDayNum={currentDayNum}
-          onSwitchDay={handleSwitchDay}
-          todayDayNum={todayDayNum}
-          isTripMapMode={isTripMapMode}
-          onToggleTripMap={enableDayMap && days.length > 0 ? handleToggleTripMap : undefined}
-        />
-        <NavArt dark={isDark} />
-      </div>
+      {/* Ocean Topbar — design 稿 .topbar 對齊 */}
+      <header className="ocean-topbar sticky-nav" id="stickyNav">
+        <div className="ocean-topbar-left">
+          {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
+          <div className="ocean-brand">
+            <TriplineLogo isOnline={isOnline} />
+            {trip && <span className="ocean-brand-label">· {trip.title || trip.name}</span>}
+          </div>
+          <div className="ocean-tb-divider" aria-hidden="true" />
+          <nav className="ocean-nav-tabs" aria-label="主要功能">
+            <button type="button" className={clsx(!activeSheet && 'active')} onClick={() => setActiveSheet(null)}>
+              <span aria-hidden="true">▦</span>
+              <span className="ocean-tab-label">行程</span>
+            </button>
+            <button type="button" className={clsx(activeSheet === 'today-route' && 'active')} onClick={() => setActiveSheet('today-route')}>
+              <span aria-hidden="true">⇅</span>
+              <span className="ocean-tab-label">路線</span>
+            </button>
+            <button type="button" className={clsx(activeSheet === 'flights' && 'active')} onClick={() => setActiveSheet('flights')}>
+              <span aria-hidden="true">✈</span>
+              <span className="ocean-tab-label">航班</span>
+            </button>
+            <button type="button" className={clsx(activeSheet === 'suggestions' && 'active')} onClick={() => setActiveSheet('suggestions')}>
+              <span aria-hidden="true">✦</span>
+              <span className="ocean-tab-label">AI 建議</span>
+            </button>
+          </nav>
+        </div>
+        <div className="ocean-topbar-right">
+          <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
+            <span aria-hidden="true">!</span>
+            <span className="ocean-tb-label">緊急</span>
+          </button>
+          <button type="button" className="ocean-tb-btn" onClick={togglePrint}>
+            <span aria-hidden="true">⎙</span>
+            <span className="ocean-tb-label">列印</span>
+          </button>
+          <a
+            className={clsx('ocean-tb-btn ocean-tb-ai', !isOnline && 'opacity-40 pointer-events-none')}
+            href="/manage/"
+            aria-disabled={!isOnline}
+            tabIndex={isOnline ? undefined : -1}
+            onClick={!isOnline ? (e: React.MouseEvent) => e.preventDefault() : undefined}
+          >
+            AI 編輯
+          </a>
+        </div>
+      </header>
 
       <ToastContainer />
 
-      {/* Page Layout */}
-      <div className="page-layout flex min-h-dvh">
-        <div className="container flex-1 min-w-0 max-w-full">
-          <div id="tripContent" className="pt-3">
-            {/* Large Title (mobile only) */}
-            {!loading && trip && (
-              <div className="py-2 px-padding-h pb-4 block md:hidden" ref={largeTitleRef}>
-                <h1 className="text-large-title font-bold leading-tight text-foreground">{trip.title || trip.name}</h1>
-                {dateRange && <p className="text-subheadline text-muted mt-1">{dateRange}</p>}
-              </div>
-            )}
+      {/* Main page */}
+      <main className="ocean-page">
+        {!loading && trip && (
+          <div className="ocean-header" ref={largeTitleRef}>
+            <div>
+              <h1 className="ocean-h1">{trip.title || trip.name}</h1>
+              {dateRange && <div className="ocean-date-range">{dateRange}</div>}
+            </div>
+          </div>
+        )}
 
-            {loading && (
-              <div className="px-padding-h">
-                <DaySkeleton />
-                <DaySkeleton />
-              </div>
-            )}
+        {/* Day strip — 設計稿的 .rtl-day-strip */}
+        {!loading && trip && (
+          <DayNav
+            days={days}
+            currentDayNum={currentDayNum}
+            onSwitchDay={handleSwitchDay}
+            todayDayNum={todayDayNum}
+            isTripMapMode={isTripMapMode}
+            onToggleTripMap={enableDayMap && days.length > 0 ? handleToggleTripMap : undefined}
+          />
+        )}
 
-            {/* TripMap 全覽地圖（F006）：全覽模式時顯示於 DaySections 上方
-                enableDayMap=false 時完全隱藏（feature flag）*/}
-            {enableDayMap && !loading && isTripMapMode && (
-              <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-                <TripMap allDays={allDays} dayNums={dayNums} />
-              </Suspense>
-            )}
+        {loading && (
+          <div className="px-padding-h">
+            <DaySkeleton />
+            <DaySkeleton />
+          </div>
+        )}
 
-            {/* #12: DaySection memo components with #11 Map lookup */}
-            {!loading &&
-              dayNums.map((dayNum) => (
+        {/* TripMap 全覽（F006）*/}
+        {enableDayMap && !loading && isTripMapMode && (
+          <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
+            <TripMap allDays={allDays} dayNums={dayNums} />
+          </Suspense>
+        )}
+
+        {/* Body: main + sidebar grid */}
+        {!loading && trip && (
+          <div className="ocean-body">
+            <div className="ocean-main" id="tripContent">
+              {dayNums.map((dayNum) => (
                 <DaySection
                   key={dayNum}
                   dayNum={dayNum}
@@ -580,24 +612,15 @@ export default function TripPage() {
                   enableDayMap={enableDayMap}
                 />
               ))}
-
-            {/* Footer Art */}
-            {!loading && <FooterArt dark={isDark} />}
-
-            {/* Footer */}
-            {!loading && trip && footerData && (
-              <Footer footer={footerData} />
-            )}
+              <FooterArt dark={isDark} />
+              {footerData && <Footer footer={footerData} />}
+            </div>
+            <aside className="ocean-side">
+              <InfoPanel currentDay={currentDay} />
+            </aside>
           </div>
-        </div>
-
-        {/* Desktop sidebar: TodaySummary + Hotel + Transport */}
-        {!loading && trip && (
-          <InfoPanel
-            currentDay={currentDay}
-          />
         )}
-      </div>
+      </main>
 
       {/* QuickPanel */}
       {!loading && trip && (
@@ -660,6 +683,6 @@ export default function TripPage() {
           退出列印模式
         </button>
       )}
-    </>
+    </div>
   );
 }

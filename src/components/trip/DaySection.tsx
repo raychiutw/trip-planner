@@ -1,6 +1,10 @@
 /**
- * DaySection — memoised per-day renderer.
- * Extracted from TripPage.tsx to reduce file size.
+ * DaySection — memoised per-day renderer (Ocean design).
+ *
+ * Renders:
+ *  - Ocean hero card (Day eyebrow + title + date + stats)
+ *  - Weather, hotel, driving stats cards
+ *  - Timeline stop cards
  */
 
 import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
@@ -10,7 +14,6 @@ import Hotel from './Hotel';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import { DayDrivingStatsCard } from './DrivingStats';
-import DayArt from './DayArt';
 import Icon from '../shared/Icon';
 import { toTimelineEntry, toHotelData } from '../../lib/mapDay';
 import { calcDrivingStats } from '../../lib/drivingStats';
@@ -18,7 +21,6 @@ import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
 
-/* DayMap — React.lazy code-split（D1：SDK lazy load）*/
 const DayMap = lazy(() => import('./DayMap'));
 
 export interface DaySectionProps {
@@ -30,12 +32,25 @@ export interface DaySectionProps {
   themeArt?: { dark: boolean };
   localToday?: string;
   isActive?: boolean;
-  /** 全覽模式時隱藏 DayMap（避免與 TripMap 重複）*/
   hideDayMap?: boolean;
-  /** IANA timezone for weather API (derived from trip destination). */
   timezone?: string;
-  /** Whether the DayMap feature flag is enabled. */
   enableDayMap?: boolean;
+}
+
+/** Extract time range parts from entry time string "HH:MM-HH:MM" or "HH:MM". */
+function getTimelineBounds(timeline: unknown[]): { start: string | null; end: string | null } {
+  const times = timeline
+    .map((e) => (typeof e === 'object' && e !== null && 'time' in e ? String((e as { time?: unknown }).time ?? '') : ''))
+    .filter((t) => t);
+  if (times.length === 0) return { start: null, end: null };
+  const firstStr = times[0] ?? '';
+  const lastStr = times[times.length - 1] ?? '';
+  const firstParts = firstStr.split('-');
+  const lastParts = lastStr.split('-');
+  return {
+    start: firstParts[0]?.trim() || null,
+    end: (lastParts[lastParts.length - 1] ?? lastParts[0] ?? '').trim() || null,
+  };
 }
 
 const DaySection = React.memo(function DaySection({
@@ -44,30 +59,22 @@ const DaySection = React.memo(function DaySection({
   daySummary,
   tripStart,
   tripEnd,
-  themeArt,
   localToday,
   isActive,
   hideDayMap = false,
   timezone,
   enableDayMap = false,
 }: DaySectionProps) {
-  /* Track whether this section has been activated to trigger enter animation */
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
   useEffect(() => {
-    if (isActive && !prevActiveRef.current) {
-      setAnimKey((k) => k + 1);
-    }
+    if (isActive && !prevActiveRef.current) setAnimKey((k) => k + 1);
     prevActiveRef.current = !!isActive;
   }, [isActive]);
 
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
-  // Derive weather locations from entries (no longer stored in DB)
-  const weatherDay = useMemo(
-    () => buildWeatherDay(day?.label, timeline),
-    [day?.label, timeline],
-  );
+  const weatherDay = useMemo(() => buildWeatherDay(day?.label, timeline), [day?.label, timeline]);
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
@@ -75,34 +82,58 @@ const DaySection = React.memo(function DaySection({
     () => timeline.length > 0 ? calcDrivingStats(timeline) : null,
     [timeline],
   );
-
   const warnings = useMemo(() => validateDay(timeline), [timeline]);
+  const bounds = useMemo(() => getTimelineBounds(timeline), [timeline]);
 
-  /* Memoised timeline entries — avoids new array reference on every render */
   const timelineEntries = useMemo(
     () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({})),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [day?.timeline],
   );
 
+  const eyebrow = `DAY ${String(dayNum).padStart(2, '0')}`;
+  const dateLabel = daySummary?.date
+    ? `${daySummary.date}${daySummary.dayOfWeek ? `（${daySummary.dayOfWeek}）` : ''}`
+    : '';
+  const area = daySummary?.label || '';
+
   return (
-    <section className="day-section" data-day={dayNum}>
-      <div className="day-header relative z-(--z-day-header)" id={`day${dayNum}`}>
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="day-header-eyebrow">Day {String(dayNum).padStart(2, '0')}</span>
-          {daySummary?.date && (
-            <span className="day-header-date text-caption tracking-wide whitespace-nowrap">
-              {daySummary.date}
-              {daySummary.dayOfWeek && `（${daySummary.dayOfWeek}）`}
-            </span>
+    <section className="ocean-day day-section" data-day={dayNum}>
+      {/* Ocean Hero card */}
+      <div className="ocean-hero" id={`day${dayNum}`}>
+        <div className="ocean-hero-chips">
+          <span className="ocean-hero-chip">
+            {eyebrow}
+            {dateLabel && ` · ${dateLabel}`}
+          </span>
+          {area && <span className="ocean-hero-chip-muted">{area}</span>}
+        </div>
+        <h2 className="ocean-hero-title">{area || `Day ${dayNum}`}</h2>
+        <div className="ocean-hero-stats">
+          <div className="ocean-hero-stat">
+            <div className="ocean-hero-stat-label">Stops</div>
+            <div className="ocean-hero-stat-value">{timeline.length || '—'}</div>
+          </div>
+          {bounds.start && (
+            <div className="ocean-hero-stat">
+              <div className="ocean-hero-stat-label">Start</div>
+              <div className="ocean-hero-stat-value">{bounds.start}</div>
+            </div>
+          )}
+          {bounds.end && (
+            <div className="ocean-hero-stat">
+              <div className="ocean-hero-stat-label">End</div>
+              <div className="ocean-hero-stat-value">{bounds.end}</div>
+            </div>
           )}
         </div>
-        <h2 className="text-title font-bold m-0 mt-2 whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
-          {daySummary?.label || `Day ${dayNum}`}
-        </h2>
-        {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
       </div>
-      <div key={animKey} className={clsx('px-padding-h pb-4', animKey > 0 && 'day-content-enter', day && 'day-content-loaded')} id={`day-slot-${dayNum}`}>
+
+      <div
+        key={animKey}
+        className={clsx(animKey > 0 && 'day-content-enter', day && 'day-content-loaded')}
+        id={`day-slot-${dayNum}`}
+      >
         {!day ? (
           <DaySkeleton />
         ) : (
@@ -110,9 +141,7 @@ const DaySection = React.memo(function DaySection({
             {warnings.length > 0 && (
               <div className="bg-destructive-bg py-3 px-4 my-2 rounded-sm text-callout text-destructive">
                 <strong><Icon name="warning" /> 注意事項：</strong>
-                <ul className="mt-1 ml-4">
-                  {warnings.map((w) => <li key={w}>{w}</li>)}
-                </ul>
+                <ul className="mt-1 ml-4">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
               </div>
             )}
 
@@ -128,21 +157,18 @@ const DaySection = React.memo(function DaySection({
             )}
 
             {hotel && typeof hotel === 'object' && (
-              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
+              <div className="ocean-side-card mb-3">
                 <Hotel hotel={toHotelData(hotel)} />
               </div>
             )}
             {dayDrivingStats && (
-              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
+              <div className="ocean-side-card mb-3">
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               </div>
             )}
 
-            {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
-                全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
-                enableDayMap=false 時完全隱藏（feature flag）*/}
             {enableDayMap && !hideDayMap && (
-              <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
+              <Suspense fallback={<div className="h-[200px] rounded-md bg-secondary animate-pulse" aria-label="地圖載入中" />}>
                 <DayMap day={day} dayNum={dayNum} />
               </Suspense>
             )}

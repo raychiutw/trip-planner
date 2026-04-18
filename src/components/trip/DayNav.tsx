@@ -1,33 +1,66 @@
-import { useRef, useCallback, useEffect, useState, useLayoutEffect } from 'react';
+import { useRef, useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 
-/* ===== Scoped styles (pseudo-elements + dark mode that Tailwind cannot express) ===== */
+/* ===== Scoped styles ===== */
 
 const SCOPED_STYLES = `
-.dn-today-dot { width: 6px; height: 6px; }
+.ocean-day-strip {
+  display: flex; gap: 8px;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 4px 0;
+  margin: 0 0 24px;
+  scrollbar-width: thin;
+}
+.ocean-day-strip::-webkit-scrollbar { height: 6px; }
+.ocean-day-strip::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+.ocean-day-strip::-webkit-scrollbar-track { background: transparent; }
+
 [data-dn] {
-  flex: 0 0 auto;
-  min-width: 74px;
-  padding: 9px 10px 8px;
+  flex: 0 0 160px;
+  scroll-snap-align: start;
+  padding: 14px 14px 12px;
   border-radius: 8px;
   background: transparent;
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
-  line-height: 1;
-  text-align: center;
-  transition: background-color var(--transition-duration-fast) var(--transition-timing-function-apple), color var(--transition-duration-fast) var(--transition-timing-function-apple), border-color var(--transition-duration-fast) var(--transition-timing-function-apple);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all var(--transition-duration-fast) var(--transition-timing-function-apple);
+  position: relative;
 }
 [data-dn]:hover:not(.active) { border-color: var(--color-accent); }
 [data-dn].active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
-[data-dn] .dn-eyebrow { font-size: 8.5px; font-weight: 600; letter-spacing: 0.15em; opacity: 0.55; text-transform: uppercase; }
-[data-dn] .dn-date { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-top: 6px; }
-[data-dn] .dn-dow { font-size: 10px; opacity: 0.65; margin-top: 4px; letter-spacing: 0.02em; }
-body.dark [data-dn]:not(.active) { background: transparent; border: 1px solid var(--color-border); color: var(--color-foreground); }
+
+[data-dn] .dn-head { display: flex; justify-content: space-between; align-items: center; }
+[data-dn] .dn-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.18em; opacity: 0.55; text-transform: uppercase; }
+[data-dn].active .dn-eyebrow { opacity: 0.7; }
+[data-dn] .dn-weather { font-size: 11px; opacity: 0.55; display: inline-flex; align-items: center; gap: 3px; }
+[data-dn].active .dn-weather { opacity: 0.7; }
+
+[data-dn] .dn-date { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1; margin-top: 10px; }
+[data-dn] .dn-dow { font-size: 12px; font-weight: 500; opacity: 0.55; margin-left: 6px; letter-spacing: 0.02em; }
+[data-dn].active .dn-dow { opacity: 0.7; }
+
+[data-dn] .dn-area { font-size: 12.5px; margin-top: 6px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-dn].active .dn-area { opacity: 0.85; }
+
+[data-dn] .dn-marks { display: flex; gap: 3px; margin-top: 12px; }
+[data-dn] .dn-mark { width: 14px; height: 2px; background: var(--color-lineStrong, #C1C1C1); }
+[data-dn].active .dn-mark { background: rgba(255,255,255,0.65); }
+
+body.dark [data-dn]:not(.active) { background: transparent; border-color: var(--color-border); color: var(--color-foreground); }
+
 @media (max-width: 760px) {
-  [data-dn] { min-width: 62px; padding: 8px 8px 7px; }
-  [data-dn] .dn-date { font-size: 16px; }
+  [data-dn] { flex: 0 0 140px; padding: 12px 12px 10px; }
+  [data-dn] .dn-date { font-size: 22px; }
 }
+@media (max-width: 480px) {
+  [data-dn] { flex: 0 0 130px; }
+}
+
 @keyframes dn-tooltip-in {
   from { opacity: 0; transform: translateX(-50%) translateY(4px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -39,7 +72,6 @@ body.dark [data-dn]:not(.active) { background: transparent; border: 1px solid va
 const WEEKDAYS = '日一二三四五六';
 const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-/** Format pill label: MM/DD (used for aria-label + fallback text). */
 export function formatPillLabel(day: DaySummary): string {
   if (!day.date) return String(day.dayNum);
   const d = new Date(day.date + 'T00:00:00');
@@ -49,18 +81,16 @@ export function formatPillLabel(day: DaySummary): string {
   return `${mm}/${dd}`;
 }
 
-/** Parse a day's display parts for the 3-line chip layout. */
-function parsePillParts(day: DaySummary): { eyebrow: string; date: string; dow: string } {
+function parseChipParts(day: DaySummary): { eyebrow: string; date: string; dow: string; dowZh: string } {
   const eyebrow = `DAY ${String(day.dayNum).padStart(2, '0')}`;
-  if (!day.date) return { eyebrow, date: String(day.dayNum), dow: '' };
+  if (!day.date) return { eyebrow, date: String(day.dayNum), dow: '', dowZh: '' };
   const d = new Date(day.date + 'T00:00:00');
-  if (isNaN(d.getTime())) return { eyebrow, date: String(day.dayNum), dow: '' };
+  if (isNaN(d.getTime())) return { eyebrow, date: String(day.dayNum), dow: '', dowZh: '' };
   const mm = d.getMonth() + 1;
   const dd = d.getDate();
-  return { eyebrow, date: `${mm}/${dd}`, dow: WEEKDAYS_EN[d.getDay()] ?? '' };
+  return { eyebrow, date: `${mm}/${dd}`, dow: WEEKDAYS_EN[d.getDay()] ?? '', dowZh: WEEKDAYS[d.getDay()] ?? '' };
 }
 
-/** Format tooltip content */
 function formatTooltip(day: DaySummary): string {
   const parts: string[] = [`Day ${day.dayNum}`];
   if (day.date) {
@@ -82,9 +112,7 @@ interface DayNavProps {
   currentDayNum: number;
   onSwitchDay: (dayNum: number) => void;
   todayDayNum?: number;
-  /** 全覽模式是否啟用 */
   isTripMapMode?: boolean;
-  /** 切換全覽模式的 callback */
   onToggleTripMap?: () => void;
 }
 
@@ -92,35 +120,9 @@ interface DayNavProps {
 
 export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, isTripMapMode = false, onToggleTripMap }: DayNavProps) {
   const navRef = useRef<HTMLDivElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
   const [tooltipDay, setTooltipDay] = useState<number | null>(null);
-
-  /* --- Sliding indicator state --- */
-  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
-
-  /* --- Update arrow visibility based on scroll position --- */
-  const updateOverflow = useCallback(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const sl = nav.scrollLeft;
-    const sw = nav.scrollWidth;
-    const cw = nav.clientWidth;
-    setCanScrollLeft(sl > 2);
-    setCanScrollRight(sl < sw - cw - 2);
-  }, []);
-
-  /* --- Scroll active pill into center view --- */
-  const scrollPillIntoView = useCallback((btn: HTMLElement) => {
-    const nav = navRef.current;
-    if (!nav) return;
-    const left = btn.offsetLeft - nav.offsetWidth / 2 + btn.offsetWidth / 2;
-    nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
-  }, []);
 
   /* --- Cleanup timers on unmount --- */
   useEffect(() => {
@@ -130,229 +132,111 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
     };
   }, []);
 
-  /* --- Attach scroll + resize listeners --- */
+  /* --- Scroll active chip into view --- */
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
+    const btn = nav.querySelector<HTMLElement>(`[data-dn][data-day="${currentDayNum}"]`);
+    if (!btn) return;
+    const left = btn.offsetLeft - nav.offsetWidth / 2 + btn.offsetWidth / 2;
+    nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }, [currentDayNum]);
 
-    // Initial check
-    updateOverflow();
+  const handleDayClick = useCallback((dayNum: number) => {
+    onSwitchDay(dayNum);
+  }, [onSwitchDay]);
 
-    // Scroll listener
-    nav.addEventListener('scroll', updateOverflow, { passive: true });
-
-    // ResizeObserver
-    let observer: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      observer = new ResizeObserver(updateOverflow);
-      observer.observe(nav);
-    }
-
-    return () => {
-      nav.removeEventListener('scroll', updateOverflow);
-      if (observer) observer.disconnect();
-    };
-  }, [updateOverflow, days]);
-
-  /* --- Scroll active pill into view when currentDayNum changes --- */
-  useEffect(() => {
-    if (!currentDayNum || !navRef.current) return;
-    const btn = navRef.current.querySelector<HTMLElement>(
-      `[data-dn][data-day="${currentDayNum}"]`,
-    );
-    if (btn) scrollPillIntoView(btn);
-  }, [currentDayNum, scrollPillIntoView]);
-
-  /* --- Sliding indicator: compute position after layout --- */
-  useLayoutEffect(() => {
-    if (!navRef.current) return;
-    // 全覽模式時，indicator 跟著「全覽」按鈕
-    const nav = navRef.current;
-    if (isTripMapMode) {
-      const overviewBtn = nav.querySelector<HTMLElement>('[data-testid="dn-overview-btn"]');
-      if (!overviewBtn) {
-        setIndicatorStyle(null);
-        return;
-      }
-      setIndicatorStyle({ left: overviewBtn.offsetLeft, width: overviewBtn.offsetWidth });
-      return;
-    }
-    const activeBtn = nav.querySelector<HTMLElement>(`[data-dn][data-day="${currentDayNum}"]`);
-    if (!activeBtn) {
-      setIndicatorStyle(null);
-      return;
-    }
-    setIndicatorStyle({ left: activeBtn.offsetLeft, width: activeBtn.offsetWidth });
-  }, [currentDayNum, days, isTripMapMode]);
-
-  /* --- Arrow click handlers --- */
-  const handleArrowLeft = useCallback(() => {
-    const nav = navRef.current;
-    if (nav) nav.scrollBy({ left: -nav.clientWidth, behavior: 'smooth' });
-  }, []);
-
-  const handleArrowRight = useCallback(() => {
-    const nav = navRef.current;
-    if (nav) nav.scrollBy({ left: nav.clientWidth, behavior: 'smooth' });
-  }, []);
-
-  /* --- Day pill click --- */
-  const handleDayClick = useCallback(
-    (dayNum: number) => {
-      setTooltipDay(null);
-      onSwitchDay(dayNum);
-    },
-    [onSwitchDay],
-  );
-
-  /* --- Tooltip: Desktop hover --- */
+  /* --- Hover/touch tooltip --- */
   const handleMouseEnter = useCallback((dayNum: number) => {
-    setTooltipDay(dayNum);
+    if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+    tooltipTimer.current = setTimeout(() => setTooltipDay(dayNum), 400);
   }, []);
-
   const handleMouseLeave = useCallback(() => {
+    if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
     setTooltipDay(null);
   }, []);
-
-  /* --- Tooltip: Mobile long press --- */
   const handleTouchStart = useCallback((dayNum: number) => {
-    longPressTimer.current = setTimeout(() => {
-      setTooltipDay(dayNum);
-    }, 500);
+    longPressTimer.current = setTimeout(() => setTooltipDay(dayNum), 500);
   }, []);
-
   const handleTouchEnd = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    // Hide tooltip after a brief delay on touch
-    tooltipTimer.current = setTimeout(() => setTooltipDay(null), 2000);
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    setTimeout(() => setTooltipDay(null), 1500);
   }, []);
 
   return (
     <>
       <style>{SCOPED_STYLES}</style>
-      <div className="relative flex items-center min-w-0 ml-auto" ref={wrapRef}>
-        {/* Left gradient fade mask */}
-        <div
-          className={clsx(
-            'absolute left-0 top-0 bottom-0 w-8 pointer-events-none z-1 bg-linear-to-r from-secondary to-transparent transition-opacity duration-fast ease-apple',
-            canScrollLeft ? 'opacity-100' : 'opacity-0',
-          )}
-          aria-hidden="true"
-        />
-        {/* Right gradient fade mask */}
-        <div
-          className={clsx(
-            'absolute right-0 top-0 bottom-0 w-8 pointer-events-none z-1 bg-linear-to-l from-secondary to-transparent transition-opacity duration-fast ease-apple',
-            canScrollRight ? 'opacity-100' : 'opacity-0',
-          )}
-          aria-hidden="true"
-        />
-
-        <button
-          className="hidden md:flex items-center bg-transparent border-none text-accent text-title3 cursor-pointer p-2 min-w-tap-min focus-visible:outline-none aria-hidden:invisible"
-          aria-label="向左捲動"
-          aria-hidden={!canScrollLeft}
-          tabIndex={canScrollLeft ? 0 : -1}
-          disabled={!canScrollLeft}
-          onClick={handleArrowLeft}
-        >
-          &#8249;
-        </button>
-        <div
-          className="relative flex gap-2 flex-1 overflow-x-auto overflow-y-visible scroll-smooth py-1 md:justify-center [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          id="navPills"
-          ref={navRef}
-        >
-          {indicatorStyle && (
-            <div
-              className="absolute top-0 h-full bg-accent rounded-md opacity-15 pointer-events-none will-change-[transform,width]"
-              aria-hidden="true"
-              style={{
-                transition: `transform var(--duration-indicator) var(--ease-spring, cubic-bezier(0.32, 1.28, 0.60, 1.00)), width var(--duration-indicator) var(--ease-spring, cubic-bezier(0.32, 1.28, 0.60, 1.00))`,
-                transform: `translateX(${indicatorStyle.left}px)`,
-                width: indicatorStyle.width,
-              }}
-            />
-          )}
-          {days.map((d) => {
-            const dayNum = d.dayNum;
-            const isActive = !isTripMapMode && dayNum === currentDayNum;
-            const isToday = dayNum === todayDayNum;
-            const showTooltip = tooltipDay === dayNum;
-
-            const tooltipId = `dn-tooltip-${dayNum}`;
-            const parts = parsePillParts(d);
-            return (
-              <button
-                key={dayNum}
-                className={clsx('dn relative z-1 cursor-pointer font-inherit', isActive && 'active')}
-                data-dn=""
-                data-day={dayNum}
-                data-action="switch-day"
-                data-target={`day${dayNum}`}
-                aria-label={d.label ? `${formatPillLabel(d)} ${d.label}` : formatPillLabel(d)}
-                aria-describedby={showTooltip ? tooltipId : undefined}
-                onClick={() => handleDayClick(dayNum)}
-                onMouseEnter={() => handleMouseEnter(dayNum)}
-                onMouseLeave={handleMouseLeave}
-                onTouchStart={() => handleTouchStart(dayNum)}
-                onTouchEnd={handleTouchEnd}
-              >
-                <span className="dn-eyebrow block">{parts.eyebrow}</span>
-                <span className="dn-date block">{parts.date}</span>
-                {parts.dow && <span className="dn-dow block">{parts.dow}</span>}
-                {/* Today marker dot */}
-                {isToday && (
-                  <span
-                    className={clsx(
-                      'dn-today-dot absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full',
-                      isActive ? 'bg-white' : 'bg-accent',
-                    )}
-                    aria-hidden="true"
-                  />
-                )}
-                {showTooltip && (
-                  <span
-                    id={tooltipId}
-                    className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-secondary text-foreground text-caption font-medium py-2 px-3 rounded-sm shadow-md whitespace-nowrap z-10 pointer-events-none [animation:dn-tooltip-in_var(--transition-duration-fast)_var(--transition-timing-function-apple)]"
-                    role="tooltip"
-                  >
-                    {formatTooltip(d)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-
-          {/* 全覽按鈕（F006.5）：只在有切換 callback 時顯示 */}
-          {onToggleTripMap && (
+      <div className="ocean-day-strip" id="navPills" ref={navRef} role="tablist" aria-label="行程日期">
+        {days.map((d) => {
+          const dayNum = d.dayNum;
+          const isActive = !isTripMapMode && dayNum === currentDayNum;
+          const isToday = dayNum === todayDayNum;
+          const showTooltip = tooltipDay === dayNum;
+          const tooltipId = `dn-tooltip-${dayNum}`;
+          const parts = parseChipParts(d);
+          return (
             <button
-              className={clsx('dn relative z-1 cursor-pointer font-inherit', isTripMapMode && 'active')}
+              key={dayNum}
+              className={clsx('dn', isActive && 'active')}
               data-dn=""
-              aria-label="全覽地圖"
-              aria-pressed={isTripMapMode}
-              onClick={onToggleTripMap}
-              data-testid="dn-overview-btn"
-              type="button"
+              data-day={dayNum}
+              data-action="switch-day"
+              data-target={`day${dayNum}`}
+              aria-label={d.label ? `${formatPillLabel(d)} ${d.label}` : formatPillLabel(d)}
+              aria-describedby={showTooltip ? tooltipId : undefined}
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => handleDayClick(dayNum)}
+              onMouseEnter={() => handleMouseEnter(dayNum)}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={() => handleTouchStart(dayNum)}
+              onTouchEnd={handleTouchEnd}
             >
-              <span className="dn-eyebrow block">MAP</span>
-              <span className="dn-date block">全覽</span>
+              <div className="dn-head">
+                <span className="dn-eyebrow">{parts.eyebrow}</span>
+                {isToday && <span className="dn-weather" aria-label="今日">● TODAY</span>}
+              </div>
+              <div className="dn-date">
+                {parts.date}
+                {parts.dow && <span className="dn-dow">{parts.dow}</span>}
+              </div>
+              {d.label && <div className="dn-area">{d.label}</div>}
+              <div className="dn-marks" aria-hidden="true">
+                {Array.from({ length: 6 }).map((_, i) => (<span key={i} className="dn-mark" />))}
+              </div>
+              {showTooltip && (
+                <span
+                  id={tooltipId}
+                  className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-secondary text-foreground text-caption font-medium py-2 px-3 rounded-sm shadow-md whitespace-nowrap z-10 pointer-events-none [animation:dn-tooltip-in_var(--transition-duration-fast)_var(--transition-timing-function-apple)]"
+                  role="tooltip"
+                >
+                  {formatTooltip(d)}
+                </span>
+              )}
             </button>
-          )}
-        </div>
-        <button
-          className="hidden md:flex items-center bg-transparent border-none text-accent text-title3 cursor-pointer p-2 min-w-tap-min focus-visible:outline-none aria-hidden:invisible"
-          aria-label="向右捲動"
-          aria-hidden={!canScrollRight}
-          tabIndex={canScrollRight ? 0 : -1}
-          disabled={!canScrollRight}
-          onClick={handleArrowRight}
-        >
-          &#8250;
-        </button>
+          );
+        })}
+
+        {onToggleTripMap && (
+          <button
+            className={clsx('dn', isTripMapMode && 'active')}
+            data-dn=""
+            aria-label="全覽地圖"
+            aria-pressed={isTripMapMode}
+            onClick={onToggleTripMap}
+            data-testid="dn-overview-btn"
+            type="button"
+          >
+            <div className="dn-head">
+              <span className="dn-eyebrow">MAP</span>
+            </div>
+            <div className="dn-date">全覽</div>
+            <div className="dn-area">所有日程</div>
+            <div className="dn-marks" aria-hidden="true">
+              {Array.from({ length: 6 }).map((_, i) => (<span key={i} className="dn-mark" />))}
+            </div>
+          </button>
+        )}
       </div>
     </>
   );
