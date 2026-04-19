@@ -57,6 +57,8 @@ function lazyWithRetry(
 const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
 const ManagePage = lazyWithRetry(() => import('../pages/ManagePage'));
 const TripPage = lazyWithRetry(() => import('../pages/TripPage'));
+const TripLayout = lazyWithRetry(() => import('../pages/TripLayout'));
+const StopDetailPage = lazyWithRetry(() => import('../pages/StopDetailPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -85,7 +87,10 @@ if (el) {
               <Route path="/admin/" element={<AdminPage />} />
               <Route path="/manage" element={<ManagePage />} />
               <Route path="/manage/" element={<ManagePage />} />
-              <Route path="/trip/:tripId" element={<TripPage />} />
+              <Route path="/trip/:tripId" element={<TripLayout />}>
+                <Route index element={<TripPage />} />
+                <Route path="stop/:entryId" element={<StopDetailPage />} />
+              </Route>
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>
           </Suspense>
