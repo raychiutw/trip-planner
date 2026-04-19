@@ -139,9 +139,9 @@ export default function TripPage() {
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
 
-  /* --- Feature flag: DayMap (read from URL once) --- */
+  /* --- Map is always enabled now (Ocean OSM migration complete). Legacy ?showmap=0 URL param opts out for QA/print scenarios. --- */
   const enableDayMap = useMemo(
-    () => new URLSearchParams(window.location.search).get('showmap') === '1',
+    () => new URLSearchParams(window.location.search).get('showmap') !== '0',
     [],
   );
 
