@@ -126,8 +126,21 @@ const SCOPED_STYLES = `
   aspect-ratio: 16 / 9;
   max-height: 320px;
   background: var(--color-secondary);
+  position: relative;
 }
-.stop-detail-map-inner > * { width: 100%; height: 100%; }
+.stop-detail-map-expand {
+  position: absolute; top: 10px; right: 10px; z-index: 400;
+  width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--color-background); border: 1px solid var(--color-border);
+  color: var(--color-foreground); cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  text-decoration: none;
+  transition: border-color 160ms var(--transition-timing-function-apple),
+              color 160ms var(--transition-timing-function-apple);
+}
+.stop-detail-map-expand:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.stop-detail-map-inner > *:not(.stop-detail-map-expand) { width: 100%; height: 100%; }
 
 /* --- Body sections --- */
 .stop-detail-section {
@@ -341,6 +354,20 @@ export default function StopDetailPage() {
             <Suspense fallback={<div className="stop-detail-skeleton" />}>
               <OceanMap pins={detailPins} mode="detail" routes={false} />
             </Suspense>
+            <a
+              className="stop-detail-map-expand"
+              href={`/trip/${trip?.id}/stop/${entryId}/map`}
+              onClick={(e) => { e.preventDefault(); navigate(`/trip/${trip?.id}/stop/${entryId}/map`); }}
+              aria-label="地圖全螢幕"
+              title="地圖全螢幕"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 3 21 3 21 9" />
+                <polyline points="9 21 3 21 3 15" />
+                <line x1="21" y1="3" x2="14" y2="10" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+              </svg>
+            </a>
           </div>
         </div>
       ) : (

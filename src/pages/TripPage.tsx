@@ -606,9 +606,36 @@ export default function TripPage() {
             return day ? extractPinsFromDay(day).pins : [];
           });
           return (
-            <Suspense fallback={<div className="h-[420px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-              <OceanMap pins={allPins} mode="overview" />
-            </Suspense>
+            <div style={{ position: 'relative' }}>
+              <Suspense fallback={<div className="h-[420px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
+                <OceanMap pins={allPins} mode="overview" />
+              </Suspense>
+              {trip?.id && (
+                <a
+                  href={`/trip/${trip?.id}/map`}
+                  onClick={(e) => { e.preventDefault(); navigate(`/trip/${trip?.id}/map`); }}
+                  aria-label="地圖全螢幕（全行程）"
+                  title="地圖全螢幕（全行程）"
+                  style={{
+                    position: 'absolute', top: 10, right: 10, zIndex: 400,
+                    width: 36, height: 36, borderRadius: 10,
+                    display: 'grid', placeItems: 'center',
+                    background: 'var(--color-background)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-foreground)',
+                    textDecoration: 'none',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 3 21 3 21 9" />
+                    <polyline points="9 21 3 21 3 15" />
+                    <line x1="21" y1="3" x2="14" y2="10" />
+                    <line x1="3" y1="21" x2="10" y2="14" />
+                  </svg>
+                </a>
+              )}
+            </div>
           );
         })()}
 
