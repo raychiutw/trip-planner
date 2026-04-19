@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import '../../css/tokens.css';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-import PageNav from '../components/shared/PageNav';
+import TriplineLogo from '../components/shared/TriplineLogo';
+import Icon from '../components/shared/Icon';
 import { apiFetchRaw } from '../lib/apiClient';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -25,9 +26,136 @@ interface TripInfo {
   published: number | boolean;
 }
 
-/** Render Markdown text to sanitized HTML with table wrapping. */
+/* ===== Scoped styles — editorial topbar + hero + chat layout ===== */
+const MANAGE_SCOPED_STYLES = `
+.manage-wrap {
+  min-height: 100dvh;
+  background: var(--color-background);
+  display: flex; flex-direction: column;
+}
+
+/* Topbar — breadcrumb glass nav（與 StopDetailPage 一致） */
+.manage-topbar {
+  position: sticky; top: 0; z-index: var(--z-sticky-nav);
+  background: var(--color-glass-nav);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 10px 16px; display: flex; align-items: center; gap: 12px;
+  height: 52px;
+}
+.manage-back {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--color-foreground);
+  transition: background-color 160ms var(--transition-timing-function-apple),
+              color 160ms var(--transition-timing-function-apple);
+}
+.manage-back:hover { background: var(--color-hover); color: var(--color-accent); }
+.manage-topbar-crumb {
+  flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--color-muted);
+  white-space: nowrap; overflow: hidden;
+}
+.manage-topbar-crumb-label { color: var(--color-foreground); }
+.manage-topbar-right {
+  display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+
+/* Trip selector pill */
+.manage-trip-selector { position: relative; }
+.manage-trip-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px 6px 12px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer;
+  transition: border-color 160ms var(--transition-timing-function-apple),
+              color 160ms var(--transition-timing-function-apple);
+}
+.manage-trip-pill:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.manage-trip-pill-name {
+  max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .manage-trip-pill-name { max-width: 120px; }
+  .manage-topbar-crumb { font-size: 10px; letter-spacing: 0.12em; }
+}
+.manage-trip-dropdown {
+  position: absolute; right: 0; top: calc(100% + 6px);
+  background: var(--color-background); border: 1px solid var(--color-border);
+  border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 4px; min-width: 240px; max-height: 50vh;
+  overflow-y: auto; z-index: calc(var(--z-sticky-nav) + 1);
+}
+.manage-trip-option {
+  display: block; width: 100%; text-align: left;
+  padding: 10px 14px; border-radius: 8px;
+  border: none; background: transparent;
+  font-size: 14px; color: var(--color-foreground);
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+  transition: background-color 140ms var(--transition-timing-function-apple);
+}
+.manage-trip-option:hover { background: var(--color-hover); }
+.manage-trip-option--active { color: var(--color-accent); font-weight: 600; }
+
+/* Chat layout */
+.manage-chat-wrap {
+  display: flex; flex-direction: column;
+  height: calc(100dvh - 52px);
+  max-width: 720px; margin: 0 auto;
+  padding: 0 16px; width: 100%;
+}
+@media (min-width: 961px) {
+  .manage-chat-wrap { padding: 0 32px; }
+}
+
+/* Hero — editorial title 結構（對齊 StopDetailPage） */
+.manage-hero { padding: 20px 0 16px; border-bottom: 1px solid var(--color-border); margin-bottom: 4px; }
+.manage-hero-eyebrow {
+  font-size: 10.5px; font-weight: 600; color: var(--color-muted);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.manage-hero-title {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--color-foreground); line-height: 1.2; margin: 0 0 4px;
+}
+@media (min-width: 768px) {
+  .manage-hero-title { font-size: 30px; }
+}
+.manage-hero-subtitle {
+  font-size: 15px; color: var(--color-muted);
+  line-height: 1.55; margin: 0;
+}
+
+/* Messages */
+.manage-messages {
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 16px 0 8px;
+}
+`;
+
+/** Render Markdown text to sanitized HTML with table wrapping.
+ *
+ * Legacy DB rows store literal "\n" (backslash + n, 2 chars) instead of real
+ * newlines. marked can't parse those, so we unescape before rendering.
+ * Do not unescape inside fenced code blocks (``` ```), to preserve code as-is.
+ */
 function renderMarkdown(text: string): string {
-  return sanitizeHtml(marked.parse(text) as string)
+  const parts = text.split(/(```[\s\S]*?```)/);
+  const normalized = parts
+    .map((part) => {
+      if (part.startsWith('```')) return part;
+      return part
+        .replace(/\\n/g, '\n')
+        .replace(/\\t/g, '\t')
+        .replace(/\\\|/g, '|');
+    })
+    .join('');
+  return sanitizeHtml(marked.parse(normalized) as string)
     .replace(/<table([^>]*)>/g, '<div class="table-wrap"><table$1>')
     .replace(/<\/table>/g, '</table></div>');
 }
@@ -44,7 +172,12 @@ function formatDate(iso: string): string {
 
 const MARKDOWN_STRIP_RE = /[#*_~`>\-|[\]()]/g;
 function truncate(text: string, max: number): string {
-  const plain = text.replace(MARKDOWN_STRIP_RE, '').trim();
+  const plain = text
+    .replace(/\\n/g, ' ')
+    .replace(/\\t/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(MARKDOWN_STRIP_RE, '')
+    .trim();
   return plain.length > max ? plain.slice(0, max) + '…' : plain;
 }
 
@@ -157,8 +290,8 @@ const ChatBubble = memo(function ChatBubble({ req }: { req: RawRequest }) {
             <div className="bg-secondary text-foreground rounded-2xl rounded-bl-sm px-4 py-2.5">
               {req.reply ? (
                 <>
-                  <div className="border-l-[3px] border-accent bg-black/[0.06] rounded-r-sm px-2.5 py-1.5 mb-2 text-caption text-muted line-clamp-2">
-                    {truncate(req.message, 80)}
+                  <div className="border border-border rounded-md px-2.5 py-1.5 mb-3 text-caption text-muted line-clamp-2 bg-background/60">
+                    <span className="text-muted/70 mr-1">↩</span>{truncate(req.message, 80)}
                   </div>
                   <div className="text-body leading-normal break-words" data-reply-content="" dangerouslySetInnerHTML={{ __html: replyHtml }} />
                 </>
@@ -427,15 +560,16 @@ export default function ManagePage() {
     }
   }
 
-  /* ===== Nav center: trip dropdown ===== */
-  const navCenter = pageState.kind === 'ready' ? (
-    <div ref={dropdownRef}>
+  /* ===== Trip selector pill (used inside ManageTopbar) ===== */
+  const tripSelector = pageState.kind === 'ready' ? (
+    <div ref={dropdownRef} className="manage-trip-selector">
       <button
-        className="flex items-center gap-1.5 bg-secondary text-foreground text-[length:var(--font-size-body)] font-semibold py-2 pl-3 pr-2.5 rounded-full min-h-tap-min cursor-pointer border-none transition-colors duration-fast hover:bg-tertiary focus-visible:outline-none"
+        className="manage-trip-pill"
         aria-label="選擇行程"
+        aria-expanded={dropdownOpen}
         onClick={() => setDropdownOpen(!dropdownOpen)}
       >
-        <span className="truncate max-w-[60vw] md:max-w-[300px]">
+        <span className="manage-trip-pill-name">
           {filteredTrips.find(t => t.tripId === currentTripId)?.name || ''}
         </span>
         <svg viewBox="0 0 10 7" fill="none" width="10" height="7" className={`shrink-0 transition-transform duration-fast ${dropdownOpen ? 'rotate-180' : ''}`}>
@@ -443,13 +577,13 @@ export default function ManagePage() {
         </svg>
       </button>
       {dropdownOpen && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-secondary rounded-lg shadow-lg border border-border/50 py-1 min-w-full max-h-[50vh] overflow-y-auto z-(--z-sticky-nav)">
+        <div className="manage-trip-dropdown">
           {filteredTrips.map((t) => (
             <button
               key={t.tripId}
               className={[
-                'w-full text-left px-4 py-2.5 border-none bg-transparent cursor-pointer text-[length:var(--font-size-body)] transition-colors duration-fast whitespace-nowrap hover:bg-hover focus-visible:outline-none',
-                t.tripId === currentTripId ? 'text-accent font-semibold' : 'text-foreground',
+                'manage-trip-option',
+                t.tripId === currentTripId ? 'manage-trip-option--active' : '',
               ].join(' ')}
               onClick={() => handleTripSelect(t.tripId)}
             >
@@ -463,9 +597,13 @@ export default function ManagePage() {
 
   /* ===== Render ===== */
   return (
-    <div className="flex min-h-dvh">
-      <div className="flex-1 min-w-0 max-w-full mx-auto">
-        <PageNav isOnline={isOnline} onClose={handleClose} center={navCenter} />
+    <div className="manage-wrap">
+      <style>{MANAGE_SCOPED_STYLES}</style>
+      <ManageTopbar
+        onBack={handleClose}
+        isOnline={isOnline}
+        tripSelector={tripSelector}
+      />
 
         <ToastContainer />
 
@@ -493,10 +631,17 @@ export default function ManagePage() {
 
           {/* Ready: chat UI */}
           {pageState.kind === 'ready' && (
-            <div className="flex flex-col h-content-h md:max-w-page-max-w mx-auto px-padding-h">
+            <div className="manage-chat-wrap">
               {/* Messages area */}
               <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-                <div className="py-4">
+                <div className="manage-hero">
+                  <div className="manage-hero-eyebrow">AI 編輯</div>
+                  <h1 className="manage-hero-title">訊息紀錄</h1>
+                  <p className="manage-hero-subtitle">
+                    修改行程內容或向 Tripline 請教建議，處理時間約 30 秒。
+                  </p>
+                </div>
+                <div className="manage-messages">
                   {/* Sentinel at TOP for loading older messages (ASC mode) */}
                   {hasMore && (
                     <div ref={sentinelRef} className="py-2" aria-hidden="true">
@@ -545,29 +690,31 @@ export default function ManagePage() {
                   <div className="flex items-center gap-1.5 mb-2 px-1">
                     <button
                       className={[
-                        'text-caption font-medium py-1 px-3 rounded-full border transition-colors duration-fast focus-visible:outline-none',
+                        'text-caption font-semibold py-1 px-3 rounded-full border transition-colors duration-fast focus-visible:outline-none',
                         mode === 'trip-edit'
-                          ? 'border-accent bg-accent-bg text-accent'
-                          : 'border-border bg-transparent text-muted hover:bg-hover',
+                          ? 'border-accent text-accent bg-transparent'
+                          : 'border-border bg-transparent text-muted hover:border-foreground hover:text-foreground',
                       ].join(' ')}
                       onClick={() => setMode('trip-edit')}
+                      aria-pressed={mode === 'trip-edit'}
                     >
                       修改
                     </button>
                     <button
                       className={[
-                        'text-caption font-medium py-1 px-3 rounded-full border transition-colors duration-fast focus-visible:outline-none',
+                        'text-caption font-semibold py-1 px-3 rounded-full border transition-colors duration-fast focus-visible:outline-none',
                         mode === 'trip-plan'
-                          ? 'border-plan-text bg-plan-bg text-plan-text'
-                          : 'border-border bg-transparent text-muted hover:bg-hover',
+                          ? 'border-plan-text text-plan-text bg-transparent'
+                          : 'border-border bg-transparent text-muted hover:border-foreground hover:text-foreground',
                       ].join(' ')}
                       onClick={() => setMode('trip-plan')}
+                      aria-pressed={mode === 'trip-plan'}
                     >
                       提問
                     </button>
                   </div>
 
-                  <div className="flex items-end gap-2 bg-secondary rounded-2xl pl-4 pr-1 py-2 shadow-md border border-border/50">
+                  <div className="flex items-end gap-2 bg-background rounded-2xl pl-4 pr-1 py-2 border border-border hover:border-muted transition-colors focus-within:border-accent">
                     <textarea
                       ref={textareaRef}
                       className="flex-1 py-1.5 border-none bg-transparent text-[length:var(--font-size-body)] font-[family-name:var(--font-family-system)] text-foreground resize-none leading-normal overflow-y-hidden focus-visible:outline-none placeholder:text-muted"
@@ -601,8 +748,37 @@ export default function ManagePage() {
             </div>
           )}
         </main>
-      </div>
     </div>
+  );
+}
+
+/* ===== ManageTopbar — breadcrumb glass nav（對齊 StopDetailPage） ===== */
+
+interface ManageTopbarProps {
+  onBack: () => void;
+  isOnline: boolean;
+  tripSelector: React.ReactNode;
+}
+
+function ManageTopbar({ onBack, isOnline, tripSelector }: ManageTopbarProps) {
+  return (
+    <header className="manage-topbar">
+      <button
+        type="button"
+        className="manage-back"
+        onClick={onBack}
+        aria-label="返回"
+      >
+        <Icon name="chevron-left" />
+      </button>
+      <div className="manage-topbar-crumb">
+        <span className="manage-topbar-crumb-label">AI 編輯</span>
+      </div>
+      <div className="manage-topbar-right">
+        {tripSelector}
+        <TriplineLogo isOnline={isOnline} />
+      </div>
+    </header>
   );
 }
 
