@@ -16,9 +16,10 @@ import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '.
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
+import { extractPinsFromDay } from '../hooks/useMapData';
 
-/* TripMap — React.lazy code-split（F006：多天總覽）*/
-const TripMap = lazy(() => import('../components/trip/TripMap'));
+/* OceanMap — React.lazy code-split（F006：多天總覽）*/
+const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import MobileBottomNav from '../components/trip/MobileBottomNav';
@@ -599,12 +600,18 @@ export default function TripPage() {
           </div>
         )}
 
-        {/* TripMap 全覽（F006）*/}
-        {enableDayMap && !loading && isTripMapMode && (
-          <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-            <TripMap allDays={allDays} dayNums={dayNums} />
-          </Suspense>
-        )}
+        {/* Trip overview（F006）— OceanMap with all days' pins, auto cluster */}
+        {enableDayMap && !loading && isTripMapMode && (() => {
+          const allPins = dayNums.flatMap((n) => {
+            const day = allDays[n];
+            return day ? extractPinsFromDay(day).pins : [];
+          });
+          return (
+            <Suspense fallback={<div className="h-[420px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
+              <OceanMap pins={allPins} mode="overview" />
+            </Suspense>
+          );
+        })()}
 
         {/* Body: main + sidebar grid */}
         {!loading && trip && (

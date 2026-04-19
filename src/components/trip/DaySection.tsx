@@ -19,9 +19,10 @@ import { toTimelineEntry, toHotelData } from '../../lib/mapDay';
 import { calcDrivingStats } from '../../lib/drivingStats';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
+import { extractPinsFromDay } from '../../hooks/useMapData';
 import type { Day, DaySummary } from '../../types/trip';
 
-const DayMap = lazy(() => import('./DayMap'));
+const OceanMap = lazy(() => import('./OceanMap'));
 
 export interface DaySectionProps {
   dayNum: number;
@@ -167,11 +168,15 @@ const DaySection = React.memo(function DaySection({
               </div>
             )}
 
-            {enableDayMap && !hideDayMap && (
-              <Suspense fallback={<div className="h-[200px] rounded-md bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-                <DayMap day={day} dayNum={dayNum} />
-              </Suspense>
-            )}
+            {enableDayMap && !hideDayMap && day && (() => {
+              const { pins } = extractPinsFromDay(day);
+              if (pins.length === 0) return null;
+              return (
+                <Suspense fallback={<div className="h-[420px] rounded-md bg-secondary animate-pulse" aria-label="地圖載入中" />}>
+                  <OceanMap pins={pins} mode="overview" />
+                </Suspense>
+              );
+            })()}
 
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />

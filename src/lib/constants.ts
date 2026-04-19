@@ -47,8 +47,8 @@ export function safeColor(c: string | null | undefined): string {
 export const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
-/** Base URL for Google Maps search links. */
-export const GOOGLE_MAPS_URL_BASE = 'https://www.google.com/maps/search/';
+/** Base URL for external navigation links (Google Maps app via web URL scheme). Not a Maps Platform API. */
+export const EXTERNAL_NAVIGATION_URL_BASE = 'https://www.google.com/maps/search/';
 
 /** Known destination timezone mapping (by tripId prefix). */
 export const TRIP_TIMEZONE: Record<string, string> = {
