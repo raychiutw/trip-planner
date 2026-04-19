@@ -156,14 +156,18 @@ export function useRoute(
           polyline: [number, number][];
           duration: number | null;
           distance: number;
+          approx?: boolean;
         };
         if (cancelled) return;
+        // Backend may return 200 + approx:true for ferry-only / unreachable pairs —
+        // preserve the flag through cache + setResult so UI can show "直線距離" hint.
+        const isApprox = data.approx === true;
         const entry: CacheEntry = {
           key,
           polyline: data.polyline,
           duration: data.duration,
           distance: data.distance,
-          approx: 0,
+          approx: isApprox ? 1 : 0,
           ts: Date.now(),
         };
         try {
@@ -175,7 +179,7 @@ export function useRoute(
           polyline: data.polyline,
           duration: data.duration,
           distance: data.distance,
-          approx: false,
+          approx: isApprox,
         });
       } catch {
         if (cancelled) return;

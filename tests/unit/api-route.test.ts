@@ -51,14 +51,17 @@ describe('/api/route CF Worker', () => {
     expect(body.error).toBe('CONFIG_MISSING');
   });
 
-  it('does not leak token in error responses', async () => {
+  it('does not leak token in fallback responses', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('network'));
     const res = await onRequestGet(
       makeCtx('https://x/api/route?from=127.7,26.2&to=127.9,26.5', { MAPBOX_TOKEN: 'pk.SECRET123' }),
     );
     const text = await res.text();
     expect(text).not.toContain('SECRET123');
-    expect(res.status).toBe(502);
+    // Network failure → server falls back to Haversine 200 (not 5xx bubble-up)
+    expect(res.status).toBe(200);
+    const body = JSON.parse(text);
+    expect(body.approx).toBe(true);
   });
 
   it('forwards Mapbox 429 as 429 RATE_LIMITED', async () => {
@@ -92,11 +95,26 @@ describe('/api/route CF Worker', () => {
     expect(body.distance).toBe(55555);
   });
 
-  it('returns 404 NO_ROUTE when Mapbox returns empty routes', async () => {
+  it('falls back to Haversine approx when Mapbox returns empty routes', async () => {
     global.fetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ routes: [] }), { status: 200 }),
     );
     const res = await onRequestGet(makeCtx('https://x/api/route?from=127.7,26.2&to=127.9,26.5'));
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.approx).toBe(true);
+    expect(body.duration).toBeNull();
+    // Straight-line polyline from→to in [lat, lng] order
+    expect(body.polyline).toEqual([[26.2, 127.7], [26.5, 127.9]]);
+    // Haversine distance is > 0 for two distinct points
+    expect(body.distance).toBeGreaterThan(0);
+  });
+
+  it('falls back to Haversine approx when Mapbox 500s (non-429)', async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response('server err', { status: 500 }));
+    const res = await onRequestGet(makeCtx('https://x/api/route?from=127.7,26.2&to=127.9,26.5'));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.approx).toBe(true);
   });
 });
