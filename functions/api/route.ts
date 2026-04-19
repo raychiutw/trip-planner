@@ -4,9 +4,13 @@
  * Frontend fetches /api/route?from=lng,lat&to=lng,lat → Worker fetches Mapbox
  * with server-side token. Token never reaches the browser.
  *
- * Response shape:
- *   { polyline: [[lat, lng], ...], duration: seconds, distance: meters }
- *   or { error: 'code', message?: 'hint' } with HTTP 4xx/5xx
+ * Response shape (always HTTP 200 for valid coords):
+ *   { polyline: [[lat, lng], ...], duration: seconds|null, distance: meters, approx?: boolean }
+ *   approx=true means Mapbox had no driving route (e.g. ferry-only islands);
+ *   server returned a Haversine straight-line fallback so frontend can draw
+ *   something sensible without extra coordination.
+ * Error shape (HTTP 4xx/5xx):
+ *   { error: 'code', message?: 'hint' }
  */
 
 import type { Env as BaseEnv } from './_types';
@@ -35,6 +39,39 @@ function errorJson(code: string, status: number, message?: string): Response {
   });
 }
 
+/** Haversine straight-line distance in metres between two lng/lat points. */
+function haversineMeters(a: Coord, b: Coord): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function approxResponse(from: Coord, to: Coord): Response {
+  return new Response(
+    JSON.stringify({
+      polyline: [
+        [from.lat, from.lng],
+        [to.lat, to.lng],
+      ],
+      duration: null,
+      distance: Math.round(haversineMeters(from, to)),
+      approx: true,
+    }),
+    {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    },
+  );
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const from = parseCoord(url.searchParams.get('from'));
@@ -53,11 +90,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     res = await fetch(mapboxUrl);
   } catch {
-    return errorJson('MAPBOX_UNREACHABLE', 502);
+    // Network/DNS failure reaching Mapbox — fall back to straight line
+    return approxResponse(from, to);
   }
 
   if (res.status === 429) return errorJson('RATE_LIMITED', 429);
-  if (!res.ok) return errorJson('MAPBOX_ERROR', 502, `Mapbox returned ${res.status}`);
+  if (!res.ok) {
+    // Mapbox 4xx/5xx (quota, bad token, etc.) — fall back rather than bubble up
+    return approxResponse(from, to);
+  }
 
   const data = (await res.json()) as {
     routes?: Array<{
@@ -67,7 +108,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }>;
   };
   const route = data.routes?.[0];
-  if (!route?.geometry?.coordinates) return errorJson('NO_ROUTE', 404);
+  // No driving route available (ferry-only island, mid-ocean coord, etc.) — fall back
+  if (!route?.geometry?.coordinates) return approxResponse(from, to);
 
   const polyline = route.geometry.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
   return new Response(
