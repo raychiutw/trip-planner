@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.1.0] - 2026-04-20
+
+Ocean v2 發布後的 `/simplify` code health 循環：消除重複、收斂 helper、優化地圖效能、補足單元測試。使用者體感：地圖切換景點反應更快、無視覺變化。
+
+### Changed
+- **OceanMap marker cache 重構**：拆成 create effect（pins 變動時建 marker）+ diff 式 update effect（focus 變動時只 `setIcon` 受影響的 2~5 個 marker）。原本每次 focus 切換全量重建整層 `L.LayerGroup`，10 pins × 5 次切換 = 50 次 marker 重建；現在只剩 ~10 次 setIcon。
+- **OceanMap cluster path 拆 create/update**：Supercluster index 建一次，focus 變動用 `clusterRefreshRef` 觸發 `refresh()`，不再重建 index。TripPage overview >10 pins 的 cluster 模式大量級也受益。
+- **Segment polyline 改 `setStyle`**：`isActive` 切換不再 `remove()` + `L.polyline()` 重畫，直接改屬性。
+- **`pinIndexById` Map 取代 `pins.findIndex`**：marker 迴圈內每個 pin 都查 O(N) → 一次性建 Map 後 O(1) 查。
+
+### Added
+- **`BreadcrumbCrumbs` 共用組件**：StopDetailPage/MapPage 的 crumb 分段渲染抽出來，用 `classPrefix` 支援各頁 scoped style。
+- **`mapDay.ts` 三個共用 helper**：`findEntryInDays`（跨日查 entry）、`parseLocalDate`（YYYY-MM-DD 嚴格解析，拒絕 `2026-02-30` rollover）、`formatDateLabel`（M/D 無補零）。StopDetailPage、MapPage、DayNav 三處重複定義收斂。
+- **21 個新單元測試**：涵蓋三個新 helper 全部分支（null / invalid / happy / 邊界）、`BreadcrumbCrumbs` 6 項行為、`formatPillLabel` fallback 路徑。測試總數 340 → 364。
+
+### Fixed
+- **focus state 同步修正**：OceanMap update effect 的 deps 加 `map` / `onMarkerClick`，避免 create 重建後 focus state 被 reset 成 idle。
+- **`parseLocalDate` 拒絕溢位日期**：`2026-02-30` 原本會被 JS Date 靜默解讀為 3/2，現在加 round-trip 檢查正確回傳 null。
+- **`markersRef` cleanup 條件式 reset**：Strict Mode 雙 mount 之間避免新 map 被舊 cleanup 清空。
+- **`focusStateRef` 移進 useEffect**：原本在 render phase 直接賦值違反 React 純度，concurrent render abort 會讓 ref reflect aborted state。
+- **`findEntryInDays` 加 `Number.isFinite` 守衛**：`entryId=NaN` 直接 return null。
+
+### Removed
+- **`height: 100% !important` CSS hack**：改用 `fillParent` prop + `[data-fill-parent="true"]` selector。
+- **重複的 `findEntryInDays` / `formatDateLabel` 定義**：StopDetailPage、MapPage 兩處拷貝刪除。
+- **DayNav 三處 `new Date(date + 'T00:00:00')` 手寫 idiom**：統一用 `parseLocalDate`。
+
 ## [2.0.0.0] - 2026-04-20 — Ocean 大改版里程碑
 
 這版宣告 Ocean 重設計（PR1 Leaflet 基建 + PR2 景點詳情頁 + PR3 全圖地圖頁）完整發布。

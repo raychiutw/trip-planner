@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
+import { parseLocalDate } from '../../lib/mapDay';
 
 /* ===== Scoped styles ===== */
 
@@ -144,35 +145,29 @@ body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-m
 const WEEKDAYS = '日一二三四五六';
 const WEEKDAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+/** Exposed for unit test only; not part of the public component API. */
 export function formatPillLabel(day: DaySummary): string {
-  if (!day.date) return String(day.dayNum);
-  const d = new Date(day.date + 'T00:00:00');
-  if (isNaN(d.getTime())) return String(day.dayNum);
-  const mm = d.getMonth() + 1;
-  const dd = d.getDate();
-  return `${mm}/${dd}`;
+  const d = parseLocalDate(day.date);
+  if (!d) return String(day.dayNum);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 function parseChipParts(day: DaySummary): { eyebrow: string; date: string; dow: string; dowZh: string } {
   const eyebrow = `DAY ${String(day.dayNum).padStart(2, '0')}`;
-  if (!day.date) return { eyebrow, date: String(day.dayNum), dow: '', dowZh: '' };
-  const d = new Date(day.date + 'T00:00:00');
-  if (isNaN(d.getTime())) return { eyebrow, date: String(day.dayNum), dow: '', dowZh: '' };
-  const mm = d.getMonth() + 1;
-  const dd = d.getDate();
-  return { eyebrow, date: `${mm}/${dd}`, dow: WEEKDAYS_EN[d.getDay()] ?? '', dowZh: WEEKDAYS[d.getDay()] ?? '' };
+  const d = parseLocalDate(day.date);
+  if (!d) return { eyebrow, date: String(day.dayNum), dow: '', dowZh: '' };
+  return {
+    eyebrow,
+    date: `${d.getMonth() + 1}/${d.getDate()}`,
+    dow: WEEKDAYS_EN[d.getDay()] ?? '',
+    dowZh: WEEKDAYS[d.getDay()] ?? '',
+  };
 }
 
 function formatTooltip(day: DaySummary): string {
   const parts: string[] = [`Day ${day.dayNum}`];
-  if (day.date) {
-    const d = new Date(day.date + 'T00:00:00');
-    if (!isNaN(d.getTime())) {
-      const mm = d.getMonth() + 1;
-      const dd = d.getDate();
-      parts.push(`${mm}/${dd}（${WEEKDAYS[d.getDay()]}）`);
-    }
-  }
+  const d = parseLocalDate(day.date);
+  if (d) parts.push(`${d.getMonth() + 1}/${d.getDate()}（${WEEKDAYS[d.getDay()]}）`);
   if (day.label) parts.push(day.label);
   return parts.join(' — ');
 }
