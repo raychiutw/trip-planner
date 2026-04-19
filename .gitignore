@@ -31,6 +31,8 @@ report.html
 
 # tp-workspace runtime trigger outputs
 .claude/skills/tp-workspace/trigger-results/
+# tp-team skill eval workspace (runtime-generated outputs + snapshots)
+.claude/skills/tp-team-workspace/
 
 # Stray npm CLI bin scripts leaked to project root
 baseline-browser-mapping
