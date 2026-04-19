@@ -6,11 +6,11 @@ import type { DaySummary } from '../../types/trip';
 
 const SCOPED_STYLES = `
 .ocean-day-strip {
-  display: flex; gap: 8px;
+  display: flex; gap: 6px;
   overflow-x: auto; scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
-  padding: 10px 40px 12px;
-  margin: -28px -40px 24px;
+  padding: 6px 40px 8px;
+  margin: -28px -40px 20px;
   scrollbar-width: thin;
   position: sticky;
   top: 64px;
@@ -19,7 +19,7 @@ const SCOPED_STYLES = `
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--color-border);
 }
-.ocean-day-strip::-webkit-scrollbar { height: 6px; }
+.ocean-day-strip::-webkit-scrollbar { height: 4px; }
 .ocean-day-strip::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 .ocean-day-strip::-webkit-scrollbar-track { background: transparent; }
 @media (max-width: 1200px) {
@@ -29,55 +29,76 @@ const SCOPED_STYLES = `
   .ocean-day-strip { top: 56px; }
 }
 @media (max-width: 760px) {
-  .ocean-day-strip { padding: 8px 16px 10px; margin: -18px -16px 20px; }
+  .ocean-day-strip { padding: 4px 16px 6px; margin: -18px -16px 16px; }
 }
 body.print-mode .ocean-day-strip { display: none; }
 
+/* Chip: single-row compact layout — DAY | date · dow | area */
 [data-dn] {
-  flex: 0 0 160px;
+  flex: 0 0 auto;
   scroll-snap-align: start;
-  padding: 14px 14px 12px;
-  border-radius: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
   background: transparent;
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  transition: all var(--transition-duration-fast) var(--transition-timing-function-apple);
+  transition: background-color var(--transition-duration-fast) var(--transition-timing-function-apple),
+              border-color var(--transition-duration-fast) var(--transition-timing-function-apple),
+              color var(--transition-duration-fast) var(--transition-timing-function-apple);
   position: relative;
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 40px;
+  white-space: nowrap;
 }
 [data-dn]:hover:not(.active) { border-color: var(--color-accent); }
 [data-dn].active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
 
-[data-dn] .dn-head { display: flex; justify-content: space-between; align-items: center; }
-[data-dn] .dn-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.18em; opacity: 0.55; text-transform: uppercase; }
-[data-dn].active .dn-eyebrow { opacity: 0.7; }
-[data-dn] .dn-weather { font-size: 11px; opacity: 0.55; display: inline-flex; align-items: center; gap: 3px; }
-[data-dn].active .dn-weather { opacity: 0.7; }
+[data-dn] .dn-head { display: inline-flex; align-items: center; gap: 4px; }
+[data-dn] .dn-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  opacity: 0.6; text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+[data-dn].active .dn-eyebrow { opacity: 0.85; }
+[data-dn] .dn-weather {
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  opacity: 0.75; text-transform: uppercase;
+  padding: 2px 5px; border-radius: 4px;
+  background: rgba(0,0,0,0.06);
+}
+[data-dn].active .dn-weather { background: rgba(255,255,255,0.18); opacity: 0.9; }
 
-[data-dn] .dn-date { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1; margin-top: 10px; }
-[data-dn] .dn-dow { font-size: 12px; font-weight: 500; opacity: 0.55; margin-left: 6px; letter-spacing: 0.02em; }
-[data-dn].active .dn-dow { opacity: 0.7; }
+[data-dn] .dn-date {
+  font-size: 15px; font-weight: 700;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+  line-height: 1;
+}
+[data-dn] .dn-dow {
+  font-size: 11px; font-weight: 500;
+  opacity: 0.6; margin-left: 4px; letter-spacing: 0.02em;
+}
+[data-dn].active .dn-dow { opacity: 0.8; }
 
-[data-dn] .dn-area { font-size: 12.5px; margin-top: 6px; opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-dn].active .dn-area { opacity: 0.85; }
-
-[data-dn] .dn-marks { display: flex; gap: 3px; align-items: center; margin-top: 12px; }
-[data-dn] .dn-mark { width: 14px; height: 2px; background: var(--color-lineStrong, #C1C1C1); }
-[data-dn] .dn-mark[data-empty="true"] { background: var(--color-border); }
-[data-dn].active .dn-mark { background: rgba(255,255,255,0.65); }
-[data-dn] .dn-marks-extra { font-size: 9px; color: var(--color-muted); margin-left: 4px; }
-[data-dn].active .dn-marks-extra { color: rgba(255,255,255,0.75); }
+[data-dn] .dn-area {
+  font-size: 12px; opacity: 0.65;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 80px;
+  border-left: 1px solid var(--color-border);
+  padding-left: 8px;
+  line-height: 1;
+}
+[data-dn].active .dn-area { opacity: 0.82; border-left-color: rgba(255,255,255,0.28); }
 
 body.dark [data-dn]:not(.active) { background: transparent; border-color: var(--color-border); color: var(--color-foreground); }
 
 @media (max-width: 760px) {
-  [data-dn] { flex: 0 0 140px; padding: 12px 12px 10px; }
-  [data-dn] .dn-date { font-size: 22px; }
-}
-@media (max-width: 480px) {
-  [data-dn] { flex: 0 0 130px; }
+  [data-dn] { padding: 7px 10px; gap: 6px; min-height: 36px; }
+  [data-dn] .dn-date { font-size: 14px; }
+  [data-dn] .dn-area { max-width: 56px; padding-left: 6px; font-size: 11.5px; }
+  [data-dn] .dn-eyebrow { font-size: 9.5px; letter-spacing: 0.12em; }
 }
 
 @keyframes dn-tooltip-in {
@@ -139,7 +160,7 @@ interface DayNavProps {
 
 /* ===== Component ===== */
 
-export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, isTripMapMode = false, onToggleTripMap, stopsByDay }: DayNavProps) {
+export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, isTripMapMode = false, onToggleTripMap }: DayNavProps) {
   const navRef = useRef<HTMLDivElement>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,30 +236,13 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
             >
               <div className="dn-head">
                 <span className="dn-eyebrow">{parts.eyebrow}</span>
-                {isToday && <span className="dn-weather" aria-label="今日">● TODAY</span>}
+                {isToday && <span className="dn-weather" aria-label="今日">TODAY</span>}
               </div>
               <div className="dn-date">
                 {parts.date}
                 {parts.dow && <span className="dn-dow">{parts.dow}</span>}
               </div>
               {d.label && <div className="dn-area">{d.label}</div>}
-              {(() => {
-                const stopCount = stopsByDay?.[dayNum];
-                const shown = stopCount !== undefined ? Math.min(stopCount, 6) : 6;
-                const extra = stopCount !== undefined && stopCount > 6 ? stopCount - 6 : 0;
-                return (
-                  <div className="dn-marks" aria-hidden="true">
-                    {Array.from({ length: shown || 6 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className="dn-mark"
-                        data-empty={stopCount === undefined || stopCount === 0 ? 'true' : undefined}
-                      />
-                    ))}
-                    {extra > 0 && <span className="dn-marks-extra">+{extra}</span>}
-                  </div>
-                );
-              })()}
               {showTooltip && (
                 <span
                   id={tooltipId}
@@ -267,9 +271,6 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
             </div>
             <div className="dn-date">全覽</div>
             <div className="dn-area">所有日程</div>
-            <div className="dn-marks" aria-hidden="true">
-              {Array.from({ length: 6 }).map((_, i) => (<span key={i} className="dn-mark" />))}
-            </div>
           </button>
         )}
       </div>
