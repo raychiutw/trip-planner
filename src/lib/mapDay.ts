@@ -9,6 +9,56 @@ import type { InfoBoxData } from '../components/trip/InfoBox';
 import type { RestaurantData } from '../components/trip/Restaurant';
 import type { ShopData } from '../components/trip/Shop';
 import type { HotelData } from '../components/trip/Hotel';
+import type { Day, Entry } from '../types/trip';
+
+/* ===== Entry lookup helpers (shared across pages/components) ===== */
+
+export interface DayEntryContext {
+  entry: Entry;
+  dayNum: number;
+  date: string | null;
+  label: string | null;
+}
+
+/** Linear scan all days for a matching entry id. Returns null if not found or id invalid. */
+export function findEntryInDays(
+  allDays: Record<number, Day>,
+  entryId: number,
+): DayEntryContext | null {
+  if (!Number.isFinite(entryId)) return null;
+  for (const dayNum of Object.keys(allDays).map((n) => Number(n))) {
+    const day = allDays[dayNum];
+    if (!day?.timeline) continue;
+    const entry = day.timeline.find((e) => e.id === entryId);
+    if (entry) return { entry, dayNum, date: day.date ?? null, label: day.label ?? null };
+  }
+  return null;
+}
+
+/** Parse a YYYY-MM-DD string as a local-time Date. Returns null on invalid/empty.
+ *  Rejects rollovers like '2026-02-30' (JS would silently interpret as Mar 2). */
+export function parseLocalDate(date: string | null | undefined): Date | null {
+  if (!date) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return null;
+  const [, yearStr, monthStr, dayStr] = match;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  const d = new Date(year, month - 1, day);
+  if (
+    d.getFullYear() !== year ||
+    d.getMonth() !== month - 1 ||
+    d.getDate() !== day
+  ) return null;
+  return d;
+}
+
+/** Format a YYYY-MM-DD date string as "M/D" in local time. Empty string on invalid. */
+export function formatDateLabel(date: string | null | undefined): string {
+  const d = parseLocalDate(date);
+  return d ? `${d.getMonth() + 1}/${d.getDate()}` : '';
+}
 
 /* ===== Raw input interfaces (camelCase, matching API response from mergePoi) ===== */
 

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { toHotelData, toTimelineEntry } from '../../src/lib/mapDay.ts';
+import {
+  toHotelData,
+  toTimelineEntry,
+  findEntryInDays,
+  parseLocalDate,
+  formatDateLabel,
+} from '../../src/lib/mapDay.ts';
 
 /* ===== buildLocation（透過 toHotelData 停車場情境間接測試）===== */
 
@@ -91,5 +97,112 @@ describe('URL trip 參數優先順序邏輯', () => {
     // 邏輯：!tripId || !/^[\w-]+$/.test(tripId) → 使用 localStorage
     const shouldUseLs = !tripId || !/^[\w-]+$/.test(tripId);
     expect(shouldUseLs).toBe(true);
+  });
+});
+
+/* ===== findEntryInDays — 跨 day 查 entry ===== */
+
+describe('findEntryInDays', () => {
+  it('命中時回傳完整 DayEntryContext', () => {
+    const days = {
+      1: { date: '2026-07-26', label: 'D1 那霸', timeline: [{ id: 42, title: '機場' }] },
+    };
+    expect(findEntryInDays(days, 42)).toEqual({
+      entry: { id: 42, title: '機場' },
+      dayNum: 1,
+      date: '2026-07-26',
+      label: 'D1 那霸',
+    });
+  });
+
+  it('未命中時回傳 null', () => {
+    expect(findEntryInDays({ 1: { timeline: [{ id: 1 }] } }, 99)).toBeNull();
+  });
+
+  it('空 days 物件回傳 null', () => {
+    expect(findEntryInDays({}, 1)).toBeNull();
+  });
+
+  it('day 無 timeline 跳過', () => {
+    expect(findEntryInDays({ 1: { label: 'empty' } }, 1)).toBeNull();
+  });
+
+  it('date/label 未定義時 context 以 null 填入', () => {
+    const ctx = findEntryInDays({ 1: { timeline: [{ id: 1 }] } }, 1);
+    expect(ctx).toMatchObject({ date: null, label: null });
+  });
+
+  it('非 finite entryId 直接回傳 null', () => {
+    const days = { 1: { timeline: [{ id: 1 }] } };
+    expect(findEntryInDays(days, NaN)).toBeNull();
+    expect(findEntryInDays(days, Infinity)).toBeNull();
+  });
+
+  it('跨多天搜尋時回傳正確的 dayNum', () => {
+    const days = {
+      1: { date: '2026-07-26', timeline: [{ id: 1 }] },
+      2: { date: '2026-07-27', timeline: [{ id: 2 }, { id: 3 }] },
+      3: { date: '2026-07-28', timeline: [{ id: 4 }] },
+    };
+    expect(findEntryInDays(days, 3)?.dayNum).toBe(2);
+    expect(findEntryInDays(days, 4)?.dayNum).toBe(3);
+  });
+});
+
+/* ===== parseLocalDate — 本地時區 YYYY-MM-DD 解析 ===== */
+
+describe('parseLocalDate', () => {
+  it('null/undefined/空字串回傳 null', () => {
+    expect(parseLocalDate(null)).toBeNull();
+    expect(parseLocalDate(undefined)).toBeNull();
+    expect(parseLocalDate('')).toBeNull();
+  });
+
+  it('合法 YYYY-MM-DD 解析為本地午夜', () => {
+    const d = parseLocalDate('2026-07-26');
+    expect(d).not.toBeNull();
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(6); // 0-indexed
+    expect(d.getDate()).toBe(26);
+    expect(d.getHours()).toBe(0);
+    expect(d.getMinutes()).toBe(0);
+  });
+
+  it('非法日期字串回傳 null', () => {
+    expect(parseLocalDate('not-a-date')).toBeNull();
+    expect(parseLocalDate('2026-13-45')).toBeNull();
+  });
+
+  it('拒絕月日溢位（2026-02-30 不應被接受成 3/2）', () => {
+    expect(parseLocalDate('2026-02-30')).toBeNull();
+    expect(parseLocalDate('2026-04-31')).toBeNull();
+    expect(parseLocalDate('2026-13-01')).toBeNull();
+  });
+
+  it('拒絕非 YYYY-MM-DD 格式', () => {
+    expect(parseLocalDate('26-07-26')).toBeNull();
+    expect(parseLocalDate('2026/07/26')).toBeNull();
+    expect(parseLocalDate('2026-7-26')).toBeNull();
+  });
+});
+
+/* ===== formatDateLabel — M/D 顯示 ===== */
+
+describe('formatDateLabel', () => {
+  it('null/undefined/空字串回傳空字串', () => {
+    expect(formatDateLabel(null)).toBe('');
+    expect(formatDateLabel(undefined)).toBe('');
+    expect(formatDateLabel('')).toBe('');
+  });
+
+  it('合法日期輸出 M/D 無補零', () => {
+    expect(formatDateLabel('2026-07-26')).toBe('7/26');
+    expect(formatDateLabel('2026-01-05')).toBe('1/5');
+    expect(formatDateLabel('2026-12-31')).toBe('12/31');
+  });
+
+  it('非法輸入回傳空字串', () => {
+    expect(formatDateLabel('abc')).toBe('');
+    expect(formatDateLabel('2026/07/26')).toBe('');
   });
 });

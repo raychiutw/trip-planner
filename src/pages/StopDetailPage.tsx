@@ -27,15 +27,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { extractPinsFromDay } from '../hooks/useMapData';
-import { toTimelineEntry } from '../lib/mapDay';
+import { toTimelineEntry, findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import { EXTERNAL_NAVIGATION_URL_BASE } from '../lib/constants';
 import { NavLinks } from '../components/trip/MapLinks';
 import InfoBox from '../components/trip/InfoBox';
 import MarkdownText from '../components/shared/MarkdownText';
 import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
+import BreadcrumbCrumbs from '../components/shared/BreadcrumbCrumbs';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import type { Day, Entry } from '../types/trip';
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -202,34 +202,6 @@ body.print-mode .stop-detail-action-wrap,
 body.print-mode .stop-detail-back { display: none !important; }
 body.print-mode .stop-detail-topbar { position: static; }
 `;
-
-/* ===== Entry lookup ===== */
-
-interface EntryContext {
-  entry: Entry;
-  dayNum: number;
-  date: string | null;
-  dayLabel: string | null;
-}
-
-function findEntryInDays(allDays: Record<number, Day>, entryId: number): EntryContext | null {
-  for (const dayNum of Object.keys(allDays).map((n) => Number(n))) {
-    const day = allDays[dayNum];
-    if (!day?.timeline) continue;
-    const entry = day.timeline.find((e) => e.id === entryId);
-    if (entry) {
-      return { entry, dayNum, date: day.date ?? null, dayLabel: day.label ?? null };
-    }
-  }
-  return null;
-}
-
-function formatDateLabel(date: string | null): string {
-  if (!date) return '';
-  const d = new Date(date + 'T00:00:00');
-  if (isNaN(d.getTime())) return '';
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
 
 /* ===== Component ===== */
 
@@ -441,16 +413,7 @@ function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate }: Topbar
         <Icon name="chevron-left" />
       </button>
       <div className="stop-detail-crumb">
-        {crumb && (
-          <>
-            {crumb.split(' · ').map((part, i) => (
-              <span key={i}>
-                {i > 0 && <span className="stop-detail-crumb-sep" aria-hidden="true">·</span>}
-                <span className={i === 0 ? 'stop-detail-crumb-day' : ''}>{part}</span>
-              </span>
-            ))}
-          </>
-        )}
+        {crumb && <BreadcrumbCrumbs parts={crumb.split(' · ')} classPrefix="stop-detail-crumb" />}
         {tripTitle && tripId && (
           <a
             className="stop-detail-crumb-trip ml-auto"
