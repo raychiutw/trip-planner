@@ -672,6 +672,10 @@ export default function TripPage() {
           onTripChange={handleTripChange}
           colorMode={colorMode}
           setColorMode={setColorMode}
+          onOpenSheet={setActiveSheet}
+          onPrint={togglePrint}
+          onDownload={handleDownloadFormat}
+          isOnline={isOnline}
         />
       </InfoSheet>
 

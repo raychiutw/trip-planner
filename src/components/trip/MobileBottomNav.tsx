@@ -35,6 +35,7 @@ export default function MobileBottomNav({
     if (activeSheet === 'suggestions') return 'suggest';
     if (activeSheet === 'flights') return 'flight';
     if (
+      activeSheet === 'action-menu' ||
       activeSheet === 'checklist' ||
       activeSheet === 'backup' ||
       activeSheet === 'driving' ||
@@ -59,7 +60,7 @@ export default function MobileBottomNav({
         onOpenSheet('flights');
         break;
       case 'menu':
-        onOpenSheet('ai-group');
+        onOpenSheet('action-menu');
         break;
       case 'editor':
         if (isOnline) window.location.href = '/manage/';
