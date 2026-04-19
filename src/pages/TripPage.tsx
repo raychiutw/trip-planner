@@ -134,7 +134,6 @@ export default function TripPage() {
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
   // showNavTitle removed along with old sticky-nav inline title
-  const largeTitleRef = useRef<HTMLDivElement>(null);
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
@@ -314,13 +313,6 @@ export default function TripPage() {
     const prefix = activeTripId.split('-')[0] ?? '';
     return TRIP_TIMEZONE[prefix];
   }, [activeTripId]);
-
-  /* --- Date range for large title subtitle --- */
-  const dateRange = useMemo(() => {
-    if (autoScrollDates.length === 0) return '';
-    if (tripStart === tripEnd) return tripStart ?? '';
-    return `${tripStart} — ${tripEnd}`;
-  }, [autoScrollDates, tripStart, tripEnd]);
 
   /* --- Today's date (timezone-aware) — shared by DayNav and Timeline --- */
   const localToday = useMemo(() => getLocalToday(activeTripId), [activeTripId]);
@@ -587,15 +579,6 @@ export default function TripPage() {
 
       {/* Main page */}
       <main className="ocean-page">
-        {!loading && trip && (
-          <div className="ocean-header" ref={largeTitleRef}>
-            <div>
-              <h1 className="ocean-h1">{trip.title || trip.name}</h1>
-              {dateRange && <div className="ocean-date-range">{dateRange}</div>}
-            </div>
-          </div>
-        )}
-
         {/* Day strip — 設計稿的 .rtl-day-strip */}
         {!loading && trip && (
           <DayNav

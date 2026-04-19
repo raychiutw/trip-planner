@@ -379,18 +379,6 @@ body.dark {
 
     /* Page */
     .ocean-page { padding: 28px 40px 48px; max-width: 1440px; margin: 0 auto; }
-    /* Header (h1 + dates) — desktop 省空間：由 topbar brand-label 展示 trip title。
-       手機 topbar 壓縮 brand-label 後改在頁面顯示。 */
-    .ocean-header { display: none; }
-    @media (max-width: 1100px) {
-        .ocean-header {
-            display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
-            margin-bottom: 28px; padding-bottom: 20px;
-            border-bottom: 1px solid var(--color-border);
-        }
-    }
-    .ocean-h1 { font-size: 34px; font-weight: 700; margin: 0; letter-spacing: -0.03em; color: var(--color-foreground); }
-    .ocean-date-range { color: var(--color-muted); font-size: 13px; margin-top: 6px; }
 
     /* Body grid */
     .ocean-body { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
@@ -600,7 +588,6 @@ body.dark {
     @media (max-width: 960px) {
         .ocean-body { grid-template-columns: 1fr; }
         .ocean-side { position: static; }
-        .ocean-h1 { font-size: 28px; }
         .ocean-hero-title { font-size: 28px; }
     }
     @media (max-width: 760px) {
@@ -609,8 +596,6 @@ body.dark {
         .ocean-topbar-right .ocean-tb-btn:not(.ocean-tb-ai) { display: none; }
         .ocean-overflow-wrap { display: none; }
         .ocean-page { padding: 18px 16px calc(80px + env(safe-area-inset-bottom)); }
-        .ocean-header { flex-direction: column; align-items: flex-start; }
-        .ocean-h1 { font-size: 24px; }
         .ocean-hero { padding: 22px 20px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 22px; }
         .ocean-stop { grid-template-columns: 56px 44px 1fr; padding: 14px; gap: 12px; }
