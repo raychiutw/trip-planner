@@ -60,16 +60,14 @@ const SCOPED_STYLES = `
   height: 52px;
 }
 .stop-detail-back {
-  height: 36px; border-radius: 999px;
-  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
-  padding: 0 12px 0 8px;
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center; flex-shrink: 0;
   background: transparent; border: none; cursor: pointer;
   color: var(--color-foreground);
-  font-size: 14px; font-weight: 500; letter-spacing: -0.01em;
-  transition: background-color 160ms var(--transition-timing-function-apple);
+  transition: background-color 160ms var(--transition-timing-function-apple),
+              color 160ms var(--transition-timing-function-apple);
 }
 .stop-detail-back:hover { background: var(--color-hover); color: var(--color-accent); }
-.stop-detail-back-label { line-height: 1; }
 .stop-detail-crumb {
   flex: 1; min-width: 0;
   display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
@@ -414,7 +412,6 @@ function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate }: Topbar
         aria-label="返回行程"
       >
         <Icon name="chevron-left" />
-        <span className="stop-detail-back-label">返回</span>
       </button>
       <div className="stop-detail-crumb">
         {crumb && (
