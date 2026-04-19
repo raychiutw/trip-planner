@@ -25,10 +25,11 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } fro
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
 import { extractPinsFromDay } from '../hooks/useMapData';
+import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
+import BreadcrumbCrumbs from '../components/shared/BreadcrumbCrumbs';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
-import type { Day, Entry } from '../types/trip';
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -75,14 +76,6 @@ const SCOPED_STYLES = `
   min-height: 0;
 }
 .map-page-body > * { width: 100%; height: 100%; }
-/* Override OceanMap's hardcoded heights */
-.map-page-body .ocean-map-container,
-.map-page-body .ocean-map-container[data-mode="detail"],
-.map-page-body .ocean-map-container[data-mode="overview"] {
-  height: 100% !important;
-  min-height: 0;
-  border-radius: 0;
-}
 .map-page-empty {
   height: 100%; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -209,30 +202,6 @@ const SCOPED_STYLES = `
 
 /* ===== Helpers ===== */
 
-interface EntryContext {
-  entry: Entry;
-  dayNum: number;
-  date: string | null;
-  label: string | null;
-}
-
-function findEntryInDays(allDays: Record<number, Day>, entryId: number): EntryContext | null {
-  for (const dayNum of Object.keys(allDays).map((n) => Number(n))) {
-    const day = allDays[dayNum];
-    if (!day?.timeline) continue;
-    const entry = day.timeline.find((e) => e.id === entryId);
-    if (entry) return { entry, dayNum, date: day.date ?? null, label: day.label ?? null };
-  }
-  return null;
-}
-
-function formatDateLabel(date: string | null): string {
-  if (!date) return '';
-  const d = new Date(date + 'T00:00:00');
-  if (isNaN(d.getTime())) return '';
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
 interface DayTab {
   dayNum: number;
   date: string | null;
@@ -336,7 +305,9 @@ export default function MapPage() {
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (mostVisible) {
           const id = Number((mostVisible.target as HTMLElement).dataset.cardEntryId);
-          if (Number.isFinite(id)) setActiveEntryId(id);
+          if (Number.isFinite(id)) {
+            setActiveEntryId((prev) => (prev === id ? prev : id));
+          }
         }
       },
       { root: container, threshold: [0.5, 0.7, 0.9] },
@@ -348,7 +319,7 @@ export default function MapPage() {
 
   /* --- Card click → scroll into view + set active --- */
   const handleCardClick = useCallback((entryId: number) => {
-    setActiveEntryId(entryId);
+    setActiveEntryId((prev) => (prev === entryId ? prev : entryId));
     const el = cardsRef.current?.querySelector<HTMLElement>(`[data-card-entry-id="${entryId}"]`);
     if (!el) return;
     scrollingProgrammatically.current = true;
@@ -399,12 +370,7 @@ export default function MapPage() {
           <Icon name="chevron-left" />
         </button>
         <div className="map-page-crumb">
-          {crumb.split(' · ').map((part, i) => (
-            <span key={i}>
-              {i > 0 && <span className="map-page-crumb-sep" aria-hidden="true">·</span>}
-              <span className={i === 0 ? 'map-page-crumb-day' : ''}>{part}</span>
-            </span>
-          ))}
+          <BreadcrumbCrumbs parts={crumb.split(' · ')} classPrefix="map-page-crumb" />
         </div>
         <TriplineLogo isOnline={isOnline} />
       </header>
@@ -422,6 +388,7 @@ export default function MapPage() {
               focusId={activeEntryId ?? undefined}
               routes={true}
               cluster={false}
+              fillParent={true}
             />
           </Suspense>
         )}

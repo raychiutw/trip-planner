@@ -12,7 +12,7 @@
  *          └─► useRoute(a,b) per segment ─► L.polyline ─► map
  */
 
-import { memo, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import Supercluster from 'supercluster';
 import { useLeafletMap } from '../../hooks/useLeafletMap';
@@ -32,6 +32,8 @@ export interface OceanMapProps {
   routes?: boolean;
   /** Auto-cluster when overview + pins.length > 10 (override via false to disable) */
   cluster?: boolean;
+  /** Fill parent container instead of using mode-default fixed heights (for fullscreen pages like /map) */
+  fillParent?: boolean;
   onMarkerClick?: (pinId: number) => void;
   dark?: boolean;
   className?: string;
@@ -106,6 +108,11 @@ const SCOPED_STYLES = `
 }
 .ocean-map-container[data-mode="detail"] { height: 280px; }
 .ocean-map-container[data-mode="overview"] { height: 420px; }
+.ocean-map-container[data-fill-parent="true"] {
+  height: 100%;
+  min-height: 0;
+  border-radius: 0;
+}
 .ocean-map-container .leaflet-control-attribution {
   font-size: 9px;
   background: rgba(255,255,255,0.85);
@@ -121,27 +128,39 @@ interface SegmentProps {
   isActive: boolean;
 }
 
+function segmentStyle(isActive: boolean, approx: boolean): L.PolylineOptions {
+  return {
+    color: isActive ? 'var(--color-accent, #0077B6)' : '#94A3B8',
+    weight: isActive ? 4 : 3,
+    opacity: isActive ? 0.85 : 0.6,
+    dashArray: approx ? '6,6' : undefined,
+    interactive: false,
+  };
+}
+
 const Segment = memo(function Segment({ map, from, to, isActive }: SegmentProps) {
   const route = useRoute(from, to);
   const lineRef = useRef<L.Polyline | null>(null);
 
+  // Create polyline once per route (re-fetched polyline = new line)
   useEffect(() => {
     if (!map || !route) return;
-    const line = L.polyline(route.polyline, {
-      color: isActive ? 'var(--color-accent, #0077B6)' : '#94A3B8',
-      weight: isActive ? 4 : 3,
-      opacity: isActive ? 0.85 : 0.6,
-      dashArray: route.approx ? '6,6' : undefined,
-      interactive: false,
-    }).addTo(map);
+    const line = L.polyline(route.polyline, segmentStyle(isActive, route.approx === true)).addTo(map);
     lineRef.current = line;
     return () => {
-      if (lineRef.current) {
-        lineRef.current.remove();
-        lineRef.current = null;
-      }
+      line.remove();
+      if (lineRef.current === line) lineRef.current = null;
     };
-  }, [map, route, isActive]);
+    // isActive intentionally omitted — handled by the style-update effect below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, route]);
+
+  // Active/idle style update without rebuilding the polyline
+  useEffect(() => {
+    const line = lineRef.current;
+    if (!line || !route) return;
+    line.setStyle(segmentStyle(isActive, route.approx === true));
+  }, [isActive, route]);
 
   return null;
 });
@@ -154,6 +173,7 @@ const OceanMap = memo(function OceanMap({
   focusId,
   routes,
   cluster,
+  fillParent = false,
   onMarkerClick,
   dark = false,
   className,
@@ -174,79 +194,165 @@ const OceanMap = memo(function OceanMap({
     return pins;
   }, [pins, mode, focusId]);
 
+  const pinIndexById = useMemo(() => {
+    const m = new Map<number, number>();
+    for (let i = 0; i < pins.length; i++) m.set(pins[i]!.id, i);
+    return m;
+  }, [pins]);
+
   const focusedIdx = useMemo(() => {
     if (focusId === undefined) return -1;
-    return pins.findIndex((p) => p.id === focusId);
-  }, [pins, focusId]);
+    return pinIndexById.get(focusId) ?? -1;
+  }, [pinIndexById, focusId]);
 
-  /* --- Markers --- */
+  const visiblePinsById = useMemo(() => {
+    const m = new Map<number, MapPin>();
+    for (const p of visiblePins) m.set(p.id, p);
+    return m;
+  }, [visiblePins]);
+
+  /** True when pinId sits before the currently focused pin in tour order. */
+  const isPastPin = useCallback(
+    (pinId: number) => focusedIdx >= 0 && (pinIndexById.get(pinId) ?? -1) < focusedIdx,
+    [focusedIdx, pinIndexById],
+  );
+
+  /* --- Markers (non-cluster): create once per pin-set, diff-update on focus change --- */
+  const markersRef = useRef<Map<number, L.Marker>>(new Map());
+
   useEffect(() => {
-    if (!map) return;
+    if (!map || autoCluster) return;
     const layer = L.layerGroup().addTo(map);
-
-    if (!autoCluster) {
-      for (const pin of visiblePins) {
-        const isFocused = pin.id === focusId;
-        const isPast = focusedIdx >= 0 && pins.findIndex((p) => p.id === pin.id) < focusedIdx;
-        const icon = markerIcon(pin, isFocused, isPast);
-        const marker = L.marker([pin.lat, pin.lng], { icon, keyboard: true, alt: `第 ${pin.index} 站：${pin.title}` });
-        if (onMarkerClick) {
-          marker.on('click', () => onMarkerClick(pin.id));
-        }
-        marker.addTo(layer);
-      }
-    } else {
-      const sc = new Supercluster({ radius: 60, maxZoom: 15 });
-      sc.load(
-        visiblePins.map((pin) => ({
-          type: 'Feature' as const,
-          geometry: { type: 'Point' as const, coordinates: [pin.lng, pin.lat] as [number, number] },
-          properties: { pin },
-        })),
-      );
-      const refresh = () => {
-        layer.clearLayers();
-        const bounds = map.getBounds();
-        const bbox: [number, number, number, number] = [
-          bounds.getWest(),
-          bounds.getSouth(),
-          bounds.getEast(),
-          bounds.getNorth(),
-        ];
-        const zoom = Math.floor(map.getZoom());
-        const clusters = sc.getClusters(bbox, zoom);
-        for (const c of clusters) {
-          const [lng, lat] = c.geometry.coordinates as [number, number];
-          const props = c.properties as { cluster?: boolean; point_count?: number; pin?: MapPin };
-          if (props.cluster) {
-            const count = props.point_count ?? 0;
-            L.marker([lat, lng], { icon: clusterIcon(count), keyboard: false }).addTo(layer);
-          } else if (props.pin) {
-            const pin = props.pin;
-            const isFocused = pin.id === focusId;
-            const isPast = focusedIdx >= 0 && pins.findIndex((p) => p.id === pin.id) < focusedIdx;
-            const m = L.marker([pin.lat, pin.lng], {
-              icon: markerIcon(pin, isFocused, isPast),
-              keyboard: true,
-              alt: `第 ${pin.index} 站：${pin.title}`,
-            });
-            if (onMarkerClick) m.on('click', () => onMarkerClick(pin.id));
-            m.addTo(layer);
-          }
-        }
-      };
-      refresh();
-      map.on('moveend zoomend', refresh);
-      return () => {
-        map.off('moveend zoomend', refresh);
-        layer.remove();
-      };
+    const markers = new Map<number, L.Marker>();
+    for (const pin of visiblePins) {
+      const marker = L.marker([pin.lat, pin.lng], {
+        icon: markerIcon(pin, false, false),
+        keyboard: true,
+        alt: `第 ${pin.index} 站：${pin.title}`,
+      });
+      if (onMarkerClick) marker.on('click', () => onMarkerClick(pin.id));
+      marker.addTo(layer);
+      markers.set(pin.id, marker);
     }
-
+    markersRef.current = markers;
     return () => {
       layer.remove();
+      // Only clear ref if it still points to OUR map — avoids clobbering a newer
+      // map set by a re-mount (Strict Mode) before this cleanup runs.
+      if (markersRef.current === markers) markersRef.current = new Map();
     };
-  }, [map, visiblePins, pins, focusId, focusedIdx, onMarkerClick, autoCluster]);
+  }, [map, visiblePins, autoCluster, onMarkerClick]);
+
+  // Diff-based focus update: compute which pins' icon state actually changed
+  // (prev focused, new focused, past-boundary crossing) and only setIcon on those.
+  // Full-update fallback when markers were just rebuilt (different Map identity).
+  const prevFocusRef = useRef<{
+    focusId?: number;
+    focusedIdx: number;
+    markers: Map<number, L.Marker> | null;
+  }>({ focusedIdx: -1, markers: null });
+
+  useEffect(() => {
+    if (autoCluster) return;
+    const markers = markersRef.current;
+    const prev = prevFocusRef.current;
+    const rebuilt = prev.markers !== markers;
+
+    const affected = new Set<number>();
+    if (rebuilt) {
+      for (const pin of visiblePins) affected.add(pin.id);
+    } else {
+      if (prev.focusId !== undefined) affected.add(prev.focusId);
+      if (focusId !== undefined) affected.add(focusId);
+      const prevIdx = prev.focusedIdx;
+      const currIdx = focusedIdx;
+      if (prevIdx !== currIdx) {
+        const lo = Math.max(0, Math.min(prevIdx, currIdx));
+        const hi = Math.max(prevIdx, currIdx);
+        if (hi >= 0) {
+          for (const pin of visiblePins) {
+            const idx = pinIndexById.get(pin.id) ?? -1;
+            if (idx >= lo && idx <= hi) affected.add(pin.id);
+          }
+        }
+      }
+    }
+
+    for (const pinId of affected) {
+      const marker = markers.get(pinId);
+      const pin = visiblePinsById.get(pinId);
+      if (!marker || !pin) continue;
+      marker.setIcon(markerIcon(pin, pinId === focusId, isPastPin(pinId)));
+    }
+
+    prevFocusRef.current = { focusId, focusedIdx, markers };
+  }, [map, onMarkerClick, visiblePins, visiblePinsById, focusId, focusedIdx, pinIndexById, autoCluster, isPastPin]);
+
+  /* --- Markers (cluster path): create Supercluster once, refresh on focus or viewport --- */
+  // Latest focus state for cluster refresh closure (avoids rebuilding SC index on focus change).
+  // Assigned in an effect, not during render, to keep the component render-pure.
+  const focusStateRef = useRef({ focusId, focusedIdx, isPastPin });
+  useEffect(() => {
+    focusStateRef.current = { focusId, focusedIdx, isPastPin };
+  });
+  const clusterRefreshRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!map || !autoCluster) return;
+    const layer = L.layerGroup().addTo(map);
+    const sc = new Supercluster({ radius: 60, maxZoom: 15 });
+    sc.load(
+      visiblePins.map((pin) => ({
+        type: 'Feature' as const,
+        geometry: { type: 'Point' as const, coordinates: [pin.lng, pin.lat] as [number, number] },
+        properties: { pin },
+      })),
+    );
+    const refresh = () => {
+      const { focusId: curFocus, isPastPin: curIsPast } = focusStateRef.current;
+      layer.clearLayers();
+      const bounds = map.getBounds();
+      const bbox: [number, number, number, number] = [
+        bounds.getWest(),
+        bounds.getSouth(),
+        bounds.getEast(),
+        bounds.getNorth(),
+      ];
+      const zoom = Math.floor(map.getZoom());
+      const clusters = sc.getClusters(bbox, zoom);
+      for (const c of clusters) {
+        const [lng, lat] = c.geometry.coordinates as [number, number];
+        const props = c.properties as { cluster?: boolean; point_count?: number; pin?: MapPin };
+        if (props.cluster) {
+          const count = props.point_count ?? 0;
+          L.marker([lat, lng], { icon: clusterIcon(count), keyboard: false }).addTo(layer);
+        } else if (props.pin) {
+          const pin = props.pin;
+          const m = L.marker([pin.lat, pin.lng], {
+            icon: markerIcon(pin, pin.id === curFocus, curIsPast(pin.id)),
+            keyboard: true,
+            alt: `第 ${pin.index} 站：${pin.title}`,
+          });
+          if (onMarkerClick) m.on('click', () => onMarkerClick(pin.id));
+          m.addTo(layer);
+        }
+      }
+    };
+    clusterRefreshRef.current = refresh;
+    refresh();
+    map.on('moveend zoomend', refresh);
+    return () => {
+      map.off('moveend zoomend', refresh);
+      layer.remove();
+      clusterRefreshRef.current = null;
+    };
+  }, [map, visiblePins, autoCluster, onMarkerClick]);
+
+  // Re-render cluster markers when focus changes — no SC index rebuild.
+  useEffect(() => {
+    if (!autoCluster) return;
+    clusterRefreshRef.current?.();
+  }, [autoCluster, focusId, focusedIdx]);
 
   /* --- Viewport fit / focus follow --- */
   useEffect(() => {
@@ -297,6 +403,7 @@ const OceanMap = memo(function OceanMap({
         ref={containerRef}
         className={className ? `ocean-map-container ${className}` : 'ocean-map-container'}
         data-mode={mode}
+        data-fill-parent={fillParent ? 'true' : undefined}
         style={style}
         role="application"
         aria-label={mode === 'detail' ? '地圖：單點景點' : '地圖：行程景點總覽'}
