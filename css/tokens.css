@@ -474,49 +474,69 @@ body.dark {
         margin-bottom: 10px; padding: 0 2px;
     }
     .ocean-rail-eyebrow {
-        font-size: 10px; letter-spacing: 0.2em; color: var(--color-muted);
+        font-size: 11px; letter-spacing: 0.2em; color: var(--color-muted);
         text-transform: uppercase; font-weight: 600;
     }
-    .ocean-rail-meta { font-size: 10px; color: var(--color-muted); }
+    .ocean-rail-meta { font-size: 11px; color: var(--color-muted); }
 
-    .ocean-rail-body { position: relative; padding-left: 54px; }
+    .ocean-rail-body { position: relative; padding: 0; }
     .ocean-rail-line {
-        position: absolute; left: 44px; top: 6px; bottom: 6px;
+        position: absolute; left: 66px; top: 12px; bottom: 12px;
         width: 1px; background: var(--color-border);
+        pointer-events: none;
     }
 
     .ocean-rail-item {
-        position: relative; display: block;
-        width: 100%; padding: 8px 0;
+        position: relative;
+        display: grid;
+        grid-template-columns: 44px 24px 1fr;
+        grid-template-areas: "time dot head" "empty expand expand";
+        column-gap: 10px; align-items: start;
+        width: 100%; padding: 12px 0;
         border-bottom: 1px dashed var(--color-border);
         color: var(--color-foreground);
     }
     .ocean-rail-item[data-last="true"] { border-bottom: none; }
     .ocean-rail-item[data-past="true"] { opacity: 0.55; }
-    .ocean-rail-item[data-now="true"] { background: color-mix(in srgb, var(--color-accent) 6%, transparent); border-radius: var(--radius-sm); padding: 8px 6px; border-bottom-color: var(--color-accent); }
+    .ocean-rail-item[data-now="true"] {
+        background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+        border-radius: var(--radius-sm);
+        padding: 12px 8px;
+        border-bottom-color: var(--color-accent);
+    }
     .ocean-rail-head {
+        grid-area: head;
         display: grid; grid-template-columns: 22px 1fr auto;
-        column-gap: 10px; width: 100%;
+        column-gap: 10px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
         color: inherit; cursor: pointer; text-align: left;
         font: inherit;
+        min-height: 24px;
     }
 
     .ocean-rail-time {
-        position: absolute; left: -54px; top: 10px;
-        width: 40px; text-align: right;
-        font-size: 12px; font-weight: 700;
+        grid-area: time;
+        align-self: center;
+        text-align: right;
+        font-size: 13px; font-weight: 700;
         font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-        color: var(--color-foreground); line-height: 1;
+        color: var(--color-foreground); line-height: 1.2;
     }
     .ocean-rail-dot {
-        position: absolute; left: -14px; top: 14px;
-        width: 10px; height: 10px; border-radius: 50%;
+        grid-area: dot;
+        align-self: center; justify-self: center;
+        width: 24px; height: 24px; border-radius: 50%;
         background: var(--color-background);
-        border: 2px solid var(--color-lineStrong, #C1C1C1);
+        border: 1.5px solid var(--color-lineStrong, #C1C1C1);
+        display: grid; place-items: center;
+        font-size: 11px; font-weight: 700;
+        color: var(--color-muted);
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        z-index: 1;
     }
-    .ocean-rail-item[data-accent="true"] .ocean-rail-dot { border-color: var(--color-accent); }
-    .ocean-rail-item[data-now="true"] .ocean-rail-dot { background: var(--color-accent); border-color: var(--color-accent); }
+    .ocean-rail-item[data-accent="true"] .ocean-rail-dot { border-color: var(--color-accent); color: var(--color-accent); }
+    .ocean-rail-item[data-now="true"] .ocean-rail-dot { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
 
     .ocean-rail-icon {
         width: 22px; height: 22px;
@@ -527,13 +547,13 @@ body.dark {
 
     .ocean-rail-content { min-width: 0; overflow: hidden; }
     .ocean-rail-name {
-        display: block; font-size: 13px; font-weight: 600;
-        letter-spacing: -0.01em;
+        display: block; font-size: 15px; font-weight: 600;
+        letter-spacing: -0.01em; line-height: 1.35;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .ocean-rail-sub {
         display: flex; gap: 6px; align-items: center;
-        font-size: 10px; color: var(--color-muted); margin-top: 1px;
+        font-size: 12px; color: var(--color-muted); margin-top: 3px;
     }
     .ocean-rail-type {
         font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
@@ -543,20 +563,23 @@ body.dark {
     .ocean-rail-sep { opacity: 0.5; }
 
     .ocean-rail-caret {
-        font-size: 14px; color: var(--color-muted);
+        font-size: 16px; color: var(--color-muted);
         transition: transform 0.2s var(--transition-timing-function-apple);
         flex-shrink: 0;
     }
     .ocean-rail-item[data-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); }
 
     .ocean-rail-expand {
+        grid-area: expand;
         display: block;
-        margin: 8px 0 4px 32px;
-        padding-left: 10px;
+        margin: 10px 0 4px 32px;
+        padding-left: 12px;
         border-left: 2px solid var(--color-border);
-        font-size: 12.5px; line-height: 1.55;
+        font-size: 14px; line-height: 1.6;
     }
     .ocean-rail-item[data-accent="true"] .ocean-rail-expand { border-left-color: var(--color-accent); }
+    .ocean-rail-expand p { margin: 0 0 6px; }
+    .ocean-rail-expand p:last-child { margin-bottom: 0; }
 
     /* SideCard */
     .ocean-side-card {

@@ -23,6 +23,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - **手機 Timeline Rail 展開列補回 InfoBox + NavLinks**：修復 Ocean 重設計後手機餐廳備選、停車資訊、預約連結等 infoBoxes 不顯示的 regression。TimelineRail 展開段原只渲染 note + description，現補 locations (NavLinks) + infoBoxes (含 restaurants / parking / reservation 等 6 種 box)。同時把 item 根節點從 `<button>` 改成 `<div>` + 裡面單獨 `<button class="ocean-rail-head">`，避免 button 裡嵌 button/a 的 HTML 違規。
+- **手機 Timeline Rail 對齊 + 編號 + 字級**：原本時間/圓圈用 absolute 定位算錯 3-4px，改成 `grid-template-columns: 44px 24px 1fr`（time/dot/head 三欄 + column-gap 10px）自然置中對齊。圓圈放大到 24×24 裝入景點編號（accent 色 / now 態藍底白字）。rail-name 13→15px、rail-sub 10→12px、rail-time 12→13px、expand 12.5→14px，eyebrow/meta 10→11px。豎線 left 對準 dot 中心 x=66。
 
 ### Changed
 - **DayNav 日期總覽列改為 sticky**：`.ocean-day-strip` 加 `position: sticky; top: 64px`（手機 56px）+ backdrop-blur + hairline border，捲動時釘在 topbar 下方。負 margin bleed 到 viewport 邊緣讓毛玻璃底色蓋滿。`.ocean-day` scroll-margin-top `84px → 210px`（手機 190px）、`.ocean-side` top `84px → 200px` 避免 sticky 堆疊重疊。chip 視覺格式 100% 保留。

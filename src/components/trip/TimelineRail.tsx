@@ -113,7 +113,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: Timel
               data-last={isLast || undefined}
             >
               <span className="ocean-rail-time">{parsed.start}</span>
-              <span className="ocean-rail-dot" aria-hidden="true" />
+              <span className="ocean-rail-dot" aria-hidden="true">{i + 1}</span>
               <button
                 type="button"
                 className="ocean-rail-head"
