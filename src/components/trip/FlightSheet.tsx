@@ -32,38 +32,49 @@ interface ParsedFlight {
 }
 
 const AIRPORT_CODE = /\b([A-Z]{3})\b/g;
-const TIME_ARROW = /(\d{1,2}:\d{2})\s*[→—–-]+\s*(\d{1,2}:\d{2})/;
-const FLIGHT_CODE = /\b([A-Z]{1,3}\s?\d{2,4})\b/;
+const TWO_TIMES = /(\d{1,2}:\d{2})[^\d]{1,30}?(\d{1,2}:\d{2})/;
+const FLIGHT_CODE_STRICT = /\b(BR|CI|JL|NH|MM|JX|GE|EVA|CAL)\s?(\d{2,4})\b/i;
 const SEAT = /座位[：:]*\s*([0-9A-Z\s,/]+)/;
 const GATE = /(?:登機門|gate)[：:]*\s*([A-Z0-9-]+)/i;
-const DATE_TOKEN = /(\d{1,2}\/\d{1,2}(?:\s*\([一二三四五六日]\))?)/;
+const DATE_TOKEN = /(\d{1,2}\/\d{1,2}(?:\s*[（(][一二三四五六日][）)])?)/;
 const DUR_TOKEN = /(\d+h\s*\d*m?|\d+\s*小時\s*\d*\s*分?)/;
-const LABEL_OUTBOUND = /去程|outbound|出發/i;
-const LABEL_RETURN = /回程|return|returning/i;
+const AIRPORT_ALLOW = /^(TPE|TSA|OKA|NRT|HND|KIX|ITM|FUK|KOJ|NGO|SDJ|CTS|ICN|GMP|PEK|PVG|HKG|SIN|BKK|KUL|DPS)$/;
+const LABEL_OUTBOUND = /去程|outbound/i;
+const LABEL_RETURN = /回程|return/i;
 
-function parseFlight(entry: DocEntry): ParsedFlight {
-  const text = `${entry.title}\n${entry.content}`;
-  const raw = entry.content;
-
-  let label = entry.title.trim();
-  if (LABEL_OUTBOUND.test(text)) label = '去程';
-  else if (LABEL_RETURN.test(text)) label = '回程';
-
-  const code = text.match(FLIGHT_CODE)?.[1];
-  const timeMatch = text.match(TIME_ARROW);
-  const depT = timeMatch?.[1];
-  const arrT = timeMatch?.[2];
-
+function extractAirports(text: string): string[] {
   const airports: string[] = [];
-  const airportMatches = text.match(AIRPORT_CODE);
-  if (airportMatches) {
-    for (const m of airportMatches) {
-      if (!/^(BR|CI|JL|ANA|JR|AM|PM|TPE|OKA|NRT|HND|KIX|FUK)/.test(m) || airports.length < 2) {
-        if (!airports.includes(m)) airports.push(m);
-      }
+  const matches = text.match(AIRPORT_CODE);
+  if (!matches) return airports;
+  for (const m of matches) {
+    if (AIRPORT_ALLOW.test(m) && !airports.includes(m)) {
+      airports.push(m);
       if (airports.length >= 2) break;
     }
   }
+  return airports;
+}
+
+function parseFlight(entry: DocEntry): ParsedFlight {
+  const text = `${entry.section ?? ''} ${entry.title ?? ''}\n${entry.content ?? ''}`;
+  const raw = entry.content ?? '';
+
+  // Label: 去程 / 回程 — section/title/content 任一命中
+  let label = (entry.section || entry.title || '').trim();
+  if (LABEL_RETURN.test(text)) label = '回程';
+  else if (LABEL_OUTBOUND.test(text)) label = '去程';
+
+  // Flight code — 嚴格比對航空公司前綴
+  const codeMatch = text.match(FLIGHT_CODE_STRICT);
+  const code = codeMatch ? `${codeMatch[1]?.toUpperCase()} ${codeMatch[2]}` : undefined;
+
+  // Times: 找任兩個 HH:MM，中間容許最多 30 個非數字字元
+  const timeMatch = raw.match(TWO_TIMES);
+  const depT = timeMatch?.[1];
+  const arrT = timeMatch?.[2];
+
+  // Airports: 只接受已知機場代碼
+  const airports = extractAirports(text);
   const dep = airports[0];
   const arr = airports[1];
 
