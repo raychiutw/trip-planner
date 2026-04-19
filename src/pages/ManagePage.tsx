@@ -295,7 +295,7 @@ export default function ManagePage() {
       ]);
 
       if (myRes.status === 401 || myRes.status === 403) {
-        if (!cancelled) setPageState({ kind: 'no-permission', message: '無法存取，請重新整理頁面' });
+        if (!cancelled) setPageState({ kind: 'auth-required' });
         return;
       }
       if (!myRes.ok) {
@@ -478,15 +478,16 @@ export default function ManagePage() {
             <div className="text-center py-10 text-muted">載入中...</div>
           )}
 
-          {pageState.kind === 'auth-required' && (
-            <div className="text-muted text-callout text-center py-8 px-4 bg-secondary rounded-md mx-padding-h my-10">
-              請先登入
-            </div>
-          )}
+          {pageState.kind === 'auth-required' && <AuthRequiredCard />}
 
           {pageState.kind === 'no-permission' && (
-            <div className="text-muted text-callout text-center py-8 px-4 bg-secondary rounded-md mx-padding-h my-10">
-              {pageState.message}
+            <div className="max-w-[480px] mx-auto my-10 px-padding-h">
+              <div className="bg-background border border-border rounded-xl p-6 text-center">
+                <div className="w-11 h-11 mx-auto mb-3 rounded-full bg-tertiary flex items-center justify-center text-muted" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                </div>
+                <p className="text-body text-foreground">{pageState.message}</p>
+              </div>
             </div>
           )}
 
@@ -600,6 +601,54 @@ export default function ManagePage() {
             </div>
           )}
         </main>
+      </div>
+    </div>
+  );
+}
+
+/* ===== AuthRequiredCard — editorial empty state for 401/403 ===== */
+
+const isLocalHost = typeof window !== 'undefined'
+  && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+
+function AuthRequiredCard() {
+  return (
+    <div className="max-w-[520px] mx-auto my-12 px-padding-h">
+      <div className="bg-background border border-border rounded-xl p-7 text-center">
+        <div
+          className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent-subtle flex items-center justify-center text-accent"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path d="M7 11V7a5 5 0 0110 0v4" />
+          </svg>
+        </div>
+        <h2 className="text-title3 font-bold text-foreground mb-1">需要登入</h2>
+        <p className="text-callout text-muted mb-5 leading-relaxed">
+          這頁需要 Cloudflare Access 認證。
+        </p>
+        {isLocalHost ? (
+          <div className="text-left bg-tertiary rounded-md p-4">
+            <div className="text-caption font-semibold text-muted mb-2" style={{ letterSpacing: '0.08em' }}>
+              本機開發
+            </div>
+            <p className="text-footnote text-foreground mb-2 leading-relaxed">
+              請在 <code className="bg-background px-1.5 py-0.5 rounded text-accent font-medium">.dev.vars</code> 設定 <code className="bg-background px-1.5 py-0.5 rounded text-accent font-medium">DEV_MOCK_EMAIL</code>，然後重啟 <code className="bg-background px-1.5 py-0.5 rounded text-accent font-medium">npm run dev</code>：
+            </p>
+            <pre className="bg-background text-foreground text-caption rounded-md p-3 overflow-auto leading-relaxed font-mono">{`# .dev.vars
+DEV_MOCK_EMAIL=your-email@example.com
+ADMIN_EMAIL=your-email@example.com`}</pre>
+          </div>
+        ) : (
+          <a
+            href="/cdn-cgi/access/login"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-accent text-white font-semibold text-callout hover:opacity-90 transition-opacity"
+          >
+            前往 Cloudflare Access 登入
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+          </a>
+        )}
       </div>
     </div>
   );
