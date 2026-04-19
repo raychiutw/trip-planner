@@ -13,6 +13,7 @@ import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripFormat } from '../lib/tripExport';
 import { calcTripDrivingStats } from '../lib/drivingStats';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
+import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
@@ -139,6 +140,9 @@ export default function TripPage() {
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
+
+  /* --- Scroll restore when returning from StopDetailPage --- */
+  useScrollRestoreOnBack();
 
   /* --- Online status + offline/reconnect toasts --- */
   const isOnline = useOnlineStatus();

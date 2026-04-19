@@ -2,10 +2,11 @@
 
 import { memo } from 'react';
 import clsx from 'clsx';
+import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
-import { NavLinks, type NavLocation } from './MapLinks';
-import InfoBox, { type InfoBoxData } from './InfoBox';
+import { type NavLocation } from './MapLinks';
+import { type InfoBoxData } from './InfoBox';
 
 /* ===== Helpers ===== */
 
@@ -83,9 +84,17 @@ interface TimelineEventProps {
   isPast?: boolean;
 }
 
-/* ===== Component ===== */
+/* ===== Component =====
+ *
+ * Entire stop card is click/Enter target → navigate to /trip/:id/stop/:entryId.
+ * Inline expand removed (PR2): description / locations / infoBoxes live on
+ * StopDetailPage. Only `note` stays inline for quick scan.
+ * Keyboard: Tab focuses the card, Enter / Space activates navigation.
+ */
 
 export const TimelineEvent = memo(function TimelineEvent({ entry, isNow, isPast }: TimelineEventProps) {
+  const navigate = useNavigate();
+  const { tripId } = useParams<{ tripId: string }>();
   const parsed = parseTimeRange(entry.time);
   const durationText = formatDuration(parsed.duration);
   const meta = deriveTypeMeta(entry);
@@ -99,18 +108,36 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, isNow, isPast 
   const travelText = travel?.text ?? '';
   const travelType = travel?.type ?? '';
 
-  const hasBody =
-    entry.description ||
-    (entry.locations && entry.locations.length > 0) ||
-    (entry.infoBoxes && entry.infoBoxes.length > 0);
+  const canOpen = entry.id != null && tripId != null;
+
+  const handleOpen = () => {
+    if (!canOpen) return;
+    navigate(`/trip/${tripId}/stop/${entry.id}`, {
+      state: { scrollAnchor: `entry-${entry.id}` },
+    });
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (!canOpen) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleOpen();
+    }
+  };
 
   return (
     <>
       <div
-        className="ocean-stop"
+        className={clsx('ocean-stop', canOpen && 'ocean-stop-clickable')}
         data-entry-id={entry.id ?? undefined}
+        data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
         data-now={isNow || undefined}
         data-past={isPast || undefined}
+        role={canOpen ? 'button' : undefined}
+        tabIndex={canOpen ? 0 : undefined}
+        onClick={handleOpen}
+        onKeyDown={handleKey}
+        aria-label={canOpen ? `查看景點：${entry.title ?? '（無標題）'}` : undefined}
       >
         {/* Time column */}
         <div className="ocean-stop-time">
@@ -138,31 +165,11 @@ export const TimelineEvent = memo(function TimelineEvent({ entry, isNow, isPast 
             )}
           </div>
           {entry.note && <MarkdownText text={entry.note} as="div" className="ocean-stop-note" />}
-          {hasBody && (
-            <div className="mt-2 text-(length:--font-size-body) leading-relaxed">
-              {entry.description && <MarkdownText text={entry.description} as="div" className="text-muted text-(length:--font-size-callout) my-1" />}
-              {entry.locations && entry.locations.length > 0 && <NavLinks locations={entry.locations} />}
-              {entry.infoBoxes && entry.infoBoxes.length > 0 &&
-                entry.infoBoxes.map((box, i) => <InfoBox key={i} box={box} />)
-              }
-            </div>
-          )}
         </div>
 
-        {/* Actions */}
-        <div className="ocean-stop-actions">
-          {entry.locations && entry.locations[0]?.googleQuery && (
-            <a
-              className="ocean-round-btn no-underline"
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(entry.locations[0].googleQuery)}`}
-              target="_blank"
-              rel="noreferrer"
-              aria-label="開啟地圖"
-              title="開啟地圖"
-            >
-              <Icon name="location-pin" />
-            </a>
-          )}
+        {/* Actions — chevron hint toward detail */}
+        <div className="ocean-stop-actions" aria-hidden="true">
+          <span className="ocean-stop-chevron">›</span>
         </div>
       </div>
 

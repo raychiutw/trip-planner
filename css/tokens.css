@@ -421,6 +421,15 @@ body.dark {
     .ocean-stop:hover { border-color: var(--color-lineStrong, #C1C1C1); }
     .ocean-stop[data-now="true"] { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
     .ocean-stop[data-past="true"] { opacity: 0.65; }
+    .ocean-stop-clickable { cursor: pointer; }
+    .ocean-stop-clickable:hover { border-color: var(--color-accent); background: var(--color-hover); }
+    .ocean-stop-clickable:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-color: var(--color-accent); }
+    .ocean-stop-chevron {
+        font-size: 22px; color: var(--color-muted);
+        transition: transform var(--transition-duration-fast) var(--transition-timing-function-apple),
+                    color var(--transition-duration-fast) var(--transition-timing-function-apple);
+    }
+    .ocean-stop-clickable:hover .ocean-stop-chevron { color: var(--color-accent); transform: translateX(3px); }
     .ocean-stop-time { text-align: left; }
     .ocean-stop-t { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1; }
     .ocean-stop-dur { font-size: 10.5px; color: var(--color-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }

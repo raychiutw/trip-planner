@@ -2,18 +2,19 @@
  * TimelineRail — mobile-only compact timeline (設計稿 design_mobile.jsx 版本)
  *
  * Structure:
- *  - Left gutter: right-aligned time (40px, tabular-nums)
+ *  - Left gutter: right-aligned time
  *  - Vertical rail: 1px line connecting all dots
- *  - Dot: 10px hollow circle, accent border for sight/food
- *  - Row: small type icon + name + (type · duration)
- *  - Click row → expand jp + note
+ *  - Dot: numbered circle, accent border for sight/food
+ *  - Row: small type icon + name + (type · duration · rating)
+ *  - Click row → navigate /trip/:tripId/stop/:entryId (details + map)
+ *
+ * Inline expand removed (PR2): note / infoBoxes / restaurants now live on the
+ * StopDetailPage. Row = tap target for navigation.
  */
 
-import { memo, useState, useEffect } from 'react';
+import { memo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../shared/Icon';
-import MarkdownText from '../shared/MarkdownText';
-import InfoBox from './InfoBox';
-import { NavLinks } from './MapLinks';
 import type { TimelineEntryData } from './TimelineEvent';
 
 interface ParsedTime { start: string; end: string; duration: number; }
@@ -70,15 +71,21 @@ interface TimelineRailProps {
 }
 
 const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: TimelineRailProps) {
-  // First stop expanded by default; collapse/switch when events change.
-  const [expandedIdx, setExpandedIdx] = useState(0);
-  useEffect(() => { setExpandedIdx(0); }, [events]);
+  const navigate = useNavigate();
+  const { tripId } = useParams<{ tripId: string }>();
 
   if (!events || events.length === 0) return null;
 
   const firstTime = parseTimeRange(events[0]?.time).start;
   const lastTime = parseTimeRange(events[events.length - 1]?.time).end ||
                    parseTimeRange(events[events.length - 1]?.time).start;
+
+  const handleOpenStop = (entryId: number | null | undefined) => {
+    if (!tripId || entryId == null) return;
+    navigate(`/trip/${tripId}/stop/${entryId}`, {
+      state: { scrollAnchor: `entry-${entryId}` },
+    });
+  };
 
   return (
     <div className="ocean-rail">
@@ -93,32 +100,28 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: Timel
         {events.map((entry, i) => {
           const parsed = parseTimeRange(entry.time);
           const meta = deriveTypeMeta(entry);
-          const expanded = i === expandedIdx;
           const isPast = nowIndex >= 0 && i < nowIndex;
           const isNow = nowIndex >= 0 && i === nowIndex;
           const isLast = i === events.length - 1;
-          const hasExpandBody =
-            entry.note ||
-            entry.description ||
-            (entry.locations && entry.locations.length > 0) ||
-            (entry.infoBoxes && entry.infoBoxes.length > 0);
+          const canOpen = entry.id != null && tripId != null;
           return (
             <div
               key={entry.id ?? i}
               className="ocean-rail-item"
-              data-expanded={expanded || undefined}
               data-now={isNow || undefined}
               data-past={isPast || undefined}
               data-accent={meta.accent || undefined}
               data-last={isLast || undefined}
+              data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
             >
               <span className="ocean-rail-time">{parsed.start}</span>
               <span className="ocean-rail-dot" aria-hidden="true">{i + 1}</span>
               <button
                 type="button"
                 className="ocean-rail-head"
-                aria-expanded={expanded}
-                onClick={() => setExpandedIdx(expanded ? -1 : i)}
+                onClick={() => handleOpenStop(entry.id)}
+                disabled={!canOpen}
+                aria-label={`查看景點：${entry.title ?? '（無標題）'}`}
               >
                 <span className="ocean-rail-icon" aria-hidden="true">
                   <Icon name={meta.icon} />
@@ -143,16 +146,6 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: Timel
                 </span>
                 <span className="ocean-rail-caret" aria-hidden="true">›</span>
               </button>
-              {expanded && hasExpandBody && (
-                <div className="ocean-rail-expand">
-                  {entry.note && <MarkdownText text={entry.note} as="div" className="block" />}
-                  {entry.description && <MarkdownText text={entry.description} as="div" className="block mt-1 text-muted" />}
-                  {entry.locations && entry.locations.length > 0 && <NavLinks locations={entry.locations} />}
-                  {entry.infoBoxes && entry.infoBoxes.length > 0 &&
-                    entry.infoBoxes.map((box, bi) => <InfoBox key={bi} box={box} />)
-                  }
-                </div>
-              )}
             </div>
           );
         })}
