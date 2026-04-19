@@ -385,29 +385,69 @@ body.dark {
     .ocean-main { min-width: 0; }
     .ocean-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 200px; }
 
-    /* Hero card inside each day */
+    /* Hero card inside each day — Airbnb editorial white card */
     .ocean-hero {
-        background: var(--color-accent); color: #fff;
+        background: var(--color-background);
+        color: var(--color-foreground);
         border-radius: var(--radius-lg);
-        padding: 28px 32px; margin-bottom: 20px;
+        border: 1px solid var(--color-border);
+        padding: 20px 24px; margin-bottom: 16px;
         overflow: hidden;
     }
-    .ocean-hero-chips { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .ocean-hero-chips {
+        display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
+        margin-bottom: 4px;
+        font-size: 10.5px; font-weight: 600;
+        letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--color-muted);
+        font-variant-numeric: tabular-nums;
+    }
     .ocean-hero-chip {
-        padding: 4px 10px; border: 1px solid rgba(255,255,255,0.25);
-        font-size: 10.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+        padding: 0; border: none;
+        font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
+        color: var(--color-foreground);
     }
+    .ocean-hero-chip::after {
+        content: "·"; margin: 0 2px 0 6px; opacity: 0.4;
+    }
+    .ocean-hero-chip:last-child::after { content: none; }
     .ocean-hero-chip-muted {
-        font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em;
-        color: rgba(255,255,255,0.55); text-transform: uppercase;
+        padding: 0;
+        font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit;
+        color: var(--color-muted);
     }
-    .ocean-hero-title { font-size: 32px; font-weight: 700; margin: 0; letter-spacing: -0.025em; line-height: 1.15; }
-    .ocean-hero-sub { font-size: 13px; opacity: 0.6; margin-top: 4px; }
-    .ocean-hero-summary { font-size: 14.5px; line-height: 1.65; opacity: 0.88; max-width: 640px; margin-top: 16px; }
-    .ocean-hero-stats { display: flex; gap: 22px; margin-top: 24px; flex-wrap: wrap; }
-    .ocean-hero-stat { padding-left: 14px; border-left: 1px solid rgba(255,255,255,0.2); }
-    .ocean-hero-stat-label { font-size: 10px; opacity: 0.55; letter-spacing: 0.2em; text-transform: uppercase; }
-    .ocean-hero-stat-value { font-size: 18px; font-weight: 700; margin-top: 4px; letter-spacing: -0.01em; }
+    .ocean-hero-title {
+        font-size: 28px; font-weight: 700; margin: 0;
+        letter-spacing: -0.02em; line-height: 1.2;
+        color: var(--color-foreground);
+    }
+    .ocean-hero-sub { font-size: 13px; color: var(--color-muted); margin-top: 4px; }
+    .ocean-hero-summary {
+        font-size: 15px; line-height: 1.6;
+        color: var(--color-muted); max-width: 640px; margin-top: 12px;
+    }
+    .ocean-hero-stats {
+        display: flex; gap: 20px; margin-top: 14px; flex-wrap: wrap;
+        font-variant-numeric: tabular-nums;
+    }
+    .ocean-hero-stat {
+        padding-left: 0;
+        border-left: none;
+        display: inline-flex; align-items: baseline; gap: 6px;
+    }
+    .ocean-hero-stat-label {
+        font-size: 10px; color: var(--color-muted);
+        letter-spacing: 0.18em; text-transform: uppercase;
+        font-weight: 600;
+    }
+    .ocean-hero-stat-value {
+        font-size: 14px; font-weight: 700; letter-spacing: -0.005em;
+        color: var(--color-foreground);
+    }
+    @media (min-width: 961px) {
+        .ocean-hero { padding: 24px 28px; }
+        .ocean-hero-title { font-size: 32px; }
+    }
 
     /* Stop card (4-col grid) */
     .ocean-stops { display: flex; flex-direction: column; gap: 10px; }
