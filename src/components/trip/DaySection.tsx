@@ -35,7 +35,6 @@ export interface DaySectionProps {
   isActive?: boolean;
   hideDayMap?: boolean;
   timezone?: string;
-  enableDayMap?: boolean;
 }
 
 /** Extract time range parts from entry time string "HH:MM-HH:MM" or "HH:MM". */
@@ -64,7 +63,6 @@ const DaySection = React.memo(function DaySection({
   isActive,
   hideDayMap = false,
   timezone,
-  enableDayMap = false,
 }: DaySectionProps) {
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
@@ -168,7 +166,7 @@ const DaySection = React.memo(function DaySection({
               </div>
             )}
 
-            {enableDayMap && !hideDayMap && day && (() => {
+            {!hideDayMap && day && (() => {
               const { pins } = extractPinsFromDay(day);
               if (pins.length === 0) return null;
               return (

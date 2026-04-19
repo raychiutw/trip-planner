@@ -66,8 +66,9 @@ const SCOPED_STYLES = `
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
+.print-mode .ocean-map-container { display: none !important; }
 @media print {
-  .sticky-nav, .print-exit-btn, .ocean-side { display: none !important; }
+  .sticky-nav, .print-exit-btn, .ocean-side, .ocean-map-container { display: none !important; }
   .page-layout { padding-right: 0 !important; }
 }
 `;
@@ -138,12 +139,6 @@ export default function TripPage() {
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
   const scrollDayRef = useRef(0);
-
-  /* --- Map is always enabled now (Ocean OSM migration complete). Legacy ?showmap=0 URL param opts out for QA/print scenarios. --- */
-  const enableDayMap = useMemo(
-    () => new URLSearchParams(window.location.search).get('showmap') !== '0',
-    [],
-  );
 
   /* --- Online status + offline/reconnect toasts --- */
   const isOnline = useOnlineStatus();
@@ -588,7 +583,7 @@ export default function TripPage() {
             onSwitchDay={handleSwitchDay}
             todayDayNum={todayDayNum}
             isTripMapMode={isTripMapMode}
-            onToggleTripMap={enableDayMap && days.length > 0 ? handleToggleTripMap : undefined}
+            onToggleTripMap={days.length > 0 ? handleToggleTripMap : undefined}
             stopsByDay={stopsByDay}
           />
         )}
@@ -601,7 +596,7 @@ export default function TripPage() {
         )}
 
         {/* Trip overview（F006）— OceanMap with all days' pins, auto cluster */}
-        {enableDayMap && !loading && isTripMapMode && (() => {
+        {!loading && isTripMapMode && (() => {
           const allPins = dayNums.flatMap((n) => {
             const day = allDays[n];
             return day ? extractPinsFromDay(day).pins : [];
@@ -630,7 +625,6 @@ export default function TripPage() {
                   isActive={dayNum === currentDayNum}
                   hideDayMap={isTripMapMode}
                   timezone={weatherTimezone}
-                  enableDayMap={enableDayMap}
                 />
               ))}
               <FooterArt dark={isDark} />
