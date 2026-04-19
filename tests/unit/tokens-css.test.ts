@@ -24,19 +24,25 @@ describe('tokens.css', () => {
     expect(tokens).toContain('--transition-duration-fast:');
   });
 
-  it('includes all 6 theme overrides (light + dark)', () => {
-    expect(tokens).toContain('body.theme-sun.dark');
-    expect(tokens).toContain('body.theme-sky {');
-    expect(tokens).toContain('body.theme-sky.dark');
-    expect(tokens).toContain('body.theme-zen {');
-    expect(tokens).toContain('body.theme-zen.dark');
-    expect(tokens).toContain('body.theme-forest {');
-    expect(tokens).toContain('body.theme-forest.dark');
-    expect(tokens).toContain('body.theme-sakura {');
-    expect(tokens).toContain('body.theme-sakura.dark');
-    expect(tokens).toContain('body.theme-night {');
-    expect(tokens).toContain('body.theme-night.dark');
+  it('Ocean-only design system: dark + print, no legacy theme blocks', () => {
+    expect(tokens).toContain('body.dark {');
     expect(tokens).toContain('body.theme-print');
+    expect(tokens).not.toContain('body.theme-sun');
+    expect(tokens).not.toContain('body.theme-sky');
+    expect(tokens).not.toContain('body.theme-zen');
+    expect(tokens).not.toContain('body.theme-forest');
+    expect(tokens).not.toContain('body.theme-sakura');
+    expect(tokens).not.toContain('body.theme-night');
+  });
+
+  it('uses Ocean accent + white background as default @theme', () => {
+    expect(tokens).toMatch(/--color-accent:\s*#0077B6/);
+    expect(tokens).toMatch(/--color-background:\s*#FFFFFF/);
+    expect(tokens).toMatch(/--color-foreground:\s*#222222/);
+  });
+
+  it('loads Inter + Noto Sans TC primary font stack', () => {
+    expect(tokens).toMatch(/--font-family-system:.*'Inter'.*'Noto Sans TC'/);
   });
 
   it('includes sheet animation tokens', () => {

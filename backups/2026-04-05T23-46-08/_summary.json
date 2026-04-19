@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-04-05T23-46-08",
+  "summary": {
+    "trips": 8,
+    "trip_days": 51,
+    "trip_entries": 306,
+    "pois": 404,
+    "trip_pois": 496,
+    "poi_relations": 1,
+    "trip_docs": 39,
+    "trip_docs_v2": 39,
+    "trip_doc_entries": 418,
+    "trip_requests": 117,
+    "trip_permissions": 11,
+    "audit_log": "ERROR"
+  }
+}

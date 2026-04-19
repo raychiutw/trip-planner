@@ -67,6 +67,7 @@ interface RawTravel {
 
 /** Raw timeline entry as returned by the API. */
 interface RawEntry {
+  id?: number | null;
   time?: string | null;
   title?: string | null;
   description?: string | null;
@@ -197,6 +198,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   }
 
   return {
+    id: raw.id ?? null,
     time: raw.time ?? null,
     title: raw.title ?? null,
     description: raw.description ?? null,

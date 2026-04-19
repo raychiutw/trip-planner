@@ -3,6 +3,131 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.0.0] - 2026-04-20 — Ocean 大改版里程碑
+
+這版宣告 Ocean 重設計（PR1 Leaflet 基建 + PR2 景點詳情頁 + PR3 全圖地圖頁）完整發布。
+所有主要頁面視覺語言統一為 Airbnb editorial 風（白底 + hairline + rounded-xl + 單一 Ocean accent）。
+
+### Added
+- **全圖地圖頁 `/trip/:id/map` + `/trip/:id/stop/:id/map`**：行程一覽頁與景點明細頁的地圖現在都能切到全螢幕模式。入口是地圖右上的 `⤢` expand icon。
+- **Funliday 風互動地圖導覽**：全圖頁由上到下是 breadcrumb topbar + 全螢幕 OceanMap + 日期 tabs（underlined style）+ 橫向 swipe entry cards（snap-scroll）。日期 tab 切換當日、card swipe/click 讓 map flyTo 該景點。IntersectionObserver 偵測中央卡片自動同步 focus。
+- **Deep link 支援**：從 StopDetailPage 的 `⤢` 進入會自動切到該景點所屬日期並 focus；從 DaySection map 進入會鎖定那一天；從 trip overview 進入預設 Day 1。
+
+### Changed
+- **Padding trick centred swipe cards**：`.map-page-cards padding-inline: max(16px, calc(50% - 110px))` 讓第一張和最後一張 card 都能 snap 到 centre，不會卡左/右邊。
+
+## [1.3.4.0] - 2026-04-20
+
+### Added
+- **ManagePage `/manage` 整頁重新設計**：跟景點詳情頁統一視覺語言 — breadcrumb topbar（sticky glass blur + 52px + ← back button + eyebrow「AI 編輯」+ trip selector pill + Trip/Line online logo）+ hero「訊息紀錄」title + subtitle「修改行程內容或向 Tripline 請教建議，處理時間約 30 秒」。chat bubble 去 AI slop（border-l-[3px] border-accent quote 改 hairline box）、mode toggle「修改/提問」改 outline-only pill、input bar 去 shadow-md 改 hairline + focus-within accent。
+- **401/403 AuthRequiredCard**：`/manage` 認證失敗從「無法存取，請重新整理頁面」模糊訊息改 editorial card，本機顯示 `.dev.vars` + `DEV_MOCK_EMAIL` 設定步驟 + code snippet，生產顯示「前往 Cloudflare Access 登入」accent button。
+
+### Fixed
+- **Markdown parser 處理 legacy DB 資料**：renderMarkdown 兜底 unescape literal `\n`（兩字元）→ 真換行、`\t` → tab、`\|` → |；保留 fenced code blocks 內字元不動。解決 AI 回覆的 `## 標題\n\n內容\n- item` 表格 / 標題 / bullet list 顯示破掉的問題。
+- **Icon registry 補 chevron-left / chevron-right**：ManagePage + StopDetailPage 的返回按鈕以前因為 Icon 元件對未知 name 回 null，`<Icon name="chevron-left" />` render 成空 button，使用者看不到 affordance。現已補進 Material Symbols path data。
+- **本機 mock auth 文件修正**：CLAUDE.md 原寫「`.env.local` 的 `DEV_MOCK_EMAIL`」實際上 wrangler 只讀 `.dev.vars`。新人 onboard 設錯地方導致 `/manage` 一直 401。`.dev.vars.example` 補 `DEV_MOCK_EMAIL` + `ADMIN_EMAIL` 範例 + 註解、CLAUDE.md 指向正確檔案 + 附 `cp .dev.vars.example .dev.vars` 指令 + 重啟 dev 提示。
+
+## [1.3.3.0] - 2026-04-20
+
+### Changed
+- **景點詳情頁重新設計（Airbnb editorial 風）**：StopDetailPage layout 整頁重寫 — breadcrumb topbar 取代重複標題、hero title 放大 26-30px、地圖套 rounded 16px 卡片 + aspect-ratio 16:9 + 雙層 shadow、desktop CTA 改 inline（不再 sticky 蓋住內容）、subtitle/note 字級升到 16px body。Mobile topbar breadcrumb 不再換行，trip title 桌機才顯示。
+- **餐廳正備選視覺層級分明**：`Restaurant` 元件改白底 + 1px hairline border + rounded-xl，新增 `variant="hero"` 給正餐廳（accent outline + 淺藍漸層底），`variant="standard"` 給備選。InfoBox `RestaurantsBox` 整片 `bg-accent-bg` 藍底拿掉，改 eyebrow heading（10px uppercase + accent icon），備選改精簡 row（name + category + rating + chevron），展開後 render standard Restaurant 卡片。
+- **購物必買 chip 化**：`Shop` 元件必買從「沖繩甜王草莓、山芋片、金枕紅心西瓜」inline 一串文字改成每項獨立 accent pill chip（dashed top border 區隔），category 從 `<strong>xxx：</strong>` 改成 rounded-full chip，白底 + hairline 卡片。
+- **DayNav 瘦身 ×2**：chip 從 4 行堆疊（DAY + 日期 + 區名 + 6 dots）改成單行水平排版「DAY 01 · 7/29 Wed · 北谷」，高度 147 → 55px（-63%）。桌機再改 GitHub/Apple HIG underlined tab style（無 border、accent 文字色 + 2px underline active），55 → 37px。總 chrome（topbar + daystrip）13% → 11%。Mobile 維持 pill card style（橫滑 snap-scroll）。
+- **InfoBox 家族整體同步**：Hotel 展開的 parking / shopping panels 也獲益於 InfoBox wrapper redesign（去藍底 + eyebrow + hairline）。
+
+## [1.3.2.0] - 2026-04-19
+
+### Added
+- **POI 景點詳情頁 `/trip/:tripId/stop/:entryId`**：點任一景點跳新頁，顯示 Ocean 地圖（單點聚焦 280px）+ DAY/日期/時間 eyebrow + 大標 + 備註 + 相關資訊（infoBoxes：餐廳備選/停車/預約等）+ 底部 accent 圓角按鈕「在 Google Maps 開啟導航」。手機/桌機共用同一 layout，桌機 maxWidth 720px 置中。
+- **`TripLayout` + `TripContext`**：`/trip/:tripId/*` 子路由共用同一份 trip+days fetch，StopDetailPage 不再重抓。
+- **`useScrollRestoreOnBack` hook**：從詳情頁按返回時，TripPage 自動捲回原 entry（`useLayoutEffect` + `requestAnimationFrame` + `[data-scroll-anchor]` 查找），用完 state 自動清空避免重捲。
+
+### Changed
+- **Timeline row 整行可點**：手機 `TimelineRail` + 桌機 `TimelineEvent` 整個景點 row 現在都是 tap target（Enter / Space / click 皆觸發），跳到詳情頁。桌機 row `role="button"` + focus-visible outline，hover 時右側 chevron 前推 3px。
+- **拿掉 inline expand**：原 TimelineRail 展開段（note / description / locations / infoBoxes）移到 StopDetailPage 承接。精簡 row 視覺，只留 name/time/type/rating/note。
+
+### Migration
+- Router 結構從平坦 `<Route path="/trip/:tripId" element={<TripPage />} />` 改為 nested layout：
+  ```
+  /trip/:tripId        TripLayout
+    ├── (index)        TripPage
+    └── stop/:entryId  StopDetailPage
+  ```
+- `TripLayout` 只做 `useTrip(urlTripId)` + provide context；TripPage 繼續用自己的 `resolveState`（處理 unpublished / default fallback）不動。SW cache 吸收 2× fetch。
+
+## [1.3.1.0] - 2026-04-19
+
+### Changed
+- **地圖全面遷移 Google Maps → OpenStreetMap (Leaflet)**：拔除 `@googlemaps/js-api-loader` 依賴，改用 `leaflet` + OSM tile（light = OSM 主站、dark = CartoDB Dark Matter）。省 API billing、載入時間改善、支援未來 Service Worker offline tile cache。
+- **新 `<OceanMap>` 元件統一兩個地圖入口**：取代 `<DayMap>`（單日）和 `<TripMap>`（全行程）。props: `mode: 'detail' | 'overview'` + `focusId` + `routes` + `cluster`。overview 模式 >10 站自動 supercluster。
+- **路線資料層改 Mapbox Directions free tier（100k/月）透過 CF Worker `/api/route` proxy**：token 永不暴露前端（存 CF Pages secret）、IndexedDB LRU cache 100 條、fetch 失敗自動 fallback Haversine 直線 + 虛線 + `approx: true` 標記。
+
+### Added
+- **`useLeafletMap` hook**：管理 Leaflet map instance 生命週期，Strict Mode idempotent guard（檢查 `container._leaflet_id`），`flyTo` 支援 `prefers-reduced-motion`，暗色模式動態切換 tile provider 不 remount。
+- **`useRoute(from, to, opts?)` hook**：單 segment 懶載入 polyline，IndexedDB cache（`idb` wrapper）+ LRU eviction，支援 `fromUpdatedAt`/`toUpdatedAt` cache invalidation（POI 座標變更時失效）。
+- **Ocean 編號 pin marker**：數字圓形 marker（focused accent 36px / idle 28px / past 灰），跟手機 timeline rail dot 設計同源。
+
+### Removed
+- `src/components/trip/DayMap.tsx`（340 行，Google Maps 單日地圖）
+- `src/components/trip/TripMap.tsx`（364 行，Google Maps 多天總覽 + Day 色盤 legend）
+- `src/components/trip/MapMarker.tsx`（256 行，Google Maps 自訂 InfoWindow overlay）
+- `src/components/trip/MapRoute.tsx`（268 行，Google Maps DirectionsRenderer + travel label overlay）
+- `src/hooks/useGoogleMaps.ts`（92 行，Maps JS API loader）
+- `src/hooks/useDirectionsRoute.ts`（176 行，Google Directions Service hook，batch+cache 邏輯移植到 `useRoute`）
+- 6 個舊 Google Maps tests（`day-map`/`trip-map`/`map-marker`/`map-route`/`use-directions-route`/`day-map.spec.ts`）
+- `GOOGLE_MAPS_URL_BASE` 常數改名為 `EXTERNAL_NAVIGATION_URL_BASE`（避免誤導為 Platform API）
+
+### Migration
+- 新增 CF Pages env var：`MAPBOX_TOKEN`（public `pk.*` token，domain-restricted）
+- 既有 `useMapData` / `extractPinsFromDay` 純資料邏輯保留不動，供新舊兩套共用。
+- Day 色盤 legend 不再沿用（Ocean 單一 accent），overview 模式以 cluster 數字取代。
+
+## [1.3.0.0] - 2026-04-19
+
+### Added
+- **Ocean 單主題設計系統**：依 Claude Design 產出的 Okinawa Trip Redesign / Mobile mockup 做整體視覺重設計。純白底 + 海洋藍 `#0077B6` accent + Airbnb 風格三層陰影 + hairline border + Inter/Noto Sans TC 字型。
+- **Ocean 版 Topbar**：sticky glass blur + 32×32 logo 方塊 + Trip/Line brand + nav tabs（行程/路線/航班/AI 建議）+ 右側 action buttons（緊急/列印/更多 dropdown/AI 編輯 dark pill）。
+- **OverflowMenu 元件**：topbar 右側「更多」按鈕下拉，9 個功能項 + 分隔線（出發清單/雨天備案/交通統計/切換行程/外觀設定/匯出 PDF/MD/JSON/CSV）。React portal + position:fixed，任何 ancestor overflow 都切不到。
+- **Day chip 160px rich 版**：DAY XX eyebrow + 26px 大日期 + dow + area + 真實 stops 數畫 progress marks（超過 6 顯示 +N）。
+- **Ocean Hero card**：每日 Ocean primary 藍底白字 + eyebrow chips + 32px title + Stops/Start/End stats 3 格。
+- **4-col Stop card**（桌機）：`68px time | 48px icon | content | actions` grid，sight/food Ocean accent，其他 ink。
+- **Compact Timeline Rail**（≤760px 手機）：54px 時間欄 + 1px 豎線 + 10px dot + 可點展開 note。
+- **Mobile bottom tab bar**：5 tab（行程/編輯/建議/航班/更多）with Ocean active highlight + safe-area。
+- **Action menu sheet**：手機「更多」tab 開 3×3 功能 grid + 匯出 row（替代桌機 dropdown）。
+- **FlightSheet 元件**：把航班 DocEntry 解析成雙大字 `TPE 18:30 → OKA 20:50` 卡片，含座位、登機門、確認狀態 dot。Fallback 到原 description 當 parser 認不出結構。
+- **SuggestionSheet 元件**：把 AI 建議按關鍵字分 3 層（高/中/低）優先級，左側 4px accent border 項目卡。
+- **Sidebar SideCards**（桌機）：整體進度（7 格 progress bar + 第 X 天）/ 今日行程 / 住宿安排（全程合併夜數）/ 當日交通 / 航班（Outbound/Return monospace）。
+- **TripLineLogo 三線 lego mark**：32×32 Ocean 方塊 + 3 條遞減 opacity 橫線 + 3 個 stud dots。
+- **useMediaQuery hook**：SSR-safe React hook 訂閱 media query change event，供 Timeline 依螢幕寬切 rail/card。
+
+### Fixed
+- **手機 Timeline Rail 展開列補回 InfoBox + NavLinks**：修復 Ocean 重設計後手機餐廳備選、停車資訊、預約連結等 infoBoxes 不顯示的 regression。TimelineRail 展開段原只渲染 note + description，現補 locations (NavLinks) + infoBoxes (含 restaurants / parking / reservation 等 6 種 box)。同時把 item 根節點從 `<button>` 改成 `<div>` + 裡面單獨 `<button class="ocean-rail-head">`，避免 button 裡嵌 button/a 的 HTML 違規。
+- **手機 Timeline Rail 對齊 + 編號 + 字級**：原本時間/圓圈用 absolute 定位算錯 3-4px，改成 `grid-template-columns: 44px 24px 1fr`（time/dot/head 三欄 + column-gap 10px）自然置中對齊。圓圈放大到 24×24 裝入景點編號（accent 色 / now 態藍底白字）。rail-name 13→15px、rail-sub 10→12px、rail-time 12→13px、expand 12.5→14px，eyebrow/meta 10→11px。豎線 left 對準 dot 中心 x=66。
+
+### Changed
+- **DayNav 日期總覽列改為 sticky**：`.ocean-day-strip` 加 `position: sticky; top: 64px`（手機 56px）+ backdrop-blur + hairline border，捲動時釘在 topbar 下方。負 margin bleed 到 viewport 邊緣讓毛玻璃底色蓋滿。`.ocean-day` scroll-margin-top `84px → 210px`（手機 190px）、`.ocean-side` top `84px → 200px` 避免 sticky 堆疊重疊。chip 視覺格式 100% 保留。
+- **theme 系統簡化為單一 Ocean**：刪除 `sun/sky/zen/forest/sakura/night` 六套主題，`useDarkMode` 移除 `ColorTheme` / `setTheme` / `THEME_CLASSES`，只管 `light/auto/dark`。`appearance.ts` 移除 `COLOR_THEMES` + `THEME_ACCENTS`。TripSheetContent 的外觀 sheet 只剩色彩模式選擇器（3 個 card）。
+- **tokens.css 全面改寫**：砍 1800+ 行六主題覆寫，新增 Ocean light + dark (deep navy `#0D1B2A`) + print 三 variants。radius 對齊 Airbnb（sm:6/md:8/lg:12/xl:16）、shadow 三層中性黑。
+- **字型**：system font stack + Caveat 手寫 → Inter + Noto Sans TC（設計稿指定）。
+- **meta theme-color**：`#F47B5E` → `#0077B6`。
+- **DayNav 整個重寫**：從細 pill + 左右箭頭按鈕改為 160px rich chip 橫向 scroll（不需要箭頭）。
+- **TimelineEvent 重寫**：從 polygon time flag + dashed 豎線改為 4-col grid stop card；≤760px 切換到 TimelineRail。
+- **InfoPanel 擴充**：原 3 卡變 5 卡（加整體進度 + 住宿安排 + 航班）。
+
+### Removed
+- **QuickPanel FAB**：全刪（14 項功能按鈕 + FAB + sheet overlay）。所有功能搬到 topbar nav tabs / action buttons / OverflowMenu dropdown / Mobile bottom nav / action-menu sheet。
+- **Edit FAB**（右下角 + 圓形按鈕）：topbar 的 AI 編輯 dark pill 取代。
+- **Theme picker UI**：外觀 sheet 裡的色彩主題選擇器（6 個 card）移除，只剩色彩模式 light/auto/dark。
+- **ThemeArt 六主題 SVG**：1038 行砍成 53 行，只保留 Ocean wave FooterArt，其餘 null。
+
+### Fixed
+- **FlightSheet parser**：容納「出發 → 抵達」格式（時間被文字切開）、label 讀 section 先、機場代碼白名單、航空公司 code 支援虎航 IT / 樂桃 MM / 台灣虎航 IT / 酷航 TR / 越捷 VJ 等。
+- **OverflowMenu 下拉被切**：因 topbar overflow 導致 popover clip。改 React portal + position:fixed 徹底避開所有 ancestor stacking/clipping context。
+
+### Migration
+- 已存 `colorTheme` localStorage 值（sun/sky/zen/forest/sakura/night/ocean）對 Ocean-only 版本無害：`useDarkMode` 直接忽略該 key，不會 crash。
+
 ## [1.2.4.0] - 2026-04-17
 
 ### Changed

@@ -1,26 +1,65 @@
 /**
- * DaySection — memoised per-day renderer.
- * Extracted from TripPage.tsx to reduce file size.
+ * DaySection — memoised per-day renderer (Ocean design).
+ *
+ * Renders:
+ *  - Ocean hero card (Day eyebrow + title + date + stats)
+ *  - Weather, hotel, driving stats cards
+ *  - Timeline stop cards
  */
 
 import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import Hotel from './Hotel';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import { DayDrivingStatsCard } from './DrivingStats';
-import DayArt from './DayArt';
 import Icon from '../shared/Icon';
 import { toTimelineEntry, toHotelData } from '../../lib/mapDay';
 import { calcDrivingStats } from '../../lib/drivingStats';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
+import { extractPinsFromDay } from '../../hooks/useMapData';
 import type { Day, DaySummary } from '../../types/trip';
-import type { ColorTheme } from '../../hooks/useDarkMode';
 
-/* DayMap — React.lazy code-split（D1：SDK lazy load）*/
-const DayMap = lazy(() => import('./DayMap'));
+/* ===== Map expand button (scoped styles) ===== */
+const MAP_EXPAND_STYLES = `
+.map-expand-wrap { position: relative; }
+.map-expand-btn {
+  position: absolute; top: 10px; right: 10px; z-index: 400;
+  width: 34px; height: 34px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--color-background); border: 1px solid var(--color-border);
+  color: var(--color-foreground); cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  text-decoration: none;
+  transition: border-color 160ms var(--transition-timing-function-apple),
+              color 160ms var(--transition-timing-function-apple);
+}
+.map-expand-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+`;
+
+function MapExpandBtn({ href, onClick, label = '地圖全螢幕' }: { href: string; onClick: (e: React.MouseEvent) => void; label?: string }) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      className="map-expand-btn"
+      aria-label={label}
+      title={label}
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="15 3 21 3 21 9" />
+        <polyline points="9 21 3 21 3 15" />
+        <line x1="21" y1="3" x2="14" y2="10" />
+        <line x1="3" y1="21" x2="10" y2="14" />
+      </svg>
+    </a>
+  );
+}
+
+const OceanMap = lazy(() => import('./OceanMap'));
 
 export interface DaySectionProps {
   dayNum: number;
@@ -28,15 +67,27 @@ export interface DaySectionProps {
   daySummary: DaySummary | undefined;
   tripStart: string | null;
   tripEnd: string | null;
-  themeArt?: { theme: ColorTheme; dark: boolean };
+  themeArt?: { dark: boolean };
   localToday?: string;
   isActive?: boolean;
-  /** 全覽模式時隱藏 DayMap（避免與 TripMap 重複）*/
   hideDayMap?: boolean;
-  /** IANA timezone for weather API (derived from trip destination). */
   timezone?: string;
-  /** Whether the DayMap feature flag is enabled. */
-  enableDayMap?: boolean;
+}
+
+/** Extract time range parts from entry time string "HH:MM-HH:MM" or "HH:MM". */
+function getTimelineBounds(timeline: unknown[]): { start: string | null; end: string | null } {
+  const times = timeline
+    .map((e) => (typeof e === 'object' && e !== null && 'time' in e ? String((e as { time?: unknown }).time ?? '') : ''))
+    .filter((t) => t);
+  if (times.length === 0) return { start: null, end: null };
+  const firstStr = times[0] ?? '';
+  const lastStr = times[times.length - 1] ?? '';
+  const firstParts = firstStr.split('-');
+  const lastParts = lastStr.split('-');
+  return {
+    start: firstParts[0]?.trim() || null,
+    end: (lastParts[lastParts.length - 1] ?? lastParts[0] ?? '').trim() || null,
+  };
 }
 
 const DaySection = React.memo(function DaySection({
@@ -45,30 +96,23 @@ const DaySection = React.memo(function DaySection({
   daySummary,
   tripStart,
   tripEnd,
-  themeArt,
   localToday,
   isActive,
   hideDayMap = false,
   timezone,
-  enableDayMap = false,
 }: DaySectionProps) {
-  /* Track whether this section has been activated to trigger enter animation */
+  const { tripId } = useParams<{ tripId: string }>();
+  const navigate = useNavigate();
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
   useEffect(() => {
-    if (isActive && !prevActiveRef.current) {
-      setAnimKey((k) => k + 1);
-    }
+    if (isActive && !prevActiveRef.current) setAnimKey((k) => k + 1);
     prevActiveRef.current = !!isActive;
   }, [isActive]);
 
   const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
-  // Derive weather locations from entries (no longer stored in DB)
-  const weatherDay = useMemo(
-    () => buildWeatherDay(day?.label, timeline),
-    [day?.label, timeline],
-  );
+  const weatherDay = useMemo(() => buildWeatherDay(day?.label, timeline), [day?.label, timeline]);
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
@@ -76,32 +120,58 @@ const DaySection = React.memo(function DaySection({
     () => timeline.length > 0 ? calcDrivingStats(timeline) : null,
     [timeline],
   );
-
   const warnings = useMemo(() => validateDay(timeline), [timeline]);
+  const bounds = useMemo(() => getTimelineBounds(timeline), [timeline]);
 
-  /* Memoised timeline entries — avoids new array reference on every render */
   const timelineEntries = useMemo(
     () => timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({})),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [day?.timeline],
   );
 
+  const eyebrow = `DAY ${String(dayNum).padStart(2, '0')}`;
+  const dateLabel = daySummary?.date
+    ? `${daySummary.date}${daySummary.dayOfWeek ? `（${daySummary.dayOfWeek}）` : ''}`
+    : '';
+  const area = daySummary?.label || '';
+
   return (
-    <section className="day-section" data-day={dayNum}>
-      <div className="day-header relative z-(--z-day-header) py-2 px-4 flex items-center gap-2 min-h-[100px] rounded-t-md" id={`day${dayNum}`}>
-        <h2 className="text-title2 font-bold whitespace-nowrap overflow-hidden text-ellipsis m-0">Day {dayNum}</h2>
-        {daySummary?.label && (
-          <span>{daySummary.label}</span>
-        )}
-        {daySummary?.date && (
-          <span className="text-subheadline text-muted ml-auto whitespace-nowrap">
-            {daySummary.date}
-            {daySummary.dayOfWeek && `（${daySummary.dayOfWeek}）`}
+    <section className="ocean-day day-section" data-day={dayNum}>
+      {/* Ocean Hero card */}
+      <div className="ocean-hero" id={`day${dayNum}`}>
+        <div className="ocean-hero-chips">
+          <span className="ocean-hero-chip">
+            {eyebrow}
+            {dateLabel && ` · ${dateLabel}`}
           </span>
-        )}
-        {themeArt && <DayArt entries={timeline} dark={themeArt.dark} />}
+          {area && <span className="ocean-hero-chip-muted">{area}</span>}
+        </div>
+        <h2 className="ocean-hero-title">{area || `Day ${dayNum}`}</h2>
+        <div className="ocean-hero-stats">
+          <div className="ocean-hero-stat">
+            <div className="ocean-hero-stat-label">Stops</div>
+            <div className="ocean-hero-stat-value">{timeline.length || '—'}</div>
+          </div>
+          {bounds.start && (
+            <div className="ocean-hero-stat">
+              <div className="ocean-hero-stat-label">Start</div>
+              <div className="ocean-hero-stat-value">{bounds.start}</div>
+            </div>
+          )}
+          {bounds.end && (
+            <div className="ocean-hero-stat">
+              <div className="ocean-hero-stat-label">End</div>
+              <div className="ocean-hero-stat-value">{bounds.end}</div>
+            </div>
+          )}
+        </div>
       </div>
-      <div key={animKey} className={clsx('px-padding-h pb-4', animKey > 0 && 'day-content-enter', day && 'day-content-loaded')} id={`day-slot-${dayNum}`}>
+
+      <div
+        key={animKey}
+        className={clsx(animKey > 0 && 'day-content-enter', day && 'day-content-loaded')}
+        id={`day-slot-${dayNum}`}
+      >
         {!day ? (
           <DaySkeleton />
         ) : (
@@ -109,9 +179,7 @@ const DaySection = React.memo(function DaySection({
             {warnings.length > 0 && (
               <div className="bg-destructive-bg py-3 px-4 my-2 rounded-sm text-callout text-destructive">
                 <strong><Icon name="warning" /> 注意事項：</strong>
-                <ul className="mt-1 ml-4">
-                  {warnings.map((w) => <li key={w}>{w}</li>)}
-                </ul>
+                <ul className="mt-1 ml-4">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
               </div>
             )}
 
@@ -127,24 +195,37 @@ const DaySection = React.memo(function DaySection({
             )}
 
             {hotel && typeof hotel === 'object' && (
-              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
+              <div className="ocean-side-card mb-3">
                 <Hotel hotel={toHotelData(hotel)} />
               </div>
             )}
             {dayDrivingStats && (
-              <div className="mb-3 bg-tertiary/60 rounded-md p-padding-h">
+              <div className="ocean-side-card mb-3">
                 <DayDrivingStatsCard stats={dayDrivingStats} />
               </div>
             )}
 
-            {/* DayMap：DayNav 下方、Timeline 上方（D1：React.lazy + Suspense）
-                全覽模式（hideDayMap=true）時隱藏，由 TripMap 取代
-                enableDayMap=false 時完全隱藏（feature flag）*/}
-            {enableDayMap && !hideDayMap && (
-              <Suspense fallback={<div className="h-[200px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-                <DayMap day={day} dayNum={dayNum} />
-              </Suspense>
-            )}
+            {!hideDayMap && day && (() => {
+              const { pins } = extractPinsFromDay(day);
+              if (pins.length === 0) return null;
+              return (
+                <>
+                  <style>{MAP_EXPAND_STYLES}</style>
+                  <div className="map-expand-wrap">
+                    <Suspense fallback={<div className="h-[420px] rounded-md bg-secondary animate-pulse" aria-label="地圖載入中" />}>
+                      <OceanMap pins={pins} mode="overview" />
+                    </Suspense>
+                    {tripId && (
+                      <MapExpandBtn
+                        href={`/trip/${tripId}/map?day=${dayNum}`}
+                        onClick={(e) => { e.preventDefault(); navigate(`/trip/${tripId}/map?day=${dayNum}`); }}
+                        label={`地圖全螢幕（Day ${dayNum}）`}
+                      />
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />

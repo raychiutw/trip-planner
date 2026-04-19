@@ -248,6 +248,12 @@ async function handleAuth(
     return context.next();
   }
 
+  // 公開讀取：GET /api/route（Mapbox Directions proxy，只接受座標 query params、不回 user data）
+  if (request.method === 'GET' && url.pathname === '/api/route') {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // 公開讀取：GET /api/trips/** 不需認證
   if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
     // Service Token（CLI / scheduler）→ admin

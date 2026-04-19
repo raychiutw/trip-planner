@@ -3,16 +3,19 @@
  * Extracted from TripPage.tsx to reduce file size.
  */
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import clsx from 'clsx';
 import DocCard from './DocCard';
+import FlightSheet from './FlightSheet';
+import SuggestionSheet from './SuggestionSheet';
 import TodayRouteSheet from './TodayRouteSheet';
 import { TripDrivingStatsCard } from './DrivingStats';
+import Icon from '../shared/Icon';
 import { toTimelineEntry } from '../../lib/mapDay';
-import { COLOR_MODE_OPTIONS, THEME_ACCENTS, COLOR_THEMES } from '../../lib/appearance';
+import { COLOR_MODE_OPTIONS } from '../../lib/appearance';
 import type { Day, TripListItem } from '../../types/trip';
 import type { DocEntry } from './DocCard';
-import type { ColorMode, ColorTheme } from '../../hooks/useDarkMode';
+import type { ColorMode } from '../../hooks/useDarkMode';
 import type { TripDrivingStats } from '../../lib/drivingStats';
 
 /* ===== Sheet content config ===== */
@@ -22,24 +25,16 @@ export const SHEET_TITLES: Record<string, string> = {
   checklist: '出發前確認',
   backup: '備案',
   emergency: '緊急聯絡',
-  suggestions: 'AI 解籤',
+  suggestions: 'AI 建議',
   driving: '交通統計',
   'today-route': '今日路線',
   'trip-select': '切換行程',
-  appearance: '外觀與主題',
+  appearance: '外觀設定',
   prep: '行前準備',
   'emergency-group': '緊急應變',
   'ai-group': 'AI 分析',
+  'action-menu': '更多功能',
 };
-
-/** Pre-built style objects for theme swatches (avoid per-render allocation). */
-const SWATCH_STYLES: Record<string, { light: React.CSSProperties; dark: React.CSSProperties }> =
-  Object.fromEntries(
-    Object.entries(THEME_ACCENTS).map(([key, { light, dark }]) => [
-      key,
-      { light: { background: light }, dark: { background: dark } },
-    ]),
-  );
 
 const LOADING_CLASS = 'text-center p-10 text-muted';
 
@@ -56,10 +51,36 @@ interface TripSheetContentProps {
   onTripChange: (tripId: string) => void;
   colorMode: ColorMode;
   setColorMode: (mode: ColorMode) => void;
-  colorTheme: ColorTheme;
-  setTheme: (theme: ColorTheme) => void;
-  isDark: boolean;
+  /** Open a different sheet from within current sheet (used by action-menu grid). */
+  onOpenSheet?: (key: string) => void;
+  /** Trigger print mode (used by action-menu). */
+  onPrint?: () => void;
+  /** Trigger a download by format (used by action-menu export row). */
+  onDownload?: (format: string) => void;
+  /** Online status for gating write actions. */
+  isOnline?: boolean;
 }
+
+/** Items rendered in the action-menu sheet's 3×3 grid. */
+const ACTION_MENU_GRID: { key: string; icon: string; label: string; requiresOnline?: boolean }[] = [
+  { key: 'flights',      icon: 'plane',        label: '航班' },
+  { key: 'driving',      icon: 'car',          label: '交通' },
+  { key: 'today-route',  icon: 'route',        label: '路線' },
+  { key: 'checklist',    icon: 'check-circle', label: '清單' },
+  { key: 'emergency',    icon: 'emergency',    label: '緊急' },
+  { key: 'backup',       icon: 'backup',       label: '備案' },
+  { key: 'suggestions',  icon: 'lightbulb',    label: 'AI 建議' },
+  { key: 'trip-select',  icon: 'swap-horiz',   label: '切換行程', requiresOnline: true },
+  { key: 'appearance',   icon: 'palette',      label: '外觀' },
+];
+
+const ACTION_MENU_EXPORTS: { key: string; icon: string; label: string; action: 'print' | 'download' }[] = [
+  { key: 'printer',       icon: 'printer',  label: '列印',   action: 'print' },
+  { key: 'download-pdf',  icon: 'download', label: 'PDF',    action: 'download' },
+  { key: 'download-md',   icon: 'doc',      label: 'MD',     action: 'download' },
+  { key: 'download-json', icon: 'code',     label: 'JSON',   action: 'download' },
+  { key: 'download-csv',  icon: 'table',    label: 'CSV',    action: 'download' },
+];
 
 /* ===== Component ===== */
 
@@ -74,19 +95,32 @@ export default function TripSheetContent({
   onTripChange,
   colorMode,
   setColorMode,
-  colorTheme,
-  setTheme,
-  isDark,
+  onOpenSheet,
+  onPrint,
+  onDownload,
+  isOnline = true,
 }: TripSheetContentProps) {
   const content = useMemo(() => {
     if (!activeSheet) return null;
     switch (activeSheet) {
-      /* Individual content */
-      case 'flights':
+      /* Flight — rich card (mockup 對齊) */
+      case 'flights': {
+        const docData = docs.flights as { title?: string; entries?: DocEntry[] } | undefined;
+        return docData?.entries?.length
+          ? <FlightSheet entries={docData.entries} />
+          : <p className="text-callout text-muted text-center py-4">尚無航班資料</p>;
+      }
+      /* Suggestions — 3-tier priority (mockup 對齊) */
+      case 'suggestions': {
+        const docData = docs.suggestions as { title?: string; entries?: DocEntry[] } | undefined;
+        return docData?.entries?.length
+          ? <SuggestionSheet entries={docData.entries} />
+          : <p className="text-callout text-muted text-center py-4">尚無建議</p>;
+      }
+      /* Generic doc sheets */
       case 'checklist':
       case 'backup':
-      case 'emergency':
-      case 'suggestions': {
+      case 'emergency': {
         const docData = docs[activeSheet] as { title?: string; entries?: DocEntry[] } | undefined;
         return docData?.entries?.length
           ? <DocCard entries={docData.entries} />
@@ -172,30 +206,57 @@ export default function TripSheetContent({
                   </button>
                 ))}
               </div>
-              <div className="text-caption font-semibold text-muted mt-4 mb-2">色彩主題</div>
-              <div className="grid grid-cols-4 gap-2">
-                {COLOR_THEMES.map((t) => (
+            </div>
+          </div>
+        );
+      case 'action-menu':
+        return (
+          <div className="max-w-[520px] mx-auto p-padding-h">
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {ACTION_MENU_GRID.map((g) => {
+                const disabled = !!g.requiresOnline && !isOnline;
+                return (
                   <button
-                    key={t.key}
-                    className={clsx('color-theme-card', t.key === colorTheme && 'active')}
-                    data-theme={t.key}
-                    onClick={() => setTheme(t.key)}
+                    key={g.key}
+                    type="button"
+                    className={clsx(
+                      'flex flex-col items-center justify-center gap-2 py-4 rounded-md border border-border bg-background cursor-pointer font-inherit text-foreground transition-colors duration-fast ease-apple',
+                      !disabled && 'hover:border-accent',
+                      disabled && 'opacity-40 cursor-not-allowed',
+                    )}
+                    disabled={disabled}
+                    onClick={() => onOpenSheet?.(g.key)}
                   >
-                    <div
-                      className="color-theme-swatch"
-                      style={isDark ? SWATCH_STYLES[t.key]?.dark : SWATCH_STYLES[t.key]?.light}
-                    />
-                    <div className="text-caption text-muted mt-1">{t.label}</div>
+                    <Icon name={g.icon} />
+                    <span className="text-caption font-semibold">{g.label}</span>
                   </button>
-                ))}
-              </div>
+                );
+              })}
+            </div>
+            <div className="text-caption2 font-semibold tracking-[0.18em] uppercase text-muted mb-2">Export</div>
+            <div className="flex flex-col gap-1.5">
+              {ACTION_MENU_EXPORTS.map((e) => (
+                <button
+                  key={e.key}
+                  type="button"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-sm border border-border bg-background cursor-pointer font-inherit text-foreground hover:border-accent transition-colors duration-fast ease-apple"
+                  onClick={() => {
+                    if (e.action === 'print') onPrint?.();
+                    else onDownload?.(e.key.replace('download-', ''));
+                  }}
+                >
+                  <Icon name={e.icon} />
+                  <span className="flex-1 text-callout text-left">{e.label}</span>
+                  <Icon name="chevronR" />
+                </button>
+              ))}
             </div>
           </div>
         );
       default:
         return null;
     }
-  }, [activeSheet, docs, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, onTripChange, colorMode, setColorMode, colorTheme, setTheme, isDark]);
+  }, [activeSheet, docs, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, onTripChange, colorMode, setColorMode, onOpenSheet, onPrint, onDownload, isOnline]);
 
   return <>{content}</>;
 }
