@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.3.2.0] - 2026-04-19
+
+### Added
+- **POI 景點詳情頁 `/trip/:tripId/stop/:entryId`**：點任一景點跳新頁，顯示 Ocean 地圖（單點聚焦 280px）+ DAY/日期/時間 eyebrow + 大標 + 備註 + 相關資訊（infoBoxes：餐廳備選/停車/預約等）+ 底部 accent 圓角按鈕「在 Google Maps 開啟導航」。手機/桌機共用同一 layout，桌機 maxWidth 720px 置中。
+- **`TripLayout` + `TripContext`**：`/trip/:tripId/*` 子路由共用同一份 trip+days fetch，StopDetailPage 不再重抓。
+- **`useScrollRestoreOnBack` hook**：從詳情頁按返回時，TripPage 自動捲回原 entry（`useLayoutEffect` + `requestAnimationFrame` + `[data-scroll-anchor]` 查找），用完 state 自動清空避免重捲。
+
+### Changed
+- **Timeline row 整行可點**：手機 `TimelineRail` + 桌機 `TimelineEvent` 整個景點 row 現在都是 tap target（Enter / Space / click 皆觸發），跳到詳情頁。桌機 row `role="button"` + focus-visible outline，hover 時右側 chevron 前推 3px。
+- **拿掉 inline expand**：原 TimelineRail 展開段（note / description / locations / infoBoxes）移到 StopDetailPage 承接。精簡 row 視覺，只留 name/time/type/rating/note。
+
+### Migration
+- Router 結構從平坦 `<Route path="/trip/:tripId" element={<TripPage />} />` 改為 nested layout：
+  ```
+  /trip/:tripId        TripLayout
+    ├── (index)        TripPage
+    └── stop/:entryId  StopDetailPage
+  ```
+- `TripLayout` 只做 `useTrip(urlTripId)` + provide context；TripPage 繼續用自己的 `resolveState`（處理 unpublished / default fallback）不動。SW cache 吸收 2× fetch。
+
 ## [1.3.1.0] - 2026-04-19
 
 ### Changed
