@@ -65,7 +65,9 @@ POI 資料所有權：`pois` = AI 維護，`trip_pois` = user 可覆寫（COALES
 
 - **Cloudflare Access**：/manage/ + /admin/ + 寫入 API
 - **Admin**：lean.lean@gmail.com
-- **Mock Auth**（本機）：`.env.local` 的 `DEV_MOCK_EMAIL`
+- **Mock Auth**（本機）：`.dev.vars` 的 `DEV_MOCK_EMAIL`（wrangler 只讀這檔，**不是** `.env.local`）
+  - 複製：`cp .dev.vars.example .dev.vars` → 改 email → 重啟 `npm run dev`
+  - 沒設會讓 `/manage` 拿 401「無法存取」
 
 ## 本機開發
 
