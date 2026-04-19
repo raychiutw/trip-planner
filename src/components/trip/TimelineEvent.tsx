@@ -1,23 +1,16 @@
-/* ===== TimelineEvent Component ===== */
-/* Renders a single timeline entry: time flag, card (title, description, */
-/* locations, info boxes), and optional travel segment to next entry.    */
+/* ===== TimelineEvent — Ocean 4-col stop card ===== */
 
 import { memo } from 'react';
 import clsx from 'clsx';
+import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
-import { NavLinks, type NavLocation } from './MapLinks';
-import InfoBox, { type InfoBoxData } from './InfoBox';
+import { type NavLocation } from './MapLinks';
+import { type InfoBoxData } from './InfoBox';
 
-// ---------------------------------------------------------------------------
-// Helpers — mirrors parseTimeRange / formatDuration from app.js
-// ---------------------------------------------------------------------------
+/* ===== Helpers ===== */
 
-interface ParsedTime {
-  start: string;
-  end: string;
-  duration: number;
-}
+interface ParsedTime { start: string; end: string; duration: number; }
 
 function parseTimeRange(timeStr?: string | null): ParsedTime {
   if (!timeStr) return { start: '', end: '', duration: 0 };
@@ -42,23 +35,34 @@ function formatDuration(mins: number): string {
   if (mins <= 0) return '';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h > 0 && m > 0) return `${h} 小時 ${m} 分`;
-  if (h > 0) return `${h} 小時`;
-  return `${m} 分`;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
 }
 
-// ---------------------------------------------------------------------------
-// Travel data shape (from dist JSON entry.travel)
-// ---------------------------------------------------------------------------
+/** Map entry type to an Icon name + zh label. */
+function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label: string; accent: boolean } {
+  // Infer type from travel data / title / description. Fallback: sight.
+  const title = (entry.title ?? '').toLowerCase();
+  const desc = (entry.description ?? '').toLowerCase();
+  const travelType = (entry.travel && typeof entry.travel === 'object' ? entry.travel.type ?? '' : '').toLowerCase();
+  const blob = `${title} ${desc} ${travelType}`;
 
-export interface TravelData {
-  type?: string | null;
-  text?: string | null;
+  // Order matters — most specific first.
+  if (/機場|flight|機票/.test(blob)) return { icon: 'plane', label: '飛行', accent: false };
+  if (/飯店|旅館|hotel|check[- ]?in|民宿/.test(blob)) return { icon: 'hotel', label: '住宿', accent: false };
+  if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'fork-knife', label: '用餐', accent: true };
+  if (/咖啡|café|cafe|coffee/.test(blob)) return { icon: 'coffee', label: '咖啡', accent: true };
+  if (/購物|shopping|mall|market/.test(blob)) return { icon: 'shopping', label: '購物', accent: false };
+  if (/開車|drive|car|自駕|租車/.test(blob)) return { icon: 'car', label: '移動', accent: false };
+  if (/步行|walk|散步/.test(blob)) return { icon: 'walk', label: '散步', accent: false };
+  if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false };
+  return { icon: 'location-pin', label: '景點', accent: true };
 }
 
-// ---------------------------------------------------------------------------
-// Timeline entry data shape (from dist JSON content.timeline[])
-// ---------------------------------------------------------------------------
+/* ===== Types ===== */
+
+export interface TravelData { type?: string | null; text?: string | null; }
 
 export interface TimelineEntryData {
   id?: number | null;
@@ -73,136 +77,107 @@ export interface TimelineEntryData {
   infoBoxes?: InfoBoxData[] | null;
 }
 
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
-
 interface TimelineEventProps {
   entry: TimelineEntryData;
-  /** 1-based index displayed in the flag */
   index: number;
-  /** Whether this is the current active entry */
   isNow?: boolean;
-  /** Whether this entry's time has passed */
   isPast?: boolean;
 }
 
-export const TimelineEvent = memo(function TimelineEvent({ entry, index, isNow, isPast }: TimelineEventProps) {
-  const parsed = parseTimeRange(entry.time);
-  const hasBody =
-    entry.description ||
-    (entry.locations && entry.locations.length > 0) ||
-    (entry.infoBoxes && entry.infoBoxes.length > 0);
-  const durationText = formatDuration(parsed.duration);
+/* ===== Component =====
+ *
+ * Entire stop card is click/Enter target → navigate to /trip/:id/stop/:entryId.
+ * Inline expand removed (PR2): description / locations / infoBoxes live on
+ * StopDetailPage. Only `note` stays inline for quick scan.
+ * Keyboard: Tab focuses the card, Enter / Space activates navigation.
+ */
 
-  // Resolve travel data — may be an object or a legacy string
+export const TimelineEvent = memo(function TimelineEvent({ entry, isNow, isPast }: TimelineEventProps) {
+  const navigate = useNavigate();
+  const { tripId } = useParams<{ tripId: string }>();
+  const parsed = parseTimeRange(entry.time);
+  const durationText = formatDuration(parsed.duration);
+  const meta = deriveTypeMeta(entry);
+
   const travel: TravelData | null =
     entry.travel && typeof entry.travel === 'object'
       ? entry.travel
       : typeof entry.travel === 'string'
         ? { text: entry.travel, type: '' }
         : null;
-
   const travelText = travel?.text ?? '';
   const travelType = travel?.type ?? '';
 
+  const canOpen = entry.id != null && tripId != null;
+
+  const handleOpen = () => {
+    if (!canOpen) return;
+    navigate(`/trip/${tripId}/stop/${entry.id}`, {
+      state: { scrollAnchor: `entry-${entry.id}` },
+    });
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (!canOpen) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleOpen();
+    }
+  };
+
   return (
     <>
-      {/* ---- Main event ---- */}
       <div
-        className={clsx(
-          'relative',
-          isPast && 'opacity-55',
-        )}
+        className={clsx('ocean-stop', canOpen && 'ocean-stop-clickable')}
         data-entry-id={entry.id ?? undefined}
+        data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
         data-now={isNow || undefined}
+        data-past={isPast || undefined}
+        role={canOpen ? 'button' : undefined}
+        tabIndex={canOpen ? 0 : undefined}
+        onClick={handleOpen}
+        onKeyDown={handleKey}
+        aria-label={canOpen ? `查看景點：${entry.title ?? '（無標題）'}` : undefined}
       >
-        {/* Arrival flag */}
-        <div
-          className="inline-flex items-center gap-2 py-1 pr-5 pl-3 font-bold text-(length:--font-size-footnote) leading-tight bg-(--color-accent) text-(--color-accent-foreground) rounded-l-(--radius-xs)"
-          style={{ clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)' }}
-        >
-          <span
-            className={clsx(
-              'relative text-[0.8em] bg-white/25 w-5 h-5 rounded-full inline-flex items-center justify-center shrink-0',
-              isNow && 'shadow-[0_0_8px_color-mix(in_srgb,var(--color-accent)_50%,transparent)]',
-            )}
-          >
-            {index}
-            {/* Pulse dot for "now" indicator — replaces ::after pseudo-element */}
-            {isNow && (
-              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-(--color-accent) animate-[tl-pulse_2s_infinite]" />
-            )}
-          </span>
-          <span>
-            {parsed.start}
-            {parsed.end ? `-${parsed.end}` : ''}
-          </span>
+        {/* Time column */}
+        <div className="ocean-stop-time">
+          <div className="ocean-stop-t">{parsed.start || '—'}</div>
+          {durationText && <div className="ocean-stop-dur">{durationText}</div>}
         </div>
 
-        {/* Segment: dashed line + card */}
-        <div
-          data-tl-segment
-          className={clsx(
-            'ml-3 py-2 pl-4 border-0 border-l-2 border-dashed border-(--color-border)',
-            isNow && 'border-solid! border-(--color-accent)!',
-          )}
-        >
-          <div
-            data-tl-card
-            className={clsx(
-              'rounded-(--radius-sm) px-4 py-3',
-              isNow && 'shadow-(--shadow-md) ring-[1.5px] ring-(--color-accent) scale-[1.01]',
-              isPast && '!shadow-none opacity-75',
+        {/* Icon box */}
+        <div className="ocean-stop-icon" data-accent={meta.accent || undefined}>
+          <Icon name={meta.icon} />
+        </div>
+
+        {/* Content */}
+        <div className="ocean-stop-content">
+          <div className="ocean-stop-meta">
+            <span className="ocean-stop-type" data-accent={meta.accent || undefined}>{meta.label}</span>
+            <span className="ocean-stop-name">{entry.title ?? ''}</span>
+            {typeof entry.googleRating === 'number' && (
+              <span className="ocean-stop-rating">★ {entry.googleRating.toFixed(1)}</span>
             )}
-          >
-            {/* Card header */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-(length:--font-size-title3) leading-tight text-(--color-accent) flex-1 min-w-0">
-                {entry.title ?? ''}
-              </span>
-              {typeof entry.googleRating === 'number' && (
-                <>{' '}<span className="text-(--color-accent) text-(length:--font-size-caption) shrink-0">★ {entry.googleRating.toFixed(1)}</span></>
-              )}
-              {durationText && (
-                <span className="text-(length:--font-size-footnote) text-(--color-muted) whitespace-nowrap shrink-0 inline-flex items-center gap-1">
-                  <Icon name="clock" /> {durationText}
-                </span>
-              )}
-            </div>
-
-            {/* Note */}
-            {entry.note && <MarkdownText text={entry.note} as="div" className="text-(--color-muted) my-1 text-(length:--font-size-callout)" />}
-
-            {/* Body: description + locations + info boxes */}
-            {hasBody && (
-              <div className="grid grid-rows-[1fr] py-1 text-(length:--font-size-body) leading-relaxed transition-[grid-template-rows] duration-(--transition-duration-normal) ease-(--transition-timing-function-apple) [&>*]:overflow-hidden">
-                {entry.description && <MarkdownText text={entry.description} as="div" className="text-(--color-muted) my-1 text-(length:--font-size-callout)" />}
-                {entry.locations && entry.locations.length > 0 && (
-                  <NavLinks locations={entry.locations} />
-                )}
-                {entry.infoBoxes && entry.infoBoxes.length > 0 &&
-                  entry.infoBoxes.map((box, i) => (
-                    <InfoBox key={i} box={box} />
-                  ))
-                }
-              </div>
-            )}
-          </div>{/* end card */}
-        </div>{/* end segment */}
-      </div>{/* end event */}
-
-      {/* ---- Travel segment to next entry ---- */}
-      {travel && travelText && (
-        <div className="ml-3 py-2 pl-4 border-0 border-l-2 border-dashed border-(--color-border)">
-          <div className="flex items-center gap-2 py-2 px-4 text-footnote text-muted bg-accent-bg rounded-sm cursor-default">
-            {travelType && (
-              <span className="inline-flex items-center [&_.svg-icon]:w-[1.1em] [&_.svg-icon]:h-[1.1em]">
-                <Icon name={travelType} />
+            {parsed.end && (
+              <span className="ocean-stop-rating">
+                <Icon name="clock" /> {parsed.start}–{parsed.end}
               </span>
             )}
-            <span className="flex-1">{travelText}</span>
           </div>
+          {entry.note && <MarkdownText text={entry.note} as="div" className="ocean-stop-note" />}
+        </div>
+
+        {/* Actions — chevron hint toward detail */}
+        <div className="ocean-stop-actions" aria-hidden="true">
+          <span className="ocean-stop-chevron">›</span>
+        </div>
+      </div>
+
+      {/* Travel connector */}
+      {travel && travelText && (
+        <div className={clsx('ocean-travel', isPast && 'opacity-60')}>
+          {travelType && <Icon name={travelType} />}
+          <span>{travelText}</span>
         </div>
       )}
     </>

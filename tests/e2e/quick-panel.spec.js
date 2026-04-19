@@ -257,9 +257,9 @@ test.describe('(7) 點擊「外觀主題」→ 主題選擇器', () => {
     await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
   }
 
-  test('點擊 appearance 後 InfoSheet 顯示「外觀與主題」標題', async ({ page }) => {
+  test('點擊 appearance 後 InfoSheet 顯示「外觀設定」標題', async ({ page }) => {
     await openAppearanceSheet(page);
-    await expect(page.locator('.sheet-title')).toContainText('外觀與主題');
+    await expect(page.locator('.sheet-title')).toContainText('外觀設定');
   });
 
   test('顯示色彩模式選擇器（3 個 color-mode-card）', async ({ page }) => {
@@ -268,66 +268,10 @@ test.describe('(7) 點擊「外觀主題」→ 主題選擇器', () => {
     await expect(modeCards).toHaveCount(3);
   });
 
-  test('顯示主題色選擇器（6 個 color-theme-card）', async ({ page }) => {
+  test('Ocean-only：不再有 color-theme-card 選擇器', async ({ page }) => {
     await openAppearanceSheet(page);
     const themeCards = page.locator('.color-theme-card');
-    await expect(themeCards).toHaveCount(6);
-  });
-});
-
-// ─────────────────────────────────────────────
-// 8. 主題切換即時生效（body class 更新）
-// ─────────────────────────────────────────────
-test.describe('(8) 主題切換即時生效', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  async function openAppearanceSheet(page) {
-    await waitForPage(page);
-    await page.locator('.quick-panel-trigger').click();
-    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
-  }
-
-  test('切換到「晴空」主題後 body 有 theme-sky class', async ({ page }) => {
-    await openAppearanceSheet(page);
-    // 點擊「晴空（sky）」主題按鈕
-    await page.locator('.color-theme-card[data-theme="sky"]').click();
-    await expect(page.locator('body')).toHaveClass(/theme-sky/);
-  });
-
-  test('切換到「和風」主題後 body 有 theme-zen class', async ({ page }) => {
-    await openAppearanceSheet(page);
-    await page.locator('.color-theme-card[data-theme="zen"]').click();
-    await expect(page.locator('body')).toHaveClass(/theme-zen/);
-  });
-});
-
-// ─────────────────────────────────────────────
-// 9. Night 主題選擇（body 加 theme-night class）
-// ─────────────────────────────────────────────
-test.describe('(9) Night 主題選擇', () => {
-  test.use({ viewport: { width: 390, height: 844 } });
-
-  async function openAppearanceSheet(page) {
-    await waitForPage(page);
-    await page.locator('.quick-panel-trigger').click();
-    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="appearance"]').click();
-    await page.locator('#infoBottomSheet.open').waitFor({ timeout: 5000 });
-  }
-
-  test('選擇「星夜」主題後 body 有 theme-night class', async ({ page }) => {
-    await openAppearanceSheet(page);
-    await page.locator('.color-theme-card[data-theme="night"]').click();
-    await expect(page.locator('body')).toHaveClass(/theme-night/);
-  });
-
-  test('選擇「星夜」後主題卡片獲得 active class', async ({ page }) => {
-    await openAppearanceSheet(page);
-    const nightCard = page.locator('.color-theme-card[data-theme="night"]');
-    await nightCard.click();
-    await expect(nightCard).toHaveClass(/active/);
+    await expect(themeCards).toHaveCount(0);
   });
 });
 

@@ -11,7 +11,7 @@ function expectColor(actual: string, expected: string) {
 
 test.describe('tokens.css Layer 驗證', () => {
 
-  test('CSS custom properties 正確定義（sun-light 預設主題）', async ({ page }) => {
+  test('CSS custom properties 正確定義（Ocean 預設主題）', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(300);
@@ -22,38 +22,30 @@ test.describe('tokens.css Layer 驗證', () => {
         accent: s.getPropertyValue('--color-accent').trim(),
         background: s.getPropertyValue('--color-background').trim(),
         foreground: s.getPropertyValue('--color-foreground').trim(),
-        secondary: s.getPropertyValue('--color-secondary').trim(),
         radiusMd: s.getPropertyValue('--radius-md').trim(),
         spacing4: s.getPropertyValue('--spacing-4').trim(),
         fontSizeBody: s.getPropertyValue('--font-size-body').trim(),
-        navH: s.getPropertyValue('--nav-h').trim(),
-        tapMin: s.getPropertyValue('--tap-min').trim(),
       };
     });
 
-    expectColor(tokens.accent, '#E86A4A');
-    expectColor(tokens.background, '#FBF3E8');
-    expectColor(tokens.foreground, '#2E2418');
-    expectColor(tokens.secondary, '#F0DABC');
-    expect(tokens.radiusMd).toBe('12px');
+    expectColor(tokens.accent, '#0077B6');
+    expectColor(tokens.background, '#FFFFFF');
+    expectColor(tokens.foreground, '#222222');
+    expect(tokens.radiusMd).toBe('8px');
     expect(tokens.spacing4).toBe('16px');
     expect(tokens.fontSizeBody).toBe('1.0625rem');
-    expect(tokens.navH).toBe('48px');
-    expect(tokens.tapMin).toBe('44px');
   });
 
-  test('深色模式 token 覆蓋正確', async ({ page }) => {
+  test('深色模式 Ocean deep-navy 覆蓋正確', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(300);
 
-    // 設定 dark class
     await page.evaluate(() => {
-      document.body.classList.add('theme-sun', 'dark');
+      document.body.classList.add('dark');
     });
     await page.waitForTimeout(200);
 
-    // 分開讀取 computed style
     const tokens = await page.evaluate(() => {
       const s = getComputedStyle(document.body);
       return {
@@ -63,32 +55,9 @@ test.describe('tokens.css Layer 驗證', () => {
       };
     });
 
-    expectColor(tokens.accent, '#F4A08A');
-    expectColor(tokens.background, '#1E1A16');
-    expectColor(tokens.foreground, '#EAE2D6');
-  });
-
-  test('Sky 主題 token 覆蓋正確', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(300);
-
-    // 切換 sky 主題
-    await page.evaluate(() => {
-      document.body.className = 'theme-sky';
-    });
-    await page.waitForTimeout(200);
-
-    const tokens = await page.evaluate(() => {
-      const s = getComputedStyle(document.body);
-      return {
-        accent: s.getPropertyValue('--color-accent').trim(),
-        background: s.getPropertyValue('--color-background').trim(),
-      };
-    });
-
-    expectColor(tokens.accent, '#2870A0');
-    expectColor(tokens.background, '#FFF9F0');
+    expectColor(tokens.accent, '#48CAE4');
+    expectColor(tokens.background, '#0D1B2A');
+    expectColor(tokens.foreground, '#E0F4FA');
   });
 
   test('Tailwind utilities layer 存在', async ({ page }) => {

@@ -1,0 +1,15 @@
+# Copy to .dev.vars (not committed) — wrangler local dev secrets
+# Used by CF Pages Functions when running `wrangler pages dev` or `npm run dev`.
+#
+# Production/Preview equivalents live in:
+# Cloudflare Dashboard → Pages → trip-planner → Settings → Environment variables
+
+# Mapbox Directions API token (public pk.* token, for /api/route proxy)
+# Get one free at https://account.mapbox.com/access-tokens/
+MAPBOX_TOKEN=pk.ey...your-token-here
+
+# Mock Auth — 本機開發 bypass Cloudflare Access
+# 設定後，wrangler 的 middleware 會假裝此 email 已登入，讓 /manage/、/admin/、寫入 API 可用
+# 不設 → 本機打 /api/my-trips 會拿到 401，/manage 看到「無法存取」
+ADMIN_EMAIL=your-email@example.com
+DEV_MOCK_EMAIL=your-email@example.com

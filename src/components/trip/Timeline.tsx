@@ -2,14 +2,14 @@
 
 import { useMemo } from 'react';
 import TimelineEvent, { type TimelineEntryData } from './TimelineEvent';
+import TimelineRail from './TimelineRail';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 interface TimelineProps {
-  /** Array of timeline entries for a single day */
   events: TimelineEntryData[];
   /** The day's date (ISO format "YYYY-MM-DD"). When it matches today, "now" tracking is enabled. */
   dayDate?: string | null;
-  /** Today's date (ISO format "YYYY-MM-DD") provided by parent for stable comparison.
-   *  Falls back to new Date() if not provided. */
+  /** Today's date (ISO format "YYYY-MM-DD") provided by parent for stable comparison. */
   localToday?: string | null;
 }
 
@@ -21,7 +21,6 @@ function parseStartMinutes(time?: string | null): number {
   return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
 }
 
-/** Parse end time from "HH:MM-HH:MM" to minutes since midnight */
 function parseEndMinutes(time?: string | null): number {
   if (!time) return -1;
   const segments = time.split('-');
@@ -33,13 +32,14 @@ function parseEndMinutes(time?: string | null): number {
 }
 
 export default function Timeline({ events, dayDate, localToday }: TimelineProps) {
-  /* Compute isToday via useMemo to avoid new Date() on every render (keeps useMemo stable) */
+  /** ≤760px: compact rail; else: 4-col stop card. Matches tokens.css mobile breakpoint. */
+  const isMobile = useMediaQuery('(max-width: 760px)');
+
   const isToday = useMemo(() => {
     const today = localToday ?? new Date().toISOString().split('T')[0];
     return dayDate === today;
   }, [dayDate, localToday]);
 
-  /* Compute now index: only if this is today's timeline */
   const nowIndex = useMemo(() => {
     if (!isToday) return -1;
     const now = new Date();
@@ -60,6 +60,10 @@ export default function Timeline({ events, dayDate, localToday }: TimelineProps)
   }, [isToday, events]);
 
   if (!events || events.length === 0) return null;
+
+  if (isMobile) {
+    return <TimelineRail events={events} nowIndex={nowIndex} />;
+  }
 
   return (
     <div className="relative mt-3">

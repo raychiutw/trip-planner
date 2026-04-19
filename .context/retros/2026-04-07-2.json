@@ -1,0 +1,35 @@
+{
+  "date": "2026-04-07",
+  "window": "7d",
+  "metrics": {
+    "commits": 40,
+    "contributors": 1,
+    "prs_merged": 6,
+    "insertions": 10100,
+    "deletions": 3900,
+    "net_loc": 6200,
+    "test_loc": 290,
+    "test_ratio": 0.03,
+    "active_days": 5,
+    "sessions": 7,
+    "deep_sessions": 3,
+    "avg_session_minutes": 52,
+    "loc_per_session_hour": 1350,
+    "feat_pct": 0.12,
+    "fix_pct": 0.48,
+    "peak_hour": 1,
+    "ai_assisted_commits": 40
+  },
+  "authors": {
+    "Ray Chiu": { "commits": 40, "insertions": 10100, "deletions": 3900, "test_ratio": 0.03, "top_area": "src/ + scripts/" }
+  },
+  "version_range": ["1.1.4.1", "1.1.5.0"],
+  "streak_days": 4,
+  "tweetable": "Week of Mar 31: 40 commits, 10.1k LOC, 6 PRs, v1.1.5.0 shipped | peak: 01:00 | Streak: 4d",
+  "test_health": {
+    "total_test_files": 129,
+    "tests_added_this_period": 1,
+    "regression_test_commits": 0,
+    "test_files_changed": 4
+  }
+}
