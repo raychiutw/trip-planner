@@ -49,20 +49,9 @@ const DOC_EMOJI: Record<string, string> = {
 };
 
 async function fetchAllData(tripId: string) {
-  // 1. meta + day summaries
-  const [meta, daySummaries] = await Promise.all([
+  const [meta, daysData, docResults] = await Promise.all([
     apiFetch<Record<string, unknown>>(`/trips/${tripId}`),
-    apiFetch<Array<{ dayNum: number; date?: string; dayOfWeek?: string; label?: string }>>(`/trips/${tripId}/days`),
-  ]);
-
-  // 2. all full days + all docs in parallel
-  const [fullDays, docResults] = await Promise.all([
-    Promise.all(
-      daySummaries.map(ds =>
-        apiFetch<RawDay>(`/trips/${tripId}/days/${ds.dayNum}`)
-          .catch(() => null),
-      ),
-    ),
+    apiFetch<RawDay[]>(`/trips/${tripId}/days?all=1`),
     Promise.all(
       DOC_KEYS.map(dtype =>
         apiFetch<{ docType: string; content: string; updatedAt: string }>(`/trips/${tripId}/docs/${dtype}`)
@@ -78,7 +67,12 @@ async function fetchAllData(tripId: string) {
     ),
   ]);
 
-  const daysData = fullDays.filter((d): d is RawDay => d !== null);
+  const daySummaries = daysData.map(d => ({
+    dayNum: d.dayNum ?? 0,
+    date: d.date,
+    dayOfWeek: d.dayOfWeek,
+    label: d.label,
+  }));
   const docsMap: Record<string, unknown> = {};
   for (const doc of docResults) {
     if (doc.data !== null) docsMap[doc.type] = doc.data;

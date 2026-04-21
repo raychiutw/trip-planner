@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.6] - 2026-04-21
+
+stale PR #179 抽出的 2 個實質 fix，rebased 到 latest master 後重發。API error logging 更詳細、tripExport 從 N+1 改 batch。
+
+### Fixed
+- **`tripExport` N+1 → batch days endpoint**：`src/lib/tripExport.ts` 原本迴圈逐天呼叫 API，改 batch 一次拿齊所有 days，export 大行程（10+ 天）時 API round-trip 從 O(N) 降到 O(1)。
+- **`api_logs` 記錄 error detail**：`functions/api/_middleware.ts` 原本 error 進 api_logs 只記 code，加 error.message 細節幫助 debug production issue。
+- **`trip-pois` PATCH 驗證訊息**：`functions/api/trips/[id]/trip-pois/[tpid].ts` 改善驗證錯誤訊息（具體欄位而非泛用 "invalid input"）。
+
+### Process
+- stale PR #179 (2026-04-14) 原 branch 落後 master 180 檔，直接 rebase 不實際。改 cherry-pick 2 個實質 commit 到 fresh branch（`fix/pr10-extracted-from-179`），無 merge conflict。同 cycle 一起 close #192 / #196 / #150 三個完全過時的 PR。
+
 ## [2.0.2.5] - 2026-04-21
 
 Lighthouse CI perf baseline infrastructure。autoplan retro 發現沒 baseline 就沒 regression detection，本 PR 建 non-blocking baseline。對使用者無直接變化，但 master push 後 GitHub Actions 會跑 Lighthouse 3 runs × 3 URLs，PR 反而能看到 perf trend。
