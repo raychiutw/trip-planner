@@ -138,6 +138,17 @@
     --duration-indicator: 350ms;
 }
 
+/* ===== Mobile type scale (≤760px) — DESIGN.md Type Scale (Mobile ≤760px) ===== */
+/* body 16px, callout 15px, subheadline 14px 改善行動閱讀體驗 */
+@media (max-width: 760px) {
+    :root {
+        --mobile-font-size-body: 1rem;         /* 16px (desktop: 17px) */
+        --mobile-font-size-callout: 0.9375rem; /* 15px (desktop: 16px) */
+        --mobile-font-size-subheadline: 0.875rem; /* 14px (desktop: 15px) */
+    }
+    body { font-size: var(--mobile-font-size-body); }
+}
+
 /* ===== Composite tokens on body (let .dark overrides take effect) ===== */
 body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
