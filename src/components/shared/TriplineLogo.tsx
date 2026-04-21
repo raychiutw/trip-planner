@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 
 interface TriplineLogoProps {
   isOnline: boolean;
@@ -8,15 +9,17 @@ interface TriplineLogoProps {
  *
  * - Mobile: 32x32 Ocean-blue rounded box with three parallel lines
  * - Desktop: same box + "Trip/Line" wordmark inline
+ * - Always wrapped in <Link to="/"> so every page has a home entry point
  */
 export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
   const boxBg = isOnline ? 'var(--color-accent)' : 'var(--color-disabled)';
 
   return (
-    <span
+    <Link
+      to="/"
+      aria-label={isOnline ? 'Tripline 首頁' : 'Tripline 首頁（離線）'}
       className={`tripline-logo${isOnline ? '' : ' tripline-logo--offline'}`}
-      aria-label={isOnline ? 'Tripline' : 'Tripline（離線）'}
-      style={{ gap: 10 }}
+      style={{ gap: 10, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
     >
       {/* 32x32 Ocean mark (always visible) */}
       <span
@@ -67,6 +70,6 @@ export default function TriplineLogo({ isOnline }: TriplineLogoProps) {
       >
         Trip<span style={{ opacity: 0.35 }}>/</span>Line
       </span>
-    </span>
+    </Link>
   );
 }

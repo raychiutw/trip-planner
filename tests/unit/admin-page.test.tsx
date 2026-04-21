@@ -38,9 +38,9 @@ describe('AdminPage', () => {
     expect(getByText('權限管理')).toBeTruthy();
   });
 
-  it('has close button with aria-label', () => {
+  it('does NOT have a close × button (AdminPage is a standalone page, not a modal)', () => {
     const { container } = renderAdmin();
-    expect(container.querySelector('[aria-label="關閉"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="關閉"]')).toBeNull();
   });
 
   it('has trip select with aria-label', () => {
@@ -94,5 +94,19 @@ describe('AdminPage', () => {
     // Verify Tailwind utility classes are present
     expect(html).toContain('flex');
     expect(html).toContain('rounded');
+  });
+
+  it('sticky nav bar (PageNav / #stickyNav) still renders', () => {
+    const { container } = renderAdmin();
+    // PageNav renders a div with id="stickyNav" — verify the nav is present
+    expect(container.querySelector('#stickyNav')).not.toBeNull();
+  });
+
+  it('PageNav 仍 render 且 TriplineLogo 是可點的 link（導回 "/"）', () => {
+    const { getByRole } = renderAdmin();
+    // TriplineLogo 已包成 <Link to="/">，react-router 會 render 為 <a>
+    const logoLink = getByRole('link', { name: /Tripline/ });
+    expect(logoLink).toBeTruthy();
+    expect(logoLink.getAttribute('href')).toBe('/');
   });
 });

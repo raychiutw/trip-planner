@@ -94,7 +94,7 @@ const INFOBOX_STYLES = `
 .infobox-block:last-child { margin-bottom: 0; }
 .infobox-heading {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 10.5px; font-weight: 600;
+  font-size: 10px; font-weight: 600;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--color-muted);
   margin-bottom: 8px;

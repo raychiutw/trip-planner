@@ -115,7 +115,7 @@ const MANAGE_SCOPED_STYLES = `
 /* Hero — editorial title 結構（對齊 StopDetailPage） */
 .manage-hero { padding: 20px 0 16px; border-bottom: 1px solid var(--color-border); margin-bottom: 4px; }
 .manage-hero-eyebrow {
-  font-size: 10.5px; font-weight: 600; color: var(--color-muted);
+  font-size: 10px; font-weight: 600; color: var(--color-muted);
   letter-spacing: 0.18em; text-transform: uppercase;
   margin-bottom: 6px;
 }

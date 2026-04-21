@@ -88,6 +88,9 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  optimizeDeps: {
+    include: ['leaflet'],
+  },
   server: {
     proxy: process.env.MOCK_API ? {} : {
       '/api': {

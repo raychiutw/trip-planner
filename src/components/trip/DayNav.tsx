@@ -127,9 +127,9 @@ body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-m
   [data-dn].active .dn-date { color: #fff; }
   [data-dn].active .dn-eyebrow { color: rgba(255,255,255,0.85); }
   [data-dn] .dn-date { font-size: 14px; color: var(--color-foreground); }
-  [data-dn] .dn-area { max-width: 56px; padding-left: 6px; font-size: 11.5px; }
+  [data-dn] .dn-area { max-width: 56px; padding-left: 6px; font-size: 11px; }
   [data-dn] .dn-area::before { display: none; }
-  [data-dn] .dn-eyebrow { font-size: 9.5px; letter-spacing: 0.12em; }
+  [data-dn] .dn-eyebrow { font-size: 10px; letter-spacing: 0.12em; }
   [data-dn] .dn-weather { background: rgba(0,0,0,0.06); color: var(--color-muted); }
   [data-dn].active .dn-weather { background: rgba(255,255,255,0.18); color: #fff; }
 }

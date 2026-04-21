@@ -535,18 +535,6 @@ export default function TripPage() {
               <span aria-hidden="true">▦</span>
               <span className="ocean-tab-label">行程</span>
             </button>
-            <button type="button" className={clsx(activeSheet === 'today-route' && 'active')} onClick={() => setActiveSheet('today-route')}>
-              <span aria-hidden="true">⇅</span>
-              <span className="ocean-tab-label">路線</span>
-            </button>
-            <button type="button" className={clsx(activeSheet === 'flights' && 'active')} onClick={() => setActiveSheet('flights')}>
-              <span aria-hidden="true">✈</span>
-              <span className="ocean-tab-label">航班</span>
-            </button>
-            <button type="button" className={clsx(activeSheet === 'suggestions' && 'active')} onClick={() => setActiveSheet('suggestions')}>
-              <span aria-hidden="true">✦</span>
-              <span className="ocean-tab-label">AI 建議</span>
-            </button>
           </nav>
         </div>
         <div className="ocean-topbar-right">
