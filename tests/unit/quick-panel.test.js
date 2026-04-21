@@ -87,11 +87,19 @@ describe('TripPage Ocean topbar', () => {
     expect(tripPageTsx).toContain('AI 編輯');
   });
 
-  it('topbar 4 個 nav tabs（行程/路線/航班/AI 建議）', () => {
-    expect(tripPageTsx).toContain('行程');
-    expect(tripPageTsx).toContain('路線');
-    expect(tripPageTsx).toContain('航班');
-    expect(tripPageTsx).toContain('AI 建議');
+  it('topbar 只保留「行程」tab，砍掉路線/航班/AI 建議三個死連結', () => {
+    // 行程 tab 保留
+    expect(tripPageTsx).toContain('ocean-nav-tabs');
+    // 三個死連結已移除
+    expect(tripPageTsx).not.toContain("setActiveSheet('today-route')");
+    expect(tripPageTsx).not.toContain("setActiveSheet('flights')");
+    expect(tripPageTsx).not.toContain("setActiveSheet('suggestions')");
+    // 對應 label 也不在 topbar nav 中（label 在 nav 外仍可存在，只要 topbar nav 沒有）
+    const navTabsStart = tripPageTsx.indexOf('ocean-nav-tabs');
+    const navTabsEnd = tripPageTsx.indexOf('</nav>', navTabsStart);
+    const navBlock = tripPageTsx.slice(navTabsStart, navTabsEnd);
+    expect(navBlock).not.toContain('路線');
+    expect(navBlock).not.toContain('AI 建議');
   });
 
   it('無 FAB / Edit FAB 殘留', () => {
