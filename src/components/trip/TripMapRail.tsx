@@ -19,7 +19,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useLeafletMap } from '../../hooks/useLeafletMap';
-import { dayColor } from '../../lib/dayPalette';
+import { dayColor, dayPolylineStyle } from '../../lib/dayPalette';
 import type { MapPin } from '../../hooks/useMapData';
 
 /* ===== Singleton style injection ===== */
@@ -124,11 +124,13 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((p): L.LatLngExpression => [p.lat, p.lng]);
       if (coords.length >= 2) {
+        // F008: dayPolylineStyle 提供 color + dashArray（color-blind aid）
+        const style = dayPolylineStyle(dayNum);
         const line = L.polyline(coords, {
-          color: dayColor(dayNum),
-          weight: 3,
+          color: style.color,
+          weight: style.weight,
           opacity: 0.8,
-          dashArray: undefined,
+          dashArray: style.dashArray,
         }).addTo(map);
         polylinesRef.current.push(line);
       }
