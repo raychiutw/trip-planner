@@ -78,7 +78,8 @@ describe('tokens.css', () => {
 
   it('includes page-level base styles (migrated from SCOPED_STYLES)', () => {
     expect(tokens).toContain('.day-header');
-    expect(tokens).toContain('.info-panel');
+    // .info-panel 已隨 InfoPanel.tsx orphan 一起刪除（F001 cleanup）
+    expect(tokens).not.toContain('.info-panel');
     expect(tokens).toContain('.trip-btn');
     expect(tokens).toContain('.color-mode-card');
     expect(tokens).toContain('.skeleton-bone');
