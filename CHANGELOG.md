@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.1.2] - 2026-04-21
+
+設計系統對齊：mobile 字體不再用 em 繼承縮小、三種 glass blur 收斂成一個、警語改 warning 色、AI 編輯 pill 回歸 Ocean 單一 accent。使用者體感：手機讀行程字變整齊、注意事項不再像錯誤訊息、整體視覺語彙一致。
+
+### Added
+- **Mobile Type Scale (DESIGN.md)**：新增 `## Type Scale (Mobile ≤760px)` 完整表格，body 在 mobile 下降到 16px、callout 15px、subheadline 14px，其他維持 desktop 尺寸。760px 斷點刻意設在 iPad mini portrait (744px) 以下 + iPad 10/11 portrait (810/820px) 以下，所有 tablet ≥768px 維持 desktop scale。
+- **Data Visualization 例外**（DESIGN.md Color section）：明文允許地圖 polyline、chart series 用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`），UI chrome 仍嚴守 Ocean 單 accent。為 PR 3 的 day palette 先鋪路。
+- **Token `--font-size-eyebrow: 0.625rem` (10px)**：補齊 DAY 01 / STOPS 等大寫 section header 專用字級。`caption2 (11px)` 保留給 NIGHT 1 等最小 meta label。
+- **Token `--blur-glass: 14px`**：所有 glass 材質（topbar / bottom-nav / sheet）統一使用。
+
+### Changed
+- **Glass 統一 14px**：`.ocean-topbar`、`.ocean-bottom-nav`、`InfoSheet` 全部 `backdrop-filter: blur(var(--blur-glass))`。原本 12 / 14 / 28 三種 blur 強度收斂到一個。
+- **Sheet 拿掉 `saturate(1.8)`**：對齊 editorial clean direction，sheet 不再做 HDR-like 飽和度拉升。配合 bg opacity 88%→94% 維持邊緣可見度。
+- **AI 編輯 pill 改 Ocean fill**：從黑底 + cyan dot 改成 Ocean accent 填色 + 白字。補齊 hover (`brightness(0.92)`) / focus-visible (白色 ring) / active (`brightness(0.85)`) 三個 state。單一 Ocean accent 原則回歸。
+- **注意事項卡 destructive → warning amber**：`#C13515` 紅 → `#F48C06` 橘黃。警語不再跟錯誤訊息同色，semantic 準確。
+- **Stop card title 確認 17px (headline)**：DESIGN.md 定義 stop name = headline 17px，PR 1 已對齊，本 PR 加測試守住。
+- **Hardcode 10/11px 全面 token 化**：tokens.css、DayNav、InfoBox、Shop、Restaurant、ManagePage、MapPage、StopDetailPage 所有 font-size 10px/11px 改用 `var(--font-size-eyebrow)` / `var(--font-size-caption2)`。
+- **DESIGN.md `caption2` 與 `eyebrow` 命名分離**：明文寫清楚用途不同，避免未來誤用。
+
+### Fixed
+- **`.ocean-bottom-nav-btn` tap target**：padding 10px → 13px + `min-height: 44px` 防呆，符合 Apple HIG 44×44 觸控目標最小值。
+- **`.color-mode-preview .cmp-input`**：`border-radius: 4px` hardcode → `var(--radius-xs)` token，消除設計系統破口。
+- **`[data-tl-card]` 拿掉 `blur(6px)`**：DESIGN.md 明確寫「不再給 timeline card 用 glass」，實作對齊。
+
+### Tests
+- 新增 36 個單元測試（pr2-tokens、pr2-mobile-scale、design-md-sections）：
+  - DESIGN.md 要有 Mobile Type Scale section + DV 例外條文
+  - tokens.css 要有 `--font-size-eyebrow` + `--blur-glass` 宣告
+  - CSS 不得再出現 `blur(12px)` / `blur(28px)` / `saturate(1.8)`
+  - `.ocean-bottom-nav-btn` padding + min-height 守住 tap target
+  - AI pill `:hover` / `:focus-visible` / `:active` state 存在
+- 測試總數：388 → **424**。
+
 ## [2.0.1.1] - 2026-04-21
 
 Design review 後的 Tier 0 bug fix：補缺 icon、清死連結、修字體破洞、修 user-trap。使用者體感：底部 5 個 tab 每個都有 icon、topbar 不再有點了沒反應的按鈕、權限管理頁點 logo 可回首頁。
