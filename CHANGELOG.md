@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.2] - 2026-04-21
+
+Design review v2 follow-up cleanup。清除 6 項 low tech debt + editorial logo 一致性 + QA 測試邏輯修正。這次走完整 OpenSpec `propose → apply → archive` 流程（補 PR 1-4 跳過的 SDD 規範）。使用者體感：StopDetailPage 點 logo 也可以回首頁了（跟其他頁一致）。其餘是 inline-refactor 無視覺變動。
+
+### Changed
+- **StopDetailPage header 改用 `<TriplineLogo>` component**：原本是 inline `Trip/Line` wordmark，editorial「logo → home」慣例 PR 1 只修到 PageNav 內的 logo，現在 StopDetailPage 也對齊（點 logo `navigate('/')`）。
+- **`DaySection` 2 處 inline `style={{}}` 搬到 CSS class**（`.ocean-hero-chips` / `.ocean-hero-chips-left`）：避免 React re-render 產生新 object ref (RBP-22)。警告 banner 的 `style` 因含 `var(--color-warning)` 動態值保留。
+- **`TripMapRail` scoped style 改 singleton injection**：原本 inline `<style>` 每 render 產生新 node，改 `document.head.querySelector` guard + 一次 inject。`<TripMapRail>` 多實例共用同一 style node。
+- **`OverflowMenu.needsDivider` 邏輯簡化**：移除 `|| prev.action !== item.action` 分支（PR 3 後 group structure 已充分表達 divider 語義）。divider 位置不變，由 structural test 守住。
+
+### Removed
+- **`src/components/trip/InfoPanel.tsx`**：PR 3 後 sidebar 已刪，InfoPanel orphan（無任何 `import InfoPanel` 存在），本 PR 完整移除。
+- **`css/tokens.css` dead classes**：`.ocean-body` / `.ocean-main` / `.ocean-side` / `.info-panel` 及對應 `@media print` fallback、`--info-panel-w` CSS variable。
+- **`src/pages/TripPage.tsx` SCOPED_STYLES dead rule**：`.print-mode .info-panel { display: none !important; }` InfoPanel 刪後已無用（/review HIGH finding）。
+
+### Fixed
+- **`.playwright-mcp/qa-pr3.mjs` T8 sticky 邏輯**：原本 assert 「scroll 前後 top 相同」誤判（sticky 設計就是要改變）。改 3-step scroll：initial → scroll 400（sticky 啟動 top≈nav-h 48）→ scroll 800（保持 top≈48 不變）。T8 現 pass。
+
+### Added
+- **`tests/unit/dead-css-cleanup.test.ts`**：守住 tokens.css 跟 TripPage SCOPED_STYLES 不再含 `.info-panel` 等 dead rules。
+- **`tests/unit/stop-detail-topbar-layout.test.tsx`**：375px narrow viewport structural assertion（back-btn + crumb + TriplineLogo 三欄 flex layout 不 overflow）。
+- **`openspec/changes/archive/2026-04-21-pr5-cleanup-follow-up/`**：完整 propose + apply + archive 流程文件（proposal / tasks × 7 F / design / plan / progress.jsonl）。這是 design-review-v2 cycle 後首次嚴格走 OpenSpec SDD 的 PR。
+
+### Tests
+測試總數：469 → **501**（+32）。新增覆蓋：
+- `F001-F007` 每個 feature 的 red test（dead-css、onClearSheet optional、inline style removed、singleton injection、needsDivider grouping、StopDetailPage TriplineLogo、TripPage SCOPED_STYLES、stop-detail-topbar-layout）
+- F007 QA script T8 修正後 verify pass
+
+### 意義
+本 PR 除了清 tech debt，更重要的是：這是 `design-review-v2` 系列 4 個 feature PR 後**首次嚴格走 OpenSpec SDD 流程**（PR 1-4 都跳了 propose → PR 4 retrofit 補寫、PR 5 pre-implementation 寫）。之後 PR 全部須先 propose 再實作，禁止再跳過。
+
 ## [2.0.2.1] - 2026-04-21
 
 OpenSpec retrofit + 文件同步。Design review v2 的 3 個 PR（v2.0.1.1 / v2.0.1.2 / v2.0.2.0）未走 OpenSpec `propose` 流程，違反 CLAUDE.md 規範。本次事後補齊完整 spec trail，並把 CLAUDE.md 過時描述同步到 v2.0.2.0 實際狀態。對使用者無功能變更。
