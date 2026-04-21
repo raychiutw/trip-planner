@@ -95,4 +95,10 @@ describe('AdminPage', () => {
     expect(html).toContain('flex');
     expect(html).toContain('rounded');
   });
+
+  it('sticky nav bar (PageNav / #stickyNav) still renders', () => {
+    const { container } = renderAdmin();
+    // PageNav renders a div with id="stickyNav" — verify the nav is present
+    expect(container.querySelector('#stickyNav')).not.toBeNull();
+  });
 });
