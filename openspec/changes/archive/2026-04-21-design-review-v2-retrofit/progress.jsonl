@@ -1,0 +1,4 @@
+{"ts":"2026-04-21T04:07:24Z","event":"phase1_merged","pr":200,"commit":"a66942d","version":"2.0.1.1","summary":"Tier 0 bug fix: icon 補齊、dead tab 砍除、logo link、非整數 fontsize、sheet default 關閉"}
+{"ts":"2026-04-21T04:37:00Z","event":"phase2_merged","pr":201,"commit":"0ad5af7","version":"2.0.1.2","summary":"Typography + Material consistency: mobile type scale、glass 統一 14px、AI pill Ocean fill、warning amber"}
+{"ts":"2026-04-21T05:16:00Z","event":"phase3_merged","pr":202,"commit":"1d26886","version":"2.0.2.0","summary":"IA 重構 + Desktop Map Rail: 4-tab route-based、TripMapRail sticky、dayPalette 10 色、看地圖 chip"}
+{"ts":"2026-04-21T06:00:00Z","event":"retrofit_created","note":"post-ship OpenSpec retroactive archive，補齊 proposal / tasks / design / plan 文件，符合 CLAUDE.md 規範","files":["proposal.md","tasks.md","design.md","plan.md","progress.jsonl"]}
