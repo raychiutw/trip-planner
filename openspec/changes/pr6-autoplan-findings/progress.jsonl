@@ -1,0 +1,11 @@
+{"item":"F001","status":"done","test_commit":"47a1e07","fix_commit":"d235165","note":"TripMapRailProps 加 dark?: boolean；useLeafletMap({ dark })；TripPage 傳 dark={isDark}"}
+{"item":"F002","status":"done","test_commit":"229f790","fix_commit":"143850e","note":"key={trip.id} 確保 React 切換行程時重掛 TripMapRail，fitDoneRef reset"}
+{"item":"F003","status":"done","test_commit":"239a035","fix_commit":"52aaa49","note":"mobile hero title 22px → 24px（DESIGN.md 規範）；pr2-mobile-scale 同步更新"}
+{"item":"F004","status":"done","test_commit":"52cf836","fix_commit":"3e65ca6","note":"html { color-scheme: light dark } 讓 UA 元件跟隨 dark mode"}
+{"item":"F005","status":"done","test_commit":"a232ff1","fix_commit":"35c281a","note":"TripMapRail 改 React.lazy + Suspense，Leaflet code split"}
+{"item":"F006","status":"done","test_commit":"771e078","fix_commit":null,"note":"fake Leaflet marker mock，驗證 entry pin click → navigate 被呼叫（no production code change）"}
+{"item":"F007","status":"done","test_commit":"4d5dd5c","fix_commit":"022b3af","note":"IntersectionObserver 監聽 [data-day] sections，60%+ intersect 時 map.panTo 到該天中心"}
+{"item":"F008","status":"done","test_commit":"99cd969","fix_commit":"5703d9f","note":"dayPolylineStyle helper：奇數天 solid，偶數天 dashArray: '6,4'；TripMapRail 使用"}
+{"item":"F009","status":"done","test_commit":"2915eba","fix_commit":"d7bece1","note":"MobileBottomNav label 訊息 → 助理；entries + route 測試同步"}
+{"item":"F010","status":"done","test_commit":"2cc6744","fix_commit":"5a61202","note":".day-map-chip 加 min-height: 44px（Apple HIG tap target）"}
+{"item":"F011","status":"done","test_commit":"0b12e7d","fix_commit":null,"note":"runtime 化：?day=2、?day=abc、?day=999 三情境測試；保留原 source-match guards"}

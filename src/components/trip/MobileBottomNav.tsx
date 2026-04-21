@@ -85,7 +85,7 @@ export default function MobileBottomNav({
   const tabs: { k: TabKey; icon: string; label: string }[] = [
     { k: 'home',    icon: 'home',   label: '行程' },
     { k: 'map',     icon: 'map',    label: '地圖' },
-    { k: 'message', icon: 'phone',  label: '訊息' },
+    { k: 'message', icon: 'phone',  label: '助理' },
     { k: 'menu',    icon: 'menu',   label: '更多' },
   ];
 

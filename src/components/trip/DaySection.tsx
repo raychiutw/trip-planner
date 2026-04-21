@@ -29,6 +29,7 @@ import type { Day, DaySummary } from '../../types/trip';
 const MAP_CHIP_STYLES = `
 .day-map-chip {
   display: inline-flex; align-items: center; gap: 4px;
+  min-height: 44px; /* F010: Apple HIG 最小 tap target 44pt */
   font-size: var(--font-size-eyebrow); font-weight: 600;
   letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--color-accent);

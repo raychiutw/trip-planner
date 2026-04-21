@@ -5,13 +5,15 @@
  * Since Leaflet is rendered in JSDOM (no real map), we verify the component
  * renders and the navigation function is properly wired.
  *
- * The actual Leaflet click event is hard to simulate in JSDOM; instead we verify:
+ * Tests:
  * - Component renders the container element when ≥1024px
  * - The component accepts pins with entry type and tripId
  * - useNavigate is called when a mock pin click handler fires
+ *
+ * F006: 補充 integration case — fake Leaflet map + marker，驗證 click → navigate
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -30,15 +32,61 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
+/* ===== F006: fake Leaflet marker that records click handlers ===== */
+type ClickHandler = () => void;
+const markerClickHandlers: ClickHandler[] = [];
+
+const fakeMarker = {
+  addTo: vi.fn().mockReturnThis(),
+  on: vi.fn((event: string, handler: ClickHandler) => {
+    if (event === 'click') markerClickHandlers.push(handler);
+    return fakeMarker;
+  }),
+  remove: vi.fn(),
+};
+
+const fakePolyline = {
+  addTo: vi.fn().mockReturnThis(),
+  remove: vi.fn(),
+};
+
+const fakeMap = {
+  on: vi.fn(),
+  off: vi.fn(),
+  remove: vi.fn(),
+  getZoom: () => 10,
+  setView: vi.fn(),
+  fitBounds: vi.fn(),
+  eachLayer: vi.fn(),
+  addLayer: vi.fn(),
+};
+
+vi.mock('leaflet', async (importOriginal) => {
+  const orig = await importOriginal<typeof import('leaflet')>();
+  return {
+    ...orig,
+    default: {
+      ...orig,
+      marker: vi.fn(() => fakeMarker),
+      polyline: vi.fn(() => fakePolyline),
+      divIcon: vi.fn(() => ({})),
+    },
+    marker: vi.fn(() => fakeMarker),
+    polyline: vi.fn(() => fakePolyline),
+    divIcon: vi.fn(() => ({})),
+  };
+});
+
 /* ===== mock useLeafletMap — expose a fake marker click trigger ===== */
 const mockFitBounds = vi.fn();
 const mockFlyTo = vi.fn();
 const containerRefObj = { current: null as HTMLDivElement | null };
 
 vi.mock('../../src/hooks/useLeafletMap', () => ({
-  useLeafletMap: () => ({
+  useLeafletMap: (opts: Record<string, unknown>) => ({
     containerRef: containerRefObj,
-    map: null,
+    // 提供 fake map：讓 TripMapRail useEffect 不 early-return，marker 能被建立
+    map: (opts as { dark?: boolean }).dark !== undefined ? fakeMap : null,
     flyTo: mockFlyTo,
     fitBounds: mockFitBounds,
   }),
@@ -52,6 +100,10 @@ const ENTRY_PINS = [
 ];
 
 describe('TripMapRail — renders container on desktop (Item 3)', () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
   it('renders .trip-map-rail container', () => {
     const { container } = render(
       <MemoryRouter>
@@ -93,5 +145,28 @@ describe('TripMapRail — renders container on desktop (Item 3)', () => {
         </MemoryRouter>,
       ),
     ).not.toThrow();
+  });
+});
+
+describe('F006 — TripMapRail marker click → navigate integration', () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+    markerClickHandlers.length = 0;
+    fakeMarker.on.mockClear();
+  });
+
+  it('entry pin click 觸發 navigate 到 stop detail', () => {
+    // dark prop 不是 undefined → useLeafletMap 回傳 fakeMap → effect 執行 → marker 被建立
+    render(
+      <MemoryRouter>
+        <TripMapRail pins={ENTRY_PINS} tripId="okinawa-trip-2026-Ray" dark={false} />
+      </MemoryRouter>,
+    );
+
+    // 找到第一個 entry pin 的 click handler 並觸發
+    expect(markerClickHandlers.length).toBeGreaterThan(0);
+    markerClickHandlers[0]?.();
+
+    expect(mockNavigate).toHaveBeenCalledWith('/trip/okinawa-trip-2026-Ray/stop/42');
   });
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
@@ -18,7 +18,8 @@ import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
 import { extractPinsFromDay } from '../hooks/useMapData';
-import TripMapRail from '../components/trip/TripMapRail';
+/* F005: lazy load TripMapRail — Leaflet 是重型套件，避免影響首頁 bundle */
+const TripMapRail = lazy(() => import('../components/trip/TripMapRail'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import MobileBottomNav from '../components/trip/MobileBottomNav';
@@ -617,11 +618,16 @@ export default function TripPage() {
                 {footerData && <Footer footer={footerData} />}
               </div>
               {/* Desktop Map Rail — right column, sticky, ≥1024px only */}
-              <TripMapRail
-                pins={allPins}
-                tripId={trip.id}
-                pinsByDay={pinsByDay}
-              />
+              {/* key={trip.id} 確保切換行程時重掛（fitDoneRef reset） */}
+              <Suspense fallback={null}>
+                <TripMapRail
+                  key={trip.id}
+                  pins={allPins}
+                  tripId={trip.id}
+                  pinsByDay={pinsByDay}
+                  dark={isDark}
+                />
+              </Suspense>
             </div>
           );
         })()}
