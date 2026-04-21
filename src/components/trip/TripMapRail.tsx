@@ -22,6 +22,16 @@ import { useLeafletMap } from '../../hooks/useLeafletMap';
 import { dayColor } from '../../lib/dayPalette';
 import type { MapPin } from '../../hooks/useMapData';
 
+/* ===== Singleton style injection ===== */
+function ensureStyle(): void {
+  if (typeof document === 'undefined') return;
+  if (document.head.querySelector('[data-scope="trip-map-rail"]')) return;
+  const el = document.createElement('style');
+  el.setAttribute('data-scope', 'trip-map-rail');
+  el.textContent = SCOPED_STYLES;
+  document.head.appendChild(el);
+}
+
 interface TripMapRailProps {
   /** All pins from all days (pre-extracted by TripPage). */
   pins: MapPin[];
@@ -70,6 +80,11 @@ function createPinIcon(label: string, color: string): L.DivIcon {
 export default function TripMapRail({ pins, tripId, pinsByDay }: TripMapRailProps) {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const navigate = useNavigate();
+
+  // Inject scoped styles once (singleton pattern)
+  useEffect(() => {
+    ensureStyle();
+  }, []);
 
   const { containerRef, map, fitBounds } = useLeafletMap({
     center: [26.2, 127.7],
@@ -150,7 +165,6 @@ export default function TripMapRail({ pins, tripId, pinsByDay }: TripMapRailProp
 
   return (
     <div className="trip-map-rail">
-      <style>{SCOPED_STYLES}</style>
       <div ref={containerRef} />
     </div>
   );

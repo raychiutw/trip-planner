@@ -238,7 +238,7 @@ export default function StopDetailPage() {
     return (
       <div className="stop-detail-wrap">
         <style>{SCOPED_STYLES}</style>
-        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} />
+        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} isOnline={isOnline} />
         <div className="stop-detail-body">
           <div className="stop-detail-hero">
             <div className="h-7 w-3/4 bg-secondary rounded animate-pulse mb-2" />
@@ -257,7 +257,7 @@ export default function StopDetailPage() {
     return (
       <div className="stop-detail-wrap">
         <style>{SCOPED_STYLES}</style>
-        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} />
+        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} isOnline={isOnline} />
         <div className="stop-detail-empty">
           <TriplineLogo isOnline={isOnline} />
           <p className="mt-4 text-lg font-semibold text-foreground">找不到這個景點</p>
@@ -311,6 +311,7 @@ export default function StopDetailPage() {
         tripTitle={trip?.title ?? null}
         tripId={trip?.id ?? null}
         navigate={navigate}
+        isOnline={isOnline}
       />
 
       <div className="stop-detail-body">
@@ -399,9 +400,10 @@ interface TopbarProps {
   tripTitle: string | null;
   tripId: string | null;
   navigate: ReturnType<typeof useNavigate>;
+  isOnline: boolean;
 }
 
-function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate }: TopbarProps) {
+function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate, isOnline }: TopbarProps) {
   return (
     <header className="stop-detail-topbar">
       <button
@@ -425,6 +427,7 @@ function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate }: Topbar
           </a>
         )}
       </div>
+      <TriplineLogo isOnline={isOnline} />
     </header>
   );
 }

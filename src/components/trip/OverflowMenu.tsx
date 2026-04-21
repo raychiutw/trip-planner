@@ -125,7 +125,7 @@ export default function OverflowMenu({ onSheet, onDownload, isOnline = true }: O
       {OVERFLOW_ITEMS.map((item, i) => {
         const disabled = !isOnline && !!item.requiresOnline;
         const prev = OVERFLOW_ITEMS[i - 1];
-        const needsDivider = prev && (prev.group !== item.group || prev.action !== item.action);
+        const needsDivider = prev && prev.group !== item.group;
         return (
           <div key={item.key} style={{ display: 'contents' }}>
             {needsDivider && <div className="ocean-overflow-divider" role="separator" />}

@@ -1,0 +1,13 @@
+{"ts":"2026-04-20T14:28:00Z","feature":"F005","step":"red","commit":"ff7c287","desc":"OverflowMenu needsDivider 行為斷言測試"}
+{"ts":"2026-04-20T14:28:30Z","feature":"F005","step":"green","commit":"3dda7c5","desc":"移除 action branch，簡化 needsDivider 邏輯"}
+{"ts":"2026-04-20T14:29:00Z","feature":"F004","step":"red","commit":"6feda4d","desc":"MobileBottomNav without onClearSheet 不 crash 測試"}
+{"ts":"2026-04-20T14:29:30Z","feature":"F004","step":"green","commit":"f865ccd","desc":"onClearSheet 已為 optional（介面已正確，無需額外修改）"}
+{"ts":"2026-04-20T14:30:00Z","feature":"F002","step":"red","commit":"48c449f","desc":"DaySection DOM 不含 inline style attribute 測試"}
+{"ts":"2026-04-20T14:30:30Z","feature":"F002","step":"green","commit":"8e91162","desc":"DaySection inline style 提升至 CSS class（ocean-hero-chips / ocean-hero-chips-left）"}
+{"ts":"2026-04-20T14:31:00Z","feature":"F003","step":"red","commit":"7a89fb9","desc":"TripMapRail 多次 render 只有一個 style 節點測試"}
+{"ts":"2026-04-20T14:32:00Z","feature":"F003","step":"green","commit":"342a343","desc":"TripMapRail singleton style injection via DOM querySelector guard"}
+{"ts":"2026-04-20T14:33:00Z","feature":"F006","step":"red","commit":"7494acd","desc":"StopDetailPage / MapPage topbar 含 TriplineLogo 測試"}
+{"ts":"2026-04-20T14:34:00Z","feature":"F006","step":"green","commit":"8d6a7d3","desc":"StopDetailPage topbar 加入 TriplineLogo（MapPage 已有）"}
+{"ts":"2026-04-20T14:35:00Z","feature":"F001","step":"red","commit":"d430120","desc":"tokens.css 不含 dead CSS selectors 斷言"}
+{"ts":"2026-04-20T14:36:00Z","feature":"F001","step":"green","commit":"4d360b6","desc":"清除 dead CSS + 刪除 orphan InfoPanel.tsx"}
+{"ts":"2026-04-20T14:37:00Z","feature":"F007","step":"green","commit":"03464f5","desc":"QA T8 sticky assert 改為三次 scroll snapshot"}

@@ -78,7 +78,6 @@ const SCOPED_STYLES = `
 .print-mode .sticky-nav { display: none; }
 .print-mode .ocean-tb-btn { display: none !important; }
 .print-mode .print-exit-btn { display: block; }
-.print-mode .info-panel { display: none !important; }
 .print-mode .page-layout { padding-right: 0 !important; }
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }

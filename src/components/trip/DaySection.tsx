@@ -25,7 +25,7 @@ import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
 
-/* ===== 看地圖 chip (scoped styles) ===== */
+/* ===== 看地圖 chip + hero chips layout (scoped styles) ===== */
 const MAP_CHIP_STYLES = `
 .day-map-chip {
   display: inline-flex; align-items: center; gap: 4px;
@@ -39,6 +39,13 @@ const MAP_CHIP_STYLES = `
 }
 .day-map-chip:hover { opacity: 0.75; }
 .day-map-chip .svg-icon { width: 12px; height: 12px; }
+.ocean-hero-chips {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 6px;
+}
+.ocean-hero-chips-left {
+  display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
 `;
 
 export interface DaySectionProps {
@@ -120,8 +127,8 @@ const DaySection = React.memo(function DaySection({
       <style>{MAP_CHIP_STYLES}</style>
       {/* Ocean Hero card */}
       <div className="ocean-hero" id={`day${dayNum}`}>
-        <div className="ocean-hero-chips" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-          <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="ocean-hero-chips">
+          <div className="ocean-hero-chips-left">
             <span className="ocean-hero-chip">
               {eyebrow}
               {dateLabel && ` · ${dateLabel}`}

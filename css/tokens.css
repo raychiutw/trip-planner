@@ -188,7 +188,6 @@ body.dark {
     --theme-line-height-body: var(--line-height-normal);
     --theme-section-gap: var(--spacing-6);
     --content-max-w: 720px;
-    --info-panel-w: 320px;
     --fab-size: 56px;
     --z-day-header: 100;
     --z-quick-panel: 350;
@@ -286,17 +285,6 @@ body.dark {
     .nav-inline-title { opacity: 0; transition: opacity var(--duration-nav-fade, 250ms) ease; }
     .nav-inline-title.visible { opacity: 1; }
 
-    /* Info panel: hidden by default, visible on desktop */
-    .info-panel { display: none; background: var(--color-secondary); border-radius: var(--radius-lg); }
-    @media (min-width: 1200px) {
-        .info-panel {
-            display: block; position: fixed; right: 0; top: calc(var(--spacing-nav-h) + var(--spacing-10));
-            width: var(--info-panel-w); height: calc(100dvh - var(--spacing-nav-h) - var(--spacing-10));
-            overflow-y: auto; padding: var(--spacing-4) var(--spacing-3);
-        }
-        .page-layout:has(.info-panel) { padding-right: calc(var(--info-panel-w) + var(--spacing-3)); }
-    }
-
     /* Appearance settings cards */
     .color-mode-card {
         appearance: none; border: 2px solid var(--color-border); border-radius: var(--radius-sm);
@@ -391,11 +379,6 @@ body.dark {
 
     /* Page */
     .ocean-page { padding: 28px 40px 48px; max-width: 1440px; margin: 0 auto; }
-
-    /* Body grid */
-    .ocean-body { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
-    .ocean-main { min-width: 0; }
-    .ocean-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 200px; }
 
     /* Hero card inside each day — Airbnb editorial white card */
     .ocean-hero {
@@ -661,7 +644,6 @@ body.dark {
 
     /* Breakpoints */
     @media (max-width: 1200px) {
-        .ocean-body { grid-template-columns: 1fr 300px; }
         .ocean-page { padding: 24px 28px 40px; }
     }
     @media (max-width: 1100px) {
@@ -670,8 +652,6 @@ body.dark {
         .ocean-brand-label { display: none; }
     }
     @media (max-width: 960px) {
-        .ocean-body { grid-template-columns: 1fr; }
-        .ocean-side { position: static; }
         .ocean-hero-title { font-size: 28px; }
     }
     /* Mobile type scale override (760px and below).
@@ -749,8 +729,6 @@ body.dark {
 
     /* Print mode */
     body.print-mode .ocean-topbar { display: none; }
-    body.print-mode .ocean-side { display: none; }
-    body.print-mode .ocean-body { grid-template-columns: 1fr; }
     body.print-mode .ocean-hero { background: var(--color-background) !important; color: var(--color-foreground) !important; border: 1px solid var(--color-border); }
     body.print-mode .ocean-hero-title { color: var(--color-foreground); }
     body.print-mode .ocean-hero-chip, body.print-mode .ocean-hero-chip-muted { border-color: var(--color-border); color: var(--color-muted); }
