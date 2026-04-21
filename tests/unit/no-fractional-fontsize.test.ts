@@ -9,7 +9,10 @@ import { resolve, extname } from 'path';
 
 const ROOT = resolve(__dirname, '../../');
 const SCAN_DIRS = ['css', 'src'];
-const SCAN_EXTS = new Set(['.css', '.tsx', '.ts', '.jsx', '.js']);
+// .css — design tokens / component styles
+// .tsx — React components that may have inline style={{ fontSize: ... }}
+// .ts / .js / .jsx 排除：hooks/lib 工具檔不寫 font-size
+const SCAN_EXTS = new Set(['.css', '.tsx']);
 
 /** Recursively collect files */
 function collectFiles(dir: string): string[] {
