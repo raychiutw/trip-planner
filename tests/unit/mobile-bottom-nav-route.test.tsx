@@ -3,10 +3,10 @@
  * MobileBottomNav 重構成 4-tab route-based (Q3=B)
  *
  * Covers:
- * - 4 tabs render: 行程 / 地圖 / 訊息 / 更多
+ * - 4 tabs render: 行程 / 地圖 / 助理 / 更多（F009: 訊息 → 助理）
  * - 行程 → navigate('/trip/:id') + scroll-to-top
  * - 地圖 → navigate('/trip/:id/map')
- * - 訊息 → navigate('/manage')
+ * - 助理 → navigate('/manage')
  * - 更多 → onOpenSheet('action-menu')
  * - Active highlighting via useLocation
  * - grid-template-columns: repeat(4, 1fr)
@@ -71,9 +71,9 @@ describe('MobileBottomNav — 4-tab route-based (PR3)', () => {
     expect(getByRole('button', { name: '地圖' })).toBeTruthy();
   });
 
-  it('「訊息」tab exists', () => {
+  it('「助理」tab exists（F009: 訊息 → 助理）', () => {
     const { getByRole } = renderNav();
-    expect(getByRole('button', { name: '訊息' })).toBeTruthy();
+    expect(getByRole('button', { name: '助理' })).toBeTruthy();
   });
 
   it('「更多」tab exists', () => {
@@ -99,9 +99,9 @@ describe('MobileBottomNav — 4-tab route-based (PR3)', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/trip/${TRIP_ID}/map`);
   });
 
-  it('「訊息」click → navigate to /manage', () => {
+  it('「助理」click → navigate to /manage（F009）', () => {
     const { getByRole } = renderNav();
-    fireEvent.click(getByRole('button', { name: '訊息' }));
+    fireEvent.click(getByRole('button', { name: '助理' }));
     expect(mockNavigate).toHaveBeenCalledWith('/manage');
   });
 
