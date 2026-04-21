@@ -14,22 +14,28 @@ interface MenuItem {
   action: MenuAction;
   /** If true, disable when offline (write actions only). */
   requiresOnline?: boolean;
+  /** Visual group — divider before first item of a new group. */
+  group?: string;
 }
 
 /** Items that don't have a topbar home — overflow menu hosts them. */
 export const OVERFLOW_ITEMS: MenuItem[] = [
+  /* Trip content (Item 8: today-route/suggestions/flights now desktop entry points) */
+  { key: 'today-route', icon: 'route',        label: '今日路線', action: 'sheet', group: 'trip' },
+  { key: 'suggestions', icon: 'lightbulb',    label: 'AI 建議',  action: 'sheet', group: 'trip' },
+  { key: 'flights',     icon: 'plane',        label: '航班',     action: 'sheet', group: 'trip' },
   /* Info sheets */
-  { key: 'checklist', icon: 'check-circle', label: '出發清單', action: 'sheet' },
-  { key: 'backup', icon: 'backup', label: '雨天備案', action: 'sheet' },
-  { key: 'driving', icon: 'car', label: '交通統計', action: 'sheet' },
+  { key: 'checklist',   icon: 'check-circle', label: '出發清單', action: 'sheet', group: 'info' },
+  { key: 'backup',      icon: 'backup',       label: '雨天備案', action: 'sheet', group: 'info' },
+  { key: 'driving',     icon: 'car',          label: '交通統計', action: 'sheet', group: 'info' },
   /* Settings */
-  { key: 'trip-select', icon: 'swap-horiz', label: '切換行程', action: 'sheet', requiresOnline: true },
-  { key: 'appearance', icon: 'palette', label: '外觀設定', action: 'sheet' },
+  { key: 'trip-select', icon: 'swap-horiz',   label: '切換行程', action: 'sheet', requiresOnline: true, group: 'settings' },
+  { key: 'appearance',  icon: 'palette',      label: '外觀設定', action: 'sheet', group: 'settings' },
   /* Downloads */
-  { key: 'download-pdf', icon: 'download', label: '匯出 PDF', action: 'download' },
-  { key: 'download-md', icon: 'doc', label: '匯出 Markdown', action: 'download' },
-  { key: 'download-json', icon: 'code', label: '匯出 JSON', action: 'download' },
-  { key: 'download-csv', icon: 'table', label: '匯出 CSV', action: 'download' },
+  { key: 'download-pdf',  icon: 'download',   label: '匯出 PDF',      action: 'download', group: 'export' },
+  { key: 'download-md',   icon: 'doc',        label: '匯出 Markdown', action: 'download', group: 'export' },
+  { key: 'download-json', icon: 'code',       label: '匯出 JSON',     action: 'download', group: 'export' },
+  { key: 'download-csv',  icon: 'table',      label: '匯出 CSV',      action: 'download', group: 'export' },
 ];
 
 const MENU_WIDTH = 200;
@@ -119,7 +125,7 @@ export default function OverflowMenu({ onSheet, onDownload, isOnline = true }: O
       {OVERFLOW_ITEMS.map((item, i) => {
         const disabled = !isOnline && !!item.requiresOnline;
         const prev = OVERFLOW_ITEMS[i - 1];
-        const needsDivider = prev && prev.action !== item.action;
+        const needsDivider = prev && (prev.group !== item.group || prev.action !== item.action);
         return (
           <div key={item.key} style={{ display: 'contents' }}>
             {needsDivider && <div className="ocean-overflow-divider" role="separator" />}

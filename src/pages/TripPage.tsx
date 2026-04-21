@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
@@ -18,14 +18,11 @@ import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
 import { extractPinsFromDay } from '../hooks/useMapData';
-
-/* OceanMap — React.lazy code-split（F006：多天總覽）*/
-const OceanMap = lazy(() => import('../components/trip/OceanMap'));
+import TripMapRail from '../components/trip/TripMapRail';
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import MobileBottomNav from '../components/trip/MobileBottomNav';
 import InfoSheet from '../components/trip/InfoSheet';
-import InfoPanel from '../components/trip/InfoPanel';
 import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
@@ -58,6 +55,25 @@ const SCOPED_STYLES = `
 }
 /* Sticky-nav children z-index layering above DestinationArt */
 .sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
+
+/* ===== 2-col layout (PR3: Q1=A, Q-C=A, Q-D=1) =====
+ * Single breakpoint ≥1024px: left col (content) + right col (sticky map rail).
+ * Below 1024px: single column (mobile-first), map is a separate route.
+ * 1024px chosen as the start of iPad Pro 13" portrait (1024px viewport width).
+ */
+.trip-body {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .trip-body {
+    grid-template-columns: clamp(375px, 30vw, 400px) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+}
+.trip-content { min-width: 0; }
+
 /* Print mode */
 .print-mode .sticky-nav { display: none; }
 .print-mode .ocean-tb-btn { display: none !important; }
@@ -67,10 +83,11 @@ const SCOPED_STYLES = `
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
-.print-mode .ocean-map-container { display: none !important; }
+.print-mode .trip-body { grid-template-columns: 1fr; }
+.print-mode .trip-map-rail { display: none !important; }
 @media print {
-  .sticky-nav, .print-exit-btn, .ocean-side, .ocean-map-container { display: none !important; }
-  .page-layout { padding-right: 0 !important; }
+  .sticky-nav, .print-exit-btn, .trip-map-rail { display: none !important; }
+  .trip-body { grid-template-columns: 1fr; }
 }
 `;
 
@@ -323,18 +340,9 @@ export default function TripPage() {
     return match?.dayNum;
   }, [days, localToday]);
 
-  /* --- 全覽模式狀態（F006）--- */
-  const [isTripMapMode, setIsTripMapMode] = useState(false);
-
-  const handleToggleTripMap = useCallback(() => {
-    setIsTripMapMode((prev) => !prev);
-  }, []);
-
   /* --- DayNav click: scroll to day section (#4) --- */
   const handleSwitchDay = useCallback(
     (dayNum: number) => {
-      // 切換天數時同時退出全覽模式
-      setIsTripMapMode(false);
       manualScrollTs.current = Date.now();
       switchDay(dayNum);
       scrollToDay(dayNum);
@@ -529,13 +537,6 @@ export default function TripPage() {
             <TriplineLogo isOnline={isOnline} />
             {trip && <span className="ocean-brand-label">· {trip.title || trip.name}</span>}
           </div>
-          <div className="ocean-tb-divider" aria-hidden="true" />
-          <nav className="ocean-nav-tabs" aria-label="主要功能">
-            <button type="button" className={clsx(!activeSheet && 'active')} onClick={() => setActiveSheet(null)}>
-              <span aria-hidden="true">▦</span>
-              <span className="ocean-tab-label">行程</span>
-            </button>
-          </nav>
         </div>
         <div className="ocean-topbar-right">
           <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
@@ -574,8 +575,6 @@ export default function TripPage() {
             currentDayNum={currentDayNum}
             onSwitchDay={handleSwitchDay}
             todayDayNum={todayDayNum}
-            isTripMapMode={isTripMapMode}
-            onToggleTripMap={days.length > 0 ? handleToggleTripMap : undefined}
             stopsByDay={stopsByDay}
           />
         )}
@@ -587,84 +586,52 @@ export default function TripPage() {
           </div>
         )}
 
-        {/* Trip overview（F006）— OceanMap with all days' pins, auto cluster */}
-        {!loading && isTripMapMode && (() => {
+        {/* Body: 2-col grid (≥1024px: content + sticky map rail; <1024px: single col) */}
+        {!loading && trip && (() => {
           const allPins = dayNums.flatMap((n) => {
             const day = allDays[n];
             return day ? extractPinsFromDay(day).pins : [];
           });
+          const pinsByDay = new Map<number, typeof allPins>();
+          for (const n of dayNums) {
+            const day = allDays[n];
+            if (day) pinsByDay.set(n, extractPinsFromDay(day).pins);
+          }
           return (
-            <div style={{ position: 'relative' }}>
-              <Suspense fallback={<div className="h-[420px] rounded-sm bg-secondary animate-pulse" aria-label="地圖載入中" />}>
-                <OceanMap pins={allPins} mode="overview" />
-              </Suspense>
-              {trip?.id && (
-                <a
-                  href={`/trip/${trip?.id}/map`}
-                  onClick={(e) => { e.preventDefault(); navigate(`/trip/${trip?.id}/map`); }}
-                  aria-label="地圖全螢幕（全行程）"
-                  title="地圖全螢幕（全行程）"
-                  style={{
-                    position: 'absolute', top: 10, right: 10, zIndex: 400,
-                    width: 36, height: 36, borderRadius: 10,
-                    display: 'grid', placeItems: 'center',
-                    background: 'var(--color-background)',
-                    border: '1px solid var(--color-border)',
-                    color: 'var(--color-foreground)',
-                    textDecoration: 'none',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" y1="3" x2="14" y2="10" />
-                    <line x1="3" y1="21" x2="10" y2="14" />
-                  </svg>
-                </a>
-              )}
+            <div className="trip-body">
+              <div className="trip-content" id="tripContent">
+                {dayNums.map((dayNum) => (
+                  <DaySection
+                    key={dayNum}
+                    dayNum={dayNum}
+                    day={allDays[dayNum]}
+                    daySummary={daySummaryMap.get(dayNum)}
+                    tripStart={tripStart}
+                    tripEnd={tripEnd}
+                    themeArt={themeArt}
+                    localToday={localToday}
+                    isActive={dayNum === currentDayNum}
+                    timezone={weatherTimezone}
+                  />
+                ))}
+                <FooterArt dark={isDark} />
+                {footerData && <Footer footer={footerData} />}
+              </div>
+              {/* Desktop Map Rail — right column, sticky, ≥1024px only */}
+              <TripMapRail
+                pins={allPins}
+                tripId={trip.id}
+                pinsByDay={pinsByDay}
+              />
             </div>
           );
         })()}
-
-        {/* Body: main + sidebar grid */}
-        {!loading && trip && (
-          <div className="ocean-body">
-            <div className="ocean-main" id="tripContent">
-              {dayNums.map((dayNum) => (
-                <DaySection
-                  key={dayNum}
-                  dayNum={dayNum}
-                  day={allDays[dayNum]}
-                  daySummary={daySummaryMap.get(dayNum)}
-                  tripStart={tripStart}
-                  tripEnd={tripEnd}
-                  themeArt={themeArt}
-                  localToday={localToday}
-                  isActive={dayNum === currentDayNum}
-                  hideDayMap={isTripMapMode}
-                  timezone={weatherTimezone}
-                />
-              ))}
-              <FooterArt dark={isDark} />
-              {footerData && <Footer footer={footerData} />}
-            </div>
-            <aside className="ocean-side">
-              <InfoPanel
-                currentDay={currentDay}
-                allDays={allDays}
-                dayNums={dayNums}
-                currentDayNum={currentDayNum}
-                flightEntries={(docs.flights as { entries?: import('../components/trip/DocCard').DocEntry[] } | undefined)?.entries}
-              />
-            </aside>
-          </div>
-        )}
       </main>
 
       {/* Mobile bottom tab bar (≤760px) */}
       {!loading && trip && (
         <MobileBottomNav
+          tripId={trip.id}
           activeSheet={activeSheet}
           onOpenSheet={setActiveSheet}
           onClearSheet={() => setActiveSheet(null)}
