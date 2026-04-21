@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.3] - 2026-04-21
+
+autoplan retrospective 發現的 11 項修復：4 個 regression/假對齊 + 7 個 quality/perf。重要體感：
+- 桌機切深色模式後地圖也跟著切（原本永遠淺色）
+- 切行程後地圖 focus 跟著切（原本停在上一個行程視角）
+- 每天的 polyline 顏色 + 虛實交替，色盲族群也能分辨
+- Mobile 底部 tab「訊息」改「助理」（使用者不再以為是 LINE 訊息）
+- 左欄 scroll 到哪天，右側地圖自動平移到那天路線
+
+### Fixed
+- **TripMapRail `dark` prop 缺失** (F001)：TripPage 沒傳 `dark={isDark}`，dark mode 下地圖底圖永遠淺色。補上 + `useLeafletMap` 收到 `dark` 觸發 tile swap。
+- **`fitDoneRef` 跨行程不 reset** (F002)：切行程時 TripMapRail 不重掛，`fitBounds` 不再跑，地圖停在上一個行程焦點。加 `key={trip.id}` 強制 remount。
+- **Mobile Hero title 假對齊** (F003)：DESIGN.md 宣稱 mobile hero title 24px 但 CSS 只有 22px。補 `@media (max-width: 760px)` override 對齊 DESIGN.md type scale。
+- **`color-scheme` 宣告缺失** (F004)：`html` 加 `color-scheme: light dark`，瀏覽器原生 scrollbar / select / date input 在 dark mode 正確轉暗（之前是白色破相）。
+
+### Changed
+- **TripMapRail 改 `React.lazy()`** (F005)：150KB Leaflet chunk 不再從 TripPage 初始 load，mobile 使用者 TTI 受益。desktop ≥1024 才 import。
+- **Day Polyline dashArray 色盲友善** (F008)：`src/lib/dayPalette.ts` 新增 `dayPolylineStyle(dayNum)` helper，奇數天 solid、偶數天 `dashArray: '6,4'`。10 色 palette + 虛實交替，sky/cyan 跟 rose/fuchsia 對色盲族群也可分辨。
+- **MobileBottomNav「訊息」→「助理」** (F009)：tab label 修正語意誤導（使用者原以為是 message inbox），aria-label 同步。
+- **`看地圖` chip tap target 44px** (F010)：`min-height: 44px` + `display: inline-flex; align-items: center;`，符合 Apple HIG 最小觸控目標。
+
+### Added
+- **TripMapRail scroll fly-to active day** (F007)：IntersectionObserver 監測 timeline 每天 section 進入 viewport，地圖 `panTo(dayCenter)` 跟著。靜態地圖變成 spatial context。
+- **TripMapRail marker click integration test** (F006)：原本 `map: null` mock 讓核心 Leaflet click 邏輯零覆蓋，改用 fake marker 模擬 click → assert navigate 被 called。
+- **MapPage `?day=N` runtime test** (F011)：原本 string-match test 升級為 mount + assert：`?day=2` → initialDayNum=2、`?day=abc` → fallback day 1、`?day=999` → fallback day 1。
+
+### Process
+- **OpenSpec proper SDD flow**：`openspec/changes/pr6-autoplan-findings/` 先 propose 後 apply（merge 後 archive）。對齊 CLAUDE.md「禁止跳過 propose」。
+
+### Tests
+- 501 → **522** (+21) 測試總數
+
 ## [2.0.2.2] - 2026-04-21
 
 Design review v2 follow-up cleanup。清除 6 項 low tech debt + editorial logo 一致性 + QA 測試邏輯修正。這次走完整 OpenSpec `propose → apply → archive` 流程（補 PR 1-4 跳過的 SDD 規範）。使用者體感：StopDetailPage 點 logo 也可以回首頁了（跟其他頁一致）。其餘是 inline-refactor 無視覺變動。
