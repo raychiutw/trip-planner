@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.5] - 2026-04-21
+
+Lighthouse CI perf baseline infrastructure。autoplan retro 發現沒 baseline 就沒 regression detection，本 PR 建 non-blocking baseline。對使用者無直接變化，但 master push 後 GitHub Actions 會跑 Lighthouse 3 runs × 3 URLs，PR 反而能看到 perf trend。
+
+### Added
+- **`lighthouserc.json`** — 3 URL (`/` + TripPage + StopDetailPage) × 3 runs，desktop preset
+- **Perf budget (warn-only)**：LCP < 2.5s、TBT < 300ms、CLS < 0.1、perf score ≥ 0.8
+- **`.github/workflows/lighthouse.yml`** — push master + workflow_dispatch 觸發、`treosh/lighthouse-ci-action@v12` + artifact upload
+- **`docs/lighthouse-ci.md`** — 使用說明 + 如何看 artifact + future roadmap
+- **TODOS.md** — 2 週 baseline 穩定後升 P1（warn → error gate）
+
+### Tests
+- 539 → **552** (+13): `lighthouse-config.test.ts` + `lighthouse-workflow.test.ts`
+
 ## [2.0.2.4] - 2026-04-21
 
 OG link preview MVP。行程連結在 LINE / iMessage / Slack / Twitter 分享時終於有預覽（藍底 + Tripline 品牌 + 副標），不再是白板。autoplan CEO retro 發現的「Tripline 唯一 distribution channel 完全沒開發」的問題。
