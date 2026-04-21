@@ -136,7 +136,63 @@ describe('AI 編輯 pill — Ocean fill', () => {
   });
 });
 
-// ——— Item 8: 注意事項 warning amber ———
+// ——— Review follow-up Item 1: topbar blur 改 token ———
+describe('ocean-topbar — backdrop-filter 使用 token', () => {
+  it('.ocean-topbar backdrop-filter 使用 var(--blur-glass) token 而非 hardcode 14px', () => {
+    // 找 .ocean-topbar 區塊
+    const topbarBlock = tokens.match(/\.ocean-topbar\s*\{[^}]+\}/s)?.[0] ?? '';
+    expect(topbarBlock).toContain('var(--blur-glass)');
+  });
+
+  it('.ocean-topbar 不存在 backdrop-filter: blur(14px) hardcode', () => {
+    // 確認已改用 token，不再有 hardcode 14px
+    const topbarBlock = tokens.match(/\.ocean-topbar\s*\{[^}]+\}/s)?.[0] ?? '';
+    expect(topbarBlock).not.toMatch(/backdrop-filter:\s*blur\(14px\)/);
+  });
+});
+
+// ——— Review follow-up Item 3: Bottom nav tap target ———
+describe('ocean-bottom-nav-btn — tap target 防呆', () => {
+  it('.ocean-bottom-nav-btn 包含 min-height: 44px（Apple HIG tap target）', () => {
+    expect(tokens).toContain('min-height: 44px');
+  });
+});
+
+// ——— Review follow-up Item 4: AI pill 互動 states ———
+describe('ocean-tb-ai — 互動 state 補齊', () => {
+  it('.ocean-tb-btn.ocean-tb-ai:hover 存在 filter: brightness 樣式', () => {
+    const hoverBlock = tokens.match(/\.ocean-tb-btn\.ocean-tb-ai:hover\s*\{[^}]+\}/s)?.[0] ?? '';
+    expect(hoverBlock).toMatch(/filter:\s*brightness/);
+  });
+
+  it('.ocean-tb-btn.ocean-tb-ai:focus-visible 存在 outline 樣式', () => {
+    const focusBlock = tokens.match(/\.ocean-tb-btn\.ocean-tb-ai:focus-visible\s*\{[^}]+\}/s)?.[0] ?? '';
+    expect(focusBlock).toMatch(/outline:/);
+  });
+
+  it('.ocean-tb-btn.ocean-tb-ai:active 存在 filter: brightness 樣式', () => {
+    const activeBlock = tokens.match(/\.ocean-tb-btn\.ocean-tb-ai:active\s*\{[^}]+\}/s)?.[0] ?? '';
+    expect(activeBlock).toMatch(/filter:\s*brightness/);
+  });
+});
+
+// ——— Review follow-up Item 6: 760px breakpoint 文件註解 ———
+describe('760px breakpoint — 文件註解', () => {
+  it('tokens.css 包含 breakpoint 說明（760px intentionally set）', () => {
+    expect(tokens).toContain('Breakpoint intentionally set');
+  });
+});
+
+// ——— Review follow-up Item 7: InfoSheet sheet opacity bump ———
+const infoSheetContent = readFileSync(resolve(ROOT, 'src/components/trip/InfoSheet.tsx'), 'utf-8');
+
+describe('InfoSheet — sheet 邊緣清晰度', () => {
+  it('InfoSheet sheet background 使用 94% 而非 88%（opacity bump）', () => {
+    expect(infoSheetContent).toMatch(/color-mix\(in srgb,\s*var\(--color-secondary\)\s*94%/);
+  });
+});
+
+// ——— Review follow-up Item 8: 注意事項 warning amber ———
 const daySectionPath = resolve(ROOT, 'src/components/trip/DaySection.tsx');
 const daySection = readFileSync(daySectionPath, 'utf-8');
 

@@ -24,4 +24,9 @@ describe('tokens.css — mobile type scale override', () => {
     // 現有 hero title 在 760px 下已改 22px — 確認存在
     expect(tokens).toContain('font-size: 22px');
   });
+
+  it('22px hero title 必須在 @media (max-width: 760px) 區塊內的 .ocean-hero-title scope 中', () => {
+    // 更精準：font-size: 22px 必須出現在 760px media query 的 .ocean-hero-title rule 裡
+    expect(tokens).toMatch(/@media\s*\(max-width:\s*760px\)[^{]*\{[^}]*\.ocean-hero-title[^}]*font-size:\s*22px/ms);
+  });
 });

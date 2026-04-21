@@ -40,4 +40,14 @@ describe('DESIGN.md — 完整性檢查', () => {
   it('Decisions Log 有 Glass unified 14px 記錄', () => {
     expect(design).toContain('Glass unified 14px');
   });
+
+  it('caption2 描述為最小行內 meta label（例：NIGHT 1 等）', () => {
+    // Finding #5：收斂 caption2 semantic
+    expect(design).toMatch(/caption2.*最小行內 meta label/);
+  });
+
+  it('eyebrow 描述為大寫 section header（例：DAY 01、STOPS、用餐）', () => {
+    // Finding #5：收斂 eyebrow semantic，與 caption2 分離
+    expect(design).toMatch(/eyebrow.*大寫 section header/);
+  });
 });
