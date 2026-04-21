@@ -58,7 +58,7 @@ body.print-mode .ocean-day-strip { display: none; }
 
 [data-dn] .dn-head { display: inline-flex; align-items: center; gap: 4px; }
 [data-dn] .dn-eyebrow {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.14em;
   opacity: 0.7; text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
@@ -79,7 +79,7 @@ body.print-mode .ocean-day-strip { display: none; }
 }
 [data-dn].active .dn-date { color: var(--color-accent); }
 [data-dn] .dn-dow {
-  font-size: 11px; font-weight: 500;
+  font-size: var(--font-size-caption2); font-weight: 500;
   opacity: 0.55; margin-left: 4px; letter-spacing: 0.02em;
 }
 [data-dn].active .dn-dow { opacity: 0.75; }
@@ -127,9 +127,9 @@ body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-m
   [data-dn].active .dn-date { color: #fff; }
   [data-dn].active .dn-eyebrow { color: rgba(255,255,255,0.85); }
   [data-dn] .dn-date { font-size: 14px; color: var(--color-foreground); }
-  [data-dn] .dn-area { max-width: 56px; padding-left: 6px; font-size: 11px; }
+  [data-dn] .dn-area { max-width: 56px; padding-left: 6px; font-size: var(--font-size-caption2); }
   [data-dn] .dn-area::before { display: none; }
-  [data-dn] .dn-eyebrow { font-size: 10px; letter-spacing: 0.12em; }
+  [data-dn] .dn-eyebrow { font-size: var(--font-size-eyebrow); letter-spacing: 0.12em; }
   [data-dn] .dn-weather { background: rgba(0,0,0,0.06); color: var(--color-muted); }
   [data-dn].active .dn-weather { background: rgba(255,255,255,0.18); color: #fff; }
 }

@@ -54,7 +54,7 @@ const MANAGE_SCOPED_STYLES = `
 .manage-back:hover { background: var(--color-hover); color: var(--color-accent); }
 .manage-topbar-crumb {
   flex: 1; min-width: 0; display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  font-size: var(--font-size-caption2); font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
   color: var(--color-muted);
   white-space: nowrap; overflow: hidden;
 }
@@ -81,7 +81,7 @@ const MANAGE_SCOPED_STYLES = `
 }
 @media (max-width: 600px) {
   .manage-trip-pill-name { max-width: 120px; }
-  .manage-topbar-crumb { font-size: 10px; letter-spacing: 0.12em; }
+  .manage-topbar-crumb { font-size: var(--font-size-eyebrow); letter-spacing: 0.12em; }
 }
 .manage-trip-dropdown {
   position: absolute; right: 0; top: calc(100% + 6px);
@@ -115,7 +115,7 @@ const MANAGE_SCOPED_STYLES = `
 /* Hero — editorial title 結構（對齊 StopDetailPage） */
 .manage-hero { padding: 20px 0 16px; border-bottom: 1px solid var(--color-border); margin-bottom: 4px; }
 .manage-hero-eyebrow {
-  font-size: 10px; font-weight: 600; color: var(--color-muted);
+  font-size: var(--font-size-eyebrow); font-weight: 600; color: var(--color-muted);
   letter-spacing: 0.18em; text-transform: uppercase;
   margin-bottom: 6px;
 }

@@ -177,7 +177,7 @@ const DaySection = React.memo(function DaySection({
         ) : (
           <>
             {warnings.length > 0 && (
-              <div className="bg-destructive-bg py-3 px-4 my-2 rounded-sm text-callout text-destructive">
+              <div className="py-3 px-4 my-2 rounded-sm text-callout" style={{ background: 'rgba(244, 140, 6, 0.08)', color: 'var(--color-warning)', borderLeft: '3px solid var(--color-warning)' }}>
                 <strong><Icon name="warning" /> 注意事項：</strong>
                 <ul className="mt-1 ml-4">{warnings.map((w) => <li key={w}>{w}</li>)}</ul>
               </div>
