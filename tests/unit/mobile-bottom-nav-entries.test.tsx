@@ -39,9 +39,9 @@ describe('MobileBottomNav — 4 個 tab 全部存在（PR3）', () => {
     expect(getByRole('button', { name: '地圖' })).toBeTruthy();
   });
 
-  it('「訊息」tab render 且有 aria-label', () => {
+  it('「助理」tab render 且有 aria-label（F009: 訊息 → 助理）', () => {
     const { getByRole } = renderNav();
-    expect(getByRole('button', { name: '訊息' })).toBeTruthy();
+    expect(getByRole('button', { name: '助理' })).toBeTruthy();
   });
 
   it('「更多」tab render 且有 aria-label', () => {

@@ -20,20 +20,19 @@ describe('tokens.css — mobile type scale override', () => {
     expect(tokens).toMatch(/@media \(max-width:\s*760px\)[\s\S]*?--mobile-font-size-body:\s*1rem/);
   });
 
-  it('ocean-hero-title mobile 22px 已存在（≤760px hero title override）', () => {
-    // 現有 hero title 在 760px 下已改 22px — 確認存在
-    expect(tokens).toContain('font-size: 22px');
+  it('ocean-hero-title mobile override 已存在（≤760px hero title override）', () => {
+    // F003: DESIGN.md 規定 mobile hero title = 24px（原 22px 已更正）
+    expect(tokens).toContain('font-size: 24px');
   });
 
-  it('22px hero title 必須在 @media (max-width: 760px) 區塊內的 .ocean-hero-title scope 中', () => {
-    // 更精準：找到包含 .ocean-hero-title 與 font-size: 22px 的 760px media block
-    // 策略：從 @media (max-width: 760px) 起點往後找 .ocean-hero-title.*font-size:\s*22px（800字元內）
+  it('24px hero title 必須在 @media (max-width: 760px) 區塊內的 .ocean-hero-title scope 中', () => {
+    // F003: 22px → 24px，符合 DESIGN.md mobile type scale 規範
     let found = false;
     const mediaRe = /@media\s*\(max-width:\s*760px\)/g;
     let m: RegExpExecArray | null;
     while ((m = mediaRe.exec(tokens)) !== null) {
       const slice = tokens.slice(m.index, m.index + 800);
-      if (/\.ocean-hero-title[^}]*font-size:\s*22px/.test(slice)) {
+      if (/\.ocean-hero-title[^}]*font-size:\s*24px/.test(slice)) {
         found = true;
         break;
       }

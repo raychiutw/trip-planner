@@ -19,7 +19,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { useLeafletMap } from '../../hooks/useLeafletMap';
-import { dayColor } from '../../lib/dayPalette';
+import { dayColor, dayPolylineStyle } from '../../lib/dayPalette';
 import type { MapPin } from '../../hooks/useMapData';
 
 /* ===== Singleton style injection ===== */
@@ -39,6 +39,8 @@ interface TripMapRailProps {
   tripId: string;
   /** Group pins by day for polyline colouring. Key = dayNum. */
   pinsByDay?: Map<number, MapPin[]>;
+  /** Pass through to useLeafletMap — use dark tile layer when true. */
+  dark?: boolean;
 }
 
 const SCOPED_STYLES = `
@@ -77,7 +79,7 @@ function createPinIcon(label: string, color: string): L.DivIcon {
   });
 }
 
-export default function TripMapRail({ pins, tripId, pinsByDay }: TripMapRailProps) {
+export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: TripMapRailProps) {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const navigate = useNavigate();
 
@@ -89,6 +91,7 @@ export default function TripMapRail({ pins, tripId, pinsByDay }: TripMapRailProp
   const { containerRef, map, fitBounds } = useLeafletMap({
     center: [26.2, 127.7],
     zoom: 11,
+    dark,
   });
 
   const fitDoneRef = useRef(false);
@@ -121,11 +124,13 @@ export default function TripMapRail({ pins, tripId, pinsByDay }: TripMapRailProp
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((p): L.LatLngExpression => [p.lat, p.lng]);
       if (coords.length >= 2) {
+        // F008: dayPolylineStyle 提供 color + dashArray（color-blind aid）
+        const style = dayPolylineStyle(dayNum);
         const line = L.polyline(coords, {
-          color: dayColor(dayNum),
-          weight: 3,
+          color: style.color,
+          weight: style.weight,
           opacity: 0.8,
-          dashArray: undefined,
+          dashArray: style.dashArray,
         }).addTo(map);
         polylinesRef.current.push(line);
       }
@@ -159,6 +164,40 @@ export default function TripMapRail({ pins, tripId, pinsByDay }: TripMapRailProp
       fitBounds(latlngs, 32);
     }
   }, [map, pins, pinsByDay, tripId, navigate, fitBounds, isDesktop]);
+
+  // F007: IntersectionObserver — 當某天 section 進入 viewport 60%+，panTo 該天中心
+  useEffect(() => {
+    if (!map || !pinsByDay || pinsByDay.size === 0) return;
+
+    const daySections = Array.from(document.querySelectorAll<HTMLElement>('[data-day]'));
+    if (daySections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // 找最明顯進入視野的 day section
+        const mostVisible = entries
+          .filter((e) => e.isIntersecting && e.intersectionRatio >= 0.6)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (!mostVisible) return;
+
+        const dayNum = Number((mostVisible.target as HTMLElement).dataset.day);
+        if (!Number.isFinite(dayNum)) return;
+
+        const dayPins = pinsByDay.get(dayNum);
+        if (!dayPins || dayPins.length === 0) return;
+
+        // 計算該天 pins 的平均座標作為中心
+        const lat = dayPins.reduce((sum, p) => sum + p.lat, 0) / dayPins.length;
+        const lng = dayPins.reduce((sum, p) => sum + p.lng, 0) / dayPins.length;
+        (map as L.Map & { panTo?: (latlng: L.LatLngExpression) => void }).panTo?.([lat, lng]);
+      },
+      { threshold: [0.6, 0.8, 1.0] },
+    );
+
+    daySections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [map, pinsByDay]);
 
   // Don't render below 1024px
   if (!isDesktop) return null;

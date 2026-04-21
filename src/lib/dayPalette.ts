@@ -27,3 +27,25 @@ export function dayColor(dayNum: number): string {
   if (!Number.isFinite(dayNum) || dayNum < 1) return DAY_PALETTE[0]!;
   return DAY_PALETTE[(dayNum - 1) % DAY_PALETTE.length]!;
 }
+
+/**
+ * F008: color-blind aid — 回傳 polyline 完整樣式。
+ * 奇數天：solid（dashArray: undefined）
+ * 偶數天：dashed（dashArray: '6,4'）
+ * 確保色盲使用者可透過線型區分不同天的路線。
+ */
+export interface PolylineStyle {
+  color: string;
+  weight: number;
+  dashArray: string | undefined;
+}
+
+export function dayPolylineStyle(dayNum: number): PolylineStyle {
+  const color = dayColor(dayNum);
+  const isEven = Number.isFinite(dayNum) && dayNum >= 1 && dayNum % 2 === 0;
+  return {
+    color,
+    weight: 3,
+    dashArray: isEven ? '6,4' : undefined,
+  };
+}
