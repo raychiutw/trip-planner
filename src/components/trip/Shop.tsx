@@ -39,7 +39,7 @@ const SHOP_STYLES = `
   letter-spacing: -0.01em; line-height: 1.3;
 }
 .shop-card__cat {
-  font-size: 11px; font-weight: 500; color: var(--color-muted);
+  font-size: var(--font-size-caption2); font-weight: 500; color: var(--color-muted);
   background: var(--color-tertiary);
   padding: 2px 8px; border-radius: 999px;
   white-space: nowrap;
@@ -59,7 +59,7 @@ const SHOP_STYLES = `
   padding-top: 10px;
 }
 .shop-card__mustbuy-label {
-  font-size: 10px; font-weight: 600; color: var(--color-accent);
+  font-size: var(--font-size-eyebrow); font-weight: 600; color: var(--color-accent);
   letter-spacing: 0.18em; text-transform: uppercase;
   display: inline-flex; align-items: center; gap: 4px;
   margin-bottom: 6px;

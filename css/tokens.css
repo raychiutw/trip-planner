@@ -75,7 +75,8 @@
     --font-size-subheadline: 0.9375rem;
     --font-size-footnote: 0.8125rem;
     --font-size-caption: 0.75rem;
-    --font-size-caption2: 0.6875rem;
+    --font-size-caption2: 0.6875rem;  /* 11px */
+    --font-size-eyebrow: 0.625rem;    /* 10px — uppercase eyebrow labels (DAY 01, STOPS, etc.) */
 
     /* Font family — Inter primary, Noto Sans TC CJK fallback */
     --font-family-system: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang TC", system-ui, sans-serif;
@@ -113,6 +114,9 @@
     /* Focus ring */
     --shadow-ring: 0 0 0 2px var(--color-accent);
 
+    /* Glass blur — unified 14px for topbar, bottom-nav, sheet */
+    --blur-glass: 14px;
+
     /* Animate */
     --animate-stepper-pulse: stepper-pulse 2s infinite;
     --animate-toast-slide-down: toast-slide-down var(--transition-duration-slow) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
@@ -132,6 +136,17 @@
     --duration-tap: 80ms;
     --duration-nav-fade: 200ms;
     --duration-indicator: 350ms;
+}
+
+/* ===== Mobile type scale (≤760px) — DESIGN.md Type Scale (Mobile ≤760px) ===== */
+/* body 16px, callout 15px, subheadline 14px 改善行動閱讀體驗 */
+@media (max-width: 760px) {
+    :root {
+        --mobile-font-size-body: 1rem;         /* 16px (desktop: 17px) */
+        --mobile-font-size-callout: 0.9375rem; /* 15px (desktop: 16px) */
+        --mobile-font-size-subheadline: 0.875rem; /* 14px (desktop: 15px) */
+    }
+    body { font-size: var(--mobile-font-size-body); }
 }
 
 /* ===== Composite tokens on body (let .dark overrides take effect) ===== */
@@ -212,7 +227,7 @@ body.dark {
         margin: 12px var(--spacing-padding-h) 16px;
     }
     .day-header h2 { color: #ffffff; }
-    .day-header .day-header-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.75; }
+    .day-header .day-header-eyebrow { font-size: var(--font-size-eyebrow); font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.75; }
     .day-header .day-header-date { color: rgba(255,255,255,0.75) !important; }
     body.dark .day-header { background: var(--color-accent-bg); color: var(--color-foreground); }
     body.dark .day-header h2 { color: var(--color-foreground); }
@@ -233,11 +248,9 @@ body.dark {
         border-radius: var(--radius-sm);
     }
 
-    /* Timeline card glass effect */
+    /* Timeline card — no glass (editorial clean direction) */
     [data-tl-card] {
-        background: color-mix(in srgb, var(--color-background) 96%, transparent);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        background: var(--color-background);
     }
     body.dark [data-tl-card] {
         background: color-mix(in srgb, var(--color-tertiary) 90%, transparent);
@@ -301,7 +314,7 @@ body.dark {
     }
     .color-mode-preview .cmp-top { flex: 1; }
     .color-mode-preview .cmp-bottom { flex: 1; display: flex; align-items: center; gap: 4px; padding: 0 6px; }
-    .color-mode-preview .cmp-input { flex: 1; height: 8px; border-radius: 4px; }
+    .color-mode-preview .cmp-input { flex: 1; height: 8px; border-radius: var(--radius-xs); }
     .color-mode-preview .cmp-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent); }
     .color-mode-light .cmp-top { background: var(--cmp-light-bg); }
     .color-mode-light .cmp-bottom { background: var(--cmp-light-surface); }
@@ -336,7 +349,7 @@ body.dark {
     .ocean-topbar {
         position: sticky; top: 0; z-index: var(--z-sticky-nav);
         background: var(--color-glass-nav);
-        backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
         border-bottom: 1px solid var(--color-border);
         padding: 12px 24px;
         display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -368,14 +381,13 @@ body.dark {
     }
     .ocean-tb-btn:hover { border-color: var(--color-accent); }
     .ocean-tb-btn.ocean-tb-ai {
-        background: var(--color-foreground); color: var(--color-background);
-        border-color: var(--color-foreground);
+        background: var(--color-accent); color: #fff;
+        border-color: var(--color-accent);
         padding: 8px 16px; font-weight: 600; position: relative; letter-spacing: 0.02em;
     }
-    .ocean-tb-btn.ocean-tb-ai::before {
-        content: ""; width: 6px; height: 6px; border-radius: 50%;
-        background: #00B4D8; display: inline-block;
-    }
+    .ocean-tb-btn.ocean-tb-ai:hover { filter: brightness(0.92); }
+    .ocean-tb-btn.ocean-tb-ai:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .ocean-tb-btn.ocean-tb-ai:active { filter: brightness(0.85); }
 
     /* Page */
     .ocean-page { padding: 28px 40px 48px; max-width: 1440px; margin: 0 auto; }
@@ -397,7 +409,7 @@ body.dark {
     .ocean-hero-chips {
         display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
         margin-bottom: 4px;
-        font-size: 10px; font-weight: 600;
+        font-size: var(--font-size-eyebrow); font-weight: 600;
         letter-spacing: 0.16em; text-transform: uppercase;
         color: var(--color-muted);
         font-variant-numeric: tabular-nums;
@@ -436,7 +448,7 @@ body.dark {
         display: inline-flex; align-items: baseline; gap: 6px;
     }
     .ocean-hero-stat-label {
-        font-size: 10px; color: var(--color-muted);
+        font-size: var(--font-size-eyebrow); color: var(--color-muted);
         letter-spacing: 0.18em; text-transform: uppercase;
         font-weight: 600;
     }
@@ -472,7 +484,7 @@ body.dark {
     .ocean-stop-clickable:hover .ocean-stop-chevron { color: var(--color-accent); transform: translateX(3px); }
     .ocean-stop-time { text-align: left; }
     .ocean-stop-t { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1; }
-    .ocean-stop-dur { font-size: 10px; color: var(--color-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
+    .ocean-stop-dur { font-size: var(--font-size-eyebrow); color: var(--color-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
     .ocean-stop-icon {
         width: 48px; height: 48px; border-radius: var(--radius-sm);
         background: var(--color-background);
@@ -483,7 +495,7 @@ body.dark {
     .ocean-stop-content { min-width: 0; }
     .ocean-stop-meta { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
     .ocean-stop-type {
-        font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+        font-size: var(--font-size-eyebrow); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
         color: var(--color-muted);
     }
     .ocean-stop-type[data-accent="true"] { color: var(--color-accent); }
@@ -523,10 +535,10 @@ body.dark {
         margin-bottom: 10px; padding: 0 2px;
     }
     .ocean-rail-eyebrow {
-        font-size: 11px; letter-spacing: 0.2em; color: var(--color-muted);
+        font-size: var(--font-size-caption2); letter-spacing: 0.2em; color: var(--color-muted);
         text-transform: uppercase; font-weight: 600;
     }
-    .ocean-rail-meta { font-size: 11px; color: var(--color-muted); }
+    .ocean-rail-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
     .ocean-rail-body { position: relative; padding: 0; }
     .ocean-rail-line {
@@ -578,7 +590,7 @@ body.dark {
         background: var(--color-background);
         border: 1.5px solid var(--color-lineStrong, #C1C1C1);
         display: grid; place-items: center;
-        font-size: 11px; font-weight: 700;
+        font-size: var(--font-size-caption2); font-weight: 700;
         color: var(--color-muted);
         font-variant-numeric: tabular-nums;
         line-height: 1;
@@ -641,7 +653,7 @@ body.dark {
         margin-bottom: 14px; padding-bottom: 10px;
         border-bottom: 1px solid var(--color-border);
     }
-    .ocean-side-card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); }
+    .ocean-side-card-title { font-size: var(--font-size-caption2); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); }
 
     /* Day section wrapper */
     .ocean-day { scroll-margin-top: 210px; }
@@ -662,6 +674,11 @@ body.dark {
         .ocean-side { position: static; }
         .ocean-hero-title { font-size: 28px; }
     }
+    /* Mobile type scale override (760px and below).
+     * Breakpoint intentionally set below iPad mini portrait (744px so mini gets mobile
+     * scale) and below iPad 10/11 portrait (810/820px → desktop scale). Any tablet-like
+     * viewport ≥768px stays on desktop type scale.
+     */
     @media (max-width: 760px) {
         .ocean-nav-tabs { display: none; }
         .ocean-tb-divider { display: none; }
@@ -683,25 +700,25 @@ body.dark {
             position: fixed; left: 0; right: 0; bottom: 0;
             display: grid; grid-template-columns: repeat(5, 1fr);
             background: color-mix(in srgb, var(--color-background) 97%, transparent);
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
             border-top: 1px solid var(--color-border);
             padding-bottom: env(safe-area-inset-bottom);
             z-index: calc(var(--z-sticky-nav) - 1);
         }
         .ocean-bottom-nav-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 3px; padding: 10px 4px;
+            gap: 3px; padding: 13px 4px; min-height: 44px;
             background: transparent; border: none; cursor: pointer;
             color: var(--color-muted); font: inherit;
             transition: color var(--transition-duration-fast) var(--transition-timing-function-apple);
         }
         .ocean-bottom-nav-btn .svg-icon { width: 18px; height: 18px; }
-        .ocean-bottom-nav-btn span { font-size: 10px; font-weight: 500; }
+        .ocean-bottom-nav-btn span { font-size: var(--font-size-eyebrow); font-weight: 500; }
         .ocean-bottom-nav-btn.is-active { color: var(--color-accent); }
         .ocean-bottom-nav-btn.is-active span { font-weight: 700; }
         .ocean-bottom-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     }
-    body.dark .ocean-tb-btn.ocean-tb-ai { background: #fff; color: #0D1B2A; border-color: #fff; }
+    body.dark .ocean-tb-btn.ocean-tb-ai { background: var(--color-accent); color: #0D1B2A; border-color: var(--color-accent); }
     body.dark .ocean-stop[data-past="true"] { opacity: 0.5; }
 
     /* Overflow "更多" menu — portalled to body, positioned via JS (position: fixed) */

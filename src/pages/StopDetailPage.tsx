@@ -71,7 +71,7 @@ const SCOPED_STYLES = `
 .stop-detail-crumb {
   flex: 1; min-width: 0;
   display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: var(--font-size-caption2); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--color-muted);
   overflow: hidden; white-space: nowrap;
 }
@@ -150,7 +150,7 @@ const SCOPED_STYLES = `
 }
 .stop-detail-section:first-of-type { border-top: none; margin-top: 8px; }
 .stop-detail-section h3 {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: var(--font-size-caption2); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--color-muted); margin: 0 0 10px;
 }
 .stop-detail-note {

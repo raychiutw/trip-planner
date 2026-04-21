@@ -62,7 +62,7 @@ const SCOPED_STYLES = `
 .map-page-crumb {
   flex: 1; min-width: 0;
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: var(--font-size-caption2); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--color-muted);
   white-space: nowrap; overflow: hidden;
 }
@@ -114,7 +114,7 @@ const SCOPED_STYLES = `
   border-bottom-color: var(--color-accent);
 }
 .map-page-day-tab-eyebrow {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.14em;
   opacity: 0.7; text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
@@ -165,7 +165,7 @@ const SCOPED_STYLES = `
   width: 22px; height: 22px; border-radius: 50%;
   background: var(--color-tertiary);
   color: var(--color-muted);
-  font-size: 11px; font-weight: 700;
+  font-size: var(--font-size-caption2); font-weight: 700;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
@@ -195,7 +195,7 @@ const SCOPED_STYLES = `
 }
 
 @media (max-width: 760px) {
-  .map-page-crumb { font-size: 10px; letter-spacing: 0.12em; }
+  .map-page-crumb { font-size: var(--font-size-eyebrow); letter-spacing: 0.12em; }
   .map-page-card { flex: 0 0 200px; }
 }
 `;
