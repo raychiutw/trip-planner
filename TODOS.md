@@ -32,7 +32,69 @@
 - 字型（Noto Sans TC）在 Worker 載入
 - Cache strategy（/api/og/:tripId → KV cache 24h）
 **Est**: 1 day CC (medium)
-**Priority**: Medium (static MVP 已 unblock distribution)
+**Priority**: P2 (static MVP 已 unblock distribution)
+
+---
+
+## Reader Validation Framework
+
+**Source**: autoplan CEO retro（v2.0.2.3）發現 — Tripline 有 7 個行程、1 個 admin、**0 個非技術旅伴實測過**。所有 UI 決策在真空中做。是 design-review-v2 10 問**沒問到**的最大 gap。
+
+**Goal**: 建立非技術旅伴使用行為觀察機制，讓 UI 決策有 ground truth。
+
+**步驟**:
+1. 定義 3 個 must-pass 使用者任務：
+   - 「找到今天吃什麼」（3 分鐘內）
+   - 「第幾天去哪裡」（2 分鐘內）
+   - 「這個景點要多久」（1 分鐘內）
+2. 招 2-3 個非技術旅伴（家人 / 朋友 / 同事），給 `https://trip-planner-dby.pages.dev/trip/okinawa-trip-2026-Ray` URL
+3. 錄 5 分鐘 screen recording（手機）+ think-aloud protocol
+4. 記錄卡點、困惑詞彙、完成時間
+5. 結果寫 `docs/reader-validation-2026-05.md`，列出 top 3 friction
+6. 下個 design cycle 以此為 input（取代「我覺得」）
+
+**Est**: 0.5 day（非技術，找人 + 觀察 + 整理）
+**Priority**: P1（block 下一個 design cycle 的方向感）
+
+---
+
+## Creator Onboarding — Public entry
+
+**Source**: autoplan CEO retro — Tripline 目前僅 admin `lean.lean@gmail.com` 可建行程，**沒 public `/new` 或 waitlist**。Dream state「10+ creator」的 funnel 入口缺。
+
+**Goal**: 讓潛在 creator 有入口知道 Tripline 存在 + 表達興趣 / 試用。
+
+**選項**:
+- **MVP A**：`/new` 顯示「目前 closed beta，留信箱加入 waitlist」+ 最簡 email 收集表單 → D1 `waitlist` 表
+- **MVP B**：`/about` landing 頁介紹 Tripline + 一個 CTA 連到 demo trip（讀為主展示）
+- **Full**：`/signup` + OAuth + creator dashboard（跟現有 Cloudflare Access 衝突需重設計）
+
+**推薦**：**MVP A + MVP B 合併**（一個 landing `/` 顯示 Tripline 簡介 + demo link + waitlist CTA）。尊重現有架構，不碰 auth。
+
+**Blocker**:
+- 產品決策：Tripline 是 invite-only curator-driven 還是 open signup？（影響 funnel 設計）
+- 法律：waitlist 需要 privacy notice + GDPR 基本條款
+
+**Est**: 1 day（含 email 收集 D1 schema + form + privacy copy）
+**Priority**: P2（依賴 reader validation 找到真使用者 pattern 先）
+
+---
+
+## Editorial Follow-through — Chrome density 檢討
+
+**Source**: autoplan Design retro — Q10=A 選 editorial 但實作仍是「editorial token 包 dashboard」。TripPage 第一屏 6 層 chrome（topbar + DayNav + Hero + 警語 + 天氣 + Hotel）before 第一個 stop content。
+
+**Goal**: 讓「editorial = 內容主角」真的在第一屏落地。
+
+**選項**:
+- TripPage 首屏只留 topbar + Hero，其他資訊收合進 Hero 下方 expandable
+- 或：Hero 瘦身（變成 editorial 式大標 + 日期 + 地區，不塞 stats），stats 下移
+- 或：DayNav 首次只顯示當天 + 「看全部」按鈕
+
+**Blocker**: 需要 reader validation 先（避免刪掉使用者其實需要的 chrome）
+
+**Est**: 1 day
+**Priority**: P2（依賴 reader validation）
 
 ---
 
