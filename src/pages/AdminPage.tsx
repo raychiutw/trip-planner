@@ -32,7 +32,7 @@ export default function AdminPage() {
   useOfflineToast(isOnline);
 
   /* ----- Shared trip selector hook ----- */
-  const { currentTripIdRef, handleClose } = useTripSelector(currentTripId);
+  const { currentTripIdRef } = useTripSelector(currentTripId);
 
   /* ----- Permissions hook ----- */
   const { permissions, permLoading, permError, loadPermissions } = usePermissions(
