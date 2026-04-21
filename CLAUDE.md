@@ -29,13 +29,14 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 - tp-* skills 透過 API 操作行程資料，不操作本地檔案
 - code 變更走 7 階段 pipeline
 - Agent 只用於 worktree 隔離，不用於角色派遣
+- 若 PR 未走 OpenSpec propose，ship 後須補 retroactive archive（參考 `openspec/changes/archive/2026-04-21-design-review-v2-retrofit/`）
 
 ## 專案結構
 
 ```
 src/entries/        main.tsx（SPA 單入口，BrowserRouter）
-src/pages/          TripPage  ManagePage  AdminPage
-src/components/     trip/（Timeline DayNav Hotel ...）  shared/（Icon Toast ErrorBoundary ...）
+src/pages/          TripPage  ManagePage（AI 編輯聊天）  AdminPage
+src/components/     trip/（Timeline DayNav Hotel TripMapRail ...）  shared/（Icon Toast ErrorBoundary ...）
 src/hooks/          useTrip  useApi  useDarkMode  usePrintMode  useOnlineStatus ...
 src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather ...
 src/types/          trip.ts  api.ts
@@ -50,6 +51,9 @@ openspec/           config.yaml  specs/  changes/
 
 - Cloudflare Pages + D1（trip-planner-db / staging）
 - 設計系統：`DESIGN.md`（暖色有機風、Apple HIG、6 套主題）
+- **Desktop 2-col layout（≥1024px）**：`grid-template-columns: clamp(375px, 30vw, 400px) 1fr`，左欄行程 timeline，右欄 `TripMapRail` sticky Leaflet 地圖；`<1024px` 單欄 mobile-first
+- **MobileBottomNav 4-tab IA（≤760px）**：`行程 / 地圖 / 訊息 / 更多`，全部 route-based（`/trip/:id` / `/trip/:id/map` / `/manage` / action-menu sheet）
+- **Day palette**：10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）用於地圖 polyline，對應 DESIGN.md Data Visualization 例外；UI chrome 仍嚴守 Ocean 單一 accent
 
 ## 資料架構（POI Schema）
 

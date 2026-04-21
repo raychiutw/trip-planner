@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.1] - 2026-04-21
+
+OpenSpec retrofit + 文件同步。Design review v2 的 3 個 PR（v2.0.1.1 / v2.0.1.2 / v2.0.2.0）未走 OpenSpec `propose` 流程，違反 CLAUDE.md 規範。本次事後補齊完整 spec trail，並把 CLAUDE.md 過時描述同步到 v2.0.2.0 實際狀態。對使用者無功能變更。
+
+### Docs
+- **`openspec/changes/archive/2026-04-21-design-review-v2-retrofit/`** — 完整 retrofit change archive：proposal / tasks (27 item × 3 phase) / design (14 題 Q&A 決策) / plan / progress.jsonl
+- **`openspec/specs/mobile-bottom-nav.md`** — 4-tab route-based IA 規格
+- **`openspec/specs/trip-map-rail.md`** — sticky desktop map rail 規格（≥1024px 斷點、clamp 左欄、Leaflet NaN guard）
+- **`openspec/specs/day-palette.md`** — 10 色 Tailwind -500 qualitative palette（DESIGN.md Data Visualization 例外的落地規格）
+
+### Changed
+- **CLAUDE.md**：`ManagePage` 標注 AI 編輯聊天（非「行程列表」）、加入 `TripMapRail` component、新增 Desktop 2-col layout 段落、新增 MobileBottomNav 4-tab 段落、開發規則加「未走 OpenSpec propose 須補 retroactive archive」條文
+
 ## [2.0.2.0] - 2026-04-21
 
 IA 重構 + desktop map rail。Design review v2 的最後一波，把行動 nav 從 5 tab 雜訊收斂到 4 個 route、desktop 從 sidebar 塞小卡改成 sticky 大地圖。使用者體感：
