@@ -36,6 +36,26 @@
 | footnote | 0.8125rem (13px) | 註腳、按鈕文字 |
 | caption | 0.75rem (12px) | 最小文字 |
 | caption2 | 0.6875rem (11px) | uppercase eyebrow（DAY 01 / STOPS 等） |
+| eyebrow | 0.625rem (10px) | DAY 01 等 uppercase label |
+
+## Type Scale (Mobile ≤760px)
+
+Mobile 閱讀環境字級做適當縮放，body 從 17px 降至 16px 改善行動閱讀體驗。
+
+| Token | Desktop | Mobile | 用途 |
+|-------|---------|--------|------|
+| large-title | 34px | 28px | 行程大標 |
+| title | 28px | 24px | Day hero 標題 |
+| title2 | 22px | 20px | Section 標題 |
+| title3 | 20px | 18px | 卡片標題 |
+| headline | 17px | 17px | Stop name、強調 |
+| body | 17px | 16px | 內文 |
+| callout | 16px | 15px | 次要內文 |
+| subheadline | 15px | 14px | 輔助 |
+| footnote | 13px | 13px | 註腳、按鈕 |
+| caption | 12px | 12px | 最小 |
+| caption2 | 11px | 11px | uppercase eyebrow 行標 |
+| eyebrow | 10px | 10px | DAY 01 等 uppercase label |
 
 ### Weight Scale
 | Token | Value | 用途 |
@@ -90,6 +110,10 @@
 
 ### Stop Type Color Convention
 設計稿「一個 accent」原則：**只有 sight（景點）、food（用餐）**用 Ocean accent，其餘類型（flight/hotel/walk/drive/shop/rest）一律 ink（`#222222`）。這讓 accent 仍保有「重點」的訊號意義，不會過度使用而失焦。
+
+### Data Visualization 例外（Color section 下）
+
+「單一 Ocean accent」原則有 **data visualization 例外**：地圖 polyline、chart series、時間軸 day separator 等 semantic encoding 可用 10 色 qualitative palette（Tailwind `{sky,teal,amber,rose,violet,lime,orange,cyan,fuchsia,emerald}-500`）。UI chrome（button、text、icon、active state）仍嚴守單 Ocean。
 
 ## Spacing
 
@@ -153,7 +177,7 @@
 
 ## Material & Effects
 
-- **Glass:** Topbar 專用 — `background: color-mix(in srgb, background 92%, transparent)` + `backdrop-filter: blur(14px)`。不再給 timeline card 用（設計稿強調乾淨、無模糊）。
+- **Glass:** Topbar、bottom-nav、sheet 統一使用 `backdrop-filter: blur(14px)`（`--blur-glass: 14px`）。三層 glass 元素保持一致強度，避免不同 blur 強度造成視覺雜亂。Sheet 拿掉 `saturate(1.8)` — 對齊 editorial clean direction，去除色飽和增強。不再給 timeline card 用（設計稿強調乾淨、無模糊）。
 - **Shadow scale（Airbnb 三層）：**
   | Token | Value | 用途 |
   |-------|-------|------|
@@ -258,3 +282,4 @@
 | 2026-04-19 | Stop card: 4-col grid | 取代原 polygon time flag；match 設計稿 `.rtl-stop` 排版 |
 | 2026-04-19 | Hairline borders | 取代 shadow 作為卡片區分，符合 Airbnb 規範 |
 | 2026-04-19 | Stop type accent rule: only sight/food | 「一個 accent」原則 — 避免七彩類型稀釋重點 |
+| 2026-04-21 | Glass unified 14px + DV color exception | 三層 glass（topbar/bottom-nav/sheet）統一 blur(14px)；sheet 去 saturate；DV 可用 10 色 qualitative palette |

@@ -33,8 +33,8 @@ describe('DESIGN.md — 完整性檢查', () => {
   });
 
   it('Material section 說明 sheet 拿掉 saturate', () => {
-    // 確認 sheet saturate 相關條文
-    expect(design).toMatch(/saturate.*拿掉|去除.*saturate|removed.*saturate/i);
+    // 確認 sheet saturate 相關條文（"拿掉 `saturate" 或 "去除 saturate"）
+    expect(design).toMatch(/拿掉.*saturate|去除.*saturate|removed.*saturate/i);
   });
 
   it('Decisions Log 有 Glass unified 14px 記錄', () => {
