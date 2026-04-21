@@ -40,4 +40,21 @@ describe('dayColor', () => {
   it('day 21 wraps back to index 0', () => {
     expect(dayColor(21)).toBe(DAY_PALETTE[0]);
   });
+
+  // PR3 review fix #1: guard against invalid inputs
+  it('dayColor(0) returns DAY_PALETTE[0] (guard: dayNum < 1)', () => {
+    expect(dayColor(0)).toBe(DAY_PALETTE[0]);
+  });
+
+  it('dayColor(-1) returns DAY_PALETTE[0] (guard: negative dayNum)', () => {
+    expect(dayColor(-1)).toBe(DAY_PALETTE[0]);
+  });
+
+  it('dayColor(NaN) returns DAY_PALETTE[0] (guard: NaN)', () => {
+    expect(dayColor(NaN)).toBe(DAY_PALETTE[0]);
+  });
+
+  it('dayColor(Infinity) returns DAY_PALETTE[0] (guard: Infinity)', () => {
+    expect(dayColor(Infinity)).toBe(DAY_PALETTE[0]);
+  });
 });
