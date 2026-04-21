@@ -89,7 +89,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['leaflet', 'supercluster'],
+    include: ['leaflet'],
   },
   server: {
     proxy: process.env.MOCK_API ? {} : {
