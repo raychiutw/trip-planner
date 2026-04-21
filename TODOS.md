@@ -9,6 +9,20 @@
 - **P3** — 想做再做（nice-to-have）
 - **P4** — 可能不做（長期觀察）
 
+## Lighthouse — Blocking gate（2 週 baseline 後）
+
+**Current**: Lighthouse CI 已建立（PR #8），所有 assertion 為 warn 模式。
+**Goal**: 2 週 baseline 資料收集後，將 warn 改為 error，設 blocking gate 阻擋效能 regression。
+**步驟**:
+1. 從 GitHub Actions artifact 收集 2 週 p50 / p95 數字
+2. 計算合理閾值（p50 + 10% buffer）
+3. `lighthouserc.json` assertions 由 `warn` 改 `error`
+4. 評估是否需要 PR preview URL integration（vs. master only）
+**Est**: 0.5 day CC（小）
+**Priority**: P2（2 週後升 P1）
+
+---
+
 ## OG Preview — Dynamic per-trip image
 
 **Current**: 所有 trip 用 static brand OG (`/og/tripline-default.png`).
