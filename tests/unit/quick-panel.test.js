@@ -18,10 +18,12 @@ function parseOverflowItems(source) {
   const blockEnd = source.indexOf('];', blockStart);
   const block = source.slice(blockStart, blockEnd + 2);
   const items = [];
-  const re = /\{\s*key:\s*'([^']+)',\s*icon:\s*'([^']+)',\s*label:\s*'([^']+)',\s*action:\s*'([^']+)'(?:,\s*requiresOnline:\s*(true|false))?\s*\}/g;
+  // Flexible regex: matches key/icon/label/action in any field order, optional extra fields
+  const re = /key:\s*'([^']+)'[^}]*?icon:\s*'([^']+)'[^}]*?label:\s*'([^']+)'[^}]*?action:\s*'([^']+)'/g;
   let m;
   while ((m = re.exec(block))) {
-    items.push({ key: m[1], icon: m[2], label: m[3], action: m[4], requiresOnline: m[5] === 'true' });
+    const requiresOnlineMatch = block.slice(m.index, m.index + 300).match(/requiresOnline:\s*(true|false)/);
+    items.push({ key: m[1], icon: m[2], label: m[3], action: m[4], requiresOnline: requiresOnlineMatch?.[1] === 'true' });
   }
   return items;
 }
@@ -31,12 +33,14 @@ function parseOverflowItems(source) {
 describe('OverflowMenu items', () => {
   const items = parseOverflowItems(overflowMenuTsx);
 
-  it('OVERFLOW_ITEMS 有 9 項', () => {
-    expect(items).toHaveLength(9);
+  it('OVERFLOW_ITEMS 有 12 項（PR3 新增 today-route/suggestions/flights）', () => {
+    // PR3 Item 8: 3 new desktop entry points added
+    expect(items).toHaveLength(12);
   });
 
-  it('包含所有預期 keys（出發/備案/交通/切換行程/外觀/4 匯出格式）', () => {
+  it('包含所有預期 keys（今日路線/AI建議/航班 + 出發/備案/交通/切換行程/外觀/4 匯出格式）', () => {
     const expected = [
+      'today-route', 'suggestions', 'flights',
       'checklist', 'backup', 'driving',
       'trip-select', 'appearance',
       'download-pdf', 'download-md', 'download-json', 'download-csv',
@@ -87,19 +91,13 @@ describe('TripPage Ocean topbar', () => {
     expect(tripPageTsx).toContain('AI 編輯');
   });
 
-  it('topbar 只保留「行程」tab，砍掉路線/航班/AI 建議三個死連結', () => {
-    // 行程 tab 保留
-    expect(tripPageTsx).toContain('ocean-nav-tabs');
-    // 三個死連結已移除
+  it('topbar 不含死連結（PR3 Item 9：ocean-nav-tabs shell 已移除）', () => {
+    // PR3 Item 9: dead tab bar shell completely removed from topbar
+    expect(tripPageTsx).not.toContain('ocean-nav-tabs');
+    // Dead sheet links not in topbar
     expect(tripPageTsx).not.toContain("setActiveSheet('today-route')");
     expect(tripPageTsx).not.toContain("setActiveSheet('flights')");
     expect(tripPageTsx).not.toContain("setActiveSheet('suggestions')");
-    // 對應 label 也不在 topbar nav 中（label 在 nav 外仍可存在，只要 topbar nav 沒有）
-    const navTabsStart = tripPageTsx.indexOf('ocean-nav-tabs');
-    const navTabsEnd = tripPageTsx.indexOf('</nav>', navTabsStart);
-    const navBlock = tripPageTsx.slice(navTabsStart, navTabsEnd);
-    expect(navBlock).not.toContain('路線');
-    expect(navBlock).not.toContain('AI 建議');
   });
 
   it('無 FAB / Edit FAB 殘留', () => {

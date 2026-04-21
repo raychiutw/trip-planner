@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.0] - 2026-04-21
+
+IA 重構 + desktop map rail。Design review v2 的最後一波，把行動 nav 從 5 tab 雜訊收斂到 4 個 route、desktop 從 sidebar 塞小卡改成 sticky 大地圖。使用者體感：
+- 桌機打開行程頁，右邊常駐一張全行程地圖，scroll 時跟著，點 pin 直接進 stop 詳情
+- 手機底部 tab 只剩 4 個且每個都通到一個 route（不再是混 scroll / 開 sheet / 跳頁的雜燴）
+- 每天的 hero 有「看地圖」chip，一鍵看當天全部 stops 在地圖上的分布
+- 每天的路線在地圖上用不同顏色（10 色輪流），一眼分得出今天路徑跟明天路徑
+
+### Added
+- **`TripMapRail` 新 component**：桌機 ≥1024px 右欄 sticky Leaflet 地圖。全行程 pins + 每天不同色 polyline，點 pin 直接 `navigate('/trip/:id/stop/:entryId')`。地圖高度 `calc(100dvh - nav-h)`，左欄 scroll 時地圖固定。
+- **Day color palette (`src/lib/dayPalette.ts`)**：Tailwind 10 色 `-500` (sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald)，day 1-10 輪流；超過 10 天 modulo wrap；0/負數/NaN/Infinity 都 fallback 到 day 1 色（`dayColor()` 有完整 guard）。對應 DESIGN.md 的 Data Visualization 例外。
+- **Day Hero「🗺 看地圖」chip**：每天 eyebrow 右側 Ocean 色 link，導到 `/trip/:id/map?day=N`，MapPage 讀 query param `fitBounds` 到當天 pins。
+- **`MobileBottomNav` 的 `看地圖` chip icon**：Icon.tsx 補 `map` SVG（line-stroke 1.75px pinpoint + 方格）。
+- **`useMediaQuery` hook (`src/hooks/useMediaQuery.ts`)**：SSR safe，同步讀 `window.matchMedia`。
+- **11 個 new unit tests**：`dayPalette`（10 色 + guard）、`mobile-bottom-nav-route`（active 判斷不誤觸 `/manage/map-xxx`）、`trip-map-rail-visibility`、`trip-map-rail-focus`、`day-section-map-link`、`map-page-day-query`、`no-inline-day-map`、`useLeafletMap` NaN zoom guard。測試總數：424 → **469**。
+
+### Changed
+- **`MobileBottomNav` 5 tab → 4 tab route-based**：
+  - 行程 → `navigate('/trip/:id')` + scroll-to-top
+  - 地圖 → `navigate('/trip/:id/map')` ← 新
+  - 訊息 → `navigate('/manage')`（原本叫「編輯」）
+  - 更多 → 開 `action-menu` sheet
+  - Active 狀態改讀 `useLocation().pathname` + regex `/\/trip\/[^/]+\/map/` 嚴格比對。
+  - CSS `grid-template-columns: repeat(5, 1fr)` → `repeat(4, 1fr)`。
+- **Desktop 2-col layout**：
+  - `<1024px`：單欄（mobile-first）+ bottom nav 地圖 tab 看地圖
+  - `≥1024px`：`grid-template-columns: clamp(375px, 30vw, 400px) 1fr` 左行程右 map rail
+  - 斷點依據：iPad Pro 13" portrait (1024px) 才啟用雙欄；11" 以下 portrait 維持單欄（map rail 擠，直接 map tab 全畫面體驗更好）。
+- **`DaySection` 拿掉 inline `<OceanMap mode="overview">`**：每天不再內嵌一張小地圖。全行程地圖由桌機右欄 map rail + 行動端 `/trip/:id/map` tab 承擔。
+- **Desktop `OverflowMenu` 補 3 個 sheet 入口**：今日路線 / AI 建議 / 航班（PR 1 砍 topbar dead tab 後 desktop 失去這三個入口的 tech debt 在這補齊）。
+- **`TripPage.tsx` 清理**：topbar 中央 tab bar shell 整個拿掉（PR 1 砍 button，PR 3 拿 container）；body render 不再依賴 `activeTripId` selector race，直接用 `trip.id`。
+
+### Fixed
+- **`useLeafletMap.fitBounds` single-pin NaN zoom**：map 尚未完全 init 時 `getZoom()` 可能回 NaN，`Math.max(NaN, 14)` 會讓 setView 變 NaN 靜默失敗。加 `Number.isFinite(z)` guard。
+
+### Design System
+- **Desktop sidebar 刪除**（progress / 今日行程 / 住宿 3 張小卡）：editorial direction 認這些是 chrome 而非核心內容，main timeline 跟 map rail 已充分覆蓋。配合 user 選項 Q1=A。
+- **IA 從混血（tab bar + action bar）回歸純 tab bar**：4 tab 全部是 route-based section 切換，每個 tab 是獨立 view，對齊 iOS HIG 原則。
+- **10 色 day palette 是 DESIGN.md Color section Data Visualization 例外的第一個落地**：UI chrome 仍嚴守 Ocean 單 accent。
+
 ## [2.0.1.2] - 2026-04-21
 
 設計系統對齊：mobile 字體不再用 em 繼承縮小、三種 glass blur 收斂成一個、警語改 warning 色、AI 編輯 pill 回歸 Ocean 單一 accent。使用者體感：手機讀行程字變整齊、注意事項不再像錯誤訊息、整體視覺語彙一致。

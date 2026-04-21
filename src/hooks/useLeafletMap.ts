@@ -122,7 +122,10 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
     if (!map || latlngs.length === 0) return;
     if (latlngs.length === 1) {
       const only = latlngs[0];
-      if (only) map.setView(only, Math.max(map.getZoom(), 14));
+      if (only) {
+        const z = map.getZoom();
+        map.setView(only, Number.isFinite(z) ? Math.max(z, 14) : 14);
+      }
       return;
     }
     const bounds = L.latLngBounds(latlngs);

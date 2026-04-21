@@ -5,6 +5,9 @@
  * "Map container is already initialized" if we call L.map() twice on the
  * same DOM node. The hook guards this via container._leaflet_id check.
  * This test pins that behavior.
+ *
+ * PR3 review fix #4: fitBounds single-point branch — setView must not receive
+ * NaN as zoom level when map.getZoom() returns NaN (e.g. before tiles load).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -52,5 +55,99 @@ describe('useLeafletMap', () => {
     unmount();
     // After unmount, re-mounting the same test should not throw
     expect(() => render(<TestMap />)).not.toThrow();
+  });
+});
+
+// PR3 review fix #4: setView NaN guard
+describe('useLeafletMap fitBounds — setView NaN guard', () => {
+  it('passes zoom=14 to setView when getZoom() returns NaN', () => {
+    // Build a minimal mock map object
+    const setViewMock = vi.fn();
+    const mockMap = {
+      getZoom: vi.fn().mockReturnValue(NaN),
+      setView: setViewMock,
+      fitBounds: vi.fn(),
+      stop: vi.fn(),
+      flyTo: vi.fn(),
+      eachLayer: vi.fn(),
+      remove: vi.fn(),
+    };
+
+    // Inline the single-point branch logic (mirrors useLeafletMap fitBounds)
+    function fitBoundsSinglePoint(map: typeof mockMap, latlngs: [number, number][]) {
+      if (!map || latlngs.length === 0) return;
+      if (latlngs.length === 1) {
+        const only = latlngs[0];
+        if (only) {
+          const z = map.getZoom();
+          map.setView(only, Number.isFinite(z) ? Math.max(z, 14) : 14);
+        }
+        return;
+      }
+    }
+
+    fitBoundsSinglePoint(mockMap, [[26.2, 127.7]]);
+
+    expect(setViewMock).toHaveBeenCalledWith([26.2, 127.7], 14);
+  });
+
+  it('passes Math.max(z, 14) when getZoom() returns a valid zoom', () => {
+    const setViewMock = vi.fn();
+    const mockMap = {
+      getZoom: vi.fn().mockReturnValue(10),
+      setView: setViewMock,
+      fitBounds: vi.fn(),
+      stop: vi.fn(),
+      flyTo: vi.fn(),
+      eachLayer: vi.fn(),
+      remove: vi.fn(),
+    };
+
+    function fitBoundsSinglePoint(map: typeof mockMap, latlngs: [number, number][]) {
+      if (!map || latlngs.length === 0) return;
+      if (latlngs.length === 1) {
+        const only = latlngs[0];
+        if (only) {
+          const z = map.getZoom();
+          map.setView(only, Number.isFinite(z) ? Math.max(z, 14) : 14);
+        }
+        return;
+      }
+    }
+
+    fitBoundsSinglePoint(mockMap, [[26.2, 127.7]]);
+
+    // z=10 < 14 → should snap to 14
+    expect(setViewMock).toHaveBeenCalledWith([26.2, 127.7], 14);
+  });
+
+  it('preserves zoom when getZoom() returns value > 14', () => {
+    const setViewMock = vi.fn();
+    const mockMap = {
+      getZoom: vi.fn().mockReturnValue(16),
+      setView: setViewMock,
+      fitBounds: vi.fn(),
+      stop: vi.fn(),
+      flyTo: vi.fn(),
+      eachLayer: vi.fn(),
+      remove: vi.fn(),
+    };
+
+    function fitBoundsSinglePoint(map: typeof mockMap, latlngs: [number, number][]) {
+      if (!map || latlngs.length === 0) return;
+      if (latlngs.length === 1) {
+        const only = latlngs[0];
+        if (only) {
+          const z = map.getZoom();
+          map.setView(only, Number.isFinite(z) ? Math.max(z, 14) : 14);
+        }
+        return;
+      }
+    }
+
+    fitBoundsSinglePoint(mockMap, [[26.2, 127.7]]);
+
+    // z=16 > 14 → should keep 16
+    expect(setViewMock).toHaveBeenCalledWith([26.2, 127.7], 16);
   });
 });

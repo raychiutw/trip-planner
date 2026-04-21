@@ -693,12 +693,13 @@ body.dark {
         .ocean-day { scroll-margin-top: 190px; }
     }
 
-    /* Mobile bottom tab bar (只在 ≤760px 顯示) */
+    /* Mobile bottom tab bar (只在 ≤760px 顯示) — PR3: 4-tab route-based */
     .ocean-bottom-nav { display: none; }
     @media (max-width: 760px) {
         .ocean-bottom-nav {
             position: fixed; left: 0; right: 0; bottom: 0;
-            display: grid; grid-template-columns: repeat(5, 1fr);
+            /* PR3 Q3=B: 5→4 tabs */
+            display: grid; grid-template-columns: repeat(4, 1fr);
             background: color-mix(in srgb, var(--color-background) 97%, transparent);
             backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
             border-top: 1px solid var(--color-border);
@@ -707,7 +708,9 @@ body.dark {
         }
         .ocean-bottom-nav-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 3px; padding: 13px 4px; min-height: 44px;
+            gap: 3px; padding: 13px 4px;
+            /* PR3 Item 10: Apple HIG minimum tap target */
+            min-height: 44px; /* = var(--spacing-tap-min) */
             background: transparent; border: none; cursor: pointer;
             color: var(--color-muted); font: inherit;
             transition: color var(--transition-duration-fast) var(--transition-timing-function-apple);
