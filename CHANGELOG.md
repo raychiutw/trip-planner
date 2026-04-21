@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.1.1] - 2026-04-21
+
+Design review 後的 Tier 0 bug fix：補缺 icon、清死連結、修字體破洞、修 user-trap。使用者體感：底部 5 個 tab 每個都有 icon、topbar 不再有點了沒反應的按鈕、權限管理頁點 logo 可回首頁。
+
+### Fixed
+- **MobileBottomNav「編輯」「更多」終於有 icon**：原本這兩個 tab 只有文字（10px 極小），另外三個（行程/建議/航班）有 icon。現在整排一致。
+- **Topbar 三個死連結拿掉**：「路線 / 航班 / AI 建議」點下去沒反應（router 沒掛對應路由），整個拿掉避免誤導。原本開啟的 sheet 仍可從底部 bar 觸發。
+- **AdminPage 不再 dead-end**：`/admin` 原本右上有 × 關閉但那是獨立頁不是 modal，按瀏覽器返回可能跳外站。改：`TriplineLogo` 包 `<Link to="/">`，點 logo 可回首頁（所有頁面通用）；AdminPage 右上 × 移除，避免 modal/page 混淆。
+- **非整數字體破洞**：DayNav eyebrow 9.5px、day-chip area 11.5px、hero eyebrow 10.5px、InfoBox heading 10.5px、Manage hero eyebrow 10.5px 改為整數 10/11px 對齊 DESIGN.md type scale。原本因 `em` 繼承失控產生的 subpixel render 不一致消失。
+
+### Changed
+- **`TriplineLogo` 統一變成 `<Link to="/">`**：所有頁面（ManagePage / AdminPage / TripPage / MapPage / StopDetailPage）左上 logo 都可點回首頁。對齊 Airbnb / NYTimes 等 editorial 網站慣例。
+- **`PageNav.onClose` 改 optional**：modal-like 頁面傳 `onClose` 才會 render × 按鈕，standalone page 省略即可避免語意混淆。
+- **`Icon.tsx`**：補 `edit`（鉛筆）與 `menu`（三橫線）SVG；刪除重複且未使用的 `pencil` entry。
+
+### Added
+- **18 個新單元測試**：`tripline-logo-link`（link 導向 `/`）、`icon-edit-menu`（edit/menu SVG 非空）、`mobile-bottom-nav-entries`（5 個 tab 全 render）、`no-fractional-fontsize`（CSS 非整數 px guard）、`trip-page-sheet-default`（RTL mount 驗 sheet 預設關）、`admin-page`（TriplineLogo link 可達）。測試總數 370 → 388。
+
+### Dev infra
+- **`vite.config.ts` 加 `optimizeDeps.include: ['leaflet']`**：解決 pull 後 dev server 無法 resolve `leaflet` 卡住 OceanMap 的問題。leaflet 是 CJS/ESM 混用包，vite 8 的 on-demand 自動 prebundle 觸發 race；`supercluster` 是純 ESM 不需手動 include。
+
+### Known limitations（留 PR 3）
+- **Desktop 失去 `today-route` / `suggestions` / `flights` 3 sheet 入口**：目前只有 MobileBottomNav 能開啟（mobile 仍正常）。PR 3 IA 重構會改成 4-tab route (`行程 / 地圖 / 訊息 / 更多`)，完整補 desktop 入口。
+- **font-size 目前仍 hardcode px**：對齊 DESIGN.md type scale 但還沒全部用 CSS token。PR 2 Typography pass 會補 `--font-size-eyebrow` 等 token，`tokens.css:304` 的 `border-radius: 4px` pre-existing 未用 `var(--radius-xs)` 也一併處理。
+- **`.ocean-bottom-nav-btn` padding 41px < 44px Apple HIG**：pre-existing，PR 2/3 會一起修到 ≥44px。
+
 ## [2.0.1.0] - 2026-04-20
 
 Ocean v2 發布後的 `/simplify` code health 循環：消除重複、收斂 helper、優化地圖效能、補足單元測試。使用者體感：地圖切換景點反應更快、無視覺變化。
