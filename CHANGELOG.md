@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.4] - 2026-04-21
+
+OG link preview MVP。行程連結在 LINE / iMessage / Slack / Twitter 分享時終於有預覽（藍底 + Tripline 品牌 + 副標），不再是白板。autoplan CEO retro 發現的「Tripline 唯一 distribution channel 完全沒開發」的問題。
+
+### Added
+- **Static brand OG image** (`public/og/tripline-default.png`)：1200×630 PNG，Tripline Ocean 藍底 + 白字大標「Tripline」+ 副標「和旅伴一起查看精美行程」+ 裝飾 dot pattern。用 `scripts/generate-og-image.mjs` (sharp + inline SVG) 在 build 時或手動產生。
+- **`index.html` OG + Twitter card meta**：完整 `og:type / site_name / title / description / image / image:width / image:height / url` + `twitter:card=summary_large_image / title / description / image`。
+- **`_headers` `/og/*` Cache-Control**：`public, max-age=86400` + `X-Content-Type-Options: nosniff`，OG image 24h CDN cache。
+- **`TODOS.md` dynamic OG roadmap**：Per-trip 動態 OG image (行程名 + 天數 + 目的地) 的 future scope + blockers (Cloudflare Workers 上 @vercel/og 相容性 + 中文字型載入 + KV cache)。
+
+### Tests
+- `og-image.test.ts` (PNG 存在 + size guard)、`og-meta.test.ts` (8 og: props + twitter card)、`og-headers.test.ts` (_headers rule)
+- 522 → **539** (+17) 測試總數
+
 ## [2.0.2.3] - 2026-04-21
 
 autoplan retrospective 發現的 11 項修復：4 個 regression/假對齊 + 7 個 quality/perf。重要體感：

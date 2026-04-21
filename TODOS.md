@@ -9,6 +9,19 @@
 - **P3** — 想做再做（nice-to-have）
 - **P4** — 可能不做（長期觀察）
 
+## OG Preview — Dynamic per-trip image
+
+**Current**: 所有 trip 用 static brand OG (`/og/tripline-default.png`).
+**Goal**: 每個 trip 有動態 OG image 顯示行程名 + 天數 + 目的地.
+**Blockers**:
+- Cloudflare Workers 的 Satori/@vercel/og 相容性驗證
+- 字型（Noto Sans TC）在 Worker 載入
+- Cache strategy（/api/og/:tripId → KV cache 24h）
+**Est**: 1 day CC (medium)
+**Priority**: Medium (static MVP 已 unblock distribution)
+
+---
+
 ## Observability
 
 ### `api_logs` source 欄位的 scheduler / companion 仍是 self-reported
