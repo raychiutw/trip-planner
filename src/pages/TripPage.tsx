@@ -617,7 +617,9 @@ export default function TripPage() {
                 {footerData && <Footer footer={footerData} />}
               </div>
               {/* Desktop Map Rail — right column, sticky, ≥1024px only */}
+              {/* key={trip.id} 確保切換行程時重掛（fitDoneRef reset） */}
               <TripMapRail
+                key={trip.id}
                 pins={allPins}
                 tripId={trip.id}
                 pinsByDay={pinsByDay}
