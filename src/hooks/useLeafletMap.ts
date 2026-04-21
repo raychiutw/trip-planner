@@ -86,6 +86,11 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
     setMap(instance);
 
     return () => {
+      // Stop any in-flight pan/zoom animation before teardown.
+      // Without this, a queued _onZoomTransitionEnd setTimeout can fire
+      // after map.remove() clears panes, throwing "_leaflet_pos" TypeError
+      // (seen on iOS Chrome when navigating away mid-animation).
+      instance.stop();
       instance.remove();
       setMap(null);
     };
