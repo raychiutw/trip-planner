@@ -1,0 +1,4 @@
+{"ts":"2026-04-20T14:28:00Z","feature":"F005","step":"red","commit":"ff7c287","desc":"OverflowMenu needsDivider 行為斷言測試"}
+{"ts":"2026-04-20T14:28:30Z","feature":"F005","step":"green","commit":"3dda7c5","desc":"移除 action branch，簡化 needsDivider 邏輯"}
+{"ts":"2026-04-20T14:29:00Z","feature":"F004","step":"red","commit":"6feda4d","desc":"MobileBottomNav without onClearSheet 不 crash 測試"}
+{"ts":"2026-04-20T14:29:30Z","feature":"F004","step":"green","commit":"6feda4d","desc":"onClearSheet 已為 optional（介面已正確，無需額外修改）"}
