@@ -1,0 +1,3 @@
+{"f":"F001","phase":"red","sha":"0c95ece","date":"2026-04-20","note":"tests/unit/timelineUtils.test.ts 新建，含 F001-F004 全部紅測試（25 tests）"}
+{"f":"F001","phase":"green","sha":"6f94cb6","date":"2026-04-20","note":"src/lib/timelineUtils.ts 新建，export ParsedTime / parseTimeRange / formatDuration / deriveTypeMeta"}
+{"f":"F002","phase":"green","sha":"ca1f516","date":"2026-04-20","note":"TimelineEvent.tsx + TimelineRail.tsx 移除本地三函式，改 import from timelineUtils；F003 JSDoc 更新；F004 index prop 移除。tsc 0 errors，577 tests passed"}
