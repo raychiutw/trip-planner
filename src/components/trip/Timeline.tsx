@@ -1,9 +1,8 @@
 /* ===== Timeline Component ===== */
 
 import { useMemo } from 'react';
-import TimelineEvent, { type TimelineEntryData } from './TimelineEvent';
+import { type TimelineEntryData } from './TimelineEvent';
 import TimelineRail from './TimelineRail';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 interface TimelineProps {
   events: TimelineEntryData[];
@@ -32,9 +31,6 @@ function parseEndMinutes(time?: string | null): number {
 }
 
 export default function Timeline({ events, dayDate, localToday }: TimelineProps) {
-  /** ≤760px: compact rail; else: 4-col stop card. Matches tokens.css mobile breakpoint. */
-  const isMobile = useMediaQuery('(max-width: 760px)');
-
   const isToday = useMemo(() => {
     const today = localToday ?? new Date().toISOString().split('T')[0];
     return dayDate === today;
@@ -61,21 +57,5 @@ export default function Timeline({ events, dayDate, localToday }: TimelineProps)
 
   if (!events || events.length === 0) return null;
 
-  if (isMobile) {
-    return <TimelineRail events={events} nowIndex={nowIndex} />;
-  }
-
-  return (
-    <div className="relative mt-3">
-      {events.map((ev, i) => (
-        <TimelineEvent
-          key={ev.id ?? i}
-          entry={ev}
-          index={i + 1}
-          isNow={isToday && i === nowIndex}
-          isPast={isToday && nowIndex >= 0 && i < nowIndex}
-        />
-      ))}
-    </div>
-  );
+  return <TimelineRail events={events} nowIndex={nowIndex} />;
 }

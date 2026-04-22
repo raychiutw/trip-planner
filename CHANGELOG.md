@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.7] - 2026-04-22
+
+Design-review 發現桌機 vs 手機行程一覽用完全不同的 component 渲染（違反「同 DOM tree、CSS 分流 layout」原則），改成統一使用 `TimelineRail`。使用者體感：桌機版時間軸跟手機一樣簡潔 editorial，不再是 4-col stop card。
+
+### Changed
+- **`Timeline.tsx` 刪除 `useMediaQuery('(max-width: 760px)')` 分支**：原本 mobile 用 `TimelineRail`、desktop 用 `TimelineEvent` (4-col stop card) 兩個完全不同的 344 行 component。桌機左欄在 PR 3 (v2.0.2.0) 後已 `clamp(375px, 30vw, 400px)` 跟 mobile 同寬，TimelineRail 即為此寬度設計的 editorial compact rail，直接統一即可。
+- **`TimelineEvent.tsx` 保留**：僅 `TimelineEntryData` / `TravelData` type export 仍被 `TimelineRail` / `TodayRouteSheet` / `mapDay.ts` 使用。component 本身變成 orphan export（無 JSX 呼叫處），可未來另一個 PR 清理。
+
+### Fixed
+- **Desktop/mobile timeline 結構不一致**：同一個 day section 在 desktop 1440 跟 mobile 375 會 render 出不同 DOM tree。現在統一。
+
 ## [2.0.2.6] - 2026-04-21
 
 stale PR #179 抽出的 2 個實質 fix，rebased 到 latest master 後重發。API error logging 更詳細、tripExport 從 N+1 改 batch。
