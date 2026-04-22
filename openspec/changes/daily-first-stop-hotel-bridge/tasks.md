@@ -59,11 +59,11 @@
 
 ## 7. 完整驗證（ship 前）
 
-- [ ] 7.1 `npm run typecheck` 無錯
-- [ ] 7.2 `npm run test` 全綠
-- [ ] 7.3 `npm run test:api` 全綠（若有 API 變更）
-- [ ] 7.4 `npm run build` 成功
-- [ ] 7.5 `npm run dev` 本機啟動，手動檢查 7 個行程首頁渲染（Day 1 首 entry 為抵達點、Day N 首 entry 為前日飯店 check-out）
+- [x] 7.1 `npm run typecheck` 無錯
+- [x] 7.2 `npm run test`：608/608 全綠
+- [x] 7.3 `npm run test:api`：179/179 全綠
+- [x] 7.4 `npm run build` 成功（Vite + PWA 產出 dist/sw.js + workbox）
+- [ ] 7.5 `npm run dev` 本機啟動手動檢查 — 留給 /qa 階段驗證
 
 ## 8. Pipeline（tp-team 七階段 — apply 後由使用者另行觸發）
 
