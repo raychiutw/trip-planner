@@ -68,6 +68,14 @@ describe('formatDuration', () => {
   it('120 → "2h"', () => {
     expect(formatDuration(120)).toBe('2h');
   });
+
+  it('NaN → "" (malformed time input guard)', () => {
+    expect(formatDuration(NaN)).toBe('');
+  });
+
+  it('Infinity → ""', () => {
+    expect(formatDuration(Infinity)).toBe('');
+  });
 });
 
 describe('deriveTypeMeta', () => {

@@ -42,10 +42,10 @@ export function parseTimeRange(timeStr?: string | null): ParsedTime {
 
 /**
  * 格式化分鐘數為可讀字串。
- * 0 或負數回傳 ""；60 → "1h"；90 → "1h 30m"；45 → "45m"。
+ * 非有限數（NaN/Infinity）、0、負數一律回 ""；60 → "1h"；90 → "1h 30m"；45 → "45m"。
  */
 export function formatDuration(mins: number): string {
-  if (mins <= 0) return '';
+  if (!Number.isFinite(mins) || mins <= 0) return '';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (h > 0 && m > 0) return `${h}h ${m}m`;
