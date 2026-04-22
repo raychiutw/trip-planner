@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.2.8] - 2026-04-22
+
+PR 11 post-hoc audit 發現的 tech debt 清理。純 refactor + 1 個 silent bug fix（malformed time 格式顯示「NaNm」字串）。使用者體感：當 time 欄位意外格式錯時不再顯示 "NaNm" 垃圾文字。
+
+### Added
+- **`src/lib/timelineUtils.ts`** — 抽出 `parseTimeRange` / `formatDuration` / `deriveTypeMeta` / `parseStartMinutes` / `parseEndMinutes` 共用 util。消除 `TimelineEvent.tsx` / `TimelineRail.tsx` / `Timeline.tsx` 三檔 ~80 行重複邏輯。
+- **`tests/unit/timelineUtils.test.ts`** — 43 個 assertions 含 edge cases（null / empty / malformed / 跨日 / NaN / Infinity）+ source-match guards（防止本地 function 定義回流）。
+
+### Fixed
+- **`formatDuration(NaN)` → `"NaNm"` 顯示 bug**：`/review` 發現 parseTimeRange 遇 malformed time（例 `"10:ab-11:00"`）時 parseInt 回 NaN，duration → NaN，`formatDuration` 計算結果 `"NaNm"` 被 render 到 stop card。加 `Number.isFinite` guard 覆蓋 NaN / Infinity / -Infinity。
+
+### Changed
+- **`TimelineRail.tsx` JSDoc** — 移除過時的「mobile-only compact timeline（設計稿 design_mobile.jsx）」描述，改「桌機與手機統一 compact editorial rail（PR 11 / v2.0.2.7 後）」反映實況。
+- **`TimelineEvent.tsx` 刪 unused `index` prop** — 介面宣告但 function body 未使用，dead prop 清理。
+
+### Process
+- **OpenSpec SDD proper flow**：`openspec/changes/pr12-timeline-utils/` propose → apply（TDD F001-F005 紅→綠）→ archive。補償 PR #213 跳過 pipeline 鐵律（/simplify / /tp-code-verify / /review / /cso --diff 全跑）。
+- **/simplify 3-agent parallel** 發現：Timeline.tsx 的 parseStart/EndMinutes 原本漏抽（F005 補齊）、ParsedTime interface 改 internal（YAGNI）。
+- **/review** 抓到 NaN 顯示 bug（本次 ship 重點 fix）。
+- **Tests**：577 → **595 tests**（+18）。
+
 ## [2.0.2.7] - 2026-04-22
 
 Design-review 發現桌機 vs 手機行程一覽用完全不同的 component 渲染（違反「同 DOM tree、CSS 分流 layout」原則），改成統一使用 `TimelineRail`。使用者體感：桌機版時間軸跟手機一樣簡潔 editorial，不再是 4-col stop card。
