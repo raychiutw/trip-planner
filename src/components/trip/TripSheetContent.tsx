@@ -9,14 +9,12 @@ import DocCard from './DocCard';
 import FlightSheet from './FlightSheet';
 import SuggestionSheet from './SuggestionSheet';
 import TodayRouteSheet from './TodayRouteSheet';
-import { TripDrivingStatsCard } from './DrivingStats';
 import Icon from '../shared/Icon';
 import { toTimelineEntry } from '../../lib/mapDay';
 import { COLOR_MODE_OPTIONS } from '../../lib/appearance';
 import type { Day, TripListItem } from '../../types/trip';
 import type { DocEntry } from './DocCard';
 import type { ColorMode } from '../../hooks/useDarkMode';
-import type { TripDrivingStats } from '../../lib/drivingStats';
 
 /* ===== Sheet content config ===== */
 
@@ -26,13 +24,9 @@ export const SHEET_TITLES: Record<string, string> = {
   backup: '備案',
   emergency: '緊急聯絡',
   suggestions: 'AI 建議',
-  driving: '交通統計',
   'today-route': '今日路線',
   'trip-select': '切換行程',
   appearance: '外觀設定',
-  prep: '行前準備',
-  'emergency-group': '緊急應變',
-  'ai-group': 'AI 分析',
   'action-menu': '更多功能',
 };
 
@@ -43,7 +37,6 @@ const LOADING_CLASS = 'text-center p-10 text-muted';
 interface TripSheetContentProps {
   activeSheet: string | null;
   docs: Record<string, unknown>;
-  tripDrivingStats: TripDrivingStats | null;
   currentDay: Day | null;
   sheetTrips: TripListItem[];
   sheetTripsLoading: boolean;
@@ -61,10 +54,9 @@ interface TripSheetContentProps {
   isOnline?: boolean;
 }
 
-/** Items rendered in the action-menu sheet's 3×3 grid. */
+/** Items rendered in the action-menu sheet's 2-column grid (4 rows × 2 cols). */
 const ACTION_MENU_GRID: { key: string; icon: string; label: string; requiresOnline?: boolean }[] = [
   { key: 'flights',      icon: 'plane',        label: '航班' },
-  { key: 'driving',      icon: 'car',          label: '交通' },
   { key: 'today-route',  icon: 'route',        label: '路線' },
   { key: 'checklist',    icon: 'check-circle', label: '清單' },
   { key: 'emergency',    icon: 'emergency',    label: '緊急' },
@@ -87,7 +79,6 @@ const ACTION_MENU_EXPORTS: { key: string; icon: string; label: string; action: '
 export default function TripSheetContent({
   activeSheet,
   docs,
-  tripDrivingStats,
   currentDay,
   sheetTrips,
   sheetTripsLoading,
@@ -130,36 +121,6 @@ export default function TripSheetContent({
         return currentDay && currentDay.timeline.length > 0
           ? <TodayRouteSheet events={currentDay.timeline.map((e) => typeof e === 'object' && e !== null ? toTimelineEntry(e) : toTimelineEntry({}))} />
           : <p>無行程資料</p>;
-      case 'driving':
-        return tripDrivingStats
-          ? <TripDrivingStatsCard tripStats={tripDrivingStats} />
-          : <p>無交通資料</p>;
-      /* Grouped content */
-      case 'prep':
-        return (
-          <>
-            {(['flights', 'checklist'] as const).map(k => {
-              const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
-              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
-            })}
-          </>
-        );
-      case 'emergency-group':
-        return (
-          <>
-            {(['emergency', 'backup'] as const).map(k => {
-              const d = docs[k] as { title?: string; entries?: DocEntry[] } | undefined;
-              return <div key={k} className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>;
-            })}
-          </>
-        );
-      case 'ai-group':
-        return (
-          <>
-            {(() => { const d = docs.suggestions as { title?: string; entries?: DocEntry[] } | undefined; return <div className="bg-secondary rounded-md p-4 mb-3">{d?.entries?.length ? <DocCard entries={d.entries} /> : <p className="text-muted">尚無資料</p>}</div>; })()}
-            <div className="bg-secondary rounded-md p-4 mb-3">{tripDrivingStats ? <TripDrivingStatsCard tripStats={tripDrivingStats} /> : <p>無交通資料</p>}</div>
-          </>
-        );
       /* Settings sheets */
       case 'trip-select':
         return (
@@ -212,7 +173,7 @@ export default function TripSheetContent({
       case 'action-menu':
         return (
           <div className="max-w-[520px] mx-auto p-padding-h">
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-2 gap-2 mb-4">
               {ACTION_MENU_GRID.map((g) => {
                 const disabled = !!g.requiresOnline && !isOnline;
                 return (
@@ -256,7 +217,7 @@ export default function TripSheetContent({
       default:
         return null;
     }
-  }, [activeSheet, docs, tripDrivingStats, currentDay, sheetTrips, sheetTripsLoading, activeTripId, onTripChange, colorMode, setColorMode, onOpenSheet, onPrint, onDownload, isOnline]);
+  }, [activeSheet, docs, currentDay, sheetTrips, sheetTripsLoading, activeTripId, onTripChange, colorMode, setColorMode, onOpenSheet, onPrint, onDownload, isOnline]);
 
   return <>{content}</>;
 }

@@ -85,8 +85,12 @@ user-invocable: true
    POST 會自動建立 trips + trip_days + trip_permissions 記錄。回傳 `{ ok: true, tripId, daysCreated }`。
 4. 為每一天產生完整內容（JSON 格式），包含：
    - timeline entries（含 type、title、time、description、location、travel、hotels 等）
-   - **每天必建三餐 entry**（使用者可自行刪除不需要的）：
-     - 早餐 `08:00`（title: `"早餐"`，附 restaurants 推薦；飯店含早則在 description 註明）
+   - **每日首 timeline entry（R19，見 tp-quality-rules）**：
+     - **Day 1**：首 entry 為抵達點（機場 / 車站 / 碼頭），詢問使用者抵達時間與地點；`title` 含「抵達」；`location` 指向交通節點 POI
+     - **Day N（N ≥ 2）**：首 entry 為 Day N-1 住宿 `day.hotel` 的**同 POI** check-out entry；`time` 優先用 `hotel.checkout`（查得到時），否則預設 `"07:00"`；`title` 含「退房」或「Check-out」；**不複製** hotel 的 `infoBoxes`；若 Day N-1 `hotel.breakfast.included === true`，`description` 開頭 inject `"🍳 早餐：{breakfast.note || '飯店自助'}"`（R8 搭配）
+     - **最後一天**：首 entry 同 Day N（前日飯店 check-out）；尾端仍不設 `day.hotel`（沿用 R0）
+   - **每天必建午/晚餐 entry**（早餐不強制；使用者可自行刪除不需要的）：
+     - 早餐（若在飯店吃，由 `day.hotel.breakfast` 表達；若在飯店外吃，才產生正式早餐 entry）
      - 午餐 `12:00`（title: `"午餐"`，附 3 家 restaurants 推薦）
      - 晚餐 `18:00`（title: `"晚餐"`，附 3 家 restaurants 推薦）
    - 三餐 entry 的 travel：以 sort_order=0（首選）餐廳的 location 計算車程，而非 entry 本身的 location

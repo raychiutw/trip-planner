@@ -46,6 +46,11 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 
    所有寫入操作須帶認證 headers（呼叫格式見 tp-shared/references.md）。
 5. **location 座標檢查（鐵律）**：檢查所有實體地點 entry 是否有 lat/lng 座標。缺座標的 entry 用 Google Maps 查詢 `maps` 欄位文字取得 lat/lng，PATCH 回填。規則見 tp-shared/references.md §1b
+5b. **R19 每日首 entry 檢查（鐵律，見 tp-quality-rules）**：驗證每天 `timeline[0]` 是否合 R19。
+    - Day 1 首 entry 應為抵達點（含「抵達」關鍵字 + 指向交通節點 POI），不合則插入
+    - Day N（N ≥ 2）首 entry 應指向 Day N-1 `day.hotel` 同 POI，`title` 含 check-out 語意；不合則**在 timeline 頂端插入** leading entry（time 優先用 Day N-1 `hotel.checkout`，無則 `"07:00"`），不複製 `hotel.infoBoxes`；若 Day N-1 `hotel.breakfast.included === true`，description inject `"🍳 早餐：{breakfast.note || '飯店自助'}"`
+    - 若 Day N 目前的 `timeline[0]` 已是早餐或景點，保留原 entry（往後順延），新插入的 check-out entry 放 index 0
+    - 插入後立即重算受影響的 travel（見 step 6）
 6. **travel 重算（鐵律）**：驗證所有 travel 語意是否正確（travel = 從此地出發去下一站）。修正放反、缺漏的 travel，不改路線順序。meal entry 用首選餐廳（sort_order=0）的 lat/lng 計算前後車程。規則見 tp-shared/references.md §4
 7. **Doc 連動（鐵律）**：檢視所有 5 種 doc（checklist/backup/suggestions/flights/emergency），更新與修正內容不一致的部分（規則見 tp-shared/references.md「Doc 連動規則」）
 8. **tp-check（after-fix）**：執行完整模式 report，確認修正結果

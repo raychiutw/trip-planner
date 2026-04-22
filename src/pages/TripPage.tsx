@@ -11,7 +11,6 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
 import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripFormat } from '../lib/tripExport';
-import { calcTripDrivingStats } from '../lib/drivingStats';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import DayNav from '../components/trip/DayNav';
@@ -458,12 +457,6 @@ export default function TripPage() {
     return () => window.removeEventListener('scroll', throttledScroll);
   }, [loading, dayNums, switchDay, isPrintMode]);
 
-  /* --- All loaded days as Day[] (#4: allDays values are already Day) --- */
-  const loadedDays = useMemo(
-    () => Object.values(allDays),
-    [allDays],
-  );
-
   /* --- Stops count per day for DayNav progress marks --- */
   const stopsByDay = useMemo(() => {
     const map: Record<number, number> = {};
@@ -473,12 +466,6 @@ export default function TripPage() {
     }
     return map;
   }, [allDays, dayNums]);
-
-  /* --- Trip driving stats --- */
-  const tripDrivingStats = useMemo(() => {
-    if (loadedDays.length === 0) return null;
-    try { return calcTripDrivingStats(loadedDays); } catch { return null; }
-  }, [loadedDays]);
 
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ dark: isDark }), [isDark]);
@@ -653,7 +640,6 @@ export default function TripPage() {
         <TripSheetContent
           activeSheet={activeSheet}
           docs={docs}
-          tripDrivingStats={tripDrivingStats}
           currentDay={currentDay}
           sheetTrips={sheetTrips}
           sheetTripsLoading={sheetTripsLoading}

@@ -627,53 +627,10 @@ test.describe('Day Lazy Loading', () => {
   });
 });
 
-/* ===== 19. 每日交通統計可收合 ===== */
-test.describe('每日交通統計', () => {
-  test('預設隱藏明細，點擊展開可見', async ({ page }) => {
-    await page.goto('/');
-    const drivingStats = page.locator('.driving-stats').first();
-    // 統計區塊本身應可見
-    await expect(drivingStats).toBeVisible();
-
-    // 明細預設隱藏（col-detail 未 open）
-    const detail = drivingStats.locator('.col-detail').first();
-    await expect(detail).not.toBeVisible();
-
-    // 點擊 col-row 展開
-    const colRow = drivingStats.locator('.col-row').first();
-    await colRow.click();
-    await expect(detail).toBeVisible();
-  });
-});
-
-/* ===== 20. 全旅程交通統計（QuickPanel） ===== */
-test.describe('全旅程交通統計', () => {
-  test('所有 Day 載入後 QuickPanel 可開啟交通統計', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    // 等待 preload 完成（所有 Day 自動載入）
-    await page.waitForTimeout(3000);
-    await page.locator('.quick-panel-trigger').click();
-    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="driving"]').click();
-    await page.waitForTimeout(500);
-    const summary = page.locator('#bottomSheetBody .driving-summary');
-    await expect(summary).toBeAttached({ timeout: 10000 });
-  });
-
-  test('包含多種交通類型', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('.day-section').first().waitFor({ timeout: 10000 });
-    await page.waitForTimeout(3000);
-    await page.locator('.quick-panel-trigger').click();
-    await page.locator('#quickPanel.open').waitFor({ timeout: 3000 });
-    await page.locator('.quick-panel-item[data-content="driving"]').click();
-    await page.waitForTimeout(300);
-    const summary = page.locator('#bottomSheetBody .driving-summary');
-    const typeSummary = summary.locator('.transport-type-summary').first();
-    await expect(typeSummary).toBeAttached({ timeout: 10000 });
-  });
-});
+/* ===== 19/20 每日交通統計 + 全旅程交通統計（已於 R19 移除）===== */
+// DrivingStats 元件與 QuickPanel 相關 sheet 已於 2026-04 R19 change 移除。
+// 原本 describe('每日交通統計') / describe('全旅程交通統計') 兩個 block 拿掉；
+// 交通資訊改由 timeline 內 entry 的 travel 物件承載，無獨立 sheet 可測。
 
 /* ===== 21. 桌機資訊面板 ===== */
 test.describe('桌機資訊面板', () => {

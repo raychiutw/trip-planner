@@ -12,8 +12,7 @@ const JS_FILES = [];
 
 const SRC_FILES = [
     'src/lib/mapRow.ts', 'src/lib/sanitize.ts', 'src/lib/constants.ts',
-    'src/lib/formatUtils.ts', 'src/lib/localStorage.ts', 'src/lib/drivingStats.ts',
-    'src/lib/weather.ts',
+    'src/lib/localStorage.ts', 'src/lib/weather.ts',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const CSS_FILES = [
@@ -64,8 +63,7 @@ describe('JS naming — mutable state', () => {
 
     // True constants: declared once with UPPER_CASE, never reassigned — OK
     const TRUE_CONSTANTS = new Set([
-        'JSON_FIELDS', 'TRANSPORT_TYPES', 'TRANSPORT_TYPE_ORDER',
-        'ARROW_EXPAND', 'ARROW_COLLAPSE', 'DRIVING_WARN_MINUTES', 'DRIVING_WARN_LABEL',
+        'JSON_FIELDS', 'ARROW_EXPAND', 'ARROW_COLLAPSE',
         'MS_PER_DAY', 'SAFE_COLOR_RE', 'APPLE_SVG', 'DIAL_RENDERERS',
         'WMO', 'ICONS', 'EMOJI_ICON_MAP', 'LS_PREFIX', 'LS_TTL',
     ]);

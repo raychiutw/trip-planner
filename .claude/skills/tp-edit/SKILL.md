@@ -37,6 +37,7 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
    - 插入/移除/替換 entry 時，重算 **前一站→本站** 和 **本站→下一站** 兩段 travel
    - 餐廳首選（sort_order=0）變動時，用新餐廳的 lat/lng 重算前後兩段 travel
    - 計算方式：用前後 entry 的 location lat/lng，meal entry 用首選餐廳 lat/lng
+   - **R19 維持（見 tp-quality-rules）**：若修改動到 `timeline[0]`（插入、移除、移動），必須保持 R19 語意 — Day 1 首 entry 為抵達點、Day N≥2 首 entry 為前日 `day.hotel` 的同 POI check-out；禁止把非 R19 entry 推到 index 0。使用者若要求「把早餐移到 Day 2 最前面」，先保留前日飯店 check-out 為 index 0，早餐放 index 1
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）
 

@@ -50,7 +50,6 @@ export default function MobileBottomNav({
       activeSheet === 'action-menu' ||
       activeSheet === 'checklist' ||
       activeSheet === 'backup' ||
-      activeSheet === 'driving' ||
       activeSheet === 'appearance' ||
       activeSheet === 'trip-select' ||
       activeSheet === 'emergency' ||

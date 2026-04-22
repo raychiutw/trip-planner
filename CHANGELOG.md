@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.3.0] - 2026-04-23
+
+R19 — 每日首 timeline entry 橋接前日飯店 check-out。使用者體感：Day 2~7 每天都從「前日飯店退房」開始，時間軸連貫不跳段；Day 1 首 entry 為抵達點。同時移除不再需要的「住宿資訊」card 與「每日/全程交通統計」card（資訊已整合至 timeline）。
+
+### Added
+- **OpenSpec change `daily-first-stop-hotel-bridge`** — 3 個 spec delta：新增 `daily-first-stop`（定義 Day N timeline[0] 必為 Day N-1 hotel check-out）、修訂 `trip-quality-rules-source`（R19 入列）、移除 `transport-stats-always-open`（card 已刪）。含 proposal.md / design.md / tasks.md。
+- **`tp-quality-rules` R19** — 每日首 entry 規則：Day 1 抵達點、Day N≥2 為前日 `day.hotel` check-out entry（title 含「退房」語意、location 同飯店 POI、不複製 hotel.infoBoxes；若 breakfast.included=true 則 description 開頭 inject「🍳 早餐：…」）。與 R0/R8 正交。
+- **`tp-rebuild` step 5b**、**`tp-create` step 4 R19 規則**、**`tp-edit` step 7 travel R19 警示** — 所有 data skill 都納入 R19 rebuild / validate / edit 流程。
+- **3 個 R19 紅燈測試**：`tests/unit/day-section-no-hotel-driving-card.test.ts`（7 assertions）、`trip-page-no-trip-driving-stats.test.ts`（3）、`trip-export-no-hotel.test.ts`（7）。
+
+### Removed
+- **`src/components/trip/Hotel.tsx`**（-81 lines）— 住宿資訊 card 下架。hotel info 由 timeline[0] 的 check-out entry 承載。
+- **`src/components/trip/DrivingStats.tsx`**（-193 lines）— 每日交通統計 card + 全行程交通統計 card 下架。交通資訊改以各 entry 的 travel 欄位就地呈現。
+- **`src/lib/drivingStats.ts`**（-162 lines）— `calcDrivingStats` / `calcTripDrivingStats` 計算邏輯整包移除。
+- **`src/lib/formatUtils.ts`** — 僅剩 `export {}` 空殼（唯一 caller `formatMinutes` 已隨 drivingStats.ts 移除）。
+- **`src/lib/mapDay.toHotelData`** + `HotelData` / `RawHotel` / `RawParking` 類型（-95 lines）— toTimelineEntry 取代其資料路徑。
+- **`src/lib/constants.ts`**：`DRIVING_WARN_MINUTES` / `DRIVING_WARN_LABEL` / `TRANSPORT_TYPES` / `TRANSPORT_TYPES_ORDER`（-24 lines，僅 DrivingStats 使用）。
+- **`TripPage.tsx` tripDrivingStats 計算 + prop 傳遞**（-14 lines）。
+- **`TripSheetContent.tsx` `driving` / `prep` / `emergency-group` / `ai-group` 四個 sheet case + ACTION_MENU_GRID `driving` 項**（-45 lines）。
+- **`OverflowMenu.tsx` `driving` 選項**、**`MobileBottomNav.tsx` `driving` sheet case**。
+- **`tripExport.ts` Markdown 🏨 住宿 / 退房 header + CSV 住宿名 / 退房時間 columns + hotel row**（-49 lines）。
+- **E2E `每日交通統計` + `全旅程交通統計` describe blocks**（tests/e2e/trip-page.spec.js -51 lines）。
+
+### Changed
+- **`DaySection.tsx`** — 簡化渲染：只保留 Ocean hero card、Weather card、Timeline；Hotel 與 DayDrivingStatsCard 兩個 render block 移除。
+- **`map-day.test.js`** — 3 個 `toHotelData` 測試案例改寫為 `toTimelineEntry` restaurants（URL 模式 + name fallback）。
+- **`overflow-menu-divider.test.tsx`** — 分隔線位置由 4/5/8 改為 3/5/7（driving item 移除後）。
+- **`quick-panel.test.js`** — action-menu item count 從 13 降至 11。
+
+### Process
+- **TDD 紅→綠**：commit `e97180d` 先建 3 個紅燈測試，`870018e` 完成 UI 綠階段，`b05a865` 清理死碼。
+- **R19 data migration 已於 7 個 trip 驗證**：本 branch 同 session 跑過 `/tp-rebuild okinawa-trip-2026-HuiYun`（D1 直寫，不進 PR diff），產出 7/7 天 R19 合規 timeline。Prod 驗證：Day 2-6 首 entry 為前日飯店 check-out entry。
+- **OpenSpec 流程**：propose → apply（本 PR）→ 待 merge 後 archive。
+- **Tests**：610 unit + 179 api = **789 tests all green**，無新增 regression。
+
 ## [2.0.2.8] - 2026-04-22
 
 PR 11 post-hoc audit 發現的 tech debt 清理。純 refactor + 1 個 silent bug fix（malformed time 格式顯示「NaNm」字串）。使用者體感：當 time 欄位意外格式錯時不再顯示 "NaNm" 垃圾文字。

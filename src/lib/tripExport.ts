@@ -17,15 +17,8 @@ type RawDayEntry = {
   shopping?: Record<string, unknown>[];
   [key: string]: unknown;
 };
-type RawHotel = {
-  name?: unknown; checkout?: unknown; note?: unknown; breakfast?: unknown;
-  parking?: unknown;
-  shopping?: Record<string, unknown>[];
-  [key: string]: unknown;
-};
 type RawDay = {
   dayNum?: number; date?: string; dayOfWeek?: string; label?: string;
-  hotel?: RawHotel | null;
   timeline?: RawDayEntry[];
   [key: string]: unknown;
 };
@@ -122,32 +115,6 @@ export async function downloadTripFormat(
         }
         md += '\n\n';
 
-        // Hotel
-        const hotel = day.hotel;
-        if (hotel?.name) {
-          md += `### 🏨 住宿：${s(hotel.name)}\n`;
-          if (hotel.checkout) md += `- 退房：${s(hotel.checkout)}\n`;
-          if (hotel.breakfast) md += `- 早餐：${typeof hotel.breakfast === 'object' ? JSON.stringify(hotel.breakfast) : s(hotel.breakfast)}\n`;
-          const parking = hotel.parking;
-          if (parking) {
-            const pInfo = typeof parking === 'object' ? (parking as Record<string, unknown>).info ?? JSON.stringify(parking) : s(parking);
-            md += `- 停車場：${pInfo}\n`;
-          }
-          if (hotel.note) md += `- 備註：${s(hotel.note)}\n`;
-
-          // Hotel shopping
-          const hotelShopping = hotel.shopping;
-          if (Array.isArray(hotelShopping) && hotelShopping.length > 0) {
-            md += '\n#### 🛍 住宿附近購物\n';
-            md += '| 店名 | 類別 | 評分 | 營業時間 | 必買 |\n';
-            md += '|------|------|------|---------|------|\n';
-            for (const sh of hotelShopping) {
-              md += `| ${s(sh.name)} | ${s(sh.category)} | ${s(sh.googleRating)} | ${s(sh.hours)} | ${s(sh.mustBuy)} |\n`;
-            }
-          }
-          md += '\n';
-        }
-
         // Timeline entries
         const timeline = day.timeline ?? [];
         for (let i = 0; i < timeline.length; i++) {
@@ -215,10 +182,12 @@ export async function downloadTripFormat(
       /* -- CSV: spreadsheet-friendly with expanded rows -- */
       const { daysData, docsMap } = await fetchAllData(tripId);
 
+      /* CSV schema v2 (R19) — 17 columns; 住宿名 / 退房時間已移除、住宿 row 已拿掉。
+       * 住宿資訊改由 timeline[0] 的 check-out entry 承載，無需獨立欄位。 */
       const headers = [
         'Day', '日期', '星期', '時間', '地點', '評分', '說明', '備註',
         '交通方式', '交通時間(分)', '餐廳名', '餐廳類別', '餐廳評分', '餐廳價格',
-        '購物店名', '購物類別', '購物必買', '住宿名', '退房時間',
+        '購物店名', '購物類別', '購物必買',
       ];
       const rows: string[][] = [headers];
 
@@ -228,16 +197,6 @@ export async function downloadTripFormat(
         const dayNum = s(day.dayNum);
         const dayDate = s(day.date);
         const dayWeek = s(day.dayOfWeek);
-
-        // Hotel row
-        const hotel = day.hotel;
-        if (hotel?.name) {
-          rows.push([
-            dayNum, dayDate, dayWeek, '住宿', csvCell(hotel.name), '', '', csvCell(hotel.note),
-            '', '', '', '', '', '',
-            '', '', '', csvCell(hotel.name), csvCell(hotel.checkout),
-          ]);
-        }
 
         // Timeline entries
         const timeline = day.timeline ?? [];
@@ -265,8 +224,6 @@ export async function downloadTripFormat(
             row.push(r ? csvCell(r.name) : '', r ? csvCell(r.category) : '', r ? csvCell(r.googleRating) : '', r ? csvCell(r.price) : '');
             // Shopping columns
             row.push(sh ? csvCell(sh.name) : '', sh ? csvCell(sh.category) : '', sh ? csvCell(sh.mustBuy) : '');
-            // Hotel columns (empty for timeline entries)
-            row.push('', '');
             rows.push(row);
           }
         }

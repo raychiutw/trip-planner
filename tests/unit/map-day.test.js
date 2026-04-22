@@ -1,39 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
-  toHotelData,
   toTimelineEntry,
   findEntryInDays,
   parseLocalDate,
   formatDateLabel,
 } from '../../src/lib/mapDay.ts';
 
-/* ===== buildLocation（透過 toHotelData 停車場情境間接測試）===== */
-
-describe('buildLocation — maps 非 URL（地名）時 name fallback', () => {
-  it('停車場 maps 是地名時，location.name 應為地名而非空', () => {
-    const hotel = toHotelData({
-      name: 'Hotel A',
-      parking: { maps: '北谷町営駐車場 美浜', price: '免費' },
-    });
-    const parking = hotel.infoBoxes?.find((b) => b.type === 'parking');
-    expect(parking).toBeDefined();
-    expect(parking.location).not.toBeNull();
-    // maps 是地名（非 URL），name 應 fallback 為地名
-    expect(parking.location.name).toBe('北谷町営駐車場 美浜');
-    // 非 URL 不應產生 googleQuery
-    expect(parking.location.googleQuery).toBeUndefined();
-  });
-
-  it('停車場 maps 是地名但 parking.name 有值時，location.name 應為 parking.name', () => {
-    const hotel = toHotelData({
-      name: 'Hotel A',
-      parking: { maps: '北谷町営駐車場 美浜', name: '美浜停車場', price: '免費' },
-    });
-    const parking = hotel.infoBoxes?.find((b) => b.type === 'parking');
-    expect(parking.location.name).toBe('美浜停車場');
-    expect(parking.location.googleQuery).toBeUndefined();
-  });
-});
+/* ===== buildLocation — 透過 toTimelineEntry 餐廳情境間接測試 ===== */
+/* R19 備註：toHotelData 已隨 Hotel card 移除，相關停車場測試改以 toTimelineEntry 測試 */
 
 describe('buildLocation — maps 是 URL 時 googleQuery', () => {
   it('餐廳 maps 是 URL 時，location.googleQuery 應為該 URL', () => {
@@ -53,16 +27,41 @@ describe('buildLocation — maps 是 URL 時 googleQuery', () => {
     // URL 模式時，name 不使用 maps 欄位
     expect(restaurant.location.name).toBe('沖繩そば');
   });
+});
 
-  it('停車場 maps 是 URL 時，location.googleQuery 應為該 URL', () => {
-    const hotel = toHotelData({
-      name: 'Hotel A',
-      parking: { maps: 'https://maps.google.com/?q=parking', price: '¥500' },
+describe('buildLocation — maps 非 URL（地名）時 name fallback（R19 後改以 toTimelineEntry 覆蓋）', () => {
+  it('餐廳 maps 是地名、name 為空時，location.name 應 fallback 為 maps 值', () => {
+    const entry = toTimelineEntry({
+      title: '晚餐',
+      restaurants: [
+        {
+          // name 刻意為空 / 未提供
+          maps: '北谷町営駐車場 美浜',
+        },
+      ],
     });
-    const parking = hotel.infoBoxes?.find((b) => b.type === 'parking');
-    expect(parking.location.googleQuery).toBe('https://maps.google.com/?q=parking');
-    // URL 模式時，maps 不作為 name
-    expect(parking.location.name).toBeUndefined();
+    const restaurant = entry.infoBoxes?.[0]?.restaurants?.[0];
+    expect(restaurant).toBeDefined();
+    expect(restaurant.location).not.toBeNull();
+    // maps 是地名（非 URL），name 應 fallback 為地名
+    expect(restaurant.location.name).toBe('北谷町営駐車場 美浜');
+    // 非 URL 不應產生 googleQuery
+    expect(restaurant.location.googleQuery).toBeUndefined();
+  });
+
+  it('餐廳 maps 是地名、name 有值時，location.name 應優先用 name', () => {
+    const entry = toTimelineEntry({
+      title: '晚餐',
+      restaurants: [
+        {
+          name: '美浜停車場',
+          maps: '北谷町営駐車場 美浜',
+        },
+      ],
+    });
+    const restaurant = entry.infoBoxes?.[0]?.restaurants?.[0];
+    expect(restaurant.location.name).toBe('美浜停車場');
+    expect(restaurant.location.googleQuery).toBeUndefined();
   });
 });
 

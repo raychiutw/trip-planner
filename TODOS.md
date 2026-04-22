@@ -82,7 +82,7 @@
 
 ## Editorial Follow-through — Chrome density 檢討
 
-**Source**: autoplan Design retro — Q10=A 選 editorial 但實作仍是「editorial token 包 dashboard」。TripPage 第一屏 6 層 chrome（topbar + DayNav + Hero + 警語 + 天氣 + Hotel）before 第一個 stop content。
+**Source**: autoplan Design retro — Q10=A 選 editorial 但實作仍是「editorial token 包 dashboard」。TripPage 第一屏仍有多層 chrome（topbar + DayNav + Hero + 警語 + 天氣）before 第一個 stop content。（v2.0.3.0 R19 已移除 Hotel card 與交通統計 card，首屏少一層，但 editorial density 議題仍在。）
 
 **Goal**: 讓「editorial = 內容主角」真的在第一屏落地。
 

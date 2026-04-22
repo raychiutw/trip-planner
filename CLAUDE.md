@@ -36,7 +36,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 ```
 src/entries/        main.tsx（SPA 單入口，BrowserRouter）
 src/pages/          TripPage  ManagePage（AI 編輯聊天）  AdminPage
-src/components/     trip/（Timeline DayNav Hotel TripMapRail ...）  shared/（Icon Toast ErrorBoundary ...）
+src/components/     trip/（Timeline DayNav DaySection TripMapRail ...）  shared/（Icon Toast ErrorBoundary ...）
 src/hooks/          useTrip  useApi  useDarkMode  usePrintMode  useOnlineStatus ...
 src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather ...
 src/types/          trip.ts  api.ts
