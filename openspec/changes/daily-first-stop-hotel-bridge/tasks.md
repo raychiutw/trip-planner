@@ -41,11 +41,11 @@
 
 ## 5. 清理死碼（Refactor）
 
-- [ ] 5.1 [CODE] `grep -r "from.*Hotel"` 確認無其他 import 後刪除 `src/components/trip/Hotel.tsx`
-- [ ] 5.2 [CODE] `grep -r "DrivingStats"` 確認無其他 import 後刪除 `src/components/trip/DrivingStats.tsx`
-- [ ] 5.3 [CODE] `grep -r "drivingStats"` 確認無其他 import 後刪除 `src/lib/drivingStats.ts` 及其 test
-- [ ] 5.4 檢查並刪除 `src/types/` 中無人引用的 `HotelData` / `DayDrivingStats` / `TripDrivingStats` 型別
-- [ ] 5.5 執行 `/simplify` 檢視整體變更，套用建議
+- [x] 5.1 [CODE] 刪除 `src/components/trip/Hotel.tsx`（toHotelData 拿掉後無人引用 HotelData type）
+- [x] 5.2 [CODE] 刪除 `src/components/trip/DrivingStats.tsx`（UI 改動後無人 import）
+- [x] 5.3 [CODE] 刪除 `src/lib/drivingStats.ts`（UI 改動後無人 import；無獨立 test 檔）
+- [x] 5.4 清除 `src/lib/mapDay.ts` 的 `toHotelData` function + `HotelData` type import + orphan `RawHotel` / `RawParking` interfaces；`tests/unit/map-day.test.js` 移除 toHotelData 相關 3 個 it（buildLocation 行為改用 toTimelineEntry 測試）
+- [ ] 5.5 執行 `/simplify` 檢視整體變更，套用建議（留給使用者後續 pipeline 觸發）
 
 ## 6. Data migration（走 D1 API）
 

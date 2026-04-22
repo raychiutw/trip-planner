@@ -8,7 +8,6 @@ import type { NavLocation } from '../components/trip/MapLinks';
 import type { InfoBoxData } from '../components/trip/InfoBox';
 import type { RestaurantData } from '../components/trip/Restaurant';
 import type { ShopData } from '../components/trip/Shop';
-import type { HotelData } from '../components/trip/Hotel';
 import type { Day, Entry } from '../types/trip';
 
 /* ===== Entry lookup helpers (shared across pages/components) ===== */
@@ -95,19 +94,6 @@ interface RawShop {
   lng?: number | null;
 }
 
-/** Raw parking POI (array element from merged trip_pois). */
-interface RawParking {
-  name?: string | null;
-  description?: string | null;
-  note?: string | null;
-  price?: string | null;
-  info?: string | null;
-  maps?: string | null;
-  mapcode?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-}
-
 /** Raw travel object nested in a timeline entry. */
 interface RawTravel {
   type?: string | null;
@@ -128,19 +114,6 @@ interface RawEntry {
   mapcode?: string | null;
   travel?: RawTravel | null;
   restaurants?: RawRestaurant[];
-  shopping?: RawShop[];
-}
-
-/** Raw hotel POI as returned by the API (flattened pois + trip_pois fields). */
-interface RawHotel {
-  name?: string | null;
-  checkout?: string | null;
-  description?: string | null;
-  note?: string | null;
-  breakfast?: string | { included?: boolean; note?: string | null } | null;
-  breakfastIncluded?: number | null;
-  breakfastNote?: string | null;
-  parking?: RawParking[] | RawParking | null;
   shopping?: RawShop[];
 }
 
@@ -261,71 +234,3 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   };
 }
 
-/* ===== Hotel (from merged pois + trip_pois) ===== */
-
-export function toHotelData(raw: RawHotel): HotelData {
-  const description = raw.description ?? null;
-
-  // breakfast is flattened into breakfastIncluded + breakfastNote
-  let breakfast: { included?: boolean; note?: string | null } | null = null;
-  const bfIncluded = raw.breakfastIncluded;
-  const bfNote = raw.breakfastNote ?? null;
-  if (bfIncluded != null || bfNote) {
-    breakfast = {
-      included: bfIncluded === 1 ? true : bfIncluded === 0 ? false : undefined,
-      note: bfNote,
-    };
-  } else {
-    // Legacy: breakfast may still be JSON string from old API
-    const rawBf = raw.breakfast;
-    if (typeof rawBf === 'string' && rawBf) {
-      try { breakfast = JSON.parse(rawBf) as { included?: boolean; note?: string | null }; } catch { breakfast = { included: true, note: rawBf }; }
-    } else if (rawBf && typeof rawBf === 'object') {
-      breakfast = rawBf;
-    }
-  }
-
-  const infoBoxes: InfoBoxData[] = [];
-
-  // parking is an array of merged POI objects
-  const parkingVal = raw.parking;
-  if (Array.isArray(parkingVal) && parkingVal.length > 0) {
-    for (const p of parkingVal as RawParking[]) {
-      infoBoxes.push({
-        type: 'parking',
-        title: p.name || '停車場',
-        price: p.description ?? null,
-        note: p.note ?? null,
-        location: buildLocation(p.maps ?? null, p.mapcode ?? null, p.name ?? null, p.lat ?? null, p.lng ?? null),
-      });
-    }
-  } else if (parkingVal && typeof parkingVal === 'object' && !Array.isArray(parkingVal)) {
-    // Legacy: parking was a single object
-    const parking = parkingVal as RawParking;
-    infoBoxes.push({
-      type: 'parking',
-      title: (parking.info ?? parking.name) || '停車場',
-      price: parking.price ?? null,
-      note: parking.note ?? null,
-      location: buildLocation(parking.maps ?? null, parking.mapcode ?? null, parking.name ?? null),
-    });
-  }
-
-  // Hotel shopping from trip_pois (passed as hotel.shopping)
-  const shopping = raw.shopping ?? [];
-  if (shopping.length > 0) {
-    infoBoxes.push({
-      type: 'shopping',
-      shops: shopping.map(toShopData),
-    });
-  }
-
-  return {
-    name: raw.name || '',
-    checkout: raw.checkout ?? null,
-    description,
-    breakfast,
-    note: raw.note ?? null,
-    infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
-  };
-}
