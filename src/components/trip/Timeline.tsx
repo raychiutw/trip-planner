@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { type TimelineEntryData } from './TimelineEvent';
 import TimelineRail from './TimelineRail';
+import { parseStartMinutes, parseEndMinutes } from '../../lib/timelineUtils';
 
 interface TimelineProps {
   events: TimelineEntryData[];
@@ -10,24 +11,6 @@ interface TimelineProps {
   dayDate?: string | null;
   /** Today's date (ISO format "YYYY-MM-DD") provided by parent for stable comparison. */
   localToday?: string | null;
-}
-
-function parseStartMinutes(time?: string | null): number {
-  if (!time) return -1;
-  const start = (time.split('-')[0] ?? '').trim();
-  const parts = start.split(':');
-  if (parts.length !== 2) return -1;
-  return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
-}
-
-function parseEndMinutes(time?: string | null): number {
-  if (!time) return -1;
-  const segments = time.split('-');
-  if (segments.length < 2) return -1;
-  const end = (segments[1] ?? '').trim();
-  const parts = end.split(':');
-  if (parts.length !== 2) return -1;
-  return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
 }
 
 export default function Timeline({ events, dayDate, localToday }: TimelineProps) {

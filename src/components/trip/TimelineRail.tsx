@@ -1,5 +1,5 @@
 /**
- * TimelineRail — mobile-only compact timeline (設計稿 design_mobile.jsx 版本)
+ * TimelineRail — 桌機與手機統一 compact editorial rail（PR 11 / v2.0.2.7 後同時服務兩端）
  *
  * Structure:
  *  - Left gutter: right-aligned time
@@ -16,53 +16,7 @@ import { memo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import type { TimelineEntryData } from './TimelineEvent';
-
-interface ParsedTime { start: string; end: string; duration: number; }
-
-function parseTimeRange(timeStr?: string | null): ParsedTime {
-  if (!timeStr) return { start: '', end: '', duration: 0 };
-  const parts = timeStr.split('-');
-  const start = (parts[0] ?? '').trim();
-  const end = parts.length > 1 ? (parts[1] ?? '').trim() : '';
-  let duration = 0;
-  if (start && end) {
-    const s = start.split(':');
-    const e = end.split(':');
-    if (s.length === 2 && e.length === 2) {
-      duration =
-        (parseInt(e[0] ?? '0', 10) * 60 + parseInt(e[1] ?? '0', 10)) -
-        (parseInt(s[0] ?? '0', 10) * 60 + parseInt(s[1] ?? '0', 10));
-      if (duration < 0) duration += 24 * 60;
-    }
-  }
-  return { start, end, duration };
-}
-
-function formatDuration(mins: number): string {
-  if (mins <= 0) return '';
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
-}
-
-function deriveTypeMeta(entry: TimelineEntryData): { icon: string; label: string; accent: boolean } {
-  const title = (entry.title ?? '').toLowerCase();
-  const desc = (entry.description ?? '').toLowerCase();
-  const travelType = (entry.travel && typeof entry.travel === 'object' ? entry.travel.type ?? '' : '').toLowerCase();
-  const blob = `${title} ${desc} ${travelType}`;
-
-  if (/機場|flight|機票/.test(blob)) return { icon: 'plane', label: '飛行', accent: false };
-  if (/飯店|旅館|hotel|check[- ]?in|民宿/.test(blob)) return { icon: 'hotel', label: '住宿', accent: false };
-  if (/餐|食|restaurant|lunch|dinner|breakfast|用餐/.test(blob)) return { icon: 'fork-knife', label: '用餐', accent: true };
-  if (/咖啡|café|cafe|coffee/.test(blob)) return { icon: 'coffee', label: '咖啡', accent: true };
-  if (/購物|shopping|mall|market/.test(blob)) return { icon: 'shopping', label: '購物', accent: false };
-  if (/開車|drive|car|自駕|租車/.test(blob)) return { icon: 'car', label: '移動', accent: false };
-  if (/步行|walk|散步/.test(blob)) return { icon: 'walk', label: '散步', accent: false };
-  if (/休息|rest|spa|泡湯/.test(blob)) return { icon: 'coffee', label: '休息', accent: false };
-  return { icon: 'location-pin', label: '景點', accent: true };
-}
+import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
 
 interface TimelineRailProps {
   events: TimelineEntryData[];
