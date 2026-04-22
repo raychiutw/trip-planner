@@ -5,11 +5,6 @@
  *  - Ocean hero card (Day eyebrow + 看地圖 chip + title + date + stats)
  *  - Weather card (HourlyWeather)
  *  - Timeline stop cards
- *
- * PR3 change: inline OceanMap removed. Each day hero now has a 「看地圖」
- * chip linking to /trip/:id/map?day=N.
- * R19 change: Hotel card + DayDrivingStatsCard removed; hotel info moves to
- * timeline[0] (前日飯店 check-out entry) and travel info to each entry's travel.
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';

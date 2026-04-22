@@ -12,8 +12,7 @@ const JS_FILES = [];
 
 const SRC_FILES = [
     'src/lib/mapRow.ts', 'src/lib/sanitize.ts', 'src/lib/constants.ts',
-    'src/lib/formatUtils.ts', 'src/lib/localStorage.ts', 'src/lib/drivingStats.ts',
-    'src/lib/weather.ts',
+    'src/lib/localStorage.ts', 'src/lib/weather.ts',
 ].map(path => ({ path, content: readFile(path) })).filter(f => f.content);
 
 const CSS_FILES = [
