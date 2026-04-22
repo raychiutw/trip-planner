@@ -11,10 +11,10 @@
 
 ## 1. 測試骨架（TDD 紅階段 — UI assertion 應 fail）
 
-- [ ] 1.1 [CODE] 新增 `tests/unit/day-section-no-hotel-driving-card.test.tsx`：assert DOM 不含 `<Hotel>` 與 `<DayDrivingStatsCard>` 元件（目前為紅燈）
-- [ ] 1.2 [CODE] 新增 `tests/unit/trip-page-no-trip-driving-stats.test.tsx`：assert 不計算 / 不傳遞 `tripDrivingStats`（目前為紅燈）
-- [ ] 1.3 [CODE] 新增 `tests/unit/trip-export-no-hotel.test.ts`：assert 匯出不含「🏨 住宿」段落、CSV 不含「住宿名 / 退房時間」欄（目前為紅燈）
-- [ ] 1.4 執行 `npm run test`，確認 1.1-1.3 新增測試皆紅燈（符合 TDD 紅階段）
+- [x] 1.1 [CODE] 新增 `tests/unit/day-section-no-hotel-driving-card.test.ts`：source-level 檢查不 import Hotel / DayDrivingStatsCard / calcDrivingStats / toHotelData、不 render <Hotel> 與 <DayDrivingStatsCard>、不宣告 dayDrivingStats（7 個 assertion）
+- [x] 1.2 [CODE] 新增 `tests/unit/trip-page-no-trip-driving-stats.test.ts`：不 import calcTripDrivingStats、不宣告 tripDrivingStats、不傳 prop（3 個 assertion）
+- [x] 1.3 [CODE] 新增 `tests/unit/trip-export-no-hotel.test.ts`：Markdown 無「🏨 住宿」/「🛍 住宿附近購物」/「退房：」；CSV 無「住宿名」「退房時間」欄、無「住宿」row 生成（6 個 assertion）
+- [x] 1.4 執行 `npm run test`，確認 1.1-1.3 新增測試皆紅燈（16/16 assertion 全紅，符合 TDD 紅階段）
 
 ## 2. Skill 規則更新（`.claude/skills/`）
 
