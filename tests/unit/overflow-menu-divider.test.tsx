@@ -26,10 +26,10 @@ describe('OverflowMenu — needsDivider 結構斷言 (F005)', () => {
     return positions;
   }
 
-  it('OVERFLOW_ITEMS 的 divider 應在每個 group 邊界（4 個分隔）', () => {
+  it('OVERFLOW_ITEMS 的 divider 應在每個 group 邊界（3 個分隔）', () => {
     const positions = getDividerPositions(OVERFLOW_ITEMS);
     // trip → info → settings → export: 3 group boundaries
-    // trip(3) / info(3) / settings(2) / export(4)
+    // trip(3) / info(2) / settings(2) / export(4) — R19 移除 driving
     expect(positions.length).toBe(3);
   });
 
@@ -38,14 +38,14 @@ describe('OverflowMenu — needsDivider 結構斷言 (F005)', () => {
     expect(positions[0]).toBe(3); // checklist is index 3, prev=flights(trip)
   });
 
-  it('第二個 divider 位於 info → settings 邊界（index 6）', () => {
+  it('第二個 divider 位於 info → settings 邊界（index 5）', () => {
     const positions = getDividerPositions(OVERFLOW_ITEMS);
-    expect(positions[1]).toBe(6); // trip-select is index 6, prev=driving(info)
+    expect(positions[1]).toBe(5); // trip-select is index 5, prev=backup(info)
   });
 
-  it('第三個 divider 位於 settings → export 邊界（index 8）', () => {
+  it('第三個 divider 位於 settings → export 邊界（index 7）', () => {
     const positions = getDividerPositions(OVERFLOW_ITEMS);
-    expect(positions[2]).toBe(8); // download-pdf is index 8, prev=appearance(settings)
+    expect(positions[2]).toBe(7); // download-pdf is index 7, prev=appearance(settings)
   });
 
   it('同 group 內不應有 divider（trip group 前 3 個 item）', () => {

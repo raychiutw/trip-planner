@@ -33,15 +33,15 @@ function parseOverflowItems(source) {
 describe('OverflowMenu items', () => {
   const items = parseOverflowItems(overflowMenuTsx);
 
-  it('OVERFLOW_ITEMS 有 12 項（PR3 新增 today-route/suggestions/flights）', () => {
-    // PR3 Item 8: 3 new desktop entry points added
-    expect(items).toHaveLength(12);
+  it('OVERFLOW_ITEMS 有 11 項（R19 移除 driving 交通統計）', () => {
+    // R19: 交通統計 card 移除，timeline 首 entry 承載前日住宿 check-out 語意
+    expect(items).toHaveLength(11);
   });
 
-  it('包含所有預期 keys（今日路線/AI建議/航班 + 出發/備案/交通/切換行程/外觀/4 匯出格式）', () => {
+  it('包含所有預期 keys（今日路線/AI建議/航班 + 出發/備案/切換行程/外觀/4 匯出格式）', () => {
     const expected = [
       'today-route', 'suggestions', 'flights',
-      'checklist', 'backup', 'driving',
+      'checklist', 'backup',
       'trip-select', 'appearance',
       'download-pdf', 'download-md', 'download-json', 'download-csv',
     ];
@@ -109,10 +109,10 @@ describe('TripPage Ocean topbar', () => {
 /* ===== Sheet 內容仍可由 TripSheetContent 提供 ===== */
 
 describe('OverflowMenu → TripSheetContent 銜接', () => {
-  it('TripSheetContent 仍處理 checklist / backup / driving / trip-select / appearance', () => {
+  it('TripSheetContent 仍處理 checklist / backup / trip-select / appearance（R19 移除 driving）', () => {
     expect(sheetContentTsx).toContain("case 'checklist':");
     expect(sheetContentTsx).toContain("case 'backup':");
-    expect(sheetContentTsx).toContain("case 'driving':");
+    expect(sheetContentTsx).not.toContain("case 'driving':");
     expect(sheetContentTsx).toContain("case 'trip-select':");
     expect(sheetContentTsx).toContain("case 'appearance':");
   });

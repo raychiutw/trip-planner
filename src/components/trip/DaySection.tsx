@@ -14,13 +14,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
-import Hotel from './Hotel';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
-import { DayDrivingStatsCard } from './DrivingStats';
 import Icon from '../shared/Icon';
-import { toTimelineEntry, toHotelData } from '../../lib/mapDay';
-import { calcDrivingStats } from '../../lib/drivingStats';
+import { toTimelineEntry } from '../../lib/mapDay';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
@@ -96,16 +93,11 @@ const DaySection = React.memo(function DaySection({
     prevActiveRef.current = !!isActive;
   }, [isActive]);
 
-  const hotel = day?.hotel;
   const timeline = day?.timeline ?? [];
   const weatherDay = useMemo(() => buildWeatherDay(day?.label, timeline), [day?.label, timeline]);
   const dayDate = day?.date ?? daySummary?.date ?? undefined;
   const dayId = day?.id;
 
-  const dayDrivingStats = useMemo(
-    () => timeline.length > 0 ? calcDrivingStats(timeline) : null,
-    [timeline],
-  );
   const warnings = useMemo(() => validateDay(timeline), [timeline]);
   const bounds = useMemo(() => getTimelineBounds(timeline), [timeline]);
 
@@ -193,17 +185,6 @@ const DaySection = React.memo(function DaySection({
                 tripEnd={tripEnd}
                 timezone={timezone}
               />
-            )}
-
-            {hotel && typeof hotel === 'object' && (
-              <div className="ocean-side-card mb-3">
-                <Hotel hotel={toHotelData(hotel)} />
-              </div>
-            )}
-            {dayDrivingStats && (
-              <div className="ocean-side-card mb-3">
-                <DayDrivingStatsCard stats={dayDrivingStats} />
-              </div>
             )}
 
             {timeline.length > 0 && (

@@ -32,12 +32,12 @@
 
 ## 4. UI 實作（TDD 綠階段 — React）
 
-- [ ] 4.1 [CODE] `src/components/trip/DaySection.tsx`：移除 `<Hotel hotel={...}>` 區塊（含外層 `ocean-side-card`）、移除 `<DayDrivingStatsCard>` 區塊、移除 `useMemo(dayDrivingStats)`、移除 `toHotelData` import（若無其他用途）
-- [ ] 4.2 [CODE] `src/pages/TripPage.tsx`：移除 `calcTripDrivingStats` import、移除 `tripDrivingStats` useMemo、移除傳給 DaySection 的 `tripDrivingStats` prop
-- [ ] 4.3 [CODE] `src/components/trip/OverflowMenu.tsx`：移除 `{ key: 'driving', icon: 'car', label: '交通統計', ... }` 項目
-- [ ] 4.4 [CODE] `src/components/trip/TripSheetContent.tsx`：移除 `driving: '交通統計'` 映射、移除對應 case / sheet content
-- [ ] 4.5 [CODE] `src/lib/tripExport.ts`：移除 Markdown 匯出的「🏨 住宿」段落（line 128）與「住宿附近購物」段落（line 141）；移除 CSV header 的「住宿名 / 退房時間」與對應資料欄（line 221, 236）
-- [ ] 4.6 執行 `npm run test`，確認 1.1/1.2/1.3 轉綠
+- [x] 4.1 [CODE] `src/components/trip/DaySection.tsx`：移除 Hotel + DayDrivingStatsCard + calcDrivingStats + toHotelData imports、移除 `const hotel` 宣告、移除 dayDrivingStats useMemo、移除兩個 render blocks
+- [x] 4.2 [CODE] `src/pages/TripPage.tsx`：移除 calcTripDrivingStats import、tripDrivingStats useMemo、TripSheetContent prop 傳遞；附帶移除孤兒 `loadedDays` useMemo
+- [x] 4.3 [CODE] `src/components/trip/OverflowMenu.tsx`：移除 `{ key: 'driving', ... }` 項目
+- [x] 4.4 [CODE] `src/components/trip/TripSheetContent.tsx`：移除 TripDrivingStats/TripDrivingStatsCard import、SHEET_TITLES driving、props 型別、ACTION_MENU_GRID driving、case 'driving'、ai-group 的交通 div、useMemo deps
+- [x] 4.5 [CODE] `src/lib/tripExport.ts`：移除 Markdown hotel section + hotel shopping + hotel row in CSV + 住宿名/退房時間 headers + timeline rows 的 hotel columns padding
+- [x] 4.6 執行 `npm run test`，611/611 全綠（含 overflow-menu-divider 與 quick-panel 的既有測試同步更新至 R19 後的 11 items / divider indices）
 
 ## 5. 清理死碼（Refactor）
 
