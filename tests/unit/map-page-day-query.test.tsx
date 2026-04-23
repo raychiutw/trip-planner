@@ -30,13 +30,13 @@ describe('MapPage — ?day=N query support (Item 7 source guard)', () => {
     expect(source).toContain('routes');
   });
 
-  it('has initialDayNum logic reading from searchParams', () => {
-    expect(source).toContain('initialDayNum');
+  it('has initialTab logic reading from searchParams (map-page-multiday-overview: initialDayNum renamed to initialTab)', () => {
+    expect(source).toContain('initialTab');
     expect(source).toMatch(/searchParams|q\s*=/); // uses the day query
   });
 
   it('breadcrumb or title references active day', () => {
-    expect(source).toMatch(/activeDayNum|DAY/);
+    expect(source).toMatch(/activeTab|DAY/);
   });
 });
 
@@ -122,9 +122,9 @@ async function mountMapPage(url: string) {
 }
 
 describe('F011 — MapPage ?day=N runtime tests', () => {
-  it('?day=2：activeDayNum 從 DAY 01 顯示 DAY 02 標記', async () => {
+  it('?day=2：activeTab 從 DAY 01 顯示 DAY 02 標記', async () => {
     const { getAllByText } = await mountMapPage('/trip/test-trip/map?day=2');
-    // 麵包屑中有 DAY 02（activeDayNum = 2）
+    // 麵包屑中有 DAY 02（activeTab = 2）
     const dayTexts = getAllByText(/DAY 02/i);
     expect(dayTexts.length).toBeGreaterThan(0);
   });

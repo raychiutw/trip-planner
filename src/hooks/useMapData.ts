@@ -122,6 +122,52 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   return { pins, missingCount };
 }
 
+/* ===== 從全行程 days 提取 pins + pinsByDay（overview mode 用） ===== */
+
+export interface ExtractAllDaysResult {
+  /** Flat pins 陣列（所有 days 合併） */
+  pins: MapPin[];
+  /** pins 依 dayNum grouping — 用於 polyline 分天著色 */
+  pinsByDay: Map<number, MapPin[]>;
+  /** 缺少座標的 entry 總數 */
+  missingCount: number;
+}
+
+/**
+ * 從全行程 days 物件提取所有 pins + dayNum → pins 對應表。
+ *
+ * 用於：
+ * - MapPage overview mode（多天多色 polyline）
+ * - TripMapRail 桌機 sticky map（全行程 pins）
+ *
+ * 回傳 pinsByDay 以 dayNum 為 key，用於 OceanMap / TripMapRail 依天著色 polyline。
+ */
+export function extractPinsFromAllDays(
+  allDays: Record<number, Day> | null | undefined,
+): ExtractAllDaysResult {
+  if (!allDays) {
+    return { pins: [], pinsByDay: new Map(), missingCount: 0 };
+  }
+
+  const pins: MapPin[] = [];
+  const pinsByDay = new Map<number, MapPin[]>();
+  let missingCount = 0;
+
+  const dayNums = Object.keys(allDays).map(Number).sort((a, b) => a - b);
+  for (const dayNum of dayNums) {
+    const day = allDays[dayNum];
+    if (!day) continue;
+    const { pins: dayPins, missingCount: dayMissing } = extractPinsFromDay(day);
+    if (dayPins.length > 0) {
+      pinsByDay.set(dayNum, dayPins);
+      pins.push(...dayPins);
+    }
+    missingCount += dayMissing;
+  }
+
+  return { pins, pinsByDay, missingCount };
+}
+
 /* ===== Hook ===== */
 
 export function useMapData(day: Day | null | undefined): UseMapDataReturn {

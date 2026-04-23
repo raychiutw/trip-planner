@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.0.0] - 2026-04-23
+
+**MapPage 多天總覽** — 地圖頁 (`/trip/:tripId/map`) 新增「總覽」模式：最左側 tab 切換到 `?day=all` 後，地圖一次顯示全行程所有景點 pin，每天用不同顏色 polyline 連接路線（與桌機側邊 TripMapRail 一致的 10 色 Day palette）。單日模式 polyline 也改用當天顏色，兩個入口視覺語言統一。點卡片可跨天 flyTo 定位，切 tab 秒速且不重抓路線。
+
+### Added
+- **MapPage「總覽」tab** — 日期 tabs 最左側新增「總覽」選項，顯示「{N} 天」副標。URL `/trip/:tripId/map?day=all` 進入總覽模式；既有 `?day=N` 行為保留。
+- **多天多色 polyline** — 總覽模式下每天 polyline 用 `dayColor(N)` 著色（10 色循環：sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald -500）。跨天不畫連線，每天路線獨立。
+- **單日模式 polyline 改用 dayColor(N)** — 之前固定 accent 色，現在與 TripMapRail 對齊。同一趟 Day 3 在桌機 rail 和 MapPage 都看到 amber-500。
+- **Entry card 跨天定位** — 總覽模式下卡片前綴 `D{N}` 著上當天色。點任一天的卡片可直接 flyTo 該景點座標，不自動切 tab（保留多天視野）。
+- **`extractPinsFromAllDays(allDays)` util** — 新 export 於 `src/hooks/useMapData.ts`，回傳 `{ pins, pinsByDay: Map<number, MapPin[]>, missingCount }`。TripMapRail 和 MapPage 共用資料結構。
+- **OceanMap `pinsByDay` / `dayNum` props** — 共用 Leaflet 元件支援多天多色 polyline；`buildSegments(params)` 抽為 pure helper 供單元測試。
+- **11 個新 runtime 測試** — `extract-pins-all-days.test.ts`（5）、`ocean-map-build-segments.test.ts`（6，含 hotel 過濾 + 跨天不連線契約）、`map-page-overview-runtime.test.tsx`（5，含 `?day=all` 下 fitBounds 不 flyTo、tab 切換 URL/props 同步）。另有 5 個 source-level regression guards。
+- **DESIGN.md「地圖 chrome 子例外」** — 記錄 Day 指示 tab active state 可用 `dayColor(N)` 著色（其餘 chrome 仍守 Ocean accent）。
+
+### Changed
+- **Day tab 觸控目標 ≥ 44px** — `.map-page-day-tab` `min-height` 從 40px 改 `var(--spacing-tap-min, 44px)`（padding 10px/12px → 12px/14px），符合 Apple HIG。
+- **OceanMap viewport follow 優化** — `pins.find()` O(n) 換成 `pinIndexById.get()` O(1)（焦點切換時每次省掉一次線性掃描，overview 模式 30+ pins 尤其有感）。
+- **Segment React key 穩定化** — per-day key 從 `d${d}:${a.id}->${b.id}` 簡化為 `${a.id}->${b.id}`，切換 overview↔單日 tab 時 Segment 保持 identity，不再整組 remount / 重新 fetch Mapbox 路線。
+
+### Fixed
+- **Overview 初始載入被拉到第一站** — `?day=all` 開啟時不再預設 `activeEntryId` 為第一張 card，OceanMap 走 `fitBounds` 顯示全行程而非 `flyTo` 第一站（Codex adversarial + structured review 雙確認的 P1 bug）。
+- **Overview 誤畫 hotel→第一站線段** — per-day polyline 過濾 `type === 'entry'`，對齊 TripMapRail 契約（hotel 是夜棲點不參與路線）。
+- **Overview 大行程 pins 不 cluster** — `cluster={!isOverview ? false : undefined}` 讓 OceanMap 內建閾值（>10 pins 自動 cluster）在總覽模式生效。
+
 ## [2.0.3.0] - 2026-04-23
 
 R19 — 每日首 timeline entry 橋接前日飯店 check-out。使用者體感：Day 2~7 每天都從「前日飯店退房」開始，時間軸連貫不跳段；Day 1 首 entry 為抵達點。同時移除不再需要的「住宿資訊」card 與「每日/全程交通統計」card（資訊已整合至 timeline）。
