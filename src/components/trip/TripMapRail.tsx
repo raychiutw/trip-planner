@@ -76,15 +76,15 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
   );
 
   /* Scroll spy: pan map to the center of whichever day section is most in view.
-     Computes centers up-front so the observer callback stays cheap. */
+     Computes centers up-front so the observer callback stays cheap. Averages over ALL pins
+     (entries + hotel) to preserve pre-refactor behavior — hotel-only days still pan to hotel. */
   const dayCenters = useMemo(() => {
     const m = new Map<number, { lat: number; lng: number }>();
     if (!pinsByDay) return m;
     pinsByDay.forEach((dayPins, dayNum) => {
-      const entries = dayPins.filter((p) => p.type === 'entry');
-      if (entries.length === 0) return;
-      const lat = entries.reduce((sum, p) => sum + p.lat, 0) / entries.length;
-      const lng = entries.reduce((sum, p) => sum + p.lng, 0) / entries.length;
+      if (dayPins.length === 0) return;
+      const lat = dayPins.reduce((sum, p) => sum + p.lat, 0) / dayPins.length;
+      const lng = dayPins.reduce((sum, p) => sum + p.lng, 0) / dayPins.length;
       m.set(dayNum, { lat, lng });
     });
     return m;
@@ -125,6 +125,7 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
           cluster={false}
           routes={true}
           fillParent={true}
+          fitOnce={true}
           onMarkerClick={handleMarkerClick}
           panToCoord={panToCoord}
           dark={dark}

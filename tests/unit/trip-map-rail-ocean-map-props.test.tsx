@@ -70,18 +70,23 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
     capturedIOCallback = null;
   });
 
-  it('passes pins, pinsByDay, dark=false to OceanMap; cluster forced off', async () => {
+  it('passes all load-bearing props (pins, pinsByDay, dark, mode, routes, fillParent, fitOnce, cluster)', async () => {
     render(
       <MemoryRouter>
         <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} dark={false} />
       </MemoryRouter>,
     );
     await waitFor(() => expect(oceanMapCalls.length).toBeGreaterThan(0));
-    const props = oceanMapCalls[oceanMapCalls.length - 1]!;
+    const props = oceanMapCalls[oceanMapCalls.length - 1]! as Record<string, unknown>;
     expect(props.pins).toBe(PINS_DAY1);
     expect(props.pinsByDay).toBe(PINS_BY_DAY);
     expect(props.dark).toBe(false);
     expect(props.cluster).toBe(false);
+    expect(props.mode).toBe('overview');
+    expect(props.routes).toBe(true);
+    expect(props.fillParent).toBe(true);
+    // fitOnce is the guard against TripPage re-renders wiping user drag + scroll-spy pan
+    expect(props.fitOnce).toBe(true);
   });
 
   it('propagates dark=true to OceanMap', async () => {
