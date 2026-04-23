@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.0.1] - 2026-04-23
+
+**字體一致性稽核修復** — 跨桌機 + 手機所有頁面字體統一為 Inter。使用者體感：/manage、/admin 的 button chip 不再用 Arial，地圖 pin 標號不再用 Helvetica Neue / system-ui，Leaflet +/− zoom 按鈕不再用 Lucida Console，整個 app 視覺更統一。
+
+### Fixed
+- **Tailwind 4 `text-*` utility class 靜默失效** — `@theme` 沒註冊 `--text-*` token，導致 `text-caption` / `text-caption2` / `text-callout` / `text-body` 等 class 不生效；所有寫這些 class 的 button / span 退回瀏覽器 UA default（Windows `button` = Arial 13.33px）。新增 12 個 `--text-*` alias 從 `--font-size-*` 對映，全部 utility class 一次啟用。
+- **`<button>` / `<input>` 字體繼承斷裂** — Tailwind 4 的 `@import "tailwindcss/theme"` 不含 preflight reset；新增全域 `button, input, select, textarea { font-family: inherit; font-size: inherit; }` 讓所有 form element 拿到 body 的 Inter。
+- **地圖 pin marker 字體錯誤** — `TripMapRail.tsx` `createPinIcon` 的 inline style 硬寫 `font-family: system-ui`；`OceanMap.tsx` `.ocean-map-pin` 用 `font-family: inherit`（從 Leaflet `.leaflet-container` 繼承 Helvetica Neue）。三處都改用 `var(--font-family-system)` token。
+- **Leaflet 預設控件字體** — `+` / `−` zoom 按鈕用 Leaflet stylesheet 預設的 Lucida Console；attribution 用 Helvetica Neue。新增 `.ocean-map-container` 與 `.trip-map-rail` scope 內的 `.leaflet-bar a` / `.leaflet-control-attribution` font-family override。
+
 ## [2.1.0.0] - 2026-04-23
 
 **MapPage 多天總覽** — 地圖頁 (`/trip/:tripId/map`) 新增「總覽」模式：最左側 tab 切換到 `?day=all` 後，地圖一次顯示全行程所有景點 pin，每天用不同顏色 polyline 連接路線（與桌機側邊 TripMapRail 一致的 10 色 Day palette）。單日模式 polyline 也改用當天顏色，兩個入口視覺語言統一。點卡片可跨天 flyTo 定位，切 tab 秒速且不重抓路線。
