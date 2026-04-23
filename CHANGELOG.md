@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.2.0] - 2026-04-23
+
+**POI Unification Phase 1 — schema prep（dormant）**。`pois.type` CHECK 新增 `activity`，`trip_entries` 加 nullable `poi_id` FK 欄位 + JOIN index。此階段純 schema，無使用者可見變化。Phase 2（API handler 走 find-or-create 把既有 timeline stop 資料回填 POI master）與 Phase 3（DROP 舊 entry.location 欄位）於後續 PR 進行。
+
+規劃文件：`SPEC.md`（3-phase plan + 6 區 skill spec）；rollback SQL：`migrations/rollback/0025*` + `0026*`（附 apply 順序說明）。
+
+### Added
+- `migrations/0025_extend_poi_types.sql` — `pois.type` CHECK 納入 `activity`。SQLite 限制下用 **triple-rename swap** pattern 同時 rebuild `pois` / `trip_pois` / `poi_relations`（單 rebuild 會讓 dependent table 的 FK 指向 dropped `pois_old`，production insert 會 `no such table` fail —— pre-landing review 抓到，已修正 commit `1eb694d`）。
+- `migrations/0026_trip_entries_poi_id.sql` — `trip_entries` 新增 `poi_id INTEGER REFERENCES pois(id)` nullable FK + `idx_trip_entries_poi_id` index。為 Phase 2 的 find-or-create / JOIN 路徑鋪路。
+- `migrations/rollback/0025_*` + `migrations/rollback/0026_*` — 雙向可逆 SQL，附執行前資料完整性 SELECT + 0026 在 0025 之前 rollback 的順序說明。
+- `SPEC.md` — POI unification 3-phase 計劃，依 spec-driven-development skill 6 區結構（objective / commands / project structure / code style / testing strategy / boundaries）。
+
+### Infrastructure
+- `.claude/settings.json` — 啟用 `agent-skills@addy-agent-skills` plugin（addyosmani/agent-skills marketplace，提供 spec-driven-development / planning / shipping-and-launch 等 engineering-workflow skills）。
+
 ## [2.1.1.0] - 2026-04-23
 
 **移除 Tripline 品牌 logo（lego mark + Trip/Line wordmark）** — 所有頁面 header 的 32×32 Ocean 方塊、三線 lego mark（3 條遞減 opacity 橫線 + 3 個 stud dot）、以及右側 `Trip/Line` wordmark 整個拔掉。TripPage（桌機 topbar）/ ManagePage（AI 編輯 header）/ MapPage / StopDetailPage（header + 404 empty state）/ PageNav（shared sticky nav）五處都不再顯示品牌 logo；各頁同步失去「點 logo 回首頁」入口。meta tag、OG image、manifest、AI 聊天品牌名稱此次不動。
