@@ -81,6 +81,22 @@ html { color-scheme: light dark; }
     --font-size-caption2: 0.6875rem;  /* 11px */
     --font-size-eyebrow: 0.625rem;    /* 10px — uppercase eyebrow labels (DAY 01, STOPS, etc.) */
 
+    /* Tailwind 4 text-* utility aliases — expose HIG font scale as `text-<name>` classes.
+       Without these, classes like `text-caption`/`text-body` are silently ignored and
+       elements fall back to browser-default font-size (~13.33px on <button>). */
+    --text-large-title: var(--font-size-large-title);
+    --text-title: var(--font-size-title);
+    --text-title2: var(--font-size-title2);
+    --text-title3: var(--font-size-title3);
+    --text-headline: var(--font-size-headline);
+    --text-body: var(--font-size-body);
+    --text-callout: var(--font-size-callout);
+    --text-subheadline: var(--font-size-subheadline);
+    --text-footnote: var(--font-size-footnote);
+    --text-caption: var(--font-size-caption);
+    --text-caption2: var(--font-size-caption2);
+    --text-eyebrow: var(--font-size-eyebrow);
+
     /* Font family — Inter primary, Noto Sans TC CJK fallback */
     --font-family-system: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang TC", system-ui, sans-serif;
     --font-family-inherit: inherit;
@@ -161,6 +177,14 @@ body {
     --badge-processing-bg: #FFF3CD;    --badge-processing-text: #856404;
     --badge-completed-bg: #D4EDDA;     --badge-completed-text: #155724;
     --badge-failed-bg: #F8D7DA;        --badge-failed-text: #721C24;
+}
+
+/* Form element font inheritance — Tailwind 4 theme import doesn't include preflight,
+   so <button>/<input>/<select>/<textarea> fall back to browser UA default font (Arial
+   13.33px on Windows). Force inherit so they pick up Inter + body font-size. */
+button, input, select, textarea {
+    font-family: inherit;
+    font-size: inherit;
 }
 body.dark {
     --badge-open-bg: #1E3040;          --badge-open-text: #7EC0E8;

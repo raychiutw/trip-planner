@@ -75,7 +75,8 @@ const SCOPED_STYLES = `
   display: grid; place-items: center;
   border-radius: 50%;
   font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-  font-family: inherit;
+  /* Explicit Inter stack — inherit from .leaflet-container falls back to Helvetica Neue */
+  font-family: var(--font-family-system, 'Inter', sans-serif);
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
   background: var(--color-background, #fff);
   border: 1.5px solid var(--color-lineStrong, #C1C1C1);
@@ -103,6 +104,7 @@ const SCOPED_STYLES = `
   border: 1.5px solid var(--color-accent, #0077B6);
   color: var(--color-foreground, #222);
   font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums;
+  font-family: var(--font-family-system, 'Inter', sans-serif);
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 .ocean-map-container {
@@ -121,6 +123,11 @@ const SCOPED_STYLES = `
 .ocean-map-container .leaflet-control-attribution {
   font-size: 9px;
   background: rgba(255,255,255,0.85);
+}
+/* Override Leaflet default Lucida Console on +/- zoom controls */
+.ocean-map-container .leaflet-bar a,
+.ocean-map-container .leaflet-control-attribution {
+  font-family: var(--font-family-system, 'Inter', sans-serif);
 }
 `;
 
