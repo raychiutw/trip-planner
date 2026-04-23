@@ -43,6 +43,8 @@ export interface OceanMapProps {
   pinsByDay?: Map<number, MapPin[]>;
   /** Apply dayColor(dayNum) to flat polylines (single-day mode). Ignored when pinsByDay is set. */
   dayNum?: number;
+  /** Imperative soft pan — panTo this coord without changing zoom. Used by TripMapRail scroll spy. */
+  panToCoord?: { lat: number; lng: number };
 }
 
 /* ===== Marker construction ===== */
@@ -271,6 +273,7 @@ const OceanMap = memo(function OceanMap({
   style,
   pinsByDay,
   dayNum,
+  panToCoord,
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
   const autoCluster = cluster ?? (mode === 'overview' && pins.length > 10);
@@ -472,6 +475,12 @@ const OceanMap = memo(function OceanMap({
     const t = setTimeout(() => map.invalidateSize(), 50);
     return () => clearTimeout(t);
   }, [map, mode]);
+
+  /* --- Imperative soft pan (used by TripMapRail scroll spy to pan per-day without zooming) --- */
+  useEffect(() => {
+    if (!map || !panToCoord) return;
+    map.panTo([panToCoord.lat, panToCoord.lng]);
+  }, [map, panToCoord]);
 
   /* --- Segments (polylines) --- */
   const segments = useMemo(() => {
