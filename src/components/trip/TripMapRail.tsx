@@ -58,6 +58,11 @@ const SCOPED_STYLES = `
   width: 100%;
   height: 100%;
 }
+/* Override Leaflet default fonts for controls + attribution */
+.trip-map-rail .leaflet-bar a,
+.trip-map-rail .leaflet-control-attribution {
+  font-family: var(--font-family-system, 'Inter', sans-serif);
+}
 `;
 
 /* ===== Leaflet default marker icon fix ===== */
