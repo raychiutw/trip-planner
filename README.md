@@ -55,4 +55,5 @@
 - [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、6 套主題）
 - [CLAUDE.md](CLAUDE.md) — 開發流程與 gstack pipeline
 - [TODOS.md](TODOS.md) — 已知待辦與 follow-up
+- [SPEC.md](SPEC.md) — 進行中的多階段規格（目前：POI Unification 三階段計劃）
 - [CHANGELOG.md](CHANGELOG.md) — 版本紀錄

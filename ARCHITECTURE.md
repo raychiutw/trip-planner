@@ -156,7 +156,7 @@ functions/api/
 
 ## Data Model
 
-D1 schema 演進在 `migrations/0001 ~ 0024*.sql`。核心表：
+D1 schema 演進在 `migrations/0001 ~ 0026*.sql`（含 `migrations/rollback/` 反向 SQL）。核心表：
 
 ### 行程結構（時間軸）
 
