@@ -16,9 +16,9 @@
 
 ## 2. lib / hook 層（TDD 綠階段 — data）
 
-- [ ] 2.1 [CODE] `src/hooks/useMapData.ts`：export `extractPinsFromAllDays(days: Day[]): { pins: MapPin[]; pinsByDay: Map<number, MapPin[]>; missingCount: number }`
-- [ ] 2.2 [CODE] `src/lib/dayPalette.ts`：確認 `dayColor(N: number): string` 與 `dayPolylineStyle(N: number): L.PolylineOptions` export；若需新增 dayNum → style 的 helper 則補上
-- [ ] 2.3 執行 `npm run test`，2.1 對應新 util test 轉綠
+- [x] 2.1 [CODE] `src/hooks/useMapData.ts`：新增 `extractPinsFromAllDays(allDays)` + `ExtractAllDaysResult` interface；input 為 `Record<number, Day>`；回傳 `{ pins, pinsByDay: Map, missingCount }`
+- [x] 2.2 [CODE] `src/lib/dayPalette.ts`：已有 `dayColor(N)` 和 `dayPolylineStyle(N)` export，無需修改
+- [x] 2.3 新增 `tests/unit/extract-pins-all-days.test.ts` 5 assertion 全綠（null input、多天 grouping、sort、missingCount、空 day）
 
 ## 3. OceanMap 擴充（TDD 綠階段 — component）
 
