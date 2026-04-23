@@ -43,6 +43,12 @@ export interface OceanMapProps {
   pinsByDay?: Map<number, MapPin[]>;
   /** Apply dayColor(dayNum) to flat polylines (single-day mode). Ignored when pinsByDay is set. */
   dayNum?: number;
+  /** Imperative soft pan — panTo this coord without changing zoom. Used by TripMapRail scroll spy. */
+  panToCoord?: { lat: number; lng: number };
+  /** When true, fitBounds runs once on mount then preserves user drag/pan. Used by TripMapRail
+      because parent TripPage rebuilds pins inline on every render — without this, every re-render
+      would snap the rail back to full-trip bounds and wipe manual map moves + scroll-spy pan. */
+  fitOnce?: boolean;
 }
 
 /* ===== Marker construction ===== */
@@ -271,6 +277,8 @@ const OceanMap = memo(function OceanMap({
   style,
   pinsByDay,
   dayNum,
+  panToCoord,
+  fitOnce = false,
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
   const autoCluster = cluster ?? (mode === 'overview' && pins.length > 10);
@@ -448,6 +456,7 @@ const OceanMap = memo(function OceanMap({
   }, [autoCluster, focusId, focusedIdx]);
 
   /* --- Viewport fit / focus follow --- */
+  const fitDoneRef = useRef(false);
   useEffect(() => {
     if (!map) return;
     if (mode === 'detail' && visiblePins[0]) {
@@ -462,9 +471,12 @@ const OceanMap = memo(function OceanMap({
         return;
       }
     }
+    // fitOnce: after the first fit, don't re-fit on parent re-renders (would wipe user drag)
+    if (fitOnce && fitDoneRef.current) return;
     const latlngs = visiblePins.map((p) => [p.lat, p.lng] as L.LatLngExpression);
     fitBounds(latlngs);
-  }, [map, mode, focusId, pins, pinIndexById, visiblePins, fitBounds, flyTo]);
+    fitDoneRef.current = true;
+  }, [map, mode, focusId, pins, pinIndexById, visiblePins, fitBounds, flyTo, fitOnce]);
 
   /* --- Resize on container changes (Suspense / mode toggle) --- */
   useEffect(() => {
@@ -472,6 +484,12 @@ const OceanMap = memo(function OceanMap({
     const t = setTimeout(() => map.invalidateSize(), 50);
     return () => clearTimeout(t);
   }, [map, mode]);
+
+  /* --- Imperative soft pan (used by TripMapRail scroll spy to pan per-day without zooming) --- */
+  useEffect(() => {
+    if (!map || !panToCoord) return;
+    map.panTo([panToCoord.lat, panToCoord.lng]);
+  }, [map, panToCoord]);
 
   /* --- Segments (polylines) --- */
   const segments = useMemo(() => {
