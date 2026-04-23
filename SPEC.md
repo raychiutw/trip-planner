@@ -148,4 +148,6 @@ node scripts/verify-entry-poi-backfill.js --all # 確認 100% entries 有 poi_id
 
 ## Revision history
 
-- 2026-04-23: 初稿（以 Q1=B / Q2=A / Q3=B / Q4=A 為基礎）
+- 2026-04-23 初稿：以 Q1=B（3 types: attraction / transport / activity）/ Q2=A / Q3=B / Q4=A 為基礎
+- 2026-04-23 Phase 1 ship：Open Decisions 解答 = 1(a) 新 `activity` type / 2(a) Phase 3 隨 v2.2.0.0 同 release / 3 ok（5% confidence 門檻）/ 4 ok（Phase 2 一併清理 orphan POI）
+- 2026-04-23 Phase 1 bug fix：adversarial review 抓到 `migrations/0025` 漏 rebuild `poi_relations`（SQLite ALTER RENAME 會把全 DB 內對 pois 的 FK 重寫，單 rebuild pois + trip_pois 會留下 poi_relations → pois_old dangling FK，production insert 會 `no such table` fail）。改用 **triple-rename swap**，連 poi_relations 一起 rebuild。Rollback 同步修正。

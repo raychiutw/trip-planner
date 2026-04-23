@@ -9,15 +9,22 @@
 --   2. PRAGMA foreign_keys 在 transaction 內無效
 --   3. CREATE TEMP TABLE 被 SQLITE_AUTH 拒絕
 --
--- 解法（dual-rename swap）：
---   1. 把 pois → pois_old（trip_pois.FK 自動 follow 改指 pois_old）
---   2. 建新 pois（新 CHECK）+ copy data
---   3. 把 trip_pois → trip_pois_old（其 FK 仍指 pois_old）
---   4. 建新 trip_pois（FK 指 pois）+ copy data
---   5. DROP trip_pois_old → DROP pois_old（順序：先 dependent 再 parent）
---   6. 重建 indexes
+-- 解法（triple-rename swap）：
+--   pois 有 2 個 dependent tables：trip_pois、poi_relations。SQLite `ALTER TABLE
+--   pois RENAME TO pois_old` 會同步把所有 dependent 的 FK 重寫為指向 `pois_old`。
+--   若只 rebuild trip_pois，poi_relations 會留下 `REFERENCES "pois_old"(id)` 的
+--   殘骸，DROP pois_old 後 poi_relations 任何 INSERT 會 `no such table` fail。
+--   解法：把 poi_relations 也納入 rebuild。
 --
--- 為何 work：COMMIT 時 trip_pois.FK 指向活著的 pois；trip_pois_old / pois_old 已 DROP。
+-- 步驟：
+--   1. pois → pois_old（兩個 dependent FK 自動改指 pois_old）
+--   2. 建新 pois（新 CHECK）+ copy data
+--   3. trip_pois → trip_pois_old（FK 仍指 pois_old）
+--   4. 建新 trip_pois（FK 指 pois）+ copy data
+--   5. poi_relations → poi_relations_old（FK 仍指 pois_old）
+--   6. 建新 poi_relations（FK 指 pois）+ copy data
+--   7. DROP poi_relations_old → DROP trip_pois_old → DROP pois_old
+--   8. 重建全部 indexes
 --
 -- 新 allowed types（依序）：
 --   hotel / restaurant / shopping / parking / attraction / transport / activity / other
@@ -93,13 +100,33 @@ CREATE TABLE trip_pois (
 INSERT INTO trip_pois SELECT * FROM trip_pois_old;
 
 -- ============================================================
--- 5. 清除舊表（順序：先 dependent 再 parent）
+-- 5. 把 poi_relations → poi_relations_old（FK 仍指 pois_old）
 -- ============================================================
+ALTER TABLE poi_relations RENAME TO poi_relations_old;
+
+-- ============================================================
+-- 6. 建新 poi_relations（FK 指 pois；schema 同 0015 / 0016）+ copy data
+-- ============================================================
+CREATE TABLE poi_relations (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  poi_id          INTEGER NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  related_poi_id  INTEGER NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  relation_type   TEXT NOT NULL CHECK (relation_type IN ('parking','nearby')),
+  note            TEXT,
+  UNIQUE(poi_id, related_poi_id, relation_type)
+);
+
+INSERT INTO poi_relations SELECT * FROM poi_relations_old;
+
+-- ============================================================
+-- 7. 清除舊表（順序：最深 dependent 先 drop）
+-- ============================================================
+DROP TABLE poi_relations_old;
 DROP TABLE trip_pois_old;
 DROP TABLE pois_old;
 
 -- ============================================================
--- 6. 重建 indexes（兩個表）
+-- 8. 重建 indexes（三個表）
 -- ============================================================
 CREATE INDEX idx_pois_type ON pois(type);
 CREATE INDEX idx_pois_name ON pois(name);

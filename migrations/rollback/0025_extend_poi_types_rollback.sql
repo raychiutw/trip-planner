@@ -1,11 +1,14 @@
 -- Rollback for migration 0025: 移除 'activity' 從 pois.type CHECK
 --
 -- 執行時機：僅當 Phase 1 ship 後發現需回退 type 擴充。
--- 前置：確保 pois 表無 type='activity' 的資料
--- 先跑：SELECT COUNT(*) FROM pois WHERE type='activity';
--- 若 > 0，**先停止 rollback**（否則 INSERT INTO pois_new 會 CHECK fail）
+-- 前置：
+--   1. 確保 pois 表無 type='activity' 的資料
+--      SELECT COUNT(*) FROM pois WHERE type='activity';
+--      若 > 0 先 STOP（否則 INSERT 會 CHECK fail）
+--   2. 確認 0025 已實際 apply 過（避免 no-op rollback 損壞 schema）
 --
--- Pattern：同 0025 dual-rename swap，CHECK 回退至 original 7 type。
+-- Pattern：同 0025 triple-rename swap，連 poi_relations 一起回退
+-- （單 rebuild pois 會 leave dangling FK → pois_old）。
 
 ALTER TABLE pois RENAME TO pois_old;
 
@@ -65,6 +68,20 @@ CREATE TABLE trip_pois (
 
 INSERT INTO trip_pois SELECT * FROM trip_pois_old;
 
+ALTER TABLE poi_relations RENAME TO poi_relations_old;
+
+CREATE TABLE poi_relations (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  poi_id          INTEGER NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  related_poi_id  INTEGER NOT NULL REFERENCES pois(id) ON DELETE CASCADE,
+  relation_type   TEXT NOT NULL CHECK (relation_type IN ('parking','nearby')),
+  note            TEXT,
+  UNIQUE(poi_id, related_poi_id, relation_type)
+);
+
+INSERT INTO poi_relations SELECT * FROM poi_relations_old;
+
+DROP TABLE poi_relations_old;
 DROP TABLE trip_pois_old;
 DROP TABLE pois_old;
 
