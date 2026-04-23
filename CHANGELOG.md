@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.0.2] - 2026-04-23
+
+**桌機行程地圖改走真實道路曲線** — 桌機右側 sticky map 之前用兩點直線連接各 stop，手機 MapPage 用 Mapbox Directions 畫實際道路。同一趟行程在兩個裝置看到完全不同的路線呈現。這版統一：桌機也走 Mapbox，曲線沿道路繞、與手機視覺一致。
+
+### Fixed
+- **桌機 TripMapRail polyline 直線 → 曲線** — TripMapRail 改為 delegate 給 OceanMap（之前是獨立 Leaflet 實作+ `L.polyline` 直線）。桌機 sticky map 現在用 `useRoute` 從 Mapbox Directions 抓實際道路，與手機 MapPage 共用同一渲染引擎、cluster 邏輯、font stack、IndexedDB 路線快取。使用者在兩個裝置看到的地圖線條從此一致。
+- **桌機 re-render 不再 wipe 地圖位置** — OceanMap 加 `fitOnce` 旗標。TripPage IIFE 每次 re-render 會重建 pins 陣列，之前會把 rail 強拉回全行程 bounds、蓋掉使用者 drag + scroll-spy pan。現在首次 fitBounds 後保留使用者拖曳位置。
+- **Scroll spy pan 位置還原為全 pin 平均** — 上一版 refactor 把 day centroid 從「全 pin 平均」改成「只算 entry pins」，hotel-only 天就不會 pan、含 hotel 的天 pan 位置會偏移。這版改回含 hotel 的全 pin 平均，行為真正與原本一致。
+
+### Changed
+- **TripMapRail 精簡為 thin wrapper**（-115 +45 行，淨 -261 連測試）— 移除自有 `useLeafletMap` + `L.marker` + `L.polyline` + `createPinIcon` + 部分 SCOPED_STYLES。保留 sticky layout + IntersectionObserver scroll spy + 點 pin 跳 `/trip/:id/stop/:eid` 的 navigation 邏輯。
+
 ## [2.1.0.1] - 2026-04-23
 
 **字體一致性稽核修復** — 跨桌機 + 手機所有頁面字體統一為 Inter。使用者體感：/manage、/admin 的 button chip 不再用 Arial，地圖 pin 標號不再用 Helvetica Neue / system-ui，Leaflet +/− zoom 按鈕不再用 Lucida Console，整個 app 視覺更統一。
