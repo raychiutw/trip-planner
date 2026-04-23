@@ -17,6 +17,7 @@ import L from 'leaflet';
 import Supercluster from 'supercluster';
 import { useLeafletMap } from '../../hooks/useLeafletMap';
 import { useRoute, type Coord } from '../../hooks/useRoute';
+import { dayPolylineStyle } from '../../lib/dayPalette';
 import type { MapPin } from '../../hooks/useMapData';
 
 /* ===== Props ===== */
@@ -38,6 +39,10 @@ export interface OceanMapProps {
   dark?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  /** When provided, draw polyline segments PER DAY using dayColor(N). Cross-day segments NOT drawn. */
+  pinsByDay?: Map<number, MapPin[]>;
+  /** Apply dayColor(dayNum) to flat polylines (single-day mode). Ignored when pinsByDay is set. */
+  dayNum?: number;
 }
 
 /* ===== Marker construction ===== */
@@ -126,9 +131,24 @@ interface SegmentProps {
   from: Coord;
   to: Coord;
   isActive: boolean;
+  /** If provided, polyline uses dayPolylineStyle(dayNum) for color + dashArray (color-blind aid). */
+  dayNum?: number;
 }
 
-function segmentStyle(isActive: boolean, approx: boolean): L.PolylineOptions {
+function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number): L.PolylineOptions {
+  if (dayNum !== undefined) {
+    // Day palette mode: dayColor + dashArray (odd=solid, even=dashed) for color-blind aid.
+    // approx fallback overrides dashArray for visual distinction.
+    const palette = dayPolylineStyle(dayNum);
+    return {
+      color: palette.color,
+      weight: isActive ? 4 : palette.weight,
+      opacity: isActive ? 0.85 : 0.6,
+      dashArray: approx ? '6,6' : palette.dashArray,
+      interactive: false,
+    };
+  }
+  // Default (no dayNum): accent for active, muted grey for idle.
   return {
     color: isActive ? 'var(--color-accent, #0077B6)' : '#94A3B8',
     weight: isActive ? 4 : 3,
@@ -138,20 +158,20 @@ function segmentStyle(isActive: boolean, approx: boolean): L.PolylineOptions {
   };
 }
 
-const Segment = memo(function Segment({ map, from, to, isActive }: SegmentProps) {
+const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: SegmentProps) {
   const route = useRoute(from, to);
   const lineRef = useRef<L.Polyline | null>(null);
 
   // Create polyline once per route (re-fetched polyline = new line)
   useEffect(() => {
     if (!map || !route) return;
-    const line = L.polyline(route.polyline, segmentStyle(isActive, route.approx === true)).addTo(map);
+    const line = L.polyline(route.polyline, segmentStyle(isActive, route.approx === true, dayNum)).addTo(map);
     lineRef.current = line;
     return () => {
       line.remove();
       if (lineRef.current === line) lineRef.current = null;
     };
-    // isActive intentionally omitted — handled by the style-update effect below
+    // isActive / dayNum handled by the style-update effect below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, route]);
 
@@ -159,11 +179,75 @@ const Segment = memo(function Segment({ map, from, to, isActive }: SegmentProps)
   useEffect(() => {
     const line = lineRef.current;
     if (!line || !route) return;
-    line.setStyle(segmentStyle(isActive, route.approx === true));
-  }, [isActive, route]);
+    line.setStyle(segmentStyle(isActive, route.approx === true, dayNum));
+  }, [isActive, route, dayNum]);
 
   return null;
 });
+
+/* ===== Pure segment-pair builder (exported for unit tests) ===== */
+
+export interface SegmentPair {
+  from: Coord;
+  to: Coord;
+  isActive: boolean;
+  key: string;
+  dayNum?: number;
+}
+
+/**
+ * Build consecutive polyline pairs from pins.
+ *
+ * - pinsByDay mode: per-day polyline, cross-day segments NOT drawn. Hotel pins
+ *   are filtered out so the polyline matches TripMapRail (hotel is a stay-over
+ *   marker, not part of the travel path between stops).
+ * - Flat pins mode: connects every consecutive pair.
+ */
+export function buildSegments(params: {
+  pins: MapPin[];
+  pinsByDay?: Map<number, MapPin[]>;
+  focusedIdx: number;
+  pinIndexById: Map<number, number>;
+  dayNum?: number;
+}): SegmentPair[] {
+  const { pins, pinsByDay, focusedIdx, pinIndexById, dayNum } = params;
+  const pairs: SegmentPair[] = [];
+
+  if (pinsByDay && pinsByDay.size > 0) {
+    const sortedDays = [...pinsByDay.keys()].sort((a, b) => a - b);
+    for (const d of sortedDays) {
+      const dayPins = (pinsByDay.get(d) ?? []).filter((p) => p.type === 'entry');
+      for (let i = 0; i < dayPins.length - 1; i++) {
+        const a = dayPins[i]!;
+        const b = dayPins[i + 1]!;
+        const aIdx = pinIndexById.get(a.id) ?? -1;
+        const bIdx = pinIndexById.get(b.id) ?? -1;
+        pairs.push({
+          from: { lat: a.lat, lng: a.lng },
+          to: { lat: b.lat, lng: b.lng },
+          isActive: focusedIdx === aIdx || focusedIdx === bIdx,
+          key: `${a.id}->${b.id}`,
+          dayNum: d,
+        });
+      }
+    }
+    return pairs;
+  }
+
+  if (pins.length < 2) return [];
+  for (let i = 0; i < pins.length - 1; i++) {
+    const a = pins[i]!;
+    const b = pins[i + 1]!;
+    pairs.push({
+      from: { lat: a.lat, lng: a.lng },
+      to: { lat: b.lat, lng: b.lng },
+      isActive: focusedIdx === i || focusedIdx === i + 1,
+      key: `${a.id}->${b.id}`,
+      dayNum,
+    });
+  }
+  return pairs;
+}
 
 /* ===== Main component ===== */
 
@@ -178,6 +262,8 @@ const OceanMap = memo(function OceanMap({
   dark = false,
   className,
   style,
+  pinsByDay,
+  dayNum,
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
   const autoCluster = cluster ?? (mode === 'overview' && pins.length > 10);
@@ -362,7 +448,8 @@ const OceanMap = memo(function OceanMap({
       return;
     }
     if (focusId !== undefined) {
-      const pin = pins.find((p) => p.id === focusId);
+      const idx = pinIndexById.get(focusId);
+      const pin = idx !== undefined ? pins[idx] : undefined;
       if (pin) {
         flyTo([pin.lat, pin.lng], map.getZoom() < 12 ? 13 : undefined);
         return;
@@ -370,7 +457,7 @@ const OceanMap = memo(function OceanMap({
     }
     const latlngs = visiblePins.map((p) => [p.lat, p.lng] as L.LatLngExpression);
     fitBounds(latlngs);
-  }, [map, mode, focusId, pins, visiblePins, fitBounds, flyTo]);
+  }, [map, mode, focusId, pins, pinIndexById, visiblePins, fitBounds, flyTo]);
 
   /* --- Resize on container changes (Suspense / mode toggle) --- */
   useEffect(() => {
@@ -381,20 +468,9 @@ const OceanMap = memo(function OceanMap({
 
   /* --- Segments (polylines) --- */
   const segments = useMemo(() => {
-    if (!showRoutes || pins.length < 2) return [];
-    const pairs: Array<{ from: Coord; to: Coord; isActive: boolean; key: string }> = [];
-    for (let i = 0; i < pins.length - 1; i++) {
-      const a = pins[i]!;
-      const b = pins[i + 1]!;
-      pairs.push({
-        from: { lat: a.lat, lng: a.lng },
-        to: { lat: b.lat, lng: b.lng },
-        isActive: focusedIdx === i || focusedIdx === i + 1,
-        key: `${a.id}->${b.id}`,
-      });
-    }
-    return pairs;
-  }, [pins, showRoutes, focusedIdx]);
+    if (!showRoutes) return [];
+    return buildSegments({ pins, pinsByDay, focusedIdx, pinIndexById, dayNum });
+  }, [pins, showRoutes, focusedIdx, pinsByDay, pinIndexById, dayNum]);
 
   return (
     <>
@@ -409,7 +485,7 @@ const OceanMap = memo(function OceanMap({
         aria-label={mode === 'detail' ? '地圖：單點景點' : '地圖：行程景點總覽'}
       />
       {segments.map((s) => (
-        <Segment key={s.key} map={map} from={s.from} to={s.to} isActive={s.isActive} />
+        <Segment key={s.key} map={map} from={s.from} to={s.to} isActive={s.isActive} dayNum={s.dayNum} />
       ))}
     </>
   );
