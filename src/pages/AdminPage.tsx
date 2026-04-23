@@ -249,7 +249,7 @@ export default function AdminPage() {
   return (
     <div className="flex min-h-dvh">
       <div className="flex-1 min-w-0 max-w-full mx-auto">
-        <PageNav isOnline={isOnline} center={navCenter} />
+        <PageNav center={navCenter} />
 
         <ToastContainer />
 

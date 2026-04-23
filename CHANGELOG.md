@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.1.0] - 2026-04-23
+
+**移除 Tripline 品牌 logo（lego mark + Trip/Line wordmark）** — 所有頁面 header 的 32×32 Ocean 方塊、三線 lego mark（3 條遞減 opacity 橫線 + 3 個 stud dot）、以及右側 `Trip/Line` wordmark 整個拔掉。TripPage（桌機 topbar）/ ManagePage（AI 編輯 header）/ MapPage / StopDetailPage（header + 404 empty state）/ PageNav（shared sticky nav）五處都不再顯示品牌 logo；各頁同步失去「點 logo 回首頁」入口。meta tag、OG image、manifest、AI 聊天品牌名稱此次不動。
+
+### Removed
+- **`TriplineLogo` 元件** — 刪除 `src/components/shared/TriplineLogo.tsx`（-75 行）
+- **5 處 header 使用位置** — TripPage / ManagePage / MapPage / StopDetailPage（×2）/ PageNav 全數移除 `<TriplineLogo>` 節點
+- **CSS 樣式** — `.tripline-logo` / `.tripline-logo-desktop` / `.ocean-brand` wrapper（`.ocean-brand-label` 保留給 TripPage 行程名稱用）
+- **Logo-existence 測試 3 檔** — `tripline-logo-link.test.tsx` / `stop-detail-page-logo.test.tsx` / `map-page-logo.test.tsx`
+
+### Changed
+- **`PageNav` prop 縮減** — 移除 `isOnline`（原本僅傳給 TriplineLogo），`AdminPage` 同步更新 caller
+- **ManagePage / MapPage / StopDetailPage** — 刪除僅用於傳遞 TriplineLogo 的 `isOnline` 本地變數與 import
+- **TripPage topbar** — `ocean-brand` wrapper 消失後，`DestinationArt` 與 `.ocean-brand-label`（行程名稱）改為 `.ocean-topbar-left` 的直接 flex sibling
+- **反向 assertion 測試** — `stop-detail-topbar-layout.test.tsx`（header 2 children + 不含 home link）、`admin-page.test.tsx`（PageNav 內不含 Tripline home link），防止 logo 意外復活
+- **`DESIGN.md`** — Decisions Log 新增 2026-04-23 棄用紀錄；Components / Icons section 移除 lego mark 描述
+
 ## [2.1.0.2] - 2026-04-23
 
 **桌機行程地圖改走真實道路曲線** — 桌機右側 sticky map 之前用兩點直線連接各 stop，手機 MapPage 用 Mapbox Directions 畫實際道路。同一趟行程在兩個裝置看到完全不同的路線呈現。這版統一：桌機也走 Mapbox，曲線沿道路繞、與手機視覺一致。

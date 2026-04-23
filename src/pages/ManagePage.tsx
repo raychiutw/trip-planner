@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import '../../css/tokens.css';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-import TriplineLogo from '../components/shared/TriplineLogo';
 import Icon from '../components/shared/Icon';
 import { apiFetchRaw } from '../lib/apiClient';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -601,7 +600,6 @@ export default function ManagePage() {
       <style>{MANAGE_SCOPED_STYLES}</style>
       <ManageTopbar
         onBack={handleClose}
-        isOnline={isOnline}
         tripSelector={tripSelector}
       />
 
@@ -756,11 +754,10 @@ export default function ManagePage() {
 
 interface ManageTopbarProps {
   onBack: () => void;
-  isOnline: boolean;
   tripSelector: React.ReactNode;
 }
 
-function ManageTopbar({ onBack, isOnline, tripSelector }: ManageTopbarProps) {
+function ManageTopbar({ onBack, tripSelector }: ManageTopbarProps) {
   return (
     <header className="manage-topbar">
       <button
@@ -776,7 +773,6 @@ function ManageTopbar({ onBack, isOnline, tripSelector }: ManageTopbarProps) {
       </div>
       <div className="manage-topbar-right">
         {tripSelector}
-        <TriplineLogo isOnline={isOnline} />
       </div>
     </header>
   );

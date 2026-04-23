@@ -1,8 +1,6 @@
 import React from 'react';
-import TriplineLogo from './TriplineLogo';
 
 interface PageNavProps {
-  isOnline: boolean;
   /** If provided, renders a × close button on the right. Omit for standalone pages (e.g. AdminPage). */
   onClose?: () => void;
   /** Center content: title string or arbitrary React node (e.g. dropdown) */
@@ -11,17 +9,16 @@ interface PageNavProps {
 
 /**
  * Shared sticky glassmorphism nav bar used by ManagePage and AdminPage.
- * Renders TriplineLogo on the left, optional center content, and an optional close X button on the right.
+ * Renders optional center content and an optional close X button on the right.
  * Pass `onClose` only when the page is used as a modal-like overlay (e.g. ManagePage).
  * Omit `onClose` for standalone pages (e.g. AdminPage) to avoid modal/page confusion.
  */
-export default function PageNav({ isOnline, onClose, center }: PageNavProps) {
+export default function PageNav({ onClose, center }: PageNavProps) {
   return (
     <div
       className="sticky top-0 z-(--z-sticky-nav) border-b border-border bg-(--color-glass-nav) backdrop-blur-xl backdrop-saturate-200 text-foreground py-2 px-padding-h flex items-center gap-2"
       id="stickyNav"
     >
-      <TriplineLogo isOnline={isOnline} />
       {center && (
         <div className="absolute left-1/2 -translate-x-1/2">
           {center}

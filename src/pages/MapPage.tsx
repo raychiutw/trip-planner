@@ -28,9 +28,7 @@ import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hook
 import { dayColor } from '../lib/dayPalette';
 import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
-import TriplineLogo from '../components/shared/TriplineLogo';
 import BreadcrumbCrumbs from '../components/shared/BreadcrumbCrumbs';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -215,7 +213,6 @@ export default function MapPage() {
   const { tripId, entryId: entryIdStr } = useParams<{ tripId: string; entryId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isOnline = useOnlineStatus();
   const { trip, allDays, loading } = useTripContext();
 
   const urlEntryId = entryIdStr ? Number(entryIdStr) : null;
@@ -416,7 +413,6 @@ export default function MapPage() {
         <div className="map-page-crumb">
           <BreadcrumbCrumbs parts={crumb.split(' · ')} classPrefix="map-page-crumb" />
         </div>
-        <TriplineLogo isOnline={isOnline} />
       </header>
 
       <main className="map-page-body">
