@@ -28,14 +28,12 @@
 
 ## 4. MapPage overview mode（TDD 綠階段 — page）
 
-- [ ] 4.1 [CODE] `src/pages/MapPage.tsx`：解析 `?day` query，接受 `'all' | string(N)`；state `activeTab: 'overview' | number`
-- [ ] 4.2 [CODE] day tabs render：prepend 「總覽」tab 於 Day 01 tab 之前；active state 依 `activeTab` 判定
-- [ ] 4.3 [CODE] pins / OceanMap props 分支：
-  - `activeTab === 'overview'`：`pinsByDay = extractPinsFromAllDays(days).pinsByDay`、傳 `pinsByDay`
-  - `activeTab === N`：pins = 該天 pins、傳 `dayNum={N}`
-- [ ] 4.4 [CODE] entry cards 顯示邏輯：overview mode 顯示所有 days 的 entry cards（水平 scroll group by day，或 flat 附 day prefix，視 UX 選擇）；single day mode 沿用既有只顯示該天
-- [ ] 4.5 [CODE] flyTo 行為：overview mode 點 card 只 flyTo 不切 tab；single day 維持既有
-- [ ] 4.6 執行 `npm run test`，1.1/1.2/1.5 轉綠
+- [x] 4.1 [CODE] `initialTab: 'overview' | number` useMemo 解析 `?day=all`/`?day=N`/預設；`activeTab` state + `isOverview` helper
+- [x] 4.2 [CODE] day tabs：prepend「總覽」tab（aria-pressed=isOverview、顯示「{N} 天」）；Day tab active 時 borderBottom + eyebrow 用 `dayColor(N)` 著色
+- [x] 4.3 [CODE] pins 三分支：overview → `extractPinsFromAllDays(allDays)`；single day → `extractPinsFromDay(currentDay)`；OceanMap 傳 `pinsByDay={isOverview ? ... : undefined}` 和 `dayNum={isOverview ? undefined : (activeTab as number)}`
+- [x] 4.4 [CODE] entry cards：overview 顯示全行程 flat list + `D{N}` prefix 用 dayColor 著色；single day 沿用；empty state 文案分支
+- [x] 4.5 [CODE] flyTo：overview mode 點 card 只 setActiveEntryId（OceanMap 自 focusId 觸發 flyTo）不切 tab；既有邏輯 handleCardClick 不動（本來就不切 tab，只是之前 effect 同步 activeTab 現在是 activeTab）
+- [x] 4.6 既有 map-page-day-query test 更新 initialDayNum→initialTab、activeDayNum→activeTab；628/628 全綠
 
 ## 5. TripMapRail 抽共用 helper（視需要）
 

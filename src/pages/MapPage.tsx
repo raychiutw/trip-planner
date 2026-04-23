@@ -24,7 +24,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTripContext } from '../contexts/TripContext';
-import { extractPinsFromDay } from '../hooks/useMapData';
+import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hooks/useMapData';
+import { dayColor } from '../lib/dayPalette';
 import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
 import TriplineLogo from '../components/shared/TriplineLogo';
@@ -231,14 +232,16 @@ export default function MapPage() {
       });
   }, [allDays]);
 
-  /* --- Initial active day: from entry (if in URL) → ?day=N → first day --- */
-  const initialDayNum = useMemo(() => {
+  /* --- Initial active tab: 'overview' | number --- */
+  // URL 解析順序：?day=all → 'overview'；entry 存在 → 對應 day；?day=N → N；否則第 1 天
+  const initialTab: 'overview' | number = useMemo(() => {
     if (!allDays) return 1;
     if (urlEntryId != null) {
       const ctx = findEntryInDays(allDays, urlEntryId);
       if (ctx) return ctx.dayNum;
     }
     const q = searchParams.get('day');
+    if (q === 'all') return 'overview';
     if (q) {
       const n = Number(q);
       if (Number.isFinite(n) && allDays[n]) return n;
@@ -246,42 +249,71 @@ export default function MapPage() {
     return dayTabs[0]?.dayNum ?? 1;
   }, [allDays, urlEntryId, searchParams, dayTabs]);
 
-  const [activeDayNum, setActiveDayNum] = useState(initialDayNum);
+  const [activeTab, setActiveTab] = useState<'overview' | number>(initialTab);
+  const isOverview = activeTab === 'overview';
 
-  // Keep activeDayNum synced with URL on first load
+  // Keep activeTab synced with URL on first load
   useEffect(() => {
-    setActiveDayNum(initialDayNum);
-  }, [initialDayNum]);
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
-  /* --- Active entry (for map focus + card highlight) --- */
-  const currentDay = allDays?.[activeDayNum];
-  const dayPins = useMemo(() => {
+  /* --- Pins: overview vs single day --- */
+  const overviewData = useMemo(() => {
+    return isOverview ? extractPinsFromAllDays(allDays) : null;
+  }, [isOverview, allDays]);
+
+  const currentDay = !isOverview && typeof activeTab === 'number' ? allDays?.[activeTab] : undefined;
+  const singleDayPins = useMemo(() => {
     if (!currentDay) return [];
     return extractPinsFromDay(currentDay).pins;
   }, [currentDay]);
 
-  const dayEntryPins = useMemo(() => dayPins.filter((p) => p.type === 'entry'), [dayPins]);
+  // Flat pins passed to OceanMap (overview aggregates all days)
+  const mapPins: MapPin[] = useMemo(() => {
+    if (isOverview && overviewData) return overviewData.pins;
+    return singleDayPins;
+  }, [isOverview, overviewData, singleDayPins]);
+
+  // Entry pins for card list — overview aggregates, single day filters to this day
+  const cardEntryPins = useMemo(() => {
+    if (isOverview && overviewData) {
+      return overviewData.pins.filter((p) => p.type === 'entry');
+    }
+    return singleDayPins.filter((p) => p.type === 'entry');
+  }, [isOverview, overviewData, singleDayPins]);
+
+  // Entry id → dayNum map (used for overview card's day prefix)
+  const entryDayMap = useMemo(() => {
+    const m = new Map<number, number>();
+    if (overviewData) {
+      overviewData.pinsByDay.forEach((pins, dayNum) => {
+        pins.forEach((p) => m.set(p.id, dayNum));
+      });
+    }
+    return m;
+  }, [overviewData]);
 
   const [activeEntryId, setActiveEntryId] = useState<number | null>(urlEntryId);
 
-  // When day changes (or first load), default active entry to URL entry or first pin
+  // When tab changes (or first load), default active entry to URL entry or first card
   useEffect(() => {
-    if (urlEntryId != null && dayEntryPins.some((p) => p.id === urlEntryId)) {
+    if (urlEntryId != null && cardEntryPins.some((p) => p.id === urlEntryId)) {
       setActiveEntryId(urlEntryId);
       return;
     }
-    setActiveEntryId(dayEntryPins[0]?.id ?? null);
-  }, [activeDayNum, urlEntryId, dayEntryPins]);
+    setActiveEntryId(cardEntryPins[0]?.id ?? null);
+  }, [activeTab, urlEntryId, cardEntryPins]);
 
-  /* --- Switch day via tab --- */
-  const handleDayClick = useCallback((dayNum: number) => {
-    setActiveDayNum(dayNum);
-    // Update URL: strip entry segment, keep only ?day=N
+  /* --- Switch tab --- */
+  const handleTabClick = useCallback((tab: 'overview' | number) => {
+    setActiveTab(tab);
+    const dayParam = tab === 'overview' ? 'all' : String(tab);
+    // Strip entry segment when switching tab via URL
     if (urlEntryId != null) {
-      navigate(`/trip/${tripId}/map?day=${dayNum}`);
+      navigate(`/trip/${tripId}/map?day=${dayParam}`);
     } else {
       const next = new URLSearchParams(searchParams);
-      next.set('day', String(dayNum));
+      next.set('day', dayParam);
       setSearchParams(next, { replace: true });
     }
   }, [tripId, navigate, searchParams, setSearchParams, urlEntryId]);
@@ -315,7 +347,7 @@ export default function MapPage() {
 
     cards.forEach((c) => observer.observe(c));
     return () => observer.disconnect();
-  }, [dayEntryPins, activeDayNum]);
+  }, [cardEntryPins, activeTab]);
 
   /* --- Card click → scroll into view + set active --- */
   const handleCardClick = useCallback((entryId: number) => {
@@ -327,10 +359,10 @@ export default function MapPage() {
     setTimeout(() => { scrollingProgrammatically.current = false; }, 400);
   }, []);
 
-  /* --- On day change / initial mount: scroll active card into centre BEFORE IO stabilises --- */
+  /* --- On tab change / initial mount: scroll active card into centre BEFORE IO stabilises --- */
   useEffect(() => {
-    if (dayEntryPins.length === 0) return;
-    const targetId = activeEntryId ?? dayEntryPins[0]!.id;
+    if (cardEntryPins.length === 0) return;
+    const targetId = activeEntryId ?? cardEntryPins[0]!.id;
     const el = cardsRef.current?.querySelector<HTMLElement>(`[data-card-entry-id="${targetId}"]`);
     if (!el || !cardsRef.current) return;
     scrollingProgrammatically.current = true;
@@ -338,17 +370,27 @@ export default function MapPage() {
     const t = setTimeout(() => { scrollingProgrammatically.current = false; }, 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDayNum, dayEntryPins.length]);
+  }, [activeTab, cardEntryPins.length]);
 
   /* --- Breadcrumb --- */
   const crumb = useMemo(() => {
+    if (isOverview) {
+      // 用 dayTabs 第一/最後日期組 trip date range
+      const first = dayTabs[0]?.date;
+      const last = dayTabs[dayTabs.length - 1]?.date;
+      const range = first && last && first !== last
+        ? `${formatDateLabel(first)} – ${formatDateLabel(last)}`
+        : first ? formatDateLabel(first) : null;
+      return range ? `總覽 · ${range}` : '總覽';
+    }
     const parts: string[] = [];
-    parts.push(`DAY ${String(activeDayNum).padStart(2, '0')}`);
-    const day = allDays?.[activeDayNum];
+    const dayNum = activeTab as number;
+    parts.push(`DAY ${String(dayNum).padStart(2, '0')}`);
+    const day = allDays?.[dayNum];
     if (day?.date) parts.push(formatDateLabel(day.date));
     if (day?.label) parts.push(day.label);
     return parts.join(' · ');
-  }, [activeDayNum, allDays]);
+  }, [activeTab, isOverview, allDays, dayTabs]);
 
   /* --- Back navigation --- */
   const onBack = useCallback(() => {
@@ -378,17 +420,21 @@ export default function MapPage() {
       <main className="map-page-body">
         {loading ? (
           <div className="map-page-empty"><span>載入中…</span></div>
-        ) : dayPins.length === 0 ? (
-          <div className="map-page-empty"><span>這天沒有位置資訊</span></div>
+        ) : mapPins.length === 0 ? (
+          <div className="map-page-empty">
+            <span>{isOverview ? '這趟行程尚無位置資訊' : '這天沒有位置資訊'}</span>
+          </div>
         ) : (
           <Suspense fallback={<div className="map-page-empty"><span>地圖載入中…</span></div>}>
             <OceanMap
-              pins={dayPins}
+              pins={mapPins}
               mode="overview"
               focusId={activeEntryId ?? undefined}
               routes={true}
               cluster={false}
               fillParent={true}
+              pinsByDay={isOverview ? overviewData?.pinsByDay : undefined}
+              dayNum={isOverview ? undefined : (activeTab as number)}
             />
           </Suspense>
         )}
@@ -396,8 +442,22 @@ export default function MapPage() {
 
       {dayTabs.length > 1 && (
         <nav className="map-page-days" role="tablist" aria-label="行程日期">
+          {/* R19: 「總覽」tab prepend 於 Day 01 之前 (map-page-multiday-overview) */}
+          <button
+            key="overview"
+            type="button"
+            role="tab"
+            className="map-page-day-tab"
+            aria-pressed={isOverview}
+            aria-selected={isOverview}
+            onClick={() => handleTabClick('overview')}
+          >
+            <span className="map-page-day-tab-eyebrow">總覽</span>
+            <span className="map-page-day-tab-date">{dayTabs.length} 天</span>
+          </button>
           {dayTabs.map((t) => {
-            const isActive = t.dayNum === activeDayNum;
+            const isActive = !isOverview && t.dayNum === activeTab;
+            const color = dayColor(t.dayNum);
             return (
               <button
                 key={t.dayNum}
@@ -406,9 +466,10 @@ export default function MapPage() {
                 className="map-page-day-tab"
                 aria-pressed={isActive}
                 aria-selected={isActive}
-                onClick={() => handleDayClick(t.dayNum)}
+                onClick={() => handleTabClick(t.dayNum)}
+                style={isActive ? { borderBottomColor: color } : undefined}
               >
-                <span className="map-page-day-tab-eyebrow">DAY {String(t.dayNum).padStart(2, '0')}</span>
+                <span className="map-page-day-tab-eyebrow" style={{ color: isActive ? color : undefined }}>DAY {String(t.dayNum).padStart(2, '0')}</span>
                 <span className="map-page-day-tab-date">{formatDateLabel(t.date)}</span>
               </button>
             );
@@ -417,11 +478,14 @@ export default function MapPage() {
       )}
 
       <div className="map-page-cards" ref={cardsRef}>
-        {dayEntryPins.length === 0 ? (
-          <div className="map-page-card-empty">這天沒有景點</div>
+        {cardEntryPins.length === 0 ? (
+          <div className="map-page-card-empty">
+            {isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
+          </div>
         ) : (
-          dayEntryPins.map((pin) => {
+          cardEntryPins.map((pin) => {
             const isActive = pin.id === activeEntryId;
+            const pinDay = entryDayMap.get(pin.id);
             return (
               <button
                 key={pin.id}
@@ -433,6 +497,12 @@ export default function MapPage() {
               >
                 <div className="map-page-card-top">
                   <span className="map-page-card-num">{pin.index}</span>
+                  {/* Overview mode: 顯示 DAY N prefix，用 dayColor */}
+                  {isOverview && pinDay && (
+                    <span className="map-page-card-time" style={{ color: dayColor(pinDay), fontWeight: 600 }}>
+                      D{pinDay}
+                    </span>
+                  )}
                   {pin.time && <span className="map-page-card-time">{pin.time}</span>}
                 </div>
                 <p className="map-page-card-title">{pin.title || '（無標題）'}</p>

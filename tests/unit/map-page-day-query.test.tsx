@@ -30,13 +30,13 @@ describe('MapPage — ?day=N query support (Item 7 source guard)', () => {
     expect(source).toContain('routes');
   });
 
-  it('has initialDayNum logic reading from searchParams', () => {
-    expect(source).toContain('initialDayNum');
+  it('has initialTab logic reading from searchParams (map-page-multiday-overview: initialDayNum renamed to initialTab)', () => {
+    expect(source).toContain('initialTab');
     expect(source).toMatch(/searchParams|q\s*=/); // uses the day query
   });
 
   it('breadcrumb or title references active day', () => {
-    expect(source).toMatch(/activeDayNum|DAY/);
+    expect(source).toMatch(/activeTab|DAY/);
   });
 });
 
