@@ -124,6 +124,11 @@ const SCOPED_STYLES = `
   font-size: 9px;
   background: rgba(255,255,255,0.85);
 }
+/* Override Leaflet default Lucida Console on +/- zoom controls */
+.ocean-map-container .leaflet-bar a,
+.ocean-map-container .leaflet-control-attribution {
+  font-family: var(--font-family-system, 'Inter', sans-serif);
+}
 `;
 
 /* ===== Single polyline component (per segment, lazy via useRoute) ===== */
