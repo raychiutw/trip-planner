@@ -1,12 +1,12 @@
 /**
- * stop-detail-topbar-layout.test.tsx — PR5 TDD
+ * stop-detail-topbar-layout.test.tsx
  *
  * 驗證 StopDetailPage topbar 在 narrow viewport（375px）下的 DOM 結構：
  * 1. topbar header 存在
- * 2. 含 3 個直接 flex children（back-btn、crumb、TriplineLogo）
- * 3. TriplineLogo（<a href="/">）存在於 header 內
- * 4. crumb（.stop-detail-crumb）存在於 header 內
- * 5. crumb 有 min-width:0（防止 overflow）
+ * 2. 含 2 個直接 flex children（back-btn、crumb）— logo 已移除
+ * 3. crumb（.stop-detail-crumb）存在於 header 內
+ * 4. crumb 有 min-width:0（防止 overflow）
+ * 5. header 內不再含 <a href="/"> home link（TriplineLogo 已整體移除）
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -62,20 +62,19 @@ function renderPage() {
   );
 }
 
-describe('StopDetailPage — topbar narrow viewport layout (PR5)', () => {
+describe('StopDetailPage — topbar narrow viewport layout', () => {
   it('topbar header 存在', () => {
     const { container } = renderPage();
     const header = container.querySelector('header.stop-detail-topbar');
     expect(header).not.toBeNull();
   });
 
-  it('topbar 含 3 個直接 flex children（back-btn + crumb + TriplineLogo）', () => {
+  it('topbar 含 2 個直接 flex children（back-btn + crumb）', () => {
     const { container } = renderPage();
     const header = container.querySelector('header.stop-detail-topbar');
     expect(header).not.toBeNull();
-    // Direct children of the topbar header
     const children = header ? Array.from(header.children) : [];
-    expect(children).toHaveLength(3);
+    expect(children).toHaveLength(2);
   });
 
   it('topbar 第一個 child 是 back button（button.stop-detail-back）', () => {
@@ -93,12 +92,11 @@ describe('StopDetailPage — topbar narrow viewport layout (PR5)', () => {
     expect(secondChild?.classList.contains('stop-detail-crumb')).toBe(true);
   });
 
-  it('topbar 第三個 child 是 TriplineLogo（<a href="/">）', () => {
+  it('topbar 內不再含 home link（<a href="/">）— TriplineLogo 已移除', () => {
     const { container } = renderPage();
     const header = container.querySelector('header.stop-detail-topbar');
-    const thirdChild = header?.children[2];
-    expect(thirdChild?.tagName.toLowerCase()).toBe('a');
-    expect(thirdChild?.getAttribute('href')).toBe('/');
+    const homeLink = header?.querySelector('a[href="/"]');
+    expect(homeLink).toBeNull();
   });
 
   it('crumb div 有 CSS class stop-detail-crumb（flex:1 + min-width:0 由 SCOPED_STYLES 保證）', () => {
@@ -108,15 +106,11 @@ describe('StopDetailPage — topbar narrow viewport layout (PR5)', () => {
   });
 
   it('SCOPED_STYLES 中 .stop-detail-crumb 含 min-width: 0（防止 narrow viewport overflow）', () => {
-    // Read TripPage source and check that crumb has min-width:0
-    // This is a static source assertion — verifies CSS is in place
     const { container: _c } = renderPage();
-    // Check the <style> tag injected by StopDetailPage contains min-width: 0 for crumb
     const styleTags = document.querySelectorAll('style');
     const allStyles = Array.from(styleTags)
       .map((s) => s.textContent ?? '')
       .join('\n');
-    // .stop-detail-crumb should have min-width: 0
     expect(allStyles).toMatch(/\.stop-detail-crumb\s*\{[^}]*min-width\s*:\s*0/);
   });
 });

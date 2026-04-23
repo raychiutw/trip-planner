@@ -33,9 +33,7 @@ import { NavLinks } from '../components/trip/MapLinks';
 import InfoBox from '../components/trip/InfoBox';
 import MarkdownText from '../components/shared/MarkdownText';
 import Icon from '../components/shared/Icon';
-import TriplineLogo from '../components/shared/TriplineLogo';
 import BreadcrumbCrumbs from '../components/shared/BreadcrumbCrumbs';
-import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -208,7 +206,6 @@ body.print-mode .stop-detail-topbar { position: static; }
 export default function StopDetailPage() {
   const { entryId: entryIdStr } = useParams<{ entryId: string }>();
   const navigate = useNavigate();
-  const isOnline = useOnlineStatus();
   useScrollRestoreOnBack();
 
   const entryId = Number(entryIdStr);
@@ -238,7 +235,7 @@ export default function StopDetailPage() {
     return (
       <div className="stop-detail-wrap">
         <style>{SCOPED_STYLES}</style>
-        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} isOnline={isOnline} />
+        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} />
         <div className="stop-detail-body">
           <div className="stop-detail-hero">
             <div className="h-7 w-3/4 bg-secondary rounded animate-pulse mb-2" />
@@ -257,9 +254,8 @@ export default function StopDetailPage() {
     return (
       <div className="stop-detail-wrap">
         <style>{SCOPED_STYLES}</style>
-        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} isOnline={isOnline} />
+        <StopDetailTopbar onBack={() => navigate(-1)} crumb={null} tripTitle={null} tripId={null} navigate={navigate} />
         <div className="stop-detail-empty">
-          <TriplineLogo isOnline={isOnline} />
           <p className="mt-4 text-lg font-semibold text-foreground">找不到這個景點</p>
           <p className="mt-2 text-sm">景點可能已被刪除或連結過期</p>
           <button
@@ -311,7 +307,6 @@ export default function StopDetailPage() {
         tripTitle={trip?.title ?? null}
         tripId={trip?.id ?? null}
         navigate={navigate}
-        isOnline={isOnline}
       />
 
       <div className="stop-detail-body">
@@ -400,10 +395,9 @@ interface TopbarProps {
   tripTitle: string | null;
   tripId: string | null;
   navigate: ReturnType<typeof useNavigate>;
-  isOnline: boolean;
 }
 
-function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate, isOnline }: TopbarProps) {
+function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate }: TopbarProps) {
   return (
     <header className="stop-detail-topbar">
       <button
@@ -427,7 +421,6 @@ function StopDetailTopbar({ onBack, crumb, tripTitle, tripId, navigate, isOnline
           </a>
         )}
       </div>
-      <TriplineLogo isOnline={isOnline} />
     </header>
   );
 }

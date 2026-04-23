@@ -23,7 +23,6 @@ import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import MobileBottomNav from '../components/trip/MobileBottomNav';
 import InfoSheet from '../components/trip/InfoSheet';
-import TriplineLogo from '../components/shared/TriplineLogo';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
 import DestinationArt from '../components/trip/DestinationArt';
@@ -520,10 +519,7 @@ export default function TripPage() {
       <header className="ocean-topbar sticky-nav" id="stickyNav">
         <div className="ocean-topbar-left">
           {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-          <div className="ocean-brand">
-            <TriplineLogo isOnline={isOnline} />
-            {trip && <span className="ocean-brand-label">· {trip.title || trip.name}</span>}
-          </div>
+          {trip && <span className="ocean-brand-label">{trip.title || trip.name}</span>}
         </div>
         <div className="ocean-topbar-right">
           <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>

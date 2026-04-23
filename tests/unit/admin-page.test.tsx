@@ -102,11 +102,11 @@ describe('AdminPage', () => {
     expect(container.querySelector('#stickyNav')).not.toBeNull();
   });
 
-  it('PageNav 仍 render 且 TriplineLogo 是可點的 link（導回 "/"）', () => {
-    const { getByRole } = renderAdmin();
-    // TriplineLogo 已包成 <Link to="/">，react-router 會 render 為 <a>
-    const logoLink = getByRole('link', { name: /Tripline/ });
-    expect(logoLink).toBeTruthy();
-    expect(logoLink.getAttribute('href')).toBe('/');
+  it('PageNav 內不再含 Tripline home link（TriplineLogo 已移除）', () => {
+    const { container } = renderAdmin();
+    const nav = container.querySelector('#stickyNav');
+    expect(nav).not.toBeNull();
+    const homeLink = nav?.querySelector('a[href="/"]');
+    expect(homeLink).toBeNull();
   });
 });
