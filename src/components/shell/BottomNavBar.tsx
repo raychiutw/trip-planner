@@ -20,6 +20,18 @@ import Icon from '../shared/Icon';
 
 type TabKey = 'home' | 'map' | 'message' | 'menu';
 
+const MENU_SHEETS = new Set<string>([
+  'action-menu',
+  'checklist',
+  'backup',
+  'appearance',
+  'trip-select',
+  'emergency',
+  'today-route',
+  'suggestions',
+  'flights',
+]);
+
 interface BottomNavBarProps {
   /** Trip ID used for navigate targets. */
   tripId: string;
@@ -46,21 +58,8 @@ export default function BottomNavBar({
     const { pathname } = location;
     // Map tab: must match /trip/:id/map exactly (and sub-routes), not just any path containing '/map'
     if (/\/trip\/[^/]+\/map/.test(pathname)) return 'map';
-    // Message tab: /manage
     if (pathname.startsWith('/manage')) return 'message';
-    // 更多 tab: open sheet that's not a route
-    if (
-      activeSheet === 'action-menu' ||
-      activeSheet === 'checklist' ||
-      activeSheet === 'backup' ||
-      activeSheet === 'appearance' ||
-      activeSheet === 'trip-select' ||
-      activeSheet === 'emergency' ||
-      activeSheet === 'today-route' ||
-      activeSheet === 'suggestions' ||
-      activeSheet === 'flights'
-    ) return 'menu';
-    // Default: 行程 (matches /trip/:id or any sub-route not caught above)
+    if (activeSheet && MENU_SHEETS.has(activeSheet)) return 'menu';
     return 'home';
   }
 
