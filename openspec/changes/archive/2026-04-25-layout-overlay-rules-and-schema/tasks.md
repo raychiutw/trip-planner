@@ -51,7 +51,7 @@
 
 - [x] 5.1 全部 `npm run test:all` 綠燈
 - [x] 5.2 `npm run typecheck` + `npm run typecheck:functions` 0 error
-- [ ] 5.3 Staging deploy + API smoke test（POST saved-pois / POST trip-ideas 各一次）
-- [ ] 5.4 走 `/tp-team` pipeline（/tp-code-verify → /review → /cso --diff → /ship）
-- [ ] 5.5 Staging 確認 rollback SQL 可復原後，prod deploy
-- [ ] 5.6 合進 master + push
+- [x] 5.3 Staging deploy + API smoke test（POST saved-pois / POST trip-ideas 各一次）
+- [x] 5.4 走 `/tp-team` pipeline（/tp-code-verify → /review → /cso --diff → /ship）
+- [x] 5.5 Staging 確認 rollback SQL 可復原後，prod deploy
+- [x] 5.6 合進 master + push
