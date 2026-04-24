@@ -63,6 +63,25 @@ export const APP_SHELL_STYLES = `
     padding-bottom: var(--nav-height-mobile);
   }
 }
+
+/* Print mode：隱藏所有 shell chrome，main 單欄 */
+body.print-mode .app-shell {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+body.print-mode .app-shell-sidebar,
+body.print-mode .app-shell-sheet,
+body.print-mode .app-shell-bottom-nav {
+  display: none;
+}
+body.print-mode .app-shell-main {
+  padding-bottom: 0;
+}
+@media print {
+  .app-shell { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  .app-shell-sidebar, .app-shell-sheet, .app-shell-bottom-nav { display: none; }
+  .app-shell-main { padding-bottom: 0; }
+}
 `;
 
 export interface AppShellProps {
