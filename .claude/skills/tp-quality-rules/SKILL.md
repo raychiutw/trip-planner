@@ -8,6 +8,17 @@ user-invocable: false
 
 產生或修改行程資料時（透過 D1 API），必須遵守以下所有品質規則。
 
+## Phase 2 POI Unification（v2.1.2.0+）
+
+Timeline entry 除了既有欄位，新增兩個與 POI master 有關的 request body 欄位：
+
+- `poi_type`：選填。預設 `attraction`。機場/車站/港口 → `transport`；浮潛/玉泉洞/鳳梨園等預訂體驗 → `activity`；餐廳/購物/住宿走原本 nested 結構（restaurants/shopping/hotel）不變動。
+- `poi_id`：PATCH 專用。允許 admin 把 entry 改掛到既有 POI master（例如重新指向某個 attraction POI）。
+
+**R11 / R12 / R17 的資料來源 Phase 2 後為 `pois` master** — GET /days/:num 回傳 `entry.poi`（JOIN pois）欄位，優先於 entry 本身的 maps/mapcode/google_rating/location。Phase 3 後 entry 這幾個欄位將 DROP，但 R-rule 檢查邏輯（實體 POI 需 maps 或 lat+lng、需 google_rating）不變。
+
+建立 entry 時仍請在 body 附上 maps / mapcode / lat / lng / google_rating — 會透過 find-or-create 流到 POI master。
+
 ### R0 JSON 結構與值約束
 
 #### 值約束

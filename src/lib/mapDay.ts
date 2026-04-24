@@ -101,6 +101,18 @@ interface RawTravel {
   min?: number | null;
 }
 
+/** Raw POI (Phase 2) joined onto entries via trip_entries.poi_id. */
+interface RawEntryPoi {
+  id?: number | null;
+  type?: string | null;
+  name?: string | null;
+  maps?: string | null;
+  mapcode?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  googleRating?: number | null;
+}
+
 /** Raw timeline entry as returned by the API. */
 interface RawEntry {
   id?: number | null;
@@ -113,6 +125,8 @@ interface RawEntry {
   maps?: string | null;
   mapcode?: string | null;
   travel?: RawTravel | null;
+  /** Phase 2: JOIN pois via poi_id — POI fields take precedence over entry columns */
+  poi?: RawEntryPoi | null;
   restaurants?: RawRestaurant[];
   shopping?: RawShop[];
 }
@@ -195,12 +209,18 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     ? { type: travel.type || '', text: formatTravelText(travel) }
     : null;
 
+  // Phase 2：POI master 優先，fallback 到 entry 欄位（Phase 3 後只剩 POI 一路）
+  const poi = raw.poi ?? null;
+  const effMaps = poi?.maps ?? raw.maps ?? null;
+  const effMapcode = poi?.mapcode ?? raw.mapcode ?? null;
+  const effGoogleRating = poi?.googleRating ?? raw.googleRating ?? null;
+
   const locations: NavLocation[] = [];
-  if (raw.maps || raw.mapcode) {
+  if (effMaps || effMapcode) {
     locations.push({
       name: raw.title || undefined,
-      googleQuery: raw.maps || undefined,
-      mapcode: raw.mapcode || undefined,
+      googleQuery: effMaps || undefined,
+      mapcode: effMapcode || undefined,
     });
   }
 
@@ -226,7 +246,7 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     title: raw.title ?? null,
     description: raw.description ?? null,
     note: raw.note ?? null,
-    googleRating: raw.googleRating ?? null,
+    googleRating: effGoogleRating,
     source: raw.source ?? null,
     travel: travelData,
     locations: locations.length > 0 ? locations : null,

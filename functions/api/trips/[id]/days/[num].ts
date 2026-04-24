@@ -31,11 +31,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   ]);
 
   const tripPoiRows = allTripPois.results as Record<string, unknown>[];
-  const poiMap = await fetchPoiMap(db, tripPoiRows);
+  const entryRows = entriesResult.results as Record<string, unknown>[];
+  const poiMap = await fetchPoiMap(db, tripPoiRows, entryRows);
 
   const assembled = assembleDay(
     day,
-    entriesResult.results as Record<string, unknown>[],
+    entryRows,
     tripPoiRows,
     poiMap,
   );
@@ -98,6 +99,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // Phase 2: poi_type 白名單驗證（避免 CHECK 失敗讓 batch 炸在半途）
+  const ALLOWED_POI_TYPES = new Set(['hotel', 'restaurant', 'shopping', 'parking', 'attraction', 'transport', 'activity', 'other']);
+  for (let i = 0; i < timelineEntries.length; i++) {
+    const pt = (timelineEntries[i] as Record<string, unknown>).poi_type;
+    if (pt !== undefined && (typeof pt !== 'string' || !ALLOWED_POI_TYPES.has(pt))) {
+      throw new AppError('DATA_VALIDATION', `timeline[${i}].poi_type 無效（允許：${[...ALLOWED_POI_TYPES].join(', ')}）`);
+    }
+  }
+
   try {
     // Batch 1: delete old trip_pois + entries, update day, insert entries
     const batch1: D1PreparedStatement[] = [];
@@ -135,6 +145,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const poiItems: FindOrCreatePoiData[] = [];
     const tripPoiBuilders: TripPoiBuilder[] = [];
     let hotelPoiIdx = -1;
+    // Phase 2: entry-level POI — each timeline entry gets a poi_id FK into pois master.
+    // -1 means no POI needed (empty title / placeholder entry).
+    const entryPoiIdx: number[] = new Array(timeline.length).fill(-1);
 
     // Hotel
     if (body.hotel) {
@@ -189,6 +202,27 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       }
     }
 
+    // Entry-level POI (Phase 2)：每個 timeline entry 對應一筆 pois master。
+    // type 來自 body.timeline[].poi_type，預設 attraction；機場/車站請傳 transport、預訂體驗請傳 activity。
+    for (let i = 0; i < timeline.length; i++) {
+      const e = timeline[i] as Record<string, unknown>;
+      const title = typeof e.title === 'string' ? e.title.trim() : '';
+      if (!title) continue;
+      const rawType = typeof e.poi_type === 'string' ? e.poi_type : 'attraction';
+      entryPoiIdx[i] = poiItems.length;
+      poiItems.push({
+        name: title,
+        type: rawType,
+        description: (e.description as string | undefined) ?? null,
+        maps: (e.maps as string | undefined) ?? null,
+        mapcode: (e.mapcode as string | undefined) ?? null,
+        lat: (e.lat as number | undefined) ?? null,
+        lng: (e.lng as number | undefined) ?? null,
+        google_rating: (e.google_rating as number | undefined) ?? null,
+        source: 'ai',
+      });
+    }
+
     // Entry restaurants + shopping
     for (let i = 0; i < timeline.length; i++) {
       const e = timeline[i]!;
@@ -231,8 +265,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     // Batch resolve all POIs (2–3 DB round-trips instead of N)
     const poiIds = await batchFindOrCreatePois(db, poiItems);
 
-    // Build batch2 trip_pois from resolved IDs
+    // Build batch2: (a) UPDATE trip_entries.poi_id for entries with POI, (b) trip_pois 插入
     const batch2: D1PreparedStatement[] = [];
+    for (let i = 0; i < timeline.length; i++) {
+      const pIdx = entryPoiIdx[i]!;
+      if (pIdx < 0) continue;
+      batch2.push(
+        db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?')
+          .bind(poiIds[pIdx], entryIds[i]!),
+      );
+    }
     for (const builder of tripPoiBuilders) {
       batch2.push(...builder(poiIds));
     }

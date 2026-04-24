@@ -5,6 +5,9 @@ import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
+// `poi_id` intentionally excluded — admin repoint should go through a separate admin endpoint
+// that validates the target POI exists. Allowing it here lets any editor repoint an entry to
+// any arbitrary pois.id (cross-trip data leak, FK violations).
 const ALLOWED_FIELDS = ['sort_order', 'time', 'title', 'description', 'source', 'maps', 'mapcode', 'google_rating', 'note', 'travel_type', 'travel_desc', 'travel_min', 'location'] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {

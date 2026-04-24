@@ -19,6 +19,9 @@ pois 表 20 個欄位（id, type, name, description, note, address, phone, email
 | restaurant | name, category, hours, google_rating, maps | description |
 | shopping | name, category, hours, google_rating, maps | description |
 | parking | name, description, maps | mapcode |
+| attraction | name, google_rating, maps | description, hours |
+| transport | name, maps | description, hours |
+| activity | name, google_rating, maps, hours | description |
 
 **trip_pois override（PATCH /trip-pois/:tpid 可修改）：**
 
@@ -28,7 +31,18 @@ pois 表 20 個欄位（id, type, name, description, note, address, phone, email
 | restaurant | description, note, hours, price, reservation, reservation_url |
 | shopping | description, note, hours, must_buy |
 
-pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`, `transport`, `other`
+pois.type 允許值：`hotel`, `restaurant`, `shopping`, `parking`, `attraction`, `transport`, `activity`, `other`（v2.1.2.0+ 納入 `activity`）
+
+### Phase 2 POI Unification：timeline entry 的 POI master（v2.1.2.0+）
+
+每個 timeline entry 都會對應一筆 pois master，透過 `trip_entries.poi_id` FK 關聯。PUT /days/:num 與 POST /entries 會自動 find-or-create。
+
+- `poi_type`（body 欄位，選填）：決定這個 entry 的 POI 屬於哪一類。**預設 `attraction`**。
+  - `transport`：機場、車站、港口、碼頭（`title` 含「機場 / 空港 / 港 / 碼頭 / 站 / 駅 / airport / station / port」時必傳）
+  - `activity`：需預訂的體驗活動（浮潛、玉泉洞、鳳梨園、工作坊等，有 reservation 且耗時 > 1h）
+  - `attraction`：一般景點（寺廟、公園、城堡、海灘、觀景台）
+- 其餘欄位（`maps`, `mapcode`, `lat`, `lng`, `google_rating`, `description`）會流進 pois master，由 find-or-create 用 `UNIQUE(name, type)` 去重（同 name + type 共享同一筆 pois row）。
+- PATCH /entries/:eid 可傳 `poi_id` 重新指向既有 POI master（例如統一兩個 entry 用同 POI）。
 
 ### 資料所有權
 
