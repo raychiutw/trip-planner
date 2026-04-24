@@ -57,6 +57,16 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 .trip-sheet-placeholder p { font-size: var(--font-size-callout); max-width: 320px; }
+
+/* TripMapRail 預設 .trip-map-rail 是給 main column scroll context 用：
+   position:sticky + height:calc(100dvh - var(--spacing-nav-h))。
+   放進 sheet 後 sticky 失效，且 100dvh 不等於 sheet 可用高度 → map 視覺只佔約 1/4。
+   用 specificity (0,2,0) 覆蓋成 static + 撐滿 sheet body。 */
+.trip-sheet-body .trip-map-rail {
+  position: static;
+  top: auto;
+  height: 100%;
+}
 `;
 
 export interface TripSheetProps {
