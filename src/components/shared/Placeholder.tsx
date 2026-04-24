@@ -34,7 +34,7 @@ const PLACEHOLDER_STYLES = `
   font: inherit; font-size: 14px; font-weight: 600;
   min-height: var(--spacing-tap-min);
 }
-.tp-placeholder .ph-cta:hover { filter: brightness(0.92); }
+.tp-placeholder .ph-cta:hover { filter: brightness(var(--hover-brightness)); }
 `;
 
 export interface PlaceholderProps {

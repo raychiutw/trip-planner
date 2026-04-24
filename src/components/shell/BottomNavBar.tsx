@@ -1,17 +1,8 @@
 /**
- * BottomNavBar — bottom tab bar（B-P2 §4 rename from MobileBottomNav）
+ * BottomNavBar — trip-scoped mobile tab bar (4-tab: 行程 / 地圖 / 助理 / 更多).
  *
- * 4 tabs: 行程 / 地圖 / 助理 / 更多
- *  - 行程: navigate('/trip/:tripId') + scroll-to-top
- *  - 地圖: navigate('/trip/:tripId/map')
- *  - 助理: navigate('/manage')
- *  - 更多: onOpenSheet('action-menu')
- *
- * Active state driven by useLocation pathname match.
- * CSS: tokens.css .ocean-bottom-nav — grid-template-columns: repeat(4, 1fr)
- * position: sticky + inset-block-end: 0 讓 nav 在 AppShell grid 中正確定位。
- *
- * Note：5-tab 全站化 + shell-aware active state 留給 §5 page refactor PR。
+ * Why sticky + inset-block-end: keeps nav aligned to AppShell grid cell bottom
+ * instead of escaping to viewport (fixed positioning would bypass grid).
  */
 
 import clsx from 'clsx';

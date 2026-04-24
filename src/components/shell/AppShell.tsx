@@ -1,15 +1,9 @@
 /**
- * AppShell — B-P2 §2 layout primitive
+ * AppShell — app-wide layout primitive.
  *
- * 桌機 ≥1024px：CSS Grid 三欄（3-pane）或兩欄（2-pane，無 sheet）
- *   3-pane: var(--grid-3pane-desktop) = 240px sidebar | 1fr main | min(780px, 40vw) sheet
- *   2-pane: var(--grid-2pane-desktop) = 240px sidebar | 1fr main
- *
- * 手機 <1024px：單欄 main + sticky bottom nav
- *   sidebar / sheet 仍 render 在 DOM（CSS display:none 隱藏）— 避免 unmount/mount 副作用
- *   main 自動加 padding-bottom: var(--nav-height-mobile) 讓內容不被 nav 蓋
- *
- * 視覺對應：docs/design-sessions/mockup-trip-v2.html
+ * Why hide sidebar/sheet via CSS instead of conditionally rendering on mobile:
+ *   keeps component state alive across breakpoints (avoids unmount/mount side effects
+ *   when users rotate device or resize viewport).
  */
 import type { ReactNode } from 'react';
 
@@ -84,6 +78,10 @@ body.print-mode .app-shell-main {
 }
 `;
 
+export const APP_SHELL_LAYOUT_3PANE = '3pane';
+export const APP_SHELL_LAYOUT_2PANE = '2pane';
+export type AppShellLayout = typeof APP_SHELL_LAYOUT_3PANE | typeof APP_SHELL_LAYOUT_2PANE;
+
 export interface AppShellProps {
   /** 桌機左側 sidebar slot（mobile 隱藏） */
   sidebar: ReactNode;
@@ -96,7 +94,7 @@ export interface AppShellProps {
 }
 
 export default function AppShell({ sidebar, main, sheet, bottomNav }: AppShellProps) {
-  const layout = sheet ? '3pane' : '2pane';
+  const layout: AppShellLayout = sheet ? APP_SHELL_LAYOUT_3PANE : APP_SHELL_LAYOUT_2PANE;
   return (
     <>
       <style>{APP_SHELL_STYLES}</style>

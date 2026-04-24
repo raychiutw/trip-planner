@@ -60,7 +60,6 @@ const TripPage = lazyWithRetry(() => import('../pages/TripPage'));
 const TripLayout = lazyWithRetry(() => import('../pages/TripLayout'));
 const StopDetailPage = lazyWithRetry(() => import('../pages/StopDetailPage'));
 const MapPage = lazyWithRetry(() => import('../pages/MapPage'));
-// B-P2 §6 placeholder pages — 視覺對應 docs/design-sessions/mockup-*-v2.html
 const ChatPage = lazyWithRetry(() => import('../pages/ChatPage'));
 const GlobalMapPage = lazyWithRetry(() => import('../pages/GlobalMapPage'));
 const ExplorePage = lazyWithRetry(() => import('../pages/ExplorePage'));
@@ -93,7 +92,6 @@ if (el) {
               <Route path="/admin/" element={<AdminPage />} />
               <Route path="/manage" element={<ManagePage />} />
               <Route path="/manage/" element={<ManagePage />} />
-              {/* B-P2 §6 placeholder pages — sidebar 5 nav 對應 routes */}
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
