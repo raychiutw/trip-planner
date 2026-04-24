@@ -26,6 +26,24 @@ trip-planner 從 2-user 私人工具（Cloudflare Access + email 白名單）轉
 | `lean-master-design-20260424-190000-mindtrip-layout-reference.md` | Mindtrip 桌機 + 手機布局規格 | Layout refactor 的 px / grid / URL state / overlay rules 規格書 |
 | `terracotta-preview.html` | Terracotta palette 視覺預覽 | 設計色彩參考 |
 
+### Mockup HTML（`docs/design-sessions/`）
+
+B-P2 layout refactor 視覺參考集合 — 透過 `tp-claude-design` skill 產出，每個檔含桌機 1440 / 1100 / mobile 375 三組 viewport，可直接對照實作。
+
+| 檔案 | 對應 | 用途 |
+|------|------|------|
+| `mockup-index.html` | 入口 | 11 檔導覽頁（3 shell variant + 7 page route + task 對照表） |
+| `mockup-shell-v1-ocean.html` | Shell V1 | Ocean 保守路線（對齊 tokens.css 現狀，零 retheme） |
+| `mockup-shell-v2-terracotta.html` | Shell V2 ✓ locked | Terracotta filled dark active pill（2026-04-24 定案） |
+| `mockup-shell-v3-magazine.html` | Shell V3 | Terracotta + 雜誌 editorial typography 變體 |
+| `mockup-trip-v2.html` | `/manage` | 行程 list + sheet 內 day strip + ocean-rail itinerary + trip switcher dropdown（無 sheet tabs） |
+| `mockup-chat-v2.html` | `/chat` | 全站 AI discovery entry：empty hero / 對話中 / 聊出 trip → sheet 展開 |
+| `mockup-map-v2.html` | `/map` | cross-trip global map（view-only、不含 search、sheet 32vw） |
+| `mockup-explore-v2.html` | `/explore` | search/儲存池 2 tab + multi-select + 加入 trip dropdown |
+| `mockup-login-v2.html` | `/login` | 未登入（OAuth Google/Apple/LINE 真實 SVG logo + Email）/ 已登入 settings |
+| `mockup-signup-v2.html` | `/login/signup` | Step 1 OAuth + Email 三 field + password meter / Step 2 等 verification |
+| `mockup-forgot-v2.html` | `/login/forgot` | Step 1 寄連結 / Step 2 設新密碼（password rule meter） |
+
 ### OpenSpec Changes（`openspec/changes/`）
 
 全部 4/4 artifacts complete，`openspec status` 皆 apply-ready：
@@ -206,6 +224,7 @@ V2-P7 Launch + audit                         B-P6 Polish  ◄┘
 - [Mindtrip UX benchmark](design-sessions/lean-master-design-20260424-180000-mindtrip-benchmark.md)
 - [Mindtrip layout reference](design-sessions/lean-master-design-20260424-190000-mindtrip-layout-reference.md)
 - [Terracotta preview](design-sessions/terracotta-preview.html)
+- [Mockup HTML 集合（B-P2 視覺參考）](design-sessions/mockup-index.html)
 - [OpenSpec changes](../openspec/changes/)
 - [既有 DESIGN.md](../DESIGN.md)
 - [tp-claude-design skill](../.claude/skills/tp-claude-design/)
@@ -215,3 +234,4 @@ V2-P7 Launch + audit                         B-P6 Polish  ◄┘
 ## Changelog
 
 - **2026-04-24 session**：完成 autoplan + office-hours 4 輪 + opsx:propose 產 6 changes。User 主動 research Mindtrip 競品 UX（提供 12 張 screenshots）+ 把 Mindtrip + OpenAuth 方案兩 model 挑戰全納入但 override 後維持 plan。
+- **2026-04-24 mockup batch**：透過 `tp-claude-design` skill 產出 11 個 HTML mockup（3 shell variant + 7 page route + 1 index）放在 `docs/design-sessions/mockup-*.html`。Shell V2 Terracotta 為 locked palette。Sheet 結構優化：移除 sheet tabs（功能跟 sidebar nav 重複）、改 trip switcher dropdown。Provider button 用真實 OAuth logo SVG（Google/Apple/LINE）。
