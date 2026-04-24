@@ -84,15 +84,12 @@ describe('toTimelineEntry — entry.poi 優先於 entry 欄位', () => {
     expect(entry.googleRating).toBe(4.3);
   });
 
-  it('entry.poi 不存在時，fallback 用 entry.maps 與 entry.googleRating', () => {
+  it('Phase 3：entry.poi 不存在時，無 locations 與 googleRating', () => {
     const entry = toTimelineEntry({
-      title: '舊景點',
-      maps: 'https://fallback.example.com',
-      googleRating: 4.0,
+      title: '無 POI entry',
     });
-    expect(entry.locations).toHaveLength(1);
-    expect(entry.locations[0].googleQuery).toBe('https://fallback.example.com');
-    expect(entry.googleRating).toBe(4.0);
+    expect(entry.locations).toBeNull();
+    expect(entry.googleRating).toBeNull();
   });
 
   it('entry.poi.mapcode 存在時使用 POI mapcode', () => {

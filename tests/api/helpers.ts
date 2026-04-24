@@ -119,17 +119,17 @@ export async function seedTrip(db: D1Database, opts: {
   return { id, owner };
 }
 
-/** 插入測試 entry */
+/** 插入測試 entry（Phase 3：不再有 location 欄位；spatial 走 poi_id JOIN pois） */
 export async function seedEntry(db: D1Database, dayId: number, opts: {
   sortOrder?: number;
   title?: string;
   travelType?: string | null;
   travelDesc?: string | null;
   travelMin?: number | null;
-  location?: string | null;
+  poiId?: number | null;
 } = {}) {
   const result = await db.prepare(
-    `INSERT INTO trip_entries (day_id, sort_order, time, title, travel_type, travel_desc, travel_min, location)
+    `INSERT INTO trip_entries (day_id, sort_order, time, title, travel_type, travel_desc, travel_min, poi_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
   ).bind(
     dayId,
@@ -139,7 +139,7 @@ export async function seedEntry(db: D1Database, dayId: number, opts: {
     opts.travelType ?? null,
     opts.travelDesc ?? null,
     opts.travelMin ?? null,
-    opts.location ?? null,
+    opts.poiId ?? null,
   ).first<{ id: number }>();
   return result!.id;
 }

@@ -20,14 +20,19 @@ beforeAll(async () => {
   const d1Id = await getDayId(db, 'trip-days', 1);
   const d2Id = await getDayId(db, 'trip-days', 2);
 
-  // Day1: entry 含 travel fields + location JSON
+  // Phase 3：spatial 透過 poi JOIN，不再用 entry.location JSON
+  const d1EntryPoiId = await seedPoi(db, { type: 'attraction', name: '測試地點' });
+  await db.prepare(
+    'UPDATE pois SET lat = 26.5, lng = 127.9 WHERE id = ?'
+  ).bind(d1EntryPoiId).run();
+
   const d1EntryId = await seedEntry(db, d1Id, {
     title: 'Day1 Entry',
     sortOrder: 0,
     travelType: 'car',
     travelDesc: '開車前往',
     travelMin: 30,
-    location: '[{"name":"測試地點","lat":26.5,"lng":127.9,"geocode_status":"ok"}]',
+    poiId: d1EntryPoiId,
   });
   const d2EntryId = await seedEntry(db, d2Id, { title: 'Day2 Entry', sortOrder: 0 });
 
@@ -200,7 +205,7 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     expect(d2Timeline[0].travel).toBeNull();
   });
 
-  it('location JSON 字串被解析為物件（取陣列第一個）', async () => {
+  it('Phase 3：entry.poi 取 POI master（取代舊 entry.location JSON）', async () => {
     const ctx = mockContext({
       request: new Request('https://test.com/api/trips/trip-days/days?all=1'),
       env,
@@ -210,11 +215,11 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
     const data = await resp.json() as Array<Record<string, unknown>>;
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
-    const location = d1Timeline[0].location as Record<string, unknown>;
-    expect(location).toBeTruthy();
-    expect(location.lat).toBe(26.5);
-    expect(location.lng).toBe(127.9);
-    expect(location.name).toBe('測試地點');
+    const poi = d1Timeline[0].poi as Record<string, unknown>;
+    expect(poi).toBeTruthy();
+    expect(poi.lat).toBe(26.5);
+    expect(poi.lng).toBe(127.9);
+    expect(poi.name).toBe('測試地點');
   });
 
   it('空行程（有天但無 POI）不 crash，回傳空 hotel/timeline', async () => {

@@ -113,19 +113,16 @@ interface RawEntryPoi {
   googleRating?: number | null;
 }
 
-/** Raw timeline entry as returned by the API. */
+/** Raw timeline entry as returned by the API (Phase 3：spatial 欄位只存在 poi). */
 interface RawEntry {
   id?: number | null;
   time?: string | null;
   title?: string | null;
   description?: string | null;
   note?: string | null;
-  googleRating?: number | null;
   source?: string | null;
-  maps?: string | null;
-  mapcode?: string | null;
   travel?: RawTravel | null;
-  /** Phase 2: JOIN pois via poi_id — POI fields take precedence over entry columns */
+  /** JOIN pois via poi_id — spatial source of truth */
   poi?: RawEntryPoi | null;
   restaurants?: RawRestaurant[];
   shopping?: RawShop[];
@@ -209,11 +206,11 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     ? { type: travel.type || '', text: formatTravelText(travel) }
     : null;
 
-  // Phase 2：POI master 優先，fallback 到 entry 欄位（Phase 3 後只剩 POI 一路）
+  // Phase 3：spatial 欄位只從 POI master 取（entry 已不存這些）
   const poi = raw.poi ?? null;
-  const effMaps = poi?.maps ?? raw.maps ?? null;
-  const effMapcode = poi?.mapcode ?? raw.mapcode ?? null;
-  const effGoogleRating = poi?.googleRating ?? raw.googleRating ?? null;
+  const effMaps = poi?.maps ?? null;
+  const effMapcode = poi?.mapcode ?? null;
+  const effGoogleRating = poi?.googleRating ?? null;
 
   const locations: NavLocation[] = [];
   if (effMaps || effMapcode) {
