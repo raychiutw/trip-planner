@@ -86,21 +86,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
 
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, maps, mapcode, google_rating, note, travel_type, travel_desc, travel_min, location, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, note, travel_type, travel_desc, travel_min, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
       .bind(
         dayId, sortOrder,
         body.time ?? null,
         title,
         body.description ?? null,
         body.source ?? 'ai',
-        body.maps ?? null,
-        body.mapcode ?? null,
-        body.google_rating ?? null,
         body.note ?? null,
         body.travel_type ?? null,
         body.travel_desc ?? null,
         body.travel_min ?? null,
-        body.location ?? null,
         poiId,
       )
       .first();

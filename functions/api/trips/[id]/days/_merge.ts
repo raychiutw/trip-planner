@@ -132,15 +132,7 @@ export function assembleDay(
       min: e.travel_min,
     } : null;
 
-    let location = e.location;
-    if (typeof location === 'string') {
-      try {
-        const parsed = JSON.parse(location);
-        location = Array.isArray(parsed) ? parsed[0] ?? null : parsed;
-      } catch { location = null; }
-    }
-
-    // Phase 2: entry.poi_id JOIN pois master
+    // Phase 3: entry.poi_id JOIN pois master（spatial 欄位唯一來源）
     const poiId = e.poi_id as number | null | undefined;
     const poi = (typeof poiId === 'number' && poiId > 0)
       ? (poiMap.get(poiId) ?? null)
@@ -148,7 +140,6 @@ export function assembleDay(
 
     return {
       ...e,
-      location,
       travel,
       poi,
       restaurants: restByEntry.get(eid) ?? [],

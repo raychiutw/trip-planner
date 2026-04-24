@@ -122,17 +122,12 @@ export interface Entry {
   title: string;
   description?: string | null;
   source?: string | null;
-  maps?: string | null;
-  mapcode?: string | null;
-  googleRating?: number | null;
   note?: string | null;
   /** Assembled from travel_type / travel_desc / travel_min columns */
   travel?: Travel | null;
-  /** Phase 2 legacy override; DROP in Phase 3 */
-  location?: Location | null;
-  /** FK → pois.id; Phase 2 backfill target */
+  /** FK → pois.id (Phase 3 後 NOT NULL，由 find-or-create 保證) */
   poiId?: number | null;
-  /** Joined POI master record; POI fields take precedence over entry override during Phase 2 */
+  /** Joined POI master record — spatial fields (lat/lng/maps/googleRating) 全部在這 */
   poi?: Poi | null;
   updatedAt?: string;
   restaurants: Restaurant[];

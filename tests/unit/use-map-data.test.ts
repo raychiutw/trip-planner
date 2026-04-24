@@ -78,7 +78,7 @@ describe('useMapData — entry pins', () => {
           id: 10,
           sortOrder: 1,
           title: '首里城',
-          location: { lat: 26.217, lng: 127.719 },
+          poi: { id: 101, type: 'attraction', name: '首里城', lat: 26.217, lng: 127.719 },
         }),
       ],
     });
@@ -98,7 +98,7 @@ describe('useMapData — entry pins', () => {
   it('5. entry lat/lng = null → missingCount=1，pin 不加入', () => {
     const day = makeDay({
       timeline: [
-        makeEntry({ id: 10, location: null }),
+        makeEntry({ id: 10, poi: null }),
       ],
     });
 
@@ -111,7 +111,7 @@ describe('useMapData — entry pins', () => {
   it('6. entry lat/lng = 0 → 視為無效', () => {
     const day = makeDay({
       timeline: [
-        makeEntry({ id: 10, location: { lat: 0, lng: 0 } }),
+        makeEntry({ id: 10, poi: { id: 1, type: 'attraction', name: 'zero', lat: 0, lng: 0 } }),
       ],
     });
 
@@ -123,9 +123,9 @@ describe('useMapData — entry pins', () => {
   it('7. 2 個有座標 + 1 個無座標 → pins.length=2, missingCount=1', () => {
     const day = makeDay({
       timeline: [
-        makeEntry({ id: 1, sortOrder: 1, location: { lat: 26.2, lng: 127.7 } }),
-        makeEntry({ id: 2, sortOrder: 2, location: null }),
-        makeEntry({ id: 3, sortOrder: 3, location: { lat: 26.3, lng: 127.8 } }),
+        makeEntry({ id: 1, sortOrder: 1, poi: { id: 1, type: 'attraction', name: 'a', lat: 26.2, lng: 127.7 } }),
+        makeEntry({ id: 2, sortOrder: 2, poi: null }),
+        makeEntry({ id: 3, sortOrder: 3, poi: { id: 3, type: 'attraction', name: 'c', lat: 26.3, lng: 127.8 } }),
       ],
     });
 
@@ -145,8 +145,7 @@ describe('useMapData — entry pins', () => {
         makeEntry({
           id: 1,
           sortOrder: 1,
-          location: { lat: 26.2, lng: 127.7 },
-          googleRating: 4.5,
+          poi: { id: 1, type: 'attraction', name: 'r', lat: 26.2, lng: 127.7, googleRating: 4.5 },
           travel: { type: 'car', min: 20 },
         }),
       ],
@@ -196,8 +195,8 @@ describe('useMapData — hotel pins', () => {
         location: { lat: 26.21, lng: 127.68 },
       }),
       timeline: [
-        makeEntry({ id: 1, sortOrder: 1, location: { lat: 26.2, lng: 127.7 } }),
-        makeEntry({ id: 2, sortOrder: 2, location: { lat: 26.3, lng: 127.8 } }),
+        makeEntry({ id: 1, sortOrder: 1, poi: { id: 1, type: 'attraction', name: 'a', lat: 26.2, lng: 127.7 } }),
+        makeEntry({ id: 2, sortOrder: 2, poi: { id: 2, type: 'attraction', name: 'b', lat: 26.3, lng: 127.8 } }),
       ],
     });
 

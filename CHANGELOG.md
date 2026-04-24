@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.2.0.0] - 2026-04-24
+
+**POI Unification Phase 3 — DROP legacy spatial columns，POI master 成為 spatial single source of truth**。`trip_entries` 正式移除 `location` / `maps` / `mapcode` / `google_rating` 四欄，entry 的座標、Google Maps URL、mapcode、評分全數由 `JOIN pois ON trip_entries.poi_id = pois.id` 取得。前後端 fallback 程式碼同步清除，Phase 2 過渡期結束。既有行程 100% 已 backfill（74 個 auto + 17 個 collision 手動分離成獨立 POI），資料全數保留。
+
+### Added
+- `migrations/0027_drop_entry_location.sql` — `ALTER TABLE trip_entries DROP COLUMN` 四欄（`location` / `maps` / `mapcode` / `google_rating`）。SQLite 3.35+ / D1 支援原生 `DROP COLUMN`，四欄均無 index / trigger / view，DROP 可直接成功。
+- `migrations/rollback/0027_drop_entry_location_rollback.sql` — `ADD COLUMN` 恢復 schema。rollback 只還原 schema 不還原資料，必須搭配 0027 前的 backup 才能完整回退。
+- `scripts/resolve-poi-collisions.js` — 為 (name, type) 碰撞 entries 建獨立 pois（名稱後綴 `#{entry.id}` 保證唯一），並重掛 `trip_entries.poi_id`。Phase 3 DROP 前 17 / 91 個 collision entries 全數分離成獨立 POI，保留原始座標。
+
+### Changed
+- `functions/api/trips/[id]/days/[num].ts` PUT — INSERT `trip_entries` 移除 `maps` / `google_rating` 欄位。
+- `functions/api/trips/[id]/days/[num]/entries.ts` POST — INSERT `trip_entries` 移除 `maps` / `mapcode` / `google_rating` / `location`。
+- `functions/api/trips/[id]/entries/[eid].ts` PATCH — `ALLOWED_FIELDS` 移除 `maps` / `mapcode` / `google_rating` / `location`。
+- `functions/api/trips/[id]/days/_merge.ts` `assembleDay` — 移除 `entry.location` JSON 解析；spatial 欄位全走 `entry.poi` JOIN 結果。
+- `functions/api/trips/[id]/audit/[aid]/rollback.ts` — `TABLE_COLUMNS.trip_entries` 同步移除四欄，確保舊 audit 事件 rollback 不會把已 DROP 欄位寫回。
+- `src/types/trip.ts` `Entry` — 移除 `location` / `maps` / `mapcode` / `googleRating`；spatial 欄位透過 `Entry.poi` 取得。
+- `src/lib/mapDay.ts` `toTimelineEntry` — `RawEntry` 移除 spatial 欄位，只讀 `raw.poi.*`。
+- `src/hooks/useMapData.ts` `extractPinsFromDay` — 移除 `entry.location` fallback，spatial 來源只有 `entry.poi`。
+- 測試同步 — `tests/unit/use-map-data.test.ts` / `extract-pins-all-days.test.ts` / `map-day.test.js` / `tests/api/days.integration.test.ts` 改用 `entry.poi` 而非 `entry.location`；`tests/api/helpers.ts seedEntry` 改接 `poiId` 而非 `location`。
+
+### Breaking changes
+- 任何外部 tooling / script / MCP 手動寫 `trip_entries.location` / `maps` / `mapcode` / `google_rating` 欄位都會失敗（欄位已 DROP）。必須透過 `PUT /days/:num` body（會走 `findOrCreatePoi` 寫入 pois master）或 `POST /entries` + `PUT /api/trips/:id/entries/:eid/poi-id` 設定 POI。
+
 ## [2.1.3.1] - 2026-04-24
 
 **hotfix：migrate 腳本加 confidence gate 保護 map pin 精度**。Phase 2 dry-run 跑完發現 17 / 91 個 legacy entries 屬於 `(name, type)` 碰撞（同名但座標 > 300m 差異，多半是大型複合設施如美浜アメリカンビレッジ、イオンモール、Vessel/Super Hotel 內的不同停點）。若直接 `--apply`，POI 只留第一個 entry 的座標，其他 entry 的精準位置就永遠消失。改為 `--apply` 預設只套用 `confidence ≥ 0.8` 的 entries；低 confidence 項目保留 `poi_id = NULL`，讓 Phase 2 fallback 繼續讀 `entry.location`，等人工用 `PUT /api/trips/:id/entries/:eid/poi-id` 重掛。`--force` flag 可覆蓋此守則。

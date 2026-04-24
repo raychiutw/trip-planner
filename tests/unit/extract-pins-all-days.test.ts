@@ -23,11 +23,12 @@ function makeEntry(id: number, sortOrder: number, lat: number | null, lng: numbe
     sortOrder,
     title: `entry ${id}`,
     time: '10:00',
-    location: lat !== null && lng !== null ? { lat, lng, name: `POI ${id}` } : null,
+    poi: lat !== null && lng !== null
+      ? { id: 1000 + id, type: 'attraction', name: `POI ${id}`, lat, lng }
+      : null,
     restaurants: [],
     shopping: [],
     travel: null,
-    googleRating: null,
     description: null,
     note: null,
   } as unknown as Day['timeline'][number];
@@ -90,20 +91,17 @@ describe('extractPinsFromAllDays', () => {
     expect(r.missingCount).toBe(1);
   });
 
-  /* Phase 2 POI fallback — entry.poi.lat/lng 優先於 entry.location (v2.1.2.0+) */
-  it('entry.poi 有 lat/lng 時優先使用（不看 entry.location）', () => {
+  /* Phase 3：spatial 來源只有 POI master（v2.2.0.0+） */
+  it('entry.poi 有 lat/lng → pin 使用 POI 座標', () => {
     const entry = {
       id: 101,
       sortOrder: 0,
       title: 'poi test',
       time: '10:00',
-      // entry.location 也有座標但刻意不同
-      location: { lat: 99.9, lng: 99.9, name: 'legacy' },
       poi: { id: 7, type: 'attraction', lat: 26.1, lng: 127.6, name: 'master' },
       restaurants: [],
       shopping: [],
       travel: null,
-      googleRating: null,
       description: null,
       note: null,
     } as unknown as Day['timeline'][number];
@@ -114,24 +112,22 @@ describe('extractPinsFromAllDays', () => {
     expect(r.pins[0]!.lng).toBe(127.6);
   });
 
-  it('entry.poi 無效座標時 fallback entry.location', () => {
+  it('entry.poi 無效座標 + 無餐廳 fallback → missingCount++', () => {
     const entry = {
       id: 102,
       sortOrder: 0,
-      title: 'fallback test',
+      title: 'no-coords test',
       time: '10:00',
-      location: { lat: 26.2, lng: 127.7, name: 'loc' },
       poi: { id: 8, type: 'attraction', lat: null, lng: null, name: 'no-coords' },
       restaurants: [],
       shopping: [],
       travel: null,
-      googleRating: null,
       description: null,
       note: null,
     } as unknown as Day['timeline'][number];
     const days = { 1: makeDay(1, { timeline: [entry] }) };
     const r = extractPinsFromAllDays(days);
-    expect(r.pins).toHaveLength(1);
-    expect(r.pins[0]!.lat).toBe(26.2);
+    expect(r.pins).toHaveLength(0);
+    expect(r.missingCount).toBe(1);
   });
 });

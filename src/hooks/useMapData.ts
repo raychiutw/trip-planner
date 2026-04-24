@@ -62,7 +62,7 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   let missingCount = 0;
   let entryIndex = 0;
 
-  /* --- 取 location 座標（location 可能是 JSON 字串、物件或陣列，取第一個有效座標）--- */
+  /* --- 取 location 座標（hotel.location 仍走 JSON 結構；entry 走 poi JOIN）--- */
   const resolveLocation = (loc: unknown): { lat: number; lng: number } | null => {
     if (!loc) return null;
     let parsed = loc;
@@ -91,13 +91,11 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   /* --- Entry pins --- */
   const timeline: Entry[] = day.timeline ?? [];
   for (const entry of timeline) {
-    // Phase 2：POI master 優先，fallback entry.location；Phase 3 後只剩 POI
+    // Phase 3：spatial 來源只有 POI master；餐廳 entry 無 POI 座標時走首選餐廳
     let coords: { lat: number; lng: number } | null = null;
     if (entry.poi && isValidCoords(entry.poi)) {
       coords = { lat: entry.poi.lat as number, lng: entry.poi.lng as number };
     }
-    if (!coords) coords = resolveLocation(entry.location);
-    // 餐廳 entry：優先用首選餐廳 (sort_order=0) 的座標
     if (!coords && entry.restaurants.length > 0) {
       const primary = entry.restaurants.find(r => r.sortOrder === 0) || entry.restaurants[0];
       if (primary && isValidCoords(primary)) {
@@ -114,7 +112,7 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
         lat: coords.lat,
         lng: coords.lng,
         time: entry.time,
-        googleRating: entry.googleRating,
+        googleRating: entry.poi?.googleRating ?? null,
         travelMin: entry.travel?.min,
         travelType: entry.travel?.type,
         sortOrder: entry.sortOrder,

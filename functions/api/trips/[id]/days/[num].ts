@@ -125,9 +125,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       const e = timeline[i]!;
       const travel = e.travel as { type?: unknown; desc?: unknown; min?: unknown } | undefined;
       batch1.push(
-        db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, maps, google_rating, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+        db.prepare('INSERT INTO trip_entries (day_id, sort_order, time, title, description, note, travel_type, travel_desc, travel_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
           .bind(dayId, i, e.time ?? null, e.title ?? null, e.description ?? null,
-            e.maps ?? null, e.google_rating ?? null, e.note ?? null,
+            e.note ?? null,
             travel?.type ?? null, travel?.desc ?? null, travel?.min ?? null),
       );
     }
