@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tripline — Terracotta Palette Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root,
+  [data-theme="light"] {
+    --accent: #D97848;
+    --accent-subtle: #FBEEE4;
+    --accent-bg: #F7DFCB;
+    --accent-deep: #B85C2E;
+    --background: #FFFBF5;
+    --secondary: #FAF4EA;
+    --tertiary: #F2EAD9;
+    --hover: #F9EDE0;
+    --foreground: #2A1F18;
+    --muted: #6F5A47;
+    --border: #EADFCF;
+    --destructive: #C13515;
+    --success: #06A77D;
+    --warning: #C88500;
+    --info: #3B7EA1;
+    --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+    --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+    --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+  }
+  [data-theme="dark"] {
+    --accent: #F0935E;
+    --accent-subtle: #3A2418;
+    --accent-bg: #4A2D1C;
+    --accent-deep: #D97848;
+    --background: #1C140F;
+    --secondary: #26201A;
+    --tertiary: #332A22;
+    --hover: #2E251E;
+    --foreground: #F5EBDC;
+    --muted: #B5A08A;
+    --border: #3A3127;
+    --destructive: #E8A0A0;
+    --success: #7EC89A;
+    --warning: #E8B556;
+    --info: #8FB8D1;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 28px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 17px;
+    line-height: 1.5;
+    transition: background 0.3s ease, color 0.3s ease;
+    padding: 48px 24px 96px;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* === Top controls === */
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand-wordmark {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .brand-wordmark .accent-dot {
+    color: var(--accent);
+  }
+  .eyebrow-sub {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--foreground);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .theme-toggle:hover {
+    border-color: var(--accent);
+    background: var(--hover);
+  }
+
+  /* === Section === */
+  section {
+    margin-bottom: 64px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .section-lead {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+
+  /* === Swatches === */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .swatch {
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--background);
+  }
+  .swatch-color {
+    height: 72px;
+  }
+  .swatch-meta {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .swatch-name {
+    font-weight: 600;
+    color: var(--foreground);
+  }
+  .swatch-hex {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .swatch-note {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 6px;
+    line-height: 1.4;
+  }
+
+  /* === Hero card mock === */
+  .hero {
+    background: var(--accent);
+    color: #FFFBF5;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: var(--shadow-md);
+  }
+  .hero-chips {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    opacity: 0.85;
+    margin-bottom: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .hero-sub {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 251, 245, 0.24);
+  }
+  .hero-stat-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+  .hero-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === Day chips === */
+  .day-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+  .day-chip {
+    min-width: 140px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--background);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .day-chip:hover {
+    border-color: var(--accent);
+  }
+  .day-chip.active {
+    background: var(--accent);
+    color: #FFFBF5;
+    border-color: var(--accent);
+  }
+  .day-chip-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .day-chip.active .day-chip-eyebrow {
+    color: rgba(255, 251, 245, 0.85);
+  }
+  .day-chip-date {
+    font-size: 18px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-chip-area {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .day-chip.active .day-chip-area {
+    color: rgba(255, 251, 245, 0.9);
+  }
+
+  /* === Stop cards === */
+  .stops {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .stop {
+    display: grid;
+    grid-template-columns: 68px 48px 1fr auto;
+    gap: 16px;
+    align-items: start;
+    padding: 16px;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .stop:hover {
+    border-color: var(--accent);
+    background: var(--hover);
+  }
+  .stop[data-now="true"] {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-md);
+  }
+  .stop[data-past="true"] {
+    opacity: 0.6;
+  }
+  .stop-time {
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+  }
+  .stop-dur {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .stop-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    border: 1px solid #C1C1C1;
+    display: grid;
+    place-items: center;
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 22px;
+  }
+  .stop-icon[data-accent="true"] {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .stop-content {
+    min-width: 0;
+  }
+  .stop-type {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .stop-type[data-accent="true"] {
+    color: var(--accent);
+  }
+  .stop-name {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .stop-note {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .stop-rating {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === Travel connector === */
+  .travel {
+    font-size: 12px;
+    color: var(--muted);
+    padding: 8px 0 8px 34px;
+    border-left: 2px dashed var(--accent);
+    margin-left: 46px;
+    letter-spacing: 0.04em;
+  }
+
+  /* === Buttons === */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #FFFBF5;
+  }
+  .btn-primary:hover {
+    background: var(--accent-deep);
+  }
+  .btn-secondary {
+    background: var(--accent-bg);
+    color: var(--accent-deep);
+    border-color: var(--accent-bg);
+  }
+  [data-theme="dark"] .btn-secondary {
+    color: var(--accent);
+  }
+  .btn-secondary:hover {
+    background: var(--accent-subtle);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--foreground);
+    border-color: var(--border);
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn-destructive {
+    background: transparent;
+    color: var(--destructive);
+    border-color: var(--destructive);
+  }
+
+  /* === Badges === */
+  .badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .badge-success { background: rgba(6, 167, 125, 0.14); color: var(--success); }
+  .badge-success .badge-dot { background: var(--success); }
+  .badge-warning { background: rgba(200, 133, 0, 0.14); color: var(--warning); }
+  .badge-warning .badge-dot { background: var(--warning); }
+  .badge-destructive { background: rgba(193, 53, 21, 0.12); color: var(--destructive); }
+  .badge-destructive .badge-dot { background: var(--destructive); }
+  .badge-info { background: rgba(59, 126, 161, 0.14); color: var(--info); }
+  .badge-info .badge-dot { background: var(--info); }
+
+  /* === Nav tabs === */
+  .nav-tabs {
+    display: inline-flex;
+    gap: 2px;
+    padding: 4px;
+    background: var(--secondary);
+    border-radius: 8px;
+  }
+  .nav-tab {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-tab:hover:not(.active) {
+    color: var(--foreground);
+    background: var(--tertiary);
+  }
+  .nav-tab.active {
+    background: var(--accent);
+    color: #FFFBF5;
+  }
+
+  /* === DV palette === */
+  .dv-palette {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 8px;
+  }
+  .dv-swatch {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column-reverse;
+    padding: 6px 8px;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* === Typography sample === */
+  .type-sample {
+    padding: 24px;
+    background: var(--secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .type-h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .type-h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--foreground); }
+  .type-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .type-body { font-size: 17px; line-height: 1.6; }
+  .type-muted { color: var(--muted); font-size: 15px; margin-top: 12px; }
+
+  /* === Footer === */
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* === Two-col layout for specific sections === */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 720px) {
+    .two-col { grid-template-columns: 1fr; }
+    .dv-palette { grid-template-columns: repeat(5, 1fr); }
+    .stop { grid-template-columns: 56px 40px 1fr; }
+    .stop > *:last-child { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+<!-- ===== Head ===== -->
+<header class="page-head">
+  <div>
+    <div class="brand-wordmark">Tripline<span class="accent-dot">.</span></div>
+    <div class="eyebrow-sub">TERRACOTTA PALETTE PREVIEW · 2026-04-24</div>
+  </div>
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="theme-icon">🌙</span>
+    <span id="theme-label">Dark mode</span>
+  </button>
+</header>
+
+<!-- ===== Accent swatches ===== -->
+<section>
+  <h2>Accent</h2>
+  <p class="section-lead">Terracotta 單主題主色。CTA、active state、sight/food icon 專用。其他一律 ink。</p>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--accent)"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">accent</div>
+        <div class="swatch-hex" id="hex-accent">#D97848</div>
+        <div class="swatch-note">主強調色（CTA、active、hero bg）</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--accent-deep)"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">accent-deep</div>
+        <div class="swatch-hex" id="hex-accent-deep">#B85C2E</div>
+        <div class="swatch-note">按下 / pressed state</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--accent-bg); border: 1px solid var(--border);"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">accent-bg</div>
+        <div class="swatch-hex" id="hex-accent-bg">#F7DFCB</div>
+        <div class="swatch-note">badge 背景</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--accent-subtle); border: 1px solid var(--border);"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">accent-subtle</div>
+        <div class="swatch-hex" id="hex-accent-subtle">#FBEEE4</div>
+        <div class="swatch-note">hover / chip bg</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Neutrals ===== -->
+<section>
+  <h2>Neutrals（warm-toned）</h2>
+  <p class="section-lead">所有中性色帶暖色 undertone。不用純 #FFF / #EEE / #222，整體像旅行雜誌紙本。</p>
+  <div class="swatches">
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--background); border: 1px solid var(--border);"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">background</div>
+        <div class="swatch-hex" id="hex-bg">#FFFBF5</div>
+        <div class="swatch-note">頁面底（暖米白）</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--secondary); border: 1px solid var(--border);"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">secondary</div>
+        <div class="swatch-hex" id="hex-sec">#FAF4EA</div>
+        <div class="swatch-note">奶油色 section bg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--tertiary); border: 1px solid var(--border);"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">tertiary</div>
+        <div class="swatch-hex" id="hex-ter">#F2EAD9</div>
+        <div class="swatch-note">暖米色 surface</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--border); border: 1px solid var(--muted);"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">border</div>
+        <div class="swatch-hex" id="hex-border">#EADFCF</div>
+        <div class="swatch-note">hairline 分隔線</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--muted)"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">muted</div>
+        <div class="swatch-hex" id="hex-muted">#6F5A47</div>
+        <div class="swatch-note">次要文字（warm taupe, WCAG AA 4.5:1）</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background: var(--foreground)"></div>
+      <div class="swatch-meta">
+        <div class="swatch-name">foreground</div>
+        <div class="swatch-hex" id="hex-fg">#2A1F18</div>
+        <div class="swatch-note">主文字（深棕，非冷黑）</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Semantic ===== -->
+<section>
+  <h2>Semantic</h2>
+  <p class="section-lead">
+    warning 從 <code>#F48C06</code> 改 <code>#C88500</code>（避免跟 accent 橘色相過近混淆）。
+    info 從 accent blue 改 <code>#3B7EA1</code>（dusty blue，跟 terracotta 互補）。
+  </p>
+  <div class="badges">
+    <span class="badge badge-success"><span class="badge-dot"></span>成功 · Success</span>
+    <span class="badge badge-warning"><span class="badge-dot"></span>警告 · Warning</span>
+    <span class="badge badge-destructive"><span class="badge-dot"></span>錯誤 · Destructive</span>
+    <span class="badge badge-info"><span class="badge-dot"></span>資訊 · Info</span>
+  </div>
+</section>
+
+<!-- ===== Typography ===== -->
+<section>
+  <h2>Typography</h2>
+  <p class="section-lead">Inter + Noto Sans TC。Apple HIG type scale。</p>
+  <div class="type-sample">
+    <div class="type-eyebrow">DAY 03 · 2026-07-31（五）</div>
+    <h1 class="type-h1">古宇利島半日遊</h1>
+    <h2 class="type-h2">絕美海景與蝦蝦飯</h2>
+    <p class="type-body">
+      沖繩北部必訪離島！全長 1,960m 的古宇利大橋壯觀絕美，
+      島上有浪漫心型岩、白沙海灘。
+    </p>
+    <p class="type-muted">
+      建議順序：大橋拍照 → 海灘戲水 → 蝦蝦飯 → 心型岩看夕陽
+    </p>
+  </div>
+</section>
+
+<!-- ===== Buttons + Nav tabs ===== -->
+<section>
+  <h2>Buttons & Tabs</h2>
+  <p class="section-lead">Hover primary button 看 accent-deep 按下狀態。</p>
+  <div class="btn-row" style="margin-bottom: 20px;">
+    <button class="btn btn-primary">AI 編輯</button>
+    <button class="btn btn-secondary">返回行程</button>
+    <button class="btn btn-ghost">取消</button>
+    <button class="btn btn-destructive">刪除這一天</button>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active">行程</button>
+    <button class="nav-tab">地圖</button>
+    <button class="nav-tab">訊息</button>
+    <button class="nav-tab">更多</button>
+  </div>
+</section>
+
+<!-- ===== Hero card ===== -->
+<section>
+  <h2>Hero Card</h2>
+  <p class="section-lead">整片 Terracotta 實心底，白字（#FFFBF5 cream）。</p>
+  <div class="hero">
+    <div class="hero-chips">
+      <span>DAY 03</span>
+      <span>·</span>
+      <span>2026-07-31（五）</span>
+      <span>·</span>
+      <span>水族館・古宇利</span>
+    </div>
+    <h1 class="hero-title">美ら海＋古宇利島一日跑</h1>
+    <div class="hero-sub">7 個 stops · 40 km · 預估 9 小時</div>
+    <div class="hero-stats">
+      <div>
+        <div class="hero-stat-label">Stops</div>
+        <div class="hero-stat-value">7</div>
+      </div>
+      <div>
+        <div class="hero-stat-label">Start</div>
+        <div class="hero-stat-value">08:00</div>
+      </div>
+      <div>
+        <div class="hero-stat-label">End</div>
+        <div class="hero-stat-value">21:00</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Day chips ===== -->
+<section>
+  <h2>Day Chips</h2>
+  <p class="section-lead">Active state 實心 Terracotta。</p>
+  <div class="day-strip">
+    <div class="day-chip">
+      <div class="day-chip-eyebrow">DAY 01</div>
+      <div class="day-chip-date">7/29</div>
+      <div class="day-chip-area">北谷</div>
+    </div>
+    <div class="day-chip">
+      <div class="day-chip-eyebrow">DAY 02</div>
+      <div class="day-chip-date">7/30</div>
+      <div class="day-chip-area">浮潛・瀨底</div>
+    </div>
+    <div class="day-chip active">
+      <div class="day-chip-eyebrow">DAY 03 · 今天</div>
+      <div class="day-chip-date">7/31</div>
+      <div class="day-chip-area">水族館・古宇利</div>
+    </div>
+    <div class="day-chip">
+      <div class="day-chip-eyebrow">DAY 04</div>
+      <div class="day-chip-date">8/01</div>
+      <div class="day-chip-area">來客夢</div>
+    </div>
+    <div class="day-chip">
+      <div class="day-chip-eyebrow">DAY 05</div>
+      <div class="day-chip-date">8/02</div>
+      <div class="day-chip-area">首里城</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Stop cards ===== -->
+<section>
+  <h2>Stop Cards</h2>
+  <p class="section-lead">sight / food 類型才用 Terracotta accent icon。其他 ink。`data-now="true"` 橘邊框 + shadow。</p>
+  <div class="stops">
+    <div class="stop" data-past="true">
+      <div>
+        <div class="stop-time">08:00</div>
+        <div class="stop-dur">退房</div>
+      </div>
+      <div class="stop-icon">🏨</div>
+      <div class="stop-content">
+        <div class="stop-type">HOTEL</div>
+        <div class="stop-name">Super Hotel 沖縄・名護 退房</div>
+        <div class="stop-note">早餐：飯店自助 · 前往許田</div>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="travel">🚗 10 min · スーパーホテル名護 → 道の駅許田</div>
+
+    <div class="stop">
+      <div>
+        <div class="stop-time">08:10</div>
+        <div class="stop-dur">30 MIN</div>
+      </div>
+      <div class="stop-icon" data-accent="true">🛍️</div>
+      <div class="stop-content">
+        <div class="stop-type" data-accent="true">SHOPPING · 景點</div>
+        <div class="stop-name">道之驛許田</div>
+        <div class="stop-note">沖繩人氣最高休息站！必買沙翁、黑糖、在地農產。</div>
+        <div class="stop-rating">⭐ 4.0 · ¥500~</div>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="travel">🚗 38 min · 道の駅許田 → 沖縄美ら海水族館</div>
+
+    <div class="stop" data-now="true">
+      <div>
+        <div class="stop-time">09:00</div>
+        <div class="stop-dur">4 HR</div>
+      </div>
+      <div class="stop-icon" data-accent="true">🐳</div>
+      <div class="stop-content">
+        <div class="stop-type" data-accent="true">SIGHT · 景點</div>
+        <div class="stop-name">美麗海水族館</div>
+        <div class="stop-note">世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。</div>
+        <div class="stop-rating">⭐ 4.6 · ¥2,180</div>
+      </div>
+      <div></div>
+    </div>
+
+    <div class="travel">🚗 8 min · 美ら海水族館 → きしもと食堂</div>
+
+    <div class="stop">
+      <div>
+        <div class="stop-time">13:05</div>
+        <div class="stop-dur">1.5 HR</div>
+      </div>
+      <div class="stop-icon" data-accent="true">🍜</div>
+      <div class="stop-content">
+        <div class="stop-type" data-accent="true">FOOD · 用餐</div>
+        <div class="stop-name">きしもと食堂（本部）</div>
+        <div class="stop-note">明治 38 年創業！傳奇沖繩麵。百年老店常排隊，建議避開正午。</div>
+        <div class="stop-rating">⭐ 4.1 · ¥600~</div>
+      </div>
+      <div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DV palette ===== -->
+<section>
+  <h2>Data Visualization Palette（地圖 polyline · Day 指示）</h2>
+  <p class="section-lead">
+    **交錯排序** — 相鄰 Day 色相距 ≥70°（紅紫群 ↔ 冷群 interleave，同群不連兩次）。
+    色相鎖 85°–345° 高飽和區避 OSM pastel，10 色皆 Tailwind -600/-700 深飽和。
+  </p>
+
+  <!-- All 10 days on simulated OSM bg -->
+  <div style="background: #f2efe9; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border);">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #6f5a47; margin-bottom: 14px;">10 Days On Simulated OSM Tile</div>
+    <div style="position: relative; height: 160px; border-radius: 8px; overflow: hidden; background: #f2efe9;">
+      <div style="position: absolute; top: 10px; left: 0; right: 0; height: 18px; background: #fcd6a4;"></div>
+      <div style="position: absolute; top: 28px; left: 0; right: 0; height: 10px; background: #f9b29c;"></div>
+      <div style="position: absolute; top: 60px; left: 0; right: 55%; height: 60px; background: #aad3df;"></div>
+      <div style="position: absolute; top: 60px; left: 55%; right: 0; height: 60px; background: #c8facc;"></div>
+      <div style="position: absolute; top: 130px; left: 0; right: 0; height: 10px; background: #b5e3a4;"></div>
+      <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 480 160" preserveAspectRatio="none">
+        <path d="M 8 30 Q 100 60 200 20 T 470 50" stroke="#BE123C" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 50 Q 120 40 240 80 T 470 30" stroke="#0369A1" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 80 Q 110 110 220 70 T 470 100" stroke="#7C3AED" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 110 Q 130 80 260 130 T 470 80" stroke="#059669" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 20 Q 140 70 270 30 T 470 120" stroke="#C026D3" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 130 Q 90 90 190 140 T 470 70" stroke="#1D4ED8" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 40 Q 160 100 290 40 T 470 140" stroke="#DB2777" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 100 Q 110 140 210 90 T 470 130" stroke="#0D9488" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 150 Q 130 110 250 145 T 470 110" stroke="#65A30D" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M 8 70 Q 100 30 200 60 T 470 20" stroke="#4338CA" stroke-width="3" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div style="font-size: 11px; color: #6f5a47; margin-top: 10px; font-style: italic;">
+      ↑ 10 條 polyline 同時顯示（Day 1-10 新順序）。在 road 橘黃 / trunk 蜜桃 / water 淺藍 / forest 淺綠 / park 草綠底上都可辨。
+    </div>
+  </div>
+
+  <!-- Adjacent pairs test: 9 pairs side by side on OSM bg -->
+  <div style="margin-bottom: 24px;">
+    <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px;">Adjacent Day Pairs（最關鍵：同圖上兩條相鄰 Day polyline 必須清楚區分）</div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+      <!-- Pair D1-D2 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #aad3df;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#BE123C" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#0369A1" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D1 rose ↔ D2 sky</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 145° 紅 vs 青</div>
+      </div>
+      <!-- Pair D2-D3 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #aad3df;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#0369A1" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#7C3AED" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D2 sky ↔ D3 violet</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 70° 青 vs 紫 ⚠️ MIN</div>
+      </div>
+      <!-- Pair D3-D4 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #c8facc;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#7C3AED" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#059669" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D3 violet ↔ D4 emerald</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 115° 紫 vs 翡翠</div>
+      </div>
+      <!-- Pair D4-D5 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #c8facc;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#059669" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#C026D3" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D4 emerald ↔ D5 fuchsia</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 145° 翡翠 vs 洋紅</div>
+      </div>
+      <!-- Pair D5-D6 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #fcd6a4;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#C026D3" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#1D4ED8" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D5 fuchsia ↔ D6 blue</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 80° 洋紅 vs 皇家藍</div>
+      </div>
+      <!-- Pair D6-D7 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #aad3df;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#1D4ED8" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#DB2777" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D6 blue ↔ D7 pink</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 110° 皇家藍 vs 玫粉</div>
+      </div>
+      <!-- Pair D7-D8 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #c8facc;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#DB2777" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#0D9488" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D7 pink ↔ D8 teal</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 155° 玫粉 vs 青綠</div>
+      </div>
+      <!-- Pair D8-D9 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #b5e3a4;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#0D9488" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#65A30D" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D8 teal ↔ D9 lime</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 90° 青綠 vs 黃綠</div>
+      </div>
+      <!-- Pair D9-D10 -->
+      <div style="background: #f2efe9; border-radius: 8px; padding: 10px; border: 1px solid var(--border);">
+        <div style="position: relative; height: 50px; border-radius: 4px; overflow: hidden; background: #f2efe9;">
+          <div style="position: absolute; top: 15px; left: 0; right: 0; height: 10px; background: #fcd6a4;"></div>
+          <svg width="100%" height="100%" style="position: absolute; inset: 0;" viewBox="0 0 200 50" preserveAspectRatio="none">
+            <path d="M 5 15 Q 60 35 120 18 T 195 30" stroke="#65A30D" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M 5 35 Q 60 15 120 32 T 195 18" stroke="#4338CA" stroke-width="3" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-size: 11px; font-weight: 600; margin-top: 6px; color: var(--foreground);">D9 lime ↔ D10 indigo</div>
+        <div style="font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums;">Δ 160° 黃綠 vs 深靛</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Swatches in new order -->
+  <div class="dv-palette">
+    <div class="dv-swatch" style="background: #BE123C">D1·ROSE</div>
+    <div class="dv-swatch" style="background: #0369A1">D2·SKY</div>
+    <div class="dv-swatch" style="background: #7C3AED">D3·VIOLET</div>
+    <div class="dv-swatch" style="background: #059669">D4·EMERALD</div>
+    <div class="dv-swatch" style="background: #C026D3">D5·FUCHSIA</div>
+    <div class="dv-swatch" style="background: #1D4ED8">D6·BLUE</div>
+    <div class="dv-swatch" style="background: #DB2777">D7·PINK</div>
+    <div class="dv-swatch" style="background: #0D9488">D8·TEAL</div>
+    <div class="dv-swatch" style="background: #65A30D">D9·LIME</div>
+    <div class="dv-swatch" style="background: #4338CA">D10·INDIGO</div>
+  </div>
+</section>
+
+<footer>
+  Tripline Terracotta Palette · 切換 light / dark mode 檢查兩套色階 · DESIGN.md v2026-04-24
+</footer>
+
+</div>
+
+<script>
+  function toggleTheme() {
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme');
+    const next = current === 'light' ? 'dark' : 'light';
+    root.setAttribute('data-theme', next);
+
+    const icon = document.getElementById('theme-icon');
+    const label = document.getElementById('theme-label');
+    if (next === 'dark') {
+      icon.textContent = '☀️';
+      label.textContent = 'Light mode';
+      document.getElementById('hex-accent').textContent = '#F0935E';
+      document.getElementById('hex-accent-deep').textContent = '#D97848';
+      document.getElementById('hex-accent-bg').textContent = '#4A2D1C';
+      document.getElementById('hex-accent-subtle').textContent = '#3A2418';
+      document.getElementById('hex-bg').textContent = '#1C140F';
+      document.getElementById('hex-sec').textContent = '#26201A';
+      document.getElementById('hex-ter').textContent = '#332A22';
+      document.getElementById('hex-border').textContent = '#3A3127';
+      document.getElementById('hex-muted').textContent = '#B5A08A';
+      document.getElementById('hex-fg').textContent = '#F5EBDC';
+    } else {
+      icon.textContent = '🌙';
+      label.textContent = 'Dark mode';
+      document.getElementById('hex-accent').textContent = '#D97848';
+      document.getElementById('hex-accent-deep').textContent = '#B85C2E';
+      document.getElementById('hex-accent-bg').textContent = '#F7DFCB';
+      document.getElementById('hex-accent-subtle').textContent = '#FBEEE4';
+      document.getElementById('hex-bg').textContent = '#FFFBF5';
+      document.getElementById('hex-sec').textContent = '#FAF4EA';
+      document.getElementById('hex-ter').textContent = '#F2EAD9';
+      document.getElementById('hex-border').textContent = '#EADFCF';
+      document.getElementById('hex-muted').textContent = '#6F5A47';
+      document.getElementById('hex-fg').textContent = '#2A1F18';
+    }
+  }
+</script>
+
+</body>
+</html>
