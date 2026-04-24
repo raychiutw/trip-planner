@@ -1,5 +1,5 @@
 /**
- * AppShell snapshot — B-P2 §2.6
+ * AppShell snapshot — 
  *
  * 三種 layout 結構固定 — snapshot 防止未來無意 regress slot 順序、className、data-layout。
  * Snapshot 排除 <style> 內容（CSS rules 已由 app-shell.test.tsx 字串斷言覆蓋）。
@@ -15,7 +15,7 @@ function shellMarkup(container: HTMLElement): string {
 }
 
 describe('AppShell snapshot', () => {
-  it('§2.6 桌機 3-pane（sidebar + main + sheet + bottomNav 全 slot）', () => {
+  it('桌機 3-pane（sidebar + main + sheet + bottomNav 全 slot）', () => {
     const { container } = render(
       <AppShell
         sidebar={<div className="mock-sidebar">Sidebar</div>}
@@ -27,7 +27,7 @@ describe('AppShell snapshot', () => {
     expect(shellMarkup(container)).toMatchSnapshot();
   });
 
-  it('§2.6 桌機 2-pane（sidebar + main，無 sheet 無 bottomNav）', () => {
+  it('桌機 2-pane（sidebar + main，無 sheet 無 bottomNav）', () => {
     const { container } = render(
       <AppShell
         sidebar={<div className="mock-sidebar">Sidebar</div>}
@@ -37,7 +37,7 @@ describe('AppShell snapshot', () => {
     expect(shellMarkup(container)).toMatchSnapshot();
   });
 
-  it('§2.6 手機典型（sidebar + main + bottomNav，無 sheet）', () => {
+  it('手機典型（sidebar + main + bottomNav，無 sheet）', () => {
     const { container } = render(
       <AppShell
         sidebar={<div className="mock-sidebar">Sidebar</div>}

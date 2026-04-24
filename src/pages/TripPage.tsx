@@ -57,22 +57,6 @@ const SCOPED_STYLES = `
 /* Sticky-nav children z-index layering above DestinationArt */
 .sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
 
-/* ===== 2-col layout (PR3: Q1=A, Q-C=A, Q-D=1) =====
- * Single breakpoint ≥1024px: left col (content) + right col (sticky map rail).
- * Below 1024px: single column (mobile-first), map is a separate route.
- * 1024px chosen as the start of iPad Pro 13" portrait (1024px viewport width).
- */
-.trip-body {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-@media (min-width: 1024px) {
-  .trip-body {
-    grid-template-columns: clamp(375px, 30vw, 400px) 1fr;
-    gap: 24px;
-    align-items: start;
-  }
-}
 .trip-content { min-width: 0; }
 
 /* Print mode */
@@ -83,11 +67,8 @@ const SCOPED_STYLES = `
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
-.print-mode .trip-body { grid-template-columns: 1fr; }
-.print-mode .trip-map-rail { display: none !important; }
 @media print {
-  .sticky-nav, .print-exit-btn, .trip-map-rail { display: none !important; }
-  .trip-body { grid-template-columns: 1fr; }
+  .sticky-nav, .print-exit-btn { display: none !important; }
 }
 `;
 
@@ -322,14 +303,15 @@ export default function TripPage() {
 
   /* --- Pins for TripMapRail (hoisted out of JSX IIFE for AppShell sheet slot) --- */
   const mapRailData = useMemo(() => {
-    const allPins = dayNums.flatMap((n) => {
-      const day = allDays[n];
-      return day ? extractPinsFromDay(day).pins : [];
-    });
-    const pinsByDay = new Map<number, typeof allPins>();
+    type Pin = ReturnType<typeof extractPinsFromDay>['pins'][number];
+    const pinsByDay = new Map<number, Pin[]>();
+    const allPins: Pin[] = [];
     for (const n of dayNums) {
       const day = allDays[n];
-      if (day) pinsByDay.set(n, extractPinsFromDay(day).pins);
+      if (!day) continue;
+      const { pins } = extractPinsFromDay(day);
+      pinsByDay.set(n, pins);
+      allPins.push(...pins);
     }
     return { allPins, pinsByDay };
   }, [dayNums, allDays]);
@@ -549,14 +531,10 @@ export default function TripPage() {
     />
   ) : undefined;
 
-  return (
-    <AppShell
-      sidebar={<DesktopSidebar user={null} />}
-      main={
+  const mainContent = (
     <div className="ocean-shell">
       <style>{SCOPED_STYLES}</style>
 
-      {/* Ocean Topbar — design 稿 .topbar 對齊 */}
       <header className="ocean-topbar sticky-nav" id="stickyNav">
         <div className="ocean-topbar-left">
           {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
@@ -590,9 +568,7 @@ export default function TripPage() {
 
       <ToastContainer />
 
-      {/* Main page */}
       <main className="ocean-page">
-        {/* Day strip — 設計稿的 .rtl-day-strip */}
         {!loading && trip && (
           <DayNav
             days={days}
@@ -610,7 +586,6 @@ export default function TripPage() {
           </div>
         )}
 
-        {/* Trip content — AppShell main slot（TripMapRail 已移至 sheet slot，BottomNavBar 移至 bottomNav slot）*/}
         {!loading && trip && (
           <div className="trip-content" id="tripContent">
             {dayNums.map((dayNum) => (
@@ -633,7 +608,6 @@ export default function TripPage() {
         )}
       </main>
 
-      {/* InfoSheet (mobile bottom sheet) */}
       <InfoSheet
         open={!!activeSheet}
         title={activeSheet ? (SHEET_TITLES[activeSheet] || '') : ''}
@@ -656,7 +630,6 @@ export default function TripPage() {
         />
       </InfoSheet>
 
-      {/* Print exit button */}
       {isPrintMode && (
         <button
           className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none"
@@ -667,7 +640,12 @@ export default function TripPage() {
         </button>
       )}
     </div>
-      }
+  );
+
+  return (
+    <AppShell
+      sidebar={<DesktopSidebar user={null} />}
+      main={mainContent}
       sheet={sheetContent}
       bottomNav={bottomNavContent}
     />

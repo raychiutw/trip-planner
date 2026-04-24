@@ -1,5 +1,5 @@
 /**
- * Placeholder pages smoke tests — B-P2 §6.1-6.4
+ * Placeholder pages smoke tests — -6.4
  *
  * 4 個 sidebar nav 對應的 placeholder pages：ChatPage / GlobalMapPage / ExplorePage / LoginPage
  * 驗證 render 不 crash + 主要 heading + CTA link to /manage
@@ -16,7 +16,7 @@ function renderWithRouter(node: React.ReactNode) {
   return render(<MemoryRouter>{node}</MemoryRouter>);
 }
 
-describe('§6.1 ChatPage placeholder', () => {
+describe('ChatPage placeholder', () => {
   it('render heading + CTA link to /manage', () => {
     const { getByTestId, getByRole } = renderWithRouter(<ChatPage />);
     expect(getByTestId('chat-page')).toBeTruthy();
@@ -26,7 +26,7 @@ describe('§6.1 ChatPage placeholder', () => {
   });
 });
 
-describe('§6.2 GlobalMapPage placeholder（/map 全域，非 per-trip）', () => {
+describe('GlobalMapPage placeholder（/map 全域，非 per-trip）', () => {
   it('render heading + CTA link to /manage', () => {
     const { getByTestId, getByRole } = renderWithRouter(<GlobalMapPage />);
     expect(getByTestId('global-map-page')).toBeTruthy();
@@ -36,7 +36,7 @@ describe('§6.2 GlobalMapPage placeholder（/map 全域，非 per-trip）', () =
   });
 });
 
-describe('§6.3 ExplorePage placeholder', () => {
+describe('ExplorePage placeholder', () => {
   it('render heading + CTA link to /manage', () => {
     const { getByTestId, getByRole } = renderWithRouter(<ExplorePage />);
     expect(getByTestId('explore-page')).toBeTruthy();
@@ -46,7 +46,7 @@ describe('§6.3 ExplorePage placeholder', () => {
   });
 });
 
-describe('§6.4 LoginPage placeholder (Cloudflare Access 過渡期)', () => {
+describe('LoginPage placeholder (Cloudflare Access 過渡期)', () => {
   it('render 「使用 Cloudflare Access 登入」heading + CTA link to /manage', () => {
     const { getByTestId, getByRole } = renderWithRouter(<LoginPage />);
     expect(getByTestId('login-page')).toBeTruthy();

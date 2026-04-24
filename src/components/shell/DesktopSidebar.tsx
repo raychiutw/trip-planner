@@ -1,18 +1,8 @@
 /**
- * DesktopSidebar — B-P2 §3
+ * DesktopSidebar — 5-nav app-level sidebar (chat / trips / map / explore / login).
  *
- * 5 nav items（聊天 / 行程 / 地圖 / 探索 / 登入）+ user chip + New Trip CTA。
- * 視覺對應：docs/design-sessions/mockup-trip-v2.html sidebar 區塊（V2 Terracotta，filled dark active pill）。
- *
- * Active state route mapping：
- *   /chat 或 /chat/* → 聊天
- *   /manage 或 /manage/* 或 /trip/* → 行程（含 per-trip 所有 sub-route，例如 /trip/:id/map）
- *   /map → 地圖（cross-trip global，per-trip 的 /trip/:id/map 不算）
- *   /explore 或 /explore/* → 探索
- *   /login 或 /login/* → 登入
- *
- * 未登入：底部顯示「未登入」chip
- * 已登入：底部顯示 account card（avatar + name + email）+ 隱藏「未登入」chip
+ * 「行程」nav matches /manage AND /trip/* so per-trip sub-routes (e.g. /trip/:id/map)
+ * stay highlighted on the trips nav, not the cross-trip /map global view.
  */
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -24,33 +14,26 @@ interface NavItemConfig {
   label: string;
   href: string;
   icon: string;
+  /** Paths that keep this nav highlighted (exact match OR followed by `/`). */
+  matchPrefixes: readonly string[];
+  /** When true, match only the exact prefix — no nested sub-routes. */
+  exactOnly?: boolean;
 }
 
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat' },
-  { key: 'trips',   label: '行程', href: '/manage',  icon: 'home' },
-  { key: 'map',     label: '地圖', href: '/map',     icon: 'map' },
-  { key: 'explore', label: '探索', href: '/explore', icon: 'search' },
-  { key: 'login',   label: '登入', href: '/login',   icon: 'user' },
+  { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
+  { key: 'trips',   label: '行程', href: '/manage',  icon: 'home',   matchPrefixes: ['/manage', '/trip'] },
+  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
+  { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
+  { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
 ];
 
-function isItemActive(pathname: string, key: NavItemConfig['key']): boolean {
-  switch (key) {
-    case 'chat':
-      return pathname === '/chat' || pathname.startsWith('/chat/');
-    case 'trips':
-      return (
-        pathname === '/manage' ||
-        pathname.startsWith('/manage/') ||
-        pathname.startsWith('/trip/')
-      );
-    case 'map':
-      return pathname === '/map';
-    case 'explore':
-      return pathname === '/explore' || pathname.startsWith('/explore/');
-    case 'login':
-      return pathname === '/login' || pathname.startsWith('/login/');
+function isItemActive(pathname: string, item: NavItemConfig): boolean {
+  for (const prefix of item.matchPrefixes) {
+    if (pathname === prefix) return true;
+    if (!item.exactOnly && pathname.startsWith(prefix + '/')) return true;
   }
+  return false;
 }
 
 const SCOPED_STYLES = `
@@ -108,7 +91,7 @@ const SCOPED_STYLES = `
   cursor: pointer; min-height: var(--spacing-tap-min);
   transition: filter 150ms var(--transition-timing-function-apple);
 }
-.tp-new-trip-btn:hover { filter: brightness(0.92); }
+.tp-new-trip-btn:hover { filter: brightness(var(--hover-brightness)); }
 .tp-new-trip-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
 .tp-user-chip {
@@ -161,7 +144,7 @@ export interface SidebarUser {
 export interface DesktopSidebarProps {
   /** Current authenticated user — null = 未登入 */
   user?: SidebarUser | null;
-  /** New Trip CTA click handler — Phase 2 由 parent 觸發 toast；Phase 3 換 modal */
+  /** New Trip CTA click handler — parent decides how to respond (toast vs modal). */
   onNewTrip?: () => void;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
@@ -181,7 +164,7 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
 
         <nav className="tp-sidebar-nav" aria-label="主要功能">
           {NAV_ITEMS.map((item) => {
-            const active = isItemActive(pathname, item.key);
+            const active = isItemActive(pathname, item);
             return (
               <Link
                 key={item.key}
