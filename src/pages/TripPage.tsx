@@ -21,7 +21,7 @@ import { extractPinsFromDay } from '../hooks/useMapData';
 const TripMapRail = lazy(() => import('../components/trip/TripMapRail'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
-import MobileBottomNav from '../components/trip/MobileBottomNav';
+import BottomNavBar from '../components/shell/BottomNavBar';
 import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
@@ -618,7 +618,7 @@ export default function TripPage() {
 
       {/* Mobile bottom tab bar (≤760px) */}
       {!loading && trip && (
-        <MobileBottomNav
+        <BottomNavBar
           tripId={trip.id}
           activeSheet={activeSheet}
           onOpenSheet={setActiveSheet}

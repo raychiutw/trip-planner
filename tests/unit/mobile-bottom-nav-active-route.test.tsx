@@ -1,6 +1,6 @@
 /**
  * mobile-bottom-nav-active-route.test.tsx — PR3 review fix #2:
- * MobileBottomNav active-tab 路由 regex 精確度測試
+ * BottomNavBar active-tab 路由 regex 精確度測試
  *
  * 確保：
  * - `/manage/maptour-2026` 不應 active「地圖」（舊 includes('/map') 會誤判）
@@ -12,7 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import MobileBottomNav from '../../src/components/trip/MobileBottomNav';
+import BottomNavBar from '../../src/components/shell/BottomNavBar';
 
 const mockNavigate = vi.fn();
 
@@ -42,7 +42,7 @@ beforeEach(() => {
 function renderNav(tripId = 'test-trip') {
   return render(
     <MemoryRouter initialEntries={[`/trip/${tripId}`]}>
-      <MobileBottomNav
+      <BottomNavBar
         tripId={tripId}
         activeSheet={null}
         onOpenSheet={vi.fn()}
@@ -58,7 +58,7 @@ function getTabBtn(container: HTMLElement, label: string) {
   );
 }
 
-describe('MobileBottomNav — active-tab route regex precision (PR3 fix #2)', () => {
+describe('BottomNavBar — active-tab route regex precision (PR3 fix #2)', () => {
   it('/trip/okinawa-trip-2026-Ray/map → 地圖 tab active', () => {
     mockPathname = '/trip/okinawa-trip-2026-Ray/map';
     const { container } = renderNav('okinawa-trip-2026-Ray');

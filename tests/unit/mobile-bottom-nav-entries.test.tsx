@@ -11,9 +11,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import MobileBottomNav from '../../src/components/trip/MobileBottomNav';
+import BottomNavBar from '../../src/components/shell/BottomNavBar';
 
-function renderNav(overrides: Partial<Parameters<typeof MobileBottomNav>[0]> = {}) {
+function renderNav(overrides: Partial<Parameters<typeof BottomNavBar>[0]> = {}) {
   const defaults = {
     tripId: 'test-trip',
     activeSheet: null,
@@ -23,12 +23,12 @@ function renderNav(overrides: Partial<Parameters<typeof MobileBottomNav>[0]> = {
   };
   return render(
     <MemoryRouter initialEntries={['/trip/test-trip']}>
-      <MobileBottomNav {...defaults} {...overrides} />
+      <BottomNavBar {...defaults} {...overrides} />
     </MemoryRouter>,
   );
 }
 
-describe('MobileBottomNav — 4 個 tab 全部存在（PR3）', () => {
+describe('BottomNavBar — 4 個 tab 全部存在（PR3）', () => {
   it('「行程」tab render 且有 aria-label', () => {
     const { getByRole } = renderNav();
     expect(getByRole('button', { name: '行程' })).toBeTruthy();
