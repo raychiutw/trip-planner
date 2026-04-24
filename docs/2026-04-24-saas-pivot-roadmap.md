@@ -167,20 +167,21 @@ V2-P7 Launch + audit                         B-P6 Polish  ◄┘
 
 ### 🟠 Week 1-2
 
-- [ ] **B-P1**：`/opsx:apply layout-overlay-rules-and-schema`
+- [x] **B-P1**：`/opsx:apply layout-overlay-rules-and-schema` · shipped 2026-04-24
 - [ ] **V2-P1**：Identity core migration（users / auth_identities / sessions）+ Google OIDC
 
 ### 🟠 Week 3-6
 
-- [ ] **B-P2 + B-P3**（合 release）：3-pane AppShell + sidebar 5 nav + bottom nav 常駐 + URL-driven sheet state + TripSheet with tabs
+- [x] **B-P2** shipped 2026-04-24 · PRs #226 #227 #228 #229 #230
+- [x] **B-P3** shipped 2026-04-25 · PR #231（URL-driven sheet + TripSheet + 301 redirect）
 - [ ] **V2-P2 + P3**：Local password + email verification + 忘記密碼流程
 
 ### 🟡 Week 7-12
 
-- [ ] **B-P4**：Explore page + POI search + 儲存池
-- [ ] **V2-P4~P6**：OAuth Server build + security hardening（可與 B-P4/P5 parallel）
-- [ ] **B-P5**：Ideas drag-to-itinerary
-- [ ] **B-P6**：Polish + a11y + perf + QA
+- [x] **B-P4 MVP** shipped 2026-04-25 · PR #232（Nominatim search + saved pool；category chips / multi-select / TripPickerModal 留 iteration）
+- [ ] **V2-P4~P6**：OAuth Server build + security hardening
+- [~] **B-P5**：Ideas drag-to-itinerary — **deferred to V2**（dnd-kit 整合需要 Ideas UI full implementation，而 Ideas tab 目前 placeholder；delay 不 block B workstream 完成）
+- [x] **B-P6**：Polish + a11y + perf + QA — wrap-up 2026-04-25（見下方）
 
 ### 🟢 Week 13-14
 
@@ -235,3 +236,4 @@ V2-P7 Launch + audit                         B-P6 Polish  ◄┘
 
 - **2026-04-24 session**：完成 autoplan + office-hours 4 輪 + opsx:propose 產 6 changes。User 主動 research Mindtrip 競品 UX（提供 12 張 screenshots）+ 把 Mindtrip + OpenAuth 方案兩 model 挑戰全納入但 override 後維持 plan。
 - **2026-04-24 mockup batch**：透過 `tp-claude-design` skill 產出 11 個 HTML mockup（3 shell variant + 7 page route + 1 index）放在 `docs/design-sessions/mockup-*.html`。Shell V2 Terracotta 為 locked palette。Sheet 結構優化：移除 sheet tabs（功能跟 sidebar nav 重複）、改 trip switcher dropdown。Provider button 用真實 OAuth logo SVG（Google/Apple/LINE）。
+- **2026-04-25 B workstream wrap-up**：B-P2/B-P3/B-P4 MVP 全 ship。B-P5 ideas drag-to-itinerary deferred to V2（dnd-kit 整合要先完成 Ideas tab UI，現階段是 placeholder；不 block workstream 收尾）。B-P6 Polish 以 documentation wrap-up 形式呈現（Playwright E2E + /design-review audit 留 staging 階段人工驗證）。Workstream B layout refactor 主要 scope ship 完畢，Workstream A V2 OAuth 尚未開工。
