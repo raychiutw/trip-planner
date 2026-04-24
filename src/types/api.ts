@@ -140,6 +140,89 @@ export interface Permission {
 // AuditLog
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// SavedPoi — 使用者跨 trip 的 POI 收藏（layout refactor Phase 1）
+// ---------------------------------------------------------------------------
+
+/**
+ * A saved POI — 使用者跨 trip 的收藏清單，由 /explore 儲存池維護。
+ *
+ * DB table: saved_pois
+ * Columns: id, email, poi_id, saved_at, note
+ *
+ * GET response 會 JOIN `pois` 補 POI 詳情（poiName / poiAddress / poiLat / poiLng / poiType）。
+ *
+ * mapRow renames (via json() deep camelCase):
+ *   poi_id       -> poiId
+ *   saved_at     -> savedAt
+ *   poi_name     -> poiName
+ *   poi_address  -> poiAddress
+ *   poi_lat      -> poiLat
+ *   poi_lng      -> poiLng
+ *   poi_type     -> poiType
+ */
+export interface SavedPoi {
+  id: number;
+  /** owner email（V2 OAuth 之前暫用 email，不是 user_id FK） */
+  email: string;
+  /** DB column `poi_id` — FK to pois(id) */
+  poiId: number;
+  /** DB column `saved_at` — ISO datetime */
+  savedAt: string;
+  note?: string | null;
+  // JOIN pois 欄位（GET endpoint 會回）
+  poiName?: string;
+  poiAddress?: string | null;
+  poiLat?: number | null;
+  poiLng?: number | null;
+  poiType?: string;
+}
+
+// ---------------------------------------------------------------------------
+// TripIdea — per-trip 的 maybe list（layout refactor Phase 1）
+// ---------------------------------------------------------------------------
+
+/**
+ * A trip idea — per-trip 的 maybe list，與 trip_entries（排定時間軸）分離。
+ *
+ * DB table: trip_ideas
+ * Columns: id, trip_id, poi_id, title, note, added_at, added_by,
+ *          promoted_to_entry_id, archived_at
+ *
+ * GET response LEFT JOIN `pois` 補 POI 詳情（poiName / poiAddress / poiLat / poiLng / poiType）。
+ *
+ * mapRow renames (via json() deep camelCase):
+ *   trip_id              -> tripId
+ *   poi_id               -> poiId
+ *   added_at             -> addedAt
+ *   added_by             -> addedBy
+ *   promoted_to_entry_id -> promotedToEntryId
+ *   archived_at          -> archivedAt
+ */
+export interface TripIdea {
+  id: number;
+  /** DB column `trip_id` */
+  tripId: string;
+  /** DB column `poi_id` — nullable（自由文字 idea 無 POI 引用） */
+  poiId?: number | null;
+  title: string;
+  note?: string | null;
+  /** DB column `added_at` — ISO datetime */
+  addedAt: string;
+  /** DB column `added_by` — email of adder */
+  addedBy?: string | null;
+  /** DB column `promoted_to_entry_id` — 若 idea 被排入 itinerary，指向新 entry；null 表未 promote */
+  promotedToEntryId?: number | null;
+  /** DB column `archived_at` — soft archive marker；null 表 active */
+  archivedAt?: string | null;
+  // LEFT JOIN pois 欄位
+  poiName?: string | null;
+  poiAddress?: string | null;
+  poiLat?: number | null;
+  poiLng?: number | null;
+  poiType?: string | null;
+}
+
 /**
  * An audit log entry recording every insert / update / delete.
  *
