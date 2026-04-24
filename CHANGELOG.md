@@ -3,6 +3,13 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.3.1] - 2026-04-24
+
+**hotfix：migrate 腳本加 confidence gate 保護 map pin 精度**。Phase 2 dry-run 跑完發現 17 / 91 個 legacy entries 屬於 `(name, type)` 碰撞（同名但座標 > 300m 差異，多半是大型複合設施如美浜アメリカンビレッジ、イオンモール、Vessel/Super Hotel 內的不同停點）。若直接 `--apply`，POI 只留第一個 entry 的座標，其他 entry 的精準位置就永遠消失。改為 `--apply` 預設只套用 `confidence ≥ 0.8` 的 entries；低 confidence 項目保留 `poi_id = NULL`，讓 Phase 2 fallback 繼續讀 `entry.location`，等人工用 `PUT /api/trips/:id/entries/:eid/poi-id` 重掛。`--force` flag 可覆蓋此守則。
+
+### Changed
+- `scripts/migrate-entries-to-pois.js` — `--apply` 路徑加 `applyList = classified.filter(c => c.confidence >= 0.8)`；新增 `--force` flag。跳過數在 terminal 輸出提醒人工處理。
+
 ## [2.1.3.0] - 2026-04-24
 
 **POI Unification Phase 2 — API 寫入 + JOIN 讀取 + 遷移腳本**。Timeline entry 從這版起走 POI master：`PUT /days/:num` 與 `POST /entries` 在寫入 `trip_entries` 後 find-or-create 對應 `pois` 列、回填 `trip_entries.poi_id`；`GET /days/:num` 則把 pois master JOIN 進 `entry.poi`，`toTimelineEntry` 與 `extractPinsFromDay` 優先讀 POI（fallback entry override 作為 Phase 2 遷移期保險）。既有行程無感；Phase 3 drop `entry.location / maps / google_rating` 欄位前跑遷移腳本一次把 legacy 資料回填 POI master 即可。
