@@ -17,8 +17,8 @@ import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
 import { extractPinsFromDay } from '../hooks/useMapData';
-/* F005: lazy load TripMapRail — Leaflet 是重型套件，避免影響首頁 bundle */
-const TripMapRail = lazy(() => import('../components/trip/TripMapRail'));
+/* F005: TripSheet 延遲載（內部 lazy load TripMapRail 以避免 Leaflet 進首頁 bundle）*/
+const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import BottomNavBar from '../components/shell/BottomNavBar';
@@ -511,10 +511,9 @@ export default function TripPage() {
 
   const sheetContent = !loading && trip ? (
     <Suspense fallback={null}>
-      <TripMapRail
-        key={trip.id}
-        pins={mapRailData.allPins}
+      <TripSheet
         tripId={trip.id}
+        allPins={mapRailData.allPins}
         pinsByDay={mapRailData.pinsByDay}
         dark={isDark}
       />

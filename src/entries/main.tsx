@@ -12,7 +12,7 @@ if ('serviceWorker' in navigator) {
 }
 
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { lazy, Suspense, StrictMode } from 'react';
 
@@ -75,6 +75,16 @@ function LegacyRedirect() {
   return <Navigate to={`/trip/${tripId}`} replace />;
 }
 
+/** /trip/:tripId/map → /trip/:tripId?sheet=map（保留其他 query params）*/
+function TripMapRedirect() {
+  const { tripId } = useParams<{ tripId: string }>();
+  const { search } = useLocation();
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  params.set('sheet', 'map');
+  const query = params.toString();
+  return <Navigate to={`/trip/${tripId ?? ''}${query ? `?${query}` : ''}`} replace />;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
@@ -98,7 +108,7 @@ if (el) {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/trip/:tripId" element={<TripLayout />}>
                 <Route index element={<TripPage />} />
-                <Route path="map" element={<MapPage />} />
+                <Route path="map" element={<TripMapRedirect />} />
                 <Route path="stop/:entryId" element={<StopDetailPage />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
               </Route>
