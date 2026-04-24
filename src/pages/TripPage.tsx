@@ -22,6 +22,8 @@ const TripMapRail = lazy(() => import('../components/trip/TripMapRail'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import BottomNavBar from '../components/shell/BottomNavBar';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebar from '../components/shell/DesktopSidebar';
 import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
@@ -318,6 +320,20 @@ export default function TripPage() {
     [days],
   );
 
+  /* --- Pins for TripMapRail (hoisted out of JSX IIFE for AppShell sheet slot) --- */
+  const mapRailData = useMemo(() => {
+    const allPins = dayNums.flatMap((n) => {
+      const day = allDays[n];
+      return day ? extractPinsFromDay(day).pins : [];
+    });
+    const pinsByDay = new Map<number, typeof allPins>();
+    for (const n of dayNums) {
+      const day = allDays[n];
+      if (day) pinsByDay.set(n, extractPinsFromDay(day).pins);
+    }
+    return { allPins, pinsByDay };
+  }, [dayNums, allDays]);
+
   /* --- Trip start/end scalars for HourlyWeather (T3) --- */
   const tripStart = autoScrollDates[0] ?? null;
   const tripEnd = autoScrollDates[autoScrollDates.length - 1] ?? null;
@@ -511,7 +527,32 @@ export default function TripPage() {
     );
   }
 
+  const sheetContent = !loading && trip ? (
+    <Suspense fallback={null}>
+      <TripMapRail
+        key={trip.id}
+        pins={mapRailData.allPins}
+        tripId={trip.id}
+        pinsByDay={mapRailData.pinsByDay}
+        dark={isDark}
+      />
+    </Suspense>
+  ) : undefined;
+
+  const bottomNavContent = !loading && trip ? (
+    <BottomNavBar
+      tripId={trip.id}
+      activeSheet={activeSheet}
+      onOpenSheet={setActiveSheet}
+      onClearSheet={() => setActiveSheet(null)}
+      isOnline={isOnline}
+    />
+  ) : undefined;
+
   return (
+    <AppShell
+      sidebar={<DesktopSidebar user={null} />}
+      main={
     <div className="ocean-shell">
       <style>{SCOPED_STYLES}</style>
 
@@ -569,63 +610,28 @@ export default function TripPage() {
           </div>
         )}
 
-        {/* Body: 2-col grid (≥1024px: content + sticky map rail; <1024px: single col) */}
-        {!loading && trip && (() => {
-          const allPins = dayNums.flatMap((n) => {
-            const day = allDays[n];
-            return day ? extractPinsFromDay(day).pins : [];
-          });
-          const pinsByDay = new Map<number, typeof allPins>();
-          for (const n of dayNums) {
-            const day = allDays[n];
-            if (day) pinsByDay.set(n, extractPinsFromDay(day).pins);
-          }
-          return (
-            <div className="trip-body">
-              <div className="trip-content" id="tripContent">
-                {dayNums.map((dayNum) => (
-                  <DaySection
-                    key={dayNum}
-                    dayNum={dayNum}
-                    day={allDays[dayNum]}
-                    daySummary={daySummaryMap.get(dayNum)}
-                    tripStart={tripStart}
-                    tripEnd={tripEnd}
-                    themeArt={themeArt}
-                    localToday={localToday}
-                    isActive={dayNum === currentDayNum}
-                    timezone={weatherTimezone}
-                  />
-                ))}
-                <FooterArt dark={isDark} />
-                {footerData && <Footer footer={footerData} />}
-              </div>
-              {/* Desktop Map Rail — right column, sticky, ≥1024px only */}
-              {/* key={trip.id} 確保切換行程時重掛（fitDoneRef reset） */}
-              <Suspense fallback={null}>
-                <TripMapRail
-                  key={trip.id}
-                  pins={allPins}
-                  tripId={trip.id}
-                  pinsByDay={pinsByDay}
-                  dark={isDark}
-                />
-              </Suspense>
-            </div>
-          );
-        })()}
+        {/* Trip content — AppShell main slot（TripMapRail 已移至 sheet slot，BottomNavBar 移至 bottomNav slot）*/}
+        {!loading && trip && (
+          <div className="trip-content" id="tripContent">
+            {dayNums.map((dayNum) => (
+              <DaySection
+                key={dayNum}
+                dayNum={dayNum}
+                day={allDays[dayNum]}
+                daySummary={daySummaryMap.get(dayNum)}
+                tripStart={tripStart}
+                tripEnd={tripEnd}
+                themeArt={themeArt}
+                localToday={localToday}
+                isActive={dayNum === currentDayNum}
+                timezone={weatherTimezone}
+              />
+            ))}
+            <FooterArt dark={isDark} />
+            {footerData && <Footer footer={footerData} />}
+          </div>
+        )}
       </main>
-
-      {/* Mobile bottom tab bar (≤760px) */}
-      {!loading && trip && (
-        <BottomNavBar
-          tripId={trip.id}
-          activeSheet={activeSheet}
-          onOpenSheet={setActiveSheet}
-          onClearSheet={() => setActiveSheet(null)}
-          isOnline={isOnline}
-        />
-      )}
 
       {/* InfoSheet (mobile bottom sheet) */}
       <InfoSheet
@@ -661,5 +667,9 @@ export default function TripPage() {
         </button>
       )}
     </div>
+      }
+      sheet={sheetContent}
+      bottomNav={bottomNavContent}
+    />
   );
 }

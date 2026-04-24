@@ -11,6 +11,8 @@ import { useRequestSSE } from '../hooks/useRequestSSE';
 import { useTripSelector } from '../hooks/useTripSelector';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebar from '../components/shell/DesktopSidebar';
 
 import { marked } from 'marked';
 
@@ -596,12 +598,15 @@ export default function ManagePage() {
 
   /* ===== Render ===== */
   return (
-    <div className="manage-wrap">
-      <style>{MANAGE_SCOPED_STYLES}</style>
-      <ManageTopbar
-        onBack={handleClose}
-        tripSelector={tripSelector}
-      />
+    <AppShell
+      sidebar={<DesktopSidebar user={null} />}
+      main={
+        <div className="manage-wrap">
+          <style>{MANAGE_SCOPED_STYLES}</style>
+          <ManageTopbar
+            onBack={handleClose}
+            tripSelector={tripSelector}
+          />
 
         <ToastContainer />
 
@@ -746,7 +751,9 @@ export default function ManagePage() {
             </div>
           )}
         </main>
-    </div>
+        </div>
+      }
+    />
   );
 }
 
