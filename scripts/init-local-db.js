@@ -18,7 +18,8 @@ const path = require('path');
 
 const RESET = process.argv.includes('--reset');
 const DB_NAME = 'trip-planner-db';
-const TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'];
+// 順序必須 FK-safe：父表在前，子表在後（test: tests/unit/init-local-db-table-order.test.ts）
+const TABLES = ['trips', 'trip_days', 'pois', 'trip_entries', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'];
 
 console.log('init-local-db.js — 本機 SQLite 初始化\n');
 
