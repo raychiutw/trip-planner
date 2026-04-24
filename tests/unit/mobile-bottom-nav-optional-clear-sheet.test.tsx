@@ -1,13 +1,13 @@
 /**
  * mobile-bottom-nav-optional-clear-sheet.test.tsx — F004 TDD red test
  *
- * 驗證：不傳入 onClearSheet prop 的 MobileBottomNav 不 crash 且正常渲染 4 個 tab。
+ * 驗證：不傳入 onClearSheet prop 的 BottomNavBar 不 crash 且正常渲染 4 個 tab。
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import MobileBottomNav from '../../src/components/trip/MobileBottomNav';
+import BottomNavBar from '../../src/components/shell/BottomNavBar';
 
 const mockNavigate = vi.fn();
 let mockPathname = '/trip/test-trip';
@@ -32,12 +32,12 @@ beforeEach(() => {
   mockPathname = '/trip/test-trip';
 });
 
-describe('MobileBottomNav — onClearSheet optional (F004)', () => {
+describe('BottomNavBar — onClearSheet optional (F004)', () => {
   it('不傳 onClearSheet 不 crash，4 個 tab 正常渲染', () => {
     expect(() => {
       render(
         <MemoryRouter initialEntries={['/trip/test-trip']}>
-          <MobileBottomNav
+          <BottomNavBar
             tripId="test-trip"
             activeSheet={null}
             onOpenSheet={vi.fn()}
@@ -51,7 +51,7 @@ describe('MobileBottomNav — onClearSheet optional (F004)', () => {
   it('不傳 onClearSheet：仍 render nav element', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/trip/test-trip']}>
-        <MobileBottomNav
+        <BottomNavBar
           tripId="test-trip"
           activeSheet={null}
           onOpenSheet={vi.fn()}
@@ -65,7 +65,7 @@ describe('MobileBottomNav — onClearSheet optional (F004)', () => {
   it('不傳 onClearSheet：仍有 4 個 button', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/trip/test-trip']}>
-        <MobileBottomNav
+        <BottomNavBar
           tripId="test-trip"
           activeSheet={null}
           onOpenSheet={vi.fn()}
@@ -80,7 +80,7 @@ describe('MobileBottomNav — onClearSheet optional (F004)', () => {
     mockPathname = '/trip/test-trip';
     const { container } = render(
       <MemoryRouter initialEntries={['/trip/test-trip']}>
-        <MobileBottomNav
+        <BottomNavBar
           tripId="test-trip"
           activeSheet={null}
           onOpenSheet={vi.fn()}

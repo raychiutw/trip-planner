@@ -1,14 +1,17 @@
 /**
- * MobileBottomNav — bottom tab bar on ≤760px viewports (PR3: 4-tab route-based)
+ * BottomNavBar — bottom tab bar（B-P2 §4 rename from MobileBottomNav）
  *
- * 4 tabs: 行程 / 地圖 / 訊息 / 更多
+ * 4 tabs: 行程 / 地圖 / 助理 / 更多
  *  - 行程: navigate('/trip/:tripId') + scroll-to-top
  *  - 地圖: navigate('/trip/:tripId/map')
- *  - 訊息: navigate('/manage')
+ *  - 助理: navigate('/manage')
  *  - 更多: onOpenSheet('action-menu')
  *
  * Active state driven by useLocation pathname match.
- * CSS: grid-template-columns: repeat(4, 1fr)
+ * CSS: tokens.css .ocean-bottom-nav — grid-template-columns: repeat(4, 1fr)
+ * position: sticky + inset-block-end: 0 讓 nav 在 AppShell grid 中正確定位。
+ *
+ * Note：5-tab 全站化 + shell-aware active state 留給 §5 page refactor PR。
  */
 
 import clsx from 'clsx';
@@ -17,7 +20,7 @@ import Icon from '../shared/Icon';
 
 type TabKey = 'home' | 'map' | 'message' | 'menu';
 
-interface MobileBottomNavProps {
+interface BottomNavBarProps {
   /** Trip ID used for navigate targets. */
   tripId: string;
   /** Currently-open sheet key (used to highlight 更多 tab). */
@@ -30,12 +33,12 @@ interface MobileBottomNavProps {
   isOnline?: boolean;
 }
 
-export default function MobileBottomNav({
+export default function BottomNavBar({
   tripId,
   activeSheet,
   onOpenSheet,
   isOnline: _isOnline = true,
-}: MobileBottomNavProps) {
+}: BottomNavBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 

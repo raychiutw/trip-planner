@@ -711,7 +711,8 @@ body.dark {
     .ocean-bottom-nav { display: none; }
     @media (max-width: 760px) {
         .ocean-bottom-nav {
-            position: fixed; left: 0; right: 0; bottom: 0;
+            /* B-P2 §4: sticky 讓 nav 在 AppShell grid 內正確定位（取代 PR3 的 fixed） */
+            position: sticky; inset-block-end: 0;
             /* PR3 Q3=B: 5→4 tabs */
             display: grid; grid-template-columns: repeat(4, 1fr);
             background: color-mix(in srgb, var(--color-background) 97%, transparent);
