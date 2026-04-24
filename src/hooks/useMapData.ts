@@ -91,7 +91,12 @@ export function extractPinsFromDay(day: Day): { pins: MapPin[]; missingCount: nu
   /* --- Entry pins --- */
   const timeline: Entry[] = day.timeline ?? [];
   for (const entry of timeline) {
-    let coords = resolveLocation(entry.location);
+    // Phase 2：POI master 優先，fallback entry.location；Phase 3 後只剩 POI
+    let coords: { lat: number; lng: number } | null = null;
+    if (entry.poi && isValidCoords(entry.poi)) {
+      coords = { lat: entry.poi.lat as number, lng: entry.poi.lng as number };
+    }
+    if (!coords) coords = resolveLocation(entry.location);
     // 餐廳 entry：優先用首選餐廳 (sort_order=0) 的座標
     if (!coords && entry.restaurants.length > 0) {
       const primary = entry.restaurants.find(r => r.sortOrder === 0) || entry.restaurants[0];

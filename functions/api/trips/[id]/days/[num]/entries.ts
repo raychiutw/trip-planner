@@ -1,6 +1,7 @@
 import { logAudit } from '../../../../_audit';
 import { hasPermission } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
+import { findOrCreatePoi } from '../../../../_poi';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
 import { json, getAuth, parseJsonBody } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -45,6 +46,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // Phase 2: poi_type 白名單（避免 pois.type CHECK 失敗）
+  const ALLOWED_POI_TYPES = new Set(['hotel', 'restaurant', 'shopping', 'parking', 'attraction', 'transport', 'activity', 'other']);
+  if (body.poi_type !== undefined && (typeof body.poi_type !== 'string' || !ALLOWED_POI_TYPES.has(body.poi_type))) {
+    throw new AppError('DATA_VALIDATION', `poi_type 無效（允許：${[...ALLOWED_POI_TYPES].join(', ')}）`);
+  }
+
   // sort_order：指定則用指定值，否則 append 到最後
   let sortOrder: number;
   if (typeof body.sort_order === 'number') {
@@ -57,14 +64,33 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     sortOrder = (max?.max_sort ?? -1) + 1;
   }
 
+  // Phase 2：title 必須為非空白字串（validateEntryBody 只檢 falsiness，空白字串通過）
+  const title = typeof body.title === 'string' ? body.title.trim() : '';
+  if (!title) throw new AppError('DATA_VALIDATION', 'title 不可為空白');
+
+  // Phase 2：entry 對應的 pois master（find-or-create），再回填 poi_id
+  // 包在 try/catch 內統一 error path；POI 建成後若 INSERT 失敗，orphan POI
+  // 由後續 `migrate-entries-to-pois.js --clean-orphans` 清理。
   let row;
   try {
+    const poiId = await findOrCreatePoi(db, {
+      name: title,
+      type: (body.poi_type as string) || 'attraction',
+      description: (body.description as string | undefined) ?? null,
+      maps: (body.maps as string | undefined) ?? null,
+      mapcode: (body.mapcode as string | undefined) ?? null,
+      lat: (body.lat as number | undefined) ?? null,
+      lng: (body.lng as number | undefined) ?? null,
+      google_rating: (body.google_rating as number | undefined) ?? null,
+      source: 'ai',
+    });
+
     row = await db
-      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, maps, mapcode, google_rating, note, travel_type, travel_desc, travel_min, location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
+      .prepare(`INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, maps, mapcode, google_rating, note, travel_type, travel_desc, travel_min, location, poi_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`)
       .bind(
         dayId, sortOrder,
         body.time ?? null,
-        body.title as string,
+        title,
         body.description ?? null,
         body.source ?? 'ai',
         body.maps ?? null,
@@ -75,9 +101,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         body.travel_desc ?? null,
         body.travel_min ?? null,
         body.location ?? null,
+        poiId,
       )
       .first();
-  } catch {
+  } catch (err) {
+    if (err instanceof AppError) throw err;
     throw new AppError('SYS_DB_ERROR', 'DB 暫時無法處理，請稍後重試');
   }
 

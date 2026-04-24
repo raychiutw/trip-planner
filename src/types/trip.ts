@@ -128,7 +128,12 @@ export interface Entry {
   note?: string | null;
   /** Assembled from travel_type / travel_desc / travel_min columns */
   travel?: Travel | null;
+  /** Phase 2 legacy override; DROP in Phase 3 */
   location?: Location | null;
+  /** FK → pois.id; Phase 2 backfill target */
+  poiId?: number | null;
+  /** Joined POI master record; POI fields take precedence over entry override during Phase 2 */
+  poi?: Poi | null;
   updatedAt?: string;
   restaurants: Restaurant[];
   shopping: Shopping[];
@@ -161,7 +166,7 @@ export interface Hotel {
 /** POI master record — source of truth, shared across trips. AI-maintained, user cannot edit directly. */
 export interface Poi {
   id: number;
-  type: 'hotel' | 'restaurant' | 'shopping' | 'parking' | 'attraction' | 'transport' | 'other';
+  type: 'hotel' | 'restaurant' | 'shopping' | 'parking' | 'attraction' | 'transport' | 'activity' | 'other';
   name: string;
   description?: string | null;
   note?: string | null;

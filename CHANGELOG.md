@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.3.0] - 2026-04-24
+
+**POI Unification Phase 2 — API 寫入 + JOIN 讀取 + 遷移腳本**。Timeline entry 從這版起走 POI master：`PUT /days/:num` 與 `POST /entries` 在寫入 `trip_entries` 後 find-or-create 對應 `pois` 列、回填 `trip_entries.poi_id`；`GET /days/:num` 則把 pois master JOIN 進 `entry.poi`，`toTimelineEntry` 與 `extractPinsFromDay` 優先讀 POI（fallback entry override 作為 Phase 2 遷移期保險）。既有行程無感；Phase 3 drop `entry.location / maps / google_rating` 欄位前跑遷移腳本一次把 legacy 資料回填 POI master 即可。
+
+### Added
+- `functions/api/_poi.ts` 流程擴充 — `batchFindOrCreatePois` 與 `findOrCreatePoi` 沒改，但 PUT / POST handler 把 entry 本身當成 POI 送進去，預設 `type = 'attraction'`，caller 可傳 `poi_type` 指定 `transport` / `activity`。
+- `functions/api/trips/[id]/days/[num].ts` — PUT 產生 entry 後，以 `entryPoiIdx` 對應到 `batchFindOrCreatePois` 回傳的 ID，batch2 前置 `UPDATE trip_entries SET poi_id = ?`。
+- `functions/api/trips/[id]/days/[num]/entries.ts` — POST 在 INSERT 前跑 `findOrCreatePoi`，`poi_id` 跟 `trip_entries` 同一筆 INSERT 寫入。
+- `functions/api/trips/[id]/entries/[eid].ts` — PATCH `ALLOWED_FIELDS` 納入 `poi_id`，支援 admin 重掛既有 POI。
+- `functions/api/trips/[id]/days/_merge.ts` — `fetchPoiMap` 改為可變參數 `(...rowLists)` 同時吃 trip_pois + trip_entries；`assembleDay` timeline 輸出 `entry.poi`（JSON deep-camel 後成 `entry.poi`）。
+- `functions/api/trips/[id]/days.ts` — batch 模式 pois 子查詢 UNION 加入 `trip_entries.poi_id`，多天 GET 也帶 entry.poi。
+- `src/lib/mapDay.ts` — `RawEntry.poi` 型別 + `toTimelineEntry` 優先讀 `poi.maps / poi.mapcode / poi.googleRating`。
+- `src/hooks/useMapData.ts` — `extractPinsFromDay` 優先讀 `entry.poi.lat/lng`；舊 `entry.location` 留作 Phase 2 fallback。
+- `src/types/trip.ts` — `Poi.type` 聯合型別新增 `'activity'`；`Entry.poiId` + `Entry.poi` 欄位。
+- `scripts/migrate-entries-to-pois.js` — Phase 2 backfill。heuristic 分類 transport / activity / attraction；`--dry-run` 產出 markdown 報告 + uncertain 清單（confidence < 0.8），gate 5%；`--apply` 產 SQL 檔 + `wrangler d1 execute --remote --file`；`--clean-orphans` 順手清被刪 trip 殘留的 pois。
+- `scripts/verify-entry-poi-backfill.js` — coverage assertion，有任何 `poi_id IS NULL` 的 entry 就 exit 1 列清單。
+- 測試 — `tests/unit/map-day.test.js`（POI JOIN 4 case）、`tests/unit/extract-pins-all-days.test.ts`（POI 座標優先 2 case）、`tests/api/days-num.integration.test.ts`（PUT 寫 poi_id + GET 回 entry.poi JOIN 2 case）。
+
+### Changed
+- `.claude/skills/tp-shared/references/poi-spec.md` — 新增 timeline entry POI 段落說明 `poi_type` body 欄位、表格補 attraction / transport / activity 必填欄位。
+- `.claude/skills/tp-quality-rules/SKILL.md` — 開頭補 Phase 2 POI Unification 段落，說明 R11 / R12 / R17 的資料來源自 POI master；body shape 本身不變。
+
+### Security / Hardening（adversarial review 抓到）
+- `functions/api/trips/[id]/days/[num].ts` + `functions/api/trips/[id]/days/[num]/entries.ts` — `poi_type` 加白名單驗證，非法值在 batch1 執行前就 400；避免 CHECK 失敗在 batch2 半途炸掉整天資料。
+- `functions/api/trips/[id]/entries/[eid].ts` — `poi_id` 從 PATCH ALLOWED_FIELDS 拔掉，避免任何編輯者把 entry 指向任意 POI（跨 trip 資料外洩 / FK 違反）。admin 手動重掛走後續獨立 admin endpoint。
+- `functions/api/pois/[id].ts` — DELETE `/api/pois/:id` 前新增 `UPDATE trip_entries SET poi_id = NULL WHERE poi_id = ?`，否則任何被 entry 引用的 POI 都會因 FK constraint 刪不掉。
+- `functions/api/trips/[id]/audit/[aid]/rollback.ts` — `TABLE_COLUMNS.trip_entries` 加入 `poi_id`，否則任何 PATCH 含 poi_id 的 entry 稽核事件都無法 rollback。
+- **新端點** `PUT /api/trips/:id/entries/:eid/poi-id`（`functions/api/trips/[id]/entries/[eid]/poi-id.ts`）— 取代 PATCH /entries 的 poi_id 路徑；驗證 POI 存在 + entry 屬於該 trip 後才重掛；支援 `poi_id: null` 清空；全部動作寫 audit_log。
+- `functions/api/trips/[id]/days/[num]/entries.ts` — POST `findOrCreatePoi` 移進 try/catch 統一 error path；`title` 拒絕僅空白字串；INSERT 失敗仍可能留 orphan POI，交由 `migrate-entries-to-pois.js --clean-orphans` 清。
+- `scripts/migrate-entries-to-pois.js` — 加 **(name, type) 碰撞偵測**：同 name+type 不同座標（> ~300m 差異）自動降 confidence 到 0.3 進 uncertain 隊列，避免把不同分店的 `麥當勞` / `駐車場` 合成一筆 POI。
+
+### Migration steps（ship 後）
+1. `node scripts/migrate-entries-to-pois.js --dry-run --trip all` — 檢查 heuristic 分類、uncertain 不超過 5%
+2. 審閱 `.gstack/migration-reports/{ts}-uncertain.md`，把必要 override 以 `PATCH /entries/:eid` 設 `poi_id`
+3. `node scripts/migrate-entries-to-pois.js --apply --trip all --clean-orphans` — 實際寫入 prod D1 + 清 orphan POI
+4. `node scripts/verify-entry-poi-backfill.js` — 確認 100% coverage 才能進 Phase 3
+
 ## [2.1.2.0] - 2026-04-23
 
 **POI Unification Phase 1 — schema prep（dormant）**。`pois.type` CHECK 新增 `activity`，`trip_entries` 加 nullable `poi_id` FK 欄位 + JOIN index。此階段純 schema，無使用者可見變化。Phase 2（API handler 走 find-or-create 把既有 timeline stop 資料回填 POI master）與 Phase 3（DROP 舊 entry.location 欄位）於後續 PR 進行。

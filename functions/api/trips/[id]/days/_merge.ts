@@ -3,17 +3,25 @@
  */
 
 /**
- * 從 trip_pois 取得所有關聯的 pois，建 poi_id → pois row 查找表。
- * 使用 `IN (...)` 批次查詢避免 N+1。
+ * 從任一帶 `poi_id` 欄位的 row set 取得所有關聯的 pois，建 poi_id → pois row 查找表。
+ * 同時支援 trip_pois（context 關聯）與 trip_entries（Phase 2 entry.poi_id）。
+ * 使用 `IN (...)` 批次查詢避免 N+1；null poi_id 直接過濾。
  */
 export async function fetchPoiMap(
   db: D1Database,
-  tripPoiRows: Record<string, unknown>[],
+  ...rowLists: Record<string, unknown>[][]
 ): Promise<Map<number, Record<string, unknown>>> {
-  const poiIds = [...new Set(tripPoiRows.map(tp => tp.poi_id as number))];
+  const allIds = new Set<number>();
+  for (const rows of rowLists) {
+    for (const r of rows) {
+      const pid = r.poi_id;
+      if (typeof pid === 'number' && pid > 0) allIds.add(pid);
+    }
+  }
   const poiMap = new Map<number, Record<string, unknown>>();
-  if (poiIds.length === 0) return poiMap;
+  if (allIds.size === 0) return poiMap;
 
+  const poiIds = [...allIds];
   const placeholders = poiIds.map(() => '?').join(',');
   const { results } = await db.prepare(
     `SELECT * FROM pois WHERE id IN (${placeholders})`,
@@ -132,10 +140,17 @@ export function assembleDay(
       } catch { location = null; }
     }
 
+    // Phase 2: entry.poi_id JOIN pois master
+    const poiId = e.poi_id as number | null | undefined;
+    const poi = (typeof poiId === 'number' && poiId > 0)
+      ? (poiMap.get(poiId) ?? null)
+      : null;
+
     return {
       ...e,
       location,
       travel,
+      poi,
       restaurants: restByEntry.get(eid) ?? [],
       shopping: shopByEntry.get(eid) ?? [],
     };

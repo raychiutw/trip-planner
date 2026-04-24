@@ -92,6 +92,9 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     await db.prepare('DELETE FROM trip_pois WHERE poi_id = ?').bind(poiId).run();
   }
 
+  // Phase 2：trip_entries.poi_id FK 沒 ON DELETE SET NULL，手動清空，否則 DELETE pois 會 FK fail
+  await db.prepare('UPDATE trip_entries SET poi_id = NULL WHERE poi_id = ?').bind(poiId).run();
+
   // 刪除 pois master
   await db.prepare('DELETE FROM pois WHERE id = ?').bind(poiId).run();
 
