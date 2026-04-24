@@ -1,9 +1,9 @@
 ## 1. Grid tokens + breakpoint
 
-- [ ] 1.1 寫 failing test: tokens.css 提供 `--grid-3pane-desktop` variable 值為 `240px 1fr min(780px, 40vw)`
-- [ ] 1.2 寫 failing test: `--nav-height-mobile` variable 值為 `88px`
-- [ ] 1.3 在 `css/tokens.css` 新增 `--grid-3pane-desktop`、`--grid-2pane-desktop`（無 sheet 時）、`--nav-height-mobile`
-- [ ] 1.4 新增 breakpoint convention 註解（1024 / 1280 boundary）
+- [x] 1.1 寫 failing test: tokens.css 提供 `--grid-3pane-desktop` variable 值為 `240px 1fr min(780px, 40vw)`
+- [x] 1.2 寫 failing test: `--nav-height-mobile` variable 值為 `88px`
+- [x] 1.3 在 `css/tokens.css` 新增 `--grid-3pane-desktop`、`--grid-2pane-desktop`（無 sheet 時）、`--nav-height-mobile`
+- [x] 1.4 新增 breakpoint convention 註解（1024 / 1280 boundary）
 
 ## 2. AppShell component
 

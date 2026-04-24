@@ -67,6 +67,17 @@ html { color-scheme: light dark; }
     --spacing-12: 48px;
     --spacing-16: 64px;
 
+    /* Layout grid templates (layout refactor Phase 2 — desktop-3pane-and-nav-layout) */
+    /* Breakpoints convention:
+     *   ≥1280px: 3-pane full (sidebar 240 / main fluid / sheet up to 780px)
+     *   1024-1279px: 3-pane narrow (sheet capped at 40vw)
+     *   <1024px: single-column + sticky bottom nav
+     */
+    --grid-3pane-desktop: 240px 1fr min(780px, 40vw);
+    --grid-2pane-desktop: 240px 1fr;
+    --nav-height-mobile: 88px;
+    --sidebar-width-desktop: 240px;
+
     /* Font size */
     --font-size-large-title: 2.125rem;
     --font-size-title: 1.75rem;
