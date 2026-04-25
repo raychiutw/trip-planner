@@ -33,134 +33,112 @@ const SCOPED_STYLES = `
 }
 body.print-mode .ocean-day-strip { display: none; }
 
-/* === DESKTOP tab style (≥761px): underlined tabs, no border, no rounded bg === */
+/* === Day strip — unified pill style for ALL viewports.
+ * Lifts mockup-trip-v2.html .mobile-day-strip-btn pattern verbatim.
+ * Vertical column (DAY 01 on top row, 7/26 Sat on bottom row). Border +
+ * filled-accent on active. 44px min tap target. Both desktop and mobile
+ * share this style per user direction「day-strip 比照手機版」. */
 [data-dn] {
   flex: 0 0 auto;
   scroll-snap-align: start;
-  padding: 10px 14px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
   background: transparent;
-  color: var(--color-muted);
+  color: var(--color-foreground);
   cursor: pointer;
   text-align: left;
   font-family: inherit;
-  transition: color 160ms var(--transition-timing-function-apple),
-              border-bottom-color 160ms var(--transition-timing-function-apple);
+  transition: background 160ms var(--transition-timing-function-apple),
+              border-color 160ms var(--transition-timing-function-apple),
+              color 160ms var(--transition-timing-function-apple);
   position: relative;
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: 36px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 44px;
   white-space: nowrap;
 }
-[data-dn]:hover:not(.active) { color: var(--color-foreground); }
+[data-dn]:hover:not(.active) {
+  border-color: var(--color-accent);
+}
 [data-dn].active {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
-  background: transparent;
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
 }
 
 [data-dn] .dn-head { display: inline-flex; align-items: center; gap: 4px; }
 [data-dn] .dn-eyebrow {
-  font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.14em;
-  opacity: 0.7; text-transform: uppercase;
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  opacity: 0.6;
+  line-height: 1;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
-[data-dn].active .dn-eyebrow { opacity: 1; }
-[data-dn] .dn-weather {
-  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
-  opacity: 0.75; text-transform: uppercase;
-  padding: 2px 5px; border-radius: 4px;
-  background: var(--color-accent-subtle); color: var(--color-accent);
+[data-dn].active .dn-eyebrow {
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0.85;
 }
-[data-dn].active .dn-weather { opacity: 1; }
-
+[data-dn] .dn-weather {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+[data-dn].active .dn-weather {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
 [data-dn] .dn-date {
-  font-size: 14px; font-weight: 600;
-  font-variant-numeric: tabular-nums; letter-spacing: -0.005em;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1;
   color: var(--color-foreground);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
 }
-[data-dn].active .dn-date { color: var(--color-accent); }
+[data-dn].active .dn-date { color: #fff; }
 [data-dn] .dn-dow {
-  font-size: var(--font-size-caption2); font-weight: 500;
-  opacity: 0.55; margin-left: 4px; letter-spacing: 0.02em;
+  font-size: var(--font-size-caption2);
+  font-weight: 500;
+  opacity: 0.55;
+  margin-left: 4px;
 }
-[data-dn].active .dn-dow { opacity: 0.75; }
-
+[data-dn].active .dn-dow { opacity: 0.85; }
 [data-dn] .dn-area {
-  font-size: 12px; opacity: 0.6;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--font-size-caption2);
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   max-width: 80px;
-  padding-left: 6px;
+  padding-left: 0;
   line-height: 1;
-  position: relative;
 }
-[data-dn] .dn-area::before {
-  content: "·"; position: absolute; left: -1px; opacity: 0.5;
+[data-dn] .dn-area::before { display: none; }
+[data-dn].active .dn-area {
+  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.85);
 }
-[data-dn].active .dn-area { opacity: 0.8; }
 
-body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-muted); }
+body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-foreground); }
 
-/* === MOBILE pill style (<761px): mockup-trip-v2.html .mobile-day-strip-btn ===
- * Vertical column layout (DAY 01 on top row, 7/26 on bottom row). Filled
- * accent on active. 44px min tap target. Matches mockup exactly. */
+/* Mobile-specific container tweaks: tighter side padding to bleed past
+ * .ocean-page's 16px side padding. */
 @media (max-width: 760px) {
   .ocean-day-strip {
     gap: 6px;
     padding: 8px 16px;
-    /* Topbar is hidden on mobile, so kill the negative top margin that used
-     * to pull the strip up under the topbar. Keep negative side margins so
-     * the strip can bleed to viewport edges within .ocean-page (which has
-     * 16px side padding). */
     margin: 0 -16px 16px;
   }
-  [data-dn] {
-    padding: 7px 10px;
-    border: 1px solid var(--color-border);
-    border-radius: 10px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    min-height: 44px;
-    color: var(--color-foreground);
-  }
-  [data-dn]:hover:not(.active) {
-    border-color: var(--color-accent);
-    border-bottom-color: var(--color-accent);
-  }
-  [data-dn].active {
-    background: var(--color-accent);
-    color: #fff;
-    border-color: var(--color-accent);
-    border-bottom-color: var(--color-accent);
-  }
-  [data-dn].active .dn-date { color: #fff; }
-  [data-dn].active .dn-eyebrow { color: rgba(255,255,255,0.85); opacity: 0.85; }
-  [data-dn] .dn-eyebrow {
-    font-size: var(--font-size-eyebrow);
-    letter-spacing: 0.14em;
-    opacity: 0.6;
-    line-height: 1;
-  }
-  [data-dn] .dn-date {
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1;
-    color: var(--color-foreground);
-  }
-  [data-dn] .dn-dow { margin-left: 4px; opacity: 0.55; }
-  [data-dn] .dn-area {
-    max-width: 80px;
-    padding-left: 0;
-    font-size: var(--font-size-caption2);
-    opacity: 0.6;
-    line-height: 1;
-  }
-  [data-dn] .dn-area::before { display: none; }
-  [data-dn] .dn-weather { background: rgba(0,0,0,0.06); color: var(--color-muted); }
-  [data-dn].active .dn-weather { background: rgba(255,255,255,0.18); color: #fff; }
 }
 
 @keyframes dn-tooltip-in {

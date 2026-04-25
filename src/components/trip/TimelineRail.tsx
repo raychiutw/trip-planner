@@ -13,7 +13,8 @@
  */
 
 import { memo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useTripId } from '../../contexts/TripIdContext';
 import Icon from '../shared/Icon';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
@@ -26,7 +27,7 @@ interface TimelineRailProps {
 
 const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: TimelineRailProps) {
   const navigate = useNavigate();
-  const { tripId } = useParams<{ tripId: string }>();
+  const tripId = useTripId();
 
   if (!events || events.length === 0) return null;
 
