@@ -252,6 +252,13 @@ async function handleAuth(
     return context.next();
   }
 
+  // V2 公開 capability probe：/api/public-config — login/signup page 需要在沒
+  // session 的情況下知道哪些 provider 開了。Side-effect-free，無 secrets exposed。
+  if (request.method === 'GET' && url.pathname === '/api/public-config') {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // 公開端點：POST /api/reports（使用者錯誤回報，不需認證）
   if (request.method === 'POST' && url.pathname === '/api/reports') {
     (context.data as Record<string, unknown>).auth = null;
