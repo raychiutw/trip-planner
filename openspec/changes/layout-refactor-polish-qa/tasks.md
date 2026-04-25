@@ -78,7 +78,7 @@
 
 - [ ] 11.1 Full Playwright E2E matrix green — blocked by 7.x deferred
 - [ ] 11.2 Lighthouse CI green — blocked by 6.1 deferred
-- [ ] 11.3 Bundle size gate pass — partial（6.4 baseline recorded，gate 待 6.1 CI 整合）
+- [x] 11.3 Bundle size gate pass — `scripts/bundle-size-check.sh` 算 dist/assets/\*.js gzipped size，threshold 300KB，超出 exit 1。`.github/workflows/ci.yml` 加 step 在 Build 之後跑（pass 條件：32 chunks 全 ≤ 300KB gzipped；最大 html2pdf 262KB lazy chunk）。
 - [x] 11.4 `/tp-team` full pipeline — 已走（10 個 PR through pipeline，含 /tp-code-verify, /review, /cso 等等價步驟透過 PR review + CI）
 - [x] 11.5 Staging → prod ship — Cloudflare Pages auto-deploy on master merge（staging = prod since master deploys directly）
 - [ ] 11.6 Post-ship 監控 24h（Sentry / daily-check 無異常）— blocked by 10.x deferred

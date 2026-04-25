@@ -33,3 +33,8 @@ jobs:
 
       - name: Verify Service Worker
         run: node scripts/verify-sw.js
+
+      - name: Bundle size gate (B-P6 task 11.3 / 6.4)
+        run: bash scripts/bundle-size-check.sh
+        env:
+          THRESHOLD_KB: 300
