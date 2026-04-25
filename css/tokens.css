@@ -1,4 +1,4 @@
-/* ===== tokens.css — Ocean Design System (single-theme, Inter + Noto Sans TC) ===== */
+/* ===== tokens.css — V2 Terracotta Design System (single-theme, Inter + Noto Sans TC) ===== */
 
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
@@ -6,34 +6,41 @@ html { color-scheme: light dark; }
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
 
-/* ===== @theme: design token source of truth (Ocean light) ===== */
+/* ===== @theme: design token source of truth (V2 Terracotta light) =====
+ * Source: docs/design-sessions/mockup-trip-v2.html (V2 Terracotta Final).
+ * Values mirror the canonical mockup palette so design ↔ implementation stay
+ * in lock-step. UI chrome is single-accent terracotta (`#D97848`); the 10-color
+ * day palette (Tailwind -500) is the documented exception per DESIGN.md
+ * Data Visualization. */
 @theme {
     /* Colors — generate bg-*, text-*, border-* utilities */
-    --color-accent: #0077B6;
-    --color-accent-subtle: #E0F4FA;
-    --color-accent-bg: #CAF0F8;
-    --color-background: #FFFFFF;
-    --color-secondary: #F7FBFD;
-    --color-tertiary: #F2F2F2;
-    --color-hover: #F2F8FB;
-    --color-foreground: #222222;
-    --color-muted: #6A6A6A;
+    --color-accent: #D97848;
+    --color-accent-subtle: #FBEEE4;
+    --color-accent-bg: #F7DFCB;
+    --color-accent-deep: #B85C2E;
+    --color-background: #FFFBF5;
+    --color-secondary: #FAF4EA;
+    --color-tertiary: #F2EAD9;
+    --color-hover: #F9EDE0;
+    --color-foreground: #2A1F18;
+    --color-muted: #6F5A47;
     --color-accent-foreground: #FFFFFF;
-    --color-border: #EBEBEB;
+    --color-border: #EADFCF;
+    --color-line-strong: #C8B89F;
     --color-destructive: #C13515;
     --color-destructive-bg: #FDECEC;
     --color-success: #06A77D;
     --color-success-bg: rgba(6, 167, 125, 0.12);
     --color-warning: #F48C06;
     --color-warning-bg: rgba(244, 140, 6, 0.12);
-    --color-info: #0077B6;
-    --color-info-bg: rgba(0, 119, 182, 0.12);
-    --color-plan-bg: #E0F4FA;
-    --color-plan-text: #023E8A;
-    --color-plan-hover: #CAF0F8;
-    --color-disabled: #B0B8BE;
-    --color-disabled-foreground: #D0D6DA;
-    --color-overlay: rgba(13, 27, 42, 0.35);
+    --color-info: #D97848;
+    --color-info-bg: rgba(217, 120, 72, 0.12);
+    --color-plan-bg: #FBEEE4;
+    --color-plan-text: #B85C2E;
+    --color-plan-hover: #F7DFCB;
+    --color-disabled: #B8AC9B;
+    --color-disabled-foreground: #D8CDB8;
+    --color-overlay: rgba(42, 31, 24, 0.35);
     --color-priority-high-bg: rgba(193, 53, 21, 0.12);
     --color-priority-high-dot: #C13515;
     --color-priority-medium-bg: rgba(244, 140, 6, 0.12);
@@ -50,9 +57,10 @@ html { color-scheme: light dark; }
     --radius-full: 9999px;
 
     /* Shadow — Airbnb 三層陰影 */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 6px 16px rgba(0,0,0,0.08);
-    --shadow-lg: 0 10px 28px rgba(0,0,0,0.12);
+    /* Warm-tinted shadows (rgba sourced from foreground brown for V2 Terracotta) */
+    --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+    --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+    --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
 
     /* Spacing — 4pt grid */
     --spacing-half: 2px;
@@ -186,7 +194,7 @@ body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 92%, transparent);
     --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
-    --badge-open-bg: #E0F4FA;         --badge-open-text: #023E8A;
+    --badge-open-bg: #FBEEE4;          --badge-open-text: #B85C2E;
     --badge-processing-bg: #FFF3CD;    --badge-processing-text: #856404;
     --badge-completed-bg: #D4EDDA;     --badge-completed-text: #155724;
     --badge-failed-bg: #F8D7DA;        --badge-failed-text: #721C24;
@@ -208,19 +216,19 @@ body.dark {
 
 /* ===== Non-utility tokens ===== */
 :root {
-    --scrollbar-thumb: #C1C1C1;
-    --scrollbar-thumb-hover: #A8A8A8;
-    --cmp-light-bg: #E0F4FA;
-    --cmp-light-surface: #FFFFFF;
-    --cmp-light-input: #EBEBEB;
-    --cmp-dark-bg: #0D1B2A;
-    --cmp-dark-surface: #1B263B;
-    --cmp-dark-input: #2E3B4F;
-    --color-badge-open: #0077B6;
-    --color-badge-closed: #023E8A;
-    --color-plan-bg: #E0F4FA;
-    --color-plan-text: #023E8A;
-    --color-plan-hover: #CAF0F8;
+    --scrollbar-thumb: #C8B89F;
+    --scrollbar-thumb-hover: #A89978;
+    --cmp-light-bg: #FBEEE4;
+    --cmp-light-surface: #FFFBF5;
+    --cmp-light-input: #EADFCF;
+    --cmp-dark-bg: #1A140F;
+    --cmp-dark-surface: #2A1F18;
+    --cmp-dark-input: #3D2D22;
+    --color-badge-open: #D97848;
+    --color-badge-closed: #B85C2E;
+    --color-plan-bg: #FBEEE4;
+    --color-plan-text: #B85C2E;
+    --color-plan-hover: #F7DFCB;
     --color-google-maps: #4285F4;
     --color-naver-maps: #03C75A;
     --theme-header-gradient: none;
@@ -783,47 +791,49 @@ body.dark {
     100% { background: transparent; }
 }
 
-/* ===== Dark mode override (Ocean deep-navy) ===== */
+/* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {
     body.dark {
-        --color-accent: #48CAE4;
-        --color-accent-subtle: #13293D;
-        --color-accent-bg: #1E3A52;
-        --color-background: #0D1B2A;
-        --color-secondary: #1B263B;
-        --color-tertiary: #2E3B4F;
-        --color-hover: #253345;
-        --color-foreground: #E0F4FA;
-        --color-muted: #90A4B8;
-        --color-accent-foreground: #0D1B2A;
-        --color-border: #2E3B4F;
+        --color-accent: #E89968;
+        --color-accent-subtle: #3A2A20;
+        --color-accent-bg: #4D372A;
+        --color-accent-deep: #FFB890;
+        --color-background: #1A140F;
+        --color-secondary: #241B14;
+        --color-tertiary: #2E2418;
+        --color-hover: #2D2218;
+        --color-foreground: #F5EBDD;
+        --color-muted: #B89E84;
+        --color-accent-foreground: #1A140F;
+        --color-border: #3D2D22;
+        --color-line-strong: #5A4634;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
         --color-success: #7EC89A;
         --color-success-bg: rgba(126, 200, 154, 0.15);
         --color-warning: #F0D060;
         --color-warning-bg: rgba(240, 208, 96, 0.15);
-        --color-info: #48CAE4;
-        --color-info-bg: rgba(72, 202, 228, 0.15);
-        --shadow-sm: 0 1px 2px rgba(0,0,0,0.20);
-        --shadow-md: 0 6px 16px rgba(0,0,0,0.30);
-        --shadow-lg: 0 10px 28px rgba(0,0,0,0.40);
+        --color-info: #E89968;
+        --color-info-bg: rgba(232, 153, 104, 0.15);
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+        --shadow-md: 0 6px 16px rgba(0,0,0,0.42);
+        --shadow-lg: 0 10px 28px rgba(0,0,0,0.55);
         --color-priority-high-bg: rgba(232, 160, 160, 0.18);
         --color-priority-high-dot: #E8A0A0;
         --color-priority-medium-bg: rgba(240, 208, 96, 0.18);
         --color-priority-medium-dot: #F0D060;
         --color-priority-low-bg: rgba(126, 200, 154, 0.12);
         --color-priority-low-dot: #7EC89A;
-        --scrollbar-thumb: #3A4758;
-        --scrollbar-thumb-hover: #4A5768;
-        --color-overlay: rgba(0,0,0,0.60);
-        --color-badge-open: #48CAE4;
-        --color-badge-closed: #8B5CF6;
-        --color-disabled: #4A5768;
-        --color-disabled-foreground: #2E3B4F;
-        --color-plan-bg: #13293D;
-        --color-plan-text: #90E0EF;
-        --color-plan-hover: #1E3A52;
+        --scrollbar-thumb: #5A4634;
+        --scrollbar-thumb-hover: #7A604A;
+        --color-overlay: rgba(0,0,0,0.65);
+        --color-badge-open: #E89968;
+        --color-badge-closed: #B85C2E;
+        --color-disabled: #5A4634;
+        --color-disabled-foreground: #3D2D22;
+        --color-plan-bg: #3A2A20;
+        --color-plan-text: #FFB890;
+        --color-plan-hover: #4D372A;
     }
 
     /* Print mode — flat white + hairline for printing */

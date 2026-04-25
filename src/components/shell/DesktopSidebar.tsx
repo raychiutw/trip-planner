@@ -1,8 +1,12 @@
 /**
- * DesktopSidebar — 5-nav app-level sidebar (chat / trips / map / explore / login).
+ * DesktopSidebar — app-level sidebar.
  *
  * 「行程」nav matches /manage AND /trip/* so per-trip sub-routes (e.g. /trip/:id/map)
  * stay highlighted on the trips nav, not the cross-trip /map global view.
+ *
+ * `chat` (/chat) + `map` (/map) are kept in NAV_ITEMS but flagged `comingSoon`
+ * so they're hidden from sidebar until Phase 3 builds the real product. Routes
+ * still resolve (placeholder pages) for direct URL access.
  */
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -18,12 +22,14 @@ interface NavItemConfig {
   matchPrefixes: readonly string[];
   /** When true, match only the exact prefix — no nested sub-routes. */
   exactOnly?: boolean;
+  /** Phase 3 placeholder — hide from sidebar until implemented. Flip to `false` to re-enable. */
+  comingSoon?: boolean;
 }
 
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',      label: '聊天',     href: '/chat',                       icon: 'chat',   matchPrefixes: ['/chat'] },
+  { key: 'chat',      label: '聊天',     href: '/chat',                       icon: 'chat',   matchPrefixes: ['/chat'], comingSoon: true },
   { key: 'trips',     label: '行程',     href: '/manage',                     icon: 'home',   matchPrefixes: ['/manage', '/trip'] },
-  { key: 'map',       label: '地圖',     href: '/map',                        icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
+  { key: 'map',       label: '地圖',     href: '/map',                        icon: 'map',    matchPrefixes: ['/map'], exactOnly: true, comingSoon: true },
   { key: 'explore',   label: '探索',     href: '/explore',                    icon: 'search', matchPrefixes: ['/explore'] },
   { key: 'settings',  label: '已連結應用', href: '/settings/connected-apps',   icon: 'gear',   matchPrefixes: ['/settings'] },
   { key: 'developer', label: '開發者',   href: '/developer/apps',             icon: 'code',   matchPrefixes: ['/developer'] },
@@ -173,11 +179,13 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
   const { pathname } = useLocation();
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
-  // Logged in: hide '登入' (use chip + 登出 link 在底部); show settings/developer
-  // Logged out: hide auth-required items; show '登入'
-  const visibleNavItems = user
-    ? NAV_ITEMS.filter((item) => item.key !== 'login')
-    : NAV_ITEMS.filter((item) => !AUTH_REQUIRED_NAV_KEYS.has(item.key));
+  // Filter chain:
+  //   1. comingSoon items hidden (Phase 3 placeholders)
+  //   2. Logged in: hide '登入' (use chip + 登出 link 在底部); show settings/developer
+  //   2. Logged out: hide auth-required items; show '登入'
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.comingSoon).filter((item) =>
+    user ? item.key !== 'login' : !AUTH_REQUIRED_NAV_KEYS.has(item.key),
+  );
 
   return (
     <>

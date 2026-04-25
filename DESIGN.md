@@ -1,4 +1,4 @@
-# Design System — Tripline（Ocean）
+# Design System — Tripline（V2 Terracotta）
 
 ## Product Context
 - **What this is:** 行程共享網站 — 旅伴可以瀏覽精美行程表（時間軸、餐廳推薦、飯店、地圖導航）
@@ -7,11 +7,27 @@
 - **Project type:** Mobile-first PWA（React SPA + Cloudflare Pages）
 
 ## Aesthetic Direction
-- **Direction:** Clean editorial — 明信片／雜誌式版面，clean Airbnb-inspired
-- **Decoration level:** Restrained — 靠排版、留白、hairline、單一 accent 支撐畫面，不靠裝飾 SVG
-- **Mood:** 清爽、專業、旅行前的期待感。純白底 + Ocean 海洋藍 accent 讓行程資訊保持主角
-- **Differentiation:** 單一色調 Ocean（非六主題切換、非暖色沙土）、Airbnb 式三層陰影、Inter + Noto Sans TC 排版
-- **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）
+- **Direction:** Warm editorial — 明信片／旅遊雜誌的暖色排版，cream-paper + 焦糖陶土
+- **Decoration level:** Restrained — 靠排版、留白、hairline、單一 terracotta accent 支撐畫面，不靠裝飾 SVG
+- **Mood:** 旅途上的溫度、紙本旅遊書的安心感。奶油底（`#FFFBF5`）+ terracotta 焦糖（`#D97848`）accent 把行程資訊保持主角，避免 SaaS 冷藍感
+- **Differentiation:** 單一色調 V2 Terracotta（非六主題切換、非冷色 Ocean）、Airbnb 式三層陰影但 rgba 用暖棕（`rgba(42, 31, 24, …)`）、Inter + Noto Sans TC 排版
+- **Reference sites:** Airbnb（card + shadow）、Apple HIG（tap target、subheadline）、Anthropic Claude Design 稿（Okinawa Trip Redesign/Mobile）、`docs/design-sessions/mockup-trip-v2.html`（V2 canonical mockup）
+
+## Palette — V2 Terracotta（canonical source: tokens.css `@theme`）
+| Token | Hex | 用途 |
+|-------|-----|------|
+| `--color-accent` | `#D97848` | UI chrome 唯一主色（active state、CTA、link） |
+| `--color-accent-deep` | `#B85C2E` | hover / pressed |
+| `--color-accent-subtle` | `#FBEEE4` | badge bg、selected row |
+| `--color-accent-bg` | `#F7DFCB` | accent panel |
+| `--color-background` | `#FFFBF5` | page bg |
+| `--color-secondary` | `#FAF4EA` | card bg |
+| `--color-foreground` | `#2A1F18` | body text |
+| `--color-muted` | `#6F5A47` | secondary text |
+| `--color-border` | `#EADFCF` | hairline |
+| `--color-line-strong` | `#C8B89F` | divider strong |
+
+> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）只用於地圖 polyline + day chip — 對應 Data Visualization 例外，UI chrome 仍嚴守 terracotta 單色。
 
 ## Typography
 
