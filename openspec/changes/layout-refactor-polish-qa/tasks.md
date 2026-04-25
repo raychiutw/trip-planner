@@ -69,7 +69,7 @@
 
 ## 10. Monitoring
 
-- [ ] 10.1 Sentry release mark `layout-v3-2026-05-xx` — deferred to next sprint (Sentry CLI integration)
+- [x] 10.1 Sentry release mark — `vite.config.ts` 加 `sentryVitePlugin({ release: { name: sentryRelease } })`，`sentryRelease` 從 `SENTRY_RELEASE` env / `npm_package_version` + `GITHUB_SHA`/`CF_PAGES_COMMIT_SHA` derive（fallback `tripline@<ver>-local`）。Naming convention：`tripline@2.3.0-<sha7>` 取代 `layout-v3-2026-05-xx` 寫死格式
 - [ ] 10.2 Sentry error rate baseline 設 threshold alert — deferred to next sprint
 - [x] 10.3 daily-check 驗 /manage, /trip/:id, /explore routes 皆 200 — `scripts/daily-check.js` 加 `queryRouteHealth()` 數據來源 5b：fetch 8 routes（/, /manage/, /admin/, /trip/:id, /explore, /login, /map, /chat）`redirect: 'manual'`，status >= 500 為 fail；report 加 `routeHealth` field
 - [ ] 10.4 Telegram 通知渠道 smoke test — deferred to next sprint

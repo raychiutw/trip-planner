@@ -7,12 +7,21 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { mockApiPlugin } from './scripts/vite-mock-api';
 
 // Only upload source maps to Sentry in CI (when SENTRY_AUTH_TOKEN is present).
+// B-P6 task 10.1：mark release with package version + commit SHA。
+// CI（GitHub Actions）有 GITHUB_SHA env；fallback 到 explicit SENTRY_RELEASE 或 'local'。
+const sentryRelease =
+  process.env.SENTRY_RELEASE ||
+  `tripline@${process.env.npm_package_version || '0.0.0'}-${
+    (process.env.GITHUB_SHA || process.env.CF_PAGES_COMMIT_SHA || 'local').slice(0, 7)
+  }`;
+
 const sentryPlugins = process.env.SENTRY_AUTH_TOKEN
   ? [
       sentryVitePlugin({
         org: process.env.SENTRY_ORG,
         project: process.env.SENTRY_PROJECT,
         authToken: process.env.SENTRY_AUTH_TOKEN,
+        release: { name: sentryRelease },
       }),
     ]
   : [];
