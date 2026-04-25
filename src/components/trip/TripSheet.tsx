@@ -19,6 +19,7 @@ import TripSheetTabs from './TripSheetTabs';
 import type { MapPin } from '../../hooks/useMapData';
 
 const TripMapRail = lazy(() => import('./TripMapRail'));
+const IdeasTabContent = lazy(() => import('./IdeasTabContent'));
 
 const DEFAULT_TAB: SheetTab = 'map';
 
@@ -136,12 +137,17 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
           id={sheetPanelId('ideas')}
           aria-labelledby={sheetTabId('ideas')}
           hidden={currentTab !== 'ideas'}
-          className="trip-sheet-placeholder"
           data-testid="tab-ideas"
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
         >
-          <div className="eyebrow">Coming soon · Phase 4</div>
-          <h3>Ideas layer</h3>
-          <p>POI 儲存池 + drag 進行程。實作在 B-P4 Explore + B-P5 Drag。</p>
+          {currentTab === 'ideas' && (
+            <Suspense fallback={<div className="trip-sheet-placeholder">載入中…</div>}>
+              <IdeasTabContent
+                tripId={tripId}
+                dayNumbers={Array.from(pinsByDay.keys()).sort((a, b) => a - b)}
+              />
+            </Suspense>
+          )}
         </div>
         <div
           role="tabpanel"

@@ -21,7 +21,7 @@
 
 ## 4. Empty states + loading
 
-- [ ] 4.1 Ideas tab empty state 統一文案 + Mindtrip 風 Add card 視覺 — deferred (B-P5 Ideas tab real UI 先做才能設計 empty state)
+- [x] 4.1 Ideas tab empty state 統一文案 + Mindtrip 風 Add card 視覺 — `src/components/trip/IdeasTabContent.tsx` real UI（fetch GET `/api/trip-ideas?tripId=...`，空狀態「還沒收藏任何想法。從探索頁加入想法，或直接從聊天告訴 AI」+ idea card 含 promote / delete / promoted 標記）；TripSheet ideas tab 從 placeholder 改 lazy load IdeasTabContent；8 cases unit test pass
 - [x] 4.2 Explore 搜尋空結果 empty state
 - [x] 4.3 Saved pool empty state
 - [ ] 4.4 Loading skeleton（可選，lightweight）取代 spinner — declined optional，暫保留 spinner
