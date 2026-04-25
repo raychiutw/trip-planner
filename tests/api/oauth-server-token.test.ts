@@ -400,4 +400,49 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
     expect(r2.status).toBe(400);
     expect(((await r2.json()) as { error: string }).error).toBe('invalid_scope');
   });
+
+  it('429 rate_limited when client bucket locked (V2-P6 throughput cap)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) {
+        return makeStmt({
+          bucket_key: 'oauth-token:mobile',
+          count: 101,
+          window_start: Date.now(),
+          locked_until: Date.now() + 30_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(429);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('rate_limited');
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
+  it('Bumps oauth-token bucket on every request (success or failure)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
+      if (sql.includes('FROM client_apps')) return makeStmt(null); // unknown client → 401
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(401); // unknown client
+    // Bucket bumped even though request failed
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+    );
+    expect(inserts.length).toBe(1);
+  });
 });
