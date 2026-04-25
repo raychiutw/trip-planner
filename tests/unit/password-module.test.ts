@@ -12,10 +12,10 @@ describe('hashPassword', () => {
     expect(stored).toMatch(/^pbkdf2\$\d+\$[A-Za-z0-9_-]+\$[A-Za-z0-9_-]+$/);
   });
 
-  it('iterations field ≥ 600000 (OWASP 2023)', async () => {
+  it('iterations field ≥ 100,000 (CF Workers Free CPU budget compromise; bump to 600k on Paid plan)', async () => {
     const stored = await hashPassword('password123');
     const iter = Number(stored.split('$')[1]);
-    expect(iter).toBeGreaterThanOrEqual(600_000);
+    expect(iter).toBeGreaterThanOrEqual(100_000);
   });
 
   it('different calls produce different output (random salt)', async () => {
@@ -73,7 +73,8 @@ describe('needsRehash', () => {
   });
 
   it('returns true for hash with lower iter count (legacy)', () => {
-    expect(needsRehash('pbkdf2$100000$salt$hash')).toBe(true);
+    // Current ITERATIONS = 100_000 (CF Workers CPU budget). 50_000 is below.
+    expect(needsRehash('pbkdf2$50000$salt$hash')).toBe(true);
   });
 
   it('returns true for non-pbkdf2 algorithm (legacy md5/sha1)', () => {
