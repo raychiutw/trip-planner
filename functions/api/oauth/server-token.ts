@@ -22,6 +22,7 @@
  */
 import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
+import { issueIdToken } from './_id_token';
 import type { Env } from '../_types';
 
 const ACCESS_TOKEN_TTL_SEC = 60 * 60;          // 1h
@@ -132,23 +133,26 @@ async function issueTokenPair(
   return { access_token: accessToken, refresh_token: refreshToken, grantId };
 }
 
-function tokenResponse(tokens: { access_token: string; refresh_token: string }, scopes: string[]): Response {
-  return new Response(
-    JSON.stringify({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_type: 'Bearer',
-      expires_in: ACCESS_TOKEN_TTL_SEC,
-      scope: scopes.join(' '),
-    }),
-    {
-      headers: {
-        'content-type': 'application/json',
-        'cache-control': 'no-store',
-        'pragma': 'no-cache',
-      },
+function tokenResponse(
+  tokens: { access_token: string; refresh_token: string },
+  scopes: string[],
+  idToken: string | null,
+): Response {
+  const body: Record<string, unknown> = {
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    token_type: 'Bearer',
+    expires_in: ACCESS_TOKEN_TTL_SEC,
+    scope: scopes.join(' '),
+  };
+  if (idToken) body.id_token = idToken;
+  return new Response(JSON.stringify(body), {
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+      'pragma': 'no-cache',
     },
-  );
+  });
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -220,7 +224,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Rotation: destroy old refresh + issue new pair (V2-P6 spec)
     await refreshAdapter.destroy(refreshTokenInput);
     const tokens = await issueTokenPair(context.env.DB, clientId, refreshRow.user_id, finalScopes);
-    return tokenResponse(tokens, finalScopes);
+    let idToken: string | null = null;
+    try {
+      idToken = await issueIdToken(context.env, context.request, clientId, refreshRow.user_id, finalScopes);
+    } catch {
+      // 'openid' scope but no signing key configured → fall through; client gets tokens without id_token
+    }
+    return tokenResponse(tokens, finalScopes, idToken);
   }
 
   // grant_type === 'authorization_code'
@@ -260,5 +270,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Issue tokens via shared helper
   const tokens = await issueTokenPair(context.env.DB, clientId, codeRow.user_id, codeRow.scopes);
-  return tokenResponse(tokens, codeRow.scopes);
+  let idToken: string | null = null;
+  try {
+    idToken = await issueIdToken(context.env, context.request, clientId, codeRow.user_id, codeRow.scopes);
+  } catch {
+    // 'openid' scope but no signing key configured → fall through; client gets tokens without id_token
+  }
+  return tokenResponse(tokens, codeRow.scopes, idToken);
 };
