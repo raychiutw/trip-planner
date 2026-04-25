@@ -29,6 +29,13 @@
 - 📱 **響應式設計** — 手機、平板、桌機均有對應排版
 - ⚡ **PWA 體驗** — 可加入主畫面，離線瀏覽快取
 
+### 介面架構（v2.3.0+）
+
+- 🖥️ **桌機 3-pane shell（≥1024px）** — 左 sidebar 240px（5 nav：聊天 / 行程 / 地圖 / 探索 / 登入）+ 中央 timeline + 右 sheet（min(780px, 40vw)）
+- 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav 4-tab IA：行程 / 地圖 / 訊息 / 更多
+- 🔗 **URL-driven sheet state** — `/trip/:id?sheet=itinerary|ideas|map|chat` 可深度連結 + 瀏覽器 back/forward 正常
+- 🗺️ **POI Master + Per-trip overrides** — `pois` 是 AI 維護的 master，`trip_pois` 允許 user 覆寫（NULL = 繼承 master）
+
 ### 旅伴協作
 
 - 💬 **旅伴請求系統** — 傳送「改行程」或「問建議」請求給行程管理員
