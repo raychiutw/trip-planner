@@ -1,7 +1,26 @@
 /**
  * GET /api/oauth/callback/google unit test — V2-P1
+ *
+ * verifyGoogleIdToken is mocked because it fetches Google's live JWKS endpoint —
+ * the real verification path is covered by the jwt-module unit tests + the
+ * google-id-token module tests. Here we exercise the callback flow logic
+ * (state validation, user creation, session issuance) with the verification
+ * stubbed to a passthrough that decodes the unsigned id_token payload.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../src/server/oauth-client/google-id-token', () => ({
+  verifyGoogleIdToken: vi.fn(async (idToken: string) => {
+    // Decode payload without signature verification (test-only).
+    const parts = idToken.split('.');
+    if (parts.length !== 3) throw new Error('JWT must have 3 parts');
+    const payloadB64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (payloadB64.length % 4)) % 4;
+    const json = atob(payloadB64 + '='.repeat(padLen));
+    return JSON.parse(json);
+  }),
+}));
+
 import { onRequestGet } from '../../functions/api/oauth/callback/google';
 
 interface MockEnv {

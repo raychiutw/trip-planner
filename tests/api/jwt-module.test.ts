@@ -229,8 +229,9 @@ describe('importPrivateKey', () => {
 
     const reimported = await importPrivateKey(pem);
     const publicKey = await derivePublicKey(reimported);
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
     const token = await signJwt(
-      { iss: 'i', sub: 's', aud: 'a', exp: 0, iat: 0 },
+      { iss: 'i', sub: 's', aud: 'a', exp: futureExp, iat: Math.floor(Date.now() / 1000) },
       reimported,
       'k',
     );

@@ -46,11 +46,11 @@ describe('POST /api/oauth/reset-password', () => {
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_TOKEN_MISSING');
   });
 
-  it('400 RESET_INVALID_PASSWORD when password < 8 chars', async () => {
+  it('400 RESET_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({ token: 'tok', password: 'short' }, env));
     expect(res.status).toBe(400);
-    expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_INVALID_PASSWORD');
+    expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_PASSWORD_TOO_SHORT');
   });
 
   it('400 RESET_TOKEN_INVALID when token not in D1 (expired or never existed)', async () => {
@@ -61,17 +61,18 @@ describe('POST /api/oauth/reset-password', () => {
     expect((await res.json() as { error: { code: string } }).error.code).toBe('RESET_TOKEN_INVALID');
   });
 
-  it('happy path: 200 + UPDATE password_hash + destroy token', async () => {
+  it('happy path: 200 + UPDATE password_hash + consume token + revoke sessions', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
-        // D1Adapter.find — return reset token payload
+        // D1Adapter.find — return reset token payload (no `used` field — fresh)
         return makeStmt({
-          payload: JSON.stringify({ userId: 'u1', email: 'u@x.com', createdAt: Date.now(), used: false }),
+          payload: JSON.stringify({ userId: 'u1', email: 'u@x.com', createdAt: Date.now() }),
           expires_at: Date.now() + 1000 * 60 * 30, // 30 min remaining
         });
       }
       if (sql.includes('UPDATE auth_identities')) return makeStmt();
-      if (sql.includes('DELETE FROM oauth_models')) return makeStmt(); // adapter.destroy
+      if (sql.includes('UPDATE oauth_models SET payload = json_set')) return makeStmt(); // adapter.consume
+      if (sql.includes('UPDATE session_devices')) return makeStmt(); // revokeAllOtherSessions
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
@@ -85,10 +86,12 @@ describe('POST /api/oauth/reset-password', () => {
     expect(json.ok).toBe(true);
     expect(json.message).toContain('密碼已更新');
 
-    // Verify UPDATE auth_identities + DELETE oauth_models calls
+    // Verify UPDATE auth_identities + consume() (UPDATE oauth_models payload)
     const sqls = dbPrepare.mock.calls.map((c) => c[0] as string);
     expect(sqls.some((s) => s.includes('UPDATE auth_identities'))).toBe(true);
-    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models'))).toBe(true);
+    expect(sqls.some((s) => s.includes('UPDATE oauth_models SET payload = json_set'))).toBe(true);
+    // Token row NOT destroyed — kept until expires_at so re-clicks see 'used'
+    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models'))).toBe(false);
   }, 30_000);
 
   it('400 when token already used (one-time use guard)', async () => {

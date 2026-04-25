@@ -51,11 +51,11 @@ describe('POST /api/oauth/signup', () => {
     expect((await r2.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_EMAIL');
   });
 
-  it('400 SIGNUP_INVALID_PASSWORD when password < 8 chars', async () => {
+  it('400 SIGNUP_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'short' }, env));
     expect(res.status).toBe(400);
-    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_PASSWORD');
+    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_PASSWORD_TOO_SHORT');
   });
 
   it('409 SIGNUP_EMAIL_TAKEN when email already in users', async () => {
