@@ -17,6 +17,21 @@ vi.mock('../../src/components/shared/Toast', () => ({
   showToast: vi.fn(),
 }));
 
+vi.mock('../../src/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+vi.mock('../../src/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
+vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
+
 import ExplorePage from '../../src/pages/ExplorePage';
 
 function renderPage() {
@@ -37,10 +52,11 @@ describe('ExplorePage', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders search input + empty saved pool initially', async () => {
+  it('renders search input + empty saved pool when switching to 儲存池 tab', async () => {
     const { getByTestId, findByText } = renderPage();
     expect(getByTestId('explore-page')).toBeTruthy();
     expect(getByTestId('explore-search-input')).toBeTruthy();
+    fireEvent.click(getByTestId('explore-tab-saved'));
     expect(await findByText(/還沒有儲存任何 POI/)).toBeTruthy();
   });
 

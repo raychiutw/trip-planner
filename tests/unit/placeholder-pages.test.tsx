@@ -1,12 +1,35 @@
 /**
- * Placeholder pages smoke tests — -6.4
+ * V2 functional smoke tests — ChatPage / GlobalMapPage / LoginPage
  *
- * 4 個 sidebar nav 對應的 placeholder pages：ChatPage / GlobalMapPage / ExplorePage / LoginPage
- * 驗證 render 不 crash + 主要 heading + CTA link to /manage
+ * These were placeholder smoke tests pre-implementation. Now that ChatPage
+ * and GlobalMapPage ship functional V2 MVPs (composer + leaflet canvas),
+ * the assertions check real entry points, not "Coming soon" CTAs.
+ *
+ * Heavy deps (sidebar / bottom nav / leaflet init / auth hooks) are mocked
+ * — this file is for layout sanity, not full integration.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+vi.mock('../../src/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+vi.mock('../../src/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
+vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
+vi.mock('../../src/hooks/useLeafletMap', () => ({
+  useLeafletMap: () => ({ containerRef: { current: null }, map: null, flyTo: () => {}, fitBounds: () => {} }),
+}));
+
 import ChatPage from '../../src/pages/ChatPage';
 import GlobalMapPage from '../../src/pages/GlobalMapPage';
 import LoginPage from '../../src/pages/LoginPage';
@@ -15,23 +38,22 @@ function renderWithRouter(node: React.ReactNode) {
   return render(<MemoryRouter>{node}</MemoryRouter>);
 }
 
-describe('ChatPage placeholder', () => {
-  it('render heading + CTA link to /manage', () => {
+describe('ChatPage (V2 functional MVP)', () => {
+  it('renders shell + heading + composer (works with no trips loaded)', () => {
     const { getByTestId, getByRole } = renderWithRouter(<ChatPage />);
     expect(getByTestId('chat-page')).toBeTruthy();
     expect(getByRole('heading', { level: 1 }).textContent).toContain('聊天');
-    const cta = getByRole('link') as HTMLAnchorElement;
-    expect(cta.getAttribute('href')).toBe('/manage');
+    expect(getByTestId('chat-input')).toBeTruthy();
+    expect(getByTestId('chat-send')).toBeTruthy();
   });
 });
 
-describe('GlobalMapPage placeholder（/map 全域，非 per-trip）', () => {
-  it('render heading + CTA link to /manage', () => {
-    const { getByTestId, getByRole } = renderWithRouter(<GlobalMapPage />);
+describe('GlobalMapPage (V2 functional MVP — cross-trip leaflet)', () => {
+  it('renders shell + map canvas + sheet', () => {
+    const { getByTestId } = renderWithRouter(<GlobalMapPage />);
     expect(getByTestId('global-map-page')).toBeTruthy();
-    expect(getByRole('heading', { level: 1 }).textContent).toContain('地圖');
-    const cta = getByRole('link') as HTMLAnchorElement;
-    expect(cta.getAttribute('href')).toBe('/manage');
+    expect(getByTestId('global-map-canvas')).toBeTruthy();
+    expect(getByTestId('global-map-sheet')).toBeTruthy();
   });
 });
 

@@ -10,7 +10,10 @@ import type { ReactNode } from 'react';
 export const APP_SHELL_STYLES = `
 .app-shell {
   display: grid;
-  min-height: 100dvh;
+  /* Lock to viewport so sidebar / main / sheet are real scroll containers
+   * — grid rows can't grow with content, so each cell becomes its own
+   * scroller, and one column scrolling doesn't drag the others. */
+  height: 100dvh;
   background: var(--color-background);
   color: var(--color-foreground);
   grid-template-columns: 1fr;
@@ -22,6 +25,9 @@ export const APP_SHELL_STYLES = `
 .app-shell-sheet {
   overflow-y: auto;
   min-height: 0;
+  /* Prevent scroll-chaining: when one column hits its end, mouse-wheel /
+   * touch should not propagate to the other columns or the document. */
+  overscroll-behavior: contain;
 }
 
 .app-shell-bottom-nav {
@@ -53,9 +59,6 @@ export const APP_SHELL_STYLES = `
  * min-height the grid grows with content, main isn't constrained, and the
  * window scrolls instead — breaking sticky inside main. */
 @media (max-width: 1023px) {
-  .app-shell {
-    height: 100dvh;
-  }
   .app-shell-sidebar {
     display: none;
   }

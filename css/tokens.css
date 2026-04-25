@@ -682,9 +682,31 @@ body.dark {
     }
     .ocean-side-card-title { font-size: var(--font-size-caption2); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); }
 
-    /* Day section wrapper */
-    .ocean-day { scroll-margin-top: 210px; }
+    /* Day section wrapper.
+     * scroll-margin-top must apply to the element that owns id="day{N}" —
+     * that's .ocean-hero (DaySection.tsx renders <div class="ocean-hero" id="day{N}"…>).
+     * Putting it on .ocean-day (the outer section) silently no-ops.
+     *
+     * Value covers stacked sticky chrome: ocean-topbar (~64) + day-strip
+     * (~80) + breathing room (~16). */
+    .ocean-day > .ocean-hero { scroll-margin-top: 200px; }
     .ocean-day + .ocean-day { margin-top: 24px; }
+
+    /* Embedded TripPage inside TripsListPage's right sheet (desktop).
+     * The sheet has no topbar of its own, so the default 28px ocean-page
+     * top padding + day-strip's `top: 64px` (offset for the absent topbar)
+     * leave a visible empty band above the day-strip. Collapse the band,
+     * pull day-strip flush with the sheet header, and isolate scroll so
+     * the sheet doesn't chain into sidebar / main. */
+    .app-shell-sheet { overscroll-behavior: contain; }
+    .app-shell-sheet .ocean-shell { min-height: 0; }
+    .app-shell-sheet .ocean-page { padding: 0 24px 24px; }
+    .app-shell-sheet .ocean-day-strip {
+      top: 0;
+      margin: 0 -24px 16px;
+      padding: 8px 24px;
+    }
+    .app-shell-sheet .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
 
     /* Breakpoints */
     @media (max-width: 1200px) {
@@ -718,7 +740,9 @@ body.dark {
         .ocean-stop { grid-template-columns: 56px 44px 1fr; padding: 14px; gap: 12px; }
         .ocean-stop-actions { grid-column: 1 / -1; justify-content: flex-end; }
         .ocean-stop-icon { width: 44px; height: 44px; }
-        .ocean-day { scroll-margin-top: 130px; }
+        /* Mobile sticky day-strip is the only top chrome (topbar hidden).
+         * Pill row 60-80 high + breathing 16-20 → land day title clear. */
+        .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
     }
 
     /* Mobile bottom tab bar (只在 ≤760px 顯示) */

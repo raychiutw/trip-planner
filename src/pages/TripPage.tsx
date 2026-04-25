@@ -629,8 +629,15 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
                 timezone={weatherTimezone}
               />
             ))}
-            <FooterArt dark={isDark} />
-            {footerData && <Footer footer={footerData} />}
+            {/* Embedded mode (TripsListPage sheet) hides decorative footer
+              * art + Footer block — sheet is a narrow column, footer would
+              * waste vertical space. Standalone /trip/:id keeps both. */}
+            {!noShell && (
+              <>
+                <FooterArt dark={isDark} />
+                {footerData && <Footer footer={footerData} />}
+              </>
+            )}
           </div>
         )}
       </main>

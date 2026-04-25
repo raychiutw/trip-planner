@@ -8,11 +8,11 @@
  *   - Mobile <1024px: 2-pane (sidebar hidden, card grid stacked, no preview sheet)
  *
  * Interaction:
- *   - Desktop card click: setSearchParams('selected', tripId) — sheet updates,
- *     no navigation. Default selected = first trip.
- *   - Mobile card click: navigate to /trip/:tripId (no sheet to update).
- *   - Trailing card "+ 新增行程" navigates to /manage (legacy editor entry).
- *   - Empty state: hero CTA → /manage.
+ *   - Card click (both viewports): setSearchParams('selected', tripId).
+ *     Mobile renders embedded TripPage as full-screen main; desktop swaps the
+ *     right sheet to that trip. No /trip/:id navigation.
+ *   - Trailing card "+ 新增行程" / empty hero CTA / sidebar new-trip button:
+ *     all open NewTripModal, which POSTs /api/trips and selects the new trip.
  *
  * Data:
  *   - GET /api/my-trips → tripIds the user has permission for
@@ -20,10 +20,11 @@
  *     start_date, end_date, member_count)
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useNewTrip } from '../contexts/NewTripContext';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -286,14 +287,13 @@ function cardMeta(trip: TripInfo): string {
   return trip.tripId;
 }
 
-const NEW_TRIP_HREF = '/manage';
-
 export default function TripsListPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFromUrl = searchParams.get('selected');
+  const { openModal: openNewTrip } = useNewTrip();
 
   const [myIds, setMyIds] = useState<string[] | null>(null);
   const [allTrips, setAllTrips] = useState<TripInfo[] | null>(null);
@@ -397,10 +397,15 @@ export default function TripsListPage() {
               </div>
               <h2>還沒開始任何行程</h2>
               <p>建立第一個行程，AI 會幫你排日程、餐廳、住宿。</p>
-              <Link to={NEW_TRIP_HREF} className="tp-hero-cta" data-testid="trips-list-new-trip-hero">
+              <button
+                type="button"
+                onClick={openNewTrip}
+                className="tp-hero-cta"
+                data-testid="trips-list-new-trip-hero"
+              >
                 <span style={{ fontSize: 18 }}>+</span>
                 <span>新增行程</span>
-              </Link>
+              </button>
             </div>
           )}
 
@@ -409,9 +414,9 @@ export default function TripsListPage() {
               {visibleTrips.map((t) => {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
                 return (
-                  <Link
+                  <button
                     key={t.tripId}
-                    to={`/trip/${encodeURIComponent(t.tripId)}`}
+                    type="button"
                     onClick={(e) => handleCardClick(t.tripId, e)}
                     className={`tp-trip-card ${isActive ? 'is-active' : ''}`}
                     data-testid={`trips-list-card-${t.tripId}`}
@@ -421,17 +426,18 @@ export default function TripsListPage() {
                     <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.day_count)}</div>
                     <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
                     <div className="tp-trip-card-meta">{cardMeta(t)}</div>
-                  </Link>
+                  </button>
                 );
               })}
-              <Link
-                to={NEW_TRIP_HREF}
+              <button
+                type="button"
+                onClick={openNewTrip}
                 className="tp-trip-card tp-trip-card-new"
                 data-testid="trips-list-new-trip-card"
               >
                 <span className="tp-new-icon" aria-hidden="true">+</span>
                 <span>新增行程</span>
-              </Link>
+              </button>
             </div>
           )}
         </div>

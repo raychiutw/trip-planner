@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../../css/tokens.css';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import Icon from '../components/shared/Icon';
 import { apiFetchRaw } from '../lib/apiClient';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { useRequests, RawRequest } from '../hooks/useRequests';
@@ -321,6 +323,17 @@ type PageState =
 
 export default function ManagePage() {
   useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const { user } = useCurrentUser();
+  const navigate = useNavigate();
+  // Admin gate: legacy AI editor + data ops are admin-only. Non-admins
+  // bounce to /trips. user === undefined means still loading; null means
+  // unauthed (useRequireAuth handles that).
+  useEffect(() => {
+    if (!user) return;
+    if (user.email !== 'lean.lean@gmail.com') {
+      navigate('/trips', { replace: true });
+    }
+  }, [user, navigate]);
   useDarkMode();
   const isOnline = useOnlineStatus();
 

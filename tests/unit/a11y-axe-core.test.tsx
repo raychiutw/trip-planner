@@ -19,10 +19,28 @@
  *   - help / helpUrl（修法）
  *   - nodes[].html / nodes[].failureSummary
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import axe, { type Result } from 'axe-core';
+
+vi.mock('../../src/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+vi.mock('../../src/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
+vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
+vi.mock('../../src/hooks/useLeafletMap', () => ({
+  useLeafletMap: () => ({ containerRef: { current: null }, map: null, flyTo: () => {}, fitBounds: () => {} }),
+}));
 
 import AppShell from '../../src/components/shell/AppShell';
 import DesktopSidebar from '../../src/components/shell/DesktopSidebar';

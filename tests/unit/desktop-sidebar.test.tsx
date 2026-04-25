@@ -14,12 +14,14 @@ import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
 function renderSidebar(opts: {
   path?: string;
   user?: { name: string; email: string } | null;
+  isAdmin?: boolean;
   onNewTrip?: () => void;
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[opts.path ?? '/trips']}>
       <DesktopSidebar
         user={opts.user ?? null}
+        isAdmin={opts.isAdmin ?? false}
         onNewTrip={opts.onNewTrip ?? vi.fn()}
       />
     </MemoryRouter>,
@@ -66,10 +68,32 @@ describe('DesktopSidebar — active state', () => {
     expect(links[3].className).not.toMatch(/is-active/);
   });
 
-  it('路由 /manage 時「行程」item active（legacy editor under trips scope）', () => {
+  it('路由 /manage 不再 highlight 「行程」item（管理獨立成 admin-only nav）', () => {
     const { getAllByRole } = renderSidebar({ path: '/manage' });
     const links = getAllByRole('link');
-    expect(links[1].className).toMatch(/is-active/);
+    expect(links[1].className).not.toMatch(/is-active/);
+  });
+
+  it('admin user 看到「管理」nav item，且在 /manage 時 active', () => {
+    const { getAllByRole } = renderSidebar({
+      path: '/manage',
+      user: { name: 'Admin', email: 'admin@trip.io' },
+      isAdmin: true,
+    });
+    const links = getAllByRole('link');
+    const labels = links.map((l) => l.textContent ?? '');
+    const manageIdx = labels.findIndex((t) => t.includes('管理'));
+    expect(manageIdx).toBeGreaterThanOrEqual(0);
+    expect(links[manageIdx]?.className).toMatch(/is-active/);
+  });
+
+  it('non-admin user 不顯示「管理」nav item', () => {
+    const { container } = renderSidebar({
+      user: { name: 'Plain', email: 'plain@x.com' },
+      isAdmin: false,
+    });
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).not.toContain('管理');
   });
 
   it('路由 /trip/abc 時「行程」item 仍 active', () => {

@@ -19,9 +19,11 @@ import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
+import { useNewTrip } from '../../contexts/NewTripContext';
+import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'explore' | 'login';
+  key: 'chat' | 'trips' | 'map' | 'explore' | 'login' | 'manage';
   label: string;
   href: string;
   icon: string;
@@ -33,11 +35,16 @@ interface NavItemConfig {
 
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
-  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/manage', '/trip'] },
+  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
   { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
   { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
   { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
 ];
+
+const NAV_ITEM_MANAGE: NavItemConfig = {
+  key: 'manage', label: '管理', href: '/manage', icon: 'settings',
+  matchPrefixes: ['/manage'],
+};
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
   for (const prefix of item.matchPrefixes) {
@@ -123,7 +130,13 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-lg);
   background: var(--color-accent-subtle);
   display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: filter 120ms;
+  min-height: var(--spacing-tap-min);
 }
+.tp-account-card:hover { filter: brightness(var(--hover-brightness)); }
+.tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .tp-account-card .tp-avatar-md {
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--color-accent);
@@ -166,24 +179,31 @@ export interface SidebarUser {
   email: string;
 }
 
+
 export interface DesktopSidebarProps {
   /** Current authenticated user — null = 未登入 */
   user?: SidebarUser | null;
+  /** Whether the current user has admin access (gates the 管理 nav item). */
+  isAdmin?: boolean;
   /** New Trip CTA click handler — parent decides how to respond (toast vs modal). */
   onNewTrip?: () => void;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, isAdmin = false, onNewTrip, brand }: DesktopSidebarProps) {
   const { pathname } = useLocation();
+  const { openModal } = useNewTrip();
+  const handleNewTrip = onNewTrip ?? openModal;
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
   // Logged in: hide '登入' (use chip + 登出 link 在底部 instead).
   // Logged out: show all 5 nav items including 登入.
-  const visibleNavItems = user
+  // Admin: append '管理' (legacy AI editor / data ops) — non-admins never see it.
+  const baseItems = user
     ? NAV_ITEMS.filter((item) => item.key !== 'login')
     : NAV_ITEMS;
+  const visibleNavItems = isAdmin ? [...baseItems, NAV_ITEM_MANAGE] : baseItems;
 
   return (
     <>
@@ -211,11 +231,13 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
         </nav>
 
         <div className="tp-sidebar-cta">
+          <ThemeToggle testId="sidebar-theme" />
+
           <button
             type="button"
             className="tp-new-trip-btn"
             data-testid="sidebar-new-trip-btn"
-            onClick={onNewTrip}
+            onClick={handleNewTrip}
           >
             <Icon name="plus" />
             <span>新增行程</span>
@@ -223,13 +245,18 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
 
           {user ? (
             <>
-              <div className="tp-account-card" data-testid="sidebar-account-card">
+              <Link
+                to="/settings/sessions"
+                className="tp-account-card"
+                data-testid="sidebar-account-card"
+                aria-label={`帳號設定：${user.name}`}
+              >
                 <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
                 <div className="tp-account-body">
                   <div className="tp-account-name">{user.name}</div>
                   <div className="tp-account-email">{user.email}</div>
                 </div>
-              </div>
+              </Link>
               <a
                 className="tp-account-logout"
                 href="/api/oauth/logout"

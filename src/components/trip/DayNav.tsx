@@ -131,13 +131,14 @@ body.print-mode .ocean-day-strip { display: none; }
 
 body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-foreground); }
 
-/* Mobile-specific container tweaks: tighter side padding to bleed past
- * .ocean-page's 16px side padding. */
+/* Mobile: match mockup-trip-v2.html .mobile-day-strip — chips read inside
+ * the page gutter (no full-bleed background, no chip indent). The strip
+ * sits within .ocean-page's 16px side padding. */
 @media (max-width: 760px) {
   .ocean-day-strip {
     gap: 6px;
-    padding: 8px 16px;
-    margin: 0 -16px 16px;
+    padding: 8px 0;
+    margin: 0 0 16px;
   }
 }
 

@@ -13,8 +13,11 @@
  */
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import ThemeToggle from '../components/shared/ThemeToggle';
 
 const SCOPED_STYLES = `
 .tp-sessions-shell {
@@ -132,6 +135,38 @@ const SCOPED_STYLES = `
   padding: 32px; text-align: center;
   color: var(--color-muted);
 }
+
+/* Account quick actions block — surfaces 深淺模式 + 登出 on this page so
+ * mobile users (no sidebar) can reach them via the 帳號 bottom-nav tab. */
+.tp-account-actions {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+  margin-bottom: 24px;
+}
+.tp-account-actions-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.tp-account-actions-label {
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-account-logout-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-destructive);
+  background: transparent; color: var(--color-destructive);
+  font: inherit; font-weight: 600; font-size: var(--font-size-callout);
+  text-decoration: none;
+  min-height: var(--spacing-tap-min);
+  text-align: center;
+}
+.tp-account-logout-btn:hover { background: var(--color-destructive-bg); }
 `;
 
 interface SessionRow {
@@ -157,6 +192,7 @@ function relativeTime(iso: string): string {
 
 export default function SessionsPage() {
   useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
+  const { user } = useCurrentUser();
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revokingSid, setRevokingSid] = useState<string | null>(null);
@@ -227,15 +263,16 @@ export default function SessionsPage() {
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
+      bottomNav={<GlobalBottomNav authed={!!user} />}
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-sessions-shell" data-testid="sessions-page">
       <div className="tp-sessions-inner">
         <div className="tp-page-heading">
           <div className="tp-page-heading-text">
-            <div className="tp-page-heading-crumb">設定</div>
-            <h1>登入裝置</h1>
-            <p>所有目前登入你帳號的裝置。發現可疑裝置請立即撤銷。</p>
+            <div className="tp-page-heading-crumb">帳號</div>
+            <h1>帳號設定</h1>
+            <p>裝置管理、深淺模式與登出。發現可疑裝置請立即撤銷。</p>
           </div>
           {otherSessions.length > 0 && (
             <button
@@ -247,6 +284,20 @@ export default function SessionsPage() {
               {revokingAll ? '登出中…' : '登出其他全部裝置'}
             </button>
           )}
+        </div>
+
+        <div className="tp-account-actions" data-testid="account-actions">
+          <div className="tp-account-actions-row">
+            <span className="tp-account-actions-label">深淺模式</span>
+            <ThemeToggle testId="sessions-theme" />
+          </div>
+          <a
+            href="/api/oauth/logout"
+            className="tp-account-logout-btn"
+            data-testid="sessions-logout"
+          >
+            登出此帳號
+          </a>
         </div>
 
         {sessions === null && !error && (
