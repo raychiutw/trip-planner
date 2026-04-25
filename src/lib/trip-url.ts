@@ -15,6 +15,11 @@ export type SheetTab = typeof SHEET_TABS[number];
 
 const SHEET_TAB_SET = new Set<string>(SHEET_TABS);
 
+/** ARIA tabs pattern：tab `id` 與 tabpanel `aria-labelledby` 配對。 */
+export const sheetTabId = (tab: SheetTab): string => `trip-sheet-tab-${tab}`;
+/** ARIA tabs pattern：tabpanel `id` 與 tab `aria-controls` 配對。 */
+export const sheetPanelId = (tab: SheetTab): string => `trip-sheet-panel-${tab}`;
+
 /** Read `?sheet=` from a search string, URLSearchParams, or full URL. */
 export function parseSheetParam(
   input: string | URLSearchParams,
