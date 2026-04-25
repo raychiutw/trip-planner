@@ -30,6 +30,7 @@ import {
   type ClientAppRow,
 } from '../../../src/server/oauth-server/validate-authorize-request';
 import { getSessionUser } from '../_session';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 const CODE_TTL_SEC = 10 * 60; // RFC 6749 §4.1.2 recommends short
@@ -151,6 +152,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     },
     CODE_TTL_SEC,
   );
+
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'oauth_authorize',
+    outcome: 'success',
+    userId: session.uid,
+    clientId: result.client.client_id,
+    metadata: { scopes: result.scopes, redirect_uri: result.redirectUri },
+  });
 
   // Redirect back to client with code + state
   const redirectParams = new URLSearchParams({ code });

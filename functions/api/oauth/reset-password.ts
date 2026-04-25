@@ -20,6 +20,7 @@
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { hashPassword } from '../../../src/server/password';
 import { parseJsonBody } from '../_utils';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 interface ResetBody {
@@ -60,11 +61,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const tokenRow = (await adapter.find(token)) as ResetTokenPayload | undefined;
 
   if (!tokenRow) {
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'password_reset_complete',
+      outcome: 'failure',
+      failureReason: 'invalid_token',
+    });
     return errorResponse('RESET_TOKEN_INVALID', '重設連結已過期或無效', 400);
   }
 
   // One-time use safeguard
   if (tokenRow.used) {
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'password_reset_complete',
+      outcome: 'failure',
+      userId: tokenRow.userId,
+      failureReason: 'token_used',
+    });
     return errorResponse('RESET_TOKEN_INVALID', '重設連結已使用，請重新申請', 400);
   }
 
@@ -87,6 +99,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Destroy token (one-time use guard)
   await adapter.destroy(token);
+
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'password_reset_complete',
+    outcome: 'success',
+    userId: tokenRow.userId,
+    metadata: { email: tokenRow.email },
+  });
 
   return new Response(
     JSON.stringify({ ok: true, message: '密碼已更新，請用新密碼登入' }),

@@ -24,6 +24,7 @@
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { parseJsonBody } from '../_utils';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 interface ForgotBody {
@@ -76,8 +77,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     TTL_SEC,
   );
 
-  // V2-P3 next slice: send email with reset link {origin}/reset-password?token={token}
-  // 目前 token 只 in D1, dev 用 wrangler d1 exec 看；prod 等 email send 接通。
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'password_reset_request',
+    outcome: 'success',
+    userId: user.user_id,
+    metadata: { email },
+  });
 
   return genericResponse;
 };

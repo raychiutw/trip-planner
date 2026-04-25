@@ -22,6 +22,7 @@
  */
 import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 const ACCESS_TOKEN_TTL_SEC = 60 * 60;          // 1h
@@ -220,6 +221,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Rotation: destroy old refresh + issue new pair (V2-P6 spec)
     await refreshAdapter.destroy(refreshTokenInput);
     const tokens = await issueTokenPair(context.env.DB, clientId, refreshRow.user_id, finalScopes);
+
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'token_issue',
+      outcome: 'success',
+      userId: refreshRow.user_id,
+      clientId,
+      metadata: { grant_type: 'refresh_token', scopes: finalScopes },
+    });
     return tokenResponse(tokens, finalScopes);
   }
 
@@ -260,5 +269,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Issue tokens via shared helper
   const tokens = await issueTokenPair(context.env.DB, clientId, codeRow.user_id, codeRow.scopes);
+
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'token_issue',
+    outcome: 'success',
+    userId: codeRow.user_id,
+    clientId,
+    metadata: { grant_type: 'authorization_code', scopes: codeRow.scopes },
+  });
   return tokenResponse(tokens, codeRow.scopes);
 };

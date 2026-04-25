@@ -22,6 +22,7 @@ import { issueSession } from '../_session';
 import { AppError } from '../_errors';
 import { parseJsonBody } from '../_utils';
 import { hashPassword } from '../../../src/server/password';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 interface SignupBody {
@@ -60,6 +61,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(email)
     .first<{ id: string }>();
   if (existing) {
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'signup',
+      outcome: 'failure',
+      failureReason: 'email_taken',
+      metadata: { email },
+    });
     return errorResponse('SIGNUP_EMAIL_TAKEN', '此 email 已註冊，請改用登入或忘記密碼', 409);
   }
 
@@ -101,5 +108,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     { status: 201, headers: { 'content-type': 'application/json' } },
   );
   await issueSession(context.request, response, userId, context.env);
+
+  // V2-P6 audit log — best-effort, don't fail signup if audit insert fails
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'signup',
+    outcome: 'success',
+    userId,
+    metadata: { email, displayName },
+  });
   return response;
 };

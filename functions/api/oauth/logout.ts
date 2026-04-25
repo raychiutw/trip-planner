@@ -19,7 +19,8 @@
  *   - Google session revoke (Google revocation endpoint，需 access_token)
  *   - Telemetry log on logout
  */
-import { clearSession } from '../_session';
+import { clearSession, getSessionUser } from '../_session';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 const SAFE_REDIRECT_DEFAULT = '/login';
@@ -30,7 +31,10 @@ function sanitizeRedirect(value: string | null): string {
   return value;
 }
 
-function buildLogoutResponse(request: Request): Response {
+async function buildLogoutResponse(request: Request, env: Env): Promise<Response> {
+  // V2-P6 audit: capture user_id from session (if any) before clearing
+  const session = await getSessionUser(request, env);
+
   const url = new URL(request.url);
   const redirectAfter = sanitizeRedirect(url.searchParams.get('redirect_after'));
   const response = new Response(null, {
@@ -38,13 +42,21 @@ function buildLogoutResponse(request: Request): Response {
     headers: { Location: redirectAfter },
   });
   clearSession(request, response);
+
+  // best-effort audit (won't throw)
+  await recordAuthEvent(env.DB, request, {
+    eventType: 'logout',
+    outcome: 'success',
+    userId: session?.uid ?? null,
+  });
+
   return response;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  return buildLogoutResponse(context.request);
+  return buildLogoutResponse(context.request, context.env);
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  return buildLogoutResponse(context.request);
+  return buildLogoutResponse(context.request, context.env);
 };
