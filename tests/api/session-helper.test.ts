@@ -99,10 +99,12 @@ describe('issueSession', () => {
 });
 
 describe('clearSession', () => {
-  it('appends Set-Cookie with Max-Age=0', () => {
+  it('appends Set-Cookie with Max-Age=0 (no DB → skip session_devices revoke)', async () => {
     const req = new Request('https://x.com/api/logout');
     const res = new Response('ok');
-    clearSession(req, res);
+    // V2-P6: clearSession is async + takes env (so it can revoke session_devices
+    // when token has sid). With no DB the cookie is still cleared — degrade gracefully.
+    await clearSession(req, res, {});
     const setCookie = res.headers.get('Set-Cookie');
     expect(setCookie).toContain('Max-Age=0');
     expect(setCookie).toContain('Expires=Thu, 01 Jan 1970');
