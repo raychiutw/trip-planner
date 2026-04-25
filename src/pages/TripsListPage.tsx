@@ -20,14 +20,14 @@
  *     start_date, end_date, member_count)
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import TripsPreviewSheet from '../components/trips/TripsPreviewSheet';
+import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
 /* /trips landing uses a narrower sheet than the trip-detail page so the card
@@ -284,7 +284,6 @@ const NEW_TRIP_HREF = '/manage';
 export default function TripsListPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
-  const navigate = useNavigate();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedFromUrl = searchParams.get('selected');
@@ -336,21 +335,15 @@ export default function TripsListPage() {
     return visibleTrips[0]?.tripId ?? null;
   }, [selectedFromUrl, visibleTrips]);
 
-  const selectedTrip = useMemo<TripInfo | null>(
-    () => visibleTrips.find((t) => t.tripId === effectiveSelectedId) ?? null,
-    [visibleTrips, effectiveSelectedId],
-  );
-
+  // Both viewports: clicking a card sets ?selected=tripId. Mobile then
+  // renders the embedded TripPage as full-screen main; desktop swaps the
+  // right sheet to that trip. Per user direction the unified URL pattern is
+  // /trips?selected=X (no /trip/:id route navigation).
   function handleCardClick(tripId: string, e: React.MouseEvent | React.KeyboardEvent) {
-    if (isDesktop) {
-      e.preventDefault();
-      const next = new URLSearchParams(searchParams);
-      next.set('selected', tripId);
-      setSearchParams(next, { replace: true });
-    } else {
-      e.preventDefault();
-      navigate(`/trip/${encodeURIComponent(tripId)}`);
-    }
+    e.preventDefault();
+    const next = new URLSearchParams(searchParams);
+    next.set('selected', tripId);
+    setSearchParams(next, { replace: false });
   }
 
   const loading = myIds === null && !error;
@@ -360,7 +353,12 @@ export default function TripsListPage() {
     ? `${visibleTrips.length} 個行程`
     : null;
 
-  const main = (
+  // Mobile + ?selected → embedded TripPage IS the main content (full-screen
+  // trip detail). Cards hide. Per user spec, /trips?selected=X is the unified
+  // entry, no /trip/:id route navigation.
+  const showEmbeddedTrip = !isDesktop && !!effectiveSelectedId && !!selectedFromUrl;
+
+  const cardGridMain = (
     <>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-trips-shell" data-testid="trips-list-page">
@@ -434,15 +432,18 @@ export default function TripsListPage() {
     </>
   );
 
-  // Desktop: pass sheet (mounts TripsPreviewSheet, AppShell shows 3-pane).
-  // Mobile: don't pass sheet — saves the days fetch + matches mockup mobile.
-  const sheet = isDesktop ? (
-    <TripsPreviewSheet
-      tripId={effectiveSelectedId}
-      meta={selectedTrip}
-      newTripHref={NEW_TRIP_HREF}
-    />
+  // Desktop sheet content = embedded TripPage (mobile-style timeline) for the
+  // selected trip. Replaces the lightweight TripsPreviewSheet — sheet content
+  // now mirrors mobile main exactly per user spec.
+  const sheet = isDesktop && effectiveSelectedId ? (
+    <TripPage tripId={effectiveSelectedId} noShell />
   ) : undefined;
+
+  // Mobile route: when ?selected, render TripPage as main (replaces cards).
+  // When no ?selected, render the card grid.
+  const main = showEmbeddedTrip ? (
+    <TripPage tripId={effectiveSelectedId!} noShell />
+  ) : cardGridMain;
 
   return (
     <AppShell

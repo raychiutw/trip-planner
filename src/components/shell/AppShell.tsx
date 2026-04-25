@@ -45,8 +45,17 @@ export const APP_SHELL_STYLES = `
   }
 }
 
-/* Mobile <1024px：單欄 + bottom nav 常駐 */
+/* Mobile <1024px：單欄 + bottom nav 常駐.
+ *
+ * Why height: 100dvh (not min-height): we need .app-shell-main to be a real
+ * scroll container so sticky elements inside (like .ocean-day-strip) stick
+ * to the top of main, not get carried away by the document scroll. With
+ * min-height the grid grows with content, main isn't constrained, and the
+ * window scrolls instead — breaking sticky inside main. */
 @media (max-width: 1023px) {
+  .app-shell {
+    height: 100dvh;
+  }
   .app-shell-sidebar {
     display: none;
   }
@@ -54,7 +63,10 @@ export const APP_SHELL_STYLES = `
     display: none;
   }
   .app-shell-main {
-    padding-bottom: var(--nav-height-mobile);
+    /* Bottom-nav is in its own grid row, not overlapping main, so no
+     * padding-bottom needed (was added previously when bottom-nav was a
+     * fixed overlay). */
+    padding-bottom: 0;
   }
 }
 

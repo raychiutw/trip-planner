@@ -127,8 +127,21 @@ type ResolveState =
 
 /* ===== Component ===== */
 
-export default function TripPage() {
+export interface TripPageProps {
+  /** Override tripId from URL params. Used when TripPage is embedded inside
+   * another page (e.g., TripsListPage's right sheet on desktop, or main slot
+   * when /trips?selected=X is set on mobile). */
+  tripId?: string;
+  /** When true, render only the inner trip content (timeline + day nav) —
+   * skip the AppShell wrapper, sidebar, sheet, bottomNav. The hosting page
+   * provides those. */
+  noShell?: boolean;
+}
+
+export default function TripPage({ tripId: propTripId, noShell = false }: TripPageProps = {}) {
   const { tripId: urlTripId } = useParams<{ tripId: string }>();
+  // Prefer prop tripId (embedded mode) over URL (route mode).
+  const effectiveUrlTripId = propTripId ?? urlTripId;
   const navigate = useNavigate();
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
@@ -202,7 +215,7 @@ export default function TripPage() {
     // Priority 1: React Router params (/trip/:tripId)
     // Priority 2: legacy query string ?trip=xxx
     // Priority 3: localStorage
-    let tripId: string | null = (urlTripId && /^[\w-]+$/.test(urlTripId)) ? urlTripId : null;
+    let tripId: string | null = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId)) ? effectiveUrlTripId : null;
     if (!tripId) tripId = getQueryTrip();
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
       tripId = lsGet<string>(LS_KEY_TRIP_PREF);
@@ -250,7 +263,7 @@ export default function TripPage() {
       });
 
     return () => { cancelled = true; };
-  }, [resolveKey, urlTripId, navigate]);
+  }, [resolveKey, effectiveUrlTripId, navigate]);
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
@@ -533,27 +546,32 @@ export default function TripPage() {
     <div className="ocean-shell">
       <style>{SCOPED_STYLES}</style>
 
-      <header className="ocean-topbar sticky-nav" id="stickyNav">
-        <div className="ocean-topbar-left">
-          {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-          {trip && <span className="ocean-brand-label">{trip.title || trip.name}</span>}
-        </div>
-        <div className="ocean-topbar-right">
-          <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
-            <span aria-hidden="true">!</span>
-            <span className="ocean-tb-label">緊急</span>
-          </button>
-          <button type="button" className="ocean-tb-btn" onClick={togglePrint}>
-            <span aria-hidden="true">⎙</span>
-            <span className="ocean-tb-label">列印</span>
-          </button>
-          <OverflowMenu
-            onSheet={handlePanelItem}
-            onDownload={handleDownloadFormat}
-            isOnline={isOnline}
-          />
-        </div>
-      </header>
+      {/* Topbar only renders in standalone (route) mode. When embedded inside
+        * TripsListPage, the host provides the chrome — render only the inner
+        * timeline + day nav so it matches mobile layout exactly. */}
+      {!noShell && (
+        <header className="ocean-topbar sticky-nav" id="stickyNav">
+          <div className="ocean-topbar-left">
+            {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
+            {trip && <span className="ocean-brand-label">{trip.title || trip.name}</span>}
+          </div>
+          <div className="ocean-topbar-right">
+            <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
+              <span aria-hidden="true">!</span>
+              <span className="ocean-tb-label">緊急</span>
+            </button>
+            <button type="button" className="ocean-tb-btn" onClick={togglePrint}>
+              <span aria-hidden="true">⎙</span>
+              <span className="ocean-tb-label">列印</span>
+            </button>
+            <OverflowMenu
+              onSheet={handlePanelItem}
+              onDownload={handleDownloadFormat}
+              isOnline={isOnline}
+            />
+          </div>
+        </header>
+      )}
 
       <ToastContainer />
 
@@ -630,6 +648,12 @@ export default function TripPage() {
       )}
     </div>
   );
+
+  // Embedded mode: host page provides AppShell + sidebar + sheet + bottomNav.
+  // We return only the inner trip content (timeline + topbar + InfoSheet).
+  if (noShell) {
+    return mainContent;
+  }
 
   return (
     <AppShell
