@@ -42,7 +42,7 @@
 - [x] 6.3 新 page 必達標；legacy page 列 open issue 不 block — `lighthouserc.json` URL 加 `/explore` + `/login`（task 9.3 起的新 IA 含 5 nav routes，public routes 全測；`/manage` 因 Cloudflare Access 擋 unauthenticated lighthouse run，留 staging headless 用 service token bypass 是 next sprint）
 - [x] 6.4 Bundle analyzer：各 chunk < 300 KB gzipped — baseline recorded in CHANGELOG 2.3.0：html2pdf 914K (lazy on PDF export), vendor 219K, OceanMap 168K (lazy), sentry 134K, TripPage 79K (lazy)。Page-level chunks 全 < 300K raw（gzipped ~ raw/3）
 - [x] 6.5 Code split：Explore / Map / Chat lazy load — `src/entries/main.tsx:57-66` 全部 page 走 `lazyWithRetry()`
-- [ ] 6.6 dnd-kit lazy load（只 Ideas/Itinerary tab 需要時載入）— N/A（`@dnd-kit/*` 未安裝；屬 B-P5 Ideas drag scope，本 workstream 不做）
+- [x] 6.6 dnd-kit lazy load（只 Ideas/Itinerary tab 需要時載入）— `npm i @dnd-kit/core@^6.3.1 @dnd-kit/sortable@^10 @dnd-kit/modifiers@^9`；IdeasTabContent 是 `lazy(() => import('./IdeasTabContent'))` (TripSheet)，dnd-kit 透過 IdeasTabContent transitive lazy import — chrome devtools Network 確認只在 `?sheet=ideas` active 時 chunk load
 
 ## 7. Playwright E2E matrix
 

@@ -1,15 +1,30 @@
 /**
- * IdeasTabContent — TripSheet 的 Ideas tab real UI（B-P5 / B-P6 task 4.1）
+ * IdeasTabContent — TripSheet 的 Ideas tab real UI（B-P5 / B-P6 task 4.1 + 6.6）
  *
  * Source: GET /api/trip-ideas?tripId=...
  * Actions:
- *   - 「+ 加入 Day N」text-based promote — POST /api/trips/:id/days/:num/entries +
+ *   - 「+ Day N」text-based promote — POST /api/trips/:id/days/:num/entries +
  *     PATCH /api/trip-ideas/:id { promotedToEntryId }
+ *   - **Drag-to-promote**（B-P5 Phase 2）— 拖 idea card 到頂部 Day badge 觸發同樣
+ *     promote API；drop targets 只在拖動時顯示
  *   - 「移除」DELETE /api/trip-ideas/:id（soft delete via archived_at）
  *
- * 不含：dnd-kit drag interaction（B-P5 後續 PR）/ conflict modal / undo toast / smart placement
+ * dnd-kit lazy load via React.lazy on this file (TripSheet wraps in lazy())。
+ * 不含：reorder ideas / cross-day move / demote / conflict modal / undo toast / smart placement
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from '@dnd-kit/core';
 import { apiFetchRaw } from '../../lib/apiClient';
 import type { TripIdea } from '../../types/api';
 
@@ -25,7 +40,11 @@ const SCOPED_STYLES = `
   padding: 12px 14px;
   background: var(--color-background);
   display: flex; flex-direction: column; gap: 6px;
+  cursor: grab;
+  user-select: none;
 }
+.tp-idea-card:active { cursor: grabbing; }
+.tp-idea-card.is-dragging { opacity: 0.4; }
 .tp-idea-card-header {
   display: flex; align-items: flex-start; gap: 8px;
   font-size: var(--font-size-callout); font-weight: 600;
@@ -73,11 +92,84 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote); color: var(--color-muted);
   padding: 8px 16px;
 }
+.tp-ideas-drop-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 12px 16px;
+  background: var(--color-accent-subtle);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky; top: 0; z-index: 5;
+}
+.tp-ideas-drop-row > .label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-accent); align-self: center;
+}
+.tp-day-drop-badge {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 2px dashed var(--color-accent);
+  font-size: var(--font-size-callout); font-weight: 600;
+  color: var(--color-accent);
+  transition: background-color 120ms;
+}
+.tp-day-drop-badge.is-over {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
 `;
+
+function ideaDragId(id: number): string { return `idea-${id}`; }
+function dayDropId(num: number): string { return `day-${num}`; }
+function parseIdeaDragId(id: string): number | null {
+  const m = id.match(/^idea-(\d+)$/);
+  return m ? Number(m[1]) : null;
+}
+function parseDayDropId(id: string): number | null {
+  const m = id.match(/^day-(\d+)$/);
+  return m ? Number(m[1]) : null;
+}
+
+interface DraggableIdeaCardProps {
+  idea: TripIdea;
+  busy: boolean;
+  isDragging: boolean;
+  children: React.ReactNode;
+}
+
+function DraggableIdeaCard({ idea, busy, isDragging, children }: DraggableIdeaCardProps) {
+  const { attributes, listeners, setNodeRef } = useDraggable({
+    id: ideaDragId(idea.id),
+    disabled: busy || !!idea.promotedToEntryId || !idea.poiId,
+  });
+  return (
+    <li
+      ref={setNodeRef}
+      className={`tp-idea-card${isDragging ? ' is-dragging' : ''}`}
+      {...attributes}
+      {...listeners}
+      data-testid={`idea-card-${idea.id}`}
+    >
+      {children}
+    </li>
+  );
+}
+
+function DroppableDayBadge({ num }: { num: number }) {
+  const { isOver, setNodeRef } = useDroppable({ id: dayDropId(num) });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`tp-day-drop-badge${isOver ? ' is-over' : ''}`}
+      data-testid={`day-drop-${num}`}
+    >
+      Day {num}
+    </div>
+  );
+}
 
 export interface IdeasTabContentProps {
   tripId: string;
-  /** Optional：days available for promote dropdown。空陣列時 promote 隱藏。 */
+  /** Optional：days available for promote dropdown / drop targets。空陣列時 promote 隱藏。 */
   dayNumbers?: number[];
 }
 
@@ -85,6 +177,12 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
   const [ideas, setIdeas] = useState<TripIdea[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor),
+  );
 
   const reload = useCallback(async () => {
     setError(null);
@@ -99,69 +197,96 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
     }
   }, [tripId]);
 
-  useEffect(() => {
-    void reload();
+  useEffect(() => { void reload(); }, [reload]);
+
+  const handleDelete = useCallback(async (id: number) => {
+    setBusyId(id);
+    try {
+      const res = await apiFetchRaw(`/api/trip-ideas/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`DELETE failed: HTTP ${res.status}`);
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
   }, [reload]);
 
-  const handleDelete = useCallback(
-    async (id: number) => {
-      setBusyId(id);
-      try {
-        const res = await apiFetchRaw(`/api/trip-ideas/${id}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error(`DELETE failed: HTTP ${res.status}`);
-        await reload();
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setBusyId(null);
+  const handlePromote = useCallback(async (idea: TripIdea, dayNum: number) => {
+    if (!idea.poiId) {
+      setError('此 idea 未綁 POI，無法直接 promote');
+      return;
+    }
+    setBusyId(idea.id);
+    try {
+      const create = await apiFetchRaw(
+        `/api/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ poiId: idea.poiId, name: idea.title }),
+        },
+      );
+      if (!create.ok) throw new Error(`promote create entry failed: ${create.status}`);
+      const created = (await create.json()) as { id?: number };
+      if (created?.id) {
+        await apiFetchRaw(`/api/trip-ideas/${idea.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ promotedToEntryId: created.id }),
+        });
       }
-    },
-    [reload],
-  );
-
-  const handlePromote = useCallback(
-    async (idea: TripIdea, dayNum: number) => {
-      if (!idea.poiId) {
-        setError('此 idea 未綁 POI，無法直接 promote');
-        return;
-      }
-      setBusyId(idea.id);
-      try {
-        const create = await apiFetchRaw(
-          `/api/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`,
-          {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ poiId: idea.poiId, name: idea.title }),
-          },
-        );
-        if (!create.ok) throw new Error(`promote create entry failed: ${create.status}`);
-        const created = (await create.json()) as { id?: number };
-        if (created?.id) {
-          await apiFetchRaw(`/api/trip-ideas/${idea.id}`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ promotedToEntryId: created.id }),
-          });
-        }
-        await reload();
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setBusyId(null);
-      }
-    },
-    [reload, tripId],
-  );
+      await reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  }, [reload, tripId]);
 
   const activeIdeas = useMemo(
     () => (ideas ?? []).filter((i) => !i.archivedAt),
     [ideas],
   );
 
+  const handleDragStart = useCallback((e: DragStartEvent) => {
+    setActiveDragId(String(e.active.id));
+  }, []);
+
+  const handleDragEnd = useCallback((e: DragEndEvent) => {
+    setActiveDragId(null);
+    if (!e.over) return;
+    const ideaId = parseIdeaDragId(String(e.active.id));
+    const dayNum = parseDayDropId(String(e.over.id));
+    if (ideaId === null || dayNum === null) return;
+    const idea = activeIdeas.find((i) => i.id === ideaId);
+    if (!idea) return;
+    void handlePromote(idea, dayNum);
+  }, [activeIdeas, handlePromote]);
+
+  const draggedIdea = useMemo(
+    () => {
+      if (!activeDragId) return null;
+      const id = parseIdeaDragId(activeDragId);
+      return id !== null ? activeIdeas.find((i) => i.id === id) ?? null : null;
+    },
+    [activeDragId, activeIdeas],
+  );
+
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveDragId(null)}
+    >
       <style>{SCOPED_STYLES}</style>
+      {activeDragId && dayNumbers.length > 0 && (
+        <div className="tp-ideas-drop-row" data-testid="ideas-drop-row">
+          <span className="label">拖到日次以加入：</span>
+          {dayNumbers.map((d) => <DroppableDayBadge key={d} num={d} />)}
+        </div>
+      )}
       {error && <div className="tp-ideas-status" role="alert" data-testid="ideas-error">⚠ {error}</div>}
       {ideas === null && (
         <div className="tp-ideas-status" data-testid="ideas-loading">載入中…</div>
@@ -176,7 +301,12 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
       {ideas !== null && activeIdeas.length > 0 && (
         <ul className="tp-ideas-list" data-testid="ideas-list">
           {activeIdeas.map((idea) => (
-            <li key={idea.id} className="tp-idea-card">
+            <DraggableIdeaCard
+              key={idea.id}
+              idea={idea}
+              busy={busyId === idea.id}
+              isDragging={activeDragId === ideaDragId(idea.id)}
+            >
               <div className="tp-idea-card-header">{idea.title}</div>
               {(idea.poiAddress || idea.poiType) && (
                 <div className="tp-idea-card-meta">
@@ -220,10 +350,20 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
                   </button>
                 </div>
               )}
-            </li>
+            </DraggableIdeaCard>
           ))}
         </ul>
       )}
-    </>
+      <DragOverlay>
+        {draggedIdea ? (
+          <div className="tp-idea-card" style={{ cursor: 'grabbing' }}>
+            <div className="tp-idea-card-header">{draggedIdea.title}</div>
+            {draggedIdea.poiType && (
+              <div className="tp-idea-card-meta"><span>{draggedIdea.poiType}</span></div>
+            )}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
