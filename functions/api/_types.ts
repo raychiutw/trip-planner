@@ -16,4 +16,8 @@ export interface Env {
   TRIPLINE_API_URL?: string;
   TRIPLINE_API_SECRET?: string;
   ASSETS: { fetch: (request: Request) => Promise<Response> };
+  // V2-P1 OAuth (optional during staged rollout)
+  SESSION_SECRET?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
