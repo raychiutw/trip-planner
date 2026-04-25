@@ -10,6 +10,7 @@
  * Rate limit (V2-P6): 429 FORGOT_PASSWORD_RATE_LIMITED → 顯示 retry-after。
  */
 import { useState } from 'react';
+import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -19,6 +20,7 @@ const SCOPED_STYLES = `
     radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
     var(--color-secondary);
 }
+${AUTH_LAYOUT_STYLES}
 .tp-auth-card {
   width: 100%; max-width: 440px;
   background: var(--color-background);
@@ -147,7 +149,8 @@ export default function ForgotPasswordPage() {
   return (
     <main className="tp-auth-shell" data-testid="forgot-password-page">
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-auth-card">
+      <div className="tp-auth-form-side">
+        <div className="tp-auth-card">
         <div className="tp-auth-brand">
           <span className="tp-auth-brand-dot" aria-hidden="true">●</span>
           <span>Tripline</span>
@@ -209,7 +212,42 @@ export default function ForgotPasswordPage() {
             </div>
           </>
         )}
+        </div>
       </div>
+
+      <AuthBrandHero
+        eyebrow="Account Recovery"
+        headline={<>忘了沒關係<br />5 分鐘搞定。</>}
+        sub="我們不會請你回答秘密問題、不收手機號、不要身分證。Email 是唯一管道，最簡單也最不容易被釣魚。"
+        items={[
+          {
+            icon: (
+              <>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </>
+            ),
+            title: '連結 1 小時失效',
+            desc: '即使被攔截，過期後就無法用，舊密碼也不洩漏。',
+          },
+          {
+            icon: (
+              <>
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <polyline points="22,6 12,13 2,6" />
+              </>
+            ),
+            title: '只透過 email',
+            desc: '不會 SMS、不會打電話、不會私訊。只看 email 收件匣即可。',
+          },
+          {
+            icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />,
+            title: '舊登入裝置自動登出',
+            desc: '重設後，所有手機/平板的 session 都失效，避免別人用你舊密碼。',
+          },
+        ]}
+        footnote="© 2026 Tripline · 帳號安全最低承諾"
+      />
     </main>
   );
 }
