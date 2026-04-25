@@ -704,17 +704,21 @@ body.dark {
      * viewport ≥768px stays on desktop type scale.
      */
     @media (max-width: 760px) {
+        /* Mobile: topbar has no visible content (brand label hidden ≥1100px,
+         * all right-side buttons hidden, AI 編輯 link removed). Hide the
+         * entire bar so day-strip becomes the top sticky element with no
+         * empty cream band + line above it. */
+        .ocean-topbar { display: none; }
         .ocean-nav-tabs { display: none; }
         .ocean-tb-divider { display: none; }
-        .ocean-topbar-right .ocean-tb-btn:not(.ocean-tb-ai) { display: none; }
         .ocean-overflow-wrap { display: none; }
-        .ocean-page { padding: 18px 16px calc(80px + env(safe-area-inset-bottom)); }
+        .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 22px 20px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
         .ocean-stop { grid-template-columns: 56px 44px 1fr; padding: 14px; gap: 12px; }
         .ocean-stop-actions { grid-column: 1 / -1; justify-content: flex-end; }
         .ocean-stop-icon { width: 44px; height: 44px; }
-        .ocean-day { scroll-margin-top: 190px; }
+        .ocean-day { scroll-margin-top: 130px; }
     }
 
     /* Mobile bottom tab bar (只在 ≤760px 顯示) */

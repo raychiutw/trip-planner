@@ -27,6 +27,10 @@ const SCOPED_STYLES = `
 @media (max-width: 1100px) {
   .ocean-day-strip { top: 56px; }
 }
+/* Mobile: topbar is hidden, so day-strip is the top sticky element. */
+@media (max-width: 760px) {
+  .ocean-day-strip { top: 0; }
+}
 body.print-mode .ocean-day-strip { display: none; }
 
 /* === DESKTOP tab style (≥761px): underlined tabs, no border, no rounded bg === */
@@ -106,7 +110,11 @@ body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-m
   .ocean-day-strip {
     gap: 6px;
     padding: 8px 16px;
-    margin: -18px -16px 16px;
+    /* Topbar is hidden on mobile, so kill the negative top margin that used
+     * to pull the strip up under the topbar. Keep negative side margins so
+     * the strip can bleed to viewport edges within .ocean-page (which has
+     * 16px side padding). */
+    margin: 0 -16px 16px;
   }
   [data-dn] {
     padding: 7px 10px;
