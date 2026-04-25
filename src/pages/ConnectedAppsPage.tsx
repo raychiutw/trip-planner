@@ -9,6 +9,7 @@
  * 安全 UX：撤銷必須二次確認（modal）— 破壞性操作。
  */
 import { useEffect, useState } from 'react';
+import { useRequireAuth } from '../hooks/useRequireAuth';
 
 const SCOPED_STYLES = `
 .tp-settings-shell {
@@ -203,6 +204,7 @@ function relativeTime(ms: number): string {
 }
 
 export default function ConnectedAppsPage() {
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   const [apps, setApps] = useState<ConnectedApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);

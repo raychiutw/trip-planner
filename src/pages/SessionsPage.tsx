@@ -12,6 +12,7 @@
  *   - 異地裝置警示（不同 ip_hash_prefix → 警示樣式）— optional V2-P6 future
  */
 import { useEffect, useState } from 'react';
+import { useRequireAuth } from '../hooks/useRequireAuth';
 
 const SCOPED_STYLES = `
 .tp-sessions-shell {
@@ -153,6 +154,7 @@ function relativeTime(iso: string): string {
 }
 
 export default function SessionsPage() {
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   const [sessions, setSessions] = useState<SessionRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [revokingSid, setRevokingSid] = useState<string | null>(null);

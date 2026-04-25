@@ -4,6 +4,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+// Bypass V2 auth gate — page is rendered as if user is logged in
+vi.mock('../../src/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({ user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),
+}));
+
 import DeveloperAppsPage from '../../src/pages/DeveloperAppsPage';
 
 const SAMPLE_APP = {

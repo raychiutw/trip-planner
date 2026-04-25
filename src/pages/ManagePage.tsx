@@ -4,6 +4,7 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import Icon from '../components/shared/Icon';
 import { apiFetchRaw } from '../lib/apiClient';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { useRequests, RawRequest } from '../hooks/useRequests';
@@ -319,6 +320,7 @@ type PageState =
   | { kind: 'ready' };
 
 export default function ManagePage() {
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   useDarkMode();
   const isOnline = useOnlineStatus();
 
