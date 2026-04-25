@@ -1,32 +1,42 @@
 /**
- * GET /api/oauth/authorize?provider=google&redirect_after_login=/manage
+ * GET /api/oauth/authorize
  *
- * V2-P1 OAuth flow start — Google OIDC client redirect。
+ * V2-P4/P5 — OAuth Server `/authorize` endpoint。Tripline as Authorization Server
+ * 接收 external client 的 authorize request，驗 + 生成 authorization_code +
+ * redirect 回 client redirect_uri (with code + state)。
+ *
+ * Public OIDC path 對齊 discovery doc。Internal Google login 在
+ * `/api/oauth/login/google`（V2-P5 routing fix 之前舊位置 = `/api/oauth/authorize?provider=google`）。
  *
  * Flow:
- *   1. Validate provider=google (其他暫不支援)
- *   2. Validate GOOGLE_CLIENT_ID env (503 if missing)
- *   3. Generate cryptographically random `state` (32 bytes base64url)
- *   4. Store state in D1 oauth_models name='OAuthState' with redirect_after_login
- *      + 5min TTL (CSRF protection — callback 收到 code 時 validate state matches)
- *   5. Build Google authorize URL (response_type=code + PKCE later)
- *   6. 302 redirect
- *
- * Callback handler (functions/api/oauth/callback.ts) — V2-P1 next slice。
- *
- * 安全性備註：
- *   - state 是 CSRF token + 1-time replay guard（D1 destroy on consume in callback）
- *   - 沒 PKCE 因 client_secret 在 server side（Google OIDC for confidential client OK）
- *     V2-P5 加 PKCE for public clients（mobile / SPA flow）
- *   - redirect_after_login 限制 same-origin 路徑（不允許 absolute URL，防 open redirect）
+ *   1. Parse query params (client_id / redirect_uri / response_type / scope /
+ *      state / code_challenge / code_challenge_method / prompt)
+ *   2. Lookup client_apps row by client_id
+ *   3. validateAuthorizeRequest（pure validator from V2-P4 #280）
+ *   4. If invalid:
+ *      - redirectableToClient=false → 400 JSON
+ *      - redirectableToClient=true → 302 redirect_uri?error=...&state=...
+ *   5. Check user logged in (session cookie):
+ *      - Not logged in → 302 /login?redirect_after=<this URL>
+ *   6. (V2-P5 will add: consent screen render)
+ *      - For V2-P4 starter: skip consent, auto-approve
+ *   7. Generate authorization_code (32 bytes random) + store D1 oauth_models
+ *      name='AuthorizationCode' { client_id, user_id, redirect_uri, scopes,
+ *      code_challenge, code_challenge_method, used: false } + 10min TTL
+ *   8. 302 redirect_uri?code=<code>&state=<state>
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
+import {
+  validateAuthorizeRequest,
+  type ClientAppRow,
+} from '../../../src/server/oauth-server/validate-authorize-request';
+import { getSessionUser } from '../_session';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
-const STATE_TTL_SEC = 5 * 60; // 5 minutes — user 通常 OAuth flow < 30s
-const SAFE_REDIRECT_DEFAULT = '/manage';
+const CODE_TTL_SEC = 10 * 60; // RFC 6749 §4.1.2 recommends short
 
-function generateState(): string {
+function generateAuthCode(): string {
   const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
   let str = '';
@@ -34,55 +44,129 @@ function generateState(): string {
   return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** 限制 redirect_after_login 為 same-origin 路徑（防 open redirect attack） */
-function sanitizeRedirect(value: string | null): string {
-  if (!value) return SAFE_REDIRECT_DEFAULT;
-  // 必須以 / 開頭且不以 // 開頭（後者是 protocol-relative，會跳出去）
-  if (!value.startsWith('/') || value.startsWith('//')) return SAFE_REDIRECT_DEFAULT;
-  return value;
+function jsonError(code: string, message: string, status: number): Response {
+  return new Response(
+    JSON.stringify({ error: code, error_description: message }),
+    { status, headers: { 'content-type': 'application/json' } },
+  );
+}
+
+function redirectError(
+  redirectUri: string,
+  errorCode: string,
+  errorDescription: string,
+  state: string | null,
+): Response {
+  const params = new URLSearchParams({ error: errorCode, error_description: errorDescription });
+  if (state) params.set('state', state);
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `${redirectUri}?${params.toString()}` },
+  });
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
-  const provider = url.searchParams.get('provider');
-  if (provider !== 'google') {
-    return new Response(
-      JSON.stringify({ error: { code: 'PROVIDER_UNSUPPORTED', message: '只支援 provider=google（V2-P1）' } }),
-      { status: 400, headers: { 'content-type': 'application/json' } },
-    );
+  const params = url.searchParams;
+
+  const req = {
+    response_type: params.get('response_type') ?? undefined,
+    client_id: params.get('client_id') ?? undefined,
+    redirect_uri: params.get('redirect_uri') ?? undefined,
+    scope: params.get('scope') ?? undefined,
+    state: params.get('state') ?? undefined,
+    code_challenge: params.get('code_challenge') ?? undefined,
+    code_challenge_method: params.get('code_challenge_method') ?? undefined,
+    prompt: params.get('prompt') ?? undefined,
+  };
+
+  // Lookup client_apps row (if client_id provided)
+  let client: ClientAppRow | null = null;
+  if (req.client_id) {
+    client = await context.env.DB
+      .prepare(
+        `SELECT client_id, client_type, app_name, redirect_uris, allowed_scopes, status
+         FROM client_apps WHERE client_id = ?`,
+      )
+      .bind(req.client_id)
+      .first<ClientAppRow>();
   }
 
-  const clientId = context.env.GOOGLE_CLIENT_ID;
-  if (!clientId) {
-    return new Response(
-      JSON.stringify({ error: { code: 'OAUTH_NOT_CONFIGURED', message: 'GOOGLE_CLIENT_ID 未設定 — 需 ops 在 Cloudflare secrets 加入' } }),
-      { status: 503, headers: { 'content-type': 'application/json' } },
-    );
+  // Validate
+  const result = validateAuthorizeRequest(req, client);
+  if ('code' in result && 'redirectableToClient' in result) {
+    if (result.redirectableToClient && req.redirect_uri) {
+      return redirectError(req.redirect_uri, result.code, result.message, req.state ?? null);
+    }
+    return jsonError(result.code, result.message, 400);
   }
 
-  const state = generateState();
-  const redirectAfterLogin = sanitizeRedirect(url.searchParams.get('redirect_after_login'));
+  // Check user logged in
+  const session = await getSessionUser(context.request, context.env);
+  if (!session) {
+    // Preserve full request URL — login redirects back here on success
+    const loginUrl = `/login?redirect_after=${encodeURIComponent(url.pathname + url.search)}`;
+    return new Response(null, { status: 302, headers: { Location: loginUrl } });
+  }
 
-  // Store state in D1 (CSRF protection + replay guard via consume on callback)
-  const adapter = new D1Adapter(context.env.DB, 'OAuthState');
+  // V2-P5: Consent check — lookup D1 Consent for (user_id, client_id)
+  // 若無 consent 或 stored scopes 不含 requested scopes → redirect to /oauth/consent
+  // prompt=consent 時强制 re-prompt（user 主動要重新確認）
+  const consentAdapter = new D1Adapter(context.env.DB, 'Consent');
+  const consentRow = (await consentAdapter.find(`${session.uid}:${result.client.client_id}`)) as
+    | { user_id: string; client_id: string; scopes: string[]; grantedAt: number }
+    | undefined;
+
+  const needsConsent =
+    result.prompt === 'consent' ||
+    !consentRow ||
+    !result.scopes.every((s) => consentRow.scopes.includes(s));
+
+  if (needsConsent) {
+    const consentParams = new URLSearchParams();
+    consentParams.set('client_id', result.client.client_id);
+    consentParams.set('redirect_uri', result.redirectUri);
+    consentParams.set('response_type', 'code');
+    consentParams.set('scope', result.scopes.join(' '));
+    if (result.state) consentParams.set('state', result.state);
+    if (result.codeChallenge) consentParams.set('code_challenge', result.codeChallenge);
+    if (result.codeChallengeMethod) consentParams.set('code_challenge_method', result.codeChallengeMethod);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/oauth/consent?${consentParams.toString()}` },
+    });
+  }
+
+  // Consent OK — generate authorization_code + store D1
+  const code = generateAuthCode();
+  const adapter = new D1Adapter(context.env.DB, 'AuthorizationCode');
   await adapter.upsert(
-    state,
-    { provider: 'google', redirectAfterLogin, createdAt: Date.now() },
-    STATE_TTL_SEC,
+    code,
+    {
+      client_id: result.client.client_id,
+      user_id: session.uid,
+      redirect_uri: result.redirectUri,
+      scopes: result.scopes,
+      code_challenge: result.codeChallenge,
+      code_challenge_method: result.codeChallengeMethod,
+      used: false,
+    },
+    CODE_TTL_SEC,
   );
 
-  // Build Google OIDC authorize URL
-  const callbackUri = `${url.origin}/api/oauth/callback`;
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    redirect_uri: callbackUri,
-    scope: 'openid profile email',
-    state,
-    access_type: 'offline', // 取 refresh_token (V2-P5 用)
-    prompt: 'consent',      // 強制 consent screen 確保拿 refresh_token
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'oauth_authorize',
+    outcome: 'success',
+    userId: session.uid,
+    clientId: result.client.client_id,
+    metadata: { scopes: result.scopes, redirect_uri: result.redirectUri },
   });
-  const authorizeUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-  return Response.redirect(authorizeUrl, 302);
+  // Redirect back to client with code + state
+  const redirectParams = new URLSearchParams({ code });
+  if (result.state) redirectParams.set('state', result.state);
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `${result.redirectUri}?${redirectParams.toString()}` },
+  });
 };

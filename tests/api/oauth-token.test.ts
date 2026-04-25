@@ -1,8 +1,8 @@
 /**
- * POST /api/oauth/server-token unit test — V2-P4
+ * POST /api/oauth/token unit test — V2-P4
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { onRequestPost } from '../../functions/api/oauth/server-token';
+import { onRequestPost } from '../../functions/api/oauth/token';
 import { hashPassword } from '../../src/server/password';
 
 interface MockEnv {
@@ -68,7 +68,7 @@ function makeContext(body: unknown, env: MockEnv, contentType = 'application/jso
     bodyStr = JSON.stringify(body);
   }
   return {
-    request: new Request('https://x.com/api/oauth/server-token', {
+    request: new Request('https://x.com/api/oauth/token', {
       method: 'POST',
       headers: { 'content-type': contentType },
       body: bodyStr,
@@ -87,7 +87,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
 
-describe('POST /api/oauth/server-token', () => {
+describe('POST /api/oauth/token', () => {
   it('400 unsupported_grant_type when not authorization_code', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({ grant_type: 'password' }, env));
@@ -273,7 +273,7 @@ describe('POST /api/oauth/server-token', () => {
   }, 60_000);
 });
 
-describe('POST /api/oauth/server-token — refresh_token grant', () => {
+describe('POST /api/oauth/token — refresh_token grant', () => {
   it('happy path: rotate refresh + issue new access', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);

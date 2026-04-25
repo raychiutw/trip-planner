@@ -7,7 +7,7 @@
  * URL params。Real consent flow integration 留 V2-P5 next slice（server-authorize
  * 改成 redirect 來這頁，user 決定後再 redirect 回 client with code）。
  *
- * Allow → POST /api/oauth/server-consent { client_id, scope, decision: 'allow' }
+ * Allow → POST /api/oauth/consent { client_id, scope, decision: 'allow' }
  *   → 200 + redirect to original authorize endpoint with consent flag
  * Deny → 302 redirect_uri?error=access_denied&state=
  */
@@ -132,10 +132,10 @@ export default function ConsentPage() {
 
   function handleAllow() {
     setBusy(true);
-    // V2-P5 next slice: POST /api/oauth/server-consent { client_id, scope, decision: 'allow' }
-    //   → server records consent + redirect to original authorize URL with consent_granted flag
-    //   → server-authorize re-runs, this time skip consent and issue code
-    // V2-P5 first slice: placeholder navigation back to original authorize
+    // POST /api/oauth/consent { client_id, scope, decision: 'allow' }
+    //   → server records consent + redirect to authorize URL with consent_granted flag
+    //   → /authorize re-runs, this time skip consent and issue code
+    // V2-P5 first slice: placeholder navigation back to /authorize
     const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
@@ -144,7 +144,7 @@ export default function ConsentPage() {
       state,
       consent_granted: '1',
     });
-    window.location.href = `/api/oauth/server-authorize?${params.toString()}`;
+    window.location.href = `/api/oauth/authorize?${params.toString()}`;
   }
 
   function handleDeny() {

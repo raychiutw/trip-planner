@@ -3,7 +3,7 @@
  *
  * Flow:
  *   - Primary: email + password form → POST /api/oauth/login → navigate redirect_after
- *   - Alt: 「使用 Google 登入」→ /api/oauth/authorize?provider=google
+ *   - Alt: 「使用 Google 登入」→ /api/oauth/login/google
  *   - Fallback: CF Access link
  *
  * Query params handled:
@@ -400,7 +400,7 @@ export default function LoginPage() {
 
         <a
           className="tp-btn tp-btn-secondary"
-          href={`/api/oauth/authorize?provider=google${redirectAfter ? `&redirect_after=${encodeURIComponent(redirectAfter)}` : ''}`}
+          href={`/api/oauth/login/google${redirectAfter ? `?redirect_after=${encodeURIComponent(redirectAfter)}` : ''}`}
           data-testid="login-google"
         >
           <GoogleLogo />
