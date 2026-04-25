@@ -38,14 +38,24 @@ afterEach(() => {
 });
 
 describe('LoginPage form', () => {
-  it('renders email + password + submit + Google + signup link', () => {
+  it('renders email + password + submit + signup link (Google hidden until probe confirms)', () => {
     renderAt();
     expect(screen.getByTestId('login-email')).toBeTruthy();
     expect(screen.getByTestId('login-password')).toBeTruthy();
     expect(screen.getByTestId('login-submit')).toBeTruthy();
-    expect(screen.getByTestId('login-google')).toBeTruthy();
     expect(screen.getByTestId('login-signup-link')).toBeTruthy();
     expect(screen.getByTestId('login-forgot-link')).toBeTruthy();
+    // Google button is gated on /api/public-config probe (not stubbed here, so absent)
+    expect(screen.queryByTestId('login-google')).toBeNull();
+  });
+
+  it('shows Google button when /api/public-config reports it enabled', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ providers: { google: true } }), { status: 200 }),
+    ));
+    vi.useRealTimers();
+    renderAt();
+    await waitFor(() => expect(screen.queryByTestId('login-google')).not.toBeNull());
   });
 
   it('successful login → navigate /manage by default', async () => {

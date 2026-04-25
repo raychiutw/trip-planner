@@ -19,8 +19,8 @@ const SCOPED_STYLES = `
   display: flex; align-items: center; justify-content: center;
   min-height: 100dvh; padding: 48px 24px;
   background:
-    radial-gradient(circle at 20% 0%, rgba(0, 119, 182, 0.06), transparent 50%),
-    radial-gradient(circle at 80% 100%, rgba(0, 119, 182, 0.04), transparent 50%),
+    radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(217, 120, 72, 0.04), transparent 50%),
     var(--color-secondary);
 }
 .tp-login-card {
@@ -179,6 +179,10 @@ export default function LoginPage() {
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
   const [failureCount, setFailureCount] = useState(0);
+  // Whether the deployment has Google OIDC env configured. We optimistically
+  // assume "no" so the button doesn't flash on slow networks; the probe flips
+  // it on if /api/public-config confirms.
+  const [googleAvailable, setGoogleAvailable] = useState(false);
 
   // Read failure count from sessionStorage to show defensive UX warning
   useEffect(() => {
@@ -188,6 +192,22 @@ export default function LoginPage() {
     } catch {
       /* ignore */
     }
+  }, []);
+
+  // Probe public-config to know which providers are enabled. Side-effect-free.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/public-config')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => {
+        if (cancelled || !cfg) return;
+        const providers = (cfg as { providers?: { google?: boolean } }).providers;
+        if (providers?.google) setGoogleAvailable(true);
+      })
+      .catch(() => {
+        // Network error — leave Google hidden. Email/password still works.
+      });
+    return () => { cancelled = true; };
   }, []);
 
   function bumpFailure() {
@@ -396,24 +416,27 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="tp-divider">或</div>
-
-        <a
-          className="tp-btn tp-btn-secondary"
-          href={`/api/oauth/login/google${redirectAfter ? `?redirect_after_login=${encodeURIComponent(redirectAfter)}` : ''}`}
-          data-testid="login-google"
-        >
-          <GoogleLogo />
-          <span>使用 Google 登入</span>
-        </a>
-
-        <a className="tp-cf-fallback" href="/manage" data-testid="login-cf-access">
-          Cloudflare Access 登入（過渡期）
-        </a>
+        {googleAvailable && (
+          <>
+            <div className="tp-divider">或</div>
+            <a
+              className="tp-btn tp-btn-secondary"
+              href={`/api/oauth/login/google${redirectAfter ? `?redirect_after_login=${encodeURIComponent(redirectAfter)}` : ''}`}
+              data-testid="login-google"
+            >
+              <GoogleLogo />
+              <span>使用 Google 登入</span>
+            </a>
+          </>
+        )}
 
         <div className="tp-login-footer">
           沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
         </div>
+
+        <a className="tp-cf-fallback" href="/manage" data-testid="login-cf-access">
+          Cloudflare Access 登入（過渡期）
+        </a>
       </div>
     </main>
   );

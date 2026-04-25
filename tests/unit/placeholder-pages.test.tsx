@@ -35,17 +35,18 @@ describe('GlobalMapPage placeholder（/map 全域，非 per-trip）', () => {
   });
 });
 
-describe('LoginPage (V2-P1 Google sign-in + CF Access 過渡期 fallback)', () => {
-  it('render 「登入您的帳號」heading + Google login button + CF Access fallback', () => {
-    const { getByTestId, getByRole } = renderWithRouter(<LoginPage />);
+describe('LoginPage (V2 password-first + optional Google + CF Access transitional fallback)', () => {
+  it('render 「登入」heading + signup link + CF Access fallback (Google gated on /api/public-config probe)', () => {
+    const { getByTestId, queryByTestId, getByRole } = renderWithRouter(<LoginPage />);
     expect(getByTestId('login-page')).toBeTruthy();
     const heading = getByRole('heading', { level: 1 }).textContent ?? '';
     expect(heading).toContain('登入');
-    // Google login button
-    const google = getByTestId('login-google') as HTMLAnchorElement;
-    expect(google.getAttribute('href')).toBe('/api/oauth/login/google');
-    expect(google.textContent).toContain('Google');
-    // CF Access fallback
+    // Self-signup link (primary V2 path per "先開放自建帳號")
+    const signup = getByTestId('login-signup-link') as HTMLAnchorElement;
+    expect(signup.getAttribute('href')).toBe('/signup');
+    // Google login button is hidden until the public-config probe confirms env
+    expect(queryByTestId('login-google')).toBeNull();
+    // CF Access fallback still present (transitional)
     const cf = getByTestId('login-cf-access') as HTMLAnchorElement;
     expect(cf.getAttribute('href')).toBe('/manage');
     expect(cf.textContent).toContain('Cloudflare Access');
