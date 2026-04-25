@@ -45,7 +45,7 @@ describe('isAllowedOrigin', () => {
 describe('checkCsrf', () => {
   it('GET 請求直接放行', () => {
     const req = new Request('https://test.com/api/trips', { method: 'GET' });
-    expect(checkCsrf(req, baseEnv)).toBeNull();
+    expect(checkCsrf(req, baseEnv, new URL(req.url))).toBeNull();
   });
 
   it('POST 有合法 Origin → 放行', () => {
@@ -53,12 +53,12 @@ describe('checkCsrf', () => {
       method: 'POST',
       headers: { Origin: 'https://trip-planner-dby.pages.dev' },
     });
-    expect(checkCsrf(req, baseEnv)).toBeNull();
+    expect(checkCsrf(req, baseEnv, new URL(req.url))).toBeNull();
   });
 
   it('POST 無 Origin 無 Service Token → 403', () => {
     const req = new Request('https://test.com/api/trips', { method: 'POST' });
-    const resp = checkCsrf(req, baseEnv);
+    const resp = checkCsrf(req, baseEnv, new URL(req.url));
     expect(resp).not.toBeNull();
     expect(resp!.status).toBe(403);
   });
@@ -71,7 +71,7 @@ describe('checkCsrf', () => {
         'CF-Access-Client-Secret': 'some-secret',
       },
     });
-    expect(checkCsrf(req, baseEnv)).toBeNull();
+    expect(checkCsrf(req, baseEnv, new URL(req.url))).toBeNull();
   });
 
   it('POST 非法 Origin → 403', () => {
@@ -79,7 +79,7 @@ describe('checkCsrf', () => {
       method: 'POST',
       headers: { Origin: 'https://evil.com' },
     });
-    const resp = checkCsrf(req, baseEnv);
+    const resp = checkCsrf(req, baseEnv, new URL(req.url));
     expect(resp!.status).toBe(403);
   });
 
@@ -88,7 +88,7 @@ describe('checkCsrf', () => {
       method: 'DELETE',
       headers: { Origin: 'http://localhost:5173' },
     });
-    expect(checkCsrf(req, baseEnv)).toBeNull();
+    expect(checkCsrf(req, baseEnv, new URL(req.url))).toBeNull();
   });
 });
 

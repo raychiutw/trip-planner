@@ -156,15 +156,26 @@ export function isAllowedOrigin(origin: string, env: Env): boolean {
  * CSRF protection for mutating requests.
  *
  * Validates the Origin header for POST/PUT/PATCH/DELETE requests.
- * Requests without an Origin header are only permitted when they carry a
- * CF-Access-Client-Id header (i.e. service-token CLI calls that don't set
- * Origin).
+ *
+ * Bypasses (these endpoints carry their own auth, not session-cookie-based):
+ *   - `/api/oauth/*` — OAuth wire endpoints authenticate via client_secret /
+ *     PKCE / Bearer token. Origin is irrelevant; spec-compliant clients
+ *     (curl, server-to-server) won't send it.
+ *   - `Authorization: Bearer` header present — V2 service token (client_credentials
+ *     grant). Bearer-auth requests come from CLI / cron, not browsers.
+ *   - `CF-Access-Client-Id` + `CF-Access-Client-Secret` — legacy service token.
  */
 /** @internal — exported for unit testing */
-export function checkCsrf(request: Request, env: Env): Response | null {
+export function checkCsrf(request: Request, env: Env, url: URL): Response | null {
   const method = request.method.toUpperCase();
   const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
   if (!mutating) return null;
+
+  // OAuth wire endpoints handle their own auth — skip session-cookie CSRF.
+  if (url.pathname.startsWith('/api/oauth/')) return null;
+
+  // V2 Bearer token = service-to-service, not browser. No Origin needed.
+  if (request.headers.get('Authorization')?.startsWith('Bearer ')) return null;
 
   const origin = request.headers.get('Origin');
   if (!origin) {
@@ -229,7 +240,7 @@ async function handleAuth(
   }
 
   // CSRF protection for all mutating requests
-  const csrfError = checkCsrf(request, env);
+  const csrfError = checkCsrf(request, env, url);
   if (csrfError) return csrfError;
 
   // Companion scope restriction — tp-request scheduler sends this header

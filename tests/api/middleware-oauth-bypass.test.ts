@@ -22,11 +22,17 @@ describe('_middleware.ts — OAuth bypass (V2-P1)', () => {
   });
 
   it('bypass 設 auth = null 並 context.next()', () => {
-    // 抓 OAuth pattern 後 5 行 window 找 auth = null + context.next()
+    // V2-P6 cutover 後檔案有兩個 /api/oauth/ 比對:CSRF bypass 跟 handleAuth
+    // bypass。lastIndexOf 抓 handleAuth 那個(它後面才有 auth = null + next())。
     const lines = MIDDLEWARE_SRC.split('\n');
-    const oauthLineIdx = lines.findIndex((l) => l.includes("'/api/oauth/'") || l.includes('"/api/oauth/"'));
-    expect(oauthLineIdx).toBeGreaterThan(0);
-    const window = lines.slice(oauthLineIdx, oauthLineIdx + 5).join('\n');
+    let lastOauthBypass = -1;
+    lines.forEach((l, i) => {
+      if (l.includes("startsWith('/api/oauth/')") || l.includes('startsWith("/api/oauth/")')) {
+        lastOauthBypass = i;
+      }
+    });
+    expect(lastOauthBypass).toBeGreaterThan(0);
+    const window = lines.slice(lastOauthBypass, lastOauthBypass + 5).join('\n');
     expect(window).toMatch(/auth\s*=\s*null/);
     expect(window).toMatch(/context\.next\(\)/);
   });
