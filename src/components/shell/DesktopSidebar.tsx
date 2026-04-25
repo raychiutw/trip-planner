@@ -51,7 +51,7 @@ const SCOPED_STYLES = `
 .tp-sidebar {
   background: var(--color-background);
   border-right: 1px solid var(--color-border);
-  padding: 20px 12px 16px;
+  padding: 20px 14px 16px;
   display: flex; flex-direction: column;
   gap: 4px;
   height: 100%;
