@@ -1,12 +1,31 @@
 /**
- * POST /api/oauth/server-token unit test — V2-P4
+ * POST /api/oauth/token unit test — V2-P4
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { onRequestPost } from '../../functions/api/oauth/server-token';
+import { onRequestPost } from '../../functions/api/oauth/token';
 import { hashPassword } from '../../src/server/password';
 
 interface MockEnv {
   DB?: { prepare: ReturnType<typeof vi.fn> };
+  OAUTH_SIGNING_PRIVATE_KEY?: string;
+}
+
+async function generateTestPrivateKeyBase64(): Promise<string> {
+  const pair = await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['sign', 'verify'],
+  );
+  const exported = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
+  const bytes = new Uint8Array(exported);
+  let str = '';
+  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
+  return btoa(str);
 }
 
 function makeStmt(firstResult: unknown = null) {
@@ -34,7 +53,8 @@ function makeAuthorizationCodePayload(overrides: Partial<Record<string, unknown>
       scopes: ['openid', 'profile'],
       code_challenge: null,
       code_challenge_method: null,
-      used: false,
+      // `consumed` is undefined by default (fresh code). Override with a timestamp
+      // to simulate a code that's already been used (replay test).
       ...overrides,
     }),
     expires_at: Date.now() + 60_000,
@@ -49,7 +69,7 @@ function makeContext(body: unknown, env: MockEnv, contentType = 'application/jso
     bodyStr = JSON.stringify(body);
   }
   return {
-    request: new Request('https://x.com/api/oauth/server-token', {
+    request: new Request('https://x.com/api/oauth/token', {
       method: 'POST',
       headers: { 'content-type': contentType },
       body: bodyStr,
@@ -68,7 +88,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
 
-describe('POST /api/oauth/server-token', () => {
+describe('POST /api/oauth/token', () => {
   it('400 unsupported_grant_type when not authorization_code', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({ grant_type: 'password' }, env));
@@ -208,11 +228,14 @@ describe('POST /api/oauth/server-token', () => {
     expect(res.status).toBe(200);
   });
 
-  it('400 invalid_grant when code already used (replay protection)', async () => {
+  it('400 invalid_grant when code already consumed (replay protection)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
       if (sql.includes('SELECT payload')) {
-        return makeStmt(makeAuthorizationCodePayload({ used: true }));
+        // Real D1Adapter.consume() sets `$.consumed` (timestamp), not `used`.
+        // Test mirrors production semantics so the test would catch a regression
+        // where token.ts checks the wrong field.
+        return makeStmt(makeAuthorizationCodePayload({ consumed: Date.now() - 1000 }));
       }
       return makeStmt();
     });
@@ -225,6 +248,28 @@ describe('POST /api/oauth/server-token', () => {
     }, env));
     expect(res.status).toBe(400);
     expect((await res.json() as { error_description: string }).error_description).toContain('already used');
+  });
+
+  it('replay attack triggers cascade revoke of access+refresh tokens (RFC 6749 §10.5)', async () => {
+    const sqls: string[] = [];
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      sqls.push(sql);
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload')) {
+        // grantId persisted on the code at consume() time → enables cascade
+        return makeStmt(makeAuthorizationCodePayload({ consumed: Date.now() - 1000, grantId: 'grant-xyz' }));
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+    // revokeByGrantId fires DELETE FROM oauth_models WHERE json_extract(payload, '$.grantId')
+    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models WHERE json_extract(payload'))).toBe(true);
   });
 
   it('confidential client requires + verifies client_secret', async () => {
@@ -254,7 +299,7 @@ describe('POST /api/oauth/server-token', () => {
   }, 60_000);
 });
 
-describe('POST /api/oauth/server-token — refresh_token grant', () => {
+describe('POST /api/oauth/token — refresh_token grant', () => {
   it('happy path: rotate refresh + issue new access', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
@@ -285,9 +330,47 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
     expect(json.token_type).toBe('Bearer');
     expect(json.scope).toBe('openid profile');
 
-    // Old refresh token destroyed (rotation)
+    // Old refresh token marked consumed (NOT destroyed — kept for reuse detection)
     const sqls = dbPrepare.mock.calls.map((c) => c[0] as string);
-    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models'))).toBe(true);
+    expect(sqls.some((s) => s.includes('UPDATE oauth_models SET payload = json_set'))).toBe(true);
+    // New refresh_token must differ from the one we passed in (rotation guarantee)
+    expect(json.refresh_token).not.toBe('old-refresh-token');
+    expect(typeof json.refresh_token).toBe('string');
+    expect((json.refresh_token as string).length).toBeGreaterThan(40);
+  });
+
+  it('refresh-token reuse detection cascades family revoke (OAuth 2.1 §6.1)', async () => {
+    const sqls: string[] = [];
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      sqls.push(sql);
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        // Token row exists BUT was already consumed by an earlier rotation —
+        // means an attacker is replaying a stolen refresh_token.
+        return makeStmt({
+          payload: JSON.stringify({
+            client_id: 'mobile',
+            user_id: 'u1',
+            scopes: ['openid'],
+            grantId: 'family-1',
+            consumed: Date.now() - 5000,
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'leaked',
+    }, env));
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error_description: string }).error_description).toContain('reuse detected');
+    // Cascade DELETE on grantId ran for both AccessToken + RefreshToken
+    const cascadeCalls = sqls.filter((s) => s.includes('DELETE FROM oauth_models WHERE json_extract(payload'));
+    expect(cascadeCalls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('400 invalid_grant when refresh_token unknown / expired', async () => {
@@ -399,5 +482,144 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
     }, env2));
     expect(r2.status).toBe(400);
     expect(((await r2.json()) as { error: string }).error).toBe('invalid_scope');
+  });
+
+  it('id_token issued when scope=openid + signing key configured (V2-P5)', async () => {
+    const signingKey = await generateTestPrivateKeyBase64();
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt(makeAuthorizationCodePayload());
+      }
+      if (sql.includes('SELECT id, email, display_name')) {
+        return makeStmt({
+          id: 'user-1',
+          email: 'user@example.com',
+          display_name: 'Test User',
+          email_verified_at: '2026-04-20',
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = {
+      DB: { prepare: dbPrepare },
+      OAUTH_SIGNING_PRIVATE_KEY: signingKey,
+    };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'auth-code-xyz',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, string>;
+    expect(typeof json.id_token).toBe('string');
+
+    // Parse JWT manually (header.payload.sig)
+    const parts = json.id_token.split('.');
+    expect(parts.length).toBe(3);
+    const padded = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (padded.length % 4)) % 4;
+    const claims = JSON.parse(atob(padded + '='.repeat(padLen))) as Record<string, unknown>;
+    expect(claims.iss).toBe('https://x.com');
+    expect(claims.sub).toBe('user-1');
+    expect(claims.aud).toBe('mobile');
+    expect(claims.email).toBe('user@example.com');
+    expect(claims.email_verified).toBe(true);
+    expect(claims.name).toBe('Test User');
+    expect(typeof claims.iat).toBe('number');
+    expect(typeof claims.exp).toBe('number');
+    expect(claims.exp).toBeGreaterThan(claims.iat as number);
+  });
+
+  it('NO id_token when scope lacks openid (just trips:read)', async () => {
+    const signingKey = await generateTestPrivateKeyBase64();
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt(makeAuthorizationCodePayload({ scopes: ['trips.read'] }));
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = {
+      DB: { prepare: dbPrepare },
+      OAUTH_SIGNING_PRIVATE_KEY: signingKey,
+    };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(json.id_token).toBeUndefined();
+  });
+
+  it('access_token still issued when openid scope but signing key missing (graceful degrade)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt(makeAuthorizationCodePayload());
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(typeof json.access_token).toBe('string');
+    expect(json.id_token).toBeUndefined();
+  });
+
+  it('429 rate_limited when client bucket locked (V2-P6 throughput cap)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) {
+        return makeStmt({
+          bucket_key: 'oauth-token:mobile',
+          count: 101,
+          window_start: Date.now(),
+          locked_until: Date.now() + 30_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(429);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('rate_limited');
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
+  it('Bumps oauth-token bucket on every request (success or failure)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('FROM client_apps')) return makeStmt(null);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(401);
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+    );
+    expect(inserts.length).toBe(1);
   });
 });

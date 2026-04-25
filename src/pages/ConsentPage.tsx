@@ -3,13 +3,16 @@
  *
  * URL: /oauth/consent?client_id=...&scope=...&redirect_uri=...&state=...&response_type=code
  *
- * V2-P5 first slice — UI placeholder render，fetch client info + scopes from
- * URL params。Real consent flow integration 留 V2-P5 next slice（server-authorize
- * 改成 redirect 來這頁，user 決定後再 redirect 回 client with code）。
+ * Both Allow and Deny submit native HTML forms to /api/oauth/consent. The
+ * server records consent (Allow) or validates redirect_uri against the client
+ * allowlist before issuing the 302 (Deny). Native form POST avoids the
+ * client-side open-redirect vector and gives us SameSite=Lax CSRF protection
+ * for free.
  *
- * Allow → POST /api/oauth/server-consent { client_id, scope, decision: 'allow' }
- *   → 200 + redirect to original authorize endpoint with consent flag
- * Deny → 302 redirect_uri?error=access_denied&state=
+ * Allow → POST /api/oauth/consent { decision: 'allow', ... }
+ *   → server upserts Consent row + 302 to /api/oauth/authorize → issues code
+ * Deny  → POST /api/oauth/consent { decision: 'deny', ... }
+ *   → server validates redirect_uri ∈ client_apps.redirect_uris + 302 with error=access_denied
  */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -109,11 +112,13 @@ export default function ConsentPage() {
   const scope = searchParams.get('scope') ?? '';
   const redirectUri = searchParams.get('redirect_uri') ?? '';
   const state = searchParams.get('state') ?? '';
+  const responseType = searchParams.get('response_type') ?? 'code';
+  const codeChallenge = searchParams.get('code_challenge') ?? '';
+  const codeChallengeMethod = searchParams.get('code_challenge_method') ?? '';
   const requestedScopes = scope.split(/\s+/).filter(Boolean);
 
   const [clientInfo, setClientInfo] = useState<ClientAppInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!clientId) {
@@ -129,30 +134,6 @@ export default function ConsentPage() {
       homepage_url: null,
     });
   }, [clientId]);
-
-  function handleAllow() {
-    setBusy(true);
-    // V2-P5 next slice: POST /api/oauth/server-consent { client_id, scope, decision: 'allow' }
-    //   → server records consent + redirect to original authorize URL with consent_granted flag
-    //   → server-authorize re-runs, this time skip consent and issue code
-    // V2-P5 first slice: placeholder navigation back to original authorize
-    const params = new URLSearchParams({
-      client_id: clientId,
-      response_type: 'code',
-      scope,
-      redirect_uri: redirectUri,
-      state,
-      consent_granted: '1',
-    });
-    window.location.href = `/api/oauth/server-authorize?${params.toString()}`;
-  }
-
-  function handleDeny() {
-    if (!redirectUri) return;
-    const params = new URLSearchParams({ error: 'access_denied' });
-    if (state) params.set('state', state);
-    window.location.href = `${redirectUri}?${params.toString()}`;
-  }
 
   if (error) {
     return (
@@ -206,24 +187,42 @@ export default function ConsentPage() {
         </div>
 
         <div className="tp-consent-actions">
-          <button
-            type="button"
-            className="tp-consent-btn tp-consent-btn-deny"
-            onClick={handleDeny}
-            disabled={busy}
-            data-testid="consent-deny"
-          >
-            拒絕
-          </button>
-          <button
-            type="button"
-            className="tp-consent-btn tp-consent-btn-allow"
-            onClick={handleAllow}
-            disabled={busy}
-            data-testid="consent-allow"
-          >
-            同意
-          </button>
+          <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
+            <input type="hidden" name="decision" value="deny" />
+            <input type="hidden" name="client_id" value={clientId} />
+            <input type="hidden" name="redirect_uri" value={redirectUri} />
+            <input type="hidden" name="response_type" value={responseType} />
+            <input type="hidden" name="scope" value={scope} />
+            <input type="hidden" name="state" value={state} />
+            {codeChallenge && <input type="hidden" name="code_challenge" value={codeChallenge} />}
+            {codeChallengeMethod && <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />}
+            <button
+              type="submit"
+              className="tp-consent-btn tp-consent-btn-deny"
+              data-testid="consent-deny"
+              style={{ width: '100%' }}
+            >
+              拒絕
+            </button>
+          </form>
+          <form method="POST" action="/api/oauth/consent" style={{ flex: 1 }}>
+            <input type="hidden" name="decision" value="allow" />
+            <input type="hidden" name="client_id" value={clientId} />
+            <input type="hidden" name="redirect_uri" value={redirectUri} />
+            <input type="hidden" name="response_type" value={responseType} />
+            <input type="hidden" name="scope" value={scope} />
+            <input type="hidden" name="state" value={state} />
+            {codeChallenge && <input type="hidden" name="code_challenge" value={codeChallenge} />}
+            {codeChallengeMethod && <input type="hidden" name="code_challenge_method" value={codeChallengeMethod} />}
+            <button
+              type="submit"
+              className="tp-consent-btn tp-consent-btn-allow"
+              data-testid="consent-allow"
+              style={{ width: '100%' }}
+            >
+              同意
+            </button>
+          </form>
         </div>
 
         <p className="tp-consent-note">

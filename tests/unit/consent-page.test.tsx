@@ -44,30 +44,37 @@ describe('ConsentPage', () => {
     expect(screen.getByTestId('consent-scope-email').textContent).toContain('email 地址');
   });
 
-  it('Allow button → window.location.href = server-authorize URL with consent_granted', async () => {
+  it('Allow button submits POST form to /api/oauth/consent with decision=allow', async () => {
     renderWithParams('client_id=p&scope=openid&redirect_uri=https://x.com/cb&state=s');
     await waitFor(() => screen.getByTestId('consent-allow'));
-    fireEvent.click(screen.getByTestId('consent-allow'));
-    expect(window.location.href).toContain('/api/oauth/server-authorize?');
-    expect(window.location.href).toContain('client_id=p');
-    expect(window.location.href).toContain('consent_granted=1');
+    const allowBtn = screen.getByTestId('consent-allow') as HTMLButtonElement;
+    const form = allowBtn.closest('form') as HTMLFormElement;
+    expect(form).toBeTruthy();
+    expect(form.method.toLowerCase()).toBe('post');
+    expect(form.action).toContain('/api/oauth/consent');
+    const decision = form.querySelector('input[name="decision"]') as HTMLInputElement;
+    expect(decision.value).toBe('allow');
+    const cid = form.querySelector('input[name="client_id"]') as HTMLInputElement;
+    expect(cid.value).toBe('p');
+    const ruri = form.querySelector('input[name="redirect_uri"]') as HTMLInputElement;
+    expect(ruri.value).toBe('https://x.com/cb');
+    const st = form.querySelector('input[name="state"]') as HTMLInputElement;
+    expect(st.value).toBe('s');
   });
 
-  it('Deny button → redirect_uri?error=access_denied&state=', async () => {
+  it('Deny button submits POST form to /api/oauth/consent with decision=deny (no client-side redirect)', async () => {
     renderWithParams('client_id=p&scope=openid&redirect_uri=https%3A%2F%2Fx.com%2Fcb&state=csrf-tok');
     await waitFor(() => screen.getByTestId('consent-deny'));
-    fireEvent.click(screen.getByTestId('consent-deny'));
-    expect(window.location.href).toContain('https://x.com/cb');
-    expect(window.location.href).toContain('error=access_denied');
-    expect(window.location.href).toContain('state=csrf-tok');
-  });
-
-  it('Deny without redirect_uri → no redirect (early return)', async () => {
-    Object.defineProperty(window, 'location', { value: { href: 'initial' }, writable: true });
-    renderWithParams('client_id=p&scope=openid');
-    await waitFor(() => screen.getByTestId('consent-deny'));
-    fireEvent.click(screen.getByTestId('consent-deny'));
-    expect(window.location.href).toBe('initial');
+    const denyBtn = screen.getByTestId('consent-deny') as HTMLButtonElement;
+    const form = denyBtn.closest('form') as HTMLFormElement;
+    expect(form).toBeTruthy();
+    expect(form.method.toLowerCase()).toBe('post');
+    expect(form.action).toContain('/api/oauth/consent');
+    const decision = form.querySelector('input[name="decision"]') as HTMLInputElement;
+    expect(decision.value).toBe('deny');
+    // redirect_uri is in the form body — server validates against client_apps allowlist
+    const ruri = form.querySelector('input[name="redirect_uri"]') as HTMLInputElement;
+    expect(ruri.value).toBe('https://x.com/cb');
   });
 
   it('Empty scope shows "無 scope 請求"', async () => {

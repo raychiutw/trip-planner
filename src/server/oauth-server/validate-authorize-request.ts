@@ -1,7 +1,7 @@
 /**
  * OAuth Server `/authorize` request validator — V2-P4
  *
- * Pure module — caller (functions/api/oauth/server-authorize.ts，next slice)
+ * Pure module — caller (functions/api/oauth/authorize.ts，V2-P5 routing fix)
  * 用此驗 incoming authorize request from external OAuth client。
  *
  * Per RFC 6749 §4.1.1（authorization_code grant）：
