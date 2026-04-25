@@ -121,6 +121,21 @@ describe('DesktopSidebar — user chip', () => {
     });
     expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
   });
+
+  it('已登入：顯示「登出」link href=/api/oauth/logout', () => {
+    const { container } = renderSidebar({
+      user: { name: 'Ray', email: 'ray@trip.io' },
+    });
+    const logout = container.querySelector('[data-testid="sidebar-logout"]') as HTMLAnchorElement | null;
+    expect(logout).toBeTruthy();
+    expect(logout?.getAttribute('href')).toBe('/api/oauth/logout');
+    expect(logout?.textContent).toContain('登出');
+  });
+
+  it('未登入時不顯示「登出」link', () => {
+    const { container } = renderSidebar({ user: null });
+    expect(container.querySelector('[data-testid="sidebar-logout"]')).toBeNull();
+  });
 });
 
 describe('DesktopSidebar — New Trip CTA', () => {

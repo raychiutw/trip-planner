@@ -134,6 +134,20 @@ const SCOPED_STYLES = `
   color: var(--color-accent);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.tp-account-logout {
+  display: block;
+  margin-top: 6px;
+  padding: 8px;
+  font: inherit;
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  min-height: var(--spacing-tap-min);
+}
+.tp-account-logout:hover { color: var(--color-foreground); }
+.tp-account-logout:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 `;
 
 export interface SidebarUser {
@@ -191,13 +205,22 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
           </button>
 
           {user ? (
-            <div className="tp-account-card" data-testid="sidebar-account-card">
-              <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
-              <div className="tp-account-body">
-                <div className="tp-account-name">{user.name}</div>
-                <div className="tp-account-email">{user.email}</div>
+            <>
+              <div className="tp-account-card" data-testid="sidebar-account-card">
+                <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
+                <div className="tp-account-body">
+                  <div className="tp-account-name">{user.name}</div>
+                  <div className="tp-account-email">{user.email}</div>
+                </div>
               </div>
-            </div>
+              <a
+                className="tp-account-logout"
+                href="/api/oauth/logout"
+                data-testid="sidebar-logout"
+              >
+                登出
+              </a>
+            </>
           ) : (
             <div className="tp-user-chip" data-testid="sidebar-user-chip">
               <div className="tp-avatar" aria-hidden="true">?</div>
