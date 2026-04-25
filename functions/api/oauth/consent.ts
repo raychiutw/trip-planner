@@ -1,8 +1,8 @@
 /**
- * POST /api/oauth/server-consent
+ * POST /api/oauth/consent
  *
  * V2-P5 — Record user consent for client_id + scopes，then redirect back to
- * /api/oauth/server-authorize（this time will skip consent check + issue code）。
+ * /api/oauth/authorize（this time will skip consent check + issue code）。
  *
  * Body (form-urlencoded or JSON):
  *   client_id
@@ -18,12 +18,9 @@
  *
  * Behavior:
  *   - decision='allow' + session: store Consent in D1 oauth_models + 302 to
- *     /api/oauth/server-authorize?... (server-authorize 下次跑時 see consent + issue code)
+ *     /api/oauth/authorize?... (authorize 下次跑時 see consent + issue code)
  *   - decision='deny' + redirect_uri: 302 to redirect_uri?error=access_denied&state=
  *   - No session: 302 to /login?redirect_after=...
- *
- * V2-P5 next slice: server-authorize.ts integrate consent check (read D1 Consent
- * before code gen + redirect to /oauth/consent if missing or scopes incomplete).
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { getSessionUser } from '../_session';
@@ -123,7 +120,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     CONSENT_TTL_SEC,
   );
 
-  // Redirect back to server-authorize with original params — this time will
+  // Redirect back to authorize with original params — this time will
   // pick up consent and proceed to code gen
   const params = new URLSearchParams();
   if (body.client_id) params.set('client_id', body.client_id);
@@ -136,6 +133,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   return new Response(null, {
     status: 302,
-    headers: { Location: `/api/oauth/server-authorize?${params.toString()}` },
+    headers: { Location: `/api/oauth/authorize?${params.toString()}` },
   });
 };

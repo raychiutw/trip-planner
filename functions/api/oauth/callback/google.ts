@@ -1,7 +1,12 @@
 /**
- * GET /api/oauth/callback?code=...&state=...
+ * GET /api/oauth/callback/google?code=...&state=...
  *
  * V2-P1 OAuth flow completion — Google OIDC client callback。
+ *
+ * **DEPLOY NOTE (V2-P5 routing fix)**: Google Cloud Console redirect_uri
+ * 需從舊路徑 `/api/oauth/callback` 改成 `/api/oauth/callback/google`。
+ * 同時 Google client redirect URL 從 `/api/oauth/authorize?provider=google`
+ * 改成 `/api/oauth/login/google`。
  *
  * Flow:
  *   1. Validate state (D1 oauth_models name='OAuthState' lookup + destroy on use)
@@ -14,9 +19,9 @@
  *   5. issueSession(uid)
  *   6. 302 redirect to state.redirectAfterLogin
  */
-import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
-import { issueSession } from '../_session';
-import type { Env } from '../_types';
+import { D1Adapter, type AdapterPayload } from '../../../../src/server/oauth-d1-adapter';
+import { issueSession } from '../../_session';
+import type { Env } from '../../_types';
 
 interface GoogleTokenResponse {
   access_token: string;
@@ -88,7 +93,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   // 3. Token exchange with Google
-  const callbackUri = `${url.origin}/api/oauth/callback`;
+  const callbackUri = `${url.origin}/api/oauth/callback/google`;
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },

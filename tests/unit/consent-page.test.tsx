@@ -48,7 +48,7 @@ describe('ConsentPage', () => {
     renderWithParams('client_id=p&scope=openid&redirect_uri=https://x.com/cb&state=s');
     await waitFor(() => screen.getByTestId('consent-allow'));
     fireEvent.click(screen.getByTestId('consent-allow'));
-    expect(window.location.href).toContain('/api/oauth/server-authorize?');
+    expect(window.location.href).toContain('/api/oauth/authorize?');
     expect(window.location.href).toContain('client_id=p');
     expect(window.location.href).toContain('consent_granted=1');
   });

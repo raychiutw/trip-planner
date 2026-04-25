@@ -1,7 +1,7 @@
 /**
  * LoginPage — V2-P1 sign-in UI（Google OIDC + 過渡期 CF Access fallback）
  *
- * Primary：「使用 Google 登入」button → redirect /api/oauth/authorize
+ * Primary：「使用 Google 登入」button → redirect /api/oauth/login/google
  *   （後端 V2-P1 next slice 接 Google OIDC client flow）
  * Fallback：CF Access 入口連結（V2 完整上線前 /manage 仍走 CF Access）
  */
@@ -77,7 +77,7 @@ export default function LoginPage() {
       <div className="tp-login-actions">
         <a
           className="tp-login-google"
-          href="/api/oauth/authorize?provider=google"
+          href="/api/oauth/login/google"
           data-testid="login-google"
         >
           <GoogleLogo />
