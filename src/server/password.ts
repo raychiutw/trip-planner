@@ -21,7 +21,22 @@
 
 const ALGORITHM_NAME = 'pbkdf2';
 const HASH_FN = 'SHA-256';
-const ITERATIONS = 600_000; // OWASP 2023 PBKDF2-SHA256 recommendation
+/**
+ * PBKDF2 iteration count.
+ *
+ * OWASP 2023 ideal is 600,000 for SHA-256, but Cloudflare Workers Free tier has a
+ * 10ms CPU time budget per request. 600k iterations consistently exceeds that on
+ * the production isolate, throwing inside `crypto.subtle.deriveBits` and
+ * surfacing as `SIGNUP_PASSWORD_FORMAT` to the user. 100,000 is the older OWASP
+ * minimum (still considered secure for non-government use) and runs in ~3-5ms
+ * on Workers, well under the budget.
+ *
+ * Format is self-describing (`pbkdf2$<iter>$<salt>$<hash>`) so old hashes with
+ * different iter counts still verify — this is a safe forward change.
+ *
+ * Bump back to 600k once the project moves to Workers Paid plan (50ms budget).
+ */
+const ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;
 
