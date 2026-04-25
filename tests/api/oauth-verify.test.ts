@@ -66,7 +66,7 @@ describe('GET /api/oauth/verify', () => {
     expect(res.headers.get('Location')).toBe('/login?verify_error=expired');
   });
 
-  it('302 → /login?verified=1 happy path + UPDATE email_verified_at', async () => {
+  it('302 → /login?verified=1 happy path + UPDATE email_verified_at + consume', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
         return makeStmt({
@@ -74,13 +74,12 @@ describe('GET /api/oauth/verify', () => {
             userId: 'u-1',
             email: 'u@x.com',
             createdAt: Date.now() - 1000,
-            used: false,
           }),
           expires_at: Date.now() + 60_000,
         });
       }
       if (sql.includes('UPDATE users SET email_verified_at')) return makeStmt();
-      if (sql.includes('DELETE FROM oauth_models')) return makeStmt();
+      if (sql.includes('UPDATE oauth_models SET payload = json_set')) return makeStmt();
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
@@ -88,16 +87,47 @@ describe('GET /api/oauth/verify', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/login?verified=1');
 
-    // Assert UPDATE called
+    // Assert UPDATE users called
     const updateCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('UPDATE users SET email_verified_at'),
     );
     expect(updateCall).toBeTruthy();
-    // Assert DELETE called (one-time use)
+    // Assert consume() called (UPDATE oauth_models SET payload = json_set, NOT DELETE)
+    const consumeCall = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE oauth_models SET payload = json_set'),
+    );
+    expect(consumeCall).toBeTruthy();
+    // DELETE no longer called — token is kept until expires_at so re-clicks return 'used'
     const deleteCall = dbPrepare.mock.calls.find(
       (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
     );
-    expect(deleteCall).toBeTruthy();
+    expect(deleteCall).toBeFalsy();
+  });
+
+  it('302 → /login?verify_error=used when token already consumed (re-click)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            userId: 'u-1',
+            email: 'u@x.com',
+            createdAt: Date.now() - 1000,
+            consumed: Date.now() - 100,
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestGet(makeVerifyContext('token=already-consumed', env));
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toBe('/login?verify_error=used');
+    // Should NOT touch users table
+    const updateUsers = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE users SET email_verified_at'),
+    );
+    expect(updateUsers).toBeFalsy();
   });
 
   it('302 → /login?verify_error=expired when token expired (D1Adapter.find returns null)', async () => {
@@ -113,11 +143,11 @@ describe('GET /api/oauth/verify', () => {
     expect(res.headers.get('Location')).toBe('/login?verify_error=expired');
   });
 
-  it('does NOT destroy token if UPDATE fails (so user can retry)', async () => {
+  it('does NOT consume token if UPDATE fails (so user can retry)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
         return makeStmt({
-          payload: JSON.stringify({ userId: 'u', email: 'u@x.com', createdAt: 0, used: false }),
+          payload: JSON.stringify({ userId: 'u', email: 'u@x.com', createdAt: 0 }),
           expires_at: Date.now() + 60_000,
         });
       }
@@ -133,11 +163,11 @@ describe('GET /api/oauth/verify', () => {
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/login?verify_error=server_error');
 
-    // DELETE was NOT called (token preserved for retry)
-    const deleteCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM oauth_models'),
+    // consume() was NOT called (token preserved for retry)
+    const consumeCall = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('UPDATE oauth_models SET payload = json_set'),
     );
-    expect(deleteCall).toBeFalsy();
+    expect(consumeCall).toBeFalsy();
   });
 });
 

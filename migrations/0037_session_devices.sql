@@ -49,7 +49,7 @@ CREATE TABLE session_devices (
   revoked_at      TEXT
 );
 
+-- sid lookup is covered by the implicit UNIQUE index on `sid TEXT NOT NULL UNIQUE`
+-- (SQLite auto-creates one). No separate single-column index needed.
 CREATE INDEX idx_session_devices_user_active
   ON session_devices(user_id, revoked_at, last_seen_at);
-CREATE INDEX idx_session_devices_sid
-  ON session_devices(sid);

@@ -13,6 +13,7 @@
  * 的是「我同意了什麼 app 用我的帳號」。
  */
 import { requireSessionUser } from '../_session';
+import { rawJson } from '../_utils';
 import type { Env } from '../_types';
 
 interface ConsentPayloadShape {
@@ -30,13 +31,6 @@ interface ConnectedAppRow {
   app_logo_url: string | null;
   homepage_url: string | null;
   status: string;
-}
-
-function snakeJson(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -72,5 +66,5 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     };
   });
 
-  return snakeJson({ apps });
+  return rawJson({ apps });
 };

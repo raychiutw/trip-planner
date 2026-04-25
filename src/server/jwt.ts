@@ -155,10 +155,33 @@ export async function signJwt(
 }
 
 /**
- * Verify JWT signature + return claims。Throws on invalid。Used in tests + future
- * userinfo bearer-token check。
+ * Options for verifyJwt — bearer-token consumers MUST pass expectedIss + expectedAud
+ * (otherwise verifyJwt only proves "this token was signed by some key we have", not
+ * that it was issued by the expected party FOR us).
+ *
+ * @field expectedIss — exact match (string) or any-of (string[]); throws if mismatch.
+ * @field expectedAud — exact match against claims.aud; supports `aud` as string OR string[].
+ * @field clockSkewSec — allow this many seconds of clock skew (default 60).
+ * @field now — override "now" (unix seconds) for testing.
  */
-export async function verifyJwt(token: string, publicKey: CryptoKey): Promise<JwtClaims> {
+export interface VerifyJwtOptions {
+  expectedIss?: string | string[];
+  expectedAud?: string;
+  clockSkewSec?: number;
+  now?: number;
+}
+
+/**
+ * Verify JWT signature + claims (exp/nbf/iss/aud). Throws on invalid。
+ *
+ * Signature-only verification is NOT sufficient for bearer-token authentication —
+ * pass `expectedIss` and `expectedAud` to defend against token-substitution.
+ */
+export async function verifyJwt(
+  token: string,
+  publicKey: CryptoKey,
+  options: VerifyJwtOptions = {},
+): Promise<JwtClaims> {
   const parts = token.split('.');
   if (parts.length !== 3) throw new Error('JWT must have 3 parts');
   const [encodedHeader, encodedPayload, encodedSig] = parts as [string, string, string];
@@ -171,7 +194,50 @@ export async function verifyJwt(token: string, publicKey: CryptoKey): Promise<Jw
   );
   if (!ok) throw new Error('JWT signature invalid');
   const claimsJson = new TextDecoder().decode(base64urlToBytes(encodedPayload));
-  return JSON.parse(claimsJson) as JwtClaims;
+  const claims = JSON.parse(claimsJson) as JwtClaims;
+
+  const skew = options.clockSkewSec ?? 60;
+  const nowSec = options.now ?? Math.floor(Date.now() / 1000);
+
+  if (typeof claims.exp === 'number' && nowSec - skew >= claims.exp) {
+    throw new Error('JWT expired');
+  }
+  if (typeof claims.nbf === 'number' && nowSec + skew < claims.nbf) {
+    throw new Error('JWT not yet valid (nbf)');
+  }
+
+  if (options.expectedIss !== undefined) {
+    const expectedIssList = Array.isArray(options.expectedIss) ? options.expectedIss : [options.expectedIss];
+    if (!expectedIssList.includes(claims.iss)) {
+      throw new Error(`JWT iss mismatch: got "${claims.iss}"`);
+    }
+  }
+
+  if (options.expectedAud !== undefined) {
+    const aud = claims.aud;
+    const audList = Array.isArray(aud) ? aud : [aud];
+    if (!audList.includes(options.expectedAud)) {
+      throw new Error(`JWT aud mismatch: expected "${options.expectedAud}"`);
+    }
+  }
+
+  return claims;
+}
+
+/**
+ * Decode JWT header without signature verification — used to extract `kid` so the
+ * caller can fetch the matching key from JWKS before calling verifyJwt.
+ */
+export function decodeJwtHeader(token: string): JwtHeader & { kid?: string } {
+  const parts = token.split('.');
+  if (parts.length !== 3) throw new Error('JWT must have 3 parts');
+  const headerJson = new TextDecoder().decode(base64urlToBytes(parts[0]!));
+  return JSON.parse(headerJson) as JwtHeader;
+}
+
+/** Import a JWK (e.g. from Google JWKS endpoint) as a verify-only public CryptoKey. */
+export async function importPublicJwk(jwk: JsonWebKey): Promise<CryptoKey> {
+  return crypto.subtle.importKey('jwk', jwk, ALG, true, ['verify']);
 }
 
 /** Compute kid from public key JWK n component (deterministic, stable across deploys) */

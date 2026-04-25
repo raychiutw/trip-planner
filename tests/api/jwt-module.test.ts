@@ -91,6 +91,77 @@ describe('signJwt + verifyJwt', () => {
   });
 });
 
+describe('verifyJwt claim validation', () => {
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  async function signedToken(claimsOverride: Record<string, unknown>) {
+    const { privateKey, publicKey } = await generateTestKeypair();
+    const claims = {
+      iss: 'https://issuer.example',
+      sub: 'user-1',
+      aud: 'client-1',
+      exp: nowSec + 3600,
+      iat: nowSec,
+      ...claimsOverride,
+    };
+    const token = await signJwt(claims as never, privateKey, 'k');
+    return { token, publicKey };
+  }
+
+  it('throws when exp is in the past (token expired)', async () => {
+    const { token, publicKey } = await signedToken({ exp: nowSec - 120 });
+    await expect(verifyJwt(token, publicKey)).rejects.toThrow(/expired/i);
+  });
+
+  it('passes when exp is within clock-skew window (default 60s)', async () => {
+    // exp 30s in the past — within default 60s skew
+    const { token, publicKey } = await signedToken({ exp: nowSec - 30 });
+    await expect(verifyJwt(token, publicKey)).resolves.toBeDefined();
+  });
+
+  it('throws when nbf is in the future (token not yet valid)', async () => {
+    const { token, publicKey } = await signedToken({ nbf: nowSec + 600 });
+    await expect(verifyJwt(token, publicKey)).rejects.toThrow(/nbf/i);
+  });
+
+  it('throws on iss mismatch when expectedIss provided', async () => {
+    const { token, publicKey } = await signedToken({ iss: 'https://attacker.com' });
+    await expect(
+      verifyJwt(token, publicKey, { expectedIss: 'https://issuer.example' }),
+    ).rejects.toThrow(/iss/i);
+  });
+
+  it('accepts iss when expectedIss is an array containing it', async () => {
+    const { token, publicKey } = await signedToken({ iss: 'accounts.google.com' });
+    await expect(
+      verifyJwt(token, publicKey, {
+        expectedIss: ['https://accounts.google.com', 'accounts.google.com'],
+      }),
+    ).resolves.toBeDefined();
+  });
+
+  it('throws on aud mismatch when expectedAud provided', async () => {
+    const { token, publicKey } = await signedToken({ aud: 'different-client' });
+    await expect(
+      verifyJwt(token, publicKey, { expectedAud: 'client-1' }),
+    ).rejects.toThrow(/aud/i);
+  });
+
+  it('accepts when aud is array and contains expectedAud', async () => {
+    const { token, publicKey } = await signedToken({ aud: ['other', 'client-1'] });
+    await expect(
+      verifyJwt(token, publicKey, { expectedAud: 'client-1' }),
+    ).resolves.toBeDefined();
+  });
+
+  it('clockSkewSec=0 fails token issued exactly now (no slack)', async () => {
+    const { token, publicKey } = await signedToken({ exp: nowSec });
+    await expect(
+      verifyJwt(token, publicKey, { clockSkewSec: 0, now: nowSec }),
+    ).rejects.toThrow(/expired/i);
+  });
+});
+
 describe('exportPublicJwk', () => {
   it('returns RFC 7517 JWK with kty=RSA, use=sig, alg=RS256, kid', async () => {
     const { privateKey } = await generateTestKeypair();

@@ -25,6 +25,7 @@
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
+import type { D1Database } from '@cloudflare/workers-types';
 import type { Env } from '../_types';
 
 const CONSENT_TTL_SEC = 365 * 24 * 60 * 60; // 1 year — user manually revokes via 帳號設定
@@ -55,10 +56,46 @@ async function parseBody(request: Request): Promise<ConsentBody> {
   return {};
 }
 
-function safeRedirect(redirectUri: string | undefined, errorCode: string, state?: string): Response {
-  if (!redirectUri || !redirectUri.startsWith('https://') && !redirectUri.startsWith('http://')) {
+/**
+ * Lookup client + verify redirect_uri is in the client's exact-match allowlist.
+ * Prevents open redirect (attacker-supplied redirect_uri spoofing the deny path).
+ */
+async function isAllowedRedirectUri(
+  db: D1Database,
+  clientId: string,
+  redirectUri: string,
+): Promise<boolean> {
+  const row = await db
+    .prepare('SELECT redirect_uris FROM client_apps WHERE client_id = ? AND status = ?')
+    .bind(clientId, 'active')
+    .first<{ redirect_uris: string }>();
+  if (!row) return false;
+  try {
+    const parsed: unknown = JSON.parse(row.redirect_uris);
+    if (!Array.isArray(parsed)) return false;
+    return parsed.some((x) => typeof x === 'string' && x === redirectUri);
+  } catch {
+    return false;
+  }
+}
+
+async function safeRedirect(
+  db: D1Database,
+  clientId: string | undefined,
+  redirectUri: string | undefined,
+  errorCode: string,
+  state?: string,
+): Promise<Response> {
+  if (!clientId || !redirectUri) {
     return new Response(
-      JSON.stringify({ error: errorCode }),
+      JSON.stringify({ error: 'invalid_request' }),
+      { status: 400, headers: { 'content-type': 'application/json' } },
+    );
+  }
+  if (!(await isAllowedRedirectUri(db, clientId, redirectUri))) {
+    // Open-redirect guard — never reflect attacker-supplied redirect_uri.
+    return new Response(
+      JSON.stringify({ error: 'invalid_request', error_description: 'redirect_uri not registered for this client' }),
       { status: 400, headers: { 'content-type': 'application/json' } },
     );
   }
@@ -92,7 +129,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   if (body.decision === 'deny') {
-    return safeRedirect(body.redirect_uri, 'access_denied', body.state);
+    return safeRedirect(context.env.DB, body.client_id, body.redirect_uri, 'access_denied', body.state);
   }
 
   if (body.decision !== 'allow') {

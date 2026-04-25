@@ -7,10 +7,12 @@
  * Flow:
  *   1. Extract token from query
  *   2. D1Adapter find token (oauth_models name='EmailVerification')
- *   3. If not found / expired / used → 302 /login?verify_error=expired
- *   4. UPDATE users SET email_verified_at = ISO_NOW WHERE id = userId
- *   5. destroy token (one-time use)
- *   6. 302 /login?verified=1
+ *   3. If row missing / expired → 302 /login?verify_error=expired
+ *   4. If row exists but already used → 302 /login?verify_error=used
+ *   5. UPDATE users SET email_verified_at = ISO_NOW WHERE id = userId
+ *   6. consume token (set $.consumed timestamp — keeps row addressable for the
+ *      remainder of TTL so re-clicks return 'used' instead of misleading 'expired')
+ *   7. 302 /login?verified=1
  *
  * 為什麼 GET 而不 POST：使用者點 email 連結觸發。標準 email-link 模式都用 GET。
  * Token 在 URL（不在 body）的安全考量：
@@ -24,7 +26,8 @@ interface VerifyTokenPayload {
   userId: string;
   email: string;
   createdAt: number;
-  used?: boolean;
+  /** Set on successful verify — re-clicks within TTL see this and return verify_error=used */
+  consumed?: number;
   [key: string]: unknown;
 }
 
@@ -49,7 +52,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!tokenRow) {
     return redirect('/login?verify_error=expired');
   }
-  if (tokenRow.used) {
+  if (tokenRow.consumed) {
     return redirect('/login?verify_error=used');
   }
 
@@ -64,8 +67,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return redirect('/login?verify_error=server_error');
   }
 
-  // Destroy token (one-time use)
-  await adapter.destroy(token);
+  // Consume (mark used in-place) — row is kept until expires_at so re-click
+  // returns 'verify_error=used' instead of the misleading 'expired'.
+  await adapter.consume(token);
 
   return redirect('/login?verified=1');
 };

@@ -12,14 +12,18 @@ interface MockEnv {
   DB?: { prepare: ReturnType<typeof vi.fn> };
 }
 
-function makeStmt() {
+function makeStmt(firstResult: unknown = null) {
   const stmt = {
     bind: vi.fn().mockReturnThis(),
-    first: vi.fn().mockResolvedValue(null),
+    first: vi.fn().mockResolvedValue(firstResult),
     run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
   };
   return stmt;
 }
+
+const ALLOWED_CLIENT_ROW = {
+  redirect_uris: JSON.stringify(['https://x.com/cb', 'https://x.com/alt']),
+};
 
 function makeContext(body: Record<string, string>, env: MockEnv, cookie?: string): Parameters<typeof onRequestPost>[0] {
   return {
@@ -59,12 +63,13 @@ describe('POST /api/oauth/consent', () => {
     expect(decodeURIComponent(loc)).toContain('client_id=partner');
   });
 
-  it('decision=deny → 302 redirect_uri?error=access_denied&state=', async () => {
+  it('decision=deny + redirect_uri in client_apps allowlist → 302 with error=access_denied', async () => {
     const token = await signSessionToken('u1', SECRET);
-    const env: MockEnv = {
-      SESSION_SECRET: SECRET,
-      DB: { prepare: vi.fn().mockReturnValue(makeStmt()) },
-    };
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ALLOWED_CLIENT_ROW);
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
     const res = await onRequestPost(makeContext({
       client_id: 'partner', redirect_uri: 'https://x.com/cb',
       scope: 'openid', state: 'csrf-1', decision: 'deny',
@@ -76,7 +81,39 @@ describe('POST /api/oauth/consent', () => {
     expect(loc).toContain('state=csrf-1');
   });
 
-  it('decision=allow → store Consent in D1 + 302 back to server-authorize', async () => {
+  it('decision=deny + redirect_uri NOT in allowlist → 400 (open-redirect guard)', async () => {
+    const token = await signSessionToken('u1', SECRET);
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ALLOWED_CLIENT_ROW);
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      client_id: 'partner',
+      redirect_uri: 'https://attacker.com/phish',
+      scope: 'openid', state: 's', decision: 'deny',
+    }, env, `tripline_session=${token}`));
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string; error_description?: string };
+    expect(json.error).toBe('invalid_request');
+    expect(json.error_description).toContain('not registered');
+  });
+
+  it('decision=deny + unknown client_id → 400 (open-redirect guard)', async () => {
+    const token = await signSessionToken('u1', SECRET);
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(null); // client not found
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      client_id: 'unknown', redirect_uri: 'https://attacker.com',
+      scope: 'openid', state: 's', decision: 'deny',
+    }, env, `tripline_session=${token}`));
+    expect(res.status).toBe(400);
+  });
+
+  it('decision=allow → store Consent in D1 + 302 back to /api/oauth/authorize', async () => {
     const dbPrepare = vi.fn().mockReturnValue(makeStmt());
     const token = await signSessionToken('u1', SECRET);
     const env: MockEnv = {

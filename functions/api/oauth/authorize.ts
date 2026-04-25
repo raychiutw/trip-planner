@@ -32,17 +32,10 @@ import {
 } from '../../../src/server/oauth-server/validate-authorize-request';
 import { getSessionUser } from '../_session';
 import { recordAuthEvent } from '../_auth_audit';
+import { generateOpaqueToken } from '../_utils';
 import type { Env } from '../_types';
 
 const CODE_TTL_SEC = 10 * 60; // RFC 6749 §4.1.2 recommends short
-
-function generateAuthCode(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let str = '';
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
 
 function jsonError(code: string, message: string, status: number): Response {
   return new Response(
@@ -138,7 +131,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   // Consent OK — generate authorization_code + store D1
-  const code = generateAuthCode();
+  const code = generateOpaqueToken();
   const adapter = new D1Adapter(context.env.DB, 'AuthorizationCode');
   await adapter.upsert(
     code,
@@ -149,7 +142,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       scopes: result.scopes,
       code_challenge: result.codeChallenge,
       code_challenge_method: result.codeChallengeMethod,
-      used: false,
     },
     CODE_TTL_SEC,
   );

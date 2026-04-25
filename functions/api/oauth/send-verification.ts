@@ -2,7 +2,7 @@
  * POST /api/oauth/send-verification
  * Body: { email: string }
  *
- * V2-P2 — Generate email verification token + (V2-P3 email service 接通) send link。
+ * Generate email verification token + send verify link via Resend (best-effort).
  *
  * Anti-enumeration：response 永遠 generic 200。Email 不存在或已驗證的 case 都
  * 不洩漏給 caller — 只有真正 unverified user 才產 token。
@@ -10,15 +10,14 @@
  * Flow:
  *   1. lowercase email
  *   2. SELECT users WHERE email = ? AND email_verified_at IS NULL
- *   3. 若 found：產 token + D1Adapter upsert (24h TTL per V2-P2 spec)
+ *   3. 若 found：產 token + D1Adapter upsert (24h TTL per V2-P2 spec) + send email
  *   4. 若 not found / already verified：silently no-op
  *   5. Always return 200 generic
  *
- * V2-P3 next slice：integrate email service to actually send link
- *   {origin}/api/oauth/verify?token={token}
+ * Verify link: {origin}/api/oauth/verify?token={token}
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
-import { parseJsonBody } from '../_utils';
+import { parseJsonBody, generateOpaqueToken } from '../_utils';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { emailVerification } from '../../../src/server/email-templates';
 import type { Env } from '../_types';
@@ -27,15 +26,7 @@ interface SendVerificationBody {
   email?: string;
 }
 
-const TTL_SEC = 24 * 60 * 60; // 24h per V2-P2 spec
-
-function generateVerifyToken(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let str = '';
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
+const EMAIL_VERIFY_TOKEN_TTL_SEC = 24 * 60 * 60; // 24h per V2-P2 spec
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = (await parseJsonBody<SendVerificationBody>(context.request)) ?? {};
@@ -64,12 +55,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // Generate + store token
-  const token = generateVerifyToken();
+  const token = generateOpaqueToken();
   const adapter = new D1Adapter(context.env.DB, 'EmailVerification');
   await adapter.upsert(
     token,
-    { userId: user.id, email, createdAt: Date.now(), used: false },
-    TTL_SEC,
+    { userId: user.id, email, createdAt: Date.now() },
+    EMAIL_VERIFY_TOKEN_TTL_SEC,
   );
 
   // Send verification email — best-effort (token stays in D1 even if email fails)

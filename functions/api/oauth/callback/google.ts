@@ -21,6 +21,7 @@
  */
 import { D1Adapter, type AdapterPayload } from '../../../../src/server/oauth-d1-adapter';
 import { issueSession } from '../../_session';
+import { verifyGoogleIdToken } from '../../../../src/server/oauth-client/google-id-token';
 import type { Env } from '../../_types';
 
 interface GoogleTokenResponse {
@@ -29,15 +30,6 @@ interface GoogleTokenResponse {
   refresh_token?: string;
   expires_in: number;
   token_type: string;
-}
-
-interface GoogleIdTokenPayload {
-  sub: string;
-  email: string;
-  email_verified?: boolean;
-  name?: string;
-  picture?: string;
-  [key: string]: unknown;
 }
 
 interface OAuthStatePayload extends AdapterPayload {
@@ -51,21 +43,6 @@ function errorResponse(code: string, message: string, status = 400): Response {
     JSON.stringify({ error: { code, message } }),
     { status, headers: { 'content-type': 'application/json' } },
   );
-}
-
-/** Decode JWT payload (base64url middle part). 不驗 signature — trust Google HTTPS endpoint。 */
-function decodeJwtPayload(idToken: string): GoogleIdTokenPayload | null {
-  const parts = idToken.split('.');
-  if (parts.length !== 3) return null;
-  const payloadB64 = parts[1];
-  if (!payloadB64) return null;
-  try {
-    const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice(0, (4 - (payloadB64.length % 4)) % 4);
-    const json = atob(padded);
-    return JSON.parse(json) as GoogleIdTokenPayload;
-  } catch {
-    return null;
-  }
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -113,13 +90,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const tokenJson = (await tokenRes.json()) as GoogleTokenResponse;
 
-  // 4. Parse id_token
-  const idPayload = decodeJwtPayload(tokenJson.id_token);
-  if (!idPayload || !idPayload.sub || !idPayload.email) {
-    return errorResponse('OAUTH_INVALID_ID_TOKEN', 'id_token 解析失敗或缺 sub/email');
+  // 4. Verify id_token signature + claims (signed by Google JWKS, aud=our client_id,
+  //    iss=accounts.google.com, exp not passed). Throws on any mismatch — defends
+  //    against token-substitution and account-takeover via attacker-controlled sub/email.
+  let claims;
+  try {
+    claims = await verifyGoogleIdToken(tokenJson.id_token, clientId);
+  } catch (err) {
+    return errorResponse(
+      'OAUTH_INVALID_ID_TOKEN',
+      `id_token 驗證失敗: ${(err as Error).message}`,
+      401,
+    );
   }
-
-  const { sub, email, email_verified, name, picture } = idPayload;
+  const sub = claims.sub;
+  const email = typeof claims.email === 'string' ? claims.email : '';
+  const email_verified = claims.email_verified === true;
+  const name = typeof claims.name === 'string' ? claims.name : undefined;
+  const picture = typeof claims.picture === 'string' ? claims.picture : undefined;
+  if (!sub || !email) {
+    return errorResponse('OAUTH_INVALID_ID_TOKEN', 'id_token 缺 sub/email claim');
+  }
   const now = new Date().toISOString();
 
   // 5. Lookup or create auth_identities + users

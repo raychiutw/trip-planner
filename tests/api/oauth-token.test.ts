@@ -53,7 +53,8 @@ function makeAuthorizationCodePayload(overrides: Partial<Record<string, unknown>
       scopes: ['openid', 'profile'],
       code_challenge: null,
       code_challenge_method: null,
-      used: false,
+      // `consumed` is undefined by default (fresh code). Override with a timestamp
+      // to simulate a code that's already been used (replay test).
       ...overrides,
     }),
     expires_at: Date.now() + 60_000,
@@ -227,11 +228,14 @@ describe('POST /api/oauth/token', () => {
     expect(res.status).toBe(200);
   });
 
-  it('400 invalid_grant when code already used (replay protection)', async () => {
+  it('400 invalid_grant when code already consumed (replay protection)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
       if (sql.includes('SELECT payload')) {
-        return makeStmt(makeAuthorizationCodePayload({ used: true }));
+        // Real D1Adapter.consume() sets `$.consumed` (timestamp), not `used`.
+        // Test mirrors production semantics so the test would catch a regression
+        // where token.ts checks the wrong field.
+        return makeStmt(makeAuthorizationCodePayload({ consumed: Date.now() - 1000 }));
       }
       return makeStmt();
     });
@@ -244,6 +248,28 @@ describe('POST /api/oauth/token', () => {
     }, env));
     expect(res.status).toBe(400);
     expect((await res.json() as { error_description: string }).error_description).toContain('already used');
+  });
+
+  it('replay attack triggers cascade revoke of access+refresh tokens (RFC 6749 §10.5)', async () => {
+    const sqls: string[] = [];
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      sqls.push(sql);
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload')) {
+        // grantId persisted on the code at consume() time → enables cascade
+        return makeStmt(makeAuthorizationCodePayload({ consumed: Date.now() - 1000, grantId: 'grant-xyz' }));
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+    // revokeByGrantId fires DELETE FROM oauth_models WHERE json_extract(payload, '$.grantId')
+    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models WHERE json_extract(payload'))).toBe(true);
   });
 
   it('confidential client requires + verifies client_secret', async () => {
@@ -304,9 +330,47 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     expect(json.token_type).toBe('Bearer');
     expect(json.scope).toBe('openid profile');
 
-    // Old refresh token destroyed (rotation)
+    // Old refresh token marked consumed (NOT destroyed — kept for reuse detection)
     const sqls = dbPrepare.mock.calls.map((c) => c[0] as string);
-    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models'))).toBe(true);
+    expect(sqls.some((s) => s.includes('UPDATE oauth_models SET payload = json_set'))).toBe(true);
+    // New refresh_token must differ from the one we passed in (rotation guarantee)
+    expect(json.refresh_token).not.toBe('old-refresh-token');
+    expect(typeof json.refresh_token).toBe('string');
+    expect((json.refresh_token as string).length).toBeGreaterThan(40);
+  });
+
+  it('refresh-token reuse detection cascades family revoke (OAuth 2.1 §6.1)', async () => {
+    const sqls: string[] = [];
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      sqls.push(sql);
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        // Token row exists BUT was already consumed by an earlier rotation —
+        // means an attacker is replaying a stolen refresh_token.
+        return makeStmt({
+          payload: JSON.stringify({
+            client_id: 'mobile',
+            user_id: 'u1',
+            scopes: ['openid'],
+            grantId: 'family-1',
+            consumed: Date.now() - 5000,
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'leaked',
+    }, env));
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error_description: string }).error_description).toContain('reuse detected');
+    // Cascade DELETE on grantId ran for both AccessToken + RefreshToken
+    const cascadeCalls = sqls.filter((s) => s.includes('DELETE FROM oauth_models WHERE json_extract(payload'));
+    expect(cascadeCalls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('400 invalid_grant when refresh_token unknown / expired', async () => {

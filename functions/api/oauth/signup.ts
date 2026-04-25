@@ -2,21 +2,20 @@
  * POST /api/oauth/signup
  * Body: { email: string, password: string, displayName?: string }
  *
- * V2-P2 — Local password account creation。建 user + auth_identities (provider='local')
- * 並立即 issueSession。
- *
- * Email verification 暫不 enforce（user_verified_at 留 null）— V2-P2 next slice
- * 加 verification email + confirm endpoint，login 時 enforce verified。
+ * Local password account creation。建 user + auth_identities (provider='local')
+ * 並立即 issueSession。`email_verified_at` 留 NULL — verify 流程透過
+ * /api/oauth/send-verification + /api/oauth/verify endpoints。
  *
  * Security:
  *   - hashPassword（PBKDF2-SHA256 600k iter，src/server/password.ts）
- *   - Constant-time email duplicate check via UNIQUE constraint trap
- *   - Rate limit deferred V2-P6（middleware level）
+ *   - Email 唯一性靠 users.email UNIQUE constraint（trap UNIQUE error in catch）
+ *   - V2-P6 rate limit per-IP（autoplan: 3/h/IP）
  *
  * Error codes:
- *   400 SIGNUP_INVALID_EMAIL / SIGNUP_INVALID_PASSWORD
+ *   400 SIGNUP_INVALID_EMAIL / SIGNUP_PASSWORD_TOO_SHORT / SIGNUP_PASSWORD_FORMAT
  *   409 SIGNUP_EMAIL_TAKEN
- *   500 SYS_INTERNAL (DB error / SESSION_SECRET 缺)
+ *   429 SIGNUP_RATE_LIMITED
+ *   500 SYS_INTERNAL
  */
 import { issueSession } from '../_session';
 import { AppError } from '../_errors';
@@ -38,7 +37,6 @@ interface SignupBody {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LEN = 8;
 
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(
@@ -58,12 +56,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return errorResponse('SIGNUP_INVALID_EMAIL', 'Email 格式無效', 400);
   }
   if (!password || password.length < MIN_PASSWORD_LEN) {
-    return errorResponse('SIGNUP_INVALID_PASSWORD', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
+    return errorResponse('SIGNUP_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
   }
 
-  // V2-P6 rate limit: per-IP bucket — anti signup-spam
-  // Bump only after validation passes（garbage input 不浪費 bucket slot），
-  // 在 DB lookup 前 bump 確保即使 success path 也計入次數（per autoplan: 3/h/IP）
+  // V2-P6 rate limit: per-IP bucket — anti signup-spam.
+  // Bump after validation, before DB lookup, so success path also counts (per autoplan: 3/h/IP)
   const ipKey = `signup:${clientIp(context.request)}`;
   const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
   if (!ipCheck.ok) {
@@ -94,7 +91,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     passwordHash = await hashPassword(password);
   } catch {
-    return errorResponse('SIGNUP_INVALID_PASSWORD', '密碼格式不符', 400);
+    return errorResponse('SIGNUP_PASSWORD_FORMAT', '密碼格式不符', 400);
   }
 
   const userId = crypto.randomUUID();

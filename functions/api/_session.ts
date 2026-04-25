@@ -27,6 +27,7 @@ import {
   verifySessionToken,
   type SessionPayload,
 } from '../../src/server/session';
+import { sha256Base64 } from './_utils';
 
 /**
  * 任何 env 物件含 SESSION_SECRET 都接受。Caller 通常傳 functions/api/_types.ts 的
@@ -45,18 +46,6 @@ function requireSecret(env: EnvWithSession): string {
     throw new AppError('SYS_INTERNAL', 'SESSION_SECRET env 未設定');
   }
   return secret;
-}
-
-/** SHA-256(ip) base64 — same algorithm as auth_audit_log.ts for consistency */
-async function hashIp(ip: string): Promise<string> {
-  const buf = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(ip) as unknown as ArrayBuffer,
-  );
-  const arr = new Uint8Array(buf);
-  let str = '';
-  for (let i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]!);
-  return btoa(str);
 }
 
 /** Lightweight User-Agent → 'Browser · OS' summary（client display 用） */
@@ -166,7 +155,7 @@ export async function issueSession(
       sid = crypto.randomUUID();
       const ua = (request.headers.get('User-Agent') ?? '').slice(0, 200);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-      const ipHash = await hashIp(ip);
+      const ipHash = await sha256Base64(ip);
       await env.DB
         .prepare(
           `INSERT INTO session_devices (sid, user_id, ua_summary, ip_hash)

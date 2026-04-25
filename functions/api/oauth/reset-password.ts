@@ -2,24 +2,25 @@
  * POST /api/oauth/reset-password
  * Body: { token: string, password: string }
  *
- * V2-P3 — verify reset token + update password_hash + destroy token (one-time use)。
+ * Verify reset token + update password_hash + consume token + revoke all
+ * existing sessions for the user (force re-login on the new password).
  *
  * Flow:
  *   1. Validate token + password format
  *   2. D1Adapter find token (oauth_models name='PasswordReset')
  *   3. If not found / expired / used → 400 RESET_TOKEN_INVALID
  *   4. hashPassword(new password) → UPDATE auth_identities WHERE user_id = ?
- *   5. destroy token (one-time use, atomic via D1Adapter.destroy)
- *   6. Return 200 (caller redirect to /login)
+ *   5. consume token (one-time-use; row kept until expires_at so re-clicks see 'used')
+ *   6. revokeAllOtherSessions(uid, null) — wipe ALL sessions so attacker holding
+ *      a previously-stolen session cookie loses access immediately.
+ *   7. Return 200 (caller redirect to /login)
  *
  * 不 issue session 自動：force user 用新密碼 explicit login，verify 他記得新密碼。
- *
- * Future (V2-P3 next slice): 加 session revoke — invalidate all existing sessions
- * for this user (V2-P5 oauth_models Session table)。
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
-import { hashPassword } from '../../../src/server/password';
+import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { parseJsonBody } from '../_utils';
+import { revokeAllOtherSessions } from '../_session';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { passwordChangedConfirm } from '../../../src/server/email-templates';
 import { recordAuthEvent } from '../_auth_audit';
@@ -34,11 +35,12 @@ interface ResetTokenPayload {
   userId: string;
   email: string;
   createdAt: number;
+  /** Set on consume (matches D1Adapter.consume()'s field name). Re-clicks see this. */
+  consumed?: number;
+  /** Legacy field — older code wrote `used` instead of `consumed`. Read both. */
   used?: boolean;
   [key: string]: unknown;
 }
-
-const MIN_PASSWORD_LEN = 8;
 
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(
@@ -56,7 +58,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return errorResponse('RESET_TOKEN_MISSING', '缺少 token', 400);
   }
   if (!password || password.length < MIN_PASSWORD_LEN) {
-    return errorResponse('RESET_INVALID_PASSWORD', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
+    return errorResponse('RESET_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
   }
 
   const adapter = new D1Adapter(context.env.DB, 'PasswordReset');
@@ -71,8 +73,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return errorResponse('RESET_TOKEN_INVALID', '重設連結已過期或無效', 400);
   }
 
-  // One-time use safeguard
-  if (tokenRow.used) {
+  // One-time use safeguard (handle both legacy `used:true` rows and new `consumed:<ts>`)
+  if (tokenRow.consumed || tokenRow.used) {
     await recordAuthEvent(context.env.DB, context.request, {
       eventType: 'password_reset_complete',
       outcome: 'failure',
@@ -87,7 +89,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     passwordHash = await hashPassword(password);
   } catch {
-    return errorResponse('RESET_INVALID_PASSWORD', '密碼格式不符', 400);
+    return errorResponse('RESET_PASSWORD_FORMAT', '密碼格式不符', 400);
   }
 
   await context.env.DB
@@ -99,8 +101,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(passwordHash, 'pbkdf2', new Date().toISOString(), tokenRow.userId)
     .run();
 
-  // Destroy token (one-time use guard)
-  await adapter.destroy(token);
+  // Mark token consumed (kept until expires_at so re-clicks return 'used')
+  await adapter.consume(token);
+
+  // Revoke ALL existing sessions for this user — security boundary: an attacker
+  // who held a stolen session cookie loses access the moment the user resets
+  // their password. Pass null as currentSid → "revoke all".
+  try {
+    await revokeAllOtherSessions(context.env.DB, tokenRow.userId, null);
+  } catch (err) {
+    // best-effort — table missing or other error doesn't block password update.
+    // eslint-disable-next-line no-console
+    console.error('[reset-password] revokeAllOtherSessions failed:', (err as Error).message);
+  }
 
   // Send confirmation email — best-effort，不擋成功 response
   if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {

@@ -17,20 +17,12 @@
  *   - 新 app status='pending_review'，ops 手動核可才 active
  *   - owner_user_id 用 session uid，不接受 body 指定（防 ownership 偽造）
  */
-import { parseJsonBody } from '../_utils';
+import { parseJsonBody, rawJson } from '../_utils';
 import { requireSessionUser } from '../_session';
 import { hashPassword } from '../../../src/server/password';
 import { AppError } from '../_errors';
+import { validateRedirectUris } from '../../../src/server/oauth-server/validate-redirect-uris';
 import type { Env } from '../_types';
-
-// 不用 _utils.json() — 它會把 snake_case key auto-camelCase，破 OAuth wire convention
-// (client_id / client_secret / redirect_uris 必須保持 snake_case，per RFC 6749)
-function snakeJson(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 const VALID_CLIENT_TYPES = ['public', 'confidential'] as const;
 const DEFAULT_SCOPES = ['openid', 'profile', 'email'];
@@ -74,31 +66,6 @@ function generateClientSecret(): string {
   const bytes = new Uint8Array(32); // 256 bits
   crypto.getRandomValues(bytes);
   return `tps_${base32(bytes)}`;
-}
-
-function validateRedirectUris(uris: unknown): string[] {
-  if (!Array.isArray(uris) || uris.length === 0) {
-    throw new AppError('DATA_VALIDATION', 'redirect_uris 必填且至少 1 個');
-  }
-  if (uris.length > 10) {
-    throw new AppError('DATA_VALIDATION', 'redirect_uris 最多 10 個');
-  }
-  return uris.map((u, i) => {
-    if (typeof u !== 'string' || u.length === 0) {
-      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 格式無效`);
-    }
-    let parsed: URL;
-    try {
-      parsed = new URL(u);
-    } catch {
-      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不是合法 URL`);
-    }
-    const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-    if (parsed.protocol !== 'https:' && !isLocalhost) {
-      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 必須是 HTTPS（localhost 例外）`);
-    }
-    return u;
-  });
 }
 
 function validateScopes(scopes: unknown): string[] {
@@ -156,7 +123,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     )
     .run();
 
-  return snakeJson(
+  return rawJson(
     {
       client_id: clientId,
       client_secret: clientSecret,
@@ -194,7 +161,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       : row.allowed_scopes,
   }));
 
-  return snakeJson({ apps });
+  return rawJson({ apps });
 };
 
 

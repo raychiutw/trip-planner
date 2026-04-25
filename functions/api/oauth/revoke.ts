@@ -22,6 +22,7 @@
  */
 import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
+import { parseFormOrJson, parseBasicAuth } from '../_utils';
 import type { Env } from '../_types';
 
 interface ClientAppRow {
@@ -61,36 +62,8 @@ function jsonError(error: string, error_description: string, status = 400): Resp
   );
 }
 
-async function parseBody(request: Request): Promise<Record<string, string>> {
-  const ct = request.headers.get('content-type') ?? '';
-  if (ct.includes('application/x-www-form-urlencoded')) {
-    const text = await request.text();
-    const params = new URLSearchParams(text);
-    const out: Record<string, string> = {};
-    for (const [k, v] of params) out[k] = v;
-    return out;
-  }
-  if (ct.includes('application/json')) {
-    return (await request.json()) as Record<string, string>;
-  }
-  return {};
-}
-
-function parseBasicAuth(request: Request): { id: string; secret: string } | null {
-  const auth = request.headers.get('Authorization');
-  if (!auth || !auth.startsWith('Basic ')) return null;
-  try {
-    const decoded = atob(auth.slice(6));
-    const idx = decoded.indexOf(':');
-    if (idx < 0) return null;
-    return { id: decoded.slice(0, idx), secret: decoded.slice(idx + 1) };
-  } catch {
-    return null;
-  }
-}
-
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const body = await parseBody(context.request);
+  const body = await parseFormOrJson<Record<string, string>>(context.request);
   const token = body.token;
   // Per RFC 7009 §2.1: missing token = invalid_request (only error case)
   if (!token) {

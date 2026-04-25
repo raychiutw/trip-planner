@@ -26,16 +26,22 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', 'sid 必填');
   }
 
-  const result = await context.env.DB
-    .prepare(
-      `UPDATE session_devices
-       SET revoked_at = datetime('now')
-       WHERE sid = ? AND user_id = ? AND revoked_at IS NULL`,
-    )
-    .bind(sid, session.uid)
-    .run();
+  let changes = 0;
+  try {
+    const result = await context.env.DB
+      .prepare(
+        `UPDATE session_devices
+         SET revoked_at = datetime('now')
+         WHERE sid = ? AND user_id = ? AND revoked_at IS NULL`,
+      )
+      .bind(sid, session.uid)
+      .run();
+    changes = (result.meta as { changes?: number } | undefined)?.changes ?? 0;
+  } catch (err) {
+    // Multi-phase deploy safety: migration 0037 not yet applied → table missing
+    if (!/no such table/i.test((err as Error).message)) throw err;
+  }
 
-  const changes = (result.meta as { changes?: number } | undefined)?.changes ?? 0;
   if (changes === 0) {
     return rawJson(
       { error: { code: 'SESSION_NOT_FOUND', message: '找不到此 session（可能已登出或不屬於你）' } },

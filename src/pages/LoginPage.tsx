@@ -400,7 +400,7 @@ export default function LoginPage() {
 
         <a
           className="tp-btn tp-btn-secondary"
-          href={`/api/oauth/login/google${redirectAfter ? `?redirect_after=${encodeURIComponent(redirectAfter)}` : ''}`}
+          href={`/api/oauth/login/google${redirectAfter ? `?redirect_after_login=${encodeURIComponent(redirectAfter)}` : ''}`}
           data-testid="login-google"
         >
           <GoogleLogo />

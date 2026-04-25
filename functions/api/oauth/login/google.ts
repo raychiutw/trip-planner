@@ -23,18 +23,11 @@
  *   - redirect_after_login 限制 same-origin 路徑（不允許 absolute URL，防 open redirect）
  */
 import { D1Adapter } from '../../../../src/server/oauth-d1-adapter';
+import { generateOpaqueToken } from '../../_utils';
 import type { Env } from '../../_types';
 
 const STATE_TTL_SEC = 5 * 60; // 5 minutes — user 通常 OAuth flow < 30s
 const SAFE_REDIRECT_DEFAULT = '/manage';
-
-function generateState(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
-  let str = '';
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
 
 /** 限制 redirect_after_login 為 same-origin 路徑（防 open redirect attack） */
 function sanitizeRedirect(value: string | null): string {
@@ -55,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     );
   }
 
-  const state = generateState();
+  const state = generateOpaqueToken();
   const redirectAfterLogin = sanitizeRedirect(url.searchParams.get('redirect_after_login'));
 
   // Store state in D1 (CSRF protection + replay guard via consume on callback)

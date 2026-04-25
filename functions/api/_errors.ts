@@ -2,6 +2,22 @@
  * _errors.ts — 結構化錯誤處理
  * handler 用 throw new AppError('CODE') 取代手動 json({error}, status)
  * middleware catch 用 instanceof AppError 判斷
+ *
+ * ## Error response shape conventions
+ *
+ * Two shapes coexist by design — pick based on who consumes the response:
+ *
+ * **RFC 6749 / 7009 OAuth wire endpoints** (`/oauth/authorize`, `/oauth/token`,
+ * `/oauth/revoke`, `/oauth/consent`): use the flat `{ error, error_description }`
+ * shape mandated by spec. Use `oauthErrorResponse(error, description, status)`.
+ *
+ * **Tripline user-facing endpoints** (signup / login / verify / forgot / reset /
+ * connected-apps / dev-apps / sessions): use the nested
+ * `{ error: { code, message } }` shape so the client can branch on a stable
+ * machine code. `AppError` + `errorResponse(err)` produces this shape.
+ *
+ * `buildRateLimitResponse(status, retryAfter, ...)` exists below for the
+ * cross-cutting "429 Retry-After" case.
  */
 import { ERROR_MESSAGES } from '../../src/types/api';
 import type { ErrorCodeType } from '../../src/types/api';
@@ -36,7 +52,7 @@ export class AppError extends Error {
   }
 }
 
-/** 將 AppError 轉為 JSON Response */
+/** 將 AppError 轉為 JSON Response（user-facing nested shape） */
 export function errorResponse(err: AppError): Response {
   return new Response(
     JSON.stringify({
@@ -51,4 +67,41 @@ export function errorResponse(err: AppError): Response {
       headers: { 'Content-Type': 'application/json' },
     },
   );
+}
+
+/**
+ * RFC 6749 / 7009 OAuth wire endpoints emit `{error, error_description}` flat —
+ * use this helper instead of inline `new Response(JSON.stringify(...))`.
+ */
+export function oauthErrorResponse(
+  error: string,
+  description: string,
+  status = 400,
+): Response {
+  return new Response(
+    JSON.stringify({ error, error_description: description }),
+    {
+      status,
+      headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    },
+  );
+}
+
+/**
+ * 429 rate-limit response. Used by signup / login / forgot-password / token —
+ * adds Retry-After header. `code` follows whichever shape the calling endpoint
+ * uses (tripline-style `LOGIN_RATE_LIMITED` vs OAuth-style `rate_limited`).
+ */
+export function buildRateLimitResponse(
+  retryAfterSeconds: number,
+  body: Record<string, unknown>,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status: 429,
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+      'Retry-After': String(retryAfterSeconds),
+    },
+  });
 }

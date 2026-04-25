@@ -19,14 +19,8 @@
 import { D1Adapter } from '../../../../src/server/oauth-d1-adapter';
 import { requireSessionUser } from '../../_session';
 import { AppError } from '../../_errors';
+import { rawJson } from '../../_utils';
 import type { Env } from '../../_types';
-
-function snakeJson(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const session = await requireSessionUser(context.request, context.env);
@@ -41,7 +35,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const consentAdapter = new D1Adapter(context.env.DB, 'Consent');
   const existing = await consentAdapter.find(consentKey);
   if (!existing) {
-    return snakeJson({ error: { code: 'CONSENT_NOT_FOUND', message: '此 app 未授權給你的帳號' } }, 404);
+    return rawJson({ error: { code: 'CONSENT_NOT_FOUND', message: '此 app 未授權給你的帳號' } }, 404);
   }
 
   // Destroy consent
@@ -59,5 +53,5 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .bind(session.uid, clientId)
     .run();
 
-  return snakeJson({ ok: true, revoked_client_id: clientId });
+  return rawJson({ ok: true, revoked_client_id: clientId });
 };

@@ -1,11 +1,11 @@
 /**
  * id_token issuance — V2-P5 OIDC compliance
  *
- * Issued by /server-token when scope includes 'openid'。Claims per OIDC §2 +
+ * Issued by /api/oauth/token when scope includes 'openid'。Claims per OIDC §2 +
  * scope-conditional (email / profile)。
  *
- * Sign 用 env OAUTH_SIGNING_PRIVATE_KEY (PKCS8). 若未設→throw（caller 應該
- * detect 在 /server-token 早期 → 500 server_error）。
+ * Sign 用 env OAUTH_SIGNING_PRIVATE_KEY (PKCS8). 若未設→throw（caller in token.ts
+ * catches and falls back to omitting id_token from the response）。
  */
 import { signJwt, importPrivateKey, computeKid } from '../../../src/server/jwt';
 import type { Env } from '../_types';

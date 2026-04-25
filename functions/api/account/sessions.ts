@@ -48,19 +48,29 @@ function toIsoUtc(sqliteTs: string): string {
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const session = await requireSessionUser(context.request, context.env);
 
-  const result = await context.env.DB
-    .prepare(
-      `SELECT sid, ua_summary, ip_hash, created_at, last_seen_at
-       FROM session_devices
-       WHERE user_id = ? AND revoked_at IS NULL
-       ORDER BY last_seen_at DESC
-       LIMIT ?`,
-    )
-    .bind(session.uid, SESSIONS_LIST_LIMIT)
-    .all<SessionDeviceRow>();
+  // Multi-phase deploy safety: if migration 0037 hasn't been applied yet
+  // (Pages deploy ships before `wrangler d1 migrations apply` runs), the
+  // SELECT throws "no such table" — degrade to empty list instead of 500.
+  let rows: SessionDeviceRow[] = [];
+  try {
+    const result = await context.env.DB
+      .prepare(
+        `SELECT sid, ua_summary, ip_hash, created_at, last_seen_at
+         FROM session_devices
+         WHERE user_id = ? AND revoked_at IS NULL
+         ORDER BY last_seen_at DESC
+         LIMIT ?`,
+      )
+      .bind(session.uid, SESSIONS_LIST_LIMIT)
+      .all<SessionDeviceRow>();
+    rows = result.results ?? [];
+  } catch (err) {
+    if (!/no such table/i.test((err as Error).message)) throw err;
+    // table not yet created → empty list
+  }
 
   const currentSid = session.sid ?? null;
-  const sessions = (result.results ?? []).map((row) => ({
+  const sessions = rows.map((row) => ({
     sid: row.sid,
     ua_summary: row.ua_summary,
     // Only first 8 chars of ip_hash for "different device" hint, not full reverse-lookup-bait
@@ -75,10 +85,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const session = await requireSessionUser(context.request, context.env);
-  const { revoked } = await revokeAllOtherSessions(
-    context.env.DB,
-    session.uid,
-    session.sid ?? null,
-  );
+  let revoked = 0;
+  try {
+    const result = await revokeAllOtherSessions(
+      context.env.DB,
+      session.uid,
+      session.sid ?? null,
+    );
+    revoked = result.revoked;
+  } catch (err) {
+    if (!/no such table/i.test((err as Error).message)) throw err;
+    // table not yet created → no-op (no sessions to revoke)
+  }
   return rawJson({ ok: true, revoked });
 };

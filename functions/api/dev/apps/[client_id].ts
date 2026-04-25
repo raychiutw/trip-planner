@@ -13,11 +13,12 @@
  *
  * DELETE /api/dev/apps/:client_id
  *   require: session + ownership
- *   soft-delete: UPDATE status='suspended'（保留 audit trail，server-authorize 會擋）
+ *   soft-delete: UPDATE status='suspended'（保留 audit trail；authorize.ts 會擋 status != 'active'）
  */
-import { parseJsonBody } from '../../_utils';
+import { parseJsonBody, rawJson } from '../../_utils';
 import { requireSessionUser } from '../../_session';
 import { AppError } from '../../_errors';
+import { validateRedirectUris } from '../../../../src/server/oauth-server/validate-redirect-uris';
 import type { Env } from '../../_types';
 
 interface ClientAppRow {
@@ -47,13 +48,6 @@ interface PatchAppBody {
 const APP_NAME_MIN = 2;
 const APP_NAME_MAX = 80;
 
-function snakeJson(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
 function shapeAppRow(row: ClientAppRow): Record<string, unknown> {
   return {
     client_id: row.client_id,
@@ -68,31 +62,6 @@ function shapeAppRow(row: ClientAppRow): Record<string, unknown> {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
-}
-
-function validateRedirectUris(uris: unknown): string[] {
-  if (!Array.isArray(uris) || uris.length === 0) {
-    throw new AppError('DATA_VALIDATION', 'redirect_uris 必填且至少 1 個');
-  }
-  if (uris.length > 10) {
-    throw new AppError('DATA_VALIDATION', 'redirect_uris 最多 10 個');
-  }
-  return uris.map((u, i) => {
-    if (typeof u !== 'string' || u.length === 0) {
-      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 格式無效`);
-    }
-    let parsed: URL;
-    try {
-      parsed = new URL(u);
-    } catch {
-      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 不是合法 URL`);
-    }
-    const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-    if (parsed.protocol !== 'https:' && !isLocalhost) {
-      throw new AppError('DATA_VALIDATION', `redirect_uris[${i}] 必須是 HTTPS（localhost 例外）`);
-    }
-    return u;
-  });
 }
 
 async function loadOwnedApp(
@@ -119,9 +88,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   const row = await loadOwnedApp(context.env.DB, clientId, session.uid);
   if (!row) {
-    return snakeJson({ error: { code: 'APP_NOT_FOUND', message: '找不到此應用' } }, 404);
+    return rawJson({ error: { code: 'APP_NOT_FOUND', message: '找不到此應用' } }, 404);
   }
-  return snakeJson(shapeAppRow(row));
+  return rawJson(shapeAppRow(row));
 };
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
@@ -131,7 +100,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   const existing = await loadOwnedApp(context.env.DB, clientId, session.uid);
   if (!existing) {
-    return snakeJson({ error: { code: 'APP_NOT_FOUND', message: '找不到此應用' } }, 404);
+    return rawJson({ error: { code: 'APP_NOT_FOUND', message: '找不到此應用' } }, 404);
   }
 
   const body = (await parseJsonBody<PatchAppBody>(context.request)) ?? {};
@@ -197,7 +166,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   if (!updated) {
     throw new AppError('SYS_INTERNAL', 'app 更新後讀取失敗');
   }
-  return snakeJson(shapeAppRow(updated));
+  return rawJson(shapeAppRow(updated));
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
@@ -207,10 +176,10 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   const existing = await loadOwnedApp(context.env.DB, clientId, session.uid);
   if (!existing) {
-    return snakeJson({ error: { code: 'APP_NOT_FOUND', message: '找不到此應用' } }, 404);
+    return rawJson({ error: { code: 'APP_NOT_FOUND', message: '找不到此應用' } }, 404);
   }
 
-  // Soft-delete: status='suspended'。保留 audit trail；server-authorize.ts 會
+  // Soft-delete: status='suspended'。保留 audit trail；authorize.ts 會
   // 擋 status != 'active'，所以 effective immediately。
   await context.env.DB
     .prepare(
@@ -221,5 +190,5 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     .bind(clientId, session.uid)
     .run();
 
-  return snakeJson({ ok: true, suspended_client_id: clientId });
+  return rawJson({ ok: true, suspended_client_id: clientId });
 };

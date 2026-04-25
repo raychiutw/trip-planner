@@ -47,8 +47,9 @@ describe('Migration 0037 — session_devices', () => {
     expect(columnLine).not.toMatch(/NOT NULL/);
   });
 
-  it('indexes for user_active + sid lookup', () => {
+  it('user_active composite index (sid lookup is covered by implicit UNIQUE index)', () => {
     expect(MIGRATION).toMatch(/CREATE INDEX idx_session_devices_user_active/);
-    expect(MIGRATION).toMatch(/CREATE INDEX idx_session_devices_sid/);
+    // No explicit idx_session_devices_sid — the UNIQUE constraint auto-creates one.
+    expect(MIGRATION).not.toMatch(/CREATE INDEX idx_session_devices_sid/);
   });
 });
