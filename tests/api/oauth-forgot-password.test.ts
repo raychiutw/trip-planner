@@ -100,16 +100,16 @@ describe('POST /api/oauth/forgot-password', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare } };
     await onRequestPost(makeContext({ email: 'u@x.com' }, env));
 
-    // 4th argument to bind on INSERT is expires_at = now + 3600 * 1000
-    const insertResult = dbPrepare.mock.results.find(
-      (_, i) => typeof dbPrepare.mock.calls[i][0] === 'string' &&
-                (dbPrepare.mock.calls[i][0] as string).includes('INSERT OR REPLACE'),
+    // Find the INSERT OR REPLACE INTO oauth_models call (PasswordReset token store)
+    // — distinct from rate_limit_buckets INSERTs that share the prefix
+    const tokenInsertIdx = dbPrepare.mock.calls.findIndex(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT OR REPLACE INTO oauth_models'),
     );
-    if (insertResult) {
-      const bindArgs = (insertResult.value as { bind: { mock: { calls: unknown[][] } } }).bind.mock.calls[0];
-      const expiresAt = bindArgs[3] as number;
-      expect(expiresAt).toBe(Date.now() + 3600 * 1000);
-    }
+    expect(tokenInsertIdx).toBeGreaterThanOrEqual(0);
+    const stmt = dbPrepare.mock.results[tokenInsertIdx].value as { bind: { mock: { calls: unknown[][] } } };
+    const bindArgs = stmt.bind.mock.calls[0];
+    const expiresAt = bindArgs[3] as number;
+    expect(expiresAt).toBe(Date.now() + 3600 * 1000);
   });
 
   it('Local provider lookup filter: WHERE provider = "local" (not Google-only user)', async () => {
@@ -118,7 +118,50 @@ describe('POST /api/oauth/forgot-password', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare } };
     await onRequestPost(makeContext({ email: 'u@x.com' }, env));
 
-    const sql = dbPrepare.mock.calls[0][0] as string;
-    expect(sql).toContain("provider = 'local'");
+    // Find the user lookup SQL — rate limit INSERTs come first now
+    const userLookupSql = dbPrepare.mock.calls
+      .map((c) => c[0] as string)
+      .find((s) => s.includes('SELECT u.id'));
+    expect(userLookupSql).toBeTruthy();
+    expect(userLookupSql).toContain("provider = 'local'");
+  });
+
+  it('429 FORGOT_PASSWORD_RATE_LIMITED when IP bucket locked', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) {
+        // Locked bucket
+        return makeStmt({
+          bucket_key: 'forgot-password:unknown',
+          count: 4,
+          window_start: Date.now(),
+          locked_until: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env));
+    expect(res.status).toBe(429);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('FORGOT_PASSWORD_RATE_LIMITED');
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
+  it('Bumps both ipKey + emailKey buckets on every valid request (defence in depth)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
+      if (sql.includes('SELECT u.id')) return makeStmt(null); // user not found
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env));
+    expect(res.status).toBe(200); // generic 200 regardless
+
+    // Both buckets bumped
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+    );
+    expect(inserts.length).toBe(2);
   });
 });

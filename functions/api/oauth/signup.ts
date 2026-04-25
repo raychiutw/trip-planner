@@ -22,6 +22,12 @@ import { issueSession } from '../_session';
 import { AppError } from '../_errors';
 import { parseJsonBody } from '../_utils';
 import { hashPassword } from '../../../src/server/password';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  clientIp,
+  RATE_LIMITS,
+} from '../_rate_limit';
 import type { Env } from '../_types';
 
 interface SignupBody {
@@ -53,6 +59,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!password || password.length < MIN_PASSWORD_LEN) {
     return errorResponse('SIGNUP_INVALID_PASSWORD', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
   }
+
+  // V2-P6 rate limit: per-IP bucket — anti signup-spam
+  // Bump only after validation passes（garbage input 不浪費 bucket slot），
+  // 在 DB lookup 前 bump 確保即使 success path 也計入次數（per autoplan: 3/h/IP）
+  const ipKey = `signup:${clientIp(context.request)}`;
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'SIGNUP_RATE_LIMITED', message: '註冊嘗試過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
+    );
+  }
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
 
   // Duplicate email check
   const existing = await context.env.DB
