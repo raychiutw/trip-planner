@@ -27,6 +27,7 @@ import {
   clientIp,
   RATE_LIMITS,
 } from '../_rate_limit';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 interface LoginBody {
@@ -96,6 +97,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Bump both buckets on failure (defence in depth)
     await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
     await bumpRateLimit(context.env.DB, emailKey, RATE_LIMITS.LOGIN);
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'login',
+      outcome: 'failure',
+      userId: identity?.user_id ?? null,
+      failureReason: !identity ? 'unknown_email' : 'wrong_password',
+      metadata: { email },
+    });
     return errorResponse('LOGIN_INVALID', 'email 或密碼錯誤', 401);
   }
 
@@ -120,5 +128,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     { status: 200, headers: { 'content-type': 'application/json' } },
   );
   await issueSession(context.request, response, identity.user_id, context.env);
+
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'login',
+    outcome: 'success',
+    userId: identity.user_id,
+    metadata: { email },
+  });
   return response;
 };

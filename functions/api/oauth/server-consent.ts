@@ -27,6 +27,7 @@
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { getSessionUser } from '../_session';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 const CONSENT_TTL_SEC = 365 * 24 * 60 * 60; // 1 year — user manually revokes via 帳號設定
@@ -122,6 +123,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     { user_id: session.uid, client_id: body.client_id, scopes, grantedAt: Date.now() },
     CONSENT_TTL_SEC,
   );
+
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'oauth_consent',
+    outcome: 'success',
+    userId: session.uid,
+    clientId: body.client_id,
+    metadata: { scopes, decision: 'allow' },
+  });
 
   // Redirect back to server-authorize with original params — this time will
   // pick up consent and proceed to code gen

@@ -28,6 +28,7 @@ import {
   bumpRateLimit,
   RATE_LIMITS,
 } from '../_rate_limit';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 const ACCESS_TOKEN_TTL_SEC = 60 * 60;          // 1h
@@ -253,8 +254,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     try {
       idToken = await issueIdToken(context.env, context.request, clientId, refreshRow.user_id, finalScopes);
     } catch {
-      // 'openid' scope but no signing key configured → fall through; client gets tokens without id_token
+      // 'openid' scope but no signing key configured → fall through
     }
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'token_issue',
+      outcome: 'success',
+      userId: refreshRow.user_id,
+      clientId,
+      metadata: { grant_type: 'refresh_token', scopes: finalScopes },
+    });
     return tokenResponse(tokens, finalScopes, idToken);
   }
 
@@ -299,7 +307,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     idToken = await issueIdToken(context.env, context.request, clientId, codeRow.user_id, codeRow.scopes);
   } catch {
-    // 'openid' scope but no signing key configured → fall through; client gets tokens without id_token
+    // 'openid' scope but no signing key configured → fall through
   }
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'token_issue',
+    outcome: 'success',
+    userId: codeRow.user_id,
+    clientId,
+    metadata: { grant_type: 'authorization_code', scopes: codeRow.scopes },
+  });
   return tokenResponse(tokens, codeRow.scopes, idToken);
 };

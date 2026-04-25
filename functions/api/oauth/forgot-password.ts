@@ -32,6 +32,7 @@ import {
 } from '../_rate_limit';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { passwordReset } from '../../../src/server/email-templates';
+import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
 
 interface ForgotBody {
@@ -128,6 +129,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
     }
   }
+
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'password_reset_request',
+    outcome: 'success',
+    userId: user.user_id,
+    metadata: { email },
+  });
 
   return genericResponse;
 };
