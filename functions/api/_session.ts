@@ -21,9 +21,13 @@ import {
   type SessionPayload,
 } from '../../src/server/session';
 
+/**
+ * 任何 env 物件含 SESSION_SECRET 都接受。Caller 通常傳 functions/api/_types.ts 的
+ * `Env`（含 SESSION_SECRET? optional）。不用 [key: string]: unknown index sig
+ * 否則 Env strict-typed 物件無法直接傳入。
+ */
 interface EnvWithSession {
   SESSION_SECRET?: string;
-  [key: string]: unknown;
 }
 
 function requireSecret(env: EnvWithSession): string {
