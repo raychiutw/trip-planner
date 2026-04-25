@@ -135,14 +135,18 @@ mobile has the same card grid layout in single-column.
 | Page | Desktop | Mobile | Notes |
 |------|---------|--------|-------|
 | /oauth/consent | ✅ form-based POST, terracotta CTA | ✅ same | recently rewritten in /review pass |
-| /settings/connected-apps | 🟡 functional, plain layout | 🟡 | needs AppShell wrap |
-| /developer/apps | 🟡 functional, plain | 🟡 | needs AppShell wrap |
-| /settings/sessions | 🟡 functional, plain | 🟡 | needs AppShell wrap |
+| /settings/connected-apps | ✅ AppShell wrap | ✅ AppShell wrap (sidebar hidden by media query) | this PR |
+| /developer/apps | ✅ AppShell wrap | ✅ AppShell wrap | this PR |
+| /settings/sessions | ✅ AppShell wrap | ✅ AppShell wrap | this PR |
 
 **Settings follow-ups:**
 
-1. ⏭ Wrap all settings pages in `AppShell` so sidebar nav + brand are visible.
-2. ⏭ Add page-level header with breadcrumb / "← 帳號設定" back link pattern.
+1. ✅ **DONE this PR.** ConnectedAppsPage / DeveloperAppsPage / SessionsPage
+   wrapped in `AppShell` with `<DesktopSidebarConnected />` so logged-in user
+   sees sidebar nav + account chip on every settings route.
+2. ⏭ Add page-level breadcrumb / "← 帳號設定" back link pattern. Sidebar
+   highlighting on `/settings/sessions` falls back to nearest match
+   (「已連結應用」) since there's no sessions-specific nav item — minor polish.
 
 ---
 
@@ -221,12 +225,12 @@ mobile has the same card grid layout in single-column.
 
 | Priority | Item | Estimated CC time | Status |
 |----------|------|------|--------|
-| P1 | Wrap auth pages in AppShell so sidebar visible to anonymous users | ~30min | ⏭ pending |
+| P1 | Wrap auth pages in AppShell so sidebar visible to anonymous users | ~30min | ⏭ deferred — anonymous click on sidebar nav causes redirect-bounce; not worth UX cost without disabling-while-anon polish |
 | P1 | Add `<aside>` desktop right-pane brand hero to login/signup/forgot | ~45min | ✅ #318 + #319 (5 pages, shared `AuthBrandHero` component) |
-| P2 | `/trips` landing page with peach-gradient trip cards | ~60min | ⏭ pending |
-| P2 | Right pane on `/trip/:id` shows selected day's stop summary | ~30min | ⏭ pending |
-| P2 | Wrap `/settings/*` and `/developer/*` in AppShell | ~20min | ⏭ pending |
-| P3 | `/explore` POI card grid with category-keyed gradients | ~90min | ⏭ pending |
+| P2 | `/trips` landing page with peach-gradient trip cards | ~60min | ✅ this PR — `TripsListPage` wired at `/trips`, JP/KR/TW/other gradient covers |
+| P2 | Right pane on `/trip/:id` shows selected day's stop summary | ~30min | ✅ already shipped — `TripSheet` (itinerary/ideas/map/chat tabs) replaced placeholder before this audit was written; audit claim was stale |
+| P2 | Wrap `/settings/*` and `/developer/*` in AppShell | ~20min | ✅ this PR — connected-apps + developer/apps + settings/sessions wrapped |
+| P3 | `/explore` POI card grid with category-keyed gradients | ~90min | ⏭ deferred to dedicated explore-redesign sprint (also needs right-pane POI detail + improved empty state) |
 | P3 | Implement `/chat` (LLM concierge) — mockup-chat-v2 design exists | several days | ⏭ pending |
 | P3 | Implement `/map` (cross-trip global map) | ~2 days | ⏭ pending |
 

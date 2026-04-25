@@ -9,6 +9,9 @@ import { MemoryRouter } from 'react-router-dom';
 vi.mock('../../src/hooks/useRequireAuth', () => ({
   useRequireAuth: () => ({ user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),
 }));
+vi.mock('../../src/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({ user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),
+}));
 
 import ConnectedAppsPage from '../../src/pages/ConnectedAppsPage';
 
