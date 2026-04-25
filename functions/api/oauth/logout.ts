@@ -30,21 +30,21 @@ function sanitizeRedirect(value: string | null): string {
   return value;
 }
 
-function buildLogoutResponse(request: Request): Response {
+async function buildLogoutResponse(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const redirectAfter = sanitizeRedirect(url.searchParams.get('redirect_after'));
   const response = new Response(null, {
     status: 302,
     headers: { Location: redirectAfter },
   });
-  clearSession(request, response);
+  await clearSession(request, response, env);
   return response;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  return buildLogoutResponse(context.request);
+  return buildLogoutResponse(context.request, context.env);
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  return buildLogoutResponse(context.request);
+  return buildLogoutResponse(context.request, context.env);
 };
