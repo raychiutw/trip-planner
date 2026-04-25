@@ -20,7 +20,7 @@
 import { issueSession } from '../_session';
 import { AppError } from '../_errors';
 import { parseJsonBody } from '../_utils';
-import { hashPassword } from '../../../src/server/password';
+import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { recordAuthEvent } from '../_auth_audit';
 import {
   checkRateLimit,
