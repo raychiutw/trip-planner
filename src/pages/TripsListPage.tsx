@@ -1,43 +1,56 @@
 /**
- * TripsListPage — V2 design audit landing page
+ * TripsListPage — V2 trip landing page (mockup-trip-v2.html parity)
  *
  * Route: /trips
- * Shows the logged-in user's accessible trips as peach-gradient cards
- * (mockup-trip-v2.html "/trips" landing). Click → /trip/:tripId detail.
+ *
+ * Layout:
+ *   - Desktop ≥1024px: 3-pane via AppShell (sidebar | trip card grid | preview sheet)
+ *   - Mobile <1024px: 2-pane (sidebar hidden, card grid stacked, no preview sheet)
+ *
+ * Interaction:
+ *   - Desktop card click: setSearchParams('selected', tripId) — sheet updates,
+ *     no navigation. Default selected = first trip.
+ *   - Mobile card click: navigate to /trip/:tripId (no sheet to update).
+ *   - Trailing card "+ 新增行程" navigates to /manage (legacy editor entry).
+ *   - Empty state: hero CTA → /manage.
  *
  * Data:
  *   - GET /api/my-trips → tripIds the user has permission for
- *   - GET /api/trips     → all published trips with name + countries
- *   - Cross-ref so admins still see only what they can edit
+ *   - GET /api/trips?all=1 → trip metadata (name, countries, day_count,
+ *     start_date, end_date, member_count)
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import TripsPreviewSheet from '../components/trips/TripsPreviewSheet';
 
 const SCOPED_STYLES = `
 .tp-trips-shell {
   min-height: 100%;
   padding: 32px 24px 64px;
   background: var(--color-secondary);
+  height: 100%;
+  overflow-y: auto;
 }
 .tp-trips-inner { max-width: 960px; margin: 0 auto; }
+
 .tp-trips-heading {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  flex-wrap: wrap; gap: 16px;
   margin-bottom: 24px;
 }
-.tp-trips-heading-crumb {
-  font-size: var(--font-size-eyebrow); font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--color-muted); margin-bottom: 8px;
-}
+.tp-trips-heading-text { flex: 1 1 auto; }
 .tp-trips-heading h1 {
   font-size: var(--font-size-title); font-weight: 800;
   letter-spacing: -0.02em; margin: 0 0 6px;
 }
-.tp-trips-heading p {
-  color: var(--color-muted); font-size: var(--font-size-subheadline);
-  margin: 0;
+.tp-trips-heading-meta {
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
 }
 
 .tp-trips-grid {
@@ -55,11 +68,19 @@ const SCOPED_STYLES = `
   color: inherit;
   transition: border-color 120ms, box-shadow 120ms, transform 120ms;
   display: block;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
 }
 .tp-trip-card:hover {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
+}
+.tp-trip-card.is-active {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
 }
 .tp-trip-card-cover {
   aspect-ratio: 16/9;
@@ -67,18 +88,11 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 }
-.tp-trip-cover-jp {
-  background-image: linear-gradient(135deg, #D97848 0%, #F0935E 100%);
-}
-.tp-trip-cover-kr {
-  background-image: linear-gradient(135deg, #B85C2E 0%, #EADFCF 100%);
-}
-.tp-trip-cover-tw {
-  background-image: linear-gradient(135deg, #C88500 0%, #F7DFCB 100%);
-}
-.tp-trip-cover-other {
-  background-image: linear-gradient(135deg, #6F5A47 0%, #C8B89F 100%);
-}
+.tp-trip-cover-jp { background-image: linear-gradient(135deg, #D97848 0%, #F0935E 100%); }
+.tp-trip-cover-kr { background-image: linear-gradient(135deg, #B85C2E 0%, #EADFCF 100%); }
+.tp-trip-cover-tw { background-image: linear-gradient(135deg, #C88500 0%, #F7DFCB 100%); }
+.tp-trip-cover-other { background-image: linear-gradient(135deg, #6F5A47 0%, #C8B89F 100%); }
+
 .tp-trip-card-eyebrow {
   font-size: var(--font-size-caption2);
   font-weight: 700;
@@ -96,9 +110,88 @@ const SCOPED_STYLES = `
 .tp-trip-card-meta {
   font-size: var(--font-size-footnote);
   color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
 }
 
-.tp-trips-empty, .tp-trips-loading, .tp-trips-error {
+/* Trailing "新增行程" card — dashed outline, accent color */
+.tp-trip-card-new {
+  background: transparent;
+  border: 2px dashed var(--color-border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px;
+  min-height: 200px;
+  color: var(--color-muted);
+  font-weight: 600;
+  font-size: var(--font-size-callout);
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.tp-trip-card-new:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+  transform: none;
+  box-shadow: none;
+}
+.tp-trip-card-new .tp-new-icon {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  display: grid; place-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  transition: background 120ms;
+}
+.tp-trip-card-new:hover .tp-new-icon {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+/* Empty state hero — when user has 0 trips */
+.tp-trips-empty-hero {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 64px 32px;
+  text-align: center;
+  margin-top: 24px;
+}
+.tp-trips-empty-hero .tp-hero-icon {
+  width: 72px; height: 72px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  display: grid; place-items: center;
+}
+.tp-trips-empty-hero h2 {
+  font-size: var(--font-size-title2);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--color-foreground);
+  margin: 0 0 8px;
+}
+.tp-trips-empty-hero p {
+  color: var(--color-muted);
+  font-size: var(--font-size-callout);
+  max-width: 420px;
+  margin: 0 auto 24px;
+  line-height: 1.5;
+}
+.tp-trips-empty-hero .tp-hero-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 28px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: var(--font-size-callout);
+  text-decoration: none;
+  cursor: pointer;
+}
+.tp-trips-empty-hero .tp-hero-cta:hover { filter: brightness(0.92); }
+
+.tp-trips-loading, .tp-trips-error {
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -121,6 +214,10 @@ interface TripInfo {
   title?: string | null;
   countries?: string | null;
   published?: number | boolean;
+  day_count?: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  member_count?: number;
 }
 
 function coverClass(countries: string | null | undefined): string {
@@ -131,16 +228,52 @@ function coverClass(countries: string | null | undefined): string {
   return 'tp-trip-cover-other';
 }
 
-function eyebrowText(countries: string | null | undefined): string {
+function eyebrow(countries: string | null | undefined, dayCount: number | undefined): string {
   const c = (countries ?? '').toUpperCase().trim();
-  if (c.includes('JP')) return 'JAPAN';
-  if (c.includes('KR')) return 'KOREA';
-  if (c.includes('TW')) return 'TAIWAN';
-  return c || 'TRIP';
+  const country =
+    c.includes('JP') ? 'JAPAN' :
+    c.includes('KR') ? 'KOREA' :
+    c.includes('TW') ? 'TAIWAN' :
+    c || 'TRIP';
+  if (typeof dayCount === 'number' && dayCount > 0) {
+    return `${country} · ${dayCount} ${dayCount === 1 ? 'DAY' : 'DAYS'}`;
+  }
+  return country;
 }
+
+function dateRange(start: string | null | undefined, end: string | null | undefined): string | null {
+  function fmt(iso: string): string {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(iso);
+    if (!m) return iso;
+    return `${parseInt(m[2]!, 10)}/${parseInt(m[3]!, 10)}`;
+  }
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (start) return fmt(start);
+  if (end) return fmt(end);
+  return null;
+}
+
+function cardMeta(trip: TripInfo): string {
+  const range = dateRange(trip.start_date, trip.end_date);
+  // member_count includes user's own row in trip_permissions; "N 旅伴" is total members.
+  const members = typeof trip.member_count === 'number' && trip.member_count > 0
+    ? `${trip.member_count} 旅伴`
+    : null;
+  if (range && members) return `${range} · ${members}`;
+  if (range) return range;
+  if (members) return members;
+  return trip.tripId;
+}
+
+const NEW_TRIP_HREF = '/manage';
 
 export default function TripsListPage() {
   useRequireAuth();
+  const navigate = useNavigate();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedFromUrl = searchParams.get('selected');
+
   const [myIds, setMyIds] = useState<string[] | null>(null);
   const [allTrips, setAllTrips] = useState<TripInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -154,13 +287,12 @@ export default function TripsListPage() {
       .then(async ([myRes, allRes]) => {
         if (cancelled) return;
         if (!myRes.ok) {
-          if (myRes.status === 401 || myRes.status === 403) return; // useRequireAuth handles redirect
+          if (myRes.status === 401 || myRes.status === 403) return;
           setError('無法載入你的行程清單。');
           return;
         }
         const myJson = (await myRes.json()) as MyTripRow[];
-        const ids = myJson.map((r) => r.tripId);
-        setMyIds(ids);
+        setMyIds(myJson.map((r) => r.tripId));
         if (allRes.ok) {
           const allJson = (await allRes.json()) as TripInfo[];
           setAllTrips(allJson);
@@ -176,63 +308,132 @@ export default function TripsListPage() {
 
   const visibleTrips = useMemo<TripInfo[]>(() => {
     if (myIds === null || allTrips === null) return [];
-    const idSet = new Set(myIds);
     const map = new Map<string, TripInfo>();
     for (const t of allTrips) map.set(t.tripId, t);
-    return myIds
-      .map((id) => map.get(id) ?? { tripId: id, name: id })
-      .filter((t) => idSet.has(t.tripId));
+    return myIds.map((id) => map.get(id) ?? { tripId: id, name: id });
   }, [myIds, allTrips]);
 
+  // Effective selected: URL param > first visible trip > null
+  const effectiveSelectedId = useMemo<string | null>(() => {
+    if (selectedFromUrl && visibleTrips.some((t) => t.tripId === selectedFromUrl)) {
+      return selectedFromUrl;
+    }
+    return visibleTrips[0]?.tripId ?? null;
+  }, [selectedFromUrl, visibleTrips]);
+
+  const selectedTrip = useMemo<TripInfo | null>(
+    () => visibleTrips.find((t) => t.tripId === effectiveSelectedId) ?? null,
+    [visibleTrips, effectiveSelectedId],
+  );
+
+  function handleCardClick(tripId: string, e: React.MouseEvent | React.KeyboardEvent) {
+    if (isDesktop) {
+      e.preventDefault();
+      const next = new URLSearchParams(searchParams);
+      next.set('selected', tripId);
+      setSearchParams(next, { replace: true });
+    } else {
+      e.preventDefault();
+      navigate(`/trip/${encodeURIComponent(tripId)}`);
+    }
+  }
+
   const loading = myIds === null && !error;
+
+  // Heading meta: "N 個行程" — placeholder for future "進行中" / "最近更新"
+  const headingMeta = visibleTrips.length > 0
+    ? `${visibleTrips.length} 個行程`
+    : null;
+
+  const main = (
+    <>
+      <style>{SCOPED_STYLES}</style>
+      <div className="tp-trips-shell" data-testid="trips-list-page">
+        <div className="tp-trips-inner">
+          <div className="tp-trips-heading">
+            <div className="tp-trips-heading-text">
+              <h1>我的行程</h1>
+              {headingMeta && <div className="tp-trips-heading-meta">{headingMeta}</div>}
+            </div>
+          </div>
+
+          {loading && (
+            <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
+          )}
+
+          {error && (
+            <div className="tp-trips-error" role="alert" data-testid="trips-list-error">{error}</div>
+          )}
+
+          {!loading && !error && visibleTrips.length === 0 && (
+            <div className="tp-trips-empty-hero" data-testid="trips-list-empty">
+              <div className="tp-hero-icon" aria-hidden="true">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <rect x="3" y="6" width="18" height="14" rx="2" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                  <line x1="8" y1="3" x2="8" y2="7" />
+                  <line x1="16" y1="3" x2="16" y2="7" />
+                </svg>
+              </div>
+              <h2>還沒開始任何行程</h2>
+              <p>建立第一個行程，AI 會幫你排日程、餐廳、住宿。</p>
+              <Link to={NEW_TRIP_HREF} className="tp-hero-cta" data-testid="trips-list-new-trip-hero">
+                <span style={{ fontSize: 18 }}>+</span>
+                <span>新增行程</span>
+              </Link>
+            </div>
+          )}
+
+          {visibleTrips.length > 0 && (
+            <div className="tp-trips-grid">
+              {visibleTrips.map((t) => {
+                const isActive = isDesktop && t.tripId === effectiveSelectedId;
+                return (
+                  <Link
+                    key={t.tripId}
+                    to={`/trip/${encodeURIComponent(t.tripId)}`}
+                    onClick={(e) => handleCardClick(t.tripId, e)}
+                    className={`tp-trip-card ${isActive ? 'is-active' : ''}`}
+                    data-testid={`trips-list-card-${t.tripId}`}
+                    aria-current={isActive ? 'true' : undefined}
+                  >
+                    <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
+                    <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.day_count)}</div>
+                    <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
+                    <div className="tp-trip-card-meta">{cardMeta(t)}</div>
+                  </Link>
+                );
+              })}
+              <Link
+                to={NEW_TRIP_HREF}
+                className="tp-trip-card tp-trip-card-new"
+                data-testid="trips-list-new-trip-card"
+              >
+                <span className="tp-new-icon" aria-hidden="true">+</span>
+                <span>新增行程</span>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  // Desktop: pass sheet (mounts TripsPreviewSheet, AppShell shows 3-pane).
+  // Mobile: don't pass sheet — saves the days fetch + matches mockup mobile.
+  const sheet = isDesktop ? (
+    <TripsPreviewSheet
+      tripId={effectiveSelectedId}
+      meta={selectedTrip}
+      newTripHref={NEW_TRIP_HREF}
+    />
+  ) : undefined;
 
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      main={<>
-        <style>{SCOPED_STYLES}</style>
-        <div className="tp-trips-shell" data-testid="trips-list-page">
-          <div className="tp-trips-inner">
-            <div className="tp-trips-heading">
-              <div className="tp-trips-heading-crumb">我的行程</div>
-              <h1>行程</h1>
-              <p>挑一個進去繼續編輯，或從上方建立新的旅程。</p>
-            </div>
-
-            {loading && (
-              <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
-            )}
-
-            {error && (
-              <div className="tp-trips-error" role="alert" data-testid="trips-list-error">{error}</div>
-            )}
-
-            {!loading && !error && visibleTrips.length === 0 && (
-              <div className="tp-trips-empty" data-testid="trips-list-empty">
-                你目前沒有可編輯的行程。請聯繫管理者邀請你加入。
-              </div>
-            )}
-
-            {visibleTrips.length > 0 && (
-              <div className="tp-trips-grid">
-                {visibleTrips.map((t) => (
-                  <Link
-                    to={`/trip/${encodeURIComponent(t.tripId)}`}
-                    className="tp-trip-card"
-                    key={t.tripId}
-                    data-testid={`trips-list-card-${t.tripId}`}
-                  >
-                    <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
-                    <div className="tp-trip-card-eyebrow">{eyebrowText(t.countries)}</div>
-                    <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
-                    <div className="tp-trip-card-meta">{t.tripId}</div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </>}
+      sheet={sheet}
+      main={main}
     />
   );
 }
