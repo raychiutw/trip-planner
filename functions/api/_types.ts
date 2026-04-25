@@ -20,4 +20,7 @@ export interface Env {
   SESSION_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  // V2-P3 email service (Resend)
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string; // e.g. 'Tripline <no-reply@trip-planner-dby.pages.dev>'
 }
