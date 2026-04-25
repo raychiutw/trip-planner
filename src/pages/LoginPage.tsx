@@ -129,7 +129,7 @@ const SCOPED_STYLES = `
   margin-top: 2px; line-height: 1.5;
 }
 .tp-bs-footnote {
-  font-size: 11px;
+  font-size: var(--font-size-caption2);
   opacity: 0.6;
   letter-spacing: 0.12em;
   text-transform: uppercase;
