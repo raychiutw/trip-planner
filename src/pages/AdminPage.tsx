@@ -5,13 +5,14 @@ import { useDarkMode } from '../hooks/useDarkMode';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { usePermissions } from '../hooks/usePermissions';
+import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useTripSelector } from '../hooks/useTripSelector';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import { apiFetchRaw } from '../lib/apiClient';
 import PageNav from '../components/shared/PageNav';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 
-/* Cloudflare Access 在 infrastructure 層處理認證，不需要 JS redirect */
+/* V2 OAuth 取代 CF Access — useRequireAuth 在頁面 mount 時 redirect 未登入 user 到 /login */
 
 /* ===== Chevron SVG as background-image for the select ===== */
 const SELECT_STYLE = { backgroundImage:
@@ -19,6 +20,7 @@ const SELECT_STYLE = { backgroundImage:
   backgroundPosition: 'right 16px center' } as const;
 
 export default function AdminPage() {
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   useDarkMode();
   const isOnline = useOnlineStatus();
 

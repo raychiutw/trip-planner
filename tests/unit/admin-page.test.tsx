@@ -1,13 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import AdminPage from '../../src/pages/AdminPage';
 
 vi.mock('../../src/hooks/useDarkMode', () => ({ useDarkMode: () => {} }));
 vi.mock('../../src/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true, reportFetchResult: () => {} }));
 vi.mock('../../src/hooks/useOfflineToast', () => ({
   useOfflineToast: () => ({ showOffline: false, showReconnect: false }),
 }));
+// Bypass V2 auth gate — page is rendered as if user is logged in
+vi.mock('../../src/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({ user: { id: 'u1', email: 'admin@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),
+}));
+
+import AdminPage from '../../src/pages/AdminPage';
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;

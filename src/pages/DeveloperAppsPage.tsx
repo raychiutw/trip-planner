@@ -17,6 +17,7 @@
  *   - redirect_uris textarea: HTTPS-only validation 由後端做
  */
 import { useEffect, useState } from 'react';
+import { useRequireAuth } from '../hooks/useRequireAuth';
 
 const SCOPED_STYLES = `
 .tp-dev-shell {
@@ -289,6 +290,7 @@ function statusPill(status: string): { className: string; label: string } {
 }
 
 export default function DeveloperAppsPage() {
+  useRequireAuth(); // V2 sole-auth: redirect to /login if no tripline_session
   const [apps, setApps] = useState<ClientApp[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 

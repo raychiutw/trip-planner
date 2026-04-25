@@ -56,19 +56,6 @@ export function detectSource(
   return 'anonymous';
 }
 
-/** Decodes a JWT payload without signature verification. Cloudflare Access validates the JWT at the edge. */
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = atob(payload);
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
 export const onRequest: PagesFunction<Env> = async (context) => {
   const start = Date.now();
   const { request, env } = context;
@@ -368,94 +355,15 @@ async function handleAuth(
     }
   }
 
-  // 公開讀取：GET /api/trips/** 不需認證
+  // 公開讀取：GET /api/trips/** 不需認證 — anonymous 直接 next() 不附 auth。
+  // V2 logged-in users were already auth-decorated by the V2 session block
+  // above, so they reach this branch only when V2 fell through (anonymous).
   if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
-    // Service Token（CLI / scheduler）→ admin
-    // Security assumption: Cloudflare Access validates CF-Access-Client-Id and
-    // CF-Access-Client-Secret at the edge. We require both headers as
-    // defense-in-depth so that a leaked Client-Id alone is not sufficient.
-    const stClientId = request.headers.get('CF-Access-Client-Id');
-    const stClientSecret = request.headers.get('CF-Access-Client-Secret');
-    if (stClientId && stClientSecret) {
-      (context.data as Record<string, unknown>).auth = {
-        email: env.ADMIN_EMAIL,
-        isAdmin: true,
-        isServiceToken: true,
-      };
-      return context.next();
-    }
-    // 嘗試解析 JWT auth（給 admin 功能用，如 ?all=1），但不強制
-    const token = getCookie(request, 'CF_Authorization');
-    if (token) {
-      const payload = decodeJwtPayload(token);
-      if (payload?.email) {
-        const email = String(payload.email).toLowerCase();
-        (context.data as Record<string, unknown>).auth = {
-          email,
-          isAdmin: env.ADMIN_EMAIL
-            ? email === env.ADMIN_EMAIL.toLowerCase()
-            : false,
-          isServiceToken: false,
-        };
-      } else if (payload?.common_name) {
-        (context.data as Record<string, unknown>).auth = {
-          email: env.ADMIN_EMAIL,
-          isAdmin: true,
-          isServiceToken: true,
-        };
-      }
-    }
     return context.next();
   }
 
-  // Service Token 辨識（header 未被 Access 消化時）
-  // Security assumption: Cloudflare Access validates both headers at the edge.
-  // We require both CF-Access-Client-Id AND CF-Access-Client-Secret as
-  // defense-in-depth so a leaked Client-Id alone does not grant admin access.
-  const clientId = request.headers.get('CF-Access-Client-Id');
-  const clientSecret = request.headers.get('CF-Access-Client-Secret');
-  if (clientId && clientSecret) {
-    (context.data as Record<string, unknown>).auth = {
-      email: env.ADMIN_EMAIL,
-      isAdmin: true,
-      isServiceToken: true,
-    };
-    return context.next();
-  }
-
-  // JWT 認證（Cloudflare Access 設定的 cookie）
-  const token = getCookie(request, 'CF_Authorization');
-  if (!token) {
-    return errorResponse(new AppError('AUTH_REQUIRED'));
-  }
-
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
-    return errorResponse(new AppError('AUTH_INVALID'));
-  }
-
-  // Service Token JWT：Access 消化 header 後發 JWT，有 common_name 但無 email
-  if (!payload.email && payload.common_name) {
-    (context.data as Record<string, unknown>).auth = {
-      email: env.ADMIN_EMAIL,
-      isAdmin: true,
-      isServiceToken: true,
-    };
-    return context.next();
-  }
-
-  if (!payload.email) {
-    return errorResponse(new AppError('AUTH_INVALID'));
-  }
-
-  const email = String(payload.email).toLowerCase();
-  const isAdmin = email === env.ADMIN_EMAIL.toLowerCase();
-
-  (context.data as Record<string, unknown>).auth = {
-    email,
-    isAdmin,
-    isServiceToken: false,
-  };
-
-  return context.next();
+  // 進到這裡代表既無 V2 session 也無 V2 Bearer,且 path 不是 public-read。
+  // Cloudflare Access 已拆,不再有 CF_Authorization cookie 或 CF-Access-Client-* header,
+  // 直接拒絕。
+  return errorResponse(new AppError('AUTH_REQUIRED'));
 }
