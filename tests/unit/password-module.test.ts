@@ -3,7 +3,7 @@
  *
  * PBKDF2-SHA256 password hashing — sign+verify roundtrip + edge cases。
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { hashPassword, verifyPassword, needsRehash } from '../../src/server/password';
 
 describe('hashPassword', () => {
@@ -63,6 +63,18 @@ describe('verifyPassword', () => {
     const stored = await hashPassword('CaseSensitive');
     expect(await verifyPassword('CaseSensitive', stored)).toBe(true);
     expect(await verifyPassword('casesensitive', stored)).toBe(false);
+  });
+
+  it('crypto deriveBits throw → return false (e.g. CF Workers rejects iter > 100k)', async () => {
+    // CF Workers production isolate caps PBKDF2 iter at 100k and throws
+    // `Pbkdf2 failed: iteration counts above 100000 are not supported`.
+    // Legacy hashes stored at 600k must fail-close to 401, not bubble to 500.
+    const spy = vi.spyOn(crypto.subtle, 'deriveBits').mockRejectedValueOnce(
+      new Error('Pbkdf2 failed: iteration counts above 100000 are not supported (requested 600000).'),
+    );
+    const result = await verifyPassword('any-password', 'pbkdf2$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+    expect(result).toBe(false);
+    spy.mockRestore();
   });
 }, 60_000);
 

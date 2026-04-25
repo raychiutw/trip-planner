@@ -20,7 +20,7 @@ import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
 
-/* ===== 看地圖 chip + hero chips layout (scoped styles) ===== */
+/* ===== 看地圖 chip + hero chips layout + 加景點 footer (scoped styles) ===== */
 const MAP_CHIP_STYLES = `
 .day-map-chip {
   display: inline-flex; align-items: center; gap: 4px;
@@ -42,6 +42,39 @@ const MAP_CHIP_STYLES = `
 .ocean-hero-chips-left {
   display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
+
+/* 加景點 button — DaySection footer affordance. 之前 timeline 編輯只能透過
+ * /chat 自由輸入，使用者要先記得有 chat 模式才會發現。這顆 dashed-border
+ * 按鈕跟 trips list 的「+ 新增行程」card 視覺對齊，點下去帶 ?tripId & prefill
+ * 跳到 /chat，user 落地就能微調再送出。 */
+.day-add-stop-row {
+  margin-top: 16px;
+  padding: 12px 16px;
+}
+.day-add-stop-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit; font-size: var(--font-size-callout); font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  min-height: var(--spacing-tap-min);
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.day-add-stop-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+.day-add-stop-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.day-add-stop-btn .svg-icon { width: 16px; height: 16px; }
 `;
 
 export interface DaySectionProps {
@@ -187,6 +220,20 @@ const DaySection = React.memo(function DaySection({
 
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />
+            )}
+
+            {tripId && (
+              <div className="day-add-stop-row">
+                <Link
+                  to={`/chat?tripId=${encodeURIComponent(tripId)}&prefill=${encodeURIComponent(`幫我加 Day ${dayNum} 的景點：`)}`}
+                  className="day-add-stop-btn"
+                  aria-label={`在 Day ${dayNum} 加景點`}
+                  data-testid={`day-${dayNum}-add-stop`}
+                >
+                  <Icon name="plus" />
+                  <span>在 Day {dayNum} 加景點</span>
+                </Link>
+              </div>
             )}
           </>
         )}

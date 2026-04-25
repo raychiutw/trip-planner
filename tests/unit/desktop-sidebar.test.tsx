@@ -157,22 +157,21 @@ describe('DesktopSidebar — user chip', () => {
     expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
   });
 
-  it('已登入：顯示「登出」link href=/api/oauth/logout', () => {
+  // /devex-review 2026-04-26：sidebar 不再放「登出」link，避免 destructive
+  // action 暴露在主要 nav 區。登出走 /settings/sessions 內的 device row revoke。
+  it('已登入：sidebar 不放「登出」link', () => {
     const { container } = renderSidebar({
       user: { name: 'Ray', email: 'ray@trip.io' },
     });
-    const logout = container.querySelector('[data-testid="sidebar-logout"]') as HTMLAnchorElement | null;
-    expect(logout).toBeTruthy();
-    expect(logout?.getAttribute('href')).toBe('/api/oauth/logout');
-    expect(logout?.textContent).toContain('登出');
+    expect(container.querySelector('[data-testid="sidebar-logout"]')).toBeNull();
   });
 
-  it('未登入時不顯示「登出」link', () => {
+  it('未登入時也不顯示「登出」link', () => {
     const { container } = renderSidebar({ user: null });
     expect(container.querySelector('[data-testid="sidebar-logout"]')).toBeNull();
   });
 
-  it('已登入時 nav 隱藏「登入」item — account chip + 登出 取代', () => {
+  it('已登入時 nav 隱藏「登入」item — account chip 取代', () => {
     const { container } = renderSidebar({
       user: { name: 'Ray', email: 'ray@trip.io' },
     });

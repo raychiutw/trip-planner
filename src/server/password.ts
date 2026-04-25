@@ -127,7 +127,15 @@ export async function verifyPassword(plain: string, stored: string): Promise<boo
   } catch {
     return false;
   }
-  const computed = await pbkdf2(plain, salt, iterations);
+  // CF Workers production isolate caps PBKDF2 iter at 100k; legacy 600k hashes
+  // throw inside deriveBits and would surface as 500. Fail-close so user sees 401
+  // and can recover via forgot-password.
+  let computed: Uint8Array;
+  try {
+    computed = await pbkdf2(plain, salt, iterations);
+  } catch {
+    return false;
+  }
   return constantTimeEquals(computed, storedHash);
 }
 
