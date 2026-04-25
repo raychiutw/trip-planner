@@ -37,6 +37,13 @@ interface AuthorizationCodePayload extends AdapterPayload {
   used: boolean;
 }
 
+interface RefreshTokenPayload extends AdapterPayload {
+  client_id: string;
+  user_id: string;
+  scopes: string[];
+  grantId: string;
+}
+
 interface ClientAppRow {
   client_id: string;
   client_type: 'public' | 'confidential';
@@ -97,15 +104,62 @@ function parseBasicAuth(request: Request): { id: string; secret: string } | null
   }
 }
 
+/** Issue access+refresh tokens 共用 helper — shared by 2 grant types. */
+async function issueTokenPair(
+  db: Env['DB'],
+  clientId: string,
+  userId: string,
+  scopes: string[],
+): Promise<{ access_token: string; refresh_token: string; grantId: string }> {
+  const grantId = crypto.randomUUID();
+  const accessToken = generateOpaqueToken();
+  const refreshToken = generateOpaqueToken();
+
+  const accessAdapter = new D1Adapter(db, 'AccessToken');
+  await accessAdapter.upsert(
+    accessToken,
+    { client_id: clientId, user_id: userId, scopes, grantId },
+    ACCESS_TOKEN_TTL_SEC,
+  );
+
+  const refreshAdapter = new D1Adapter(db, 'RefreshToken');
+  await refreshAdapter.upsert(
+    refreshToken,
+    { client_id: clientId, user_id: userId, scopes, grantId },
+    REFRESH_TOKEN_TTL_SEC,
+  );
+
+  return { access_token: accessToken, refresh_token: refreshToken, grantId };
+}
+
+function tokenResponse(tokens: { access_token: string; refresh_token: string }, scopes: string[]): Response {
+  return new Response(
+    JSON.stringify({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      token_type: 'Bearer',
+      expires_in: ACCESS_TOKEN_TTL_SEC,
+      scope: scopes.join(' '),
+    }),
+    {
+      headers: {
+        'content-type': 'application/json',
+        'cache-control': 'no-store',
+        'pragma': 'no-cache',
+      },
+    },
+  );
+}
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = await parseBody(context.request);
   const grant_type = body.grant_type;
 
-  if (grant_type !== 'authorization_code') {
-    return jsonError('unsupported_grant_type', 'Only authorization_code grant supported (V2-P4)');
+  if (grant_type !== 'authorization_code' && grant_type !== 'refresh_token') {
+    return jsonError('unsupported_grant_type', 'Supported: authorization_code, refresh_token');
   }
 
-  // Client auth: HTTP Basic OR body fields
+  // Client auth: HTTP Basic OR body fields (shared by both grant types)
   const basic = parseBasicAuth(context.request);
   const clientId = basic?.id ?? body.client_id;
   const clientSecret = basic?.secret ?? body.client_secret;
@@ -126,7 +180,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return jsonError('invalid_client', 'Unknown or inactive client_id', 401);
   }
 
-  // Confidential client: verify client_secret
+  // Confidential client: verify client_secret (both grant types)
   if (client.client_type === 'confidential') {
     if (!clientSecret || !client.client_secret_hash) {
       return jsonError('invalid_client', 'client_secret required for confidential client', 401);
@@ -135,7 +189,41 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!ok) return jsonError('invalid_client', 'Invalid client_secret', 401);
   }
 
-  // Lookup authorization_code
+  // Branch on grant_type
+  if (grant_type === 'refresh_token') {
+    const refreshTokenInput = body.refresh_token;
+    if (!refreshTokenInput) {
+      return jsonError('invalid_request', 'Missing refresh_token');
+    }
+
+    const refreshAdapter = new D1Adapter(context.env.DB, 'RefreshToken');
+    const refreshRow = (await refreshAdapter.find(refreshTokenInput)) as RefreshTokenPayload | undefined;
+
+    if (!refreshRow) {
+      return jsonError('invalid_grant', 'refresh_token expired or invalid');
+    }
+    if (refreshRow.client_id !== clientId) {
+      return jsonError('invalid_grant', 'refresh_token does not belong to this client');
+    }
+
+    // Optional scope downgrade: caller can request narrower scope
+    const requestedScopes = (body.scope ?? '').split(/\s+/).filter(Boolean);
+    let finalScopes = refreshRow.scopes;
+    if (requestedScopes.length > 0) {
+      const invalid = requestedScopes.filter((s) => !refreshRow.scopes.includes(s));
+      if (invalid.length > 0) {
+        return jsonError('invalid_scope', `Cannot widen scope: ${invalid.join(', ')}`);
+      }
+      finalScopes = requestedScopes;
+    }
+
+    // Rotation: destroy old refresh + issue new pair (V2-P6 spec)
+    await refreshAdapter.destroy(refreshTokenInput);
+    const tokens = await issueTokenPair(context.env.DB, clientId, refreshRow.user_id, finalScopes);
+    return tokenResponse(tokens, finalScopes);
+  }
+
+  // grant_type === 'authorization_code'
   const code = body.code;
   if (!code) return jsonError('invalid_request', 'Missing code');
 
@@ -170,39 +258,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Mark code as used (one-time)
   await codeAdapter.consume(code);
 
-  // Issue access_token + refresh_token
-  const grantId = crypto.randomUUID();
-  const accessToken = generateOpaqueToken();
-  const refreshToken = generateOpaqueToken();
-
-  const accessAdapter = new D1Adapter(context.env.DB, 'AccessToken');
-  await accessAdapter.upsert(
-    accessToken,
-    { client_id: clientId, user_id: codeRow.user_id, scopes: codeRow.scopes, grantId },
-    ACCESS_TOKEN_TTL_SEC,
-  );
-
-  const refreshAdapter = new D1Adapter(context.env.DB, 'RefreshToken');
-  await refreshAdapter.upsert(
-    refreshToken,
-    { client_id: clientId, user_id: codeRow.user_id, scopes: codeRow.scopes, grantId },
-    REFRESH_TOKEN_TTL_SEC,
-  );
-
-  return new Response(
-    JSON.stringify({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      token_type: 'Bearer',
-      expires_in: ACCESS_TOKEN_TTL_SEC,
-      scope: codeRow.scopes.join(' '),
-    }),
-    {
-      headers: {
-        'content-type': 'application/json',
-        'cache-control': 'no-store',
-        'pragma': 'no-cache',
-      },
-    },
-  );
+  // Issue tokens via shared helper
+  const tokens = await issueTokenPair(context.env.DB, clientId, codeRow.user_id, codeRow.scopes);
+  return tokenResponse(tokens, codeRow.scopes);
 };
