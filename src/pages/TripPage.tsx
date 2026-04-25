@@ -12,6 +12,7 @@ import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripFormat } from '../lib/tripExport';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
+import { TripIdContext } from '../contexts/TripIdContext';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
@@ -106,16 +107,32 @@ function getQueryTrip(): string | null {
   return new URLSearchParams(window.location.search).get('trip');
 }
 
-/* ===== Scroll helper ===== */
+/* ===== Scroll helpers ===== */
+
+/**
+ * Find the actual scrolling ancestor of `el`. AppShell uses a constrained
+ * `.app-shell-main { overflow-y: auto }` as the scroll container, so the
+ * window doesn't scroll. Fall back to document if no ancestor scrolls.
+ */
+function findScrollContainer(el: HTMLElement): HTMLElement | Window {
+  let parent: HTMLElement | null = el.parentElement;
+  while (parent) {
+    const cs = getComputedStyle(parent);
+    const overflowY = cs.overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return window;
+}
 
 function scrollToDay(dayNum: number): void {
   const header = document.getElementById('day' + dayNum);
   if (!header) return;
-  const nav = document.getElementById('stickyNav');
-  const navH = nav ? nav.offsetHeight : 0;
-  const navTop = nav ? (parseFloat(getComputedStyle(nav).top) || 0) : 0;
-  const top = header.getBoundingClientRect().top + window.pageYOffset - navH - navTop - 4;
-  window.scrollTo({ top, behavior: 'smooth' });
+  // scroll-margin-top on the header (set in the align effect below) handles
+  // the day-strip sticky offset, so we just use scrollIntoView here.
+  header.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ===== Resolve state machine ===== */
@@ -422,12 +439,17 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     return () => window.removeEventListener('resize', align);
   }, [loading]);
 
-  /* --- Scroll tracking: update active pill + hash (#6) --- */
+  /* --- Scroll tracking: update active pill + hash (#6).
+   * AppShell makes `.app-shell-main` the scroll container (overflow-y: auto).
+   * Window doesn't scroll, so listening on window misses every scroll event.
+   * Attach the listener to the scroll container of any day header. */
   useEffect(() => {
     if (loading || dayNums.length === 0) return;
-    // Print mode 下頁面用 print layout，scroll tracking 對 user 無意義且會觸發
-    // 不必要的 switchDay setState；進入 print mode 時 cleanup 就讓 effect 重跑以 detach。
     if (isPrintMode) return;
+
+    const firstHeader = document.getElementById('day' + dayNums[0]);
+    if (!firstHeader) return;
+    const scroller = findScrollContainer(firstHeader);
 
     function onScroll() {
       const nav = document.getElementById('stickyNav');
@@ -439,12 +461,10 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
       const current = computeActiveDayIndex(headerTops, navH, getStableViewportH());
       if (current >= 0) {
         const activeDayNum = dayNums[current] ?? -1;
-        // #1: Only call switchDay when day actually changes (avoid redundant re-renders)
         if (activeDayNum >= 0 && activeDayNum !== scrollDayRef.current) {
           scrollDayRef.current = activeDayNum;
           switchDay(activeDayNum);
         }
-        // Update hash (debounced to avoid conflicts with manual scroll)
         if (Date.now() - manualScrollTs.current > 600) {
           const newHash = '#day' + activeDayNum;
           if (window.location.hash !== newHash) {
@@ -462,8 +482,8 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
       }
     }
 
-    window.addEventListener('scroll', throttledScroll, { passive: true });
-    return () => window.removeEventListener('scroll', throttledScroll);
+    scroller.addEventListener('scroll', throttledScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', throttledScroll);
   }, [loading, dayNums, switchDay, isPrintMode]);
 
   /* --- Stops count per day for DayNav progress marks --- */
@@ -649,16 +669,24 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     </div>
   );
 
+  // Wrap content in TripIdContext so descendants (TimelineEvent, DaySection,
+  // TimelineRail) can read tripId without depending on URL useParams — needed
+  // for embedded mode where URL is /trips?selected=:id (no :tripId param).
+  const wrappedMain = (
+    <TripIdContext.Provider value={activeTripId}>
+      {mainContent}
+    </TripIdContext.Provider>
+  );
+
   // Embedded mode: host page provides AppShell + sidebar + sheet + bottomNav.
-  // We return only the inner trip content (timeline + topbar + InfoSheet).
   if (noShell) {
-    return mainContent;
+    return wrappedMain;
   }
 
   return (
     <AppShell
       sidebar={<DesktopSidebarConnected />}
-      main={mainContent}
+      main={wrappedMain}
       sheet={sheetContent}
       bottomNav={bottomNavContent}
     />

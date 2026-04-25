@@ -8,7 +8,8 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useTripId } from '../../contexts/TripIdContext';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import HourlyWeather from './HourlyWeather';
@@ -82,7 +83,7 @@ const DaySection = React.memo(function DaySection({
   isActive,
   timezone,
 }: DaySectionProps) {
-  const { tripId } = useParams<{ tripId: string }>();
+  const tripId = useTripId();
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
   useEffect(() => {

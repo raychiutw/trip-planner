@@ -2,7 +2,8 @@
 
 import { memo } from 'react';
 import clsx from 'clsx';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useTripId } from '../../contexts/TripIdContext';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import { type NavLocation } from './MapLinks';
@@ -42,7 +43,7 @@ interface TimelineEventProps {
 
 export const TimelineEvent = memo(function TimelineEvent({ entry, isNow, isPast }: TimelineEventProps) {
   const navigate = useNavigate();
-  const { tripId } = useParams<{ tripId: string }>();
+  const tripId = useTripId();
   const parsed = parseTimeRange(entry.time);
   const durationText = formatDuration(parsed.duration);
   const meta = deriveTypeMeta(entry);
