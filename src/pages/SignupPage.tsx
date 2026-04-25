@@ -246,13 +246,12 @@ export default function SignupPage() {
           </div>
 
           <div className="tp-form-row">
-            <label htmlFor="signup-password">
-              密碼 <span className="tp-hint">至少 8 字元</span>
-            </label>
+            <label htmlFor="signup-password">密碼</label>
             <input
               id="signup-password"
               type="password"
               autoComplete="new-password"
+              placeholder="至少 8 字元"
               minLength={8}
               required
               value={password}
