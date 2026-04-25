@@ -2,7 +2,7 @@
  * TripSheetTabs — underline tab header for TripSheet.
  */
 import clsx from 'clsx';
-import { SHEET_TABS, type SheetTab } from '../../lib/trip-url';
+import { SHEET_TABS, sheetPanelId, sheetTabId, type SheetTab } from '../../lib/trip-url';
 
 const TAB_LABELS: Record<SheetTab, string> = {
   itinerary: '行程',
@@ -46,9 +46,12 @@ export default function TripSheetTabs({ currentTab, onChange }: TripSheetTabsPro
         {SHEET_TABS.map((tab) => (
           <button
             key={tab}
+            id={sheetTabId(tab)}
             type="button"
             role="tab"
             aria-selected={currentTab === tab}
+            aria-controls={sheetPanelId(tab)}
+            tabIndex={currentTab === tab ? 0 : -1}
             className={clsx('trip-sheet-tab', currentTab === tab && 'is-active')}
             onClick={() => onChange(tab)}
             data-testid={`trip-sheet-tab-${tab}`}

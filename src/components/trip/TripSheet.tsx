@@ -11,6 +11,8 @@ import {
   parseSheetParam,
   setSheetParam,
   closeSheet,
+  sheetPanelId,
+  sheetTabId,
   type SheetTab,
 } from '../../lib/trip-url';
 import TripSheetTabs from './TripSheetTabs';
@@ -114,38 +116,63 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
         <TripSheetTabs currentTab={currentTab} onChange={handleTabChange} />
       </div>
       <div className="trip-sheet-body">
-        {currentTab === 'map' && (
-          <Suspense fallback={null}>
-            <TripMapRail
-              key={tripId}
-              pins={allPins}
-              tripId={tripId}
-              pinsByDay={pinsByDay}
-              dark={dark}
-            />
-          </Suspense>
-        )}
-        {currentTab === 'itinerary' && (
-          <div className="trip-sheet-placeholder" data-testid="tab-itinerary">
-            <div className="eyebrow">Itinerary</div>
-            <h3>行程已顯示在左側</h3>
-            <p>Timeline 在 main 區已展開，未來會搬到這個 tab（Mindtrip 3-pane 模式）。</p>
-          </div>
-        )}
-        {currentTab === 'ideas' && (
-          <div className="trip-sheet-placeholder" data-testid="tab-ideas">
-            <div className="eyebrow">Coming soon · Phase 4</div>
-            <h3>Ideas layer</h3>
-            <p>POI 儲存池 + drag 進行程。實作在 B-P4 Explore + B-P5 Drag。</p>
-          </div>
-        )}
-        {currentTab === 'chat' && (
-          <div className="trip-sheet-placeholder" data-testid="tab-chat">
-            <div className="eyebrow">Coming soon · Phase 3</div>
-            <h3>Per-trip chat</h3>
-            <p>針對這趟 trip 的 AI 對話。實作在 Workstream V2。</p>
-          </div>
-        )}
+        {/* ARIA tabs pattern: 4 個 tabpanel 都 in DOM 用 hidden 切換，
+            這樣每個 tab 的 aria-controls 永遠 resolve 到實際 element。
+            map tab 內仍 conditional mount 維持 lazy + key={tripId} 重 init 行為。 */}
+        <div
+          role="tabpanel"
+          id={sheetPanelId('itinerary')}
+          aria-labelledby={sheetTabId('itinerary')}
+          hidden={currentTab !== 'itinerary'}
+          className="trip-sheet-placeholder"
+          data-testid="tab-itinerary"
+        >
+          <div className="eyebrow">Itinerary</div>
+          <h3>行程已顯示在左側</h3>
+          <p>Timeline 在 main 區已展開，未來會搬到這個 tab（Mindtrip 3-pane 模式）。</p>
+        </div>
+        <div
+          role="tabpanel"
+          id={sheetPanelId('ideas')}
+          aria-labelledby={sheetTabId('ideas')}
+          hidden={currentTab !== 'ideas'}
+          className="trip-sheet-placeholder"
+          data-testid="tab-ideas"
+        >
+          <div className="eyebrow">Coming soon · Phase 4</div>
+          <h3>Ideas layer</h3>
+          <p>POI 儲存池 + drag 進行程。實作在 B-P4 Explore + B-P5 Drag。</p>
+        </div>
+        <div
+          role="tabpanel"
+          id={sheetPanelId('map')}
+          aria-labelledby={sheetTabId('map')}
+          hidden={currentTab !== 'map'}
+        >
+          {currentTab === 'map' && (
+            <Suspense fallback={null}>
+              <TripMapRail
+                key={tripId}
+                pins={allPins}
+                tripId={tripId}
+                pinsByDay={pinsByDay}
+                dark={dark}
+              />
+            </Suspense>
+          )}
+        </div>
+        <div
+          role="tabpanel"
+          id={sheetPanelId('chat')}
+          aria-labelledby={sheetTabId('chat')}
+          hidden={currentTab !== 'chat'}
+          className="trip-sheet-placeholder"
+          data-testid="tab-chat"
+        >
+          <div className="eyebrow">Coming soon · Phase 3</div>
+          <h3>Per-trip chat</h3>
+          <p>針對這趟 trip 的 AI 對話。實作在 Workstream V2。</p>
+        </div>
       </div>
     </div>
   );
