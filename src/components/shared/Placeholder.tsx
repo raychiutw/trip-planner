@@ -44,9 +44,9 @@ export interface PlaceholderProps {
   title: ReactNode;
   /** One-line description below the title. */
   body: ReactNode;
-  /** Primary CTA href (react-router Link). Defaults to `/manage`. */
+  /** Primary CTA href (react-router Link). Defaults to `/trips`. */
   ctaHref?: string;
-  /** CTA label. Defaults to 「前往行程管理」. */
+  /** CTA label. Defaults to 「前往我的行程」. */
   ctaLabel?: ReactNode;
   /** `data-testid` on the root for integration tests. */
   testId?: string;
@@ -56,8 +56,8 @@ export default function Placeholder({
   eyebrow,
   title,
   body,
-  ctaHref = '/manage',
-  ctaLabel = '前往行程管理',
+  ctaHref = '/trips',
+  ctaLabel = '前往我的行程',
   testId,
 }: PlaceholderProps) {
   return (

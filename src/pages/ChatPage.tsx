@@ -2,9 +2,13 @@
  * ChatPage — V2 AI 對話入口（mockup-chat-v2.html parity）
  *
  * Wire to existing tp-request pipeline:
- *   1. POST /api/requests {tripId, mode: 'trip-plan', message}  → row.id
- *   2. SSE GET /api/requests/:id/events tracks status open→processing→completed
- *   3. on completed: GET /api/requests/:id → row.reply (Mac Mini Claude CLI fills it)
+ *   1. On trip switch: GET /api/requests?tripId=X&limit=20&sort=asc → render
+ *      historical conversation (each row = user bubble + assistant bubble).
+ *   2. POST /api/requests {tripId, message}  → row.id
+ *      (mode no longer sent — tp-request skill on Mac Mini auto-classifies
+ *      message intent: 改行程 vs 問建議)
+ *   3. SSE GET /api/requests/:id/events tracks status open→processing→completed
+ *   4. on completed: GET /api/requests/:id → row.reply (Mac Mini Claude CLI fills it)
  *
  * Why an active trip is required: tp-request rows are scoped to a trip
  * (permission gate + Mac Mini context). Cold-start (no trip yet) shows a
@@ -45,6 +49,47 @@ interface ChatMessage {
   markdown?: boolean;
   /** When true, mark message as failed (red border). */
   failed?: boolean;
+}
+
+interface RawRequestRow {
+  id: number;
+  trip_id: string;
+  mode?: string;
+  message?: string | null;
+  reply?: string | null;
+  status: 'open' | 'processing' | 'completed' | 'failed';
+  submitted_by?: string | null;
+  processed_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/** Build a message pair (user bubble + assistant bubble) from a tp-request row. */
+function rowToMessages(row: RawRequestRow): ChatMessage[] {
+  const out: ChatMessage[] = [];
+  const baseId = row.id * 2;
+  if (row.message) {
+    out.push({ id: baseId, role: 'user', text: row.message });
+  }
+  if (row.status === 'completed' && row.reply) {
+    out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true });
+  } else if (row.status === 'failed') {
+    out.push({
+      id: baseId + 1,
+      role: 'assistant',
+      text: row.reply?.trim() || 'AI 處理失敗。',
+      failed: true,
+    });
+  } else {
+    // open / processing — still inflight from a prior session
+    out.push({
+      id: baseId + 1,
+      role: 'assistant',
+      text: '思考中…',
+      pendingRequestId: row.id,
+    });
+  }
+  return out;
 }
 
 const SCOPED_STYLES = `
@@ -262,6 +307,7 @@ export default function ChatPage() {
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
   const [inflightId, setInflightId] = useState<number | null>(null);
@@ -312,6 +358,46 @@ export default function ChatPage() {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [tripMenuOpen]);
+
+  // Load historical chat for the active trip. Each tp-request row turns into
+  // one user bubble + one assistant bubble (or pending/failed placeholder).
+  // Re-runs whenever the user switches trips. Cancels in-flight fetches on
+  // trip change so a stale trip's history can't land into the new trip view.
+  useEffect(() => {
+    if (!activeTripId) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    setHistoryLoading(true);
+    setMessages([]);
+    (async () => {
+      try {
+        const res = await apiFetch<{ items: RawRequestRow[]; hasMore: boolean }>(
+          `/requests?tripId=${encodeURIComponent(activeTripId)}&limit=20&sort=asc`,
+        );
+        if (cancelled) return;
+        const rows = Array.isArray(res?.items) ? res.items : [];
+        const next: ChatMessage[] = [];
+        let resumeId: number | null = null;
+        for (const row of rows) {
+          for (const m of rowToMessages(row)) next.push(m);
+          if (row.status === 'open' || row.status === 'processing') resumeId = row.id;
+        }
+        setMessages(next);
+        // If a prior session left a request in-flight, resume the SSE so the
+        // pending bubble fills in once the Mac Mini finishes.
+        if (resumeId != null) setInflightId(resumeId);
+      } catch {
+        if (!cancelled) {
+          // Silent on history load fail — page still works for new sends.
+        }
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeTripId]);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -393,11 +479,14 @@ export default function ChatPage() {
     ]);
 
     try {
+      // mode no longer sent — tp-request skill auto-classifies intent
+      // (改行程 vs 問建議). Server defaults to 'trip-plan' to satisfy the
+      // CHECK constraint, the skill ignores it.
       const res = await fetch('/api/requests', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tripId: activeTripId, mode: 'trip-plan', message: text }),
+        body: JSON.stringify({ tripId: activeTripId, message: text }),
       });
       if (!res.ok) {
         const errText = await res.text();
@@ -501,11 +590,17 @@ export default function ChatPage() {
           <div className="tp-chat-empty"><p>載入中…</p></div>
         )}
 
-        {activeTripId && messages.length === 0 && (
+        {activeTripId && historyLoading && messages.length === 0 && (
+          <div className="tp-chat-empty" data-testid="chat-history-loading">
+            <p>載入歷史對話…</p>
+          </div>
+        )}
+
+        {activeTripId && !historyLoading && messages.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
             <h2>從一個指令開始</h2>
-            <p>選好行程後，告訴我要改什麼、加什麼、換什麼。</p>
+            <p>有什麼要改、要加、要換，或者只是想問建議都可以。AI 會自動判斷是要動行程還是純對話。</p>
             <div className="tp-chat-suggestions">
               {SUGGESTIONS.map((s) => (
                 <button

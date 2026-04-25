@@ -57,7 +57,9 @@ function lazyWithRetry<P = any>(
 }
 
 const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
-const ManagePage = lazyWithRetry(() => import('../pages/ManagePage'));
+// ManagePage removed 2026-04-26 — superseded by /chat. tp-request skill on
+// Mac Mini auto-classifies improve-trip vs question intent; the legacy
+// chat-style editor at /manage is redundant. /manage now redirects to /chat.
 // TripPage is no longer a route component — it's embedded inside TripsListPage
 // when /trips?selected=X. Direct /trip/:tripId URLs redirect to /trips via
 // TripIndexRedirect. Stop sub-routes (StopDetailPage, MapPage) still mount
@@ -125,8 +127,8 @@ if (el) {
             <Routes>
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/admin/" element={<AdminPage />} />
-              <Route path="/manage" element={<ManagePage />} />
-              <Route path="/manage/" element={<ManagePage />} />
+              <Route path="/manage" element={<Navigate to="/chat" replace />} />
+              <Route path="/manage/" element={<Navigate to="/chat" replace />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />

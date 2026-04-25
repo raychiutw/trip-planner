@@ -6,8 +6,8 @@
  * Settings (connected-apps / developer/apps / sessions) reach via direct URL,
  * not primary nav.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
 
@@ -15,14 +15,12 @@ function renderSidebar(opts: {
   path?: string;
   user?: { name: string; email: string } | null;
   isAdmin?: boolean;
-  onNewTrip?: () => void;
 } = {}) {
   return render(
     <MemoryRouter initialEntries={[opts.path ?? '/trips']}>
       <DesktopSidebar
         user={opts.user ?? null}
         isAdmin={opts.isAdmin ?? false}
-        onNewTrip={opts.onNewTrip ?? vi.fn()}
       />
     </MemoryRouter>,
   );
@@ -68,15 +66,15 @@ describe('DesktopSidebar — active state', () => {
     expect(links[3].className).not.toMatch(/is-active/);
   });
 
-  it('路由 /manage 不再 highlight 「行程」item（管理獨立成 admin-only nav）', () => {
-    const { getAllByRole } = renderSidebar({ path: '/manage' });
+  it('路由 /chat 時「聊天」item active（取代舊 /manage editor）', () => {
+    const { getAllByRole } = renderSidebar({ path: '/chat' });
     const links = getAllByRole('link');
-    expect(links[1].className).not.toMatch(/is-active/);
+    expect(links[0].className).toMatch(/is-active/);
   });
 
-  it('admin user 看到「管理」nav item，且在 /manage 時 active', () => {
+  it('admin user 看到「管理」nav item，且在 /admin 時 active', () => {
     const { getAllByRole } = renderSidebar({
-      path: '/manage',
+      path: '/admin',
       user: { name: 'Admin', email: 'admin@trip.io' },
       isAdmin: true,
     });
@@ -194,20 +192,16 @@ describe('DesktopSidebar — user chip', () => {
   });
 });
 
-describe('DesktopSidebar — New Trip CTA', () => {
-  let onNewTripMock: ReturnType<typeof vi.fn>;
-  beforeEach(() => {
-    onNewTripMock = vi.fn();
+describe('DesktopSidebar — sidebar 不再有「+ 新增行程」CTA（user direction 2026-04-26）', () => {
+  it('未登入時 sidebar 沒有 sidebar-new-trip-btn', () => {
+    const { queryByTestId } = renderSidebar();
+    expect(queryByTestId('sidebar-new-trip-btn')).toBeNull();
   });
 
-  it('sidebar 底部有「新增行程」CTA button', () => {
-    const { getByTestId } = renderSidebar({ onNewTrip: onNewTripMock });
-    expect(getByTestId('sidebar-new-trip-btn').textContent).toContain('新增行程');
-  });
-
-  it('點擊 CTA 觸發 onNewTrip callback', () => {
-    const { getByTestId } = renderSidebar({ onNewTrip: onNewTripMock });
-    fireEvent.click(getByTestId('sidebar-new-trip-btn'));
-    expect(onNewTripMock).toHaveBeenCalledTimes(1);
+  it('已登入時 sidebar 也沒有 sidebar-new-trip-btn — 入口改在 TripsListPage / GlobalMap empty state', () => {
+    const { queryByTestId } = renderSidebar({
+      user: { name: 'Ray', email: 'ray@trip.io' },
+    });
+    expect(queryByTestId('sidebar-new-trip-btn')).toBeNull();
   });
 });

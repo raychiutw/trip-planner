@@ -80,7 +80,7 @@ function withRouter(node: React.ReactNode, initialUrl = '/') {
 
 describe('a11y — axe-core wcag2a + wcag2aa（task 5.1+5.2）', () => {
   it('DesktopSidebar 0 violations', async () => {
-    const { container } = render(withRouter(<DesktopSidebar />, '/manage'));
+    const { container } = render(withRouter(<DesktopSidebar />, '/trips'));
     const violations = await runAxe(container);
     expect(violations, describeViolations(violations)).toEqual([]);
   });

@@ -3,10 +3,12 @@
  * BottomNavBar active-tab 路由 regex 精確度測試
  *
  * 確保：
- * - `/manage/maptour-2026` 不應 active「地圖」（舊 includes('/map') 會誤判）
+ * - `/chat/maptour-2026` 不應 active「地圖」（舊 includes('/map') 會誤判）
  * - `/trip/okinawa-trip-2026-Ray/map` 應 active「地圖」
  * - `/trip/test-trip` 應 active「行程」（exact trip route）
- * - `/manage/triphub` 不應 active「行程」
+ *
+ * Note: /manage 在 2026-04-26 廢棄並 redirect 到 /chat — 原本對
+ * `/manage/triphub` 的「不應 active 行程」case 已不再 reachable。
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -66,8 +68,8 @@ describe('BottomNavBar — active-tab route regex precision (PR3 fix #2)', () =>
     expect(mapBtn?.getAttribute('aria-current')).toBe('page');
   });
 
-  it('/manage/maptour-2026 → 地圖 tab NOT active (舊 includes 誤判防止)', () => {
-    mockPathname = '/manage/maptour-2026';
+  it('/chat/maptour-2026 → 地圖 tab NOT active (舊 includes 誤判防止)', () => {
+    mockPathname = '/chat/maptour-2026';
     const { container } = renderNav();
     const mapBtn = getTabBtn(container, '地圖');
     expect(mapBtn?.getAttribute('aria-current')).toBeNull();
@@ -80,10 +82,10 @@ describe('BottomNavBar — active-tab route regex precision (PR3 fix #2)', () =>
     expect(homeBtn?.getAttribute('aria-current')).toBe('page');
   });
 
-  it('/manage/triphub → 行程 tab NOT active', () => {
-    mockPathname = '/manage/triphub';
+  it('/chat → 訊息 tab active（取代舊 /manage editor）', () => {
+    mockPathname = '/chat';
     const { container } = renderNav();
-    const homeBtn = getTabBtn(container, '行程');
-    expect(homeBtn?.getAttribute('aria-current')).toBeNull();
+    const messageBtn = getTabBtn(container, '助理');
+    expect(messageBtn?.getAttribute('aria-current')).toBe('page');
   });
 });

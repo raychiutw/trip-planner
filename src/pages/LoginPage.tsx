@@ -326,7 +326,7 @@ export default function LoginPage() {
       });
       if (res.ok) {
         clearFailure();
-        navigate(redirectAfter ?? '/manage');
+        navigate(redirectAfter ?? '/trips');
         return;
       }
 

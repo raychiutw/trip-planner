@@ -19,7 +19,6 @@ import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
-import { useNewTrip } from '../../contexts/NewTripContext';
 import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
@@ -42,8 +41,8 @@ const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
 ];
 
 const NAV_ITEM_MANAGE: NavItemConfig = {
-  key: 'manage', label: '管理', href: '/manage', icon: 'settings',
-  matchPrefixes: ['/manage'],
+  key: 'manage', label: '管理', href: '/admin', icon: 'gear',
+  matchPrefixes: ['/admin'],
 };
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
@@ -185,16 +184,12 @@ export interface DesktopSidebarProps {
   user?: SidebarUser | null;
   /** Whether the current user has admin access (gates the 管理 nav item). */
   isAdmin?: boolean;
-  /** New Trip CTA click handler — parent decides how to respond (toast vs modal). */
-  onNewTrip?: () => void;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, isAdmin = false, onNewTrip, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, isAdmin = false, brand }: DesktopSidebarProps) {
   const { pathname } = useLocation();
-  const { openModal } = useNewTrip();
-  const handleNewTrip = onNewTrip ?? openModal;
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
   // Logged in: hide '登入' (use chip + 登出 link 在底部 instead).
@@ -232,16 +227,6 @@ export default function DesktopSidebar({ user, isAdmin = false, onNewTrip, brand
 
         <div className="tp-sidebar-cta">
           <ThemeToggle testId="sidebar-theme" />
-
-          <button
-            type="button"
-            className="tp-new-trip-btn"
-            data-testid="sidebar-new-trip-btn"
-            onClick={handleNewTrip}
-          >
-            <Icon name="plus" />
-            <span>新增行程</span>
-          </button>
 
           {user ? (
             <>

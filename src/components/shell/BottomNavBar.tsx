@@ -49,7 +49,7 @@ export default function BottomNavBar({
     const { pathname } = location;
     // Map tab: must match /trip/:id/map exactly (and sub-routes), not just any path containing '/map'
     if (/\/trip\/[^/]+\/map/.test(pathname)) return 'map';
-    if (pathname.startsWith('/manage')) return 'message';
+    if (pathname.startsWith('/chat')) return 'message';
     if (activeSheet && MENU_SHEETS.has(activeSheet)) return 'menu';
     return 'home';
   }
@@ -66,7 +66,7 @@ export default function BottomNavBar({
         navigate(`/trip/${tripId}/map`);
         break;
       case 'message':
-        navigate('/manage');
+        navigate('/chat');
         break;
       case 'menu':
         onOpenSheet('action-menu');

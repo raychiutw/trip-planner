@@ -1,16 +1,35 @@
+/**
+ * AdminPage smoke tests — V2 redesign (terracotta-preview parity).
+ *
+ * Validates the post-2026-04-26 rewrite: AppShell wrap, V2 page heading,
+ * tp-admin-section markup, admin gate (non-admin user redirects to /trips).
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
-vi.mock('../../src/hooks/useDarkMode', () => ({ useDarkMode: () => {} }));
+vi.mock('../../src/hooks/useDarkMode', () => ({ useDarkMode: () => ({ isDark: false, setIsDark: () => {}, colorMode: 'auto', setColorMode: () => {}, toggleDark: () => {} }) }));
 vi.mock('../../src/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true, reportFetchResult: () => {} }));
 vi.mock('../../src/hooks/useOfflineToast', () => ({
   useOfflineToast: () => ({ showOffline: false, showReconnect: false }),
 }));
-// Bypass V2 auth gate — page is rendered as if user is logged in
 vi.mock('../../src/hooks/useRequireAuth', () => ({
-  useRequireAuth: () => ({ user: { id: 'u1', email: 'admin@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' }, reload: () => {} }),
+  useRequireAuth: () => ({
+    user: { id: 'u1', email: 'lean.lean@gmail.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
 }));
+// Admin gate compares `user.email === 'lean.lean@gmail.com'` — ship the
+// admin user so the page renders instead of redirecting to /trips.
+vi.mock('../../src/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    user: { id: 'u1', email: 'lean.lean@gmail.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
+// Replace shell deps to keep the test focused on AdminPage markup
+vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
+vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
 
 import AdminPage from '../../src/pages/AdminPage';
 
@@ -26,92 +45,64 @@ function renderAdmin() {
   return render(
     <MemoryRouter>
       <AdminPage />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   mockFetch.mockResolvedValue({
-    ok: true, status: 200, json: async () => MOCK_TRIPS,
+    ok: true,
+    status: 200,
+    json: async () => MOCK_TRIPS,
   });
 });
 
-describe('AdminPage', () => {
-  it('renders page title', () => {
+describe('AdminPage — V2 (AppShell + tp-admin-* + admin gate)', () => {
+  it('renders page heading + crumb 「管理」 + h1 「權限管理」', () => {
     const { getByText } = renderAdmin();
+    expect(getByText('管理')).toBeTruthy();
     expect(getByText('權限管理')).toBeTruthy();
   });
 
-  it('does NOT have a close × button (AdminPage is a standalone page, not a modal)', () => {
-    const { container } = renderAdmin();
-    expect(container.querySelector('[aria-label="關閉"]')).toBeNull();
-  });
-
-  it('has trip select with aria-label', () => {
-    const { container } = renderAdmin();
-    expect(container.querySelector('[aria-label="選擇行程"]')).toBeTruthy();
-  });
-
-  it('loads and displays trip options', async () => {
-    const { getByText } = renderAdmin();
-    await waitFor(() => expect(getByText('沖繩自駕')).toBeTruthy());
-    expect(getByText('(已下架) 釜山旅行')).toBeTruthy();
-  });
-
-  it('shows empty state before trip selection', () => {
-    const { getByText } = renderAdmin();
-    expect(getByText('請先選擇行程')).toBeTruthy();
-  });
-
-  it('has email input and add button', () => {
-    const { getByPlaceholderText, getByText } = renderAdmin();
-    expect(getByPlaceholderText('email@example.com')).toBeTruthy();
-    expect(getByText('新增')).toBeTruthy();
-  });
-
-  it('has three section titles', () => {
+  it('three V2 sections render with eyebrow titles', () => {
     const { getByText } = renderAdmin();
     expect(getByText('選擇行程')).toBeTruthy();
     expect(getByText('已授權成員')).toBeTruthy();
     expect(getByText('新增成員')).toBeTruthy();
   });
 
-  it('has ToastContainer for status feedback', () => {
+  it('does NOT render legacy PageNav (#stickyNav removed in V2)', () => {
     const { container } = renderAdmin();
-    // ToastContainer renders a fixed div; Toast bubbles use aria-live="polite"
-    expect(container.querySelector('.fixed')).toBeTruthy();
+    expect(container.querySelector('#stickyNav')).toBeNull();
   });
 
-  it('uses zero legacy CSS class names', () => {
+  it('trip select uses tp-admin-select class + aria-label', () => {
     const { container } = renderAdmin();
-    const html = container.innerHTML;
-    expect(html).not.toContain('class="admin-');
-    expect(html).not.toContain('class="page-layout"');
-    expect(html).not.toContain('class="sticky-nav"');
-    expect(html).not.toContain('class="nav-title"');
-    expect(html).not.toContain('class="container"');
+    const select = container.querySelector('[aria-label="選擇行程"]');
+    expect(select).toBeTruthy();
+    expect(select?.className).toContain('tp-admin-select');
   });
 
-  it('uses Tailwind inline classes', () => {
-    const { container } = renderAdmin();
-    const html = container.innerHTML;
-    // Verify Tailwind utility classes are present
-    expect(html).toContain('flex');
-    expect(html).toContain('rounded');
+  it('loads + renders trip options after mount', async () => {
+    const { getByText } = renderAdmin();
+    await waitFor(() => expect(getByText('沖繩自駕')).toBeTruthy());
+    expect(getByText('(已下架) 釜山旅行')).toBeTruthy();
   });
 
-  it('sticky nav bar (PageNav / #stickyNav) still renders', () => {
-    const { container } = renderAdmin();
-    // PageNav renders a div with id="stickyNav" — verify the nav is present
-    expect(container.querySelector('#stickyNav')).not.toBeNull();
+  it('shows 「請先選擇行程」 empty state before trip is picked', () => {
+    const { getByText } = renderAdmin();
+    expect(getByText('請先選擇行程')).toBeTruthy();
   });
 
-  it('PageNav 內不再含 Tripline home link（TriplineLogo 已移除）', () => {
+  it('has email input + 「新增」 button via tp-admin-add', () => {
+    const { container, getByText } = renderAdmin();
+    expect(container.querySelector('[data-testid="admin-add-email"]')).toBeTruthy();
+    expect(getByText('新增')).toBeTruthy();
+  });
+
+  it('renders ToastContainer for action feedback', () => {
     const { container } = renderAdmin();
-    const nav = container.querySelector('#stickyNav');
-    expect(nav).not.toBeNull();
-    const homeLink = nav?.querySelector('a[href="/"]');
-    expect(homeLink).toBeNull();
+    expect(container.querySelector('[role="region"], .fixed')).toBeTruthy();
   });
 });

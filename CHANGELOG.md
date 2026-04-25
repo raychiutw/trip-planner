@@ -3,6 +3,30 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.6.0] - 2026-04-26
+
+**`/chat` 接通 Mac Mini tp-request + `/map` trip switcher + ManagePage 廢棄**。Chat 頁載入時帶歷史對話（每筆 tp-request row 渲染為 user/assistant bubble pair），未完成的 inflight 自動 resume SSE。前端 POST `/api/requests` 不再傳 mode — server 預設 `trip-plan`，tp-request skill 自動判別「改行程 vs 問建議」。`/map` 從 chip-filter 多 trip 改為 dropdown trip-switcher 模式（一次顯示一個行程，切換／空狀態 CTA），polyline 用 OceanMap 內建 useRoute 走真實導航線。Legacy `/manage` 編輯器移除，redirect 到 `/chat`。AdminPage 重新對齊 V2 terracotta-preview design。
+
+### Added
+- **Chat 歷史對話載入** — `ChatPage` 切 trip 時 `GET /api/requests?tripId=X&sort=asc&limit=20`，每筆 row 轉 user message + assistant reply（markdown 渲染）。Status `open`/`processing` 的 prior-session row 自動 resume SSE，typing dot 等 Mac Mini 回 reply 後就地替換。
+- **`/map` trip switcher** — `GlobalMapPage` 完整重寫：左上 floating header 帶 dropdown 切 trip + N stops/M days meta，地圖用 `OceanMap mode="overview"` 真實導航折線（per-day polyline + hotel sortOrder=-1 入線），點 marker 在右側 sheet 顯示 POI detail（mobile 用底部浮卡）。沒任何 trip → terracotta hero card「+ 新增行程」。
+- **AdminPage V2 重設計** — 包 AppShell + DesktopSidebarConnected + GlobalBottomNav，page heading 用 `.tp-page-heading`（crumb「管理」+ h1「權限管理」），三 sections 包進 `.tp-admin-section` 卡片。Trip select / permission list / add member 全部對齊 terracotta tokens。加 admin gate effect（非 admin redirect `/trips`）。
+- **「管理」sidebar nav 連 /admin** — gear icon，admin-only 顯示（`email === lean.lean@gmail.com`）。
+
+### Changed
+- **`POST /api/requests` mode 變 optional** — 沒給 default `'trip-plan'`（滿足 DB CHECK constraint），tp-request skill 自己看 message 自動判別意圖。前端不再傳 mode 欄位。
+- **`/manage` redirect → `/chat`** — 路由 `<Navigate to="/chat" replace />`，舊 bookmark 直接落到 chat 頁。`LoginPage` 預設 redirect、`Placeholder` default ctaHref、`BottomNavBar` 助理 tab 全改 `/chat` 或 `/trips`。
+- **Sidebar nav matchPrefixes** — 「行程」拿掉 `/manage`、「管理」改只匹配 `/admin`。GlobalBottomNav 同步。
+- **Sidebar 拿掉「+ 新增行程」按鈕** — 入口移到 TripsListPage（trailing dashed card / hero CTA）跟 GlobalMapPage empty state。Sidebar 底部只剩 ThemeToggle + account-card + 登出。
+
+### Fixed
+- **ChatPage empty state 文案對齊新 mode-less 行為** — 「有什麼要改、要加、要換，或者只是想問建議都可以。AI 會自動判斷是要動行程還是純對話」對應 skill 自動判別。
+- **Sidebar 「管理」icon** — 之前 `'settings'` icon 不在 Icon library，render 出空白；改 `'gear'`（library 有定義）。
+
+### Removed
+- **`src/pages/ManagePage.tsx` (323 行)** — Legacy AI editor 由 `/chat` 取代（chat 走同一條 tp-request pipeline，UX 更簡潔）。
+- **`tests/unit/request-api-v2.test.js`** — coupled to ManagePage.tsx，整檔刪除。
+
 ## [2.5.0] - 2026-04-26
 
 **V2 design polish + 4 placeholder pages 變 functional**。把累積的 design 議題（DayNav 留白、day 錨點被 sticky strip 遮、桌機 sheet 上方空白、三欄捲動互踩、新增行程連結錯位）一次掃乾淨；同時把 `/chat` `/map` `/manage` `/explore` 四個 placeholder 變成可用 MVP，`/chat` 直接接 Mac Mini tp-request pipeline + SSE。地圖 polyline 規格寫進 DESIGN.md（飯店為當日線首），sidebar 加 admin-only「管理」連結 + 深淺模式 toggle。

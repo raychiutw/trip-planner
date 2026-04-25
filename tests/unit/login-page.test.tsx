@@ -70,7 +70,7 @@ describe('LoginPage form', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalled());
-    expect(navigateMock.mock.calls[0]![0]).toBe('/manage');
+    expect(navigateMock.mock.calls[0]![0]).toBe('/trips');
   });
 
   it('successful login navigates to redirect_after when present', async () => {
@@ -88,7 +88,7 @@ describe('LoginPage form', () => {
     expect(navigateMock.mock.calls[0]![0]).toBe('/explore');
   });
 
-  it('open redirect protection: //evil → fallback /manage', async () => {
+  it('open redirect protection: //evil → fallback /trips', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: true }), { status: 200 }),
     ));
@@ -100,7 +100,7 @@ describe('LoginPage form', () => {
     fireEvent.click(screen.getByTestId('login-submit'));
 
     await waitFor(() => expect(navigateMock).toHaveBeenCalled());
-    expect(navigateMock.mock.calls[0]![0]).toBe('/manage');
+    expect(navigateMock.mock.calls[0]![0]).toBe('/trips');
   });
 
   it('LOGIN_INVALID → error banner + bumps fail counter', async () => {

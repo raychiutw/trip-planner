@@ -70,18 +70,18 @@ describe('DesktopSidebarConnected', () => {
     expect(container.textContent).not.toContain('me@example.com');
   });
 
-  it('passes through onNewTrip prop to inner DesktopSidebar', async () => {
+  it('renders DesktopSidebar after user fetch succeeds', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
     );
-    const onNewTrip = vi.fn();
     const { container } = render(
       <MemoryRouter>
-        <DesktopSidebarConnected onNewTrip={onNewTrip} />
+        <DesktopSidebarConnected />
       </MemoryRouter>,
     );
     await waitFor(() => expect(container.textContent).toContain('me@example.com'));
-    // CTA 仍 in DOM (新增行程 button)
     expect(container.querySelector('[data-testid="desktop-sidebar"]')).toBeTruthy();
+    // sidebar 不再有「+ 新增行程」按鈕（入口改在 TripsListPage / GlobalMap empty state）
+    expect(container.querySelector('[data-testid="sidebar-new-trip-btn"]')).toBeNull();
   });
 });

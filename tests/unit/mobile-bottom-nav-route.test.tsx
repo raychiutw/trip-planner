@@ -6,7 +6,7 @@
  * - 4 tabs render: 行程 / 地圖 / 助理 / 更多（F009: 訊息 → 助理）
  * - 行程 → navigate('/trip/:id') + scroll-to-top
  * - 地圖 → navigate('/trip/:id/map')
- * - 助理 → navigate('/manage')
+ * - 助理 → navigate('/chat')
  * - 更多 → onOpenSheet('action-menu')
  * - Active highlighting via useLocation
  * - grid-template-columns: repeat(4, 1fr)
@@ -99,10 +99,10 @@ describe('BottomNavBar — 4-tab route-based (PR3)', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/trip/${TRIP_ID}/map`);
   });
 
-  it('「助理」click → navigate to /manage（F009）', () => {
+  it('「助理」click → navigate to /chat（取代舊 /manage editor，AI auto-classifies intent）', () => {
     const { getByRole } = renderNav();
     fireEvent.click(getByRole('button', { name: '助理' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/manage');
+    expect(mockNavigate).toHaveBeenCalledWith('/chat');
   });
 
   it('「更多」click → onOpenSheet("action-menu")', () => {
