@@ -108,12 +108,22 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const showAll = url.searchParams.get('all') === '1';
   const auth = getAuth(context);
 
-  let sql: string;
-  if (showAll && auth?.isAdmin) {
-    sql = 'SELECT id AS tripId, name, owner, title, self_drive, countries, published, auto_scroll, footer, is_default FROM trips ORDER BY name ASC';
-  } else {
-    sql = 'SELECT id AS tripId, name, owner, title, self_drive, countries, published, auto_scroll, footer, is_default FROM trips WHERE published = 1 ORDER BY name ASC';
-  }
+  // Enriched fields for /trips landing card meta:
+  //   day_count    — number of days in trip (rendered as "JAPAN · 5 DAYS" eyebrow)
+  //   start_date   — earliest day.date (rendered as "7/26 – 7/30" range)
+  //   end_date     — latest day.date
+  //   member_count — distinct emails on trip_permissions excluding wildcard
+  //                  (rendered as "2 旅伴" — the count includes the owner)
+  const baseCols = `t.id AS tripId, t.name, t.owner, t.title, t.self_drive,
+                    t.countries, t.published, t.auto_scroll, t.footer, t.is_default,
+                    (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
+                    (SELECT MIN(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS start_date,
+                    (SELECT MAX(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS end_date,
+                    (SELECT COUNT(DISTINCT email) FROM trip_permissions p WHERE p.trip_id = t.id) AS member_count`;
+
+  const sql = showAll && auth?.isAdmin
+    ? `SELECT ${baseCols} FROM trips t ORDER BY t.name ASC`
+    : `SELECT ${baseCols} FROM trips t WHERE t.published = 1 ORDER BY t.name ASC`;
 
   const { results } = await context.env.DB.prepare(sql).all();
   return json(results);
