@@ -1,61 +1,151 @@
 /**
- * LoginPage — V2-P1 sign-in UI（Google OIDC + 過渡期 CF Access fallback）
+ * LoginPage — V2 sign-in UI（local password + Google OIDC + CF Access fallback）
  *
- * Primary：「使用 Google 登入」button → redirect /api/oauth/authorize
- *   （後端 V2-P1 next slice 接 Google OIDC client flow）
- * Fallback：CF Access 入口連結（V2 完整上線前 /manage 仍走 CF Access）
+ * Flow:
+ *   - Primary: email + password form → POST /api/oauth/login → navigate redirect_after
+ *   - Alt: 「使用 Google 登入」→ /api/oauth/authorize?provider=google
+ *   - Fallback: CF Access link
+ *
+ * Query params handled:
+ *   ?verified=1 → "Email 驗證成功" toast
+ *   ?verify_error=expired → 警示 banner
+ *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
  */
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const SCOPED_STYLES = `
 .tp-login-shell {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 100dvh; padding: 48px 24px; gap: 24px;
-  text-align: center;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100dvh; padding: 48px 24px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(0, 119, 182, 0.06), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(0, 119, 182, 0.04), transparent 50%),
+    var(--color-secondary);
 }
-.tp-login-eyebrow {
-  font-size: var(--font-size-eyebrow); font-weight: 700;
-  letter-spacing: 0.22em; text-transform: uppercase;
-  color: var(--color-muted);
-}
-.tp-login-title {
-  font-size: var(--font-size-title2); font-weight: 700;
-  letter-spacing: -0.01em; color: var(--color-foreground);
-}
-.tp-login-actions {
-  display: flex; flex-direction: column; gap: 12px;
-  width: 100%; max-width: 340px;
-}
-.tp-login-google {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  font: inherit; font-size: var(--font-size-callout); font-weight: 600;
-  padding: 12px 20px; border-radius: var(--radius-md);
+.tp-login-card {
+  width: 100%; max-width: 440px;
+  background: var(--color-background);
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  box-shadow: var(--shadow-md);
+}
+.tp-login-brand {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 28px;
+  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+}
+.tp-login-brand-dot { color: var(--color-accent); }
+.tp-login-headline { text-align: center; margin-bottom: 24px; }
+.tp-login-headline h1 {
+  font-size: var(--font-size-title2); font-weight: 800;
+  letter-spacing: -0.01em; margin: 0 0 6px;
+}
+.tp-login-headline p {
+  color: var(--color-muted); font-size: var(--font-size-subheadline);
+  margin: 0;
+}
+
+.tp-form { display: flex; flex-direction: column; gap: 16px; }
+.tp-form-row { display: flex; flex-direction: column; gap: 6px; }
+.tp-form-row label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.tp-form-row .tp-hint-link {
+  color: var(--color-accent);
+  font-weight: 600; font-size: var(--font-size-caption);
+  text-decoration: none;
+}
+.tp-form-row .tp-hint-link:hover { text-decoration: underline; }
+.tp-form-row input {
+  font-family: inherit; font-size: var(--font-size-callout);
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  min-height: 48px;
+}
+.tp-form-row input:focus {
+  outline: 2px solid var(--color-accent); outline-offset: -2px;
+  border-color: var(--color-accent);
+}
+
+.tp-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: var(--font-size-callout); font-weight: 600;
+  cursor: pointer; min-height: 48px;
+  transition: background 120ms;
+  text-decoration: none;
+  width: 100%;
+}
+.tp-btn-primary {
+  background: var(--color-accent); color: #fff; border: none;
+}
+.tp-btn-primary:hover:not(:disabled) { filter: brightness(0.92); }
+.tp-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.tp-btn-secondary {
   background: var(--color-background); color: var(--color-foreground);
-  cursor: pointer; min-height: var(--spacing-tap-min);
-  transition: border-color 120ms, background-color 120ms;
+  border: 1px solid var(--color-border);
 }
-.tp-login-google:hover { border-color: var(--color-accent); background: var(--color-accent-subtle); }
-.tp-login-google:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.tp-login-divider {
+.tp-btn-secondary:hover { background: var(--color-hover); }
+
+.tp-divider {
   display: flex; align-items: center; gap: 12px;
+  margin: 20px 0;
+  color: var(--color-muted); font-size: var(--font-size-caption);
+  font-weight: 500;
+}
+.tp-divider::before, .tp-divider::after {
+  content: ''; flex: 1; height: 1px;
+  background: var(--color-border);
+}
+
+.tp-banner {
+  display: flex; gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-subheadline); line-height: 1.5;
+  margin-bottom: 16px;
+}
+.tp-banner-success { background: var(--color-success-bg); color: var(--color-success); }
+.tp-banner-error { background: var(--color-destructive-bg); color: var(--color-destructive); }
+.tp-banner-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent); }
+.tp-banner a { color: inherit; text-decoration: underline; font-weight: 600; }
+
+.tp-cf-fallback {
+  display: block; margin: 20px auto 0;
+  padding: 8px 16px;
+  text-align: center;
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  min-height: var(--spacing-tap-min);
+}
+.tp-cf-fallback:hover { color: var(--color-accent); }
+
+.tp-login-footer {
+  text-align: center; margin-top: 24px;
   font-size: var(--font-size-footnote); color: var(--color-muted);
-  width: 100%; max-width: 340px;
 }
-.tp-login-divider::before, .tp-login-divider::after {
-  content: ''; flex: 1; height: 1px; background: var(--color-border);
+.tp-login-footer a {
+  color: var(--color-accent);
+  font-weight: 600; text-decoration: none;
 }
-.tp-login-cf {
-  font-size: var(--font-size-callout); color: var(--color-muted);
-  text-decoration: underline; text-underline-offset: 4px;
-  padding: 8px 16px; border-radius: var(--radius-sm);
-  min-height: var(--spacing-tap-min); display: inline-flex; align-items: center; justify-content: center;
-}
-.tp-login-cf:hover { color: var(--color-accent); }
-.tp-login-note {
-  font-size: var(--font-size-footnote); color: var(--color-muted);
-  max-width: 340px;
-}
+.tp-login-footer a:hover { text-decoration: underline; }
 `;
+
+interface ApiError {
+  error: { code: string; message: string };
+}
 
 function GoogleLogo() {
   return (
@@ -68,29 +158,263 @@ function GoogleLogo() {
   );
 }
 
+function sanitizeRedirectAfter(value: string | null): string | null {
+  if (!value) return null;
+  if (!value.startsWith('/') || value.startsWith('//')) return null;
+  return value;
+}
+
+const RATE_LIMIT_WARN_THRESHOLD = 4;
+
 export default function LoginPage() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const verified = params.get('verified') === '1';
+  const verifyError = params.get('verify_error');
+  const redirectAfter = sanitizeRedirectAfter(params.get('redirect_after'));
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [bannerError, setBannerError] = useState<string | null>(null);
+  const [lockedRetryAfter, setLockedRetryAfter] = useState<number | null>(null);
+  const [failureCount, setFailureCount] = useState(0);
+
+  // Read failure count from sessionStorage to show defensive UX warning
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('tp_login_fail_count');
+      if (stored) setFailureCount(parseInt(stored, 10) || 0);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function bumpFailure() {
+    const next = failureCount + 1;
+    setFailureCount(next);
+    try { sessionStorage.setItem('tp_login_fail_count', String(next)); } catch { /* ignore */ }
+  }
+
+  function clearFailure() {
+    setFailureCount(0);
+    try { sessionStorage.removeItem('tp_login_fail_count'); } catch { /* ignore */ }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setBannerError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/oauth/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      if (res.ok) {
+        clearFailure();
+        navigate(redirectAfter ?? '/manage');
+        return;
+      }
+
+      const errJson = (await res.json().catch(() => null)) as ApiError | null;
+      const code = errJson?.error?.code ?? 'UNKNOWN';
+      switch (code) {
+        case 'LOGIN_INVALID_INPUT':
+          setBannerError('請輸入 email 與密碼');
+          break;
+        case 'LOGIN_INVALID':
+          bumpFailure();
+          setBannerError('email 或密碼錯誤');
+          break;
+        case 'LOGIN_RATE_LIMITED': {
+          const retryAfter = res.headers.get('Retry-After');
+          setLockedRetryAfter(retryAfter ? Number(retryAfter) : 1800);
+          break;
+        }
+        default:
+          setBannerError('登入失敗，請稍後再試');
+      }
+    } catch {
+      setBannerError('網路連線失敗，請檢查後再試');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Lockout countdown
+  useEffect(() => {
+    if (lockedRetryAfter === null) return;
+    const id = setInterval(() => {
+      setLockedRetryAfter((s) => {
+        if (s === null) return null;
+        if (s <= 1) {
+          clearInterval(id);
+          return null;
+        }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [lockedRetryAfter !== null]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lockout view (full-screen replaces form)
+  if (lockedRetryAfter !== null) {
+    const minutes = Math.floor(lockedRetryAfter / 60);
+    const seconds = lockedRetryAfter % 60;
+    const countdown = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return (
+      <main className="tp-login-shell" data-testid="login-page-locked">
+        <style>{SCOPED_STYLES}</style>
+        <div className="tp-login-card" style={{ textAlign: 'center' }}>
+          <div className="tp-login-brand">
+            <span className="tp-login-brand-dot" aria-hidden="true">●</span>
+            <span>Tripline</span>
+          </div>
+          <div
+            style={{
+              width: 72, height: 72, margin: '0 auto 16px',
+              borderRadius: 'var(--radius-full)',
+              background: 'var(--color-destructive-bg)',
+              color: 'var(--color-destructive)',
+              display: 'grid', placeItems: 'center',
+            }}
+            aria-hidden="true"
+          >
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <rect x="3" y="11" width="18" height="11" rx="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <h1 className="tp-login-headline" style={{ margin: '0 0 8px' }}>登入嘗試太多次</h1>
+          <p style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-subheadline)', margin: '0 0 16px' }}>
+            為了保護帳號安全，我們暫時鎖定了登入功能。
+          </p>
+          <div
+            data-testid="login-locked-countdown"
+            style={{
+              fontFamily: "'SF Mono', ui-monospace, monospace",
+              fontSize: 36, fontWeight: 800,
+              color: 'var(--color-accent)',
+              margin: '20px 0',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {countdown}
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--color-muted)', margin: '0 0 20px' }}>
+            倒數結束後即可再試。如果不是本人操作，建議立即重設密碼。
+          </p>
+          <a href="/login/forgot" className="tp-btn tp-btn-primary" data-testid="login-locked-reset">
+            重設密碼
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  const showFailWarning = failureCount >= RATE_LIMIT_WARN_THRESHOLD;
+
   return (
     <main className="tp-login-shell" data-testid="login-page">
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-login-eyebrow">Welcome · Tripline</div>
-      <h1 className="tp-login-title">登入您的帳號</h1>
-      <div className="tp-login-actions">
+      <div className="tp-login-card">
+        <div className="tp-login-brand">
+          <span className="tp-login-brand-dot" aria-hidden="true">●</span>
+          <span>Tripline</span>
+        </div>
+        <div className="tp-login-headline">
+          <h1>登入</h1>
+          <p>歡迎回來</p>
+        </div>
+
+        {verified && (
+          <div className="tp-banner tp-banner-success" data-testid="login-banner-verified">
+            Email 驗證成功！請登入。
+          </div>
+        )}
+
+        {verifyError && (
+          <div className="tp-banner tp-banner-warning" data-testid="login-banner-verify-error">
+            {verifyError === 'expired' && '驗證連結已過期，請重新申請或註冊。'}
+            {verifyError === 'used' && '此驗證連結已使用過。'}
+            {verifyError === 'missing_token' && '驗證連結無效。'}
+            {!['expired', 'used', 'missing_token'].includes(verifyError) && '驗證失敗，請重新申請。'}
+          </div>
+        )}
+
+        {showFailWarning && (
+          <div className="tp-banner tp-banner-warning" role="alert" data-testid="login-banner-fail-warn">
+            已連續輸入錯誤多次，再失敗將鎖定 30 分鐘。
+            <strong> 忘記密碼？</strong>
+            <a href="/login/forgot">重設密碼</a>。
+          </div>
+        )}
+
+        {bannerError && (
+          <div className="tp-banner tp-banner-error" role="alert" data-testid="login-banner-error">
+            {bannerError}
+          </div>
+        )}
+
+        <form className="tp-form" onSubmit={handleSubmit} noValidate>
+          <div className="tp-form-row">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              data-testid="login-email"
+            />
+          </div>
+          <div className="tp-form-row">
+            <label htmlFor="login-password">
+              密碼
+              <a href="/login/forgot" className="tp-hint-link" data-testid="login-forgot-link">忘記密碼？</a>
+            </label>
+            <input
+              id="login-password"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              data-testid="login-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="tp-btn tp-btn-primary"
+            disabled={submitting}
+            data-testid="login-submit"
+          >
+            {submitting ? '登入中…' : '登入'}
+          </button>
+        </form>
+
+        <div className="tp-divider">或</div>
+
         <a
-          className="tp-login-google"
-          href="/api/oauth/authorize?provider=google"
+          className="tp-btn tp-btn-secondary"
+          href={`/api/oauth/authorize?provider=google${redirectAfter ? `&redirect_after=${encodeURIComponent(redirectAfter)}` : ''}`}
           data-testid="login-google"
         >
           <GoogleLogo />
           <span>使用 Google 登入</span>
         </a>
+
+        <a className="tp-cf-fallback" href="/manage" data-testid="login-cf-access">
+          Cloudflare Access 登入（過渡期）
+        </a>
+
+        <div className="tp-login-footer">
+          沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
+        </div>
       </div>
-      <div className="tp-login-divider">過渡期</div>
-      <a className="tp-login-cf" href="/manage" data-testid="login-cf-access">
-        改用 Cloudflare Access 登入
-      </a>
-      <p className="tp-login-note">
-        V2 OAuth 還在 staged rollout — 若 Google 登入無法使用，請改走 Cloudflare Access。
-      </p>
     </main>
   );
 }
