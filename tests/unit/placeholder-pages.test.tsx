@@ -35,13 +35,19 @@ describe('GlobalMapPage placeholder（/map 全域，非 per-trip）', () => {
   });
 });
 
-describe('LoginPage placeholder (Cloudflare Access 過渡期)', () => {
-  it('render 「使用 Cloudflare Access 登入」heading + CTA link to /manage', () => {
+describe('LoginPage (V2-P1 Google sign-in + CF Access 過渡期 fallback)', () => {
+  it('render 「登入您的帳號」heading + Google login button + CF Access fallback', () => {
     const { getByTestId, getByRole } = renderWithRouter(<LoginPage />);
     expect(getByTestId('login-page')).toBeTruthy();
     const heading = getByRole('heading', { level: 1 }).textContent ?? '';
-    expect(heading).toContain('Cloudflare Access');
-    const cta = getByRole('link') as HTMLAnchorElement;
-    expect(cta.getAttribute('href')).toBe('/manage');
+    expect(heading).toContain('登入');
+    // Google login button
+    const google = getByTestId('login-google') as HTMLAnchorElement;
+    expect(google.getAttribute('href')).toBe('/api/oauth/authorize?provider=google');
+    expect(google.textContent).toContain('Google');
+    // CF Access fallback
+    const cf = getByTestId('login-cf-access') as HTMLAnchorElement;
+    expect(cf.getAttribute('href')).toBe('/manage');
+    expect(cf.textContent).toContain('Cloudflare Access');
   });
 });
