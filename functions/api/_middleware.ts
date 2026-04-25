@@ -7,8 +7,18 @@
 
 import type { Env } from './_types';
 import { detectGarbledText } from './_validate';
+import { getSessionUser } from './_session';
+import { D1Adapter, type AdapterPayload } from '../../src/server/oauth-d1-adapter';
 
 import { AppError, errorResponse } from './_errors';
+
+interface AccessTokenPayload extends AdapterPayload {
+  client_id: string;
+  /** null for client_credentials grants (service-to-service) */
+  user_id: string | null;
+  scopes: string[];
+  grantId: string;
+}
 
 function getCookie(request: Request, name: string): string | null {
   const cookieHeader = request.headers.get('Cookie');
@@ -269,6 +279,82 @@ async function handleAuth(
   if (request.method === 'GET' && url.pathname === '/api/route') {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();
+  }
+
+  // V2 OAuth — sole auth path (CF Access blocks below are kept transitional during cutover).
+  //
+  // Order: try V2 session cookie first (browser users), then V2 Bearer token (service
+  // calls). If either is present and valid, decorate auth and return next() —
+  // skipping the CF Access JWT path entirely. CF Access still works as fallback for
+  // sessions issued before the cutover; once `_session.ts` becomes the sole token
+  // issuer the CF JWT block below becomes dead code.
+  const v2Session = await getSessionUser(request, env);
+  if (v2Session) {
+    let userEmail = '';
+    try {
+      const userRow = await env.DB
+        .prepare('SELECT email FROM users WHERE id = ?')
+        .bind(v2Session.uid)
+        .first<{ email: string }>();
+      if (userRow?.email) userEmail = userRow.email.toLowerCase();
+    } catch {
+      // best-effort — DB miss leaves email empty, isAdmin will be false
+    }
+    (context.data as Record<string, unknown>).auth = {
+      email: userEmail,
+      isAdmin: env.ADMIN_EMAIL ? userEmail === env.ADMIN_EMAIL.toLowerCase() : false,
+      isServiceToken: false,
+    };
+    return context.next();
+  }
+
+  // V2 service-to-service: Authorization: Bearer <access_token> issued via
+  // /api/oauth/token grant_type=client_credentials. user_id is null on these tokens
+  // (no user — pure client). Admin scope marks the client as service-admin.
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const bearerToken = authHeader.slice(7).trim();
+    if (bearerToken) {
+      try {
+        const tokenAdapter = new D1Adapter(env.DB, 'AccessToken');
+        const tokenRow = (await tokenAdapter.find(bearerToken)) as AccessTokenPayload | undefined;
+        if (tokenRow) {
+          // user-bound bearer (authorization_code grant): look up email from users
+          // service-bound bearer (client_credentials): user_id null, treat as service token
+          let email = '';
+          let isAdmin = false;
+          let isServiceToken = false;
+          if (tokenRow.user_id === null) {
+            isServiceToken = true;
+            email = env.ADMIN_EMAIL ?? '';
+            isAdmin = tokenRow.scopes.includes('admin');
+          } else {
+            try {
+              const userRow = await env.DB
+                .prepare('SELECT email FROM users WHERE id = ?')
+                .bind(tokenRow.user_id)
+                .first<{ email: string }>();
+              if (userRow?.email) {
+                email = userRow.email.toLowerCase();
+                isAdmin = env.ADMIN_EMAIL ? email === env.ADMIN_EMAIL.toLowerCase() : false;
+              }
+            } catch {
+              /* best-effort */
+            }
+          }
+          (context.data as Record<string, unknown>).auth = {
+            email,
+            isAdmin,
+            isServiceToken,
+            scopes: tokenRow.scopes,
+            clientId: tokenRow.client_id,
+          };
+          return context.next();
+        }
+      } catch {
+        // best-effort lookup — fall through to CF Access fallback if Bearer invalid
+      }
+    }
   }
 
   // 公開讀取：GET /api/trips/** 不需認證

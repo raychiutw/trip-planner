@@ -60,6 +60,7 @@ interface ClientAppRow {
   client_type: 'public' | 'confidential';
   client_secret_hash: string | null;
   status: string;
+  allowed_scopes: string;
 }
 
 function jsonError(error: string, error_description: string, status = 400): Response {
@@ -139,8 +140,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const body = await parseFormOrJson<Record<string, string>>(context.request);
   const grant_type = body.grant_type;
 
-  if (grant_type !== 'authorization_code' && grant_type !== 'refresh_token') {
-    return jsonError('unsupported_grant_type', 'Supported: authorization_code, refresh_token');
+  if (
+    grant_type !== 'authorization_code' &&
+    grant_type !== 'refresh_token' &&
+    grant_type !== 'client_credentials'
+  ) {
+    return jsonError(
+      'unsupported_grant_type',
+      'Supported: authorization_code, refresh_token, client_credentials',
+    );
   }
 
   // Client auth: HTTP Basic OR body fields (shared by both grant types)
@@ -174,7 +182,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const client = await context.env.DB
     .prepare(
-      `SELECT client_id, client_type, client_secret_hash, status
+      `SELECT client_id, client_type, client_secret_hash, status, allowed_scopes
        FROM client_apps WHERE client_id = ?`,
     )
     .bind(clientId)
@@ -193,7 +201,81 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!ok) return jsonError('invalid_client', 'Invalid client_secret', 401);
   }
 
-  // Branch on grant_type
+  // Branch on grant_type — client_credentials first (RFC 6749 §4.4)
+  if (grant_type === 'client_credentials') {
+    // Per RFC 6749 §4.4: only confidential clients can use client_credentials.
+    // Public clients have no secret to authenticate with → would be unauthenticated
+    // service-to-service call, which violates the grant's purpose.
+    if (client.client_type !== 'confidential') {
+      return jsonError(
+        'unauthorized_client',
+        'client_credentials grant requires a confidential client',
+        401,
+      );
+    }
+
+    // Validate requested scopes are subset of client.allowed_scopes (default: all
+    // allowed scopes if request omits scope param).
+    const requestedScopes = (body.scope ?? '').split(/\s+/).filter(Boolean);
+    let allowedScopes: string[] = [];
+    try {
+      const parsed: unknown = JSON.parse(client.allowed_scopes ?? '[]');
+      if (Array.isArray(parsed)) {
+        allowedScopes = parsed.filter((s): s is string => typeof s === 'string');
+      }
+    } catch {
+      /* allowed_scopes corrupt → treat as empty allow-list (deny) */
+    }
+    const finalScopes = requestedScopes.length === 0 ? allowedScopes : requestedScopes;
+    const invalid = finalScopes.filter((s) => !allowedScopes.includes(s));
+    if (invalid.length > 0) {
+      return jsonError(
+        'invalid_scope',
+        `Scope not permitted for this client: ${invalid.join(', ')}`,
+      );
+    }
+
+    // Issue access_token only — no refresh_token (RFC 6749 §4.4.3).
+    // Service can re-authenticate with credentials when access_token expires.
+    const accessToken = generateOpaqueToken(48);
+    const grantId = crypto.randomUUID();
+    const accessAdapter = new D1Adapter(context.env.DB, 'AccessToken');
+    await accessAdapter.upsert(
+      accessToken,
+      {
+        client_id: clientId,
+        user_id: null, // client_credentials has no user
+        scopes: finalScopes,
+        grantId,
+      },
+      ACCESS_TOKEN_TTL_SEC,
+    );
+
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'token_issue',
+      outcome: 'success',
+      userId: null,
+      clientId,
+      metadata: { grant_type: 'client_credentials', scopes: finalScopes },
+    });
+
+    return new Response(
+      JSON.stringify({
+        access_token: accessToken,
+        token_type: 'Bearer',
+        expires_in: ACCESS_TOKEN_TTL_SEC,
+        scope: finalScopes.join(' '),
+      }),
+      {
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+          'pragma': 'no-cache',
+        },
+      },
+    );
+  }
+
   if (grant_type === 'refresh_token') {
     const refreshTokenInput = body.refresh_token;
     if (!refreshTokenInput) {

@@ -35,8 +35,8 @@ describe('GlobalMapPage placeholder（/map 全域，非 per-trip）', () => {
   });
 });
 
-describe('LoginPage (V2 password-first + optional Google + CF Access transitional fallback)', () => {
-  it('render 「登入」heading + signup link + CF Access fallback (Google gated on /api/public-config probe)', () => {
+describe('LoginPage (V2 password-first + optional Google — sole auth, no CF Access fallback)', () => {
+  it('render 「登入」heading + signup link (Google gated on /api/public-config probe; CF Access link removed in cutover)', () => {
     const { getByTestId, queryByTestId, getByRole } = renderWithRouter(<LoginPage />);
     expect(getByTestId('login-page')).toBeTruthy();
     const heading = getByRole('heading', { level: 1 }).textContent ?? '';
@@ -46,9 +46,7 @@ describe('LoginPage (V2 password-first + optional Google + CF Access transitiona
     expect(signup.getAttribute('href')).toBe('/signup');
     // Google login button is hidden until the public-config probe confirms env
     expect(queryByTestId('login-google')).toBeNull();
-    // CF Access fallback still present (transitional)
-    const cf = getByTestId('login-cf-access') as HTMLAnchorElement;
-    expect(cf.getAttribute('href')).toBe('/manage');
-    expect(cf.textContent).toContain('Cloudflare Access');
+    // CF Access transitional link is REMOVED (V2 is sole auth post-cutover)
+    expect(queryByTestId('login-cf-access')).toBeNull();
   });
 });
