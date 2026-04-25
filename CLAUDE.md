@@ -35,9 +35,12 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 
 ```
 src/entries/        main.tsx（SPA 單入口，BrowserRouter）
-src/pages/          TripPage  ManagePage（AI 編輯聊天）  AdminPage
+src/pages/          TripPage  TripsListPage（/trips landing）  ManagePage（AI 編輯）  AdminPage
+                    LoginPage  SignupPage  ForgotPasswordPage  ResetPasswordPage  EmailVerifyPendingPage
+                    ConsentPage  ConnectedAppsPage  DeveloperAppsPage  SessionsPage  ExplorePage
 src/components/     trip/（Timeline DayNav DaySection TripMapRail ...）  shared/（Icon Toast ErrorBoundary ...）
-src/hooks/          useTrip  useApi  useDarkMode  usePrintMode  useOnlineStatus ...
+                    auth/（AuthBrandHero — V2 split-screen 右側 hero pane 共用）  shell/（AppShell DesktopSidebar BottomNavBar ...）
+src/hooks/          useTrip  useApi  useDarkMode  useRequireAuth  useCurrentUser  useOnlineStatus ...
 src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather ...
 src/types/          trip.ts  api.ts
 css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，含 6 套主題）

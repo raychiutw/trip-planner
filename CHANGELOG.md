@@ -3,6 +3,51 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.4.0] - 2026-04-25
+
+**V2 OAuth full cutover + V2 design audit follow-ups**。Cloudflare Access 全拆，Tripline 自建 V2 OAuth 接管所有 auth（瀏覽器 session cookie + CLI Bearer token）。5 個 auth page 對齊 mockup-v2 桌機 split-screen + brand hero pane。3 個 settings page wrap 進 AppShell。新增 `/trips` landing page 帶 country-keyed peach-gradient trip cards。詳見 `docs/v2-design-audit-2026-04-25.md` + `.gstack/deploy-reports/2026-04-25-pr317-321-deploy.md`。
+
+### Added
+- **Auth pages 桌機 split-screen + brand hero pane**（≥1024px）— `/login` / `/signup` / `/login/forgot` / `/auth/password/reset` / `/signup/check-email` 桌機版改成 1fr/1fr grid，左 form card、右 terracotta gradient brand hero 帶 eyebrow + headline + features + footnote。手機（<1024px）維持單欄 centered card 不變。共用 `src/components/auth/AuthBrandHero.tsx`。
+- **`/trips` landing page** — 新 `TripsListPage` 顯示登入用戶有權限的行程，每個 trip 渲染為 16/9 peach-gradient card（JP terracotta / KR cocoa / TW amber / 其他 warm-stone），點進去 → `/trip/:tripId` detail。
+- **Settings AppShell wrap** — `/settings/connected-apps` / `/developer/apps` / `/settings/sessions` 包進 `AppShell` 帶 `DesktopSidebarConnected`，桌機看到 sidebar nav + account chip。
+- **CLI service token 流程** — `/api/oauth/token` `grant_type=client_credentials`（RFC 6749 §4.4），confidential client、scope 限制、無 refresh token。對應 `scripts/lib/get-tripline-token.js` helper（auto-loads `.env.local`、60s pre-expiry refresh、`/tmp/tripline-cli-token-<uid>.json` cache）+ `scripts/provision-admin-cli-client.js` 一次性 provisioning。
+- **`/api/public-config`** — side-effect-free probe endpoint，前端拿 `{ providers: { google }, features: { passwordSignup, emailVerification } }` graceful 渲染（沒設 `GOOGLE_CLIENT_ID` 時 LoginPage 自動隱藏 Google 按鈕）。
+- **V2 Terracotta theme** — `css/tokens.css` 全面遷移 `--color-accent: #D97848` / `--color-background: #FFFBF5` / `--color-foreground: #2A1F18` + warm-tinted shadows，dark mode 換 deep-cocoa 對齊。`DESIGN.md` header 改 V2 Terracotta + canonical Palette table。
+- **`useRequireAuth` hook** — `src/hooks/useRequireAuth.ts` wrap `useCurrentUser`，`user === null` 時 navigate `/login?redirect_after=...`。套到 ManagePage / AdminPage / ConnectedAppsPage / SessionsPage / DeveloperAppsPage。
+- **SessionsPage unit test** — `tests/unit/sessions-page.test.tsx` 13 tests 補齊 V2-P6 multi-device session 管理 page 的覆蓋率。
+- **TripsListPage unit test** — `tests/unit/trips-list-page.test.tsx` 6 tests covering loading / empty / cross-ref / fallback / 兩種失敗模式。
+
+### Changed
+- **Cloudflare Access 全拆** — 不再透過 Access policy 保護 `/manage` / `/admin` / `/api/requests` / `/api/my-trips` / `/api/permissions`。`functions/api/_middleware.ts` 重寫：先試 V2 session cookie（HMAC-SHA256 opaque），再試 Bearer token（用 `D1Adapter('AccessToken').find()`）。CF JWT decode + service token check 的死程式碼移除。
+- **Scheduler scripts 改 Bearer auth** — `scripts/tp-request-scheduler.sh` / `scripts/tripline-job.sh` / `scripts/tripline-api-server.ts` 從 `CF-Access-Client-Id`/`Secret` headers 換成 `Authorization: Bearer $(node scripts/lib/get-tripline-token.js)`，TS 版用 `authedFetch` wrapper 401 自動 retry 一次。
+- **Password hashing iterations** — `src/server/password.ts` PBKDF2 從 600k 降到 100k 以符合 CF Workers Free plan 10ms CPU budget。Self-describing hash format 確保舊 hash 仍可驗證。Workers Paid plan 啟用後可調回 600k。
+- **Signup rate limit** — `functions/api/_rate_limit.ts` SIGNUP `maxAttempts: 3 → 10` per hour per IP（dev + NAT 共用 IP 太緊）。
+- **DesktopSidebar padding** — `20px 12px → 20px 14px` 對齊 mockup spacing。
+- **SignupPage password hint** — `「至少 8 字元」` 從 label-side `<span>` 移到 input `placeholder`，對齊 mockup-signup-v2。
+- **CLAUDE.md auth section** — V2 OAuth 改為 sole auth、附上 mock auth 設定（`.dev.vars` / `DEV_MOCK_EMAIL`）+ admin CLI client provisioning 步驟。
+- **`backups/` 加 `.gitignore`** — `scripts/dump-d1.js` 產的 daily JSON dump 不再髒 git status。
+
+### Fixed
+- **CSRF middleware bypass `/api/oauth/*` + Bearer requests** — 沒 Origin header 的 CLI curl 不再 403。
+- **`get-tripline-token.js` 在 launchd 環境** — scripts launched from launchd 不 source `.env.local`，helper 自己 auto-load。
+- **`provision-admin-cli-client.js` iter mismatch** — script 用 600k 但 prod 是 100k，driver `verifyPassword` 從 stored hash 讀 iter，500 error 修掉。
+- **AuthBrandHero footnote font-size** — `11px → var(--font-size-caption2)`，pr2-tokens.test.ts hardcode 檢查通過。
+
+### Removed
+- **CF Access service token check** — `functions/api/_middleware.ts` 的 `decodeJwtPayload` + CF JWT path 全拆。
+- **CF Access fallback link from LoginPage** — V2 self-signup 變唯一 primary CTA。
+
+### Test results
+- 988/988 unit tests pass
+- TypeScript clean
+- Cloudflare Pages prod deploy verified（screenshot evidence in `.gstack/deploy-reports/post-pr321-login.png`）
+
+### Deferred (audit close-out)
+- Auth pages AppShell wrap — anonymous click sidebar nav 會 redirect-bounce，需先做 disable-while-anon polish
+- `/explore` POI grid + 右 pane detail + category palette — defer 到專屬 explore-redesign sprint（P3 ~90min+）
+- `/chat`（LLM concierge）+ `/map`（cross-trip global map）— multi-day implementations，P3
+
 ## [2.3.0] - 2026-04-25
 
 **Layout Refactor (B Workstream P1-P4) + V2 OAuth Day 0 spike + A11y polish**。SaaS pivot 第一階段：Mindtrip-inspired 3-pane shell + URL-driven sheet state + Explore MVP。Panva oidc-provider 在 CF Pages Functions + nodejs_compat 下能 import + instantiate（GREEN，進 V2-P1）。詳見 `docs/2026-04-25-session-retro.md` + `docs/v2-oauth-spike-result.md`。

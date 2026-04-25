@@ -29,12 +29,22 @@
 - 📱 **響應式設計** — 手機、平板、桌機均有對應排版
 - ⚡ **PWA 體驗** — 可加入主畫面，離線瀏覽快取
 
-### 介面架構（v2.3.0+）
+### 介面架構（v2.4.0+）
 
 - 🖥️ **桌機 3-pane shell（≥1024px）** — 左 sidebar 240px（5 nav：聊天 / 行程 / 地圖 / 探索 / 登入）+ 中央 timeline + 右 sheet（min(780px, 40vw)）
 - 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav 4-tab IA：行程 / 地圖 / 訊息 / 更多
 - 🔗 **URL-driven sheet state** — `/trip/:id?sheet=itinerary|ideas|map|chat` 可深度連結 + 瀏覽器 back/forward 正常
+- 🎨 **V2 Terracotta 設計系統** — `#D97848` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，5 個 auth page 桌機版 split-screen（左 form card、右 brand hero gradient pane）
+- 🗺️ **`/trips` landing** — country-keyed peach-gradient trip cards（JP / KR / TW / 其他），點進去 → trip detail
 - 🗺️ **POI Master + Per-trip overrides** — `pois` 是 AI 維護的 master，`trip_pois` 允許 user 覆寫（NULL = 繼承 master）
+
+### 帳號與認證（v2.4.0+）
+
+- 🔐 **V2 OAuth sole auth** — Cloudflare Access 已全拆，瀏覽器走 self-signup + email/password（`tripline_session` opaque cookie）
+- 🤖 **CLI / service tokens** — `/api/oauth/token` `grant_type=client_credentials`（RFC 6749 §4.4）給 scheduler scripts、admin tooling 用
+- 📧 **Email verification + password reset** — 自建流程帶 1h TTL token + 限制（rate limit、anti-enumeration）
+- 🖥️ **多裝置 session 管理** — `/settings/sessions` 看登入裝置、撤銷單一 session 或一鍵登出全部其他裝置
+- 🔌 **OAuth client_apps** — `/settings/connected-apps`（user 端撤銷授權）+ `/developer/apps`（dev 端建立 OAuth client）
 
 ### 旅伴協作
 
