@@ -64,6 +64,8 @@ const ChatPage = lazyWithRetry(() => import('../pages/ChatPage'));
 const GlobalMapPage = lazyWithRetry(() => import('../pages/GlobalMapPage'));
 const ExplorePage = lazyWithRetry(() => import('../pages/ExplorePage'));
 const LoginPage = lazyWithRetry(() => import('../pages/LoginPage'));
+const ForgotPasswordPage = lazyWithRetry(() => import('../pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazyWithRetry(() => import('../pages/ResetPasswordPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
@@ -107,6 +109,8 @@ if (el) {
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/login/forgot" element={<ForgotPasswordPage />} />
+              <Route path="/auth/password/reset" element={<ResetPasswordPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
               <Route path="/trip/:tripId" element={<TripLayout />}>
                 <Route index element={<TripPage />} />
