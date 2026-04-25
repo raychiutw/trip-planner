@@ -168,6 +168,11 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
   const { pathname } = useLocation();
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
+  // Logged in 時 hide「登入」 nav item — user chip + 登出 link 已在 sidebar bottom
+  const visibleNavItems = user
+    ? NAV_ITEMS.filter((item) => item.key !== 'login')
+    : NAV_ITEMS;
+
   return (
     <>
       <style>{SCOPED_STYLES}</style>
@@ -177,7 +182,7 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
         </div>
 
         <nav className="tp-sidebar-nav" aria-label="主要功能">
-          {NAV_ITEMS.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isItemActive(pathname, item);
             return (
               <Link

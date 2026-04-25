@@ -136,6 +136,25 @@ describe('DesktopSidebar — user chip', () => {
     const { container } = renderSidebar({ user: null });
     expect(container.querySelector('[data-testid="sidebar-logout"]')).toBeNull();
   });
+
+  it('已登入時 nav 隱藏「登入」item（已有 user chip + 登出，避免重複）', () => {
+    const { container } = renderSidebar({
+      user: { name: 'Ray', email: 'ray@trip.io' },
+    });
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).not.toContain('登入');
+    // 其他 4 nav item 仍在
+    expect(nav?.textContent).toContain('聊天');
+    expect(nav?.textContent).toContain('行程');
+    expect(nav?.textContent).toContain('地圖');
+    expect(nav?.textContent).toContain('探索');
+  });
+
+  it('未登入時 nav 顯示「登入」item', () => {
+    const { container } = renderSidebar({ user: null });
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).toContain('登入');
+  });
 });
 
 describe('DesktopSidebar — New Trip CTA', () => {
