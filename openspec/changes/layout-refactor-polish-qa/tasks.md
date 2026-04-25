@@ -46,7 +46,7 @@
 
 ## 7. Playwright E2E matrix
 
-- [ ] 7.1 `playwright.config.ts` 加 iOS webkit + Chrome Android projects — deferred to next sprint
+- [x] 7.1 `playwright.config.js` 加 iOS webkit + Chrome Android projects — `devices['Pixel 5']` (mobile-chrome) + `devices['iPhone 13']` (mobile-safari) projects 加進；test 用 `tests/unit/playwright-config-mobile.test.ts` 4 cases 驗存在性
 - [ ] 7.2 E2E suite: 桌機 login → 建 trip → 加 ideas → promote → reorder — deferred (depends on B-P5 Ideas drag)
 - [ ] 7.3 E2E suite: 手機 login → explore → save POI → add to trip — deferred to next sprint
 - [x] 7.4 E2E suite: sheet tab 切換 + URL query 驗證 — unit-level equivalent done：`tests/unit/trip-sheet.test.tsx` (8 cases) + `trip-url.test.ts` (12 cases) + `trip-sheet-tabs-aria.test.tsx` + `trip-sheet-tabs-keyboard.test.tsx` 已 cover URL parse / set / close + tab activation。完整 Playwright e2e 留 next sprint 補
