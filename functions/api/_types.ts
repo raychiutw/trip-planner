@@ -20,4 +20,6 @@ export interface Env {
   SESSION_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  // V2-P5 RS256 signing — PKCS8 private key (PEM or raw base64)
+  OAUTH_SIGNING_PRIVATE_KEY?: string;
 }

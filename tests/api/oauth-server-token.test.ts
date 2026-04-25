@@ -7,6 +7,25 @@ import { hashPassword } from '../../src/server/password';
 
 interface MockEnv {
   DB?: { prepare: ReturnType<typeof vi.fn> };
+  OAUTH_SIGNING_PRIVATE_KEY?: string;
+}
+
+async function generateTestPrivateKeyBase64(): Promise<string> {
+  const pair = await crypto.subtle.generateKey(
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      modulusLength: 2048,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: 'SHA-256',
+    },
+    true,
+    ['sign', 'verify'],
+  );
+  const exported = await crypto.subtle.exportKey('pkcs8', pair.privateKey);
+  const bytes = new Uint8Array(exported);
+  let str = '';
+  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
+  return btoa(str);
 }
 
 function makeStmt(firstResult: unknown = null) {
@@ -399,5 +418,103 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
     }, env2));
     expect(r2.status).toBe(400);
     expect(((await r2.json()) as { error: string }).error).toBe('invalid_scope');
+  });
+
+  it('id_token issued when scope=openid + signing key configured (V2-P5)', async () => {
+    const signingKey = await generateTestPrivateKeyBase64();
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt(makeAuthorizationCodePayload());
+      }
+      if (sql.includes('SELECT id, email, display_name')) {
+        return makeStmt({
+          id: 'user-1',
+          email: 'user@example.com',
+          display_name: 'Test User',
+          email_verified_at: '2026-04-20',
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = {
+      DB: { prepare: dbPrepare },
+      OAUTH_SIGNING_PRIVATE_KEY: signingKey,
+    };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'auth-code-xyz',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, string>;
+    expect(typeof json.id_token).toBe('string');
+
+    // Parse JWT manually (header.payload.sig)
+    const parts = json.id_token.split('.');
+    expect(parts.length).toBe(3);
+    const padded = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (padded.length % 4)) % 4;
+    const claims = JSON.parse(atob(padded + '='.repeat(padLen))) as Record<string, unknown>;
+    expect(claims.iss).toBe('https://x.com');
+    expect(claims.sub).toBe('user-1');
+    expect(claims.aud).toBe('mobile');
+    expect(claims.email).toBe('user@example.com');
+    expect(claims.email_verified).toBe(true);
+    expect(claims.name).toBe('Test User'); // from profile scope
+    expect(typeof claims.iat).toBe('number');
+    expect(typeof claims.exp).toBe('number');
+    expect(claims.exp).toBeGreaterThan(claims.iat as number);
+  });
+
+  it('NO id_token when scope lacks openid (just trips:read)', async () => {
+    const signingKey = await generateTestPrivateKeyBase64();
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt(makeAuthorizationCodePayload({ scopes: ['trips.read'] }));
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = {
+      DB: { prepare: dbPrepare },
+      OAUTH_SIGNING_PRIVATE_KEY: signingKey,
+    };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(json.id_token).toBeUndefined();
+  });
+
+  it('access_token still issued when openid scope but signing key missing (graceful degrade)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt(makeAuthorizationCodePayload());
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = {
+      DB: { prepare: dbPrepare },
+      // NO OAUTH_SIGNING_PRIVATE_KEY
+    };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c',
+      redirect_uri: 'https://x.com/cb',
+    }, env));
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(typeof json.access_token).toBe('string');
+    expect(json.id_token).toBeUndefined();
   });
 });
