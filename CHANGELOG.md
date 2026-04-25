@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.5.0] - 2026-04-26
+
+**V2 design polish + 4 placeholder pages 變 functional**。把累積的 design 議題（DayNav 留白、day 錨點被 sticky strip 遮、桌機 sheet 上方空白、三欄捲動互踩、新增行程連結錯位）一次掃乾淨；同時把 `/chat` `/map` `/manage` `/explore` 四個 placeholder 變成可用 MVP，`/chat` 直接接 Mac Mini tp-request pipeline + SSE。地圖 polyline 規格寫進 DESIGN.md（飯店為當日線首），sidebar 加 admin-only「管理」連結 + 深淺模式 toggle。
+
+### Added
+- **`/chat` AI 對話 MVP** — `ChatPage` 接 `POST /api/requests` `{tripId, mode:'trip-plan'}` + `useRequestSSE` 監聽狀態 + `GET /api/requests/:id` 拿 reply 渲染 markdown。trip picker dropdown 切 active trip（寫 `LS_KEY_TRIP_PREF`），4 顆 suggestion chip 冷啟，輸入框 Enter 送出 / Shift+Enter 換行 / aria-label。
+- **`/map` 全域 leaflet 地圖** — `GlobalMapPage` 用 `useLeafletMap` 渲染所有自己有權限行程的 POI，每 trip 一色（10 色 terracotta palette）。Per-day polyline 串接 hotel + entries by sortOrder（跨 day 不連線）。左上 chip 可逐 trip toggle 隱藏，點 marker 在右側 sheet 顯示 POI 細節 + 「打開行程」CTA，mobile 改用底部浮卡。
+- **`/explore` tabs + multi-select + add-to-trip** — 兩 tab（搜尋 / 儲存池），儲存池卡片加 checkbox + sticky toolbar，多選後「加入行程」開 trip picker modal（POST entries endpoint 待接通則 toast 提示 + 切到該 trip）。
+- **`NewTripContext` 全域新增行程 modal** — 取代各頁分散的 prop drilling，Sidebar / TripsListPage 三入口（trailing dashed card / 空 hero CTA / sidebar 底部按鈕）共用同一個 modal。POST `/api/trips` 含 auto slug + 4-char base36 suffix tripId。
+- **`ThemeToggle` 共用元件** — 三段式 segmented（淺 / 自動 / 深），sidebar 底部 + SessionsPage 帳號 actions block 共用。
+- **桌機 sidebar admin-only「管理」nav 項** — `DesktopSidebarConnected` 用 `email === lean.lean@gmail.com` gate，普通用戶看不到。`/manage` 同步加 admin gate effect（非 admin redirect `/trips`）。
+- **桌機 sidebar account-card 變 Link** — 點擊進 `/settings/sessions`，作為桌機帳號入口。
+- **手機 SessionsPage 加 ThemeToggle + 登出按鈕** — mobile 帳號 tab（連到 `/settings/sessions`）落地後直接看到深淺模式切換 + 紅框登出 button。
+- **DESIGN.md「地圖 Polyline 規格」section** — 新章節明訂飯店為當日 polyline 起點（sortOrder=-1 自然成為線首），跨 day 不連線，hotel marker 仍維持 ink 色不違反 Stop Type Color Convention。
+
+### Changed
+- **DayNav mobile 留白方向** — `.ocean-day-strip` mobile padding `8px 16px` + 拿掉負 margin，strip 改在 `.ocean-page` 16px gutter 內；對齊 `mockup-trip-v2.html .mobile-day-strip` 樣式。
+- **Day section 錨點實作** — `.ocean-day > .ocean-hero { scroll-margin-top }` 取代 `.ocean-day {...}`，因為 `id="day{N}"` 實際在 `.ocean-hero` 上，原本寫法 silently no-op；mobile 96px、desktop 200px、sheet 內 96px。
+- **AppShell 三欄獨立捲動** — `.app-shell { height: 100dvh }`（原 min-height 讓 grid 隨內容漲），加 `overscroll-behavior: contain` 給 sidebar / main / sheet，scroll-chaining 不再傳到 document 或別欄。
+- **行程 sheet 內 ocean-page padding-top: 0** — `.app-shell-sheet` 內覆蓋預設 28px top padding，並把 `.ocean-day-strip top: 64px` 收掉，桌機 sheet 不再有為已不存在的 topbar 預留的 64px 空白。
+- **noShell 模式 TripPage 不渲染 Footer + FooterArt** — embedded 在 sheet 時把裝飾性 footer 拿掉（sheet 是窄欄，footer 浪費垂直空間）。
+- **Manage page 變 admin-only** — 透過 `useCurrentUser` 比對 admin email；同時 sidebar nav matchPrefixes 把 `/manage` 從「行程」item 移出，改歸到 admin-only「管理」item。
+- **OceanMap polyline 含 hotel** — `buildSegments` 拿掉 `filter(p => p.type === 'entry')`，改 `sort((a,b) => a.sortOrder - b.sortOrder)`，hotel sortOrder=-1 自然落在線首。
+
+### Fixed
+- **桌機 sheet 上方空白** — `.app-shell-sheet .ocean-page` padding-top 收掉 + `.ocean-day-strip` top:0/margin:0，sheet 不再有空白帶。
+- **TimelineEvent stop click 在 embedded 模式無反應** — 用 `useTripId()` context hook 取代 `useParams`（在 `/trips?selected=` URL 拿不到 :tripId param）。
+- **Mobile DayNav 點天數無錨點 scroll + 滑動不換 active day** — `scrollToDay` 改 `header.scrollIntoView`；scroll-spy listener 用 `findScrollContainer` 走父鏈到 `.app-shell-main` 真實 scroller。
+- **新增行程連結錯誤** — sidebar 底部「+ 新增行程」按鈕在非 `/trips` 頁面 onClick 為 undefined 沒反應，改成全域 `useNewTrip().openModal` 預設行為。
+
+### Removed
+- **舊的 `.ocean-day { scroll-margin-top: 130/210px }`** — 規則放錯 element 上根本沒 hit，改寫到 `.ocean-day > .ocean-hero`。
+- **TripsListPage local NewTripModal state** — 統一改用 `useNewTrip()` context；trailing card / hero CTA / sidebar 三入口共用一份 modal mount。
+
 ## [2.4.0] - 2026-04-25
 
 **V2 OAuth full cutover + V2 design audit follow-ups**。Cloudflare Access 全拆，Tripline 自建 V2 OAuth 接管所有 auth（瀏覽器 session cookie + CLI Bearer token）。5 個 auth page 對齊 mockup-v2 桌機 split-screen + brand hero pane。3 個 settings page wrap 進 AppShell。新增 `/trips` landing page 帶 country-keyed peach-gradient trip cards。詳見 `docs/v2-design-audit-2026-04-25.md` + `.gstack/deploy-reports/2026-04-25-pr317-321-deploy.md`。
