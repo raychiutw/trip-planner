@@ -1,8 +1,8 @@
 /**
- * POST /api/oauth/server-consent unit test — V2-P5
+ * POST /api/oauth/consent unit test — V2-P5
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { onRequestPost } from '../../functions/api/oauth/server-consent';
+import { onRequestPost } from '../../functions/api/oauth/consent';
 import { signSessionToken } from '../../src/server/session';
 
 const SECRET = 'session-secret-test';
@@ -23,7 +23,7 @@ function makeStmt() {
 
 function makeContext(body: Record<string, string>, env: MockEnv, cookie?: string): Parameters<typeof onRequestPost>[0] {
   return {
-    request: new Request('https://x.com/api/oauth/server-consent', {
+    request: new Request('https://x.com/api/oauth/consent', {
       method: 'POST',
       headers: {
         'content-type': 'application/x-www-form-urlencoded',
@@ -45,7 +45,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
 
-describe('POST /api/oauth/server-consent', () => {
+describe('POST /api/oauth/consent', () => {
   it('302 to /login when no session (preserve params via redirect_after)', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({
@@ -94,7 +94,7 @@ describe('POST /api/oauth/server-consent', () => {
 
     expect(res.status).toBe(302);
     const loc = res.headers.get('Location') ?? '';
-    expect(loc).toContain('/api/oauth/server-authorize?');
+    expect(loc).toContain('/api/oauth/authorize?');
     expect(loc).toContain('client_id=partner');
     expect(loc).toContain('state=csrf-x');
 

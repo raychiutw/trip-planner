@@ -1,5 +1,5 @@
 /**
- * POST /api/oauth/server-token
+ * POST /api/oauth/token
  *
  * V2-P4 — OAuth Server token endpoint。Exchange authorization_code for
  * access_token + refresh_token。

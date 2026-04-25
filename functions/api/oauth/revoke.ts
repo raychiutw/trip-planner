@@ -1,0 +1,155 @@
+/**
+ * POST /api/oauth/revoke — RFC 7009 Token Revocation
+ *
+ * V2-P5 — Public OAuth Server endpoint。對齊 OIDC discovery doc
+ * `revocation_endpoint` 公告。
+ *
+ * Body (form-urlencoded):
+ *   token=<token-string>
+ *   token_type_hint=<access_token | refresh_token>  (optional)
+ *   client_id=<client_id>                           (or HTTP Basic auth)
+ *   client_secret=<for confidential>                (or HTTP Basic auth)
+ *
+ * Per RFC 7009 §2.2 — endpoint **always** responds 200 even when token
+ * unknown / already revoked / wrong client. 不洩漏 token 是否存在 prevent
+ * scanning attack。
+ *
+ * Authentication required for confidential clients (per RFC 7009 §2.1)：
+ *   - client_secret 驗證跟 /token 同邏輯（Basic auth or body）
+ *   - client_id 對 token 不一致 → silent 200（不洩 token 屬於別 client）
+ *
+ * Response: 200 (empty body)
+ */
+import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
+import { verifyPassword } from '../../../src/server/password';
+import type { Env } from '../_types';
+
+interface ClientAppRow {
+  client_id: string;
+  client_type: 'public' | 'confidential';
+  client_secret_hash: string | null;
+  status: string;
+}
+
+interface AccessTokenPayload extends AdapterPayload {
+  client_id: string;
+  user_id: string;
+  scopes: string[];
+  grantId: string;
+}
+
+interface RefreshTokenPayload extends AdapterPayload {
+  client_id: string;
+  user_id: string;
+  scopes: string[];
+  grantId: string;
+}
+
+function silent200(): Response {
+  // RFC 7009 §2.2: server responds with HTTP status 200 if token is invalid /
+  // expired / already revoked. 不洩 token 存在性。
+  return new Response(null, {
+    status: 200,
+    headers: { 'cache-control': 'no-store', 'pragma': 'no-cache' },
+  });
+}
+
+function jsonError(error: string, error_description: string, status = 400): Response {
+  return new Response(
+    JSON.stringify({ error, error_description }),
+    { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } },
+  );
+}
+
+async function parseBody(request: Request): Promise<Record<string, string>> {
+  const ct = request.headers.get('content-type') ?? '';
+  if (ct.includes('application/x-www-form-urlencoded')) {
+    const text = await request.text();
+    const params = new URLSearchParams(text);
+    const out: Record<string, string> = {};
+    for (const [k, v] of params) out[k] = v;
+    return out;
+  }
+  if (ct.includes('application/json')) {
+    return (await request.json()) as Record<string, string>;
+  }
+  return {};
+}
+
+function parseBasicAuth(request: Request): { id: string; secret: string } | null {
+  const auth = request.headers.get('Authorization');
+  if (!auth || !auth.startsWith('Basic ')) return null;
+  try {
+    const decoded = atob(auth.slice(6));
+    const idx = decoded.indexOf(':');
+    if (idx < 0) return null;
+    return { id: decoded.slice(0, idx), secret: decoded.slice(idx + 1) };
+  } catch {
+    return null;
+  }
+}
+
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  const body = await parseBody(context.request);
+  const token = body.token;
+  // Per RFC 7009 §2.1: missing token = invalid_request (only error case)
+  if (!token) {
+    return jsonError('invalid_request', 'Missing token parameter');
+  }
+
+  const basic = parseBasicAuth(context.request);
+  const clientId = basic?.id ?? body.client_id;
+  const clientSecret = basic?.secret ?? body.client_secret;
+  if (!clientId) {
+    return jsonError('invalid_client', 'Missing client_id', 401);
+  }
+
+  const client = await context.env.DB
+    .prepare(
+      `SELECT client_id, client_type, client_secret_hash, status
+       FROM client_apps WHERE client_id = ?`,
+    )
+    .bind(clientId)
+    .first<ClientAppRow>();
+
+  if (!client || client.status !== 'active') {
+    return jsonError('invalid_client', 'Unknown or inactive client_id', 401);
+  }
+
+  if (client.client_type === 'confidential') {
+    if (!clientSecret || !client.client_secret_hash) {
+      return jsonError('invalid_client', 'client_secret required for confidential client', 401);
+    }
+    const ok = await verifyPassword(clientSecret, client.client_secret_hash);
+    if (!ok) return jsonError('invalid_client', 'Invalid client_secret', 401);
+  }
+
+  // Try access_token first, then refresh_token (token_type_hint speeds the lookup
+  // but per RFC 7009 §4.1.2 we MUST try the other if the hint misses)。
+  const hint = body.token_type_hint;
+  const tryOrder = hint === 'refresh_token' ? ['RefreshToken', 'AccessToken'] : ['AccessToken', 'RefreshToken'];
+
+  for (const adapterName of tryOrder) {
+    const adapter = new D1Adapter(context.env.DB, adapterName);
+    const payload = (await adapter.find(token)) as AccessTokenPayload | RefreshTokenPayload | undefined;
+    if (!payload) continue;
+
+    // RFC 7009: token belongs to wrong client → silent 200, don't leak
+    if (payload.client_id !== clientId) {
+      return silent200();
+    }
+
+    // Revoke this token
+    await adapter.destroy(token);
+
+    // RFC 7009 §2.1: revoking a refresh_token MUST also revoke all access_tokens
+    // issued by this grant chain
+    if (adapterName === 'RefreshToken' && payload.grantId) {
+      await adapter.revokeByGrantId(payload.grantId);
+    }
+    return silent200();
+  }
+
+  // Token not found in either store — silent 200 (RFC 7009 §2.2)
+  return silent200();
+};
