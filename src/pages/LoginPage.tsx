@@ -16,12 +16,18 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 const SCOPED_STYLES = `
 .tp-login-shell {
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100dvh; padding: 48px 24px;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
     radial-gradient(circle at 80% 100%, rgba(217, 120, 72, 0.04), transparent 50%),
     var(--color-secondary);
+  /* mobile fallback: single-column centered */
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px 24px;
+}
+.tp-login-form-side {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center;
 }
 .tp-login-card {
   width: 100%; max-width: 440px;
@@ -30,6 +36,105 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-xl);
   padding: 40px 36px;
   box-shadow: var(--shadow-md);
+}
+
+/* Desktop ≥1024px: split-screen (form left + brand hero right) */
+@media (min-width: 1024px) {
+  .tp-login-shell {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    padding: 0;
+  }
+  .tp-login-form-side {
+    padding: 48px;
+  }
+}
+
+.tp-login-brand-hero {
+  display: none;
+  background: linear-gradient(135deg, var(--color-foreground) 0%, var(--color-accent-deep, #B85C2E) 100%);
+  color: var(--color-background);
+  padding: 56px 48px;
+  position: relative;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+}
+@media (min-width: 1024px) {
+  .tp-login-brand-hero { display: flex; }
+}
+.tp-login-brand-hero::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -100px;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: rgba(247, 223, 203, 0.1);
+  pointer-events: none;
+}
+.tp-login-brand-hero::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; left: -80px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: rgba(217, 120, 72, 0.18);
+  pointer-events: none;
+}
+.tp-bs-eyebrow {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  position: relative; z-index: 2;
+}
+.tp-bs-display {
+  font-size: 42px; font-weight: 900;
+  letter-spacing: -0.03em; line-height: 1.05;
+  margin: 16px 0 24px;
+  position: relative; z-index: 2;
+  max-width: 380px;
+}
+.tp-bs-features {
+  display: flex; flex-direction: column;
+  gap: 18px;
+  position: relative; z-index: 2;
+}
+.tp-bs-feature {
+  display: flex; gap: 14px;
+  align-items: flex-start;
+}
+.tp-bs-feature .tp-feat-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 251, 245, 0.12);
+  display: grid; place-items: center;
+  flex-shrink: 0;
+  color: var(--color-background);
+}
+.tp-bs-feature .tp-feat-icon svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.tp-bs-feature .tp-feat-body { padding-top: 4px; }
+.tp-bs-feature .tp-feat-title {
+  font-size: 15px; font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.tp-bs-feature .tp-feat-desc {
+  font-size: 13px; opacity: 0.78;
+  margin-top: 2px; line-height: 1.5;
+}
+.tp-bs-footnote {
+  font-size: 11px;
+  opacity: 0.6;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  position: relative; z-index: 2;
 }
 .tp-login-brand {
   display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -266,13 +371,17 @@ export default function LoginPage() {
     return () => clearInterval(id);
   }, [lockedRetryAfter !== null]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Lockout view (full-screen replaces form)
+  // Lockout view — single-column (no brand hero, full-bleed alarming UX)
   if (lockedRetryAfter !== null) {
     const minutes = Math.floor(lockedRetryAfter / 60);
     const seconds = lockedRetryAfter % 60;
     const countdown = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     return (
-      <main className="tp-login-shell" data-testid="login-page-locked">
+      <main
+        className="tp-login-shell"
+        style={{ display: 'flex', gridTemplateColumns: 'unset', padding: '48px 24px' }}
+        data-testid="login-page-locked"
+      >
         <style>{SCOPED_STYLES}</style>
         <div className="tp-login-card" style={{ textAlign: 'center' }}>
           <div className="tp-login-brand">
@@ -326,7 +435,8 @@ export default function LoginPage() {
   return (
     <main className="tp-login-shell" data-testid="login-page">
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-login-card">
+      <div className="tp-login-form-side">
+        <div className="tp-login-card">
         <div className="tp-login-brand">
           <span className="tp-login-brand-dot" aria-hidden="true">●</span>
           <span>Tripline</span>
@@ -421,7 +531,68 @@ export default function LoginPage() {
         <div className="tp-login-footer">
           沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
         </div>
+        </div>
       </div>
+
+      <aside className="tp-login-brand-hero" data-testid="login-brand-hero" aria-hidden="true">
+        <div className="tp-bs-eyebrow">Why sign in</div>
+        <div>
+          <h2 className="tp-bs-display">把每次旅程<br />留在身邊。</h2>
+          <div className="tp-bs-features">
+            <div className="tp-bs-feature">
+              <div className="tp-feat-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M21 12a9 9 0 0 1-9 9M3 12a9 9 0 0 1 9-9M21 12h-4M7 12H3M12 21v-4M12 7V3" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+              </div>
+              <div className="tp-feat-body">
+                <div className="tp-feat-title">跨裝置同步</div>
+                <div className="tp-feat-desc">手機看到的就是平板看到的，離線也能用。</div>
+              </div>
+            </div>
+            <div className="tp-bs-feature">
+              <div className="tp-feat-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="8.5" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <div className="tp-feat-body">
+                <div className="tp-feat-title">邀請旅伴共編</div>
+                <div className="tp-feat-desc">用一個 link 把家人朋友拉進行程，不用 LINE 截圖。</div>
+              </div>
+            </div>
+            <div className="tp-bs-feature">
+              <div className="tp-feat-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <div className="tp-feat-body">
+                <div className="tp-feat-title">儲存池跟著你</div>
+                <div className="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。</div>
+              </div>
+            </div>
+            <div className="tp-bs-feature">
+              <div className="tp-feat-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  <circle cx="9" cy="10" r="1" />
+                  <circle cx="15" cy="10" r="1" />
+                </svg>
+              </div>
+              <div className="tp-feat-body">
+                <div className="tp-feat-title">AI 對話記住你</div>
+                <div className="tp-feat-desc">告訴 Tripline 你喜歡什麼，下次規劃自動套你的偏好。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="tp-bs-footnote">© 2026 Tripline · 由旅人為旅人打造</div>
+      </aside>
     </main>
   );
 }
