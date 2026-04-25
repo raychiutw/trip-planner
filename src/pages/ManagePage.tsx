@@ -12,7 +12,7 @@ import { useTripSelector } from '../hooks/useTripSelector';
 import { sanitizeHtml } from '../lib/sanitize';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
-import DesktopSidebar from '../components/shell/DesktopSidebar';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 
 import { marked } from 'marked';
 
@@ -599,7 +599,7 @@ export default function ManagePage() {
   /* ===== Render ===== */
   return (
     <AppShell
-      sidebar={<DesktopSidebar user={null} />}
+      sidebar={<DesktopSidebarConnected />}
       main={
         <div className="manage-wrap">
           <style>{MANAGE_SCOPED_STYLES}</style>
