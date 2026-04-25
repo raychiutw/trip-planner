@@ -35,6 +35,10 @@ export interface SessionPayload {
   csrf: string;
   /** Schema version 預留 — V2-P1 = 1 */
   v: number;
+  /** V2-P6 session id — for multi-device tracking + remote revocation。Legacy
+   * session（V2-P1）沒有此欄；revocation check 時遇 undefined 視為「無法 revoke」。
+   */
+  sid?: string;
   [key: string]: unknown;
 }
 
@@ -97,6 +101,7 @@ export async function signSessionToken(
   uid: string,
   secret: string,
   ttlSeconds = 30 * 24 * 60 * 60,
+  sid?: string,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const payload: SessionPayload = {
@@ -105,6 +110,7 @@ export async function signSessionToken(
     iat: now,
     exp: now + ttlSeconds,
     csrf: generateCsrfToken(),
+    ...(sid ? { sid } : {}),
   };
   const payloadStr = base64urlEncode(JSON.stringify(payload));
   const sig = await hmacSign(secret, payloadStr);

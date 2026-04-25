@@ -28,6 +28,12 @@ export function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(deepCamel(data)), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
+/** JSON response WITHOUT key conversion — for OAuth wire format that requires
+ *  snake_case keys (RFC 6749 access_token / client_id etc.) */
+export function rawJson(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
+}
+
 /** 型別安全的 auth 擷取 */
 export function getAuth(context: { data: unknown }): AuthData | null {
   return ((context.data as Record<string, unknown>)?.auth as AuthData) ?? null;

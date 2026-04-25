@@ -41,7 +41,7 @@ async function buildLogoutResponse(request: Request, env: Env): Promise<Response
     status: 302,
     headers: { Location: redirectAfter },
   });
-  clearSession(request, response);
+  await clearSession(request, response, env);
 
   // best-effort audit (won't throw)
   await recordAuthEvent(env.DB, request, {
