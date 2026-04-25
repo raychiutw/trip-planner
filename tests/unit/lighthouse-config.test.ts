@@ -27,8 +27,20 @@ describe('lighthouserc.json', () => {
     expect(config.ci.collect.numberOfRuns).toBeGreaterThanOrEqual(3);
   });
 
-  it('包含 3 個目標 URL（root / trip / stop detail）', () => {
-    expect(config.ci.collect.url).toHaveLength(3);
+  it('包含 5 個目標 URL（root / trip / stop detail / explore / login — task 6.3 後新 IA public routes）', () => {
+    expect(config.ci.collect.url).toHaveLength(5);
+    const urls = config.ci.collect.url.join('\n');
+    expect(urls).toMatch(/\/$/m); // root
+    expect(urls).toContain('/trip/');
+    expect(urls).toContain('/stop/');
+    expect(urls).toContain('/explore');
+    expect(urls).toContain('/login');
+  });
+
+  it('a11y threshold ≥ 0.9（task 6.2 — 新 IA public routes 必達標）', () => {
+    const a11y = config.ci.assert.assertions['categories:accessibility'] as [string, { minScore: number }] | undefined;
+    expect(a11y, 'lighthouserc.json 必須含 categories:accessibility').toBeTruthy();
+    expect(a11y?.[1]?.minScore).toBeGreaterThanOrEqual(0.9);
   });
 
   it('assertions 含 largest-contentful-paint（LCP）', () => {
