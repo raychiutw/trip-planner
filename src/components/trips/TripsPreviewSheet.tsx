@@ -122,10 +122,12 @@ const SCOPED_STYLES = `
   font-weight: 600;
 }
 
+/* Day strip — mockup-trip-v2.html .mobile-day-strip pill pattern.
+ * Per user spec: desktop sheet AND mobile day-nav share THIS pattern. */
 .tp-day-strip {
-  display: flex; gap: 4px;
+  display: flex; gap: 6px;
   overflow-x: auto;
-  padding: 0 24px;
+  padding: 8px 16px;
   position: sticky; top: 0;
   background: color-mix(in srgb, var(--color-background) 92%, transparent);
   backdrop-filter: blur(14px);
@@ -136,19 +138,25 @@ const SCOPED_STYLES = `
 .tp-day-strip::-webkit-scrollbar { display: none; }
 .tp-day-strip-btn {
   flex: 0 0 auto;
-  padding: 10px 12px;
-  border: none; background: transparent;
-  border-bottom: 2px solid transparent;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: transparent;
   cursor: pointer; font-family: inherit;
-  color: var(--color-muted);
-  display: inline-flex; flex-direction: column; gap: 2px;
+  color: var(--color-foreground);
+  display: inline-flex; flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   min-height: 44px;
-  transition: color 160ms, border-bottom-color 160ms;
+  transition: background 150ms, border-color 150ms, color 150ms;
 }
-.tp-day-strip-btn:hover:not(.is-active) { color: var(--color-foreground); }
+.tp-day-strip-btn:hover:not(.is-active) {
+  border-color: var(--color-accent);
+}
 .tp-day-strip-btn.is-active {
-  color: var(--color-accent-deep, #B85C2E);
-  border-bottom-color: var(--color-accent);
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
 }
 .tp-day-strip-btn .tp-dn-head { display: inline-flex; align-items: center; gap: 4px; }
 .tp-day-strip-btn .tp-dn-eyebrow {
@@ -156,10 +164,11 @@ const SCOPED_STYLES = `
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  opacity: 0.7;
+  opacity: 0.6;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.tp-day-strip-btn.is-active .tp-dn-eyebrow { opacity: 1; }
+.tp-day-strip-btn.is-active .tp-dn-eyebrow { opacity: 0.85; }
 .tp-day-strip-btn .tp-dn-today {
   font-size: 9px;
   font-weight: 700;
@@ -170,22 +179,25 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep, #B85C2E);
 }
+.tp-day-strip-btn.is-active .tp-dn-today {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
 .tp-day-strip-btn .tp-dn-date {
-  font-size: 14px; font-weight: 600;
+  font-size: 13px; font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.005em;
   line-height: 1;
   color: var(--color-foreground);
 }
-.tp-day-strip-btn.is-active .tp-dn-date {
-  color: var(--color-accent-deep, #B85C2E);
-}
+.tp-day-strip-btn.is-active .tp-dn-date { color: #fff; }
 .tp-day-strip-btn .tp-dn-dow {
   font-size: var(--font-size-caption2);
   font-weight: 500;
   opacity: 0.55;
   margin-left: 4px;
 }
+.tp-day-strip-btn.is-active .tp-dn-dow { opacity: 0.85; }
 
 .tp-sheet-body { flex: 1; overflow-y: auto; }
 .tp-rail { padding: 16px 20px 20px; }

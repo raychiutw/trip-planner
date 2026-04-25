@@ -99,19 +99,23 @@ body.print-mode .ocean-day-strip { display: none; }
 
 body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-muted); }
 
-/* === MOBILE pill style (<761px): back to card-style snap-scroll === */
+/* === MOBILE pill style (<761px): mockup-trip-v2.html .mobile-day-strip-btn ===
+ * Vertical column layout (DAY 01 on top row, 7/26 on bottom row). Filled
+ * accent on active. 44px min tap target. Matches mockup exactly. */
 @media (max-width: 760px) {
   .ocean-day-strip {
     gap: 6px;
-    padding: 4px 16px 6px;
+    padding: 8px 16px;
     margin: -18px -16px 16px;
   }
   [data-dn] {
     padding: 7px 10px;
     border: 1px solid var(--color-border);
     border-radius: 10px;
-    gap: 6px;
-    min-height: 36px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    min-height: 44px;
     color: var(--color-foreground);
   }
   [data-dn]:hover:not(.active) {
@@ -125,11 +129,28 @@ body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-m
     border-bottom-color: var(--color-accent);
   }
   [data-dn].active .dn-date { color: #fff; }
-  [data-dn].active .dn-eyebrow { color: rgba(255,255,255,0.85); }
-  [data-dn] .dn-date { font-size: 14px; color: var(--color-foreground); }
-  [data-dn] .dn-area { max-width: 56px; padding-left: 6px; font-size: var(--font-size-caption2); }
+  [data-dn].active .dn-eyebrow { color: rgba(255,255,255,0.85); opacity: 0.85; }
+  [data-dn] .dn-eyebrow {
+    font-size: var(--font-size-eyebrow);
+    letter-spacing: 0.14em;
+    opacity: 0.6;
+    line-height: 1;
+  }
+  [data-dn] .dn-date {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-foreground);
+  }
+  [data-dn] .dn-dow { margin-left: 4px; opacity: 0.55; }
+  [data-dn] .dn-area {
+    max-width: 80px;
+    padding-left: 0;
+    font-size: var(--font-size-caption2);
+    opacity: 0.6;
+    line-height: 1;
+  }
   [data-dn] .dn-area::before { display: none; }
-  [data-dn] .dn-eyebrow { font-size: var(--font-size-eyebrow); letter-spacing: 0.12em; }
   [data-dn] .dn-weather { background: rgba(0,0,0,0.06); color: var(--color-muted); }
   [data-dn].active .dn-weather { background: rgba(255,255,255,0.18); color: #fff; }
 }

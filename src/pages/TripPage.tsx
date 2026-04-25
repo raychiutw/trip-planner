@@ -1,8 +1,7 @@
-import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
-import clsx from 'clsx';
 import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
@@ -553,15 +552,6 @@ export default function TripPage() {
             onDownload={handleDownloadFormat}
             isOnline={isOnline}
           />
-          <a
-            className={clsx('ocean-tb-btn ocean-tb-ai', !isOnline && 'opacity-40 pointer-events-none')}
-            href="/manage/"
-            aria-disabled={!isOnline}
-            tabIndex={isOnline ? undefined : -1}
-            onClick={!isOnline ? (e: React.MouseEvent) => e.preventDefault() : undefined}
-          >
-            AI 編輯
-          </a>
         </div>
       </header>
 

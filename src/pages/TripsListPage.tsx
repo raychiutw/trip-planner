@@ -22,12 +22,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TripsPreviewSheet from '../components/trips/TripsPreviewSheet';
 
 const SCOPED_STYLES = `
+/* /trips landing uses a narrower sheet than the trip-detail page so the card
+ * grid + browse area gets more room. Default 3-pane token is min(780px, 40vw)
+ * which gives ~50/50 main/sheet at 1440 (too cramped for a list). Override
+ * to min(420px, 32vw) — at 1440 → sheet=420, main=780, sidebar=240.
+ *
+ * Scoped to <main className="tp-trips-shell"> so other 3-pane pages
+ * (TripPage with rich TripSheet) keep their wider sheet. */
+@media (min-width: 1024px) {
+  .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
+    grid-template-columns: 240px 1fr min(420px, 32vw);
+  }
+}
 .tp-trips-shell {
   min-height: 100%;
   padding: 32px 24px 64px;
@@ -269,6 +283,7 @@ const NEW_TRIP_HREF = '/manage';
 
 export default function TripsListPage() {
   useRequireAuth();
+  const { user } = useCurrentUser();
   const navigate = useNavigate();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
@@ -434,6 +449,7 @@ export default function TripsListPage() {
       sidebar={<DesktopSidebarConnected />}
       sheet={sheet}
       main={main}
+      bottomNav={<GlobalBottomNav authed={!!user} />}
     />
   );
 }

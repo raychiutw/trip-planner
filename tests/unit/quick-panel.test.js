@@ -85,10 +85,11 @@ describe('TripPage Ocean topbar', () => {
     expect(tripPageTsx).not.toContain('QuickPanel');
   });
 
-  it('topbar 直接暴露 緊急 / 列印 / AI 編輯', () => {
+  it('topbar 直接暴露 緊急 / 列印（AI 編輯 link 移除 — 走 sidebar 「行程」 → /manage）', () => {
     expect(tripPageTsx).toContain("setActiveSheet('emergency')");
     expect(tripPageTsx).toContain('togglePrint');
-    expect(tripPageTsx).toContain('AI 編輯');
+    // AI 編輯 link removed per user direction; sidebar 行程 nav still routes to /manage
+    expect(tripPageTsx).not.toContain('AI 編輯');
   });
 
   it('topbar 不含死連結（PR3 Item 9：ocean-nav-tabs shell 已移除）', () => {
