@@ -18,6 +18,8 @@
  */
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 
 const SCOPED_STYLES = `
 .tp-dev-shell {
@@ -396,8 +398,11 @@ export default function DeveloperAppsPage() {
   }
 
   return (
-    <main className="tp-dev-shell" data-testid="developer-apps-page">
+    <AppShell
+      sidebar={<DesktopSidebarConnected />}
+      main={<>
       <style>{SCOPED_STYLES}</style>
+      <div className="tp-dev-shell" data-testid="developer-apps-page">
       <div className="tp-dev-inner">
         <div className="tp-page-heading">
           <div className="tp-page-heading-text">
@@ -464,6 +469,7 @@ export default function DeveloperAppsPage() {
             })}
           </div>
         )}
+      </div>
       </div>
 
       {creating && (
@@ -621,6 +627,7 @@ export default function DeveloperAppsPage() {
           </div>
         </div>
       )}
-    </main>
+      </>}
+    />
   );
 }

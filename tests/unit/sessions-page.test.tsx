@@ -12,6 +12,15 @@ vi.mock('../../src/hooks/useRequireAuth', () => ({
     reload: () => {},
   }),
 }));
+// Mock useCurrentUser too — DesktopSidebarConnected (now wrapping the page in
+// AppShell) reads from it, and would otherwise consume the stubbed fetch
+// Response body before the page-level fetch could read it.
+vi.mock('../../src/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    user: { id: 'u1', email: 'u@x.com', emailVerified: true, displayName: null, avatarUrl: null, createdAt: '' },
+    reload: () => {},
+  }),
+}));
 
 import SessionsPage from '../../src/pages/SessionsPage';
 

@@ -13,6 +13,8 @@
  */
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 
 const SCOPED_STYLES = `
 .tp-sessions-shell {
@@ -223,8 +225,11 @@ export default function SessionsPage() {
   const otherSessions = sessions?.filter((s) => !s.is_current) ?? [];
 
   return (
-    <main className="tp-sessions-shell" data-testid="sessions-page">
+    <AppShell
+      sidebar={<DesktopSidebarConnected />}
+      main={<>
       <style>{SCOPED_STYLES}</style>
+      <div className="tp-sessions-shell" data-testid="sessions-page">
       <div className="tp-sessions-inner">
         <div className="tp-page-heading">
           <div className="tp-page-heading-text">
@@ -329,6 +334,8 @@ export default function SessionsPage() {
           </div>
         </div>
       </div>
-    </main>
+      </div>
+      </>}
+    />
   );
 }
