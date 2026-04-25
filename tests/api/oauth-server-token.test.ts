@@ -253,3 +253,151 @@ describe('POST /api/oauth/server-token', () => {
     expect((await r1.json() as { error: string }).error).toBe('invalid_client');
   }, 60_000);
 });
+
+describe('POST /api/oauth/server-token — refresh_token grant', () => {
+  it('happy path: rotate refresh + issue new access', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            client_id: 'mobile',
+            user_id: 'u1',
+            scopes: ['openid', 'profile'],
+            grantId: 'g1',
+          }),
+          expires_at: Date.now() + 60000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'old-refresh-token',
+    }, env));
+
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(typeof json.access_token).toBe('string');
+    expect(typeof json.refresh_token).toBe('string');
+    expect(json.token_type).toBe('Bearer');
+    expect(json.scope).toBe('openid profile');
+
+    // Old refresh token destroyed (rotation)
+    const sqls = dbPrepare.mock.calls.map((c) => c[0] as string);
+    expect(sqls.some((s) => s.includes('DELETE FROM oauth_models'))).toBe(true);
+  });
+
+  it('400 invalid_grant when refresh_token unknown / expired', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload')) return makeStmt(null);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'expired',
+    }, env));
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error: string }).error).toBe('invalid_grant');
+  });
+
+  it('400 invalid_grant when refresh_token belongs to other client (anti-token theft)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            client_id: 'other-client',
+            user_id: 'u1',
+            scopes: ['openid'],
+            grantId: 'g1',
+          }),
+          expires_at: Date.now() + 60000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'someone-elses-token',
+    }, env));
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error_description: string }).error_description).toContain('does not belong');
+  });
+
+  it('400 invalid_request when refresh_token missing', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      // missing refresh_token
+    }, env));
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error: string }).error).toBe('invalid_request');
+  });
+
+  it('Scope downgrade allowed (subset of stored), widening rejected', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            client_id: 'mobile',
+            user_id: 'u1',
+            scopes: ['openid', 'profile', 'email'],
+            grantId: 'g1',
+          }),
+          expires_at: Date.now() + 60000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    // Downgrade ok
+    const r1 = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'tok',
+      scope: 'openid',
+    }, env));
+    expect(r1.status).toBe(200);
+    expect(((await r1.json()) as { scope: string }).scope).toBe('openid');
+
+    // Widening rejected
+    const dbPrepare2 = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      if (sql.includes('SELECT payload')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            client_id: 'mobile',
+            user_id: 'u1',
+            scopes: ['openid'],
+            grantId: 'g1',
+          }),
+          expires_at: Date.now() + 60000,
+        });
+      }
+      return makeStmt();
+    });
+    const env2: MockEnv = { DB: { prepare: dbPrepare2 } };
+    const r2 = await onRequestPost(makeContext({
+      grant_type: 'refresh_token',
+      client_id: 'mobile',
+      refresh_token: 'tok',
+      scope: 'openid admin',
+    }, env2));
+    expect(r2.status).toBe(400);
+    expect(((await r2.json()) as { error: string }).error).toBe('invalid_scope');
+  });
+});
