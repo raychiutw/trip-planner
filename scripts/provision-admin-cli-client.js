@@ -98,10 +98,18 @@ function generateClientSecret() {
   return `tps_${result}`;
 }
 
-/** PBKDF2-SHA256 600k iter — matches src/server/password.ts hashPassword format */
+/**
+ * PBKDF2-SHA256 — matches src/server/password.ts ITERATIONS (currently 100,000;
+ * sized for CF Workers Free 10ms CPU budget — see password.ts comment for the
+ * "bump back to 600k after Workers Paid plan" upgrade path).
+ *
+ * MUST stay in sync with `ITERATIONS` in src/server/password.ts. If they
+ * diverge, verifyPassword on prod will read iter from the stored hash and
+ * run that many iterations — exceeding CPU budget when iter > current ceiling.
+ */
 async function hashPassword(plain) {
   const salt = crypto.randomBytes(16);
-  const iter = 600_000;
+  const iter = 100_000;
   const hash = crypto.pbkdf2Sync(plain, salt, iter, 32, 'sha256');
   const b64u = (buf) =>
     buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

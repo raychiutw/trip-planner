@@ -31,6 +31,20 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// Auto-load .env.local so scripts invoked from launchd (which doesn't auto-source
+// the user's shell rc) can find TRIPLINE_API_CLIENT_ID / SECRET. Shell-invoked
+// callers that already exported these env vars take precedence (we never overwrite).
+try {
+  const envPath = path.join(__dirname, '..', '..', '.env.local');
+  const content = fs.readFileSync(envPath, 'utf8');
+  content.split('\n').forEach((line) => {
+    const m = line.match(/^(\w+)=(.+)/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+  });
+} catch {
+  /* no .env.local — caller must export env vars manually */
+}
+
 const DEFAULT_BASE = 'https://trip-planner-dby.pages.dev';
 const REFRESH_LEADTIME_SEC = 60; // refresh 1min before actual expiry to avoid edge races
 
