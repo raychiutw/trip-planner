@@ -22,4 +22,7 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   // V2-P5 RS256 signing — PKCS8 private key (PEM or raw base64)
   OAUTH_SIGNING_PRIVATE_KEY?: string;
+  // V2-P3 email service (Resend)
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string; // e.g. 'Tripline <no-reply@trip-planner-dby.pages.dev>'
 }
