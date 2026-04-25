@@ -23,7 +23,7 @@ import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import BottomNavBar from '../components/shell/BottomNavBar';
 import AppShell from '../components/shell/AppShell';
-import DesktopSidebar from '../components/shell/DesktopSidebar';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
@@ -643,7 +643,7 @@ export default function TripPage() {
 
   return (
     <AppShell
-      sidebar={<DesktopSidebar user={null} />}
+      sidebar={<DesktopSidebarConnected />}
       main={mainContent}
       sheet={sheetContent}
       bottomNav={bottomNavContent}
