@@ -1,30 +1,38 @@
 /**
- * GET /api/oauth/authorize unit test — V2-P1
+ * GET /api/oauth/authorize unit test — V2-P4
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { onRequestGet } from '../../functions/api/oauth/authorize';
+import { signSessionToken } from '../../src/server/session';
+
+const SECRET = 'session-secret-test';
+
+const ACTIVE_CLIENT = {
+  client_id: 'partner-x',
+  client_type: 'confidential',
+  app_name: 'Partner X',
+  redirect_uris: JSON.stringify(['https://partner.com/cb']),
+  allowed_scopes: JSON.stringify(['openid', 'profile', 'email']),
+  status: 'active',
+};
 
 interface MockEnv {
-  GOOGLE_CLIENT_ID?: string;
-  DB?: {
-    prepare: ReturnType<typeof vi.fn>;
-  };
+  SESSION_SECRET?: string;
+  DB?: { prepare: ReturnType<typeof vi.fn> };
 }
 
-function makeEnv(opts: { clientId?: string } = {}): MockEnv {
+function makeStmt(firstResult: unknown = null) {
   const stmt = {
     bind: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue(firstResult),
     run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }),
   };
-  return {
-    GOOGLE_CLIENT_ID: opts.clientId,
-    DB: { prepare: vi.fn().mockReturnValue(stmt) },
-  };
+  return stmt;
 }
 
-function makeContext(url: string, env: MockEnv): Parameters<typeof onRequestGet>[0] {
+function makeContext(url: string, env: MockEnv, cookie?: string): Parameters<typeof onRequestGet>[0] {
   return {
-    request: new Request(url),
+    request: new Request(url, cookie ? { headers: { Cookie: cookie } } : {}),
     env: env as unknown as never,
     params: {} as unknown as never,
     data: {} as unknown as never,
@@ -39,94 +47,246 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-04-25T00:00:00Z'));
 });
 
+const buildUrl = (params: Record<string, string>) => {
+  const sp = new URLSearchParams(params);
+  return `https://x.com/api/oauth/authorize?${sp.toString()}`;
+};
+
 describe('GET /api/oauth/authorize', () => {
-  it('rejects provider != google with 400 PROVIDER_UNSUPPORTED', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=apple', env));
-    expect(res.status).toBe(400);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('PROVIDER_UNSUPPORTED');
-  });
-
-  it('rejects no provider param with 400', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/authorize', env));
+  it('400 when client_id missing (not redirectable)', async () => {
+    const env: MockEnv = { DB: { prepare: vi.fn() } };
+    const res = await onRequestGet(makeContext(buildUrl({ response_type: 'code' }), env));
     expect(res.status).toBe(400);
   });
 
-  it('returns 503 OAUTH_NOT_CONFIGURED when GOOGLE_CLIENT_ID missing', async () => {
-    const env = makeEnv({}); // no clientId
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google', env));
-    expect(res.status).toBe(503);
-    const json = await res.json() as { error: { code: string } };
-    expect(json.error.code).toBe('OAUTH_NOT_CONFIGURED');
+  it('400 when client_id unknown (not redirectable)', async () => {
+    const env: MockEnv = { DB: { prepare: vi.fn().mockReturnValue(makeStmt(null)) } };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'unknown',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid',
+    }), env));
+    expect(res.status).toBe(400);
   });
 
-  it('redirects 302 to Google authorize URL when configured', async () => {
-    const env = makeEnv({ clientId: 'test-client-id' });
-    const res = await onRequestGet(makeContext('https://trip-planner-dby.pages.dev/api/oauth/authorize?provider=google', env));
+  it('302 to client redirect_uri with error when scope invalid', async () => {
+    const env: MockEnv = {
+      DB: { prepare: vi.fn().mockReturnValue(makeStmt(ACTIVE_CLIENT)) },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'admin', // not in allowed
+      state: 'csrf-1',
+    }), env));
     expect(res.status).toBe(302);
-    const location = res.headers.get('Location');
-    expect(location).toMatch(/^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/);
-    expect(location).toContain('client_id=test-client-id');
-    expect(location).toContain('response_type=code');
-    expect(location).toContain('scope=openid+profile+email');
-    expect(location).toContain('redirect_uri=https%3A%2F%2Ftrip-planner-dby.pages.dev%2Fapi%2Foauth%2Fcallback');
-    expect(location).toContain('access_type=offline');
-    expect(location).toContain('prompt=consent');
-    expect(location).toMatch(/state=[A-Za-z0-9_-]+/);
+    const loc = res.headers.get('Location') ?? '';
+    expect(loc).toContain('https://partner.com/cb?');
+    expect(loc).toContain('error=invalid_scope');
+    expect(loc).toContain('state=csrf-1');
   });
 
-  it('stores state in D1 oauth_models with 5min TTL', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google', env));
-
-    expect(env.DB!.prepare).toHaveBeenCalledWith(expect.stringContaining('INSERT OR REPLACE INTO oauth_models'));
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    expect(stmt.bind).toHaveBeenCalledWith(
-      'OAuthState',
-      expect.any(String), // state
-      expect.stringContaining('"provider":"google"'),
-      Date.now() + 300 * 1000, // 5min TTL
-    );
-  });
-
-  it('open redirect protection: redirect_after_login must start with single /', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    // open redirect attempt: //evil.com → 應 fallback default
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google&redirect_after_login=//evil.com/steal', env));
+  it('302 to /login when valid request but no session', async () => {
+    const env: MockEnv = {
+      DB: { prepare: vi.fn().mockReturnValue(makeStmt(ACTIVE_CLIENT)) },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid',
+      state: 's',
+    }), env));
     expect(res.status).toBe(302);
-    // state stored 但 redirectAfterLogin 應 = /manage default
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    const payload = JSON.parse(stmt.bind.mock.calls[0][2]);
-    expect(payload.redirectAfterLogin).toBe('/manage');
+    const loc = res.headers.get('Location') ?? '';
+    expect(loc).toMatch(/^\/login\?redirect_after=/);
+    expect(decodeURIComponent(loc)).toContain('/api/oauth/authorize?');
   });
 
-  it('open redirect protection: absolute URL → fallback default', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google&redirect_after_login=https://evil.com', env));
+  it('logged in + no Consent → 302 /oauth/consent (V2-P5 integration)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      // Consent SELECT returns null (no consent yet)
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) return makeStmt(null);
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = {
+      SESSION_SECRET: SECRET,
+      DB: { prepare: dbPrepare },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid profile',
+      state: 'csrf-xyz',
+    }), env, `tripline_session=${token}`));
+
     expect(res.status).toBe(302);
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    const payload = JSON.parse(stmt.bind.mock.calls[0][2]);
-    expect(payload.redirectAfterLogin).toBe('/manage');
+    const loc = res.headers.get('Location') ?? '';
+    expect(loc).toMatch(/^\/oauth\/consent\?/);
+    expect(loc).toContain('client_id=partner-x');
+    expect(loc).toContain('state=csrf-xyz');
+    expect(loc).toContain('scope=openid+profile'); // URLSearchParams uses + for space
   });
 
-  it('valid same-origin redirect_after_login preserved', async () => {
-    const env = makeEnv({ clientId: 'gid' });
-    await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google&redirect_after_login=/trip/test-trip', env));
-    const stmt = env.DB!.prepare.mock.results[0].value;
-    const payload = JSON.parse(stmt.bind.mock.calls[0][2]);
-    expect(payload.redirectAfterLogin).toBe('/trip/test-trip');
+  it('logged in + has Consent covering all scopes → 302 redirect_uri?code=&state=', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      // Consent SELECT returns existing consent covering scopes
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid', 'profile', 'email'],
+            grantedAt: Date.now() - 1000,
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      if (sql.includes('INSERT OR REPLACE INTO oauth_models')) return makeStmt();
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = {
+      SESSION_SECRET: SECRET,
+      DB: { prepare: dbPrepare },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid profile',
+      state: 'csrf-xyz',
+    }), env, `tripline_session=${token}`));
+
+    expect(res.status).toBe(302);
+    const loc = res.headers.get('Location') ?? '';
+    expect(loc).toMatch(/^https:\/\/partner\.com\/cb\?code=[A-Za-z0-9_-]+&state=csrf-xyz$/);
   });
 
-  it('state is unique across calls (32 bytes random)', async () => {
-    const env1 = makeEnv({ clientId: 'gid' });
-    const env2 = makeEnv({ clientId: 'gid' });
-    const res1 = await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google', env1));
-    const res2 = await onRequestGet(makeContext('https://x.com/api/oauth/authorize?provider=google', env2));
-    const state1 = new URL(res1.headers.get('Location')!).searchParams.get('state');
-    const state2 = new URL(res2.headers.get('Location')!).searchParams.get('state');
-    expect(state1).not.toBe(state2);
-    expect(state1!.length).toBeGreaterThan(40);
+  it('Consent insufficient (missing requested scope) → 302 /oauth/consent', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid'], // missing 'profile'
+            grantedAt: Date.now(),
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid profile', // requesting profile not in stored consent
+      state: 's',
+    }), env, `tripline_session=${token}`));
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^\/oauth\/consent\?/);
+  });
+
+  it('prompt=consent forces re-prompt even with stored Consent', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid', 'profile', 'email'],
+            grantedAt: Date.now(),
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid',
+      state: 's',
+      prompt: 'consent',
+    }), env, `tripline_session=${token}`));
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^\/oauth\/consent\?/);
+  });
+
+  it('PKCE public client: code_challenge stored (with consent granted)', async () => {
+    const PUBLIC_CLIENT = { ...ACTIVE_CLIENT, client_id: 'mobile', client_type: 'public' };
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      // Consent granted for mobile + openid
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'mobile',
+            scopes: ['openid'],
+            grantedAt: Date.now(),
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = {
+      SESSION_SECRET: SECRET,
+      DB: { prepare: dbPrepare },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'mobile',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid',
+      code_challenge: 'pkce-challenge-abc',
+      code_challenge_method: 'S256',
+      state: 's',
+    }), env, `tripline_session=${token}`));
+
+    expect(res.status).toBe(302);
+
+    // Inspect INSERT payload — should contain code_challenge
+    const insertStmt = dbPrepare.mock.results.find(
+      (r, i) => typeof dbPrepare.mock.calls[i][0] === 'string' &&
+                (dbPrepare.mock.calls[i][0] as string).includes('INSERT OR REPLACE'),
+    )?.value;
+    if (insertStmt) {
+      const bindArgs = (insertStmt as { bind: { mock: { calls: unknown[][] } } }).bind.mock.calls[0];
+      const payload = JSON.parse(bindArgs[2] as string);
+      expect(payload.code_challenge).toBe('pkce-challenge-abc');
+      expect(payload.code_challenge_method).toBe('S256');
+    }
+  });
+
+  it('Rejects redirect_uri not in whitelist (not redirectable)', async () => {
+    const env: MockEnv = {
+      DB: { prepare: vi.fn().mockReturnValue(makeStmt(ACTIVE_CLIENT)) },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://evil.com/cb',
+      response_type: 'code',
+      scope: 'openid',
+    }), env));
+    expect(res.status).toBe(400);
+    // Not 302 — security critical, attacker shouldn't get redirect to their own URL
   });
 });

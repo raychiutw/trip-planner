@@ -1,5 +1,5 @@
 /**
- * POST /api/oauth/server-token
+ * POST /api/oauth/token
  *
  * V2-P4 — OAuth Server token endpoint。Exchange authorization_code for
  * access_token + refresh_token。
@@ -14,14 +14,22 @@
  *   client_secret=<for confidential clients> (or HTTP Basic auth)
  *   code_verifier=<PKCE — required if code_challenge was present at authorize>
  *
- * V2-P4 階段 issue **opaque tokens**（random bytes stored in D1，not JWT）。
- * V2-P5 加 RS256 JWT id_token signing。
+ * Issues opaque access + refresh tokens (random bytes stored in D1) plus an
+ * RS256-signed JWT id_token when the request scope includes `openid`.
  *
  * Response (JSON):
  *   { access_token, refresh_token, token_type: 'Bearer', expires_in, scope }
  */
 import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
+import { issueIdToken } from './_id_token';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  RATE_LIMITS,
+} from '../_rate_limit';
+import { recordAuthEvent } from '../_auth_audit';
+import { generateOpaqueToken, parseFormOrJson, parseBasicAuth } from '../_utils';
 import type { Env } from '../_types';
 
 const ACCESS_TOKEN_TTL_SEC = 60 * 60;          // 1h
@@ -34,7 +42,8 @@ interface AuthorizationCodePayload extends AdapterPayload {
   scopes: string[];
   code_challenge: string | null;
   code_challenge_method: 'S256' | null;
-  used: boolean;
+  /** Set to grantId of the issued tokens after consume — enables RFC 6749 §10.5 cascade revoke on replay */
+  grantId?: string;
 }
 
 interface RefreshTokenPayload extends AdapterPayload {
@@ -42,6 +51,8 @@ interface RefreshTokenPayload extends AdapterPayload {
   user_id: string;
   scopes: string[];
   grantId: string;
+  /** Set on rotation (consume) — re-use attempts after this is set trigger family revoke */
+  consumed?: number;
 }
 
 interface ClientAppRow {
@@ -58,14 +69,6 @@ function jsonError(error: string, error_description: string, status = 400): Resp
   );
 }
 
-function generateOpaqueToken(): string {
-  const bytes = new Uint8Array(48);
-  crypto.getRandomValues(bytes);
-  let str = '';
-  for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);
-  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 /** Compute SHA-256 hash of code_verifier and base64url encode (per RFC 7636 §4.6). */
 async function pkceTransform(verifier: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
@@ -75,45 +78,23 @@ async function pkceTransform(verifier: string): Promise<string> {
   return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-async function parseBody(request: Request): Promise<Record<string, string>> {
-  const ct = request.headers.get('content-type') ?? '';
-  if (ct.includes('application/x-www-form-urlencoded')) {
-    const text = await request.text();
-    const params = new URLSearchParams(text);
-    const out: Record<string, string> = {};
-    for (const [k, v] of params) out[k] = v;
-    return out;
-  }
-  if (ct.includes('application/json')) {
-    return (await request.json()) as Record<string, string>;
-  }
-  return {};
-}
-
-/** Parse HTTP Basic auth header for client credentials (RFC 6749 §2.3.1). */
-function parseBasicAuth(request: Request): { id: string; secret: string } | null {
-  const auth = request.headers.get('Authorization');
-  if (!auth || !auth.startsWith('Basic ')) return null;
-  try {
-    const decoded = atob(auth.slice(6));
-    const idx = decoded.indexOf(':');
-    if (idx < 0) return null;
-    return { id: decoded.slice(0, idx), secret: decoded.slice(idx + 1) };
-  } catch {
-    return null;
-  }
-}
-
-/** Issue access+refresh tokens 共用 helper — shared by 2 grant types. */
+/**
+ * Issue access+refresh tokens. If `existingGrantId` is provided (rotation case),
+ * the new pair inherits it so revokeByGrantId can cascade across the entire
+ * token family — necessary for RFC 6749 §10.5 / OAuth 2.1 §6.1 reuse detection.
+ */
 async function issueTokenPair(
   db: Env['DB'],
   clientId: string,
   userId: string,
   scopes: string[],
+  existingGrantId?: string,
 ): Promise<{ access_token: string; refresh_token: string; grantId: string }> {
-  const grantId = crypto.randomUUID();
-  const accessToken = generateOpaqueToken();
-  const refreshToken = generateOpaqueToken();
+  const grantId = existingGrantId ?? crypto.randomUUID();
+  // 48 bytes (~64 char base64url) — RFC 6749 doesn't fix length but 32 bytes
+  // ~256 bits of entropy is the de-facto minimum; bump to 48 for headroom.
+  const accessToken = generateOpaqueToken(48);
+  const refreshToken = generateOpaqueToken(48);
 
   const accessAdapter = new D1Adapter(db, 'AccessToken');
   await accessAdapter.upsert(
@@ -132,27 +113,30 @@ async function issueTokenPair(
   return { access_token: accessToken, refresh_token: refreshToken, grantId };
 }
 
-function tokenResponse(tokens: { access_token: string; refresh_token: string }, scopes: string[]): Response {
-  return new Response(
-    JSON.stringify({
-      access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token,
-      token_type: 'Bearer',
-      expires_in: ACCESS_TOKEN_TTL_SEC,
-      scope: scopes.join(' '),
-    }),
-    {
-      headers: {
-        'content-type': 'application/json',
-        'cache-control': 'no-store',
-        'pragma': 'no-cache',
-      },
+function tokenResponse(
+  tokens: { access_token: string; refresh_token: string },
+  scopes: string[],
+  idToken: string | null,
+): Response {
+  const body: Record<string, unknown> = {
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    token_type: 'Bearer',
+    expires_in: ACCESS_TOKEN_TTL_SEC,
+    scope: scopes.join(' '),
+  };
+  if (idToken) body.id_token = idToken;
+  return new Response(JSON.stringify(body), {
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'no-store',
+      'pragma': 'no-cache',
     },
-  );
+  });
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
-  const body = await parseBody(context.request);
+  const body = await parseFormOrJson<Record<string, string>>(context.request);
   const grant_type = body.grant_type;
 
   if (grant_type !== 'authorization_code' && grant_type !== 'refresh_token') {
@@ -167,6 +151,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!clientId) {
     return jsonError('invalid_client', 'Missing client_id');
   }
+
+  // V2-P6 rate limit: per-client_id bucket — throughput cap
+  // Preset: 100 attempts / minute, 5min lockout (per RATE_LIMITS.OAUTH_TOKEN)
+  // Bump regardless of grant_type / outcome — total per-minute throughput cap
+  const tokenKey = `oauth-token:${clientId}`;
+  const tokenCheck = await checkRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
+  if (!tokenCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: 'rate_limited', error_description: 'Too many token requests for this client' }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+          'Retry-After': String(tokenCheck.retryAfter),
+        },
+      },
+    );
+  }
+  await bumpRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
 
   const client = await context.env.DB
     .prepare(
@@ -202,6 +206,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!refreshRow) {
       return jsonError('invalid_grant', 'refresh_token expired or invalid');
     }
+
+    // Reuse detection (RFC 6749 §10.4 / OAuth 2.1 §6.1): if this row was already
+    // consumed by a prior rotation, the refresh token has been replayed →
+    // attacker likely has a stolen token. Cascade-revoke the entire family.
+    if (refreshRow.consumed) {
+      await new D1Adapter(context.env.DB, 'AccessToken').revokeByGrantId(refreshRow.grantId);
+      await new D1Adapter(context.env.DB, 'RefreshToken').revokeByGrantId(refreshRow.grantId);
+      await recordAuthEvent(context.env.DB, context.request, {
+        eventType: 'token_revoke',
+        outcome: 'failure',
+        userId: refreshRow.user_id,
+        clientId,
+        failureReason: 'refresh_token_reuse',
+        metadata: { grantId: refreshRow.grantId },
+      });
+      return jsonError('invalid_grant', 'refresh_token reuse detected — token family revoked');
+    }
     if (refreshRow.client_id !== clientId) {
       return jsonError('invalid_grant', 'refresh_token does not belong to this client');
     }
@@ -217,10 +238,32 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       finalScopes = requestedScopes;
     }
 
-    // Rotation: destroy old refresh + issue new pair (V2-P6 spec)
-    await refreshAdapter.destroy(refreshTokenInput);
-    const tokens = await issueTokenPair(context.env.DB, clientId, refreshRow.user_id, finalScopes);
-    return tokenResponse(tokens, finalScopes);
+    // Rotation: mark old as consumed (NOT destroy) so future reuse attempts trigger
+    // family revoke above. Issue new pair inheriting the grantId so revokeByGrantId
+    // can cascade later. consume() sets payload.$.consumed timestamp; cron sweeps
+    // expired refresh-token rows after expires_at.
+    await refreshAdapter.consume(refreshTokenInput);
+    const tokens = await issueTokenPair(
+      context.env.DB,
+      clientId,
+      refreshRow.user_id,
+      finalScopes,
+      refreshRow.grantId,
+    );
+    let idToken: string | null = null;
+    try {
+      idToken = await issueIdToken(context.env, context.request, clientId, refreshRow.user_id, finalScopes);
+    } catch {
+      // 'openid' scope but no signing key configured → fall through
+    }
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'token_issue',
+      outcome: 'success',
+      userId: refreshRow.user_id,
+      clientId,
+      metadata: { grant_type: 'refresh_token', scopes: finalScopes },
+    });
+    return tokenResponse(tokens, finalScopes, idToken);
   }
 
   // grant_type === 'authorization_code'
@@ -233,9 +276,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!codeRow) {
     return jsonError('invalid_grant', 'Authorization code expired or invalid');
   }
-  if (codeRow.used) {
-    // Replay attack — RFC 6749 §10.5: revoke all tokens issued from this grant
-    return jsonError('invalid_grant', 'Authorization code already used (potential replay attack)');
+  if (codeRow.consumed) {
+    // Replay attack — RFC 6749 §10.5: cascade-revoke all tokens issued from this grant
+    if (codeRow.grantId) {
+      await new D1Adapter(context.env.DB, 'AccessToken').revokeByGrantId(codeRow.grantId);
+      await new D1Adapter(context.env.DB, 'RefreshToken').revokeByGrantId(codeRow.grantId);
+    }
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'token_issue',
+      outcome: 'failure',
+      userId: codeRow.user_id,
+      clientId,
+      failureReason: 'auth_code_replay',
+      metadata: { grantId: codeRow.grantId ?? null, scopes: codeRow.scopes },
+    });
+    return jsonError('invalid_grant', 'Authorization code already used (replay detected — tokens revoked)');
   }
   if (codeRow.client_id !== clientId) {
     return jsonError('invalid_grant', 'code does not belong to this client');
@@ -255,10 +310,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
-  // Mark code as used (one-time)
-  await codeAdapter.consume(code);
-
-  // Issue tokens via shared helper
+  // Issue tokens, then mark code as consumed + bind grantId for replay-revoke
   const tokens = await issueTokenPair(context.env.DB, clientId, codeRow.user_id, codeRow.scopes);
-  return tokenResponse(tokens, codeRow.scopes);
+  await codeAdapter.consume(code);
+  await context.env.DB
+    .prepare('UPDATE oauth_models SET payload = json_set(payload, ?, ?) WHERE name = ? AND id = ?')
+    .bind('$.grantId', tokens.grantId, 'AuthorizationCode', code)
+    .run();
+  let idToken: string | null = null;
+  try {
+    idToken = await issueIdToken(context.env, context.request, clientId, codeRow.user_id, codeRow.scopes);
+  } catch {
+    // 'openid' scope but no signing key configured → fall through
+  }
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'token_issue',
+    outcome: 'success',
+    userId: codeRow.user_id,
+    clientId,
+    metadata: { grant_type: 'authorization_code', scopes: codeRow.scopes },
+  });
+  return tokenResponse(tokens, codeRow.scopes, idToken);
 };

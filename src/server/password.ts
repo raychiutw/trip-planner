@@ -25,6 +25,14 @@ const ITERATIONS = 600_000; // OWASP 2023 PBKDF2-SHA256 recommendation
 const SALT_BYTES = 16;
 const HASH_BYTES = 32;
 
+/**
+ * Single source of truth for password length policy. Imported by signup +
+ * reset-password endpoints so a future bump to e.g. 12 chars takes effect
+ * everywhere atomically (otherwise users could reset to a shorter password
+ * than signup would accept).
+ */
+export const MIN_PASSWORD_LEN = 8;
+
 function base64urlEncode(bytes: Uint8Array): string {
   let str = '';
   for (let i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]!);

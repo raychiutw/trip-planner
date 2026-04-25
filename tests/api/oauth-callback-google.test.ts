@@ -1,8 +1,27 @@
 /**
- * GET /api/oauth/callback unit test — V2-P1
+ * GET /api/oauth/callback/google unit test — V2-P1
+ *
+ * verifyGoogleIdToken is mocked because it fetches Google's live JWKS endpoint —
+ * the real verification path is covered by the jwt-module unit tests + the
+ * google-id-token module tests. Here we exercise the callback flow logic
+ * (state validation, user creation, session issuance) with the verification
+ * stubbed to a passthrough that decodes the unsigned id_token payload.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { onRequestGet } from '../../functions/api/oauth/callback';
+
+vi.mock('../../src/server/oauth-client/google-id-token', () => ({
+  verifyGoogleIdToken: vi.fn(async (idToken: string) => {
+    // Decode payload without signature verification (test-only).
+    const parts = idToken.split('.');
+    if (parts.length !== 3) throw new Error('JWT must have 3 parts');
+    const payloadB64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (payloadB64.length % 4)) % 4;
+    const json = atob(payloadB64 + '='.repeat(padLen));
+    return JSON.parse(json);
+  }),
+}));
+
+import { onRequestGet } from '../../functions/api/oauth/callback/google';
 
 interface MockEnv {
   GOOGLE_CLIENT_ID?: string;
@@ -45,10 +64,10 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('GET /api/oauth/callback', () => {
+describe('GET /api/oauth/callback/google', () => {
   it('400 OAUTH_MISSING_PARAMS when no code/state', async () => {
     const env: MockEnv = { DB: { prepare: vi.fn() } };
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google', env));
     expect(res.status).toBe(400);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('OAUTH_MISSING_PARAMS');
@@ -57,7 +76,7 @@ describe('GET /api/oauth/callback', () => {
   it('400 OAUTH_INVALID_STATE when state not in D1', async () => {
     const stmt = makeStmt(null); // adapter.find returns null
     const env: MockEnv = { DB: { prepare: vi.fn().mockReturnValue(stmt) } };
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback?code=c1&state=missing', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google?code=c1&state=missing', env));
     expect(res.status).toBe(400);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('OAUTH_INVALID_STATE');
@@ -73,7 +92,7 @@ describe('GET /api/oauth/callback', () => {
       // CLIENT_SECRET missing
       DB: { prepare: vi.fn().mockReturnValue(stmt) },
     };
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback?code=c&state=s', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google?code=c&state=s', env));
     expect(res.status).toBe(503);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('OAUTH_NOT_CONFIGURED');
@@ -122,7 +141,7 @@ describe('GET /api/oauth/callback', () => {
       }), { status: 200 }),
     );
 
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback?code=auth-code&state=valid-state', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google?code=auth-code&state=valid-state', env));
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/manage');
     expect(res.headers.get('Set-Cookie')).toMatch(/tripline_session=/);
@@ -160,7 +179,7 @@ describe('GET /api/oauth/callback', () => {
       }), { status: 200 }),
     );
 
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback?code=c&state=s', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google?code=c&state=s', env));
     expect(res.status).toBe(302);
     expect(res.headers.get('Location')).toBe('/explore');
     // 確認有 INSERT INTO users + INSERT INTO auth_identities calls
@@ -183,7 +202,7 @@ describe('GET /api/oauth/callback', () => {
     const fetchSpy = vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response('invalid_grant', { status: 400 }),
     );
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback?code=c&state=s', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google?code=c&state=s', env));
     expect(res.status).toBe(502);
     fetchSpy.mockRestore();
   });
@@ -206,7 +225,7 @@ describe('GET /api/oauth/callback', () => {
         token_type: 'Bearer',
       }), { status: 200 }),
     );
-    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback?code=c&state=s', env));
+    const res = await onRequestGet(makeContext('https://x.com/api/oauth/callback/google?code=c&state=s', env));
     expect(res.status).toBe(400);
     const json = await res.json() as { error: { code: string } };
     expect(json.error.code).toBe('OAUTH_INVALID_ID_TOKEN');

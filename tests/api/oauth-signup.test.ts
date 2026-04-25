@@ -51,11 +51,11 @@ describe('POST /api/oauth/signup', () => {
     expect((await r2.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_EMAIL');
   });
 
-  it('400 SIGNUP_INVALID_PASSWORD when password < 8 chars', async () => {
+  it('400 SIGNUP_PASSWORD_TOO_SHORT when password < 8 chars', async () => {
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: vi.fn() } };
     const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'short' }, env));
     expect(res.status).toBe(400);
-    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_INVALID_PASSWORD');
+    expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_PASSWORD_TOO_SHORT');
   });
 
   it('409 SIGNUP_EMAIL_TAKEN when email already in users', async () => {
@@ -115,9 +115,13 @@ describe('POST /api/oauth/signup', () => {
       password: 'password123',
     }, env));
 
-    // First DB call should be lookup with lowercased email
-    const firstStmt = dbPrepare.mock.results[0].value;
-    expect(firstStmt.bind).toHaveBeenCalledWith('mixed.case@example.com');
+    // Find the user-lookup stmt by SQL pattern (rate limit calls now precede it)
+    const userLookupIdx = dbPrepare.mock.calls.findIndex(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('SELECT id FROM users'),
+    );
+    expect(userLookupIdx).toBeGreaterThanOrEqual(0);
+    const lookupStmt = dbPrepare.mock.results[userLookupIdx].value;
+    expect(lookupStmt.bind).toHaveBeenCalledWith('mixed.case@example.com');
   }, 30_000);
 
   it('UNIQUE constraint race condition → 409 SIGNUP_EMAIL_TAKEN', async () => {
@@ -139,4 +143,47 @@ describe('POST /api/oauth/signup', () => {
     expect(res.status).toBe(409);
     expect((await res.json() as { error: { code: string } }).error.code).toBe('SIGNUP_EMAIL_TAKEN');
   }, 30_000);
+
+  it('429 SIGNUP_RATE_LIMITED when IP bucket locked', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) {
+        return makeStmt({
+          bucket_key: 'signup:unknown',
+          count: 4,
+          window_start: Date.now(),
+          locked_until: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      email: 'a@b.com',
+      password: 'longenough',
+    }, env));
+    expect(res.status).toBe(429);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('SIGNUP_RATE_LIMITED');
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
+  it('Bumps signup ipKey bucket on every valid attempt (anti spam)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
+      if (sql.includes('SELECT id FROM users')) return makeStmt({ id: 'existing' }); // dup → 409
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      email: 'taken@example.com',
+      password: 'longenough',
+    }, env));
+    // dup email → 409, but rate limit bucket should still be bumped
+    expect(res.status).toBe(409);
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+    );
+    expect(inserts.length).toBe(1); // single ipKey bucket (no per-email for signup)
+  });
 });

@@ -10,7 +10,7 @@ import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'explore' | 'login';
+  key: 'chat' | 'trips' | 'map' | 'explore' | 'login' | 'settings' | 'developer';
   label: string;
   href: string;
   icon: string;
@@ -21,12 +21,17 @@ interface NavItemConfig {
 }
 
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
-  { key: 'trips',   label: '行程', href: '/manage',  icon: 'home',   matchPrefixes: ['/manage', '/trip'] },
-  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
-  { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
-  { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
+  { key: 'chat',      label: '聊天',     href: '/chat',                       icon: 'chat',   matchPrefixes: ['/chat'] },
+  { key: 'trips',     label: '行程',     href: '/manage',                     icon: 'home',   matchPrefixes: ['/manage', '/trip'] },
+  { key: 'map',       label: '地圖',     href: '/map',                        icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
+  { key: 'explore',   label: '探索',     href: '/explore',                    icon: 'search', matchPrefixes: ['/explore'] },
+  { key: 'settings',  label: '已連結應用', href: '/settings/connected-apps',   icon: 'gear',   matchPrefixes: ['/settings'] },
+  { key: 'developer', label: '開發者',   href: '/developer/apps',             icon: 'code',   matchPrefixes: ['/developer'] },
+  { key: 'login',     label: '登入',     href: '/login',                      icon: 'user',   matchPrefixes: ['/login'] },
 ];
+
+// Auth-required nav items — hidden for anonymous users
+const AUTH_REQUIRED_NAV_KEYS = new Set(['settings', 'developer']);
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
   for (const prefix of item.matchPrefixes) {
@@ -168,10 +173,11 @@ export default function DesktopSidebar({ user, onNewTrip, brand }: DesktopSideba
   const { pathname } = useLocation();
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
-  // Logged in 時 hide「登入」 nav item — user chip + 登出 link 已在 sidebar bottom
+  // Logged in: hide '登入' (use chip + 登出 link 在底部); show settings/developer
+  // Logged out: hide auth-required items; show '登入'
   const visibleNavItems = user
     ? NAV_ITEMS.filter((item) => item.key !== 'login')
-    : NAV_ITEMS;
+    : NAV_ITEMS.filter((item) => !AUTH_REQUIRED_NAV_KEYS.has(item.key));
 
   return (
     <>

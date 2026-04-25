@@ -43,7 +43,7 @@ describe('LoginPage (V2-P1 Google sign-in + CF Access 過渡期 fallback)', () =
     expect(heading).toContain('登入');
     // Google login button
     const google = getByTestId('login-google') as HTMLAnchorElement;
-    expect(google.getAttribute('href')).toBe('/api/oauth/authorize?provider=google');
+    expect(google.getAttribute('href')).toBe('/api/oauth/login/google');
     expect(google.textContent).toContain('Google');
     // CF Access fallback
     const cf = getByTestId('login-cf-access') as HTMLAnchorElement;

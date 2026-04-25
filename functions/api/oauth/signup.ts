@@ -2,26 +2,32 @@
  * POST /api/oauth/signup
  * Body: { email: string, password: string, displayName?: string }
  *
- * V2-P2 — Local password account creation。建 user + auth_identities (provider='local')
- * 並立即 issueSession。
- *
- * Email verification 暫不 enforce（user_verified_at 留 null）— V2-P2 next slice
- * 加 verification email + confirm endpoint，login 時 enforce verified。
+ * Local password account creation。建 user + auth_identities (provider='local')
+ * 並立即 issueSession。`email_verified_at` 留 NULL — verify 流程透過
+ * /api/oauth/send-verification + /api/oauth/verify endpoints。
  *
  * Security:
  *   - hashPassword（PBKDF2-SHA256 600k iter，src/server/password.ts）
- *   - Constant-time email duplicate check via UNIQUE constraint trap
- *   - Rate limit deferred V2-P6（middleware level）
+ *   - Email 唯一性靠 users.email UNIQUE constraint（trap UNIQUE error in catch）
+ *   - V2-P6 rate limit per-IP（autoplan: 3/h/IP）
  *
  * Error codes:
- *   400 SIGNUP_INVALID_EMAIL / SIGNUP_INVALID_PASSWORD
+ *   400 SIGNUP_INVALID_EMAIL / SIGNUP_PASSWORD_TOO_SHORT / SIGNUP_PASSWORD_FORMAT
  *   409 SIGNUP_EMAIL_TAKEN
- *   500 SYS_INTERNAL (DB error / SESSION_SECRET 缺)
+ *   429 SIGNUP_RATE_LIMITED
+ *   500 SYS_INTERNAL
  */
 import { issueSession } from '../_session';
 import { AppError } from '../_errors';
 import { parseJsonBody } from '../_utils';
-import { hashPassword } from '../../../src/server/password';
+import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
+import { recordAuthEvent } from '../_auth_audit';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  clientIp,
+  RATE_LIMITS,
+} from '../_rate_limit';
 import type { Env } from '../_types';
 
 interface SignupBody {
@@ -31,7 +37,6 @@ interface SignupBody {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LEN = 8;
 
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(
@@ -51,8 +56,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return errorResponse('SIGNUP_INVALID_EMAIL', 'Email 格式無效', 400);
   }
   if (!password || password.length < MIN_PASSWORD_LEN) {
-    return errorResponse('SIGNUP_INVALID_PASSWORD', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
+    return errorResponse('SIGNUP_PASSWORD_TOO_SHORT', `密碼至少 ${MIN_PASSWORD_LEN} 字元`, 400);
   }
+
+  // V2-P6 rate limit: per-IP bucket — anti signup-spam.
+  // Bump after validation, before DB lookup, so success path also counts (per autoplan: 3/h/IP)
+  const ipKey = `signup:${clientIp(context.request)}`;
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'SIGNUP_RATE_LIMITED', message: '註冊嘗試過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
+    );
+  }
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.SIGNUP);
 
   // Duplicate email check
   const existing = await context.env.DB
@@ -60,6 +77,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(email)
     .first<{ id: string }>();
   if (existing) {
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'signup',
+      outcome: 'failure',
+      failureReason: 'email_taken',
+      metadata: { email },
+    });
     return errorResponse('SIGNUP_EMAIL_TAKEN', '此 email 已註冊，請改用登入或忘記密碼', 409);
   }
 
@@ -68,7 +91,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     passwordHash = await hashPassword(password);
   } catch {
-    return errorResponse('SIGNUP_INVALID_PASSWORD', '密碼格式不符', 400);
+    return errorResponse('SIGNUP_PASSWORD_FORMAT', '密碼格式不符', 400);
   }
 
   const userId = crypto.randomUUID();
@@ -101,5 +124,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     { status: 201, headers: { 'content-type': 'application/json' } },
   );
   await issueSession(context.request, response, userId, context.env);
+
+  // V2-P6 audit log — best-effort, don't fail signup if audit insert fails
+  await recordAuthEvent(context.env.DB, context.request, {
+    eventType: 'signup',
+    outcome: 'success',
+    userId,
+    metadata: { email, displayName },
+  });
   return response;
 };
