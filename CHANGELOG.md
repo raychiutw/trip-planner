@@ -3,6 +3,55 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.3.0] - 2026-04-25
+
+**Layout Refactor (B Workstream P1-P4) + V2 OAuth Day 0 spike + A11y polish**。SaaS pivot 第一階段：Mindtrip-inspired 3-pane shell + URL-driven sheet state + Explore MVP。Panva oidc-provider 在 CF Pages Functions + nodejs_compat 下能 import + instantiate（GREEN，進 V2-P1）。詳見 `docs/2026-04-25-session-retro.md` + `docs/v2-oauth-spike-result.md`。
+
+### Added
+- `src/components/shell/AppShell.tsx` — 3-pane / 2-pane layout primitive (sidebar + main + sheet slots)
+- `src/components/shell/DesktopSidebar.tsx` — 5 nav items（聊天 / 行程 / 地圖 / 探索 / 登入）+ user chip
+- `src/components/shell/BottomNavBar.tsx` — Mobile sticky bottom nav (4-tab IA)
+- `src/components/trip/TripSheet.tsx` + `TripSheetTabs.tsx` — URL-driven sheet (`?sheet=itinerary|ideas|map|chat`) + ARIA tabs pattern + keyboard nav
+- `src/lib/trip-url.ts` — Sheet URL helpers + `sheetTabId` / `sheetPanelId` ID conventions
+- `src/pages/{Chat,GlobalMap,Explore,Login}Page.tsx` — 4 個新 page (placeholder + real Explore)
+- `src/components/shared/Placeholder.tsx` — Reusable empty-state page UI
+- `functions/api/poi-search.ts` — Nominatim search proxy + 24h CDN cache
+- `functions/api/pois/find-or-create.ts` — POI master upsert
+- `functions/api/oauth/spike.ts` — V2 Day 0 spike endpoint (will be rewritten in V2-P1)
+- `migrations/0028_saved_pois.sql` + `0029_trip_ideas.sql` — Phase 1 schema
+- `docs/v2-oauth-server-plan.md` + `docs/v2-oauth-spike-result.md` — V2 OAuth design (Panva oidc-provider + D1 adapter)
+- A11y：`@media (prefers-reduced-motion: reduce)` global override 加到 `css/tokens.css`
+
+### Changed
+- `wrangler.toml` — 加 `compatibility_flags = ["nodejs_compat"]`（V2 OAuth）
+- `src/entries/main.tsx` — 加 4 個新 routes + `<TripMapRedirect>` (`/trip/:id/map` → `?sheet=map`)
+- `src/pages/{Trip,Manage}Page.tsx` — wrap in AppShell
+
+### Fixed
+- `scripts/init-local-db.js` TABLES 順序 — pois 必須在 trip_entries 之前（FK from migration 0026），原序讓 trip_entries / trip_pois import 0 rows
+- `TripSheet` map tab 高度只佔 1/4 — TripMapRail sticky + `calc(100dvh - nav-h)` 在 sheet 內失效，加 SCOPED_STYLES override 撐滿
+- `/manage` 跳 default trip — 移除 `public/_redirects`（rewrite to /index.html 觸發 wrangler canonical-strip 308 to /），改靠 `dist/manage/` directory canonical 308 to `/manage/`
+
+### A11y (B-P6 partial)
+- ARIA tabs pattern 完整關聯（id + aria-controls + role=tabpanel + aria-labelledby + hidden vs unmount）
+- Keyboard navigation（ArrowLeft/Right/Home/End on tablist + roving tabindex）
+- Color contrast WCAG 2.x AA verified（unit test 13 cases，light + dark theme）
+- prefers-reduced-motion global override
+
+### Performance baseline (B-P6 task 6.4)
+- Total `dist/`: 1.9 MB raw (~600 KB gzipped initial estimate)
+- Largest chunks: html2pdf 914K (lazy on PDF export), vendor 219K, OceanMap 168K (lazy), sentry 134K, TripPage 79K (lazy)
+- All page-level routes lazy-loaded via `lazyWithRetry`
+
+### Open follow-ups (B-P6 deferred to next sprint)
+- axe-core install + run (task 5.1, 5.2)
+- Lighthouse CI workflow (task 6.1-6.3)
+- Playwright E2E matrix (task 7.x)
+- Sentry release tagging + monitoring (task 10.x)
+- TripSheet open/close animation transitions (task 3.1-3.3, 需先實作 transition)
+- B-P5 Ideas drag-to-itinerary (V2 排程，等 Ideas tab real UI)
+- V2-P1 ~ V2-P7 OAuth Server (14 週)
+
 ## [2.2.0.0] - 2026-04-24
 
 **POI Unification Phase 3 — DROP legacy spatial columns，POI master 成為 spatial single source of truth**。`trip_entries` 正式移除 `location` / `maps` / `mapcode` / `google_rating` 四欄，entry 的座標、Google Maps URL、mapcode、評分全數由 `JOIN pois ON trip_entries.poi_id = pois.id` 取得。前後端 fallback 程式碼同步清除，Phase 2 過渡期結束。既有行程 100% 已 backfill（74 個 auto + 17 個 collision 手動分離成獨立 POI），資料全數保留。

@@ -898,3 +898,17 @@ body.dark {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(1.4); }
 }
+
+/* B-P6 task 3.4 — Respect prefers-reduced-motion (vestibular disorder accessibility).
+   全域 override：禁用 / 大幅縮短 animation + transition + scroll-behavior smoothness。
+   `0.01ms` 而非 `0` 維持 transitionend / animationend event 仍 fire（依賴 callback 的程式不會壞）。 */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
