@@ -24,6 +24,8 @@
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { parseJsonBody } from '../_utils';
+import { sendEmail, EmailError } from '../../../src/server/email';
+import { passwordReset } from '../../../src/server/email-templates';
 import type { Env } from '../_types';
 
 interface ForgotBody {
@@ -55,12 +57,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Check if user exists with local provider
   const user = await context.env.DB
     .prepare(
-      `SELECT u.id AS user_id FROM users u
+      `SELECT u.id AS user_id, u.display_name FROM users u
        JOIN auth_identities ai ON ai.user_id = u.id
        WHERE u.email = ? AND ai.provider = 'local' LIMIT 1`,
     )
     .bind(email)
-    .first<{ user_id: string }>();
+    .first<{ user_id: string; display_name: string | null }>();
 
   if (!user) {
     // Don't generate token, but return same generic response
@@ -76,8 +78,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     TTL_SEC,
   );
 
-  // V2-P3 next slice: send email with reset link {origin}/reset-password?token={token}
-  // 目前 token 只 in D1, dev 用 wrangler d1 exec 看；prod 等 email send 接通。
+  // Send reset email — best-effort (token stays in D1 even if email fails)
+  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
+    const origin = new URL(context.request.url).origin;
+    const resetUrl = `${origin}/auth/password/reset?token=${encodeURIComponent(token)}`;
+    const tpl = passwordReset(resetUrl, user.display_name);
+    try {
+      await sendEmail(context.env, {
+        to: email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+      });
+    } catch (err) {
+      // best-effort — anti-enum response unchanged
+      // eslint-disable-next-line no-console
+      console.error('[forgot-password] email send failed:',
+        err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
+    }
+  }
 
   return genericResponse;
 };

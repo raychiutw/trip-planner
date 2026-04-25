@@ -20,6 +20,8 @@
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { hashPassword } from '../../../src/server/password';
 import { parseJsonBody } from '../_utils';
+import { sendEmail, EmailError } from '../../../src/server/email';
+import { passwordChangedConfirm } from '../../../src/server/email-templates';
 import type { Env } from '../_types';
 
 interface ResetBody {
@@ -87,6 +89,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Destroy token (one-time use guard)
   await adapter.destroy(token);
+
+  // Send confirmation email — best-effort，不擋成功 response
+  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
+    try {
+      const userRow = await context.env.DB
+        .prepare('SELECT display_name FROM users WHERE id = ?')
+        .bind(tokenRow.userId)
+        .first<{ display_name: string | null }>();
+      const tpl = passwordChangedConfirm(userRow?.display_name ?? null);
+      await sendEmail(context.env, {
+        to: tokenRow.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+      });
+    } catch (err) {
+      // best-effort
+      // eslint-disable-next-line no-console
+      console.error('[reset-password] confirmation email failed:',
+        err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
+    }
+  }
 
   return new Response(
     JSON.stringify({ ok: true, message: '密碼已更新，請用新密碼登入' }),

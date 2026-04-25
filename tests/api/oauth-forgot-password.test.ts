@@ -121,4 +121,47 @@ describe('POST /api/oauth/forgot-password', () => {
     const sql = dbPrepare.mock.calls[0][0] as string;
     expect(sql).toContain("provider = 'local'");
   });
+
+  it('sends reset email via Resend when env keys set (V2-P3 wire)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'msg-1' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('SELECT u.id')) return makeStmt({ user_id: 'u-1', display_name: 'Ray' });
+      return makeStmt();
+    });
+    const env = {
+      DB: { prepare: dbPrepare },
+      RESEND_API_KEY: 're_test',
+      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+    };
+    await onRequestPost(makeContext({ email: 'u@x.com' }, env as never));
+
+    const resendCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+    );
+    expect(resendCall).toBeTruthy();
+    const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
+    expect(body.to).toEqual(['u@x.com']);
+    expect(body.subject).toContain('重設');
+    expect(body.html).toContain('https://x.com/auth/password/reset?token=');
+    vi.unstubAllGlobals();
+  });
+
+  it('does NOT send email when env keys unset (graceful)', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('SELECT u.id')) return makeStmt({ user_id: 'u', display_name: null });
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    await onRequestPost(makeContext({ email: 'u@x.com' }, env));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });
