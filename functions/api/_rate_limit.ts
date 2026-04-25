@@ -144,8 +144,9 @@ export function clientIp(request: Request): string {
 export const RATE_LIMITS = {
   // Anti brute-force login: 5 attempts / 15min window, 30min lockout
   LOGIN: { maxAttempts: 5, windowMs: 15 * 60 * 1000, lockoutMs: 30 * 60 * 1000 },
-  // Signup spam protection: 3 attempts / 1h window, 1h lockout
-  SIGNUP: { maxAttempts: 3, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
+  // Signup spam protection: 10 attempts / 1h window, 1h lockout.
+  // (Was 3/h per autoplan; bumped — too tight for dev self-testing + shared NAT IP)
+  SIGNUP: { maxAttempts: 10, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
   // Password reset abuse: 3 attempts / 1h window, 1h lockout
   FORGOT_PASSWORD: { maxAttempts: 3, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
   // OAuth token endpoint per-client: 100 attempts / minute, 5min lockout

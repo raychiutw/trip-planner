@@ -173,8 +173,8 @@ describe('RATE_LIMITS presets', () => {
     expect(RATE_LIMITS.LOGIN.lockoutMs).toBe(30 * 60 * 1000);
   });
 
-  it('SIGNUP: more conservative (3 attempts / 1h)', () => {
-    expect(RATE_LIMITS.SIGNUP.maxAttempts).toBe(3);
+  it('SIGNUP: 10 attempts / 1h (bumped from autoplan original 3 — too tight for dev + NAT)', () => {
+    expect(RATE_LIMITS.SIGNUP.maxAttempts).toBe(10);
   });
 
   it('OAUTH_TOKEN: high frequency (100 / min) for active client', () => {
