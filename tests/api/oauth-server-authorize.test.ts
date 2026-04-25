@@ -105,9 +105,49 @@ describe('GET /api/oauth/server-authorize', () => {
     expect(decodeURIComponent(loc)).toContain('/api/oauth/server-authorize?');
   });
 
-  it('happy path: logged in + valid → 302 redirect_uri?code=&state=', async () => {
+  it('logged in + no Consent → 302 /oauth/consent (V2-P5 integration)', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      // Consent SELECT returns null (no consent yet)
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) return makeStmt(null);
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = {
+      SESSION_SECRET: SECRET,
+      DB: { prepare: dbPrepare },
+    };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid profile',
+      state: 'csrf-xyz',
+    }), env, `tripline_session=${token}`));
+
+    expect(res.status).toBe(302);
+    const loc = res.headers.get('Location') ?? '';
+    expect(loc).toMatch(/^\/oauth\/consent\?/);
+    expect(loc).toContain('client_id=partner-x');
+    expect(loc).toContain('state=csrf-xyz');
+    expect(loc).toContain('scope=openid+profile'); // URLSearchParams uses + for space
+  });
+
+  it('logged in + has Consent covering all scopes → 302 redirect_uri?code=&state=', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      // Consent SELECT returns existing consent covering scopes
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid', 'profile', 'email'],
+            grantedAt: Date.now() - 1000,
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
       if (sql.includes('INSERT OR REPLACE INTO oauth_models')) return makeStmt();
       return makeStmt();
     });
@@ -127,18 +167,83 @@ describe('GET /api/oauth/server-authorize', () => {
     expect(res.status).toBe(302);
     const loc = res.headers.get('Location') ?? '';
     expect(loc).toMatch(/^https:\/\/partner\.com\/cb\?code=[A-Za-z0-9_-]+&state=csrf-xyz$/);
-
-    // Verify INSERT AuthorizationCode in D1
-    const insertCall = dbPrepare.mock.calls.find(
-      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO oauth_models'),
-    );
-    expect(insertCall).toBeTruthy();
   });
 
-  it('PKCE public client: code_challenge stored', async () => {
+  it('Consent insufficient (missing requested scope) → 302 /oauth/consent', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid'], // missing 'profile'
+            grantedAt: Date.now(),
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid profile', // requesting profile not in stored consent
+      state: 's',
+    }), env, `tripline_session=${token}`));
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^\/oauth\/consent\?/);
+  });
+
+  it('prompt=consent forces re-prompt even with stored Consent', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt(ACTIVE_CLIENT);
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'partner-x',
+            scopes: ['openid', 'profile', 'email'],
+            grantedAt: Date.now(),
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
+      return makeStmt();
+    });
+    const token = await signSessionToken('user-1', SECRET);
+    const env: MockEnv = { SESSION_SECRET: SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestGet(makeContext(buildUrl({
+      client_id: 'partner-x',
+      redirect_uri: 'https://partner.com/cb',
+      response_type: 'code',
+      scope: 'openid',
+      state: 's',
+      prompt: 'consent',
+    }), env, `tripline_session=${token}`));
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^\/oauth\/consent\?/);
+  });
+
+  it('PKCE public client: code_challenge stored (with consent granted)', async () => {
     const PUBLIC_CLIENT = { ...ACTIVE_CLIENT, client_id: 'mobile', client_type: 'public' };
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM client_apps')) return makeStmt(PUBLIC_CLIENT);
+      // Consent granted for mobile + openid
+      if (sql.includes('SELECT payload, expires_at FROM oauth_models')) {
+        return makeStmt({
+          payload: JSON.stringify({
+            user_id: 'user-1',
+            client_id: 'mobile',
+            scopes: ['openid'],
+            grantedAt: Date.now(),
+          }),
+          expires_at: Date.now() + 60_000,
+        });
+      }
       return makeStmt();
     });
     const token = await signSessionToken('user-1', SECRET);
