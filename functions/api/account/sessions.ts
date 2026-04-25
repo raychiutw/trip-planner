@@ -35,6 +35,16 @@ interface SessionDeviceRow {
 // 在實務上幾乎不可能（除惡意/bug）— 真出現再加 pagination。
 const SESSIONS_LIST_LIMIT = 100;
 
+/**
+ * SQLite `datetime('now')` 回 `'2026-04-25 07:48:12'` 沒 timezone 標記，
+ * frontend `new Date(iso)` 會 interpret 為 local TZ，造成 UTC+8 時區顯示
+ * 偏 8 小時。轉成 ISO 8601 with Z suffix（SQLite 已用 UTC 寫入）讓
+ * `new Date()` 正確解析為 UTC。
+ */
+function toIsoUtc(sqliteTs: string): string {
+  return sqliteTs.replace(' ', 'T') + 'Z';
+}
+
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const session = await requireSessionUser(context.request, context.env);
 
@@ -55,8 +65,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     ua_summary: row.ua_summary,
     // Only first 8 chars of ip_hash for "different device" hint, not full reverse-lookup-bait
     ip_hash_prefix: row.ip_hash ? row.ip_hash.slice(0, 8) : null,
-    created_at: row.created_at,
-    last_seen_at: row.last_seen_at,
+    created_at: toIsoUtc(row.created_at),
+    last_seen_at: toIsoUtc(row.last_seen_at),
     is_current: row.sid === currentSid,
   }));
 
