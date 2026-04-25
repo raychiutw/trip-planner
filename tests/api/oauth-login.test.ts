@@ -113,4 +113,74 @@ describe('POST /api/oauth/login', () => {
     const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'whatever' }, env));
     expect(res.status).toBe(401);
   }, 30_000);
+
+  it('429 LOGIN_RATE_LIMITED when IP locked', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) {
+        // Return locked row
+        return makeStmt({
+          bucket_key: 'login:unknown',
+          count: 6,
+          window_start: Date.now(),
+          locked_until: Date.now() + 60_000, // locked for 1min
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({ email: 'a@b.com', password: 'pw1234' }, env));
+    expect(res.status).toBe(429);
+    const json = await res.json() as { error: { code: string } };
+    expect(json.error.code).toBe('LOGIN_RATE_LIMITED');
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('Failed login bumps rate limit counters (defence in depth)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
+      if (sql.includes('SELECT user_id, password_hash')) return makeStmt(null); // user not found
+      if (sql.includes('INSERT OR REPLACE INTO rate_limit_buckets')) return makeStmt();
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({ email: 'unknown@x.com', password: 'wrong' }, env));
+    expect(res.status).toBe(401);
+
+    // Both ipKey + emailKey buckets should be bumped (INSERT OR REPLACE called twice)
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+    );
+    expect(inserts.length).toBe(2);
+  }, 30_000);
+
+  it('Successful login resets rate limit counters', async () => {
+    const real = await hashPassword('correct-pass');
+    const deletes: string[] = [];
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
+      if (sql.includes('SELECT user_id, password_hash')) {
+        return makeStmt({ user_id: 'u', password_hash: real });
+      }
+      if (sql.includes('DELETE FROM rate_limit_buckets')) {
+        return {
+          ...makeStmt(),
+          bind: vi.fn().mockImplementation(function(this: { lastBindArgs?: unknown[] }, ...args: unknown[]) {
+            deletes.push(args[0] as string);
+            return this;
+          }),
+        };
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: 'session-secret-test', DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({ email: 'user@x.com', password: 'correct-pass' }, env));
+    expect(res.status).toBe(200);
+
+    // Both bucket keys reset
+    const deleteCount = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('DELETE FROM rate_limit_buckets'),
+    ).length;
+    expect(deleteCount).toBe(2);
+  }, 60_000);
 });
