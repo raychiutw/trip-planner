@@ -20,6 +20,13 @@
 import { issueSession } from '../_session';
 import { parseJsonBody } from '../_utils';
 import { verifyPassword } from '../../../src/server/password';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  resetRateLimit,
+  clientIp,
+  RATE_LIMITS,
+} from '../_rate_limit';
 import type { Env } from '../_types';
 
 interface LoginBody {
@@ -53,6 +60,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return errorResponse('LOGIN_INVALID_INPUT', 'email + password 必填', 400);
   }
 
+  // V2-P6 rate limit: per-IP + per-email buckets (defence in depth)
+  const ipKey = `login:${clientIp(context.request)}`;
+  const emailKey = `login:${email}`;
+
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'LOGIN_RATE_LIMITED', message: '登入嘗試過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
+    );
+  }
+  const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.LOGIN);
+  if (!emailCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'LOGIN_RATE_LIMITED', message: '此 email 登入嘗試過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
+    );
+  }
+
   // Lookup local provider identity
   const identity = await context.env.DB
     .prepare(
@@ -67,8 +93,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const passwordOk = await verifyPassword(password, hashToCheck);
 
   if (!identity || !passwordOk) {
+    // Bump both buckets on failure (defence in depth)
+    await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.LOGIN);
+    await bumpRateLimit(context.env.DB, emailKey, RATE_LIMITS.LOGIN);
     return errorResponse('LOGIN_INVALID', 'email 或密碼錯誤', 401);
   }
+
+  // Success: reset counters (legitimate user not penalised by past failed attempts)
+  await resetRateLimit(context.env.DB, ipKey);
+  await resetRateLimit(context.env.DB, emailKey);
 
   // Update last_used_at (best effort, don't fail login if update errors)
   try {
