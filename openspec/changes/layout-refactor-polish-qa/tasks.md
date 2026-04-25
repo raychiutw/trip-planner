@@ -22,8 +22,8 @@
 ## 4. Empty states + loading
 
 - [ ] 4.1 Ideas tab empty state 統一文案 + Mindtrip 風 Add card 視覺
-- [ ] 4.2 Explore 搜尋空結果 empty state
-- [ ] 4.3 Saved pool empty state
+- [x] 4.2 Explore 搜尋空結果 empty state
+- [x] 4.3 Saved pool empty state
 - [ ] 4.4 Loading skeleton（可選，lightweight）取代 spinner
 
 ## 5. A11y audit
@@ -33,7 +33,7 @@
 - [x] 5.3 鍵盤 tab order 驗證（手動 + Playwright test）
 - [x] 5.4 ARIA labels 補齊 sidebar / bottom nav / sheet tabs
 - [ ] 5.5 Focus trap in modal / sheet 正確
-- [ ] 5.6 Color contrast 對照 Terracotta palette（用 Chrome DevTools Lighthouse 驗）
+- [x] 5.6 Color contrast 對照 Ocean palette（unit test WCAG 2.x AA：light + dark theme 13 cases pass）
 
 ## 6. Performance
 
