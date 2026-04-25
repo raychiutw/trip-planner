@@ -213,6 +213,40 @@ async function queryWebAnalytics() {
   };
 }
 
+// ── 數據來源 5b: Route health（B-P6 task 10.3）─────────────────────
+// 驗證主要 SPA routes prod 上回 < 500（Cloudflare Access 的 302 / SPA 200 都算 OK）
+
+async function queryRouteHealth() {
+  var BASE = 'https://trip-planner-dby.pages.dev';
+  var ROUTES = [
+    '/',
+    '/manage/',
+    '/admin/',
+    '/trip/okinawa-trip-2026-Ray',
+    '/explore',
+    '/login',
+    '/map',
+    '/chat',
+  ];
+  var checks = await Promise.all(ROUTES.map(async function(r) {
+    try {
+      var res = await fetch(BASE + r, { redirect: 'manual' });
+      return { route: r, status: res.status, ok: res.status < 500 };
+    } catch (e) {
+      return { route: r, status: 0, ok: false, error: (e && e.message) || String(e) };
+    }
+  }));
+  var failed = checks.filter(function(c) { return !c.ok; });
+  return {
+    status: failed.length === 0
+      ? 'ok'
+      : (failed.length >= Math.ceil(checks.length / 2) ? 'critical' : 'warning'),
+    total: failed.length,
+    checked: checks.length,
+    routes: checks,
+  };
+}
+
 // ── 數據來源 6: npm audit ────────────────────────────────────────
 
 function queryNpmAudit() {
@@ -466,6 +500,7 @@ async function main() {
     queryWorkersAnalytics(), // 2
     queryWebAnalytics(),     // 3
     queryRequestErrors(),    // 4
+    queryRouteHealth(),      // 5 — B-P6 task 10.3
   ]);
 
   function val(idx, fallback) {
@@ -480,6 +515,7 @@ async function main() {
   var workers = val(2, { requests: 0, errors: 0, p50: 0, p99: 0 });
   var web = val(3, { visits: 0, pageViews: 0 });
   var requestErrors = val(4, { status: 'ok', total: 0, statusCounts: { open: 0, processing: 0, failed: 0 }, stuckProcessing: 0, pending: [] });
+  var routeHealth = val(5, { status: 'ok', total: 0, checked: 0, routes: [] });
 
   var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors);
 
@@ -493,7 +529,8 @@ async function main() {
     workers: workers,
     web: web,
     npmAudit: npmAuditResult,
-    schedulerErrors: schedulerErrors
+    schedulerErrors: schedulerErrors,
+    routeHealth: routeHealth
   };
 
   // 為所有 issue/error 項目加流水編號
