@@ -107,9 +107,35 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return new Response(null, { status: 302, headers: { Location: loginUrl } });
   }
 
-  // V2-P5 will add consent screen here. V2-P4 starter: auto-approve + redirect.
+  // V2-P5: Consent check — lookup D1 Consent for (user_id, client_id)
+  // 若無 consent 或 stored scopes 不含 requested scopes → redirect to /oauth/consent
+  // prompt=consent 時强制 re-prompt（user 主動要重新確認）
+  const consentAdapter = new D1Adapter(context.env.DB, 'Consent');
+  const consentRow = (await consentAdapter.find(`${session.uid}:${result.client.client_id}`)) as
+    | { user_id: string; client_id: string; scopes: string[]; grantedAt: number }
+    | undefined;
 
-  // Generate authorization_code + store D1
+  const needsConsent =
+    result.prompt === 'consent' ||
+    !consentRow ||
+    !result.scopes.every((s) => consentRow.scopes.includes(s));
+
+  if (needsConsent) {
+    const consentParams = new URLSearchParams();
+    consentParams.set('client_id', result.client.client_id);
+    consentParams.set('redirect_uri', result.redirectUri);
+    consentParams.set('response_type', 'code');
+    consentParams.set('scope', result.scopes.join(' '));
+    if (result.state) consentParams.set('state', result.state);
+    if (result.codeChallenge) consentParams.set('code_challenge', result.codeChallenge);
+    if (result.codeChallengeMethod) consentParams.set('code_challenge_method', result.codeChallengeMethod);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `/oauth/consent?${consentParams.toString()}` },
+    });
+  }
+
+  // Consent OK — generate authorization_code + store D1
   const code = generateAuthCode();
   const adapter = new D1Adapter(context.env.DB, 'AuthorizationCode');
   await adapter.upsert(
