@@ -30,12 +30,11 @@ try {
 // --- Config ---
 const PORT = parseInt(process.env.TRIPLINE_PORT || '6688', 10);
 const API_SECRET = process.env.TRIPLINE_API_SECRET || '';
-const CF_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID || '';
-const CF_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET || '';
 const API_BASE = 'https://trip-planner-dby.pages.dev/api';
 const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
 const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
 const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-token.js');
 
 // --- Logging ---
 mkdirSync(LOG_DIR, { recursive: true });
@@ -60,13 +59,32 @@ function logError(msg: string) {
 }
 
 // --- API helpers ---
-function cfHeaders(): Record<string, string> {
+// V2 OAuth client_credentials replaces CF Access Service Token. The token helper
+// caches in /tmp; on 401 we invalidate and retry once via require() reload.
+const tokenHelper = require(TOKEN_HELPER) as {
+  getToken: (opts?: { forceFresh?: boolean }) => Promise<string>;
+  invalidateCache: () => void;
+};
+
+async function authHeaders(forceFresh = false): Promise<Record<string, string>> {
+  const token = await tokenHelper.getToken({ forceFresh });
   return {
-    'CF-Access-Client-Id': CF_CLIENT_ID,
-    'CF-Access-Client-Secret': CF_CLIENT_SECRET,
+    'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json',
     'Origin': API_BASE.replace('/api', ''),
   };
+}
+
+/** fetch wrapper that auto-retries once on 401 with a fresh token. */
+async function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  const headers = { ...(init.headers as Record<string, string> ?? {}), ...(await authHeaders()) };
+  let res = await fetch(url, { ...init, headers });
+  if (res.status === 401) {
+    tokenHelper.invalidateCache();
+    const freshHeaders = { ...(init.headers as Record<string, string> ?? {}), ...(await authHeaders(true)) };
+    res = await fetch(url, { ...init, headers: freshHeaders });
+  }
+  return res;
 }
 
 interface TripRequest {
@@ -78,9 +96,7 @@ interface TripRequest {
 }
 
 async function fetchOldestOpen(): Promise<TripRequest | null> {
-  const res = await fetch(`${API_BASE}/requests?status=open&limit=1&sort=asc`, {
-    headers: cfHeaders(),
-  });
+  const res = await authedFetch(`${API_BASE}/requests?status=open&limit=1&sort=asc`);
   if (!res.ok) {
     logError(`fetchOldestOpen failed: ${res.status}`);
     return null;
@@ -98,9 +114,8 @@ async function patchStatus(
   const body: Record<string, string> = { status };
   if (extra?.processed_by) body.processed_by = extra.processed_by;
 
-  const res = await fetch(`${API_BASE}/requests/${id}`, {
+  const res = await authedFetch(`${API_BASE}/requests/${id}`, {
     method: 'PATCH',
-    headers: cfHeaders(),
     body: JSON.stringify(body),
   });
   if (!res.ok) {

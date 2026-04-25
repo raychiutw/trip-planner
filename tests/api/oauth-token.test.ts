@@ -623,3 +623,101 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
     expect(inserts.length).toBe(1);
   });
 });
+
+describe('POST /api/oauth/token — client_credentials grant (RFC 6749 §4.4)', () => {
+  it('confidential client + correct secret + admin scope → 200 with access_token only (no refresh)', async () => {
+    const secretHash = await hashPassword('the-secret-1');
+    const CONFIDENTIAL_CLI = {
+      client_id: 'tripline-internal-cli',
+      client_type: 'confidential',
+      client_secret_hash: secretHash,
+      status: 'active',
+      allowed_scopes: '["admin","trips:read","trips:write"]',
+    };
+    const sqls: string[] = [];
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      sqls.push(sql);
+      if (sql.includes('FROM client_apps')) return makeStmt(CONFIDENTIAL_CLI);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'client_credentials',
+      client_id: 'tripline-internal-cli',
+      client_secret: 'the-secret-1',
+      scope: 'admin',
+    }, env));
+    expect(res.status).toBe(200);
+    const json = await res.json() as Record<string, unknown>;
+    expect(typeof json.access_token).toBe('string');
+    expect(json.refresh_token).toBeUndefined(); // §4.4.3 — no refresh
+    expect(json.token_type).toBe('Bearer');
+    expect(json.scope).toBe('admin');
+    // Stored in AccessToken adapter
+    expect(sqls.some((s) => s.includes('INSERT OR REPLACE INTO oauth_models'))).toBe(true);
+  }, 60_000);
+
+  it('public client → 401 unauthorized_client (client_credentials only for confidential)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt({
+        ...PUBLIC_CLIENT,
+        allowed_scopes: '["admin"]',
+      });
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'client_credentials',
+      client_id: 'mobile',
+      scope: 'admin',
+    }, env));
+    expect(res.status).toBe(401);
+    expect((await res.json() as { error: string }).error).toBe('unauthorized_client');
+  });
+
+  it('scope outside allowed_scopes → 400 invalid_scope', async () => {
+    const secretHash = await hashPassword('secret-1234');
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt({
+        client_id: 'cli',
+        client_type: 'confidential',
+        client_secret_hash: secretHash,
+        status: 'active',
+        allowed_scopes: '["trips:read"]', // no admin
+      });
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'client_credentials',
+      client_id: 'cli',
+      client_secret: 'secret-1234',
+      scope: 'admin',
+    }, env));
+    expect(res.status).toBe(400);
+    expect((await res.json() as { error: string }).error).toBe('invalid_scope');
+  }, 60_000);
+
+  it('omitting scope param → defaults to all client.allowed_scopes', async () => {
+    const secretHash = await hashPassword('secret-1234');
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM client_apps')) return makeStmt({
+        client_id: 'cli',
+        client_type: 'confidential',
+        client_secret_hash: secretHash,
+        status: 'active',
+        allowed_scopes: '["admin","trips:read"]',
+      });
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'client_credentials',
+      client_id: 'cli',
+      client_secret: 'secret-1234',
+    }, env));
+    expect(res.status).toBe(200);
+    const json = await res.json() as { scope: string };
+    expect(json.scope).toBe('admin trips:read');
+  }, 60_000);
+});

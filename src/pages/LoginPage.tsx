@@ -120,18 +120,6 @@ const SCOPED_STYLES = `
 .tp-banner-info { background: var(--color-accent-subtle); color: var(--color-accent); }
 .tp-banner a { color: inherit; text-decoration: underline; font-weight: 600; }
 
-.tp-cf-fallback {
-  display: block; margin: 20px auto 0;
-  padding: 8px 16px;
-  text-align: center;
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  min-height: var(--spacing-tap-min);
-}
-.tp-cf-fallback:hover { color: var(--color-accent); }
-
 .tp-login-footer {
   text-align: center; margin-top: 24px;
   font-size: var(--font-size-footnote); color: var(--color-muted);
@@ -433,10 +421,6 @@ export default function LoginPage() {
         <div className="tp-login-footer">
           沒有帳號？<a href="/signup" data-testid="login-signup-link">建立帳號</a>
         </div>
-
-        <a className="tp-cf-fallback" href="/manage" data-testid="login-cf-access">
-          Cloudflare Access 登入（過渡期）
-        </a>
       </div>
     </main>
   );
