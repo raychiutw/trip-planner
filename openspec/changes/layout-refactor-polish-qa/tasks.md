@@ -30,7 +30,7 @@
 
 - [ ] 5.1 安裝 axe-core / playwright-axe
 - [ ] 5.2 跑 axe 驗所有 page，修 violation
-- [ ] 5.3 鍵盤 tab order 驗證（手動 + Playwright test）
+- [x] 5.3 鍵盤 tab order 驗證（手動 + Playwright test）
 - [x] 5.4 ARIA labels 補齊 sidebar / bottom nav / sheet tabs
 - [ ] 5.5 Focus trap in modal / sheet 正確
 - [ ] 5.6 Color contrast 對照 Terracotta palette（用 Chrome DevTools Lighthouse 驗）
