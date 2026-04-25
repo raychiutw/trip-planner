@@ -13,6 +13,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 
 const SCOPED_STYLES = `
 .tp-verify-shell {
@@ -22,6 +23,7 @@ const SCOPED_STYLES = `
     radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
     var(--color-secondary);
 }
+${AUTH_LAYOUT_STYLES}
 .tp-verify-card {
   width: 100%; max-width: 440px;
   background: var(--color-background);
@@ -142,7 +144,8 @@ export default function EmailVerifyPendingPage() {
   return (
     <main className="tp-verify-shell" data-testid="verify-pending-page">
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-verify-card">
+      <div className="tp-verify-form-side">
+        <div className="tp-verify-card">
         <div className="tp-verify-icon-circle">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
@@ -195,7 +198,32 @@ export default function EmailVerifyPendingPage() {
         <p className="tp-verify-footer">
           打錯 email？<a href="/signup">改用其他信箱</a>
         </p>
+        </div>
       </div>
+
+      <AuthBrandHero
+        eyebrow="Almost there"
+        headline={<>差最後一步<br />就能開始。</>}
+        sub="驗證 email 是為了確保你能收到旅伴邀請、行程更新通知，以及哪天忘記密碼時的重設連結。"
+        items={[
+          {
+            icon: <polyline points="20,6 9,17 4,12" />,
+            title: '驗證後立即可用',
+            desc: '點完連結會自動回到這個頁面，可以直接開始規劃 trip。',
+          },
+          {
+            icon: (
+              <>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </>
+            ),
+            title: '未驗證不算啟用',
+            desc: '沒驗證的帳號 7 天後自動清除，避免假帳號占空間。',
+          },
+        ]}
+        footnote="© 2026 Tripline"
+      />
     </main>
   );
 }

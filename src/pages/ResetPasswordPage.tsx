@@ -14,6 +14,7 @@
  */
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -23,6 +24,7 @@ const SCOPED_STYLES = `
     radial-gradient(circle at 20% 0%, rgba(217, 120, 72, 0.06), transparent 50%),
     var(--color-secondary);
 }
+${AUTH_LAYOUT_STYLES}
 .tp-auth-card {
   width: 100%; max-width: 440px;
   background: var(--color-background);
@@ -235,7 +237,11 @@ export default function ResetPasswordPage() {
   // Token missing in URL → render error directly
   if (!token || tokenInvalid) {
     return (
-      <main className="tp-auth-shell" data-testid="reset-password-page">
+      <main
+        className="tp-auth-shell"
+        style={{ display: 'flex', gridTemplateColumns: 'unset', padding: '48px 24px' }}
+        data-testid="reset-password-page"
+      >
         <style>{SCOPED_STYLES}</style>
         <div className="tp-auth-card">
           <div className="tp-auth-brand">
@@ -264,7 +270,11 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <main className="tp-auth-shell" data-testid="reset-password-page">
+      <main
+        className="tp-auth-shell"
+        style={{ display: 'flex', gridTemplateColumns: 'unset', padding: '48px 24px' }}
+        data-testid="reset-password-page"
+      >
         <style>{SCOPED_STYLES}</style>
         <div className="tp-auth-card">
           <div className="tp-auth-brand">
@@ -289,7 +299,8 @@ export default function ResetPasswordPage() {
   return (
     <main className="tp-auth-shell" data-testid="reset-password-page">
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-auth-card">
+      <div className="tp-auth-form-side">
+        <div className="tp-auth-card">
         <div className="tp-auth-brand">
           <span className="tp-auth-brand-dot" aria-hidden="true">●</span>
           <span>Tripline</span>
@@ -388,7 +399,32 @@ export default function ResetPasswordPage() {
         <div className="tp-auth-footer">
           想起密碼了？<a href="/login">回登入</a>
         </div>
+        </div>
       </div>
+
+      <AuthBrandHero
+        eyebrow="Final Step"
+        headline={<>最後一步<br />就完成了。</>}
+        sub="設好新密碼，你會自動登入並進入「行程」頁。記得密碼存到密碼管理器（1Password / Apple Keychain / Google Password）。"
+        items={[
+          {
+            icon: <polyline points="20,6 9,17 4,12" />,
+            title: '即時生效',
+            desc: '設好密碼後立即可登入，不需等 email 或重新驗證。',
+          },
+          {
+            icon: (
+              <>
+                <path d="M12 1l3 3-3 3M12 17l3 3-3 3M5 12H1l3-3M19 12h4l-3 3" />
+                <path d="M9 12a3 3 0 0 1 6 0v0a3 3 0 0 1-6 0z" />
+              </>
+            ),
+            title: '舊裝置全登出',
+            desc: '手機、平板、其他電腦的 session 全部清掉，重新登入才能用。',
+          },
+        ]}
+        footnote="© 2026 Tripline"
+      />
     </main>
   );
 }

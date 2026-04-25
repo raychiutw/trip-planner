@@ -14,6 +14,7 @@
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -24,6 +25,7 @@ const SCOPED_STYLES = `
     radial-gradient(circle at 80% 100%, rgba(217, 120, 72, 0.04), transparent 50%),
     var(--color-secondary);
 }
+${AUTH_LAYOUT_STYLES}
 .tp-auth-card {
   width: 100%; max-width: 440px;
   background: var(--color-background);
@@ -205,7 +207,8 @@ export default function SignupPage() {
   return (
     <main className="tp-auth-shell" data-testid="signup-page">
       <style>{SCOPED_STYLES}</style>
-      <div className="tp-auth-card">
+      <div className="tp-auth-form-side">
+        <div className="tp-auth-card">
         <div className="tp-auth-brand">
           <span className="tp-auth-brand-dot" aria-hidden="true">●</span>
           <span>Tripline</span>
@@ -289,7 +292,43 @@ export default function SignupPage() {
         <div className="tp-auth-footer">
           已有帳號？<a href="/login">直接登入</a>
         </div>
+        </div>
       </div>
+
+      <AuthBrandHero
+        eyebrow="Why Tripline"
+        headline={<>把每次旅程<br />留在身邊。</>}
+        sub="註冊後可同步行程到所有裝置、邀請旅伴共編、儲存喜歡的 POI 一鍵加入下次 trip。"
+        items={[
+          {
+            icon: (
+              <>
+                <path d="M21 12a9 9 0 0 1-9 9M3 12a9 9 0 0 1 9-9M21 12h-4M7 12H3M12 21v-4M12 7V3" />
+                <circle cx="12" cy="12" r="4" />
+              </>
+            ),
+            title: '跨裝置同步',
+            desc: '手機看到的就是平板看到的，離線也能用。',
+          },
+          {
+            icon: (
+              <>
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="8.5" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+              </>
+            ),
+            title: '邀請旅伴共編',
+            desc: '用一個 link 把家人朋友拉進行程，不用 LINE 截圖。',
+          },
+          {
+            icon: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
+            title: '儲存池跟著你',
+            desc: '看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。',
+          },
+        ]}
+        footnote="© 2026 Tripline · 由旅人為旅人打造"
+      />
     </main>
   );
 }
