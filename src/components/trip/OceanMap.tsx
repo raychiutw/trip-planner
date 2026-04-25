@@ -211,9 +211,10 @@ export interface SegmentPair {
 /**
  * Build consecutive polyline pairs from pins.
  *
- * - pinsByDay mode: per-day polyline, cross-day segments NOT drawn. Hotel pins
- *   are filtered out so the polyline matches TripMapRail (hotel is a stay-over
- *   marker, not part of the travel path between stops).
+ * - pinsByDay mode: per-day polyline, cross-day segments NOT drawn. Hotel
+ *   pins ARE included as the day's start point (sortOrder=-1) per
+ *   DESIGN.md「地圖 Polyline 規格」— skipping the hotel left the first
+ *   entry visually orphaned.
  * - Flat pins mode: connects every consecutive pair.
  */
 export function buildSegments(params: {
@@ -229,7 +230,8 @@ export function buildSegments(params: {
   if (pinsByDay && pinsByDay.size > 0) {
     const sortedDays = [...pinsByDay.keys()].sort((a, b) => a - b);
     for (const d of sortedDays) {
-      const dayPins = (pinsByDay.get(d) ?? []).filter((p) => p.type === 'entry');
+      // Sort by sortOrder so hotel (-1) leads the chain naturally.
+      const dayPins = [...(pinsByDay.get(d) ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
       for (let i = 0; i < dayPins.length - 1; i++) {
         const a = dayPins[i]!;
         const b = dayPins[i + 1]!;
