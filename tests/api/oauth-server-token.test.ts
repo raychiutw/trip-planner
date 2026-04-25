@@ -463,7 +463,7 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
     expect(claims.aud).toBe('mobile');
     expect(claims.email).toBe('user@example.com');
     expect(claims.email_verified).toBe(true);
-    expect(claims.name).toBe('Test User'); // from profile scope
+    expect(claims.name).toBe('Test User');
     expect(typeof claims.iat).toBe('number');
     expect(typeof claims.exp).toBe('number');
     expect(claims.exp).toBeGreaterThan(claims.iat as number);
@@ -502,10 +502,7 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
       }
       return makeStmt();
     });
-    const env: MockEnv = {
-      DB: { prepare: dbPrepare },
-      // NO OAUTH_SIGNING_PRIVATE_KEY
-    };
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
     const res = await onRequestPost(makeContext({
       grant_type: 'authorization_code',
       client_id: 'mobile',
@@ -516,5 +513,49 @@ describe('POST /api/oauth/server-token — refresh_token grant', () => {
     const json = await res.json() as Record<string, unknown>;
     expect(typeof json.access_token).toBe('string');
     expect(json.id_token).toBeUndefined();
+  });
+
+  it('429 rate_limited when client bucket locked (V2-P6 throughput cap)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) {
+        return makeStmt({
+          bucket_key: 'oauth-token:mobile',
+          count: 101,
+          window_start: Date.now(),
+          locked_until: Date.now() + 30_000,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(429);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe('rate_limited');
+    expect(res.headers.get('Retry-After')).toBeTruthy();
+    expect(Number(res.headers.get('Retry-After'))).toBeGreaterThan(0);
+  });
+
+  it('Bumps oauth-token bucket on every request (success or failure)', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('FROM client_apps')) return makeStmt(null);
+      return makeStmt();
+    });
+    const env: MockEnv = { DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      grant_type: 'authorization_code',
+      client_id: 'mobile',
+      code: 'c', redirect_uri: 'r',
+    }, env));
+    expect(res.status).toBe(401);
+    const inserts = dbPrepare.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+    );
+    expect(inserts.length).toBe(1);
   });
 });

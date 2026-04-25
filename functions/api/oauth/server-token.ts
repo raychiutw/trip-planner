@@ -23,6 +23,11 @@
 import { D1Adapter, type AdapterPayload } from '../../../src/server/oauth-d1-adapter';
 import { verifyPassword } from '../../../src/server/password';
 import { issueIdToken } from './_id_token';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  RATE_LIMITS,
+} from '../_rate_limit';
 import type { Env } from '../_types';
 
 const ACCESS_TOKEN_TTL_SEC = 60 * 60;          // 1h
@@ -171,6 +176,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!clientId) {
     return jsonError('invalid_client', 'Missing client_id');
   }
+
+  // V2-P6 rate limit: per-client_id bucket — throughput cap
+  // Preset: 100 attempts / minute, 5min lockout (per RATE_LIMITS.OAUTH_TOKEN)
+  // Bump regardless of grant_type / outcome — total per-minute throughput cap
+  const tokenKey = `oauth-token:${clientId}`;
+  const tokenCheck = await checkRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
+  if (!tokenCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: 'rate_limited', error_description: 'Too many token requests for this client' }),
+      {
+        status: 429,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'no-store',
+          'Retry-After': String(tokenCheck.retryAfter),
+        },
+      },
+    );
+  }
+  await bumpRateLimit(context.env.DB, tokenKey, RATE_LIMITS.OAUTH_TOKEN);
 
   const client = await context.env.DB
     .prepare(

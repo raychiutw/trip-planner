@@ -24,6 +24,12 @@
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { parseJsonBody } from '../_utils';
+import {
+  checkRateLimit,
+  bumpRateLimit,
+  clientIp,
+  RATE_LIMITS,
+} from '../_rate_limit';
 import type { Env } from '../_types';
 
 interface ForgotBody {
@@ -51,6 +57,31 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   );
 
   if (!email) return genericResponse;
+
+  // V2-P6 rate limit: per-IP + per-email buckets
+  // Per autoplan: 3/h/IP + 3/h/email — defence in depth
+  // Bump regardless of email-exists-or-not（response 永遠 generic，attacker 無從分辨）
+  const ipKey = `forgot-password:${clientIp(context.request)}`;
+  const emailKey = `forgot-password:${email}`;
+
+  const ipCheck = await checkRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
+  if (!ipCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '密碼重設請求過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(ipCheck.retryAfter) } },
+    );
+  }
+  const emailCheck = await checkRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
+  if (!emailCheck.ok) {
+    return new Response(
+      JSON.stringify({ error: { code: 'FORGOT_PASSWORD_RATE_LIMITED', message: '此 email 重設請求過多，請稍後再試' } }),
+      { status: 429, headers: { 'content-type': 'application/json', 'Retry-After': String(emailCheck.retryAfter) } },
+    );
+  }
+
+  // Bump both buckets — every valid request counts (anti-enumeration: response is generic anyway)
+  await bumpRateLimit(context.env.DB, ipKey, RATE_LIMITS.FORGOT_PASSWORD);
+  await bumpRateLimit(context.env.DB, emailKey, RATE_LIMITS.FORGOT_PASSWORD);
 
   // Check if user exists with local provider
   const user = await context.env.DB
