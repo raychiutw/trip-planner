@@ -19,6 +19,8 @@
  */
 import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { parseJsonBody } from '../_utils';
+import { sendEmail, EmailError } from '../../../src/server/email';
+import { emailVerification } from '../../../src/server/email-templates';
 import type { Env } from '../_types';
 
 interface SendVerificationBody {
@@ -46,13 +48,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (!email) return genericResponse;
 
-  // Look up unverified user
+  // Look up unverified user (joined to display_name for email greeting)
   const user = await context.env.DB
     .prepare(
-      `SELECT id FROM users WHERE email = ? AND email_verified_at IS NULL LIMIT 1`,
+      `SELECT id, display_name
+       FROM users
+       WHERE email = ? AND email_verified_at IS NULL LIMIT 1`,
     )
     .bind(email)
-    .first<{ id: string }>();
+    .first<{ id: string; display_name: string | null }>();
 
   if (!user) {
     // Either email doesn't exist or already verified — silent no-op
@@ -68,8 +72,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     TTL_SEC,
   );
 
-  // V2-P3 next slice: send email with verify link {origin}/api/oauth/verify?token={token}
-  // 目前 token 只 in D1, dev 用 wrangler d1 exec 看；prod 等 email send 接通。
+  // Send verification email — best-effort (token stays in D1 even if email fails)
+  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
+    const origin = new URL(context.request.url).origin;
+    const verifyUrl = `${origin}/api/oauth/verify?token=${encodeURIComponent(token)}`;
+    const tpl = emailVerification(verifyUrl, user.display_name);
+    try {
+      await sendEmail(context.env, {
+        to: email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+      });
+    } catch (err) {
+      // best-effort: log but still return generic 200 (anti-enum + token in D1 valid)
+      // eslint-disable-next-line no-console
+      console.error('[send-verification] email send failed:',
+        err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
+    }
+  }
 
   return genericResponse;
 };

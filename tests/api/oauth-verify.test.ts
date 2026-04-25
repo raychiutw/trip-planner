@@ -162,7 +162,7 @@ describe('POST /api/oauth/send-verification', () => {
   it('200 generic when email already verified (silent no-op)', async () => {
     // Filter SQL excludes verified users → SELECT returns null
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM users')) {
+      if (sql.includes('FROM users') && sql.includes('email_verified_at IS NULL')) {
         // emulate WHERE email_verified_at IS NULL filter excluding verified user
         return makeStmt(null);
       }
@@ -179,8 +179,8 @@ describe('POST /api/oauth/send-verification', () => {
 
   it('200 + INSERT EmailVerification token when email is unverified user', async () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
-      if (sql.includes('SELECT id FROM users')) {
-        return makeStmt({ id: 'u-1' });
+      if (sql.includes('FROM users') && sql.includes('email_verified_at IS NULL')) {
+        return makeStmt({ id: 'u-1', display_name: null });
       }
       if (sql.includes('INSERT OR REPLACE INTO oauth_models')) return makeStmt();
       return makeStmt();
@@ -217,5 +217,74 @@ describe('POST /api/oauth/send-verification', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare } };
     await onSendVerification(makeSendContext({ email: '  Mixed@EXAMPLE.com  ' }, env));
     expect(stmt.bind).toHaveBeenCalledWith('mixed@example.com');
+  });
+
+  it('sends Resend email when RESEND_API_KEY + EMAIL_FROM set (V2-P3 wire)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 'msg-123' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM users') && sql.includes('email_verified_at IS NULL')) {
+        return makeStmt({ id: 'u-1', display_name: 'Ray' });
+      }
+      return makeStmt();
+    });
+    const env = {
+      DB: { prepare: dbPrepare },
+      RESEND_API_KEY: 're_test',
+      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+    };
+    await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
+
+    // fetch hits Resend with verify URL in body
+    const resendCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+    );
+    expect(resendCall).toBeTruthy();
+    const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
+    expect(body.to).toEqual(['u@x.com']);
+    expect(body.subject).toContain('驗證');
+    expect(body.html).toContain('https://x.com/api/oauth/verify?token=');
+    vi.unstubAllGlobals();
+  });
+
+  it('does NOT send email when RESEND_API_KEY missing (graceful degrade)', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM users') && sql.includes('email_verified_at IS NULL')) {
+        return makeStmt({ id: 'u-1', display_name: null });
+      }
+      return makeStmt();
+    });
+    const env = { DB: { prepare: dbPrepare } }; // NO RESEND_API_KEY
+    await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it('returns generic 200 even when Resend API fails (best-effort)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'invalid_api_key' }), { status: 401 }),
+    ));
+
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM users') && sql.includes('email_verified_at IS NULL')) {
+        return makeStmt({ id: 'u-1', display_name: null });
+      }
+      return makeStmt();
+    });
+    const env = {
+      DB: { prepare: dbPrepare },
+      RESEND_API_KEY: 're_bad',
+      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+    };
+    const res = await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
+    expect(res.status).toBe(200);
+    vi.unstubAllGlobals();
   });
 });
