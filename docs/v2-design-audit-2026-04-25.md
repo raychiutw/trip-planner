@@ -21,11 +21,11 @@ in `docs/design-sessions/`. Desktop (1280×800) AND mobile (375×812).
 
 | Page | Desktop | Mobile | Mockup target |
 |------|---------|--------|---------------|
-| /login | 🟡 standalone card | 🟡 standalone card | mockup-login-v2.html |
-| /signup | 🟡 standalone card | ✅ aesthetic clean & email-first | mockup-signup-v2.html |
-| /login/forgot | 🟡 standalone card | 🟡 | mockup-forgot-v2.html |
-| /auth/password/reset | 🟡 standalone card (no mockup) | 🟡 | (V2 design language) |
-| /signup/check-email | 🟡 standalone card (no mockup) | 🟡 | (V2 design language) |
+| /login | ✅ split-screen + brand hero (#318) | ✅ single-column | mockup-login-v2.html |
+| /signup | ✅ split-screen + brand hero (#319) | ✅ single-column | mockup-signup-v2.html |
+| /login/forgot | ✅ split-screen + brand hero (#319) | ✅ single-column | mockup-forgot-v2.html |
+| /auth/password/reset | ✅ split-screen + Final Step hero (#319, form view) / single-column (invalid + success view) | ✅ single-column | (V2 design language) |
+| /signup/check-email | ✅ split-screen + Almost there hero (#319) | ✅ single-column | (V2 design language) |
 
 **Common gaps across all auth pages:**
 
@@ -57,8 +57,10 @@ in `docs/design-sessions/`. Desktop (1280×800) AND mobile (375×812).
 1. ⏭ Wrap `/login`, `/signup`, `/login/forgot`, `/auth/password/reset`,
    `/signup/check-email` in `AppShell` so unauthenticated users see the same
    sidebar + chrome as logged-in. Sidebar already supports `user: null`.
-2. ⏭ Add a desktop-only `<aside>` right-pane brand hero to each auth page
-   (one per page, content matches mockup's per-page narrative).
+2. ✅ **DONE in #318 + #319.** Desktop `<aside>` right-pane brand hero added
+   to login/signup/forgot/reset/check-email. Shared via
+   `src/components/auth/AuthBrandHero.tsx`. LoginPage still inlines the
+   pattern — folding into shared component is a future cleanup PR.
 3. ⏭ Add `STEP 1/2` indicator chips on the forgot→check-email flow.
 
 ---
@@ -177,12 +179,12 @@ mobile has the same card grid layout in single-column.
 
 ## Per-page polish items (small CSS-only fixes feasible later)
 
-| File | Issue | Fix |
-|------|-------|-----|
-| `src/pages/LoginPage.tsx` | CF Access link styled as muted text — could be smaller | reduce font-size to caption, lower contrast |
-| `src/pages/SignupPage.tsx` | "至少 8 字元" hint right-aligned — mockup has it inline-after | minor copy reflow |
-| `src/pages/ExplorePage.tsx` | Empty state container has 360px min-height — feels weighty | tighten to fit content |
-| `src/components/shell/DesktopSidebar.tsx` | Sidebar padding `20px 12px` — mockup uses `20px 14px` | bump 12 → 14 |
+| File | Issue | Fix | Status |
+|------|-------|-----|--------|
+| `src/pages/LoginPage.tsx` | CF Access fallback link | removed (V2 cutover, this PR series) | ✅ done |
+| `src/pages/SignupPage.tsx` | "至少 8 字元" hint right-aligned — mockup has it inline-after | minor copy reflow | ⏭ |
+| `src/pages/ExplorePage.tsx` | Empty state container has 360px min-height — feels weighty | tighten to fit content | ⏭ |
+| `src/components/shell/DesktopSidebar.tsx` | Sidebar padding `20px 12px` — mockup uses `20px 14px` | bump 12 → 14 | ⏭ |
 
 ---
 
@@ -217,16 +219,16 @@ mobile has the same card grid layout in single-column.
 
 ## Follow-ups in priority order (P1 → P3)
 
-| Priority | Item | Estimated CC time |
-|----------|------|------|
-| P1 | Wrap auth pages in AppShell so sidebar visible to anonymous users | ~30min |
-| P1 | Add `<aside>` desktop right-pane brand hero to login/signup/forgot | ~45min |
-| P2 | `/trips` landing page with peach-gradient trip cards | ~60min |
-| P2 | Right pane on `/trip/:id` shows selected day's stop summary | ~30min |
-| P2 | Wrap `/settings/*` and `/developer/*` in AppShell | ~20min |
-| P3 | `/explore` POI card grid with category-keyed gradients | ~90min |
-| P3 | Implement `/chat` (LLM concierge) — mockup-chat-v2 design exists | several days |
-| P3 | Implement `/map` (cross-trip global map) | ~2 days |
+| Priority | Item | Estimated CC time | Status |
+|----------|------|------|--------|
+| P1 | Wrap auth pages in AppShell so sidebar visible to anonymous users | ~30min | ⏭ pending |
+| P1 | Add `<aside>` desktop right-pane brand hero to login/signup/forgot | ~45min | ✅ #318 + #319 (5 pages, shared `AuthBrandHero` component) |
+| P2 | `/trips` landing page with peach-gradient trip cards | ~60min | ⏭ pending |
+| P2 | Right pane on `/trip/:id` shows selected day's stop summary | ~30min | ⏭ pending |
+| P2 | Wrap `/settings/*` and `/developer/*` in AppShell | ~20min | ⏭ pending |
+| P3 | `/explore` POI card grid with category-keyed gradients | ~90min | ⏭ pending |
+| P3 | Implement `/chat` (LLM concierge) — mockup-chat-v2 design exists | several days | ⏭ pending |
+| P3 | Implement `/map` (cross-trip global map) | ~2 days | ⏭ pending |
 
 ---
 
