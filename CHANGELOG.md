@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.13.3] - 2026-04-26
+
+**PR-N: 剩下 7 項 anti-slop HIGH 修正（hex hardcode → tokens, decorative emoji → Icon）**。User 直接也修指示，audit 9 項裡 PR-M 已清 3 項，本 PR 清剩 6 項 HIGH（IdeasTabContent / OceanMap / DayNav / TripsListPage / EntryActionPopover / InlineAddPoi）。
+
+### Internal
+- **`css/tokens.css`** — 新增 8 個 trip cover token（`--color-cover-{jp,kr,tw,other}-{from,to}`）含 light + dark 兩套；無 visual 改動，純把 hex 從 component code 抽出來。
+- **DayNav.tsx** — 3 處 `color: #fff` → `var(--color-accent-foreground)`（active state day chip 文字 + weather chip + date label）。dark mode 自動 invert（accent-foreground 在暗色變 deep-cocoa）。
+- **OceanMap.tsx** — pin active state `border-color: #fff; color: #fff` → token；polyline idle color `'#94A3B8'`（slate-400 cool grey）→ `'var(--color-line-strong, #C8B89F)'`（warm 跟 brand 對齊）。
+- **IdeasTabContent.tsx** — danger button hover `#dc2626` → `var(--color-destructive)`，跟 `--color-warning` `--color-success` semantic 一致。
+- **TripsListPage.tsx** — 4 個 `.tp-trip-cover-{jp,kr,tw,other}` gradient 改用新 cover token；2 處 `color: #fff` → `var(--color-accent-foreground)`。
+- **EntryActionPopover.tsx** — `<p>⚠️ {pendingHint}</p>` → `<p><Icon name="warning" /><span>{pendingHint}</span></p>`，emoji 換 Icon system 既有 `warning` SVG。CSS `.tp-action-pending-note` 加 flex layout 對齊 icon。
+- **InlineAddPoi.tsx** — `🤖 AI 幫我找` → `<Icon name="sparkle" />` + text；`✏️ 自訂景點` → `<Icon name="edit" />` + text。chip CSS 加 `.svg-icon` size。
+
+### Anti-slop audit 進度
+- HIGH 9 項：✅ 全清（PR-M 3 + PR-N 6）
+- MED 1 項：DayArt.tsx 42 hex 待 PR-O 帶（決定要不要 SVG path color 也走 token，scope 較大）
+
+### Verify gate
+- tsc clean / 122 files / 1031 tests pass
+
 ## [2.13.2] - 2026-04-26
 
 **PR-M: NewTripModal proof banner 移除 + emoji 清 + 底部 viewport 不被遮（QA round 4 + anti-slop sweep）**。User 截圖 2 點 + anti-slop audit 同檔 3 項一次帶。

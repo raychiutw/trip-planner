@@ -99,8 +99,8 @@ const SCOPED_STYLES = `
 .ocean-map-pin[data-state="active"] {
   width: 36px; height: 36px; font-size: 13px;
   background: var(--color-accent, #D97848);
-  border-color: #fff;
-  color: #fff;
+  border-color: var(--color-accent-foreground, #fff);
+  color: var(--color-accent-foreground, #fff);
   box-shadow: 0 4px 12px rgba(217, 120, 72, 0.30);
 }
 .ocean-map-pin[data-state="past"] {
@@ -170,9 +170,9 @@ function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number): L.Po
       interactive: false,
     };
   }
-  // Default (no dayNum): accent for active, muted grey for idle.
+  // Default (no dayNum): accent for active, line-strong for idle.
   return {
-    color: isActive ? 'var(--color-accent, #D97848)' : '#94A3B8',
+    color: isActive ? 'var(--color-accent, #D97848)' : 'var(--color-line-strong, #C8B89F)',
     weight: isActive ? 4 : 3,
     opacity: isActive ? 0.85 : 0.6,
     dashArray: approx ? '6,6' : undefined,

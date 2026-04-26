@@ -6,7 +6,8 @@
  * 結果 click「+ 加入」 → POST `/api/trips/:id/days/:dayNum/entries`
  * （內部 findOrCreatePoi）→ dispatch `tp-entry-updated` → DaySection refetch。
  *
- * 「🤖 AI 幫我找」+「✏️ 自訂景點」 chip 仍 route 到 /chat 保留 fallback 出口。
+ * 「AI 幫我找」+「自訂景點」 chip（sparkle / edit Icon）仍 route 到 /chat
+ * 保留 fallback 出口。
  */
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -112,9 +113,10 @@ const SCOPED_STYLES = `
   padding: 8px 14px; border-radius: var(--radius-full);
   border: 1px solid var(--color-border); cursor: pointer;
   text-decoration: none;
-  display: inline-flex; align-items: center; gap: 4px;
+  display: inline-flex; align-items: center; gap: 6px;
   min-height: 36px;
 }
+.tp-inline-add-chip .svg-icon { width: 14px; height: 14px; flex-shrink: 0; }
 .tp-inline-add-chip:hover { background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent); }
 
 .tp-inline-add-results {
@@ -332,10 +334,12 @@ export default function InlineAddPoi({ tripId, dayNum }: InlineAddPoiProps) {
 
         <div className="tp-inline-add-chips">
           <Link to={aiHref} className="tp-inline-add-chip" data-testid="inline-add-poi-chip-ai">
-            🤖 AI 幫我找
+            <Icon name="sparkle" />
+            <span>AI 幫我找</span>
           </Link>
           <Link to={customHref} className="tp-inline-add-chip" data-testid="inline-add-poi-chip-custom">
-            ✏️ 自訂景點
+            <Icon name="edit" />
+            <span>自訂景點</span>
           </Link>
         </div>
 

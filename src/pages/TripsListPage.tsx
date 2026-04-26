@@ -115,10 +115,10 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md);
   margin-bottom: 12px;
 }
-.tp-trip-cover-jp { background-image: linear-gradient(135deg, #D97848 0%, #F0935E 100%); }
-.tp-trip-cover-kr { background-image: linear-gradient(135deg, #B85C2E 0%, #EADFCF 100%); }
-.tp-trip-cover-tw { background-image: linear-gradient(135deg, #C88500 0%, #F7DFCB 100%); }
-.tp-trip-cover-other { background-image: linear-gradient(135deg, #6F5A47 0%, #C8B89F 100%); }
+.tp-trip-cover-jp { background-image: linear-gradient(135deg, var(--color-cover-jp-from) 0%, var(--color-cover-jp-to) 100%); }
+.tp-trip-cover-kr { background-image: linear-gradient(135deg, var(--color-cover-kr-from) 0%, var(--color-cover-kr-to) 100%); }
+.tp-trip-cover-tw { background-image: linear-gradient(135deg, var(--color-cover-tw-from) 0%, var(--color-cover-tw-to) 100%); }
+.tp-trip-cover-other { background-image: linear-gradient(135deg, var(--color-cover-other-from) 0%, var(--color-cover-other-to) 100%); }
 
 .tp-trip-card-eyebrow {
   font-size: var(--font-size-caption2);
@@ -171,7 +171,7 @@ const SCOPED_STYLES = `
 }
 .tp-trip-card-new:hover .tp-new-icon {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 
 /* Empty state hero — when user has 0 trips */
@@ -210,7 +210,7 @@ const SCOPED_STYLES = `
   padding: 14px 28px;
   border-radius: var(--radius-full);
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-foreground);
   font-weight: 700;
   font-size: var(--font-size-callout);
   text-decoration: none;
