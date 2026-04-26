@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.15] - 2026-04-26
+
+**PR-DD: 新增行程後立即出現在列表（QA round 14）**。User onion523: 「行程後要切換功能 才看的到新行程」。
+
+### Fixed
+- **新增 trip 後 /trips landing 不更新** — TripsListPage `useEffect([])` 只 mount 跑一次。NewTripContext.handleCreated navigate 到 `/trips?selected={id}` 不 remount TripsListPage（同 router instance），所以 list 還是舊 myIds。User 必須切到別的 tab 再回來才看到新 trip。
+
+### 修
+- **NewTripContext.handleCreated dispatch `tp-trip-created` CustomEvent** — payload 含 `{ tripId }`，創建成功後立即發出。
+- **TripsListPage 抽 `loadTrips` callback + 聽 event** — mount 時 `loadTrips()`；event 來時也 `loadTrips()`。`useCallback([])` stable identity 給兩個 effect 用。
+
+### Internal
+- 同 pattern 既有 `tp-entry-updated` event（TripPage 用來在 entry POST/PATCH 後 refetch current day）。沿用 CustomEvent 慣例不引新 state mgmt。
+- prod data fix（手動）：`UPDATE trip_permissions SET role='owner' WHERE EXISTS (SELECT 1 FROM trips WHERE t.id = trip_permissions.trip_id AND LOWER(t.owner) = LOWER(trip_permissions.email))` — 把 onion523 的台南 / 之前的 perm 從舊 'admin' role 補升 'owner'。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.14] - 2026-04-26
 
 **PR-CC: 行程 owner 概念正規化 — 強制 server-side、區分 owner/member badge、不可刪 owner**。User 指示：「行程增加 owner 概念，huiyun 行程 owner = huiyun 帳號、ray 的 = lean.lean@gmail.com，之後誰建立就是誰是 owner，加入共編的是 member。」 + 「設定畫面 members 也要調整 owner 可以加 member 不能刪除自己 owner」。
