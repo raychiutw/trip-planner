@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.10] - 2026-04-26
+
+**PR-Y: NewTripModal 錯誤訊息真實化 — 修「建立行程失敗，請稍後再試」 generic 掩蓋（QA round 12）**。User: 新增行程失敗（Jessica Yo 截圖）。
+
+### Fixed
+- **「建立行程失敗，請稍後再試」 generic toast 掩蓋真實原因** — `handleSubmit` 解 error response 用 `data.message`，但 API (`functions/api/_errors.ts`) 用巢狀 `{ error: { code, message } }` 格式（V2 user-facing standard），所以 `data.message` 永遠 undefined → 永遠 fallback 到 generic 文字。
+- **修：改讀 `data.error.message`** — backend `ERROR_MESSAGES` dictionary 已對每個 code 定 friendly 文字（401「請先登入」、403「你沒有此操作的權限」、503「資料庫忙碌中，請稍後再試」等），fix 後 user 看到具體原因可 actionable。
+
+### Internal
+- 抓 bug 過程：D1 audit_log 查最近 trip insert events → 沒有 Jessica Yo 對應 row → 證明 POST 沒到 INSERT 步就 fail（驗證 / auth / encoding 之一）→ 對照 NewTripModal handleSubmit 解析邏輯 → 找到 `data.message` 錯位（應 `data.error.message`）。
+- 同 pattern bug 可能還在其他 component（用同樣 raw fetch + manual error parse 的）。建議下個 sweep 統一改用 `apiFetch` (`src/lib/apiClient.ts`) 走 `ApiError.fromResponse` — PR-V follow-up scope。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.9] - 2026-04-26
 
 **PR-X: ExplorePage 儲存池 toolbar 加刪除 + 跟下方 POI grid 留間隔（QA round 11）**。User: 「儲存的 poi 點選後 加入行程 後面增加刪除 然後點選後顯示的功能列要和景點 poi 要有留間隔」。

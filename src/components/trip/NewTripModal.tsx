@@ -498,10 +498,16 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       });
       if (!res.ok) {
         const text = await res.text();
+        // PR-Y 2026-04-26：API 用巢狀 { error: { code, message } } 格式
+        // (functions/api/_errors.ts errorResponse)，原本只讀 data.message 永遠
+        // 拿不到任何 message → user 永遠看到 generic「建立行程失敗，請稍後
+        // 再試」掩蓋真實 reason（401 沒登入 / 400 驗證失敗 / 503 DB 錯等）。
+        // 改讀 data.error.message → 用 ERROR_MESSAGES dictionary 已 friendly 的文字。
         let message = '建立行程失敗，請稍後再試。';
         try {
-          const data = JSON.parse(text) as { message?: string };
-          if (data?.message) message = data.message;
+          const data = JSON.parse(text) as { error?: { code?: string; message?: string } };
+          const errMsg = data?.error?.message;
+          if (errMsg) message = errMsg;
         } catch {
           // not JSON, keep default
         }
