@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.20] - 2026-04-26
+
+**PR-JJ: /trips sheet cap 鎖在 mockup-1440 的 576px，不讓 wider viewport 長到 780（QA round 19）**。
+
+### Fixed
+- **Sheet 在 wider viewport 太大** — PR-II 砍 override 改繼承全域 token `min(780, 40vw)` 在 1440 沒問題（=576），但 user 在 1920+ viewport 會看到 sheet 長到 768，視覺上比例不對。
+- 修法：override sheet 改 `min(576px, 40vw)` — 把 mockup-1440 的 576 比例鎖死在**所有 viewport**：
+  - 1440 → sheet 576 (40vw)、main 624（mockup canonical）
+  - 1920 → sheet **576 (cap)**、main 1104（PR-II 是 768/901，現在 sheet 不再長）
+  - 2560 → sheet 576 (cap)、main 1744
+- **配套**：shell horizontal padding 24 → 16，讓 1440 main inner=592 ≥ 576，2 cards 確實塞得下（PR-II 的 565 < 576 只能放 1 card 是 bug）。
+- 1440 viewport 量到 `240 624 576`、grid 2 cols 各 ~290px。
+- verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.19] - 2026-04-26
 
 **PR-II: /trips sheet 比例修回 mockup canonical（QA round 18）**。

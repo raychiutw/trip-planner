@@ -37,14 +37,29 @@ import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
-/* PR-II 2026-04-26：/trips 不再 override sheet 寬，直接繼承全域 token
- * --grid-3pane-desktop = '240px 1fr min(780px, 40vw)' (tokens.css 行 95)，
- * 對照 mockup-trip-v2.html 行 30 canonical。PR-FF 把 sheet 改窄 min(440, 32vw)
- * 是錯的 — mockup 1440 viewport 標的就是 sheet=576px (40vw)、main=624px、
- * 2-card auto-fill。砍 override 換 DRY，跟 trip-detail page sheet 寬度一致。 */
+/* PR-JJ 2026-04-26：/trips 把 sheet cap 鎖死在 mockup-1440-canonical 寬度
+ * 576px，不讓它在 wider viewport（1920+）長到 780。
+ *
+ * 量過後發現：mockup-trip-v2.html 線 30 canonical 是 min(780, 40vw)，
+ * 在 1440 確實 = 576。但全域 token 同樣公式在 user 1920+ viewport 會長到
+ * 768px，user 看了覺得「sheet 太大」— 視覺上 1440 demo 比例才對。
+ *
+ * 修法：override sheet → min(576px, 40vw)，把 mockup-1440 比例鎖在所有
+ * viewport，sheet 不再隨 vw 長大；trip-detail page 的全域 token 不動。
+ *
+ * 1440 → sheet 576 (40vw)、main 624、shell padding 16 horizontal → inner 581
+ *      → 2 cards (280×2+16=576 fits)
+ * 1920 → sheet 576 (cap)、main 1104、inner 960 (capped) → 3 cards
+ * 2560 → sheet 576 (cap)、main 1744、inner 960 → 3 cards */
+@media (min-width: 1024px) {
+  .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
+    grid-template-columns: 240px 1fr min(576px, 40vw);
+  }
+}
 .tp-trips-shell {
   min-height: 100%;
-  padding: 32px 24px 64px;
+  /* PR-JJ：horizontal padding 24 → 16 讓 1440 inner 有 581 ≥ 576 容 2 cols */
+  padding: 32px 16px 64px;
   background: var(--color-secondary);
   height: 100%;
   overflow-y: auto;
