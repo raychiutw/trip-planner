@@ -18,6 +18,7 @@ import { useTripId } from '../../contexts/TripIdContext';
 import { apiFetchRaw } from '../../lib/apiClient';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
+import StopLightbox from './StopLightbox';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
 
@@ -119,6 +120,23 @@ const SCOPED_STYLES = `
 
 .ocean-rail-head[aria-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
 .ocean-rail-caret { transition: transform 120ms; display: inline-block; }
+
+.tp-rail-actions {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.tp-rail-action-btn {
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  padding: 8px 14px; border-radius: var(--radius-full);
+  background: var(--color-accent-subtle); color: var(--color-accent-deep);
+  border: 1.5px solid var(--color-accent-bg); cursor: pointer;
+  /* H4 — primary action chip, 44px tap target */
+  min-height: var(--spacing-tap-min);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.tp-rail-action-btn:hover {
+  background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent);
+}
 `;
 
 interface TimelineRailProps {
@@ -148,6 +166,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const [draftNote, setDraftNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -246,6 +265,19 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 
       {expanded && entry.id != null && (
         <div className="tp-rail-detail" data-testid={`timeline-rail-detail-${entry.id}`}>
+          <div className="tp-rail-actions">
+            <button
+              type="button"
+              className="tp-rail-action-btn"
+              onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
+              aria-label="放大檢視"
+              data-testid={`timeline-rail-lightbox-open-${entry.id}`}
+            >
+              <span aria-hidden="true">⛶</span>
+              <span>放大檢視</span>
+            </button>
+          </div>
+
           {hasDescription && (
             <div className="tp-rail-detail-section">
               <h4>說明</h4>
@@ -337,6 +369,12 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           </div>
         </div>
       )}
+
+      <StopLightbox
+        open={lightboxOpen}
+        entry={entry}
+        onClose={() => setLightboxOpen(false)}
+      />
     </>
   );
 });
