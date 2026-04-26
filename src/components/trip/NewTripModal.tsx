@@ -123,20 +123,29 @@ const SCOPED_STYLES = `
     padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));
   }
 }
-.tp-new-form-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+/* PR-W 2026-04-26：close button 從 form-top inline 改 absolute 定位在 modal
+ * 右上角（覆蓋 hero pane 上層）。z-index 2 高過 hero SVG（z-index 0/1）。
+ * Mobile 跟 desktop 都同一位置。glass-style 在橘色 hero 上對比度 OK。 */
 .tp-new-form-close {
+  position: absolute;
+  top: 12px; right: 12px;
+  z-index: 2;
   width: var(--spacing-tap-min, 44px); height: var(--spacing-tap-min, 44px);
   border-radius: var(--radius-full);
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
   display: grid; place-items: center;
   cursor: pointer;
-  font-size: 18px; color: var(--color-muted);
+  font-size: 18px; color: var(--color-foreground);
+  box-shadow: var(--shadow-sm);
 }
 .tp-new-form-close:hover {
-  background: var(--color-accent-subtle);
+  background: var(--color-background);
   color: var(--color-accent-deep);
-  border-color: var(--color-accent-bg);
+}
+.tp-new-form-close:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
 .tp-new-modal h2 {
   font-size: var(--font-size-title, 1.75rem);
@@ -539,7 +548,20 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-trip-title"
+        style={{ position: 'relative' }}
       >
+        {/* PR-W：close 直接 absolute 定位在 modal 右上角，獨立於 hero/form 兩個
+            grid child，覆蓋整個 modal 右上 corner。 */}
+        <button
+          type="button"
+          className="tp-new-form-close"
+          onClick={onClose}
+          disabled={submitting}
+          aria-label="關閉"
+          data-testid="new-trip-close"
+        >
+          ✕
+        </button>
         {/* Hero pane — QA 2026-04-26 PR-M：移除 social proof banner（fake stat
             anti-slop + user 截圖確認 mobile 太擠）。eyebrow + h1 + 副標保留。 */}
         <aside className="tp-new-hero" data-testid="new-trip-hero" aria-hidden="true">
@@ -553,19 +575,6 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
 
         {/* Form pane */}
         <div className="tp-new-form">
-          <div className="tp-new-form-top">
-            <button
-              type="button"
-              className="tp-new-form-close"
-              onClick={onClose}
-              disabled={submitting}
-              aria-label="關閉"
-              data-testid="new-trip-close"
-            >
-              ✕
-            </button>
-          </div>
-
           <h2 id="new-trip-title">想去哪裡？</h2>
           <p className="tp-new-modal-sub">先說目的地跟想做什麼，AI 會幫你排日程、餐廳、住宿。</p>
 

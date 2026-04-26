@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.8] - 2026-04-26
+
+**PR-W: NewTripModal 關閉 X 移到右上角（QA round 10）**。User 截圖紅圈：原本 X 在 form pane 上方，視覺浮在 hero/form 中間區域（mobile）。
+
+### Changed
+- **`.tp-new-form-close` 改 `position: absolute; top: 12px; right: 12px;`** — 直接定位 modal box 右上角，覆蓋 hero pane 上層。z-index 2 高過 hero SVG（0/1）。Mobile / desktop 同位置。
+- **glass-style** background `rgba(255, 255, 255, 0.92)` + `backdrop-filter: blur(8px)`，在橘色 hero 背景上仍清楚對比。
+- **JSX 結構**：`.tp-new-form-top` wrapper 拿掉，close button 直接掛在 `.tp-new-modal` form 之下（form 本身加 `position: relative` 給 absolute child 用）。
+
+### Internal
+- 純 CSS + JSX 移位，零邏輯改動。Test ID `new-trip-close` 不變。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.7] - 2026-04-26
 
 **PR-V: NewTripModal 真的會捲了 — grid-template-rows + overscroll-behavior（QA round 9）**。User: 「捲動是捲動底部 layer，上方無法用」。Claude 用 /browse 對 prod 測 + 量 DOM 找到根因。
