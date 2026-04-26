@@ -19,15 +19,18 @@
  *   - GET /api/trips?all=1 → trip metadata (name, countries, day_count,
  *     start_date, end_date, member_count)
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useNewTrip } from '../contexts/NewTripContext';
+import { apiFetchRaw } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import TripCardMenu from '../components/trip/TripCardMenu';
+import ToastContainer, { showToast } from '../components/shared/Toast';
 import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
@@ -85,6 +88,11 @@ const SCOPED_STYLES = `
   .tp-trips-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+/* PR-Q 2026-04-26：每張 trip card 加 ... menu。card 改 wrapper（position:
+ * relative）裝 button + menu trigger 兩個 children，避免 button-in-button。 */
+.tp-trip-card-wrap {
+  position: relative;
 }
 .tp-trip-card {
   background: var(--color-background);
@@ -358,6 +366,45 @@ export default function TripsListPage() {
     setSearchParams(next, { replace: false });
   }
 
+  // PR-Q：card kebab 「共編設定」→ navigate 到該 trip + ?sheet=collab。
+  // TripPage 讀 ?sheet= 自動 setActiveSheet，user 一次到位。
+  const navigate = useNavigate();
+  const handleMenuCollab = useCallback(
+    (tripId: string) => {
+      navigate(`/trips?selected=${encodeURIComponent(tripId)}&sheet=collab`);
+    },
+    [navigate],
+  );
+
+  // PR-Q：card kebab 「刪除行程」 → confirm + DELETE /api/trips/:id +
+  // optimistic remove from local list（避免 user 等待 reload）。
+  const handleMenuDelete = useCallback(
+    async (tripId: string) => {
+      const trip = visibleTrips.find((t) => t.tripId === tripId);
+      const label = trip?.title || trip?.name || tripId;
+      if (!window.confirm(`確定刪除「${label}」？此操作無法復原。`)) return;
+      try {
+        const r = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
+        if (r.status === 403) throw new Error('僅行程擁有者或管理者可刪除');
+        if (r.status === 404) throw new Error('行程不存在');
+        if (!r.ok) throw new Error('刪除失敗，請稍後再試');
+        showToast(`已刪除「${label}」`, 'success');
+        // Optimistic local removal
+        setMyIds((prev) => prev?.filter((id) => id !== tripId) ?? null);
+        setAllTrips((prev) => prev?.filter((t) => t.tripId !== tripId) ?? null);
+        // Clear ?selected= if user just deleted the open trip
+        if (selectedFromUrl === tripId) {
+          const next = new URLSearchParams(searchParams);
+          next.delete('selected');
+          setSearchParams(next, { replace: true });
+        }
+      } catch (err) {
+        showToast((err as Error).message, 'error');
+      }
+    },
+    [visibleTrips, selectedFromUrl, searchParams, setSearchParams],
+  );
+
   const loading = myIds === null && !error;
 
   // Heading meta: "N 個行程" — placeholder for future "進行中" / "最近更新"
@@ -373,6 +420,7 @@ export default function TripsListPage() {
   const cardGridMain = (
     <>
       <style>{SCOPED_STYLES}</style>
+      <ToastContainer />
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <div className="tp-trips-inner">
           <div className="tp-trips-heading">
@@ -419,19 +467,25 @@ export default function TripsListPage() {
               {visibleTrips.map((t) => {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
                 return (
-                  <button
-                    key={t.tripId}
-                    type="button"
-                    onClick={(e) => handleCardClick(t.tripId, e)}
-                    className={`tp-trip-card ${isActive ? 'is-active' : ''}`}
-                    data-testid={`trips-list-card-${t.tripId}`}
-                    aria-current={isActive ? 'true' : undefined}
-                  >
-                    <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
-                    <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.day_count)}</div>
-                    <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
-                    <div className="tp-trip-card-meta">{cardMeta(t)}</div>
-                  </button>
+                  <div key={t.tripId} className="tp-trip-card-wrap">
+                    <button
+                      type="button"
+                      onClick={(e) => handleCardClick(t.tripId, e)}
+                      className={`tp-trip-card ${isActive ? 'is-active' : ''}`}
+                      data-testid={`trips-list-card-${t.tripId}`}
+                      aria-current={isActive ? 'true' : undefined}
+                    >
+                      <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
+                      <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.day_count)}</div>
+                      <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
+                      <div className="tp-trip-card-meta">{cardMeta(t)}</div>
+                    </button>
+                    <TripCardMenu
+                      tripId={t.tripId}
+                      onCollab={handleMenuCollab}
+                      onDelete={handleMenuDelete}
+                    />
+                  </div>
                 );
               })}
               <button

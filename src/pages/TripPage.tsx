@@ -446,6 +446,13 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
+    // PR-Q 2026-04-26：?sheet=<key> URL param — 從 /trips card kebab「共編
+    // 設定」過來，自動開該 sheet。允許的 key 必須在 SHEET_TITLES 內。
+    const sheetParam = new URLSearchParams(window.location.search).get('sheet');
+    if (sheetParam && Object.prototype.hasOwnProperty.call(SHEET_TITLES, sheetParam)) {
+      setActiveSheet(sheetParam);
+    }
+
     // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI
     // 卡「跳到行程」過來，需要 scroll 到該 entry）。useScrollRestoreOnBack
     // 已處理 location.state.scrollAnchor，但 GlobalMapPage Link 同時放 query

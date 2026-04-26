@@ -5,6 +5,7 @@ const ICONS: Record<string, string> = {
   /* ----- UI System ----- */
   'edit': '<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
   'menu': '<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" d="M3 12h18M3 6h18M3 18h18"/>',
+  'more-vert': '<circle cx="12" cy="6" r="1.75"/><circle cx="12" cy="12" r="1.75"/><circle cx="12" cy="18" r="1.75"/>',
   /* iOS-style reorder/drag handle — 3 horizontal lines, slightly shorter than menu icon. Apple Reminders / Lists drag affordance. */
   'grip': '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 8h14M5 12h14M5 16h14"/>',
   'plane': '<path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>',

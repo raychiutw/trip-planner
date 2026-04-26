@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.3] - 2026-04-26
+
+**PR-Q: TripsListPage 卡片 ... 菜單（共編 / 刪除）+ DELETE /api/trips/:id（V2-P7）**。User 指示：「行程列表 增加 … 顯示刪除與共編」。
+
+### Added
+- **`TripCardMenu` component**（`src/components/trip/TripCardMenu.tsx`）— kebab「...」 button + portal'd dropdown popover with「共編設定」 / 「刪除行程」 兩個 menuitem。click 用 stopPropagation 阻止穿透到 card click。Portal 到 body 避免 stacking context 衝突。
+- **`'more-vert'` icon** — 三點垂直 SVG，trigger button 用。
+- **`DELETE /api/trips/:id`**（`functions/api/trips/[id].ts`）— admin OR trip owner only（co-editor 即使在 trip_permissions 上也不能刪，destructive 操作必須 limit）。FK ON DELETE CASCADE 自動清掉 trip_days / trip_entries / trip_pois / trip_permissions / trip_docs / ideas / trip_requests 等所有相關 row。logAudit 留 snapshot。
+- **`?sheet=<key>` URL param 支援**（`TripPage.tsx`）— card kebab 「共編」 點開後 navigate 到 `/trips?selected={id}&sheet=collab`，TripPage 在 initial-scroll effect 內讀 sheet 參數 + 自動 setActiveSheet（限定在 SHEET_TITLES 已知 keys）。
+
+### Changed
+- **`TripsListPage` 卡片結構** — 從 raw `<button>` 改 wrap 在 `<div className="tp-trip-card-wrap">` 內（`position: relative`），button + TripCardMenu 兩個 child。menu trigger 是 `position: absolute; top: 8px; right: 8px;` overlay。
+- **`handleMenuDelete`** — confirm dialog → `apiFetchRaw('/trips/:id', { method: 'DELETE' })` → optimistic local state 移除（`setMyIds` + `setAllTrips`）→ 若該 trip 是當前 `?selected=`，clear URL param。錯誤狀態 toast：403「僅行程擁有者或管理者可刪除」、404「行程不存在」、其他「刪除失敗」。
+- **`handleMenuCollab`** — `navigate('/trips?selected={id}&sheet=collab')`，user 一次到位看到共編 sheet。
+
+### Internal
+- TripsListPage 加 `<ToastContainer />` 給 delete 錯誤 / 成功訊息用（之前只有 TripPage 有，/trips landing 沒 mount）。
+- TripCardMenu 用 `useLayoutEffect` 算位置 + `useEffect` 處理 Escape / click-outside（同 OverflowMenu pattern）。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
 ## [2.14.2] - 2026-04-26
 
 **PR-R: /map 6 點重組 — 控制條重排 + POI 卡 CTA 升級 + 點 POI 只顯示當天 polyline + 跳到行程真的能跳（QA round 6）**。User 截圖 5 點 + 第 6 點補。
