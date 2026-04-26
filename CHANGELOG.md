@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.19] - 2026-04-26
+
+**PR-II: /trips sheet 比例修回 mockup canonical（QA round 18）**。
+
+### Fixed
+- **Sheet 比例不對** — 認真比對 `docs/design-sessions/mockup-trip-v2.html` 線 30 + 167 後修回 canonical：
+  - Sheet 寬：`min(440px, 32vw)` → `min(780px, 40vw)`（PR-FF 改窄是錯的）
+  - Trip grid：`repeat(3, 1fr)` 強制 → `repeat(auto-fill, minmax(280px, 1fr))` adaptive
+- 改動就是把 PR-FF 加的 scoped override 整段砍掉，直接繼承全域 token `--grid-3pane-desktop`（tokens.css 行 95）— DRY 化，跟 trip-detail page sheet 寬度一致。
+- 1440 viewport 對齊 mockup：sheet=576px (40vw)、main=624px、2-card auto-fill。
+- verify gate: tsc clean / 123 files / 1029 tests pass。
+
 ## [2.14.18] - 2026-04-26
 
 **PR-GG/HH bundle: CollabSheet 重新設計 + docs 404 不再噴 5 連 toast（QA round 17）**。

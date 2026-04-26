@@ -37,23 +37,11 @@ import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
-/* /trips landing uses a narrower sheet than the trip-detail page so the card
- * grid + browse area gets more room. Default 3-pane token is min(780px, 40vw)
- * which gives ~50/50 main/sheet at 1440 (too cramped for a list). Override
- * to min(420px, 32vw) — at 1440 → sheet=420, main=780, sidebar=240.
- *
- * Scoped to <main className="tp-trips-shell"> so other 3-pane pages
- * (TripPage with rich TripSheet) keep their wider sheet. */
-@media (min-width: 1024px) {
-  .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
-    /* PR-FF 2026-04-26：原 min(560, 38vw) 對單純 trip 詳情 sheet 太寬，
-     * 對照 mockup-trip-v2 sheet 大小調 min(440, 32vw)：
-     *   1440px → 440 sheet，main 760（cards 更寬）
-     *   1280px → 410 sheet
-     *   1024px → 328 sheet（最低 viewport 仍 OK，cards 兩欄保持 280 min） */
-    grid-template-columns: 240px 1fr min(440px, 32vw);
-  }
-}
+/* PR-II 2026-04-26：/trips 不再 override sheet 寬，直接繼承全域 token
+ * --grid-3pane-desktop = '240px 1fr min(780px, 40vw)' (tokens.css 行 95)，
+ * 對照 mockup-trip-v2.html 行 30 canonical。PR-FF 把 sheet 改窄 min(440, 32vw)
+ * 是錯的 — mockup 1440 viewport 標的就是 sheet=576px (40vw)、main=624px、
+ * 2-card auto-fill。砍 override 換 DRY，跟 trip-detail page sheet 寬度一致。 */
 .tp-trips-shell {
   min-height: 100%;
   padding: 32px 24px 64px;
@@ -81,8 +69,11 @@ const SCOPED_STYLES = `
 
 .tp-trips-grid {
   display: grid;
-  /* Mobile default: 2 columns (per user spec). Desktop overrides to 3
-   * columns below. Cards shrink/grow to fit available main width. */
+  /* Mobile default: 2 columns (per user spec). Desktop 改 auto-fill 對照
+   * mockup-trip-v2.html line 167 canonical:
+   *   repeat(auto-fill, minmax(280px, 1fr))
+   * adaptive — main 變寬時自動加欄、變窄時掉欄，不再強制 3-col。
+   * 1440 viewport main=624 → 容下 2 cards (272 each)，跟 mockup 一致。 */
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-top: 24px;
@@ -122,7 +113,8 @@ const SCOPED_STYLES = `
 }
 @media (min-width: 1024px) {
   .tp-trips-grid {
-    grid-template-columns: repeat(3, 1fr);
+    /* mockup-trip-v2.html line 167 canonical：adaptive auto-fill */
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
 /* PR-Q 2026-04-26：每張 trip card 加 ... menu。card 改 wrapper（position:
