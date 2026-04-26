@@ -3,6 +3,33 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.24] - 2026-04-26
+
+**PR-PP: /trips 架構改 2-pane（去 sheet）+ 5 cards/row + 點選顯示滿版（QA round 23）**。
+
+### Changed (架構)
+- **去 sheet** — TripsListPage 不再有右側 sheet pane。AppShell 從 3-pane 改成 2-pane (sidebar 240 + main fluid)。
+- **點選 = 滿版 trip** — `/trips?selected=X` 在桌機/手機都把 main 換成滿版 embedded TripPage（含 `[← back] [trip name]` topbar），不再走 sheet。`showEmbeddedTrip` 不分 viewport 同行為。
+- **行程 card 一行 5 個** — minmax 200 → 160，加上去 sheet 後 main 變寬：
+  - 1024 → 4 cards × 168px
+  - 1280 → 5 cards × 179px
+  - 1440 → 5 cards × 179px
+  - 1920 → 5 cards × 179px (max-width 960 cap)
+- 5 cols 在 ≥1280 穩定，符合 user 「一行 5 個」 spec。
+
+### Removed
+- `.app-shell:has(> main .tp-trips-shell)[data-layout="3pane"]` sheet width override（已不適用）。
+- TripsListPage `sheet` prop 傳給 AppShell。
+- Embedded mode 的 `!isDesktop` 限制（現在桌機/手機都走 embedded）。
+
+### Refined
+- **Embedded TripPage 吃滿 main 寬** — User 進一步釐清：sidebar 固定後 trip detail 直接吃滿剩餘空間，不要 max-width 限寬。砍掉 `.tp-embedded-content` wrapper（曾短暫加上 max-width 720 後被 user 退回）。
+
+### Tests
+- 更新 2 cases：原 `desktop: first trip auto-selected → sheet` 改為新架構 `desktop + no ?selected: card grid only` + `desktop + ?selected: 滿版 embedded`。
+
+verify gate: tsc clean / 123 files / 1029 tests pass.
+
 ## [2.14.23] - 2026-04-26
 
 **PR-NN/OO bundle: mobile-topbar 取代 floating back btn + CollabModal → InfoSheet 統一（QA round 22）**。

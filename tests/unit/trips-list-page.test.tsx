@@ -109,27 +109,21 @@ describe('TripsListPage', () => {
     await waitFor(() => expect(screen.queryByTestId('new-trip-modal')).toBeTruthy());
   });
 
-  it('desktop: first trip auto-selected → embedded TripPage in sheet', async () => {
+  it('desktop + no ?selected: card grid renders, no embedded TripPage (PR-PP)', async () => {
+    // PR-PP 2026-04-26：架構改 2-pane (sidebar + main，去 sheet)。
+    // /trips landing 不再自動選第一筆 + 開 sheet — user 看到的是 card grid。
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
-    await waitFor(() => expect(screen.queryAllByTestId('embedded-trip-page').length).toBeGreaterThan(0));
-    const sheet = screen.getAllByTestId('embedded-trip-page')[0];
-    expect(sheet?.getAttribute('data-trip-id')).toBe('okinawa');
-    expect(sheet?.getAttribute('data-no-shell')).toBe('true');
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
+    expect(screen.queryByTestId('embedded-trip-page')).toBeNull();
   });
 
-  it('desktop: clicking second card swaps the sheet without navigation', async () => {
+  it('desktop + ?selected=seoul: embedded TripPage replaces grid 滿版 (PR-PP)', async () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
-    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('trips-list-card-seoul')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('trips-list-card-seoul'));
-    await waitFor(() => {
-      const embedded = screen.getAllByTestId('embedded-trip-page')[0];
-      return embedded?.getAttribute('data-trip-id') === 'seoul';
-    });
-    // First card should now NOT be active
-    expect(screen.getByTestId('trips-list-card-okinawa').className).not.toContain('is-active');
-    expect(screen.getByTestId('trips-list-card-seoul').className).toContain('is-active');
+    render(<MemoryRouter initialEntries={['/trips?selected=seoul']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('embedded-trip-page')).toBeTruthy());
+    expect(screen.getByTestId('embedded-trip-page').getAttribute('data-trip-id')).toBe('seoul');
+    expect(screen.getByTestId('embedded-trip-page').getAttribute('data-no-shell')).toBe('true');
   });
 
   it('mobile + no ?selected: card grid renders, no embedded TripPage in main', async () => {

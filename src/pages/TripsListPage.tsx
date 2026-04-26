@@ -38,22 +38,17 @@ import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
-/* PR-KK 2026-04-26：sheet min(576, 32vw) — 涵蓋 1280 viewport user
+/* PR-PP 2026-04-26：架構改 2-pane（sidebar + main），不再有右側 sheet。
  *
- * PR-JJ 用 40vw 在 1280 算 = 512，沒到 576 cap 就被 40vw 鎖死，user 在
- * 1280 sheet 仍偏大（main 只放 1 card）。改 32vw 讓 1280 = 410，main 630
- * 容下 2 cards。1920+ 仍 cap 576 維持 mockup 上限。
+ * 原 3-pane：sidebar (240) + main (cards) + sheet (selected trip detail)。
+ * User 反饋：去 sheet，行程卡牌一行 5 個；點選顯示滿版 trip。
  *
- * 1280 → sheet 410 (32vw)、main 630、inner 598 → 2 cards (576 fits)
- * 1440 → sheet 461 (32vw)、main 739、inner 707 → 2 cards
- * 1920 → sheet 576 (cap)、main 1104、inner 960 (max-width) → 3 cards
- * 2560 → sheet 576 (cap)、main 1744、inner 960 → 3 cards */
-@media (min-width: 1024px) {
-  .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
-    /* PR-MM 2026-04-26：sheet 再收緊 cap 540 / 28vw，給 main 更多空間排卡 */
-    grid-template-columns: 240px 1fr min(540px, 28vw);
-  }
-}
+ * 新架構：
+ *   /trips landing      → 2-pane: sidebar + cards (5 per row at 1280)
+ *   /trips?selected=X   → 2-pane: sidebar + 滿版 TripPage embedded (with topbar)
+ *
+ * 桌機/手機統一行為（手機 sidebar 隱藏走 bottom-nav，不變）。
+ * 移除舊 .app-shell:has 3-pane sheet override。 */
 .tp-trips-shell {
   min-height: 100%;
   /* PR-JJ：horizontal padding 24 → 16 讓 1440 inner 有 581 ≥ 576 容 2 cols */
@@ -82,11 +77,8 @@ const SCOPED_STYLES = `
 
 .tp-trips-grid {
   display: grid;
-  /* Mobile default: 2 columns (per user spec). Desktop 改 auto-fill 對照
-   * mockup-trip-v2.html line 167 canonical:
-   *   repeat(auto-fill, minmax(280px, 1fr))
-   * adaptive — main 變寬時自動加欄、變窄時掉欄，不再強制 3-col。
-   * 1440 viewport main=624 → 容下 2 cards (272 each)，跟 mockup 一致。 */
+  /* Mobile default: 2 cols。Desktop ≥1024 走 auto-fill minmax(160) 自動排版。
+   * PR-PP：1280 main=1040 (no sheet) → inner 960 → 5 cards × 179px each。 */
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-top: 24px;
@@ -143,21 +135,15 @@ const SCOPED_STYLES = `
   flex: 1; min-width: 0;
 }
 @media (min-width: 1024px) {
-  /* Desktop 不走 embedded mode（走 sheet pane），topbar 強 hide 防意外。 */
-  .tp-embedded-topbar { display: none; }
-}
-@media (min-width: 1024px) {
   .tp-trips-grid {
-    /* PR-MM 2026-04-26：minmax 280→200 — card 比照 mobile 尺寸做 RWD
-     *
-     * Mobile 預設 2 cols，375px viewport 下每卡 ~180px。Desktop minmax 200
-     * 跟 mobile 同尺寸基準 + auto-fill 自動排版：
-     *   1280 inner ~650 → 3 cards (200×3+32=632 fits)
-     *   1440 inner ~765 → 3 cards (200×4+48=848 > 765)
-     *   1920 inner 960 → 4 cards (200×4+48=848 fits)
-     *   2560 inner 960 → 4 cards
-     * 真正的 RWD：viewport 變大自動增加列數，卡片本身保持 mobile 大小不過大。 */
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    /* PR-PP：桌機 ≥1024 走 auto-fill minmax(160)。架構是 2-pane（無 sheet），
+     * main 寬度 = viewport - 240 sidebar，inner 受 max-width 960 cap。
+     *   1024 main=784, inner=720 → 4 cards (160×4+48=688 fits) at 168px
+     *   1280 main=1040, inner=960 (max-width cap) → 5 cards at 179px
+     *   1440 main=1200, inner=960 → 5 cards at 179px
+     *   1920 main=1680, inner=960 → 5 cards at 179px
+     * 5 cols 在 ≥1280 穩定，符合 user「一行 5 個」 spec。 */
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 /* PR-Q 2026-04-26：每張 trip card 加 ... menu。card 改 wrapper（position:
@@ -506,7 +492,9 @@ export default function TripsListPage() {
   // Mobile + ?selected → embedded TripPage IS the main content (full-screen
   // trip detail). Cards hide. Per user spec, /trips?selected=X is the unified
   // entry, no /trip/:id route navigation.
-  const showEmbeddedTrip = !isDesktop && !!effectiveSelectedId && !!selectedFromUrl;
+  /* PR-PP：去 sheet 後，embedded mode 不分 mobile/desktop — 兩邊都把 main
+   * 換成滿版 TripPage（topbar [← back] [trip name] + timeline）。 */
+  const showEmbeddedTrip = !!effectiveSelectedId && !!selectedFromUrl;
 
   const cardGridMain = (
     <>
@@ -593,12 +581,7 @@ export default function TripsListPage() {
     </>
   );
 
-  // Desktop sheet content = embedded TripPage (mobile-style timeline) for the
-  // selected trip. Replaces the lightweight TripsPreviewSheet — sheet content
-  // now mirrors mobile main exactly per user spec.
-  const sheet = isDesktop && effectiveSelectedId ? (
-    <TripPage tripId={effectiveSelectedId} noShell />
-  ) : undefined;
+  // PR-PP 2026-04-26：架構改 2-pane，sheet 不再用，永遠 undefined。
 
   // PR-NN 2026-04-26：mobile embedded mode 改 .tp-embedded-topbar pattern
   // （[← back] [trip name]）。原 PR-AA floating back btn 自己一行 + 跟 mockup
@@ -641,7 +624,6 @@ export default function TripsListPage() {
     <>
       <AppShell
         sidebar={<DesktopSidebarConnected />}
-        sheet={sheet}
         main={main}
         bottomNav={<GlobalBottomNav authed={!!user} />}
       />
