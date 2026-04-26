@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.6.2] - 2026-04-26
+
+**`/map` 對齊 mockup-map-v2 — 9 個 issue 一起修**。trip switcher 不再被 leaflet zoom 壓住、桌機 sheet 補 ✕ close + 跳到行程 button + 同日其他 stop mini-list、cluster 數字 icon 點下去自動 zoom 展開、mobile 補底部 stop carousel 左右滑、加 全覽 + 我的位置 pill button。
+
+### Added
+- **Sheet header「✕ 關閉」+「跳到行程」accent button** — 對齊 mockup `.sheet-header`。✕ 清掉 `selectedPinId` 回到 empty state；「跳到行程」accent fill 跳到 `/trips?selected=...`。
+- **Sheet「同日其他 stop」mini-list** — 顯示選中 pin 那天的所有 stops（time + dot + 名稱），active 高亮 accent，點 row 即切換 selected pin。對齊 mockup `.day-stop-mini`。
+- **Sheet meta chips 完整化** — 國家 / 類型（住宿）/ 時間 / ★ rating，對齊 mockup `.sheet-poi-meta`。
+- **Bottom-left「▣ 全覽 / ⊕ 我的位置」pill bar** — `fitBounds` 把所有 pins 收成一個畫面、`navigator.geolocation` 取座標 flyTo 14 zoom。對齊 mockup `.map-action-bar`。
+- **Mobile 底部 POI carousel** — 顯示 active 那天（或選中 pin 那天）的所有 stops，水平滑動 + scroll-snap，點 card 切 selected pin（同步 sheet + 地圖 flyTo focus）。對齊 mockup `.mobile-poi-stack`。
+- **Cluster 點擊 → 自動 zoom 展開** — `OceanMap` 給 cluster marker 加 click handler，呼叫 `supercluster.getClusterExpansionZoom` 算展開 zoom level，setView 過去；fallback 是 `currentZoom + 2`。
+
+### Changed
+- **Leaflet 內建 zoom +/- 從 topleft 搬 bottomright** — 避免跟左上 trip switcher overlap，對齊 mockup `.map-control-stack`。`useLeafletMap` 加 `zoomControlPosition` option，`OceanMap` 加同名 prop 透傳，`GlobalMapPage` 傳 `'bottomright'`。
+- **Trip switcher z-index 20 → 1000** — 之前在某些 viewport 被 leaflet panes (z-index 600+) 壓住，現在用 1000 確保始終浮在最上層。
+- **Sheet 結構改 `.sheet-header` + `.sheet-body` flex column** — header 固定不滾、body 內容可滾、整體高度撐滿 sheet pane。
+
+### Internal
+- `OceanMap` 新增 `onMapReady?: (map: L.Map | null) => void` prop — 給 `GlobalMapPage` 拿 leaflet 實例做 fitBounds / setView。one-shot on mount + null on cleanup。
+- `useLeafletMap` 重構 zoom control：原本走 `L.map({zoomControl})` 拿不到 position，改 `L.map({zoomControl: false})` + 條件式 `L.control.zoom({position}).addTo(instance)`。
+
 ## [2.6.1] - 2026-04-26
 
 **Mindtrip-parity DX：新增行程升級成 destination-first + 加景點 affordance + chat markdown 防呆**。/devex-review 發現我們 NewTripModal 比 mindtrip 弱（只給名稱+兩顆日期 vs 對方 destination + flexible/select dates + preferences），DaySection 沒有「加景點」入口（必須記得有 chat 模式），chat 渲染遇到 reply 含字面 `\n` 或單顆 tilde（價格範圍 `¥100~300`）就破版。這版補齊三個。Sidebar 同步拿掉 destructive 的「登出」link，改走 /settings/sessions device row revoke。

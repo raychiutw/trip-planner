@@ -33,6 +33,9 @@ export interface UseLeafletMapOptions {
   minZoom?: number;
   maxZoom?: number;
   zoomControl?: boolean;
+  /** Position of Leaflet's built-in zoom control. Default 'topleft' (Leaflet 預設)。
+   *  /map 用 'bottomright' 對齊 mockup 並避開左上 trip switcher。 */
+  zoomControlPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
   dark?: boolean;
 }
 
@@ -56,7 +59,7 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [map, setMap] = useState<L.Map | null>(null);
 
-  const { center = [26.2124, 127.6792], zoom = 11, minZoom = 3, maxZoom = 19, zoomControl = false, dark = false } = opts;
+  const { center = [26.2124, 127.6792], zoom = 11, minZoom = 3, maxZoom = 19, zoomControl = false, zoomControlPosition = 'topleft', dark = false } = opts;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -73,9 +76,13 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
       zoom,
       minZoom,
       maxZoom,
-      zoomControl,
+      // 自己加 zoom control 才有 position 控制，預設 L.map 一律放 topleft。
+      zoomControl: false,
       attributionControl: true,
     });
+    if (zoomControl) {
+      L.control.zoom({ position: zoomControlPosition }).addTo(instance);
+    }
 
     L.tileLayer(dark ? OSM_DARK : OSM_LIGHT, {
       attribution: dark ? CARTO_ATTR : OSM_ATTR,
