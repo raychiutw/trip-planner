@@ -41,16 +41,17 @@ export function parseTimeRange(timeStr?: string | null): ParsedTime {
 }
 
 /**
- * 格式化分鐘數為可讀字串。
- * 非有限數（NaN/Infinity）、0、負數一律回 ""；60 → "1h"；90 → "1h 30m"；45 → "45m"。
+ * 格式化分鐘數為可讀字串（中文）。
+ * QA 2026-04-26 BUG-038/048：raw 「30m」「1h 30m」 改中文化，整個 UI 中文一致。
+ * 非有限數（NaN/Infinity）、0、負數一律回 ""；60 → "1 小時"；90 → "1 小時 30 分"；45 → "45 分鐘"。
  */
 export function formatDuration(mins: number): string {
   if (!Number.isFinite(mins) || mins <= 0) return '';
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
+  if (h > 0 && m > 0) return `${h} 小時 ${m} 分`;
+  if (h > 0) return `${h} 小時`;
+  return `${m} 分鐘`;
 }
 
 /**

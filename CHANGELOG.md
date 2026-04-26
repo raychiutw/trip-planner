@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.5] - 2026-04-26
+
+**QA fix series PR-E: formatDuration 中文化（2 issues）**。Timeline rail / map carousel / lightbox 等多處共用 `formatDuration` helper，從 raw 「30m」「1h 30m」 改成中文「30 分鐘」「1 小時 30 分」 — 一處改 cover 4+ 顯示位置。
+
+### Fixed
+- **BUG-038 / 048 formatDuration i18n** — `src/lib/timelineUtils.ts` 改回傳：
+  - 純分鐘：`${m} 分鐘`（例：30 → "30 分鐘"）
+  - 純小時：`${h} 小時`（例：60 → "1 小時"）
+  - 組合：`${h} 小時 ${m} 分`（例：90 → "1 小時 30 分"，組合場景去「鐘」更精簡）
+- **`tests/unit/timelineUtils.test.ts`** — 4 個 case 同步更新預期值。
+
+### 暫緩到 PR-E2
+- BUG-008 警告卡 logic 「美國村可能早於 AEON 北谷店 營業時間（食品區 ~24:00）」 — 文案邏輯需 product owner 確認後才動 wording。
+
+### Internal
+- 無 component 改動 — pure helper signature 保持，只改實作。verify gate: tsc clean / 1035 tests pass。
+
 ## [2.12.4] - 2026-04-26
 
 **QA fix series PR-D: Mobile map carousel + pill bar + trip switcher caret（3 issues）**。手機 /map 頁的 carousel overflow 視覺暗示、pill bar 跟 carousel 距離、trip switcher dropdown affordance — 三個 CSS-only fix。
