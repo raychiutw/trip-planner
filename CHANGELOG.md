@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.7] - 2026-04-26
+
+**QA fix series PR-G: /map default sheet content（2 issues）**。`/map` 桌機 right sheet pane 沒選 pin 時 99% 空白只有「點 marker」hint — 改成 trip overview（trip 名 + meta + day list with first-stop preview，每 day row 可點直接 setSelectedPinId 到該天首 pin）。
+
+### Fixed
+- **BUG-044 / 045 default sheet content** — `selectedPin == null && resolved` 時 render `.tp-global-map-sheet-overview`：
+  - **header**：trip 名（title2）+ `${pins.length} stops · ${pinsByDay.size} days` meta
+  - **day list**：每 day swatch dot（`dayColor(N)`）+ eyebrow `DAY 0X · N stops` + first-stop title preview。整 row click → `setSelectedPinId(pins[0].id)` 跳到該天第一個景點
+  - **bottom hint**：「點地圖上的 marker 看單一景點詳情，線段是真實導航路線」 提示卡（`--color-secondary` bg）
+  - 既有 「無 trip / 沒選 trip」 empty state 不變
+
+### 暫緩到 PR-G2/G3
+- BUG-005 right sheet auto-scroll — 需 PO 確認進入 trip 後預設 scroll 到 top 還是 active day
+- BUG-008 警告卡文案 — 「美國村可能早於 AEON 北谷店 營業時間」 logic 需 PO 看
+- BUG-009 trip embedded mode share — 需 share button design + URL pattern
+- BUG-028 native date picker — 大 feature（custom datepicker library / build）
+- BUG-042/043 map cluster overlap — Leaflet supercluster radius config 深調
+- BUG-046 全覽/我的位置 + zoom 控制位置 — UX 決策需 user 確認
+
+### Internal
+- 純 JSX + CSS。verify gate: tsc clean / 1035 tests pass。
+- 未加 unit test — `tests/unit/global-map-page.test.tsx` 不存在。可以後續補（new test 確認 default sheet renders + day click triggers）。
+
 ## [2.12.6] - 2026-04-26
 
 **QA fix series PR-F: misc polish（4 issues）**。Theme toggle / month carousel / emoji alignment / mobile card title tooltip — 一輪 polish 收尾。

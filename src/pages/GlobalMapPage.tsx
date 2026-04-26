@@ -39,6 +39,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useNewTrip } from '../contexts/NewTripContext';
 import { extractPinsFromDay, type MapPin } from '../hooks/useMapData';
+import { dayColor } from '../lib/dayPalette';
 import { apiFetch } from '../lib/apiClient';
 import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
@@ -288,6 +289,59 @@ const SCOPED_STYLES = `
   line-height: 1.55;
   text-align: center;
   padding: 24px;
+}
+
+/* QA 2026-04-26 BUG-044/045：no-pin selected 時 sheet 不再 99% 空白，
+ * 改顯示 trip overview — trip 名 + total stops/days + 各 day 列表 + 第一站
+ * preview。每個 day row click → setSelectedPinId 到該天第一個 pin。 */
+.tp-global-map-sheet-overview { display: flex; flex-direction: column; gap: 16px; }
+.tp-global-map-sheet-overview-header h2 {
+  font-size: var(--font-size-title2); font-weight: 800;
+  letter-spacing: -0.01em; margin: 0 0 4px;
+}
+.tp-global-map-sheet-overview-header p {
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+  margin: 0; font-variant-numeric: tabular-nums;
+}
+.tp-global-map-sheet-overview-days {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tp-global-map-sheet-day-btn {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-background); cursor: pointer;
+  font: inherit; text-align: left;
+  min-height: var(--spacing-tap-min);
+  transition: border-color 120ms, background 120ms;
+}
+.tp-global-map-sheet-day-btn:hover {
+  border-color: var(--color-accent); background: var(--color-accent-subtle);
+}
+.tp-global-map-sheet-day-num {
+  width: 28px; height: 28px; border-radius: var(--radius-full);
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700; font-size: var(--font-size-caption);
+  flex-shrink: 0;
+}
+.tp-global-map-sheet-day-text { flex: 1; min-width: 0; }
+.tp-global-map-sheet-day-eyebrow {
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-global-map-sheet-day-first {
+  font-size: var(--font-size-callout); font-weight: 600;
+  color: var(--color-foreground); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-global-map-sheet-hint {
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+  text-align: center; margin: 12px 0 0; line-height: 1.5;
+  padding: 12px; background: var(--color-secondary); border-radius: var(--radius-md);
 }
 .tp-global-map-sheet-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
@@ -906,13 +960,57 @@ export default function GlobalMapPage() {
               </div>
             )}
           </>
+        ) : resolved ? (
+          /* QA 2026-04-26 BUG-044/045：no pin selected 時不再 99% 空白，改顯
+           * 示 trip overview — name + meta + day list (click 首 pin)。 */
+          <div className="tp-global-map-sheet-overview" data-testid="global-map-sheet-overview">
+            <div className="tp-global-map-sheet-overview-header">
+              <h2>{resolved.name}</h2>
+              <p>{resolved.pins.length} stops · {resolved.pinsByDay.size} days</p>
+            </div>
+            <ul className="tp-global-map-sheet-overview-days">
+              {Array.from(resolved.pinsByDay.entries())
+                .sort((a, b) => a[0] - b[0])
+                .map(([dayNum, pins]) => {
+                  const firstPin = pins[0];
+                  if (!firstPin) return null;
+                  return (
+                    <li key={dayNum}>
+                      <button
+                        type="button"
+                        className="tp-global-map-sheet-day-btn"
+                        onClick={() => setSelectedPinId(firstPin.id)}
+                        data-testid={`global-map-sheet-day-${dayNum}`}
+                      >
+                        <span
+                          className="tp-global-map-sheet-day-num"
+                          style={{ background: dayColor(dayNum) }}
+                          aria-hidden="true"
+                        >
+                          {dayNum}
+                        </span>
+                        <span className="tp-global-map-sheet-day-text">
+                          <span className="tp-global-map-sheet-day-eyebrow">
+                            DAY {String(dayNum).padStart(2, '0')} · {pins.length} stops
+                          </span>
+                          <span className="tp-global-map-sheet-day-first">
+                            {firstPin.title}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+            </ul>
+            <p className="tp-global-map-sheet-hint">
+              點地圖上的 marker 看單一景點詳情，線段是真實導航路線
+            </p>
+          </div>
         ) : (
           <div className="tp-global-map-sheet-empty">
-            {resolved
-              ? '點地圖上的標記查看景點細節。\n線段是真實導航路線。'
-              : hasNoTrips
-                ? '左側建立第一個行程後，地圖會用真實導航路線把每個景點串起來。'
-                : '挑一個行程來看地圖。'}
+            {hasNoTrips
+              ? '左側建立第一個行程後，地圖會用真實導航路線把每個景點串起來。'
+              : '挑一個行程來看地圖。'}
           </div>
         )}
       </div>
