@@ -20,7 +20,7 @@
  *     start_date, end_date, member_count)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -30,6 +30,8 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TripCardMenu from '../components/trip/TripCardMenu';
+import CollabModal from '../components/trip/CollabModal';
+import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage from './TripPage';
@@ -84,6 +86,39 @@ const SCOPED_STYLES = `
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-top: 24px;
+}
+
+/* PR-AA 2026-04-26：手機行程詳情返回箭頭。embedded mode 下 floating sticky
+ * 在 main 區域左上角，點了清掉 ?selected= 回 list。z-index 5 高過 day-strip
+ * 但低過 modal。glass-style 讓 user 看到下方內容跟著走。 */
+.tp-trips-back-btn {
+  position: sticky; top: 8px; left: 8px;
+  z-index: 5;
+  margin: 8px 0 0 8px;
+  width: 40px; height: 40px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  display: inline-grid; place-items: center;
+  cursor: pointer;
+  font: inherit;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+  transition: background 120ms, color 120ms;
+}
+.tp-trips-back-btn:hover {
+  background: var(--color-background);
+  color: var(--color-accent);
+}
+.tp-trips-back-btn:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
+}
+.tp-trips-back-btn .svg-icon { width: 18px; height: 18px; }
+@media (min-width: 1024px) {
+  /* Desktop showEmbeddedTrip 不會 trigger（embedded 走 sheet pane），這個
+   * back btn 只 mobile 用。Desktop 強 hide 防意外 render。 */
+  .tp-trips-back-btn { display: none; }
 }
 @media (min-width: 1024px) {
   .tp-trips-grid {
@@ -367,14 +402,14 @@ export default function TripsListPage() {
     setSearchParams(next, { replace: false });
   }
 
-  // PR-Q：card kebab 「共編設定」→ navigate 到該 trip + ?sheet=collab。
-  // TripPage 讀 ?sheet= 自動 setActiveSheet，user 一次到位。
-  const navigate = useNavigate();
+  // PR-AA 2026-04-26：⋯ 共編改 inline modal，不 navigate 到 trip 頁。
+  // 之前 PR-Q 走 navigate /trips?selected=&sheet=collab 一次到位，但 user
+  // 指示「不要開啟行程頁」 — 共編設定不該強制 user 進 trip 詳情。改 setState
+  // 觸發 CollabModal 直接顯示，trip 列表保持 visible 在背景。
+  const [collabTripId, setCollabTripId] = useState<string | null>(null);
   const handleMenuCollab = useCallback(
-    (tripId: string) => {
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}&sheet=collab`);
-    },
-    [navigate],
+    (tripId: string) => { setCollabTripId(tripId); },
+    [],
   );
 
   // PR-Q：card kebab 「刪除行程」 → confirm + DELETE /api/trips/:id +
@@ -510,18 +545,42 @@ export default function TripsListPage() {
     <TripPage tripId={effectiveSelectedId} noShell />
   ) : undefined;
 
+  // PR-AA 2026-04-26：手機行程詳情左上角加返回箭頭（user 指示）。embedded
+  // mode 時 wrap 一個 div 加 floating back button，clear ?selected= 回 list。
+  function clearSelected() {
+    const next = new URLSearchParams(searchParams);
+    next.delete('selected');
+    setSearchParams(next, { replace: false });
+  }
+
   // Mobile route: when ?selected, render TripPage as main (replaces cards).
   // When no ?selected, render the card grid.
   const main = showEmbeddedTrip ? (
-    <TripPage tripId={effectiveSelectedId!} noShell />
+    <div style={{ position: 'relative', minHeight: '100%' }}>
+      <button
+        type="button"
+        className="tp-trips-back-btn"
+        onClick={clearSelected}
+        aria-label="返回行程列表"
+        data-testid="trips-back-to-list"
+      >
+        <Icon name="arrow-left" />
+      </button>
+      <TripPage tripId={effectiveSelectedId!} noShell />
+    </div>
   ) : cardGridMain;
 
   return (
-    <AppShell
-      sidebar={<DesktopSidebarConnected />}
-      sheet={sheet}
-      main={main}
-      bottomNav={<GlobalBottomNav authed={!!user} />}
-    />
+    <>
+      <AppShell
+        sidebar={<DesktopSidebarConnected />}
+        sheet={sheet}
+        main={main}
+        bottomNav={<GlobalBottomNav authed={!!user} />}
+      />
+      {collabTripId && (
+        <CollabModal tripId={collabTripId} onClose={() => setCollabTripId(null)} />
+      )}
+    </>
   );
 }
