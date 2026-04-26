@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.9] - 2026-04-26
+
+**QA round 2 PR-I：/map mobile redesign per user feedback（4 changes）**。手機 /map QA 截圖 4 個 explicit 改動 — 化繁為簡。
+
+### Fixed (per user mobile screenshot directives)
+- **Header 簡化**：拿掉「Global Map」 eyebrow + `${pins} stops · ${days} days` meta，只留 trip dropdown。資訊在 sheet overview (PR-G) 已重複，header 太擠。
+- **Mobile carousel 拿掉 eyebrow + title** — 「● 沖繩五日 · DAY 01 · 7 STOPS」 + 「點 marker 看詳情」 caption 重複又佔垂直空間，刪除。
+- **Cross-day continuous scroll**：carousel 從 single-day filter 改 flatten 全部 pins。Day 1 最後 stop → Day 2 第一 stop 直接接續滑換。每 card eyebrow 加 `D{dayNum}·` prefix 標示所屬 day。
+- **Active card border = `dayColor(dayNum)`**：active 卡片 border + 軟 box-shadow 用該 day 的 polyline 顏色。inactive 卡片 left-border 3px 同色 hint 該 stop 屬哪天。
+- **Pill bar 往下靠**：mobile bottom 240 → 130（carousel 縮短後距離拉近）。
+- **OceanMap cluster 完全 disable**（user 更正：「移除 cluster」）— `<OceanMap cluster={false} />` 在 GlobalMapPage 直接關掉 supercluster。每個 stop 顯示為個別 pin，無數字 bubble。`.ocean-map-cluster` styling 留 fallback（其他頁若再開可用），改 white bg + `line-strong` border 視覺。
+
+### Removed
+- `carouselDay` useMemo — cross-day flatten 後不再需要 single-day filter。
+
+### Internal
+- 純 JSX + CSS。verify gate: tsc clean / 1035 tests pass。
+- mockup `/tmp/tripline-mockup-poi-edit.html` 沒 mobile carousel spec — 此 PR 依 user 直接 feedback（screenshot annotations）為 ground truth。
+- 後續可加 unit test（cross-day carousel render + dayColor border）— 目前 GlobalMapPage 無 test 檔。
+
 ## [2.12.8] - 2026-04-26
 
 **QA fix series PR-H: Supercluster radius tweak（2 issues）**。Map cluster bubble overlap in dense areas — bump radius 60→80 + maxZoom 15→16。
