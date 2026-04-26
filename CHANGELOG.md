@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.4] - 2026-04-26
+
+**QA fix series PR-D: Mobile map carousel + pill bar + trip switcher caret（3 issues）**。手機 /map 頁的 carousel overflow 視覺暗示、pill bar 跟 carousel 距離、trip switcher dropdown affordance — 三個 CSS-only fix。
+
+### Fixed
+- **BUG-039 mobile carousel right-fade mask** — `.tp-global-map-mobile-cards` 加 28px gradient mask 暗示「還有 stop 可水平滑」，比照 PR-A DayNav pattern。
+- **BUG-040 pill bar 距離 carousel 加 gap** — mobile `.tp-global-map-actions` 從 `bottom: 220px` → `240px`，給 pill bar 跟 carousel 之間更明顯氣口（碰觸 risk↓）。
+- **BUG-041 / 047 trip switcher caret affordance** — `.tp-global-map-trip-btn .caret` 從 12px / muted → 14px / accent / weight 700。「▾ 是 dropdown」 視覺權重出來。
+
+### 暫緩到 PR-D2（cluster + default sheet content）
+- BUG-042 cluster overlap：需要動 supercluster radius / map zoom config，比 CSS fix 大
+- BUG-044 / 045 default sheet 99% 空白：需要新 component（trip overview / day stops list）+ 路由邏輯
+- BUG-046 control 兩邊分開：UX 決策需確認後再動
+
+### Internal
+- 純 CSS。verify gate: tsc clean / 1035 tests pass。
+- mockup `/tmp/tripline-mockup-poi-edit.html` `.mobile-poi-stack` + `.map-action-bar` spec 對齊。
+
 ## [2.12.3] - 2026-04-26
 
 **QA fix series PR-C: TimelineRail action row 補齊 mockup 4 個 icon button（1 issue）**。依 mockup spec — 行內 expand 的 action row 應有「⛶ / ⎘ / ⇅ / 🗑 / ✕」5 個 button，prod 只有前 3 個。補完 🗑 + ✕。
