@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../shared/Icon';
 import { apiFetchRaw } from '../../lib/apiClient';
+import { mapNominatimCategory } from '../../lib/poiCategory';
 
 const SCOPED_STYLES = `
 .tp-inline-add-row { padding: 12px 16px; }
@@ -384,21 +385,6 @@ export default function InlineAddPoi({ tripId, dayNum }: InlineAddPoiProps) {
       </div>
     </div>
   );
-}
-
-/**
- * Nominatim category（OSM `class`）→ Tripline poi_type 白名單。
- * 白名單 source: functions/api/trips/[id]/days/[num]/entries.ts ALLOWED_POI_TYPES。
- */
-function mapNominatimCategory(category: string): string {
-  const c = category.toLowerCase();
-  if (c.includes('hotel') || c.includes('lodging') || c.includes('tourism')) return 'hotel';
-  if (c.includes('restaurant') || c.includes('food') || c.includes('amenity')) return 'restaurant';
-  if (c.includes('shop') || c.includes('mall') || c.includes('retail')) return 'shopping';
-  if (c.includes('parking')) return 'parking';
-  if (c.includes('transport') || c.includes('railway') || c.includes('airport')) return 'transport';
-  if (c.includes('activity') || c.includes('leisure')) return 'activity';
-  return 'attraction';
 }
 
 function categoryEmoji(category: string): string {
