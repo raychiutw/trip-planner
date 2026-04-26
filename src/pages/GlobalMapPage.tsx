@@ -3,25 +3,36 @@
  *
  * Route: /map
  *
- * Design deviation from mockup: mockup 顯示所有 trip 同時，user 指示
- * 改成「挑一個 trip 顯示 + dropdown 切換 + 沒 trip → 新增行程 CTA」。
+ * Design deviation from mockup: mockup 顯示所有 trip 同時 + filter chips；
+ * user 指示改成「挑一個 trip 顯示 + dropdown 切換 + 沒 trip → 新增行程 CTA」。
  *
  * Layout:
  *   - Desktop ≥1024px: 3-pane (sidebar | map main | sheet POI detail)
- *   - Mobile <1024px: 1-pane map + bottom nav
+ *   - Mobile <1024px: 1-pane map + bottom POI carousel + bottom nav
  *
  * Map render:
  *   - 重用 `OceanMap mode="overview"` — 內建 useRoute 走 /api/route
- *     proxy（Mapbox driving directions），落地真實導航折線而不是直線；
- *     失敗時自動 fallback Haversine straight line（標 approx）。
+ *     proxy（Mapbox driving directions），落地真實導航折線而不是直線。
  *   - Per-day polyline 按 dayColor(N)，hotel sortOrder=-1 入線（DESIGN.md
  *     「地圖 Polyline 規格」）。
  *   - 點 marker → setSelected → 右側 sheet 顯示 POI detail，flyTo 該 pin。
+ *   - 點 cluster → supercluster.getClusterExpansionZoom 自動 zoom 展開（OceanMap 內處理）。
+ *   - 透過 onMapReady 拿 L.Map 實例，給「全覽 / 我的位置」pill button 用。
+ *
+ * Sheet（mockup-map-v2 對齊）：
+ *   - Header: ✕ close（清掉 selectedPinId）+ 跳到行程 accent CTA
+ *   - Body: trip dot eyebrow + POI title + meta chips → 同日其他 stop mini-list（active 高亮）
+ *   - Empty state: 提示點 marker
+ *
+ * Mobile（mockup-map-v2 對齊）：
+ *   - Bottom POI carousel — active 那天的所有 stops，左右滑換，點 card → setSelected
+ *   - 取代之前的單一浮動 card
  *
  * Empty state: 沒任何 trip → terracotta hero + 「+ 新增行程」按鈕走
  * useNewTrip().openModal。
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type L from 'leaflet';
 import { Link } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -68,10 +79,13 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
 }
 
-/* Header — trip switcher */
+/* Header — trip switcher.
+ * z-index 1000 確保壓過 leaflet marker pane (z-index 600+) 跟 popup pane (700+)。
+ * 之前 z-index 20 被 leaflet cluster icon (drawn inside map container 但
+ * 因 stacking context 計算出更高) 壓在下面。 */
 .tp-global-map-header {
   position: absolute; top: 16px; left: 16px;
-  z-index: 20;
+  z-index: 1000;
   pointer-events: auto;
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -119,7 +133,7 @@ const SCOPED_STYLES = `
   box-shadow: var(--shadow-md);
   max-height: 360px; overflow-y: auto;
   padding: 4px;
-  z-index: 25;
+  z-index: 1001;
 }
 .tp-global-map-dropdown-row {
   display: flex; flex-direction: column; gap: 2px;
@@ -140,6 +154,41 @@ const SCOPED_STYLES = `
   position: relative;
 }
 .tp-global-map-canvas .ocean-map-container { height: 100%; }
+
+/* 全覽 / 我的位置 pill bar — 對齊 mockup-map-v2 .map-action-bar (bottom-left).
+ * z-index 600 floats above leaflet panes，避開 marker click 區。
+ * Mobile 下放在 bottom carousel 上方，避免被 carousel 遮擋。 */
+.tp-global-map-actions {
+  position: absolute; bottom: 24px; left: 24px;
+  display: flex; gap: 8px;
+  z-index: 600;
+}
+@media (max-width: 1023px) {
+  .tp-global-map-actions {
+    bottom: 220px; left: 12px;
+  }
+}
+.tp-global-map-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 14px; border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-background) 95%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--color-border);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-foreground); cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  min-height: var(--spacing-tap-min);
+}
+.tp-global-map-pill:hover {
+  background: var(--color-background);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.tp-global-map-pill:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+.tp-global-map-pill .svg-icon { width: 14px; height: 14px; }
 
 /* Empty state — no trips at all */
 .tp-global-map-empty {
@@ -187,14 +236,52 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-/* Right sheet — selected POI detail */
+/* ===== Sheet (desktop right pane) — mockup-map-v2 對齊 =====
+ * Header 帶 ✕ close + 跳到行程 accent button。
+ * Body: trip dot eyebrow → title → meta chips → info-rows → 同日其他 stop。 */
 .tp-global-map-sheet {
-  padding: 20px 20px 32px;
+  display: flex; flex-direction: column;
+  height: 100%;
+}
+.tp-global-map-sheet-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.tp-global-map-sheet-header .icon-btn {
+  width: 32px; height: 32px; border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--color-muted);
+  font: inherit;
+}
+.tp-global-map-sheet-header .icon-btn:hover {
+  border-color: var(--color-accent); color: var(--color-accent);
+}
+.tp-global-map-sheet-header .spacer { flex: 1; }
+.tp-global-map-sheet-header .open-trip-btn {
+  display: inline-flex; align-items: center;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  text-decoration: none;
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 700;
+  border: none; cursor: pointer;
+}
+.tp-global-map-sheet-header .open-trip-btn:hover { filter: brightness(var(--hover-brightness)); }
+.tp-global-map-sheet-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 20px;
 }
 .tp-global-map-sheet-empty {
+  display: grid; place-items: center;
+  height: 100%;
   color: var(--color-muted);
   font-size: var(--font-size-callout);
   line-height: 1.55;
+  text-align: center;
+  padding: 24px;
 }
 .tp-global-map-sheet-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
@@ -206,54 +293,181 @@ const SCOPED_STYLES = `
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--color-accent);
 }
-.tp-global-map-sheet h2 {
+.tp-global-map-sheet-title {
   font-size: var(--font-size-title2); font-weight: 800;
   letter-spacing: -0.01em; margin: 0 0 10px;
+  line-height: 1.25;
 }
-.tp-global-map-sheet .meta {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+.tp-global-map-sheet-meta {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
 }
-.tp-global-map-sheet .chip {
-  display: inline-flex; padding: 4px 10px;
-  border: 1px solid var(--color-border); border-radius: var(--radius-full);
-  font-size: var(--font-size-caption); font-weight: 600;
-  background: var(--color-background); color: var(--color-muted);
-}
-.tp-global-map-sheet .chip.accent {
-  background: var(--color-accent-subtle); color: var(--color-accent);
-  border-color: var(--color-accent);
-}
-.tp-global-map-sheet .info-row {
-  display: flex; justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-footnote);
-}
-.tp-global-map-sheet .info-row:last-child { border-bottom: none; }
-.tp-global-map-sheet .info-row .info-label { color: var(--color-muted); }
-.tp-global-map-sheet .open-trip-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  margin-top: 16px; padding: 10px 16px;
+.tp-global-map-sheet-meta .chip {
+  display: inline-flex; padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  text-decoration: none; font: inherit; font-weight: 700;
-  font-size: var(--font-size-callout);
+  font-size: var(--font-size-caption); font-weight: 600;
+  background: var(--color-tertiary); color: var(--color-muted);
+  letter-spacing: 0.04em;
 }
-.tp-global-map-sheet .open-trip-btn:hover { filter: brightness(var(--hover-brightness)); }
+.tp-global-map-sheet-meta .chip.accent {
+  background: var(--color-accent-subtle); color: var(--color-accent);
+}
+.tp-global-map-sheet-meta .chip.rating {
+  color: var(--color-foreground); font-weight: 700;
+}
+.tp-global-map-sheet-section {
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.tp-global-map-sheet-section h4 {
+  font-size: var(--font-size-caption2); font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 8px;
+}
+.tp-global-map-sheet-section .info-row {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: var(--font-size-footnote);
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+.tp-global-map-sheet-section .info-row:last-child { border-bottom: none; }
+.tp-global-map-sheet-section .info-row .info-label {
+  font-size: var(--font-size-caption2); font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--color-muted);
+  width: 80px; flex-shrink: 0;
+}
+.tp-global-map-sheet-section .info-row .info-value {
+  color: var(--color-foreground);
+  font-variant-numeric: tabular-nums;
+}
 
-/* Mobile floating selected card (sheet hidden) */
-.tp-global-map-mobile-card {
-  position: absolute; left: 12px; right: 12px; bottom: 12px;
+/* 同日其他 stop mini-list */
+.tp-global-map-sheet-stops {
+  display: flex; flex-direction: column;
+}
+.tp-global-map-sheet-stop {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--color-border);
+  cursor: pointer;
+  background: transparent; border-left: none; border-right: none; border-top: none;
+  font: inherit; text-align: left;
+  width: 100%;
+  color: var(--color-foreground);
+}
+.tp-global-map-sheet-stop:last-child { border-bottom: none; }
+.tp-global-map-sheet-stop:hover .ds-name { color: var(--color-accent-deep); }
+.tp-global-map-sheet-stop .ds-time {
+  font-size: var(--font-size-caption); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  width: 44px; flex-shrink: 0;
+}
+.tp-global-map-sheet-stop .ds-dot {
+  width: 18px; height: 18px; border-radius: 50%;
   background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  box-shadow: var(--shadow-lg);
-  z-index: 6;
+  border: 1.5px solid var(--color-line-strong);
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 700;
+  color: var(--color-muted);
+  flex-shrink: 0;
+}
+.tp-global-map-sheet-stop.is-active .ds-dot {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-global-map-sheet-stop .ds-name {
+  font-size: var(--font-size-footnote); font-weight: 500;
+  flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tp-global-map-sheet-stop.is-active .ds-name {
+  font-weight: 700; color: var(--color-accent-deep);
+}
+
+/* ===== Mobile bottom POI carousel — mockup-map-v2 .mobile-poi-stack 對齊 ===== */
+.tp-global-map-mobile-stack {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to top, var(--color-background) 75%, transparent);
+  padding: 12px 0 16px;
+  /* z-index 700 浮在 leaflet marker-pane (600) + tooltip-pane (650) 之上，
+   * 只低於 popup-pane (700)，跟「全覽/我的位置」pill bar (600) 不衝突。 */
+  z-index: 700;
   display: none;
+  pointer-events: auto;
 }
 @media (max-width: 1023px) {
-  .tp-global-map-mobile-card.is-active { display: block; }
+  .tp-global-map-mobile-stack { display: block; }
+}
+.tp-global-map-mobile-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--color-line-strong);
+  margin: 0 auto 8px;
+}
+.tp-global-map-mobile-eyebrow {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 16px;
+  font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--color-muted);
+  margin-bottom: 4px;
+}
+.tp-global-map-mobile-eyebrow .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-accent);
+}
+.tp-global-map-mobile-title {
+  padding: 0 16px;
+  font-size: var(--font-size-footnote); font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--color-foreground);
+}
+.tp-global-map-mobile-cards {
+  display: flex; gap: 10px;
+  padding: 4px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+}
+.tp-global-map-mobile-cards::-webkit-scrollbar { display: none; }
+.tp-global-map-mobile-card {
+  flex: 0 0 200px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column;
+}
+.tp-global-map-mobile-card:hover {
+  border-color: var(--color-accent);
+}
+.tp-global-map-mobile-card.is-active {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+.tp-global-map-mobile-card .pc-cover {
+  height: 60px; border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-subtle) 100%);
+}
+.tp-global-map-mobile-card .pc-eyebrow {
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.tp-global-map-mobile-card .pc-title {
+  font-size: var(--font-size-caption); font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 `;
 
@@ -284,6 +498,7 @@ export default function GlobalMapPage() {
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
   // Step 1: fetch my trips + meta on mount.
   useEffect(() => {
@@ -374,6 +589,10 @@ export default function GlobalMapPage() {
     setSelectedPinId(pinId);
   }, []);
 
+  const onMapReady = useCallback((map: L.Map | null) => {
+    mapRef.current = map;
+  }, []);
+
   const pickTrip = useCallback((tripId: string) => {
     setActiveTripId(tripId);
     lsSet(LS_KEY_TRIP_PREF, tripId);
@@ -381,10 +600,57 @@ export default function GlobalMapPage() {
     setSelectedPinId(null);
   }, []);
 
+  const closeSheet = useCallback(() => {
+    setSelectedPinId(null);
+  }, []);
+
+  // 全覽 — fitBounds 到所有 pins。
+  const fitAll = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !resolved || resolved.pins.length === 0) return;
+    const latlngs = resolved.pins.map((p) => [p.lat, p.lng] as [number, number]);
+    map.fitBounds(latlngs, { padding: [40, 40] });
+  }, [resolved]);
+
+  // 我的位置 — navigator.geolocation 取座標 → flyTo。
+  // 失敗（denied / unsupported）silent fail，pill button 也不丟錯，只是不動作。
+  const locateMe = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        map.setView([pos.coords.latitude, pos.coords.longitude], 14, { animate: true });
+      },
+      () => {
+        // permission denied / unavailable — silent
+      },
+      { timeout: 5000, maximumAge: 60000 },
+    );
+  }, []);
+
   const selectedPin = useMemo(() => {
     if (!resolved || selectedPinId == null) return null;
     return resolved.pins.find((p) => p.id === selectedPinId) ?? null;
   }, [resolved, selectedPinId]);
+
+  // 算 selected pin 在哪天 → 從 pinsByDay 反查（O(days) 通常 < 30）
+  const selectedDay = useMemo(() => {
+    if (!resolved || !selectedPin) return null;
+    for (const [dayNum, dayPins] of resolved.pinsByDay) {
+      if (dayPins.some((p) => p.id === selectedPin.id)) return { dayNum, pins: dayPins };
+    }
+    return null;
+  }, [resolved, selectedPin]);
+
+  // Mobile carousel：選了 stop → 顯示該 stop 那天的所有 pins
+  // 沒選 → 顯示第一天的 pins 當預設提示，避免 carousel 一片空白
+  const carouselDay = useMemo(() => {
+    if (!resolved) return null;
+    if (selectedDay) return selectedDay;
+    const first = Array.from(resolved.pinsByDay.entries()).sort((a, b) => a[0] - b[0])[0];
+    if (!first) return null;
+    return { dayNum: first[0], pins: first[1] };
+  }, [resolved, selectedDay]);
 
   // Loading: trips list still null
   const isLoadingList = trips === null && !error;
@@ -415,7 +681,7 @@ export default function GlobalMapPage() {
         </div>
       ) : (
         <>
-          {/* Floating trip switcher header (over map). */}
+          {/* Floating trip switcher header (over map). z-index 1000 確保壓過 leaflet. */}
           {trips && trips.length > 0 && (
             <div className="tp-global-map-header" ref={menuRef} data-testid="global-map-trip-switcher">
               <div className="tp-global-map-header-eyebrow">Global Map</div>
@@ -476,6 +742,8 @@ export default function GlobalMapPage() {
                   fillParent
                   focusId={selectedPinId ?? undefined}
                   onMarkerClick={onMarkerClick}
+                  onMapReady={onMapReady}
+                  zoomControlPosition="bottomright"
                   dark={isDark}
                   className="ocean-map-container"
                 />
@@ -485,85 +753,165 @@ export default function GlobalMapPage() {
               <div className="tp-global-map-loading" style={{ color: 'var(--color-destructive)' }}>{error}</div>
             )}
 
-            {/* Mobile-only floating selected POI card */}
-            <div
-              className={`tp-global-map-mobile-card ${selectedPin ? 'is-active' : ''}`}
-              data-testid="global-map-mobile-card"
-            >
-              {selectedPin && resolved && (
-                <>
-                  <div className="tp-global-map-sheet-eyebrow">
-                    <span className="dot" />
-                    <span>{resolved.name}</span>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: 'var(--font-size-headline)', marginBottom: 4 }}>
-                    {selectedPin.title}
-                  </div>
-                  {selectedPin.time && (
-                    <div style={{ color: 'var(--color-muted)', fontSize: 'var(--font-size-footnote)' }}>
-                      {selectedPin.time}
-                    </div>
-                  )}
-                  <Link
-                    to={`/trips?selected=${encodeURIComponent(resolved.tripId)}`}
-                    className="open-trip-btn"
-                    style={{ marginTop: 10 }}
-                  >
-                    打開行程
-                  </Link>
-                </>
-              )}
-            </div>
+            {/* Bottom-left action pills — 全覽 / 我的位置 (mockup .map-action-bar) */}
+            {resolved && resolved.pins.length > 0 && (
+              <div className="tp-global-map-actions" data-testid="global-map-actions">
+                <button
+                  type="button"
+                  className="tp-global-map-pill"
+                  onClick={fitAll}
+                  data-testid="global-map-fit-all"
+                  aria-label="把所有景點縮成一個畫面"
+                >
+                  <Icon name="map" />
+                  <span>全覽</span>
+                </button>
+                <button
+                  type="button"
+                  className="tp-global-map-pill"
+                  onClick={locateMe}
+                  data-testid="global-map-locate-me"
+                  aria-label="移到我目前的位置"
+                >
+                  <Icon name="location-pin" />
+                  <span>我的位置</span>
+                </button>
+              </div>
+            )}
+
+            {/* Mobile bottom POI carousel — show pins of carouselDay (selected day or day 1).
+             * Click a card → setSelected, opens sheet content (visible on desktop right pane;
+             * mobile relies on the active card highlight + map flyTo via focusId). */}
+            {carouselDay && carouselDay.pins.length > 0 && (
+              <div className="tp-global-map-mobile-stack" data-testid="global-map-mobile-stack">
+                <div className="tp-global-map-mobile-handle" aria-hidden="true" />
+                <div className="tp-global-map-mobile-eyebrow">
+                  <span className="dot" />
+                  {resolved?.name} · DAY {String(carouselDay.dayNum).padStart(2, '0')} · {carouselDay.pins.length} STOPS
+                </div>
+                <div className="tp-global-map-mobile-title">
+                  {selectedPin ? selectedPin.title : '點 marker 看詳情，左右滑換 stop'}
+                </div>
+                <div className="tp-global-map-mobile-cards">
+                  {carouselDay.pins.map((pin) => (
+                    <button
+                      key={pin.id}
+                      type="button"
+                      className={`tp-global-map-mobile-card ${pin.id === selectedPinId ? 'is-active' : ''}`}
+                      onClick={() => setSelectedPinId(pin.id)}
+                      data-testid={`global-map-mobile-card-${pin.id}`}
+                    >
+                      <div className="pc-cover" aria-hidden="true" />
+                      <div className="pc-eyebrow">
+                        {pin.time ? `${pin.time} · STOP ${pin.index || '—'}` : `STOP ${pin.index || '—'}`}
+                      </div>
+                      <div className="pc-title">{pin.title}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
     </div>
   );
 
+  // Desktop right sheet — mockup-map-v2 對齊：✕ close + 跳到行程 button + meta chips + info-rows + 同日 mini-list
   const sheet = (
     <div className="tp-global-map-sheet" data-testid="global-map-sheet">
       <style>{SCOPED_STYLES}</style>
-      {selectedPin && resolved ? (
-        <>
-          <div className="tp-global-map-sheet-eyebrow">
-            <span className="dot" />
-            <span>{resolved.name}</span>
-          </div>
-          <h2>{selectedPin.title}</h2>
-          <div className="meta">
-            {resolved.countries && <span className="chip accent">{resolved.countries}</span>}
-            {selectedPin.time && <span className="chip">{selectedPin.time}</span>}
-            {typeof selectedPin.googleRating === 'number' && (
-              <span className="chip">★ {selectedPin.googleRating.toFixed(1)}</span>
-            )}
-          </div>
-          <div className="info-row">
-            <span className="info-label">座標</span>
-            <span>{selectedPin.lat.toFixed(4)}, {selectedPin.lng.toFixed(4)}</span>
-          </div>
-          {selectedPin.travelMin != null && (
-            <div className="info-row">
-              <span className="info-label">前一站交通</span>
-              <span>{selectedPin.travelType ?? '—'} {selectedPin.travelMin} 分</span>
-            </div>
-          )}
+      <div className="tp-global-map-sheet-header">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={closeSheet}
+          disabled={!selectedPin}
+          aria-label="關閉景點細節"
+          data-testid="global-map-sheet-close"
+        >
+          ✕
+        </button>
+        <div className="spacer" />
+        {selectedPin && resolved && (
           <Link
             to={`/trips?selected=${encodeURIComponent(resolved.tripId)}`}
             className="open-trip-btn"
-            data-testid="sheet-open-trip"
+            data-testid="global-map-sheet-open-trip"
           >
-            打開行程
+            跳到行程
           </Link>
-        </>
-      ) : (
-        <div className="tp-global-map-sheet-empty">
-          {resolved
-            ? '點地圖上的標記查看景點細節。線段是真實導航路線。'
-            : hasNoTrips
-              ? '左側建立第一個行程後，地圖會用真實導航路線把每個景點串起來。'
-              : '挑一個行程來看地圖。'}
-        </div>
-      )}
+        )}
+      </div>
+      <div className="tp-global-map-sheet-body">
+        {selectedPin && resolved ? (
+          <>
+            <div className="tp-global-map-sheet-eyebrow">
+              <span className="dot" />
+              <span>
+                {resolved.name}
+                {selectedDay && ` · Day ${String(selectedDay.dayNum).padStart(2, '0')}`}
+                {selectedPin.index > 0 && ` · Stop ${String(selectedPin.index).padStart(2, '0')}`}
+              </span>
+            </div>
+            <h2 className="tp-global-map-sheet-title">{selectedPin.title}</h2>
+            <div className="tp-global-map-sheet-meta">
+              {resolved.countries && <span className="chip accent">{resolved.countries}</span>}
+              {selectedPin.type === 'hotel' && <span className="chip">住宿</span>}
+              {selectedPin.time && <span className="chip">{selectedPin.time}</span>}
+              {typeof selectedPin.googleRating === 'number' && (
+                <span className="chip rating">★ {selectedPin.googleRating.toFixed(1)}</span>
+              )}
+            </div>
+
+            <div className="tp-global-map-sheet-section">
+              <h4>資訊</h4>
+              <div className="info-row">
+                <span className="info-label">座標</span>
+                <span className="info-value">{selectedPin.lat.toFixed(4)}, {selectedPin.lng.toFixed(4)}</span>
+              </div>
+              {selectedPin.travelMin != null && (
+                <div className="info-row">
+                  <span className="info-label">前段交通</span>
+                  <span className="info-value">{selectedPin.travelType ?? '—'} · {selectedPin.travelMin} 分</span>
+                </div>
+              )}
+            </div>
+
+            {selectedDay && selectedDay.pins.length > 1 && (
+              <div className="tp-global-map-sheet-section">
+                <h4>同日其他 stop</h4>
+                <div className="tp-global-map-sheet-stops">
+                  {selectedDay.pins.map((p) => {
+                    const active = p.id === selectedPin.id;
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        className={`tp-global-map-sheet-stop ${active ? 'is-active' : ''}`}
+                        onClick={() => setSelectedPinId(p.id)}
+                        data-testid={`global-map-sheet-stop-${p.id}`}
+                      >
+                        <span className="ds-time">{p.time ?? '—'}</span>
+                        <span className="ds-dot">{p.type === 'hotel' ? '🛏' : (p.index || '·')}</span>
+                        <span className="ds-name">{p.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="tp-global-map-sheet-empty">
+            {resolved
+              ? '點地圖上的標記查看景點細節。\n線段是真實導航路線。'
+              : hasNoTrips
+                ? '左側建立第一個行程後，地圖會用真實導航路線把每個景點串起來。'
+                : '挑一個行程來看地圖。'}
+          </div>
+        )}
+      </div>
     </div>
   );
 
