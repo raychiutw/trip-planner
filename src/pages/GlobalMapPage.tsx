@@ -72,6 +72,14 @@ interface ResolvedTrip {
 }
 
 const SCOPED_STYLES = `
+/* PR-MM 2026-04-26：/map sheet 寬度比照 /trips（min(540, 28vw)），不再走全域
+ * --grid-3pane-desktop = min(780, 40vw)。同 user 在 1280 viewport 看 sheet
+ * 太大的問題。 */
+@media (min-width: 1024px) {
+  .app-shell:has(> main .tp-global-map-shell)[data-layout="3pane"] {
+    grid-template-columns: 240px 1fr min(540px, 28vw);
+  }
+}
 .tp-global-map-shell {
   position: relative;
   height: 100%;
