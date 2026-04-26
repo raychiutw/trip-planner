@@ -11,6 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import { dayColor } from '../../lib/dayPalette';
+import Icon from '../shared/Icon';
 
 const SCOPED_STYLES = `
 .tp-action-popover {
@@ -121,7 +122,9 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption);
   color: var(--color-warning);
   line-height: 1.4;
+  display: flex; align-items: flex-start; gap: 6px;
 }
+.tp-action-pending-note .svg-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
 `;
 
 const TIME_SLOTS = [
@@ -247,8 +250,18 @@ export default function EntryActionPopover({ open, action, days, currentDayId, o
         </select>
       </div>
 
-      {!isWired && <p className="tp-action-pending-note">⚠️ {pendingHint} — 此功能即將推出</p>}
-      {error && <p className="tp-action-pending-note" role="alert">{error}</p>}
+      {!isWired && (
+        <p className="tp-action-pending-note">
+          <Icon name="warning" />
+          <span>{pendingHint} — 此功能即將推出</span>
+        </p>
+      )}
+      {error && (
+        <p className="tp-action-pending-note" role="alert">
+          <Icon name="warning" />
+          <span>{error}</span>
+        </p>
+      )}
 
       <div className="tp-action-cta">
         <button

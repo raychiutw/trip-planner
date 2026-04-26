@@ -66,7 +66,7 @@ const SCOPED_STYLES = `
   cursor: pointer; min-height: var(--spacing-tap-min);
 }
 .tp-idea-card-action:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.tp-idea-card-action.is-danger:hover { border-color: #dc2626; color: #dc2626; }
+.tp-idea-card-action.is-danger:hover { border-color: var(--color-destructive); color: var(--color-destructive); }
 .tp-idea-card-action[disabled] { opacity: 0.5; cursor: not-allowed; }
 .tp-idea-card-promoted {
   font-size: var(--font-size-footnote);

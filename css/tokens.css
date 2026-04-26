@@ -48,6 +48,18 @@ html { color-scheme: light dark; }
     --color-priority-low-bg: rgba(6, 167, 125, 0.10);
     --color-priority-low-dot: #06A77D;
 
+    /* Trip cover gradients — TripsListPage destination cards (jp/kr/tw/other).
+     * 4 fixed combinations; preserves visual identity while removing hex
+     * literals from component CSS (anti-slop hex hardcoding cleanup). */
+    --color-cover-jp-from: #D97848;        /* matches --color-accent */
+    --color-cover-jp-to: #F0935E;          /* lighter terracotta tint */
+    --color-cover-kr-from: #B85C2E;        /* matches --color-accent-deep */
+    --color-cover-kr-to: #EADFCF;          /* matches --color-border */
+    --color-cover-tw-from: #C88500;        /* warm amber, JP-adjacent gold */
+    --color-cover-tw-to: #F7DFCB;          /* matches --color-accent-bg */
+    --color-cover-other-from: #6F5A47;     /* matches --color-muted */
+    --color-cover-other-to: #C8B89F;       /* matches --color-line-strong */
+
     /* Radius — Airbnb-inspired 8px primary */
     --radius-xs: 4px;
     --radius-sm: 6px;
@@ -862,6 +874,16 @@ body.dark {
         --color-plan-bg: #3A2A20;
         --color-plan-text: #FFB890;
         --color-plan-hover: #4D372A;
+        /* Trip cover gradients — dark mode preserves the destination accent
+         * while toning down luminance to fit deep-cocoa background. */
+        --color-cover-jp-from: #B85C2E;
+        --color-cover-jp-to: #D97848;
+        --color-cover-kr-from: #8A4520;
+        --color-cover-kr-to: #5A4634;
+        --color-cover-tw-from: #9E6800;
+        --color-cover-tw-to: #4D372A;
+        --color-cover-other-from: #4D372A;
+        --color-cover-other-to: #6F5A47;
     }
 
     /* Print mode — flat white + hairline for printing */
