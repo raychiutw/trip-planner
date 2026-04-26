@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.2] - 2026-04-26
+
+**PR-R: /map 6 點重組 — 控制條重排 + POI 卡 CTA 升級 + 點 POI 只顯示當天 polyline + 跳到行程真的能跳（QA round 6）**。User 截圖 5 點 + 第 6 點補。
+
+### Changed
+- **「全覽 / 我的位置」 pill bar 上移到選擇行程下方** — `.tp-global-map-actions` 從 `bottom: 100px` (mobile) 改 `top: 64px`（mobile）/ `top: 76px`（desktop）。視覺群組跟 trip switcher 接在一起。
+- **POI 卡 grid layout 改右側 CTA chip** — `.tp-global-map-mobile-poi` 從垂直 stack 改 `grid-template-columns: minmax(0, 1fr) auto`，左 content（eyebrow / title / meta）+ 右「跳到行程」 chip。CTA 從 inline link 升級成 accent-fill button（`bg: accent` / `color: accent-foreground` / `radius: full`）。
+- **POI 卡下移** — `bottom: 152px → 110px`，pill bar 已上移讓出空間，卡片貼緊 carousel 上緣。
+
+### Added
+- **點全覽自動關 POI** — `fitAll()` callback 同步 `setSelectedPinId(null)`，一鍵 reset 視角 + 關 detail card + 顯示全部 days polyline。
+- **點 POI 只顯示當天 polyline** — 新 `displayPinsByDay` derived map：sleected pin 存在時 filter 到 `selectedDay.dayNum` only，沒選時還原 `resolved.pinsByDay`。Markers 不過濾，仍 render 全部 pins 避免 user 找不到別天景點。
+- **跳到行程真的會 scroll 到該 stop** — Link 加 `state={{ scrollAnchor: 'entry-${id}' }}`（讓既有 useScrollRestoreOnBack hook 處理）+ TripPage 加 fallback：useEffect 讀 `?focus=` query 並 scroll 到 `[data-scroll-anchor="entry-${focus}"]`。雙保險：state 沒帶上時 query 那條也 work（user 直接貼 URL）。
+
+### Internal
+- TripPage 在既有 initial-scroll effect 加 focus 優先級分支（high > today > hash）。
+- `displayPinsByDay` 用 `useMemo` derived，OceanMap 認 props，沒重 render 邏輯改動。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
 ## [2.14.1] - 2026-04-26
 
 **PR-P: NewTripModal portal 修底部無法操作 + 共編 entry 提升 discoverability（QA round 5）**。User 兩個截圖回報：modal 下方控制鍵被 bottom nav 蓋住無法 tap，且共編設定找不到。

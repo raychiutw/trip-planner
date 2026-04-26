@@ -160,19 +160,18 @@ const SCOPED_STYLES = `
 }
 .tp-global-map-canvas .ocean-map-container { height: 100%; }
 
-/* 全覽 / 我的位置 pill bar — 對齊 mockup-map-v2 .map-action-bar (bottom-left).
- * z-index 600 floats above leaflet panes，避開 marker click 區。
- * Mobile 下放在 bottom carousel 上方，避免被 carousel 遮擋。 */
+/* 全覽 / 我的位置 pill bar — PR-R：上移到選擇行程 chip 下方，靠近 trip
+ * switcher 視覺群組（user 截圖指示）。z-index 600 floats above leaflet panes。
+ * Desktop trip switcher 在 top: 16px 約 50px 高，pill bar 接 top: 76px。
+ * Mobile trip switcher 也在 top 區，pill bar 接 top: 64px（chip 較小）。 */
 .tp-global-map-actions {
-  position: absolute; bottom: 24px; left: 24px;
+  position: absolute; top: 76px; left: 16px;
   display: flex; gap: 8px;
   z-index: 600;
 }
 @media (max-width: 1023px) {
-  /* QA 2026-04-26 PR-L：再往下靠 carousel — 130 → 100 緊貼 carousel 上緣
-   * （carousel handle 12 + cards ~80 ≈ 92px，100 剛好上方一點點 gap）。 */
   .tp-global-map-actions {
-    bottom: 100px; left: 12px;
+    top: 64px; left: 12px;
   }
 }
 .tp-global-map-pill {
@@ -484,10 +483,13 @@ const SCOPED_STYLES = `
 /* QA 2026-04-26 PR-L: mobile POI detail card — 點 marker 在 carousel 上方
  * 顯示，帶類型 chip + 時間 + 評分 + 跳到行程 CTA。Hide on desktop（≥1024）。
  * 對齊 mockup-map-v2 sheet 結構，compact mobile 版。 */
+/* PR-R 2026-04-26：POI 卡下移到 carousel 上方緊貼（pill bar 已經上移讓出空間）+
+ * 改用 grid layout：左 content（eyebrow / title / meta）、右 CTA chip（明顯
+ * 行動入口）。close ✕ 仍 absolute top-right。 */
 .tp-global-map-mobile-poi {
   display: none;
   position: absolute;
-  left: 12px; right: 12px; bottom: 152px;
+  left: 12px; right: 12px; bottom: 110px;
   z-index: 700;
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -497,14 +499,21 @@ const SCOPED_STYLES = `
   pointer-events: auto;
 }
 @media (max-width: 1023px) {
-  .tp-global-map-mobile-poi { display: block; }
+  .tp-global-map-mobile-poi {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+  }
 }
+.tp-global-map-mobile-poi-content { min-width: 0; }
 .tp-global-map-mobile-poi-close {
-  position: absolute; top: 8px; right: 8px;
-  width: 32px; height: 32px;
+  position: absolute; top: 6px; right: 6px;
+  width: 28px; height: 28px;
   border: 0; border-radius: 50%;
   background: transparent; color: var(--color-muted);
-  font-size: 16px; cursor: pointer;
+  font-size: 14px; cursor: pointer;
+  z-index: 1;
 }
 .tp-global-map-mobile-poi-close:hover {
   background: var(--color-secondary); color: var(--color-foreground);
@@ -513,17 +522,18 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-eyebrow); font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--color-muted);
-  margin-bottom: 4px; min-height: 12px;
+  margin-bottom: 2px; min-height: 12px;
 }
 .tp-global-map-mobile-poi-title {
   font-size: var(--font-size-headline); font-weight: 800;
   letter-spacing: -0.01em;
-  margin: 0 28px 6px 0;
+  margin: 0 32px 4px 0;
   line-height: 1.25;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
 }
 .tp-global-map-mobile-poi-meta {
   display: flex; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 10px;
 }
 .tp-global-map-mobile-poi-meta .chip {
   font-size: var(--font-size-caption); font-weight: 600;
@@ -536,9 +546,13 @@ const SCOPED_STYLES = `
 .tp-global-map-mobile-poi-cta {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: var(--font-size-footnote); font-weight: 700;
-  color: var(--color-accent); text-decoration: none;
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  padding: 10px 14px; border-radius: var(--radius-full);
+  text-decoration: none;
+  white-space: nowrap;
+  min-height: var(--spacing-tap-min);
 }
-.tp-global-map-mobile-poi-cta:hover { color: var(--color-accent-deep); }
+.tp-global-map-mobile-poi-cta:hover { filter: brightness(0.95); }
 
 .tp-global-map-mobile-cards {
   display: flex; gap: 10px;
@@ -723,7 +737,10 @@ export default function GlobalMapPage() {
   }, []);
 
   // 全覽 — fitBounds 到所有 pins。
+  // PR-R 2026-04-26：點全覽同時清掉 selectedPin（user 指示「點全覽時關閉所有
+  // poi」）— 一鍵 reset 視角 + 關 detail card + 顯示全部 days polyline。
   const fitAll = useCallback(() => {
+    setSelectedPinId(null);
     const map = mapRef.current;
     if (!map || !resolved || resolved.pins.length === 0) return;
     const latlngs = resolved.pins.map((p) => [p.lat, p.lng] as [number, number]);
@@ -759,6 +776,15 @@ export default function GlobalMapPage() {
     }
     return null;
   }, [resolved, selectedPin]);
+
+  // PR-R 2026-04-26：點 POI 只顯示當天行程導航（user 指示）— polylines 過濾
+  // 到 selected pin 所屬的 day。沒選 pin 時顯示全部 days。Markers 不過濾，
+  // 仍然 render 全部 pins（避免 user 突然找不到別天景點）。
+  const displayPinsByDay = useMemo(() => {
+    if (!resolved) return new Map<number, MapPin[]>();
+    if (!selectedDay) return resolved.pinsByDay;
+    return new Map([[selectedDay.dayNum, selectedDay.pins]]);
+  }, [resolved, selectedDay]);
 
   // PR-I：原 carouselDay (filter to one day) 移除 — carousel 改 cross-day
   // continuous，render 全部 pins 直接從 resolved.pinsByDay 攤平。selectedDay
@@ -843,7 +869,7 @@ export default function GlobalMapPage() {
               <Suspense fallback={<div className="tp-global-map-loading">載入地圖…</div>}>
                 <OceanMap
                   pins={resolved.pins}
-                  pinsByDay={resolved.pinsByDay}
+                  pinsByDay={displayPinsByDay}
                   mode="overview"
                   routes
                   fillParent
@@ -889,9 +915,9 @@ export default function GlobalMapPage() {
               </div>
             )}
 
-            {/* QA 2026-04-26 PR-L：mobile 點 marker 沒顯示 POI 資訊 — 加 detail card
-             * 浮在 carousel 上方。title + 類型 + 時間 + ⭐ + 「跳到行程」CTA。
-             * 對齊桌機 sheet 結構但 compact mobile 版。 */}
+            {/* PR-R 2026-04-26：POI detail card 結構改 grid（左 content / 右 CTA），
+             * 「跳到行程 →」變右側顯眼 chip 按鈕。Link state 加 scrollAnchor 讓
+             * 目標 trip 頁能 scroll 到該 stop（useScrollRestoreOnBack 處理）。 */}
             {resolved && selectedPin && (
               <div className="tp-global-map-mobile-poi" data-testid="global-map-mobile-poi">
                 <button
@@ -902,22 +928,26 @@ export default function GlobalMapPage() {
                 >
                   ✕
                 </button>
-                <div className="tp-global-map-mobile-poi-eyebrow">
-                  {selectedPin.index > 0 && `STOP ${String(selectedPin.index).padStart(2, '0')}`}
-                </div>
-                <h3 className="tp-global-map-mobile-poi-title">{selectedPin.title}</h3>
-                <div className="tp-global-map-mobile-poi-meta">
-                  {selectedPin.type === 'hotel' && <span className="chip">住宿</span>}
-                  {selectedPin.time && <span className="chip">{selectedPin.time}</span>}
-                  {typeof selectedPin.googleRating === 'number' && (
-                    <span className="chip rating">★ {selectedPin.googleRating.toFixed(1)}</span>
-                  )}
+                <div className="tp-global-map-mobile-poi-content">
+                  <div className="tp-global-map-mobile-poi-eyebrow">
+                    {selectedPin.index > 0 && `STOP ${String(selectedPin.index).padStart(2, '0')}`}
+                  </div>
+                  <h3 className="tp-global-map-mobile-poi-title">{selectedPin.title}</h3>
+                  <div className="tp-global-map-mobile-poi-meta">
+                    {selectedPin.type === 'hotel' && <span className="chip">住宿</span>}
+                    {selectedPin.time && <span className="chip">{selectedPin.time}</span>}
+                    {typeof selectedPin.googleRating === 'number' && (
+                      <span className="chip rating">★ {selectedPin.googleRating.toFixed(1)}</span>
+                    )}
+                  </div>
                 </div>
                 <Link
                   to={`/trips?selected=${encodeURIComponent(resolved.tripId)}&focus=${selectedPin.id}`}
+                  state={{ scrollAnchor: `entry-${selectedPin.id}` }}
                   className="tp-global-map-mobile-poi-cta"
+                  data-testid="global-map-mobile-poi-cta"
                 >
-                  跳到行程 →
+                  跳到行程
                 </Link>
               </div>
             )}
