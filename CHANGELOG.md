@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.25] - 2026-04-27
+
+**PR-QQ: embedded topbar 對齊 mockup-trip-v2 canonical（QA round 24）**。
+
+### Changed
+- **Embedded topbar 視覺重設** — 對齊 `mockup-trip-v2.html` line 438 `.mobile-topbar` canonical 規格 + `mockup-trip-selected-v1.html` Variant A:
+  - Padding 12px → **16px**（mockup standard）
+  - Back btn **40×40 transparent** → **36×36 with border + bg-background**（mockup `.icon-btn` pattern）
+  - Back icon 20px → 18px
+- Title 維持 17px bold 單行（不加 day eyebrow，採 user 偏好的 simple title style）。
+
+### Notes
+- Mockup file 寫於 `docs/design-sessions/mockup-trip-selected-v1.html`（3 variants × desktop/mobile demos）做為設計 baseline。
+- 共編 chip 與 ⋯ 暫保留在 TripPage 內部；後續可考慮整合進 topbar actions slot。
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.24] - 2026-04-26
 
 **PR-PP: /trips 架構改 2-pane（去 sheet）+ 5 cards/row + 點選顯示滿版（QA round 23）**。

@@ -95,10 +95,16 @@ const SCOPED_STYLES = `
   height: 100%;
   min-height: 100%;
 }
+/* PR-QQ 2026-04-27：對齊 mockup-trip-selected-v1.html Variant A
+ * （+ B 的單行 title）— 對齊 mockup-trip-v2.html line 438 .mobile-topbar
+ * canonical 規格：56px 高、16px padding、glass blur、border-bottom hairline。
+ * Back btn 36×36 帶 border + bg-background = mockup .icon-btn pattern，比原
+ * 40×40 transparent 更貼齊 mockup affordance。Title 17px bold 單行，
+ * 不加 day eyebrow（保持簡潔）。 */
 .tp-embedded-topbar {
   display: flex; align-items: center; gap: 12px;
   height: 56px;
-  padding: 0 12px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-background) 94%, transparent);
   backdrop-filter: blur(14px);
@@ -106,9 +112,9 @@ const SCOPED_STYLES = `
   flex-shrink: 0;
 }
 .tp-embedded-back {
-  width: 40px; height: 40px;
+  width: 36px; height: 36px;
   border-radius: var(--radius-md);
-  background: transparent;
+  background: var(--color-background);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   display: grid; place-items: center;
@@ -125,7 +131,7 @@ const SCOPED_STYLES = `
 .tp-embedded-back:focus-visible {
   outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
-.tp-embedded-back .svg-icon { width: 20px; height: 20px; }
+.tp-embedded-back .svg-icon { width: 18px; height: 18px; }
 .tp-embedded-trip-name {
   font-size: var(--font-size-headline);
   font-weight: 700;
