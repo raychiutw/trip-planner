@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
+import { mapNominatimCategory } from '../lib/poiCategory';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
@@ -326,11 +327,14 @@ export default function ExplorePage() {
   async function handleSave(poi: PoiSearchResult) {
     setSavingIds((s) => new Set(s).add(poi.osm_id));
     try {
+      // PR-T 2026-04-26：原本直接送 poi.category（Nominatim raw 'tourism' /
+      // 'amenity' / 'shop' 等），會被 pois.type CHECK constraint 拒收 → 503。
+      // 走 mapNominatimCategory() 映射到 whitelist（同 InlineAddPoi 用法）。
       const createResp = await apiFetch<{ id: number }>('/pois/find-or-create', {
         method: 'POST',
         body: JSON.stringify({
           name: poi.name,
-          type: poi.category || 'poi',
+          type: mapNominatimCategory(poi.category),
           lat: poi.lat,
           lng: poi.lng,
           address: poi.address,
