@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.5] - 2026-04-26
+
+**PR-T: ExplorePage 儲存 503 修 — Nominatim raw category 沒映射到 whitelist（QA round 8）**。User 截圖：「搜尋的儲存會出現錯誤」。Claude 自己測 prod 找到根因。
+
+### Fixed
+- **ExplorePage 「+ 儲存」 → 503** — `POST /api/pois/find-or-create` 回 503，user toast「目前繁忙碌中，請稍後再試」。根因：ExplorePage 直接送 `type: poi.category || 'poi'`（Nominatim 原始 class，例如 `'tourism'` / `'amenity'` / `'shop'`），不在 `pois.type` CHECK constraint 白名單內（`'hotel','restaurant','shopping','parking','attraction','transport','activity','other'`），SQLite CHECK 失敗 → backend 翻成 SYS_DB_ERROR 503。
+- **修：套用 `mapNominatimCategory()`** — InlineAddPoi 一直有這個映射，ExplorePage 沒有。新增共用 `src/lib/poiCategory.ts` 把 mapping 抽出來，ExplorePage + InlineAddPoi 都改 import 用。Nominatim raw → tripline whitelist 已知對應（hotel/lodging/tourism→hotel、restaurant/food/amenity→restaurant、shop/mall/retail→shopping、parking→parking、transport/railway/airport→transport、activity/leisure→activity、其他→attraction）。
+
+### Added
+- **`src/lib/poiCategory.ts`** — 新共用 lib，export `mapNominatimCategory(category) → PoiType` + `PoiType` type union。Single source of truth for Nominatim → whitelist mapping。
+
+### Internal
+- `InlineAddPoi.tsx` — 移除 inline `mapNominatimCategory` function，改 import from lib。
+- `ExplorePage.tsx` — `type: poi.category || 'poi'` → `type: mapNominatimCategory(poi.category)`。
+- 抓 bug 用 /browse skill 對 prod 真實登入測試 + 看 network log 抓到「POST /api/pois/find-or-create → 503」 + manual 重 POST with `type: "attraction"` 確認映射後回 200。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.4] - 2026-04-26
 
 **PR-S: 補定義 `--z-modal` token，修 NewTripModal 仍被 bottom nav 蓋（QA round 7）**。User 截圖回報 PR-P portal 後 modal 還是會被 nav 切掉、無法捲到底。
