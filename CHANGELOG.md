@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.0] - 2026-04-26
+
+**PR-O: 帳號頁簡化 + sidebar 管理 → trip 共編 IA 重組（V2-P7）**。User 指示 IA：「只保留帳號，登出移到最下方，原 sidebar 管理功能移到行程內做共編功能；一般帳號針對自己行程設定共編，admin 帳號可以對所有行程設定共編。」
+
+### Added
+- **`CollabSheet` component**（`src/components/trip/CollabSheet.tsx`）— 每個 trip 在 OverflowMenu 「更多 → 共編設定」 點開的 sheet。提供已授權成員 list + 新增 email + 移除 perm。reuse `usePermissions` hook + `apiFetchRaw` POST/DELETE。
+- **`group` icon**（`src/components/shared/Icon.tsx`）— Material 風格人群 SVG，用於共編入口（OverflowMenu + ACTION_MENU_GRID）。
+- **`'collab': '共編設定'`** 加入 `SHEET_TITLES` 與 `OVERFLOW_ITEMS`（settings group）+ `ACTION_MENU_GRID`（mobile bottom-nav 「更多」 sheet 顯示）。
+- **`tests/unit/collab-sheet.test.tsx`** — empty tripId placeholder + populated load + add POST → reload 三個 smoke case。
+
+### Changed
+- **API: `/api/permissions` GET/POST/DELETE 從 admin-only 放寬為 admin OR trip owner**。新 helper `ensureCanManageTripPerms(context, auth, tripId)` 在 `permissions.ts` export，DELETE 端反查 `record.trip_id` 後驗證。一般 user 可管自己 owner 行程的共編；admin 仍對所有行程有權。
+- **`SessionsPage` (帳號頁) 簡化** — heading 從「帳號設定 / 裝置管理、深淺模式與登出」 改為純「帳號 / {email}」。`.tp-account-actions` 中段 block 移除，改為 `.tp-account-footer` block 放在頁面**最下方**（device list + info banner 之後），裡面是深淺模式 toggle + 登出按鈕。
+- **`DesktopSidebar` 拿掉「管理」 nav item** — `NAV_ITEM_MANAGE` const 移除，`isAdmin` prop 標 `@deprecated`（保留以避免 ConnectedSidebar 端 break）。
+
+### Removed
+- **`src/pages/AdminPage.tsx`** — admin 共編管理已搬進 CollabSheet，整檔刪除。
+- **`tests/unit/admin-page.test.tsx`** — 對應 AdminPage 的 8 個 test 整檔刪除（被新 collab-sheet.test.tsx 3 個 case 替代，net -5 tests）。
+
+### Deprecated
+- `/admin` route → `Navigate to="/trips" replace`。typeing /admin 在 URL bar 會跳到行程列表（admin 從各 trip 的 OverflowMenu 進共編 sheet）。
+- Cloudflare Access policy sync code（`addEmailToAccessPolicy` / `removeEmailFromAccessPolicy`）— V2-P6 cutover 後 CF Access 已移除，這些 best-effort sync 對非 admin 來說 env vars 不存在會 silent fail，無影響但屬 dead code。下個 sweep 可清。
+
+### Internal
+- `tests/unit/desktop-sidebar.test.tsx` — admin nav item 測試從「應該看到」改為「也不再看到」。
+- `tests/unit/overflow-menu-divider.test.tsx` — 第三個 divider index 7 → 8（settings group 多 collab 一項）。
+- `tests/unit/quick-panel.test.js` — OVERFLOW_ITEMS length 11 → 12，expected keys 加入 `'collab'`。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
+### 後續可加
+- CollabSheet 加 role 切換（owner / editor / viewer）— 目前一律 'member'。
+- CollabSheet 加擁有者標示（顯示 `trip.owner` 跟 trip_permissions list 區分）。
+- CollabSheet 加離開行程按鈕（user 自己離開）— 目前只有 owner/admin 可移除別人。
+- AdminDashboard 全 trip 視角（admin only）— 目前 admin 只能進單個 trip 的 collab sheet，沒有 cross-trip 視圖。
+
 ## [2.13.3] - 2026-04-26
 
 **PR-N: 剩下 7 項 anti-slop HIGH 修正（hex hardcode → tokens, decorative emoji → Icon）**。User 直接也修指示，audit 9 項裡 PR-M 已清 3 項，本 PR 清剩 6 項 HIGH（IdeasTabContent / OceanMap / DayNav / TripsListPage / EntryActionPopover / InlineAddPoi）。

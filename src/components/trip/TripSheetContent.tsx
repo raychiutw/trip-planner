@@ -9,6 +9,7 @@ import DocCard from './DocCard';
 import FlightSheet from './FlightSheet';
 import SuggestionSheet from './SuggestionSheet';
 import TodayRouteSheet from './TodayRouteSheet';
+import CollabSheet from './CollabSheet';
 import Icon from '../shared/Icon';
 import { toTimelineEntry } from '../../lib/mapDay';
 import { COLOR_MODE_OPTIONS } from '../../lib/appearance';
@@ -27,6 +28,7 @@ export const SHEET_TITLES: Record<string, string> = {
   'today-route': '今日路線',
   'trip-select': '切換行程',
   appearance: '外觀設定',
+  collab: '共編設定',
   'action-menu': '更多功能',
 };
 
@@ -62,6 +64,7 @@ const ACTION_MENU_GRID: { key: string; icon: string; label: string; requiresOnli
   { key: 'emergency',    icon: 'emergency',    label: '緊急' },
   { key: 'backup',       icon: 'backup',       label: '備案' },
   { key: 'suggestions',  icon: 'lightbulb',    label: 'AI 建議' },
+  { key: 'collab',       icon: 'group',        label: '共編', requiresOnline: true },
   { key: 'trip-select',  icon: 'swap-horiz',   label: '切換行程', requiresOnline: true },
   { key: 'appearance',   icon: 'palette',      label: '外觀' },
 ];
@@ -144,6 +147,8 @@ export default function TripSheetContent({
             </div>
           </div>
         );
+      case 'collab':
+        return <CollabSheet tripId={activeTripId ?? ''} />;
       case 'appearance':
         return (
           <div className="max-w-[520px] mx-auto p-padding-h">

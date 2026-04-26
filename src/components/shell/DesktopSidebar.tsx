@@ -18,6 +18,10 @@
  * /devex-review 2026-04-26：sidebar 拿掉「登出」link。登出走 account chip →
  * /settings/sessions 內的 device row revoke，避免 destructive action 跟主要
  * nav 同框，降低誤點機率。
+ *
+ * V2-P7 PR-O 2026-04-26：sidebar 拿掉「管理」 nav item。原 admin 共編管理
+ * 功能搬進每個 trip 的 OverflowMenu →「共編設定」 sheet（CollabSheet），
+ * 一般 user 也可管自己 owner 行程，不再侷限 admin。
  */
 import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
@@ -26,7 +30,7 @@ import Icon from '../shared/Icon';
 import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'explore' | 'login' | 'manage';
+  key: 'chat' | 'trips' | 'map' | 'explore' | 'login';
   label: string;
   href: string;
   icon: string;
@@ -43,11 +47,6 @@ const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
   { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
   { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
 ];
-
-const NAV_ITEM_MANAGE: NavItemConfig = {
-  key: 'manage', label: '管理', href: '/admin', icon: 'gear',
-  matchPrefixes: ['/admin'],
-};
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
   for (const prefix of item.matchPrefixes) {
@@ -172,23 +171,22 @@ export interface SidebarUser {
 export interface DesktopSidebarProps {
   /** Current authenticated user — null = 未登入 */
   user?: SidebarUser | null;
-  /** Whether the current user has admin access (gates the 管理 nav item). */
+  /** @deprecated PR-O：管理 nav 已廢，admin 改走 trip-level CollabSheet。
+   * Prop 保留以避免 ConnectedSidebar 端 break，但已無作用。 */
   isAdmin?: boolean;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
 
-export default function DesktopSidebar({ user, isAdmin = false, brand }: DesktopSidebarProps) {
+export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
   const { pathname } = useLocation();
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
   // Logged in: hide '登入' (use chip + 登出 link 在底部 instead).
   // Logged out: show all 5 nav items including 登入.
-  // Admin: append '管理' (legacy AI editor / data ops) — non-admins never see it.
-  const baseItems = user
+  const visibleNavItems = user
     ? NAV_ITEMS.filter((item) => item.key !== 'login')
     : NAV_ITEMS;
-  const visibleNavItems = isAdmin ? [...baseItems, NAV_ITEM_MANAGE] : baseItems;
 
   return (
     <>

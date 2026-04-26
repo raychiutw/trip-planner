@@ -72,17 +72,14 @@ describe('DesktopSidebar — active state', () => {
     expect(links[0].className).toMatch(/is-active/);
   });
 
-  it('admin user 看到「管理」nav item，且在 /admin 時 active', () => {
-    const { getAllByRole } = renderSidebar({
-      path: '/admin',
+  it('PR-O 後 admin user 也不再看到「管理」nav item（已搬進每個行程的共編 sheet）', () => {
+    const { container } = renderSidebar({
+      path: '/trips',
       user: { name: 'Admin', email: 'admin@trip.io' },
       isAdmin: true,
     });
-    const links = getAllByRole('link');
-    const labels = links.map((l) => l.textContent ?? '');
-    const manageIdx = labels.findIndex((t) => t.includes('管理'));
-    expect(manageIdx).toBeGreaterThanOrEqual(0);
-    expect(links[manageIdx]?.className).toMatch(/is-active/);
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).not.toContain('管理');
   });
 
   it('non-admin user 不顯示「管理」nav item', () => {

@@ -136,28 +136,28 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-/* Account quick actions block — surfaces 深淺模式 + 登出 on this page so
- * mobile users (no sidebar) can reach them via the 帳號 bottom-nav tab. */
-.tp-account-actions {
+/* PR-O 2026-04-26：登出區搬到頁面最下方（user 指示）+ 簡化為純 logout button。
+ * 深淺模式 toggle 仍留在帳號頁但移到 logout 上方，跟 logout 共用同一容器。 */
+.tp-account-footer {
+  margin-top: 32px;
+  padding: 20px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: flex; flex-direction: column; gap: 12px;
-  margin-bottom: 24px;
+  display: flex; flex-direction: column; gap: 16px;
 }
-.tp-account-actions-row {
+.tp-account-footer-row {
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; flex-wrap: wrap;
 }
-.tp-account-actions-label {
+.tp-account-footer-label {
   font-size: var(--font-size-callout);
   font-weight: 600;
   color: var(--color-foreground);
 }
 .tp-account-logout-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-destructive);
   background: transparent; color: var(--color-destructive);
@@ -165,6 +165,7 @@ const SCOPED_STYLES = `
   text-decoration: none;
   min-height: var(--spacing-tap-min);
   text-align: center;
+  width: 100%;
 }
 .tp-account-logout-btn:hover { background: var(--color-destructive-bg); }
 `;
@@ -271,8 +272,8 @@ export default function SessionsPage() {
         <div className="tp-page-heading">
           <div className="tp-page-heading-text">
             <div className="tp-page-heading-crumb">帳號</div>
-            <h1>帳號設定</h1>
-            <p>裝置管理、深淺模式與登出。發現可疑裝置請立即撤銷。</p>
+            <h1>帳號</h1>
+            {user?.email && <p data-testid="sessions-user-email">{user.email}</p>}
           </div>
           {otherSessions.length > 0 && (
             <button
@@ -284,20 +285,6 @@ export default function SessionsPage() {
               {revokingAll ? '登出中…' : '登出其他全部裝置'}
             </button>
           )}
-        </div>
-
-        <div className="tp-account-actions" data-testid="account-actions">
-          <div className="tp-account-actions-row">
-            <span className="tp-account-actions-label">深淺模式</span>
-            <ThemeToggle testId="sessions-theme" />
-          </div>
-          <a
-            href="/api/oauth/logout"
-            className="tp-account-logout-btn"
-            data-testid="sessions-logout"
-          >
-            登出此帳號
-          </a>
         </div>
 
         {sessions === null && !error && (
@@ -383,6 +370,21 @@ export default function SessionsPage() {
             登出某裝置後，該裝置上的 Tripline 會立即跳回登入畫面。
             OAuth 已連結 app 不受影響（請至「<a href="/settings/connected-apps">已連結的應用</a>」管理）。
           </div>
+        </div>
+
+        {/* PR-O 2026-04-26：深淺模式 + 登出搬到頁面最下方（user 指示）。 */}
+        <div className="tp-account-footer" data-testid="account-footer">
+          <div className="tp-account-footer-row">
+            <span className="tp-account-footer-label">深淺模式</span>
+            <ThemeToggle testId="sessions-theme" />
+          </div>
+          <a
+            href="/api/oauth/logout"
+            className="tp-account-logout-btn"
+            data-testid="sessions-logout"
+          >
+            登出此帳號
+          </a>
         </div>
       </div>
       </div>

@@ -43,9 +43,9 @@ describe('OverflowMenu — needsDivider 結構斷言 (F005)', () => {
     expect(positions[1]).toBe(5); // trip-select is index 5, prev=backup(info)
   });
 
-  it('第三個 divider 位於 settings → export 邊界（index 7）', () => {
+  it('第三個 divider 位於 settings → export 邊界（index 8 — PR-O 後 settings 多 collab 一項，從 7 → 8）', () => {
     const positions = getDividerPositions(OVERFLOW_ITEMS);
-    expect(positions[2]).toBe(7); // download-pdf is index 7, prev=appearance(settings)
+    expect(positions[2]).toBe(8); // download-pdf is index 8 (collab + trip-select + appearance + 3 prev groups)
   });
 
   it('同 group 內不應有 divider（trip group 前 3 個 item）', () => {

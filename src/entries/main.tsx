@@ -56,7 +56,9 @@ function lazyWithRetry<P = any>(
   );
 }
 
-const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
+// AdminPage removed 2026-04-26 (PR-O) — admin 共編管理拆進每個 trip 的
+// OverflowMenu →「共編設定」 sheet (CollabSheet)，一般 user 也可管自己 owner
+// 行程。/admin 維持 backward-compat redirect 到 /trips。
 // ManagePage removed 2026-04-26 — superseded by /chat. tp-request skill on
 // Mac Mini auto-classifies improve-trip vs question intent; the legacy
 // chat-style editor at /manage is redundant. /manage now redirects to /chat.
@@ -138,8 +140,8 @@ if (el) {
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
             <Routes>
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="/admin/" element={<AdminPage />} />
+              <Route path="/admin" element={<Navigate to="/trips" replace />} />
+              <Route path="/admin/" element={<Navigate to="/trips" replace />} />
               <Route path="/manage" element={<Navigate to="/chat" replace />} />
               <Route path="/manage/" element={<Navigate to="/chat" replace />} />
               <Route path="/chat" element={<ChatPage />} />

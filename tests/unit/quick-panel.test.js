@@ -33,16 +33,17 @@ function parseOverflowItems(source) {
 describe('OverflowMenu items', () => {
   const items = parseOverflowItems(overflowMenuTsx);
 
-  it('OVERFLOW_ITEMS 有 11 項（R19 移除 driving 交通統計）', () => {
+  it('OVERFLOW_ITEMS 有 12 項（PR-O 加入 collab 共編設定）', () => {
     // R19: 交通統計 card 移除，timeline 首 entry 承載前日住宿 check-out 語意
-    expect(items).toHaveLength(11);
+    // PR-O: 加入 collab 共編設定（settings group），從 11 → 12
+    expect(items).toHaveLength(12);
   });
 
-  it('包含所有預期 keys（今日路線/AI建議/航班 + 出發/備案/切換行程/外觀/4 匯出格式）', () => {
+  it('包含所有預期 keys（今日路線/AI建議/航班 + 出發/備案/共編/切換行程/外觀/4 匯出格式）', () => {
     const expected = [
       'today-route', 'suggestions', 'flights',
       'checklist', 'backup',
-      'trip-select', 'appearance',
+      'collab', 'trip-select', 'appearance',
       'download-pdf', 'download-md', 'download-json', 'download-csv',
     ];
     expect(items.map(i => i.key)).toEqual(expected);
