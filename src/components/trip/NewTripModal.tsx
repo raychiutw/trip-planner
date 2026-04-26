@@ -268,6 +268,10 @@ const SCOPED_STYLES = `
   display: flex; gap: 8px; overflow-x: auto;
   padding-bottom: 4px;
   scrollbar-width: thin;
+  /* QA 2026-04-26 BUG-031：右側 28px gradient mask 暗示「還有月份可滑」。
+   * 比照 PR-A DayNav + PR-D mobile carousel 同 pattern。 */
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
 }
 .tp-new-flex-months::-webkit-scrollbar { height: 4px; }
 .tp-new-flex-months::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 2px; }
@@ -293,7 +297,11 @@ const SCOPED_STYLES = `
   color: var(--color-accent-foreground, #fff);
   border-color: var(--color-accent);
 }
-.tp-new-flex-month .icon { font-size: 16px; line-height: 1; }
+.tp-new-flex-month .icon {
+  /* QA 2026-04-26 BUG-032：emoji 在 flex column 中 vertical alignment 用
+   * line-height + display block 強制 baseline 對齊（active state 不偏移）。 */
+  font-size: 18px; line-height: 1; display: block; height: 18px;
+}
 .tp-new-flex-month .m { font-size: var(--font-size-footnote); font-weight: 700; }
 .tp-new-flex-month .y { font-size: var(--font-size-caption); opacity: 0.75; }
 

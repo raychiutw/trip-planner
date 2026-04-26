@@ -809,7 +809,7 @@ export default function GlobalMapPage() {
                       <div className="pc-eyebrow">
                         {pin.time ? `${pin.time} · STOP ${pin.index || '—'}` : `STOP ${pin.index || '—'}`}
                       </div>
-                      <div className="pc-title">{pin.title}</div>
+                      <div className="pc-title" title={pin.title}>{pin.title}</div>
                     </button>
                   ))}
                 </div>

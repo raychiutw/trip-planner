@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.6] - 2026-04-26
+
+**QA fix series PR-F: misc polish（4 issues）**。Theme toggle / month carousel / emoji alignment / mobile card title tooltip — 一輪 polish 收尾。
+
+### Fixed
+- **BUG-006 ThemeToggle active state** — pressed button 從 `shadow-sm` 升 `shadow-md + inset 1.5px accent border + accent-deep color`，跟 NewTripModal segmented (PR-B) 一致。
+- **BUG-031 month carousel right-fade mask** — `.tp-new-flex-months` 加 28px gradient mask + 同 PR-A DayNav / PR-D mobile carousel pattern。
+- **BUG-032 month emoji alignment** — `.tp-new-flex-month .icon` 從 16 → 18px + `display: block` + `height: 18px` 強制 baseline 對齊（active state 不偏移）。
+- **BUG-037 mobile carousel title tooltip** — `.pc-title` 加 `title={pin.title}` HTML attribute，long names truncated 後 hover 看 full text。
+
+### 暫緩
+- BUG-022 popover heading z-index — 經分析非可重現 issue，skip。
+- BUG-023 popover backdrop — mockup 規範無 backdrop，skip per mockup directive。
+- BUG-036 mobile day strip mask — PR-A 已加（DayNav 桌機 + mobile 共用同 CSS），skip。
+
+### Internal
+- 純 CSS + 1 JSX attribute。verify gate: tsc clean / 1035 tests pass。
+
 ## [2.12.5] - 2026-04-26
 
 **QA fix series PR-E: formatDuration 中文化（2 issues）**。Timeline rail / map carousel / lightbox 等多處共用 `formatDuration` helper，從 raw 「30m」「1h 30m」 改成中文「30 分鐘」「1 小時 30 分」 — 一處改 cover 4+ 顯示位置。

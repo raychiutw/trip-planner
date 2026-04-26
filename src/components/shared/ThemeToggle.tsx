@@ -26,9 +26,11 @@ const SCOPED_STYLES = `
 }
 .tp-theme-toggle-btn:hover:not([aria-pressed="true"]) { color: var(--color-foreground); }
 .tp-theme-toggle-btn[aria-pressed="true"] {
+  /* QA 2026-04-26 BUG-006：跟 NewTripModal segmented 一致 — accent border +
+   * shadow-md，active 一眼看得出。原 shadow-sm 對比度不足。 */
   background: var(--color-background);
-  color: var(--color-foreground);
-  box-shadow: var(--shadow-sm);
+  color: var(--color-accent-deep);
+  box-shadow: var(--shadow-md), inset 0 0 0 1.5px var(--color-accent);
 }
 `;
 
