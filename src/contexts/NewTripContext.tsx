@@ -37,6 +37,11 @@ export function NewTripProvider({ children }: { children: ReactNode }) {
   const handleCreated = useCallback(
     (tripId: string) => {
       setOpen(false);
+      // PR-DD 2026-04-26：新增成功後 dispatch event，讓 TripsListPage（或任
+      // 何 listener）re-fetch trip list。原本 TripsListPage useEffect 只在
+      // mount 跑一次，新增 trip 後 user 看不到，要切換 tab 才刷新（onion523
+      // 回報）。
+      window.dispatchEvent(new CustomEvent('tp-trip-created', { detail: { tripId } }));
       navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
     },
     [navigate],
