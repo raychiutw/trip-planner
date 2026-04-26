@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Icon from '../components/shared/Icon';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { apiFetch } from '../lib/apiClient';
@@ -60,6 +61,36 @@ const SCOPED_STYLES = `
 .sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
 
 .trip-content { min-width: 0; }
+
+/* PR-P 2026-04-26：trip-actions row — embedded mode（noShell）也需要
+ * visible 共編入口。topbar 被 noShell 隱藏後，user 找不到任何方式進入共編
+ * sheet。這個 row 在 trip 主內容最上方，desktop / mobile 都看得到。 */
+.tp-trip-actions {
+  display: flex; gap: 6px; justify-content: flex-end;
+  padding: 8px 12px 0;
+}
+.tp-trip-action-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  cursor: pointer;
+  min-height: 32px;
+  box-shadow: var(--shadow-sm);
+  transition: background 120ms, border-color 120ms;
+}
+.tp-trip-action-chip:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+}
+.tp-trip-action-chip .svg-icon { width: 14px; height: 14px; }
+.tp-trip-action-chip:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
+}
 
 /* Print mode */
 .print-mode .sticky-nav { display: none; }
@@ -624,6 +655,24 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
       )}
 
       <ToastContainer />
+
+      {/* PR-P 2026-04-26：共編 chip — embedded mode (noShell) 把 topbar +
+       * OverflowMenu 都藏掉，user 找不到任何 entry 進共編 sheet。這個 chip
+       * 永遠 render（不管 noShell），讓行程擁有者隨時能改共編。 */}
+      {!loading && trip && (
+        <div className="tp-trip-actions" aria-label="行程操作">
+          <button
+            type="button"
+            className="tp-trip-action-chip"
+            onClick={() => setActiveSheet('collab')}
+            data-testid="trip-actions-collab"
+            aria-label="開啟共編設定"
+          >
+            <Icon name="group" />
+            <span>共編</span>
+          </button>
+        </div>
+      )}
 
       <main className="ocean-page">
         {!loading && trip && (

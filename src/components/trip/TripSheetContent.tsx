@@ -56,16 +56,17 @@ interface TripSheetContentProps {
   isOnline?: boolean;
 }
 
-/** Items rendered in the action-menu sheet's 2-column grid (4 rows × 2 cols). */
+/** Items rendered in the action-menu sheet's 2-column grid (4 rows × 2 cols).
+ * PR-P：collab 移到第一格（最顯眼位置），mobile user 一進「更多」 sheet 就看到。 */
 const ACTION_MENU_GRID: { key: string; icon: string; label: string; requiresOnline?: boolean }[] = [
+  { key: 'collab',       icon: 'group',        label: '共編', requiresOnline: true },
+  { key: 'trip-select',  icon: 'swap-horiz',   label: '切換行程', requiresOnline: true },
   { key: 'flights',      icon: 'plane',        label: '航班' },
   { key: 'today-route',  icon: 'route',        label: '路線' },
   { key: 'checklist',    icon: 'check-circle', label: '清單' },
   { key: 'emergency',    icon: 'emergency',    label: '緊急' },
   { key: 'backup',       icon: 'backup',       label: '備案' },
   { key: 'suggestions',  icon: 'lightbulb',    label: 'AI 建議' },
-  { key: 'collab',       icon: 'group',        label: '共編', requiresOnline: true },
-  { key: 'trip-select',  icon: 'swap-horiz',   label: '切換行程', requiresOnline: true },
   { key: 'appearance',   icon: 'palette',      label: '外觀' },
 ];
 

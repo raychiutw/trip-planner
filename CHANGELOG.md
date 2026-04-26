@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.1] - 2026-04-26
+
+**PR-P: NewTripModal portal 修底部無法操作 + 共編 entry 提升 discoverability（QA round 5）**。User 兩個截圖回報：modal 下方控制鍵被 bottom nav 蓋住無法 tap，且共編設定找不到。
+
+### Fixed
+- **NewTripModal 底部控制鍵被 bottom nav 蓋住** — `return createPortal(<div className="tp-new-modal-backdrop">…</div>, document.body)`，escape 任何 ancestor stacking context（AppShell scroll container / TripsListPage sheet 等）。z-index 60 backdrop 真正高過 sticky bottom nav (z-index 10)，mobile 下方「選日期 / 彈性日期」 segmented 跟其下的所有控制鍵全部可 tap。
+- **共編設定 mobile 找不到入口** — embedded mode（`/trips?selected=` 由 TripsListPage 提供 chrome）把 TripPage 的 topbar + OverflowMenu kebab 都 hide 了，原本 user 完全沒有路徑進共編 sheet。新增 `.tp-trip-actions` 永遠 render 在 trip 主內容最上方（不分 noShell），裡面是「共編 + group icon」 chip 直接 `setActiveSheet('collab')`。
+
+### Changed
+- **`ACTION_MENU_GRID` 共編移到第一格** — mobile「更多」 sheet 第一張卡片就是共編，最顯眼位置。從 `[航班, 路線, 清單, 緊急, 備案, AI 建議, 共編, 切換行程, 外觀]` → `[共編, 切換行程, 航班, 路線, 清單, 緊急, 備案, AI 建議, 外觀]`。
+
+### Internal
+- `NewTripModal` 加 `import { createPortal } from 'react-dom'`，`return` 包成 `createPortal((<div…/>), document.body)`。jsdom 環境下 portal 同樣 work，1026 tests 全綠。
+- `TripPage` 加 `import Icon from '../components/shared/Icon'`，新 `.tp-trip-action-chip` styling（accent hover 反白）+ JSX 一個 button。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.0] - 2026-04-26
 
 **PR-O: 帳號頁簡化 + sidebar 管理 → trip 共編 IA 重組（V2-P7）**。User 指示 IA：「只保留帳號，登出移到最下方，原 sidebar 管理功能移到行程內做共編功能；一般帳號針對自己行程設定共編，admin 帳號可以對所有行程設定共編。」

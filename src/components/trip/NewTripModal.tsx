@@ -19,6 +19,7 @@
  * 對應 mindtrip 8:31.31 split-screen 與 8:32.17 numeric stepper / month carousel。
  */
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetchRaw } from '../../lib/apiClient';
 
 const SCOPED_STYLES = `
@@ -507,7 +508,11 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       ? `${destShown}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`
       : '請先輸入目的地';
 
-  return (
+  // PR-P 2026-04-26：portal 到 document.body，escape 任何 ancestor stacking
+  // context（AppShell scroll container / TripsListPage sheet 等），讓 backdrop
+  // z-index 60 真正高過 sticky bottom nav (z-index 10)。修 mobile 下方控制鍵
+  // 被 nav 蓋住無法 tap 的 bug。
+  return createPortal((
     <div
       className="tp-new-modal-backdrop"
       onMouseDown={handleBackdrop}
@@ -713,5 +718,5 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         </div>
       </form>
     </div>
-  );
+  ), document.body);
 }
