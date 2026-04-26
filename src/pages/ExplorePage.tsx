@@ -125,18 +125,20 @@ const SCOPED_STYLES = `
 .explore-search button:disabled { opacity: 0.5; cursor: not-allowed; }
 .explore-search button:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
 
-/* Selection toolbar — appears when ≥1 saved item is checked */
+/* Selection toolbar — appears when ≥1 saved item is checked.
+ * PR-X 2026-04-26：margin-bottom 16 給跟下方 POI grid 留間隔（user 指示）。 */
 .explore-toolbar {
   position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
+  margin-bottom: 16px;
   background: var(--color-accent-subtle);
   border: 1px solid var(--color-accent);
   border-radius: var(--radius-md);
   font-size: var(--font-size-callout); color: var(--color-accent);
 }
-.explore-toolbar-actions { display: flex; gap: 8px; }
+.explore-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .explore-toolbar-btn {
   padding: 8px 14px; border-radius: var(--radius-full);
   border: 1px solid var(--color-accent);
@@ -147,7 +149,16 @@ const SCOPED_STYLES = `
 .explore-toolbar-btn-ghost {
   background: transparent; color: var(--color-accent);
 }
+.explore-toolbar-btn-destructive {
+  background: transparent; color: var(--color-destructive);
+  border-color: var(--color-destructive);
+}
+.explore-toolbar-btn-destructive:hover:not(:disabled) {
+  background: var(--color-destructive-bg);
+  filter: none;
+}
 .explore-toolbar-btn:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
+.explore-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .explore-section h2 {
   font-size: var(--font-size-title3); font-weight: 700;
@@ -270,6 +281,7 @@ export default function ExplorePage() {
   const [saved, setSaved] = useState<SavedPoiRow[]>([]);
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
   const [selectedSavedIds, setSelectedSavedIds] = useState<Set<number>>(new Set());
+  const [deletingSelected, setDeletingSelected] = useState(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
   const [trips, setTrips] = useState<TripPickerRow[] | null>(null);
 
@@ -370,6 +382,36 @@ export default function ExplorePage() {
   }
 
   function clearSelection() { setSelectedSavedIds(new Set()); }
+
+  // PR-X 2026-04-26：批次刪除選中的 saved POI。confirm → Promise.all DELETE
+  // → optimistic local removal + reload。
+  async function handleDeleteSelected() {
+    const ids = Array.from(selectedSavedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`確定刪除選中的 ${ids.length} 個收藏？此操作無法復原。`)) return;
+    setDeletingSelected(true);
+    try {
+      const results = await Promise.all(
+        ids.map((id) =>
+          apiFetch(`/saved-pois/${id}`, { method: 'DELETE' })
+            .then(() => ({ id, ok: true as const }))
+            .catch((err: unknown) => ({ id, ok: false as const, err })),
+        ),
+      );
+      const failed = results.filter((r) => !r.ok);
+      if (failed.length === 0) {
+        showToast(`已刪除 ${ids.length} 個收藏`, 'success', 2400);
+      } else if (failed.length < ids.length) {
+        showToast(`已刪除 ${ids.length - failed.length} 個，${failed.length} 個失敗`, 'error', 3000);
+      } else {
+        showToast(`刪除失敗，請稍後再試`, 'error', 3000);
+      }
+      setSelectedSavedIds(new Set());
+      await loadSaved();
+    } finally {
+      setDeletingSelected(false);
+    }
+  }
 
   async function openTripPicker() {
     if (selectedSavedIds.size === 0) return;
@@ -505,6 +547,7 @@ export default function ExplorePage() {
                     type="button"
                     className="explore-toolbar-btn explore-toolbar-btn-ghost"
                     onClick={clearSelection}
+                    disabled={deletingSelected}
                     data-testid="explore-clear-selection"
                   >
                     取消選擇
@@ -513,9 +556,19 @@ export default function ExplorePage() {
                     type="button"
                     className="explore-toolbar-btn"
                     onClick={openTripPicker}
+                    disabled={deletingSelected}
                     data-testid="explore-add-to-trip"
                   >
                     加入行程
+                  </button>
+                  <button
+                    type="button"
+                    className="explore-toolbar-btn explore-toolbar-btn-destructive"
+                    onClick={handleDeleteSelected}
+                    disabled={deletingSelected}
+                    data-testid="explore-delete-selected"
+                  >
+                    {deletingSelected ? '刪除中…' : '刪除'}
                   </button>
                 </div>
               </div>
