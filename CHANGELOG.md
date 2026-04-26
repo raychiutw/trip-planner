@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.23] - 2026-04-26
+
+**PR-NN/OO bundle: mobile-topbar 取代 floating back btn + CollabModal → InfoSheet 統一（QA round 22）**。
+
+### Fixed (PR-NN)
+- **手機回上一頁自己一行 + 跟 mockup 不符** — 原 `.tp-trips-back-btn` 是 40x40 floating sticky 在 TripPage 之上，獨佔一行。改成 56px 全寬 sticky `.tp-embedded-topbar`（對齊 `mockup-trip-v2.html` line 438 `.mobile-topbar`）：[← back btn] [trip name] 兩欄，glass blur 樣式跟 mockup 一致。
+- 修法：刪掉 `.tp-trips-back-btn` CSS + 改 embedded JSX 用 `.tp-embedded-trip` wrapper + `.tp-embedded-topbar` header。
+
+### Changed (PR-OO)
+- **桌機共編 ≠ 手機共編** — TripsListPage 卡片 ⋯ → 共編走 `CollabModal`（centered 520px modal），TripPage 共編 chip 走 `InfoSheet`（slide-up sheet）— 兩個 component、兩種視覺。
+- 修法：TripsListPage 改用 `InfoSheet` + `CollabSheet`，跟 TripPage 共編 chip 同一 sheet 容器。`CollabModal` 已刪除（unused）。
+- 桌機/手機現在都走同樣 slide-up sheet pattern。
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.22] - 2026-04-26
 
 **PR-LL/MM bundle: sheet 再收緊 + card 比照 mobile 尺寸 RWD（QA round 21）**。
