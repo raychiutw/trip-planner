@@ -99,15 +99,15 @@ const SCOPED_STYLES = `
   line-height: 1.3;
 }
 /* Badge — 對照 terracotta-preview .badge / .badge-info：bg rgba + accent
- * color + 6px dot。 */
+ * color + 6px dot。
+ * PR-CC：owner / member 用不同顏色區分。owner = success 綠（語意：你的行程
+ * 擁有者，正向強調），member = accent 橘（次要，但仍是有編輯權）。 */
 .tp-collab-badge {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: var(--font-size-caption2);
   font-weight: 600;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  background: rgba(217, 120, 72, 0.12);
-  color: var(--color-accent-deep);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   align-self: flex-start;
@@ -115,8 +115,32 @@ const SCOPED_STYLES = `
 .tp-collab-badge-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--color-accent);
   flex-shrink: 0;
+}
+.tp-collab-badge-owner {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+.tp-collab-badge-owner .tp-collab-badge-dot {
+  background: var(--color-success);
+}
+.tp-collab-badge-member {
+  background: rgba(217, 120, 72, 0.12);
+  color: var(--color-accent-deep);
+}
+.tp-collab-badge-member .tp-collab-badge-dot {
+  background: var(--color-accent);
+}
+
+/* PR-CC：owner row 用「擁有者」 label 取代「移除」 button，視覺強調此 row
+ * 不可被移除。 */
+.tp-collab-owner-tag {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 6px 10px;
 }
 
 /* 移除 button — 對照 terracotta-preview .btn-destructive ghost pattern。
@@ -300,26 +324,36 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
           <div className="tp-collab-list">
             {permissions.map((p) => {
               const initial = p.email.charAt(0).toUpperCase() || '?';
+              const isOwner = p.role === 'owner';
+              const badgeClass = isOwner ? 'tp-collab-badge-owner' : 'tp-collab-badge-member';
               return (
                 <div className="tp-collab-row" key={p.id} data-testid={`collab-row-${p.id}`}>
                   <div className="tp-collab-row-avatar" aria-hidden="true">{initial}</div>
                   <div className="tp-collab-row-body">
                     <span className="tp-collab-row-email">{p.email}</span>
-                    <span className="tp-collab-badge" data-testid={`collab-role-${p.id}`}>
+                    <span className={`tp-collab-badge ${badgeClass}`} data-testid={`collab-role-${p.id}`}>
                       <span className="tp-collab-badge-dot" aria-hidden="true" />
                       {p.role}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    className="tp-collab-remove"
-                    aria-label={`移除 ${p.email}`}
-                    disabled={removingId === p.id}
-                    onClick={() => handleRemove(p.id, p.email)}
-                    data-testid={`collab-remove-${p.id}`}
-                  >
-                    {removingId === p.id ? '移除中…' : '移除'}
-                  </button>
+                  {/* PR-CC：owner 不可被移除（含自己），顯示「擁有者」 label
+                      取代 button。member 才有 remove button。 */}
+                  {isOwner ? (
+                    <span className="tp-collab-owner-tag" data-testid={`collab-owner-tag-${p.id}`}>
+                      擁有者
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="tp-collab-remove"
+                      aria-label={`移除 ${p.email}`}
+                      disabled={removingId === p.id}
+                      onClick={() => handleRemove(p.id, p.email)}
+                      data-testid={`collab-remove-${p.id}`}
+                    >
+                      {removingId === p.id ? '移除中…' : '移除'}
+                    </button>
+                  )}
                 </div>
               );
             })}

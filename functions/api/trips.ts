@@ -23,12 +23,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const id = body.id as string | undefined;
   const name = body.name as string | undefined;
-  const owner = body.owner as string | undefined;
   const startDate = body.startDate as string | undefined;
   const endDate = body.endDate as string | undefined;
 
-  if (!id || !name || !owner || !startDate || !endDate) {
-    throw new AppError('DATA_VALIDATION', '缺必填欄位：id, name, owner, startDate, endDate');
+  // PR-CC 2026-04-26：owner 強制 = auth.email，不再讀 body.owner（防偽造）。
+  // User 指示「之後的誰建立就是誰是 owner」 — 從 server-side auth 取唯一可信來源。
+  const owner = auth.email;
+
+  if (!id || !name || !startDate || !endDate) {
+    throw new AppError('DATA_VALIDATION', '缺必填欄位：id, name, startDate, endDate');
   }
   if (!TRIPID_RE.test(id) || id.length > 100) {
     throw new AppError('DATA_VALIDATION', 'tripId 格式錯誤：僅允許小寫英數字與連字號，最長 100 字元');
@@ -83,10 +86,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
   }
 
+  // PR-CC 2026-04-26：自動加 owner 進 trip_permissions role='owner'（取代舊
+  // 'admin' 角色）。`hasPermission` 三種 role 都認，前端 CollabSheet 可區分
+  // 顯示 owner row 不可移除。
   stmts.push(
     db.prepare(
       'INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?)'
-    ).bind(auth.email, id, 'admin')
+    ).bind(auth.email, id, 'owner')
   );
 
   await db.batch(stmts);

@@ -133,7 +133,7 @@ export interface Permission {
   email: string;
   /** DB column `trip_id`; '*' means all trips */
   tripId: string;
-  role: 'admin' | 'member';
+  role: 'owner' | 'admin' | 'member';
 }
 
 // ---------------------------------------------------------------------------

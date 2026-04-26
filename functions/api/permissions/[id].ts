@@ -27,6 +27,13 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');
   }
 
+  // PR-CC 2026-04-26：owner 不可被刪（含 self-delete）。User 指示「不能刪除
+  // 自己 owner」 — destructive 操作必須 limit。要轉移 owner 走另外 endpoint
+  // (未來實作)，不能直接 DELETE。
+  if (record.role === 'owner') {
+    throw new AppError('PERM_DENIED', '不可移除行程擁有者');
+  }
+
   await ensureCanManageTripPerms(context, auth, record.trip_id);
 
   // 刪除 D1 記錄
