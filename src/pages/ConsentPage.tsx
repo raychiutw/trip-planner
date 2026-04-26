@@ -16,6 +16,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import ErrorBanner from '../components/shared/ErrorBanner';
 
 const SCOPED_STYLES = `
 .tp-consent-shell {
@@ -140,7 +141,7 @@ export default function ConsentPage() {
       <main className="tp-consent-shell" data-testid="consent-page">
         <style>{SCOPED_STYLES}</style>
         <div className="tp-consent-card">
-          <div className="tp-consent-error" role="alert">⚠ {error}</div>
+          <ErrorBanner message={error} testId="consent-error" />
         </div>
       </main>
     );

@@ -15,6 +15,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
+import InlineError from '../components/shared/InlineError';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -381,9 +382,7 @@ export default function ResetPasswordPage() {
               onChange={(e) => setConfirm(e.target.value)}
               data-testid="reset-confirm"
             />
-            {pwError && (
-              <div className="tp-error" data-testid="reset-pw-error">{pwError}</div>
-            )}
+            {pwError && <InlineError message={pwError} testId="reset-pw-error" />}
           </div>
 
           <button

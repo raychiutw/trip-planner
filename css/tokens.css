@@ -179,7 +179,12 @@ html { color-scheme: light dark; }
     --animate-toast-slide-up: toast-slide-up var(--transition-duration-normal) ease forwards;
 
     /* Layout composite */
-    --spacing-toast-top: calc(var(--spacing-nav-h) + var(--spacing-3));
+    /* PR-U 2026-04-26：原值 calc(48 + 12) = 60px 假設 page 有 sticky topbar，
+     * /explore /map /trips landing /sessions 等 mobile page 沒有 topbar 的，
+     * toast 60px 直接覆蓋 page heading（user 截圖回報「目前繁忙碌中」 蓋住
+     * 「探索」 標題）。改 max(16, safe-area-inset-top) 對齊 iOS HIG transient
+     * notification 慣例：頂部 safe area 下方就近顯示，跨 page 一致。 */
+    --spacing-toast-top: max(16px, env(safe-area-inset-top, 16px));
     --spacing-content-h: calc(100dvh - var(--spacing-nav-h));
 }
 

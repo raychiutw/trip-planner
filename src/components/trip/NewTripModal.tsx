@@ -21,6 +21,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetchRaw } from '../../lib/apiClient';
+import InlineError from '../shared/InlineError';
 
 const SCOPED_STYLES = `
 .tp-new-modal-backdrop {
@@ -689,11 +690,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
             />
           </div>
 
-          {error && (
-            <p className="tp-new-modal-error" role="alert" data-testid="new-trip-error">
-              {error}
-            </p>
-          )}
+          {error && <InlineError message={error} testId="new-trip-error" />}
 
           <div className="tp-new-modal-actions">
             <div className="tp-new-modal-summary"><b>{summaryText}</b></div>

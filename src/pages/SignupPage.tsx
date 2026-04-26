@@ -15,6 +15,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
+import InlineError from '../components/shared/InlineError';
 
 const SCOPED_STYLES = `
 .tp-auth-shell {
@@ -240,9 +241,7 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               data-testid="signup-email"
             />
-            {emailError && (
-              <div className="tp-error" data-testid="signup-email-error">{emailError}</div>
-            )}
+            {emailError && <InlineError message={emailError} testId="signup-email-error" />}
           </div>
 
           <div className="tp-form-row">
@@ -258,9 +257,7 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               data-testid="signup-password"
             />
-            {passwordError && (
-              <div className="tp-error" data-testid="signup-password-error">{passwordError}</div>
-            )}
+            {passwordError && <InlineError message={passwordError} testId="signup-password-error" />}
           </div>
 
           <div className="tp-form-row">

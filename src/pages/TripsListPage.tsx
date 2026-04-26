@@ -31,6 +31,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TripCardMenu from '../components/trip/TripCardMenu';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
@@ -434,9 +435,7 @@ export default function TripsListPage() {
             <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
           )}
 
-          {error && (
-            <div className="tp-trips-error" role="alert" data-testid="trips-list-error">{error}</div>
-          )}
+          {error && <ErrorBanner message={error} testId="trips-list-error" />}
 
           {!loading && !error && visibleTrips.length === 0 && (
             <div className="tp-trips-empty-hero" data-testid="trips-list-empty">

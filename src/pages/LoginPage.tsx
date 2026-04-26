@@ -13,6 +13,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import ErrorBanner from '../components/shared/ErrorBanner';
 
 const SCOPED_STYLES = `
 .tp-login-shell {
@@ -469,11 +470,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {bannerError && (
-          <div className="tp-banner tp-banner-error" role="alert" data-testid="login-banner-error">
-            {bannerError}
-          </div>
-        )}
+        {bannerError && <ErrorBanner message={bannerError} testId="login-banner-error" />}
 
         <form className="tp-form" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">

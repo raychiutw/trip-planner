@@ -3,6 +3,31 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.6] - 2026-04-26
+
+**PR-U: 全站錯誤訊息統一 — Toast 跑版修 + 共用 ErrorBanner/InlineError + anti-slop emoji 清（design audit 4 點全修）**。User 指示「全部修」 PR-U/V/W/X bundle。
+
+### Fixed
+- **Toast 跑版** — `--spacing-toast-top` 從 `calc(48 + 12) = 60px` 改 `max(16px, env(safe-area-inset-top, 16px))`。原值假設 page 有 sticky topbar (48px)，但 /explore /map /trips landing /sessions 等 mobile page 沒有 topbar，60px 直接覆蓋 page heading。新值對齊 iOS HIG transient notification 慣例 — 頂部 safe area 下方就近顯示，跨 page 一致。
+
+### Added
+- **`src/components/shared/ErrorBanner.tsx`** — 統一 page-level / form-level 錯誤訊息 banner。內建 `<Icon name="warning" />` + `role="alert"` + destructive token。Single source of truth 取代全站 12 種重複實作。
+- **`src/components/shared/InlineError.tsx`** — 表單欄位下方 / 小範圍 inline 錯誤（紅色 footnote 字 + role=alert）。
+
+### Changed
+- **Anti-slop emoji prefix 補完**：
+  - `IdeasTabContent.tsx`：`<div>⚠ {error}</div>` → `<Icon name="warning" />` + flex layout
+  - `ConsentPage.tsx`：`<div>⚠ {error}</div>` → `<ErrorBanner />` 包
+- **9 個 caller 遷移到共用 component**：
+  - **ErrorBanner**: `LoginPage` (banner-error) / `SessionsPage` / `ConsentPage` / `TripsListPage` / `ConnectedAppsPage` / `DeveloperAppsPage` / `InlineAddPoi`
+  - **InlineError**: `SignupPage` (email + password) / `ResetPasswordPage` (pwError) / `DeveloperAppsPage` (createError) / `NewTripModal` (form error) / `TimelineRail` (saveError)
+- **`InlineAddPoi` 移除舊 `.tp-inline-add-error` CSS**（11 行 destructive bg/border style），保留 `.tp-inline-add-error-shell` wrapper margin（2 行）。
+
+### Internal
+- 仍保留的舊 class（待 PR-V 收尾遷移）：`.tp-banner-error` 在 SignupPage / ResetPasswordPage / ForgotPasswordPage 是 multi-kind banner（error / warning / info），需要 Banner 元件支援 kind prop 才能完全收斂。`.tp-error-banner` / `.tp-trips-error` / `.tp-consent-error` / `.tp-rail-note-error` / `.tp-new-modal-error` 等舊 CSS 雖已無 caller，留著 dead code 不影響 runtime（下個 sweep 清）。
+- backend `_errors.ts` + `src/types/api.ts` 的 `ERROR_MESSAGES` dictionary 已有完整 friendly 文字（`SYS_DB_ERROR: '資料庫忙碌中，請稍後再試'` 等），`ApiError.fromResponse` 自動 parse code → friendly message — apiClient 端不需額外 mapping。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.5] - 2026-04-26
 
 **PR-T: ExplorePage 儲存 503 修 — Nominatim raw category 沒映射到 whitelist（QA round 8）**。User 截圖：「搜尋的儲存會出現錯誤」。Claude 自己測 prod 找到根因。
@@ -18,7 +43,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - `InlineAddPoi.tsx` — 移除 inline `mapNominatimCategory` function，改 import from lib。
 - `ExplorePage.tsx` — `type: poi.category || 'poi'` → `type: mapNominatimCategory(poi.category)`。
 - 抓 bug 用 /browse skill 對 prod 真實登入測試 + 看 network log 抓到「POST /api/pois/find-or-create → 503」 + manual 重 POST with `type: "attraction"` 確認映射後回 200。
-- verify gate: tsc clean / 122 files / 1026 tests pass。
 
 ## [2.14.4] - 2026-04-26
 

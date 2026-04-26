@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import ErrorBanner from '../components/shared/ErrorBanner';
 
 const SCOPED_STYLES = `
 .tp-settings-shell {
@@ -266,11 +267,7 @@ export default function ConnectedAppsPage() {
           <p>這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。</p>
         </div>
 
-        {error && (
-          <div className="tp-error-banner" role="alert" data-testid="connected-apps-error">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} testId="connected-apps-error" />}
 
         {apps === null && !error && (
           <div className="tp-loading" data-testid="connected-apps-loading">載入中…</div>

@@ -27,6 +27,7 @@ import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
 import Icon from '../shared/Icon';
+import InlineError from '../shared/InlineError';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
 import EntryActionPopover, { type EntryActionConfirmPayload } from './EntryActionPopover';
@@ -534,7 +535,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                     <kbd>⌘</kbd> + <kbd>↩</kbd> 儲存 · <kbd>esc</kbd> 取消
                   </span>
                 </div>
-                {saveError && <p className="tp-rail-note-error" role="alert">{saveError}</p>}
+                {saveError && <InlineError message={saveError} />}
               </>
             ) : (
               <div

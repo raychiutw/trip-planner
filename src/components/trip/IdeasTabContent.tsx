@@ -26,6 +26,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { apiFetchRaw } from '../../lib/apiClient';
+import Icon from '../shared/Icon';
 import type { TripIdea } from '../../types/api';
 
 const SCOPED_STYLES = `
@@ -92,6 +93,11 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote); color: var(--color-muted);
   padding: 8px 16px;
 }
+.tp-ideas-status-error {
+  display: flex; align-items: center; gap: 6px;
+  color: var(--color-destructive);
+}
+.tp-ideas-status-error .svg-icon { width: 14px; height: 14px; flex-shrink: 0; }
 .tp-ideas-drop-row {
   display: flex; gap: 8px; flex-wrap: wrap;
   padding: 12px 16px;
@@ -287,7 +293,12 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
           {dayNumbers.map((d) => <DroppableDayBadge key={d} num={d} />)}
         </div>
       )}
-      {error && <div className="tp-ideas-status" role="alert" data-testid="ideas-error">⚠ {error}</div>}
+      {error && (
+        <div className="tp-ideas-status tp-ideas-status-error" role="alert" data-testid="ideas-error">
+          <Icon name="warning" />
+          <span>{error}</span>
+        </div>
+      )}
       {ideas === null && (
         <div className="tp-ideas-status" data-testid="ideas-loading">載入中…</div>
       )}

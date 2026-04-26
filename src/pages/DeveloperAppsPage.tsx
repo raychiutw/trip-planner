@@ -20,6 +20,8 @@ import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import ErrorBanner from '../components/shared/ErrorBanner';
+import InlineError from '../components/shared/InlineError';
 
 const SCOPED_STYLES = `
 .tp-dev-shell {
@@ -423,9 +425,7 @@ export default function DeveloperAppsPage() {
           </button>
         </div>
 
-        {error && (
-          <div className="tp-error-banner" role="alert" data-testid="dev-apps-error">{error}</div>
-        )}
+        {error && <ErrorBanner message={error} testId="dev-apps-error" />}
 
         {apps === null && !error && (
           <div className="tp-loading" data-testid="dev-apps-loading">載入中…</div>
@@ -553,9 +553,7 @@ export default function DeveloperAppsPage() {
                     ))}
                   </div>
                 </div>
-                {createError && (
-                  <div className="tp-error" role="alert" data-testid="dev-apps-create-error">{createError}</div>
-                )}
+                {createError && <InlineError message={createError} testId="dev-apps-create-error" />}
               </div>
               <div className="tp-modal-footer">
                 <button

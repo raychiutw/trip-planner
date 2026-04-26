@@ -18,6 +18,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import ThemeToggle from '../components/shared/ThemeToggle';
+import ErrorBanner from '../components/shared/ErrorBanner';
 
 const SCOPED_STYLES = `
 .tp-sessions-shell {
@@ -354,11 +355,7 @@ export default function SessionsPage() {
           </div>
         )}
 
-        {error && (
-          <div className="tp-banner tp-banner-error" role="alert" data-testid="sessions-error">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBanner message={error} testId="sessions-error" />}
 
         <div className="tp-banner tp-banner-info">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">

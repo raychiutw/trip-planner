@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '../shared/Icon';
+import ErrorBanner from '../shared/ErrorBanner';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { mapNominatimCategory } from '../../lib/poiCategory';
 
@@ -162,16 +163,9 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
 }
 
-.tp-inline-add-error {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--color-destructive-bg);
-  border: 1px solid var(--color-destructive);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-footnote);
-  color: var(--color-destructive);
-  line-height: 1.5;
-}
+/* PR-U：tp-inline-add-error CSS removed — 改用 shared ErrorBanner，
+ * 留 .tp-inline-add-error-shell 給 wrapper margin。 */
+.tp-inline-add-error-shell { margin-top: 10px; }
 `;
 
 interface PoiSearchResult {
@@ -377,11 +371,7 @@ export default function InlineAddPoi({ tripId, dayNum }: InlineAddPoiProps) {
           </div>
         )}
 
-        {addError && (
-          <p className="tp-inline-add-error" role="alert" data-testid="inline-add-poi-error">
-            {addError}
-          </p>
-        )}
+        {addError && <ErrorBanner message={addError} testId="inline-add-poi-error" className="tp-inline-add-error-shell" />}
       </div>
     </div>
   );
