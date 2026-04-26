@@ -124,8 +124,11 @@ const SCOPED_STYLES = `
 }
 @media (min-width: 1024px) {
   .tp-trips-grid {
-    /* mockup-trip-v2.html line 167 canonical：adaptive auto-fill */
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    /* PR-LL 2026-04-26：minmax 280→260 — buffer for macOS scrollbar
+     * always-on (15px) 及 zoom 不為 100% 的 1px-level 邊界差。
+     * 1280 viewport 即使 inner 因 scrollbar 縮到 575，260×2+16=536 仍可
+     * 容 2 cols。原 mockup canonical 280 在邊界差時掉成 1 col，視覺不對。 */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   }
 }
 /* PR-Q 2026-04-26：每張 trip card 加 ... menu。card 改 wrapper（position:

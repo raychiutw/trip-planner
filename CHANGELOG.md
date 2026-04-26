@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.22] - 2026-04-26
+
+**PR-LL: trip-grid minmax 280→260 — buffer for scrollbar/zoom 邊界差（QA round 21）**。
+
+### Fixed
+- **1280 viewport user 仍看到 1 card** — PR-KK 的 sheet 410 + minmax 280 在 1280 inner=587 計算上應該容 2 cols（576），但 macOS scrollbar always-on 模式吃 ~15px 讓 inner=572 < 576 → 掉成 1 col。
+- 修法：minmax 280 → 260，260×2+16=536 buffer 50+ px，可承受 scrollbar / zoom / Mac 邊距等 1px-level 差異。
+- 仍維持 mockup-trip-v2.html line 167 canonical 的 auto-fill adaptive，只把 min 寬度從 280 調整到 260（仍是合理 trip card min 寬度）。
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.21] - 2026-04-26
 
 **PR-KK: sheet 改 32vw cap 576 — 涵蓋 1280 viewport（QA round 20）**。
