@@ -1,8 +1,9 @@
 /**
  * NewTripModal — V2 split-hero polish tests.
  *
- * Covers the v2.7 enhancement (PR1):
- *   - Split-screen hero pane (left illustration + social proof)
+ * Covers the v2.7 enhancement (PR1) + PR-M cleanup:
+ *   - Split-screen hero pane (left illustration only — social proof banner
+ *     removed in PR-M as fake-stat anti-slop + mobile cramping fix)
  *   - Flexible-dates mode upgrade: numeric stepper + month carousel
  *     (replaces 「先建空行程，之後再決定」 hint)
  *   - Existing fixed-date submit still works (regression guard)
@@ -39,18 +40,16 @@ afterEach(() => {
 });
 
 describe('NewTripModal — V2 split-hero pane', () => {
-  it('renders hero pane with social proof copy', () => {
+  it('renders hero pane with eyebrow + headline copy', () => {
     renderModal();
     const hero = screen.getByTestId('new-trip-hero');
     expect(hero).toBeTruthy();
-    const proof = screen.getByTestId('new-trip-social-proof');
-    expect(proof.textContent).toMatch(/個行程/);
+    expect(hero.textContent).toMatch(/規劃下一/);
   });
 
-  it('hero pane shows trip count from prop', () => {
-    renderModal({ totalTrips: 1247 });
-    const proof = screen.getByTestId('new-trip-social-proof');
-    expect(proof.textContent).toContain('1,247');
+  it('hero pane no longer renders social proof banner (PR-M cleanup)', () => {
+    renderModal();
+    expect(screen.queryByTestId('new-trip-social-proof')).toBeNull();
   });
 });
 

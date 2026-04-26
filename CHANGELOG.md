@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.13.2] - 2026-04-26
+
+**PR-M: NewTripModal proof banner 移除 + emoji 清 + 底部 viewport 不被遮（QA round 4 + anti-slop sweep）**。User 截圖 2 點 + anti-slop audit 同檔 3 項一次帶。
+
+### Removed
+- **Hero social proof banner** — `.tp-new-hero-proof` JSX + CSS + `DEFAULT_TOTAL_TRIPS=1247` constant + `formatTripCount` helper + `totalTrips` prop。fake-stat anti-slop（「1,247 個行程已在 Tripline 上分享 / 平均規劃時間 8 分鐘」沒實際資料來源）+ user 截圖確認 mobile hero 太擠。
+- **目的地 input 📍 emoji** — `.tp-new-dest-pin` span + 對應 padding-left 44px hack。anti-slop emoji 濫用（label「目的地」+ placeholder 已能清楚定位用途）。
+- **月份 carousel emoji** — `MONTH_ICONS = ['❄️', '🌸', ...]` array + `MonthChoice.icon` field + `<span className="icon">` JSX。anti-slop emoji 濫用（月份數字本身已是強 semantic indicator，季節 emoji 是裝飾性 noise）。
+
+### Fixed
+- **Mobile modal 底部被 viewport / iOS home indicator 遮住** — `.tp-new-modal` 加 `max-height: calc(100dvh - 32px)`（dvh 對應 Safari URL bar 動態高度），`.tp-new-form` 改 `overflow-y: auto` + `min-height: 0` + `padding-bottom: max(24px, env(safe-area-inset-bottom, 24px))`。grid child `min-height: 0` 是讓 max-height 約束生效的關鍵（grid 預設 min-height auto 會撐爆）。
+
+### Internal
+- 對應 anti-slop audit 第 1、2、5 項（emoji 月份 / 📍 / fake stat）一次清，剩 6 項（PR-N 處理）。
+- `.tp-new-flex-month .m` font-size: footnote → callout（emoji 拿掉後月份文字單獨 carry，需放大維持視覺權重）。
+- `tests/unit/new-trip-modal.test.tsx` 兩個 social proof 測試改寫：`renders hero pane with eyebrow + headline copy` + `hero pane no longer renders social proof banner`。
+- verify gate: tsc clean / 122 files / 1031 tests pass。
+
 ## [2.13.1] - 2026-04-26
 
 **PR-L: /map 手機控制條微調 + marker click 顯示 POI 卡（QA round 3）**。User 標註截圖三個改動。
