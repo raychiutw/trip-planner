@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.27] - 2026-04-27
+
+**PR-TT: hotfix embedded topbar CSS 沒注入 → 子元素 stack vertically（QA round 26）**。
+
+### Fixed
+- **Critical layout bug** — `<style>{SCOPED_STYLES}</style>` 原本在 `cardGridMain` JSX 內，embedded mode 不渲染 cardGridMain → CSS 沒注入 → `.tp-embedded-topbar` 用 `<header>` UA 預設 `display: block`，子元素 stack vertically：
+  - User 看到 `[← back]` + `[共編 chip]` 兩行而非一行
+  - PR-RR 整個 actions slot 視覺被破壞
+- 修：`<style>` 提到 component 頂層 `return ()` 的 `<>` 內，永遠注入。
+- 桌機 + 手機 同時修復，兩者都正確顯示 `[← back] [trip name] [共編 chip]` 單行 topbar。
+- verify gate: tsc clean / 1029 tests pass。
+
 ## [2.14.26] - 2026-04-27
 
 **PR-RR: 補齊 mockup A actions slot — 共編 chip 進 embedded topbar（QA round 25）**。

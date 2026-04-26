@@ -532,7 +532,6 @@ export default function TripsListPage() {
 
   const cardGridMain = (
     <>
-      <style>{SCOPED_STYLES}</style>
       <ToastContainer />
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <div className="tp-trips-inner">
@@ -673,6 +672,11 @@ export default function TripsListPage() {
 
   return (
     <>
+      {/* PR-TT 2026-04-27：SCOPED_STYLES hoist 到頂層，永遠注入。
+       * 原本在 cardGridMain 內 → embedded mode 不渲染 cardGridMain → CSS
+       * 沒注入 → .tp-embedded-topbar 用 <header> UA 預設 display: block，
+       * 子元素 stack vertically (back btn + 共編 chip 變兩行)。 */}
+      <style>{SCOPED_STYLES}</style>
       <AppShell
         sidebar={<DesktopSidebarConnected />}
         main={main}
