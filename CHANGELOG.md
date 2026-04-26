@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.11] - 2026-04-26
+
+**PR-AA: ⋯ 共編 inline modal + 手機行程詳情返回箭頭（QA round 13 — IA 兩件事）**。
+
+### Changed
+- **⋯ 共編點了不再 navigate 到 trip 頁** — User 指示「不要開啟行程頁」。原 PR-Q 走 `navigate('/trips?selected={id}&sheet=collab')` 強制 user 進 trip 詳情。改：TripsListPage 加 `collabTripId` state，TripCardMenu 的 `onCollab` 改 `setCollabTripId(tripId)` 直接觸發 inline modal，trip 列表保留 visible 在背景。
+
+### Added
+- **`src/components/trip/CollabModal.tsx`** — 新 modal wrapper，createPortal to body + escape stacking context + z-modal token + Escape key dismiss + backdrop click dismiss。內容是現成 `<CollabSheet />`。Header 含「共編設定」 標題 + ✕ close button。
+- **手機行程詳情返回箭頭** — User 指示。`/trips?selected=` mobile embedded mode 在 main 區左上 sticky 顯示 `<button>` with `arrow-left` icon，點了 `setSearchParams(remove 'selected')` 回 list。glass-style 在內容上浮動。Desktop 強 hide（embedded 走 sheet pane 不適用）。
+
+### Internal
+- TripsListPage 拿掉 `useNavigate` import（不再 navigate）。
+- back button CSS 用 `position: sticky; top: 8px` 跟著 scroll 不消失。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.10] - 2026-04-26
 
 **PR-Y: NewTripModal 錯誤訊息真實化 — 修「建立行程失敗，請稍後再試」 generic 掩蓋（QA round 12）**。User: 新增行程失敗（Jessica Yo 截圖）。
