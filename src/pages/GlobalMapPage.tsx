@@ -118,7 +118,11 @@ const SCOPED_STYLES = `
 }
 .tp-global-map-trip-btn:hover { border-color: var(--color-accent); }
 .tp-global-map-trip-btn .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tp-global-map-trip-btn .caret { font-size: 12px; color: var(--color-muted); flex-shrink: 0; }
+.tp-global-map-trip-btn .caret {
+  /* QA 2026-04-26 BUG-041/047：12px caret 跟 muted color 太弱，user 看不出
+   * 是 dropdown。bump 14 + 改 accent color，視覺重量出來，affordance 清楚 */
+  font-size: 14px; color: var(--color-accent); flex-shrink: 0; font-weight: 700;
+}
 .tp-global-map-meta {
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
@@ -164,8 +168,10 @@ const SCOPED_STYLES = `
   z-index: 600;
 }
 @media (max-width: 1023px) {
+  /* QA 2026-04-26 BUG-040：220px 距離 carousel 太近視覺上像黏在一起，bump
+   * 到 240px 給更明顯氣口。carousel ~150-170px 高，240 = 70-90px gap 安全 */
   .tp-global-map-actions {
-    bottom: 220px; left: 12px;
+    bottom: 240px; left: 12px;
   }
 }
 .tp-global-map-pill {
@@ -427,6 +433,10 @@ const SCOPED_STYLES = `
   overflow-x: auto;
   scrollbar-width: none;
   scroll-snap-type: x mandatory;
+  /* QA 2026-04-26 BUG-039：右側 28px gradient mask 暗示「還有 stop 可滑」。
+   * 比照 PR-A DayNav 同 pattern。padding-right 給 24px 防 mask 蓋到 last card 內容 */
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
 }
 .tp-global-map-mobile-cards::-webkit-scrollbar { display: none; }
 .tp-global-map-mobile-card {
