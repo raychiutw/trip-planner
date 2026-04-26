@@ -40,7 +40,12 @@ const SCOPED_STYLES = `
  * (TripPage with rich TripSheet) keep their wider sheet. */
 @media (min-width: 1024px) {
   .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
-    grid-template-columns: 240px 1fr min(420px, 32vw);
+    /* QA 2026-04-26 BUG-002/007/019：sheet 太窄（420 / 32vw）導致嵌入 TripPage
+     * 的 day-strip + popover 全 overflow。bump 到 min(560, 38vw)：
+     *   1440px → 547 sheet（原 420），main 653（原 780），緊但夠 3-col cards
+     *   1280px → 486 sheet（原 410）
+     *   1024px → 389 sheet（原 328），最低 viewport 仍 OK */
+    grid-template-columns: 240px 1fr min(560px, 38vw);
   }
 }
 .tp-trips-shell {

@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.1] - 2026-04-26
+
+**QA fix series PR-A: sheet overflow root cause（4 issues）**。 prod adversarial QA 抓到 sheet pane 太窄導致 day strip / EntryActionPopover 全 overflow。一個 root cause 解 4 個 HIGH/MEDIUM bug。
+
+### Fixed
+- **BUG-002 / 007 sheet width** — `TripsListPage` 3-pane sheet 從 `min(420px, 32vw)` bump 到 `min(560px, 38vw)`。1440px viewport sheet 從 420 → 547，給嵌入的 TripPage day-strip + popover 喘息空間。main pane 從 780 → 653，3-col trip cards 仍 fit。
+- **BUG-019 / 021 popover overflow** — `EntryActionPopover` 加 `max-height: min(calc(100vh - 120px), 480px)` + `overflow-y: auto`。「複製到時段」 select 不再被 viewport 截斷，day list 太長時 popover 內 scroll。
+- **BUG-002 day strip 視覺暗示** — `DayNav` 加右側 32px linear-gradient mask + 顯示 `webkit-scrollbar` 3px thumb。user 一眼看到「還有 day 可水平捲」 affordance。
+- **BUG-020 popover swatch 辨識度** — `.tp-action-swatch` 12px → 14px + 加 `border: 1px solid rgba(0,0,0,0.08)` hairline。day color 在小尺寸下看得更清楚。
+
+### Internal
+- 無 test 變動 — CSS-only fix。verify gate: tsc clean / 1035 tests pass。
+- QA report 全文 `.gstack/qa-reports/qa-report-prod-2026-04-26-adversarial.md` (49 issues 共 6 個 PR 修)。
+
 ## [2.12.0] - 2026-04-26
 
 **v2.10 Wave 3：pois.photos schema + StopLightbox photo carousel（PR6/3，最後一棒）**。

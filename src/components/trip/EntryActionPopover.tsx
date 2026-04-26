@@ -22,6 +22,10 @@ const SCOPED_STYLES = `
   box-shadow: var(--shadow-lg);
   z-index: 60;
   padding: 14px;
+  /* QA 2026-04-26 BUG-021：限制高度 + 內 scroll，防止 select / day list 超
+   * 出 viewport 看不到。viewport-100 留空間給 sheet header + bottom nav。 */
+  max-height: min(calc(100vh - 120px), 480px);
+  overflow-y: auto;
   animation: tp-action-pop-in 120ms var(--transition-timing-function-apple, ease-out);
 }
 @keyframes tp-action-pop-in {
@@ -63,7 +67,11 @@ const SCOPED_STYLES = `
   opacity: 0.4;
   cursor: not-allowed;
 }
-.tp-action-swatch { width: 12px; height: 12px; border-radius: var(--radius-full); flex-shrink: 0; }
+.tp-action-swatch {
+  width: 14px; height: 14px; border-radius: var(--radius-full); flex-shrink: 0;
+  /* QA 2026-04-26 BUG-020：12px 太小看不清色塊，bump 14 + 加 hairline border 增辨識度 */
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
 .tp-action-day-label { flex: 1; font-size: var(--font-size-callout); font-weight: 600; }
 .tp-action-day-count { font-size: var(--font-size-caption); color: var(--color-muted); }
 

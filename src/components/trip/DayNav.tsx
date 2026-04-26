@@ -19,8 +19,13 @@ const SCOPED_STYLES = `
   background: var(--color-glass-nav);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--color-border);
+  /* QA 2026-04-26 BUG-002/036：右側漸層 fade 暗示「還有更多 day 可水平捲」。
+   * mask 不影響 active state 顏色（active fill 仍清楚顯示），只是淡出 overflow 邊。 */
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
 }
-.ocean-day-strip::-webkit-scrollbar { height: 0; }
+.ocean-day-strip::-webkit-scrollbar { height: 3px; }
+.ocean-day-strip::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 2px; }
 @media (max-width: 1200px) {
   .ocean-day-strip { padding-left: 28px; padding-right: 28px; margin-left: -28px; margin-right: -28px; margin-top: -24px; }
 }
