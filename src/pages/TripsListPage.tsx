@@ -30,7 +30,8 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TripCardMenu from '../components/trip/TripCardMenu';
-import CollabModal from '../components/trip/CollabModal';
+import InfoSheet from '../components/trip/InfoSheet';
+import CollabSheet from '../components/trip/CollabSheet';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ErrorBanner from '../components/shared/ErrorBanner';
@@ -91,37 +92,59 @@ const SCOPED_STYLES = `
   margin-top: 24px;
 }
 
-/* PR-AA 2026-04-26：手機行程詳情返回箭頭。embedded mode 下 floating sticky
- * 在 main 區域左上角，點了清掉 ?selected= 回 list。z-index 5 高過 day-strip
- * 但低過 modal。glass-style 讓 user 看到下方內容跟著走。 */
-.tp-trips-back-btn {
-  position: sticky; top: 8px; left: 8px;
-  z-index: 5;
-  margin: 8px 0 0 8px;
+/* PR-NN 2026-04-26：mobile embedded mode 改成完整 mobile-topbar 模式
+ * （對齊 docs/design-sessions/mockup-trip-v2.html line 438 .mobile-topbar）。
+ * 取代 PR-AA 的 floating sticky back btn — 那個獨佔一行、跟 mockup 不符。
+ *
+ * 結構：[← back btn] [trip name] — 56px 全寬、sticky top、glass blur。 */
+.tp-embedded-trip {
+  position: relative;
+  display: flex; flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+}
+.tp-embedded-topbar {
+  display: flex; align-items: center; gap: 12px;
+  height: 56px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
+  backdrop-filter: blur(14px);
+  position: sticky; top: 0; z-index: 10;
+  flex-shrink: 0;
+}
+.tp-embedded-back {
   width: 40px; height: 40px;
-  border-radius: var(--radius-full);
-  background: var(--color-glass-toast);
+  border-radius: var(--radius-md);
+  background: transparent;
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
-  display: inline-grid; place-items: center;
+  display: grid; place-items: center;
   cursor: pointer;
   font: inherit;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(8px);
-  transition: background 120ms, color 120ms;
+  flex-shrink: 0;
+  transition: border-color 120ms, color 120ms, background 120ms;
 }
-.tp-trips-back-btn:hover {
-  background: var(--color-background);
+.tp-embedded-back:hover {
+  border-color: var(--color-accent);
   color: var(--color-accent);
+  background: var(--color-accent-subtle);
 }
-.tp-trips-back-btn:focus-visible {
+.tp-embedded-back:focus-visible {
   outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
-.tp-trips-back-btn .svg-icon { width: 18px; height: 18px; }
+.tp-embedded-back .svg-icon { width: 20px; height: 20px; }
+.tp-embedded-trip-name {
+  font-size: var(--font-size-headline);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-foreground);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; min-width: 0;
+}
 @media (min-width: 1024px) {
-  /* Desktop showEmbeddedTrip 不會 trigger（embedded 走 sheet pane），這個
-   * back btn 只 mobile 用。Desktop 強 hide 防意外 render。 */
-  .tp-trips-back-btn { display: none; }
+  /* Desktop 不走 embedded mode（走 sheet pane），topbar 強 hide 防意外。 */
+  .tp-embedded-topbar { display: none; }
 }
 @media (min-width: 1024px) {
   .tp-trips-grid {
@@ -434,10 +457,10 @@ export default function TripsListPage() {
     setSearchParams(next, { replace: false });
   }
 
-  // PR-AA 2026-04-26：⋯ 共編改 inline modal，不 navigate 到 trip 頁。
-  // 之前 PR-Q 走 navigate /trips?selected=&sheet=collab 一次到位，但 user
-  // 指示「不要開啟行程頁」 — 共編設定不該強制 user 進 trip 詳情。改 setState
-  // 觸發 CollabModal 直接顯示，trip 列表保持 visible 在背景。
+  // PR-OO 2026-04-26：⋯ 共編改 InfoSheet（跟 TripPage 共編 chip 同 sheet
+  // 容器，桌機/手機 視覺一致）。原 PR-AA 走 CollabModal centered modal，跟
+  // TripPage 的 InfoSheet slide-up 視覺不符 — 同一動作兩種容器。改 InfoSheet
+  // 統一，CollabModal 已刪。trip 列表保持 visible 在背景。
   const [collabTripId, setCollabTripId] = useState<string | null>(null);
   const handleMenuCollab = useCallback(
     (tripId: string) => { setCollabTripId(tripId); },
@@ -577,27 +600,39 @@ export default function TripsListPage() {
     <TripPage tripId={effectiveSelectedId} noShell />
   ) : undefined;
 
-  // PR-AA 2026-04-26：手機行程詳情左上角加返回箭頭（user 指示）。embedded
-  // mode 時 wrap 一個 div 加 floating back button，clear ?selected= 回 list。
+  // PR-NN 2026-04-26：mobile embedded mode 改 .tp-embedded-topbar pattern
+  // （[← back] [trip name]）。原 PR-AA floating back btn 自己一行 + 跟 mockup
+  // mobile-topbar 不符，已棄用。
   function clearSelected() {
     const next = new URLSearchParams(searchParams);
     next.delete('selected');
     setSearchParams(next, { replace: false });
   }
 
+  const embeddedTrip = showEmbeddedTrip
+    ? (allTrips ?? []).find((t) => t.tripId === effectiveSelectedId)
+    : null;
+
   // Mobile route: when ?selected, render TripPage as main (replaces cards).
   // When no ?selected, render the card grid.
   const main = showEmbeddedTrip ? (
-    <div style={{ position: 'relative', minHeight: '100%' }}>
-      <button
-        type="button"
-        className="tp-trips-back-btn"
-        onClick={clearSelected}
-        aria-label="返回行程列表"
-        data-testid="trips-back-to-list"
-      >
-        <Icon name="arrow-left" />
-      </button>
+    <div className="tp-embedded-trip">
+      <header className="tp-embedded-topbar">
+        <button
+          type="button"
+          className="tp-embedded-back"
+          onClick={clearSelected}
+          aria-label="返回行程列表"
+          data-testid="trips-back-to-list"
+        >
+          <Icon name="arrow-left" />
+        </button>
+        {embeddedTrip && (
+          <span className="tp-embedded-trip-name">
+            {embeddedTrip.title || embeddedTrip.name}
+          </span>
+        )}
+      </header>
       <TripPage tripId={effectiveSelectedId!} noShell />
     </div>
   ) : cardGridMain;
@@ -610,9 +645,15 @@ export default function TripsListPage() {
         main={main}
         bottomNav={<GlobalBottomNav authed={!!user} />}
       />
-      {collabTripId && (
-        <CollabModal tripId={collabTripId} onClose={() => setCollabTripId(null)} />
-      )}
+      {/* PR-OO 2026-04-26：CollabModal → InfoSheet — 跟 TripPage 共編 chip
+       * 同一 sheet 容器，桌機/手機 視覺一致 (slide-up sheet pattern)。 */}
+      <InfoSheet
+        open={!!collabTripId}
+        title="共編設定"
+        onClose={() => setCollabTripId(null)}
+      >
+        {collabTripId ? <CollabSheet tripId={collabTripId} /> : null}
+      </InfoSheet>
     </>
   );
 }
