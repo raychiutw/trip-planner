@@ -132,6 +132,24 @@ export async function verifyPassword(plain: string, stored: string): Promise<boo
 }
 
 /**
+ * Lazy-cached static probe hash for timing-attack defence。
+ *
+ * 給 unknown email 的 login 做 constant-time fake verify。必須跟 ITERATIONS 同步,
+ * 否則 PBKDF2 throw（CF Workers 對 deriveBits 600k iter throw "iteration counts
+ * above 100000 are not supported"）→ login.ts 整段 500，反而把 unknown-email 變
+ * 100% 可區分 oracle。
+ *
+ * 用 lazy + per-isolate cache：cold start 多一次 5ms pbkdf2，後續 O(1)。
+ */
+let probeHashCache: Promise<string> | null = null;
+export function getStaticProbeHash(): Promise<string> {
+  if (!probeHashCache) {
+    probeHashCache = hashPassword('timing-probe-static-not-a-real-password-!!');
+  }
+  return probeHashCache;
+}
+
+/**
  * Re-hash if iteration count is below current。Useful for incremental upgrade
  * when OWASP recommendation bumps（V2-P6 might raise to 1M）。Caller storing
  * password should call this on successful login + persist if returned non-null。

@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.26] - 2026-04-27
+
+**daily-check 2026-04-27 — 3 個 fix（PBKDF2 timing probe + POI race + report 噪音）**。
+
+### Fixed
+- **`/api/oauth/login` 500 (3 logs)** — `TIMING_PROBE_HASH` 還寫死 `pbkdf2$600000$...$...`，但 ITERATIONS 已降到 100k。CF Workers `crypto.subtle.deriveBits` 對 600k throw "iteration counts above 100000 are not supported"，導致**任何未知 email 的 login 都 500**（同時把 unknown-email 變成 100% 可區分的 oracle，timing-attack 防線失效）。改成 lazy + per-isolate cache 的 `getStaticProbeHash()`，跟 `ITERATIONS` 同步。
+- **`/api/pois/find-or-create` 503 (2 logs，`POI lost after INSERT OR IGNORE`)** — D1 read replica 在 INSERT OR IGNORE race 後可能短暫看不到 winner 的 row。第二次 re-fetch 前加 50ms 退避再試一次才 throw。
+- **daily-check report 噪音** — `useTrip.ts` 故意 polling 5 種 docs，首次缺檔靜默吃 `DATA_NOT_FOUND`（PR-HH 行為）；每次開行程多 5 個 404 污染日報。SQL 排除 `GET /api/trips/*/docs/*` 的 404，audit trail 仍寫進 `api_logs`。
+
+### Notes
+- DB 全部 6 個 `auth_identities` 都已是 100k iter；600k 是純粹 timing probe constant 殘留，沒有真實舊 hash 受害。
+- `_leaflet_pos` Sentry issue (3 events, 0 users) #198 `instance.stop()` 修復後仍偶發，無 stack trace 不可 repro，本輪不動。
+
+verify gate: tsc clean / 1029 unit + 525 API tests pass.
+
 ## [2.14.25] - 2026-04-27
 
 **PR-QQ: embedded topbar 對齊 mockup-trip-v2 canonical（QA round 24）**。

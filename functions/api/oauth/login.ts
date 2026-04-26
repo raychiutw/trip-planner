@@ -19,7 +19,7 @@
  */
 import { issueSession } from '../_session';
 import { parseJsonBody } from '../_utils';
-import { verifyPassword } from '../../../src/server/password';
+import { verifyPassword, getStaticProbeHash } from '../../../src/server/password';
 import {
   checkRateLimit,
   bumpRateLimit,
@@ -39,11 +39,6 @@ interface AuthIdentityRow {
   user_id: string;
   password_hash: string | null;
 }
-
-// Fake hash to compute against when email not found — defeats timing oracle
-// (PBKDF2 takes constant time regardless of input)。Static value, doesn't matter
-// since constant-time compare against unrelated hash will always fail。
-const TIMING_PROBE_HASH = 'pbkdf2$600000$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(
@@ -90,7 +85,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first<AuthIdentityRow>();
 
   // Always run verifyPassword (real hash if found, fake if not) — constant-time guarantee
-  const hashToCheck = identity?.password_hash ?? TIMING_PROBE_HASH;
+  const hashToCheck = identity?.password_hash ?? (await getStaticProbeHash());
   const passwordOk = await verifyPassword(password, hashToCheck);
 
   if (!identity || !passwordOk) {

@@ -140,13 +140,18 @@ async function querySentry() {
 // ── 數據來源 2: D1 api_logs — 昨日 4xx/5xx ──────────────────────
 
 async function queryApiErrors() {
-  // 過濾可預期的 auth/rate-limit 錯誤（401/403/429 屬正常流程）
+  // 過濾可預期錯誤：
+  //   401/403/429 = auth/rate-limit 正常流程
+  //   GET /api/trips/.../docs/{type} 404 = useTrip.ts 故意 polling 5 種 docs，
+  //     首次缺檔靜默吃 DATA_NOT_FOUND（PR-HH 註解）。每次開行程都會多 5 個 404，
+  //     污染 daily report，但 audit trail 仍寫進 api_logs。
   var rows = await queryD1(
     "SELECT path, method, status, COUNT(*) as count, MAX(created_at) as lastOccurred " +
     "FROM api_logs " +
     "WHERE created_at >= datetime('now', '-1 day') " +
     "  AND status >= 400 " +
     "  AND status NOT IN (401, 403, 429) " +
+    "  AND NOT (method = 'GET' AND status = 404 AND path GLOB '/api/trips/*/docs/*') " +
     "GROUP BY path, method, status " +
     "ORDER BY count DESC"
   );

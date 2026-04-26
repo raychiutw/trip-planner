@@ -78,11 +78,20 @@ export async function findOrCreatePoi(
   // INSERT OR IGNORE returns null if concurrent insert won the race
   if (result) return result.id;
 
+  // D1 read replica may briefly miss the concurrent winner's INSERT.
+  // Retry once after 50ms before throwing — handles eventual-consistency window
+  // (2026-04-26 daily-check: 2x SYS_DB_ERROR caught on production).
   const reFetch = await db.prepare(
     'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
   ).bind(data.name, data.type).first<{ id: number }>();
-  if (!reFetch) throw new AppError('SYS_DB_ERROR', 'POI lost after INSERT OR IGNORE');
-  return reFetch.id;
+  if (reFetch) return reFetch.id;
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const reFetchRetry = await db.prepare(
+    'SELECT id FROM pois WHERE name = ? AND type = ? LIMIT 1'
+  ).bind(data.name, data.type).first<{ id: number }>();
+  if (!reFetchRetry) throw new AppError('SYS_DB_ERROR', 'POI lost after INSERT OR IGNORE (after retry)');
+  return reFetchRetry.id;
 }
 
 /**
