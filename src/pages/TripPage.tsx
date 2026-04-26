@@ -187,6 +187,17 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     prevIsOnlineRef.current = isOnline;
   }, [isOnline]);
 
+  // V3 inline expansion (PR2): TimelineRail dispatches `tp-entry-updated`
+  // on successful note PATCH. We refetch the current day to surface the new
+  // value across the timeline + map + sheet.
+  useEffect(() => {
+    function onEntryUpdated() {
+      refetchCurrentDayRef.current?.();
+    }
+    window.addEventListener('tp-entry-updated', onEntryUpdated);
+    return () => window.removeEventListener('tp-entry-updated', onEntryUpdated);
+  }, []);
+
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorMode, setColorMode } = useDarkMode();
 

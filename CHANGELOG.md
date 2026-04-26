@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.8.0] - 2026-04-26
+
+**Mindtrip-parity 補強 PR2：TimelineRail 反轉成 V3 inline expansion + click-to-edit 備註**。反轉 2026-04-19 commit 01382db「整行可點跳詳情頁」的決策 — 點 stop row 改成 toggle 內嵌 detail panel（描述 / 地點 / 備註），不再 navigate 到 StopDetailPage。備註欄位 click-to-edit + Cmd+Enter 儲存 / ESC 取消 + PATCH `/api/trips/:id/entries/:eid`。儲存成功後 dispatch `tp-entry-updated` 給 TripPage 觸發 refetchCurrentDay。
+
+### Added
+- **TimelineRail inline expand** — accordion 行為（一次只展開一個 row），expand 時 caret `›` 旋 90° 變 `⌄`，detail panel slides in 160ms。aria-expanded / aria-label 完整。
+- **備註 click-to-edit** — 點備註區塊 → 變 textarea + Terracotta accent border + 3px focus ring。Cmd+Enter / ⌘+↩ 儲存 → PATCH 後 dispatch event。ESC 取消、textarea 寬度 100% / min-height 88px / resize vertical。空備註顯示 「+ 加備註」 dashed-style placeholder。
+- **儲存中狀態 + 錯誤訊息** — 「儲存中…」label + disabled 雙鈕；PATCH 失敗顯示 inline error（role=alert）。
+- **`tp-entry-updated` window event** — `{ tripId, entryId }` detail，TripPage 接收後呼叫 `refetchCurrentDay` 同步 timeline / map / sheet。
+
+### Changed
+- **TimelineRail click 行為**：`useNavigate('/trip/:id/stop/:eid')` → `setExpandedId(toggle)`。`/trip/:id/stop/:eid` URL 仍可直接訪問（StopDetailPage 保留為 deep-link share 用途），但列表已不再點到。
+- **TimelineEvent.tsx 縮成 type-only module** — Timeline.tsx 早已 only render TimelineRail，TimelineEvent component 是 orphan。PR2 刪 component 程式碼，保留 `TimelineEntryData` / `TravelData` 兩個 type（5 個檔案還在 import）。
+
+### Internal
+- 新增 `tests/unit/timeline-rail-inline-expand.test.tsx`（13 case）— 涵蓋 collapse default / click expand / accordion 切換 / aria-expanded / 備註 click-to-edit / ESC 取消 / Cmd+Enter PATCH / Save button / event dispatch / 空備註 placeholder。
+- 新增 `RailRow` sub-component 隔離每 row 的 useState（編輯/儲存狀態）— 避免父層 single-source state 互相干擾。
+- TripPage 新增 `tp-entry-updated` listener（line 191–199）— 走既有 `refetchCurrentDayRef.current?.()` pattern，跟 online-restore listener 對齊。
+
 ## [2.7.0] - 2026-04-26
 
 **Mindtrip-parity 補強 PR1：NewTripModal V1 split-hero v2 + 手機 map carousel polish**。/tp-claude-design 跑完 6 個 mockup，使用者選 V1 split-hero（新增行程）+ V3 inline-expand（編輯景點）— 本 PR 拿掉 NewTripModal 老的單欄表單，做成左 hero + 右 form 的 split-screen，並補齊「彈性日期」模式（numeric stepper + 6 個月 carousel）。順手把 GlobalMapPage 手機底部 stop carousel 那塊裝飾色塊拆掉、card 縮成 150px。PR2/3 後續跟上。
