@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.13] - 2026-04-26
+
+**PR-Z: CollabSheet 視覺重新設計 — 對照 DESIGN.md + terracotta-preview.html 收齊風格**。User: 版面不一致（移除 button 文字直排、新增 button 看似 disabled、role pill 樣式單薄）。
+
+### Fixed
+- **「移除」 button 文字直排** — 加 `white-space: nowrap` + `min-width: 64px` + `flex-shrink: 0`。原本沒 min-width 在容器擠壓時 button 縮到 1 字寬度 → 「移」/「除」 兩字直排亂。
+- **「+ 新增」 button 看似 disabled** — disabled 從 `opacity: 0.5` 改 `opacity: 0.55` 但**保留 background fill**，user 仍看得出是 primary CTA 只是 dimmer，不再 transparent 假象。
+- **role pill 樣式單薄** — 對照 terracotta-preview `.badge` pattern：rgba(accent, 0.12) bg + accent-deep color + 6px dot prefix + uppercase letter-spacing 0.04em。
+
+### Changed
+- **List container 改 single bordered group with dividers**（同 SessionsPage `.tp-list` pattern）— 取代原本 separate row cards。視覺更 compact + 統一感更強。
+- **Member row 加 avatar circle**（accent-subtle bg + initial）— 對齊 SessionsPage device-icon pattern。
+- **Section head 右側加 count 副標**（`{permissions.length} 人`）— 對照 ConnectedAppsPage `.tp-section-count` pattern。
+- **Empty state 改 secondary bg + 更具導引性的文字**（「尚未授權任何成員，可在下方新增。」）。
+
+### Internal
+- 移除 inline Tailwind class `flex flex-col gap-2`（list container 改用 dedicated `.tp-collab-list` class）。
+- Add input className 從匿名 nested 改 explicit `.tp-collab-add-input`（避免 cascade 不確定性）。
+- collab-sheet test fix：`getByText('尚未授權任何成員')` → `getByText(/尚未授權任何成員/)`（regex 容納新加的引導文字）。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.12] - 2026-04-26
 
 **PR-BB: NewTripModal 目的地接 POI search autocomplete（強制選擇 / option B）**。User: 「新增行程選的目的地要結合搜尋 poi 藉此知道行程國家與相關 table 資訊」。
