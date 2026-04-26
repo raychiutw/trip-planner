@@ -69,7 +69,7 @@ describe('CollabSheet — populated', () => {
     });
 
     render(<CollabSheet tripId="trip-1" />);
-    await waitFor(() => expect(screen.getByText('尚未授權任何成員')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/尚未授權任何成員/)).toBeTruthy());
     fireEvent.change(screen.getByTestId('collab-add-email'), { target: { value: 'new@example.com' } });
     fireEvent.click(screen.getByTestId('collab-add-submit'));
     await waitFor(() => expect(postCount).toBe(1));
