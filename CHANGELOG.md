@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.0] - 2026-04-26
+
+**v2.10 Wave 3：pois.photos schema + StopLightbox photo carousel（PR6/3，最後一棒）**。
+完成 V3 mockup 整合 — POI 詳情頁的「⛶ 放大檢視」 lightbox 從 PR3 的純 placeholder 升級為真實照片 carousel（◀ ▶ + 分頁點 + caption + attribution）。資料 schema + frontend 全完成；populate 照片內容（從 Wikimedia Commons 抓）走後續 admin script 跑。
+
+### Migration
+- **`migrations/0038_pois_photos.sql`** — `ALTER TABLE pois ADD COLUMN photos TEXT`。Nullable，JSON-encoded array of `{ url, thumbUrl?, caption?, source?, attribution? }`。
+- **`migrations/rollback/0038_pois_photos_rollback.sql`** — `DROP COLUMN photos`（D1 / SQLite 3.35+ 支援）。
+
+### Added
+- **`PoiPhoto` type**（`src/components/trip/TimelineEvent.tsx`）— `{ url, thumbUrl?, caption?, source?, attribution? }`。
+- **`TimelineEntryData.photos`** 欄位 — `PoiPhoto[] | null`，從 `pois.photos` JSON column parse 而來。
+- **`mapDay.parsePhotos()`** 安全解析 — malformed JSON / non-array / 缺 url 的 item 都 fallback null（不 throw）。frontend 可放心 graceful。
+- **StopLightbox photo carousel** — `entry.photos.length ≥ 1` 時 render 黑底大圖 + ◀ ▶ nav button + 底部分頁點 + caption + attribution（hyperlink 到 source）。空 / null → 維持原 placeholder。
+- **鍵盤導航** — lightbox open + photos 存在時，`←` `→` 切換照片，`Esc` 關閉。
+- **單張照片** 自動隱藏 nav button + pager dots（不 redundant UI）。
+
+### Changed
+- **API 自動 surface photos** — `functions/api/trips/[id]/days/_merge.ts` 用 `SELECT * FROM pois`，新欄位自動帶到 response。`json()` helper 不會深 parse JSON 字串，frontend 在 mapDay 處理。
+- **`RawEntryPoi` interface** 加 `photos?: string | null`。
+
+### Internal
+- 新增 `tests/unit/stop-lightbox.test.tsx`（+10 case）：placeholder vs carousel 切換、thumbUrl 優先、caption + attribution + source link、prev/next 環繞、ArrowLeft/ArrowRight 鍵盤、單張隱藏 nav。
+- 新增 `tests/unit/map-day-photos.test.ts`（8 case）：valid JSON / NULL / 空字串 / 空陣列 / malformed / object（非陣列）/ 混合 valid+invalid filter / all-invalid。
+
+### 部署順序
+1. `wrangler d1 migrations apply trip-planner-db --env preview` — staging 先試
+2. PR 預覽 deploy → 開 lightbox 看 placeholder 仍 OK（photos NULL 為常態）
+3. `wrangler d1 migrations apply trip-planner-db` — production
+4. 驗 prod lightbox 仍 graceful
+
+### Pending（v2.13+ follow-up）
+- **`scripts/populate-poi-photos.js`** — Wikimedia Commons API populate script（待寫）：
+  - 為每個 POI by name query Commons → 抓 top result image + thumbUrl
+  - Rate limit + cache + dry-run mode
+  - Cron 每週掃 photos NULL 的 pois
+- **User upload flow** — 直接上傳到 R2 + 寫 photos JSON
+- **per-entry photo override** — 目前 photos 只在 pois master，未來可加 trip_pois.photos 覆寫
+
 ## [2.11.0] - 2026-04-26
 
 **v2.10 Wave 2：InlineAddPoi 接 Nominatim search（PR5/3）**。發現 `/api/poi-search` 端點已經為 ExplorePage 寫好（v2.0 時期），所以 Wave 2 只需要 wire frontend — InlineAddPoi 從 PR3 純 placeholder 改成真實 search + add flow。

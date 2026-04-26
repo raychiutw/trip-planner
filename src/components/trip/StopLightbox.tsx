@@ -9,7 +9,7 @@
  * Triggered from TimelineRail's expanded-row action button (⛶).
  * ESC / ✕ / backdrop click → onClose.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import { parseTimeRange, deriveTypeMeta } from '../../lib/timelineUtils';
@@ -91,6 +91,52 @@ const SCOPED_STYLES = `
   max-width: 320px;
 }
 
+/* v2.12 Wave 3 photo carousel */
+.tp-lightbox-carousel {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius-lg);
+  min-height: 320px; max-height: 60vh;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.tp-lightbox-carousel img {
+  max-width: 100%; max-height: 60vh;
+  object-fit: contain;
+  display: block;
+}
+.tp-lightbox-carousel .nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
+  background: rgba(0,0,0,0.45); color: #fff;
+  border: 0; border-radius: var(--radius-full);
+  cursor: pointer;
+  display: grid; place-items: center;
+  font-size: 22px;
+  backdrop-filter: blur(8px);
+}
+.tp-lightbox-carousel .nav:hover { background: rgba(0,0,0,0.65); }
+.tp-lightbox-carousel .nav.prev { left: 12px; }
+.tp-lightbox-carousel .nav.next { right: 12px; }
+.tp-lightbox-carousel .pager {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px;
+}
+.tp-lightbox-carousel .pager .dot {
+  width: 8px; height: 8px; border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.4);
+  transition: width 0.2s, background 0.2s;
+}
+.tp-lightbox-carousel .pager .dot.on {
+  background: #fff; width: 24px;
+}
+.tp-lightbox-caption {
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+  margin-top: 6px; text-align: center; line-height: 1.4;
+}
+.tp-lightbox-caption a { color: var(--color-accent-deep); text-decoration: none; }
+.tp-lightbox-caption a:hover { text-decoration: underline; }
+
 .tp-lightbox-info { display: flex; flex-direction: column; gap: 14px; }
 .tp-lightbox-meta-row {
   display: flex; gap: 8px; flex-wrap: wrap;
@@ -140,14 +186,23 @@ export interface StopLightboxProps {
 }
 
 export default function StopLightbox({ open, entry, onClose }: StopLightboxProps) {
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const photos = entry.photos ?? null;
+  const hasPhotos = !!photos && photos.length > 0;
+
   useEffect(() => {
     if (!open) return;
+    setPhotoIndex(0);
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
+      if (hasPhotos && photos) {
+        if (e.key === 'ArrowLeft') setPhotoIndex((i) => (i - 1 + photos.length) % photos.length);
+        if (e.key === 'ArrowRight') setPhotoIndex((i) => (i + 1) % photos.length);
+      }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, hasPhotos, photos]);
 
   if (!open) return null;
 
@@ -156,6 +211,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
   const firstLoc = entry.locations?.[0];
   const hasNote = !!entry.note?.trim();
   const hasDescription = !!entry.description?.trim();
+  const currentPhoto = hasPhotos && photos ? photos[photoIndex] ?? photos[0]! : null;
 
   const handleBackdrop = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
@@ -197,11 +253,63 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
         </div>
 
         <div className="tp-lightbox-body">
-          <div className="tp-lightbox-photo" data-testid="stop-lightbox-photo-placeholder">
-            <span className="icon" aria-hidden="true">📷</span>
-            <span className="label">照片功能即將推出</span>
-            <span className="hint">未來可在這裡看景點照片、街景縮圖、user-uploaded gallery。目前只顯示文字內容。</span>
-          </div>
+          {hasPhotos && photos && currentPhoto ? (
+            <div>
+              <div className="tp-lightbox-carousel" data-testid="stop-lightbox-carousel">
+                <img
+                  src={currentPhoto.thumbUrl || currentPhoto.url}
+                  alt={currentPhoto.caption || entry.title || '景點照片'}
+                  loading="lazy"
+                />
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="nav prev"
+                      onClick={() => setPhotoIndex((i) => (i - 1 + photos.length) % photos.length)}
+                      aria-label="上一張"
+                      data-testid="stop-lightbox-prev"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="nav next"
+                      onClick={() => setPhotoIndex((i) => (i + 1) % photos.length)}
+                      aria-label="下一張"
+                      data-testid="stop-lightbox-next"
+                    >
+                      ›
+                    </button>
+                    <div className="pager" role="tablist" aria-label="照片分頁">
+                      {photos.map((_, i) => (
+                        <span key={i} className={`dot${i === photoIndex ? ' on' : ''}`} aria-hidden="true" />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {(currentPhoto.caption || currentPhoto.attribution) && (
+                <p className="tp-lightbox-caption" data-testid="stop-lightbox-caption">
+                  {currentPhoto.caption}
+                  {currentPhoto.caption && currentPhoto.attribution && ' · '}
+                  {currentPhoto.attribution && (
+                    currentPhoto.source ? (
+                      <a href={currentPhoto.source} target="_blank" rel="noopener noreferrer">
+                        {currentPhoto.attribution}
+                      </a>
+                    ) : currentPhoto.attribution
+                  )}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="tp-lightbox-photo" data-testid="stop-lightbox-photo-placeholder">
+              <span className="icon" aria-hidden="true">📷</span>
+              <span className="label">照片功能即將推出</span>
+              <span className="hint">未來可在這裡看景點照片、街景縮圖、user-uploaded gallery。目前只顯示文字內容。</span>
+            </div>
+          )}
 
           <div className="tp-lightbox-info">
             <div className="tp-lightbox-meta-row">
