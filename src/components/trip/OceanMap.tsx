@@ -420,7 +420,10 @@ const OceanMap = memo(function OceanMap({
   useEffect(() => {
     if (!map || !autoCluster) return;
     const layer = L.layerGroup().addTo(map);
-    const sc = new Supercluster({ radius: 60, maxZoom: 15 });
+    // QA 2026-04-26 BUG-042/043：原 radius 60 在 dense area（如沖繩本島）造
+    // 成多個 cluster bubble overlap。bump 80 + maxZoom 16，cluster 更
+    // aggressive 避免疊在一起，user zoom in 一級就拆開細節。
+    const sc = new Supercluster({ radius: 80, maxZoom: 16 });
     sc.load(
       visiblePins.map((pin) => ({
         type: 'Feature' as const,
