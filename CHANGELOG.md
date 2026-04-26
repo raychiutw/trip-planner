@@ -3,6 +3,27 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.13.0] - 2026-04-26
+
+**PR-K: 聊天訊息時間 + Timeline 拖拉排序 + iOS-style grip icon（3 個 feature）**。Round 2 user feedback 三個 feature 合一個 PR。
+
+### Added
+- **Chat 訊息時間** — `ChatMessage` 加 `createdAt?: string`，`rowToMessages` 從 `created_at`/`updated_at` 帶入。每個 bubble 下方 render `<time>` 元素：`HH:mm`（同日）或 `MM/DD HH:mm`（跨日）。font-size caption2 + muted color，user 對齊 right、assistant 對齊 left。
+- **Timeline stop 拖拉排序** — `TimelineRail` 包 `DndContext` + `SortableContext`，每 row 用 `useSortable`。drag end → optimistic local order override + Promise.all PATCH 每個 entry 的 `sort_order = 新 index` → dispatch `tp-entry-updated` → refetch 拿 backend authoritative order。失敗 revert override。
+- **`grip` icon (iOS-style)** — `Icon` registry 加 3 條水平線 icon（Apple Reminders/Lists drag affordance）。stroke-width 2 + linecap round。`.ocean-rail-grip` 32×32 button 在 row 左側 dot 旁，cursor grab/grabbing，hover accent，`touch-action: none` 阻止瀏覽器 swipe 接管。
+
+### Internal
+- `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` — 已在 deps，無新 dep。
+- `useSortable({ id: entry.id, disabled: entry.id == null })` — 沒儲存的 row（local-only）不可拖。
+- `PointerSensor` activation distance 8px — 避免誤觸 toggle expand。
+- 拖拉 handle 跟 row click area 完全分離（grip button vs row button），無 click 衝突。
+- verify gate: tsc clean / 122 files / 1031 tests pass。
+
+### 後續可加
+- Cross-day drag（拖到別天） — 目前 only same-day reorder。需要 day boundary drop targets 或 keyboard fly-to-day。
+- Drag preview / overlay — 目前用 dnd-kit 預設 transform，可加 DragOverlay 顯示「拖拉中」 visual。
+- Sort_order PATCH batching — 目前 N 個 entry N 個 PATCH，可加 bulk endpoint `/entries/reorder` 一次完成。
+
 ## [2.12.10] - 2026-04-26
 
 **QA round 2 PR-J：TripPage mobile day-strip clip + 看地圖 chip 移除（2 fixes）**。手機 trip 詳情頁兩個 user feedback 改動。

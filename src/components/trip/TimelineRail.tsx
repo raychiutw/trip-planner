@@ -12,8 +12,17 @@
  * reachable via list click.
  */
 
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import clsx from 'clsx';
+import {
+  DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
+  closestCenter, type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, sortableKeyboardCoordinates,
+  verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
@@ -165,6 +174,24 @@ const SCOPED_STYLES = `
   position: relative;
   display: inline-flex; gap: 4px;
 }
+
+/* QA 2026-04-26 PR-K：iOS-style 拖拉排序 grip handle。位於 ocean-rail-item
+ * left side（dot 旁邊），cursor grab/grabbing。touch-action none 阻止瀏覽器
+ * 預設 horizontal scroll/swipe 接管。color muted 讓它低調，hover 變 accent。 */
+.ocean-rail-grip {
+  border: 0; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px;
+  cursor: grab;
+  color: var(--color-muted);
+  border-radius: var(--radius-sm);
+  touch-action: none;
+  flex-shrink: 0;
+  transition: color 120ms, background 120ms;
+}
+.ocean-rail-grip:hover { color: var(--color-accent); background: var(--color-secondary); }
+.ocean-rail-grip:active { cursor: grabbing; }
+.ocean-rail-grip .svg-icon { width: 18px; height: 18px; }
 `;
 
 interface TimelineRailProps {
@@ -192,6 +219,18 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const allDays = useTripDays();
   const parsed = parseTimeRange(entry.time);
   const meta = deriveTypeMeta(entry);
+
+  // QA 2026-04-26 PR-K：dnd-kit sortable wiring。entry.id null 時 disabled
+  // (避免拖到還沒儲存的 row)。drag handle 用 grip icon button (only-source)
+  // 避免跟 row click 衝突 toggle expand。
+  const sortableId = entry.id ?? `idx-${index}`;
+  const sortable = useSortable({ id: sortableId, disabled: entry.id == null });
+  const sortableStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(sortable.transform),
+    transition: sortable.transition,
+    opacity: sortable.isDragging ? 0.6 : undefined,
+    zIndex: sortable.isDragging ? 20 : undefined,
+  };
   const canExpand = entry.id != null;
   const entryIdNum = entry.id ?? null;
 
@@ -296,6 +335,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   return (
     <>
       <div
+        ref={sortable.setNodeRef}
+        style={sortableStyle}
         className="ocean-rail-item"
         data-now={isNow || undefined}
         data-past={isPast || undefined}
@@ -305,6 +346,19 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       >
         <span className="ocean-rail-time">{parsed.start}</span>
         <span className="ocean-rail-dot" aria-hidden="true">{index + 1}</span>
+        {/* QA 2026-04-26 PR-K：iOS-style drag handle (grip icon)。only drag
+         * source 避免跟 row click 衝突。aria-label「拖拉排序」 對 screen reader
+         * 表達 sortable affordance。 */}
+        <button
+          type="button"
+          className="ocean-rail-grip"
+          {...sortable.listeners}
+          {...sortable.attributes}
+          aria-label={`拖拉排序：${entry.title ?? '（無標題）'}`}
+          data-testid={entry.id != null ? `timeline-rail-grip-${entry.id}` : undefined}
+        >
+          <Icon name="grip" />
+        </button>
         <button
           type="button"
           className="ocean-rail-head"
@@ -514,12 +568,70 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 
 const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }: TimelineRailProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  // PR-K：local order override — drag-end 後立即套用 optimistic order，等
+  // backend PATCH 完成 + tp-entry-updated 觸發 refetch 再用 fresh data 覆蓋。
+  const [orderOverride, setOrderOverride] = useState<number[] | null>(null);
+  const tripId = useTripId();
+
+  // PR-K dnd-kit sensors。pointer 8px activation distance 避免誤觸 (跟 click
+  // expand row 衝突)，keyboard 走 sortable coordinate getter。
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  // 套 order override (drag 後 optimistic) 重排 events
+  const orderedEvents = useMemo(() => {
+    if (!orderOverride) return events;
+    const byId = new Map<number, TimelineEntryData>();
+    events.forEach((e) => { if (e.id != null) byId.set(e.id, e); });
+    const result: TimelineEntryData[] = [];
+    orderOverride.forEach((id) => { const e = byId.get(id); if (e) result.push(e); });
+    // 保險：events 有但 override 漏的 id 接在尾巴
+    events.forEach((e) => { if (e.id != null && !orderOverride.includes(e.id)) result.push(e); });
+    return result;
+  }, [events, orderOverride]);
+
+  // events prop 變動 → reset override（refetch 帶回 backend authoritative order）
+  const eventsKey = events.map((e) => e.id ?? -1).join(',');
+  useMemo(() => { setOrderOverride(null); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [eventsKey]);
+
+  const handleDragEnd = useCallback(async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = orderedEvents.findIndex((ev) => (ev.id ?? `idx-${ev.id}`) === active.id);
+    const newIdx = orderedEvents.findIndex((ev) => (ev.id ?? `idx-${ev.id}`) === over.id);
+    if (oldIdx < 0 || newIdx < 0) return;
+    const reordered = arrayMove(orderedEvents, oldIdx, newIdx);
+    const newIds = reordered.map((ev) => ev.id).filter((id): id is number => id != null);
+    setOrderOverride(newIds);
+    // PATCH 每個改變位置的 entry 的 sort_order = 新 index
+    if (!tripId) return;
+    try {
+      await Promise.all(newIds.map((id, idx) =>
+        apiFetchRaw(`/trips/${tripId}/entries/${id}`, {
+          method: 'PATCH',
+          credentials: 'same-origin',
+          body: JSON.stringify({ sort_order: idx }),
+        }),
+      ));
+      window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+        detail: { tripId, entryId: active.id, reordered: true },
+      }));
+    } catch {
+      // PATCH 失敗 → revert override，refetch 拿 fresh data
+      setOrderOverride(null);
+    }
+  }, [orderedEvents, tripId]);
 
   if (!events || events.length === 0) return null;
 
-  const firstTime = parseTimeRange(events[0]?.time).start;
-  const lastTime = parseTimeRange(events[events.length - 1]?.time).end ||
-                   parseTimeRange(events[events.length - 1]?.time).start;
+  const firstTime = parseTimeRange(orderedEvents[0]?.time).start;
+  const lastTime = parseTimeRange(orderedEvents[orderedEvents.length - 1]?.time).end ||
+                   parseTimeRange(orderedEvents[orderedEvents.length - 1]?.time).start;
+
+  // PR-K：sortable items list — entry.id 或 fallback `idx-N`（disabled in RailRow）
+  const sortableItems = orderedEvents.map((e, i) => e.id ?? `idx-${i}`);
 
   return (
     <div className="ocean-rail">
@@ -527,12 +639,14 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       <div className="ocean-rail-header">
         <span className="ocean-rail-eyebrow">Itinerary</span>
         <span className="ocean-rail-meta">
-          {events.length} stops{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
+          {orderedEvents.length} stops{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
         </span>
       </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
       <div className="ocean-rail-body">
         <div className="ocean-rail-line" aria-hidden="true" />
-        {events.map((entry, i) => {
+        {orderedEvents.map((entry, i) => {
           const isPast = nowIndex >= 0 && i < nowIndex;
           const isNow = nowIndex >= 0 && i === nowIndex;
           const isLast = i === events.length - 1;
@@ -555,6 +669,8 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           );
         })}
       </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 });

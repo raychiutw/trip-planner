@@ -5,6 +5,8 @@ const ICONS: Record<string, string> = {
   /* ----- UI System ----- */
   'edit': '<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
   'menu': '<path fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" d="M3 12h18M3 6h18M3 18h18"/>',
+  /* iOS-style reorder/drag handle — 3 horizontal lines, slightly shorter than menu icon. Apple Reminders / Lists drag affordance. */
+  'grip': '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 8h14M5 12h14M5 16h14"/>',
   'plane': '<path d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>',
   'check-circle': '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>',
   'circle-dot': '<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/><circle cx="12" cy="12" r="5"/>',

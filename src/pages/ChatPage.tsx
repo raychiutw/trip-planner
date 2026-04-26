@@ -18,7 +18,7 @@
  *   - Desktop ≥1024px: 3-pane via AppShell (sidebar | chat main | sheet)
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -49,6 +49,10 @@ interface ChatMessage {
   markdown?: boolean;
   /** When true, mark message as failed (red border). */
   failed?: boolean;
+  /** ISO timestamp from tp-request `created_at` / `updated_at`. Rendered as
+   *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
+   *  optimistic message (will fill on next reload from API)。 */
+  createdAt?: string | null;
 }
 
 interface RawRequestRow {
@@ -64,21 +68,40 @@ interface RawRequestRow {
   updated_at?: string;
 }
 
+/** QA 2026-04-26 PR-K：format chat bubble timestamp。同日只顯示 HH:mm，
+ *  跨日加 MM/DD prefix。tabular-nums 字體穩定 alignment。 */
+function formatChatTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const today = new Date();
+  if (d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate()) {
+    return `${hh}:${mm}`;
+  }
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+}
+
 /** Build a message pair (user bubble + assistant bubble) from a tp-request row. */
 function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const out: ChatMessage[] = [];
   const baseId = row.id * 2;
+  // QA 2026-04-26 PR-K：每個 message 帶 ISO timestamp。user message 用 created_at
+  // (送出時點)，assistant reply 用 updated_at (AI 完成時點)。fallback 互換。
+  const userTs = row.created_at ?? row.updated_at ?? null;
+  const assistantTs = row.updated_at ?? row.created_at ?? null;
   if (row.message) {
-    out.push({ id: baseId, role: 'user', text: row.message });
+    out.push({ id: baseId, role: 'user', text: row.message, createdAt: userTs });
   }
   if (row.status === 'completed' && row.reply) {
-    out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true });
+    out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true, createdAt: assistantTs });
   } else if (row.status === 'failed') {
     out.push({
       id: baseId + 1,
       role: 'assistant',
       text: row.reply?.trim() || 'AI 處理失敗。',
       failed: true,
+      createdAt: assistantTs,
     });
   } else {
     // open / processing — still inflight from a prior session
@@ -87,6 +110,7 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
       role: 'assistant',
       text: '思考中…',
       pendingRequestId: row.id,
+      createdAt: assistantTs,
     });
   }
   return out;
@@ -230,6 +254,17 @@ const SCOPED_STYLES = `
   border-bottom-left-radius: var(--radius-sm);
   white-space: normal;
 }
+/* QA 2026-04-26 PR-K：每則訊息下方時間 — user 對齊 right、assistant 對齊 left。
+ * font-size caption2 + muted color，不搶 message text 視覺權重。 */
+.tp-chat-msg-time {
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+  padding: 0 4px;
+}
+.tp-chat-msg-time-user { align-self: flex-end; }
+.tp-chat-msg-time-assistant { align-self: flex-start; }
 .tp-chat-msg-assistant.is-pending {
   color: var(--color-muted);
   font-style: italic;
@@ -651,21 +686,31 @@ export default function ChatPage() {
         )}
 
         {activeTripId && messages.map((m) => (
-          <div
-            key={m.id}
-            className={`tp-chat-msg ${m.role === 'user' ? 'tp-chat-msg-user' : 'tp-chat-msg-assistant'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
-            data-testid={`chat-msg-${m.role}`}
-          >
-            {m.pendingRequestId ? (
-              <span className="tp-chat-typing" aria-label="AI 思考中">
-                <span /><span /><span />
-              </span>
-            ) : m.markdown ? (
-              <MarkdownText text={m.text} as="div" />
-            ) : (
-              m.text
+          <Fragment key={m.id}>
+            <div
+              className={`tp-chat-msg ${m.role === 'user' ? 'tp-chat-msg-user' : 'tp-chat-msg-assistant'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
+              data-testid={`chat-msg-${m.role}`}
+            >
+              {m.pendingRequestId ? (
+                <span className="tp-chat-typing" aria-label="AI 思考中">
+                  <span /><span /><span />
+                </span>
+              ) : m.markdown ? (
+                <MarkdownText text={m.text} as="div" />
+              ) : (
+                m.text
+              )}
+            </div>
+            {m.createdAt && !m.pendingRequestId && (
+              <time
+                className={`tp-chat-msg-time tp-chat-msg-time-${m.role}`}
+                dateTime={m.createdAt}
+                data-testid={`chat-msg-time-${m.id}`}
+              >
+                {formatChatTime(m.createdAt)}
+              </time>
             )}
-          </div>
+          </Fragment>
         ))}
 
         {sseError && inflightId && (
