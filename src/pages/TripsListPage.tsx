@@ -95,6 +95,15 @@ const SCOPED_STYLES = `
   height: 100%;
   min-height: 100%;
 }
+/* PR-PP v3 2026-04-26：embedded TripPage 內容置中 + max-width 限寬，
+ * 不要佔滿整個 main pane 寬度。User 反饋「不是滿版」 — 桌機 main 1040
+ * 直接 render TripPage 內容會看起來空空、過寬。容器 max-width 720 模擬
+ * 原 sheet 比例（540-576）但稍放寬。 */
+.tp-embedded-content {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
 .tp-embedded-topbar {
   display: flex; align-items: center; gap: 12px;
   height: 56px;
@@ -616,7 +625,9 @@ export default function TripsListPage() {
           </span>
         )}
       </header>
-      <TripPage tripId={effectiveSelectedId!} noShell />
+      <div className="tp-embedded-content">
+        <TripPage tripId={effectiveSelectedId!} noShell />
+      </div>
     </div>
   ) : cardGridMain;
 

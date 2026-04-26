@@ -20,7 +20,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Removed
 - `.app-shell:has(> main .tp-trips-shell)[data-layout="3pane"]` sheet width override（已不適用）。
 - TripsListPage `sheet` prop 傳給 AppShell。
-- Embedded mode 的 `!isDesktop` 限制（現在桌機/手機都走滿版）。
+- Embedded mode 的 `!isDesktop` 限制（現在桌機/手機都走 embedded）。
+
+### Refined
+- **Embedded TripPage 不滿版** — 加 `.tp-embedded-content { max-width: 720px; margin: 0 auto }` 容器，trip 內容置中限寬，不佔滿 1040 main 寬度。User 反饋「不是滿版」。
 
 ### Tests
 - 更新 2 cases：原 `desktop: first trip auto-selected → sheet` 改為新架構 `desktop + no ?selected: card grid only` + `desktop + ?selected: 滿版 embedded`。
