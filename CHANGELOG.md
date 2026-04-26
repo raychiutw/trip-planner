@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.9] - 2026-04-26
+
+**PR-X: ExplorePage 儲存池 toolbar 加刪除 + 跟下方 POI grid 留間隔（QA round 11）**。User: 「儲存的 poi 點選後 加入行程 後面增加刪除 然後點選後顯示的功能列要和景點 poi 要有留間隔」。
+
+### Added
+- **「刪除」 button** 加在「加入行程」 後面 — destructive style（透明 bg / destructive border + color，hover bg destructive-bg）。
+- **`handleDeleteSelected()`** — confirm dialog → `Promise.all` 對每個 selected id 呼 DELETE `/api/saved-pois/:id` → 部分失敗仍 show 部分成功 toast。
+- **`deletingSelected` state + `disabled` 三個 button** during delete in-flight。
+
+### Fixed
+- **Toolbar 跟下方 POI grid 沒間隔** — `.explore-toolbar` 加 `margin-bottom: 16px`。原本 toolbar 跟 grid 沒有 gap（兩個都是 `.explore-section` 直接 child，section 沒設 flex/gap），視覺貼在一起。
+
+### Internal
+- DELETE endpoint `/api/saved-pois/:id` 已存在（owner / admin only），無需後端改動。
+- toolbar-actions flex-wrap 加進去，三個 button 在窄螢幕可換行不擠破。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
 ## [2.14.8] - 2026-04-26
 
 **PR-W: NewTripModal 關閉 X 移到右上角（QA round 10）**。User 截圖紅圈：原本 X 在 form pane 上方，視覺浮在 hero/form 中間區域（mobile）。
