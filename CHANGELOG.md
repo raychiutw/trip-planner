@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.29] - 2026-04-27
+
+**PR-VV: mobile bottom-nav scroll-direction-aware auto-hide（QA round 28）**。
+
+### Added
+- **Bottom-nav 向下捲消失、向上捲顯示** (iOS Safari pattern)。AppShell 加 scroll listener on `.app-shell-main`，detect direction → toggle `data-hidden` attr → CSS `transform: translateY(100%)` slide animation。
+- 8px threshold 避免抖動，60px top buffer 避免最頂端就 hide。
+- `passive: true` listener (RBP-26 規定)。
+
+### Changed
+- **Bottom-nav grid row → fixed overlay** — 原 sticky in grid row 結構無法 transform-hide（row 仍佔空間），改 `position: fixed` 才能 slide 完全離場。
+- Main pane 加 `padding-bottom: var(--nav-height-mobile, 88px)` reserve space 避免 content 被遮。
+
+### Tests
+- `app-shell-snapshot.test.tsx` snapshot 更新（多 `data-hidden="false"` attr）。
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.28] - 2026-04-27
 
 **PR-UU: 共編 chip 改漢堡選單 (共編 / 列印 / 下載 4 formats)（QA round 27）**。
