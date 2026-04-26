@@ -153,6 +153,13 @@ const SCOPED_STYLES = `
 .tp-rail-action-icon:hover {
   background: var(--color-accent-subtle); color: var(--color-accent-deep); border-color: var(--color-accent-bg);
 }
+/* QA 2026-04-26 BUG-012：mockup .iconbtn.sm.danger for delete — destructive
+ * 顏色用 priority-high tokens 對齊 DESIGN.md semantic colors。 */
+.tp-rail-action-icon.is-danger:hover {
+  background: var(--color-priority-high-bg);
+  color: var(--color-priority-high-dot);
+  border-color: var(--color-priority-high-dot);
+}
 .tp-rail-action-icon-group {
   /* anchor the absolute-positioned EntryActionPopover */
   position: relative;
@@ -239,6 +246,26 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       void saveNote();
     }
   };
+
+  // QA 2026-04-26 BUG-012：mockup .iconbtn.sm.danger 🗑 delete handler。
+  // 走既有 DELETE /api/trips/:id/entries/:eid → cascade delete trip_pois。
+  // 用 native confirm() 確認（避免誤觸），成功後 dispatch event 觸發 refetch。
+  const handleDelete = useCallback(async () => {
+    if (!tripId || entryIdNum == null) return;
+    if (!window.confirm(`確定刪除「${entry.title || '此景點'}」？此操作無法復原。`)) return;
+    try {
+      const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('刪除失敗');
+      window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+        detail: { tripId, entryId: entryIdNum },
+      }));
+    } catch (err) {
+      window.alert(err instanceof Error ? err.message : '刪除失敗');
+    }
+  }, [tripId, entryIdNum, entry.title]);
 
   // v2.10 Wave 1: ⎘ copy / ⇅ move handler — popover onConfirm callback。
   // copy → POST /trips/:id/entries/:eid/copy ；move → PATCH /trips/:id/entries/:eid。
@@ -360,6 +387,28 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 )}
               </div>
             )}
+            {/* QA 2026-04-26 BUG-012：mockup 規範 4 個 icon button — 🗑 delete
+             * + ✕ collapse 不論單天/多天都顯示（每個 entry 都該能刪/收闔）。 */}
+            <button
+              type="button"
+              className="tp-rail-action-icon is-danger"
+              onClick={(e) => { e.stopPropagation(); void handleDelete(); }}
+              aria-label="刪除景點"
+              title="刪除景點"
+              data-testid={`timeline-rail-delete-${entry.id}`}
+            >
+              🗑
+            </button>
+            <button
+              type="button"
+              className="tp-rail-action-icon"
+              onClick={(e) => { e.stopPropagation(); onToggle(); }}
+              aria-label="收闔"
+              title="收闔"
+              data-testid={`timeline-rail-collapse-${entry.id}`}
+            >
+              ✕
+            </button>
           </div>
 
           {hasDescription && (

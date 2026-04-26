@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.3] - 2026-04-26
+
+**QA fix series PR-C: TimelineRail action row 補齊 mockup 4 個 icon button（1 issue）**。依 mockup spec — 行內 expand 的 action row 應有「⛶ / ⎘ / ⇅ / 🗑 / ✕」5 個 button，prod 只有前 3 個。補完 🗑 + ✕。
+
+### Fixed (per mockup spec)
+- **BUG-012 action row 補 🗑 + ✕** — mockup `.actions` 4 個 iconbtn 全部補齊：
+  - **🗑 delete**：DELETE `/api/trips/:id/entries/:eid`（既有端點）+ `window.confirm` 確認 + dispatch `tp-entry-updated`。`.is-danger` variant 用 `--color-priority-high-*` tokens 對齊 DESIGN.md semantic colors
+  - **✕ collapse**：呼叫 `onToggle()` 把行收闔，pure UI no API
+  - 兩個 button 不論單天/多天 always 顯示，跟 ⎘/⇅ conditional on 多天 拆開
+
+### Internal
+- 無 test 變動 — 純 JSX + handler，既有 timeline-rail-inline-expand tests 仍 pass。verify gate: tsc clean / 1035 tests pass。
+- 註解避坑：SCOPED_STYLES template literal 內註解禁用 backtick（會關閉 string）。
+
 ## [2.12.2] - 2026-04-26
 
 **QA fix series PR-B: NewTripModal mockup-aligned polish + PR-A revert（5 issues）**。依 mockup `/tmp/tripline-newtrip-v1-split-hero-v2.html` spec 修 NewTripModal hero/form 的視覺缺漏。同時 retroactively review PR-A — swatch 14px 升級違反 mockup 12px spec，這版復原。
