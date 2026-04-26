@@ -49,6 +49,12 @@ export interface OceanMapProps {
       because parent TripPage rebuilds pins inline on every render — without this, every re-render
       would snap the rail back to full-trip bounds and wipe manual map moves + scroll-spy pan. */
   fitOnce?: boolean;
+  /** Imperative L.Map handle for parent — used by /map page 全覽/我的位置/zoom 控制。
+   *  Called once on mount and on cleanup with null。Parent should ref-store, not state-store. */
+  onMapReady?: (map: L.Map | null) => void;
+  /** Override Leaflet zoom control position (default 'topleft')。/map 用 'bottomright'
+   *  避免跟左上 trip-switcher overlap。 */
+  zoomControlPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
 }
 
 /* ===== Marker construction ===== */
@@ -281,14 +287,25 @@ const OceanMap = memo(function OceanMap({
   dayNum,
   panToCoord,
   fitOnce = false,
+  onMapReady,
+  zoomControlPosition,
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
   const autoCluster = cluster ?? (mode === 'overview' && pins.length > 10);
 
   const { containerRef, map, fitBounds, flyTo } = useLeafletMap({
     zoomControl: mode === 'overview',
+    zoomControlPosition,
     dark,
   });
+
+  // Expose L.Map handle to parent (one-shot when ready, null on cleanup).
+  // 給 GlobalMapPage 的「全覽 / 我的位置」pill button 用。
+  useEffect(() => {
+    if (!onMapReady) return;
+    onMapReady(map);
+    return () => onMapReady(null);
+  }, [map, onMapReady]);
 
   const visiblePins = useMemo(() => {
     if (mode === 'detail' && focusId !== undefined) {
@@ -425,10 +442,21 @@ const OceanMap = memo(function OceanMap({
       const clusters = sc.getClusters(bbox, zoom);
       for (const c of clusters) {
         const [lng, lat] = c.geometry.coordinates as [number, number];
-        const props = c.properties as { cluster?: boolean; point_count?: number; pin?: MapPin };
+        const props = c.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; pin?: MapPin };
         if (props.cluster) {
           const count = props.point_count ?? 0;
-          L.marker([lat, lng], { icon: clusterIcon(count), keyboard: false }).addTo(layer);
+          const clusterId = props.cluster_id;
+          // 點 cluster → zoom 到 supercluster 計算的 expansion zoom，使其展開成個別
+          // 子 cluster / pin。沒 expansion zoom（已經在 maxZoom）就 +2 級當保險。
+          const m = L.marker([lat, lng], { icon: clusterIcon(count), keyboard: true });
+          m.on('click', () => {
+            const target =
+              clusterId != null
+                ? Math.min(sc.getClusterExpansionZoom(clusterId), 18)
+                : Math.min(map.getZoom() + 2, 18);
+            map.setView([lat, lng], target, { animate: true });
+          });
+          m.addTo(layer);
         } else if (props.pin) {
           const pin = props.pin;
           const m = L.marker([pin.lat, pin.lng], {
