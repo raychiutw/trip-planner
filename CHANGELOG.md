@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.7] - 2026-04-26
+
+**PR-V: NewTripModal 真的會捲了 — grid-template-rows + overscroll-behavior（QA round 9）**。User: 「捲動是捲動底部 layer，上方無法用」。Claude 用 /browse 對 prod 測 + 量 DOM 找到根因。
+
+### Fixed
+- **Modal 內容看得到但動不了 + scroll 跑到背景 page** — 根因兩層：
+  - **Layer 1（form 沒被約束）**：modal `display: grid` 但只設 `grid-template-columns`，沒設 `grid-template-rows`。grid 預設 `grid-auto-rows: auto`，每個 row 取內容高。Form 內容自然撐成 755px，超過 modal 可用空間（max-height 812 - hero 222 = 590px）。Form 自己有 `overflow-y: auto` + `min-height: 0`，但因為「自己沒被父層約束高度」，根本沒進入 overflow 狀態，scroll 不觸發 → user 看到內容被切但動不了。
+  - **Layer 2（rubber-band scroll bleed）**：iOS Safari 在 modal 觸 scroll 邊界時會把剩餘動量傳給 ancestor，背景 page (AppShell main 也是 overflow-y: auto) 跟著捲。
+
+### 修法
+- **`grid-template-rows: auto 1fr`** — mobile single-column 強制 hero 取自然高度，form 拿剩餘空間（590px）。Form 一被約束，`overflow-y: auto` 真的觸發，內容 755 > clientH 590 = 可捲。
+- **`overscroll-behavior: contain`** — form 加上後，scroll 邊界動量被 form 自己吃掉，不會傳到 ancestor。背景 page 不再被誤動。
+- **Desktop @media** 加 `grid-template-rows: 1fr` — split-screen 兩欄並排，rows 一個就夠（覆蓋 mobile 的 auto 1fr）。
+
+### 抓 bug 過程（自我測試先做好）
+```
+1. /browse goto /trips → 登入 onion523 → click 新增行程
+2. js measure: modalH=812 ✓, formH=754, formScrollH=755, formClientH=755, canScroll=false
+   → form size = its content size (not constrained)
+3. js patch: modal.style.gridTemplateRows='auto 1fr'
+4. js measure again: formClientH=588, formScrollH=755, canScroll=true ✓
+5. 確認映射對 → 寫進 source code
+```
+
+### Internal
+- 純 CSS 改動 — 1 個 grid-template-rows + 1 個 overscroll-behavior，零 JS 改動。
+- 對應 user 上一次截圖 PR-S 修了 z-index，PR-M 修了 max-height，PR-V 終於把 scroll 完整跑通：z-index 高 + portal 出 stacking context + max-height 約束 + grid rows 約束內 child + overscroll 防 bleed = 4 件事缺一不可。
+- verify gate: 122 files / 1026 tests pass。
+
 ## [2.14.6] - 2026-04-26
 
 **PR-U: 全站錯誤訊息統一 — Toast 跑版修 + 共用 ErrorBanner/InlineError + anti-slop emoji 清（design audit 4 點全修）**。User 指示「全部修」 PR-U/V/W/X bundle。

@@ -49,9 +49,18 @@ const SCOPED_STYLES = `
    * 被 viewport / iOS home indicator / chrome bottom-nav 切到。32px = 上下
    * backdrop padding 各 16。dvh 走 dynamic viewport 對應 Safari URL bar。 */
   max-height: calc(100dvh - 32px);
+  /* PR-V 2026-04-26：mobile single-column 必須明確 grid-template-rows: auto 1fr，
+   * 否則 form 自然撐成內容高（755px）超過 modal 可用（812 - hero 222 = 590），
+   * 被 modal 的 overflow:hidden 切掉，form 自己 overflow-y: auto 因為「自己沒被
+   * 約束」根本不觸發 → user 看到內容被切但動不了。 */
+  grid-template-rows: auto 1fr;
 }
 @media (min-width: 768px) {
-  .tp-new-modal { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); }
+  .tp-new-modal {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    /* Desktop split-screen — hero 跟 form 並排，rows 一個就夠 */
+    grid-template-rows: 1fr;
+  }
 }
 
 /* ===== Hero pane ===== */
@@ -100,8 +109,11 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
   /* QA 2026-04-26 PR-M：form pane 自己捲，避免整個 modal 撐爆 viewport。
    * min-height: 0 讓 grid child 可被 max-height 約束（grid 預設 min-height auto）。
-   * padding-bottom 加 safe-area，避免 iOS home indicator 蓋到送出按鈕。 */
+   * padding-bottom 加 safe-area，避免 iOS home indicator 蓋到送出按鈕。
+   * PR-V 2026-04-26：overscroll-behavior contain 防 iOS rubber-band 把 scroll
+   * 傳到背景 page（user 截圖回報「捲動是捲動底部 layer」）。 */
   overflow-y: auto;
+  overscroll-behavior: contain;
   min-height: 0;
   padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
 }
