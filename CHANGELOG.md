@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.21] - 2026-04-26
+
+**PR-KK: sheet 改 32vw cap 576 — 涵蓋 1280 viewport（QA round 20）**。
+
+### Fixed
+- **1280 viewport sheet 仍太大** — PR-JJ 的 `min(576, 40vw)` 在 1280 算 = 512px（沒到 576 cap，被 40vw 鎖死），main 只放 1 card。改 `min(576, 32vw)` 讓 1280 = 410px，main 630 容下 2 cards。
+- 1920+ 仍 cap 576 維持 mockup 上限。
+
+| Viewport | sheet | main | cards |
+|----------|-------|------|-------|
+| 1280 | 410 (32vw) | 630 | 2 |
+| 1440 | 461 (32vw) | 739 | 2 |
+| 1920 | 576 (cap) | 1104 | 3 |
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.20] - 2026-04-26
 
 **PR-JJ: /trips sheet cap 鎖在 mockup-1440 的 576px，不讓 wider viewport 長到 780（QA round 19）**。
