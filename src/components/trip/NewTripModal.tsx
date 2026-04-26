@@ -18,10 +18,24 @@
  *
  * 對應 mindtrip 8:31.31 split-screen 與 8:32.17 numeric stepper / month carousel。
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetchRaw } from '../../lib/apiClient';
 import InlineError from '../shared/InlineError';
+
+interface PoiSearchResult {
+  osm_id: number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  category: string;
+  country?: string;
+  country_name?: string;
+}
+
+const POI_SEARCH_DEBOUNCE_MS = 300;
+const POI_SEARCH_MIN_LEN = 2;
 
 const SCOPED_STYLES = `
 .tp-new-modal-backdrop {
@@ -163,7 +177,98 @@ const SCOPED_STYLES = `
 .tp-new-form-row-spaced { margin-top: 16px; }
 /* QA 2026-04-26 PR-M：拿掉 📍 emoji 視覺重心（anti-slop emoji 濫用）。
  * label「目的地」+ placeholder 已經足夠定位 input 用途。 */
+.tp-new-dest-wrap { position: relative; }
 .tp-new-dest-wrap input { font-weight: 600; }
+
+/* PR-BB 2026-04-26：destination autocomplete dropdown + locked POI chip */
+.tp-new-dest-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  z-index: 3;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.tp-new-dest-status {
+  padding: 14px 16px;
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  text-align: center;
+}
+.tp-new-dest-result {
+  display: flex; flex-direction: column; gap: 2px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.tp-new-dest-result:last-child { border-bottom: 0; }
+.tp-new-dest-result:hover {
+  background: var(--color-accent-subtle);
+}
+.tp-new-dest-result:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: -2px;
+}
+.tp-new-dest-result .name {
+  font-size: var(--font-size-callout); font-weight: 700;
+  color: var(--color-foreground);
+  line-height: 1.3;
+}
+.tp-new-dest-result .addr {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  line-height: 1.4;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+}
+
+.tp-new-dest-locked {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-subtle);
+  min-height: var(--spacing-tap-min);
+}
+.tp-new-dest-locked-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.tp-new-dest-locked-text strong {
+  font-size: var(--font-size-body); font-weight: 700;
+  color: var(--color-accent-deep);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-new-dest-locked-country {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+}
+.tp-new-dest-clear {
+  width: 32px; height: 32px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-muted);
+  display: grid; place-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.tp-new-dest-clear:hover {
+  background: var(--color-accent-bg);
+  color: var(--color-accent-deep);
+}
 .tp-new-form-row label {
   font-size: var(--font-size-footnote);
   font-weight: 700;
@@ -406,15 +511,9 @@ function genTripId(name: string): string {
   return `${slug}-${suffix}`.slice(0, 100);
 }
 
-function detectCountries(destination: string): string {
-  const s = destination.toLowerCase();
-  if (/沖繩|沖縄|京都|東京|大阪|北海道|福岡|名古屋|奈良|kyoto|tokyo|osaka|okinawa|japan|jp/i.test(destination) || /jp/.test(s)) return 'JP';
-  if (/首爾|釜山|濟州|seoul|busan|jeju|korea|kr/i.test(destination)) return 'KR';
-  if (/台北|台中|台南|花蓮|高雄|墾丁|taipei|taichung|tainan|hualien|kaohsiung|taiwan|tw/i.test(destination)) return 'TW';
-  if (/曼谷|清邁|普吉|bangkok|chiang|phuket|thailand|th/i.test(destination)) return 'TH';
-  if (/巴黎|羅馬|倫敦|paris|rome|london|europe/i.test(destination)) return 'EU';
-  return 'JP';
-}
+// PR-BB 2026-04-26：detectCountries() 移除。原本用 keyword regex 猜測 country，
+// 不準（沖繩寫成 "Naha" / 巴塞隆納沒列在清單 / 等等都會 default JP）。改成
+// destination autocomplete 強制 user 選一筆 POI，直接拿 Nominatim 真實 country code。
 
 export interface NewTripModalProps {
   open: boolean;
@@ -426,7 +525,17 @@ export interface NewTripModalProps {
 type DateMode = 'select' | 'flexible';
 
 export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: NewTripModalProps) {
-  const [destination, setDestination] = useState('');
+  // PR-BB 2026-04-26：destination 從 free-text 改 POI autocomplete。User 必須
+  // 從搜尋結果選一筆 (selectedPoi)，submit 才會通過 canSubmit。Country code 用
+  // Nominatim 回傳的 ISO alpha-2 取代原本 detectCountries() keyword regex 猜測。
+  const [destQuery, setDestQuery] = useState('');
+  const [selectedPoi, setSelectedPoi] = useState<PoiSearchResult | null>(null);
+  const [poiResults, setPoiResults] = useState<PoiSearchResult[] | null>(null);
+  const [poiSearching, setPoiSearching] = useState(false);
+  const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
+  const poiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const poiAbortRef = useRef<AbortController | null>(null);
+
   const [dateMode, setDateMode] = useState<DateMode>('select');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -440,7 +549,11 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
 
   useEffect(() => {
     if (!open) {
-      setDestination('');
+      setDestQuery('');
+      setSelectedPoi(null);
+      setPoiResults(null);
+      setPoiSearching(false);
+      setPoiSearchError(null);
       setDateMode('select');
       setStartDate('');
       setEndDate('');
@@ -452,6 +565,63 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       setFlexMonth(monthChoices[0]?.key ?? '');
     }
   }, [open, monthChoices]);
+
+  // Debounced POI search — 同 InlineAddPoi 250ms pattern，但 lower min len 2。
+  // selectedPoi 鎖定後不再 search（user 已選定）。
+  useEffect(() => {
+    if (!open) return;
+    if (selectedPoi) return; // already locked, no re-search
+    if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
+    const trimmed = destQuery.trim();
+    if (trimmed.length < POI_SEARCH_MIN_LEN) {
+      setPoiResults(null);
+      setPoiSearching(false);
+      setPoiSearchError(null);
+      poiAbortRef.current?.abort();
+      return;
+    }
+    poiDebounceRef.current = setTimeout(async () => {
+      poiAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      poiAbortRef.current = ctrl;
+      setPoiSearching(true);
+      setPoiSearchError(null);
+      try {
+        const resp = await fetch(
+          `/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=10`,
+          { signal: ctrl.signal },
+        );
+        if (!resp.ok) {
+          setPoiSearchError('搜尋失敗，請稍後再試');
+          setPoiResults([]);
+          return;
+        }
+        const data = (await resp.json()) as { results: PoiSearchResult[] };
+        setPoiResults(data.results ?? []);
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        setPoiSearchError('網路連線失敗');
+        setPoiResults([]);
+      } finally {
+        setPoiSearching(false);
+      }
+    }, POI_SEARCH_DEBOUNCE_MS);
+    return () => {
+      if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
+    };
+  }, [destQuery, selectedPoi, open]);
+
+  function selectPoi(poi: PoiSearchResult) {
+    setSelectedPoi(poi);
+    setDestQuery(poi.name);
+    setPoiResults(null);
+  }
+
+  function clearSelectedPoi() {
+    setSelectedPoi(null);
+    setDestQuery('');
+    setPoiResults(null);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -465,7 +635,8 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
   if (!open) return null;
 
   const datesValid = dateMode === 'flexible' ? !!flexMonth && flexDays >= MIN_FLEX_DAYS : !!startDate && !!endDate;
-  const canSubmit = !!destination.trim() && datesValid && !submitting;
+  // PR-BB：必須選一筆 POI，自由文字不通過
+  const canSubmit = !!selectedPoi && datesValid && !submitting;
 
   function adjustFlexDays(delta: number) {
     setFlexDays((d) => Math.min(MAX_FLEX_DAYS, Math.max(MIN_FLEX_DAYS, d + delta)));
@@ -473,14 +644,17 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedPoi) return;
     setSubmitting(true);
     setError(null);
-    const tripName = destination.trim();
+    const tripName = selectedPoi.name;
     const tripId = genTripId(tripName);
     const dates = dateMode === 'flexible'
       ? flexDatesFromMonth(flexMonth, flexDays)
       : { start: startDate, end: endDate };
+    // PR-BB：country 用 Nominatim ISO alpha-2，fallback 'JP' 給找不到 country
+    // 的特例（多半 OSM 邊界 POI / 海上 POI）。
+    const countries = selectedPoi.country || 'JP';
     try {
       const res = await apiFetchRaw('/trips', {
         method: 'POST',
@@ -491,7 +665,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           owner: ownerEmail,
           startDate: dates.start,
           endDate: dates.end,
-          countries: detectCountries(tripName),
+          countries,
           description: preferences.trim() || undefined,
           published: 1,
         }),
@@ -525,16 +699,16 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
     if (e.target === e.currentTarget && !submitting) onClose();
   }
 
-  // QA 2026-04-26 BUG-027：destination 空時顯示「請先輸入目的地」 — 比「未
-  // 選地點」更明確（user 可能誤以為「未選地點」 是 toggle option 而非 prompt）。
-  const destShown = destination.trim();
+  // PR-BB 2026-04-26：destShown 從 `destination.trim()` 改 `selectedPoi?.name`，
+  // 強制 user 選一筆 POI 才有 summary 文字。沒選顯示「請先選擇目的地」。
+  const destShown = selectedPoi?.name ?? '';
   const summaryText = dateMode === 'flexible'
     ? destShown
       ? `${destShown} · ${flexDays} 天 · ${flexMonth ? monthChoices.find((m) => m.key === flexMonth)?.label : ''}`
-      : '請先輸入目的地'
+      : '請先選擇目的地'
     : destShown
       ? `${destShown}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`
-      : '請先輸入目的地';
+      : '請先選擇目的地';
 
   // PR-P 2026-04-26：portal 到 document.body，escape 任何 ancestor stacking
   // context（AppShell scroll container / TripsListPage sheet 等），讓 backdrop
@@ -587,16 +761,67 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           <div className="tp-new-form-row">
             <label htmlFor="new-trip-destination">目的地</label>
             <div className="tp-new-dest-wrap">
-              <input
-                id="new-trip-destination"
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="沖繩・京都・首爾・台南..."
-                required
-                autoFocus
-                data-testid="new-trip-destination-input"
-              />
+              {selectedPoi ? (
+                /* PR-BB：locked POI chip。點 ✕ 重新搜尋。 */
+                <div className="tp-new-dest-locked" data-testid="new-trip-dest-locked">
+                  <div className="tp-new-dest-locked-text">
+                    <strong>{selectedPoi.name}</strong>
+                    {selectedPoi.country_name && (
+                      <span className="tp-new-dest-locked-country">
+                        {selectedPoi.country_name}
+                        {selectedPoi.country && ` · ${selectedPoi.country}`}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="tp-new-dest-clear"
+                    onClick={clearSelectedPoi}
+                    aria-label="重新選擇目的地"
+                    data-testid="new-trip-dest-clear"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    id="new-trip-destination"
+                    type="text"
+                    value={destQuery}
+                    onChange={(e) => setDestQuery(e.target.value)}
+                    placeholder="搜尋景點、城市、地址…"
+                    required
+                    autoFocus
+                    autoComplete="off"
+                    data-testid="new-trip-destination-input"
+                  />
+                  {/* PR-BB：dropdown 顯示搜尋結果。debounce 300ms。User 必須選
+                      一筆才能 submit（強制收斂到 OSM 真實 POI / 拿 country code）。 */}
+                  {(poiSearching || poiResults || poiSearchError) && destQuery.trim().length >= POI_SEARCH_MIN_LEN && (
+                    <div className="tp-new-dest-dropdown" role="listbox" data-testid="new-trip-dest-dropdown">
+                      {poiSearching && <div className="tp-new-dest-status">搜尋中…</div>}
+                      {!poiSearching && poiSearchError && <div className="tp-new-dest-status">{poiSearchError}</div>}
+                      {!poiSearching && !poiSearchError && poiResults && poiResults.length === 0 && (
+                        <div className="tp-new-dest-status">沒找到結果，試試別的關鍵字</div>
+                      )}
+                      {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (
+                        <button
+                          key={p.osm_id}
+                          type="button"
+                          role="option"
+                          className="tp-new-dest-result"
+                          onClick={() => selectPoi(p)}
+                          data-testid={`new-trip-dest-result-${p.osm_id}`}
+                        >
+                          <span className="name">{p.name}</span>
+                          <span className="addr">{p.address}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

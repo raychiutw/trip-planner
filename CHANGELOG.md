@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.12] - 2026-04-26
+
+**PR-BB: NewTripModal 目的地接 POI search autocomplete（強制選擇 / option B）**。User: 「新增行程選的目的地要結合搜尋 poi 藉此知道行程國家與相關 table 資訊」。
+
+### Changed
+- **目的地 input 從 free-text 改 POI search autocomplete** — User 必須從搜尋結果選一筆 POI，才能 submit。原本 free-text + `detectCountries()` keyword regex 猜測 country，常常猜錯（沖繩寫成 'Naha' / 巴塞隆納沒列在清單 / 等等都 default JP）→ 現在直接用 Nominatim 真實 ISO alpha-2 country code。
+- **`/api/poi-search` 擴充 response** — 加 `country` (uppercase ISO alpha-2) + `country_name` 兩個欄位。Backend 已在 query 時 `addressdetails=1`，只是原本沒回傳；本 PR 把它寫進 PoiSearchResult interface 並 map 進 result rows。Backwards compatible — 既有 caller (InlineAddPoi / ExplorePage) 不讀 country 欄位。
+
+### Added
+- **NewTripModal `selectedPoi` state** — debounced search 300ms (低於 InlineAddPoi 的 250ms 因為 modal 場景比較不需即時)，min query length 2 字元。
+- **Locked POI chip UI** — 選定後 input 換成 `.tp-new-dest-locked` chip 顯示 POI name + country_name + country code（accent-subtle bg + accent border），可點 ✕ `clearSelectedPoi()` 重新搜尋。
+- **Dropdown UI** — `.tp-new-dest-dropdown` absolute 定位於 input 下方，max-height 280px 內捲。每筆結果有 name (callout/700) + address (caption/muted)。
+
+### Removed
+- **`detectCountries()` keyword regex** — 不再需要，country 直接從 selected POI 拿。
+- **`destination` state** → `destQuery`（input 內容）+ `selectedPoi`（鎖定的 POI）。
+
+### Internal
+- `selectedPoi.country` 是 ISO alpha-2 大寫，跟 trips.countries CSV 格式相容（單一 country 直接放，未來支援 multi 可改 CSV）。
+- 對 OSM 邊界 POI / 海上 POI 等找不到 country 的特例，submit 時 fallback 'JP'。
+- 兩個 submit test 改寫：mock /api/poi-search 回單筆結果 + fireEvent.click 結果 → selectPoi → submit。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
 ## [2.14.11] - 2026-04-26
 
 **PR-AA: ⋯ 共編 inline modal + 手機行程詳情返回箭頭（QA round 13 — IA 兩件事）**。

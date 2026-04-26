@@ -112,25 +112,63 @@ describe('NewTripModal — flexible-dates upgrade', () => {
   });
 });
 
+/* PR-BB 2026-04-26：destination 從 free-text input 改 POI search autocomplete。
+ * Submit 必須先選一筆 POI，所以下面 submit tests 改 mock /api/poi-search 並
+ * fireEvent.click 第一筆結果觸發 selectPoi(). */
+function mockPoiSearchAndSubmitFetch(tripIdResp: string, poi: { osm_id?: number; name: string; country?: string }) {
+  return vi.fn().mockImplementation(async (url: RequestInfo | URL) => {
+    const u = typeof url === 'string' ? url : url.toString();
+    if (u.includes('/api/poi-search')) {
+      return {
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              osm_id: poi.osm_id ?? 12345,
+              name: poi.name,
+              address: `${poi.name}, 日本`,
+              lat: 26.21,
+              lng: 127.68,
+              category: 'tourism',
+              country: poi.country ?? 'JP',
+              country_name: '日本',
+            },
+          ],
+        }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({ tripId: tripIdResp }),
+    };
+  });
+}
+
 describe('NewTripModal — flexible submit uses month + days', () => {
   it('submits with month-1st as start and start+days as end', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ tripId: 'okinawa-abc1' }),
-    });
+    const fetchMock = mockPoiSearchAndSubmitFetch('okinawa-abc1', { name: '沖繩' });
     vi.stubGlobal('fetch', fetchMock);
 
     const { onCreated } = renderModal();
     fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
       target: { value: '沖繩' },
     });
+    // 等 POI search debounce + result render → click first result
+    const result = await screen.findByTestId('new-trip-dest-result-12345', undefined, { timeout: 1000 });
+    fireEvent.click(result);
+
     fireEvent.click(screen.getByTestId('new-trip-date-mode-flexible'));
     fireEvent.click(screen.getByTestId('new-trip-flex-day-plus')); // 5 → 6
     fireEvent.click(screen.getByTestId('new-trip-flex-month-2026-07'));
     fireEvent.click(screen.getByTestId('new-trip-submit'));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    // fetchMock 會被叫多次：1 個 poi-search + 1 個 trips POST。找 POST trips 那筆。
+    await waitFor(() => {
+      const tripsCall = fetchMock.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('/trips') && !c[0].includes('poi-search'));
+      expect(tripsCall).toBeTruthy();
+    });
+    const tripsCall = fetchMock.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('/trips') && !c[0].includes('poi-search'))!;
+    const body = JSON.parse((tripsCall[1] as RequestInit).body as string);
     expect(body.startDate).toBe('2026-07-01');
     expect(body.endDate).toBe('2026-07-06'); // 6 calendar days inclusive: 1,2,3,4,5,6
     expect(body.countries).toBe('JP');
@@ -140,22 +178,26 @@ describe('NewTripModal — flexible submit uses month + days', () => {
 
 describe('NewTripModal — fixed-date submit (regression)', () => {
   it('still submits with explicit start/end when in select mode', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ tripId: 'kyoto-xyz9' }),
-    });
+    const fetchMock = mockPoiSearchAndSubmitFetch('kyoto-xyz9', { osm_id: 67890, name: '京都', country: 'JP' });
     vi.stubGlobal('fetch', fetchMock);
 
     renderModal();
     fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
       target: { value: '京都' },
     });
+    const result = await screen.findByTestId('new-trip-dest-result-67890', undefined, { timeout: 1000 });
+    fireEvent.click(result);
+
     fireEvent.change(screen.getByTestId('new-trip-start-input'), { target: { value: '2026-09-01' } });
     fireEvent.change(screen.getByTestId('new-trip-end-input'), { target: { value: '2026-09-05' } });
     fireEvent.click(screen.getByTestId('new-trip-submit'));
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    await waitFor(() => {
+      const tripsCall = fetchMock.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('/trips') && !c[0].includes('poi-search'));
+      expect(tripsCall).toBeTruthy();
+    });
+    const tripsCall = fetchMock.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('/trips') && !c[0].includes('poi-search'))!;
+    const body = JSON.parse((tripsCall[1] as RequestInit).body as string);
     expect(body.startDate).toBe('2026-09-01');
     expect(body.endDate).toBe('2026-09-05');
   });

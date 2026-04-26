@@ -18,6 +18,14 @@ interface NominatimResult {
   name?: string;
   type?: string;
   class?: string;
+  /** addressdetails=1 時 Nominatim 回傳的 address breakdown。 */
+  address?: {
+    country?: string;
+    country_code?: string;  // ISO 3166-1 alpha-2 (lowercase, 例：'jp', 'tw')
+    state?: string;
+    city?: string;
+    town?: string;
+  };
 }
 
 export interface PoiSearchResult {
@@ -27,6 +35,12 @@ export interface PoiSearchResult {
   lat: number;
   lng: number;
   category: string;
+  /** PR-BB 2026-04-26：ISO 3166-1 alpha-2 大寫（'JP' / 'TW' / 'KR' 等）。
+   * NewTripModal 的 destination autocomplete 用此值取代原本 detectCountries()
+   * keyword regex 猜測 — 直接拿 OSM 真實 country code 更精準。 */
+  country?: string;
+  /** Country full name（中文 / 英文都可能，看 Accept-Language 而定）。 */
+  country_name?: string;
 }
 
 function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, string> = {}): Response {
@@ -78,6 +92,8 @@ export const onRequestGet: PagesFunction = async (context) => {
     lat: parseFloat(r.lat),
     lng: parseFloat(r.lon),
     category: r.class ?? r.type ?? 'poi',
+    country: r.address?.country_code?.toUpperCase(),
+    country_name: r.address?.country,
   }));
 
   return jsonResponse({ results }, 200, {
