@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.10] - 2026-04-26
+
+**QA round 2 PR-J：TripPage mobile day-strip clip + 看地圖 chip 移除（2 fixes）**。手機 trip 詳情頁兩個 user feedback 改動。
+
+### Fixed
+- **手機 day-strip 被 URL bar 切到** — `.ocean-day-strip` mobile 加 `top: env(safe-area-inset-top, 0)` + `padding-top: 8 → 16px`。iOS Safari/Chrome URL bar 跟 sticky day cards 之間有自然 buffer，rounded top corner 不再被視覺切。
+- **每日 hero「📖 看地圖」 chip 移除** — `DaySection.ocean-hero-chips` 拿掉 `<Link to={mapHref}>看地圖</Link>` chip 元素 + `Link` import。bottom nav 已有「地圖」 tab 入口，每天 hero 重複 chip 是 noise。
+
+### Removed
+- `tests/unit/day-section-map-link.test.tsx` — 整檔刪。test 是針對「看地圖 chip」 feature 的，feature 拿掉後 test stale。
+
+### Internal
+- 純 CSS + 1 JSX block 刪除 + 1 test file 刪除。verify gate: tsc clean / 122 files / 1031 tests pass（−4 stale tests）。
+- `MAP_CHIP_STYLES` 內的 `.day-map-chip` CSS 留著（其他地方未必用，留 fallback；下個 sweep 可清）。
+
 ## [2.12.9] - 2026-04-26
 
 **QA round 2 PR-I：/map mobile redesign per user feedback（4 changes）**。手機 /map QA 截圖 4 個 explicit 改動 — 化繁為簡。

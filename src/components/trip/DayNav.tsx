@@ -32,9 +32,14 @@ const SCOPED_STYLES = `
 @media (max-width: 1100px) {
   .ocean-day-strip { top: 56px; }
 }
-/* Mobile: topbar is hidden, so day-strip is the top sticky element. */
+/* Mobile: topbar is hidden, so day-strip is the top sticky element.
+ * QA 2026-04-26 PR-J：iOS Safari/Chrome URL bar 會跟 sticky top:0 day-strip
+ * 視覺重疊 — 加 env(safe-area-inset-top) 讓 day cards 跟瀏覽器 chrome 之間
+ * 有自然 buffer，cards 的 rounded top 不再被切看不見。 */
 @media (max-width: 760px) {
-  .ocean-day-strip { top: 0; }
+  .ocean-day-strip {
+    top: env(safe-area-inset-top, 0);
+  }
 }
 body.print-mode .ocean-day-strip { display: none; }
 
@@ -142,7 +147,9 @@ body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-f
 @media (max-width: 760px) {
   .ocean-day-strip {
     gap: 6px;
-    padding: 8px 0;
+    /* QA 2026-04-26 PR-J：top padding 8 → 16 給 cards rounded corner 跟 URL bar
+     * 之間更明顯氣口，避免視覺被切。底部維持 8 + margin 16 不變。 */
+    padding: 16px 0 8px;
     margin: 0 0 16px;
   }
 }
