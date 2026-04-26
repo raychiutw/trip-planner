@@ -348,33 +348,43 @@ export default function TripsListPage() {
   const [allTrips, setAllTrips] = useState<TripInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all([
-      fetch('/api/my-trips', { credentials: 'same-origin' }),
-      fetch('/api/trips?all=1', { credentials: 'same-origin' }),
-    ])
-      .then(async ([myRes, allRes]) => {
-        if (cancelled) return;
-        if (!myRes.ok) {
-          if (myRes.status === 401 || myRes.status === 403) return;
-          setError('無法載入你的行程清單。');
-          return;
-        }
-        const myJson = (await myRes.json()) as MyTripRow[];
-        setMyIds(myJson.map((r) => r.tripId));
-        if (allRes.ok) {
-          const allJson = (await allRes.json()) as TripInfo[];
-          setAllTrips(allJson);
-        } else {
-          setAllTrips([]);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError('網路連線失敗，請稍後再試。');
-      });
-    return () => { cancelled = true; };
+  // PR-DD 2026-04-26：抽出 loadTrips 讓 mount + tp-trip-created event 都能觸發
+  // refetch。User onion523 反應「行程後要切換功能才看的到新行程」 — TripsListPage
+  // 原本只 mount 跑一次，新增完 navigate 過去 trip 詳情，回 list 看不到新 trip。
+  const loadTrips = useCallback(async () => {
+    try {
+      const [myRes, allRes] = await Promise.all([
+        fetch('/api/my-trips', { credentials: 'same-origin' }),
+        fetch('/api/trips?all=1', { credentials: 'same-origin' }),
+      ]);
+      if (!myRes.ok) {
+        if (myRes.status === 401 || myRes.status === 403) return;
+        setError('無法載入你的行程清單。');
+        return;
+      }
+      const myJson = (await myRes.json()) as MyTripRow[];
+      setMyIds(myJson.map((r) => r.tripId));
+      if (allRes.ok) {
+        const allJson = (await allRes.json()) as TripInfo[];
+        setAllTrips(allJson);
+      } else {
+        setAllTrips([]);
+      }
+    } catch {
+      setError('網路連線失敗，請稍後再試。');
+    }
   }, []);
+
+  useEffect(() => { void loadTrips(); }, [loadTrips]);
+
+  // PR-DD：聽 NewTripContext 在 POST trips 成功後 dispatch 的 event，re-fetch
+  // list 拿新 trip。同 tab navigate 不會 remount TripsListPage，必須 explicit
+  // refetch 才會更新。
+  useEffect(() => {
+    function onTripCreated() { void loadTrips(); }
+    window.addEventListener('tp-trip-created', onTripCreated);
+    return () => window.removeEventListener('tp-trip-created', onTripCreated);
+  }, [loadTrips]);
 
   const visibleTrips = useMemo<TripInfo[]>(() => {
     if (myIds === null || allTrips === null) return [];
