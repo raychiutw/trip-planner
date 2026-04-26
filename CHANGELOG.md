@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.22] - 2026-04-26
+
+**PR-LL/MM bundle: sheet 再收緊 + card 比照 mobile 尺寸 RWD（QA round 21）**。
+
+### Fixed (PR-LL)
+- **1280 viewport user 仍看到 1 card** — PR-KK 的 sheet 410 + minmax 280 在 1280 inner=587 計算上應該容 2 cols（576），但 macOS scrollbar always-on 模式吃 ~15px 讓 inner=572 < 576 → 掉成 1 col。
+
+### Changed (PR-MM)
+- **/map sheet 比照 /trips** — GlobalMapPage 加同樣 sheet override `min(540, 28vw)`，不再走全域 `min(780, 40vw)`。同步解決 1280 viewport map sheet 太大的問題。
+- **Sheet 再收緊** — `min(576, 32vw)` → `min(540, 28vw)`：
+  - 1280: sheet 358 (28vw)、main 682
+  - 1440: sheet 403 (28vw)、main 797
+  - 1920: sheet 538 (28vw)、main 1142
+  - 2560: sheet 540 (cap)、main 1780
+- **Card 比照 mobile 尺寸 + 自動 RWD** — `minmax(280, 1fr)` → `minmax(200, 1fr)`：mobile 2-col 在 375 viewport 每張 ~180，desktop minmax 200 同尺寸基準，auto-fill 隨 viewport 自動加列：
+  - 1280 → 3 cards
+  - 1440 → 3 cards
+  - 1920 → 4 cards
+  - 2560 → 4 cards
+- 真正的 RWD：viewport 變寬自動增加列數而非卡片變大。
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.21] - 2026-04-26
 
 **PR-KK: sheet 改 32vw cap 576 — 涵蓋 1280 viewport（QA round 20）**。
