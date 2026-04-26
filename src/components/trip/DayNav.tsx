@@ -75,7 +75,7 @@ body.print-mode .ocean-day-strip { display: none; }
 }
 [data-dn].active {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-accent-foreground);
   border-color: var(--color-accent);
 }
 
@@ -105,7 +105,7 @@ body.print-mode .ocean-day-strip { display: none; }
 }
 [data-dn].active .dn-weather {
   background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  color: var(--color-accent-foreground);
 }
 [data-dn] .dn-date {
   font-size: 13px;
@@ -115,7 +115,7 @@ body.print-mode .ocean-day-strip { display: none; }
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.005em;
 }
-[data-dn].active .dn-date { color: #fff; }
+[data-dn].active .dn-date { color: var(--color-accent-foreground); }
 [data-dn] .dn-dow {
   font-size: var(--font-size-caption2);
   font-weight: 500;
