@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.13.1] - 2026-04-26
+
+**PR-L: /map 手機控制條微調 + marker click 顯示 POI 卡（QA round 3）**。User 標註截圖三個改動。
+
+### Fixed
+- **左下「全覽 / 我的位置」 pill bar** — mobile `.tp-global-map-actions` `bottom: 130px → 100px`，再往下靠 carousel 上緣 30px，視覺更緊湊不浪費空白。
+- **右下 zoom 控制移到右上** — `<OceanMap zoomControlPosition="bottomright" />` → `topright`，避開手機底部 carousel + pill bar 區的擁擠，與 Apple Maps / Google Maps 手機版習慣一致。
+- **點 marker 沒顯示 POI 資訊** — mobile（<1024px）desktop sheet pane 隱藏，原本 marker click 等於沒效果。新增 `.tp-global-map-mobile-poi` 浮動卡 render 在 carousel 上方（`bottom: 152px`），含 close 按鈕、`STOP NN` eyebrow、title h3、type/time/rating chips、`跳到行程 →` CTA。
+
+### Internal
+- 純 CSS 位移 + 一個 prop 改值 + 一個 JSX block + 對應 mobile-only CSS。desktop ≥1024px 行為 0 改動（sheet pane 維持）。
+- 卡片 close 按鈕同時清掉 `selectedPinId`，與 marker 再次點擊行為一致。
+- verify gate: tsc clean / 122 files / 1031 tests pass。
+
 ## [2.13.0] - 2026-04-26
 
 **PR-K: 聊天訊息時間 + Timeline 拖拉排序 + iOS-style grip icon（3 個 feature）**。Round 2 user feedback 三個 feature 合一個 PR。

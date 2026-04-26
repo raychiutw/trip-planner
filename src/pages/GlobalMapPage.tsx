@@ -169,10 +169,10 @@ const SCOPED_STYLES = `
   z-index: 600;
 }
 @media (max-width: 1023px) {
-  /* QA 2026-04-26 PR-I：carousel 拿掉 eyebrow + title 後高度從 ~150 → ~100，
-   * pill bar 從 240 → 130 往下方 stop 切換靠攏（per user feedback）。 */
+  /* QA 2026-04-26 PR-L：再往下靠 carousel — 130 → 100 緊貼 carousel 上緣
+   * （carousel handle 12 + cards ~80 ≈ 92px，100 剛好上方一點點 gap）。 */
   .tp-global-map-actions {
-    bottom: 130px; left: 12px;
+    bottom: 100px; left: 12px;
   }
 }
 .tp-global-map-pill {
@@ -481,6 +481,65 @@ const SCOPED_STYLES = `
   margin-bottom: 8px;
   color: var(--color-foreground);
 }
+/* QA 2026-04-26 PR-L: mobile POI detail card — 點 marker 在 carousel 上方
+ * 顯示，帶類型 chip + 時間 + 評分 + 跳到行程 CTA。Hide on desktop（≥1024）。
+ * 對齊 mockup-map-v2 sheet 結構，compact mobile 版。 */
+.tp-global-map-mobile-poi {
+  display: none;
+  position: absolute;
+  left: 12px; right: 12px; bottom: 152px;
+  z-index: 700;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 14px 16px;
+  pointer-events: auto;
+}
+@media (max-width: 1023px) {
+  .tp-global-map-mobile-poi { display: block; }
+}
+.tp-global-map-mobile-poi-close {
+  position: absolute; top: 8px; right: 8px;
+  width: 32px; height: 32px;
+  border: 0; border-radius: 50%;
+  background: transparent; color: var(--color-muted);
+  font-size: 16px; cursor: pointer;
+}
+.tp-global-map-mobile-poi-close:hover {
+  background: var(--color-secondary); color: var(--color-foreground);
+}
+.tp-global-map-mobile-poi-eyebrow {
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 4px; min-height: 12px;
+}
+.tp-global-map-mobile-poi-title {
+  font-size: var(--font-size-headline); font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0 28px 6px 0;
+  line-height: 1.25;
+}
+.tp-global-map-mobile-poi-meta {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.tp-global-map-mobile-poi-meta .chip {
+  font-size: var(--font-size-caption); font-weight: 600;
+  background: var(--color-secondary); color: var(--color-foreground);
+  padding: 3px 10px; border-radius: var(--radius-full);
+}
+.tp-global-map-mobile-poi-meta .chip.rating {
+  background: var(--color-accent-subtle); color: var(--color-accent-deep);
+}
+.tp-global-map-mobile-poi-cta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--font-size-footnote); font-weight: 700;
+  color: var(--color-accent); text-decoration: none;
+}
+.tp-global-map-mobile-poi-cta:hover { color: var(--color-accent-deep); }
+
 .tp-global-map-mobile-cards {
   display: flex; gap: 10px;
   padding: 4px 16px;
@@ -791,7 +850,7 @@ export default function GlobalMapPage() {
                   focusId={selectedPinId ?? undefined}
                   onMarkerClick={onMarkerClick}
                   onMapReady={onMapReady}
-                  zoomControlPosition="bottomright"
+                  zoomControlPosition="topright"
                   dark={isDark}
                   className="ocean-map-container"
                   /* QA 2026-04-26 PR-I 更正：完全停用 cluster — user feedback「移除
@@ -827,6 +886,39 @@ export default function GlobalMapPage() {
                   <Icon name="location-pin" />
                   <span>我的位置</span>
                 </button>
+              </div>
+            )}
+
+            {/* QA 2026-04-26 PR-L：mobile 點 marker 沒顯示 POI 資訊 — 加 detail card
+             * 浮在 carousel 上方。title + 類型 + 時間 + ⭐ + 「跳到行程」CTA。
+             * 對齊桌機 sheet 結構但 compact mobile 版。 */}
+            {resolved && selectedPin && (
+              <div className="tp-global-map-mobile-poi" data-testid="global-map-mobile-poi">
+                <button
+                  type="button"
+                  className="tp-global-map-mobile-poi-close"
+                  onClick={() => setSelectedPinId(null)}
+                  aria-label="關閉景點詳情"
+                >
+                  ✕
+                </button>
+                <div className="tp-global-map-mobile-poi-eyebrow">
+                  {selectedPin.index > 0 && `STOP ${String(selectedPin.index).padStart(2, '0')}`}
+                </div>
+                <h3 className="tp-global-map-mobile-poi-title">{selectedPin.title}</h3>
+                <div className="tp-global-map-mobile-poi-meta">
+                  {selectedPin.type === 'hotel' && <span className="chip">住宿</span>}
+                  {selectedPin.time && <span className="chip">{selectedPin.time}</span>}
+                  {typeof selectedPin.googleRating === 'number' && (
+                    <span className="chip rating">★ {selectedPin.googleRating.toFixed(1)}</span>
+                  )}
+                </div>
+                <Link
+                  to={`/trips?selected=${encodeURIComponent(resolved.tripId)}&focus=${selectedPin.id}`}
+                  className="tp-global-map-mobile-poi-cta"
+                >
+                  跳到行程 →
+                </Link>
               </div>
             )}
 
