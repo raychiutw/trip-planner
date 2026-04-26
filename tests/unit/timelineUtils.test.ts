@@ -53,20 +53,20 @@ describe('formatDuration', () => {
     expect(formatDuration(-5)).toBe('');
   });
 
-  it('45 → "45m"', () => {
-    expect(formatDuration(45)).toBe('45m');
+  it('45 → "45 分鐘"', () => {
+    expect(formatDuration(45)).toBe('45 分鐘');
   });
 
-  it('60 → "1h"', () => {
-    expect(formatDuration(60)).toBe('1h');
+  it('60 → "1 小時"', () => {
+    expect(formatDuration(60)).toBe('1 小時');
   });
 
-  it('90 → "1h 30m"', () => {
-    expect(formatDuration(90)).toBe('1h 30m');
+  it('90 → "1 小時 30 分"', () => {
+    expect(formatDuration(90)).toBe('1 小時 30 分');
   });
 
-  it('120 → "2h"', () => {
-    expect(formatDuration(120)).toBe('2h');
+  it('120 → "2 小時"', () => {
+    expect(formatDuration(120)).toBe('2 小時');
   });
 
   it('NaN → "" (malformed time input guard)', () => {
