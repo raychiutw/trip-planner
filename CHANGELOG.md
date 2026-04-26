@@ -11,6 +11,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **1280 viewport user 仍看到 1 card** — PR-KK 的 sheet 410 + minmax 280 在 1280 inner=587 計算上應該容 2 cols（576），但 macOS scrollbar always-on 模式吃 ~15px 讓 inner=572 < 576 → 掉成 1 col。
 
 ### Changed (PR-MM)
+- **/map sheet 比照 /trips** — GlobalMapPage 加同樣 sheet override `min(540, 28vw)`，不再走全域 `min(780, 40vw)`。同步解決 1280 viewport map sheet 太大的問題。
 - **Sheet 再收緊** — `min(576, 32vw)` → `min(540, 28vw)`：
   - 1280: sheet 358 (28vw)、main 682
   - 1440: sheet 403 (28vw)、main 797
