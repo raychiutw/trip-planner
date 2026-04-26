@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.2] - 2026-04-26
+
+**QA fix series PR-B: NewTripModal mockup-aligned polish + PR-A revert（5 issues）**。依 mockup `/tmp/tripline-newtrip-v1-split-hero-v2.html` spec 修 NewTripModal hero/form 的視覺缺漏。同時 retroactively review PR-A — swatch 14px 升級違反 mockup 12px spec，這版復原。
+
+### Fixed (per mockup spec)
+- **BUG-026 destination 📍 icon** — 加 `.tp-new-dest-wrap` + `.tp-new-dest-pin` 直接 lift mockup `.dest-input .pin` pattern。Input padding-left 14 → 44 騰出 icon 空間，icon Terracotta accent 色 + `pointer-events: none`。
+- **BUG-027 summary 文案** — destination 空時顯示「請先輸入目的地」 取代「未選地點」（後者像 toggle option 而非 prompt）。
+- **BUG-029 segmented active state 對比** — 從 `box-shadow: var(--shadow-sm)` 升級成 `var(--shadow-md) + inset 0 0 0 1.5px accent`。color 從 `--color-foreground` 改 `--color-accent-deep`，視覺權重翻倍。
+- **BUG-030 stepper 字級** — `.tp-new-flex-num` 從 `--font-size-title` (1.75rem) 升 `--font-size-large-title` (2.125rem)。對齊 mockup `.flex-stepper .num` spec。`min-width` 56→64px 容納大字。
+
+### PR-A retroactive review（per mockup directive）
+- **swatch size 復原 12px** — PR-A 為解 BUG-020 visibility 而升 14px 違反 mockup spec。border opacity 從 0.08 → 0.10 增加 contrast，size 維持 mockup 12px。
+
+### Internal
+- 無 test 變動 — CSS + JSX visual fix。verify gate: tsc clean / 1035 tests pass。
+- `修復時也要遵守 design md 和 mockup html` — user directive 2026-04-26。PR-B 起每個 fix 對 mockup HTML + DESIGN.md 比對後才寫。
+- TS template literal 注意 — backtick 在 SCOPED_STYLES 註解內會關閉字串。改用單引號或 plain text。
+
 ## [2.12.1] - 2026-04-26
 
 **QA fix series PR-A: sheet overflow root cause（4 issues）**。 prod adversarial QA 抓到 sheet pane 太窄導致 day strip / EntryActionPopover 全 overflow。一個 root cause 解 4 個 HIGH/MEDIUM bug。
