@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.18] - 2026-04-26
+
+**PR-GG/HH bundle: CollabSheet 重新設計 + docs 404 不再噴 5 連 toast（QA round 17）**。
+
+### Fixed (CollabSheet — PR-GG)
+- **「移除」按鈕文字直排亂** — row 改單一水平 flex（避免 column 包 email + pill 撐高 row 把 button 擠窄）；按鈕走 terracotta-preview `.btn-destructive` ghost 樣式（transparent + destructive border + nowrap + min-width 64）。
+- **「新增」按鈕透明像 disabled** — 走 `.btn-primary` 實心 fill：`var(--color-accent)` bg + `var(--color-accent-foreground)` 文字、hover → `--color-accent-deep`；disabled 只調 opacity 0.55 保留實心橘色，永遠看得出是 primary CTA。
+- **role pill 跟 row 沒對齊** — pill 移到 email 同一行 inline，avatar / email / pill / button 四欄 `align-items: center` 對齊；pill 中文化「擁有者 / 共編成員」、放棄 uppercase 英文 role。
+- **Owner row 留白對齊** — owner 不渲染 remove button（不可移除），靠 flex 自然收尾。
+
+### Fixed (docs — PR-HH)
+- **新行程開出 5 連「找不到這筆資料」error toast** — `useTrip.fetchAllDocs` 對 5 個 docs（flights/checklist/backup/emergency/suggestions）的 404 rejection 各跑一次 `showErrorToast`。docs 是 optional sub-resource（新行程不會自動寫 5 種 docs），404 應靜默略過，不該每個都噴 toast 騷擾使用者。
+- 修法：`if (err.code === 'DATA_NOT_FOUND') continue;` 在 toast 觸發前提早 short-circuit。
+- 其他 severity（500、網路錯）仍正常 toast — 加 regression-guard 測試確保。
+
+### Tests
+- `tests/unit/use-trip-docs-404.test.tsx` 新增 3 cases：5 連 404 不 toast / 500 仍 toast / 部分 200 部分 404 混合。
+- verify gate: tsc clean / 123 files / 1029 tests pass。
+
 ## [2.14.17] - 2026-04-26
 
 **PR-EE/FF bundle: dark mode 樣式修補 + trips list 卡片均一 + 隱藏 trip-id + sheet 寬度收縮（QA round 15-16）**。

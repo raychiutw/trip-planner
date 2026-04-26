@@ -176,6 +176,12 @@ export function useTrip(tripId: string | null): UseTripReturn {
           for (const result of results) {
             if (result.status === 'rejected') {
               const err = result.reason;
+              // 404 = 該 doc 尚未建立。docs 是 optional sub-resource（新行程
+              // 不會自動寫 5 種 docs），靜默略過避免每個 doc 各噴一個 toast
+              // （PR-HH 2026-04-26：開新行程 5 連 toast bug）。
+              if (err instanceof ApiError && err.code === 'DATA_NOT_FOUND') {
+                continue;
+              }
               if (err instanceof ApiError && err.severity !== 'minor') {
                 showErrorToast(err.message, err.severity);
               }

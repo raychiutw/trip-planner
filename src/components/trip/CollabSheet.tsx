@@ -17,28 +17,42 @@ import { usePermissions } from '../../hooks/usePermissions';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 
-/* PR-Z 2026-04-26 重新設計
- * 對照 docs/design-sessions/terracotta-preview.html 的 list / row / badge /
- * btn pattern + DESIGN.md tokens 統一收齊風格。
+/* PR-GG 2026-04-26 重新設計
+ * 對照 docs/design-sessions/terracotta-preview.html 的 .btn-primary /
+ * .btn-destructive / .badge pattern + SessionsPage `.tp-list` row layout。
  *
- * 修正三個 user 看到的問題：
- *   1. 「移除」 button 文字直排亂 → white-space: nowrap + min-width 64
- *   2. 「+ 新增」 button 看似 disabled → primary CTA filled，disabled 也保留
- *      accent fill（只降 opacity），不再 transparent 假象
- *   3. role pill 樣式單薄 → terracotta-preview .badge pattern（dot + bg color）
+ * 修正 user 截圖三個問題：
+ *   1. 「移除」 button 文字直排亂 → 統一 .btn-destructive ghost：transparent
+ *      bg + destructive border + nowrap，把 row 改為單行 flex 不再 column 包，
+ *      避免 row body 撐高把按鈕擠窄。
+ *   2. 「新增」 button 看似 disabled → .btn-primary：實心 accent 填色 + accent
+ *      foreground 對比文字，disabled 只調 opacity 不換色，活躍狀態一眼可辨。
+ *   3. role pill 跟 row 沒對齊 → pill 改放 email 同一行（inline）；avatar /
+ *      email / pill / action 四欄 align-items: center 對齊在同一條基線。
  */
 const SCOPED_STYLES = `
 .tp-collab-sheet {
-  display: flex; flex-direction: column; gap: 20px;
+  display: flex; flex-direction: column; gap: 24px;
   padding: 8px 16px 24px;
   max-width: 560px; margin: 0 auto;
 }
+
+.tp-collab-hint {
+  font-size: var(--font-size-subheadline);
+  color: var(--color-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+.tp-collab-hint strong { color: var(--color-foreground); font-weight: 600; }
+
 .tp-collab-section {
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: column; gap: 12px;
 }
 .tp-collab-section-head {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 8px;
+}
+.tp-collab-section-title {
   font-size: var(--font-size-eyebrow); font-weight: 700;
   letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--color-muted);
@@ -47,12 +61,10 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-caption);
   font-weight: 600;
   color: var(--color-muted);
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .tp-collab-empty {
-  padding: 24px 16px;
+  padding: 28px 16px;
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
   text-align: center;
@@ -61,9 +73,7 @@ const SCOPED_STYLES = `
   background: var(--color-secondary);
 }
 
-/* List container — single bordered group with dividers (terracotta-preview
- * .tp-list pattern from SessionsPage). 比 separate row cards 更 compact + 視覺
- * 統一感更強。 */
+/* ===== Member list — single bordered group with dividers ===== */
 .tp-collab-list {
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -73,10 +83,12 @@ const SCOPED_STYLES = `
 .tp-collab-row {
   display: flex; align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--color-border);
+  min-height: 64px;
 }
 .tp-collab-row:last-child { border-bottom: none; }
+
 .tp-collab-row-avatar {
   width: 36px; height: 36px;
   border-radius: 50%;
@@ -87,9 +99,11 @@ const SCOPED_STYLES = `
   font-weight: 700;
   flex-shrink: 0;
 }
-.tp-collab-row-body {
+
+.tp-collab-row-main {
   flex: 1 1 auto; min-width: 0;
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
 }
 .tp-collab-row-email {
   font-size: var(--font-size-subheadline);
@@ -97,20 +111,19 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   line-height: 1.3;
+  min-width: 0;
 }
-/* Badge — 對照 terracotta-preview .badge / .badge-info：bg rgba + accent
- * color + 6px dot。
- * PR-CC：owner / member 用不同顏色區分。owner = success 綠（語意：你的行程
- * 擁有者，正向強調），member = accent 橘（次要，但仍是有編輯權）。 */
+
+/* ===== Role badge — terracotta-preview .badge pattern ===== */
 .tp-collab-badge {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: var(--font-size-caption2);
+  font-size: var(--font-size-caption);
   font-weight: 600;
   padding: 3px 10px;
   border-radius: var(--radius-full);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  align-self: flex-start;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 .tp-collab-badge-dot {
   width: 6px; height: 6px;
@@ -125,49 +138,41 @@ const SCOPED_STYLES = `
   background: var(--color-success);
 }
 .tp-collab-badge-member {
-  background: rgba(217, 120, 72, 0.12);
+  background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
 }
 .tp-collab-badge-member .tp-collab-badge-dot {
   background: var(--color-accent);
 }
 
-/* PR-CC：owner row 用「擁有者」 label 取代「移除」 button，視覺強調此 row
- * 不可被移除。 */
-.tp-collab-owner-tag {
+/* ===== Remove button — terracotta-preview .btn-destructive ghost ===== */
+.tp-collab-remove {
+  appearance: none;
+  background: transparent;
+  color: var(--color-destructive);
+  border: 1px solid var(--color-destructive);
+  font: inherit;
   font-size: var(--font-size-footnote);
   font-weight: 600;
-  color: var(--color-muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-  padding: 6px 10px;
-}
-
-/* 移除 button — 對照 terracotta-preview .btn-destructive ghost pattern。
- * white-space nowrap + min-width 64 修文字直排 bug。 */
-.tp-collab-remove {
-  appearance: none; border: 1px solid var(--color-border);
-  background: var(--color-background); color: var(--color-destructive);
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  padding: 6px 14px; border-radius: var(--radius-full);
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
   cursor: pointer;
   min-height: 32px;
   min-width: 64px;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background 120ms, border-color 120ms;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 120ms;
 }
 .tp-collab-remove:hover:not(:disabled) {
   background: var(--color-destructive-bg);
-  border-color: var(--color-destructive);
 }
 .tp-collab-remove:focus-visible {
   outline: 2px solid var(--color-destructive); outline-offset: 2px;
 }
 .tp-collab-remove:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Add member input + button — primary CTA fill，disabled 保留 fill 只降 opacity
- * （不再 transparent 假象 disabled）。 */
+/* ===== Add member input + button — primary CTA fill ===== */
 .tp-collab-add {
   display: flex; gap: 8px; align-items: stretch;
 }
@@ -180,6 +185,7 @@ const SCOPED_STYLES = `
   font: inherit; font-size: var(--font-size-callout);
   padding: 10px 14px;
   min-height: var(--spacing-tap-min);
+  transition: border-color 120ms, box-shadow 120ms;
 }
 .tp-collab-add-input:focus {
   outline: none; border-color: var(--color-accent);
@@ -188,35 +194,39 @@ const SCOPED_STYLES = `
 .tp-collab-add-input::placeholder { color: var(--color-muted); }
 
 .tp-collab-add-btn {
-  border: none; cursor: pointer;
-  background: var(--color-accent); color: var(--color-accent-foreground);
+  appearance: none;
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  cursor: pointer;
   font: inherit; font-weight: 700; font-size: var(--font-size-callout);
   border-radius: var(--radius-md);
-  padding: 0 18px;
+  padding: 0 20px;
   min-height: var(--spacing-tap-min);
   white-space: nowrap;
   flex-shrink: 0;
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: filter 120ms;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 120ms, border-color 120ms;
 }
-.tp-collab-add-btn:hover:not(:disabled) { filter: brightness(var(--hover-brightness, 0.92)); }
+.tp-collab-add-btn:hover:not(:disabled) {
+  background: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
+}
 .tp-collab-add-btn:focus-visible {
   outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
 .tp-collab-add-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  /* 不改 background 顏色 — disabled 仍然看得出是 primary CTA，只是 dimmer */
+  /* 仍然保留實心 accent 色 — 一眼可辨是 primary CTA，只是 dimmer */
 }
 .tp-collab-add-btn .svg-icon { width: 14px; height: 14px; flex-shrink: 0; }
 
-.tp-collab-hint {
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  line-height: 1.55;
-  margin: 0;
+/* ===== Mobile tweaks ===== */
+@media (max-width: 480px) {
+  .tp-collab-row { padding: 12px 14px; gap: 10px; }
+  .tp-collab-row-avatar { width: 32px; height: 32px; font-size: var(--font-size-footnote); }
 }
-.tp-collab-hint strong { color: var(--color-foreground); font-weight: 700; }
 `;
 
 interface CollabSheetProps {
@@ -308,7 +318,7 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
 
       <section className="tp-collab-section">
         <div className="tp-collab-section-head">
-          <span>已授權成員</span>
+          <span className="tp-collab-section-title">已授權成員</span>
           {!permLoading && !permError && permissions.length > 0 && (
             <span className="tp-collab-section-count">{permissions.length} 人</span>
           )}
@@ -321,28 +331,32 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
           <div className="tp-collab-empty">尚未授權任何成員，可在下方新增。</div>
         )}
         {!permLoading && !permError && permissions.length > 0 && (
-          <div className="tp-collab-list">
+          <div className="tp-collab-list" role="list">
             {permissions.map((p) => {
               const initial = p.email.charAt(0).toUpperCase() || '?';
               const isOwner = p.role === 'owner';
               const badgeClass = isOwner ? 'tp-collab-badge-owner' : 'tp-collab-badge-member';
+              const badgeLabel = isOwner ? '擁有者' : '共編成員';
               return (
-                <div className="tp-collab-row" key={p.id} data-testid={`collab-row-${p.id}`}>
+                <div
+                  className="tp-collab-row"
+                  key={p.id}
+                  role="listitem"
+                  data-testid={`collab-row-${p.id}`}
+                >
                   <div className="tp-collab-row-avatar" aria-hidden="true">{initial}</div>
-                  <div className="tp-collab-row-body">
+                  <div className="tp-collab-row-main">
                     <span className="tp-collab-row-email">{p.email}</span>
-                    <span className={`tp-collab-badge ${badgeClass}`} data-testid={`collab-role-${p.id}`}>
+                    <span
+                      className={`tp-collab-badge ${badgeClass}`}
+                      data-testid={`collab-role-${p.id}`}
+                    >
                       <span className="tp-collab-badge-dot" aria-hidden="true" />
-                      {p.role}
+                      {badgeLabel}
                     </span>
                   </div>
-                  {/* PR-CC：owner 不可被移除（含自己），顯示「擁有者」 label
-                      取代 button。member 才有 remove button。 */}
-                  {isOwner ? (
-                    <span className="tp-collab-owner-tag" data-testid={`collab-owner-tag-${p.id}`}>
-                      擁有者
-                    </span>
-                  ) : (
+                  {/* Owner 不可被移除（含自己），不渲染按鈕，留空對齊。 */}
+                  {!isOwner && (
                     <button
                       type="button"
                       className="tp-collab-remove"
@@ -362,7 +376,9 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
       </section>
 
       <section className="tp-collab-section">
-        <div className="tp-collab-section-head">新增成員</div>
+        <div className="tp-collab-section-head">
+          <span className="tp-collab-section-title">新增成員</span>
+        </div>
         <div className="tp-collab-add">
           <input
             type="email"
@@ -372,6 +388,7 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); }}
+            aria-label="新成員的 email"
             data-testid="collab-add-email"
           />
           <button
