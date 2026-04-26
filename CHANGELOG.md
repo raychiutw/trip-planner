@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.11.0] - 2026-04-26
+
+**v2.10 Wave 2：InlineAddPoi 接 Nominatim search（PR5/3）**。發現 `/api/poi-search` 端點已經為 ExplorePage 寫好（v2.0 時期），所以 Wave 2 只需要 wire frontend — InlineAddPoi 從 PR3 純 placeholder 改成真實 search + add flow。
+
+### Added
+- **InlineAddPoi 真實 search** — 接 existing `GET /api/poi-search?q=&limit=10`（Nominatim proxy + 24h Cloudflare edge cache）。
+  - Debounce 250ms（避免每按鍵 fetch）
+  - MIN_QUERY_LEN = 2 字元才 fire（< 2 不 fetch）
+  - AbortController cancel 前一次 in-flight 請求（避免 race）
+  - Loading spinner 在 search input 右側
+  - 結果列 max-height 360px scroll
+- **InlineAddPoi 真實 Add** — 點 Add → POST `/api/trips/:id/days/:dayNum/entries` body `{ title, poi_type, lat, lng, source: 'user-search' }`。entries 端點內部 findOrCreatePoi 處理 POI master upsert。成功 → dispatch `tp-entry-updated` → DaySection refetch。
+- **狀態 indicator** — Add button 「+ 加入」→ 「加入中…」 → 「✓ 已加」（success state，按鈕變成功色）。
+
+### Changed
+- **InlineAddPoi 拿掉 PR3 的 placeholder result 列 + disabled「附近 / AI 推薦」 chip** — 真 search 取代後不需要假 chip 占位。「🤖 AI 幫我找」 + 「✏️ 自訂景點」 chip 仍 route /chat 保留 fallback 出口。
+- **`mapNominatimCategory()` helper** — Nominatim `class`（tourism/amenity/shop/...）→ Tripline poi_type 白名單（hotel/restaurant/shopping/parking/transport/activity/attraction），對齊 entries POST 的 ALLOWED_POI_TYPES。
+
+### Internal
+- `tests/unit/inline-add-poi.test.tsx` 完全重寫（從 9 case → 16 case）：
+  - collapsed / expand / close
+  - chat fallback chip URL 對
+  - search enabled、< MIN_QUERY_LEN 不 fetch、debounce 250ms、cancel 前一次
+  - results 渲染、empty hint、upstream error
+  - Add → POST entries（URL + method + body 正確 + 含 poi_type mapping）
+  - 成功 → dispatch tp-entry-updated + 「✓ 已加」 state、失敗 → error display
+- 用 `vi.useFakeTimers()` + `vi.advanceTimersByTime()` 測 debounce — 不依賴真實時間。
+
+### Backend（無改動 — Nominatim proxy 已存在）
+- `functions/api/poi-search.ts` 早為 ExplorePage 寫好，沒重做。`Cache-Control: public, max-age=86400` 走 Cloudflare edge cache 24h，無需 KV 設定。User-Agent header `Tripline/1.0 (https://trip-planner-dby.pages.dev)` 已合 Nominatim ToS。
+- 規劃中的「server-side rate limit per-user」 暫不做 — Cloudflare edge cache 已能擋掉大部分重複請求，且 Nominatim 的 IP-level rate limit 是上游而非我方責任。需要時 follow-up 再加。
+
+### Pending（Wave 3 即將跟上 PR6）
+- `pois.photos` JSON column migration
+- Wikimedia Commons populate script
+- StopLightbox photo carousel wire（取代「📷 照片功能即將推出」 placeholder）
+
 ## [2.10.0] - 2026-04-26
 
 **v2.10 Wave 1：copy + move + StopDetailPage 清理（PR4/3）**。把 v2.9 PR3 的 ⎘/⇅ button standalone 元件接上 backend。`/trip/:id/stop/:eid` 老 deep-link 改 redirect 到 trip 詳情頁，刪 StopDetailPage 整支死碼。後續 Wave 2 接 POI search、Wave 3 接 photos。
