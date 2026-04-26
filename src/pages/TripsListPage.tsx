@@ -140,6 +140,34 @@ const SCOPED_STYLES = `
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   flex: 1; min-width: 0;
 }
+/* PR-RR 2026-04-27：embedded topbar actions slot — 對齊 mockup-trip-selected-v1.html
+ * Variant A 的 right action group。共編 chip + (TODO ⋯ overflow)。 */
+.tp-embedded-actions {
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+}
+.tp-embedded-action-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 120ms, color 120ms, background 120ms;
+}
+.tp-embedded-action-chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+}
+.tp-embedded-action-chip:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
+}
+.tp-embedded-action-chip .svg-icon { width: 14px; height: 14px; flex-shrink: 0; }
 @media (min-width: 1024px) {
   .tp-trips-grid {
     /* PR-PP：桌機 ≥1024 走 auto-fill minmax(160)。架構是 2-pane（無 sheet），
@@ -620,6 +648,23 @@ export default function TripsListPage() {
           <span className="tp-embedded-trip-name">
             {embeddedTrip.title || embeddedTrip.name}
           </span>
+        )}
+        {/* PR-RR 2026-04-27：actions slot — 共編 chip 對齊 mockup A 規格。
+         * 點擊 → setCollabTripId 觸發 InfoSheet (跟卡片 ⋯ 同 path)。
+         * TripPage 的 .tp-trip-actions chip 在 noShell 下已 hide，避免重複。 */}
+        {effectiveSelectedId && (
+          <div className="tp-embedded-actions">
+            <button
+              type="button"
+              className="tp-embedded-action-chip"
+              onClick={() => setCollabTripId(effectiveSelectedId)}
+              aria-label="開啟共編設定"
+              data-testid="trips-embedded-collab"
+            >
+              <Icon name="group" />
+              <span>共編</span>
+            </button>
+          </div>
         )}
       </header>
       <TripPage tripId={effectiveSelectedId!} noShell />

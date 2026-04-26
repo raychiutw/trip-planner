@@ -678,10 +678,10 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
 
       <ToastContainer />
 
-      {/* PR-P 2026-04-26：共編 chip — embedded mode (noShell) 把 topbar +
-       * OverflowMenu 都藏掉，user 找不到任何 entry 進共編 sheet。這個 chip
-       * 永遠 render（不管 noShell），讓行程擁有者隨時能改共編。 */}
-      {!loading && trip && (
+      {/* PR-RR 2026-04-27：共編 chip 在 noShell 模式下 hide。embedded mode
+       * 由 TripsListPage 的 topbar 提供 共編 入口（chip in topbar action slot），
+       * 避免兩個 共編 entry 重複。Standalone /trip/:id 模式仍 render。 */}
+      {!noShell && !loading && trip && (
         <div className="tp-trip-actions" aria-label="行程操作">
           <button
             type="button"

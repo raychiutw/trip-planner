@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.26] - 2026-04-27
+
+**PR-RR: 補齊 mockup A actions slot — 共編 chip 進 embedded topbar（QA round 25）**。
+
+### Changed
+- **共編 chip 從 TripPage 搬進 embedded topbar** — 對齊 `mockup-trip-selected-v1.html` Variant A right action group。topbar 變成 `[← back] [trip name] [共編]`。
+- TripPage `.tp-trip-actions` chip 在 `noShell` mode 下 hide，避免兩個 共編 entry 重複。
+- 共編 chip 點擊呼叫 `setCollabTripId(effectiveSelectedId)` → 開 TripsListPage 既有 InfoSheet（跟卡片 ⋯ → 共編 同 path）。
+
+### TODO
+- Variant A 的 ⋯ overflow icon-btn 還沒做（cross-component OverflowMenu wire deferred）。
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.25] - 2026-04-27
 
 **PR-QQ: embedded topbar 對齊 mockup-trip-v2 canonical（QA round 24）**。
