@@ -37,23 +37,19 @@ import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage from './TripPage';
 
 const SCOPED_STYLES = `
-/* PR-JJ 2026-04-26：/trips 把 sheet cap 鎖死在 mockup-1440-canonical 寬度
- * 576px，不讓它在 wider viewport（1920+）長到 780。
+/* PR-KK 2026-04-26：sheet min(576, 32vw) — 涵蓋 1280 viewport user
  *
- * 量過後發現：mockup-trip-v2.html 線 30 canonical 是 min(780, 40vw)，
- * 在 1440 確實 = 576。但全域 token 同樣公式在 user 1920+ viewport 會長到
- * 768px，user 看了覺得「sheet 太大」— 視覺上 1440 demo 比例才對。
+ * PR-JJ 用 40vw 在 1280 算 = 512，沒到 576 cap 就被 40vw 鎖死，user 在
+ * 1280 sheet 仍偏大（main 只放 1 card）。改 32vw 讓 1280 = 410，main 630
+ * 容下 2 cards。1920+ 仍 cap 576 維持 mockup 上限。
  *
- * 修法：override sheet → min(576px, 40vw)，把 mockup-1440 比例鎖在所有
- * viewport，sheet 不再隨 vw 長大；trip-detail page 的全域 token 不動。
- *
- * 1440 → sheet 576 (40vw)、main 624、shell padding 16 horizontal → inner 581
- *      → 2 cards (280×2+16=576 fits)
- * 1920 → sheet 576 (cap)、main 1104、inner 960 (capped) → 3 cards
+ * 1280 → sheet 410 (32vw)、main 630、inner 598 → 2 cards (576 fits)
+ * 1440 → sheet 461 (32vw)、main 739、inner 707 → 2 cards
+ * 1920 → sheet 576 (cap)、main 1104、inner 960 (max-width) → 3 cards
  * 2560 → sheet 576 (cap)、main 1744、inner 960 → 3 cards */
 @media (min-width: 1024px) {
   .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
-    grid-template-columns: 240px 1fr min(576px, 40vw);
+    grid-template-columns: 240px 1fr min(576px, 32vw);
   }
 }
 .tp-trips-shell {
