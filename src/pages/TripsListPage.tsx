@@ -19,7 +19,8 @@
  *   - GET /api/trips?all=1 → trip metadata (name, countries, day_count,
  *     start_date, end_date, member_count)
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -35,7 +36,7 @@ import CollabSheet from '../components/trip/CollabSheet';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ErrorBanner from '../components/shared/ErrorBanner';
-import TripPage from './TripPage';
+import TripPage, { type TripPageHandle } from './TripPage';
 
 const SCOPED_STYLES = `
 /* PR-PP 2026-04-26：架構改 2-pane（sidebar + main），不再有右側 sheet。
@@ -140,34 +141,76 @@ const SCOPED_STYLES = `
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   flex: 1; min-width: 0;
 }
-/* PR-RR 2026-04-27：embedded topbar actions slot — 對齊 mockup-trip-selected-v1.html
- * Variant A 的 right action group。共編 chip + (TODO ⋯ overflow)。 */
+/* PR-UU 2026-04-27：embedded topbar actions slot — 漢堡選單 (⋯) 一統 共編 / 列印 / 下載。
+ * 對齊 mockup-trip-selected-v1.html Variant A 的 ⋯ icon-btn。 */
 .tp-embedded-actions {
   display: flex; align-items: center; gap: 6px;
   flex-shrink: 0;
+  position: relative;
 }
-.tp-embedded-action-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
+.tp-embedded-menu-trigger {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-md);
   background: var(--color-background);
+  border: 1px solid var(--color-border);
   color: var(--color-foreground);
-  font: inherit;
-  font-size: var(--font-size-footnote);
-  font-weight: 600;
+  display: grid; place-items: center;
   cursor: pointer;
+  font: inherit;
+  flex-shrink: 0;
   transition: border-color 120ms, color 120ms, background 120ms;
 }
-.tp-embedded-action-chip:hover {
+.tp-embedded-menu-trigger:hover {
   border-color: var(--color-accent);
-  color: var(--color-accent-deep);
+  color: var(--color-accent);
   background: var(--color-accent-subtle);
 }
-.tp-embedded-action-chip:focus-visible {
+.tp-embedded-menu-trigger:focus-visible {
   outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
-.tp-embedded-action-chip .svg-icon { width: 14px; height: 14px; flex-shrink: 0; }
+.tp-embedded-menu-trigger .svg-icon { width: 18px; height: 18px; }
+
+.tp-embedded-menu {
+  position: fixed;
+  min-width: 200px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 4px;
+  z-index: var(--z-modal, 9000);
+  display: flex; flex-direction: column;
+  gap: 1px;
+}
+.tp-embedded-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border: none; background: transparent;
+  font: inherit; font-size: var(--font-size-callout);
+  color: var(--color-foreground);
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  min-height: 40px;
+}
+.tp-embedded-menu-item:hover { background: var(--color-hover); }
+.tp-embedded-menu-item:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: -2px;
+}
+.tp-embedded-menu-item .svg-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--color-muted); }
+.tp-embedded-menu-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+.tp-embedded-menu-section-label {
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 8px 12px 4px;
+}
 @media (min-width: 1024px) {
   .tp-trips-grid {
     /* PR-PP：桌機 ≥1024 走 auto-fill minmax(160)。架構是 2-pane（無 sheet），
@@ -401,6 +444,161 @@ function cardMeta(trip: TripInfo): string {
   return '';
 }
 
+/* PR-UU 2026-04-27：embedded topbar 漢堡選單 — 共編 / 列印 / 下載 (4 formats)。
+ * 共編 走 host 的 setCollabTripId（既有 InfoSheet path）。
+ * 列印 + 下載 走 TripPage forwardRef handle。 */
+const MENU_WIDTH = 200;
+const VIEWPORT_MARGIN = 8;
+
+interface EmbeddedActionMenuProps {
+  tripId: string;
+  tripPageRef: React.RefObject<TripPageHandle | null>;
+  onCollab: () => void;
+}
+
+function EmbeddedActionMenu({ tripId, tripPageRef, onCollab }: EmbeddedActionMenuProps) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    function recompute() {
+      const btn = triggerRef.current;
+      if (!btn) return;
+      const r = btn.getBoundingClientRect();
+      const vw = window.innerWidth;
+      let left = r.right - MENU_WIDTH;
+      if (left < VIEWPORT_MARGIN) left = VIEWPORT_MARGIN;
+      if (left + MENU_WIDTH > vw - VIEWPORT_MARGIN) left = vw - MENU_WIDTH - VIEWPORT_MARGIN;
+      setPos({ top: r.bottom + 6, left });
+    }
+    recompute();
+    window.addEventListener('resize', recompute);
+    window.addEventListener('scroll', recompute, true);
+    return () => {
+      window.removeEventListener('resize', recompute);
+      window.removeEventListener('scroll', recompute, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+        triggerRef.current?.focus();
+      }
+    }
+    function onClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target) && !triggerRef.current?.contains(target)) {
+        close();
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('mousedown', onClick);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onClick);
+    };
+  }, [open, close]);
+
+  function runAndClose(fn: () => void) {
+    return () => { fn(); close(); };
+  }
+
+  const dropdown = open && pos ? createPortal((
+    <div
+      ref={menuRef}
+      role="menu"
+      className="tp-embedded-menu"
+      style={{ top: pos.top, left: pos.left }}
+      data-testid={`trip-embedded-menu-${tripId}`}
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(onCollab)}
+      >
+        <Icon name="group" />
+        <span>共編設定</span>
+      </button>
+      <div className="tp-embedded-menu-divider" />
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(() => tripPageRef.current?.togglePrint())}
+      >
+        <Icon name="printer" />
+        <span>列印</span>
+      </button>
+      <div className="tp-embedded-menu-divider" />
+      <span className="tp-embedded-menu-section-label">下載格式</span>
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('pdf'))}
+      >
+        <Icon name="download" />
+        <span>PDF</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('md'))}
+      >
+        <Icon name="doc" />
+        <span>Markdown</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('json'))}
+      >
+        <Icon name="code" />
+        <span>JSON</span>
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-embedded-menu-item"
+        onClick={runAndClose(() => tripPageRef.current?.triggerDownload('csv'))}
+      >
+        <Icon name="table" />
+        <span>CSV</span>
+      </button>
+    </div>
+  ), document.body) : null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="tp-embedded-menu-trigger"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="行程動作"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        data-testid="trips-embedded-menu-trigger"
+      >
+        <Icon name="more-vert" />
+      </button>
+      {dropdown}
+    </>
+  );
+}
+
 export default function TripsListPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
@@ -482,6 +680,9 @@ export default function TripsListPage() {
   // TripPage 的 InfoSheet slide-up 視覺不符 — 同一動作兩種容器。改 InfoSheet
   // 統一，CollabModal 已刪。trip 列表保持 visible 在背景。
   const [collabTripId, setCollabTripId] = useState<string | null>(null);
+  /* PR-UU 2026-04-27：embedded TripPage forwardRef handle，給漢堡選單呼叫
+   * 列印 / 下載 (TripPage 內部 state-bound handlers)。共編走 setCollabTripId。 */
+  const tripPageRef = useRef<TripPageHandle>(null);
   const handleMenuCollab = useCallback(
     (tripId: string) => { setCollabTripId(tripId); },
     [],
@@ -648,25 +849,19 @@ export default function TripsListPage() {
             {embeddedTrip.title || embeddedTrip.name}
           </span>
         )}
-        {/* PR-RR 2026-04-27：actions slot — 共編 chip 對齊 mockup A 規格。
-         * 點擊 → setCollabTripId 觸發 InfoSheet (跟卡片 ⋯ 同 path)。
-         * TripPage 的 .tp-trip-actions chip 在 noShell 下已 hide，避免重複。 */}
+        {/* PR-UU 2026-04-27：actions slot 改漢堡選單 — 共編 / 列印 / 下載 4 formats。
+         * 列印 + 下載 透過 tripPageRef 呼叫 TripPage forwardRef handle。 */}
         {effectiveSelectedId && (
           <div className="tp-embedded-actions">
-            <button
-              type="button"
-              className="tp-embedded-action-chip"
-              onClick={() => setCollabTripId(effectiveSelectedId)}
-              aria-label="開啟共編設定"
-              data-testid="trips-embedded-collab"
-            >
-              <Icon name="group" />
-              <span>共編</span>
-            </button>
+            <EmbeddedActionMenu
+              tripId={effectiveSelectedId}
+              tripPageRef={tripPageRef}
+              onCollab={() => setCollabTripId(effectiveSelectedId)}
+            />
           </div>
         )}
       </header>
-      <TripPage tripId={effectiveSelectedId!} noShell />
+      <TripPage ref={tripPageRef} tripId={effectiveSelectedId!} noShell />
     </div>
   ) : cardGridMain;
 

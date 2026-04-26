@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.28] - 2026-04-27
+
+**PR-UU: 共編 chip 改漢堡選單 (共編 / 列印 / 下載 4 formats)（QA round 27）**。
+
+### Added
+- **Embedded topbar 漢堡選單** — 替換 PR-RR 的 共編 chip。⋯ icon-btn 36×36 (mockup A `.va-icon-btn` 規格) → portal dropdown 200px 寬：
+  - **共編設定** — 走 host `setCollabTripId` 開既有 InfoSheet
+  - **列印** — 走 TripPage forwardRef `togglePrint()` 進入 print-mode (既有 hook)
+  - **下載 PDF / Markdown / JSON / CSV** — 走 TripPage forwardRef `triggerDownload(format)` (既有 `lib/tripExport.ts` downloadTripFormat)
+- 對齊 mockup-trip-selected-v1.html Variant A 完整版（topbar 終於完成 right action group）。
+
+### Changed
+- TripPage 改為 `forwardRef<TripPageHandle>` — 暴露 `openSheet` / `triggerDownload` / `togglePrint` 給父層 cross-component 呼叫。
+- TripsListPage 加 `tripPageRef = useRef<TripPageHandle>(null)`，傳給 embedded TripPage。
+
+### A11y
+- Menu 走 `role="menu"` + items `role="menuitem"`
+- Esc / outside click 關閉 + focus return
+- Trigger 帶 `aria-haspopup` + `aria-expanded`
+
+verify gate: tsc clean / 1029 tests pass.
+
 ## [2.14.27] - 2026-04-27
 
 **PR-TT: hotfix embedded topbar CSS 沒注入 → 子元素 stack vertically（QA round 26）**。

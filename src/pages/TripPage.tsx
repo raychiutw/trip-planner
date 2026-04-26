@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Icon from '../components/shared/Icon';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -188,7 +188,18 @@ export interface TripPageProps {
   noShell?: boolean;
 }
 
-export default function TripPage({ tripId: propTripId, noShell = false }: TripPageProps = {}) {
+/* PR-SS/UU 2026-04-27：embedded mode 用 ref 從外部 trigger 各 actions。
+ * TripsListPage 的 embedded topbar ⋯ 漢堡選單透過此 handle 呼叫。 */
+export interface TripPageHandle {
+  openSheet: (key: string) => void;
+  triggerDownload: (format: string) => void;
+  togglePrint: () => void;
+}
+
+function TripPageInner(
+  { tripId: propTripId, noShell = false }: TripPageProps,
+  ref: React.Ref<TripPageHandle>,
+) {
   const { tripId: urlTripId } = useParams<{ tripId: string }>();
   // Prefer prop tripId (embedded mode) over URL (route mode).
   const effectiveUrlTripId = propTripId ?? urlTripId;
@@ -592,6 +603,14 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
 
   /* --- Topbar / OverflowMenu -> InfoSheet --- */
   const handlePanelItem = useCallback((key: string) => { setActiveSheet(key); }, []);
+
+  /* PR-SS/UU 2026-04-27：embedded mode 把 sheet/download/print handlers 開放
+   * 給父層。TripsListPage 的 ⋯ 漢堡選單 (共編 / 列印 / 下載) 透過 ref 呼叫。 */
+  useImperativeHandle(ref, () => ({
+    openSheet: (key: string) => setActiveSheet(key),
+    triggerDownload: (format: string) => { void handleDownloadFormat(format); },
+    togglePrint,
+  }), [handleDownloadFormat, togglePrint]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
   /* --- Fix 5: Trip change without full page reload --- */
@@ -803,3 +822,7 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     />
   );
 }
+
+const TripPage = forwardRef<TripPageHandle, TripPageProps>(TripPageInner);
+TripPage.displayName = 'TripPage';
+export default TripPage;
