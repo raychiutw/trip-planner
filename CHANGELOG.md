@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.14] - 2026-04-26
+
+**PR-CC: 行程 owner 概念正規化 — 強制 server-side、區分 owner/member badge、不可刪 owner**。User 指示：「行程增加 owner 概念，huiyun 行程 owner = huiyun 帳號、ray 的 = lean.lean@gmail.com，之後誰建立就是誰是 owner，加入共編的是 member。」 + 「設定畫面 members 也要調整 owner 可以加 member 不能刪除自己 owner」。
+
+### Migration (已套用 prod)
+- **`migrations/0039_trip_permissions_owner_role.sql`** — 擴充 `trip_permissions.role` CHECK 從 `('admin','member')` 加入 `'owner'`。SQLite 不支援 ALTER TABLE DROP CONSTRAINT，用 swap 表 pattern recreate（含原本 indexes 重建）。
+- **Prod data fix（手動執行 wrangler）**：
+  - `okinawa-trip-2026-Ray`.owner: `'Ray'` → `'lean.lean@gmail.com'`
+  - `okinawa-trip-2026-HuiYun`.owner: `'HuiYun'` → `'penyin@gmail.com'`
+  - 對應 trip_permissions 兩 row role: `'member'` → `'owner'`
+
+### Backend
+- **POST /api/trips 強制 `owner = auth.email`** — 不再讀 `body.owner`（防偽造）。User 指示「之後的誰建立就是誰是 owner」 — server-side auth 取唯一可信來源。
+- **POST /api/trips 自動 INSERT trip_permissions role='owner'** — 取代舊 'admin' 角色。後續 hasPermission 仍認 owner / admin / member 三種。
+- **DELETE /api/permissions/:id 阻擋 owner role row** — User 指示「不能刪除自己 owner」。Owner 只能透過未來轉移 endpoint（unimplemented）變更，不可直接 DELETE。回 403 「不可移除行程擁有者」。
+
+### Frontend (CollabSheet)
+- **owner badge 用 success 綠色** vs **member badge 用 accent 橘色** — 視覺一眼區分。語意：你是擁有者（強調正向） vs 你是共編成員（次要）。
+- **owner row 顯示「擁有者」 label 取代 移除 button** — 視覺強調此 row 不可被移除。Member row 才有 remove button。
+- **`Permission.role` type 擴充** `'owner' | 'admin' | 'member'`。
+
+### Internal
+- backend 既有 `hasPermission` query 用 `email AND trip_id` 不過濾 role，'owner' / 'admin' / 'member' 都自動 pass — 無需改動。
+- Owner transfer 流程（將 owner 從 A 換給 B）尚未實作 — 單向 destructive 需要 confirm + audit + 強制把舊 owner 降成 member。列入 backlog。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests / 53 API files / 525 API tests pass。
+
 ## [2.14.13] - 2026-04-26
 
 **PR-Z: CollabSheet 視覺重新設計 — 對照 DESIGN.md + terracotta-preview.html 收齊風格**。User: 版面不一致（移除 button 文字直排、新增 button 看似 disabled、role pill 樣式單薄）。
