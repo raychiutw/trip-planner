@@ -169,10 +169,10 @@ const SCOPED_STYLES = `
   z-index: 600;
 }
 @media (max-width: 1023px) {
-  /* QA 2026-04-26 BUG-040：220px 距離 carousel 太近視覺上像黏在一起，bump
-   * 到 240px 給更明顯氣口。carousel ~150-170px 高，240 = 70-90px gap 安全 */
+  /* QA 2026-04-26 PR-I：carousel 拿掉 eyebrow + title 後高度從 ~150 → ~100，
+   * pill bar 從 240 → 130 往下方 stop 切換靠攏（per user feedback）。 */
   .tp-global-map-actions {
-    bottom: 240px; left: 12px;
+    bottom: 130px; left: 12px;
   }
 }
 .tp-global-map-pill {
@@ -701,15 +701,9 @@ export default function GlobalMapPage() {
     return null;
   }, [resolved, selectedPin]);
 
-  // Mobile carousel：選了 stop → 顯示該 stop 那天的所有 pins
-  // 沒選 → 顯示第一天的 pins 當預設提示，避免 carousel 一片空白
-  const carouselDay = useMemo(() => {
-    if (!resolved) return null;
-    if (selectedDay) return selectedDay;
-    const first = Array.from(resolved.pinsByDay.entries()).sort((a, b) => a[0] - b[0])[0];
-    if (!first) return null;
-    return { dayNum: first[0], pins: first[1] };
-  }, [resolved, selectedDay]);
+  // PR-I：原 carouselDay (filter to one day) 移除 — carousel 改 cross-day
+  // continuous，render 全部 pins 直接從 resolved.pinsByDay 攤平。selectedDay
+  // 仍由其他地方使用（map flyTo 範圍）。
 
   // Loading: trips list still null
   const isLoadingList = trips === null && !error;
@@ -740,10 +734,10 @@ export default function GlobalMapPage() {
         </div>
       ) : (
         <>
-          {/* Floating trip switcher header (over map). z-index 1000 確保壓過 leaflet. */}
+          {/* QA 2026-04-26 PR-I：簡化 header — 拿掉「Global Map」 eyebrow + stops/days
+           * meta，只留 trip dropdown。資訊在 sheet overview 已重複顯示。 */}
           {trips && trips.length > 0 && (
             <div className="tp-global-map-header" ref={menuRef} data-testid="global-map-trip-switcher">
-              <div className="tp-global-map-header-eyebrow">Global Map</div>
               <div className="tp-global-map-header-row">
                 <button
                   type="button"
@@ -758,11 +752,6 @@ export default function GlobalMapPage() {
                   </span>
                   <span className="caret" aria-hidden="true">▾</span>
                 </button>
-              </div>
-              <div className="tp-global-map-meta">
-                {resolved
-                  ? `${resolved.pins.length} stops · ${resolved.pinsByDay.size} days`
-                  : '載入中…'}
               </div>
               {menuOpen && (
                 <div className="tp-global-map-dropdown" role="menu" data-testid="global-map-trip-menu">
@@ -805,6 +794,9 @@ export default function GlobalMapPage() {
                   zoomControlPosition="bottomright"
                   dark={isDark}
                   className="ocean-map-container"
+                  /* QA 2026-04-26 PR-I 更正：完全停用 cluster — user feedback「移除
+                   * cluster」。每個 stop 直接顯示為個別 pin，不再 cluster 成數字 bubble。 */
+                  cluster={false}
                 />
               </Suspense>
             )}
@@ -838,34 +830,37 @@ export default function GlobalMapPage() {
               </div>
             )}
 
-            {/* Mobile bottom POI carousel — show pins of carouselDay (selected day or day 1).
-             * Click a card → setSelected, opens sheet content (visible on desktop right pane;
-             * mobile relies on the active card highlight + map flyTo via focusId). */}
-            {carouselDay && carouselDay.pins.length > 0 && (
+            {/* QA 2026-04-26 PR-I：mobile carousel 三大改動
+             *   1. 拿掉 eyebrow + title row（標題重複，user 已從 header 看到 trip 名）
+             *   2. cross-day 連續 scroll — flatten pinsByDay 成單一陣列
+             *      Day 1 最後 stop → Day 2 第一 stop 直接接續滑換
+             *   3. active card border-color 用 dayColor(dayNum)，跟 map polyline 一致 */}
+            {resolved && resolved.pins.length > 0 && (
               <div className="tp-global-map-mobile-stack" data-testid="global-map-mobile-stack">
                 <div className="tp-global-map-mobile-handle" aria-hidden="true" />
-                <div className="tp-global-map-mobile-eyebrow">
-                  <span className="dot" />
-                  {resolved?.name} · DAY {String(carouselDay.dayNum).padStart(2, '0')} · {carouselDay.pins.length} STOPS
-                </div>
-                <div className="tp-global-map-mobile-title">
-                  {selectedPin ? selectedPin.title : '點 marker 看詳情，左右滑換 stop'}
-                </div>
                 <div className="tp-global-map-mobile-cards">
-                  {carouselDay.pins.map((pin) => (
-                    <button
-                      key={pin.id}
-                      type="button"
-                      className={`tp-global-map-mobile-card ${pin.id === selectedPinId ? 'is-active' : ''}`}
-                      onClick={() => setSelectedPinId(pin.id)}
-                      data-testid={`global-map-mobile-card-${pin.id}`}
-                    >
-                      <div className="pc-eyebrow">
-                        {pin.time ? `${pin.time} · STOP ${pin.index || '—'}` : `STOP ${pin.index || '—'}`}
-                      </div>
-                      <div className="pc-title" title={pin.title}>{pin.title}</div>
-                    </button>
-                  ))}
+                  {Array.from(resolved.pinsByDay.entries())
+                    .sort((a, b) => a[0] - b[0])
+                    .flatMap(([dayNum, pins]) => pins.map((pin) => ({ pin, dayNum })))
+                    .map(({ pin, dayNum }) => {
+                      const isActive = pin.id === selectedPinId;
+                      const dColor = dayColor(dayNum);
+                      return (
+                        <button
+                          key={pin.id}
+                          type="button"
+                          className={`tp-global-map-mobile-card ${isActive ? 'is-active' : ''}`}
+                          onClick={() => setSelectedPinId(pin.id)}
+                          data-testid={`global-map-mobile-card-${pin.id}`}
+                          style={isActive ? { borderColor: dColor, boxShadow: `0 0 0 2px ${dColor}33` } : { borderLeftColor: dColor, borderLeftWidth: 3 }}
+                        >
+                          <div className="pc-eyebrow">
+                            {pin.time ? `${pin.time} · D${dayNum}·${pin.index || '—'}` : `D${dayNum}·STOP ${pin.index || '—'}`}
+                          </div>
+                          <div className="pc-title" title={pin.title}>{pin.title}</div>
+                        </button>
+                      );
+                    })}
                 </div>
               </div>
             )}
