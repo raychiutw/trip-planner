@@ -19,6 +19,22 @@ import { type InfoBoxData } from './InfoBox';
 
 export interface TravelData { type?: string | null; text?: string | null; }
 
+/**
+ * v2.12 Wave 3：POI 照片 schema。`pois.photos` 是 JSON-encoded TEXT column，
+ * mapDay.toTimelineEntry 會 parse 後 surface 為 PoiPhoto[]。
+ *   - url：原圖 URL（Wikimedia Commons file URL 或 user upload）
+ *   - thumbUrl：選填，縮圖（Commons API 可指定 iiurlwidth=400）
+ *   - caption：選填，圖片說明
+ *   - source / attribution：來源 + 授權說明（Wikimedia 圖片 ToS 要求 attribution）
+ */
+export interface PoiPhoto {
+  url: string;
+  thumbUrl?: string;
+  caption?: string;
+  source?: string;
+  attribution?: string;
+}
+
 export interface TimelineEntryData {
   id?: number | null;
   time?: string | null;
@@ -30,4 +46,7 @@ export interface TimelineEntryData {
   travel?: TravelData | string | null;
   locations?: NavLocation[] | null;
   infoBoxes?: InfoBoxData[] | null;
+  /** v2.12 Wave 3：POI photos （from pois.photos JSON column）。null = 還沒抓到，
+   *  StopLightbox 顯示「即將推出」 placeholder。 */
+  photos?: PoiPhoto[] | null;
 }

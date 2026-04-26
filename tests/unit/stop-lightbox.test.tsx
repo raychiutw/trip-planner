@@ -89,3 +89,86 @@ describe('StopLightbox — open / close', () => {
     expect(screen.getByTestId('stop-lightbox')).toBeTruthy();
   });
 });
+
+describe('StopLightbox — photo carousel (v2.12 Wave 3)', () => {
+  const PHOTOS = [
+    { url: 'https://commons.wikimedia.org/photo1.jpg', thumbUrl: 'https://commons.wikimedia.org/thumb1.jpg', caption: '黑潮之海水槽', source: 'https://commons.wikimedia.org/file1', attribution: 'CC BY-SA 4.0 · Wikimedia Commons' },
+    { url: 'https://commons.wikimedia.org/photo2.jpg', caption: '美ら海水族館入口' },
+    { url: 'https://commons.wikimedia.org/photo3.jpg' },
+  ];
+
+  it('renders placeholder when entry has no photos', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: null }} onClose={() => {}} />);
+    expect(screen.getByTestId('stop-lightbox-photo-placeholder')).toBeTruthy();
+    expect(screen.queryByTestId('stop-lightbox-carousel')).toBeNull();
+  });
+
+  it('renders placeholder when photos array is empty', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: [] }} onClose={() => {}} />);
+    expect(screen.getByTestId('stop-lightbox-photo-placeholder')).toBeTruthy();
+  });
+
+  it('renders carousel when entry has ≥1 photo', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    expect(screen.getByTestId('stop-lightbox-carousel')).toBeTruthy();
+    expect(screen.queryByTestId('stop-lightbox-photo-placeholder')).toBeNull();
+  });
+
+  it('first photo shown by default with thumbUrl preferred over url', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    const img = screen.getByTestId('stop-lightbox-carousel').querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('thumb1.jpg');
+    expect(img.alt).toBe('黑潮之海水槽');
+  });
+
+  it('caption with attribution + source link rendered', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    const cap = screen.getByTestId('stop-lightbox-caption');
+    expect(cap.textContent).toContain('黑潮之海水槽');
+    expect(cap.textContent).toContain('CC BY-SA');
+    const link = cap.querySelector('a') as HTMLAnchorElement;
+    expect(link.href).toBe('https://commons.wikimedia.org/file1');
+  });
+
+  it('next button advances photo index', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    fireEvent.click(screen.getByTestId('stop-lightbox-next'));
+    const img = screen.getByTestId('stop-lightbox-carousel').querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('photo2.jpg');
+  });
+
+  it('prev button wraps from index 0 → last', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    fireEvent.click(screen.getByTestId('stop-lightbox-prev'));
+    const img = screen.getByTestId('stop-lightbox-carousel').querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('photo3.jpg');
+  });
+
+  it('next button wraps from last → index 0', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    fireEvent.click(screen.getByTestId('stop-lightbox-next'));
+    fireEvent.click(screen.getByTestId('stop-lightbox-next'));
+    fireEvent.click(screen.getByTestId('stop-lightbox-next'));
+    const img = screen.getByTestId('stop-lightbox-carousel').querySelector('img') as HTMLImageElement;
+    // PHOTOS[0] 有 thumbUrl，所以回到 index 0 顯示 thumb1.jpg
+    expect(img.src).toContain('thumb1.jpg');
+  });
+
+  it('arrow keys navigate photos when open', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: PHOTOS }} onClose={() => {}} />);
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    const img = screen.getByTestId('stop-lightbox-carousel').querySelector('img') as HTMLImageElement;
+    expect(img.src).toContain('photo2.jpg');
+  });
+
+  it('single-photo carousel hides nav + pager', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: [PHOTOS[0]!] }} onClose={() => {}} />);
+    expect(screen.queryByTestId('stop-lightbox-prev')).toBeNull();
+    expect(screen.queryByTestId('stop-lightbox-next')).toBeNull();
+  });
+
+  it('photo without caption + attribution → no caption div', () => {
+    render(<StopLightbox open entry={{ ...ENTRY, photos: [{ url: 'https://x.com/a.jpg' }] }} onClose={() => {}} />);
+    expect(screen.queryByTestId('stop-lightbox-caption')).toBeNull();
+  });
+});
