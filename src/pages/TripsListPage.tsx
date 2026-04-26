@@ -46,12 +46,12 @@ const SCOPED_STYLES = `
  * (TripPage with rich TripSheet) keep their wider sheet. */
 @media (min-width: 1024px) {
   .app-shell:has(> main .tp-trips-shell)[data-layout="3pane"] {
-    /* QA 2026-04-26 BUG-002/007/019：sheet 太窄（420 / 32vw）導致嵌入 TripPage
-     * 的 day-strip + popover 全 overflow。bump 到 min(560, 38vw)：
-     *   1440px → 547 sheet（原 420），main 653（原 780），緊但夠 3-col cards
-     *   1280px → 486 sheet（原 410）
-     *   1024px → 389 sheet（原 328），最低 viewport 仍 OK */
-    grid-template-columns: 240px 1fr min(560px, 38vw);
+    /* PR-FF 2026-04-26：原 min(560, 38vw) 對單純 trip 詳情 sheet 太寬，
+     * 對照 mockup-trip-v2 sheet 大小調 min(440, 32vw)：
+     *   1440px → 440 sheet，main 760（cards 更寬）
+     *   1280px → 410 sheet
+     *   1024px → 328 sheet（最低 viewport 仍 OK，cards 兩欄保持 280 min） */
+    grid-template-columns: 240px 1fr min(440px, 32vw);
   }
 }
 .tp-trips-shell {
@@ -97,7 +97,7 @@ const SCOPED_STYLES = `
   margin: 8px 0 0 8px;
   width: 40px; height: 40px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--color-glass-toast);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   display: inline-grid; place-items: center;
@@ -138,12 +138,20 @@ const SCOPED_STYLES = `
   text-decoration: none;
   color: inherit;
   transition: border-color 120ms, box-shadow 120ms, transform 120ms;
-  display: block;
+  /* PR-FF 2026-04-26：display: flex column 讓 card 高度自動跟同 row 兄弟對齊
+   * （grid auto stretch + flex column = 高度均一）。原 display: block 各 card
+   * 高度跟內容變動，user 看到「行程一覽大小不依」。 */
+  display: flex; flex-direction: column;
   cursor: pointer;
   font-family: inherit;
   text-align: left;
   width: 100%;
+  height: 100%;
 }
+/* meta 推到底部，cover/eyebrow/title 上半部空間靠攏，視覺一致 */
+.tp-trip-card-meta { margin-top: auto; }
+/* meta 為空字串時不佔空間（hide trip-id 後可能 empty） */
+.tp-trip-card-meta:empty { display: none; }
 .tp-trip-card:hover {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
@@ -333,7 +341,9 @@ function cardMeta(trip: TripInfo): string {
   if (range && members) return `${range} · ${members}`;
   if (range) return range;
   if (members) return members;
-  return trip.tripId;
+  // PR-FF 2026-04-26：移除 trip.tripId fallback。User 指示「隱藏 trip id」 —
+  // trip-vduh 這種 slug 對 user 沒意義，留白勝過顯示亂碼。
+  return '';
 }
 
 export default function TripsListPage() {

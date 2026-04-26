@@ -18,7 +18,9 @@ const SCOPED_STYLES = `
   position: absolute; top: 8px; right: 8px;
   width: 32px; height: 32px;
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.92);
+  /* PR-EE 2026-04-26：原本 rgba(255,255,255,0.92) hardcode 白色，dark mode
+   * 跳出來像浮白圓圈。改 --color-glass-toast token 自動 light/dark 切換。 */
+  background: var(--color-glass-toast);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   display: grid; place-items: center;
@@ -27,6 +29,7 @@ const SCOPED_STYLES = `
   font: inherit;
   padding: 0;
   box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
   transition: background 120ms, border-color 120ms;
 }
 .tp-card-menu-trigger:hover {

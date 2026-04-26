@@ -889,7 +889,9 @@ body.dark {
         --color-cover-jp-to: #D97848;
         --color-cover-kr-from: #8A4520;
         --color-cover-kr-to: #5A4634;
-        --color-cover-tw-from: #9E6800;
+        /* PR-EE 2026-04-26：dark mode TW cover 太亮（#9E6800 amber 在深色 ui
+         * 上跳出來太搶眼），降到 deep amber-brown 跟 cover-other-from 接近。 */
+        --color-cover-tw-from: #5A4220;
         --color-cover-tw-to: #4D372A;
         --color-cover-other-from: #4D372A;
         --color-cover-other-to: #6F5A47;
