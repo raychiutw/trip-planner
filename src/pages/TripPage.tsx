@@ -446,6 +446,21 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
+    // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI
+    // 卡「跳到行程」過來，需要 scroll 到該 entry）。useScrollRestoreOnBack
+    // 已處理 location.state.scrollAnchor，但 GlobalMapPage Link 同時放 query
+    // 跟 state，兩條路任一條 work 都行。這裡 query 那條是 fallback —
+    // 例如 user 直接貼 URL 沒有 history state。
+    const focusParam = new URLSearchParams(window.location.search).get('focus');
+    if (focusParam) {
+      requestAnimationFrame(() => {
+        const sel = `[data-scroll-anchor="entry-${CSS.escape(focusParam)}"]`;
+        const el = document.querySelector<HTMLElement>(sel);
+        if (el) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      });
+      return;
+    }
+
     // URL hash takes priority over auto-locate
     const hash = window.location.hash;
     const hashMatch = hash?.match(/^#day(\d+)$/);
