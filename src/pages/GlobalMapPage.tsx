@@ -430,11 +430,11 @@ const SCOPED_STYLES = `
 }
 .tp-global-map-mobile-cards::-webkit-scrollbar { display: none; }
 .tp-global-map-mobile-card {
-  flex: 0 0 200px;
+  flex: 0 0 150px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 10px;
+  padding: 10px 12px;
   cursor: pointer;
   text-align: left;
   font: inherit;
@@ -447,11 +447,6 @@ const SCOPED_STYLES = `
 .tp-global-map-mobile-card.is-active {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
-}
-.tp-global-map-mobile-card .pc-cover {
-  height: 60px; border-radius: var(--radius-sm);
-  margin-bottom: 6px;
-  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-subtle) 100%);
 }
 .tp-global-map-mobile-card .pc-eyebrow {
   font-size: var(--font-size-eyebrow); font-weight: 700;
@@ -801,7 +796,6 @@ export default function GlobalMapPage() {
                       onClick={() => setSelectedPinId(pin.id)}
                       data-testid={`global-map-mobile-card-${pin.id}`}
                     >
-                      <div className="pc-cover" aria-hidden="true" />
                       <div className="pc-eyebrow">
                         {pin.time ? `${pin.time} · STOP ${pin.index || '—'}` : `STOP ${pin.index || '—'}`}
                       </div>
