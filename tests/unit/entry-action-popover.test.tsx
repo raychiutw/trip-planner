@@ -82,7 +82,7 @@ describe('EntryActionPopover — render', () => {
   });
 });
 
-describe('EntryActionPopover — confirm disabled', () => {
+describe('EntryActionPopover — confirm disabled (v2.9 mock mode)', () => {
   it('confirm button disabled with backend-pending tooltip', () => {
     renderPopover('copy');
     const confirm = screen.getByTestId('entry-action-confirm') as HTMLButtonElement;
@@ -106,5 +106,82 @@ describe('EntryActionPopover — confirm disabled', () => {
     const { onClose } = renderPopover('copy');
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('EntryActionPopover — wired mode (v2.10 Wave 1 with onConfirm)', () => {
+  it('confirm button disabled until a day is picked', () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    render(
+      <EntryActionPopover
+        open
+        action="copy"
+        days={DAYS}
+        currentDayId={101}
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    const confirm = screen.getByTestId('entry-action-confirm') as HTMLButtonElement;
+    // No day picked → still disabled
+    expect(confirm.disabled).toBe(true);
+    expect(confirm.getAttribute('title')).toMatch(/請先選擇/);
+    // Pick a day
+    fireEvent.click(screen.getByTestId('entry-action-day-2'));
+    expect(confirm.disabled).toBe(false);
+    expect(confirm.textContent).toBe('複製');
+  });
+
+  it('clicking confirm calls onConfirm with selected day + slot', async () => {
+    const onConfirm = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+    render(
+      <EntryActionPopover
+        open
+        action="move"
+        days={DAYS}
+        currentDayId={101}
+        onClose={onClose}
+        onConfirm={onConfirm}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('entry-action-day-3'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    // wait for async confirm to resolve
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onConfirm).toHaveBeenCalledWith({ targetDayId: 103, timeSlot: 'same' });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('confirm shows error when onConfirm throws', async () => {
+    const onConfirm = vi.fn().mockRejectedValue(new Error('伺服器壞了'));
+    render(
+      <EntryActionPopover
+        open
+        action="copy"
+        days={DAYS}
+        currentDayId={101}
+        onClose={() => {}}
+        onConfirm={onConfirm}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByRole('alert').textContent).toContain('伺服器壞了');
+  });
+
+  it('wired mode hides backend-pending notice', () => {
+    render(
+      <EntryActionPopover
+        open
+        action="copy"
+        days={DAYS}
+        currentDayId={101}
+        onClose={() => {}}
+        onConfirm={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId('entry-action-popover').textContent).not.toMatch(/即將推出/);
   });
 });

@@ -15,10 +15,12 @@
 import { memo, useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { useTripId } from '../../contexts/TripIdContext';
+import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
 import Icon from '../shared/Icon';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
+import EntryActionPopover, { type EntryActionConfirmPayload } from './EntryActionPopover';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
 
@@ -137,12 +139,34 @@ const SCOPED_STYLES = `
 .tp-rail-action-btn:hover {
   background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent);
 }
+.tp-rail-action-spacer { flex: 1; }
+.tp-rail-action-icon {
+  /* v2.10 Wave 1: ⎘ ⇅ icon-only buttons. relative for popover absolute pos. */
+  position: relative;
+  font: inherit; font-size: 16px;
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
+  border-radius: var(--radius-full);
+  background: var(--color-secondary); color: var(--color-foreground);
+  border: 1px solid var(--color-border); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tp-rail-action-icon:hover {
+  background: var(--color-accent-subtle); color: var(--color-accent-deep); border-color: var(--color-accent-bg);
+}
+.tp-rail-action-icon-group {
+  /* anchor the absolute-positioned EntryActionPopover */
+  position: relative;
+  display: inline-flex; gap: 4px;
+}
 `;
 
 interface TimelineRailProps {
   events: TimelineEntryData[];
   /** Activate "now" indicator for this index */
   nowIndex?: number;
+  /** v2.10 Wave 1: trip_days.id for current day — passed to RailRow for ⎘/⇅
+   *  popover currentDayId + copy POST default sortOrder. Optional for tests. */
+  dayId?: number | null;
 }
 
 interface RailRowProps {
@@ -153,10 +177,12 @@ interface RailRowProps {
   isPast: boolean;
   isNow: boolean;
   isLast: boolean;
+  dayId?: number | null;
 }
 
-const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast }: RailRowProps) {
+const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast, isNow, isLast, dayId }: RailRowProps) {
   const tripId = useTripId();
+  const allDays = useTripDays();
   const parsed = parseTimeRange(entry.time);
   const meta = deriveTypeMeta(entry);
   const canExpand = entry.id != null;
@@ -167,6 +193,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const [savingNote, setSavingNote] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [popoverAction, setPopoverAction] = useState<'copy' | 'move' | null>(null);
 
   const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -212,6 +239,28 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       void saveNote();
     }
   };
+
+  // v2.10 Wave 1: ⎘ copy / ⇅ move handler — popover onConfirm callback。
+  // copy → POST /trips/:id/entries/:eid/copy ；move → PATCH /trips/:id/entries/:eid。
+  const handleCopyOrMove = useCallback(async ({ targetDayId }: EntryActionConfirmPayload) => {
+    if (!tripId || entryIdNum == null || popoverAction == null) return;
+    const path = popoverAction === 'copy'
+      ? `/trips/${tripId}/entries/${entryIdNum}/copy`
+      : `/trips/${tripId}/entries/${entryIdNum}`;
+    const method = popoverAction === 'copy' ? 'POST' : 'PATCH';
+    const body = popoverAction === 'copy'
+      ? JSON.stringify({ targetDayId })
+      : JSON.stringify({ day_id: targetDayId });
+    const res = await apiFetchRaw(path, {
+      method,
+      credentials: 'same-origin',
+      body,
+    });
+    if (!res.ok) throw new Error(popoverAction === 'copy' ? '複製失敗' : '移動失敗');
+    window.dispatchEvent(new CustomEvent('tp-entry-updated', {
+      detail: { tripId, entryId: entryIdNum },
+    }));
+  }, [tripId, entryIdNum, popoverAction]);
 
   const hasDescription = !!entry.description?.trim();
   const hasLocations = !!entry.locations && entry.locations.length > 0;
@@ -276,6 +325,41 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               <span aria-hidden="true">⛶</span>
               <span>放大檢視</span>
             </button>
+            <div className="tp-rail-action-spacer" />
+            {dayId != null && allDays.length > 1 && (
+              <div className="tp-rail-action-icon-group">
+                <button
+                  type="button"
+                  className="tp-rail-action-icon"
+                  onClick={(e) => { e.stopPropagation(); setPopoverAction('copy'); }}
+                  aria-label="複製到其他天"
+                  title="複製到其他天"
+                  data-testid={`timeline-rail-copy-open-${entry.id}`}
+                >
+                  ⎘
+                </button>
+                <button
+                  type="button"
+                  className="tp-rail-action-icon"
+                  onClick={(e) => { e.stopPropagation(); setPopoverAction('move'); }}
+                  aria-label="移到其他天"
+                  title="移到其他天"
+                  data-testid={`timeline-rail-move-open-${entry.id}`}
+                >
+                  ⇅
+                </button>
+                {popoverAction != null && (
+                  <EntryActionPopover
+                    open
+                    action={popoverAction}
+                    days={allDays}
+                    currentDayId={dayId}
+                    onClose={() => setPopoverAction(null)}
+                    onConfirm={handleCopyOrMove}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {hasDescription && (
@@ -379,7 +463,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   );
 });
 
-const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: TimelineRailProps) {
+const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }: TimelineRailProps) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   if (!events || events.length === 0) return null;
@@ -417,6 +501,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1 }: Timel
               isPast={isPast}
               isNow={isNow}
               isLast={isLast}
+              dayId={dayId}
             />
           );
         })}

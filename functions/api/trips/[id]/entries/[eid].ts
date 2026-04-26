@@ -7,7 +7,9 @@ import type { Env } from '../../../_types';
 
 // Phase 3：移除 location / maps / mapcode / google_rating — 這些欄位已 DROP，POI master JOIN 取代。
 // POI 重掛走 PUT /api/trips/:id/entries/:eid/poi-id（獨立端點，驗證 POI 存在）。
-const ALLOWED_FIELDS = ['sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
+// v2.10 Wave 1 (Item 3 move 跨天)：加 day_id — 須驗證 targetDay 屬於同 trip，
+// 不可改成不同 trip 的 day_id（防越權）。
+const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
@@ -43,6 +45,20 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     if (f in body && typeof body[f] === 'string' && detectGarbledText(body[f] as string)) {
       throw new AppError('DATA_ENCODING', `欄位 ${f} 包含疑似亂碼，請確認 encoding 為 UTF-8`);
     }
+  }
+
+  // v2.10 Wave 1: day_id move 跨天驗證 — 防止把 entry 移到別 trip 的 day。
+  if ('day_id' in body) {
+    const targetDayId = body.day_id;
+    if (typeof targetDayId !== 'number' || !Number.isInteger(targetDayId) || targetDayId <= 0) {
+      throw new AppError('DATA_VALIDATION', 'day_id 必須是正整數');
+    }
+    const targetDay = await db
+      .prepare('SELECT trip_id FROM trip_days WHERE id = ?')
+      .bind(targetDayId)
+      .first() as { trip_id: string } | null;
+    if (!targetDay) throw new AppError('DATA_NOT_FOUND', '指定的 day 不存在');
+    if (targetDay.trip_id !== id) throw new AppError('PERM_DENIED', '不可將 entry 移到其他 trip');
   }
 
   const update = buildUpdateClause(body, ALLOWED_FIELDS);

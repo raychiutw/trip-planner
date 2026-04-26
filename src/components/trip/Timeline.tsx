@@ -11,9 +11,13 @@ interface TimelineProps {
   dayDate?: string | null;
   /** Today's date (ISO format "YYYY-MM-DD") provided by parent for stable comparison. */
   localToday?: string | null;
+  /** v2.10 Wave 1: trip_days.id for the current day — used by RailRow ⎘/⇅
+   *  popover (currentDayId) + PATCH/POST endpoints (target_day_id resolves
+   *  via TripDaysContext day picker). */
+  dayId?: number | null;
 }
 
-export default function Timeline({ events, dayDate, localToday }: TimelineProps) {
+export default function Timeline({ events, dayDate, localToday, dayId }: TimelineProps) {
   const isToday = useMemo(() => {
     const today = localToday ?? new Date().toISOString().split('T')[0];
     return dayDate === today;
@@ -40,5 +44,5 @@ export default function Timeline({ events, dayDate, localToday }: TimelineProps)
 
   if (!events || events.length === 0) return null;
 
-  return <TimelineRail events={events} nowIndex={nowIndex} />;
+  return <TimelineRail events={events} nowIndex={nowIndex} dayId={dayId} />;
 }

@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.10.0] - 2026-04-26
+
+**v2.10 Wave 1：copy + move + StopDetailPage 清理（PR4/3）**。把 v2.9 PR3 的 ⎘/⇅ button standalone 元件接上 backend。`/trip/:id/stop/:eid` 老 deep-link 改 redirect 到 trip 詳情頁，刪 StopDetailPage 整支死碼。後續 Wave 2 接 POI search、Wave 3 接 photos。
+
+### Added
+- **POST `/api/trips/:id/entries/:eid/copy`**（`functions/api/trips/[id]/entries/[eid]/copy.ts`） — body `{ targetDayId, sortOrder?, time? }`，複製 entry 到目標 day。targetDay 必驗屬同 trip（防越權）。sortOrder 預設追加到目標 day 末尾。audit log action='insert' diff 含 `copiedFromEntryId` 反向追溯。註：trip_pois 不複製（schema 含 hotel/timeline/shopping context 較複雜，需要時 follow-up）。
+- **PATCH `/api/trips/:id/entries/:eid` 加 `day_id` 進 ALLOWED_FIELDS** — 跨天 move via 既有 PATCH 流程（perm / audit / diff 全 free）。day_id 必驗屬同 trip（同 copy 防護），非 integer → 400、不存在 → 404、跨 trip → 403。
+- **`TripDaysContext`**（`src/contexts/TripDaysContext.tsx`） — 輕量 day-list snapshot（`DayOption[]`），讓 RailRow 不用 prop drill 4 層就能拿到 popover 用的 day 選項。
+- **TimelineRail expanded row 接 ⎘/⇅ button** — 點開 EntryActionPopover (action='copy' or 'move')，confirm → fetch → dispatch `tp-entry-updated`。≥2 days + dayId 才顯示按鈕。
+
+### Changed
+- **EntryActionPopover 新增 `onConfirm?` prop** — 給 callback 即啟用 wired mode：confirm 不再 disabled、隱藏「即將推出」notice、改顯示「請先選擇目標日」tooltip 直到 user 選好。fallback 走 v2.9 PR3 mock 模式（standalone tests 仍可跑）。新增 loading state（「複製中…」）+ error display（role=alert）。
+- **TripPage 提供 `TripDaysContext.Provider`** — 從 `dayNums + allDays + daySummaryMap` 推 `DayOption[]` 給後代。
+- **`/trip/:tripId/stop/:entryId` 改 redirect** — 不再 render StopDetailPage，改 `<Navigate to={`/trips?selected=${tripId}&focus=${entryId}`} />`。舊分享 link 仍 land。`StopDetailRedirect` 元件處理 useParams + 構造 URL。
+- **DaySection 傳 `dayId` 給 Timeline → TimelineRail** — 為了 ⎘/⇅ popover 知道「目前那天」要 disabled。
+
+### Removed
+- **`src/pages/StopDetailPage.tsx`** — 整支刪。PR2 後 list 不再連到，現在 URL 也走 redirect，這支 component 沒人 render 了。
+- **`tests/unit/stop-detail-topbar-layout.test.tsx`** — 對應 test 一併刪。
+- **main.tsx StopDetailPage lazy import** — 拿掉。
+
+### Internal
+- 新增 `tests/api/entry-copy-move.integration.test.ts`（10 case） — 涵蓋 copy 200、跨 trip 403、targetDay 不存在 404、未認證 401、targetDayId 非 number 400、sortOrder 預設追加、PATCH day_id move 200、跨 trip 403、不存在 404、非 integer 400。
+- `tests/unit/entry-action-popover.test.tsx` 新增 4 case for wired mode — confirm enables after pick day、onConfirm payload、error display、wired hides pending notice。
+- `tests/unit/timeline-rail-inline-expand.test.tsx` 新增 9 case for ⎘/⇅ wire — buttons 顯示條件、popover open、PATCH/POST URL+body 正確、tp-entry-updated dispatch、current day disabled。
+- `docs/plans/v2.10-backend-backlog.md` — 整份 v2.10 計畫紀錄（5 件事拆 3 波 + 風險 + Wave 2/3 pending）。
+
+### Pending（v2.11+）
+- Wave 2：POI search Nominatim proxy + InlineAddPoi 接 search input（即將開 PR5）
+- Wave 3：`pois.photos` JSON column + Wikimedia Commons populate + StopLightbox photo carousel
+- Follow-up：trip_pois copy 支援（hotel context override）、TripsListPage 接 `?focus=:eid` 自動展開 inline expand + lightbox
+
 ## [2.9.0] - 2026-04-26
 
 **Mindtrip-parity 補強 PR3：3 個 V3 mockup 元件完成 — StopLightbox（⛶ 放大檢視）+ EntryActionPopover（⎘⇅ copy/move）+ InlineAddPoi（取代 /chat Link）**。Pure UI scaffolding，照 mockup 做出視覺 + 互動結構，但 search / copy / move 端點還沒上 backend，buttons 標 disabled +「即將推出」tooltip。**已 wire**：⛶ 放大檢視 + InlineAddPoi。**未 wire**：EntryActionPopover（standalone 元件 + tests 完備，待 v2.10 接 ⎘⇅ button 入 TimelineRail 同時上 backend）。

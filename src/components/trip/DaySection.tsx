@@ -190,7 +190,7 @@ const DaySection = React.memo(function DaySection({
             )}
 
             {timeline.length > 0 && (
-              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />
+              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} />
             )}
 
             {tripId && <InlineAddPoi tripId={tripId} dayNum={dayNum} />}
