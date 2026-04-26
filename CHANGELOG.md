@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.4] - 2026-04-26
+
+**PR-S: 補定義 `--z-modal` token，修 NewTripModal 仍被 bottom nav 蓋（QA round 7）**。User 截圖回報 PR-P portal 後 modal 還是會被 nav 切掉、無法捲到底。
+
+### Fixed
+- **Modal 仍被 sticky bottom nav 蓋住** — 根因：`--z-modal` token 從沒在 `tokens.css` 定義過，NewTripModal 用 `var(--z-modal, 60)` 全部走 fallback 60，而 `--z-sticky-nav: 200` 比 60 大很多，所以 bottom nav 永遠贏。PR-P 的 `createPortal(document.body)` 雖然 escape 了 stacking context，但 z-index 數字還是輸。
+- **修：`tokens.css` 加 `--z-modal: 9000`** — 一行 token 補定義，數字選 9000 是要高過所有 sticky 元素（sticky-nav 200 / fab 300 / quick-panel 350 / info-sheet 401），且留 buffer 給未來更高 priority overlay。NewTripModal 已用 var() 引用，自動生效不需改 component。
+
+### Internal
+- 屬於 PR-P 的 follow-up 修補，PR-P portal 解決 stacking context 問題、PR-S 解決 z-index 數字問題，兩個一起才完整。
+- verify gate: 122 files / 1026 tests pass。
+
 ## [2.14.3] - 2026-04-26
 
 **PR-Q: TripsListPage 卡片 ... 菜單（共編 / 刪除）+ DELETE /api/trips/:id（V2-P7）**。User 指示：「行程列表 增加 … 顯示刪除與共編」。

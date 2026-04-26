@@ -159,6 +159,10 @@ html { color-scheme: light dark; }
     /* Z-index */
     --z-sticky-nav: 200;
     --z-fab: 300;
+    /* PR-S 2026-04-26：modal 必須高過所有 sticky 元素（sticky-nav 200 / fab
+     * 300 / quick-panel 350 / info-sheet 401）。9000 留 buffer 給未來更高
+     * priority overlay（emergency banner / toast 之類）。 */
+    --z-modal: 9000;
 
     /* Focus ring */
     --shadow-ring: 0 0 0 2px var(--color-accent);
