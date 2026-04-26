@@ -43,6 +43,10 @@ const SCOPED_STYLES = `
   overflow: hidden;
   display: grid;
   grid-template-columns: 1fr;
+  /* QA 2026-04-26 PR-M：限制 modal 高度 + 讓 form pane 內捲，避免 mobile 內容
+   * 被 viewport / iOS home indicator / chrome bottom-nav 切到。32px = 上下
+   * backdrop padding 各 16。dvh 走 dynamic viewport 對應 Safari URL bar。 */
+  max-height: calc(100dvh - 32px);
 }
 @media (min-width: 768px) {
   .tp-new-modal { grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); }
@@ -87,38 +91,23 @@ const SCOPED_STYLES = `
   opacity: 0.95;
   text-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
-.tp-new-hero-proof {
-  display: flex; align-items: center; gap: 12px;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px;
-  backdrop-filter: blur(8px);
-}
-.tp-new-hero-proof-avatars { display: flex; }
-.tp-new-hero-proof-av {
-  width: 28px; height: 28px;
-  border-radius: var(--radius-full);
-  border: 2px solid #fff;
-  background: var(--color-accent-bg, #F7DFCB);
-  margin-left: -8px;
-  display: grid; place-items: center;
-  font-size: var(--font-size-caption, 0.75rem); font-weight: 700;
-  color: var(--color-accent-deep, #B85C2E);
-}
-.tp-new-hero-proof-av:first-child { margin-left: 0; }
-.tp-new-hero-proof-av.plus { background: var(--color-accent-deep, #B85C2E); color: #fff; }
-.tp-new-hero-proof-text { font-size: var(--font-size-footnote, 0.8125rem); line-height: 1.4; }
-.tp-new-hero-proof-text b { font-weight: 700; }
-.tp-new-hero-proof-text .sub { opacity: 0.85; display: block; }
 
 /* ===== Form pane ===== */
 .tp-new-form {
   padding: 24px;
   display: flex; flex-direction: column;
+  /* QA 2026-04-26 PR-M：form pane 自己捲，避免整個 modal 撐爆 viewport。
+   * min-height: 0 讓 grid child 可被 max-height 約束（grid 預設 min-height auto）。
+   * padding-bottom 加 safe-area，避免 iOS home indicator 蓋到送出按鈕。 */
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
 }
 @media (min-width: 768px) {
-  .tp-new-form { padding: 28px 32px; }
+  .tp-new-form {
+    padding: 28px 32px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));
+  }
 }
 .tp-new-form-top { display: flex; justify-content: flex-end; margin-bottom: 8px; }
 .tp-new-form-close {
@@ -149,16 +138,9 @@ const SCOPED_STYLES = `
 }
 .tp-new-form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .tp-new-form-row-spaced { margin-top: 16px; }
-/* QA 2026-04-26 BUG-026：依 mockup .dest-input .pin spec — 目的地 input 左
- * 側固定 📍 icon 提供視覺重心。padding-left 從 14 → 44 騰出 icon 空間。 */
-.tp-new-dest-wrap { position: relative; }
-.tp-new-dest-wrap .tp-new-dest-pin {
-  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-  color: var(--color-accent); font-size: 20px;
-  pointer-events: none;
-  line-height: 1;
-}
-.tp-new-dest-wrap input { padding-left: 44px !important; font-weight: 600; }
+/* QA 2026-04-26 PR-M：拿掉 📍 emoji 視覺重心（anti-slop emoji 濫用）。
+ * label「目的地」+ placeholder 已經足夠定位 input 用途。 */
+.tp-new-dest-wrap input { font-weight: 600; }
 .tp-new-form-row label {
   font-size: var(--font-size-footnote);
   font-weight: 700;
@@ -297,12 +279,7 @@ const SCOPED_STYLES = `
   color: var(--color-accent-foreground, #fff);
   border-color: var(--color-accent);
 }
-.tp-new-flex-month .icon {
-  /* QA 2026-04-26 BUG-032：emoji 在 flex column 中 vertical alignment 用
-   * line-height + display block 強制 baseline 對齊（active state 不偏移）。 */
-  font-size: 18px; line-height: 1; display: block; height: 18px;
-}
-.tp-new-flex-month .m { font-size: var(--font-size-footnote); font-weight: 700; }
+.tp-new-flex-month .m { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-new-flex-month .y { font-size: var(--font-size-caption); opacity: 0.75; }
 
 /* ===== CTA ===== */
@@ -351,19 +328,16 @@ const HERO_SVG = (
   </svg>
 );
 
-const MONTH_ICONS = ['❄️', '🌸', '🌸', '🌸', '☀️', '☀️', '☀️', '🏝️', '🍁', '🍁', '🍂', '❄️'];
 const MONTHS_AHEAD = 6;
 const DEFAULT_FLEX_DAYS = 5;
 const MIN_FLEX_DAYS = 1;
 const MAX_FLEX_DAYS = 30;
-const DEFAULT_TOTAL_TRIPS = 1247;
 
 interface MonthChoice {
   key: string;
   label: string;
   year: number;
   month: number; // 0-indexed
-  icon: string;
 }
 
 function buildMonthChoices(now: Date): MonthChoice[] {
@@ -377,7 +351,6 @@ function buildMonthChoices(now: Date): MonthChoice[] {
       label: `${month + 1} 月`,
       year,
       month,
-      icon: MONTH_ICONS[month] ?? '📅',
     });
   }
   return out;
@@ -420,22 +393,16 @@ function detectCountries(destination: string): string {
   return 'JP';
 }
 
-function formatTripCount(n: number): string {
-  return n.toLocaleString('en-US');
-}
-
 export interface NewTripModalProps {
   open: boolean;
   ownerEmail: string;
   onClose: () => void;
   onCreated: (tripId: string) => void;
-  /** Total trips count for hero social proof. Defaults to 1247 placeholder. */
-  totalTrips?: number;
 }
 
 type DateMode = 'select' | 'flexible';
 
-export default function NewTripModal({ open, ownerEmail, onClose, onCreated, totalTrips }: NewTripModalProps) {
+export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: NewTripModalProps) {
   const [destination, setDestination] = useState('');
   const [dateMode, setDateMode] = useState<DateMode>('select');
   const [startDate, setStartDate] = useState('');
@@ -474,7 +441,6 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated, tot
 
   if (!open) return null;
 
-  const proofCount = totalTrips ?? DEFAULT_TOTAL_TRIPS;
   const datesValid = dateMode === 'flexible' ? !!flexMonth && flexDays >= MIN_FLEX_DAYS : !!startDate && !!endDate;
   const canSubmit = !!destination.trim() && datesValid && !submitting;
 
@@ -556,25 +522,14 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated, tot
         aria-modal="true"
         aria-labelledby="new-trip-title"
       >
-        {/* Hero pane */}
+        {/* Hero pane — QA 2026-04-26 PR-M：移除 social proof banner（fake stat
+            anti-slop + user 截圖確認 mobile 太擠）。eyebrow + h1 + 副標保留。 */}
         <aside className="tp-new-hero" data-testid="new-trip-hero" aria-hidden="true">
           {HERO_SVG}
-          <span className="tp-new-hero-eyebrow">第 {formatTripCount(proofCount + 1)} 個行程</span>
+          <span className="tp-new-hero-eyebrow">新行程</span>
           <div className="tp-new-hero-content">
             <h1>規劃下一<br />趟旅行</h1>
             <p>告訴我們去哪、待幾天，<br />剩下的我們陪你想。</p>
-          </div>
-          <div className="tp-new-hero-proof" data-testid="new-trip-social-proof">
-            <div className="tp-new-hero-proof-avatars">
-              <div className="tp-new-hero-proof-av">蔡</div>
-              <div className="tp-new-hero-proof-av">林</div>
-              <div className="tp-new-hero-proof-av">王</div>
-              <div className="tp-new-hero-proof-av plus">+</div>
-            </div>
-            <div className="tp-new-hero-proof-text">
-              <b>{formatTripCount(proofCount)} 個行程</b>已在 Tripline 上分享
-              <span className="sub">平均規劃時間 8 分鐘</span>
-            </div>
           </div>
         </aside>
 
@@ -599,7 +554,6 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated, tot
           <div className="tp-new-form-row">
             <label htmlFor="new-trip-destination">目的地</label>
             <div className="tp-new-dest-wrap">
-              <span className="tp-new-dest-pin" aria-hidden="true">📍</span>
               <input
                 id="new-trip-destination"
                 type="text"
@@ -709,7 +663,6 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated, tot
                     onClick={() => setFlexMonth(m.key)}
                     data-testid={`new-trip-flex-month-${m.key}`}
                   >
-                    <span className="icon" aria-hidden="true">{m.icon}</span>
                     <span className="m">{m.label}</span>
                     <span className="y">{m.year}</span>
                   </button>
