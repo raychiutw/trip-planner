@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.7.0] - 2026-04-26
+
+**Mindtrip-parity 補強 PR1：NewTripModal V1 split-hero v2 + 手機 map carousel polish**。/tp-claude-design 跑完 6 個 mockup，使用者選 V1 split-hero（新增行程）+ V3 inline-expand（編輯景點）— 本 PR 拿掉 NewTripModal 老的單欄表單，做成左 hero + 右 form 的 split-screen，並補齊「彈性日期」模式（numeric stepper + 6 個月 carousel）。順手把 GlobalMapPage 手機底部 stop carousel 那塊裝飾色塊拆掉、card 縮成 150px。PR2/3 後續跟上。
+
+### Added
+- **NewTripModal split-hero pane** — 左側 SVG 風景插圖（自繪、無 CDN 依賴）+ Terracotta 漸層 + social proof 卡片（avatars + 「已有 1,247 個行程在 Tripline 上分享」+ 平均規劃時間）。第一屏即承載 value prop，避開 title-screen anti-pattern。`<768px` 下 hero 收成上方 banner，form 全寬下接。
+- **彈性日期 numeric stepper** — `−  5 天  +` 控件，1–30 天範圍，clamp 邊界。對齊 mindtrip 8:32.17 「How many days?」pattern。
+- **月份 carousel** — 顯示未來 6 個月（含 emoji icon：❄️🌸☀️🏝️🍁🍂），horizontal scroll-snap，aria-pressed 控件 active state。submit 時用該月 1 日當 start，+ (days−1) 當 end。
+- **`totalTrips` prop** — hero social proof 數字可從外部傳入（預設 1247 placeholder），未來接 API 可動態更新。
+
+### Changed
+- **NewTripModal max-width 460px → 880px** — 容納 split-screen layout。Form pane 維持 flex-column 結構，新增 close button 在右上。
+- **`apiFetchRaw` 取代 raw `fetch('/api/trips')`** — 解 CR-4 違規，修復沒走 `reportFetchResult` 造成 online/offline detection 失準的隱患。
+- **`segmented` button tap target 復原 44px** — refactor 過程意外從 44 降成 36，違反 H4，改回。
+- **GlobalMapPage 手機底部 stop carousel 拆裝飾色塊** — 移除 `.pc-cover` 60px Terracotta 漸層 block；card width `flex: 0 0 200px` → `150px`，padding `10px` → `10px 12px`。手機一屏可見 2.2 張卡片（露出下一張 teaser），縮 30% 不犧牲字級。
+
+### Internal
+- 新增 `tests/unit/new-trip-modal.test.tsx`（11 個 case）— 涵蓋 hero pane 渲染、`totalTrips` prop、numeric stepper +/− clamping、月份 carousel selection、flexible submit 算 dates 正確（month-1st + days−1）、fixed-date regression。
+- `vi.useFakeTimers({ toFake: ['Date'] })` 模式 — 月份 carousel 需 deterministic「current month」，但 testing-library `waitFor()` 要 real setTimeout 才能 poll。
+
 ## [2.6.2] - 2026-04-26
 
 **`/map` 對齊 mockup-map-v2 — 9 個 issue 一起修**。trip switcher 不再被 leaflet zoom 壓住、桌機 sheet 補 ✕ close + 跳到行程 button + 同日其他 stop mini-list、cluster 數字 icon 點下去自動 zoom 展開、mobile 補底部 stop carousel 左右滑、加 全覽 + 我的位置 pill button。
