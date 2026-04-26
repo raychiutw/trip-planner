@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.9.0] - 2026-04-26
+
+**Mindtrip-parity 補強 PR3：3 個 V3 mockup 元件完成 — StopLightbox（⛶ 放大檢視）+ EntryActionPopover（⎘⇅ copy/move）+ InlineAddPoi（取代 /chat Link）**。Pure UI scaffolding，照 mockup 做出視覺 + 互動結構，但 search / copy / move 端點還沒上 backend，buttons 標 disabled +「即將推出」tooltip。**已 wire**：⛶ 放大檢視 + InlineAddPoi。**未 wire**：EntryActionPopover（standalone 元件 + tests 完備，待 v2.10 接 ⎘⇅ button 入 TimelineRail 同時上 backend）。
+
+### Added
+- **`StopLightbox`**（`src/components/trip/StopLightbox.tsx`） — Fullscreen detail modal：左側照片區 placeholder（「照片功能即將推出」hint）+ 右側 meta pills (★ rating / clock 時段 / 📍 地址) + description + note 大字閱讀區 + locations chips（連 Google Maps）。ESC / ✕ / backdrop click 三個 close path。aria-modal + aria-labelledby 完整。
+- **`EntryActionPopover`**（`src/components/trip/EntryActionPopover.tsx`） — ⎘ copy / ⇅ move popover（單一元件，action prop 切換 heading + CTA verb）：day picker 顯示 swatch + 已有 stop 數 + 目前那天 disabled + aria-pressed 切換、time slot select（同原時段 / 早上 / 午餐 / 午後 / 晚餐 / 自訂）、Confirm button **disabled + tooltip**「Copy/Move 端點即將推出」+ warning note。
+- **`InlineAddPoi`**（`src/components/trip/InlineAddPoi.tsx`） — 取代 DaySection 的 `<Link to="/chat?...">+ 在 Day N 加景點</Link>` 為 inline 展開卡片：collapsed 時跟原 dashed-border button 視覺一致；expanded 時 search input（disabled + placeholder「改用 AI 助理」）+ chips（🤖 AI 幫我找 / ✏️ 自訂景點 → 兩個都 routes /chat 保留現有出口；📍 附近 / ⭐ AI 推薦的 → disabled）+ 3 筆 placeholder result 列（disabled「+ 加入」）+ pending notice。
+- **`StopLightbox` 接到 TimelineRail** — expanded row 頂端新增「⛶ 放大檢視」accent chip button。點下開 lightbox。
+
+### Changed
+- **DaySection 加景點 affordance** — 從 `<Link to="/chat?...">` 換成 `<InlineAddPoi tripId dayNum />`。原 `.day-add-stop-row / .day-add-stop-btn` CSS 移到 `InlineAddPoi.tsx` 的 SCOPED_STYLES。
+- **TimelineRail 展開列頂端新增 action row** — `tp-rail-actions`，目前只有 ⛶ 放大檢視一顆。⎘/⇅ 按鈕等 v2.10 backend 上線同步加。
+
+### Internal
+- 新增 3 個測試檔（共 29 case）：
+  - `tests/unit/stop-lightbox.test.tsx`（9） — render / open-close / 內容 / photo placeholder / ESC / backdrop / content click 不關
+  - `tests/unit/entry-action-popover.test.tsx`（11） — render copy/move heading / 當前 day disabled / pressing 切換 / time slot select / **confirm disabled + tooltip 驗證** / cancel
+  - `tests/unit/inline-add-poi.test.tsx`（9） — collapsed → expand / search disabled / placeholder results disabled / AI/custom chip 連 /chat URL 對 / pending notice
+- `EntryActionPopover` 採 `aria-pressed` + `aria-disabled` 而非自製 active state，screen-reader friendly。
+- `StopLightbox` 用 `<MarkdownText>` render description / note，跟 timeline 內 inline display 行為一致（避免 user 在 lightbox 看到 raw markdown）。
+
+### Pending（v2.10 計畫）
+- POI search endpoint（或 Nominatim proxy）→ 接 InlineAddPoi search input
+- `POST /api/trips/:id/entries/:eid/copy` 端點 + TimelineRail ⎘ button
+- `PATCH /api/trips/:id/entries/:eid` 加 `day_id` 進 ALLOWED_FIELDS（或新 move 端點）+ TimelineRail ⇅ button
+- `entry_photos` table 或 `pois.photos` JSON column → 接 StopLightbox 照片區
+- StopDetailPage / `/trip/:id/stop/:eid` 路由清理（PR2 已留為 deep-link orphan）
+
 ## [2.8.0] - 2026-04-26
 
 **Mindtrip-parity 補強 PR2：TimelineRail 反轉成 V3 inline expansion + click-to-edit 備註**。反轉 2026-04-19 commit 01382db「整行可點跳詳情頁」的決策 — 點 stop row 改成 toggle 內嵌 detail panel（描述 / 地點 / 備註），不再 navigate 到 StopDetailPage。備註欄位 click-to-edit + Cmd+Enter 儲存 / ESC 取消 + PATCH `/api/trips/:id/entries/:eid`。儲存成功後 dispatch `tp-entry-updated` 給 TripPage 觸發 refetchCurrentDay。
