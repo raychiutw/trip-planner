@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.12.8] - 2026-04-26
+
+**QA fix series PR-H: Supercluster radius tweak（2 issues）**。Map cluster bubble overlap in dense areas — bump radius 60→80 + maxZoom 15→16。
+
+### Fixed
+- **BUG-042 / 043 cluster overlap** — `OceanMap` `new Supercluster({ radius: 60, maxZoom: 15 })` → `{ radius: 80, maxZoom: 16 }`。dense areas（沖繩本島、東京）cluster 更 aggressive 避免疊在一起，user zoom in 一級拆開細節。
+
+### Internal
+- 1 行 config tweak。verify gate: tsc clean / 1035 tests pass。
+- supercluster docs: https://github.com/mapbox/supercluster — radius default 40，maxZoom default 16。我們之前 60/15 太鬆。
+
 ## [2.12.7] - 2026-04-26
 
 **QA fix series PR-G: /map default sheet content（2 issues）**。`/map` 桌機 right sheet pane 沒選 pin 時 99% 空白只有「點 marker」hint — 改成 trip overview（trip 名 + meta + day list with first-stop preview，每 day row 可點直接 setSelectedPinId 到該天首 pin）。
