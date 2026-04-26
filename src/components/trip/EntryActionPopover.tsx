@@ -68,9 +68,10 @@ const SCOPED_STYLES = `
   cursor: not-allowed;
 }
 .tp-action-swatch {
-  width: 14px; height: 14px; border-radius: var(--radius-full); flex-shrink: 0;
-  /* QA 2026-04-26 BUG-020：12px 太小看不清色塊，bump 14 + 加 hairline border 增辨識度 */
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  /* mockup spec: 12px。PR-A 曾誤升 14px 違反 mockup，PR-B 復原。
+   * 視覺辨識度由 hairline border 解決（不靠 size bump）。 */
+  width: 12px; height: 12px; border-radius: var(--radius-full); flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.10);
 }
 .tp-action-day-label { flex: 1; font-size: var(--font-size-callout); font-weight: 600; }
 .tp-action-day-count { font-size: var(--font-size-caption); color: var(--color-muted); }

@@ -149,6 +149,16 @@ const SCOPED_STYLES = `
 }
 .tp-new-form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .tp-new-form-row-spaced { margin-top: 16px; }
+/* QA 2026-04-26 BUG-026：依 mockup .dest-input .pin spec — 目的地 input 左
+ * 側固定 📍 icon 提供視覺重心。padding-left 從 14 → 44 騰出 icon 空間。 */
+.tp-new-dest-wrap { position: relative; }
+.tp-new-dest-wrap .tp-new-dest-pin {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--color-accent); font-size: 20px;
+  pointer-events: none;
+  line-height: 1;
+}
+.tp-new-dest-wrap input { padding-left: 44px !important; font-weight: 600; }
 .tp-new-form-row label {
   font-size: var(--font-size-footnote);
   font-weight: 700;
@@ -206,9 +216,11 @@ const SCOPED_STYLES = `
   min-height: var(--spacing-tap-min);
 }
 .tp-new-segmented button.is-active {
+  /* QA 2026-04-26 BUG-029：原本只有 --shadow-sm 對比度不夠，加 accent border
+   * + 升 --shadow-md 讓 active state 一眼看得出。仍守 mockup「白底 active」 base。 */
   background: var(--color-background);
-  color: var(--color-foreground);
-  box-shadow: var(--shadow-sm);
+  color: var(--color-accent-deep);
+  box-shadow: var(--shadow-md), inset 0 0 0 1.5px var(--color-accent);
 }
 .tp-new-segmented button:hover:not(.is-active) {
   color: var(--color-foreground);
@@ -237,10 +249,13 @@ const SCOPED_STYLES = `
 }
 .tp-new-flex-step:disabled { opacity: 0.4; cursor: not-allowed; }
 .tp-new-flex-num {
-  font-size: var(--font-size-title, 1.75rem); font-weight: 800;
-  color: var(--color-foreground); min-width: 56px; text-align: center;
+  /* QA 2026-04-26 BUG-030：mockup spec 用 --font-size-large-title (2.125rem)
+   * 給 stepper 數字大字權重。current --font-size-title (1.75rem) 太小。 */
+  font-size: var(--font-size-large-title, 2.125rem); font-weight: 800;
+  color: var(--color-foreground); min-width: 64px; text-align: center;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .tp-new-flex-unit { font-size: var(--font-size-callout); color: var(--color-muted); }
 
@@ -507,9 +522,16 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated, tot
     if (e.target === e.currentTarget && !submitting) onClose();
   }
 
+  // QA 2026-04-26 BUG-027：destination 空時顯示「請先輸入目的地」 — 比「未
+  // 選地點」更明確（user 可能誤以為「未選地點」 是 toggle option 而非 prompt）。
+  const destShown = destination.trim();
   const summaryText = dateMode === 'flexible'
-    ? `${destination.trim() || '未選地點'} · ${flexDays} 天 · ${flexMonth ? monthChoices.find((m) => m.key === flexMonth)?.label : ''}`
-    : `${destination.trim() || '未選地點'}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`;
+    ? destShown
+      ? `${destShown} · ${flexDays} 天 · ${flexMonth ? monthChoices.find((m) => m.key === flexMonth)?.label : ''}`
+      : '請先輸入目的地'
+    : destShown
+      ? `${destShown}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`
+      : '請先輸入目的地';
 
   return (
     <div
@@ -568,16 +590,19 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated, tot
 
           <div className="tp-new-form-row">
             <label htmlFor="new-trip-destination">目的地</label>
-            <input
-              id="new-trip-destination"
-              type="text"
-              value={destination}
-              onChange={(e) => setDestination(e.target.value)}
-              placeholder="沖繩・京都・首爾・台南..."
-              required
-              autoFocus
-              data-testid="new-trip-destination-input"
-            />
+            <div className="tp-new-dest-wrap">
+              <span className="tp-new-dest-pin" aria-hidden="true">📍</span>
+              <input
+                id="new-trip-destination"
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="沖繩・京都・首爾・台南..."
+                required
+                autoFocus
+                data-testid="new-trip-destination-input"
+              />
+            </div>
           </div>
 
           <div className="tp-new-form-row">
