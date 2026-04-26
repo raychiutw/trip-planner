@@ -19,7 +19,7 @@
  *   - Mobile <1024px: 1-pane chat + bottom nav
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequestSSE } from '../hooks/useRequestSSE';
@@ -303,6 +303,7 @@ const SUGGESTIONS = [
 export default function ChatPage() {
   useRequireAuth();
   const { user } = useCurrentUser();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
@@ -314,6 +315,37 @@ export default function ChatPage() {
   const bodyRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tripMenuRef = useRef<HTMLDivElement>(null);
+
+  // Deep-link prefill: /chat?tripId=...&prefill=... — DaySection 的「+ 加景點」
+  // 入口會帶這兩個 param 過來，讓 user 落地就看到準備好的請求草稿。撐到 active
+  // trip 設好後再 populate input + 聚焦，不直接 send 讓 user 還能微調。讀完即
+  // 從 URL 拿掉，避免重新整理 / 返回又 re-prefill。
+  useEffect(() => {
+    const prefill = searchParams.get('prefill');
+    const targetTripId = searchParams.get('tripId');
+    if (!prefill && !targetTripId) return;
+    if (targetTripId && trips) {
+      const valid = trips.some((t) => t.tripId === targetTripId);
+      if (valid) setActiveTripId(targetTripId);
+    }
+    if (prefill) {
+      setInput(prefill);
+      // 等 textarea mount 後 focus + cursor 移到尾端
+      setTimeout(() => {
+        const el = inputRef.current;
+        if (el) {
+          el.focus();
+          el.setSelectionRange(el.value.length, el.value.length);
+        }
+      }, 50);
+    }
+    // 清掉 query 避免回來的時候又重 prefill
+    const next = new URLSearchParams(searchParams);
+    next.delete('prefill');
+    next.delete('tripId');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trips]);
 
   // Subscribe to SSE for inflight request id; flips status to 'completed' / 'failed'.
   const { status, error: sseError } = useRequestSSE(inflightId);

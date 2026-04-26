@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.6.1] - 2026-04-26
+
+**Mindtrip-parity DX：新增行程升級成 destination-first + 加景點 affordance + chat markdown 防呆**。/devex-review 發現我們 NewTripModal 比 mindtrip 弱（只給名稱+兩顆日期 vs 對方 destination + flexible/select dates + preferences），DaySection 沒有「加景點」入口（必須記得有 chat 模式），chat 渲染遇到 reply 含字面 `\n` 或單顆 tilde（價格範圍 `¥100~300`）就破版。這版補齊三個。Sidebar 同步拿掉 destructive 的「登出」link，改走 /settings/sessions device row revoke。
+
+### Added
+- **NewTripModal destination-first** — 從「行程名稱 + 出發/回程」改成「目的地 + 日期模式 + 偏好」。目的地是主欄位（placeholder「沖繩・京都・首爾・台南...」），日期改 segmented control「選日期 / 彈性日期」，彈性模式自動填今天 + 5 天佔位。新增「想做什麼？（選填）」textarea 寫進 trip.description。Country 自動偵測（沖繩/京都→JP、首爾→KR、台北→TW、曼谷→TH）。
+- **DaySection「+ 在 Day N 加景點」入口** — 每個 day 的 timeline 末端加 dashed-border 按鈕，點下去帶 `?tripId=...&prefill=幫我加 Day N 的景點：` 跳到 `/chat`，input 自動聚焦尾端，URL query 用完即清避免重 prefill。Chat 流是 POI 編輯的官方路徑（tp-request → Mac Mini Claude），但之前沒入口 user 不會發現。
+- **ChatPage prefill via searchParams** — `useSearchParams` 讀 `?tripId` 切 active trip + `?prefill` 填 input。
+
+### Changed
+- **Sidebar 拿掉「登出」link** — 避免 destructive action 跟主要 nav 同框，誤點機率降低。登出走 account chip → `/settings/sessions` 內的 device row revoke。
+- **NewTripModal segmented control 守 44px tap target** — terracotta-preview 的 `.nav-tabs` 用 36px 是 mockup 簡化，實作守住 Apple HIG 最小觸控目標確保手機不誤點。
+
+### Fixed
+- **Chat markdown 渲染遇字面 `\n` 跟單顆 tilde 破版** — `renderMarkdown` 加 defensive normalize：`\\n`（雙重 JSON encode 進來的字面 backslash-n）→ 真換行；單顆 `~`（如 `Day 3~4`、`¥100~300`、`¥3,000~`）escape 成 `\~` 避免 GFM strikethrough 把整段文字吃掉。雙顆 `~~text~~` 仍保留 strikethrough 行為。
+
 ## [2.6.0] - 2026-04-26
 
 **`/chat` 接通 Mac Mini tp-request + `/map` trip switcher + ManagePage 廢棄**。Chat 頁載入時帶歷史對話（每筆 tp-request row 渲染為 user/assistant bubble pair），未完成的 inflight 自動 resume SSE。前端 POST `/api/requests` 不再傳 mode — server 預設 `trip-plan`，tp-request skill 自動判別「改行程 vs 問建議」。`/map` 從 chip-filter 多 trip 改為 dropdown trip-switcher 模式（一次顯示一個行程，切換／空狀態 CTA），polyline 用 OceanMap 內建 useRoute 走真實導航線。Legacy `/manage` 編輯器移除，redirect 到 `/chat`。AdminPage 重新對齊 V2 terracotta-preview design。

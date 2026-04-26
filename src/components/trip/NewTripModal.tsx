@@ -1,13 +1,20 @@
 /**
- * NewTripModal — minimal form modal for creating a blank trip.
+ * NewTripModal — 「想去哪裡」優先的行程建立 modal。
  *
- * Posts to POST /api/trips, which requires { id, name, owner, startDate, endDate }.
- * tripId is auto-generated from the name (slug + 4-char base36 timestamp suffix)
- * because the user-facing flow on /trips landing should not surface a raw ID
- * field. Trip is created with `published: 1` so it shows up on the list right
- * away; the empty trip_days are scaffolded server-side from the date range.
+ * 取代舊的「行程名稱 + 兩顆日期」三欄表單。新流程對齊 mindtrip 的
+ * Where to? 模式：
+ *   1. 目的地（destination）— 主欄位，placeholder 給靈感（沖繩・京都・首爾…）
+ *   2. 日期模式切換（dateMode）— 「選日期」/「彈性日期」二選一
+ *      - select：showStart/End picker
+ *      - flexible：留白，submit 時用今天 + 5 天當佔位（之後可在行程內改）
+ *   3. 旅伴偏好（preferences）— 選填 textarea，存進 trip.description
+ *      讓 AI 之後可以參照（例：想去溫泉、別太累、預算 5 萬）
  *
- * On success → onCreated(tripId) — host page swaps the selection.
+ * Submit:
+ *   - tripId 由目的地 slug + 4-char base36 timestamp 組成，user 不需手動輸入。
+ *   - name = 目的地（最少摩擦），title/description 都可後續在 trip 內編輯。
+ *   - countries 用 keyword 偵測：沖繩/京都/東京/大阪 → JP，首爾/釜山 → KR，
+ *     台北/花蓮 → TW，否則 fallback "JP"（最大宗）。
  */
 import { useEffect, useState } from 'react';
 
@@ -27,7 +34,7 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 24px;
-  width: 100%; max-width: 420px;
+  width: 100%; max-width: 460px;
   font: inherit;
 }
 .tp-new-modal h2 {
@@ -49,7 +56,8 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   letter-spacing: 0.04em;
 }
-.tp-new-form-row input {
+.tp-new-form-row input,
+.tp-new-form-row textarea {
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -59,7 +67,13 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-callout);
   min-height: var(--spacing-tap-min);
 }
-.tp-new-form-row input:focus {
+.tp-new-form-row textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.5;
+}
+.tp-new-form-row input:focus,
+.tp-new-form-row textarea:focus {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-subtle);
@@ -94,6 +108,39 @@ const SCOPED_STYLES = `
 }
 .tp-new-modal-btn-primary:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
 .tp-new-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Date mode segmented control — mirrors mindtrip 的 Flexible / Select dates。
+ * 對齊 nav-tabs：Terracotta accent fill 表示 active，hairline border + ink text 表示 inactive。 */
+.tp-new-segmented {
+  display: inline-flex; gap: 2px;
+  padding: 4px; border-radius: var(--radius-md);
+  background: var(--color-secondary);
+  align-self: flex-start;
+}
+.tp-new-segmented button {
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  padding: 10px 16px; border-radius: var(--radius-sm);
+  border: none; background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  /* H4: Apple HIG 44px tap target — terracotta-preview 用 36px 是 mockup
+   * 簡化，這裡實作守住 44px 確保手機操作不誤點。 */
+  min-height: var(--spacing-tap-min);
+}
+.tp-new-segmented button.is-active {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-new-segmented button:hover:not(.is-active) {
+  color: var(--color-foreground);
+  background: var(--color-tertiary);
+}
+.tp-new-flexible-hint {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  padding: 8px 0 0;
+}
 `;
 
 function slugify(s: string): string {
@@ -114,6 +161,33 @@ function genTripId(name: string): string {
   return `${slug}-${suffix}`.slice(0, 100);
 }
 
+/**
+ * Lightweight country-code detection by keyword.
+ * Default JP（最大宗）— 沒命中 keyword 也不擋 submit。
+ */
+function detectCountries(destination: string): string {
+  const s = destination.toLowerCase();
+  if (/沖繩|沖縄|京都|東京|大阪|北海道|福岡|名古屋|奈良|kyoto|tokyo|osaka|okinawa|japan|jp/i.test(destination) || /jp/.test(s)) return 'JP';
+  if (/首爾|釜山|濟州|seoul|busan|jeju|korea|kr/i.test(destination)) return 'KR';
+  if (/台北|台中|台南|花蓮|高雄|墾丁|taipei|taichung|tainan|hualien|kaohsiung|taiwan|tw/i.test(destination)) return 'TW';
+  if (/曼谷|清邁|普吉|bangkok|chiang|phuket|thailand|th/i.test(destination)) return 'TH';
+  if (/巴黎|羅馬|倫敦|paris|rome|london|europe/i.test(destination)) return 'EU';
+  return 'JP';
+}
+
+/**
+ * 「彈性日期」fallback：今天 + 5 天，user 之後可在行程內改。
+ * yyyy-mm-dd 格式（API expected）。
+ */
+function flexibleDates(): { start: string; end: string } {
+  const now = new Date();
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const start = fmt(now);
+  const endDate = new Date(now);
+  endDate.setDate(endDate.getDate() + 5);
+  return { start, end: fmt(endDate) };
+}
+
 export interface NewTripModalProps {
   open: boolean;
   ownerEmail: string;
@@ -121,18 +195,24 @@ export interface NewTripModalProps {
   onCreated: (tripId: string) => void;
 }
 
+type DateMode = 'select' | 'flexible';
+
 export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: NewTripModalProps) {
-  const [name, setName] = useState('');
+  const [destination, setDestination] = useState('');
+  const [dateMode, setDateMode] = useState<DateMode>('select');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [preferences, setPreferences] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
-      setName('');
+      setDestination('');
+      setDateMode('select');
       setStartDate('');
       setEndDate('');
+      setPreferences('');
       setSubmitting(false);
       setError(null);
     }
@@ -149,14 +229,18 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
 
   if (!open) return null;
 
-  const canSubmit = !!name.trim() && !!startDate && !!endDate && !submitting;
+  const datesValid =
+    dateMode === 'flexible' ? true : !!startDate && !!endDate;
+  const canSubmit = !!destination.trim() && datesValid && !submitting;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
-    const tripId = genTripId(name);
+    const tripName = destination.trim();
+    const tripId = genTripId(tripName);
+    const dates = dateMode === 'flexible' ? flexibleDates() : { start: startDate, end: endDate };
     try {
       const res = await fetch('/api/trips', {
         method: 'POST',
@@ -164,11 +248,12 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: tripId,
-          name: name.trim(),
+          name: tripName,
           owner: ownerEmail,
-          startDate,
-          endDate,
-          countries: 'JP',
+          startDate: dates.start,
+          endDate: dates.end,
+          countries: detectCountries(tripName),
+          description: preferences.trim() || undefined,
           published: 1,
         }),
       });
@@ -210,47 +295,96 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         aria-modal="true"
         aria-labelledby="new-trip-title"
       >
-        <h2 id="new-trip-title">新增行程</h2>
-        <p className="tp-new-modal-sub">先填基本資訊建立空白行程，之後可在行程內加景點與餐廳。</p>
+        <h2 id="new-trip-title">想去哪裡？</h2>
+        <p className="tp-new-modal-sub">先說目的地跟想做什麼，AI 會幫你排日程、餐廳、住宿。</p>
 
         <div className="tp-new-form-row">
-          <label htmlFor="new-trip-name">行程名稱</label>
+          <label htmlFor="new-trip-destination">目的地</label>
           <input
-            id="new-trip-name"
+            id="new-trip-destination"
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="例：沖繩五日"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            placeholder="沖繩・京都・首爾・台南..."
             required
             autoFocus
-            data-testid="new-trip-name-input"
+            data-testid="new-trip-destination-input"
           />
         </div>
 
-        <div className="tp-new-form-grid">
-          <div className="tp-new-form-row">
-            <label htmlFor="new-trip-start">出發日期</label>
-            <input
-              id="new-trip-start"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-              data-testid="new-trip-start-input"
-            />
+        <div className="tp-new-form-row">
+          <label>日期</label>
+          <div
+            className="tp-new-segmented"
+            role="tablist"
+            aria-label="日期模式"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={dateMode === 'select'}
+              className={dateMode === 'select' ? 'is-active' : ''}
+              onClick={() => setDateMode('select')}
+              data-testid="new-trip-date-mode-select"
+            >
+              選日期
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={dateMode === 'flexible'}
+              className={dateMode === 'flexible' ? 'is-active' : ''}
+              onClick={() => setDateMode('flexible')}
+              data-testid="new-trip-date-mode-flexible"
+            >
+              彈性日期
+            </button>
           </div>
-          <div className="tp-new-form-row">
-            <label htmlFor="new-trip-end">回程日期</label>
-            <input
-              id="new-trip-end"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              required
-              min={startDate || undefined}
-              data-testid="new-trip-end-input"
-            />
+        </div>
+
+        {dateMode === 'select' ? (
+          <div className="tp-new-form-grid">
+            <div className="tp-new-form-row">
+              <label htmlFor="new-trip-start">出發</label>
+              <input
+                id="new-trip-start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+                data-testid="new-trip-start-input"
+              />
+            </div>
+            <div className="tp-new-form-row">
+              <label htmlFor="new-trip-end">回程</label>
+              <input
+                id="new-trip-end"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+                min={startDate || undefined}
+                data-testid="new-trip-end-input"
+              />
+            </div>
           </div>
+        ) : (
+          <p className="tp-new-flexible-hint" data-testid="new-trip-flexible-hint">
+            先建空行程，之後再決定具體日期就好。
+          </p>
+        )}
+
+        <div className="tp-new-form-row">
+          <label htmlFor="new-trip-preferences">想做什麼？（選填）</label>
+          <textarea
+            id="new-trip-preferences"
+            value={preferences}
+            onChange={(e) => setPreferences(e.target.value)}
+            placeholder="想去溫泉、別太累、預算 5 萬 / 兩人..."
+            rows={3}
+            maxLength={2000}
+            data-testid="new-trip-preferences-input"
+          />
         </div>
 
         {error && (
