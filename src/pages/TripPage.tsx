@@ -13,6 +13,8 @@ import { downloadTripFormat } from '../lib/tripExport';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
+import { TripDaysContext } from '../contexts/TripDaysContext';
+import type { DayOption } from '../components/trip/EntryActionPopover';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
@@ -334,6 +336,23 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
     for (const d of days) map.set(d.dayNum, d);
     return map;
   }, [days]);
+
+  /* --- v2.10 Wave 1: DayOption[] for ⎘/⇅ popover day picker.
+   *      Built once per trip data change; provided via TripDaysContext. */
+  const dayOptions: DayOption[] = useMemo(() => {
+    return dayNums.map((n) => {
+      const day = allDays[n];
+      const summary = daySummaryMap.get(n);
+      return {
+        dayNum: n,
+        dayId: day?.id ?? 0,
+        label: summary?.date
+          ? `${summary.date}${summary.dayOfWeek ? `（${summary.dayOfWeek}）` : ''}`
+          : `Day ${n}`,
+        stopCount: day?.timeline?.length ?? 0,
+      };
+    }).filter((d) => d.dayId > 0);
+  }, [dayNums, allDays, daySummaryMap]);
 
   /* --- Auto-scroll dates --- */
   const autoScrollDates = useMemo(
@@ -690,9 +709,12 @@ export default function TripPage({ tripId: propTripId, noShell = false }: TripPa
   // Wrap content in TripIdContext so descendants (TimelineEvent, DaySection,
   // TimelineRail) can read tripId without depending on URL useParams — needed
   // for embedded mode where URL is /trips?selected=:id (no :tripId param).
+  // v2.10 Wave 1：TripDaysContext 提供 ⎘/⇅ popover 用的 DayOption[] 給 RailRow。
   const wrappedMain = (
     <TripIdContext.Provider value={activeTripId}>
-      {mainContent}
+      <TripDaysContext.Provider value={dayOptions}>
+        {mainContent}
+      </TripDaysContext.Provider>
     </TripIdContext.Provider>
   );
 

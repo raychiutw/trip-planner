@@ -14,6 +14,8 @@ import { MemoryRouter } from 'react-router-dom';
 import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
+import { TripDaysContext } from '../../src/contexts/TripDaysContext';
+import type { DayOption } from '../../src/components/trip/EntryActionPopover';
 
 const ENTRY_A: TimelineEntryData = {
   id: 42,
@@ -180,5 +182,114 @@ describe('TimelineRail — click-to-edit note', () => {
     fireEvent.click(screen.getByTestId('timeline-rail-row-43'));
     const placeholder = screen.getByTestId('timeline-rail-note-value-43');
     expect(placeholder.textContent).toContain('加備註');
+  });
+});
+
+const DAY_OPTIONS: DayOption[] = [
+  { dayNum: 1, dayId: 101, label: 'Day 1', stopCount: 2 },
+  { dayNum: 2, dayId: 102, label: 'Day 2', stopCount: 0 },
+  { dayNum: 3, dayId: 103, label: 'Day 3', stopCount: 1 },
+];
+
+function renderWiredRail(events = [ENTRY_A, ENTRY_B], days = DAY_OPTIONS, dayId: number | null = 101, tripId = 'okinawa-2026') {
+  return render(
+    <MemoryRouter>
+      <TripIdContext.Provider value={tripId}>
+        <TripDaysContext.Provider value={days}>
+          <TimelineRail events={events} dayId={dayId} />
+        </TripDaysContext.Provider>
+      </TripIdContext.Provider>
+    </MemoryRouter>,
+  );
+}
+
+describe('TimelineRail — ⎘/⇅ copy/move buttons (v2.10 Wave 1)', () => {
+  it('expanded row shows ⎘ + ⇅ buttons when ≥2 days + dayId set', () => {
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    expect(screen.getByTestId('timeline-rail-copy-open-42')).toBeTruthy();
+    expect(screen.getByTestId('timeline-rail-move-open-42')).toBeTruthy();
+  });
+
+  it('hides ⎘/⇅ when only 1 day available', () => {
+    renderWiredRail([ENTRY_A], [DAY_OPTIONS[0]!]);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    expect(screen.queryByTestId('timeline-rail-copy-open-42')).toBeNull();
+  });
+
+  it('hides ⎘/⇅ when no dayId provided', () => {
+    renderWiredRail(undefined, undefined, null);
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    expect(screen.queryByTestId('timeline-rail-copy-open-42')).toBeNull();
+  });
+
+  it('clicking ⎘ opens popover with copy heading', () => {
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
+    const popover = screen.getByTestId('entry-action-popover');
+    expect(popover.textContent).toContain('複製到哪一天');
+  });
+
+  it('clicking ⇅ opens popover with move heading', () => {
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-open-42'));
+    const popover = screen.getByTestId('entry-action-popover');
+    expect(popover.textContent).toContain('移動到哪一天');
+  });
+
+  it('confirm copy → POST /api/trips/:id/entries/:eid/copy with targetDayId', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
+    fireEvent.click(screen.getByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [url, opts] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('/api/trips/okinawa-2026/entries/42/copy');
+    expect((opts as RequestInit).method).toBe('POST');
+    expect(JSON.parse((opts as RequestInit).body as string)).toEqual({ targetDayId: 102 });
+  });
+
+  it('confirm move → PATCH /api/trips/:id/entries/:eid with day_id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-move-open-42'));
+    fireEvent.click(screen.getByTestId('entry-action-day-3'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [url, opts] = fetchMock.mock.calls[0]!;
+    expect(url).toBe('/api/trips/okinawa-2026/entries/42');
+    expect((opts as RequestInit).method).toBe('PATCH');
+    expect(JSON.parse((opts as RequestInit).body as string)).toEqual({ day_id: 103 });
+  });
+
+  it('successful copy/move dispatches tp-entry-updated event', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    vi.stubGlobal('fetch', fetchMock);
+    const listener = vi.fn();
+    window.addEventListener('tp-entry-updated', listener);
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
+    fireEvent.click(screen.getByTestId('entry-action-day-2'));
+    fireEvent.click(screen.getByTestId('entry-action-confirm'));
+    await waitFor(() => expect(listener).toHaveBeenCalled());
+    const evt = listener.mock.calls[0]![0] as CustomEvent<{ tripId: string; entryId: number }>;
+    expect(evt.detail).toEqual({ tripId: 'okinawa-2026', entryId: 42 });
+    window.removeEventListener('tp-entry-updated', listener);
+  });
+
+  it('current day option marked disabled in popover', () => {
+    renderWiredRail();
+    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
+    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
+    const day1 = screen.getByTestId('entry-action-day-1');
+    expect(day1.getAttribute('aria-disabled')).toBe('true');
   });
 });

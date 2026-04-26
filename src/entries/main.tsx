@@ -62,10 +62,11 @@ const AdminPage = lazyWithRetry(() => import('../pages/AdminPage'));
 // chat-style editor at /manage is redundant. /manage now redirects to /chat.
 // TripPage is no longer a route component — it's embedded inside TripsListPage
 // when /trips?selected=X. Direct /trip/:tripId URLs redirect to /trips via
-// TripIndexRedirect. Stop sub-routes (StopDetailPage, MapPage) still mount
-// under /trip/:tripId/stop/:entryId.
+// TripIndexRedirect.
+// v2.10 Wave 1：StopDetailPage 移除（PR2 後 list 不再連到，這裡保留 URL
+// backward-compat：/trip/:id/stop/:eid → /trips?selected=:id&focus=:eid，
+// 供舊分享 link 仍能 land）。MapPage 仍可走 /trip/:id/stop/:eid/map。
 const TripLayout = lazyWithRetry(() => import('../pages/TripLayout'));
-const StopDetailPage = lazyWithRetry(() => import('../pages/StopDetailPage'));
 const MapPage = lazyWithRetry(() => import('../pages/MapPage'));
 const ChatPage = lazyWithRetry(() => import('../pages/ChatPage'));
 const GlobalMapPage = lazyWithRetry(() => import('../pages/GlobalMapPage'));
@@ -111,6 +112,18 @@ function TripMapRedirect() {
   return <Navigate to={`/trips?${params.toString()}`} replace />;
 }
 
+/** v2.10 Wave 1: /trip/:tripId/stop/:entryId → /trips?selected=:tripId&focus=:entryId
+ *
+ * StopDetailPage 已刪。舊分享 link 仍 land 在 trip 詳情頁，未來 TripsListPage
+ * 接 ?focus=:eid query 自動展開 inline expand + 開 StopLightbox 完成 deep-link。 */
+function StopDetailRedirect() {
+  const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
+  const params = new URLSearchParams();
+  params.set('selected', tripId ?? '');
+  if (entryId) params.set('focus', entryId);
+  return <Navigate to={`/trips?${params.toString()}`} replace />;
+}
+
 const el = document.getElementById('reactRoot');
 if (el) {
   // Reuse existing root on Vite HMR to avoid "createRoot on same container" error
@@ -148,7 +161,7 @@ if (el) {
                   * /trip/:tripId/* for now (deep links from TimelineEvent etc). */}
                 <Route index element={<TripIndexRedirect />} />
                 <Route path="map" element={<TripMapRedirect />} />
-                <Route path="stop/:entryId" element={<StopDetailPage />} />
+                <Route path="stop/:entryId" element={<StopDetailRedirect />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
               </Route>
               <Route path="*" element={<LegacyRedirect />} />

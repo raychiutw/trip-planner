@@ -1,16 +1,16 @@
 /**
- * EntryActionPopover — V3 ⎘ copy / ⇅ move popover (PR3 v2.9)
+ * EntryActionPopover — V3 ⎘ copy / ⇅ move popover.
  *
- * Pure UI scaffolding. Day picker + time slot select render real data, but
- * the confirm button is **disabled** until backend lands:
- *   - Copy: POST /api/trips/:id/entries/:eid/copy?targetDayId=&sortOrder=
- *           (entries[eid] copy.ts handler 待補)
- *   - Move: PATCH /api/trips/:id/entries/:eid 把 `day_id` 加進 ALLOWED_FIELDS
- *           或新增 POST /api/trips/:id/entries/:eid/move 端點
+ * v2.9 PR3：純 UI mockup with disabled confirm（端點還沒 ship）。
+ * v2.10 Wave 1：backend 上線 — confirm 接 onConfirm callback：
+ *   - Copy: POST /api/trips/:id/entries/:eid/copy { targetDayId, sortOrder?, time? }
+ *   - Move: PATCH /api/trips/:id/entries/:eid { day_id, sort_order? }
  *
- * 顯示「即將推出」 tooltip 提示 user 待後續 PR。
+ * `onConfirm` 由 caller（RailRow）提供 — popover 本身不知道是 copy 還是 move
+ * 怎麼打 API，只負責收集 user 選擇 + 觸發 callback。
  */
 import { useEffect, useState } from 'react';
+import { dayColor } from '../../lib/dayPalette';
 
 const SCOPED_STYLES = `
 .tp-action-popover {
@@ -133,6 +133,12 @@ export interface DayOption {
   swatchColor?: string;
 }
 
+export interface EntryActionConfirmPayload {
+  targetDayId: number;
+  /** key from TIME_SLOTS — caller decides how to map to time string. */
+  timeSlot: string;
+}
+
 export interface EntryActionPopoverProps {
   open: boolean;
   action: 'copy' | 'move';
@@ -140,11 +146,16 @@ export interface EntryActionPopoverProps {
   /** dayId of the entry being copied/moved — disabled in the picker. */
   currentDayId: number;
   onClose: () => void;
+  /** v2.10 Wave 1: backend 上線後的 confirm callback。Omit → 顯示 disabled
+   *  + 「即將推出」（保留 v2.9 PR3 的 mock 行為，給 standalone test 用）。 */
+  onConfirm?: (payload: EntryActionConfirmPayload) => Promise<void>;
 }
 
-export default function EntryActionPopover({ open, action, days, currentDayId, onClose }: EntryActionPopoverProps) {
+export default function EntryActionPopover({ open, action, days, currentDayId, onClose, onConfirm }: EntryActionPopoverProps) {
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [timeSlot, setTimeSlot] = useState<string>('same');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -162,6 +173,23 @@ export default function EntryActionPopover({ open, action, days, currentDayId, o
   const pendingHint = action === 'copy'
     ? 'Copy 端點即將推出（POST /entries/:eid/copy）'
     : 'Move 端點即將推出（PATCH 加 day_id）';
+
+  const isWired = !!onConfirm;
+  const canConfirm = isWired && selectedDayId != null && !submitting;
+
+  async function handleConfirm() {
+    if (!onConfirm || selectedDayId == null) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onConfirm({ targetDayId: selectedDayId, timeSlot });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '操作失敗');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div className="tp-action-popover" role="dialog" aria-label={heading} data-testid="entry-action-popover">
@@ -182,7 +210,7 @@ export default function EntryActionPopover({ open, action, days, currentDayId, o
               onClick={() => { if (!isCurrent) setSelectedDayId(d.dayId); }}
               data-testid={`entry-action-day-${d.dayNum}`}
             >
-              <span className="tp-action-swatch" style={d.swatchColor ? { background: d.swatchColor } : undefined} aria-hidden="true" />
+              <span className="tp-action-swatch" style={{ background: d.swatchColor || dayColor(d.dayNum) }} aria-hidden="true" />
               <span className="tp-action-day-label">
                 Day {d.dayNum} · {d.label}
                 {isCurrent && '（目前）'}
@@ -210,13 +238,15 @@ export default function EntryActionPopover({ open, action, days, currentDayId, o
         </select>
       </div>
 
-      <p className="tp-action-pending-note">⚠️ {pendingHint} — 此功能即將推出</p>
+      {!isWired && <p className="tp-action-pending-note">⚠️ {pendingHint} — 此功能即將推出</p>}
+      {error && <p className="tp-action-pending-note" role="alert">{error}</p>}
 
       <div className="tp-action-cta">
         <button
           type="button"
           className="cancel"
           onClick={onClose}
+          disabled={submitting}
           data-testid="entry-action-cancel"
         >
           取消
@@ -224,11 +254,12 @@ export default function EntryActionPopover({ open, action, days, currentDayId, o
         <button
           type="button"
           className="confirm"
-          disabled
-          title="此功能即將推出，待 backend 端點完成"
+          disabled={!canConfirm}
+          title={isWired ? (selectedDayId == null ? '請先選擇目標日' : '') : '此功能即將推出，待 backend 端點完成'}
+          onClick={isWired ? handleConfirm : undefined}
           data-testid="entry-action-confirm"
         >
-          {ctaLabel}（即將推出）
+          {submitting ? `${ctaLabel}中…` : (isWired ? ctaLabel : `${ctaLabel}（即將推出）`)}
         </button>
       </div>
     </div>
