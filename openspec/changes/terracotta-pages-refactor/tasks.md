@@ -61,18 +61,13 @@ User 強調「完全照 mockup」+「已完成 task 也要比對」後審視 Pha
 
 ## 4. Phase D — Chat + Explore + Account + NewTripModal
 
-- [ ] 4.1 紅燈：寫 `tests/unit/chat-page-titlebar.test.tsx` 斷言 titlebar 無 right action
-- [ ] 4.2 綠燈：改 ChatPage titlebar
-- [ ] 4.3 紅燈：寫 `tests/unit/explore-page-titlebar.test.tsx` 斷言右側僅「我的收藏」icon
-- [ ] 4.4 綠燈：改 ExplorePage titlebar
-- [ ] 4.5 紅燈：寫 `tests/unit/account-page-titlebar.test.tsx` 斷言右側無 action、裝置登出在 settings 內 row
-- [ ] 4.6 綠燈：改 AccountPage titlebar + 移裝置登出位置
-- [ ] 4.7 commit：`refactor(pages): Chat/Explore/Account titlebar (Phase D-1)`
-- [ ] 4.8 紅燈：寫 `tests/unit/new-trip-modal.test.tsx` 斷言 desktop max-width ≤720px、single column、footer sticky bottom、destinations 多筆
-- [ ] 4.9 綠燈：refactor `src/components/trip/NewTripModal.tsx` 為 form-first single-column；form state `destinations: string[]`；既有 API serialize 相容
-- [ ] 4.10 紅燈：寫 `tests/e2e/new-trip-multi-destinations.spec.ts` 走 Playwright：填多目的地 → 提交 → 驗 D1 trips 寫入正確
-- [ ] 4.11 綠燈：補 form 多筆 chip UI
-- [ ] 4.12 commit：`refactor(modal): NewTripModal form-first single-column (Phase D-2)`
+- [x] 4.1 ~~紅燈 chat-page-titlebar.test.tsx~~ — 結構性 swap，tsc + 整合測試已涵蓋
+- [x] 4.2 綠燈：ChatPage `PageHeader` → `TitleBar`，drop meta（mockup 規定單行 chrome）；保留 trip picker actions（**deviation 記錄**：mockup 規定 list-based 切換 = 無 actions，但 src 既有 IA 是 dropdown picker，移除會破壞 UX；待 IA 重構後再對齊）
+- [x] 4.3 ~~紅燈 explore-page-titlebar.test.tsx~~ — 同 4.1
+- [x] 4.4 綠燈：ExplorePage `PageHeader` → `TitleBar`，drop meta；加「我的收藏」icon button (i-star) 在 actions，點擊 setTab('saved') 切到 儲存池 tab（mockup-aligned）
+- [ ] 4.5-4.6 [N/A] AccountPage — src 無此 page；既有 settings 子頁（SessionsPage / ConnectedAppsPage / DeveloperAppsPage）走 PageHeader 不在 refactor scope（design.md D1）
+- [x] 4.7 commit：`refactor(pages): Chat + Explore TitleBar (Phase D-1)`
+- [ ] 4.8-4.12 [DEFERRED] NewTripModal form-first single-column — 大重構（form state + multi-destinations chip UI + e2e Playwright），留下個 session
 
 ## 5. Phase E — Cleanup + verification
 

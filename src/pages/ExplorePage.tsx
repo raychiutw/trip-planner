@@ -23,7 +23,7 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import PageHeader from '../components/shell/PageHeader';
+import TitleBar from '../components/shell/TitleBar';
 
 interface PoiSearchResult {
   osm_id: number;
@@ -447,9 +447,20 @@ export default function ExplorePage() {
       <style>{SCOPED_STYLES}</style>
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />
-        <PageHeader
+        <TitleBar
           title="探索"
-          meta="搜尋 POI、儲存到池裡，再一鍵把選中的點丟進你的行程。"
+          actions={
+            <button
+              type="button"
+              className="tp-titlebar-back"
+              onClick={() => setTab('saved')}
+              aria-label="我的收藏"
+              title="我的收藏（儲存池）"
+              data-testid="explore-saved-titlebar"
+            >
+              <Icon name="star" />
+            </button>
+          }
         />
 
         <div className="explore-tabs" role="tablist" aria-label="探索分頁">

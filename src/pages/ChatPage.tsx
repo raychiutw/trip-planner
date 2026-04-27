@@ -28,7 +28,7 @@ import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import PageHeader from '../components/shell/PageHeader';
+import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
 import MarkdownText from '../components/shared/MarkdownText';
 
@@ -596,9 +596,8 @@ export default function ChatPage() {
   const main = (
     <div className="tp-chat-shell" data-testid="chat-page">
       <style>{SCOPED_STYLES}</style>
-      <PageHeader
+      <TitleBar
         title="聊天"
-        meta="對指定行程說：「幫我加 Day 2 的午餐」、「換掉景點 X」，會直接改你行程的時間軸。"
         actions={trips && trips.length > 0 && (
           <div className="tp-chat-trip-menu" ref={tripMenuRef}>
             <button
