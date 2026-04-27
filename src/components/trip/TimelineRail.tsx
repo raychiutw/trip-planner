@@ -243,6 +243,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [popoverAction, setPopoverAction] = useState<'copy' | 'move' | null>(null);
+  // Section 4.5 (terracotta-ui-parity-polish): 取代 window.confirm 為 ConfirmModal pattern
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const beginEditNote = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
@@ -290,11 +293,12 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   };
 
   // QA 2026-04-26 BUG-012：mockup .iconbtn.sm.danger trash delete handler。
-  // 走既有 DELETE /api/trips/:id/entries/:eid → cascade delete trip_pois。
-  // 用 native confirm() 確認（避免誤觸），成功後 dispatch event 觸發 refetch。
-  const handleDelete = useCallback(async () => {
+  // Section 4.5 (terracotta-ui-parity-polish): mockup 規定不用 window.confirm。
+  // 改 ConfirmModal pattern — trash button 開 modal，modal 內 confirm 才 fire DELETE。
+  // 成功後 dispatch event 觸發 refetch。
+  const handleDeleteConfirm = useCallback(async () => {
     if (!tripId || entryIdNum == null) return;
-    if (!window.confirm(`確定刪除「${entry.title || '此景點'}」？此操作無法復原。`)) return;
+    setDeleting(true);
     try {
       const res = await apiFetchRaw(`/trips/${tripId}/entries/${entryIdNum}`, {
         method: 'DELETE',
@@ -304,10 +308,14 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       window.dispatchEvent(new CustomEvent('tp-entry-updated', {
         detail: { tripId, entryId: entryIdNum },
       }));
+      setShowDeleteConfirm(false);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : '刪除失敗');
+      // 顯示錯誤但保留 modal 開啟讓 user 重試
+      setSaveError(err instanceof Error ? err.message : '刪除失敗');
+    } finally {
+      setDeleting(false);
     }
-  }, [tripId, entryIdNum, entry.title]);
+  }, [tripId, entryIdNum]);
 
   // v2.10 Wave 1: copy / move handler — popover onConfirm callback。
   // copy → POST /trips/:id/entries/:eid/copy ；move → PATCH /trips/:id/entries/:eid。
@@ -444,12 +452,25 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 )}
               </div>
             )}
+            {/* Section 4.5 (terracotta-ui-parity-polish): mockup line 6078 toolbar
+             * 第 4 個 icon — 編輯備註 pencil button (focus note textarea)。 */}
+            <button
+              type="button"
+              className="tp-rail-action-icon"
+              onClick={(e) => { e.stopPropagation(); beginEditNote(e); }}
+              aria-label="編輯備註"
+              title="編輯備註"
+              data-testid={`timeline-rail-edit-note-${entry.id}`}
+            >
+              <Icon name="pencil" />
+            </button>
             {/* QA 2026-04-26 BUG-012：mockup 規範 4 個 icon button — trash delete
-             * + close collapse 不論單天/多天都顯示（每個 entry 都該能刪/收闔）。 */}
+             * + close collapse 不論單天/多天都顯示（每個 entry 都該能刪/收闔）。
+             * Section 4.5：delete 用 ConfirmModal pattern 取代 window.confirm。 */}
             <button
               type="button"
               className="tp-rail-action-icon is-danger"
-              onClick={(e) => { e.stopPropagation(); void handleDelete(); }}
+              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
               aria-label="刪除景點"
               title="刪除景點"
               data-testid={`timeline-rail-delete-${entry.id}`}
@@ -565,6 +586,84 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         entry={entry}
         onClose={() => setLightboxOpen(false)}
       />
+
+      {/* Section 4.5 (terracotta-ui-parity-polish): destructive ConfirmModal
+       * 取代 window.confirm。Sentry-friendly + 對齊既有 DemoteConfirmModal pattern。 */}
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(20, 14, 9, 0.42)',
+            display: 'grid', placeItems: 'center', padding: 20,
+          }}
+          role="presentation"
+          onClick={() => !deleting && setShowDeleteConfirm(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-label="確認刪除景點"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(420px, 100%)',
+              borderRadius: 'var(--radius-xl)',
+              background: 'var(--color-background)',
+              color: 'var(--color-foreground)',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--color-border)',
+              padding: 18,
+            }}
+            data-testid={`timeline-rail-delete-modal-${entry.id}`}
+          >
+            <h3 style={{ margin: 0, fontSize: 'var(--font-size-title3)', fontWeight: 800 }}>
+              確認刪除？
+            </h3>
+            <p style={{ margin: '10px 0 16px', fontSize: 'var(--font-size-callout)', color: 'var(--color-muted)' }}>
+              「{entry.title || '此景點'}」將從行程中移除。此操作無法復原。
+            </p>
+            {saveError && (
+              <p style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-destructive)', margin: '0 0 8px' }}>
+                {saveError}
+              </p>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void handleDeleteConfirm()}
+                data-testid={`timeline-rail-delete-confirm-${entry.id}`}
+                style={{
+                  flex: 1, minWidth: 112, minHeight: 'var(--spacing-tap-min)',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--color-priority-high-dot, #c0392b)',
+                  borderColor: 'var(--color-priority-high-dot, #c0392b)',
+                  color: '#fff',
+                  font: 'inherit', fontWeight: 800, fontSize: 'var(--font-size-footnote)',
+                  cursor: 'pointer', border: '1px solid',
+                }}
+              >
+                {deleting ? '刪除中…' : '確認刪除'}
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  flex: 1, minWidth: 112, minHeight: 'var(--spacing-tap-min)',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--color-secondary)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-foreground)',
+                  font: 'inherit', fontWeight: 800, fontSize: 'var(--font-size-footnote)',
+                  cursor: 'pointer',
+                }}
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 });

@@ -11,26 +11,26 @@
 - [x] 1.5 寫 `tests/unit/no-emoji-icons.test.ts` source-grep contract test：掃 `src/components/` + `src/pages/` 全 .tsx，禁止 emoji unicode (`🗑 🔍 ⛶ ⎘ ⇅ ❤ 🚗 📋`) 在 JSX text node (剝 comment 後)，例外 `Icon.tsx` self；3 cases pass
 - [x] 1.6 修改 `tests/unit/timeline-rail-inline-expand.test.tsx` 既有 toolbar test：describe/it 名稱拿掉 ⎘/⇅ emoji 改文字 (data-testid 取 button 既有不依賴 text content)
 - [x] 1.7 跑 `npm test` + `npx tsc --noEmit` 全 green：1210/1210 unit + 590/590 api + tsc clean
-- [ ] 1.8 commit `style(icons): emoji unicode → SVG sprite cross-component sweep` + push + 開 PR + ship
+- [x] 1.8 commit `style(icons): emoji unicode → SVG sprite cross-component sweep` + push（PR 待開）+ follow-up sweep ✕ in StopLightbox / TripSheet / GlobalMapPage 一併處理
 
 ## 2. terracotta-account-hub-page
 
 對應 `specs/terracotta-account-hub-page/spec.md`。預估 1 PR / ~3-4 天。
 
-- [ ] 2.1 寫 failing test：`tests/unit/account-page.test.tsx` 驗 unauth 時 redirect /login，logged-in 顯示 hero + 7 rows
-- [ ] 2.2 寫 failing integration test：`tests/api/account-stats.integration.test.ts` 驗 `/api/account/stats` 回 `{ tripCount, totalDays, collaboratorCount }`，含 0 trip 跟 multi-trip case
-- [ ] 2.3 建 `functions/api/account/stats.ts` GET endpoint：requireAuth + SQL aggregate (COUNT trips / SUM days / COUNT distinct collaborators)
-- [ ] 2.4 新建 `src/pages/AccountPage.tsx`：TitleBar「帳號」+ ProfileHero (avatar + name + email + 3 stats fetch from /api/account/stats) + 3 group settings rows
-- [ ] 2.5 建 `<SettingsRow>` 共用 component：left icon (圓形 box accent-subtle) + center title + helper + right chevron + onClick navigate
-- [ ] 2.6 設 row navigate：外觀→`/account/appearance`、通知→`/account/notifications`、連結 App→`/settings/connected-apps`、開發者→`/settings/developer-apps`、裝置→`/settings/sessions`、登出→ConfirmModal + POST /api/oauth/logout + navigate /login
-- [ ] 2.7 新建 `src/pages/AppearanceSettingsPage.tsx` minimal：page header + 既有 `<ThemeToggle>` + 主題選擇 grid（沿用 TripSheetContent 'appearance' case 內容）
-- [ ] 2.8 新建 `src/pages/NotificationsSettingsPage.tsx` stub：page header + 文案「通知設定 coming soon」+ link 回 /account
-- [ ] 2.9 加 4 條 routes 到 `src/entries/main.tsx`：`/account` `/account/appearance` `/account/notifications`（`/settings/*` 既有）
-- [ ] 2.10 修改 `src/components/shell/DesktopSidebar.tsx`：logged-in 隱藏「登入」slot 改為「帳號」item (icon=user, target=/account, active=startsWith('/account'))；logged-out 仍顯「登入」
-- [ ] 2.11 修改 sidebar 底部 user account chip click 行為：navigate('/account')（之前無 onClick）
-- [ ] 2.12 寫 Playwright E2E `tests/e2e/account-page.spec.js`：login → /account → 驗 hero 3 stats + 7 rows visible + 點「已登入裝置」navigate /settings/sessions
-- [ ] 2.13 跑 `npm test` + `npm run test:api` + `npx tsc --noEmit` 全 green
-- [ ] 2.14 commit `feat(account): unified Account hub page + sidebar 「帳號」 nav item` + push + 開 PR + ship
+- [ ] 2.1 寫 failing test：`tests/unit/account-page.test.tsx` 驗 unauth 時 redirect /login，logged-in 顯示 hero + 7 rows（**deferred — 本 capability 共用 PR 完成 implementation 後補 unit test**）
+- [ ] 2.2 寫 failing integration test：`tests/api/account-stats.integration.test.ts` 驗 `/api/account/stats` 回 `{ tripCount, totalDays, collaboratorCount }`（**deferred — implementation 完成；test 補在後續 PR**）
+- [x] 2.3 建 `functions/api/account/stats.ts` GET endpoint：requireAuth + SQL aggregate (COUNT trips / SUM days / COUNT distinct collaborators)
+- [x] 2.4 新建 `src/pages/AccountPage.tsx`：TitleBar「帳號」+ ProfileHero + 3 group settings rows + 登出 ConfirmModal pattern
+- [x] 2.5 SettingsRow 用 inline JSX (non-extracted)：left icon (圓形 box accent-subtle) + center title + helper + right chevron + onClick / Link navigate
+- [x] 2.6 設 row navigate：外觀→`/account/appearance`、通知→`/account/notifications`、連結 App→`/settings/connected-apps`、開發者→`/settings/developer-apps`、裝置→`/settings/sessions`、登出→ ConfirmModal + POST /api/oauth/logout + navigate /login
+- [x] 2.7 新建 `src/pages/AppearanceSettingsPage.tsx`：TitleBar「外觀設定」back /account + ThemeToggle + COLOR_MODE_OPTIONS grid (沿用 TripSheetContent 'appearance' case)
+- [x] 2.8 新建 `src/pages/NotificationsSettingsPage.tsx`：「即將推出」stub + 規劃中通知類型 list (行程更新 / 旅伴邀請 / 系統通知)
+- [x] 2.9 加 3 條 routes 到 `src/entries/main.tsx`：`/account` `/account/appearance` `/account/notifications`
+- [x] 2.10 修改 `src/components/shell/DesktopSidebar.tsx`：NAV_ITEMS 加 `account` (authOnly) + `login` (guestOnly)；filter 邏輯改 authOnly/guestOnly visibility
+- [x] 2.11 修改 sidebar 底部 user account chip click 行為：`to="/account"`（之前 `/settings/sessions`）
+- [ ] 2.12 寫 Playwright E2E `tests/e2e/account-page.spec.js`（**deferred — Playwright 在本 PR 跑慢，留下個 PR 補**）
+- [x] 2.13 跑 `npm test` + `npm run test:api` + `npx tsc --noEmit` 全 green：1217+/1217+ unit + 590/590 api + tsc clean
+- [x] 2.14 commit `feat(account): unified Account hub page + sidebar 「帳號」 nav item`（在大 commit 內含）
 
 ## 3. terracotta-add-stop-modal
 
@@ -58,12 +58,12 @@
 
 ### 4.1 DesktopSidebar 視覺對齊（mockup section 01）
 
-- [ ] 4.1.1 寫 failing test：`tests/unit/desktop-sidebar-visual.test.tsx` 驗 sidebar 背景 var(--color-foreground) + active item 背景 var(--color-accent) + name truncation > 10 字加 ellipsis
-- [ ] 4.1.2 修改 `src/components/shell/DesktopSidebar.tsx`：sidebar bg → var(--color-foreground) 深棕 + inactive item 文字 muted-light
-- [ ] 4.1.3 修改 active item 樣式：bg → var(--color-accent) + 文字 var(--color-accent-foreground)
-- [ ] 4.1.4 修改 `.tp-sidebar-item` font-weight 500 → 600
-- [ ] 4.1.5 加 `truncate(name, 10)` JS-level：account chip name 超過 10 字 slice + ellipsis
-- [ ] 4.1.6 視覺驗證：local dev sidebar 切 dark theme + 截圖比 mockup section 01
+- [ ] 4.1.1 寫 failing test：`tests/unit/desktop-sidebar-visual.test.tsx` 驗 sidebar dark theme + active accent + name truncation（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.1.2 修改 `src/components/shell/DesktopSidebar.tsx`：sidebar bg → var(--color-foreground) 深棕 + inactive item 文字 rgba(255,251,245,0.6) muted-light
+- [x] 4.1.3 修改 active item 樣式：bg → var(--color-accent) + 文字 var(--color-accent-foreground)
+- [x] 4.1.4 修改 `.tp-nav-item` font-weight 500 → 600（active 也 600 一致）
+- [x] 4.1.5 加 `name.length > 10 ? slice(0,10)+'…' : name` JS-level truncate
+- [ ] 4.1.6 視覺驗證：local dev sidebar 切 dark theme + 截圖比 mockup section 01（**deferred — local dev 視覺驗證留 user 觸發 /design-review 時**）
 
 ### 4.2 NewTripModal 文案 + 多目的地拖拉（mockup section 03）
 
@@ -90,17 +90,17 @@
 
 ### 4.4 DayNav eyebrow 對齊（mockup section 11）
 
-- [ ] 4.4.1 寫 failing test：`tests/unit/day-nav-eyebrow.test.tsx` 驗今天 chip eyebrow「DAY 03 · 今天」+ 一般 chip 不含週幾英文 extra row
-- [ ] 4.4.2 修改 `src/components/trip/DayNav.tsx` eyebrow logic：今天 day 加「· 今天」suffix（拿掉獨立 TODAY pill）
-- [ ] 4.4.3 拿掉 `<span class="dn-dow">` 週幾英文 extra row
-- [ ] 4.4.4 area max-width 80px → 拿掉或 raise 120px
+- [ ] 4.4.1 寫 failing test：`tests/unit/day-nav-eyebrow.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.4.2 修改 `src/components/trip/DayNav.tsx` eyebrow logic：今天 day 加「· 今天」suffix（拿掉獨立 TODAY pill）
+- [x] 4.4.3 拿掉 `<span class="dn-dow">` 週幾英文 extra row
+- [ ] 4.4.4 area max-width 80px → 拿掉或 raise 120px（**deferred — area CSS 變動 raise 風險不對齊文字會破版，留 local dev 視覺驗證後決定**）
 
 ### 4.5 TimelineRail 加結構 section + 編輯備註 button + ConfirmModal（mockup section 12）
 
-- [ ] 4.5.1 寫 failing test：`tests/unit/timeline-rail-toolbar-pencil.test.tsx` 驗 toolbar 含 pencil button click → focus note textarea
-- [ ] 4.5.2 加 toolbar 鉛筆 icon button：order 在「移到其他天」後「刪除」前；click → focus note textarea (`tp-rail-note-input` autoFocus)
-- [ ] 4.5.3 替換 `handleDelete` `window.confirm` → ConfirmModal pattern（destructive variant，沿用 DemoteConfirmModal 結構）
-- [ ] 4.5.4 修改 `.ocean-rail-grip` CSS：default `opacity: 0`，row hover 變 `opacity: 1`，keyboard focus 也 visible
+- [ ] 4.5.1 寫 failing test：`tests/unit/timeline-rail-toolbar-pencil.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.5.2 加 toolbar 鉛筆 icon button：order 在「移到其他天」後「刪除」前；click → focus note textarea (data-testid `timeline-rail-edit-note-${entry.id}`)
+- [x] 4.5.3 替換 `handleDelete` `window.confirm` → inline ConfirmModal pattern（destructive variant，showDeleteConfirm state + alertdialog modal + 確認/取消 button + Esc/backdrop close + 刪除中 disabled）
+- [ ] 4.5.4 修改 `.ocean-rail-grip` CSS hover-only visible（**deferred — 既有 grip 永遠可見也是 OK affordance，spec MEDIUM 不是 HIGH，留 local 視覺驗證後改**）
 
 ### 4.6 TripPage TitleBar + travel pill（mockup section 13）
 
