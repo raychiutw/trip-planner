@@ -238,12 +238,13 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
   const tripIdRef = useRef(tripId);
   useEffect(() => { tripIdRef.current = tripId; }, [tripId]);
 
-  const { permissions, permLoading, permError, loadPermissions } = usePermissions(
+  const { permissions, pendingInvitations, permLoading, permError, loadPermissions } = usePermissions(
     tripIdRef as React.RefObject<string>,
   );
   const [email, setEmail] = useState('');
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [revokingEmail, setRevokingEmail] = useState<string | null>(null);
 
   useEffect(() => {
     if (tripId) loadPermissions(tripId);
@@ -259,12 +260,22 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
         body: JSON.stringify({ email: trimmed, tripId, role: 'member' }),
       });
       if (r.status === 201) {
-        showToast(`已新增 ${trimmed}`, 'success');
+        const data = await r.json().catch(() => null) as { status?: string } | null;
+        const successMsg = data?.status === 'invitation_sent'
+          ? `邀請信已寄至 ${trimmed}`
+          : `已新增 ${trimmed}`;
+        showToast(successMsg, 'success');
         setEmail('');
         loadPermissions(tripId);
         return;
       }
-      if (r.status === 409) throw new Error('此 email 已有權限');
+      if (r.status === 409) {
+        // 兩條分支都可能 409：trip_permissions UNIQUE 衝突 vs trip_invitations 重邀
+        // server 回的 message 已區分，讀進來顯示比 hardcode 準確
+        const data = await r.json().catch(() => null);
+        const msg = data?.error?.message ?? '此 email 已有權限或 pending 邀請';
+        throw new Error(msg);
+      }
       if (r.status === 403) throw new Error('僅行程擁有者或管理者可操作');
       const data = await r.json().catch(() => null);
       const errObj = data?.error;
@@ -296,6 +307,28 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
       showToast((err as Error).message, 'error');
     } finally {
       setRemovingId(null);
+    }
+  }
+
+  async function handleRevokeInvite(invitedEmail: string) {
+    if (!window.confirm(`確定撤銷對 ${invitedEmail} 的邀請？`)) return;
+    setRevokingEmail(invitedEmail);
+    try {
+      const r = await apiFetchRaw('/invitations/revoke', {
+        method: 'POST',
+        body: JSON.stringify({ tripId, email: invitedEmail }),
+      });
+      if (!r.ok) {
+        const data = await r.json().catch(() => null);
+        const errMsg = data?.error?.message ?? '撤銷失敗';
+        throw new Error(errMsg);
+      }
+      showToast(`已撤銷對 ${invitedEmail} 的邀請`, 'success');
+      loadPermissions(tripId);
+    } catch (err) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setRevokingEmail(null);
     }
   }
 
@@ -374,6 +407,51 @@ export default function CollabSheet({ tripId }: CollabSheetProps) {
           </div>
         )}
       </section>
+
+      {!permLoading && !permError && pendingInvitations.length > 0 && (
+        <section className="tp-collab-section" data-testid="collab-pending-section">
+          <div className="tp-collab-section-head">
+            <span className="tp-collab-section-title">待接受邀請</span>
+            <span className="tp-collab-section-count">{pendingInvitations.length} 人</span>
+          </div>
+          <div className="tp-collab-list" role="list">
+            {pendingInvitations.map((inv) => {
+              const initial = inv.invitedEmail.charAt(0).toUpperCase() || '?';
+              return (
+                <div
+                  className="tp-collab-row"
+                  key={inv.id}
+                  role="listitem"
+                  data-testid={`pending-row-${inv.invitedEmail}`}
+                >
+                  <div className="tp-collab-row-avatar" aria-hidden="true">{initial}</div>
+                  <div className="tp-collab-row-main">
+                    <span className="tp-collab-row-email">{inv.invitedEmail}</span>
+                    <span className="tp-collab-badge tp-collab-badge-member">
+                      <span className="tp-collab-badge-dot" aria-hidden="true" />
+                      {inv.isExpired
+                        ? '已過期'
+                        : inv.daysRemaining > 0
+                          ? `剩 ${inv.daysRemaining} 天`
+                          : '今日到期'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="tp-collab-remove"
+                    aria-label={`撤銷對 ${inv.invitedEmail} 的邀請`}
+                    disabled={revokingEmail === inv.invitedEmail}
+                    onClick={() => void handleRevokeInvite(inv.invitedEmail)}
+                    data-testid={`pending-revoke-${inv.invitedEmail}`}
+                  >
+                    {revokingEmail === inv.invitedEmail ? '撤銷中…' : '撤銷'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="tp-collab-section">
         <div className="tp-collab-section-head">

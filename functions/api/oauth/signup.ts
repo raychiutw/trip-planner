@@ -22,6 +22,7 @@ import { AppError } from '../_errors';
 import { parseJsonBody } from '../_utils';
 import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { recordAuthEvent } from '../_auth_audit';
+import { tryAcceptInvitation } from '../../../src/server/invitation-accept';
 import {
   checkRateLimit,
   bumpRateLimit,
@@ -34,6 +35,9 @@ interface SignupBody {
   email?: string;
   password?: string;
   displayName?: string;
+  /** V2 共編：未註冊者點 invitation link → /signup?invitation=xxx → 註冊時帶來，
+   *  註冊成功後自動接受邀請（若 email match）。失敗（過期 / mismatch）不擋 signup。 */
+  invitationToken?: string;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -117,10 +121,53 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('SYS_INTERNAL', `Signup INSERT 失敗：${msg.slice(0, 200)}`);
   }
 
+  // V2 共編：optional invitation token — 註冊成功後嘗試 accept（best-effort，
+  // 失敗不擋 signup，errorCode 回傳給 client 顯示提示）
+  //
+  // **Trust model 設計選擇**：此 invitation accept 路徑會在 user 還沒驗證 email
+  // （email_verified_at IS NULL）的情況下加入 trip_permissions。安全考量：
+  //   1. inviter 知道 invitee email 並寄出 invitation token
+  //   2. invitee 收到 email + 點 link → 隱含證明能接收該 mailbox（possession proof）
+  //   3. tryAcceptInvitation 嚴格 check user.email === invitation.invited_email
+  //   4. inviter 是 trip owner，已對「邀請誰」負責
+  // 這是 GitHub / Notion / Slack 等共編產品的標準 trust model — invitation link
+  // 即視為該 email 的所有權證明（一次性、有時限）。後續寄信給該 user 仍會走
+  // verification flow（unverified banner 提示），但 trip access 不阻擋。
+  let joinedTrip: { id: string; title: string } | null = null;
+  let invitationError: string | null = null;
+  const rawInviteToken = body.invitationToken?.trim();
+  if (rawInviteToken && context.env.SESSION_SECRET) {
+    try {
+      const result = await tryAcceptInvitation(
+        context.env.DB,
+        context.env.SESSION_SECRET,
+        rawInviteToken,
+        { id: userId, email },
+      );
+      if (result.ok) {
+        joinedTrip = { id: result.tripId, title: result.tripTitle };
+      } else {
+        invitationError = result.code;
+      }
+    } catch (err) {
+      // DB error during invitation accept — don't fail signup
+      // eslint-disable-next-line no-console
+      console.error('[signup] tryAcceptInvitation failed:', (err as Error).message);
+      invitationError = 'INVITATION_ACCEPT_FAILED';
+    }
+  }
+
   // Issue session immediately（V2-P2 後續若 enforce email verify，這 session 仍
   // valid，只是 user 看到 banner 提示驗證 email）
   const response = new Response(
-    JSON.stringify({ ok: true, userId, email, requiresVerification: true }),
+    JSON.stringify({
+      ok: true,
+      userId,
+      email,
+      requiresVerification: true,
+      joinedTrip,
+      invitationError,
+    }),
     { status: 201, headers: { 'content-type': 'application/json' } },
   );
   await issueSession(context.request, response, userId, context.env);
@@ -130,7 +177,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     eventType: 'signup',
     outcome: 'success',
     userId,
-    metadata: { email, displayName },
+    metadata: { email, displayName, invitationAccepted: joinedTrip?.id ?? null },
   });
   return response;
 };

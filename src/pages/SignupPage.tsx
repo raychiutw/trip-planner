@@ -13,7 +13,7 @@
  *   - Network failure → generic banner
  */
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import AuthBrandHero, { AUTH_LAYOUT_STYLES } from '../components/auth/AuthBrandHero';
 import InlineError from '../components/shared/InlineError';
 
@@ -121,10 +121,15 @@ interface SignupOk {
   userId: string;
   email: string;
   requiresVerification: boolean;
+  /** V2 共編：若 signup body 帶 invitationToken 且接受成功，這裡會帶 trip 資訊 */
+  joinedTrip?: { id: string; title: string } | null;
+  invitationError?: string | null;
 }
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const invitationToken = params.get('invitation');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -148,6 +153,8 @@ export default function SignupPage() {
           email: email.trim(),
           password,
           displayName: displayName.trim() || undefined,
+          // V2 共編：若 URL 帶 ?invitation=xxx，server 會嘗試 accept invitation
+          ...(invitationToken ? { invitationToken } : {}),
         }),
       });
 
@@ -163,7 +170,15 @@ export default function SignupPage() {
         } catch {
           /* ignore */
         }
-        navigate(`/signup/check-email?email=${encodeURIComponent(json.email)}`);
+        // V2 共編：若 signup 同時 accept 了 invitation → 直接帶到該 trip
+        if (json.joinedTrip?.id) {
+          navigate(`/trips?selected=${encodeURIComponent(json.joinedTrip.id)}`);
+          return;
+        }
+        // signup 成功但 invitation 失敗 → check-email flow + 帶 errCode 給該頁顯示 toast
+        const checkEmailQuery = new URLSearchParams({ email: json.email });
+        if (json.invitationError) checkEmailQuery.set('invitationError', json.invitationError);
+        navigate(`/signup/check-email?${checkEmailQuery.toString()}`);
         return;
       }
 
