@@ -184,7 +184,7 @@ const SCOPED_STYLES = `
 .ocean-rail-grip {
   border: 0; background: transparent;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px;
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   cursor: grab;
   color: var(--color-muted);
   border-radius: var(--radius-sm);

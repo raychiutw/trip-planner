@@ -1402,8 +1402,8 @@ body.dark {
   flex-shrink: 0;
 }
 .tp-titlebar-back {
-  width: 36px;
-  height: 36px;
+  width: var(--spacing-tap-min);
+  height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
   display: grid;
   place-items: center;

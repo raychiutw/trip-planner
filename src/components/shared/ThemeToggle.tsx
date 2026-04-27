@@ -19,10 +19,10 @@ const SCOPED_STYLES = `
 .tp-theme-toggle-btn {
   border: none; background: transparent;
   font: inherit; font-size: var(--font-size-caption2); font-weight: 600;
-  padding: 6px 8px; border-radius: var(--radius-full);
+  padding: 12px 8px; border-radius: var(--radius-full);
   cursor: pointer; color: var(--color-muted);
   transition: background 120ms, color 120ms;
-  min-height: 32px;
+  min-height: 44px;
 }
 .tp-theme-toggle-btn:hover:not([aria-pressed="true"]) { color: var(--color-foreground); }
 .tp-theme-toggle-btn[aria-pressed="true"] {
