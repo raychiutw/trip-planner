@@ -57,7 +57,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         `SELECT token_hash, invited_email, created_at, expires_at
          FROM trip_invitations
          WHERE trip_id = ? AND accepted_at IS NULL
-         ORDER BY created_at DESC`,
+         ORDER BY created_at DESC
+         LIMIT 100`,
       )
       .bind(tripId)
       .all<PendingInvitationRow>();

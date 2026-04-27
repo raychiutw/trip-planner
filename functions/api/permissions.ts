@@ -57,12 +57,52 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   await ensureCanManageTripPerms(context, auth, tripId);
 
   const { results } = await context.env.DB
-    .prepare('SELECT * FROM trip_permissions WHERE trip_id = ? ORDER BY email')
+    .prepare(
+      'SELECT id, email, trip_id, role, user_id FROM trip_permissions WHERE trip_id = ? ORDER BY email',
+    )
     .bind(tripId)
     .all();
 
   return json(results);
 };
+
+/** Best-effort send invitation email — 兩條分支共用，失敗 console.error 但不擋業務流程。 */
+async function sendInvitationEmailBestEffort(
+  env: Env,
+  params: {
+    to: string;
+    inviteUrl: string;
+    inviterDisplayName: string | null;
+    inviterEmail: string;
+    tripTitle: string;
+    isExistingUser: boolean;
+  },
+): Promise<void> {
+  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
+  const tpl = tripInvitation({
+    inviteUrl: params.inviteUrl,
+    inviterDisplayName: params.inviterDisplayName,
+    inviterEmail: params.inviterEmail,
+    tripTitle: params.tripTitle,
+    isExistingUser: params.isExistingUser,
+  });
+  try {
+    await sendEmail(env, {
+      to: params.to,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+    });
+  } catch (emailErr) {
+    // eslint-disable-next-line no-console
+    console.error(
+      '[permissions] invitation email send failed:',
+      emailErr instanceof EmailError
+        ? `${emailErr.status} ${emailErr.message}`
+        : (emailErr as Error).message,
+    );
+  }
+}
 
 // POST /api/permissions { email, tripId, role? }
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -138,34 +178,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     });
 
     // Best-effort send notification email（isExistingUser=true → CTA「登入並加入」）
-    if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
-      const origin = new URL(context.request.url).origin;
-      const tpl = tripInvitation({
-        // 已註冊者直接 redirect /trips?selected=tripId（不需 token）
-        inviteUrl: `${origin}/trips?selected=${encodeURIComponent(tripId)}`,
-        inviterDisplayName,
-        inviterEmail,
-        tripTitle,
-        isExistingUser: true,
-      });
-      try {
-        await sendEmail(context.env, {
-          to: lowerEmail,
-          subject: tpl.subject,
-          html: tpl.html,
-          text: tpl.text,
-        });
-      } catch (emailErr) {
-        // best-effort: log but still return success
-        // eslint-disable-next-line no-console
-        console.error(
-          '[permissions] email send failed:',
-          emailErr instanceof EmailError
-            ? `${emailErr.status} ${emailErr.message}`
-            : (emailErr as Error).message,
-        );
-      }
-    }
+    // 已註冊者直接 redirect /trips?selected=tripId（不需 token）
+    await sendInvitationEmailBestEffort(context.env, {
+      to: lowerEmail,
+      inviteUrl: `${new URL(context.request.url).origin}/trips?selected=${encodeURIComponent(tripId)}`,
+      inviterDisplayName,
+      inviterEmail,
+      tripTitle,
+      isExistingUser: true,
+    });
 
     return new Response(
       JSON.stringify({
@@ -220,33 +241,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   });
 
   // Best-effort send invitation email（含 raw token in URL）
-  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
-    const origin = new URL(context.request.url).origin;
-    const inviteUrl = `${origin}/invite?token=${encodeURIComponent(rawToken)}`;
-    const tpl = tripInvitation({
-      inviteUrl,
-      inviterDisplayName,
-      inviterEmail,
-      tripTitle,
-      isExistingUser: false,
-    });
-    try {
-      await sendEmail(context.env, {
-        to: lowerEmail,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-      });
-    } catch (emailErr) {
-      // eslint-disable-next-line no-console
-      console.error(
-        '[permissions] invitation email send failed:',
-        emailErr instanceof EmailError
-          ? `${emailErr.status} ${emailErr.message}`
-          : (emailErr as Error).message,
-      );
-    }
-  }
+  await sendInvitationEmailBestEffort(context.env, {
+    to: lowerEmail,
+    inviteUrl: `${new URL(context.request.url).origin}/invite?token=${encodeURIComponent(rawToken)}`,
+    inviterDisplayName,
+    inviterEmail,
+    tripTitle,
+    isExistingUser: false,
+  });
 
   return new Response(
     JSON.stringify({
