@@ -1,15 +1,5 @@
 /**
- * NewTripModal — 「想去哪裡」優先的行程建立 modal（V2 split-hero）。
- *
- * 結構（≥768px desktop）：
- *   ┌──────────────┬──────────────────┐
- *   │  Hero pane   │  Form pane       │
- *   │  (SVG bg +   │  目的地 / 日期    │
- *   │   social     │   / 偏好 / 送出  │
- *   │   proof)     │                  │
- *   └──────────────┴──────────────────┘
- *
- * <768px 下 hero 收成上方 200px banner，form 全寬下接。
+ * NewTripModal — form-first single-column trip creation modal.
  *
  * 日期模式：
  *   - select：showStart/End picker（HTML date input，瀏覽器原生）
@@ -54,67 +44,15 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 880px;
+  max-width: 720px;
   font: inherit;
   overflow: hidden;
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   /* QA 2026-04-26 PR-M：限制 modal 高度 + 讓 form pane 內捲，避免 mobile 內容
    * 被 viewport / iOS home indicator / chrome bottom-nav 切到。32px = 上下
    * backdrop padding 各 16。dvh 走 dynamic viewport 對應 Safari URL bar。 */
   max-height: calc(100dvh - 32px);
-  /* PR-V 2026-04-26：mobile single-column 必須明確 grid-template-rows: auto 1fr，
-   * 否則 form 自然撐成內容高（755px）超過 modal 可用（812 - hero 222 = 590），
-   * 被 modal 的 overflow:hidden 切掉，form 自己 overflow-y: auto 因為「自己沒被
-   * 約束」根本不觸發 → user 看到內容被切但動不了。 */
-  grid-template-rows: auto 1fr;
-}
-@media (min-width: 768px) {
-  .tp-new-modal {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-    /* Desktop split-screen — hero 跟 form 並排，rows 一個就夠 */
-    grid-template-rows: 1fr;
-  }
-}
-
-/* ===== Hero pane ===== */
-.tp-new-hero {
-  position: relative;
-  padding: 24px;
-  display: flex; flex-direction: column; justify-content: space-between;
-  color: #fff;
-  background: linear-gradient(160deg, var(--color-accent-deep, #B85C2E) 0%, var(--color-accent, #D97848) 50%, #E8956B 100%);
-  overflow: hidden;
-  min-height: 200px;
-  gap: 20px;
-}
-@media (min-width: 768px) {
-  .tp-new-hero { padding: 32px; min-height: auto; }
-}
-.tp-new-hero > * { position: relative; z-index: 1; }
-.tp-new-hero-svg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.5; z-index: 0; }
-.tp-new-hero-eyebrow {
-  font-size: var(--font-size-caption, 0.75rem); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.12em;
-  background: rgba(255,255,255,0.2);
-  padding: 6px 12px; border-radius: var(--radius-full);
-  align-self: flex-start;
-  backdrop-filter: blur(8px);
-}
-.tp-new-hero-content h1 {
-  font-size: var(--font-size-title, 1.75rem); font-weight: 800;
-  line-height: 1.15; letter-spacing: -0.02em;
-  margin: 0 0 12px;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.25);
-}
-@media (min-width: 768px) {
-  .tp-new-hero-content h1 { font-size: var(--font-size-large-title, 2.125rem); }
-}
-.tp-new-hero-content p {
-  font-size: var(--font-size-callout, 1rem);
-  line-height: 1.5; margin: 0;
-  opacity: 0.95;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 
 /* ===== Form pane ===== */
@@ -129,12 +67,12 @@ const SCOPED_STYLES = `
   overflow-y: auto;
   overscroll-behavior: contain;
   min-height: 0;
-  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  padding-bottom: 0;
 }
 @media (min-width: 768px) {
   .tp-new-form {
     padding: 28px 32px;
-    padding-bottom: max(28px, env(safe-area-inset-bottom, 28px));
+    padding-bottom: 0;
   }
 }
 /* PR-W 2026-04-26：close button 從 form-top inline 改 absolute 定位在 modal
@@ -180,7 +118,47 @@ const SCOPED_STYLES = `
 .tp-new-dest-wrap { position: relative; }
 .tp-new-dest-wrap input { font-weight: 600; }
 
-/* PR-BB 2026-04-26：destination autocomplete dropdown + locked POI chip */
+/* Destination autocomplete dropdown + selected POI chips */
+.tp-new-dest-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tp-new-dest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent-deep);
+  font-size: var(--font-size-footnote);
+  font-weight: 700;
+}
+.tp-new-dest-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tp-new-dest-chip button {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: 0;
+  background: var(--color-background);
+  color: var(--color-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.tp-new-dest-chip button:hover {
+  color: var(--color-accent-deep);
+}
 .tp-new-dest-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -232,43 +210,6 @@ const SCOPED_STYLES = `
   display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
 }
 
-.tp-new-dest-locked {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1.5px solid var(--color-accent);
-  border-radius: var(--radius-lg);
-  background: var(--color-accent-subtle);
-  min-height: var(--spacing-tap-min);
-}
-.tp-new-dest-locked-text {
-  flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 2px;
-}
-.tp-new-dest-locked-text strong {
-  font-size: var(--font-size-body); font-weight: 700;
-  color: var(--color-accent-deep);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.tp-new-dest-locked-country {
-  font-size: var(--font-size-caption);
-  color: var(--color-muted);
-}
-.tp-new-dest-clear {
-  width: 32px; height: 32px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-muted);
-  display: grid; place-items: center;
-  cursor: pointer;
-  font-size: 14px;
-  flex-shrink: 0;
-}
-.tp-new-dest-clear:hover {
-  background: var(--color-accent-bg);
-  color: var(--color-accent-deep);
-}
 .tp-new-form-row label {
   font-size: var(--font-size-footnote);
   font-weight: 700;
@@ -412,9 +353,23 @@ const SCOPED_STYLES = `
 
 /* ===== CTA ===== */
 .tp-new-modal-actions {
+  position: sticky;
+  bottom: 0;
   display: flex; gap: 8px; justify-content: flex-end; align-items: center;
-  margin-top: 20px; padding-top: 16px;
+  margin: 20px -24px 0;
+  padding: 16px 24px max(16px, env(safe-area-inset-bottom, 16px));
   border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-background) 94%, transparent);
+  backdrop-filter: blur(var(--blur-glass, 14px));
+  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+}
+@media (min-width: 768px) {
+  .tp-new-modal-actions {
+    margin-left: -32px;
+    margin-right: -32px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
 }
 .tp-new-modal-summary {
   flex: 1; font-size: var(--font-size-footnote); color: var(--color-muted);
@@ -441,20 +396,6 @@ const SCOPED_STYLES = `
 .tp-new-modal-btn-primary:hover:not(:disabled) { filter: brightness(var(--hover-brightness, 0.95)); }
 .tp-new-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
-
-const HERO_SVG = (
-  <svg className="tp-new-hero-svg" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="80" cy="120" r="40" fill="#fff" opacity="0.15" />
-    <circle cx="320" cy="180" r="60" fill="#fff" opacity="0.1" />
-    <path d="M0 480 Q 100 460 200 470 T 400 460 L 400 600 L 0 600 Z" fill="#fff" opacity="0.15" />
-    <path d="M0 520 Q 80 500 180 515 T 400 510 L 400 600 L 0 600 Z" fill="#fff" opacity="0.2" />
-    <circle cx="320" cy="100" r="36" fill="#FFE4C8" opacity="0.5" />
-    <ellipse cx="120" cy="380" rx="80" ry="22" fill="#fff" opacity="0.25" />
-    <ellipse cx="280" cy="330" rx="100" ry="28" fill="#fff" opacity="0.2" />
-    <path d="M0 420 Q 50 415 100 420 T 200 420 T 300 420 T 400 420" stroke="#fff" strokeWidth="1.5" opacity="0.3" fill="none" />
-    <path d="M0 440 Q 50 435 100 440 T 200 440 T 300 440 T 400 440" stroke="#fff" strokeWidth="1.5" opacity="0.2" fill="none" />
-  </svg>
-);
 
 const MONTHS_AHEAD = 6;
 const DEFAULT_FLEX_DAYS = 5;
@@ -525,11 +466,10 @@ export interface NewTripModalProps {
 type DateMode = 'select' | 'flexible';
 
 export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: NewTripModalProps) {
-  // PR-BB 2026-04-26：destination 從 free-text 改 POI autocomplete。User 必須
-  // 從搜尋結果選一筆 (selectedPoi)，submit 才會通過 canSubmit。Country code 用
-  // Nominatim 回傳的 ISO alpha-2 取代原本 detectCountries() keyword regex 猜測。
+  // Destination uses POI autocomplete. User can select multiple POIs; chips are
+  // the submitted destinations and provide reliable country metadata.
   const [destQuery, setDestQuery] = useState('');
-  const [selectedPoi, setSelectedPoi] = useState<PoiSearchResult | null>(null);
+  const [selectedPois, setSelectedPois] = useState<PoiSearchResult[]>([]);
   const [poiResults, setPoiResults] = useState<PoiSearchResult[] | null>(null);
   const [poiSearching, setPoiSearching] = useState(false);
   const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
@@ -550,7 +490,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
   useEffect(() => {
     if (!open) {
       setDestQuery('');
-      setSelectedPoi(null);
+      setSelectedPois([]);
       setPoiResults(null);
       setPoiSearching(false);
       setPoiSearchError(null);
@@ -567,10 +507,8 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
   }, [open, monthChoices]);
 
   // Debounced POI search — 同 InlineAddPoi 250ms pattern，但 lower min len 2。
-  // selectedPoi 鎖定後不再 search（user 已選定）。
   useEffect(() => {
     if (!open) return;
-    if (selectedPoi) return; // already locked, no re-search
     if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
     const trimmed = destQuery.trim();
     if (trimmed.length < POI_SEARCH_MIN_LEN) {
@@ -609,18 +547,19 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
     return () => {
       if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
     };
-  }, [destQuery, selectedPoi, open]);
+  }, [destQuery, open]);
 
   function selectPoi(poi: PoiSearchResult) {
-    setSelectedPoi(poi);
-    setDestQuery(poi.name);
-    setPoiResults(null);
-  }
-
-  function clearSelectedPoi() {
-    setSelectedPoi(null);
+    setSelectedPois((prev) => (
+      prev.some((p) => p.osm_id === poi.osm_id) ? prev : [...prev, poi]
+    ));
     setDestQuery('');
     setPoiResults(null);
+    setPoiSearchError(null);
+  }
+
+  function removeSelectedPoi(osmId: number) {
+    setSelectedPois((prev) => prev.filter((p) => p.osm_id !== osmId));
   }
 
   useEffect(() => {
@@ -635,8 +574,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
   if (!open) return null;
 
   const datesValid = dateMode === 'flexible' ? !!flexMonth && flexDays >= MIN_FLEX_DAYS : !!startDate && !!endDate;
-  // PR-BB：必須選一筆 POI，自由文字不通過
-  const canSubmit = !!selectedPoi && datesValid && !submitting;
+  const canSubmit = selectedPois.length > 0 && datesValid && !submitting;
 
   function adjustFlexDays(delta: number) {
     setFlexDays((d) => Math.min(MAX_FLEX_DAYS, Math.max(MIN_FLEX_DAYS, d + delta)));
@@ -644,17 +582,15 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || !selectedPoi) return;
+    if (!canSubmit || selectedPois.length === 0) return;
     setSubmitting(true);
     setError(null);
-    const tripName = selectedPoi.name;
+    const tripName = selectedPois.map((poi) => poi.name).join('、');
     const tripId = genTripId(tripName);
     const dates = dateMode === 'flexible'
       ? flexDatesFromMonth(flexMonth, flexDays)
       : { start: startDate, end: endDate };
-    // PR-BB：country 用 Nominatim ISO alpha-2，fallback 'JP' 給找不到 country
-    // 的特例（多半 OSM 邊界 POI / 海上 POI）。
-    const countries = selectedPoi.country || 'JP';
+    const countries = Array.from(new Set(selectedPois.map((poi) => poi.country || 'JP'))).join(',');
     try {
       const res = await apiFetchRaw('/trips', {
         method: 'POST',
@@ -699,9 +635,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
     if (e.target === e.currentTarget && !submitting) onClose();
   }
 
-  // PR-BB 2026-04-26：destShown 從 `destination.trim()` 改 `selectedPoi?.name`，
-  // 強制 user 選一筆 POI 才有 summary 文字。沒選顯示「請先選擇目的地」。
-  const destShown = selectedPoi?.name ?? '';
+  const destShown = selectedPois.map((poi) => poi.name).join('、');
   const summaryText = dateMode === 'flexible'
     ? destShown
       ? `${destShown} · ${flexDays} 天 · ${flexMonth ? monthChoices.find((m) => m.key === flexMonth)?.label : ''}`
@@ -742,17 +676,6 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         >
           ✕
         </button>
-        {/* Hero pane — QA 2026-04-26 PR-M：移除 social proof banner（fake stat
-            anti-slop + user 截圖確認 mobile 太擠）。eyebrow + h1 + 副標保留。 */}
-        <aside className="tp-new-hero" data-testid="new-trip-hero" aria-hidden="true">
-          {HERO_SVG}
-          <span className="tp-new-hero-eyebrow">新行程</span>
-          <div className="tp-new-hero-content">
-            <h1>規劃下一<br />趟旅行</h1>
-            <p>告訴我們去哪、待幾天，<br />剩下的我們陪你想。</p>
-          </div>
-        </aside>
-
         {/* Form pane */}
         <div className="tp-new-form">
           <h2 id="new-trip-title">想去哪裡？</h2>
@@ -761,66 +684,62 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           <div className="tp-new-form-row">
             <label htmlFor="new-trip-destination">目的地</label>
             <div className="tp-new-dest-wrap">
-              {selectedPoi ? (
-                /* PR-BB：locked POI chip。點 ✕ 重新搜尋。 */
-                <div className="tp-new-dest-locked" data-testid="new-trip-dest-locked">
-                  <div className="tp-new-dest-locked-text">
-                    <strong>{selectedPoi.name}</strong>
-                    {selectedPoi.country_name && (
-                      <span className="tp-new-dest-locked-country">
-                        {selectedPoi.country_name}
-                        {selectedPoi.country && ` · ${selectedPoi.country}`}
+              {selectedPois.length > 0 && (
+                <div className="tp-new-dest-chips" data-testid="new-trip-destination-chips">
+                  {selectedPois.map((poi) => (
+                    <div
+                      key={poi.osm_id}
+                      className="tp-new-dest-chip"
+                      data-testid={`new-trip-destination-chip-${poi.osm_id}`}
+                    >
+                      <span>
+                        {poi.name}
+                        {poi.country && ` · ${poi.country}`}
                       </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="tp-new-dest-clear"
-                    onClick={clearSelectedPoi}
-                    aria-label="重新選擇目的地"
-                    data-testid="new-trip-dest-clear"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <input
-                    id="new-trip-destination"
-                    type="text"
-                    value={destQuery}
-                    onChange={(e) => setDestQuery(e.target.value)}
-                    placeholder="搜尋景點、城市、地址…"
-                    required
-                    autoFocus
-                    autoComplete="off"
-                    data-testid="new-trip-destination-input"
-                  />
-                  {/* PR-BB：dropdown 顯示搜尋結果。debounce 300ms。User 必須選
-                      一筆才能 submit（強制收斂到 OSM 真實 POI / 拿 country code）。 */}
-                  {(poiSearching || poiResults || poiSearchError) && destQuery.trim().length >= POI_SEARCH_MIN_LEN && (
-                    <div className="tp-new-dest-dropdown" role="listbox" data-testid="new-trip-dest-dropdown">
-                      {poiSearching && <div className="tp-new-dest-status">搜尋中…</div>}
-                      {!poiSearching && poiSearchError && <div className="tp-new-dest-status">{poiSearchError}</div>}
-                      {!poiSearching && !poiSearchError && poiResults && poiResults.length === 0 && (
-                        <div className="tp-new-dest-status">沒找到結果，試試別的關鍵字</div>
-                      )}
-                      {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (
-                        <button
-                          key={p.osm_id}
-                          type="button"
-                          role="option"
-                          className="tp-new-dest-result"
-                          onClick={() => selectPoi(p)}
-                          data-testid={`new-trip-dest-result-${p.osm_id}`}
-                        >
-                          <span className="name">{p.name}</span>
-                          <span className="addr">{p.address}</span>
-                        </button>
-                      ))}
+                      <button
+                        type="button"
+                        onClick={() => removeSelectedPoi(poi.osm_id)}
+                        aria-label={`移除目的地：${poi.name}`}
+                      >
+                        ×
+                      </button>
                     </div>
+                  ))}
+                </div>
+              )}
+              <input
+                id="new-trip-destination"
+                type="text"
+                value={destQuery}
+                onChange={(e) => setDestQuery(e.target.value)}
+                placeholder={selectedPois.length > 0 ? '繼續搜尋下一個目的地…' : '搜尋景點、城市、地址…'}
+                required={selectedPois.length === 0}
+                autoFocus
+                autoComplete="off"
+                data-testid="new-trip-destination-input"
+              />
+              {/* POI dropdown. User must select at least one real POI before submit. */}
+              {(poiSearching || poiResults || poiSearchError) && destQuery.trim().length >= POI_SEARCH_MIN_LEN && (
+                <div className="tp-new-dest-dropdown" role="listbox" data-testid="new-trip-dest-dropdown">
+                  {poiSearching && <div className="tp-new-dest-status">搜尋中…</div>}
+                  {!poiSearching && poiSearchError && <div className="tp-new-dest-status">{poiSearchError}</div>}
+                  {!poiSearching && !poiSearchError && poiResults && poiResults.length === 0 && (
+                    <div className="tp-new-dest-status">沒找到結果，試試別的關鍵字</div>
                   )}
-                </>
+                  {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (
+                    <button
+                      key={p.osm_id}
+                      type="button"
+                      role="option"
+                      className="tp-new-dest-result"
+                      onClick={() => selectPoi(p)}
+                      data-testid={`new-trip-dest-result-${p.osm_id}`}
+                    >
+                      <span className="name">{p.name}</span>
+                      <span className="addr">{p.address}</span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </div>

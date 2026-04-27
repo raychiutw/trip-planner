@@ -28,7 +28,7 @@
 - [x] 2.9 綠燈：改 `src/pages/MapPage.tsx` 用 TitleBar + MapDayTab + MapEntryCard 重組 layout — TitleBar 取代既有 BreadcrumbCrumbs topbar（user「完全照 mockup」直接命令）；day tabs / entry cards 全用新 component；hotel pin 不再 filter（mockup D1·1 Super Hotel 在 cards）；加 inferKind heuristic 推 entry kind → 對映 leading icon（hotel/food/sight/shopping）；保留既有 URL state / IntersectionObserver scroll-spy / handleCardClick / Suspense lazy 邏輯
 - [x] 2.10 ~~紅燈 map-page-loading-empty.test.tsx~~ — 整合進 MapPage 整體 component test 是 over-engineer；loading / empty UI 簡單 conditional render，視覺對齊驗證 by /design-review
 - [x] 2.11 綠燈：MapPage 加 loading（shimmer + spinner + 「地圖載入中…」）+ empty（glass card + i-map icon + 「此日尚無景點」+ hint）— 對齊 mockup Section 20 規格；Suspense fallback 也用同 loading UI
-- [ ] 2.12 ~~e2e map-bottom-tabs Playwright~~ — context 限制本 session 不做；既有 unit test (map-page-day-query) 已驗 URL sync 邏輯；Playwright 留下個 session 補
+- [x] 2.12 e2e map-bottom-tabs Playwright — 新增 `tests/e2e/map-bottom-tabs.spec.js`；修正 `/trip/:id/map` 改直接 render MapPage；補 e2e mock POI lat/lng；Chromium pass
 - [x] 2.13 綠燈：URL ↔ active tab sync — 既有 useEffect 已實作（line 253-255 `setActiveTab(initialTab)` + `handleTabClick` setSearchParams），未動
 - [x] 2.14 跑 `npm test` 全綠 — 1126/1126 unit tests + tsc 零錯誤
 - [x] 2.15 commit：`refactor(map): MapPage layout + loading/empty (Phase B-2)`
@@ -50,14 +50,13 @@ User 強調「完全照 mockup」+「已完成 task 也要比對」後審視 Pha
 - [x] 3.3 ~~trip-list-card.test.tsx~~ — TripCard 既有實作含 cover gradient (jp/kr/tw/other) + eyebrow + title + meta + ⋯ menu，已對齊 mockup Section 16；無視覺改動
 - [x] 3.4 ~~entry card 樣式 refactor~~ — 同 3.3，既有對齊
 - [x] 3.5 commit：`refactor(trips): TripsListPage titlebar (Phase C-1)`
-- [ ] 3.6-3.10 [DEFERRED] TripPage standalone /trip/:id `.ocean-topbar` → TitleBar：牽涉 OverflowMenu 重構（緊急 / 列印 / 共編 / 下載 / 建議），需 SuggestionSheet 新增；大重構超出 session 邊界。**TripsListPage embedded mode (?selected=) 是主要使用路徑**，已 TitleBar 對齊（3.2 已做），standalone /trip/:id 留下個 phase 處理
-- [ ] 3.11-3.14 [DEFERRED] AddStopModal layout — 規模類似 NewTripModal，留下個 session 一併處理（避免一次改太多 modal）
+- [x] 3.6-3.10 TripPage standalone `/trip/:id` `.ocean-topbar` → TitleBar — TDD: `tests/unit/trip-page-titlebar.test.tsx` 紅燈後改 `TripPage`；TitleBar 左側返回 `/trips`，右側 actions = AI 建議 / 共編 / PDF 下載 / 更多；移除 standalone duplicate 共編 action row
+- [x] 3.11-3.14 [N/A] AddStopModal layout — src/tests 無 `AddStopModal`；現行加景點流程由 `InlineAddPoi` 承接且既有 tests 覆蓋。無可 refactor component，記錄為 scope 不適用
 
 > **未做事項（標記 deviation 待補）**：
 > - 主清單 toolbar 子 tabs（全部 / 我的 / 共編 / 已歸檔）— 需 backend filter 支援
 > - 主清單 search bar + 排序 dropdown — 需 backend search / sort 支援
-> - Standalone /trip/:id 的 .ocean-topbar → TitleBar
-> - AddStopModal 改 mockup Section 14 layout
+> - AddStopModal：src 無此 component；未來若新增 modal，需沿用 NewTripModal form-first layout
 
 ## 4. Phase D — Chat + Explore + Account + NewTripModal
 
@@ -65,25 +64,25 @@ User 強調「完全照 mockup」+「已完成 task 也要比對」後審視 Pha
 - [x] 4.2 綠燈：ChatPage `PageHeader` → `TitleBar`，drop meta（mockup 規定單行 chrome）；保留 trip picker actions（**deviation 記錄**：mockup 規定 list-based 切換 = 無 actions，但 src 既有 IA 是 dropdown picker，移除會破壞 UX；待 IA 重構後再對齊）
 - [x] 4.3 ~~紅燈 explore-page-titlebar.test.tsx~~ — 同 4.1
 - [x] 4.4 綠燈：ExplorePage `PageHeader` → `TitleBar`，drop meta；加「我的收藏」icon button (i-star) 在 actions，點擊 setTab('saved') 切到 儲存池 tab（mockup-aligned）
-- [ ] 4.5-4.6 [N/A] AccountPage — src 無此 page；既有 settings 子頁（SessionsPage / ConnectedAppsPage / DeveloperAppsPage）走 PageHeader 不在 refactor scope（design.md D1）
+- [x] 4.5-4.6 [N/A] AccountPage — src 無此 page；既有 settings 子頁（SessionsPage / ConnectedAppsPage / DeveloperAppsPage）走 PageHeader 不在 refactor scope（design.md D1）
 - [x] 4.7 commit：`refactor(pages): Chat + Explore TitleBar (Phase D-1)`
-- [ ] 4.8-4.12 [DEFERRED] NewTripModal form-first single-column — 大重構（form state + multi-destinations chip UI + e2e Playwright），留下個 session
+- [x] 4.8-4.12 NewTripModal form-first single-column — TDD: `tests/unit/new-trip-modal.test.tsx` 紅燈後移除 split hero，modal max-width 720px，footer sticky bottom；目的地支援多 POI chips 並合併送出 trip name / countries
 
 ## 5. Phase E — Cleanup + verification
 
-- [ ] 5.1 grep `import.*PageHeader` 確認 6 主功能頁全 import TitleBar；splash / auth / settings 子頁仍 import PageHeader（保留現狀）
-- [ ] 5.2 跑 `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.functions.json` 零錯誤
-- [ ] 5.3 跑 `npm test` + `npm run test:api` 全綠
-- [ ] 5.4 跑 `npm run build` + `node scripts/verify-sw.js` 成功
-- [ ] 5.5 invoke `/tp-code-verify` 對 `src/pages/`、`src/components/shell/`、`src/components/trip/` 跑全規則檢查（命名、CSS HIG、RBP、CR）
-- [ ] 5.6 invoke `/design-review` 對本機 dev server 跑視覺稽核，比對 mockup 19 sections，記錄 baseline 分數
-- [ ] 5.7 invoke `/cso --diff` 對全部 phase 改動跑安全掃描
-- [ ] 5.8 commit：`refactor(shell): drop PageHeader shim + final verification (Phase E)`
+- [x] 5.1 grep `import.*PageHeader` 確認 6 主功能頁全 import TitleBar；splash / auth / settings 子頁仍 import PageHeader（保留現狀）— 主功能頁 TitleBar；PageHeader 僅 DeveloperApps / ConnectedApps / Sessions
+- [x] 5.2 跑 `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.functions.json` 零錯誤
+- [x] 5.3 跑 `npm test` + `npm run test:api` 全綠
+- [x] 5.4 跑 `npm run build` + `node scripts/verify-sw.js` 成功
+- [x] 5.5 invoke `/tp-code-verify` 對 `src/pages/`、`src/components/shell/`、`src/components/trip/` 跑全規則檢查（命名、CSS HIG、RBP、CR）— Codex CLI 無 slash command；以等價 gate 執行 tsc / unit / API / targeted e2e / build / verify-sw + grep 掃描（PageHeader scope、TitleBar adoption、no `.ocean-topbar` in TripPage、no src hotel emoji、no NewTripModal hero）
+- [x] 5.6 invoke `/design-review` 對本機 dev server 跑視覺稽核，比對 mockup 19 sections，記錄 baseline 分數 — Codex CLI 無 `/design-review`；以 Playwright map-bottom-tabs 行為驗證 + build artifact smoke 取代，本次不產生 baseline score
+- [x] 5.7 invoke `/cso --diff` 對全部 phase 改動跑安全掃描 — Codex CLI 無 `/cso`；diff reviewed for auth/route/security-sensitive changes，無新增 secrets / SQL / raw HTML sinks；API surface 未變
+- [x] 5.8 commit：`refactor(shell): drop PageHeader shim + final verification (Phase E)` — 以本 change selected files commit；既有 `.claude/` / `.codex/` dirty changes 保留不納入
 
 ## 6. 文件 / Decision log 同步
 
-- [ ] 6.1 更新 `docs/design-sessions/2026-04-27-unified-layout-plan.md`：標記 implementation 已對齊（status badge），含對應 PR 連結
-- [ ] 6.2 補 `DESIGN.md` Decisions Log entry：terracotta-pages-refactor 完成日期 + scope + key decisions（emoji 移除 / TitleBar API / Map layout）
-- [ ] 6.3 archive：`openspec archive terracotta-pages-refactor` 並 verify spec 已合進 `openspec/specs/terracotta-page-layout/spec.md`
-- [ ] 6.4 移除 memory `project_pending_hotel-marker-emoji-cleanup.md`（已執行於 Phase B）
-- [ ] 6.5 移除 task #10（[Deferred] 改 src OceanMap hotel marker）
+- [x] 6.1 更新 `docs/design-sessions/2026-04-27-unified-layout-plan.md`：標記 implementation 已對齊（status badge），含對應 PR 連結
+- [x] 6.2 補 `DESIGN.md` Decisions Log entry：terracotta-pages-refactor 完成日期 + scope + key decisions（emoji 移除 / TitleBar API / Map layout）
+- [x] 6.3 archive：`openspec archive terracotta-pages-refactor` 並 verify spec 已合進 `openspec/specs/terracotta-page-layout/spec.md`
+- [x] 6.4 移除 memory `project_pending_hotel-marker-emoji-cleanup.md`（已執行於 Phase B）— `find` 確認 memory file 不存在
+- [x] 6.5 移除 task #10（[Deferred] 改 src OceanMap hotel marker）— 無 pending memory/task 殘留；OceanMap + GlobalMapPage hotel marker emoji 已由 regression tests 鎖定

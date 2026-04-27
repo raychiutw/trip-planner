@@ -63,8 +63,8 @@ function lazyWithRetry<P = any>(
 // Mac Mini auto-classifies improve-trip vs question intent; the legacy
 // chat-style editor at /manage is redundant. /manage now redirects to /chat.
 // TripPage is no longer a route component — it's embedded inside TripsListPage
-// when /trips?selected=X. Direct /trip/:tripId URLs redirect to /trips via
-// TripIndexRedirect.
+// when /trips?selected=X. Direct /trip/:tripId index URLs redirect to /trips via
+// TripIndexRedirect. /trip/:tripId/map remains a full-bleed MapPage route.
 // v2.10 Wave 1：StopDetailPage 移除（PR2 後 list 不再連到，這裡保留 URL
 // backward-compat：/trip/:id/stop/:eid → /trips?selected=:id&focus=:eid，
 // 供舊分享 link 仍能 land）。MapPage 仍可走 /trip/:id/stop/:eid/map。
@@ -103,16 +103,6 @@ function TripIndexRedirect() {
   // Forward existing query params (?sheet=map etc) onto the new URL
   incoming.set('selected', tripId ?? '');
   return <Navigate to={`/trips?${incoming.toString()}`} replace />;
-}
-
-/** /trip/:tripId/map → /trips?selected=:tripId&sheet=map */
-function TripMapRedirect() {
-  const { tripId } = useParams<{ tripId: string }>();
-  const { search } = useLocation();
-  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
-  params.set('selected', tripId ?? '');
-  params.set('sheet', 'map');
-  return <Navigate to={`/trips?${params.toString()}`} replace />;
 }
 
 /** v2.10 Wave 1: /trip/:tripId/stop/:entryId → /trips?selected=:tripId&focus=:entryId
@@ -164,7 +154,7 @@ if (el) {
                   * unified URL pattern. Stop sub-routes still resolve under
                   * /trip/:tripId/* for now (deep links from TimelineEvent etc). */}
                 <Route index element={<TripIndexRedirect />} />
-                <Route path="map" element={<TripMapRedirect />} />
+                <Route path="map" element={<MapPage />} />
                 <Route path="stop/:entryId" element={<StopDetailRedirect />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
               </Route>

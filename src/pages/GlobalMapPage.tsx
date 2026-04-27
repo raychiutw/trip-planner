@@ -1076,7 +1076,7 @@ export default function GlobalMapPage() {
                         data-testid={`global-map-sheet-stop-${p.id}`}
                       >
                         <span className="ds-time">{p.time ?? '—'}</span>
-                        <span className="ds-dot">{p.type === 'hotel' ? '🛏' : (p.index || '·')}</span>
+                        <span className="ds-dot">{p.index || '·'}</span>
                         <span className="ds-name">{p.title}</span>
                       </button>
                     );

@@ -308,6 +308,11 @@ function buildMinimalDay(dayNum, date, dayOfWeek, label) {
         travelDesc: '開車 30 分鐘',
         travelMin: 30,
         location: null,
+        poi: {
+          lat: 26.2 + dayNum * 0.01,
+          lng: 127.7 + dayNum * 0.01,
+          googleRating: 4.2,
+        },
         travel: { type: 'car', desc: '開車 30 分鐘', min: 30 },
         restaurants: [],
         shopping: [],
