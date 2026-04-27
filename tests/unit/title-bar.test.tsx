@@ -34,14 +34,15 @@ describe('TitleBar — 基本渲染', () => {
 
   it('預設不渲染 eyebrow / meta（mockup 規定單行 chrome）', () => {
     const { container } = render(<TitleBar title="地圖" />);
-    expect(container.querySelector('.tp-page-header-eyebrow')).toBeNull();
-    expect(container.querySelector('.tp-page-header-meta')).toBeNull();
+    expect(container.querySelector('.tp-titlebar-eyebrow')).toBeNull();
+    expect(container.querySelector('.tp-titlebar-meta')).toBeNull();
   });
 
-  it('header 有 sticky chrome class 標記（CSS 由 tokens.css 套用 sticky / glass）', () => {
+  it('header 用 .tp-titlebar class + data-titlebar="true"（mockup 對齊 64/56 + 20/18）', () => {
     const { container } = render(<TitleBar title="探索" />);
     const header = container.querySelector('header');
     expect(header).not.toBeNull();
+    expect(header!.classList.contains('tp-titlebar')).toBe(true);
     expect(header!.getAttribute('data-titlebar')).toBe('true');
   });
 });
@@ -90,12 +91,12 @@ describe('TitleBar — actions slot', () => {
     );
     expect(getByText('搜尋')).not.toBeNull();
     expect(getByText('新增')).not.toBeNull();
-    const actionsSlot = container.querySelector('.tp-page-header-actions');
+    const actionsSlot = container.querySelector('.tp-titlebar-actions');
     expect(actionsSlot).not.toBeNull();
   });
 
   it('無 actions prop：不渲染 actions 容器', () => {
     const { container } = render(<TitleBar title="帳號" />);
-    expect(container.querySelector('.tp-page-header-actions')).toBeNull();
+    expect(container.querySelector('.tp-titlebar-actions')).toBeNull();
   });
 });

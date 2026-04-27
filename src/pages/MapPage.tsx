@@ -28,7 +28,9 @@ import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hook
 import { dayColor } from '../lib/dayPalette';
 import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
-import BreadcrumbCrumbs from '../components/shared/BreadcrumbCrumbs';
+import TitleBar from '../components/shell/TitleBar';
+import MapDayTab from '../components/trip/MapDayTab';
+import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -39,165 +41,114 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   overflow: hidden;
 }
-.map-page-topbar {
-  flex-shrink: 0;
-  background: var(--color-glass-nav);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--color-border);
-  padding: 10px 16px;
-  display: flex; align-items: center; gap: 12px;
-  height: 52px;
-}
-.map-page-back {
-  width: 36px; height: 36px; border-radius: 50%;
-  display: grid; place-items: center; flex-shrink: 0;
-  background: transparent; border: none; cursor: pointer;
-  color: var(--color-foreground);
-  transition: background-color 160ms var(--transition-timing-function-apple),
-              color 160ms var(--transition-timing-function-apple);
-}
-.map-page-back:hover { background: var(--color-hover); color: var(--color-accent); }
-
-.map-page-crumb {
-  flex: 1; min-width: 0;
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: var(--font-size-caption2); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--color-muted);
-  white-space: nowrap; overflow: hidden;
-}
-.map-page-crumb-day { color: var(--color-foreground); }
-.map-page-crumb-sep { opacity: 0.4; }
-.map-page-crumb > span { white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
-
 .map-page-body {
   flex: 1;
   position: relative;
   min-height: 0;
 }
 .map-page-body > * { width: 100%; height: 100%; }
-.map-page-empty {
-  height: 100%; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  color: var(--color-muted); gap: 8px;
-  padding: 24px;
-}
 
-/* ===== Day tabs — underlined tabs style (對齊 DayNav desktop) ===== */
-.map-page-days {
-  flex-shrink: 0;
-  background: var(--color-glass-nav);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--color-border);
-  display: flex; gap: 2px;
-  overflow-x: auto; scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
-  padding: 0 12px;
-  scrollbar-width: none;
+/* ===== Loading state — shimmer canvas + accent spinner（mockup Section 20） ===== */
+.map-page-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--color-secondary) 0%, var(--color-tertiary) 50%, var(--color-secondary) 100%);
+  background-size: 200% 200%;
+  animation: shimmer 2s ease-in-out infinite;
+  z-index: 4;
 }
-.map-page-days::-webkit-scrollbar { display: none; }
-.map-page-day-tab {
-  flex: 0 0 auto; scroll-snap-align: start;
-  padding: 12px 14px;
-  border: none; border-bottom: 2px solid transparent; border-radius: 0;
-  background: transparent;
+.map-page-loading-stack {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+}
+.map-page-loading-spinner {
+  width: 32px; height: 32px;
+  border: 2.5px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  border-top-color: var(--color-accent);
+  border-radius: var(--radius-full);
+  animation: tp-spin 800ms linear infinite;
+}
+.map-page-loading-text {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
   color: var(--color-muted);
-  cursor: pointer; font-family: inherit;
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: var(--spacing-tap-min, 44px); white-space: nowrap;
-  transition: color 160ms var(--transition-timing-function-apple),
-              border-bottom-color 160ms var(--transition-timing-function-apple);
+  margin: 0;
 }
-.map-page-day-tab:hover:not([aria-pressed="true"]) { color: var(--color-foreground); }
-.map-page-day-tab[aria-pressed="true"] {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
-}
-.map-page-day-tab-eyebrow {
-  font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.14em;
-  opacity: 0.7; text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-.map-page-day-tab[aria-pressed="true"] .map-page-day-tab-eyebrow { opacity: 1; }
-.map-page-day-tab-date {
-  font-size: 13px; font-weight: 600;
-  font-variant-numeric: tabular-nums; letter-spacing: -0.005em;
-  line-height: 1;
-  color: var(--color-foreground);
-}
-.map-page-day-tab[aria-pressed="true"] .map-page-day-tab-date { color: var(--color-accent); }
 
-/* ===== Entry cards — swipe snap (Funliday style) ===== */
+/* ===== Empty state — glass card（mockup Section 20） ===== */
+.map-page-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 4;
+}
+.map-page-empty-card {
+  text-align: center;
+  padding: 24px 28px;
+  background: var(--color-glass-nav);
+  backdrop-filter: blur(var(--blur-glass, 14px));
+  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  max-width: 280px;
+  box-shadow: var(--shadow-md);
+}
+.map-page-empty-icon {
+  width: 32px; height: 32px;
+  color: var(--color-muted);
+  margin: 0 auto 8px;
+  display: grid; place-items: center;
+}
+.map-page-empty-icon svg { width: 32px; height: 32px; }
+.map-page-empty-title {
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.map-page-empty-text {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== Map page entry cards centering override =====
+ * tp-map-entry-cards 的基礎樣式在 tokens.css；MapPage 額外加 scroll-snap 與
+ * 中心 padding（first/last card 能 snap 到 viewport center）。 */
 .map-page-cards {
-  flex-shrink: 0;
-  display: flex; gap: 10px;
-  overflow-x: auto; scroll-snap-type: x mandatory;
+  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   /* Padding so first/last card can snap to centre (card width = 220px, half = 110px) */
   padding: 12px max(16px, calc(50% - 110px)) calc(12px + env(safe-area-inset-bottom, 0px));
-  background: var(--color-background);
-  scrollbar-width: none;
 }
-.map-page-cards::-webkit-scrollbar { display: none; }
-.map-page-card {
-  flex: 0 0 220px; scroll-snap-align: center;
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-background);
-  color: var(--color-foreground);
-  cursor: pointer; font-family: inherit;
-  text-align: left;
-  transition: border-color 160ms var(--transition-timing-function-apple),
-              box-shadow 160ms var(--transition-timing-function-apple);
-}
-.map-page-card:hover:not([aria-pressed="true"]) { border-color: var(--color-muted); }
-.map-page-card[aria-pressed="true"] {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 20%, transparent);
-}
-.map-page-card-top {
-  display: inline-flex; align-items: baseline; gap: 8px;
-  margin-bottom: 4px;
-}
-.map-page-card-num {
-  display: inline-grid; place-items: center;
-  width: 22px; height: 22px; border-radius: 50%;
-  background: var(--color-tertiary);
-  color: var(--color-muted);
-  font-size: var(--font-size-caption2); font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-.map-page-card[aria-pressed="true"] .map-page-card-num {
-  background: var(--color-accent); color: #fff;
-}
-.map-page-card-time {
-  font-size: 13px; font-weight: 600;
-  font-variant-numeric: tabular-nums; letter-spacing: -0.005em;
-  color: var(--color-foreground);
-}
-.map-page-card-title {
-  font-size: 14px; font-weight: 500;
-  color: var(--color-foreground);
-  line-height: 1.35;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
-}
+.map-page-cards .tp-map-entry-card { scroll-snap-align: center; }
 .map-page-card-empty {
   flex: 0 0 auto;
   padding: 10px 12px;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
 }
 
 @media (max-width: 760px) {
-  .map-page-crumb { font-size: var(--font-size-eyebrow); letter-spacing: 0.12em; }
-  .map-page-card { flex: 0 0 200px; }
+  .map-page-cards .tp-map-entry-card { flex: 0 0 200px; }
 }
 `;
+
+/**
+ * inferKind — 從 pin.title 推 entry kind（heuristic）。
+ * MapPin 沒 kind metadata，這個是過渡方案；待 entries schema 加 kind 欄位後可移除。
+ * Hotel pin 直接走 type === 'hotel'。
+ */
+function inferKind(pin: { type: string; title: string }): EntryKind {
+  if (pin.type === 'hotel') return 'hotel';
+  const t = pin.title;
+  if (/食堂|餐廳|餐|食|麵|拉麵|烏龍|壽司|sushi|ramen|cafe|coffee|restaurant|noodle|燒|定食|烤|料理|燒肉|烤肉/i.test(t)) return 'food';
+  if (/購物|商店|outlet|百貨|超市|mart|store|商場|藥妝|免稅|drug|drugstore|店|shop/i.test(t)) return 'shopping';
+  return 'sight';
+}
 
 /* ===== Helpers ===== */
 
@@ -271,12 +222,11 @@ export default function MapPage() {
     return singleDayPins;
   }, [isOverview, overviewData, singleDayPins]);
 
-  // Entry pins for card list — overview aggregates, single day filters to this day
+  // Entry pins for card list — mockup 規格：含 hotel（D1·1 Super Hotel 也在 cards）。
+  // overview 模式聚合所有日；single day 模式只該日。
   const cardEntryPins = useMemo(() => {
-    if (isOverview && overviewData) {
-      return overviewData.pins.filter((p) => p.type === 'entry');
-    }
-    return singleDayPins.filter((p) => p.type === 'entry');
+    if (isOverview && overviewData) return overviewData.pins;
+    return singleDayPins;
   }, [isOverview, overviewData, singleDayPins]);
 
   // Entry id → dayNum map (used for overview card's day prefix)
@@ -371,26 +321,6 @@ export default function MapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, cardEntryPins.length]);
 
-  /* --- Breadcrumb --- */
-  const crumb = useMemo(() => {
-    if (isOverview) {
-      // 用 dayTabs 第一/最後日期組 trip date range
-      const first = dayTabs[0]?.date;
-      const last = dayTabs[dayTabs.length - 1]?.date;
-      const range = first && last && first !== last
-        ? `${formatDateLabel(first)} – ${formatDateLabel(last)}`
-        : first ? formatDateLabel(first) : null;
-      return range ? `總覽 · ${range}` : '總覽';
-    }
-    const parts: string[] = [];
-    const dayNum = activeTab as number;
-    parts.push(`DAY ${String(dayNum).padStart(2, '0')}`);
-    const day = allDays?.[dayNum];
-    if (day?.date) parts.push(formatDateLabel(day.date));
-    if (day?.label) parts.push(day.label);
-    return parts.join(' · ');
-  }, [activeTab, isOverview, allDays, dayTabs]);
-
   /* --- Back navigation --- */
   const onBack = useCallback(() => {
     if (urlEntryId != null) navigate(`/trip/${tripId}/stop/${urlEntryId}`);
@@ -401,29 +331,54 @@ export default function MapPage() {
     <div className="map-page-wrap">
       <style>{SCOPED_STYLES}</style>
 
-      <header className="map-page-topbar">
-        <button
-          type="button"
-          className="map-page-back"
-          onClick={onBack}
-          aria-label="返回"
-        >
-          <Icon name="chevron-left" />
-        </button>
-        <div className="map-page-crumb">
-          <BreadcrumbCrumbs parts={crumb.split(' · ')} classPrefix="map-page-crumb" />
-        </div>
-      </header>
+      <TitleBar
+        title="地圖"
+        back={onBack}
+        actions={
+          <>
+            {trip?.title && (
+              <button
+                type="button"
+                className="tp-titlebar-back"
+                aria-label="切換行程"
+                title={trip.title}
+              >
+                <Icon name="route" />
+              </button>
+            )}
+          </>
+        }
+      />
 
       <main className="map-page-body">
         {loading ? (
-          <div className="map-page-empty"><span>載入中…</span></div>
+          <div className="map-page-loading" role="status" aria-busy="true" aria-live="polite">
+            <div className="map-page-loading-stack">
+              <div className="map-page-loading-spinner" aria-hidden="true" />
+              <p className="map-page-loading-text">地圖載入中…</p>
+            </div>
+          </div>
         ) : mapPins.length === 0 ? (
           <div className="map-page-empty">
-            <span>{isOverview ? '這趟行程尚無位置資訊' : '這天沒有位置資訊'}</span>
+            <div className="map-page-empty-card">
+              <span className="map-page-empty-icon" aria-hidden="true">
+                <Icon name="map" />
+              </span>
+              <p className="map-page-empty-title">{isOverview ? '這趟行程尚無景點' : '此日尚無景點'}</p>
+              <p className="map-page-empty-text">切換其他日期、或回到行程加入景點。</p>
+            </div>
           </div>
         ) : (
-          <Suspense fallback={<div className="map-page-empty"><span>地圖載入中…</span></div>}>
+          <Suspense
+            fallback={
+              <div className="map-page-loading" role="status" aria-busy="true" aria-live="polite">
+                <div className="map-page-loading-stack">
+                  <div className="map-page-loading-spinner" aria-hidden="true" />
+                  <p className="map-page-loading-text">地圖載入中…</p>
+                </div>
+              </div>
+            }
+          >
             <OceanMap
               pins={mapPins}
               mode="overview"
@@ -439,43 +394,29 @@ export default function MapPage() {
       </main>
 
       {dayTabs.length > 1 && (
-        <nav className="map-page-days" role="tablist" aria-label="行程日期">
+        <nav className="tp-map-day-tabs" role="tablist" aria-label="行程日期">
           {/* 「總覽」tab prepend 於 Day 01 之前 */}
-          <button
+          <MapDayTab
             key="overview"
-            type="button"
-            role="tab"
-            className="map-page-day-tab"
-            aria-pressed={isOverview}
-            aria-selected={isOverview}
+            dayLabel="總覽"
+            dateLabel={`${dayTabs.length} 天`}
+            isActive={isOverview}
             onClick={() => handleTabClick('overview')}
-          >
-            <span className="map-page-day-tab-eyebrow">總覽</span>
-            <span className="map-page-day-tab-date">{dayTabs.length} 天</span>
-          </button>
-          {dayTabs.map((t) => {
-            const isActive = !isOverview && t.dayNum === activeTab;
-            const color = dayColor(t.dayNum);
-            return (
-              <button
-                key={t.dayNum}
-                type="button"
-                role="tab"
-                className="map-page-day-tab"
-                aria-pressed={isActive}
-                aria-selected={isActive}
-                onClick={() => handleTabClick(t.dayNum)}
-                style={isActive ? { borderBottomColor: color } : undefined}
-              >
-                <span className="map-page-day-tab-eyebrow" style={isActive ? { color } : undefined}>DAY {String(t.dayNum).padStart(2, '0')}</span>
-                <span className="map-page-day-tab-date">{formatDateLabel(t.date)}</span>
-              </button>
-            );
-          })}
+          />
+          {dayTabs.map((t) => (
+            <MapDayTab
+              key={t.dayNum}
+              dayLabel={`DAY ${String(t.dayNum).padStart(2, '0')}`}
+              dateLabel={formatDateLabel(t.date) ?? undefined}
+              dayColor={dayColor(t.dayNum)}
+              isActive={!isOverview && t.dayNum === activeTab}
+              onClick={() => handleTabClick(t.dayNum)}
+            />
+          ))}
         </nav>
       )}
 
-      <div className="map-page-cards" ref={cardsRef}>
+      <div className="tp-map-entry-cards map-page-cards" ref={cardsRef} role="list">
         {cardEntryPins.length === 0 ? (
           <div className="map-page-card-empty">
             {isOverview ? '這趟行程尚無景點' : '這天沒有景點'}
@@ -483,28 +424,22 @@ export default function MapPage() {
         ) : (
           cardEntryPins.map((pin) => {
             const isActive = pin.id === activeEntryId;
-            const pinDay = entryDayMap.get(pin.id);
+            // Overview 模式：用 entryDayMap 反查；Single-day 模式：activeTab 即 dayNum
+            const pinDay = isOverview ? entryDayMap.get(pin.id) : (activeTab as number);
+            const color = pinDay ? dayColor(pinDay) : 'var(--color-muted)';
             return (
-              <button
+              <MapEntryCard
                 key={pin.id}
-                type="button"
-                className="map-page-card"
-                data-card-entry-id={pin.id}
-                aria-pressed={isActive}
+                dataEntryId={pin.id}
+                dayLocalIndex={pin.index}
+                dayLabel={isOverview && pinDay ? `D${pinDay}` : undefined}
+                dayColor={color}
+                time={pin.time ?? undefined}
+                title={pin.title || '（無標題）'}
+                kind={inferKind(pin)}
+                isActive={isActive}
                 onClick={() => handleCardClick(pin.id)}
-              >
-                <div className="map-page-card-top">
-                  <span className="map-page-card-num">{pin.index}</span>
-                  {/* Overview mode: 顯示 DAY N prefix，用 dayColor */}
-                  {isOverview && pinDay && (
-                    <span className="map-page-card-time" style={{ color: dayColor(pinDay) }}>
-                      D{pinDay}
-                    </span>
-                  )}
-                  {pin.time && <span className="map-page-card-time">{pin.time}</span>}
-                </div>
-                <p className="map-page-card-title">{pin.title || '（無標題）'}</p>
-              </button>
+              />
             );
           })
         )}
