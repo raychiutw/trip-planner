@@ -1,18 +1,20 @@
 /**
- * GET /api/invitations?token=xxx — V2 共編邀請查詢
+ * GET /api/invitations — 兩條 query 分支：
  *
- * Lookup by HMAC(SESSION_SECRET, raw_token) → trip_invitations row + JOIN trips
- * + JOIN users (inviter info)。三種失敗 case 共用 410 GONE：
- *   - INVITATION_INVALID  : token_hash 找不到 row
- *   - INVITATION_EXPIRED  : expires_at < now
- *   - INVITATION_ACCEPTED : accepted_at IS NOT NULL（避免重複觸發 / 防 replay）
+ * 1. ?token=xxx  → 公開查詢（未登入也可），返回 invitation preview 給 InvitePage
+ *    用。三種失敗 case 共用 410 GONE：INVITATION_INVALID / EXPIRED / ACCEPTED。
  *
- * Public endpoint (不需 session) — 讓未登入者可預覽 invitation 內容後決定 login/signup。
+ * 2. ?tripId=xxx → 需 auth，owner / admin 列出該 trip 所有 pending invitations
+ *    給 CollabSheet pending UI 用。回傳 [{ id, invitedEmail, expiresAt, daysRemaining }]，
+ *    刻意不包含 token_hash（敏感資料）。
  *
  * 為何 410 不是 404：被邀請者點 link 時收到「已過期」是正常 lifecycle 結尾，semantic 是
  * gone (was here, no longer)，不是 not found。
  */
 import { hashInvitationToken } from '../../src/server/invitation-token';
+import { ensureCanManageTripPerms } from './permissions';
+import { AppError } from './_errors';
+import { getAuth } from './_utils';
 import type { Env } from './_types';
 
 interface InvitationRow {
@@ -25,6 +27,13 @@ interface InvitationRow {
   accepted_at: string | null;
 }
 
+interface PendingInvitationRow {
+  token_hash: string;
+  invited_email: string;
+  created_at: string;
+  expires_at: string;
+}
+
 function errorResponse(code: string, message: string, status: number): Response {
   return new Response(
     JSON.stringify({ error: { code, message } }),
@@ -35,7 +44,48 @@ function errorResponse(code: string, message: string, status: number): Response 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const rawToken = (url.searchParams.get('token') ?? '').trim();
+  const tripId = (url.searchParams.get('tripId') ?? '').trim();
 
+  // Branch 2: list pending invitations for a trip (owner / admin only)
+  if (tripId) {
+    const auth = getAuth(context);
+    if (!auth) throw new AppError('AUTH_REQUIRED');
+    await ensureCanManageTripPerms(context, auth, tripId);
+
+    const { results } = await context.env.DB
+      .prepare(
+        `SELECT token_hash, invited_email, created_at, expires_at
+         FROM trip_invitations
+         WHERE trip_id = ? AND accepted_at IS NULL
+         ORDER BY created_at DESC`,
+      )
+      .bind(tripId)
+      .all<PendingInvitationRow>();
+
+    const now = Date.now();
+    const items = (results ?? []).map((r) => {
+      const expiresMs = new Date(r.expires_at).getTime();
+      const daysRemaining = Math.max(0, Math.ceil((expiresMs - now) / (24 * 60 * 60 * 1000)));
+      const isExpired = expiresMs < now;
+      return {
+        // 用 token_hash 當 stable identifier 給 frontend revoke/resend reference。
+        // 不會洩漏 raw token（hash 即使 leak 也無法用）。
+        id: r.token_hash,
+        invitedEmail: r.invited_email,
+        createdAt: r.created_at,
+        expiresAt: r.expires_at,
+        daysRemaining,
+        isExpired,
+      };
+    });
+
+    return new Response(
+      JSON.stringify({ items }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
+  // Branch 1: public preview by token (existing behaviour)
   if (!rawToken) {
     return errorResponse('INVITATION_TOKEN_MISSING', '邀請連結缺少 token 參數', 400);
   }
