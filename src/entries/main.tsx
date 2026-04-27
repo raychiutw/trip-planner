@@ -83,6 +83,7 @@ const DeveloperAppsPage = lazyWithRetry(() => import('../pages/DeveloperAppsPage
 const SessionsPage = lazyWithRetry(() => import('../pages/SessionsPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
 const TripsListPage = lazyWithRetry(() => import('../pages/TripsListPage'));
+const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -156,6 +157,7 @@ if (el) {
               <Route path="/developer/apps" element={<DeveloperAppsPage />} />
               <Route path="/settings/sessions" element={<SessionsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
+              <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
               <Route path="/trip/:tripId" element={<TripLayout />}>
                 {/* Index route /trip/:tripId redirects to /trips?selected=:id —
