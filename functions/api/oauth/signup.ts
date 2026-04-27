@@ -123,6 +123,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // V2 共編：optional invitation token — 註冊成功後嘗試 accept（best-effort，
   // 失敗不擋 signup，errorCode 回傳給 client 顯示提示）
+  //
+  // **Trust model 設計選擇**：此 invitation accept 路徑會在 user 還沒驗證 email
+  // （email_verified_at IS NULL）的情況下加入 trip_permissions。安全考量：
+  //   1. inviter 知道 invitee email 並寄出 invitation token
+  //   2. invitee 收到 email + 點 link → 隱含證明能接收該 mailbox（possession proof）
+  //   3. tryAcceptInvitation 嚴格 check user.email === invitation.invited_email
+  //   4. inviter 是 trip owner，已對「邀請誰」負責
+  // 這是 GitHub / Notion / Slack 等共編產品的標準 trust model — invitation link
+  // 即視為該 email 的所有權證明（一次性、有時限）。後續寄信給該 user 仍會走
+  // verification flow（unverified banner 提示），但 trip access 不阻擋。
   let joinedTrip: { id: string; title: string } | null = null;
   let invitationError: string | null = null;
   const rawInviteToken = body.invitationToken?.trim();
