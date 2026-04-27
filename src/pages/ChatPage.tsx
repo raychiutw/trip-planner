@@ -693,7 +693,10 @@ export default function ChatPage() {
               ) : m.markdown ? (
                 <MarkdownText text={m.text} as="div" />
               ) : (
-                m.text
+                /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，
+                 * 配合 .tp-chat-msg 的 white-space: pre-wrap 顯示換行；
+                 * 對真的就是 backslash-n 字面的 corner case 不影響 visual。 */
+                m.text.replace(/\\n/g, '\n')
               )}
             </div>
             {m.createdAt && !m.pendingRequestId && (
