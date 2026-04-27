@@ -1,9 +1,10 @@
 /**
- * NewTripModal — V2 split-hero polish tests.
+ * NewTripModal — V2 form-first modal tests.
  *
  * Covers the v2.7 enhancement (PR1) + PR-M cleanup:
- *   - Split-screen hero pane (left illustration only — social proof banner
- *     removed in PR-M as fake-stat anti-slop + mobile cramping fix)
+ *   - Form-first single-column shell with no hero pane
+ *   - Sticky footer actions
+ *   - Multiple destination chips
  *   - Flexible-dates mode upgrade: numeric stepper + month carousel
  *     (replaces 「先建空行程，之後再決定」 hint)
  *   - Existing fixed-date submit still works (regression guard)
@@ -39,17 +40,20 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('NewTripModal — V2 split-hero pane', () => {
-  it('renders hero pane with eyebrow + headline copy', () => {
+describe('NewTripModal — form-first single-column shell', () => {
+  it('does not render the old split-screen hero pane', () => {
     renderModal();
-    const hero = screen.getByTestId('new-trip-hero');
-    expect(hero).toBeTruthy();
-    expect(hero.textContent).toMatch(/規劃下一/);
+    expect(screen.queryByTestId('new-trip-hero')).toBeNull();
   });
 
-  it('hero pane no longer renders social proof banner (PR-M cleanup)', () => {
+  it('uses <=720px modal width and sticky footer actions', () => {
     renderModal();
-    expect(screen.queryByTestId('new-trip-social-proof')).toBeNull();
+    const styleText = Array.from(document.querySelectorAll('style'))
+      .map((node) => node.textContent ?? '')
+      .join('\n');
+    expect(styleText).toContain('max-width: 720px');
+    expect(styleText).not.toContain('grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr)');
+    expect(styleText).toMatch(/\.tp-new-modal-actions\s*\{[^}]*position:\s*sticky/s);
   });
 });
 
@@ -143,6 +147,90 @@ function mockPoiSearchAndSubmitFetch(tripIdResp: string, poi: { osm_id?: number;
     };
   });
 }
+
+function mockMultiPoiSearchAndSubmitFetch(tripIdResp: string) {
+  return vi.fn().mockImplementation(async (url: RequestInfo | URL) => {
+    const u = typeof url === 'string' ? url : url.toString();
+    if (u.includes('/api/poi-search')) {
+      const decoded = decodeURIComponent(u);
+      const isKyoto = decoded.includes('京都');
+      return {
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              osm_id: isKyoto ? 67890 : 12345,
+              name: isKyoto ? '京都' : '沖繩',
+              address: isKyoto ? '京都府，日本' : '沖繩縣，日本',
+              lat: isKyoto ? 35.0116 : 26.21,
+              lng: isKyoto ? 135.7681 : 127.68,
+              category: 'tourism',
+              country: 'JP',
+              country_name: '日本',
+            },
+          ],
+        }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({ tripId: tripIdResp }),
+    };
+  });
+}
+
+describe('NewTripModal — multiple destinations', () => {
+  it('keeps the destination search visible after adding a chip so a second destination can be added', async () => {
+    const fetchMock = mockMultiPoiSearchAndSubmitFetch('multi-abc1');
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderModal();
+    fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
+      target: { value: '沖繩' },
+    });
+    fireEvent.click(await screen.findByTestId('new-trip-dest-result-12345', undefined, { timeout: 1000 }));
+
+    expect(screen.getByTestId('new-trip-destination-chip-12345')).toBeTruthy();
+    expect(screen.getByTestId('new-trip-destination-input')).toBeTruthy();
+
+    fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
+      target: { value: '京都' },
+    });
+    fireEvent.click(await screen.findByTestId('new-trip-dest-result-67890', undefined, { timeout: 1000 }));
+
+    expect(screen.getByTestId('new-trip-destination-chip-12345')).toBeTruthy();
+    expect(screen.getByTestId('new-trip-destination-chip-67890')).toBeTruthy();
+  });
+
+  it('submits selected destination chips as a combined trip name', async () => {
+    const fetchMock = mockMultiPoiSearchAndSubmitFetch('multi-abc1');
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { onCreated } = renderModal();
+    fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
+      target: { value: '沖繩' },
+    });
+    fireEvent.click(await screen.findByTestId('new-trip-dest-result-12345', undefined, { timeout: 1000 }));
+    fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
+      target: { value: '京都' },
+    });
+    fireEvent.click(await screen.findByTestId('new-trip-dest-result-67890', undefined, { timeout: 1000 }));
+
+    fireEvent.change(screen.getByTestId('new-trip-start-input'), { target: { value: '2026-09-01' } });
+    fireEvent.change(screen.getByTestId('new-trip-end-input'), { target: { value: '2026-09-05' } });
+    fireEvent.click(screen.getByTestId('new-trip-submit'));
+
+    await waitFor(() => {
+      const tripsCall = fetchMock.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('/trips') && !c[0].includes('poi-search'));
+      expect(tripsCall).toBeTruthy();
+    });
+    const tripsCall = fetchMock.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('/trips') && !c[0].includes('poi-search'))!;
+    const body = JSON.parse((tripsCall[1] as RequestInit).body as string);
+    expect(body.name).toBe('沖繩、京都');
+    expect(body.countries).toBe('JP');
+    expect(onCreated).toHaveBeenCalledWith('multi-abc1');
+  });
+});
 
 describe('NewTripModal — flexible submit uses month + days', () => {
   it('submits with month-1st as start and start+days as end', async () => {

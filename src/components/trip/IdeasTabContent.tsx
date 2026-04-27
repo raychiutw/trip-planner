@@ -10,23 +10,30 @@
  *   - 「移除」DELETE /api/trip-ideas/:id（soft delete via archived_at）
  *
  * dnd-kit lazy load via React.lazy on this file (TripSheet wraps in lazy())。
- * 不含：reorder ideas / cross-day move / demote / conflict modal / undo toast / smart placement
+ * 不含：reorder ideas / cross-day move / demote / undo toast
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
-  KeyboardSensor,
   useDraggable,
   useDroppable,
-  useSensor,
-  useSensors,
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { apiFetchRaw } from '../../lib/apiClient';
+import {
+  findFirstTimeConflict,
+  getExplicitSlotPlacement,
+  getSmartPlacement,
+  type DragScheduleEntry,
+  type SmartPlacement,
+} from '../../lib/drag-strategy';
+import { useDragDrop } from '../../hooks/useDragDrop';
+import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
+import ConflictModal from './ConflictModal';
+import UndoToast from './UndoToast';
 import type { TripIdea } from '../../types/api';
 
 const SCOPED_STYLES = `
@@ -122,10 +129,44 @@ const SCOPED_STYLES = `
   background: var(--color-accent);
   color: var(--color-accent-foreground);
 }
+.tp-day-drop-zone {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tp-day-slot-row {
+  display: flex; gap: 4px; flex-wrap: wrap;
+}
+.tp-day-slot-chip {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  border: 1px dashed var(--color-border);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  color: var(--color-muted);
+  transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+.tp-day-slot-chip.is-over {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+/* Section 7 task 7.1: DragOverlay ghost — 0.95x 縮放 + 強化 shadow + 2deg tilt
+ * 表「舉起」 affordance（Mindtrip / Notion pattern）。 */
+.tp-idea-card-overlay {
+  transform: scale(0.95) rotate(2deg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18), 0 4px 12px rgba(0, 0, 0, 0.12);
+  cursor: grabbing;
+  border-color: var(--color-accent);
+  background: var(--color-background);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-idea-card-overlay { transform: none; }
+}
 `;
 
 function ideaDragId(id: number): string { return `idea-${id}`; }
 function dayDropId(num: number): string { return `day-${num}`; }
+function daySlotDropId(num: number, startTime: string): string { return `day-${num}-slot-${startTime.replace(':', '')}`; }
 function parseIdeaDragId(id: string): number | null {
   const m = id.match(/^idea-(\d+)$/);
   return m ? Number(m[1]) : null;
@@ -133,6 +174,48 @@ function parseIdeaDragId(id: string): number | null {
 function parseDayDropId(id: string): number | null {
   const m = id.match(/^day-(\d+)$/);
   return m ? Number(m[1]) : null;
+}
+function parseDaySlotDropId(id: string): { dayNum: number; explicitStartTime: string } | null {
+  const m = id.match(/^day-(\d+)-slot-(\d{2})(\d{2})$/);
+  return m ? { dayNum: Number(m[1]), explicitStartTime: `${m[2]}:${m[3]}` } : null;
+}
+
+const PROMOTE_TIME_SLOTS = [
+  { startTime: '09:00', label: '09' },
+  { startTime: '12:00', label: '12' },
+  { startTime: '14:00', label: '14' },
+  { startTime: '18:00', label: '18' },
+] as const;
+
+const ENTRY_POI_TYPES = new Set(['hotel', 'restaurant', 'shopping', 'parking', 'attraction', 'transport', 'activity', 'other']);
+
+function normalizeEntryPoiType(type: string | null | undefined): string {
+  if (!type) return 'attraction';
+  if (ENTRY_POI_TYPES.has(type)) return type;
+  if (type === 'sight') return 'attraction';
+  return 'other';
+}
+
+type DayTimelineResponse = {
+  timeline?: Array<{
+    id?: number | string | null;
+    title?: string | null;
+    time?: string | null;
+    sortOrder?: number | null;
+    sort_order?: number | null;
+    orderInDay?: number | null;
+    order_in_day?: number | null;
+  }>;
+};
+
+function normalizeTimelineEntry(entry: NonNullable<DayTimelineResponse['timeline']>[number]): DragScheduleEntry {
+  return {
+    id: entry.id,
+    title: entry.title,
+    time: entry.time,
+    sortOrder: entry.sortOrder ?? entry.sort_order ?? null,
+    orderInDay: entry.orderInDay ?? entry.order_in_day ?? null,
+  };
 }
 
 interface DraggableIdeaCardProps {
@@ -173,10 +256,39 @@ function DroppableDayBadge({ num }: { num: number }) {
   );
 }
 
+function DroppableDaySlot({ num, startTime, label }: { num: number; startTime: string; label: string }) {
+  const { isOver, setNodeRef } = useDroppable({ id: daySlotDropId(num, startTime) });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`tp-day-slot-chip${isOver ? ' is-over' : ''}`}
+      data-testid={`day-slot-drop-${num}-${startTime.replace(':', '')}`}
+    >
+      {label}:00
+    </div>
+  );
+}
+
 export interface IdeasTabContentProps {
   tripId: string;
   /** Optional：days available for promote dropdown / drop targets。空陣列時 promote 隱藏。 */
   dayNumbers?: number[];
+}
+
+interface PendingConflict {
+  idea: TripIdea;
+  dayNum: number;
+  explicitStartTime: string;
+  placement: SmartPlacement;
+  entries: DragScheduleEntry[];
+  conflictTitle?: string | null;
+}
+
+interface LastPromote {
+  entryId: number;
+  ideaId: number;
+  dayNum: number;
+  toastKey: number;
 }
 
 export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabContentProps) {
@@ -184,16 +296,15 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
+  const [lastPromote, setLastPromote] = useState<LastPromote | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor),
-  );
+  const { sensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 4 });
 
   const reload = useCallback(async () => {
     setError(null);
     try {
-      const res = await apiFetchRaw(`/api/trip-ideas?tripId=${encodeURIComponent(tripId)}`);
+      const res = await apiFetchRaw(`/trip-ideas?tripId=${encodeURIComponent(tripId)}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { ideas?: TripIdea[] };
       setIdeas(data.ideas ?? []);
@@ -208,7 +319,7 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
   const handleDelete = useCallback(async (id: number) => {
     setBusyId(id);
     try {
-      const res = await apiFetchRaw(`/api/trip-ideas/${id}`, { method: 'DELETE' });
+      const res = await apiFetchRaw(`/trip-ideas/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(`DELETE failed: HTTP ${res.status}`);
       await reload();
     } catch (e) {
@@ -218,37 +329,128 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
     }
   }, [reload]);
 
-  const handlePromote = useCallback(async (idea: TripIdea, dayNum: number) => {
+  const loadDayEntries = useCallback(async (dayNum: number) => {
+    try {
+      const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}`);
+      if (!res.ok) return [];
+      const day = (await res.json()) as DayTimelineResponse;
+      return (day.timeline ?? []).map(normalizeTimelineEntry);
+    } catch {
+      return [];
+    }
+  }, [tripId]);
+
+  const commitPromote = useCallback(async (idea: TripIdea, dayNum: number, placement: SmartPlacement) => {
+    const create = await apiFetchRaw(
+      `/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          title: idea.title,
+          time: placement.time,
+          sort_order: placement.sortOrder,
+          poi_type: normalizeEntryPoiType(idea.poiType),
+          note: idea.note ?? null,
+          lat: idea.poiLat ?? null,
+          lng: idea.poiLng ?? null,
+        }),
+      },
+    );
+    if (!create.ok) throw new Error(`promote create entry failed: ${create.status}`);
+    const created = (await create.json()) as { id?: number };
+    if (created?.id) {
+      await apiFetchRaw(`/trip-ideas/${idea.id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ promotedToEntryId: created.id }),
+      });
+      // Section 2.6: drag promote 後 5 秒 undo toast 視窗
+      setLastPromote({ entryId: created.id, ideaId: idea.id, dayNum, toastKey: Date.now() });
+    }
+    await reload();
+  }, [reload, tripId]);
+
+  const handleUndoPromote = useCallback(async () => {
+    const last = lastPromote;
+    if (!last) return;
+    setLastPromote(null);
+    try {
+      await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/entries/${last.entryId}`, {
+        method: 'DELETE',
+      });
+      await apiFetchRaw(`/trip-ideas/${last.ideaId}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ promotedToEntryId: null }),
+      });
+      await reload();
+    } catch (e) {
+      setError((e as Error).message ?? 'undo 失敗');
+    }
+  }, [lastPromote, reload, tripId]);
+
+  const handleUndoTimeout = useCallback(() => {
+    setLastPromote(null);
+  }, []);
+
+  const handlePromote = useCallback(async (idea: TripIdea, dayNum: number, explicitStartTime?: string) => {
     if (!idea.poiId) {
       setError('此 idea 未綁 POI，無法直接 promote');
       return;
     }
     setBusyId(idea.id);
     try {
-      const create = await apiFetchRaw(
-        `/api/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`,
-        {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ poiId: idea.poiId, name: idea.title }),
-        },
-      );
-      if (!create.ok) throw new Error(`promote create entry failed: ${create.status}`);
-      const created = (await create.json()) as { id?: number };
-      if (created?.id) {
-        await apiFetchRaw(`/api/trip-ideas/${idea.id}`, {
-          method: 'PATCH',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ promotedToEntryId: created.id }),
-        });
+      const entries = await loadDayEntries(dayNum);
+      const placement = explicitStartTime
+        ? getExplicitSlotPlacement(explicitStartTime, entries)
+        : getSmartPlacement(entries);
+      if (explicitStartTime) {
+        const conflict = findFirstTimeConflict(placement, entries);
+        if (conflict) {
+          setPendingConflict({
+            idea,
+            dayNum,
+            explicitStartTime,
+            placement,
+            entries,
+            conflictTitle: conflict.title,
+          });
+          return;
+        }
       }
-      await reload();
+      await commitPromote(idea, dayNum, placement);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusyId(null);
     }
-  }, [reload, tripId]);
+  }, [commitPromote, loadDayEntries]);
+
+  const handleConflictCancel = useCallback(() => {
+    setPendingConflict(null);
+  }, []);
+
+  const handleConflictParallel = useCallback(() => {
+    const pending = pendingConflict;
+    if (!pending) return;
+    setPendingConflict(null);
+    setBusyId(pending.idea.id);
+    void commitPromote(pending.idea, pending.dayNum, pending.placement)
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setBusyId(null));
+  }, [commitPromote, pendingConflict]);
+
+  const handleConflictMoveAfter = useCallback(() => {
+    const pending = pendingConflict;
+    if (!pending) return;
+    const placement = getSmartPlacement(pending.entries);
+    setPendingConflict(null);
+    setBusyId(pending.idea.id);
+    void commitPromote(pending.idea, pending.dayNum, placement)
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setBusyId(null));
+  }, [commitPromote, pendingConflict]);
 
   const activeIdeas = useMemo(
     () => (ideas ?? []).filter((i) => !i.archivedAt),
@@ -263,11 +465,12 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
     setActiveDragId(null);
     if (!e.over) return;
     const ideaId = parseIdeaDragId(String(e.active.id));
-    const dayNum = parseDayDropId(String(e.over.id));
+    const slot = parseDaySlotDropId(String(e.over.id));
+    const dayNum = slot?.dayNum ?? parseDayDropId(String(e.over.id));
     if (ideaId === null || dayNum === null) return;
     const idea = activeIdeas.find((i) => i.id === ideaId);
     if (!idea) return;
-    void handlePromote(idea, dayNum);
+    void handlePromote(idea, dayNum, slot?.explicitStartTime);
   }, [activeIdeas, handlePromote]);
 
   const draggedIdea = useMemo(
@@ -282,15 +485,45 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
   return (
     <DndContext
       sensors={sensors}
+      accessibility={TP_DRAG_ACCESSIBILITY}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActiveDragId(null)}
     >
       <style>{SCOPED_STYLES}</style>
+      <ConflictModal
+        open={pendingConflict != null}
+        conflictTitle={pendingConflict?.conflictTitle}
+        time={pendingConflict?.placement.time ?? ''}
+        onMoveAfter={handleConflictMoveAfter}
+        onParallel={handleConflictParallel}
+        onCancel={handleConflictCancel}
+      />
+      <UndoToast
+        open={lastPromote != null}
+        message={lastPromote ? `已加入 Day ${lastPromote.dayNum}` : ''}
+        onUndo={handleUndoPromote}
+        onTimeout={handleUndoTimeout}
+        resetKey={lastPromote?.toastKey}
+      />
       {activeDragId && dayNumbers.length > 0 && (
         <div className="tp-ideas-drop-row" data-testid="ideas-drop-row">
           <span className="label">拖到日次以加入：</span>
-          {dayNumbers.map((d) => <DroppableDayBadge key={d} num={d} />)}
+          {dayNumbers.map((d) => (
+            <div className="tp-day-drop-zone" key={d}>
+              <DroppableDayBadge num={d} />
+              <div className="tp-day-slot-row" aria-label={`Day ${d} time slots`}>
+                {PROMOTE_TIME_SLOTS.map((slot) => (
+                  <DroppableDaySlot
+                    key={slot.startTime}
+                    num={d}
+                    startTime={slot.startTime}
+                    label={slot.label}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {error && (
@@ -365,9 +598,9 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
           ))}
         </ul>
       )}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {draggedIdea ? (
-          <div className="tp-idea-card" style={{ cursor: 'grabbing' }}>
+          <div className="tp-idea-card tp-idea-card-overlay" data-testid="ideas-drag-overlay">
             <div className="tp-idea-card-header">{draggedIdea.title}</div>
             {draggedIdea.poiType && (
               <div className="tp-idea-card-meta"><span>{draggedIdea.poiType}</span></div>

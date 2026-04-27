@@ -15,17 +15,18 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import {
-  DndContext, PointerSensor, KeyboardSensor, useSensor, useSensors,
+  DndContext,
   closestCenter, type DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext, useSortable, sortableKeyboardCoordinates,
+  SortableContext, useSortable,
   verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useTripId } from '../../contexts/TripIdContext';
 import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
+import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
 import InlineError from '../shared/InlineError';
 import MarkdownText from '../shared/MarkdownText';
@@ -33,6 +34,7 @@ import StopLightbox from './StopLightbox';
 import EntryActionPopover, { type EntryActionConfirmPayload } from './EntryActionPopover';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
+import { useDragDrop } from '../../hooks/useDragDrop';
 
 const SCOPED_STYLES = `
 .tp-rail-detail {
@@ -182,7 +184,7 @@ const SCOPED_STYLES = `
 .ocean-rail-grip {
   border: 0; background: transparent;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px;
+  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
   cursor: grab;
   color: var(--color-muted);
   border-radius: var(--radius-sm);
@@ -576,10 +578,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
 
   // PR-K dnd-kit sensors。pointer 8px activation distance 避免誤觸 (跟 click
   // expand row 衝突)，keyboard 走 sortable coordinate getter。
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const { sensors } = useDragDrop({ includeTouch: true, pointerActivationDistance: 8, sortable: true });
 
   // 套 order override (drag 後 optimistic) 重排 events
   const orderedEvents = useMemo(() => {
@@ -606,21 +605,21 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
     const reordered = arrayMove(orderedEvents, oldIdx, newIdx);
     const newIds = reordered.map((ev) => ev.id).filter((id): id is number => id != null);
     setOrderOverride(newIds);
-    // PATCH 每個改變位置的 entry 的 sort_order = 新 index
     if (!tripId) return;
+    // Section 6/3：reorder 走 batch endpoint，避免 N+1 PATCH。drop 後一次送
+    // 所有改變位置的 entry 的 sort_order，atomic 失敗 → revert override。
     try {
-      await Promise.all(newIds.map((id, idx) =>
-        apiFetchRaw(`/trips/${tripId}/entries/${id}`, {
-          method: 'PATCH',
-          credentials: 'same-origin',
-          body: JSON.stringify({ sort_order: idx }),
-        }),
-      ));
+      const updates = newIds.map((id, idx) => ({ id, sort_order: idx }));
+      const res = await apiFetchRaw(`/trips/${tripId}/entries/batch`, {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        body: JSON.stringify({ updates }),
+      });
+      if (!res.ok) throw new Error(`batch reorder failed: ${res.status}`);
       window.dispatchEvent(new CustomEvent('tp-entry-updated', {
         detail: { tripId, entryId: active.id, reordered: true },
       }));
     } catch {
-      // PATCH 失敗 → revert override，refetch 拿 fresh data
       setOrderOverride(null);
     }
   }, [orderedEvents, tripId]);
@@ -643,7 +642,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           {orderedEvents.length} stops{firstTime && lastTime ? ` · ${firstTime}–${lastTime}` : ''}
         </span>
       </div>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} accessibility={TP_DRAG_ACCESSIBILITY} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
       <div className="ocean-rail-body">
         <div className="ocean-rail-line" aria-hidden="true" />

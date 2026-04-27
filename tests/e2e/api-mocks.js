@@ -36,6 +36,53 @@ const MOCK_TRIPS_LIST = [
   },
 ];
 
+const MOCK_USER = {
+  id: 'user-ray',
+  email: 'lean.lean@gmail.com',
+  emailVerified: true,
+  displayName: 'Ray',
+  avatarUrl: null,
+  createdAt: '2026-01-01T00:00:00Z',
+};
+
+const MOCK_POI_SEARCH_RESULTS = [
+  {
+    osm_id: 90001,
+    name: '沖繩美麗海水族館',
+    address: '沖繩縣國頭郡本部町石川424',
+    lat: 26.6944,
+    lng: 127.8781,
+    category: 'sight',
+    country: 'JP',
+    country_name: '日本',
+  },
+];
+
+function initialSavedPois() {
+  return [];
+}
+
+function initialTripIdeas() {
+  return [
+    {
+      id: 7101,
+      tripId: 'okinawa-trip-2026-Ray',
+      poiId: 8001,
+      title: '沖繩美麗海水族館',
+      note: '從探索儲存池加入',
+      addedAt: '2026-04-25T10:10:00Z',
+      addedBy: MOCK_USER.email,
+      promotedToEntryId: null,
+      archivedAt: null,
+      poiName: '沖繩美麗海水族館',
+      poiAddress: '沖繩縣國頭郡本部町石川424',
+      poiLat: 26.6944,
+      poiLng: 127.8781,
+      poiType: 'sight',
+    },
+  ];
+}
+
 /* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) ===== */
 const MOCK_TRIP_META_OKINAWA = {
   id: 'okinawa-trip-2026-Ray',
@@ -308,6 +355,11 @@ function buildMinimalDay(dayNum, date, dayOfWeek, label) {
         travelDesc: '開車 30 分鐘',
         travelMin: 30,
         location: null,
+        poi: {
+          lat: 26.2 + dayNum * 0.01,
+          lng: 127.7 + dayNum * 0.01,
+          googleRating: 4.2,
+        },
         travel: { type: 'car', desc: '開車 30 分鐘', min: 30 },
         restaurants: [],
         shopping: [],
@@ -492,6 +544,38 @@ const TRIP_DOCS = {
   'busan-trip-2026-CeliaDemyKathy': null, // no docs
 };
 
+const MOCK_SESSIONS = [
+  {
+    sid: 'current',
+    ua_summary: 'Chrome on macOS',
+    ip_hash_prefix: 'a1b2',
+    created_at: '2026-04-25T10:00:00Z',
+    last_seen_at: '2026-04-27T08:00:00Z',
+    is_current: true,
+  },
+  {
+    sid: 'iphone',
+    ua_summary: 'Mobile Safari on iPhone',
+    ip_hash_prefix: 'c3d4',
+    created_at: '2026-04-24T09:00:00Z',
+    last_seen_at: '2026-04-26T21:00:00Z',
+    is_current: false,
+  },
+];
+
+const MOCK_CONNECTED_APPS = [
+  {
+    client_id: 'weather-importer',
+    app_name: 'Weather Importer',
+    app_logo_url: null,
+    app_description: 'Imports local weather into Tripline',
+    homepage_url: null,
+    status: 'active',
+    scopes: ['read:trips', 'write:trips'],
+    granted_at: Date.now() - 86400000,
+  },
+];
+
 /* ===== Setup function ===== */
 
 /**
@@ -500,9 +584,155 @@ const TRIP_DOCS = {
  * @param {import('@playwright/test').Page} page
  */
 async function setupApiMocks(page) {
+  const savedPois = initialSavedPois();
+  const tripIdeas = initialTripIdeas();
+  const sessions = MOCK_SESSIONS.map((s) => ({ ...s }));
+  const connectedApps = MOCK_CONNECTED_APPS.map((a) => ({ ...a }));
+  let nextSavedId = 8000;
+  let nextPoiId = 8800;
+  let nextEntryId = 9000;
+
+  await page.route(/\/api\/oauth\/userinfo$/, (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) });
+  });
+
+  await page.route(/\/api\/my-trips$/, (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_TRIPS_LIST.map((t) => ({ tripId: t.tripId }))),
+    });
+  });
+
+  await page.route(/\/api\/account\/sessions(?:\/[^/]+)?$/, async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET' && path === '/api/account/sessions') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ sessions }),
+      });
+    }
+    if (request.method() === 'DELETE' && path === '/api/account/sessions') {
+      const current = sessions.find((s) => s.is_current);
+      sessions.splice(0, sessions.length, ...(current ? [current] : []));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    if (request.method() === 'DELETE') {
+      const sid = decodeURIComponent(path.split('/').pop() ?? '');
+      const idx = sessions.findIndex((s) => s.sid === sid);
+      if (idx >= 0) sessions.splice(idx, 1);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
+  });
+
+  await page.route(/\/api\/account\/connected-apps(?:\/[^/]+)?$/, async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ apps: connectedApps }),
+      });
+    }
+    if (request.method() === 'DELETE') {
+      const clientId = decodeURIComponent(path.split('/').pop() ?? '');
+      const idx = connectedApps.findIndex((app) => app.client_id === clientId);
+      if (idx >= 0) connectedApps.splice(idx, 1);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
+  });
+
+  await page.route(/\/api\/poi-search/, (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ results: MOCK_POI_SEARCH_RESULTS }),
+    });
+  });
+
+  await page.route(/\/api\/pois\/find-or-create$/, async (route) => {
+    const body = route.request().postDataJSON?.() ?? {};
+    const existing = savedPois.find((p) => p.poiName === body.name);
+    const id = existing?.poiId ?? ++nextPoiId;
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id }) });
+  });
+
+  await page.route(/\/api\/saved-pois(?:\/\d+)?$/, async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(savedPois) });
+    }
+    if (request.method() === 'POST') {
+      const body = request.postDataJSON?.() ?? {};
+      const searchPoi = MOCK_POI_SEARCH_RESULTS[0];
+      const row = {
+        id: ++nextSavedId,
+        email: MOCK_USER.email,
+        poiId: body.poiId ?? searchPoi.osm_id,
+        savedAt: new Date().toISOString(),
+        note: body.note ?? null,
+        poiName: searchPoi.name,
+        poiAddress: searchPoi.address,
+        poiLat: searchPoi.lat,
+        poiLng: searchPoi.lng,
+        poiType: searchPoi.category,
+      };
+      savedPois.unshift(row);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(row) });
+    }
+    if (request.method() === 'DELETE') {
+      const id = Number(path.split('/').pop());
+      const idx = savedPois.findIndex((p) => p.id === id);
+      if (idx >= 0) savedPois.splice(idx, 1);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
+  });
+
+  await page.route(/\/api\/trip-ideas(?:\/\d+)?/, async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ideas: tripIdeas }) });
+    }
+    const id = Number(path.split('/').pop());
+    const idea = tripIdeas.find((i) => i.id === id);
+    if (!idea) {
+      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not found' }) });
+    }
+    if (request.method() === 'PATCH') {
+      const body = request.postDataJSON?.() ?? {};
+      Object.assign(idea, body);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(idea) });
+    }
+    if (request.method() === 'DELETE') {
+      idea.archivedAt = new Date().toISOString();
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+    }
+    return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
+  });
+
   await page.route(/\/api\/trips/, (route) => {
     const url = route.request().url();
     const path = new URL(url).pathname;
+    const method = route.request().method();
+
+    // Pattern: POST /api/trips/:id/days/:num/entries
+    const entryCreateMatch = path.match(/^\/api\/trips\/([^/]+)\/days\/(\d+)\/entries$/);
+    if (entryCreateMatch && method === 'POST') {
+      const [, , dayNum] = entryCreateMatch;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: ++nextEntryId, dayNum: Number(dayNum) }),
+      });
+    }
 
     // Exact: /api/trips (trip list)
     if (path === '/api/trips') {
@@ -537,7 +767,11 @@ async function setupApiMocks(page) {
       const [, tripId] = daysMatch;
       const tripDays = TRIP_DAYS[tripId];
       if (tripDays) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(tripDays.list) });
+        const urlObj = new URL(url);
+        const daysPayload = urlObj.searchParams.get('all') === '1'
+          ? Object.values(tripDays.byNum)
+          : tripDays.list;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(daysPayload) });
       }
       return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not found' }) });
     }

@@ -27,10 +27,10 @@ import OverflowMenu from '../components/trip/OverflowMenu';
 import BottomNavBar from '../components/shell/BottomNavBar';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import TitleBar from '../components/shell/TitleBar';
 import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
-import DestinationArt from '../components/trip/DestinationArt';
 import DaySkeleton from '../components/trip/DaySkeleton';
 import type { TripListItem } from '../types/trip';
 
@@ -62,34 +62,61 @@ const SCOPED_STYLES = `
 
 .trip-content { min-width: 0; }
 
-/* PR-P 2026-04-26：trip-actions row — embedded mode（noShell）也需要
- * visible 共編入口。topbar 被 noShell 隱藏後，user 找不到任何方式進入共編
- * sheet。這個 row 在 trip 主內容最上方，desktop / mobile 都看得到。 */
-.tp-trip-actions {
-  display: flex; gap: 6px; justify-content: flex-end;
-  padding: 8px 12px 0;
-}
-.tp-trip-action-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px;
+.tp-trip-titlebar-action {
+  width: var(--spacing-tap-min, 44px);
+  height: var(--spacing-tap-min, 44px);
+  border: 0;
   border-radius: var(--radius-full);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
+  background: transparent;
   color: var(--color-foreground);
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  display: inline-grid;
+  place-items: center;
   cursor: pointer;
-  min-height: 32px;
-  box-shadow: var(--shadow-sm);
-  transition: background 120ms, border-color 120ms;
+  transition: background 120ms, color 120ms;
 }
-.tp-trip-action-chip:hover {
+.tp-trip-titlebar-action:hover {
   background: var(--color-accent-subtle);
-  border-color: var(--color-accent);
   color: var(--color-accent-deep);
 }
-.tp-trip-action-chip .svg-icon { width: 14px; height: 14px; }
-.tp-trip-action-chip:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
+.tp-trip-titlebar-action:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+.tp-trip-titlebar-action .svg-icon { width: 20px; height: 20px; }
+.tp-titlebar .ocean-tb-btn {
+  width: var(--spacing-tap-min, 44px);
+  height: var(--spacing-tap-min, 44px);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-foreground);
+  display: inline-grid;
+  place-items: center;
+}
+.tp-titlebar .ocean-tb-btn:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+}
+.tp-titlebar .ocean-tb-btn > span[aria-hidden="true"] { display: none; }
+.tp-titlebar .ocean-tb-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.tp-titlebar .ocean-tb-btn::before {
+  content: "⋯";
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 700;
+}
+@media (max-width: 1023px) {
+  .tp-trip-titlebar-action[data-compact-hidden="true"] { display: none; }
 }
 
 /* Print mode */
@@ -672,48 +699,55 @@ function TripPageInner(
         * TripsListPage, the host provides the chrome — render only the inner
         * timeline + day nav so it matches mobile layout exactly. */}
       {!noShell && (
-        <header className="ocean-topbar sticky-nav" id="stickyNav">
-          <div className="ocean-topbar-left">
-            {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-            {trip && <span className="ocean-brand-label">{trip.title || trip.name}</span>}
-          </div>
-          <div className="ocean-topbar-right">
-            <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
-              <span aria-hidden="true">!</span>
-              <span className="ocean-tb-label">緊急</span>
-            </button>
-            <button type="button" className="ocean-tb-btn" onClick={togglePrint}>
-              <span aria-hidden="true">⎙</span>
-              <span className="ocean-tb-label">列印</span>
-            </button>
-            <OverflowMenu
-              onSheet={handlePanelItem}
-              onDownload={handleDownloadFormat}
-              isOnline={isOnline}
-            />
-          </div>
-        </header>
+        <TitleBar
+          id="stickyNav"
+          className="sticky-nav"
+          title={trip?.title || trip?.name || '行程詳情'}
+          back={() => navigate('/trips')}
+          backLabel="返回行程列表"
+          actions={
+            <>
+              <button
+                type="button"
+                className="tp-trip-titlebar-action"
+                data-compact-hidden="true"
+                onClick={() => setActiveSheet('suggestions')}
+                aria-label="開啟 AI 建議"
+                title="AI 建議"
+              >
+                <Icon name="lightbulb" />
+              </button>
+              <button
+                type="button"
+                className="tp-trip-titlebar-action"
+                data-compact-hidden="true"
+                onClick={() => setActiveSheet('collab')}
+                aria-label="開啟共編設定"
+                title="共編"
+              >
+                <Icon name="group" />
+              </button>
+              <button
+                type="button"
+                className="tp-trip-titlebar-action"
+                data-compact-hidden="true"
+                onClick={() => { void handleDownloadFormat('pdf'); }}
+                aria-label="下載行程"
+                title="下載"
+              >
+                <Icon name="download" />
+              </button>
+              <OverflowMenu
+                onSheet={handlePanelItem}
+                onDownload={handleDownloadFormat}
+                isOnline={isOnline}
+              />
+            </>
+          }
+        />
       )}
 
       <ToastContainer />
-
-      {/* PR-RR 2026-04-27：共編 chip 在 noShell 模式下 hide。embedded mode
-       * 由 TripsListPage 的 topbar 提供 共編 入口（chip in topbar action slot），
-       * 避免兩個 共編 entry 重複。Standalone /trip/:id 模式仍 render。 */}
-      {!noShell && !loading && trip && (
-        <div className="tp-trip-actions" aria-label="行程操作">
-          <button
-            type="button"
-            className="tp-trip-action-chip"
-            onClick={() => setActiveSheet('collab')}
-            data-testid="trip-actions-collab"
-            aria-label="開啟共編設定"
-          >
-            <Icon name="group" />
-            <span>共編</span>
-          </button>
-        </div>
-      )}
 
       <main className="ocean-page">
         {!loading && trip && (

@@ -211,6 +211,46 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-md); font-size: var(--font-size-callout);
 }
 
+/* F6 design-review: landing empty state — 暖色 onboarding card + chip suggestions */
+.explore-landing-empty {
+  padding: 48px 24px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  margin-top: 8px;
+}
+.explore-landing-empty .landing-eyebrow {
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--color-muted);
+}
+.explore-landing-empty .landing-title {
+  margin: 0; font-size: var(--font-size-title3); font-weight: 800;
+  color: var(--color-foreground);
+}
+.explore-landing-empty .landing-copy {
+  margin: 0 0 8px; font-size: var(--font-size-callout); color: var(--color-muted);
+  max-width: 320px;
+}
+.explore-landing-empty .landing-chips {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+}
+.explore-landing-empty .landing-chip {
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  padding: 10px 16px; border-radius: var(--radius-full);
+  background: var(--color-accent-subtle); color: var(--color-accent-deep);
+  border: 1px solid var(--color-accent-bg);
+  cursor: pointer;
+  min-height: var(--spacing-tap-min);
+  transition: background-color 120ms, color 120ms;
+}
+.explore-landing-empty .landing-chip:hover {
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
+}
+
 /* Trip picker modal */
 .tp-trip-picker-backdrop {
   position: fixed; inset: 0;
@@ -312,9 +352,7 @@ export default function ExplorePage() {
     });
   }, [saved]);
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const q = query.trim();
+  async function runSearch(q: string) {
     if (q.length < 2) {
       showToast('至少輸入 2 個字', 'error', 2000);
       return;
@@ -332,6 +370,20 @@ export default function ExplorePage() {
       setSearching(false);
     }
   }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    await runSearch(query.trim());
+  }
+
+  /** F6 design-review: chip suggestion click → 自動填欄 + 觸發搜尋。 */
+  function handleChipClick(suggestion: string) {
+    setQuery(suggestion);
+    void runSearch(suggestion);
+  }
+
+  /** F6 design-review: landing empty state suggestion chips。 */
+  const SUGGESTED_QUERIES = ['沖繩美麗海水族館', '首里城', '國際通', '古宇利大橋', '美國村'];
 
   async function handleSave(poi: PoiSearchResult) {
     setSavingIds((s) => new Set(s).add(poi.osm_id));
@@ -538,6 +590,29 @@ export default function ExplorePage() {
 
             {results.length === 0 && query && !searching && (
               <div className="explore-empty">沒有找到「{query}」的結果。換個關鍵字試試？</div>
+            )}
+
+            {/* F6 design-review: landing empty state — 沒搜尋過時給 onboarding
+              + 5 個熱門 chip，避免使用者落地看到完全空白不知道怎麼動。 */}
+            {results.length === 0 && !query && !searching && (
+              <div className="explore-landing-empty" data-testid="explore-landing-empty">
+                <div className="landing-eyebrow">從這裡開始</div>
+                <h3 className="landing-title">試試熱門 POI</h3>
+                <p className="landing-copy">輸入關鍵字搜尋，或點下方建議快速開始。</p>
+                <div className="landing-chips">
+                  {SUGGESTED_QUERIES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className="landing-chip"
+                      onClick={() => handleChipClick(s)}
+                      data-testid={`explore-suggestion-${s}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
           </>
         )}

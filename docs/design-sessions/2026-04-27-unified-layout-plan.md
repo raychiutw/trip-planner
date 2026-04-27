@@ -1,5 +1,7 @@
 # 2026-04-27 Unified Layout Plan
 
+**Status:** Implemented via OpenSpec `terracotta-pages-refactor` on 2026-04-27. Formal PR link: pending local commit/ship.
+
 ## Goal
 
 聊天、行程、地圖、探索、帳號目前已經開始使用共用 shell，但 titlebar、sidebar、bottom nav、content width、scroll chrome 行為仍不完全一致。本次決策先把規格固定，後續實作以此文件與 `DESIGN.md` 為準。

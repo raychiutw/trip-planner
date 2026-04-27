@@ -83,6 +83,21 @@ function formatChatTime(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
 }
 
+/**
+ * F7 design-review: 偵測歷史訊息中的編碼錯誤（mojibake），對應 backend
+ * functions/api/_validate.ts:detectGarbledText 的相同三條規則。Backend
+ * middleware 會擋新訊息，但 D1 已有舊 row 仍會 render — 本 helper 讓
+ * frontend 在 render 時 bail out 顯示 placeholder 而不是亂碼字元。
+ */
+export function isGarbledMessage(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  // Rule 1: U+FFFD replacement char — browser 解 UTF-8 失敗的標記
+  if (text.includes('�')) return true;
+  if (/[-ÿ]{3,}/.test(text)) return true;
+  if (/[\x80-\x9F]/.test(text)) return true;
+  return false;
+}
+
 /** Build a message pair (user bubble + assistant bubble) from a tp-request row. */
 function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const out: ChatMessage[] = [];
@@ -317,7 +332,19 @@ const SCOPED_STYLES = `
   min-height: 44px;
   flex-shrink: 0;
 }
-.tp-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-chat-send:disabled {
+  background: var(--color-secondary);
+  color: var(--color-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+/* F7 design-review: mojibake placeholder — italic muted 不搶 healthy
+ * message 視覺權重，title attribute 提供 hover hint。 */
+.tp-chat-msg-garbled {
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: var(--font-size-footnote);
+}
 .tp-chat-send:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
 `;
 
@@ -685,10 +712,19 @@ export default function ChatPage() {
                 <span className="tp-chat-typing" aria-label="AI 思考中">
                   <span /><span /><span />
                 </span>
+              ) : isGarbledMessage(m.text) ? (
+                /* F7 design-review: detect mojibake → render placeholder
+                 * 而不是 raw bytes，避免 trust signal 受損。 */
+                <span className="tp-chat-msg-garbled" aria-label="訊息含編碼錯誤" title="此訊息含編碼錯誤無法顯示">
+                  ⚠ 訊息含編碼錯誤，無法顯示
+                </span>
               ) : m.markdown ? (
                 <MarkdownText text={m.text} as="div" />
               ) : (
-                m.text
+                /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，
+                 * 配合 .tp-chat-msg 的 white-space: pre-wrap 顯示換行；
+                 * 對真的就是 backslash-n 字面的 corner case 不影響 visual。 */
+                m.text.replace(/\\n/g, '\n')
               )}
             </div>
             {m.createdAt && !m.pendingRequestId && (

@@ -78,17 +78,22 @@ describe('OverflowMenu items', () => {
   });
 });
 
-/* ===== Topbar 整合驗證 ===== */
+/* ===== TitleBar 整合驗證 ===== */
 
-describe('TripPage Ocean topbar', () => {
-  it('引入 OverflowMenu（取代 QuickPanel）', () => {
+describe('TripPage TitleBar integration', () => {
+  it('引入 TitleBar + OverflowMenu（取代 Ocean topbar / QuickPanel）', () => {
+    expect(tripPageTsx).toContain("import TitleBar from '../components/shell/TitleBar'");
     expect(tripPageTsx).toContain("import OverflowMenu from '../components/trip/OverflowMenu'");
+    expect(tripPageTsx).toContain('<TitleBar');
+    expect(tripPageTsx).not.toContain('ocean-topbar');
     expect(tripPageTsx).not.toContain('QuickPanel');
   });
 
-  it('topbar 直接暴露 緊急 / 列印（AI 編輯 link 移除 — 走 sidebar 「行程」 → /manage）', () => {
-    expect(tripPageTsx).toContain("setActiveSheet('emergency')");
-    expect(tripPageTsx).toContain('togglePrint');
+  it('TitleBar 直接暴露 AI 建議 / 共編 / PDF 下載', () => {
+    expect(tripPageTsx).toContain("setActiveSheet('suggestions')");
+    expect(tripPageTsx).toContain("setActiveSheet('collab')");
+    expect(tripPageTsx).toContain("handleDownloadFormat('pdf')");
+    expect(tripPageTsx).not.toContain("setActiveSheet('emergency')");
     // AI 編輯 link removed per user direction; sidebar 行程 nav still routes to /manage
     expect(tripPageTsx).not.toContain('AI 編輯');
   });
@@ -99,7 +104,6 @@ describe('TripPage Ocean topbar', () => {
     // Dead sheet links not in topbar
     expect(tripPageTsx).not.toContain("setActiveSheet('today-route')");
     expect(tripPageTsx).not.toContain("setActiveSheet('flights')");
-    expect(tripPageTsx).not.toContain("setActiveSheet('suggestions')");
   });
 
   it('無 FAB / Edit FAB 殘留', () => {

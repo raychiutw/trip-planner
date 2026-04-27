@@ -3,6 +3,80 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.15.0] - 2026-04-28
+
+**Ideas drag-to-itinerary — drag UX primitives + batch endpoint + design polish**。
+
+OpenSpec change `ideas-drag-to-itinerary` 38/42 task 完成（4 個剩 manual ops gate）。
+帶來行程編輯的 drag-and-drop 基礎：Ideas 拖到 Day → entry，Timeline 內拖動重排走
+單次 batch transaction，drag 完成後 5 秒 undo toast 可 revert，鍵盤使用者可用
+Space/Arrow/Enter/Esc 操作並聽到中文螢幕閱讀器播報。順手把 design-review 的
+10 個 finding（5 HIGH / 2 MEDIUM / 3 POLISH）一次清掉：H1 字級、44px 觸控目標、
+Chat 亂碼安全渲染、user message `\n` 換行、Explore landing chip 建議、
+DragOverlay 抬起感視覺、disabled button 視覺對比。
+
+### Added
+
+- **PATCH /api/trips/:id/entries/batch endpoint** — D1 atomic batch transaction
+  取代 N+1 PATCH，drag-drop reorder 結束後一次送 N entries 的 sort_order /
+  day_id / time。4 層 atomic gate：requireAuth → hasPermission(tripId) →
+  per-id ownership pre-check via JOIN trip_days → cross-trip day_id move
+  pre-check。8 integration cases 全 pass。
+- **Drag UI primitives**：
+  - `src/lib/drag-strategy.ts` smart placement + 衝突偵測（純函式）
+  - `src/lib/drag-announcements.ts` 中文 onDragStart/Over/End/Cancel announcements
+  - `src/lib/demote-strategy.ts` API orchestration (DELETE entry → PATCH idea)
+  - `src/hooks/useDragDrop.ts` PointerSensor + TouchSensor (200ms long-press) +
+    KeyboardSensor wrap
+- **Drag UI components**：
+  - `ConflictModal` 時段衝突解決（換位置 / 併排 / 取消）
+  - `UndoToast` 5 秒 revert window with reset key + role=status aria-live
+  - `DroppableIdeasSection` + `IDEAS_SECTION_DROP_ID` 常數供 V2 cross-component
+    drag wiring
+  - `DemoteConfirmModal` destructive 確認 (時段資訊會清除)
+- **TimelineRail drag reorder via batch endpoint** — handleDragEnd 從 N+1 PATCH
+  改用 PATCH /entries/batch；optimistic order override 失敗時 revert；DndContext
+  套中文 announcements。
+- **IdeasTabContent UndoToast wiring + ConflictModal 換位置/併排 scenarios** —
+  commitPromote 後 setLastPromote → 5 秒 toast → click undo 觸發 DELETE entry
+  + PATCH idea promotedToEntryId=null + reload。
+- **DragOverlay polish (F7 design-review)** — `.tp-idea-card-overlay` 加
+  `transform: scale(0.95) rotate(2deg)` + `box-shadow: 0 12px 32px ...` +
+  `dropAnimation={null}`，並 `prefers-reduced-motion` override。
+- **Explore landing empty state (F6 design-review)** — `.explore-landing-empty`
+  card 加 5 個 chip 建議（沖繩美麗海水族館 / 首里城 / 國際通 / 古宇利大橋 /
+  美國村），click 自動填欄 + 跑 search；refactor extract `runSearch(q)` 讓 form
+  submit 跟 chip click 共用。
+- **Chat mojibake safe-render (F7 design-review)** — `isGarbledMessage` helper
+  detect U+FFFD / 連續 3+ Latin Extended / C1 控制字元，render 前 bail out 顯示
+  「⚠ 訊息含編碼錯誤，無法顯示」placeholder，避免 raw bytes 破壞 trust signal。
+- **Playwright drag-flows E2E** — `tests/e2e/drag-flows.spec.js` 5 cases pass on
+  chromium：grip a11y label / cross-day ⎘⇅ popover / mobile touch target ≥32px /
+  keyboard focus + Space + Esc / aria-live region attached。
+
+### Changed
+
+- **TitleBar H1 字級提升 (F1 design-review)** — desktop 20→24px / mobile 18→22px，
+  讓 trip 標題視覺權重更接近 H2 (32px) Day name，緩解 hierarchy 倒置（完整 H1↔H2
+  semantic swap 留 ENG follow-up）。
+- **44px 觸控目標 (F2 design-review)** — ThemeToggle 三段切換 button (32→44px) +
+  TimelineRail `.ocean-rail-grip` (32→var(--spacing-tap-min)) +
+  `.tp-titlebar-back` (36→var(--spacing-tap-min))。
+- **Disabled 送出 button 視覺對比 (F9 design-review)** — `.tp-chat-send:disabled`
+  從只 opacity:0.5 改用 secondary cream 背景 + muted brown 文字 + opacity:0.6 +
+  cursor:not-allowed。
+- **Chat user message `\n` literal 換行 (F8 design-review)** — render 時
+  `replace(/\\n/g, '\n')` 配合既有 `white-space: pre-wrap` 顯示為實際換行。
+- **TimelineRail / IdeasTabContent DndContext zh-TW announcements (Section 5)** —
+  套 `accessibility={TP_DRAG_ACCESSIBILITY}` 讓螢幕閱讀器收到中文播報。
+
+### Fixed
+
+- **F4 false positive verified-no-fix** — Alert ⚠ 確認已用 `<Icon name="warning" />`
+  inline SVG（之前 thumbnail 縮圖看起來像 emoji）。
+- **F3 / F5 / F10 false positive verified-no-fix** — Times serif + pure black 只在
+  HTML/HEAD/META invisible elements；map sidebar 實際 240px 跟其他 page 一致。
+
 ## [2.14.30] - 2026-04-27
 
 **V2 共編分享信完整實作 — invitation token 系統 + 4 endpoint + InvitePage**。

@@ -1353,7 +1353,7 @@ body.dark {
     -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
   }
   .tp-titlebar-title {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin: 0;
@@ -1364,7 +1364,7 @@ body.dark {
     white-space: nowrap;
   }
 }
-/* Compact ≤760px: 56px / padding 0 16px / title 18px */
+/* Compact ≤760px: 56px / padding 0 16px / title 22px */
 @media (max-width: 760px) {
   .tp-titlebar {
     position: sticky;
@@ -1384,7 +1384,7 @@ body.dark {
     -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
   }
   .tp-titlebar-title {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin: 0;
@@ -1402,8 +1402,8 @@ body.dark {
   flex-shrink: 0;
 }
 .tp-titlebar-back {
-  width: 36px;
-  height: 36px;
+  width: var(--spacing-tap-min);
+  height: var(--spacing-tap-min);
   border-radius: var(--radius-full);
   display: grid;
   place-items: center;

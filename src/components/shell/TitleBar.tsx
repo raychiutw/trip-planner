@@ -18,6 +18,10 @@ import type { ReactNode } from 'react';
 import Icon from '../shared/Icon';
 
 export interface TitleBarProps {
+  /** Optional DOM id for pages that align scroll offsets to the sticky chrome. */
+  id?: string;
+  /** Optional extra class for page-specific print / scroll rules. */
+  className?: string;
   /** Page title — primary identity. ReactNode 允許 inline accent span / `<br/>`。 */
   title: ReactNode;
   /** 提供 callback 即顯示左側 36×36 返回 button（行程詳情頁專用）。 */
@@ -28,9 +32,10 @@ export interface TitleBarProps {
   backLabel?: string;
 }
 
-export default function TitleBar({ title, back, actions, backLabel = '返回' }: TitleBarProps) {
+export default function TitleBar({ id, className, title, back, actions, backLabel = '返回' }: TitleBarProps) {
+  const headerClass = className ? `tp-titlebar ${className}` : 'tp-titlebar';
   return (
-    <header className="tp-titlebar" data-titlebar="true">
+    <header id={id} className={headerClass} data-titlebar="true">
       {back && (
         <button
           type="button"

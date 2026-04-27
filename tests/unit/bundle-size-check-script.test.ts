@@ -56,3 +56,17 @@ describe('ci.yml — bundle size gate step', () => {
     expect(CI_YML).toMatch(/THRESHOLD_KB:\s*300/);
   });
 });
+
+describe('ci.yml — Playwright matrix gate', () => {
+  it('PR 只跑 desktop chromium', () => {
+    expect(CI_YML).toMatch(/github\.event_name[\s\S]*pull_request/);
+    expect(CI_YML).toMatch(/npx playwright install --with-deps chromium/);
+    expect(CI_YML).toMatch(/npx playwright test --project=chromium/);
+  });
+
+  it('push master 跑完整 Playwright matrix', () => {
+    expect(CI_YML).toMatch(/push:[\s\S]*branches:\s*\[master\]/);
+    expect(CI_YML).toMatch(/npx playwright install --with-deps chromium webkit/);
+    expect(CI_YML).toMatch(/else[\s\S]*npx playwright test/);
+  });
+});
