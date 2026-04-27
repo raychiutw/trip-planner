@@ -3,6 +3,7 @@
 !.claude/skills/
 !.claude/memory-sync/
 !.claude/settings.json
+.codex/
 .env
 .env.local
 .dev.vars

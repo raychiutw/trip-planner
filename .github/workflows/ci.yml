@@ -2,6 +2,8 @@ name: CI
 on:
   pull_request:
     branches: [master]
+  push:
+    branches: [master]
 
 jobs:
   ci:
@@ -38,3 +40,19 @@ jobs:
         run: bash scripts/bundle-size-check.sh
         env:
           THRESHOLD_KB: 300
+
+      - name: Install Playwright browsers
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx playwright install --with-deps chromium
+          else
+            npx playwright install --with-deps chromium webkit
+          fi
+
+      - name: Playwright E2E (PR Chrome / main full matrix)
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx playwright test --project=chromium
+          else
+            npx playwright test
+          fi

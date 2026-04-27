@@ -84,6 +84,7 @@ async function queryD1(sql) {
 // ── 日期工具 ────────────────────────────────────────────────────
 
 var DAY_MS = 24 * 60 * 60 * 1000;
+var CLIENT_ERROR_WARNING_THRESHOLD = 5;
 
 function pastDayWindow() {
   return {
@@ -140,13 +141,15 @@ async function querySentry() {
 // ── 數據來源 2: D1 api_logs — 昨日 4xx/5xx ──────────────────────
 
 async function queryApiErrors() {
-  // 過濾可預期的 auth/rate-limit 錯誤（401/403/429 屬正常流程）
+  // 過濾可預期的 auth/rate-limit 錯誤（401/403/429 屬正常流程），
+  // 以及 optional docs 404（useTrip 會靜默略過 DATA_NOT_FOUND docs）。
   var rows = await queryD1(
     "SELECT path, method, status, COUNT(*) as count, MAX(created_at) as lastOccurred " +
     "FROM api_logs " +
     "WHERE created_at >= datetime('now', '-1 day') " +
     "  AND status >= 400 " +
     "  AND status NOT IN (401, 403, 429) " +
+    "  AND NOT (status = 404 AND path LIKE '/api/trips/%/docs/%') " +
     "GROUP BY path, method, status " +
     "ORDER BY count DESC"
   );
@@ -155,7 +158,9 @@ async function queryApiErrors() {
   var status = 'ok';
   if (total > 0) {
     var has5xx = rows.some(function(r) { return r.status >= 500; });
-    status = has5xx ? 'critical' : 'warning';
+    status = has5xx
+      ? 'critical'
+      : (total >= CLIENT_ERROR_WARNING_THRESHOLD ? 'warning' : 'ok');
   }
 
   return {

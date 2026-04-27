@@ -11,7 +11,7 @@ function expectColor(actual: string, expected: string) {
 
 test.describe('tokens.css Layer 驗證', () => {
 
-  test('CSS custom properties 正確定義（Ocean 預設主題）', async ({ page }) => {
+  test('CSS custom properties 正確定義（Terracotta 預設主題）', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(300);
@@ -28,15 +28,15 @@ test.describe('tokens.css Layer 驗證', () => {
       };
     });
 
-    expectColor(tokens.accent, '#0077B6');
-    expectColor(tokens.background, '#FFFFFF');
-    expectColor(tokens.foreground, '#222222');
+    expectColor(tokens.accent, '#D97848');
+    expectColor(tokens.background, '#FFFBF5');
+    expectColor(tokens.foreground, '#2A1F18');
     expect(tokens.radiusMd).toBe('8px');
     expect(tokens.spacing4).toBe('16px');
     expect(tokens.fontSizeBody).toBe('1.0625rem');
   });
 
-  test('深色模式 Ocean deep-navy 覆蓋正確', async ({ page }) => {
+  test('深色模式 Terracotta deep-cocoa 覆蓋正確', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(300);
@@ -55,9 +55,9 @@ test.describe('tokens.css Layer 驗證', () => {
       };
     });
 
-    expectColor(tokens.accent, '#48CAE4');
-    expectColor(tokens.background, '#0D1B2A');
-    expectColor(tokens.foreground, '#E0F4FA');
+    expectColor(tokens.accent, '#E89968');
+    expectColor(tokens.background, '#1A140F');
+    expectColor(tokens.foreground, '#F5EBDD');
   });
 
   test('Tailwind utilities layer 存在', async ({ page }) => {
