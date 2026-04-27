@@ -351,14 +351,16 @@ function coverClass(countries: string | null | undefined): string {
 }
 
 function eyebrow(countries: string | null | undefined, dayCount: number | undefined): string {
+  // Section 4.7 (terracotta-ui-parity-polish): mockup eyebrow 用中文 (line 6904)
+  // 取代既有 「JAPAN · 12 DAYS」全英文。
   const c = (countries ?? '').toUpperCase().trim();
   const country =
-    c.includes('JP') ? 'JAPAN' :
-    c.includes('KR') ? 'KOREA' :
-    c.includes('TW') ? 'TAIWAN' :
-    c || 'TRIP';
+    c.includes('JP') ? '日本' :
+    c.includes('KR') ? '韓國' :
+    c.includes('TW') ? '台灣' :
+    c || '行程';
   if (typeof dayCount === 'number' && dayCount > 0) {
-    return `${country} · ${dayCount} ${dayCount === 1 ? 'DAY' : 'DAYS'}`;
+    return `${country} · ${dayCount} 天`;
   }
   return country;
 }
@@ -710,8 +712,9 @@ export default function TripsListPage() {
                   <line x1="16" y1="3" x2="16" y2="7" />
                 </svg>
               </div>
-              <h2>還沒開始任何行程</h2>
-              <p>建立第一個行程，AI 會幫你排日程、餐廳、住宿。</p>
+              {/* Section 4.7 (terracotta-ui-parity-polish): mockup line 7101-7102 文案 */}
+              <h2>還沒有行程</h2>
+              <p>建立第一個行程，開始規劃你的下一趟旅程。也可以從探索頁尋找靈感。</p>
               <button
                 type="button"
                 onClick={openNewTrip}

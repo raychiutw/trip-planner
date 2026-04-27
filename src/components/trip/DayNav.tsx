@@ -282,13 +282,15 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               onTouchEnd={handleTouchEnd}
             >
               <div className="dn-head">
-                <span className="dn-eyebrow">{parts.eyebrow}</span>
-                {isToday && <span className="dn-weather" aria-label="今日">TODAY</span>}
+                {/* Section 4.4 (terracotta-ui-parity-polish): mockup eyebrow
+                 * 「DAY 03 · 今天」拿「· 今天」 suffix 取代 TODAY pill；date
+                 * 行去掉 dow 英文 extra row。 */}
+                <span className="dn-eyebrow">
+                  {parts.eyebrow}
+                  {isToday && <span className="dn-eyebrow-today" aria-label="今日"> · 今天</span>}
+                </span>
               </div>
-              <div className="dn-date">
-                {parts.date}
-                {parts.dow && <span className="dn-dow">{parts.dow}</span>}
-              </div>
+              <div className="dn-date">{parts.date}</div>
               {d.label && <div className="dn-area">{d.label}</div>}
               {showTooltip && (
                 <span

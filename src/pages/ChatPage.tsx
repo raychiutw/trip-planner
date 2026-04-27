@@ -766,13 +766,17 @@ export default function ChatPage() {
           disabled={composerDisabled}
           data-testid="chat-input"
         />
+        {/* Section 4.8 (terracotta-ui-parity-polish): mockup icon-only send button
+         * (line 7245-7247)，aria-label「送出」保留 a11y。inflight 顯示 hourglass icon
+         * 取代「送出中…」文字。 */}
         <button
           type="submit"
           className="tp-chat-send"
           disabled={composerDisabled || !input.trim()}
+          aria-label={inflightId ? '送出中' : '送出'}
           data-testid="chat-send"
         >
-          {inflightId ? '送出中…' : '送出'}
+          <Icon name={inflightId ? 'hourglass' : 'send'} />
         </button>
       </form>
     </div>

@@ -510,7 +510,8 @@ export default function ExplorePage() {
               title="我的收藏（儲存池）"
               data-testid="explore-saved-titlebar"
             >
-              <Icon name="star" />
+              {/* Section 4.9 (terracotta-ui-parity-polish): mockup「我的收藏」 heart icon (line 7294/7370) */}
+              <Icon name="heart" />
             </button>
           }
         />

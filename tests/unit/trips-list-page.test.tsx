@@ -85,9 +85,10 @@ describe('TripsListPage', () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
-    expect(screen.getByText('JAPAN · 5 DAYS')).toBeTruthy();
+    // Section 4.7 (terracotta-ui-parity-polish): eyebrow 中文化「日本 · N 天」對齊 mockup
+    expect(screen.getByText('日本 · 5 天')).toBeTruthy();
     expect(screen.getByText('7/26 – 7/30 · 2 旅伴')).toBeTruthy();
-    expect(screen.getByText('KOREA · 4 DAYS')).toBeTruthy();
+    expect(screen.getByText('韓國 · 4 天')).toBeTruthy();
   });
 
   it('trailing 新增行程 card present when trips exist and opens modal on click', async () => {

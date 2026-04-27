@@ -30,7 +30,7 @@ import Icon from '../shared/Icon';
 import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'explore' | 'login';
+  key: 'chat' | 'trips' | 'map' | 'explore' | 'account' | 'login';
   label: string;
   href: string;
   icon: string;
@@ -38,14 +38,21 @@ interface NavItemConfig {
   matchPrefixes: readonly string[];
   /** When true, match only the exact prefix — no nested sub-routes. */
   exactOnly?: boolean;
+  /** When true, item only shows for logged-in users (Section 2 account-hub-page) */
+  authOnly?: boolean;
+  /** When true, item only shows for logged-out users */
+  guestOnly?: boolean;
 }
 
+// Section 2 (terracotta-account-hub-page): logged-in 第 5 nav 為「帳號」
+// (mockup line 5108-5112)，取代 logged-out 的「登入」slot。
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
   { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
   { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
   { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
-  { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
+  { key: 'account', label: '帳號', href: '/account', icon: 'user',   matchPrefixes: ['/account'], authOnly: true },
+  { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'], guestOnly: true },
 ];
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
@@ -58,8 +65,10 @@ function isItemActive(pathname: string, item: NavItemConfig): boolean {
 
 const SCOPED_STYLES = `
 .tp-sidebar {
-  background: var(--color-background);
-  border-right: 1px solid var(--color-border);
+  /* Section 4.1 (terracotta-ui-parity-polish): mockup dark sidebar
+   * (line 5126) — color-foreground 深棕底 on cream page。 */
+  background: var(--color-foreground);
+  border-right: 1px solid var(--color-foreground);
   padding: 20px 14px 16px;
   display: flex; flex-direction: column;
   gap: 4px;
@@ -70,7 +79,8 @@ const SCOPED_STYLES = `
   padding: 6px 12px 20px;
   display: flex; align-items: center; gap: 8px;
   font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
-  color: var(--color-foreground);
+  /* Dark sidebar 上文字反白 */
+  color: var(--color-background);
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
@@ -78,27 +88,34 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column; gap: 2px;
 }
 .tp-nav-item {
+  /* Section 4.1 (terracotta-ui-parity-polish): dark sidebar 上 inactive
+   * 用半透明 white 替代 muted (muted 在深棕底對比不夠)。font-weight 600
+   * 對齊 mockup line 5129。 */
   display: flex; align-items: center; gap: 12px;
   padding: 10px 14px; border-radius: 10px;
-  color: var(--color-muted);
-  font-size: 14px; font-weight: 500;
+  color: rgba(255, 251, 245, 0.6);
+  font-size: 14px; font-weight: 600;
   cursor: pointer; text-decoration: none;
   transition: background 150ms var(--transition-timing-function-apple),
               color 150ms var(--transition-timing-function-apple);
   min-height: var(--spacing-tap-min);
 }
-.tp-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
-.tp-nav-item.is-active {
-  background: var(--color-foreground);
+.tp-nav-item:hover {
+  background: rgba(255, 251, 245, 0.08);
   color: var(--color-background);
-  font-weight: 600;
+}
+.tp-nav-item.is-active {
+  /* mockup HIGH active 為 accent 實心 (line 5128) */
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
 .tp-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
 
 .tp-sidebar-cta {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+  /* Dark sidebar 上 border 用半透明 white */
+  border-top: 1px solid rgba(255, 251, 245, 0.12);
   display: flex; flex-direction: column; gap: 8px;
 }
 .tp-new-trip-btn {
@@ -130,10 +147,11 @@ const SCOPED_STYLES = `
 .tp-account-card {
   padding: 12px;
   border-radius: var(--radius-lg);
-  background: var(--color-accent-subtle);
+  /* Dark sidebar 上 account card 用半透明 white over dark 取代 accent-subtle */
+  background: rgba(255, 251, 245, 0.08);
   display: flex; align-items: center; gap: 10px;
   text-decoration: none;
-  color: inherit;
+  color: var(--color-background);
   transition: filter 120ms;
   min-height: var(--spacing-tap-min);
 }
@@ -152,12 +170,14 @@ const SCOPED_STYLES = `
 }
 .tp-account-card .tp-account-name {
   font-size: 13px; font-weight: 700;
-  color: var(--color-foreground);
+  /* Dark sidebar：name 用 reverse foreground (cream on dark) */
+  color: var(--color-background);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tp-account-card .tp-account-email {
   font-size: var(--font-size-caption2);
-  color: var(--color-accent);
+  /* Dark sidebar：email 用半透明 cream */
+  color: rgba(255, 251, 245, 0.6);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 `;
@@ -182,11 +202,13 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
   const { pathname } = useLocation();
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
 
-  // Logged in: hide '登入' (use chip + 登出 link 在底部 instead).
-  // Logged out: show all 5 nav items including 登入.
-  const visibleNavItems = user
-    ? NAV_ITEMS.filter((item) => item.key !== 'login')
-    : NAV_ITEMS;
+  // Section 2 (terracotta-account-hub-page): logged-in 顯示「帳號」隱藏「登入」；
+  // logged-out 反之。
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.authOnly) return !!user;
+    if (item.guestOnly) return !user;
+    return true;
+  });
 
   return (
     <>
@@ -218,14 +240,20 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
 
           {user ? (
             <Link
-              to="/settings/sessions"
+              to="/account"
               className="tp-account-card"
               data-testid="sidebar-account-card"
               aria-label={`帳號設定：${user.name}`}
             >
               <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
               <div className="tp-account-body">
-                <div className="tp-account-name">{user.name}</div>
+                {/* Section 4.1 (terracotta-ui-parity-polish): mockup line 5132
+                 * 規定 name.length > 10 → slice(0,10)+'…' JS-level truncation。
+                 * Sidebar nav 點 Account card 改 navigate /account（取代既有
+                 * /settings/sessions直連）— Section 2 account-hub-page 對齊。 */}
+                <div className="tp-account-name">
+                  {user.name.length > 10 ? `${user.name.slice(0, 10)}…` : user.name}
+                </div>
                 <div className="tp-account-email">{user.email}</div>
               </div>
             </Link>
