@@ -3,8 +3,8 @@ import { lsSet, lsGet } from '../lib/localStorage';
 
 export type ColorMode = 'light' | 'auto' | 'dark';
 
-/** Ocean theme color values (light / dark) — for <meta name="theme-color">. */
-const OCEAN_COLORS = { light: '#0077B6', dark: '#0D1B2A' } as const;
+/** Theme color values (light / dark) — for <meta name="theme-color">. Mirrors V2 Terracotta `--color-accent`. */
+const THEME_COLORS = { light: '#D97848', dark: '#1A140F' } as const;
 
 /** Resolve whether dark class should be applied for a given color mode. */
 function resolveDark(mode: ColorMode): boolean {
@@ -31,7 +31,7 @@ function readColorMode(): ColorMode {
 function updateMetaThemeColor(dark: boolean) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute('content', dark ? OCEAN_COLORS.dark : OCEAN_COLORS.light);
+    meta.setAttribute('content', dark ? THEME_COLORS.dark : THEME_COLORS.light);
   }
 }
 

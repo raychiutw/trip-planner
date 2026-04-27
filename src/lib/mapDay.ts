@@ -3,7 +3,7 @@
  * POI Schema: API returns merged pois + trip_pois rows.
  */
 
-import type { TimelineEntryData, TravelData } from '../components/trip/TimelineEvent';
+import type { TimelineEntryData, TravelData, PoiPhoto } from '../components/trip/TimelineEvent';
 import type { NavLocation } from '../components/trip/MapLinks';
 import type { InfoBoxData } from '../components/trip/InfoBox';
 import type { RestaurantData } from '../components/trip/Restaurant';
@@ -111,6 +111,8 @@ interface RawEntryPoi {
   lat?: number | null;
   lng?: number | null;
   googleRating?: number | null;
+  /** v2.12 Wave 3：JSON-encoded TEXT — array of { url, thumbUrl?, caption?, source?, attribution? } */
+  photos?: string | null;
 }
 
 /** Raw timeline entry as returned by the API (Phase 3：spatial 欄位只存在 poi). */
@@ -211,6 +213,8 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const effMaps = poi?.maps ?? null;
   const effMapcode = poi?.mapcode ?? null;
   const effGoogleRating = poi?.googleRating ?? null;
+  // v2.12 Wave 3：parse pois.photos JSON 字串。malformed → 視為 null（不 throw）。
+  const effPhotos: PoiPhoto[] | null = parsePhotos(poi?.photos);
 
   const locations: NavLocation[] = [];
   if (effMaps || effMapcode) {
@@ -248,6 +252,25 @@ export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
     travel: travelData,
     locations: locations.length > 0 ? locations : null,
     infoBoxes: infoBoxes.length > 0 ? infoBoxes : null,
+    photos: effPhotos,
   };
+}
+
+/**
+ * Parse `pois.photos` JSON-encoded TEXT column. Returns null on missing /
+ * empty / malformed input — frontend then falls back to placeholder UI.
+ */
+function parsePhotos(raw: string | null | undefined): PoiPhoto[] | null {
+  if (!raw || typeof raw !== 'string') return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const valid: PoiPhoto[] = parsed.filter(
+      (p): p is PoiPhoto => p && typeof p === 'object' && typeof (p as { url?: unknown }).url === 'string',
+    );
+    return valid.length > 0 ? valid : null;
+  } catch {
+    return null;
+  }
 }
 

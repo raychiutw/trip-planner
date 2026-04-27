@@ -1,0 +1,242 @@
+/**
+ * DesktopSidebar — app-level sidebar.
+ *
+ * 5-item primary nav matching mockup-trip-v2 / mockup-shell-v2-terracotta:
+ *   聊天 / 行程 / 地圖 / 探索 / 登入
+ *
+ * Settings (connected-apps, developer/apps, sessions) reach via direct URL
+ * or future account-chip menu — they're admin/maintenance routes, not core
+ * "produce/consume trips" actions.
+ *
+ * 「行程」nav matches /trips AND /manage AND /trip/* so per-trip sub-routes
+ * stay highlighted on this nav, not the global /map view.
+ *
+ * 聊天 + 地圖 are placeholder pages (chat with LLM concierge / cross-trip
+ * map). Visible in sidebar to set roadmap expectations even before full
+ * implementation lands.
+ *
+ * /devex-review 2026-04-26：sidebar 拿掉「登出」link。登出走 account chip →
+ * /settings/sessions 內的 device row revoke，避免 destructive action 跟主要
+ * nav 同框，降低誤點機率。
+ *
+ * V2-P7 PR-O 2026-04-26：sidebar 拿掉「管理」 nav item。原 admin 共編管理
+ * 功能搬進每個 trip 的 OverflowMenu →「共編設定」 sheet（CollabSheet），
+ * 一般 user 也可管自己 owner 行程，不再侷限 admin。
+ */
+import type { ReactNode } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import clsx from 'clsx';
+import Icon from '../shared/Icon';
+import ThemeToggle from '../shared/ThemeToggle';
+
+interface NavItemConfig {
+  key: 'chat' | 'trips' | 'map' | 'explore' | 'login';
+  label: string;
+  href: string;
+  icon: string;
+  /** Paths that keep this nav highlighted (exact match OR followed by `/`). */
+  matchPrefixes: readonly string[];
+  /** When true, match only the exact prefix — no nested sub-routes. */
+  exactOnly?: boolean;
+}
+
+const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
+  { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
+  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
+  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
+  { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
+  { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
+];
+
+function isItemActive(pathname: string, item: NavItemConfig): boolean {
+  for (const prefix of item.matchPrefixes) {
+    if (pathname === prefix) return true;
+    if (!item.exactOnly && pathname.startsWith(prefix + '/')) return true;
+  }
+  return false;
+}
+
+const SCOPED_STYLES = `
+.tp-sidebar {
+  background: var(--color-background);
+  border-right: 1px solid var(--color-border);
+  padding: 20px 14px 16px;
+  display: flex; flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  overflow-y: auto;
+}
+.tp-sidebar-brand {
+  padding: 6px 12px 20px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--color-foreground);
+}
+.tp-sidebar-brand .accent-dot { color: var(--color-accent); }
+
+.tp-sidebar-nav {
+  display: flex; flex-direction: column; gap: 2px;
+}
+.tp-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 10px;
+  color: var(--color-muted);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: background 150ms var(--transition-timing-function-apple),
+              color 150ms var(--transition-timing-function-apple);
+  min-height: var(--spacing-tap-min);
+}
+.tp-nav-item:hover { background: var(--color-hover); color: var(--color-foreground); }
+.tp-nav-item.is-active {
+  background: var(--color-foreground);
+  color: var(--color-background);
+  font-weight: 600;
+}
+.tp-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+.tp-sidebar-cta {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.tp-new-trip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px; border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border: none;
+  font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; min-height: var(--spacing-tap-min);
+  transition: filter 150ms var(--transition-timing-function-apple);
+}
+.tp-new-trip-btn:hover { filter: brightness(var(--hover-brightness)); }
+.tp-new-trip-btn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.tp-user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; border-radius: var(--radius-md);
+  color: var(--color-muted); font-size: 13px;
+}
+.tp-user-chip .tp-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--color-accent-bg);
+  color: var(--color-accent);
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+
+.tp-account-card {
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-subtle);
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: filter 120ms;
+  min-height: var(--spacing-tap-min);
+}
+.tp-account-card:hover { filter: brightness(var(--hover-brightness)); }
+.tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tp-account-card .tp-avatar-md {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  display: grid; place-items: center;
+  font-size: 14px; font-weight: 800; flex-shrink: 0;
+}
+.tp-account-card .tp-account-body {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.tp-account-card .tp-account-name {
+  font-size: 13px; font-weight: 700;
+  color: var(--color-foreground);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tp-account-card .tp-account-email {
+  font-size: var(--font-size-caption2);
+  color: var(--color-accent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+`;
+
+export interface SidebarUser {
+  name: string;
+  email: string;
+}
+
+
+export interface DesktopSidebarProps {
+  /** Current authenticated user — null = 未登入 */
+  user?: SidebarUser | null;
+  /** @deprecated PR-O：管理 nav 已廢，admin 改走 trip-level CollabSheet。
+   * Prop 保留以避免 ConnectedSidebar 端 break，但已無作用。 */
+  isAdmin?: boolean;
+  /** Optional brand slot override — 預設 "Tripline." */
+  brand?: ReactNode;
+}
+
+export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
+  const { pathname } = useLocation();
+  const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
+
+  // Logged in: hide '登入' (use chip + 登出 link 在底部 instead).
+  // Logged out: show all 5 nav items including 登入.
+  const visibleNavItems = user
+    ? NAV_ITEMS.filter((item) => item.key !== 'login')
+    : NAV_ITEMS;
+
+  return (
+    <>
+      <style>{SCOPED_STYLES}</style>
+      <div className="tp-sidebar" data-testid="desktop-sidebar">
+        <div className="tp-sidebar-brand">
+          {brand ?? (<>Tripline<span className="accent-dot">.</span></>)}
+        </div>
+
+        <nav className="tp-sidebar-nav" aria-label="主要功能">
+          {visibleNavItems.map((item) => {
+            const active = isItemActive(pathname, item);
+            return (
+              <Link
+                key={item.key}
+                to={item.href}
+                className={clsx('tp-nav-item', active && 'is-active')}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="tp-sidebar-cta">
+          <ThemeToggle testId="sidebar-theme" />
+
+          {user ? (
+            <Link
+              to="/settings/sessions"
+              className="tp-account-card"
+              data-testid="sidebar-account-card"
+              aria-label={`帳號設定：${user.name}`}
+            >
+              <div className="tp-avatar-md" aria-hidden="true">{initial}</div>
+              <div className="tp-account-body">
+                <div className="tp-account-name">{user.name}</div>
+                <div className="tp-account-email">{user.email}</div>
+              </div>
+            </Link>
+          ) : (
+            <div className="tp-user-chip" data-testid="sidebar-user-chip">
+              <div className="tp-avatar" aria-hidden="true">?</div>
+              <span>未登入</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}

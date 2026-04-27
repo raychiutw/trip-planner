@@ -7,8 +7,18 @@
 
 import type { Env } from './_types';
 import { detectGarbledText } from './_validate';
+import { getSessionUser } from './_session';
+import { D1Adapter, type AdapterPayload } from '../../src/server/oauth-d1-adapter';
 
 import { AppError, errorResponse } from './_errors';
+
+interface AccessTokenPayload extends AdapterPayload {
+  client_id: string;
+  /** null for client_credentials grants (service-to-service) */
+  user_id: string | null;
+  scopes: string[];
+  grantId: string;
+}
 
 function getCookie(request: Request, name: string): string | null {
   const cookieHeader = request.headers.get('Cookie');
@@ -44,19 +54,6 @@ export function detectSource(
   if (clientId && clientSecret) return 'service_token';
   if (getCookie(request, 'CF_Authorization')) return 'user_jwt';
   return 'anonymous';
-}
-
-/** Decodes a JWT payload without signature verification. Cloudflare Access validates the JWT at the edge. */
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
-    const decoded = atob(payload);
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
 }
 
 export const onRequest: PagesFunction<Env> = async (context) => {
@@ -146,15 +143,26 @@ export function isAllowedOrigin(origin: string, env: Env): boolean {
  * CSRF protection for mutating requests.
  *
  * Validates the Origin header for POST/PUT/PATCH/DELETE requests.
- * Requests without an Origin header are only permitted when they carry a
- * CF-Access-Client-Id header (i.e. service-token CLI calls that don't set
- * Origin).
+ *
+ * Bypasses (these endpoints carry their own auth, not session-cookie-based):
+ *   - `/api/oauth/*` — OAuth wire endpoints authenticate via client_secret /
+ *     PKCE / Bearer token. Origin is irrelevant; spec-compliant clients
+ *     (curl, server-to-server) won't send it.
+ *   - `Authorization: Bearer` header present — V2 service token (client_credentials
+ *     grant). Bearer-auth requests come from CLI / cron, not browsers.
+ *   - `CF-Access-Client-Id` + `CF-Access-Client-Secret` — legacy service token.
  */
 /** @internal — exported for unit testing */
-export function checkCsrf(request: Request, env: Env): Response | null {
+export function checkCsrf(request: Request, env: Env, url: URL): Response | null {
   const method = request.method.toUpperCase();
   const mutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
   if (!mutating) return null;
+
+  // OAuth wire endpoints handle their own auth — skip session-cookie CSRF.
+  if (url.pathname.startsWith('/api/oauth/')) return null;
+
+  // V2 Bearer token = service-to-service, not browser. No Origin needed.
+  if (request.headers.get('Authorization')?.startsWith('Bearer ')) return null;
 
   const origin = request.headers.get('Origin');
   if (!origin) {
@@ -219,7 +227,7 @@ async function handleAuth(
   }
 
   // CSRF protection for all mutating requests
-  const csrfError = checkCsrf(request, env);
+  const csrfError = checkCsrf(request, env, url);
   if (csrfError) return csrfError;
 
   // Companion scope restriction — tp-request scheduler sends this header
@@ -242,6 +250,23 @@ async function handleAuth(
     }
   }
 
+  // V2-P1：/api/oauth/* 全部 public — OAuth endpoints 自管 auth
+  // (PKCE / client_secret / JWT)，由 oidc-provider 處理。User-session middleware
+  // 不該攔截，否則 external client + browser OAuth flow 都被 401。
+  // 包含：spike (V2 Day 0) / .well-known/openid-configuration / authorize / token /
+  // revoke / par 等所有 OAuth endpoints。
+  if (url.pathname.startsWith('/api/oauth/')) {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
+  // V2 公開 capability probe：/api/public-config — login/signup page 需要在沒
+  // session 的情況下知道哪些 provider 開了。Side-effect-free，無 secrets exposed。
+  if (request.method === 'GET' && url.pathname === '/api/public-config') {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // 公開端點：POST /api/reports（使用者錯誤回報，不需認證）
   if (request.method === 'POST' && url.pathname === '/api/reports') {
     (context.data as Record<string, unknown>).auth = null;
@@ -254,94 +279,91 @@ async function handleAuth(
     return context.next();
   }
 
-  // 公開讀取：GET /api/trips/** 不需認證
-  if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
-    // Service Token（CLI / scheduler）→ admin
-    // Security assumption: Cloudflare Access validates CF-Access-Client-Id and
-    // CF-Access-Client-Secret at the edge. We require both headers as
-    // defense-in-depth so that a leaked Client-Id alone is not sufficient.
-    const stClientId = request.headers.get('CF-Access-Client-Id');
-    const stClientSecret = request.headers.get('CF-Access-Client-Secret');
-    if (stClientId && stClientSecret) {
-      (context.data as Record<string, unknown>).auth = {
-        email: env.ADMIN_EMAIL,
-        isAdmin: true,
-        isServiceToken: true,
-      };
-      return context.next();
+  // V2 OAuth — sole auth path (CF Access blocks below are kept transitional during cutover).
+  //
+  // Order: try V2 session cookie first (browser users), then V2 Bearer token (service
+  // calls). If either is present and valid, decorate auth and return next() —
+  // skipping the CF Access JWT path entirely. CF Access still works as fallback for
+  // sessions issued before the cutover; once `_session.ts` becomes the sole token
+  // issuer the CF JWT block below becomes dead code.
+  const v2Session = await getSessionUser(request, env);
+  if (v2Session) {
+    let userEmail = '';
+    try {
+      const userRow = await env.DB
+        .prepare('SELECT email FROM users WHERE id = ?')
+        .bind(v2Session.uid)
+        .first<{ email: string }>();
+      if (userRow?.email) userEmail = userRow.email.toLowerCase();
+    } catch {
+      // best-effort — DB miss leaves email empty, isAdmin will be false
     }
-    // 嘗試解析 JWT auth（給 admin 功能用，如 ?all=1），但不強制
-    const token = getCookie(request, 'CF_Authorization');
-    if (token) {
-      const payload = decodeJwtPayload(token);
-      if (payload?.email) {
-        const email = String(payload.email).toLowerCase();
-        (context.data as Record<string, unknown>).auth = {
-          email,
-          isAdmin: env.ADMIN_EMAIL
-            ? email === env.ADMIN_EMAIL.toLowerCase()
-            : false,
-          isServiceToken: false,
-        };
-      } else if (payload?.common_name) {
-        (context.data as Record<string, unknown>).auth = {
-          email: env.ADMIN_EMAIL,
-          isAdmin: true,
-          isServiceToken: true,
-        };
+    (context.data as Record<string, unknown>).auth = {
+      email: userEmail,
+      isAdmin: env.ADMIN_EMAIL ? userEmail === env.ADMIN_EMAIL.toLowerCase() : false,
+      isServiceToken: false,
+    };
+    return context.next();
+  }
+
+  // V2 service-to-service: Authorization: Bearer <access_token> issued via
+  // /api/oauth/token grant_type=client_credentials. user_id is null on these tokens
+  // (no user — pure client). Admin scope marks the client as service-admin.
+  const authHeader = request.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const bearerToken = authHeader.slice(7).trim();
+    if (bearerToken) {
+      try {
+        const tokenAdapter = new D1Adapter(env.DB, 'AccessToken');
+        const tokenRow = (await tokenAdapter.find(bearerToken)) as AccessTokenPayload | undefined;
+        if (tokenRow) {
+          // user-bound bearer (authorization_code grant): look up email from users
+          // service-bound bearer (client_credentials): user_id null, treat as service token
+          let email = '';
+          let isAdmin = false;
+          let isServiceToken = false;
+          if (tokenRow.user_id === null) {
+            isServiceToken = true;
+            email = env.ADMIN_EMAIL ?? '';
+            isAdmin = tokenRow.scopes.includes('admin');
+          } else {
+            try {
+              const userRow = await env.DB
+                .prepare('SELECT email FROM users WHERE id = ?')
+                .bind(tokenRow.user_id)
+                .first<{ email: string }>();
+              if (userRow?.email) {
+                email = userRow.email.toLowerCase();
+                isAdmin = env.ADMIN_EMAIL ? email === env.ADMIN_EMAIL.toLowerCase() : false;
+              }
+            } catch {
+              /* best-effort */
+            }
+          }
+          (context.data as Record<string, unknown>).auth = {
+            email,
+            isAdmin,
+            isServiceToken,
+            scopes: tokenRow.scopes,
+            clientId: tokenRow.client_id,
+          };
+          return context.next();
+        }
+      } catch {
+        // best-effort lookup — fall through to CF Access fallback if Bearer invalid
       }
     }
+  }
+
+  // 公開讀取：GET /api/trips/** 不需認證 — anonymous 直接 next() 不附 auth。
+  // V2 logged-in users were already auth-decorated by the V2 session block
+  // above, so they reach this branch only when V2 fell through (anonymous).
+  if (request.method === 'GET' && url.pathname.startsWith('/api/trips')) {
     return context.next();
   }
 
-  // Service Token 辨識（header 未被 Access 消化時）
-  // Security assumption: Cloudflare Access validates both headers at the edge.
-  // We require both CF-Access-Client-Id AND CF-Access-Client-Secret as
-  // defense-in-depth so a leaked Client-Id alone does not grant admin access.
-  const clientId = request.headers.get('CF-Access-Client-Id');
-  const clientSecret = request.headers.get('CF-Access-Client-Secret');
-  if (clientId && clientSecret) {
-    (context.data as Record<string, unknown>).auth = {
-      email: env.ADMIN_EMAIL,
-      isAdmin: true,
-      isServiceToken: true,
-    };
-    return context.next();
-  }
-
-  // JWT 認證（Cloudflare Access 設定的 cookie）
-  const token = getCookie(request, 'CF_Authorization');
-  if (!token) {
-    return errorResponse(new AppError('AUTH_REQUIRED'));
-  }
-
-  const payload = decodeJwtPayload(token);
-  if (!payload) {
-    return errorResponse(new AppError('AUTH_INVALID'));
-  }
-
-  // Service Token JWT：Access 消化 header 後發 JWT，有 common_name 但無 email
-  if (!payload.email && payload.common_name) {
-    (context.data as Record<string, unknown>).auth = {
-      email: env.ADMIN_EMAIL,
-      isAdmin: true,
-      isServiceToken: true,
-    };
-    return context.next();
-  }
-
-  if (!payload.email) {
-    return errorResponse(new AppError('AUTH_INVALID'));
-  }
-
-  const email = String(payload.email).toLowerCase();
-  const isAdmin = email === env.ADMIN_EMAIL.toLowerCase();
-
-  (context.data as Record<string, unknown>).auth = {
-    email,
-    isAdmin,
-    isServiceToken: false,
-  };
-
-  return context.next();
+  // 進到這裡代表既無 V2 session 也無 V2 Bearer,且 path 不是 public-read。
+  // Cloudflare Access 已拆,不再有 CF_Authorization cookie 或 CF-Access-Client-* header,
+  // 直接拒絕。
+  return errorResponse(new AppError('AUTH_REQUIRED'));
 }

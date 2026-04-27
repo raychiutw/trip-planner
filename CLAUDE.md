@@ -35,9 +35,12 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 
 ```
 src/entries/        main.tsx（SPA 單入口，BrowserRouter）
-src/pages/          TripPage  ManagePage（AI 編輯聊天）  AdminPage
+src/pages/          TripPage  TripsListPage（/trips landing）  ManagePage（AI 編輯）  AdminPage
+                    LoginPage  SignupPage  ForgotPasswordPage  ResetPasswordPage  EmailVerifyPendingPage
+                    ConsentPage  ConnectedAppsPage  DeveloperAppsPage  SessionsPage  ExplorePage
 src/components/     trip/（Timeline DayNav DaySection TripMapRail ...）  shared/（Icon Toast ErrorBoundary ...）
-src/hooks/          useTrip  useApi  useDarkMode  usePrintMode  useOnlineStatus ...
+                    auth/（AuthBrandHero — V2 split-screen 右側 hero pane 共用）  shell/（AppShell DesktopSidebar BottomNavBar ...）
+src/hooks/          useTrip  useApi  useDarkMode  useRequireAuth  useCurrentUser  useOnlineStatus ...
 src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather ...
 src/types/          trip.ts  api.ts
 css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，含 6 套主題）
@@ -65,13 +68,25 @@ trip_docs  audit_log  api_logs  trip_requests  trip_permissions
 
 POI 資料所有權：`pois` = AI 維護，`trip_pois` = user 可覆寫（COALESCE convention：NULL = 繼承 master）
 
-## 認證
+## 認證 — V2 OAuth (sole auth, 取代 Cloudflare Access)
 
-- **Cloudflare Access**：/manage/ + /admin/ + 寫入 API
-- **Admin**：lean.lean@gmail.com
-- **Mock Auth**（本機）：`.dev.vars` 的 `DEV_MOCK_EMAIL`（wrangler 只讀這檔，**不是** `.env.local`）
-  - 複製：`cp .dev.vars.example .dev.vars` → 改 email → 重啟 `npm run dev`
-  - 沒設會讓 `/manage` 拿 401「無法存取」
+V2-P6 cutover 後 Cloudflare Access 已拆,所有 auth 走 tripline 自建 V2 OAuth。
+
+**瀏覽器 user**:`/signup` 自建帳號 → `tripline_session` HMAC opaque cookie → middleware `getSessionUser` 驗證 + 從 `users` 表查 email。Admin 看 `email === ADMIN_EMAIL`。
+
+**CLI / service token**:`/api/oauth/token` `grant_type=client_credentials` → opaque Bearer access_token (1h TTL) → header `Authorization: Bearer <token>`。Service token 在 client_apps 表 `allowed_scopes` 含 `admin` → middleware 設 `isAdmin: true`。
+
+- **Admin email**:`lean.lean@gmail.com`
+- **Mock Auth**(本機 `npm run dev`):`.dev.vars` 的 `DEV_MOCK_EMAIL`(wrangler 只讀這檔,**不是** `.env.local`)
+  - 複製:`cp .dev.vars.example .dev.vars` → 改 email → 重啟 `npm run dev`
+- **Provision CLI service client**(一次性 ops):
+  ```bash
+  node scripts/provision-admin-cli-client.js
+  # → outputs TRIPLINE_API_CLIENT_ID + TRIPLINE_API_CLIENT_SECRET (一次性,DB 只存 hash)
+  ```
+  記得把 secret 加進 `.env.local` 跟 launchd plist 給 scheduler scripts 用。
+- **Required env(prod)**:`SESSION_SECRET`(簽 cookie,32+ char)、`OAUTH_SIGNING_PRIVATE_KEY`(只有發 id_token 給 OAuth client app 時用,本人帳號自登入不需)
+- **Optional env**:`RESEND_API_KEY` + `EMAIL_FROM`(verify / reset email)、`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`(Google 登入 button)
 
 ## 本機開發
 

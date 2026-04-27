@@ -1,4 +1,4 @@
-/* ===== tokens.css — Ocean Design System (single-theme, Inter + Noto Sans TC) ===== */
+/* ===== tokens.css — V2 Terracotta Design System (single-theme, Inter + Noto Sans TC) ===== */
 
 /* F004: 讓瀏覽器原生 UI（scrollbar、form element、selection）在 dark mode 下自動跟隨 */
 html { color-scheme: light dark; }
@@ -6,40 +6,59 @@ html { color-scheme: light dark; }
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
 
-/* ===== @theme: design token source of truth (Ocean light) ===== */
+/* ===== @theme: design token source of truth (V2 Terracotta light) =====
+ * Source: docs/design-sessions/mockup-trip-v2.html (V2 Terracotta Final).
+ * Values mirror the canonical mockup palette so design ↔ implementation stay
+ * in lock-step. UI chrome is single-accent terracotta (`#D97848`); the 10-color
+ * day palette (Tailwind -500) is the documented exception per DESIGN.md
+ * Data Visualization. */
 @theme {
     /* Colors — generate bg-*, text-*, border-* utilities */
-    --color-accent: #0077B6;
-    --color-accent-subtle: #E0F4FA;
-    --color-accent-bg: #CAF0F8;
-    --color-background: #FFFFFF;
-    --color-secondary: #F7FBFD;
-    --color-tertiary: #F2F2F2;
-    --color-hover: #F2F8FB;
-    --color-foreground: #222222;
-    --color-muted: #6A6A6A;
+    --color-accent: #D97848;
+    --color-accent-subtle: #FBEEE4;
+    --color-accent-bg: #F7DFCB;
+    --color-accent-deep: #B85C2E;
+    --color-background: #FFFBF5;
+    --color-secondary: #FAF4EA;
+    --color-tertiary: #F2EAD9;
+    --color-hover: #F9EDE0;
+    --color-foreground: #2A1F18;
+    --color-muted: #6F5A47;
     --color-accent-foreground: #FFFFFF;
-    --color-border: #EBEBEB;
+    --color-border: #EADFCF;
+    --color-line-strong: #C8B89F;
     --color-destructive: #C13515;
     --color-destructive-bg: #FDECEC;
     --color-success: #06A77D;
     --color-success-bg: rgba(6, 167, 125, 0.12);
     --color-warning: #F48C06;
     --color-warning-bg: rgba(244, 140, 6, 0.12);
-    --color-info: #0077B6;
-    --color-info-bg: rgba(0, 119, 182, 0.12);
-    --color-plan-bg: #E0F4FA;
-    --color-plan-text: #023E8A;
-    --color-plan-hover: #CAF0F8;
-    --color-disabled: #B0B8BE;
-    --color-disabled-foreground: #D0D6DA;
-    --color-overlay: rgba(13, 27, 42, 0.35);
+    --color-info: #D97848;
+    --color-info-bg: rgba(217, 120, 72, 0.12);
+    --color-plan-bg: #FBEEE4;
+    --color-plan-text: #B85C2E;
+    --color-plan-hover: #F7DFCB;
+    --color-disabled: #B8AC9B;
+    --color-disabled-foreground: #D8CDB8;
+    --color-overlay: rgba(42, 31, 24, 0.35);
     --color-priority-high-bg: rgba(193, 53, 21, 0.12);
     --color-priority-high-dot: #C13515;
     --color-priority-medium-bg: rgba(244, 140, 6, 0.12);
     --color-priority-medium-dot: #F48C06;
     --color-priority-low-bg: rgba(6, 167, 125, 0.10);
     --color-priority-low-dot: #06A77D;
+
+    /* Trip cover gradients — TripsListPage destination cards (jp/kr/tw/other).
+     * 4 fixed combinations; preserves visual identity while removing hex
+     * literals from component CSS (anti-slop hex hardcoding cleanup). */
+    --color-cover-jp-from: #D97848;        /* matches --color-accent */
+    --color-cover-jp-to: #F0935E;          /* lighter terracotta tint */
+    --color-cover-kr-from: #B85C2E;        /* matches --color-accent-deep */
+    --color-cover-kr-to: #EADFCF;          /* matches --color-border */
+    --color-cover-tw-from: #C88500;        /* warm amber, JP-adjacent gold */
+    --color-cover-tw-to: #F7DFCB;          /* matches --color-accent-bg */
+    --color-cover-other-from: #6F5A47;     /* matches --color-muted */
+    --color-cover-other-to: #C8B89F;       /* matches --color-line-strong */
 
     /* Radius — Airbnb-inspired 8px primary */
     --radius-xs: 4px;
@@ -50,9 +69,10 @@ html { color-scheme: light dark; }
     --radius-full: 9999px;
 
     /* Shadow — Airbnb 三層陰影 */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
-    --shadow-md: 0 6px 16px rgba(0,0,0,0.08);
-    --shadow-lg: 0 10px 28px rgba(0,0,0,0.12);
+    /* Warm-tinted shadows (rgba sourced from foreground brown for V2 Terracotta) */
+    --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+    --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+    --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
 
     /* Spacing — 4pt grid */
     --spacing-half: 2px;
@@ -67,8 +87,7 @@ html { color-scheme: light dark; }
     --spacing-12: 48px;
     --spacing-16: 64px;
 
-    /* Layout grid templates (layout refactor Phase 2 — desktop-3pane-and-nav-layout) */
-    /* Breakpoints convention:
+    /* AppShell layout grid templates.
      *   ≥1280px: 3-pane full (sidebar 240 / main fluid / sheet up to 780px)
      *   1024-1279px: 3-pane narrow (sheet capped at 40vw)
      *   <1024px: single-column + sticky bottom nav
@@ -140,6 +159,10 @@ html { color-scheme: light dark; }
     /* Z-index */
     --z-sticky-nav: 200;
     --z-fab: 300;
+    /* PR-S 2026-04-26：modal 必須高過所有 sticky 元素（sticky-nav 200 / fab
+     * 300 / quick-panel 350 / info-sheet 401）。9000 留 buffer 給未來更高
+     * priority overlay（emergency banner / toast 之類）。 */
+    --z-modal: 9000;
 
     /* Focus ring */
     --shadow-ring: 0 0 0 2px var(--color-accent);
@@ -147,13 +170,21 @@ html { color-scheme: light dark; }
     /* Glass blur — unified 14px for topbar, bottom-nav, sheet */
     --blur-glass: 14px;
 
+    /* Shared hover filter — filled buttons darken slightly on hover */
+    --hover-brightness: 0.92;
+
     /* Animate */
     --animate-stepper-pulse: stepper-pulse 2s infinite;
     --animate-toast-slide-down: toast-slide-down var(--transition-duration-slow) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
     --animate-toast-slide-up: toast-slide-up var(--transition-duration-normal) ease forwards;
 
     /* Layout composite */
-    --spacing-toast-top: calc(var(--spacing-nav-h) + var(--spacing-3));
+    /* PR-U 2026-04-26：原值 calc(48 + 12) = 60px 假設 page 有 sticky topbar，
+     * /explore /map /trips landing /sessions 等 mobile page 沒有 topbar 的，
+     * toast 60px 直接覆蓋 page heading（user 截圖回報「目前繁忙碌中」 蓋住
+     * 「探索」 標題）。改 max(16, safe-area-inset-top) 對齊 iOS HIG transient
+     * notification 慣例：頂部 safe area 下方就近顯示，跨 page 一致。 */
+    --spacing-toast-top: max(16px, env(safe-area-inset-top, 16px));
     --spacing-content-h: calc(100dvh - var(--spacing-nav-h));
 }
 
@@ -184,7 +215,7 @@ body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 92%, transparent);
     --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
-    --badge-open-bg: #E0F4FA;         --badge-open-text: #023E8A;
+    --badge-open-bg: #FBEEE4;          --badge-open-text: #B85C2E;
     --badge-processing-bg: #FFF3CD;    --badge-processing-text: #856404;
     --badge-completed-bg: #D4EDDA;     --badge-completed-text: #155724;
     --badge-failed-bg: #F8D7DA;        --badge-failed-text: #721C24;
@@ -206,19 +237,19 @@ body.dark {
 
 /* ===== Non-utility tokens ===== */
 :root {
-    --scrollbar-thumb: #C1C1C1;
-    --scrollbar-thumb-hover: #A8A8A8;
-    --cmp-light-bg: #E0F4FA;
-    --cmp-light-surface: #FFFFFF;
-    --cmp-light-input: #EBEBEB;
-    --cmp-dark-bg: #0D1B2A;
-    --cmp-dark-surface: #1B263B;
-    --cmp-dark-input: #2E3B4F;
-    --color-badge-open: #0077B6;
-    --color-badge-closed: #023E8A;
-    --color-plan-bg: #E0F4FA;
-    --color-plan-text: #023E8A;
-    --color-plan-hover: #CAF0F8;
+    --scrollbar-thumb: #C8B89F;
+    --scrollbar-thumb-hover: #A89978;
+    --cmp-light-bg: #FBEEE4;
+    --cmp-light-surface: #FFFBF5;
+    --cmp-light-input: #EADFCF;
+    --cmp-dark-bg: #1A140F;
+    --cmp-dark-surface: #2A1F18;
+    --cmp-dark-input: #3D2D22;
+    --color-badge-open: #D97848;
+    --color-badge-closed: #B85C2E;
+    --color-plan-bg: #FBEEE4;
+    --color-plan-text: #B85C2E;
+    --color-plan-hover: #F7DFCB;
     --color-google-maps: #4285F4;
     --color-naver-maps: #03C75A;
     --theme-header-gradient: none;
@@ -407,7 +438,7 @@ body.dark {
         border-color: var(--color-accent);
         padding: 8px 16px; font-weight: 600; position: relative; letter-spacing: 0.02em;
     }
-    .ocean-tb-btn.ocean-tb-ai:hover { filter: brightness(0.92); }
+    .ocean-tb-btn.ocean-tb-ai:hover { filter: brightness(var(--hover-brightness)); }
     .ocean-tb-btn.ocean-tb-ai:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
     .ocean-tb-btn.ocean-tb-ai:active { filter: brightness(0.85); }
 
@@ -672,9 +703,31 @@ body.dark {
     }
     .ocean-side-card-title { font-size: var(--font-size-caption2); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); }
 
-    /* Day section wrapper */
-    .ocean-day { scroll-margin-top: 210px; }
+    /* Day section wrapper.
+     * scroll-margin-top must apply to the element that owns id="day{N}" —
+     * that's .ocean-hero (DaySection.tsx renders <div class="ocean-hero" id="day{N}"…>).
+     * Putting it on .ocean-day (the outer section) silently no-ops.
+     *
+     * Value covers stacked sticky chrome: ocean-topbar (~64) + day-strip
+     * (~80) + breathing room (~16). */
+    .ocean-day > .ocean-hero { scroll-margin-top: 200px; }
     .ocean-day + .ocean-day { margin-top: 24px; }
+
+    /* Embedded TripPage inside TripsListPage's right sheet (desktop).
+     * The sheet has no topbar of its own, so the default 28px ocean-page
+     * top padding + day-strip's `top: 64px` (offset for the absent topbar)
+     * leave a visible empty band above the day-strip. Collapse the band,
+     * pull day-strip flush with the sheet header, and isolate scroll so
+     * the sheet doesn't chain into sidebar / main. */
+    .app-shell-sheet { overscroll-behavior: contain; }
+    .app-shell-sheet .ocean-shell { min-height: 0; }
+    .app-shell-sheet .ocean-page { padding: 0 24px 24px; }
+    .app-shell-sheet .ocean-day-strip {
+      top: 0;
+      margin: 0 -24px 16px;
+      padding: 8px 24px;
+    }
+    .app-shell-sheet .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
 
     /* Breakpoints */
     @media (max-width: 1200px) {
@@ -694,25 +747,31 @@ body.dark {
      * viewport ≥768px stays on desktop type scale.
      */
     @media (max-width: 760px) {
+        /* Mobile: topbar has no visible content (brand label hidden ≥1100px,
+         * all right-side buttons hidden, AI 編輯 link removed). Hide the
+         * entire bar so day-strip becomes the top sticky element with no
+         * empty cream band + line above it. */
+        .ocean-topbar { display: none; }
         .ocean-nav-tabs { display: none; }
         .ocean-tb-divider { display: none; }
-        .ocean-topbar-right .ocean-tb-btn:not(.ocean-tb-ai) { display: none; }
         .ocean-overflow-wrap { display: none; }
-        .ocean-page { padding: 18px 16px calc(80px + env(safe-area-inset-bottom)); }
+        .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 22px 20px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
         .ocean-stop { grid-template-columns: 56px 44px 1fr; padding: 14px; gap: 12px; }
         .ocean-stop-actions { grid-column: 1 / -1; justify-content: flex-end; }
         .ocean-stop-icon { width: 44px; height: 44px; }
-        .ocean-day { scroll-margin-top: 190px; }
+        /* Mobile sticky day-strip is the only top chrome (topbar hidden).
+         * Pill row 60-80 high + breathing 16-20 → land day title clear. */
+        .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
     }
 
-    /* Mobile bottom tab bar (只在 ≤760px 顯示) — PR3: 4-tab route-based */
+    /* Mobile bottom tab bar (只在 ≤760px 顯示) */
     .ocean-bottom-nav { display: none; }
     @media (max-width: 760px) {
         .ocean-bottom-nav {
-            position: fixed; left: 0; right: 0; bottom: 0;
-            /* PR3 Q3=B: 5→4 tabs */
+            /* sticky 讓 nav 在 AppShell grid cell 內正確定位，不脫離到 viewport */
+            position: sticky; inset-block-end: 0;
             display: grid; grid-template-columns: repeat(4, 1fr);
             background: color-mix(in srgb, var(--color-background) 97%, transparent);
             backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
@@ -723,7 +782,7 @@ body.dark {
         .ocean-bottom-nav-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             gap: 3px; padding: 13px 4px;
-            /* PR3 Item 10: Apple HIG minimum tap target */
+            /* Apple HIG minimum tap target */
             min-height: 44px; /* = var(--spacing-tap-min) */
             background: transparent; border: none; cursor: pointer;
             color: var(--color-muted); font: inherit;
@@ -781,47 +840,61 @@ body.dark {
     100% { background: transparent; }
 }
 
-/* ===== Dark mode override (Ocean deep-navy) ===== */
+/* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {
     body.dark {
-        --color-accent: #48CAE4;
-        --color-accent-subtle: #13293D;
-        --color-accent-bg: #1E3A52;
-        --color-background: #0D1B2A;
-        --color-secondary: #1B263B;
-        --color-tertiary: #2E3B4F;
-        --color-hover: #253345;
-        --color-foreground: #E0F4FA;
-        --color-muted: #90A4B8;
-        --color-accent-foreground: #0D1B2A;
-        --color-border: #2E3B4F;
+        --color-accent: #E89968;
+        --color-accent-subtle: #3A2A20;
+        --color-accent-bg: #4D372A;
+        --color-accent-deep: #FFB890;
+        --color-background: #1A140F;
+        --color-secondary: #241B14;
+        --color-tertiary: #2E2418;
+        --color-hover: #2D2218;
+        --color-foreground: #F5EBDD;
+        --color-muted: #B89E84;
+        --color-accent-foreground: #1A140F;
+        --color-border: #3D2D22;
+        --color-line-strong: #5A4634;
         --color-destructive: #E8A0A0;
         --color-destructive-bg: rgba(232, 160, 160, 0.15);
         --color-success: #7EC89A;
         --color-success-bg: rgba(126, 200, 154, 0.15);
         --color-warning: #F0D060;
         --color-warning-bg: rgba(240, 208, 96, 0.15);
-        --color-info: #48CAE4;
-        --color-info-bg: rgba(72, 202, 228, 0.15);
-        --shadow-sm: 0 1px 2px rgba(0,0,0,0.20);
-        --shadow-md: 0 6px 16px rgba(0,0,0,0.30);
-        --shadow-lg: 0 10px 28px rgba(0,0,0,0.40);
+        --color-info: #E89968;
+        --color-info-bg: rgba(232, 153, 104, 0.15);
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+        --shadow-md: 0 6px 16px rgba(0,0,0,0.42);
+        --shadow-lg: 0 10px 28px rgba(0,0,0,0.55);
         --color-priority-high-bg: rgba(232, 160, 160, 0.18);
         --color-priority-high-dot: #E8A0A0;
         --color-priority-medium-bg: rgba(240, 208, 96, 0.18);
         --color-priority-medium-dot: #F0D060;
         --color-priority-low-bg: rgba(126, 200, 154, 0.12);
         --color-priority-low-dot: #7EC89A;
-        --scrollbar-thumb: #3A4758;
-        --scrollbar-thumb-hover: #4A5768;
-        --color-overlay: rgba(0,0,0,0.60);
-        --color-badge-open: #48CAE4;
-        --color-badge-closed: #8B5CF6;
-        --color-disabled: #4A5768;
-        --color-disabled-foreground: #2E3B4F;
-        --color-plan-bg: #13293D;
-        --color-plan-text: #90E0EF;
-        --color-plan-hover: #1E3A52;
+        --scrollbar-thumb: #5A4634;
+        --scrollbar-thumb-hover: #7A604A;
+        --color-overlay: rgba(0,0,0,0.65);
+        --color-badge-open: #E89968;
+        --color-badge-closed: #B85C2E;
+        --color-disabled: #5A4634;
+        --color-disabled-foreground: #3D2D22;
+        --color-plan-bg: #3A2A20;
+        --color-plan-text: #FFB890;
+        --color-plan-hover: #4D372A;
+        /* Trip cover gradients — dark mode preserves the destination accent
+         * while toning down luminance to fit deep-cocoa background. */
+        --color-cover-jp-from: #B85C2E;
+        --color-cover-jp-to: #D97848;
+        --color-cover-kr-from: #8A4520;
+        --color-cover-kr-to: #5A4634;
+        /* PR-EE 2026-04-26：dark mode TW cover 太亮（#9E6800 amber 在深色 ui
+         * 上跳出來太搶眼），降到 deep amber-brown 跟 cover-other-from 接近。 */
+        --color-cover-tw-from: #5A4220;
+        --color-cover-tw-to: #4D372A;
+        --color-cover-other-from: #4D372A;
+        --color-cover-other-to: #6F5A47;
     }
 
     /* Print mode — flat white + hairline for printing */
@@ -895,4 +968,187 @@ body.dark {
 @keyframes tl-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(1.4); }
+}
+
+/* B-P6 task 3.4 — Respect prefers-reduced-motion (vestibular disorder accessibility).
+   全域 override：禁用 / 大幅縮短 animation + transition + scroll-behavior smoothness。
+   `0.01ms` 而非 `0` 維持 transitionend / animationend event 仍 fire（依賴 callback 的程式不會壞）。 */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ===== PageHeader — unified app-wide page heading primitive =====
+ * Source: src/components/shell/PageHeader.tsx (component logic).
+ *
+ * Hybrid responsive design (settled 2026-04-27):
+ *   - Desktop ≥761px: Variant A "Editorial Hairline" — 28px title, eyebrow above,
+ *     hairline bottom, no shadow on standalone.
+ *   - Mobile ≤760px: Variant B "Mockup Canonical 56px" — 56px glass strip with
+ *     17px headline. Mirrors mockup-trip-v2.html .mobile-topbar canonical.
+ */
+.tp-page-header {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--color-background);
+}
+.tp-page-header-text {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.tp-page-header-eyebrow {
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-muted);
+}
+.tp-page-header-h1 {
+  margin: 0; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--color-foreground);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tp-page-header-meta {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-page-header-actions {
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+}
+.tp-page-header-back {
+  width: 36px; height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  display: grid; place-items: center;
+  cursor: pointer; font: inherit;
+  flex-shrink: 0;
+  transition: border-color 120ms var(--transition-timing-function-apple),
+              color 120ms var(--transition-timing-function-apple),
+              background 120ms var(--transition-timing-function-apple);
+}
+.tp-page-header-back:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+.tp-page-header-back:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
+}
+.tp-page-header-back .svg-icon { width: 18px; height: 18px; }
+
+/* Center align (Consent splash-style) */
+.tp-page-header[data-align="center"] {
+  flex-direction: column; align-items: center; text-align: center;
+}
+.tp-page-header[data-align="center"] .tp-page-header-text { align-items: center; }
+
+/* ===== Desktop ≥761px — Variant A "Editorial Hairline" ===== */
+@media (min-width: 761px) {
+  .tp-page-header[data-variant="standalone"] {
+    /* horizontal padding intentionally 0 — header inherits horizontal space from
+     * its parent wrap (page-level inner container, e.g. tp-sessions-inner). */
+    padding: 8px 0 20px;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 24px;
+  }
+  .tp-page-header[data-variant="standalone"] .tp-page-header-h1 {
+    font-size: var(--font-size-title);
+  }
+  .tp-page-header[data-variant="sticky"] {
+    position: sticky; top: 0; z-index: var(--z-sticky-nav, 200);
+    /* Defensive: prevent flex parent (e.g. .tp-embedded-trip = column flex) stretching
+     * the sticky child cross-axis, which historically breaks Safari iOS sticky. */
+    align-self: flex-start; width: 100%;
+    height: 56px; padding: 0 24px;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 94%, transparent);
+    backdrop-filter: blur(var(--blur-glass, 14px));
+    -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  }
+  .tp-page-header[data-variant="sticky"] .tp-page-header-h1 {
+    font-size: var(--font-size-headline);
+  }
+  .tp-page-header[data-variant="floating"] {
+    position: absolute; top: 16px; left: 16px;
+    max-width: 420px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-background);
+    box-shadow: var(--shadow-md);
+  }
+  .tp-page-header[data-variant="floating"] .tp-page-header-h1 {
+    font-size: var(--font-size-callout);
+  }
+}
+
+/* ===== Mobile ≤760px — Variant B "Mockup Canonical 56px" ===== */
+@media (max-width: 760px) {
+  .tp-page-header[data-variant="standalone"],
+  .tp-page-header[data-variant="sticky"] {
+    height: 56px; padding: 0 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 94%, transparent);
+    backdrop-filter: blur(var(--blur-glass, 14px));
+    -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  }
+  .tp-page-header[data-variant="sticky"] {
+    position: sticky; top: 0; z-index: var(--z-sticky-nav, 200);
+  }
+  .tp-page-header[data-variant="floating"] {
+    position: absolute; top: 16px; left: 16px; right: 16px;
+    max-width: 420px; height: 52px;
+    padding: 0 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-background) 96%, transparent);
+    box-shadow: var(--shadow-md);
+  }
+  .tp-page-header .tp-page-header-h1 {
+    font-size: var(--font-size-headline);
+  }
+  .tp-page-header[data-variant="standalone"] .tp-page-header-text,
+  .tp-page-header[data-variant="sticky"] .tp-page-header-text {
+    flex-direction: row; align-items: center; gap: 10px;
+  }
+  /* Mobile actions 防呆：寬 picker（含長行程名）會擠掉 title。max-width 50% +
+   * 內部子元素 min-width: 0 + overflow: hidden 讓 picker 自己截字。 */
+  .tp-page-header-actions {
+    max-width: 60%;
+    min-width: 0;
+  }
+  .tp-page-header-actions > * {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Mobile saves space: drop secondary text. Keep title as the page identity. */
+  .tp-page-header[data-variant="standalone"] .tp-page-header-eyebrow,
+  .tp-page-header[data-variant="standalone"] .tp-page-header-meta,
+  .tp-page-header[data-variant="sticky"] .tp-page-header-eyebrow,
+  .tp-page-header[data-variant="sticky"] .tp-page-header-meta {
+    display: none;
+  }
+  /* center-align hero pages keep block layout even on mobile */
+  .tp-page-header[data-align="center"] {
+    height: auto; padding: 22px 16px 18px;
+  }
+  .tp-page-header[data-align="center"] .tp-page-header-text {
+    flex-direction: column;
+  }
+  .tp-page-header[data-align="center"] .tp-page-header-eyebrow,
+  .tp-page-header[data-align="center"] .tp-page-header-meta {
+    display: block;
+  }
 }

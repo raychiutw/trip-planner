@@ -11,17 +11,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
+  // INNER JOIN trips so orphan permission rows (trip deleted but permission left
+  // behind) never leak into /trips landing or ManagePage trip selector. Wildcard
+  // '*' admin grant is filtered out — it's a sentinel, not a real tripId.
   let results;
   if (auth.isAdmin) {
-    // admin 可看所有行程（從 permissions 中取 distinct trip_id）
     const { results: rows } = await env.DB
-      .prepare('SELECT DISTINCT trip_id AS tripId FROM trip_permissions WHERE trip_id != ? ORDER BY trip_id')
+      .prepare(`SELECT DISTINCT p.trip_id AS tripId
+                FROM trip_permissions p
+                INNER JOIN trips t ON t.id = p.trip_id
+                WHERE p.trip_id != ?
+                ORDER BY p.trip_id`)
       .bind('*')
       .all();
     results = rows;
   } else {
     const { results: rows } = await env.DB
-      .prepare('SELECT trip_id AS tripId FROM trip_permissions WHERE email = ? AND trip_id != ? ORDER BY trip_id')
+      .prepare(`SELECT p.trip_id AS tripId
+                FROM trip_permissions p
+                INNER JOIN trips t ON t.id = p.trip_id
+                WHERE p.email = ? AND p.trip_id != ?
+                ORDER BY p.trip_id`)
       .bind(auth.email.toLowerCase(), '*')
       .all();
     results = rows;

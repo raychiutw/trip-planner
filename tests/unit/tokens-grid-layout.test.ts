@@ -29,7 +29,7 @@ describe('tokens.css — P2 grid layout variables', () => {
   });
 
   it('breakpoint 慣例註解存在', () => {
-    expect(TOKENS).toMatch(/Breakpoints convention/);
+    expect(TOKENS).toMatch(/AppShell layout grid templates/);
     expect(TOKENS).toMatch(/≥1280px/);
     expect(TOKENS).toMatch(/1024-1279px/);
     expect(TOKENS).toMatch(/<1024px/);

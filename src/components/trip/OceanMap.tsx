@@ -49,6 +49,12 @@ export interface OceanMapProps {
       because parent TripPage rebuilds pins inline on every render — without this, every re-render
       would snap the rail back to full-trip bounds and wipe manual map moves + scroll-spy pan. */
   fitOnce?: boolean;
+  /** Imperative L.Map handle for parent — used by /map page 全覽/我的位置/zoom 控制。
+   *  Called once on mount and on cleanup with null。Parent should ref-store, not state-store. */
+  onMapReady?: (map: L.Map | null) => void;
+  /** Override Leaflet zoom control position (default 'topleft')。/map 用 'bottomright'
+   *  避免跟左上 trip-switcher overlap。 */
+  zoomControlPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
 }
 
 /* ===== Marker construction ===== */
@@ -92,10 +98,10 @@ const SCOPED_STYLES = `
 }
 .ocean-map-pin[data-state="active"] {
   width: 36px; height: 36px; font-size: 13px;
-  background: var(--color-accent, #0077B6);
-  border-color: #fff;
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.30);
+  background: var(--color-accent, #D97848);
+  border-color: var(--color-accent-foreground, #fff);
+  color: var(--color-accent-foreground, #fff);
+  box-shadow: 0 4px 12px rgba(217, 120, 72, 0.30);
 }
 .ocean-map-pin[data-state="past"] {
   border-color: #E0E0E0;
@@ -103,11 +109,14 @@ const SCOPED_STYLES = `
 }
 .ocean-map-pin[data-type="hotel"] { font-size: 14px; }
 .ocean-map-cluster {
+  /* QA 2026-04-26 PR-I：cluster 在 GlobalMapPage 已 disable (cluster={false})，
+   * 此 styling 留給其他 pages 之後若再開 cluster 用 — 改 white bg +
+   * line-strong border 跟 .ocean-map-pin 視覺一致。 */
   display: grid; place-items: center;
   width: 40px; height: 40px;
   border-radius: 50%;
-  background: var(--color-accent-bg, #CAF0F8);
-  border: 1.5px solid var(--color-accent, #0077B6);
+  background: var(--color-background, #fff);
+  border: 1.5px solid var(--color-line-strong, #C8B89F);
   color: var(--color-foreground, #222);
   font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums;
   font-family: var(--font-family-system, 'Inter', sans-serif);
@@ -161,9 +170,9 @@ function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number): L.Po
       interactive: false,
     };
   }
-  // Default (no dayNum): accent for active, muted grey for idle.
+  // Default (no dayNum): accent for active, line-strong for idle.
   return {
-    color: isActive ? 'var(--color-accent, #0077B6)' : '#94A3B8',
+    color: isActive ? 'var(--color-accent, #D97848)' : 'var(--color-line-strong, #C8B89F)',
     weight: isActive ? 4 : 3,
     opacity: isActive ? 0.85 : 0.6,
     dashArray: approx ? '6,6' : undefined,
@@ -211,9 +220,10 @@ export interface SegmentPair {
 /**
  * Build consecutive polyline pairs from pins.
  *
- * - pinsByDay mode: per-day polyline, cross-day segments NOT drawn. Hotel pins
- *   are filtered out so the polyline matches TripMapRail (hotel is a stay-over
- *   marker, not part of the travel path between stops).
+ * - pinsByDay mode: per-day polyline, cross-day segments NOT drawn. Hotel
+ *   pins ARE included as the day's start point (sortOrder=-1) per
+ *   DESIGN.md「地圖 Polyline 規格」— skipping the hotel left the first
+ *   entry visually orphaned.
  * - Flat pins mode: connects every consecutive pair.
  */
 export function buildSegments(params: {
@@ -229,7 +239,8 @@ export function buildSegments(params: {
   if (pinsByDay && pinsByDay.size > 0) {
     const sortedDays = [...pinsByDay.keys()].sort((a, b) => a - b);
     for (const d of sortedDays) {
-      const dayPins = (pinsByDay.get(d) ?? []).filter((p) => p.type === 'entry');
+      // Sort by sortOrder so hotel (-1) leads the chain naturally.
+      const dayPins = [...(pinsByDay.get(d) ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
       for (let i = 0; i < dayPins.length - 1; i++) {
         const a = dayPins[i]!;
         const b = dayPins[i + 1]!;
@@ -279,14 +290,25 @@ const OceanMap = memo(function OceanMap({
   dayNum,
   panToCoord,
   fitOnce = false,
+  onMapReady,
+  zoomControlPosition,
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
   const autoCluster = cluster ?? (mode === 'overview' && pins.length > 10);
 
   const { containerRef, map, fitBounds, flyTo } = useLeafletMap({
     zoomControl: mode === 'overview',
+    zoomControlPosition,
     dark,
   });
+
+  // Expose L.Map handle to parent (one-shot when ready, null on cleanup).
+  // 給 GlobalMapPage 的「全覽 / 我的位置」pill button 用。
+  useEffect(() => {
+    if (!onMapReady) return;
+    onMapReady(map);
+    return () => onMapReady(null);
+  }, [map, onMapReady]);
 
   const visiblePins = useMemo(() => {
     if (mode === 'detail' && focusId !== undefined) {
@@ -401,7 +423,10 @@ const OceanMap = memo(function OceanMap({
   useEffect(() => {
     if (!map || !autoCluster) return;
     const layer = L.layerGroup().addTo(map);
-    const sc = new Supercluster({ radius: 60, maxZoom: 15 });
+    // QA 2026-04-26 BUG-042/043：原 radius 60 在 dense area（如沖繩本島）造
+    // 成多個 cluster bubble overlap。bump 80 + maxZoom 16，cluster 更
+    // aggressive 避免疊在一起，user zoom in 一級就拆開細節。
+    const sc = new Supercluster({ radius: 80, maxZoom: 16 });
     sc.load(
       visiblePins.map((pin) => ({
         type: 'Feature' as const,
@@ -423,10 +448,21 @@ const OceanMap = memo(function OceanMap({
       const clusters = sc.getClusters(bbox, zoom);
       for (const c of clusters) {
         const [lng, lat] = c.geometry.coordinates as [number, number];
-        const props = c.properties as { cluster?: boolean; point_count?: number; pin?: MapPin };
+        const props = c.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; pin?: MapPin };
         if (props.cluster) {
           const count = props.point_count ?? 0;
-          L.marker([lat, lng], { icon: clusterIcon(count), keyboard: false }).addTo(layer);
+          const clusterId = props.cluster_id;
+          // 點 cluster → zoom 到 supercluster 計算的 expansion zoom，使其展開成個別
+          // 子 cluster / pin。沒 expansion zoom（已經在 maxZoom）就 +2 級當保險。
+          const m = L.marker([lat, lng], { icon: clusterIcon(count), keyboard: true });
+          m.on('click', () => {
+            const target =
+              clusterId != null
+                ? Math.min(sc.getClusterExpansionZoom(clusterId), 18)
+                : Math.min(map.getZoom() + 2, 18);
+            map.setView([lat, lng], target, { animate: true });
+          });
+          m.addTo(layer);
         } else if (props.pin) {
           const pin = props.pin;
           const m = L.marker([pin.lat, pin.lng], {

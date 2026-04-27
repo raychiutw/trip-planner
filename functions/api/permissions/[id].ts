@@ -1,8 +1,11 @@
 /**
  * DELETE /api/permissions/:id — 移除權限 + 條件式 Access 同步
+ *
+ * V2-P7 PR-O: 從「admin only」放寬為「admin OR trip owner」。
+ * Trip ID 從 permission 記錄反查，再驗 owner。
  */
 
-import { removeEmailFromAccessPolicy } from '../permissions';
+import { ensureCanManageTripPerms, removeEmailFromAccessPolicy } from '../permissions';
 import { logAudit } from '../_audit';
 import { AppError } from '../_errors';
 import { json, getAuth } from '../_utils';
@@ -11,7 +14,6 @@ import type { Env } from '../_types';
 export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const id = context.params.id as string;
 
@@ -24,6 +26,15 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   if (!record) {
     throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');
   }
+
+  // PR-CC 2026-04-26：owner 不可被刪（含 self-delete）。User 指示「不能刪除
+  // 自己 owner」 — destructive 操作必須 limit。要轉移 owner 走另外 endpoint
+  // (未來實作)，不能直接 DELETE。
+  if (record.role === 'owner') {
+    throw new AppError('PERM_DENIED', '不可移除行程擁有者');
+  }
+
+  await ensureCanManageTripPerms(context, auth, record.trip_id);
 
   // 刪除 D1 記錄
   await context.env.DB.prepare('DELETE FROM trip_permissions WHERE id = ?').bind(id).run();

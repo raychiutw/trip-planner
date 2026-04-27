@@ -1,8 +1,8 @@
 /**
  * ocean-map-build-segments.test.ts — runtime coverage for buildSegments pure helper.
  *
- * Addresses review gaps:
- * - hotel pins must NOT form polyline (matches TripMapRail contract)
+ * Per DESIGN.md「地圖 Polyline 規格」:
+ * - hotel (sortOrder=-1) IS the day's first node — must form the leading segment
  * - cross-day segments must NOT be drawn in pinsByDay mode
  * - flat mode still connects consecutive pairs
  */
@@ -38,17 +38,29 @@ describe('buildSegments — pinsByDay mode', () => {
     expect(segs.find((s) => s.key === '2->3')).toBeUndefined();
   });
 
-  it('filters out hotel pins — hotel→first-stop line NOT drawn', () => {
+  it('hotel leads the day — segments are hotel→first-stop→next-stop', () => {
     const pinsByDay = new Map<number, MapPin[]>([
       [1, [makeHotel(99, 26.05, 127.55), makeEntry(1, 26.10, 127.60), makeEntry(2, 26.11, 127.61)]],
     ]);
     const segs = buildSegments({
       pins: [], pinsByDay, focusedIdx: -1, pinIndexById: new Map(),
     });
-    // Hotel filtered: only entry→entry segment remains (1→2)
+    // Hotel sortOrder=-1 sorts first, then entries by sortOrder.
+    // Expect 2 segments: hotel→entry1, entry1→entry2.
+    expect(segs).toHaveLength(2);
+    expect(segs[0]!.key).toBe('99->1');
+    expect(segs[1]!.key).toBe('1->2');
+  });
+
+  it('hotel-less day still connects entries normally', () => {
+    const pinsByDay = new Map<number, MapPin[]>([
+      [1, [makeEntry(1, 26.10, 127.60), makeEntry(2, 26.11, 127.61)]],
+    ]);
+    const segs = buildSegments({
+      pins: [], pinsByDay, focusedIdx: -1, pinIndexById: new Map(),
+    });
     expect(segs).toHaveLength(1);
     expect(segs[0]!.key).toBe('1->2');
-    expect(segs.find((s) => s.key.startsWith('99->'))).toBeUndefined();
   });
 
   it('tags each segment with its dayNum', () => {

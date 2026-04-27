@@ -1,7 +1,6 @@
 {
   "hooks": {},
   "enabledPlugins": {
-    "oh-my-claudecode@omc": true,
-    "agent-skills@addy-agent-skills": true
+    "oh-my-claudecode@omc": true
   }
 }

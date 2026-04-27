@@ -63,8 +63,21 @@ export function sanitizeHtml(html: string): string {
  */
 import { marked } from 'marked';
 
+/**
+ * Defensive normalization for AI-generated reply payloads:
+ * - `\\n` (literal backslash-n from double-encoded JSON) → real newline
+ * - solo `~` (e.g., `Day 3~4`, `¥100~300`) → escaped `\~` so marked GFM
+ *   strikethrough only fires on the canonical `~~text~~` form. Without this,
+ *   a range like `Day 3~4 ... ¥100~300` becomes a giant <del> span.
+ */
+function normalizeForMarkdown(text: string): string {
+  return text
+    .replace(/\\n/g, '\n')
+    .replace(/(?<!~)~(?!~)/g, '\\~');
+}
+
 export function renderMarkdown(text: string): string {
-  return sanitizeHtml(marked.parse(text) as string);
+  return sanitizeHtml(marked.parse(normalizeForMarkdown(text)) as string);
 }
 
 /**
@@ -74,6 +87,6 @@ export function renderMarkdown(text: string): string {
  * line breaks as \n which we convert to <br>.
  */
 export function renderMarkdownInline(text: string): string {
-  const html = (marked.parseInline(text) as string).replace(/\n/g, '<br>');
+  const html = (marked.parseInline(normalizeForMarkdown(text)) as string).replace(/\n/g, '<br>');
   return sanitizeHtml(html);
 }
