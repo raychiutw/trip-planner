@@ -92,6 +92,9 @@ export const PAGE_HEADER_STYLES = `
   }
   .tp-page-header[data-variant="sticky"] {
     position: sticky; top: 0; z-index: var(--z-sticky-nav, 200);
+    /* Defensive: prevent flex parent (e.g. .tp-embedded-trip = column flex) stretching
+     * the sticky child cross-axis, which historically breaks Safari iOS sticky. */
+    align-self: flex-start; width: 100%;
     height: 56px; padding: 0 24px;
     border-bottom: 1px solid var(--color-border);
     background: color-mix(in srgb, var(--color-background) 94%, transparent);
@@ -144,6 +147,17 @@ export const PAGE_HEADER_STYLES = `
   .tp-page-header[data-variant="standalone"] .tp-page-header-text,
   .tp-page-header[data-variant="sticky"] .tp-page-header-text {
     flex-direction: row; align-items: center; gap: 10px;
+  }
+  /* Mobile actions 防呆：寬 picker（含長行程名）會擠掉 title。max-width 50% +
+   * 內部子元素 min-width: 0 + overflow: hidden 讓 picker 自己截字。 */
+  .tp-page-header-actions {
+    max-width: 60%;
+    min-width: 0;
+  }
+  .tp-page-header-actions > * {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   /* Mobile saves space: drop secondary text. Keep title as the page identity. */
   .tp-page-header[data-variant="standalone"] .tp-page-header-eyebrow,

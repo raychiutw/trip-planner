@@ -123,8 +123,12 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
   background: var(--color-secondary);
 }
-/* tp-chat-header 改用 <PageHeader sticky variant>。.tp-chat-header CSS 已退役。 */
-.tp-chat-shell .tp-page-header[data-variant="standalone"] { padding-left: 24px; padding-right: 24px; }
+/* tp-chat-header 改用 <PageHeader>（standalone 預設）。.tp-chat-header CSS 已退役。
+ * 桌機補 24px 水平 padding 因為 .tp-chat-shell 沒有 page-level padding；
+ * 手機 (≤760px) 用 PageHeader 內建 16px canonical 規格，避免覆寫。 */
+@media (min-width: 761px) {
+  .tp-chat-shell .tp-page-header[data-variant="standalone"] { padding-left: 24px; padding-right: 24px; }
+}
 .tp-chat-trip-picker {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 10px;

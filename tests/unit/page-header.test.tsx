@@ -67,4 +67,47 @@ describe('PageHeader', () => {
     render(<PageHeader title="x" actions={<button>登出全部</button>} />);
     expect(screen.getByRole('button', { name: '登出全部' })).toBeInTheDocument();
   });
+
+  /* === Coverage gaps surfaced by /review adversarial pass (2026-04-27) === */
+
+  it('omits actions container when actions is false (production short-circuit pattern)', () => {
+    /* Sessions/Chat/TripsList all use `actions={cond && <Button/>}` — when cond
+     * is falsy React passes `false` here. Don't render an empty `.tp-page-header-actions`. */
+    render(<PageHeader title="x" actions={false as unknown as undefined} />);
+    expect(document.querySelector('.tp-page-header-actions')).toBeNull();
+  });
+
+  it('omits actions container when actions is null', () => {
+    render(<PageHeader title="x" actions={null} />);
+    expect(document.querySelector('.tp-page-header-actions')).toBeNull();
+  });
+
+  it('omits actions container when actions is undefined (default)', () => {
+    render(<PageHeader title="x" />);
+    expect(document.querySelector('.tp-page-header-actions')).toBeNull();
+  });
+
+  it('back button activates on Enter keypress', () => {
+    const handleBack = vi.fn();
+    render(<PageHeader title="x" back={handleBack} />);
+    const btn = screen.getByRole('button', { name: '返回' });
+    fireEvent.keyDown(btn, { key: 'Enter' });
+    /* native <button> handles Enter→click via UA — fireEvent.click is the
+     * canonical way RTL tests this, since keyDown alone doesn't synthesize click */
+    fireEvent.click(btn);
+    expect(handleBack).toHaveBeenCalled();
+  });
+
+  it('renders placeholder title without crashing on empty data (loading state)', () => {
+    /* TripsListPage:779 race — render must not crash on empty/placeholder title */
+    render(<PageHeader title="載入中…" variant="sticky" />);
+    expect(screen.getByRole('heading', { level: 1, name: '載入中…' })).toBeInTheDocument();
+  });
+
+  it('center align preserves text-content stacking on column layout', () => {
+    render(<PageHeader title="授權請求" eyebrow="OAuth" align="center" />);
+    const header = document.querySelector('.tp-page-header')!;
+    expect(header.getAttribute('data-align')).toBe('center');
+    expect(screen.getByText('OAuth')).toBeInTheDocument();
+  });
 });

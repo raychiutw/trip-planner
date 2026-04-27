@@ -776,7 +776,7 @@ export default function TripsListPage() {
     <div className="tp-embedded-trip">
       <PageHeader
         variant="sticky"
-        title={embeddedTrip?.title || embeddedTrip?.name || ''}
+        title={embeddedTrip?.title || embeddedTrip?.name || '載入中…'}
         back={clearSelected}
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
