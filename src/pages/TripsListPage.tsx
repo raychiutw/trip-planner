@@ -30,6 +30,7 @@ import { apiFetchRaw } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import PageHeader from '../components/shell/PageHeader';
 import TripCardMenu from '../components/trip/TripCardMenu';
 import InfoSheet from '../components/trip/InfoSheet';
 import CollabSheet from '../components/trip/CollabSheet';
@@ -60,21 +61,7 @@ const SCOPED_STYLES = `
 }
 .tp-trips-inner { max-width: 960px; margin: 0 auto; }
 
-.tp-trips-heading {
-  display: flex; justify-content: space-between; align-items: flex-end;
-  flex-wrap: wrap; gap: 16px;
-  margin-bottom: 24px;
-}
-.tp-trips-heading-text { flex: 1 1 auto; }
-.tp-trips-heading h1 {
-  font-size: var(--font-size-title); font-weight: 800;
-  letter-spacing: -0.02em; margin: 0 0 6px;
-}
-.tp-trips-heading-meta {
-  color: var(--color-muted);
-  font-size: var(--font-size-footnote);
-  font-variant-numeric: tabular-nums;
-}
+/* heading 改用統一 <PageHeader>。.tp-trips-heading 已退役。 */
 
 .tp-trips-grid {
   display: grid;
@@ -102,52 +89,10 @@ const SCOPED_STYLES = `
  * Back btn 36×36 帶 border + bg-background = mockup .icon-btn pattern，比原
  * 40×40 transparent 更貼齊 mockup affordance。Title 17px bold 單行，
  * 不加 day eyebrow（保持簡潔）。 */
-.tp-embedded-topbar {
-  display: flex; align-items: center; gap: 12px;
-  height: 56px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(14px);
-  position: sticky; top: 0; z-index: 10;
-  flex-shrink: 0;
-}
-.tp-embedded-back {
-  width: 36px; height: 36px;
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-foreground);
-  display: grid; place-items: center;
-  cursor: pointer;
-  font: inherit;
-  flex-shrink: 0;
-  transition: border-color 120ms, color 120ms, background 120ms;
-}
-.tp-embedded-back:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
-}
-.tp-embedded-back:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
-.tp-embedded-back .svg-icon { width: 18px; height: 18px; }
-.tp-embedded-trip-name {
-  font-size: var(--font-size-headline);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--color-foreground);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  flex: 1; min-width: 0;
-}
-/* PR-UU 2026-04-27：embedded topbar actions slot — 漢堡選單 (⋯) 一統 共編 / 列印 / 下載。
- * 對齊 mockup-trip-selected-v1.html Variant A 的 ⋯ icon-btn。 */
-.tp-embedded-actions {
-  display: flex; align-items: center; gap: 6px;
-  flex-shrink: 0;
-  position: relative;
-}
+/* embedded topbar 改用統一 <PageHeader variant="sticky">。
+ * 舊 .tp-embedded-topbar / -back / -trip-name / -actions CSS 已退役。
+ * .tp-embedded-trip 仍是 wrapper（含 height: 100%），保留。
+ * .tp-embedded-menu* 給 EmbeddedActionMenu sub-component 用，保留。 */
 .tp-embedded-menu-trigger {
   width: 36px; height: 36px;
   border-radius: var(--radius-md);
@@ -736,12 +681,7 @@ export default function TripsListPage() {
       <ToastContainer />
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <div className="tp-trips-inner">
-          <div className="tp-trips-heading">
-            <div className="tp-trips-heading-text">
-              <h1>我的行程</h1>
-              {headingMeta && <div className="tp-trips-heading-meta">{headingMeta}</div>}
-            </div>
-          </div>
+          <PageHeader title="我的行程" meta={headingMeta} />
 
           {loading && (
             <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
@@ -821,9 +761,19 @@ export default function TripsListPage() {
   // （[← back] [trip name]）。原 PR-AA floating back btn 自己一行 + 跟 mockup
   // mobile-topbar 不符，已棄用。
   function clearSelected() {
+    /* Capture the trip id user was viewing BEFORE we drop ?selected — used
+     * to restore keyboard focus to the originating card after re-render
+     * (back-btn unmounts → focus would otherwise fall to <body>). */
+    const targetId = effectiveSelectedId;
     const next = new URLSearchParams(searchParams);
     next.delete('selected');
     setSearchParams(next, { replace: false });
+    if (targetId && typeof window !== 'undefined') {
+      requestAnimationFrame(() => {
+        const card = document.querySelector(`[data-testid="trips-list-card-${targetId}"]`);
+        if (card instanceof HTMLElement) card.focus();
+      });
+    }
   }
 
   const embeddedTrip = showEmbeddedTrip
@@ -834,33 +784,19 @@ export default function TripsListPage() {
   // When no ?selected, render the card grid.
   const main = showEmbeddedTrip ? (
     <div className="tp-embedded-trip">
-      <header className="tp-embedded-topbar">
-        <button
-          type="button"
-          className="tp-embedded-back"
-          onClick={clearSelected}
-          aria-label="返回行程列表"
-          data-testid="trips-back-to-list"
-        >
-          <Icon name="arrow-left" />
-        </button>
-        {embeddedTrip && (
-          <span className="tp-embedded-trip-name">
-            {embeddedTrip.title || embeddedTrip.name}
-          </span>
+      <PageHeader
+        variant="sticky"
+        title={embeddedTrip?.title || embeddedTrip?.name || '載入中…'}
+        back={clearSelected}
+        backLabel="返回行程列表"
+        actions={effectiveSelectedId && (
+          <EmbeddedActionMenu
+            tripId={effectiveSelectedId}
+            tripPageRef={tripPageRef}
+            onCollab={() => setCollabTripId(effectiveSelectedId)}
+          />
         )}
-        {/* PR-UU 2026-04-27：actions slot 改漢堡選單 — 共編 / 列印 / 下載 4 formats。
-         * 列印 + 下載 透過 tripPageRef 呼叫 TripPage forwardRef handle。 */}
-        {effectiveSelectedId && (
-          <div className="tp-embedded-actions">
-            <EmbeddedActionMenu
-              tripId={effectiveSelectedId}
-              tripPageRef={tripPageRef}
-              onCollab={() => setCollabTripId(effectiveSelectedId)}
-            />
-          </div>
-        )}
-      </header>
+      />
       <TripPage ref={tripPageRef} tripId={effectiveSelectedId!} noShell />
     </div>
   ) : cardGridMain;

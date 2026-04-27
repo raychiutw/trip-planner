@@ -28,6 +28,7 @@ import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import PageHeader from '../components/shell/PageHeader';
 import Icon from '../components/shared/Icon';
 import MarkdownText from '../components/shared/MarkdownText';
 
@@ -122,19 +123,11 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
   background: var(--color-secondary);
 }
-.tp-chat-header {
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-background);
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 12px; flex-wrap: wrap;
-}
-.tp-chat-header-text h1 {
-  font-size: var(--font-size-title2); font-weight: 800;
-  letter-spacing: -0.01em; margin: 0 0 2px;
-}
-.tp-chat-header-text p {
-  font-size: var(--font-size-footnote); color: var(--color-muted); margin: 0;
+/* tp-chat-header 改用 <PageHeader>（standalone 預設）。.tp-chat-header CSS 已退役。
+ * 桌機補 24px 水平 padding 因為 .tp-chat-shell 沒有 page-level padding；
+ * 手機 (≤760px) 用 PageHeader 內建 16px canonical 規格，避免覆寫。 */
+@media (min-width: 761px) {
+  .tp-chat-shell .tp-page-header[data-variant="standalone"] { padding-left: 24px; padding-right: 24px; }
 }
 .tp-chat-trip-picker {
   display: inline-flex; align-items: center; gap: 6px;
@@ -603,12 +596,10 @@ export default function ChatPage() {
   const main = (
     <div className="tp-chat-shell" data-testid="chat-page">
       <style>{SCOPED_STYLES}</style>
-      <header className="tp-chat-header">
-        <div className="tp-chat-header-text">
-          <h1>聊天</h1>
-          <p>對指定行程說：「幫我加 Day 2 的午餐」、「換掉景點 X」，會直接改你行程的時間軸。</p>
-        </div>
-        {trips && trips.length > 0 && (
+      <PageHeader
+        title="聊天"
+        meta="對指定行程說：「幫我加 Day 2 的午餐」、「換掉景點 X」，會直接改你行程的時間軸。"
+        actions={trips && trips.length > 0 && (
           <div className="tp-chat-trip-menu" ref={tripMenuRef}>
             <button
               type="button"
@@ -641,7 +632,7 @@ export default function ChatPage() {
             )}
           </div>
         )}
-      </header>
+      />
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">
         {!activeTripId && trips !== null && trips.length === 0 && (

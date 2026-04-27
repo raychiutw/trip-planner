@@ -17,6 +17,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import PageHeader from '../components/shell/PageHeader';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import ErrorBanner from '../components/shared/ErrorBanner';
 
@@ -27,24 +28,7 @@ const SCOPED_STYLES = `
 }
 .tp-sessions-inner { max-width: 920px; margin: 0 auto; }
 
-.tp-page-heading {
-  display: flex; align-items: flex-end; justify-content: space-between;
-  gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
-}
-.tp-page-heading-text { flex: 1 1 auto; }
-.tp-page-heading-crumb {
-  font-size: var(--font-size-eyebrow); font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--color-muted); margin-bottom: 8px;
-}
-.tp-page-heading h1 {
-  font-size: var(--font-size-title); font-weight: 800;
-  letter-spacing: -0.02em; margin: 0 0 6px;
-}
-.tp-page-heading p {
-  color: var(--color-muted); font-size: var(--font-size-subheadline);
-  margin: 0;
-}
+/* page heading 改用統一的 <PageHeader>（src/components/shell/PageHeader.tsx），舊 .tp-page-heading 已退役 */
 
 .tp-list {
   background: var(--color-background);
@@ -270,13 +254,11 @@ export default function SessionsPage() {
       <style>{SCOPED_STYLES}</style>
       <div className="tp-sessions-shell" data-testid="sessions-page">
       <div className="tp-sessions-inner">
-        <div className="tp-page-heading">
-          <div className="tp-page-heading-text">
-            <div className="tp-page-heading-crumb">帳號</div>
-            <h1>帳號</h1>
-            {user?.email && <p data-testid="sessions-user-email">{user.email}</p>}
-          </div>
-          {otherSessions.length > 0 && (
+        <PageHeader
+          eyebrow="帳號"
+          title="帳號"
+          meta={user?.email && <span data-testid="sessions-user-email">{user.email}</span>}
+          actions={otherSessions.length > 0 && (
             <button
               className="tp-btn tp-btn-destructive"
               onClick={revokeAllOthers}
@@ -286,7 +268,7 @@ export default function SessionsPage() {
               {revokingAll ? '登出中…' : '登出其他全部裝置'}
             </button>
           )}
-        </div>
+        />
 
         {sessions === null && !error && (
           <div className="tp-loading" data-testid="sessions-loading">載入中…</div>
