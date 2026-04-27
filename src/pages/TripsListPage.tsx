@@ -30,7 +30,7 @@ import { apiFetchRaw } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import PageHeader from '../components/shell/PageHeader';
+import TitleBar from '../components/shell/TitleBar';
 import TripCardMenu from '../components/trip/TripCardMenu';
 import InfoSheet from '../components/trip/InfoSheet';
 import CollabSheet from '../components/trip/CollabSheet';
@@ -664,10 +664,8 @@ export default function TripsListPage() {
 
   const loading = myIds === null && !error;
 
-  // Heading meta: "N 個行程" — placeholder for future "進行中" / "最近更新"
-  const headingMeta = visibleTrips.length > 0
-    ? `${visibleTrips.length} 個行程`
-    : null;
+  // Heading meta 已棄用 — mockup 規定 TitleBar 單行 chrome 不放 meta。
+  // 行程數隱性，user 看 cards 自然知道；toolbar 子 tabs / search / 排序 留 future PR。
 
   // Mobile + ?selected → embedded TripPage IS the main content (full-screen
   // trip detail). Cards hide. Per user spec, /trips?selected=X is the unified
@@ -681,7 +679,20 @@ export default function TripsListPage() {
       <ToastContainer />
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <div className="tp-trips-inner">
-          <PageHeader title="我的行程" meta={headingMeta} />
+          <TitleBar
+            title="我的行程"
+            actions={
+              <button
+                type="button"
+                className="tp-titlebar-back"
+                onClick={openNewTrip}
+                aria-label="新增行程"
+                data-testid="trips-list-new-trip-titlebar"
+              >
+                <Icon name="plus" />
+              </button>
+            }
+          />
 
           {loading && (
             <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>
@@ -784,8 +795,7 @@ export default function TripsListPage() {
   // When no ?selected, render the card grid.
   const main = showEmbeddedTrip ? (
     <div className="tp-embedded-trip">
-      <PageHeader
-        variant="sticky"
+      <TitleBar
         title={embeddedTrip?.title || embeddedTrip?.name || '載入中…'}
         back={clearSelected}
         backLabel="返回行程列表"

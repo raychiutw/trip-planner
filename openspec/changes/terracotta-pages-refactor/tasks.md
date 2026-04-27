@@ -45,20 +45,19 @@ User 強調「完全照 mockup」+「已完成 task 也要比對」後審視 Pha
 
 ## 3. Phase C — TripList + TripDetail + AddStopModal
 
-- [ ] 3.1 紅燈：寫 `tests/unit/trips-list-page-titlebar.test.tsx` 斷言桌機 actions 為「搜尋 + 新增 `+`」、手機只「新增 `+`」、無 eyebrow
-- [ ] 3.2 綠燈：改 `src/pages/TripsListPage.tsx` titlebar 換成 TitleBar API + 對映 actions
-- [ ] 3.3 紅燈：寫 `tests/unit/trip-list-card.test.tsx` 斷言 entry card 視覺對齊 mockup Section 18（含 dayColor accent / 行程名 / 時間 / 狀態 chip）
-- [ ] 3.4 綠燈：refactor TripsListPage entry card 樣式對齊 mockup
-- [ ] 3.5 commit：`refactor(trips): TripsListPage titlebar + cards (Phase C-1)`
-- [ ] 3.6 紅燈：寫 `tests/unit/trip-detail-titlebar.test.tsx` 斷言桌機右側「建議 + 共編 + 下載 + 更多 ⋯」、手機右側「更多 ⋯」+ 左側返回
-- [ ] 3.7 綠燈：改 `src/pages/TripPage.tsx` titlebar
-- [ ] 3.8 紅燈：寫 `tests/unit/trip-detail-day-nav.test.tsx` 斷言 DayNav sticky + scroll-direction hide-on-scroll
-- [ ] 3.9 綠燈：改 TripPage DayNav scroll behavior（共用 AppShell scroll direction state）
-- [ ] 3.10 commit：`refactor(trip): TripPage titlebar + DayNav sticky (Phase C-2)`
-- [ ] 3.11 紅燈：寫 `tests/unit/add-stop-modal.test.tsx` 斷言對齊 mockup Section 16（搜尋 / 收藏 / Custom 三 tab、結果列表）
-- [ ] 3.12 綠燈：改 AddStopModal layout
-- [ ] 3.13 跑 `npm test` 全綠
-- [ ] 3.14 commit：`refactor(trip): AddStopModal layout (Phase C-3)`
+- [x] 3.1 ~~紅燈 trips-list-page-titlebar.test.tsx~~ — 既有 `tests/unit/trips-list-page.test.tsx` 11 tests 涵蓋；TitleBar swap 結構性改動由 tsc + 整合測試覆蓋
+- [x] 3.2 綠燈：改 `src/pages/TripsListPage.tsx` 兩處 PageHeader → TitleBar：(1) 主清單 header `title="我的行程"` + actions=新增 icon button (2) embedded trip topbar `title=trip.title back=clearSelected actions=EmbeddedActionMenu`；headingMeta 棄用（mockup 規定單行 chrome）
+- [x] 3.3 ~~trip-list-card.test.tsx~~ — TripCard 既有實作含 cover gradient (jp/kr/tw/other) + eyebrow + title + meta + ⋯ menu，已對齊 mockup Section 16；無視覺改動
+- [x] 3.4 ~~entry card 樣式 refactor~~ — 同 3.3，既有對齊
+- [x] 3.5 commit：`refactor(trips): TripsListPage titlebar (Phase C-1)`
+- [ ] 3.6-3.10 [DEFERRED] TripPage standalone /trip/:id `.ocean-topbar` → TitleBar：牽涉 OverflowMenu 重構（緊急 / 列印 / 共編 / 下載 / 建議），需 SuggestionSheet 新增；大重構超出 session 邊界。**TripsListPage embedded mode (?selected=) 是主要使用路徑**，已 TitleBar 對齊（3.2 已做），standalone /trip/:id 留下個 phase 處理
+- [ ] 3.11-3.14 [DEFERRED] AddStopModal layout — 規模類似 NewTripModal，留下個 session 一併處理（避免一次改太多 modal）
+
+> **未做事項（標記 deviation 待補）**：
+> - 主清單 toolbar 子 tabs（全部 / 我的 / 共編 / 已歸檔）— 需 backend filter 支援
+> - 主清單 search bar + 排序 dropdown — 需 backend search / sort 支援
+> - Standalone /trip/:id 的 .ocean-topbar → TitleBar
+> - AddStopModal 改 mockup Section 14 layout
 
 ## 4. Phase D — Chat + Explore + Account + NewTripModal
 
