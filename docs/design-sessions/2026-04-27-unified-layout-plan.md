@@ -20,7 +20,54 @@
 - 全站主功能頁 titlebar 一律 sticky。
 - 桌機與 compact 都只保留單行標題。
 - 桌機不要 eyebrow、meta、helper text。
-- Compact 右側統一 hamburger menu，展開後放 secondary actions、帳號、設定等。
+- 桌機與手機右側都放 **page-specific actions**（不再強制統一 hamburger）：1–2 個 icon button + 可選 primary button；超過時用「更多 ⋯」menu 收容次要 actions。
+- 只有行程詳情才有左側返回 button（其他主功能頁無返回，因 sidebar / bottom nav 是主導航）。
+
+#### TitleBar 規範 — 桌機
+
+```
+Title                                      [secondary icon] [primary button]
+──────────────────────────────────────────────────────────────────────────
+```
+
+| 功能 | Title | 左側 | 右側 |
+|------|-------|------|------|
+| 聊天 | 聊天 | 無 | 無（list item 點選即進入該對話） |
+| 行程列表 | 我的行程 | 無 | 搜尋、新增 `+` |
+| 行程詳情 | 行程名稱 | 返回列表 | 建議、共編、下載、更多 `⋯` |
+| 地圖 | 地圖 | 無 | 行程切換、全覽、定位（Day strip 含「總覽」 prepend，對齊 `?day=all`） |
+| 探索 | 探索 | 無 | 我的收藏 |
+| 帳號 | 帳號 | 無 | 無（裝置登出走 settings 內的「已登入裝置」row） |
+
+#### TitleBar 規範 — 手機
+
+手機更克制：右側通常 1 個 icon（最多 2）。
+
+```
+[back?] Title                                      [icon]
+────────────────────────────────────────────────────────
+```
+
+| 功能 | Title | 左側 | 右側 |
+|------|-------|------|------|
+| 聊天 | 聊天 | 無 | 無（list item 點選即進入該對話） |
+| 行程列表 | 我的行程 | 無 | 新增 `+` |
+| 行程詳情 | 行程名稱 | 返回 | 更多 `⋯` |
+| 地圖 | 地圖 | 無或返回 | 行程切換（Day strip 含「總覽」 prepend，對齊 `?day=all`） |
+| 探索 | 探索 | 無 | 我的收藏 icon |
+| 帳號 | 帳號 | 無 | 無 |
+
+#### Component API
+
+把現有 `PageHeader` 改名為真正的 `TitleBar`：
+
+```tsx
+<TitleBar
+  title="我的行程"
+  back={...}        // optional, 顯示左側返回 button（僅行程詳情用）
+  actions={...}     // 右側 actions：icon buttons + 可選 primary button + 可選 ⋯ menu
+/>
+```
 
 ### Navigation Chrome
 

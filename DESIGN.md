@@ -50,6 +50,7 @@
 | `card-title` | 17px / 24px | 16px / 24px | 700 | 卡片標題、stop name |
 | `body` | 16px / 26px | 16px / 26px | 400 | 主要中文內文 |
 | `support` | 14px / 22px | 14px / 22px | 400 | 輔助文字、描述、提示 |
+| `footnote` | 13px / 18px | 13px / 18px | 400 | 介於 body 與 label 之間（chat preview / list meta / micro UI），對齊 `--font-size-footnote`（tokens.css 0.8125rem） |
 | `label` | 12px / 16px | 12px / 16px | 600 | 表單 label、metadata、chip label |
 | `sidebar-item` | 14px / 20px | n/a | 600 | Desktop sidebar nav |
 | `bottom-nav-label` | n/a | 11px / 14px | 700 | Compact bottom nav label |
@@ -68,7 +69,7 @@
 - **Font family:** 桌機與 compact 不換 font family，避免品牌語氣分裂與載入成本增加。
 - **Titlebar is chrome:** titlebar 不使用 page-title 字級。桌機 20px、compact 18px 是上限。
 - **Chinese body:** 內文不低於 16px；中文行高保持 26px，手機也不壓縮。
-- **Letter spacing:** 中文一律 `letter-spacing: 0`。只有 uppercase `eyebrow` 可用 `0.12em`。
+- **Letter spacing:** 中文一律 `letter-spacing: 0`。Uppercase `eyebrow` 用 `0.12em`。**Latin uppercase 在 chip / pill / segmented label** 可用 `0.04–0.08em`（純拉丁字 / 數字 / 縮寫如 `DAY 01`、`HOTEL`、`SIGHT`），但中英混排或主要中文字段仍須 `0`。
 - **Eyebrow / uppercase labels**：`font-size: 10px; line-height: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;`
 - **Tabular numbers**：時間（16:30）、日期（7/2）一律 `font-variant-numeric: tabular-nums`
 
@@ -142,6 +143,8 @@
 ### Base Unit
 4px grid — 所有間距為 4 的倍數。
 
+**Micro-spacing 例外**：chip / pill / icon-button 的 inner padding 可用 `6 / 10 / 14 / 18px` 等非 4-grid 值，因為這些元素的 typography（11-13px font + line-height）需要 fine-tuned padding 達到視覺均衡，硬套 4-grid 反而 padding 過鬆或過緊。例外限定 inner padding，外層 gap / margin 仍守 4-grid。
+
 ### Scale
 | Token | Value | 用途 |
 |-------|-------|------|
@@ -209,7 +212,8 @@
 
 ## Material & Effects
 
-- **Glass:** Titlebar、bottom-nav、sheet 統一使用 `backdrop-filter: blur(14px)`（`--blur-glass: 14px`）。三層 glass 元素保持一致強度，避免不同 blur 強度造成視覺雜亂。Sheet 不加 `saturate(1.8)` — 對齊 editorial clean direction，去除色飽和增強。不再給 timeline card 用（設計稿強調乾淨、無模糊）。
+- **Glass:** Titlebar、bottom-nav、sheet 統一使用 `backdrop-filter: blur(14px)`（`--blur-glass: 14px`）。三層 glass 元素保持一致強度，避免不同 blur 強度造成視覺雜亂。Sheet 不加 `saturate(1.8)` — 對齊 editorial clean direction，去除色飽和增強。不再給 timeline card 用（設計稿強調乾淨、無模糊）。**Small floating button 例外**：≤32px 的浮動按鈕（POI photo 上的 `+ 加入` / `⋯` menu / `❤ 收藏 toggle`）可用 `blur(6px)` — 14px blur 在小元素上會 over-soften 邊緣，6px 給更 proportional 的玻璃感。
+- **Shadow specialized 例外**：地圖 markers 的 active state ring + drop shadow 可用 inline 多層 shadow（如 `0 0 0 4px rgba(217,120,72,0.3), 0 4px 12px rgba(42,31,24,0.45)`），因為 marker 浮在地圖背景上需要更強對比，token 三層 shadow 過弱。例外限定地圖 marker，其他 UI 一律用 token。
 - **Shadow scale（Airbnb 三層）：**
   | Token | Value | 用途 |
   |-------|-------|------|
