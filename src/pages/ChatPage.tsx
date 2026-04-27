@@ -145,7 +145,7 @@ const SCOPED_STYLES = `
   font-weight: 700;
   letter-spacing: 0.1em;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--color-accent-subtle);
   color: var(--color-accent);
 }

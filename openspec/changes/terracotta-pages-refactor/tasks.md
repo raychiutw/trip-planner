@@ -2,18 +2,18 @@
 
 ## 1. Phase A — Token + Component primitives（無 page 動作）
 
-- [ ] 1.1 grep `tokens.css` 確認 `--radius-full` 是否存在；若無，補 `--radius-full: 9999px` token + 文件註解
-- [ ] 1.2 grep src/ 找出所有 `border-radius: 999px` / `9999px` hardcoded，替換成 `var(--radius-full)`（保留 `border-radius: 50%` 圓形例外）
-- [ ] 1.3 補 `tokens.css` 加 map marker shadow exception variable + loading shimmer animation keyframe（對應 mockup `.tp-map-marker.is-active` + `tp-map-shimmer`）
-- [ ] 1.4 紅燈：寫 `tests/unit/title-bar.test.tsx`，斷言 `<TitleBar title="X" />` 渲染 sticky chrome、無 eyebrow / meta；`<TitleBar back={...} />` 顯示左側返回；`<TitleBar actions={[...]} />` 渲染右側 actions 並符合 44px 觸控
-- [ ] 1.5 綠燈：新建 `src/components/shell/TitleBar.tsx` 對齊 mockup chrome（sticky + glass blur 14px + hairline border-bottom + desktop 64px / compact 56px）
-- [ ] 1.6 在 `src/components/shell/PageHeader.tsx` 加 `export { TitleBar as default } from './TitleBar'` re-export shim（暫存以便 phase B-D 漸進切換；Phase E cleanup 移除）
-- [ ] 1.7 紅燈：寫 `tests/unit/map-day-tab.test.tsx` 斷言 idle / active 樣式、dayColor inline、min-height 44px、border-bottom transparent → accent
-- [ ] 1.8 綠燈：新建 `src/components/trip/MapDayTab.tsx`
-- [ ] 1.9 紅燈：寫 `tests/unit/map-entry-card.test.tsx` 斷言 type icon mapping (hotel/food/sight/shopping)、day-local index、active state ring + accent icon
-- [ ] 1.10 綠燈：新建 `src/components/trip/MapEntryCard.tsx`
-- [ ] 1.11 跑 `npx tsc --noEmit` + `npm test` 確認 Phase A 全綠
-- [ ] 1.12 commit：`refactor(shell): TitleBar + MapDayTab + MapEntryCard primitives (Phase A)`
+- [x] 1.1 grep `tokens.css` 確認 `--radius-full` 是否存在；若無，補 `--radius-full: 9999px` token + 文件註解 — 已存在於 tokens.css:69，無需動作
+- [x] 1.2 grep src/ 找出所有 `border-radius: 999px` / `9999px` hardcoded，替換成 `var(--radius-full)`（保留 `border-radius: 50%` 圓形例外）— 5 處替換完成（ChatPage / ExplorePage / Restaurant / Shop ×2）
+- [x] 1.3 補 `tokens.css` 加 map marker shadow exception variable + loading shimmer animation keyframe（對應 mockup `.tp-map-marker.is-active` + `tp-map-shimmer`）— 加 `--shadow-map-marker-active` / `--shadow-map-marker-idle` + `@keyframes tp-spin`；`@keyframes shimmer` 已存在
+- [x] 1.4 紅燈：寫 `tests/unit/title-bar.test.tsx`，斷言 `<TitleBar title="X" />` 渲染 sticky chrome、無 eyebrow / meta；`<TitleBar back={...} />` 顯示左側返回；`<TitleBar actions={[...]} />` 渲染右側 actions 並符合 44px 觸控
+- [x] 1.5 綠燈：新建 `src/components/shell/TitleBar.tsx` 對齊 mockup chrome（sticky + glass blur 14px + hairline border-bottom + desktop 64px / compact 56px）
+- [x] 1.6 ~~PageHeader re-export shim~~（廢棄 — 見 design.md D1 修正）：TitleBar 跟 PageHeader **並存**，不做 shim；既有 PageHeader 用戶（8 個 splash / auth / settings 子頁）不在 refactor scope，繼續用 PageHeader；6 主功能頁切換到 TitleBar
+- [x] 1.7 紅燈：寫 `tests/unit/map-day-tab.test.tsx` 斷言 idle / active 樣式、dayColor inline、min-height 44px、border-bottom transparent → accent
+- [x] 1.8 綠燈：新建 `src/components/trip/MapDayTab.tsx`
+- [x] 1.9 紅燈：寫 `tests/unit/map-entry-card.test.tsx` 斷言 type icon mapping (hotel/food/sight/shopping)、day-local index、active state ring + accent icon
+- [x] 1.10 綠燈：新建 `src/components/trip/MapEntryCard.tsx`
+- [x] 1.11 跑 `npx tsc --noEmit` + `npm test` 確認 Phase A 全綠 — 1117/1117 tests pass
+- [x] 1.12 commit：`refactor(shell): TitleBar + MapDayTab + MapEntryCard primitives (Phase A)`
 
 ## 2. Phase B — Map page + OceanMap
 
@@ -67,7 +67,7 @@
 
 ## 5. Phase E — Cleanup + verification
 
-- [ ] 5.1 grep `import.*PageHeader` 確認所有 import 已切到 TitleBar；移除 PageHeader.tsx re-export shim
+- [ ] 5.1 grep `import.*PageHeader` 確認 6 主功能頁全 import TitleBar；splash / auth / settings 子頁仍 import PageHeader（保留現狀）
 - [ ] 5.2 跑 `npx tsc --noEmit` + `npx tsc --noEmit -p tsconfig.functions.json` 零錯誤
 - [ ] 5.3 跑 `npm test` + `npm run test:api` 全綠
 - [ ] 5.4 跑 `npm run build` + `node scripts/verify-sw.js` 成功

@@ -41,7 +41,7 @@ const SHOP_STYLES = `
 .shop-card__cat {
   font-size: var(--font-size-caption2); font-weight: 500; color: var(--color-muted);
   background: var(--color-tertiary);
-  padding: 2px 8px; border-radius: 999px;
+  padding: 2px 8px; border-radius: var(--radius-full);
   white-space: nowrap;
 }
 .shop-card__rating {
@@ -71,7 +71,7 @@ const SHOP_STYLES = `
   font-size: 12px; font-weight: 500;
   color: var(--color-accent);
   background: var(--color-accent-subtle);
-  padding: 4px 10px; border-radius: 999px;
+  padding: 4px 10px; border-radius: var(--radius-full);
   letter-spacing: -0.005em;
 }
 .shop-card__desc {

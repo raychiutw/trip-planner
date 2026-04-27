@@ -215,6 +215,9 @@ body {
     --color-glass-nav: color-mix(in srgb, var(--color-background) 92%, transparent);
     --color-glass-toast: color-mix(in srgb, var(--color-secondary) 92%, transparent);
     --shadow-toast: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
+    /* Map marker active state — DESIGN.md exception (multi-layer rgba inline allowed for map markers) */
+    --shadow-map-marker-active: 0 0 0 4px color-mix(in srgb, var(--color-accent) 30%, transparent), 0 4px 12px rgba(42, 31, 24, 0.32);
+    --shadow-map-marker-idle: 0 1px 4px rgba(42, 31, 24, 0.18);
     --badge-open-bg: #FBEEE4;          --badge-open-text: #B85C2E;
     --badge-processing-bg: #FFF3CD;    --badge-processing-text: #856404;
     --badge-completed-bg: #D4EDDA;     --badge-completed-text: #155724;
@@ -311,6 +314,12 @@ body.dark {
         background-size: 200% 100%;
         animation: shimmer 1.5s infinite;
         border-radius: var(--radius-sm);
+    }
+
+    /* Spinner rotation — used by Map page loading + ad-hoc loading affordances */
+    @keyframes tp-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
 
     /* Timeline card — no glass (editorial clean direction) */
@@ -1151,4 +1160,170 @@ body.dark {
   .tp-page-header[data-align="center"] .tp-page-header-meta {
     display: block;
   }
+}
+
+/* ===== MapDayTab — bottom underline tab (V2 Terracotta Map page) ===== */
+.tp-map-day-tabs {
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(var(--blur-glass, 14px));
+  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 0 12px;
+  scrollbar-width: none;
+}
+.tp-map-day-tabs::-webkit-scrollbar { display: none; }
+.tp-map-day-tab {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  white-space: nowrap;
+  transition: color 150ms, border-bottom-color 150ms;
+}
+.tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
+.tp-map-day-tab.is-active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+.tp-map-day-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-ring);
+}
+.tp-map-day-tab-eyebrow {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.tp-map-day-tab-date {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-map-day-tab.is-active .tp-map-day-tab-date {
+  color: var(--color-accent);
+}
+
+/* ===== MapEntryCard — horizontal snap-scroll item (V2 Terracotta Map page) ===== */
+.tp-map-entry-cards {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 12px 16px;
+  background: var(--color-background);
+  border-top: 1px solid var(--color-border);
+  scrollbar-width: none;
+}
+.tp-map-entry-cards::-webkit-scrollbar { display: none; }
+.tp-map-entry-card {
+  flex: 0 0 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.tp-map-entry-card:hover:not(.is-active) {
+  border-color: color-mix(in srgb, var(--color-border) 50%, var(--color-foreground));
+}
+.tp-map-entry-card.is-active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+.tp-map-entry-card:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-ring);
+}
+.tp-map-entry-card-top {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.tp-map-entry-card-num {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-background);
+  color: var(--color-muted);
+  border: 1.5px solid var(--color-border);
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.tp-map-entry-card.is-active .tp-map-entry-card-num {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent-foreground);
+}
+.tp-map-entry-card-day {
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.tp-map-entry-card-time {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-map-entry-card-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.tp-map-entry-card-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--color-muted);
+  display: inline-grid;
+  place-items: center;
+}
+.tp-map-entry-card-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tp-map-entry-card.is-active .tp-map-entry-card-icon { color: var(--color-accent); }
+.tp-map-entry-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--color-foreground);
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

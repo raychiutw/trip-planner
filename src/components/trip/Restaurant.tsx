@@ -61,7 +61,7 @@ const RESTAURANT_STYLES = `
 .rest-card__cat {
   font-size: var(--font-size-caption2); font-weight: 500; color: var(--color-muted);
   background: var(--color-tertiary);
-  padding: 2px 8px; border-radius: 999px;
+  padding: 2px 8px; border-radius: var(--radius-full);
   white-space: nowrap;
 }
 .rest-card__meta {

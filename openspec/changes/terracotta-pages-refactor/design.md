@@ -37,18 +37,20 @@ V2 Terracotta layout 已在 mockup 階段定稿，但 src/ 仍是舊規格。本
 
 ## Decisions
 
-### D1：TitleBar 取代 PageHeader
+### D1：TitleBar 跟 PageHeader 並存（修正 2026-04-27 — Open Q1 解）
 
-**決定**：`src/components/shell/PageHeader.tsx` rename 成 `TitleBar.tsx`，props 改 `<TitleBar title back? actions? />`，移除 `eyebrow` / `meta` / `helperText` props。
+**決定**：新建 `src/components/shell/TitleBar.tsx`（簡化 API：`<TitleBar title back? actions? backLabel? />`，無 eyebrow / meta / variant / align），用於 mockup 涵蓋的 6 主功能頁；PageHeader.tsx 保留現狀，繼續服務 8 個非 mockup-scope 子頁（ForgotPasswordPage / SignupPage / ResetPasswordPage / EmailVerifyPendingPage / SessionsPage / DeveloperAppsPage / ConnectedAppsPage 等 splash / auth / settings 頁），這些頁有 hero / eyebrow / meta 設計需求且不在本 refactor 範圍。
 
 **理由**：
-- mockup 全站 titlebar 都是單行，eyebrow / meta / helper 不存在
-- unified-layout-plan.md 明文「桌機與 compact 都只保留單行標題」
-- 簡化 props surface 降低各頁 inconsistent 使用機會
+- mockup 6 主功能頁 (Chat / Trips / Trip detail / Map / Explore / Account) 是單行 chrome，TitleBar 簡化 API 對齊 unified-layout-plan.md
+- V2 OAuth / settings 子頁是 splash-style hero 頁面（已用 ConsentPage `align="center"` 模式），保留 PageHeader 避免破壞既有 hero 設計
+- 兩 component 並存，責任清楚：TitleBar = page chrome、PageHeader = splash hero
+- 沒有 re-export shim 需求（既有 PageHeader 用戶都不在 refactor scope，不需漸進切換）
 
 **替代方案**：
 - 保留 PageHeader 名稱、props 加 `variant?: 'titlebar' | 'header'`：拒絕，name 不反映 V2 角色（chrome 而非 hero）
 - 砍 PageHeader 直接 inline 各頁：拒絕，違反 DRY，且 sticky / glass 樣式分散難維護
+- TitleBar rename 取代 PageHeader 全站：拒絕，違反 mockup scope 限制，會強迫 splash 子頁改 layout（不在本 refactor 範圍）
 
 ### D2：Map page 改 src OceanMap 既有 spec + mockup 結構
 
@@ -160,8 +162,8 @@ V2 Terracotta layout 已在 mockup 階段定稿，但 src/ 仍是舊規格。本
 
 ## Open Questions
 
-1. **Q：`PageHeader` 既有使用者**有沒有任何頁面用到 `eyebrow` / `meta` / `helperText` props？需 grep 一輪。如果有，是否屬於 mockup 涵蓋的 6 主功能頁，還是其他子頁（如 ConsentPage / EmailVerifyPendingPage 等 V2 OAuth 流程頁）？
-   - 子頁若不在 mockup 涵蓋範圍，是否走另一個 capability spec，還是本次 refactor 一併處理？
+1. ~~**Q：`PageHeader` 既有使用者**有沒有任何頁面用到 `eyebrow` / `meta` / `helperText` props？需 grep 一輪。如果有，是否屬於 mockup 涵蓋的 6 主功能頁，還是其他子頁（如 ConsentPage / EmailVerifyPendingPage 等 V2 OAuth 流程頁）？~~
+   - **解（2026-04-27）**：grep 結果 8 個非 mockup-scope 子頁用 PageHeader 帶 eyebrow / meta（ForgotPassword / Signup / Reset / EmailVerify / Sessions / DeveloperApps / ConnectedApps / 等）。這些是 splash / auth / settings hero 頁面，**不在本 refactor 範圍**。決策：TitleBar 跟 PageHeader 並存（見 D1 修正），不做 re-export shim。子頁未來若要改 layout 走另一個 change，本次 refactor 不動。
 2. **Q：Map page entry card 在 overview 模式 active 高亮 sync**：mockup 有圖，但 src 既有實作是否已有 entry card list？需 confirm 是否有現成的 list state 可重用。
 3. **Q：tabs scroll-into-view**：mockup 沒明示 active tab 是否要自動 scroll into view（horizontal scroll 區內）。需回 mockup 或 unified-layout-plan.md 補圖。
 4. **Q：邊界 typography（極長行程名、空 day list）**：mockup 沒涵蓋。實作前必須補圖。
