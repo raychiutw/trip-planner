@@ -17,7 +17,7 @@ import L from 'leaflet';
 import Supercluster from 'supercluster';
 import { useLeafletMap } from '../../hooks/useLeafletMap';
 import { useRoute, type Coord } from '../../hooks/useRoute';
-import { dayPolylineStyle } from '../../lib/dayPalette';
+import { dayColor, dayPolylineStyle } from '../../lib/dayPalette';
 import type { MapPin } from '../../hooks/useMapData';
 
 /* ===== Props ===== */
@@ -59,12 +59,36 @@ export interface OceanMapProps {
 
 /* ===== Marker construction ===== */
 
-function markerIcon(pin: MapPin, isFocused: boolean, isPast: boolean): L.DivIcon {
-  const label = pin.type === 'hotel' ? '🛏' : String(pin.index);
+/**
+ * markerIcon — 建構 Leaflet divIcon 給 map marker。
+ *
+ * Hotel 跟 entry pin 共用同一 label 規則：純數字 String(pin.index)，
+ * 不再用 🛏 emoji（DESIGN.md L383「不用 emoji」+ anti-slop L2-5）。
+ * Type 區分（hotel 視為 day anchor 等）已轉移到 entry card 的 leading icon
+ * （見 src/components/trip/MapEntryCard.tsx），map marker 只負責 day-local order +
+ * dayColor border + active highlight。
+ *
+ * dayColor 套 idle marker inline border-color + color；active / past 不套（由 CSS
+ * .ocean-map-pin[data-state="active|past"] 處理 accent fill 與 muted）。
+ *
+ * Exported 供 unit test 用（tests/unit/ocean-map-marker-no-emoji.test.tsx）。
+ */
+export function markerIcon(
+  pin: MapPin,
+  isFocused: boolean,
+  isPast: boolean,
+  dayColor?: string,
+): L.DivIcon {
+  const label = String(pin.index);
   const state = isFocused ? 'active' : isPast ? 'past' : 'idle';
+  // dayColor 只套 idle 狀態。值來自 dayPalette（受控），可直接內嵌進 inline style。
+  const styleAttr =
+    state === 'idle' && dayColor
+      ? ` style="border-color: ${dayColor}; color: ${dayColor};"`
+      : '';
   return L.divIcon({
     className: 'ocean-map-pin-wrap',
-    html: `<span class="ocean-map-pin" data-state="${state}" data-type="${pin.type}">${label}</span>`,
+    html: `<span class="ocean-map-pin" data-state="${state}" data-type="${pin.type}"${styleAttr}>${label}</span>`,
     iconSize: [isFocused ? 36 : 28, isFocused ? 36 : 28],
     iconAnchor: [isFocused ? 18 : 14, isFocused ? 18 : 14],
   });
@@ -107,7 +131,6 @@ const SCOPED_STYLES = `
   border-color: #E0E0E0;
   color: #C1C1C1;
 }
-.ocean-map-pin[data-type="hotel"] { font-size: 14px; }
 .ocean-map-cluster {
   /* QA 2026-04-26 PR-I：cluster 在 GlobalMapPage 已 disable (cluster={false})，
    * 此 styling 留給其他 pages 之後若再開 cluster 用 — 改 white bg +
@@ -340,6 +363,26 @@ const OceanMap = memo(function OceanMap({
     [focusedIdx, pinIndexById],
   );
 
+  /**
+   * pinIdToDayColor — 每個 pin 對應的 dayColor hex（idle marker border + text）。
+   * pinsByDay 模式：用反向 lookup（pinId → dayNum → dayColor）；
+   * single-day 模式（dayNum prop）：所有 pin 共用同一 dayColor；
+   * 都沒設：undefined（marker 走 CSS muted 預設）。
+   */
+  const pinIdToDayColor = useMemo(() => {
+    const m = new Map<number, string>();
+    if (pinsByDay && pinsByDay.size > 0) {
+      for (const [day, dayPins] of pinsByDay) {
+        const color = dayColor(day);
+        for (const pin of dayPins) m.set(pin.id, color);
+      }
+    } else if (dayNum !== undefined) {
+      const color = dayColor(dayNum);
+      for (const pin of pins) m.set(pin.id, color);
+    }
+    return m;
+  }, [pinsByDay, dayNum, pins]);
+
   /* --- Markers (non-cluster): create once per pin-set, diff-update on focus change --- */
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
 
@@ -349,7 +392,7 @@ const OceanMap = memo(function OceanMap({
     const markers = new Map<number, L.Marker>();
     for (const pin of visiblePins) {
       const marker = L.marker([pin.lat, pin.lng], {
-        icon: markerIcon(pin, false, false),
+        icon: markerIcon(pin, false, false, pinIdToDayColor.get(pin.id)),
         keyboard: true,
         alt: `第 ${pin.index} 站：${pin.title}`,
       });
@@ -364,7 +407,7 @@ const OceanMap = memo(function OceanMap({
       // map set by a re-mount (Strict Mode) before this cleanup runs.
       if (markersRef.current === markers) markersRef.current = new Map();
     };
-  }, [map, visiblePins, autoCluster, onMarkerClick]);
+  }, [map, visiblePins, autoCluster, onMarkerClick, pinIdToDayColor]);
 
   // Diff-based focus update: compute which pins' icon state actually changed
   // (prev focused, new focused, past-boundary crossing) and only setIcon on those.
@@ -405,11 +448,11 @@ const OceanMap = memo(function OceanMap({
       const marker = markers.get(pinId);
       const pin = visiblePinsById.get(pinId);
       if (!marker || !pin) continue;
-      marker.setIcon(markerIcon(pin, pinId === focusId, isPastPin(pinId)));
+      marker.setIcon(markerIcon(pin, pinId === focusId, isPastPin(pinId), pinIdToDayColor.get(pinId)));
     }
 
     prevFocusRef.current = { focusId, focusedIdx, markers };
-  }, [map, onMarkerClick, visiblePins, visiblePinsById, focusId, focusedIdx, pinIndexById, autoCluster, isPastPin]);
+  }, [map, onMarkerClick, visiblePins, visiblePinsById, focusId, focusedIdx, pinIndexById, autoCluster, isPastPin, pinIdToDayColor]);
 
   /* --- Markers (cluster path): create Supercluster once, refresh on focus or viewport --- */
   // Latest focus state for cluster refresh closure (avoids rebuilding SC index on focus change).
@@ -466,7 +509,7 @@ const OceanMap = memo(function OceanMap({
         } else if (props.pin) {
           const pin = props.pin;
           const m = L.marker([pin.lat, pin.lng], {
-            icon: markerIcon(pin, pin.id === curFocus, curIsPast(pin.id)),
+            icon: markerIcon(pin, pin.id === curFocus, curIsPast(pin.id), pinIdToDayColor.get(pin.id)),
             keyboard: true,
             alt: `第 ${pin.index} 站：${pin.title}`,
           });
@@ -483,7 +526,7 @@ const OceanMap = memo(function OceanMap({
       layer.remove();
       clusterRefreshRef.current = null;
     };
-  }, [map, visiblePins, autoCluster, onMarkerClick]);
+  }, [map, visiblePins, autoCluster, onMarkerClick, pinIdToDayColor]);
 
   // Re-render cluster markers when focus changes — no SC index rebuild.
   useEffect(() => {

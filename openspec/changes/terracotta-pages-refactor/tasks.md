@@ -17,13 +17,13 @@
 
 ## 2. Phase B — Map page + OceanMap
 
-- [ ] 2.1 紅燈：寫 `tests/unit/ocean-map-marker-no-emoji.test.tsx` render OceanMap with hotel pin → 斷言 marker label === `String(pin.index)`，不含 `🛏` 或任何 emoji 字元
-- [ ] 2.2 綠燈：改 `src/components/trip/OceanMap.tsx:63` `markerIcon` 函式 → `const label = String(pin.index);`（移除 hotel 三元）
-- [ ] 2.3 綠燈：刪 `src/components/trip/OceanMap.tsx:110` `.ocean-map-pin[data-type="hotel"] { font-size: 14px; }` CSS（emoji 專用 override）
-- [ ] 2.4 紅燈：擴 `tests/unit/ocean-map-imperative-effects.test.tsx` 斷言 idle marker 套 dayColor border + dayColor color、active marker 套 accent fill + accent ring（對齊 mockup `.tp-map-marker` / `.tp-map-marker.is-active` 規格）
-- [ ] 2.5 綠燈：改 `OceanMap.tsx` SCOPED_STYLES 的 `.ocean-map-pin` idle 樣式為 dayColor border + dayColor text（用 `data-day-color` 或 inline style）；active 維持既有 accent fill
-- [ ] 2.6 跑既有 `tests/unit/ocean-map-*.test.tsx`、`map-page-*.test.tsx` 全綠
-- [ ] 2.7 commit：`refactor(map): OceanMap marker no emoji + dayColor idle (Phase B-1)`
+- [x] 2.1 紅燈：寫 `tests/unit/ocean-map-marker-no-emoji.test.tsx` render OceanMap with hotel pin → 斷言 marker label === `String(pin.index)`，不含 `🛏` 或任何 emoji 字元 — TDD red 確認 4 tests fail (markerIcon not exported)
+- [x] 2.2 綠燈：改 `src/components/trip/OceanMap.tsx:63` `markerIcon` 函式 → `const label = String(pin.index);`（移除 hotel 三元）
+- [x] 2.3 綠燈：刪 `src/components/trip/OceanMap.tsx:110` `.ocean-map-pin[data-type="hotel"] { font-size: 14px; }` CSS（emoji 專用 override）
+- [x] 2.4 紅燈：擴 `tests/unit/ocean-map-marker-no-emoji.test.tsx` 加 5 個 dayColor inline style 斷言（idle 套 / active 不套 / past 不套 / 無參數不套 / hotel 也接受）— 改 location 從 imperative-effects 到 marker-no-emoji file，因 imperative-effects 已 mock divIcon 無法驗 html
+- [x] 2.5 綠燈：擴 `markerIcon(pin, isFocused, isPast, dayColor?)` 簽章；OceanMap 加 `pinIdToDayColor` useMemo lookup（pinsByDay 反查 / dayNum fallback）；3 處 markerIcon call site 全傳 dayColor；deps 補 `pinIdToDayColor`
+- [x] 2.6 跑既有 `tests/unit/ocean-map-*.test.tsx`、`map-page-*.test.tsx` 全綠 — 47/47 OceanMap 相關 tests + 全 1126/1126 unit tests pass
+- [x] 2.7 commit：`refactor(map): OceanMap marker no emoji + dayColor idle (Phase B-1)`
 - [ ] 2.8 紅燈：寫 `tests/unit/map-page-layout.test.tsx` 斷言 MapPage 渲染含 TitleBar (`title="地圖"`) + map canvas (flex-1) + MapDayTab nav + MapEntryCard list；overview tab 第一項為「總覽 · {N}天」
 - [ ] 2.9 綠燈：改 `src/pages/MapPage.tsx` 用新 TitleBar + MapDayTab + MapEntryCard 重組 layout（保留既有 URL state 解析 / dayQuery / focus 邏輯）
 - [ ] 2.10 紅燈：寫 `tests/unit/map-page-loading-empty.test.tsx` 斷言 loading 顯示 spinner + 「地圖載入中…」+ aria-busy；empty 顯示 glass card + i-map icon + 「此日尚無景點」
