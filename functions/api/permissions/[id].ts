@@ -1,11 +1,12 @@
 /**
- * DELETE /api/permissions/:id — 移除權限 + 條件式 Access 同步
+ * DELETE /api/permissions/:id — 移除權限
  *
  * V2-P7 PR-O: 從「admin only」放寬為「admin OR trip owner」。
- * Trip ID 從 permission 記錄反查，再驗 owner。
+ * V2 共編改寫（task 5/9, 2026-04-27）：拔掉 CF Access policy 同步（V2-P6
+ * cutover 後 Access 已拆，呼叫 CF API 是死代碼 + 任何呼叫都會 fail）。
  */
 
-import { ensureCanManageTripPerms, removeEmailFromAccessPolicy } from '../permissions';
+import { ensureCanManageTripPerms } from '../permissions';
 import { logAudit } from '../_audit';
 import { AppError } from '../_errors';
 import { json, getAuth } from '../_utils';
@@ -17,7 +18,6 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   const id = context.params.id as string;
 
-  // 先查要刪的記錄
   const record = await context.env.DB
     .prepare('SELECT * FROM trip_permissions WHERE id = ?')
     .bind(id)
@@ -27,37 +27,15 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_NOT_FOUND', '找不到該權限記錄');
   }
 
-  // PR-CC 2026-04-26：owner 不可被刪（含 self-delete）。User 指示「不能刪除
-  // 自己 owner」 — destructive 操作必須 limit。要轉移 owner 走另外 endpoint
-  // (未來實作)，不能直接 DELETE。
+  // PR-CC 2026-04-26：owner 不可被刪（含 self-delete）。要轉移 owner 走另外
+  // endpoint（未來實作），不能直接 DELETE。
   if (record.role === 'owner') {
     throw new AppError('PERM_DENIED', '不可移除行程擁有者');
   }
 
   await ensureCanManageTripPerms(context, auth, record.trip_id);
 
-  // 刪除 D1 記錄
   await context.env.DB.prepare('DELETE FROM trip_permissions WHERE id = ?').bind(id).run();
-
-  // 檢查該 email 是否還有其他行程權限
-  const remaining = await context.env.DB
-    .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND trip_id != ?')
-    .bind(record.email, '*')
-    .first();
-
-  if (!remaining) {
-    // 無其他權限，從 Access policy 移除
-    try {
-      await removeEmailFromAccessPolicy(context.env, record.email);
-    } catch (err) {
-      // 回滾：重新 INSERT
-      await context.env.DB
-        .prepare('INSERT INTO trip_permissions (id, email, trip_id, role) VALUES (?, ?, ?, ?)')
-        .bind(record.id, record.email, record.trip_id, record.role)
-        .run();
-      throw new AppError('DATA_SAVE_FAILED', '同步 Access policy 失敗，已回滾');
-    }
-  }
 
   await logAudit(context.env.DB, {
     tripId: record.trip_id,

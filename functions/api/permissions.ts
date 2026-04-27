@@ -1,14 +1,28 @@
 /**
  * GET  /api/permissions?tripId=xxx  — 列出行程權限
- * POST /api/permissions { email, tripId, role } — 新增權限 + Access 同步
+ * POST /api/permissions { email, tripId, role? } — 新增權限 / 寄邀請
  *
  * V2-P7 PR-O: 從「admin only」放寬為「admin OR trip owner」。
- * 一般使用者可管自己 owner = 自己 email 的行程共編；admin 仍對所有行程有權。
+ * V2 共編分享信改寫（task 5/9, 2026-04-27）：拔 CF Access 死代碼（V2-P6 cutover 後
+ * Access 已拆），改成兩條分支：
+ *   - existing user (users.email match)：INSERT trip_permissions + 寄通知信「[Inviter]
+ *     邀請你加入 [Trip]」（isExistingUser=true → CTA「登入並加入」）
+ *   - new email：產 invitation token + INSERT trip_invitations + 寄含 signup link 的
+ *     邀請信（isExistingUser=false → CTA「註冊並加入」）
+ *
+ * 兩條分支 response shape 對齊 anti-enumeration（status 區分但 201 + email 一致）。
+ * Email 寄送 best-effort（失敗不 rollback）。
  */
 
 import { logAudit } from './_audit';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
+import { sendEmail, EmailError } from '../../src/server/email';
+import { tripInvitation } from '../../src/server/email-templates';
+import {
+  generateInvitationToken,
+  invitationExpiresAt,
+} from '../../src/server/invitation-token';
 import type { Env } from './_types';
 
 /** 檢查 auth user 是否為該 trip 的 owner（admin 自動 pass）。 */
@@ -26,51 +40,6 @@ export async function ensureCanManageTripPerms(
   if ((owner.owner ?? '').toLowerCase() !== auth.email.toLowerCase()) {
     throw new AppError('PERM_ADMIN_ONLY', '僅行程擁有者或管理者可操作共編');
   }
-}
-
-/** 取得目前 Access policy 的 include email 列表 */
-async function getAccessPolicyEmails(env: Env): Promise<string[]> {
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/access/apps/${env.CF_ACCESS_APP_ID}/policies/${env.CF_ACCESS_POLICY_ID}`,
-    { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' } }
-  );
-  if (!res.ok) throw new Error(`Access API GET failed: ${res.status}`);
-  const data = await res.json() as { result: { include: Array<{ email?: { email: string } }> } };
-  return data.result.include
-    .filter((rule: { email?: { email: string } }) => rule.email)
-    .map((rule: { email?: { email: string } }) => rule.email!.email.toLowerCase());
-}
-
-/** 更新 Access policy 的 include email 列表 */
-async function updateAccessPolicyEmails(env: Env, emails: string[]): Promise<void> {
-  const include = emails.map(email => ({ email: { email } }));
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/access/apps/${env.CF_ACCESS_APP_ID}/policies/${env.CF_ACCESS_POLICY_ID}`,
-    {
-      method: 'PUT',
-      headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: '允許的旅伴', decision: 'allow', include }),
-    }
-  );
-  if (!res.ok) throw new Error(`Access API PUT failed: ${res.status}`);
-}
-
-/** 將 email 加入 Access policy（若尚未存在） */
-export async function addEmailToAccessPolicy(env: Env, email: string): Promise<void> {
-  const emails = await getAccessPolicyEmails(env);
-  const lower = email.toLowerCase();
-  if (emails.includes(lower)) return; // 已在白名單
-  emails.push(lower);
-  await updateAccessPolicyEmails(env, emails);
-}
-
-/** 從 Access policy 移除 email（若存在） */
-export async function removeEmailFromAccessPolicy(env: Env, email: string): Promise<void> {
-  const emails = await getAccessPolicyEmails(env);
-  const lower = email.toLowerCase();
-  const filtered = emails.filter(e => e !== lower);
-  if (filtered.length === emails.length) return; // 本來就不在
-  await updateAccessPolicyEmails(env, filtered);
 }
 
 // GET /api/permissions?tripId=xxx
@@ -100,7 +69,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
 
-  const body = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
+  const body = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(
+    context.request,
+  );
 
   const { email, tripId, role = 'member' } = body;
   if (!email || !tripId) {
@@ -115,47 +86,175 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const lowerEmail = email.toLowerCase();
 
-  // 寫入 D1（UNIQUE index 保護 race condition）
-  let result: Record<string, unknown> & { id: number };
+  // Lookup invited user — 決定走 existing-user vs new-email 分支
+  const invitedUser = await context.env.DB
+    .prepare('SELECT id, display_name FROM users WHERE email = ? LIMIT 1')
+    .bind(lowerEmail)
+    .first<{ id: string; display_name: string | null }>();
+
+  // Trip title + inviter info 兩條分支共用（寄信都需要）
+  const [trip, inviter] = await Promise.all([
+    context.env.DB
+      .prepare('SELECT title FROM trips WHERE id = ?')
+      .bind(tripId)
+      .first<{ title: string }>(),
+    context.env.DB
+      .prepare('SELECT display_name, email FROM users WHERE email = ? LIMIT 1')
+      .bind(auth.email.toLowerCase())
+      .first<{ display_name: string | null; email: string }>(),
+  ]);
+  const tripTitle = trip?.title ?? tripId;
+  const inviterDisplayName = inviter?.display_name ?? null;
+  const inviterEmail = inviter?.email ?? auth.email;
+
+  if (invitedUser) {
+    // ===== Branch A: invited email 已註冊 =====
+    let permRow: { id: number };
+    try {
+      const row = await context.env.DB
+        .prepare(
+          `INSERT INTO trip_permissions (email, trip_id, role, user_id)
+           VALUES (?, ?, ?, ?) RETURNING *`,
+        )
+        .bind(lowerEmail, tripId, role, invitedUser.id)
+        .first<{ id: number }>();
+      if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
+      permRow = row;
+    } catch (err) {
+      if (err instanceof AppError) throw err;
+      if (err instanceof Error && err.message.includes('UNIQUE')) {
+        throw new AppError('DATA_CONFLICT', '此 email 已有此行程的權限');
+      }
+      throw err;
+    }
+
+    await logAudit(context.env.DB, {
+      tripId,
+      tableName: 'trip_permissions',
+      recordId: permRow.id,
+      action: 'insert',
+      changedBy: auth.email,
+      diffJson: JSON.stringify({ email: lowerEmail, role, source: 'direct_add' }),
+    });
+
+    // Best-effort send notification email（isExistingUser=true → CTA「登入並加入」）
+    if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
+      const origin = new URL(context.request.url).origin;
+      const tpl = tripInvitation({
+        // 已註冊者直接 redirect /trips?selected=tripId（不需 token）
+        inviteUrl: `${origin}/trips?selected=${encodeURIComponent(tripId)}`,
+        inviterDisplayName,
+        inviterEmail,
+        tripTitle,
+        isExistingUser: true,
+      });
+      try {
+        await sendEmail(context.env, {
+          to: lowerEmail,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+        });
+      } catch (emailErr) {
+        // best-effort: log but still return success
+        // eslint-disable-next-line no-console
+        console.error(
+          '[permissions] email send failed:',
+          emailErr instanceof EmailError
+            ? `${emailErr.status} ${emailErr.message}`
+            : (emailErr as Error).message,
+        );
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        status: 'permission_added',
+        email: lowerEmail,
+        id: permRow.id,
+      }),
+      { status: 201, headers: { 'content-type': 'application/json' } },
+    );
+  }
+
+  // ===== Branch B: invited email 未註冊 → 產 invitation token =====
+  if (!context.env.SESSION_SECRET) {
+    throw new AppError('SYS_INTERNAL', 'SESSION_SECRET 未設定');
+  }
+
+  // Need inviter user_id for invited_by FK
+  const inviterRow = await context.env.DB
+    .prepare('SELECT id FROM users WHERE email = ? LIMIT 1')
+    .bind(auth.email.toLowerCase())
+    .first<{ id: string }>();
+  if (!inviterRow) {
+    throw new AppError('SYS_INTERNAL', '邀請者帳號不存在');
+  }
+
+  const { rawToken, tokenHash } = await generateInvitationToken(context.env.SESSION_SECRET);
+  const expiresAt = invitationExpiresAt(7);
+
   try {
-    const row = await context.env.DB
-      .prepare('INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?) RETURNING *')
-      .bind(lowerEmail, tripId, role)
-      .first<Record<string, unknown> & { id: number }>();
-    if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
-    result = row;
+    await context.env.DB
+      .prepare(
+        `INSERT INTO trip_invitations (token_hash, trip_id, invited_email, role, invited_by, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(tokenHash, tripId, lowerEmail, role, inviterRow.id, expiresAt)
+      .run();
   } catch (err) {
-    if (err instanceof AppError) throw err;
-    // UNIQUE constraint violation → already exists
     if (err instanceof Error && err.message.includes('UNIQUE')) {
-      throw new AppError('DATA_CONFLICT', '此 email 已有此行程的權限');
+      throw new AppError('DATA_CONFLICT', '此 email 已有 pending 邀請（請改用重寄）');
     }
     throw err;
   }
 
-  // 同步 Access policy（best-effort：失敗不 rollback D1，回傳 warning）
-  let accessSyncFailed = false;
-  try {
-    await addEmailToAccessPolicy(context.env, lowerEmail);
-  } catch (err) {
-    accessSyncFailed = true;
-    const accessErr = err instanceof Error ? err.message : String(err);
-    console.error('Access policy sync failed:', accessErr);
-    await logAudit(context.env.DB, {
-      tripId, tableName: 'trip_permissions', recordId: result.id,
-      action: 'error', changedBy: auth.email,
-      diffJson: JSON.stringify({ warning: 'Access policy sync failed', message: accessErr }),
-    });
-  }
-
   await logAudit(context.env.DB, {
     tripId,
-    tableName: 'trip_permissions',
-    recordId: result.id,
+    tableName: 'trip_invitations',
+    recordId: null,
     action: 'insert',
     changedBy: auth.email,
-    diffJson: JSON.stringify({ email: lowerEmail, role }),
+    diffJson: JSON.stringify({ invited_email: lowerEmail, role, expires_at: expiresAt }),
   });
 
-  return json({ ...result, _accessSyncFailed: accessSyncFailed }, 201);
+  // Best-effort send invitation email（含 raw token in URL）
+  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
+    const origin = new URL(context.request.url).origin;
+    const inviteUrl = `${origin}/invite?token=${encodeURIComponent(rawToken)}`;
+    const tpl = tripInvitation({
+      inviteUrl,
+      inviterDisplayName,
+      inviterEmail,
+      tripTitle,
+      isExistingUser: false,
+    });
+    try {
+      await sendEmail(context.env, {
+        to: lowerEmail,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+      });
+    } catch (emailErr) {
+      // eslint-disable-next-line no-console
+      console.error(
+        '[permissions] invitation email send failed:',
+        emailErr instanceof EmailError
+          ? `${emailErr.status} ${emailErr.message}`
+          : (emailErr as Error).message,
+      );
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      ok: true,
+      status: 'invitation_sent',
+      email: lowerEmail,
+      expiresAt,
+    }),
+    { status: 201, headers: { 'content-type': 'application/json' } },
+  );
 };
