@@ -107,19 +107,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   type RequestBody = { tripId?: string; mode?: string; message?: string; title?: string; body?: string };
   const body = await parseJsonBody<RequestBody>(request);
 
-  const { tripId, mode } = body;
+  const { tripId } = body;
   // 優先使用 message，若未提供則 fallback 合併 title + body（向下相容）
   const message = body.message
     || [body.title, body.body].filter(Boolean).join('\n')
     || '';
 
-  if (!tripId || !mode || !message) {
-    throw new AppError('DATA_VALIDATION', '缺少必要欄位：tripId, mode, message');
+  if (!tripId || !message) {
+    throw new AppError('DATA_VALIDATION', '缺少必要欄位：tripId, message');
   }
 
-  if (mode !== 'trip-edit' && mode !== 'trip-plan') {
-    throw new AppError('DATA_VALIDATION', 'mode 必須是 trip-edit 或 trip-plan');
-  }
+  // mode is now optional. tp-request skill on Mac Mini auto-classifies the
+  // message intent (改行程 vs 問建議). Frontend no longer needs to choose.
+  // Default to 'trip-plan' to satisfy DB CHECK (mode IN ('trip-edit','trip-plan'))
+  // — the field is vestigial from the skill's perspective; schema kept for
+  // backward compat with older client versions.
+  const mode = body.mode === 'trip-edit' || body.mode === 'trip-plan' ? body.mode : 'trip-plan';
 
   if (!await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');

@@ -38,10 +38,24 @@ describe('POST /api/requests', () => {
     expect(data.status).toBe('open');
   });
 
-  it('缺 mode → 400', async () => {
+  it('缺 mode → 201（自動 default trip-plan，tp-request skill 自動判別意圖）', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/requests', 'POST', {
-        tripId: 'trip-req', message: 'hi',
+        tripId: 'trip-req', message: '幫我推薦景點',
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(201);
+    const data = await resp.json() as Record<string, unknown>;
+    expect(data.mode).toBe('trip-plan');
+  });
+
+  it('缺 message → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/requests', 'POST', {
+        tripId: 'trip-req',
       }),
       env,
       auth: mockAuth(),

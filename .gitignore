@@ -30,6 +30,9 @@ report.html
 # Daily-check runtime logs
 .context/daily-check-*.log
 
+# D1 daily backup JSON dumps (scripts/dump-d1.js output)
+backups/
+
 # tp-workspace runtime trigger outputs
 .claude/skills/tp-workspace/trigger-results/
 # tp-team skill eval workspace (runtime-generated outputs + snapshots)

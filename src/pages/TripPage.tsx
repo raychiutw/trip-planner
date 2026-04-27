@@ -1,8 +1,8 @@
-import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Icon from '../components/shared/Icon';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
-import clsx from 'clsx';
 import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
@@ -13,15 +13,20 @@ import { TRIP_TIMEZONE, getLocalToday } from '../lib/constants';
 import { downloadTripFormat } from '../lib/tripExport';
 import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '../lib/scrollSpy';
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
+import { TripIdContext } from '../contexts/TripIdContext';
+import { TripDaysContext } from '../contexts/TripDaysContext';
+import type { DayOption } from '../components/trip/EntryActionPopover';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
 import { extractPinsFromDay } from '../hooks/useMapData';
-/* F005: lazy load TripMapRail — Leaflet 是重型套件，避免影響首頁 bundle */
-const TripMapRail = lazy(() => import('../components/trip/TripMapRail'));
+/* F005: TripSheet 延遲載（內部 lazy load TripMapRail 以避免 Leaflet 進首頁 bundle）*/
+const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
-import MobileBottomNav from '../components/trip/MobileBottomNav';
+import BottomNavBar from '../components/shell/BottomNavBar';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
@@ -55,23 +60,37 @@ const SCOPED_STYLES = `
 /* Sticky-nav children z-index layering above DestinationArt */
 .sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
 
-/* ===== 2-col layout (PR3: Q1=A, Q-C=A, Q-D=1) =====
- * Single breakpoint ≥1024px: left col (content) + right col (sticky map rail).
- * Below 1024px: single column (mobile-first), map is a separate route.
- * 1024px chosen as the start of iPad Pro 13" portrait (1024px viewport width).
- */
-.trip-body {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-@media (min-width: 1024px) {
-  .trip-body {
-    grid-template-columns: clamp(375px, 30vw, 400px) 1fr;
-    gap: 24px;
-    align-items: start;
-  }
-}
 .trip-content { min-width: 0; }
+
+/* PR-P 2026-04-26：trip-actions row — embedded mode（noShell）也需要
+ * visible 共編入口。topbar 被 noShell 隱藏後，user 找不到任何方式進入共編
+ * sheet。這個 row 在 trip 主內容最上方，desktop / mobile 都看得到。 */
+.tp-trip-actions {
+  display: flex; gap: 6px; justify-content: flex-end;
+  padding: 8px 12px 0;
+}
+.tp-trip-action-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  cursor: pointer;
+  min-height: 32px;
+  box-shadow: var(--shadow-sm);
+  transition: background 120ms, border-color 120ms;
+}
+.tp-trip-action-chip:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+}
+.tp-trip-action-chip .svg-icon { width: 14px; height: 14px; }
+.tp-trip-action-chip:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px;
+}
 
 /* Print mode */
 .print-mode .sticky-nav { display: none; }
@@ -81,11 +100,8 @@ const SCOPED_STYLES = `
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
-.print-mode .trip-body { grid-template-columns: 1fr; }
-.print-mode .trip-map-rail { display: none !important; }
 @media print {
-  .sticky-nav, .print-exit-btn, .trip-map-rail { display: none !important; }
-  .trip-body { grid-template-columns: 1fr; }
+  .sticky-nav, .print-exit-btn { display: none !important; }
 }
 `;
 
@@ -124,16 +140,32 @@ function getQueryTrip(): string | null {
   return new URLSearchParams(window.location.search).get('trip');
 }
 
-/* ===== Scroll helper ===== */
+/* ===== Scroll helpers ===== */
+
+/**
+ * Find the actual scrolling ancestor of `el`. AppShell uses a constrained
+ * `.app-shell-main { overflow-y: auto }` as the scroll container, so the
+ * window doesn't scroll. Fall back to document if no ancestor scrolls.
+ */
+function findScrollContainer(el: HTMLElement): HTMLElement | Window {
+  let parent: HTMLElement | null = el.parentElement;
+  while (parent) {
+    const cs = getComputedStyle(parent);
+    const overflowY = cs.overflowY;
+    if ((overflowY === 'auto' || overflowY === 'scroll') && parent.scrollHeight > parent.clientHeight) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return window;
+}
 
 function scrollToDay(dayNum: number): void {
   const header = document.getElementById('day' + dayNum);
   if (!header) return;
-  const nav = document.getElementById('stickyNav');
-  const navH = nav ? nav.offsetHeight : 0;
-  const navTop = nav ? (parseFloat(getComputedStyle(nav).top) || 0) : 0;
-  const top = header.getBoundingClientRect().top + window.pageYOffset - navH - navTop - 4;
-  window.scrollTo({ top, behavior: 'smooth' });
+  // scroll-margin-top on the header (set in the align effect below) handles
+  // the day-strip sticky offset, so we just use scrollIntoView here.
+  header.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ===== Resolve state machine ===== */
@@ -145,8 +177,32 @@ type ResolveState =
 
 /* ===== Component ===== */
 
-export default function TripPage() {
+export interface TripPageProps {
+  /** Override tripId from URL params. Used when TripPage is embedded inside
+   * another page (e.g., TripsListPage's right sheet on desktop, or main slot
+   * when /trips?selected=X is set on mobile). */
+  tripId?: string;
+  /** When true, render only the inner trip content (timeline + day nav) —
+   * skip the AppShell wrapper, sidebar, sheet, bottomNav. The hosting page
+   * provides those. */
+  noShell?: boolean;
+}
+
+/* PR-SS/UU 2026-04-27：embedded mode 用 ref 從外部 trigger 各 actions。
+ * TripsListPage 的 embedded topbar ⋯ 漢堡選單透過此 handle 呼叫。 */
+export interface TripPageHandle {
+  openSheet: (key: string) => void;
+  triggerDownload: (format: string) => void;
+  togglePrint: () => void;
+}
+
+function TripPageInner(
+  { tripId: propTripId, noShell = false }: TripPageProps,
+  ref: React.Ref<TripPageHandle>,
+) {
   const { tripId: urlTripId } = useParams<{ tripId: string }>();
+  // Prefer prop tripId (embedded mode) over URL (route mode).
+  const effectiveUrlTripId = propTripId ?? urlTripId;
   const navigate = useNavigate();
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
@@ -174,6 +230,17 @@ export default function TripPage() {
     }
     prevIsOnlineRef.current = isOnline;
   }, [isOnline]);
+
+  // V3 inline expansion (PR2): TimelineRail dispatches `tp-entry-updated`
+  // on successful note PATCH. We refetch the current day to surface the new
+  // value across the timeline + map + sheet.
+  useEffect(() => {
+    function onEntryUpdated() {
+      refetchCurrentDayRef.current?.();
+    }
+    window.addEventListener('tp-entry-updated', onEntryUpdated);
+    return () => window.removeEventListener('tp-entry-updated', onEntryUpdated);
+  }, []);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
   const { isDark, setIsDark, colorMode, setColorMode } = useDarkMode();
@@ -220,7 +287,7 @@ export default function TripPage() {
     // Priority 1: React Router params (/trip/:tripId)
     // Priority 2: legacy query string ?trip=xxx
     // Priority 3: localStorage
-    let tripId: string | null = (urlTripId && /^[\w-]+$/.test(urlTripId)) ? urlTripId : null;
+    let tripId: string | null = (effectiveUrlTripId && /^[\w-]+$/.test(effectiveUrlTripId)) ? effectiveUrlTripId : null;
     if (!tripId) tripId = getQueryTrip();
     if (!tripId || !/^[\w-]+$/.test(tripId)) {
       tripId = lsGet<string>(LS_KEY_TRIP_PREF);
@@ -268,7 +335,7 @@ export default function TripPage() {
       });
 
     return () => { cancelled = true; };
-  }, [resolveKey, urlTripId, navigate]);
+  }, [resolveKey, effectiveUrlTripId, navigate]);
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
@@ -312,11 +379,43 @@ export default function TripPage() {
     return map;
   }, [days]);
 
+  /* --- v2.10 Wave 1: DayOption[] for ⎘/⇅ popover day picker.
+   *      Built once per trip data change; provided via TripDaysContext. */
+  const dayOptions: DayOption[] = useMemo(() => {
+    return dayNums.map((n) => {
+      const day = allDays[n];
+      const summary = daySummaryMap.get(n);
+      return {
+        dayNum: n,
+        dayId: day?.id ?? 0,
+        label: summary?.date
+          ? `${summary.date}${summary.dayOfWeek ? `（${summary.dayOfWeek}）` : ''}`
+          : `Day ${n}`,
+        stopCount: day?.timeline?.length ?? 0,
+      };
+    }).filter((d) => d.dayId > 0);
+  }, [dayNums, allDays, daySummaryMap]);
+
   /* --- Auto-scroll dates --- */
   const autoScrollDates = useMemo(
     () => days.map((d) => d.date).filter((d): d is string => !!d).sort(),
     [days],
   );
+
+  /* --- Pins for TripMapRail (hoisted out of JSX IIFE for AppShell sheet slot) --- */
+  const mapRailData = useMemo(() => {
+    type Pin = ReturnType<typeof extractPinsFromDay>['pins'][number];
+    const pinsByDay = new Map<number, Pin[]>();
+    const allPins: Pin[] = [];
+    for (const n of dayNums) {
+      const day = allDays[n];
+      if (!day) continue;
+      const { pins } = extractPinsFromDay(day);
+      pinsByDay.set(n, pins);
+      allPins.push(...pins);
+    }
+    return { allPins, pinsByDay };
+  }, [dayNums, allDays]);
 
   /* --- Trip start/end scalars for HourlyWeather (T3) --- */
   const tripStart = autoScrollDates[0] ?? null;
@@ -357,6 +456,28 @@ export default function TripPage() {
     // Reset browser scroll restoration to prevent stale position
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
+
+    // PR-Q 2026-04-26：?sheet=<key> URL param — 從 /trips card kebab「共編
+    // 設定」過來，自動開該 sheet。允許的 key 必須在 SHEET_TITLES 內。
+    const sheetParam = new URLSearchParams(window.location.search).get('sheet');
+    if (sheetParam && Object.prototype.hasOwnProperty.call(SHEET_TITLES, sheetParam)) {
+      setActiveSheet(sheetParam);
+    }
+
+    // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI
+    // 卡「跳到行程」過來，需要 scroll 到該 entry）。useScrollRestoreOnBack
+    // 已處理 location.state.scrollAnchor，但 GlobalMapPage Link 同時放 query
+    // 跟 state，兩條路任一條 work 都行。這裡 query 那條是 fallback —
+    // 例如 user 直接貼 URL 沒有 history state。
+    const focusParam = new URLSearchParams(window.location.search).get('focus');
+    if (focusParam) {
+      requestAnimationFrame(() => {
+        const sel = `[data-scroll-anchor="entry-${CSS.escape(focusParam)}"]`;
+        const el = document.querySelector<HTMLElement>(sel);
+        if (el) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      });
+      return;
+    }
 
     // URL hash takes priority over auto-locate
     const hash = window.location.hash;
@@ -412,12 +533,17 @@ export default function TripPage() {
     return () => window.removeEventListener('resize', align);
   }, [loading]);
 
-  /* --- Scroll tracking: update active pill + hash (#6) --- */
+  /* --- Scroll tracking: update active pill + hash (#6).
+   * AppShell makes `.app-shell-main` the scroll container (overflow-y: auto).
+   * Window doesn't scroll, so listening on window misses every scroll event.
+   * Attach the listener to the scroll container of any day header. */
   useEffect(() => {
     if (loading || dayNums.length === 0) return;
-    // Print mode 下頁面用 print layout，scroll tracking 對 user 無意義且會觸發
-    // 不必要的 switchDay setState；進入 print mode 時 cleanup 就讓 effect 重跑以 detach。
     if (isPrintMode) return;
+
+    const firstHeader = document.getElementById('day' + dayNums[0]);
+    if (!firstHeader) return;
+    const scroller = findScrollContainer(firstHeader);
 
     function onScroll() {
       const nav = document.getElementById('stickyNav');
@@ -429,12 +555,10 @@ export default function TripPage() {
       const current = computeActiveDayIndex(headerTops, navH, getStableViewportH());
       if (current >= 0) {
         const activeDayNum = dayNums[current] ?? -1;
-        // #1: Only call switchDay when day actually changes (avoid redundant re-renders)
         if (activeDayNum >= 0 && activeDayNum !== scrollDayRef.current) {
           scrollDayRef.current = activeDayNum;
           switchDay(activeDayNum);
         }
-        // Update hash (debounced to avoid conflicts with manual scroll)
         if (Date.now() - manualScrollTs.current > 600) {
           const newHash = '#day' + activeDayNum;
           if (window.location.hash !== newHash) {
@@ -452,8 +576,8 @@ export default function TripPage() {
       }
     }
 
-    window.addEventListener('scroll', throttledScroll, { passive: true });
-    return () => window.removeEventListener('scroll', throttledScroll);
+    scroller.addEventListener('scroll', throttledScroll, { passive: true });
+    return () => scroller.removeEventListener('scroll', throttledScroll);
   }, [loading, dayNums, switchDay, isPrintMode]);
 
   /* --- Stops count per day for DayNav progress marks --- */
@@ -479,6 +603,14 @@ export default function TripPage() {
 
   /* --- Topbar / OverflowMenu -> InfoSheet --- */
   const handlePanelItem = useCallback((key: string) => { setActiveSheet(key); }, []);
+
+  /* PR-SS/UU 2026-04-27：embedded mode 把 sheet/download/print handlers 開放
+   * 給父層。TripsListPage 的 ⋯ 漢堡選單 (共編 / 列印 / 下載) 透過 ref 呼叫。 */
+  useImperativeHandle(ref, () => ({
+    openSheet: (key: string) => setActiveSheet(key),
+    triggerDownload: (format: string) => { void handleDownloadFormat(format); },
+    togglePrint,
+  }), [handleDownloadFormat, togglePrint]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
   /* --- Fix 5: Trip change without full page reload --- */
@@ -511,47 +643,79 @@ export default function TripPage() {
     );
   }
 
-  return (
+  const sheetContent = !loading && trip ? (
+    <Suspense fallback={null}>
+      <TripSheet
+        tripId={trip.id}
+        allPins={mapRailData.allPins}
+        pinsByDay={mapRailData.pinsByDay}
+        dark={isDark}
+      />
+    </Suspense>
+  ) : undefined;
+
+  const bottomNavContent = !loading && trip ? (
+    <BottomNavBar
+      tripId={trip.id}
+      activeSheet={activeSheet}
+      onOpenSheet={setActiveSheet}
+      onClearSheet={() => setActiveSheet(null)}
+      isOnline={isOnline}
+    />
+  ) : undefined;
+
+  const mainContent = (
     <div className="ocean-shell">
       <style>{SCOPED_STYLES}</style>
 
-      {/* Ocean Topbar — design 稿 .topbar 對齊 */}
-      <header className="ocean-topbar sticky-nav" id="stickyNav">
-        <div className="ocean-topbar-left">
-          {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
-          {trip && <span className="ocean-brand-label">{trip.title || trip.name}</span>}
-        </div>
-        <div className="ocean-topbar-right">
-          <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
-            <span aria-hidden="true">!</span>
-            <span className="ocean-tb-label">緊急</span>
-          </button>
-          <button type="button" className="ocean-tb-btn" onClick={togglePrint}>
-            <span aria-hidden="true">⎙</span>
-            <span className="ocean-tb-label">列印</span>
-          </button>
-          <OverflowMenu
-            onSheet={handlePanelItem}
-            onDownload={handleDownloadFormat}
-            isOnline={isOnline}
-          />
-          <a
-            className={clsx('ocean-tb-btn ocean-tb-ai', !isOnline && 'opacity-40 pointer-events-none')}
-            href="/manage/"
-            aria-disabled={!isOnline}
-            tabIndex={isOnline ? undefined : -1}
-            onClick={!isOnline ? (e: React.MouseEvent) => e.preventDefault() : undefined}
-          >
-            AI 編輯
-          </a>
-        </div>
-      </header>
+      {/* Topbar only renders in standalone (route) mode. When embedded inside
+        * TripsListPage, the host provides the chrome — render only the inner
+        * timeline + day nav so it matches mobile layout exactly. */}
+      {!noShell && (
+        <header className="ocean-topbar sticky-nav" id="stickyNav">
+          <div className="ocean-topbar-left">
+            {activeTripId && <DestinationArt tripId={activeTripId} dark={isDark} />}
+            {trip && <span className="ocean-brand-label">{trip.title || trip.name}</span>}
+          </div>
+          <div className="ocean-topbar-right">
+            <button type="button" className="ocean-tb-btn" onClick={() => setActiveSheet('emergency')}>
+              <span aria-hidden="true">!</span>
+              <span className="ocean-tb-label">緊急</span>
+            </button>
+            <button type="button" className="ocean-tb-btn" onClick={togglePrint}>
+              <span aria-hidden="true">⎙</span>
+              <span className="ocean-tb-label">列印</span>
+            </button>
+            <OverflowMenu
+              onSheet={handlePanelItem}
+              onDownload={handleDownloadFormat}
+              isOnline={isOnline}
+            />
+          </div>
+        </header>
+      )}
 
       <ToastContainer />
 
-      {/* Main page */}
+      {/* PR-RR 2026-04-27：共編 chip 在 noShell 模式下 hide。embedded mode
+       * 由 TripsListPage 的 topbar 提供 共編 入口（chip in topbar action slot），
+       * 避免兩個 共編 entry 重複。Standalone /trip/:id 模式仍 render。 */}
+      {!noShell && !loading && trip && (
+        <div className="tp-trip-actions" aria-label="行程操作">
+          <button
+            type="button"
+            className="tp-trip-action-chip"
+            onClick={() => setActiveSheet('collab')}
+            data-testid="trip-actions-collab"
+            aria-label="開啟共編設定"
+          >
+            <Icon name="group" />
+            <span>共編</span>
+          </button>
+        </div>
+      )}
+
       <main className="ocean-page">
-        {/* Day strip — 設計稿的 .rtl-day-strip */}
         {!loading && trip && (
           <DayNav
             days={days}
@@ -569,65 +733,35 @@ export default function TripPage() {
           </div>
         )}
 
-        {/* Body: 2-col grid (≥1024px: content + sticky map rail; <1024px: single col) */}
-        {!loading && trip && (() => {
-          const allPins = dayNums.flatMap((n) => {
-            const day = allDays[n];
-            return day ? extractPinsFromDay(day).pins : [];
-          });
-          const pinsByDay = new Map<number, typeof allPins>();
-          for (const n of dayNums) {
-            const day = allDays[n];
-            if (day) pinsByDay.set(n, extractPinsFromDay(day).pins);
-          }
-          return (
-            <div className="trip-body">
-              <div className="trip-content" id="tripContent">
-                {dayNums.map((dayNum) => (
-                  <DaySection
-                    key={dayNum}
-                    dayNum={dayNum}
-                    day={allDays[dayNum]}
-                    daySummary={daySummaryMap.get(dayNum)}
-                    tripStart={tripStart}
-                    tripEnd={tripEnd}
-                    themeArt={themeArt}
-                    localToday={localToday}
-                    isActive={dayNum === currentDayNum}
-                    timezone={weatherTimezone}
-                  />
-                ))}
+        {!loading && trip && (
+          <div className="trip-content" id="tripContent">
+            {dayNums.map((dayNum) => (
+              <DaySection
+                key={dayNum}
+                dayNum={dayNum}
+                day={allDays[dayNum]}
+                daySummary={daySummaryMap.get(dayNum)}
+                tripStart={tripStart}
+                tripEnd={tripEnd}
+                themeArt={themeArt}
+                localToday={localToday}
+                isActive={dayNum === currentDayNum}
+                timezone={weatherTimezone}
+              />
+            ))}
+            {/* Embedded mode (TripsListPage sheet) hides decorative footer
+              * art + Footer block — sheet is a narrow column, footer would
+              * waste vertical space. Standalone /trip/:id keeps both. */}
+            {!noShell && (
+              <>
                 <FooterArt dark={isDark} />
                 {footerData && <Footer footer={footerData} />}
-              </div>
-              {/* Desktop Map Rail — right column, sticky, ≥1024px only */}
-              {/* key={trip.id} 確保切換行程時重掛（fitDoneRef reset） */}
-              <Suspense fallback={null}>
-                <TripMapRail
-                  key={trip.id}
-                  pins={allPins}
-                  tripId={trip.id}
-                  pinsByDay={pinsByDay}
-                  dark={isDark}
-                />
-              </Suspense>
-            </div>
-          );
-        })()}
+              </>
+            )}
+          </div>
+        )}
       </main>
 
-      {/* Mobile bottom tab bar (≤760px) */}
-      {!loading && trip && (
-        <MobileBottomNav
-          tripId={trip.id}
-          activeSheet={activeSheet}
-          onOpenSheet={setActiveSheet}
-          onClearSheet={() => setActiveSheet(null)}
-          isOnline={isOnline}
-        />
-      )}
-
-      {/* InfoSheet (mobile bottom sheet) */}
       <InfoSheet
         open={!!activeSheet}
         title={activeSheet ? (SHEET_TITLES[activeSheet] || '') : ''}
@@ -650,7 +784,6 @@ export default function TripPage() {
         />
       </InfoSheet>
 
-      {/* Print exit button */}
       {isPrintMode && (
         <button
           className="print-exit-btn hidden fixed top-[10px] left-1/2 -translate-x-1/2 z-(--z-print-exit) bg-destructive text-accent-foreground border-none py-3 px-6 rounded-sm text-callout font-system font-semibold hover:brightness-[0.85] focus-visible:outline-none"
@@ -662,4 +795,34 @@ export default function TripPage() {
       )}
     </div>
   );
+
+  // Wrap content in TripIdContext so descendants (TimelineEvent, DaySection,
+  // TimelineRail) can read tripId without depending on URL useParams — needed
+  // for embedded mode where URL is /trips?selected=:id (no :tripId param).
+  // v2.10 Wave 1：TripDaysContext 提供 ⎘/⇅ popover 用的 DayOption[] 給 RailRow。
+  const wrappedMain = (
+    <TripIdContext.Provider value={activeTripId}>
+      <TripDaysContext.Provider value={dayOptions}>
+        {mainContent}
+      </TripDaysContext.Provider>
+    </TripIdContext.Provider>
+  );
+
+  // Embedded mode: host page provides AppShell + sidebar + sheet + bottomNav.
+  if (noShell) {
+    return wrappedMain;
+  }
+
+  return (
+    <AppShell
+      sidebar={<DesktopSidebarConnected />}
+      main={wrappedMain}
+      sheet={sheetContent}
+      bottomNav={bottomNavContent}
+    />
+  );
 }
+
+const TripPage = forwardRef<TripPageHandle, TripPageProps>(TripPageInner);
+TripPage.displayName = 'TripPage';
+export default TripPage;

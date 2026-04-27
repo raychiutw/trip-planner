@@ -11,10 +11,16 @@ source "$PROJECT_DIR/scripts/lib/scheduler-common.sh"
 
 log "--- 排程啟動 ---"
 
+# V2 OAuth client_credentials — replaces CF Access Service Token
+TOKEN=$(node "$PROJECT_DIR/scripts/lib/get-tripline-token.js" 2>>"$ERR_LOG_FILE") || {
+  log_error "Token 取得失敗,確認 TRIPLINE_API_CLIENT_ID/SECRET env 已設"
+  log_error "--- 排程結束（錯誤）---"
+  exit 1
+}
+
 # Query open requests
 RESPONSE=$(curl -sf \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "Authorization: Bearer $TOKEN" \
   "https://trip-planner-dby.pages.dev/api/requests?status=open" 2>&1) || {
   log_error "API 呼叫失敗: $RESPONSE"
   log_error "--- 排程結束（錯誤）---"
@@ -41,8 +47,8 @@ PATCHED_IDS=()
 while IFS='|' read -r rid trip_id mode msg; do
   log "  id=$rid trip=$trip_id mode=$mode msg=$msg"
   curl -sf -X PATCH \
-    -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-    -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Origin: https://trip-planner-dby.pages.dev" \
     -H "Content-Type: application/json" \
     -d '{"status":"received"}' \
     "https://trip-planner-dby.pages.dev/api/requests/$rid" > /dev/null 2>&1 && {
@@ -61,8 +67,8 @@ else
   log_error "Claude 執行失敗，回滾 status → open"
   for rid in "${PATCHED_IDS[@]}"; do
     curl -sf -X PATCH \
-      -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-      -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Origin: https://trip-planner-dby.pages.dev" \
       -H "Content-Type: application/json" \
       -d '{"status":"open"}' \
       "https://trip-planner-dby.pages.dev/api/requests/$rid" > /dev/null 2>&1 && \

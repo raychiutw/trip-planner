@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V2 Map Page — /map (cross-trip global)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #D97848;
+  --accent-subtle: #FBEEE4;
+  --accent-bg: #F7DFCB;
+  --accent-deep: #B85C2E;
+  --background: #FFFBF5;
+  --secondary: #FAF4EA;
+  --tertiary: #F2EAD9;
+  --hover: #F9EDE0;
+  --foreground: #2A1F18;
+  --muted: #6F5A47;
+  --border: #EADFCF;
+  --line-strong: #C8B89F;
+  --sidebar-bg: #FFFBF5;
+  --sheet-bg: #FFFBF5;
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+
+  /* Map palette: cross-trip 每 trip 一個主色（DESIGN.md 10 色 Day palette 取前 3） */
+  --trip-okinawa: #D97848;  /* terracotta accent */
+  --trip-seoul: #06A77D;    /* teal */
+  --trip-taichung: #0EA5C7; /* sky */
+
+  --map-bg: #E5E7E0;
+  --map-water: #C8D6DC;
+  --map-land: #F0EDE3;
+  --map-road: #FFFFFF;
+
+  --grid-3pane: 240px 1fr min(420px, 32vw);
+  --grid-2pane: 240px 1fr;
+  --nav-h-mobile: 88px;
+  --font-eyebrow: 0.625rem;
+  --font-caption2: 0.6875rem;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #E8E3D8;
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 32px 24px 80px;
+}
+
+.page-header {
+  max-width: 1600px; margin: 0 auto 24px;
+  padding-bottom: 20px; border-bottom: 2px solid rgba(42, 31, 24, 0.08);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+}
+.page-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.page-header .variant-chip {
+  background: var(--accent); color: #fff;
+  padding: 6px 14px; border-radius: 9999px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+}
+.page-header .nav-links a {
+  color: var(--muted); text-decoration: none; margin-left: 16px; font-size: 14px; font-weight: 500;
+}
+.page-header .nav-links a:hover { color: var(--accent); }
+
+.viewport-label {
+  margin: 40px auto 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 12px; max-width: 1600px;
+}
+.viewport-label::after { content: ''; flex: 1; height: 1px; background: rgba(42, 31, 24, 0.1); }
+
+.viewport-frame {
+  background: var(--background);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(42, 31, 24, 0.2), 0 2px 6px rgba(42, 31, 24, 0.08);
+  overflow: hidden;
+  position: relative;
+  margin: 0 auto;
+}
+.vp-desktop-full { width: 1440px; height: 940px; }
+.vp-desktop-narrow { width: 1100px; height: 800px; }
+.vp-mobile { width: 375px; height: 812px; }
+
+.shell-3pane { display: grid; grid-template-columns: var(--grid-3pane); height: 100%; }
+.shell-2pane { display: grid; grid-template-columns: var(--grid-2pane); height: 100%; }
+.shell-mobile { display: flex; flex-direction: column; height: 100%; position: relative; }
+
+/* ========== Sidebar ========== */
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 20px 12px 16px;
+  display: flex; flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+.sidebar-brand {
+  padding: 6px 12px 20px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+}
+.sidebar-brand .accent-dot { color: var(--accent); }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 10px;
+  color: var(--muted);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  min-height: 44px;
+}
+.nav-item:hover { background: var(--hover); color: var(--foreground); }
+.nav-item.active {
+  background: var(--foreground); color: var(--background);
+  font-weight: 600;
+}
+.nav-item .icon { width: 20px; height: 20px; display: grid; place-items: center; flex-shrink: 0; }
+.nav-item .icon svg { width: 100%; height: 100%; stroke-width: 2; }
+.sidebar-cta {
+  margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.new-trip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px; border-radius: 9999px;
+  background: var(--accent); color: #fff;
+  border: none; font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; min-height: 44px;
+}
+.new-trip-btn:hover { background: var(--accent-deep); }
+.user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; border-radius: 8px;
+  color: var(--muted); font-size: 13px;
+}
+.user-chip .avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--accent-deep);
+  display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+
+/* ========== Map main ========== */
+.map-main {
+  position: relative;
+  overflow: hidden;
+  background: var(--map-bg);
+}
+
+/* SVG map illustration */
+.map-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+
+/* Floating controls overlay */
+.map-overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.map-overlay > * { pointer-events: auto; }
+
+.map-topbar {
+  position: absolute; top: 16px; left: 16px; right: 16px;
+  display: flex; align-items: flex-start; gap: 12px;
+}
+.map-eyebrow-card {
+  flex: 1;
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; gap: 12px;
+  max-width: 480px;
+}
+.map-eyebrow-card .me-label {
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+}
+.map-eyebrow-card .me-title { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; }
+.map-eyebrow-card .me-meta { font-size: 12px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.map-filter-bar {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.trip-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 9999px;
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--foreground); cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, opacity 0.15s;
+}
+.trip-chip:hover { border-color: var(--foreground); }
+.trip-chip.is-off { opacity: 0.4; }
+.trip-chip .chip-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.trip-chip[data-trip="okinawa"] .chip-dot { background: var(--trip-okinawa); }
+.trip-chip[data-trip="seoul"] .chip-dot { background: var(--trip-seoul); }
+.trip-chip[data-trip="taichung"] .chip-dot { background: var(--trip-taichung); }
+.trip-chip .chip-meta { color: var(--muted); font-weight: 500; font-size: 11px; }
+
+/* Bottom-left zoom-to-fit */
+.map-action-bar {
+  position: absolute; bottom: 24px; left: 24px;
+  display: flex; gap: 8px;
+}
+.map-pill-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border-radius: 9999px;
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  font: inherit; font-size: 13px; font-weight: 600;
+  color: var(--foreground); cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.map-pill-btn:hover { background: var(--background); border-color: var(--accent); color: var(--accent); }
+
+/* Bottom-right zoom + locate */
+.map-control-stack {
+  position: absolute; bottom: 24px; right: 24px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.map-square-btn {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--foreground); font: inherit; font-size: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.map-square-btn:hover { background: var(--background); border-color: var(--accent); color: var(--accent); }
+.map-zoom-group {
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--background) 95%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; box-shadow: var(--shadow-sm);
+}
+.map-zoom-group .map-square-btn { background: transparent; border: none; border-radius: 0; box-shadow: none; backdrop-filter: none; }
+.map-zoom-group .map-square-btn + .map-square-btn { border-top: 1px solid var(--border); }
+
+/* Trip legend (bottom center on mobile, hidden on desktop where chip bar覆蓋功能) */
+
+/* POI marker popup (when selected) */
+.poi-popup {
+  position: absolute;
+  background: var(--background);
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 12px;
+  min-width: 220px;
+  pointer-events: auto;
+}
+.poi-popup .pp-eyebrow {
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--accent-deep);
+  margin-bottom: 4px;
+}
+.poi-popup .pp-title {
+  font-size: 14px; font-weight: 700; letter-spacing: -0.005em;
+  margin-bottom: 4px;
+}
+.poi-popup .pp-meta {
+  font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.poi-popup .pp-actions {
+  display: flex; gap: 6px; margin-top: 10px;
+  padding-top: 10px; border-top: 1px solid var(--border);
+}
+.poi-popup .pp-btn {
+  flex: 1;
+  padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--foreground); cursor: pointer;
+  text-align: center;
+}
+.poi-popup .pp-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.poi-popup .pp-btn:hover { border-color: var(--accent); color: var(--accent); }
+.poi-popup .pp-btn.primary:hover { background: var(--accent-deep); color: #fff; }
+
+/* ========== Right Sheet (cross-trip selected POI / trip detail) ========== */
+.sheet {
+  background: var(--sheet-bg);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sheet-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+}
+.sheet-header .icon-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--muted); font-size: 14px;
+}
+.sheet-header .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sheet-header .spacer { flex: 1; }
+.sheet-header .save-btn {
+  padding: 6px 14px; border-radius: 9999px;
+  background: var(--accent); color: #fff; border: none;
+  font: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+}
+.sheet-header .save-btn:hover { background: var(--accent-deep); }
+
+.sheet-body { flex: 1; overflow-y: auto; padding: 20px; }
+
+.sheet-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 8px;
+}
+.sheet-eyebrow .trip-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--trip-okinawa);
+}
+.sheet-poi-title {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.01em;
+  line-height: 1.2; margin-bottom: 8px;
+}
+.sheet-poi-meta {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 16px;
+}
+.sheet-poi-meta .chip {
+  padding: 3px 10px; border-radius: 9999px;
+  background: var(--tertiary); color: var(--muted);
+  font-weight: 600; letter-spacing: 0.05em;
+}
+.sheet-poi-meta .chip.accent { background: var(--accent-subtle); color: var(--accent-deep); }
+.sheet-poi-meta .rating { color: var(--foreground); font-weight: 700; }
+
+.sheet-section {
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.sheet-section h4 {
+  font-size: var(--font-caption2); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 8px;
+}
+.sheet-section p { font-size: 14px; line-height: 1.55; color: var(--foreground); }
+.sheet-section .info-row {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 13px; padding: 6px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.sheet-section .info-row:last-child { border-bottom: none; }
+.sheet-section .info-row .info-label {
+  font-size: var(--font-caption2); font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--muted);
+  width: 80px; flex-shrink: 0;
+}
+.sheet-section .info-row .info-value { color: var(--foreground); }
+
+/* Other stops in same day */
+.day-stop-mini {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border); cursor: pointer;
+}
+.day-stop-mini:last-child { border-bottom: none; }
+.day-stop-mini:hover .ds-name { color: var(--accent-deep); }
+.day-stop-mini .ds-time {
+  font-size: 12px; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--foreground);
+  width: 44px; flex-shrink: 0;
+}
+.day-stop-mini .ds-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--background); border: 1.5px solid var(--line-strong);
+  display: grid; place-items: center;
+  font-size: 9px; font-weight: 700; color: var(--muted);
+  flex-shrink: 0;
+}
+.day-stop-mini.active .ds-dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+.day-stop-mini .ds-name {
+  font-size: 13px; font-weight: 500; flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.day-stop-mini.active .ds-name { font-weight: 700; color: var(--accent-deep); }
+
+/* ========== Mobile ========== */
+.mobile-topbar {
+  height: 56px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 94%, transparent);
+  backdrop-filter: blur(14px);
+  flex-shrink: 0;
+  position: relative; z-index: 10;
+}
+.mobile-topbar .brand { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.mobile-topbar .brand .accent-dot { color: var(--accent); }
+.mobile-topbar .icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  display: grid; place-items: center; cursor: pointer;
+}
+
+.mobile-map {
+  flex: 1; position: relative; overflow: hidden;
+  background: var(--map-bg);
+}
+
+/* Mobile filter chip strip (top) */
+.mobile-filter-strip {
+  position: absolute; top: 12px; left: 12px; right: 12px;
+  display: flex; gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  z-index: 6;
+}
+.mobile-filter-strip::-webkit-scrollbar { display: none; }
+.mobile-filter-strip .trip-chip {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* Mobile poi card carousel (bottom over map) */
+.mobile-poi-stack {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, var(--background) 75%, transparent);
+  padding: 12px 0 16px;
+  z-index: 6;
+}
+.mobile-poi-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--line-strong);
+  margin: 0 auto 8px;
+}
+.mobile-poi-eyebrow {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 16px;
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+  margin-bottom: 4px;
+}
+.mobile-poi-eyebrow .trip-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--trip-okinawa); }
+.mobile-poi-title { padding: 0 16px; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.mobile-poi-cards {
+  display: flex; gap: 10px;
+  padding: 4px 16px 4px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.mobile-poi-cards::-webkit-scrollbar { display: none; }
+.mobile-poi-card {
+  flex: 0 0 200px;
+  background: var(--background);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px;
+  cursor: pointer;
+}
+.mobile-poi-card.active { border-color: var(--accent); box-shadow: var(--shadow-md); }
+.mobile-poi-card .pc-mini-cover {
+  height: 80px; border-radius: 6px; margin-bottom: 6px;
+  background: var(--tertiary);
+}
+.mobile-poi-card .pc-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 2px;
+}
+.mobile-poi-card .pc-title { font-size: 13px; font-weight: 600; line-height: 1.3; }
+
+.bottom-nav {
+  position: sticky; inset-block-end: 0; left: 0; right: 0;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  height: var(--nav-h-mobile);
+  background: color-mix(in srgb, var(--background) 97%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.bottom-nav-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font: inherit; min-height: 44px;
+}
+.bottom-nav-btn .icon { width: 22px; height: 22px; }
+.bottom-nav-btn .icon svg { width: 100%; height: 100%; stroke-width: 2; }
+.bottom-nav-btn span { font-size: 10px; font-weight: 500; }
+.bottom-nav-btn.active { color: var(--accent); }
+.bottom-nav-btn.active span { font-weight: 700; }
+
+.icon { display: inline-flex; align-items: center; justify-content: center; }
+.icon svg { stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.spec-card {
+  max-width: 1600px; margin: 32px auto 0;
+  background: var(--background); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px;
+  font-size: 13px; line-height: 1.7;
+}
+.spec-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.spec-card code { background: var(--tertiary); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--accent-deep); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div>
+    <h1>V2 Map Page Mockup — /map (cross-trip global)</h1>
+    <div style="font-size: 13px; color: var(--muted); margin-top: 4px;">
+      Sidebar 第 3 項「地圖」· 全域 cross-trip 地圖 · view-only（不含 search，那是探索的事）
+    </div>
+  </div>
+  <div>
+    <span class="variant-chip">V2 · Map</span>
+    <span class="nav-links">
+      <a href="mockup-trip-v2.html">行程</a>
+      <a href="mockup-chat-v2.html">聊天</a>
+      <a href="mockup-index.html">Index</a>
+    </span>
+  </div>
+</header>
+
+<!-- ============ Desktop 1440 — sheet 展開顯示選中的 POI detail ============ -->
+<div class="viewport-label">Desktop · 1440 × 940 · 3-pane（map 占主區，sheet 展開顯示選中 POI）</div>
+<div class="viewport-frame vp-desktop-full">
+  <div class="shell-3pane">
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">Tripline<span class="accent-dot">.</span></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>聊天</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>行程</a>
+        <a class="nav-item active"><span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>地圖</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>探索</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>登入</a>
+      </nav>
+      <div class="sidebar-cta">
+        <button class="new-trip-btn"><span style="font-size: 16px;">+</span>新增行程</button>
+        <div class="user-chip"><div class="avatar">R</div><span>ray@trip.io</span></div>
+      </div>
+    </aside>
+
+    <!-- Map main -->
+    <main class="map-main">
+      <!-- SVG illustrative map (simplified 沖繩 + 首爾 + 台中 stylized region) -->
+      <svg class="map-canvas" viewBox="0 0 800 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <!-- water bg -->
+        <rect width="800" height="700" fill="#C8D6DC"/>
+        <!-- land masses (stylized) -->
+        <path d="M-20,200 Q120,180 200,220 Q280,260 350,250 Q420,240 500,290 Q580,340 700,330 L820,330 L820,720 L-20,720 Z" fill="#F0EDE3"/>
+        <path d="M150,80 Q220,60 280,90 Q330,120 360,100 L380,150 Q330,170 270,160 Q200,150 150,180 Q140,130 150,80 Z" fill="#F0EDE3"/>
+        <path d="M580,80 Q640,70 690,100 Q720,140 700,180 Q650,200 600,190 Q560,160 580,80 Z" fill="#F0EDE3"/>
+
+        <!-- subtle grid lines -->
+        <g stroke="#D8DCD2" stroke-width="0.4" opacity="0.7">
+          <line x1="0" y1="100" x2="800" y2="100"/>
+          <line x1="0" y1="200" x2="800" y2="200"/>
+          <line x1="0" y1="300" x2="800" y2="300"/>
+          <line x1="0" y1="400" x2="800" y2="400"/>
+          <line x1="0" y1="500" x2="800" y2="500"/>
+          <line x1="0" y1="600" x2="800" y2="600"/>
+          <line x1="100" y1="0" x2="100" y2="700"/>
+          <line x1="200" y1="0" x2="200" y2="700"/>
+          <line x1="300" y1="0" x2="300" y2="700"/>
+          <line x1="400" y1="0" x2="400" y2="700"/>
+          <line x1="500" y1="0" x2="500" y2="700"/>
+          <line x1="600" y1="0" x2="600" y2="700"/>
+          <line x1="700" y1="0" x2="700" y2="700"/>
+        </g>
+
+        <!-- 沖繩 polyline (Day 1 → Day 5) terracotta -->
+        <g>
+          <polyline points="180,420 220,440 260,460 280,490 320,510 380,490 430,470" fill="none" stroke="#D97848" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0"/>
+          <!-- markers -->
+          <circle cx="180" cy="420" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="180" y="424" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">1</text>
+          <circle cx="220" cy="440" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="220" y="444" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">2</text>
+          <!-- selected (large) -->
+          <circle cx="260" cy="460" r="14" fill="#D97848" stroke="#fff" stroke-width="3"/>
+          <text x="260" y="464" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="Inter">3</text>
+          <circle cx="280" cy="490" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="280" y="494" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">4</text>
+          <circle cx="320" cy="510" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="320" y="514" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">5</text>
+          <circle cx="380" cy="490" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="380" y="494" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">6</text>
+          <circle cx="430" cy="470" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="430" y="474" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">7</text>
+        </g>
+
+        <!-- 首爾 polyline teal -->
+        <g>
+          <polyline points="220,120 250,140 280,130 310,150 290,170" fill="none" stroke="#06A77D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="220" cy="120" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <text x="220" y="124" font-size="8" font-weight="700" fill="#06A77D" text-anchor="middle" font-family="Inter">1</text>
+          <circle cx="250" cy="140" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <text x="250" y="144" font-size="8" font-weight="700" fill="#06A77D" text-anchor="middle" font-family="Inter">2</text>
+          <circle cx="280" cy="130" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <text x="280" y="134" font-size="8" font-weight="700" fill="#06A77D" text-anchor="middle" font-family="Inter">3</text>
+          <circle cx="310" cy="150" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <text x="310" y="154" font-size="8" font-weight="700" fill="#06A77D" text-anchor="middle" font-family="Inter">4</text>
+          <circle cx="290" cy="170" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <text x="290" y="174" font-size="8" font-weight="700" fill="#06A77D" text-anchor="middle" font-family="Inter">5</text>
+        </g>
+
+        <!-- 台中 polyline sky -->
+        <g>
+          <polyline points="610,120 630,140 650,135" fill="none" stroke="#0EA5C7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="610" cy="120" r="7" fill="#fff" stroke="#0EA5C7" stroke-width="2.5"/>
+          <text x="610" y="124" font-size="8" font-weight="700" fill="#0EA5C7" text-anchor="middle" font-family="Inter">1</text>
+          <circle cx="630" cy="140" r="7" fill="#fff" stroke="#0EA5C7" stroke-width="2.5"/>
+          <text x="630" y="144" font-size="8" font-weight="700" fill="#0EA5C7" text-anchor="middle" font-family="Inter">2</text>
+          <circle cx="650" cy="135" r="7" fill="#fff" stroke="#0EA5C7" stroke-width="2.5"/>
+          <text x="650" y="139" font-size="8" font-weight="700" fill="#0EA5C7" text-anchor="middle" font-family="Inter">3</text>
+        </g>
+
+        <!-- region labels -->
+        <text x="280" y="510" font-size="14" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">沖繩</text>
+        <text x="270" y="200" font-size="14" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">首爾</text>
+        <text x="630" y="170" font-size="14" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">台中</text>
+      </svg>
+
+      <!-- Floating overlay -->
+      <div class="map-overlay">
+        <!-- Topbar with eyebrow card + filter chips -->
+        <div class="map-topbar">
+          <div class="map-eyebrow-card">
+            <div>
+              <div class="me-label">Global Map</div>
+              <div class="me-title">所有行程</div>
+            </div>
+            <div class="me-meta">3 trips · 15 stops</div>
+          </div>
+          <div class="map-filter-bar">
+            <button class="trip-chip" data-trip="okinawa">
+              <span class="chip-dot"></span>
+              <span>沖繩</span>
+              <span class="chip-meta">7 stops</span>
+            </button>
+            <button class="trip-chip" data-trip="seoul">
+              <span class="chip-dot"></span>
+              <span>首爾</span>
+              <span class="chip-meta">5 stops</span>
+            </button>
+            <button class="trip-chip is-off" data-trip="taichung">
+              <span class="chip-dot"></span>
+              <span>台中</span>
+              <span class="chip-meta">3 stops</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- POI popup (hover/click on marker 3) -->
+        <div class="poi-popup" style="top: 360px; left: 200px;">
+          <div class="pp-eyebrow">沖繩 · DAY 01 · STOP 03</div>
+          <div class="pp-title">MEGA唐吉軻德 宜野灣店</div>
+          <div class="pp-meta">用餐 · ★ 4.2 · 13:00</div>
+          <div class="pp-actions">
+            <button class="pp-btn">查看詳情</button>
+            <button class="pp-btn primary">跳到行程</button>
+          </div>
+        </div>
+
+        <!-- Bottom-left action -->
+        <div class="map-action-bar">
+          <button class="map-pill-btn">▣ 全覽</button>
+          <button class="map-pill-btn">⊕ 我的位置</button>
+        </div>
+
+        <!-- Bottom-right zoom + layer -->
+        <div class="map-control-stack">
+          <button class="map-square-btn" title="圖層">≡</button>
+          <div class="map-zoom-group">
+            <button class="map-square-btn" title="放大">+</button>
+            <button class="map-square-btn" title="縮小">−</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Sheet — selected POI detail -->
+    <aside class="sheet">
+      <div class="sheet-header">
+        <button class="icon-btn" title="關閉">✕</button>
+        <button class="icon-btn" title="收窄">⇤</button>
+        <div class="spacer"></div>
+        <button class="save-btn">跳到行程</button>
+      </div>
+
+      <div class="sheet-body">
+        <div class="sheet-eyebrow">
+          <span class="trip-dot" style="background: var(--trip-okinawa);"></span>
+          沖繩 · Day 01 · Stop 03
+        </div>
+        <h2 class="sheet-poi-title">MEGA唐吉軻德 宜野灣店（含午餐）</h2>
+        <div class="sheet-poi-meta">
+          <span class="chip accent">用餐</span>
+          <span class="chip rating">★ 4.2 · 1,580 reviews</span>
+          <span class="chip">13:00 – 15:10</span>
+          <span class="chip">2h</span>
+        </div>
+
+        <div class="sheet-section">
+          <h4>位置 · Address</h4>
+          <p>沖縄県宜野湾市真志喜３丁目２８−４１</p>
+        </div>
+
+        <div class="sheet-section">
+          <div class="info-row">
+            <span class="info-label">Phone</span>
+            <span class="info-value">+81 98-942-9911</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Hours</span>
+            <span class="info-value">10:00 – 24:00（每日）</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Travel</span>
+            <span class="info-value">飯店 → 12 km · 車程 25 分</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Coords</span>
+            <span class="info-value">26.2870, 127.7475</span>
+          </div>
+        </div>
+
+        <div class="sheet-section">
+          <h4>同日其他 stop</h4>
+          <div class="day-stop-mini">
+            <span class="ds-time">10:45</span>
+            <span class="ds-dot">1</span>
+            <span class="ds-name">抵達那霸機場</span>
+          </div>
+          <div class="day-stop-mini">
+            <span class="ds-time">12:10</span>
+            <span class="ds-dot">2</span>
+            <span class="ds-name">租車取車</span>
+          </div>
+          <div class="day-stop-mini active">
+            <span class="ds-time">13:00</span>
+            <span class="ds-dot">3</span>
+            <span class="ds-name">MEGA唐吉軻德 宜野灣店</span>
+          </div>
+          <div class="day-stop-mini">
+            <span class="ds-time">15:10</span>
+            <span class="ds-dot">4</span>
+            <span class="ds-name">Check in Vessel Hotel</span>
+          </div>
+          <div class="day-stop-mini">
+            <span class="ds-time">16:00</span>
+            <span class="ds-dot">5</span>
+            <span class="ds-name">美國村 + Sunset Beach</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ============ Desktop 1100 — sheet 收起，純 map view ============ -->
+<div class="viewport-label">Desktop Narrow · 1100 × 800 · 2-pane（sheet 收起 → map 全寬，純瀏覽 mode）</div>
+<div class="viewport-frame vp-desktop-narrow">
+  <div class="shell-2pane">
+    <aside class="sidebar">
+      <div class="sidebar-brand">Tripline<span class="accent-dot">.</span></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>聊天</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>行程</a>
+        <a class="nav-item active"><span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>地圖</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>探索</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>登入</a>
+      </nav>
+      <div class="sidebar-cta">
+        <button class="new-trip-btn"><span style="font-size: 16px;">+</span>新增行程</button>
+        <div class="user-chip"><div class="avatar">R</div><span>ray@trip.io</span></div>
+      </div>
+    </aside>
+
+    <main class="map-main">
+      <svg class="map-canvas" viewBox="0 0 800 700" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <rect width="800" height="700" fill="#C8D6DC"/>
+        <path d="M-20,200 Q120,180 200,220 Q280,260 350,250 Q420,240 500,290 Q580,340 700,330 L820,330 L820,720 L-20,720 Z" fill="#F0EDE3"/>
+        <path d="M150,80 Q220,60 280,90 Q330,120 360,100 L380,150 Q330,170 270,160 Q200,150 150,180 Q140,130 150,80 Z" fill="#F0EDE3"/>
+        <path d="M580,80 Q640,70 690,100 Q720,140 700,180 Q650,200 600,190 Q560,160 580,80 Z" fill="#F0EDE3"/>
+        <g stroke="#D8DCD2" stroke-width="0.4" opacity="0.7">
+          <line x1="0" y1="200" x2="800" y2="200"/>
+          <line x1="0" y1="400" x2="800" y2="400"/>
+          <line x1="200" y1="0" x2="200" y2="700"/>
+          <line x1="400" y1="0" x2="400" y2="700"/>
+          <line x1="600" y1="0" x2="600" y2="700"/>
+        </g>
+        <g>
+          <polyline points="180,420 220,440 260,460 280,490 320,510 380,490 430,470" fill="none" stroke="#D97848" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="180" cy="420" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <circle cx="220" cy="440" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <circle cx="260" cy="460" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <circle cx="280" cy="490" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <circle cx="320" cy="510" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <circle cx="380" cy="490" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <circle cx="430" cy="470" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+        </g>
+        <g>
+          <polyline points="220,120 250,140 280,130 310,150 290,170" fill="none" stroke="#06A77D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="220" cy="120" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <circle cx="250" cy="140" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <circle cx="280" cy="130" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <circle cx="310" cy="150" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+          <circle cx="290" cy="170" r="7" fill="#fff" stroke="#06A77D" stroke-width="2.5"/>
+        </g>
+        <g>
+          <polyline points="610,120 630,140 650,135" fill="none" stroke="#0EA5C7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="610" cy="120" r="7" fill="#fff" stroke="#0EA5C7" stroke-width="2.5"/>
+          <circle cx="630" cy="140" r="7" fill="#fff" stroke="#0EA5C7" stroke-width="2.5"/>
+          <circle cx="650" cy="135" r="7" fill="#fff" stroke="#0EA5C7" stroke-width="2.5"/>
+        </g>
+        <text x="280" y="510" font-size="14" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">沖繩</text>
+        <text x="270" y="200" font-size="14" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">首爾</text>
+        <text x="630" y="170" font-size="14" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">台中</text>
+      </svg>
+
+      <div class="map-overlay">
+        <div class="map-topbar">
+          <div class="map-eyebrow-card">
+            <div>
+              <div class="me-label">Global Map</div>
+              <div class="me-title">所有行程</div>
+            </div>
+            <div class="me-meta">3 trips · 15 stops</div>
+          </div>
+          <div class="map-filter-bar">
+            <button class="trip-chip" data-trip="okinawa">
+              <span class="chip-dot"></span><span>沖繩</span>
+            </button>
+            <button class="trip-chip" data-trip="seoul">
+              <span class="chip-dot"></span><span>首爾</span>
+            </button>
+            <button class="trip-chip" data-trip="taichung">
+              <span class="chip-dot"></span><span>台中</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="map-action-bar">
+          <button class="map-pill-btn">▣ 全覽</button>
+          <button class="map-pill-btn">⊕ 我的位置</button>
+        </div>
+
+        <div class="map-control-stack">
+          <button class="map-square-btn" title="圖層">≡</button>
+          <div class="map-zoom-group">
+            <button class="map-square-btn" title="放大">+</button>
+            <button class="map-square-btn" title="縮小">−</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ Mobile 375 — full-screen map + bottom POI carousel ============ -->
+<div class="viewport-label">Mobile · 375 × 812 · 全螢幕 map + 上 filter chips + 下 POI carousel + bottom nav</div>
+<div class="viewport-frame vp-mobile">
+  <div class="shell-mobile">
+    <header class="mobile-topbar">
+      <div class="brand">Tripline<span class="accent-dot">.</span></div>
+      <button class="icon-btn" title="圖層"><span style="font-size: 16px;">≡</span></button>
+    </header>
+
+    <div class="mobile-map">
+      <svg class="map-canvas" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+        <rect width="400" height="600" fill="#C8D6DC"/>
+        <path d="M-20,180 Q80,160 160,200 Q220,230 280,250 Q340,260 420,300 L420,620 L-20,620 Z" fill="#F0EDE3"/>
+        <path d="M80,40 Q150,30 200,60 Q230,90 250,80 L260,130 Q200,150 130,140 Q70,120 80,40 Z" fill="#F0EDE3"/>
+        <g stroke="#D8DCD2" stroke-width="0.4" opacity="0.7">
+          <line x1="0" y1="150" x2="400" y2="150"/>
+          <line x1="0" y1="300" x2="400" y2="300"/>
+          <line x1="0" y1="450" x2="400" y2="450"/>
+          <line x1="100" y1="0" x2="100" y2="600"/>
+          <line x1="200" y1="0" x2="200" y2="600"/>
+          <line x1="300" y1="0" x2="300" y2="600"/>
+        </g>
+
+        <!-- 沖繩（focused trip）-->
+        <g>
+          <polyline points="100,360 140,380 180,400 200,430 240,450 290,430" fill="none" stroke="#D97848" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="100" cy="360" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="100" y="364" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">1</text>
+          <circle cx="140" cy="380" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="140" y="384" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">2</text>
+          <circle cx="180" cy="400" r="14" fill="#D97848" stroke="#fff" stroke-width="3"/>
+          <text x="180" y="404" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" font-family="Inter">3</text>
+          <circle cx="200" cy="430" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="200" y="434" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">4</text>
+          <circle cx="240" cy="450" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="240" y="454" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">5</text>
+          <circle cx="290" cy="430" r="8" fill="#fff" stroke="#D97848" stroke-width="2.5"/>
+          <text x="290" y="434" font-size="9" font-weight="700" fill="#D97848" text-anchor="middle" font-family="Inter">6</text>
+        </g>
+        <text x="200" y="490" font-size="13" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">沖繩</text>
+
+        <!-- 首爾 -->
+        <g>
+          <polyline points="120,80 150,100 180,90 210,110" fill="none" stroke="#06A77D" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="120" cy="80" r="6" fill="#fff" stroke="#06A77D" stroke-width="2.2"/>
+          <circle cx="150" cy="100" r="6" fill="#fff" stroke="#06A77D" stroke-width="2.2"/>
+          <circle cx="180" cy="90" r="6" fill="#fff" stroke="#06A77D" stroke-width="2.2"/>
+          <circle cx="210" cy="110" r="6" fill="#fff" stroke="#06A77D" stroke-width="2.2"/>
+        </g>
+        <text x="170" y="135" font-size="12" font-weight="700" fill="#6F5A47" font-family="Inter" letter-spacing="2">首爾</text>
+      </svg>
+
+      <!-- Filter chips (top) -->
+      <div class="mobile-filter-strip">
+        <button class="trip-chip" data-trip="okinawa">
+          <span class="chip-dot"></span><span>沖繩</span>
+        </button>
+        <button class="trip-chip" data-trip="seoul">
+          <span class="chip-dot"></span><span>首爾</span>
+        </button>
+        <button class="trip-chip is-off" data-trip="taichung">
+          <span class="chip-dot"></span><span>台中</span>
+        </button>
+      </div>
+
+      <!-- Right floating: layer + zoom -->
+      <div class="map-control-stack" style="bottom: 200px; right: 12px;">
+        <div class="map-zoom-group">
+          <button class="map-square-btn" title="放大">+</button>
+          <button class="map-square-btn" title="縮小">−</button>
+        </div>
+      </div>
+
+      <!-- Bottom POI carousel for selected trip -->
+      <div class="mobile-poi-stack">
+        <div class="mobile-poi-handle" aria-hidden="true"></div>
+        <div class="mobile-poi-eyebrow">
+          <span class="trip-dot"></span>
+          沖繩 · DAY 01 · 7 STOPS
+        </div>
+        <div class="mobile-poi-title">點選 marker 看詳情，左右滑換 stop</div>
+        <div class="mobile-poi-cards">
+          <div class="mobile-poi-card">
+            <div class="pc-mini-cover" style="background: linear-gradient(135deg, #D97848 0%, #F0935E 100%);"></div>
+            <div class="pc-eyebrow">10:45 · STOP 1</div>
+            <div class="pc-title">抵達那霸機場</div>
+          </div>
+          <div class="mobile-poi-card active">
+            <div class="pc-mini-cover" style="background: linear-gradient(135deg, #B85C2E 0%, #D97848 100%);"></div>
+            <div class="pc-eyebrow">13:00 · STOP 3</div>
+            <div class="pc-title">MEGA唐吉軻德</div>
+          </div>
+          <div class="mobile-poi-card">
+            <div class="pc-mini-cover" style="background: linear-gradient(135deg, #C88500 0%, #F7DFCB 100%);"></div>
+            <div class="pc-eyebrow">15:10 · STOP 4</div>
+            <div class="pc-title">Vessel Hotel</div>
+          </div>
+          <div class="mobile-poi-card">
+            <div class="pc-mini-cover" style="background: linear-gradient(135deg, #06A77D 0%, #EADFCF 100%);"></div>
+            <div class="pc-eyebrow">16:00 · STOP 5</div>
+            <div class="pc-title">美國村 + Sunset Beach</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="主要功能">
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>
+        <span>聊天</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>
+        <span>行程</span>
+      </button>
+      <button class="bottom-nav-btn active">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>
+        <span>地圖</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <span>探索</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+        <span>登入</span>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<section class="spec-card">
+  <h3>地圖頁規格摘要</h3>
+  <ul style="padding-left: 20px; list-style: disc;">
+    <li><strong>路由</strong>：<code>/map</code> — 全域 cross-trip 地圖；跟 per-trip <code>/trip/:id?sheet=map</code> 不同（後者是單 trip view）</li>
+    <li><strong>Scope</strong>：view-only（不含 search、不含 add to trip）；search 屬於 <code>/explore</code></li>
+    <li><strong>Trip palette</strong>：每 trip 一個主色 — 沖繩 <code>#D97848</code> / 首爾 <code>#06A77D</code> / 台中 <code>#0EA5C7</code>。對齊 DESIGN.md Day Palette 10 色（取前三色作 trip 區分）</li>
+    <li><strong>Floating overlay</strong>（map 上層）：<ul style="padding-left: 16px; margin-top: 4px;">
+      <li>Top-left: eyebrow card「Global Map · 所有行程 · 3 trips · 15 stops」</li>
+      <li>Top-right: filter chips（每 trip 一個，dot + 名稱 + stops 計數，可 toggle off）</li>
+      <li>Bottom-left: ▣ 全覽 / ⊕ 我的位置 pill button</li>
+      <li>Bottom-right: 圖層切換 + 放大/縮小</li>
+    </ul></li>
+    <li><strong>Marker</strong>：number circle，selected 變大 + accent fill；trip 色用 stroke 區分</li>
+    <li><strong>POI popup</strong>：點 marker 浮出 — eyebrow（trip · day · stop 編號）+ title + meta + 「查看詳情 / 跳到行程」雙按鈕</li>
+    <li><strong>Sheet 展開時</strong>（width 收窄至 <code>min(420px, 32vw)</code> — 比 trip sheet 的 780 窄，留更多 map 面積）：</li>
+    <li>Sheet 內容：trip dot + scope eyebrow → POI title → meta chips → 位置 / 電話 / 時段 / 距離 / 座標 → 同日其他 stop mini-list（active 高亮）</li>
+    <li><strong>Sheet 主 CTA</strong>：「跳到行程」accent button（router 跳到 <code>/trip/:id?sheet=itinerary&day=N</code> 並 anchor 到該 stop）</li>
+    <li><strong>Mobile</strong>：full-screen map（占整個 main）+ top filter chips + bottom POI card carousel（被選 trip 的 stops，左右滑換）+ bottom nav 常駐</li>
+    <li><strong>不該有的</strong>：search bar / 新增 POI / heart save — 那些都在 <code>/explore</code>。地圖頁只是「看你已有 trips 的地理 view」</li>
+  </ul>
+</section>
+
+</body>
+</html>

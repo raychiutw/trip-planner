@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V2 Chat Page — /chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #D97848;
+  --accent-subtle: #FBEEE4;
+  --accent-bg: #F7DFCB;
+  --accent-deep: #B85C2E;
+  --background: #FFFBF5;
+  --secondary: #FAF4EA;
+  --tertiary: #F2EAD9;
+  --hover: #F9EDE0;
+  --foreground: #2A1F18;
+  --muted: #6F5A47;
+  --border: #EADFCF;
+  --line-strong: #C8B89F;
+  --sidebar-bg: #FFFBF5;
+  --sheet-bg: #FFFBF5;
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+
+  --grid-3pane: 240px 1fr min(780px, 40vw);
+  --grid-2pane: 240px 1fr;
+  --nav-h-mobile: 88px;
+  --font-eyebrow: 0.625rem;
+  --font-caption2: 0.6875rem;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #E8E3D8;
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 32px 24px 80px;
+}
+
+.page-header {
+  max-width: 1600px; margin: 0 auto 24px;
+  padding-bottom: 20px; border-bottom: 2px solid rgba(42, 31, 24, 0.08);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+}
+.page-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.page-header .variant-chip {
+  background: var(--accent); color: #fff;
+  padding: 6px 14px; border-radius: 9999px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+}
+.page-header .nav-links a {
+  color: var(--muted); text-decoration: none; margin-left: 16px; font-size: 14px; font-weight: 500;
+}
+.page-header .nav-links a:hover { color: var(--accent); }
+
+.viewport-label {
+  margin: 40px auto 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 12px; max-width: 1600px;
+}
+.viewport-label::after { content: ''; flex: 1; height: 1px; background: rgba(42, 31, 24, 0.1); }
+
+.viewport-frame {
+  background: var(--background);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(42, 31, 24, 0.2), 0 2px 6px rgba(42, 31, 24, 0.08);
+  overflow: hidden;
+  position: relative;
+  margin: 0 auto;
+}
+.vp-desktop-full { width: 1440px; height: 940px; }
+.vp-desktop-narrow { width: 1100px; height: 800px; }
+.vp-mobile { width: 375px; height: 812px; }
+
+.shell-3pane { display: grid; grid-template-columns: var(--grid-3pane); height: 100%; }
+.shell-2pane { display: grid; grid-template-columns: var(--grid-2pane); height: 100%; }
+.shell-mobile { display: flex; flex-direction: column; height: 100%; position: relative; }
+
+/* ========== Sidebar ========== */
+.sidebar {
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 20px 12px 16px;
+  display: flex; flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+.sidebar-brand {
+  padding: 6px 12px 20px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+}
+.sidebar-brand .accent-dot { color: var(--accent); }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 10px;
+  color: var(--muted);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  min-height: 44px;
+}
+.nav-item:hover { background: var(--hover); color: var(--foreground); }
+.nav-item.active {
+  background: var(--foreground); color: var(--background);
+  font-weight: 600;
+}
+.nav-item .icon { width: 20px; height: 20px; display: grid; place-items: center; flex-shrink: 0; }
+.nav-item .icon svg { width: 100%; height: 100%; stroke-width: 2; }
+
+/* Chat history list inside sidebar (聊天頁特有) */
+.sidebar-section-label {
+  padding: 12px 14px 6px;
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+}
+.chat-history-item {
+  display: block;
+  padding: 8px 14px; border-radius: 8px;
+  color: var(--foreground); text-decoration: none;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background 0.15s;
+}
+.chat-history-item:hover { background: var(--hover); }
+.chat-history-item.active { background: var(--accent-subtle); color: var(--accent-deep); font-weight: 600; }
+.chat-history-item .ch-time {
+  display: block; font-size: 11px; color: var(--muted); margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar-cta {
+  margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.new-trip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px; border-radius: 9999px;
+  background: var(--accent); color: #fff;
+  border: none; font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; min-height: 44px;
+}
+.new-trip-btn:hover { background: var(--accent-deep); }
+.user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; border-radius: 8px;
+  color: var(--muted); font-size: 13px;
+}
+.user-chip .avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--accent-deep);
+  display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+
+/* ========== Chat Main Area ========== */
+.chat-main {
+  display: flex; flex-direction: column;
+  background: var(--secondary);
+  overflow: hidden;
+  position: relative;
+}
+.chat-topbar {
+  height: 56px; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  flex-shrink: 0;
+}
+.chat-topbar .conv-title {
+  font-size: 14px; font-weight: 600; letter-spacing: -0.005em;
+  display: flex; align-items: center; gap: 8px;
+}
+.chat-topbar .conv-title .conv-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.chat-topbar .topbar-actions { display: flex; gap: 6px; }
+.chat-topbar .icon-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--muted); font-size: 13px;
+}
+.chat-topbar .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Conversation feed */
+.conv-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 0;
+}
+.conv-feed-inner {
+  max-width: 760px; margin: 0 auto; padding: 0 32px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+.msg { display: flex; gap: 12px; }
+.msg.user { justify-content: flex-end; }
+.msg.user .bubble {
+  background: var(--accent); color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg.ai .bubble {
+  background: var(--background); border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.msg .avatar-sm {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--accent-deep);
+  display: grid; place-items: center;
+  font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+.msg.ai .avatar-sm { background: var(--foreground); color: var(--background); }
+.msg .bubble {
+  padding: 12px 16px; border-radius: 16px;
+  font-size: 15px; line-height: 1.55;
+  max-width: 560px;
+}
+.msg .bubble strong { font-weight: 600; }
+.msg .bubble .bubble-meta {
+  display: flex; gap: 8px; align-items: center;
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600;
+}
+.msg.user .bubble .bubble-meta { border-top-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); }
+
+/* AI 提案 trip card inside bubble */
+.proposal-card {
+  display: block; margin-top: 12px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--secondary);
+  padding: 12px;
+  cursor: pointer;
+}
+.proposal-card:hover { border-color: var(--accent); }
+.proposal-card .pc-cover {
+  height: 90px; border-radius: 8px;
+  background: linear-gradient(135deg, #D97848 0%, #F0935E 100%);
+  margin-bottom: 8px;
+}
+.proposal-card .pc-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 4px;
+}
+.proposal-card .pc-title {
+  font-size: 15px; font-weight: 700; letter-spacing: -0.005em; color: var(--foreground);
+  margin-bottom: 4px;
+}
+.proposal-card .pc-meta {
+  font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+
+/* Empty hero (新對話開頭) */
+.empty-hero {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 32px;
+  text-align: center;
+}
+.empty-hero .hero-greeting {
+  font-size: 36px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.2;
+  margin-bottom: 12px;
+}
+.empty-hero .hero-greeting .accent-dot { color: var(--accent); }
+.empty-hero .hero-sub {
+  font-size: 16px; color: var(--muted); margin-bottom: 32px;
+  max-width: 480px;
+}
+.suggestion-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  max-width: 640px; width: 100%;
+}
+.sug-chip {
+  padding: 14px 18px; border-radius: 14px;
+  border: 1px solid var(--border); background: var(--background);
+  text-align: left; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; gap: 4px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sug-chip:hover { border-color: var(--accent); background: var(--hover); }
+.sug-chip .sug-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--accent-deep);
+}
+.sug-chip .sug-text {
+  font-size: 14px; font-weight: 600; color: var(--foreground); letter-spacing: -0.005em;
+}
+
+/* Chat input (sticky bottom) */
+.chat-input-wrap {
+  flex-shrink: 0; padding: 16px 24px 24px;
+  background: linear-gradient(to top, var(--secondary) 80%, transparent);
+}
+.chat-input {
+  max-width: 760px; margin: 0 auto;
+  display: flex; align-items: center; gap: 10px;
+  background: var(--background);
+  border: 1px solid var(--border); border-radius: 9999px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow-sm);
+  min-height: 56px;
+}
+.chat-input:focus-within { border-color: var(--accent); }
+.chat-input .input-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: none; background: transparent;
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--muted);
+}
+.chat-input .input-btn:hover { background: var(--hover); color: var(--accent); }
+.chat-input .input-btn.send {
+  background: var(--accent); color: #fff;
+}
+.chat-input .input-btn.send:hover { background: var(--accent-deep); }
+.chat-input .input-field {
+  flex: 1; border: none; background: transparent;
+  font: inherit; font-size: 15px; color: var(--foreground);
+  outline: none; padding: 0 4px;
+}
+.chat-input .input-field::placeholder { color: var(--muted); }
+
+/* Quick action bubbles above input */
+.quick-actions {
+  max-width: 760px; margin: 0 auto 12px;
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.qa-bubble {
+  padding: 6px 12px; border-radius: 9999px;
+  border: 1px solid var(--border); background: var(--background);
+  font: inherit; font-size: 12px; color: var(--muted);
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.qa-bubble:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ========== Right Sheet (聊天聊出來的 trip) ========== */
+.sheet {
+  background: var(--sheet-bg);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.sheet-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.sheet-header .icon-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--muted); font-size: 14px;
+}
+.sheet-header .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+.sheet-header .spacer { flex: 1; }
+.sheet-header .save-btn {
+  padding: 6px 14px; border-radius: 9999px;
+  background: var(--accent); color: #fff; border: none;
+  font: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+}
+.sheet-header .save-btn:hover { background: var(--accent-deep); }
+
+.sheet-title { padding: 16px 24px 8px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.sheet-meta {
+  padding: 0 24px 16px;
+  display: flex; gap: 8px; flex-wrap: wrap;
+  font-size: 12px; color: var(--muted);
+}
+.sheet-meta .chip { padding: 4px 10px; border-radius: 9999px; background: var(--tertiary); }
+.sheet-meta .chip.active { background: var(--accent-subtle); color: var(--accent-deep); font-weight: 600; }
+
+.sheet-tabs {
+  display: flex; gap: 0; padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+.sheet-tab {
+  padding: 12px 14px; font-size: 14px; font-weight: 500;
+  color: var(--muted); cursor: pointer;
+  border: none; background: transparent; font-family: inherit;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.sheet-tab.active { color: var(--foreground); font-weight: 600; border-bottom-color: var(--accent); }
+.sheet-tab:hover:not(.active) { color: var(--foreground); }
+
+.sheet-body { flex: 1; overflow-y: auto; }
+
+/* Day strip */
+.day-strip {
+  display: flex; gap: 4px;
+  overflow-x: auto;
+  padding: 0 24px;
+  position: sticky; top: 0;
+  background: color-mix(in srgb, var(--sheet-bg) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  z-index: 5;
+  scrollbar-width: none;
+}
+.day-strip::-webkit-scrollbar { display: none; }
+.day-strip-btn {
+  flex: 0 0 auto; padding: 10px 12px;
+  border: none; background: transparent;
+  border-bottom: 2px solid transparent;
+  cursor: pointer; font-family: inherit;
+  color: var(--muted);
+  display: inline-flex; flex-direction: column; gap: 2px;
+  min-height: 44px;
+}
+.day-strip-btn.active { color: var(--accent-deep); border-bottom-color: var(--accent); }
+.day-strip-btn .dn-eyebrow {
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+.day-strip-btn.active .dn-eyebrow { opacity: 1; }
+.day-strip-btn .dn-date {
+  font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+
+/* Ocean rail */
+.rail { padding: 16px 20px 20px; }
+.rail-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 10px; padding: 0 4px;
+}
+.rail-eyebrow {
+  font-size: var(--font-caption2); letter-spacing: 0.2em; color: var(--muted);
+  text-transform: uppercase; font-weight: 600;
+}
+.rail-meta { font-size: var(--font-caption2); color: var(--muted); font-variant-numeric: tabular-nums; }
+.rail-body { position: relative; padding: 0; }
+.rail-line {
+  position: absolute; left: 66px; top: 12px; bottom: 12px;
+  width: 1px; background: var(--border);
+}
+.rail-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 24px 22px 1fr 18px;
+  column-gap: 10px; align-items: center;
+  width: 100%; padding: 12px 4px;
+  border-bottom: 1px dashed var(--border);
+  cursor: pointer;
+}
+.rail-item:hover { background: var(--hover); }
+.rail-item[data-last="true"] { border-bottom: none; }
+.rail-time {
+  text-align: right;
+  font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rail-dot {
+  justify-self: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--background); border: 1.5px solid var(--line-strong);
+  display: grid; place-items: center;
+  font-size: var(--font-caption2); font-weight: 700; color: var(--muted);
+  z-index: 1;
+}
+.rail-item[data-accent="true"] .rail-dot { border-color: var(--accent); color: var(--accent); }
+.rail-icon {
+  width: 22px; height: 22px;
+  display: grid; place-items: center; color: var(--muted);
+}
+.rail-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rail-item[data-accent="true"] .rail-icon { color: var(--accent); }
+.rail-content { min-width: 0; overflow: hidden; }
+.rail-name {
+  display: block; font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.rail-sub {
+  display: flex; gap: 6px; align-items: center;
+  font-size: 12px; color: var(--muted); margin-top: 3px;
+}
+.rail-type {
+  font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+}
+.rail-item[data-accent="true"] .rail-type { color: var(--accent); }
+.rail-sep { opacity: 0.5; }
+.rail-caret {
+  font-size: 18px; color: var(--muted);
+}
+
+/* ========== Mobile ========== */
+.mobile-topbar {
+  height: 56px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 94%, transparent);
+  backdrop-filter: blur(14px);
+  flex-shrink: 0;
+}
+.mobile-topbar .brand {
+  font-size: 14px; font-weight: 700; letter-spacing: -0.005em;
+  display: flex; align-items: center; gap: 8px;
+}
+.mobile-topbar .brand .conv-eyebrow {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+}
+.mobile-topbar .icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  display: grid; place-items: center; cursor: pointer;
+}
+
+.mobile-conv {
+  flex: 1; overflow-y: auto;
+  padding: 20px 16px;
+  background: var(--secondary);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.mobile-conv .msg { max-width: 100%; }
+.mobile-conv .msg .bubble { font-size: 14px; max-width: 280px; }
+
+.mobile-input-wrap {
+  flex-shrink: 0; padding: 12px 16px;
+  background: linear-gradient(to top, var(--background) 80%, transparent);
+  border-top: 1px solid var(--border);
+}
+.mobile-input-wrap .chat-input { min-height: 48px; }
+.mobile-input-wrap .chat-input .input-field { font-size: 14px; }
+
+.bottom-nav {
+  position: sticky; inset-block-end: 0; left: 0; right: 0;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  height: var(--nav-h-mobile);
+  background: color-mix(in srgb, var(--background) 97%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.bottom-nav-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font: inherit; min-height: 44px;
+}
+.bottom-nav-btn .icon { width: 22px; height: 22px; }
+.bottom-nav-btn .icon svg { width: 100%; height: 100%; stroke-width: 2; }
+.bottom-nav-btn span { font-size: 10px; font-weight: 500; }
+.bottom-nav-btn.active { color: var(--accent); }
+.bottom-nav-btn.active span { font-weight: 700; }
+
+.icon { display: inline-flex; align-items: center; justify-content: center; }
+.icon svg { stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.spec-card {
+  max-width: 1600px; margin: 32px auto 0;
+  background: var(--background); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px;
+  font-size: 13px; line-height: 1.7;
+}
+.spec-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.spec-card code { background: var(--tertiary); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--accent-deep); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div>
+    <h1>V2 Chat Page Mockup — /chat</h1>
+    <div style="font-size: 13px; color: var(--muted); margin-top: 4px;">
+      Sidebar 5 nav 第 1 項「聊天」· 全站 AI discovery entry · 從聊出 trip 到展開右 sheet 的完整流
+    </div>
+  </div>
+  <div>
+    <span class="variant-chip">V2 · Chat</span>
+    <span class="nav-links">
+      <a href="mockup-trip-v2.html">← V2 Final（行程）</a>
+      <a href="mockup-index.html">Index</a>
+    </span>
+  </div>
+</header>
+
+<!-- ============ Desktop 1440 — 對話進行中 + 聊出 trip 後 sheet 展開 ============ -->
+<div class="viewport-label">Desktop · 1440 × 940 · 對話進行中 + AI 已提案 trip → 右 sheet 展開預覽</div>
+<div class="viewport-frame vp-desktop-full">
+  <div class="shell-3pane">
+
+    <!-- Sidebar with chat history -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">Tripline<span class="accent-dot">.</span></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item active"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>聊天</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>行程</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>地圖</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>探索</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>登入</a>
+      </nav>
+
+      <div class="sidebar-section-label">最近對話</div>
+      <a class="chat-history-item active">
+        沖繩 5 日親子行
+        <span class="ch-time">剛才 · 7/26 trip</span>
+      </a>
+      <a class="chat-history-item">
+        首爾美食週末
+        <span class="ch-time">昨天</span>
+      </a>
+      <a class="chat-history-item">
+        台中咖啡廳推薦
+        <span class="ch-time">3 天前</span>
+      </a>
+
+      <div class="sidebar-cta">
+        <button class="new-trip-btn"><span style="font-size: 16px;">+</span>新對話</button>
+        <div class="user-chip"><div class="avatar">R</div><span>ray@trip.io</span></div>
+      </div>
+    </aside>
+
+    <!-- Chat main -->
+    <main class="chat-main">
+      <header class="chat-topbar">
+        <div class="conv-title">
+          <span class="conv-eyebrow">CONVERSATION 042</span>
+          沖繩 5 日親子行
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" title="重新命名">✎</button>
+          <button class="icon-btn" title="分享">↗</button>
+          <button class="icon-btn" title="更多">⋯</button>
+        </div>
+      </header>
+
+      <div class="conv-feed">
+        <div class="conv-feed-inner">
+
+          <div class="msg user">
+            <div class="bubble">
+              7/26-7/30 想帶兩個小朋友去沖繩，希望輕鬆一點，不用每天趕景點。預算每天大約 ¥30,000 左右。
+            </div>
+            <div class="avatar-sm">R</div>
+          </div>
+
+          <div class="msg ai">
+            <div class="avatar-sm">T</div>
+            <div class="bubble">
+              已幫你排了 <strong>5 天 4 夜</strong>的沖繩行程，<strong>Day 1 抵達後直接 check in 飯店</strong>，下午自由活動，後面 4 天每天平均 4-5 個 stop，午餐和晚餐都已選好。
+              <div class="bubble-meta">
+                <span>2 旅伴</span>
+                <span>·</span>
+                <span>7/26 – 7/30</span>
+                <span>·</span>
+                <span>已避開趕景點</span>
+              </div>
+              <a class="proposal-card">
+                <div class="pc-cover"></div>
+                <div class="pc-eyebrow">JAPAN · 5 DAYS · DRAFT</div>
+                <div class="pc-title">沖繩 5 日親子行</div>
+                <div class="pc-meta">7/26 – 7/30 · 7+8+5+6+4 stops · ¥148,000 預估</div>
+              </a>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="bubble">Day 2 的水族館想換成晚一點開始，小朋友早上會起不來</div>
+            <div class="avatar-sm">R</div>
+          </div>
+
+          <div class="msg ai">
+            <div class="avatar-sm">T</div>
+            <div class="bubble">
+              已調整：Day 2 美麗海水族館從 10:00 改到 <strong>11:30 開始</strong>，原本 13:00 的午餐順延到 14:30（水族館內咖啡廳），下午接著古宇利島就會避開人潮。右邊 sheet 已更新。
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="chat-input-wrap">
+        <div class="quick-actions">
+          <button class="qa-bubble">+ 加入景點</button>
+          <button class="qa-bubble">改交通方式</button>
+          <button class="qa-bubble">換餐廳推薦</button>
+          <button class="qa-bubble">調整時段</button>
+        </div>
+        <div class="chat-input">
+          <button class="input-btn" title="附加">＋</button>
+          <input class="input-field" placeholder="繼續調整這趟行程，例：「Day 3 想加海水浴場」">
+          <button class="input-btn" title="語音">🎙</button>
+          <button class="input-btn send" title="送出">↑</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Sheet with proposed trip -->
+    <aside class="sheet">
+      <div class="sheet-header">
+        <button class="icon-btn" title="關閉">✕</button>
+        <button class="icon-btn" title="收窄">⇤</button>
+        <div class="spacer"></div>
+        <button class="save-btn">儲存到行程</button>
+        <button class="icon-btn" title="更多">⋯</button>
+      </div>
+      <div class="sheet-title">沖繩 5 日親子行</div>
+      <div class="sheet-meta">
+        <span class="chip active">沖繩 · 那霸</span>
+        <span class="chip">7/26 – 7/30</span>
+        <span class="chip">2 旅伴</span>
+        <span class="chip" style="background: var(--accent-bg); color: var(--accent-deep);">DRAFT</span>
+      </div>
+      <div class="sheet-tabs">
+        <button class="sheet-tab active">行程</button>
+        <button class="sheet-tab">想法</button>
+        <button class="sheet-tab">地圖</button>
+        <button class="sheet-tab">摘要</button>
+      </div>
+
+      <div class="sheet-body">
+        <div class="day-strip" role="tablist">
+          <button class="day-strip-btn active"><span class="dn-eyebrow">DAY 01</span><span class="dn-date">7/26</span></button>
+          <button class="day-strip-btn"><span class="dn-eyebrow">DAY 02</span><span class="dn-date">7/27</span></button>
+          <button class="day-strip-btn"><span class="dn-eyebrow">DAY 03</span><span class="dn-date">7/28</span></button>
+          <button class="day-strip-btn"><span class="dn-eyebrow">DAY 04</span><span class="dn-date">7/29</span></button>
+          <button class="day-strip-btn"><span class="dn-eyebrow">DAY 05</span><span class="dn-date">7/30</span></button>
+        </div>
+
+        <div class="rail">
+          <div class="rail-header">
+            <span class="rail-eyebrow">Itinerary · Day 01</span>
+            <span class="rail-meta">7 stops · 10:45–21:00</span>
+          </div>
+          <div class="rail-body">
+            <div class="rail-line"></div>
+            <div class="rail-item">
+              <span class="rail-time">10:45</span>
+              <span class="rail-dot">1</span>
+              <span class="rail-icon"><svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg></span>
+              <div class="rail-content">
+                <span class="rail-name">抵達那霸機場</span>
+                <div class="rail-sub"><span class="rail-type">飛行</span></div>
+              </div>
+              <span class="rail-caret">›</span>
+            </div>
+            <div class="rail-item">
+              <span class="rail-time">12:10</span>
+              <span class="rail-dot">2</span>
+              <span class="rail-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="6" rx="1.5"/><path d="M5 11l2-5h10l2 5"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg></span>
+              <div class="rail-content">
+                <span class="rail-name">租車取車</span>
+                <div class="rail-sub"><span class="rail-type">移動</span><span class="rail-sep">·</span><span>30m</span></div>
+              </div>
+              <span class="rail-caret">›</span>
+            </div>
+            <div class="rail-item" data-accent="true">
+              <span class="rail-time">13:00</span>
+              <span class="rail-dot">3</span>
+              <span class="rail-icon"><svg viewBox="0 0 24 24"><path d="M5 3v8a3 3 0 0 0 6 0V3M8 11v10M16 3c-1.5 0-3 1.5-3 4v4h3v10"/></svg></span>
+              <div class="rail-content">
+                <span class="rail-name">MEGA唐吉軻德 宜野灣店（含午餐）</span>
+                <div class="rail-sub"><span class="rail-type">用餐</span><span class="rail-sep">·</span><span>2h</span></div>
+              </div>
+              <span class="rail-caret">›</span>
+            </div>
+            <div class="rail-item">
+              <span class="rail-time">15:10</span>
+              <span class="rail-dot">4</span>
+              <span class="rail-icon"><svg viewBox="0 0 24 24"><path d="M3 18v-6h7a3 3 0 0 1 3 3v3M3 18h18M21 18v-3a4 4 0 0 0-4-4M5 12V8a2 2 0 0 1 2-2h6"/></svg></span>
+              <div class="rail-content">
+                <span class="rail-name">Check in Vessel Hotel</span>
+                <div class="rail-sub"><span class="rail-type">住宿</span><span class="rail-sep">·</span><span>20m</span></div>
+              </div>
+              <span class="rail-caret">›</span>
+            </div>
+            <div class="rail-item" data-accent="true" data-last="true">
+              <span class="rail-time">16:00</span>
+              <span class="rail-dot">5</span>
+              <span class="rail-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg></span>
+              <div class="rail-content">
+                <span class="rail-name">美國村 + Sunset Beach</span>
+                <div class="rail-sub"><span class="rail-type">景點</span><span class="rail-sep">·</span><span>3h</span></div>
+              </div>
+              <span class="rail-caret">›</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ============ Desktop 1100 — Empty State 新對話 ============ -->
+<div class="viewport-label">Desktop Narrow · 1100 × 800 · 新對話 empty state（hero greeting + suggestion bubbles）</div>
+<div class="viewport-frame vp-desktop-narrow">
+  <div class="shell-2pane">
+    <aside class="sidebar">
+      <div class="sidebar-brand">Tripline<span class="accent-dot">.</span></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item active"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>聊天</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>行程</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>地圖</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>探索</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>登入</a>
+      </nav>
+      <div class="sidebar-section-label">最近對話</div>
+      <a class="chat-history-item">沖繩 5 日親子行<span class="ch-time">剛才</span></a>
+      <a class="chat-history-item">首爾美食週末<span class="ch-time">昨天</span></a>
+      <div class="sidebar-cta">
+        <button class="new-trip-btn"><span style="font-size: 16px;">+</span>新對話</button>
+        <div class="user-chip"><div class="avatar">R</div><span>ray@trip.io</span></div>
+      </div>
+    </aside>
+
+    <main class="chat-main">
+      <header class="chat-topbar">
+        <div class="conv-title">
+          <span class="conv-eyebrow">NEW</span>
+          新對話
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" title="更多">⋯</button>
+        </div>
+      </header>
+
+      <div class="empty-hero">
+        <h2 class="hero-greeting">想去哪裡<span class="accent-dot">？</span></h2>
+        <p class="hero-sub">告訴我目的地、日期、想要的旅遊風格 — 我會幫你排一份可調整的行程草稿。</p>
+
+        <div class="suggestion-grid">
+          <button class="sug-chip">
+            <span class="sug-eyebrow">SUMMER · FAMILY</span>
+            <span class="sug-text">7 月帶小朋友去沖繩，5 天輕鬆行</span>
+          </button>
+          <button class="sug-chip">
+            <span class="sug-eyebrow">WEEKEND · FOOD</span>
+            <span class="sug-text">這週末首爾美食 3 天 2 夜</span>
+          </button>
+          <button class="sug-chip">
+            <span class="sug-eyebrow">SOLO · CITY</span>
+            <span class="sug-text">一個人去東京 4 天，想看美術館和獨立咖啡廳</span>
+          </button>
+          <button class="sug-chip">
+            <span class="sug-eyebrow">OUTDOOR</span>
+            <span class="sug-text">幫我規劃宜蘭兩天健行</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="chat-input-wrap">
+        <div class="chat-input">
+          <button class="input-btn" title="附加">＋</button>
+          <input class="input-field" placeholder="跟我說你想去哪裡，或選上面的範例">
+          <button class="input-btn" title="語音">🎙</button>
+          <button class="input-btn send" title="送出">↑</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ Mobile 375 ============ -->
+<div class="viewport-label">Mobile · 375 × 812 · 對話進行中（user/AI bubble + chat input + bottom nav 常駐）</div>
+<div class="viewport-frame vp-mobile">
+  <div class="shell-mobile">
+    <header class="mobile-topbar">
+      <div class="brand">
+        <span class="conv-eyebrow">CONV 042</span>
+        沖繩 5 日親子行
+      </div>
+      <button class="icon-btn" title="更多"><span>⋯</span></button>
+    </header>
+
+    <div class="mobile-conv">
+      <div class="msg user">
+        <div class="bubble">7/26-7/30 想帶小朋友去沖繩，希望輕鬆一點</div>
+        <div class="avatar-sm">R</div>
+      </div>
+      <div class="msg ai">
+        <div class="avatar-sm">T</div>
+        <div class="bubble">
+          已排好 5 天 4 夜，每天平均 4-5 個 stop。
+          <a class="proposal-card">
+            <div class="pc-cover"></div>
+            <div class="pc-eyebrow">JAPAN · 5 DAYS · DRAFT</div>
+            <div class="pc-title">沖繩 5 日親子行</div>
+            <div class="pc-meta">7/26 – 7/30 · 7+8+5+6+4 stops</div>
+          </a>
+        </div>
+      </div>
+      <div class="msg user">
+        <div class="bubble">水族館想晚一點開始</div>
+        <div class="avatar-sm">R</div>
+      </div>
+    </div>
+
+    <div class="mobile-input-wrap">
+      <div class="quick-actions" style="margin-bottom: 8px;">
+        <button class="qa-bubble">+ 景點</button>
+        <button class="qa-bubble">換餐廳</button>
+        <button class="qa-bubble">調時段</button>
+      </div>
+      <div class="chat-input">
+        <button class="input-btn" title="附加">＋</button>
+        <input class="input-field" placeholder="繼續調整...">
+        <button class="input-btn send" title="送出">↑</button>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="主要功能">
+      <button class="bottom-nav-btn active">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>
+        <span>聊天</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>
+        <span>行程</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>
+        <span>地圖</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <span>探索</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+        <span>登入</span>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<section class="spec-card">
+  <h3>聊天頁規格摘要</h3>
+  <ul style="padding-left: 20px; list-style: disc;">
+    <li><strong>路由</strong>：<code>/chat</code>（新對話）/ <code>/chat/:id</code>（指定 conversation）</li>
+    <li><strong>Sidebar 加段</strong>：原 5 nav 下方新增「最近對話」list（chat history） + 「+ 新對話」CTA（覆蓋原本的「新增行程」CTA）</li>
+    <li><strong>Main 區結構</strong>：top bar（conv title + actions）→ conversation feed（max-width 760 居中）→ chat input wrap（sticky bottom）</li>
+    <li><strong>訊息 bubble</strong>：user 右靠齊 + accent bg；AI 左靠齊 + 白底 + border。AI bubble 內可嵌 proposal card（trip preview）+ bubble-meta footer</li>
+    <li><strong>Empty state</strong>：hero greeting「想去哪裡？」+ 4 個 suggestion chip（eyebrow + text 兩行）</li>
+    <li><strong>Chat input</strong>：rounded-full 56px height，左 + 附加 / 中 input / 右 mic + send（accent fill）</li>
+    <li><strong>Quick actions</strong>：input 上方 4 個 outline pill bubble（+加景點 / 改交通 / 換餐廳 / 調時段），對話進行中才顯示</li>
+    <li><strong>Right sheet</strong>：聊出 trip 後展開 — 跟 V2 Final 同 sheet 結構（tabs + day strip + ocean-rail），多一個「儲存到行程」按鈕（DRAFT → 正式 trip）</li>
+    <li><strong>Mobile 差異</strong>：sidebar 收起、改 bottom nav；conversation feed padding 16px；input 高度降至 48px；quick actions 縮成 3 個</li>
+    <li><strong>實作對應</strong>：新建 <code>src/pages/ChatPage.tsx</code> 是 task §6.1 的 placeholder — mockup 提供完整 UI 規格供日後 V2-P? 階段實作</li>
+  </ul>
+</section>
+
+</body>
+</html>

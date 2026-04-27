@@ -1,12 +1,32 @@
 /**
  * GET  /api/permissions?tripId=xxx  — 列出行程權限
  * POST /api/permissions { email, tripId, role } — 新增權限 + Access 同步
+ *
+ * V2-P7 PR-O: 從「admin only」放寬為「admin OR trip owner」。
+ * 一般使用者可管自己 owner = 自己 email 的行程共編；admin 仍對所有行程有權。
  */
 
 import { logAudit } from './_audit';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
+
+/** 檢查 auth user 是否為該 trip 的 owner（admin 自動 pass）。 */
+export async function ensureCanManageTripPerms(
+  context: { env: Env },
+  auth: { email: string; isAdmin: boolean },
+  tripId: string,
+): Promise<void> {
+  if (auth.isAdmin) return;
+  const owner = await context.env.DB
+    .prepare('SELECT owner FROM trips WHERE id = ?')
+    .bind(tripId)
+    .first<{ owner: string | null }>();
+  if (!owner) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
+  if ((owner.owner ?? '').toLowerCase() !== auth.email.toLowerCase()) {
+    throw new AppError('PERM_ADMIN_ONLY', '僅行程擁有者或管理者可操作共編');
+  }
+}
 
 /** 取得目前 Access policy 的 include email 列表 */
 async function getAccessPolicyEmails(env: Env): Promise<string[]> {
@@ -57,7 +77,6 @@ export async function removeEmailFromAccessPolicy(env: Env, email: string): Prom
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const url = new URL(context.request.url);
   const tripId = url.searchParams.get('tripId');
@@ -65,6 +84,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!tripId) {
     throw new AppError('DATA_VALIDATION', '缺少 tripId 參數');
   }
+
+  await ensureCanManageTripPerms(context, auth, tripId);
 
   const { results } = await context.env.DB
     .prepare('SELECT * FROM trip_permissions WHERE trip_id = ? ORDER BY email')
@@ -78,7 +99,6 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
 
   const body = await parseJsonBody<{ email?: string; tripId?: string; role?: string }>(context.request);
 
@@ -86,6 +106,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!email || !tripId) {
     throw new AppError('DATA_VALIDATION', '缺少必要欄位：email, tripId');
   }
+
+  await ensureCanManageTripPerms(context, auth, tripId);
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new AppError('DATA_VALIDATION', 'email 格式不正確');

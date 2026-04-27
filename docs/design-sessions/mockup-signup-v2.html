@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V2 Sign Up — /login/signup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --accent: #D97848;
+  --accent-subtle: #FBEEE4;
+  --accent-bg: #F7DFCB;
+  --accent-deep: #B85C2E;
+  --background: #FFFBF5;
+  --secondary: #FAF4EA;
+  --tertiary: #F2EAD9;
+  --hover: #F9EDE0;
+  --foreground: #2A1F18;
+  --muted: #6F5A47;
+  --border: #EADFCF;
+  --line-strong: #C8B89F;
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --grid-2pane: 240px 1fr;
+  --nav-h-mobile: 88px;
+  --font-eyebrow: 0.625rem;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { color-scheme: light; }
+body {
+  font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: #E8E3D8;
+  color: var(--foreground);
+  font-size: 16px; line-height: 1.5;
+  padding: 32px 24px 80px;
+}
+
+.page-header {
+  max-width: 1600px; margin: 0 auto 24px;
+  padding-bottom: 20px; border-bottom: 2px solid rgba(42, 31, 24, 0.08);
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+}
+.page-header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.page-header .variant-chip {
+  background: var(--accent); color: #fff;
+  padding: 6px 14px; border-radius: 9999px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.05em;
+}
+.page-header .nav-links a {
+  color: var(--muted); text-decoration: none; margin-left: 16px; font-size: 14px; font-weight: 500;
+}
+.page-header .nav-links a:hover { color: var(--accent); }
+
+.viewport-label {
+  margin: 40px auto 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 12px; max-width: 1600px;
+}
+.viewport-label::after { content: ''; flex: 1; height: 1px; background: rgba(42, 31, 24, 0.1); }
+
+.viewport-frame {
+  background: var(--background);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(42, 31, 24, 0.2), 0 2px 6px rgba(42, 31, 24, 0.08);
+  overflow: hidden; position: relative; margin: 0 auto;
+}
+.vp-desktop-full { width: 1440px; height: 940px; }
+.vp-desktop-narrow { width: 1100px; height: 800px; }
+.vp-mobile { width: 375px; height: 812px; }
+
+.shell-2pane { display: grid; grid-template-columns: var(--grid-2pane); height: 100%; }
+.shell-mobile { display: flex; flex-direction: column; height: 100%; position: relative; }
+
+/* Sidebar */
+.sidebar {
+  background: var(--background); border-right: 1px solid var(--border);
+  padding: 20px 12px 16px;
+  display: flex; flex-direction: column; gap: 4px; overflow-y: auto;
+}
+.sidebar-brand {
+  padding: 6px 12px 20px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+}
+.sidebar-brand .accent-dot { color: var(--accent); }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 10px;
+  color: var(--muted); font-size: 14px; font-weight: 500;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.15s, color 0.15s; min-height: 44px;
+}
+.nav-item:hover { background: var(--hover); color: var(--foreground); }
+.nav-item.active { background: var(--foreground); color: var(--background); font-weight: 600; }
+.nav-item .icon { width: 20px; height: 20px; display: grid; place-items: center; flex-shrink: 0; }
+.nav-item .icon svg { width: 100%; height: 100%; stroke-width: 2; }
+.sidebar-cta {
+  margin-top: auto; padding-top: 16px; border-top: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px; border-radius: 8px; color: var(--muted); font-size: 13px;
+}
+.user-chip .avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--accent-deep);
+  display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink: 0;
+}
+
+/* ========== Main 2-col layout ========== */
+.auth-main {
+  background: var(--secondary);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%; overflow: hidden;
+}
+.auth-form-side {
+  display: flex; align-items: center; justify-content: center;
+  padding: 48px; overflow-y: auto;
+}
+.auth-card {
+  width: 100%; max-width: 440px;
+  background: var(--background);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 40px 36px;
+  box-shadow: var(--shadow-md);
+}
+
+/* Step indicator */
+.step-indicator {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px;
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--muted);
+}
+.step-indicator .step-dots { display: flex; gap: 4px; }
+.step-indicator .step-dot { width: 16px; height: 4px; border-radius: 2px; background: var(--tertiary); }
+.step-indicator .step-dot.done { background: var(--accent); }
+.step-indicator .step-dot.active { background: var(--foreground); }
+
+.auth-card h2 {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.15;
+  margin-bottom: 8px;
+}
+.auth-card .ac-sub {
+  font-size: 14px; color: var(--muted); margin-bottom: 20px;
+}
+
+.ac-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-bottom: 16px;
+  font-size: 13px; font-weight: 600; color: var(--accent-deep);
+  text-decoration: none; cursor: pointer;
+}
+.ac-back:hover { color: var(--foreground); }
+
+/* Provider */
+.providers {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-bottom: 20px;
+}
+.provider-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 12px 18px; border-radius: 12px;
+  background: var(--background); border: 1px solid var(--border);
+  font: inherit; font-size: 14px; font-weight: 600; color: var(--foreground);
+  cursor: pointer; min-height: 48px;
+}
+.provider-btn:hover { background: var(--hover); border-color: var(--foreground); }
+.provider-btn .provider-icon { width: 20px; height: 20px; display: grid; place-items: center; }
+.provider-btn .provider-icon svg { width: 20px; height: 20px; display: block; }
+
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--muted); margin: 20px 0;
+}
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Field */
+.field { margin-bottom: 14px; }
+.field label {
+  display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px;
+}
+.field input {
+  width: 100%; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--background);
+  font: inherit; font-size: 15px; color: var(--foreground);
+  outline: none; min-height: 48px;
+}
+.field input:focus { border-color: var(--accent); }
+.field input::placeholder { color: var(--muted); }
+.field .helper { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+/* Password rules */
+.pw-rules {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-top: 8px;
+  padding: 12px; border-radius: 10px;
+  background: var(--secondary);
+  font-size: 12px;
+}
+.pw-rule { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.pw-rule.ok { color: var(--accent-deep); }
+.pw-rule .rule-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line-strong);
+}
+.pw-rule.ok .rule-dot { background: var(--accent); }
+
+/* Terms checkbox */
+.terms-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 16px 0;
+  font-size: 12px; color: var(--muted); line-height: 1.6;
+}
+.terms-row .checkbox {
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 1.5px solid var(--accent); background: var(--accent);
+  display: grid; place-items: center; flex-shrink: 0;
+  cursor: pointer; color: #fff; font-size: 12px; font-weight: 700;
+  margin-top: 1px;
+}
+.terms-row a { color: var(--accent-deep); text-decoration: none; font-weight: 600; }
+.terms-row a:hover { text-decoration: underline; }
+
+/* Primary button */
+.primary-btn {
+  width: 100%;
+  padding: 12px 18px; border-radius: 12px;
+  background: var(--foreground); color: var(--background);
+  border: none; font: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; min-height: 48px; margin-top: 4px;
+}
+.primary-btn:hover { background: var(--accent-deep); }
+
+.ac-footer {
+  margin-top: 16px; font-size: 13px; color: var(--muted);
+  text-align: center;
+}
+.ac-footer a, .ac-footer .lc-link {
+  color: var(--accent-deep); text-decoration: none; font-weight: 600; cursor: pointer;
+}
+.ac-footer a:hover { text-decoration: underline; }
+
+/* Verification waiting state */
+.verify-card .verify-icon {
+  width: 72px; height: 72px; border-radius: 18px;
+  background: var(--accent-subtle); color: var(--accent-deep);
+  display: grid; place-items: center;
+  margin: 0 auto 20px;
+}
+.verify-card .verify-icon svg {
+  width: 36px; height: 36px;
+  stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.verify-card h2 { text-align: center; }
+.verify-card .ac-sub { text-align: center; }
+.verify-card .verify-email {
+  display: inline-block;
+  background: var(--accent-subtle); color: var(--accent-deep);
+  padding: 4px 12px; border-radius: 9999px;
+  font-weight: 700; font-size: 13px;
+  margin: 0 4px;
+}
+
+.verify-actions {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 24px;
+}
+.btn-secondary {
+  width: 100%;
+  padding: 11px 18px; border-radius: 12px;
+  background: transparent; color: var(--foreground);
+  border: 1px solid var(--border);
+  font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+.verify-help {
+  margin-top: 20px; padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); line-height: 1.7;
+}
+.verify-help strong { color: var(--foreground); display: block; margin-bottom: 4px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; }
+
+/* Right benefit aside */
+.auth-aside {
+  background: linear-gradient(135deg, var(--foreground) 0%, var(--accent-deep) 100%);
+  color: var(--background);
+  padding: 56px 48px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative; overflow: hidden;
+}
+.auth-aside::before {
+  content: ''; position: absolute;
+  top: -100px; right: -100px; width: 400px; height: 400px;
+  border-radius: 50%; background: rgba(247, 223, 203, 0.1);
+}
+.auth-aside::after {
+  content: ''; position: absolute;
+  bottom: -80px; left: -80px; width: 300px; height: 300px;
+  border-radius: 50%; background: rgba(217, 120, 72, 0.18);
+}
+.auth-aside > * { position: relative; z-index: 2; }
+.aside-eyebrow {
+  font-size: var(--font-eyebrow); font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; opacity: 0.7;
+}
+.aside-display {
+  font-size: 38px; font-weight: 900; letter-spacing: -0.03em; line-height: 1.1;
+  margin: 16px 0 24px; max-width: 400px;
+}
+.aside-sub { font-size: 15px; line-height: 1.6; opacity: 0.85; max-width: 380px; }
+
+.feature-list {
+  display: flex; flex-direction: column; gap: 16px;
+  margin-top: 32px;
+}
+.feature-row {
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.feature-row .f-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(255, 251, 245, 0.12);
+  display: grid; place-items: center; flex-shrink: 0;
+  color: var(--background);
+}
+.feature-row .f-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.feature-row .f-body { padding-top: 4px; }
+.feature-row .f-title { font-size: 14px; font-weight: 700; }
+.feature-row .f-desc { font-size: 12px; opacity: 0.78; margin-top: 2px; line-height: 1.5; }
+
+.aside-footnote {
+  font-size: 11px; opacity: 0.6; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+}
+
+/* Mobile */
+.mobile-topbar {
+  height: 56px; padding: 0 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--background); flex-shrink: 0;
+  position: sticky; top: 0; z-index: 10;
+}
+.mobile-topbar .brand { font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+.mobile-topbar .brand .accent-dot { color: var(--accent); }
+.mobile-topbar .icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--background);
+  display: grid; place-items: center; cursor: pointer;
+}
+
+.mobile-auth {
+  flex: 1; overflow-y: auto;
+  padding: 24px 24px calc(var(--nav-h-mobile) + 16px);
+  display: flex; flex-direction: column; gap: 18px;
+}
+.mobile-auth h2 {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.15;
+  margin-bottom: 6px;
+}
+.mobile-auth .ac-sub { font-size: 14px; color: var(--muted); }
+
+.bottom-nav {
+  position: sticky; inset-block-end: 0; left: 0; right: 0;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  height: var(--nav-h-mobile);
+  background: var(--background);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+.bottom-nav-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--muted); font: inherit; min-height: 44px;
+}
+.bottom-nav-btn .icon { width: 22px; height: 22px; }
+.bottom-nav-btn .icon svg { width: 100%; height: 100%; stroke-width: 2; }
+.bottom-nav-btn span { font-size: 10px; font-weight: 500; }
+.bottom-nav-btn.active { color: var(--accent); }
+.bottom-nav-btn.active span { font-weight: 700; }
+
+.icon { display: inline-flex; align-items: center; justify-content: center; }
+.icon svg { stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.spec-card {
+  max-width: 1600px; margin: 32px auto 0;
+  background: var(--background); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px 24px;
+  font-size: 13px; line-height: 1.7;
+}
+.spec-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+.spec-card code { background: var(--tertiary); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--accent-deep); }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div>
+    <h1>V2 Sign Up Mockup — /login/signup</h1>
+    <div style="font-size: 13px; color: var(--muted); margin-top: 4px;">
+      多步註冊 · Step 1 OAuth 一鍵 / Email 註冊 → Step 2 等 email verification
+    </div>
+  </div>
+  <div>
+    <span class="variant-chip">V2 · Sign up</span>
+    <span class="nav-links">
+      <a href="mockup-login-v2.html">← 登入</a>
+      <a href="mockup-forgot-v2.html">忘記密碼</a>
+      <a href="mockup-index.html">Index</a>
+    </span>
+  </div>
+</header>
+
+<!-- ============ Desktop 1440 — Step 1 註冊表單 ============ -->
+<div class="viewport-label">Desktop · 1440 × 940 · Step 1 — OAuth 一鍵 / Email + 密碼 + 名稱建立帳號</div>
+<div class="viewport-frame vp-desktop-full">
+  <div class="shell-2pane">
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">Tripline<span class="accent-dot">.</span></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>聊天</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>行程</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>地圖</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>探索</a>
+        <a class="nav-item active"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>登入</a>
+      </nav>
+      <div class="sidebar-cta">
+        <div class="user-chip"><div class="avatar">+</div><span>建立帳號中</span></div>
+      </div>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-form-side">
+        <div class="auth-card">
+          <a class="ac-back">← 回登入</a>
+          <div class="step-indicator">
+            <span>Step 1 / 2 · 建立帳號</span>
+            <span class="step-dots">
+              <span class="step-dot active"></span>
+              <span class="step-dot"></span>
+            </span>
+          </div>
+          <h2>建立 Tripline 帳號<br>開始規劃旅程</h2>
+          <div class="ac-sub">兩種方式都行 — OAuth 5 秒搞定，或用 email 自己建。</div>
+
+          <div class="providers">
+            <button class="provider-btn">
+              <span class="provider-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M21.35 11.1H12v3.8h5.35a4.5 4.5 0 0 1-1.97 2.96v2.45h3.17c1.86-1.71 2.94-4.22 2.94-7.21 0-.66-.06-1.3-.17-2z" fill="#4285F4"/><path d="M12 22c2.7 0 4.96-.9 6.62-2.43l-3.17-2.45a6 6 0 0 1-3.45.96 6 6 0 0 1-5.7-4.16H2.99v2.55A10 10 0 0 0 12 22z" fill="#34A853"/><path d="M6.3 13.92a6 6 0 0 1 0-3.84V7.53H2.99a10 10 0 0 0 0 8.94L6.3 13.92z" fill="#FBBC05"/><path d="M12 6.16c1.47 0 2.79.5 3.83 1.5l2.86-2.86C16.95 3.13 14.7 2 12 2A10 10 0 0 0 2.99 7.53L6.3 10.08C7.1 7.95 9.35 6.16 12 6.16z" fill="#EA4335"/></svg>
+              </span>
+              <span>用 Google 註冊</span>
+            </button>
+            <button class="provider-btn">
+              <span class="provider-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+              </span>
+              <span>用 Apple 註冊</span>
+            </button>
+            <button class="provider-btn">
+              <span class="provider-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="#06C755"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+              </span>
+              <span>用 LINE 註冊</span>
+            </button>
+          </div>
+
+          <div class="divider">或 Email 註冊</div>
+
+          <div class="field">
+            <label>顯示名稱</label>
+            <input type="text" placeholder="旅伴會看到這個名字">
+            <div class="helper">至少 2 個字，可隨時改。</div>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input type="email" placeholder="ray@example.com">
+          </div>
+          <div class="field">
+            <label>密碼</label>
+            <input type="password" placeholder="至少 8 字元 + 1 個數字">
+            <div class="pw-rules">
+              <div class="pw-rule ok"><span class="rule-dot"></span>至少 8 個字元</div>
+              <div class="pw-rule ok"><span class="rule-dot"></span>包含至少 1 個數字</div>
+              <div class="pw-rule"><span class="rule-dot"></span>包含至少 1 個大寫字母</div>
+            </div>
+          </div>
+
+          <div class="terms-row">
+            <span class="checkbox">✓</span>
+            <span>我同意 <a>服務條款</a>與 <a>隱私權政策</a>，了解 Tripline 不會在未經允許下分享行程資料。</span>
+          </div>
+
+          <button class="primary-btn">建立帳號 →</button>
+
+          <div class="ac-footer">
+            已有帳號？<span class="lc-link">直接登入</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-aside">
+        <div class="aside-eyebrow">Why Tripline</div>
+        <div>
+          <h2 class="aside-display">把每次旅程<br>留在身邊。</h2>
+          <p class="aside-sub">註冊後可同步行程到所有裝置、邀請旅伴共編、儲存喜歡的 POI 一鍵加入下次 trip。</p>
+          <div class="feature-list">
+            <div class="feature-row">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9M3 12a9 9 0 0 1 9-9M21 12h-4M7 12H3M12 21v-4M12 7V3"/><circle cx="12" cy="12" r="4"/></svg>
+              </div>
+              <div class="f-body">
+                <div class="f-title">跨裝置同步</div>
+                <div class="f-desc">手機看到的就是平板看到的，離線也能用。</div>
+              </div>
+            </div>
+            <div class="feature-row">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="f-body">
+                <div class="f-title">邀請旅伴共編</div>
+                <div class="f-desc">用一個 link 把家人朋友拉進行程，不用 LINE 截圖。</div>
+              </div>
+            </div>
+            <div class="feature-row">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="f-body">
+                <div class="f-title">儲存池跟著你</div>
+                <div class="f-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="aside-footnote">© 2026 Tripline · 由旅人為旅人打造</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ Desktop 1100 — Step 2: 等 email verification ============ -->
+<div class="viewport-label">Desktop Narrow · 1100 × 800 · Step 2 — 等 email verification（pending state）</div>
+<div class="viewport-frame vp-desktop-narrow">
+  <div class="shell-2pane">
+
+    <aside class="sidebar">
+      <div class="sidebar-brand">Tripline<span class="accent-dot">.</span></div>
+      <nav class="sidebar-nav">
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>聊天</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>行程</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>地圖</a>
+        <a class="nav-item"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>探索</a>
+        <a class="nav-item active"><span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>登入</a>
+      </nav>
+      <div class="sidebar-cta">
+        <div class="user-chip"><div class="avatar">R</div><span>等待驗證...</span></div>
+      </div>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-form-side">
+        <div class="auth-card verify-card">
+          <div class="step-indicator" style="justify-content: center;">
+            <span>Step 2 / 2 · 驗證 email</span>
+            <span class="step-dots">
+              <span class="step-dot done"></span>
+              <span class="step-dot active"></span>
+            </span>
+          </div>
+
+          <div class="verify-icon">
+            <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <h2>檢查信箱</h2>
+          <div class="ac-sub">
+            驗證連結已寄到 <span class="verify-email">ray@trip.io</span>，點擊後就能開始規劃。連結 24 小時內有效。
+          </div>
+
+          <div class="verify-actions">
+            <button class="primary-btn">開啟 email app</button>
+            <button class="btn-secondary">沒收到？重寄連結</button>
+          </div>
+
+          <div class="verify-help">
+            <strong>找不到信？</strong>
+            檢查垃圾信件 / 推廣信件夾。寄件人是 <span style="font-weight: 600; color: var(--foreground);">noreply@trip.io</span>。
+            如果還是沒看到，<a style="color: var(--accent-deep); text-decoration: none; font-weight: 600;">改用其他 email</a>。
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-aside">
+        <div class="aside-eyebrow">Almost there</div>
+        <div>
+          <h2 class="aside-display">差最後一步<br>就能開始。</h2>
+          <p class="aside-sub">驗證 email 是為了確保你能收到旅伴邀請、行程更新通知，以及哪天忘記密碼時的重設連結。</p>
+          <div class="feature-list">
+            <div class="feature-row">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>
+              </div>
+              <div class="f-body">
+                <div class="f-title">驗證後立即可用</div>
+                <div class="f-desc">點完連結會自動回到這個頁面，可以直接開始規劃 trip。</div>
+              </div>
+            </div>
+            <div class="feature-row">
+              <div class="f-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div class="f-body">
+                <div class="f-title">未驗證不算啟用</div>
+                <div class="f-desc">沒驗證的帳號 7 天後自動清除，避免假帳號占空間。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="aside-footnote">© 2026 Tripline</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============ Mobile — Step 1 簡化版 ============ -->
+<div class="viewport-label">Mobile · 375 × 812 · Step 1 註冊（mobile 全寬簡化版 + bottom nav）</div>
+<div class="viewport-frame vp-mobile">
+  <div class="shell-mobile">
+    <header class="mobile-topbar">
+      <div class="brand">Tripline<span class="accent-dot">.</span></div>
+      <button class="icon-btn" title="關閉"><span style="font-size: 16px;">✕</span></button>
+    </header>
+
+    <div class="mobile-auth">
+      <a class="ac-back">← 回登入</a>
+      <div class="step-indicator">
+        <span>Step 1 / 2</span>
+        <span class="step-dots">
+          <span class="step-dot active"></span>
+          <span class="step-dot"></span>
+        </span>
+      </div>
+      <div>
+        <h2>建立帳號<br>開始規劃</h2>
+        <div class="ac-sub">OAuth 5 秒搞定 · 或用 email 自己建</div>
+      </div>
+
+      <div class="providers">
+        <button class="provider-btn">
+          <span class="provider-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M21.35 11.1H12v3.8h5.35a4.5 4.5 0 0 1-1.97 2.96v2.45h3.17c1.86-1.71 2.94-4.22 2.94-7.21 0-.66-.06-1.3-.17-2z" fill="#4285F4"/><path d="M12 22c2.7 0 4.96-.9 6.62-2.43l-3.17-2.45a6 6 0 0 1-3.45.96 6 6 0 0 1-5.7-4.16H2.99v2.55A10 10 0 0 0 12 22z" fill="#34A853"/><path d="M6.3 13.92a6 6 0 0 1 0-3.84V7.53H2.99a10 10 0 0 0 0 8.94L6.3 13.92z" fill="#FBBC05"/><path d="M12 6.16c1.47 0 2.79.5 3.83 1.5l2.86-2.86C16.95 3.13 14.7 2 12 2A10 10 0 0 0 2.99 7.53L6.3 10.08C7.1 7.95 9.35 6.16 12 6.16z" fill="#EA4335"/></svg>
+          </span>
+          <span>用 Google 註冊</span>
+        </button>
+        <button class="provider-btn">
+          <span class="provider-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+          </span>
+          <span>用 Apple 註冊</span>
+        </button>
+        <button class="provider-btn">
+          <span class="provider-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="#06C755"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+          </span>
+          <span>用 LINE 註冊</span>
+        </button>
+      </div>
+
+      <div class="divider">或 Email 註冊</div>
+
+      <div>
+        <div class="field">
+          <label>顯示名稱</label>
+          <input type="text" placeholder="旅伴會看到這個名字">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input type="email" placeholder="ray@example.com">
+        </div>
+        <div class="field">
+          <label>密碼</label>
+          <input type="password" placeholder="至少 8 字元 + 1 個數字">
+        </div>
+
+        <div class="terms-row">
+          <span class="checkbox">✓</span>
+          <span>同意 <a>服務條款</a>與 <a>隱私權</a></span>
+        </div>
+
+        <button class="primary-btn">建立帳號 →</button>
+      </div>
+
+      <div class="ac-footer">
+        已有帳號？<span class="lc-link">直接登入</span>
+      </div>
+    </div>
+
+    <nav class="bottom-nav" aria-label="主要功能">
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg></span>
+        <span>聊天</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4z"/><path d="M8 3v4M16 3v4"/></svg></span>
+        <span>行程</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><path d="M9 4l-6 3v13l6-3 6 3 6-3V4l-6 3-6-3z"/><path d="M9 4v13M15 7v13"/></svg></span>
+        <span>地圖</span>
+      </button>
+      <button class="bottom-nav-btn">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
+        <span>探索</span>
+      </button>
+      <button class="bottom-nav-btn active">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg></span>
+        <span>登入</span>
+      </button>
+    </nav>
+  </div>
+</div>
+
+<section class="spec-card">
+  <h3>註冊頁規格摘要</h3>
+  <ul style="padding-left: 20px; list-style: disc;">
+    <li><strong>路由</strong>：<code>/login/signup</code>（Step 1 填表）<code>/login/verify</code>（Step 2 等 email 驗證）</li>
+    <li><strong>Step 1</strong>：3 個 OAuth provider（Google/Apple/LINE 真實 logo SVG）+ Email 註冊三 field（顯示名稱 / Email / 密碼）+ 即時 password rule meter + terms checkbox（預設 checked）+ primary CTA「建立帳號」</li>
+    <li><strong>Step 2 verify state</strong>：72px accent-subtle icon + 「檢查信箱」hero + 顯示已寄到的 email chip + 雙 action（「開啟 email app」primary / 「重寄連結」secondary）+ help footer（垃圾信件提示 / 改用其他 email）</li>
+    <li><strong>Provider buttons</strong>：跟 login 同樣 3 個 OAuth 真實 logo SVG（Google 4 色、Apple 黑、LINE #06C755 綠）— 對齊品牌 guideline 要求</li>
+    <li><strong>顯示名稱欄位</strong>：mockup 多一個 field（login 沒有）— 旅伴會看到這個名字，後續可改</li>
+    <li><strong>Password rules 即時驗證</strong>：3 條規則 dot + 文案（&gt;=8 字 / 至少 1 數字 / 至少 1 大寫），達成的變 accent</li>
+    <li><strong>Terms 行</strong>：accent-fill checkbox（預設勾選 — 但實作要 user 主動勾才符合 dark pattern 規避；mockup 為 demo 預勾）+ 雙 link 條款</li>
+    <li><strong>未驗證帳號 7 天清除</strong>：spec card 提到的 reassurance — 避免假帳號累積，符合 V2 OAuth Workstream A 的 hardening</li>
+    <li><strong>Mobile</strong>：簡化 — 無右側 aside、無 password rule meter（僅 placeholder hint）、terms 縮短「同意條款與隱私權」</li>
+    <li><strong>實作對應</strong>：V2 OAuth Workstream A · Phase 2「Local password + email verification」</li>
+  </ul>
+</section>
+
+</body>
+</html>

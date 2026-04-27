@@ -1,0 +1,29 @@
+name: Telegram smoke test
+
+# Manual trigger only — Telegram channel sanity check（B-P6 task 10.4）
+# 每月跑一次或在改 daily-check Telegram 部分後 manual 跑驗證。
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每月 1 日 UTC 22:00 = 台灣 06:00 跑一次 sanity
+    - cron: '0 22 1 * *'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run Telegram smoke test
+        run: bash scripts/telegram-smoke.sh
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_HOME_TOKEN: ${{ secrets.TELEGRAM_BOT_HOME_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}

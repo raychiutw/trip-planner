@@ -3,6 +3,1141 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.29] - 2026-04-27
+
+**PR-VV: mobile bottom-nav scroll-direction-aware auto-hide（QA round 28）**。
+
+### Added
+- **Bottom-nav 向下捲消失、向上捲顯示** (iOS Safari pattern)。AppShell 加 scroll listener on `.app-shell-main`，detect direction → toggle `data-hidden` attr → CSS `transform: translateY(100%)` slide animation。
+- 8px threshold 避免抖動，60px top buffer 避免最頂端就 hide。
+- `passive: true` listener (RBP-26 規定)。
+
+### Changed
+- **Bottom-nav grid row → fixed overlay** — 原 sticky in grid row 結構無法 transform-hide（row 仍佔空間），改 `position: fixed` 才能 slide 完全離場。
+- Main pane 加 `padding-bottom: var(--nav-height-mobile, 88px)` reserve space 避免 content 被遮。
+
+### Tests
+- `app-shell-snapshot.test.tsx` snapshot 更新（多 `data-hidden="false"` attr）。
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.28] - 2026-04-27
+
+**PR-UU: 共編 chip 改漢堡選單 (共編 / 列印 / 下載 4 formats)（QA round 27）**。
+
+### Added
+- **Embedded topbar 漢堡選單** — 替換 PR-RR 的 共編 chip。⋯ icon-btn 36×36 (mockup A `.va-icon-btn` 規格) → portal dropdown 200px 寬：
+  - **共編設定** — 走 host `setCollabTripId` 開既有 InfoSheet
+  - **列印** — 走 TripPage forwardRef `togglePrint()` 進入 print-mode (既有 hook)
+  - **下載 PDF / Markdown / JSON / CSV** — 走 TripPage forwardRef `triggerDownload(format)` (既有 `lib/tripExport.ts` downloadTripFormat)
+- 對齊 mockup-trip-selected-v1.html Variant A 完整版（topbar 終於完成 right action group）。
+
+### Changed
+- TripPage 改為 `forwardRef<TripPageHandle>` — 暴露 `openSheet` / `triggerDownload` / `togglePrint` 給父層 cross-component 呼叫。
+- TripsListPage 加 `tripPageRef = useRef<TripPageHandle>(null)`，傳給 embedded TripPage。
+
+### A11y
+- Menu 走 `role="menu"` + items `role="menuitem"`
+- Esc / outside click 關閉 + focus return
+- Trigger 帶 `aria-haspopup` + `aria-expanded`
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.27] - 2026-04-27
+
+**PR-TT: hotfix embedded topbar CSS 沒注入 → 子元素 stack vertically（QA round 26）**。
+
+### Fixed
+- **Critical layout bug** — `<style>{SCOPED_STYLES}</style>` 原本在 `cardGridMain` JSX 內，embedded mode 不渲染 cardGridMain → CSS 沒注入 → `.tp-embedded-topbar` 用 `<header>` UA 預設 `display: block`，子元素 stack vertically：
+  - User 看到 `[← back]` + `[共編 chip]` 兩行而非一行
+  - PR-RR 整個 actions slot 視覺被破壞
+- 修：`<style>` 提到 component 頂層 `return ()` 的 `<>` 內，永遠注入。
+- 桌機 + 手機 同時修復，兩者都正確顯示 `[← back] [trip name] [共編 chip]` 單行 topbar。
+- verify gate: tsc clean / 1029 tests pass。
+
+## [2.14.26] - 2026-04-27
+
+**PR-RR: 補齊 mockup A actions slot — 共編 chip 進 embedded topbar（QA round 25）**。
+
+### Changed
+- **共編 chip 從 TripPage 搬進 embedded topbar** — 對齊 `mockup-trip-selected-v1.html` Variant A right action group。topbar 變成 `[← back] [trip name] [共編]`。
+- TripPage `.tp-trip-actions` chip 在 `noShell` mode 下 hide，避免兩個 共編 entry 重複。
+- 共編 chip 點擊呼叫 `setCollabTripId(effectiveSelectedId)` → 開 TripsListPage 既有 InfoSheet（跟卡片 ⋯ → 共編 同 path）。
+
+### TODO
+- Variant A 的 ⋯ overflow icon-btn 還沒做（cross-component OverflowMenu wire deferred）。
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.25] - 2026-04-27
+
+**PR-QQ: embedded topbar 對齊 mockup-trip-v2 canonical（QA round 24）**。
+
+### Changed
+- **Embedded topbar 視覺重設** — 對齊 `mockup-trip-v2.html` line 438 `.mobile-topbar` canonical 規格 + `mockup-trip-selected-v1.html` Variant A:
+  - Padding 12px → **16px**（mockup standard）
+  - Back btn **40×40 transparent** → **36×36 with border + bg-background**（mockup `.icon-btn` pattern）
+  - Back icon 20px → 18px
+- Title 維持 17px bold 單行（不加 day eyebrow，採 user 偏好的 simple title style）。
+
+### Notes
+- Mockup file 寫於 `docs/design-sessions/mockup-trip-selected-v1.html`（3 variants × desktop/mobile demos）做為設計 baseline。
+- 共編 chip 與 ⋯ 暫保留在 TripPage 內部；後續可考慮整合進 topbar actions slot。
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.24] - 2026-04-26
+
+**PR-PP: /trips 架構改 2-pane（去 sheet）+ 5 cards/row + 點選顯示滿版（QA round 23）**。
+
+### Changed (架構)
+- **去 sheet** — TripsListPage 不再有右側 sheet pane。AppShell 從 3-pane 改成 2-pane (sidebar 240 + main fluid)。
+- **點選 = 滿版 trip** — `/trips?selected=X` 在桌機/手機都把 main 換成滿版 embedded TripPage（含 `[← back] [trip name]` topbar），不再走 sheet。`showEmbeddedTrip` 不分 viewport 同行為。
+- **行程 card 一行 5 個** — minmax 200 → 160，加上去 sheet 後 main 變寬：
+  - 1024 → 4 cards × 168px
+  - 1280 → 5 cards × 179px
+  - 1440 → 5 cards × 179px
+  - 1920 → 5 cards × 179px (max-width 960 cap)
+- 5 cols 在 ≥1280 穩定，符合 user 「一行 5 個」 spec。
+
+### Removed
+- `.app-shell:has(> main .tp-trips-shell)[data-layout="3pane"]` sheet width override（已不適用）。
+- TripsListPage `sheet` prop 傳給 AppShell。
+- Embedded mode 的 `!isDesktop` 限制（現在桌機/手機都走 embedded）。
+
+### Refined
+- **Embedded TripPage 吃滿 main 寬** — User 進一步釐清：sidebar 固定後 trip detail 直接吃滿剩餘空間，不要 max-width 限寬。砍掉 `.tp-embedded-content` wrapper（曾短暫加上 max-width 720 後被 user 退回）。
+
+### Tests
+- 更新 2 cases：原 `desktop: first trip auto-selected → sheet` 改為新架構 `desktop + no ?selected: card grid only` + `desktop + ?selected: 滿版 embedded`。
+
+verify gate: tsc clean / 123 files / 1029 tests pass.
+
+## [2.14.23] - 2026-04-26
+
+**PR-NN/OO bundle: mobile-topbar 取代 floating back btn + CollabModal → InfoSheet 統一（QA round 22）**。
+
+### Fixed (PR-NN)
+- **手機回上一頁自己一行 + 跟 mockup 不符** — 原 `.tp-trips-back-btn` 是 40x40 floating sticky 在 TripPage 之上，獨佔一行。改成 56px 全寬 sticky `.tp-embedded-topbar`（對齊 `mockup-trip-v2.html` line 438 `.mobile-topbar`）：[← back btn] [trip name] 兩欄，glass blur 樣式跟 mockup 一致。
+- 修法：刪掉 `.tp-trips-back-btn` CSS + 改 embedded JSX 用 `.tp-embedded-trip` wrapper + `.tp-embedded-topbar` header。
+
+### Changed (PR-OO)
+- **桌機共編 ≠ 手機共編** — TripsListPage 卡片 ⋯ → 共編走 `CollabModal`（centered 520px modal），TripPage 共編 chip 走 `InfoSheet`（slide-up sheet）— 兩個 component、兩種視覺。
+- 修法：TripsListPage 改用 `InfoSheet` + `CollabSheet`，跟 TripPage 共編 chip 同一 sheet 容器。`CollabModal` 已刪除（unused）。
+- 桌機/手機現在都走同樣 slide-up sheet pattern。
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.22] - 2026-04-26
+
+**PR-LL/MM bundle: sheet 再收緊 + card 比照 mobile 尺寸 RWD（QA round 21）**。
+
+### Fixed (PR-LL)
+- **1280 viewport user 仍看到 1 card** — PR-KK 的 sheet 410 + minmax 280 在 1280 inner=587 計算上應該容 2 cols（576），但 macOS scrollbar always-on 模式吃 ~15px 讓 inner=572 < 576 → 掉成 1 col。
+
+### Changed (PR-MM)
+- **/map sheet 比照 /trips** — GlobalMapPage 加同樣 sheet override `min(540, 28vw)`，不再走全域 `min(780, 40vw)`。同步解決 1280 viewport map sheet 太大的問題。
+- **Sheet 再收緊** — `min(576, 32vw)` → `min(540, 28vw)`：
+  - 1280: sheet 358 (28vw)、main 682
+  - 1440: sheet 403 (28vw)、main 797
+  - 1920: sheet 538 (28vw)、main 1142
+  - 2560: sheet 540 (cap)、main 1780
+- **Card 比照 mobile 尺寸 + 自動 RWD** — `minmax(280, 1fr)` → `minmax(200, 1fr)`：mobile 2-col 在 375 viewport 每張 ~180，desktop minmax 200 同尺寸基準，auto-fill 隨 viewport 自動加列：
+  - 1280 → 3 cards
+  - 1440 → 3 cards
+  - 1920 → 4 cards
+  - 2560 → 4 cards
+- 真正的 RWD：viewport 變寬自動增加列數而非卡片變大。
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.21] - 2026-04-26
+
+**PR-KK: sheet 改 32vw cap 576 — 涵蓋 1280 viewport（QA round 20）**。
+
+### Fixed
+- **1280 viewport sheet 仍太大** — PR-JJ 的 `min(576, 40vw)` 在 1280 算 = 512px（沒到 576 cap，被 40vw 鎖死），main 只放 1 card。改 `min(576, 32vw)` 讓 1280 = 410px，main 630 容下 2 cards。
+- 1920+ 仍 cap 576 維持 mockup 上限。
+
+| Viewport | sheet | main | cards |
+|----------|-------|------|-------|
+| 1280 | 410 (32vw) | 630 | 2 |
+| 1440 | 461 (32vw) | 739 | 2 |
+| 1920 | 576 (cap) | 1104 | 3 |
+
+verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.20] - 2026-04-26
+
+**PR-JJ: /trips sheet cap 鎖在 mockup-1440 的 576px，不讓 wider viewport 長到 780（QA round 19）**。
+
+### Fixed
+- **Sheet 在 wider viewport 太大** — PR-II 砍 override 改繼承全域 token `min(780, 40vw)` 在 1440 沒問題（=576），但 user 在 1920+ viewport 會看到 sheet 長到 768，視覺上比例不對。
+- 修法：override sheet 改 `min(576px, 40vw)` — 把 mockup-1440 的 576 比例鎖死在**所有 viewport**：
+  - 1440 → sheet 576 (40vw)、main 624（mockup canonical）
+  - 1920 → sheet **576 (cap)**、main 1104（PR-II 是 768/901，現在 sheet 不再長）
+  - 2560 → sheet 576 (cap)、main 1744
+- **配套**：shell horizontal padding 24 → 16，讓 1440 main inner=592 ≥ 576，2 cards 確實塞得下（PR-II 的 565 < 576 只能放 1 card 是 bug）。
+- 1440 viewport 量到 `240 624 576`、grid 2 cols 各 ~290px。
+- verify gate: tsc clean / 1029 tests pass.
+
+## [2.14.19] - 2026-04-26
+
+**PR-II: /trips sheet 比例修回 mockup canonical（QA round 18）**。
+
+### Fixed
+- **Sheet 比例不對** — 認真比對 `docs/design-sessions/mockup-trip-v2.html` 線 30 + 167 後修回 canonical：
+  - Sheet 寬：`min(440px, 32vw)` → `min(780px, 40vw)`（PR-FF 改窄是錯的）
+  - Trip grid：`repeat(3, 1fr)` 強制 → `repeat(auto-fill, minmax(280px, 1fr))` adaptive
+- 改動就是把 PR-FF 加的 scoped override 整段砍掉，直接繼承全域 token `--grid-3pane-desktop`（tokens.css 行 95）— DRY 化，跟 trip-detail page sheet 寬度一致。
+- 1440 viewport 對齊 mockup：sheet=576px (40vw)、main=624px、2-card auto-fill。
+- verify gate: tsc clean / 123 files / 1029 tests pass。
+
+## [2.14.18] - 2026-04-26
+
+**PR-GG/HH bundle: CollabSheet 重新設計 + docs 404 不再噴 5 連 toast（QA round 17）**。
+
+### Fixed (CollabSheet — PR-GG)
+- **「移除」按鈕文字直排亂** — row 改單一水平 flex（避免 column 包 email + pill 撐高 row 把 button 擠窄）；按鈕走 terracotta-preview `.btn-destructive` ghost 樣式（transparent + destructive border + nowrap + min-width 64）。
+- **「新增」按鈕透明像 disabled** — 走 `.btn-primary` 實心 fill：`var(--color-accent)` bg + `var(--color-accent-foreground)` 文字、hover → `--color-accent-deep`；disabled 只調 opacity 0.55 保留實心橘色，永遠看得出是 primary CTA。
+- **role pill 跟 row 沒對齊** — pill 移到 email 同一行 inline，avatar / email / pill / button 四欄 `align-items: center` 對齊；pill 中文化「擁有者 / 共編成員」、放棄 uppercase 英文 role。
+- **Owner row 留白對齊** — owner 不渲染 remove button（不可移除），靠 flex 自然收尾。
+
+### Fixed (docs — PR-HH)
+- **新行程開出 5 連「找不到這筆資料」error toast** — `useTrip.fetchAllDocs` 對 5 個 docs（flights/checklist/backup/emergency/suggestions）的 404 rejection 各跑一次 `showErrorToast`。docs 是 optional sub-resource（新行程不會自動寫 5 種 docs），404 應靜默略過，不該每個都噴 toast 騷擾使用者。
+- 修法：`if (err.code === 'DATA_NOT_FOUND') continue;` 在 toast 觸發前提早 short-circuit。
+- 其他 severity（500、網路錯）仍正常 toast — 加 regression-guard 測試確保。
+
+### Tests
+- `tests/unit/use-trip-docs-404.test.tsx` 新增 3 cases：5 連 404 不 toast / 500 仍 toast / 部分 200 部分 404 混合。
+- verify gate: tsc clean / 123 files / 1029 tests pass。
+
+## [2.14.17] - 2026-04-26
+
+**PR-EE/FF bundle: dark mode 樣式修補 + trips list 卡片均一 + 隱藏 trip-id + sheet 寬度收縮（QA round 15-16）**。
+
+### Fixed (dark mode)
+- **⋯ 卡片 kebab button 白圈** — `.tp-card-menu-trigger` 用 `rgba(255,255,255,0.92)` hardcode 白色 → 改 `var(--color-glass-toast)` token (light: cream / dark: cocoa) + `backdrop-filter: blur(8px)`。
+- **手機行程詳情返回箭頭白圈** — `.tp-trips-back-btn` 同問題同修法。
+- **TW cover dark mode 太亮** — `--color-cover-tw-from: #9E6800`（amber gold）在 dark UI 跳出來太搶眼，改 `#5A4220`（deep amber-brown）。
+
+### Fixed (trips list)
+- **隱藏 trip-id** — `cardMeta()` fallback `trip.tripId` 移除 → return `''`。`trip-vduh` 對 user 沒意義，留白勝過顯示亂碼。
+- **卡片大小不一** — `.tp-trip-card` 改 `display: flex; flex-direction: column; height: 100%;`，meta `margin-top: auto` 推到底部。grid auto stretch + flex column = 同 row 高度均一。
+- **Sheet 寬度過大** — `min(560px, 38vw)` → `min(440px, 32vw)`，對照 mockup-trip-v2 sheet 比例。1440px viewport 主欄變寬 cards 顯示更舒服。
+
+### Internal
+- 抓 bug 用 `/browse` 對 prod 套 dark mode 截圖確認。
+- User 回報的「奇怪長條圖」 在 headless browse 沒重現 — 可能 Xiaomi 裝置 specific quirk，需實機 debug。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.14] - 2026-04-26
+
+**PR-CC: 行程 owner 概念正規化 — 強制 server-side、區分 owner/member badge、不可刪 owner**。User 指示：「行程增加 owner 概念，huiyun 行程 owner = huiyun 帳號、ray 的 = lean.lean@gmail.com，之後誰建立就是誰是 owner，加入共編的是 member。」 + 「設定畫面 members 也要調整 owner 可以加 member 不能刪除自己 owner」。
+
+### Migration (已套用 prod)
+- **`migrations/0039_trip_permissions_owner_role.sql`** — 擴充 `trip_permissions.role` CHECK 從 `('admin','member')` 加入 `'owner'`。SQLite 不支援 ALTER TABLE DROP CONSTRAINT，用 swap 表 pattern recreate（含原本 indexes 重建）。
+- **Prod data fix（手動執行 wrangler）**：
+  - `okinawa-trip-2026-Ray`.owner: `'Ray'` → `'lean.lean@gmail.com'`
+  - `okinawa-trip-2026-HuiYun`.owner: `'HuiYun'` → `'penyin@gmail.com'`
+  - 對應 trip_permissions 兩 row role: `'member'` → `'owner'`
+
+### Backend
+- **POST /api/trips 強制 `owner = auth.email`** — 不再讀 `body.owner`（防偽造）。User 指示「之後的誰建立就是誰是 owner」 — server-side auth 取唯一可信來源。
+- **POST /api/trips 自動 INSERT trip_permissions role='owner'** — 取代舊 'admin' 角色。後續 hasPermission 仍認 owner / admin / member 三種。
+- **DELETE /api/permissions/:id 阻擋 owner role row** — User 指示「不能刪除自己 owner」。Owner 只能透過未來轉移 endpoint（unimplemented）變更，不可直接 DELETE。回 403 「不可移除行程擁有者」。
+
+### Frontend (CollabSheet)
+- **owner badge 用 success 綠色** vs **member badge 用 accent 橘色** — 視覺一眼區分。語意：你是擁有者（強調正向） vs 你是共編成員（次要）。
+- **owner row 顯示「擁有者」 label 取代 移除 button** — 視覺強調此 row 不可被移除。Member row 才有 remove button。
+- **`Permission.role` type 擴充** `'owner' | 'admin' | 'member'`。
+
+### Internal
+- backend 既有 `hasPermission` query 用 `email AND trip_id` 不過濾 role，'owner' / 'admin' / 'member' 都自動 pass — 無需改動。
+- Owner transfer 流程（將 owner 從 A 換給 B）尚未實作 — 單向 destructive 需要 confirm + audit + 強制把舊 owner 降成 member。列入 backlog。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests / 53 API files / 525 API tests pass。
+
+## [2.14.13] - 2026-04-26
+
+**PR-Z: CollabSheet 視覺重新設計 — 對照 DESIGN.md + terracotta-preview.html 收齊風格**。User: 版面不一致（移除 button 文字直排、新增 button 看似 disabled、role pill 樣式單薄）。
+
+### Fixed
+- **「移除」 button 文字直排** — 加 `white-space: nowrap` + `min-width: 64px` + `flex-shrink: 0`。原本沒 min-width 在容器擠壓時 button 縮到 1 字寬度 → 「移」/「除」 兩字直排亂。
+- **「+ 新增」 button 看似 disabled** — disabled 從 `opacity: 0.5` 改 `opacity: 0.55` 但**保留 background fill**，user 仍看得出是 primary CTA 只是 dimmer，不再 transparent 假象。
+- **role pill 樣式單薄** — 對照 terracotta-preview `.badge` pattern：rgba(accent, 0.12) bg + accent-deep color + 6px dot prefix + uppercase letter-spacing 0.04em。
+
+### Changed
+- **List container 改 single bordered group with dividers**（同 SessionsPage `.tp-list` pattern）— 取代原本 separate row cards。視覺更 compact + 統一感更強。
+- **Member row 加 avatar circle**（accent-subtle bg + initial）— 對齊 SessionsPage device-icon pattern。
+- **Section head 右側加 count 副標**（`{permissions.length} 人`）— 對照 ConnectedAppsPage `.tp-section-count` pattern。
+- **Empty state 改 secondary bg + 更具導引性的文字**（「尚未授權任何成員，可在下方新增。」）。
+
+### Internal
+- 移除 inline Tailwind class `flex flex-col gap-2`（list container 改用 dedicated `.tp-collab-list` class）。
+- Add input className 從匿名 nested 改 explicit `.tp-collab-add-input`（避免 cascade 不確定性）。
+- collab-sheet test fix：`getByText('尚未授權任何成員')` → `getByText(/尚未授權任何成員/)`（regex 容納新加的引導文字）。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.12] - 2026-04-26
+
+**PR-BB: NewTripModal 目的地接 POI search autocomplete（強制選擇 / option B）**。User: 「新增行程選的目的地要結合搜尋 poi 藉此知道行程國家與相關 table 資訊」。
+
+### Changed
+- **目的地 input 從 free-text 改 POI search autocomplete** — User 必須從搜尋結果選一筆 POI，才能 submit。原本 free-text + `detectCountries()` keyword regex 猜測 country，常常猜錯（沖繩寫成 'Naha' / 巴塞隆納沒列在清單 / 等等都 default JP）→ 現在直接用 Nominatim 真實 ISO alpha-2 country code。
+- **`/api/poi-search` 擴充 response** — 加 `country` (uppercase ISO alpha-2) + `country_name` 兩個欄位。Backend 已在 query 時 `addressdetails=1`，只是原本沒回傳；本 PR 把它寫進 PoiSearchResult interface 並 map 進 result rows。Backwards compatible — 既有 caller (InlineAddPoi / ExplorePage) 不讀 country 欄位。
+
+### Added
+- **NewTripModal `selectedPoi` state** — debounced search 300ms (低於 InlineAddPoi 的 250ms 因為 modal 場景比較不需即時)，min query length 2 字元。
+- **Locked POI chip UI** — 選定後 input 換成 `.tp-new-dest-locked` chip 顯示 POI name + country_name + country code（accent-subtle bg + accent border），可點 ✕ `clearSelectedPoi()` 重新搜尋。
+- **Dropdown UI** — `.tp-new-dest-dropdown` absolute 定位於 input 下方，max-height 280px 內捲。每筆結果有 name (callout/700) + address (caption/muted)。
+
+### Removed
+- **`detectCountries()` keyword regex** — 不再需要，country 直接從 selected POI 拿。
+- **`destination` state** → `destQuery`（input 內容）+ `selectedPoi`（鎖定的 POI）。
+
+### Internal
+- `selectedPoi.country` 是 ISO alpha-2 大寫，跟 trips.countries CSV 格式相容（單一 country 直接放，未來支援 multi 可改 CSV）。
+- 對 OSM 邊界 POI / 海上 POI 等找不到 country 的特例，submit 時 fallback 'JP'。
+- 兩個 submit test 改寫：mock /api/poi-search 回單筆結果 + fireEvent.click 結果 → selectPoi → submit。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
+## [2.14.11] - 2026-04-26
+
+**PR-AA: ⋯ 共編 inline modal + 手機行程詳情返回箭頭（QA round 13 — IA 兩件事）**。
+
+### Changed
+- **⋯ 共編點了不再 navigate 到 trip 頁** — User 指示「不要開啟行程頁」。原 PR-Q 走 `navigate('/trips?selected={id}&sheet=collab')` 強制 user 進 trip 詳情。改：TripsListPage 加 `collabTripId` state，TripCardMenu 的 `onCollab` 改 `setCollabTripId(tripId)` 直接觸發 inline modal，trip 列表保留 visible 在背景。
+
+### Added
+- **`src/components/trip/CollabModal.tsx`** — 新 modal wrapper，createPortal to body + escape stacking context + z-modal token + Escape key dismiss + backdrop click dismiss。內容是現成 `<CollabSheet />`。Header 含「共編設定」 標題 + ✕ close button。
+- **手機行程詳情返回箭頭** — User 指示。`/trips?selected=` mobile embedded mode 在 main 區左上 sticky 顯示 `<button>` with `arrow-left` icon，點了 `setSearchParams(remove 'selected')` 回 list。glass-style 在內容上浮動。Desktop 強 hide（embedded 走 sheet pane 不適用）。
+
+### Internal
+- TripsListPage 拿掉 `useNavigate` import（不再 navigate）。
+- back button CSS 用 `position: sticky; top: 8px` 跟著 scroll 不消失。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.10] - 2026-04-26
+
+**PR-Y: NewTripModal 錯誤訊息真實化 — 修「建立行程失敗，請稍後再試」 generic 掩蓋（QA round 12）**。User: 新增行程失敗（Jessica Yo 截圖）。
+
+### Fixed
+- **「建立行程失敗，請稍後再試」 generic toast 掩蓋真實原因** — `handleSubmit` 解 error response 用 `data.message`，但 API (`functions/api/_errors.ts`) 用巢狀 `{ error: { code, message } }` 格式（V2 user-facing standard），所以 `data.message` 永遠 undefined → 永遠 fallback 到 generic 文字。
+- **修：改讀 `data.error.message`** — backend `ERROR_MESSAGES` dictionary 已對每個 code 定 friendly 文字（401「請先登入」、403「你沒有此操作的權限」、503「資料庫忙碌中，請稍後再試」等），fix 後 user 看到具體原因可 actionable。
+
+### Internal
+- 抓 bug 過程：D1 audit_log 查最近 trip insert events → 沒有 Jessica Yo 對應 row → 證明 POST 沒到 INSERT 步就 fail（驗證 / auth / encoding 之一）→ 對照 NewTripModal handleSubmit 解析邏輯 → 找到 `data.message` 錯位（應 `data.error.message`）。
+- 同 pattern bug 可能還在其他 component（用同樣 raw fetch + manual error parse 的）。建議下個 sweep 統一改用 `apiFetch` (`src/lib/apiClient.ts`) 走 `ApiError.fromResponse` — PR-V follow-up scope。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.9] - 2026-04-26
+
+**PR-X: ExplorePage 儲存池 toolbar 加刪除 + 跟下方 POI grid 留間隔（QA round 11）**。User: 「儲存的 poi 點選後 加入行程 後面增加刪除 然後點選後顯示的功能列要和景點 poi 要有留間隔」。
+
+### Added
+- **「刪除」 button** 加在「加入行程」 後面 — destructive style（透明 bg / destructive border + color，hover bg destructive-bg）。
+- **`handleDeleteSelected()`** — confirm dialog → `Promise.all` 對每個 selected id 呼 DELETE `/api/saved-pois/:id` → 部分失敗仍 show 部分成功 toast。
+- **`deletingSelected` state + `disabled` 三個 button** during delete in-flight。
+
+### Fixed
+- **Toolbar 跟下方 POI grid 沒間隔** — `.explore-toolbar` 加 `margin-bottom: 16px`。原本 toolbar 跟 grid 沒有 gap（兩個都是 `.explore-section` 直接 child，section 沒設 flex/gap），視覺貼在一起。
+
+### Internal
+- DELETE endpoint `/api/saved-pois/:id` 已存在（owner / admin only），無需後端改動。
+- toolbar-actions flex-wrap 加進去，三個 button 在窄螢幕可換行不擠破。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.8] - 2026-04-26
+
+**PR-W: NewTripModal 關閉 X 移到右上角（QA round 10）**。User 截圖紅圈：原本 X 在 form pane 上方，視覺浮在 hero/form 中間區域（mobile）。
+
+### Changed
+- **`.tp-new-form-close` 改 `position: absolute; top: 12px; right: 12px;`** — 直接定位 modal box 右上角，覆蓋 hero pane 上層。z-index 2 高過 hero SVG（0/1）。Mobile / desktop 同位置。
+- **glass-style** background `rgba(255, 255, 255, 0.92)` + `backdrop-filter: blur(8px)`，在橘色 hero 背景上仍清楚對比。
+- **JSX 結構**：`.tp-new-form-top` wrapper 拿掉，close button 直接掛在 `.tp-new-modal` form 之下（form 本身加 `position: relative` 給 absolute child 用）。
+
+### Internal
+- 純 CSS + JSX 移位，零邏輯改動。Test ID `new-trip-close` 不變。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.7] - 2026-04-26
+
+**PR-V: NewTripModal 真的會捲了 — grid-template-rows + overscroll-behavior（QA round 9）**。User: 「捲動是捲動底部 layer，上方無法用」。Claude 用 /browse 對 prod 測 + 量 DOM 找到根因。
+
+### Fixed
+- **Modal 內容看得到但動不了 + scroll 跑到背景 page** — 根因兩層：
+  - **Layer 1（form 沒被約束）**：modal `display: grid` 但只設 `grid-template-columns`，沒設 `grid-template-rows`。grid 預設 `grid-auto-rows: auto`，每個 row 取內容高。Form 內容自然撐成 755px，超過 modal 可用空間（max-height 812 - hero 222 = 590px）。Form 自己有 `overflow-y: auto` + `min-height: 0`，但因為「自己沒被父層約束高度」，根本沒進入 overflow 狀態，scroll 不觸發 → user 看到內容被切但動不了。
+  - **Layer 2（rubber-band scroll bleed）**：iOS Safari 在 modal 觸 scroll 邊界時會把剩餘動量傳給 ancestor，背景 page (AppShell main 也是 overflow-y: auto) 跟著捲。
+
+### 修法
+- **`grid-template-rows: auto 1fr`** — mobile single-column 強制 hero 取自然高度，form 拿剩餘空間（590px）。Form 一被約束，`overflow-y: auto` 真的觸發，內容 755 > clientH 590 = 可捲。
+- **`overscroll-behavior: contain`** — form 加上後，scroll 邊界動量被 form 自己吃掉，不會傳到 ancestor。背景 page 不再被誤動。
+- **Desktop @media** 加 `grid-template-rows: 1fr` — split-screen 兩欄並排，rows 一個就夠（覆蓋 mobile 的 auto 1fr）。
+
+### 抓 bug 過程（自我測試先做好）
+```
+1. /browse goto /trips → 登入 onion523 → click 新增行程
+2. js measure: modalH=812 ✓, formH=754, formScrollH=755, formClientH=755, canScroll=false
+   → form size = its content size (not constrained)
+3. js patch: modal.style.gridTemplateRows='auto 1fr'
+4. js measure again: formClientH=588, formScrollH=755, canScroll=true ✓
+5. 確認映射對 → 寫進 source code
+```
+
+### Internal
+- 純 CSS 改動 — 1 個 grid-template-rows + 1 個 overscroll-behavior，零 JS 改動。
+- 對應 user 上一次截圖 PR-S 修了 z-index，PR-M 修了 max-height，PR-V 終於把 scroll 完整跑通：z-index 高 + portal 出 stacking context + max-height 約束 + grid rows 約束內 child + overscroll 防 bleed = 4 件事缺一不可。
+- verify gate: 122 files / 1026 tests pass。
+
+## [2.14.6] - 2026-04-26
+
+**PR-U: 全站錯誤訊息統一 — Toast 跑版修 + 共用 ErrorBanner/InlineError + anti-slop emoji 清（design audit 4 點全修）**。User 指示「全部修」 PR-U/V/W/X bundle。
+
+### Fixed
+- **Toast 跑版** — `--spacing-toast-top` 從 `calc(48 + 12) = 60px` 改 `max(16px, env(safe-area-inset-top, 16px))`。原值假設 page 有 sticky topbar (48px)，但 /explore /map /trips landing /sessions 等 mobile page 沒有 topbar，60px 直接覆蓋 page heading。新值對齊 iOS HIG transient notification 慣例 — 頂部 safe area 下方就近顯示，跨 page 一致。
+
+### Added
+- **`src/components/shared/ErrorBanner.tsx`** — 統一 page-level / form-level 錯誤訊息 banner。內建 `<Icon name="warning" />` + `role="alert"` + destructive token。Single source of truth 取代全站 12 種重複實作。
+- **`src/components/shared/InlineError.tsx`** — 表單欄位下方 / 小範圍 inline 錯誤（紅色 footnote 字 + role=alert）。
+
+### Changed
+- **Anti-slop emoji prefix 補完**：
+  - `IdeasTabContent.tsx`：`<div>⚠ {error}</div>` → `<Icon name="warning" />` + flex layout
+  - `ConsentPage.tsx`：`<div>⚠ {error}</div>` → `<ErrorBanner />` 包
+- **9 個 caller 遷移到共用 component**：
+  - **ErrorBanner**: `LoginPage` (banner-error) / `SessionsPage` / `ConsentPage` / `TripsListPage` / `ConnectedAppsPage` / `DeveloperAppsPage` / `InlineAddPoi`
+  - **InlineError**: `SignupPage` (email + password) / `ResetPasswordPage` (pwError) / `DeveloperAppsPage` (createError) / `NewTripModal` (form error) / `TimelineRail` (saveError)
+- **`InlineAddPoi` 移除舊 `.tp-inline-add-error` CSS**（11 行 destructive bg/border style），保留 `.tp-inline-add-error-shell` wrapper margin（2 行）。
+
+### Internal
+- 仍保留的舊 class（待 PR-V 收尾遷移）：`.tp-banner-error` 在 SignupPage / ResetPasswordPage / ForgotPasswordPage 是 multi-kind banner（error / warning / info），需要 Banner 元件支援 kind prop 才能完全收斂。`.tp-error-banner` / `.tp-trips-error` / `.tp-consent-error` / `.tp-rail-note-error` / `.tp-new-modal-error` 等舊 CSS 雖已無 caller，留著 dead code 不影響 runtime（下個 sweep 清）。
+- backend `_errors.ts` + `src/types/api.ts` 的 `ERROR_MESSAGES` dictionary 已有完整 friendly 文字（`SYS_DB_ERROR: '資料庫忙碌中，請稍後再試'` 等），`ApiError.fromResponse` 自動 parse code → friendly message — apiClient 端不需額外 mapping。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.5] - 2026-04-26
+
+**PR-T: ExplorePage 儲存 503 修 — Nominatim raw category 沒映射到 whitelist（QA round 8）**。User 截圖：「搜尋的儲存會出現錯誤」。Claude 自己測 prod 找到根因。
+
+### Fixed
+- **ExplorePage 「+ 儲存」 → 503** — `POST /api/pois/find-or-create` 回 503，user toast「目前繁忙碌中，請稍後再試」。根因：ExplorePage 直接送 `type: poi.category || 'poi'`（Nominatim 原始 class，例如 `'tourism'` / `'amenity'` / `'shop'`），不在 `pois.type` CHECK constraint 白名單內（`'hotel','restaurant','shopping','parking','attraction','transport','activity','other'`），SQLite CHECK 失敗 → backend 翻成 SYS_DB_ERROR 503。
+- **修：套用 `mapNominatimCategory()`** — InlineAddPoi 一直有這個映射，ExplorePage 沒有。新增共用 `src/lib/poiCategory.ts` 把 mapping 抽出來，ExplorePage + InlineAddPoi 都改 import 用。Nominatim raw → tripline whitelist 已知對應（hotel/lodging/tourism→hotel、restaurant/food/amenity→restaurant、shop/mall/retail→shopping、parking→parking、transport/railway/airport→transport、activity/leisure→activity、其他→attraction）。
+
+### Added
+- **`src/lib/poiCategory.ts`** — 新共用 lib，export `mapNominatimCategory(category) → PoiType` + `PoiType` type union。Single source of truth for Nominatim → whitelist mapping。
+
+### Internal
+- `InlineAddPoi.tsx` — 移除 inline `mapNominatimCategory` function，改 import from lib。
+- `ExplorePage.tsx` — `type: poi.category || 'poi'` → `type: mapNominatimCategory(poi.category)`。
+- 抓 bug 用 /browse skill 對 prod 真實登入測試 + 看 network log 抓到「POST /api/pois/find-or-create → 503」 + manual 重 POST with `type: "attraction"` 確認映射後回 200。
+
+## [2.14.4] - 2026-04-26
+
+**PR-S: 補定義 `--z-modal` token，修 NewTripModal 仍被 bottom nav 蓋（QA round 7）**。User 截圖回報 PR-P portal 後 modal 還是會被 nav 切掉、無法捲到底。
+
+### Fixed
+- **Modal 仍被 sticky bottom nav 蓋住** — 根因：`--z-modal` token 從沒在 `tokens.css` 定義過，NewTripModal 用 `var(--z-modal, 60)` 全部走 fallback 60，而 `--z-sticky-nav: 200` 比 60 大很多，所以 bottom nav 永遠贏。PR-P 的 `createPortal(document.body)` 雖然 escape 了 stacking context，但 z-index 數字還是輸。
+- **修：`tokens.css` 加 `--z-modal: 9000`** — 一行 token 補定義，數字選 9000 是要高過所有 sticky 元素（sticky-nav 200 / fab 300 / quick-panel 350 / info-sheet 401），且留 buffer 給未來更高 priority overlay。NewTripModal 已用 var() 引用，自動生效不需改 component。
+
+### Internal
+- 屬於 PR-P 的 follow-up 修補，PR-P portal 解決 stacking context 問題、PR-S 解決 z-index 數字問題，兩個一起才完整。
+- verify gate: 122 files / 1026 tests pass。
+
+## [2.14.3] - 2026-04-26
+
+**PR-Q: TripsListPage 卡片 ... 菜單（共編 / 刪除）+ DELETE /api/trips/:id（V2-P7）**。User 指示：「行程列表 增加 … 顯示刪除與共編」。
+
+### Added
+- **`TripCardMenu` component**（`src/components/trip/TripCardMenu.tsx`）— kebab「...」 button + portal'd dropdown popover with「共編設定」 / 「刪除行程」 兩個 menuitem。click 用 stopPropagation 阻止穿透到 card click。Portal 到 body 避免 stacking context 衝突。
+- **`'more-vert'` icon** — 三點垂直 SVG，trigger button 用。
+- **`DELETE /api/trips/:id`**（`functions/api/trips/[id].ts`）— admin OR trip owner only（co-editor 即使在 trip_permissions 上也不能刪，destructive 操作必須 limit）。FK ON DELETE CASCADE 自動清掉 trip_days / trip_entries / trip_pois / trip_permissions / trip_docs / ideas / trip_requests 等所有相關 row。logAudit 留 snapshot。
+- **`?sheet=<key>` URL param 支援**（`TripPage.tsx`）— card kebab 「共編」 點開後 navigate 到 `/trips?selected={id}&sheet=collab`，TripPage 在 initial-scroll effect 內讀 sheet 參數 + 自動 setActiveSheet（限定在 SHEET_TITLES 已知 keys）。
+
+### Changed
+- **`TripsListPage` 卡片結構** — 從 raw `<button>` 改 wrap 在 `<div className="tp-trip-card-wrap">` 內（`position: relative`），button + TripCardMenu 兩個 child。menu trigger 是 `position: absolute; top: 8px; right: 8px;` overlay。
+- **`handleMenuDelete`** — confirm dialog → `apiFetchRaw('/trips/:id', { method: 'DELETE' })` → optimistic local state 移除（`setMyIds` + `setAllTrips`）→ 若該 trip 是當前 `?selected=`，clear URL param。錯誤狀態 toast：403「僅行程擁有者或管理者可刪除」、404「行程不存在」、其他「刪除失敗」。
+- **`handleMenuCollab`** — `navigate('/trips?selected={id}&sheet=collab')`，user 一次到位看到共編 sheet。
+
+### Internal
+- TripsListPage 加 `<ToastContainer />` 給 delete 錯誤 / 成功訊息用（之前只有 TripPage 有，/trips landing 沒 mount）。
+- TripCardMenu 用 `useLayoutEffect` 算位置 + `useEffect` 處理 Escape / click-outside（同 OverflowMenu pattern）。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
+## [2.14.2] - 2026-04-26
+
+**PR-R: /map 6 點重組 — 控制條重排 + POI 卡 CTA 升級 + 點 POI 只顯示當天 polyline + 跳到行程真的能跳（QA round 6）**。User 截圖 5 點 + 第 6 點補。
+
+### Changed
+- **「全覽 / 我的位置」 pill bar 上移到選擇行程下方** — `.tp-global-map-actions` 從 `bottom: 100px` (mobile) 改 `top: 64px`（mobile）/ `top: 76px`（desktop）。視覺群組跟 trip switcher 接在一起。
+- **POI 卡 grid layout 改右側 CTA chip** — `.tp-global-map-mobile-poi` 從垂直 stack 改 `grid-template-columns: minmax(0, 1fr) auto`，左 content（eyebrow / title / meta）+ 右「跳到行程」 chip。CTA 從 inline link 升級成 accent-fill button（`bg: accent` / `color: accent-foreground` / `radius: full`）。
+- **POI 卡下移** — `bottom: 152px → 110px`，pill bar 已上移讓出空間，卡片貼緊 carousel 上緣。
+
+### Added
+- **點全覽自動關 POI** — `fitAll()` callback 同步 `setSelectedPinId(null)`，一鍵 reset 視角 + 關 detail card + 顯示全部 days polyline。
+- **點 POI 只顯示當天 polyline** — 新 `displayPinsByDay` derived map：sleected pin 存在時 filter 到 `selectedDay.dayNum` only，沒選時還原 `resolved.pinsByDay`。Markers 不過濾，仍 render 全部 pins 避免 user 找不到別天景點。
+- **跳到行程真的會 scroll 到該 stop** — Link 加 `state={{ scrollAnchor: 'entry-${id}' }}`（讓既有 useScrollRestoreOnBack hook 處理）+ TripPage 加 fallback：useEffect 讀 `?focus=` query 並 scroll 到 `[data-scroll-anchor="entry-${focus}"]`。雙保險：state 沒帶上時 query 那條也 work（user 直接貼 URL）。
+
+### Internal
+- TripPage 在既有 initial-scroll effect 加 focus 優先級分支（high > today > hash）。
+- `displayPinsByDay` 用 `useMemo` derived，OceanMap 認 props，沒重 render 邏輯改動。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
+## [2.14.1] - 2026-04-26
+
+**PR-P: NewTripModal portal 修底部無法操作 + 共編 entry 提升 discoverability（QA round 5）**。User 兩個截圖回報：modal 下方控制鍵被 bottom nav 蓋住無法 tap，且共編設定找不到。
+
+### Fixed
+- **NewTripModal 底部控制鍵被 bottom nav 蓋住** — `return createPortal(<div className="tp-new-modal-backdrop">…</div>, document.body)`，escape 任何 ancestor stacking context（AppShell scroll container / TripsListPage sheet 等）。z-index 60 backdrop 真正高過 sticky bottom nav (z-index 10)，mobile 下方「選日期 / 彈性日期」 segmented 跟其下的所有控制鍵全部可 tap。
+- **共編設定 mobile 找不到入口** — embedded mode（`/trips?selected=` 由 TripsListPage 提供 chrome）把 TripPage 的 topbar + OverflowMenu kebab 都 hide 了，原本 user 完全沒有路徑進共編 sheet。新增 `.tp-trip-actions` 永遠 render 在 trip 主內容最上方（不分 noShell），裡面是「共編 + group icon」 chip 直接 `setActiveSheet('collab')`。
+
+### Changed
+- **`ACTION_MENU_GRID` 共編移到第一格** — mobile「更多」 sheet 第一張卡片就是共編，最顯眼位置。從 `[航班, 路線, 清單, 緊急, 備案, AI 建議, 共編, 切換行程, 外觀]` → `[共編, 切換行程, 航班, 路線, 清單, 緊急, 備案, AI 建議, 外觀]`。
+
+### Internal
+- `NewTripModal` 加 `import { createPortal } from 'react-dom'`，`return` 包成 `createPortal((<div…/>), document.body)`。jsdom 環境下 portal 同樣 work，1026 tests 全綠。
+- `TripPage` 加 `import Icon from '../components/shared/Icon'`，新 `.tp-trip-action-chip` styling（accent hover 反白）+ JSX 一個 button。
+- verify gate: tsc clean / 122 files / 1026 tests pass。
+
+## [2.14.0] - 2026-04-26
+
+**PR-O: 帳號頁簡化 + sidebar 管理 → trip 共編 IA 重組（V2-P7）**。User 指示 IA：「只保留帳號，登出移到最下方，原 sidebar 管理功能移到行程內做共編功能；一般帳號針對自己行程設定共編，admin 帳號可以對所有行程設定共編。」
+
+### Added
+- **`CollabSheet` component**（`src/components/trip/CollabSheet.tsx`）— 每個 trip 在 OverflowMenu 「更多 → 共編設定」 點開的 sheet。提供已授權成員 list + 新增 email + 移除 perm。reuse `usePermissions` hook + `apiFetchRaw` POST/DELETE。
+- **`group` icon**（`src/components/shared/Icon.tsx`）— Material 風格人群 SVG，用於共編入口（OverflowMenu + ACTION_MENU_GRID）。
+- **`'collab': '共編設定'`** 加入 `SHEET_TITLES` 與 `OVERFLOW_ITEMS`（settings group）+ `ACTION_MENU_GRID`（mobile bottom-nav 「更多」 sheet 顯示）。
+- **`tests/unit/collab-sheet.test.tsx`** — empty tripId placeholder + populated load + add POST → reload 三個 smoke case。
+
+### Changed
+- **API: `/api/permissions` GET/POST/DELETE 從 admin-only 放寬為 admin OR trip owner**。新 helper `ensureCanManageTripPerms(context, auth, tripId)` 在 `permissions.ts` export，DELETE 端反查 `record.trip_id` 後驗證。一般 user 可管自己 owner 行程的共編；admin 仍對所有行程有權。
+- **`SessionsPage` (帳號頁) 簡化** — heading 從「帳號設定 / 裝置管理、深淺模式與登出」 改為純「帳號 / {email}」。`.tp-account-actions` 中段 block 移除，改為 `.tp-account-footer` block 放在頁面**最下方**（device list + info banner 之後），裡面是深淺模式 toggle + 登出按鈕。
+- **`DesktopSidebar` 拿掉「管理」 nav item** — `NAV_ITEM_MANAGE` const 移除，`isAdmin` prop 標 `@deprecated`（保留以避免 ConnectedSidebar 端 break）。
+
+### Removed
+- **`src/pages/AdminPage.tsx`** — admin 共編管理已搬進 CollabSheet，整檔刪除。
+- **`tests/unit/admin-page.test.tsx`** — 對應 AdminPage 的 8 個 test 整檔刪除（被新 collab-sheet.test.tsx 3 個 case 替代，net -5 tests）。
+
+### Deprecated
+- `/admin` route → `Navigate to="/trips" replace`。typeing /admin 在 URL bar 會跳到行程列表（admin 從各 trip 的 OverflowMenu 進共編 sheet）。
+- Cloudflare Access policy sync code（`addEmailToAccessPolicy` / `removeEmailFromAccessPolicy`）— V2-P6 cutover 後 CF Access 已移除，這些 best-effort sync 對非 admin 來說 env vars 不存在會 silent fail，無影響但屬 dead code。下個 sweep 可清。
+
+### Internal
+- `tests/unit/desktop-sidebar.test.tsx` — admin nav item 測試從「應該看到」改為「也不再看到」。
+- `tests/unit/overflow-menu-divider.test.tsx` — 第三個 divider index 7 → 8（settings group 多 collab 一項）。
+- `tests/unit/quick-panel.test.js` — OVERFLOW_ITEMS length 11 → 12，expected keys 加入 `'collab'`。
+- verify gate: tsc clean / functions tsc clean / 122 files / 1026 tests pass / 53 API files / 525 API tests pass。
+
+### 後續可加
+- CollabSheet 加 role 切換（owner / editor / viewer）— 目前一律 'member'。
+- CollabSheet 加擁有者標示（顯示 `trip.owner` 跟 trip_permissions list 區分）。
+- CollabSheet 加離開行程按鈕（user 自己離開）— 目前只有 owner/admin 可移除別人。
+- AdminDashboard 全 trip 視角（admin only）— 目前 admin 只能進單個 trip 的 collab sheet，沒有 cross-trip 視圖。
+
+## [2.13.3] - 2026-04-26
+
+**PR-N: 剩下 7 項 anti-slop HIGH 修正（hex hardcode → tokens, decorative emoji → Icon）**。User 直接也修指示，audit 9 項裡 PR-M 已清 3 項，本 PR 清剩 6 項 HIGH（IdeasTabContent / OceanMap / DayNav / TripsListPage / EntryActionPopover / InlineAddPoi）。
+
+### Internal
+- **`css/tokens.css`** — 新增 8 個 trip cover token（`--color-cover-{jp,kr,tw,other}-{from,to}`）含 light + dark 兩套；無 visual 改動，純把 hex 從 component code 抽出來。
+- **DayNav.tsx** — 3 處 `color: #fff` → `var(--color-accent-foreground)`（active state day chip 文字 + weather chip + date label）。dark mode 自動 invert（accent-foreground 在暗色變 deep-cocoa）。
+- **OceanMap.tsx** — pin active state `border-color: #fff; color: #fff` → token；polyline idle color `'#94A3B8'`（slate-400 cool grey）→ `'var(--color-line-strong, #C8B89F)'`（warm 跟 brand 對齊）。
+- **IdeasTabContent.tsx** — danger button hover `#dc2626` → `var(--color-destructive)`，跟 `--color-warning` `--color-success` semantic 一致。
+- **TripsListPage.tsx** — 4 個 `.tp-trip-cover-{jp,kr,tw,other}` gradient 改用新 cover token；2 處 `color: #fff` → `var(--color-accent-foreground)`。
+- **EntryActionPopover.tsx** — `<p>⚠️ {pendingHint}</p>` → `<p><Icon name="warning" /><span>{pendingHint}</span></p>`，emoji 換 Icon system 既有 `warning` SVG。CSS `.tp-action-pending-note` 加 flex layout 對齊 icon。
+- **InlineAddPoi.tsx** — `🤖 AI 幫我找` → `<Icon name="sparkle" />` + text；`✏️ 自訂景點` → `<Icon name="edit" />` + text。chip CSS 加 `.svg-icon` size。
+
+### Anti-slop audit 進度
+- HIGH 9 項：✅ 全清（PR-M 3 + PR-N 6）
+- MED 1 項：DayArt.tsx 42 hex 待 PR-O 帶（決定要不要 SVG path color 也走 token，scope 較大）
+
+### Verify gate
+- tsc clean / 122 files / 1031 tests pass
+
+## [2.13.2] - 2026-04-26
+
+**PR-M: NewTripModal proof banner 移除 + emoji 清 + 底部 viewport 不被遮（QA round 4 + anti-slop sweep）**。User 截圖 2 點 + anti-slop audit 同檔 3 項一次帶。
+
+### Removed
+- **Hero social proof banner** — `.tp-new-hero-proof` JSX + CSS + `DEFAULT_TOTAL_TRIPS=1247` constant + `formatTripCount` helper + `totalTrips` prop。fake-stat anti-slop（「1,247 個行程已在 Tripline 上分享 / 平均規劃時間 8 分鐘」沒實際資料來源）+ user 截圖確認 mobile hero 太擠。
+- **目的地 input 📍 emoji** — `.tp-new-dest-pin` span + 對應 padding-left 44px hack。anti-slop emoji 濫用（label「目的地」+ placeholder 已能清楚定位用途）。
+- **月份 carousel emoji** — `MONTH_ICONS = ['❄️', '🌸', ...]` array + `MonthChoice.icon` field + `<span className="icon">` JSX。anti-slop emoji 濫用（月份數字本身已是強 semantic indicator，季節 emoji 是裝飾性 noise）。
+
+### Fixed
+- **Mobile modal 底部被 viewport / iOS home indicator 遮住** — `.tp-new-modal` 加 `max-height: calc(100dvh - 32px)`（dvh 對應 Safari URL bar 動態高度），`.tp-new-form` 改 `overflow-y: auto` + `min-height: 0` + `padding-bottom: max(24px, env(safe-area-inset-bottom, 24px))`。grid child `min-height: 0` 是讓 max-height 約束生效的關鍵（grid 預設 min-height auto 會撐爆）。
+
+### Internal
+- 對應 anti-slop audit 第 1、2、5 項（emoji 月份 / 📍 / fake stat）一次清，剩 6 項（PR-N 處理）。
+- `.tp-new-flex-month .m` font-size: footnote → callout（emoji 拿掉後月份文字單獨 carry，需放大維持視覺權重）。
+- `tests/unit/new-trip-modal.test.tsx` 兩個 social proof 測試改寫：`renders hero pane with eyebrow + headline copy` + `hero pane no longer renders social proof banner`。
+- verify gate: tsc clean / 122 files / 1031 tests pass。
+
+## [2.13.1] - 2026-04-26
+
+**PR-L: /map 手機控制條微調 + marker click 顯示 POI 卡（QA round 3）**。User 標註截圖三個改動。
+
+### Fixed
+- **左下「全覽 / 我的位置」 pill bar** — mobile `.tp-global-map-actions` `bottom: 130px → 100px`，再往下靠 carousel 上緣 30px，視覺更緊湊不浪費空白。
+- **右下 zoom 控制移到右上** — `<OceanMap zoomControlPosition="bottomright" />` → `topright`，避開手機底部 carousel + pill bar 區的擁擠，與 Apple Maps / Google Maps 手機版習慣一致。
+- **點 marker 沒顯示 POI 資訊** — mobile（<1024px）desktop sheet pane 隱藏，原本 marker click 等於沒效果。新增 `.tp-global-map-mobile-poi` 浮動卡 render 在 carousel 上方（`bottom: 152px`），含 close 按鈕、`STOP NN` eyebrow、title h3、type/time/rating chips、`跳到行程 →` CTA。
+
+### Internal
+- 純 CSS 位移 + 一個 prop 改值 + 一個 JSX block + 對應 mobile-only CSS。desktop ≥1024px 行為 0 改動（sheet pane 維持）。
+- 卡片 close 按鈕同時清掉 `selectedPinId`，與 marker 再次點擊行為一致。
+- verify gate: tsc clean / 122 files / 1031 tests pass。
+
+## [2.13.0] - 2026-04-26
+
+**PR-K: 聊天訊息時間 + Timeline 拖拉排序 + iOS-style grip icon（3 個 feature）**。Round 2 user feedback 三個 feature 合一個 PR。
+
+### Added
+- **Chat 訊息時間** — `ChatMessage` 加 `createdAt?: string`，`rowToMessages` 從 `created_at`/`updated_at` 帶入。每個 bubble 下方 render `<time>` 元素：`HH:mm`（同日）或 `MM/DD HH:mm`（跨日）。font-size caption2 + muted color，user 對齊 right、assistant 對齊 left。
+- **Timeline stop 拖拉排序** — `TimelineRail` 包 `DndContext` + `SortableContext`，每 row 用 `useSortable`。drag end → optimistic local order override + Promise.all PATCH 每個 entry 的 `sort_order = 新 index` → dispatch `tp-entry-updated` → refetch 拿 backend authoritative order。失敗 revert override。
+- **`grip` icon (iOS-style)** — `Icon` registry 加 3 條水平線 icon（Apple Reminders/Lists drag affordance）。stroke-width 2 + linecap round。`.ocean-rail-grip` 32×32 button 在 row 左側 dot 旁，cursor grab/grabbing，hover accent，`touch-action: none` 阻止瀏覽器 swipe 接管。
+
+### Internal
+- `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities` — 已在 deps，無新 dep。
+- `useSortable({ id: entry.id, disabled: entry.id == null })` — 沒儲存的 row（local-only）不可拖。
+- `PointerSensor` activation distance 8px — 避免誤觸 toggle expand。
+- 拖拉 handle 跟 row click area 完全分離（grip button vs row button），無 click 衝突。
+- verify gate: tsc clean / 122 files / 1031 tests pass。
+
+### 後續可加
+- Cross-day drag（拖到別天） — 目前 only same-day reorder。需要 day boundary drop targets 或 keyboard fly-to-day。
+- Drag preview / overlay — 目前用 dnd-kit 預設 transform，可加 DragOverlay 顯示「拖拉中」 visual。
+- Sort_order PATCH batching — 目前 N 個 entry N 個 PATCH，可加 bulk endpoint `/entries/reorder` 一次完成。
+
+## [2.12.10] - 2026-04-26
+
+**QA round 2 PR-J：TripPage mobile day-strip clip + 看地圖 chip 移除（2 fixes）**。手機 trip 詳情頁兩個 user feedback 改動。
+
+### Fixed
+- **手機 day-strip 被 URL bar 切到** — `.ocean-day-strip` mobile 加 `top: env(safe-area-inset-top, 0)` + `padding-top: 8 → 16px`。iOS Safari/Chrome URL bar 跟 sticky day cards 之間有自然 buffer，rounded top corner 不再被視覺切。
+- **每日 hero「📖 看地圖」 chip 移除** — `DaySection.ocean-hero-chips` 拿掉 `<Link to={mapHref}>看地圖</Link>` chip 元素 + `Link` import。bottom nav 已有「地圖」 tab 入口，每天 hero 重複 chip 是 noise。
+
+### Removed
+- `tests/unit/day-section-map-link.test.tsx` — 整檔刪。test 是針對「看地圖 chip」 feature 的，feature 拿掉後 test stale。
+
+### Internal
+- 純 CSS + 1 JSX block 刪除 + 1 test file 刪除。verify gate: tsc clean / 122 files / 1031 tests pass（−4 stale tests）。
+- `MAP_CHIP_STYLES` 內的 `.day-map-chip` CSS 留著（其他地方未必用，留 fallback；下個 sweep 可清）。
+
+## [2.12.9] - 2026-04-26
+
+**QA round 2 PR-I：/map mobile redesign per user feedback（4 changes）**。手機 /map QA 截圖 4 個 explicit 改動 — 化繁為簡。
+
+### Fixed (per user mobile screenshot directives)
+- **Header 簡化**：拿掉「Global Map」 eyebrow + `${pins} stops · ${days} days` meta，只留 trip dropdown。資訊在 sheet overview (PR-G) 已重複，header 太擠。
+- **Mobile carousel 拿掉 eyebrow + title** — 「● 沖繩五日 · DAY 01 · 7 STOPS」 + 「點 marker 看詳情」 caption 重複又佔垂直空間，刪除。
+- **Cross-day continuous scroll**：carousel 從 single-day filter 改 flatten 全部 pins。Day 1 最後 stop → Day 2 第一 stop 直接接續滑換。每 card eyebrow 加 `D{dayNum}·` prefix 標示所屬 day。
+- **Active card border = `dayColor(dayNum)`**：active 卡片 border + 軟 box-shadow 用該 day 的 polyline 顏色。inactive 卡片 left-border 3px 同色 hint 該 stop 屬哪天。
+- **Pill bar 往下靠**：mobile bottom 240 → 130（carousel 縮短後距離拉近）。
+- **OceanMap cluster 完全 disable**（user 更正：「移除 cluster」）— `<OceanMap cluster={false} />` 在 GlobalMapPage 直接關掉 supercluster。每個 stop 顯示為個別 pin，無數字 bubble。`.ocean-map-cluster` styling 留 fallback（其他頁若再開可用），改 white bg + `line-strong` border 視覺。
+
+### Removed
+- `carouselDay` useMemo — cross-day flatten 後不再需要 single-day filter。
+
+### Internal
+- 純 JSX + CSS。verify gate: tsc clean / 1035 tests pass。
+- mockup `/tmp/tripline-mockup-poi-edit.html` 沒 mobile carousel spec — 此 PR 依 user 直接 feedback（screenshot annotations）為 ground truth。
+- 後續可加 unit test（cross-day carousel render + dayColor border）— 目前 GlobalMapPage 無 test 檔。
+
+## [2.12.8] - 2026-04-26
+
+**QA fix series PR-H: Supercluster radius tweak（2 issues）**。Map cluster bubble overlap in dense areas — bump radius 60→80 + maxZoom 15→16。
+
+### Fixed
+- **BUG-042 / 043 cluster overlap** — `OceanMap` `new Supercluster({ radius: 60, maxZoom: 15 })` → `{ radius: 80, maxZoom: 16 }`。dense areas（沖繩本島、東京）cluster 更 aggressive 避免疊在一起，user zoom in 一級拆開細節。
+
+### Internal
+- 1 行 config tweak。verify gate: tsc clean / 1035 tests pass。
+- supercluster docs: https://github.com/mapbox/supercluster — radius default 40，maxZoom default 16。我們之前 60/15 太鬆。
+
+## [2.12.7] - 2026-04-26
+
+**QA fix series PR-G: /map default sheet content（2 issues）**。`/map` 桌機 right sheet pane 沒選 pin 時 99% 空白只有「點 marker」hint — 改成 trip overview（trip 名 + meta + day list with first-stop preview，每 day row 可點直接 setSelectedPinId 到該天首 pin）。
+
+### Fixed
+- **BUG-044 / 045 default sheet content** — `selectedPin == null && resolved` 時 render `.tp-global-map-sheet-overview`：
+  - **header**：trip 名（title2）+ `${pins.length} stops · ${pinsByDay.size} days` meta
+  - **day list**：每 day swatch dot（`dayColor(N)`）+ eyebrow `DAY 0X · N stops` + first-stop title preview。整 row click → `setSelectedPinId(pins[0].id)` 跳到該天第一個景點
+  - **bottom hint**：「點地圖上的 marker 看單一景點詳情，線段是真實導航路線」 提示卡（`--color-secondary` bg）
+  - 既有 「無 trip / 沒選 trip」 empty state 不變
+
+### 暫緩到 PR-G2/G3
+- BUG-005 right sheet auto-scroll — 需 PO 確認進入 trip 後預設 scroll 到 top 還是 active day
+- BUG-008 警告卡文案 — 「美國村可能早於 AEON 北谷店 營業時間」 logic 需 PO 看
+- BUG-009 trip embedded mode share — 需 share button design + URL pattern
+- BUG-028 native date picker — 大 feature（custom datepicker library / build）
+- BUG-042/043 map cluster overlap — Leaflet supercluster radius config 深調
+- BUG-046 全覽/我的位置 + zoom 控制位置 — UX 決策需 user 確認
+
+### Internal
+- 純 JSX + CSS。verify gate: tsc clean / 1035 tests pass。
+- 未加 unit test — `tests/unit/global-map-page.test.tsx` 不存在。可以後續補（new test 確認 default sheet renders + day click triggers）。
+
+## [2.12.6] - 2026-04-26
+
+**QA fix series PR-F: misc polish（4 issues）**。Theme toggle / month carousel / emoji alignment / mobile card title tooltip — 一輪 polish 收尾。
+
+### Fixed
+- **BUG-006 ThemeToggle active state** — pressed button 從 `shadow-sm` 升 `shadow-md + inset 1.5px accent border + accent-deep color`，跟 NewTripModal segmented (PR-B) 一致。
+- **BUG-031 month carousel right-fade mask** — `.tp-new-flex-months` 加 28px gradient mask + 同 PR-A DayNav / PR-D mobile carousel pattern。
+- **BUG-032 month emoji alignment** — `.tp-new-flex-month .icon` 從 16 → 18px + `display: block` + `height: 18px` 強制 baseline 對齊（active state 不偏移）。
+- **BUG-037 mobile carousel title tooltip** — `.pc-title` 加 `title={pin.title}` HTML attribute，long names truncated 後 hover 看 full text。
+
+### 暫緩
+- BUG-022 popover heading z-index — 經分析非可重現 issue，skip。
+- BUG-023 popover backdrop — mockup 規範無 backdrop，skip per mockup directive。
+- BUG-036 mobile day strip mask — PR-A 已加（DayNav 桌機 + mobile 共用同 CSS），skip。
+
+### Internal
+- 純 CSS + 1 JSX attribute。verify gate: tsc clean / 1035 tests pass。
+
+## [2.12.5] - 2026-04-26
+
+**QA fix series PR-E: formatDuration 中文化（2 issues）**。Timeline rail / map carousel / lightbox 等多處共用 `formatDuration` helper，從 raw 「30m」「1h 30m」 改成中文「30 分鐘」「1 小時 30 分」 — 一處改 cover 4+ 顯示位置。
+
+### Fixed
+- **BUG-038 / 048 formatDuration i18n** — `src/lib/timelineUtils.ts` 改回傳：
+  - 純分鐘：`${m} 分鐘`（例：30 → "30 分鐘"）
+  - 純小時：`${h} 小時`（例：60 → "1 小時"）
+  - 組合：`${h} 小時 ${m} 分`（例：90 → "1 小時 30 分"，組合場景去「鐘」更精簡）
+- **`tests/unit/timelineUtils.test.ts`** — 4 個 case 同步更新預期值。
+
+### 暫緩到 PR-E2
+- BUG-008 警告卡 logic 「美國村可能早於 AEON 北谷店 營業時間（食品區 ~24:00）」 — 文案邏輯需 product owner 確認後才動 wording。
+
+### Internal
+- 無 component 改動 — pure helper signature 保持，只改實作。verify gate: tsc clean / 1035 tests pass。
+
+## [2.12.4] - 2026-04-26
+
+**QA fix series PR-D: Mobile map carousel + pill bar + trip switcher caret（3 issues）**。手機 /map 頁的 carousel overflow 視覺暗示、pill bar 跟 carousel 距離、trip switcher dropdown affordance — 三個 CSS-only fix。
+
+### Fixed
+- **BUG-039 mobile carousel right-fade mask** — `.tp-global-map-mobile-cards` 加 28px gradient mask 暗示「還有 stop 可水平滑」，比照 PR-A DayNav pattern。
+- **BUG-040 pill bar 距離 carousel 加 gap** — mobile `.tp-global-map-actions` 從 `bottom: 220px` → `240px`，給 pill bar 跟 carousel 之間更明顯氣口（碰觸 risk↓）。
+- **BUG-041 / 047 trip switcher caret affordance** — `.tp-global-map-trip-btn .caret` 從 12px / muted → 14px / accent / weight 700。「▾ 是 dropdown」 視覺權重出來。
+
+### 暫緩到 PR-D2（cluster + default sheet content）
+- BUG-042 cluster overlap：需要動 supercluster radius / map zoom config，比 CSS fix 大
+- BUG-044 / 045 default sheet 99% 空白：需要新 component（trip overview / day stops list）+ 路由邏輯
+- BUG-046 control 兩邊分開：UX 決策需確認後再動
+
+### Internal
+- 純 CSS。verify gate: tsc clean / 1035 tests pass。
+- mockup `/tmp/tripline-mockup-poi-edit.html` `.mobile-poi-stack` + `.map-action-bar` spec 對齊。
+
+## [2.12.3] - 2026-04-26
+
+**QA fix series PR-C: TimelineRail action row 補齊 mockup 4 個 icon button（1 issue）**。依 mockup spec — 行內 expand 的 action row 應有「⛶ / ⎘ / ⇅ / 🗑 / ✕」5 個 button，prod 只有前 3 個。補完 🗑 + ✕。
+
+### Fixed (per mockup spec)
+- **BUG-012 action row 補 🗑 + ✕** — mockup `.actions` 4 個 iconbtn 全部補齊：
+  - **🗑 delete**：DELETE `/api/trips/:id/entries/:eid`（既有端點）+ `window.confirm` 確認 + dispatch `tp-entry-updated`。`.is-danger` variant 用 `--color-priority-high-*` tokens 對齊 DESIGN.md semantic colors
+  - **✕ collapse**：呼叫 `onToggle()` 把行收闔，pure UI no API
+  - 兩個 button 不論單天/多天 always 顯示，跟 ⎘/⇅ conditional on 多天 拆開
+
+### Internal
+- 無 test 變動 — 純 JSX + handler，既有 timeline-rail-inline-expand tests 仍 pass。verify gate: tsc clean / 1035 tests pass。
+- 註解避坑：SCOPED_STYLES template literal 內註解禁用 backtick（會關閉 string）。
+
+## [2.12.2] - 2026-04-26
+
+**QA fix series PR-B: NewTripModal mockup-aligned polish + PR-A revert（5 issues）**。依 mockup `/tmp/tripline-newtrip-v1-split-hero-v2.html` spec 修 NewTripModal hero/form 的視覺缺漏。同時 retroactively review PR-A — swatch 14px 升級違反 mockup 12px spec，這版復原。
+
+### Fixed (per mockup spec)
+- **BUG-026 destination 📍 icon** — 加 `.tp-new-dest-wrap` + `.tp-new-dest-pin` 直接 lift mockup `.dest-input .pin` pattern。Input padding-left 14 → 44 騰出 icon 空間，icon Terracotta accent 色 + `pointer-events: none`。
+- **BUG-027 summary 文案** — destination 空時顯示「請先輸入目的地」 取代「未選地點」（後者像 toggle option 而非 prompt）。
+- **BUG-029 segmented active state 對比** — 從 `box-shadow: var(--shadow-sm)` 升級成 `var(--shadow-md) + inset 0 0 0 1.5px accent`。color 從 `--color-foreground` 改 `--color-accent-deep`，視覺權重翻倍。
+- **BUG-030 stepper 字級** — `.tp-new-flex-num` 從 `--font-size-title` (1.75rem) 升 `--font-size-large-title` (2.125rem)。對齊 mockup `.flex-stepper .num` spec。`min-width` 56→64px 容納大字。
+
+### PR-A retroactive review（per mockup directive）
+- **swatch size 復原 12px** — PR-A 為解 BUG-020 visibility 而升 14px 違反 mockup spec。border opacity 從 0.08 → 0.10 增加 contrast，size 維持 mockup 12px。
+
+### Internal
+- 無 test 變動 — CSS + JSX visual fix。verify gate: tsc clean / 1035 tests pass。
+- `修復時也要遵守 design md 和 mockup html` — user directive 2026-04-26。PR-B 起每個 fix 對 mockup HTML + DESIGN.md 比對後才寫。
+- TS template literal 注意 — backtick 在 SCOPED_STYLES 註解內會關閉字串。改用單引號或 plain text。
+
+## [2.12.1] - 2026-04-26
+
+**QA fix series PR-A: sheet overflow root cause（4 issues）**。 prod adversarial QA 抓到 sheet pane 太窄導致 day strip / EntryActionPopover 全 overflow。一個 root cause 解 4 個 HIGH/MEDIUM bug。
+
+### Fixed
+- **BUG-002 / 007 sheet width** — `TripsListPage` 3-pane sheet 從 `min(420px, 32vw)` bump 到 `min(560px, 38vw)`。1440px viewport sheet 從 420 → 547，給嵌入的 TripPage day-strip + popover 喘息空間。main pane 從 780 → 653，3-col trip cards 仍 fit。
+- **BUG-019 / 021 popover overflow** — `EntryActionPopover` 加 `max-height: min(calc(100vh - 120px), 480px)` + `overflow-y: auto`。「複製到時段」 select 不再被 viewport 截斷，day list 太長時 popover 內 scroll。
+- **BUG-002 day strip 視覺暗示** — `DayNav` 加右側 32px linear-gradient mask + 顯示 `webkit-scrollbar` 3px thumb。user 一眼看到「還有 day 可水平捲」 affordance。
+- **BUG-020 popover swatch 辨識度** — `.tp-action-swatch` 12px → 14px + 加 `border: 1px solid rgba(0,0,0,0.08)` hairline。day color 在小尺寸下看得更清楚。
+
+### Internal
+- 無 test 變動 — CSS-only fix。verify gate: tsc clean / 1035 tests pass。
+- QA report 全文 `.gstack/qa-reports/qa-report-prod-2026-04-26-adversarial.md` (49 issues 共 6 個 PR 修)。
+
+## [2.12.0] - 2026-04-26
+
+**v2.10 Wave 3：pois.photos schema + StopLightbox photo carousel（PR6/3，最後一棒）**。
+完成 V3 mockup 整合 — POI 詳情頁的「⛶ 放大檢視」 lightbox 從 PR3 的純 placeholder 升級為真實照片 carousel（◀ ▶ + 分頁點 + caption + attribution）。資料 schema + frontend 全完成；populate 照片內容（從 Wikimedia Commons 抓）走後續 admin script 跑。
+
+### Migration
+- **`migrations/0038_pois_photos.sql`** — `ALTER TABLE pois ADD COLUMN photos TEXT`。Nullable，JSON-encoded array of `{ url, thumbUrl?, caption?, source?, attribution? }`。
+- **`migrations/rollback/0038_pois_photos_rollback.sql`** — `DROP COLUMN photos`（D1 / SQLite 3.35+ 支援）。
+
+### Added
+- **`PoiPhoto` type**（`src/components/trip/TimelineEvent.tsx`）— `{ url, thumbUrl?, caption?, source?, attribution? }`。
+- **`TimelineEntryData.photos`** 欄位 — `PoiPhoto[] | null`，從 `pois.photos` JSON column parse 而來。
+- **`mapDay.parsePhotos()`** 安全解析 — malformed JSON / non-array / 缺 url 的 item 都 fallback null（不 throw）。frontend 可放心 graceful。
+- **StopLightbox photo carousel** — `entry.photos.length ≥ 1` 時 render 黑底大圖 + ◀ ▶ nav button + 底部分頁點 + caption + attribution（hyperlink 到 source）。空 / null → 維持原 placeholder。
+- **鍵盤導航** — lightbox open + photos 存在時，`←` `→` 切換照片，`Esc` 關閉。
+- **單張照片** 自動隱藏 nav button + pager dots（不 redundant UI）。
+
+### Changed
+- **API 自動 surface photos** — `functions/api/trips/[id]/days/_merge.ts` 用 `SELECT * FROM pois`，新欄位自動帶到 response。`json()` helper 不會深 parse JSON 字串，frontend 在 mapDay 處理。
+- **`RawEntryPoi` interface** 加 `photos?: string | null`。
+
+### Internal
+- 新增 `tests/unit/stop-lightbox.test.tsx`（+10 case）：placeholder vs carousel 切換、thumbUrl 優先、caption + attribution + source link、prev/next 環繞、ArrowLeft/ArrowRight 鍵盤、單張隱藏 nav。
+- 新增 `tests/unit/map-day-photos.test.ts`（8 case）：valid JSON / NULL / 空字串 / 空陣列 / malformed / object（非陣列）/ 混合 valid+invalid filter / all-invalid。
+
+### 部署順序
+1. `wrangler d1 migrations apply trip-planner-db --env preview` — staging 先試
+2. PR 預覽 deploy → 開 lightbox 看 placeholder 仍 OK（photos NULL 為常態）
+3. `wrangler d1 migrations apply trip-planner-db` — production
+4. 驗 prod lightbox 仍 graceful
+
+### Pending（v2.13+ follow-up）
+- **`scripts/populate-poi-photos.js`** — Wikimedia Commons API populate script（待寫）：
+  - 為每個 POI by name query Commons → 抓 top result image + thumbUrl
+  - Rate limit + cache + dry-run mode
+  - Cron 每週掃 photos NULL 的 pois
+- **User upload flow** — 直接上傳到 R2 + 寫 photos JSON
+- **per-entry photo override** — 目前 photos 只在 pois master，未來可加 trip_pois.photos 覆寫
+
+## [2.11.0] - 2026-04-26
+
+**v2.10 Wave 2：InlineAddPoi 接 Nominatim search（PR5/3）**。發現 `/api/poi-search` 端點已經為 ExplorePage 寫好（v2.0 時期），所以 Wave 2 只需要 wire frontend — InlineAddPoi 從 PR3 純 placeholder 改成真實 search + add flow。
+
+### Added
+- **InlineAddPoi 真實 search** — 接 existing `GET /api/poi-search?q=&limit=10`（Nominatim proxy + 24h Cloudflare edge cache）。
+  - Debounce 250ms（避免每按鍵 fetch）
+  - MIN_QUERY_LEN = 2 字元才 fire（< 2 不 fetch）
+  - AbortController cancel 前一次 in-flight 請求（避免 race）
+  - Loading spinner 在 search input 右側
+  - 結果列 max-height 360px scroll
+- **InlineAddPoi 真實 Add** — 點 Add → POST `/api/trips/:id/days/:dayNum/entries` body `{ title, poi_type, lat, lng, source: 'user-search' }`。entries 端點內部 findOrCreatePoi 處理 POI master upsert。成功 → dispatch `tp-entry-updated` → DaySection refetch。
+- **狀態 indicator** — Add button 「+ 加入」→ 「加入中…」 → 「✓ 已加」（success state，按鈕變成功色）。
+
+### Changed
+- **InlineAddPoi 拿掉 PR3 的 placeholder result 列 + disabled「附近 / AI 推薦」 chip** — 真 search 取代後不需要假 chip 占位。「🤖 AI 幫我找」 + 「✏️ 自訂景點」 chip 仍 route /chat 保留 fallback 出口。
+- **`mapNominatimCategory()` helper** — Nominatim `class`（tourism/amenity/shop/...）→ Tripline poi_type 白名單（hotel/restaurant/shopping/parking/transport/activity/attraction），對齊 entries POST 的 ALLOWED_POI_TYPES。
+
+### Internal
+- `tests/unit/inline-add-poi.test.tsx` 完全重寫（從 9 case → 16 case）：
+  - collapsed / expand / close
+  - chat fallback chip URL 對
+  - search enabled、< MIN_QUERY_LEN 不 fetch、debounce 250ms、cancel 前一次
+  - results 渲染、empty hint、upstream error
+  - Add → POST entries（URL + method + body 正確 + 含 poi_type mapping）
+  - 成功 → dispatch tp-entry-updated + 「✓ 已加」 state、失敗 → error display
+- 用 `vi.useFakeTimers()` + `vi.advanceTimersByTime()` 測 debounce — 不依賴真實時間。
+
+### Backend（無改動 — Nominatim proxy 已存在）
+- `functions/api/poi-search.ts` 早為 ExplorePage 寫好，沒重做。`Cache-Control: public, max-age=86400` 走 Cloudflare edge cache 24h，無需 KV 設定。User-Agent header `Tripline/1.0 (https://trip-planner-dby.pages.dev)` 已合 Nominatim ToS。
+- 規劃中的「server-side rate limit per-user」 暫不做 — Cloudflare edge cache 已能擋掉大部分重複請求，且 Nominatim 的 IP-level rate limit 是上游而非我方責任。需要時 follow-up 再加。
+
+### Pending（Wave 3 即將跟上 PR6）
+- `pois.photos` JSON column migration
+- Wikimedia Commons populate script
+- StopLightbox photo carousel wire（取代「📷 照片功能即將推出」 placeholder）
+
+## [2.10.0] - 2026-04-26
+
+**v2.10 Wave 1：copy + move + StopDetailPage 清理（PR4/3）**。把 v2.9 PR3 的 ⎘/⇅ button standalone 元件接上 backend。`/trip/:id/stop/:eid` 老 deep-link 改 redirect 到 trip 詳情頁，刪 StopDetailPage 整支死碼。後續 Wave 2 接 POI search、Wave 3 接 photos。
+
+### Added
+- **POST `/api/trips/:id/entries/:eid/copy`**（`functions/api/trips/[id]/entries/[eid]/copy.ts`） — body `{ targetDayId, sortOrder?, time? }`，複製 entry 到目標 day。targetDay 必驗屬同 trip（防越權）。sortOrder 預設追加到目標 day 末尾。audit log action='insert' diff 含 `copiedFromEntryId` 反向追溯。註：trip_pois 不複製（schema 含 hotel/timeline/shopping context 較複雜，需要時 follow-up）。
+- **PATCH `/api/trips/:id/entries/:eid` 加 `day_id` 進 ALLOWED_FIELDS** — 跨天 move via 既有 PATCH 流程（perm / audit / diff 全 free）。day_id 必驗屬同 trip（同 copy 防護），非 integer → 400、不存在 → 404、跨 trip → 403。
+- **`TripDaysContext`**（`src/contexts/TripDaysContext.tsx`） — 輕量 day-list snapshot（`DayOption[]`），讓 RailRow 不用 prop drill 4 層就能拿到 popover 用的 day 選項。
+- **TimelineRail expanded row 接 ⎘/⇅ button** — 點開 EntryActionPopover (action='copy' or 'move')，confirm → fetch → dispatch `tp-entry-updated`。≥2 days + dayId 才顯示按鈕。
+
+### Changed
+- **EntryActionPopover 新增 `onConfirm?` prop** — 給 callback 即啟用 wired mode：confirm 不再 disabled、隱藏「即將推出」notice、改顯示「請先選擇目標日」tooltip 直到 user 選好。fallback 走 v2.9 PR3 mock 模式（standalone tests 仍可跑）。新增 loading state（「複製中…」）+ error display（role=alert）。
+- **TripPage 提供 `TripDaysContext.Provider`** — 從 `dayNums + allDays + daySummaryMap` 推 `DayOption[]` 給後代。
+- **`/trip/:tripId/stop/:entryId` 改 redirect** — 不再 render StopDetailPage，改 `<Navigate to={`/trips?selected=${tripId}&focus=${entryId}`} />`。舊分享 link 仍 land。`StopDetailRedirect` 元件處理 useParams + 構造 URL。
+- **DaySection 傳 `dayId` 給 Timeline → TimelineRail** — 為了 ⎘/⇅ popover 知道「目前那天」要 disabled。
+
+### Removed
+- **`src/pages/StopDetailPage.tsx`** — 整支刪。PR2 後 list 不再連到，現在 URL 也走 redirect，這支 component 沒人 render 了。
+- **`tests/unit/stop-detail-topbar-layout.test.tsx`** — 對應 test 一併刪。
+- **main.tsx StopDetailPage lazy import** — 拿掉。
+
+### Internal
+- 新增 `tests/api/entry-copy-move.integration.test.ts`（10 case） — 涵蓋 copy 200、跨 trip 403、targetDay 不存在 404、未認證 401、targetDayId 非 number 400、sortOrder 預設追加、PATCH day_id move 200、跨 trip 403、不存在 404、非 integer 400。
+- `tests/unit/entry-action-popover.test.tsx` 新增 4 case for wired mode — confirm enables after pick day、onConfirm payload、error display、wired hides pending notice。
+- `tests/unit/timeline-rail-inline-expand.test.tsx` 新增 9 case for ⎘/⇅ wire — buttons 顯示條件、popover open、PATCH/POST URL+body 正確、tp-entry-updated dispatch、current day disabled。
+- `docs/plans/v2.10-backend-backlog.md` — 整份 v2.10 計畫紀錄（5 件事拆 3 波 + 風險 + Wave 2/3 pending）。
+
+### Pending（v2.11+）
+- Wave 2：POI search Nominatim proxy + InlineAddPoi 接 search input（即將開 PR5）
+- Wave 3：`pois.photos` JSON column + Wikimedia Commons populate + StopLightbox photo carousel
+- Follow-up：trip_pois copy 支援（hotel context override）、TripsListPage 接 `?focus=:eid` 自動展開 inline expand + lightbox
+
+## [2.9.0] - 2026-04-26
+
+**Mindtrip-parity 補強 PR3：3 個 V3 mockup 元件完成 — StopLightbox（⛶ 放大檢視）+ EntryActionPopover（⎘⇅ copy/move）+ InlineAddPoi（取代 /chat Link）**。Pure UI scaffolding，照 mockup 做出視覺 + 互動結構，但 search / copy / move 端點還沒上 backend，buttons 標 disabled +「即將推出」tooltip。**已 wire**：⛶ 放大檢視 + InlineAddPoi。**未 wire**：EntryActionPopover（standalone 元件 + tests 完備，待 v2.10 接 ⎘⇅ button 入 TimelineRail 同時上 backend）。
+
+### Added
+- **`StopLightbox`**（`src/components/trip/StopLightbox.tsx`） — Fullscreen detail modal：左側照片區 placeholder（「照片功能即將推出」hint）+ 右側 meta pills (★ rating / clock 時段 / 📍 地址) + description + note 大字閱讀區 + locations chips（連 Google Maps）。ESC / ✕ / backdrop click 三個 close path。aria-modal + aria-labelledby 完整。
+- **`EntryActionPopover`**（`src/components/trip/EntryActionPopover.tsx`） — ⎘ copy / ⇅ move popover（單一元件，action prop 切換 heading + CTA verb）：day picker 顯示 swatch + 已有 stop 數 + 目前那天 disabled + aria-pressed 切換、time slot select（同原時段 / 早上 / 午餐 / 午後 / 晚餐 / 自訂）、Confirm button **disabled + tooltip**「Copy/Move 端點即將推出」+ warning note。
+- **`InlineAddPoi`**（`src/components/trip/InlineAddPoi.tsx`） — 取代 DaySection 的 `<Link to="/chat?...">+ 在 Day N 加景點</Link>` 為 inline 展開卡片：collapsed 時跟原 dashed-border button 視覺一致；expanded 時 search input（disabled + placeholder「改用 AI 助理」）+ chips（🤖 AI 幫我找 / ✏️ 自訂景點 → 兩個都 routes /chat 保留現有出口；📍 附近 / ⭐ AI 推薦的 → disabled）+ 3 筆 placeholder result 列（disabled「+ 加入」）+ pending notice。
+- **`StopLightbox` 接到 TimelineRail** — expanded row 頂端新增「⛶ 放大檢視」accent chip button。點下開 lightbox。
+
+### Changed
+- **DaySection 加景點 affordance** — 從 `<Link to="/chat?...">` 換成 `<InlineAddPoi tripId dayNum />`。原 `.day-add-stop-row / .day-add-stop-btn` CSS 移到 `InlineAddPoi.tsx` 的 SCOPED_STYLES。
+- **TimelineRail 展開列頂端新增 action row** — `tp-rail-actions`，目前只有 ⛶ 放大檢視一顆。⎘/⇅ 按鈕等 v2.10 backend 上線同步加。
+
+### Internal
+- 新增 3 個測試檔（共 29 case）：
+  - `tests/unit/stop-lightbox.test.tsx`（9） — render / open-close / 內容 / photo placeholder / ESC / backdrop / content click 不關
+  - `tests/unit/entry-action-popover.test.tsx`（11） — render copy/move heading / 當前 day disabled / pressing 切換 / time slot select / **confirm disabled + tooltip 驗證** / cancel
+  - `tests/unit/inline-add-poi.test.tsx`（9） — collapsed → expand / search disabled / placeholder results disabled / AI/custom chip 連 /chat URL 對 / pending notice
+- `EntryActionPopover` 採 `aria-pressed` + `aria-disabled` 而非自製 active state，screen-reader friendly。
+- `StopLightbox` 用 `<MarkdownText>` render description / note，跟 timeline 內 inline display 行為一致（避免 user 在 lightbox 看到 raw markdown）。
+
+### Pending（v2.10 計畫）
+- POI search endpoint（或 Nominatim proxy）→ 接 InlineAddPoi search input
+- `POST /api/trips/:id/entries/:eid/copy` 端點 + TimelineRail ⎘ button
+- `PATCH /api/trips/:id/entries/:eid` 加 `day_id` 進 ALLOWED_FIELDS（或新 move 端點）+ TimelineRail ⇅ button
+- `entry_photos` table 或 `pois.photos` JSON column → 接 StopLightbox 照片區
+- StopDetailPage / `/trip/:id/stop/:eid` 路由清理（PR2 已留為 deep-link orphan）
+
+## [2.8.0] - 2026-04-26
+
+**Mindtrip-parity 補強 PR2：TimelineRail 反轉成 V3 inline expansion + click-to-edit 備註**。反轉 2026-04-19 commit 01382db「整行可點跳詳情頁」的決策 — 點 stop row 改成 toggle 內嵌 detail panel（描述 / 地點 / 備註），不再 navigate 到 StopDetailPage。備註欄位 click-to-edit + Cmd+Enter 儲存 / ESC 取消 + PATCH `/api/trips/:id/entries/:eid`。儲存成功後 dispatch `tp-entry-updated` 給 TripPage 觸發 refetchCurrentDay。
+
+### Added
+- **TimelineRail inline expand** — accordion 行為（一次只展開一個 row），expand 時 caret `›` 旋 90° 變 `⌄`，detail panel slides in 160ms。aria-expanded / aria-label 完整。
+- **備註 click-to-edit** — 點備註區塊 → 變 textarea + Terracotta accent border + 3px focus ring。Cmd+Enter / ⌘+↩ 儲存 → PATCH 後 dispatch event。ESC 取消、textarea 寬度 100% / min-height 88px / resize vertical。空備註顯示 「+ 加備註」 dashed-style placeholder。
+- **儲存中狀態 + 錯誤訊息** — 「儲存中…」label + disabled 雙鈕；PATCH 失敗顯示 inline error（role=alert）。
+- **`tp-entry-updated` window event** — `{ tripId, entryId }` detail，TripPage 接收後呼叫 `refetchCurrentDay` 同步 timeline / map / sheet。
+
+### Changed
+- **TimelineRail click 行為**：`useNavigate('/trip/:id/stop/:eid')` → `setExpandedId(toggle)`。`/trip/:id/stop/:eid` URL 仍可直接訪問（StopDetailPage 保留為 deep-link share 用途），但列表已不再點到。
+- **TimelineEvent.tsx 縮成 type-only module** — Timeline.tsx 早已 only render TimelineRail，TimelineEvent component 是 orphan。PR2 刪 component 程式碼，保留 `TimelineEntryData` / `TravelData` 兩個 type（5 個檔案還在 import）。
+
+### Internal
+- 新增 `tests/unit/timeline-rail-inline-expand.test.tsx`（13 case）— 涵蓋 collapse default / click expand / accordion 切換 / aria-expanded / 備註 click-to-edit / ESC 取消 / Cmd+Enter PATCH / Save button / event dispatch / 空備註 placeholder。
+- 新增 `RailRow` sub-component 隔離每 row 的 useState（編輯/儲存狀態）— 避免父層 single-source state 互相干擾。
+- TripPage 新增 `tp-entry-updated` listener（line 191–199）— 走既有 `refetchCurrentDayRef.current?.()` pattern，跟 online-restore listener 對齊。
+
+## [2.7.0] - 2026-04-26
+
+**Mindtrip-parity 補強 PR1：NewTripModal V1 split-hero v2 + 手機 map carousel polish**。/tp-claude-design 跑完 6 個 mockup，使用者選 V1 split-hero（新增行程）+ V3 inline-expand（編輯景點）— 本 PR 拿掉 NewTripModal 老的單欄表單，做成左 hero + 右 form 的 split-screen，並補齊「彈性日期」模式（numeric stepper + 6 個月 carousel）。順手把 GlobalMapPage 手機底部 stop carousel 那塊裝飾色塊拆掉、card 縮成 150px。PR2/3 後續跟上。
+
+### Added
+- **NewTripModal split-hero pane** — 左側 SVG 風景插圖（自繪、無 CDN 依賴）+ Terracotta 漸層 + social proof 卡片（avatars + 「已有 1,247 個行程在 Tripline 上分享」+ 平均規劃時間）。第一屏即承載 value prop，避開 title-screen anti-pattern。`<768px` 下 hero 收成上方 banner，form 全寬下接。
+- **彈性日期 numeric stepper** — `−  5 天  +` 控件，1–30 天範圍，clamp 邊界。對齊 mindtrip 8:32.17 「How many days?」pattern。
+- **月份 carousel** — 顯示未來 6 個月（含 emoji icon：❄️🌸☀️🏝️🍁🍂），horizontal scroll-snap，aria-pressed 控件 active state。submit 時用該月 1 日當 start，+ (days−1) 當 end。
+- **`totalTrips` prop** — hero social proof 數字可從外部傳入（預設 1247 placeholder），未來接 API 可動態更新。
+
+### Changed
+- **NewTripModal max-width 460px → 880px** — 容納 split-screen layout。Form pane 維持 flex-column 結構，新增 close button 在右上。
+- **`apiFetchRaw` 取代 raw `fetch('/api/trips')`** — 解 CR-4 違規，修復沒走 `reportFetchResult` 造成 online/offline detection 失準的隱患。
+- **`segmented` button tap target 復原 44px** — refactor 過程意外從 44 降成 36，違反 H4，改回。
+- **GlobalMapPage 手機底部 stop carousel 拆裝飾色塊** — 移除 `.pc-cover` 60px Terracotta 漸層 block；card width `flex: 0 0 200px` → `150px`，padding `10px` → `10px 12px`。手機一屏可見 2.2 張卡片（露出下一張 teaser），縮 30% 不犧牲字級。
+
+### Internal
+- 新增 `tests/unit/new-trip-modal.test.tsx`（11 個 case）— 涵蓋 hero pane 渲染、`totalTrips` prop、numeric stepper +/− clamping、月份 carousel selection、flexible submit 算 dates 正確（month-1st + days−1）、fixed-date regression。
+- `vi.useFakeTimers({ toFake: ['Date'] })` 模式 — 月份 carousel 需 deterministic「current month」，但 testing-library `waitFor()` 要 real setTimeout 才能 poll。
+
+## [2.6.2] - 2026-04-26
+
+**`/map` 對齊 mockup-map-v2 — 9 個 issue 一起修**。trip switcher 不再被 leaflet zoom 壓住、桌機 sheet 補 ✕ close + 跳到行程 button + 同日其他 stop mini-list、cluster 數字 icon 點下去自動 zoom 展開、mobile 補底部 stop carousel 左右滑、加 全覽 + 我的位置 pill button。
+
+### Added
+- **Sheet header「✕ 關閉」+「跳到行程」accent button** — 對齊 mockup `.sheet-header`。✕ 清掉 `selectedPinId` 回到 empty state；「跳到行程」accent fill 跳到 `/trips?selected=...`。
+- **Sheet「同日其他 stop」mini-list** — 顯示選中 pin 那天的所有 stops（time + dot + 名稱），active 高亮 accent，點 row 即切換 selected pin。對齊 mockup `.day-stop-mini`。
+- **Sheet meta chips 完整化** — 國家 / 類型（住宿）/ 時間 / ★ rating，對齊 mockup `.sheet-poi-meta`。
+- **Bottom-left「▣ 全覽 / ⊕ 我的位置」pill bar** — `fitBounds` 把所有 pins 收成一個畫面、`navigator.geolocation` 取座標 flyTo 14 zoom。對齊 mockup `.map-action-bar`。
+- **Mobile 底部 POI carousel** — 顯示 active 那天（或選中 pin 那天）的所有 stops，水平滑動 + scroll-snap，點 card 切 selected pin（同步 sheet + 地圖 flyTo focus）。對齊 mockup `.mobile-poi-stack`。
+- **Cluster 點擊 → 自動 zoom 展開** — `OceanMap` 給 cluster marker 加 click handler，呼叫 `supercluster.getClusterExpansionZoom` 算展開 zoom level，setView 過去；fallback 是 `currentZoom + 2`。
+
+### Changed
+- **Leaflet 內建 zoom +/- 從 topleft 搬 bottomright** — 避免跟左上 trip switcher overlap，對齊 mockup `.map-control-stack`。`useLeafletMap` 加 `zoomControlPosition` option，`OceanMap` 加同名 prop 透傳，`GlobalMapPage` 傳 `'bottomright'`。
+- **Trip switcher z-index 20 → 1000** — 之前在某些 viewport 被 leaflet panes (z-index 600+) 壓住，現在用 1000 確保始終浮在最上層。
+- **Sheet 結構改 `.sheet-header` + `.sheet-body` flex column** — header 固定不滾、body 內容可滾、整體高度撐滿 sheet pane。
+
+### Internal
+- `OceanMap` 新增 `onMapReady?: (map: L.Map | null) => void` prop — 給 `GlobalMapPage` 拿 leaflet 實例做 fitBounds / setView。one-shot on mount + null on cleanup。
+- `useLeafletMap` 重構 zoom control：原本走 `L.map({zoomControl})` 拿不到 position，改 `L.map({zoomControl: false})` + 條件式 `L.control.zoom({position}).addTo(instance)`。
+
+## [2.6.1] - 2026-04-26
+
+**Mindtrip-parity DX：新增行程升級成 destination-first + 加景點 affordance + chat markdown 防呆**。/devex-review 發現我們 NewTripModal 比 mindtrip 弱（只給名稱+兩顆日期 vs 對方 destination + flexible/select dates + preferences），DaySection 沒有「加景點」入口（必須記得有 chat 模式），chat 渲染遇到 reply 含字面 `\n` 或單顆 tilde（價格範圍 `¥100~300`）就破版。這版補齊三個。Sidebar 同步拿掉 destructive 的「登出」link，改走 /settings/sessions device row revoke。
+
+### Added
+- **NewTripModal destination-first** — 從「行程名稱 + 出發/回程」改成「目的地 + 日期模式 + 偏好」。目的地是主欄位（placeholder「沖繩・京都・首爾・台南...」），日期改 segmented control「選日期 / 彈性日期」，彈性模式自動填今天 + 5 天佔位。新增「想做什麼？（選填）」textarea 寫進 trip.description。Country 自動偵測（沖繩/京都→JP、首爾→KR、台北→TW、曼谷→TH）。
+- **DaySection「+ 在 Day N 加景點」入口** — 每個 day 的 timeline 末端加 dashed-border 按鈕，點下去帶 `?tripId=...&prefill=幫我加 Day N 的景點：` 跳到 `/chat`，input 自動聚焦尾端，URL query 用完即清避免重 prefill。Chat 流是 POI 編輯的官方路徑（tp-request → Mac Mini Claude），但之前沒入口 user 不會發現。
+- **ChatPage prefill via searchParams** — `useSearchParams` 讀 `?tripId` 切 active trip + `?prefill` 填 input。
+
+### Changed
+- **Sidebar 拿掉「登出」link** — 避免 destructive action 跟主要 nav 同框，誤點機率降低。登出走 account chip → `/settings/sessions` 內的 device row revoke。
+- **NewTripModal segmented control 守 44px tap target** — terracotta-preview 的 `.nav-tabs` 用 36px 是 mockup 簡化，實作守住 Apple HIG 最小觸控目標確保手機不誤點。
+
+### Fixed
+- **Chat markdown 渲染遇字面 `\n` 跟單顆 tilde 破版** — `renderMarkdown` 加 defensive normalize：`\\n`（雙重 JSON encode 進來的字面 backslash-n）→ 真換行；單顆 `~`（如 `Day 3~4`、`¥100~300`、`¥3,000~`）escape 成 `\~` 避免 GFM strikethrough 把整段文字吃掉。雙顆 `~~text~~` 仍保留 strikethrough 行為。
+
+## [2.6.0] - 2026-04-26
+
+**`/chat` 接通 Mac Mini tp-request + `/map` trip switcher + ManagePage 廢棄**。Chat 頁載入時帶歷史對話（每筆 tp-request row 渲染為 user/assistant bubble pair），未完成的 inflight 自動 resume SSE。前端 POST `/api/requests` 不再傳 mode — server 預設 `trip-plan`，tp-request skill 自動判別「改行程 vs 問建議」。`/map` 從 chip-filter 多 trip 改為 dropdown trip-switcher 模式（一次顯示一個行程，切換／空狀態 CTA），polyline 用 OceanMap 內建 useRoute 走真實導航線。Legacy `/manage` 編輯器移除，redirect 到 `/chat`。AdminPage 重新對齊 V2 terracotta-preview design。
+
+### Added
+- **Chat 歷史對話載入** — `ChatPage` 切 trip 時 `GET /api/requests?tripId=X&sort=asc&limit=20`，每筆 row 轉 user message + assistant reply（markdown 渲染）。Status `open`/`processing` 的 prior-session row 自動 resume SSE，typing dot 等 Mac Mini 回 reply 後就地替換。
+- **`/map` trip switcher** — `GlobalMapPage` 完整重寫：左上 floating header 帶 dropdown 切 trip + N stops/M days meta，地圖用 `OceanMap mode="overview"` 真實導航折線（per-day polyline + hotel sortOrder=-1 入線），點 marker 在右側 sheet 顯示 POI detail（mobile 用底部浮卡）。沒任何 trip → terracotta hero card「+ 新增行程」。
+- **AdminPage V2 重設計** — 包 AppShell + DesktopSidebarConnected + GlobalBottomNav，page heading 用 `.tp-page-heading`（crumb「管理」+ h1「權限管理」），三 sections 包進 `.tp-admin-section` 卡片。Trip select / permission list / add member 全部對齊 terracotta tokens。加 admin gate effect（非 admin redirect `/trips`）。
+- **「管理」sidebar nav 連 /admin** — gear icon，admin-only 顯示（`email === lean.lean@gmail.com`）。
+
+### Changed
+- **`POST /api/requests` mode 變 optional** — 沒給 default `'trip-plan'`（滿足 DB CHECK constraint），tp-request skill 自己看 message 自動判別意圖。前端不再傳 mode 欄位。
+- **`/manage` redirect → `/chat`** — 路由 `<Navigate to="/chat" replace />`，舊 bookmark 直接落到 chat 頁。`LoginPage` 預設 redirect、`Placeholder` default ctaHref、`BottomNavBar` 助理 tab 全改 `/chat` 或 `/trips`。
+- **Sidebar nav matchPrefixes** — 「行程」拿掉 `/manage`、「管理」改只匹配 `/admin`。GlobalBottomNav 同步。
+- **Sidebar 拿掉「+ 新增行程」按鈕** — 入口移到 TripsListPage（trailing dashed card / hero CTA）跟 GlobalMapPage empty state。Sidebar 底部只剩 ThemeToggle + account-card + 登出。
+
+### Fixed
+- **ChatPage empty state 文案對齊新 mode-less 行為** — 「有什麼要改、要加、要換，或者只是想問建議都可以。AI 會自動判斷是要動行程還是純對話」對應 skill 自動判別。
+- **Sidebar 「管理」icon** — 之前 `'settings'` icon 不在 Icon library，render 出空白；改 `'gear'`（library 有定義）。
+
+### Removed
+- **`src/pages/ManagePage.tsx` (323 行)** — Legacy AI editor 由 `/chat` 取代（chat 走同一條 tp-request pipeline，UX 更簡潔）。
+- **`tests/unit/request-api-v2.test.js`** — coupled to ManagePage.tsx，整檔刪除。
+
+## [2.5.0] - 2026-04-26
+
+**V2 design polish + 4 placeholder pages 變 functional**。把累積的 design 議題（DayNav 留白、day 錨點被 sticky strip 遮、桌機 sheet 上方空白、三欄捲動互踩、新增行程連結錯位）一次掃乾淨；同時把 `/chat` `/map` `/manage` `/explore` 四個 placeholder 變成可用 MVP，`/chat` 直接接 Mac Mini tp-request pipeline + SSE。地圖 polyline 規格寫進 DESIGN.md（飯店為當日線首），sidebar 加 admin-only「管理」連結 + 深淺模式 toggle。
+
+### Added
+- **`/chat` AI 對話 MVP** — `ChatPage` 接 `POST /api/requests` `{tripId, mode:'trip-plan'}` + `useRequestSSE` 監聽狀態 + `GET /api/requests/:id` 拿 reply 渲染 markdown。trip picker dropdown 切 active trip（寫 `LS_KEY_TRIP_PREF`），4 顆 suggestion chip 冷啟，輸入框 Enter 送出 / Shift+Enter 換行 / aria-label。
+- **`/map` 全域 leaflet 地圖** — `GlobalMapPage` 用 `useLeafletMap` 渲染所有自己有權限行程的 POI，每 trip 一色（10 色 terracotta palette）。Per-day polyline 串接 hotel + entries by sortOrder（跨 day 不連線）。左上 chip 可逐 trip toggle 隱藏，點 marker 在右側 sheet 顯示 POI 細節 + 「打開行程」CTA，mobile 改用底部浮卡。
+- **`/explore` tabs + multi-select + add-to-trip** — 兩 tab（搜尋 / 儲存池），儲存池卡片加 checkbox + sticky toolbar，多選後「加入行程」開 trip picker modal（POST entries endpoint 待接通則 toast 提示 + 切到該 trip）。
+- **`NewTripContext` 全域新增行程 modal** — 取代各頁分散的 prop drilling，Sidebar / TripsListPage 三入口（trailing dashed card / 空 hero CTA / sidebar 底部按鈕）共用同一個 modal。POST `/api/trips` 含 auto slug + 4-char base36 suffix tripId。
+- **`ThemeToggle` 共用元件** — 三段式 segmented（淺 / 自動 / 深），sidebar 底部 + SessionsPage 帳號 actions block 共用。
+- **桌機 sidebar admin-only「管理」nav 項** — `DesktopSidebarConnected` 用 `email === lean.lean@gmail.com` gate，普通用戶看不到。`/manage` 同步加 admin gate effect（非 admin redirect `/trips`）。
+- **桌機 sidebar account-card 變 Link** — 點擊進 `/settings/sessions`，作為桌機帳號入口。
+- **手機 SessionsPage 加 ThemeToggle + 登出按鈕** — mobile 帳號 tab（連到 `/settings/sessions`）落地後直接看到深淺模式切換 + 紅框登出 button。
+- **DESIGN.md「地圖 Polyline 規格」section** — 新章節明訂飯店為當日 polyline 起點（sortOrder=-1 自然成為線首），跨 day 不連線，hotel marker 仍維持 ink 色不違反 Stop Type Color Convention。
+
+### Changed
+- **DayNav mobile 留白方向** — `.ocean-day-strip` mobile padding `8px 16px` + 拿掉負 margin，strip 改在 `.ocean-page` 16px gutter 內；對齊 `mockup-trip-v2.html .mobile-day-strip` 樣式。
+- **Day section 錨點實作** — `.ocean-day > .ocean-hero { scroll-margin-top }` 取代 `.ocean-day {...}`，因為 `id="day{N}"` 實際在 `.ocean-hero` 上，原本寫法 silently no-op；mobile 96px、desktop 200px、sheet 內 96px。
+- **AppShell 三欄獨立捲動** — `.app-shell { height: 100dvh }`（原 min-height 讓 grid 隨內容漲），加 `overscroll-behavior: contain` 給 sidebar / main / sheet，scroll-chaining 不再傳到 document 或別欄。
+- **行程 sheet 內 ocean-page padding-top: 0** — `.app-shell-sheet` 內覆蓋預設 28px top padding，並把 `.ocean-day-strip top: 64px` 收掉，桌機 sheet 不再有為已不存在的 topbar 預留的 64px 空白。
+- **noShell 模式 TripPage 不渲染 Footer + FooterArt** — embedded 在 sheet 時把裝飾性 footer 拿掉（sheet 是窄欄，footer 浪費垂直空間）。
+- **Manage page 變 admin-only** — 透過 `useCurrentUser` 比對 admin email；同時 sidebar nav matchPrefixes 把 `/manage` 從「行程」item 移出，改歸到 admin-only「管理」item。
+- **OceanMap polyline 含 hotel** — `buildSegments` 拿掉 `filter(p => p.type === 'entry')`，改 `sort((a,b) => a.sortOrder - b.sortOrder)`，hotel sortOrder=-1 自然落在線首。
+
+### Fixed
+- **桌機 sheet 上方空白** — `.app-shell-sheet .ocean-page` padding-top 收掉 + `.ocean-day-strip` top:0/margin:0，sheet 不再有空白帶。
+- **TimelineEvent stop click 在 embedded 模式無反應** — 用 `useTripId()` context hook 取代 `useParams`（在 `/trips?selected=` URL 拿不到 :tripId param）。
+- **Mobile DayNav 點天數無錨點 scroll + 滑動不換 active day** — `scrollToDay` 改 `header.scrollIntoView`；scroll-spy listener 用 `findScrollContainer` 走父鏈到 `.app-shell-main` 真實 scroller。
+- **新增行程連結錯誤** — sidebar 底部「+ 新增行程」按鈕在非 `/trips` 頁面 onClick 為 undefined 沒反應，改成全域 `useNewTrip().openModal` 預設行為。
+
+### Removed
+- **舊的 `.ocean-day { scroll-margin-top: 130/210px }`** — 規則放錯 element 上根本沒 hit，改寫到 `.ocean-day > .ocean-hero`。
+- **TripsListPage local NewTripModal state** — 統一改用 `useNewTrip()` context；trailing card / hero CTA / sidebar 三入口共用一份 modal mount。
+
+## [2.4.0] - 2026-04-25
+
+**V2 OAuth full cutover + V2 design audit follow-ups**。Cloudflare Access 全拆，Tripline 自建 V2 OAuth 接管所有 auth（瀏覽器 session cookie + CLI Bearer token）。5 個 auth page 對齊 mockup-v2 桌機 split-screen + brand hero pane。3 個 settings page wrap 進 AppShell。新增 `/trips` landing page 帶 country-keyed peach-gradient trip cards。詳見 `docs/v2-design-audit-2026-04-25.md` + `.gstack/deploy-reports/2026-04-25-pr317-321-deploy.md`。
+
+### Added
+- **Auth pages 桌機 split-screen + brand hero pane**（≥1024px）— `/login` / `/signup` / `/login/forgot` / `/auth/password/reset` / `/signup/check-email` 桌機版改成 1fr/1fr grid，左 form card、右 terracotta gradient brand hero 帶 eyebrow + headline + features + footnote。手機（<1024px）維持單欄 centered card 不變。共用 `src/components/auth/AuthBrandHero.tsx`。
+- **`/trips` landing page** — 新 `TripsListPage` 顯示登入用戶有權限的行程，每個 trip 渲染為 16/9 peach-gradient card（JP terracotta / KR cocoa / TW amber / 其他 warm-stone），點進去 → `/trip/:tripId` detail。
+- **Settings AppShell wrap** — `/settings/connected-apps` / `/developer/apps` / `/settings/sessions` 包進 `AppShell` 帶 `DesktopSidebarConnected`，桌機看到 sidebar nav + account chip。
+- **CLI service token 流程** — `/api/oauth/token` `grant_type=client_credentials`（RFC 6749 §4.4），confidential client、scope 限制、無 refresh token。對應 `scripts/lib/get-tripline-token.js` helper（auto-loads `.env.local`、60s pre-expiry refresh、`/tmp/tripline-cli-token-<uid>.json` cache）+ `scripts/provision-admin-cli-client.js` 一次性 provisioning。
+- **`/api/public-config`** — side-effect-free probe endpoint，前端拿 `{ providers: { google }, features: { passwordSignup, emailVerification } }` graceful 渲染（沒設 `GOOGLE_CLIENT_ID` 時 LoginPage 自動隱藏 Google 按鈕）。
+- **V2 Terracotta theme** — `css/tokens.css` 全面遷移 `--color-accent: #D97848` / `--color-background: #FFFBF5` / `--color-foreground: #2A1F18` + warm-tinted shadows，dark mode 換 deep-cocoa 對齊。`DESIGN.md` header 改 V2 Terracotta + canonical Palette table。
+- **`useRequireAuth` hook** — `src/hooks/useRequireAuth.ts` wrap `useCurrentUser`，`user === null` 時 navigate `/login?redirect_after=...`。套到 ManagePage / AdminPage / ConnectedAppsPage / SessionsPage / DeveloperAppsPage。
+- **SessionsPage unit test** — `tests/unit/sessions-page.test.tsx` 13 tests 補齊 V2-P6 multi-device session 管理 page 的覆蓋率。
+- **TripsListPage unit test** — `tests/unit/trips-list-page.test.tsx` 6 tests covering loading / empty / cross-ref / fallback / 兩種失敗模式。
+
+### Changed
+- **Cloudflare Access 全拆** — 不再透過 Access policy 保護 `/manage` / `/admin` / `/api/requests` / `/api/my-trips` / `/api/permissions`。`functions/api/_middleware.ts` 重寫：先試 V2 session cookie（HMAC-SHA256 opaque），再試 Bearer token（用 `D1Adapter('AccessToken').find()`）。CF JWT decode + service token check 的死程式碼移除。
+- **Scheduler scripts 改 Bearer auth** — `scripts/tp-request-scheduler.sh` / `scripts/tripline-job.sh` / `scripts/tripline-api-server.ts` 從 `CF-Access-Client-Id`/`Secret` headers 換成 `Authorization: Bearer $(node scripts/lib/get-tripline-token.js)`，TS 版用 `authedFetch` wrapper 401 自動 retry 一次。
+- **Password hashing iterations** — `src/server/password.ts` PBKDF2 從 600k 降到 100k 以符合 CF Workers Free plan 10ms CPU budget。Self-describing hash format 確保舊 hash 仍可驗證。Workers Paid plan 啟用後可調回 600k。
+- **Signup rate limit** — `functions/api/_rate_limit.ts` SIGNUP `maxAttempts: 3 → 10` per hour per IP（dev + NAT 共用 IP 太緊）。
+- **DesktopSidebar padding** — `20px 12px → 20px 14px` 對齊 mockup spacing。
+- **SignupPage password hint** — `「至少 8 字元」` 從 label-side `<span>` 移到 input `placeholder`，對齊 mockup-signup-v2。
+- **CLAUDE.md auth section** — V2 OAuth 改為 sole auth、附上 mock auth 設定（`.dev.vars` / `DEV_MOCK_EMAIL`）+ admin CLI client provisioning 步驟。
+- **`backups/` 加 `.gitignore`** — `scripts/dump-d1.js` 產的 daily JSON dump 不再髒 git status。
+
+### Fixed
+- **CSRF middleware bypass `/api/oauth/*` + Bearer requests** — 沒 Origin header 的 CLI curl 不再 403。
+- **`get-tripline-token.js` 在 launchd 環境** — scripts launched from launchd 不 source `.env.local`，helper 自己 auto-load。
+- **`provision-admin-cli-client.js` iter mismatch** — script 用 600k 但 prod 是 100k，driver `verifyPassword` 從 stored hash 讀 iter，500 error 修掉。
+- **AuthBrandHero footnote font-size** — `11px → var(--font-size-caption2)`，pr2-tokens.test.ts hardcode 檢查通過。
+
+### Removed
+- **CF Access service token check** — `functions/api/_middleware.ts` 的 `decodeJwtPayload` + CF JWT path 全拆。
+- **CF Access fallback link from LoginPage** — V2 self-signup 變唯一 primary CTA。
+
+### Test results
+- 988/988 unit tests pass
+- TypeScript clean
+- Cloudflare Pages prod deploy verified（screenshot evidence in `.gstack/deploy-reports/post-pr321-login.png`）
+
+### Deferred (audit close-out)
+- Auth pages AppShell wrap — anonymous click sidebar nav 會 redirect-bounce，需先做 disable-while-anon polish
+- `/explore` POI grid + 右 pane detail + category palette — defer 到專屬 explore-redesign sprint（P3 ~90min+）
+- `/chat`（LLM concierge）+ `/map`（cross-trip global map）— multi-day implementations，P3
+
+## [2.3.0] - 2026-04-25
+
+**Layout Refactor (B Workstream P1-P4) + V2 OAuth Day 0 spike + A11y polish**。SaaS pivot 第一階段：Mindtrip-inspired 3-pane shell + URL-driven sheet state + Explore MVP。Panva oidc-provider 在 CF Pages Functions + nodejs_compat 下能 import + instantiate（GREEN，進 V2-P1）。詳見 `docs/2026-04-25-session-retro.md` + `docs/v2-oauth-spike-result.md`。
+
+### Added
+- `src/components/shell/AppShell.tsx` — 3-pane / 2-pane layout primitive (sidebar + main + sheet slots)
+- `src/components/shell/DesktopSidebar.tsx` — 5 nav items（聊天 / 行程 / 地圖 / 探索 / 登入）+ user chip
+- `src/components/shell/BottomNavBar.tsx` — Mobile sticky bottom nav (4-tab IA)
+- `src/components/trip/TripSheet.tsx` + `TripSheetTabs.tsx` — URL-driven sheet (`?sheet=itinerary|ideas|map|chat`) + ARIA tabs pattern + keyboard nav
+- `src/lib/trip-url.ts` — Sheet URL helpers + `sheetTabId` / `sheetPanelId` ID conventions
+- `src/pages/{Chat,GlobalMap,Explore,Login}Page.tsx` — 4 個新 page (placeholder + real Explore)
+- `src/components/shared/Placeholder.tsx` — Reusable empty-state page UI
+- `functions/api/poi-search.ts` — Nominatim search proxy + 24h CDN cache
+- `functions/api/pois/find-or-create.ts` — POI master upsert
+- `functions/api/oauth/spike.ts` — V2 Day 0 spike endpoint (will be rewritten in V2-P1)
+- `migrations/0028_saved_pois.sql` + `0029_trip_ideas.sql` — Phase 1 schema
+- `docs/v2-oauth-server-plan.md` + `docs/v2-oauth-spike-result.md` — V2 OAuth design (Panva oidc-provider + D1 adapter)
+- A11y：`@media (prefers-reduced-motion: reduce)` global override 加到 `css/tokens.css`
+
+### Changed
+- `wrangler.toml` — 加 `compatibility_flags = ["nodejs_compat"]`（V2 OAuth）
+- `src/entries/main.tsx` — 加 4 個新 routes + `<TripMapRedirect>` (`/trip/:id/map` → `?sheet=map`)
+- `src/pages/{Trip,Manage}Page.tsx` — wrap in AppShell
+
+### Fixed
+- `scripts/init-local-db.js` TABLES 順序 — pois 必須在 trip_entries 之前（FK from migration 0026），原序讓 trip_entries / trip_pois import 0 rows
+- `TripSheet` map tab 高度只佔 1/4 — TripMapRail sticky + `calc(100dvh - nav-h)` 在 sheet 內失效，加 SCOPED_STYLES override 撐滿
+- `/manage` 跳 default trip — 移除 `public/_redirects`（rewrite to /index.html 觸發 wrangler canonical-strip 308 to /），改靠 `dist/manage/` directory canonical 308 to `/manage/`
+
+### A11y (B-P6 partial)
+- ARIA tabs pattern 完整關聯（id + aria-controls + role=tabpanel + aria-labelledby + hidden vs unmount）
+- Keyboard navigation（ArrowLeft/Right/Home/End on tablist + roving tabindex）
+- Color contrast WCAG 2.x AA verified（unit test 13 cases，light + dark theme）
+- prefers-reduced-motion global override
+
+### Performance baseline (B-P6 task 6.4)
+- Total `dist/`: 1.9 MB raw (~600 KB gzipped initial estimate)
+- Largest chunks: html2pdf 914K (lazy on PDF export), vendor 219K, OceanMap 168K (lazy), sentry 134K, TripPage 79K (lazy)
+- All page-level routes lazy-loaded via `lazyWithRetry`
+
+### Open follow-ups (B-P6 deferred to next sprint)
+- axe-core install + run (task 5.1, 5.2)
+- Lighthouse CI workflow (task 6.1-6.3)
+- Playwright E2E matrix (task 7.x)
+- Sentry release tagging + monitoring (task 10.x)
+- TripSheet open/close animation transitions (task 3.1-3.3, 需先實作 transition)
+- B-P5 Ideas drag-to-itinerary (V2 排程，等 Ideas tab real UI)
+- V2-P1 ~ V2-P7 OAuth Server (14 週)
+
 ## [2.2.0.0] - 2026-04-24
 
 **POI Unification Phase 3 — DROP legacy spatial columns，POI master 成為 spatial single source of truth**。`trip_entries` 正式移除 `location` / `maps` / `mapcode` / `google_rating` 四欄，entry 的座標、Google Maps URL、mapcode、評分全數由 `JOIN pois ON trip_entries.poi_id = pois.id` 取得。前後端 fallback 程式碼同步清除，Phase 2 過渡期結束。既有行程 100% 已 backfill（74 個 auto + 17 個 collision 手動分離成獨立 POI），資料全數保留。

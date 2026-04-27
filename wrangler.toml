@@ -1,5 +1,8 @@
 name = "trip-planner"
 compatibility_date = "2024-12-01"
+# nodejs_compat：V2 OAuth spike（oidc-provider 依賴 koa / node:crypto 等 Node shim）
+# 若 spike 結論是 fallback 到 openauthjs + KV，應移除此 flag
+compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
 [[d1_databases]]

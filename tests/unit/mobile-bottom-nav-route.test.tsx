@@ -1,12 +1,12 @@
 /**
  * mobile-bottom-nav-route.test.tsx — TDD tests for Item 1:
- * MobileBottomNav 重構成 4-tab route-based (Q3=B)
+ * BottomNavBar 重構成 4-tab route-based (Q3=B)
  *
  * Covers:
  * - 4 tabs render: 行程 / 地圖 / 助理 / 更多（F009: 訊息 → 助理）
  * - 行程 → navigate('/trip/:id') + scroll-to-top
  * - 地圖 → navigate('/trip/:id/map')
- * - 助理 → navigate('/manage')
+ * - 助理 → navigate('/chat')
  * - 更多 → onOpenSheet('action-menu')
  * - Active highlighting via useLocation
  * - grid-template-columns: repeat(4, 1fr)
@@ -15,7 +15,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import MobileBottomNav from '../../src/components/trip/MobileBottomNav';
+import BottomNavBar from '../../src/components/shell/BottomNavBar';
 
 /* ===== mock react-router navigate ===== */
 const mockNavigate = vi.fn();
@@ -39,7 +39,7 @@ beforeEach(() => {
 
 const TRIP_ID = 'test-trip';
 
-function renderNav(overrides: Partial<Parameters<typeof MobileBottomNav>[0]> = {}) {
+function renderNav(overrides: Partial<Parameters<typeof BottomNavBar>[0]> = {}) {
   const defaults = {
     tripId: TRIP_ID,
     activeSheet: null,
@@ -49,12 +49,12 @@ function renderNav(overrides: Partial<Parameters<typeof MobileBottomNav>[0]> = {
   };
   return render(
     <MemoryRouter initialEntries={[`/trip/${TRIP_ID}`]}>
-      <MobileBottomNav {...defaults} {...overrides} />
+      <BottomNavBar {...defaults} {...overrides} />
     </MemoryRouter>,
   );
 }
 
-describe('MobileBottomNav — 4-tab route-based (PR3)', () => {
+describe('BottomNavBar — 4-tab route-based (PR3)', () => {
   it('renders exactly 4 tab buttons', () => {
     const { getAllByRole } = renderNav();
     const btns = getAllByRole('button');
@@ -99,10 +99,10 @@ describe('MobileBottomNav — 4-tab route-based (PR3)', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/trip/${TRIP_ID}/map`);
   });
 
-  it('「助理」click → navigate to /manage（F009）', () => {
+  it('「助理」click → navigate to /chat（取代舊 /manage editor，AI auto-classifies intent）', () => {
     const { getByRole } = renderNav();
     fireEvent.click(getByRole('button', { name: '助理' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/manage');
+    expect(mockNavigate).toHaveBeenCalledWith('/chat');
   });
 
   it('「更多」click → onOpenSheet("action-menu")', () => {

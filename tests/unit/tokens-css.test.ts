@@ -24,7 +24,7 @@ describe('tokens.css', () => {
     expect(tokens).toContain('--transition-duration-fast:');
   });
 
-  it('Ocean-only design system: dark + print, no legacy theme blocks', () => {
+  it('Single-theme design system: dark + print, no legacy multi-theme blocks', () => {
     expect(tokens).toContain('body.dark {');
     expect(tokens).toContain('body.theme-print');
     expect(tokens).not.toContain('body.theme-sun');
@@ -35,10 +35,10 @@ describe('tokens.css', () => {
     expect(tokens).not.toContain('body.theme-night');
   });
 
-  it('uses Ocean accent + white background as default @theme', () => {
-    expect(tokens).toMatch(/--color-accent:\s*#0077B6/);
-    expect(tokens).toMatch(/--color-background:\s*#FFFFFF/);
-    expect(tokens).toMatch(/--color-foreground:\s*#222222/);
+  it('uses V2 Terracotta accent + cream background as default @theme', () => {
+    expect(tokens).toMatch(/--color-accent:\s*#D97848/);
+    expect(tokens).toMatch(/--color-background:\s*#FFFBF5/);
+    expect(tokens).toMatch(/--color-foreground:\s*#2A1F18/);
   });
 
   it('loads Inter + Noto Sans TC primary font stack', () => {

@@ -8,18 +8,19 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useTripId } from '../../contexts/TripIdContext';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import Icon from '../shared/Icon';
+import InlineAddPoi from './InlineAddPoi';
 import { toTimelineEntry } from '../../lib/mapDay';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
 import type { Day, DaySummary } from '../../types/trip';
 
-/* ===== 看地圖 chip + hero chips layout (scoped styles) ===== */
+/* ===== 看地圖 chip + hero chips layout + 加景點 footer (scoped styles) ===== */
 const MAP_CHIP_STYLES = `
 .day-map-chip {
   display: inline-flex; align-items: center; gap: 4px;
@@ -41,7 +42,10 @@ const MAP_CHIP_STYLES = `
 .ocean-hero-chips-left {
   display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
+
 `;
+/* PR3 v2.9：原 .day-add-stop-row / .day-add-stop-btn 由 InlineAddPoi 組件
+ * 接管，CSS 一併移到 InlineAddPoi 的 SCOPED_STYLES。 */
 
 export interface DaySectionProps {
   dayNum: number;
@@ -82,7 +86,7 @@ const DaySection = React.memo(function DaySection({
   isActive,
   timezone,
 }: DaySectionProps) {
-  const { tripId } = useParams<{ tripId: string }>();
+  const tripId = useTripId();
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
   useEffect(() => {
@@ -110,7 +114,8 @@ const DaySection = React.memo(function DaySection({
     : '';
   const area = daySummary?.label || '';
 
-  const mapHref = tripId ? `/trip/${tripId}/map?day=${dayNum}` : null;
+  // QA 2026-04-26 PR-J：拿掉每日 hero 的「📖 看地圖」 chip — user feedback
+  // 「移除每日 header 看地圖」。bottom nav 已有「地圖」 tab 入口，每天 chip 重複。
 
   return (
     <section className="ocean-day day-section" data-day={dayNum}>
@@ -125,16 +130,6 @@ const DaySection = React.memo(function DaySection({
             </span>
             {area && <span className="ocean-hero-chip-muted">{area}</span>}
           </div>
-          {mapHref && (
-            <Link
-              to={mapHref}
-              className="day-map-chip"
-              aria-label={`DAY ${String(dayNum).padStart(2, '0')} 地圖`}
-            >
-              <Icon name="map" />
-              看地圖
-            </Link>
-          )}
         </div>
         <h2 className="ocean-hero-title">{area || `Day ${dayNum}`}</h2>
         <div className="ocean-hero-stats">
@@ -185,8 +180,10 @@ const DaySection = React.memo(function DaySection({
             )}
 
             {timeline.length > 0 && (
-              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} />
+              <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} />
             )}
+
+            {tripId && <InlineAddPoi tripId={tripId} dayNum={dayNum} />}
           </>
         )}
       </div>

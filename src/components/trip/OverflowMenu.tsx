@@ -28,6 +28,7 @@ export const OVERFLOW_ITEMS: MenuItem[] = [
   { key: 'checklist',   icon: 'check-circle', label: '出發清單', action: 'sheet', group: 'info' },
   { key: 'backup',      icon: 'backup',       label: '雨天備案', action: 'sheet', group: 'info' },
   /* Settings */
+  { key: 'collab',      icon: 'group',        label: '共編設定', action: 'sheet', requiresOnline: true, group: 'settings' },
   { key: 'trip-select', icon: 'swap-horiz',   label: '切換行程', action: 'sheet', requiresOnline: true, group: 'settings' },
   { key: 'appearance',  icon: 'palette',      label: '外觀設定', action: 'sheet', group: 'settings' },
   /* Downloads */

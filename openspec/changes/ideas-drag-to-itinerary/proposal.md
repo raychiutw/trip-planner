@@ -1,3 +1,13 @@
+## Status
+
+> ⏸ **Deferred to V2**（2026-04-25 retro 決定）
+>
+> B-P5 在 SaaS pivot roadmap 中被識別為「Ideas drag UX」，但前提依賴 Ideas tab 真實 UI（目前還是 placeholder，B-P4 只做 Explore + saved pool）。先做 Ideas tab real UI，再做 drag。
+>
+> **不 archive 此 change** — 留 active 等 V2 排程進來時拿來用。Schema 已 ship（`trip_entries.order_in_day` + `trip_ideas.promoted_to_entry_id` from B-P1）。
+>
+> 相關：`docs/2026-04-25-session-retro.md` / `docs/2026-04-24-saas-pivot-roadmap.md`。
+
 ## Why
 
 Mindtrip layout benchmark (Image 12) 顯示 Ideas ↔ Itinerary 雙向 drag 是 Ideas 分層的完整 UX。僅做「點按鈕 promote」是 text-based 操作，使用者對 Ideas 的觸感式規劃需求沒滿足。Phase 1 schema 已準備 (`trip_entries.order_in_day` + `trip_ideas.promoted_to_entry_id`)，Phase 3 Ideas tab UI 已存；此 Phase 把兩者用 dnd-kit 串成完整 drag experience。

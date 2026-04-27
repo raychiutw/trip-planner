@@ -26,10 +26,16 @@ fi
 
 log "--- Job 啟動 ---"
 
+# V2 OAuth client_credentials — replaces CF Access Service Token
+TOKEN=$(node "$PROJECT_DIR/scripts/lib/get-tripline-token.js" 2>>"$LOG_FILE") || {
+  log "Token 取得失敗,確認 TRIPLINE_API_CLIENT_ID/SECRET env"
+  log "--- Job 結束（Token 失敗）---"
+  exit 1
+}
+
 # 1. 卡住偵測：processing 超過 STALE_THRESHOLD_MIN 分鐘 → 標記 failed
 PROCESSING=$(curl -sf \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "Authorization: Bearer $TOKEN" \
   "https://trip-planner-dby.pages.dev/api/requests?status=processing" 2>&1) || {
   log "查詢 processing 失敗"
   PROCESSING="[]"
@@ -56,8 +62,8 @@ if [ -n "$STALE_IDS" ]; then
   while read -r rid; do
     log "  卡住偵測: id=$rid → failed"
     curl -sf -X PATCH \
-      -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-      -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "Origin: https://trip-planner-dby.pages.dev" \
       -H "Content-Type: application/json" \
       -d '{"status":"failed","processed_by":"job"}' \
       "https://trip-planner-dby.pages.dev/api/requests/$rid" > /dev/null 2>&1 && \
