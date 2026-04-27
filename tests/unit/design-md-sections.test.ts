@@ -10,13 +10,14 @@ const designPath = resolve(__dirname, '../../DESIGN.md');
 const design = readFileSync(designPath, 'utf-8');
 
 describe('DESIGN.md — 完整性檢查', () => {
-  it('包含 Mobile Type Scale section', () => {
-    expect(design).toContain('## Type Scale (Mobile ≤760px)');
+  it('包含 role-based Type Scale section', () => {
+    expect(design).toContain('### Type Scale');
+    expect(design).toContain('Desktop');
+    expect(design).toContain('Compact');
   });
 
-  it('Mobile type scale 表格包含 body 16px mobile override', () => {
-    // 確認 body 欄位在 Mobile 下為 16px
-    expect(design).toMatch(/body.*16px/);
+  it('Type scale 表格包含 desktop / compact body 16px / 26px 規格', () => {
+    expect(design).toMatch(/`body`.*16px \/ 26px.*16px \/ 26px/);
   });
 
   it('包含 Data Visualization 例外條文', () => {
@@ -33,21 +34,19 @@ describe('DESIGN.md — 完整性檢查', () => {
   });
 
   it('Material section 說明 sheet 拿掉 saturate', () => {
-    // 確認 sheet saturate 相關條文（"拿掉 `saturate" 或 "去除 saturate"）
-    expect(design).toMatch(/拿掉.*saturate|去除.*saturate|removed.*saturate/i);
+    // 確認 sheet saturate 相關條文（"不加 `saturate"、"拿掉 `saturate" 或 "去除 saturate"）
+    expect(design).toMatch(/不加.*saturate|拿掉.*saturate|去除.*saturate|removed.*saturate/i);
   });
 
   it('Decisions Log 有 Glass unified 14px 記錄', () => {
     expect(design).toContain('Glass unified 14px');
   });
 
-  it('caption2 描述為最小行內 meta label（例：NIGHT 1 等）', () => {
-    // Finding #5：收斂 caption2 semantic
-    expect(design).toMatch(/caption2.*最小行內 meta label/);
+  it('label token 描述表單 label 與 metadata 用途', () => {
+    expect(design).toMatch(/`label`.*表單 label、metadata、chip label/);
   });
 
-  it('eyebrow 描述為大寫 section header（例：DAY 01、STOPS、用餐）', () => {
-    // Finding #5：收斂 eyebrow semantic，與 caption2 分離
-    expect(design).toMatch(/eyebrow.*大寫 section header/);
+  it('eyebrow token 限定為 uppercase label', () => {
+    expect(design).toMatch(/`eyebrow`.*uppercase label/);
   });
 });
