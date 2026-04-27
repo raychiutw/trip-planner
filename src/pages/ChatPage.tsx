@@ -89,7 +89,7 @@ function formatChatTime(iso: string): string {
  * middleware 會擋新訊息，但 D1 已有舊 row 仍會 render — 本 helper 讓
  * frontend 在 render 時 bail out 顯示 placeholder 而不是亂碼字元。
  */
-function isGarbledMessage(text: string): boolean {
+export function isGarbledMessage(text: string): boolean {
   if (!text || typeof text !== 'string') return false;
   // Rule 1: U+FFFD replacement char — browser 解 UTF-8 失敗的標記
   if (text.includes('�')) return true;
