@@ -23,12 +23,12 @@ const ICON_HREF_BY_KIND: Record<EntryKind, string | null> = {
 export interface MapEntryCardProps {
   /** 該日序號（1-based，每天從 1 重新開始） */
   dayLocalIndex: number;
-  /** 短 day label（"D1" / "D2"），eyebrow 顯示 */
-  dayLabel: string;
+  /** 短 day label（"D1" / "D2"），eyebrow 顯示。Single-day 模式可省略以節省空間 */
+  dayLabel?: string;
   /** dayColor hex，套 num border + day eyebrow */
   dayColor: string;
-  /** 時間文字（"08:00" / "10:30"） */
-  time: string;
+  /** 時間文字（"08:00" / "10:30"），可選 */
+  time?: string;
   /** entry 名稱 */
   title: string;
   /** entry 類型，對映 leading icon */
@@ -37,6 +37,8 @@ export interface MapEntryCardProps {
   isActive: boolean;
   /** 點擊 callback（觸發 marker focus + flyTo） */
   onClick: () => void;
+  /** 對應 entry id，用於 IntersectionObserver 反查（MapPage scroll spy） */
+  dataEntryId?: number;
 }
 
 export default function MapEntryCard({
@@ -48,6 +50,7 @@ export default function MapEntryCard({
   kind,
   isActive,
   onClick,
+  dataEntryId,
 }: MapEntryCardProps) {
   const iconHref = ICON_HREF_BY_KIND[kind];
   return (
@@ -57,6 +60,7 @@ export default function MapEntryCard({
       aria-pressed={isActive}
       className={`tp-map-entry-card${isActive ? ' is-active' : ''}`}
       onClick={onClick}
+      data-card-entry-id={dataEntryId}
     >
       <div className="tp-map-entry-card-top">
         <span
@@ -65,10 +69,12 @@ export default function MapEntryCard({
         >
           {dayLocalIndex}
         </span>
-        <span className="tp-map-entry-card-day" style={{ color: dayColor }}>
-          {dayLabel}
-        </span>
-        <span className="tp-map-entry-card-time">{time}</span>
+        {dayLabel && (
+          <span className="tp-map-entry-card-day" style={{ color: dayColor }}>
+            {dayLabel}
+          </span>
+        )}
+        {time && <span className="tp-map-entry-card-time">{time}</span>}
       </div>
       <div className="tp-map-entry-card-body">
         {iconHref && (

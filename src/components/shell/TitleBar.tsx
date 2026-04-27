@@ -6,11 +6,13 @@
  * variant / align（splash / auth / settings 子頁繼續用 PageHeader，見
  * openspec/changes/terracotta-pages-refactor/design.md D1）。
  *
- * 視覺對應：docs/design-sessions/terracotta-preview-v2.html sections 13-20
- *           docs/design-sessions/2026-04-27-unified-layout-plan.md TitleBar 表格
+ * 視覺對應：docs/design-sessions/terracotta-preview-v2.html `.tp-page-titlebar`
+ *           - Desktop 64px / padding 0 24px / title 20px
+ *           - Compact 56px / padding 0 16px / title 18px
+ *           - sticky + glass blur 14px + hairline border-bottom
  *
- * CSS：reuse 既有 `.tp-page-header` sticky / glass / hairline 樣式（tokens.css），
- *      加 `data-titlebar="true"` 屬性供未來 TitleBar-only override 用。
+ * CSS：使用 dedicated `.tp-titlebar` class（不 reuse `.tp-page-header`，因為 V2
+ *      Terracotta 的 64px 與字級 20px 跟 PageHeader 既有 56px / 17px 不同）。
  */
 import type { ReactNode } from 'react';
 import Icon from '../shared/Icon';
@@ -28,26 +30,19 @@ export interface TitleBarProps {
 
 export default function TitleBar({ title, back, actions, backLabel = '返回' }: TitleBarProps) {
   return (
-    <header
-      className="tp-page-header"
-      data-titlebar="true"
-      data-variant="sticky"
-      data-align="left"
-    >
+    <header className="tp-titlebar" data-titlebar="true">
       {back && (
         <button
           type="button"
-          className="tp-page-header-back"
+          className="tp-titlebar-back"
           onClick={back}
           aria-label={backLabel}
         >
           <Icon name="arrow-left" />
         </button>
       )}
-      <div className="tp-page-header-text">
-        <h1 className="tp-page-header-h1">{title}</h1>
-      </div>
-      {actions && <div className="tp-page-header-actions">{actions}</div>}
+      <h1 className="tp-titlebar-title">{title}</h1>
+      {actions && <div className="tp-titlebar-actions">{actions}</div>}
     </header>
   );
 }

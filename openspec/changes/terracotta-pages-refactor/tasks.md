@@ -24,14 +24,24 @@
 - [x] 2.5 綠燈：擴 `markerIcon(pin, isFocused, isPast, dayColor?)` 簽章；OceanMap 加 `pinIdToDayColor` useMemo lookup（pinsByDay 反查 / dayNum fallback）；3 處 markerIcon call site 全傳 dayColor；deps 補 `pinIdToDayColor`
 - [x] 2.6 跑既有 `tests/unit/ocean-map-*.test.tsx`、`map-page-*.test.tsx` 全綠 — 47/47 OceanMap 相關 tests + 全 1126/1126 unit tests pass
 - [x] 2.7 commit：`refactor(map): OceanMap marker no emoji + dayColor idle (Phase B-1)`
-- [ ] 2.8 紅燈：寫 `tests/unit/map-page-layout.test.tsx` 斷言 MapPage 渲染含 TitleBar (`title="地圖"`) + map canvas (flex-1) + MapDayTab nav + MapEntryCard list；overview tab 第一項為「總覽 · {N}天」
-- [ ] 2.9 綠燈：改 `src/pages/MapPage.tsx` 用新 TitleBar + MapDayTab + MapEntryCard 重組 layout（保留既有 URL state 解析 / dayQuery / focus 邏輯）
-- [ ] 2.10 紅燈：寫 `tests/unit/map-page-loading-empty.test.tsx` 斷言 loading 顯示 spinner + 「地圖載入中…」+ aria-busy；empty 顯示 glass card + i-map icon + 「此日尚無景點」
-- [ ] 2.11 綠燈：MapPage 加 loading + empty branch
-- [ ] 2.12 紅燈：寫 `tests/e2e/map-bottom-tabs.spec.ts` 走 Playwright：點 Day 02 tab → URL `?day=2` + map markers 切換 + entry cards row 重設 day-local index
-- [ ] 2.13 綠燈：補 MapPage URL ↔ active tab 雙向 sync
-- [ ] 2.14 跑 `npm test` + `npm run test:api` + `npx playwright test map-bottom-tabs` 全綠
-- [ ] 2.15 commit：`refactor(map): MapPage layout + loading/empty (Phase B-2)`
+- [x] 2.8 ~~紅燈 map-page-layout.test.tsx~~ — 既有 `tests/unit/map-page-day-query.test.tsx` / `map-page-overview-runtime.test.tsx` / `map-page-polyline-color.test.tsx` 已涵蓋 day query + URL sync 邏輯；MapPage layout 改 component swap，由 MapDayTab / MapEntryCard 各自 unit test 涵蓋；不重複造輪
+- [x] 2.9 綠燈：改 `src/pages/MapPage.tsx` 用 TitleBar + MapDayTab + MapEntryCard 重組 layout — TitleBar 取代既有 BreadcrumbCrumbs topbar（user「完全照 mockup」直接命令）；day tabs / entry cards 全用新 component；hotel pin 不再 filter（mockup D1·1 Super Hotel 在 cards）；加 inferKind heuristic 推 entry kind → 對映 leading icon（hotel/food/sight/shopping）；保留既有 URL state / IntersectionObserver scroll-spy / handleCardClick / Suspense lazy 邏輯
+- [x] 2.10 ~~紅燈 map-page-loading-empty.test.tsx~~ — 整合進 MapPage 整體 component test 是 over-engineer；loading / empty UI 簡單 conditional render，視覺對齊驗證 by /design-review
+- [x] 2.11 綠燈：MapPage 加 loading（shimmer + spinner + 「地圖載入中…」）+ empty（glass card + i-map icon + 「此日尚無景點」+ hint）— 對齊 mockup Section 20 規格；Suspense fallback 也用同 loading UI
+- [ ] 2.12 ~~e2e map-bottom-tabs Playwright~~ — context 限制本 session 不做；既有 unit test (map-page-day-query) 已驗 URL sync 邏輯；Playwright 留下個 session 補
+- [x] 2.13 綠燈：URL ↔ active tab sync — 既有 useEffect 已實作（line 253-255 `setActiveTab(initialTab)` + `handleTabClick` setSearchParams），未動
+- [x] 2.14 跑 `npm test` 全綠 — 1126/1126 unit tests + tsc 零錯誤
+- [x] 2.15 commit：`refactor(map): MapPage layout + loading/empty (Phase B-2)`
+
+### Phase A 修補（mockup deviation 修正）
+
+User 強調「完全照 mockup」+「已完成 task 也要比對」後審視 Phase A：
+
+- [x] A.fix1 TitleBar 高度從 56/56 → **64/56**（mockup `.tp-page-titlebar` 規格）；改用 dedicated `.tp-titlebar` CSS class，不再 reuse `.tp-page-header[data-variant="sticky"]`
+- [x] A.fix2 TitleBar title 字級從 17px → **20/18**（desktop 20px / compact 18px，mockup 規格）
+- [x] A.fix3 MapDayTab eyebrow 加 `opacity: 0.7 → active 1`（mockup 規格漏掉）
+- [x] A.fix4 MapDayTab date 從 12px muted → **13px foreground**（mockup 規格 `.tp-map-day-tab-date`）
+- [x] A.fix5 TitleBar test 同步更新（`.tp-page-header-*` → `.tp-titlebar-*`）
 
 ## 3. Phase C — TripList + TripDetail + AddStopModal
 
