@@ -317,7 +317,12 @@ const SCOPED_STYLES = `
   min-height: 44px;
   flex-shrink: 0;
 }
-.tp-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-chat-send:disabled {
+  background: var(--color-secondary);
+  color: var(--color-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .tp-chat-send:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
 `;
 
