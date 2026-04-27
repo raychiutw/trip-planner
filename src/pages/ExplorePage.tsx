@@ -91,7 +91,7 @@ const SCOPED_STYLES = `
 }
 .explore-tab .tab-count {
   font-size: var(--font-size-caption2); font-weight: 700;
-  padding: 1px 6px; border-radius: 999px;
+  padding: 1px 6px; border-radius: var(--radius-full);
   background: rgba(0,0,0,0.08);
 }
 .explore-tab[aria-selected="true"] .tab-count {
