@@ -187,3 +187,173 @@ describe('POST /api/oauth/signup', () => {
     expect(inserts.length).toBe(1); // single ipKey bucket (no per-email for signup)
   });
 });
+
+/**
+ * V2 共編邀請：signup with invitationToken — 註冊成功後自動接受邀請（若 token valid +
+ * email match）。失敗（過期 / mismatch）不擋 signup，response 含 invitationError。
+ */
+describe('POST /api/oauth/signup with invitationToken', () => {
+  const TEST_SECRET = 'session-secret-test-32-chars-long';
+
+  it('happy path: 201 + joinedTrip + INSERT trip_permissions + UPDATE invitation accepted', async () => {
+    let permissionInsertSeen = false;
+    let invitationUpdateSeen = false;
+
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
+      if (sql.includes('INSERT INTO users')) return makeStmt();
+      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
+      if (sql.includes('FROM trip_invitations')) {
+        return makeStmt({
+          trip_id: 'trip-1',
+          invited_email: 'newperson@x.com',
+          expires_at: '2026-05-04T00:00:00Z',
+          accepted_at: null,
+        });
+      }
+      if (sql.includes('SELECT title FROM trips')) {
+        return makeStmt({ title: '沖繩 5 日' });
+      }
+      if (sql.includes('INSERT OR IGNORE INTO trip_permissions')) {
+        permissionInsertSeen = true;
+        return makeStmt();
+      }
+      if (sql.includes('UPDATE trip_invitations')) {
+        invitationUpdateSeen = true;
+        return makeStmt();
+      }
+      return makeStmt();
+    });
+    const dbBatch = vi.fn().mockResolvedValue([{ meta: { changes: 1 } }, { meta: { changes: 1 } }]);
+    const env: MockEnv = {
+      SESSION_SECRET: TEST_SECRET,
+      DB: { prepare: dbPrepare, batch: dbBatch } as unknown as MockEnv['DB'],
+    };
+    const res = await onRequestPost(makeContext({
+      email: 'newperson@x.com',
+      password: 'longenough',
+      invitationToken: 'raw-invite-token',
+    }, env));
+
+    expect(res.status).toBe(201);
+    const json = await res.json() as {
+      ok: boolean;
+      joinedTrip: { id: string; title: string } | null;
+      invitationError: string | null;
+    };
+    expect(json.joinedTrip).toEqual({ id: 'trip-1', title: '沖繩 5 日' });
+    expect(json.invitationError).toBeNull();
+    expect(permissionInsertSeen).toBe(true);
+    expect(invitationUpdateSeen).toBe(true);
+  });
+
+  it('expired invitation: 201 signup success + invitationError=INVITATION_EXPIRED + joinedTrip=null', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
+      if (sql.includes('INSERT INTO users')) return makeStmt();
+      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
+      if (sql.includes('FROM trip_invitations')) {
+        return makeStmt({
+          trip_id: 'trip-1',
+          invited_email: 'newperson@x.com',
+          expires_at: '2026-04-20T00:00:00Z', // expired
+          accepted_at: null,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      email: 'newperson@x.com',
+      password: 'longenough',
+      invitationToken: 'expired-token',
+    }, env));
+
+    expect(res.status).toBe(201);
+    const json = await res.json() as {
+      joinedTrip: unknown;
+      invitationError: string;
+    };
+    expect(json.joinedTrip).toBeNull();
+    expect(json.invitationError).toBe('INVITATION_EXPIRED');
+  });
+
+  it('email mismatch: 201 signup success + invitationError=INVITATION_EMAIL_MISMATCH + joinedTrip=null', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
+      if (sql.includes('INSERT INTO users')) return makeStmt();
+      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
+      if (sql.includes('FROM trip_invitations')) {
+        return makeStmt({
+          trip_id: 'trip-1',
+          invited_email: 'someone-else@x.com', // different
+          expires_at: '2026-05-04T00:00:00Z',
+          accepted_at: null,
+        });
+      }
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      email: 'newperson@x.com',
+      password: 'longenough',
+      invitationToken: 'wrong-email-token',
+    }, env));
+
+    expect(res.status).toBe(201);
+    const json = await res.json() as { invitationError: string; joinedTrip: unknown };
+    expect(json.invitationError).toBe('INVITATION_EMAIL_MISMATCH');
+    expect(json.joinedTrip).toBeNull();
+  });
+
+  it('invalid token: 201 signup success + invitationError=INVITATION_INVALID', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
+      if (sql.includes('INSERT INTO users')) return makeStmt();
+      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
+      if (sql.includes('FROM trip_invitations')) return makeStmt(null);
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      email: 'newperson@x.com',
+      password: 'longenough',
+      invitationToken: 'bogus',
+    }, env));
+
+    expect(res.status).toBe(201);
+    const json = await res.json() as { invitationError: string };
+    expect(json.invitationError).toBe('INVITATION_INVALID');
+  });
+
+  it('no invitationToken: backward compat — joinedTrip + invitationError both null/undefined', async () => {
+    const dbPrepare = vi.fn().mockImplementation((sql: string) => {
+      if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null);
+      if (sql.includes('SELECT id FROM users')) return makeStmt(null);
+      if (sql.includes('INSERT INTO users')) return makeStmt();
+      if (sql.includes('INSERT INTO auth_identities')) return makeStmt();
+      return makeStmt();
+    });
+    const env: MockEnv = { SESSION_SECRET: TEST_SECRET, DB: { prepare: dbPrepare } };
+    const res = await onRequestPost(makeContext({
+      email: 'newperson@x.com',
+      password: 'longenough',
+    }, env));
+
+    expect(res.status).toBe(201);
+    const json = await res.json() as { joinedTrip: unknown; invitationError: unknown };
+    // both nullish OK
+    expect(json.joinedTrip ?? null).toBeNull();
+    expect(json.invitationError ?? null).toBeNull();
+
+    // Did NOT touch trip_invitations
+    const inviteCall = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('FROM trip_invitations'),
+    );
+    expect(inviteCall).toBeFalsy();
+  });
+});
