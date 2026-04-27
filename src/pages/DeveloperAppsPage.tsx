@@ -20,6 +20,7 @@ import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import PageHeader from '../components/shell/PageHeader';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import InlineError from '../components/shared/InlineError';
 
@@ -30,25 +31,7 @@ const SCOPED_STYLES = `
 }
 .tp-dev-inner { max-width: 920px; margin: 0 auto; }
 
-.tp-page-heading {
-  display: flex; align-items: flex-end;
-  justify-content: space-between; gap: 16px;
-  margin-bottom: 24px; flex-wrap: wrap;
-}
-.tp-page-heading-text { flex: 1 1 auto; }
-.tp-page-heading-crumb {
-  font-size: var(--font-size-eyebrow); font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--color-muted); margin-bottom: 8px;
-}
-.tp-page-heading h1 {
-  font-size: var(--font-size-title); font-weight: 800;
-  letter-spacing: -0.02em; margin: 0 0 6px;
-}
-.tp-page-heading p {
-  color: var(--color-muted); font-size: var(--font-size-subheadline);
-  margin: 0;
-}
+/* page heading 改用統一的 <PageHeader>（src/components/shell/PageHeader.tsx），舊 .tp-page-heading 已退役 */
 
 .tp-list-table {
   background: var(--color-background);
@@ -406,24 +389,24 @@ export default function DeveloperAppsPage() {
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">
       <div className="tp-dev-inner">
-        <div className="tp-page-heading">
-          <div className="tp-page-heading-text">
-            <div className="tp-page-heading-crumb">開發者後台</div>
-            <h1>應用</h1>
-            <p>管理你的 OAuth client。每個 app 對應一組 client_id。</p>
-          </div>
-          <button
-            className="tp-btn tp-btn-primary tp-btn-lg"
-            onClick={() => setCreating(true)}
-            data-testid="dev-apps-new"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            建立新應用
-          </button>
-        </div>
+        <PageHeader
+          eyebrow="開發者後台"
+          title="應用"
+          meta="管理你的 OAuth client。每個 app 對應一組 client_id。"
+          actions={
+            <button
+              className="tp-btn tp-btn-primary tp-btn-lg"
+              onClick={() => setCreating(true)}
+              data-testid="dev-apps-new"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              建立新應用
+            </button>
+          }
+        />
 
         {error && <ErrorBanner message={error} testId="dev-apps-error" />}
 

@@ -23,6 +23,7 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import PageHeader from '../components/shell/PageHeader';
 
 interface PoiSearchResult {
   osm_id: number;
@@ -64,11 +65,7 @@ const SCOPED_STYLES = `
 }
 @media (max-width: 760px) { .explore-wrap { padding: 16px 16px 32px; gap: 16px; } }
 
-.explore-header h1 {
-  font-size: var(--font-size-title); font-weight: 800;
-  letter-spacing: -0.02em; margin-bottom: 6px;
-}
-.explore-header p { color: var(--color-muted); font-size: var(--font-size-callout); }
+/* explore-header 改用統一 <PageHeader>。.explore-header CSS 已退役。 */
 
 /* Tab bar — segmented switch between 搜尋 / 儲存池 */
 .explore-tabs {
@@ -450,10 +447,10 @@ export default function ExplorePage() {
       <style>{SCOPED_STYLES}</style>
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />
-        <header className="explore-header">
-          <h1>探索</h1>
-          <p>搜尋 POI、儲存到池裡，再一鍵把選中的點丟進你的行程。</p>
-        </header>
+        <PageHeader
+          title="探索"
+          meta="搜尋 POI、儲存到池裡，再一鍵把選中的點丟進你的行程。"
+        />
 
         <div className="explore-tabs" role="tablist" aria-label="探索分頁">
           <button

@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import PageHeader from '../components/shell/PageHeader';
 import ErrorBanner from '../components/shared/ErrorBanner';
 
 const SCOPED_STYLES = `
@@ -22,20 +23,7 @@ const SCOPED_STYLES = `
 .tp-settings-inner {
   max-width: 720px; margin: 0 auto;
 }
-.tp-page-heading { margin-bottom: 24px; }
-.tp-page-heading-crumb {
-  font-size: var(--font-size-eyebrow); font-weight: 700;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--color-muted); margin-bottom: 8px;
-}
-.tp-page-heading h1 {
-  font-size: var(--font-size-title); font-weight: 800;
-  letter-spacing: -0.02em; margin: 0 0 6px;
-}
-.tp-page-heading p {
-  color: var(--color-muted); font-size: var(--font-size-subheadline);
-  margin: 0;
-}
+/* page heading 改用統一的 <PageHeader>（src/components/shell/PageHeader.tsx），舊 .tp-page-heading 已退役 */
 
 .tp-section {
   background: var(--color-background);
@@ -261,11 +249,11 @@ export default function ConnectedAppsPage() {
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">
       <div className="tp-settings-inner">
-        <div className="tp-page-heading">
-          <div className="tp-page-heading-crumb">設定</div>
-          <h1>已連結的應用</h1>
-          <p>這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。</p>
-        </div>
+        <PageHeader
+          eyebrow="設定"
+          title="已連結的應用"
+          meta="這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。"
+        />
 
         {error && <ErrorBanner message={error} testId="connected-apps-error" />}
 
