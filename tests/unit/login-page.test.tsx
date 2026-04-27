@@ -207,3 +207,94 @@ describe('LoginPage lockout', () => {
     expect(link.getAttribute('href')).toBe('/login/forgot');
   });
 });
+
+describe('LoginPage with ?invitation=token (V2 共編)', () => {
+  /** Mock fetch by URL (public-config probe + login + accept all go through fetch) */
+  function stubByRoute(routes: Array<{ match: RegExp; status: number; body: unknown }>) {
+    const fn = vi.fn().mockImplementation((input: RequestInfo) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      const route = routes.find((r) => r.match.test(url));
+      if (!route) return Promise.resolve(new Response('Not Found', { status: 404 }));
+      return Promise.resolve(new Response(JSON.stringify(route.body), {
+        status: route.status,
+        headers: { 'content-type': 'application/json' },
+      }));
+    });
+    vi.stubGlobal('fetch', fn);
+    return fn;
+  }
+
+  it('after login success, accept invitation + window.location.href redirect to trip', async () => {
+    const fetchMock = stubByRoute([
+      { match: /\/api\/public-config/, status: 200, body: {} },
+      { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
+      { match: /\/api\/invitations\/accept/, status: 200, body: { ok: true, tripId: 'trip-1', tripTitle: '沖繩' } },
+    ]);
+    vi.useRealTimers();
+
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, href: 'about:blank', assign: vi.fn() },
+      writable: true,
+    });
+
+    renderAt('invitation=invite-tok');
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'u@x.com' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'goodpass' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => {
+      const acceptCall = fetchMock.mock.calls.find(
+        (c) => typeof c[0] === 'string' && (c[0] as string).includes('/api/invitations/accept'),
+      );
+      expect(acceptCall).toBeTruthy();
+    });
+    const acceptCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/api/invitations/accept'),
+    )!;
+    const init = acceptCall[1] as RequestInit;
+    const body = JSON.parse(init.body as string) as { token: string };
+    expect(body.token).toBe('invite-tok');
+
+    await waitFor(() => expect(window.location.href).toContain('/trips?selected=trip-1'));
+  });
+
+  it('without ?invitation: navigates to /trips (default behavior unchanged)', async () => {
+    const fetchMock = stubByRoute([
+      { match: /\/api\/public-config/, status: 200, body: {} },
+      { match: /\/api\/oauth\/login/, status: 200, body: { ok: true } },
+    ]);
+    vi.useRealTimers();
+
+    renderAt();
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'u@x.com' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'goodpass' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips'));
+    const acceptCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/api/invitations/accept'),
+    );
+    expect(acceptCall).toBeFalsy();
+  });
+
+  it('login OK but accept fails: still redirects to /trips with toast hint (graceful)', async () => {
+    stubByRoute([
+      { match: /\/api\/public-config/, status: 200, body: {} },
+      { match: /\/api\/oauth\/login(?!\/google)/, status: 200, body: { ok: true } },
+      { match: /\/api\/invitations\/accept/, status: 410, body: { error: { code: 'INVITATION_EXPIRED', message: '已過期' } } },
+    ]);
+    vi.useRealTimers();
+
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, href: 'about:blank' },
+      writable: true,
+    });
+
+    renderAt('invitation=expired-tok');
+    fireEvent.change(screen.getByTestId('login-email'), { target: { value: 'u@x.com' } });
+    fireEvent.change(screen.getByTestId('login-password'), { target: { value: 'goodpass' } });
+    fireEvent.click(screen.getByTestId('login-submit'));
+
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/trips'));
+  });
+});

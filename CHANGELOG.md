@@ -3,6 +3,49 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.14.30] - 2026-04-27
+
+**V2 共編分享信完整實作 — invitation token 系統 + 4 endpoint + InvitePage**。
+
+行程擁有者現在可以邀請任何 email 共編行程：對方收到含一次性 token 的 invitation 信，
+點 link 後依是否已註冊走「登入並加入」或「註冊並加入」流程，user.email 必須 match
+invitation 才能 accept（防 phishing token forwarding）。CollabSheet 新增「待接受邀請」
+section 顯示 pending list + 撤銷按鈕。
+
+### Added
+- **新表 `trip_invitations`**（migration 0040）— token_hash PK（HMAC-SHA256 of raw token，不存 raw）+ trip_id/invited_by FK + 7 天 expires_at + accepted_at/by lifecycle 欄位。
+- **Migration 0041 schema 強化** — partial UNIQUE INDEX `(trip_id, invited_email) WHERE accepted_at IS NULL` 防同 (trip,email) 累積無限 pending；invited_by `ON DELETE SET NULL` 保留邀請者刪除後的 audit trail。
+- **Email template `tripInvitation`** — 兩個分支文案（已註冊「登入並加入」/ 未註冊「註冊並加入」）+ 7 天 TTL 提示 + anti-phish footer 顯示 inviterEmail。
+- **Endpoints**：`GET /api/invitations?token=xxx`（公開預覽）/ `?tripId=xxx`（owner 列 pending）/ `POST /api/invitations/accept` / `POST /api/invitations/revoke`。
+- **InvitePage**（`/invite?token=xxx`）— 4 種 UI state：loading / error 含「請聯絡邀請者重寄」/ logged-in match → 接受按鈕 / mismatch → 顯示「此邀請不屬於你」/ anonymous → 兩個 CTA（註冊 + 登入）。
+- **LoginPage / SignupPage 接 `?invitation=xxx`** — 登入/註冊成功後自動 accept invitation → redirect `/trips?selected=:tripId`。
+- **CollabSheet「待接受邀請」 section** — 顯示 invitedEmail + 剩餘天數 / 已過期 badge + 「撤銷」按鈕。
+- **`tryAcceptInvitation` 共用 helper** — 被 `/accept` endpoint 與 signup 共用，atomic batch INSERT trip_permissions + UPDATE accepted_at（含 race guard `WHERE accepted_at IS NULL`）。
+
+### Changed
+- **`POST /api/permissions` 兩條分支**：邀請 email 已註冊 → INSERT trip_permissions + 寄通知信；未註冊 → 產 invitation token + INSERT trip_invitations + 寄含 signup link 的邀請信。Email best-effort（失敗不擋業務流程）。
+- **`POST /api/oauth/signup` 接 `invitationToken`** — 註冊成功後自動 accept invitation；失敗 graceful（response 含 `invitationError` 但 signup 仍成功）。
+
+### Removed
+- **`permissions.ts` Cloudflare Access 死代碼**（V2-P6 cutover 後 CF Access 已拆，~70 行 `addEmailToAccessPolicy` 等函式移除，DELETE handler 同步清理）。
+
+### Fixed
+- **/review specialist findings** — race condition guard（accept UPDATE 加 `accepted_at IS NULL` WHERE）/ role enum validation（`POST /permissions` 拒非 member|admin）/ CollabSheet 409 toast 改讀 server message（區分「已有權限」vs「pending 邀請」）/ revoke endpoint error code 改 `INVITATION_*` namespace。
+- **/simplify findings** — 抽 `sendInvitationEmailBestEffort` helper 去 25 行 copy-paste / GET pending 加 `LIMIT 100` 防大 payload / `SELECT *` 改指定欄位。
+
+### Tests
+- 新增 ~70 test cases（migration schema × 2、template、4 endpoint × ~10、InvitePage、Login/Signup invitation、CollabSheet pending）。
+- 1080 unit + 582 API test 全綠。
+
+### Security
+- HMAC-SHA256 token（256-bit entropy）+ DB 存 hash 不存 raw → DB dump 無法反查 token。
+- Email match check 防 token 轉寄（user.email !== invited_email → 403）。
+- partial UNIQUE 防同 (trip,email) pending 累積。
+- Audit log on accept / revoke / permission_added / invitation_sent。
+- `/cso --diff` 通過 8/10 confidence gate，無 critical findings。
+
+verify gate: tsc clean / 1662 tests pass / /simplify + /tp-code-verify + /review (5 specialists) + /cso --diff 全過。
+
 ## [2.14.29] - 2026-04-27
 
 **PR-VV: mobile bottom-nav scroll-direction-aware auto-hide（QA round 28）**。

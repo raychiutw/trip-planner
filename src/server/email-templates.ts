@@ -111,6 +111,46 @@ export function passwordReset(resetUrl: string, displayName?: string | null): Em
   };
 }
 
+export interface TripInvitationParams {
+  /** Invite URL，已含 raw token query string */
+  inviteUrl: string;
+  /** 邀請者顯示名稱，null 時 fallback 用 inviterEmail */
+  inviterDisplayName: string | null;
+  /** 邀請者 email — 顯示在 anti-phish footer 讓收件者驗證熟識 */
+  inviterEmail: string;
+  /** 行程標題 */
+  tripTitle: string;
+  /** 收件者是否已有 tripline 帳號 — 影響 CTA 文案（登入並加入 vs 註冊並加入） */
+  isExistingUser: boolean;
+}
+
+export function tripInvitation(params: TripInvitationParams): EmailTemplate {
+  const inviterLabel = params.inviterDisplayName?.trim() || params.inviterEmail;
+  const ctaLabel = params.isExistingUser ? '登入並加入' : '註冊並加入';
+  const introVerb = params.isExistingUser ? '登入後即可開始共編。' : '註冊帳號後即可開始共編。';
+
+  return {
+    subject: `${inviterLabel} 邀請你加入「${params.tripTitle}」行程`,
+    html: shellHtml(`
+<div style="background:#fff; border:1px solid #EADFCF; border-radius:14px; padding:32px;">
+  <p style="margin:0 0 8px; font-size:13px; letter-spacing:0.18em; text-transform:uppercase; color:${MUTED_COLOR}; font-weight:700;">行程邀請</p>
+  <h2 style="margin:0 0 16px; font-size:22px; font-weight:800; line-height:1.4;">${escapeHtml(inviterLabel)} 邀請你加入<br>「${escapeHtml(params.tripTitle)}」</h2>
+  <p style="margin:0 0 16px; font-size:15px;">你被邀請成為此行程的共編成員。${introVerb}</p>
+  ${ctaButton(params.inviteUrl, ctaLabel)}
+  <p style="margin:0 0 8px; font-size:13px; color:${MUTED_COLOR};">或複製以下連結到瀏覽器：</p>
+  <p style="margin:0 0 16px; font-size:12px; color:${MUTED_COLOR}; word-break:break-all;"><a href="${escapeHtml(params.inviteUrl)}" style="color:${BRAND_DEEP}; text-decoration:none;">${escapeHtml(params.inviteUrl)}</a></p>
+  <p style="margin:0 0 8px; font-size:13px; color:${MUTED_COLOR};">小提醒：</p>
+  <ul style="margin:0; padding-left:20px; font-size:12px; color:${MUTED_COLOR};">
+    <li>此邀請 7 天內有效</li>
+    <li>邀請只能由 <strong style="color:${TEXT_COLOR};">${escapeHtml(params.inviterEmail)}</strong> 發出 — 若不認識此人，請直接忽略此信件</li>
+    <li>接受後，你會在自己的行程列表看到此行程</li>
+  </ul>
+</div>
+`),
+    text: `${inviterLabel} 邀請你加入「${params.tripTitle}」行程\n\n你被邀請成為此行程的共編成員。${params.isExistingUser ? '請點擊以下連結登入並加入：' : '請點擊以下連結註冊帳號並加入：'}\n${params.inviteUrl}\n\n· 此邀請 7 天內有效\n· 邀請來自 ${params.inviterEmail}，若不認識請忽略\n\n— Tripline`,
+  };
+}
+
 export function passwordChangedConfirm(displayName?: string | null): EmailTemplate {
   return {
     subject: 'Tripline 密碼已更改',

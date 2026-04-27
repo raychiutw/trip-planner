@@ -1,15 +1,15 @@
 /**
- * LoginPage — V2 sign-in UI（local password + Google OIDC + CF Access fallback）
+ * LoginPage — V2 sign-in UI（local password + Google OIDC）
  *
  * Flow:
  *   - Primary: email + password form → POST /api/oauth/login → navigate redirect_after
  *   - Alt: 「使用 Google 登入」→ /api/oauth/login/google
- *   - Fallback: CF Access link
  *
  * Query params handled:
  *   ?verified=1 → "Email 驗證成功" toast
  *   ?verify_error=expired → 警示 banner
  *   ?redirect_after=/path → 成功登入後 navigate 此 path（已 sanitize 內部 path only）
+ *   ?invitation=token → 登入成功後自動 POST /api/invitations/accept → redirect 該 trip
  */
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -266,6 +266,8 @@ export default function LoginPage() {
   const verified = params.get('verified') === '1';
   const verifyError = params.get('verify_error');
   const redirectAfter = sanitizeRedirectAfter(params.get('redirect_after'));
+  /** V2 共編：登入完成後接受邀請 + 導頁到該 trip。失敗 graceful → 走 default redirect。 */
+  const invitationToken = params.get('invitation');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -327,6 +329,25 @@ export default function LoginPage() {
       });
       if (res.ok) {
         clearFailure();
+        // V2 共編：若有 invitation token，嘗試接受 → 成功則導到該 trip
+        if (invitationToken) {
+          try {
+            const acceptRes = await fetch('/api/invitations/accept', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ token: invitationToken }),
+            });
+            if (acceptRes.ok) {
+              const data = (await acceptRes.json()) as { tripId: string };
+              window.location.href = `/trips?selected=${encodeURIComponent(data.tripId)}`;
+              return;
+            }
+            // accept failed → fall through to default redirect (使用者體驗：仍登入成功)
+          } catch {
+            // network error → fall through
+          }
+        }
         navigate(redirectAfter ?? '/trips');
         return;
       }
