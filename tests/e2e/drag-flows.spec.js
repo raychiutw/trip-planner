@@ -44,10 +44,13 @@ test.describe('Drag flows — Section 8.1 reorder & cross-day', () => {
     await page.goto(`/trips?selected=${TRIP_ID}`);
     await expect(page.getByRole('heading', { name: /2026 沖繩自駕五日遊/ })).toBeVisible();
 
+    // Auto-wait grip rendering — TimelineRail 在 DaySection 內 lazy hydrate，
+    // CI runner 比 local 慢一拍時 sync count() 會拿到 0。先 auto-wait first
+    // visible，再數 count（同 layout-quality.spec.js pattern）。
     const grips = page.getByRole('button', { name: /拖拉排序/ });
+    await expect(grips.first()).toBeVisible();
     const count = await grips.count();
     expect(count).toBeGreaterThan(0);
-    // 第一個 grip 必有 aria-label 含 entry title — screen reader 可區分
     const firstLabel = await grips.first().getAttribute('aria-label');
     expect(firstLabel).toContain('拖拉排序');
   });
