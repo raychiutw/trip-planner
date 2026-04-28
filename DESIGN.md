@@ -50,7 +50,7 @@
 | `card-title` | 17px / 24px | 16px / 24px | 700 | 卡片標題、stop name |
 | `body` | 16px / 26px | 16px / 26px | 400 | 主要中文內文 |
 | `support` | 14px / 22px | 14px / 22px | 400 | 輔助文字、描述、提示 |
-| `footnote` | 13px / 18px | 13px / 18px | 400 | 介於 body 與 label 之間（chat preview / list meta / micro UI），對齊 `--font-size-footnote`（tokens.css 0.8125rem） |
+| `footnote` / `support` | 14px / 22px | 14px / 22px | 400 | 介於 body 與 label 之間（chat preview / list meta / micro UI），對齊 `--font-size-footnote`（tokens.css 0.875rem） |
 | `label` | 12px / 16px | 12px / 16px | 600 | 表單 label、metadata、chip label |
 | `sidebar-item` | 14px / 20px | n/a | 600 | Desktop sidebar nav |
 | `bottom-nav-label` | n/a | 11px / 14px | 700 | Compact bottom nav label |

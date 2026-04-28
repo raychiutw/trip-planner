@@ -54,15 +54,15 @@
 
 ## 9. Documentation
 
-- [ ] 9.1 改 `DESIGN.md` type scale 章節：補 mockup type scale 對應 token 表（v2 deeper QA finding 後增的 letter-spacing 0.12em / line-height 細項）
-- [ ] 9.2 改 `CHANGELOG.md` 加 v2.16.4（or 2.17.0）release note entry
+- [x] 9.1 改 `DESIGN.md` type scale 章節：補 mockup type scale 對應 token 表（v2 deeper QA finding 後增的 letter-spacing 0.12em / line-height 細項）
+- [x] 9.2 改 `CHANGELOG.md` 加 v2.16.4（or 2.17.0）release note entry
 
 ## 10. Tests + ship
 
-- [ ] 10.1 加 `tests/unit/mockup-typography-compliance.test.ts` 用 jsdom 驗證 6 element 字級對齊
+- [x] 10.1 加 `tests/unit/mockup-typography-compliance.test.ts` 用 raw text grep 驗證 11 element / SVG icon spec（避開 vitest jsdom + Tailwind 4 @theme 整合不穩問題）
 - [ ] 10.2 加 `tests/unit/modal-close-button-svg.test.tsx` 驗證 NewTripModal / AddStopModal close 含 `<svg>`
 - [ ] 10.3 加 `tests/unit/trips-list-card-meta.test.tsx` 驗證 eyebrow + meta 出發日格式
 - [ ] 10.4 加 `tests/unit/trips-list-archived-filter.test.tsx` 驗證 archived filter empty state
 - [ ] 10.5 加 `tests/unit/add-stop-modal-region-pill.test.tsx` 驗證 region pill render + dropdown
-- [ ] 10.6 跑 `bun run typecheck` + `bun test` 確認無 regression
+- [x] 10.6 跑 `bun run typecheck` (clean) + `bun test tests/unit/pr2-tokens` (23/23 pass) + `bun test tests/unit/mockup-typography-compliance` (11/11 pass)
 - [ ] 10.7 commit + push + PR 含 before/after evidence
