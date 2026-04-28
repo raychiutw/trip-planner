@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.0] - 2026-04-29
+
+**Mockup parity QA followup**：v2 deeper QA 用 `getComputedStyle()` 進實際 DOM 量字級，找到 30 個 finding。修 6 個 capability 共 typography token / SVG icon discipline / map entry-cards desktop visibility / AddStopModal region-filter / TripsList camelCase + 出發日 + 已歸檔 / mobile bottom nav label 字級。
+
+### Changed
+
+- **Typography 全站對齊 mockup `terracotta-preview-v2.html` 規範**：`--font-size-body` 17→16、`--font-size-footnote` 13→14；`.tp-titlebar-title` desktop 24→20、compact 22→18；`.ocean-hero-title` ≥961 32→28、≤960 28→24、base 28→24；`.tp-trip-card-eyebrow` 11→10 + letter-spacing 0.18→0.12em；`.tp-trip-card-title` 17→16 + line-height 1.35 + 2-line clamp；NewTripModal h2 + AddStopModal title font-weight 800→700；mobile bottom nav label weight 500→700 + 鎖 line-height 14
+- **TripsListPage trip card meta 加出發日**「{owner} · 7/2 出發」格式（mockup section 16:6906-6909）
+- **TripsListPage 加「已歸檔」第 4 顆 filter tab** + empty state「目前沒有已歸檔行程」+「回到全部」reset button（mockup section 16:6890-6894；archived_at schema migration 為 follow-up）
+- **AddStopModal「搜尋」tab body 加 region selector chip**（hardcode 5 region：沖繩 / 東京 / 京都 / 首爾 / 台南 + 全部地區）+ filter button + filter sheet placeholder（mockup section 14:6452 / 14:6460）
+- **AddStopModal day meta 改全大寫**「DAY 01 · 7/29（三）」格式（mockup section 14:6442）
+- **AddStopModal footer counter 改一律顯示**「已選 N 個 · 將加入 ...」即使 N=0（mockup section 14:6518）
+- **/map page entry cards horizontal scroll desktop 也 visible** — 拿掉 `.tp-global-map-mobile-stack` 的 `@media (max-width: 1023px)` gate；加 `.tp-map-entry-stack/cards/card` class alias 對齊 mockup naming
+- **/map page「全覽 / 我的位置」chips 從 top-left 移到 right-bottom FAB 位置** — mockup 規範「不用 floating top day strip」
+
+### Fixed
+
+- **TripInfo interface stale snake_case bug** — API 透過 `functions/api/_utils.ts` 的 `deepCamel()` 把 SQL `day_count`/`start_date`/`member_count` 轉 camelCase，舊 interface 用 snake_case 導致 runtime 永遠 undefined → trip card eyebrow 缺「· N 天」、meta 缺日期。改 camelCase 對齊實際 response。
+- **NewTripModal close button 違反 CLAUDE.md icon 規範** — `.tp-new-form-close` 內部從 UTF-8「✕」字元改 `<Icon name="x-mark" />` SVG sprite reference
+
+### Added
+
+- **Icon registry 補 4 個 icon** — `chevron-down` / `chevron-up` / `filter`（Material funnel）/ `target`（compass-rose）
+
+### OpenSpec
+
+- `openspec/changes/mockup-parity-qa-fixes/` — 6 capability proposal + design + tasks + specs（3 new + 3 modified）
+- `.gstack/qa-reports/qa-report-trip-planner-dby-pages-dev-2026-04-28.md` — v2 deeper QA report 含 30 finding + severity matrix + sprint plan
+
 ## [2.16.3] - 2026-04-28
 
 **修加景點不自動更新行程 + 清掉 InlineAddPoi dead code**。User 報告：手動加景點後 timeline 沒自動更新（screenshot 顯示舊 InlineAddPoi UI）。

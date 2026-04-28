@@ -173,13 +173,17 @@ const SCOPED_STYLES = `
  * Desktop trip switcher 在 top: 16px 約 50px 高，pill bar 接 top: 76px。
  * Mobile trip switcher 也在 top 區，pill bar 接 top: 64px（chip 較小）。 */
 .tp-global-map-actions {
-  position: absolute; top: 76px; left: 16px;
-  display: flex; gap: 8px;
+  /* mockup-parity-qa-fixes + map-page-day-strip spec：
+   * 把「全覽 / 我的位置」chips 從 top floating bar 移到 right-bottom FAB stack，
+   * 對齊 mockup section 20 規範「不用 floating top day strip」 + map FAB 位置。
+   * Bottom 偏移 leave space for entry-cards stack (~96px). */
+  position: absolute; right: 16px; bottom: 116px;
+  display: flex; flex-direction: column; gap: 8px;
   z-index: 600;
 }
 @media (max-width: 1023px) {
   .tp-global-map-actions {
-    top: 64px; left: 12px;
+    right: 12px; bottom: 116px;
   }
 }
 .tp-global-map-pill {
@@ -452,19 +456,21 @@ const SCOPED_STYLES = `
   font-weight: 700; color: var(--color-accent-deep);
 }
 
-/* ===== Mobile bottom POI carousel — mockup-map-v2 .mobile-poi-stack 對齊 ===== */
-.tp-global-map-mobile-stack {
+/* ===== Bottom POI carousel — mockup section 20:7649 規範 entry cards horizontal scroll =====
+ * mockup-parity-qa-fixes: 改 cross-viewport visible（desktop 也 render），
+ * 加 .tp-map-entry-stack/.tp-map-entry-cards/.tp-map-entry-card class alias 對齊 mockup naming，
+ * 既有 mobile-* class 留 backward compat。
+ */
+.tp-global-map-mobile-stack,
+.tp-map-entry-stack {
   position: absolute; left: 0; right: 0; bottom: 0;
   background: linear-gradient(to top, var(--color-background) 75%, transparent);
   padding: 12px 0 16px;
   /* z-index 700 浮在 leaflet marker-pane (600) + tooltip-pane (650) 之上，
-   * 只低於 popup-pane (700)，跟「全覽/我的位置」pill bar (600) 不衝突。 */
+   * 只低於 popup-pane (700)，跟 right-bottom FAB 不衝突。 */
   z-index: 700;
-  display: none;
+  display: block;
   pointer-events: auto;
-}
-@media (max-width: 1023px) {
-  .tp-global-map-mobile-stack { display: block; }
 }
 .tp-global-map-mobile-handle {
   width: 36px; height: 4px; border-radius: 2px;
@@ -562,19 +568,21 @@ const SCOPED_STYLES = `
 }
 .tp-global-map-mobile-poi-cta:hover { filter: brightness(0.95); }
 
-.tp-global-map-mobile-cards {
+.tp-global-map-mobile-cards,
+.tp-map-entry-cards {
   display: flex; gap: 10px;
   padding: 4px 16px;
   overflow-x: auto;
   scrollbar-width: none;
   scroll-snap-type: x mandatory;
-  /* QA 2026-04-26 BUG-039：右側 28px gradient mask 暗示「還有 stop 可滑」。
-   * 比照 PR-A DayNav 同 pattern。padding-right 給 24px 防 mask 蓋到 last card 內容 */
+  /* 右側 28px gradient mask 暗示「還有 stop 可滑」。比照 PR-A DayNav 同 pattern。 */
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
   mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
 }
-.tp-global-map-mobile-cards::-webkit-scrollbar { display: none; }
-.tp-global-map-mobile-card {
+.tp-global-map-mobile-cards::-webkit-scrollbar,
+.tp-map-entry-cards::-webkit-scrollbar { display: none; }
+.tp-global-map-mobile-card,
+.tp-map-entry-card {
   flex: 0 0 150px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
@@ -586,21 +594,25 @@ const SCOPED_STYLES = `
   scroll-snap-align: start;
   display: flex; flex-direction: column;
 }
-.tp-global-map-mobile-card:hover {
+.tp-global-map-mobile-card:hover,
+.tp-map-entry-card:hover {
   border-color: var(--color-accent);
 }
-.tp-global-map-mobile-card.is-active {
+.tp-global-map-mobile-card.is-active,
+.tp-map-entry-card.is-active {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
 }
-.tp-global-map-mobile-card .pc-eyebrow {
+.tp-global-map-mobile-card .pc-eyebrow,
+.tp-map-entry-card .pc-eyebrow {
   font-size: var(--font-size-eyebrow); font-weight: 700;
   letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--color-muted);
   margin-bottom: 2px;
   font-variant-numeric: tabular-nums;
 }
-.tp-global-map-mobile-card .pc-title {
+.tp-global-map-mobile-card .pc-title,
+.tp-map-entry-card .pc-title {
   font-size: var(--font-size-caption); font-weight: 600;
   line-height: 1.3;
   color: var(--color-foreground);

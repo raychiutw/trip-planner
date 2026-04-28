@@ -96,8 +96,11 @@ const SCOPED_STYLES = `
   width: 22px; height: 22px;
 }
 .tp-global-bottom-nav-btn span {
+  /* mockup-parity-qa-fixes: mockup section 02:5227 規範 11/14/700
+   * （曾為 11/normal/500，2026-04-29 對齊 mockup 升 weight + 鎖 line-height） */
   font-size: var(--font-size-caption2);
-  font-weight: 500;
+  line-height: 14px;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 .tp-global-bottom-nav-btn:hover { color: var(--color-foreground); }

@@ -138,8 +138,9 @@ const SCOPED_STYLES = `
   outline: 2px solid var(--color-accent); outline-offset: 2px;
 }
 .tp-new-modal h2 {
+  /* mockup-parity-qa-fixes: mockup spec 700（曾為 800） */
   font-size: var(--font-size-title, 1.75rem);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0 0 6px;
 }
@@ -1006,7 +1007,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           aria-label="關閉"
           data-testid="new-trip-close"
         >
-          ✕
+          <Icon name="x-mark" />
         </button>
         {/* Form pane */}
         <div className="tp-new-form">

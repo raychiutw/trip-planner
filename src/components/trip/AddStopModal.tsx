@@ -44,12 +44,19 @@ export interface AddStopModalProps {
   open: boolean;
   tripId: string;
   dayNum: number;
-  /** Optional 「Day X · MM/DD」 摘要顯示在 footer，給 user context。 */
+  /** Optional 「DAY {NN} · {M}/{D}（{星期}）」 摘要顯示在 header + footer。 */
   dayLabel?: string;
+  /** mockup-parity-qa-fixes: trip-context derived region 預設值，供 region pill 顯示。 */
+  defaultRegion?: string;
   onClose: () => void;
   /** 完成 commit 後通知 parent，parent 可 refetch day 顯示新 entry。 */
   onAdded?: () => void;
 }
+
+/* mockup-parity-qa-fixes: region 選項 hardcode list（design.md decision 3）。
+ * 後續 user 旅行跨更多 region 可改為 trip.countries 動態 mapping。 */
+const REGION_OPTIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台南'] as const;
+type RegionOption = typeof REGION_OPTIONS[number];
 
 type Tab = 'search' | 'saved' | 'custom';
 
@@ -77,10 +84,70 @@ const SCOPED_STYLES = `
   border-bottom: 1px solid var(--color-border);
 }
 .tp-add-stop-title {
+  /* mockup-parity-qa-fixes: title 700（mockup 規範） */
   font-size: var(--font-size-title3);
-  font-weight: 800;
+  font-weight: 700;
   margin: 0;
   letter-spacing: -0.01em;
+}
+/* mockup-parity-qa-fixes: region selector pill (mockup section 14:6452) */
+.tp-add-stop-region-row { position: relative; margin-bottom: 12px; }
+.tp-add-stop-region-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-foreground); cursor: pointer;
+  min-height: 32px;
+}
+.tp-add-stop-region-pill:hover { border-color: var(--color-accent); color: var(--color-accent-deep); }
+.tp-add-stop-region-pill .svg-icon { width: 14px; height: 14px; color: var(--color-muted); }
+.tp-add-stop-region-menu {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  z-index: 1; min-width: 160px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  list-style: none; padding: 4px; margin: 0;
+}
+.tp-add-stop-region-menu li button {
+  width: 100%; text-align: left;
+  padding: 8px 10px;
+  border: 0; background: transparent;
+  font: inherit; font-size: var(--font-size-footnote);
+  color: var(--color-foreground); cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.tp-add-stop-region-menu li button:hover { background: var(--color-hover); }
+.tp-add-stop-region-menu li[aria-selected="true"] button {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-weight: 700;
+}
+/* mockup-parity-qa-fixes: filter button (mockup section 14:6460) */
+.tp-add-stop-filter-btn {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-foreground); cursor: pointer;
+  min-height: 32px;
+}
+.tp-add-stop-filter-btn:hover { border-color: var(--color-accent); color: var(--color-accent-deep); }
+.tp-add-stop-filter-btn .svg-icon { width: 14px; height: 14px; color: var(--color-muted); }
+.tp-add-stop-filter-sheet {
+  margin: 0 0 12px;
+  padding: 12px;
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
 }
 .tp-add-stop-day-meta {
   font-size: var(--font-size-footnote);
@@ -153,7 +220,8 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-search-input {
   width: 100%; min-height: 44px;
-  padding: 8px 12px 8px 36px;
+  /* mockup-parity-qa-fixes: 加 right padding 100px 給 .tp-add-stop-filter-btn 留空間 */
+  padding: 8px 100px 8px 36px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   background: var(--color-background);
@@ -308,11 +376,18 @@ function matchCategory(category: string | null | undefined, target: AddStopCateg
   return false;
 }
 
-export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, onAdded }: AddStopModalProps) {
+export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRegion, onClose, onAdded }: AddStopModalProps) {
   const [tab, setTab] = useState<Tab>('search');
   const [category, setCategory] = useState<AddStopCategory>('all');
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PoiSearchResult[]>([]);
+  // mockup-parity-qa-fixes: region selector + filter button state
+  const initialRegion = REGION_OPTIONS.includes(defaultRegion as RegionOption)
+    ? (defaultRegion as RegionOption)
+    : '全部地區';
+  const [region, setRegion] = useState<RegionOption>(initialRegion);
+  const [regionMenuOpen, setRegionMenuOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [selectedSearch, setSelectedSearch] = useState<Set<number>>(new Set());
 
@@ -571,6 +646,42 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
 
           {tab === 'search' && (
             <>
+              {/* mockup section 14:6452-6454 — region selector chip 在 search body 上方 */}
+              <div className="tp-add-stop-region-row">
+                <button
+                  type="button"
+                  className="tp-add-stop-region-pill"
+                  onClick={() => setRegionMenuOpen((v) => !v)}
+                  data-testid="add-stop-region-pill"
+                  aria-haspopup="listbox"
+                  aria-expanded={regionMenuOpen}
+                >
+                  {region} <Icon name="chevron-down" />
+                </button>
+                {regionMenuOpen && (
+                  <ul
+                    className="tp-add-stop-region-menu"
+                    role="listbox"
+                    aria-label="切換地區"
+                    data-testid="add-stop-region-menu"
+                  >
+                    {REGION_OPTIONS.map((opt) => (
+                      <li key={opt} role="option" aria-selected={region === opt}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegion(opt);
+                            setRegionMenuOpen(false);
+                          }}
+                          data-testid={`add-stop-region-opt-${opt}`}
+                        >
+                          {opt}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <div className="tp-add-stop-search-input-wrap">
                 <Icon name="search" />
                 <input
@@ -581,7 +692,31 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
                   onChange={(e) => setQuery(e.target.value)}
                   data-testid="add-stop-search-input"
                 />
+                {/* mockup section 14:6460 — filter button trailing search input */}
+                <button
+                  type="button"
+                  className="tp-add-stop-filter-btn"
+                  onClick={() => setFilterSheetOpen((v) => !v)}
+                  aria-label="篩選"
+                  aria-expanded={filterSheetOpen}
+                  data-testid="add-stop-filter-btn"
+                >
+                  <Icon name="filter" />
+                  <span>篩選</span>
+                </button>
               </div>
+              {filterSheetOpen && (
+                <div
+                  className="tp-add-stop-filter-sheet"
+                  data-testid="add-stop-filter-sheet"
+                  role="region"
+                  aria-label="篩選"
+                >
+                  <p style={{ margin: 0, color: 'var(--color-muted)' }}>
+                    篩選功能（評分、價位、open-now）開發中。目前可用上方類別 subtab 切換 POI 類別。
+                  </p>
+                </div>
+              )}
               {searching && <div className="tp-add-stop-empty">搜尋中…</div>}
               {!searching && query.trim().length === 0 && category === 'all' && savedPois && savedPois.length > 0 && (
                 <div className="tp-add-stop-empty">
@@ -724,11 +859,8 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
 
         <div className="tp-add-stop-footer">
           <span className="tp-add-stop-counter" data-testid="add-stop-counter">
-            {totalSelected > 0 ? (
-              <>已選 <strong>{totalSelected}</strong> 個 · 將加入 {dayLabel ?? `Day ${dayNum}`}</>
-            ) : (
-              <>從上方挑選或填寫一個項目</>
-            )}
+            {/* mockup section 14:6518 規範「已選 N 個 · 將加入 DAY {NN} · M/D」即使 0 也顯示 */}
+            已選 <strong>{totalSelected}</strong> 個 · 將加入 {dayLabel ?? `DAY ${String(dayNum).padStart(2, '0')}`}
             {submitError && <span style={{ color: 'var(--color-destructive, #c0392b)', marginLeft: 8 }}>{submitError}</span>}
           </span>
           <div className="tp-add-stop-actions">

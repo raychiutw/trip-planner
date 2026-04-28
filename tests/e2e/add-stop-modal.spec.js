@@ -53,8 +53,9 @@ test.describe('AddStopModal — Section 3', () => {
     await expect(page.getByTestId('add-stop-custom-time')).toBeVisible();
     await expect(page.getByTestId('add-stop-custom-duration')).toBeVisible();
     await expect(page.getByTestId('add-stop-custom-note')).toBeVisible();
-    // counter 0 → 「從上方挑選或填寫一個項目」
-    await expect(page.getByTestId('add-stop-counter')).toContainText('從上方挑選或填寫一個項目');
+    // mockup-parity-qa-fixes: counter 0 也顯示「已選 0 個 · 將加入 ...」（mockup section 14:6518）
+    await expect(page.getByTestId('add-stop-counter')).toContainText('已選');
+    await expect(page.getByTestId('add-stop-counter')).toContainText('將加入');
     await page.getByTestId('add-stop-custom-title').fill('海邊散步');
     await expect(page.getByTestId('add-stop-counter')).toContainText('已選 1 個');
   });

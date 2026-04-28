@@ -63,8 +63,9 @@ function mockApi(my: { tripId: string }[], all: Array<Record<string, unknown>>) 
 }
 
 const SAMPLE = [
-  { tripId: 'okinawa', name: '沖繩之旅', title: '沖繩之旅', countries: 'JP', published: 1, day_count: 5, start_date: '2026-07-26', end_date: '2026-07-30', member_count: 2 },
-  { tripId: 'seoul', name: '首爾美食行', title: '首爾美食行', countries: 'KR', published: 1, day_count: 4, start_date: '2026-08-15', end_date: '2026-08-18', member_count: 1 },
+  // mockup-parity-qa-fixes: API 透過 deepCamel() 回 camelCase；test mock 跟 prod response shape 一致
+  { tripId: 'okinawa', name: '沖繩之旅', title: '沖繩之旅', countries: 'JP', published: 1, dayCount: 5, startDate: '2026-07-26', endDate: '2026-07-30', memberCount: 2 },
+  { tripId: 'seoul', name: '首爾美食行', title: '首爾美食行', countries: 'KR', published: 1, dayCount: 4, startDate: '2026-08-15', endDate: '2026-08-18', memberCount: 1 },
 ];
 
 describe('TripsListPage', () => {
@@ -87,7 +88,8 @@ describe('TripsListPage', () => {
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
     // Section 4.7 (terracotta-ui-parity-polish): eyebrow 中文化「日本 · N 天」對齊 mockup
     expect(screen.getByText('日本 · 5 天')).toBeTruthy();
-    expect(screen.getByText('7/26 – 7/30 · 2 旅伴')).toBeTruthy();
+    // mockup-parity-qa-fixes: cardMeta 改「{M}/{D} 出發 · {range}」格式（mockup section 16:6908）
+    expect(screen.getByText('7/26 出發 · 7/26 – 7/30')).toBeTruthy();
     expect(screen.getByText('韓國 · 4 天')).toBeTruthy();
   });
 
@@ -168,10 +170,11 @@ describe('TripsListPage', () => {
 describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () => {
   const sample = [
     // u@x.com 是 mock current user → owner === user → 我的
-    { tripId: 'okinawa', name: '沖繩', title: '沖繩', countries: 'JP', published: 1, day_count: 5, member_count: 2, owner: 'u@x.com' },
+    // mockup-parity-qa-fixes: API 透過 deepCamel() 回 camelCase
+    { tripId: 'okinawa', name: '沖繩', title: '沖繩', countries: 'JP', published: 1, dayCount: 5, memberCount: 2, owner: 'u@x.com' },
     // 不同 owner → 共編
-    { tripId: 'seoul', name: '首爾', title: '首爾', countries: 'KR', published: 1, day_count: 4, member_count: 1, owner: 'friend@x.com' },
-    { tripId: 'taipei', name: '台北', title: '台北', countries: 'TW', published: 1, day_count: 3, member_count: 1, owner: 'u@x.com' },
+    { tripId: 'seoul', name: '首爾', title: '首爾', countries: 'KR', published: 1, dayCount: 4, memberCount: 1, owner: 'friend@x.com' },
+    { tripId: 'taipei', name: '台北', title: '台北', countries: 'TW', published: 1, dayCount: 3, memberCount: 1, owner: 'u@x.com' },
   ];
 
   it('toolbar 顯示三個 filter tab + sort dropdown + search toggle', async () => {

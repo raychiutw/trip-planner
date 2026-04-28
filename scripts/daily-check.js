@@ -429,8 +429,8 @@ function querySchedulerErrors() {
 
 // ── summary 計算 ────────────────────────────────────────────────
 
-function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors) {
-  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors];
+function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene) {
+  var sections = [sentry, apiErrors, npmAudit, requestErrors, schedulerErrors, dataHygiene];
   var critical = sections.filter(function(s) { return s && s.status === 'critical'; }).length;
   var warning = sections.filter(function(s) { return s && s.status === 'warning'; }).length;
   var ok = sections.filter(function(s) { return s && s.status === 'ok'; }).length;
@@ -440,6 +440,50 @@ function calcSummary(sentry, apiErrors, npmAudit, requestErrors, schedulerErrors
     warning: warning,
     ok: ok
   };
+}
+
+// ── Prod data hygiene ──────────────────────────────────────────────
+// mockup-parity-qa-fixes Sprint 7.2: 偵測 prod trip data 含 known test marker
+// （e.g. TEST_AUTO_UPDATE_PROBE 在 v2 deeper QA 發現 leak 進 Ray's trip Day 04）。
+// 找到就 warn，提醒 manually clean up via API DELETE。
+
+var PROD_DATA_TEST_MARKERS = [
+  'TEST_AUTO_UPDATE_PROBE',
+  '_PROBE',
+  'AUTO_TEST_FIXTURE',
+  '__TEST_ONLY__'
+];
+
+async function queryProdDataHygiene() {
+  try {
+    var likeClauses = PROD_DATA_TEST_MARKERS.map(function(marker) {
+      // SQL injection-safe: marker 是 hardcoded constant，不接 user input
+      return "title LIKE '%" + marker.replace(/'/g, "''") + "%' OR note LIKE '%" + marker.replace(/'/g, "''") + "%'";
+    }).join(' OR ');
+    var sql = 'SELECT id, trip_id, day_num, title, note FROM trip_entries WHERE ' + likeClauses + ' LIMIT 50';
+    var rows = await queryD1(sql);
+    if (!rows || rows.length === 0) {
+      return { status: 'ok', total: 0, leaks: [] };
+    }
+    return {
+      status: 'warning',
+      total: rows.length,
+      leaks: rows.map(function(r) {
+        return {
+          entryId: r.id,
+          tripId: r.trip_id,
+          dayNum: r.day_num,
+          title: r.title,
+          marker: PROD_DATA_TEST_MARKERS.find(function(m) {
+            return (r.title && r.title.indexOf(m) >= 0) || (r.note && r.note.indexOf(m) >= 0);
+          })
+        };
+      })
+    };
+  } catch (err) {
+    console.error('Prod data hygiene check failed:', err.message);
+    return { status: 'ok', total: 0, leaks: [], error: err.message };
+  }
 }
 
 // ── 流水編號產生器 ───────────────────────────────────────────────
@@ -462,6 +506,9 @@ function assignNums(report) {
   }
   if (report.requestErrors && report.requestErrors.pending) {
     report.requestErrors.pending.forEach(function(p) { p.num = counter(); });
+  }
+  if (report.dataHygiene && report.dataHygiene.leaks) {
+    report.dataHygiene.leaks.forEach(function(l) { l.num = counter(); });
   }
 
   report._maxNum = counter() - 1;
@@ -506,6 +553,7 @@ async function main() {
     queryWebAnalytics(),     // 3
     queryRequestErrors(),    // 4
     queryRouteHealth(),      // 5 — B-P6 task 10.3
+    queryProdDataHygiene(),  // 6 — mockup-parity-qa-fixes Sprint 7.2
   ]);
 
   function val(idx, fallback) {
@@ -521,8 +569,9 @@ async function main() {
   var web = val(3, { visits: 0, pageViews: 0 });
   var requestErrors = val(4, { status: 'ok', total: 0, statusCounts: { open: 0, processing: 0, failed: 0 }, stuckProcessing: 0, pending: [] });
   var routeHealth = val(5, { status: 'ok', total: 0, checked: 0, routes: [] });
+  var dataHygiene = val(6, { status: 'ok', total: 0, leaks: [] });
 
-  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors);
+  var summary = calcSummary(sentry, apiErrors, npmAuditResult, requestErrors, schedulerErrors, dataHygiene);
 
   var report = {
     date: today,
@@ -535,7 +584,8 @@ async function main() {
     web: web,
     npmAudit: npmAuditResult,
     schedulerErrors: schedulerErrors,
-    routeHealth: routeHealth
+    routeHealth: routeHealth,
+    dataHygiene: dataHygiene
   };
 
   // 為所有 issue/error 項目加流水編號
