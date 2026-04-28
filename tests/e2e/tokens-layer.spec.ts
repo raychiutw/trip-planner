@@ -33,7 +33,7 @@ test.describe('tokens.css Layer 驗證', () => {
     expectColor(tokens.foreground, '#2A1F18');
     expect(tokens.radiusMd).toBe('8px');
     expect(tokens.spacing4).toBe('16px');
-    expect(tokens.fontSizeBody).toBe('1.0625rem');
+    expect(tokens.fontSizeBody).toBe('1rem'); // mockup-parity-qa-fixes: 17→16px (mockup body 規範)
   });
 
   test('深色模式 Terracotta deep-cocoa 覆蓋正確', async ({ page }) => {
