@@ -35,28 +35,33 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 
 ```
 src/entries/        main.tsx（SPA 單入口，BrowserRouter）
-src/pages/          TripPage  TripsListPage（/trips landing）  ManagePage（AI 編輯）  AdminPage
+src/pages/          TripPage  TripsListPage（/trips landing）  MapPage  GlobalMapPage  ChatPage
+                    ExplorePage  AccountPage  AppearanceSettingsPage  NotificationsSettingsPage
                     LoginPage  SignupPage  ForgotPasswordPage  ResetPasswordPage  EmailVerifyPendingPage
-                    ConsentPage  ConnectedAppsPage  DeveloperAppsPage  SessionsPage  ExplorePage
-src/components/     trip/（Timeline DayNav DaySection TripMapRail ...）  shared/（Icon Toast ErrorBoundary ...）
-                    auth/（AuthBrandHero — V2 split-screen 右側 hero pane 共用）  shell/（AppShell DesktopSidebar BottomNavBar ...）
+                    ConsentPage  ConnectedAppsPage  DeveloperAppsPage  SessionsPage
+src/components/     trip/（Timeline DayNav DaySection TripMapRail AddStopModal MapFabs TravelPill ...）
+                    shared/（Icon Toast ErrorBoundary AlertPanel ...）
+                    auth/（AuthBrandHero — V2 split-screen 右側 hero pane 共用）
+                    shell/（AppShell DesktopSidebar GlobalBottomNav TitleBar ...）
+src/contexts/       NewTripContext  ActiveTripContext（cross-page active trip + storage event sync）
+                    TripIdContext  TripDaysContext  TripContext
 src/hooks/          useTrip  useApi  useDarkMode  useRequireAuth  useCurrentUser  useOnlineStatus ...
-src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather ...
+src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather  drag-strategy ...
 src/types/          trip.ts  api.ts
-css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，含 6 套主題）
+css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，V2 Terracotta 單一 accent）
 functions/api/      _middleware  _auth  _audit  _utils  _validate  _types
-                    trips/  pois/  requests/  permissions/（RESTful nested routes）
-migrations/         0001 ~ 0026（D1 schema，含 rollback/）
+                    trips/  pois/  requests/  permissions/  account/（RESTful nested routes）
+migrations/         0001 ~ 0042（D1 schema，含 rollback/）
 scripts/            init-local-db  dump-d1  daily-check  migrate-pois  tp-check ...
-tests/              unit/  integration/  e2e/
+tests/              unit/  integration/  e2e/  api/
 openspec/           config.yaml  specs/  changes/
 ```
 
 - Cloudflare Pages + D1（trip-planner-db / staging）
-- 設計系統：`DESIGN.md`（暖色有機風、Apple HIG、6 套主題）
+- 設計系統：`DESIGN.md`（暖色有機風、Apple HIG、V2 Terracotta accent）
 - **Desktop 2-col layout（≥1024px）**：`grid-template-columns: clamp(375px, 30vw, 400px) 1fr`，左欄行程 timeline，右欄 `TripMapRail` sticky Leaflet 地圖；`<1024px` 單欄 mobile-first
-- **MobileBottomNav 4-tab IA（≤760px）**：`行程 / 地圖 / 訊息 / 更多`，全部 route-based（`/trip/:id` / `/trip/:id/map` / `/manage` / action-menu sheet）
-- **Day palette**：10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）用於地圖 polyline，對應 DESIGN.md Data Visualization 例外；UI chrome 仍嚴守 Ocean 單一 accent
+- **GlobalBottomNav 5-tab IA（≤760px）**：`聊天 / 行程 / 地圖 / 探索 / 帳號`（logged-in）or `... / 登入`（guest），全部 global route。配合 `ActiveTripContext`，從 trip 進其他 tab 自動帶入當前 trip context（/chat 預選對應 trip thread，/map 預設該 trip 的 pin overview，/explore region 預設該 trip's countries）。「更多」 sheet 4 個 action 已遷移：共編 → trip TitleBar；切換行程 → /trips card grid；外觀 → AccountPage；下載 → trip TitleBar OverflowMenu。
+- **Day palette**：10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）用於地圖 polyline，對應 DESIGN.md Data Visualization 例外；UI chrome 仍嚴守 V2 Terracotta 單一 accent
 
 ## 資料架構（POI Schema）
 
