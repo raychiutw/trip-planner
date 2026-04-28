@@ -324,7 +324,7 @@ const SCOPED_STYLES = `
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
   display: grid; place-items: center;
-  font: inherit; font-weight: 700; font-size: 11px;
+  font: inherit; font-weight: 700; font-size: var(--font-size-caption2);
   flex-shrink: 0;
 }
 .tp-trip-card-owner-name {
