@@ -269,6 +269,9 @@ function TripPageInner(
   // Stable ref so the effect below can call refetchCurrentDay without re-running
   // when refetchCurrentDay identity changes (it is declared after useTrip below).
   const refetchCurrentDayRef = useRef<(() => void) | null>(null);
+  // Same pattern for refetchDay — listener 讀 event.detail.dayNum 時
+  // 走 refetchDay(targetDay) 而非 refetchCurrentDay (該 day 可能 ≠ currentDay)。
+  const refetchDayRef = useRef<((dayNum: number) => void) | null>(null);
 
   // Refresh stale data when connection is restored
   const prevIsOnlineRef = useRef(isOnline);
@@ -280,11 +283,21 @@ function TripPageInner(
   }, [isOnline]);
 
   // V3 inline expansion (PR2): TimelineRail dispatches `tp-entry-updated`
-  // on successful note PATCH. We refetch the current day to surface the new
-  // value across the timeline + map + sheet.
+  // on successful note PATCH. AddStopModal / future inline editors 也 dispatch
+  // 這個 event with `detail: { tripId, dayNum }`。讀 detail.dayNum 走
+  // refetchDay(targetDay) — handle add 到 currentDay 以外的 day case
+  // (e.g. day strip 選 Day 1 但 modal 加到 Day 3, 時間線同時顯示所有 day,
+  //  Day 3 cache 仍需 invalidate 才會看到新 entry)。
+  // 沒帶 dayNum (legacy event source) → fallback refetchCurrentDay。
   useEffect(() => {
-    function onEntryUpdated() {
-      refetchCurrentDayRef.current?.();
+    function onEntryUpdated(e: Event) {
+      const detail = (e as CustomEvent).detail as { dayNum?: number } | null;
+      const targetDay = detail?.dayNum;
+      if (typeof targetDay === 'number' && targetDay > 0) {
+        refetchDayRef.current?.(targetDay);
+      } else {
+        refetchCurrentDayRef.current?.();
+      }
     }
     window.addEventListener('tp-entry-updated', onEntryUpdated);
     return () => window.removeEventListener('tp-entry-updated', onEntryUpdated);
@@ -395,11 +408,12 @@ function TripPageInner(
     if (activeTripId) setActiveTrip(activeTripId);
   }, [activeTripId, setActiveTrip]);
 
-  const { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, allDays, docs, loading, error } =
+  const { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
 
   // Keep ref in sync so the online-status effect can call it without a stale closure
   refetchCurrentDayRef.current = refetchCurrentDay;
+  refetchDayRef.current = refetchDay;
 
   /** Direct download by format — delegates to tripExport module */
   const handleDownloadFormat = useCallback(async (format: string) => {

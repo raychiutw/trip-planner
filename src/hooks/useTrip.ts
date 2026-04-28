@@ -49,6 +49,10 @@ export interface UseTripReturn {
   currentDayNum: number;
   switchDay: (dayNum: number) => void;
   refetchCurrentDay: () => void;
+  /** Refetch a specific day (bypass cache). Used by listener when add/edit
+   *  happens to a non-current day — timeline 顯示所有 day, 該 day section
+   *  仍需 invalidate cache + re-fetch 才會 surface 新 entry。 */
+  refetchDay: (dayNum: number) => void;
   docs: Partial<Record<DocKey, DocData>>;
   allDays: Record<number, Day>;
   loading: boolean;
@@ -215,17 +219,26 @@ export function useTrip(tripId: string | null): UseTripReturn {
     };
   }, [tripId]);
 
-  /* --- Refetch the current day (bypass cache) --- */
-  const refetchCurrentDay = useCallback(() => {
-    if (!currentDayNum) return;
-    delete allDaysRef.current[currentDayNum];
-    fetchDay(currentDayNum).then((day) => {
+  /* --- Refetch a specific day (bypass cache) ---
+   * Handles both「current day」 case (dayNum === currentDayNum 同步 setCurrentDay)
+   * 跟「某天 add 但不是當前 strip 選中那天」 case (timeline 仍顯示所有 day,
+   * 需 update allDays[dayNum] 該 DaySection 才會 re-render)。 */
+  const refetchDay = useCallback((dayNum: number) => {
+    if (!Number.isInteger(dayNum) || dayNum < 1) return;
+    delete allDaysRef.current[dayNum];
+    fetchDay(dayNum).then((day) => {
       if (day) {
-        setCurrentDay(day);
-        setAllDays((prev) => ({ ...prev, [currentDayNum]: day }));
+        setAllDays((prev) => ({ ...prev, [dayNum]: day }));
+        if (dayNum === currentDayNum) setCurrentDay(day);
       }
     });
   }, [currentDayNum, fetchDay]);
 
-  return { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, docs, allDays, loading, error };
+  /* --- Refetch the current day (legacy alias for refetchDay(currentDayNum)) --- */
+  const refetchCurrentDay = useCallback(() => {
+    if (!currentDayNum) return;
+    refetchDay(currentDayNum);
+  }, [currentDayNum, refetchDay]);
+
+  return { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, refetchDay, docs, allDays, loading, error };
 }
