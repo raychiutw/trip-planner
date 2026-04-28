@@ -4,8 +4,11 @@ import { assembleDay } from './days/_merge';
 
 /**
  * GET /api/trips/:id/days
- * - 預設：回傳 days summary list（id, day_num, date, day_of_week, label）
+ * - 預設：回傳 days summary list（id, day_num, date, day_of_week, label, title）
  * - `?all=1`：回傳完整 days 陣列（含 hotel + timeline + POI），解決前端 N+1
+ *
+ * Section 4.3 (terracotta-mockup-parity-v2)：summary 加 `title` 欄。
+ * SELECT * 在 batch 模式自動 surface title (column 已 added by migration 0042)。
  */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
@@ -14,7 +17,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   if (!all) {
     const { results } = await db
-      .prepare('SELECT id, day_num, date, day_of_week, label FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
+      .prepare('SELECT id, day_num, date, day_of_week, label, title FROM trip_days WHERE trip_id = ? ORDER BY day_num ASC')
       .bind(id)
       .all();
     return json(results);

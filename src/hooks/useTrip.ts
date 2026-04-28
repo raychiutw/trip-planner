@@ -27,6 +27,8 @@ function mapDayResponse(raw: Record<string, unknown>): Day {
     date: (raw.date as string | null | undefined) ?? null,
     dayOfWeek: (raw.dayOfWeek as string | null | undefined) ?? null,
     label: (raw.label as string | null | undefined) ?? null,
+    /** Section 4.3 (terracotta-mockup-parity-v2)：surface trip_days.title */
+    title: (raw.title as string | null | undefined) ?? null,
     updatedAt: raw.updatedAt as string | undefined,
     hotel: (raw.hotel as Day['hotel']) ?? null,
     timeline: (raw.timeline as Day['timeline']) ?? [],

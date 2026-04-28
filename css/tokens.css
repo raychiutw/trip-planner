@@ -1196,7 +1196,9 @@ body.dark {
 .tp-map-day-tab:hover:not(.is-active) { color: var(--color-foreground); }
 .tp-map-day-tab.is-active {
   color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
+  /* Section 4.10: per-day border-bottom-color override via inline --day-color
+   * (set in MapDayTab.tsx)。fallback 用 accent (overview tab 沒 dayColor)。 */
+  border-bottom-color: var(--day-color, var(--color-accent));
 }
 .tp-map-day-tab:focus-visible {
   outline: none;

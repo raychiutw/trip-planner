@@ -85,9 +85,10 @@ describe('TripsListPage', () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], SAMPLE));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
-    expect(screen.getByText('JAPAN · 5 DAYS')).toBeTruthy();
+    // Section 4.7 (terracotta-ui-parity-polish): eyebrow 中文化「日本 · N 天」對齊 mockup
+    expect(screen.getByText('日本 · 5 天')).toBeTruthy();
     expect(screen.getByText('7/26 – 7/30 · 2 旅伴')).toBeTruthy();
-    expect(screen.getByText('KOREA · 4 DAYS')).toBeTruthy();
+    expect(screen.getByText('韓國 · 4 天')).toBeTruthy();
   });
 
   it('trailing 新增行程 card present when trips exist and opens modal on click', async () => {
@@ -161,5 +162,67 @@ describe('TripsListPage', () => {
     }));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-error')).toBeTruthy());
+  });
+});
+
+describe('TripsListPage — Section 4.7 toolbar (filter/sort/search/owner)', () => {
+  const sample = [
+    // u@x.com 是 mock current user → owner === user → 我的
+    { tripId: 'okinawa', name: '沖繩', title: '沖繩', countries: 'JP', published: 1, day_count: 5, member_count: 2, owner: 'u@x.com' },
+    // 不同 owner → 共編
+    { tripId: 'seoul', name: '首爾', title: '首爾', countries: 'KR', published: 1, day_count: 4, member_count: 1, owner: 'friend@x.com' },
+    { tripId: 'taipei', name: '台北', title: '台北', countries: 'TW', published: 1, day_count: 3, member_count: 1, owner: 'u@x.com' },
+  ];
+
+  it('toolbar 顯示三個 filter tab + sort dropdown + search toggle', async () => {
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-toolbar')).toBeTruthy());
+    expect(screen.getByTestId('trips-list-tab-all')).toBeTruthy();
+    expect(screen.getByTestId('trips-list-tab-mine')).toBeTruthy();
+    expect(screen.getByTestId('trips-list-tab-collab')).toBeTruthy();
+    expect(screen.getByTestId('trips-list-sort')).toBeTruthy();
+    expect(screen.getByTestId('trips-list-search-toggle')).toBeTruthy();
+  });
+
+  it('filter tab「我的」只顯示 owner === current user 的 trip', async () => {
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-tab-mine')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('trips-list-tab-mine'));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy());
+    expect(screen.queryByTestId('trips-list-card-okinawa')).toBeTruthy();
+    expect(screen.queryByTestId('trips-list-card-taipei')).toBeTruthy();
+    expect(screen.queryByTestId('trips-list-card-seoul')).toBeNull();
+  });
+
+  it('filter tab「共編」只顯示 owner !== current user 的 trip', async () => {
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-tab-collab')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('trips-list-tab-collab'));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-seoul')).toBeTruthy());
+    expect(screen.queryByTestId('trips-list-card-seoul')).toBeTruthy();
+    expect(screen.queryByTestId('trips-list-card-okinawa')).toBeNull();
+  });
+
+  it('search toggle expand → input 出現 + 過濾後 count 顯示', async () => {
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }, { tripId: 'taipei' }], sample));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-search-toggle')).toBeTruthy());
+    expect(screen.queryByTestId('trips-list-search-input')).toBeNull();
+    fireEvent.click(screen.getByTestId('trips-list-search-toggle'));
+    await waitFor(() => expect(screen.queryByTestId('trips-list-search-input')).toBeTruthy());
+    fireEvent.change(screen.getByTestId('trips-list-search-input'), { target: { value: '沖繩' } });
+    await waitFor(() => expect(screen.queryByTestId('trips-list-search-count')).toBeTruthy());
+    expect(screen.getByTestId('trips-list-search-count').textContent).toContain('1');
+  });
+
+  it('owner avatar 顯示「由你建立」/ owner email username', async () => {
+    vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }, { tripId: 'seoul' }], sample));
+    render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByTestId('trips-list-card-owner-okinawa')).toBeTruthy());
+    expect(screen.getByTestId('trips-list-card-owner-okinawa').textContent).toContain('由你建立');
+    expect(screen.getByTestId('trips-list-card-owner-seoul').textContent).toContain('friend');
   });
 });

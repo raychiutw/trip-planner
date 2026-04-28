@@ -17,7 +17,15 @@
 import { type NavLocation } from './MapLinks';
 import { type InfoBoxData } from './InfoBox';
 
-export interface TravelData { type?: string | null; text?: string | null; }
+export interface TravelData {
+  type?: string | null;
+  /** Free-form description (e.g.「沿縣道 58 號北上」). API surface as `desc`. */
+  desc?: string | null;
+  /** Travel duration in minutes. */
+  min?: number | null;
+  /** Legacy alias kept for backwards compat — map source still emits `text`. */
+  text?: string | null;
+}
 
 /**
  * v2.12 Wave 3：POI 照片 schema。`pois.photos` 是 JSON-encoded TEXT column，

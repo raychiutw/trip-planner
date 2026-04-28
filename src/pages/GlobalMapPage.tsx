@@ -20,7 +20,7 @@
  *   - 透過 onMapReady 拿 L.Map 實例，給「全覽 / 我的位置」pill button 用。
  *
  * Sheet（mockup-map-v2 對齊）：
- *   - Header: ✕ close（清掉 selectedPinId）+ 跳到行程 accent CTA
+ *   - Header: close（清掉 selectedPinId）+ 跳到行程 accent CTA
  *   - Body: trip dot eyebrow + POI title + meta chips → 同日其他 stop mini-list（active 高亮）
  *   - Empty state: 提示點 marker
  *
@@ -41,7 +41,7 @@ import { useNewTrip } from '../contexts/NewTripContext';
 import { extractPinsFromDay, type MapPin } from '../hooks/useMapData';
 import { dayColor } from '../lib/dayPalette';
 import { apiFetch } from '../lib/apiClient';
-import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -251,7 +251,7 @@ const SCOPED_STYLES = `
 }
 
 /* ===== Sheet (desktop right pane) — mockup-map-v2 對齊 =====
- * Header 帶 ✕ close + 跳到行程 accent button。
+ * Header 帶 close + 跳到行程 accent button。
  * Body: trip dot eyebrow → title → meta chips → info-rows → 同日其他 stop。 */
 .tp-global-map-sheet {
   display: flex; flex-direction: column;
@@ -493,7 +493,7 @@ const SCOPED_STYLES = `
  * 對齊 mockup-map-v2 sheet 結構，compact mobile 版。 */
 /* PR-R 2026-04-26：POI 卡下移到 carousel 上方緊貼（pill bar 已經上移讓出空間）+
  * 改用 grid layout：左 content（eyebrow / title / meta）、右 CTA chip（明顯
- * 行動入口）。close ✕ 仍 absolute top-right。 */
+ * 行動入口）。close button 仍 absolute top-right。 */
 .tp-global-map-mobile-poi {
   display: none;
   position: absolute;
@@ -632,7 +632,9 @@ export default function GlobalMapPage() {
   const { openModal: openNewTrip } = useNewTrip();
 
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
+  const { activeTripId, setActiveTrip } = useActiveTrip();
+  const setActiveTripId = setActiveTrip;
   const [resolved, setResolved] = useState<ResolvedTrip | null>(null);
   const [selectedPinId, setSelectedPinId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -661,7 +663,9 @@ export default function GlobalMapPage() {
         const myTrips = allJson.filter((t) => mine.has(t.tripId));
         setTrips(myTrips);
         if (myTrips.length === 0) return;
-        const pref = lsGet<string>(LS_KEY_TRIP_PREF);
+        // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
+        // fallback 第一個可見 trip
+        const pref = activeTripId;
         const initial = pref && myTrips.some((t) => t.tripId === pref) ? pref : myTrips[0]!.tripId;
         setActiveTripId(initial);
       } catch {
@@ -734,11 +738,11 @@ export default function GlobalMapPage() {
   }, []);
 
   const pickTrip = useCallback((tripId: string) => {
+    // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
     setActiveTripId(tripId);
-    lsSet(LS_KEY_TRIP_PREF, tripId);
     setMenuOpen(false);
     setSelectedPinId(null);
-  }, []);
+  }, [setActiveTripId]);
 
   const closeSheet = useCallback(() => {
     setSelectedPinId(null);
@@ -934,7 +938,7 @@ export default function GlobalMapPage() {
                   onClick={() => setSelectedPinId(null)}
                   aria-label="關閉景點詳情"
                 >
-                  ✕
+                  <Icon name="x-mark" />
                 </button>
                 <div className="tp-global-map-mobile-poi-content">
                   <div className="tp-global-map-mobile-poi-eyebrow">
@@ -1000,7 +1004,7 @@ export default function GlobalMapPage() {
     </div>
   );
 
-  // Desktop right sheet — mockup-map-v2 對齊：✕ close + 跳到行程 button + meta chips + info-rows + 同日 mini-list
+  // Desktop right sheet — mockup-map-v2 對齊：close + 跳到行程 button + meta chips + info-rows + 同日 mini-list
   const sheet = (
     <div className="tp-global-map-sheet" data-testid="global-map-sheet">
       <style>{SCOPED_STYLES}</style>
@@ -1013,7 +1017,7 @@ export default function GlobalMapPage() {
           aria-label="關閉景點細節"
           data-testid="global-map-sheet-close"
         >
-          ✕
+          <Icon name="x-mark" />
         </button>
         <div className="spacer" />
         {selectedPin && resolved && (

@@ -43,7 +43,11 @@
 新增推薦 chips block（mockup Frame 2 + Frame 3）：
 - 「熱門目的地」chip group：日本 / 韓國 / 台灣 / 沖繩 / 京都 ...
 - 「最近搜尋」chip group：localStorage 拉前 5 個
-- Search dropdown 結果改為分組顯示（不平鋪）
+- discoverability + recall 機制：mockup 用 dropdown 分組（熱門 / 最近搜尋 /
+  搜尋結果 3 組），本實作改用 input 下方 chip-blocks pattern 達同需求 —
+  user 看到熱門 + 最近 quick start 入口，點 chip → 觸發 search debounce 走
+  既有 PoiSearchResult flow（不需 cache 完整 POI shape）。兩種 pattern 等價，
+  視 implementation footprint 與 mobile 高度受限 trade-off 選 chip-blocks。
 - 目的地數量 ≥2 時顯示「分配天數」stepper：每目的地 +/- N 天
 
 #### Scenario: 標題對齊 mockup
@@ -209,17 +213,22 @@ mockup 規範 day hero title 是「美ら海＋古宇利島一日跑」這種 us
 
 ### Requirement: ExplorePage POI card 加 cover photo + ❤ + ★ rating + region selector + subtabs
 
-對應 mockup section 18。修改 `src/pages/ExplorePage.tsx`：
+對應 mockup section 18 (line 7284-7423)。修改 `src/pages/ExplorePage.tsx`：
 
 | Finding | Mockup | 修改 |
 |---|---|---|
 | Card cover | `tp-explore-card-cover` placeholder color tone | Card 上半 100% width 16:9 cover image (POI photo URL or `data-tone` placeholder) |
 | ❤ favorite icon | top-right corner | Card overlay 右上角 heart toggle (favorite ≠ saved，是另一概念 — 或合併為 saved 同時是 favorite) |
 | ★ rating meta | `★ 4.6 · ¥2,180` | Card meta 加 ★ rating + 價位 ¥ 區間（既有 `googleRating` 對應） |
-| TitleBar action | mockup heart icon | 改既有 star icon → heart icon 對齊 mockup |
-| Region selector | mockup「沖繩 ▾」 | 加 region selector pill（default 用 user 最近 trip's region） |
-| Subtab chips | mockup「為你推薦 / 景點 / 美食 / 住宿 / 購物」 | 加 5 個 POI category subtab chips |
+| TitleBar action | mockup heart icon (line 7294/7370) | 改既有 star icon → heart icon 對齊 mockup |
+| Region selector | mockup「沖繩 ▾」 (line 7299/7375) | 加 region selector pill（default 用 user 最近 trip's region） |
+| Subtab chips | mockup「為你推薦 / 景點 / 美食 / 住宿 / 購物」(line 7305-7311) | 加 5 個 POI category subtab chips |
 | Card hover | accent border + lift shadow | 加 `:hover` accent border + `transform: translateY(-2px)` + shadow-md |
+| **Tab pair 結構** | mockup 無「搜尋 / 我的收藏」tab pair (single content area) | 拿掉既有 `.explore-tabs` UI + CSS，改用 TitleBar action button toggle 兩 view（search 為 default，TitleBar「我的收藏」 button click → saved view，TitleBar 變 back button → 切回 search） |
+| **Element 順序** | region pill → search bar → subtab chips → grid (line 7298-7312) | 調整既有 search-on-top 順序 → region 在前 |
+| **Search placeholder** | mockup「搜尋景點、餐廳、住宿…」(line 7303) | 改既有「搜尋 POI（例：沖繩水族館、首爾燒肉）」對齊 |
+| **Grid columns** | mockup desktop 3-col (line 7290) / compact 2-col (line 7366) | grid-template-columns: repeat(2,1fr); @media ≥1024px → repeat(3,1fr) |
+| **「儲存池」文案** | 非台灣慣用語，對齊 mockup「我的收藏」(line 7294) | 全 codebase rename 「儲存池」→「我的收藏」(ExplorePage / LoginPage / SignupPage / api.ts comment / unit test / e2e api-mocks / openspec docs) |
 
 #### Scenario: POI card 結構含 cover + heart + rating
 - **WHEN** Render POI card
@@ -236,6 +245,20 @@ mockup 規範 day hero title 是「美ら海＋古宇利島一日跑」這種 us
 - **WHEN** 使用者點 region selector「沖繩 ▾」+ 選「京都」
 - **THEN** POI search 重 fetch with region=`京都`
 - **AND** Region selector label 更新「京都 ▾」
+
+#### Scenario: TitleBar「我的收藏」 button toggle 兩 view
+- **WHEN** 使用者在預設 search view，點 TitleBar 右上「我的收藏」 heart icon button
+- **THEN** 切到 saved view，TitleBar title 變「我的收藏」+ 左上出現 back button「返回探索」
+- **AND** Search 相關 UI (region pill / search bar / subtab) 隱藏，改 render saved POI grid
+- **WHEN** 使用者點 back button
+- **THEN** 切回 search view，TitleBar 復原「探索」 + 「我的收藏」 button
+
+#### Scenario: ExplorePage 「我的收藏」 仍保留 multi-select + 加入行程 modal
+- **WHEN** 使用者在 saved view 多選 POI + 點「加入行程」
+- **THEN** 開 trip-picker modal 選 trip → POST batch
+- **AND** 此流程跟 AddStopModal「收藏」 tab 是**不同 use case**：ExplorePage 流程
+  trip-agnostic（user 還沒決定加哪 trip）；AddStopModal 流程 trip-scoped（已知
+  當前 trip + day）。兩流程並存解不同 user mental model，不視為 redundancy。
 
 ### Requirement: MapPage 加 FAB buttons (圖層 / 定位)
 

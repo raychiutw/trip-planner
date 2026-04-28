@@ -92,7 +92,7 @@
   → Mitigation: polish capability 不含 BottomNav 變動，BottomNav 等 decision 完成才動
 - **[Risk] AccountPage 整合 settings 入口時，sidebar 「帳號」nav item 跟現有 logged-in user card 重複** 
   → Mitigation: tasks 含明確「拿掉 user card 或保留 + 「帳號」nav 同時並存」決策子任務
-- **[Risk] AddStopModal 重構讓既有 saved POI 流程斷掉**（ExplorePage 儲存池現在透過「加入行程」modal 加進 trip，跟新 AddStopModal「收藏」tab 概念重疊）
+- **[Risk] AddStopModal 重構讓既有 saved POI 流程斷掉**（ExplorePage 我的收藏現在透過「加入行程」modal 加進 trip，跟新 AddStopModal「收藏」tab 概念重疊）
   → Mitigation: 重構時 spec 明確兩流程是同個 saved POI table 不同 entry point；ExplorePage saved 流程不動，AddStopModal「收藏」 tab read-only consume 同 store
 - **[Trade-off] 「completeness 修一波」vs「incremental 修細」**：本 change 採前者（一次 audit / 5 capability 一起 implement / 全 done 才 archive），加快 mockup 對齊；缺點是 archive timeline 拉長，兩個月內可能因 mockup itself iterate 又 drift
 - **[Trade-off] 不改 D1 schema 限制 Account hub stats**：3 個 stats（N 個行程 / N 天旅程 / N 位旅伴）需 client-side aggregate；trip 多的 user 可能 N+1 fetch 慢。Mitigation: 用 SUM 先寫一個 `/api/account/stats` aggregate endpoint 避免 client-side 算
@@ -114,7 +114,7 @@
 ## Open Questions
 
 - BottomNav IA 5-tab vs 4-tab — **product decision 待回答**：對齊 mockup global IA 還是保留 trip-scoped？
-- AddStopModal「收藏」 tab vs ExplorePage「儲存池」tab — 實作上算同一概念，UI 是否該指向同一 model？mockup 視覺處理不一樣（modal vs page），是 design 故意還是 modeling oversight？
+- AddStopModal「收藏」 tab vs ExplorePage「我的收藏」tab — 實作上算同一概念，UI 是否該指向同一 model？mockup 視覺處理不一樣（modal vs page），是 design 故意還是 modeling oversight？
 - Notifications page 內容 — mockup row 寫「行程更新 / 旅伴邀請 / 系統通知」分組但沒 mock 實際 page，初版做什麼 minimum？
 - Stop card emoji icon 替換是否同時改 trash confirm flow（mockup section 12 lead 吐槽 `window.confirm`）— 算同 capability 還是 polish 內？建議 polish 內處理，icon sweep 純視覺
 
@@ -252,7 +252,7 @@
 
 **Missing**:
 - HIGH: Modal 整體結構完全不存在 — mockup line 6428-6711 規範 4-frame modal (搜尋/收藏/自訂 3-tab + 兩種 saved state)。React 用 `InlineAddPoi` 在 DaySection 內 inline expand（不是 modal），沒 tabs、沒 modal layout
-- HIGH:「收藏」tab 完整流程 (mockup Frame 2 + 3，line 6527-6640) — React 無 saved-pois-in-context 概念；saved POI 只在 ExplorePage `儲存池` tab 看，不能從 trip detail 取用
+- HIGH:「收藏」tab 完整流程 (mockup Frame 2 + 3，line 6527-6640) — React 無 saved-pois-in-context 概念；saved POI 只在 ExplorePage `我的收藏` tab 看，不能從 trip detail 取用
 - HIGH:「自訂」tab form (mockup Frame 4，line 6642-6709)：標題 / 地址 / 開始時間 / 結束時間 / 類型 / 預估停留 / 備註 — React `InlineAddPoi` 只能搜尋 POI，無自訂 form
 - HIGH: 2-col grid POI cards with cover photo（mockup line 6470-6515 `tp-add-poi-card`）— React 用 1-col list `tp-inline-add-result` (line 130-149)，無 cover photo
 - MEDIUM: Region selector「沖繩 ▾」(line 6452-6454)、filter button「📋 篩選」(line 6460)、subtab chips「為你推薦/景點/美食/住宿/購物」(line 6462-6467) — 全無對應 React 元件
@@ -301,7 +301,7 @@
 - HIGH: POI grid card 視覺結構完全不同 — mockup `tp-explore-card` 有 cover photo (`tp-explore-card-cover` with `data-tone`) + ❤ favorite toggle right-corner + name + ★ rating meta (line 7313-7319)；React `explore-poi-card` 是 text-only card with category eyebrow + name + address +「+ 儲存」button (line 569-587)，無 cover, 無 ❤ icon, 無 rating
 - HIGH:「我的收藏」titlebar action（mockup line 7294 ghost button with heart icon, line 7370 compact icon button）— React 用 `Icon name="star"` (line 513) 切到 saved tab — icon 跟 mockup 不同（heart vs star）
 - HIGH: Region selector「沖繩 ▾」(line 7299, 7375) — React 無 region picker UI
-- HIGH: Subtab chips「為你推薦 / 景點 / 美食 / 住宿 / 購物」(line 7305-7311, 7381-7386) — React 只有「搜尋 / 儲存池」兩 tab 結構，無 POI 類型 sub-filter
+- HIGH: Subtab chips「為你推薦 / 景點 / 美食 / 住宿 / 購物」(line 7305-7311, 7381-7386) — React 只有「搜尋 / 我的收藏」兩 tab 結構，無 POI 類型 sub-filter
 - MEDIUM: Mockup compact 版用 `tp-page-titlebar` heart icon button (line 7370) — React 已對齊（star icon）
 
 **Inconsistent**:
@@ -311,7 +311,7 @@
 - LOW: Mockup card meta「★ 4.6 · ¥2,180」(line 7318)；React card meta 顯示「address truncated」(line 572)
 
 **Extra**:
-- React 有「儲存池 multi-select + 加入行程 modal」流程 (line 620-740)；mockup 無此 batch-add-to-trip flow
+- React 有「我的收藏 multi-select + 加入行程 modal」流程 (line 620-740)；mockup 無此 batch-add-to-trip flow
 
 #### 19 Account
 

@@ -6,6 +6,7 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -24,7 +25,10 @@ import { extractPinsFromDay } from '../hooks/useMapData';
 const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
-import BottomNavBar from '../components/shell/BottomNavBar';
+import AlertPanel from '../components/shared/AlertPanel';
+import AddStopModal from '../components/trip/AddStopModal';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
@@ -63,14 +67,19 @@ const SCOPED_STYLES = `
 .trip-content { min-width: 0; }
 
 .tp-trip-titlebar-action {
-  width: var(--spacing-tap-min, 44px);
   height: var(--spacing-tap-min, 44px);
+  min-width: var(--spacing-tap-min, 44px);
+  padding: 0 14px;
   border: 0;
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-foreground);
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
   cursor: pointer;
   transition: background 120ms, color 120ms;
 }
@@ -83,6 +92,10 @@ const SCOPED_STYLES = `
   outline-offset: 2px;
 }
 .tp-trip-titlebar-action .svg-icon { width: 20px; height: 20px; }
+@media (max-width: 1023px) {
+  .tp-trip-titlebar-action { padding: 0; min-width: var(--spacing-tap-min, 44px); width: var(--spacing-tap-min, 44px); }
+  .tp-trip-titlebar-action-label { display: none; }
+}
 .tp-titlebar .ocean-tb-btn {
   width: var(--spacing-tap-min, 44px);
   height: var(--spacing-tap-min, 44px);
@@ -115,7 +128,7 @@ const SCOPED_STYLES = `
   line-height: 1;
   font-weight: 700;
 }
-@media (max-width: 1023px) {
+@media (max-width: 760px) {
   .tp-trip-titlebar-action[data-compact-hidden="true"] { display: none; }
 }
 
@@ -221,6 +234,9 @@ export interface TripPageHandle {
   openSheet: (key: string) => void;
   triggerDownload: (format: string) => void;
   togglePrint: () => void;
+  /** Section 3 (terracotta-add-stop-modal) E2E follow-up：embedded mode 也能
+   *  trigger AddStopModal，TripsListPage 的 embedded TitleBar 開放此 entry。 */
+  openAddStop: () => void;
 }
 
 function TripPageInner(
@@ -231,9 +247,14 @@ function TripPageInner(
   // Prefer prop tripId (embedded mode) over URL (route mode).
   const effectiveUrlTripId = propTripId ?? urlTripId;
   const navigate = useNavigate();
+  const { user: currentUser } = useCurrentUser();
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  // Section 3 (terracotta-add-stop-modal)：trip-level「+ 加入景點」 modal state，
+  // 帶當前 active day 進去；user 完成 commit 後 dispatch tp-entry-updated 觸發
+  // refetch（既有 listener 處理）。
+  const [addStopOpen, setAddStopOpen] = useState(false);
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
@@ -366,6 +387,13 @@ function TripPageInner(
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
+
+  /* Section 5 (E4)：將 resolved trip id 寫入 ActiveTripContext，提供給
+   * /chat /map /explore 等 global route 之預設 active trip。 */
+  const { setActiveTrip } = useActiveTrip();
+  useEffect(() => {
+    if (activeTripId) setActiveTrip(activeTripId);
+  }, [activeTripId, setActiveTrip]);
 
   const { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
@@ -637,6 +665,7 @@ function TripPageInner(
     openSheet: (key: string) => setActiveSheet(key),
     triggerDownload: (format: string) => { void handleDownloadFormat(format); },
     togglePrint,
+    openAddStop: () => setAddStopOpen(true),
   }), [handleDownloadFormat, togglePrint]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
@@ -659,10 +688,16 @@ function TripPageInner(
     return (
       <div className="flex min-h-dvh">
         <div className="flex-1 min-w-0 max-w-full mx-auto">
-          <div id="tripContent">
+          <div id="tripContent" style={{ padding: '24px 16px' }}>
+            <AlertPanel
+              variant="error"
+              title="無法載入行程"
+              message={`找不到此行程或載入失敗（ID：${activeTripId}）。請確認連結是否正確，或回行程列表挑選其他。`}
+              actionLabel="重試"
+              onAction={() => setResolveKey((k) => k + 1)}
+            />
             <div className="text-center p-10 text-foreground">
-              <p className="mb-4 text-title2">行程不存在：{activeTripId}</p>
-              <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/">選擇其他行程</a>
+              <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/trips">回行程列表</a>
             </div>
           </div>
         </div>
@@ -681,14 +716,11 @@ function TripPageInner(
     </Suspense>
   ) : undefined;
 
+  // Section 5 (E4)：trip-scoped 4-tab BottomNavBar 退役，全 page 統一用
+  // 5-tab GlobalBottomNav。「更多」 sheet 4 action 已遷移新家：
+  // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
   const bottomNavContent = !loading && trip ? (
-    <BottomNavBar
-      tripId={trip.id}
-      activeSheet={activeSheet}
-      onOpenSheet={setActiveSheet}
-      onClearSheet={() => setActiveSheet(null)}
-      isOnline={isOnline}
-    />
+    <GlobalBottomNav authed={!!currentUser} />
   ) : undefined;
 
   const mainContent = (
@@ -710,12 +742,24 @@ function TripPageInner(
               <button
                 type="button"
                 className="tp-trip-titlebar-action"
+                onClick={() => setAddStopOpen(true)}
+                aria-label={`在 Day ${currentDayNum || 1} 加景點`}
+                title="加入景點"
+                data-testid="trip-add-stop-trigger"
+              >
+                <Icon name="plus" />
+                <span className="tp-trip-titlebar-action-label">加景點</span>
+              </button>
+              <button
+                type="button"
+                className="tp-trip-titlebar-action"
                 data-compact-hidden="true"
                 onClick={() => setActiveSheet('suggestions')}
                 aria-label="開啟 AI 建議"
                 title="AI 建議"
               >
                 <Icon name="lightbulb" />
+                <span className="tp-trip-titlebar-action-label">建議</span>
               </button>
               <button
                 type="button"
@@ -726,6 +770,7 @@ function TripPageInner(
                 title="共編"
               >
                 <Icon name="group" />
+                <span className="tp-trip-titlebar-action-label">共編</span>
               </button>
               <button
                 type="button"
@@ -736,6 +781,7 @@ function TripPageInner(
                 title="下載"
               >
                 <Icon name="download" />
+                <span className="tp-trip-titlebar-action-label">下載</span>
               </button>
               <OverflowMenu
                 onSheet={handlePanelItem}
@@ -750,6 +796,17 @@ function TripPageInner(
       <ToastContainer />
 
       <main className="ocean-page">
+        {/* Section 4.10：persistent offline banner — 取代 useOfflineToast 的
+          * 短暫 toast，給 user 一個常駐的「目前在離線模式」 hint */}
+        {!isOnline && !loading && trip && (
+          <div className="px-padding-h">
+            <AlertPanel
+              variant="warning"
+              title="目前是離線模式"
+              message="顯示的是裝置上的快取資料。新增 / 編輯仍會在連線恢復後同步。"
+            />
+          </div>
+        )}
         {!loading && trip && (
           <DayNav
             days={days}
@@ -817,6 +874,23 @@ function TripPageInner(
           isOnline={isOnline}
         />
       </InfoSheet>
+
+      {/* Section 3：trip-level「+ 加景點」 modal — 帶 currentDayNum，user 完成
+        * commit 後 AddStopModal 內部 dispatch tp-entry-updated，TripPage 既有
+        * listener (line 277) 會觸發 refetchCurrentDay。 */}
+      {trip && currentDayNum > 0 && (
+        <AddStopModal
+          open={addStopOpen}
+          tripId={trip.id}
+          dayNum={currentDayNum}
+          dayLabel={(() => {
+            const day = days.find((d) => d.dayNum === currentDayNum);
+            const date = day?.date ? day.date : '';
+            return date ? `Day ${currentDayNum} · ${date}` : `Day ${currentDayNum}`;
+          })()}
+          onClose={() => setAddStopOpen(false)}
+        />
+      )}
 
       {isPrintMode && (
         <button

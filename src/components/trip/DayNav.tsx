@@ -129,7 +129,10 @@ body.print-mode .ocean-day-strip { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 80px;
+  /* Section 4.4 (terracotta-mockup-parity-v2)：max-width 80→120px 給「美瑛拼布之路」
+   * 這種 4-5 字 area 名稱 完整顯示空間，不被 ellipsis 砍掉。container 既有
+   * flex layout 不會破版（DayNav 整列水平 scroll），測試 6 字 area 仍 fit。 */
+  max-width: 120px;
   padding-left: 0;
   line-height: 1;
 }
@@ -282,13 +285,15 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               onTouchEnd={handleTouchEnd}
             >
               <div className="dn-head">
-                <span className="dn-eyebrow">{parts.eyebrow}</span>
-                {isToday && <span className="dn-weather" aria-label="今日">TODAY</span>}
+                {/* Section 4.4 (terracotta-ui-parity-polish): mockup eyebrow
+                 * 「DAY 03 · 今天」拿「· 今天」 suffix 取代 TODAY pill；date
+                 * 行去掉 dow 英文 extra row。 */}
+                <span className="dn-eyebrow">
+                  {parts.eyebrow}
+                  {isToday && <span className="dn-eyebrow-today" aria-label="今日"> · 今天</span>}
+                </span>
               </div>
-              <div className="dn-date">
-                {parts.date}
-                {parts.dow && <span className="dn-dow">{parts.dow}</span>}
-              </div>
+              <div className="dn-date">{parts.date}</div>
               {d.label && <div className="dn-area">{d.label}</div>}
               {showTooltip && (
                 <span

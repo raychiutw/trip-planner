@@ -235,6 +235,102 @@ const SCOPED_STYLES = `
   font-variant-numeric: tabular-nums;
 }
 
+/* Section 4.7：trips toolbar — filter subtabs + sort + search expanding */
+.tp-trips-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.tp-trips-tabs {
+  display: inline-flex; align-items: center;
+  background: var(--color-secondary);
+  border-radius: var(--radius-full);
+  padding: 4px;
+}
+.tp-trips-tab {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-muted);
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px;
+}
+.tp-trips-tab:hover { color: var(--color-foreground); }
+.tp-trips-tab.is-active {
+  background: var(--color-background);
+  color: var(--color-accent);
+  box-shadow: var(--shadow-sm);
+}
+.tp-trips-tab-count {
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-secondary);
+  color: var(--color-muted);
+}
+.tp-trips-tab.is-active .tp-trips-tab-count {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+.tp-trips-sort {
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-foreground); cursor: pointer;
+  min-height: 32px;
+}
+.tp-trips-search {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 4px 8px 4px 10px;
+  min-height: 32px;
+  transition: width 160ms ease;
+  width: 36px; overflow: hidden;
+}
+.tp-trips-search.is-open { width: 220px; }
+.tp-trips-search input {
+  flex: 1; min-width: 0;
+  border: 0; background: transparent;
+  font: inherit; font-size: var(--font-size-footnote); outline: none;
+  color: var(--color-foreground);
+}
+.tp-trips-search-toggle {
+  border: 0; background: transparent; cursor: pointer;
+  display: grid; place-items: center;
+  width: 24px; height: 24px;
+  color: var(--color-muted); flex-shrink: 0;
+}
+.tp-trips-search-toggle:hover { color: var(--color-foreground); }
+.tp-trips-search-toggle .svg-icon { width: 16px; height: 16px; }
+.tp-trips-search-count {
+  font-size: var(--font-size-caption2); color: var(--color-muted);
+}
+
+/* Section 4.7：owner avatar — 32x32 circle with first letter fallback。 */
+.tp-trip-card-owner {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+}
+.tp-trip-card-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  display: grid; place-items: center;
+  font: inherit; font-weight: 700; font-size: var(--font-size-caption2);
+  flex-shrink: 0;
+}
+.tp-trip-card-owner-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 /* Trailing "新增行程" card — dashed outline, accent color */
 .tp-trip-card-new {
   background: transparent;
@@ -351,14 +447,16 @@ function coverClass(countries: string | null | undefined): string {
 }
 
 function eyebrow(countries: string | null | undefined, dayCount: number | undefined): string {
+  // Section 4.7 (terracotta-ui-parity-polish): mockup eyebrow 用中文 (line 6904)
+  // 取代既有 「JAPAN · 12 DAYS」全英文。
   const c = (countries ?? '').toUpperCase().trim();
   const country =
-    c.includes('JP') ? 'JAPAN' :
-    c.includes('KR') ? 'KOREA' :
-    c.includes('TW') ? 'TAIWAN' :
-    c || 'TRIP';
+    c.includes('JP') ? '日本' :
+    c.includes('KR') ? '韓國' :
+    c.includes('TW') ? '台灣' :
+    c || '行程';
   if (typeof dayCount === 'number' && dayCount > 0) {
-    return `${country} · ${dayCount} ${dayCount === 1 ? 'DAY' : 'DAYS'}`;
+    return `${country} · ${dayCount} 天`;
   }
   return country;
 }
@@ -594,12 +692,53 @@ export default function TripsListPage() {
     return () => window.removeEventListener('tp-trip-created', onTripCreated);
   }, [loadTrips]);
 
-  const visibleTrips = useMemo<TripInfo[]>(() => {
+  const myTrips = useMemo<TripInfo[]>(() => {
     if (myIds === null || allTrips === null) return [];
     const map = new Map<string, TripInfo>();
     for (const t of allTrips) map.set(t.tripId, t);
     return myIds.map((id) => map.get(id) ?? { tripId: id, name: id });
   }, [myIds, allTrips]);
+
+  // Section 4.7：filter subtab + sort + search expanding bar — pure client-side
+  // 操作 myTrips 已知子集合，避免重新打 /api。
+  const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'collab'>('all');
+  const [sortBy, setSortBy] = useState<'updated' | 'start' | 'name'>('updated');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const userEmail = (user?.email ?? '').toLowerCase();
+
+  const visibleTrips = useMemo<TripInfo[]>(() => {
+    let list = [...myTrips];
+    if (filterTab === 'mine') {
+      list = list.filter((t) => (t.owner ?? '').toLowerCase() === userEmail);
+    } else if (filterTab === 'collab') {
+      list = list.filter((t) => (t.owner ?? '').toLowerCase() !== userEmail);
+    }
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      list = list.filter((t) => {
+        const haystack = `${t.title ?? ''} ${t.name ?? ''} ${t.countries ?? ''}`.toLowerCase();
+        return haystack.includes(term);
+      });
+    }
+    if (sortBy === 'name') {
+      list.sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
+    } else if (sortBy === 'start') {
+      list.sort((a, b) => {
+        const av = a.start_date ?? '9999';
+        const bv = b.start_date ?? '9999';
+        return av < bv ? -1 : av > bv ? 1 : 0;
+      });
+    }
+    // 'updated' 預設保留 myIds 順序（API 已 most-recent-first）
+    return list;
+  }, [myTrips, filterTab, sortBy, searchTerm, userEmail]);
+
+  // For badge counts shown on filter subtabs — counts on the unfiltered set.
+  const tabCounts = useMemo(() => {
+    const mine = myTrips.filter((t) => (t.owner ?? '').toLowerCase() === userEmail).length;
+    return { all: myTrips.length, mine, collab: myTrips.length - mine };
+  }, [myTrips, userEmail]);
 
   // Effective selected: URL param > first visible trip > null
   const effectiveSelectedId = useMemo<string | null>(() => {
@@ -700,7 +839,77 @@ export default function TripsListPage() {
 
           {error && <ErrorBanner message={error} testId="trips-list-error" />}
 
-          {!loading && !error && visibleTrips.length === 0 && (
+          {!loading && !error && myTrips.length > 0 && (
+            <div className="tp-trips-toolbar" data-testid="trips-list-toolbar">
+              <div className="tp-trips-tabs" role="tablist" aria-label="行程分類">
+                {([
+                  { key: 'all', label: '全部', count: tabCounts.all },
+                  { key: 'mine', label: '我的', count: tabCounts.mine },
+                  { key: 'collab', label: '共編', count: tabCounts.collab },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={filterTab === tab.key}
+                    className={`tp-trips-tab ${filterTab === tab.key ? 'is-active' : ''}`}
+                    onClick={() => setFilterTab(tab.key)}
+                    data-testid={`trips-list-tab-${tab.key}`}
+                  >
+                    {tab.label}
+                    <span className="tp-trips-tab-count">{tab.count}</span>
+                  </button>
+                ))}
+              </div>
+              <select
+                className="tp-trips-sort"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'updated' | 'start' | 'name')}
+                data-testid="trips-list-sort"
+                aria-label="排序方式"
+              >
+                <option value="updated">最新編輯</option>
+                <option value="start">出發日近</option>
+                <option value="name">名稱 A→Z</option>
+              </select>
+              <div className={`tp-trips-search ${searchOpen ? 'is-open' : ''}`}>
+                <button
+                  type="button"
+                  className="tp-trips-search-toggle"
+                  onClick={() => {
+                    setSearchOpen((o) => {
+                      if (o) setSearchTerm('');
+                      return !o;
+                    });
+                  }}
+                  aria-label={searchOpen ? '關閉搜尋' : '開啟搜尋'}
+                  data-testid="trips-list-search-toggle"
+                >
+                  <Icon name={searchOpen ? 'x-mark' : 'search'} />
+                </button>
+                {searchOpen && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="搜尋行程名稱或地區"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      autoFocus
+                      data-testid="trips-list-search-input"
+                      aria-label="搜尋行程"
+                    />
+                    {searchTerm && (
+                      <span className="tp-trips-search-count" data-testid="trips-list-search-count">
+                        {visibleTrips.length} 筆
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && myTrips.length === 0 && (
             <div className="tp-trips-empty-hero" data-testid="trips-list-empty">
               <div className="tp-hero-icon" aria-hidden="true">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -710,8 +919,9 @@ export default function TripsListPage() {
                   <line x1="16" y1="3" x2="16" y2="7" />
                 </svg>
               </div>
-              <h2>還沒開始任何行程</h2>
-              <p>建立第一個行程，AI 會幫你排日程、餐廳、住宿。</p>
+              {/* Section 4.7 (terracotta-ui-parity-polish): mockup line 7101-7102 文案 */}
+              <h2>還沒有行程</h2>
+              <p>建立第一個行程，開始規劃你的下一趟旅程。也可以從探索頁尋找靈感。</p>
               <button
                 type="button"
                 onClick={openNewTrip}
@@ -724,10 +934,21 @@ export default function TripsListPage() {
             </div>
           )}
 
+          {!loading && !error && myTrips.length > 0 && visibleTrips.length === 0 && (
+            <div className="tp-trips-loading" data-testid="trips-list-empty-filtered">
+              沒有符合條件的行程。試著切換分類或調整搜尋字。
+            </div>
+          )}
+
           {visibleTrips.length > 0 && (
             <div className="tp-trips-grid">
               {visibleTrips.map((t) => {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
+                const ownerEmail = (t.owner ?? '').trim();
+                const ownerInitial = ownerEmail ? ownerEmail.charAt(0).toUpperCase() : '·';
+                const ownerLabel = ownerEmail
+                  ? (ownerEmail.toLowerCase() === userEmail ? '由你建立' : ownerEmail.split('@')[0])
+                  : '';
                 return (
                   <div key={t.tripId} className="tp-trip-card-wrap">
                     <button
@@ -741,6 +962,12 @@ export default function TripsListPage() {
                       <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.day_count)}</div>
                       <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
                       <div className="tp-trip-card-meta">{cardMeta(t)}</div>
+                      {ownerLabel && (
+                        <div className="tp-trip-card-owner" data-testid={`trips-list-card-owner-${t.tripId}`}>
+                          <span className="tp-trip-card-avatar" aria-hidden="true">{ownerInitial}</span>
+                          <span className="tp-trip-card-owner-name">{ownerLabel}</span>
+                        </div>
+                      )}
                     </button>
                     <TripCardMenu
                       tripId={t.tripId}
@@ -800,11 +1027,26 @@ export default function TripsListPage() {
         back={clearSelected}
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
-          <EmbeddedActionMenu
-            tripId={effectiveSelectedId}
-            tripPageRef={tripPageRef}
-            onCollab={() => setCollabTripId(effectiveSelectedId)}
-          />
+          <>
+            {/* Section 3 (terracotta-add-stop-modal)：embedded mode 也提供
+              * 「加景點」 trigger，呼叫 TripPage exposed handle openAddStop。
+              * 否則 user 在 /trips?selected= flow（主要 entry）找不到加景點。 */}
+            <button
+              type="button"
+              className="tp-embedded-menu-trigger"
+              onClick={() => tripPageRef.current?.openAddStop()}
+              aria-label="加景點"
+              title="加景點"
+              data-testid="trip-add-stop-trigger"
+            >
+              <Icon name="plus" />
+            </button>
+            <EmbeddedActionMenu
+              tripId={effectiveSelectedId}
+              tripPageRef={tripPageRef}
+              onCollab={() => setCollabTripId(effectiveSelectedId)}
+            />
+          </>
         )}
       />
       <TripPage ref={tripPageRef} tripId={effectiveSelectedId!} noShell />

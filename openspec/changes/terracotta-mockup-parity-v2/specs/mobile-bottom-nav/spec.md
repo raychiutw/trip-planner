@@ -1,6 +1,11 @@
 ## ADDED Requirements
 
-> **Note**：本 spec 是對 `openspec/specs/mobile-bottom-nav.md`（既有 4-tab implementation note）的取代。實作前必須先完成 §Requirement「Bottom Nav IA 5-tab vs 4-tab decision」收斂方向。Decision 結果可能 keep 4-tab（不執行 IA 重整）或 adopt 5-tab（依下方 Requirement 實作）。Archive 時依 decision 結果決定是否覆蓋既有 spec。
+> **Decision (2026-04-28)**: Adopt **5-tab** IA — 對齊 mockup section 02 source
+> of truth。詳見 `notes/bottom-nav-ia-decision.md` + `notes/e-deferred-decisions.md`
+> §E4。本 spec 取代既有 `openspec/specs/mobile-bottom-nav.md` 4-tab spec。
+> 4-tab BottomNavBar 實作 deprecated；全 page 統一用 `<GlobalBottomNav>`。
+> 配合「active trip context」機制 (`src/contexts/ActiveTripContext.tsx`) 補償
+> in-trip workflow 退步。
 
 ### Requirement: Bottom Nav IA 5-tab vs 4-tab decision（**product gate**）
 
@@ -75,3 +80,45 @@
 #### Scenario: 「地圖」tab regex 不誤觸
 - **WHEN** user 在 `/manage/map-xxx`
 - **THEN** Bottom nav「地圖」tab **不** active（regex 嚴格 `/^\/(map$|trip\/[^/]+\/map$)/`）
+
+### Requirement: Active trip context 機制（補償 5-tab 失去 trip-scoped 高效）
+
+對應 E4 決策的額外需求。新建 `src/contexts/ActiveTripContext.tsx` 為 single
+source of truth，所有 global route (/chat /map /explore) 預設帶入當前 active
+trip 對應內容。
+
+實作規範：
+- React Context provider 包在 app root (`<ActiveTripProvider>` 在 BrowserRouter
+  內 NewTripProvider 之外)
+- localStorage `LS_KEY_TRIP_PREF` 持久化 (繼承既有 key，不需 migration)
+- Window `storage` event subscribe → 跨 tab 同步
+- `useActiveTrip()` hook 讀寫
+- TripPage 進入時自動 `setActiveTrip(activeTripId)`
+- ChatPage / GlobalMapPage / ExplorePage 讀 `activeTripId` 預設
+
+每頁整合：
+| 頁 | 預設行為 |
+|---|---|
+| /chat | trip picker 預選 active trip 對應 chat thread |
+| /map | active trip 對應的 map pin overview (GlobalMapPage 既有) |
+| /explore | region pill 預設 active trip's countries 對應 (JP→沖繩 / KR→首爾 / TW→台北) |
+
+#### Scenario: 進入 /trip/:id 自動 set active trip
+- **WHEN** user 進入 `/trip/okinawa-2026`
+- **THEN** `ActiveTripContext.activeTripId === 'okinawa-2026'`
+- **AND** localStorage `tp-trip-pref` 持久化
+
+#### Scenario: 切到 /chat 預設 active trip 對應 thread
+- **WHEN** user 在 `/trip/okinawa-2026` 點底部「聊天」 tab
+- **THEN** 切到 /chat，trip picker 自動選 'okinawa-2026'
+- **AND** History fetch `/api/requests?tripId=okinawa-2026`
+
+#### Scenario: 切到 /map 預設 active trip 對應 map
+- **WHEN** user 在 `/trip/okinawa-2026` 點底部「地圖」 tab
+- **THEN** 切到 /map (GlobalMapPage)，預設選 'okinawa-2026'
+- **AND** Map pin 顯示 okinawa-2026 行程的 POI
+
+#### Scenario: 跨 tab 同步
+- **WHEN** user 在 tab A setActiveTrip('kyoto')
+- **AND** Tab B 同 app open
+- **THEN** Tab B 的 activeTripId state 自動更新為 'kyoto' (storage event)

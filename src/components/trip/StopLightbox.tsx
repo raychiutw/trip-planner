@@ -7,7 +7,7 @@
  * timing — useful as expanded reading surface beyond the inline accordion.
  *
  * Triggered from TimelineRail's expanded-row action button (⛶).
- * ESC / ✕ / backdrop click → onClose.
+ * ESC / close button / backdrop click → onClose.
  */
 import { useEffect, useState } from 'react';
 import Icon from '../shared/Icon';
@@ -248,7 +248,7 @@ export default function StopLightbox({ open, entry, onClose }: StopLightboxProps
             aria-label="關閉放大檢視"
             data-testid="stop-lightbox-close"
           >
-            ✕
+            <Icon name="x-mark" />
           </button>
         </div>
 

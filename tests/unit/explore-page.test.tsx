@@ -52,11 +52,12 @@ describe('ExplorePage', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders search input + empty saved pool when switching to 儲存池 tab', async () => {
+  it('renders search input + empty saved view when 切換 to 我的收藏 view', async () => {
     const { getByTestId, findByText } = renderPage();
     expect(getByTestId('explore-page')).toBeTruthy();
     expect(getByTestId('explore-search-input')).toBeTruthy();
-    fireEvent.click(getByTestId('explore-tab-saved'));
+    // Section 4.9: TitleBar action 「我的收藏」 button toggle 取代既有 tab pair
+    fireEvent.click(getByTestId('explore-saved-titlebar'));
     expect(await findByText(/還沒有儲存任何 POI/)).toBeTruthy();
   });
 
@@ -117,5 +118,110 @@ describe('ExplorePage', () => {
         expect.objectContaining({ method: 'POST' }),
       );
     });
+  });
+});
+
+describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
+  beforeEach(() => {
+    apiFetchMock.mockReset();
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path === '/saved-pois') return Promise.resolve([]);
+      return Promise.resolve({});
+    });
+    global.fetch = vi.fn();
+  });
+
+  it('region pill 顯示「全部地區 ▾」 default', () => {
+    const { getByTestId } = renderPage();
+    const pill = getByTestId('explore-region-pill');
+    expect(pill.textContent).toContain('全部地區');
+  });
+
+  it('5 個 subtab chip 渲染：為你推薦 / 景點 / 美食 / 住宿 / 購物', () => {
+    const { getByTestId } = renderPage();
+    expect(getByTestId('explore-subtab-all').textContent).toBe('為你推薦');
+    expect(getByTestId('explore-subtab-attraction').textContent).toBe('景點');
+    expect(getByTestId('explore-subtab-food').textContent).toBe('美食');
+    expect(getByTestId('explore-subtab-hotel').textContent).toBe('住宿');
+    expect(getByTestId('explore-subtab-shopping').textContent).toBe('購物');
+  });
+
+  it('預設 subtab「為你推薦」 套 .is-active', () => {
+    const { getByTestId } = renderPage();
+    expect(getByTestId('explore-subtab-all').className).toContain('is-active');
+    expect(getByTestId('explore-subtab-food').className).not.toContain('is-active');
+  });
+
+  it('切 subtab 套 .is-active 並切換 aria-selected', () => {
+    const { getByTestId } = renderPage();
+    fireEvent.click(getByTestId('explore-subtab-food'));
+    expect(getByTestId('explore-subtab-food').className).toContain('is-active');
+    expect(getByTestId('explore-subtab-food').getAttribute('aria-selected')).toBe('true');
+    expect(getByTestId('explore-subtab-all').className).not.toContain('is-active');
+  });
+
+  it('search results 渲染 cover photo (data-tone) + heart save button', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        results: [
+          { osm_id: 7, name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
+        ],
+      }),
+    });
+    const { getByTestId, container } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '美ら海' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => {
+      expect(getByTestId('explore-save-btn-7')).toBeTruthy();
+    });
+    // cover element 含 data-tone (1-8)
+    const cover = container.querySelector('.explore-poi-cover');
+    expect(cover?.getAttribute('data-tone')).toMatch(/^[1-8]$/);
+    // heart button class 含 explore-poi-heart
+    const heartBtn = getByTestId('explore-save-btn-7');
+    expect(heartBtn.className).toContain('explore-poi-heart');
+  });
+
+  it('rating meta line 顯示 ★ icon', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        results: [
+          { osm_id: 8, name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism' },
+        ],
+      }),
+    });
+    const { getByTestId, container } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: '首爾' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => {
+      expect(getByTestId('explore-save-btn-8')).toBeTruthy();
+    });
+    const rating = container.querySelector('.explore-poi-rating');
+    expect(rating?.textContent).toContain('★');
+  });
+
+  it('subtab category filter — food 過濾掉非餐廳結果', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        results: [
+          { osm_id: 1, name: 'A 餐廳', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
+          { osm_id: 2, name: 'B 景點', address: 'X', lat: 1, lng: 1, category: 'tourism' },
+        ],
+      }),
+    });
+    const { getByTestId } = renderPage();
+    fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'foo' } });
+    fireEvent.click(getByTestId('explore-search-submit'));
+    await waitFor(() => {
+      expect(getByTestId('explore-save-btn-1')).toBeTruthy();
+      expect(getByTestId('explore-save-btn-2')).toBeTruthy();
+    });
+    // 切 food → 只剩 restaurant
+    fireEvent.click(getByTestId('explore-subtab-food'));
+    expect(() => getByTestId('explore-save-btn-2')).toThrow();
+    expect(getByTestId('explore-save-btn-1')).toBeTruthy();
   });
 });

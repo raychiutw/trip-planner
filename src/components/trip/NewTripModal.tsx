@@ -10,8 +10,14 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { apiFetchRaw } from '../../lib/apiClient';
+import { lsGet, lsSet } from '../../lib/localStorage';
 import InlineError from '../shared/InlineError';
+import Icon from '../shared/Icon';
+import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 
 interface PoiSearchResult {
   osm_id: number;
@@ -26,6 +32,38 @@ interface PoiSearchResult {
 
 const POI_SEARCH_DEBOUNCE_MS = 300;
 const POI_SEARCH_MIN_LEN = 2;
+
+// Section 4.2.8 (terracotta-mockup-parity-v2)：「熱門目的地」靜態 list
+// （無 backend trending endpoint，依使用者 trip-planner 主要市場手動 curate）。
+// 點擊 chip → 直接觸發 search input 走既有 debounce 流程（避免 fake POI inject
+// 造成 country code 不準）。
+const POPULAR_DESTINATIONS: ReadonlyArray<{ key: string; label: string }> = [
+  { key: 'okinawa', label: '沖繩' },
+  { key: 'tokyo', label: '東京' },
+  { key: 'kyoto', label: '京都' },
+  { key: 'seoul', label: '首爾' },
+  { key: 'bangkok', label: '曼谷' },
+  { key: 'taipei', label: '台北' },
+];
+
+// Section 4.2.8：localStorage key for「最近搜尋」 (recent dest names) — 取 5
+// 個 most-recent，selectPoi 時 push 到 head。儲 string array，max 5。
+const LS_KEY_RECENT_DESTS = 'tripline:newtrip:recent-dests';
+const RECENT_DESTS_MAX = 5;
+
+function loadRecentDests(): string[] {
+  const raw = lsGet<string[]>(LS_KEY_RECENT_DESTS);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((s) => typeof s === 'string').slice(0, RECENT_DESTS_MAX);
+}
+
+function pushRecentDest(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  const cur = loadRecentDests();
+  const next = [trimmed, ...cur.filter((d) => d !== trimmed)].slice(0, RECENT_DESTS_MAX);
+  lsSet(LS_KEY_RECENT_DESTS, next);
+}
 
 const SCOPED_STYLES = `
 .tp-new-modal-backdrop {
@@ -118,7 +156,153 @@ const SCOPED_STYLES = `
 .tp-new-dest-wrap { position: relative; }
 .tp-new-dest-wrap input { font-weight: 600; }
 
-/* Destination autocomplete dropdown + selected POI chips */
+/* Destination autocomplete dropdown + selected POI chips
+ * Section 4.2 (terracotta-ui-parity-polish): chips → 縱向 sortable rows
+ * with grip handle + 編號 + remove。對齊 mockup section 03 (line 5996+)。 */
+.tp-new-dest-rows {
+  display: flex; flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tp-new-dest-row {
+  display: grid;
+  grid-template-columns: 24px 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  font-size: var(--font-size-footnote);
+}
+.tp-new-dest-row.is-dragging {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+.tp-new-dest-grip {
+  cursor: grab;
+  color: var(--color-muted);
+  display: grid; place-items: center;
+  width: 24px; height: 24px;
+}
+.tp-new-dest-grip:active { cursor: grabbing; }
+.tp-new-dest-grip .svg-icon { width: 14px; height: 14px; }
+.tp-new-dest-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  font-weight: 700;
+  font-size: var(--font-size-caption);
+}
+.tp-new-dest-name {
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-new-dest-name .tp-new-dest-region {
+  margin-left: 6px;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.tp-new-dest-remove {
+  width: 28px; height: 28px;
+  border: 0; background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  display: grid; place-items: center;
+}
+.tp-new-dest-remove:hover { background: var(--color-hover); color: var(--color-destructive); }
+.tp-new-dest-remove .svg-icon { width: 14px; height: 14px; }
+.tp-new-dest-helper {
+  margin: 0 0 10px;
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+}
+
+/* Section 4.2.10：day quota stepper — multi-dest 分配天數 */
+.tp-new-quota {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-secondary);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.tp-new-quota-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: var(--font-size-footnote);
+}
+.tp-new-quota-title { font-weight: 700; color: var(--color-foreground); }
+.tp-new-quota-sum { color: var(--color-muted); font-variant-numeric: tabular-nums; }
+.tp-new-quota-sum.is-mismatch { color: var(--color-priority-high-dot, #c0392b); font-weight: 700; }
+.tp-new-quota-rows {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tp-new-quota-row {
+  display: grid; grid-template-columns: 24px 1fr auto; align-items: center;
+  gap: 10px; padding: 6px 0;
+  font-size: var(--font-size-footnote);
+}
+.tp-new-quota-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: var(--font-size-caption2);
+}
+.tp-new-quota-name { font-weight: 600; color: var(--color-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-new-quota-stepper { display: inline-flex; align-items: center; gap: 6px; }
+.tp-new-quota-step-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  border-radius: var(--radius-md);
+  font: inherit; font-weight: 700;
+  cursor: pointer;
+}
+.tp-new-quota-step-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.tp-new-quota-step-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.tp-new-quota-value {
+  min-width: 32px; text-align: center;
+  font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+/* Section 4.2.8：「熱門 / 最近」 chip groups — 顯示在 destination input 下方 */
+.tp-new-dest-chip-group {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 12px;
+}
+.tp-new-dest-chip-group-label {
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.tp-new-dest-chip-group-list {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.tp-new-dest-chip-quick {
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font: inherit; font-size: var(--font-size-footnote);
+  color: var(--color-foreground); cursor: pointer;
+  min-height: 32px;
+}
+.tp-new-dest-chip-quick:hover {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-color: var(--color-accent);
+}
+
+/* Legacy chips fallback (other usages) */
 .tp-new-dest-chips {
   display: flex;
   flex-wrap: wrap;
@@ -456,6 +640,87 @@ function genTripId(name: string): string {
 // 不準（沖繩寫成 "Naha" / 巴塞隆納沒列在清單 / 等等都會 default JP）。改成
 // destination autocomplete 強制 user 選一筆 POI，直接拿 Nominatim 真實 country code。
 
+/* Section 4.2：sortable destination list — 內部 SortableContext + 每 row 用
+ * useSortable hook 產 transform，drop 透過 parent onReorder callback 改 array。
+ * Single 1 dest 也 render row 但 grip disabled visually (cursor default)。 */
+interface SortableDestinationRowProps {
+  poi: PoiSearchResult;
+  index: number;
+  onRemove: (osmId: number) => void;
+}
+
+function SortableDestinationRow({ poi, index, onRemove }: SortableDestinationRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: poi.osm_id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`tp-new-dest-row ${isDragging ? 'is-dragging' : ''}`}
+      data-testid={`new-trip-destination-row-${poi.osm_id}`}
+    >
+      <button
+        type="button"
+        className="tp-new-dest-grip"
+        aria-label={`拖移目的地：${poi.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        <Icon name="arrows-vertical" />
+      </button>
+      <span className="tp-new-dest-num" aria-hidden="true">{index + 1}</span>
+      <span className="tp-new-dest-name">
+        {poi.name}
+        {poi.country && <span className="tp-new-dest-region">{poi.country}</span>}
+      </span>
+      <button
+        type="button"
+        className="tp-new-dest-remove"
+        onClick={() => onRemove(poi.osm_id)}
+        aria-label={`移除目的地：${poi.name}`}
+      >
+        <Icon name="x-mark" />
+      </button>
+    </div>
+  );
+}
+
+interface SortableDestinationListProps {
+  pois: PoiSearchResult[];
+  onReorder: (fromIdx: number, toIdx: number) => void;
+  onRemove: (osmId: number) => void;
+}
+
+function SortableDestinationList({ pois, onReorder, onRemove }: SortableDestinationListProps) {
+  function handleDragEnd(e: DragEndEvent) {
+    if (!e.over || e.active.id === e.over.id) return;
+    const fromIdx = pois.findIndex((p) => p.osm_id === e.active.id);
+    const toIdx = pois.findIndex((p) => p.osm_id === e.over!.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    onReorder(fromIdx, toIdx);
+  }
+  return (
+    <DndContext
+      collisionDetection={closestCenter}
+      accessibility={TP_DRAG_ACCESSIBILITY}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={pois.map((p) => p.osm_id)} strategy={verticalListSortingStrategy}>
+        <div className="tp-new-dest-rows" data-testid="new-trip-destination-rows">
+          {pois.map((p, i) => (
+            <SortableDestinationRow key={p.osm_id} poi={p} index={i} onRemove={onRemove} />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
 export interface NewTripModalProps {
   open: boolean;
   ownerEmail: string;
@@ -483,6 +748,15 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
   const [flexDays, setFlexDays] = useState(DEFAULT_FLEX_DAYS);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Section 4.2.8：recent dests state — modal open 時 load 一次。selectPoi 後
+  // re-load 反映新 push 進 head 的 entry。
+  const [recentDests, setRecentDests] = useState<string[]>([]);
+
+  // Section 4.2.10：multi-dest day quota — Record<osm_id, day_count>。
+  // 顯示 stepper 給 user 分配每 dest 天數，總和 ↔ trip total days 同步驗證。
+  // 預設 evenly split (or +1 落在前段 dest 處理 remainder)。submit 時 append
+  // 「目的地天數分配」到 preferences 給 AI consume。
+  const [destDays, setDestDays] = useState<Record<number, number>>({});
 
   const monthChoices = useMemo(() => buildMonthChoices(new Date()), [open]);
   const [flexMonth, setFlexMonth] = useState<string>(() => monthChoices[0]?.key ?? '');
@@ -503,8 +777,50 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       setError(null);
     } else {
       setFlexMonth(monthChoices[0]?.key ?? '');
+      setRecentDests(loadRecentDests());
+      setDestDays({});
     }
   }, [open, monthChoices]);
+
+  // Section 4.2.10：compute total trip days from current date mode。
+  const totalTripDays = useMemo(() => {
+    if (dateMode === 'flexible') return flexDays;
+    if (!startDate || !endDate) return 0;
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    const diff = Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    return Number.isFinite(diff) && diff > 0 ? diff : 0;
+  }, [dateMode, startDate, endDate, flexDays]);
+
+  // Section 4.2.10：分配 trip total days 到 dest，evenly split + remainder
+  // 前段累加。每次 dest list / total 變動時 reset 為 even split (但保留 user
+  // 手動 override 的值，前提是 sum 不超 total)。
+  useEffect(() => {
+    if (selectedPois.length < 2 || totalTripDays <= 0) {
+      setDestDays({});
+      return;
+    }
+    const perDest = Math.floor(totalTripDays / selectedPois.length);
+    const remainder = totalTripDays - perDest * selectedPois.length;
+    const next: Record<number, number> = {};
+    selectedPois.forEach((p, i) => {
+      next[p.osm_id] = perDest + (i < remainder ? 1 : 0);
+    });
+    setDestDays(next);
+  }, [selectedPois, totalTripDays]);
+
+  const destDaysSum = useMemo(
+    () => selectedPois.reduce((s, p) => s + (destDays[p.osm_id] ?? 0), 0),
+    [selectedPois, destDays],
+  );
+
+  function bumpDestDays(osmId: number, delta: number) {
+    setDestDays((prev) => {
+      const cur = prev[osmId] ?? 0;
+      const next = Math.max(0, cur + delta);
+      return { ...prev, [osmId]: next };
+    });
+  }
 
   // Debounced POI search — 同 InlineAddPoi 250ms pattern，但 lower min len 2。
   useEffect(() => {
@@ -556,8 +872,14 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
     setDestQuery('');
     setPoiResults(null);
     setPoiSearchError(null);
+    // Section 4.2.8：push to localStorage recent list 給下次 modal 預顯示
+    pushRecentDest(poi.name);
+    setRecentDests(loadRecentDests());
   }
 
+  function reorderSelectedPois(fromIdx: number, toIdx: number) {
+    setSelectedPois((prev) => arrayMove(prev, fromIdx, toIdx));
+  }
   function removeSelectedPoi(osmId: number) {
     setSelectedPois((prev) => prev.filter((p) => p.osm_id !== osmId));
   }
@@ -591,6 +913,16 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       ? flexDatesFromMonth(flexMonth, flexDays)
       : { start: startDate, end: endDate };
     const countries = Array.from(new Set(selectedPois.map((poi) => poi.country || 'JP'))).join(',');
+    // Section 4.2.10：multi-dest day quota append 到 preferences 給 AI consume，
+    // schema 用「目的地天數分配：沖繩 3 天 / 京都 2 天」 自然語言
+    let combinedDescription = preferences.trim();
+    if (selectedPois.length >= 2 && totalTripDays > 0 && destDaysSum === totalTripDays) {
+      const allocation = selectedPois
+        .map((p) => `${p.name} ${destDays[p.osm_id] ?? 0} 天`)
+        .join(' / ');
+      const note = `目的地天數分配：${allocation}`;
+      combinedDescription = combinedDescription ? `${combinedDescription}\n\n${note}` : note;
+    }
     try {
       const res = await apiFetchRaw('/trips', {
         method: 'POST',
@@ -602,7 +934,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           startDate: dates.start,
           endDate: dates.end,
           countries,
-          description: preferences.trim() || undefined,
+          description: combinedDescription || undefined,
           published: 1,
         }),
       });
@@ -678,33 +1010,66 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         </button>
         {/* Form pane */}
         <div className="tp-new-form">
-          <h2 id="new-trip-title">想去哪裡？</h2>
-          <p className="tp-new-modal-sub">先說目的地跟想做什麼，AI 會幫你排日程、餐廳、住宿。</p>
+          <h2 id="new-trip-title">新增行程</h2>
 
           <div className="tp-new-form-row">
-            <label htmlFor="new-trip-destination">目的地</label>
+            <label htmlFor="new-trip-destination">目的地（可加多筆，拖拉排序）</label>
             <div className="tp-new-dest-wrap">
               {selectedPois.length > 0 && (
-                <div className="tp-new-dest-chips" data-testid="new-trip-destination-chips">
-                  {selectedPois.map((poi) => (
-                    <div
-                      key={poi.osm_id}
-                      className="tp-new-dest-chip"
-                      data-testid={`new-trip-destination-chip-${poi.osm_id}`}
+                <SortableDestinationList
+                  pois={selectedPois}
+                  onReorder={reorderSelectedPois}
+                  onRemove={removeSelectedPoi}
+                />
+              )}
+              {selectedPois.length >= 2 && (
+                <p className="tp-new-dest-helper" data-testid="new-trip-destination-helper">
+                  行程跨 {selectedPois.length} 個目的地 · 順序決定地圖 polyline 串接方向
+                </p>
+              )}
+              {selectedPois.length >= 2 && totalTripDays > 0 && (
+                <div className="tp-new-quota" data-testid="new-trip-quota">
+                  <div className="tp-new-quota-header">
+                    <span className="tp-new-quota-title">分配天數</span>
+                    <span
+                      className={`tp-new-quota-sum ${destDaysSum !== totalTripDays ? 'is-mismatch' : ''}`}
+                      data-testid="new-trip-quota-sum"
                     >
-                      <span>
-                        {poi.name}
-                        {poi.country && ` · ${poi.country}`}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeSelectedPoi(poi.osm_id)}
-                        aria-label={`移除目的地：${poi.name}`}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                      已分配 {destDaysSum} / {totalTripDays} 天
+                    </span>
+                  </div>
+                  <div className="tp-new-quota-rows">
+                    {selectedPois.map((p, i) => (
+                      <div key={p.osm_id} className="tp-new-quota-row" data-testid={`new-trip-quota-row-${p.osm_id}`}>
+                        <span className="tp-new-quota-num" aria-hidden="true">{i + 1}</span>
+                        <span className="tp-new-quota-name">{p.name}</span>
+                        <div className="tp-new-quota-stepper">
+                          <button
+                            type="button"
+                            className="tp-new-quota-step-btn"
+                            onClick={() => bumpDestDays(p.osm_id, -1)}
+                            disabled={(destDays[p.osm_id] ?? 0) <= 0}
+                            aria-label={`${p.name} 減 1 天`}
+                            data-testid={`new-trip-quota-minus-${p.osm_id}`}
+                          >
+                            −
+                          </button>
+                          <span className="tp-new-quota-value" data-testid={`new-trip-quota-value-${p.osm_id}`}>
+                            {destDays[p.osm_id] ?? 0}
+                          </span>
+                          <button
+                            type="button"
+                            className="tp-new-quota-step-btn"
+                            onClick={() => bumpDestDays(p.osm_id, +1)}
+                            aria-label={`${p.name} 加 1 天`}
+                            data-testid={`new-trip-quota-plus-${p.osm_id}`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
               <input
@@ -742,6 +1107,47 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
                 </div>
               )}
             </div>
+
+            {/* Section 4.2.8：「熱門 / 最近」 chip groups — 只在 dropdown 沒打開
+              * 且 user 還沒輸入 query 時顯示，避免與 search results 視覺競爭 */}
+            {destQuery.trim().length === 0 && (
+              <>
+                <div className="tp-new-dest-chip-group" data-testid="new-trip-popular-dests">
+                  <div className="tp-new-dest-chip-group-label">熱門目的地</div>
+                  <div className="tp-new-dest-chip-group-list">
+                    {POPULAR_DESTINATIONS.map((d) => (
+                      <button
+                        key={d.key}
+                        type="button"
+                        className="tp-new-dest-chip-quick"
+                        onClick={() => setDestQuery(d.label)}
+                        data-testid={`new-trip-popular-dest-${d.key}`}
+                      >
+                        {d.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {recentDests.length > 0 && (
+                  <div className="tp-new-dest-chip-group" data-testid="new-trip-recent-dests">
+                    <div className="tp-new-dest-chip-group-label">最近搜尋</div>
+                    <div className="tp-new-dest-chip-group-list">
+                      {recentDests.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          className="tp-new-dest-chip-quick"
+                          onClick={() => setDestQuery(name)}
+                          data-testid={`new-trip-recent-dest-${name}`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <div className="tp-new-form-row">
@@ -759,7 +1165,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
                 onClick={() => setDateMode('select')}
                 data-testid="new-trip-date-mode-select"
               >
-                選日期
+                固定日期
               </button>
               <button
                 type="button"
@@ -769,7 +1175,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
                 onClick={() => setDateMode('flexible')}
                 data-testid="new-trip-date-mode-flexible"
               >
-                彈性日期
+                大概時間
               </button>
             </div>
           </div>

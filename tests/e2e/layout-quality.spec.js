@@ -56,9 +56,12 @@ test.describe('Layout quality gates', () => {
     await page.getByTestId('explore-search-submit').click();
     await expect(page.getByTestId('explore-results')).toContainText('沖繩美麗海水族館');
     await page.getByTestId('explore-save-btn-90001').click();
-    await expect(page.getByTestId('explore-save-btn-90001')).toContainText('已儲存');
+    // Section 4.9 (terracotta-mockup-parity-v2): heart button 是 icon-only，
+    // saved 狀態用 aria-label「已儲存」 + .is-saved class，不是 text content
+    await expect(page.getByTestId('explore-save-btn-90001')).toHaveClass(/is-saved/);
 
-    await page.getByTestId('explore-tab-saved').click();
+    // E3: 拿掉「搜尋 / 我的收藏」 tab pair，改用 TitleBar action button toggle
+    await page.getByTestId('explore-saved-titlebar').click();
     await expect(page.getByTestId('saved-card-8001')).toBeVisible();
     await page.getByTestId('saved-check-8001').check();
     await page.getByTestId('explore-add-to-trip').click();

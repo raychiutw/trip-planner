@@ -145,7 +145,7 @@ export interface Permission {
 // ---------------------------------------------------------------------------
 
 /**
- * A saved POI — 使用者跨 trip 的收藏清單，由 /explore 儲存池維護。
+ * A saved POI — 使用者跨 trip 的收藏清單，由 /explore 我的收藏維護。
  *
  * DB table: saved_pois
  * Columns: id, email, poi_id, saved_at, note

@@ -190,7 +190,7 @@ describe('NewTripModal — multiple destinations', () => {
     });
     fireEvent.click(await screen.findByTestId('new-trip-dest-result-12345', undefined, { timeout: 1000 }));
 
-    expect(screen.getByTestId('new-trip-destination-chip-12345')).toBeTruthy();
+    expect(screen.getByTestId('new-trip-destination-row-12345')).toBeTruthy();
     expect(screen.getByTestId('new-trip-destination-input')).toBeTruthy();
 
     fireEvent.change(screen.getByTestId('new-trip-destination-input'), {
@@ -198,8 +198,8 @@ describe('NewTripModal — multiple destinations', () => {
     });
     fireEvent.click(await screen.findByTestId('new-trip-dest-result-67890', undefined, { timeout: 1000 }));
 
-    expect(screen.getByTestId('new-trip-destination-chip-12345')).toBeTruthy();
-    expect(screen.getByTestId('new-trip-destination-chip-67890')).toBeTruthy();
+    expect(screen.getByTestId('new-trip-destination-row-12345')).toBeTruthy();
+    expect(screen.getByTestId('new-trip-destination-row-67890')).toBeTruthy();
   });
 
   it('submits selected destination chips as a combined trip name', async () => {
