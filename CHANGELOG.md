@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.16.2] - 2026-04-28
+
+**Hotfix dark mode 地圖底圖：carto dark_all → carto light_all**。深色 UI 配深色 tile 對比不足，accent 紅色 polyline + day-color marker 在 dark tile 上不易辨識。改為 Carto Positron light_all（muted 淺色底圖），dark UI chrome 配淺色地圖內容，markers / labels / polylines 對比強。
+
+### Fixed
+
+- **`useLeafletMap.ts` dark mode tile**：`OSM_DARK` (`cartocdn/dark_all`) 改為 `OSM_DARK_UI` (`cartocdn/light_all`)，rename 反映語意（dark UI mode 用的 tile，本身 light）。Light mode 仍用 OSM 標準 tile。Initial mount 跟 dark prop swap 兩個 path 同步更新。
+- verify gate: tsc clean / 1346 tests pass。
+
 ## [2.16.1] - 2026-04-28
 
 **Hotfix CI failures — GitHub Pages Jekyll build + mobile Playwright matrix 全綠**。修 v2.16.0 之後的 master CI 三個獨立 fail（不影響 Cloudflare Pages production deploy，但擋住自動化驗證信號）。

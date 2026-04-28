@@ -23,7 +23,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 const OSM_LIGHT = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const OSM_DARK = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png';
+// Dark UI 配 Carto Positron light tile：深色 tile 跟 dark chrome 對比不夠，
+// markers / polylines / labels 不易看清；改 light_all 給 dark UI 一張 muted
+// 淺色底圖，accent 紅色 polyline + day-color marker 在淺底圖上對比強。
+const OSM_DARK_UI = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png';
 const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const CARTO_ATTR = OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
@@ -84,7 +87,7 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
       L.control.zoom({ position: zoomControlPosition }).addTo(instance);
     }
 
-    L.tileLayer(dark ? OSM_DARK : OSM_LIGHT, {
+    L.tileLayer(dark ? OSM_DARK_UI : OSM_LIGHT, {
       attribution: dark ? CARTO_ATTR : OSM_ATTR,
       subdomains: dark ? 'abcd' : 'abc',
       maxZoom,
@@ -113,7 +116,7 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
       if (layer instanceof L.TileLayer) tiles.push(layer);
     });
     tiles.forEach((t) => map.removeLayer(t));
-    L.tileLayer(dark ? OSM_DARK : OSM_LIGHT, {
+    L.tileLayer(dark ? OSM_DARK_UI : OSM_LIGHT, {
       attribution: dark ? CARTO_ATTR : OSM_ATTR,
       subdomains: dark ? 'abcd' : 'abc',
       maxZoom,
