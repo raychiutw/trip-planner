@@ -8,7 +8,7 @@ type AllowedTable = typeof ALLOWED_TABLES[number];
 
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   trips:            ['id', 'name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer', 'created_at', 'updated_at'],
-  trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'updated_at'],
+  trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'updated_at'],
   trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'poi_id', 'updated_at'],
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'google_rating', 'category', 'maps', 'mapcode', 'lat', 'lng', 'country', 'source', 'created_at', 'updated_at'],
   trip_pois:        ['id', 'trip_id', 'poi_id', 'context', 'day_id', 'entry_id', 'sort_order', 'description', 'note', 'hours', 'checkout', 'breakfast_included', 'breakfast_note', 'price', 'reservation', 'reservation_url', 'must_buy', 'source', 'created_at', 'updated_at'],

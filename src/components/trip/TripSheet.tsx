@@ -16,6 +16,7 @@ import {
   type SheetTab,
 } from '../../lib/trip-url';
 import TripSheetTabs from './TripSheetTabs';
+import Icon from '../shared/Icon';
 import type { MapPin } from '../../hooks/useMapData';
 
 const TripMapRail = lazy(() => import('./TripMapRail'));
@@ -112,7 +113,7 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
           aria-label="關閉 sheet"
           data-testid="trip-sheet-close"
         >
-          ✕
+          <Icon name="x-mark" />
         </button>
         <TripSheetTabs currentTab={currentTab} onChange={handleTabChange} />
       </div>

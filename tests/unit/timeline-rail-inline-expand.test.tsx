@@ -221,27 +221,27 @@ function renderWiredRail(events = [ENTRY_A, ENTRY_B], days = DAY_OPTIONS, dayId:
   );
 }
 
-describe('TimelineRail — ⎘/⇅ copy/move buttons (v2.10 Wave 1)', () => {
-  it('expanded row shows ⎘ + ⇅ buttons when ≥2 days + dayId set', () => {
+describe('TimelineRail — copy/move copy/move buttons (v2.10 Wave 1)', () => {
+  it('expanded row shows copy + move buttons when ≥2 days + dayId set', () => {
     renderWiredRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.getByTestId('timeline-rail-copy-open-42')).toBeTruthy();
     expect(screen.getByTestId('timeline-rail-move-open-42')).toBeTruthy();
   });
 
-  it('hides ⎘/⇅ when only 1 day available', () => {
+  it('hides copy/move when only 1 day available', () => {
     renderWiredRail([ENTRY_A], [DAY_OPTIONS[0]!]);
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.queryByTestId('timeline-rail-copy-open-42')).toBeNull();
   });
 
-  it('hides ⎘/⇅ when no dayId provided', () => {
+  it('hides copy/move when no dayId provided', () => {
     renderWiredRail(undefined, undefined, null);
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.queryByTestId('timeline-rail-copy-open-42')).toBeNull();
   });
 
-  it('clicking ⎘ opens popover with copy heading', () => {
+  it('clicking copy button opens popover with copy heading', () => {
     renderWiredRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
@@ -249,7 +249,7 @@ describe('TimelineRail — ⎘/⇅ copy/move buttons (v2.10 Wave 1)', () => {
     expect(popover.textContent).toContain('複製到哪一天');
   });
 
-  it('clicking ⇅ opens popover with move heading', () => {
+  it('clicking move button opens popover with move heading', () => {
     renderWiredRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     fireEvent.click(screen.getByTestId('timeline-rail-move-open-42'));
@@ -366,7 +366,7 @@ describe('TimelineRail — cross-day drag capability', () => {
   it('batch endpoint 接 day_id 變動，cross-day move 走同一 batch payload', () => {
     // Backend integration test：tests/api/entries-batch.integration.test.ts
     // "Cross-day move：同次 batch 更新 day_id + sort_order" 已驗證。
-    // 前端 cross-day UI 目前透過 ⎘/⇅ popover（multi-day view in TimelineRail
+    // 前端 cross-day UI 目前透過 copy/move popover（multi-day view in TimelineRail
     // expand）走 PATCH /entries/:eid 既有 endpoint，drag-cross-day 為 V2 lift
     // DndContext 後啟動。此 contract 只確認 batch endpoint 字段對齊 spec。
     expect(TIMELINE_RAIL_SRC).toContain('updates');

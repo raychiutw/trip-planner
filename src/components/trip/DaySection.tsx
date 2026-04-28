@@ -8,13 +8,14 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useTripId } from '../../contexts/TripIdContext';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import Icon from '../shared/Icon';
-import InlineAddPoi from './InlineAddPoi';
+// Section 3 (terracotta-add-stop-modal)：DaySection 內 inline「+ 加景點」入口
+// 退役，trip-level 統一走 TripPage TitleBar AddStopModal。InlineAddPoi component
+// 暫保留 file 為 follow-up cleanup，本次 PR 不刪 file 避免 diff 過大。
 import { toTimelineEntry } from '../../lib/mapDay';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
@@ -86,7 +87,6 @@ const DaySection = React.memo(function DaySection({
   isActive,
   timezone,
 }: DaySectionProps) {
-  const tripId = useTripId();
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
   useEffect(() => {
@@ -113,6 +113,9 @@ const DaySection = React.memo(function DaySection({
     ? `${daySummary.date}${daySummary.dayOfWeek ? `（${daySummary.dayOfWeek}）` : ''}`
     : '';
   const area = daySummary?.label || '';
+  // Section 4.3 (terracotta-mockup-parity-v2)：3-tier fallback chain — user-defined
+  // title (trip_days.title) → 區域 label (trip_days.label, 例「美瑛」) →「Day N」。
+  const dayTitle = day?.title?.trim() || area || `Day ${dayNum}`;
 
   // QA 2026-04-26 PR-J：拿掉每日 hero 的「📖 看地圖」 chip — user feedback
   // 「移除每日 header 看地圖」。bottom nav 已有「地圖」 tab 入口，每天 chip 重複。
@@ -128,10 +131,10 @@ const DaySection = React.memo(function DaySection({
               {eyebrow}
               {dateLabel && ` · ${dateLabel}`}
             </span>
-            {area && <span className="ocean-hero-chip-muted">{area}</span>}
+            {area && area !== dayTitle && <span className="ocean-hero-chip-muted">{area}</span>}
           </div>
         </div>
-        <h2 className="ocean-hero-title">{area || `Day ${dayNum}`}</h2>
+        <h2 className="ocean-hero-title">{dayTitle}</h2>
         <div className="ocean-hero-stats">
           <div className="ocean-hero-stat">
             <div className="ocean-hero-stat-label">Stops</div>
@@ -182,8 +185,6 @@ const DaySection = React.memo(function DaySection({
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} />
             )}
-
-            {tripId && <InlineAddPoi tripId={tripId} dayNum={dayNum} />}
           </>
         )}
       </div>

@@ -1,5 +1,11 @@
 /**
- * BottomNavBar — trip-scoped mobile tab bar (4-tab: 行程 / 地圖 / 助理 / 更多).
+ * BottomNavBar — trip-scoped 4-tab mobile bottom nav.
+ *
+ * @deprecated Section 5 (terracotta-mockup-parity-v2 / E4)：mockup 對齊 5-tab
+ *   global IA，全 page 統一用 `<GlobalBottomNav>`。本 component 已不被任何
+ *   page render，「更多」 sheet 4 action 已遷移：
+ *     共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
+ *   File 暫保留，未來 cleanup PR 再砍。
  *
  * Why sticky + inset-block-end: keeps nav aligned to AppShell grid cell bottom
  * instead of escaping to viewport (fixed positioning would bypass grid).

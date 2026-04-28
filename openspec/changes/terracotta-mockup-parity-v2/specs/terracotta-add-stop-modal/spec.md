@@ -48,11 +48,11 @@
 
 ### Requirement: 「收藏」tab 對接既有 saved POI store
 
-「收藏」tab 列出 user 既有 saved POI（同 ExplorePage `儲存池` tab data source `/api/saved-pois`），但提供 batch add to 當前 trip 的 inline UX：
+「收藏」tab 列出 user 既有 saved POI（同 ExplorePage `我的收藏` tab data source `/api/saved-pois`），但提供 batch add to 當前 trip 的 inline UX：
 - POI grid 同搜尋 tab 結構，每 card 含 checkbox
 - 預設無選取，使用者勾選後 footer counter 更新
 
-ExplorePage 「儲存池」tab 既有功能不變（仍然可以從 explore 進來 multi-select + 加入行程），AddStopModal 「收藏」 tab 是同 data 的另一 entry point。
+ExplorePage 「我的收藏」tab 既有功能不變（仍然可以從 explore 進來 multi-select + 加入行程），AddStopModal 「收藏」 tab 是同 data 的另一 entry point。
 
 #### Scenario: 切「收藏」tab 顯示 user 的 saved POI
 - **WHEN** 使用者點「收藏」tab

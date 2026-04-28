@@ -69,7 +69,7 @@ function initialTripIdeas() {
       tripId: 'okinawa-trip-2026-Ray',
       poiId: 8001,
       title: '沖繩美麗海水族館',
-      note: '從探索儲存池加入',
+      note: '從探索我的收藏加入',
       addedAt: '2026-04-25T10:10:00Z',
       addedBy: MOCK_USER.email,
       promotedToEntryId: null,
@@ -594,6 +594,20 @@ async function setupApiMocks(page) {
 
   await page.route(/\/api\/oauth\/userinfo$/, (route) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) });
+  });
+
+  // Section 2 (terracotta-account-hub-page)：account stats endpoint
+  await page.route(/\/api\/account\/stats$/, (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ tripCount: 5, totalDays: 12, collaboratorCount: 3 }),
+    });
+  });
+
+  // Logout 走 POST /api/oauth/logout — 不影響 mock fixture，回 200 即可
+  await page.route(/\/api\/oauth\/logout$/, (route) => {
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
   });
 
   await page.route(/\/api\/my-trips$/, (route) => {

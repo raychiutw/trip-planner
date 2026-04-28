@@ -1,15 +1,17 @@
 /**
- * GlobalBottomNav — 5-tab mobile bottom nav for non-trip pages.
+ * GlobalBottomNav — 5-tab mobile bottom nav (mockup section 02 align).
  *
- * Lifts mockup-trip-v2.html `.bottom-nav` pattern verbatim. Mirrors
- * DesktopSidebar's 5-item primary nav (聊天 / 行程 / 地圖 / 探索 / 登入)
- * so mobile and desktop share the same IA.
+ * Section 5 (terracotta-mockup-parity-v2 / E4): mockup 採 5-tab global IA
+ * (聊天 / 行程 / 地圖 / 探索 / 帳號 | 登入)。本 component 是所有 page 共用
+ * bottom-nav，包含 trip-scoped /trip/:id (取代既有 4-tab BottomNavBar)。
  *
- * Logged-in users have 登入 swapped for 帳號 (account chip with logout).
+ * 「更多」 sheet 4 action 已遷移新家：
+ *   - 共編 → trip TitleBar 「共編」 button (Section 4.6)
+ *   - 切換行程 → /trips card grid
+ *   - 外觀 → AccountPage 「外觀設定」 row (Section 2)
+ *   - 下載 / 列印 → trip TitleBar OverflowMenu
  *
- * Trip-scoped pages (/trip/:id) keep using BottomNavBar with 4-tab
- * trip-context IA (行程/地圖/訊息/更多). This component is for /trips,
- * /explore, /manage, /chat, /map and similar global routes.
+ * Logged-in users 「帳號」 entry → /account (取代既有 /settings/sessions)。
  */
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
@@ -22,25 +24,40 @@ interface NavItem {
   icon: string;
   matchPrefixes: readonly string[];
   exactOnly?: boolean;
+  /** Section 5 (E4)：額外的 path 正則 — 對應 /trip/:id/map 也算「地圖」active */
+  additionalActivePatterns?: readonly RegExp[];
 }
+
+// Section 5 (E4)：「地圖」 tab — `/map` exact + `/trip/:id/map` 也視為 active
+// （in-trip map view），但 `/manage/map-xxx` 不誤觸（純文字 prefix 不夠精確）
+const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map$/];
+// 「行程」 tab — /trips + /trip/:id 都 active，但 /trip/:id/map 視為地圖不算行程
+const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+$/];
 
 const NAV_ITEMS_ANON: ReadonlyArray<NavItem> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
-  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
-  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
+  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
   { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
 ];
 
 const NAV_ITEMS_AUTH: ReadonlyArray<NavItem> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
-  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
-  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
+  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
+  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
   { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
-  { key: 'account', label: '帳號', href: '/settings/sessions', icon: 'user', matchPrefixes: ['/settings'] },
+  // Section 2 (terracotta-account-hub-page) + E4：帳號 entry 改 /account hub
+  { key: 'account', label: '帳號', href: '/account', icon: 'user',   matchPrefixes: ['/account', '/settings'] },
 ];
 
 function isItemActive(pathname: string, item: NavItem): boolean {
+  // additionalActivePatterns 優先（更精確的 regex match）
+  if (item.additionalActivePatterns) {
+    for (const re of item.additionalActivePatterns) {
+      if (re.test(pathname)) return true;
+    }
+  }
   for (const prefix of item.matchPrefixes) {
     if (pathname === prefix) return true;
     if (!item.exactOnly && pathname.startsWith(prefix + '/')) return true;
@@ -86,6 +103,19 @@ const SCOPED_STYLES = `
 .tp-global-bottom-nav-btn:hover { color: var(--color-foreground); }
 .tp-global-bottom-nav-btn.is-active {
   color: var(--color-accent);
+  /* Section 5 (E4)：mockup section 02 active state — accent-subtle 底 + 2px
+   * top indicator */
+  background: var(--color-accent-subtle);
+  position: relative;
+}
+.tp-global-bottom-nav-btn.is-active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 32px; height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: var(--color-accent);
 }
 .tp-global-bottom-nav-btn.is-active span {
   font-weight: 700;

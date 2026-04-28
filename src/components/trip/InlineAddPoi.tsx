@@ -1,13 +1,14 @@
 /**
  * InlineAddPoi — V3 inline + 加景點 affordance.
  *
- * v2.9 PR3：純 UI mockup with disabled search。
- * v2.11 Wave 2：search input 接真 Nominatim proxy （`GET /api/poi-search`），
- * 結果 click「+ 加入」 → POST `/api/trips/:id/days/:dayNum/entries`
- * （內部 findOrCreatePoi）→ dispatch `tp-entry-updated` → DaySection refetch。
+ * @deprecated Section 3 (terracotta-add-stop-modal) 改用 trip-level
+ *   `<AddStopModal>`（TripPage TitleBar「+ 加景點」 button）。本 component 不再
+ *   被 DaySection 渲染。File 暫時保留為 follow-up cleanup PR 確認無人引用後再刪。
  *
- * 「AI 幫我找」+「自訂景點」 chip（sparkle / edit Icon）仍 route 到 /chat
- * 保留 fallback 出口。
+ * History：
+ *   v2.9 PR3：純 UI mockup with disabled search。
+ *   v2.11 Wave 2：search input 接真 Nominatim proxy；POST entries; dispatch
+ *     `tp-entry-updated` 觸發 refetch。
  */
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -310,12 +311,12 @@ export default function InlineAddPoi({ tripId, dayNum }: InlineAddPoiProps) {
             aria-label="收闔加景點"
             data-testid="inline-add-poi-close"
           >
-            ✕
+            <Icon name="x-mark" />
           </button>
         </div>
 
         <div className="tp-inline-add-search">
-          <span className="ico" aria-hidden="true">🔍</span>
+          <span className="ico" aria-hidden="true"><Icon name="search" /></span>
           <input
             type="text"
             placeholder="搜尋景點、餐廳、地址…（≥2 個字）"

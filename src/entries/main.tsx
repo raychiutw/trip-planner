@@ -15,6 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
+import { ActiveTripProvider } from '../contexts/ActiveTripContext';
 import { lazy, Suspense, StrictMode } from 'react';
 
 import '../../css/tokens.css';
@@ -81,6 +82,10 @@ const ResetPasswordPage = lazyWithRetry(() => import('../pages/ResetPasswordPage
 const ConnectedAppsPage = lazyWithRetry(() => import('../pages/ConnectedAppsPage'));
 const DeveloperAppsPage = lazyWithRetry(() => import('../pages/DeveloperAppsPage'));
 const SessionsPage = lazyWithRetry(() => import('../pages/SessionsPage'));
+// Section 2 (terracotta-account-hub-page) — unified Account hub + sub-settings
+const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
+const AppearanceSettingsPage = lazyWithRetry(() => import('../pages/AppearanceSettingsPage'));
+const NotificationsSettingsPage = lazyWithRetry(() => import('../pages/NotificationsSettingsPage'));
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
 const TripsListPage = lazyWithRetry(() => import('../pages/TripsListPage'));
 const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
@@ -128,6 +133,7 @@ if (el) {
     <StrictMode>
       <ErrorBoundary>
         <BrowserRouter>
+          <ActiveTripProvider>
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
             <Routes>
@@ -146,6 +152,10 @@ if (el) {
               <Route path="/settings/connected-apps" element={<ConnectedAppsPage />} />
               <Route path="/developer/apps" element={<DeveloperAppsPage />} />
               <Route path="/settings/sessions" element={<SessionsPage />} />
+              {/* Section 2 (terracotta-account-hub-page) routes */}
+              <Route path="/account" element={<AccountPage />} />
+              <Route path="/account/appearance" element={<AppearanceSettingsPage />} />
+              <Route path="/account/notifications" element={<NotificationsSettingsPage />} />
               <Route path="/oauth/consent" element={<ConsentPage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
@@ -162,6 +172,7 @@ if (el) {
             </Routes>
           </Suspense>
           </NewTripProvider>
+          </ActiveTripProvider>
         </BrowserRouter>
       </ErrorBoundary>
     </StrictMode>
