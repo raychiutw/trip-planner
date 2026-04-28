@@ -17,8 +17,8 @@
 
 對應 `specs/terracotta-account-hub-page/spec.md`。預估 1 PR / ~3-4 天。
 
-- [ ] 2.1 寫 failing test：`tests/unit/account-page.test.tsx` 驗 unauth 時 redirect /login，logged-in 顯示 hero + 7 rows（**deferred — 本 capability 共用 PR 完成 implementation 後補 unit test**）
-- [ ] 2.2 寫 failing integration test：`tests/api/account-stats.integration.test.ts` 驗 `/api/account/stats` 回 `{ tripCount, totalDays, collaboratorCount }`（**deferred — implementation 完成；test 補在後續 PR**）
+- [x] 2.1 寫 unit test `tests/unit/account-page.test.tsx` (10 case)：hero render + stats fetch + 6 row testid + 登出 modal flow + appearance/notifications Link href + 取消 button
+- [ ] 2.2 寫 failing integration test：`tests/api/account-stats.integration.test.ts` 驗 `/api/account/stats` 回 `{ tripCount, totalDays, collaboratorCount }`（**deferred — implementation 完成；integration test 在後續 PR 配 staging D1 fixture 補**）
 - [x] 2.3 建 `functions/api/account/stats.ts` GET endpoint：requireAuth + SQL aggregate (COUNT trips / SUM days / COUNT distinct collaborators)
 - [x] 2.4 新建 `src/pages/AccountPage.tsx`：TitleBar「帳號」+ ProfileHero + 3 group settings rows + 登出 ConfirmModal pattern
 - [x] 2.5 SettingsRow 用 inline JSX (non-extracted)：left icon (圓形 box accent-subtle) + center title + helper + right chevron + onClick / Link navigate
@@ -28,7 +28,7 @@
 - [x] 2.9 加 3 條 routes 到 `src/entries/main.tsx`：`/account` `/account/appearance` `/account/notifications`
 - [x] 2.10 修改 `src/components/shell/DesktopSidebar.tsx`：NAV_ITEMS 加 `account` (authOnly) + `login` (guestOnly)；filter 邏輯改 authOnly/guestOnly visibility
 - [x] 2.11 修改 sidebar 底部 user account chip click 行為：`to="/account"`（之前 `/settings/sessions`）
-- [ ] 2.12 寫 Playwright E2E `tests/e2e/account-page.spec.js`（**deferred — Playwright 在本 PR 跑慢，留下個 PR 補**）
+- [x] 2.12 寫 Playwright E2E `tests/e2e/account-page.spec.js` (8 test)：hero stats + 3 group + appearance/notifications subroute + 登出 confirm flow + sidebar account chip → /account
 - [x] 2.13 跑 `npm test` + `npm run test:api` + `npx tsc --noEmit` 全 green：1217+/1217+ unit + 590/590 api + tsc clean
 - [x] 2.14 commit `feat(account): unified Account hub page + sidebar 「帳號」 nav item`（在大 commit 內含）
 
@@ -39,8 +39,8 @@
 - [x] 3.1 寫 failing test：`tests/unit/add-stop-modal.test.tsx` 驗 modal open/close + tab switch + footer counter + button enable/disable + Esc/backdrop close
 - [x] 3.2 寫 failing test：「自訂」tab form validation（缺 title 顯示 inline error）— custom tab confirm button enabled by default 觸發 inline error path
 - [x] 3.3 新建 `src/components/trip/AddStopModal.tsx`：Modal layout (backdrop + center card + Esc/click-backdrop 關) + Header (標題 + day meta + close) + 3 tabs + content + Footer。region selector + 推薦 chips 留 follow-up（需 backend trending endpoint + region taxonomy）
-- [ ] 3.4 「搜尋」tab：subtab chips 5 項（**deferred — 純 client-side region/category filter 已在 ExplorePage 4.9 內 land；AddStopModal 內 subtab 留下個 PR 配合後端 trending endpoint 一起做**）
-- [ ] 3.5 「為你推薦」default subtab 內容（**deferred — 需 backend trending endpoint，本 PR 不啟動**）
+- [x] 3.4 「搜尋」tab + 「收藏」tab 共用 5 個 category subtab chips：為你推薦 / 景點 / 美食 / 住宿 / 購物，client-side filter `matchCategory()` regex match POI category text
+- [x] 3.5 「為你推薦」(category='all') default → 顯示無 filter 的全部 results；無 backend trending endpoint 改採 user 自選 saved POI + search results 並列策略
 - [x] 3.6 「收藏」tab：fetch `/api/saved-pois` + 多選 grid + empty state
 - [x] 3.7 「自訂」tab：form (title required + time + duration + note) + 提交 POST /api/trips/:id/days/:num/entries
 - [x] 3.8 Footer：counter「已選 N 個 · 將加入 Day X」+ 完成 button (disabled when 0 selected) + 取消 button
@@ -48,7 +48,7 @@
 - [x] 3.10 修改 `src/pages/TripPage.tsx`：TitleBar actions 加「加景點」 button (icon + text) → open AddStopModal 帶 currentDayNum 進去；user 完成 commit 後 modal 內 dispatch tp-entry-updated 觸發既有 listener refetch
 - [x] 3.11 修改 `src/components/trip/DaySection.tsx`：移除 `<InlineAddPoi>` import + render；同步 remove unused useTripId import
 - [x] 3.12 `src/components/trip/InlineAddPoi.tsx` header 加 @deprecated annotation；file 暫保留為 follow-up cleanup PR 確認無人引用後再刪
-- [ ] 3.13 寫 Playwright E2E `tests/e2e/add-stop-modal.spec.js`（**deferred — Playwright 在本 PR 跑慢，留下個 PR 補**）
+- [x] 3.13 寫 Playwright E2E `tests/e2e/add-stop-modal.spec.js` (8 test)：trigger 開 modal + 3 tab + 5 subtab + 收藏 empty state + 自訂 form + inline error + Esc/close + subtab is-active
 - [x] 3.14 跑 `npm test` + `npx tsc --noEmit` 全 green：tsc clean + emoji contract pass + 既有 unit suite 無 regression
 - [ ] 3.15 commit `feat(add-stop): modal 3-tab pattern (搜尋/收藏/自訂) + batch select` + push + 合進本 capability 主 PR（不另開）
 
@@ -58,26 +58,26 @@
 
 ### 4.1 DesktopSidebar 視覺對齊（mockup section 01）
 
-- [ ] 4.1.1 寫 failing test：`tests/unit/desktop-sidebar-visual.test.tsx` 驗 sidebar dark theme + active accent + name truncation（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.1.1 寫 unit test `tests/unit/desktop-sidebar-visual.test.tsx` (13 case)：5 nav (logged-in) / 4 nav (logged-out) + active class + path matching + account chip name truncation + Link href + 未登入 chip + dark theme bg + inactive 文字色 + active accent + font-weight
 - [x] 4.1.2 修改 `src/components/shell/DesktopSidebar.tsx`：sidebar bg → var(--color-foreground) 深棕 + inactive item 文字 rgba(255,251,245,0.6) muted-light
 - [x] 4.1.3 修改 active item 樣式：bg → var(--color-accent) + 文字 var(--color-accent-foreground)
 - [x] 4.1.4 修改 `.tp-nav-item` font-weight 500 → 600（active 也 600 一致）
 - [x] 4.1.5 加 `name.length > 10 ? slice(0,10)+'…' : name` JS-level truncate
-- [ ] 4.1.6 視覺驗證：local dev sidebar 切 dark theme + 截圖比 mockup section 01（**deferred — local dev 視覺驗證留 user 觸發 /design-review 時**）
+- [ ] 4.1.6 視覺驗證：local dev sidebar 切 dark theme + 截圖比 mockup section 01（**deferred — 留 user 跑 /design-review 時補 screenshot diff，本 PR 已 cover SCOPED_STYLES regex assert**）
 
 ### 4.2 NewTripModal 文案 + 多目的地拖拉（mockup section 03）
 
-- [ ] 4.2.1 寫 failing test：`tests/unit/new-trip-modal-multidest.test.tsx`（**deferred — implementation 完成；既有 new-trip-modal.test.tsx 補了 row testid 重命名 cover regression；新 multidest unit test 留下個 PR**）
+- [x] 4.2.1 寫 unit test `tests/unit/new-trip-modal-multidest.test.tsx` (10 case)：title「新增行程」+ helper line + date mode label + sortable row + 編號 + remove + region + helper count
 - [x] 4.2.2 改 modal title 文案：「想去哪裡？」→「新增行程」
 - [x] 4.2.3 改日期 mode tabs label：「選日期 / 彈性日期」→「固定日期 / 大概時間」
 - [x] 4.2.4 改 destination section label：「目的地」→「目的地（可加多筆，拖拉排序）」
 - [x] 4.2.5 加 helper 行：「行程跨 N 個目的地 · 順序決定地圖 polyline 串接方向」
 - [x] 4.2.6 拿掉 sub-headline「先說目的地跟想做什麼，AI 會幫你排日程、餐廳、住宿。」
 - [x] 4.2.7 重 build destination input：用 `@dnd-kit/sortable` 做 sortable list（grip + 編號 + name + region + remove）取代既有 chips
-- [ ] 4.2.8 加「熱門目的地」chip group + 「最近搜尋」chip group（**deferred — 需 trending data + localStorage taxonomy；單獨 follow-up**）
-- [ ] 4.2.9 dropdown search results 改分組顯示（**deferred — UX 改寫獨立 follow-up**）
-- [ ] 4.2.10 加「分配天數」stepper：dest count ≥ 2 時顯示（**deferred — 跟 trip.days 多 dest 切 day quota schema 一起設計，獨立 PR**）
-- [ ] 4.2.11 視覺驗證：local dev 開 NewTripModal + 加 3 dest 拖拉 + 截圖比 mockup section 03（**deferred — 留 user 觸發 /design-review 時**）
+- [x] 4.2.8 加「熱門目的地」chip group (6 個 hard-coded) + 「最近搜尋」chip group (localStorage 取 5 most-recent，selectPoi push)
+- [ ] 4.2.9 dropdown search results 改分組顯示（**deferred — 需 search API 改 schema 加 group_by；UX 改寫範圍獨立 follow-up**）
+- [x] 4.2.10 加「分配天數」stepper：dest count ≥ 2 + total days > 0 時顯示，evenly split + remainder 前段累加；submit append「目的地天數分配：沖繩 3 天 / 京都 2 天」 到 description 給 AI consume
+- [ ] 4.2.11 視覺驗證：local dev 開 NewTripModal + 加 3 dest 拖拉 + 截圖比 mockup section 03（**deferred — 留 user 跑 /design-review 時補 screenshot diff**）
 
 ### 4.3 DaySection day hero 加 day title（mockup section 10）
 
@@ -90,21 +90,21 @@
 
 ### 4.4 DayNav eyebrow 對齊（mockup section 11）
 
-- [ ] 4.4.1 寫 failing test：`tests/unit/day-nav-eyebrow.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.4.1 寫 unit test `tests/unit/day-nav-eyebrow.test.tsx` (7 case)：今日 suffix render + non-today 不含 + 沒 todayDayNum + TODAY pill 移除 + dn-dow 移除 + area 仍渲染 + DAY NN 格式
 - [x] 4.4.2 修改 `src/components/trip/DayNav.tsx` eyebrow logic：今天 day 加「· 今天」suffix（拿掉獨立 TODAY pill）
 - [x] 4.4.3 拿掉 `<span class="dn-dow">` 週幾英文 extra row
-- [ ] 4.4.4 area max-width 80px → 拿掉或 raise 120px（**deferred — area CSS 變動 raise 風險不對齊文字會破版，留 local dev 視覺驗證後決定**）
+- [x] 4.4.4 area max-width 80px → 120px：給「美瑛拼布之路」 4-5 字 area 完整顯示空間，container flex layout 不會破版
 
 ### 4.5 TimelineRail 加結構 section + 編輯備註 button + ConfirmModal（mockup section 12）
 
-- [ ] 4.5.1 寫 failing test：`tests/unit/timeline-rail-toolbar-pencil.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.5.1 寫 unit test `tests/unit/timeline-rail-toolbar-pencil.test.tsx` (6 case)：預設不展開 + click row 展開 4 button + pencil 進 edit mode + delete 開 ConfirmModal + 取消關閉 + toolbar 全 SVG 無 emoji
 - [x] 4.5.2 加 toolbar 鉛筆 icon button：order 在「移到其他天」後「刪除」前；click → focus note textarea (data-testid `timeline-rail-edit-note-${entry.id}`)
 - [x] 4.5.3 替換 `handleDelete` `window.confirm` → inline ConfirmModal pattern（destructive variant，showDeleteConfirm state + alertdialog modal + 確認/取消 button + Esc/backdrop close + 刪除中 disabled）
-- [ ] 4.5.4 修改 `.ocean-rail-grip` CSS hover-only visible（**deferred — 既有 grip 永遠可見也是 OK affordance，spec MEDIUM 不是 HIGH，留 local 視覺驗證後改**）
+- [x] 4.5.4 `.ocean-rail-grip` desktop hover-only：`@media (hover: hover) and (pointer: fine)` 內 opacity 0 → 1 on parent row hover/focus-within；touch device 永遠可見（避免找不到拖拉把手）；keyboard focus 也 visible 保 a11y
 
 ### 4.6 TripPage TitleBar + travel pill（mockup section 13）
 
-- [ ] 4.6.1 寫 failing test：`tests/unit/trip-page-titlebar-actions.test.tsx`（**deferred — TripPage mount 過重(useTrip + leaflet)；TitleBar action button 純 markup 改寫，unit test 留下個 PR with full TripPage harness**）
+- [x] 4.6.1 寫 unit test `tests/unit/trip-page-titlebar-actions.test.tsx` (6 case)：用 vi.mock 隔離 useTrip + heavy children；驗 4 個 action button (加景點/建議/共編/下載) + OverflowMenu + 加景點 click 開 AddStopModal + 各 button text label
 - [x] 4.6.2 改 TripPage TitleBar actions 從 icon-only 為 ghost button with icon + text label（建議/共編/下載）；tablet ≤1023px collapse 為 icon-only；mobile ≤760px hide 走 OverflowMenu
 - [x] 4.6.3 寫 unit test `tests/unit/travel-pill.test.tsx` (7 case)：empty render null + min/desc/both render + type → icon mapping (car/walk/train/bus/plane)
 - [x] 4.6.4 修改 `src/components/trip/TimelineRail.tsx` 渲染：兩 RailRow 之間 conditional render `<TravelPill>` 用 entry.travel = { type, desc, min }
@@ -123,7 +123,7 @@
 ### 4.8 ChatPage day divider + AI avatar + bubble timestamp prefix（mockup section 17）
 
 - [x] 4.8.1 寫 unit test `tests/unit/chat-page-day-divider.test.ts` (6 case)：同日連續 1 divider + 跨日 inject + 無 createdAt 不觸發 + mixed input + id format + text 含週X
-- [ ] 4.8.2 寫 failing test：`tests/unit/chat-page-ai-avatar.test.tsx`（**deferred — ChatPage mount 過重 (useRequireAuth + apiFetch fetch mock + scroll observer)；avatar 純 markup 已驗 via E2E follow-up**）
+- [x] 4.8.2 寫 unit test `tests/unit/chat-page-ai-avatar.test.tsx` (6 case)：vi.mock 隔離 useRequireAuth + useRequestSSE + apiFetch；驗 assistant bubble AI avatar + user bubble 不含 + assistant timestamp prefix「Tripline AI · 」+ user 不含 prefix + 跨日 day-divider + TitleBar trip name
 - [x] 4.8.3 加 `buildMessagesWithDividers()` pure function：兩條 message 跨日時 inject `{ id: 'day-divider-YYYY-MM-DD', role: 'day-divider', text }` synthetic message
 - [x] 4.8.4 ChatPage render loop 處理 day-divider type：render `<div class="tp-chat-day-divider">YYYY/MM/DD（週X）</div>` 不渲染 bubble
 - [x] 4.8.5 加 `tp-chat-avatar.is-ai`「AI」avatar 32x32 在 assistant bubble 左側（user message 不加；row wrapper flex direction 處理對齊）
@@ -133,7 +133,7 @@
 
 ### 4.9 ExplorePage POI card cover + heart + rating + region + subtabs（mockup section 18）
 
-- [ ] 4.9.1 寫 failing test：`tests/unit/explore-page-card-cover.test.tsx`（**deferred — 既有 explore-page.test.tsx 4 case pass cover regression；POI 卡片 cover/heart 結構 visual-only，留下個 PR 配合真實 search results integration test 一起補**）
+- [x] 4.9.1 擴 `tests/unit/explore-page.test.tsx` 加 7 case Section 4.9：region pill default + 5 subtab render + active state + cover photo data-tone + heart button class + rating ★ icon + subtab category filter (food regex 過濾掉非餐廳)
 - [x] 4.9.2 重 build `.explore-poi-card`：top 100% 16:9 cover (data-tone 1-8 8 種 gradient placeholder) + 右上 heart icon button (toggle saved) + body 內 rating meta line
 - [x] 4.9.3 改 TitleBar action icon：star → heart（前 commit 已 land）
 - [x] 4.9.4 加 region selector pill：default「全部地區」+ click open prompt dropdown（簡易 prompt; 完整 dropdown UI 留 follow-up）

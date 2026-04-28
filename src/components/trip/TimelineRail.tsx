@@ -191,11 +191,21 @@ const SCOPED_STYLES = `
   border-radius: var(--radius-sm);
   touch-action: none;
   flex-shrink: 0;
-  transition: color 120ms, background 120ms;
+  transition: color 120ms, background 120ms, opacity 160ms;
 }
 .ocean-rail-grip:hover { color: var(--color-accent); background: var(--color-secondary); }
 .ocean-rail-grip:active { cursor: grabbing; }
 .ocean-rail-grip .svg-icon { width: 18px; height: 18px; }
+
+/* Section 4.5 (terracotta-mockup-parity-v2)：desktop hover-only grip。
+ * 只 apply 到 (hover: hover) device — touch device 永遠可見避免「找不到拖拉
+ * 把手」。focus-within / keyboard nav 也保留 visible (a11y)。 */
+@media (hover: hover) and (pointer: fine) {
+  .ocean-rail-row-wrap .ocean-rail-grip { opacity: 0; }
+  .ocean-rail-row-wrap:hover .ocean-rail-grip,
+  .ocean-rail-row-wrap:focus-within .ocean-rail-grip,
+  .ocean-rail-row-wrap .ocean-rail-grip:focus-visible { opacity: 1; }
+}
 `;
 
 interface TimelineRailProps {
@@ -649,6 +659,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 type="button"
                 disabled={deleting}
                 onClick={() => setShowDeleteConfirm(false)}
+                data-testid={`timeline-rail-delete-cancel-${entry.id}`}
                 style={{
                   flex: 1, minWidth: 112, minHeight: 'var(--spacing-tap-min)',
                   borderRadius: 'var(--radius-full)',

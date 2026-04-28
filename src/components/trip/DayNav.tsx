@@ -129,7 +129,10 @@ body.print-mode .ocean-day-strip { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 80px;
+  /* Section 4.4 (terracotta-mockup-parity-v2)：max-width 80→120px 給「美瑛拼布之路」
+   * 這種 4-5 字 area 名稱 完整顯示空間，不被 ellipsis 砍掉。container 既有
+   * flex layout 不會破版（DayNav 整列水平 scroll），測試 6 字 area 仍 fit。 */
+  max-width: 120px;
   padding-left: 0;
   line-height: 1;
 }

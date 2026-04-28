@@ -121,6 +121,27 @@ const SCOPED_STYLES = `
   padding: 16px 20px;
 }
 
+/* Section 3.4：5 subtab chips — 共用 search + saved tab，居於 tab body 上方 */
+.tp-add-stop-subtabs {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 12px;
+}
+.tp-add-stop-subtab {
+  border: 1px solid transparent;
+  background: var(--color-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-muted); cursor: pointer;
+  min-height: 32px;
+}
+.tp-add-stop-subtab:hover { color: var(--color-foreground); }
+.tp-add-stop-subtab.is-active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-color: var(--color-accent-bg);
+}
+
 .tp-add-stop-search-input-wrap {
   position: relative; margin-bottom: 12px;
 }
@@ -262,8 +283,34 @@ const SCOPED_STYLES = `
 }
 `;
 
+// Section 3.4-3.5：5 個 category subtab（為你推薦 / 景點 / 美食 / 住宿 / 購物）
+// 純 client-side filter — 對 search results 與 saved POIs 同邏輯，避免引入新
+// backend trending endpoint 增加 dependency。「為你推薦」 default tab 取 saved
+// POI top 12 + search results 全顯示（兩個 grid 並列）。
+type AddStopCategory = 'all' | 'attraction' | 'food' | 'hotel' | 'shopping';
+
+const CATEGORY_TABS: ReadonlyArray<{ key: AddStopCategory; label: string }> = [
+  { key: 'all', label: '為你推薦' },
+  { key: 'attraction', label: '景點' },
+  { key: 'food', label: '美食' },
+  { key: 'hotel', label: '住宿' },
+  { key: 'shopping', label: '購物' },
+];
+
+/** 將 POI category text 對應到 5 subtab；無資料 fallback 'all'。 */
+function matchCategory(category: string | null | undefined, target: AddStopCategory): boolean {
+  if (target === 'all') return true;
+  const cat = (category ?? '').toLowerCase();
+  if (target === 'food') return /restaurant|cafe|food|bar|bakery|餐|食/.test(cat);
+  if (target === 'hotel') return /hotel|hostel|guest|inn|住宿|飯店/.test(cat);
+  if (target === 'shopping') return /shop|mall|market|購物/.test(cat);
+  if (target === 'attraction') return /attract|museum|park|temple|景點|公園/.test(cat);
+  return false;
+}
+
 export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, onAdded }: AddStopModalProps) {
   const [tab, setTab] = useState<Tab>('search');
+  const [category, setCategory] = useState<AddStopCategory>('all');
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PoiSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -287,6 +334,7 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
   useEffect(() => {
     if (!open) {
       setTab('search');
+      setCategory('all');
       setQuery('');
       setSearchResults([]);
       setSelectedSearch(new Set());
@@ -503,6 +551,24 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
         </div>
 
         <div className="tp-add-stop-body">
+          {(tab === 'search' || tab === 'saved') && (
+            <div className="tp-add-stop-subtabs" role="tablist" aria-label="POI 類別">
+              {CATEGORY_TABS.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={category === c.key}
+                  className={`tp-add-stop-subtab ${category === c.key ? 'is-active' : ''}`}
+                  onClick={() => setCategory(c.key)}
+                  data-testid={`add-stop-subtab-${c.key}`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {tab === 'search' && (
             <>
               <div className="tp-add-stop-search-input-wrap">
@@ -517,34 +583,48 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
                 />
               </div>
               {searching && <div className="tp-add-stop-empty">搜尋中…</div>}
+              {!searching && query.trim().length === 0 && category === 'all' && savedPois && savedPois.length > 0 && (
+                <div className="tp-add-stop-empty">
+                  輸入關鍵字搜尋，或切到「收藏」 tab 從你儲存的 POI 加入
+                </div>
+              )}
+              {!searching && query.trim().length === 0 && category !== 'all' && (
+                <div className="tp-add-stop-empty">輸入「{CATEGORY_TABS.find((c) => c.key === category)?.label}」 相關關鍵字開始搜尋</div>
+              )}
               {!searching && query.trim().length >= 2 && searchResults.length === 0 && (
                 <div className="tp-add-stop-empty">沒有找到結果，換個關鍵字試試</div>
               )}
-              {searchResults.length > 0 && (
-                <div className="tp-add-stop-grid">
-                  {searchResults.map((r) => {
-                    const isSelected = selectedSearch.has(r.osm_id);
-                    return (
-                      <label
-                        key={r.osm_id}
-                        className={`tp-add-stop-card ${isSelected ? 'is-selected' : ''}`}
-                        data-testid={`add-stop-search-card-${r.osm_id}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="tp-add-stop-card-checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSearch(r.osm_id)}
-                        />
-                        <div className="tp-add-stop-card-body">
-                          <div className="tp-add-stop-card-name">{r.name}</div>
-                          <div className="tp-add-stop-card-meta">{r.address}</div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+              {searchResults.length > 0 && (() => {
+                const filtered = searchResults.filter((r) => matchCategory(r.category, category));
+                if (filtered.length === 0) {
+                  return <div className="tp-add-stop-empty">符合類別篩選的結果為 0，試著切到「為你推薦」看全部</div>;
+                }
+                return (
+                  <div className="tp-add-stop-grid">
+                    {filtered.map((r) => {
+                      const isSelected = selectedSearch.has(r.osm_id);
+                      return (
+                        <label
+                          key={r.osm_id}
+                          className={`tp-add-stop-card ${isSelected ? 'is-selected' : ''}`}
+                          data-testid={`add-stop-search-card-${r.osm_id}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="tp-add-stop-card-checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSearch(r.osm_id)}
+                          />
+                          <div className="tp-add-stop-card-body">
+                            <div className="tp-add-stop-card-name">{r.name}</div>
+                            <div className="tp-add-stop-card-meta">{r.address}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </>
           )}
 
@@ -554,31 +634,37 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
               {!savedLoading && savedPois !== null && savedPois.length === 0 && (
                 <div className="tp-add-stop-empty">還沒有收藏任何 POI。先去「探索」儲存幾個。</div>
               )}
-              {savedPois !== null && savedPois.length > 0 && (
-                <div className="tp-add-stop-grid">
-                  {savedPois.map((r) => {
-                    const isSelected = selectedSaved.has(r.id);
-                    return (
-                      <label
-                        key={r.id}
-                        className={`tp-add-stop-card ${isSelected ? 'is-selected' : ''}`}
-                        data-testid={`add-stop-saved-card-${r.id}`}
-                      >
-                        <input
-                          type="checkbox"
-                          className="tp-add-stop-card-checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleSaved(r.id)}
-                        />
-                        <div className="tp-add-stop-card-body">
-                          <div className="tp-add-stop-card-name">{r.poiName}</div>
-                          <div className="tp-add-stop-card-meta">{r.poiAddress ?? r.poiType}</div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
+              {savedPois !== null && savedPois.length > 0 && (() => {
+                const filtered = savedPois.filter((r) => matchCategory(r.poiType, category));
+                if (filtered.length === 0) {
+                  return <div className="tp-add-stop-empty">符合類別篩選的收藏為 0，試著切到「為你推薦」看全部</div>;
+                }
+                return (
+                  <div className="tp-add-stop-grid">
+                    {filtered.map((r) => {
+                      const isSelected = selectedSaved.has(r.id);
+                      return (
+                        <label
+                          key={r.id}
+                          className={`tp-add-stop-card ${isSelected ? 'is-selected' : ''}`}
+                          data-testid={`add-stop-saved-card-${r.id}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="tp-add-stop-card-checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSaved(r.id)}
+                          />
+                          <div className="tp-add-stop-card-body">
+                            <div className="tp-add-stop-card-name">{r.poiName}</div>
+                            <div className="tp-add-stop-card-meta">{r.poiAddress ?? r.poiType}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </>
           )}
 
