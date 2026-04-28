@@ -103,10 +103,10 @@ html { color-scheme: light dark; }
     --font-size-title2: 1.375rem;
     --font-size-title3: 1.25rem;
     --font-size-headline: 1.0625rem;
-    --font-size-body: 1.0625rem;
+    --font-size-body: 1rem; /* 16px — mockup body 規範（曾為 17px headline alias，2026-04-29 對齊 mockup 降 1px） */
     --font-size-callout: 1rem;
     --font-size-subheadline: 0.9375rem;
-    --font-size-footnote: 0.8125rem;
+    --font-size-footnote: 0.875rem; /* 14px — mockup support 規範（曾為 13px，2026-04-29 對齊 mockup 升 1px） */
     --font-size-caption: 0.75rem;
     --font-size-caption2: 0.6875rem;  /* 11px */
     --font-size-eyebrow: 0.625rem;    /* 10px — uppercase eyebrow labels (DAY 01, STOPS, etc.) */
@@ -486,7 +486,8 @@ body.dark {
         color: var(--color-muted);
     }
     .ocean-hero-title {
-        font-size: 28px; font-weight: 700; margin: 0;
+        /* mockup-parity-qa-fixes: mockup .tp-detail-hero-title:1869 — base 24px, ≥961 28px, ≤960 24px */
+        font-size: 24px; font-weight: 700; margin: 0;
         letter-spacing: -0.02em; line-height: 1.2;
         color: var(--color-foreground);
     }
@@ -515,7 +516,7 @@ body.dark {
     }
     @media (min-width: 961px) {
         .ocean-hero { padding: 24px 28px; }
-        .ocean-hero-title { font-size: 32px; }
+        .ocean-hero-title { font-size: 28px; } /* mockup .tp-detail-hero-title desktop:1870 (was 32px) */
     }
 
     /* Stop card (4-col grid) */
@@ -748,7 +749,7 @@ body.dark {
         .ocean-brand-label { display: none; }
     }
     @media (max-width: 960px) {
-        .ocean-hero-title { font-size: 28px; }
+        .ocean-hero-title { font-size: 24px; } /* mockup .tp-detail-hero-title compact:1877 (was 28px) */
     }
     /* Mobile type scale override (760px and below).
      * Breakpoint intentionally set below iPad mini portrait (744px so mini gets mobile
@@ -1355,7 +1356,9 @@ body.dark {
     -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
   }
   .tp-titlebar-title {
-    font-size: 24px;
+    /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
+    font-size: var(--font-size-title3); /* 20px */
+    line-height: 28px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin: 0;
@@ -1366,7 +1369,7 @@ body.dark {
     white-space: nowrap;
   }
 }
-/* Compact ≤760px: 56px / padding 0 16px / title 22px */
+/* Compact ≤760px: 56px / padding 0 16px / title 18px (mockup .tp-page-titlebar-title compact:4088) */
 @media (max-width: 760px) {
   .tp-titlebar {
     position: sticky;
@@ -1386,7 +1389,8 @@ body.dark {
     -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
   }
   .tp-titlebar-title {
-    font-size: 22px;
+    font-size: 18px; /* mockup compact 18px (was 22px) */
+    line-height: 24px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin: 0;
@@ -1419,3 +1423,11 @@ body.dark {
 .tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent); }
 .tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
+
+/* mockup-parity-qa-fixes 2026-04-29: page-title compact override
+ * mockup .tp-page-titlebar-title compact:4088 規範 page-title 24px on <760px viewport. */
+@media (max-width: 760px) {
+  :root {
+    --font-size-title: 1.5rem; /* 28px → 24px on compact */
+  }
+}
