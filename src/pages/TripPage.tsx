@@ -24,6 +24,7 @@ import { extractPinsFromDay } from '../hooks/useMapData';
 const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
+import AlertPanel from '../components/shared/AlertPanel';
 import BottomNavBar from '../components/shell/BottomNavBar';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -63,14 +64,19 @@ const SCOPED_STYLES = `
 .trip-content { min-width: 0; }
 
 .tp-trip-titlebar-action {
-  width: var(--spacing-tap-min, 44px);
   height: var(--spacing-tap-min, 44px);
+  min-width: var(--spacing-tap-min, 44px);
+  padding: 0 14px;
   border: 0;
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-foreground);
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
   cursor: pointer;
   transition: background 120ms, color 120ms;
 }
@@ -83,6 +89,10 @@ const SCOPED_STYLES = `
   outline-offset: 2px;
 }
 .tp-trip-titlebar-action .svg-icon { width: 20px; height: 20px; }
+@media (max-width: 1023px) {
+  .tp-trip-titlebar-action { padding: 0; min-width: var(--spacing-tap-min, 44px); width: var(--spacing-tap-min, 44px); }
+  .tp-trip-titlebar-action-label { display: none; }
+}
 .tp-titlebar .ocean-tb-btn {
   width: var(--spacing-tap-min, 44px);
   height: var(--spacing-tap-min, 44px);
@@ -115,7 +125,7 @@ const SCOPED_STYLES = `
   line-height: 1;
   font-weight: 700;
 }
-@media (max-width: 1023px) {
+@media (max-width: 760px) {
   .tp-trip-titlebar-action[data-compact-hidden="true"] { display: none; }
 }
 
@@ -659,10 +669,16 @@ function TripPageInner(
     return (
       <div className="flex min-h-dvh">
         <div className="flex-1 min-w-0 max-w-full mx-auto">
-          <div id="tripContent">
+          <div id="tripContent" style={{ padding: '24px 16px' }}>
+            <AlertPanel
+              variant="error"
+              title="無法載入行程"
+              message={`找不到此行程或載入失敗（ID：${activeTripId}）。請確認連結是否正確，或回行程列表挑選其他。`}
+              actionLabel="重試"
+              onAction={() => setResolveKey((k) => k + 1)}
+            />
             <div className="text-center p-10 text-foreground">
-              <p className="mb-4 text-title2">行程不存在：{activeTripId}</p>
-              <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/">選擇其他行程</a>
+              <a className="inline-block py-3 px-6 bg-accent text-accent-foreground rounded-md no-underline font-semibold text-callout transition-[filter] duration-fast ease-apple hover:brightness-110" href="/trips">回行程列表</a>
             </div>
           </div>
         </div>
@@ -716,6 +732,7 @@ function TripPageInner(
                 title="AI 建議"
               >
                 <Icon name="lightbulb" />
+                <span className="tp-trip-titlebar-action-label">建議</span>
               </button>
               <button
                 type="button"
@@ -726,6 +743,7 @@ function TripPageInner(
                 title="共編"
               >
                 <Icon name="group" />
+                <span className="tp-trip-titlebar-action-label">共編</span>
               </button>
               <button
                 type="button"
@@ -736,6 +754,7 @@ function TripPageInner(
                 title="下載"
               >
                 <Icon name="download" />
+                <span className="tp-trip-titlebar-action-label">下載</span>
               </button>
               <OverflowMenu
                 onSheet={handlePanelItem}
@@ -750,6 +769,17 @@ function TripPageInner(
       <ToastContainer />
 
       <main className="ocean-page">
+        {/* Section 4.10：persistent offline banner — 取代 useOfflineToast 的
+          * 短暫 toast，給 user 一個常駐的「目前在離線模式」 hint */}
+        {!isOnline && !loading && trip && (
+          <div className="px-padding-h">
+            <AlertPanel
+              variant="warning"
+              title="目前是離線模式"
+              message="顯示的是裝置上的快取資料。新增 / 編輯仍會在連線恢復後同步。"
+            />
+          </div>
+        )}
         {!loading && trip && (
           <DayNav
             days={days}

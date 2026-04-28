@@ -41,8 +41,10 @@ interface TripSummary {
 }
 
 interface ChatMessage {
-  id: number;
-  role: 'user' | 'assistant';
+  id: number | string;
+  /** Section 4.8 (terracotta-ui-parity-polish)：'day-divider' 是 synthetic
+   *  separator message，由 buildMessagesWithDividers 注入跨日邊界。 */
+  role: 'user' | 'assistant' | 'day-divider';
   text: string;
   /** When set, this assistant bubble is the placeholder waiting for SSE completion. */
   pendingRequestId?: number | null;
@@ -54,6 +56,41 @@ interface ChatMessage {
    *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
    *  optimistic message (will fill on next reload from API)。 */
   createdAt?: string | null;
+}
+
+/** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
+const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+function formatDayDivider(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}（${WEEKDAY_LABELS[d.getDay()]}）`;
+}
+
+/** Section 4.8: Inject day-divider synthetic messages between consecutive
+ *  messages whose createdAt date differs。Pure: 給定相同 input 回傳相同
+ *  output，方便 unit test。 */
+export function buildMessagesWithDividers(messages: ChatMessage[]): ChatMessage[] {
+  const out: ChatMessage[] = [];
+  let lastDateKey = '';
+  for (const m of messages) {
+    if (m.createdAt) {
+      const d = new Date(m.createdAt);
+      if (!Number.isNaN(d.getTime())) {
+        const dateKey = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (dateKey !== lastDateKey) {
+          out.push({
+            id: `day-divider-${dateKey}`,
+            role: 'day-divider',
+            text: formatDayDivider(m.createdAt),
+            createdAt: m.createdAt,
+          });
+          lastDateKey = dateKey;
+        }
+      }
+    }
+    out.push(m);
+  }
+  return out;
 }
 
 interface RawRequestRow {
@@ -273,6 +310,32 @@ const SCOPED_STYLES = `
 }
 .tp-chat-msg-time-user { align-self: flex-end; }
 .tp-chat-msg-time-assistant { align-self: flex-start; }
+/* Section 4.8 (terracotta-ui-parity-polish)：assistant message 旁的 AI avatar
+ * + bubble row wrapper，user message 不顯示 avatar 維持非對稱 visual。 */
+.tp-chat-msg-row { display: flex; gap: 8px; align-items: flex-end; }
+.tp-chat-msg-row.is-assistant { align-self: flex-start; max-width: min(680px, 85%); }
+.tp-chat-msg-row.is-user { align-self: flex-end; max-width: min(680px, 85%); flex-direction: row-reverse; }
+.tp-chat-msg-row .tp-chat-msg { max-width: 100%; }
+.tp-chat-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: var(--font-size-caption2); font-weight: 700;
+  flex-shrink: 0;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+}
+.tp-chat-avatar.is-ai { background: var(--color-accent); color: var(--color-accent-foreground); }
+/* Section 4.8: day-divider header — center 對齊 + horizontal hairline */
+.tp-chat-day-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 12px 0 4px;
+  font-size: var(--font-size-caption2); color: var(--color-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.tp-chat-day-divider::before,
+.tp-chat-day-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--color-border);
+}
 .tp-chat-msg-assistant.is-pending {
   color: var(--color-muted);
   font-style: italic;
@@ -624,7 +687,7 @@ export default function ChatPage() {
     <div className="tp-chat-shell" data-testid="chat-page">
       <style>{SCOPED_STYLES}</style>
       <TitleBar
-        title="聊天"
+        title={activeTrip?.title || activeTrip?.name || '聊天'}
         actions={trips && trips.length > 0 && (
           <div className="tp-chat-trip-menu" ref={tripMenuRef}>
             <button
@@ -702,42 +765,62 @@ export default function ChatPage() {
           </div>
         )}
 
-        {activeTripId && messages.map((m) => (
-          <Fragment key={m.id}>
-            <div
-              className={`tp-chat-msg ${m.role === 'user' ? 'tp-chat-msg-user' : 'tp-chat-msg-assistant'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
-              data-testid={`chat-msg-${m.role}`}
-            >
-              {m.pendingRequestId ? (
-                <span className="tp-chat-typing" aria-label="AI 思考中">
-                  <span /><span /><span />
-                </span>
-              ) : isGarbledMessage(m.text) ? (
-                /* F7 design-review: detect mojibake → render placeholder
-                 * 而不是 raw bytes，避免 trust signal 受損。 */
-                <span className="tp-chat-msg-garbled" aria-label="訊息含編碼錯誤" title="此訊息含編碼錯誤無法顯示">
-                  ⚠ 訊息含編碼錯誤，無法顯示
-                </span>
-              ) : m.markdown ? (
-                <MarkdownText text={m.text} as="div" />
-              ) : (
-                /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，
-                 * 配合 .tp-chat-msg 的 white-space: pre-wrap 顯示換行；
-                 * 對真的就是 backslash-n 字面的 corner case 不影響 visual。 */
-                m.text.replace(/\\n/g, '\n')
-              )}
-            </div>
-            {m.createdAt && !m.pendingRequestId && (
-              <time
-                className={`tp-chat-msg-time tp-chat-msg-time-${m.role}`}
-                dateTime={m.createdAt}
-                data-testid={`chat-msg-time-${m.id}`}
+        {activeTripId && buildMessagesWithDividers(messages).map((m) => {
+          if (m.role === 'day-divider') {
+            return (
+              <div
+                key={m.id}
+                className="tp-chat-day-divider"
+                role="separator"
+                data-testid="chat-day-divider"
               >
-                {formatChatTime(m.createdAt)}
-              </time>
-            )}
-          </Fragment>
-        ))}
+                {m.text}
+              </div>
+            );
+          }
+          const isAssistant = m.role === 'assistant';
+          return (
+            <Fragment key={m.id}>
+              <div className={`tp-chat-msg-row ${isAssistant ? 'is-assistant' : 'is-user'}`}>
+                {isAssistant && (
+                  <div className="tp-chat-avatar is-ai" aria-hidden="true" data-testid="chat-avatar-ai">AI</div>
+                )}
+                <div
+                  className={`tp-chat-msg ${isAssistant ? 'tp-chat-msg-assistant' : 'tp-chat-msg-user'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
+                  data-testid={`chat-msg-${m.role}`}
+                >
+                  {m.pendingRequestId ? (
+                    <span className="tp-chat-typing" aria-label="AI 思考中">
+                      <span /><span /><span />
+                    </span>
+                  ) : isGarbledMessage(m.text) ? (
+                    /* F7 design-review: detect mojibake → render placeholder
+                     * 而不是 raw bytes，避免 trust signal 受損。 */
+                    <span className="tp-chat-msg-garbled" aria-label="訊息含編碼錯誤" title="此訊息含編碼錯誤無法顯示">
+                      訊息含編碼錯誤，無法顯示
+                    </span>
+                  ) : m.markdown ? (
+                    <MarkdownText text={m.text} as="div" />
+                  ) : (
+                    /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，
+                     * 配合 .tp-chat-msg 的 white-space: pre-wrap 顯示換行；
+                     * 對真的就是 backslash-n 字面的 corner case 不影響 visual。 */
+                    m.text.replace(/\\n/g, '\n')
+                  )}
+                </div>
+              </div>
+              {m.createdAt && !m.pendingRequestId && (
+                <time
+                  className={`tp-chat-msg-time tp-chat-msg-time-${m.role}`}
+                  dateTime={m.createdAt}
+                  data-testid={`chat-msg-time-${m.id}`}
+                >
+                  {isAssistant ? `Tripline AI · ${formatChatTime(m.createdAt)}` : formatChatTime(m.createdAt)}
+                </time>
+              )}
+            </Fragment>
+          );
+        })}
 
         {sseError && inflightId && (
           <div className="tp-chat-msg tp-chat-msg-assistant is-failed" role="alert">

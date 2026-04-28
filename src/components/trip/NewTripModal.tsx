@@ -10,8 +10,13 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { apiFetchRaw } from '../../lib/apiClient';
 import InlineError from '../shared/InlineError';
+import Icon from '../shared/Icon';
+import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 
 interface PoiSearchResult {
   osm_id: number;
@@ -118,7 +123,76 @@ const SCOPED_STYLES = `
 .tp-new-dest-wrap { position: relative; }
 .tp-new-dest-wrap input { font-weight: 600; }
 
-/* Destination autocomplete dropdown + selected POI chips */
+/* Destination autocomplete dropdown + selected POI chips
+ * Section 4.2 (terracotta-ui-parity-polish): chips → 縱向 sortable rows
+ * with grip handle + 編號 + remove。對齊 mockup section 03 (line 5996+)。 */
+.tp-new-dest-rows {
+  display: flex; flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.tp-new-dest-row {
+  display: grid;
+  grid-template-columns: 24px 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  min-height: 44px;
+  font-size: var(--font-size-footnote);
+}
+.tp-new-dest-row.is-dragging {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+.tp-new-dest-grip {
+  cursor: grab;
+  color: var(--color-muted);
+  display: grid; place-items: center;
+  width: 24px; height: 24px;
+}
+.tp-new-dest-grip:active { cursor: grabbing; }
+.tp-new-dest-grip .svg-icon { width: 14px; height: 14px; }
+.tp-new-dest-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  font-weight: 700;
+  font-size: var(--font-size-caption);
+}
+.tp-new-dest-name {
+  min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-new-dest-name .tp-new-dest-region {
+  margin-left: 6px;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.tp-new-dest-remove {
+  width: 28px; height: 28px;
+  border: 0; background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  border-radius: 50%;
+  display: grid; place-items: center;
+}
+.tp-new-dest-remove:hover { background: var(--color-hover); color: var(--color-destructive); }
+.tp-new-dest-remove .svg-icon { width: 14px; height: 14px; }
+.tp-new-dest-helper {
+  margin: 0 0 10px;
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+}
+
+/* Legacy chips fallback (other usages) */
 .tp-new-dest-chips {
   display: flex;
   flex-wrap: wrap;
@@ -456,6 +530,87 @@ function genTripId(name: string): string {
 // 不準（沖繩寫成 "Naha" / 巴塞隆納沒列在清單 / 等等都會 default JP）。改成
 // destination autocomplete 強制 user 選一筆 POI，直接拿 Nominatim 真實 country code。
 
+/* Section 4.2：sortable destination list — 內部 SortableContext + 每 row 用
+ * useSortable hook 產 transform，drop 透過 parent onReorder callback 改 array。
+ * Single 1 dest 也 render row 但 grip disabled visually (cursor default)。 */
+interface SortableDestinationRowProps {
+  poi: PoiSearchResult;
+  index: number;
+  onRemove: (osmId: number) => void;
+}
+
+function SortableDestinationRow({ poi, index, onRemove }: SortableDestinationRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: poi.osm_id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`tp-new-dest-row ${isDragging ? 'is-dragging' : ''}`}
+      data-testid={`new-trip-destination-row-${poi.osm_id}`}
+    >
+      <button
+        type="button"
+        className="tp-new-dest-grip"
+        aria-label={`拖移目的地：${poi.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        <Icon name="arrows-vertical" />
+      </button>
+      <span className="tp-new-dest-num" aria-hidden="true">{index + 1}</span>
+      <span className="tp-new-dest-name">
+        {poi.name}
+        {poi.country && <span className="tp-new-dest-region">{poi.country}</span>}
+      </span>
+      <button
+        type="button"
+        className="tp-new-dest-remove"
+        onClick={() => onRemove(poi.osm_id)}
+        aria-label={`移除目的地：${poi.name}`}
+      >
+        <Icon name="x-mark" />
+      </button>
+    </div>
+  );
+}
+
+interface SortableDestinationListProps {
+  pois: PoiSearchResult[];
+  onReorder: (fromIdx: number, toIdx: number) => void;
+  onRemove: (osmId: number) => void;
+}
+
+function SortableDestinationList({ pois, onReorder, onRemove }: SortableDestinationListProps) {
+  function handleDragEnd(e: DragEndEvent) {
+    if (!e.over || e.active.id === e.over.id) return;
+    const fromIdx = pois.findIndex((p) => p.osm_id === e.active.id);
+    const toIdx = pois.findIndex((p) => p.osm_id === e.over!.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    onReorder(fromIdx, toIdx);
+  }
+  return (
+    <DndContext
+      collisionDetection={closestCenter}
+      accessibility={TP_DRAG_ACCESSIBILITY}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={pois.map((p) => p.osm_id)} strategy={verticalListSortingStrategy}>
+        <div className="tp-new-dest-rows" data-testid="new-trip-destination-rows">
+          {pois.map((p, i) => (
+            <SortableDestinationRow key={p.osm_id} poi={p} index={i} onRemove={onRemove} />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
 export interface NewTripModalProps {
   open: boolean;
   ownerEmail: string;
@@ -558,6 +713,9 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
     setPoiSearchError(null);
   }
 
+  function reorderSelectedPois(fromIdx: number, toIdx: number) {
+    setSelectedPois((prev) => arrayMove(prev, fromIdx, toIdx));
+  }
   function removeSelectedPoi(osmId: number) {
     setSelectedPois((prev) => prev.filter((p) => p.osm_id !== osmId));
   }
@@ -678,34 +836,22 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
         </button>
         {/* Form pane */}
         <div className="tp-new-form">
-          <h2 id="new-trip-title">想去哪裡？</h2>
-          <p className="tp-new-modal-sub">先說目的地跟想做什麼，AI 會幫你排日程、餐廳、住宿。</p>
+          <h2 id="new-trip-title">新增行程</h2>
 
           <div className="tp-new-form-row">
-            <label htmlFor="new-trip-destination">目的地</label>
+            <label htmlFor="new-trip-destination">目的地（可加多筆，拖拉排序）</label>
             <div className="tp-new-dest-wrap">
               {selectedPois.length > 0 && (
-                <div className="tp-new-dest-chips" data-testid="new-trip-destination-chips">
-                  {selectedPois.map((poi) => (
-                    <div
-                      key={poi.osm_id}
-                      className="tp-new-dest-chip"
-                      data-testid={`new-trip-destination-chip-${poi.osm_id}`}
-                    >
-                      <span>
-                        {poi.name}
-                        {poi.country && ` · ${poi.country}`}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeSelectedPoi(poi.osm_id)}
-                        aria-label={`移除目的地：${poi.name}`}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <SortableDestinationList
+                  pois={selectedPois}
+                  onReorder={reorderSelectedPois}
+                  onRemove={removeSelectedPoi}
+                />
+              )}
+              {selectedPois.length >= 2 && (
+                <p className="tp-new-dest-helper" data-testid="new-trip-destination-helper">
+                  行程跨 {selectedPois.length} 個目的地 · 順序決定地圖 polyline 串接方向
+                </p>
               )}
               <input
                 id="new-trip-destination"
@@ -759,7 +905,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
                 onClick={() => setDateMode('select')}
                 data-testid="new-trip-date-mode-select"
               >
-                選日期
+                固定日期
               </button>
               <button
                 type="button"
@@ -769,7 +915,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
                 onClick={() => setDateMode('flexible')}
                 data-testid="new-trip-date-mode-flexible"
               >
-                彈性日期
+                大概時間
               </button>
             </div>
           </div>

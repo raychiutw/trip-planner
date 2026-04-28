@@ -171,14 +171,98 @@ const SCOPED_STYLES = `
 .explore-poi-card {
   position: relative;
   background: var(--color-background); border: 1px solid var(--color-border);
-  border-radius: var(--radius-md); padding: 14px 16px;
-  display: flex; flex-direction: column; gap: 6px;
-  transition: border-color 120ms;
+  border-radius: var(--radius-lg);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: border-color 120ms, box-shadow 120ms, transform 120ms;
+}
+.explore-poi-card:hover {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 .explore-poi-card.is-selected { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+/* Section 4.9：cover photo placeholder — 16:9 + 8-tone gradient by data-tone */
+.explore-poi-cover {
+  position: relative;
+  aspect-ratio: 16/9;
+  width: 100%;
+  background: var(--color-tertiary);
+}
+.explore-poi-cover[data-tone="1"] { background: linear-gradient(135deg, #f5cba7 0%, #d68160 100%); }
+.explore-poi-cover[data-tone="2"] { background: linear-gradient(135deg, #a3d9b1 0%, #5b9b6e 100%); }
+.explore-poi-cover[data-tone="3"] { background: linear-gradient(135deg, #b3c7e6 0%, #6b88b8 100%); }
+.explore-poi-cover[data-tone="4"] { background: linear-gradient(135deg, #f5d088 0%, #c98b2c 100%); }
+.explore-poi-cover[data-tone="5"] { background: linear-gradient(135deg, #e3a3c4 0%, #b06a8e 100%); }
+.explore-poi-cover[data-tone="6"] { background: linear-gradient(135deg, #c8b5e3 0%, #8a73b8 100%); }
+.explore-poi-cover[data-tone="7"] { background: linear-gradient(135deg, #f0a59a 0%, #c95745 100%); }
+.explore-poi-cover[data-tone="8"] { background: linear-gradient(135deg, #b8e3d5 0%, #67a896 100%); }
+.explore-poi-card .explore-poi-heart {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 36px; height: 36px;
+  border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, transform 120ms;
+  backdrop-filter: blur(8px);
+}
+.explore-poi-card .explore-poi-heart:hover { background: rgba(0, 0, 0, 0.65); transform: scale(1.05); }
+.explore-poi-card .explore-poi-heart.is-saved {
+  background: var(--color-accent); color: var(--color-accent-foreground);
+}
+.explore-poi-card .explore-poi-heart .svg-icon { width: 18px; height: 18px; }
+.explore-poi-body {
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.explore-poi-card .explore-poi-rating {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+.explore-poi-card .explore-poi-rating-star { color: var(--color-priority-medium-dot, #f5a62c); }
 .explore-poi-card .poi-category {
   font-size: var(--font-size-eyebrow); font-weight: 700; letter-spacing: 0.18em;
   text-transform: uppercase; color: var(--color-muted);
+}
+
+/* Section 4.9：region selector pill + subtabs (5 個 category chip) */
+.explore-region-bar {
+  display: flex; align-items: center; gap: 12px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+.explore-region-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-background);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-foreground); cursor: pointer;
+  min-height: 32px;
+}
+.explore-region-pill:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.explore-subtabs {
+  display: inline-flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
+}
+.explore-subtab {
+  border: 1px solid transparent; background: var(--color-secondary);
+  padding: 6px 12px; border-radius: var(--radius-full);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-muted); cursor: pointer;
+  min-height: 32px;
+}
+.explore-subtab:hover { color: var(--color-foreground); }
+.explore-subtab.is-active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  border-color: var(--color-accent-bg);
 }
 .explore-poi-card .poi-name {
   font-size: var(--font-size-headline); font-weight: 700;
@@ -321,6 +405,9 @@ export default function ExplorePage() {
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
   const [trips, setTrips] = useState<TripPickerRow[] | null>(null);
+  // Section 4.9：region selector + category subtab filter
+  const [region, setRegion] = useState<string>('全部地區');
+  const [category, setCategory] = useState<string>('all');
 
   const loadSaved = useCallback(async () => {
     try {
@@ -557,37 +644,105 @@ export default function ExplorePage() {
               </button>
             </form>
 
-            {results.length > 0 && (
-              <section className="explore-section" data-testid="explore-results">
-                <h2>搜尋結果</h2>
-                <p className="section-meta">{results.length} 個 POI · 點「+ 儲存」加入儲存池</p>
-                <div className="explore-poi-grid">
-                  {results.map((poi) => {
-                    const key = `${poi.category || 'poi'}::${poi.name}`;
-                    const isSaved = savedKeySet.has(key);
-                    const isSaving = savingIds.has(poi.osm_id);
-                    return (
-                      <article className="explore-poi-card" key={poi.osm_id}>
-                        <div className="poi-category">{poi.category || 'POI'}</div>
-                        <div className="poi-name">{poi.name}</div>
-                        <div className="poi-address">{poi.address}</div>
-                        <div className="poi-actions">
-                          <button
-                            type="button"
-                            className={isSaved ? 'saved' : ''}
-                            onClick={() => !isSaved && handleSave(poi)}
-                            disabled={isSaving || isSaved}
-                            data-testid={`explore-save-btn-${poi.osm_id}`}
+            {/* Section 4.9：region pill + category subtabs (純 client-side filter) */}
+            <div className="explore-region-bar">
+              <button
+                type="button"
+                className="explore-region-pill"
+                onClick={() => {
+                  const next = window.prompt('輸入要查看的地區（例：沖繩、首爾、台北）', region === '全部地區' ? '' : region);
+                  if (next != null) setRegion(next.trim() || '全部地區');
+                }}
+                data-testid="explore-region-pill"
+              >
+                <Icon name="location-pin" />
+                <span>{region} ▾</span>
+              </button>
+              <div className="explore-subtabs" role="tablist" aria-label="POI 類別">
+                {([
+                  { key: 'all', label: '為你推薦' },
+                  { key: 'attraction', label: '景點' },
+                  { key: 'food', label: '美食' },
+                  { key: 'hotel', label: '住宿' },
+                  { key: 'shopping', label: '購物' },
+                ] as const).map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={category === s.key}
+                    className={`explore-subtab ${category === s.key ? 'is-active' : ''}`}
+                    onClick={() => setCategory(s.key)}
+                    data-testid={`explore-subtab-${s.key}`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {results.length > 0 && (() => {
+              // Section 4.9：純 client-side filter — region 對應 address contains，
+              // category 對應 poi.category text；無資料就 fallback 全顯示。
+              const filtered = results.filter((p) => {
+                if (region !== '全部地區' && !(p.address ?? '').includes(region)) return false;
+                if (category === 'all') return true;
+                const cat = (p.category ?? '').toLowerCase();
+                if (category === 'food' && /restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return true;
+                if (category === 'hotel' && /hotel|hostel|guest|inn|住宿|飯店/.test(cat)) return true;
+                if (category === 'shopping' && /shop|mall|market|購物/.test(cat)) return true;
+                if (category === 'attraction' && /attract|museum|park|temple|景點|公園/.test(cat)) return true;
+                return false;
+              });
+              return (
+                <section className="explore-section" data-testid="explore-results">
+                  <h2>搜尋結果</h2>
+                  <p className="section-meta">
+                    {filtered.length} / {results.length} 個 POI · 點愛心圖示加入儲存池
+                  </p>
+                  <div className="explore-poi-grid">
+                    {filtered.map((poi) => {
+                      const key = `${poi.category || 'poi'}::${poi.name}`;
+                      const isSaved = savedKeySet.has(key);
+                      const isSaving = savingIds.has(poi.osm_id);
+                      // Stable tone 1-8 derived from osm_id 後綴 hash。
+                      const tone = ((poi.osm_id ?? 0) % 8) + 1;
+                      return (
+                        <article className="explore-poi-card" key={poi.osm_id}>
+                          <div
+                            className="explore-poi-cover"
+                            data-tone={String(tone)}
+                            aria-hidden="true"
                           >
-                            {isSaved ? <><Icon name="check" /> 已儲存</> : isSaving ? '儲存中...' : '+ 儲存'}
-                          </button>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
+                            <button
+                              type="button"
+                              className={`explore-poi-heart ${isSaved ? 'is-saved' : ''}`}
+                              onClick={() => !isSaved && !isSaving && handleSave(poi)}
+                              disabled={isSaving || isSaved}
+                              aria-label={isSaved ? '已儲存' : '儲存到收藏'}
+                              data-testid={`explore-save-btn-${poi.osm_id}`}
+                            >
+                              <Icon name="heart" />
+                            </button>
+                          </div>
+                          <div className="explore-poi-body">
+                            <div className="poi-category">{poi.category || 'POI'}</div>
+                            <div className="poi-name">{poi.name}</div>
+                            <div className="poi-address">{poi.address}</div>
+                            {/* Section 4.9：rating meta — 真實 rating 待 backend
+                              提供 Google rating 接入；先用 placeholder ⭐ + 「待補」 */}
+                            <div className="explore-poi-rating">
+                              <span className="explore-poi-rating-star">★</span>
+                              <span>探索更多評論</span>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
 
             {results.length === 0 && query && !searching && (
               <div className="explore-empty">沒有找到「{query}」的結果。換個關鍵字試試？</div>

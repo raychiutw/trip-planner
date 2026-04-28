@@ -32,6 +32,7 @@ import InlineError from '../shared/InlineError';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
 import EntryActionPopover, { type EntryActionConfirmPayload } from './EntryActionPopover';
+import TravelPill from './TravelPill';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
 import { useDragDrop } from '../../hooks/useDragDrop';
@@ -750,21 +751,30 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
           const isNow = nowIndex >= 0 && i === nowIndex;
           const isLast = i === events.length - 1;
           const expanded = entry.id != null && expandedId === entry.id;
+          const travelObj = entry.travel && typeof entry.travel === 'object' ? entry.travel : null;
           return (
-            <RailRow
-              key={entry.id ?? i}
-              entry={entry}
-              index={i}
-              expanded={expanded}
-              onToggle={() => {
-                if (entry.id == null) return;
-                setExpandedId((cur) => (cur === entry.id ? null : entry.id ?? null));
-              }}
-              isPast={isPast}
-              isNow={isNow}
-              isLast={isLast}
-              dayId={dayId}
-            />
+            <div key={entry.id ?? i} className="ocean-rail-row-wrap">
+              {i > 0 && travelObj && (
+                <TravelPill
+                  type={travelObj.type ?? null}
+                  desc={travelObj.desc ?? null}
+                  min={travelObj.min ?? null}
+                />
+              )}
+              <RailRow
+                entry={entry}
+                index={i}
+                expanded={expanded}
+                onToggle={() => {
+                  if (entry.id == null) return;
+                  setExpandedId((cur) => (cur === entry.id ? null : entry.id ?? null));
+                }}
+                isPast={isPast}
+                isNow={isNow}
+                isLast={isLast}
+                dayId={dayId}
+              />
+            </div>
           );
         })}
       </div>

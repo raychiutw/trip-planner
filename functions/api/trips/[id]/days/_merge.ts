@@ -153,6 +153,9 @@ export function assembleDay(
     date: dayRow.date,
     day_of_week: dayRow.day_of_week,
     label: dayRow.label,
+    /** Section 4.3 (terracotta-mockup-parity-v2)：surface trip_days.title to client.
+     *  Nullable — old rows pre-migration-0042 surface as undefined. */
+    title: (dayRow as { title?: unknown }).title ?? null,
     hotel,
     timeline,
   };

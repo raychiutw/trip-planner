@@ -113,6 +113,9 @@ const DaySection = React.memo(function DaySection({
     ? `${daySummary.date}${daySummary.dayOfWeek ? `（${daySummary.dayOfWeek}）` : ''}`
     : '';
   const area = daySummary?.label || '';
+  // Section 4.3 (terracotta-mockup-parity-v2)：3-tier fallback chain — user-defined
+  // title (trip_days.title) → 區域 label (trip_days.label, 例「美瑛」) →「Day N」。
+  const dayTitle = day?.title?.trim() || area || `Day ${dayNum}`;
 
   // QA 2026-04-26 PR-J：拿掉每日 hero 的「📖 看地圖」 chip — user feedback
   // 「移除每日 header 看地圖」。bottom nav 已有「地圖」 tab 入口，每天 chip 重複。
@@ -128,10 +131,10 @@ const DaySection = React.memo(function DaySection({
               {eyebrow}
               {dateLabel && ` · ${dateLabel}`}
             </span>
-            {area && <span className="ocean-hero-chip-muted">{area}</span>}
+            {area && area !== dayTitle && <span className="ocean-hero-chip-muted">{area}</span>}
           </div>
         </div>
-        <h2 className="ocean-hero-title">{area || `Day ${dayNum}`}</h2>
+        <h2 className="ocean-hero-title">{dayTitle}</h2>
         <div className="ocean-hero-stats">
           <div className="ocean-hero-stat">
             <div className="ocean-hero-stat-label">Stops</div>
