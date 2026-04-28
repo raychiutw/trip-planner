@@ -898,9 +898,17 @@ function TripPageInner(
           tripId={trip.id}
           dayNum={currentDayNum}
           dayLabel={(() => {
+            // mockup-parity-qa-fixes: mockup section 14:6442 規範「DAY 03 · 7/31（五）」全大寫格式
             const day = days.find((d) => d.dayNum === currentDayNum);
-            const date = day?.date ? day.date : '';
-            return date ? `Day ${currentDayNum} · ${date}` : `Day ${currentDayNum}`;
+            const date = day?.date ?? '';
+            const dayPad = String(currentDayNum).padStart(2, '0');
+            if (!date) return `DAY ${dayPad}`;
+            const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date);
+            if (!m) return `DAY ${dayPad} · ${date}`;
+            const month = parseInt(m[2]!, 10);
+            const dom = parseInt(m[3]!, 10);
+            const weekdayChar = ['日', '一', '二', '三', '四', '五', '六'][new Date(date + 'T00:00:00Z').getUTCDay()] ?? '';
+            return `DAY ${dayPad} · ${month}/${dom}（${weekdayChar}）`;
           })()}
           onClose={() => setAddStopOpen(false)}
         />
