@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.16.3] - 2026-04-28
+
+**修加景點不自動更新行程 + 清掉 InlineAddPoi dead code**。User 報告：手動加景點後 timeline 沒自動更新（screenshot 顯示舊 InlineAddPoi UI）。
+
+### Fixed
+
+- **加景點到非當前 day 不刷新 timeline** — `TripPage` 的 `tp-entry-updated` listener 之前忽略 `event.detail.dayNum`，永遠 call `refetchCurrentDay`。當 user 加景點到不是 day-strip 當前選中那天時（timeline 同時顯示所有 day），該 day 的 cache 沒被 invalidate → DaySection 仍顯示舊 entries。改：listener 讀 `event.detail.dayNum`，走新增的 `refetchDay(targetDay)`，refetch 對的 day。沒帶 dayNum 的舊 event source 仍 fallback 到 `refetchCurrentDay`。
+
+### Removed
+
+- **InlineAddPoi 跟對應 unit test** — V2.15 (terracotta-mockup-parity-v2) 已用 `<AddStopModal>` 取代 inline `<InlineAddPoi>`，src/ 內無 import (dead code)，但 cached prod build 仍可能包含。直接刪除 component 跟 16 個 unit test 一次清乾淨，下次部署 user 強制 fetch 新 bundle 後就看不到舊 UI。
+
+### Added
+
+- **`useTrip` 新增 `refetchDay(dayNum)` API** — 取代「永遠 refetch currentDay」假設，handle 任意 day 的 cache invalidation + state update。`refetchCurrentDay` 改為 `refetchDay(currentDayNum)` 的 alias。
+
+### Internal
+
+- verify gate: tsc clean / 157 test files / 1330 tests pass (deleted 16 InlineAddPoi tests).
+
 ## [2.16.2] - 2026-04-28
 
 **Hotfix dark mode 地圖底圖：carto dark_all → carto light_all**。深色 UI 配深色 tile 對比不足，accent 紅色 polyline + day-color marker 在 dark tile 上不易辨識。改為 Carto Positron light_all（muted 淺色底圖），dark UI chrome 配淺色地圖內容，markers / labels / polylines 對比強。
