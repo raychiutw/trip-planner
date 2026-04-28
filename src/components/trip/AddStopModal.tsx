@@ -383,6 +383,10 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
     return customTitle.trim() ? 1 : 0;
   }, [tab, selectedSearch, selectedSaved, customTitle]);
 
+  // 自訂 tab 即使 title 是空，也讓 confirm 可點，這樣使用者點下去才能觸發
+  // inline title required 驗證；其他 tab 則用 totalSelected 守 enabled。
+  const confirmEnabled = tab === 'custom' ? !submitting : totalSelected > 0 && !submitting;
+
   const handleConfirm = useCallback(async () => {
     if (submitting) return;
     setSubmitError(null);
@@ -655,7 +659,7 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, onClose, 
               type="button"
               className="tp-add-stop-btn tp-add-stop-btn-confirm"
               onClick={() => void handleConfirm()}
-              disabled={totalSelected === 0 || submitting}
+              disabled={!confirmEnabled}
               data-testid="add-stop-confirm"
             >
               {submitting ? '加入中…' : '完成'}

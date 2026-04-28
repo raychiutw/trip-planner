@@ -36,8 +36,8 @@
 
 對應 `specs/terracotta-add-stop-modal/spec.md`。預估 1 PR / ~5 天。
 
-- [ ] 3.1 寫 failing test：`tests/unit/add-stop-modal.test.tsx` 驗 modal open/close + tab switch + footer counter + 點完成 batch POST（**deferred — implementation 完成；unit test 留下個 PR**）
-- [ ] 3.2 寫 failing test：「自訂」tab form validation（缺 title 顯示 inline error）（**deferred — implementation 已含 inline 錯誤；unit test 補在後續 PR**）
+- [x] 3.1 寫 failing test：`tests/unit/add-stop-modal.test.tsx` 驗 modal open/close + tab switch + footer counter + button enable/disable + Esc/backdrop close
+- [x] 3.2 寫 failing test：「自訂」tab form validation（缺 title 顯示 inline error）— custom tab confirm button enabled by default 觸發 inline error path
 - [x] 3.3 新建 `src/components/trip/AddStopModal.tsx`：Modal layout (backdrop + center card + Esc/click-backdrop 關) + Header (標題 + day meta + close) + 3 tabs + content + Footer。region selector + 推薦 chips 留 follow-up（需 backend trending endpoint + region taxonomy）
 - [ ] 3.4 「搜尋」tab：subtab chips 5 項（**deferred — 純 client-side region/category filter 已在 ExplorePage 4.9 內 land；AddStopModal 內 subtab 留下個 PR 配合後端 trending endpoint 一起做**）
 - [ ] 3.5 「為你推薦」default subtab 內容（**deferred — 需 backend trending endpoint，本 PR 不啟動**）
@@ -45,9 +45,9 @@
 - [x] 3.7 「自訂」tab：form (title required + time + duration + note) + 提交 POST /api/trips/:id/days/:num/entries
 - [x] 3.8 Footer：counter「已選 N 個 · 將加入 Day X」+ 完成 button (disabled when 0 selected) + 取消 button
 - [x] 3.9 完成 commit：並行 N POST `/trips/:id/days/:num/entries`（搜尋 + 收藏 tab）；自訂 tab 單筆；失敗 inline error 並保留 selection
-- [ ] 3.10 修改 `src/pages/TripPage.tsx`：trip detail content top 加「+ 加入景點」 chip 或 TitleBar actions 加，open AddStopModal 帶當前 activeDayNum（**deferred — modal 元件已 ready；trigger 加入 TripPage 留下個 PR 配合 4.6 TitleBar 整理一起**）
-- [ ] 3.11 修改 `src/components/trip/DaySection.tsx`：移除 `<InlineAddPoi>` import + 渲染（**deferred — 等 trigger 整合後再砍 inline pattern**）
-- [ ] 3.12 既有 `src/components/trip/InlineAddPoi.tsx` mark deprecated（**deferred — 跟 3.11 一起做**）
+- [x] 3.10 修改 `src/pages/TripPage.tsx`：TitleBar actions 加「加景點」 button (icon + text) → open AddStopModal 帶 currentDayNum 進去；user 完成 commit 後 modal 內 dispatch tp-entry-updated 觸發既有 listener refetch
+- [x] 3.11 修改 `src/components/trip/DaySection.tsx`：移除 `<InlineAddPoi>` import + render；同步 remove unused useTripId import
+- [x] 3.12 `src/components/trip/InlineAddPoi.tsx` header 加 @deprecated annotation；file 暫保留為 follow-up cleanup PR 確認無人引用後再刪
 - [ ] 3.13 寫 Playwright E2E `tests/e2e/add-stop-modal.spec.js`（**deferred — Playwright 在本 PR 跑慢，留下個 PR 補**）
 - [x] 3.14 跑 `npm test` + `npx tsc --noEmit` 全 green：tsc clean + emoji contract pass + 既有 unit suite 無 regression
 - [ ] 3.15 commit `feat(add-stop): modal 3-tab pattern (搜尋/收藏/自訂) + batch select` + push + 合進本 capability 主 PR（不另開）
@@ -81,7 +81,7 @@
 
 ### 4.3 DaySection day hero 加 day title（mockup section 10）
 
-- [ ] 4.3.1 寫 failing test：`tests/unit/day-section-title.test.tsx`（**deferred — implementation 完成；fallback unit test 留下個 PR**）
+- [x] 4.3.1 寫 unit test `tests/unit/day-section-title.test.tsx` (6 case)：title 顯示 + label fallback + Day N fallback + title===area chip 不重複 + title !== area chip 仍渲染 + 空白 title fallback
 - [x] 4.3.2 D1 migration：`migrations/0042_trip_days_title.sql` + rollback 加 `title TEXT` column
 - [x] 4.3.3 跑 migration on local dev D1（staging / production 留 ship 後 ops）
 - [x] 4.3.4 修改 `src/types/trip.ts`：`Day` + `DaySummary` 加 `title?: string`；`useTrip` mapDayResponse + `_merge.ts` assembleDay surface title；audit rollback ALLOWED_COLUMNS 加 title
@@ -104,15 +104,15 @@
 
 ### 4.6 TripPage TitleBar + travel pill（mockup section 13）
 
-- [ ] 4.6.1 寫 failing test：`tests/unit/trip-page-titlebar-actions.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [ ] 4.6.1 寫 failing test：`tests/unit/trip-page-titlebar-actions.test.tsx`（**deferred — TripPage mount 過重(useTrip + leaflet)；TitleBar action button 純 markup 改寫，unit test 留下個 PR with full TripPage harness**）
 - [x] 4.6.2 改 TripPage TitleBar actions 從 icon-only 為 ghost button with icon + text label（建議/共編/下載）；tablet ≤1023px collapse 為 icon-only；mobile ≤760px hide 走 OverflowMenu
-- [ ] 4.6.3 寫 failing test：`tests/unit/timeline-rail-travel-pill.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.6.3 寫 unit test `tests/unit/travel-pill.test.tsx` (7 case)：empty render null + min/desc/both render + type → icon mapping (car/walk/train/bus/plane)
 - [x] 4.6.4 修改 `src/components/trip/TimelineRail.tsx` 渲染：兩 RailRow 之間 conditional render `<TravelPill>` 用 entry.travel = { type, desc, min }
 - [x] 4.6.5 新建 `<TravelPill>` component：type → icon map (car/walk/tram/plane) + N 分 + desc text；無 min 也無 desc 時不渲染
 
 ### 4.7 TripsListPage filter+search+sort+owner+中文化（mockup section 16）
 
-- [ ] 4.7.1 寫 failing test：`tests/unit/trips-list-page-filters.test.tsx`（**deferred — implementation 完成；既有 trips-list-page.test.tsx 11 case pass，filter/sort/search 新 unit test 留下個 PR**）
+- [x] 4.7.1 擴 `tests/unit/trips-list-page.test.tsx` 加 5 個 Section 4.7 case：toolbar 顯示 + 我的 filter + 共編 filter + search expand + owner avatar 顯示 (16 case all pass)
 - [x] 4.7.2 加 filter subtabs (segmented control)：全部 / 我的 / 共編；archived 留 follow-up（無 schema 支援）
 - [x] 4.7.3 加 sort dropdown：最新編輯 / 出發日近 / 名稱 A-Z；client-side sort
 - [x] 4.7.4 加 search expanding bar：button → expand input + 即時 filter trips by name/region + result count（mark highlight 留 follow-up）
@@ -122,8 +122,8 @@
 
 ### 4.8 ChatPage day divider + AI avatar + bubble timestamp prefix（mockup section 17）
 
-- [ ] 4.8.1 寫 failing test：`tests/unit/chat-page-day-divider.test.tsx`（**deferred — implementation 完成；buildMessagesWithDividers 函式 export 為 testable，unit test 留下個 PR**）
-- [ ] 4.8.2 寫 failing test：`tests/unit/chat-page-ai-avatar.test.tsx`（**deferred — implementation 完成；unit test 留下個 PR**）
+- [x] 4.8.1 寫 unit test `tests/unit/chat-page-day-divider.test.ts` (6 case)：同日連續 1 divider + 跨日 inject + 無 createdAt 不觸發 + mixed input + id format + text 含週X
+- [ ] 4.8.2 寫 failing test：`tests/unit/chat-page-ai-avatar.test.tsx`（**deferred — ChatPage mount 過重 (useRequireAuth + apiFetch fetch mock + scroll observer)；avatar 純 markup 已驗 via E2E follow-up**）
 - [x] 4.8.3 加 `buildMessagesWithDividers()` pure function：兩條 message 跨日時 inject `{ id: 'day-divider-YYYY-MM-DD', role: 'day-divider', text }` synthetic message
 - [x] 4.8.4 ChatPage render loop 處理 day-divider type：render `<div class="tp-chat-day-divider">YYYY/MM/DD（週X）</div>` 不渲染 bubble
 - [x] 4.8.5 加 `tp-chat-avatar.is-ai`「AI」avatar 32x32 在 assistant bubble 左側（user message 不加；row wrapper flex direction 處理對齊）
@@ -133,7 +133,7 @@
 
 ### 4.9 ExplorePage POI card cover + heart + rating + region + subtabs（mockup section 18）
 
-- [ ] 4.9.1 寫 failing test：`tests/unit/explore-page-card-cover.test.tsx`（**deferred — implementation 完成；既有 explore-page.test.tsx 4 case pass，cover/heart 新 unit test 留下個 PR**）
+- [ ] 4.9.1 寫 failing test：`tests/unit/explore-page-card-cover.test.tsx`（**deferred — 既有 explore-page.test.tsx 4 case pass cover regression；POI 卡片 cover/heart 結構 visual-only，留下個 PR 配合真實 search results integration test 一起補**）
 - [x] 4.9.2 重 build `.explore-poi-card`：top 100% 16:9 cover (data-tone 1-8 8 種 gradient placeholder) + 右上 heart icon button (toggle saved) + body 內 rating meta line
 - [x] 4.9.3 改 TitleBar action icon：star → heart（前 commit 已 land）
 - [x] 4.9.4 加 region selector pill：default「全部地區」+ click open prompt dropdown（簡易 prompt; 完整 dropdown UI 留 follow-up）
@@ -143,10 +143,10 @@
 
 ### 4.10 MapPage FAB + day tab overview + AlertPanel（mockup section 20 + section 04）
 
-- [ ] 4.10.1 加 `src/components/trip/MapFabs.tsx`：右下 FAB stack 「圖層」+「定位」 button（**deferred — Map FAB 跟 Leaflet tile layer dropdown 較大 scope，獨立 PR**）
-- [ ] 4.10.2 圖層 FAB：popover 顯示街道 / 衛星 / 地形 3 選項（**deferred — 同 4.10.1**）
-- [ ] 4.10.3 定位 FAB：navigator.geolocation.getCurrentPosition（**deferred — 同 4.10.1**）
-- [ ] 4.10.4 修改 `src/components/trip/MapDayTab.tsx` active 樣式：border-bottom underline（**deferred — 視覺微調獨立 follow-up**）
+- [x] 4.10.1 加 `src/components/trip/MapFabs.tsx`：右下 FAB stack 「圖層」+「定位」 button + Wired to MapPage 經 OceanMap onMapReady 拉 L.Map ref
+- [x] 4.10.2 圖層 FAB：popover 顯示街道 / 衛星 / 地形 3 選項；Esri World Imagery (衛星) + OpenTopoMap (地形)；切換 swap tile layer (eachLayer + remove + addLayer)
+- [x] 4.10.3 定位 FAB：navigator.geolocation.getCurrentPosition → flyTo(zoom 14) + L.circleMarker user pin；無 geolocation API 觸發 alert
+- [x] 4.10.4 修改 `src/components/trip/MapDayTab.tsx` active 樣式：border-bottom-color 改用 inline `--day-color` CSS var (per-day color underline)，fallback 既有 accent (overview tab 沒 dayColor)
 - [x] 4.10.5 建 `src/components/shared/AlertPanel.tsx`：variant (error/warning/info) + icon + title + message + actionLabel + onAction + onDismiss
 - [x] 4.10.6 寫 unit test `tests/unit/alert-panel.test.tsx` 驗 3 variants render + dismiss + action callback
 - [x] 4.10.7 接入 `useOnlineStatus`：TripPage offline 時 render warning AlertPanel；既有 useOfflineToast transient 通知保留（雙層 UX：toast 短暫提示 + AlertPanel 持久 hint）

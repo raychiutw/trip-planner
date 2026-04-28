@@ -8,13 +8,14 @@
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useTripId } from '../../contexts/TripIdContext';
 import clsx from 'clsx';
 import DaySkeleton from './DaySkeleton';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import Icon from '../shared/Icon';
-import InlineAddPoi from './InlineAddPoi';
+// Section 3 (terracotta-add-stop-modal)：DaySection 內 inline「+ 加景點」入口
+// 退役，trip-level 統一走 TripPage TitleBar AddStopModal。InlineAddPoi component
+// 暫保留 file 為 follow-up cleanup，本次 PR 不刪 file 避免 diff 過大。
 import { toTimelineEntry } from '../../lib/mapDay';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
@@ -86,7 +87,6 @@ const DaySection = React.memo(function DaySection({
   isActive,
   timezone,
 }: DaySectionProps) {
-  const tripId = useTripId();
   const [animKey, setAnimKey] = useState(0);
   const prevActiveRef = useRef(false);
   useEffect(() => {
@@ -185,8 +185,6 @@ const DaySection = React.memo(function DaySection({
             {timeline.length > 0 && (
               <Timeline events={timelineEntries} dayDate={dayDate ?? null} localToday={localToday} dayId={dayId ?? null} />
             )}
-
-            {tripId && <InlineAddPoi tripId={tripId} dayNum={dayNum} />}
           </>
         )}
       </div>

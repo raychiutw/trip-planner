@@ -25,6 +25,7 @@ const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import AlertPanel from '../components/shared/AlertPanel';
+import AddStopModal from '../components/trip/AddStopModal';
 import BottomNavBar from '../components/shell/BottomNavBar';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -244,6 +245,10 @@ function TripPageInner(
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
+  // Section 3 (terracotta-add-stop-modal)：trip-level「+ 加入景點」 modal state，
+  // 帶當前 active day 進去；user 完成 commit 後 dispatch tp-entry-updated 觸發
+  // refetch（既有 listener 處理）。
+  const [addStopOpen, setAddStopOpen] = useState(false);
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
@@ -726,6 +731,17 @@ function TripPageInner(
               <button
                 type="button"
                 className="tp-trip-titlebar-action"
+                onClick={() => setAddStopOpen(true)}
+                aria-label={`在 Day ${currentDayNum || 1} 加景點`}
+                title="加入景點"
+                data-testid="trip-add-stop-trigger"
+              >
+                <Icon name="plus" />
+                <span className="tp-trip-titlebar-action-label">加景點</span>
+              </button>
+              <button
+                type="button"
+                className="tp-trip-titlebar-action"
                 data-compact-hidden="true"
                 onClick={() => setActiveSheet('suggestions')}
                 aria-label="開啟 AI 建議"
@@ -847,6 +863,23 @@ function TripPageInner(
           isOnline={isOnline}
         />
       </InfoSheet>
+
+      {/* Section 3：trip-level「+ 加景點」 modal — 帶 currentDayNum，user 完成
+        * commit 後 AddStopModal 內部 dispatch tp-entry-updated，TripPage 既有
+        * listener (line 277) 會觸發 refetchCurrentDay。 */}
+      {trip && currentDayNum > 0 && (
+        <AddStopModal
+          open={addStopOpen}
+          tripId={trip.id}
+          dayNum={currentDayNum}
+          dayLabel={(() => {
+            const day = days.find((d) => d.dayNum === currentDayNum);
+            const date = day?.date ? day.date : '';
+            return date ? `Day ${currentDayNum} · ${date}` : `Day ${currentDayNum}`;
+          })()}
+          onClose={() => setAddStopOpen(false)}
+        />
+      )}
 
       {isPrintMode && (
         <button
