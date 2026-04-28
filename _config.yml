@@ -1,0 +1,15 @@
+# GitHub Pages Jekyll config — minimal.
+#
+# Trip-planner deploys to Cloudflare Pages; GitHub Pages builds run only because
+# the repo has Pages enabled in settings. CHANGELOG.md contains code snippets
+# with `{{` and `${id}` patterns that Jekyll's Liquid engine mis-parses
+# (Jekyll 3.10 has no per-file render_with_liquid escape), so we exclude it
+# here to keep the auto-generated `pages-build-deployment` workflow green.
+exclude:
+  - CHANGELOG.md
+  - node_modules
+  - tests
+  - functions
+  - migrations
+  - scripts
+  - openspec

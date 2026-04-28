@@ -29,12 +29,11 @@ test.describe('AccountPage — Section 2', () => {
 
   test('3 group settings rows render: 應用程式 / 共編 & 整合 / 帳號', async ({ page }) => {
     await page.goto('/account');
-    // exact match — 「應用程式」 字串會出現在 helper text「管理透過 Tripline 登入的應用程式」
-    // 中，得用 exact 抓 group label
-    await expect(page.getByText('應用程式', { exact: true })).toBeVisible();
-    await expect(page.getByText('共編 & 整合')).toBeVisible();
-    // 「帳號」 既是 TitleBar h1 也是 group label，至少 2 個 element
-    await expect(page.getByText('帳號').first()).toBeVisible();
+    // 用 testid 抓 group label，避免 mobile viewport 下 DesktopSidebar (display:none
+    // 但 DOM 仍在) / GlobalBottomNav 的 nav span 干擾 getByText 順序判定。
+    await expect(page.getByTestId('account-group-label-application')).toHaveText('應用程式');
+    await expect(page.getByTestId('account-group-label-collab')).toHaveText('共編 & 整合');
+    await expect(page.getByTestId('account-group-label-account')).toHaveText('帳號');
   });
 
   test('外觀設定 row click → /account/appearance', async ({ page }) => {
