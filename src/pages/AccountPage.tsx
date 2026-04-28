@@ -231,8 +231,9 @@ export default function AccountPage() {
   const initial = user.email.charAt(0).toUpperCase();
   const displayName = user.displayName || user.email.split('@')[0] || user.email;
 
-  const groups: { label: string; rows: SettingsRow[] }[] = [
+  const groups: { key: string; label: string; rows: SettingsRow[] }[] = [
     {
+      key: 'application',
       label: '應用程式',
       rows: [
         { key: 'appearance', icon: 'palette', title: '外觀設定', helper: '主題色、深淺模式', to: '/account/appearance' },
@@ -240,6 +241,7 @@ export default function AccountPage() {
       ],
     },
     {
+      key: 'collab',
       label: '共編 & 整合',
       rows: [
         { key: 'connected-apps', icon: 'device', title: '已連結 App', helper: '管理透過 Tripline 登入的應用程式', to: '/settings/connected-apps' },
@@ -247,6 +249,7 @@ export default function AccountPage() {
       ],
     },
     {
+      key: 'account',
       label: '帳號',
       rows: [
         { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有 active session', to: '/settings/sessions' },
@@ -286,8 +289,8 @@ export default function AccountPage() {
         </section>
 
         {groups.map((group) => (
-          <section key={group.label} className="tp-account-group">
-            <div className="tp-account-group-label">{group.label}</div>
+          <section key={group.key} className="tp-account-group">
+            <div className="tp-account-group-label" data-testid={`account-group-label-${group.key}`}>{group.label}</div>
             <div className="tp-account-rows">
               {group.rows.map((row) => {
                 const className = `tp-account-row${row.danger ? ' is-danger' : ''}`;

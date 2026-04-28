@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.16.1] - 2026-04-28
+
+**Hotfix CI failures — GitHub Pages Jekyll build + mobile Playwright matrix 全綠**。修 v2.16.0 之後的 master CI 三個獨立 fail（不影響 Cloudflare Pages production deploy，但擋住自動化驗證信號）。
+
+### Fixed
+
+- **GitHub Pages Jekyll build** — 新增 `_config.yml` 把 `CHANGELOG.md` 加進 `exclude` 清單。Jekyll 3.10 沒有 page-level `render_with_liquid: false`，遇到 v2.14.2 內含的 ``state={{ scrollAnchor: 'entry-${id}' }}`` inline code 會被 Liquid engine 當 template variable 解析失敗。同時排除 `tests/`、`functions/`、`migrations/`、`scripts/`、`openspec/` 等不需要被 publish 為 docs 的目錄。
+- **`account-page.spec.js` mobile-chrome / mobile-safari fail** — `getByText('帳號').first()` 抓到 `DesktopSidebar` 隱藏 span（`@media (max-width: 1023px)` 下 `app-shell-sidebar { display: none }`，但 React 仍 render 進 DOM）。給 `AccountPage` 三個 group label div 加 `data-testid={`account-group-label-${group.key}`}`（`application` / `collab` / `account`），spec 改用 `getByTestId(...).toHaveText(...)`，跳脫 DOM 順序判定。
+- **`drag-flows.spec.js:82` mobile-safari boundingBox null** — Playwright 的 `boundingBox()` 對 webkit + sticky/transform 容器內的 element 有已知 edge case 偶爾回 null。改先 `scrollIntoViewIfNeeded()` 再用 `el.evaluate(e => e.getBoundingClientRect())` 直接讀 DOM API，跳過 Playwright 內部 box logic。
+- verify gate: tsc clean / 1346 unit + integration tests pass / mobile-chrome + mobile-safari e2e 24/24 pass / 0 review findings / 0 cso findings。
+
 ## [2.16.0] - 2026-04-28
 
 **Terracotta mockup parity v2 — 5 capability + ABCDE deferred 全處理**。
