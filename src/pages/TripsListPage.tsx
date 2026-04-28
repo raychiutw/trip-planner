@@ -216,18 +216,26 @@ const SCOPED_STYLES = `
 .tp-trip-cover-other { background-image: linear-gradient(135deg, var(--color-cover-other-from) 0%, var(--color-cover-other-to) 100%); }
 
 .tp-trip-card-eyebrow {
-  font-size: var(--font-size-caption2);
+  /* mockup-parity-qa-fixes: mockup .tp-list-card-eyebrow:3781 — 10px / 0.12em / 700 */
+  font-size: var(--font-size-eyebrow);
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-muted);
   margin-bottom: 6px;
 }
 .tp-trip-card-title {
-  font-size: var(--font-size-headline);
+  /* mockup-parity-qa-fixes: mockup .tp-list-card-title:3789 — 16px / 700 / lh 1.35 / 2-line clamp */
+  font-size: var(--font-size-body);
   font-weight: 700;
   letter-spacing: -0.005em;
+  line-height: 1.35;
   margin: 0 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .tp-trip-card-meta {
   font-size: var(--font-size-footnote);
@@ -432,10 +440,14 @@ interface TripInfo {
   title?: string | null;
   countries?: string | null;
   published?: number | boolean;
-  day_count?: number;
-  start_date?: string | null;
-  end_date?: string | null;
-  member_count?: number;
+  /* mockup-parity-qa-fixes: API 透過 functions/api/_utils.ts deepCamel() 把 SQL snake_case 轉
+   * camelCase。既有 day_count/start_date/member_count interface 是 stale bug — runtime 永遠
+   * undefined，導致 eyebrow 不顯示「· N 天」、card meta 缺日期。改 camelCase 對齊實際 response。 */
+  dayCount?: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  memberCount?: number;
+  archivedAt?: string | null;
 }
 
 function coverClass(countries: string | null | undefined): string {
@@ -473,17 +485,26 @@ function dateRange(start: string | null | undefined, end: string | null | undefi
   return null;
 }
 
+function startDateMD(start: string | null | undefined): string | null {
+  // mockup-parity-qa-fixes: 出發日「7/2 出發」格式 (mockup section 16:6908)
+  if (!start) return null;
+  const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(start);
+  if (!m) return null;
+  return `${parseInt(m[2]!, 10)}/${parseInt(m[3]!, 10)} 出發`;
+}
+
 function cardMeta(trip: TripInfo): string {
-  const range = dateRange(trip.start_date, trip.end_date);
-  // member_count includes user's own row in trip_permissions; "N 旅伴" is total members.
-  const members = typeof trip.member_count === 'number' && trip.member_count > 0
-    ? `${trip.member_count} 旅伴`
+  // mockup section 16:6906-6909 範例「張三李四 · 7/29 出發」 — meta 顯示「{owner} · M/D 出發」
+  const startMD = startDateMD(trip.startDate);
+  const range = dateRange(trip.startDate, trip.endDate);
+  const members = typeof trip.memberCount === 'number' && trip.memberCount > 0
+    ? `${trip.memberCount} 旅伴`
     : null;
+  if (startMD && range) return `${startMD} · ${range}`;
+  if (startMD) return startMD;
   if (range && members) return `${range} · ${members}`;
   if (range) return range;
   if (members) return members;
-  // PR-FF 2026-04-26：移除 trip.tripId fallback。User 指示「隱藏 trip id」 —
-  // trip-vduh 這種 slug 對 user 沒意義，留白勝過顯示亂碼。
   return '';
 }
 
@@ -701,7 +722,8 @@ export default function TripsListPage() {
 
   // Section 4.7：filter subtab + sort + search expanding bar — pure client-side
   // 操作 myTrips 已知子集合，避免重新打 /api。
-  const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'collab'>('all');
+  // mockup-parity-qa-fixes: 加「已歸檔」第 4 顆 filter tab
+  const [filterTab, setFilterTab] = useState<'all' | 'mine' | 'collab' | 'archived'>('all');
   const [sortBy, setSortBy] = useState<'updated' | 'start' | 'name'>('updated');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -709,10 +731,16 @@ export default function TripsListPage() {
 
   const visibleTrips = useMemo<TripInfo[]>(() => {
     let list = [...myTrips];
-    if (filterTab === 'mine') {
-      list = list.filter((t) => (t.owner ?? '').toLowerCase() === userEmail);
-    } else if (filterTab === 'collab') {
-      list = list.filter((t) => (t.owner ?? '').toLowerCase() !== userEmail);
+    // 'archived' filter 取 archivedAt !== null；其他 filter 預設排除 archived（避免雜訊）
+    if (filterTab === 'archived') {
+      list = list.filter((t) => t.archivedAt != null);
+    } else {
+      list = list.filter((t) => t.archivedAt == null);
+      if (filterTab === 'mine') {
+        list = list.filter((t) => (t.owner ?? '').toLowerCase() === userEmail);
+      } else if (filterTab === 'collab') {
+        list = list.filter((t) => (t.owner ?? '').toLowerCase() !== userEmail);
+      }
     }
     const term = searchTerm.trim().toLowerCase();
     if (term) {
@@ -725,8 +753,8 @@ export default function TripsListPage() {
       list.sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
     } else if (sortBy === 'start') {
       list.sort((a, b) => {
-        const av = a.start_date ?? '9999';
-        const bv = b.start_date ?? '9999';
+        const av = a.startDate ?? '9999';
+        const bv = b.startDate ?? '9999';
         return av < bv ? -1 : av > bv ? 1 : 0;
       });
     }
@@ -736,8 +764,10 @@ export default function TripsListPage() {
 
   // For badge counts shown on filter subtabs — counts on the unfiltered set.
   const tabCounts = useMemo(() => {
-    const mine = myTrips.filter((t) => (t.owner ?? '').toLowerCase() === userEmail).length;
-    return { all: myTrips.length, mine, collab: myTrips.length - mine };
+    const active = myTrips.filter((t) => t.archivedAt == null);
+    const archived = myTrips.length - active.length;
+    const mine = active.filter((t) => (t.owner ?? '').toLowerCase() === userEmail).length;
+    return { all: active.length, mine, collab: active.length - mine, archived };
   }, [myTrips, userEmail]);
 
   // Effective selected: URL param > first visible trip > null
@@ -846,6 +876,7 @@ export default function TripsListPage() {
                   { key: 'all', label: '全部', count: tabCounts.all },
                   { key: 'mine', label: '我的', count: tabCounts.mine },
                   { key: 'collab', label: '共編', count: tabCounts.collab },
+                  { key: 'archived', label: '已歸檔', count: tabCounts.archived },
                 ] as const).map((tab) => (
                   <button
                     key={tab.key}
@@ -936,7 +967,26 @@ export default function TripsListPage() {
 
           {!loading && !error && myTrips.length > 0 && visibleTrips.length === 0 && (
             <div className="tp-trips-loading" data-testid="trips-list-empty-filtered">
-              沒有符合條件的行程。試著切換分類或調整搜尋字。
+              {filterTab === 'archived'
+                ? '目前沒有已歸檔行程。歸檔行程會在這裡顯示。'
+                : '沒有符合條件的行程。試著切換分類或調整搜尋字。'}
+              {filterTab === 'archived' && (
+                <button
+                  type="button"
+                  onClick={() => setFilterTab('all')}
+                  data-testid="trips-list-archived-reset"
+                  style={{
+                    marginLeft: 8,
+                    background: 'transparent',
+                    border: 0,
+                    color: 'var(--color-accent)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  回到全部
+                </button>
+              )}
             </div>
           )}
 
@@ -959,7 +1009,7 @@ export default function TripsListPage() {
                       aria-current={isActive ? 'true' : undefined}
                     >
                       <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
-                      <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.day_count)}</div>
+                      <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.dayCount)}</div>
                       <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
                       <div className="tp-trip-card-meta">{cardMeta(t)}</div>
                       {ownerLabel && (
