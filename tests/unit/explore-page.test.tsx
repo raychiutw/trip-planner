@@ -52,11 +52,12 @@ describe('ExplorePage', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders search input + empty saved pool when switching to 儲存池 tab', async () => {
+  it('renders search input + empty saved view when 切換 to 我的收藏 view', async () => {
     const { getByTestId, findByText } = renderPage();
     expect(getByTestId('explore-page')).toBeTruthy();
     expect(getByTestId('explore-search-input')).toBeTruthy();
-    fireEvent.click(getByTestId('explore-tab-saved'));
+    // Section 4.9: TitleBar action 「我的收藏」 button toggle 取代既有 tab pair
+    fireEvent.click(getByTestId('explore-saved-titlebar'));
     expect(await findByText(/還沒有儲存任何 POI/)).toBeTruthy();
   });
 

@@ -334,7 +334,7 @@ export default function SignupPage() {
           },
           {
             icon: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
-            title: '儲存池跟著你',
+            title: '我的收藏跟著你',
             desc: '看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。',
           },
         ]}

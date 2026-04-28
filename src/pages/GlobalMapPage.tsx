@@ -41,7 +41,7 @@ import { useNewTrip } from '../contexts/NewTripContext';
 import { extractPinsFromDay, type MapPin } from '../hooks/useMapData';
 import { dayColor } from '../lib/dayPalette';
 import { apiFetch } from '../lib/apiClient';
-import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -632,7 +632,9 @@ export default function GlobalMapPage() {
   const { openModal: openNewTrip } = useNewTrip();
 
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
+  const { activeTripId, setActiveTrip } = useActiveTrip();
+  const setActiveTripId = setActiveTrip;
   const [resolved, setResolved] = useState<ResolvedTrip | null>(null);
   const [selectedPinId, setSelectedPinId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -661,7 +663,9 @@ export default function GlobalMapPage() {
         const myTrips = allJson.filter((t) => mine.has(t.tripId));
         setTrips(myTrips);
         if (myTrips.length === 0) return;
-        const pref = lsGet<string>(LS_KEY_TRIP_PREF);
+        // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
+        // fallback 第一個可見 trip
+        const pref = activeTripId;
         const initial = pref && myTrips.some((t) => t.tripId === pref) ? pref : myTrips[0]!.tripId;
         setActiveTripId(initial);
       } catch {
@@ -734,11 +738,11 @@ export default function GlobalMapPage() {
   }, []);
 
   const pickTrip = useCallback((tripId: string) => {
+    // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
     setActiveTripId(tripId);
-    lsSet(LS_KEY_TRIP_PREF, tripId);
     setMenuOpen(false);
     setSelectedPinId(null);
-  }, []);
+  }, [setActiveTripId]);
 
   const closeSheet = useCallback(() => {
     setSelectedPinId(null);

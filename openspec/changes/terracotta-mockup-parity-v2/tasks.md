@@ -139,7 +139,7 @@
 - [x] 4.9.4 加 region selector pill：default「全部地區」+ click open prompt dropdown（簡易 prompt; 完整 dropdown UI 留 follow-up）
 - [x] 4.9.5 加 subtab chips「為你推薦 / 景點 / 美食 / 住宿 / 購物」5 個；client-side filter results.category text contains regex（無資料時 fallback 全顯示）
 - [x] 4.9.6 加 card hover：accent border + `transform: translateY(-2px)` + shadow-md transition
-- [ ] 4.9.7 重新評估 ExplorePage 「儲存池 multi-select + 加入行程 modal」流程在 add-stop-modal 完成後是否還必要（**deferred — add-stop-modal 收藏 tab 已可滿足；ExplorePage 儲存池流程 cleanup 留下個 PR**）
+- [ ] 4.9.7 重新評估 ExplorePage 「我的收藏 multi-select + 加入行程 modal」流程在 add-stop-modal 完成後是否還必要（**deferred — add-stop-modal 收藏 tab 已可滿足；ExplorePage 我的收藏流程 cleanup 留下個 PR**）
 
 ### 4.10 MapPage FAB + day tab overview + AlertPanel（mockup section 20 + section 04）
 

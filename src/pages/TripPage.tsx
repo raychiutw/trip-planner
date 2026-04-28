@@ -6,6 +6,7 @@ import { useOfflineToast } from '../hooks/useOfflineToast';
 import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { lsGet, lsSet, lsRemove, lsRenewAll, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import { useTrip } from '../hooks/useTrip';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { usePrintMode } from '../hooks/usePrintMode';
@@ -26,7 +27,8 @@ import Footer, { type FooterData } from '../components/trip/Footer';
 import OverflowMenu from '../components/trip/OverflowMenu';
 import AlertPanel from '../components/shared/AlertPanel';
 import AddStopModal from '../components/trip/AddStopModal';
-import BottomNavBar from '../components/shell/BottomNavBar';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
@@ -242,6 +244,7 @@ function TripPageInner(
   // Prefer prop tripId (embedded mode) over URL (route mode).
   const effectiveUrlTripId = propTripId ?? urlTripId;
   const navigate = useNavigate();
+  const { user: currentUser } = useCurrentUser();
   const [resolveState, setResolveState] = useState<ResolveState>({ status: 'loading' });
   const [resolveKey, setResolveKey] = useState(0);   /* Fix 5: re-trigger resolve */
   const [activeSheet, setActiveSheet] = useState<string | null>(null);
@@ -381,6 +384,13 @@ function TripPageInner(
 
   /* --- Derive active tripId for the hook --- */
   const activeTripId = resolveState.status === 'resolved' ? resolveState.tripId : null;
+
+  /* Section 5 (E4)：將 resolved trip id 寫入 ActiveTripContext，提供給
+   * /chat /map /explore 等 global route 之預設 active trip。 */
+  const { setActiveTrip } = useActiveTrip();
+  useEffect(() => {
+    if (activeTripId) setActiveTrip(activeTripId);
+  }, [activeTripId, setActiveTrip]);
 
   const { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, allDays, docs, loading, error } =
     useTrip(activeTripId);
@@ -702,14 +712,11 @@ function TripPageInner(
     </Suspense>
   ) : undefined;
 
+  // Section 5 (E4)：trip-scoped 4-tab BottomNavBar 退役，全 page 統一用
+  // 5-tab GlobalBottomNav。「更多」 sheet 4 action 已遷移新家：
+  // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
   const bottomNavContent = !loading && trip ? (
-    <BottomNavBar
-      tripId={trip.id}
-      activeSheet={activeSheet}
-      onOpenSheet={setActiveSheet}
-      onClearSheet={() => setActiveSheet(null)}
-      isOnline={isOnline}
-    />
+    <GlobalBottomNav authed={!!currentUser} />
   ) : undefined;
 
   const mainContent = (

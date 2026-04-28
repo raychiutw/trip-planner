@@ -24,7 +24,7 @@ import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequestSSE } from '../hooks/useRequestSSE';
 import { apiFetch } from '../lib/apiClient';
-import { lsGet, lsSet, LS_KEY_TRIP_PREF } from '../lib/localStorage';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -424,7 +424,9 @@ export default function ChatPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
-  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  // Section 5 (E4)：active trip 從 ActiveTripContext 讀寫，跨頁同步
+  const { activeTripId, setActiveTrip } = useActiveTrip();
+  const setActiveTripId = setActiveTrip;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [input, setInput] = useState('');
@@ -485,8 +487,9 @@ export default function ChatPage() {
         const myTrips = allJson.filter((t) => mine.has(t.tripId));
         setTrips(myTrips);
 
-        // Pick active: localStorage pref → first trip
-        const pref = lsGet<string>(LS_KEY_TRIP_PREF);
+        // Section 5 (E4)：優先用 ActiveTripContext (cross-page persisted)，
+        // fallback 第一個可見 trip
+        const pref = activeTripId;
         const valid = pref && myTrips.some((t) => t.tripId === pref) ? pref : (myTrips[0]?.tripId ?? null);
         setActiveTripId(valid);
       } catch {
@@ -664,8 +667,8 @@ export default function ChatPage() {
   }, [activeTripId, inflightId]);
 
   function pickTrip(tripId: string) {
+    // Section 5 (E4)：寫進 ActiveTripContext (內部已 persist localStorage)
     setActiveTripId(tripId);
-    lsSet(LS_KEY_TRIP_PREF, tripId);
     setTripMenuOpen(false);
   }
 

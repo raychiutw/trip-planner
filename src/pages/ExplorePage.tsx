@@ -3,7 +3,7 @@
  *
  * Two tabs:
  *   1. 搜尋  — Nominatim search with single-click 儲存 per result.
- *   2. 儲存池 — multi-select + 「加入行程」toolbar to push selection into a trip.
+ *   2. 我的收藏 — multi-select + 「加入行程」toolbar to push selection into a trip.
  *
  * Auth: useRequireAuth — page is for logged-in users.
  *
@@ -18,6 +18,7 @@ import { apiFetch } from '../lib/apiClient';
 import { mapNominatimCategory } from '../lib/poiCategory';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import AppShell from '../components/shell/AppShell';
@@ -67,36 +68,9 @@ const SCOPED_STYLES = `
 
 /* explore-header 改用統一 <PageHeader>。.explore-header CSS 已退役。 */
 
-/* Tab bar — segmented switch between 搜尋 / 儲存池 */
-.explore-tabs {
-  display: inline-flex; gap: 4px;
-  padding: 4px;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  align-self: flex-start;
-}
-.explore-tab {
-  border: none; background: transparent;
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  padding: 8px 16px; border-radius: var(--radius-full);
-  cursor: pointer;
-  color: var(--color-muted);
-  min-height: 36px;
-  display: inline-flex; align-items: center; gap: 6px;
-  transition: background 120ms, color 120ms;
-}
-.explore-tab[aria-selected="true"] {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-}
-.explore-tab .tab-count {
-  font-size: var(--font-size-caption2); font-weight: 700;
-  padding: 1px 6px; border-radius: var(--radius-full);
-  background: rgba(0,0,0,0.08);
-}
-.explore-tab[aria-selected="true"] .tab-count {
-  background: rgba(255,255,255,0.18); color: inherit;
-}
+/* Section 4.9 (terracotta-mockup-parity-v2)：對齊 mockup section 18 拿掉
+ * 「搜尋 / 我的收藏」 tab pair。改用 TitleBar action button 切兩 view，
+ * 既有 .explore-tabs / .explore-tab CSS 已退役一併刪除避免 dead rules。 */
 
 .explore-search {
   display: flex; align-items: center; gap: 8px;
@@ -165,8 +139,16 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote); color: var(--color-muted); margin-bottom: 12px;
 }
 
+/* Section 4.9 (terracotta-mockup-parity-v2)：對齊 mockup section 18 grid
+ * 規格 (mockup line 7290 desktop / 7366 compact)：
+ * desktop ≥1024px = 3-col；compact ≤1024px = 2-col。 */
 .explore-poi-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (min-width: 1024px) {
+  .explore-poi-grid { grid-template-columns: repeat(3, 1fr); }
 }
 .explore-poi-card {
   position: relative;
@@ -406,7 +388,22 @@ export default function ExplorePage() {
   const [showTripPicker, setShowTripPicker] = useState(false);
   const [trips, setTrips] = useState<TripPickerRow[] | null>(null);
   // Section 4.9：region selector + category subtab filter
+  // Section 5 (E4)：region 預設用 active trip's countries → 對應地區名
+  const { activeTripId } = useActiveTrip();
+  const defaultRegion = useMemo(() => {
+    const t = trips?.find((x) => x.tripId === activeTripId);
+    const country = (t?.countries ?? '').trim().toUpperCase();
+    if (country.includes('JP')) return '沖繩';
+    if (country.includes('KR')) return '首爾';
+    if (country.includes('TW')) return '台北';
+    return '全部地區';
+  }, [trips, activeTripId]);
   const [region, setRegion] = useState<string>('全部地區');
+  // 第一次 trips/activeTripId resolve 後同步 default
+  useEffect(() => {
+    if (region === '全部地區' && defaultRegion !== '全部地區') setRegion(defaultRegion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultRegion]);
   const [category, setCategory] = useState<string>('all');
 
   const loadSaved = useCallback(async () => {
@@ -586,65 +583,41 @@ export default function ExplorePage() {
       <style>{SCOPED_STYLES}</style>
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />
+        {/* Section 4.9 (terracotta-mockup-parity-v2)：對齊 mockup section 18
+          * (line 7284-7423) — 拿掉「搜尋 / 我的收藏」 tab pair，改用 TitleBar
+          * action button toggle 兩個 view。default = 搜尋；TitleBar「我的收藏」
+          * button click → 切到 saved view，TitleBar 變 back button → 切回搜尋。 */}
         <TitleBar
-          title="探索"
+          title={tab === 'saved' ? '我的收藏' : '探索'}
+          back={tab === 'saved' ? () => setTab('search') : undefined}
+          backLabel={tab === 'saved' ? '返回探索' : undefined}
           actions={
-            <button
-              type="button"
-              className="tp-titlebar-back"
-              onClick={() => setTab('saved')}
-              aria-label="我的收藏"
-              title="我的收藏（儲存池）"
-              data-testid="explore-saved-titlebar"
-            >
-              {/* Section 4.9 (terracotta-ui-parity-polish): mockup「我的收藏」 heart icon (line 7294/7370) */}
-              <Icon name="heart" />
-            </button>
+            tab === 'search' ? (
+              <button
+                type="button"
+                className="tp-titlebar-back"
+                onClick={() => setTab('saved')}
+                aria-label="我的收藏"
+                title="我的收藏"
+                data-testid="explore-saved-titlebar"
+              >
+                {/* mockup「我的收藏」 heart icon (line 7294/7370) */}
+                <Icon name="heart" />
+              </button>
+            ) : null
           }
         />
 
-        <div className="explore-tabs" role="tablist" aria-label="探索分頁">
-          <button
-            type="button"
-            role="tab"
-            className="explore-tab"
-            aria-selected={tab === 'search'}
-            onClick={() => setTab('search')}
-            data-testid="explore-tab-search"
-          >
-            <span>搜尋</span>
-            {results.length > 0 && <span className="tab-count">{results.length}</span>}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            className="explore-tab"
-            aria-selected={tab === 'saved'}
-            onClick={() => setTab('saved')}
-            data-testid="explore-tab-saved"
-          >
-            <span>儲存池</span>
-            <span className="tab-count">{saved.length}</span>
-          </button>
-        </div>
+        {/* 收藏 view 內顯示 count meta，取代既有 tab badge，與 mockup
+          * section 18 single-content 結構一致 */}
+        {tab === 'saved' && saved.length > 0 && (
+          <p className="section-meta" data-testid="explore-saved-count">{saved.length} 個收藏 POI</p>
+        )}
 
         {tab === 'search' && (
           <>
-            <form className="explore-search" onSubmit={handleSearch}>
-              <span className="search-icon"><Icon name="search" /></span>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜尋 POI（例：沖繩水族館、首爾燒肉）"
-                data-testid="explore-search-input"
-              />
-              <button type="submit" disabled={searching} data-testid="explore-search-submit">
-                {searching ? '搜尋中...' : '搜尋'}
-              </button>
-            </form>
-
-            {/* Section 4.9：region pill + category subtabs (純 client-side filter) */}
+            {/* Section 4.9：對齊 mockup section 18 (line 7298-7311) element 順序
+              * → region pill → search bar → subtab chips → grid */}
             <div className="explore-region-bar">
               <button
                 type="button"
@@ -658,27 +631,42 @@ export default function ExplorePage() {
                 <Icon name="location-pin" />
                 <span>{region} ▾</span>
               </button>
-              <div className="explore-subtabs" role="tablist" aria-label="POI 類別">
-                {([
-                  { key: 'all', label: '為你推薦' },
-                  { key: 'attraction', label: '景點' },
-                  { key: 'food', label: '美食' },
-                  { key: 'hotel', label: '住宿' },
-                  { key: 'shopping', label: '購物' },
-                ] as const).map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={category === s.key}
-                    className={`explore-subtab ${category === s.key ? 'is-active' : ''}`}
-                    onClick={() => setCategory(s.key)}
-                    data-testid={`explore-subtab-${s.key}`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
+            </div>
+
+            <form className="explore-search" onSubmit={handleSearch}>
+              <span className="search-icon"><Icon name="search" /></span>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="搜尋景點、餐廳、住宿…"
+                data-testid="explore-search-input"
+              />
+              <button type="submit" disabled={searching} data-testid="explore-search-submit">
+                {searching ? '搜尋中...' : '搜尋'}
+              </button>
+            </form>
+
+            <div className="explore-subtabs" role="tablist" aria-label="POI 類別">
+              {([
+                { key: 'all', label: '為你推薦' },
+                { key: 'attraction', label: '景點' },
+                { key: 'food', label: '美食' },
+                { key: 'hotel', label: '住宿' },
+                { key: 'shopping', label: '購物' },
+              ] as const).map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={category === s.key}
+                  className={`explore-subtab ${category === s.key ? 'is-active' : ''}`}
+                  onClick={() => setCategory(s.key)}
+                  data-testid={`explore-subtab-${s.key}`}
+                >
+                  {s.label}
+                </button>
+              ))}
             </div>
 
             {results.length > 0 && (() => {
@@ -698,7 +686,7 @@ export default function ExplorePage() {
                 <section className="explore-section" data-testid="explore-results">
                   <h2>搜尋結果</h2>
                   <p className="section-meta">
-                    {filtered.length} / {results.length} 個 POI · 點愛心圖示加入儲存池
+                    {filtered.length} / {results.length} 個 POI · 點愛心圖示加入我的收藏
                   </p>
                   <div className="explore-poi-grid">
                     {filtered.map((poi) => {
@@ -775,7 +763,7 @@ export default function ExplorePage() {
 
         {tab === 'saved' && (
           <section className="explore-section" data-testid="explore-saved">
-            <h2>儲存池</h2>
+            <h2>我的收藏</h2>
             <p className="section-meta">勾選想加入行程的 POI，點「加入行程」一鍵丟進選定 trip。</p>
 
             {selectedSavedIds.size > 0 && (

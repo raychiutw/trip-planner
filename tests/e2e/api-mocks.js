@@ -69,7 +69,7 @@ function initialTripIdeas() {
       tripId: 'okinawa-trip-2026-Ray',
       poiId: 8001,
       title: '沖繩美麗海水族館',
-      note: '從探索儲存池加入',
+      note: '從探索我的收藏加入',
       addedAt: '2026-04-25T10:10:00Z',
       addedBy: MOCK_USER.email,
       promotedToEntryId: null,

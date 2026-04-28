@@ -15,6 +15,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { ErrorBoundary } from '../components/shared/ErrorBoundary';
 import { NewTripProvider } from '../contexts/NewTripContext';
+import { ActiveTripProvider } from '../contexts/ActiveTripContext';
 import { lazy, Suspense, StrictMode } from 'react';
 
 import '../../css/tokens.css';
@@ -132,6 +133,7 @@ if (el) {
     <StrictMode>
       <ErrorBoundary>
         <BrowserRouter>
+          <ActiveTripProvider>
           <NewTripProvider>
           <Suspense fallback={<div style={FALLBACK_STYLE}>載入中…</div>}>
             <Routes>
@@ -170,6 +172,7 @@ if (el) {
             </Routes>
           </Suspense>
           </NewTripProvider>
+          </ActiveTripProvider>
         </BrowserRouter>
       </ErrorBoundary>
     </StrictMode>
