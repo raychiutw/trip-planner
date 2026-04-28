@@ -3,6 +3,48 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.16.0] - 2026-04-28
+
+**Terracotta mockup parity v2 — 5 capability + ABCDE deferred 全處理**。
+
+對齊 `docs/design-sessions/terracotta-preview-v2.html` (7,950 行 / 14 page section / 5 design-token reference) 為 source of truth，跨 5 capability + 17 個 ABCDE deferred follow-up 全 land。OpenSpec change `terracotta-mockup-parity-v2` 完整 spec + design + tasks + 4 份 notes (bottom-nav-ia-decision / e-deferred-decisions / 等)。
+
+### Added
+
+- **`/account` 統一帳號 hub**：profile hero (avatar 64px + name + email + 3 stats) + 3 group settings rows (應用程式 / 共編 & 整合 / 帳號) + 登出 ConfirmModal pattern。新建 `/account/appearance` (主題切換) + `/account/notifications` (即將推出 stub) 兩 sub-route。
+  - 新 endpoint `GET /api/account/stats`：`{ tripCount, totalDays, collaboratorCount }` SQL aggregate (lowercase email、含 wildcard '*' 處理、distinct collaborator)，10 個 unit case 驗 fetch flow，7 個 integration case 驗 SQL 結構與 collab dedup 邏輯。
+- **Trip-level「加景點」 modal**（`AddStopModal`，取代 day-level inline `InlineAddPoi`）：3-tab pattern (搜尋 / 收藏 / 自訂) + 5 category subtab (為你推薦 / 景點 / 美食 / 住宿 / 購物) + footer counter 「已選 N 個 · 將加入 Day X」 + 自訂 tab 含 inline error 驗證。Trigger 在 TripPage TitleBar，embedded mode (`/trips?selected=`) 也提供同 entry 走 forwardRef handle。
+- **5-tab GlobalBottomNav (mobile-bottom-nav adopt)**：聊天 / 行程 / 地圖 / 探索 / 帳號（logged-in）or 登入（guest），對齊 mockup section 02。Active state 含 2px top indicator + accent-subtle 底。「地圖」 tab regex 同時涵蓋 `/map` 與 `/trip/:id/map` 但不誤觸 `/manage/map-xxx`。原 4-tab `BottomNavBar` 標 `@deprecated`。
+- **`ActiveTripContext`**：app-level「目前選擇的行程」 single source of truth，跨頁同步 (window storage event) + localStorage 持久化 + provider-外 fallback degraded mode。/trip/:id 進入自動 set，/chat 預設 active trip 對應 thread，/map 預設 pin overview，/explore region 預設對應 country (JP→沖繩 / KR→首爾 / TW→台北)，補償 5-tab IA 失去 trip-scoped 高效。
+- **TimelineRail 補強**：toolbar 加「編輯備註」鉛筆 icon button → focus note textarea (取代 implicit click-to-edit)；`window.confirm` delete → ConfirmModal pattern (alertdialog + destructive variant + Esc/backdrop close)；grip handle desktop hover-only (`@media (hover: hover) and (pointer: fine)`)，touch device + keyboard focus 永遠可見保 a11y。
+- **TimelineRail TravelPill**：兩 entry 之間 conditional render `tp-travel-pill`「N 分 · 描述」 (依 entry.travel = { type, desc, min })。type → icon map (car / walking / train / bus / plane / fallback car)。
+- **TripPage TitleBar ghost button text label**：「加景點 / 建議 / 共編 / 下載」 desktop ≥1024px icon + text，tablet 760-1023px icon-only，mobile ≤760px hide 走 OverflowMenu。
+- **TripsListPage filter + sort + search + owner avatar**：filter subtab (全部 / 我的 / 共編 with count) + sort dropdown (最新編輯 / 出發日近 / 名稱 A-Z) + search expanding bar (button → input + result count) + owner avatar (28x28 圓形 initial)「由你建立 / owner email」。Card eyebrow 中文化「日本 · 5 天」。
+- **ChatPage day divider + AI avatar + bubble timestamp prefix**：跨日訊息間 inject `tp-chat-day-divider` (YYYY/MM/DD（週X）)；assistant bubble 加 32x32「AI」 avatar (左側) + timestamp prefix「Tripline AI · 」；TitleBar title 從固定「聊天」→ 當前 trip.name；送出 button text → icon-only。
+- **ExplorePage POI cover + region + 5 subtab + heart save**：對齊 mockup section 18。Card top 16:9 cover (data-tone 1-8 gradient placeholder) + 右上 heart icon button (toggle saved) + body 內 ★ rating + accent border hover lift transition (`translateY(-2px)`)。Region selector pill (default 用 active trip's countries) + 5 category subtab (為你推薦 / 景點 / 美食 / 住宿 / 購物，client-side regex filter)。Element 順序對齊 mockup section 18 (region pill → search bar → subtab → grid)，placeholder「搜尋景點、餐廳、住宿…」，grid desktop 3-col / mobile 2-col。
+- **NewTripModal 多目的地 sortable + popular/recent chips + day quota stepper**：destination 改 `@dnd-kit/sortable` rows (grip + 編號 + name + region + remove)，title「新增行程」，date mode tabs label「固定日期 / 大概時間」，多 dest 顯示「行程跨 N 個目的地 · 順序決定地圖 polyline 串接方向」 helper。新加「熱門目的地」6 個 chip + 「最近搜尋」localStorage 5 個（selectPoi push）。多 dest + total days > 0 顯示「分配天數」 stepper (evenly split + remainder 前段累加)，submit 時 sum === total 才 append「目的地天數分配：沖繩 3 天 / 京都 2 天」 到 description 給 AI consume。
+- **DaySection day title 概念 + migration 0042**：`trip_days.title TEXT` column (nullable)，3-tier fallback (title || area || `Day N`)。`Day` + `DaySummary` types 加 title field，`useTrip` mapDayResponse + `_merge.ts` assembleDay surface title，audit rollback ALLOWED_COLUMNS 加 title。Day title 編輯 UI (PATCH /api/trips/:id/days/:num) 為 follow-up。
+- **DayNav 對齊 mockup section 11**：今天 day eyebrow 加「· 今天」 suffix (取代獨立 TODAY pill)；拿掉 `dn-dow` 週幾英文 extra row；`.dn-area` max-width 80→120px 給「美瑛拼布之路」 4-5 字 area 完整空間。
+- **DesktopSidebar dark theme**：bg → `var(--color-foreground)` 深棕，inactive item rgba(255,251,245,0.6) muted-light，active item bg `var(--color-accent)` + 文字 `var(--color-accent-foreground)`，font-weight 600 全 item，name truncation `name.length > 10 ? slice(0,10)+'…'`。Logged-in 顯示「帳號」 nav item (link `/account`)；logged-out 顯示「登入」。
+- **TripPage offline + load error AlertPanel**：新建 `<AlertPanel>` (variant: error / warning / info + actionLabel + onAction + onDismiss + role=alert/status)，TripPage offline 時 main 上方 render persistent warning banner，load error 改 AlertPanel + retry action (取代既有 generic 「行程不存在」 fallback)。
+- **MapFabs 圖層 + 定位**：MapPage 右下 FAB stack 兩 button — 「圖層」 popover (街道 OSM / 衛星 Esri World Imagery / 地形 OpenTopoMap，swap Leaflet tile layer) + 「定位」 (`navigator.geolocation` → `flyTo` 14 zoom + L.circleMarker user pin)。MapDayTab active 改 per-day color underline (inline `--day-color` CSS var)。
+- **icon SVG sweep**：8 個 emoji（🗑 ✕ ⛶ ⎘ ⇅ 🔍 ❤ ✓）→ `<Icon>` SVG sprite (Material Symbols Rounded style)，新增 trash / maximize / arrows-vertical / copy / check / send / heart / pencil / layers 9 個 sprite。Source-grep contract test (`tests/unit/no-emoji-icons.test.ts`) 防 regression。
+- **20 個 unit + 2 個 E2E + 1 個 integration test suite (新增)**：alert-panel / no-emoji-icons / chat-page-day-divider / chat-page-ai-avatar / day-section-title / day-nav-eyebrow / desktop-sidebar-visual / new-trip-modal-multidest / explore-page (+7 case) / trips-list-page (+5 case) / account-page / trip-page-titlebar-actions / timeline-rail-toolbar-pencil / travel-pill / add-stop-modal / map-fabs / global-bottom-nav-5tab / active-trip-context；E2E `account-page.spec.js` + `add-stop-modal.spec.js`；API `account-stats.integration.test.ts`。
+
+### Changed
+
+- **「儲存池」→「我的收藏」 全 codebase rename**：「儲存池」非台灣慣用語，rename 跨 ExplorePage / LoginPage / SignupPage / `api.ts` comment / unit test / e2e api-mocks fixture / openspec design.md / spec.md / tasks.md。對齊 mockup line 7294「我的收藏」 命名。
+- **ExplorePage UI 重組對齊 mockup section 18**：拿掉「搜尋 / 我的收藏」 tab pair (mockup 無 tab 結構)，改用 TitleBar action button toggle 兩 view (search view title「探索」 + 「我的收藏」 button；saved view title「我的收藏」 + 返回探索 back button)。
+- **TripPage / GlobalMapPage / ChatPage active trip 統一**：原各頁 `lsGet/lsSet LS_KEY_TRIP_PREF` 散用 → 統一改用 `useActiveTrip()` hook，跨 tab + 跨頁同步。
+
+### For contributors
+
+- **OpenSpec change `terracotta-mockup-parity-v2`**：5 capability spec (icon-svg-sweep / account-hub-page / add-stop-modal / ui-parity-polish / mobile-bottom-nav) + design.md (含 14 page section audit ~46 missing / 42 inconsistent / 11 extra finding) + tasks.md 全 task 標 done/deferred 含原因 + 4 份 notes (bottom-nav-ia-decision / e-deferred-decisions / etc)。
+- **`feedback_mockup_source_of_truth.md` memory**：mockup 是 source of truth 不挑戰；提供 implementation option 時 A 永遠是 mockup-aligned 那個且為 recommended，B/C 才是 deviation。
+- **`docs/parity-v2-release` doc-release branch + VERSION 2.15.0 → 2.16.0**：covers PR #387 (terracotta-mockup-parity-v2) + PR #388 (E1 follow-up: account-stats integration test)。
+- BottomNavBar (4-tab) 標 `@deprecated`，全 page 統一改用 GlobalBottomNav (5-tab)。File 暫保留為下個 cleanup PR。
+- InlineAddPoi 標 `@deprecated`，DaySection 不再 import 渲染。File 暫保留為下個 cleanup PR。
+
 ## [2.15.0] - 2026-04-28
 
 **Ideas drag-to-itinerary — drag UX primitives + batch endpoint + design polish**。
