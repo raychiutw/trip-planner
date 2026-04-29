@@ -4169,35 +4169,10 @@
     padding: 16px;
   }
 
-  /* === Chat page === */
-  .tp-chat-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .tp-chat-item {
-    display: grid;
-    grid-template-columns: 40px 1fr auto;
-    gap: 12px;
-    align-items: center;
-    padding: 12px 14px;
-    border: 1px solid var(--tp-border);
-    border-radius: var(--tp-radius-md);
-    background: var(--tp-background);
-    cursor: pointer;
-    transition: border-color 150ms, background 150ms;
-  }
-  .tp-chat-item:hover {
-    border-color: var(--tp-accent);
-    background: var(--tp-hover);
-  }
-  .tp-chat-item.is-active {
-    border-color: var(--tp-accent);
-    background: var(--tp-accent-subtle);
-  }
-  [data-theme="dark"] .tp-chat-item.is-active {
-    background: var(--tp-accent-bg);
-  }
+  /* === Chat page (avatar + trip-picker pill) ===
+   * 2026-04-29:list 模式 deferred(F-001/F-002/F-003 維持 production 行程綁定式 IA),
+   * 移除 tp-chat-list / tp-chat-item / tp-chat-name / tp-chat-preview / tp-chat-meta /
+   * tp-chat-time / tp-chat-unread。avatar 保留給 conversation 用。 */
   .tp-chat-avatar {
     width: 40px;
     height: 40px;
@@ -4208,6 +4183,7 @@
     place-items: center;
     font-size: 14px;
     font-weight: 700;
+    flex-shrink: 0;
   }
   .tp-chat-avatar.is-ai {
     background: var(--tp-foreground);
@@ -4215,47 +4191,48 @@
   [data-theme="dark"] .tp-chat-avatar.is-ai {
     background: #0F0B08;
   }
-  .tp-chat-body {
-    min-width: 0;
-  }
-  .tp-chat-name {
-    font-size: 14px;
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .tp-chat-preview {
-    font-size: 12px;
-    color: var(--tp-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    margin-top: 2px;
-  }
-  .tp-chat-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    font-variant-numeric: tabular-nums;
-  }
-  .tp-chat-time {
-    font-size: 11px;
-    color: var(--tp-muted);
-    font-variant-numeric: tabular-nums;
-  }
-  .tp-chat-unread {
-    min-width: 18px;
-    height: 18px;
-    padding: 0 6px;
+  /* Conversation header 右側 trip-picker pill —— production ChatPage `.tp-chat-trip-picker`。
+   * 點擊展開 dropdown 切換當前綁定行程。 */
+  .tp-chat-trip-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--tp-border);
     border-radius: 999px;
-    background: var(--tp-accent);
-    color: var(--tp-on-accent);
-    font-size: 10px;
+    background: var(--tp-background);
+    color: var(--tp-foreground);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 36px;
+    transition: border-color 150ms, color 150ms;
+  }
+  .tp-chat-trip-picker:hover {
+    border-color: var(--tp-accent);
+    color: var(--tp-accent);
+  }
+  .tp-chat-trip-picker .pill {
+    font-size: 11px;
     font-weight: 700;
-    display: grid;
-    place-items: center;
+    letter-spacing: 0.1em;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--tp-accent-subtle);
+    color: var(--tp-accent);
+  }
+  /* Conversation message wrapper — assistant 用 row layout 把 avatar + bubble 並排。
+   * user message 不渲染 avatar(維持非對稱 visual),直接 align-self flex-end。 */
+  .tp-chat-msg-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    align-self: flex-start;
+    max-width: min(680px, 85%);
+  }
+  .tp-chat-msg-row.is-assistant .tp-chat-bubble {
+    max-width: 100%;
   }
 
   /* === Explore page === */
@@ -4598,28 +4575,10 @@
   .tp-chat-bubble-meta.is-ai {
     align-self: flex-start;
   }
-  .tp-chat-bubble-suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-  }
-  .tp-chat-bubble-suggestion {
-    font: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border: 1px solid var(--tp-border);
-    border-radius: 999px;
-    background: var(--tp-background);
-    color: var(--tp-foreground);
-    cursor: pointer;
-  }
-  .tp-chat-bubble-suggestion:hover {
-    border-color: var(--tp-accent);
-    color: var(--tp-accent);
-    background: var(--tp-accent-subtle);
-  }
+  /* 2026-04-29:tp-chat-bubble-suggestions / tp-chat-bubble-suggestion 移除。
+   * F-008 deferred:production AI 採直接執行式(「✅ 已處理」),非建議-確認模式,
+   * 訊息為純 markdown,無 inline action pill。詳見 docs/design-sessions/2026-04-29 chat
+   * mockup-prod 對齊決策。 */
   .tp-chat-input {
     display: flex;
     align-items: flex-end;
@@ -7113,131 +7072,42 @@
 <!-- ===== Section 17 — Chat Page ===== -->
 <section class="tp-section">
   <h2 class="tp-section-title">Chat Page</h2>
-  <p class="tp-section-lead">「聊天」主功能頁標題 + 內容 mockup。對齊 DESIGN.md PageHeader spec：桌機只放單行標題 + 右側 actions（無 eyebrow/meta），compact 右側統一 hamburger menu，sticky + glass + hairline。Reference: docs/design-sessions/2026-04-27-unified-layout-plan.md。</p>
-
-  <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · titlebar 64px · 標題 + 右側 actions（搜尋 / 新對話）</span></div>
-    <header class="tp-page-titlebar">
-      <h3 class="tp-page-titlebar-title">聊天</h3>
-      <div class="tp-page-titlebar-actions"></div>
-    </header>
-    <div class="tp-page-content">
-      <div class="tp-chat-list">
-        <div class="tp-chat-item is-active">
-          <div class="tp-chat-avatar is-ai">AI</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">Tripline AI</div>
-            <div class="tp-chat-preview">沖繩五日：Day 03 美ら海水族館 + 古宇利大橋 + きしもと食堂…</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">剛剛</span>
-            <span class="tp-chat-unread">3</span>
-          </div>
-        </div>
-        <div class="tp-chat-item">
-          <div class="tp-chat-avatar">張</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">張三李四 · 沖繩跨城</div>
-            <div class="tp-chat-preview">張：第 4 天可以加大阪 USJ 嗎？預算還夠</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">14:32</span>
-          </div>
-        </div>
-        <div class="tp-chat-item">
-          <div class="tp-chat-avatar is-ai">AI</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">Tripline AI · 京都賞楓</div>
-            <div class="tp-chat-preview">已為你規劃 7 天行程，包含嵐山、清水寺、伏見稻荷大社…</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">昨天</span>
-          </div>
-        </div>
-        <div class="tp-chat-item">
-          <div class="tp-chat-avatar">H</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">HuiYun · 河內下龍灣</div>
-            <div class="tp-chat-preview">HuiYun：飛機票訂好了，12/20 早班</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">3 天前</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT <span>≤1024px · titlebar 56px · 右側 hamburger（展開狀態 demo）</span></div>
-    <header class="tp-page-titlebar">
-      <h3 class="tp-page-titlebar-title">聊天</h3>
-      <div class="tp-page-titlebar-actions"></div>
-    </header>
-    <div class="tp-page-content">
-      <div class="tp-chat-list">
-        <div class="tp-chat-item is-active">
-          <div class="tp-chat-avatar is-ai">AI</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">Tripline AI</div>
-            <div class="tp-chat-preview">沖繩五日：Day 03 美ら海水族館…</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">剛剛</span>
-            <span class="tp-chat-unread">3</span>
-          </div>
-        </div>
-        <div class="tp-chat-item">
-          <div class="tp-chat-avatar">張</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">張三李四 · 沖繩跨城</div>
-            <div class="tp-chat-preview">第 4 天可以加大阪 USJ 嗎？</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">14:32</span>
-          </div>
-        </div>
-        <div class="tp-chat-item">
-          <div class="tp-chat-avatar is-ai">AI</div>
-          <div class="tp-chat-body">
-            <div class="tp-chat-name">Tripline AI · 京都賞楓</div>
-            <div class="tp-chat-preview">已為你規劃 7 天行程…</div>
-          </div>
-          <div class="tp-chat-meta">
-            <span class="tp-chat-time">昨天</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <p class="tp-section-lead">「聊天」主功能頁採「行程綁定式 AI 助手」IA(類 ChatGPT plugin),非 inbox 模式。標題顯示當前行程名稱,右側 trip-picker pill 切換行程。AI 直接執行(「✅ 已處理」)而非建議-確認模式,訊息為純 markdown,無 suggestion pills。Reference: 2026-04-29 chat-mockup-parity-p1-p3 PR #395 + 後續 mockup-prod 對齊決策(F-001/F-002/F-003/F-008 維持 production,mockup 反向更新)。</p>
 
   <!-- ===== Chat conversation desktop ===== -->
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP — CONVERSATION <span>點 chat list item 後的對話視窗 · title 變 trip name + 返回 + ⋯</span></div>
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · titlebar = 行程名 + 右側 trip-picker pill;訊息含時間戳記與日期分隔</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="回對話列表"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">沖繩 + 大阪 + 京都跨城</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-preview-icon-button" type="button" aria-label="更多"><span class="tp-icon"><svg><use href="#i-more"/></svg></span></button>
+        <button class="tp-chat-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="pill">行程</span>
+          <span>沖繩 + 大阪 + 京都跨城</span>
+          <span aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
     <div class="tp-chat-conv">
       <div class="tp-chat-messages">
         <div class="tp-chat-day-divider">2026-04-25 · 週四</div>
-        <div class="tp-chat-bubble is-ai">已為你規劃 12 天跨城行程：沖繩 5 天（美ら海 / 古宇利 / 萬座毛）→ 大阪 3 天 → 京都 4 天。要從哪一天開始展開細節？</div>
+        <div class="tp-chat-msg-row is-assistant">
+          <div class="tp-chat-avatar is-ai">AI</div>
+          <div class="tp-chat-bubble is-ai">已為你規劃 12 天跨城行程：沖繩 5 天（美ら海 / 古宇利 / 萬座毛）→ 大阪 3 天 → 京都 4 天。要從哪一天開始展開細節？</div>
+        </div>
         <div class="tp-chat-bubble-meta is-ai">Tripline AI · 14:02</div>
         <div class="tp-chat-bubble is-user">先看沖繩 Day 03 的安排</div>
         <div class="tp-chat-bubble-meta is-user">14:03</div>
-        <div class="tp-chat-bubble is-ai">Day 03 主題「美ら海＋古宇利島一日跑」：08:00 退房 → 08:10 道之驛許田 → 09:00 美ら海水族館（4 hr）→ 13:05 きしもと食堂 → 15:00 古宇利大橋。預估 9 小時 / 40 km。</div>
+        <div class="tp-chat-msg-row is-assistant">
+          <div class="tp-chat-avatar is-ai">AI</div>
+          <div class="tp-chat-bubble is-ai">Day 03 主題「美ら海＋古宇利島一日跑」：08:00 退房 → 08:10 道之驛許田 → 09:00 美ら海水族館（4 hr）→ 13:05 きしもと食堂 → 15:00 古宇利大橋。預估 9 小時 / 40 km。</div>
+        </div>
         <div class="tp-chat-bubble-meta is-ai">Tripline AI · 14:03</div>
         <div class="tp-chat-day-divider">今天 · 14:30</div>
         <div class="tp-chat-bubble is-user">水族館停留可以縮短嗎？想加一個午餐景點</div>
         <div class="tp-chat-bubble-meta is-user">剛剛</div>
-        <div class="tp-chat-bubble is-ai">建議水族館從 4 hr → 2.5 hr，加入「燒肉本部牧場」（11:30，本部町在地和牛）。需要我直接更新行程嗎？
-          <div class="tp-chat-bubble-suggestions">
-            <button class="tp-chat-bubble-suggestion" type="button">直接更新</button>
-            <button class="tp-chat-bubble-suggestion" type="button">先看其他選項</button>
-          </div>
+        <div class="tp-chat-msg-row is-assistant">
+          <div class="tp-chat-avatar is-ai">AI</div>
+          <div class="tp-chat-bubble is-ai">✅ 已處理：水族館停留時間從 4 hr → 2.5 hr，加入「燒肉本部牧場」（11:30，本部町在地和牛）作為午餐景點。Day 03 總時數 9 hr → 9 hr（不變），新增 1 個 POI。</div>
         </div>
         <div class="tp-chat-bubble-meta is-ai">Tripline AI · 剛剛</div>
       </div>
@@ -7250,31 +7120,35 @@
 
   <!-- ===== Chat conversation compact ===== -->
   <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT — CONVERSATION <span>≤1024px · 對話視窗全屏 · 返回 + ⋯</span></div>
+    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 全屏 conversation · header 同 desktop:行程名 + trip-picker pill</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="回對話列表"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">沖繩 + 大阪 + 京都跨城</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-preview-icon-button" type="button" aria-label="更多"><span class="tp-icon"><svg><use href="#i-more"/></svg></span></button>
+        <button class="tp-chat-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="pill">行程</span>
+          <span>沖繩跨城</span>
+          <span aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
     <div class="tp-chat-conv">
       <div class="tp-chat-messages">
         <div class="tp-chat-day-divider">今天</div>
-        <div class="tp-chat-bubble is-ai">Day 03 已規劃好。預估 9 小時 / 40 km。</div>
+        <div class="tp-chat-msg-row is-assistant">
+          <div class="tp-chat-avatar is-ai">AI</div>
+          <div class="tp-chat-bubble is-ai">Day 03 已規劃好。預估 9 小時 / 40 km。</div>
+        </div>
         <div class="tp-chat-bubble-meta is-ai">Tripline AI · 14:03</div>
         <div class="tp-chat-bubble is-user">水族館停留可以縮短嗎？</div>
         <div class="tp-chat-bubble-meta is-user">剛剛</div>
-        <div class="tp-chat-bubble is-ai">建議 4 hr → 2.5 hr，加入「燒肉本部牧場」午餐。需要直接更新嗎？
-          <div class="tp-chat-bubble-suggestions">
-            <button class="tp-chat-bubble-suggestion" type="button">直接更新</button>
-            <button class="tp-chat-bubble-suggestion" type="button">看其他</button>
-          </div>
+        <div class="tp-chat-msg-row is-assistant">
+          <div class="tp-chat-avatar is-ai">AI</div>
+          <div class="tp-chat-bubble is-ai">✅ 已處理：水族館 4 hr → 2.5 hr，加入燒肉本部牧場午餐。</div>
         </div>
         <div class="tp-chat-bubble-meta is-ai">Tripline AI · 剛剛</div>
       </div>
       <div class="tp-chat-input">
-        <textarea class="tp-chat-input-textarea" placeholder="輸入訊息…" rows="1"></textarea>
+        <textarea class="tp-chat-input-textarea" placeholder="輸入訊息或語音指令…" rows="1"></textarea>
         <button class="tp-chat-input-send" type="button" aria-label="送出"><span class="tp-icon"><svg><use href="#i-send"/></svg></span></button>
       </div>
     </div>
