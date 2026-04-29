@@ -48,12 +48,21 @@ describe('ChatPage (V2 functional MVP)', () => {
   });
 });
 
-describe('GlobalMapPage (V2 functional MVP — cross-trip leaflet)', () => {
-  it('renders shell + map canvas + sheet', () => {
-    const { getByTestId } = renderWithRouter(<GlobalMapPage />);
-    expect(getByTestId('global-map-page')).toBeTruthy();
-    expect(getByTestId('global-map-canvas')).toBeTruthy();
-    expect(getByTestId('global-map-sheet')).toBeTruthy();
+describe('GlobalMapPage (v2.17.5 — sidebar /map redirect to trip-bound)', () => {
+  /* 2026-04-29:GlobalMapPage 改為 render-前 conditional redirect。
+   * 有 trip → <Navigate to=`/trip/:id/map` replace />(MemoryRouter 不會 render
+   * 子 page,GlobalMapPage 不會 mount canvas)
+   * 沒 trip → fall through 到 empty state「+ 建立第一個行程」CTA
+   *
+   * 此 test 驗 fall-through path:fetch 給空陣列 → empty state 渲染。 */
+  it('沒 trip 時走 fall-through empty state(不 redirect)', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    }) as unknown as typeof fetch;
+    const { findByTestId } = renderWithRouter(<GlobalMapPage />);
+    expect(await findByTestId('global-map-empty')).toBeTruthy();
+    expect(await findByTestId('global-map-new-trip')).toBeTruthy();
   });
 });
 
