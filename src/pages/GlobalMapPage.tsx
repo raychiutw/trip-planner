@@ -756,16 +756,24 @@ export default function GlobalMapPage() {
     setSelectedPinId(null);
   }, [setActiveTripId]);
 
-  /* 2026-04-29:sidebar「地圖」走 /map → 若 user 有任何 trip,redirect 到
-   * /trip/:id/map(優先 ActiveTripContext.activeTripId,fallback trips[0])對齊
-   * mockup「Map Page」spec(Reference: src/pages/MapPage.tsx 規範 trip-bound view)。
-   * 沒任何 trip → 維持本頁 empty state「+ 建立第一個行程」CTA。
-   * trips === null 時(loading)不 redirect,等 fetch 完才 decide,避免 flash。 */
-  if (trips !== null && trips.length > 0) {
-    const target = activeTripId && trips.some((t) => t.tripId === activeTripId)
-      ? activeTripId
-      : trips[0]!.tripId;
-    return <Navigate to={`/trip/${encodeURIComponent(target)}/map`} replace />;
+  /* 2026-04-29:sidebar「地圖」走 /map → 渲染前判斷,有 trip 立刻 redirect 到
+   * /trip/:id/map 對齊 mockup「Map Page」spec(Reference: src/pages/MapPage.tsx)。
+   *
+   * 渲染前三層判斷,避免 flash GlobalMapPage UI:
+   * 1. activeTripId(從 ActiveTripContext / localStorage cache)→ 立刻 redirect
+   *    (常見 case,user 之前進過 trip,localStorage 有 cache)
+   * 2. trips === null(fetch 中) → render null 空白避免 flash
+   * 3. trips fetch 完 → 有 trip 拿 trips[0] redirect / 沒 trip 走 empty state
+   *
+   * 沒任何 trip → fall through 到本頁既有 empty state「+ 建立第一個行程」CTA。 */
+  if (activeTripId) {
+    return <Navigate to={`/trip/${encodeURIComponent(activeTripId)}/map`} replace />;
+  }
+  if (trips === null) {
+    return null;
+  }
+  if (trips.length > 0) {
+    return <Navigate to={`/trip/${encodeURIComponent(trips[0]!.tripId)}/map`} replace />;
   }
 
   const closeSheet = useCallback(() => {
