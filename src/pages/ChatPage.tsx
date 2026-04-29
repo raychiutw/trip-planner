@@ -56,6 +56,10 @@ interface ChatMessage {
    *  bubble timestamp (HH:mm if today, MM/DD HH:mm 否則)。null when local
    *  optimistic message (will fill on next reload from API)。 */
   createdAt?: string | null;
+  /** 2026-04-29:multi-user trip 共編 chat,user message 真正 sender(從 tp-request
+   * `submittedBy` email 來)。Render bubble meta 時 split email local-part 當
+   * displayName(避免歷史訊息全標當前登入者)。 */
+  submittedBy?: string | null;
 }
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
@@ -146,7 +150,7 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const userTs = row.createdAt ?? row.updatedAt ?? null;
   const assistantTs = row.updatedAt ?? row.createdAt ?? null;
   if (row.message) {
-    out.push({ id: baseId, role: 'user', text: row.message, createdAt: userTs });
+    out.push({ id: baseId, role: 'user', text: row.message, createdAt: userTs, submittedBy: row.submittedBy ?? null });
   }
   if (row.status === 'completed' && row.reply) {
     out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true, createdAt: assistantTs });
@@ -640,7 +644,7 @@ export default function ChatPage() {
     // `{m.createdAt && ...}` 永不為真)。改用 createdAt + ISO 8601。
     setMessages((prev) => [
       ...prev,
-      { id: now, role: 'user', text, createdAt: new Date(now).toISOString() },
+      { id: now, role: 'user', text, createdAt: new Date(now).toISOString(), submittedBy: user?.email ?? null },
       { id: now + 1, role: 'assistant', text: '思考中…', pendingRequestId: -1 },
     ]);
 
@@ -833,7 +837,11 @@ export default function ChatPage() {
                 >
                   {isAssistant
                     ? `Tripline AI · ${formatChatTime(m.createdAt)}`
-                    : `${user?.displayName || user?.email?.split('@')[0] || '我'} · ${formatChatTime(m.createdAt)}`}
+                    /* 2026-04-29:multi-user trip user message sender 從 m.submittedBy
+                     * (email)取 local-part 當 displayName,而不是固定當前登入者
+                     * displayName(歷史訊息可能是其他 collaborator 送)。fallback 順序:
+                     *   m.submittedBy local-part → 當前登入者 displayName / email → 「我」 */
+                    : `${m.submittedBy?.split('@')[0] || user?.displayName || user?.email?.split('@')[0] || '我'} · ${formatChatTime(m.createdAt)}`}
                 </time>
               )}
             </Fragment>
