@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.15] - 2026-04-30
+
+**MapPage day-tabs / GlobalBottomNav 重疊修正**:User 拍 v2.17.14 後反饋 day nav 跟 bottom nav 重疊。
+
+### Fixed
+
+- **MapPage `.map-page-wrap` overlap with fixed bottom-nav**(`src/pages/MapPage.tsx`)
+  - v2.17.14 把 MapPage 包進 AppShell + GlobalBottomNav,但保留 `.map-page-wrap { height: 100dvh }`(原本沒包 AppShell 時對的)。
+  - AppShell 在 mobile 已經 reserve `padding-bottom: var(--nav-height-mobile, 88px)` 給 fixed bottom-nav,wrap 撐到 100dvh 等於蓋過 bottom-nav 88px,day-tabs(從 wrap 底部往上排)就跟 5-tab 重疊。
+  - 改 `height: 100%` 對齊 ChatPage `.tp-chat-shell` pattern — wrap 填滿 main content-area(不含 padding-bottom),day-tabs 自然落在 bottom-nav 上方。
+
 ## [2.17.14] - 2026-04-29
 
 **Standard TitleBar 對齊 + Map 拿 back + 加 BottomNav**:User 拍板「行程/探索沒用標準 title 要調整」「地圖不需要回前頁箭頭」「缺少底部 tool bar」。三頁 layout 對齊統一規範。

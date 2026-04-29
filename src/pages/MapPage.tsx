@@ -42,7 +42,10 @@ const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
 const SCOPED_STYLES = `
 .map-page-wrap {
-  height: 100dvh;
+  /* AppShell main 已 lock 100dvh + 為 fixed GlobalBottomNav 留 padding-bottom。
+   * 此 wrap 對齊 ChatPage .tp-chat-shell pattern 用 height: 100% 填滿 main
+   * content-area,不要用 100dvh(會撐到 viewport 蓋過 bottom-nav 跟 day tabs)。 */
+  height: 100%;
   display: flex; flex-direction: column;
   background: var(--color-background);
   overflow: hidden;
