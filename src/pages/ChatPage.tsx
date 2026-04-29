@@ -95,15 +95,15 @@ export function buildMessagesWithDividers(messages: ChatMessage[]): ChatMessage[
 
 interface RawRequestRow {
   id: number;
-  trip_id: string;
+  tripId: string;
   mode?: string;
   message?: string | null;
   reply?: string | null;
   status: 'open' | 'processing' | 'completed' | 'failed';
-  submitted_by?: string | null;
-  processed_by?: string | null;
-  created_at?: string;
-  updated_at?: string;
+  submittedBy?: string | null;
+  processedBy?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 /** QA 2026-04-26 PR-K：format chat bubble timestamp。同日只顯示 HH:mm，
@@ -139,10 +139,12 @@ export function isGarbledMessage(text: string): boolean {
 function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const out: ChatMessage[] = [];
   const baseId = row.id * 2;
-  // QA 2026-04-26 PR-K：每個 message 帶 ISO timestamp。user message 用 created_at
-  // (送出時點)，assistant reply 用 updated_at (AI 完成時點)。fallback 互換。
-  const userTs = row.created_at ?? row.updated_at ?? null;
-  const assistantTs = row.updated_at ?? row.created_at ?? null;
+  // 2026-04-29 design-review F-004:API 實際回 camelCase(`createdAt` / `updatedAt`)
+  // 因此型別與 access 改齊;原 snake_case 拿不到 timestamp,bubble meta 渲染條件
+  // 永不為真。user message 用 createdAt(送出時點),assistant reply 用 updatedAt
+  // (AI 完成時點),fallback 互換。
+  const userTs = row.createdAt ?? row.updatedAt ?? null;
+  const assistantTs = row.updatedAt ?? row.createdAt ?? null;
   if (row.message) {
     out.push({ id: baseId, role: 'user', text: row.message, createdAt: userTs });
   }
@@ -279,8 +281,8 @@ const SCOPED_STYLES = `
 .tp-chat-msg {
   max-width: min(640px, 80%);
   padding: 10px 14px;
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-callout);
+  border-radius: 16px;
+  font-size: var(--font-size-footnote);
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
@@ -289,24 +291,26 @@ const SCOPED_STYLES = `
   align-self: flex-end;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
-  border-bottom-right-radius: var(--radius-sm);
+  border-bottom-right-radius: 4px;
 }
 .tp-chat-msg-assistant {
   align-self: flex-start;
-  background: var(--color-background);
+  background: var(--color-secondary);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
-  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-left-radius: 4px;
   white-space: normal;
 }
-/* QA 2026-04-26 PR-K：每則訊息下方時間 — user 對齊 right、assistant 對齊 left。
- * font-size caption2 + muted color，不搶 message text 視覺權重。 */
+/* Bubble meta：每則訊息下方時間 + AI agent 標籤(F-004,2026-04-29 對齊 mockup)
+ * — user 對齊 right、assistant 對齊 left。font-size caption2 + muted color +
+ * weight 500 + margin-top 4。 */
 .tp-chat-msg-time {
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
-  margin-top: 2px;
+  margin-top: 4px;
   font-variant-numeric: tabular-nums;
   padding: 0 4px;
+  font-weight: 500;
 }
 .tp-chat-msg-time-user { align-self: flex-end; }
 .tp-chat-msg-time-assistant { align-self: flex-start; }
@@ -317,24 +321,22 @@ const SCOPED_STYLES = `
 .tp-chat-msg-row.is-user { align-self: flex-end; max-width: min(680px, 85%); flex-direction: row-reverse; }
 .tp-chat-msg-row .tp-chat-msg { max-width: 100%; }
 .tp-chat-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 40px; height: 40px; border-radius: 50%;
   display: grid; place-items: center;
-  font-size: var(--font-size-caption2); font-weight: 700;
+  font-size: var(--font-size-footnote); font-weight: 700;
   flex-shrink: 0;
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-deep);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
-.tp-chat-avatar.is-ai { background: var(--color-accent); color: var(--color-accent-foreground); }
-/* Section 4.8: day-divider header — center 對齊 + horizontal hairline */
+.tp-chat-avatar.is-ai { background: var(--color-foreground); color: var(--color-accent-foreground); }
+[data-theme="dark"] .tp-chat-avatar.is-ai { background: #0F0B08; }
 .tp-chat-day-divider {
-  display: flex; align-items: center; gap: 12px;
+  text-align: center;
   margin: 12px 0 4px;
   font-size: var(--font-size-caption2); color: var(--color-muted);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.tp-chat-day-divider::before,
-.tp-chat-day-divider::after {
-  content: ''; flex: 1; height: 1px; background: var(--color-border);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
 }
 .tp-chat-msg-assistant.is-pending {
   color: var(--color-muted);
@@ -362,19 +364,23 @@ const SCOPED_STYLES = `
 
 .tp-chat-composer {
   position: sticky; inset-block-end: 0;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: color-mix(in srgb, var(--color-background) 95%, transparent);
-  backdrop-filter: blur(12px);
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-top: 1px solid var(--color-border);
   display: flex; gap: 8px; align-items: flex-end;
+}
+@media (max-width: 760px) {
+  .tp-chat-composer { padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); }
 }
 .tp-chat-input {
   flex: 1;
   resize: none;
-  font: inherit; font-size: var(--font-size-callout);
+  font: inherit; font-size: var(--font-size-footnote);
   padding: 10px 14px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   background: var(--color-background);
   color: var(--color-foreground);
   min-height: 44px; max-height: 160px;
@@ -389,11 +395,15 @@ const SCOPED_STYLES = `
   border: none; cursor: pointer;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
-  border-radius: var(--radius-full);
-  padding: 10px 18px;
-  font: inherit; font-weight: 700; font-size: var(--font-size-callout);
-  min-height: 44px;
+  border-radius: 50%;
+  width: 40px; height: 40px;
+  padding: 0;
+  display: grid; place-items: center;
   flex-shrink: 0;
+  transition: background 150ms;
+}
+.tp-chat-send:hover:not(:disabled) {
+  background: var(--color-accent-deep);
 }
 .tp-chat-send:disabled {
   background: var(--color-secondary);
@@ -408,7 +418,6 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   font-size: var(--font-size-footnote);
 }
-.tp-chat-send:hover:not(:disabled) { filter: brightness(var(--hover-brightness)); }
 `;
 
 const SUGGESTIONS = [
@@ -846,7 +855,7 @@ export default function ChatPage() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onComposerKeyDown}
-          placeholder={activeTripId ? '輸入指令（Enter 送出、Shift+Enter 換行）' : '先選一個行程才能聊'}
+          placeholder={activeTripId ? '輸入訊息或語音指令…' : '先選一個行程才能聊'}
           rows={1}
           aria-label="輸入訊息"
           disabled={composerDisabled}

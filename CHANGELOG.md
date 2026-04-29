@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.1] - 2026-04-29
+
+**Chat 頁 mockup parity QA**：對照 `terracotta-preview-v2.html` Section 17 嚴格比對聊天頁,findings 14 條中 P1 + P2 + P3 共 9 條 design fix 全部 close,另發現並修復一個讓 bubble 時間戳記永遠拿不到的 backing data bug。P0 IA 重做(chat list 模式)與 F-008 suggestion pills schema 改動 deferred 給後續 PR。
+
+### Changed
+
+- **聊天 bubble 樣式對齊 mockup `tp-chat-bubble` 規範**:radius `12 12 6 12` → `16 16 4 16`(user)、`12 12 12 6` → `16 16 16 4`(AI);font-size `--font-size-callout` 16px → `--font-size-footnote` 14px;AI bubble bg `--color-background` → `--color-secondary`(對齊 mockup `--tp-secondary`)
+- **AI avatar 從 accent terracotta 換深棕主色**:`.tp-chat-avatar.is-ai` bg `--color-accent` → `--color-foreground`、尺寸 32x32 → 40x40,user / AI avatar 終於有色彩區分;dark mode override #0F0B08 跟著 mockup 補
+- **Send button 圓角矩形 → 正圓**:52x44 padding 10/18 → 40x40 padding 0 + radius 50%;hover state 加 `--color-accent-deep` 對齊 mockup spec
+- **Composer glass spec 對齊 mockup**:padding 12/16 → 12/20、blur 12 → 14、補 `-webkit-backdrop-filter`;compact (≤760px) 走 mockup 10/14 規範
+- **Day divider 純文字 center**:移除 hairline `::before/::after` flex 處理,改 `text-align: center` + `font-weight: 600` + `font-variant-numeric: tabular-nums` 對齊 mockup
+- **Bubble meta 加 weight 500 + margin-top 4**:`.tp-chat-msg-time` 從 `margin-top: 2` weight default 升到 `margin-top: 4` `font-weight: 500` 對齊 mockup `tp-chat-bubble-meta` 視覺權重
+- **Composer placeholder 文案**:「輸入指令(Enter 送出、Shift+Enter 換行)」→「輸入訊息或語音指令…」(對齊 mockup,移除 placeholder 內鍵盤提示這個反 HIG 的做法)
+- **Textarea radius 12 → 16** 對齊 mockup `--tp-radius`
+
+### Fixed
+
+- **`RawRequestRow` 型別 vs `/api/requests` API contract 不一致** — interface 用 snake_case (`created_at` / `updated_at` / `trip_id` / `submitted_by` / `processed_by`),實際 API 透過 `_utils.ts:deepCamel()` 回 camelCase,導致 `rowToMessages` mapper 拿到 `row.created_at = undefined`,所有歷史訊息的 `createdAt` 永遠 null,bubble 時間戳記與 day divider 渲染條件 `{m.createdAt && !m.pendingRequestId}` 永不為 true。改 camelCase 後 bubble meta(40 條)+ day divider(3 條)正常 render。
+
 ## [2.17.0] - 2026-04-29
 
 **Mockup parity QA followup**：v2 deeper QA 用 `getComputedStyle()` 進實際 DOM 量字級，找到 30 個 finding。修 6 個 capability 共 typography token / SVG icon discipline / map entry-cards desktop visibility / AddStopModal region-filter / TripsList camelCase + 出發日 + 已歸檔 / mobile bottom nav label 字級。
