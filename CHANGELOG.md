@@ -3,6 +3,18 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.8] - 2026-04-29
+
+**Map FAB stretch bug 修 + Mobile gestures 顯式啟用**:User 截圖反饋 trip-bound MapPage 的 layers/target FAB 跑到左中而非右下,加上手機需要明確的手勢操作。
+
+### Fixed
+
+- **`.tp-map-fabs` box stretch 全屏 bug** — computed style 量到 `top: -16px; left: -16px; width: 100%`,FAB 跑到地圖左上而非 mockup 規範的右下。`absolute` 在沒設 `top`/`left` 時某些 layout context 會自動 pull box 到 `0, 0`,加上 `right: 16; bottom: 16` 變 stretch 全屏。Force 加 `top: auto; left: auto; width: max-content; height: max-content;` 強制 box shrink-fit content。
+
+### Added
+
+- **Leaflet map 顯式啟用 mobile 手勢操作** — User 反饋「手機地圖增加手勢操作」。Leaflet 1.7+ default 已 enable 所有 touch interaction(pan / pinch / double-tap),但顯式宣告 `dragging: true`、`touchZoom: true`、`doubleClickZoom: true`、`scrollWheelZoom: true`、`bounceAtZoomLimits: true` 對齊 user 預期 + 抗上游 default 變動。
+
 ## [2.17.7] - 2026-04-29
 
 **Map + Explore + Trips list 多頁 mockup parity**:User 反饋 GlobalMapPage Day color 漸層感太重、「全覽 / 我的位置」應為 SVG icon FAB、Explore default 應 load POI grid、Title action 統一「桌機 icon+文字 / 手機 icon-only」 規範。
