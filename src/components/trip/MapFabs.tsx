@@ -55,8 +55,15 @@ const TILE_PRESETS: TilePreset[] = [
 
 const SCOPED_STYLES = `
 .tp-map-fabs {
+  /* 2026-04-29:explicit top/left auto + width max-content 防止 box stretch
+   * 全屏。Issue:absolute 在某些 layout context 沒設 left/right 時 default
+   * 取 normal flow position(可能變 0)+ 設 right:16 後 box 從 0 拉到 right:16
+   * 形成全屏 stretch。computed style 量到 top:-16 left:-16 width:viewport,
+   * FAB 跑到左上而非右下。force inset-inline-start: auto 解決。 */
   position: absolute;
+  top: auto; left: auto;
   right: 16px; bottom: 16px;
+  width: max-content; height: max-content;
   display: flex; flex-direction: column; gap: 10px;
   z-index: 400;
 }

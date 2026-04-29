@@ -82,6 +82,14 @@ export function useLeafletMap(opts: UseLeafletMapOptions = {}): UseLeafletMap {
       // 自己加 zoom control 才有 position 控制，預設 L.map 一律放 topleft。
       zoomControl: false,
       attributionControl: true,
+      /* 2026-04-29:explicit 啟用 mobile 手勢操作(user 反饋「手機地圖增加手勢
+       * 操作」)。Leaflet 1.7+ default 全 enabled + 移除 `tap`(modern browsers
+       * 原生 handle),這裡顯式宣告對齊 user 預期。 */
+      dragging: true,           // one-finger pan
+      touchZoom: true,          // two-finger pinch zoom
+      doubleClickZoom: true,    // double-tap zoom
+      scrollWheelZoom: true,    // desktop mouse wheel
+      bounceAtZoomLimits: true, // 縮放邊界 bounce 視覺回饋
     });
     if (zoomControl) {
       L.control.zoom({ position: zoomControlPosition }).addTo(instance);
