@@ -35,14 +35,16 @@ test.describe('AddStopModal — Section 3', () => {
     await expect(page.getByTestId('add-stop-subtab-food')).toBeVisible();
     await expect(page.getByTestId('add-stop-subtab-hotel')).toBeVisible();
     await expect(page.getByTestId('add-stop-subtab-shopping')).toBeVisible();
+    await expect(page.getByText('熱門景點 · 沖繩')).toBeVisible();
+    await expect(page.getByTestId('add-stop-search-card-90001')).toBeVisible();
   });
 
   test('切到收藏 tab → render 收藏 grid 或 empty state', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.getByTestId('trip-add-stop-trigger').click();
     await page.getByTestId('add-stop-tab-saved').click();
-    // mock initialSavedPois 預設 [] → empty state「還沒有收藏任何 POI」
-    await expect(page.getByText(/還沒有收藏任何 POI/)).toBeVisible();
+    // mock initialSavedPois 預設 [] → mockup empty state「還沒收藏景點」
+    await expect(page.getByText(/還沒收藏景點/)).toBeVisible();
   });
 
   test('自訂 tab → form fields render + counter 隨 title 更新', async ({ page }) => {

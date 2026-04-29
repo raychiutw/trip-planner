@@ -38,37 +38,26 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage, { type TripPageHandle } from './TripPage';
+import { useActiveTrip } from '../contexts/ActiveTripContext';
 
 const SCOPED_STYLES = `
-/* PR-PP 2026-04-26：架構改 2-pane（sidebar + main），不再有右側 sheet。
- *
- * 原 3-pane：sidebar (240) + main (cards) + sheet (selected trip detail)。
- * User 反饋：去 sheet，行程卡牌一行 5 個；點選顯示滿版 trip。
- *
- * 新架構：
- *   /trips landing      → 2-pane: sidebar + cards (5 per row at 1280)
- *   /trips?selected=X   → 2-pane: sidebar + 滿版 TripPage embedded (with topbar)
- *
- * 桌機/手機統一行為（手機 sidebar 隱藏走 bottom-nav，不變）。
- * 移除舊 .app-shell:has 3-pane sheet override。 */
+/* Terracotta preview v2 Section 16 parity: desktop 240px auto-fill cards,
+ * compact 2-column cards, and embedded trip detail remains full-page. */
 .tp-trips-shell {
   min-height: 100%;
-  /* PR-JJ：horizontal padding 24 → 16 讓 1440 inner 有 581 ≥ 576 容 2 cols */
   padding: 32px 16px 64px;
   background: var(--color-secondary);
   height: 100%;
   overflow-y: auto;
 }
-.tp-trips-inner { max-width: 960px; margin: 0 auto; }
+.tp-trips-inner { max-width: 1100px; margin: 0 auto; }
 
 /* heading 改用統一 <PageHeader>。.tp-trips-heading 已退役。 */
 
 .tp-trips-grid {
   display: grid;
-  /* Mobile default: 2 cols。Desktop ≥1024 走 auto-fill minmax(160) 自動排版。
-   * PR-PP：1280 main=1040 (no sheet) → inner 960 → 5 cards × 179px each。 */
   grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  gap: 10px;
   margin-top: 24px;
 }
 
@@ -158,14 +147,8 @@ const SCOPED_STYLES = `
 }
 @media (min-width: 1024px) {
   .tp-trips-grid {
-    /* PR-PP：桌機 ≥1024 走 auto-fill minmax(160)。架構是 2-pane（無 sheet），
-     * main 寬度 = viewport - 240 sidebar，inner 受 max-width 960 cap。
-     *   1024 main=784, inner=720 → 4 cards (160×4+48=688 fits) at 168px
-     *   1280 main=1040, inner=960 (max-width cap) → 5 cards at 179px
-     *   1440 main=1200, inner=960 → 5 cards at 179px
-     *   1920 main=1680, inner=960 → 5 cards at 179px
-     * 5 cols 在 ≥1280 穩定，符合 user「一行 5 個」 spec。 */
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
   }
 }
 /* PR-Q 2026-04-26：每張 trip card 加 ... menu。card 改 wrapper（position:
@@ -177,38 +160,51 @@ const SCOPED_STYLES = `
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 0;
   text-decoration: none;
   color: inherit;
   transition: border-color 120ms, box-shadow 120ms, transform 120ms;
-  /* PR-FF 2026-04-26：display: flex column 讓 card 高度自動跟同 row 兄弟對齊
-   * （grid auto stretch + flex column = 高度均一）。原 display: block 各 card
-   * 高度跟內容變動，user 看到「行程一覽大小不依」。 */
   display: flex; flex-direction: column;
   cursor: pointer;
   font-family: inherit;
   text-align: left;
   width: 100%;
   height: 100%;
+  min-height: 180px;
+  overflow: hidden;
 }
-/* meta 推到底部，cover/eyebrow/title 上半部空間靠攏，視覺一致 */
-.tp-trip-card-meta { margin-top: auto; }
-/* meta 為空字串時不佔空間（hide trip-id 後可能 empty） */
-.tp-trip-card-meta:empty { display: none; }
 .tp-trip-card:hover {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 .tp-trip-card.is-active {
   border-color: var(--color-accent);
   box-shadow: var(--shadow-md);
 }
+.tp-trip-card.is-active::before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  z-index: 2;
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
 .tp-trip-card-cover {
-  aspect-ratio: 16/9;
+  height: 88px;
   background: var(--color-tertiary);
-  border-radius: var(--radius-md);
-  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+.tp-trip-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 14px 16px 16px;
+  gap: 6px;
 }
 .tp-trip-cover-jp { background-image: linear-gradient(135deg, var(--color-cover-jp-from) 0%, var(--color-cover-jp-to) 100%); }
 .tp-trip-cover-kr { background-image: linear-gradient(135deg, var(--color-cover-kr-from) 0%, var(--color-cover-kr-to) 100%); }
@@ -216,21 +212,20 @@ const SCOPED_STYLES = `
 .tp-trip-cover-other { background-image: linear-gradient(135deg, var(--color-cover-other-from) 0%, var(--color-cover-other-to) 100%); }
 
 .tp-trip-card-eyebrow {
-  /* mockup-parity-qa-fixes: mockup .tp-list-card-eyebrow:3781 — 10px / 0.12em / 700 */
   font-size: var(--font-size-eyebrow);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--color-muted);
-  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
 }
 .tp-trip-card-title {
-  /* mockup-parity-qa-fixes: mockup .tp-list-card-title:3789 — 16px / 700 / lh 1.35 / 2-line clamp */
   font-size: var(--font-size-body);
   font-weight: 700;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.01em;
   line-height: 1.35;
-  margin: 0 0 4px;
+  color: var(--color-foreground);
+  margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -238,9 +233,22 @@ const SCOPED_STYLES = `
   overflow: hidden;
 }
 .tp-trip-card-meta {
-  font-size: var(--font-size-footnote);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-caption);
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.tp-trip-card-meta:empty { display: none; }
+.tp-trip-card-meta-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Section 4.7：trips toolbar — filter subtabs + sort + search expanding */
@@ -320,23 +328,14 @@ const SCOPED_STYLES = `
 }
 
 /* Section 4.7：owner avatar — 32x32 circle with first letter fallback。 */
-.tp-trip-card-owner {
-  display: flex; align-items: center; gap: 8px;
-  margin-top: 10px;
-  font-size: var(--font-size-caption2);
-  color: var(--color-muted);
-}
 .tp-trip-card-avatar {
-  width: 28px; height: 28px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
   display: grid; place-items: center;
   font: inherit; font-weight: 700; font-size: var(--font-size-caption2);
   flex-shrink: 0;
-}
-.tp-trip-card-owner-name {
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
 /* Trailing "新增行程" card — dashed outline, accent color */
@@ -371,6 +370,44 @@ const SCOPED_STYLES = `
 .tp-trip-card-new:hover .tp-new-icon {
   background: var(--color-accent);
   color: var(--color-accent-foreground);
+}
+@media (max-width: 760px) {
+  .tp-trip-card {
+    min-height: 160px;
+  }
+  .tp-trip-card-cover {
+    height: 64px;
+  }
+  .tp-trip-card-body {
+    padding: 10px 12px 12px;
+    gap: 4px;
+  }
+  .tp-trip-card-eyebrow {
+    font-size: 9px;
+  }
+  .tp-trip-card-title {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+  .tp-trip-card-meta {
+    font-size: var(--font-size-eyebrow);
+    gap: 6px;
+    padding-top: 6px;
+  }
+  .tp-trip-card-avatar {
+    width: 18px;
+    height: 18px;
+    font-size: var(--font-size-eyebrow);
+  }
+  .tp-trip-card-new {
+    min-height: 160px;
+    padding: 16px 8px;
+  }
+  .tp-trip-card-new .tp-new-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
 }
 
 /* Empty state hero — when user has 0 trips */
@@ -782,8 +819,16 @@ export default function TripsListPage() {
   // renders the embedded TripPage as full-screen main; desktop swaps the
   // right sheet to that trip. Per user direction the unified URL pattern is
   // /trips?selected=X (no /trip/:id route navigation).
+  //
+  // 2026-04-29 race fix: 同步寫 ActiveTripContext。原本 active trip 設定靠
+  // embedded TripPage mount 後 useEffect 觸發 setActiveTrip，但如果 user
+  // 點完 card 立刻走 bottom-nav 切到 /chat，TripPage 還沒 mount → ChatPage
+  // 拿到舊 activeTripId，訊息會送錯 trip（lean.lean@gmail trip_requests:162
+  // 的 sympton：台南內容送進沖繩 trip）。Card click 同步寫 context 解決。
+  const { setActiveTrip } = useActiveTrip();
   function handleCardClick(tripId: string, e: React.MouseEvent | React.KeyboardEvent) {
     e.preventDefault();
+    setActiveTrip(tripId);
     const next = new URLSearchParams(searchParams);
     next.set('selected', tripId);
     setSearchParams(next, { replace: false });
@@ -1009,15 +1054,19 @@ export default function TripsListPage() {
                       aria-current={isActive ? 'true' : undefined}
                     >
                       <div className={`tp-trip-card-cover ${coverClass(t.countries)}`} aria-hidden="true" />
-                      <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.dayCount)}</div>
-                      <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
-                      <div className="tp-trip-card-meta">{cardMeta(t)}</div>
-                      {ownerLabel && (
-                        <div className="tp-trip-card-owner" data-testid={`trips-list-card-owner-${t.tripId}`}>
-                          <span className="tp-trip-card-avatar" aria-hidden="true">{ownerInitial}</span>
-                          <span className="tp-trip-card-owner-name">{ownerLabel}</span>
+                      <div className="tp-trip-card-body">
+                        <div className="tp-trip-card-eyebrow">{eyebrow(t.countries, t.dayCount)}</div>
+                        <h2 className="tp-trip-card-title">{t.title || t.name}</h2>
+                        <div className="tp-trip-card-meta">
+                          {ownerLabel && <span className="tp-trip-card-avatar" aria-hidden="true">{ownerInitial}</span>}
+                          <span
+                            className="tp-trip-card-meta-text"
+                            data-testid={ownerLabel ? `trips-list-card-owner-${t.tripId}` : undefined}
+                          >
+                            {[ownerLabel, cardMeta(t)].filter(Boolean).join(' · ')}
+                          </span>
                         </div>
-                      )}
+                      </div>
                     </button>
                     <TripCardMenu
                       tripId={t.tripId}
