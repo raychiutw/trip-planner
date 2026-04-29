@@ -6312,7 +6312,6 @@
     <article class="tp-detail-frame tp-detail-mobile-frame" data-rail-style="none">
       <div class="tp-detail-frame-label">COMPACT <span>≤1024px · pill 縮排對齊 dot column</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">美ら海＋古宇利島一日跑</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-preview-icon-button" type="button" aria-label="更多"><span class="tp-icon"><svg><use href="#i-more"/></svg></span></button>
@@ -6899,19 +6898,18 @@
   <p class="tp-section-lead">行程一覽頁的 content area mockup（不含 sidebar，sidebar / page header 已在 Section 01 / 02 單獨展示）。Card 元素參考 src/pages/TripsListPage.tsx：cover gradient（4 國別 jp/kr/tw/other）+ eyebrow + title + meta（owner avatar + 出發日）+ ⋯ menu。下方四個 frame：<strong>(1) Desktop</strong> 多 trip cards grid、<strong>(2) Desktop search active</strong> 搜尋展開狀態、<strong>(3) Compact 375px</strong> 2-col 手機版、<strong>(4) Empty state</strong>（0 trips hero CTA）。</p>
 
   <!-- ===== Frame 1: Desktop ===== -->
-  <div class="tp-list-page">
-    <div class="tp-list-page-label">DESKTOP <span>1024px+ · grid auto-fill 240px min · 1 active card + 5 trips + trailing 新增</span></div>
-    <div class="tp-list-page-content">
-
-      <div class="tp-list-header">
-        <div class="tp-list-header-text">
-          <h3 class="tp-list-header-title">我的行程</h3>
-        </div>
-        <div class="tp-list-header-actions">
-          <button class="tp-btn is-ghost" type="button"><span class="tp-icon"><svg><use href="#i-search"/></svg></span>搜尋</button>
-          <button class="tp-btn is-primary" type="button"><span class="tp-icon"><svg><use href="#i-plus"/></svg></span>新增行程</button>
-        </div>
+  <div class="tp-page-frame">
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · grid auto-fill 240px · titlebar:標題 + .tp-titlebar-action「+ 新增行程」</span></div>
+    <header class="tp-page-titlebar">
+      <h3 class="tp-page-titlebar-title">我的行程</h3>
+      <div class="tp-page-titlebar-actions">
+        <button class="tp-titlebar-action" type="button" aria-label="新增行程">
+          <span class="tp-icon"><svg><use href="#i-plus"/></svg></span>
+          <span class="tp-titlebar-action-label">新增行程</span>
+        </button>
       </div>
+    </header>
+    <div class="tp-page-content">
 
       <div class="tp-list-toolbar">
         <button class="tp-add-subtab is-active" type="button">全部</button>
@@ -7042,19 +7040,18 @@
   </div>
 
   <!-- ===== Frame 2: Compact 375px ===== -->
-  <div class="tp-list-page-mobile-wrap">
-    <div class="tp-list-page tp-list-page-mobile-frame">
-      <div class="tp-list-page-label">COMPACT <span>≤1024px · 2-col card grid · 16px padding</span></div>
-      <div class="tp-list-page-content">
-
-        <div class="tp-list-header">
-          <div class="tp-list-header-text">
-            <h3 class="tp-list-header-title">我的行程</h3>
-          </div>
-          <div class="tp-list-header-actions">
-            <button class="tp-preview-icon-button is-primary" type="button" aria-label="新增行程"><span class="tp-icon"><svg><use href="#i-plus"/></svg></span></button>
-          </div>
-        </div>
+  <div class="tp-page-frame tp-page-frame-compact">
+    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 2-col card grid · titlebar action 縮 icon-only · 底部 GlobalBottomNav 5-tab</span></div>
+    <header class="tp-page-titlebar">
+      <h3 class="tp-page-titlebar-title">我的行程</h3>
+      <div class="tp-page-titlebar-actions">
+        <button class="tp-titlebar-action" type="button" aria-label="新增行程">
+          <span class="tp-icon"><svg><use href="#i-plus"/></svg></span>
+          <span class="tp-titlebar-action-label">新增行程</span>
+        </button>
+      </div>
+    </header>
+    <div class="tp-page-content">
 
         <div class="tp-list-toolbar">
           <button class="tp-add-subtab is-active" type="button">全部</button>
@@ -7109,19 +7106,30 @@
           </button>
         </div>
 
-      </div>
     </div>
+    <!-- 2026-04-29 v2.17.14:compact frame 加 GlobalBottomNav 5-tab 對齊 prod。 -->
+    <nav class="tp-bnav-frame" aria-label="Bottom nav — 行程 active">
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
+      <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
+    </nav>
   </div>
 
   <!-- ===== Frame 3: Empty state ===== -->
-  <div class="tp-list-page">
-    <div class="tp-list-page-label">EMPTY STATE <span>0 個行程 · hero icon + CTA</span></div>
-    <div class="tp-list-page-content">
-      <div class="tp-list-header">
-        <div class="tp-list-header-text">
-          <h3 class="tp-list-header-title">我的行程</h3>
-        </div>
+  <div class="tp-page-frame">
+    <div class="tp-page-frame-label">EMPTY STATE <span>0 個行程 · hero icon + CTA</span></div>
+    <header class="tp-page-titlebar">
+      <h3 class="tp-page-titlebar-title">我的行程</h3>
+      <div class="tp-page-titlebar-actions">
+        <button class="tp-titlebar-action" type="button" aria-label="新增行程">
+          <span class="tp-icon"><svg><use href="#i-plus"/></svg></span>
+          <span class="tp-titlebar-action-label">新增行程</span>
+        </button>
       </div>
+    </header>
+    <div class="tp-page-content">
       <div class="tp-list-empty">
         <div class="tp-list-empty-icon"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span></div>
         <h4 class="tp-list-empty-title">還沒有行程</h4>
@@ -7228,11 +7236,14 @@
   <p class="tp-section-lead">「探索」主功能頁標題 + POI grid mockup。桌機 grid 3-col、手機 2-col。Card hover 變 accent 邊框 + lift shadow，右上 ❤ 收藏 toggle。Reference: DESIGN.md + unified-layout-plan.md。</p>
 
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col</span></div>
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col · titlebar:標題 + .tp-titlebar-action「我的收藏」(icon+label)</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">探索</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-btn is-ghost" type="button"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>我的收藏</button>
+        <button class="tp-titlebar-action" type="button" aria-label="我的收藏">
+          <span class="tp-icon"><svg><use href="#i-heart"/></svg></span>
+          <span class="tp-titlebar-action-label">我的收藏</span>
+        </button>
       </div>
     </header>
     <div class="tp-page-content">
@@ -7304,11 +7315,14 @@
   </div>
 
   <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 2-col grid · hamburger 收納 actions</span></div>
+    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 2-col grid · titlebar action 縮 icon-only · 底部 GlobalBottomNav 5-tab</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">探索</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-preview-icon-button" type="button" aria-label="我的收藏"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span></button>
+        <button class="tp-titlebar-action" type="button" aria-label="我的收藏">
+          <span class="tp-icon"><svg><use href="#i-heart"/></svg></span>
+          <span class="tp-titlebar-action-label">我的收藏</span>
+        </button>
       </div>
     </header>
     <div class="tp-page-content">
@@ -7360,6 +7374,14 @@
         </div>
       </div>
     </div>
+    <!-- 2026-04-29 v2.17.14:compact frame 加 GlobalBottomNav 5-tab 對齊 prod。 -->
+    <nav class="tp-bnav-frame" aria-label="Bottom nav — 探索 active">
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
+      <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
+    </nav>
   </div>
 </section>
 
@@ -7521,9 +7543,8 @@
   <p class="tp-section-lead">「地圖」主功能頁，full bleed map + 底部 sticky day tabs（src 風格 underline tabs）+ entry cards horizontal snap-scroll。Day strip 第一項是<strong>「總覽」</strong>（對齊 src `?day=all`），active tab 用 dayColor border-bottom。Entry cards 點 marker → activate（雙向 sync）。Reference: src/pages/MapPage.tsx + DESIGN.md DV palette。</p>
 
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP — OVERVIEW ACTIVE <span>full bleed map · bottom day tabs + entry cards · titlebar:back + 行程名 + trip-picker(SVG icon + 名稱)</span></div>
+    <div class="tp-page-frame-label">DESKTOP — OVERVIEW ACTIVE <span>full bleed map · bottom day tabs + entry cards · titlebar:行程名 + trip-picker(SVG icon + 名稱);無 back button(地圖 nav 切換走 sidebar)</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
@@ -7696,9 +7717,8 @@
   </div>
 
   <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT — OVERVIEW ACTIVE <span>full bleed · bottom tabs + cards 簡化 · titlebar:back + 地圖 + trip-picker(icon-only)</span></div>
+    <div class="tp-page-frame-label">COMPACT — OVERVIEW ACTIVE <span>full bleed · bottom tabs + cards 簡化 · titlebar:地圖 + trip-picker(icon-only);無 back button + 底部 GlobalBottomNav 5-tab</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
@@ -7792,12 +7812,19 @@
         </div>
       </button>
     </div>
+    <!-- 2026-04-29 v2.17.14:user 拍板 MapPage 缺底部 toolbar — compact 加 GlobalBottomNav 5-tab 對齊 prod。 -->
+    <nav class="tp-bnav-frame" aria-label="Bottom nav — 地圖 active">
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
+      <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
+    </nav>
   </div>
 
   <div class="tp-page-frame">
     <div class="tp-page-frame-label">LOADING STATE <span>tiles 載入中 · shimmer + accent spinner</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="返回" disabled><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程" disabled>
@@ -7826,7 +7853,6 @@
   <div class="tp-page-frame">
     <div class="tp-page-frame-label">EMPTY STATE <span>選定日期無景點 · glass card hint</span></div>
     <header class="tp-page-titlebar">
-      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
