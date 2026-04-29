@@ -5,7 +5,7 @@
  *   - 放大檢視 button (lightbox open)
  *   - 編輯備註 pencil button (focus textarea data-testid `timeline-rail-edit-note-N`)
  *   - 刪除景點 button → 開 inline ConfirmModal (alertdialog)，不直接 fire DELETE
- *   - 收闔 button (x-mark icon)
+ *   - 收合 button (x-mark icon)
  *   - icon 全為 SVG sprite (無 emoji)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -43,7 +43,7 @@ describe('TimelineRail toolbar — pencil + ConfirmModal', () => {
     expect(screen.queryByTestId('timeline-rail-detail-42')).toBeNull();
   });
 
-  it('click row → 展開 toolbar 含 4 個 action button (放大/編輯/刪除/收闔)', () => {
+  it('click row → 展開 toolbar 含 4 個 action button (放大/編輯/刪除/收合)', () => {
     renderRail();
     fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
     expect(screen.getByTestId('timeline-rail-detail-42')).toBeTruthy();
