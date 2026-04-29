@@ -39,7 +39,6 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useDarkMode } from '../hooks/useDarkMode';
 import { useNewTrip } from '../contexts/NewTripContext';
 import { extractPinsFromDay, type MapPin } from '../hooks/useMapData';
-import { dayColor } from '../lib/dayPalette';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
@@ -186,27 +185,23 @@ const SCOPED_STYLES = `
     right: 12px; bottom: 116px;
   }
 }
-.tp-global-map-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 14px; border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--color-background) 95%, transparent);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--color-border);
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  color: var(--color-foreground); cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  min-height: var(--spacing-tap-min);
-}
-.tp-global-map-pill:hover {
+/* 2026-04-29:全覽 / 我的位置 從 text pill 改 SVG icon-only 圓形 FAB
+ * 對齊 mockup S20「Map Page」spec + production MapFabs 一致 visual。
+ * tp-global-map-pill class 留作 backward compat,新 button 用 tp-global-map-fab。 */
+.tp-global-map-fab {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 0;
   background: var(--color-background);
-  border-color: var(--color-accent);
-  color: var(--color-accent);
+  color: var(--color-foreground);
+  display: grid; place-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: background 120ms, transform 120ms;
 }
-.tp-global-map-pill:disabled {
-  opacity: 0.5; cursor: not-allowed;
-}
-.tp-global-map-pill .svg-icon { width: 14px; height: 14px; }
+.tp-global-map-fab:hover { background: var(--color-hover); transform: translateY(-1px); }
+.tp-global-map-fab:disabled { opacity: 0.4; cursor: not-allowed; }
+.tp-global-map-fab .svg-icon { width: 20px; height: 20px; }
 
 /* Empty state — no trips at all */
 .tp-global-map-empty {
@@ -332,8 +327,11 @@ const SCOPED_STYLES = `
   border-color: var(--color-accent); background: var(--color-accent-subtle);
 }
 .tp-global-map-sheet-day-num {
+  /* 2026-04-29:user 反饋「Day nav 不要漸層色」。原本 inline dayColor 背景
+   * 變每個 day 不同色,改 muted 統一灰色背景對齊整頁中性 visual。 */
   width: 28px; height: 28px; border-radius: var(--radius-full);
   display: grid; place-items: center;
+  background: var(--color-muted);
   color: #fff; font-weight: 700; font-size: var(--font-size-caption);
   flex-shrink: 0;
 }
@@ -931,28 +929,30 @@ export default function GlobalMapPage() {
               <div className="tp-global-map-loading" style={{ color: 'var(--color-destructive)' }}>{error}</div>
             )}
 
-            {/* Bottom-left action pills — 全覽 / 我的位置 (mockup .map-action-bar) */}
+            {/* Bottom-right FAB stack — 全覽 / 我的位置(2026-04-29 mockup parity:
+             * 從 text pill 改 SVG icon-only 圓形 FAB,對齊 mockup S20 spec
+             * + production MapFabs 一致 visual)。 */}
             {resolved && resolved.pins.length > 0 && (
               <div className="tp-global-map-actions" data-testid="global-map-actions">
                 <button
                   type="button"
-                  className="tp-global-map-pill"
+                  className="tp-global-map-fab"
                   onClick={fitAll}
                   data-testid="global-map-fit-all"
                   aria-label="把所有景點縮成一個畫面"
+                  title="全覽"
                 >
                   <Icon name="map" />
-                  <span>全覽</span>
                 </button>
                 <button
                   type="button"
-                  className="tp-global-map-pill"
+                  className="tp-global-map-fab"
                   onClick={locateMe}
                   data-testid="global-map-locate-me"
                   aria-label="移到我目前的位置"
+                  title="我的位置"
                 >
                   <Icon name="location-pin" />
-                  <span>我的位置</span>
                 </button>
               </div>
             )}
@@ -1008,7 +1008,9 @@ export default function GlobalMapPage() {
                     .flatMap(([dayNum, pins]) => pins.map((pin) => ({ pin, dayNum })))
                     .map(({ pin, dayNum }) => {
                       const isActive = pin.id === selectedPinId;
-                      const dColor = dayColor(dayNum);
+                      // 2026-04-29:dayColor 漸層感 user 不喜歡,改 active 用 accent,
+                      // inactive 用 default border(不再用 dayColor border-left),保持
+                      // entry stack 視覺一致(只有 active 突出,非全頁彩虹)。
                       return (
                         <button
                           key={pin.id}
@@ -1016,7 +1018,6 @@ export default function GlobalMapPage() {
                           className={`tp-global-map-mobile-card ${isActive ? 'is-active' : ''}`}
                           onClick={() => setSelectedPinId(pin.id)}
                           data-testid={`global-map-mobile-card-${pin.id}`}
-                          style={isActive ? { borderColor: dColor, boxShadow: `0 0 0 2px ${dColor}33` } : { borderLeftColor: dColor, borderLeftWidth: 3 }}
                         >
                           <div className="pc-eyebrow">
                             {pin.time ? `${pin.time} · D${dayNum}·${pin.index || '—'}` : `D${dayNum}·STOP ${pin.index || '—'}`}
@@ -1143,7 +1144,6 @@ export default function GlobalMapPage() {
                       >
                         <span
                           className="tp-global-map-sheet-day-num"
-                          style={{ background: dayColor(dayNum) }}
                           aria-hidden="true"
                         >
                           {dayNum}

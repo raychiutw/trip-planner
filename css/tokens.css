@@ -1448,6 +1448,47 @@ body.dark {
 .tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
 
+/* 2026-04-29:title action button 帶文字 label。User 拍板「桌機 icon+文字、
+ * 手機 icon only」是所有 title 規範。
+ *
+ * 用法:button class="tp-titlebar-action" 含 <Icon> + <span class="tp-titlebar-action-label">label</span>
+ * 桌機(>=761):pill 樣式 icon + 文字 inline
+ * 手機(<=760):縮回 icon-only 圓形(label hide) */
+.tp-titlebar-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--spacing-tap-min);
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+.tp-titlebar-action:hover {
+  background: var(--color-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.tp-titlebar-action:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-action .svg-icon { width: 18px; height: 18px; }
+@media (max-width: 760px) {
+  .tp-titlebar-action {
+    width: var(--spacing-tap-min);
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-full);
+    justify-content: center;
+  }
+  .tp-titlebar-action-label { display: none; }
+}
+
 /* mockup-parity-qa-fixes 2026-04-29: page-title compact override
  * mockup .tp-page-titlebar-title compact:4088 規範 page-title 24px on <760px viewport. */
 @media (max-width: 760px) {

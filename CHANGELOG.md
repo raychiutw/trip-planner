@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.7] - 2026-04-29
+
+**Map + Explore + Trips list 多頁 mockup parity**:User 反饋 GlobalMapPage Day color 漸層感太重、「全覽 / 我的位置」應為 SVG icon FAB、Explore default 應 load POI grid、Title action 統一「桌機 icon+文字 / 手機 icon-only」 規範。
+
+### Changed
+
+- **GlobalMapPage `.tp-global-map-pill` 改 `.tp-global-map-fab`** — 「全覽 / 我的位置」從 text pill(icon+「全覽」/「我的位置」文字 + glass blur)改 SVG icon-only 圓形 FAB(44x44 + box-shadow,對齊 mockup S20 `.tp-map-fab` + `production MapFabs`)。
+- **GlobalMapPage 移除 dayColor 漸層**:Mobile entry card 拿掉 `borderLeftColor: dColor` inline style(改 default border 灰色,is-active 用 accent);Sheet day-num badge 拿掉 `background: dayColor(dayNum)` 改統一 muted 灰色背景。Markers 仍保留 dayColor(polyline + marker 一致 visual)。
+- **ExplorePage default load 熱門 POI grid**:User 拍板 E5 — 移除「試試熱門 POI」 onboarding empty state,mount 後 region resolved 自動 `runSearch` 帶熱門 POI grid。Region 預設「全部地區」 fallback 用熱門目的地「東京」;有 active trip → 沖繩/首爾/台北。Empty state UI 改為 fallback only(search 失敗 + 沒結果情境)。
+- **Title action 統一規範 `.tp-titlebar-action`**:User 拍板「桌機 icon+文字、手機 icon-only」是所有 title 規範。新 class:`.tp-titlebar-action` pill 帶 `<span class="tp-titlebar-action-label">label</span>`,`@media (max-width: 760px)` hide label + 縮回 icon-only 圓形。Apply:
+  - **ExplorePage**「♡ 我的收藏」按鈕(對齊 mockup S18 line 7192 desktop `[icon] 文字` + line 7268 compact icon-only)
+  - **TripsListPage**「+ 新增行程」按鈕(對齊 mockup S16 line 6869 desktop + line 7012 compact icon-only)
+
+### Fixed
+
+- **ExplorePage test 同步**:`shows error toast when search query < 2 chars` test 改驗 user input 後 fetch call count 沒增加(取代「fetch 沒被 call」),因 mount auto search 會先 call 一次 fetch。
+
 ## [2.17.6] - 2026-04-29
 
 **Map page mockup parity 細修**:對齊 mockup S20「Map Page」剩餘差異 — day tab 高度過大(user 反饋「Day 的格式不能太高」)+ mockup 沒 zoom +/- 控制(production 用 Leaflet 預設左上 zoom buttons,mockup 反向更新 spec)。

@@ -469,6 +469,19 @@ export default function ExplorePage() {
   /** F6 design-review: landing empty state suggestion chips。 */
   const SUGGESTED_QUERIES = ['沖繩美麗海水族館', '首里城', '國際通', '古宇利大橋', '美國村'];
 
+  /* 2026-04-29 (E5 user 拍板「對齊 mockup default load 熱門 POI grid」):
+   * 移除 onboarding empty state「試試熱門 POI」,改 mount 後 region resolve 自動
+   * runSearch 拉熱門 POI grid。region 預設「全部地區」 fallback 用熱門目的地
+   * 「東京」做 seed,有 active trip 則 active trip's region(沖繩/首爾/台北)。 */
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
+  useEffect(() => {
+    if (hasAutoSearched || tab !== 'search') return;
+    const seed = region !== '全部地區' ? region : '東京';
+    setHasAutoSearched(true);
+    void runSearch(seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [region, tab]);
+
   async function handleSave(poi: PoiSearchResult) {
     setSavingIds((s) => new Set(s).add(poi.osm_id));
     try {
@@ -595,14 +608,17 @@ export default function ExplorePage() {
             tab === 'search' ? (
               <button
                 type="button"
-                className="tp-titlebar-back"
+                className="tp-titlebar-action"
                 onClick={() => setTab('saved')}
                 aria-label="我的收藏"
                 title="我的收藏"
                 data-testid="explore-saved-titlebar"
               >
-                {/* mockup「我的收藏」 heart icon (line 7294/7370) */}
+                {/* 2026-04-29 mockup parity (E1):桌機 icon+「我的收藏」文字
+                 * (對齊 mockup S18 line 7294/7370),手機 (<=760px) 縮回 icon-only。
+                 * 「所有 title 規範」:.tp-titlebar-action class 統一 pattern。 */}
                 <Icon name="heart" />
+                <span className="tp-titlebar-action-label">我的收藏</span>
               </button>
             ) : null
           }
@@ -736,13 +752,14 @@ export default function ExplorePage() {
               <div className="explore-empty">沒有找到「{query}」的結果。換個關鍵字試試？</div>
             )}
 
-            {/* F6 design-review: landing empty state — 沒搜尋過時給 onboarding
-              + 5 個熱門 chip，避免使用者落地看到完全空白不知道怎麼動。 */}
-            {results.length === 0 && !query && !searching && (
+            {/* 2026-04-29 (E5):landing empty state 移除,改 mount auto search
+             * 帶熱門 POI grid。fallback empty state 只 fire 在 search 失敗 +
+             * 沒結果情境(沒 query,results=[]),提供 chip 讓 user 重啟。 */}
+            {results.length === 0 && !query && !searching && hasAutoSearched && (
               <div className="explore-landing-empty" data-testid="explore-landing-empty">
-                <div className="landing-eyebrow">從這裡開始</div>
-                <h3 className="landing-title">試試熱門 POI</h3>
-                <p className="landing-copy">輸入關鍵字搜尋，或點下方建議快速開始。</p>
+                <div className="landing-eyebrow">沒拿到結果</div>
+                <h3 className="landing-title">試試這些</h3>
+                <p className="landing-copy">看起來這個地區暫時沒結果,點下方建議或自行搜尋。</p>
                 <div className="landing-chips">
                   {SUGGESTED_QUERIES.map((s) => (
                     <button

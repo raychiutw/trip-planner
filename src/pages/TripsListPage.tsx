@@ -898,12 +898,14 @@ export default function TripsListPage() {
             actions={
               <button
                 type="button"
-                className="tp-titlebar-back"
+                className="tp-titlebar-action"
                 onClick={openNewTrip}
                 aria-label="新增行程"
                 data-testid="trips-list-new-trip-titlebar"
               >
+                {/* 2026-04-29:title action 統一規範 — 桌機 icon+文字,手機 icon only */}
                 <Icon name="plus" />
+                <span className="tp-titlebar-action-label">新增行程</span>
               </button>
             }
           />
