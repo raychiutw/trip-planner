@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.10] - 2026-04-29
+
+**Multi-user chat 其他 collaborator 訊息照 LINE 群組規則顯示**:User 拍板共編 trip 的「其他人訊息」用 LINE 群組 layout(左側 + avatar + sender 名 bubble 上方),自己 + AI 維持原 layout。
+
+### Added
+
+- **新 row class `.tp-chat-msg-row.is-other-user`** — 其他 collaborator 訊息靠左,同 AI 一致 column flow
+- **新 bubble class `.tp-chat-msg-other-user`** — secondary bg + border + bottom-left-radius 4px(類 AI bubble 但獨立 class 留未來區分空間)
+- **新 sender name `.tp-chat-msg-sender-name`** — bubble 上方顯示 sender 名,11px caps + letter-spacing + muted color(LINE 群組對方訊息 sender 標示)
+- **新 avatar `.tp-chat-avatar.is-other-user`** — secondary bg + border + sender 首字 initial(取代 AI 的深棕 background)
+- **新 meta align `.tp-chat-msg-time-other-user`** — 時間 align flex-start + margin-left 對齊 avatar 後
+
+### Changed
+
+- ChatMessage render 邏輯重排:`isOtherUser = !isAssistant && m.submittedBy && m.submittedBy !== user.email`
+- bubble wrap 加 `.tp-chat-msg-bubble-wrap`(flex column)讓 sender name + bubble 垂直排
+- 三種 layout:**自己**(右側 accent)/ **其他人**(左側 LINE-style)/ **AI**(左側 + AI avatar)
+
 ## [2.17.9] - 2026-04-29
 
 **Multi-user chat sender bug fix**:User 反饋 7 天行程(HuiYun owner + Ray 共編)的 chat 歷史訊息 sender 名稱錯——v2.17.2 我把 user message meta 改用 `useCurrentUser().displayName`(永遠是當前登入者),但歷史訊息可能是其他 collaborator 送的,應該標原 sender 名稱。
