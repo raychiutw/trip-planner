@@ -8,14 +8,13 @@
  * activeDayNum 進來；user 選 / 填完後 batch POST 到該 day。
  *
  * 範圍說明（PR 內 ship）：
- *   - 搜尋 tab：reuse `/api/poi-search` 即時搜尋 + 多選 grid + checkbox
+ *   - 搜尋 tab：reuse `/api/poi-search` 預設地區推薦 + 即時搜尋 + 多選 grid
  *   - 收藏 tab：fetch `/api/saved-pois` + 同樣多選 grid
  *   - 自訂 tab：簡易 form (title required + time + duration + note)
  *   - Footer：counter + 完成 (batch POST) + 取消
  *
  * Deferred to follow-up：
- *   - 「為你推薦」trending（需 backend trending endpoint）
- *   - region selector + filter chip（需 region taxonomy）
+ *   - region selector taxonomy（目前使用 mockup 對齊的固定地區清單）
  *   - 推薦 chips by tag
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -39,6 +38,8 @@ interface SavedPoiRow {
   poiAddress: string | null;
   poiType: string;
 }
+
+type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
 
 export interface AddStopModalProps {
   open: boolean;
@@ -90,19 +91,18 @@ const SCOPED_STYLES = `
   margin: 0;
   letter-spacing: -0.01em;
 }
-/* mockup-parity-qa-fixes: region selector pill (mockup section 14:6452) */
-.tp-add-stop-region-row { position: relative; margin-bottom: 12px; }
+/* mockup section 14: region label + search row + visual POI cards */
+.tp-add-stop-region-row { position: relative; margin-bottom: 14px; }
 .tp-add-stop-region-pill {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit; font-size: 18px; font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--color-foreground); cursor: pointer;
-  min-height: 32px;
 }
-.tp-add-stop-region-pill:hover { border-color: var(--color-accent); color: var(--color-accent-deep); }
+.tp-add-stop-region-pill:hover { color: var(--color-accent-deep); }
 .tp-add-stop-region-pill .svg-icon { width: 14px; height: 14px; color: var(--color-muted); }
 .tp-add-stop-region-menu {
   position: absolute; top: calc(100% + 4px); left: 0;
@@ -128,16 +128,21 @@ const SCOPED_STYLES = `
   font-weight: 700;
 }
 /* mockup-parity-qa-fixes: filter button (mockup section 14:6460) */
+.tp-add-stop-search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
 .tp-add-stop-filter-btn {
-  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
   display: inline-flex; align-items: center; gap: 4px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: var(--radius-full);
   border: 1px solid var(--color-border);
   background: var(--color-background);
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   color: var(--color-foreground); cursor: pointer;
-  min-height: 32px;
+  min-height: 40px;
+  flex-shrink: 0;
 }
 .tp-add-stop-filter-btn:hover { border-color: var(--color-accent); color: var(--color-accent-deep); }
 .tp-add-stop-filter-btn .svg-icon { width: 14px; height: 14px; color: var(--color-muted); }
@@ -191,26 +196,28 @@ const SCOPED_STYLES = `
 /* Section 3.4：5 subtab chips — 共用 search + saved tab，居於 tab body 上方 */
 .tp-add-stop-subtabs {
   display: flex; flex-wrap: wrap; gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 .tp-add-stop-subtab {
-  border: 1px solid transparent;
-  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
   padding: 6px 12px;
   border-radius: var(--radius-full);
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  color: var(--color-muted); cursor: pointer;
+  color: var(--color-foreground); cursor: pointer;
   min-height: 32px;
 }
 .tp-add-stop-subtab:hover { color: var(--color-foreground); }
 .tp-add-stop-subtab.is-active {
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-deep);
-  border-color: var(--color-accent-bg);
+  background: var(--color-foreground);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-foreground);
 }
 
 .tp-add-stop-search-input-wrap {
-  position: relative; margin-bottom: 12px;
+  position: relative;
+  flex: 1;
+  min-width: 0;
 }
 .tp-add-stop-search-input-wrap .svg-icon {
   position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
@@ -220,11 +227,10 @@ const SCOPED_STYLES = `
 }
 .tp-add-stop-search-input {
   width: 100%; min-height: 44px;
-  /* mockup-parity-qa-fixes: 加 right padding 100px 給 .tp-add-stop-filter-btn 留空間 */
-  padding: 8px 100px 8px 36px;
+  padding: 8px 14px 8px 36px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
-  background: var(--color-background);
+  background: var(--color-secondary);
   font: inherit; font-size: var(--font-size-callout);
   color: var(--color-foreground);
 }
@@ -234,61 +240,196 @@ const SCOPED_STYLES = `
 }
 
 .tp-add-stop-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
+.tp-add-stop-result-title {
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  margin: 0 0 10px;
+  letter-spacing: -0.005em;
+}
 .tp-add-stop-card {
-  display: flex; gap: 10px;
-  padding: 10px 12px;
+  position: relative;
+  display: block;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-background);
+  overflow: hidden;
   cursor: pointer;
   transition: border-color 120ms, background 120ms;
   text-align: left;
   font: inherit;
   color: var(--color-foreground);
 }
-.tp-add-stop-card:hover { border-color: var(--color-accent); background: var(--color-hover); }
+.tp-add-stop-card:hover { border-color: var(--color-accent); background: var(--color-background); }
 .tp-add-stop-card.is-selected {
   border-color: var(--color-accent);
-  background: var(--color-accent-subtle);
+  background: var(--color-background);
 }
 .tp-add-stop-card-checkbox {
-  flex-shrink: 0;
-  width: 22px; height: 22px;
-  margin: 0;
-  accent-color: var(--color-accent);
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
 }
-.tp-add-stop-card-body { min-width: 0; flex: 1; }
+.tp-add-stop-card-photo {
+  height: 96px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.tp-add-stop-card-photo[data-tone="warm"] {
+  background: linear-gradient(135deg, var(--color-accent-bg), var(--color-tertiary));
+}
+.tp-add-stop-card-photo[data-tone="cool"] {
+  background: linear-gradient(135deg, #DCE7E0, #C8DCE0);
+}
+.tp-add-stop-card-photo[data-tone="ocean"] {
+  background: linear-gradient(135deg, #C7DBE5, #A6C5D2);
+}
+.tp-add-stop-card-photo[data-tone="amber"] {
+  background: linear-gradient(135deg, #F2DCB0, #E0C089);
+}
+.tp-add-stop-card-photo .svg-icon {
+  width: 32px;
+  height: 32px;
+  color: rgba(255, 255, 255, 0.78);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.18));
+}
+.tp-add-stop-card-add {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-foreground);
+  color: var(--color-accent-foreground);
+  font: inherit;
+  font-size: var(--font-size-caption2);
+  font-weight: 700;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+.tp-add-stop-card-add .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+.tp-add-stop-card.is-selected .tp-add-stop-card-add {
+  background: var(--color-success, #2E7D32);
+}
+.tp-add-stop-card-body { min-width: 0; padding: 10px 12px; }
 .tp-add-stop-card-name {
-  font-weight: 700; font-size: var(--font-size-footnote);
+  font-weight: 700; font-size: var(--font-size-callout);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  letter-spacing: -0.005em;
+  margin-bottom: 4px;
 }
 .tp-add-stop-card-meta {
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
-  margin-top: 2px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tp-add-stop-card-meta .svg-icon {
+  width: 10px;
+  height: 10px;
+  color: var(--color-warning);
+  vertical-align: -1px;
+  margin-right: 4px;
 }
 
 .tp-add-stop-empty {
-  padding: 32px 16px; text-align: center;
+  min-height: 260px;
+  padding: 40px 20px; text-align: center;
   color: var(--color-muted);
   font-size: var(--font-size-callout);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.tp-add-stop-empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  display: grid;
+  place-items: center;
+}
+.tp-add-stop-empty-icon .svg-icon {
+  width: 28px;
+  height: 28px;
+}
+.tp-add-stop-empty-title {
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+.tp-add-stop-empty-desc {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  max-width: 280px;
+  line-height: 1.6;
 }
 
-.tp-add-stop-form { display: flex; flex-direction: column; gap: 12px; }
-.tp-add-stop-form-row { display: flex; flex-direction: column; gap: 6px; }
-.tp-add-stop-form-row label {
+.tp-add-stop-saved-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+.tp-add-stop-saved-title {
+  font-size: var(--font-size-callout);
+  font-weight: 700;
+  margin: 0;
+}
+.tp-add-stop-saved-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+}
+
+.tp-add-stop-form { display: flex; flex-direction: column; gap: 14px; }
+.tp-add-stop-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.tp-add-stop-form-row.is-full {
+  grid-template-columns: 1fr;
+}
+.tp-add-stop-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.tp-add-stop-form-field label {
   font-size: var(--font-size-caption); font-weight: 700;
   color: var(--color-foreground);
 }
-.tp-add-stop-form-row input,
-.tp-add-stop-form-row textarea,
-.tp-add-stop-form-row select {
+.tp-add-stop-form-field input,
+.tp-add-stop-form-field textarea,
+.tp-add-stop-form-select,
+.tp-add-stop-form-placeholder {
   padding: 10px 12px; min-height: 44px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -296,17 +437,36 @@ const SCOPED_STYLES = `
   font: inherit; font-size: var(--font-size-callout);
   color: var(--color-foreground);
 }
-.tp-add-stop-form-row textarea { min-height: 80px; resize: vertical; }
-.tp-add-stop-form-row input:focus,
-.tp-add-stop-form-row textarea:focus,
-.tp-add-stop-form-row select:focus {
+.tp-add-stop-form-field textarea { min-height: 88px; resize: vertical; }
+.tp-add-stop-form-field input:focus,
+.tp-add-stop-form-field textarea:focus {
   outline: none; border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
+.tp-add-stop-form-select,
+.tp-add-stop-form-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tp-add-stop-form-placeholder {
+  color: var(--color-muted);
+}
+.tp-add-stop-form-helper {
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+  line-height: 1.45;
 }
 .tp-add-stop-form-row-error {
   color: var(--color-destructive, #c0392b);
   font-size: var(--font-size-caption2);
   margin-top: 2px;
+}
+@media (max-width: 760px) {
+  .tp-add-stop-form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tp-add-stop-footer {
@@ -376,6 +536,64 @@ function matchCategory(category: string | null | undefined, target: AddStopCateg
   return false;
 }
 
+function normalizeSearchResults(data: unknown): PoiSearchResult[] {
+  const rows = Array.isArray(data)
+    ? data
+    : data && typeof data === 'object' && Array.isArray((data as { results?: unknown }).results)
+      ? (data as { results: unknown[] }).results
+      : [];
+  return rows.flatMap((row) => {
+    if (!row || typeof row !== 'object') return [];
+    const item = row as Record<string, unknown>;
+    const id = Number(item.osm_id ?? item.osmId);
+    const name = typeof item.name === 'string' ? item.name : '';
+    if (!Number.isFinite(id) || !name.trim()) return [];
+    return [{
+      osm_id: id,
+      name,
+      address: typeof item.address === 'string' ? item.address : '',
+      lat: Number(item.lat) || 0,
+      lng: Number(item.lng) || 0,
+      category: typeof item.category === 'string' ? item.category : 'poi',
+    }];
+  });
+}
+
+function normalizeSavedPois(data: unknown): SavedPoiRow[] {
+  if (!Array.isArray(data)) return [];
+  return data.flatMap((row) => {
+    if (!row || typeof row !== 'object') return [];
+    const item = row as Record<string, unknown>;
+    const id = Number(item.id);
+    const poiId = Number(item.poiId ?? item.poi_id);
+    const poiName = item.poiName ?? item.poi_name;
+    if (!Number.isFinite(id) || typeof poiName !== 'string' || !poiName.trim()) return [];
+    const poiAddress = item.poiAddress ?? item.poi_address;
+    const poiType = item.poiType ?? item.poi_type;
+    return [{
+      id,
+      poiId: Number.isFinite(poiId) ? poiId : 0,
+      poiName,
+      poiAddress: typeof poiAddress === 'string' ? poiAddress : null,
+      poiType: typeof poiType === 'string' ? poiType : 'poi',
+    }];
+  });
+}
+
+function poiTone(category: string | null | undefined, index: number): PoiCardTone {
+  const cat = (category ?? '').toLowerCase();
+  if (/restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return 'warm';
+  if (/shop|mall|market|購物/.test(cat)) return 'amber';
+  if (/hotel|hostel|guest|inn|住宿|飯店/.test(cat)) return 'cool';
+  const tones: readonly PoiCardTone[] = ['ocean', 'cool', 'amber', 'warm'];
+  return tones[index % tones.length] ?? 'ocean';
+}
+
+function poiMeta(address: string | null | undefined, category: string | null | undefined): string {
+  const primary = (address ?? '').split(',')[0]?.trim();
+  return primary || category || '景點';
+}
+
 export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRegion, onClose, onAdded }: AddStopModalProps) {
   const [tab, setTab] = useState<Tab>('search');
   const [category, setCategory] = useState<AddStopCategory>('all');
@@ -405,6 +623,10 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
   const [submitError, setSubmitError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => {
+    if (open) setRegion(initialRegion);
+  }, [open, initialRegion]);
+
   // Reset state on close
   useEffect(() => {
     if (!open) {
@@ -433,22 +655,23 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  // 搜尋 debounced
+  // 搜尋 debounced；query 空白時用目前地區載入 mockup 的「熱門景點」初始 grid。
   useEffect(() => {
     if (!open || tab !== 'search') return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     const trimmed = query.trim();
-    if (trimmed.length < 2) {
+    const fallbackQuery = region !== '全部地區' ? region : '';
+    const searchTerm = trimmed.length >= 2 ? trimmed : fallbackQuery;
+    if (searchTerm.length < 2) {
       setSearchResults([]);
       return;
     }
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=20`);
+        const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(searchTerm)}&limit=20`);
         if (resp.ok) {
-          const data = (await resp.json()) as PoiSearchResult[];
-          setSearchResults(Array.isArray(data) ? data : []);
+          setSearchResults(normalizeSearchResults(await resp.json()));
         }
       } catch {
         // silent — empty grid still readable
@@ -459,7 +682,7 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [open, tab, query]);
+  }, [open, tab, query, region]);
 
   // 收藏 fetch (lazy 切到 tab 才打)
   useEffect(() => {
@@ -469,8 +692,7 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
       try {
         const resp = await fetch('/api/saved-pois', { credentials: 'same-origin' });
         if (resp.ok) {
-          const data = (await resp.json()) as SavedPoiRow[];
-          setSavedPois(Array.isArray(data) ? data : []);
+          setSavedPois(normalizeSavedPois(await resp.json()));
         } else {
           setSavedPois([]);
         }
@@ -682,17 +904,18 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
                   </ul>
                 )}
               </div>
-              <div className="tp-add-stop-search-input-wrap">
-                <Icon name="search" />
-                <input
-                  type="text"
-                  className="tp-add-stop-search-input"
-                  placeholder="搜尋景點、餐廳、地址…（最少 2 字）"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  data-testid="add-stop-search-input"
-                />
-                {/* mockup section 14:6460 — filter button trailing search input */}
+              <div className="tp-add-stop-search-row">
+                <div className="tp-add-stop-search-input-wrap">
+                  <Icon name="search" />
+                  <input
+                    type="text"
+                    className="tp-add-stop-search-input"
+                    placeholder="搜尋景點、餐廳、住宿…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    data-testid="add-stop-search-input"
+                  />
+                </div>
                 <button
                   type="button"
                   className="tp-add-stop-filter-btn"
@@ -735,8 +958,10 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
                   return <div className="tp-add-stop-empty">符合類別篩選的結果為 0，試著切到「為你推薦」看全部</div>;
                 }
                 return (
-                  <div className="tp-add-stop-grid">
-                    {filtered.map((r) => {
+                  <>
+                    <h3 className="tp-add-stop-result-title">熱門景點 · {region}</h3>
+                    <div className="tp-add-stop-grid">
+                    {filtered.map((r, index) => {
                       const isSelected = selectedSearch.has(r.osm_id);
                       return (
                         <label
@@ -750,14 +975,25 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
                             checked={isSelected}
                             onChange={() => toggleSearch(r.osm_id)}
                           />
+                          <div className="tp-add-stop-card-photo" data-tone={poiTone(r.category, index)}>
+                            <Icon name="location-pin" />
+                          </div>
+                          <span className="tp-add-stop-card-add">
+                            <Icon name={isSelected ? 'check' : 'plus'} />
+                            {isSelected ? '已加入' : '加入'}
+                          </span>
                           <div className="tp-add-stop-card-body">
                             <div className="tp-add-stop-card-name">{r.name}</div>
-                            <div className="tp-add-stop-card-meta">{r.address}</div>
+                            <div className="tp-add-stop-card-meta">
+                              <Icon name="star" />
+                              {poiMeta(r.address, r.category)}
+                            </div>
                           </div>
                         </label>
                       );
                     })}
-                  </div>
+                    </div>
+                  </>
                 );
               })()}
             </>
@@ -767,7 +1003,11 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
             <>
               {savedLoading && <div className="tp-add-stop-empty">載入收藏…</div>}
               {!savedLoading && savedPois !== null && savedPois.length === 0 && (
-                <div className="tp-add-stop-empty">還沒有收藏任何 POI。先去「探索」儲存幾個。</div>
+                <div className="tp-add-stop-empty">
+                  <div className="tp-add-stop-empty-icon"><Icon name="heart" /></div>
+                  <div className="tp-add-stop-empty-title">還沒收藏景點</div>
+                  <div className="tp-add-stop-empty-desc">在探索頁或地圖上點收藏地點，下次行程就能直接從這裡加入。</div>
+                </div>
               )}
               {savedPois !== null && savedPois.length > 0 && (() => {
                 const filtered = savedPois.filter((r) => matchCategory(r.poiType, category));
@@ -775,8 +1015,15 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
                   return <div className="tp-add-stop-empty">符合類別篩選的收藏為 0，試著切到「為你推薦」看全部</div>;
                 }
                 return (
-                  <div className="tp-add-stop-grid">
-                    {filtered.map((r) => {
+                  <>
+                    <div className="tp-add-stop-saved-header">
+                      <h3 className="tp-add-stop-saved-title">我的收藏 · {savedPois.length} 個景點</h3>
+                      <button className="tp-add-stop-saved-sort" type="button">
+                        按收藏時間排序 <Icon name="chevron-down" />
+                      </button>
+                    </div>
+                    <div className="tp-add-stop-grid">
+                    {filtered.map((r, index) => {
                       const isSelected = selectedSaved.has(r.id);
                       return (
                         <label
@@ -790,14 +1037,25 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
                             checked={isSelected}
                             onChange={() => toggleSaved(r.id)}
                           />
+                          <div className="tp-add-stop-card-photo" data-tone={poiTone(r.poiType, index)}>
+                            <Icon name="location-pin" />
+                          </div>
+                          <span className="tp-add-stop-card-add">
+                            <Icon name={isSelected ? 'check' : 'plus'} />
+                            {isSelected ? '已加入' : '加入'}
+                          </span>
                           <div className="tp-add-stop-card-body">
                             <div className="tp-add-stop-card-name">{r.poiName}</div>
-                            <div className="tp-add-stop-card-meta">{r.poiAddress ?? r.poiType}</div>
+                            <div className="tp-add-stop-card-meta">
+                              <Icon name="star" />
+                              {poiMeta(r.poiAddress, r.poiType)}
+                            </div>
                           </div>
                         </label>
                       );
                     })}
-                  </div>
+                    </div>
+                  </>
                 );
               })()}
             </>
@@ -805,53 +1063,76 @@ export default function AddStopModal({ open, tripId, dayNum, dayLabel, defaultRe
 
           {tab === 'custom' && (
             <form className="tp-add-stop-form" onSubmit={(e) => { e.preventDefault(); void handleConfirm(); }}>
-              <div className="tp-add-stop-form-row">
-                <label htmlFor="add-stop-custom-title">標題 *</label>
-                <input
-                  id="add-stop-custom-title"
-                  type="text"
-                  value={customTitle}
-                  onChange={(e) => { setCustomTitle(e.target.value); setCustomError(null); }}
-                  placeholder="例：海邊散步、那霸機場 check-in"
-                  autoFocus
-                  data-testid="add-stop-custom-title"
-                />
-                {customError && (
-                  <div className="tp-add-stop-form-row-error" data-testid="add-stop-custom-error">{customError}</div>
-                )}
+              <div className="tp-add-stop-form-row is-full">
+                <div className="tp-add-stop-form-field">
+                  <label htmlFor="add-stop-custom-title">標題 *</label>
+                  <input
+                    id="add-stop-custom-title"
+                    type="text"
+                    value={customTitle}
+                    onChange={(e) => { setCustomTitle(e.target.value); setCustomError(null); }}
+                    placeholder="輸入景點名稱（例：心型岩看夕陽）"
+                    autoFocus
+                    data-testid="add-stop-custom-title"
+                  />
+                  {customError && (
+                    <div className="tp-add-stop-form-row-error" data-testid="add-stop-custom-error">{customError}</div>
+                  )}
+                </div>
+              </div>
+              <div className="tp-add-stop-form-row is-full">
+                <div className="tp-add-stop-form-field">
+                  <label>地址 / 地標</label>
+                  <div className="tp-add-stop-form-placeholder"><span>街道地址或地標關鍵字</span><Icon name="location-pin" /></div>
+                  <div className="tp-add-stop-form-helper">輸入後系統自動定位座標（用於地圖 polyline 連結）</div>
+                </div>
               </div>
               <div className="tp-add-stop-form-row">
-                <label htmlFor="add-stop-custom-time">時間（選填）</label>
-                <input
-                  id="add-stop-custom-time"
-                  type="text"
-                  value={customTime}
-                  onChange={(e) => setCustomTime(e.target.value)}
-                  placeholder="例：14:00 或 10:00–12:30"
-                  data-testid="add-stop-custom-time"
-                />
+                <div className="tp-add-stop-form-field">
+                  <label htmlFor="add-stop-custom-time">開始時間</label>
+                  <input
+                    id="add-stop-custom-time"
+                    type="text"
+                    value={customTime}
+                    onChange={(e) => setCustomTime(e.target.value)}
+                    placeholder={`Day ${String(dayNum).padStart(2, '0')} · 17:00`}
+                    data-testid="add-stop-custom-time"
+                  />
+                </div>
+                <div className="tp-add-stop-form-field">
+                  <label>結束時間</label>
+                  <div className="tp-add-stop-form-select"><span>自動估算</span><Icon name="chevron-down" /></div>
+                </div>
               </div>
               <div className="tp-add-stop-form-row">
-                <label htmlFor="add-stop-custom-duration">停留時間（分鐘，選填）</label>
-                <input
-                  id="add-stop-custom-duration"
-                  type="number"
-                  inputMode="numeric"
-                  value={customDuration}
-                  onChange={(e) => setCustomDuration(e.target.value)}
-                  placeholder="例：90"
-                  data-testid="add-stop-custom-duration"
-                />
+                <div className="tp-add-stop-form-field">
+                  <label>類型</label>
+                  <div className="tp-add-stop-form-select"><span>SIGHT · 景點</span><Icon name="chevron-down" /></div>
+                </div>
+                <div className="tp-add-stop-form-field">
+                  <label htmlFor="add-stop-custom-duration">預估停留</label>
+                  <input
+                    id="add-stop-custom-duration"
+                    type="number"
+                    inputMode="numeric"
+                    value={customDuration}
+                    onChange={(e) => setCustomDuration(e.target.value)}
+                    placeholder="90"
+                    data-testid="add-stop-custom-duration"
+                  />
+                </div>
               </div>
-              <div className="tp-add-stop-form-row">
-                <label htmlFor="add-stop-custom-note">備註（選填）</label>
-                <textarea
-                  id="add-stop-custom-note"
-                  value={customNote}
-                  onChange={(e) => setCustomNote(e.target.value)}
-                  placeholder="任何補充細節，例：要先預約、攜帶現金等"
-                  data-testid="add-stop-custom-note"
-                />
+              <div className="tp-add-stop-form-row is-full">
+                <div className="tp-add-stop-form-field">
+                  <label htmlFor="add-stop-custom-note">備註（選填）</label>
+                  <textarea
+                    id="add-stop-custom-note"
+                    value={customNote}
+                    onChange={(e) => setCustomNote(e.target.value)}
+                    placeholder="想看夕陽 · 推薦避開週末"
+                    data-testid="add-stop-custom-note"
+                  />
+                </div>
               </div>
             </form>
           )}

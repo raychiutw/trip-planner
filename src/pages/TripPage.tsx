@@ -44,6 +44,16 @@ import '../../css/tokens.css';
 
 const UNPUBLISHED_CLASS = 'text-muted mt-2';
 
+function deriveAddStopRegion(title?: string | null, name?: string | null, countries?: string | null): string {
+  const text = `${title ?? ''} ${name ?? ''} ${countries ?? ''}`;
+  if (/沖繩|okinawa/i.test(text)) return '沖繩';
+  if (/東京|tokyo/i.test(text)) return '東京';
+  if (/京都|kyoto/i.test(text)) return '京都';
+  if (/首爾|seoul|korea|kr/i.test(text)) return '首爾';
+  if (/台南|tainan/i.test(text)) return '台南';
+  return '全部地區';
+}
+
 /* ===== Scoped styles — only rules Tailwind/tokens.css cannot express ===== */
 const SCOPED_STYLES = `
 /* Day-content enter animations */
@@ -897,6 +907,7 @@ function TripPageInner(
           open={addStopOpen}
           tripId={trip.id}
           dayNum={currentDayNum}
+          defaultRegion={deriveAddStopRegion(trip.title, trip.name, trip.countries)}
           dayLabel={(() => {
             // mockup-parity-qa-fixes: mockup section 14:6442 規範「DAY 03 · 7/31（五）」全大寫格式
             const day = days.find((d) => d.dayNum === currentDayNum);

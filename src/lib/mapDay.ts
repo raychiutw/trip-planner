@@ -205,7 +205,12 @@ function toShopData(s: RawShop): ShopData {
 export function toTimelineEntry(raw: RawEntry): TimelineEntryData {
   const travel = raw.travel ?? null;
   const travelData: TravelData | null = travel
-    ? { type: travel.type || '', text: formatTravelText(travel) }
+    ? {
+        type: travel.type || '',
+        desc: travel.desc ?? null,
+        min: travel.min ?? null,
+        text: formatTravelText(travel),
+      }
     : null;
 
   // Phase 3：spatial 欄位只從 POI master 取（entry 已不存這些）
@@ -273,4 +278,3 @@ function parsePhotos(raw: string | null | undefined): PoiPhoto[] | null {
     return null;
   }
 }
-

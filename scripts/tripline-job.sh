@@ -7,6 +7,10 @@ LOG_DIR="$PROJECT_DIR/scripts/logs/tp-request"
 LOG_FILE="$LOG_DIR/tripline-job-$(date +%Y-%m-%d).log"
 STALE_THRESHOLD_MIN=20  # > Claude 15 min timeout，避免 race
 
+# launchd 不會 source shell rc, PATH 不含 /opt/homebrew/bin。
+# 顯式擴 PATH 給 node / curl / python3 用（找不到 node 會讓整個 job fail）
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
 mkdir -p "$LOG_DIR"
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
 
