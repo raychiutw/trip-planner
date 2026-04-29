@@ -10,7 +10,7 @@
 | `TimelineRail.tsx` `tp-rail-actions` 複製到其他天 | `⎘` | `copy` | mockup line 6076 `#i-copy` |
 | `TimelineRail.tsx` `tp-rail-actions` 移到其他天 | `⇅` | `arrows-vertical` | mockup line 6077 `#i-move-vertical` |
 | `TimelineRail.tsx` `tp-rail-actions` 刪除景點 | `🗑` | `trash` | mockup line 6079 `#i-trash` |
-| `TimelineRail.tsx` `tp-rail-actions` 收闔 | `✕` | `x` 或 `close` | mockup line 6080 `#i-x` |
+| `TimelineRail.tsx` `tp-rail-actions` 收合 | `✕` | `x` 或 `close` | mockup line 6080 `#i-x` |
 | `InlineAddPoi.tsx` search input prefix | `🔍` | `search` | mockup line 6457 `#i-search` |
 | `ExplorePage.tsx` POI card「+ 儲存」prefix（暫無 emoji 但使用 `+`/`✓` text） | `✓ 已儲存` | `check` | mockup line 7314 `#i-heart` |
 
@@ -18,7 +18,7 @@
 
 #### Scenario: TimelineRail 展開列工具列全部用 SVG icon
 - **WHEN** 使用者展開任一 timeline entry
-- **THEN** 「放大檢視 / 複製 / 移到其他天 / 刪除 / 收闔」5 個 button 全部 render `<svg>` 元素
+- **THEN** 「放大檢視 / 複製 / 移到其他天 / 刪除 / 收合」5 個 button 全部 render `<svg>` 元素
 - **AND** 全部 button DOM 內無 emoji unicode（U+1F300 以上 / U+2700-U+27BF symbol 範圍）
 - **AND** 既有 `data-testid` 不變（不破壞 unit test 跟 E2E 取 element）
 
