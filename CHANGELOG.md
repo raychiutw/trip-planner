@@ -3,6 +3,24 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.11] - 2026-04-29
+
+**Account page mockup parity + DesktopSidebar 去重**:User 拍板七項 finding,prod source 動兩處,mockup 反向更新對齊 prod 多項。
+
+### Changed
+
+- **DesktopSidebar 移除「帳號」 nav item** — User「桌機版 sidebar 不用帳號 避免重複」。Desktop 只剩 4 個 nav(聊天 / 行程 / 地圖 / 探索),user 透過底部 `.tp-account-card` user chip 進 `/account`。Mobile `GlobalBottomNav` 維持 5 tab 含「帳號」(底部空間有限,沒底部 user chip)。
+- **AccountPage 登出 row 加強 destructive visual + icon 改 `x-mark`** — User AC6 拍板 mockup destructive style。原本 `arrow-left` icon 在 light-tan background red icon 視覺不夠 destructive;改 `x-mark` icon + CSS `.tp-account-row.is-danger` 加 title + helper 也繼承 red(原本只 row container set color,被 title/helper explicit color override 掉)。
+- **Mockup `terracotta-preview-v2.html` Section 19 Account profile 對齊 prod**:
+  - AC1 layout 從 horizontal(avatar 左 + 內容右)改 vertical centered(avatar 居中 + 名/email/stats 直排)
+  - AC3 stats 從 inline 一行 `<strong>5</strong>個行程` 改 3-column grid stack(每個 stat 大數字 + 下面 label)
+  - AC4 移除「共編設定」 row(共編 context 在 trip-level,不在 account global)
+  - AC7 登出 helper 文案「會清除本地未同步資料」 → 「清除目前裝置的登入狀態」對齊 prod 中性描述
+
+### Fixed
+
+- **DesktopSidebar test 同步**:`logged-in 顯示 5 nav` → `logged-in 顯示 4 nav` test 對齊新 IA(帳號移到底部 user chip)
+
 ## [2.17.10] - 2026-04-29
 
 **Multi-user chat 其他 collaborator 訊息照 LINE 群組規則顯示**:User 拍板共編 trip 的「其他人訊息」用 LINE 群組 layout(左側 + avatar + sender 名 bubble 上方),自己 + AI 維持原 layout。

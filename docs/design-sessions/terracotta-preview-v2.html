@@ -4375,20 +4375,24 @@
     font-size: 10px;
   }
 
-  /* === Account page === */
+  /* === Account page ===
+   * 2026-04-29 mockup parity:profile 對齊 production vertical centered layout。
+   * AC1/AC2/AC3 user 拍板維持 prod,改 mockup:
+   * - 桌機 + 手機都 vertical centered(avatar 居中,名/email/stats 直排)
+   * - avatar 圓形(原本就是 50%)
+   * - stats 改 3-column stack(每個 stat 大數字 + 下面 label) */
   .tp-account-profile {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 18px;
-    padding: 20px 22px;
+    gap: 16px;
+    padding: 28px 22px;
     border: 1px solid var(--tp-border);
     border-radius: var(--tp-radius-lg);
     background: var(--tp-secondary);
     margin-bottom: 20px;
   }
   .tp-page-frame-compact .tp-account-profile {
-    flex-direction: column;
-    text-align: center;
     padding: 22px 16px;
     gap: 12px;
   }
@@ -4407,12 +4411,17 @@
   .tp-account-info {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
   }
   .tp-account-name {
     font-size: 20px;
     font-weight: 700;
     letter-spacing: -0.01em;
     margin: 0 0 4px;
+    text-align: center;
   }
   .tp-account-email {
     font-size: 13px;
@@ -4420,14 +4429,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: center;
+    margin-bottom: 16px;
   }
   .tp-account-stats {
-    display: flex;
-    gap: 16px;
-    margin-top: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    padding-top: 16px;
+    border-top: 1px solid var(--tp-border);
     font-variant-numeric: tabular-nums;
   }
   .tp-account-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
     font-size: 12px;
     color: var(--tp-muted);
     font-variant-numeric: tabular-nums;
@@ -4435,7 +4453,9 @@
   .tp-account-stat strong {
     color: var(--tp-foreground);
     font-weight: 700;
-    margin-right: 4px;
+    font-size: 18px;
+    margin-right: 0;
+    line-height: 1.2;
   }
   .tp-account-section-label {
     font-size: 10px;
@@ -7365,16 +7385,10 @@
         </button>
       </div>
 
+      <!-- 2026-04-29 (AC4):移除「共編設定」 row。User 拍板共編 context 在
+           trip-level(從 trip detail page 進設定),不在 account global level。 -->
       <div class="tp-account-section-label">共編 &amp; 整合</div>
       <div class="tp-account-list">
-        <button class="tp-account-row" type="button">
-          <div class="tp-account-row-icon"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span></div>
-          <div class="tp-account-row-text">
-            <div class="tp-account-row-title">共編設定</div>
-            <div class="tp-account-row-helper">2 位旅伴 · 3 個分享連結</div>
-          </div>
-          <span class="tp-account-row-chevron"><span class="tp-icon"><svg><use href="#i-chevron"/></svg></span></span>
-        </button>
         <button class="tp-account-row" type="button">
           <div class="tp-account-row-icon"><span class="tp-icon"><svg><use href="#i-map"/></svg></span></div>
           <div class="tp-account-row-text">
@@ -7407,7 +7421,7 @@
           <div class="tp-account-row-icon"><span class="tp-icon"><svg><use href="#i-close"/></svg></span></div>
           <div class="tp-account-row-text">
             <div class="tp-account-row-title">登出</div>
-            <div class="tp-account-row-helper">會清除本地未同步資料</div>
+            <div class="tp-account-row-helper">清除目前裝置的登入狀態</div>
           </div>
           <span class="tp-account-row-chevron"><span class="tp-icon"><svg><use href="#i-chevron"/></svg></span></span>
         </button>
@@ -7469,7 +7483,7 @@
           <div class="tp-account-row-icon"><span class="tp-icon"><svg><use href="#i-close"/></svg></span></div>
           <div class="tp-account-row-text">
             <div class="tp-account-row-title">登出</div>
-            <div class="tp-account-row-helper">會清除本地未同步資料</div>
+            <div class="tp-account-row-helper">清除目前裝置的登入狀態</div>
           </div>
           <span class="tp-account-row-chevron"><span class="tp-icon"><svg><use href="#i-chevron"/></svg></span></span>
         </button>

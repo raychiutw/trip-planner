@@ -138,8 +138,13 @@ const SCOPED_STYLES = `
 }
 .tp-account-row-chevron .svg-icon { width: 14px; height: 14px; }
 
-/* Logout destructive variant (mockup line 7508-7515 .is-danger) */
+/* Logout destructive variant — 2026-04-29 加強 visual:title + helper 都繼承
+ * destructive red(原本只 row color set,但 title/helper 用 explicit color
+ * override,沒繼承到 red),對齊 mockup S19 「登出」 row 整 row 紅字 visual。
+ * icon 從 arrow-left 改 x-mark 對齊 mockup destructive 語意。 */
 .tp-account-row.is-danger { color: var(--color-priority-high-dot, #c0392b); }
+.tp-account-row.is-danger .tp-account-row-title { color: var(--color-priority-high-dot, #c0392b); }
+.tp-account-row.is-danger .tp-account-row-helper { color: var(--color-priority-high-dot, #c0392b); opacity: 0.78; }
 .tp-account-row.is-danger .tp-account-row-icon {
   background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.08));
   color: var(--color-priority-high-dot, #c0392b);
@@ -253,7 +258,7 @@ export default function AccountPage() {
       label: '帳號',
       rows: [
         { key: 'sessions', icon: 'group', title: '已登入裝置', helper: '管理所有 active session', to: '/settings/sessions' },
-        { key: 'logout', icon: 'arrow-left', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => setShowLogoutModal(true), danger: true },
+        { key: 'logout', icon: 'x-mark', title: '登出', helper: '清除目前裝置的登入狀態', onClick: () => setShowLogoutModal(true), danger: true },
       ],
     },
   ];

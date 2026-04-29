@@ -27,18 +27,22 @@ function renderSidebar(opts: {
 }
 
 describe('DesktopSidebar — visual + nav IA', () => {
-  it('logged-in 顯示 5 nav: 聊天 / 行程 / 地圖 / 探索 / 帳號', () => {
+  /* 2026-04-29:user 拍板「桌機版 sidebar 不用帳號選項 避免重複」 — desktop
+   * 移除「帳號」 nav item,user 透過底部 user chip(.tp-account-card)進
+   * /account。Mobile GlobalBottomNav 維持 5 tab 含「帳號」。 */
+  it('logged-in 顯示 4 nav: 聊天 / 行程 / 地圖 / 探索(帳號移到底部 user chip)', () => {
     renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trips' });
     expect(screen.getByText('聊天')).toBeTruthy();
     expect(screen.getByText('行程')).toBeTruthy();
     expect(screen.getByText('地圖')).toBeTruthy();
     expect(screen.getByText('探索')).toBeTruthy();
-    expect(screen.getByText('帳號')).toBeTruthy();
+    // desktop sidebar 不再有「帳號」 nav,改透過底部 user chip
+    expect(screen.queryAllByText('帳號')).toHaveLength(0);
     // logged-in 不顯示「登入」
     expect(screen.queryByText('登入')).toBeNull();
   });
 
-  it('logged-out 顯示「登入」隱藏「帳號」', () => {
+  it('logged-out 顯示「登入」(沒「帳號」)', () => {
     renderSidebar({ user: null, initialEntry: '/trips' });
     expect(screen.getByText('登入')).toBeTruthy();
     expect(screen.queryByText('帳號')).toBeNull();

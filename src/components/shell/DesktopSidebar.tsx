@@ -44,14 +44,15 @@ interface NavItemConfig {
   guestOnly?: boolean;
 }
 
-// Section 2 (terracotta-account-hub-page): logged-in 第 5 nav 為「帳號」
-// (mockup line 5108-5112)，取代 logged-out 的「登入」slot。
+// 2026-04-29:User 拍板「桌機版 sidebar 不用帳號選項 避免重複」 — desktop 版
+// 移除「帳號」 nav item。User 透過 sidebar 底部 user chip(.tp-account-card)
+// 進 /account。Mobile GlobalBottomNav 維持 5 tab 含「帳號」(底部空間有限,
+// 沒底部 user chip)。
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
   { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
   { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
   { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
-  { key: 'account', label: '帳號', href: '/account', icon: 'user',   matchPrefixes: ['/account'], authOnly: true },
   { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'], guestOnly: true },
 ];
 
