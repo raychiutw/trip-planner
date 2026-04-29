@@ -299,14 +299,16 @@ const SCOPED_STYLES = `
   border-bottom-left-radius: 4px;
   white-space: normal;
 }
-/* QA 2026-04-26 PR-K：每則訊息下方時間 — user 對齊 right、assistant 對齊 left。
- * font-size caption2 + muted color，不搶 message text 視覺權重。 */
+/* Bubble meta：每則訊息下方時間 + AI agent 標籤(F-004,2026-04-29 對齊 mockup)
+ * — user 對齊 right、assistant 對齊 left。font-size caption2 + muted color +
+ * weight 500 + margin-top 4。 */
 .tp-chat-msg-time {
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
-  margin-top: 2px;
+  margin-top: 4px;
   font-variant-numeric: tabular-nums;
   padding: 0 4px;
+  font-weight: 500;
 }
 .tp-chat-msg-time-user { align-self: flex-end; }
 .tp-chat-msg-time-assistant { align-self: flex-start; }
