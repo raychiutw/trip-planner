@@ -3,6 +3,15 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.6] - 2026-04-29
+
+**Map page mockup parity 細修**:對齊 mockup S20「Map Page」剩餘差異 — day tab 高度過大(user 反饋「Day 的格式不能太高」)+ mockup 沒 zoom +/- 控制(production 用 Leaflet 預設左上 zoom buttons,mockup 反向更新 spec)。
+
+### Changed
+
+- **`.tp-map-day-tab` 高度減扁** — `padding: 10px 14px` → `6px 14px`,`min-height: 44px` → `36px`,跟 mockup S20 underline tabs 視覺一致(扁平 strip,不搶垂直空間)。Touch target 36px 略低於 Apple HIG 44px 規範,但 day tabs 排成水平 strip 有 horizontal touch slop,可接受
+- **mockup `terracotta-preview-v2.html` Section 20 加 zoom +/- 控制示意** — `.tp-map-zoom-controls` + `.tp-map-zoom-btn` pair,左上 vertical stack 對齊 production Leaflet `leaflet-control-zoom` default
+
 ## [2.17.5] - 2026-04-29
 
 **`/map` redirect 到 trip-bound MapPage + 補 trip-picker pill**:sidebar「地圖」link 走 `/map`(GlobalMapPage),但 mockup「Map Page」spec(Reference: `src/pages/MapPage.tsx`)規範的是 trip-bound view(full-bleed map + 底部 day tabs + 底部 entry cards)。GlobalMapPage 是 cross-trip global overview(3-col layout),沒有 mockup 對應。本次:

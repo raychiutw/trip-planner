@@ -4635,6 +4635,30 @@
   }
 
   /* === Map page (full bleed) === */
+  /* 2026-04-29:Leaflet 預設 zoom +/- 控制示意,左上 vertical stack。
+   * Production 使用 leaflet-control-zoom default,mockup 對齊 visual。 */
+  .tp-map-zoom-controls {
+    position: absolute;
+    top: 10px; left: 10px;
+    display: flex; flex-direction: column;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    z-index: 400;
+  }
+  .tp-map-zoom-btn {
+    width: 30px; height: 30px;
+    border: 0;
+    background: var(--tp-background);
+    color: var(--tp-foreground);
+    cursor: pointer;
+    font-size: 18px; font-weight: 700;
+    line-height: 1;
+    display: grid; place-items: center;
+    border-bottom: 1px solid var(--tp-border);
+  }
+  .tp-map-zoom-btn:last-child { border-bottom: 0; }
+  .tp-map-zoom-btn:hover { background: var(--tp-hover); }
   .tp-map-canvas {
     height: 480px;
     background: #F2EFE9;
@@ -7492,6 +7516,13 @@
       <div class="tp-map-fabs">
         <button class="tp-map-fab" type="button" aria-label="圖層"><span class="tp-icon"><svg><use href="#i-layers"/></svg></span></button>
         <button class="tp-map-fab" type="button" aria-label="定位"><span class="tp-icon"><svg><use href="#i-target"/></svg></span></button>
+      </div>
+      <!-- 2026-04-29 mockup parity:對齊 production Leaflet 預設 zoom +/- 控制
+           (左上垂直 stack)。Touch device 用 pinch zoom,但保留 button 提供
+           desktop 滑鼠 + a11y keyboard zoom。 -->
+      <div class="tp-map-zoom-controls" aria-label="縮放控制">
+        <button class="tp-map-zoom-btn" type="button" aria-label="放大">+</button>
+        <button class="tp-map-zoom-btn" type="button" aria-label="縮小">−</button>
       </div>
     </div>
     <nav class="tp-map-day-tabs" role="tablist" aria-label="行程日期">
