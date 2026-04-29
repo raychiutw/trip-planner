@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.9] - 2026-04-29
+
+**Multi-user chat sender bug fix**:User 反饋 7 天行程(HuiYun owner + Ray 共編)的 chat 歷史訊息 sender 名稱錯——v2.17.2 我把 user message meta 改用 `useCurrentUser().displayName`(永遠是當前登入者),但歷史訊息可能是其他 collaborator 送的,應該標原 sender 名稱。
+
+### Fixed
+
+- **Chat user message bubble meta sender 改用訊息原 sender** — `ChatMessage.submittedBy` 欄位從 `tp_request.submittedBy` email 帶過來;render 時用 `m.submittedBy.split('@')[0]` 當 displayName,fallback 才是當前登入者 displayName。Optimistic 新訊息用當前 `user.email` 為 sender。
+
 ## [2.17.8] - 2026-04-29
 
 **Map FAB stretch bug 修 + Mobile gestures 顯式啟用**:User 截圖反饋 trip-bound MapPage 的 layers/target FAB 跑到左中而非右下,加上手機需要明確的手勢操作。
