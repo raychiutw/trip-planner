@@ -33,7 +33,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type L from 'leaflet';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -755,6 +755,18 @@ export default function GlobalMapPage() {
     setMenuOpen(false);
     setSelectedPinId(null);
   }, [setActiveTripId]);
+
+  /* 2026-04-29:sidebar「地圖」走 /map → 若 user 有任何 trip,redirect 到
+   * /trip/:id/map(優先 ActiveTripContext.activeTripId,fallback trips[0])對齊
+   * mockup「Map Page」spec(Reference: src/pages/MapPage.tsx 規範 trip-bound view)。
+   * 沒任何 trip → 維持本頁 empty state「+ 建立第一個行程」CTA。
+   * trips === null 時(loading)不 redirect,等 fetch 完才 decide,避免 flash。 */
+  if (trips !== null && trips.length > 0) {
+    const target = activeTripId && trips.some((t) => t.tripId === activeTripId)
+      ? activeTripId
+      : trips[0]!.tripId;
+    return <Navigate to={`/trip/${encodeURIComponent(target)}/map`} replace />;
+  }
 
   const closeSheet = useCallback(() => {
     setSelectedPinId(null);

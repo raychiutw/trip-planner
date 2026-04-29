@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.5] - 2026-04-29
+
+**`/map` redirect 到 trip-bound MapPage**:sidebar「地圖」link 走 `/map`(GlobalMapPage),但 mockup「Map Page」spec(Reference: `src/pages/MapPage.tsx`)規範的是 trip-bound view(full-bleed map + 底部 day tabs + 底部 entry cards)。GlobalMapPage 是 cross-trip global overview(3-col layout),沒有 mockup 對應,user 從 sidebar 進去看到的不是 mockup 規範樣式。本次 GlobalMapPage 加 redirect:有任何 trip 就帶到 trip-bound view(優先 active trip,fallback 第一筆),沒 trip 才 fall through 到既有 empty state「+ 建立第一個行程」CTA。
+
+### Changed
+
+- **`/map` GlobalMapPage 改 conditional redirect** — 有 trip → `<Navigate to=\`/trip/${tripId}/map\` replace />`;沒 trip → 維持 empty state。優先用 `ActiveTripContext.activeTripId`(若該 trip 仍存在於 user trips),fallback `trips[0]`。`trips === null`(loading)時不 redirect 避免 flash。
+
 ## [2.17.4] - 2026-04-29
 
 **「收闔」→「收合」台灣慣用語修正**:`收闔` 不是台灣現代慣用,改「收合」對齊用語規範。涵蓋 `TimelineRail.tsx`(3 處 aria-label / title)、`mockup terracotta-preview-v2.html`(3 處)、test fixture(2 處)、openspec historical archive(2 處)、CHANGELOG 歷史紀錄(1 處)。
