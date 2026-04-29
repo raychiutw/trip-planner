@@ -45,12 +45,16 @@ const SCOPED_STYLES = `
  * compact 2-column cards, and embedded trip detail remains full-page. */
 .tp-trips-shell {
   min-height: 100%;
-  padding: 32px 16px 64px;
   background: var(--color-secondary);
   height: 100%;
   overflow-y: auto;
+  /* TitleBar sticky 從 viewport edge 開始;inner 自己 handle 水平 padding。 */
 }
-.tp-trips-inner { max-width: 1100px; margin: 0 auto; }
+.tp-trips-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+}
 
 /* heading 改用統一 <PageHeader>。.tp-trips-heading 已退役。 */
 
@@ -897,23 +901,23 @@ export default function TripsListPage() {
     <>
       <ToastContainer />
       <div className="tp-trips-shell" data-testid="trips-list-page">
+        <TitleBar
+          title="我的行程"
+          actions={
+            <button
+              type="button"
+              className="tp-titlebar-action"
+              onClick={openNewTrip}
+              aria-label="新增行程"
+              data-testid="trips-list-new-trip-titlebar"
+            >
+              {/* 2026-04-29:title action 統一規範 — 桌機 icon+文字,手機 icon only */}
+              <Icon name="plus" />
+              <span className="tp-titlebar-action-label">新增行程</span>
+            </button>
+          }
+        />
         <div className="tp-trips-inner">
-          <TitleBar
-            title="我的行程"
-            actions={
-              <button
-                type="button"
-                className="tp-titlebar-action"
-                onClick={openNewTrip}
-                aria-label="新增行程"
-                data-testid="trips-list-new-trip-titlebar"
-              >
-                {/* 2026-04-29:title action 統一規範 — 桌機 icon+文字,手機 icon only */}
-                <Icon name="plus" />
-                <span className="tp-titlebar-action-label">新增行程</span>
-              </button>
-            }
-          />
 
           {loading && (
             <div className="tp-trips-loading" data-testid="trips-list-loading">載入中…</div>

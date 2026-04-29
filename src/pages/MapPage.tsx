@@ -28,10 +28,14 @@ import { extractPinsFromDay, extractPinsFromAllDays, type MapPin } from '../hook
 import { dayColor } from '../lib/dayPalette';
 import { findEntryInDays, formatDateLabel } from '../lib/mapDay';
 import Icon from '../components/shared/Icon';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import MapDayTab from '../components/trip/MapDayTab';
 import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 import MapFabs from '../components/trip/MapFabs';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import type * as L from 'leaflet';
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
@@ -385,19 +389,17 @@ export default function MapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, cardEntryPins.length]);
 
-  /* --- Back navigation --- */
-  const onBack = useCallback(() => {
-    if (urlEntryId != null) navigate(`/trip/${tripId}/stop/${urlEntryId}`);
-    else navigate(`/trip/${tripId}`);
-  }, [tripId, navigate, urlEntryId]);
+  // 2026-04-29 v2.17.14:user 拍板「地圖不需要回前頁箭頭」 — 移除 back button。
+  // User navigates 出 map 走 sidebar / GlobalBottomNav 切換 nav,不需要 back。
 
-  return (
+  const { user } = useCurrentUser();
+
+  const main = (
     <div className="map-page-wrap">
       <style>{SCOPED_STYLES}</style>
 
       <TitleBar
         title="地圖"
-        back={onBack}
         actions={trips && trips.length > 0 && (
           <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button
@@ -538,5 +540,13 @@ export default function MapPage() {
         <span className="sr-only" aria-hidden="true">{trip.title}</span>
       )}
     </div>
+  );
+
+  return (
+    <AppShell
+      sidebar={<DesktopSidebarConnected />}
+      main={main}
+      bottomNav={<GlobalBottomNav authed={!!user} />}
+    />
   );
 }

@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.14] - 2026-04-29
+
+**Standard TitleBar 對齊 + Map 拿 back + 加 BottomNav**:User 拍板「行程/探索沒用標準 title 要調整」「地圖不需要回前頁箭頭」「缺少底部 tool bar」。三頁 layout 對齊統一規範。
+
+### Fixed
+
+- **TripsListPage TitleBar full-width**(`src/pages/TripsListPage.tsx`):
+  - TitleBar 從 `.tp-trips-inner`(max-width 1100px)拉出,放回 `.tp-trips-shell` 直接子層,sticky 對齊 viewport edge。
+  - `.tp-trips-shell` 移除 `padding: 32px 16px 64px`(原 32px top push TitleBar 離 viewport edge),改讓 `.tp-trips-inner` 自己 handle `padding: 24px 16px 64px`。
+- **ExplorePage TitleBar full-width**(`src/pages/ExplorePage.tsx`):TitleBar 從 `.explore-wrap`(max-width 960px + padding 24px)拉出,放回 `.explore-shell` 直接子層,sticky 對齊 viewport edge。
+- **MapPage 移除 back button + 加 AppShell 包 GlobalBottomNav**(`src/pages/MapPage.tsx`):
+  - 移除 `back={onBack}` + 對應 `onBack` callback(原邏輯:有 `urlEntryId` → 回 `/trip/:id/stop/:eid`,否則 → 回 `/trip/:id`)。
+  - 新增 import:`AppShell` / `DesktopSidebarConnected` / `GlobalBottomNav` / `useCurrentUser`。
+  - `return` 從 `<div className="map-page-wrap">` 改成 `<AppShell sidebar={...} main={...} bottomNav={<GlobalBottomNav authed={!!user} />} />`,對齊 ChatPage / TripsListPage / ExplorePage 的 standard layout。
+
+### Changed
+
+- **Mockup S20 map 拿掉 back button**:4 處 frame(desktop overview / compact overview / loading / empty)的 `tp-preview-icon-button aria-label="返回"` 全部刪除。Frame label 註明「無 back button(地圖 nav 切換走 sidebar)」。
+- **Mockup S20 map compact 加 GlobalBottomNav 視覺**:`.tp-bnav-frame` 5-tab(聊天 / 行程 / 地圖 active / 探索 / 帳號)放在 entry-cards 後面,反映 prod AppShell 結構。
+- **Mockup S18 explore 對齊 standard TitleBar**:
+  - Desktop frame:`.tp-btn is-ghost` → `.tp-titlebar-action`(icon+label,對齊 prod)。
+  - Compact frame:`.tp-preview-icon-button` icon-only → `.tp-titlebar-action`(讓 mobile breakpoint 自動切 icon-only)。
+  - Compact frame 加 GlobalBottomNav 5-tab(探索 active)。
+- **Mockup S16 trips 整段對齊 standard `.tp-page-frame` pattern**:
+  - 3 frames(desktop / compact / empty)從 `.tp-list-page` family 改成 `.tp-page-frame`(對齊 S17/S18/S20)。
+  - `.tp-list-header` 三段(text/title/actions)改成 `<header class="tp-page-titlebar">` + `.tp-page-titlebar-title` + `.tp-page-titlebar-actions`。
+  - 「搜尋 + 新增行程」 button 對齊 prod 把搜尋移進 toolbar(prod 行為),TitleBar 只放「+ 新增行程」 `.tp-titlebar-action`。
+  - Compact frame 加 GlobalBottomNav 5-tab(行程 active)。
+
 ## [2.17.13] - 2026-04-29
 
 **Map cluster 全拆 + mockup S20 FAB 對齊 prod**:User 拍板「地圖不要聚合」。所有 OceanMap entry 永遠單獨顯示 pin,不再 cluster 成數字 bubble。

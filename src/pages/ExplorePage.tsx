@@ -594,35 +594,32 @@ export default function ExplorePage() {
   const main = (
     <div className="explore-shell">
       <style>{SCOPED_STYLES}</style>
+      {/* TitleBar 拉出 .explore-wrap,full-width sticky 對齊其他頁面 standard。 */}
+      <TitleBar
+        title={tab === 'saved' ? '我的收藏' : '探索'}
+        back={tab === 'saved' ? () => setTab('search') : undefined}
+        backLabel={tab === 'saved' ? '返回探索' : undefined}
+        actions={
+          tab === 'search' ? (
+            <button
+              type="button"
+              className="tp-titlebar-action"
+              onClick={() => setTab('saved')}
+              aria-label="我的收藏"
+              title="我的收藏"
+              data-testid="explore-saved-titlebar"
+            >
+              {/* 2026-04-29 mockup parity (E1):桌機 icon+「我的收藏」文字
+               * (對齊 mockup S18 line 7294/7370),手機 (<=760px) 縮回 icon-only。
+               * 「所有 title 規範」:.tp-titlebar-action class 統一 pattern。 */}
+              <Icon name="heart" />
+              <span className="tp-titlebar-action-label">我的收藏</span>
+            </button>
+          ) : null
+        }
+      />
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />
-        {/* Section 4.9 (terracotta-mockup-parity-v2)：對齊 mockup section 18
-          * (line 7284-7423) — 拿掉「搜尋 / 我的收藏」 tab pair，改用 TitleBar
-          * action button toggle 兩個 view。default = 搜尋；TitleBar「我的收藏」
-          * button click → 切到 saved view，TitleBar 變 back button → 切回搜尋。 */}
-        <TitleBar
-          title={tab === 'saved' ? '我的收藏' : '探索'}
-          back={tab === 'saved' ? () => setTab('search') : undefined}
-          backLabel={tab === 'saved' ? '返回探索' : undefined}
-          actions={
-            tab === 'search' ? (
-              <button
-                type="button"
-                className="tp-titlebar-action"
-                onClick={() => setTab('saved')}
-                aria-label="我的收藏"
-                title="我的收藏"
-                data-testid="explore-saved-titlebar"
-              >
-                {/* 2026-04-29 mockup parity (E1):桌機 icon+「我的收藏」文字
-                 * (對齊 mockup S18 line 7294/7370),手機 (<=760px) 縮回 icon-only。
-                 * 「所有 title 規範」:.tp-titlebar-action class 統一 pattern。 */}
-                <Icon name="heart" />
-                <span className="tp-titlebar-action-label">我的收藏</span>
-              </button>
-            ) : null
-          }
-        />
 
         {/* 收藏 view 內顯示 count meta，取代既有 tab badge，與 mockup
           * section 18 single-content 結構一致 */}
