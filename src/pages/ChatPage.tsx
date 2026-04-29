@@ -634,9 +634,13 @@ export default function ChatPage() {
     setInput('');
 
     // Optimistic: user bubble + assistant typing placeholder
+    // 2026-04-29 fix:user message 之前用 `timestamp: now`(數字)+ `as unknown as
+    // ChatMessage` cast 跳 type check,實際 ChatMessage interface 要 `createdAt`
+    // ISO string。bug 導致 production 看不到 user 訊息時間戳記(meta render 條件
+    // `{m.createdAt && ...}` 永不為真)。改用 createdAt + ISO 8601。
     setMessages((prev) => [
       ...prev,
-      { id: now, role: 'user', text, timestamp: now } as unknown as ChatMessage,
+      { id: now, role: 'user', text, createdAt: new Date(now).toISOString() },
       { id: now + 1, role: 'assistant', text: '思考中…', pendingRequestId: -1 },
     ]);
 
@@ -827,7 +831,9 @@ export default function ChatPage() {
                   dateTime={m.createdAt}
                   data-testid={`chat-msg-time-${m.id}`}
                 >
-                  {isAssistant ? `Tripline AI · ${formatChatTime(m.createdAt)}` : formatChatTime(m.createdAt)}
+                  {isAssistant
+                    ? `Tripline AI · ${formatChatTime(m.createdAt)}`
+                    : `${user?.displayName || user?.email?.split('@')[0] || '我'} · ${formatChatTime(m.createdAt)}`}
                 </time>
               )}
             </Fragment>
