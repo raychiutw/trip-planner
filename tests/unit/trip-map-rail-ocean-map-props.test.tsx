@@ -16,7 +16,6 @@ interface CapturedOceanMapProps {
   pins?: unknown;
   pinsByDay?: Map<number, unknown>;
   dark?: boolean;
-  cluster?: boolean;
   panToCoord?: { lat: number; lng: number };
   onMarkerClick?: (id: number) => void;
 }
@@ -70,7 +69,7 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
     capturedIOCallback = null;
   });
 
-  it('passes all load-bearing props (pins, pinsByDay, dark, mode, routes, fillParent, fitOnce, cluster)', async () => {
+  it('passes all load-bearing props (pins, pinsByDay, dark, mode, routes, fillParent, fitOnce)', async () => {
     render(
       <MemoryRouter>
         <TripMapRail pins={PINS_DAY1} tripId="test-trip" pinsByDay={PINS_BY_DAY} dark={false} />
@@ -81,12 +80,13 @@ describe('TripMapRail — OceanMap wrapper contract', () => {
     expect(props.pins).toBe(PINS_DAY1);
     expect(props.pinsByDay).toBe(PINS_BY_DAY);
     expect(props.dark).toBe(false);
-    expect(props.cluster).toBe(false);
     expect(props.mode).toBe('overview');
     expect(props.routes).toBe(true);
     expect(props.fillParent).toBe(true);
     // fitOnce is the guard against TripPage re-renders wiping user drag + scroll-spy pan
     expect(props.fitOnce).toBe(true);
+    // cluster prop 已移除(2026-04-29 v2.17.13:user 拍板「地圖不要聚合」)
+    expect(props).not.toHaveProperty('cluster');
   });
 
   it('propagates dark=true to OceanMap', async () => {

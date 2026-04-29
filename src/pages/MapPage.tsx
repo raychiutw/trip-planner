@@ -470,7 +470,6 @@ export default function MapPage() {
               mode="overview"
               focusId={activeEntryId ?? undefined}
               routes={true}
-              cluster={!isOverview ? false : undefined}
               fillParent={true}
               pinsByDay={isOverview ? overviewData?.pinsByDay : undefined}
               dayNum={isOverview ? undefined : (activeTab as number)}
