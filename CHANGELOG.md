@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.4] - 2026-04-29
+
+**「收闔」→「收合」台灣慣用語修正**:`收闔` 不是台灣現代慣用,改「收合」對齊用語規範。涵蓋 `TimelineRail.tsx`(3 處 aria-label / title)、`mockup terracotta-preview-v2.html`(3 處)、test fixture(2 處)、openspec historical archive(2 處)、CHANGELOG 歷史紀錄(1 處)。
+
+### Changed
+
+- 全 repo「收闔」→「收合」共 11 處替換(對齊 memory `feedback_taiwan_traditional_chinese.md`)
+
 ## [2.17.3] - 2026-04-29
 
 **行程明細頁 stop card mockup parity**:對照 `terracotta-preview-v2.html` Section 12「Stop Card Redesign — Action Affordances」Variant A 規範與 Section 13「Trip Detail Page Content」截圖,將 collapsed stop row 與 expanded toolbar 全面對齊 mockup。User 拍板:F-001 chat list 模式 / F-008 suggestion pills 等已決議維持 production,本次純 stop card visual + interaction 對齊。
@@ -1011,7 +1019,7 @@ verify gate: tsc clean / 1029 tests pass.
 ### Fixed (per mockup spec)
 - **BUG-012 action row 補 🗑 + ✕** — mockup `.actions` 4 個 iconbtn 全部補齊：
   - **🗑 delete**：DELETE `/api/trips/:id/entries/:eid`（既有端點）+ `window.confirm` 確認 + dispatch `tp-entry-updated`。`.is-danger` variant 用 `--color-priority-high-*` tokens 對齊 DESIGN.md semantic colors
-  - **✕ collapse**：呼叫 `onToggle()` 把行收闔，pure UI no API
+  - **✕ collapse**：呼叫 `onToggle()` 把行收合，pure UI no API
   - 兩個 button 不論單天/多天 always 顯示，跟 ⎘/⇅ conditional on 多天 拆開
 
 ### Internal

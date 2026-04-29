@@ -380,7 +380,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
           onClick={onToggle}
           disabled={!canExpand}
           aria-expanded={canExpand ? expanded : undefined}
-          aria-label={`${expanded ? '收闔' : '展開'}景點：${entry.title ?? '（無標題）'}`}
+          aria-label={`${expanded ? '收合' : '展開'}景點：${entry.title ?? '（無標題）'}`}
           data-testid={entry.id != null ? `timeline-rail-row-${entry.id}` : undefined}
         >
           <span className="ocean-rail-icon" aria-hidden="true">
@@ -576,8 +576,8 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
               type="button"
               className="tp-rail-action-icon"
               onClick={(e) => { e.stopPropagation(); onToggle(); }}
-              aria-label="收闔"
-              title="收闔"
+              aria-label="收合"
+              title="收合"
               data-testid={`timeline-rail-collapse-${entry.id}`}
             >
               <Icon name="minimize" />

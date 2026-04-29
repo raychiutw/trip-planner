@@ -223,7 +223,7 @@
 #### 12 Stop card
 
 **Inconsistent**:
-- HIGH: Mockup expanded toolbar 有 6 個 SVG icon button：放大 / 複製 / 移動 / 編輯備註 / [spacer] / 刪除 / 收闔 (line 6074-6080)；React `tp-rail-actions`（line 401-469）有：放大檢視（chip with text 不是 icon-only）+ 複製 + 移動 + 刪除 + 收闔，缺少「編輯備註」獨立按鈕（備註 inline click-to-edit）
+- HIGH: Mockup expanded toolbar 有 6 個 SVG icon button：放大 / 複製 / 移動 / 編輯備註 / [spacer] / 刪除 / 收合 (line 6074-6080)；React `tp-rail-actions`（line 401-469）有：放大檢視（chip with text 不是 icon-only）+ 複製 + 移動 + 刪除 + 收合，缺少「編輯備註」獨立按鈕（備註 inline click-to-edit）
 - HIGH: Mockup 用 unified `<svg><use href="#i-trash"/>` SVG sprites；React 用 emoji unicode：`🗑` (line 457)、`✕` (line 467)、`⛶` (line 409)、`⎘` (line 423)、`⇅` (line 433) — 即 mockup section 12 lead 明文吐槽的問題：「`⎘⇅🗑✕` 是 unicode/emoji 跨字型不一致」(line 5971)
 - MEDIUM: Mockup 規定「delete confirm 不應用 `window.confirm`」(line 5971 lead)；React `handleDelete` line 297 仍用 `window.confirm`
 - MEDIUM: Mockup `tp-stop-v-grip` collapsed 狀態低調，hover row 才浮現（line 6034 tagline）；React `ocean-rail-grip` 永遠可見，無 hover 邏輯切換
