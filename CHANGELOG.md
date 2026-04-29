@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.2] - 2026-04-29
+
+**Chat user 訊息時間戳記修復 + sender 名稱**:v2.17.1 修了歷史訊息(透過 mapper)的 `createdAt` 渲染條件,但新送出的訊息有獨立 bug — `setMessages` 用 `timestamp: now`(數字)+ `as unknown as ChatMessage` cast 跳 type check,實際 `ChatMessage` interface 要 `createdAt` ISO string,新訊息永遠拿不到時間戳。本次修復 + 對齊 mockup 新規範,bubble meta 加 sender 名稱(self 顯示 displayName,fallback email local-part)。
+
+### Fixed
+
+- **user 訊息時間戳記永遠 missing** — `ChatPage.tsx:639` 新送出 user message 用 `timestamp: now` 而非 `createdAt: ISO`,`as unknown as ChatMessage` cast 讓 TypeScript 沒抓到。改用 `createdAt: new Date(now).toISOString()`,bubble meta render 條件 `{m.createdAt && !m.pendingRequestId}` 終於對 user 新訊息為真
+
+### Changed
+
+- **bubble meta 加 sender 名稱**:user message 從「14:03」改「Ray · 14:03」(`user.displayName` fallback email local-part fallback「我」),AI message 維持「Tripline AI · 14:02」。對齊新 mockup 規範
+- **mockup `terracotta-preview-v2.html` Section 17**:user bubble meta 範例補 sender 名稱「Ray · 14:03」、「Ray · 剛剛」對齊 production 新行為
+
 ## [2.17.1] - 2026-04-29
 
 **Chat 頁 mockup parity QA**：對照 `terracotta-preview-v2.html` Section 17 嚴格比對聊天頁,findings 14 條中 P1 + P2 + P3 共 9 條 design fix 全部 close,另發現並修復一個讓 bubble 時間戳記永遠拿不到的 backing data bug。P0 IA 重做(chat list 模式)與 F-008 suggestion pills schema 改動 deferred 給後續 PR。
