@@ -279,7 +279,7 @@ const SCOPED_STYLES = `
 .tp-chat-msg {
   max-width: min(640px, 80%);
   padding: 10px 14px;
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   font-size: var(--font-size-callout);
   line-height: 1.55;
   white-space: pre-wrap;
@@ -289,14 +289,14 @@ const SCOPED_STYLES = `
   align-self: flex-end;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
-  border-bottom-right-radius: var(--radius-sm);
+  border-bottom-right-radius: 4px;
 }
 .tp-chat-msg-assistant {
   align-self: flex-start;
-  background: var(--color-background);
+  background: var(--color-secondary);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
-  border-bottom-left-radius: var(--radius-sm);
+  border-bottom-left-radius: 4px;
   white-space: normal;
 }
 /* QA 2026-04-26 PR-K：每則訊息下方時間 — user 對齊 right、assistant 對齊 left。
