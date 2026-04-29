@@ -625,13 +625,15 @@ body.dark {
         border-bottom-color: var(--color-accent);
     }
     .ocean-rail-head {
+        /* 2026-04-29 mockup parity:icon 從 inline 22px 改 48x48 大方框 box
+         * (mockup S12 Variant A 規範);grid 改 48px 1fr auto。 */
         grid-area: head;
-        display: grid; grid-template-columns: 22px 1fr auto;
-        column-gap: 10px; align-items: center; width: 100%;
+        display: grid; grid-template-columns: 48px 1fr auto;
+        column-gap: 12px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
         color: inherit; cursor: pointer; text-align: left;
         font: inherit;
-        min-height: 24px;
+        min-height: 48px;
     }
 
     .ocean-rail-time {
@@ -658,14 +660,37 @@ body.dark {
     .ocean-rail-item[data-accent="true"] .ocean-rail-dot { border-color: var(--color-accent); color: var(--color-accent); }
     .ocean-rail-item[data-now="true"] .ocean-rail-dot { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
 
+    /* 2026-04-29 mockup parity:icon 從 inline 22px 改 48x48 獨立 box
+     * (mockup S12 Variant A);secondary bg + radius-md + border。 */
     .ocean-rail-icon {
-        width: 22px; height: 22px;
+        width: 48px; height: 48px;
         display: grid; place-items: center;
+        background: var(--color-secondary);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
         color: var(--color-muted); flex-shrink: 0;
     }
-    .ocean-rail-item[data-accent="true"] .ocean-rail-icon { color: var(--color-accent); }
+    .ocean-rail-icon .svg-icon { width: 24px; height: 24px; }
+    .ocean-rail-item[data-accent="true"] .ocean-rail-icon {
+        background: var(--color-accent-subtle);
+        border-color: var(--color-accent-bg);
+        color: var(--color-accent);
+    }
 
-    .ocean-rail-content { min-width: 0; overflow: hidden; }
+    .ocean-rail-content {
+        min-width: 0; overflow: hidden;
+        display: flex; flex-direction: column; gap: 2px;
+    }
+    /* 2026-04-29 mockup parity:meta.label 從 sub line 拉出為 chip eyebrow
+     * (mockup S12「HOTEL」「SIGHT · 景點」)— 11px caps + letter-spacing 0.12 +
+     * accent color。是 caps spacing 不是 chip background,輕量視覺權重。 */
+    .ocean-rail-chip {
+        font-size: var(--font-size-eyebrow);
+        font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--color-muted);
+        line-height: 1;
+    }
+    .ocean-rail-item[data-accent="true"] .ocean-rail-chip { color: var(--color-accent); }
     .ocean-rail-name {
         display: block; font-size: 15px; font-weight: 600;
         letter-spacing: -0.01em; line-height: 1.35;
@@ -673,13 +698,8 @@ body.dark {
     }
     .ocean-rail-sub {
         display: flex; gap: 6px; align-items: center;
-        font-size: 12px; color: var(--color-muted); margin-top: 3px;
+        font-size: 12px; color: var(--color-muted);
     }
-    .ocean-rail-type {
-        font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
-        color: var(--color-muted);
-    }
-    .ocean-rail-item[data-accent="true"] .ocean-rail-type { color: var(--color-accent); }
     .ocean-rail-sep { opacity: 0.5; }
 
     .ocean-rail-caret {

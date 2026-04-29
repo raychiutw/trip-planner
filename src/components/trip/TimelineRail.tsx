@@ -136,21 +136,14 @@ const SCOPED_STYLES = `
 .ocean-rail-head[aria-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
 .ocean-rail-caret { transition: transform 120ms; display: inline-block; }
 
+/* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部(mockup S12
+ * Variant A 規範)。margin-top + padding-top + border-top 視覺分隔 body 內容。
+ * gap 改 4px 讓 4+2 兩組看起來更緊。 */
 .tp-rail-actions {
-  display: flex; gap: 6px; flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-.tp-rail-action-btn {
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  padding: 8px 14px; border-radius: var(--radius-full);
-  background: var(--color-accent-subtle); color: var(--color-accent-deep);
-  border: 1.5px solid var(--color-accent-bg); cursor: pointer;
-  /* H4 — primary action chip, 44px tap target */
-  min-height: var(--spacing-tap-min);
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.tp-rail-action-btn:hover {
-  background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent);
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
 }
 .tp-rail-action-spacer { flex: 1; }
 .tp-rail-action-icon {
@@ -394,22 +387,25 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             <Icon name={meta.icon} />
           </span>
           <span className="ocean-rail-content">
+            {/* 2026-04-29 mockup parity:meta.label 從 sub line inline 拉出
+             * 為 chip eyebrow(對齊 mockup S12「HOTEL」「SIGHT · 景點」格式)。
+             * letter-spacing + uppercase 突出 subtype 視覺,sub line 只剩
+             * duration · rating。 */}
+            <span className="ocean-rail-chip">{meta.label}</span>
             <span className="ocean-rail-name">{entry.title ?? ''}</span>
-            <span className="ocean-rail-sub">
-              <span className="ocean-rail-type">{meta.label}</span>
-              {formatDuration(parsed.duration) && (
-                <>
-                  <span className="ocean-rail-sep">·</span>
+            {(formatDuration(parsed.duration) || typeof entry.googleRating === 'number') && (
+              <span className="ocean-rail-sub">
+                {formatDuration(parsed.duration) && (
                   <span>{formatDuration(parsed.duration)}</span>
-                </>
-              )}
-              {typeof entry.googleRating === 'number' && (
-                <>
+                )}
+                {formatDuration(parsed.duration) && typeof entry.googleRating === 'number' && (
                   <span className="ocean-rail-sep">·</span>
+                )}
+                {typeof entry.googleRating === 'number' && (
                   <span>★ {entry.googleRating.toFixed(1)}</span>
-                </>
-              )}
-            </span>
+                )}
+              </span>
+            )}
           </span>
           <span className="ocean-rail-caret" aria-hidden="true">›</span>
         </button>
@@ -417,89 +413,6 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
 
       {expanded && entry.id != null && (
         <div className="tp-rail-detail" data-testid={`timeline-rail-detail-${entry.id}`}>
-          <div className="tp-rail-actions">
-            <button
-              type="button"
-              className="tp-rail-action-btn"
-              onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
-              aria-label="放大檢視"
-              data-testid={`timeline-rail-lightbox-open-${entry.id}`}
-            >
-              <Icon name="maximize" />
-              <span>放大檢視</span>
-            </button>
-            <div className="tp-rail-action-spacer" />
-            {dayId != null && allDays.length > 1 && (
-              <div className="tp-rail-action-icon-group">
-                <button
-                  type="button"
-                  className="tp-rail-action-icon"
-                  onClick={(e) => { e.stopPropagation(); setPopoverAction('copy'); }}
-                  aria-label="複製到其他天"
-                  title="複製到其他天"
-                  data-testid={`timeline-rail-copy-open-${entry.id}`}
-                >
-                  <Icon name="copy" />
-                </button>
-                <button
-                  type="button"
-                  className="tp-rail-action-icon"
-                  onClick={(e) => { e.stopPropagation(); setPopoverAction('move'); }}
-                  aria-label="移到其他天"
-                  title="移到其他天"
-                  data-testid={`timeline-rail-move-open-${entry.id}`}
-                >
-                  <Icon name="arrows-vertical" />
-                </button>
-                {popoverAction != null && (
-                  <EntryActionPopover
-                    open
-                    action={popoverAction}
-                    days={allDays}
-                    currentDayId={dayId}
-                    onClose={() => setPopoverAction(null)}
-                    onConfirm={handleCopyOrMove}
-                  />
-                )}
-              </div>
-            )}
-            {/* Section 4.5 (terracotta-ui-parity-polish): mockup line 6078 toolbar
-             * 第 4 個 icon — 編輯備註 pencil button (focus note textarea)。 */}
-            <button
-              type="button"
-              className="tp-rail-action-icon"
-              onClick={(e) => { e.stopPropagation(); beginEditNote(e); }}
-              aria-label="編輯備註"
-              title="編輯備註"
-              data-testid={`timeline-rail-edit-note-${entry.id}`}
-            >
-              <Icon name="pencil" />
-            </button>
-            {/* QA 2026-04-26 BUG-012：mockup 規範 4 個 icon button — trash delete
-             * + close collapse 不論單天/多天都顯示（每個 entry 都該能刪/收闔）。
-             * Section 4.5：delete 用 ConfirmModal pattern 取代 window.confirm。 */}
-            <button
-              type="button"
-              className="tp-rail-action-icon is-danger"
-              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-              aria-label="刪除景點"
-              title="刪除景點"
-              data-testid={`timeline-rail-delete-${entry.id}`}
-            >
-              <Icon name="trash" />
-            </button>
-            <button
-              type="button"
-              className="tp-rail-action-icon"
-              onClick={(e) => { e.stopPropagation(); onToggle(); }}
-              aria-label="收闔"
-              title="收闔"
-              data-testid={`timeline-rail-collapse-${entry.id}`}
-            >
-              <Icon name="x-mark" />
-            </button>
-          </div>
-
           {hasDescription && (
             <div className="tp-rail-detail-section">
               <h4>說明</h4>
@@ -588,6 +501,87 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 {hasNote ? entry.note : '+ 加備註'}
               </div>
             )}
+          </div>
+
+          {/* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部
+           * (mockup S12 Variant A 規範);排列 4+2 grouped:左 4 常用編輯
+           * (放大|複|移|編)+ spacer + 右 2 終止/狀態(刪|收合)。 */}
+          <div className="tp-rail-actions">
+            <button
+              type="button"
+              className="tp-rail-action-icon"
+              onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
+              aria-label="放大檢視"
+              title="放大檢視"
+              data-testid={`timeline-rail-lightbox-open-${entry.id}`}
+            >
+              <Icon name="maximize" />
+            </button>
+            {dayId != null && allDays.length > 1 && (
+              <div className="tp-rail-action-icon-group">
+                <button
+                  type="button"
+                  className="tp-rail-action-icon"
+                  onClick={(e) => { e.stopPropagation(); setPopoverAction('copy'); }}
+                  aria-label="複製到其他天"
+                  title="複製到其他天"
+                  data-testid={`timeline-rail-copy-open-${entry.id}`}
+                >
+                  <Icon name="copy" />
+                </button>
+                <button
+                  type="button"
+                  className="tp-rail-action-icon"
+                  onClick={(e) => { e.stopPropagation(); setPopoverAction('move'); }}
+                  aria-label="移到其他天"
+                  title="移到其他天"
+                  data-testid={`timeline-rail-move-open-${entry.id}`}
+                >
+                  <Icon name="arrows-vertical" />
+                </button>
+                {popoverAction != null && (
+                  <EntryActionPopover
+                    open
+                    action={popoverAction}
+                    days={allDays}
+                    currentDayId={dayId}
+                    onClose={() => setPopoverAction(null)}
+                    onConfirm={handleCopyOrMove}
+                  />
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              className="tp-rail-action-icon"
+              onClick={(e) => { e.stopPropagation(); beginEditNote(e); }}
+              aria-label="編輯備註"
+              title="編輯備註"
+              data-testid={`timeline-rail-edit-note-${entry.id}`}
+            >
+              <Icon name="pencil" />
+            </button>
+            <div className="tp-rail-action-spacer" />
+            <button
+              type="button"
+              className="tp-rail-action-icon is-danger"
+              onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
+              aria-label="刪除景點"
+              title="刪除景點"
+              data-testid={`timeline-rail-delete-${entry.id}`}
+            >
+              <Icon name="trash" />
+            </button>
+            <button
+              type="button"
+              className="tp-rail-action-icon"
+              onClick={(e) => { e.stopPropagation(); onToggle(); }}
+              aria-label="收闔"
+              title="收闔"
+              data-testid={`timeline-rail-collapse-${entry.id}`}
+            >
+              <Icon name="minimize" />
+            </button>
           </div>
         </div>
       )}

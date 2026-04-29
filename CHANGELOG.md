@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.3] - 2026-04-29
+
+**行程明細頁 stop card mockup parity**:對照 `terracotta-preview-v2.html` Section 12「Stop Card Redesign — Action Affordances」Variant A 規範與 Section 13「Trip Detail Page Content」截圖,將 collapsed stop row 與 expanded toolbar 全面對齊 mockup。User 拍板:F-001 chat list 模式 / F-008 suggestion pills 等已決議維持 production,本次純 stop card visual + interaction 對齊。
+
+### Changed
+
+- **Collapsed row:stop icon 從 inline 22px 改 48x48 大方框 box** — `secondary` bg + `border-md` + `radius-md` + 24px 內 icon。`data-accent="true"` row 用 `accent-subtle` bg + `accent-bg` border + `accent` icon color。對齊 mockup S12 Variant A 規範
+- **Collapsed row:類型 label 從 sub line inline 拉出為 chip eyebrow** — 11px / weight 700 / letter-spacing 0.12em / uppercase / muted(default)/ accent(data-accent),放在景點名上方獨立一行。Sub line 只剩 duration · ★ rating
+- **Expanded toolbar 從 body 上方移到底部** — `tp-rail-actions` 加 `margin-top: 12px`、`padding-top: 12px`、`border-top` 視覺分隔 body 內容,JSX 順序改為 「說明 → 地點 → 備註 → toolbar」,對齊 mockup S12 Variant A 「expanded 後底部統一 toolbar」spec
+- **Expanded toolbar 排列改 4+2 grouped** — 左 4 常用編輯`[放大|複|移|編]` + spacer(flex:1)+ 右 2 終止/狀態`[刪|收合]`,視覺把「危險」與「狀態切換」與「常用編輯」拉開
+- **「放大檢視」從 pill+文字 (106x44) 改 icon-only (44x44)** — 對齊 mockup toolbar 全 icon-only spec,移除 `tp-rail-action-btn` class 與內部 `<span>放大檢視</span>`
+- **收合 icon 從 `x-mark` (✕) 改 `minimize` (↘↖)** — `x-mark` 語意是「關閉 modal」過於強烈,實際行為是 expanded → collapsed 切換,minimize 語意精準
+
+### Added
+
+- **`Icon` registry 加 `minimize`** — Material `fullscreen_exit` SVG path,雙斜線往內收
+
 ## [2.17.2] - 2026-04-29
 
 **Chat user 訊息時間戳記修復 + sender 名稱**:v2.17.1 修了歷史訊息(透過 mapper)的 `createdAt` 渲染條件,但新送出的訊息有獨立 bug — `setMessages` 用 `timestamp: now`(數字)+ `as unknown as ChatMessage` cast 跳 type check,實際 `ChatMessage` interface 要 `createdAt` ISO string,新訊息永遠拿不到時間戳。本次修復 + 對齊 mockup 新規範,bubble meta 加 sender 名稱(self 顯示 displayName,fallback email local-part)。
