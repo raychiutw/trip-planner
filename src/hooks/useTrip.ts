@@ -3,8 +3,7 @@ import { apiFetch } from '../lib/apiClient';
 import { mapRow } from '../lib/mapRow';
 import { ApiError } from '../lib/errors';
 import { showErrorToast } from '../components/shared/Toast';
-import type { Trip, Day, DaySummary } from '../types/trip';
-import type { DocEntry } from '../components/trip/DocCard';
+import type { Trip, Day, DaySummary, DocEntry } from '../types/trip';
 
 /** Shape of a single doc returned from /api/trips/:id/docs/:key */
 export interface DocData {

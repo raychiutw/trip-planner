@@ -233,8 +233,10 @@ export default function AccountPage() {
 
   if (!auth.user || !user) return null;
 
-  const initial = user.email.charAt(0).toUpperCase();
+  // v2.17.17:initial 用 displayName 對齊 sidebar(原本用 email.charAt 造成
+  // displayName "Ray" + email "lean.lean@..." 時 hero 顯示「L」 但 sidebar 顯示「R」)。
   const displayName = user.displayName || user.email.split('@')[0] || user.email;
+  const initial = displayName.charAt(0).toUpperCase();
 
   const groups: { key: string; label: string; rows: SettingsRow[] }[] = [
     {

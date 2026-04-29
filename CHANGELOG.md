@@ -3,6 +3,50 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.17] - 2026-04-30
+
+**6 個 trip sheet feature 整批移除 + AccountPage avatar fix**:User /qa 找到 critical issue —`/trip/:id` 永遠 redirect 到 TripsListPage embedded mode,`EmbeddedActionMenu` 只暴露 5 項(共編 + 列印 + 4 download),其餘 6 個 sheet 完全沒 UI 入口。User 拍板「移除」。
+
+### Removed (Critical F1: 6 unreachable sheets + dead code chain)
+
+**Dead component files(0 user-reachable render path):**
+- `src/components/trip/OverflowMenu.tsx`(整個 component,12 個 OVERFLOW_ITEMS)
+- `src/components/trip/SuggestionSheet.tsx`(AI 建議 sheet body)
+- `src/components/trip/FlightSheet.tsx`(航班 sheet body)
+- `src/components/trip/TodayRouteSheet.tsx`(今日路線 sheet body)
+- `src/components/trip/DocCard.tsx`(checklist / backup / emergency sheet body)
+- `src/components/trip/TripSheetContent.tsx`(switch case 9 個 sheet keys 整個 dispatcher,包含 ACTION_MENU_GRID 9-button + ACTION_MENU_EXPORTS 5-row dead grids)
+
+**Dead UI logic in TripPage(`{!noShell && <TitleBar actions={...} />}` 整段):**
+- 5 個 button(加景點 / 建議 / 共編 / 下載 + OverflowMenu)
+- `handlePanelItem` callback
+- `handleTripChange` callback(trip-select sheet 用)
+- `sheetTrips` / `sheetTripsLoading` state(trip-select sheet 用)
+- `colorMode` / `setColorMode`(appearance sheet 用)
+- `currentDay` / `docs` props(都 only fed to TripSheetContent)
+- TripPage 改成 inline render `<CollabSheet>` for `activeSheet === 'collab'`(唯一還活著的 sheet)
+- `?sheet=` URL param 從 `SHEET_TITLES` allowlist 改成 hardcode `=== 'collab'` check
+- `Icon` / `TitleBar` import 一起拔(now unused)
+
+### Fixed (High F2: AccountPage avatar 跟 sidebar 不一致)
+
+- `AccountPage.tsx:236` 從 `user.email.charAt(0).toUpperCase()` 改用 `displayName.charAt(0).toUpperCase()`,跟 `DesktopSidebar:204` `user.name` 一致。User "Ray" + email "lean.lean@..." 現在 hero 跟 sidebar 都顯示「R」。
+
+### Moved
+
+- `DocEntry` type 從已刪 `src/components/trip/DocCard.tsx` 搬到 `src/types/trip.ts`(被 `useTrip.ts` + `lib/tripExport.ts` import,export 流程還活著)。
+
+### Removed tests
+
+- `tests/unit/overflow-menu-divider.test.tsx`(測 deleted OverflowMenu divider 邏輯)
+- `tests/unit/trip-page-titlebar-actions.test.tsx`(測 deleted TripPage TitleBar 4 actions)
+- `tests/unit/trip-page-titlebar.test.tsx`(測 deleted TripPage standalone TitleBar mount)
+- `tests/unit/quick-panel.test.js`(asserts OverflowMenu imports + 12 OVERFLOW_ITEMS keys)
+
+### Stats
+
+**Net -14 files / -1500+ lines,precache 2189.65 → 2164.35 KiB(-25 KiB)。** 1316 → 1258 tests(58 個跟 deleted dead 一起刪)。
+
 ## [2.17.16] - 2026-04-30
 
 **Dead code + @deprecated 整批清除**:User 拍板「dead code 跟 deprecated 都刪」。

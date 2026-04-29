@@ -1,6 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useMemo, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Icon from '../components/shared/Icon';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useOfflineToast } from '../hooks/useOfflineToast';
 import { apiFetch } from '../lib/apiClient';
@@ -19,19 +18,17 @@ import { TripDaysContext } from '../contexts/TripDaysContext';
 import type { DayOption } from '../components/trip/EntryActionPopover';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
-import TripSheetContent, { SHEET_TITLES } from '../components/trip/TripSheetContent';
 import { extractPinsFromDay } from '../hooks/useMapData';
 /* F005: TripSheet 延遲載（內部 lazy load TripMapRail 以避免 Leaflet 進首頁 bundle）*/
 const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 import Footer, { type FooterData } from '../components/trip/Footer';
-import OverflowMenu from '../components/trip/OverflowMenu';
+import CollabSheet from '../components/trip/CollabSheet';
 import AlertPanel from '../components/shared/AlertPanel';
 import AddStopModal from '../components/trip/AddStopModal';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import TitleBar from '../components/shell/TitleBar';
 import InfoSheet from '../components/trip/InfoSheet';
 import ToastContainer from '../components/shared/Toast';
 import { FooterArt } from '../components/trip/ThemeArt';
@@ -253,11 +250,7 @@ function TripPageInner(
   }, []);
 
   /* --- Dark mode + Print mode (#2: coordinated via shared state) --- */
-  const { isDark, setIsDark, colorMode, setColorMode } = useDarkMode();
-
-  /* --- Trips list for trip-select sheet --- */
-  const [sheetTrips, setSheetTrips] = useState<TripListItem[]>([]);
-  const [sheetTripsLoading, setSheetTripsLoading] = useState(false);
+  const { isDark, setIsDark } = useDarkMode();
 
   const { isPrintMode, togglePrint } = usePrintMode({ isDark, setIsDark });
 
@@ -268,27 +261,6 @@ function TripPageInner(
       sessionStorage.setItem('lsRenewed', '1');
     }
   }, []);
-
-  /* --- Fetch trips when trip-select sheet opens (cached: skip if already loaded) --- */
-  useEffect(() => {
-    if (activeSheet !== 'trip-select') return;
-    if (sheetTrips.length > 0) return;  // 已有快取，不重複請求
-    let cancelled = false;
-    setSheetTripsLoading(true);
-    apiFetch<Record<string, unknown>[]>('/trips')
-      .then((raw) => {
-        if (cancelled) return;
-        const data = raw.map(r => mapRow(r)) as unknown as TripListItem[];
-        setSheetTrips(data.filter((t) => t.published === 1));
-      })
-      .catch(() => {
-        // ignore
-      })
-      .finally(() => {
-        if (!cancelled) setSheetTripsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [activeSheet, sheetTrips.length]);
 
   /* --- Resolve trip ID from URL / localStorage / default (#6: cancelled guard) --- */
   /* Fix 5: resolveKey in deps allows re-triggering without full page reload */
@@ -357,7 +329,7 @@ function TripPageInner(
     if (activeTripId) setActiveTrip(activeTripId);
   }, [activeTripId, setActiveTrip]);
 
-  const { trip, days, currentDay, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, docs, loading, error } =
+  const { trip, days, currentDayNum, switchDay, refetchCurrentDay, refetchDay, allDays, loading, error } =
     useTrip(activeTripId);
 
   // Keep ref in sync so the online-status effect can call it without a stale closure
@@ -475,11 +447,11 @@ function TripPageInner(
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    // PR-Q 2026-04-26：?sheet=<key> URL param — 從 /trips card kebab「共編
-    // 設定」過來，自動開該 sheet。允許的 key 必須在 SHEET_TITLES 內。
+    // PR-Q 2026-04-26:?sheet=<key> URL param — 從 /trips card kebab「共編
+    // 設定」過來,自動開該 sheet。v2.17.17:只剩 collab 一個合法 key。
     const sheetParam = new URLSearchParams(window.location.search).get('sheet');
-    if (sheetParam && Object.prototype.hasOwnProperty.call(SHEET_TITLES, sheetParam)) {
-      setActiveSheet(sheetParam);
+    if (sheetParam === 'collab') {
+      setActiveSheet('collab');
     }
 
     // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI
@@ -619,11 +591,10 @@ function TripPageInner(
     return raw as FooterData;
   }, [trip]);
 
-  /* --- Topbar / OverflowMenu -> InfoSheet --- */
-  const handlePanelItem = useCallback((key: string) => { setActiveSheet(key); }, []);
-
-  /* PR-SS/UU 2026-04-27：embedded mode 把 sheet/download/print handlers 開放
-   * 給父層。TripsListPage 的 ⋯ 漢堡選單 (共編 / 列印 / 下載) 透過 ref 呼叫。 */
+  /* PR-SS/UU 2026-04-27:embedded mode 把 sheet/download/print handlers 開放
+   * 給父層。TripsListPage 的 ⋯ 漢堡選單(共編 / 列印 / 下載)透過 ref 呼叫。
+   * v2.17.17:其餘 sheet keys(suggestions/today-route/flights/checklist/
+   * backup/emergency/appearance/trip-select)已整批移除 — 只剩 collab 走 sheet。 */
   useImperativeHandle(ref, () => ({
     openSheet: (key: string) => setActiveSheet(key),
     triggerDownload: (format: string) => { void handleDownloadFormat(format); },
@@ -631,17 +602,6 @@ function TripPageInner(
     openAddStop: () => setAddStopOpen(true),
   }), [handleDownloadFormat, togglePrint]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
-
-  /* --- Fix 5: Trip change without full page reload --- */
-  const handleTripChange = useCallback((tripId: string) => {
-    // scrollDayRef 在 scroll tracking 內作為 dedup guard，跨行程沒 reset 會讓
-    // 新行程載入後若首日 dayNum 相同就不觸發 switchDay，造成 hash 殘留舊值。
-    scrollDayRef.current = 0;
-    navigate(`/trip/${tripId}${window.location.search}`, { replace: true });
-    lsSet(LS_KEY_TRIP_PREF, tripId);
-    setActiveSheet(null);
-    setResolveKey((k) => k + 1);
-  }, [navigate]);
 
   /* --- Early returns (#13: use hoisted static views) --- */
   if (resolveState.status === 'unpublished') return UNPUBLISHED_VIEW;
@@ -689,71 +649,11 @@ function TripPageInner(
     <div className="ocean-shell">
       <style>{SCOPED_STYLES}</style>
 
-      {/* Topbar only renders in standalone (route) mode. When embedded inside
-        * TripsListPage, the host provides the chrome — render only the inner
-        * timeline + day nav so it matches mobile layout exactly. */}
-      {!noShell && (
-        <TitleBar
-          id="stickyNav"
-          className="sticky-nav"
-          title={trip?.title || trip?.name || '行程詳情'}
-          back={() => navigate('/trips')}
-          backLabel="返回行程列表"
-          actions={
-            <>
-              <button
-                type="button"
-                className="tp-titlebar-action"
-                onClick={() => setAddStopOpen(true)}
-                aria-label={`在 Day ${currentDayNum || 1} 加景點`}
-                title="加入景點"
-                data-testid="trip-add-stop-trigger"
-              >
-                <Icon name="plus" />
-                <span className="tp-titlebar-action-label">加景點</span>
-              </button>
-              <button
-                type="button"
-                className="tp-titlebar-action"
-                data-compact-hidden="true"
-                onClick={() => setActiveSheet('suggestions')}
-                aria-label="開啟 AI 建議"
-                title="AI 建議"
-              >
-                <Icon name="lightbulb" />
-                <span className="tp-titlebar-action-label">建議</span>
-              </button>
-              <button
-                type="button"
-                className="tp-titlebar-action"
-                data-compact-hidden="true"
-                onClick={() => setActiveSheet('collab')}
-                aria-label="開啟共編設定"
-                title="共編"
-              >
-                <Icon name="group" />
-                <span className="tp-titlebar-action-label">共編</span>
-              </button>
-              <button
-                type="button"
-                className="tp-titlebar-action"
-                data-compact-hidden="true"
-                onClick={() => { void handleDownloadFormat('pdf'); }}
-                aria-label="下載行程"
-                title="下載"
-              >
-                <Icon name="download" />
-                <span className="tp-titlebar-action-label">下載</span>
-              </button>
-              <OverflowMenu
-                onSheet={handlePanelItem}
-                onDownload={handleDownloadFormat}
-                isOnline={isOnline}
-              />
-            </>
-          }
-        />
-      )}
+      {/* v2.17.17:TripPage 永遠透過 TripsListPage embedded mode 渲染(noShell=true)
+       * router /trip/:id index 走 TripIndexRedirect → /trips?selected=:id。
+       * 既有 standalone TitleBar 區塊整批移除(連同 OverflowMenu 與 6 個 dead
+       * sheet entries:suggestions / today-route / flights / checklist /
+       * backup / emergency)。共編入口由 TripsListPage 的 EmbeddedActionMenu 提供。 */}
 
       <ToastContainer />
 
@@ -815,26 +715,15 @@ function TripPageInner(
         )}
       </main>
 
+      {/* v2.17.17:活著的 sheet 只剩 collab(共編設定)— 由 EmbeddedActionMenu
+       * onCollab callback OR `?sheet=collab` URL deeplink 觸發 setActiveSheet('collab')。
+       * 其餘 8 個 sheet keys 在 v2.17.17 整批移除(無 UI 入口)。 */}
       <InfoSheet
-        open={!!activeSheet}
-        title={activeSheet ? (SHEET_TITLES[activeSheet] || '') : ''}
+        open={activeSheet === 'collab'}
+        title="共編設定"
         onClose={handleSheetClose}
       >
-        <TripSheetContent
-          activeSheet={activeSheet}
-          docs={docs}
-          currentDay={currentDay}
-          sheetTrips={sheetTrips}
-          sheetTripsLoading={sheetTripsLoading}
-          activeTripId={activeTripId}
-          onTripChange={handleTripChange}
-          colorMode={colorMode}
-          setColorMode={setColorMode}
-          onOpenSheet={setActiveSheet}
-          onPrint={togglePrint}
-          onDownload={handleDownloadFormat}
-          isOnline={isOnline}
-        />
+        {trip ? <CollabSheet tripId={trip.id} /> : null}
       </InfoSheet>
 
       {/* Section 3：trip-level「+ 加景點」 modal — 帶 currentDayNum，user 完成
