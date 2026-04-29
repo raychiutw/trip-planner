@@ -317,14 +317,15 @@ const SCOPED_STYLES = `
 .tp-chat-msg-row.is-user { align-self: flex-end; max-width: min(680px, 85%); flex-direction: row-reverse; }
 .tp-chat-msg-row .tp-chat-msg { max-width: 100%; }
 .tp-chat-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
+  width: 40px; height: 40px; border-radius: 50%;
   display: grid; place-items: center;
-  font-size: var(--font-size-caption2); font-weight: 700;
+  font-size: var(--font-size-footnote); font-weight: 700;
   flex-shrink: 0;
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-deep);
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
 }
-.tp-chat-avatar.is-ai { background: var(--color-accent); color: var(--color-accent-foreground); }
+.tp-chat-avatar.is-ai { background: var(--color-foreground); color: var(--color-accent-foreground); }
+[data-theme="dark"] .tp-chat-avatar.is-ai { background: #0F0B08; }
 /* Section 4.8: day-divider header — center 對齊 + horizontal hairline */
 .tp-chat-day-divider {
   display: flex; align-items: center; gap: 12px;
