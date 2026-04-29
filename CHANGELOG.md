@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.13] - 2026-04-29
+
+**Map cluster 全拆 + mockup S20 FAB 對齊 prod**:User 拍板「地圖不要聚合」。所有 OceanMap entry 永遠單獨顯示 pin,不再 cluster 成數字 bubble。
+
+### Removed
+
+- **`OceanMap` cluster path 整段刪除**(`src/components/trip/OceanMap.tsx`):
+  - 移除 `Supercluster` import + `supercluster` package + `@types/supercluster`(~10 KB precache 縮水)。
+  - 移除 `clusterIcon()` divIcon helper。
+  - 移除 `cluster?` prop + `autoCluster` 計算(原 default:`mode === 'overview' && pins.length > 10`)。
+  - 移除 cluster path useEffect(SC index build / `getClusters` / cluster click → `getClusterExpansionZoom` zoom-in 整段)。
+  - 移除 `focusStateRef` + `clusterRefreshRef` cluster path internal state。
+  - 移除 `.ocean-map-cluster` CSS。
+- **Cluster prop pass 全清**:`TripMapRail` / `MapPage` / `GlobalMapPage` 三處 `cluster={false}` / `cluster={undefined}` 全部拔掉(默認既非 cluster)。
+- **Stale doc comment**:`GlobalMapPage` `* 點 cluster → supercluster.getClusterExpansionZoom 自動 zoom 展開` + z-index hint。
+
+### Changed
+
+- **Mockup S20 map FAB 對齊 prod `MapFabs`**(`docs/design-sessions/terracotta-preview-v2.html`):
+  - `.tp-map-fab` size 48x48 → 44x44(對齊 prod CSS),border 1px solid → 0,gap 8px → 10px,加 `.is-active` accent variant。
+  - 4 處 frame(desktop overview / compact overview / loading / empty)統一 right-bottom FAB stack:**圖層**(`i-layers`,aria-label「切換地圖圖層」)+ **我的位置**(`i-location-pin`,aria-label「定位到我的位置」)。
+  - Compact frame 之前只有「定位」單顆,補上「圖層」對齊 prod 邏輯(prod 兩個 viewport 都顯示)。
+  - aria-label 從「圖層」/「定位」 → 對齊 prod 的「切換地圖圖層」/「定位到我的位置」。
+  - 加 `i-location-pin` SVG symbol(對齊 prod `Icon.tsx` line 54 path)。
+
+### Tests
+
+- `trip-map-rail-ocean-map-props.test.tsx`:`expect(props.cluster).toBe(false)` → `expect(props).not.toHaveProperty('cluster')`(回應 prop 已拔)。
+
 ## [2.17.12] - 2026-04-29
 
 **TitleBar 規範統一 + ocean legacy purge**:把 trip-picker / overflow trigger / TripPage actions 全部收進 shared `.tp-titlebar-*` family,刪掉 V1 ocean legacy CSS 跟 unused components。

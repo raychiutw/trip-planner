@@ -16,7 +16,6 @@
  *   - Per-day polyline 按 dayColor(N)，hotel sortOrder=-1 入線（DESIGN.md
  *     「地圖 Polyline 規格」）。
  *   - 點 marker → setSelected → 右側 sheet 顯示 POI detail，flyTo 該 pin。
- *   - 點 cluster → supercluster.getClusterExpansionZoom 自動 zoom 展開（OceanMap 內處理）。
  *   - 透過 onMapReady 拿 L.Map 實例，給「全覽 / 我的位置」pill button 用。
  *
  * Sheet（mockup-map-v2 對齊）：
@@ -47,7 +46,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import Icon from '../components/shared/Icon';
 import type { Day } from '../types/trip';
 
-// OceanMap is heavy (leaflet + supercluster). Lazy-load so /map's first paint
+// OceanMap is heavy (leaflet bundle). Lazy-load so /map's first paint
 // (header + sheet skeleton) lands before the leaflet bundle finishes parsing.
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -88,9 +87,7 @@ const SCOPED_STYLES = `
 }
 
 /* Header — trip switcher.
- * z-index 1000 確保壓過 leaflet marker pane (z-index 600+) 跟 popup pane (700+)。
- * 之前 z-index 20 被 leaflet cluster icon (drawn inside map container 但
- * 因 stacking context 計算出更高) 壓在下面。 */
+ * z-index 1000 確保壓過 leaflet marker pane (z-index 600+) 跟 popup pane (700+)。 */
 .tp-global-map-header {
   position: absolute; top: 16px; left: 16px;
   z-index: 1000;
@@ -919,9 +916,6 @@ export default function GlobalMapPage() {
                   zoomControlPosition="topright"
                   dark={isDark}
                   className="ocean-map-container"
-                  /* QA 2026-04-26 PR-I 更正：完全停用 cluster — user feedback「移除
-                   * cluster」。每個 stop 直接顯示為個別 pin，不再 cluster 成數字 bubble。 */
-                  cluster={false}
                 />
               </Suspense>
             )}

@@ -9,7 +9,7 @@
  *
  * The actual map rendering (tiles, pins, per-day colored polylines along real
  * roads via Mapbox Directions) is delegated to OceanMap so desktop rail + mobile
- * MapPage share the same polyline engine, cluster logic, and font stack.
+ * MapPage share the same polyline engine and font stack.
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -122,7 +122,6 @@ export default function TripMapRail({ pins, tripId, pinsByDay, dark = false }: T
           pins={pins}
           mode="overview"
           pinsByDay={pinsByDay}
-          cluster={false}
           routes={true}
           fillParent={true}
           fitOnce={true}

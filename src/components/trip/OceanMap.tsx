@@ -3,7 +3,7 @@
  *
  * One component serves both entry points:
  *   - mode='detail'   → single focus pin, 280px tall
- *   - mode='overview' → all pins + polyline + auto cluster when >10 stops
+ *   - mode='overview' → all pins + polyline (no clustering)
  *
  * Numbered accent-color pin (matches rail dot). Polylines fetch lazily via
  * /api/route proxy (Mapbox), falls back to Haversine straight line on failure.
@@ -14,7 +14,6 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
-import Supercluster from 'supercluster';
 import { useLeafletMap } from '../../hooks/useLeafletMap';
 import { useRoute, type Coord } from '../../hooks/useRoute';
 import { dayColor, dayPolylineStyle } from '../../lib/dayPalette';
@@ -31,8 +30,6 @@ export interface OceanMapProps {
   focusId?: number;
   /** Draw polylines between consecutive pins (default true in overview, false in detail) */
   routes?: boolean;
-  /** Auto-cluster when overview + pins.length > 10 (override via false to disable) */
-  cluster?: boolean;
   /** Fill parent container instead of using mode-default fixed heights (for fullscreen pages like /map) */
   fillParent?: boolean;
   onMarkerClick?: (pinId: number) => void;
@@ -94,15 +91,6 @@ export function markerIcon(
   });
 }
 
-function clusterIcon(count: number): L.DivIcon {
-  return L.divIcon({
-    className: 'ocean-map-pin-wrap',
-    html: `<span class="ocean-map-cluster">${count}</span>`,
-    iconSize: [40, 40],
-    iconAnchor: [20, 20],
-  });
-}
-
 /* ===== Inline styles (scoped to this component) ===== */
 
 const SCOPED_STYLES = `
@@ -130,20 +118,6 @@ const SCOPED_STYLES = `
 .ocean-map-pin[data-state="past"] {
   border-color: #E0E0E0;
   color: #C1C1C1;
-}
-.ocean-map-cluster {
-  /* QA 2026-04-26 PR-I：cluster 在 GlobalMapPage 已 disable (cluster={false})，
-   * 此 styling 留給其他 pages 之後若再開 cluster 用 — 改 white bg +
-   * line-strong border 跟 .ocean-map-pin 視覺一致。 */
-  display: grid; place-items: center;
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: var(--color-background, #fff);
-  border: 1.5px solid var(--color-line-strong, #C8B89F);
-  color: var(--color-foreground, #222);
-  font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums;
-  font-family: var(--font-family-system, 'Inter', sans-serif);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 .ocean-map-container {
   width: 100%;
@@ -303,7 +277,6 @@ const OceanMap = memo(function OceanMap({
   mode,
   focusId,
   routes,
-  cluster,
   fillParent = false,
   onMarkerClick,
   dark = false,
@@ -317,7 +290,6 @@ const OceanMap = memo(function OceanMap({
   zoomControlPosition,
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
-  const autoCluster = cluster ?? (mode === 'overview' && pins.length > 10);
 
   const { containerRef, map, fitBounds, flyTo } = useLeafletMap({
     zoomControl: mode === 'overview',
@@ -383,11 +355,11 @@ const OceanMap = memo(function OceanMap({
     return m;
   }, [pinsByDay, dayNum, pins]);
 
-  /* --- Markers (non-cluster): create once per pin-set, diff-update on focus change --- */
+  /* --- Markers: create once per pin-set, diff-update on focus change --- */
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
 
   useEffect(() => {
-    if (!map || autoCluster) return;
+    if (!map) return;
     const layer = L.layerGroup().addTo(map);
     const markers = new Map<number, L.Marker>();
     for (const pin of visiblePins) {
@@ -407,7 +379,7 @@ const OceanMap = memo(function OceanMap({
       // map set by a re-mount (Strict Mode) before this cleanup runs.
       if (markersRef.current === markers) markersRef.current = new Map();
     };
-  }, [map, visiblePins, autoCluster, onMarkerClick, pinIdToDayColor]);
+  }, [map, visiblePins, onMarkerClick, pinIdToDayColor]);
 
   // Diff-based focus update: compute which pins' icon state actually changed
   // (prev focused, new focused, past-boundary crossing) and only setIcon on those.
@@ -419,7 +391,6 @@ const OceanMap = memo(function OceanMap({
   }>({ focusedIdx: -1, markers: null });
 
   useEffect(() => {
-    if (autoCluster) return;
     const markers = markersRef.current;
     const prev = prevFocusRef.current;
     const rebuilt = prev.markers !== markers;
@@ -452,87 +423,7 @@ const OceanMap = memo(function OceanMap({
     }
 
     prevFocusRef.current = { focusId, focusedIdx, markers };
-  }, [map, onMarkerClick, visiblePins, visiblePinsById, focusId, focusedIdx, pinIndexById, autoCluster, isPastPin, pinIdToDayColor]);
-
-  /* --- Markers (cluster path): create Supercluster once, refresh on focus or viewport --- */
-  // Latest focus state for cluster refresh closure (avoids rebuilding SC index on focus change).
-  // Assigned in an effect, not during render, to keep the component render-pure.
-  const focusStateRef = useRef({ focusId, focusedIdx, isPastPin });
-  useEffect(() => {
-    focusStateRef.current = { focusId, focusedIdx, isPastPin };
-  });
-  const clusterRefreshRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    if (!map || !autoCluster) return;
-    const layer = L.layerGroup().addTo(map);
-    // QA 2026-04-26 BUG-042/043：原 radius 60 在 dense area（如沖繩本島）造
-    // 成多個 cluster bubble overlap。bump 80 + maxZoom 16，cluster 更
-    // aggressive 避免疊在一起，user zoom in 一級就拆開細節。
-    const sc = new Supercluster({ radius: 80, maxZoom: 16 });
-    sc.load(
-      visiblePins.map((pin) => ({
-        type: 'Feature' as const,
-        geometry: { type: 'Point' as const, coordinates: [pin.lng, pin.lat] as [number, number] },
-        properties: { pin },
-      })),
-    );
-    const refresh = () => {
-      const { focusId: curFocus, isPastPin: curIsPast } = focusStateRef.current;
-      layer.clearLayers();
-      const bounds = map.getBounds();
-      const bbox: [number, number, number, number] = [
-        bounds.getWest(),
-        bounds.getSouth(),
-        bounds.getEast(),
-        bounds.getNorth(),
-      ];
-      const zoom = Math.floor(map.getZoom());
-      const clusters = sc.getClusters(bbox, zoom);
-      for (const c of clusters) {
-        const [lng, lat] = c.geometry.coordinates as [number, number];
-        const props = c.properties as { cluster?: boolean; cluster_id?: number; point_count?: number; pin?: MapPin };
-        if (props.cluster) {
-          const count = props.point_count ?? 0;
-          const clusterId = props.cluster_id;
-          // 點 cluster → zoom 到 supercluster 計算的 expansion zoom，使其展開成個別
-          // 子 cluster / pin。沒 expansion zoom（已經在 maxZoom）就 +2 級當保險。
-          const m = L.marker([lat, lng], { icon: clusterIcon(count), keyboard: true });
-          m.on('click', () => {
-            const target =
-              clusterId != null
-                ? Math.min(sc.getClusterExpansionZoom(clusterId), 18)
-                : Math.min(map.getZoom() + 2, 18);
-            map.setView([lat, lng], target, { animate: true });
-          });
-          m.addTo(layer);
-        } else if (props.pin) {
-          const pin = props.pin;
-          const m = L.marker([pin.lat, pin.lng], {
-            icon: markerIcon(pin, pin.id === curFocus, curIsPast(pin.id), pinIdToDayColor.get(pin.id)),
-            keyboard: true,
-            alt: `第 ${pin.index} 站：${pin.title}`,
-          });
-          if (onMarkerClick) m.on('click', () => onMarkerClick(pin.id));
-          m.addTo(layer);
-        }
-      }
-    };
-    clusterRefreshRef.current = refresh;
-    refresh();
-    map.on('moveend zoomend', refresh);
-    return () => {
-      map.off('moveend zoomend', refresh);
-      layer.remove();
-      clusterRefreshRef.current = null;
-    };
-  }, [map, visiblePins, autoCluster, onMarkerClick, pinIdToDayColor]);
-
-  // Re-render cluster markers when focus changes — no SC index rebuild.
-  useEffect(() => {
-    if (!autoCluster) return;
-    clusterRefreshRef.current?.();
-  }, [autoCluster, focusId, focusedIdx]);
+  }, [map, onMarkerClick, visiblePins, visiblePinsById, focusId, focusedIdx, pinIndexById, isPastPin, pinIdToDayColor]);
 
   /* --- Viewport fit / focus follow --- */
   const fitDoneRef = useRef(false);

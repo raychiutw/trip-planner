@@ -4845,36 +4845,41 @@
     margin: 0;
     line-height: 1.5;
   }
+  /* Map FAB stack — production `MapFabs` 對齊規範:
+   * 右下角 44x44 round button(no border, shadow-md),圖層 + 我的位置 兩顆。
+   * 對齊 src/components/trip/MapFabs.tsx CSS。 */
   .tp-map-fabs {
     position: absolute;
     bottom: 16px;
     right: 16px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    z-index: 5;
+    gap: 10px;
+    z-index: 400;
   }
   .tp-map-fab {
-    width: 48px;
-    height: 48px;
-    border-radius: 999px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 0;
     background: var(--tp-background);
-    border: 1px solid var(--tp-border);
     color: var(--tp-foreground);
     display: grid;
     place-items: center;
     cursor: pointer;
     box-shadow: var(--tp-shadow-md);
     font: inherit;
-    transition: border-color 150ms, color 150ms;
+    transition: background 120ms, transform 120ms;
   }
   .tp-map-fab:hover {
-    border-color: var(--tp-accent);
-    color: var(--tp-accent);
+    background: var(--tp-hover, color-mix(in srgb, var(--tp-foreground) 6%, transparent));
+    transform: translateY(-1px);
   }
-  .tp-map-fab .tp-icon {
-    font-size: 18px;
+  .tp-map-fab.is-active {
+    background: var(--tp-accent);
+    color: var(--tp-on-accent);
   }
+  .tp-map-fab .tp-icon { width: 20px; height: 20px; }
   /* === Map page — src-aligned day tabs + entry cards (bottom strip) === */
   .tp-map-day-tabs {
     flex-shrink: 0;
@@ -5081,6 +5086,7 @@
     <symbol id="i-account" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
     <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/></symbol>
     <symbol id="i-swap-horiz" viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z" fill="currentColor"/></symbol>
+    <symbol id="i-location-pin" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z" fill="currentColor"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M3 3h7M3 3v7M21 3h-7M21 3v7M3 21h7M3 21v-7M21 21h-7M21 21v-7"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
     <symbol id="i-move" viewBox="0 0 24 24"><path d="M7 3 3 7l4 4M17 3l4 4-4 4M7 21l-4-4 4-4M17 21l4-4-4-4M3 7h18M21 17H3"/></symbol>
@@ -7549,8 +7555,8 @@
       <div class="tp-map-marker" style="top: 12%; left: 80%; border-color: #059669; color: #059669;">1</div>
       <div class="tp-map-marker" style="top: 14%; left: 56%; border-color: #C026D3; color: #C026D3;">1</div>
       <div class="tp-map-fabs">
-        <button class="tp-map-fab" type="button" aria-label="圖層"><span class="tp-icon"><svg><use href="#i-layers"/></svg></span></button>
-        <button class="tp-map-fab" type="button" aria-label="定位"><span class="tp-icon"><svg><use href="#i-target"/></svg></span></button>
+        <button class="tp-map-fab" type="button" aria-label="切換地圖圖層"><span class="tp-icon"><svg><use href="#i-layers"/></svg></span></button>
+        <button class="tp-map-fab" type="button" aria-label="定位到我的位置"><span class="tp-icon"><svg><use href="#i-location-pin"/></svg></span></button>
       </div>
       <!-- 2026-04-29 mockup parity:對齊 production Leaflet 預設 zoom +/- 控制
            (左上垂直 stack)。Touch device 用 pinch zoom,但保留 button 提供
@@ -7718,7 +7724,8 @@
       <div class="tp-map-marker is-active" style="top: 34%; left: 84%;">1</div>
       <div class="tp-map-marker" style="top: 16%; left: 56%; border-color: #7C3AED; color: #7C3AED;">2</div>
       <div class="tp-map-fabs">
-        <button class="tp-map-fab" type="button" aria-label="定位"><span class="tp-icon"><svg><use href="#i-target"/></svg></span></button>
+        <button class="tp-map-fab" type="button" aria-label="切換地圖圖層"><span class="tp-icon"><svg><use href="#i-layers"/></svg></span></button>
+        <button class="tp-map-fab" type="button" aria-label="定位到我的位置"><span class="tp-icon"><svg><use href="#i-location-pin"/></svg></span></button>
       </div>
     </div>
     <nav class="tp-map-day-tabs" role="tablist" aria-label="行程日期">
