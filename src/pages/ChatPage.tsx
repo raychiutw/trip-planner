@@ -305,6 +305,20 @@ const SCOPED_STYLES = `
   border-bottom-left-radius: 4px;
   white-space: normal;
 }
+/* 2026-04-29:其他 collaborator 訊息(LINE 群組對方 style)— bubble bg
+ * 跟 AI 接近 secondary 但稍區隔(border-color 用 muted hint)。 */
+.tp-chat-msg-other-user {
+  align-self: flex-start;
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  color: var(--color-foreground);
+  border-bottom-left-radius: 4px;
+  white-space: normal;
+}
+.tp-chat-msg-time-other-user {
+  align-self: flex-start;
+  margin-left: calc(40px + 8px);
+}
 /* Bubble meta：每則訊息下方時間 + AI agent 標籤(F-004,2026-04-29 對齊 mockup)
  * — user 對齊 right、assistant 對齊 left。font-size caption2 + muted color +
  * weight 500 + margin-top 4。 */
@@ -323,6 +337,27 @@ const SCOPED_STYLES = `
 .tp-chat-msg-row { display: flex; gap: 8px; align-items: flex-end; }
 .tp-chat-msg-row.is-assistant { align-self: flex-start; max-width: min(680px, 85%); }
 .tp-chat-msg-row.is-user { align-self: flex-end; max-width: min(680px, 85%); flex-direction: row-reverse; }
+/* 2026-04-29:multi-user trip 共編 — 其他 collaborator 訊息照 LINE 群組規則
+ * 顯示左側 + avatar + sender 名上方。bubble visual 跟 AI 接近(secondary bg)
+ * 但 sender 名突出區隔。 */
+.tp-chat-msg-row.is-other-user { align-self: flex-start; max-width: min(680px, 85%); }
+.tp-chat-msg-bubble-wrap { display: flex; flex-direction: column; min-width: 0; }
+.tp-chat-msg-sender-name {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  margin: 0 0 3px 4px;
+}
+.tp-chat-avatar.is-other-user {
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+  border: 1px solid var(--color-border);
+}
+[data-theme="dark"] .tp-chat-avatar.is-other-user {
+  background: var(--color-tertiary);
+  border-color: var(--color-border);
+}
 .tp-chat-msg-row .tp-chat-msg { max-width: 100%; }
 .tp-chat-avatar {
   width: 40px; height: 40px; border-radius: 50%;
@@ -799,49 +834,69 @@ export default function ChatPage() {
             );
           }
           const isAssistant = m.role === 'assistant';
+          /* 2026-04-29:LINE 群組規則 — user message 分自己 vs 其他 collaborator。
+           * 自己:右側 accent bubble(現狀)。
+           * 其他人:左側 + avatar(首字)+ sender 名在 bubble 上方(LINE 對方 style)。
+           * AI:左側 + AI avatar(現狀)。
+           *
+           * isOtherUser:user role 且 submittedBy 不等於當前登入者 email。
+           * Legacy 訊息沒 submittedBy 視為自己(避免老資料全變對方 view)。 */
+          const senderLocalPart = m.submittedBy?.split('@')[0];
+          const isOtherUser = !isAssistant && !!m.submittedBy && m.submittedBy !== user?.email;
+          const senderDisplay = senderLocalPart || user?.displayName || user?.email?.split('@')[0] || '我';
+          const senderInitial = (senderLocalPart || senderDisplay || '?').charAt(0).toUpperCase();
+          const rowClass = isAssistant ? 'is-assistant' : isOtherUser ? 'is-other-user' : 'is-user';
           return (
             <Fragment key={m.id}>
-              <div className={`tp-chat-msg-row ${isAssistant ? 'is-assistant' : 'is-user'}`}>
+              <div className={`tp-chat-msg-row ${rowClass}`}>
                 {isAssistant && (
                   <div className="tp-chat-avatar is-ai" aria-hidden="true" data-testid="chat-avatar-ai">AI</div>
                 )}
-                <div
-                  className={`tp-chat-msg ${isAssistant ? 'tp-chat-msg-assistant' : 'tp-chat-msg-user'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
-                  data-testid={`chat-msg-${m.role}`}
-                >
-                  {m.pendingRequestId ? (
-                    <span className="tp-chat-typing" aria-label="AI 思考中">
-                      <span /><span /><span />
-                    </span>
-                  ) : isGarbledMessage(m.text) ? (
-                    /* F7 design-review: detect mojibake → render placeholder
-                     * 而不是 raw bytes，避免 trust signal 受損。 */
-                    <span className="tp-chat-msg-garbled" aria-label="訊息含編碼錯誤" title="此訊息含編碼錯誤無法顯示">
-                      訊息含編碼錯誤，無法顯示
-                    </span>
-                  ) : m.markdown ? (
-                    <MarkdownText text={m.text} as="div" />
-                  ) : (
-                    /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，
-                     * 配合 .tp-chat-msg 的 white-space: pre-wrap 顯示換行；
-                     * 對真的就是 backslash-n 字面的 corner case 不影響 visual。 */
-                    m.text.replace(/\\n/g, '\n')
+                {isOtherUser && (
+                  <div className="tp-chat-avatar is-other-user" aria-hidden="true" data-testid={`chat-avatar-other-${m.id}`}>
+                    {senderInitial}
+                  </div>
+                )}
+                <div className="tp-chat-msg-bubble-wrap">
+                  {isOtherUser && (
+                    <div className="tp-chat-msg-sender-name" data-testid={`chat-sender-${m.id}`}>{senderDisplay}</div>
                   )}
+                  <div
+                    className={`tp-chat-msg ${isAssistant ? 'tp-chat-msg-assistant' : isOtherUser ? 'tp-chat-msg-other-user' : 'tp-chat-msg-user'} ${m.pendingRequestId ? 'is-pending' : ''} ${m.failed ? 'is-failed' : ''}`}
+                    data-testid={`chat-msg-${isOtherUser ? 'other-user' : m.role}`}
+                  >
+                    {m.pendingRequestId ? (
+                      <span className="tp-chat-typing" aria-label="AI 思考中">
+                        <span /><span /><span />
+                      </span>
+                    ) : isGarbledMessage(m.text) ? (
+                      /* F7 design-review: detect mojibake → render placeholder
+                       * 而不是 raw bytes，避免 trust signal 受損。 */
+                      <span className="tp-chat-msg-garbled" aria-label="訊息含編碼錯誤" title="此訊息含編碼錯誤無法顯示">
+                        訊息含編碼錯誤，無法顯示
+                      </span>
+                    ) : m.markdown ? (
+                      <MarkdownText text={m.text} as="div" />
+                    ) : (
+                      /* F8 design-review: 把 user 打的 `\n` literal 轉真正換行，
+                       * 配合 .tp-chat-msg 的 white-space: pre-wrap 顯示換行；
+                       * 對真的就是 backslash-n 字面的 corner case 不影響 visual。 */
+                      m.text.replace(/\\n/g, '\n')
+                    )}
+                  </div>
                 </div>
               </div>
               {m.createdAt && !m.pendingRequestId && (
                 <time
-                  className={`tp-chat-msg-time tp-chat-msg-time-${m.role}`}
+                  className={`tp-chat-msg-time tp-chat-msg-time-${isOtherUser ? 'other-user' : m.role}`}
                   dateTime={m.createdAt}
                   data-testid={`chat-msg-time-${m.id}`}
                 >
                   {isAssistant
                     ? `Tripline AI · ${formatChatTime(m.createdAt)}`
-                    /* 2026-04-29:multi-user trip user message sender 從 m.submittedBy
-                     * (email)取 local-part 當 displayName,而不是固定當前登入者
-                     * displayName(歷史訊息可能是其他 collaborator 送)。fallback 順序:
-                     *   m.submittedBy local-part → 當前登入者 displayName / email → 「我」 */
-                    : `${m.submittedBy?.split('@')[0] || user?.displayName || user?.email?.split('@')[0] || '我'} · ${formatChatTime(m.createdAt)}`}
+                    : isOtherUser
+                      ? `${senderDisplay} · ${formatChatTime(m.createdAt)}`
+                      : `${senderDisplay} · ${formatChatTime(m.createdAt)}`}
                 </time>
               )}
             </Fragment>
