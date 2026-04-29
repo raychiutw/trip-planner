@@ -404,52 +404,9 @@ body.dark {
     body.dark .trip-btn:hover { background: var(--color-tertiary); }
 }
 
-/* ===== Ocean Shell — Topbar + Page + Body grid ===== */
+/* ===== Ocean Shell — Page wrapper used by TripPage ===== */
 @layer base {
     .ocean-shell { min-height: 100dvh; background: var(--color-background); color: var(--color-foreground); }
-
-    /* Sticky topbar（Ocean 設計稿） */
-    .ocean-topbar {
-        position: sticky; top: 0; z-index: var(--z-sticky-nav);
-        background: var(--color-glass-nav);
-        backdrop-filter: blur(var(--blur-glass)); -webkit-backdrop-filter: blur(var(--blur-glass));
-        border-bottom: 1px solid var(--color-border);
-        padding: 12px 24px;
-        display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    }
-    .ocean-topbar-left, .ocean-topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; min-width: 0; }
-    .ocean-topbar-right { gap: 6px; }
-    .ocean-brand-label { color: var(--color-muted); font-weight: 500; font-size: 13px; }
-    .ocean-tb-divider { width: 1px; height: 22px; background: var(--color-border); flex-shrink: 0; margin: 0 4px; }
-
-    .ocean-nav-tabs { display: flex; gap: 2px; flex-shrink: 0; }
-    .ocean-nav-tabs button {
-        padding: 7px 12px; border-radius: 6px; border: none; background: transparent;
-        font: inherit; font-size: 13px; font-weight: 600;
-        cursor: pointer; color: var(--color-muted);
-        white-space: nowrap; flex-shrink: 0;
-        display: inline-flex; align-items: center; gap: 5px;
-    }
-    .ocean-nav-tabs button:hover:not(.active) { color: var(--color-foreground); background: var(--color-tertiary); }
-    .ocean-nav-tabs button.active { background: var(--color-accent); color: #fff; }
-
-    .ocean-tb-btn {
-        padding: 8px 12px; border-radius: 6px;
-        border: 1px solid var(--color-border); background: var(--color-background);
-        cursor: pointer; font: inherit; font-size: 13px;
-        color: var(--color-foreground);
-        display: inline-flex; align-items: center; gap: 6px;
-        white-space: nowrap; flex-shrink: 0;
-    }
-    .ocean-tb-btn:hover { border-color: var(--color-accent); }
-    .ocean-tb-btn.ocean-tb-ai {
-        background: var(--color-accent); color: #fff;
-        border-color: var(--color-accent);
-        padding: 8px 16px; font-weight: 600; position: relative; letter-spacing: 0.02em;
-    }
-    .ocean-tb-btn.ocean-tb-ai:hover { filter: brightness(var(--hover-brightness)); }
-    .ocean-tb-btn.ocean-tb-ai:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    .ocean-tb-btn.ocean-tb-ai:active { filter: brightness(0.85); }
 
     /* Page */
     .ocean-page { padding: 28px 40px 48px; max-width: 1440px; margin: 0 auto; }
@@ -517,65 +474,6 @@ body.dark {
     @media (min-width: 961px) {
         .ocean-hero { padding: 24px 28px; }
         .ocean-hero-title { font-size: 28px; } /* mockup .tp-detail-hero-title desktop:1870 (was 32px) */
-    }
-
-    /* Stop card (4-col grid) */
-    .ocean-stops { display: flex; flex-direction: column; gap: 10px; }
-    .ocean-stop {
-        background: var(--color-background); color: var(--color-foreground);
-        border-radius: var(--radius-md); border: 1px solid var(--color-border);
-        padding: 18px 20px;
-        display: grid; grid-template-columns: 68px 48px 1fr auto; gap: 18px; align-items: center;
-        transition: border-color var(--transition-duration-fast) var(--transition-timing-function-apple);
-    }
-    .ocean-stop:hover { border-color: var(--color-lineStrong, #C1C1C1); }
-    .ocean-stop[data-now="true"] { border-color: var(--color-accent); box-shadow: var(--shadow-md); }
-    .ocean-stop[data-past="true"] { opacity: 0.65; }
-    .ocean-stop-clickable { cursor: pointer; }
-    .ocean-stop-clickable:hover { border-color: var(--color-accent); background: var(--color-hover); }
-    .ocean-stop-clickable:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-color: var(--color-accent); }
-    .ocean-stop-chevron {
-        font-size: 22px; color: var(--color-muted);
-        transition: transform var(--transition-duration-fast) var(--transition-timing-function-apple),
-                    color var(--transition-duration-fast) var(--transition-timing-function-apple);
-    }
-    .ocean-stop-clickable:hover .ocean-stop-chevron { color: var(--color-accent); transform: translateX(3px); }
-    .ocean-stop-time { text-align: left; }
-    .ocean-stop-t { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; line-height: 1; }
-    .ocean-stop-dur { font-size: var(--font-size-eyebrow); color: var(--color-muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
-    .ocean-stop-icon {
-        width: 48px; height: 48px; border-radius: var(--radius-sm);
-        background: var(--color-background);
-        border: 1px solid #C1C1C1; color: var(--color-foreground);
-        display: grid; place-items: center;
-    }
-    .ocean-stop-icon[data-accent="true"] { color: var(--color-accent); border-color: var(--color-accent); }
-    .ocean-stop-content { min-width: 0; }
-    .ocean-stop-meta { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-    .ocean-stop-type {
-        font-size: var(--font-size-eyebrow); font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
-        color: var(--color-muted);
-    }
-    .ocean-stop-type[data-accent="true"] { color: var(--color-accent); }
-    .ocean-stop-name { font-size: 17px; font-weight: 700; letter-spacing: -0.005em; }
-    .ocean-stop-rating { font-size: 12px; color: var(--color-muted); }
-    .ocean-stop-note { font-size: 13px; color: var(--color-muted); margin-top: 6px; line-height: 1.55; }
-    .ocean-stop-actions { display: flex; gap: 6px; flex-shrink: 0; }
-    .ocean-round-btn {
-        width: 32px; height: 32px; border-radius: var(--radius-sm);
-        border: 1px solid var(--color-border);
-        background: var(--color-background); color: var(--color-muted);
-        display: grid; place-items: center; cursor: pointer;
-        flex-shrink: 0; font: inherit;
-    }
-    .ocean-round-btn:hover { border-color: var(--color-accent); color: var(--color-accent); }
-
-    /* Travel connector between stops */
-    .ocean-travel {
-        display: flex; align-items: center; gap: 10px;
-        padding: 8px 16px; margin: 0 0 0 34px;
-        font-size: 12px; color: var(--color-muted);
-        border-left: 2px dashed var(--color-border);
     }
 
     /* Flight card (mockup FlightInfo) */
@@ -739,8 +637,8 @@ body.dark {
      * that's .ocean-hero (DaySection.tsx renders <div class="ocean-hero" id="day{N}"…>).
      * Putting it on .ocean-day (the outer section) silently no-ops.
      *
-     * Value covers stacked sticky chrome: ocean-topbar (~64) + day-strip
-     * (~80) + breathing room (~16). */
+     * Value covers stacked sticky chrome: TitleBar (64) + day-strip (~80)
+     * + breathing room (~16) + headroom = 200px. */
     .ocean-day > .ocean-hero { scroll-margin-top: 200px; }
     .ocean-day + .ocean-day { margin-top: 24px; }
 
@@ -764,11 +662,6 @@ body.dark {
     @media (max-width: 1200px) {
         .ocean-page { padding: 24px 28px 40px; }
     }
-    @media (max-width: 1100px) {
-        .ocean-topbar { padding: 10px 16px; overflow-x: auto; scrollbar-width: none; }
-        .ocean-topbar::-webkit-scrollbar { display: none; }
-        .ocean-brand-label { display: none; }
-    }
     @media (max-width: 960px) {
         .ocean-hero-title { font-size: 24px; } /* mockup .tp-detail-hero-title compact:1877 (was 28px) */
     }
@@ -778,20 +671,9 @@ body.dark {
      * viewport ≥768px stays on desktop type scale.
      */
     @media (max-width: 760px) {
-        /* Mobile: topbar has no visible content (brand label hidden ≥1100px,
-         * all right-side buttons hidden, AI 編輯 link removed). Hide the
-         * entire bar so day-strip becomes the top sticky element with no
-         * empty cream band + line above it. */
-        .ocean-topbar { display: none; }
-        .ocean-nav-tabs { display: none; }
-        .ocean-tb-divider { display: none; }
-        .ocean-overflow-wrap { display: none; }
         .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 22px 20px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        .ocean-stop { grid-template-columns: 56px 44px 1fr; padding: 14px; gap: 12px; }
-        .ocean-stop-actions { grid-column: 1 / -1; justify-content: flex-end; }
-        .ocean-stop-icon { width: 44px; height: 44px; }
         /* Mobile sticky day-strip is the only top chrome (topbar hidden).
          * Pill row 60-80 high + breathing 16-20 → land day title clear. */
         .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
@@ -825,9 +707,6 @@ body.dark {
         .ocean-bottom-nav-btn.is-active span { font-weight: 700; }
         .ocean-bottom-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     }
-    body.dark .ocean-tb-btn.ocean-tb-ai { background: var(--color-accent); color: #0D1B2A; border-color: var(--color-accent); }
-    body.dark .ocean-stop[data-past="true"] { opacity: 0.5; }
-
     /* Overflow "更多" menu — portalled to body, positioned via JS (position: fixed) */
     .ocean-overflow-menu {
         position: fixed;
@@ -852,7 +731,6 @@ body.dark {
     .ocean-overflow-divider { height: 1px; background: var(--color-border); margin: 4px 0; }
 
     /* Print mode */
-    body.print-mode .ocean-topbar { display: none; }
     body.print-mode .ocean-hero { background: var(--color-background) !important; color: var(--color-foreground) !important; border: 1px solid var(--color-border); }
     body.print-mode .ocean-hero-title { color: var(--color-foreground); }
     body.print-mode .ocean-hero-chip, body.print-mode .ocean-hero-chip-muted { border-color: var(--color-border); color: var(--color-muted); }
@@ -1488,6 +1366,98 @@ body.dark {
   }
   .tp-titlebar-action-label { display: none; }
 }
+
+/* Icon-only TitleBar button — for menu triggers (e.g. OverflowMenu ⋯).
+ * 跟 .tp-titlebar-action 同 family 但永遠 icon-only,沒 border / label。
+ * Hover 同 .tp-titlebar-back 風格(transparent → hover bg)。 */
+.tp-titlebar-icon-btn {
+  width: var(--spacing-tap-min);
+  height: var(--spacing-tap-min);
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-foreground);
+  transition: background-color 150ms, color 150ms;
+}
+.tp-titlebar-icon-btn:hover { background: var(--color-hover); color: var(--color-accent); }
+.tp-titlebar-icon-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-icon-btn .svg-icon { width: 20px; height: 20px; }
+
+/* TitleBar trip-picker — shared by ChatPage / MapPage.
+ * 規範:桌機(>=761) icon + trip name + chevron;手機(<=760) icon-only。 */
+.tp-titlebar-trip-menu { position: relative; }
+.tp-titlebar-trip-picker {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: var(--spacing-tap-min);
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  max-width: 240px;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+.tp-titlebar-trip-picker:hover {
+  background: var(--color-hover);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.tp-titlebar-trip-picker:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-titlebar-trip-picker .svg-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.tp-titlebar-trip-picker-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.tp-titlebar-trip-picker-chevron {
+  font-size: var(--font-size-eyebrow);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .tp-titlebar-trip-picker {
+    width: var(--spacing-tap-min);
+    padding: 0;
+    border: none;
+    justify-content: center;
+    max-width: none;
+  }
+  .tp-titlebar-trip-picker-name,
+  .tp-titlebar-trip-picker-chevron { display: none; }
+}
+.tp-titlebar-trip-dropdown {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  min-width: 240px;
+  max-height: 360px; overflow-y: auto;
+  z-index: 20;
+  padding: 4px;
+}
+.tp-titlebar-trip-row {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: none; background: transparent; text-align: left;
+  font: inherit; cursor: pointer; width: 100%;
+  color: var(--color-foreground);
+}
+.tp-titlebar-trip-row:hover { background: var(--color-hover); }
+.tp-titlebar-trip-row.is-active { background: var(--color-accent-subtle); color: var(--color-accent); }
+.tp-titlebar-trip-row-title { font-weight: 700; font-size: var(--font-size-callout); }
+.tp-titlebar-trip-row-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
 /* mockup-parity-qa-fixes 2026-04-29: page-title compact override
  * mockup .tp-page-titlebar-title compact:4088 規範 page-title 24px on <760px viewport. */

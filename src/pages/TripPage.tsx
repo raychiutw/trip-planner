@@ -76,75 +76,14 @@ const SCOPED_STYLES = `
 
 .trip-content { min-width: 0; }
 
-.tp-trip-titlebar-action {
-  height: var(--spacing-tap-min, 44px);
-  min-width: var(--spacing-tap-min, 44px);
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--color-foreground);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font: inherit;
-  font-size: var(--font-size-footnote);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 120ms, color 120ms;
-}
-.tp-trip-titlebar-action:hover {
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-deep);
-}
-.tp-trip-titlebar-action:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-.tp-trip-titlebar-action .svg-icon { width: 20px; height: 20px; }
-@media (max-width: 1023px) {
-  .tp-trip-titlebar-action { padding: 0; min-width: var(--spacing-tap-min, 44px); width: var(--spacing-tap-min, 44px); }
-  .tp-trip-titlebar-action-label { display: none; }
-}
-.tp-titlebar .ocean-tb-btn {
-  width: var(--spacing-tap-min, 44px);
-  height: var(--spacing-tap-min, 44px);
-  border: 0;
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--color-foreground);
-  display: inline-grid;
-  place-items: center;
-}
-.tp-titlebar .ocean-tb-btn:hover {
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-deep);
-}
-.tp-titlebar .ocean-tb-btn > span[aria-hidden="true"] { display: none; }
-.tp-titlebar .ocean-tb-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-.tp-titlebar .ocean-tb-btn::before {
-  content: "⋯";
-  font-size: 24px;
-  line-height: 1;
-  font-weight: 700;
-}
+/* Compact-hidden TitleBar actions — 桌機(>=761px) 顯示「建議 / 共編 / 下載」
+ * inline,手機塞進 OverflowMenu 避免標題列擁擠。 */
 @media (max-width: 760px) {
-  .tp-trip-titlebar-action[data-compact-hidden="true"] { display: none; }
+  .tp-titlebar-action[data-compact-hidden="true"] { display: none; }
 }
 
 /* Print mode */
 .print-mode .sticky-nav { display: none; }
-.print-mode .ocean-tb-btn { display: none !important; }
 .print-mode .print-exit-btn { display: block; }
 .print-mode .page-layout { padding-right: 0 !important; }
 .print-mode #tripContent section { background: var(--color-background) !important; }
@@ -765,47 +704,47 @@ function TripPageInner(
             <>
               <button
                 type="button"
-                className="tp-trip-titlebar-action"
+                className="tp-titlebar-action"
                 onClick={() => setAddStopOpen(true)}
                 aria-label={`在 Day ${currentDayNum || 1} 加景點`}
                 title="加入景點"
                 data-testid="trip-add-stop-trigger"
               >
                 <Icon name="plus" />
-                <span className="tp-trip-titlebar-action-label">加景點</span>
+                <span className="tp-titlebar-action-label">加景點</span>
               </button>
               <button
                 type="button"
-                className="tp-trip-titlebar-action"
+                className="tp-titlebar-action"
                 data-compact-hidden="true"
                 onClick={() => setActiveSheet('suggestions')}
                 aria-label="開啟 AI 建議"
                 title="AI 建議"
               >
                 <Icon name="lightbulb" />
-                <span className="tp-trip-titlebar-action-label">建議</span>
+                <span className="tp-titlebar-action-label">建議</span>
               </button>
               <button
                 type="button"
-                className="tp-trip-titlebar-action"
+                className="tp-titlebar-action"
                 data-compact-hidden="true"
                 onClick={() => setActiveSheet('collab')}
                 aria-label="開啟共編設定"
                 title="共編"
               >
                 <Icon name="group" />
-                <span className="tp-trip-titlebar-action-label">共編</span>
+                <span className="tp-titlebar-action-label">共編</span>
               </button>
               <button
                 type="button"
-                className="tp-trip-titlebar-action"
+                className="tp-titlebar-action"
                 data-compact-hidden="true"
                 onClick={() => { void handleDownloadFormat('pdf'); }}
                 aria-label="下載行程"
                 title="下載"
               >
                 <Icon name="download" />
-                <span className="tp-trip-titlebar-action-label">下載</span>
+                <span className="tp-titlebar-action-label">下載</span>
               </button>
               <OverflowMenu
                 onSheet={handlePanelItem}

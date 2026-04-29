@@ -3,6 +3,56 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.12] - 2026-04-29
+
+**TitleBar 規範統一 + ocean legacy purge**:把 trip-picker / overflow trigger / TripPage actions 全部收進 shared `.tp-titlebar-*` family,刪掉 V1 ocean legacy CSS 跟 unused components。
+
+### Changed
+
+- **Shared TitleBar action family**(`css/tokens.css`)
+  - 既有 `.tp-titlebar-action`(icon+label desktop / icon-only mobile) 不變。
+  - 新增 `.tp-titlebar-icon-btn` — icon-only menu trigger(取代 V1 `.ocean-tb-btn` legacy override)。
+  - 新增 `.tp-titlebar-trip-picker` 系列(`.tp-titlebar-trip-menu` / `.tp-titlebar-trip-picker-name` / `.tp-titlebar-trip-picker-chevron` / `.tp-titlebar-trip-dropdown` / `.tp-titlebar-trip-row`) — Chat / Map 共用,規範:**桌機 SVG icon + 行程名 + chevron;手機 icon-only**(對齊 user 拍板的「桌機 icon+文字、手機 icon only」 title 規範)。
+- **TripPage TitleBar refactor**(`src/pages/TripPage.tsx`)
+  - 移除自有 `.tp-trip-titlebar-action` + `.tp-trip-titlebar-action-label` CSS,改 reuse shared `.tp-titlebar-action`。
+  - 移除 `.tp-titlebar .ocean-tb-btn` legacy override + `::before { content: "⋯" }` unicode hack。
+- **OverflowMenu trigger refactor**(`src/components/trip/OverflowMenu.tsx`)
+  - className `.ocean-tb-btn` → `.tp-titlebar-icon-btn`。
+  - `<span aria-hidden>☰</span>` + `<span class="ocean-tb-label">更多</span>` → `<Icon name="more-vert" />`(material symbols 三點 icon,aria-label 已有「更多功能」)。
+- **ChatPage trip-picker refactor**(`src/pages/ChatPage.tsx`)
+  - 移除 `.tp-chat-trip-picker` / `.tp-chat-trip-menu` / `.tp-chat-trip-dropdown` / `.tp-chat-trip-row` inline scope CSS。
+  - JSX className 改 shared `.tp-titlebar-trip-*`,trip 標籤從 `<span class="pill">行程</span>` + 名字 改成 `<Icon name="swap-horiz" />` + 名字 + chevron。
+- **MapPage trip-picker refactor**(`src/pages/MapPage.tsx`)
+  - 同 ChatPage 改造,移除 `.tp-map-trip-picker` 系列 inline CSS,改用 shared class + swap-horiz icon。
+- **Mockup S17 chat + S20 map 同步對齊**(`docs/design-sessions/terracotta-preview-v2.html`)
+  - mockup `.tp-chat-trip-picker` → `.tp-titlebar-trip-picker` + 加 `i-swap-horiz` SVG symbol(Material swap-horiz)。
+  - Map mockup 4 處 titlebar 統一加 back button(對齊 prod TitleBar `back` prop)、移除 V1「沖繩 + 大阪 + 京都」 ghost button + 「定位」 titlebar action(prod 沒有,定位走 FAB)。
+  - mockup compact frame `.tp-titlebar-trip-picker` 縮回 icon-only(width 44 / no border / hide name + chevron)。
+
+### Removed
+
+- **V1 ocean legacy CSS**(`css/tokens.css`)— 確認無 TSX 引用後整批刪:
+  - `.ocean-topbar` + `.ocean-topbar-left` / `.ocean-topbar-right` / `.ocean-brand-label` / `.ocean-tb-divider`(V1 sticky topbar shell,V2 已被 TitleBar 取代)。
+  - `.ocean-nav-tabs` + `.ocean-nav-tabs button`(V1 inline nav tabs)。
+  - `.ocean-tb-btn` + `.ocean-tb-ai`(V1 topbar button + AI pill variant)。
+  - `.ocean-stop` 系列(`.ocean-stops` / `.ocean-stop-clickable` / `.ocean-stop-chevron` / `.ocean-stop-time` / `.ocean-stop-t` / `.ocean-stop-dur` / `.ocean-stop-icon` / `.ocean-stop-content` / `.ocean-stop-meta` / `.ocean-stop-type` / `.ocean-stop-name` / `.ocean-stop-rating` / `.ocean-stop-note` / `.ocean-stop-actions`)— V1 4-col stop card,Timeline.tsx 早已只 render TimelineRail。
+  - `.ocean-round-btn` + `.ocean-travel`(V1 stop card 配件)。
+  - `.ocean-overflow-wrap`(V1 topbar overflow wrapper)。
+  - `body.dark .ocean-tb-btn.ocean-tb-ai` + `body.dark .ocean-stop[data-past]` dark variants。
+  - `body.print-mode .ocean-topbar` print 規則。
+  - 1100px breakpoint 內的 `.ocean-topbar` / `.ocean-brand-label` overrides(無對應的 base CSS)。
+- **Unused components**(零 app code reference 確認後刪):
+  - `src/components/shared/BreadcrumbCrumbs.tsx` + `tests/unit/breadcrumb-crumbs.test.tsx`。
+  - `src/components/shared/PageNav.tsx`。
+  - `src/components/shared/RequestStepper.tsx` + `tests/unit/request-stepper.test.tsx` + `tests/unit/request-stepper.test.js`。
+  - `src/components/trip/DroppableIdeasSection.tsx` + `tests/unit/droppable-ideas-section.test.tsx`。
+  - `src/components/trip/TodaySummary.tsx`。
+- **Stale test assertions**(`tests/unit/pr2-tokens.test.ts`)— 移除 V1 dead class regression checks(`.ocean-tb-ai` Ocean fill / `.ocean-topbar` blur token / AI pill 互動 states)。
+
+### Fixed
+
+- **TripsListPage `.tp-trips-grid` mobile overflow**(`src/pages/TripsListPage.tsx`)— `repeat(2, 1fr)` 等同 `repeat(2, minmax(auto, 1fr))`,當 card title 寬於 1fr 計算值時 column auto 撐大,第二 col 超出 grid right edge(實測 viewport 390px,第二 card right = 418px,overflow 28px)。改 `repeat(2, minmax(0, 1fr))` 強制 min: 0。
+
 ## [2.17.11] - 2026-04-29
 
 **Account page mockup parity + DesktopSidebar 去重**:User 拍板七項 finding,prod source 動兩處,mockup 反向更新對齊 prod 多項。

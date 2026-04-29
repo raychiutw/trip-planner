@@ -4191,37 +4191,53 @@
   [data-theme="dark"] .tp-chat-avatar.is-ai {
     background: #0F0B08;
   }
-  /* Conversation header 右側 trip-picker pill —— production ChatPage `.tp-chat-trip-picker`。
-   * 點擊展開 dropdown 切換當前綁定行程。 */
-  .tp-chat-trip-picker {
+  /* TitleBar trip-picker — shared by Chat / Map header(production
+   * `.tp-titlebar-trip-picker`)。規範:桌機 SVG icon + 行程名 + chevron;
+   * 手機(<=760) icon-only。點擊展開 dropdown 切換當前綁定行程。 */
+  .tp-titlebar-trip-picker {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
+    height: 44px;
+    padding: 0 14px;
     border: 1px solid var(--tp-border);
     border-radius: 999px;
-    background: var(--tp-background);
+    background: transparent;
     color: var(--tp-foreground);
     font: inherit;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    min-height: 36px;
-    transition: border-color 150ms, color 150ms;
+    flex-shrink: 0;
+    max-width: 240px;
+    transition: background-color 150ms, border-color 150ms, color 150ms;
   }
-  .tp-chat-trip-picker:hover {
+  .tp-titlebar-trip-picker:hover {
+    background: var(--tp-hover);
     border-color: var(--tp-accent);
     color: var(--tp-accent);
   }
-  .tp-chat-trip-picker .pill {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    padding: 1px 6px;
-    border-radius: 999px;
-    background: var(--tp-accent-subtle);
-    color: var(--tp-accent);
+  .tp-titlebar-trip-picker .tp-icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .tp-titlebar-trip-picker-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
+  .tp-titlebar-trip-picker-chevron {
+    font-size: 10px;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+  .tp-page-frame-compact .tp-titlebar-trip-picker {
+    width: 44px;
+    padding: 0;
+    border: none;
+    justify-content: center;
+    max-width: none;
+  }
+  .tp-page-frame-compact .tp-titlebar-trip-picker-name,
+  .tp-page-frame-compact .tp-titlebar-trip-picker-chevron { display: none; }
   /* Conversation message wrapper — assistant 用 row layout 把 avatar + bubble 並排。
    * user message 不渲染 avatar(維持非對稱 visual),直接 align-self flex-end。 */
   .tp-chat-msg-row {
@@ -5064,6 +5080,7 @@
     <symbol id="i-explore" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></symbol>
     <symbol id="i-account" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
     <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="18" r="1.2"/></symbol>
+    <symbol id="i-swap-horiz" viewBox="0 0 24 24"><path d="M6.99 11 3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z" fill="currentColor"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M3 3h7M3 3v7M21 3h-7M21 3v7M3 21h7M3 21v-7M21 21h-7M21 21v-7"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
     <symbol id="i-move" viewBox="0 0 24 24"><path d="M7 3 3 7l4 4M17 3l4 4-4 4M7 21l-4-4 4-4M17 21l4-4-4-4M3 7h18M21 17H3"/></symbol>
@@ -7120,14 +7137,14 @@
 
   <!-- ===== Chat conversation desktop ===== -->
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · titlebar = 行程名 + 右側 trip-picker pill;訊息含時間戳記與日期分隔</span></div>
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · titlebar = 行程名 + 右側 trip-picker(SVG icon + 行程名);訊息含時間戳記與日期分隔</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">沖繩 + 大阪 + 京都跨城</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-chat-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
-          <span class="pill">行程</span>
-          <span>沖繩 + 大阪 + 京都跨城</span>
-          <span aria-hidden="true">▾</span>
+        <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
+          <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
+          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都跨城</span>
+          <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
     </header>
@@ -7164,14 +7181,14 @@
 
   <!-- ===== Chat conversation compact ===== -->
   <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 全屏 conversation · header 同 desktop:行程名 + trip-picker pill</span></div>
+    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 全屏 conversation · header 行程名 + trip-picker(icon-only)</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">沖繩 + 大阪 + 京都跨城</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-chat-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false">
-          <span class="pill">行程</span>
-          <span>沖繩跨城</span>
-          <span aria-hidden="true">▾</span>
+        <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
+          <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
+          <span class="tp-titlebar-trip-picker-name">沖繩跨城</span>
+          <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
         </button>
       </div>
     </header>
@@ -7498,12 +7515,16 @@
   <p class="tp-section-lead">「地圖」主功能頁，full bleed map + 底部 sticky day tabs（src 風格 underline tabs）+ entry cards horizontal snap-scroll。Day strip 第一項是<strong>「總覽」</strong>（對齊 src `?day=all`），active tab 用 dayColor border-bottom。Entry cards 點 marker → activate（雙向 sync）。Reference: src/pages/MapPage.tsx + DESIGN.md DV palette。</p>
 
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP — OVERVIEW ACTIVE <span>full bleed map · bottom day tabs + entry cards</span></div>
+    <div class="tp-page-frame-label">DESKTOP — OVERVIEW ACTIVE <span>full bleed map · bottom day tabs + entry cards · titlebar:back + 行程名 + trip-picker(SVG icon + 名稱)</span></div>
     <header class="tp-page-titlebar">
+      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-btn is-ghost" type="button"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>沖繩 + 大阪 + 京都</button>
-        <button class="tp-preview-icon-button" type="button" aria-label="定位"><span class="tp-icon"><svg><use href="#i-target"/></svg></span></button>
+        <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
+          <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
+          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都</span>
+          <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
     <div class="tp-map-canvas">
@@ -7669,11 +7690,16 @@
   </div>
 
   <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT — OVERVIEW ACTIVE <span>full bleed · bottom tabs + cards 簡化</span></div>
+    <div class="tp-page-frame-label">COMPACT — OVERVIEW ACTIVE <span>full bleed · bottom tabs + cards 簡化 · titlebar:back + 地圖 + trip-picker(icon-only)</span></div>
     <header class="tp-page-titlebar">
+      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-preview-icon-button" type="button" aria-label="切換行程"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span></button>
+        <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
+          <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
+          <span class="tp-titlebar-trip-picker-name">沖繩跨城</span>
+          <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
     <div class="tp-map-canvas">
@@ -7764,10 +7790,14 @@
   <div class="tp-page-frame">
     <div class="tp-page-frame-label">LOADING STATE <span>tiles 載入中 · shimmer + accent spinner</span></div>
     <header class="tp-page-titlebar">
+      <button class="tp-preview-icon-button" type="button" aria-label="返回" disabled><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-btn is-ghost" type="button" disabled><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>沖繩 + 大阪 + 京都</button>
-        <button class="tp-preview-icon-button" type="button" aria-label="定位" disabled><span class="tp-icon"><svg><use href="#i-target"/></svg></span></button>
+        <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程" disabled>
+          <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
+          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都</span>
+          <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
     <div class="tp-map-canvas">
@@ -7789,10 +7819,14 @@
   <div class="tp-page-frame">
     <div class="tp-page-frame-label">EMPTY STATE <span>選定日期無景點 · glass card hint</span></div>
     <header class="tp-page-titlebar">
+      <button class="tp-preview-icon-button" type="button" aria-label="返回"><span class="tp-icon"><svg><use href="#i-arrow-left"/></svg></span></button>
       <h3 class="tp-page-titlebar-title">地圖</h3>
       <div class="tp-page-titlebar-actions">
-        <button class="tp-btn is-ghost" type="button"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>沖繩 + 大阪 + 京都</button>
-        <button class="tp-preview-icon-button" type="button" aria-label="定位"><span class="tp-icon"><svg><use href="#i-target"/></svg></span></button>
+        <button class="tp-titlebar-trip-picker" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切換行程">
+          <span class="tp-icon"><svg><use href="#i-swap-horiz"/></svg></span>
+          <span class="tp-titlebar-trip-picker-name">沖繩 + 大阪 + 京都</span>
+          <span class="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
+        </button>
       </div>
     </header>
     <div class="tp-map-canvas">

@@ -119,60 +119,10 @@ describe('hardcode px → token 替換', () => {
   });
 });
 
-// ——— Item 7: AI 編輯 pill 改 Ocean fill ———
-const tokensContent = tokens;
-
-describe('AI 編輯 pill — Ocean fill', () => {
-  it('.ocean-tb-ai 使用 var(--color-accent) 作為 background', () => {
-    // 找 .ocean-tb-ai 區塊後確認 background: var(--color-accent)
-    const aiBlock = tokensContent.match(/\.ocean-tb-btn\.ocean-tb-ai\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(aiBlock).toContain('var(--color-accent)');
-  });
-
-  it('.ocean-tb-ai::before cyan dot 已移除', () => {
-    // ::before 中不應再有 background: #00B4D8 (cyan)
-    const beforeBlock = tokensContent.match(/\.ocean-tb-btn\.ocean-tb-ai::before\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(beforeBlock).not.toContain('#00B4D8');
-  });
-});
-
-// ——— Review follow-up Item 1: topbar blur 改 token ———
-describe('ocean-topbar — backdrop-filter 使用 token', () => {
-  it('.ocean-topbar backdrop-filter 使用 var(--blur-glass) token 而非 hardcode 14px', () => {
-    // 找 .ocean-topbar 區塊
-    const topbarBlock = tokens.match(/\.ocean-topbar\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(topbarBlock).toContain('var(--blur-glass)');
-  });
-
-  it('.ocean-topbar 不存在 backdrop-filter: blur(14px) hardcode', () => {
-    // 確認已改用 token，不再有 hardcode 14px
-    const topbarBlock = tokens.match(/\.ocean-topbar\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(topbarBlock).not.toMatch(/backdrop-filter:\s*blur\(14px\)/);
-  });
-});
-
 // ——— Review follow-up Item 3: Bottom nav tap target ———
 describe('ocean-bottom-nav-btn — tap target 防呆', () => {
   it('.ocean-bottom-nav-btn 包含 min-height: 44px（Apple HIG tap target）', () => {
     expect(tokens).toContain('min-height: 44px');
-  });
-});
-
-// ——— Review follow-up Item 4: AI pill 互動 states ———
-describe('ocean-tb-ai — 互動 state 補齊', () => {
-  it('.ocean-tb-btn.ocean-tb-ai:hover 存在 filter: brightness 樣式', () => {
-    const hoverBlock = tokens.match(/\.ocean-tb-btn\.ocean-tb-ai:hover\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(hoverBlock).toMatch(/filter:\s*brightness/);
-  });
-
-  it('.ocean-tb-btn.ocean-tb-ai:focus-visible 存在 outline 樣式', () => {
-    const focusBlock = tokens.match(/\.ocean-tb-btn\.ocean-tb-ai:focus-visible\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(focusBlock).toMatch(/outline:/);
-  });
-
-  it('.ocean-tb-btn.ocean-tb-ai:active 存在 filter: brightness 樣式', () => {
-    const activeBlock = tokens.match(/\.ocean-tb-btn\.ocean-tb-ai:active\s*\{[^}]+\}/s)?.[0] ?? '';
-    expect(activeBlock).toMatch(/filter:\s*brightness/);
   });
 });
 

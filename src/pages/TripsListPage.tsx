@@ -55,8 +55,13 @@ const SCOPED_STYLES = `
 /* heading 改用統一 <PageHeader>。.tp-trips-heading 已退役。 */
 
 .tp-trips-grid {
+  /* 2026-04-29:user 反饋「行程版面超出版面」 — repeat(2, 1fr) 等同
+   * repeat(2, minmax(auto, 1fr)),當某張 card 內容(title)寬過 1fr 計算值時
+   * column auto 撐大,導致第二 col 超出 grid right edge(實測 viewport 390 +
+   * 第二 card right 418,overflow 28px)。改 minmax(0, 1fr) 強制 min: 0 不
+   * 被內容撐大,column 等寬。 */
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 24px;
 }
