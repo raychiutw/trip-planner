@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.5] - 2026-04-29
+
+**`/map` redirect 到 trip-bound MapPage + 補 trip-picker pill**:sidebar「地圖」link 走 `/map`(GlobalMapPage),但 mockup「Map Page」spec(Reference: `src/pages/MapPage.tsx`)規範的是 trip-bound view(full-bleed map + 底部 day tabs + 底部 entry cards)。GlobalMapPage 是 cross-trip global overview(3-col layout),沒有 mockup 對應。本次:
+1. GlobalMapPage 加 render 前 3 層 redirect 判斷(有 cached activeTripId / fetch 後有 trip / 沒 trip 才走 empty state),避免 flash UI
+2. MapPage 補 trip-picker pill + dropdown(對齊 mockup S20 right titlebar action),click 切 trip → navigate `/trip/:newId/map`
+
+### Changed
+
+- **`/map` GlobalMapPage redirect 邏輯改 render 前 3 層判斷** — `activeTripId`(localStorage cache)→ 立刻 redirect;`trips === null`(loading) → render null 避免 flash;`trips` fetch 完 → 有 trip 拿 `trips[0]` redirect / 沒 trip 走 empty state「+ 建立第一個行程」CTA。
+- **MapPage 補 trip-picker pill + dropdown** — `.tp-map-trip-picker` pill 顯示「行程 / trip name / ▾」(對齊 ChatPage `.tp-chat-trip-picker` pattern);click 開 dropdown 列 user trips,選 → `navigate(/trip/:newId/map)` 整頁切 trip context。CSS 複用 ChatPage 既有 pattern 改 `tp-map-*` 命名空間。
+
 ## [2.17.4] - 2026-04-29
 
 **「收闔」→「收合」台灣慣用語修正**:`收闔` 不是台灣現代慣用,改「收合」對齊用語規範。涵蓋 `TimelineRail.tsx`(3 處 aria-label / title)、`mockup terracotta-preview-v2.html`(3 處)、test fixture(2 處)、openspec historical archive(2 處)、CHANGELOG 歷史紀錄(1 處)。
