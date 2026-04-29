@@ -139,7 +139,7 @@ describe('TripPage TitleBar actions — Section 4.6 + Section 3.10', () => {
     await renderAndWait();
     const addStopBtn = screen.getByTestId('trip-add-stop-trigger');
     expect(addStopBtn.querySelector('.svg-icon')).toBeTruthy();
-    expect(addStopBtn.querySelector('.tp-trip-titlebar-action-label')?.textContent).toBe('加景點');
+    expect(addStopBtn.querySelector('.tp-titlebar-action-label')?.textContent).toBe('加景點');
   });
 
   it('「加景點」 button click → AddStopModal 開啟，帶當前 currentDayNum', async () => {
@@ -154,18 +154,18 @@ describe('TripPage TitleBar actions — Section 4.6 + Section 3.10', () => {
   it('「建議」 button text label 為「建議」', async () => {
     await renderAndWait();
     const btn = screen.getByLabelText(/AI 建議/);
-    expect(btn.querySelector('.tp-trip-titlebar-action-label')?.textContent).toBe('建議');
+    expect(btn.querySelector('.tp-titlebar-action-label')?.textContent).toBe('建議');
   });
 
   it('「共編」 button text label 為「共編」', async () => {
     await renderAndWait();
     const btn = screen.getByLabelText(/共編設定/);
-    expect(btn.querySelector('.tp-trip-titlebar-action-label')?.textContent).toBe('共編');
+    expect(btn.querySelector('.tp-titlebar-action-label')?.textContent).toBe('共編');
   });
 
   it('「下載」 button text label 為「下載」', async () => {
     await renderAndWait();
     const btn = screen.getByLabelText(/下載行程/);
-    expect(btn.querySelector('.tp-trip-titlebar-action-label')?.textContent).toBe('下載');
+    expect(btn.querySelector('.tp-titlebar-action-label')?.textContent).toBe('下載');
   });
 });

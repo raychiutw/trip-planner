@@ -151,14 +151,13 @@ export default function OverflowMenu({ onSheet, onDownload, isOnline = true }: O
       <button
         ref={triggerRef}
         type="button"
-        className="ocean-tb-btn"
+        className="tp-titlebar-icon-btn"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="更多功能"
         onClick={() => setOpen((v) => !v)}
       >
-        <span aria-hidden="true">☰</span>
-        <span className="ocean-tb-label">更多</span>
+        <Icon name="more-vert" />
       </button>
       {menu}
     </>

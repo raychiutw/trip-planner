@@ -187,53 +187,6 @@ const SCOPED_STYLES = `
 @media (min-width: 761px) {
   .tp-chat-shell .tp-page-header[data-variant="standalone"] { padding-left: 24px; padding-right: 24px; }
 }
-.tp-chat-trip-picker {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  background: var(--color-background);
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  color: var(--color-foreground); cursor: pointer;
-  min-height: 36px;
-}
-.tp-chat-trip-picker:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.tp-chat-trip-picker .pill {
-  font-size: var(--font-size-caption2);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-}
-
-.tp-chat-trip-menu {
-  position: relative;
-}
-.tp-chat-trip-dropdown {
-  position: absolute; top: calc(100% + 6px); right: 0;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  min-width: 240px;
-  max-height: 360px; overflow-y: auto;
-  z-index: 20;
-  padding: 4px;
-}
-.tp-chat-trip-row {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  border: none; background: transparent; text-align: left;
-  font: inherit; cursor: pointer; width: 100%;
-  color: var(--color-foreground);
-}
-.tp-chat-trip-row:hover { background: var(--color-hover); }
-.tp-chat-trip-row.is-active { background: var(--color-accent-subtle); color: var(--color-accent); }
-.tp-chat-trip-row .row-title { font-weight: 700; font-size: var(--font-size-callout); }
-.tp-chat-trip-row .row-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
 .tp-chat-body {
   flex: 1; min-height: 0; overflow-y: auto;
@@ -744,32 +697,35 @@ export default function ChatPage() {
       <TitleBar
         title={activeTrip?.title || activeTrip?.name || '聊天'}
         actions={trips && trips.length > 0 && (
-          <div className="tp-chat-trip-menu" ref={tripMenuRef}>
+          <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button
               type="button"
-              className="tp-chat-trip-picker"
+              className="tp-titlebar-trip-picker"
               onClick={() => setTripMenuOpen((o) => !o)}
               data-testid="chat-trip-picker"
               aria-haspopup="menu"
               aria-expanded={tripMenuOpen}
+              aria-label="切換行程"
             >
-              <span className="pill">行程</span>
-              <span>{activeTrip?.title || activeTrip?.name || activeTripId || '選擇行程'}</span>
-              <span aria-hidden="true">▾</span>
+              <Icon name="swap-horiz" />
+              <span className="tp-titlebar-trip-picker-name">
+                {activeTrip?.title || activeTrip?.name || activeTripId || '選擇行程'}
+              </span>
+              <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
             </button>
             {tripMenuOpen && (
-              <div className="tp-chat-trip-dropdown" role="menu">
+              <div className="tp-titlebar-trip-dropdown" role="menu">
                 {trips.map((t) => (
                   <button
                     key={t.tripId}
                     type="button"
-                    className={`tp-chat-trip-row ${t.tripId === activeTripId ? 'is-active' : ''}`}
+                    className={`tp-titlebar-trip-row ${t.tripId === activeTripId ? 'is-active' : ''}`}
                     onClick={() => pickTrip(t.tripId)}
                     role="menuitem"
                     data-testid={`chat-trip-pick-${t.tripId}`}
                   >
-                    <span className="row-title">{t.title || t.name || t.tripId}</span>
-                    <span className="row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
+                    <span className="tp-titlebar-trip-row-title">{t.title || t.name || t.tripId}</span>
+                    <span className="tp-titlebar-trip-row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
                   </button>
                 ))}
               </div>

@@ -138,53 +138,6 @@ const SCOPED_STYLES = `
   .map-page-cards .tp-map-entry-card { flex: 0 0 200px; }
 }
 
-/* 2026-04-29 mockup parity:trip-picker pill(複用 ChatPage tp-chat-trip-picker
- * pattern,改 tp-map-* 命名空間)。pill click 開 dropdown 切 trip → navigate
- * /trip/:newId/map。 */
-.tp-map-trip-picker {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  background: var(--color-background);
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  color: var(--color-foreground); cursor: pointer;
-  min-height: 36px;
-}
-.tp-map-trip-picker:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.tp-map-trip-picker .pill {
-  font-size: var(--font-size-caption2);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
-}
-.tp-map-trip-menu { position: relative; }
-.tp-map-trip-dropdown {
-  position: absolute; top: calc(100% + 6px); right: 0;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  min-width: 240px;
-  max-height: 360px; overflow-y: auto;
-  z-index: 20;
-  padding: 4px;
-}
-.tp-map-trip-row {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 8px 10px;
-  border-radius: var(--radius-sm);
-  border: none; background: transparent; text-align: left;
-  font: inherit; cursor: pointer; width: 100%;
-  color: var(--color-foreground);
-}
-.tp-map-trip-row:hover { background: var(--color-hover); }
-.tp-map-trip-row.is-active { background: var(--color-accent-subtle); color: var(--color-accent); }
-.tp-map-trip-row .row-title { font-weight: 700; font-size: var(--font-size-callout); }
-.tp-map-trip-row .row-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 `;
 
 /**
@@ -227,8 +180,8 @@ export default function MapPage() {
   const navigate = useNavigate();
   const { trip, allDays, loading } = useTripContext();
 
-  /* 2026-04-29:trip-picker pill(對齊 mockup「Map Page」spec + ChatPage 既有
-   * `tp-chat-trip-picker` pattern)。fetch user 所有 trips for dropdown,
+  /* 2026-04-29:trip-picker(對齊 mockup「Map Page」spec + shared
+   * `.tp-titlebar-trip-picker` pattern)。fetch user 所有 trips for dropdown,
    * pickTrip → navigate /trip/:newId/map(整頁切換 trip context)。 */
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
   const [tripMenuOpen, setTripMenuOpen] = useState(false);
@@ -446,32 +399,35 @@ export default function MapPage() {
         title="地圖"
         back={onBack}
         actions={trips && trips.length > 0 && (
-          <div className="tp-map-trip-menu" ref={tripMenuRef}>
+          <div className="tp-titlebar-trip-menu" ref={tripMenuRef}>
             <button
               type="button"
-              className="tp-map-trip-picker"
+              className="tp-titlebar-trip-picker"
               onClick={() => setTripMenuOpen((o) => !o)}
               data-testid="map-trip-picker"
               aria-haspopup="menu"
               aria-expanded={tripMenuOpen}
+              aria-label="切換行程"
             >
-              <span className="pill">行程</span>
-              <span>{trip?.title || trip?.name || tripId || '選擇行程'}</span>
-              <span aria-hidden="true">▾</span>
+              <Icon name="swap-horiz" />
+              <span className="tp-titlebar-trip-picker-name">
+                {trip?.title || trip?.name || tripId || '選擇行程'}
+              </span>
+              <span className="tp-titlebar-trip-picker-chevron" aria-hidden="true">▾</span>
             </button>
             {tripMenuOpen && (
-              <div className="tp-map-trip-dropdown" role="menu">
+              <div className="tp-titlebar-trip-dropdown" role="menu">
                 {trips.map((t) => (
                   <button
                     key={t.tripId}
                     type="button"
-                    className={`tp-map-trip-row ${t.tripId === tripId ? 'is-active' : ''}`}
+                    className={`tp-titlebar-trip-row ${t.tripId === tripId ? 'is-active' : ''}`}
                     onClick={() => pickTrip(t.tripId)}
                     role="menuitem"
                     data-testid={`map-trip-pick-${t.tripId}`}
                   >
-                    <span className="row-title">{t.title || t.name || t.tripId}</span>
-                    <span className="row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
+                    <span className="tp-titlebar-trip-row-title">{t.title || t.name || t.tripId}</span>
+                    <span className="tp-titlebar-trip-row-meta">{(t.countries ?? '').toUpperCase() || t.tripId}</span>
                   </button>
                 ))}
               </div>
