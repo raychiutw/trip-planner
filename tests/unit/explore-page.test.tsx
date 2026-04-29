@@ -62,12 +62,20 @@ describe('ExplorePage', () => {
   });
 
   it('shows error toast when search query < 2 chars', () => {
+    /* 2026-04-29 (E5):mount 後 auto runSearch with default region seed
+     * → fetch 已被 call 一次。Test 改驗 user input < 2 字 click submit
+     * 不會 trigger 第二次 fetch(維持 fetch call count = 1,不是 2)。 */
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ results: [] }),
+    });
     const { getByTestId } = renderPage();
+    const initialFetchCount = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length;
     const input = getByTestId('explore-search-input') as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'a' } });
     fireEvent.click(getByTestId('explore-search-submit'));
-    // showToast is mocked — assertion via no network call
-    expect(global.fetch).not.toHaveBeenCalled();
+    // showToast is mocked — assertion via no NEW network call after submit
+    expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(initialFetchCount);
   });
 
   it('calls /api/poi-search on valid submit + renders results', async () => {
