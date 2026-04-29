@@ -1199,8 +1199,11 @@ body.dark {
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
 .tp-map-day-tab {
+  /* 2026-04-29 mockup parity:user 反饋「Day 的格式不能太高」,padding
+   * 10/14 + min-height 44px → 6/14 + min-height 36px,跟 mockup S20 underline
+   * tabs 視覺一致(扁平 strip,不搶佔垂直空間)。 */
   flex: 0 0 auto;
-  padding: 10px 14px;
+  padding: 6px 14px;
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
@@ -1211,7 +1214,7 @@ body.dark {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
+  min-height: 36px;
   white-space: nowrap;
   transition: color 150ms, border-bottom-color 150ms;
 }
