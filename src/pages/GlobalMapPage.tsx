@@ -33,7 +33,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type L from 'leaflet';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useDarkMode } from '../hooks/useDarkMode';
@@ -755,6 +755,26 @@ export default function GlobalMapPage() {
     setMenuOpen(false);
     setSelectedPinId(null);
   }, [setActiveTripId]);
+
+  /* 2026-04-29:sidebar「地圖」走 /map → 渲染前判斷,有 trip 立刻 redirect 到
+   * /trip/:id/map 對齊 mockup「Map Page」spec(Reference: src/pages/MapPage.tsx)。
+   *
+   * 渲染前三層判斷,避免 flash GlobalMapPage UI:
+   * 1. activeTripId(從 ActiveTripContext / localStorage cache)→ 立刻 redirect
+   *    (常見 case,user 之前進過 trip,localStorage 有 cache)
+   * 2. trips === null(fetch 中) → render null 空白避免 flash
+   * 3. trips fetch 完 → 有 trip 拿 trips[0] redirect / 沒 trip 走 empty state
+   *
+   * 沒任何 trip → fall through 到本頁既有 empty state「+ 建立第一個行程」CTA。 */
+  if (activeTripId) {
+    return <Navigate to={`/trip/${encodeURIComponent(activeTripId)}/map`} replace />;
+  }
+  if (trips === null) {
+    return null;
+  }
+  if (trips.length > 0) {
+    return <Navigate to={`/trip/${encodeURIComponent(trips[0]!.tripId)}/map`} replace />;
+  }
 
   const closeSheet = useCallback(() => {
     setSelectedPinId(null);
