@@ -36,13 +36,13 @@ import ChatPage from '../../src/pages/ChatPage';
 
 const SAMPLE_REQUEST_ROW = {
   id: 1,
-  trip_id: 'okinawa-2026',
+  tripId: 'okinawa-2026',
   mode: 'edit',
   message: 'Day 1 加水族館',
   reply: '已加在早上 10:00',
   status: 'completed' as const,
-  created_at: '2026-04-27T08:00:00',
-  updated_at: '2026-04-27T08:00:30',
+  createdAt: '2026-04-27T08:00:00',
+  updatedAt: '2026-04-27T08:00:30',
 };
 
 beforeEach(() => {
@@ -115,8 +115,8 @@ describe('ChatPage AI avatar + bubble timestamp prefix — Section 4.8', () => {
       if (path.startsWith('/requests')) {
         return Promise.resolve({
           items: [
-            { ...SAMPLE_REQUEST_ROW, id: 1, created_at: '2026-04-26T10:00:00', updated_at: '2026-04-26T10:00:10' },
-            { ...SAMPLE_REQUEST_ROW, id: 2, created_at: '2026-04-28T10:00:00', updated_at: '2026-04-28T10:00:10' },
+            { ...SAMPLE_REQUEST_ROW, id: 1, createdAt: '2026-04-26T10:00:00', updatedAt: '2026-04-26T10:00:10' },
+            { ...SAMPLE_REQUEST_ROW, id: 2, createdAt: '2026-04-28T10:00:00', updatedAt: '2026-04-28T10:00:10' },
           ],
           hasMore: false,
         });
