@@ -5,11 +5,12 @@
  *   - map=null disable 兩 button
  *   - map provided enable + popover 開合
  *   - 三個 layer option 都顯示 + 點 active state 切換
- *   - 定位 button click without geolocation API → 觸發 alert
+ *   - 定位 button click without geolocation API → 觸發 toast (取代 window.alert)
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import MapFabs from '../../src/components/trip/MapFabs';
+import * as Toast from '../../src/components/shared/Toast';
 import type * as L from 'leaflet';
 
 // Minimal map mock — 只實作 component 會打的 method
@@ -23,10 +24,12 @@ function makeMockMap(): L.Map {
 }
 
 describe('MapFabs', () => {
+  let showToastSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    vi.stubGlobal('alert', vi.fn());
+    showToastSpy = vi.spyOn(Toast, 'showToast').mockImplementation(() => 0);
   });
   afterEach(() => {
+    showToastSpy.mockRestore();
     vi.unstubAllGlobals();
   });
 
@@ -65,7 +68,7 @@ describe('MapFabs', () => {
     expect(screen.getByTestId('map-fab-layers-option-satellite').className).toContain('is-active');
   });
 
-  it('地理 API 不存在時 click 定位 → 觸發 alert', () => {
+  it('地理 API 不存在時 click 定位 → 觸發 toast (取代 window.alert)', () => {
     // 假裝沒有 navigator.geolocation
     const oldNav = (globalThis as unknown as { navigator: Navigator }).navigator;
     Object.defineProperty(globalThis, 'navigator', {
@@ -74,7 +77,7 @@ describe('MapFabs', () => {
     });
     render(<MapFabs map={makeMockMap()} />);
     fireEvent.click(screen.getByTestId('map-fab-locate'));
-    expect(window.alert).toHaveBeenCalled();
+    expect(showToastSpy).toHaveBeenCalledWith('此瀏覽器不支援定位', 'error', expect.any(Number));
     Object.defineProperty(globalThis, 'navigator', { value: oldNav, configurable: true });
   });
 });

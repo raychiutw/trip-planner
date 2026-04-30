@@ -12,7 +12,7 @@
  * is the natural next step; the UI is shaped so wiring it later is a 1-line
  * change inside `addSelectedToTrip`.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/apiClient';
 import { mapNominatimCategory } from '../lib/poiCategory';
@@ -21,10 +21,15 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import ConfirmModal from '../components/shared/ConfirmModal';
+import InputModal from '../components/shared/InputModal';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+
+/** Region 候選 (常用 destinations + 全部地區)。Active trip's region 自動加進來不重複。 */
+const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台北'] as const;
 
 interface PoiSearchResult {
   osm_id: number;
@@ -229,6 +234,52 @@ const SCOPED_STYLES = `
   min-height: 32px;
 }
 .explore-region-pill:hover { border-color: var(--color-accent); color: var(--color-accent); }
+.explore-region-pill[aria-expanded="true"] { border-color: var(--color-accent); color: var(--color-accent); }
+
+/* Section 4.9：region picker popover (取代 window.prompt) */
+.explore-region-picker-anchor { position: relative; display: inline-block; }
+.explore-region-popover {
+  position: absolute; top: calc(100% + 6px); left: 0;
+  z-index: 50;
+  min-width: 180px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  animation: tp-region-pop-in 140ms var(--transition-timing-function-apple);
+}
+@keyframes tp-region-pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.explore-region-option {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none; background: transparent;
+  border-radius: var(--radius-sm);
+  font: inherit; font-size: var(--font-size-footnote); font-weight: 500;
+  color: var(--color-foreground);
+  cursor: pointer;
+  text-align: left;
+  min-height: 36px;
+}
+.explore-region-option:hover { background: var(--color-hover); }
+.explore-region-option.is-active {
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-deep);
+  font-weight: 700;
+}
+.explore-region-option-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+.explore-region-option-custom {
+  color: var(--color-accent);
+  font-weight: 600;
+}
 .explore-subtabs {
   display: inline-flex; align-items: center; gap: 6px;
   flex-wrap: wrap;
@@ -406,6 +457,45 @@ export default function ExplorePage() {
   }, [defaultRegion]);
   const [category, setCategory] = useState<string>('all');
 
+  /* Region picker popover state (取代 window.prompt) */
+  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
+  const [regionInputOpen, setRegionInputOpen] = useState(false);
+  const regionAnchorRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside / Escape close popover
+  useEffect(() => {
+    if (!regionPickerOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      if (regionAnchorRef.current && !regionAnchorRef.current.contains(e.target as Node)) {
+        setRegionPickerOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setRegionPickerOpen(false);
+    }
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [regionPickerOpen]);
+
+  // Combined option list — POPULAR + active trip's region (if not in popular)
+  const regionOptions = useMemo(() => {
+    const list: string[] = [...POPULAR_REGIONS];
+    if (defaultRegion !== '全部地區' && !list.includes(defaultRegion)) {
+      list.splice(1, 0, defaultRegion);
+    }
+    if (region !== '全部地區' && !list.includes(region)) {
+      list.splice(1, 0, region);
+    }
+    return list;
+  }, [defaultRegion, region]);
+
+  /* Delete-selected-saved confirm state (取代 window.confirm) */
+  const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
+
   const loadSaved = useCallback(async () => {
     try {
       const rows = await apiFetch<SavedPoiRow[]>('/saved-pois');
@@ -529,12 +619,16 @@ export default function ExplorePage() {
 
   function clearSelection() { setSelectedSavedIds(new Set()); }
 
-  // PR-X 2026-04-26：批次刪除選中的 saved POI。confirm → Promise.all DELETE
+  // PR-X 2026-04-26：批次刪除選中的 saved POI。ConfirmModal → Promise.all DELETE
   // → optimistic local removal + reload。
+  function requestDeleteSelected() {
+    if (selectedSavedIds.size === 0) return;
+    setDeleteSelectedConfirmOpen(true);
+  }
   async function handleDeleteSelected() {
     const ids = Array.from(selectedSavedIds);
     if (ids.length === 0) return;
-    if (!window.confirm(`確定刪除選中的 ${ids.length} 個收藏？此操作無法復原。`)) return;
+    setDeleteSelectedConfirmOpen(false);
     setDeletingSelected(true);
     try {
       const results = await Promise.all(
@@ -632,18 +726,51 @@ export default function ExplorePage() {
             {/* Section 4.9：對齊 mockup section 18 (line 7298-7311) element 順序
               * → region pill → search bar → subtab chips → grid */}
             <div className="explore-region-bar">
-              <button
-                type="button"
-                className="explore-region-pill"
-                onClick={() => {
-                  const next = window.prompt('輸入要查看的地區（例：沖繩、首爾、台北）', region === '全部地區' ? '' : region);
-                  if (next != null) setRegion(next.trim() || '全部地區');
-                }}
-                data-testid="explore-region-pill"
-              >
-                <Icon name="location-pin" />
-                <span>{region} ▾</span>
-              </button>
+              <div className="explore-region-picker-anchor" ref={regionAnchorRef}>
+                <button
+                  type="button"
+                  className="explore-region-pill"
+                  onClick={() => setRegionPickerOpen((v) => !v)}
+                  aria-haspopup="listbox"
+                  aria-expanded={regionPickerOpen}
+                  data-testid="explore-region-pill"
+                >
+                  <Icon name="location-pin" />
+                  <span>{region} ▾</span>
+                </button>
+                {regionPickerOpen && (
+                  <div className="explore-region-popover" role="listbox" data-testid="explore-region-popover">
+                    {regionOptions.map((opt) => (
+                      <button
+                        type="button"
+                        key={opt}
+                        role="option"
+                        aria-selected={opt === region}
+                        className={`explore-region-option${opt === region ? ' is-active' : ''}`}
+                        onClick={() => {
+                          setRegion(opt);
+                          setRegionPickerOpen(false);
+                        }}
+                        data-testid={`explore-region-option-${opt}`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                    <div className="explore-region-option-divider" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className="explore-region-option explore-region-option-custom"
+                      onClick={() => {
+                        setRegionPickerOpen(false);
+                        setRegionInputOpen(true);
+                      }}
+                      data-testid="explore-region-option-custom"
+                    >
+                      + 自訂地區…
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <form className="explore-search" onSubmit={handleSearch}>
@@ -805,7 +932,7 @@ export default function ExplorePage() {
                   <button
                     type="button"
                     className="explore-toolbar-btn explore-toolbar-btn-destructive"
-                    onClick={handleDeleteSelected}
+                    onClick={requestDeleteSelected}
                     disabled={deletingSelected}
                     data-testid="explore-delete-selected"
                   >
@@ -896,6 +1023,33 @@ export default function ExplorePage() {
           </div>
         </div>
       )}
+
+      {/* Region 自訂 input modal (取代 window.prompt) */}
+      <InputModal
+        open={regionInputOpen}
+        title="自訂地區"
+        message="輸入要查看的地區，例如：「大阪」、「曼谷」、「巴黎」。"
+        placeholder="地區名稱"
+        defaultValue={region === '全部地區' ? '' : region}
+        confirmLabel="切換"
+        allowEmpty
+        onConfirm={(v) => {
+          setRegion(v.trim() || '全部地區');
+          setRegionInputOpen(false);
+        }}
+        onCancel={() => setRegionInputOpen(false)}
+      />
+
+      {/* 收藏批次刪除 confirm (取代 window.confirm) */}
+      <ConfirmModal
+        open={deleteSelectedConfirmOpen}
+        title="確定刪除收藏？"
+        message={`即將刪除 ${selectedSavedIds.size} 個收藏 POI，此操作無法復原。`}
+        confirmLabel="刪除"
+        busy={deletingSelected}
+        onConfirm={handleDeleteSelected}
+        onCancel={() => setDeleteSelectedConfirmOpen(false)}
+      />
     </div>
   );
 

@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.18.1] - 2026-04-30
+
+**禁用 native browser dialog，全站改用 styled modal / toast**。`window.confirm` / `window.alert` / `window.prompt` 無法 style、無法 a11y trap focus、阻塞主執行緒、Mac/Windows 視覺差異大，看起來「不像我們的 app」。盤點 7 處全部換成 ConfirmModal / 新建 InputModal / Toast。
+
+### Added
+
+- **`src/components/shared/InputModal.tsx`**：取代 `window.prompt` 的單行 input modal。Role `dialog`、auto-focus + 全選 default value、Enter 提交 / Escape 取消、空字串自動 disable confirm（`allowEmpty` opt-in）、portal to body、150ms backdrop fade + 200ms slide-up scale 動畫，跟 ConfirmModal 視覺對齊。
+- **ExplorePage region picker popover**：取代 `window.prompt` 的 region selector。Pill click → 開 popover (常用地區 chips：全部地區 / 沖繩 / 東京 / 京都 / 首爾 / 台北 + active trip's region) → 點選 setRegion，「+ 自訂地區…」 → 開 InputModal。Popover 支援 click-outside / Escape close。
+- **Mockup Section 22 — Dialogs system showcase** (`docs/design-sessions/terracotta-preview-v2.html`)：4 個 frame 展示 ConfirmModal (destructive)、InputModal (single-line prompt)、Toast variants (success / error / info)、Decision matrix (when to use which)。
+- **DESIGN.md 新 section「Modal Dialogs」**：禁用 native dialog 規範、surface 對應表、ConfirmModal / InputModal 細節 spec、視覺規格、現役 use case 列表。
+
+### Changed (7 處 native dialog 改 styled modal / toast)
+
+- `src/pages/ExplorePage.tsx` — `window.confirm`(刪除批次收藏) 改 `<ConfirmModal>`；`window.prompt`(輸入地區) 改 popover + `<InputModal>` 自訂 fallback。
+- `src/pages/TripsListPage.tsx` — `window.confirm`(刪除行程) 改 `<ConfirmModal>`，handleMenuDelete 拆兩階段（trigger 開 modal / handleConfirmDelete 真執行）。
+- `src/pages/SessionsPage.tsx` — `confirm`(登出其他全部裝置) 改 `<ConfirmModal>`，revokeAllConfirmOpen state 控制。
+- `src/components/trip/MapFabs.tsx` — 兩處 `window.alert`(不支援定位 / 無法取得位置) 改 `showToast(..., 'error', 3000)`。
+- `src/lib/tripExport.ts` — `alert`(下載失敗) 改 `showToast(..., 'error', 3000)`。
+
+### Tests
+
+- `tests/unit/map-fabs.test.tsx`：「地理 API 不存在 → 觸發 alert」 改驗 `showToast` spy（取代 `window.alert` mock）。
+- `tests/unit/sessions-page.test.tsx`：「登出其他全部裝置」 confirmed / cancelled flow 改走 `confirm-modal-confirm` / `confirm-modal-cancel` testid（取代 `vi.stubGlobal('confirm', ...)`）。
+
+### Internal
+
+- verify gate: tsc clean / 148 test files / 1265 tests pass。
+- `mockup` 對應 src `<ConfirmModal>` / `<InputModal>` / `<Toast>` 視覺一致；DESIGN.md decision matrix 給未來 PR 參考。
+
 ## [2.18.0] - 2026-04-30
 
 **共編設定升格獨立頁面 + 新增 viewer role + ConfirmModal + QA medium/low fix**:User /qa 後拍板「移除既有 InfoSheet 內嵌 collab,改 standalone page」+ 加 viewer(檢視成員,read-only collaborator)。同 PR 順手清掉 QA 報告的 medium(F3)+ low(L1)findings。
