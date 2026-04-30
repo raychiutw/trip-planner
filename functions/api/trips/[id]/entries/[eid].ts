@@ -1,5 +1,5 @@
 import { logAudit, computeDiff } from '../../../_audit';
-import { hasPermission, verifyEntryBelongsToTrip } from '../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
@@ -22,7 +22,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
 
   const [hasPerm, belongsToTrip] = await Promise.all([
-    hasPermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth.email, id, auth.isAdmin),
     verifyEntryBelongsToTrip(db, eid, id),
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');
@@ -100,7 +100,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
 
   const [hasPerm2, belongsToTrip2] = await Promise.all([
-    hasPermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth.email, id, auth.isAdmin),
     verifyEntryBelongsToTrip(db, eid, id),
   ]);
   if (!hasPerm2) throw new AppError('PERM_DENIED');

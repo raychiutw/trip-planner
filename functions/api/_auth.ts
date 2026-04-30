@@ -16,9 +16,11 @@ export function requireAuth(context: { data: unknown }): AuthData {
 }
 
 /**
- * Returns true if the authenticated user has permission to write to the given trip.
- * Admins and service tokens always have permission. Regular users must have an entry
- * in the permissions table matching their email and the trip id (or a wildcard '*').
+ * Returns true if the authenticated user has any permission row on the given trip
+ * (read access). Admins and service tokens always pass. viewer / member / owner /
+ * admin roles all return true — viewer is read-allowed.
+ *
+ * For write/destructive operations, use `hasWritePermission` instead.
  */
 export async function hasPermission(
   db: D1Database,
@@ -29,6 +31,28 @@ export async function hasPermission(
   if (isAdmin) return true;
   const row = await db
     .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?)')
+    .bind(email.toLowerCase(), tripId, '*')
+    .first();
+  return !!row;
+}
+
+/**
+ * Returns true if the authenticated user can write to the given trip.
+ * viewer role is BLOCKED here per migration 0043 ("viewer = read-only collaborator").
+ * Admins and service tokens always pass. owner / admin / member roles return true.
+ *
+ * v2.18.0: introduced alongside the 3-tier role model so write paths gate viewer out
+ * while read paths (`hasPermission`) keep viewer access.
+ */
+export async function hasWritePermission(
+  db: D1Database,
+  email: string,
+  tripId: string,
+  isAdmin: boolean,
+): Promise<boolean> {
+  if (isAdmin) return true;
+  const row = await db
+    .prepare("SELECT 1 FROM trip_permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?) AND role != 'viewer'")
     .bind(email.toLowerCase(), tripId, '*')
     .first();
   return !!row;

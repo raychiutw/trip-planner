@@ -29,6 +29,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - **CollabSheet**(legacy InfoSheet body)變 thin wrapper:`<CollabPanel tripId={...} />` — 確保所有 entry path 視覺一致(將來整批拔 InfoSheet wrapper 時可一併刪)。
 - **POST /api/permissions** validation 接受 `viewer` role(原本 reject 任何 non-member/non-admin)。
 
+### Security (review hardening)
+
+- **viewer role 真正 read-only**(`functions/api/_auth.ts`):pre-merge review 抓到 `hasPermission()` 不區分 role,viewer 雖在 UI 顯示「檢視成員」但 backend 17 個 write endpoint 都會放他過。新增 `hasWritePermission()` 排除 viewer,並 migrate 所有 write path(`trips/[id]` PUT、`trip-ideas` POST/PATCH/DELETE、`trip-pois` PATCH/DELETE、`entries` PATCH/DELETE/copy/batch、`days/[num]` PUT、`docs/[type]` PUT、`pois/[id]` PATCH、`requests` POST)。Read path(`trip-ideas` GET、`requests` GET、`requests/[id]` GET / events SSE)續用 `hasPermission` 維持 viewer 可讀。新測試 `tests/unit/has-write-permission.test.ts` 7 例 pin SQL filter 防回歸。
+
 ### Fixed (QA medium/low findings)
 
 - **F3 — TripsListPage mobile tabs 換行**(`src/pages/TripsListPage.tsx`):4 tab `flex: 1` 平分時 375px viewport 「全部 N」 文+count 撐爆 ~85px 寬度,斷成「全 / 部」兩行。改 `.tp-trips-tabs` 容器 `overflow-x: auto` + tab `white-space: nowrap; flex-shrink: 0`,對齊 mockup `.tp-add-subtab` pattern。Tab 不換行,user 滑動切換。
