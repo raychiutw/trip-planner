@@ -20,6 +20,7 @@ import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import PageHeader from '../components/shell/PageHeader';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import ConfirmModal from '../components/shared/ConfirmModal';
 
 const SCOPED_STYLES = `
 .tp-sessions-shell {
@@ -183,6 +184,7 @@ export default function SessionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [revokingSid, setRevokingSid] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
+  const [revokeAllConfirmOpen, setRevokeAllConfirmOpen] = useState(false);
 
   async function load() {
     setError(null);
@@ -222,8 +224,9 @@ export default function SessionsPage() {
     }
   }
 
+  // 兩階段：requestRevokeAllOthers 開 ConfirmModal、revokeAllOthers 真的執行。
   async function revokeAllOthers() {
-    if (!confirm('確定要登出其他所有裝置嗎？目前裝置不受影響。')) return;
+    setRevokeAllConfirmOpen(false);
     setRevokingAll(true);
     try {
       const res = await fetch('/api/account/sessions', {
@@ -261,7 +264,7 @@ export default function SessionsPage() {
           actions={otherSessions.length > 0 && (
             <button
               className="tp-btn tp-btn-destructive"
-              onClick={revokeAllOthers}
+              onClick={() => setRevokeAllConfirmOpen(true)}
               disabled={revokingAll}
               data-testid="sessions-revoke-all"
             >
@@ -367,6 +370,15 @@ export default function SessionsPage() {
         </div>
       </div>
       </div>
+      <ConfirmModal
+        open={revokeAllConfirmOpen}
+        title="登出其他所有裝置？"
+        message="目前裝置不受影響。其他登入過的瀏覽器 / 手機都會立即跳回登入畫面。"
+        confirmLabel="登出全部"
+        busy={revokingAll}
+        onConfirm={revokeAllOthers}
+        onCancel={() => setRevokeAllConfirmOpen(false)}
+      />
       </>}
     />
   );

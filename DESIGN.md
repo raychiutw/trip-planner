@@ -301,6 +301,74 @@
 - Stop 之間的交通段，左側 2px dashed terracotta border + icon + text。
 - 縮排 34px（對齊 stop 內 icon box 左緣）。
 
+## Modal Dialogs
+
+### Principle
+
+**禁止使用 native browser dialog**（`window.confirm` / `window.alert` / `window.prompt`）—
+無法 style、無法 a11y trap focus、阻塞主執行緒、Mac/Windows 視覺差異大、看起來「不像我們的 app」。所有互動式對話必須走 styled modal 或 Toast。
+
+### Surface 對應表
+
+| Situation | Surface | Component |
+|-----------|---------|-----------|
+| Destructive 確認（刪除 / 撤銷 / 登出全部裝置 / 移除共編） | ConfirmModal (`role="alertdialog"`) | `<ConfirmModal>` |
+| 單行 input prompt（輸入地區名 / 自訂值 / 備註） | InputModal (`role="dialog"`) | `<InputModal>` |
+| 環境狀態 / 低風險通知（離線 / 複製成功 / 不支援的功能 / 操作失敗可重試） | Toast | `showToast()` / `showErrorToast()` |
+
+當你在猶豫時：**需要 user 顯式決定 → Modal；passive 通知 → Toast**。
+
+### ConfirmModal
+
+`src/components/shared/ConfirmModal.tsx`
+
+- Role: `alertdialog`（語意上要求 user 注意）
+- Title `<h2>` + message `<p>` + 兩個 button：取消 ghost / 確認 destructive 實心
+- Confirm button 自動 focus（keyboard user 直接 Enter）
+- Escape / backdrop click / cancel button 都關閉
+- `busy` prop：confirm button 顯示「處理中…」+ disabled，避免 double-submit
+- Destructive button 顏色 = `--color-priority-high-dot`（不用 terracotta accent）
+
+### InputModal
+
+`src/components/shared/InputModal.tsx`
+
+- Role: `dialog`（不是 alertdialog，純收 input 不阻斷）
+- Title + optional message + 單行 `<input>` + 兩個 button
+- Input 自動 focus + 全選 default value（user 直接覆蓋輸入）
+- Enter 提交 / Escape 取消 / backdrop dismiss
+- 空字串自動 disable 確認 button，除非 `allowEmpty`
+- Confirm button 用 `--color-accent`（非 destructive，不用紅）
+
+### Visual Spec（兩者共用）
+
+| Property | Value |
+|---|---|
+| Backdrop | `rgba(20, 14, 9, 0.42)` + portal to `document.body` |
+| Modal width | `min(420px, 100%)` |
+| Border radius | `--radius-xl` |
+| Shadow | `--shadow-lg` |
+| Backdrop animation | 150ms fade-in |
+| Modal animation | 200ms slide-up + scale (98% → 100%) |
+| Button radius | `--radius-full` (pill) |
+| Button min-height | 44px (Apple HIG tap target) |
+| Cancel button bg | `--color-secondary` + 1px `--color-border` |
+| Cancel hover | `--color-hover` |
+| Confirm focus ring | 2px outline + 2px offset |
+
+### Examples (現役)
+
+- TripsListPage card kebab「刪除」 → ConfirmModal
+- ExplorePage 收藏批次「刪除」 → ConfirmModal
+- ExplorePage region pill「+ 自訂地區…」 → InputModal
+- SessionsPage「登出其他全部裝置」 → ConfirmModal
+- CollabPanel 移除成員 / 撤銷邀請 → ConfirmModal
+- TimelineRail 刪除景點 → ConfirmModal
+
+### Toast
+
+詳見 [Error & Status Messaging](#error--status-messaging) — Toast 規範統一管在那。
+
 ## Error & Status Messaging
 
 ### Principle

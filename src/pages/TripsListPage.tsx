@@ -35,6 +35,7 @@ import TripCardMenu from '../components/trip/TripCardMenu';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
+import ConfirmModal from '../components/shared/ConfirmModal';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import TripPage, { type TripPageHandle } from './TripPage';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
@@ -862,13 +863,26 @@ export default function TripsListPage() {
     [navigate],
   );
 
-  // PR-Q：card kebab 「刪除行程」 → confirm + DELETE /api/trips/:id +
+  // PR-Q：card kebab 「刪除行程」 → ConfirmModal + DELETE /api/trips/:id +
   // optimistic remove from local list（避免 user 等待 reload）。
+  // 兩階段 state：requestMenuDelete 開 modal、handleConfirmDelete 真的執行。
+  const [deleteTarget, setDeleteTarget] = useState<{ tripId: string; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const handleMenuDelete = useCallback(
-    async (tripId: string) => {
+    (tripId: string) => {
       const trip = visibleTrips.find((t) => t.tripId === tripId);
       const label = trip?.title || trip?.name || tripId;
-      if (!window.confirm(`確定刪除「${label}」？此操作無法復原。`)) return;
+      setDeleteTarget({ tripId, label });
+    },
+    [visibleTrips],
+  );
+
+  const handleConfirmDelete = useCallback(
+    async () => {
+      if (!deleteTarget) return;
+      const { tripId, label } = deleteTarget;
+      setDeleting(true);
       try {
         const r = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}`, { method: 'DELETE' });
         if (r.status === 403) throw new Error('僅行程擁有者或管理者可刪除');
@@ -884,11 +898,14 @@ export default function TripsListPage() {
           next.delete('selected');
           setSearchParams(next, { replace: true });
         }
+        setDeleteTarget(null);
       } catch (err) {
         showToast((err as Error).message, 'error');
+      } finally {
+        setDeleting(false);
       }
     },
-    [visibleTrips, selectedFromUrl, searchParams, setSearchParams],
+    [deleteTarget, selectedFromUrl, searchParams, setSearchParams],
   );
 
   const loading = myIds === null && !error;
@@ -906,6 +923,15 @@ export default function TripsListPage() {
   const cardGridMain = (
     <>
       <ToastContainer />
+      <ConfirmModal
+        open={deleteTarget !== null}
+        title="確定刪除行程？"
+        message={deleteTarget ? `即將刪除「${deleteTarget.label}」，此操作無法復原。` : ''}
+        confirmLabel="刪除"
+        busy={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"

@@ -5,6 +5,7 @@
 
 import { apiFetch } from './apiClient';
 import { DOC_KEYS } from '../hooks/useTrip';
+import { showToast } from '../components/shared/Toast';
 import type { Trip } from '../types/trip';
 
 /* ===== Internal raw types for API responses ===== */
@@ -269,6 +270,6 @@ export async function downloadTripFormat(
     }
   } catch {
     document.body.classList.remove('print-mode');
-    alert('下載失敗，請稍後再試');
+    showToast('下載失敗，請稍後再試', 'error', 3000);
   }
 }

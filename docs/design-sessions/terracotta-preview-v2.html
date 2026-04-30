@@ -8276,8 +8276,169 @@
   </div>
 </section>
 
+<!-- ===== Section 22 — Dialogs system showcase (ConfirmModal / InputModal / Toast) ===== -->
+<style>
+  /* Section 22 — Dialogs system: 規範 native dialog 替代品 */
+  .tp-dialogs-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 16px;
+  }
+  @media (min-width: 900px) {
+    .tp-dialogs-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .tp-dialogs-cell {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tp-dialogs-cell-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--tp-muted);
+  }
+  .tp-dialogs-cell-caption {
+    font-size: 13px; line-height: 20px; color: var(--tp-muted);
+  }
+
+  /* Input modal frame (新) — 跟 confirm 同 backdrop / 同尺寸 */
+  .tp-input-frame {
+    background: rgba(20, 14, 9, 0.42);
+    padding: 40px 16px;
+    border: 1px solid var(--tp-border); border-radius: var(--tp-radius-lg);
+    overflow: hidden; display: grid; place-items: center;
+  }
+  .tp-input-modal-mock {
+    width: min(420px, 100%);
+    border-radius: var(--tp-radius-xl);
+    background: var(--tp-background); color: var(--tp-foreground);
+    box-shadow: var(--tp-shadow-lg);
+    border: 1px solid var(--tp-border);
+    padding: 20px;
+  }
+  .tp-input-modal-title { margin: 0 0 8px; font-size: 20px; font-weight: 700; color: var(--tp-foreground); }
+  .tp-input-modal-message { margin: 0 0 16px; font-size: 14px; line-height: 20px; color: var(--tp-muted); }
+  .tp-input-modal-field {
+    width: 100%; box-sizing: border-box;
+    font: inherit; font-size: 16px;
+    padding: 10px 12px; margin-bottom: 20px;
+    border: 1.5px solid var(--tp-accent);
+    border-radius: var(--tp-radius-md);
+    background: var(--tp-background); color: var(--tp-foreground);
+    box-shadow: 0 0 0 3px rgba(217, 120, 72, 0.16);
+  }
+  .tp-input-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .tp-input-modal-btn {
+    min-height: 44px; padding: 0 18px;
+    border-radius: 999px;
+    font: inherit; font-weight: 600; font-size: 14px;
+    border: 1px solid; cursor: pointer;
+  }
+  .tp-input-modal-btn-cancel {
+    background: var(--tp-secondary); color: var(--tp-foreground); border-color: var(--tp-border);
+  }
+  .tp-input-modal-btn-confirm {
+    background: var(--tp-accent); color: var(--tp-accent-foreground); border-color: var(--tp-accent);
+  }
+
+  /* Toast preview extension — 擴展 error variant */
+  .tp-toast-preview-icon.is-error { background: rgba(193,53,21,0.18); color: var(--tp-destructive, #C13515); }
+</style>
+<section class="tp-section">
+  <h2 class="tp-section-title">Dialogs system — ConfirmModal / InputModal / Toast</h2>
+  <p class="tp-section-lead">
+    <strong>禁用 native browser dialog</strong>（<code>window.confirm</code> / <code>window.alert</code> / <code>window.prompt</code>）— 無法 style、無法 a11y trap focus、阻塞主執行緒、Mac/Windows 視覺差異大。
+    所有互動式對話走 styled modal 或 toast。決策原則：<strong>需要 user 顯式決定 → Modal；passive 通知 → Toast</strong>。
+  </p>
+
+  <div class="tp-dialogs-grid">
+
+    <!-- Frame 1: ConfirmModal -->
+    <div class="tp-dialogs-cell">
+      <div class="tp-dialogs-cell-label">Frame 1 — ConfirmModal (destructive)</div>
+      <div class="tp-confirm-frame">
+        <div class="tp-confirm-modal" role="alertdialog" aria-modal="true">
+          <h2 class="tp-confirm-title">確定刪除收藏？</h2>
+          <p class="tp-confirm-message">即將刪除 3 個收藏 POI，此操作無法復原。</p>
+          <div class="tp-confirm-actions">
+            <button class="tp-confirm-btn tp-confirm-btn-cancel" type="button">取消</button>
+            <button class="tp-confirm-btn tp-confirm-btn-danger" type="button">刪除</button>
+          </div>
+        </div>
+      </div>
+      <p class="tp-dialogs-cell-caption">
+        <code>role="alertdialog"</code> · destructive button 用 <code>--color-priority-high-dot</code>（不是 terracotta accent）· confirm button auto-focus · Escape / backdrop / cancel 都關閉。用於：刪除 trip / 收藏 / 移除共編 / 登出全部裝置 / 刪除 entry。
+      </p>
+    </div>
+
+    <!-- Frame 2: InputModal (新) -->
+    <div class="tp-dialogs-cell">
+      <div class="tp-dialogs-cell-label">Frame 2 — InputModal (single-line prompt)</div>
+      <div class="tp-input-frame">
+        <div class="tp-input-modal-mock" role="dialog" aria-modal="true">
+          <h2 class="tp-input-modal-title">自訂地區</h2>
+          <p class="tp-input-modal-message">輸入要查看的地區，例如：「大阪」、「曼谷」、「巴黎」。</p>
+          <input type="text" class="tp-input-modal-field" value="大阪" />
+          <div class="tp-input-modal-actions">
+            <button class="tp-input-modal-btn tp-input-modal-btn-cancel" type="button">取消</button>
+            <button class="tp-input-modal-btn tp-input-modal-btn-confirm" type="button">切換</button>
+          </div>
+        </div>
+      </div>
+      <p class="tp-dialogs-cell-caption">
+        <code>role="dialog"</code>（不是 alertdialog，純收 input）· input auto-focus + 全選 default value · Enter 提交 / Escape 取消 · Confirm 用 <code>--color-accent</code>（非 destructive）· empty 自動 disable confirm 除非 <code>allowEmpty</code>。用於：ExplorePage 自訂地區 / 將來 rename / 自訂備註等。
+      </p>
+    </div>
+
+    <!-- Frame 3: Toast variants -->
+    <div class="tp-dialogs-cell">
+      <div class="tp-dialogs-cell-label">Frame 3 — Toast variants (passive notification)</div>
+      <div class="tp-toast-preview-list">
+        <div class="tp-toast-preview">
+          <span class="tp-toast-preview-icon is-success"><span class="tp-icon"><svg><use href="#i-check"/></svg></span></span>
+          已刪除「2026 沖繩五日自駕遊」
+        </div>
+        <div class="tp-toast-preview">
+          <span class="tp-toast-preview-icon is-error"><span class="tp-icon"><svg><use href="#i-close"/></svg></span></span>
+          無法取得位置：使用者拒絕授權
+        </div>
+        <div class="tp-toast-preview">
+          <span class="tp-toast-preview-icon is-info"><span class="tp-icon"><svg><use href="#i-info"/></svg></span></span>
+          已恢復連線
+        </div>
+      </div>
+      <p class="tp-dialogs-cell-caption">
+        Auto-dismiss 2.4-3s · success / error / info 三色 · 不阻斷 user 操作 · Desktop 右上 titlebar 下方、compact 底部高於 bottom nav。用於：操作成功 / 失敗可重試 / 環境狀態（離線、不支援的功能）/ 複製成功。
+      </p>
+    </div>
+
+    <!-- Frame 4: Decision Matrix (text-only spec card) -->
+    <div class="tp-dialogs-cell">
+      <div class="tp-dialogs-cell-label">Frame 4 — When to use which</div>
+      <div style="background: var(--tp-background); border: 1px solid var(--tp-border); border-radius: var(--tp-radius-lg); padding: 16px; font-size: 14px; line-height: 22px;">
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 12px 16px; align-items: baseline;">
+          <strong style="color: var(--tp-destructive, #C13515);">Destructive</strong>
+          <span>刪除 / 撤銷 / 移除權限 → <strong>ConfirmModal</strong></span>
+
+          <strong style="color: var(--tp-accent-deep);">Single input</strong>
+          <span>需要 user 輸入單行文字 → <strong>InputModal</strong></span>
+
+          <strong style="color: var(--tp-info, #3B7EA1);">Passive</strong>
+          <span>通知 / 環境狀態 / 可重試的失敗 → <strong>Toast</strong></span>
+
+          <strong style="color: var(--tp-success, #06A77D);">Inline error</strong>
+          <span>表單欄位錯 → 欄位下方 <code>FieldError</code>（不要用 toast / modal）</span>
+        </div>
+      </div>
+      <p class="tp-dialogs-cell-caption">
+        絕對不用：<code>window.confirm</code> / <code>window.alert</code> / <code>window.prompt</code>。新增 destructive flow 一律走 ConfirmModal；新增 input prompt 一律走 InputModal。
+      </p>
+    </div>
+
+  </div>
+</section>
+
 <footer class="tp-footer">
-  Tripline Terracotta Layout v2 · 切換 light / dark mode 檢查 chrome、content、modal · DESIGN.md v2026-04-27
+  Tripline Terracotta Layout v2 · 切換 light / dark mode 檢查 chrome、content、modal · DESIGN.md v2026-04-30
 </footer>
 
 </div>

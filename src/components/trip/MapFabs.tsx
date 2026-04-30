@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import Icon from '../shared/Icon';
+import { showToast } from '../shared/Toast';
 
 export type MapTileStyle = 'street' | 'satellite' | 'terrain';
 
@@ -156,7 +157,7 @@ export default function MapFabs({ map, initialStyle = 'street' }: MapFabsProps) 
   function locateMe() {
     if (!map || locating) return;
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      window.alert('此瀏覽器不支援定位');
+      showToast('此瀏覽器不支援定位', 'error', 3000);
       return;
     }
     setLocating(true);
@@ -177,7 +178,7 @@ export default function MapFabs({ map, initialStyle = 'street' }: MapFabsProps) 
       },
       (err) => {
         setLocating(false);
-        window.alert(`無法取得位置：${err.message}`);
+        showToast(`無法取得位置：${err.message}`, 'error', 3000);
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
     );

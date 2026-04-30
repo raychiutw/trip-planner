@@ -155,17 +155,20 @@ describe('SessionsPage', () => {
     expect((deleteCall[1] as RequestInit).method).toBe('DELETE');
   });
 
-  it('「登出其他全部裝置」 confirmed → DELETE + filter to current only', async () => {
+  it('「登出其他全部裝置」 confirmed via ConfirmModal → DELETE + filter to current only', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, revoked_count: 2 }), { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
     vi.useRealTimers();
 
     render(<MemoryRouter><SessionsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('sessions-revoke-all')).toBeTruthy());
+    // Click 觸發 → 開 ConfirmModal（不直接 DELETE）
     fireEvent.click(screen.getByTestId('sessions-revoke-all'));
+    await waitFor(() => expect(screen.queryByTestId('confirm-modal')).toBeTruthy());
+    // Click ConfirmModal 內的「登出全部」 → 真的 DELETE
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
 
     await waitFor(() => expect(screen.queryByTestId('sessions-row-sess_phone')).toBeNull());
     expect(screen.queryByTestId('sessions-row-sess_old')).toBeNull();
@@ -178,17 +181,18 @@ describe('SessionsPage', () => {
     expect((deleteCall[1] as RequestInit).method).toBe('DELETE');
   });
 
-  it('「登出其他全部裝置」 cancelled → no DELETE call', async () => {
+  it('「登出其他全部裝置」 ConfirmModal cancel → no DELETE call', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ sessions: SAMPLE_SESSIONS }), { status: 200 }),
     );
     vi.stubGlobal('fetch', fetchMock);
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false));
     vi.useRealTimers();
 
     render(<MemoryRouter><SessionsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('sessions-revoke-all')).toBeTruthy());
     fireEvent.click(screen.getByTestId('sessions-revoke-all'));
+    await waitFor(() => expect(screen.queryByTestId('confirm-modal')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
 
     // No additional fetch beyond initial GET
     expect(fetchMock).toHaveBeenCalledTimes(1);
