@@ -1,17 +1,10 @@
 /**
  * GlobalBottomNav — 5-tab mobile bottom nav (mockup section 02 align).
  *
- * Section 5 (terracotta-mockup-parity-v2 / E4): mockup 採 5-tab global IA
- * (聊天 / 行程 / 地圖 / 探索 / 帳號 | 登入)。本 component 是所有 page 共用
- * bottom-nav，包含 trip-scoped /trip/:id (取代既有 4-tab BottomNavBar)。
+ * 5-tab global IA(聊天 / 行程 / 地圖 / 探索 / 帳號 | 登入),所有 page 共用,
+ * 包含 trip-scoped /trip/:id。
  *
- * 「更多」 sheet 4 action 已遷移新家：
- *   - 共編 → trip TitleBar 「共編」 button (Section 4.6)
- *   - 切換行程 → /trips card grid
- *   - 外觀 → AccountPage 「外觀設定」 row (Section 2)
- *   - 下載 / 列印 → trip TitleBar OverflowMenu
- *
- * Logged-in users 「帳號」 entry → /account (取代既有 /settings/sessions)。
+ * Logged-in users「帳號」 entry → /account。
  */
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';

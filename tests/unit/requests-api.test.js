@@ -71,10 +71,11 @@ describe('Request type definition', () => {
     expect(apiTypes).toContain('message: string');
   });
 
-  it('marks title and body as deprecated', () => {
-    // Should have @deprecated annotations for legacy fields
-    const titleDeprecated = apiTypes.includes('@deprecated') && apiTypes.includes('title?');
-    expect(titleDeprecated).toBe(true);
+  it('legacy title/body/processedBy fields purged from Request interface', () => {
+    // v2.17.16:deprecated 欄位整批刪除。Request 不再有 title? / body? / processedBy?。
+    expect(apiTypes).not.toMatch(/^\s*title\?:/m);
+    expect(apiTypes).not.toMatch(/^\s*body\?:/m);
+    expect(apiTypes).not.toMatch(/^\s*processedBy\?:/m);
   });
 
   it('uses RequestStatus type for status field', () => {

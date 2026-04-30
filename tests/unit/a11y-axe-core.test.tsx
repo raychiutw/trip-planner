@@ -44,7 +44,6 @@ vi.mock('../../src/hooks/useLeafletMap', () => ({
 
 import AppShell from '../../src/components/shell/AppShell';
 import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
-import BottomNavBar from '../../src/components/shell/BottomNavBar';
 import TripSheet from '../../src/components/trip/TripSheet';
 import ChatPage from '../../src/pages/ChatPage';
 import GlobalMapPage from '../../src/pages/GlobalMapPage';
@@ -81,12 +80,6 @@ function withRouter(node: React.ReactNode, initialUrl = '/') {
 describe('a11y — axe-core wcag2a + wcag2aa（task 5.1+5.2）', () => {
   it('DesktopSidebar 0 violations', async () => {
     const { container } = render(withRouter(<DesktopSidebar />, '/trips'));
-    const violations = await runAxe(container);
-    expect(violations, describeViolations(violations)).toEqual([]);
-  });
-
-  it('BottomNavBar 0 violations', async () => {
-    const { container } = render(withRouter(<BottomNavBar tripId="test-trip" />, '/trip/test-trip'));
     const violations = await runAxe(container);
     expect(violations, describeViolations(violations)).toEqual([]);
   });

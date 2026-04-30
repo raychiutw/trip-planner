@@ -679,8 +679,7 @@ function TripPageInner(
     </Suspense>
   ) : undefined;
 
-  // Section 5 (E4)：trip-scoped 4-tab BottomNavBar 退役，全 page 統一用
-  // 5-tab GlobalBottomNav。「更多」 sheet 4 action 已遷移新家：
+  // 「更多」 sheet 4 action 已遷移新家:
   // 共編 → trip TitleBar；切換行程 → /trips；外觀 → AccountPage；下載 → OverflowMenu
   const bottomNavContent = !loading && trip ? (
     <GlobalBottomNav authed={!!currentUser} />

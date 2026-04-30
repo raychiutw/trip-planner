@@ -34,7 +34,6 @@ vi.mock('../../src/components/shell/AppShell', () => ({
   default: ({ main }: { main: React.ReactNode }) => <div data-testid="app-shell">{main}</div>,
 }));
 vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
-vi.mock('../../src/components/shell/BottomNavBar', () => ({ default: () => null }));
 vi.mock('../../src/components/trip/TripSheet', () => ({ default: () => null }));
 vi.mock('../../src/components/trip/InfoSheet', () => ({
   default: ({ open, title, children }: { open: boolean; title: string; children: React.ReactNode }) => (

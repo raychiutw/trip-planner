@@ -3,6 +3,39 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.17.16] - 2026-04-30
+
+**Dead code + @deprecated 整批清除**:User 拍板「dead code 跟 deprecated 都刪」。
+
+### Removed
+
+**Dead files(0 references):**
+- `src/hooks/useTripSelector.ts`(只有 self-reference)
+- `src/hooks/useRequests.ts`(只有 self-reference)
+- `src/lib/demote-strategy.ts` + `tests/unit/demote-strategy.test.ts`(test 在測 dead src)
+- `src/components/trip/DemoteConfirmModal.tsx`(只有 stale doc comment 提到)
+- `src/components/shell/BottomNavBar.tsx`(自帶 `@deprecated`,沒人 render)
+- `tests/unit/mobile-bottom-nav-route.test.tsx` / `mobile-bottom-nav-entries.test.tsx` / `mobile-bottom-nav-optional-clear-sheet.test.tsx`(全部測 deleted BottomNavBar)
+
+**Deprecated props / fields:**
+- `DesktopSidebar` 的 `isAdmin?: boolean` prop(自標 `@deprecated`,PR-O 後管理 nav 已廢)+ `DesktopSidebarConnected` 的 `const isAdmin = ...` 計算 + `isAdmin={isAdmin}` 傳遞。
+- `Request` interface 的 `title?: string` / `body?: string` / `processedBy?: string | null` 欄位(自標 `@deprecated`,grep 確認 src + functions 都沒人讀)。
+
+**Stale doc comments:**
+- `src/components/trip/TimelineRail.tsx:596` 移除 DemoteConfirmModal pattern 引用。
+- `src/pages/TripPage.tsx:682` 拿掉 BottomNavBar 退役歷史 prefix。
+- `src/components/shell/GlobalBottomNav.tsx` JSDoc 簡化 — 拿掉 BottomNavBar 取代史 + 4 action 遷移細節(那些是 transition note,已過時)。
+- `tests/unit/trip-page-titlebar.test.tsx:37` 拿掉 `vi.mock('BottomNavBar')`(TripPage 早就不 import 了)。
+- `tests/unit/a11y-axe-core.test.tsx` 拿掉 BottomNavBar import + axe test case。
+
+### Tests
+
+- `requests-api.test.js > Request type definition`:`marks title and body as deprecated` → `legacy title/body/processedBy fields purged`(改成 negative assertion)。
+
+### Stats
+
+- Net **-12 files / -1100+ lines**。1316 → 1286 tests(30 個跟 deleted dead files 一起刪)。
+
 ## [2.17.15] - 2026-04-30
 
 **MapPage day-tabs / GlobalBottomNav 重疊修正**:User 拍 v2.17.14 後反饋 day nav 跟 bottom nav 重疊。
