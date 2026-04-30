@@ -593,7 +593,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
       />
 
       {/* Section 4.5 (terracotta-ui-parity-polish): destructive ConfirmModal
-       * 取代 window.confirm。Sentry-friendly + 對齊既有 DemoteConfirmModal pattern。 */}
+       * 取代 window.confirm。Sentry-friendly。 */}
       {showDeleteConfirm && (
         <div
           style={{

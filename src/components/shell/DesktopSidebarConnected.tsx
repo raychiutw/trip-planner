@@ -29,9 +29,5 @@ export default function DesktopSidebarConnected(props: DesktopSidebarConnectedPr
     };
   }, [user]);
 
-  // Admin gate: matches getAuth() server logic — owner email exposes
-  // legacy /manage editor + data tooling. Anyone else doesn't see it.
-  const isAdmin = user?.email === 'lean.lean@gmail.com';
-
-  return <DesktopSidebar {...props} user={sidebarUser} isAdmin={isAdmin} />;
+  return <DesktopSidebar {...props} user={sidebarUser} />;
 }

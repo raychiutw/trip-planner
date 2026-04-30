@@ -192,9 +192,6 @@ export interface SidebarUser {
 export interface DesktopSidebarProps {
   /** Current authenticated user — null = 未登入 */
   user?: SidebarUser | null;
-  /** @deprecated PR-O：管理 nav 已廢，admin 改走 trip-level CollabSheet。
-   * Prop 保留以避免 ConnectedSidebar 端 break，但已無作用。 */
-  isAdmin?: boolean;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }

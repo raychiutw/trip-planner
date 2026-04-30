@@ -48,6 +48,83 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 - 共編 sheet 升格 page 後,user 從 `/trips` card 點「共編」 → `/trip/:id/collab` (新 page)→ click 「← 返回前頁」 → 回 `/trips`。Browser back / forward 自然運作。
 - Owner role 不可被 PATCH/DELETE — 維持既有 ownership transfer 走另外 endpoint(未來實作)。
 
+## [2.17.17] - 2026-04-30
+
+**6 個 trip sheet feature 整批移除 + AccountPage avatar fix**:User /qa 找到 critical issue —`/trip/:id` 永遠 redirect 到 TripsListPage embedded mode,`EmbeddedActionMenu` 只暴露 5 項(共編 + 列印 + 4 download),其餘 6 個 sheet 完全沒 UI 入口。User 拍板「移除」。
+
+### Removed (Critical F1: 6 unreachable sheets + dead code chain)
+
+**Dead component files(0 user-reachable render path):**
+- `src/components/trip/OverflowMenu.tsx`(整個 component,12 個 OVERFLOW_ITEMS)
+- `src/components/trip/SuggestionSheet.tsx`(AI 建議 sheet body)
+- `src/components/trip/FlightSheet.tsx`(航班 sheet body)
+- `src/components/trip/TodayRouteSheet.tsx`(今日路線 sheet body)
+- `src/components/trip/DocCard.tsx`(checklist / backup / emergency sheet body)
+- `src/components/trip/TripSheetContent.tsx`(switch case 9 個 sheet keys 整個 dispatcher,包含 ACTION_MENU_GRID 9-button + ACTION_MENU_EXPORTS 5-row dead grids)
+
+**Dead UI logic in TripPage(`{!noShell && <TitleBar actions={...} />}` 整段):**
+- 5 個 button(加景點 / 建議 / 共編 / 下載 + OverflowMenu)
+- `handlePanelItem` callback
+- `handleTripChange` callback(trip-select sheet 用)
+- `sheetTrips` / `sheetTripsLoading` state(trip-select sheet 用)
+- `colorMode` / `setColorMode`(appearance sheet 用)
+- `currentDay` / `docs` props(都 only fed to TripSheetContent)
+- TripPage 改成 inline render `<CollabSheet>` for `activeSheet === 'collab'`(唯一還活著的 sheet)
+- `?sheet=` URL param 從 `SHEET_TITLES` allowlist 改成 hardcode `=== 'collab'` check
+- `Icon` / `TitleBar` import 一起拔(now unused)
+
+### Fixed (High F2: AccountPage avatar 跟 sidebar 不一致)
+
+- `AccountPage.tsx:236` 從 `user.email.charAt(0).toUpperCase()` 改用 `displayName.charAt(0).toUpperCase()`,跟 `DesktopSidebar:204` `user.name` 一致。User "Ray" + email "lean.lean@..." 現在 hero 跟 sidebar 都顯示「R」。
+
+### Moved
+
+- `DocEntry` type 從已刪 `src/components/trip/DocCard.tsx` 搬到 `src/types/trip.ts`(被 `useTrip.ts` + `lib/tripExport.ts` import,export 流程還活著)。
+
+### Removed tests
+
+- `tests/unit/overflow-menu-divider.test.tsx`(測 deleted OverflowMenu divider 邏輯)
+- `tests/unit/trip-page-titlebar-actions.test.tsx`(測 deleted TripPage TitleBar 4 actions)
+- `tests/unit/trip-page-titlebar.test.tsx`(測 deleted TripPage standalone TitleBar mount)
+- `tests/unit/quick-panel.test.js`(asserts OverflowMenu imports + 12 OVERFLOW_ITEMS keys)
+
+### Stats
+
+**Net -14 files / -1500+ lines,precache 2189.65 → 2164.35 KiB(-25 KiB)。** 1316 → 1258 tests(58 個跟 deleted dead 一起刪)。
+
+## [2.17.16] - 2026-04-30
+
+**Dead code + @deprecated 整批清除**:User 拍板「dead code 跟 deprecated 都刪」。
+
+### Removed
+
+**Dead files(0 references):**
+- `src/hooks/useTripSelector.ts`(只有 self-reference)
+- `src/hooks/useRequests.ts`(只有 self-reference)
+- `src/lib/demote-strategy.ts` + `tests/unit/demote-strategy.test.ts`(test 在測 dead src)
+- `src/components/trip/DemoteConfirmModal.tsx`(只有 stale doc comment 提到)
+- `src/components/shell/BottomNavBar.tsx`(自帶 `@deprecated`,沒人 render)
+- `tests/unit/mobile-bottom-nav-route.test.tsx` / `mobile-bottom-nav-entries.test.tsx` / `mobile-bottom-nav-optional-clear-sheet.test.tsx`(全部測 deleted BottomNavBar)
+
+**Deprecated props / fields:**
+- `DesktopSidebar` 的 `isAdmin?: boolean` prop(自標 `@deprecated`,PR-O 後管理 nav 已廢)+ `DesktopSidebarConnected` 的 `const isAdmin = ...` 計算 + `isAdmin={isAdmin}` 傳遞。
+- `Request` interface 的 `title?: string` / `body?: string` / `processedBy?: string | null` 欄位(自標 `@deprecated`,grep 確認 src + functions 都沒人讀)。
+
+**Stale doc comments:**
+- `src/components/trip/TimelineRail.tsx:596` 移除 DemoteConfirmModal pattern 引用。
+- `src/pages/TripPage.tsx:682` 拿掉 BottomNavBar 退役歷史 prefix。
+- `src/components/shell/GlobalBottomNav.tsx` JSDoc 簡化 — 拿掉 BottomNavBar 取代史 + 4 action 遷移細節(那些是 transition note,已過時)。
+- `tests/unit/trip-page-titlebar.test.tsx:37` 拿掉 `vi.mock('BottomNavBar')`(TripPage 早就不 import 了)。
+- `tests/unit/a11y-axe-core.test.tsx` 拿掉 BottomNavBar import + axe test case。
+
+### Tests
+
+- `requests-api.test.js > Request type definition`:`marks title and body as deprecated` → `legacy title/body/processedBy fields purged`(改成 negative assertion)。
+
+### Stats
+
+- Net **-12 files / -1100+ lines**。1316 → 1286 tests(30 個跟 deleted dead files 一起刪)。
+
 ## [2.17.15] - 2026-04-30
 
 **MapPage day-tabs / GlobalBottomNav 重疊修正**:User 拍 v2.17.14 後反饋 day nav 跟 bottom nav 重疊。

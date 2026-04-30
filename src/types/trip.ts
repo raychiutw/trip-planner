@@ -10,6 +10,16 @@
 // Nested value types
 // ---------------------------------------------------------------------------
 
+/** Trip doc entry shape used by /api/trips/:id/docs/:key (export only,
+ *  v2.17.17 後 sheet rendering 已移除,只剩 tripExport 用)。 */
+export interface DocEntry {
+  id?: number;
+  sort_order?: number;
+  section: string;
+  title: string;
+  content: string;
+}
+
 /** Location object stored in entries.location, parsed by API handler */
 export interface Location {
   name?: string;

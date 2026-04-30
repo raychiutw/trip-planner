@@ -80,8 +80,7 @@ export type RequestStatus = 'open' | 'received' | 'processing' | 'completed';
  * A trip-edit / trip-plan request submitted by a traveller.
  *
  * DB table: requests
- * Columns: id, trip_id, mode, message, submitted_by, reply, status,
- *          created_at, processed_by
+ * Columns: id, trip_id, mode, message, submitted_by, reply, status, created_at
  *
  * mapRow renames:
  *   trip_id      -> tripId
@@ -93,12 +92,7 @@ export interface Request {
   /** DB column `trip_id` */
   tripId: string;
   mode: 'trip-edit' | 'trip-plan' | 'trip-info';
-  /** Combined message (merged from legacy title + body) */
   message: string;
-  /** @deprecated Use `message` instead. Kept for legacy compatibility. */
-  title?: string;
-  /** @deprecated Use `message` instead. Kept for legacy compatibility. */
-  body?: string;
   /** DB column `submitted_by` — email of the submitter */
   submittedBy?: string | null;
   reply?: string | null;
@@ -106,11 +100,6 @@ export interface Request {
   status: RequestStatus;
   /** DB column `created_at` */
   createdAt: string;
-  /**
-   * DB column `processed_by` (added in migration 0004).
-   * @deprecated No longer set by new requests. Retained for historical data only.
-   */
-  processedBy?: string | null;
 }
 
 // ---------------------------------------------------------------------------
