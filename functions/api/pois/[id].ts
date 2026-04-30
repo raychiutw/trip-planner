@@ -7,7 +7,7 @@
  */
 
 import { logAudit, computeDiff } from '../_audit';
-import { hasPermission } from '../_auth';
+import { hasWritePermission } from '../_auth';
 import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
@@ -37,7 +37,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   if (!auth.isAdmin) {
     if (!tripId) throw new AppError('DATA_VALIDATION', '非 admin 必須提供 tripId');
-    if (!await hasPermission(db, auth.email, tripId, false)) {
+    if (!await hasWritePermission(db, auth.email, tripId, false)) {
       throw new AppError('PERM_DENIED');
     }
     const link = await db.prepare(

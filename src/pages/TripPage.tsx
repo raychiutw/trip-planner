@@ -447,11 +447,13 @@ function TripPageInner(
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    // PR-Q 2026-04-26:?sheet=<key> URL param — 從 /trips card kebab「共編
-    // 設定」過來,自動開該 sheet。v2.17.17:只剩 collab 一個合法 key。
+    // PR-Q 2026-04-26：?sheet=<key> URL param — 從 /trips card kebab 過來。
+    // v2.17.17：v2.17.16/17 cleanup 後其餘 sheet keys 已移除，只剩 collab。
+    // v2.18.0：collab 升格獨立頁面 /trip/:id/collab，?sheet=collab redirect
+    // 過去（保 legacy URL 相容）。
     const sheetParam = new URLSearchParams(window.location.search).get('sheet');
-    if (sheetParam === 'collab') {
-      setActiveSheet('collab');
+    if (sheetParam === 'collab' && resolveState.status === 'resolved') {
+      navigate(`/trip/${encodeURIComponent(resolveState.tripId)}/collab`, { replace: true });
     }
 
     // PR-R 2026-04-26：?focus=<entryId> URL param 優先級最高（從 /map 點 POI

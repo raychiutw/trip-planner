@@ -11,7 +11,7 @@
  */
 
 import { logAudit } from '../../../../_audit';
-import { hasPermission, verifyEntryBelongsToTrip } from '../../../../_auth';
+import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
@@ -26,7 +26,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const [hasPerm, belongsToTrip] = await Promise.all([
-    hasPermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth.email, id, auth.isAdmin),
     verifyEntryBelongsToTrip(db, entryId, id),
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

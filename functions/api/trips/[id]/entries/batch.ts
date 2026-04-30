@@ -15,7 +15,7 @@
  *   - 全 atomic 透過 db.batch() — 一筆失敗整批 rollback
  */
 import { logAudit } from '../../../_audit';
-import { hasPermission, requireAuth } from '../../../_auth';
+import { hasWritePermission, requireAuth } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, parseJsonBody, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -32,7 +32,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const { id: tripId } = context.params as { id: string };
   const db = context.env.DB;
 
-  if (!await hasPermission(db, auth.email, tripId, auth.isAdmin)) {
+  if (!await hasWritePermission(db, auth.email, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

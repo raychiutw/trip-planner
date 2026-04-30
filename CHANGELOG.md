@@ -3,6 +3,51 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.18.0] - 2026-04-30
+
+**共編設定升格獨立頁面 + 新增 viewer role + ConfirmModal + QA medium/low fix**:User /qa 後拍板「移除既有 InfoSheet 內嵌 collab,改 standalone page」+ 加 viewer(檢視成員,read-only collaborator)。同 PR 順手清掉 QA 報告的 medium(F3)+ low(L1)findings。
+
+### Added
+
+- **新 route `/trip/:tripId/collab`** + `src/pages/CollabPage.tsx`(獨立頁面,共用 `.tp-titlebar` chrome,左側 back 回前頁,右側無 actions,body 是 `<CollabPanel>`)。
+- **`src/components/trip/CollabPanel.tsx`**(新):共編 panel body,包含 hint / member list(3-tier role)/ pending invitations / add form。從 CollabSheet 的 v2.17 設計演進。
+- **`src/components/shared/ConfirmModal.tsx`**(新):取代 `window.confirm()` 的 styled destructive 對話框。支援 Escape / backdrop dismiss / busy state / focus auto-trap。
+- **viewer role**(3-tier:owner / member / viewer):
+  - `Migration 0043`:`trip_permissions.role` CHECK 加 'viewer'(SQLite recreate-table)
+  - `Migration 0044`:`trip_invitations.role` CHECK 加 'viewer'
+  - `src/types/api.ts`:加 `CollabRole` type alias(`'owner' | 'admin' | 'member' | 'viewer'`)
+- **role chip dropdown**:CollabPanel 內的 member / viewer chip 點擊展開選單,可在 member ↔ viewer 切換(owner / admin chip 不可改)。
+- **新增成員 role selector**:`+ 新增` form 下方 pill row 可選預設 role(預設「共編成員」,可切「檢視成員」)。
+- **Backend `PATCH /api/permissions/:id`**:新 endpoint,body `{ role: 'member' | 'viewer' }`。Validation 拒 `'owner'/'admin'` 升級攻擊。No-op 直接 200(避免 audit log noise)。
+- **Mockup Section 21 — Collab Page**:Desktop / Compact / ConfirmModal / Toast variants 4 個 frame。加 `i-check` SVG symbol(原 mockup 沒有)。
+
+### Changed
+
+- **TripsListPage `EmbeddedActionMenu` onCollab**:從 `setCollabTripId(state)` 改 `navigate('/trip/:id/collab')`,移除 InfoSheet wrapper + CollabSheet import。
+- **TripsListPage `handleMenuCollab`**(card kebab menu):同上,navigate 取代 sheet。
+- **TripPage `?sheet=collab` URL deeplink**:redirect 到 `/trip/:id/collab`(legacy URL 相容,replace history)。其他 sheet keys 仍走 InfoSheet path(兼容)。
+- **CollabSheet**(legacy InfoSheet body)變 thin wrapper:`<CollabPanel tripId={...} />` — 確保所有 entry path 視覺一致(將來整批拔 InfoSheet wrapper 時可一併刪)。
+- **POST /api/permissions** validation 接受 `viewer` role(原本 reject 任何 non-member/non-admin)。
+
+### Security (review hardening)
+
+- **viewer role 真正 read-only**(`functions/api/_auth.ts`):pre-merge review 抓到 `hasPermission()` 不區分 role,viewer 雖在 UI 顯示「檢視成員」但 backend 17 個 write endpoint 都會放他過。新增 `hasWritePermission()` 排除 viewer,並 migrate 所有 write path(`trips/[id]` PUT、`trip-ideas` POST/PATCH/DELETE、`trip-pois` PATCH/DELETE、`entries` PATCH/DELETE/copy/batch、`days/[num]` PUT、`docs/[type]` PUT、`pois/[id]` PATCH、`requests` POST)。Read path(`trip-ideas` GET、`requests` GET、`requests/[id]` GET / events SSE)續用 `hasPermission` 維持 viewer 可讀。新測試 `tests/unit/has-write-permission.test.ts` 7 例 pin SQL filter 防回歸。
+
+### Fixed (QA medium/low findings)
+
+- **F3 — TripsListPage mobile tabs 換行**(`src/pages/TripsListPage.tsx`):4 tab `flex: 1` 平分時 375px viewport 「全部 N」 文+count 撐爆 ~85px 寬度,斷成「全 / 部」兩行。改 `.tp-trips-tabs` 容器 `overflow-x: auto` + tab `white-space: nowrap; flex-shrink: 0`,對齊 mockup `.tp-add-subtab` pattern。Tab 不換行,user 滑動切換。
+- **L1 — `.map-highlight` orphan CSS**(`css/tokens.css`):整段 `.map-highlight` + `@keyframes map-highlight-pulse` 移除(無 src 引用)。
+
+### Tests
+
+- `tests/unit/collab-sheet.test.tsx`:revoke test 改 click ConfirmModal confirm button(原 `window.confirm` mock 不再有效)。
+
+### Dev notes
+
+- DocEntry / docs 結構不動(export 流程仍用),CollabSheet thin shim 保留(兼容 TripSheetContent 內 case 'collab')。
+- 共編 sheet 升格 page 後,user 從 `/trips` card 點「共編」 → `/trip/:id/collab` (新 page)→ click 「← 返回前頁」 → 回 `/trips`。Browser back / forward 自然運作。
+- Owner role 不可被 PATCH/DELETE — 維持既有 ownership transfer 走另外 endpoint(未來實作)。
+
 ## [2.17.17] - 2026-04-30
 
 **6 個 trip sheet feature 整批移除 + AccountPage avatar fix**:User /qa 找到 critical issue —`/trip/:id` 永遠 redirect 到 TripsListPage embedded mode,`EmbeddedActionMenu` 只暴露 5 項(共編 + 列印 + 4 download),其餘 6 個 sheet 完全沒 UI 入口。User 拍板「移除」。
