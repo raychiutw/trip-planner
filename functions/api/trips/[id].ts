@@ -1,5 +1,5 @@
 import { logAudit, computeDiff } from '../_audit';
-import { hasPermission } from '../_auth';
+import { hasWritePermission } from '../_auth';
 import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
@@ -75,7 +75,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const db = context.env.DB;
   const [hasPerm, existing] = await Promise.all([
-    hasPermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth.email, id, auth.isAdmin),
     db.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Promise<Record<string, unknown> | null>,
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

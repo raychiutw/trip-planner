@@ -1,5 +1,5 @@
 import { logAudit } from '../../../_audit';
-import { hasPermission } from '../../../_auth';
+import { hasWritePermission } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { json, getAuth, parseJsonBody } from '../../../_utils';
 import type { Env } from '../../../_types';
@@ -60,7 +60,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const db = context.env.DB;
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
+  if (!await hasWritePermission(db, auth.email, id, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

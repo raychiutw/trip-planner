@@ -166,6 +166,9 @@ describe('CollabSheet — pending invitations (V2 共編)', () => {
     render(<CollabSheet tripId="trip-1" />);
     await waitFor(() => screen.getByTestId('pending-revoke-p@x.com'));
     fireEvent.click(screen.getByTestId('pending-revoke-p@x.com'));
+    // v2.18.0: revoke 改 ConfirmModal,要 click confirm 才實際 POST
+    await waitFor(() => screen.getByTestId('confirm-modal-confirm'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => expect(revokeCount).toBe(1));
     // Verify body has tripId + email
     const revokeCall = mockFetch.mock.calls.find(

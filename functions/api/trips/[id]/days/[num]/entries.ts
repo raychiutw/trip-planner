@@ -1,5 +1,5 @@
 import { logAudit } from '../../../../_audit';
-import { hasPermission } from '../../../../_auth';
+import { hasWritePermission } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { findOrCreatePoi } from '../../../../_poi';
 import { validateEntryBody, detectGarbledText } from '../../../../_validate';
@@ -22,7 +22,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
   const changedBy = auth.email;
 
-  if (!await hasPermission(db, auth.email, id, auth.isAdmin)) {
+  if (!await hasWritePermission(db, auth.email, id, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

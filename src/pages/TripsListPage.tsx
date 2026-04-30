@@ -21,7 +21,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useMediaQuery } from '../hooks/useMediaQuery';
@@ -32,8 +32,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TripCardMenu from '../components/trip/TripCardMenu';
-import InfoSheet from '../components/trip/InfoSheet';
-import CollabSheet from '../components/trip/CollabSheet';
+// v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ErrorBanner from '../components/shared/ErrorBanner';
@@ -266,12 +265,19 @@ const SCOPED_STYLES = `
   margin-top: 12px;
   flex-wrap: wrap;
 }
+/* v2.18.0:tabs 在窄螢幕(375px)會把「全部 N」 文字壓到換行(每 tab ~85px)。
+ * 改 horizontal scroll 對齊 mockup .tp-add-subtab pattern — tab 不換行,
+ * user 滑動切換。Inner-flex 不必 flex:1 等寬,讓內容自然寬度。 */
 .tp-trips-tabs {
   display: inline-flex; align-items: center;
   background: var(--color-secondary);
   border-radius: var(--radius-full);
   padding: 4px;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
 }
+.tp-trips-tabs::-webkit-scrollbar { display: none; }
 .tp-trips-tab {
   border: 0; background: transparent; cursor: pointer;
   padding: 6px 14px; border-radius: var(--radius-full);
@@ -279,6 +285,8 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   display: inline-flex; align-items: center; gap: 6px;
   min-height: 32px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tp-trips-tab:hover { color: var(--color-foreground); }
 .tp-trips-tab.is-active {
@@ -714,6 +722,7 @@ export default function TripsListPage() {
   const { user } = useCurrentUser();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const selectedFromUrl = searchParams.get('selected');
   const { openModal: openNewTrip } = useNewTrip();
 
@@ -843,17 +852,14 @@ export default function TripsListPage() {
     setSearchParams(next, { replace: false });
   }
 
-  // PR-OO 2026-04-26：⋯ 共編改 InfoSheet（跟 TripPage 共編 chip 同 sheet
-  // 容器，桌機/手機 視覺一致）。原 PR-AA 走 CollabModal centered modal，跟
-  // TripPage 的 InfoSheet slide-up 視覺不符 — 同一動作兩種容器。改 InfoSheet
-  // 統一，CollabModal 已刪。trip 列表保持 visible 在背景。
-  const [collabTripId, setCollabTripId] = useState<string | null>(null);
-  /* PR-UU 2026-04-27：embedded TripPage forwardRef handle，給漢堡選單呼叫
-   * 列印 / 下載 (TripPage 內部 state-bound handlers)。共編走 setCollabTripId。 */
+  // v2.18.0:共編 sheet 升格獨立頁面 /trip/:id/collab。
+  // card kebab + EmbeddedActionMenu「共編」 → navigate 過去,不再開 InfoSheet。
+  /* PR-UU 2026-04-27:embedded TripPage forwardRef handle,給漢堡選單呼叫
+   * 列印 / 下載(TripPage 內部 state-bound handlers)。 */
   const tripPageRef = useRef<TripPageHandle>(null);
   const handleMenuCollab = useCallback(
-    (tripId: string) => { setCollabTripId(tripId); },
-    [],
+    (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/collab`); },
+    [navigate],
   );
 
   // PR-Q：card kebab 「刪除行程」 → confirm + DELETE /api/trips/:id +
@@ -1154,7 +1160,7 @@ export default function TripsListPage() {
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}
               tripPageRef={tripPageRef}
-              onCollab={() => setCollabTripId(effectiveSelectedId)}
+              onCollab={() => navigate(`/trip/${encodeURIComponent(effectiveSelectedId)}/collab`)}
             />
           </>
         )}
@@ -1175,15 +1181,7 @@ export default function TripsListPage() {
         main={main}
         bottomNav={<GlobalBottomNav authed={!!user} />}
       />
-      {/* PR-OO 2026-04-26：CollabModal → InfoSheet — 跟 TripPage 共編 chip
-       * 同一 sheet 容器，桌機/手機 視覺一致 (slide-up sheet pattern)。 */}
-      <InfoSheet
-        open={!!collabTripId}
-        title="共編設定"
-        onClose={() => setCollabTripId(null)}
-      >
-        {collabTripId ? <CollabSheet tripId={collabTripId} /> : null}
-      </InfoSheet>
+      {/* v2.18.0:共編 sheet 升格 /trip/:id/collab 獨立頁,既有 InfoSheet wrapper 移除。 */}
     </>
   );
 }

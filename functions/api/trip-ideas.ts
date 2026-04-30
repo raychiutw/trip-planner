@@ -6,7 +6,7 @@
  * GET 預設 filter 掉 archived_at IS NOT NULL 的 row。
  */
 import { AppError } from './_errors';
-import { requireAuth, hasPermission } from './_auth';
+import { requireAuth, hasPermission, hasWritePermission } from './_auth';
 import { json, parseJsonBody } from './_utils';
 import type { Env } from './_types';
 
@@ -53,7 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first();
   if (!trip) throw new AppError('DATA_NOT_FOUND', 'trip 不存在');
 
-  if (!(await hasPermission(context.env.DB, auth.email, body.tripId, auth.isAdmin))) {
+  if (!(await hasWritePermission(context.env.DB, auth.email, body.tripId, auth.isAdmin))) {
     throw new AppError('PERM_DENIED');
   }
 

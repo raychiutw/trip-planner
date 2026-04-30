@@ -89,6 +89,8 @@ const NotificationsSettingsPage = lazyWithRetry(() => import('../pages/Notificat
 const ConsentPage = lazyWithRetry(() => import('../pages/ConsentPage'));
 const TripsListPage = lazyWithRetry(() => import('../pages/TripsListPage'));
 const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
+// v2.18.0:共編 sheet 升格獨立頁面
+const CollabPage = lazyWithRetry(() => import('../pages/CollabPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -167,6 +169,8 @@ if (el) {
                 <Route path="map" element={<MapPage />} />
                 <Route path="stop/:entryId" element={<StopDetailRedirect />} />
                 <Route path="stop/:entryId/map" element={<MapPage />} />
+                {/* v2.18.0:共編設定獨立頁(取代 ?sheet=collab bottom-sheet) */}
+                <Route path="collab" element={<CollabPage />} />
               </Route>
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>

@@ -6,7 +6,7 @@
  * Body 接 camelCase（frontend 習慣），handler 內部映射為 snake_case column。
  */
 import { AppError } from '../_errors';
-import { requireAuth, hasPermission } from '../_auth';
+import { requireAuth, hasWritePermission } from '../_auth';
 import { json, parseIntParam, parseJsonBody } from '../_utils';
 import type { Env } from '../_types';
 
@@ -28,7 +28,7 @@ export const onRequestPatch: PagesFunction<Env, 'id'> = async (context) => {
     .first<{ trip_id: string }>();
   if (!existing) throw new AppError('DATA_NOT_FOUND', '找不到該 idea');
 
-  if (!(await hasPermission(context.env.DB, auth.email, existing.trip_id, auth.isAdmin))) {
+  if (!(await hasWritePermission(context.env.DB, auth.email, existing.trip_id, auth.isAdmin))) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -65,7 +65,7 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
     .first<{ trip_id: string }>();
   if (!existing) throw new AppError('DATA_NOT_FOUND', '找不到該 idea');
 
-  if (!(await hasPermission(context.env.DB, auth.email, existing.trip_id, auth.isAdmin))) {
+  if (!(await hasWritePermission(context.env.DB, auth.email, existing.trip_id, auth.isAdmin))) {
     throw new AppError('PERM_DENIED');
   }
 

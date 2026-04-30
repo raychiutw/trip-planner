@@ -13,7 +13,7 @@
  */
 
 import { logAudit } from './_audit';
-import { hasPermission } from './_auth';
+import { hasPermission, hasWritePermission } from './_auth';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import type { Env } from './_types';
@@ -124,7 +124,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // backward compat with older client versions.
   const mode = body.mode === 'trip-edit' || body.mode === 'trip-plan' ? body.mode : 'trip-plan';
 
-  if (!await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
+  if (!await hasWritePermission(env.DB, auth.email, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

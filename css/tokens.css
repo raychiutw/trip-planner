@@ -738,16 +738,7 @@ body.dark {
     body.print-mode .ocean-hero-stat-label, body.print-mode .ocean-hero-stat-value { color: var(--color-foreground); opacity: 1; }
 }
 
-/* ===== Map highlight ===== */
-.map-highlight {
-    animation: map-highlight-pulse var(--transition-duration-slow) ease-in-out;
-}
-@keyframes map-highlight-pulse {
-    0%   { background: transparent; }
-    25%  { background: var(--color-accent-subtle); }
-    75%  { background: var(--color-accent-subtle); }
-    100% { background: transparent; }
-}
+/* v2.18.0:`.map-highlight` + `@keyframes map-highlight-pulse` 已 orphan(無 src 引用),整批刪除。 */
 
 /* ===== Dark mode override (Terracotta deep-cocoa) ===== */
 @layer base {
