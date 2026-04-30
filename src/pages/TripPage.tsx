@@ -475,10 +475,13 @@ function TripPageInner(
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
     window.scrollTo(0, 0);
 
-    // PR-Q 2026-04-26：?sheet=<key> URL param — 從 /trips card kebab「共編
-    // 設定」過來，自動開該 sheet。允許的 key 必須在 SHEET_TITLES 內。
+    // PR-Q 2026-04-26:?sheet=<key> URL param — 從 /trips card kebab 過來。
+    // v2.18.0:?sheet=collab 已升格獨立頁面 /trip/:id/collab,redirect 過去
+    // (保 legacy URL 相容)。其餘 sheet keys 維持既有 InfoSheet 開啟邏輯。
     const sheetParam = new URLSearchParams(window.location.search).get('sheet');
-    if (sheetParam && Object.prototype.hasOwnProperty.call(SHEET_TITLES, sheetParam)) {
+    if (sheetParam === 'collab' && resolveState.status === 'resolved') {
+      navigate(`/trip/${encodeURIComponent(resolveState.tripId)}/collab`, { replace: true });
+    } else if (sheetParam && Object.prototype.hasOwnProperty.call(SHEET_TITLES, sheetParam)) {
       setActiveSheet(sheetParam);
     }
 

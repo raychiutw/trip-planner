@@ -127,13 +127,21 @@ export interface Request {
  *   trip_id -> tripId
  *
  * Special value: trip_id = '*' means access to all trips.
+ *
+ * Roles(v2.18.0):
+ *   - owner:  trip 創建者,單一,不可改/刪
+ *   - admin:  系統管理員(across all trips)
+ *   - member: 共編成員,可檢視+編輯
+ *   - viewer: 檢視成員,只可檢視(read-only collaborator)
  */
+export type CollabRole = 'owner' | 'admin' | 'member' | 'viewer';
+
 export interface Permission {
   id: number;
   email: string;
   /** DB column `trip_id`; '*' means all trips */
   tripId: string;
-  role: 'owner' | 'admin' | 'member';
+  role: CollabRole;
 }
 
 // ---------------------------------------------------------------------------
