@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.18.2] - 2026-05-01
+
+### Fixed
+
+- **`src/components/trip/IdeasTabContent.tsx`** — `loadDayEntries` 加 `Number.isInteger(dayNum) || dayNum < 1` defensive guard，與 `useTrip.fetchDay`（#180 修過的同模式）對齊。daily-check 4/30 報告捕到 8 次 `GET /api/trips/.../days/undefined → 404`，唯一沒 guard 的 GET `/days/:num` 路徑就是這裡，加 guard 阻 invalid dayNum 拼進 URL 污染 api_logs。
+
 ## [2.18.1] - 2026-04-30
 
 **禁用 native browser dialog，全站改用 styled modal / toast**。`window.confirm` / `window.alert` / `window.prompt` 無法 style、無法 a11y trap focus、阻塞主執行緒、Mac/Windows 視覺差異大，看起來「不像我們的 app」。盤點 7 處全部換成 ConfirmModal / 新建 InputModal / Toast。
