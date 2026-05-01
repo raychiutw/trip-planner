@@ -330,6 +330,7 @@ export default function IdeasTabContent({ tripId, dayNumbers = [] }: IdeasTabCon
   }, [reload]);
 
   const loadDayEntries = useCallback(async (dayNum: number) => {
+    if (!Number.isInteger(dayNum) || dayNum < 1) return [];
     try {
       const res = await apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}`);
       if (!res.ok) return [];

@@ -277,3 +277,23 @@ describe('IdeasTabContent — Undo toast (tasks 2.6-2.7)', () => {
     expect(IDEAS_TAB_CONTENT_SRC).toMatch(/handlePromote[\s\S]+?setError\(\(e as Error\)\.message\)/);
   });
 });
+
+describe('IdeasTabContent — loadDayEntries dayNum guard (v2.18.2 regression)', () => {
+  // 對應 daily-check 4/30 報告的 8 次 GET /api/trips/.../days/undefined → 404
+  // guard 把 invalid dayNum 擋在 fetch 之前,避免 URL 拼成 /days/undefined 污染 api_logs
+  it('source: loadDayEntries 開頭即 reject 非正整數 dayNum 並回空陣列', () => {
+    expect(IDEAS_TAB_CONTENT_SRC).toMatch(
+      /loadDayEntries\s*=\s*useCallback\(async\s*\(dayNum:\s*number\)\s*=>\s*\{\s*if\s*\(!Number\.isInteger\(dayNum\)\s*\|\|\s*dayNum\s*<\s*1\)\s*return\s*\[\];/,
+    );
+  });
+
+  it('source: guard 擋住 undefined / NaN / 0 / 負數 / 浮點數,避免 URL 拼成 /days/undefined', () => {
+    // Number.isInteger 對 undefined / NaN / 0.5 都回 false; dayNum < 1 擋掉 0 跟負數
+    expect(Number.isInteger(undefined as unknown as number)).toBe(false);
+    expect(Number.isInteger(NaN)).toBe(false);
+    expect(Number.isInteger(0.5)).toBe(false);
+    expect(Number.isInteger(0)).toBe(true); // 但 0 < 1,所以仍被第二個 clause 擋
+    expect(Number.isInteger(-1)).toBe(true); // -1 < 1
+    expect(Number.isInteger(1)).toBe(true); // 1 通過
+  });
+});
