@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.18.4] - 2026-05-02
+
+### Fixed
+
+- **`scripts/daily-check.js`** — `queryProdDataHygiene` 的 SQL 用 `trip_entries.trip_id` / `day_num`，但這兩欄在 `trip_days`，D1 自 4/30 起回 `400 SQLITE_ERROR no such column: trip_id`。catch 把 error 包成 `status: 'ok'`,3 天 daily-check 假裝綠燈遮蓋 silent failure。改 JOIN `trip_days td ON te.day_id = td.id` 取 `td.trip_id, td.day_num`,catch 改回 `status: 'warning'`。順手撈回 1 筆遺漏 leak `entry id 883 / okinawa-trip-2026-Ray Day 1 / TEST_PROBE`(2026-04-28 留下),透過 cleanup-test-data-leak.js 刪除。
+
 ## [2.18.2] - 2026-05-01
 
 ### Fixed
