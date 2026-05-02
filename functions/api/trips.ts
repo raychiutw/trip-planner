@@ -10,6 +10,11 @@ const MAX_DAYS = 30;
 const MAX_DESTINATIONS = 30;
 const MS_PER_DAY = 86400000;
 
+// 2026-05-02 follow-up: enum validation defense-in-depth — POST 端與 PUT 一致
+const VALID_TRAVEL_MODES = new Set(['driving', 'walking', 'transit']);
+const VALID_LANGS = new Set(['zh-TW', 'en', 'ja']);
+const VALID_DATA_SOURCES = new Set(['manual', 'tp-create', 'imported']);
+
 const TRIP_DOC_TYPES = ['flights', 'checklist', 'backup', 'suggestions', 'emergency'] as const;
 
 interface DestinationInput {
@@ -72,6 +77,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const totalDays = Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
   if (totalDays > MAX_DAYS) {
     throw new AppError('DATA_VALIDATION', `行程天數不可超過 ${MAX_DAYS} 天`);
+  }
+
+  // 2026-05-02 follow-up: enum validation defense-in-depth
+  if (body.default_travel_mode !== undefined &&
+      !VALID_TRAVEL_MODES.has(body.default_travel_mode as string)) {
+    throw new AppError('DATA_VALIDATION', 'default_travel_mode 必須為 driving / walking / transit 之一');
+  }
+  if (body.lang !== undefined && !VALID_LANGS.has(body.lang as string)) {
+    throw new AppError('DATA_VALIDATION', 'lang 必須為 zh-TW / en / ja 之一');
+  }
+  if (body.data_source !== undefined && !VALID_DATA_SOURCES.has(body.data_source as string)) {
+    throw new AppError('DATA_VALIDATION', 'data_source 必須為 manual / tp-create / imported 之一');
   }
 
   // Validate optional destinations array (commit 7)

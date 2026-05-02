@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.3] - 2026-05-02
+
+### Added
+
+- **`default_travel_mode` / `lang` / `data_source` enum 驗證** — POST /api/trips
+  與 PUT /api/trips/:id body 寫入前驗 enum 值 (`driving|walking|transit`、
+  `zh-TW|en|ja`、`manual|tp-create|imported`)，hostile / typo payload 直接 400。
+  /cso --diff sub-confidence 標的 defense-in-depth，hostile path 沒實際 exploit
+  但 typo 寫進 prod 會讓 trips row 帶 garbage default。新增 5 個 integration
+  tests 鎖 enum boundary。
+
+### Removed
+
+- **e2e + dev mock 的舊欄位殘餘：** v2.19.0 PR 範圍內漏改的測試 fixture
+  跟 dev mock。`tests/e2e/api-mocks.js` 6 處 (`selfDrive` / `footer` /
+  `autoScroll` / `ogDescription`)、`scripts/vite-mock-api.ts` 1 處
+  (`selfDrive: true`) 改成新欄位（`defaultTravelMode` / `lang` / `dataSource` /
+  `destinations`）。E2E 沒 assert 這些欄位所以原本不影響 test 結果，但 fixture
+  與 prod schema drift 留著遲早出包。
+
 ## [2.19.2] - 2026-05-02
 
 ### Fixed

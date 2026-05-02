@@ -12,27 +12,28 @@
 
 /* ===== /api/trips (trip list) ===== */
 const MOCK_TRIPS_LIST = [
+  // 2026-05-02 (migration 0045): selfDrive/autoScroll/footer cols DROP'd → 改用 defaultTravelMode/lang/dataSource
   {
     tripId: 'okinawa-trip-2026-Ray',
     name: '沖繩自駕五日遊',
     owner: 'Ray',
     title: '2026 沖繩自駕五日遊',
-    selfDrive: 1,
     countries: '["JP"]',
     published: 1,
-    autoScroll: '["2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05"]',
-    footer: '{"title":"沖繩自駕五日遊","dates":"2026/07/01 — 07/05","tagline":"享受沖繩的陽光與海風","budget":"預算：每人 NT$35,000","exchangeNote":"匯率：1 JPY ≈ 0.22 TWD"}',
+    defaultTravelMode: 'driving',
+    lang: 'zh-TW',
+    dataSource: 'manual',
   },
   {
     tripId: 'busan-trip-2026-CeliaDemyKathy',
     name: '釜山三日遊',
     owner: 'CeliaDemyKathy',
     title: '2026 釜山三日遊',
-    selfDrive: 0,
     countries: '["KR"]',
     published: 1,
-    autoScroll: '["2026-08-10","2026-08-11","2026-08-12"]',
-    footer: '{"title":"釜山三日遊","dates":"2026/08/10 — 08/12","tagline":"韓國美食之旅","budget":"預算：每人 NT$25,000"}',
+    defaultTravelMode: 'transit',
+    lang: 'zh-TW',
+    dataSource: 'manual',
   },
 ];
 
@@ -83,7 +84,9 @@ function initialTripIdeas() {
   ];
 }
 
-/* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) ===== */
+/* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) =====
+ * 2026-05-02 (migration 0045): ogDescription / selfDrive / autoScroll / footer
+ * cols DROP'd → 改 defaultTravelMode / lang / dataSource + destinations[] join。 */
 const MOCK_TRIP_META_OKINAWA = {
   id: 'okinawa-trip-2026-Ray',
   tripId: 'okinawa-trip-2026-Ray',
@@ -91,19 +94,12 @@ const MOCK_TRIP_META_OKINAWA = {
   owner: 'Ray',
   title: '2026 沖繩自駕五日遊',
   description: '五天四夜沖繩自駕行程',
-  ogDescription: '沖繩自駕五日遊行程規劃',
-  selfDrive: 1,
   countries: '["JP"]',
   published: 1,
-  autoScroll: '["2026-07-01","2026-07-02","2026-07-03","2026-07-04","2026-07-05"]',
-  // footer is parsed to object by the API handler
-  footer: {
-    title: '沖繩自駕五日遊',
-    dates: '2026/07/01 — 07/05',
-    tagline: '享受沖繩的陽光與海風',
-    budget: '預算：每人 NT$35,000',
-    exchangeNote: '匯率：1 JPY ≈ 0.22 TWD',
-  },
+  defaultTravelMode: 'driving',
+  lang: 'zh-TW',
+  dataSource: 'manual',
+  destinations: [],
 };
 
 /* ===== /api/trips/busan-trip-2026-CeliaDemyKathy (single trip meta) ===== */
@@ -114,17 +110,12 @@ const MOCK_TRIP_META_BUSAN = {
   owner: 'CeliaDemyKathy',
   title: '2026 釜山三日遊',
   description: '三天兩夜釜山美食行程',
-  ogDescription: '釜山三日遊行程規劃',
-  selfDrive: 0,
   countries: '["KR"]',
   published: 1,
-  autoScroll: '["2026-08-10","2026-08-11","2026-08-12"]',
-  footer: {
-    title: '釜山三日遊',
-    dates: '2026/08/10 — 08/12',
-    tagline: '韓國美食之旅',
-    budget: '預算：每人 NT$25,000',
-  },
+  defaultTravelMode: 'transit',
+  lang: 'zh-TW',
+  dataSource: 'manual',
+  destinations: [],
 };
 
 /* ===== /api/trips/:id/days (days summary) ===== */
