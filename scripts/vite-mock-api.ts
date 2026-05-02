@@ -63,7 +63,7 @@ export function mockApiPlugin(): Plugin {
         } else if (path === '/api/permissions') {
           resp = json(MOCK_PERMISSIONS);
         } else if (path.startsWith('/api/trips/')) {
-          resp = json({ tripId: 'okinawa-trip-2026-Ray', name: 'Ray 的沖繩之旅', title: '2026 沖繩五日自駕遊行程表', selfDrive: true });
+          resp = json({ tripId: 'okinawa-trip-2026-Ray', name: 'Ray 的沖繩之旅', title: '2026 沖繩五日自駕遊行程表', defaultTravelMode: 'driving' });
         } else {
           resp = json({ error: 'mock: not found' }, 404);
         }
