@@ -13,7 +13,14 @@
 - 📋 **多行程支援** — 同時管理多套旅遊計畫，一鍵切換
 - 🗓️ **每日時間軸** — 景點、餐廳、購物、飯店依時間排列，清晰呈現一天行程
 - 🍽️ **三選一餐廳推薦** — 每個用餐時段提供三間選擇，含評分、價位與地圖連結
-- 🗺️ **多地圖支援** — 每個景點直連 Google Maps、Apple Maps、Naver Maps
+- 🗺️ **多地圖支援** — 每個景點直連 Google Maps、Apple Maps、Naver Maps（v2.19.0 改 client 端 `mapsUrl` 從 lat/lng 即時組 URL）
+
+### 行程編輯（v2.19.0+）
+
+- ✏️ **新增 / 編輯行程** — 可改名稱、描述、語言、預設交通方式、發布狀態、目的地清單（拖排 / 加 POI / 分配天數）
+- 🌐 **OSM POI 自動補資料** — Nominatim + Overpass + OpenTripMap + Wikidata 拉景點 lat/lng / address / phone / 評分 / cuisine / opening_hours / wikidata_id，90 天 cache，每月 1 號 09:00 自動跑批次補新 POI
+- 🚗 **景點重排自動更新車程** — 拖拉景點順序時自動重算 ORS 路徑（自駕 / 步行）+ Haversine fallback（大眾運輸）
+- 📅 **多目的地子表** — 跨城市行程可分配每地天數（沖繩 3 天 / 京都 2 天）
 
 ### 即時資訊
 
