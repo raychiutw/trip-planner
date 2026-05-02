@@ -504,12 +504,15 @@ body.dark {
         display: none;
     }
 
+    /* 2026-05-01 mockup S12 Variant A 對齊 — 單層 5 欄 grid，移除冗餘 dot。
+     * Cols: grip(24) | time+dur(60) | icon(44) | content(1fr) | caret(24)。
+     * Grip 永遠淡顯（hover 變 accent），與 time/icon/content/caret 同 row。 */
     .ocean-rail-item {
         position: relative;
         display: grid;
-        grid-template-columns: 44px 24px 1fr;
-        grid-template-areas: "time dot head" "empty expand expand";
-        column-gap: 10px; align-items: start;
+        grid-template-columns: 24px 60px 44px 1fr 24px;
+        column-gap: 14px;
+        align-items: center;
         width: 100%; padding: 12px 0;
         border-bottom: 1px dashed var(--color-border);
         color: var(--color-foreground);
@@ -522,53 +525,46 @@ body.dark {
         padding: 12px 8px;
         border-bottom-color: var(--color-accent);
     }
+    /* head button 跨 col 3-5（icon | content | caret），row click target */
     .ocean-rail-head {
-        /* 2026-04-29 mockup parity:icon 從 inline 22px 改 48x48 大方框 box
-         * (mockup S12 Variant A 規範);grid 改 48px 1fr auto。 */
-        grid-area: head;
-        display: grid; grid-template-columns: 48px 1fr auto;
-        column-gap: 12px; align-items: center; width: 100%;
+        grid-column: 3 / span 3;
+        display: grid; grid-template-columns: 44px 1fr 24px;
+        column-gap: 14px; align-items: center; width: 100%;
         background: transparent; border: none; padding: 0;
         color: inherit; cursor: pointer; text-align: left;
         font: inherit;
-        min-height: 48px;
+        min-height: 44px;
     }
 
+    /* time-stack：時間主行 + dur 副行（如「30 分」「4 HR」「退房」） */
+    .ocean-rail-time-stack {
+        grid-column: 2;
+        display: flex; flex-direction: column; gap: 2px;
+        align-items: flex-start;
+        line-height: 1.2;
+    }
     .ocean-rail-time {
-        grid-area: time;
-        align-self: center;
-        text-align: right;
-        font-size: 13px; font-weight: 700;
-        font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-        color: var(--color-foreground); line-height: 1.2;
+        font-size: var(--font-size-footnote); font-weight: 700;
+        font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
+        color: var(--color-foreground);
     }
-    .ocean-rail-dot {
-        grid-area: dot;
-        align-self: center; justify-self: center;
-        width: 24px; height: 24px; border-radius: 50%;
-        background: var(--color-background);
-        border: 1.5px solid var(--color-lineStrong, #C1C1C1);
-        display: grid; place-items: center;
-        font-size: var(--font-size-caption2); font-weight: 700;
-        color: var(--color-muted);
+    .ocean-rail-dur {
+        font-size: var(--font-size-eyebrow); letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--color-muted);
+        font-weight: 600;
         font-variant-numeric: tabular-nums;
-        line-height: 1;
-        z-index: 1;
     }
-    .ocean-rail-item[data-accent="true"] .ocean-rail-dot { border-color: var(--color-accent); color: var(--color-accent); }
-    .ocean-rail-item[data-now="true"] .ocean-rail-dot { background: var(--color-accent); border-color: var(--color-accent); color: #fff; }
 
-    /* 2026-04-29 mockup parity:icon 從 inline 22px 改 48x48 獨立 box
-     * (mockup S12 Variant A);secondary bg + radius-md + border。 */
+    /* mockup S12 Variant A: 44x44 icon box（從 48 降到 44 對齊 spec） */
     .ocean-rail-icon {
-        width: 48px; height: 48px;
+        width: 44px; height: 44px;
         display: grid; place-items: center;
         background: var(--color-secondary);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
         color: var(--color-muted); flex-shrink: 0;
     }
-    .ocean-rail-icon .svg-icon { width: 24px; height: 24px; }
+    .ocean-rail-icon .svg-icon { width: 22px; height: 22px; }
     .ocean-rail-item[data-accent="true"] .ocean-rail-icon {
         background: var(--color-accent-subtle);
         border-color: var(--color-accent-bg);
@@ -598,7 +594,6 @@ body.dark {
         display: flex; gap: 6px; align-items: center;
         font-size: 12px; color: var(--color-muted);
     }
-    .ocean-rail-sep { opacity: 0.5; }
 
     .ocean-rail-caret {
         font-size: 16px; color: var(--color-muted);

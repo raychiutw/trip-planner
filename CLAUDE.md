@@ -102,7 +102,12 @@ npm run dev          # vite (5173) + wrangler (8788)
 
 ## Design System
 
-所有視覺決定參照 `DESIGN.md`。修改 UI 必須對照，QA 模式下標記不符項。
+**`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` 是 UI/UX 的 single source of truth**。
+
+- **無衝突情境**：code 必須完全遵守 source of truth。任何 UI 修改先對照，與 mockup / DESIGN.md 不符即 bug。
+- **衝突情境**（code 已 ship 與 source of truth 不一致 / 新需求 source of truth 未涵蓋）：**先與 user 討論作法**，不自行決定哪邊改。可能是：(a) 修 code 對齊 source of truth、(b) 更新 source of truth 反映新決議、(c) 加 Decisions Log 例外。
+- **絕不**沉默偏離 source of truth — 即使「合理改進」也要先討論，避免 design review 反向修正。
+- QA 模式下任何不符項都應標記。
 
 ## gstack
 
