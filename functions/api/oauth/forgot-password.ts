@@ -32,6 +32,8 @@ import {
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { passwordReset } from '../../../src/server/email-templates';
 import { recordAuthEvent } from '../_auth_audit';
+import { recordEmailEvent } from '../_audit';
+import { alertAdminTelegram } from '../_alert';
 import type { Env } from '../_types';
 
 interface ForgotBody {
@@ -101,32 +103,59 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     RESET_TOKEN_TTL_SEC,
   );
 
-  // Send reset email — best-effort (token stays in D1 even if email fails)
-  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
-    const origin = new URL(context.request.url).origin;
-    const resetUrl = `${origin}/auth/password/reset?token=${encodeURIComponent(token)}`;
-    const tpl = passwordReset(resetUrl, user.display_name);
-    try {
-      await sendEmail(context.env, {
-        to: email,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-      });
-    } catch (err) {
-      // best-effort — anti-enum response unchanged
-      // eslint-disable-next-line no-console
-      console.error('[forgot-password] email send failed:',
-        err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
-    }
+  // 2026-05-02 cutover: sync send via mac mini tunnel + audit + telegram alert.
+  // Q7 全 endpoint（含 forgot-password）失敗誠實回 500，捨棄 anti-enumeration
+  // 設計（trip-planner 私人圈規模可接受）。
+  const origin = new URL(context.request.url).origin;
+  const resetUrl = `${origin}/auth/password/reset?token=${encodeURIComponent(token)}`;
+  const tpl = passwordReset(resetUrl, user.display_name);
+
+  try {
+    const result = await sendEmail(context.env, {
+      to: email,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+      template: 'forgot-password',
+    });
+    await recordEmailEvent(context.env.DB, {
+      template: 'forgot-password',
+      recipient: email,
+      status: 'sent',
+      latencyMs: result.elapsed,
+    });
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'password_reset_request',
+      outcome: 'success',
+      userId: user.user_id,
+      metadata: { email },
+    });
+    return genericResponse;
+  } catch (err) {
+    const msg = err instanceof EmailError
+      ? `${err.status} ${err.message}`
+      : err instanceof Error
+        ? err.message
+        : String(err);
+    await recordEmailEvent(context.env.DB, {
+      template: 'forgot-password',
+      recipient: email,
+      status: 'failed',
+      error: msg,
+    });
+    await recordAuthEvent(context.env.DB, context.request, {
+      eventType: 'password_reset_request',
+      outcome: 'failure',
+      userId: user.user_id,
+      metadata: { email, reason: 'email_send_failed', error: msg },
+    });
+    await alertAdminTelegram(
+      context.env,
+      `重設密碼信寄送失敗: ${email} (${msg})`,
+    );
+    return new Response(
+      JSON.stringify({ error: '重設密碼信寄送失敗，請稍後再試' }),
+      { status: 500, headers: { 'content-type': 'application/json' } },
+    );
   }
-
-  await recordAuthEvent(context.env.DB, context.request, {
-    eventType: 'password_reset_request',
-    outcome: 'success',
-    userId: user.user_id,
-    metadata: { email },
-  });
-
-  return genericResponse;
 };
