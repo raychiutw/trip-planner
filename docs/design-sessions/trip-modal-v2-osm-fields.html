@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>Trip Modal v2 — OSM 欄位整合 mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+ * Tokens — V2 Terracotta（複製自 css/tokens.css 必要子集）
+ * ============================================================ */
+:root {
+  --color-accent: #D97848;
+  --color-accent-deep: #B85C2E;
+  --color-accent-subtle: #FBEEE4;
+  --color-accent-bg: #F7DFCB;
+  --color-accent-foreground: #FFFFFF;
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F2EAD9;
+  --color-hover: #F9EDE0;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-line-strong: #C8B89F;
+  --color-destructive: #C13515;
+  --color-success: #06A77D;
+  --color-warning: #F48C06;
+  --color-info: #3B7EA1;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+
+  --font-system: 'Inter', 'Noto Sans TC', -apple-system, "PingFang TC", system-ui, sans-serif;
+  --font-size-body: 1rem;
+  --font-size-callout: 1rem;
+  --font-size-footnote: 0.875rem;
+  --font-size-caption: 0.75rem;
+  --font-size-caption2: 0.6875rem;
+  --font-size-eyebrow: 0.625rem;
+  --font-size-title: 1.75rem;
+  --font-size-title2: 1.375rem;
+  --font-size-title3: 1.25rem;
+  --font-size-headline: 1.0625rem;
+
+  --tap-min: 44px;
+  --transition-apple: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ============================================================
+ * Page chrome (展示用，非 modal 一部分)
+ * ============================================================ */
+* { box-sizing: border-box; }
+html { color-scheme: light; }
+body {
+  margin: 0;
+  font-family: var(--font-system);
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color: var(--color-foreground);
+  background: linear-gradient(180deg, #F2EAD9 0%, #FAF4EA 240px);
+  min-height: 100vh;
+  letter-spacing: 0;
+}
+
+.preview-header {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 24px 16px;
+}
+.preview-header h1 {
+  margin: 0 0 4px;
+  font-size: var(--font-size-title);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.preview-header .lead {
+  margin: 0 0 16px;
+  color: var(--color-muted);
+  font-size: var(--font-size-callout);
+}
+.preview-notes {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin: 16px 0 0;
+  font-size: var(--font-size-footnote);
+}
+.preview-notes summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--color-accent-deep);
+  padding: 4px 0;
+  list-style: none;
+}
+.preview-notes summary::before {
+  content: "▸";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--color-accent);
+  transition: transform 150ms var(--transition-apple);
+}
+.preview-notes[open] summary::before { transform: rotate(90deg); }
+.preview-notes ul { margin: 12px 0 0; padding-left: 20px; }
+.preview-notes li { margin-bottom: 8px; line-height: 1.6; }
+.preview-notes code {
+  background: var(--color-secondary);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  font-size: 0.9em;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.preview-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.preview-frame-label {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--color-line-strong);
+}
+.preview-frame-label strong {
+  color: var(--color-accent-deep);
+  margin-right: 8px;
+}
+.preview-frame-label .desc {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  margin-left: 12px;
+}
+
+.preview-stage {
+  position: relative;
+  background: rgba(42, 31, 24, 0.18);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 400px;
+}
+.preview-stage.is-mobile {
+  padding: 16px;
+}
+.preview-stage.is-mobile .tp-modal {
+  max-width: 375px;
+}
+
+/* ============================================================
+ * Modal core
+ * ============================================================ */
+.tp-modal {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.tp-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
+}
+.tp-modal-title {
+  font-size: var(--font-size-title3);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.tp-modal-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 18px;
+  font-family: inherit;
+}
+.tp-modal-close:hover {
+  background: var(--color-hover);
+  color: var(--color-foreground);
+}
+.tp-modal-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.tp-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-secondary);
+}
+
+/* ============================================================
+ * Form sections
+ * ============================================================ */
+.tp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tp-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tp-section-label .req {
+  color: var(--color-destructive);
+  font-weight: 700;
+  font-size: var(--font-size-caption);
+}
+.tp-section-helper {
+  margin: 4px 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+/* ============================================================
+ * Destination list (沿用 V2 mockup pattern)
+ * ============================================================ */
+.tp-new-dest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tp-new-dest-row {
+  display: grid;
+  grid-template-columns: 24px 28px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  min-height: 52px;
+  transition: border-color 150ms var(--transition-apple);
+}
+.tp-new-dest-row:hover { border-color: var(--color-line-strong); }
+.tp-new-dest-grip {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  color: var(--color-muted);
+  opacity: 0.4;
+  transition: opacity 150ms var(--transition-apple);
+}
+.tp-new-dest-row:hover .tp-new-dest-grip { opacity: 1; color: var(--color-accent); }
+.tp-new-dest-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  font-weight: 700;
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
+.tp-new-dest-content { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-new-dest-name {
+  font-weight: 600;
+  font-size: var(--font-size-callout);
+  color: var(--color-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tp-new-dest-meta {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+}
+.tp-new-dest-remove {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--color-muted);
+  font-family: inherit;
+}
+.tp-new-dest-remove:hover {
+  background: rgba(193, 53, 21, 0.12);
+  color: var(--color-destructive);
+}
+.tp-new-dest-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 12px 16px;
+  border: 1px dashed var(--color-line-strong);
+  background: transparent;
+  color: var(--color-muted);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
+  transition: all 150ms var(--transition-apple);
+}
+.tp-new-dest-add:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+}
+
+/* ============================================================
+ * Date mode tabs + inputs
+ * ============================================================ */
+.tp-new-date-modes {
+  display: inline-flex;
+  background: var(--color-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+  align-self: flex-start;
+}
+.tp-new-date-mode {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  min-height: 36px;
+}
+.tp-new-date-mode.is-active {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-sm);
+}
+.tp-new-date-fixed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.tp-new-date-input { display: flex; flex-direction: column; gap: 4px; }
+.tp-new-date-input-label {
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.tp-new-date-input-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  min-height: var(--tap-min);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-size: var(--font-size-callout);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.tp-new-date-input-box:hover { border-color: var(--color-accent); }
+.tp-new-date-icon { color: var(--color-muted); font-size: 16px; }
+
+/* ============================================================
+ * Preferences textarea
+ * ============================================================ */
+.tp-new-textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  color: var(--color-foreground);
+  resize: vertical;
+  line-height: 1.5;
+}
+.tp-new-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
+.tp-new-textarea::placeholder { color: var(--color-muted); }
+
+/* ============================================================
+ * NEW: Advanced settings collapsible
+ * ============================================================ */
+.tp-new-advanced {
+  border-top: 1px solid var(--color-border);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+.tp-new-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-new-advanced-toggle .chevron {
+  display: inline-block;
+  transition: transform 150ms var(--transition-apple);
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.tp-new-advanced.is-open .tp-new-advanced-toggle .chevron { transform: rotate(90deg); }
+.tp-new-advanced-meta {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+.tp-new-advanced-body {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 14px;
+}
+.tp-new-advanced.is-open .tp-new-advanced-body { display: flex; }
+
+/* ============================================================
+ * NEW: Title input + auto-name preview
+ * ============================================================ */
+.tp-new-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tp-new-field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: var(--color-muted);
+  letter-spacing: 0.02em;
+}
+.tp-new-field-label .opt {
+  color: var(--color-muted);
+  font-weight: 400;
+  font-size: var(--font-size-caption);
+}
+.tp-new-field-input {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  color: var(--color-foreground);
+}
+.tp-new-field-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
+.tp-new-field-input::placeholder { color: var(--color-muted); opacity: 0.7; }
+
+.tp-new-field-helper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+.tp-new-field-helper.is-preview {
+  color: var(--color-accent-deep);
+  font-weight: 500;
+}
+.tp-new-field-helper.is-preview::before {
+  content: "↳";
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* ============================================================
+ * NEW: Title 變更提示（EditTripModal）
+ * ============================================================ */
+.tp-new-title-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--color-accent-subtle);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-caption);
+  color: var(--color-accent-deep);
+}
+.tp-new-title-hint-text { flex: 1; line-height: 1.4; }
+.tp-new-title-hint-text strong {
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+.tp-new-title-hint-btn {
+  border: 1px solid var(--color-accent);
+  background: var(--color-background);
+  color: var(--color-accent-deep);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.tp-new-title-hint-btn:hover {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-new-title-hint-dismiss {
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-family: inherit;
+}
+.tp-new-title-hint-dismiss:hover { background: rgba(42, 31, 24, 0.08); color: var(--color-foreground); }
+
+/* ============================================================
+ * NEW: Lang select
+ * ============================================================ */
+.tp-new-select {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236F5A47' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 12px center / 12px no-repeat;
+  font: inherit;
+  font-size: var(--font-size-callout);
+  color: var(--color-foreground);
+  appearance: none;
+  cursor: pointer;
+}
+.tp-new-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
+
+/* ============================================================
+ * NEW: Travel mode segment
+ * ============================================================ */
+.tp-new-segment {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-tertiary);
+  border-radius: var(--radius-md);
+}
+.tp-new-segment-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: all 150ms var(--transition-apple);
+}
+.tp-new-segment-option:hover { color: var(--color-foreground); }
+.tp-new-segment-option.is-active {
+  background: var(--color-background);
+  color: var(--color-accent-deep);
+  box-shadow: var(--shadow-sm);
+}
+.tp-new-segment-option .icon { font-size: 14px; line-height: 1; }
+
+/* ============================================================
+ * NEW: Toggle row (self_drive)
+ * ============================================================ */
+.tp-new-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+.tp-new-toggle-content { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.tp-new-toggle-label {
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+.tp-new-toggle-helper {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+.tp-new-toggle {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border: none;
+  background: var(--color-line-strong);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: background-color 200ms var(--transition-apple);
+  font-family: inherit;
+}
+.tp-new-toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  background: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: transform 200ms var(--transition-apple);
+}
+.tp-new-toggle.is-on { background: var(--color-accent); }
+.tp-new-toggle.is-on::after { transform: translateX(18px); }
+
+/* ============================================================
+ * NEW: Publish state radio (footer 旁)
+ * ============================================================ */
+.tp-new-publish {
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-full);
+  gap: 2px;
+}
+.tp-new-publish-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  color: var(--color-muted);
+  cursor: pointer;
+  min-height: 36px;
+  transition: all 150ms var(--transition-apple);
+}
+.tp-new-publish-option:hover { color: var(--color-foreground); }
+.tp-new-publish-option.is-active {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  box-shadow: var(--shadow-sm);
+}
+.tp-new-publish-option .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-line-strong);
+}
+.tp-new-publish-option.is-active.is-draft .dot { background: var(--color-warning); }
+.tp-new-publish-option.is-active.is-published .dot { background: var(--color-success); }
+
+/* ============================================================
+ * Buttons
+ * ============================================================ */
+.tp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-min);
+  padding: 10px 20px;
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 150ms var(--transition-apple);
+}
+.tp-btn.is-ghost {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+.tp-btn.is-ghost:hover { background: var(--color-hover); }
+.tp-btn.is-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-btn.is-primary:hover {
+  background: var(--color-accent-deep);
+  filter: brightness(0.95);
+}
+
+/* ============================================================
+ * Mobile compact
+ * ============================================================ */
+@media (max-width: 760px) {
+  .preview-stage { padding: 0; background: var(--color-background); border-radius: 0; }
+  .tp-modal {
+    max-width: 100%;
+    width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+  }
+  .tp-modal-body { max-height: none; flex: 1; }
+  .tp-new-date-fixed { grid-template-columns: 1fr; }
+  .tp-new-segment { grid-template-columns: 1fr; gap: 6px; }
+  .tp-modal-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .tp-new-publish { width: 100%; justify-content: stretch; }
+  .tp-new-publish-option { flex: 1; justify-content: center; }
+}
+
+/* Compact mobile preview frame */
+.preview-stage.is-mobile .tp-modal {
+  height: 720px;
+  max-height: 720px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+}
+.preview-stage.is-mobile .tp-new-date-fixed { grid-template-columns: 1fr; }
+.preview-stage.is-mobile .tp-modal-body { max-height: 580px; }
+</style>
+</head>
+<body>
+
+<header class="preview-header">
+  <h1>Trip Modal v2 — OSM 欄位整合 mockup</h1>
+  <p class="lead">對齊 V2 Terracotta SoT (<code>docs/design-sessions/terracotta-preview-v2.html</code>) · 補齊 9 個欄位讓 UI 建立的 trip 與 tp-create 結構齊平</p>
+
+  <details class="preview-notes" open>
+    <summary>Design Notes — 重要設計推斷（請 user 確認）</summary>
+    <ul>
+      <li><strong>multi-dest vs <code>region</code> 欄位：</strong>現有 NewTripModal 已是 multi-dest list（沖繩 + 大阪 + 京都 拖拉排序），不是單一 input。本 mockup 解讀：<code>region</code> DB 欄位 = multi-dest names join 字串（例 <code>"沖繩,大阪,京都"</code>），<strong>不再單獨 input</strong>。OSM enrich 時依此切分查 Overpass。</li>
+      <li><strong>title 自動命名規則：</strong>1 dest「2026 沖繩」/ 2 dests「2026 沖繩・大阪」/ 3+ dests「2026 沖繩等 3 地」。跨年用第一天年份。user 自填後不再覆蓋。</li>
+      <li><strong>進階設定 collapsible：</strong>新欄位（title / description / lang / travel_mode / self_drive）全收進「進階設定」folded，避免主畫面從 3 section 暴增到 7 section。預設收起，user 想動才展開。</li>
+      <li><strong>published 改放底部 actions row：</strong>3-state segment「草稿 / 上線」緊貼建立按鈕，視覺上強調「user 必須選一個發布狀態」。預設草稿。</li>
+      <li><strong>保留現有 multi-dest + 雙日期模式：</strong>不破壞 user 已熟悉的 mindtrip 風 UX。</li>
+      <li><strong>拔除欄位：</strong>不再顯示 footer / food_prefs / og_description / auto_scroll / is_default 任何 input。</li>
+      <li><strong>EditTripModal 共用 layout：</strong>跟 NewTripModal 99% 同，只差預填值 + region 變更時 title 旁顯示「更新提示」alert（user 主動點才覆寫，不自動）。</li>
+    </ul>
+  </details>
+</header>
+
+<!-- ===========================================================
+     FRAME 1 — NewTripModal v2 · Default state · 進階收起
+     =========================================================== -->
+<section class="preview-section">
+  <div class="preview-frame-label">
+    <strong>FRAME 1</strong> NewTripModal v2 · Default state
+    <span class="desc">desktop 560px · multi-dest 已選 3 筆 · 進階設定 folded · published 預設草稿</span>
+  </div>
+  <div class="preview-stage">
+    <div class="tp-modal" role="dialog" aria-labelledby="frame1-title">
+      <div class="tp-modal-head">
+        <h2 class="tp-modal-title" id="frame1-title">新增行程</h2>
+        <button class="tp-modal-close" type="button" aria-label="關閉">×</button>
+      </div>
+      <div class="tp-modal-body">
+        <!-- Section 1: 目的地（必填） -->
+        <div class="tp-section">
+          <span class="tp-section-label">目的地 <span class="req">✱</span></span>
+          <div class="tp-new-dest-list">
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">1</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">沖繩</span>
+                <span class="tp-new-dest-meta">日本 · 沖縄県</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button" aria-label="移除">×</button>
+            </div>
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">2</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">大阪</span>
+                <span class="tp-new-dest-meta">日本 · 大阪府</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button" aria-label="移除">×</button>
+            </div>
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">3</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">京都</span>
+                <span class="tp-new-dest-meta">日本 · 京都府</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button" aria-label="移除">×</button>
+            </div>
+          </div>
+          <button class="tp-new-dest-add" type="button">
+            <span>🔍</span>
+            <span>加入目的地（搜尋城市、景點、地址⋯）</span>
+          </button>
+          <p class="tp-section-helper">行程跨 3 個目的地 · 順序決定地圖 polyline 串接方向</p>
+        </div>
+
+        <!-- Section 2: 日期（必填） -->
+        <div class="tp-section">
+          <span class="tp-section-label">日期 <span class="req">✱</span></span>
+          <div class="tp-new-date-modes" role="tablist">
+            <button class="tp-new-date-mode is-active" type="button" role="tab" aria-selected="true">固定日期</button>
+            <button class="tp-new-date-mode" type="button" role="tab" aria-selected="false">大概時間</button>
+          </div>
+          <div class="tp-new-date-fixed">
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">出發</span>
+              <div class="tp-new-date-input-box">
+                <span class="tp-new-date-icon">📅</span>
+                <span>2026-07-29（三）</span>
+              </div>
+            </div>
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">回程</span>
+              <div class="tp-new-date-input-box">
+                <span class="tp-new-date-icon">📅</span>
+                <span>2026-08-09（日）</span>
+              </div>
+            </div>
+          </div>
+          <p class="tp-section-helper">總計 12 天 · 平均分配給 3 個目的地（後續可在 trip detail 微調）</p>
+        </div>
+
+        <!-- Section 3: 偏好（選填） -->
+        <div class="tp-section">
+          <span class="tp-section-label">想做什麼？（選填）</span>
+          <textarea class="tp-new-textarea" placeholder="想去溫泉、別太累、預算 5 萬 / 兩人⋯"></textarea>
+          <p class="tp-section-helper">AI 會根據偏好建議景點；不填寫也可以建立空白行程</p>
+        </div>
+
+        <!-- Section 4: 進階設定 collapsible -->
+        <div class="tp-new-advanced">
+          <button class="tp-new-advanced-toggle" type="button" aria-expanded="false">
+            <span class="chevron">▸</span>
+            <span>進階設定</span>
+            <span class="tp-new-advanced-meta">行程名稱 · 描述 · 顯示語言 · 預設交通 · 自駕模式</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="tp-modal-actions">
+        <div class="tp-new-publish" role="radiogroup" aria-label="發布狀態">
+          <button class="tp-new-publish-option is-active is-draft" type="button" role="radio" aria-checked="true">
+            <span class="dot"></span>
+            <span>草稿</span>
+          </button>
+          <button class="tp-new-publish-option" type="button" role="radio" aria-checked="false">
+            <span class="dot"></span>
+            <span>上線</span>
+          </button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="tp-btn is-ghost" type="button">取消</button>
+          <button class="tp-btn is-primary" type="button">建立行程</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===========================================================
+     FRAME 2 — NewTripModal v2 · 進階展開 · title preview 即時
+     =========================================================== -->
+<section class="preview-section">
+  <div class="preview-frame-label">
+    <strong>FRAME 2</strong> NewTripModal v2 · 進階展開
+    <span class="desc">title placeholder 即時顯示自動命名 · 顯示 lang / travel_mode / self_drive 三個欄位 · published 切到「上線」</span>
+  </div>
+  <div class="preview-stage">
+    <div class="tp-modal" role="dialog" aria-labelledby="frame2-title">
+      <div class="tp-modal-head">
+        <h2 class="tp-modal-title" id="frame2-title">新增行程</h2>
+        <button class="tp-modal-close" type="button" aria-label="關閉">×</button>
+      </div>
+      <div class="tp-modal-body">
+
+        <!-- 簡略：dest list 收起來，省篇幅 -->
+        <div class="tp-section">
+          <span class="tp-section-label">目的地 <span class="req">✱</span></span>
+          <div class="tp-new-dest-list">
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">1</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">沖繩</span>
+                <span class="tp-new-dest-meta">日本 · 沖縄県</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button">×</button>
+            </div>
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">2</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">大阪</span>
+                <span class="tp-new-dest-meta">日本 · 大阪府</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button">×</button>
+            </div>
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">3</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">京都</span>
+                <span class="tp-new-dest-meta">日本 · 京都府</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-section">
+          <span class="tp-section-label">日期 <span class="req">✱</span></span>
+          <div class="tp-new-date-fixed">
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">出發</span>
+              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-07-29（三）</span></div>
+            </div>
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">回程</span>
+              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-08-09（日）</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 進階設定 — 展開狀態 -->
+        <div class="tp-new-advanced is-open">
+          <button class="tp-new-advanced-toggle" type="button" aria-expanded="true">
+            <span class="chevron">▸</span>
+            <span>進階設定</span>
+            <span class="tp-new-advanced-meta">5 個選填欄位</span>
+          </button>
+          <div class="tp-new-advanced-body">
+
+            <!-- title input + auto preview -->
+            <div class="tp-new-field">
+              <label class="tp-new-field-label" for="trip-title">
+                <span>行程名稱</span>
+                <span class="opt">（選填）</span>
+              </label>
+              <input class="tp-new-field-input" id="trip-title" type="text" placeholder="留空則自動命名">
+              <p class="tp-new-field-helper is-preview">自動命名「2026 沖繩等 3 地」</p>
+            </div>
+
+            <!-- description -->
+            <div class="tp-new-field">
+              <label class="tp-new-field-label" for="trip-desc">
+                <span>描述</span>
+                <span class="opt">（選填，用於 SEO 與對外展示）</span>
+              </label>
+              <textarea class="tp-new-textarea" id="trip-desc" rows="3" placeholder="這趟行程的主題、適合誰、特色⋯"></textarea>
+            </div>
+
+            <!-- lang -->
+            <div class="tp-new-field">
+              <label class="tp-new-field-label" for="trip-lang">
+                <span>顯示語言</span>
+              </label>
+              <select class="tp-new-select" id="trip-lang">
+                <option value="zh-TW" selected>繁體中文（台灣）</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
+
+            <!-- travel mode segment -->
+            <div class="tp-new-field">
+              <label class="tp-new-field-label">
+                <span>預設交通方式</span>
+                <span class="opt">（影響車程計算 + 地圖路線）</span>
+              </label>
+              <div class="tp-new-segment" role="radiogroup">
+                <button class="tp-new-segment-option is-active" type="button" role="radio" aria-checked="true">
+                  <span class="icon">🚗</span><span>自駕</span>
+                </button>
+                <button class="tp-new-segment-option" type="button" role="radio" aria-checked="false">
+                  <span class="icon">🚶</span><span>步行</span>
+                </button>
+                <button class="tp-new-segment-option" type="button" role="radio" aria-checked="false">
+                  <span class="icon">🚆</span><span>大眾運輸</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- self_drive toggle -->
+            <div class="tp-new-toggle-row">
+              <div class="tp-new-toggle-content">
+                <span class="tp-new-toggle-label">自駕模式</span>
+                <span class="tp-new-toggle-helper">顯示停車場、加油站、IC 出入口等自駕相關 POI</span>
+              </div>
+              <button class="tp-new-toggle is-on" type="button" role="switch" aria-checked="true" aria-label="自駕模式"></button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      <div class="tp-modal-actions">
+        <div class="tp-new-publish" role="radiogroup" aria-label="發布狀態">
+          <button class="tp-new-publish-option" type="button" role="radio" aria-checked="false">
+            <span class="dot"></span>
+            <span>草稿</span>
+          </button>
+          <button class="tp-new-publish-option is-active is-published" type="button" role="radio" aria-checked="true">
+            <span class="dot"></span>
+            <span>上線</span>
+          </button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="tp-btn is-ghost" type="button">取消</button>
+          <button class="tp-btn is-primary" type="button">建立行程</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===========================================================
+     FRAME 3 — EditTripModal v2 · 預填現有 trip · region 變更提示
+     =========================================================== -->
+<section class="preview-section">
+  <div class="preview-frame-label">
+    <strong>FRAME 3</strong> EditTripModal v2 · 預填現有 trip
+    <span class="desc">title 已自填「家族沖繩五日遊」· 偵測 region 已從「沖繩」變成「沖繩,京都」→ 顯示更新 title 提示</span>
+  </div>
+  <div class="preview-stage">
+    <div class="tp-modal" role="dialog" aria-labelledby="frame3-title">
+      <div class="tp-modal-head">
+        <h2 class="tp-modal-title" id="frame3-title">編輯行程</h2>
+        <button class="tp-modal-close" type="button" aria-label="關閉">×</button>
+      </div>
+      <div class="tp-modal-body">
+
+        <div class="tp-section">
+          <span class="tp-section-label">目的地 <span class="req">✱</span></span>
+          <div class="tp-new-dest-list">
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">1</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">沖繩</span>
+                <span class="tp-new-dest-meta">日本 · 沖縄県 · 5 天</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button">×</button>
+            </div>
+            <div class="tp-new-dest-row" style="background:var(--color-accent-subtle); border-color:var(--color-accent);">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">2</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">京都 <span style="color:var(--color-accent-deep); font-size:var(--font-size-caption); margin-left:6px;">新增</span></span>
+                <span class="tp-new-dest-meta">日本 · 京都府 · 3 天</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button">×</button>
+            </div>
+          </div>
+          <button class="tp-new-dest-add" type="button">
+            <span>🔍</span>
+            <span>加入目的地</span>
+          </button>
+        </div>
+
+        <div class="tp-section">
+          <span class="tp-section-label">日期 <span class="req">✱</span></span>
+          <div class="tp-new-date-fixed">
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">出發</span>
+              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-07-26（日）</span></div>
+            </div>
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">回程</span>
+              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-08-02（日）</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-section">
+          <span class="tp-section-label">想做什麼？（選填）</span>
+          <textarea class="tp-new-textarea">家族出遊，想去溫泉，避免太累的行程</textarea>
+        </div>
+
+        <div class="tp-new-advanced is-open">
+          <button class="tp-new-advanced-toggle" type="button" aria-expanded="true">
+            <span class="chevron">▸</span>
+            <span>進階設定</span>
+            <span class="tp-new-advanced-meta">已自訂行程名稱 + 自駕模式</span>
+          </button>
+          <div class="tp-new-advanced-body">
+
+            <div class="tp-new-field">
+              <label class="tp-new-field-label" for="edit-title">
+                <span>行程名稱</span>
+                <span class="opt">（選填）</span>
+              </label>
+              <input class="tp-new-field-input" id="edit-title" type="text" value="家族沖繩五日遊">
+              <!-- region 變更提示 -->
+              <div class="tp-new-title-hint" role="alert">
+                <div class="tp-new-title-hint-text">
+                  目的地已變更，要更新名稱為「<strong>2026 沖繩・京都</strong>」？
+                </div>
+                <button class="tp-new-title-hint-btn" type="button">套用</button>
+                <button class="tp-new-title-hint-dismiss" type="button" aria-label="忽略提示">×</button>
+              </div>
+            </div>
+
+            <div class="tp-new-field">
+              <label class="tp-new-field-label" for="edit-desc">
+                <span>描述</span>
+                <span class="opt">（選填，用於 SEO）</span>
+              </label>
+              <textarea class="tp-new-textarea" id="edit-desc" rows="3">2026 暑假家族 8 日，沖繩本島 + 京都，含 USJ 與祇園祭⋯</textarea>
+            </div>
+
+            <div class="tp-new-field">
+              <label class="tp-new-field-label" for="edit-lang">
+                <span>顯示語言</span>
+              </label>
+              <select class="tp-new-select" id="edit-lang">
+                <option value="zh-TW" selected>繁體中文（台灣）</option>
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
+
+            <div class="tp-new-field">
+              <label class="tp-new-field-label">
+                <span>預設交通方式</span>
+              </label>
+              <div class="tp-new-segment" role="radiogroup">
+                <button class="tp-new-segment-option is-active" type="button" role="radio" aria-checked="true">
+                  <span class="icon">🚗</span><span>自駕</span>
+                </button>
+                <button class="tp-new-segment-option" type="button" role="radio" aria-checked="false">
+                  <span class="icon">🚶</span><span>步行</span>
+                </button>
+                <button class="tp-new-segment-option" type="button" role="radio" aria-checked="false">
+                  <span class="icon">🚆</span><span>大眾運輸</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="tp-new-toggle-row">
+              <div class="tp-new-toggle-content">
+                <span class="tp-new-toggle-label">自駕模式</span>
+                <span class="tp-new-toggle-helper">顯示停車場、加油站、IC 出入口等自駕相關 POI</span>
+              </div>
+              <button class="tp-new-toggle is-on" type="button" role="switch" aria-checked="true" aria-label="自駕模式"></button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+      <div class="tp-modal-actions">
+        <div class="tp-new-publish" role="radiogroup" aria-label="發布狀態">
+          <button class="tp-new-publish-option" type="button" role="radio" aria-checked="false">
+            <span class="dot"></span>
+            <span>草稿</span>
+          </button>
+          <button class="tp-new-publish-option is-active is-published" type="button" role="radio" aria-checked="true">
+            <span class="dot"></span>
+            <span>上線</span>
+          </button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="tp-btn is-ghost" type="button">取消</button>
+          <button class="tp-btn is-primary" type="button">儲存變更</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===========================================================
+     FRAME 4 — Compact mobile 375px · NewTripModal v2 · 進階展開
+     =========================================================== -->
+<section class="preview-section">
+  <div class="preview-frame-label">
+    <strong>FRAME 4</strong> Compact 375px · NewTripModal v2 · 進階展開
+    <span class="desc">mobile 全寬、segmented 改 1-col stack、actions 換行讓 publish 占滿一行</span>
+  </div>
+  <div class="preview-stage is-mobile">
+    <div class="tp-modal" role="dialog">
+      <div class="tp-modal-head">
+        <h2 class="tp-modal-title">新增行程</h2>
+        <button class="tp-modal-close" type="button" aria-label="關閉">×</button>
+      </div>
+      <div class="tp-modal-body">
+
+        <div class="tp-section">
+          <span class="tp-section-label">目的地 <span class="req">✱</span></span>
+          <div class="tp-new-dest-list">
+            <div class="tp-new-dest-row">
+              <span class="tp-new-dest-grip">⋮⋮</span>
+              <span class="tp-new-dest-num">1</span>
+              <div class="tp-new-dest-content">
+                <span class="tp-new-dest-name">沖繩</span>
+                <span class="tp-new-dest-meta">沖縄県</span>
+              </div>
+              <button class="tp-new-dest-remove" type="button">×</button>
+            </div>
+          </div>
+          <button class="tp-new-dest-add" type="button"><span>🔍</span><span>加入目的地</span></button>
+        </div>
+
+        <div class="tp-section">
+          <span class="tp-section-label">日期 <span class="req">✱</span></span>
+          <div class="tp-new-date-fixed" style="grid-template-columns: 1fr;">
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">出發</span>
+              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-07-29（三）</span></div>
+            </div>
+            <div class="tp-new-date-input">
+              <span class="tp-new-date-input-label">回程</span>
+              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-08-09（日）</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tp-new-advanced is-open">
+          <button class="tp-new-advanced-toggle" type="button" aria-expanded="true">
+            <span class="chevron">▸</span>
+            <span>進階設定</span>
+          </button>
+          <div class="tp-new-advanced-body">
+            <div class="tp-new-field">
+              <label class="tp-new-field-label">
+                <span>行程名稱</span>
+                <span class="opt">（選填）</span>
+              </label>
+              <input class="tp-new-field-input" type="text" placeholder="留空自動命名">
+              <p class="tp-new-field-helper is-preview">自動命名「2026 沖繩」</p>
+            </div>
+            <div class="tp-new-field">
+              <label class="tp-new-field-label"><span>顯示語言</span></label>
+              <select class="tp-new-select">
+                <option selected>繁體中文（台灣）</option>
+              </select>
+            </div>
+            <div class="tp-new-field">
+              <label class="tp-new-field-label"><span>預設交通方式</span></label>
+              <div class="tp-new-segment" style="grid-template-columns: 1fr; gap:6px;" role="radiogroup">
+                <button class="tp-new-segment-option is-active" type="button"><span class="icon">🚗</span><span>自駕</span></button>
+                <button class="tp-new-segment-option" type="button"><span class="icon">🚶</span><span>步行</span></button>
+                <button class="tp-new-segment-option" type="button"><span class="icon">🚆</span><span>大眾運輸</span></button>
+              </div>
+            </div>
+            <div class="tp-new-toggle-row">
+              <div class="tp-new-toggle-content">
+                <span class="tp-new-toggle-label">自駕模式</span>
+                <span class="tp-new-toggle-helper">顯示停車場、加油站等</span>
+              </div>
+              <button class="tp-new-toggle is-on" type="button" role="switch"></button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="tp-modal-actions" style="flex-wrap:wrap;">
+        <div class="tp-new-publish" role="radiogroup" aria-label="發布狀態" style="width:100%;">
+          <button class="tp-new-publish-option is-active is-draft" type="button" style="flex:1; justify-content:center;">
+            <span class="dot"></span><span>草稿</span>
+          </button>
+          <button class="tp-new-publish-option" type="button" style="flex:1; justify-content:center;">
+            <span class="dot"></span><span>上線</span>
+          </button>
+        </div>
+        <div style="display:flex; gap:8px; width:100%;">
+          <button class="tp-btn is-ghost" type="button" style="flex:1;">取消</button>
+          <button class="tp-btn is-primary" type="button" style="flex:2;">建立行程</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
