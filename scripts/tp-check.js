@@ -19,10 +19,12 @@ const argSlugs = process.argv.slice(2).filter(a => !a.startsWith('-'));
 function loadTrip(slug) {
   const dir = path.join(DIST, slug);
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
-  // 2026-05-02 (migration 0045): trips.footer / auto_scroll / food_prefs / self_drive 已 DROP；
-  // 此處保留 footer / autoScrollDates 讀取以相容 stale dist JSON，新 dist 將不含這兩欄。
-  // R1 foodPreferences 檢查與 R8 selfDrive parking 檢查需另行改寫（見 tp-quality-rules R1 改寫 + default_travel_mode 取代）。
-  const result = { meta: meta.meta, footer: meta.footer, autoScrollDates: meta.autoScrollDates };
+  // 2026-05-02 (migration 0045 + tp-check sync): trips.footer / auto_scroll /
+  // food_prefs / self_drive 已 DROP — tp-check 不再讀這些欄位。新 dist
+  // 不含 footer / autoScrollDates。R10 改用 meta.defaultTravelMode === 'driving'
+  // 取代 meta.selfDrive（同 trips.default_travel_mode 語意）。R1 改寫見
+  // tp-quality-rules（不再要求 meta.foodPreferences）。
+  const result = { meta: meta.meta };
   const fp = path.join(dir, 'flights.json');
   if (fs.existsSync(fp)) result.flights = JSON.parse(fs.readFileSync(fp, 'utf8'));
   const dayFiles = fs.readdirSync(dir)
@@ -80,9 +82,11 @@ function check(data, slug) {
   pass('R0');
   days.forEach(d => { if (d.label && d.label.length > 8) warn('R0', `Day ${d.id} "${d.label}" > 8 chars`); });
 
-  // R1 foodPreferences
+  // R1 料理偏好（2026-05-02 改寫 — migration 0045 後 trips.food_prefs 已 DROP）：
+  // 不再固定 3 偏好對應 3 餐廳，改由 LLM 從 timeline 上下文 + category 多樣性 +
+  // chat 偏好 + 目的地代表料理推薦。R1 在 tp-check 端作廢檢查（運行時無從驗證
+  // LLM 是否照新規則推薦），仍 pass 標記以保留欄位順序。
   pass('R1');
-  if (!Array.isArray(meta.foodPreferences) || meta.foodPreferences.length === 0) fail('R1', 'missing foodPreferences');
 
   // R2 meals (flight-aware, hotel "家" exemption)
   pass('R2');
@@ -160,9 +164,12 @@ function check(data, slug) {
     else if (![true, false, null].includes(h.breakfast.included)) warn('R8', `Day ${day.id} breakfast.included invalid`);
   });
 
-  // R10 gasStation (only when 還車 event exists)
+  // R10 gasStation (only when 還車 event exists, 自駕 trip only)
+  // 2026-05-02 (migration 0045): meta.selfDrive 已 DROP → 改讀 meta.defaultTravelMode
+  // === 'driving'（同 trips.default_travel_mode 語意，由 dist export pipeline
+  // 從 trips row 帶到 meta JSON）。
   pass('R10');
-  if (meta.selfDrive) {
+  if (meta.defaultTravelMode === 'driving') {
     days.forEach(day => {
       (day.content?.timeline || []).forEach(ev => {
         if (!(ev.title || '').includes('還車')) return;
