@@ -13,6 +13,8 @@
 import { spawn } from 'child_process';
 import { appendFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+import nodemailer, { type Transporter } from 'nodemailer';
+import { makeMailHandler } from './lib/mailer-handler';
 
 // --- Load .env.local ---
 const envPath = join(import.meta.dir, '..', '.env.local');
@@ -35,6 +37,11 @@ const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
 const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
 const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 const TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-token.js');
+
+// --- Mailer config (Gmail SMTP) ---
+const GMAIL_USER = process.env.GMAIL_USERNAME || '';
+const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD || '';
+const EMAIL_FROM_DEFAULT = process.env.EMAIL_FROM || `Tripline <${GMAIL_USER}>`;
 
 // --- Logging ---
 mkdirSync(LOG_DIR, { recursive: true });
@@ -221,14 +228,59 @@ async function processLoop(source: 'api' | 'job') {
 }
 
 // --- HTTP Server ---
+/**
+ * Constant-time Bearer token comparison — defends against timing side-channel
+ * brute-force attacks now that /trigger and /internal/mail/send are publicly
+ * reachable via Tailscale Funnel (--https=8443) without per-IP rate limits (Q12).
+ *
+ * Using subtle.timingSafeEqual on equal-length byte buffers; length mismatch
+ * short-circuits to false (timing leak there is acceptable — only reveals
+ * "wrong length", not byte-by-byte content).
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const aBuf = new TextEncoder().encode(a);
+  const bBuf = new TextEncoder().encode(b);
+  let diff = 0;
+  for (let i = 0; i < aBuf.length; i++) {
+    diff |= aBuf[i]! ^ bBuf[i]!;
+  }
+  return diff === 0;
+}
+
 function verifyAuth(req: Request): boolean {
   if (!API_SECRET) {
     logError('WARNING: TRIPLINE_API_SECRET not set — rejecting all requests');
     return false;
   }
   const authHeader = req.headers.get('Authorization') || '';
-  return authHeader === `Bearer ${API_SECRET}`;
+  return constantTimeEqual(authHeader, `Bearer ${API_SECRET}`);
 }
+
+// --- Mailer (lazy SMTP transporter + handler) ---
+let mailTransporter: Transporter | null = null;
+function getMailTransporter(): Transporter {
+  if (!mailTransporter) {
+    if (!GMAIL_USER || !GMAIL_PASS) {
+      throw new Error('GMAIL_USERNAME or GMAIL_APP_PASSWORD not set');
+    }
+    mailTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+    });
+  }
+  return mailTransporter;
+}
+
+const mailHandler = makeMailHandler({
+  verifyAuth,
+  transporter: getMailTransporter,
+  emailFrom: EMAIL_FROM_DEFAULT,
+  log,
+  logError,
+});
 
 Bun.serve({
   port: PORT,
@@ -266,6 +318,10 @@ Bun.serve({
       });
 
       return Response.json({ triggered: true, source });
+    }
+
+    if (url.pathname === '/internal/mail/send' && req.method === 'POST') {
+      return await mailHandler(req);
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });
