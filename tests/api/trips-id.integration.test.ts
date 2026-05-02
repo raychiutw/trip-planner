@@ -73,4 +73,75 @@ describe('PUT /api/trips/:id', () => {
     });
     expect((await callHandler(onRequestPut, ctx)).status).toBe(403);
   });
+
+  // OSM PR (migration 0045)：destinations[] full-replacement semantics on PUT。
+  it('帶 destinations[] → 全量取代 trip_destinations + scalar field 一起更新', async () => {
+    // First seed an existing destination for trip-1
+    await db.prepare(
+      `INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, osm_id, osm_type)
+       VALUES ('trip-1', 0, '原沖繩', 26.21, 127.68, 5, 100, 'node')`,
+    ).run();
+
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', {
+        title: '帶 dest 的更新',
+        destinations: [
+          { name: '京都', lat: 35.01, lng: 135.76, day_quota: 3, osm_id: 200, osm_type: 'node' },
+          { name: '大阪', lat: 34.69, lng: 135.50, day_quota: 2, osm_id: 201, osm_type: 'relation' },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+
+    const trip = await db.prepare('SELECT title FROM trips WHERE id = ?').bind('trip-1').first();
+    expect((trip as Record<string, unknown>).title).toBe('帶 dest 的更新');
+
+    const dests = await db.prepare(
+      'SELECT name, dest_order, day_quota, osm_id, osm_type FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order',
+    ).bind('trip-1').all();
+    expect(dests.results).toHaveLength(2);
+    expect((dests.results[0] as Record<string, unknown>).name).toBe('京都');
+    expect((dests.results[0] as Record<string, unknown>).day_quota).toBe(3);
+    expect((dests.results[1] as Record<string, unknown>).name).toBe('大阪');
+    expect((dests.results[1] as Record<string, unknown>).osm_type).toBe('relation');
+    // Old 「原沖繩」 should be gone (full-replacement)
+    const old = await db.prepare("SELECT name FROM trip_destinations WHERE trip_id = ? AND name = '原沖繩'")
+      .bind('trip-1').first();
+    expect(old).toBeNull();
+  });
+
+  it('帶空 destinations[] → 清光 trip_destinations', async () => {
+    // Seed existing dests first
+    await db.prepare(
+      `INSERT INTO trip_destinations (trip_id, dest_order, name) VALUES ('trip-1', 0, '臨時')`,
+    ).run();
+
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', { destinations: [] }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(200);
+
+    const dests = await db.prepare(
+      'SELECT COUNT(*) as cnt FROM trip_destinations WHERE trip_id = ?',
+    ).bind('trip-1').first();
+    expect((dests as Record<string, unknown>).cnt).toBe(0);
+  });
+
+  it('body 完全空 → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', {}),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
+  });
 });
