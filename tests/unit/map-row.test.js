@@ -38,8 +38,10 @@ describe('mapRow — snake_case to camelCase conversion', () => {
     expect(mapRow({ day_of_week: '三' }).dayOfWeek).toBe('三');
   });
 
-  it('converts self_drive to selfDrive', () => {
-    expect(mapRow({ self_drive: 1 }).selfDrive).toBe(1);
+  // 2026-05-02 (migration 0045): trips.self_drive 已 DROP，改用 default_travel_mode。
+  // snakeToCamel 通用 rename 仍 work，這裡換用 default_travel_mode 驗證。
+  it('converts default_travel_mode to defaultTravelMode', () => {
+    expect(mapRow({ default_travel_mode: 'driving' }).defaultTravelMode).toBe('driving');
   });
 
   it('converts day_num to dayNum', () => {
@@ -59,20 +61,15 @@ describe('mapRow — snake_case to camelCase conversion', () => {
   });
 });
 
-/* ===== JSON_FIELDS parsing (DB 欄位不再有 _json 後綴) ===== */
+/* ===== JSON_FIELDS parsing — empty after migration 0045 (footer DROP'd) ===== */
 describe('mapRow — JSON string fields get parsed', () => {
-  it('parses footer string to object', () => {
-    const result = mapRow({ footer: '{"dates":"2026-05-01 ~ 2026-05-05"}' });
-    expect(result.footer).toEqual({ dates: '2026-05-01 ~ 2026-05-05' });
-  });
-
-  it('keeps malformed JSON string as-is', () => {
-    const result = mapRow({ footer: '{not json}' });
-    expect(result.footer).toBe('{not json}');
-  });
+  // 2026-05-02 (migration 0045): JSON_FIELDS 清空（trips.footer 已 DROP，
+  // 其餘 JSON cols 早已改 scalar 或在 API handler 端解析）。保留以下 negative
+  // tests 確保未來新增 JSON_FIELDS entry 時 parking / location / 任意 col
+  // 沒被誤掃為 JSON。
 
   it('non-JSON fields are not parsed even if they look like JSON', () => {
-    // parking/location/attrs/breakfast are no longer in JSON_FIELDS (V2 schema)
+    // parking/location/attrs/breakfast 不在 JSON_FIELDS（V2 schema 後皆為 scalar 或 API 解析）
     const result = mapRow({ parking: '{"price":"free"}' });
     expect(result.parking).toBe('{"price":"free"}');
   });
@@ -183,8 +180,10 @@ describe('exported constants', () => {
     expect(Array.isArray(JSON_FIELDS)).toBe(true);
   });
 
-  it('JSON_FIELDS contains footer', () => {
-    expect(JSON_FIELDS).toContain('footer');
-    expect(JSON_FIELDS).toHaveLength(1);
+  // 2026-05-02 (migration 0045): trips.footer DROP'd → JSON_FIELDS 清空。
+  // 不再有 JSON TEXT cols 需要 mapRow 解析（其餘 JSON cols 都改 scalar 或在
+  // API handler 端解析）。array 保留為 extension point。
+  it('JSON_FIELDS is empty (no JSON TEXT cols left after migration 0045)', () => {
+    expect(JSON_FIELDS).toHaveLength(0);
   });
 });
