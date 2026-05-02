@@ -54,7 +54,7 @@ describe('makeMailHandler', () => {
   it('returns 401 when verifyAuth fails', async () => {
     const { deps, verifyAuth } = makeDeps({ verifyAuth: vi.fn().mockReturnValue(false) });
     const handler = makeMailHandler(deps);
-    const res = await handler(makeReq({ to: 'a@b.c', subject: 's', html: '<p>h</p>' }));
+    const res = await handler(makeReq({ to: 'a@b.co', subject: 's', html: '<p>h</p>' }));
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'unauthorized' });
     expect(verifyAuth).toHaveBeenCalledOnce();
@@ -79,14 +79,14 @@ describe('makeMailHandler', () => {
   it('returns 400 when "subject" missing', async () => {
     const { deps } = makeDeps();
     const handler = makeMailHandler(deps);
-    const res = await handler(makeReq({ to: 'a@b.c', html: 'h' }));
+    const res = await handler(makeReq({ to: 'a@b.co', html: 'h' }));
     expect(res.status).toBe(400);
   });
 
   it('returns 400 when "html" missing', async () => {
     const { deps } = makeDeps();
     const handler = makeMailHandler(deps);
-    const res = await handler(makeReq({ to: 'a@b.c', subject: 's' }));
+    const res = await handler(makeReq({ to: 'a@b.co', subject: 's' }));
     expect(res.status).toBe(400);
   });
 
@@ -119,7 +119,7 @@ describe('makeMailHandler', () => {
   it('uses configured emailFrom override', async () => {
     const { deps, sendMail } = makeDeps({ emailFrom: 'Custom <custom@example.com>' });
     const handler = makeMailHandler(deps);
-    await handler(makeReq({ to: 'a@b.c', subject: 's', html: 'h' }));
+    await handler(makeReq({ to: 'a@b.co', subject: 's', html: 'h' }));
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ from: 'Custom <custom@example.com>' }),
     );
@@ -130,7 +130,7 @@ describe('makeMailHandler', () => {
     const { deps, logError } = makeDeps({ sendMail });
     const handler = makeMailHandler(deps);
     const res = await handler(
-      makeReq({ to: 'a@b.c', subject: 's', html: 'h', template: 'forgot-password' }),
+      makeReq({ to: 'a@b.co', subject: 's', html: 'h', template: 'forgot-password' }),
     );
     expect(res.status).toBe(500);
     expect((await res.json()).error).toBe('SMTP server unreachable');
@@ -142,14 +142,14 @@ describe('makeMailHandler', () => {
   it('sets template to null when not provided', async () => {
     const { deps } = makeDeps();
     const handler = makeMailHandler(deps);
-    const res = await handler(makeReq({ to: 'a@b.c', subject: 's', html: 'h' }));
+    const res = await handler(makeReq({ to: 'a@b.co', subject: 's', html: 'h' }));
     expect((await res.json()).template).toBeNull();
   });
 
   it('logs success without template hint when omitted', async () => {
     const { deps, log } = makeDeps();
     const handler = makeMailHandler(deps);
-    await handler(makeReq({ to: 'a@b.c', subject: 's', html: 'h' }));
+    await handler(makeReq({ to: 'a@b.co', subject: 's', html: 'h' }));
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/template=-/));
   });
 
@@ -157,7 +157,7 @@ describe('makeMailHandler', () => {
     const { deps, sendMail } = makeDeps();
     const handler = makeMailHandler(deps);
     await handler(
-      makeReq({ to: 'a@b.c', subject: 's', html: '<p>h</p>', text: 'plain h' }),
+      makeReq({ to: 'a@b.co', subject: 's', html: '<p>h</p>', text: 'plain h' }),
     );
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({ html: '<p>h</p>', text: 'plain h' }),
@@ -167,8 +167,72 @@ describe('makeMailHandler', () => {
   it('omits text key from sendMail when not provided', async () => {
     const { deps, sendMail } = makeDeps();
     const handler = makeMailHandler(deps);
-    await handler(makeReq({ to: 'a@b.c', subject: 's', html: '<p>h</p>' }));
+    await handler(makeReq({ to: 'a@b.co', subject: 's', html: '<p>h</p>' }));
     const callArgs = sendMail.mock.calls[0][0] as Record<string, unknown>;
     expect(callArgs.text).toBeUndefined();
+  });
+
+  // Open-relay defense: validate `to` is single plain email (not list / display-name / CRLF)
+  describe('to validation (open-relay defense)', () => {
+    it('rejects comma-separated recipient list (BCC injection)', async () => {
+      const { deps, sendMail } = makeDeps();
+      const handler = makeMailHandler(deps);
+      const res = await handler(makeReq({
+        to: 'victim@example.com, attacker@evil.com',
+        subject: 's', html: 'h',
+      }));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toMatch(/single plain email/);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('rejects "Display Name <email>" syntax (RFC 5322 list)', async () => {
+      const { deps, sendMail } = makeDeps();
+      const handler = makeMailHandler(deps);
+      const res = await handler(makeReq({
+        to: 'Display Name <a@b.c>',
+        subject: 's', html: 'h',
+      }));
+      expect(res.status).toBe(400);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('rejects CRLF injection in to field (header smuggling)', async () => {
+      const { deps, sendMail } = makeDeps();
+      const handler = makeMailHandler(deps);
+      const res = await handler(makeReq({
+        to: 'a@b.c\r\nBcc: attacker@evil.com',
+        subject: 's', html: 'h',
+      }));
+      expect(res.status).toBe(400);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('rejects malformed email (no @)', async () => {
+      const { deps, sendMail } = makeDeps();
+      const handler = makeMailHandler(deps);
+      const res = await handler(makeReq({ to: 'not-an-email', subject: 's', html: 'h' }));
+      expect(res.status).toBe(400);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('rejects empty to (already covered by missing check, but trips here too)', async () => {
+      const { deps, sendMail } = makeDeps();
+      const handler = makeMailHandler(deps);
+      const res = await handler(makeReq({ to: '', subject: 's', html: 'h' }));
+      expect(res.status).toBe(400);
+      expect(sendMail).not.toHaveBeenCalled();
+    });
+
+    it('accepts valid plain email with plus sign + dots', async () => {
+      const { deps, sendMail } = makeDeps();
+      const handler = makeMailHandler(deps);
+      const res = await handler(makeReq({
+        to: 'user.name+tag@example.co.jp',
+        subject: 's', html: 'h',
+      }));
+      expect(res.status).toBe(200);
+      expect(sendMail).toHaveBeenCalledOnce();
+    });
   });
 });

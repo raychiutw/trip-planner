@@ -127,13 +127,20 @@ export default function EmailVerifyPendingPage() {
     setResending(true);
     setResendStatus('idle');
     try {
-      await fetch('/api/oauth/send-verification', {
+      const res = await fetch('/api/oauth/send-verification', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: safeEmail }),
       });
-      setResendStatus('sent');
-      setCooldownEndsAt(Date.now() + COOLDOWN_SEC * 1000);
+      // 2026-05-02 cutover: send-verification now returns 500 EMAIL_SEND_FAILED
+      // when mac mini SMTP fails (Q7 strict UX). Don't show "sent" if the
+      // backend explicitly failed to deliver.
+      if (res.ok) {
+        setResendStatus('sent');
+        setCooldownEndsAt(Date.now() + COOLDOWN_SEC * 1000);
+      } else {
+        setResendStatus('error');
+      }
     } catch {
       setResendStatus('error');
     } finally {

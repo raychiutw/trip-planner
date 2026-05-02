@@ -228,13 +228,33 @@ async function processLoop(source: 'api' | 'job') {
 }
 
 // --- HTTP Server ---
+/**
+ * Constant-time Bearer token comparison — defends against timing side-channel
+ * brute-force attacks now that /trigger and /internal/mail/send are publicly
+ * reachable via Tailscale Funnel (--https=8443) without per-IP rate limits (Q12).
+ *
+ * Using subtle.timingSafeEqual on equal-length byte buffers; length mismatch
+ * short-circuits to false (timing leak there is acceptable — only reveals
+ * "wrong length", not byte-by-byte content).
+ */
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const aBuf = new TextEncoder().encode(a);
+  const bBuf = new TextEncoder().encode(b);
+  let diff = 0;
+  for (let i = 0; i < aBuf.length; i++) {
+    diff |= aBuf[i]! ^ bBuf[i]!;
+  }
+  return diff === 0;
+}
+
 function verifyAuth(req: Request): boolean {
   if (!API_SECRET) {
     logError('WARNING: TRIPLINE_API_SECRET not set — rejecting all requests');
     return false;
   }
   const authHeader = req.headers.get('Authorization') || '';
-  return authHeader === `Bearer ${API_SECRET}`;
+  return constantTimeEqual(authHeader, `Bearer ${API_SECRET}`);
 }
 
 // --- Mailer (lazy SMTP transporter + handler) ---
