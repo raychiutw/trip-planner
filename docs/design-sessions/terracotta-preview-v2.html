@@ -1634,6 +1634,83 @@
     font-size: 16px;
   }
 
+  /* === 餐廳推薦 section (v2.18.3) ===
+   * Meal entries 展開後新增 section,介於說明/地點 與 toolbar 之間。
+   * 資料來自 entry.infoBoxes[type='restaurants'],按 sort_order 升冪。
+   * Spec: src/components/trip/Restaurant.tsx + TimelineRail.tsx。 */
+  .tp-stop-v-rest-section {
+    padding: 14px 16px;
+    border-top: 1px solid var(--tp-border);
+    background: var(--tp-secondary);
+  }
+  .tp-stop-v-rest-section h4 {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    margin: 0 0 8px;
+  }
+  .tp-stop-v-rest-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .tp-stop-v-rest-card {
+    background: var(--tp-background);
+    border: 1px solid var(--tp-border);
+    border-radius: var(--tp-radius-lg);
+    padding: 12px 14px;
+  }
+  /* Hero variant — accent border + subtle gradient.「首選」識別靠視覺,不掛 chip。 */
+  .tp-stop-v-rest-card[data-variant="hero"] {
+    border-color: var(--tp-accent);
+    background: linear-gradient(180deg, var(--tp-accent-subtle) 0%, var(--tp-background) 40%);
+    padding: 14px 16px;
+  }
+  .tp-stop-v-rest-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--tp-accent-deep);
+    letter-spacing: -0.01em;
+  }
+  .tp-stop-v-rest-cat {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--tp-muted);
+    background: var(--tp-tertiary);
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .tp-stop-v-rest-meta {
+    font-size: 12px;
+    color: var(--tp-muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tp-stop-v-rest-desc {
+    font-size: 14px;
+    color: var(--tp-foreground);
+    margin-top: 6px;
+    line-height: 1.55;
+  }
+  /* 「備選」 divider — eyebrow + hairline rule */
+  .tp-stop-v-rest-alt-heading {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--tp-muted);
+    margin: 6px 0 -2px;
+  }
+  .tp-stop-v-rest-alt-heading::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--tp-border);
+  }
+
 
   /* === Variant comparison frame === */
   .tp-variant-frame {
@@ -6096,6 +6173,62 @@
           <div class="tp-stop-v-detail-body">
             <strong>說明：</strong>世界最大級水族館！巨大「黑潮之海」水槽可近距離觀賞鯨鯊和鬼蝠魟。
             <br><strong>地點：</strong>沖繩縣國頭郡本部町石川424
+          </div>
+          <div class="tp-stop-v-toolbar">
+            <button class="tp-stop-iconbtn" type="button" aria-label="放大檢視" title="放大檢視"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></button>
+            <button class="tp-stop-iconbtn" type="button" aria-label="複製到其他天" title="複製到其他天"><span class="tp-icon"><svg><use href="#i-copy"/></svg></span></button>
+            <button class="tp-stop-iconbtn" type="button" aria-label="移到其他天" title="移到其他天"><span class="tp-icon"><svg><use href="#i-move"/></svg></span></button>
+            <button class="tp-stop-iconbtn" type="button" aria-label="編輯備註" title="編輯備註"><span class="tp-icon"><svg><use href="#i-pencil"/></svg></span></button>
+            <div class="tp-stop-v-toolbar-spacer"></div>
+            <button class="tp-stop-iconbtn is-danger" type="button" aria-label="刪除景點" title="刪除景點"><span class="tp-icon"><svg><use href="#i-trash"/></svg></span></button>
+            <button class="tp-stop-iconbtn" type="button" aria-label="收合" title="收合"><span class="tp-icon"><svg><use href="#i-collapse"/></svg></span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- v2.18.3:meal entry 展開「餐廳推薦」section,介於說明 / 地點 與 toolbar 之間。
+        資料來自 trip_pois.context='timeline' 多筆,按 sort_order 升冪 → 第一筆 hero
+        (accent 邊框 + 漸層底)+「備選」divider + 後續 standard cards。1 家不分。 -->
+      <div class="tp-stop-v is-variant-a is-expanded">
+        <div class="tp-stop-v-row">
+          <div class="tp-stop-v-grip"><span class="tp-icon"><svg><use href="#i-grip"/></svg></span></div>
+          <div class="tp-stop-v-time">13:05<span class="tp-stop-v-dur">1H 30M</span></div>
+          <div class="tp-stop-v-icon" data-accent="true"><span class="tp-icon"><svg><use href="#i-utensils"/></svg></span></div>
+          <div class="tp-stop-v-content">
+            <div class="tp-stop-v-type" data-accent="true">FOOD · 用餐</div>
+            <div class="tp-stop-v-name">本部午餐</div>
+            <div class="tp-stop-v-meta"><span class="tp-icon tp-icon-fill"><svg><use href="#i-star"/></svg></span>4.1</div>
+          </div>
+          <div class="tp-stop-v-caret"><span class="tp-icon"><svg><use href="#i-chevron"/></svg></span></div>
+        </div>
+        <div class="tp-stop-v-detail">
+          <div class="tp-stop-v-detail-body">
+            <strong>說明：</strong>水族館附近覓食，本部町在地美食
+            <br><strong>地點：</strong>本部町
+          </div>
+          <div class="tp-stop-v-rest-section">
+            <h4>餐廳推薦</h4>
+            <div class="tp-stop-v-rest-list">
+              <article class="tp-stop-v-rest-card" data-variant="hero">
+                <span class="tp-stop-v-rest-name">きしもと食堂</span>
+                <span class="tp-stop-v-rest-cat">拉麵</span>
+                <div class="tp-stop-v-rest-meta">★ 4.1 · ¥600~ · 11:00–17:00（週三公休）</div>
+                <div class="tp-stop-v-rest-desc">明治 38 年創業！傳奇沖繩麵</div>
+              </article>
+              <h5 class="tp-stop-v-rest-alt-heading">備選</h5>
+              <article class="tp-stop-v-rest-card">
+                <span class="tp-stop-v-rest-name">海人食堂</span>
+                <span class="tp-stop-v-rest-cat">生魚片</span>
+                <div class="tp-stop-v-rest-meta">★ 4.0 · ¥1,000~ · 11:00–15:30</div>
+                <div class="tp-stop-v-rest-desc">北谷漁港直營海鮮食堂，刺身定食・海鮮丼</div>
+              </article>
+              <article class="tp-stop-v-rest-card">
+                <span class="tp-stop-v-rest-name">焼肉もとぶ牧場 本部店</span>
+                <span class="tp-stop-v-rest-cat">燒肉</span>
+                <div class="tp-stop-v-rest-meta">★ 4.0</div>
+                <div class="tp-stop-v-rest-desc">牧場直營本部牛，A4-A5 等級和牛燒肉</div>
+              </article>
+            </div>
           </div>
           <div class="tp-stop-v-toolbar">
             <button class="tp-stop-iconbtn" type="button" aria-label="放大檢視" title="放大檢視"><span class="tp-icon"><svg><use href="#i-expand"/></svg></span></button>
