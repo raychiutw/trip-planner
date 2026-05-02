@@ -1353,6 +1353,31 @@ body.dark {
   .tp-titlebar-action-label { display: none; }
 }
 
+/* 2026-05-03: primary variant for confirm action button (儲存 / 完成 / 建立)。
+ * Accent 實心，桌機 icon + 文字、手機 icon only (繼承 .tp-titlebar-action 的 RWD)。
+ * 用法: <button class="tp-titlebar-action is-primary">…</button> */
+.tp-titlebar-action.is-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
+}
+.tp-titlebar-action.is-primary:hover {
+  background: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
+  color: var(--color-accent-foreground);
+  filter: brightness(0.95);
+}
+.tp-titlebar-action.is-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 760px) {
+  .tp-titlebar-action.is-primary {
+    background: var(--color-accent);
+    color: var(--color-accent-foreground);
+  }
+}
+
 /* Icon-only TitleBar button — for menu triggers (e.g. OverflowMenu ⋯).
  * 跟 .tp-titlebar-action 同 family 但永遠 icon-only,沒 border / label。
  * Hover 同 .tp-titlebar-back 風格(transparent → hover bg)。 */

@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.4] - 2026-05-03
+
+### Changed
+
+- **「編輯行程」改全頁** — 點 trip 卡片 kebab「編輯行程」現在 navigate 到
+  `/trip/:id/edit` 全頁（取代之前的 modal popup）。畫面跟原 modal 同樣 6 欄位
+  + sortable destinations + region change hint，但有以下優點：
+  - 瀏覽器 back 鍵直接取消
+  - 編輯 URL 可分享 / 深度連結
+  - mobile 不會被 modal 高度限制壓縮 form
+  - 重新整理頁面不會丟失編輯狀態（雖然目前沒持久化未送出的編輯）
+  - 對應 DESIGN.md 2026-05-03 新規則「複雜 form 流程必走全頁，modal 限定
+    confirm/input/popover」
+- **TitleBar action button responsive 統一**：桌機 `icon + 文字`、手機 `icon only`，
+  `.tp-titlebar-action` + `.tp-titlebar-action-label` CSS class 早已存在
+  （v2.18 引入），新增 `.is-primary` variant 給 confirm action（accent 實心，
+  「儲存」「完成」「建立」用）。對應 DESIGN.md「Page Titlebar」section 2026-05-03 補強。
+
+### Removed
+
+- **`src/components/trip/EditTripModal.tsx`** — 由 `src/pages/EditTripPage.tsx`
+  取代。所有 caller (TripsListPage card kebab) 改 `navigate('/trip/:id/edit')`。
+
+### Internal
+
+- 新 route `/trip/:tripId/edit` mount `EditTripPage`，承襲 CollabPage pattern
+  (AppShell + sticky TitleBar + content)。
+- TripsListPage 加聽 `tp-trip-updated` event（之前只聽 `tp-trip-created`），
+  EditTripPage 儲存後 dispatch 此 event 觸發 list refresh。
+
 ## [2.19.3] - 2026-05-02
 
 ### Added
