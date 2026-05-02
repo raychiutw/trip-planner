@@ -39,20 +39,25 @@ src/pages/          TripPage  TripsListPage（/trips landing）  MapPage  Global
                     ExplorePage  AccountPage  AppearanceSettingsPage  NotificationsSettingsPage
                     LoginPage  SignupPage  ForgotPasswordPage  ResetPasswordPage  EmailVerifyPendingPage
                     ConsentPage  ConnectedAppsPage  DeveloperAppsPage  SessionsPage
-src/components/     trip/（Timeline DayNav DaySection TripMapRail AddStopModal MapFabs TravelPill ...）
-                    shared/（Icon Toast ErrorBoundary AlertPanel ...）
+src/components/     trip/（Timeline DayNav DaySection TripMapRail AddStopModal MapFabs TravelPill
+                          NewTripModal EditTripModal TripCardMenu _tripFormStyles ...）
+                    shared/（Icon Toast ErrorBoundary AlertPanel MapsButtonGroup ...）
                     auth/（AuthBrandHero — V2 split-screen 右側 hero pane 共用）
                     shell/（AppShell DesktopSidebar GlobalBottomNav TitleBar ...）
 src/contexts/       NewTripContext  ActiveTripContext（cross-page active trip + storage event sync）
                     TripIdContext  TripDaysContext  TripContext
 src/hooks/          useTrip  useApi  useDarkMode  useRequireAuth  useCurrentUser  useOnlineStatus ...
-src/lib/            mapRow  mapDay  mergePoi  localStorage  sentry  weather  drag-strategy ...
+src/lib/            mapRow  mapDay  mergePoi  mapsUrl  localStorage  sentry  weather  drag-strategy ...
+src/server/         osm/（nominatim overpass opentripmap wikidata clients）
+                    routing/ors  travel/compute（Haversine fallback）  poi/enrich（90d cache orchestrator）
 src/types/          trip.ts  api.ts
 css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，V2 Terracotta 單一 accent）
 functions/api/      _middleware  _auth  _audit  _utils  _validate  _types
                     trips/  pois/  requests/  permissions/  account/（RESTful nested routes）
-migrations/         0001 ~ 0042（D1 schema，含 rollback/）
-scripts/            init-local-db  dump-d1  daily-check  migrate-pois  tp-check ...
+                    poi-search.ts  pois/[id]/enrich.ts  trips/[id]/recompute-travel.ts（v2.19.0 OSM endpoints）
+migrations/         0001 ~ 0045（D1 schema，含 rollback/）
+scripts/            init-local-db  dump-d1  daily-check  migrate-pois  tp-check
+                    poi-enrich-batch  poi-enrich-scheduler（v2.19.0 OSM enrichment）...
 tests/              unit/  integration/  e2e/  api/
 openspec/           config.yaml  specs/  changes/
 ```
