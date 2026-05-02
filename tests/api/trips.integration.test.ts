@@ -27,7 +27,8 @@ describe('POST /api/trips', () => {
       startDate: '2026-04-01',
       endDate: '2026-04-03',
       title: '沖繩三日遊',
-      self_drive: 1,
+      // Migration 0045 dropped self_drive — replaced by default_travel_mode (Q1).
+      default_travel_mode: 'driving',
       countries: 'JP',
     };
     const ctx = mockContext({
@@ -45,7 +46,7 @@ describe('POST /api/trips', () => {
     // 驗證 DB 狀態
     const trip = await db.prepare('SELECT * FROM trips WHERE id = ?').bind('okinawa-2026').first();
     expect(trip).not.toBeNull();
-    expect((trip as Record<string, unknown>).self_drive).toBe(1);
+    expect((trip as Record<string, unknown>).default_travel_mode).toBe('driving');
 
     const days = await db.prepare('SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_num').bind('okinawa-2026').all();
     expect(days.results).toHaveLength(3);
@@ -118,6 +119,24 @@ describe('POST /api/trips', () => {
       // 不設定 auth
     });
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
+  });
+
+  // /review-fix: hostile destinations[] payload
+  it('destinations 數量超過上限 (>30) → 400', async () => {
+    const tooMany = Array.from({ length: 31 }, (_, i) => ({ name: `d${i}` }));
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips', 'POST', {
+        id: 'too-many-dests', name: 'x', startDate: '2026-04-01', endDate: '2026-04-01',
+        destinations: tooMany,
+      }),
+      env,
+      auth: mockAuth({ email: 'test@test.com' }),
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    expect(resp.status).toBe(400);
+    // Trip should not have been created
+    const trip = await db.prepare('SELECT * FROM trips WHERE id = ?').bind('too-many-dests').first();
+    expect(trip).toBeNull();
   });
 });
 

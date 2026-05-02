@@ -18,6 +18,7 @@ import { lsGet, lsSet } from '../../lib/localStorage';
 import InlineError from '../shared/InlineError';
 import Icon from '../shared/Icon';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
+import { TRIP_FORM_STYLES } from './_tripFormStyles';
 
 interface PoiSearchResult {
   osm_id: number;
@@ -65,161 +66,28 @@ function pushRecentDest(name: string) {
   lsSet(LS_KEY_RECENT_DESTS, next);
 }
 
+/**
+ * SCOPED_STYLES 只放 NewTripModal 特有 rules — modal-backdrop / form pane /
+ * close / h2 / sub / form-row / dest-row / dest-dropdown / segmented / actions /
+ * btn 等共用樣式由 _tripFormStyles.ts 提供（comma-selector 同時 cover
+ * `.tp-new-*` 與 `.tp-edit-*`）。
+ */
 const SCOPED_STYLES = `
-.tp-new-modal-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(42, 31, 24, 0.55);
-  z-index: var(--z-modal, 60);
-  display: grid; place-items: center;
-  padding: 16px;
-  animation: tp-new-modal-fade 160ms var(--transition-timing-function-apple, ease-out);
-}
-@keyframes tp-new-modal-fade { from { opacity: 0; } to { opacity: 1; } }
-
-.tp-new-modal {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  width: 100%;
-  max-width: 720px;
-  font: inherit;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  /* QA 2026-04-26 PR-M：限制 modal 高度 + 讓 form pane 內捲，避免 mobile 內容
-   * 被 viewport / iOS home indicator / chrome bottom-nav 切到。32px = 上下
-   * backdrop padding 各 16。dvh 走 dynamic viewport 對應 Safari URL bar。 */
-  max-height: calc(100dvh - 32px);
-}
-
-/* ===== Form pane ===== */
-.tp-new-form {
-  padding: 24px;
-  display: flex; flex-direction: column;
-  /* QA 2026-04-26 PR-M：form pane 自己捲，避免整個 modal 撐爆 viewport。
-   * min-height: 0 讓 grid child 可被 max-height 約束（grid 預設 min-height auto）。
-   * padding-bottom 加 safe-area，避免 iOS home indicator 蓋到送出按鈕。
-   * PR-V 2026-04-26：overscroll-behavior contain 防 iOS rubber-band 把 scroll
-   * 傳到背景 page（user 截圖回報「捲動是捲動底部 layer」）。 */
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  min-height: 0;
-  padding-bottom: 0;
-}
-@media (min-width: 768px) {
-  .tp-new-form {
-    padding: 28px 32px;
-    padding-bottom: 0;
-  }
-}
-/* PR-W 2026-04-26：close button 從 form-top inline 改 absolute 定位在 modal
- * 右上角（覆蓋 hero pane 上層）。z-index 2 高過 hero SVG（z-index 0/1）。
- * Mobile 跟 desktop 都同一位置。glass-style 在橘色 hero 上對比度 OK。 */
-.tp-new-form-close {
-  position: absolute;
-  top: 12px; right: 12px;
-  z-index: 2;
-  width: var(--spacing-tap-min, 44px); height: var(--spacing-tap-min, 44px);
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(8px);
-  display: grid; place-items: center;
-  cursor: pointer;
-  font-size: 18px; color: var(--color-foreground);
-  box-shadow: var(--shadow-sm);
-}
-.tp-new-form-close:hover {
-  background: var(--color-background);
-  color: var(--color-accent-deep);
-}
-.tp-new-form-close:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
-.tp-new-modal h2 {
-  /* mockup-parity-qa-fixes: mockup spec 700（曾為 800） */
-  font-size: var(--font-size-title, 1.75rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 6px;
-}
-.tp-new-modal-sub {
-  color: var(--color-muted);
-  font-size: var(--font-size-callout);
-  margin: 0 0 20px;
-  line-height: 1.5;
-}
-.tp-new-form-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
 .tp-new-form-row-spaced { margin-top: 16px; }
 /* QA 2026-04-26 PR-M：拿掉 📍 emoji 視覺重心（anti-slop emoji 濫用）。
  * label「目的地」+ placeholder 已經足夠定位 input 用途。 */
 .tp-new-dest-wrap { position: relative; }
 .tp-new-dest-wrap input { font-weight: 600; }
 
-/* Destination autocomplete dropdown + selected POI chips
- * Section 4.2 (terracotta-ui-parity-polish): chips → 縱向 sortable rows
- * with grip handle + 編號 + remove。對齊 mockup section 03 (line 5996+)。 */
-.tp-new-dest-rows {
-  display: flex; flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.tp-new-dest-row {
-  display: grid;
-  grid-template-columns: 24px 28px 1fr auto;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  min-height: 44px;
-  font-size: var(--font-size-footnote);
-}
-.tp-new-dest-row.is-dragging {
-  background: var(--color-accent-subtle);
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-md);
-}
-.tp-new-dest-grip {
-  cursor: grab;
-  color: var(--color-muted);
-  display: grid; place-items: center;
-  width: 24px; height: 24px;
-}
-.tp-new-dest-grip:active { cursor: grabbing; }
-.tp-new-dest-grip .svg-icon { width: 14px; height: 14px; }
-.tp-new-dest-num {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  font-weight: 700;
-  font-size: var(--font-size-caption);
-}
-.tp-new-dest-name {
-  min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-weight: 600;
-  color: var(--color-foreground);
-}
+/* dest-rows 在 NewTripModal 用 10px margin-bottom（vs shared default 8px）
+ * — 留給 quota stepper 上下緩衝 */
+.tp-new-dest-rows { margin-bottom: 10px; }
+
 .tp-new-dest-name .tp-new-dest-region {
   margin-left: 6px;
   color: var(--color-muted);
   font-weight: 500;
 }
-.tp-new-dest-remove {
-  width: 28px; height: 28px;
-  border: 0; background: transparent;
-  color: var(--color-muted);
-  cursor: pointer;
-  border-radius: 50%;
-  display: grid; place-items: center;
-}
-.tp-new-dest-remove:hover { background: var(--color-hover); color: var(--color-destructive); }
-.tp-new-dest-remove .svg-icon { width: 14px; height: 14px; }
 .tp-new-dest-helper {
   margin: 0 0 10px;
   font-size: var(--font-size-caption2);
@@ -344,122 +212,11 @@ const SCOPED_STYLES = `
 .tp-new-dest-chip button:hover {
   color: var(--color-accent-deep);
 }
-.tp-new-dest-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0; right: 0;
-  z-index: 3;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  max-height: 280px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-.tp-new-dest-status {
-  padding: 14px 16px;
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  text-align: center;
-}
-.tp-new-dest-result {
-  display: flex; flex-direction: column; gap: 2px;
-  width: 100%;
-  padding: 10px 14px;
-  border: 0;
-  border-bottom: 1px solid var(--color-border);
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background 120ms;
-}
-.tp-new-dest-result:last-child { border-bottom: 0; }
-.tp-new-dest-result:hover {
-  background: var(--color-accent-subtle);
-}
-.tp-new-dest-result:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-}
-.tp-new-dest-result .name {
-  font-size: var(--font-size-callout); font-weight: 700;
-  color: var(--color-foreground);
-  line-height: 1.3;
-}
-.tp-new-dest-result .addr {
-  font-size: var(--font-size-caption);
-  color: var(--color-muted);
-  line-height: 1.4;
-  overflow: hidden; text-overflow: ellipsis;
-  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
-}
-
-.tp-new-form-row label {
-  font-size: var(--font-size-footnote);
-  font-weight: 700;
-  color: var(--color-foreground);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.tp-new-form-row input,
-.tp-new-form-row textarea {
-  padding: 12px 14px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-secondary);
-  color: var(--color-foreground);
-  font: inherit;
-  font-size: var(--font-size-body);
-  min-height: var(--spacing-tap-min);
-}
-.tp-new-form-row textarea {
-  resize: vertical;
-  min-height: 72px;
-  line-height: 1.5;
-}
-.tp-new-form-row input:focus,
-.tp-new-form-row textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  background: var(--color-background);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
 .tp-new-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .tp-new-modal-error {
   color: var(--color-destructive);
   font-size: var(--font-size-footnote);
   margin: 4px 0 0;
-}
-
-/* ===== Date mode segmented control ===== */
-.tp-new-segmented {
-  display: inline-flex; gap: 0;
-  padding: 4px; border-radius: var(--radius-full);
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  align-self: stretch;
-}
-.tp-new-segmented button {
-  flex: 1;
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  padding: 10px 16px; border-radius: var(--radius-full);
-  border: none; background: transparent;
-  color: var(--color-muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  /* H4: Apple HIG 44px tap target — keep 44px even inside the 4px-padded
-   * segmented chrome so the inner button itself remains tappable. */
-  min-height: var(--spacing-tap-min);
-}
-.tp-new-segmented button.is-active {
-  /* QA 2026-04-26 BUG-029：原本只有 --shadow-sm 對比度不夠，加 accent border
-   * + 升 --shadow-md 讓 active state 一眼看得出。仍守 mockup「白底 active」 base。 */
-  background: var(--color-background);
-  color: var(--color-accent-deep);
-  box-shadow: var(--shadow-md), inset 0 0 0 1.5px var(--color-accent);
-}
-.tp-new-segmented button:hover:not(.is-active) {
-  color: var(--color-foreground);
 }
 
 /* ===== Numeric stepper (flexible mode) ===== */
@@ -536,50 +293,11 @@ const SCOPED_STYLES = `
 .tp-new-flex-month .m { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-new-flex-month .y { font-size: var(--font-size-caption); opacity: 0.75; }
 
-/* ===== CTA ===== */
-.tp-new-modal-actions {
-  position: sticky;
-  bottom: 0;
-  display: flex; gap: 8px; justify-content: flex-end; align-items: center;
-  margin: 20px -24px 0;
-  padding: 16px 24px max(16px, env(safe-area-inset-bottom, 16px));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-}
-@media (min-width: 768px) {
-  .tp-new-modal-actions {
-    margin-left: -32px;
-    margin-right: -32px;
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-}
+/* ===== Modal summary text (NewTripModal-only, EditTripModal 沒對應 element) ===== */
 .tp-new-modal-summary {
   flex: 1; font-size: var(--font-size-footnote); color: var(--color-muted);
 }
 .tp-new-modal-summary b { color: var(--color-foreground); font-weight: 700; }
-.tp-new-modal-btn {
-  padding: 12px 20px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-foreground);
-  font: inherit; font-weight: 600;
-  font-size: var(--font-size-callout);
-  cursor: pointer;
-  min-height: var(--spacing-tap-min);
-  transition: filter 120ms;
-}
-.tp-new-modal-btn:hover:not(:disabled) { background: var(--color-hover); }
-.tp-new-modal-btn-primary {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
-}
-.tp-new-modal-btn-primary:hover:not(:disabled) { filter: brightness(var(--hover-brightness, 0.95)); }
-.tp-new-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const MONTHS_AHEAD = 6;
@@ -924,6 +642,17 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       const note = `目的地天數分配：${allocation}`;
       combinedDescription = combinedDescription ? `${combinedDescription}\n\n${note}` : note;
     }
+    // OSM PR (migration 0045)：destinations[] 寫入 trip_destinations subtable
+    // 給 backend 後續路徑計算 / region overlay 使用。osm_id 來自 selectPoi 抓的
+    // Nominatim 結果，PoiSearchResult 沒帶 osm_type 所以這裡省略（backend 接受
+    // null）；day_quota 從 destDays 帶過去（單 dest 或未分配時 null）。
+    const destinationsPayload = selectedPois.map((poi) => ({
+      name: poi.name,
+      lat: poi.lat,
+      lng: poi.lng,
+      osm_id: poi.osm_id,
+      day_quota: selectedPois.length >= 2 ? destDays[poi.osm_id] ?? null : null,
+    }));
     try {
       const res = await apiFetchRaw('/trips', {
         method: 'POST',
@@ -937,6 +666,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           countries,
           description: combinedDescription || undefined,
           published: 1,
+          destinations: destinationsPayload,
         }),
       });
       if (!res.ok) {
@@ -988,6 +718,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       role="presentation"
       data-testid="new-trip-modal"
     >
+      <style>{TRIP_FORM_STYLES}</style>
       <style>{SCOPED_STYLES}</style>
       <form
         className="tp-new-modal"

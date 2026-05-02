@@ -53,7 +53,9 @@ describe('NewTripModal — form-first single-column shell', () => {
       .join('\n');
     expect(styleText).toContain('max-width: 720px');
     expect(styleText).not.toContain('grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr)');
-    expect(styleText).toMatch(/\.tp-new-modal-actions\s*\{[^}]*position:\s*sticky/s);
+    // /review-fix (CSS dedupe): actions rule 抽到 _tripFormStyles.ts，現在 selector
+    // 是 `.tp-new-modal-actions, .tp-edit-actions {`。允許 comma 後跟 .tp-edit-actions。
+    expect(styleText).toMatch(/\.tp-new-modal-actions[\s,]+(?:\.tp-edit-actions\s*)?\{[^}]*position:\s*sticky/s);
   });
 });
 

@@ -31,4 +31,7 @@ export interface Env {
   // email send failure or trigger fetch failure (reuses scripts/daily-check creds).
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  // 2026-05-02 OSM integration — POI enrich + travel routing.
+  ORS_API_KEY?: string;          // OpenRouteService — POST /trips/:id/recompute-travel
+  OPENTRIPMAP_API_KEY?: string;  // OpenTripMap — POST /pois/:id/enrich
 }

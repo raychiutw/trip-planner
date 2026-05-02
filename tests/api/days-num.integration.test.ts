@@ -159,8 +159,8 @@ describe('PUT /api/trips/:id/days/:num', () => {
             time: '09:00',
             title: '那覇空港',
             poi_type: 'transport',
-            maps: 'https://www.google.com/maps/search/那覇空港',
-            google_rating: 4.2,
+            // Migration 0045: maps dropped, google_rating renamed to rating.
+            rating: 4.2,
           },
           {
             time: '12:00',
@@ -184,12 +184,12 @@ describe('PUT /api/trips/:id/days/:num', () => {
       expect(e.poi_id).not.toBeNull();
     }
 
+    // Migration 0045: pois.maps dropped (use mapsUrl helper); google_rating renamed to rating.
     const transportPoi = await db.prepare(
-      "SELECT id, maps, google_rating FROM pois WHERE name = '那覇空港' AND type = 'transport'",
-    ).first() as { id: number; maps: string; google_rating: number } | null;
+      "SELECT id, rating FROM pois WHERE name = '那覇空港' AND type = 'transport'",
+    ).first() as { id: number; rating: number } | null;
     expect(transportPoi).not.toBeNull();
-    expect(transportPoi!.maps).toContain('那覇空港');
-    expect(transportPoi!.google_rating).toBe(4.2);
+    expect(transportPoi!.rating).toBe(4.2);
 
     const attractionPoi = await db.prepare(
       "SELECT id FROM pois WHERE name = '首里城' AND type = 'attraction'",
@@ -205,12 +205,12 @@ describe('PUT /api/trips/:id/days/:num', () => {
     });
     const resp = await callHandler(onRequestGet, ctx);
     expect(resp.status).toBe(200);
-    const data = await resp.json() as { timeline: Array<{ title: string; poi: { type: string; maps: string } | null }> };
+    const data = await resp.json() as { timeline: Array<{ title: string; poi: { type: string } | null }> };
     const transportEntry = data.timeline.find((e) => e.title === '那覇空港');
     expect(transportEntry).toBeDefined();
     expect(transportEntry!.poi).not.toBeNull();
     expect(transportEntry!.poi!.type).toBe('transport');
-    expect(transportEntry!.poi!.maps).toContain('那覇空港');
+    // Migration 0045: poi.maps dropped (use mapsUrl helper to render Google/Apple/Naver URLs).
   });
 
   it('Phase 2: POST /entries 建立 POI 並回填 poi_id', async () => {
@@ -219,8 +219,8 @@ describe('PUT /api/trips/:id/days/:num', () => {
         title: '美麗海水族館',
         time: '10:00',
         poi_type: 'attraction',
-        maps: 'https://www.google.com/maps/search/美麗海水族館',
-        google_rating: 4.5,
+        // Migration 0045: maps dropped, google_rating renamed to rating.
+        rating: 4.5,
       }),
       env,
       auth: mockAuth({ email: 'user@test.com' }),
@@ -232,10 +232,9 @@ describe('PUT /api/trips/:id/days/:num', () => {
     expect(row.poiId).not.toBeNull();
     expect(row.poiId).toBeGreaterThan(0);
 
-    const poi = await db.prepare("SELECT type, name, maps FROM pois WHERE id = ?").bind(row.poiId).first() as { type: string; name: string; maps: string };
+    const poi = await db.prepare("SELECT type, name FROM pois WHERE id = ?").bind(row.poiId).first() as { type: string; name: string };
     expect(poi.type).toBe('attraction');
     expect(poi.name).toBe('美麗海水族館');
-    expect(poi.maps).toContain('美麗海水族館');
   });
 
   it('Phase 2: PATCH /entries/:eid 不接受 poi_id（避免跨 trip 指向）', async () => {

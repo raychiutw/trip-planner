@@ -37,8 +37,12 @@ user-invocable: true
 | **destination** | 目的地 | `沖繩`、`釜山`、`板橋` |
 | **startDate** | 出發日（YYYY-MM-DD） | `2026-07-29` |
 | **endDate** | 回程日（YYYY-MM-DD） | `2026-08-02` |
-| **self_drive** | 自駕 or 大眾交通 | `true`（自駕）/ `false`（大眾交通） |
-| **food_prefs** | 料理偏好（最多 3 類，依優先排序） | `拉麵, 燒肉, 當地特色` |
+
+> **2026-05-02 (migration 0045)**：`self_drive` / `food_prefs` / `og_description` /
+> `auto_scroll` / `footer` / `is_default` 欄位已從 `trips` 表移除（OSM PR Q1/Q3）。
+> 自駕語意改用 `default_travel_mode='driving'`；料理偏好不再持久化（每次推餐廳時
+> 由 LLM 從上下文判斷，見 tp-quality-rules R1 改寫）。`destinations[]` 為新加 body
+> 欄位，寫入 `trip_destinations` 子表。
 
 以下欄位**自動推導**，不需詢問：
 
@@ -46,32 +50,13 @@ user-invocable: true
 |------|----------|
 | `id` (tripId) | `{destination}-trip-{year}-{owner}`（全部小寫，API 驗證 `/^[a-z0-9-]+$/`） |
 | `name` | `{owner} 的{destination}之旅` |
-| `title` | `{year} {destination}{天數}日{自駕遊/大眾交通之旅}行程表` |
+| `title` | `{year} {destination}{天數}日行程表` |
 | `countries` | 依目的地判斷 ISO 3166-1 alpha-2（日本 `JP`、韓國 `KR`、台灣 `TW`） |
 | `description` | 行程完成後自動產生 SEO 摘要（含主要景點、天數、特色） |
-| `og_description` | 精簡版 description（≤ 100 字，用於 Open Graph meta） |
-| `auto_scroll` | 從 startDate 到 endDate 的逗號分隔日期列表 |
-| `footer` | JSON 物件（見下方範例） |
+| `data_source` | `'manual'`（POST 預設）/ `'tp-create'`（skill 標記） |
+| `default_travel_mode` | `'driving'`（自駕）/ `'walking'` / `'transit'` — 影響 ORS 路徑計算 |
+| `lang` | `'zh-TW'`（預設） |
 | `published` | 預設 `0`（未發布），行程完成驗證通過後改 `1` |
-| `is_default` | 預設 `0`（DB 自動設定，POST 不需傳） |
-
-#### footer 自動產生規則
-
-```json
-{
-  "title": "{year} {destination}{天數}日{自駕遊/之旅}",
-  "dates": "{M/D（星期）} ~ {M/D（星期）}",
-  "budget": "",
-  "exchangeNote": "{依國家產生}",
-  "tagline": "{依國家產生}"
-}
-```
-
-| 國家 | exchangeNote | tagline |
-|------|-------------|---------|
-| JP | `匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準` | `めんそーれ 沖繩！ 祝旅途愉快！`（依地區調整） |
-| KR | `匯率以 1 KRW ≈ 0.025 TWD 估算｜實際費用依當時匯率及消費為準` | `{韓文歡迎語}！祝旅途愉快！` |
-| TW | `""` | `{依地區調整}` |
 
 ### Phase 1：產生骨架
 
@@ -80,7 +65,7 @@ user-invocable: true
 2. 讀取品質規則（tp-quality-rules skill）
 3. 建立行程（`POST /api/trips`，API 格式見 tp-shared/references.md）：
 
-   Body: `{id, name, owner, title, description, og_description, self_drive, countries, food_prefs, auto_scroll, footer, published:0, startDate, endDate}`
+   Body: `{id, name, owner, title, description, countries, data_source:'tp-create', default_travel_mode, lang:'zh-TW', published:0, startDate, endDate, destinations:[{name, lat?, lng?, day_quota?, sub_areas?, osm_id?, osm_type?}]}`
 
    POST 會自動建立 trips + trip_days + trip_permissions 記錄。回傳 `{ ok: true, tripId, daysCreated }`。
 4. 為每一天產生完整內容（JSON 格式），包含：

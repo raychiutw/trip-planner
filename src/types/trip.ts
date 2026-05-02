@@ -48,18 +48,8 @@ export interface Parking {
   mapcode?: string;
 }
 
-/**
- * Footer object stored in trips.footer (JSON parsed by mapRow).
- * Fields used by the Footer component.
- */
-export interface Footer {
-  title?: string;
-  dates?: string;
-  budget?: string;
-  exchangeNote?: string;
-  tagline?: string;
-  note?: string;
-}
+// Migration 0045 (2026-05-02): trips.footer column dropped + Footer component
+// removed. The legacy `Footer` type lived here.
 
 // ---------------------------------------------------------------------------
 // Core data entities (after mapRow transformation)
@@ -282,25 +272,41 @@ export interface DaySummary {
 
 /**
  * Trip list item from GET /api/trips
- * Columns projected: id AS tripId, name, owner, title, self_drive, countries,
- *                    published, auto_scroll, footer
+ * Migration 0045 dropped self_drive/auto_scroll/footer/is_default. Added
+ * data_source/default_travel_mode/lang. TripPage fallback now uses
+ * `published === 1` instead of `isDefault === 1` (commit 18).
  */
 export interface TripListItem {
   tripId: string;
   name: string;
   owner: string;
   title?: string | null;
-  selfDrive: number;
   countries?: string | null;
   published: number;
-  autoScroll?: string | null;
-  /** Raw JSON string at list endpoint (parsed by mapRow if passed through) */
-  footer?: string | null;
-  isDefault?: number;
+  dataSource?: string | null;
+  defaultTravelMode?: string | null;
+  lang?: string | null;
+}
+
+/**
+ * Trip destination row (multi-dest normalization, migration 0045 added trip_destinations).
+ */
+export interface TripDestination {
+  dest_order: number;
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+  day_quota?: number | null;
+  /** JSON-parsed array of sub-area names (e.g. ['梅田', '難波']) */
+  sub_areas?: string[] | null;
+  osm_id?: number | null;
+  osm_type?: 'node' | 'way' | 'relation' | null;
 }
 
 /**
  * Single trip from GET /api/trips/:id
+ * Migration 0045 dropped og_description/self_drive/food_prefs/auto_scroll/footer/
+ * is_default. Added data_source/default_travel_mode/lang + destinations join.
  */
 export interface Trip {
   id: string;
@@ -309,13 +315,12 @@ export interface Trip {
   owner: string;
   title?: string | null;
   description?: string | null;
-  ogDescription?: string | null;
-  selfDrive?: number | null;
   countries?: string | null;
   published?: number | null;
-  foodPrefs?: string | null;
-  autoScroll?: string | null;
-  footer?: Footer | null;
+  dataSource?: string | null;
+  defaultTravelMode?: string | null;
+  lang?: string | null;
+  destinations?: TripDestination[];
   createdAt?: string;
   updatedAt?: string;
 }

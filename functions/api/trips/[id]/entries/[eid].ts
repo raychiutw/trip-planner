@@ -5,7 +5,7 @@ import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-// Phase 3：移除 location / maps / mapcode / google_rating — 這些欄位已 DROP，POI master JOIN 取代。
+// Phase 3：移除 location / maps / mapcode / rating — 這些欄位已 DROP，POI master JOIN 取代。
 // POI 重掛走 PUT /api/trips/:id/entries/:eid/poi-id（獨立端點，驗證 POI 存在）。
 // v2.10 Wave 1 (Item 3 move 跨天)：加 day_id — 須驗證 targetDay 屬於同 trip，
 // 不可改成不同 trip 的 day_id（防越權）。

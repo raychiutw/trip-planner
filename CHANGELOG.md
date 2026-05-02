@@ -3,6 +3,35 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.0] - 2026-05-02
+
+### Added
+
+- **OSM POI 自動補資料：** 新 endpoint `POST /api/pois/:id/enrich` 拉 Nominatim（座標）+ Overpass（OSM tags）+ OpenTripMap（rating 1-7）+ Wikidata（sitelinks 數），90 天 cache（`pois.data_fetched_at`），失敗 graceful fallback。可整批補：`bun scripts/poi-enrich-batch.ts --limit=100`。新景點不必再手填地址、評分、營業時間。
+- **景點重新排序自動更新車程：** 在行程上拖拉景點順序時，立刻觸發 `POST /api/trips/:id/recompute-travel`，後端走 OpenRouteService（自駕/步行）+ Haversine fallback（大眾運輸 / ORS 暫不支援），相鄰 entry 的距離 / 時間 / 模式同步刷新。原本順序變了車程數字卻停在舊值，user 還以為拖拉沒生效。
+- **編輯既有行程：** 全新 EditTripModal v2 (TripsListPage card kebab → 「編輯行程」)。可改：行程名稱、描述、顯示語言（繁中 / 英 / 日）、預設交通方式（自駕 / 步行 / 大眾）、發布狀態、目的地清單（拖拉、加 POI、刪、分配天數）。region 變更時 title 旁顯示「目的地已變更，要更新名稱為『2026 沖繩・京都』？」alert，使用者主動點才覆寫。日期目前 read-only chip 顯示，避免改日期 cascade 影響 entries / hotels。
+- **新增行程也送 destinations[]：** NewTripModal v2 提交時把 destinations[] 結構化資料寫進 `trip_destinations` 子表（先前只當文字註記丟在 description 給 AI consume），後續地圖 region overlay / per-dest 路徑計算 / per-dest 天氣才有 source of truth。
+- **三家地圖直連按鈕：** 任何 POI 旁加 Google / Apple / Naver Maps 按鈕，client 端用 `mapsUrl()` helper 從 lat/lng 即時組 URL，不需 DB 存 vendor-specific 連結。原本只能開 Google Maps。
+- **5 個 trip_docs 自動建立：** 用 UI 建新行程時自動建 flights / checklist / backup / suggestions / emergency 5 個 doc stubs。先前 UI 建的 trip docs tab 是空的，user 必須跑 `/tp-create` 才補得齊。
+
+### Changed
+
+- **trips schema 大整：** migration 0045 移除 6 欄 (`auto_scroll`, `og_description`, `footer`, `food_prefs`, `is_default`, `self_drive`)、加 3 欄 (`data_source`, `default_travel_mode`, `lang`)、加 `trip_destinations` 子表（取代 `region` text 欄位）。`pois.google_rating` 改名為 `rating`（後端用 OpenTripMap 1-7 而非 Google 5★）、`pois.maps` 拆掉（改 client 組 URL）、加 6 個 OSM 欄位 (`osm_id`/`osm_type`/`category`/`tags`/`wikidata_id`/`data_fetched_at`)。`trip_entries` 加 4 個 travel 欄位（distance / min / computed_at / source）。
+- **R1 料理偏好邏輯改寫：** 拔掉 `trips.food_prefs` 後，餐廳推薦不再固定「3 家對應 3 偏好」，改由 LLM 從同行程已產生的 category 多樣性 + 該日 timeline 上下文 + chat 偏好 + 目的地代表料理動態判斷。tp-quality-rules R1 / R3 同步改寫。
+- **`PUT /api/trips/:id` 支援 `destinations[]` 全量取代：** 帶 array 即 DELETE existing + INSERT all（atomic single batch）。空 array → 清光。無 destinations key → 不動子表。
+
+### Fixed
+
+- **景點移動排序時相對車程沒更新（核心 bug）：** 見上方 recompute-travel 自動觸發。
+- **`PUT /trips/:id` 處理 `destinations[]` 不 atomic：** /review 抓到原本 DELETE + INSERT 是兩次獨立 D1 操作，INSERT 失敗會留下「行程沒有目的地」的部分結果。改成 single `db.batch()` 確保 transactional。
+- **`destinations[]` 沒長度上限：** Hostile payload `Array(10000).fill(...)` 會試圖批次 INSERT 10k rows → 撞 D1 batch 100-stmt 上限 crash。POST + PUT 都加 30 dest 上限。
+- **`sub_areas` runtime 沒驗 array of strings：** PUT 端先前用 truthy 檢查就 stringify，hostile nested object 會撐爆 row。新 `safeSubAreas()` helper 強制驗 array of strings 才寫，否則寫 NULL。
+- **景點重排車程更新失敗時靜默：** 改成 toast 提示「順序已儲存，但車程時間更新失敗，重新整理後再試」。原本 `.catch(() => {})` 讓 user 以為 reorder 沒生效。
+
+### Removed
+
+- **`Footer` component + trips 6 欄：** Footer.tsx 拆掉、`TripPage` fallback `t.isDefault === 1` 改 `t.published === 1`、`types/trip.ts` 清 Footer interface 與 dropped 欄位。`scripts/seed.sql` 7 個 trip INSERT 同步重寫。`tp-create` SKILL 拔 footer / food_prefs / og_description / auto_scroll 範本。
+
 ## [2.18.4] - 2026-05-02
 
 ### Fixed

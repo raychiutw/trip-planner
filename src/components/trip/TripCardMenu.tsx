@@ -75,6 +75,8 @@ export interface TripCardMenuProps {
   tripId: string;
   /** 用戶選「共編」 — host 通常 navigate 到該 trip + sheet=collab。 */
   onCollab: (tripId: string) => void;
+  /** 用戶選「編輯」 — host 開 EditTripModal 預填現有 trip 值。 */
+  onEdit: (tripId: string) => void;
   /** 用戶選「刪除」 — host 應該 confirm + DELETE + 從 list 移除。 */
   onDelete: (tripId: string) => void;
   /** 預設關掉 menu 後 host 不需要做事。 */
@@ -84,7 +86,7 @@ export interface TripCardMenuProps {
 const MENU_WIDTH = 160;
 const VIEWPORT_MARGIN = 8;
 
-export default function TripCardMenu({ tripId, onCollab, onDelete, onClose }: TripCardMenuProps) {
+export default function TripCardMenu({ tripId, onCollab, onEdit, onDelete, onClose }: TripCardMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -153,6 +155,13 @@ export default function TripCardMenu({ tripId, onCollab, onDelete, onClose }: Tr
     close();
   }
 
+  function handleEdit(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onEdit(tripId);
+    close();
+  }
+
   function handleDelete(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -168,6 +177,16 @@ export default function TripCardMenu({ tripId, onCollab, onDelete, onClose }: Tr
       style={{ top: pos.top, left: pos.left }}
       data-testid={`trip-card-menu-${tripId}`}
     >
+      <button
+        type="button"
+        role="menuitem"
+        className="tp-card-menu-item"
+        onClick={handleEdit}
+        data-testid={`trip-card-menu-edit-${tripId}`}
+      >
+        <Icon name="edit" />
+        <span>編輯行程</span>
+      </button>
       <button
         type="button"
         role="menuitem"

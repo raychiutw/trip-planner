@@ -155,7 +155,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       hotelPoiIdx = poiItems.length;
       poiItems.push({
         name: (h.name as string) || '', type: 'hotel',
-        description: h.description as string, maps: h.maps as string,
+        description: h.description as string,
         lat: h.lat as number, lng: h.lng as number, source: 'ai',
       });
       const hCopy = h; // capture for closure
@@ -173,7 +173,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           poiItems.push({
             name: (p.name as string) || '停車場', type: 'parking',
             description: p.price ? `費用：${p.price}` : null,
-            maps: p.maps as string, mapcode: p.mapcode as string,
+            mapcode: p.mapcode as string,
             lat: p.lat as number, lng: p.lng as number, source: 'ai',
           });
           tripPoiBuilders.push((ids) => [
@@ -191,7 +191,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           const shopIdx = poiItems.length;
           poiItems.push({
             name: (s.name as string) || '', type: 'shopping',
-            google_rating: s.google_rating as number, maps: s.maps as string,
+            rating: s.rating as number,
             category: s.category as string, hours: s.hours as string, source: 'ai',
           });
           tripPoiBuilders.push((ids) => [
@@ -214,11 +214,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         name: title,
         type: rawType,
         description: (e.description as string | undefined) ?? null,
-        maps: (e.maps as string | undefined) ?? null,
         mapcode: (e.mapcode as string | undefined) ?? null,
         lat: (e.lat as number | undefined) ?? null,
         lng: (e.lng as number | undefined) ?? null,
-        google_rating: (e.google_rating as number | undefined) ?? null,
+        rating: (e.rating as number | undefined) ?? null,
         source: 'ai',
       });
     }
@@ -233,8 +232,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           const rIdx = poiItems.length;
           poiItems.push({
             name: (r.name as string) || '', type: 'restaurant',
-            description: r.description as string, google_rating: r.google_rating as number,
-            maps: r.maps as string, category: r.category as string,
+            description: r.description as string, rating: r.rating as number,
+            category: r.category as string,
             hours: r.hours as string, source: 'ai',
           });
           tripPoiBuilders.push((ids) => [
@@ -251,7 +250,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           const sIdx = poiItems.length;
           poiItems.push({
             name: (s.name as string) || '', type: 'shopping',
-            google_rating: s.google_rating as number, maps: s.maps as string,
+            rating: s.rating as number,
             category: s.category as string, hours: s.hours as string, source: 'ai',
           });
           tripPoiBuilders.push((ids) => [
