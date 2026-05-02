@@ -40,9 +40,17 @@ export async function fetchTags(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15_000);
   try {
+    // 2026-05-02 fix: 原本送 Content-Type: text/plain 但 body 用
+    // `data=<urlencoded>` — 格式不一致導致 Overpass parser 回 406 (Not Acceptable)。
+    // poi-enrich-batch v2.19.0 100 個 POI 中 30 個（30%）撞此 bug。
+    // 改用 application/x-www-form-urlencoded 對齊 body 格式。
     const res = await fetch(OVERPASS_BASE, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'User-Agent': 'Tripline/1.0 (lean.lean@gmail.com)',
+      },
       body: `data=${encodeURIComponent(query)}`,
       signal: ctrl.signal,
     });

@@ -3,6 +3,20 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.2] - 2026-05-02
+
+### Fixed
+
+- **Overpass API 客戶端 30% 失敗率：** v2.19.0 上線後跑 `poi-enrich-batch
+  --limit=100`，100 個 POI 中 30 個（30%）撞 `Overpass HTTP 406 Not
+  Acceptable`。Root cause: `src/server/osm/overpass.ts` 送 `Content-Type:
+  text/plain` 但 body 用 `data=<urlencoded>` 格式 — 兩者不一致導致 Overpass
+  parser reject。改為 `application/x-www-form-urlencoded` 對齊 body。
+  順便加 `Accept: application/json` + `User-Agent: Tripline/1.0` (per OSM
+  usage policy)。新增 6 個 unit tests (`tests/unit/overpass.test.ts`) 鎖
+  request shape 防 regression。修完 batch 重跑 `--force` 該 30 個 POI 預期
+  能補到 phone / website / opening_hours / cuisine / wikidata 等 OSM tags。
+
 ## [2.19.1] - 2026-05-02
 
 ### Removed
