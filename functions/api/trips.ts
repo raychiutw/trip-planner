@@ -7,6 +7,7 @@ const TRIPID_RE = /^[a-z0-9-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MAX_DAYS = 30;
+const MAX_DESTINATIONS = 30;
 const MS_PER_DAY = 86400000;
 
 const TRIP_DOC_TYPES = ['flights', 'checklist', 'backup', 'suggestions', 'emergency'] as const;
@@ -74,9 +75,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // Validate optional destinations array (commit 7)
+  // /review-fix: cap length 防 hostile payload 撐爆 D1 batch 100-stmt 上限。
   const destsRaw = body.destinations;
   let destinations: DestinationInput[] = [];
   if (Array.isArray(destsRaw)) {
+    if (destsRaw.length > MAX_DESTINATIONS) {
+      throw new AppError('DATA_VALIDATION', `destinations 數量不可超過 ${MAX_DESTINATIONS}`);
+    }
     destinations = destsRaw.filter((d): d is DestinationInput =>
       d != null && typeof d === 'object' && typeof (d as DestinationInput).name === 'string',
     );

@@ -19,6 +19,8 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
   const tokens = readFile('css/tokens.css');
   const tripsList = readFile('src/pages/TripsListPage.tsx');
   const newTripModal = readFile('src/components/trip/NewTripModal.tsx');
+  // /review-fix (CSS dedupe): h2 / sub / form-row 等共用 rules 已抽到 _tripFormStyles.ts
+  const tripFormStyles = readFile('src/components/trip/_tripFormStyles.ts');
   const addStopModal = readFile('src/components/trip/AddStopModal.tsx');
   const bnav = readFile('src/components/shell/GlobalBottomNav.tsx');
 
@@ -59,9 +61,12 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
   });
 
   it('NewTripModal h2 font-weight 700 (mockup spec)', () => {
-    const h2Block = newTripModal.match(/\.tp-new-modal h2\s*\{[\s\S]*?font-weight:\s*(\d+)/);
+    // h2 rule 抽到 _tripFormStyles.ts 後用 comma-selector cover 兩個 modal
+    const h2Block = tripFormStyles.match(/\.tp-new-modal h2,\s*\.tp-edit-modal h2\s*\{[\s\S]*?font-weight:\s*(\d+)/);
     expect(h2Block).not.toBeNull();
     expect(h2Block?.[1]).toBe('700');
+    // suppress unused-var lint for newTripModal (還有其他 it 用到)
+    expect(newTripModal).toContain('NewTripModal');
   });
 
   it('AddStopModal title font-weight 700 (mockup spec)', () => {

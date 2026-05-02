@@ -144,4 +144,51 @@ describe('PUT /api/trips/:id', () => {
     });
     expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
   });
+
+  // /review-fix: hostile payload guards
+  it('destinations 數量超過上限 (>30) → 400', async () => {
+    const tooMany = Array.from({ length: 31 }, (_, i) => ({ name: `dest-${i}`, osm_id: 1000 + i }));
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', { destinations: tooMany }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(400);
+  });
+
+  it('sub_areas 不是 string array → 寫入 NULL（防 nested object 撐爆 row）', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', {
+        destinations: [
+          { name: '惡意 sub_areas', sub_areas: { nested: { deeply: 'evil' } }, osm_id: 999 },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(200);
+    const dest = await db.prepare('SELECT sub_areas FROM trip_destinations WHERE name = ?')
+      .bind('惡意 sub_areas').first();
+    expect((dest as Record<string, unknown>).sub_areas).toBeNull();
+  });
+
+  it('sub_areas 是 string array → 正常 JSON 寫入', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', {
+        destinations: [
+          { name: '正常 sub_areas', sub_areas: ['梅田', '難波'], osm_id: 998 },
+        ],
+      }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(200);
+    const dest = await db.prepare('SELECT sub_areas FROM trip_destinations WHERE name = ?')
+      .bind('正常 sub_areas').first();
+    expect(JSON.parse((dest as Record<string, unknown>).sub_areas as string)).toEqual(['梅田', '難波']);
+  });
 });

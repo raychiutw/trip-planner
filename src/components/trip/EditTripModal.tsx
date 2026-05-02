@@ -20,6 +20,7 @@ import { apiFetchRaw } from '../../lib/apiClient';
 import InlineError from '../shared/InlineError';
 import Icon from '../shared/Icon';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
+import { TRIP_FORM_STYLES } from './_tripFormStyles';
 
 interface PoiSearchResult {
   osm_id: number;
@@ -76,139 +77,16 @@ interface TripApi {
 const POI_SEARCH_DEBOUNCE_MS = 300;
 const POI_SEARCH_MIN_LEN = 2;
 
+/**
+ * SCOPED_STYLES 只放 EditTripModal 特有 rules — modal-backdrop / form pane /
+ * close / h2 / sub / form-row / dest-row / dest-dropdown / segment / actions /
+ * btn 等共用樣式由 _tripFormStyles.ts 提供（comma-selector 同時 cover
+ * `.tp-new-*` 與 `.tp-edit-*`）。
+ */
 const SCOPED_STYLES = `
-.tp-edit-modal-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(42, 31, 24, 0.55);
-  z-index: var(--z-modal, 60);
-  display: grid; place-items: center;
-  padding: 16px;
-  animation: tp-edit-modal-fade 160ms var(--transition-timing-function-apple, ease-out);
-}
-@keyframes tp-edit-modal-fade { from { opacity: 0; } to { opacity: 1; } }
-
-.tp-edit-modal {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  width: 100%;
-  max-width: 720px;
-  font: inherit;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  max-height: calc(100dvh - 32px);
-  position: relative;
-}
-.tp-edit-form {
-  padding: 24px;
-  display: flex; flex-direction: column;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  min-height: 0;
-  padding-bottom: 0;
-}
-@media (min-width: 768px) {
-  .tp-edit-form { padding: 28px 32px; padding-bottom: 0; }
-}
-.tp-edit-close {
-  position: absolute; top: 12px; right: 12px;
-  z-index: 2;
-  width: var(--spacing-tap-min, 44px); height: var(--spacing-tap-min, 44px);
-  border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(8px);
-  display: grid; place-items: center;
-  cursor: pointer;
-  font-size: 18px; color: var(--color-foreground);
-  box-shadow: var(--shadow-sm);
-}
-.tp-edit-close:hover { background: var(--color-background); color: var(--color-accent-deep); }
-.tp-edit-close:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-
-.tp-edit-modal h2 {
-  font-size: var(--font-size-title, 1.75rem);
-  font-weight: 700; letter-spacing: -0.02em;
-  margin: 0 0 6px;
-}
-.tp-edit-sub {
-  color: var(--color-muted);
-  font-size: var(--font-size-callout);
-  margin: 0 0 20px; line-height: 1.5;
-}
-
-.tp-edit-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.tp-edit-row label {
-  font-size: var(--font-size-footnote);
-  font-weight: 700; color: var(--color-foreground);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.tp-edit-row input[type="text"],
-.tp-edit-row textarea,
-.tp-edit-row select {
-  padding: 12px 14px;
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-secondary);
-  color: var(--color-foreground);
-  font: inherit;
-  font-size: var(--font-size-body);
-  min-height: var(--spacing-tap-min);
-}
-.tp-edit-row textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
-.tp-edit-row input[type="text"]:focus,
-.tp-edit-row textarea:focus,
-.tp-edit-row select:focus {
-  outline: none;
-  border-color: var(--color-accent);
-  background: var(--color-background);
-  box-shadow: 0 0 0 3px var(--color-accent-subtle);
-}
-
-/* destinations sortable rows */
-.tp-edit-dest-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-.tp-edit-dest-row {
-  display: grid;
-  grid-template-columns: 24px 28px 1fr auto auto;
-  align-items: center; gap: 8px;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  min-height: 44px;
-  font-size: var(--font-size-footnote);
-}
-.tp-edit-dest-row.is-dragging {
+.tp-edit-dest-row.is-new {
   background: var(--color-accent-subtle);
   border-color: var(--color-accent);
-  box-shadow: var(--shadow-md);
-}
-.tp-edit-dest-row.is-new { background: var(--color-accent-subtle); border-color: var(--color-accent); }
-.tp-edit-dest-grip {
-  cursor: grab;
-  color: var(--color-muted);
-  display: grid; place-items: center;
-  width: 24px; height: 24px;
-  border: 0; background: transparent;
-}
-.tp-edit-dest-grip:active { cursor: grabbing; }
-.tp-edit-dest-grip .svg-icon { width: 14px; height: 14px; }
-.tp-edit-dest-num {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  font-weight: 700;
-  font-size: var(--font-size-caption);
-}
-.tp-edit-dest-name {
-  min-width: 0;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  font-weight: 600;
-  color: var(--color-foreground);
 }
 .tp-edit-dest-badge {
   margin-left: 6px;
@@ -221,16 +99,6 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
   font-variant-numeric: tabular-nums;
 }
-.tp-edit-dest-remove {
-  width: 28px; height: 28px;
-  border: 0; background: transparent;
-  color: var(--color-muted);
-  cursor: pointer;
-  border-radius: 50%;
-  display: grid; place-items: center;
-}
-.tp-edit-dest-remove:hover { background: var(--color-hover); color: var(--color-destructive); }
-.tp-edit-dest-remove .svg-icon { width: 14px; height: 14px; }
 
 /* + 加入目的地 trigger */
 .tp-edit-dest-add-wrap { position: relative; }
@@ -245,35 +113,13 @@ const SCOPED_STYLES = `
   cursor: pointer;
   min-height: 36px;
 }
-.tp-edit-dest-add-btn:hover { background: var(--color-accent-subtle); border-color: var(--color-accent); color: var(--color-accent-deep); }
+.tp-edit-dest-add-btn:hover {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent-deep);
+}
 .tp-edit-dest-search-wrap { position: relative; margin-top: 8px; }
 .tp-edit-dest-search-wrap input { width: 100%; }
-.tp-edit-dest-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-  z-index: 3;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  max-height: 280px; overflow-y: auto; overscroll-behavior: contain;
-}
-.tp-edit-dest-status {
-  padding: 14px 16px;
-  font-size: var(--font-size-footnote);
-  color: var(--color-muted);
-  text-align: center;
-}
-.tp-edit-dest-result {
-  display: flex; flex-direction: column; gap: 2px;
-  width: 100%;
-  padding: 10px 14px;
-  border: 0; border-bottom: 1px solid var(--color-border);
-  background: transparent; font: inherit; text-align: left; cursor: pointer;
-}
-.tp-edit-dest-result:last-child { border-bottom: 0; }
-.tp-edit-dest-result:hover { background: var(--color-accent-subtle); }
-.tp-edit-dest-result .name { font-size: var(--font-size-callout); font-weight: 700; color: var(--color-foreground); line-height: 1.3; }
-.tp-edit-dest-result .addr { font-size: var(--font-size-caption); color: var(--color-muted); line-height: 1.4; }
 
 /* read-only date chip */
 .tp-edit-date-readonly {
@@ -324,47 +170,12 @@ const SCOPED_STYLES = `
   border-radius: 50%;
   display: grid; place-items: center;
 }
-.tp-edit-title-hint-dismiss:hover { background: var(--color-background); color: var(--color-foreground); }
-
-/* segment for default_travel_mode */
-.tp-edit-segment {
-  display: inline-flex;
-  padding: 4px;
-  border-radius: var(--radius-full);
-  background: var(--color-secondary);
-  border: 1px solid var(--color-border);
-  align-self: stretch;
-}
-.tp-edit-segment button {
-  flex: 1;
-  font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
-  padding: 10px 16px; border-radius: var(--radius-full);
-  border: none; background: transparent; color: var(--color-muted);
-  cursor: pointer;
-  min-height: var(--spacing-tap-min);
-}
-.tp-edit-segment button.is-active {
+.tp-edit-title-hint-dismiss:hover {
   background: var(--color-background);
-  color: var(--color-accent-deep);
-  box-shadow: var(--shadow-md), inset 0 0 0 1.5px var(--color-accent);
+  color: var(--color-foreground);
 }
-.tp-edit-segment button:hover:not(.is-active) { color: var(--color-foreground); }
 
-/* sticky actions row */
-.tp-edit-actions {
-  position: sticky; bottom: 0;
-  display: flex; gap: 8px; justify-content: space-between; align-items: center;
-  flex-wrap: wrap;
-  margin: 20px -24px 0;
-  padding: 16px 24px max(16px, env(safe-area-inset-bottom, 16px));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-}
-@media (min-width: 768px) {
-  .tp-edit-actions { margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; }
-}
+/* publish status segment in actions row */
 .tp-edit-actions-publish {
   display: inline-flex;
   padding: 4px;
@@ -394,22 +205,6 @@ const SCOPED_STYLES = `
 .tp-edit-actions-publish button.is-active.is-draft .dot { background: var(--color-line-strong); }
 
 .tp-edit-actions-btns { display: inline-flex; gap: 8px; }
-.tp-edit-btn {
-  padding: 12px 20px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: transparent; color: var(--color-foreground);
-  font: inherit; font-weight: 600; font-size: var(--font-size-callout);
-  cursor: pointer;
-  min-height: var(--spacing-tap-min);
-}
-.tp-edit-btn:hover:not(:disabled) { background: var(--color-hover); }
-.tp-edit-btn-primary {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
-}
-.tp-edit-btn-primary:hover:not(:disabled) { filter: brightness(var(--hover-brightness, 0.95)); }
-.tp-edit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* loading shimmer for initial fetch */
 .tp-edit-loading {
@@ -754,6 +549,7 @@ export default function EditTripModal({ open, tripId, onClose, onSaved }: EditTr
       role="presentation"
       data-testid="edit-trip-modal"
     >
+      <style>{TRIP_FORM_STYLES}</style>
       <style>{SCOPED_STYLES}</style>
       <form
         className="tp-edit-modal"

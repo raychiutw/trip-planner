@@ -28,6 +28,7 @@ import { useTripDays } from '../../contexts/TripDaysContext';
 import { apiFetchRaw } from '../../lib/apiClient';
 import { TP_DRAG_ACCESSIBILITY } from '../../lib/drag-announcements';
 import Icon from '../shared/Icon';
+import { showToast } from '../shared/Toast';
 import InlineError from '../shared/InlineError';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
@@ -766,12 +767,18 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
       // OSM PR (migration 0045)：reorder 後重新計算 entry travel — 兩個相鄰 entry
       // 的 driving / walking / transit 距離取決於順序，sort_order 變動 → 必須重算。
       // 走 fire-and-forget：travel 顯示是 secondary，重算失敗（API 503/no ORS key）
-      // 不阻塞 UI，下次 load 再試。tp-entry-updated event 用 reordered+travel
-      // hint 給聽 listener 的 component 重 fetch。
+      // 不阻塞 UI 但 toast 提示 user 重排已存、travel 數字未更新，避免誤以為
+      // reorder 沒生效（travel 是 user reorder 的視覺信號）。
       apiFetchRaw(`/trips/${tripId}/recompute-travel`, {
         method: 'POST',
         credentials: 'same-origin',
-      }).catch(() => { /* ignore — travel rebuild 可在下次 reorder 時重試 */ });
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`recompute-travel ${res.status}`);
+        })
+        .catch(() => {
+          showToast('順序已儲存，但車程時間更新失敗，重新整理後再試', 'info');
+        });
       window.dispatchEvent(new CustomEvent('tp-entry-updated', {
         detail: { tripId, entryId: active.id, reordered: true, travelRecomputeRequested: true },
       }));

@@ -106,10 +106,19 @@ interface DestinationInput {
   osm_type?: 'node' | 'way' | 'relation' | null;
 }
 
+const MAX_DESTINATIONS = 30;
+
 function isValidDestination(d: unknown): d is DestinationInput {
   if (!d || typeof d !== 'object') return false;
   const obj = d as Record<string, unknown>;
   return typeof obj.name === 'string' && obj.name.trim().length > 0;
+}
+
+/** /review-fix: sub_areas runtime 必須是 string array，避免被 nested object 撐爆 row */
+function safeSubAreas(val: unknown): string | null {
+  if (!Array.isArray(val)) return null;
+  if (!val.every((s) => typeof s === 'string')) return null;
+  return JSON.stringify(val);
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
@@ -131,21 +140,27 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   // OSM PR (migration 0045)：destinations[] 為非 trips 欄位的特殊 nested resource，
   // 用 full-replacement 語意 — 給定 array 即 DELETE existing + INSERT all。
   // 無 destinations key → 不動 trip_destinations。空 array → 清光（user 想清空）。
+  // /review-fix: 集中 stmts → 單次 db.batch() 確保 atomic（DELETE+INSERT 不分裂）。
+  // /review-fix: cap length 防 hostile payload 撐爆 D1 batch 100-stmt 上限。
   const hasDestinations = Array.isArray(body.destinations);
+  if (hasDestinations && (body.destinations as unknown[]).length > MAX_DESTINATIONS) {
+    throw new AppError('DATA_VALIDATION', `destinations 數量不可超過 ${MAX_DESTINATIONS}`);
+  }
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
   if (!update && !hasDestinations) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   const changedBy = auth.email;
+  const stmts: D1PreparedStatement[] = [];
 
   if (update) {
-    await db.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id).run();
+    stmts.push(db.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id));
   }
 
   if (hasDestinations) {
     const inputs = (body.destinations as unknown[]).filter(isValidDestination);
-    await db.prepare('DELETE FROM trip_destinations WHERE trip_id = ?').bind(id).run();
-    if (inputs.length > 0) {
-      const inserts = inputs.map((d, idx) =>
+    stmts.push(db.prepare('DELETE FROM trip_destinations WHERE trip_id = ?').bind(id));
+    inputs.forEach((d, idx) => {
+      stmts.push(
         db.prepare(
           `INSERT INTO trip_destinations
             (trip_id, dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type)
@@ -157,13 +172,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
           d.lat ?? null,
           d.lng ?? null,
           d.day_quota ?? null,
-          d.sub_areas ? JSON.stringify(d.sub_areas) : null,
+          safeSubAreas(d.sub_areas),
           d.osm_id ?? null,
           d.osm_type ?? null,
         ),
       );
-      await db.batch(inserts);
-    }
+    });
+  }
+
+  if (stmts.length > 0) {
+    await db.batch(stmts);
   }
 
   const newFields: Record<string, unknown> = update
