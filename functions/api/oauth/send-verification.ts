@@ -20,6 +20,8 @@ import { D1Adapter } from '../../../src/server/oauth-d1-adapter';
 import { parseJsonBody, generateOpaqueToken } from '../_utils';
 import { sendEmail, EmailError } from '../../../src/server/email';
 import { emailVerification } from '../../../src/server/email-templates';
+import { recordEmailEvent } from '../_audit';
+import { alertAdminTelegram } from '../_alert';
 import type { Env } from '../_types';
 
 interface SendVerificationBody {
@@ -63,25 +65,48 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     EMAIL_VERIFY_TOKEN_TTL_SEC,
   );
 
-  // Send verification email — best-effort (token stays in D1 even if email fails)
-  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
-    const origin = new URL(context.request.url).origin;
-    const verifyUrl = `${origin}/api/oauth/verify?token=${encodeURIComponent(token)}`;
-    const tpl = emailVerification(verifyUrl, user.display_name);
-    try {
-      await sendEmail(context.env, {
-        to: email,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-      });
-    } catch (err) {
-      // best-effort: log but still return generic 200 (anti-enum + token in D1 valid)
-      // eslint-disable-next-line no-console
-      console.error('[send-verification] email send failed:',
-        err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
-    }
-  }
+  // 2026-05-02 cutover: sync send via mac mini tunnel + audit + telegram alert.
+  // Q7: 失敗時誠實回 500「寄送失敗」(no anti-enumeration exception even though
+  // existence vs failure is partially observable to attacker — UX > 安全 trade-off).
+  // Token 仍存 D1，user 之後可重寄。
+  const origin = new URL(context.request.url).origin;
+  const verifyUrl = `${origin}/api/oauth/verify?token=${encodeURIComponent(token)}`;
+  const tpl = emailVerification(verifyUrl, user.display_name);
 
-  return genericResponse;
+  try {
+    const result = await sendEmail(context.env, {
+      to: email,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+      template: 'verification',
+    });
+    await recordEmailEvent(context.env.DB, {
+      template: 'verification',
+      recipient: email,
+      status: 'sent',
+      latencyMs: result.elapsed,
+    });
+    return genericResponse;
+  } catch (err) {
+    const msg = err instanceof EmailError
+      ? `${err.status} ${err.message}`
+      : err instanceof Error
+        ? err.message
+        : String(err);
+    await recordEmailEvent(context.env.DB, {
+      template: 'verification',
+      recipient: email,
+      status: 'failed',
+      error: msg,
+    });
+    await alertAdminTelegram(
+      context.env,
+      `驗證信寄送失敗: ${email} (${msg})`,
+    );
+    return new Response(
+      JSON.stringify({ error: '驗證信寄送失敗，請稍後再試' }),
+      { status: 500, headers: { 'content-type': 'application/json' } },
+    );
+  }
 };
