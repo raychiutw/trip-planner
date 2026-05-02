@@ -28,9 +28,9 @@ export async function alertAdminTelegram(env: AlertEnv, message: string): Promis
     console.warn('[alert] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set; alert skipped');
     return;
   }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 5_000);
   try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5_000);
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -40,12 +40,13 @@ export async function alertAdminTelegram(env: AlertEnv, message: string): Promis
       }),
       signal: ctrl.signal,
     });
-    clearTimeout(timer);
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
       console.error('[alert] Telegram API non-2xx:', res.status, errText);
     }
   } catch (err) {
     console.error('[alert] Telegram alert failed:', err instanceof Error ? err.message : err);
+  } finally {
+    clearTimeout(timer);
   }
 }

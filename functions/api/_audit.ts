@@ -50,7 +50,7 @@ export async function logAudit(db: D1Database, opts: {
  * For invitation / trigger-failed pass real tripId.
  */
 export async function recordEmailEvent(db: D1Database, opts: {
-  template: string;        // 'verification' | 'forgot-password' | 'reset-password' | 'invitation' | 'trigger'
+  template: string;        // 'verification' | 'forgot-password' | 'reset-password-confirm' | 'invitation' | 'trigger'
   recipient: string;
   status: 'sent' | 'failed' | 'config-missing' | 'trigger-failed';
   error?: string;

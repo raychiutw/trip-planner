@@ -43,6 +43,14 @@ export function makeMailHandler(deps: MailHandlerDeps) {
       return jsonResponse({ error: 'missing to/subject/html' }, 400);
     }
 
+    // Validate `to` is a single, plain email address — defends against open-relay
+    // abuse if TRIPLINE_API_SECRET ever leaks. nodemailer accepts comma-separated
+    // lists and 'Display Name <email>' syntax which would let a caller send to
+    // arbitrary recipients under the Tripline Gmail identity.
+    if (!isPlainEmail(to)) {
+      return jsonResponse({ error: 'invalid to: must be a single plain email' }, 400);
+    }
+
     try {
       const t0 = Date.now();
       const info = await deps.transporter().sendMail({
@@ -77,4 +85,22 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+/**
+ * Single-email RFC 5322-ish check. Rejects:
+ * - comma-separated lists ('a@b.c, attacker@evil.com')
+ * - display-name syntax ('Display Name <email>')
+ * - CRLF injection (header smuggling)
+ * - missing @ or local/domain
+ *
+ * Intentionally strict — for system-generated transactional email there's no
+ * legitimate need for multi-recipient or display-name on this internal endpoint.
+ */
+function isPlainEmail(addr: string): boolean {
+  if (typeof addr !== 'string' || addr.length === 0 || addr.length > 254) return false;
+  // Reject any control char (including CR/LF), comma, angle bracket, quote, semicolon
+  if (/[\r\n,<>\";]/.test(addr)) return false;
+  // Basic shape: local@domain.tld with at least one dot in domain
+  return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(addr);
 }
