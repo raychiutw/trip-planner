@@ -93,6 +93,7 @@ const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 const CollabPage = lazyWithRetry(() => import('../pages/CollabPage'));
 const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
+const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -177,6 +178,9 @@ if (el) {
                 <Route path="collab" element={<CollabPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: EditTripModal → /trip/:id/edit */}
                 <Route path="edit" element={<EditTripPage />} />
+                {/* 2026-05-03 modal-to-fullpage migration: EntryActionPopover → /stop/:eid/(copy|move) */}
+                <Route path="stop/:entryId/copy" element={<EntryActionPage action="copy" />} />
+                <Route path="stop/:entryId/move" element={<EntryActionPage action="move" />} />
               </Route>
               <Route path="*" element={<LegacyRedirect />} />
             </Routes>

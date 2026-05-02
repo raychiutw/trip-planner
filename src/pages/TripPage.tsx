@@ -15,7 +15,7 @@ import { computeActiveDayIndex, getStableViewportH, computeInitialHash } from '.
 import { useScrollRestoreOnBack } from '../hooks/useScrollRestoreOnBack';
 import { TripIdContext } from '../contexts/TripIdContext';
 import { TripDaysContext } from '../contexts/TripDaysContext';
-import type { DayOption } from '../components/trip/EntryActionPopover';
+import type { DayOption } from '../lib/entryAction';
 import DayNav from '../components/trip/DayNav';
 import DaySection from '../components/trip/DaySection';
 import { extractPinsFromDay } from '../hooks/useMapData';

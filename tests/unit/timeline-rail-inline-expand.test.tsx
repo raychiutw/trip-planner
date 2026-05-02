@@ -17,7 +17,7 @@ import TimelineRail from '../../src/components/trip/TimelineRail';
 import type { TimelineEntryData } from '../../src/components/trip/TimelineEvent';
 import { TripIdContext } from '../../src/contexts/TripIdContext';
 import { TripDaysContext } from '../../src/contexts/TripDaysContext';
-import type { DayOption } from '../../src/components/trip/EntryActionPopover';
+import type { DayOption } from '../../src/lib/entryAction';
 
 const TIMELINE_RAIL_SRC = fs.readFileSync(
   path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
@@ -241,75 +241,12 @@ describe('TimelineRail — copy/move copy/move buttons (v2.10 Wave 1)', () => {
     expect(screen.queryByTestId('timeline-rail-copy-open-42')).toBeNull();
   });
 
-  it('clicking copy button opens popover with copy heading', () => {
-    renderWiredRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
-    const popover = screen.getByTestId('entry-action-popover');
-    expect(popover.textContent).toContain('複製到哪一天');
-  });
-
-  it('clicking move button opens popover with move heading', () => {
-    renderWiredRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-move-open-42'));
-    const popover = screen.getByTestId('entry-action-popover');
-    expect(popover.textContent).toContain('移動到哪一天');
-  });
-
-  it('confirm copy → POST /api/trips/:id/entries/:eid/copy with targetDayId', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal('fetch', fetchMock);
-    renderWiredRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
-    fireEvent.click(screen.getByTestId('entry-action-day-2'));
-    fireEvent.click(screen.getByTestId('entry-action-confirm'));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const [url, opts] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('/api/trips/okinawa-2026/entries/42/copy');
-    expect((opts as RequestInit).method).toBe('POST');
-    expect(JSON.parse((opts as RequestInit).body as string)).toEqual({ targetDayId: 102 });
-  });
-
-  it('confirm move → PATCH /api/trips/:id/entries/:eid with day_id', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal('fetch', fetchMock);
-    renderWiredRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-move-open-42'));
-    fireEvent.click(screen.getByTestId('entry-action-day-3'));
-    fireEvent.click(screen.getByTestId('entry-action-confirm'));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    const [url, opts] = fetchMock.mock.calls[0]!;
-    expect(url).toBe('/api/trips/okinawa-2026/entries/42');
-    expect((opts as RequestInit).method).toBe('PATCH');
-    expect(JSON.parse((opts as RequestInit).body as string)).toEqual({ day_id: 103 });
-  });
-
-  it('successful copy/move dispatches tp-entry-updated event', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
-    vi.stubGlobal('fetch', fetchMock);
-    const listener = vi.fn();
-    window.addEventListener('tp-entry-updated', listener);
-    renderWiredRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
-    fireEvent.click(screen.getByTestId('entry-action-day-2'));
-    fireEvent.click(screen.getByTestId('entry-action-confirm'));
-    await waitFor(() => expect(listener).toHaveBeenCalled());
-    const evt = listener.mock.calls[0]![0] as CustomEvent<{ tripId: string; entryId: number }>;
-    expect(evt.detail).toEqual({ tripId: 'okinawa-2026', entryId: 42 });
-    window.removeEventListener('tp-entry-updated', listener);
-  });
-
-  it('current day option marked disabled in popover', () => {
-    renderWiredRail();
-    fireEvent.click(screen.getByTestId('timeline-rail-row-42'));
-    fireEvent.click(screen.getByTestId('timeline-rail-copy-open-42'));
-    const day1 = screen.getByTestId('entry-action-day-1');
-    expect(day1.getAttribute('aria-disabled')).toBe('true');
-  });
+  // 2026-05-03 modal-to-fullpage migration: EntryActionPopover → EntryActionPage
+  // (/trip/:id/stop/:eid/copy 或 /move)。TimelineRail 不再 mount popover，
+  // 改為 navigate('/trip/:id/stop/:eid/(copy|move)')。Popover 行為（fetch days、
+  // confirm flow、API call、event dispatch）覆蓋責任轉移到 EntryActionPage 自己
+  // 的測試 (TODO: src/pages/EntryActionPage 等價單元測試)。
+  // 此處只驗 TimelineRail 端按鈕點擊後 URL 變動正確。
 });
 
 describe('TimelineRail — drag reorder contract', () => {

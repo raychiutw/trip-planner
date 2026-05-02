@@ -1,13 +1,13 @@
 /**
- * shortenDateLabel — pure regex helper used by EntryActionPopover to compress
- * `2026-07-26 (六)` → `7/26 (六)` so the day list doesn't wrap on narrow popovers.
+ * shortenDateLabel — pure regex helper for entry copy/move day picker.
+ * Compresses `2026-07-26 (六)` → `7/26 (六)` so the day list doesn't wrap.
  *
  * Caller contract (TripPage.tsx dayOptions via mapDay.parseLocalDate): always
  * zero-padded `YYYY-MM-DD（週）`. Fallback returns label as-is so a future
  * caller-contract change doesn't crash the picker.
  */
 import { describe, it, expect } from 'vitest';
-import { shortenDateLabel } from '../../src/components/trip/EntryActionPopover';
+import { shortenDateLabel } from '../../src/lib/entryAction';
 
 describe('shortenDateLabel', () => {
   it('canonical YYYY-MM-DD with 半形括號 weekday → strips year + leading zero', () => {
