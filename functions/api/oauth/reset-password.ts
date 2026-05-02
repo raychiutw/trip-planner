@@ -22,6 +22,8 @@ import { hashPassword, MIN_PASSWORD_LEN } from '../../../src/server/password';
 import { parseJsonBody } from '../_utils';
 import { revokeAllOtherSessions } from '../_session';
 import { sendEmail, EmailError } from '../../../src/server/email';
+import { recordEmailEvent } from '../_audit';
+import { alertAdminTelegram } from '../_alert';
 import { passwordChangedConfirm } from '../../../src/server/email-templates';
 import { recordAuthEvent } from '../_auth_audit';
 import type { Env } from '../_types';
@@ -115,26 +117,47 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     console.error('[reset-password] revokeAllOtherSessions failed:', (err as Error).message);
   }
 
-  // Send confirmation email — best-effort，不擋成功 response
-  if (context.env.RESEND_API_KEY && context.env.EMAIL_FROM) {
-    try {
-      const userRow = await context.env.DB
-        .prepare('SELECT display_name FROM users WHERE id = ?')
-        .bind(tokenRow.userId)
-        .first<{ display_name: string | null }>();
-      const tpl = passwordChangedConfirm(userRow?.display_name ?? null);
-      await sendEmail(context.env, {
-        to: tokenRow.email,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-      });
-    } catch (err) {
-      // best-effort
-      // eslint-disable-next-line no-console
-      console.error('[reset-password] confirmation email failed:',
-        err instanceof EmailError ? `${err.status} ${err.message}` : (err as Error).message);
-    }
+  // Send confirmation email — best-effort（密碼已更新，不擋 user 的 200 response）。
+  // Q7 例外：confirmation 是「事後通知」非「primary deliverable」，回 500 會讓
+  // user 誤以為密碼沒改成功 → 重複嘗試。改成 best-effort + audit + telegram alert
+  // 給 admin observable 即可。
+  const userRow = await context.env.DB
+    .prepare('SELECT display_name FROM users WHERE id = ?')
+    .bind(tokenRow.userId)
+    .first<{ display_name: string | null }>();
+  const tpl = passwordChangedConfirm(userRow?.display_name ?? null);
+  try {
+    const result = await sendEmail(context.env, {
+      to: tokenRow.email,
+      subject: tpl.subject,
+      html: tpl.html,
+      text: tpl.text,
+      template: 'reset-password-confirm',
+    });
+    await recordEmailEvent(context.env.DB, {
+      template: 'reset-password-confirm',
+      recipient: tokenRow.email,
+      status: 'sent',
+      latencyMs: result.elapsed,
+      triggeredBy: tokenRow.email,
+    });
+  } catch (err) {
+    const msg = err instanceof EmailError
+      ? `${err.status} ${err.message}`
+      : err instanceof Error
+        ? err.message
+        : String(err);
+    await recordEmailEvent(context.env.DB, {
+      template: 'reset-password-confirm',
+      recipient: tokenRow.email,
+      status: 'failed',
+      error: msg,
+      triggeredBy: tokenRow.email,
+    });
+    await alertAdminTelegram(
+      context.env,
+      `密碼重設確認信寄送失敗（password 已更新）: ${tokenRow.email} (${msg})`,
+    );
   }
 
   await recordAuthEvent(context.env.DB, context.request, {
