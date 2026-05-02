@@ -152,4 +152,23 @@ describe('makeMailHandler', () => {
     await handler(makeReq({ to: 'a@b.c', subject: 's', html: 'h' }));
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/template=-/));
   });
+
+  it('forwards text fallback to nodemailer when provided', async () => {
+    const { deps, sendMail } = makeDeps();
+    const handler = makeMailHandler(deps);
+    await handler(
+      makeReq({ to: 'a@b.c', subject: 's', html: '<p>h</p>', text: 'plain h' }),
+    );
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({ html: '<p>h</p>', text: 'plain h' }),
+    );
+  });
+
+  it('omits text key from sendMail when not provided', async () => {
+    const { deps, sendMail } = makeDeps();
+    const handler = makeMailHandler(deps);
+    await handler(makeReq({ to: 'a@b.c', subject: 's', html: '<p>h</p>' }));
+    const callArgs = sendMail.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs.text).toBeUndefined();
+  });
 });

@@ -13,6 +13,7 @@ export interface MailRequestBody {
   to?: string;
   subject?: string;
   html?: string;
+  text?: string;       // optional plain-text fallback for non-HTML clients
   template?: string;
 }
 
@@ -37,7 +38,7 @@ export function makeMailHandler(deps: MailHandlerDeps) {
       return jsonResponse({ error: 'bad json' }, 400);
     }
 
-    const { to, subject, html, template } = body;
+    const { to, subject, html, text, template } = body;
     if (!to || !subject || !html) {
       return jsonResponse({ error: 'missing to/subject/html' }, 400);
     }
@@ -49,6 +50,7 @@ export function makeMailHandler(deps: MailHandlerDeps) {
         to,
         subject,
         html,
+        ...(text ? { text } : {}),
       });
       const elapsed = Date.now() - t0;
       deps.log?.(
