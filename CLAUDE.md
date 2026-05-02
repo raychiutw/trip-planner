@@ -134,3 +134,12 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke checkpoint
 - Code quality, health check → invoke health
+
+## GBrain Configuration (configured by /setup-gbrain)
+- Engine: pglite
+- Config file: `~/.gbrain/config.json` (mode 0600)
+- DB path: `~/.gbrain/brain.pglite`
+- Setup date: 2026-05-02
+- MCP registered: yes (user scope, `mcp__gbrain__*` tools available after Claude Code restart)
+- Memory sync: artifacts-only (`gstack-brain-ray` private GitHub repo)
+- Current repo policy: read-write (trip-planner imported 876 pages / 1170 chunks)
