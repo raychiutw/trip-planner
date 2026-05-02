@@ -21,7 +21,13 @@ export const onRequestGet: PagesFunction<Env> = (context) => {
       },
       features: {
         passwordSignup: true,
-        emailVerification: Boolean(env.RESEND_API_KEY && env.EMAIL_FROM),
+        // 2026-05-02 cutover: gate on TRIPLINE_API_URL + TRIPLINE_API_SECRET
+        // (mac mini Gmail SMTP via Tailscale Funnel). Resend env kept as
+        // backward-compat OR fallback during rollout.
+        emailVerification: Boolean(
+          (env.TRIPLINE_API_URL && env.TRIPLINE_API_SECRET) ||
+          (env.RESEND_API_KEY && env.EMAIL_FROM),
+        ),
       },
     }),
     {

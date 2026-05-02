@@ -208,6 +208,12 @@ describe('POST /api/oauth/send-verification', () => {
   });
 
   it('200 + INSERT EmailVerification token when email is unverified user', async () => {
+    // 2026-05-02 cutover: sendEmail now requires TRIPLINE_API_URL + TRIPLINE_API_SECRET
+    // Stub fetch to mac mini /internal/mail/send to return success → 200 generic.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, messageId: 'msg-test', elapsed: 100 }), { status: 200 }),
+    ));
+
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM users') && sql.includes('email_verified_at IS NULL')) {
         return makeStmt({ id: 'u-1', display_name: null });
@@ -215,8 +221,12 @@ describe('POST /api/oauth/send-verification', () => {
       if (sql.includes('INSERT OR REPLACE INTO oauth_models')) return makeStmt();
       return makeStmt();
     });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onSendVerification(makeSendContext({ email: 'unverified@x.com' }, env));
+    const env = {
+      DB: { prepare: dbPrepare },
+      TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+      TRIPLINE_API_SECRET: 'test-bearer',
+    };
+    const res = await onSendVerification(makeSendContext({ email: 'unverified@x.com' }, env as never));
     expect(res.status).toBe(200);
 
     // Verify INSERT called with name='EmailVerification'
@@ -229,6 +239,7 @@ describe('POST /api/oauth/send-verification', () => {
     expect(bindArgs[0]).toBe('EmailVerification'); // name
     // bindArgs[1] = id (token), bindArgs[2] = payload JSON, bindArgs[3] = expires_at
     expect(bindArgs[3]).toBe(Date.now() + 24 * 60 * 60 * 1000); // 24h TTL
+    vi.unstubAllGlobals();
   });
 
   it('Filters by email_verified_at IS NULL (only unverified users get tokens)', async () => {
@@ -249,9 +260,9 @@ describe('POST /api/oauth/send-verification', () => {
     expect(stmt.bind).toHaveBeenCalledWith('mixed@example.com');
   });
 
-  it('sends Resend email when RESEND_API_KEY + EMAIL_FROM set (V2-P3 wire)', async () => {
+  it('sends verification email via mac mini tunnel (post-2026-05-02 cutover)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ id: 'msg-123' }), { status: 200 }),
+      new Response(JSON.stringify({ ok: true, messageId: 'msg-123', elapsed: 200 }), { status: 200 }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -263,24 +274,27 @@ describe('POST /api/oauth/send-verification', () => {
     });
     const env = {
       DB: { prepare: dbPrepare },
-      RESEND_API_KEY: 're_test',
-      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+      TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+      TRIPLINE_API_SECRET: 'test-bearer',
     };
     await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
 
-    // fetch hits Resend with verify URL in body
-    const resendCall = fetchMock.mock.calls.find(
-      (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+    const mailerCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
     );
-    expect(resendCall).toBeTruthy();
-    const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
-    expect(body.to).toEqual(['u@x.com']);
+    expect(mailerCall).toBeTruthy();
+    const init = mailerCall![1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe('Bearer test-bearer');
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.to).toBe('u@x.com');
     expect(body.subject).toContain('驗證');
     expect(body.html).toContain('https://x.com/api/oauth/verify?token=');
+    expect(body.template).toBe('verification');
     vi.unstubAllGlobals();
   });
 
-  it('does NOT send email when RESEND_API_KEY missing (graceful degrade)', async () => {
+  it('returns 500 + audit when TRIPLINE_API_URL missing (Q7 — UX > anti-enum)', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -290,16 +304,24 @@ describe('POST /api/oauth/send-verification', () => {
       }
       return makeStmt();
     });
-    const env = { DB: { prepare: dbPrepare } }; // NO RESEND_API_KEY
-    await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
+    const env = { DB: { prepare: dbPrepare } }; // NO TRIPLINE_API_URL
+    const res = await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
+    expect(res.status).toBe(500);
 
+    // audit_log INSERT for failed email event
+    const auditInsert = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO audit_log'),
+    );
+    expect(auditInsert).toBeTruthy();
+
+    // No fetch (sendEmail throws before fetch; alertAdminTelegram skipped — no env)
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
-  it('returns generic 200 even when Resend API fails (best-effort)', async () => {
+  it('returns 500 when mac mini mailer fails (Q7 strict for primary deliverable)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: 'invalid_api_key' }), { status: 401 }),
+      new Response(JSON.stringify({ error: 'SMTP unreachable' }), { status: 500 }),
     ));
 
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
@@ -310,11 +332,11 @@ describe('POST /api/oauth/send-verification', () => {
     });
     const env = {
       DB: { prepare: dbPrepare },
-      RESEND_API_KEY: 're_bad',
-      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+      TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+      TRIPLINE_API_SECRET: 'test-bearer',
     };
     const res = await onSendVerification(makeSendContext({ email: 'u@x.com' }, env as never));
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(500);
     vi.unstubAllGlobals();
   });
 });

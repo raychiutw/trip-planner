@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.18.4] - 2026-05-02
+
+### Fixed
+
+- **驗證信、重設密碼信、邀請信現在真的會寄出來了。** Email 系統 silent-fail 30+ 天的根因確認：CF Pages prod 沒設 `RESEND_API_KEY` + `EMAIL_FROM`，4 個 oauth/permissions endpoint 全 silent-skip 整段邏輯（API 仍回 200「驗證信會寄至信箱」騙 user）。本次直接 cutover 到 mac mini Gmail SMTP via Tailscale Funnel：CF Pages Functions sync await fetch `${TRIPLINE_API_URL}/internal/mail/send` → mac mini `tripline-api-server.ts` 用 nodemailer 寄出 → user 1-3s 內看到結果。徹底脫離 Resend vendor lock-in，順便修好「Resend 需 verified domain」這個阻塞點（mac mini Gmail 自家寄自家，零 DNS 設定）。
+- **Chat 訊息即時觸發修好，從 0–15 分鐘等待縮回 < 1 秒。** D1 audit 顯示過去 14 天 15 筆 `trip_requests`，**只有 1 筆** `processed_by='api'`（4/25），其餘 13 筆 + 4/26 之後全部走 15 分鐘 cron 兜底。`functions/api/requests.ts:182` 的 silent `catch {}` 完全吞掉 `fetch ${TRIPLINE_API_URL}/trigger` 的失敗。本次跟 email cutover 共用 setup（同 Tailscale Funnel 8443 + 同 audit + Telegram alert pattern），併進同 PR 一次修。
+- **送驗證信失敗時 `EmailVerifyPendingPage` 不再顯示「已重寄」騙 user**（`fetch` 不 throw 500，原本沒 check `res.ok`）。SignupPage 仍維持 best-effort（post-action，user 可在 verify-pending 頁手動重試）。
+- **`/api/public-config` 的 `emailVerification` capability flag** 改 gate 在 `TRIPLINE_API_URL + TRIPLINE_API_SECRET`（保留 `RESEND_API_KEY` fallback during rollout），cutover 後不再回 `false` 騙前端。
+
+### Changed
+
+- **`functions/api/oauth/{send-verification,forgot-password}.ts`** — 寄信失敗從 silent-skip + 200 generic 改成 audit_log + Telegram alert + 500 `{error: {code: 'EMAIL_SEND_FAILED', message}}`（Q7 user 拍板：UX > anti-enumeration，private-circle scale 接受 trade-off）。`reset-password` 跟 `permissions` 是 best-effort 例外（confirmation/invitation 是事後通知，回 500 會誤導 user 以為主操作失敗）。
+- **`scripts/tripline-api-server.ts`** — Bearer token 比較從 `===` 改 constant-time byte loop（Tailscale Funnel 公網 + 無 rate limit + 共享 secret = timing side-channel 風險）。新增 `POST /internal/mail/send` endpoint with nodemailer Gmail SMTP transporter（lazy init）。
+- **`scripts/lib/mailer-handler.ts`** — 抽 DI handler factory 方便 unit test（mock nodemailer transporter）；`to` 欄位 `isPlainEmail` 驗證（拒 comma list / Display Name 語法 / CRLF injection）防 open-relay abuse。
+- **`functions/api/_alert.ts`** — 新 `alertAdminTelegram(env, msg)` helper（5s timeout + finally clearTimeout 修 timer leak）。
+- **`functions/api/_audit.ts`** — 新 `recordEmailEvent(db, opts)` helper reuse `audit_log` table（Q11，`table_name='email'` namespace）。
+- **`functions/api/_types.ts` + `CLAUDE.md` + `.dev.vars.example`** — Required env update：`TRIPLINE_API_URL` + `TRIPLINE_API_SECRET` 雙用途（trigger + mailer），新 `TELEGRAM_BOT_TOKEN/CHAT_ID` (optional)，新 mac mini 端 `GMAIL_USERNAME/APP_PASSWORD/EMAIL_FROM`（複用 daily-report.yml 同一組 Gmail App Password，Q8）。`RESEND_API_KEY` 標 deprecated。
+
+### Added
+
+- **`scripts/lib/mailer-handler.ts`** + **`functions/api/_alert.ts`** + **`recordEmailEvent`** helpers — 39 個新 unit test（mailer-handler 18 + alert 6 + email-audit 5 + server-email 13 - oauth-verify/forgot/reset/permissions integration tests updated for cutover）。
+- **`openspec/changes/2026-05-02-email-and-trigger-silent-fail-fix/proposal.md`** — 完整 plan + 12 Open Questions 答案 + Decisions Log + Operational Runbook（寄信失敗排查順序 + trigger 失敗排查 + mac mini 重開 SOP）。
+
 ## [2.18.3] - 2026-05-02
 
 ### Fixed

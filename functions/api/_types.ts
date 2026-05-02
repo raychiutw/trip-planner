@@ -22,7 +22,13 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   // V2-P5 RS256 signing — PKCS8 private key (PEM or raw base64)
   OAUTH_SIGNING_PRIVATE_KEY?: string;
-  // V2-P3 email service (Resend)
+  // V2-P3 email service — kept for backward-compat during rollout, but
+  // 2026-05-02 cutover routes sendEmail() through TRIPLINE_API_URL +
+  // TRIPLINE_API_SECRET to mac mini Gmail SMTP via Tailscale Funnel.
   RESEND_API_KEY?: string;
-  EMAIL_FROM?: string; // e.g. 'Tripline <no-reply@trip-planner-dby.pages.dev>'
+  EMAIL_FROM?: string;
+  // 2026-05-02 silent-fail observability — alertAdminTelegram fires here on
+  // email send failure or trigger fetch failure (reuses scripts/daily-check creds).
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
 }

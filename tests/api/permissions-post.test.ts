@@ -167,19 +167,20 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
       });
       const env: MockEnv = {
         DB: { prepare: dbPrepare },
-        RESEND_API_KEY: 're_test',
-        EMAIL_FROM: 'Tripline <no-reply@example.com>',
+        TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+        TRIPLINE_API_SECRET: 'test-bearer',
       };
       await onRequestPost(
         makeContext({ email: 'invitee@x.com', tripId: 'trip-1' }, env),
       );
 
-      const resendCall = fetchMock.mock.calls.find(
-        (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+      const mailerCall = fetchMock.mock.calls.find(
+        (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
       );
-      expect(resendCall).toBeTruthy();
-      const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
-      expect(body.to).toEqual(['invitee@x.com']);
+      expect(mailerCall).toBeTruthy();
+      const body = JSON.parse((mailerCall![1] as RequestInit).body as string) as Record<string, unknown>;
+      expect(body.to).toBe('invitee@x.com');
+      expect(body.template).toBe('invitation');
       // isExistingUser=true → 文案含「登入」
       expect(body.html).toContain('登入');
     });
@@ -211,8 +212,8 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
       const env: MockEnv = {
         DB: { prepare: dbPrepare },
         SESSION_SECRET: TEST_SECRET,
-        RESEND_API_KEY: 're_test',
-        EMAIL_FROM: 'Tripline <no-reply@example.com>',
+        TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+        TRIPLINE_API_SECRET: 'test-bearer',
       };
       const res = await onRequestPost(
         makeContext({ email: 'newperson@x.com', tripId: 'trip-1' }, env),
@@ -234,11 +235,11 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
       expect(inviteInsertCall).toBeTruthy();
 
       // Email sent with isExistingUser=false → 文案含「註冊」
-      const resendCall = fetchMock.mock.calls.find(
-        (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+      const mailerCall = fetchMock.mock.calls.find(
+        (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
       );
-      expect(resendCall).toBeTruthy();
-      const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
+      expect(mailerCall).toBeTruthy();
+      const body = JSON.parse((mailerCall![1] as RequestInit).body as string) as Record<string, unknown>;
       expect(body.html).toContain('註冊');
       // URL must contain raw token (not the hash)
       expect((body.html as string)).toMatch(/\/invite\?token=/);
@@ -272,9 +273,10 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
   });
 
   describe('Best-effort email send', () => {
-    it('still returns 201 when Resend fails (does not rollback INSERT)', async () => {
+    it('still returns 201 when mac mini mailer fails (does not rollback INSERT)', async () => {
+      // mac mini returns 500 → sendEmail throws → caught best-effort + audit + alert
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ error: 'invalid_api_key' }), { status: 401 }),
+        new Response(JSON.stringify({ error: 'SMTP unreachable' }), { status: 500 }),
       ));
 
       const dbPrepare = vi.fn().mockImplementation((sql: string) => {
@@ -289,8 +291,8 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
       });
       const env: MockEnv = {
         DB: { prepare: dbPrepare },
-        RESEND_API_KEY: 're_bad',
-        EMAIL_FROM: 'Tripline <no-reply@example.com>',
+        TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+        TRIPLINE_API_SECRET: 'test-bearer',
       };
       const res = await onRequestPost(
         makeContext({ email: 'invitee@x.com', tripId: 'trip-1' }, env),
@@ -298,7 +300,8 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
       expect(res.status).toBe(201);
     });
 
-    it('skips email send when RESEND_API_KEY missing (graceful)', async () => {
+    it('best-effort: 201 + audit_log INSERT when TRIPLINE_API_URL missing', async () => {
+      // sendEmail throws on missing env → caught + audit + alert (no telegram env so skipped)
       const fetchMock = vi.fn();
       vi.stubGlobal('fetch', fetchMock);
 
@@ -312,15 +315,20 @@ describe('POST /api/permissions (V2 共編改寫)', () => {
         }
         return makeStmt();
       });
-      const env: MockEnv = { DB: { prepare: dbPrepare } }; // no RESEND_API_KEY
+      const env: MockEnv = { DB: { prepare: dbPrepare } }; // no TRIPLINE_API_URL
       const res = await onRequestPost(
         makeContext({ email: 'invitee@x.com', tripId: 'trip-1' }, env),
       );
       expect(res.status).toBe(201);
-      const resendCall = fetchMock.mock.calls.find(
-        (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+
+      // audit_log INSERT for failed email event
+      const auditInsert = dbPrepare.mock.calls.find(
+        (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO audit_log'),
       );
-      expect(resendCall).toBeFalsy();
+      expect(auditInsert).toBeTruthy();
+
+      // No fetch (sendEmail throws before fetch; alertAdminTelegram skipped — no env)
+      expect(fetchMock).not.toHaveBeenCalled();
     });
   });
 

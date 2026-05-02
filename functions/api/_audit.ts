@@ -37,6 +37,44 @@ export async function logAudit(db: D1Database, opts: {
   }
 }
 
+/**
+ * recordEmailEvent — log email send / trigger fetch outcome to audit_log.
+ *
+ * Reuses existing audit_log table (Q11 decision in
+ * 2026-05-02-email-and-trigger-silent-fail-fix proposal). Uses
+ * `table_name='email'` to namespace; uses `action='insert'` for all events
+ * (audit_log CHECK constraint only allows insert/update/delete; success vs
+ * failure is encoded in diff_json.status).
+ *
+ * For verify/forgot/reset (no trip context) tripId defaults to 'system'.
+ * For invitation / trigger-failed pass real tripId.
+ */
+export async function recordEmailEvent(db: D1Database, opts: {
+  template: string;        // 'verification' | 'forgot-password' | 'reset-password-confirm' | 'invitation' | 'trigger'
+  recipient: string;
+  status: 'sent' | 'failed' | 'config-missing' | 'trigger-failed';
+  error?: string;
+  tripId?: string;
+  triggeredBy?: string;
+  latencyMs?: number;
+}) {
+  const diff = JSON.stringify({
+    template: opts.template,
+    recipient: opts.recipient,
+    status: opts.status,
+    error: opts.error ?? null,
+    latency_ms: opts.latencyMs ?? null,
+  });
+  await logAudit(db, {
+    tripId: opts.tripId ?? 'system',
+    tableName: 'email',
+    recordId: null,
+    action: 'insert',
+    changedBy: opts.triggeredBy ?? 'system',
+    diffJson: diff,
+  });
+}
+
 export function computeDiff(oldRow: Record<string, unknown>, newFields: Record<string, unknown>): string {
   const diff: Record<string, { old: unknown; new: unknown }> = {};
   for (const key of Object.keys(newFields)) {

@@ -58,17 +58,25 @@ describe('POST /api/oauth/forgot-password', () => {
   });
 
   it('200 + INSERT PasswordReset token when email + local provider exist', async () => {
+    // 2026-05-02 cutover: token gen now requires successful email send for 200.
+    // Stub fetch to mac mini /internal/mail/send to return success.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, messageId: 'msg-test', elapsed: 200 }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('SELECT u.id AS user_id')) {
-        return makeStmt({ user_id: 'user-1' });
-      }
-      if (sql.includes('INSERT OR REPLACE INTO oauth_models')) {
-        return makeStmt();
+        return makeStmt({ user_id: 'user-1', display_name: null });
       }
       return makeStmt();
     });
-    const env: MockEnv = { DB: { prepare: dbPrepare } };
-    const res = await onRequestPost(makeContext({ email: 'user@x.com' }, env));
+    const env = {
+      DB: { prepare: dbPrepare },
+      TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+      TRIPLINE_API_SECRET: 'test-bearer',
+    };
+    const res = await onRequestPost(makeContext({ email: 'user@x.com' }, env as never));
     expect(res.status).toBe(200);
 
     // Verify INSERT PasswordReset called
@@ -76,12 +84,7 @@ describe('POST /api/oauth/forgot-password', () => {
       (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO oauth_models'),
     );
     expect(insertCall).toBeTruthy();
-    const stmt = dbPrepare.mock.results.find(
-      (r) => r.value === dbPrepare.mock.calls.find(
-        (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE'),
-      )?.toString(),
-    );
-    // Check binding includes 'PasswordReset' name + token + payload + expiry
+    vi.unstubAllGlobals();
   });
 
   it('email lowercase + trim before lookup', async () => {
@@ -165,9 +168,9 @@ describe('POST /api/oauth/forgot-password', () => {
     expect(inserts.length).toBe(2);
   });
 
-  it('sends reset email via Resend when env keys set (V2-P3 wire)', async () => {
+  it('sends reset email via mac mini tunnel (post-2026-05-02 cutover)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ id: 'msg-1' }), { status: 200 }),
+      new Response(JSON.stringify({ ok: true, messageId: 'msg-1', elapsed: 1234 }), { status: 200 }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -177,23 +180,29 @@ describe('POST /api/oauth/forgot-password', () => {
     });
     const env = {
       DB: { prepare: dbPrepare },
-      RESEND_API_KEY: 're_test',
-      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+      TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+      TRIPLINE_API_SECRET: 'test-bearer',
     };
-    await onRequestPost(makeContext({ email: 'u@x.com' }, env as never));
+    const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env as never));
+    expect(res.status).toBe(200);
 
-    const resendCall = fetchMock.mock.calls.find(
-      (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+    const mailerCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
     );
-    expect(resendCall).toBeTruthy();
-    const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
-    expect(body.to).toEqual(['u@x.com']);
+    expect(mailerCall).toBeTruthy();
+    expect(mailerCall![0]).toBe('https://mac-mini.tail.ts.net:8443/internal/mail/send');
+    const init = mailerCall![1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe('Bearer test-bearer');
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.to).toBe('u@x.com');
     expect(body.subject).toContain('重設');
     expect(body.html).toContain('https://x.com/auth/password/reset?token=');
+    expect(body.template).toBe('forgot-password');
     vi.unstubAllGlobals();
   });
 
-  it('does NOT send email when env keys unset (graceful)', async () => {
+  it('returns 500 + audit + alert when TRIPLINE_API_URL unset (Q7 — UX > anti-enum)', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -202,8 +211,20 @@ describe('POST /api/oauth/forgot-password', () => {
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
-    await onRequestPost(makeContext({ email: 'u@x.com' }, env));
+    const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env));
+    expect(res.status).toBe(500);
+    const json = await res.json() as { error: { code: string; message: string } };
+    expect(json.error.code).toBe('EMAIL_SEND_FAILED');
+    expect(json.error.message).toContain('寄送失敗');
 
+    // audit_log INSERT for 'failed' email event
+    const auditInsert = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO audit_log'),
+    );
+    expect(auditInsert).toBeTruthy();
+
+    // No fetch attempted (sendEmail throws before fetch when env missing,
+    // alertAdminTelegram also skips when TELEGRAM_* env missing)
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });

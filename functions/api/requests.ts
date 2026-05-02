@@ -12,7 +12,8 @@
  *   - 不帶 limit/before/after 時向下相容（回傳全部，LIMIT 50）
  */
 
-import { logAudit } from './_audit';
+import { logAudit, recordEmailEvent } from './_audit';
+import { alertAdminTelegram } from './_alert';
 import { hasPermission, hasWritePermission } from './_auth';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
@@ -163,26 +164,61 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     console.error('[requests] logAudit failed (non-fatal):', auditErr);
   }
 
-  // Fire-and-forget: 觸發 Mac Mini API server 處理
-  if (env.TRIPLINE_API_URL) {
-    context.waitUntil(
-      (async () => {
-        try {
-          const ctrl = new AbortController();
-          setTimeout(() => ctrl.abort(), 3000);
-          await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${env.TRIPLINE_API_SECRET}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ requestId: newRow ? (newRow as Record<string, unknown>).id : null }),
-            signal: ctrl.signal,
-          });
-        } catch {} // 靜默失敗，launchd job 備援
-      })()
-    );
-  }
+  // Fire-and-forget: 觸發 Mac Mini API server 處理（cron 15min 兜底）
+  // 2026-05-02 silent-fail fix: 失敗時 audit_log + Telegram alert，不再 silent catch{}
+  // (D1 audit 顯示 7 天 zero source=api → 既有 catch{} 完全掩蓋了 fetch 失敗)
+  context.waitUntil(
+    (async () => {
+      const requestId = newRow ? (newRow as Record<string, unknown>).id : null;
+      if (!env.TRIPLINE_API_URL) {
+        await recordEmailEvent(env.DB, {
+          template: 'trigger',
+          recipient: 'system',
+          status: 'config-missing',
+          tripId,
+          triggeredBy: auth.email,
+          error: 'TRIPLINE_API_URL not configured',
+        });
+        await alertAdminTelegram(
+          env,
+          `即時觸發 config 缺失（cron 15min 兜底）: trip=${tripId}, request=${requestId} (TRIPLINE_API_URL not set)`,
+        );
+        return;
+      }
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 3000);
+        const res = await fetch(env.TRIPLINE_API_URL + '/trigger?source=api', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${env.TRIPLINE_API_SECRET}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ requestId }),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) {
+          throw new Error(`Trigger responded ${res.status}`);
+        }
+        // 成功不寫 audit — trigger 量大，正常情況無需 trail
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await recordEmailEvent(env.DB, {
+          template: 'trigger',
+          recipient: 'system',
+          status: 'trigger-failed',
+          tripId,
+          triggeredBy: auth.email,
+          error: msg,
+        });
+        await alertAdminTelegram(
+          env,
+          `即時觸發失敗（cron 15min 兜底）: trip=${tripId}, request=${requestId} (${msg})`,
+        );
+      }
+    })(),
+  );
 
   return json(result, 201);
 };
