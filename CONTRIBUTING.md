@@ -129,18 +129,22 @@ gh pr create --base master --title "fix: ..." --body "..."
 
 ```
 src/
-├── entries/main.tsx      SPA 入口
-├── pages/                TripPage / ManagePage / AdminPage
-├── components/           trip/ + shared/
-├── hooks/                useTrip / useDarkMode / usePrintMode ...
-├── lib/                  apiClient / mapRow / scrollSpy ...
+├── entries/main.tsx      SPA 入口（BrowserRouter）
+├── pages/                TripsListPage（landing） / TripPage（embedded）/ MapPage
+│                         / ChatPage / GlobalMapPage / ExplorePage / AccountPage
+│                         / Auth pages（Login / Signup / Forgot / Reset / Sessions ...）
+├── components/           trip/ + shared/ + auth/ + shell/
+├── contexts/             NewTripContext / ActiveTripContext / TripIdContext / TripDaysContext
+├── hooks/                useTrip / useApi / useDarkMode / useRequireAuth / useCurrentUser ...
+├── lib/                  apiClient / mapRow / mapDay / mergePoi / drag-strategy ...
 └── types/
 
-functions/api/            Cloudflare Pages Functions（TS）
-migrations/               D1 schema（0001 ~ 00NN，idempotent）
-css/tokens.css            唯一 CSS 檔（Tailwind 4 @theme）
+functions/api/            Cloudflare Pages Functions（TS）— 含 oauth/, trips/, pois/, requests/
+migrations/               D1 schema（0001 ~ 0042+，idempotent）
+css/tokens.css            唯一 CSS 檔（Tailwind 4 @theme，V2 Terracotta 單主題）
 tests/                    unit / api / e2e
 scripts/                  init-local-db, dump-d1, daily-check ...
+docs/design-sessions/     terracotta-preview-v2.html — UI/UX source of truth
 ```
 
 ## 常見任務速查

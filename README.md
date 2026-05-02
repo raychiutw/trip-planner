@@ -24,21 +24,21 @@
 ### 外觀與體驗
 
 - 🌙 **深色模式** — 支援淺色、深色、跟隨系統三種模式
-- 🎨 **3 套色彩主題** — 陽光（Sunshine）、晴空（Clear Sky）、和風（Japanese Zen）
+- 🎨 **V2 Terracotta 單一主題** — `#D97848` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，暖色有機風 + Apple HIG（取代早期多主題切換）
 - 🖨️ **列印模式** — A4 排版最佳化，可直接列印或輸出 PDF
 - 📱 **響應式設計** — 手機、平板、桌機均有對應排版
 - ⚡ **PWA 體驗** — 可加入主畫面，離線瀏覽快取
 
-### 介面架構（v2.4.0+）
+### 介面架構（v2.18.x）
 
-- 🖥️ **桌機 3-pane shell（≥1024px）** — 左 sidebar 240px（5 nav：聊天 / 行程 / 地圖 / 探索 / 帳號 logged-in 或 登入 guest）+ 中央 timeline + 右 sheet（min(780px, 40vw)）
-- 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav 5-tab IA：聊天 / 行程 / 地圖 / 探索 / 帳號（logged-in）。配合 ActiveTripContext，從 trip 進其他 tab 自動帶入當前 trip context
-- 🔗 **URL-driven sheet state** — `/trip/:id?sheet=itinerary|ideas|map|chat` 可深度連結 + 瀏覽器 back/forward 正常
-- 🎨 **V2 Terracotta 設計系統** — `#D97848` accent + `#FFFBF5` cream bg + `#2A1F18` warm-dark fg，5 個 auth page 桌機版 split-screen（左 form card、右 brand hero gradient pane）
+- 🖥️ **桌機 2-col layout（≥1024px）** — 左 sidebar 240px（5 nav：聊天 / 行程 / 地圖 / 探索 / 帳號 logged-in 或 登入 guest）+ 中央 trip detail (`grid-template-columns: clamp(375px, 30vw, 400px) 1fr`)，右欄 `TripMapRail` sticky Leaflet 地圖
+- 📱 **手機單欄 + bottom nav（<1024px）** — sticky bottom nav 5-tab IA：聊天 / 行程 / 地圖 / 探索 / 帳號（logged-in）。配合 `ActiveTripContext`，從 trip 進其他 tab 自動帶入當前 trip context（`/chat` 預選對應 thread、`/map` 該 trip pin overview）
+- 🔗 **`/trips?selected=:id` URL pattern** — landing page `/trips` 顯示 trip cards，點選後 `?selected=:id` 內嵌 detail，可深度連結 + 瀏覽器 back/forward 正常。`/trip/:id` 為相容 redirect
+- 🎨 **5 個 auth page split-screen** — 桌機版左 form card、右 brand hero gradient pane（`AuthBrandHero` 共用元件）
 - 🗺️ **`/trips` landing** — country-keyed peach-gradient trip cards（JP / KR / TW / 其他），點進去 → trip detail
-- 🗺️ **POI Master + Per-trip overrides** — `pois` 是 AI 維護的 master，`trip_pois` 允許 user 覆寫（NULL = 繼承 master）
+- 🗺️ **POI Master + Per-trip overrides** — `pois` 是 AI 維護的 master，`trip_pois` 允許 user 覆寫（NULL = 繼承 master via COALESCE）
 
-### 帳號與認證（v2.4.0+）
+### 帳號與認證（V2 OAuth）
 
 - 🔐 **V2 OAuth sole auth** — Cloudflare Access 已全拆，瀏覽器走 self-signup + email/password（`tripline_session` opaque cookie）
 - 🤖 **CLI / service tokens** — `/api/oauth/token` `grant_type=client_credentials`（RFC 6749 §4.4）給 scheduler scripts、admin tooling 用
@@ -69,7 +69,7 @@
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 系統組成、資料流、信任邊界、部署拓撲
 - [CONTRIBUTING.md](CONTRIBUTING.md) — 新手上路、測試、commit 慣例、常見任務
-- [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、6 套主題）
+- [DESIGN.md](DESIGN.md) — 設計系統與視覺規範（暖色有機風、Apple HIG、V2 Terracotta 單一主題）
 - [CLAUDE.md](CLAUDE.md) — 開發流程與 gstack pipeline
 - [TODOS.md](TODOS.md) — 已知待辦與 follow-up
 - [SPEC.md](SPEC.md) — 進行中的多階段規格（目前：POI Unification 三階段計劃）

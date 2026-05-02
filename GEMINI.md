@@ -1,75 +1,82 @@
 # Tripline
 
 ## Project Overview
-Tripline is a frontend web application for creating, managing, and viewing travel itineraries. It uses a custom build process to convert Markdown-based trip data (`data/trips-md/`) into JSON format (`data/dist/`) for the frontend to consume.
+
+Tripline is a travel itinerary web app: viewing, editing, and sharing trips with collaborators. Backed by Cloudflare D1 (SQLite on the edge) for trip data, served as a React SPA via Cloudflare Pages.
 
 ### Technologies
-- **Frontend**: HTML, CSS (Custom Design System), Vanilla JavaScript.
-- **Testing**: Vitest (Unit/Integration), Playwright (E2E).
-- **Build System**: Custom Node.js scripts (`scripts/build.js`, `scripts/trip-build.js`).
-- **Data Source**: Markdown files stored in `data/trips-md/`.
+- **Frontend**: React 19 + TypeScript + Vite, Tailwind CSS 4 (`css/tokens.css` `@theme` 為唯一 CSS 入口)。
+- **Routing**: React Router v6 (`BrowserRouter`, SPA 單入口 `src/entries/main.tsx`)。
+- **Backend**: Cloudflare Pages Functions (`functions/api/*.ts`, Workers runtime)。
+- **Database**: Cloudflare D1 (SQLite on the edge), schema in `migrations/`。
+- **Auth**: V2 OAuth self-built (`tripline_session` HMAC opaque cookie + `/api/oauth/*` endpoints)。Cloudflare Access **已 V2-P6 完全拆除**。
+- **Build**: Vite (SPA bundle into `dist/`), Wrangler (Pages 本機模擬 + 部署)。
+- **Testing**: Vitest + @testing-library/react (unit / integration), Playwright (e2e), Miniflare (API integration)。
+- **Observability**: Sentry (Vite plugin + runtime), `api_logs` D1 table。
+- **CI/CD**: GitHub Actions + Cloudflare Pages auto-deploy on master push。
 
 ## Directory Structure
-- `index.html`, `edit.html`, `setting.html`: Main HTML entry points.
-- `css/`: Stylesheets (`shared.css`, `style.css`, `edit.css`, `setting.css`). Includes a custom 4pt grid system and Apple-inspired design tokens.
-- `js/`: Vanilla JS logic (`shared.js`, `icons.js`, `app.js`, `edit.js`, `setting.js`). Uses inline SVG icons.
-- `data/trips-md/`: **Primary Data Source**. Contains Markdown files for each trip (e.g., `meta.md`, `day-1.md`).
-- `data/dist/`: **Build Output**. Contains JSON files generated from the Markdown files. **Do not edit manually.**
-- `data/examples/`: Template files for creating new trip Markdown documents.
-- `scripts/`: Custom Node.js build scripts.
-- `tests/`: Unit, integration, JSON schema, and E2E tests.
-- `.gemini/skills/`: Custom Gemini CLI skills for managing trips (e.g., `tp-create`, `tp-edit`, `tp-check`).
+
+- `src/entries/main.tsx`: SPA 單入口，BrowserRouter 註冊所有 routes。
+- `src/pages/`: TripsListPage (主入口 `/trips`)、TripPage (embedded)、MapPage、ChatPage、ExplorePage、AccountPage、Auth pages 等。
+- `src/components/`: `trip/` (Timeline / DayNav / Restaurant / TripMapRail 等)、`shared/` (Icon / Toast / ConfirmModal 等)、`shell/` (AppShell / DesktopSidebar / GlobalBottomNav)。
+- `src/contexts/`: NewTripContext, ActiveTripContext, TripIdContext, TripDaysContext。
+- `src/hooks/`: useTrip, useApi, useDarkMode, useRequireAuth, useCurrentUser 等。
+- `src/lib/`: mapRow, mapDay, mergePoi, localStorage, sentry, drag-strategy。
+- `css/tokens.css`: 唯一 CSS source — Tailwind CSS 4 `@theme` 定義 V2 Terracotta 單主題 tokens (color / radius / spacing / typography)。
+- `functions/api/`: Cloudflare Pages Functions (TS) — RESTful nested routes：`trips/`, `pois/`, `requests/`, `permissions/`, `account/`, `oauth/` 等。
+- `migrations/`: D1 SQL schema (0001 ~ 0042+，含 `rollback/`)。
+- `scripts/`: `init-local-db`, `dump-d1`, `daily-check`, `migrate-pois`, `tp-check` 等運維腳本。
+- `tests/`: `unit/`, `integration/`, `e2e/`, `api/`。
+- `docs/design-sessions/terracotta-preview-v2.html`: **canonical mockup** (UI/UX source of truth)。
+- `openspec/`: `config.yaml` + `specs/` + `changes/` (OpenSpec workflow)。
 
 ## Building and Running
 
-### Build Data
-To convert the Markdown trip data in `data/trips-md/` to JSON files in `data/dist/`:
+### Local Dev (vite + wrangler)
 ```bash
-npm run build
+npm run dev:init     # 一鍵建本機 SQLite (only first time)
+npm run dev          # vite (5173) + wrangler pages dev (8788) 並行
 ```
-Or for specific trip generation:
-```bash
-npm run build:trips
-```
+Open `http://localhost:5173/`. Vite proxy `/api/*` to wrangler 8788。
 
-### Local Development Server
-To serve the frontend locally:
+### Production Build
 ```bash
-npx serve -l 3000
+npm run build        # vite build → dist/
 ```
-Then open `http://localhost:3000` in your browser. (You can use the `tp-run` skill to automate this).
+Cloudflare Pages 自動 deploy on master push (`pages-build-deployment` workflow)。
 
 ### Testing
-Run all tests (Vitest):
 ```bash
-npm test
-```
-Watch mode:
-```bash
-npm run test:watch
-```
-E2E tests (Playwright):
-```bash
-npm run test:e2e
+npm run test                # vitest run (unit + integration)
+npm run test:watch          # vitest watch
+npm run test:e2e            # Playwright e2e
 ```
 
 ## Development Conventions
-- **Data Modification**: Only modify files in `data/trips-md/`. Never manually edit files in `data/dist/`.
-- **Trip Quality**: New or modified trips must adhere to the quality rules defined in `.gemini/skills/tp-rebuild/references/trip-quality-rules.md`. Use the `tp-check` skill to validate them.
-- **UI Design**: Adhere to the "Apple-inspired" HIG design specifications:
-  - Use the 4pt grid system.
-  - Borderless design (use background colors to differentiate hierarchy).
-  - Use semantic CSS tokens (e.g., `var(--accent)`, `var(--text)`).
-  - Check `.gemini/skills/tp-hig/references/css-hig.md` for full details. Use `tp-hig` skill to help comply.
-- **CSS Architecture**: `shared.css` provides the scrolling infrastructure and global tokens. Other pages may need to reset specific scrolling behaviors if they differ significantly from the main trip view (see setting page implementation).
-- **Git Commits**: Commit messages should be in Traditional Chinese. Do not automatically push without user confirmation. Ensure tests pass before committing.
-- **Language**: Use Traditional Chinese (Taiwan).
-- **OpenSpec Workflow**: New features should follow the OpenSpec process (`openspec/config.yaml`), including proposal, design, specs, tasks, and implementation.
+
+- **Data Modification**: 行程資料透過 API operations 修改 (PATCH `/api/trips/:id/entries/:eid`, POST `/api/trips/:id/entries`)。tp-* skills 用 API 不操作本地檔。
+- **POI Master + Per-trip overrides**: `pois` 是 AI 維護 master，`trip_pois` allow user override (NULL = 繼承 master via COALESCE)。
+- **UI Design**: 遵守 `DESIGN.md` (V2 Terracotta 單一 accent #D97848 + #FFFBF5 cream bg + 暖色有機風 + Apple HIG)。Mockup `docs/design-sessions/terracotta-preview-v2.html` 是 canonical source。
+- **Mockup + DESIGN.md = single source of truth**: 衝突先討論 (見 CLAUDE.md Design System section)，無衝突必須完全遵守，禁止沉默偏離。
+- **CSS Architecture**: 全部走 Tailwind utility class + `tokens.css` `@theme` tokens。Scoped styles 只在 component-level 用 `<style>{SCOPED_STYLES}</style>` 處理 pseudo-element / dark mode 例外。
+- **Auth**: V2 OAuth (`tripline_session` cookie / Bearer token)。本機開發用 `.dev.vars` 的 `DEV_MOCK_EMAIL` (wrangler 讀此檔，**不是** `.env.local`)。
+- **Git Commits**: 走 7 階段 gstack pipeline (Think → Plan → Build → Review → Test → Ship → Reflect)。code 變更用 feature branch + `/ship` 自動建 PR (禁止直接 push master)。Commit messages 用繁體中文。
+- **Language**: 繁體中文 (Taiwan)。
+- **OpenSpec Workflow**: 新功能走 OpenSpec (`openspec/config.yaml`) — propose → design → specs → tasks → implement。
 
 ## Agent Skills
-This project includes specialized Gemini CLI skills to automate workflows. Ensure they are loaded using `/skills reload`.
-- `tp-create`: Create a new trip structure.
-- `tp-edit`: Modify an existing trip.
-- `tp-check`: Validate trip data against quality rules.
-- `tp-rebuild` / `tp-rebuild-all`: Automatically fix issues in trip data.
-- `tp-deploy`: Commit, push, and deploy to Cloudflare Pages.
+
+`.claude/skills/` 內 trip-planner 專屬 skill (前綴 `tp-`)：
+- `tp-team`: code 變更前的 pipeline 入口。
+- `tp-create`: 從零建新行程。
+- `tp-edit`: 局部修改既有行程。
+- `tp-rebuild`: 重整行程品質 (R0-R18 規則)。
+- `tp-check`: 驗證行程品質，輸出紅綠燈報告 (唯讀)。
+- `tp-patch`: 批量補齊 POI 欄位 (跨行程)。
+- `tp-request`: 處理旅伴請求 (D1 queue)。
+- `tp-daily-check`: 每日健康檢查 + 自動修復 + Telegram 通知。
+- `tp-code-verify`: commit 前驗證 code (命名 / React / CSS HIG / 測試)。
+- `tp-claude-design`: 從零產新視覺 artifact (新 page / component / mockup)。
+
+詳見 `CLAUDE.md` Sprint Pipeline section。
