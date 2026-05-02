@@ -8,6 +8,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Fixed
 
 - **`scripts/daily-check.js`** — `queryProdDataHygiene` 的 SQL 用 `trip_entries.trip_id` / `day_num`，但這兩欄在 `trip_days`，D1 自 4/30 起回 `400 SQLITE_ERROR no such column: trip_id`。catch 把 error 包成 `status: 'ok'`,3 天 daily-check 假裝綠燈遮蓋 silent failure。改 JOIN `trip_days td ON te.day_id = td.id` 取 `td.trip_id, td.day_num`,catch 改回 `status: 'warning'`。順手撈回 1 筆遺漏 leak `entry id 883 / okinawa-trip-2026-Ray Day 1 / TEST_PROBE`(2026-04-28 留下),透過 cleanup-test-data-leak.js 刪除。
+- **`scripts/daily-check-scheduler.sh`** — `build_telegram_msg` 補 `r.dataHygiene` 區塊（adversarial review F1 修正）。原本 daily-check.js 的修正只更新 JSON 報告 + summary count，但 Telegram 訊息（user 實際看到的通知路徑）沒讀 `dataHygiene`，silent failure 仍然顯示「✅ 全綠」。補 issues block：error → 🔴「prod data hygiene 檢查失敗」、total>0 → ⚠️「N 筆 test marker 殘留」。
 
 ## [2.18.2] - 2026-05-01
 
