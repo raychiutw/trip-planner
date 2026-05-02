@@ -140,7 +140,8 @@ functions/api/            Cloudflare Pages Functions（TS）
 migrations/               D1 schema（0001 ~ 00NN，idempotent）
 css/tokens.css            唯一 CSS 檔（Tailwind 4 @theme）
 tests/                    unit / api / e2e
-scripts/                  init-local-db, dump-d1, daily-check ...
+scripts/                  init-local-db, dump-d1, daily-check, poi-enrich-batch ...
+src/server/               osm/, routing/, travel/, poi/ (server-side OSM enrichment stack, v2.19.0)
 ```
 
 ## 常見任務速查
