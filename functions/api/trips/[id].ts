@@ -108,6 +108,13 @@ interface DestinationInput {
 
 const MAX_DESTINATIONS = 30;
 
+// 2026-05-02 follow-up: enum validation defense-in-depth — 雖然 frontend
+// EditTripModal segment 只送這 3 個值，PUT body 仍可能來自 CLI/外部 client。
+// /cso --diff sub-confidence 標 OK，但加 enum 檢查更穩健。
+const VALID_TRAVEL_MODES = new Set(['driving', 'walking', 'transit']);
+const VALID_LANGS = new Set(['zh-TW', 'en', 'ja']);
+const VALID_DATA_SOURCES = new Set(['manual', 'tp-create', 'imported']);
+
 function isValidDestination(d: unknown): d is DestinationInput {
   if (!d || typeof d !== 'object') return false;
   const obj = d as Record<string, unknown>;
@@ -119,6 +126,21 @@ function safeSubAreas(val: unknown): string | null {
   if (!Array.isArray(val)) return null;
   if (!val.every((s) => typeof s === 'string')) return null;
   return JSON.stringify(val);
+}
+
+/** Validate enum body fields. Throws AppError on bad value. Allows undefined (field not being updated). */
+function validateEnumFields(body: Record<string, unknown>): void {
+  if (body.default_travel_mode !== undefined &&
+      !VALID_TRAVEL_MODES.has(body.default_travel_mode as string)) {
+    throw new AppError('DATA_VALIDATION',
+      `default_travel_mode 必須為 driving / walking / transit 之一`);
+  }
+  if (body.lang !== undefined && !VALID_LANGS.has(body.lang as string)) {
+    throw new AppError('DATA_VALIDATION', `lang 必須為 zh-TW / en / ja 之一`);
+  }
+  if (body.data_source !== undefined && !VALID_DATA_SOURCES.has(body.data_source as string)) {
+    throw new AppError('DATA_VALIDATION', `data_source 必須為 manual / tp-create / imported 之一`);
+  }
 }
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
@@ -136,6 +158,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (!existing) throw new AppError('DATA_NOT_FOUND');
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
+
+  // 2026-05-02 follow-up: enum validation 防 hostile / typo payload 寫進 prod。
+  validateEnumFields(body);
 
   // OSM PR (migration 0045)：destinations[] 為非 trips 欄位的特殊 nested resource，
   // 用 full-replacement 語意 — 給定 array 即 DELETE existing + INSERT all。

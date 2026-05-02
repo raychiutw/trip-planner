@@ -121,6 +121,31 @@ describe('POST /api/trips', () => {
     expect((await callHandler(onRequestPost, ctx)).status).toBe(401);
   });
 
+  // 2026-05-02 follow-up: enum validation defense-in-depth
+  it('POST default_travel_mode 非 enum 值 → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips', 'POST', {
+        id: 'bad-mode-trip', name: 'x', startDate: '2026-04-01', endDate: '2026-04-01',
+        default_travel_mode: 'teleport',
+      }),
+      env,
+      auth: mockAuth({ email: 'test@test.com' }),
+    });
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
+  });
+
+  it('POST lang 非 enum 值 → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips', 'POST', {
+        id: 'bad-lang-trip', name: 'x', startDate: '2026-04-01', endDate: '2026-04-01',
+        lang: 'esperanto',
+      }),
+      env,
+      auth: mockAuth({ email: 'test@test.com' }),
+    });
+    expect((await callHandler(onRequestPost, ctx)).status).toBe(400);
+  });
+
   // /review-fix: hostile destinations[] payload
   it('destinations 數量超過上限 (>30) → 400', async () => {
     const tooMany = Array.from({ length: 31 }, (_, i) => ({ name: `d${i}` }));

@@ -135,6 +135,40 @@ describe('PUT /api/trips/:id', () => {
     expect((dests as Record<string, unknown>).cnt).toBe(0);
   });
 
+  // 2026-05-02 follow-up: enum validation defense-in-depth
+  it('default_travel_mode 非 enum 值 → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', { default_travel_mode: 'flying' }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    const resp = await callHandler(onRequestPut, ctx);
+    expect(resp.status).toBe(400);
+  });
+
+  it('lang 非 enum 值 → 400', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', { lang: 'klingon' }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(400);
+  });
+
+  it('default_travel_mode 合法 enum → 200', async () => {
+    const ctx = mockContext({
+      request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', { default_travel_mode: 'walking' }),
+      env,
+      auth: mockAuth({ email: 'user@test.com' }),
+      params: { id: 'trip-1' },
+    });
+    expect((await callHandler(onRequestPut, ctx)).status).toBe(200);
+    const trip = await db.prepare('SELECT default_travel_mode FROM trips WHERE id = ?').bind('trip-1').first();
+    expect((trip as Record<string, unknown>).default_travel_mode).toBe('walking');
+  });
+
   it('body 完全空 → 400', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/trips/trip-1', 'PUT', {}),

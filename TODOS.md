@@ -9,34 +9,6 @@
 - **P3** — 想做再做（nice-to-have）
 - **P4** — 可能不做（長期觀察）
 
-## OIDC discovery routing 錯亂（V2-P5 critical bug）
-
-**Priority:** P0
-**Discovered:** 2026-04-25 by /qa on `feat/v2-p6-multi-device-sessions`
-**Affects:** master（V2-P1 #256 起就有）
-
-OIDC discovery doc (`/.well-known/openid-configuration`) 公告的 4 個 endpoint 中 2 個指錯：
-
-| Discovery 公告 | 實際 handler | 結果 |
-|---------------|------------|------|
-| `authorization_endpoint: /api/oauth/authorize` | OAuth Client to Google | 回 `PROVIDER_UNSUPPORTED` ✗ |
-| `token_endpoint: /api/oauth/token` | 不存在 | 405 ✗ |
-| `userinfo_endpoint: /api/oauth/userinfo` | userinfo.ts | OK ✓ |
-| `revocation_endpoint: /api/oauth/revoke` | 不存在 | 405 ✗ |
-| `jwks_uri: .../jwks.json` | jwks.json.ts | OK ✓ |
-
-實際 OAuth Server endpoint 在 `/api/oauth/server-authorize` + `/api/oauth/server-token`，discovery doc 沒指過去。
-
-**衝擊：** 任何 OIDC-compliant external client 跟 discovery 走，會打到 `/api/oauth/authorize` 拿 Google client redirect bug，或打 `/api/oauth/token` 拿 405 — OAuth Server 對外完全 broken。
-
-**修法選項：**
-1. **改 routing**（推薦）：`/api/oauth/authorize` 改成 OAuth Server，現有 Google client 改 mount 到 `/api/oauth/google/redirect` — 符合 autoplan「`/oauth/*` 為 public」設計。需改 server-authorize.ts → authorize.ts、新建 token.ts + revoke.ts wrapper。
-2. **改 discovery doc**（妥協）：讓 doc 直接指 `/server-authorize` / `/server-token` — leak internal naming，違反 autoplan 設計但 atomic 修。
-
-要 V2-P7 上線前修。本 PR (V2-P6 sessions) scope 不含 OAuth Server routing，已 flag。
-
----
-
 ## Lighthouse — Blocking gate（2 週 baseline 後）
 
 **Current**: Lighthouse CI 已建立（PR #8），所有 assertion 為 warn 模式。
@@ -150,6 +122,11 @@ OIDC discovery doc (`/.well-known/openid-configuration`) 公告的 4 個 endpoin
 ---
 
 ## Completed
+
+### OIDC discovery routing 錯亂（V2-P5 critical bug）
+
+**Priority:** P0
+**Completed:** v2.19.x (2026-05-02 audit) — V2-P5 routing fix 已上線，`functions/api/oauth/authorize.ts` header 確認「Public OIDC path 對齊 discovery doc。Internal Google login 在 `/api/oauth/login/google`」。`token.ts` / `revoke.ts` / `userinfo.ts` / `jwks.json.ts` 全在位。tests/api/oidc-discovery.test.ts 12/12 pass — discovery routing 已 healthy，原 TODO 為過時記錄。
 
 ### DayNav 日期 pill 等寬
 
