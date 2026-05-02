@@ -763,8 +763,17 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
         body: JSON.stringify({ updates }),
       });
       if (!res.ok) throw new Error(`batch reorder failed: ${res.status}`);
+      // OSM PR (migration 0045)：reorder 後重新計算 entry travel — 兩個相鄰 entry
+      // 的 driving / walking / transit 距離取決於順序，sort_order 變動 → 必須重算。
+      // 走 fire-and-forget：travel 顯示是 secondary，重算失敗（API 503/no ORS key）
+      // 不阻塞 UI，下次 load 再試。tp-entry-updated event 用 reordered+travel
+      // hint 給聽 listener 的 component 重 fetch。
+      apiFetchRaw(`/trips/${tripId}/recompute-travel`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).catch(() => { /* ignore — travel rebuild 可在下次 reorder 時重試 */ });
       window.dispatchEvent(new CustomEvent('tp-entry-updated', {
-        detail: { tripId, entryId: active.id, reordered: true },
+        detail: { tripId, entryId: active.id, reordered: true, travelRecomputeRequested: true },
       }));
     } catch {
       setOrderOverride(null);

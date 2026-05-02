@@ -924,6 +924,17 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
       const note = `目的地天數分配：${allocation}`;
       combinedDescription = combinedDescription ? `${combinedDescription}\n\n${note}` : note;
     }
+    // OSM PR (migration 0045)：destinations[] 寫入 trip_destinations subtable
+    // 給 backend 後續路徑計算 / region overlay 使用。osm_id 來自 selectPoi 抓的
+    // Nominatim 結果，PoiSearchResult 沒帶 osm_type 所以這裡省略（backend 接受
+    // null）；day_quota 從 destDays 帶過去（單 dest 或未分配時 null）。
+    const destinationsPayload = selectedPois.map((poi) => ({
+      name: poi.name,
+      lat: poi.lat,
+      lng: poi.lng,
+      osm_id: poi.osm_id,
+      day_quota: selectedPois.length >= 2 ? destDays[poi.osm_id] ?? null : null,
+    }));
     try {
       const res = await apiFetchRaw('/trips', {
         method: 'POST',
@@ -937,6 +948,7 @@ export default function NewTripModal({ open, ownerEmail, onClose, onCreated }: N
           countries,
           description: combinedDescription || undefined,
           published: 1,
+          destinations: destinationsPayload,
         }),
       });
       if (!res.ok) {
