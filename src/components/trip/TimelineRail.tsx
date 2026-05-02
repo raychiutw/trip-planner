@@ -32,6 +32,7 @@ import InlineError from '../shared/InlineError';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
 import EntryActionPopover, { type EntryActionConfirmPayload } from './EntryActionPopover';
+import { Restaurant, type RestaurantData } from './Restaurant';
 import TravelPill from './TravelPill';
 import type { TimelineEntryData } from './TimelineEvent';
 import { parseTimeRange, formatDuration, deriveTypeMeta } from '../../lib/timelineUtils';
@@ -136,6 +137,28 @@ const SCOPED_STYLES = `
 .ocean-rail-head[aria-expanded="true"] .ocean-rail-caret { transform: rotate(90deg); color: var(--color-accent-deep); }
 .ocean-rail-caret { transition: transform 120ms; display: inline-block; }
 
+/* 2026-05-01 餐廳推薦 section — 顯示 entry.infoBoxes 中 type='restaurants' 的卡片。
+ * 排序按 sortOrder 升冪：第一筆 hero（accent 邊框 + 漸層底），其餘 standard。
+ * ≥2 家時前一張和後續間插「備選」divider。1 家走 standard 不分 hero/alt。
+ * 全展開無收合（user 拍板）。 */
+.tp-rail-rest-list { display: flex; flex-direction: column; gap: 8px; }
+.tp-rail-rest-alt-heading {
+  display: flex; align-items: center; gap: 10px;
+  font-size: var(--font-size-eyebrow);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 6px 0 -2px;
+  padding-left: 2px;
+}
+.tp-rail-rest-alt-heading::after {
+  content: ''; flex: 1; height: 1px; background: var(--color-border);
+}
+/* Restaurant.tsx 內的 .rest-card 預設 margin: 8px 0；放進 list 用 gap:8 控
+ * 間距，這裡覆蓋 margin 為 0 避免 double spacing。 */
+.tp-rail-rest-list .rest-card { margin: 0; }
+
 /* 2026-04-29 mockup parity:expanded toolbar 從 body 上方移到底部(mockup S12
  * Variant A 規範)。margin-top + padding-top + border-top 視覺分隔 body 內容。
  * gap 改 4px 讓 4+2 兩組看起來更緊。 */
@@ -172,33 +195,30 @@ const SCOPED_STYLES = `
   display: inline-flex; gap: 4px;
 }
 
-/* QA 2026-04-26 PR-K：iOS-style 拖拉排序 grip handle。位於 ocean-rail-item
- * left side（dot 旁邊），cursor grab/grabbing。touch-action none 阻止瀏覽器
- * 預設 horizontal scroll/swipe 接管。color muted 讓它低調，hover 變 accent。 */
+/* 2026-05-01 mockup S12 Variant A 對齊 — grip 在 row grid col 1，永遠淡顯
+ * (opacity 0.4) 而非 hover-only 隱形，hover 才變 accent。提升 discoverability
+ * 同時不喧賓奪主。觸控裝置同樣 0.4，避免「找不到拖拉把手」。 */
 .ocean-rail-grip {
+  grid-column: 1;
   border: 0; background: transparent;
   display: inline-flex; align-items: center; justify-content: center;
-  width: var(--spacing-tap-min); height: var(--spacing-tap-min);
+  width: 24px; height: 24px;
   cursor: grab;
   color: var(--color-muted);
+  opacity: 0.4;
   border-radius: var(--radius-sm);
   touch-action: none;
   flex-shrink: 0;
-  transition: color 120ms, background 120ms, opacity 160ms;
+  transition: color 120ms, opacity 160ms;
 }
-.ocean-rail-grip:hover { color: var(--color-accent); background: var(--color-secondary); }
+.ocean-rail-row-wrap:hover .ocean-rail-grip,
+.ocean-rail-grip:hover,
+.ocean-rail-grip:focus-visible {
+  opacity: 1;
+  color: var(--color-accent);
+}
 .ocean-rail-grip:active { cursor: grabbing; }
-.ocean-rail-grip .svg-icon { width: 18px; height: 18px; }
-
-/* Section 4.5 (terracotta-mockup-parity-v2)：desktop hover-only grip。
- * 只 apply 到 (hover: hover) device — touch device 永遠可見避免「找不到拖拉
- * 把手」。focus-within / keyboard nav 也保留 visible (a11y)。 */
-@media (hover: hover) and (pointer: fine) {
-  .ocean-rail-row-wrap .ocean-rail-grip { opacity: 0; }
-  .ocean-rail-row-wrap:hover .ocean-rail-grip,
-  .ocean-rail-row-wrap:focus-within .ocean-rail-grip,
-  .ocean-rail-row-wrap .ocean-rail-grip:focus-visible { opacity: 1; }
-}
+.ocean-rail-grip .svg-icon { width: 16px; height: 16px; }
 `;
 
 interface TimelineRailProps {
@@ -347,6 +367,15 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const hasLocations = !!entry.locations && entry.locations.length > 0;
   const hasNote = !!entry.note?.trim();
 
+  // 2026-05-01 餐廳推薦 — 從 infoBoxes 取出 type='restaurants' 並按 sortOrder 升冪。
+  // 1 家：standard variant；≥2 家：第一筆 hero + 後續 standard（中間插「備選」divider）
+  const sortedRestaurants: RestaurantData[] = useMemo(() => {
+    const box = entry.infoBoxes?.find((b) => b.type === 'restaurants');
+    const items = box?.restaurants ?? [];
+    return [...items].sort((a, b) => (a.sortOrder ?? 99) - (b.sortOrder ?? 99));
+  }, [entry.infoBoxes]);
+  const hasRestaurants = sortedRestaurants.length > 0;
+
   return (
     <>
       <div
@@ -359,11 +388,9 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         data-last={isLast || undefined}
         data-scroll-anchor={entry.id != null ? `entry-${entry.id}` : undefined}
       >
-        <span className="ocean-rail-time">{parsed.start}</span>
-        <span className="ocean-rail-dot" aria-hidden="true">{index + 1}</span>
-        {/* QA 2026-04-26 PR-K：iOS-style drag handle (grip icon)。only drag
-         * source 避免跟 row click 衝突。aria-label「拖拉排序」 對 screen reader
-         * 表達 sortable affordance。 */}
+        {/* mockup S12 Variant A 5 欄 grid: grip(24) | time+dur(60) | icon(44) | content | caret(24)
+         * 2026-05-01: grip 移到 col 1（首子元素）+ time 包進 stack 加 dur 副行 +
+         * 移除 .ocean-rail-dot 編號圓圈（mockup 沒有此元素，與 grip 視覺競爭）。 */}
         <button
           type="button"
           className="ocean-rail-grip"
@@ -374,6 +401,15 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         >
           <Icon name="grip" />
         </button>
+        {(() => {
+          const durLabel = formatDuration(parsed.duration);
+          return (
+            <span className="ocean-rail-time-stack">
+              <span className="ocean-rail-time">{parsed.start}</span>
+              {durLabel && <span className="ocean-rail-dur">{durLabel}</span>}
+            </span>
+          );
+        })()}
         <button
           type="button"
           className="ocean-rail-head"
@@ -387,23 +423,11 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             <Icon name={meta.icon} />
           </span>
           <span className="ocean-rail-content">
-            {/* 2026-04-29 mockup parity:meta.label 從 sub line inline 拉出
-             * 為 chip eyebrow(對齊 mockup S12「HOTEL」「SIGHT · 景點」格式)。
-             * letter-spacing + uppercase 突出 subtype 視覺,sub line 只剩
-             * duration · rating。 */}
             <span className="ocean-rail-chip">{meta.label}</span>
             <span className="ocean-rail-name">{entry.title ?? ''}</span>
-            {(formatDuration(parsed.duration) || typeof entry.googleRating === 'number') && (
+            {typeof entry.googleRating === 'number' && (
               <span className="ocean-rail-sub">
-                {formatDuration(parsed.duration) && (
-                  <span>{formatDuration(parsed.duration)}</span>
-                )}
-                {formatDuration(parsed.duration) && typeof entry.googleRating === 'number' && (
-                  <span className="ocean-rail-sep">·</span>
-                )}
-                {typeof entry.googleRating === 'number' && (
-                  <span>★ {entry.googleRating.toFixed(1)}</span>
-                )}
+                <span>★ {entry.googleRating.toFixed(1)}</span>
               </span>
             )}
           </span>
@@ -440,6 +464,24 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                       <Icon name="map" />
                       <span>{display}</span>
                     </a>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {hasRestaurants && (
+            <div className="tp-rail-detail-section">
+              <h4>餐廳推薦</h4>
+              <div className="tp-rail-rest-list" data-testid={`timeline-rail-rest-${entry.id}`}>
+                {sortedRestaurants.map((r, i) => {
+                  const isHero = sortedRestaurants.length > 1 && i === 0;
+                  const showAltDivider = sortedRestaurants.length > 1 && i === 1;
+                  return (
+                    <div key={`${r.name}-${i}`} onClick={(e) => e.stopPropagation()}>
+                      {showAltDivider && <h5 className="tp-rail-rest-alt-heading">備選</h5>}
+                      <Restaurant restaurant={r} variant={isHero ? 'hero' : 'standard'} />
+                    </div>
                   );
                 })}
               </div>

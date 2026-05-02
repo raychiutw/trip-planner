@@ -78,15 +78,17 @@ test.describe('Drag flows — Section 8.2 mobile webkit', () => {
     const firstGrip = page.getByRole('button', { name: /拖拉排序/ }).first();
     await expect(firstGrip).toBeVisible();
     await firstGrip.scrollIntoViewIfNeeded();
-    // 44px touch target（CSS HIG H4）。Webkit (mobile-safari) 對 sticky/transform
-    // 容器內 element 的 boundingBox() 偶爾回 null（Playwright/CDP 已知 edge
-    // case），改讀 DOM getBoundingClientRect() 直接拿 rect。
+    // 2026-05-02 v2.18.3:grip 從 32x32 改 24x24 對齊 mockup S12 Variant A
+    // (terracotta-preview-v2.html .tp-stop-v-grip)。documented exception 對
+    // Apple HIG 44px tap target,詳見 DESIGN.md Decisions Log + Accessibility
+    // section。Webkit (mobile-safari) 對 sticky/transform 容器內 element 的
+    // boundingBox() 偶爾回 null,改讀 DOM getBoundingClientRect() 拿 rect。
     const box = await firstGrip.evaluate((el) => {
       const r = el.getBoundingClientRect();
       return { width: r.width, height: r.height };
     });
-    expect(box.width).toBeGreaterThanOrEqual(32); // grip is 32x32 button (内 18x18 icon)
-    expect(box.height).toBeGreaterThanOrEqual(32);
+    expect(box.width).toBeGreaterThanOrEqual(24); // grip is 24x24 button (mockup S12 Variant A spec)
+    expect(box.height).toBeGreaterThanOrEqual(24);
   });
 });
 

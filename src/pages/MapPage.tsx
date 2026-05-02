@@ -248,9 +248,10 @@ export default function MapPage() {
   }, [allDays]);
 
   /* --- Initial active tab: 'overview' | number --- */
-  // URL 解析順序：?day=all → 'overview'；entry 存在 → 對應 day；?day=N → N；否則第 1 天
+  // URL 解析順序：entry 存在 → 對應 day；?day=N → N；?day=all → 'overview'；
+  // 否則 'overview'（user 拍板：地圖預設全覽，先看整趟再縮特定 day）
   const initialTab: 'overview' | number = useMemo(() => {
-    if (!allDays) return 1;
+    if (!allDays) return 'overview';
     if (urlEntryId != null) {
       const ctx = findEntryInDays(allDays, urlEntryId);
       if (ctx) return ctx.dayNum;
@@ -261,8 +262,8 @@ export default function MapPage() {
       const n = Number(q);
       if (Number.isFinite(n) && allDays[n]) return n;
     }
-    return dayTabs[0]?.dayNum ?? 1;
-  }, [allDays, urlEntryId, searchParams, dayTabs]);
+    return 'overview';
+  }, [allDays, urlEntryId, searchParams]);
 
   const [activeTab, setActiveTab] = useState<'overview' | number>(initialTab);
   const isOverview = activeTab === 'overview';
@@ -479,6 +480,7 @@ export default function MapPage() {
               pinsByDay={isOverview ? overviewData?.pinsByDay : undefined}
               dayNum={isOverview ? undefined : (activeTab as number)}
               onMapReady={setLeafletMap}
+              onMarkerClick={handleCardClick}
             />
           </Suspense>
         )}

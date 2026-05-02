@@ -3,6 +3,26 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.18.3] - 2026-05-02
+
+### Fixed
+
+- **`src/pages/MapPage.tsx`** — 桌機點 marker 無反應：`<OceanMap>` 缺 `onMarkerClick` prop，OceanMap 內部已支援但沒接線。補 `onMarkerClick={handleCardClick}` — 點 marker 即等同點底下卡片（focus + flyTo + scroll into view）。
+- **`src/pages/MapPage.tsx`** — MapPage 預設 tab 改為「總覽 5 天」（原預設 Day 1）：無 `?day=` 參數 + 無 entry deeplink → `initialTab='overview'`，user 拍板「地圖預設全覽」原則。Entry deeplink + `?day=N` URL 參數行為不變。
+- **`src/components/trip/EntryActionPopover.tsx`** — popover「移動到哪一天」layout 多重修正：(a) 寬度改 `min(320px, calc(100vw - 32px))` mobile 不溢出 viewport；(b) 桌機 anchor 從 `right: 0` 改 `left: 0`，避免左半被 DesktopSidebar 蓋住；(c) Day label 從 `Day N · 2026-07-29（三）（目前）` 單行重排為兩行 stack — 主行「Day N」+ 右側 count，副行短日期 `7/29（三）` + 「目前」chip。再窄的 viewport 也不 wrap。
+- **`src/components/trip/TimelineRail.tsx` + `css/tokens.css`** — TimelineRail row 對齊 mockup S12 Variant A：grid 從巢狀 `(44 24 1fr) + (48 1fr auto)` 改單層 5 欄 `24 60 44 1fr 24`（grip | time+dur | icon | content | caret）；移除 `.ocean-rail-dot` 編號圓圈（mockup 沒此元素，與 grip 視覺競爭）；time 加 dur 副行（`30 分鐘` / `2 小時` 顯示在時間下方）；grip 改永遠淡顯 0.4 而非 hover-only 隱形，提升 discoverability 不喧賓奪主；icon box 從 48x48 對齊 spec 改 44x44。
+
+### Added
+
+- **`src/components/trip/TimelineRail.tsx` + `Restaurant.tsx`** — entry 展開後新增「餐廳推薦」section（在「地點」與「備註」之間）。資料來自 `entry.infoBoxes` 中 `type='restaurants'` 條目（API 端早已 ship，PR #163），按 `sort_order` 升冪：≥2 家走 hero（accent 邊框 + 漸層底）+「備選」divider + 後續 standard cards；1 家直接 standard variant。沿用既有 `Restaurant.tsx` hero/standard variant 與 SCOPED_STYLES，僅新增 `.tp-rail-rest-list` + `.tp-rail-rest-alt-heading` 兩條 CSS。
+- **`tests/unit/entry-action-popover-shorten-date.test.ts` + `timeline-rail-restaurants.test.tsx`** — 補 13 個單元測試覆蓋（specialist review 標記 CRITICAL 的 test gap）：`shortenDateLabel` 8 個 edge case（半形/全形括號 / double-digit / non-padded fallback / non-hyphen separator / empty / Day-N fallback），`sortedRestaurants` 5 個渲染 case（無 infoBoxes / 空 / 1 家 standard / ≥2 家 hero+備選 divider / null sortOrder 排尾）。
+
+### Changed (review polish, 同 PR 處理)
+
+- **`css/tokens.css`** — `.ocean-rail-time` `font-size: 14px` 改 `var(--font-size-footnote)` 對齊 token discipline；移除已死 `.ocean-rail-sep`（rating sub-line 已不用 separator span）。
+- **`src/components/trip/EntryActionPopover.tsx`** — `shortenDateLabel` regex 從 `\d{1,2}` 收緊為 `\d{2}` 對齊 `parseLocalDate` zero-padded contract；export 該函式給 unit test；JSDoc 280px → popover 內（layout 已改 320px）；comment drift 同步。
+- **`src/components/trip/TimelineRail.tsx`** — `formatDuration(parsed.duration)` 重複呼叫合併（IIFE hoist 到 const `durLabel`）。
+
 ## [2.18.2] - 2026-05-01
 
 ### Fixed

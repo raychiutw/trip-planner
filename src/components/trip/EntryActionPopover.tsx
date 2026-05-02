@@ -15,16 +15,20 @@ import Icon from '../shared/Icon';
 
 const SCOPED_STYLES = `
 .tp-action-popover {
-  position: absolute; right: 0; top: calc(100% + 6px);
-  width: 280px;
+  /* 2026-05-01 layout fix:
+   *   - 寬度 responsive: min(320px, calc(100vw - 32px)) — mobile 不超過 viewport
+   *   - 向下開 + left:0 — 從 group 左緣往右延伸，避免桌機 right:0 讓 popover
+   *     左半被 DesktopSidebar 蓋住（sidebar fixed 左 ~152px）
+   *   - max-height 限制 + 內捲
+   */
+  position: absolute; left: 0; top: calc(100% + 6px);
+  width: min(320px, calc(100vw - 32px));
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   z-index: 60;
   padding: 14px;
-  /* QA 2026-04-26 BUG-021：限制高度 + 內 scroll，防止 select / day list 超
-   * 出 viewport 看不到。viewport-100 留空間給 sheet header + bottom nav。 */
   max-height: min(calc(100vh - 120px), 480px);
   overflow-y: auto;
   animation: tp-action-pop-in 120ms var(--transition-timing-function-apple, ease-out);
@@ -74,8 +78,32 @@ const SCOPED_STYLES = `
   width: 12px; height: 12px; border-radius: var(--radius-full); flex-shrink: 0;
   border: 1px solid rgba(0, 0, 0, 0.10);
 }
-.tp-action-day-label { flex: 1; font-size: var(--font-size-callout); font-weight: 600; }
-.tp-action-day-count { font-size: var(--font-size-caption); color: var(--color-muted); }
+/* 2026-05-01 layout fix:label stack 兩行避免 popover 內 wrap。主行「Day N + count」
+ * 一行；副行短日期「7/2（四）」+「目前」chip muted。整列不再 wrap。 */
+.tp-action-day-label-stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tp-action-day-label-main {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: var(--font-size-callout); font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.tp-action-day-label-main .tp-action-day-count-inline {
+  margin-left: auto;
+  font-size: var(--font-size-caption); font-weight: 500;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-action-day-label-sub {
+  font-size: var(--font-size-caption); color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.tp-action-day-current-chip {
+  font-size: var(--font-size-eyebrow); font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+  padding: 1px 6px; border-radius: var(--radius-full);
+}
 
 .tp-action-time-row {
   margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border);
@@ -126,6 +154,19 @@ const SCOPED_STYLES = `
 }
 .tp-action-pending-note .svg-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
 `;
+
+/** Caller 餵 label 格式為「YYYY-MM-DD（週）」(TripPage.tsx dayOptions，
+ * 經 mapDay.parseLocalDate 確保 zero-padded `\d{2}-\d{2}` 形態)。
+ * popover 內擠不下，shorten 為「M/D（週）」。Fallback 原 label 若 parse 失敗
+ * （防呆，理論不會 hit — caller contract 已固定 zero-padded）。 */
+export function shortenDateLabel(label: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})(.*)$/.exec(label);
+  if (!m) return label;
+  const month = parseInt(m[1]!, 10);
+  const dom = parseInt(m[2]!, 10);
+  const rest = m[3] ?? '';
+  return `${month}/${dom}${rest}`;
+}
 
 const TIME_SLOTS = [
   { key: 'same', label: '同原時段' },
@@ -223,12 +264,17 @@ export default function EntryActionPopover({ open, action, days, currentDayId, o
               data-testid={`entry-action-day-${d.dayNum}`}
             >
               <span className="tp-action-swatch" style={{ background: d.swatchColor || dayColor(d.dayNum) }} aria-hidden="true" />
-              <span className="tp-action-day-label">
-                Day {d.dayNum} · {d.label}
-                {isCurrent && '（目前）'}
-              </span>
-              <span className="tp-action-day-count">
-                {d.stopCount === 0 ? '空' : `${d.stopCount} 個`}
+              <span className="tp-action-day-label-stack">
+                <span className="tp-action-day-label-main">
+                  <span>Day {d.dayNum}</span>
+                  <span className="tp-action-day-count-inline">
+                    {d.stopCount === 0 ? '空' : `${d.stopCount} 個`}
+                  </span>
+                </span>
+                <span className="tp-action-day-label-sub">
+                  <span>{shortenDateLabel(d.label)}</span>
+                  {isCurrent && <span className="tp-action-day-current-chip">目前</span>}
+                </span>
               </span>
             </button>
           );
