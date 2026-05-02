@@ -213,8 +213,9 @@ describe('POST /api/oauth/forgot-password', () => {
     const env: MockEnv = { DB: { prepare: dbPrepare } };
     const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env));
     expect(res.status).toBe(500);
-    const json = await res.json() as { error: string };
-    expect(json.error).toContain('寄送失敗');
+    const json = await res.json() as { error: { code: string; message: string } };
+    expect(json.error.code).toBe('EMAIL_SEND_FAILED');
+    expect(json.error.message).toContain('寄送失敗');
 
     // audit_log INSERT for 'failed' email event
     const auditInsert = dbPrepare.mock.calls.find(

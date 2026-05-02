@@ -105,7 +105,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       `驗證信寄送失敗: ${email} (${msg})`,
     );
     return new Response(
-      JSON.stringify({ error: '驗證信寄送失敗，請稍後再試' }),
+      JSON.stringify({ error: { code: 'EMAIL_SEND_FAILED', message: '驗證信寄送失敗，請稍後再試' } }),
       { status: 500, headers: { 'content-type': 'application/json' } },
     );
   }
