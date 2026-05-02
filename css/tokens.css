@@ -544,12 +544,12 @@ body.dark {
         line-height: 1.2;
     }
     .ocean-rail-time {
-        font-size: 14px; font-weight: 700;
+        font-size: var(--font-size-footnote); font-weight: 700;
         font-variant-numeric: tabular-nums; letter-spacing: -0.01em;
         color: var(--color-foreground);
     }
     .ocean-rail-dur {
-        font-size: 10px; letter-spacing: 0.08em;
+        font-size: var(--font-size-eyebrow); letter-spacing: 0.08em;
         text-transform: uppercase; color: var(--color-muted);
         font-weight: 600;
         font-variant-numeric: tabular-nums;
@@ -594,7 +594,6 @@ body.dark {
         display: flex; gap: 6px; align-items: center;
         font-size: 12px; color: var(--color-muted);
     }
-    .ocean-rail-sep { opacity: 0.5; }
 
     .ocean-rail-caret {
         font-size: 16px; color: var(--color-muted);

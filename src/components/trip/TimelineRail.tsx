@@ -401,12 +401,15 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
         >
           <Icon name="grip" />
         </button>
-        <span className="ocean-rail-time-stack">
-          <span className="ocean-rail-time">{parsed.start}</span>
-          {formatDuration(parsed.duration) && (
-            <span className="ocean-rail-dur">{formatDuration(parsed.duration)}</span>
-          )}
-        </span>
+        {(() => {
+          const durLabel = formatDuration(parsed.duration);
+          return (
+            <span className="ocean-rail-time-stack">
+              <span className="ocean-rail-time">{parsed.start}</span>
+              {durLabel && <span className="ocean-rail-dur">{durLabel}</span>}
+            </span>
+          );
+        })()}
         <button
           type="button"
           className="ocean-rail-head"

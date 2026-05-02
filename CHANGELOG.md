@@ -15,6 +15,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 
 - **`src/components/trip/TimelineRail.tsx` + `Restaurant.tsx`** — entry 展開後新增「餐廳推薦」section（在「地點」與「備註」之間）。資料來自 `entry.infoBoxes` 中 `type='restaurants'` 條目（API 端早已 ship，PR #163），按 `sort_order` 升冪：≥2 家走 hero（accent 邊框 + 漸層底）+「備選」divider + 後續 standard cards；1 家直接 standard variant。沿用既有 `Restaurant.tsx` hero/standard variant 與 SCOPED_STYLES，僅新增 `.tp-rail-rest-list` + `.tp-rail-rest-alt-heading` 兩條 CSS。
+- **`tests/unit/entry-action-popover-shorten-date.test.ts` + `timeline-rail-restaurants.test.tsx`** — 補 13 個單元測試覆蓋（specialist review 標記 CRITICAL 的 test gap）：`shortenDateLabel` 8 個 edge case（半形/全形括號 / double-digit / non-padded fallback / non-hyphen separator / empty / Day-N fallback），`sortedRestaurants` 5 個渲染 case（無 infoBoxes / 空 / 1 家 standard / ≥2 家 hero+備選 divider / null sortOrder 排尾）。
+
+### Changed (review polish, 同 PR 處理)
+
+- **`css/tokens.css`** — `.ocean-rail-time` `font-size: 14px` 改 `var(--font-size-footnote)` 對齊 token discipline；移除已死 `.ocean-rail-sep`（rating sub-line 已不用 separator span）。
+- **`src/components/trip/EntryActionPopover.tsx`** — `shortenDateLabel` regex 從 `\d{1,2}` 收緊為 `\d{2}` 對齊 `parseLocalDate` zero-padded contract；export 該函式給 unit test；JSDoc 280px → popover 內（layout 已改 320px）；comment drift 同步。
+- **`src/components/trip/TimelineRail.tsx`** — `formatDuration(parsed.duration)` 重複呼叫合併（IIFE hoist 到 const `durLabel`）。
 
 ## [2.18.2] - 2026-05-01
 

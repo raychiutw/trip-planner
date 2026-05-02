@@ -78,7 +78,7 @@ const SCOPED_STYLES = `
   width: 12px; height: 12px; border-radius: var(--radius-full); flex-shrink: 0;
   border: 1px solid rgba(0, 0, 0, 0.10);
 }
-/* 2026-05-01 layout fix:label stack 兩行避免在 280px 內 wrap。主行「Day N + count」
+/* 2026-05-01 layout fix:label stack 兩行避免 popover 內 wrap。主行「Day N + count」
  * 一行；副行短日期「7/2（四）」+「目前」chip muted。整列不再 wrap。 */
 .tp-action-day-label-stack { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .tp-action-day-label-main {
@@ -155,11 +155,12 @@ const SCOPED_STYLES = `
 .tp-action-pending-note .svg-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
 `;
 
-/** Caller 餵 label 格式為「YYYY-MM-DD（週）」(TripPage.tsx dayOptions)。
- * 280px popover 內擠不下，shorten 為「M/D（週）」。Fallback 原 label
- * 若 parse 失敗（防呆，理論不會 hit）。 */
-function shortenDateLabel(label: string): string {
-  const m = /^\d{4}-(\d{1,2})-(\d{1,2})(.*)$/.exec(label);
+/** Caller 餵 label 格式為「YYYY-MM-DD（週）」(TripPage.tsx dayOptions，
+ * 經 mapDay.parseLocalDate 確保 zero-padded `\d{2}-\d{2}` 形態)。
+ * popover 內擠不下，shorten 為「M/D（週）」。Fallback 原 label 若 parse 失敗
+ * （防呆，理論不會 hit — caller contract 已固定 zero-padded）。 */
+export function shortenDateLabel(label: string): string {
+  const m = /^\d{4}-(\d{2})-(\d{2})(.*)$/.exec(label);
   if (!m) return label;
   const month = parseInt(m[1]!, 10);
   const dom = parseInt(m[2]!, 10);
