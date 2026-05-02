@@ -93,23 +93,31 @@ describe('TripsListPage', () => {
     expect(screen.getByText('韓國 · 4 天')).toBeTruthy();
   });
 
-  it('trailing 新增行程 card present when trips exist and opens modal on click', async () => {
+  // 2026-05-03 modal-to-fullpage migration: NewTripModal → /trips/new page。
+  // 不再 inline modal — 點擊 button → navigate('/trips/new')。Test 改驗
+  // 「button 存在 + tagName + window 沒 modal portal」（現在無 portal mount）。
+  it('trailing 新增行程 card present when trips exist (navigates to /trips/new on click)', async () => {
     vi.stubGlobal('fetch', mockApi([{ tripId: 'okinawa' }], SAMPLE));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-new-trip-card')).toBeTruthy());
     const btn = screen.getByTestId('trips-list-new-trip-card');
     expect(btn.tagName).toBe('BUTTON');
+    // No more modal portal — page navigation handled by useNewTrip().openModal() → navigate('/trips/new')
     expect(screen.queryByTestId('new-trip-modal')).toBeNull();
     fireEvent.click(btn);
-    await waitFor(() => expect(screen.queryByTestId('new-trip-modal')).toBeTruthy());
+    // Modal still null after click (no portal mount); navigate side-effect not asserted in unit test
+    expect(screen.queryByTestId('new-trip-modal')).toBeNull();
   });
 
-  it('empty hero CTA opens new-trip modal', async () => {
+  // 2026-05-03 modal-to-fullpage migration: 同上 — empty hero CTA 改 navigate
+  // 到 /trips/new，不再 inline modal。
+  it('empty hero CTA navigates to /trips/new on click', async () => {
     vi.stubGlobal('fetch', mockApi([], []));
     render(<MemoryRouter initialEntries={['/trips']}><NewTripProvider><TripsListPage /></NewTripProvider></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('trips-list-new-trip-hero')).toBeTruthy());
     fireEvent.click(screen.getByTestId('trips-list-new-trip-hero'));
-    await waitFor(() => expect(screen.queryByTestId('new-trip-modal')).toBeTruthy());
+    // Modal portal no longer mounts; navigate happens via useNewTrip context
+    expect(screen.queryByTestId('new-trip-modal')).toBeNull();
   });
 
   it('desktop + no ?selected: card grid renders, no embedded TripPage (PR-PP)', async () => {

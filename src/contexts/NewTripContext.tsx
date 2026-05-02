@@ -5,18 +5,19 @@
  * (every authed page), TripsListPage's trailing dashed card, and its empty
  * hero CTA. Wiring per page is fragile (most pages forgot to pass
  * onNewTrip and the button silently no-op'd). Context centralises the
- * modal: any descendant calls useNewTrip().openModal() and the same modal
- * appears + posts /api/trips + navigates to the new trip on success.
+ * navigation: any descendant calls useNewTrip().openModal() and gets
+ * navigate('/trips/new').
  *
- * Provider mounts the modal so it's always available; children that don't
- * use it pay nothing.
+ * 2026-05-03 modal-to-fullpage migration: NewTripModal 已被
+ * `src/pages/NewTripPage.tsx` 取代（route `/trips/new`）。Context 不再 mount
+ * modal，只提供 navigation hook。API 名稱 `openModal` 為相容性保留
+ * （many callers 已用 `openModal`），實際語意是「開啟新增行程介面」。
  */
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCurrentUser } from '../hooks/useCurrentUser';
-import NewTripModal from '../components/trip/NewTripModal';
 
 interface NewTripContextValue {
+  /** 開啟新增行程介面（v2 後 navigate 到 /trips/new page，不再 modal）。 */
   openModal: () => void;
 }
 
@@ -28,34 +29,14 @@ export function useNewTrip(): NewTripContextValue {
 
 export function NewTripProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const { user } = useCurrentUser();
-  const [open, setOpen] = useState(false);
 
-  const openModal = useCallback(() => setOpen(true), []);
-  const closeModal = useCallback(() => setOpen(false), []);
-
-  const handleCreated = useCallback(
-    (tripId: string) => {
-      setOpen(false);
-      // PR-DD 2026-04-26：新增成功後 dispatch event，讓 TripsListPage（或任
-      // 何 listener）re-fetch trip list。原本 TripsListPage useEffect 只在
-      // mount 跑一次，新增 trip 後 user 看不到，要切換 tab 才刷新（onion523
-      // 回報）。
-      window.dispatchEvent(new CustomEvent('tp-trip-created', { detail: { tripId } }));
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-    },
-    [navigate],
-  );
+  const openModal = useCallback(() => {
+    navigate('/trips/new');
+  }, [navigate]);
 
   return (
     <NewTripContext.Provider value={{ openModal }}>
       {children}
-      <NewTripModal
-        open={open}
-        ownerEmail={user?.email ?? ''}
-        onClose={closeModal}
-        onCreated={handleCreated}
-      />
     </NewTripContext.Provider>
   );
 }

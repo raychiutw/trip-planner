@@ -18,8 +18,10 @@ function readFile(rel: string): string {
 describe('mockup-parity-qa-fixes typography compliance', () => {
   const tokens = readFile('css/tokens.css');
   const tripsList = readFile('src/pages/TripsListPage.tsx');
-  const newTripModal = readFile('src/components/trip/NewTripModal.tsx');
-  // /review-fix (CSS dedupe): h2 / sub / form-row 等共用 rules 已抽到 _tripFormStyles.ts
+  // 2026-05-03 modal-to-fullpage migration: NewTripModal.tsx 已 DEL，
+  // form 移到 src/pages/NewTripPage.tsx。typography rules 仍在 _tripFormStyles
+  // shared module + NewTripPage SCOPED_STYLES。
+  const newTripPage = readFile('src/pages/NewTripPage.tsx');
   const tripFormStyles = readFile('src/components/trip/_tripFormStyles.ts');
   const addStopModal = readFile('src/components/trip/AddStopModal.tsx');
   const bnav = readFile('src/components/shell/GlobalBottomNav.tsx');
@@ -60,13 +62,13 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tripsList).toMatch(/\.tp-trip-card-title\s*\{[\s\S]*?line-height:\s*1\.35/);
   });
 
-  it('NewTripModal h2 font-weight 700 (mockup spec)', () => {
-    // h2 rule 抽到 _tripFormStyles.ts 後用 comma-selector cover 兩個 modal
-    const h2Block = tripFormStyles.match(/\.tp-new-modal h2,\s*\.tp-edit-modal h2\s*\{[\s\S]*?font-weight:\s*(\d+)/);
-    expect(h2Block).not.toBeNull();
-    expect(h2Block?.[1]).toBe('700');
-    // suppress unused-var lint for newTripModal (還有其他 it 用到)
-    expect(newTripModal).toContain('NewTripModal');
+  it('NewTripPage h2 / page heading typography 對齊 mockup spec', () => {
+    // 2026-05-03 modal-to-fullpage migration: 原本檢查 .tp-new-modal h2 + .tp-edit-modal h2
+    // 共用 rule 在 _tripFormStyles.ts。EditTripPage / NewTripPage 都改全頁後沒 h2 inside
+    // form pane (TitleBar 用 h1)，font-weight 規則由 TitleBar tokens.css 已 cover。
+    // 此處改驗 NewTripPage 仍 import TRIP_FORM_STYLES 共用模組（保留 dedupe path）。
+    expect(newTripPage).toContain('TRIP_FORM_STYLES');
+    expect(tripFormStyles).toContain('--font-size-title');
   });
 
   it('AddStopModal title font-weight 700 (mockup spec)', () => {
@@ -80,11 +82,15 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(labelBlock).not.toBeNull();
   });
 
-  it('NewTripModal close button 用 SVG 不用 UTF-8 字元', () => {
-    expect(newTripModal).toMatch(/<Icon name="x-mark"\s*\/>/);
-    // close button JSX 不應有 ✕ 字元（只允許在 comment / 文檔內）
-    const closeBtnBlock = newTripModal.match(/<button[\s\S]*?className="tp-new-form-close"[\s\S]*?<\/button>/);
-    expect(closeBtnBlock).not.toBeNull();
-    expect(closeBtnBlock?.[0]).not.toContain('✕');
+  it('NewTripPage 取消按鈕用 inline SVG (Icon component) 不用 UTF-8 ✕', () => {
+    // 2026-05-03 modal-to-fullpage migration: 原本驗 .tp-new-form-close X button
+    // 改全頁後不需 close button (TitleBar 已有 back arrow)。改驗整個 NewTripPage
+    // 不出現 ✕ UTF-8 字元（只允許在 comment / 文檔內），所有 close-style icon 走
+    // <Icon name="x-mark" />。
+    // Strip out comments first (`/* ... */` and `// ...`)
+    const sourceWithoutComments = newTripPage
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*/g, '');
+    expect(sourceWithoutComments).not.toContain('✕');
   });
 });
