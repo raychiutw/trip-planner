@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.6] - 2026-05-03
+
+### Changed
+
+- **「複製/移動景點到其他天」改全頁** — 點 timeline entry 展開後 toolbar 的
+  「複製」/「移動」按鈕，從原本彈出 anchored popover 改為 navigate 到
+  `/trip/:id/stop/:eid/copy` 或 `/move` 全頁。User 流程相同（選目標日 +
+  時段 → 確認），但 URL 可分享、瀏覽器 back 取消、a11y 簡化（不需 focus trap）。
+  原 `EntryActionPopover` 雖小巧但內部含 day picker + time slot select +
+  confirm CTA，屬「複雜 form 流程」邊緣案例 → DESIGN.md 2026-05-03 重新分類為
+  違規 modal-ish surface。
+
+### Removed
+
+- **`src/components/trip/EntryActionPopover.tsx`** — 由 `src/pages/EntryActionPage.tsx`
+  取代。`shortenDateLabel` + `DayOption` type 抽到 `src/lib/entryAction.ts`
+  共用。
+- **`tests/unit/entry-action-popover.test.tsx`** — popover-specific render
+  tests，page 版本需要 router context + Promise mocks，重寫成本 > 重新覆蓋
+  價值，先刪除留 follow-up 補 EntryActionPage 等價測試。
+
+### Internal
+
+- 新 routes `/trip/:tripId/stop/:entryId/copy` + `/move` mount 同一個
+  `EntryActionPage` component，用 prop `action='copy'|'move'` 區分。
+- TimelineRail copy/move button onClick 從 `setPopoverAction(action)` 改
+  `navigate('/trip/:id/stop/:eid/(copy|move)')`，handleCopyOrMove callback
+  整段砍掉（API call 邏輯轉移到 EntryActionPage）。
+- TripDaysContext + TripPage `DayOption` import 同步移到 `src/lib/entryAction`。
+- timeline-rail-inline-expand.test.tsx popover-specific assertions 移除
+  （5 tests），保留 button visibility tests（3 tests）。
+
 ## [2.19.5] - 2026-05-03
 
 ### Changed
