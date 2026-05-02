@@ -3,6 +3,19 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.1] - 2026-05-02
+
+### Removed
+
+- **`scripts/tp-check.js` dropped col 引用清光：** v2.19.0 留下 inline TODO 標
+  記 `meta.footer` / `meta.autoScrollDates` / `meta.foodPreferences` /
+  `meta.selfDrive` 為 stale dist JSON 相容欄位，本版實際移除。R10 自駕加油站
+  檢查改用 `meta.defaultTravelMode === 'driving'` (對應 `trips.default_travel_mode`)。
+  R1 料理偏好檢查作廢（per tp-quality-rules R1 改寫 — LLM 動態判斷不從固定欄位讀）。
+- **`src/lib/mapRow.ts` JSON_FIELDS 清空：** trips.footer 已 DROP（migration 0045），
+  唯一 JSON TEXT col 不存在 → array 改為空。對應 unit tests 同步更新（drop 2 個
+  footer JSON parse tests，rename `self_drive→selfDrive` test 用 `default_travel_mode`）。
+
 ## [2.19.0] - 2026-05-02
 
 ### Added

@@ -5,14 +5,15 @@ export function snakeToCamel(key: string): string {
 
 /**
  * Fields whose string values should be JSON-parsed.
- * Cleanup: removed parking/attrs/trip_attrs/breakfast
- * — these are now scalar columns or eliminated in POI Schema.
- * Remaining JSON TEXT columns: footer (trips).
- * location (trip_entries) is now parsed in the API handler ([num].ts).
+ *
+ * History:
+ *   - Removed parking/attrs/trip_attrs/breakfast — became scalar cols / POI schema.
+ *   - Removed footer (migration 0045, 2026-05-02) — trips.footer DROP'd.
+ *   - location (trip_entries) parsed in API handler ([num].ts), not here.
+ *
+ * 目前無 JSON TEXT cols 需要 mapRow 解析 — array 保留為 extension point。
  */
-export const JSON_FIELDS: string[] = [
-  'footer',
-];
+export const JSON_FIELDS: string[] = [];
 
 /**
  * Maps a single DB row object:
