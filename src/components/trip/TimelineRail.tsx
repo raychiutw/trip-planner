@@ -32,7 +32,9 @@ import { showToast } from '../shared/Toast';
 import InlineError from '../shared/InlineError';
 import MarkdownText from '../shared/MarkdownText';
 import StopLightbox from './StopLightbox';
-import EntryActionPopover, { type EntryActionConfirmPayload } from './EntryActionPopover';
+// 2026-05-03 modal-to-fullpage migration: EntryActionPopover 由 /trip/:id/stop/:eid/(copy|move) page 取代。
+// DayOption type 抽到 src/lib/entryAction.ts 給 caller (TripPage dayOptions) 共用。
+import { useNavigate } from 'react-router-dom';
 import { Restaurant, type RestaurantData } from './Restaurant';
 import TravelPill from './TravelPill';
 import type { TimelineEntryData } from './TimelineEvent';
@@ -267,7 +269,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
   const [savingNote, setSavingNote] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [popoverAction, setPopoverAction] = useState<'copy' | 'move' | null>(null);
+  const navigate = useNavigate();
   // Section 4.5 (terracotta-ui-parity-polish): 取代 window.confirm 為 ConfirmModal pattern
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -342,27 +344,13 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
     }
   }, [tripId, entryIdNum]);
 
-  // v2.10 Wave 1: copy / move handler — popover onConfirm callback。
-  // copy → POST /trips/:id/entries/:eid/copy ；move → PATCH /trips/:id/entries/:eid。
-  const handleCopyOrMove = useCallback(async ({ targetDayId }: EntryActionConfirmPayload) => {
-    if (!tripId || entryIdNum == null || popoverAction == null) return;
-    const path = popoverAction === 'copy'
-      ? `/trips/${tripId}/entries/${entryIdNum}/copy`
-      : `/trips/${tripId}/entries/${entryIdNum}`;
-    const method = popoverAction === 'copy' ? 'POST' : 'PATCH';
-    const body = popoverAction === 'copy'
-      ? JSON.stringify({ targetDayId })
-      : JSON.stringify({ day_id: targetDayId });
-    const res = await apiFetchRaw(path, {
-      method,
-      credentials: 'same-origin',
-      body,
-    });
-    if (!res.ok) throw new Error(popoverAction === 'copy' ? '複製失敗' : '移動失敗');
-    window.dispatchEvent(new CustomEvent('tp-entry-updated', {
-      detail: { tripId, entryId: entryIdNum },
-    }));
-  }, [tripId, entryIdNum, popoverAction]);
+  // v2.10 Wave 1 → 2026-05-03 modal-to-fullpage: copy / move 改 navigate
+  // 到 /trip/:id/stop/:eid/(copy|move) page，page 自己處理 fetch days +
+  // 確認 + dispatch tp-entry-updated event。TimelineRail 只需 navigate。
+  const goCopyOrMove = useCallback((action: 'copy' | 'move') => {
+    if (!tripId || entryIdNum == null) return;
+    navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entryIdNum}/${action}`);
+  }, [tripId, entryIdNum, navigate]);
 
   const hasDescription = !!entry.description?.trim();
   const hasLocations = !!entry.locations && entry.locations.length > 0;
@@ -565,7 +553,7 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 <button
                   type="button"
                   className="tp-rail-action-icon"
-                  onClick={(e) => { e.stopPropagation(); setPopoverAction('copy'); }}
+                  onClick={(e) => { e.stopPropagation(); goCopyOrMove('copy'); }}
                   aria-label="複製到其他天"
                   title="複製到其他天"
                   data-testid={`timeline-rail-copy-open-${entry.id}`}
@@ -575,23 +563,13 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
                 <button
                   type="button"
                   className="tp-rail-action-icon"
-                  onClick={(e) => { e.stopPropagation(); setPopoverAction('move'); }}
+                  onClick={(e) => { e.stopPropagation(); goCopyOrMove('move'); }}
                   aria-label="移到其他天"
                   title="移到其他天"
                   data-testid={`timeline-rail-move-open-${entry.id}`}
                 >
                   <Icon name="arrows-vertical" />
                 </button>
-                {popoverAction != null && (
-                  <EntryActionPopover
-                    open
-                    action={popoverAction}
-                    days={allDays}
-                    currentDayId={dayId}
-                    onClose={() => setPopoverAction(null)}
-                    onConfirm={handleCopyOrMove}
-                  />
-                )}
               </div>
             )}
             <button

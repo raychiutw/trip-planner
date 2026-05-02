@@ -12,7 +12,7 @@
  */
 
 import { createContext, useContext } from 'react';
-import type { DayOption } from '../components/trip/EntryActionPopover';
+import type { DayOption } from '../lib/entryAction';
 
 export const TripDaysContext = createContext<DayOption[] | null>(null);
 
