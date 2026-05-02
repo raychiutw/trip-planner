@@ -92,6 +92,7 @@ const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
 // v2.18.0:共編 sheet 升格獨立頁面
 const CollabPage = lazyWithRetry(() => import('../pages/CollabPage'));
 const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
+const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -162,6 +163,8 @@ if (el) {
               <Route path="/oauth/consent" element={<ConsentPage />} />
               <Route path="/invite" element={<InvitePage />} />
               <Route path="/trips" element={<TripsListPage />} />
+              {/* 2026-05-03 modal-to-fullpage migration: NewTripModal → /trips/new */}
+              <Route path="/trips/new" element={<NewTripPage />} />
               <Route path="/trip/:tripId" element={<TripLayout />}>
                 {/* Index route /trip/:tripId redirects to /trips?selected=:id —
                   * unified URL pattern. Stop sub-routes still resolve under
