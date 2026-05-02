@@ -20,7 +20,14 @@ import { AppError } from '../../../_errors';
 import { json, parseJsonBody, buildUpdateClause } from '../../../_utils';
 import type { Env } from '../../../_types';
 
-const ALLOWED_FIELDS = ['sort_order', 'day_id', 'time'] as const;
+// Migration 0045 added travel_distance_m / travel_computed_at / travel_source on
+// trip_entries. POST /trips/:id/recompute-travel batches updates internally via
+// db.batch(), but external callers (TimelineRail.handleDragEnd or future
+// admin tools) may also want to push computed travel values through this batch.
+const ALLOWED_FIELDS = [
+  'sort_order', 'day_id', 'time',
+  'travel_distance_m', 'travel_min', 'travel_computed_at', 'travel_source',
+] as const;
 
 interface BatchUpdateItem {
   id: number;
