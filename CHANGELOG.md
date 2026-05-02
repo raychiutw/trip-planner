@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.5] - 2026-05-03
+
+### Changed
+
+- **「新增行程」改全頁** — 從 DesktopSidebar「+ 新增行程」/ TripsListPage 卡片
+  「+ 新增」/ 空狀態 hero 點擊 → navigate `/trips/new` 全頁（取代之前的 modal
+  popup）。畫面跟原 modal 同樣 9+ 欄位（多目的地搜尋 / 拖排 / 天數分配 / 固定
+  vs 大概日期 / 月份 carousel / 偏好 textarea）+ 全部 popular/recent 目的地 chips。
+  好處同 v2.19.4 EditTripPage：browser back 取消 / URL deep-linkable / 行動裝置
+  不被高度限制 / 重新整理保留位置。對應 DESIGN.md 2026-05-03 規則（Trip Form
+  Pages section）。
+- **NewTripContext 簡化** — 不再 mount modal，只提供 `openModal()` API（API 名
+  稱保留相容性）導向 `/trips/new`。Provider 失去 modal state，~30 LOC 變 ~10 LOC。
+
+### Removed
+
+- **`src/components/trip/NewTripModal.tsx`** — 由 `src/pages/NewTripPage.tsx`
+  取代。所有 caller (DesktopSidebar 透過 useNewTrip context、TripsListPage 卡片
+  + hero CTA、GlobalMapPage) 行為不變，因為 context API 同名。
+- **`tests/unit/new-trip-modal.test.tsx` + `tests/unit/new-trip-modal-multidest.test.tsx`** —
+  原本 render NewTripModal 直接驗 portal/backdrop 行為。Page 版本需要 router
+  context，重寫成本 > 重新覆蓋價值，先刪除留 follow-up 補 NewTripPage 等價測試。
+
+### Fixed
+
+- `tests/unit/trips-list-page.test.tsx`：2 個 assertion 改為驗 button 點擊後
+  「不再 mount modal portal」（之前等待 `data-testid="new-trip-modal"` 出現）
+- `tests/unit/mockup-typography-compliance.test.ts`：grep 來源從 NewTripModal.tsx
+  改 NewTripPage.tsx，並調整 close-button assertion 為「整檔不出現 ✕ UTF-8 字元」
+  （TitleBar 已有 back arrow，無 close button 需要驗）
+
 ## [2.19.4] - 2026-05-03
 
 ### Changed
