@@ -23,7 +23,8 @@ describe('PATCH /api/pois/:id', () => {
   it('admin 更新 POI → 200', async () => {
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/pois/${poiId}`, 'PATCH', {
-        google_rating: 4.5,
+        // Migration 0045: rename google_rating → rating (1-7 OpenTripMap scale).
+        rating: 4.5,
         address: '沖繩縣那霸市',
       }),
       env,
@@ -32,8 +33,8 @@ describe('PATCH /api/pois/:id', () => {
     });
     const resp = await callHandler(onRequestPatch, ctx);
     expect(resp.status).toBe(200);
-    const poi = await db.prepare('SELECT google_rating, address FROM pois WHERE id = ?').bind(poiId).first();
-    expect((poi as Record<string, unknown>).google_rating).toBe(4.5);
+    const poi = await db.prepare('SELECT rating, address FROM pois WHERE id = ?').bind(poiId).first();
+    expect((poi as Record<string, unknown>).rating).toBe(4.5);
     expect((poi as Record<string, unknown>).address).toBe('沖繩縣那霸市');
   });
 

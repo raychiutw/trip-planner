@@ -4,24 +4,53 @@ import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
-const ALLOWED_FIELDS = ['name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer'] as const;
+// Migration 0045: dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
+// Added data_source/default_travel_mode/lang (Q1, Q2). `region` derived from
+// trip_destinations join — not a writable column.
+const ALLOWED_FIELDS = [
+  'name', 'owner', 'title', 'description',
+  'countries', 'published',
+  'data_source', 'default_travel_mode', 'lang',
+] as const;
+
+interface TripDestRow {
+  dest_order: number;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  day_quota: number | null;
+  sub_areas: string | null;
+  osm_id: number | null;
+  osm_type: string | null;
+}
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
+  const db = context.env.DB;
 
-  const row = await context.env.DB.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first<Record<string, unknown>>();
+  const row = await db.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first<Record<string, unknown>>();
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
-  if (row.footer && typeof row.footer === 'string') {
-    try {
-      row.footer = JSON.parse(row.footer);
-    } catch {
-      // leave as-is if parse fails
-    }
-  }
+  // Commit 8: include trip_destinations array in single-trip GET response.
+  // sub_areas stored as JSON array string — parse for client convenience.
+  const dests = await db
+    .prepare(
+      'SELECT dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order ASC',
+    )
+    .bind(id)
+    .all<TripDestRow>();
+
+  row.destinations = dests.results.map((d) => ({
+    ...d,
+    sub_areas: d.sub_areas ? safeParseJson(d.sub_areas) : null,
+  }));
 
   return json(row);
 };
+
+function safeParseJson(raw: string): unknown {
+  try { return JSON.parse(raw); } catch { return raw; }
+}
 
 /**
  * DELETE /api/trips/:id — 刪除整個行程。

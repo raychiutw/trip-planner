@@ -7,10 +7,13 @@ const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
-  trips:            ['id', 'name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer', 'created_at', 'updated_at'],
+  // Migration 0045: trips dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default;
+  // added data_source/default_travel_mode/lang. pois dropped maps; renamed google_rating → rating
+  // and added 6 OSM追溯 cols.
+  trips:            ['id', 'name', 'owner', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'created_at', 'updated_at'],
   trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'updated_at'],
-  trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'poi_id', 'updated_at'],
-  pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'google_rating', 'category', 'maps', 'mapcode', 'lat', 'lng', 'country', 'source', 'created_at', 'updated_at'],
+  trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'travel_distance_m', 'travel_computed_at', 'travel_source', 'poi_id', 'updated_at'],
+  pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'mapcode', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'created_at', 'updated_at'],
   trip_pois:        ['id', 'trip_id', 'poi_id', 'context', 'day_id', 'entry_id', 'sort_order', 'description', 'note', 'hours', 'checkout', 'breakfast_included', 'breakfast_note', 'price', 'reservation', 'reservation_url', 'must_buy', 'source', 'created_at', 'updated_at'],
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],

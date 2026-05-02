@@ -102,8 +102,9 @@ export async function seedTrip(db: D1Database, opts: {
   const days = opts.days || 3;
   const published = opts.published ?? 1;
 
+  // Migration 0045 dropped self_drive (Q1 — replaced by default_travel_mode='driving').
   await db.prepare(
-    'INSERT OR IGNORE INTO trips (id, name, owner, title, self_drive, countries, published) VALUES (?, ?, ?, ?, 0, ?, ?)'
+    'INSERT OR IGNORE INTO trips (id, name, owner, title, countries, published) VALUES (?, ?, ?, ?, ?, ?)'
   ).bind(id, id, owner, `Test Trip ${id}`, 'JP', published).run();
 
   for (let i = 1; i <= days; i++) {

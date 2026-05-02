@@ -9,11 +9,12 @@ export interface FindOrCreatePoiData {
   name: string;
   type: string;
   description?: string | null;
-  maps?: string | null;
+  // Migration 0045: dropped `maps` (replaced by mapsUrl helper, commit 13)
   mapcode?: string | null;
   lat?: number | null;
   lng?: number | null;
-  google_rating?: number | null;
+  // Migration 0045: renamed google_rating → rating (1-7 OpenTripMap, was 1-5 Google)
+  rating?: number | null;
   category?: string | null;
   hours?: string | null;
   source?: string | null;
@@ -25,7 +26,7 @@ export interface FindOrCreatePoiData {
 }
 
 const COALESCE_FIELDS = [
-  'description', 'maps', 'mapcode', 'lat', 'lng', 'google_rating',
+  'description', 'mapcode', 'lat', 'lng', 'rating',
   'category', 'hours', 'address', 'phone', 'email', 'website', 'country',
 ] as const;
 
@@ -64,12 +65,13 @@ export async function findOrCreatePoi(
   }
 
   // Not found → INSERT (INSERT OR IGNORE for race-safety with UNIQUE index)
+  // Migration 0045: dropped maps col (use mapsUrl helper).
   const result = await db.prepare(
-    'INSERT OR IGNORE INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+    'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
   ).bind(
     data.type, data.name, data.description ?? null, data.hours ?? null,
-    data.google_rating ?? null, data.category ?? null,
-    data.maps ?? null, data.mapcode ?? null,
+    data.rating ?? null, data.category ?? null,
+    data.mapcode ?? null,
     data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
     data.address ?? null, data.phone ?? null, data.email ?? null,
     data.website ?? null, data.country ?? 'JP',
@@ -143,11 +145,11 @@ export async function batchFindOrCreatePois(
     const insertStmts = toInsert.map((idx) => {
       const data = uniqueItems[idx]!.data;
       return db.prepare(
-        'INSERT OR IGNORE INTO pois (type, name, description, hours, google_rating, category, maps, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
+        'INSERT OR IGNORE INTO pois (type, name, description, hours, rating, category, mapcode, lat, lng, source, address, phone, email, website, country) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id'
       ).bind(
         data.type, data.name, data.description ?? null, data.hours ?? null,
-        data.google_rating ?? null, data.category ?? null,
-        data.maps ?? null, data.mapcode ?? null,
+        data.rating ?? null, data.category ?? null,
+        data.mapcode ?? null,
         data.lat ?? null, data.lng ?? null, data.source ?? 'ai',
         data.address ?? null, data.phone ?? null, data.email ?? null,
         data.website ?? null, data.country ?? 'JP',

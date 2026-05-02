@@ -27,7 +27,8 @@ describe('POST /api/trips', () => {
       startDate: '2026-04-01',
       endDate: '2026-04-03',
       title: '沖繩三日遊',
-      self_drive: 1,
+      // Migration 0045 dropped self_drive — replaced by default_travel_mode (Q1).
+      default_travel_mode: 'driving',
       countries: 'JP',
     };
     const ctx = mockContext({
@@ -45,7 +46,7 @@ describe('POST /api/trips', () => {
     // 驗證 DB 狀態
     const trip = await db.prepare('SELECT * FROM trips WHERE id = ?').bind('okinawa-2026').first();
     expect(trip).not.toBeNull();
-    expect((trip as Record<string, unknown>).self_drive).toBe(1);
+    expect((trip as Record<string, unknown>).default_travel_mode).toBe('driving');
 
     const days = await db.prepare('SELECT * FROM trip_days WHERE trip_id = ? ORDER BY day_num').bind('okinawa-2026').all();
     expect(days.results).toHaveLength(3);

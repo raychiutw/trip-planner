@@ -33,9 +33,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     description?: string;
     note?: string;
     hours?: string;
-    google_rating?: number;
+    rating?: number;
     category?: string;
-    maps?: string;
     mapcode?: string;
     lat?: number;
     lng?: number;
@@ -60,8 +59,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const poiId = await findOrCreatePoi(db, {
     name: body.name, type: body.type,
     description: body.description as string, hours: body.hours as string,
-    google_rating: body.google_rating as number, category: body.category as string,
-    maps: body.maps as string, mapcode: body.mapcode as string,
+    rating: body.rating as number, category: body.category as string,
+    mapcode: body.mapcode as string,
     lat: body.lat as number, lng: body.lng as number, source: 'ai',
   });
 
