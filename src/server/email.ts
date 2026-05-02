@@ -1,30 +1,31 @@
 /**
- * Email service — V2-P3 transactional email send via Resend API
+ * Email service — sync send via mac mini Gmail SMTP over Tailscale Funnel.
  *
- * 為何 Resend：Workers fetch-friendly、3k/月免費、developer-first docs（per
- * V2-OAuth design doc Open Question #1 + autoplan finding）。
+ * **Stack rewrite**（2026-05-02-email-and-trigger-silent-fail-fix）：
+ * 從 Resend HTTP API 改成 fetch ${TRIPLINE_API_URL}/internal/mail/send
+ * （mac mini scripts/tripline-api-server.ts），由 mac mini 用 nodemailer +
+ * Gmail SMTP 寄出。
  *
- * 為何不 Cloudflare Email Routing：forward-only (inbound)，outbound 仍 beta，
- * 不適合 production 主流程。
+ * 為何脫 Resend：
+ *   1. trip-planner-dby.pages.dev 是 CF Pages 預設 domain，無法驗 DKIM；
+ *      Resend 拒收。
+ *   2. Vendor lock-in — 跟 OSM 整合決策一致，能脫離 vendor 就脫。
+ *   3. mac mini 已是 always-on infrastructure，沿用同一條 funnel 就好。
  *
- * Usage:
- *   import { sendEmail, type EmailEnv } from 'src/server/email';
- *   await sendEmail(env, {
- *     to: 'user@example.com',
- *     subject: '驗證您的 Tripline 帳號',
- *     html: ...,
- *     text: ...,
- *   });
+ * Behaviour:
+ *   - sync await mac mini 寄完才回（user 點 → 等 1-3s → 看到結果）
+ *   - 任何失敗（env 缺 / fetch 失敗 / mac mini 5xx）→ throw EmailError
+ *   - 4 個 oauth/permissions endpoint catch EmailError → audit + telegram + 500
+ *     誠實顯示「寄送失敗，請稍後再試」(Q7 全 endpoint 不豁免)
  *
- * Best-effort：Resend API 失敗 → 拋 EmailError，caller 決定是否阻擋業務流程。
- *   - signup verify email failure → user 看 fallback 訊息「無法寄信，請使用重寄」
- *   - password reset failure → 同樣 fallback
- *   - 視為「不影響 user 帳號狀態」的 best-effort，但 audit log 仍記錄 failure
+ * Required env：
+ *   TRIPLINE_API_URL    — mac mini funnel URL (e.g. https://...:8443)
+ *   TRIPLINE_API_SECRET — Bearer token，與 mac mini /internal/mail/send 同一組
  */
 
 export interface EmailEnv {
-  RESEND_API_KEY?: string;
-  EMAIL_FROM?: string; // e.g. 'Tripline <no-reply@trip-planner-dby.pages.dev>'
+  TRIPLINE_API_URL?: string;
+  TRIPLINE_API_SECRET?: string;
 }
 
 export interface SendEmailParams {
@@ -32,12 +33,15 @@ export interface SendEmailParams {
   subject: string;
   html: string;
   text?: string;
+  template?: string;     // 給 mac mini 寫 audit log，例 'verification' | 'forgot-password' | 'reset-password' | 'invitation'
 }
 
 export interface SendEmailResult {
   ok: true;
-  /** Resend message id (for tracking) */
+  /** Gmail SMTP messageId（為了 ops 追溯） */
   id: string;
+  /** mac mini 端 sendMail latency in ms */
+  elapsed: number;
 }
 
 export class EmailError extends Error {
@@ -51,35 +55,45 @@ export class EmailError extends Error {
   }
 }
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
+const MAILER_TIMEOUT_MS = 10_000;
 
 export async function sendEmail(
   env: EmailEnv,
   params: SendEmailParams,
 ): Promise<SendEmailResult> {
-  if (!env.RESEND_API_KEY) {
-    throw new EmailError('RESEND_API_KEY not configured', 500, null);
+  if (!env.TRIPLINE_API_URL) {
+    throw new EmailError('TRIPLINE_API_URL not configured', 500, null);
   }
-  if (!env.EMAIL_FROM) {
-    throw new EmailError('EMAIL_FROM not configured', 500, null);
+  if (!env.TRIPLINE_API_SECRET) {
+    throw new EmailError('TRIPLINE_API_SECRET not configured', 500, null);
   }
 
-  const body = {
-    from: env.EMAIL_FROM,
-    to: [params.to],
-    subject: params.subject,
-    html: params.html,
-    ...(params.text ? { text: params.text } : {}),
-  };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), MAILER_TIMEOUT_MS);
 
-  const res = await fetch(RESEND_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${env.TRIPLINE_API_URL}/internal/mail/send`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.TRIPLINE_API_SECRET}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+        ...(params.text ? { text: params.text } : {}),
+        ...(params.template ? { template: params.template } : {}),
+      }),
+      signal: ctrl.signal,
+    });
+  } catch (err) {
+    clearTimeout(timer);
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new EmailError(`Mailer fetch failed: ${msg}`, 0, null);
+  }
+  clearTimeout(timer);
 
   let respBody: unknown = null;
   try {
@@ -89,12 +103,18 @@ export async function sendEmail(
   }
 
   if (!res.ok) {
-    throw new EmailError(`Resend API ${res.status}`, res.status, respBody);
+    const errMsg = (respBody as Record<string, unknown> | null)?.error;
+    throw new EmailError(
+      `Mailer responded ${res.status}${typeof errMsg === 'string' ? `: ${errMsg}` : ''}`,
+      res.status,
+      respBody,
+    );
   }
 
-  const idVal = (respBody as Record<string, unknown> | null)?.id;
-  if (typeof idVal !== 'string') {
-    throw new EmailError('Resend response missing id', res.status, respBody);
+  const id = (respBody as Record<string, unknown> | null)?.messageId;
+  const elapsed = (respBody as Record<string, unknown> | null)?.elapsed;
+  if (typeof id !== 'string') {
+    throw new EmailError('Mailer response missing messageId', res.status, respBody);
   }
-  return { ok: true, id: idVal };
+  return { ok: true, id, elapsed: typeof elapsed === 'number' ? elapsed : 0 };
 }
