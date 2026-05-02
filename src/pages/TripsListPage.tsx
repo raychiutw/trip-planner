@@ -32,7 +32,6 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TripCardMenu from '../components/trip/TripCardMenu';
-import EditTripModal from '../components/trip/EditTripModal';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -767,7 +766,12 @@ export default function TripsListPage() {
   useEffect(() => {
     function onTripCreated() { void loadTrips(); }
     window.addEventListener('tp-trip-created', onTripCreated);
-    return () => window.removeEventListener('tp-trip-created', onTripCreated);
+    // 2026-05-03: EditTripPage 儲存後 dispatch tp-trip-updated → 同 loadTrips refresh
+    window.addEventListener('tp-trip-updated', onTripCreated);
+    return () => {
+      window.removeEventListener('tp-trip-created', onTripCreated);
+      window.removeEventListener('tp-trip-updated', onTripCreated);
+    };
   }, [loadTrips]);
 
   const myTrips = useMemo<TripInfo[]>(() => {
@@ -864,21 +868,14 @@ export default function TripsListPage() {
     [navigate],
   );
 
-  // OSM PR (v2)：card kebab「編輯行程」 → 開 EditTripModal 預填現有 trip 值。
-  // 儲存成功後 reload trips list 反映變更。
-  const [editTargetId, setEditTargetId] = useState<string | null>(null);
-  const handleMenuEdit = useCallback((tripId: string) => { setEditTargetId(tripId); }, []);
-  const handleEditSaved = useCallback(
-    (tripId: string) => {
-      setEditTargetId(null);
-      void loadTrips();
-      showToast('行程已更新', 'success');
-      // Optional: re-render TripPage if user is currently viewing the edited trip
-      if (selectedFromUrl === tripId) {
-        window.dispatchEvent(new CustomEvent('tp-trip-updated', { detail: { tripId } }));
-      }
-    },
-    [loadTrips, selectedFromUrl],
+  // 2026-05-03 modal-to-fullpage migration: card kebab「編輯行程」改 navigate
+  // 到 /trip/:id/edit page (取代原本開 EditTripModal)。EditTripPage 自己處理
+  // load + submit + 成功後 navigate back + dispatch tp-trip-updated event。
+  // TripsListPage 只需 listen tp-trip-updated 來 refresh list（已有 listener
+  // 在另一個 useEffect — 見 PR-DD comment）。
+  const handleMenuEdit = useCallback(
+    (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/edit`); },
+    [navigate],
   );
 
   // PR-Q：card kebab 「刪除行程」 → ConfirmModal + DELETE /api/trips/:id +
@@ -950,14 +947,6 @@ export default function TripsListPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-      {editTargetId && (
-        <EditTripModal
-          open={editTargetId !== null}
-          tripId={editTargetId}
-          onClose={() => setEditTargetId(null)}
-          onSaved={handleEditSaved}
-        />
-      )}
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"
