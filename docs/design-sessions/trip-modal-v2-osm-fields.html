@@ -822,7 +822,7 @@ body {
       <li><strong>published 改放底部 actions row：</strong>3-state segment「草稿 / 上線」緊貼建立按鈕，視覺上強調「user 必須選一個發布狀態」。預設草稿。</li>
       <li><strong>保留現有 multi-dest + 雙日期模式：</strong>不破壞 user 已熟悉的 mindtrip 風 UX。</li>
       <li><strong>拔除欄位：</strong>不再顯示 footer / food_prefs / og_description / auto_scroll / is_default 任何 input。</li>
-      <li><strong>EditTripModal 共用 layout：</strong>跟 NewTripModal 99% 同，只差預填值 + region 變更時 title 旁顯示「更新提示」alert（user 主動點才覆寫，不自動）。</li>
+      <li><strong>EditTripModal 共用 layout：</strong>跟 NewTripModal 99% 同，差別：(a) 預填現有 trip 值；(b) destinations 名稱與原值不同 → title 旁顯示「更新提示」alert（user 主動點才覆寫，不自動）；(c) <strong>日期改為 read-only 顯示</strong> — 修改日期需 cascade trip_days/entries/hotels，目前 v1 不支援，read-only chip 顯示「2026-07-26 ~ 2026-08-02 · 8 天」附說明「修改日期請另建新行程」。</li>
     </ul>
   </details>
 </header>
@@ -1145,16 +1145,12 @@ body {
         </div>
 
         <div class="tp-section">
-          <span class="tp-section-label">日期 <span class="req">✱</span></span>
-          <div class="tp-new-date-fixed">
-            <div class="tp-new-date-input">
-              <span class="tp-new-date-input-label">出發</span>
-              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-07-26（日）</span></div>
+          <span class="tp-section-label">日期</span>
+          <div class="tp-new-date-readonly" style="display:flex; flex-direction:column; gap:4px; padding:12px 14px; background:var(--color-secondary); border:1px solid var(--color-border); border-radius:var(--radius-md);">
+            <div style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-callout); font-weight:600; color:var(--color-foreground);">
+              <span>📅</span><span>2026-07-26 ~ 2026-08-02 · 8 天</span>
             </div>
-            <div class="tp-new-date-input">
-              <span class="tp-new-date-input-label">回程</span>
-              <div class="tp-new-date-input-box"><span class="tp-new-date-icon">📅</span><span>2026-08-02（日）</span></div>
-            </div>
+            <p style="margin:0; font-size:var(--font-size-caption); color:var(--color-muted);">修改日期請另建新行程（v1 暫不支援編輯，避免 cascade 影響 trip_days / entries / hotels）</p>
           </div>
         </div>
 

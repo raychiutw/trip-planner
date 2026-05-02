@@ -7,12 +7,35 @@ const TRIPID_RE = /^[a-z0-9-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MAX_DAYS = 30;
+const MAX_DESTINATIONS = 30;
 const MS_PER_DAY = 86400000;
+
+const TRIP_DOC_TYPES = ['flights', 'checklist', 'backup', 'suggestions', 'emergency'] as const;
+
+interface DestinationInput {
+  name?: string;
+  lat?: number;
+  lng?: number;
+  day_quota?: number;
+  sub_areas?: string[];
+  osm_id?: number;
+  osm_type?: 'node' | 'way' | 'relation';
+}
 
 function str(val: unknown, fallback = ''): string {
   if (typeof val === 'string') return val;
   if (val != null && typeof val === 'object') return JSON.stringify(val);
   return fallback;
+}
+
+function nullableStr(val: unknown): string | null {
+  if (typeof val === 'string' && val.length > 0) return val;
+  return null;
+}
+
+function nullableInt(val: unknown): number | null {
+  if (typeof val === 'number' && Number.isFinite(val)) return val;
+  return null;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -27,7 +50,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const endDate = body.endDate as string | undefined;
 
   // PR-CC 2026-04-26：owner 強制 = auth.email，不再讀 body.owner（防偽造）。
-  // User 指示「之後的誰建立就是誰是 owner」 — 從 server-side auth 取唯一可信來源。
   const owner = auth.email;
 
   if (!id || !name || !startDate || !endDate) {
@@ -52,48 +74,91 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', `行程天數不可超過 ${MAX_DAYS} 天`);
   }
 
+  // Validate optional destinations array (commit 7)
+  // /review-fix: cap length 防 hostile payload 撐爆 D1 batch 100-stmt 上限。
+  const destsRaw = body.destinations;
+  let destinations: DestinationInput[] = [];
+  if (Array.isArray(destsRaw)) {
+    if (destsRaw.length > MAX_DESTINATIONS) {
+      throw new AppError('DATA_VALIDATION', `destinations 數量不可超過 ${MAX_DESTINATIONS}`);
+    }
+    destinations = destsRaw.filter((d): d is DestinationInput =>
+      d != null && typeof d === 'object' && typeof (d as DestinationInput).name === 'string',
+    );
+  }
+
   const db = context.env.DB;
   const existing = await db.prepare('SELECT 1 FROM trips WHERE id = ?').bind(id).first();
   if (existing) throw new AppError('DATA_CONFLICT', 'tripId 已存在');
 
   const stmts: D1PreparedStatement[] = [];
 
+  // Migration 0045: dropped self_drive/og_description/footer/food_prefs/auto_scroll/is_default.
+  // Added data_source/default_travel_mode/lang. `region` not added — derived from
+  // trip_destinations join in /api/trips/:id (commit 8).
   stmts.push(
     db.prepare(
-      'INSERT INTO trips (id, name, owner, title, description, og_description, self_drive, countries, published, food_prefs, auto_scroll, footer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO trips (id, name, owner, title, description, countries, published, data_source, default_travel_mode, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       id, name, owner,
       str(body.title),
       str(body.description),
-      str(body.og_description),
-      body.self_drive != null ? Number(body.self_drive) : 0,
       str(body.countries, 'JP'),
       body.published != null ? Number(body.published) : 0,
-      str(body.food_prefs),
-      str(body.auto_scroll),
-      str(body.footer),
-    )
+      str(body.data_source, 'manual'),
+      str(body.default_travel_mode, 'driving'),
+      str(body.lang, 'zh-TW'),
+    ),
   );
 
+  // trip_days
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(start.getTime() + i * MS_PER_DAY);
     const date = d.toISOString().slice(0, 10);
     const dayOfWeek = WEEKDAYS[d.getUTCDay()];
     stmts.push(
       db.prepare(
-        'INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?, ?, ?, ?, ?)'
-      ).bind(id, i + 1, date, dayOfWeek, '')
+        'INSERT INTO trip_days (trip_id, day_num, date, day_of_week, label) VALUES (?, ?, ?, ?, ?)',
+      ).bind(id, i + 1, date, dayOfWeek, ''),
     );
   }
 
-  // PR-CC 2026-04-26：自動加 owner 進 trip_permissions role='owner'（取代舊
-  // 'admin' 角色）。`hasPermission` 三種 role 都認，前端 CollabSheet 可區分
-  // 顯示 owner row 不可移除。
+  // trip_permissions: owner row (PR-CC 2026-04-26 owner role replaces admin)
   stmts.push(
     db.prepare(
-      'INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?)'
-    ).bind(auth.email, id, 'owner')
+      'INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?)',
+    ).bind(auth.email, id, 'owner'),
   );
+
+  // trip_destinations: write each dest with dest_order (commit 7)
+  destinations.forEach((d, idx) => {
+    stmts.push(
+      db.prepare(
+        `INSERT INTO trip_destinations (trip_id, dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        id,
+        idx + 1,
+        d.name ?? '',
+        nullableInt(d.lat),
+        nullableInt(d.lng),
+        nullableInt(d.day_quota),
+        Array.isArray(d.sub_areas) ? JSON.stringify(d.sub_areas) : null,
+        nullableInt(d.osm_id),
+        nullableStr(d.osm_type),
+      ),
+    );
+  });
+
+  // Auto-create 5 trip_docs stubs (commit 9). Empty title; tp-create skill or
+  // user fills in later. Avoids "UI-built trip has no docs tab content" gap.
+  for (const docType of TRIP_DOC_TYPES) {
+    stmts.push(
+      db.prepare(
+        'INSERT INTO trip_docs (trip_id, doc_type, title) VALUES (?, ?, ?)',
+      ).bind(id, docType, ''),
+    );
+  }
 
   await db.batch(stmts);
 
@@ -106,7 +171,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     diffJson: JSON.stringify(body),
   });
 
-  return json({ ok: true, tripId: id, daysCreated: totalDays }, 201);
+  return json({ ok: true, tripId: id, daysCreated: totalDays, destinationsCreated: destinations.length }, 201);
 };
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -114,14 +179,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const showAll = url.searchParams.get('all') === '1';
   const auth = getAuth(context);
 
-  // Enriched fields for /trips landing card meta:
-  //   day_count    — number of days in trip (rendered as "JAPAN · 5 DAYS" eyebrow)
-  //   start_date   — earliest day.date (rendered as "7/26 – 7/30" range)
-  //   end_date     — latest day.date
-  //   member_count — distinct emails on trip_permissions excluding wildcard
-  //                  (rendered as "2 旅伴" — the count includes the owner)
-  const baseCols = `t.id AS tripId, t.name, t.owner, t.title, t.self_drive,
-                    t.countries, t.published, t.auto_scroll, t.footer, t.is_default,
+  // Migration 0045: dropped self_drive/auto_scroll/footer/is_default from baseCols.
+  // Added data_source/default_travel_mode/lang for client awareness.
+  // Note: `is_default` GONE — frontend fallback path (TripPage) updated to use
+  // "user's first published=1 trip" (commit 18).
+  const baseCols = `t.id AS tripId, t.name, t.owner, t.title,
+                    t.countries, t.published, t.data_source, t.default_travel_mode, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
                     (SELECT MIN(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS start_date,
                     (SELECT MAX(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS end_date,

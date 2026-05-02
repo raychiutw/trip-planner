@@ -1,15 +1,18 @@
 -- Auto-generated seed data from backup
--- Schema: post-0014_poi_normalization (new table/column names)
--- Usage: npx wrangler d1 execute trip-planner-db-staging --remote --file migrations/seed.sql
+-- Schema: post-0045_osm_integration_and_trips_meta
+-- 2026-05-02: trips dropped self_drive/auto_scroll/footer/is_default cols
+--             (migration 0045 OSM integration). default_travel_mode/data_source/lang
+--             rely on DB defaults (driving / manual / zh-TW).
+-- Usage: npx wrangler d1 execute trip-planner-db-staging --remote --file scripts/seed.sql
 
 -- trips
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('banqiao-trip-2026-Onion','Onion 的板橋之旅','Onion','2026 板橋十五日在地行程表',1,'TW',1,'2026-04-01, 2026-04-02, 2026-04-03, 2026-04-04, 2026-04-05, 2026-04-06, 2026-04-07, 2026-04-08, 2026-04-09, 2026-04-10, 2026-04-11, 2026-04-12, 2026-04-13, 2026-04-14, 2026-04-15','{"title":"2026 板橋十五日行程","dates":"4/1（三）~ 4/15（三）","budget":"","exchangeNote":"","tagline":"新北在地生活！探索家附近的好去處！"}',0);
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('busan-trip-2026-CeliaDemyKathy','三姊妹的釜山之旅','CeliaDemyKathy','2026 釜山五天四夜三姊妹之旅',0,'KR',1,'2026-03-20, 2026-03-21, 2026-03-22, 2026-03-23, 2026-03-24','{"title":"2026 釜山五天四夜三姊妹之旅","dates":"3/20（五）~ 3/24（二）","budget":"","exchangeNote":"匯率以 1 KRW ≈ 0.025 TWD 估算｜實際費用依當時匯率及消費為準","tagline":"부산에 오이소! 三姊妹釜山行，開始！"}',0);
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('kyoto-trip-2026-MimiChu','咪咪醬的京都之旅','MimiChu','2026 京都六日咪咪醬初體驗行程表',0,'JP',1,'2026-03-06, 2026-03-07, 2026-03-08, 2026-03-09, 2026-03-10, 2026-03-11','{"title":"2026 京都咪咪醬初體驗","dates":"3/6（五）~ 3/11（三）","budget":"","exchangeNote":"匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準","tagline":"おこしやす 京都！ 祝旅途愉快！"}',0);
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('okinawa-trip-2026-AeronAn','AeronAn 的沖繩之旅','AeronAn','2026 沖繩五日大眾交通之旅',0,'JP',1,'2026-04-24, 2026-04-25, 2026-04-26, 2026-04-27, 2026-04-28','{"title":"2026 沖繩五日大眾交通之旅","dates":"4/24（五）~ 4/28（二）","budget":"","exchangeNote":"匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準","tagline":"めんそーれ 沖繩！ 祝旅途愉快！"}',0);
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('okinawa-trip-2026-HuiYun','Hui Yun 的沖繩之旅','HuiYun','2026 沖繩七日遊行程表',1,'JP',1,'2026-07-02, 2026-07-03, 2026-07-04, 2026-07-05, 2026-07-06, 2026-07-07, 2026-07-08','{"title":"2026 沖繩七日遊","dates":"7/2（四）~ 7/8（三）","budget":"","exchangeNote":"","tagline":"めんそーれ 沖繩！ 祝旅途愉快！"}',0);
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('okinawa-trip-2026-Ray','Ray 的沖繩之旅','Ray','2026 沖繩五日自駕遊行程表',1,'JP',1,'2026-07-29, 2026-07-30, 2026-07-31, 2026-08-01, 2026-08-02','{"title":"2026 沖繩五日自駕遊","dates":"7/29（三）~ 8/2（日）","budget":"","exchangeNote":"匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準","tagline":"めんそーれ 沖繩！ 祝旅途愉快！"}',1);
-INSERT OR IGNORE INTO trips (id,name,owner,title,self_drive,countries,published,auto_scroll,footer,is_default) VALUES ('okinawa-trip-2026-RayHus','RayHus 的沖繩之旅','RayHus','2026 沖繩六日輕旅遊行程表',0,'JP',1,'2026-03-06, 2026-03-07, 2026-03-08, 2026-03-09, 2026-03-10, 2026-03-11','{"title":"2026 沖繩六日輕旅遊","dates":"3/6（五）~ 3/11（三）","budget":"","exchangeNote":"匯率以 1 JPY ≈ 0.22 TWD 估算｜實際費用依當時匯率及消費為準","tagline":"めんそーれ 沖繩！ 祝旅途愉快！"}',0);
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('banqiao-trip-2026-Onion','Onion 的板橋之旅','Onion','2026 板橋十五日在地行程表','TW',1,'driving');
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('busan-trip-2026-CeliaDemyKathy','三姊妹的釜山之旅','CeliaDemyKathy','2026 釜山五天四夜三姊妹之旅','KR',1,'transit');
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('kyoto-trip-2026-MimiChu','咪咪醬的京都之旅','MimiChu','2026 京都六日咪咪醬初體驗行程表','JP',1,'transit');
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('okinawa-trip-2026-AeronAn','AeronAn 的沖繩之旅','AeronAn','2026 沖繩五日大眾交通之旅','JP',1,'transit');
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('okinawa-trip-2026-HuiYun','Hui Yun 的沖繩之旅','HuiYun','2026 沖繩七日遊行程表','JP',1,'driving');
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('okinawa-trip-2026-Ray','Ray 的沖繩之旅','Ray','2026 沖繩五日自駕遊行程表','JP',1,'driving');
+INSERT OR IGNORE INTO trips (id,name,owner,title,countries,published,default_travel_mode) VALUES ('okinawa-trip-2026-RayHus','RayHus 的沖繩之旅','RayHus','2026 沖繩六日輕旅遊行程表','JP',1,'transit');
 
 -- trip_days (was: days) — weather_json dropped
 INSERT OR IGNORE INTO trip_days (id,trip_id,day_num,date,day_of_week,label) VALUES (51,'banqiao-trip-2026-Onion',1,'2026-04-01','三','板橋');

@@ -19,6 +19,9 @@ const argSlugs = process.argv.slice(2).filter(a => !a.startsWith('-'));
 function loadTrip(slug) {
   const dir = path.join(DIST, slug);
   const meta = JSON.parse(fs.readFileSync(path.join(dir, 'meta.json'), 'utf8'));
+  // 2026-05-02 (migration 0045): trips.footer / auto_scroll / food_prefs / self_drive 已 DROP；
+  // 此處保留 footer / autoScrollDates 讀取以相容 stale dist JSON，新 dist 將不含這兩欄。
+  // R1 foodPreferences 檢查與 R8 selfDrive parking 檢查需另行改寫（見 tp-quality-rules R1 改寫 + default_travel_mode 取代）。
   const result = { meta: meta.meta, footer: meta.footer, autoScrollDates: meta.autoScrollDates };
   const fp = path.join(dir, 'flights.json');
   if (fs.existsSync(fp)) result.flights = JSON.parse(fs.readFileSync(fp, 'utf8'));

@@ -19,6 +19,17 @@ const ALLOWED_FIELDS = [
   'must_buy', 'entry_id',
 ] as const;
 
+// 2026-05-02 OSM PR (commit 11): pois master 專屬欄位 — 偵測到後自動 dispatch
+// 到 PATCH /pois/:id (避免 silent no-op，前端誤把 master 欄位送到 trip_pois)。
+// description/note/hours 是 overlap (trip_pois 也有同名欄位作為覆寫) — 留在
+// trip_pois ALLOWED_FIELDS，視為 user 想做 override。
+const POI_MASTER_ONLY_FIELDS = [
+  'name', 'address', 'phone', 'email', 'website',
+  'rating', 'category', 'mapcode', 'lat', 'lng',
+  'country', 'source',
+  'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source',
+] as const;
+
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
@@ -50,23 +61,63 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // 2026-05-02 commit 11: split body into trip_pois fields vs pois master fields.
+  // Master fields auto-dispatch to UPDATE pois — eliminates the silent no-op
+  // pattern where caller PATCH /trip-pois with address/phone/etc was rejected
+  // by the whitelist filter and buildUpdateClause returned empty.
+  const masterFields: Record<string, unknown> = {};
+  for (const k of POI_MASTER_ONLY_FIELDS) {
+    if (k in body) masterFields[k] = body[k];
+  }
+  const hasMaster = Object.keys(masterFields).length > 0;
+
+  // Apply master UPDATE first (if any) — uses oldRow.poi_id from trip_pois join.
+  let masterResult: Record<string, unknown> | null = null;
+  if (hasMaster) {
+    const poiId = oldRow.poi_id as number | undefined;
+    if (!poiId) throw new AppError('SYS_INTERNAL', 'trip_poi 缺少 poi_id link');
+    const oldPoi = await db.prepare('SELECT * FROM pois WHERE id = ?').bind(poiId).first<Record<string, unknown>>();
+    if (!oldPoi) throw new AppError('DATA_NOT_FOUND', `master pois#${poiId} 不存在`);
+    const masterClause = buildUpdateClause(masterFields, POI_MASTER_ONLY_FIELDS as unknown as string[]);
+    if (masterClause) {
+      masterResult = await db
+        .prepare(`UPDATE pois SET ${masterClause.setClauses} WHERE id = ? RETURNING *`)
+        .bind(...masterClause.values, poiId)
+        .first<Record<string, unknown>>();
+      await logAudit(db, {
+        tripId: id, tableName: 'pois', recordId: poiId,
+        action: 'update', changedBy: auth.email,
+        diffJson: computeDiff(oldPoi, masterResult ?? {}),
+      });
+    }
+  }
+
   const updateResult = buildUpdateClause(body, ALLOWED_FIELDS as unknown as string[]);
-  if (!updateResult) {
-    const rejected = Object.keys(body).filter(k => !(ALLOWED_FIELDS as readonly string[]).includes(k));
+  let newRow: Record<string, unknown> | null = null;
+  if (updateResult) {
+    newRow = await db
+      .prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ? RETURNING *`)
+      .bind(...updateResult.values, tripPoiId)
+      .first<Record<string, unknown>>();
+    if (!newRow) throw new AppError('SYS_INTERNAL', 'UPDATE RETURNING 未回傳資料');
+    await logAudit(db, {
+      tripId: id, tableName: 'trip_pois', recordId: tripPoiId,
+      action: 'update', changedBy: auth.email,
+      diffJson: computeDiff(oldRow, newRow),
+    });
+  } else if (!hasMaster) {
+    // No trip_pois fields AND no master fields → nothing to update
+    const rejected = Object.keys(body).filter(
+      (k) => !(ALLOWED_FIELDS as readonly string[]).includes(k)
+        && !(POI_MASTER_ONLY_FIELDS as readonly string[]).includes(k),
+    );
     throw new AppError('DATA_VALIDATION', `無有效欄位可更新（收到: ${rejected.join(', ') || 'empty body'}）`);
   }
 
-  const newRow = await db.prepare(`UPDATE trip_pois SET ${updateResult.setClauses} WHERE id = ? RETURNING *`)
-    .bind(...updateResult.values, tripPoiId).first();
-  if (!newRow) throw new AppError('SYS_INTERNAL', 'UPDATE RETURNING 未回傳資料');
-  const diffJson = computeDiff(oldRow, newRow as Record<string, unknown>);
-
-  await logAudit(db, {
-    tripId: id, tableName: 'trip_pois', recordId: tripPoiId,
-    action: 'update', changedBy: auth.email, diffJson,
+  return json({
+    trip_poi: newRow ?? oldRow,
+    ...(masterResult ? { poi: masterResult } : {}),
   });
-
-  return json(newRow);
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (context) => {

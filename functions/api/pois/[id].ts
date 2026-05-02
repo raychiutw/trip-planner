@@ -12,10 +12,14 @@ import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause, parseIntParam } from '../_utils';
 import type { Env } from '../_types';
 
+// Migration 0045: rename google_rating → rating; drop maps (use mapsUrl helper).
+// Added 6 OSM追溯 cols editable by enrich endpoint (commit 6) but exposed here
+// for tp-* skill batch updates.
 const ALLOWED_FIELDS = [
   'name', 'description', 'note', 'address', 'phone', 'email', 'website',
-  'hours', 'google_rating', 'category', 'maps', 'mapcode', 'lat', 'lng',
+  'hours', 'rating', 'category', 'mapcode', 'lat', 'lng',
   'country', 'source',
+  'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source',
 ] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {

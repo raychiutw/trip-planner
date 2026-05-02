@@ -4,24 +4,53 @@ import { AppError } from '../_errors';
 import { json, getAuth, parseJsonBody, buildUpdateClause } from '../_utils';
 import type { Env } from '../_types';
 
-const ALLOWED_FIELDS = ['name', 'owner', 'title', 'description', 'og_description', 'self_drive', 'countries', 'published', 'food_prefs', 'auto_scroll', 'footer'] as const;
+// Migration 0045: dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
+// Added data_source/default_travel_mode/lang (Q1, Q2). `region` derived from
+// trip_destinations join — not a writable column.
+const ALLOWED_FIELDS = [
+  'name', 'owner', 'title', 'description',
+  'countries', 'published',
+  'data_source', 'default_travel_mode', 'lang',
+] as const;
+
+interface TripDestRow {
+  dest_order: number;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  day_quota: number | null;
+  sub_areas: string | null;
+  osm_id: number | null;
+  osm_type: string | null;
+}
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const { id } = context.params as { id: string };
+  const db = context.env.DB;
 
-  const row = await context.env.DB.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first<Record<string, unknown>>();
+  const row = await db.prepare('SELECT *, id AS tripId FROM trips WHERE id = ?').bind(id).first<Record<string, unknown>>();
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
-  if (row.footer && typeof row.footer === 'string') {
-    try {
-      row.footer = JSON.parse(row.footer);
-    } catch {
-      // leave as-is if parse fails
-    }
-  }
+  // Commit 8: include trip_destinations array in single-trip GET response.
+  // sub_areas stored as JSON array string — parse for client convenience.
+  const dests = await db
+    .prepare(
+      'SELECT dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type FROM trip_destinations WHERE trip_id = ? ORDER BY dest_order ASC',
+    )
+    .bind(id)
+    .all<TripDestRow>();
+
+  row.destinations = dests.results.map((d) => ({
+    ...d,
+    sub_areas: d.sub_areas ? safeParseJson(d.sub_areas) : null,
+  }));
 
   return json(row);
 };
+
+function safeParseJson(raw: string): unknown {
+  try { return JSON.parse(raw); } catch { return raw; }
+}
 
 /**
  * DELETE /api/trips/:id — 刪除整個行程。
@@ -67,6 +96,31 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   return json({ ok: true });
 };
 
+interface DestinationInput {
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+  day_quota?: number | null;
+  sub_areas?: string[] | null;
+  osm_id?: number | null;
+  osm_type?: 'node' | 'way' | 'relation' | null;
+}
+
+const MAX_DESTINATIONS = 30;
+
+function isValidDestination(d: unknown): d is DestinationInput {
+  if (!d || typeof d !== 'object') return false;
+  const obj = d as Record<string, unknown>;
+  return typeof obj.name === 'string' && obj.name.trim().length > 0;
+}
+
+/** /review-fix: sub_areas runtime 必須是 string array，避免被 nested object 撐爆 row */
+function safeSubAreas(val: unknown): string | null {
+  if (!Array.isArray(val)) return null;
+  if (!val.every((s) => typeof s === 'string')) return null;
+  return JSON.stringify(val);
+}
+
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
   if (!auth) throw new AppError('AUTH_REQUIRED');
@@ -83,13 +137,59 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const body = await parseJsonBody<Record<string, unknown>>(context.request);
 
+  // OSM PR (migration 0045)：destinations[] 為非 trips 欄位的特殊 nested resource，
+  // 用 full-replacement 語意 — 給定 array 即 DELETE existing + INSERT all。
+  // 無 destinations key → 不動 trip_destinations。空 array → 清光（user 想清空）。
+  // /review-fix: 集中 stmts → 單次 db.batch() 確保 atomic（DELETE+INSERT 不分裂）。
+  // /review-fix: cap length 防 hostile payload 撐爆 D1 batch 100-stmt 上限。
+  const hasDestinations = Array.isArray(body.destinations);
+  if (hasDestinations && (body.destinations as unknown[]).length > MAX_DESTINATIONS) {
+    throw new AppError('DATA_VALIDATION', `destinations 數量不可超過 ${MAX_DESTINATIONS}`);
+  }
   const update = buildUpdateClause(body, ALLOWED_FIELDS);
-  if (!update) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
+  if (!update && !hasDestinations) throw new AppError('DATA_VALIDATION', '無有效欄位可更新');
 
   const changedBy = auth.email;
-  const newFields = Object.fromEntries(update.fields.map(f => [f, body[f]]));
+  const stmts: D1PreparedStatement[] = [];
 
-  await db.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id).run();
+  if (update) {
+    stmts.push(db.prepare(`UPDATE trips SET ${update.setClauses} WHERE id = ?`).bind(...update.values, id));
+  }
+
+  if (hasDestinations) {
+    const inputs = (body.destinations as unknown[]).filter(isValidDestination);
+    stmts.push(db.prepare('DELETE FROM trip_destinations WHERE trip_id = ?').bind(id));
+    inputs.forEach((d, idx) => {
+      stmts.push(
+        db.prepare(
+          `INSERT INTO trip_destinations
+            (trip_id, dest_order, name, lat, lng, day_quota, sub_areas, osm_id, osm_type)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(
+          id,
+          idx,
+          d.name,
+          d.lat ?? null,
+          d.lng ?? null,
+          d.day_quota ?? null,
+          safeSubAreas(d.sub_areas),
+          d.osm_id ?? null,
+          d.osm_type ?? null,
+        ),
+      );
+    });
+  }
+
+  if (stmts.length > 0) {
+    await db.batch(stmts);
+  }
+
+  const newFields: Record<string, unknown> = update
+    ? Object.fromEntries(update.fields.map(f => [f, body[f]]))
+    : {};
+  if (hasDestinations) {
+    newFields.destinations_count = (body.destinations as unknown[]).length;
+  }
 
   await logAudit(db, {
     tripId: id,

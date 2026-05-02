@@ -21,7 +21,9 @@ import DaySection from '../components/trip/DaySection';
 import { extractPinsFromDay } from '../hooks/useMapData';
 /* F005: TripSheet 延遲載（內部 lazy load TripMapRail 以避免 Leaflet 進首頁 bundle）*/
 const TripSheet = lazy(() => import('../components/trip/TripSheet'));
-import Footer, { type FooterData } from '../components/trip/Footer';
+// Migration 0045 (2026-05-02): trips.footer dropped. Footer.tsx component
+// deleted in same commit. FooterArt (decorative SVG, ThemeArt module, unrelated)
+// stays.
 import CollabSheet from '../components/trip/CollabSheet';
 import AlertPanel from '../components/shared/AlertPanel';
 import AddStopModal from '../components/trip/AddStopModal';
@@ -283,8 +285,10 @@ function TripPageInner(
         if (cancelled) return;
         const trips = raw.map(r => mapRow(r)) as unknown as TripListItem[];
 
-        // 找出預設行程（isDefault=1）作為最終 fallback
-        const defaultTrip = trips.find((t) => t.isDefault === 1);
+        // Migration 0045 dropped trips.is_default. Fallback改用 user 第一個
+        // published=1 的 trip — TripsListPage 列表已是 published=1 ordered by
+        // name ASC，取第一筆即可（PR plan Q5 / commit 18）。
+        const defaultTrip = trips.find((t) => t.published === 1);
 
         // 比對 tripId 是否存在於已發布行程中
         const match = tripId ? trips.find((t) => t.tripId === tripId) : null;
@@ -351,9 +355,9 @@ function TripPageInner(
     if (trip?.title) {
       document.querySelector('meta[property="og:title"]')?.setAttribute('content', trip.title);
     }
-    if (trip?.ogDescription) {
-      document.querySelector('meta[property="og:description"]')?.setAttribute('content', trip.ogDescription);
-    }
+    // Migration 0045 dropped trips.og_description. SSR (functions/trip/[[path]].ts)
+    // already derives og:description from `${countries} 行程` fallback — sufficient
+    // SEO baseline. Client no longer overrides.
   }, [trip]);
 
   /* --- Sorted day nums --- */
@@ -585,14 +589,6 @@ function TripPageInner(
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ dark: isDark }), [isDark]);
 
-  /* --- Footer data (#4: proper FooterData type) --- */
-  const footerData = useMemo((): FooterData | null => {
-    if (!trip) return null;
-    const raw = trip.footer;
-    if (!raw || typeof raw !== 'object') return null;
-    return raw as FooterData;
-  }, [trip]);
-
   /* PR-SS/UU 2026-04-27:embedded mode 把 sheet/download/print handlers 開放
    * 給父層。TripsListPage 的 ⋯ 漢堡選單(共編 / 列印 / 下載)透過 ref 呼叫。
    * v2.17.17:其餘 sheet keys(suggestions/today-route/flights/checklist/
@@ -704,15 +700,11 @@ function TripPageInner(
                 timezone={weatherTimezone}
               />
             ))}
-            {/* Embedded mode (TripsListPage sheet) hides decorative footer
-              * art + Footer block — sheet is a narrow column, footer would
-              * waste vertical space. Standalone /trip/:id keeps both. */}
-            {!noShell && (
-              <>
-                <FooterArt dark={isDark} />
-                {footerData && <Footer footer={footerData} />}
-              </>
-            )}
+            {/* Embedded mode (TripsListPage sheet) hides decorative footer art —
+              * sheet is a narrow column, art would waste vertical space.
+              * Standalone /trip/:id keeps it. Migration 0045 dropped trips.footer
+              * → Footer block removed (data-driven block, not the FooterArt SVG). */}
+            {!noShell && <FooterArt dark={isDark} />}
           </div>
         )}
       </main>

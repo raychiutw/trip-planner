@@ -32,6 +32,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import TripCardMenu from '../components/trip/TripCardMenu';
+import EditTripModal from '../components/trip/EditTripModal';
 // v2.18.0:CollabSheet → CollabPage(獨立路由),InfoSheet wrapper 移除
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -863,6 +864,23 @@ export default function TripsListPage() {
     [navigate],
   );
 
+  // OSM PR (v2)：card kebab「編輯行程」 → 開 EditTripModal 預填現有 trip 值。
+  // 儲存成功後 reload trips list 反映變更。
+  const [editTargetId, setEditTargetId] = useState<string | null>(null);
+  const handleMenuEdit = useCallback((tripId: string) => { setEditTargetId(tripId); }, []);
+  const handleEditSaved = useCallback(
+    (tripId: string) => {
+      setEditTargetId(null);
+      void loadTrips();
+      showToast('行程已更新', 'success');
+      // Optional: re-render TripPage if user is currently viewing the edited trip
+      if (selectedFromUrl === tripId) {
+        window.dispatchEvent(new CustomEvent('tp-trip-updated', { detail: { tripId } }));
+      }
+    },
+    [loadTrips, selectedFromUrl],
+  );
+
   // PR-Q：card kebab 「刪除行程」 → ConfirmModal + DELETE /api/trips/:id +
   // optimistic remove from local list（避免 user 等待 reload）。
   // 兩階段 state：requestMenuDelete 開 modal、handleConfirmDelete 真的執行。
@@ -932,6 +950,14 @@ export default function TripsListPage() {
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+      {editTargetId && (
+        <EditTripModal
+          open={editTargetId !== null}
+          tripId={editTargetId}
+          onClose={() => setEditTargetId(null)}
+          onSaved={handleEditSaved}
+        />
+      )}
       <div className="tp-trips-shell" data-testid="trips-list-page">
         <TitleBar
           title="我的行程"
@@ -1114,6 +1140,7 @@ export default function TripsListPage() {
                     <TripCardMenu
                       tripId={t.tripId}
                       onCollab={handleMenuCollab}
+                      onEdit={handleMenuEdit}
                       onDelete={handleMenuDelete}
                     />
                   </div>
