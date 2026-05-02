@@ -13,3 +13,28 @@ MAPBOX_TOKEN=pk.ey...your-token-here
 # 不設 → 本機打 /api/my-trips 會拿到 401，/manage 看到「無法存取」
 ADMIN_EMAIL=your-email@example.com
 DEV_MOCK_EMAIL=your-email@example.com
+
+# OpenRouteService API key — 路徑/車程計算（POST /trips/:id/recompute-travel）
+# 註冊免費（2,000 req/day, 40 req/min）：https://openrouteservice.org/dev/#/signup
+ORS_API_KEY=eyJvcmci...your-token
+
+# OpenTripMap API key — POI rating + 補欄位（OSM + Wikidata 包裝）
+# 註冊免費（5,000 req/day, 5 req/sec）：https://opentripmap.io/product
+OPENTRIPMAP_API_KEY=your-opentripmap-key
+
+# === 2026-05-02 email cutover (Mac mini Gmail SMTP via Tailscale Funnel) ===
+# CF Pages Functions 透過 ${TRIPLINE_API_URL}/internal/mail/send 走 mac mini，
+# 由 mac mini scripts/tripline-api-server.ts 用 nodemailer + Gmail SMTP 寄出。
+# 取代 RESEND_API_KEY（已棄用）。
+
+# Mac mini Gmail SMTP credentials（在 mac mini .env.local 設，不是 wrangler）
+# - 從 GitHub Actions secrets 複用同一組（daily-report.yml 已用），少一組密碼管
+# - App Password 不是 Gmail 登入密碼，需在 https://myaccount.google.com/apppasswords 建立
+GMAIL_USERNAME=your-gmail@gmail.com
+GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
+EMAIL_FROM=Tripline <your-gmail@gmail.com>
+
+# Telegram admin alert（CF Pages 端用，silent-skip 改 audit + alert 後失敗會通知）
+# 複用 scripts/daily-check 的同一組 token + chat_id
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
