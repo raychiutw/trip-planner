@@ -14,7 +14,8 @@
  * Email 寄送 best-effort（失敗不 rollback）。
  */
 
-import { logAudit } from './_audit';
+import { logAudit, recordEmailEvent } from './_audit';
+import { alertAdminTelegram } from './_alert';
 import { AppError } from './_errors';
 import { json, getAuth, parseJsonBody } from './_utils';
 import { sendEmail, EmailError } from '../../src/server/email';
@@ -66,19 +67,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   return json(results);
 };
 
-/** Best-effort send invitation email — 兩條分支共用，失敗 console.error 但不擋業務流程。 */
+/**
+ * Best-effort send invitation email — 兩條分支共用。
+ *
+ * **Q7 best-effort exception**：trip_permissions / trip_invitations row 已寫入 DB，
+ * email 失敗不 rollback、不 throw 500（user 已能看到 trip / 邀請可重寄）。
+ * 但 silent-skip 反 pattern 已換掉：失敗時 audit_log + Telegram alert 給 admin
+ * observable。
+ */
 async function sendInvitationEmailBestEffort(
   env: Env,
   params: {
     to: string;
+    tripId: string;
+    inviterEmail: string;
     inviteUrl: string;
     inviterDisplayName: string | null;
-    inviterEmail: string;
     tripTitle: string;
     isExistingUser: boolean;
   },
 ): Promise<void> {
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) return;
   const tpl = tripInvitation({
     inviteUrl: params.inviteUrl,
     inviterDisplayName: params.inviterDisplayName,
@@ -87,19 +95,38 @@ async function sendInvitationEmailBestEffort(
     isExistingUser: params.isExistingUser,
   });
   try {
-    await sendEmail(env, {
+    const result = await sendEmail(env, {
       to: params.to,
       subject: tpl.subject,
       html: tpl.html,
       text: tpl.text,
+      template: 'invitation',
+    });
+    await recordEmailEvent(env.DB, {
+      template: 'invitation',
+      recipient: params.to,
+      status: 'sent',
+      tripId: params.tripId,
+      triggeredBy: params.inviterEmail,
+      latencyMs: result.elapsed,
     });
   } catch (emailErr) {
-    // eslint-disable-next-line no-console
-    console.error(
-      '[permissions] invitation email send failed:',
-      emailErr instanceof EmailError
-        ? `${emailErr.status} ${emailErr.message}`
-        : (emailErr as Error).message,
+    const msg = emailErr instanceof EmailError
+      ? `${emailErr.status} ${emailErr.message}`
+      : emailErr instanceof Error
+        ? emailErr.message
+        : String(emailErr);
+    await recordEmailEvent(env.DB, {
+      template: 'invitation',
+      recipient: params.to,
+      status: 'failed',
+      error: msg,
+      tripId: params.tripId,
+      triggeredBy: params.inviterEmail,
+    });
+    await alertAdminTelegram(
+      env,
+      `行程邀請信寄送失敗: ${params.to} (trip=${params.tripId}, ${msg})`,
     );
   }
 }
@@ -186,9 +213,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // 已註冊者直接 redirect /trips?selected=tripId（不需 token）
     await sendInvitationEmailBestEffort(context.env, {
       to: lowerEmail,
+      tripId,
+      inviterEmail,
       inviteUrl: `${new URL(context.request.url).origin}/trips?selected=${encodeURIComponent(tripId)}`,
       inviterDisplayName,
-      inviterEmail,
       tripTitle,
       isExistingUser: true,
     });
@@ -248,9 +276,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Best-effort send invitation email（含 raw token in URL）
   await sendInvitationEmailBestEffort(context.env, {
     to: lowerEmail,
+    tripId,
+    inviterEmail,
     inviteUrl: `${new URL(context.request.url).origin}/invite?token=${encodeURIComponent(rawToken)}`,
     inviterDisplayName,
-    inviterEmail,
     tripTitle,
     isExistingUser: false,
   });
