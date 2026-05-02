@@ -129,9 +129,9 @@ describe('POST /api/oauth/reset-password', () => {
     expect(updateSql).toContain("provider = 'local'");
   }, 30_000);
 
-  it('sends confirmation email when env keys set (V2-P3 wire)', async () => {
+  it('sends confirmation email via mac mini tunnel (post-2026-05-02 cutover)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ id: 'msg-1' }), { status: 200 }),
+      new Response(JSON.stringify({ ok: true, messageId: 'msg-1', elapsed: 200 }), { status: 200 }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -149,22 +149,28 @@ describe('POST /api/oauth/reset-password', () => {
     });
     const env = {
       DB: { prepare: dbPrepare },
-      RESEND_API_KEY: 're_test',
-      EMAIL_FROM: 'Tripline <no-reply@example.com>',
+      TRIPLINE_API_URL: 'https://mac-mini.tail.ts.net:8443',
+      TRIPLINE_API_SECRET: 'test-bearer',
     };
     await onRequestPost(makeContext({ token: 't', password: 'newpass1234' }, env as never));
 
-    const resendCall = fetchMock.mock.calls.find(
-      (c) => typeof c[0] === 'string' && (c[0] as string).includes('resend.com'),
+    const mailerCall = fetchMock.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('/internal/mail/send'),
     );
-    expect(resendCall).toBeTruthy();
-    const body = JSON.parse((resendCall![1] as RequestInit).body as string) as Record<string, unknown>;
-    expect(body.to).toEqual(['u@x.com']);
+    expect(mailerCall).toBeTruthy();
+    const init = mailerCall![1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe('Bearer test-bearer');
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.to).toBe('u@x.com');
     expect(body.subject).toContain('密碼');
+    expect(body.template).toBe('reset-password-confirm');
     vi.unstubAllGlobals();
   }, 30_000);
 
-  it('does NOT send confirmation email when env keys unset', async () => {
+  it('still returns 200 when confirmation email fails (best-effort, password updated)', async () => {
+    // confirmation email is "事後通知" — failure should not block 200 response.
+    // sendEmail throws (no TRIPLINE_API_URL); caught best-effort + audit + alert.
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
 
@@ -178,8 +184,16 @@ describe('POST /api/oauth/reset-password', () => {
       return makeStmt();
     });
     const env: MockEnv = { DB: { prepare: dbPrepare } };
-    await onRequestPost(makeContext({ token: 't', password: 'newpass1234' }, env));
+    const res = await onRequestPost(makeContext({ token: 't', password: 'newpass1234' }, env));
+    expect(res.status).toBe(200);
 
+    // audit_log INSERT for failed email event
+    const auditInsert = dbPrepare.mock.calls.find(
+      (c) => typeof c[0] === 'string' && (c[0] as string).includes('INSERT INTO audit_log'),
+    );
+    expect(auditInsert).toBeTruthy();
+
+    // No fetch (sendEmail throws before fetch; telegram skipped — no env)
     expect(fetchMock).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   }, 30_000);
