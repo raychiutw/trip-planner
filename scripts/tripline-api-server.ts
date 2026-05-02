@@ -13,6 +13,8 @@
 import { spawn } from 'child_process';
 import { appendFileSync, mkdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+import nodemailer, { type Transporter } from 'nodemailer';
+import { makeMailHandler } from './lib/mailer-handler';
 
 // --- Load .env.local ---
 const envPath = join(import.meta.dir, '..', '.env.local');
@@ -35,6 +37,11 @@ const PROJECT_DIR = process.env.PROJECT_DIR || join(import.meta.dir, '..');
 const LOG_DIR = join(PROJECT_DIR, 'scripts', 'logs', 'api-server');
 const CLAUDE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 const TOKEN_HELPER = join(PROJECT_DIR, 'scripts', 'lib', 'get-tripline-token.js');
+
+// --- Mailer config (Gmail SMTP) ---
+const GMAIL_USER = process.env.GMAIL_USERNAME || '';
+const GMAIL_PASS = process.env.GMAIL_APP_PASSWORD || '';
+const EMAIL_FROM_DEFAULT = process.env.EMAIL_FROM || `Tripline <${GMAIL_USER}>`;
 
 // --- Logging ---
 mkdirSync(LOG_DIR, { recursive: true });
@@ -230,6 +237,31 @@ function verifyAuth(req: Request): boolean {
   return authHeader === `Bearer ${API_SECRET}`;
 }
 
+// --- Mailer (lazy SMTP transporter + handler) ---
+let mailTransporter: Transporter | null = null;
+function getMailTransporter(): Transporter {
+  if (!mailTransporter) {
+    if (!GMAIL_USER || !GMAIL_PASS) {
+      throw new Error('GMAIL_USERNAME or GMAIL_APP_PASSWORD not set');
+    }
+    mailTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: { user: GMAIL_USER, pass: GMAIL_PASS },
+    });
+  }
+  return mailTransporter;
+}
+
+const mailHandler = makeMailHandler({
+  verifyAuth,
+  transporter: getMailTransporter,
+  emailFrom: EMAIL_FROM_DEFAULT,
+  log,
+  logError,
+});
+
 Bun.serve({
   port: PORT,
   async fetch(req) {
@@ -266,6 +298,10 @@ Bun.serve({
       });
 
       return Response.json({ triggered: true, source });
+    }
+
+    if (url.pathname === '/internal/mail/send' && req.method === 'POST') {
+      return await mailHandler(req);
     }
 
     return Response.json({ error: 'not found' }, { status: 404 });
