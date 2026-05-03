@@ -3,6 +3,14 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.21.1] - 2026-05-04
+
+**Hotfix** — Service Worker `reg.update()` 補 `.catch()`，靜默 Sentry `InvalidStateError` noise（5/3 daily-check 偵測，5 events / 0 users）。registration 在 install/activate/unregister race 中 update 會 throw，原本沒接 → 浮到 unhandledrejection → Sentry 捕獲。
+
+### Fixed
+
+- **`src/entries/main.tsx`** — `navigator.serviceWorker.getRegistration().then((reg) => reg.update())` 接 `.catch(() => {})`。SW update 是背景非關鍵任務，registration 在 transition state 時 reject 屬正常 race，不該污染 error 監控。
+
 ## [2.21.0] - 2026-05-04
 
 **IA reshuffle** — sidebar 第 4 項「探索」→「我的收藏」升 primary nav (saved POIs universal
