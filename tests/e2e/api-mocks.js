@@ -743,7 +743,13 @@ async function setupApiMocks(page) {
     }
 
     // Pattern: GET/PATCH/DELETE /api/trips/:id/entries/:eid
-    // GET 給 EntryActionPage (move/copy) 載 entry meta;PATCH/DELETE 是修改/刪除
+    // PATCH/DELETE 是修改/刪除景點。
+    // ⚠ GET 在真 prod 不存在 (functions/api/trips/[id]/entries/[eid].ts 只 export
+    //   onRequestPatch / onRequestDelete) → CF Pages 回 405。EntryActionPage.tsx:260
+    //   呼叫 GET 會 setLoadError「載入失敗」,move/copy 頁面 broken in prod。
+    //   本 mock 為 happy path 暫補一個 GET → spec 過,但 hide 此 bug。
+    //   TODO(prod-bug): 修真 endpoint 補 onRequestGet OR 改 EntryActionPage 改用
+    //   /trips/:id/days?all=1 的 timeline.entries 找 entry。修好後 mock 也拿掉。
     const entryActionMatch = path.match(/^\/api\/trips\/([^/]+)\/entries\/(\d+)$/);
     if (entryActionMatch) {
       const [, , eid] = entryActionMatch;
