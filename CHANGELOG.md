@@ -3,6 +3,16 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.15] - 2026-05-03
+
+### Fixed
+
+- **mobile form action bar 終於可點（form-page 4 page 全解鎖）** — `.tp-page-bottom-bar` z-index 從 `5` 提到 `calc(var(--z-sticky-nav, 200) + 10)`。Mobile <1024px 時 `.app-shell-bottom-nav` 與 `.tp-page-bottom-bar` 都是 `position: fixed; bottom: 0`，原 z-index `5` 被 nav (`--z-sticky-nav: 200`) 蓋住，clicks on `entry-action-confirm` / `add-stop-confirm` / `edit-trip-submit` 全被 nav `<a>` 攔截。Regression 來自 PR #428/#430/#431 modal-to-fullpage migration（原 modal 走 portal stacking context 不衝突，改 page 後同層）。Desktop nav `display: none` 無此衝突。Master CI 6 mobile-chrome+mobile-safari E2E test fail 於此修復後解鎖。
+
+### Changed
+
+- **CLAUDE.md compacted to ~531 tokens (English)** — 從 ~3000 token 中文版精簡 82%，翻譯成英文。保留 7-stage pipeline、hard rules、layout、dev gotchas（`.dev.vars` vs `.env.local` trap、`TRIPLINE_API_URL` `:443` not `:8443`）、Design SoT 政策、skill routing（補上 `/document-release`）、GBrain config pointer。完整 env 列表、project tree、POI schema、deprecated `RESEND` 註記移到 ARCHITECTURE.md / GEMINI.md / DESIGN.md / openspec/config.yaml / .dev.vars.example 等專責檔案。
+
 ## [2.19.14] - 2026-05-03
 
 ### Changed
