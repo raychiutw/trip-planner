@@ -326,7 +326,9 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 **Strip container (`.tp-map-day-tabs`)**
 - 共用 wrapper：horizontal scroll + scrollbar hidden + glass blur 14px
-- Trip detail 加 modifier `.tp-map-day-tabs--sticky`：position: sticky, top: 64px (desktop) / 56px (compact)，緊接 TitleBar 形成 sticky chrome group，加底邊 hairline + 右側 mask 漸層 fade（暗示水平可捲）
+- Trip detail 加 modifier `.tp-map-day-tabs--sticky`：position: sticky, top: 64px (desktop) / 56px (compact)，緊接 TitleBar 形成 sticky chrome group，僅加底邊 hairline（不加水平 mask 漸層 — 視覺干擾）
+- 錨點 #dayN 跳轉：`.ocean-hero { scroll-margin-top: 110px (desktop) / 100px (compact) }`，避免目標被 sticky chrome 蓋住
+- TripPage 的 `.ocean-page` 桌機 top padding = 0（讓 sticky day strip 緊貼 TitleBar 無空隙）；mobile 已是 0
 - MapPage 不用 modifier：top border 當作底部 card-rail 上邊界，自然 stack 在頁面 flex column
 - TripPage 內 `<TitleBar>` 已 sticky top:0，`<DayNav>` 設 top:64/56px → 兩者凍結頂部成 sticky chrome group
 
