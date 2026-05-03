@@ -75,9 +75,24 @@ const SCOPED_STYLES = `
  * 取代 PR-AA 的 floating sticky back btn — 那個獨佔一行、跟 mockup 不符。
  *
  * 結構：[← back btn] [trip name] — 56px 全寬、sticky top、glass blur。 */
+/* 2026-05-03 root fix:從 flex-column 改 grid 「chrome auto + content 1fr」
+ * 模式。原 flex-column + default flex-shrink:1 + min-height:auto 讓 TitleBar
+ * 在父空間不足時 (TripPage 內容很長) 被擠壓到 children max-height (45px),
+ * user 觀察「行程明細標題列比其他功能頁低」+「加景點外框不正確」(button 凸出)
+ * 同 root cause。
+ *
+ * Grid template rows:
+ *   row 1 (auto)  — TitleBar 用 CSS height: 56px (compact) / 64px (desktop) fixed
+ *   row 2 (1fr)   — TripPage .ocean-shell 撐滿剩餘 viewport
+ *
+ * 比 flex column + flex-shrink:0 更 semantic: chrome (auto) + main (1fr)
+ * 是 W3C grid layout standard pattern。同 ChatPage / MapPage 用 flex
+ * column + child explicit flex:1 一致語意,但 grid 不需依賴 child set 對的
+ * flex behavior,layout intent 完全在 parent。 */
 .tp-embedded-trip {
   position: relative;
-  display: flex; flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr;
   height: 100%;
   min-height: 100%;
 }
