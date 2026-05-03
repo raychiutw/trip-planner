@@ -1,0 +1,22 @@
+[
+  {"query": "沖繩 Day 3 午餐換成通堂拉麵，聽說比較好吃", "should_trigger": true},
+  {"query": "/tp-edit okinawa-trip-2026-ray Day 2 下午加一個美國村的景點", "should_trigger": true},
+  {"query": "幫我把第四天的燒肉改成海鮮餐廳，小朋友不愛燒肉", "should_trigger": true},
+  {"query": "yilan-trip 的 Day 1 晚餐要換掉，那家店 google 評分才 3.2", "should_trigger": true},
+  {"query": "那霸那個飯店名字打錯了，應該是 Hotel Orion 本部 not Naha", "should_trigger": true},
+  {"query": "Day 5 行程太趕了，把水族館刪掉改成自由活動", "should_trigger": true},
+  {"query": "幫宜蘭行程 Day 2 加一個雨天備案景點，最好是室內的", "should_trigger": true},
+  {"query": "update the restaurant on day 3 of the okinawa trip to a local ramen place instead", "should_trigger": true},
+  {"query": "釜山行程 Day 1 咖啡廳的 google_rating 要更新成 4.3", "should_trigger": true},
+  {"query": "沖繩行程第二天飯店改成 Hilton 北谷，checkout 是 11:00", "should_trigger": true},
+  {"query": "幫我建一個東京三日遊行程，3/20 出發", "should_trigger": false},
+  {"query": "跑一下沖繩行程的 R0-R18 品質檢查", "should_trigger": false},
+  {"query": "全部行程的飯店都缺 phone 欄位，幫我批次補齊", "should_trigger": false},
+  {"query": "沖繩行程全面重整一下，R12 好多紅燈", "should_trigger": false},
+  {"query": "有旅伴送了一個修改請求，status 是 processing，幫我處理", "should_trigger": false},
+  {"query": "TripPage 的 CSS 要改成支援深色主題", "should_trigger": false},
+  {"query": "每日健康檢查跑一下，看有沒有 API 掛掉", "should_trigger": false},
+  {"query": "functions/api/pois 的 error handling 需要修一下，回傳 500", "should_trigger": false},
+  {"query": "幫我檢查所有行程的 R12 評分有沒有缺", "should_trigger": false},
+  {"query": "ship 這個 branch，建 PR 準備 merge", "should_trigger": false}
+]

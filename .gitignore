@@ -3,7 +3,7 @@
 !.claude/skills/
 !.claude/memory-sync/
 !.claude/settings.json
-.codex/
+.codex/*
 .agents/
 .env
 .env.local
@@ -102,3 +102,9 @@ day3.json
 .claude/skills/gstack/
 .gstack/
 .claude/skills/gstack-upgrade/
+
+# Project Codex skills are versioned; other .codex runtime files stay ignored.
+!.codex/skills/
+!.codex/skills/**
+.codex/skills/tp-workspace/trigger-results/
+.codex/skills/tp-team-workspace/
