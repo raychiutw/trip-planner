@@ -25,7 +25,7 @@
  *   - 取消改 navigate(-1)，儲存後 navigate(`/trips?selected=:id`)
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -359,6 +359,7 @@ export default function EditTripPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // GET trip on mount / tripId change
   useEffect(() => {
@@ -551,10 +552,7 @@ export default function EditTripPage() {
       label="儲存"
       busyLabel="儲存中⋯"
       busy={submitting}
-      onClick={() => {
-        const form = document.getElementById('edit-trip-form') as HTMLFormElement | null;
-        if (form) form.requestSubmit();
-      }}
+      onClick={() => formRef.current?.requestSubmit()}
       testId="edit-trip-titlebar-save"
     />
   );
@@ -575,7 +573,7 @@ export default function EditTripPage() {
               actions={titleBarActions}
             />
 
-            <form id="edit-trip-form" onSubmit={handleSubmit} className="tp-edit-page-form">
+            <form ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
               <p className="tp-edit-page-sub">修改行程基本設定 + 目的地。修改日期請另建新行程。</p>
 
               {loading ? (

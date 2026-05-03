@@ -39,22 +39,22 @@ describe('MapDayTab — 基本渲染', () => {
 });
 
 describe('MapDayTab — active state', () => {
-  it('isActive=true：button 有 is-active class + aria-selected="true"', () => {
+  it('isActive=true：button 有 is-active class + aria-current="true"', () => {
     const { container } = render(
       <MapDayTab dayLabel="DAY 02" dateLabel="7/30" dayColor="#0369A1" isActive={true} onClick={() => {}} />,
     );
     const button = container.querySelector('button')!;
     expect(button.classList.contains('is-active')).toBe(true);
-    expect(button.getAttribute('aria-selected')).toBe('true');
+    expect(button.getAttribute('aria-current')).toBe('true');
   });
 
-  it('isActive=false：button 無 is-active class + aria-selected="false"', () => {
+  it('isActive=false：button 無 is-active class + 無 aria-current', () => {
     const { container } = render(
       <MapDayTab dayLabel="DAY 02" dateLabel="7/30" dayColor="#0369A1" isActive={false} onClick={() => {}} />,
     );
     const button = container.querySelector('button')!;
     expect(button.classList.contains('is-active')).toBe(false);
-    expect(button.getAttribute('aria-selected')).toBe('false');
+    expect(button.getAttribute('aria-current')).toBeNull();
   });
 });
 
@@ -68,12 +68,30 @@ describe('MapDayTab — interaction', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it('button role="tab" + type="button"', () => {
+  it('button type="button" 不掛 role=tab (用 navigation 語意,DayNav wrapper 是 <nav>)', () => {
     const { container } = render(
       <MapDayTab dayLabel="總覽" dateLabel="7天" isActive={true} onClick={() => {}} />,
     );
     const button = container.querySelector('button')!;
-    expect(button.getAttribute('role')).toBe('tab');
+    expect(button.getAttribute('role')).toBeNull();
     expect(button.getAttribute('type')).toBe('button');
+  });
+
+  it('dayColor 不安全格式 (CSS injection attempt) 被 sanitize 掉', () => {
+    const { container, getByText } = render(
+      <MapDayTab
+        dayLabel="DAY 09"
+        dateLabel="9/9"
+        dayColor="red; background: url(evil)"
+        isActive={true}
+        onClick={() => {}}
+      />,
+    );
+    const eyebrow = getByText('DAY 09');
+    // unsafe value should not appear in style
+    expect(eyebrow.getAttribute('style') || '').not.toMatch(/url\(evil\)/);
+    // is-active button should not get --day-color from unsafe input
+    const button = container.querySelector('button')!;
+    expect(button.getAttribute('style') || '').not.toMatch(/url\(evil\)/);
   });
 });
