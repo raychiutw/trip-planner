@@ -404,10 +404,13 @@ body.dark {
 @layer base {
     .ocean-shell { min-height: 100dvh; background: var(--color-background); color: var(--color-foreground); }
 
-    /* Page */
-    .ocean-page { padding: 28px 40px 48px; max-width: 1440px; margin: 0 auto; }
+    /* Page — top padding 0 讓 sticky day nav strip 緊貼 TitleBar 下方無空隙
+     * (.ocean-page 只有 TripPage 用)。Hero 自帶 padding，content 不會貼太緊。 */
+    .ocean-page { padding: 0 40px 48px; max-width: 1440px; margin: 0 auto; }
 
-    /* Hero card inside each day — Airbnb editorial white card */
+    /* Hero card inside each day — Airbnb editorial white card。
+     * scroll-margin-top: 110px desktop / 100px compact 讓 #dayN 錨點跳轉時
+     * 落在 sticky chrome (TitleBar 64/56 + DayNav strip ~37) 下方，避免被蓋。 */
     .ocean-hero {
         background: var(--color-accent);
         color: var(--color-accent-foreground);
@@ -415,6 +418,7 @@ body.dark {
         border: 0;
         padding: 20px 24px; margin-bottom: 20px;
         overflow: hidden;
+        scroll-margin-top: 110px;
     }
     .ocean-hero-chips {
         display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
@@ -640,16 +644,11 @@ body.dark {
     .app-shell-sheet { overscroll-behavior: contain; }
     .app-shell-sheet .ocean-shell { min-height: 0; }
     .app-shell-sheet .ocean-page { padding: 0 24px 24px; }
-    .app-shell-sheet .ocean-day-strip {
-      top: 0;
-      margin: 0 -24px 16px;
-      padding: 8px 24px;
-    }
     .app-shell-sheet .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
 
     /* Breakpoints */
     @media (max-width: 1200px) {
-        .ocean-page { padding: 24px 28px 40px; }
+        .ocean-page { padding: 0 28px 40px; }
     }
     @media (max-width: 960px) {
         .ocean-hero-title { font-size: 24px; } /* mockup .tp-detail-hero-title compact:1877 (was 28px) */
@@ -663,9 +662,9 @@ body.dark {
         .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 22px 20px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        /* Mobile sticky day-strip is the only top chrome (topbar hidden).
-         * Pill row 60-80 high + breathing 16-20 → land day title clear. */
-        .ocean-day > .ocean-hero { scroll-margin-top: 96px; }
+        /* Mobile sticky chrome = TitleBar 56 + DayNav strip ~37 = ~93px
+         * + 7px breathing = 100px。 */
+        .ocean-day > .ocean-hero { scroll-margin-top: 100px; }
     }
 
     /* Mobile bottom tab bar (只在 ≤760px 顯示) */
@@ -1124,8 +1123,8 @@ body.dark {
   color: var(--color-accent);
 }
 
-/* Sticky chrome variant — trip detail page 把同一條 strip 黏在 TitleBar 下方，
- * border 從 top 翻到 bottom + 加右側 mask 漸層暗示「還有更多 day 可水平捲」。
+/* Sticky chrome variant — trip detail page 把同一條 strip 黏在 TitleBar 下方。
+ * border 從 top 翻到 bottom (sticky chrome group 底邊)。
  * MapPage 不用此 modifier (它的 tabs 是 bottom card-rail 的上邊界)。 */
 .tp-map-day-tabs--sticky {
   position: sticky;
@@ -1133,10 +1132,8 @@ body.dark {
   z-index: calc(var(--z-sticky-nav, 200) - 1);
   border-top: none;
   border-bottom: 1px solid var(--color-border);
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
-  mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
 }
-@media (max-width: 1100px) {
+@media (max-width: 760px) {
   .tp-map-day-tabs--sticky { top: 56px; }
 }
 body.print-mode .tp-map-day-tabs--sticky { display: none; }
