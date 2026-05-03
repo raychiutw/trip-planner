@@ -5,7 +5,7 @@
  * 的 ALLOWED_POI_TYPES 與 pois.type CHECK constraint
  * (`'hotel','restaurant','shopping','parking','attraction','transport','activity','other'`)。
  *
- * 兩處用：InlineAddPoi（trip 內加景點）+ ExplorePage（探索儲存到池）。
+ * 兩處用：AddStopPage（trip 內加景點）+ ExplorePage（探索儲存到池）。
  * 不映射就直接送 raw category（例如 'tourism'/'amenity'）給 backend，會在
  * pois CHECK constraint 失敗 → 500/503，user 看到「目前繁忙碌中」 toast。
  */

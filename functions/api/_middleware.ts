@@ -253,8 +253,8 @@ async function handleAuth(
   // V2-P1：/api/oauth/* 全部 public — OAuth endpoints 自管 auth
   // (PKCE / client_secret / JWT)，由 oidc-provider 處理。User-session middleware
   // 不該攔截，否則 external client + browser OAuth flow 都被 401。
-  // 包含：spike (V2 Day 0) / .well-known/openid-configuration / authorize / token /
-  // revoke / par 等所有 OAuth endpoints。
+  // 包含：.well-known/openid-configuration / authorize / token / revoke / par
+  // 等所有 OAuth endpoints。(2026-05-03 V2 Day 0 spike endpoint 已退役。)
   if (url.pathname.startsWith('/api/oauth/')) {
     (context.data as Record<string, unknown>).auth = null;
     return context.next();
