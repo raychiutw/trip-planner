@@ -181,12 +181,8 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column;
   background: var(--color-secondary);
 }
-/* tp-chat-header 改用 <PageHeader>（standalone 預設）。.tp-chat-header CSS 已退役。
- * 桌機補 24px 水平 padding 因為 .tp-chat-shell 沒有 page-level padding；
- * 手機 (≤760px) 用 PageHeader 內建 16px canonical 規格，避免覆寫。 */
-@media (min-width: 761px) {
-  .tp-chat-shell .tp-page-header[data-variant="standalone"] { padding-left: 24px; padding-right: 24px; }
-}
+/* tp-chat-header / .tp-page-header CSS 已退役。改用 <TitleBar>，自帶
+ * padding 0 24px (desktop) / 0 16px (compact)，不需額外覆寫。 */
 
 .tp-chat-body {
   flex: 1; min-height: 0; overflow-y: auto;
