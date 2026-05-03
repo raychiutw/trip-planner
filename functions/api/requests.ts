@@ -39,7 +39,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少 tripId 參數');
   }
 
-  if (tripId && !await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
+  if (tripId && !await hasPermission(env.DB, auth, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 
@@ -125,7 +125,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // backward compat with older client versions.
   const mode = body.mode === 'trip-edit' || body.mode === 'trip-plan' ? body.mode : 'trip-plan';
 
-  if (!await hasWritePermission(env.DB, auth.email, tripId, auth.isAdmin)) {
+  if (!await hasWritePermission(env.DB, auth, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

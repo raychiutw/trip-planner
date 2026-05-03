@@ -12,6 +12,18 @@ export async function callHandler(
   handler: (ctx: unknown) => Promise<Response>,
   ctx: unknown,
 ): Promise<Response> {
+  // V2 cutover (migration 0047): trips.owner_user_id / trip_permissions.user_id
+  // 必須有對應 users row。Auto-seed auth user before handler runs so callers
+  // who only do mockAuth({email}) don't have to remember seedUser.
+  const auth = (ctx as { data?: { auth?: AuthData } })?.data?.auth;
+  const env = (ctx as { env?: Env })?.env;
+  if (auth?.email && auth.userId && env?.DB) {
+    await env.DB
+      .prepare('INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)')
+      .bind(auth.userId, auth.email, auth.email.split('@')[0])
+      .run()
+      .catch(() => { /* best-effort; tests asserting users insert behavior can override */ });
+  }
   try {
     return await handler(ctx);
   } catch (err) {
@@ -34,10 +46,26 @@ export function mockEnv(db: D1Database, overrides: Partial<Env> = {}): Env {
   } as Env;
 }
 
-/** 建立 mock auth context */
+/** Synthetic userId from email: 'a@b.com' → 'test-user-a-b-com' */
+export function userIdFor(email: string): string {
+  return `test-user-${email.replace(/[^a-z0-9]/gi, '-')}`;
+}
+
+/** Insert users row (idempotent). Tests that create trips/permissions/saved-pois need user FK satisfied. */
+export async function seedUser(db: D1Database, email = 'user@test.com'): Promise<string> {
+  const id = userIdFor(email);
+  await db.prepare(
+    'INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)'
+  ).bind(id, email, email.split('@')[0]).run();
+  return id;
+}
+
+/** 建立 mock auth context。V2 cutover：userId 從 email 衍生，呼叫端應先 seedUser(email)。 */
 export function mockAuth(overrides: Partial<AuthData> = {}): AuthData {
+  const email = overrides.email ?? 'user@test.com';
   return {
-    email: 'user@test.com',
+    email,
+    userId: overrides.userId ?? userIdFor(email),
     isAdmin: false,
     isServiceToken: false,
     ...overrides,
@@ -90,7 +118,9 @@ export function jsonRequest(
   return new Request(url, opts);
 }
 
-/** 插入測試行程 + 天 + 權限 */
+/** 插入測試行程 + 天 + 權限。
+ *  V2 cutover (migration 0047): trips.owner / trip_permissions.email columns dropped。
+ *  helper 自動 INSERT users row + 用 user_id-keyed schema。 */
 export async function seedTrip(db: D1Database, opts: {
   id?: string;
   owner?: string;
@@ -98,14 +128,18 @@ export async function seedTrip(db: D1Database, opts: {
   published?: number;
 } = {}) {
   const id = opts.id || 'test-trip';
-  const owner = opts.owner || 'user@test.com';
+  const ownerEmail = opts.owner || 'user@test.com';
   const days = opts.days || 3;
   const published = opts.published ?? 1;
+  const ownerUserId = `test-user-${ownerEmail.replace(/[^a-z0-9]/gi, '-')}`;
 
-  // Migration 0045 dropped self_drive (Q1 — replaced by default_travel_mode='driving').
   await db.prepare(
-    'INSERT OR IGNORE INTO trips (id, name, owner, title, countries, published) VALUES (?, ?, ?, ?, ?, ?)'
-  ).bind(id, id, owner, `Test Trip ${id}`, 'JP', published).run();
+    'INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)'
+  ).bind(ownerUserId, ownerEmail, ownerEmail.split('@')[0]).run();
+
+  await db.prepare(
+    'INSERT OR IGNORE INTO trips (id, name, owner_user_id, title, countries, published) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(id, id, ownerUserId, `Test Trip ${id}`, 'JP', published).run();
 
   for (let i = 1; i <= days; i++) {
     await db.prepare(
@@ -114,10 +148,10 @@ export async function seedTrip(db: D1Database, opts: {
   }
 
   await db.prepare(
-    'INSERT OR IGNORE INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?)'
-  ).bind(owner, id, 'admin').run();
+    'INSERT OR IGNORE INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, ?)'
+  ).bind(ownerUserId, id, 'owner').run();
 
-  return { id, owner };
+  return { id, owner: ownerEmail, ownerUserId };
 }
 
 /** 插入測試 entry（Phase 3：不再有 location 欄位；spatial 走 poi_id JOIN pois） */

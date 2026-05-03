@@ -82,16 +82,35 @@ async function main() {
   console.log(`backfill-user-id.js — ${APPLY ? 'APPLY' : 'DRY-RUN'} mode (${LOCAL ? 'local' : 'prod'})`);
   console.log('---');
 
-  // 1. Distinct emails from 3 sources
-  const savedPoiEmails = await queryD1(
-    `SELECT DISTINCT email FROM saved_pois WHERE email IS NOT NULL AND user_id IS NULL`,
-  );
-  const permissionEmails = await queryD1(
-    `SELECT DISTINCT email FROM trip_permissions WHERE email IS NOT NULL AND email != '*' AND user_id IS NULL`,
-  );
-  const ideaEmails = await queryD1(
-    `SELECT DISTINCT added_by AS email FROM trip_ideas WHERE added_by IS NOT NULL AND added_by_user_id IS NULL`,
-  );
+  // V2 cutover (migration 0046+0047): saved_pois.email / trip_permissions.email
+  // / trip_ideas table 都已 dropped。本 script 是 V2-P1 prep 工具，post-cutover
+  // 應 deprecate；保留 only 為了 dev 重跑 0033 後 backfill 的 case。
+  // Guard: 若任一 source table 已沒有 email column，script 視為 deprecated 並直接 exit。
+  const tableInfo = async (table, column) => {
+    const rows = await queryD1(
+      `SELECT 1 FROM pragma_table_info('${table}') WHERE name = '${column}' LIMIT 1`,
+    );
+    return rows.length > 0;
+  };
+
+  const hasSavedPoisEmail = await tableInfo('saved_pois', 'email');
+  const hasPermEmail = await tableInfo('trip_permissions', 'email');
+  const hasTripIdeas = (await queryD1(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='trip_ideas' LIMIT 1`)).length > 0;
+  if (!hasSavedPoisEmail && !hasPermEmail && !hasTripIdeas) {
+    console.log('post-V2-cutover: saved_pois.email / trip_permissions.email / trip_ideas all gone. Nothing to backfill — script deprecated.');
+    return;
+  }
+
+  // 1. Distinct emails from up to 3 sources (skip dropped tables/columns)
+  const savedPoiEmails = hasSavedPoisEmail
+    ? await queryD1(`SELECT DISTINCT email FROM saved_pois WHERE email IS NOT NULL AND user_id IS NULL`)
+    : [];
+  const permissionEmails = hasPermEmail
+    ? await queryD1(`SELECT DISTINCT email FROM trip_permissions WHERE email IS NOT NULL AND email != '*' AND user_id IS NULL`)
+    : [];
+  const ideaEmails = hasTripIdeas
+    ? await queryD1(`SELECT DISTINCT added_by AS email FROM trip_ideas WHERE added_by IS NOT NULL AND added_by_user_id IS NULL`)
+    : [];
 
   const allEmails = new Set([
     ...savedPoiEmails.map((r) => r.email),
@@ -100,9 +119,9 @@ async function main() {
   ]);
 
   console.log(`Distinct emails to backfill:`);
-  console.log(`  saved_pois:        ${savedPoiEmails.length}`);
-  console.log(`  trip_permissions:  ${permissionEmails.length}`);
-  console.log(`  trip_ideas:        ${ideaEmails.length}`);
+  console.log(`  saved_pois:        ${savedPoiEmails.length}${hasSavedPoisEmail ? '' : ' (column dropped)'}`);
+  console.log(`  trip_permissions:  ${permissionEmails.length}${hasPermEmail ? '' : ' (column dropped)'}`);
+  console.log(`  trip_ideas:        ${ideaEmails.length}${hasTripIdeas ? '' : ' (table dropped)'}`);
   console.log(`  Combined unique:   ${allEmails.size}`);
 
   // 2. Lookup users.id per email
@@ -122,17 +141,21 @@ async function main() {
   console.log(`Users found:    ${foundUsers} / ${allEmails.size}`);
   console.log(`Users missing:  ${allEmails.size - foundUsers} (這些 email 還沒 Google login)`);
 
-  // 3. UPDATE rows (or report)
+  // 3. UPDATE rows (or report) — skip dropped tables/columns
   let updates = 0;
   for (const [email, uid] of emailToUid) {
-    const sqlSaved = `UPDATE saved_pois SET user_id = '${uid}' WHERE email = '${email.replace(/'/g, "''")}' AND user_id IS NULL`;
-    const sqlPerm = `UPDATE trip_permissions SET user_id = '${uid}' WHERE email = '${email.replace(/'/g, "''")}' AND user_id IS NULL`;
-    const sqlIdea = `UPDATE trip_ideas SET added_by_user_id = '${uid}' WHERE added_by = '${email.replace(/'/g, "''")}' AND added_by_user_id IS NULL`;
+    const escEmail = email.replace(/'/g, "''");
 
     if (APPLY) {
-      await queryD1(sqlSaved);
-      await queryD1(sqlPerm);
-      await queryD1(sqlIdea);
+      if (hasSavedPoisEmail) {
+        await queryD1(`UPDATE saved_pois SET user_id = '${uid}' WHERE email = '${escEmail}' AND user_id IS NULL`);
+      }
+      if (hasPermEmail) {
+        await queryD1(`UPDATE trip_permissions SET user_id = '${uid}' WHERE email = '${escEmail}' AND user_id IS NULL`);
+      }
+      if (hasTripIdeas) {
+        await queryD1(`UPDATE trip_ideas SET added_by_user_id = '${uid}' WHERE added_by = '${escEmail}' AND added_by_user_id IS NULL`);
+      }
     }
     updates++;
   }

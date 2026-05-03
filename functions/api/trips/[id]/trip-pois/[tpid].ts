@@ -41,7 +41,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const [hasPerm, belongsToTrip] = await Promise.all([
-    hasWritePermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth, id, auth.isAdmin),
     verifyTripPoiBelongsToTrip(db, tripPoiId, id),
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');
@@ -131,7 +131,7 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const [hasPerm, belongsToTrip] = await Promise.all([
-    hasWritePermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth, id, auth.isAdmin),
     verifyTripPoiBelongsToTrip(db, tripPoiId, id),
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

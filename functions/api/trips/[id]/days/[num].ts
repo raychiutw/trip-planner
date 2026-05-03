@@ -56,7 +56,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const changedBy = auth.email;
   const db = context.env.DB;
 
-  if (!await hasWritePermission(db, auth.email, id, auth.isAdmin)) {
+  if (!await hasWritePermission(db, auth, id, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

@@ -7,8 +7,10 @@ import type { Env } from '../_types';
 // Migration 0045: dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default.
 // Added data_source/default_travel_mode/lang (Q1, Q2). `region` derived from
 // trip_destinations join — not a writable column.
+// V2 cutover phase 2 (migration 0047): trips.owner column dropped — 移除 'owner'
+// from PATCH-allowed fields。owner 改變需走 transfer-ownership flow（未實作，phase 3）。
 const ALLOWED_FIELDS = [
-  'name', 'owner', 'title', 'description',
+  'name', 'title', 'description',
   'countries', 'published',
   'data_source', 'default_travel_mode', 'lang',
 ] as const;
@@ -77,8 +79,9 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
 
   // Strict ownership check：只 owner 或 admin 可刪。Co-editor (trip_permissions
   // 列表上的) 雖然能編輯，但 destructive 操作必須 limit 到 owner。
-  const ownerEmail = typeof existing.owner === 'string' ? existing.owner.toLowerCase() : '';
-  if (!auth.isAdmin && ownerEmail !== auth.email.toLowerCase()) {
+  // V2 cutover phase 2: 純 owner_user_id check (owner email column dropped)
+  const ownerUid = typeof existing.owner_user_id === 'string' ? existing.owner_user_id : null;
+  if (!auth.isAdmin && (!auth.userId || ownerUid !== auth.userId)) {
     throw new AppError('PERM_DENIED', '僅行程擁有者或管理者可刪除');
   }
 
@@ -151,7 +154,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
   const db = context.env.DB;
   const [hasPerm, existing] = await Promise.all([
-    hasWritePermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth, id, auth.isAdmin),
     db.prepare('SELECT * FROM trips WHERE id = ?').bind(id).first() as Promise<Record<string, unknown> | null>,
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

@@ -3,6 +3,51 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.20.0] - 2026-05-04
+
+**Major upgrade** — V2 owner email→user_id 完整 cutover + trip_ideas 概念退場
+（合一進「我的收藏」universal pool）+ tp-request 行為簡化（拔 mode/intent 分流）。
+
+### Breaking
+
+- **Schema cutover (migration 0046+0047)** — `saved_pois.email` / `trip_permissions.email` / `trips.owner` (email column) **DROPPED**。所有 ownership / permission 改純 `user_id`-keyed。**前置條件**：所有 prod user 必須有 V2 OAuth `users.id`。
+- **`trip_ideas` table dropped** — 「備案」概念合一進 `saved_pois` (universal pool)。`?sheet=ideas` URL pattern retired (legacy URL graceful degrade to default tab)。`functions/api/trip-ideas.ts` + `IdeasTabContent.tsx` + 5 個相關 tests 一併移除。
+- **`trip_permissions.email='*'` wildcard** — phase 2 cutover 先 drop，未來改 dedicated `public_trips` column (phase 3)。
+
+### Added
+
+- **「我的收藏」加入行程 fast-path UI** — `route /saved-pois/:id/add-to-trip`，全頁 form (DESIGN.md L390-414)，6 fields。stay duration 依 POI type heuristic。**不走** message-based tp-request 避免 LLM 8 秒等待感。
+- **`POST /api/saved-pois/:id/add-to-trip` REST endpoint** — fast-path inserts trip_entries + trip_pois，travel_* 背景 fill。
+- **「目前在 N 個行程」徽章** — `GET /api/saved-pois` 用 `json_group_array` 一次 LEFT JOIN trip_pois (避 N+1)。
+- **`trip_requests.actions_taken` audit log column** — reply 必含「我做了什麼」摘要 footer，旅伴可即時 catch overreach。
+- **Decision Rubric 取代 mode/intent matrix** — tp-request SKILL.md：明確動作詞 → 寫資料；純疑問 → 回覆；模糊 → 保守 default。含 HuiYun 「Day 2 換成沖繩そば」 worked example。
+- **`X-Request-Dry-Run: 1` companion header** — DX-C4 escape hatch；Ray 排查 LLM 誤判用。
+- **`scripts/verify-user-backfill.ts`** — E-H4 pre-PR gate；列出 4 表 email column 任何 orphan，0 才能 migrate。
+- **`scripts/fixup-local-users.sql`** — local dev seed 補 synthetic users。`init-local-db.js` Step 2.5 自動套用。
+
+### Changed
+
+- **`tp-request` SKILL.md (4 平台)** — `.claude` `.codex` `.agents` 同步；意圖安全矩陣整段拔除；security.md 加 saved-pois 5 條 white-list。
+- **`_auth.ts` `hasPermission` / `hasWritePermission`** — 純 user_id-keyed query；26 callers 改 pass `auth` object 而非 `auth.email`。
+- **`AuthData` type** 加 `userId: string | null`。
+- **DESIGN.md** 加 V2 cutover spec section。
+- **`docs/design-sessions/terracotta-preview-v2.html`** 加 3 frames mockup。
+- **`SHEET_TABS`** `['itinerary','ideas','map','chat']` → `['itinerary','map','chat']`。
+
+### Infrastructure
+
+- **D1 time-travel bookmark `00000c7e-00000000-00005060-c83adc25887a5d6b61bffb2004e726d3`** 為 phase 1+2 rollback point。
+- **autoplan 13 must-fix 全 integrate** — Codex 撞 usage limit 期間跑 [subagent-only]，REVISE verdict 由 Ray override D5=B 維持 Big Bang。
+
+### Migration runbook
+
+phase 1 (0046) auto-applied。phase 2 (0047) 推薦 manual gate：
+1. confirm commit 1-6 deploy + code 100% 走 user_id-only auth
+2. soak ≥ 1 hr 觀察 prod logs
+3. `bun scripts/verify-user-backfill.ts` 對 prod PASS (0 orphans)
+4. `wrangler d1 backup` 記 bookmark
+5. `wrangler d1 migrations apply trip-planner-db --remote`
+
 ## [2.19.17] - 2026-05-03
 
 ### Fixed

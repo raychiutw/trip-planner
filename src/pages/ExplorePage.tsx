@@ -42,6 +42,14 @@ interface SavedPoiRow {
   poiType: string;
   savedAt: string;
   note: string | null;
+  /** GET /api/saved-pois 一次 LEFT JOIN trip_pois 反查「目前在哪些 trip」 */
+  usages?: Array<{
+    tripId: string;
+    tripName: string;
+    dayNum: number | null;
+    dayDate: string | null;
+    entryId: number | null;
+  }>;
 }
 
 interface TripPickerRow {
@@ -309,6 +317,23 @@ const SCOPED_STYLES = `
 .explore-poi-card .poi-actions button:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .explore-poi-card .poi-actions button.saved { background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent); }
 .explore-poi-card .poi-actions button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.explore-poi-card .poi-usage-badge {
+  font-size: var(--font-size-footnote);
+  color: var(--color-muted);
+  margin-top: 4px;
+}
+.explore-poi-card .poi-actions-saved { display: flex; gap: 12px; align-items: center; margin-top: 8px; }
+.explore-poi-card .poi-select-label {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+}
+.explore-poi-card .poi-add-link {
+  font-size: var(--font-size-footnote);
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.explore-poi-card .poi-add-link:hover { text-decoration: underline; }
 
 .explore-poi-checkbox {
   width: 22px; height: 22px;
@@ -919,6 +944,7 @@ export default function ExplorePage() {
               <div className="explore-poi-grid">
                 {saved.map((row) => {
                   const isSelected = selectedSavedIds.has(row.id);
+                  const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
                   return (
                     <article
                       className={`explore-poi-card ${isSelected ? 'is-selected' : ''}`}
@@ -928,10 +954,13 @@ export default function ExplorePage() {
                       <div className="poi-category">{row.poiType}</div>
                       <div className="poi-name">{row.poiName}</div>
                       {row.poiAddress && <div className="poi-address">{row.poiAddress}</div>}
-                      <div className="poi-actions">
-                        <label
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-                        >
+                      {usageCount > 0 && (
+                        <div className="poi-usage-badge" data-testid={`saved-usage-badge-${row.id}`}>
+                          目前在 {usageCount} 個行程
+                        </div>
+                      )}
+                      <div className="poi-actions poi-actions-saved">
+                        <label className="poi-select-label">
                           <input
                             type="checkbox"
                             className="explore-poi-checkbox"
@@ -939,10 +968,15 @@ export default function ExplorePage() {
                             onChange={() => toggleSavedSelection(row.id)}
                             data-testid={`saved-check-${row.id}`}
                           />
-                          <span style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-muted)' }}>
-                            {isSelected ? '已選' : '選取'}
-                          </span>
+                          <span>{isSelected ? '已選' : '選取'}</span>
                         </label>
+                        <a
+                          href={`/saved-pois/${row.id}/add-to-trip`}
+                          className="poi-add-link"
+                          data-testid={`saved-add-to-trip-${row.id}`}
+                        >
+                          加入行程 →
+                        </a>
                       </div>
                     </article>
                   );

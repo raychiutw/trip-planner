@@ -6,11 +6,11 @@ import type { Env } from '../../../../_types';
 const ALLOWED_TABLES = ['trips', 'trip_days', 'trip_entries', 'pois', 'trip_pois', 'poi_relations', 'trip_docs', 'trip_doc_entries', 'trip_requests', 'trip_permissions'] as const;
 type AllowedTable = typeof ALLOWED_TABLES[number];
 
+// V2 cutover (migration 0047): trips.owner dropped → owner_user_id; trip_permissions.email
+// dropped → user_id only。Pre-cutover audit rows referencing 'owner' / 'email' columns
+// 不可 rollback（rewriteable via human migration; 此處 surface clear 失敗）。
 const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
-  // Migration 0045: trips dropped og_description/self_drive/food_prefs/auto_scroll/footer/is_default;
-  // added data_source/default_travel_mode/lang. pois dropped maps; renamed google_rating → rating
-  // and added 6 OSM追溯 cols.
-  trips:            ['id', 'name', 'owner', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'created_at', 'updated_at'],
+  trips:            ['id', 'name', 'owner_user_id', 'title', 'description', 'countries', 'published', 'data_source', 'default_travel_mode', 'lang', 'created_at', 'updated_at'],
   trip_days:        ['id', 'trip_id', 'day_num', 'date', 'day_of_week', 'label', 'title', 'updated_at'],
   trip_entries:     ['id', 'day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min', 'travel_distance_m', 'travel_computed_at', 'travel_source', 'poi_id', 'updated_at'],
   pois:             ['id', 'type', 'name', 'description', 'note', 'address', 'phone', 'email', 'website', 'hours', 'rating', 'category', 'mapcode', 'lat', 'lng', 'country', 'source', 'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source', 'data_fetched_at', 'created_at', 'updated_at'],
@@ -18,8 +18,8 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
   trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],
-  trip_requests:    ['id', 'trip_id', 'mode', 'message', 'submitted_by', 'reply', 'status', 'created_at'],
-  trip_permissions: ['id', 'email', 'trip_id', 'role', 'created_at'],
+  trip_requests:    ['id', 'trip_id', 'mode', 'message', 'submitted_by', 'reply', 'status', 'actions_taken', 'created_at'],
+  trip_permissions: ['id', 'user_id', 'trip_id', 'role', 'created_at'],
 };
 
 interface AuditRow {

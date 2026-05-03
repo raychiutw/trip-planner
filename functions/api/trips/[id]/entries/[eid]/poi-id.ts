@@ -26,7 +26,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   const db = context.env.DB;
 
   const [hasPerm, belongsToTrip] = await Promise.all([
-    hasWritePermission(db, auth.email, id, auth.isAdmin),
+    hasWritePermission(db, auth, id, auth.isAdmin),
     verifyEntryBelongsToTrip(db, entryId, id),
   ]);
   if (!hasPerm) throw new AppError('PERM_DENIED');

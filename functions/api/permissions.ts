@@ -29,16 +29,18 @@ import type { Env } from './_types';
 /** 檢查 auth user 是否為該 trip 的 owner（admin 自動 pass）。 */
 export async function ensureCanManageTripPerms(
   context: { env: Env },
-  auth: { email: string; isAdmin: boolean },
+  auth: { email: string; userId: string | null; isAdmin: boolean },
   tripId: string,
 ): Promise<void> {
   if (auth.isAdmin) return;
+  // V2 cutover phase 2: 純 owner_user_id check (owner email column dropped)
+  if (!auth.userId) throw new AppError('PERM_ADMIN_ONLY', '需 V2 OAuth 登入');
   const owner = await context.env.DB
-    .prepare('SELECT owner FROM trips WHERE id = ?')
+    .prepare('SELECT owner_user_id FROM trips WHERE id = ?')
     .bind(tripId)
-    .first<{ owner: string | null }>();
+    .first<{ owner_user_id: string | null }>();
   if (!owner) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
-  if ((owner.owner ?? '').toLowerCase() !== auth.email.toLowerCase()) {
+  if (owner.owner_user_id !== auth.userId) {
     throw new AppError('PERM_ADMIN_ONLY', '僅行程擁有者或管理者可操作共編');
   }
 }
@@ -57,9 +59,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
   await ensureCanManageTripPerms(context, auth, tripId);
 
+  // V2 cutover phase 2: trip_permissions.email column dropped — JOIN users for display
   const { results } = await context.env.DB
     .prepare(
-      'SELECT id, email, trip_id, role, user_id FROM trip_permissions WHERE trip_id = ? ORDER BY email',
+      `SELECT tp.id, u.email, tp.trip_id, tp.role, tp.user_id
+       FROM trip_permissions tp
+       LEFT JOIN users u ON u.id = tp.user_id
+       WHERE tp.trip_id = ?
+       ORDER BY u.email`,
     )
     .bind(tripId)
     .all();
@@ -181,14 +188,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   if (invitedUser) {
     // ===== Branch A: invited email 已註冊 =====
+    // V2 cutover phase 2: 純 user_id-keyed insert (email column dropped)
     let permRow: { id: number };
     try {
       const row = await context.env.DB
         .prepare(
-          `INSERT INTO trip_permissions (email, trip_id, role, user_id)
-           VALUES (?, ?, ?, ?) RETURNING *`,
+          `INSERT INTO trip_permissions (trip_id, role, user_id)
+           VALUES (?, ?, ?) RETURNING *`,
         )
-        .bind(lowerEmail, tripId, role, invitedUser.id)
+        .bind(tripId, role, invitedUser.id)
         .first<{ id: number }>();
       if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
       permRow = row;

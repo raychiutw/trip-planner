@@ -9900,8 +9900,121 @@ body {
 </section>
 
 
+<!-- ============================================================
+     V2 Cutover (migration 0046+0047) — 2026-05-04
+     新增/退場 sections。完整 spec see DESIGN.md「V2 Owner Cutover & saved_pois Universal Pool」
+     ============================================================ -->
+
+<section class="preview-section">
+  <h2 style="font-size:24px; font-weight:700; margin:48px 0 8px;">V2 Cutover · saved_pois 加入行程 fast-path</h2>
+  <p class="desc" style="margin-bottom:24px;">
+    Migration 0046 把「備案 (trip_ideas)」概念合一進「我的收藏 (saved_pois)」universal pool。
+    旅伴 trip-scoped 想法 retire；所有「想去但沒進行程」景點走 saved_pois。Page route
+    <code>/saved-pois/:id/add-to-trip</code>，全頁 form (DESIGN.md L390-414 form 規範 — &gt;3 fields + select + time picker 必走全頁，**不是** modal)。
+  </p>
+  <div class="preview-frame-label">
+    <strong>FRAME 1</strong> Compact 375px · AddSavedPoiToTripPage · 主流程
+    <span class="desc">TitleBar (back +「加入」 primary action) + POI summary card + 6-row form + tp-page-bottom-bar</span>
+  </div>
+  <div class="preview-stage is-mobile" style="background: var(--color-background); padding: 0;">
+    <header class="tp-titlebar" style="position:sticky; top:0;">
+      <button class="tp-titlebar-back" type="button" aria-label="返回">‹</button>
+      <h1 class="tp-titlebar-title">加入行程</h1>
+      <div class="tp-titlebar-actions">
+        <button class="tp-titlebar-action is-primary" type="button">
+          <span>✓</span><span class="tp-titlebar-action-label">加入</span>
+        </button>
+      </div>
+    </header>
+    <main style="padding: 16px; display:flex; flex-direction:column; gap:16px;">
+      <div style="padding:16px; border-radius:var(--radius-md); background:var(--color-bg-muted, #FAF4EA); border:1px solid var(--color-border);">
+        <h3 style="margin:0 0 4px; font-size:16px;">沖繩美麗海水族館</h3>
+        <p style="margin:0; color:var(--color-muted); font-size:13px;">沖繩縣國頭郡本部町石川424</p>
+        <p style="margin:4px 0 0; color:var(--color-muted); font-size:13px;">備註：必看鯨鯊</p>
+      </div>
+      <div class="tp-form" style="display:flex; flex-direction:column; gap:16px;">
+        <div class="tp-form-row">
+          <label>行程</label>
+          <select><option>2026 沖繩五日自駕遊</option></select>
+        </div>
+        <div class="tp-form-row">
+          <label>第幾天</label>
+          <select><option>Day 3 · 北部 (2026-07-28)</option></select>
+        </div>
+        <div class="tp-form-row">
+          <label>放置位置</label>
+          <select><option>加在當天最後</option></select>
+        </div>
+        <div class="tp-form-row">
+          <label>開始時間（可空，依景點類型自動推）</label>
+          <input type="time" value="10:00">
+        </div>
+        <div class="tp-form-row">
+          <label>結束時間（可空，依停留時間預估推）</label>
+          <input type="time" value="12:00">
+        </div>
+      </div>
+    </main>
+    <div class="tp-page-bottom-bar">
+      <button class="tp-btn is-primary" type="button" style="width:100%;">加入行程</button>
+    </div>
+  </div>
+
+  <div class="preview-frame-label" style="margin-top:24px;">
+    <strong>FRAME 2</strong> 「目前在 N 個行程」 徽章 (saved POI card)
+    <span class="desc">ExplorePage saved tab 每筆 POI card 在 POI 名稱下方加 footnote 級徽章 + 「加入行程 →」 link。N=0 不渲染。</span>
+  </div>
+  <div class="preview-stage" style="padding:24px; background:var(--color-background);">
+    <article class="explore-poi-card" style="max-width:320px; padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-md);">
+      <div class="poi-category" style="font-size:11px; color:var(--color-muted); text-transform:uppercase; letter-spacing:.04em;">restaurant</div>
+      <div class="poi-name" style="font-size:17px; font-weight:600; margin-top:4px;">花笠食堂</div>
+      <div class="poi-address" style="font-size:13px; color:var(--color-muted); margin-top:2px;">那霸市牧志3-2-48</div>
+      <div class="poi-usage-badge" style="font-size:12px; color:var(--color-muted); margin-top:4px;">目前在 2 個行程</div>
+      <div class="poi-actions" style="display:flex; gap:12px; align-items:center; margin-top:12px;">
+        <label style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:var(--color-muted);">
+          <input type="checkbox"> 選取
+        </label>
+        <a href="#" style="font-size:12px; color:var(--color-accent); text-decoration:none;">加入行程 →</a>
+      </div>
+    </article>
+  </div>
+
+  <div class="preview-frame-label" style="margin-top:24px;">
+    <strong>FRAME 3</strong> 7-state matrix (compact diagrams)
+    <span class="desc">loading skeleton / empty no-trip CTA / error PersistentAlert / success navigate. conflict modal + optimistic + partial 同此 spec — 完整見 DESIGN.md。</span>
+  </div>
+  <div class="preview-stage" style="padding:24px; background:var(--color-background); display:flex; flex-direction:column; gap:16px;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+      <div style="padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-md);">
+        <strong style="font-size:12px; color:var(--color-muted);">LOADING</strong>
+        <div style="background:#EADFCF; height:36px; border-radius:6px; margin-top:8px;"></div>
+        <div style="background:#EADFCF; height:36px; border-radius:6px; margin-top:12px;"></div>
+        <div style="background:#EADFCF; height:36px; border-radius:6px; margin-top:12px;"></div>
+      </div>
+      <div style="padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-md);">
+        <strong style="font-size:12px; color:var(--color-muted);">EMPTY (NO TRIP)</strong>
+        <div style="text-align:center; padding:20px; border:1px dashed var(--color-border); border-radius:var(--radius-md); margin-top:8px; color:var(--color-muted); font-size:13px;">
+          <p style="margin:0;">你還沒有任何行程</p>
+          <a href="#" style="display:inline-block; margin-top:8px; padding:8px 16px; border-radius:var(--radius-md); background:var(--color-accent); color:#fff; text-decoration:none; font-weight:600; font-size:12px;">建立第一個行程</a>
+        </div>
+      </div>
+      <div style="padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-md);">
+        <strong style="font-size:12px; color:var(--color-muted);">ERROR (NETWORK / 5xx)</strong>
+        <div style="padding:10px 12px; border-radius:var(--radius-md); background:rgba(217,120,72,.12); border:1px solid var(--color-accent); color:var(--color-accent); font-size:12px; margin-top:8px;">
+          加入失敗（HTTP 503）。你的選擇還在，請稍後重試。
+        </div>
+      </div>
+      <div style="padding:16px; border:1px solid var(--color-border); border-radius:var(--radius-md);">
+        <strong style="font-size:12px; color:var(--color-muted);">SUCCESS</strong>
+        <p style="font-size:13px; color:var(--color-foreground); margin-top:8px;">→ navigate <code>/trips?selected=:id&amp;day=N&amp;saved_added=1</code></p>
+        <p style="font-size:11px; color:var(--color-muted); margin-top:4px;">後續 toast 由 TripsListPage handle</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer class="tp-footer">
-  Tripline Terracotta Layout v2 · 切換 light / dark mode 檢查 chrome、content、modal · DESIGN.md v2026-04-30
+  Tripline Terracotta Layout v2 · 切換 light / dark mode 檢查 chrome、content、modal · DESIGN.md v2026-05-04
 </footer>
 
 </div>

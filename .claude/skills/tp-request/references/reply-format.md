@@ -15,6 +15,40 @@ curl -s -X PATCH \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"
 ```
 
+## DX-C2 — Reply 必須含「我做了什麼」摘要 footer
+
+V2 cutover (migration 0046) 規範：拔掉 mode/intent 分流後，旅伴無法從 mode 字面
+推測 skill 是「改了 trip 資料」還是「只回覆」。**所有 reply 必須在末尾加 actions footer**
+讓旅伴一眼看到 skill 實際做了什麼：
+
+- 寫資料的 reply：footer 列每個 API 動作的中文摘要 + 是否成功。
+  例：「已執行：將 Day 2 的『花笠食堂』替換成『沖繩そば專門店』、travel 已重算。」
+- 純回覆的 reply：footer 寫「未修改任何行程資料」。
+- dry-run reply：footer 寫「**dry-run 模式**：以下為將執行但 **未實際寫入** 的動作」。
+
+範例 footer：
+
+```
+---
+**我做了什麼**：
+- 替換 Day 2 entry #1287（花笠食堂 → 沖繩そば專門店）
+- 重算 Day 2 #1286 → #1287、#1287 → #1288 兩段車程
+- 已寫入：trip_entries / trip_pois
+```
+
+伴隨 `actions_taken` JSON column（DX-C4 audit log）寫入 trip_requests row：
+```json
+[
+  {"endpoint":"PATCH /api/trips/:id/entries/1287","summary":"replace POI"},
+  {"endpoint":"POST /api/trips/:id/entries/1287/trip-pois","summary":"attach 沖繩そば"},
+  {"endpoint":"PATCH /api/trips/:id/entries/1287 travel","summary":"recompute"}
+]
+```
+
+Ray 可 grep `trip_requests.actions_taken` 找誤判 case（reply 說做了 X 但實際只做 Y）。
+
+## 過長 reply
+
 若 reply 內容太長（超過 shell 單行限制），改用暫存 .js 檔：
 
 ```bash

@@ -62,9 +62,17 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
 /**
  * Authentication data attached to every request by _middleware.ts.
  * Stored on context.data.auth and passed through to API handlers.
+ *
+ * V2 cutover (migration 0046+0047): userId is the canonical identifier.
+ * email is retained for audit_log changedBy + display + dual-read fallback
+ * during the email→user_id transition. After phase 2 (DROP email columns),
+ * email becomes derived (JOIN users.email by id) for those use cases.
  */
 export interface AuthData {
+  /** Email — kept for audit_log changedBy + display. May fall back when userId is null. */
   email: string;
+  /** V2 user_id (TEXT uuid). null only for service-token / pre-V2 sessions. */
+  userId: string | null;
   isAdmin: boolean;
   isServiceToken: boolean;
 }
@@ -160,8 +168,10 @@ export interface Permission {
  */
 export interface SavedPoi {
   id: number;
-  /** owner email（V2 OAuth 之前暫用 email，不是 user_id FK） */
+  /** owner email — V2 cutover dual-read: kept for transition, dropped in phase 2 (migration 0047) */
   email: string;
+  /** owner user_id — V2 cutover canonical identifier */
+  userId: string | null;
   /** DB column `poi_id` — FK to pois(id) */
   poiId: number;
   /** DB column `saved_at` — ISO datetime */
@@ -173,52 +183,31 @@ export interface SavedPoi {
   poiLat?: number | null;
   poiLng?: number | null;
   poiType?: string;
+  /**
+   * GET /api/saved-pois 回傳每筆收藏目前出現在哪些 trip / day / entry。
+   * 透過 saved_pois.poi_id ← trip_pois.poi_id 反查（單一 LEFT JOIN + json_group_array）。
+   * 空陣列 = 此收藏尚未排進任何行程；可在 saved card 顯示「目前在 N 個 trip」徽章。
+   */
+  usages?: SavedPoiUsage[];
 }
 
-// ---------------------------------------------------------------------------
-// TripIdea — per-trip 的 maybe list（layout refactor Phase 1）
-// ---------------------------------------------------------------------------
-
-/**
- * A trip idea — per-trip 的 maybe list，與 trip_entries（排定時間軸）分離。
- *
- * DB table: trip_ideas
- * Columns: id, trip_id, poi_id, title, note, added_at, added_by,
- *          promoted_to_entry_id, archived_at
- *
- * GET response LEFT JOIN `pois` 補 POI 詳情（poiName / poiAddress / poiLat / poiLng / poiType）。
- *
- * mapRow renames (via json() deep camelCase):
- *   trip_id              -> tripId
- *   poi_id               -> poiId
- *   added_at             -> addedAt
- *   added_by             -> addedBy
- *   promoted_to_entry_id -> promotedToEntryId
- *   archived_at          -> archivedAt
- */
-export interface TripIdea {
-  id: number;
-  /** DB column `trip_id` */
+/** 一筆收藏在某 trip / day / entry 的出現紀錄（GET /api/saved-pois 回傳）。 */
+export interface SavedPoiUsage {
   tripId: string;
-  /** DB column `poi_id` — nullable（自由文字 idea 無 POI 引用） */
-  poiId?: number | null;
-  title: string;
-  note?: string | null;
-  /** DB column `added_at` — ISO datetime */
-  addedAt: string;
-  /** DB column `added_by` — email of adder */
-  addedBy?: string | null;
-  /** DB column `promoted_to_entry_id` — 若 idea 被排入 itinerary，指向新 entry；null 表未 promote */
-  promotedToEntryId?: number | null;
-  /** DB column `archived_at` — soft archive marker；null 表 active */
-  archivedAt?: string | null;
-  // LEFT JOIN pois 欄位
-  poiName?: string | null;
-  poiAddress?: string | null;
-  poiLat?: number | null;
-  poiLng?: number | null;
-  poiType?: string | null;
+  tripName: string;
+  dayNum: number | null;
+  dayDate: string | null;
+  entryId: number | null;
 }
+
+// ---------------------------------------------------------------------------
+// TripIdea — RETIRED in migration 0046 (V2 owner cutover)
+// ---------------------------------------------------------------------------
+//
+// 「備案」概念合一進「我的收藏」(saved_pois) — 跨 trip universal pool。
+// 詳見 design doc: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260504-002256.md
+// 既有 trip_ideas 資料 active rows 已 migrate 進 saved_pois (trip owner's pool)。
+// 「目前在哪些 trip」資訊改透過 SavedPoi.usages JOIN trip_pois 反查。
 
 /**
  * An audit log entry recording every insert / update / delete.

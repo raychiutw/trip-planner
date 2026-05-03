@@ -21,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
   const tripId = (row as Record<string, unknown>).trip_id as string;
-  if (!await hasPermission(env.DB, auth.email, tripId, auth.isAdmin)) {
+  if (!await hasPermission(env.DB, auth, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 

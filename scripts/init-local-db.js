@@ -106,6 +106,23 @@ for (const table of TABLES) {
   }
 }
 
+// Step 2.5: V2 cutover compat — fixup users + trips.owner for legacy display names
+// (seed/backup data has trips.owner = display name; V2 cutover requires email)
+const fixupSql = path.join(__dirname, 'fixup-local-users.sql');
+if (fs.existsSync(fixupSql)) {
+  console.log('\nStep 2.5/4: V2 cutover compat fixup (users + trips.owner)...');
+  try {
+    execSync(`npx wrangler d1 execute ${DB_NAME} --local --file "${fixupSql}"`, {
+      encoding: 'utf8',
+      timeout: 30000,
+      stdio: 'pipe',
+    });
+    console.log('  ✓ fixup applied');
+  } catch (err) {
+    console.log(`  ✗ fixup failed: ${err.message?.substring(0, 80)}`);
+  }
+}
+
 // Step 3: Verify
 console.log('\nStep 3/4: Verifying...');
 for (const table of TABLES) {

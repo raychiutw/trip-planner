@@ -7,7 +7,6 @@ import { SHEET_TABS, sheetPanelId, sheetTabId, type SheetTab } from '../../lib/t
 
 const TAB_LABELS: Record<SheetTab, string> = {
   itinerary: '行程',
-  ideas: '想法',
   map: '地圖',
   chat: '聊天',
 };

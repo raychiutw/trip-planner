@@ -194,6 +194,15 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'PATCH', pattern: /^\/api\/pois\/\d+$/ },
   { method: 'GET',   pattern: /^\/api\/trips\// },
   { method: 'GET',   pattern: /^\/api\/requests/ },
+  // V2 cutover (DX-C3): saved_pois 雙向搬運。tp-request scheduler 需要：
+  //   - 查/建/刪 saved_pois（對映 entry → 收藏 / 收藏 → entry 流程）
+  //   - 從收藏 fast-path 加入行程（D-C1 endpoint）
+  // companion scope binds writes to the request submitter (auth.userId), 不是 trip owner，
+  // 防 prompt injection 跨 user 操作（M2 security boundary）。
+  { method: 'GET',   pattern: /^\/api\/saved-pois(\/\d+)?$/ },
+  { method: 'POST',  pattern: /^\/api\/saved-pois$/ },
+  { method: 'DELETE', pattern: /^\/api\/saved-pois\/\d+$/ },
+  { method: 'POST',  pattern: /^\/api\/saved-pois\/\d+\/add-to-trip$/ },
 ];
 
 /** @internal — exported for unit testing */
@@ -215,11 +224,28 @@ async function handleAuth(
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // Mock auth for local development — DEV_MOCK_EMAIL set in .env.local (not in version control)
+  // Mock auth for local development — DEV_MOCK_EMAIL set in .dev.vars (not committed)
   if (env.DEV_MOCK_EMAIL) {
+    // Fail-safe：DEV_MOCK_EMAIL 不應該在 prod 啟用，意外設定的話 admin flag bypass 風險高。
+    // Env type 由 wrangler.toml 推出，沒固定 ENVIRONMENT/NODE_ENV — 走 Record cast 讀任意 key。
+    const envBag = env as unknown as Record<string, string | undefined>;
+    if (envBag.ENVIRONMENT === 'production' || envBag.NODE_ENV === 'production') {
+      return errorResponse(new AppError('SYS_INTERNAL', 'DEV_MOCK_EMAIL 不可在 production 啟用'));
+    }
     const email = env.DEV_MOCK_EMAIL.toLowerCase();
+    // V2 cutover：解析 mock email → user_id 一次。DB miss 一律 fail-closed，
+    // 避免「userId null + isAdmin true」短路 hasPermission 變成 admin bypass。
+    const userRow = await env.DB
+      .prepare('SELECT id FROM users WHERE email = ? LIMIT 1')
+      .bind(email)
+      .first<{ id: string }>()
+      .catch(() => null);
+    if (!userRow?.id) {
+      return errorResponse(new AppError('AUTH_REQUIRED', `DEV_MOCK_EMAIL=${email} 沒對應 users row — 跑 scripts/fixup-local-users.sql 或 V2 OAuth signup`));
+    }
     (context.data as Record<string, unknown>).auth = {
       email,
+      userId: userRow.id,
       isAdmin: email === (env.ADMIN_EMAIL || '').toLowerCase(),
       isServiceToken: false,
     };
@@ -300,6 +326,7 @@ async function handleAuth(
     }
     (context.data as Record<string, unknown>).auth = {
       email: userEmail,
+      userId: v2Session.uid,
       isAdmin: env.ADMIN_EMAIL ? userEmail === env.ADMIN_EMAIL.toLowerCase() : false,
       isServiceToken: false,
     };
@@ -342,6 +369,7 @@ async function handleAuth(
           }
           (context.data as Record<string, unknown>).auth = {
             email,
+            userId: tokenRow.user_id,
             isAdmin,
             isServiceToken,
             scopes: tokenRow.scopes,

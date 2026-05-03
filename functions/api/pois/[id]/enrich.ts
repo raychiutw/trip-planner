@@ -30,7 +30,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Permission: admin bypasses; non-admin needs tripId + write perm + POI link
   if (!auth.isAdmin) {
     if (!tripId) throw new AppError('DATA_VALIDATION', '非 admin 必須提供 tripId 參數');
-    if (!await hasWritePermission(db, auth.email, tripId, false)) {
+    if (!await hasWritePermission(db, auth, tripId, false)) {
       throw new AppError('PERM_DENIED');
     }
     const link = await db

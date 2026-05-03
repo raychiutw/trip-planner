@@ -54,9 +54,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const startDate = body.startDate as string | undefined;
   const endDate = body.endDate as string | undefined;
 
-  // PR-CC 2026-04-26：owner 強制 = auth.email，不再讀 body.owner（防偽造）。
-  const owner = auth.email;
-
   if (!id || !name || !startDate || !endDate) {
     throw new AppError('DATA_VALIDATION', '缺必填欄位：id, name, startDate, endDate');
   }
@@ -113,11 +110,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Migration 0045: dropped self_drive/og_description/footer/food_prefs/auto_scroll/is_default.
   // Added data_source/default_travel_mode/lang. `region` not added — derived from
   // trip_destinations join in /api/trips/:id (commit 8).
+  // V2 cutover phase 2: trips.owner email column dropped, NOT NULL owner_user_id only。
+  if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能建立行程');
   stmts.push(
     db.prepare(
-      'INSERT INTO trips (id, name, owner, title, description, countries, published, data_source, default_travel_mode, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, default_travel_mode, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
-      id, name, owner,
+      id, name, auth.userId,
       str(body.title),
       str(body.description),
       str(body.countries, 'JP'),
@@ -140,11 +139,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
   }
 
-  // trip_permissions: owner row (PR-CC 2026-04-26 owner role replaces admin)
+  // trip_permissions: owner row — V2 cutover phase 2: 純 user_id (email column dropped)
   stmts.push(
     db.prepare(
-      'INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?)',
-    ).bind(auth.email, id, 'owner'),
+      'INSERT INTO trip_permissions (user_id, trip_id, role) VALUES (?, ?, ?)',
+    ).bind(auth.userId, id, 'owner'),
   );
 
   // trip_destinations: write each dest with dest_order (commit 7)
@@ -196,20 +195,21 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const showAll = url.searchParams.get('all') === '1';
   const auth = getAuth(context);
 
-  // Migration 0045: dropped self_drive/auto_scroll/footer/is_default from baseCols.
-  // Added data_source/default_travel_mode/lang for client awareness.
-  // Note: `is_default` GONE — frontend fallback path (TripPage) updated to use
-  // "user's first published=1 trip" (commit 18).
-  const baseCols = `t.id AS tripId, t.name, t.owner, t.title,
+  // V2 cutover (migration 0047): trips.owner email column dropped — owner_user_id
+  // is canonical; LEFT JOIN users 拿 owner email for legacy display。
+  const baseCols = `t.id AS tripId, t.name,
+                    u.email AS owner, t.owner_user_id,
+                    t.title,
                     t.countries, t.published, t.data_source, t.default_travel_mode, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
                     (SELECT MIN(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS start_date,
                     (SELECT MAX(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS end_date,
-                    (SELECT COUNT(DISTINCT email) FROM trip_permissions p WHERE p.trip_id = t.id) AS member_count`;
+                    (SELECT COUNT(DISTINCT user_id) FROM trip_permissions p WHERE p.trip_id = t.id) AS member_count`;
 
+  const fromJoin = `FROM trips t LEFT JOIN users u ON u.id = t.owner_user_id`;
   const sql = showAll && auth?.isAdmin
-    ? `SELECT ${baseCols} FROM trips t ORDER BY t.name ASC`
-    : `SELECT ${baseCols} FROM trips t WHERE t.published = 1 ORDER BY t.name ASC`;
+    ? `SELECT ${baseCols} ${fromJoin} ORDER BY t.name ASC`
+    : `SELECT ${baseCols} ${fromJoin} WHERE t.published = 1 ORDER BY t.name ASC`;
 
   const { results } = await context.env.DB.prepare(sql).all();
   return json(results);

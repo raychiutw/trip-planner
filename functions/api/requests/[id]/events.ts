@@ -25,7 +25,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // 驗證使用者有權限看這個 request 所屬的 trip
   const req = await env.DB.prepare('SELECT trip_id FROM trip_requests WHERE id = ?').bind(id).first() as { trip_id: string } | null;
   if (!req) throw new AppError('DATA_NOT_FOUND');
-  if (!await hasPermission(env.DB, auth.email, req.trip_id, auth.isAdmin)) {
+  if (!await hasPermission(env.DB, auth, req.trip_id, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 
