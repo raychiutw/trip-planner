@@ -226,8 +226,10 @@ async function handleAuth(
 
   // Mock auth for local development — DEV_MOCK_EMAIL set in .dev.vars (not committed)
   if (env.DEV_MOCK_EMAIL) {
-    // Fail-safe：DEV_MOCK_EMAIL 不應該在 prod 啟用，意外設定的話 admin flag bypass 風險高
-    if (env.ENVIRONMENT === 'production' || env.NODE_ENV === 'production') {
+    // Fail-safe：DEV_MOCK_EMAIL 不應該在 prod 啟用，意外設定的話 admin flag bypass 風險高。
+    // Env type 由 wrangler.toml 推出，沒固定 ENVIRONMENT/NODE_ENV — 走 Record cast 讀任意 key。
+    const envBag = env as unknown as Record<string, string | undefined>;
+    if (envBag.ENVIRONMENT === 'production' || envBag.NODE_ENV === 'production') {
       return errorResponse(new AppError('SYS_INTERNAL', 'DEV_MOCK_EMAIL 不可在 production 啟用'));
     }
     const email = env.DEV_MOCK_EMAIL.toLowerCase();
