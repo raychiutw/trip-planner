@@ -265,19 +265,22 @@
 
 **Action button (`.tp-titlebar-action`)**
 - 唯一合法 class，禁止自製 ad-hoc class
-- 兩 variant: default outline / `.is-primary` accent filled
-- 桌機: rounded rect (radius-md 8px) + 1px border + icon + 文字 label
-- 手機: square 44×44 + radius-md (rounded corners) + 1px border + icon-only (label hidden via `.tp-titlebar-action-label` @media)
+- **Ghost icon button family**：無 border、透明底、hover 出 `--color-hover` + accent text。對齊 Apple HIG / iOS toolbar 慣例，跟 `.tp-titlebar-back` 同 family。
+- 兩 variant: default ghost / `.is-primary` accent filled (CTA 強調用，Tracerocta 實心)
+- 桌機: rounded rect (radius-md 8px) + icon + 文字 label
+- 手機: square 44×44 + radius-md + icon-only (label hidden via `.tp-titlebar-action-label` @media)
 - 44×44 min tap target
 - 多 action 水平排列, `.tp-titlebar-actions` wrapper, gap 6px
 
 **Button family radius 統一規則**
-所有 TitleBar button (含返回 / icon trigger / action) **一律 radius-md (8px)** — 不用 radius-full pill。對齊 mockup S23 spec + `.tp-embedded-menu-trigger` 既有 36×36 square + radius-md 視覺風格。
+所有 TitleBar button (含返回 / icon trigger / action) **一律 radius-md (8px)** — 不用 radius-full pill。
 
-**例外 button class** (都用 radius-md，差別在 size + border)
-- `.tp-titlebar-back` — 左側返回 button, 44×44 transparent icon-only + radius-md
-- `.tp-titlebar-icon-btn` — OverflowMenu kebab trigger, 44×44 icon-only no border + radius-md
-- `.tp-embedded-menu-trigger` — EmbeddedActionMenu 內部 kebab, 36×36 square + radius-md (smaller size for sub-trigger context)
+**全 TitleBar button class** (都 ghost、無 border、44×44 min tap)
+- `.tp-titlebar-back` — 左側返回 button, 44×44 ghost icon
+- `.tp-titlebar-action` — 右側 action (icon + 文字 / mobile icon-only)，可加 `.is-primary` 變實心 accent CTA
+- `.tp-titlebar-icon-btn` — OverflowMenu kebab trigger, 44×44 icon-only ghost
+- `.tp-titlebar-trip-picker` — Chat/Map「切換行程」 picker, ghost icon + text，radius-full（pill shape 因為 picker 內部 chevron + truncation 視覺需要 — 唯一例外）
+- 漢堡選單 (TripsListPage embedded EmbeddedActionMenu) 直接複用 `.tp-titlebar-action`，不再有獨立 `.tp-embedded-menu-trigger` class
 
 **Sub-content 規則 (TitleBar 下方)**
 - eyebrow + meta: 用 `.tp-page-eyebrow` + `.tp-page-meta` inline 在 TitleBar 下方第一行 (settings/list page 資訊密度需求)
