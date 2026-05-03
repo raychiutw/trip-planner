@@ -1,7 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react';
 import type { DaySummary } from '../../types/trip';
 import { parseLocalDate } from '../../lib/mapDay';
-import { dayColor } from '../../lib/dayPalette';
 import MapDayTab from './MapDayTab';
 
 /**
@@ -76,7 +75,6 @@ export default function DayNav({
         dayNum: d.dayNum,
         dayLabel: isToday ? `${eyebrowBase} · 今天` : eyebrowBase,
         dateLabel: formatPillLabel(d),
-        color: dayColor(d.dayNum),
         ariaLabel: buildAriaLabel(d),
       };
     }),
@@ -112,14 +110,13 @@ export default function DayNav({
       aria-label="行程日期"
       onKeyDown={handleKeyDown}
     >
-      {tabs.map(({ dayNum, dayLabel, dateLabel, color, ariaLabel }) => {
+      {tabs.map(({ dayNum, dayLabel, dateLabel, ariaLabel }) => {
         const isActive = dayNum === currentDayNum;
         return (
           <MapDayTab
             key={dayNum}
             dayLabel={dayLabel}
             dateLabel={dateLabel}
-            dayColor={color}
             isActive={isActive}
             onClick={() => onSwitchDay(dayNum)}
             ariaLabel={ariaLabel}

@@ -3,6 +3,25 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.14] - 2026-05-03
+
+### Changed
+
+- **行程明細頁 day strip 回到 Terracotta 單色** — 原本 day eyebrow + active
+  underline 套 10 色 day palette (sky/teal/amber/...),跟 V2 設計核心承諾
+  「UI chrome 嚴守單色 accent」分歧。本版收斂: idle muted, active 套
+  Terracotta accent。多色仍保留在地圖頁 (polyline + 底部 day strip + entry card),
+  服務於 N 條路徑的視覺區分需求。
+
+### For contributors
+
+- DESIGN.md L30 + L322-324 改寫 Day palette 例外限縮到「只用於地圖
+  (polyline + Map page chrome)」, 排除 trip 明細頁
+- mockup `terracotta-preview-v2.html` Section 11 拆兩 variant: trip detail (單色)
+  vs Map page (多色), 對齊新 spec
+- DayNav.tsx 拿掉 dayColor import + 2 處 prop pass; MapDayTab component API 不動
+  (`dayColor?` 仍 optional, MapPage 端仍傳)
+
 ## [2.19.13] - 2026-05-03
 
 ### Fixed

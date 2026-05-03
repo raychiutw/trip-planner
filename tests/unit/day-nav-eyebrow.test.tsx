@@ -113,4 +113,28 @@ describe('DayNav — MapDayTab 共用視覺對齊', () => {
     expect(nav).toBeTruthy();
     expect(nav?.classList.contains('tp-map-day-tabs--sticky')).toBe(true);
   });
+
+  it('Trip detail 不傳 dayColor: eyebrow 無 inline color, button 無 --day-color (regression lock for v2.19.14)', () => {
+    // v2.19.14 SoT: DESIGN.md L30 規範「Day palette 例外只用於地圖」, trip 明細
+    // 嚴守 Terracotta 單色 accent。本 test lock DayNav 不傳 dayColor 給
+    // MapDayTab — future regression (重新加 dayColor) 會被這 case 抓到。
+    render(
+      <DayNav
+        days={makeDays()}
+        currentDayNum={2}
+        onSwitchDay={vi.fn()}
+        todayDayNum={2}
+      />,
+    );
+    // 所有 eyebrow span 都不應該有 inline color style
+    const eyebrows = Array.from(document.querySelectorAll('.tp-map-day-tab-eyebrow'));
+    for (const eyebrow of eyebrows) {
+      expect(eyebrow.getAttribute('style') || '').not.toMatch(/color:/i);
+    }
+    // 所有 button 都不應該有 --day-color CSS var (active border-bottom 走 default accent)
+    const buttons = Array.from(document.querySelectorAll('.tp-map-day-tab'));
+    for (const btn of buttons) {
+      expect(btn.getAttribute('style') || '').not.toMatch(/--day-color/);
+    }
+  });
 });

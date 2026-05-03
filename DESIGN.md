@@ -27,7 +27,7 @@
 | `--color-border` | `#EADFCF` | hairline |
 | `--color-line-strong` | `#C8B89F` | divider strong |
 
-> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）只用於地圖 polyline + day chip — 對應 Data Visualization 例外，UI chrome 仍嚴守 terracotta 單色。
+> **Day palette exception**: 10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖** — map polyline + Map page bottom day strip eyebrow + active underline。對應 Data Visualization 例外。**Trip 明細頁 day strip 嚴守 Terracotta 單色 accent**（idle eyebrow muted, active eyebrow + underline 用 `var(--color-accent)`），不套 dayColor。理由：多色服務於地圖 N 條線視覺區分需求；trip 明細頁不需要區分多 day，反而 chrome 一致性更重要。
 
 ## Typography
 
@@ -319,13 +319,15 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 
 **Tab 規格 (`.tp-map-day-tab`)**
 - text-only (eyebrow + date)，無 chip background fill / border
-- Eyebrow: `DAY 01` 套 per-day color (`dayColor(dayNum)` from `src/lib/dayPalette` — 10-tone Tailwind -500 palette)
+- Eyebrow: `DAY 01` — **Map page** 套 per-day color (`dayColor(dayNum)` from `src/lib/dayPalette` — 10-tone Tailwind -500 palette)；**Trip 明細頁** 不傳 `dayColor` prop，用 default token (idle muted, active accent)
 - Date: 14px / 600 weight, `color-foreground` (active 套 accent color)
-- Active state: 2px `border-bottom` 用 `--day-color` inline override (per-day color underline)
+- Active state: 2px `border-bottom`-color — **Map page** 用 `--day-color` inline override (per-day color underline)；**Trip 明細頁** 用 `var(--color-accent)` (Terracotta 單色)
 - Idle: muted text + transparent border-bottom
 - Hover (idle): `color-foreground`
 - 36px min height (扁平 strip — 不搶佔垂直空間，對齊 mockup S20)
 - Today marker: eyebrow 文字後綴「· 今天」（不是另一個 pill）
+
+> **Day color 規範**：Map page 內 chrome (day strip eyebrow + underline + entry card num + entry card eyebrow) 套 dayColor 服務於「N 條 polyline 視覺區分」需求；Trip 明細頁 chrome 嚴守 Terracotta 單色 accent — 多色不溢出地圖 context。詳見上方「Day palette exception」。
 
 **Strip container (`.tp-map-day-tabs`)**
 - 共用 wrapper：horizontal scroll + scrollbar hidden + glass blur 14px

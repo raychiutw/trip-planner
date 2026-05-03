@@ -66,7 +66,7 @@ openspec/           config.yaml  specs/  changes/
 - 設計系統：`DESIGN.md`（暖色有機風、Apple HIG、V2 Terracotta accent）
 - **Desktop 2-col layout（≥1024px）**：`grid-template-columns: clamp(375px, 30vw, 400px) 1fr`，左欄行程 timeline，右欄 `TripMapRail` sticky Leaflet 地圖；`<1024px` 單欄 mobile-first
 - **GlobalBottomNav 5-tab IA（≤760px）**：`聊天 / 行程 / 地圖 / 探索 / 帳號`（logged-in）or `... / 登入`（guest），全部 global route。配合 `ActiveTripContext`，從 trip 進其他 tab 自動帶入當前 trip context（/chat 預選對應 trip thread，/map 預設該 trip 的 pin overview，/explore region 預設該 trip's countries）。「更多」 sheet 4 個 action 已遷移：共編 → trip TitleBar；切換行程 → /trips card grid；外觀 → AccountPage；下載 → trip TitleBar OverflowMenu。
-- **Day palette**：10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）用於地圖 polyline，對應 DESIGN.md Data Visualization 例外；UI chrome 仍嚴守 V2 Terracotta 單一 accent
+- **Day palette**：10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖** — map polyline + Map page bottom day strip eyebrow/underline + entry card num/eyebrow，對應 DESIGN.md Data Visualization 例外；trip 明細頁 day strip + 其他 UI chrome 嚴守 V2 Terracotta 單一 accent（不傳 dayColor prop）
 
 ## 資料架構（POI Schema）
 
