@@ -67,13 +67,13 @@ const SCOPED_STYLES = `
   margin-top: 24px;
 }
 
-/* grid template rows (chrome auto + main 1fr) 取代 flex column —
- * flex 的 default flex-shrink:1 會讓 TitleBar 在 main 內容很長時被擠壓。 */
+/* Block stacking — TitleBar (sticky) + TripPage 自然 stack。
+ * 不能用 grid + height: 100% — 那會把 TitleBar 的 sticky containing block
+ * 限制在 row 1 (64px) 內，捲動超過 viewport 高度 TitleBar 就被擠出。
+ * 需要 containing block 跟 .ocean-shell 一樣長,sticky 才能整段 viewport 黏住。 */
 .tp-embedded-trip {
   position: relative;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: 100%;
+  display: block;
   min-height: 100%;
 }
 .tp-embedded-menu-trigger {
