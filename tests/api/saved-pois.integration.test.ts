@@ -1,12 +1,15 @@
-/* TODO v2.20.1 — V2 cutover (migration 0046+0047) 改 schema：trips.owner / trip_permissions.email / saved_pois.email columns dropped。本檔 pin 舊 schema SQL 字串斷言，需語意級 rewrite。 */
 /**
  * Integration test — GET/POST /api/saved-pois + DELETE /api/saved-pois/:id
  *
  * 涵蓋：auth gate、UNIQUE 衝突、FK 404、permission 403、DESC 排序。
+ *
+ * v2.21.1 rewrite — V2 cutover (migration 0046+0047) 後 saved_pois.email column
+ * dropped；改純 user_id-keyed inserts via seedUser helper. helper userIdFor()
+ * 把 email 衍生成 deterministic user id。
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createTestDb, disposeMiniflare } from './setup';
-import { mockEnv, mockAuth, mockContext, jsonRequest, seedPoi, callHandler } from './helpers';
+import { mockEnv, mockAuth, mockContext, jsonRequest, seedPoi, seedUser, userIdFor, callHandler } from './helpers';
 import { onRequestGet, onRequestPost } from '../../functions/api/saved-pois';
 import { onRequestDelete } from '../../functions/api/saved-pois/[id]';
 import type { Env } from '../../functions/api/_types';
@@ -25,11 +28,12 @@ beforeAll(async () => {
 
 afterAll(disposeMiniflare);
 
-describe.skip('GET /api/saved-pois', () => {
+describe('GET /api/saved-pois', () => {
   it('回自己的收藏，按 saved_at DESC 排序', async () => {
-    await db.prepare('INSERT INTO saved_pois (email, poi_id) VALUES (?, ?)').bind('list@test.com', poiA).run();
-    // 暫停 10ms 讓 datetime('now') 有差異；D1 精度為秒，用 saved_at 手動設
-    await db.prepare("INSERT INTO saved_pois (email, poi_id, saved_at) VALUES (?, ?, '2026-04-23 10:00:00')").bind('list@test.com', poiB).run();
+    const userId = await seedUser(db, 'list@test.com');
+    await db.prepare('INSERT INTO saved_pois (user_id, poi_id) VALUES (?, ?)').bind(userId, poiA).run();
+    // datetime('now') 精度為秒；用 saved_at 手動設讓 DESC 排序穩定
+    await db.prepare("INSERT INTO saved_pois (user_id, poi_id, saved_at) VALUES (?, ?, '2026-04-23 10:00:00')").bind(userId, poiB).run();
 
     const ctx = mockContext({
       request: new Request('https://test.com/api/saved-pois'),
@@ -40,7 +44,7 @@ describe.skip('GET /api/saved-pois', () => {
     expect(resp.status).toBe(200);
     const data = await resp.json() as Array<{ poiId: number; poiName: string; savedAt: string }>;
     expect(data.length).toBe(2);
-    // 最新（poiA 剛插入）應排前
+    // 最新（poiA 用 datetime('now') 是當下；poiB 寫死 2026-04-23）— DESC 排序 poiA 在前
     expect(data[0]!.poiId).toBe(poiA);
     expect(data[0]!.poiName).toBe('POI A for saved');
     expect(data[1]!.poiId).toBe(poiB);
@@ -55,8 +59,10 @@ describe.skip('GET /api/saved-pois', () => {
     expect(resp.status).toBe(401);
   });
 
-  it('回他人 email 的 row 不可見', async () => {
-    await db.prepare('INSERT INTO saved_pois (email, poi_id) VALUES (?, ?)').bind('other@test.com', poiA).run();
+  it('回他人 user 的 row 不可見', async () => {
+    const otherId = await seedUser(db, 'other@test.com');
+    await db.prepare('INSERT INTO saved_pois (user_id, poi_id) VALUES (?, ?)').bind(otherId, poiA).run();
+    // mockAuth 自動 derive userId from email；callHandler 自動 seedUser
     const ctx = mockContext({
       request: new Request('https://test.com/api/saved-pois'),
       env,
@@ -69,7 +75,7 @@ describe.skip('GET /api/saved-pois', () => {
   });
 });
 
-describe.skip('POST /api/saved-pois', () => {
+describe('POST /api/saved-pois', () => {
   it('成功 INSERT 回 201', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/saved-pois', 'POST', { poiId: poiA, note: '值得再去' }),
@@ -78,15 +84,16 @@ describe.skip('POST /api/saved-pois', () => {
     });
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
-    const data = await resp.json() as { id: number; poiId: number; email: string; note: string };
+    const data = await resp.json() as { id: number; poiId: number; userId: string; note: string };
     expect(data.id).toBeGreaterThan(0);
     expect(data.poiId).toBe(poiA);
-    expect(data.email).toBe('insert@test.com');
+    expect(data.userId).toBe(userIdFor('insert@test.com'));
     expect(data.note).toBe('值得再去');
   });
 
   it('重複 POI → 409', async () => {
-    await db.prepare('INSERT INTO saved_pois (email, poi_id) VALUES (?, ?)').bind('dup@test.com', poiA).run();
+    const userId = await seedUser(db, 'dup@test.com');
+    await db.prepare('INSERT INTO saved_pois (user_id, poi_id) VALUES (?, ?)').bind(userId, poiA).run();
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/saved-pois', 'POST', { poiId: poiA }),
       env,
@@ -110,7 +117,7 @@ describe.skip('POST /api/saved-pois', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/saved-pois', 'POST', { note: 'no poi' }),
       env,
-      auth: mockAuth({ email: 'nf@test.com' }),
+      auth: mockAuth({ email: 'nf2@test.com' }),
     });
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(400);
@@ -126,11 +133,12 @@ describe.skip('POST /api/saved-pois', () => {
   });
 });
 
-describe.skip('DELETE /api/saved-pois/:id', () => {
+describe('DELETE /api/saved-pois/:id', () => {
   it('刪自己的收藏 → 204', async () => {
+    const userId = await seedUser(db, 'del@test.com');
     const row = await db.prepare(
-      'INSERT INTO saved_pois (email, poi_id) VALUES (?, ?) RETURNING id',
-    ).bind('del@test.com', poiB).first<{ id: number }>();
+      'INSERT INTO saved_pois (user_id, poi_id) VALUES (?, ?) RETURNING id',
+    ).bind(userId, poiB).first<{ id: number }>();
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/saved-pois/${row!.id}`, 'DELETE'),
@@ -146,9 +154,10 @@ describe.skip('DELETE /api/saved-pois/:id', () => {
   });
 
   it('刪他人的收藏 → 403', async () => {
+    const ownerId = await seedUser(db, 'owner@test.com');
     const row = await db.prepare(
-      'INSERT INTO saved_pois (email, poi_id) VALUES (?, ?) RETURNING id',
-    ).bind('owner@test.com', poiB).first<{ id: number }>();
+      'INSERT INTO saved_pois (user_id, poi_id) VALUES (?, ?) RETURNING id',
+    ).bind(ownerId, poiB).first<{ id: number }>();
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/saved-pois/${row!.id}`, 'DELETE'),
@@ -167,7 +176,7 @@ describe.skip('DELETE /api/saved-pois/:id', () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/saved-pois/999999', 'DELETE'),
       env,
-      auth: mockAuth({ email: 'del@test.com' }),
+      auth: mockAuth({ email: 'del2@test.com' }),
       params: { id: '999999' },
     });
     const resp = await callHandler(onRequestDelete, ctx);
@@ -175,9 +184,10 @@ describe.skip('DELETE /api/saved-pois/:id', () => {
   });
 
   it('admin 可刪任何人的收藏', async () => {
+    const someId = await seedUser(db, 'someone@test.com');
     const row = await db.prepare(
-      'INSERT INTO saved_pois (email, poi_id) VALUES (?, ?) RETURNING id',
-    ).bind('someone@test.com', poiB).first<{ id: number }>();
+      'INSERT INTO saved_pois (user_id, poi_id) VALUES (?, ?) RETURNING id',
+    ).bind(someId, poiB).first<{ id: number }>();
 
     const ctx = mockContext({
       request: jsonRequest(`https://test.com/api/saved-pois/${row!.id}`, 'DELETE'),

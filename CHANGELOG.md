@@ -3,6 +3,45 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.21.1] - 2026-05-04
+
+**v2.21.0 deferred cleanup** — 完成 v2.21.0 PR 末尾留的 deferred follow-up：server-side
+409 conflict detection（補完 ConflictModal contract）+ schema-pin tests 部分 rewrite
+（deleted obsolete saved-pois-schema, rewrote saved-pois.integration, un-skipped
+oauth-signup）。
+
+### Added
+
+- **Server-side 409 conflict detection** for `POST /api/saved-pois/:id/add-to-trip` (MF2 server completion):
+  - 新 entry 與同 day 既有 entry 時段重疊 → 409 + `{error:'CONFLICT', conflictWith:{entryId, time, title, dayNum}}`
+  - Overlap 邏輯：`newStart < entryEnd AND newEnd > entryStart`（任何 portion 重疊）
+  - `position=replace` 跳過檢查（要取代的本來就重疊；avoid double-prompt）
+  - NULL `time` entries 永遠不算 conflict（無時段 basis）
+  - 跨 day 不算 conflict（trip_days 不同）
+  - 精確接續（newStart === existingEnd）不算 conflict（半開區間語意）
+- **Helper functions** `parseTimeRange()` + `hhmmToMin()` in `add-to-trip.ts` for time-range overlap math.
+- **Integration test `tests/api/saved-pois-add-to-trip.integration.test.ts`** (NEW, 6 tests): overlap 409 / exact match 409 / contiguous 201 / different day 201 / NULL time 201 / replace 201.
+
+### Changed
+
+- **`tests/api/saved-pois.integration.test.ts`**: full V2-cutover rewrite. Pre-V2.20.0 inline `INSERT INTO saved_pois (email, poi_id)` SQL replaced with user_id-keyed inserts via `seedUser()` helper + `userIdFor()` deterministic id derivation. 3 describes un-skipped (13 tests pass: GET/POST/DELETE matrix).
+- **`tests/api/oauth-signup.test.ts`**: `describe.skip` → `describe`. Tests pass un-modified (signup writes to users + auth_identities tables, unaffected by trips.owner / saved_pois.email column drops).
+
+### Removed
+
+- **`tests/api/saved-pois-schema.integration.test.ts`** — DELETED. Test file pinned migration 0028-era schema (`saved_pois.email` UNIQUE on `(email, poi_id)`); whole schema premise dropped V2.20.0 (migration 0046+0047 → user_id-keyed pool). Re-pin from saved-pois.integration.test.ts (current schema).
+
+### Deferred to v2.21.2
+
+- **`tests/api/account-stats.integration.test.ts`** — `tp.email = '*'` wildcard removed V2.20.0; needs full SQL rewrite for new permission scheme.
+- **`tests/api/trips.integration.test.ts`** — POST/GET trips body/response shape (owner field) needs camel/user_id alignment.
+- **`tests/api/permissions-post.test.ts`** — 5 describe blocks mocking `SELECT owner FROM trips` (now `SELECT owner_user_id FROM trips`); needs deep mock refactor + `makeContext` userId field addition.
+- **`tests/api/invitations-list-revoke.test.ts`** — same mock-SQL stale pattern (8 occurrences).
+- **LLM Decision Rubric prompt-injection regression test fixtures** — needs separate fixture infra design.
+- **Page-transition cache** — no React Query/SWR; `/explore`→`/saved` short loading flash acceptable.
+- **/design-review parallel worktree** — separate skill invocation, mockup parity audit pass.
+- **X-Request-Dry-Run middleware impl** — was deferred from v2.20.1; needs separate spec.
+
 ## [2.21.0] - 2026-05-04
 
 **IA reshuffle** — sidebar 第 4 項「探索」→「我的收藏」升 primary nav (saved POIs universal
