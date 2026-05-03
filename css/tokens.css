@@ -986,7 +986,12 @@ body.dark {
 .tp-page-bottom-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  z-index: 5;
+  /* z-index 必須高於 .app-shell-bottom-nav (--z-sticky-nav: 200)。
+   * 兩者皆 position:fixed bottom:0 在 mobile <1024px 重疊，nav 預設 z=200
+   * 會攔截 form action button click（regression 來自 modal-to-fullpage
+   * migration #428/#430/#431 — 原 modal 走 portal stacking context 不衝突,
+   * 改 page 後同層，bar 須顯式蓋過 nav）。Desktop nav `display: none` 無此衝突。 */
+  z-index: calc(var(--z-sticky-nav, 200) + 10);
   display: flex;
   gap: 12px;
   align-items: center;
