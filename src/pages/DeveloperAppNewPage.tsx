@@ -20,13 +20,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
+import { useNavigateBack } from '../hooks/useNavigateBack';
+import { routes } from '../lib/routes';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import InlineError from '../components/shared/InlineError';
-import Icon from '../components/shared/Icon';
 
 const SCOPED_STYLES = `
 .tp-dev-new-shell {
@@ -118,18 +120,8 @@ const SCOPED_STYLES = `
 }
 .tp-pill-pending { background: var(--color-warning-bg); color: var(--color-warning); }
 
-/* Bottom sticky bar (mobile / desktop align) — 完成 + 取消 */
-.tp-dev-new-bottom-bar {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  display: flex; gap: 8px; padding: 12px 16px;
-  background: var(--color-background);
-  border-top: 1px solid var(--color-border);
-  z-index: 30;
-}
-@media (min-width: 1024px) {
-  .tp-dev-new-bottom-bar { left: 240px; }
-}
-.tp-dev-new-bottom-bar .tp-btn { flex: 1; }
+/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用,DeveloperAppNew 用 --end variant + buttons flex:1 撐滿。 */
+.tp-page-bottom-bar.tp-page-bottom-bar--end .tp-btn { flex: 1; }
 
 /* .tp-btn family 移到 css/tokens.css 共用。 */
 
@@ -232,6 +224,7 @@ export default function DeveloperAppNewPage() {
   const auth = useRequireAuth();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
+  const handleCancel = useNavigateBack(routes.developerApps());
 
   const [form, setForm] = useState({
     app_name: '',
@@ -291,13 +284,6 @@ export default function DeveloperAppNewPage() {
     }
   }
 
-  function handleCancel() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/developer/apps');
-    }
-  }
 
   async function copy(value: string) {
     try {
@@ -311,23 +297,19 @@ export default function DeveloperAppNewPage() {
     setSecretResult(null);
     // Notify list page to refetch — picked up by DeveloperAppsPage 'tp-developer-app-created' listener
     window.dispatchEvent(new CustomEvent('tp-developer-app-created'));
-    navigate('/developer/apps');
+    navigate(routes.developerApps());
   }
 
   if (!auth.user) return null;
 
   const titleBarActions = (
-    <button
-      type="button"
-      className="tp-titlebar-action is-primary"
+    <TitleBarPrimaryAction
+      label="建立"
+      busyLabel="建立中⋯"
+      busy={submitting}
       onClick={() => void handleSubmit()}
-      disabled={submitting}
-      aria-label={submitting ? '建立中' : '建立'}
-      data-testid="dev-app-new-titlebar-submit"
-    >
-      <Icon name="check" />
-      <span className="tp-titlebar-action-label">{submitting ? '建立中⋯' : '建立'}</span>
-    </button>
+      testId="dev-app-new-titlebar-submit"
+    />
   );
 
   return (
@@ -426,7 +408,7 @@ export default function DeveloperAppNewPage() {
             </div>
           </div>
 
-          <div className="tp-dev-new-bottom-bar">
+          <div className="tp-page-bottom-bar tp-page-bottom-bar--end">
             <button
               type="button"
               className="tp-btn"

@@ -33,9 +33,11 @@
  *   - move: PATCH /api/trips/:id/entries/:eid { day_id }
  */
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useNavigateBack } from '../hooks/useNavigateBack';
+import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import { dayColor } from '../lib/dayPalette';
 import {
@@ -47,6 +49,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 
@@ -191,24 +194,7 @@ const SCOPED_STYLES = `
   font-size: var(--font-size-footnote);
 }
 
-.tp-entry-action-bottom-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 5;
-  display: flex; gap: 8px; align-items: center;
-  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 12px));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-  justify-content: flex-end;
-}
-@media (min-width: 1024px) {
-  .tp-entry-action-bottom-bar {
-    left: 240px;
-    padding: 16px 32px max(16px, env(safe-area-inset-bottom, 16px));
-  }
-}
+/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用,EntryAction 用 --end variant。 */
 .tp-entry-action-btn {
   padding: 12px 20px;
   border-radius: var(--radius-full);
@@ -245,7 +231,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
   const auth = useRequireAuth();
   const { user } = useCurrentUser();
   const { tripId, entryId } = useParams<{ tripId: string; entryId: string }>();
-  const navigate = useNavigate();
+  const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const entryIdNum = entryId ? parseInt(entryId, 10) : null;
   const heading = action === 'copy' ? '複製到哪一天' : '移動到哪一天';
@@ -295,15 +281,6 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
     return () => { cancelled = true; };
   }, [auth.user, tripId, entryIdNum]);
 
-  function handleBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else if (tripId) {
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-    } else {
-      navigate('/trips');
-    }
-  }
 
   async function handleConfirm() {
     if (!tripId || entryIdNum == null || selectedDayId == null) return;
@@ -356,7 +333,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         sidebar={<DesktopSidebarConnected />}
         main={
           <div className="tp-entry-action-shell" data-testid="entry-action-page">
-            <TitleBar title={heading} back={() => navigate('/trips')} backLabel="返回行程列表" />
+            <TitleBar title={heading} back={handleBack} backLabel="返回行程列表" />
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
               無效的行程或景點 ID
             </div>
@@ -367,19 +344,15 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
     );
   }
 
-  // TitleBar primary action — 用標準 .tp-titlebar-action.is-primary
   const titleBarActions = !loading && !loadError && (
-    <button
-      type="button"
-      className="tp-titlebar-action is-primary"
-      onClick={handleConfirm}
+    <TitleBarPrimaryAction
+      label={ctaLabel}
+      busyLabel={`${ctaLabel}中⋯`}
+      busy={submitting}
       disabled={!canConfirm}
-      aria-label={submitting ? `${ctaLabel}中` : ctaLabel}
-      data-testid="entry-action-titlebar-confirm"
-    >
-      <Icon name="check" />
-      <span className="tp-titlebar-action-label">{submitting ? `${ctaLabel}中⋯` : ctaLabel}</span>
-    </button>
+      onClick={handleConfirm}
+      testId="entry-action-titlebar-confirm"
+    />
   );
 
   return (
@@ -485,7 +458,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
             </div>
 
             {!loading && !loadError && (
-              <div className="tp-entry-action-bottom-bar">
+              <div className="tp-page-bottom-bar tp-page-bottom-bar--end">
                 <button
                   type="button"
                   className="tp-entry-action-btn"
