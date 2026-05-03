@@ -179,28 +179,7 @@ const SCOPED_STYLES = `
   border-color: var(--color-accent);
 }
 
-.tp-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 12px;
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: var(--font-size-callout); font-weight: 600;
-  cursor: pointer; min-height: 48px;
-  transition: background 120ms;
-  text-decoration: none;
-  width: 100%;
-}
-.tp-btn-primary {
-  background: var(--color-accent); color: #fff; border: none;
-}
-.tp-btn-primary:hover:not(:disabled) { filter: brightness(0.92); }
-.tp-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-.tp-btn-secondary {
-  background: var(--color-background); color: var(--color-foreground);
-  border: 1px solid var(--color-border);
-}
-.tp-btn-secondary:hover { background: var(--color-hover); }
+/* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
 
 .tp-divider {
   display: flex; align-items: center; gap: 12px;

@@ -131,25 +131,7 @@ const SCOPED_STYLES = `
 }
 .tp-dev-new-bottom-bar .tp-btn { flex: 1; }
 
-.tp-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: 6px;
-  padding: 10px 16px; border-radius: var(--radius-md);
-  font-family: inherit; font-size: var(--font-size-footnote);
-  font-weight: 600; border: 1px solid var(--color-border);
-  background: var(--color-background); color: var(--color-foreground);
-  cursor: pointer;
-}
-.tp-btn:hover { background: var(--color-hover); }
-.tp-btn-primary {
-  background: var(--color-accent); color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
-}
-.tp-btn-primary:hover { filter: brightness(0.95); }
-.tp-btn-primary:disabled,
-.tp-btn:disabled {
-  opacity: 0.55; cursor: not-allowed;
-}
+/* .tp-btn family 移到 css/tokens.css 共用。 */
 
 /* Secret reveal modal — 沿用原 DeveloperAppsPage block，critical attention UX */
 .tp-modal-backdrop {
@@ -184,8 +166,6 @@ const SCOPED_STYLES = `
   display: flex; gap: 8px;
 }
 .tp-modal-footer .tp-btn { flex: 1; }
-.tp-btn-block { width: 100%; }
-.tp-btn-lg { padding: 12px 20px; font-size: var(--font-size-callout); }
 
 .tp-secret-icon-circle {
   width: 56px; height: 56px;

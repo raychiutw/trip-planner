@@ -85,24 +85,7 @@ const SCOPED_STYLES = `
   display: flex; gap: 8px; flex-shrink: 0;
 }
 
-.tp-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 8px 14px; border-radius: var(--radius-sm);
-  font-family: inherit; font-size: var(--font-size-footnote);
-  font-weight: 600; border: 1px solid var(--color-border);
-  background: var(--color-background); color: var(--color-foreground);
-  cursor: pointer; min-height: 36px;
-  transition: background 120ms;
-}
-.tp-btn:hover:not(:disabled) { background: var(--color-hover); }
-.tp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.tp-btn-destructive {
-  color: var(--color-destructive); border-color: var(--color-destructive);
-}
-.tp-btn-destructive:hover:not(:disabled) { background: var(--color-destructive-bg); }
-.tp-btn-primary { background: var(--color-accent); color: #fff; border: none; }
-.tp-btn-primary:hover:not(:disabled) { filter: brightness(0.92); }
-.tp-btn-block { width: 100%; min-height: 48px; padding: 12px 20px; font-size: var(--font-size-callout); }
+/* .tp-btn family 移到 css/tokens.css 共用。 */
 
 .tp-empty {
   padding: 48px 24px; text-align: center;
