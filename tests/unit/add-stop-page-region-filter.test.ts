@@ -1,7 +1,11 @@
 // @vitest-environment node
 /**
- * mockup-parity-qa-fixes Sprint 10.5: AddStopModal region pill + filter button
+ * mockup-parity-qa-fixes Sprint 10.5: AddStopPage region pill + filter button
  * + DAY 全大寫 + footer counter 不被 regression。
+ *
+ * 2026-05-03 modal-to-fullpage migration: AddStopModal.tsx 已 DEL，搬到
+ * src/pages/AddStopPage.tsx。region/filter/counter mockup spec 沿用，dayLabel
+ * 邏輯從 TripPage inline 算搬進 page 裡 (deriveDayLabel)。
  *
  * Pure-text grep on source 避免 jsdom + React 18 + vi.* API 不相容問題。
  */
@@ -10,15 +14,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const SRC = readFileSync(
-  path.resolve(__dirname, '../../src/components/trip/AddStopModal.tsx'),
-  'utf8'
-);
-const TRIP_PAGE = readFileSync(
-  path.resolve(__dirname, '../../src/pages/TripPage.tsx'),
+  path.resolve(__dirname, '../../src/pages/AddStopPage.tsx'),
   'utf8'
 );
 
-describe('mockup-parity-qa-fixes AddStopModal region + filter + DAY format', () => {
+describe('mockup-parity-qa-fixes AddStopPage region + filter + DAY format', () => {
   it('REGION_OPTIONS 含 6 個 hardcode region', () => {
     expect(SRC).toMatch(/REGION_OPTIONS\s*=\s*\[/);
     ['全部地區', '沖繩', '東京', '京都', '首爾', '台南'].forEach((r) => {
@@ -48,15 +48,24 @@ describe('mockup-parity-qa-fixes AddStopModal region + filter + DAY format', () 
     expect(counterBlock?.[0]).not.toMatch(/從上方挑選或填寫一個項目/);
   });
 
-  it('TripPage 傳給 AddStopModal 的 dayLabel 是「DAY 03 · 7/31（五）」全大寫格式', () => {
-    expect(TRIP_PAGE).toMatch(/DAY\s*\$\{dayPad\}/);
-    expect(TRIP_PAGE).toMatch(/padStart\(2,\s*'0'\)/);
-    expect(TRIP_PAGE).toMatch(/weekdayChar/);
-    expect(TRIP_PAGE).toMatch(/'日',\s*'一',\s*'二'/);
+  it('deriveDayLabel 產生「DAY 03 · 7/31（五）」全大寫格式', () => {
+    // 2026-05-03 modal-to-fullpage migration: TripPage 原本 inline 算 dayLabel
+    // 傳給 modal，現在改在 AddStopPage 裡 fetch days 後 deriveDayLabel 算。
+    // 規則仍鎖 mockup section 14:6442 全大寫格式。weekday 從 API row.day_of_week
+    // 直接取（取代原 TripPage 用 ['日','一',...] hardcode 陣列推算）。
+    expect(SRC).toMatch(/function deriveDayLabel/);
+    expect(SRC).toMatch(/DAY \$\{dayPad\}/);
+    expect(SRC).toMatch(/padStart\(2,\s*'0'\)/);
+    expect(SRC).toMatch(/day\.day_of_week/);
+    // 全大寫格式 + 全形括號（template literal 跨行 + escape，避免 special-char regex）
+    expect(SRC).toContain('DAY ${dayPad} · ${month}/${dom}');
+    expect(SRC).toContain('（${weekdayChar}）');
   });
 
-  it('defaultRegion prop 接收 trip-context 預設 region', () => {
-    expect(SRC).toMatch(/defaultRegion\?:\s*string/);
-    expect(SRC).toMatch(/initialRegion = REGION_OPTIONS\.includes\(defaultRegion as RegionOption\)/);
+  it('dayNum 從 ?day= URL searchParam 讀取（取代原 modal dayNum prop）', () => {
+    // 2026-05-03 modal-to-fullpage migration: TripPage 原本 prop 傳 dayNum，
+    // 改全頁後從 useSearchParams() 讀 ?day=N，URL deep-linkable。
+    expect(SRC).toMatch(/useSearchParams/);
+    expect(SRC).toMatch(/searchParams\.get\(\s*'day'\s*\)/);
   });
 });
