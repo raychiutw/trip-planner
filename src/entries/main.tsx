@@ -6,9 +6,11 @@ initSentry();
 flushPendingReports();
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistration().then((reg) => {
-    if (reg) reg.update();
-  });
+  // reg.update() rejects with InvalidStateError when the registration is in
+  // transition (install/activate/unregister race). Swallow — non-fatal background work.
+  navigator.serviceWorker.getRegistration()
+    .then((reg) => reg?.update())
+    .catch(() => {});
 }
 
 import { createRoot } from 'react-dom/client';
