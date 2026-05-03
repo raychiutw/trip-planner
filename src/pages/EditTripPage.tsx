@@ -32,11 +32,14 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useNavigateBack } from '../hooks/useNavigateBack';
+import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
@@ -220,27 +223,9 @@ const SCOPED_STYLES = `
   color: var(--color-foreground);
 }
 
-/* page-level sticky bottom actions (取代 modal sticky footer) */
-.tp-edit-page-bottom-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 5;
-  display: flex; gap: 8px; align-items: center;
-  flex-wrap: wrap;
-  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 12px));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-  justify-content: space-between;
-}
-@media (min-width: 1024px) {
-  .tp-edit-page-bottom-bar {
-    /* desktop: AppShell sidebar 占 240px (min)，bottom bar 從 sidebar 右側起 */
-    left: 240px;
-    padding: 16px 32px max(16px, env(safe-area-inset-bottom, 16px));
-  }
-}
+/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用 */
+/* EditTripPage 額外加 flex-wrap (publish segment + cancel + save 多元素) */
+.tp-page-bottom-bar { flex-wrap: wrap; }
 
 .tp-edit-actions-publish {
   display: inline-flex;
@@ -350,6 +335,7 @@ export default function EditTripPage() {
   const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const navigate = useNavigate();
+  const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const [loading, setLoading] = useState(true);
   const [original, setOriginal] = useState<TripApi | null>(null);
@@ -513,15 +499,6 @@ export default function EditTripPage() {
     setTitleHintDismissed(true);
   }
 
-  function handleBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else if (tripId) {
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-    } else {
-      navigate('/trips');
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -578,7 +555,7 @@ export default function EditTripPage() {
       showToast('行程已更新', 'success');
       // 廣播更新事件給 listening pages (ActiveTrip / TripsList)
       window.dispatchEvent(new CustomEvent('tp-trip-updated', { detail: { tripId } }));
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
+      navigate(routes.tripsSelected(tripId));
     } catch (err) {
       setError(err instanceof Error ? err.message : '儲存變更失敗');
       setSubmitting(false);
@@ -593,7 +570,7 @@ export default function EditTripPage() {
         sidebar={<DesktopSidebarConnected />}
         main={
           <div className="tp-edit-page-shell" data-testid="edit-trip-page">
-            <TitleBar title="編輯行程" back={() => navigate('/trips')} backLabel="返回行程列表" />
+            <TitleBar title="編輯行程" back={handleBack} backLabel="返回行程列表" />
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
               無效的行程 ID
             </div>
@@ -608,23 +585,17 @@ export default function EditTripPage() {
     ? `${original.startDate} ~ ${original.endDate}`
     : null;
 
-  // TitleBar primary action — 用標準 .tp-titlebar-action.is-primary（桌機
-  // icon + 文字、手機 icon only），對齊 DESIGN.md 2026-05-03 TitleBar 規則。
   const titleBarActions = !loading && (
-    <button
-      type="button"
-      className="tp-titlebar-action is-primary"
+    <TitleBarPrimaryAction
+      label="儲存"
+      busyLabel="儲存中⋯"
+      busy={submitting}
       onClick={() => {
         const form = document.getElementById('edit-trip-form') as HTMLFormElement | null;
         if (form) form.requestSubmit();
       }}
-      disabled={submitting}
-      aria-label={submitting ? '儲存中' : '儲存'}
-      data-testid="edit-trip-titlebar-save"
-    >
-      <Icon name="check" />
-      <span className="tp-titlebar-action-label">{submitting ? '儲存中⋯' : '儲存'}</span>
-    </button>
+      testId="edit-trip-titlebar-save"
+    />
   );
 
   return (
@@ -826,7 +797,7 @@ export default function EditTripPage() {
             </form>
 
             {!loading && (
-              <div className="tp-edit-page-bottom-bar">
+              <div className="tp-page-bottom-bar">
                 <div className="tp-edit-actions-publish" role="radiogroup" aria-label="發布狀態">
                   <button
                     type="button"

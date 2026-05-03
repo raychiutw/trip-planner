@@ -36,12 +36,15 @@ import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } 
 import { CSS } from '@dnd-kit/utilities';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useNavigateBack } from '../hooks/useNavigateBack';
+import { routes } from '../lib/routes';
 import { apiFetchRaw } from '../lib/apiClient';
 import { lsGet, lsSet } from '../lib/localStorage';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import InlineError from '../components/shared/InlineError';
 import Icon from '../components/shared/Icon';
 import ToastContainer from '../components/shared/Toast';
@@ -92,7 +95,7 @@ function pushRecentDest(name: string) {
  * SCOPED_STYLES for NewTripPage-specific rules:
  *   - .tp-new-page-shell — page background + scroll
  *   - .tp-new-page-form — content max-width form container
- *   - .tp-new-page-bottom-bar — sticky bottom actions row
+ *   - .tp-page-bottom-bar — sticky bottom actions row
  *   - All other form-row / dest-row / segment / btn styles 走 _tripFormStyles.ts
  *     共用 (.tp-new-* prefix 仍 work — comma-selector 含)
  *   - NewTripPage-only: flex-stepper / month carousel / quota / chip-groups
@@ -292,26 +295,8 @@ const SCOPED_STYLES = `
 .tp-new-flex-month .m { font-size: var(--font-size-callout); font-weight: 700; }
 .tp-new-flex-month .y { font-size: var(--font-size-caption); opacity: 0.75; }
 
-/* page-level sticky bottom actions (取代 modal sticky footer) */
-.tp-new-page-bottom-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 5;
-  display: flex; gap: 8px; align-items: center;
-  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 12px));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-  justify-content: flex-end;
-}
-@media (min-width: 1024px) {
-  .tp-new-page-bottom-bar {
-    /* desktop: AppShell sidebar 占 240px (min)，bottom bar 從 sidebar 右側起 */
-    left: 240px;
-    padding: 16px 32px max(16px, env(safe-area-inset-bottom, 16px));
-  }
-}
+/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用。
+ * NewTripPage 用 --end variant 把 actions 推到右側 (無 counter)。 */
 .tp-new-page-bottom-summary {
   flex: 1;
   font-size: var(--font-size-footnote);
@@ -460,6 +445,7 @@ export default function NewTripPage() {
   const auth = useRequireAuth();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
+  const handleBack = useNavigateBack(routes.trips());
   const ownerEmail = user?.email ?? '';
 
   // Destination uses POI autocomplete. User can select multiple POIs.
@@ -588,13 +574,6 @@ export default function NewTripPage() {
     setSelectedPois((prev) => prev.filter((p) => p.osm_id !== osmId));
   }
 
-  function handleBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/trips');
-    }
-  }
 
   function adjustFlexDays(delta: number) {
     setFlexDays((d) => Math.min(MAX_FLEX_DAYS, Math.max(MIN_FLEX_DAYS, d + delta)));
@@ -676,23 +655,18 @@ export default function NewTripPage() {
       ? `${destShown}${startDate && endDate ? ` · ${startDate} – ${endDate}` : ''}`
       : '請先選擇目的地';
 
-  // TitleBar primary action — 用標準 .tp-titlebar-action.is-primary（桌機
-  // icon + 文字、手機 icon only），對齊 DESIGN.md 2026-05-03 TitleBar 規則。
   const titleBarActions = (
-    <button
-      type="button"
-      className="tp-titlebar-action is-primary"
+    <TitleBarPrimaryAction
+      label="建立行程"
+      busyLabel="建立中⋯"
+      busy={submitting}
+      disabled={!canSubmit}
       onClick={() => {
         const form = document.getElementById('new-trip-form') as HTMLFormElement | null;
         if (form) form.requestSubmit();
       }}
-      disabled={!canSubmit}
-      aria-label={submitting ? '建立中' : '建立行程'}
-      data-testid="new-trip-titlebar-create"
-    >
-      <Icon name="check" />
-      <span className="tp-titlebar-action-label">{submitting ? '建立中⋯' : '建立行程'}</span>
-    </button>
+      testId="new-trip-titlebar-create"
+    />
   );
 
   return (
@@ -968,7 +942,7 @@ export default function NewTripPage() {
               {error && <InlineError message={error} testId="new-trip-error" />}
             </form>
 
-            <div className="tp-new-page-bottom-bar">
+            <div className="tp-page-bottom-bar tp-page-bottom-bar--end">
               <div className="tp-new-page-bottom-summary"><b>{summaryText}</b></div>
               <button
                 type="button"

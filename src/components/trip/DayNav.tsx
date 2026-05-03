@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 import { parseLocalDate } from '../../lib/mapDay';
@@ -199,17 +199,31 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
     setTimeout(() => setTooltipDay(null), 1500);
   }, []);
 
+  // Pre-compute per-chip data once per `days`/`todayDayNum` change so render loop
+  // doesn't rerun parseChipParts + dayColor on every parent state update.
+  const chips = useMemo(
+    () => days.map((d) => {
+      const color = dayColor(d.dayNum);
+      return {
+        day: d,
+        dayNum: d.dayNum,
+        parts: parseChipParts(d),
+        isToday: d.dayNum === todayDayNum,
+        btnStyle: { '--day-color': color } as React.CSSProperties,
+        eyebrowStyle: { color } as React.CSSProperties,
+      };
+    }),
+    [days, todayDayNum],
+  );
+
   return (
     <>
       <style>{SCOPED_STYLES}</style>
       <div className="ocean-day-strip" id="navPills" ref={navRef} role="tablist" aria-label="行程日期">
-        {days.map((d) => {
-          const dayNum = d.dayNum;
+        {chips.map(({ day, dayNum, parts, isToday, btnStyle, eyebrowStyle }) => {
           const isActive = !isTripMapMode && dayNum === currentDayNum;
-          const isToday = dayNum === todayDayNum;
           const showTooltip = tooltipDay === dayNum;
           const tooltipId = `dn-tooltip-${dayNum}`;
-          const parts = parseChipParts(d);
           return (
             <button
               key={dayNum}
@@ -218,7 +232,7 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               data-day={dayNum}
               data-action="switch-day"
               data-target={`day${dayNum}`}
-              aria-label={d.label ? `${formatPillLabel(d)} ${d.label}` : formatPillLabel(d)}
+              aria-label={day.label ? `${formatPillLabel(day)} ${day.label}` : formatPillLabel(day)}
               aria-describedby={showTooltip ? tooltipId : undefined}
               role="tab"
               aria-selected={isActive}
@@ -227,25 +241,22 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               onMouseLeave={handleMouseLeave}
               onTouchStart={() => handleTouchStart(dayNum)}
               onTouchEnd={handleTouchEnd}
-              style={{ '--day-color': dayColor(dayNum) } as React.CSSProperties}
+              style={btnStyle}
             >
-              {/* 2026-05-03 underline tab format (對齊 MapPage day nav):
-                * eyebrow (DAY 01) 套 per-day color, date (7/2) 跟 active state 用 accent。
-                * 移除 .dn-head wrapper + .dn-area (混入 inline meta — area label 改放
-                * eyebrow 後 suffix 不單獨 row)。 */}
-              <span className="dn-eyebrow" style={{ color: dayColor(dayNum) }}>
+              {/* eyebrow (DAY 01) 套 per-day color, date 跟 active state 用 accent */}
+              <span className="dn-eyebrow" style={eyebrowStyle}>
                 {parts.eyebrow}
                 {isToday && <span className="dn-eyebrow-today" aria-label="今日"> · 今天</span>}
               </span>
               <div className="dn-date">{parts.date}</div>
-              {d.label && <div className="dn-area">{d.label}</div>}
+              {day.label && <div className="dn-area">{day.label}</div>}
               {showTooltip && (
                 <span
                   id={tooltipId}
                   className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-secondary text-foreground text-caption font-medium py-2 px-3 rounded-sm shadow-md whitespace-nowrap z-10 pointer-events-none [animation:dn-tooltip-in_var(--transition-duration-fast)_var(--transition-timing-function-apple)]"
                   role="tooltip"
                 >
-                  {formatTooltip(d)}
+                  {formatTooltip(day)}
                 </span>
               )}
             </button>
