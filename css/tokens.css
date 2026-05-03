@@ -1330,13 +1330,16 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * 手機 (<=760) 縮回 icon-only 圓形 (label hidden via @media)。
  * 用法：<button class="tp-titlebar-action"><Icon /><span class="tp-titlebar-action-label">label</span></button> */
 .tp-titlebar-action {
+  /* Ghost icon button — 跟 .tp-titlebar-back 同 family，無外框、透明底，
+   * hover 出 --color-hover。Apple HIG / iOS toolbar 慣例。Primary CTA 變體
+   * 走下方 .is-primary 用 accent 實心. */
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: var(--spacing-tap-min);
   padding: 0 14px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: none;
   background: transparent;
   color: var(--color-foreground);
   font: inherit;
@@ -1344,23 +1347,25 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 150ms, border-color 150ms, color 150ms;
+  transition: background-color 150ms, color 150ms;
 }
 .tp-titlebar-action:hover {
   background: var(--color-hover);
-  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 .tp-titlebar-action:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-action .svg-icon { width: 18px; height: 18px; }
+/* Icon-only modifier — 強制 44×44 square (desktop + mobile)，給沒文字 label 的
+ * trigger (例：EmbeddedActionMenu 漢堡) 用。 */
+.tp-titlebar-action--icon-only {
+  width: var(--spacing-tap-min);
+  padding: 0;
+  justify-content: center;
+}
 @media (max-width: 760px) {
   .tp-titlebar-action {
     width: var(--spacing-tap-min);
     padding: 0;
-    /* mobile icon-only：保留 border + radius，跟桌機 + .tp-embedded-menu-trigger
-     * 同視覺 family (rounded rectangle)。 */
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
     justify-content: center;
   }
   .tp-titlebar-action-label { display: none; }
@@ -1371,11 +1376,9 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-action.is-primary {
   background: var(--color-accent);
   color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
 }
 .tp-titlebar-action.is-primary:hover {
   background: var(--color-accent-deep);
-  border-color: var(--color-accent-deep);
   color: var(--color-accent-foreground);
   filter: brightness(0.95);
 }
@@ -1414,10 +1417,11 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
  * 規範:桌機(>=761) icon + trip name + chevron;手機(<=760) icon-only。 */
 .tp-titlebar-trip-menu { position: relative; }
 .tp-titlebar-trip-picker {
+  /* Ghost icon button — 同 .tp-titlebar-action family，無框透明底，hover 出 --color-hover */
   display: inline-flex; align-items: center; gap: 6px;
   height: var(--spacing-tap-min);
   padding: 0 14px;
-  border: 1px solid var(--color-border);
+  border: none;
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--color-foreground);
@@ -1427,11 +1431,10 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
   cursor: pointer;
   flex-shrink: 0;
   max-width: 240px;
-  transition: background-color 150ms, border-color 150ms, color 150ms;
+  transition: background-color 150ms, color 150ms;
 }
 .tp-titlebar-trip-picker:hover {
   background: var(--color-hover);
-  border-color: var(--color-accent);
   color: var(--color-accent);
 }
 .tp-titlebar-trip-picker:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
