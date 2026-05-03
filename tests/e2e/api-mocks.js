@@ -118,19 +118,22 @@ const MOCK_TRIP_META_BUSAN = {
   destinations: [],
 };
 
-/* ===== /api/trips/:id/days (days summary) ===== */
+/* ===== /api/trips/:id/days (days summary) =====
+ * 真 API (functions/api/trips/[id]/days.ts) 回 day_num snake_case (+ day_of_week)。
+ * 部分 page (TripPage Timeline) 在 mapRow 後用 dayNum camelCase。為相容兩派
+ * consumer (EntryActionPage / AddStopPage 直接讀 day_num),mock dual-key。 */
 const MOCK_DAYS_OKINAWA = [
-  { id: 1, dayNum: 1, date: '2026-07-01', dayOfWeek: '三', label: '那霸市區' },
-  { id: 2, dayNum: 2, date: '2026-07-02', dayOfWeek: '四', label: '美國村' },
-  { id: 3, dayNum: 3, date: '2026-07-03', dayOfWeek: '五', label: '海洋博公園' },
-  { id: 4, dayNum: 4, date: '2026-07-04', dayOfWeek: '六', label: '北谷・恩納' },
-  { id: 5, dayNum: 5, date: '2026-07-05', dayOfWeek: '日', label: '回程' },
+  { id: 1, dayNum: 1, day_num: 1, date: '2026-07-01', dayOfWeek: '三', day_of_week: '三', label: '那霸市區' },
+  { id: 2, dayNum: 2, day_num: 2, date: '2026-07-02', dayOfWeek: '四', day_of_week: '四', label: '美國村' },
+  { id: 3, dayNum: 3, day_num: 3, date: '2026-07-03', dayOfWeek: '五', day_of_week: '五', label: '海洋博公園' },
+  { id: 4, dayNum: 4, day_num: 4, date: '2026-07-04', dayOfWeek: '六', day_of_week: '六', label: '北谷・恩納' },
+  { id: 5, dayNum: 5, day_num: 5, date: '2026-07-05', dayOfWeek: '日', day_of_week: '日', label: '回程' },
 ];
 
 const MOCK_DAYS_BUSAN = [
-  { id: 1, dayNum: 1, date: '2026-08-10', dayOfWeek: '一', label: '海雲臺' },
-  { id: 2, dayNum: 2, date: '2026-08-11', dayOfWeek: '二', label: '南浦洞' },
-  { id: 3, dayNum: 3, date: '2026-08-12', dayOfWeek: '三', label: '回程' },
+  { id: 1, dayNum: 1, day_num: 1, date: '2026-08-10', dayOfWeek: '一', day_of_week: '一', label: '海雲臺' },
+  { id: 2, dayNum: 2, day_num: 2, date: '2026-08-11', dayOfWeek: '二', day_of_week: '二', label: '南浦洞' },
+  { id: 3, dayNum: 3, day_num: 3, date: '2026-08-12', dayOfWeek: '三', day_of_week: '三', label: '回程' },
 ];
 
 /* ===== /api/trips/okinawa-trip-2026-Ray/days/1 (full day) ===== */
@@ -739,6 +742,38 @@ async function setupApiMocks(page) {
       });
     }
 
+    // Pattern: GET/PATCH/DELETE /api/trips/:id/entries/:eid
+    // GET 給 EntryActionPage (move/copy) 載 entry meta;PATCH/DELETE 是修改/刪除
+    const entryActionMatch = path.match(/^\/api\/trips\/([^/]+)\/entries\/(\d+)$/);
+    if (entryActionMatch) {
+      const [, , eid] = entryActionMatch;
+      const eidNum = Number(eid);
+      if (method === 'GET') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ id: eidNum, day_id: 1, title: `Mock entry ${eid}` }),
+        });
+      }
+      if (method === 'PATCH' || method === 'DELETE') {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ id: eidNum, ok: true }),
+        });
+      }
+    }
+
+    // Pattern: POST /api/trips/:id/entries/:eid/copy → 複製景點
+    const entryCopyMatch = path.match(/^\/api\/trips\/([^/]+)\/entries\/(\d+)\/copy$/);
+    if (entryCopyMatch && method === 'POST') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: ++nextEntryId, ok: true }),
+      });
+    }
+
     // Exact POST /api/trips → 建立新行程，回 { tripId }
     if (path === '/api/trips' && method === 'POST') {
       const body = route.request().postDataJSON?.() ?? {};
@@ -747,6 +782,17 @@ async function setupApiMocks(page) {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ tripId: newTripId }),
+      });
+    }
+
+    // Pattern: PUT/DELETE /api/trips/:id → 編輯/刪除行程
+    const tripActionMatch = path.match(/^\/api\/trips\/([^/]+)$/);
+    if (tripActionMatch && (method === 'PUT' || method === 'DELETE')) {
+      const [, id] = tripActionMatch;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ tripId: id, ok: true }),
       });
     }
 
