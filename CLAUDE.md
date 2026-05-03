@@ -1,143 +1,53 @@
-# Tripline — 行程共享網站
+# Tripline
 
-## gstack Sprint Pipeline
+Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
 
-**Claude 直接做事，invoke 不同 gstack skill 換帽子。** code 變更前 invoke `/tp-team`。
+## Pipeline (invoke `/tp-team` before code changes)
 
-```
-Think → Plan → Build → Review → Test → Ship → Reflect
-```
+`Think → Plan → Build → Review → Test → Ship → Reflect`
 
-| 階段 | gstack skill | 做什麼 |
-|------|-------------|--------|
-| Think | `/office-hours` | 探索需求（新功能/架構跑） |
-| Plan | `/autoplan` | CEO + Eng + Design 三審 |
-| Build | 寫 code + `/simplify` | TDD + 精簡 |
-| Review | `/tp-code-verify` → `/review` | 專案規範 + diff 審查 ← 不可跳過 |
-| Test | `/cso --diff` + `/qa` | 安全掃描 + QA ← `/cso --diff` 不可跳 |
-| Ship | `/ship` → `/land-and-deploy` → `/canary` | PR + merge + 監控 |
-| Reflect | `/retro` | 回顧（weekly） |
+- Think `/office-hours` · Plan `/autoplan` · Build code + `/simplify`
+- Review `/tp-code-verify` + `/review` (mandatory)
+- Test `/cso --diff` (mandatory) + `/qa`
+- Ship `/ship` → `/land-and-deploy` → `/canary` · Reflect `/retro`
 
-## CI/CD
+## Hard Rules
 
-1. Feature branch → 2. TDD → 3. `/ship`（PR） → 4. CI（tsc + test + build） → 5. `/land-and-deploy`（merge） → 6. `/canary` → 7. Production（https://trip-planner-dby.pages.dev/）
+- Feature branch + PR via `/ship`. Never push master directly.
+- `tp-*` skills hit API, not local files.
+- Agent tool only for worktree isolation.
+- Web browse: `/browse` only, never `mcp__claude-in-chrome__*`.
+- Post-ship retroactive OpenSpec archive if PR didn't propose first.
 
-## ⚠️ 開發規則（強制）
+## Layout
 
-**規則定義在 `openspec/config.yaml`，無論是否使用 OpenSpec 流程都必須遵守。**
+`src/` SPA · `functions/api/` Pages Functions · `migrations/` D1 · `tests/` · `css/tokens.css` Tailwind 4.
 
-- tp-* skills 透過 API 操作行程資料，不操作本地檔案
-- code 變更走 7 階段 pipeline
-- Agent 只用於 worktree 隔離，不用於角色派遣
-- 若 PR 未走 OpenSpec propose，ship 後須補 retroactive archive（參考 `openspec/changes/archive/2026-04-21-design-review-v2-retrofit/`）
+Desktop ≥1024px: 2-col timeline + sticky map. Mobile: 5-tab nav.
 
-## 專案結構
-
-```
-src/entries/        main.tsx（SPA 單入口，BrowserRouter）
-src/pages/          TripPage  TripsListPage（/trips landing）  MapPage  GlobalMapPage  ChatPage
-                    ExplorePage  AccountPage  AppearanceSettingsPage  NotificationsSettingsPage
-                    LoginPage  SignupPage  ForgotPasswordPage  ResetPasswordPage  EmailVerifyPendingPage
-                    ConsentPage  ConnectedAppsPage  DeveloperAppsPage  SessionsPage
-src/components/     trip/（Timeline DayNav DaySection TripMapRail AddStopModal MapFabs TravelPill
-                          NewTripModal EditTripModal TripCardMenu _tripFormStyles ...）
-                    shared/（Icon Toast ErrorBoundary AlertPanel MapsButtonGroup ...）
-                    auth/（AuthBrandHero — V2 split-screen 右側 hero pane 共用）
-                    shell/（AppShell DesktopSidebar GlobalBottomNav TitleBar ...）
-src/contexts/       NewTripContext  ActiveTripContext（cross-page active trip + storage event sync）
-                    TripIdContext  TripDaysContext  TripContext
-src/hooks/          useTrip  useApi  useDarkMode  useRequireAuth  useCurrentUser  useOnlineStatus ...
-src/lib/            mapRow  mapDay  mergePoi  mapsUrl  localStorage  sentry  weather  drag-strategy ...
-src/server/         osm/（nominatim overpass opentripmap wikidata clients）
-                    routing/ors  travel/compute（Haversine fallback）  poi/enrich（90d cache orchestrator）
-src/types/          trip.ts  api.ts
-css/                tokens.css（Tailwind CSS 4 @theme — 唯一 CSS，V2 Terracotta 單一 accent）
-functions/api/      _middleware  _auth  _audit  _utils  _validate  _types
-                    trips/  pois/  requests/  permissions/  account/（RESTful nested routes）
-                    poi-search.ts  pois/[id]/enrich.ts  trips/[id]/recompute-travel.ts（v2.19.0 OSM endpoints）
-migrations/         0001 ~ 0045（D1 schema，含 rollback/）
-scripts/            init-local-db  dump-d1  daily-check  migrate-pois  tp-check
-                    poi-enrich-batch  poi-enrich-scheduler（v2.19.0 OSM enrichment）...
-tests/              unit/  integration/  e2e/  api/
-openspec/           config.yaml  specs/  changes/
-```
-
-- Cloudflare Pages + D1（trip-planner-db / staging）
-- 設計系統：`DESIGN.md`（暖色有機風、Apple HIG、V2 Terracotta accent）
-- **Desktop 2-col layout（≥1024px）**：`grid-template-columns: clamp(375px, 30vw, 400px) 1fr`，左欄行程 timeline，右欄 `TripMapRail` sticky Leaflet 地圖；`<1024px` 單欄 mobile-first
-- **GlobalBottomNav 5-tab IA（≤760px）**：`聊天 / 行程 / 地圖 / 探索 / 帳號`（logged-in）or `... / 登入`（guest），全部 global route。配合 `ActiveTripContext`，從 trip 進其他 tab 自動帶入當前 trip context（/chat 預選對應 trip thread，/map 預設該 trip 的 pin overview，/explore region 預設該 trip's countries）。「更多」 sheet 4 個 action 已遷移：共編 → trip TitleBar；切換行程 → /trips card grid；外觀 → AccountPage；下載 → trip TitleBar OverflowMenu。
-- **Day palette**：10 色 Tailwind -500（sky/teal/amber/rose/violet/lime/orange/cyan/fuchsia/emerald）**只用於地圖** — map polyline + Map page bottom day strip eyebrow/underline + entry card num/eyebrow，對應 DESIGN.md Data Visualization 例外；trip 明細頁 day strip + 其他 UI chrome 嚴守 V2 Terracotta 單一 accent（不傳 dayColor prop）
-
-## 資料架構（POI Schema）
-
-```
-trips → trip_days → trip_entries        時間軸結構
-pois（AI 維護 master）→ trip_pois（user 覆寫）→ poi_relations（多對多）
-trip_docs  audit_log  api_logs  trip_requests  trip_permissions
-```
-
-POI 資料所有權：`pois` = AI 維護，`trip_pois` = user 可覆寫（COALESCE convention：NULL = 繼承 master）
-
-## 認證 — V2 OAuth (sole auth, 取代 Cloudflare Access)
-
-V2-P6 cutover 後 Cloudflare Access 已拆,所有 auth 走 tripline 自建 V2 OAuth。
-
-**瀏覽器 user**:`/signup` 自建帳號 → `tripline_session` HMAC opaque cookie → middleware `getSessionUser` 驗證 + 從 `users` 表查 email。Admin 看 `email === ADMIN_EMAIL`。
-
-**CLI / service token**:`/api/oauth/token` `grant_type=client_credentials` → opaque Bearer access_token (1h TTL) → header `Authorization: Bearer <token>`。Service token 在 client_apps 表 `allowed_scopes` 含 `admin` → middleware 設 `isAdmin: true`。
-
-- **Admin email**:`lean.lean@gmail.com`
-- **Mock Auth**(本機 `npm run dev`):`.dev.vars` 的 `DEV_MOCK_EMAIL`(wrangler 只讀這檔,**不是** `.env.local`)
-  - 複製:`cp .dev.vars.example .dev.vars` → 改 email → 重啟 `npm run dev`
-- **Provision CLI service client**(一次性 ops):
-  ```bash
-  node scripts/provision-admin-cli-client.js
-  # → outputs TRIPLINE_API_CLIENT_ID + TRIPLINE_API_CLIENT_SECRET (一次性,DB 只存 hash)
-  ```
-  記得把 secret 加進 `.env.local` 跟 launchd plist 給 scheduler scripts 用。
-- **Required env(prod)**:`SESSION_SECRET`(簽 cookie,32+ char)、`OAUTH_SIGNING_PRIVATE_KEY`(只有發 id_token 給 OAuth client app 時用,本人帳號自登入不需)、`TRIPLINE_API_URL`(mac mini funnel，**含路徑前綴**：`https://ray-chiudemac-mini.tail2750c0.ts.net/tripline/api`，funnel listen :443 → proxy mac mini :8080。verify/forgot/reset/invite email + tp-request trigger 都走這條。**注意**：早期 cutover doc 寫 `:8443` 是錯的,funnel 實際 listen :443)、`TRIPLINE_API_SECRET`(Bearer token，與 mac mini 同一組)
-- **Optional env**:`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`(失敗通知 admin，未設則 silent skip)、`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`(Google 登入 button)
-- **Mac mini env**(在 mac mini `.env.local`，由 `tripline-api-server.ts` 載入)：`GMAIL_USERNAME` + `GMAIL_APP_PASSWORD`(App Password 不是 Gmail 登入密碼)、`EMAIL_FROM`
-- **Deprecated**:`RESEND_API_KEY` + `EMAIL_FROM`(CF Pages 端，2026-05-02 cutover 後改用 mac mini Gmail SMTP)
-
-## 本機開發
+## Dev
 
 ```bash
-npm run dev:init     # 一鍵建本機 SQLite
-npm run dev          # vite (5173) + wrangler (8788)
+npm run dev:init   # local SQLite
+npm run dev        # vite 5173 + wrangler 8788
 ```
 
-## Design System
+Mock auth: copy `.dev.vars.example` → `.dev.vars` (NOT `.env.local`), set `DEV_MOCK_EMAIL`.
+Prod `TRIPLINE_API_URL`: funnel listens `:443`, not `:8443`.
 
-**`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` 是 UI/UX 的 single source of truth**。
+## Design SoT
 
-- **無衝突情境**：code 必須完全遵守 source of truth。任何 UI 修改先對照，與 mockup / DESIGN.md 不符即 bug。
-- **衝突情境**（code 已 ship 與 source of truth 不一致 / 新需求 source of truth 未涵蓋）：**先與 user 討論作法**，不自行決定哪邊改。可能是：(a) 修 code 對齊 source of truth、(b) 更新 source of truth 反映新決議、(c) 加 Decisions Log 例外。
-- **絕不**沉默偏離 source of truth — 即使「合理改進」也要先討論，避免 design review 反向修正。
-- QA 模式下任何不符項都應標記。
+`DESIGN.md` + `docs/design-sessions/terracotta-preview-v2.html` are UI/UX truth. Code mismatch = bug. Conflict → discuss first.
 
-## gstack
+## Skill Routing
 
-**網頁瀏覽一律用 `/browse`，不用 `mcp__claude-in-chrome__*`。**
+Match → invoke `Skill` first.
 
-常用：`/office-hours` `/autoplan` `/review` `/codex` `/qa` `/cso` `/ship` `/land-and-deploy` `/canary` `/retro` `/browse` `/design-review` `/investigate` `/benchmark`
+- Brainstorm → `/office-hours` · Bug → `/investigate`
+- Ship/PR → `/ship` · QA → `/qa` · Code review → `/review`
+- Doc sync post-ship → `/document-release`
+- Visual → `/design-review` · Architecture → `/plan-eng-review`
+- Browse → `/browse`
 
-## Skill routing
-
-When the user's request matches an available skill, ALWAYS invoke it using the Skill
-tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
-The skill has specialized workflows that produce better results than ad-hoc answers.
-
-Key routing rules:
-- Product ideas, "is this worth building", brainstorming → invoke office-hours
-- Bugs, errors, "why is this broken", 500 errors → invoke investigate
-- Ship, deploy, push, create PR → invoke ship
-- QA, test the site, find bugs → invoke qa
-- Code review, check my diff → invoke review
-- Update docs after shipping → invoke document-release
-- Weekly retro → invoke retro
-- Design system, brand → invoke design-consultation
-- Visual audit, design polish → invoke design-review
-- Architecture review → invoke plan-eng-review
-- Save progress, checkpoint, resume → invoke checkpoint
-- Code quality, health check → invoke health
+Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
+Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite, see `~/.gbrain/config.json`.
