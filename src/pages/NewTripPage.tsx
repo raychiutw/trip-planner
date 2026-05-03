@@ -29,7 +29,7 @@
  *   - 取消改 navigate(-1)，建立後 navigate(`/trips?selected=:id`)
  *   - 「建立」 primary action 在 TitleBar (responsive icon+文字 / icon-only)
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -50,20 +50,8 @@ import Icon from '../components/shared/Icon';
 import ToastContainer from '../components/shared/Toast';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
-
-interface PoiSearchResult {
-  osm_id: number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  category: string;
-  country?: string;
-  country_name?: string;
-}
-
-const POI_SEARCH_DEBOUNCE_MS = 300;
-const POI_SEARCH_MIN_LEN = 2;
+import { usePoiSearch } from '../hooks/usePoiSearch';
+import type { PoiSearchResult } from '../types/poi';
 
 const POPULAR_DESTINATIONS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'okinawa', label: '沖繩' },
@@ -451,11 +439,17 @@ export default function NewTripPage() {
   // Destination uses POI autocomplete. User can select multiple POIs.
   const [destQuery, setDestQuery] = useState('');
   const [selectedPois, setSelectedPois] = useState<PoiSearchResult[]>([]);
-  const [poiResults, setPoiResults] = useState<PoiSearchResult[] | null>(null);
-  const [poiSearching, setPoiSearching] = useState(false);
   const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
-  const poiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const poiAbortRef = useRef<AbortController | null>(null);
+  const { results: poiResults, searching: poiSearching } = usePoiSearch({
+    query: destQuery,
+    limit: 10,
+    normalise: (raw) => {
+      // API returns `{ results: [] }` wrapper
+      const arr = Array.isArray(raw) ? raw : (raw as { results?: PoiSearchResult[] })?.results ?? [];
+      return arr as PoiSearchResult[];
+    },
+    onError: (kind) => setPoiSearchError(kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'),
+  });
 
   const [dateMode, setDateMode] = useState<DateMode>('select');
   const [startDate, setStartDate] = useState('');
@@ -514,54 +508,16 @@ export default function NewTripPage() {
     });
   }
 
-  // POI search debounce
+  // Clear error when query empties
   useEffect(() => {
-    if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
-    const trimmed = destQuery.trim();
-    if (trimmed.length < POI_SEARCH_MIN_LEN) {
-      setPoiResults(null);
-      setPoiSearching(false);
-      setPoiSearchError(null);
-      poiAbortRef.current?.abort();
-      return;
-    }
-    poiDebounceRef.current = setTimeout(async () => {
-      poiAbortRef.current?.abort();
-      const ctrl = new AbortController();
-      poiAbortRef.current = ctrl;
-      setPoiSearching(true);
-      setPoiSearchError(null);
-      try {
-        const resp = await fetch(
-          `/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=10`,
-          { signal: ctrl.signal },
-        );
-        if (!resp.ok) {
-          setPoiSearchError('搜尋失敗，請稍後再試');
-          setPoiResults([]);
-          return;
-        }
-        const data = (await resp.json()) as { results: PoiSearchResult[] };
-        setPoiResults(data.results ?? []);
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return;
-        setPoiSearchError('網路連線失敗');
-        setPoiResults([]);
-      } finally {
-        setPoiSearching(false);
-      }
-    }, POI_SEARCH_DEBOUNCE_MS);
-    return () => {
-      if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
-    };
+    if (destQuery.trim().length < 2) setPoiSearchError(null);
   }, [destQuery]);
 
   function selectPoi(poi: PoiSearchResult) {
     setSelectedPois((prev) => (
       prev.some((p) => p.osm_id === poi.osm_id) ? prev : [...prev, poi]
     ));
-    setDestQuery('');
-    setPoiResults(null);
+    setDestQuery(''); // Clearing query auto-clears poiResults via hook
     setPoiSearchError(null);
     pushRecentDest(poi.name);
     setRecentDests(loadRecentDests());
@@ -758,7 +714,7 @@ export default function NewTripPage() {
                     autoComplete="off"
                     data-testid="new-trip-destination-input"
                   />
-                  {(poiSearching || poiResults || poiSearchError) && destQuery.trim().length >= POI_SEARCH_MIN_LEN && (
+                  {(poiSearching || poiResults.length > 0 || poiSearchError) && destQuery.trim().length >= 2 && (
                     <div className="tp-new-dest-dropdown" role="listbox" data-testid="new-trip-dest-dropdown">
                       {poiSearching && <div className="tp-new-dest-status">搜尋中⋯</div>}
                       {!poiSearching && poiSearchError && <div className="tp-new-dest-status">{poiSearchError}</div>}

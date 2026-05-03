@@ -27,7 +27,7 @@
  *   - onClose / onAdded 改 navigate(-1) + dispatch tp-entry-updated
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -41,15 +41,8 @@ import TitleBar from '../components/shell/TitleBar';
 import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-
-interface PoiSearchResult {
-  osm_id: number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  category: string;
-}
+import { usePoiSearch } from '../hooks/usePoiSearch';
+import type { PoiSearchResult } from '../types/poi';
 
 interface SavedPoiRow {
   id: number;
@@ -601,12 +594,24 @@ export default function AddStopPage() {
   const [tab, setTab] = useState<Tab>('search');
   const [category, setCategory] = useState<AddStopCategory>('all');
   const [query, setQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<PoiSearchResult[]>([]);
   const [region, setRegion] = useState<RegionOption>('全部地區');
   const [regionMenuOpen, setRegionMenuOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [searching, setSearching] = useState(false);
   const [selectedSearch, setSelectedSearch] = useState<Set<number>>(new Set());
+
+  // Search query falls back to region when user hasn't typed (e.g. just opened
+  // the page with region preset to 「沖繩」 — show 「熱門景點 · 沖繩」).
+  const effectiveQuery = useMemo(() => {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2) return trimmed;
+    return region !== '全部地區' ? region : '';
+  }, [query, region]);
+  const { results: searchResults, searching } = usePoiSearch({
+    enabled: tab === 'search',
+    query: effectiveQuery,
+    limit: 20,
+    normalise: normalizeSearchResults,
+  });
 
   const [savedPois, setSavedPois] = useState<SavedPoiRow[] | null>(null);
   const [savedLoading, setSavedLoading] = useState(false);
@@ -620,8 +625,6 @@ export default function AddStopPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
 
@@ -642,41 +645,7 @@ export default function AddStopPage() {
     return () => { cancelled = true; };
   }, [auth.user, tripId, dayNum]);
 
-  // Search debounce + abort: 快速打字時 cancel inflight 避免 last-write-wins race
-  useEffect(() => {
-    if (tab !== 'search') return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const trimmed = query.trim();
-    const fallbackQuery = region !== '全部地區' ? region : '';
-    const searchTerm = trimmed.length >= 2 ? trimmed : fallbackQuery;
-    if (searchTerm.length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    debounceRef.current = setTimeout(async () => {
-      abortRef.current?.abort();
-      const ctrl = new AbortController();
-      abortRef.current = ctrl;
-      setSearching(true);
-      try {
-        const resp = await fetch(
-          `/api/poi-search?q=${encodeURIComponent(searchTerm)}&limit=20`,
-          { signal: ctrl.signal },
-        );
-        if (resp.ok) {
-          setSearchResults(normalizeSearchResults(await resp.json()));
-        }
-      } catch (err) {
-        if ((err as { name?: string })?.name === 'AbortError') return;
-      } finally {
-        if (abortRef.current === ctrl) setSearching(false);
-      }
-    }, 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      abortRef.current?.abort();
-    };
-  }, [tab, query, region]);
+  // POI search 由 usePoiSearch hook 處理 (見上方 hook call) — debounce + abort 內建
 
   // Saved fetch (lazy 切到 tab 才打)
   useEffect(() => {

@@ -153,32 +153,7 @@ const SCOPED_STYLES = `
   margin: 0;
 }
 
-.tp-form { display: flex; flex-direction: column; gap: 16px; }
-.tp-form-row { display: flex; flex-direction: column; gap: 6px; }
-.tp-form-row label {
-  font-size: var(--font-size-footnote); font-weight: 600;
-  display: flex; justify-content: space-between; align-items: baseline;
-}
-.tp-form-row .tp-hint-link {
-  color: var(--color-accent);
-  font-weight: 600; font-size: var(--font-size-caption);
-  text-decoration: none;
-}
-.tp-form-row .tp-hint-link:hover { text-decoration: underline; }
-.tp-form-row input {
-  font-family: inherit; font-size: var(--font-size-callout);
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  min-height: 48px;
-}
-.tp-form-row input:focus {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-  border-color: var(--color-accent);
-}
-
+/* .tp-form / .tp-form-row 移到 css/tokens.css；LoginPage 用 .tp-form--auth 拉高觸控尺寸。 */
 /* .tp-btn family 移到 css/tokens.css 共用。LoginPage 用 .tp-btn-block (full width) + .tp-btn-lg。 */
 
 .tp-divider {
@@ -472,7 +447,7 @@ export default function LoginPage() {
 
         {bannerError && <ErrorBanner message={bannerError} testId="login-banner-error" />}
 
-        <form className="tp-form" onSubmit={handleSubmit} noValidate>
+        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
             <label htmlFor="login-email">Email</label>
             <input

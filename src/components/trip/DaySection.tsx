@@ -112,9 +112,6 @@ const DaySection = React.memo(function DaySection({
   // title (trip_days.title) → 區域 label (trip_days.label, 例「美瑛」) →「Day N」。
   const dayTitle = day?.title?.trim() || area || `Day ${dayNum}`;
 
-  // QA 2026-04-26 PR-J：拿掉每日 hero 的「📖 看地圖」 chip — user feedback
-  // 「移除每日 header 看地圖」。bottom nav 已有「地圖」 tab 入口，每天 chip 重複。
-
   return (
     <section className="ocean-day day-section" data-day={dayNum}>
       <style>{MAP_CHIP_STYLES}</style>

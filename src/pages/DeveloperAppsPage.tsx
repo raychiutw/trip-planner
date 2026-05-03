@@ -100,7 +100,7 @@ const SCOPED_STYLES = `
 .tp-error-banner { color: var(--color-destructive); }
 `;
 
-interface ClientApp {
+export interface ClientApp {
   client_id: string;
   client_type: 'public' | 'confidential';
   app_name: string;
@@ -112,6 +112,8 @@ interface ClientApp {
   created_at: string;
   updated_at: string;
 }
+
+export type DeveloperAppCreatedEvent = CustomEvent<{ app: ClientApp }>;
 
 // 2026-05-03 modal-to-fullpage migration: NewAppResult + SCOPE_OPTIONS 已搬到
 // src/pages/DeveloperAppNewPage.tsx (form 全頁化後 list page 不需要)。
@@ -145,11 +147,17 @@ export default function DeveloperAppsPage() {
 
   useEffect(() => { void loadApps(); }, []);
 
-  // 2026-05-03 modal-to-fullpage migration: 建立新應用走 /developer/apps/new 全頁。
-  // page submit 成功 + ack secret → dispatch tp-developer-app-created 讓列表
-  // 自動 refresh，不用 user 手動重整。
+  // tp-developer-app-created event 帶完整 ClientApp detail → in-place append
+  // (省一次 GET /api/dev/apps)。若 detail 缺漏（事件型別舊版 dispatch）退回 full refetch。
   useEffect(() => {
-    function handleAppCreated() { void loadApps(); }
+    function handleAppCreated(e: Event) {
+      const detail = (e as DeveloperAppCreatedEvent).detail;
+      if (detail?.app) {
+        setApps((prev) => prev ? [...prev, detail.app] : [detail.app]);
+      } else {
+        void loadApps();
+      }
+    }
     window.addEventListener('tp-developer-app-created', handleAppCreated);
     return () => window.removeEventListener('tp-developer-app-created', handleAppCreated);
   }, []);

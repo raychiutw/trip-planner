@@ -29,6 +29,7 @@ import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import InlineError from '../components/shared/InlineError';
+import type { ClientApp } from './DeveloperAppsPage';
 
 const SCOPED_STYLES = `
 .tp-dev-new-shell {
@@ -58,34 +59,7 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-/* Form rows — 沿用原 modal CSS 規格 */
-.tp-form { display: flex; flex-direction: column; gap: 16px; }
-.tp-form-row { display: flex; flex-direction: column; gap: 6px; }
-.tp-form-row label {
-  font-size: var(--font-size-footnote); font-weight: 600;
-  display: flex; justify-content: space-between; align-items: baseline;
-}
-.tp-form-row .tp-hint {
-  font-size: var(--font-size-caption2);
-  color: var(--color-muted); font-weight: 500;
-}
-.tp-form-row input, .tp-form-row textarea {
-  font-family: inherit; font-size: var(--font-size-callout);
-  padding: 10px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-}
-.tp-form-row textarea {
-  font-family: 'SF Mono', ui-monospace, monospace;
-  font-size: var(--font-size-footnote);
-  min-height: 80px; resize: vertical;
-}
-.tp-form-row input:focus, .tp-form-row textarea:focus {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-  border-color: var(--color-accent);
-}
+/* .tp-form / .tp-form-row / .tp-hint 移到 css/tokens.css 共用（DeveloperAppNew 用密集預設）。 */
 
 .tp-radio-group {
   display: flex; gap: 8px;
@@ -294,9 +268,25 @@ export default function DeveloperAppNewPage() {
   }
 
   function ackSecret() {
+    if (!secretResult) {
+      navigate(routes.developerApps());
+      return;
+    }
+    const now = new Date().toISOString();
+    const app: ClientApp = {
+      client_id: secretResult.client_id,
+      client_type: secretResult.client_type as 'public' | 'confidential',
+      app_name: secretResult.app_name,
+      app_description: null,
+      homepage_url: null,
+      redirect_uris: secretResult.redirect_uris,
+      allowed_scopes: secretResult.allowed_scopes,
+      status: secretResult.status as 'active' | 'pending_review' | 'suspended',
+      created_at: now,
+      updated_at: now,
+    };
     setSecretResult(null);
-    // Notify list page to refetch — picked up by DeveloperAppsPage 'tp-developer-app-created' listener
-    window.dispatchEvent(new CustomEvent('tp-developer-app-created'));
+    window.dispatchEvent(new CustomEvent('tp-developer-app-created', { detail: { app } }));
     navigate(routes.developerApps());
   }
 
