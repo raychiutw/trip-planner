@@ -2,7 +2,8 @@
  * useCurrentUser — V2-P1 fetch logged-in user from /api/oauth/userinfo
  *
  * Component 用此 hook 拿 current user 給 DesktopSidebar / TopBar 顯示 user chip。
- * 沒 session 時 user = null（401 → null），方便 caller render「登入」CTA。
+ * 沒 session 時 user = null（401 → null）。Caller 必須保留 undefined loading
+ * state，不要先當成未登入，避免 auth-dependent chrome flicker。
  *
  * 不快取 across navigation — useEffect fetch on mount。Future V2-P5 加 SWR-style
  * cache + revalidate（避免每頁 mount 都打 API）。

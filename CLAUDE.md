@@ -2,7 +2,7 @@
 
 Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
 
-## Pipeline (invoke `/tp-team` before code changes)
+## Pipeline
 
 `Think → Plan → Build → Review → Test → Ship → Reflect`
 
@@ -13,6 +13,7 @@ Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
 
 ## Hard Rules
 
+- **Code change → invoke `/tp-team` first** (新功能、bug fix、refactor、migration、CSS、API endpoint)。行程資料用 `tp-*` data skills 直接打 API。
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation.
@@ -50,4 +51,4 @@ Match → invoke `Skill` first.
 - Browse → `/browse`
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite, see `~/.gbrain/config.json`.
+Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP, sync=artifacts-only, repo=read-write, see `~/.gbrain/config.json`.
