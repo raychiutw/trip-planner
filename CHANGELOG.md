@@ -3,6 +3,12 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.15] - 2026-05-03
+
+### Changed
+
+- **CLAUDE.md compacted to ~531 tokens (English)** — 從 ~3000 token 中文版精簡 82%，翻譯成英文。保留 7-stage pipeline、hard rules、layout、dev gotchas（`.dev.vars` vs `.env.local` trap、`TRIPLINE_API_URL` `:443` not `:8443`）、Design SoT 政策、skill routing（補上 `/document-release`）、GBrain config pointer。完整 env 列表、project tree、POI schema、deprecated `RESEND` 註記移到 ARCHITECTURE.md / GEMINI.md / DESIGN.md / openspec/config.yaml / .dev.vars.example 等專責檔案。
+
 ## [2.19.14] - 2026-05-03
 
 ### Changed
