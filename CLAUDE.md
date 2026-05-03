@@ -95,7 +95,7 @@ V2-P6 cutover 後 Cloudflare Access 已拆,所有 auth 走 tripline 自建 V2 OA
   # → outputs TRIPLINE_API_CLIENT_ID + TRIPLINE_API_CLIENT_SECRET (一次性,DB 只存 hash)
   ```
   記得把 secret 加進 `.env.local` 跟 launchd plist 給 scheduler scripts 用。
-- **Required env(prod)**:`SESSION_SECRET`(簽 cookie,32+ char)、`OAUTH_SIGNING_PRIVATE_KEY`(只有發 id_token 給 OAuth client app 時用,本人帳號自登入不需)、`TRIPLINE_API_URL`(mac mini funnel `https://...:8443`，verify/forgot/reset/invite email + tp-request trigger 都走這條)、`TRIPLINE_API_SECRET`(Bearer token，與 mac mini 同一組)
+- **Required env(prod)**:`SESSION_SECRET`(簽 cookie,32+ char)、`OAUTH_SIGNING_PRIVATE_KEY`(只有發 id_token 給 OAuth client app 時用,本人帳號自登入不需)、`TRIPLINE_API_URL`(mac mini funnel，**含路徑前綴**：`https://ray-chiudemac-mini.tail2750c0.ts.net/tripline/api`，funnel listen :443 → proxy mac mini :8080。verify/forgot/reset/invite email + tp-request trigger 都走這條。**注意**：早期 cutover doc 寫 `:8443` 是錯的,funnel 實際 listen :443)、`TRIPLINE_API_SECRET`(Bearer token，與 mac mini 同一組)
 - **Optional env**:`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`(失敗通知 admin，未設則 silent skip)、`GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`(Google 登入 button)
 - **Mac mini env**(在 mac mini `.env.local`，由 `tripline-api-server.ts` 載入)：`GMAIL_USERNAME` + `GMAIL_APP_PASSWORD`(App Password 不是 Gmail 登入密碼)、`EMAIL_FROM`
 - **Deprecated**:`RESEND_API_KEY` + `EMAIL_FROM`(CF Pages 端，2026-05-02 cutover 後改用 mac mini Gmail SMTP)
