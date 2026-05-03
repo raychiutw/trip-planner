@@ -14,8 +14,9 @@ import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import Icon from '../shared/Icon';
 // Section 3 (terracotta-add-stop-modal)：DaySection 內 inline「+ 加景點」入口
-// 退役，trip-level 統一走 TripPage TitleBar AddStopModal。InlineAddPoi component
-// 暫保留 file 為 follow-up cleanup，本次 PR 不刪 file 避免 diff 過大。
+// 退役，trip-level 統一走 TripPage TitleBar 「+ 加景點」按鈕 → navigate 到
+// /trip/:id/add-stop?day=N 全頁 (2026-05-03 modal-to-fullpage migration)。
+// InlineAddPoi component 暫保留 file 為 follow-up cleanup。
 import { toTimelineEntry } from '../../lib/mapDay';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
