@@ -1,18 +1,17 @@
 /**
- * TitleBar — V2 Terracotta page chrome primitive.
+ * TitleBar — V2 Terracotta page chrome primitive (2026-05-03 PageHeader 退役後唯一)。
  *
- * 用於 mockup 涵蓋 6 主功能頁（Chat / Trips / Trip detail / Map / Explore /
- * Account）。簡化 API：title / back / actions / backLabel — 無 eyebrow / meta /
- * variant / align（splash / auth / settings 子頁繼續用 PageHeader，見
- * openspec/changes/terracotta-pages-refactor/design.md D1）。
+ * 用於所有 page (主功能 / settings 子頁 / form 全頁)。簡化 API：
+ * title / back / actions / backLabel — 無 eyebrow / meta / variant / align。
+ * eyebrow + meta 改用 inline `.tp-page-eyebrow` + `.tp-page-meta` 在 TitleBar
+ * 下方第一行 (settings 子頁 + list page 的資訊密度需求)。
  *
- * 視覺對應：docs/design-sessions/terracotta-preview-v2.html `.tp-page-titlebar`
+ * 視覺對應：docs/design-sessions/terracotta-preview-v2.html Section 23 + .tp-page-titlebar
  *           - Desktop 64px / padding 0 24px / title 20px
  *           - Compact 56px / padding 0 16px / title 18px
  *           - sticky + glass blur 14px + hairline border-bottom
  *
- * CSS：使用 dedicated `.tp-titlebar` class（不 reuse `.tp-page-header`，因為 V2
- *      Terracotta 的 64px 與字級 20px 跟 PageHeader 既有 56px / 17px 不同）。
+ * CSS：`css/tokens.css` L1226+ `.tp-titlebar`。
  */
 import type { ReactNode } from 'react';
 import Icon from '../shared/Icon';

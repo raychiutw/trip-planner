@@ -72,7 +72,7 @@ const SCOPED_STYLES = `
 }
 @media (max-width: 760px) { .explore-wrap { padding: 16px 16px 32px; gap: 16px; } }
 
-/* explore-header 改用統一 <PageHeader>。.explore-header CSS 已退役。 */
+/* explore-header 改用統一 <TitleBar>。.explore-header CSS 已退役。 */
 
 /* Section 4.9 (terracotta-mockup-parity-v2)：對齊 mockup section 18 拿掉
  * 「搜尋 / 我的收藏」 tab pair。改用 TitleBar action button 切兩 view，

@@ -21,7 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import PageHeader from '../components/shell/PageHeader';
+import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
 
 const SCOPED_STYLES = `
@@ -31,7 +31,7 @@ const SCOPED_STYLES = `
 }
 .tp-dev-inner { max-width: 920px; margin: 0 auto; }
 
-/* page heading 改用統一的 <PageHeader>（src/components/shell/PageHeader.tsx），舊 .tp-page-heading 已退役 */
+/* page heading 改用統一 <TitleBar> + .tp-page-eyebrow / .tp-page-meta inline (2026-05-03 PageHeader 退役)。 */
 
 .tp-list-table {
   background: var(--color-background);
@@ -175,25 +175,27 @@ export default function DeveloperAppsPage() {
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-dev-shell" data-testid="developer-apps-page">
+      <TitleBar
+        title="應用"
+        actions={
+          <button
+            type="button"
+            className="tp-titlebar-action"
+            onClick={() => navigate('/developer/apps/new')}
+            aria-label="建立新應用"
+            data-testid="dev-apps-new"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span className="tp-titlebar-action-label">建立新應用</span>
+          </button>
+        }
+      />
       <div className="tp-dev-inner">
-        <PageHeader
-          eyebrow="開發者後台"
-          title="應用"
-          meta="管理你的 OAuth client。每個 app 對應一組 client_id。"
-          actions={
-            <button
-              className="tp-btn tp-btn-primary tp-btn-lg"
-              onClick={() => navigate('/developer/apps/new')}
-              data-testid="dev-apps-new"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              建立新應用
-            </button>
-          }
-        />
+        <p className="tp-page-eyebrow">開發者後台</p>
+        <p className="tp-page-meta">管理你的 OAuth client。每個 app 對應一組 client_id。</p>
 
         {error && <ErrorBanner message={error} testId="dev-apps-error" />}
 

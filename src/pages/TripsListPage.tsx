@@ -56,7 +56,7 @@ const SCOPED_STYLES = `
   padding: 24px 16px 64px;
 }
 
-/* heading 改用統一 <PageHeader>。.tp-trips-heading 已退役。 */
+/* heading 改用統一 <TitleBar>。.tp-trips-heading 已退役。 */
 
 .tp-trips-grid {
   /* 2026-04-29:user 反饋「行程版面超出版面」 — repeat(2, 1fr) 等同
@@ -87,7 +87,7 @@ const SCOPED_STYLES = `
  * Back btn 36×36 帶 border + bg-background = mockup .icon-btn pattern，比原
  * 40×40 transparent 更貼齊 mockup affordance。Title 17px bold 單行，
  * 不加 day eyebrow（保持簡潔）。 */
-/* embedded topbar 改用統一 <PageHeader variant="sticky">。
+/* embedded topbar 改用統一 <TitleBar>。
  * 舊 .tp-embedded-topbar / -back / -trip-name / -actions CSS 已退役。
  * .tp-embedded-trip 仍是 wrapper（含 height: 100%），保留。
  * .tp-embedded-menu* 給 EmbeddedActionMenu sub-component 用，保留。 */
