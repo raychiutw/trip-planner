@@ -5929,10 +5929,36 @@
   </div>
 </section>
 
-<!-- ===== Section 11 — Day Tabs (Trip detail + Map page 共用) ===== -->
+<!-- ===== Section 11 — Day Tabs (Trip detail + Map page 共用元件,雙色彩規範) ===== -->
 <section class="tp-section">
   <h2 class="tp-section-title">Day Tabs</h2>
-  <p class="tp-section-lead">Trip detail + Map page 同一條 underline strip — text-only eyebrow + date,active 用 per-day color underline。Trip detail 加 <code>.tp-map-day-tabs--sticky</code> 黏在 TitleBar 下方。</p>
+  <p class="tp-section-lead">Trip detail + Map page 共用同一個 underline tab primitive (<code>&lt;MapDayTab&gt;</code>),但 <strong>day color 規範不同</strong>：Trip 明細頁嚴守 Terracotta 單色 accent (chrome 一致性), Map page 套 per-day color (服務於地圖 N 條 polyline 視覺區分,Data Visualization 例外)。Trip detail 另加 <code>.tp-map-day-tabs--sticky</code> 黏在 TitleBar 下方。</p>
+
+  <h3 class="tp-variant-name">Trip detail variant — Terracotta 單色</h3>
+  <nav class="tp-map-day-tabs" style="margin-bottom: 24px;">
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow">DAY 01</span>
+      <span class="tp-map-day-tab-date">7/29</span>
+    </button>
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow">DAY 02</span>
+      <span class="tp-map-day-tab-date">7/30</span>
+    </button>
+    <button class="tp-map-day-tab is-active" type="button">
+      <span class="tp-map-day-tab-eyebrow">DAY 03 · 今天</span>
+      <span class="tp-map-day-tab-date">7/31</span>
+    </button>
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow">DAY 04</span>
+      <span class="tp-map-day-tab-date">8/01</span>
+    </button>
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow">DAY 05</span>
+      <span class="tp-map-day-tab-date">8/02</span>
+    </button>
+  </nav>
+
+  <h3 class="tp-variant-name">Map page variant — per-day color (DV 例外)</h3>
   <nav class="tp-map-day-tabs">
     <button class="tp-map-day-tab" type="button">
       <span class="tp-map-day-tab-eyebrow" style="color:#0ea5e9">DAY 01</span>
