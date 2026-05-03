@@ -458,9 +458,13 @@ async function queryProdDataHygiene() {
   try {
     var likeClauses = PROD_DATA_TEST_MARKERS.map(function(marker) {
       // SQL injection-safe: marker 是 hardcoded constant，不接 user input
-      return "title LIKE '%" + marker.replace(/'/g, "''") + "%' OR note LIKE '%" + marker.replace(/'/g, "''") + "%'";
+      var safe = marker.replace(/'/g, "''");
+      return "te.title LIKE '%" + safe + "%' OR te.note LIKE '%" + safe + "%'";
     }).join(' OR ');
-    var sql = 'SELECT id, trip_id, day_num, title, note FROM trip_entries WHERE ' + likeClauses + ' LIMIT 50';
+    // trip_id / day_num 在 trip_days,需 JOIN(trip_entries 只有 day_id)
+    var sql = 'SELECT te.id, td.trip_id, td.day_num, te.title, te.note ' +
+      'FROM trip_entries te JOIN trip_days td ON te.day_id = td.id ' +
+      'WHERE ' + likeClauses + ' LIMIT 50';
     var rows = await queryD1(sql);
     if (!rows || rows.length === 0) {
       return { status: 'ok', total: 0, leaks: [] };
@@ -481,8 +485,9 @@ async function queryProdDataHygiene() {
       })
     };
   } catch (err) {
+    // check 失敗本身就該 surface,別假裝綠燈遮蓋 silent failure
     console.error('Prod data hygiene check failed:', err.message);
-    return { status: 'ok', total: 0, leaks: [], error: err.message };
+    return { status: 'warning', total: 0, leaks: [], error: err.message };
   }
 }
 

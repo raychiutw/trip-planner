@@ -60,6 +60,11 @@ build_telegram_msg() {
       var icon = r.npmAudit.status === 'critical' ? '🔴' : '⚠️';
       issues.push(icon + ' npm: ' + r.npmAudit.total + ' 個漏洞 (' + breakdown.join(' ') + ')');
     }
+    if (r.dataHygiene && r.dataHygiene.error) {
+      issues.push('🔴 prod data hygiene 檢查失敗: ' + r.dataHygiene.error);
+    } else if (r.dataHygiene && r.dataHygiene.total > 0) {
+      issues.push('⚠️ prod data hygiene: ' + r.dataHygiene.total + ' 筆 test marker 殘留');
+    }
     if (issues.length === 0) { lines.push('📊 ' + today + ' ✅ 全綠'); }
     else { lines.push('📊 Tripline 每日報告 ' + today); lines.push('──────────────'); issues.forEach(function(i) { lines.push(i); }); }
     lines.push('──────────────');
