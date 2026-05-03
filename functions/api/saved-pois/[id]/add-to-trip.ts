@@ -5,6 +5,11 @@
  * Auth: saved_pois owner OR admin + 對 tripId 有 hasWritePermission。
  *
  * travel_* 欄位 NULL，背景 tp-request 之後 fill（避免 LLM 8 秒等待感）。
+ *
+ * v2.21.1 (MF2 server completion): 同 day 時段衝突 → 409 + conflictWith 結構，
+ * 讓 FE 的 ConflictModal 可以顯示 [取消/取代既有/改插入到後面] 三選 action。
+ * Conflict = newStart < entryEnd AND newEnd > entryStart (any overlap)，
+ * position=replace 時不檢查（既然要取代，當然有衝突，不必再彈 modal）。
  */
 import { logAudit } from '../../_audit';
 import { hasWritePermission, requireAuth } from '../../_auth';
@@ -24,6 +29,21 @@ interface Body {
 }
 
 const VALID_POSITIONS = new Set(['append', 'before', 'after', 'replace']);
+
+/** Parse "HH:MM-HH:MM" → [startMin, endMin]; null if not parseable. */
+function parseTimeRange(time: string | null | undefined): [number, number] | null {
+  if (!time) return null;
+  const m = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(time);
+  if (!m) return null;
+  const [, h1, m1, h2, m2] = m;
+  return [parseInt(h1!, 10) * 60 + parseInt(m1!, 10), parseInt(h2!, 10) * 60 + parseInt(m2!, 10)];
+}
+
+/** "HH:MM" → minutes since midnight. */
+function hhmmToMin(t: string): number {
+  const [h, m] = t.split(':');
+  return parseInt(h!, 10) * 60 + parseInt(m!, 10);
+}
 
 export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   const auth = requireAuth(context);
@@ -120,6 +140,34 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
 
   const start = startTime ?? defaultStartFor(saved.poi_type);
   const end = endTime ?? addMinutes(start, stayMinutesFor(saved.poi_type));
+
+  // v2.21.1: conflict detection — 同 day 時段重疊的 entry → 409 + conflictWith。
+  // position=replace 跳過（要取代的本來就會被刪）。entries 沒 time 字串 / 解析失敗的也跳過。
+  if (position !== 'replace') {
+    const newStartMin = hhmmToMin(start);
+    const newEndMin = hhmmToMin(end);
+    const { results: dayEntries } = await db
+      .prepare('SELECT id, time, title FROM trip_entries WHERE day_id = ?')
+      .bind(day.id)
+      .all<{ id: number; time: string | null; title: string }>();
+    for (const entry of dayEntries ?? []) {
+      const range = parseTimeRange(entry.time);
+      if (!range) continue;
+      const [eStart, eEnd] = range;
+      // Overlap: newStart < eEnd AND newEnd > eStart
+      if (newStartMin < eEnd && newEndMin > eStart) {
+        return json({
+          error: 'CONFLICT',
+          conflictWith: {
+            entryId: entry.id,
+            time: entry.time,
+            title: entry.title,
+            dayNum,
+          },
+        }, 409);
+      }
+    }
+  }
 
   // 原子性：shift/delete + INSERT entry + INSERT trip_pois 全包成單一 batch（D1 單 transaction）。
   // trip_pois.entry_id 用 SQLite last_insert_rowid() 取上一句 INSERT 的 PK，省 round-trip 又
