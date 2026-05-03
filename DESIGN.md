@@ -266,15 +266,18 @@
 **Action button (`.tp-titlebar-action`)**
 - 唯一合法 class，禁止自製 ad-hoc class
 - 兩 variant: default outline / `.is-primary` accent filled
-- 桌機: pill (radius full) + 1px border + icon + 文字 label
-- 手機: round (radius full) + 1px border + icon-only (label hidden via `.tp-titlebar-action-label` @media)
+- 桌機: rounded rect (radius-md 8px) + 1px border + icon + 文字 label
+- 手機: square 44×44 + radius-md (rounded corners) + 1px border + icon-only (label hidden via `.tp-titlebar-action-label` @media)
 - 44×44 min tap target
 - 多 action 水平排列, `.tp-titlebar-actions` wrapper, gap 6px
 
-**例外 button class**
-- `.tp-titlebar-back` — 左側返回 button, 36×36 transparent icon-only
-- `.tp-titlebar-icon-btn` — OverflowMenu kebab trigger, icon-only no border
-- `.tp-embedded-menu-trigger` — EmbeddedActionMenu 內部 kebab, 36×36 square; 不得用作 primary action
+**Button family radius 統一規則**
+所有 TitleBar button (含返回 / icon trigger / action) **一律 radius-md (8px)** — 不用 radius-full pill。對齊 mockup S23 spec + `.tp-embedded-menu-trigger` 既有 36×36 square + radius-md 視覺風格。
+
+**例外 button class** (都用 radius-md，差別在 size + border)
+- `.tp-titlebar-back` — 左側返回 button, 44×44 transparent icon-only + radius-md
+- `.tp-titlebar-icon-btn` — OverflowMenu kebab trigger, 44×44 icon-only no border + radius-md
+- `.tp-embedded-menu-trigger` — EmbeddedActionMenu 內部 kebab, 36×36 square + radius-md (smaller size for sub-trigger context)
 
 **Sub-content 規則 (TitleBar 下方)**
 - eyebrow + meta: 用 `.tp-page-eyebrow` + `.tp-page-meta` inline 在 TitleBar 下方第一行 (settings/list page 資訊密度需求)
@@ -307,10 +310,24 @@
 | `/explore`、探索結果、POI 詳細 | 探索 |
 | `/account`、connected apps、developer apps | 帳號 |
 
-### Trip Detail DayNav
-- Sticky 在 titlebar 下方，與 bottom nav 使用同一套 hide-on-scroll 行為。
-- Day item 可使用 data visualization day color，但外框、文字與 inactive state 仍跟 Terracotta 系統。
-- Compact 以水平 scroll + scroll snap；desktop 可保留較寬 chip。
+### Day Nav (Trip Detail + Map page 共用視覺)
+
+統一 colorful underline tab format — `.ocean-day-strip` (TripPage `<DayNav>`) 與 `.tp-map-day-tabs` (MapPage) 視覺對齊。
+
+**Tab 規格 (`[data-dn]` / `.tp-map-day-tab`)**
+- text-only (eyebrow + date)，無 chip background fill / border
+- Eyebrow: `DAY 01` 套 per-day color (`dayColor(dayNum)` from `src/lib/dayPalette` — 10-tone Tailwind -500 palette)
+- Date: 14px / 600 weight, `color-foreground` (active 套 accent color)
+- Active state: 2px `border-bottom` 用 `--day-color` inline override (per-day color underline)
+- Idle: muted text + transparent border-bottom
+- Hover (idle): `color-foreground`
+- 44px min tap target
+
+**Strip container (`.ocean-day-strip` / `.tp-map-day-tabs`)**
+- Sticky chrome group: 緊接 TitleBar (top: 64px desktop / 56px compact, mobile top:0)
+- Background glass blur 14px + 1px bottom hairline border
+- Horizontal scroll, scrollbar hidden
+- 右側 mask 漸層 fade 暗示「還有更多 day 可水平捲」
 
 ### Trip Detail Page
 - Desktop / compact 共用同一份 `TripDetail` 內容樹：DayNav、stop list、住宿、交通、地圖摘要、錯誤訊息、空狀態都不可拆成兩套邏輯。
@@ -340,11 +357,6 @@
 - Modal backdrop / portal 浮層
 - 大型 split hero / 形象圖
 - Loading 蓋住 page (改用 `<PageErrorState>` 或 inline skeleton)
-
-### Day Chip（`[data-dn]`）
-- 160×auto（compact 140/130）。
-- Border hairline，active = terracotta 實心白字；地圖 day indicator 可套 day color 例外。
-- 內容三段：`DAY 01` / 日期 / area label。Progress marks 僅在資訊密度需要時使用。
 
 ### Stop Card
 - 4-col grid：`68px time | 48px icon box | content | actions`，compact 可收斂到 3-col。
