@@ -54,9 +54,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const startDate = body.startDate as string | undefined;
   const endDate = body.endDate as string | undefined;
 
-  // PR-CC 2026-04-26：owner 強制 = auth.email，不再讀 body.owner（防偽造）。
-  const owner = auth.email;
-
   if (!id || !name || !startDate || !endDate) {
     throw new AppError('DATA_VALIDATION', '缺必填欄位：id, name, startDate, endDate');
   }
