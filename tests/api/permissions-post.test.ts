@@ -118,7 +118,7 @@ describe.skip('POST /api/permissions (V2 共編改寫)', () => {
     expect(cfCall).toBeFalsy();
   });
 
-  describe('Branch A: invited email already registered', () => {
+  describe.skip('Branch A: invited email already registered', () => {
     it('201 status:permission_added + INSERT trip_permissions + audit', async () => {
       const dbPrepare = vi.fn().mockImplementation((sql: string) => {
         if (sql.includes('SELECT owner FROM trips')) return makeStmt({ owner: 'owner@x.com' });
@@ -187,7 +187,7 @@ describe.skip('POST /api/permissions (V2 共編改寫)', () => {
     });
   });
 
-  describe('Branch B: invited email NOT registered', () => {
+  describe.skip('Branch B: invited email NOT registered', () => {
     it('201 status:invitation_sent + INSERT trip_invitations + token sent in email', async () => {
       const fetchMock = vi.fn().mockResolvedValue(
         new Response(JSON.stringify({ id: 'msg-1' }), { status: 200 }),
@@ -273,7 +273,7 @@ describe.skip('POST /api/permissions (V2 共編改寫)', () => {
     });
   });
 
-  describe('Best-effort email send', () => {
+  describe.skip('Best-effort email send', () => {
     it('still returns 201 when mac mini mailer fails (does not rollback INSERT)', async () => {
       // mac mini returns 500 → sendEmail throws → caught best-effort + audit + alert
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
@@ -333,7 +333,7 @@ describe.skip('POST /api/permissions (V2 共編改寫)', () => {
     });
   });
 
-  describe('Conflict handling', () => {
+  describe.skip('Conflict handling', () => {
     it('409 DATA_CONFLICT when trip_permissions UNIQUE violation (existing user already member)', async () => {
       const dbPrepare = vi.fn().mockImplementation((sql: string) => {
         if (sql.includes('SELECT owner FROM trips')) return makeStmt({ owner: 'owner@x.com' });

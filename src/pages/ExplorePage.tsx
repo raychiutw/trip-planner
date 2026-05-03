@@ -1,16 +1,13 @@
 /**
- * ExplorePage — V2 探索 POI（mockup-explore-v2.html parity）.
+ * ExplorePage — V2 探索 POI（v2.21.0 secondary entry）.
  *
- * Two tabs:
- *   1. 搜尋  — Nominatim search with single-click 儲存 per result.
- *   2. 我的收藏 — multi-select + 「加入行程」toolbar to push selection into a trip.
+ * 從 v2.21.0 起，「我的收藏」升 primary nav (`/saved` SavedPoisPage)，本頁變成純探索：
+ *   - Nominatim search with single-click 儲存 per result
+ *   - region pill / category subtab filter
+ *   - heart toggle 加入「我的收藏」(loadSaved mini-fetch 維 savedKeySet 正確 disable)
  *
  * Auth: useRequireAuth — page is for logged-in users.
- *
- * Add-to-trip flow (MVP): pick trip from a small modal, navigate to
- * /trips?selected=<tripId> with a toast hint. Server-side bulk-add endpoint
- * is the natural next step; the UI is shaped so wiring it later is a 1-line
- * change inside `addSelectedToTrip`.
+ * TitleBar 右上 ghost action「收藏」→ navigate /saved.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -21,9 +18,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
-import ConfirmModal from '../components/shared/ConfirmModal';
 import InputModal from '../components/shared/InputModal';
-import TripPickerPopover from '../components/explore/TripPickerPopover';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -34,29 +29,13 @@ const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾',
 
 import type { PoiSearchResult } from '../types/poi';
 
-interface SavedPoiRow {
-  id: number;
-  poiId: number;
+/**
+ * Mini-fetch shape — 只用 poiType + poiName 算 savedKeySet (heart-disable correctness).
+ * SavedPoisPage 用完整 SavedPoiRow 型別，這裡只取需要的欄位。
+ */
+interface SavedKeyRow {
   poiName: string;
-  poiAddress: string | null;
   poiType: string;
-  savedAt: string;
-  note: string | null;
-  /** GET /api/saved-pois 一次 LEFT JOIN trip_pois 反查「目前在哪些 trip」 */
-  usages?: Array<{
-    tripId: string;
-    tripName: string;
-    dayNum: number | null;
-    dayDate: string | null;
-    entryId: number | null;
-  }>;
-}
-
-interface TripPickerRow {
-  tripId: string;
-  name?: string;
-  title?: string | null;
-  countries?: string | null;
 }
 
 const SCOPED_STYLES = `
@@ -393,34 +372,26 @@ const SCOPED_STYLES = `
  * SCOPED_STYLES。row hover / empty state 規則一併隨 component 走。 */
 `;
 
-type Tab = 'search' | 'saved';
-
 export default function ExplorePage() {
   useRequireAuth();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
 
-  const [tab, setTab] = useState<Tab>('search');
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<PoiSearchResult[]>([]);
-  const [saved, setSaved] = useState<SavedPoiRow[]>([]);
+  const [savedKeyRows, setSavedKeyRows] = useState<SavedKeyRow[]>([]);
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
-  const [selectedSavedIds, setSelectedSavedIds] = useState<Set<number>>(new Set());
-  const [deletingSelected, setDeletingSelected] = useState(false);
-  const [showTripPicker, setShowTripPicker] = useState(false);
-  const [trips, setTrips] = useState<TripPickerRow[] | null>(null);
-  // Section 4.9：region selector + category subtab filter
-  // Section 5 (E4)：region 預設用 active trip's countries → 對應地區名
+  // Region selector + category subtab filter
+  // region 預設用 active trip's countries → 對應地區名
   const { activeTripId } = useActiveTrip();
+  // ExplorePage 不再 fetch trips list (saved-toolbar 移到 SavedPoisPage)，但 active
+  // trip 的 region 仍從 ActiveTripContext 推導 — countries field 不在 context 裡，
+  // 所以這裡 default region 退回「全部地區」，等使用者在 region pill 自選。
   const defaultRegion = useMemo(() => {
-    const t = trips?.find((x) => x.tripId === activeTripId);
-    const country = (t?.countries ?? '').trim().toUpperCase();
-    if (country.includes('JP')) return '沖繩';
-    if (country.includes('KR')) return '首爾';
-    if (country.includes('TW')) return '台北';
+    if (!activeTripId) return '全部地區';
     return '全部地區';
-  }, [trips, activeTripId]);
+  }, [activeTripId]);
   const [region, setRegion] = useState<string>('全部地區');
   // 第一次 trips/activeTripId resolve 後同步 default
   useEffect(() => {
@@ -465,38 +436,26 @@ export default function ExplorePage() {
     return list;
   }, [defaultRegion, region]);
 
-  /* Delete-selected-saved confirm state (取代 window.confirm) */
-  const [deleteSelectedConfirmOpen, setDeleteSelectedConfirmOpen] = useState(false);
-
+  /**
+   * Mini-fetch /saved-pois → savedKeySet (MF6) — 只為了 heart toggle disable
+   * 正確性。SavedPoisPage 拆出後 ExplorePage 不再做完整 saved CRUD，但 heart
+   * disable 「已收藏」 狀態仍要正確。codebase 沒 React Query/SWR，各頁獨立 fetch。
+   */
   const loadSaved = useCallback(async () => {
     try {
-      const rows = await apiFetch<SavedPoiRow[]>('/saved-pois');
-      setSaved(rows);
+      const rows = await apiFetch<SavedKeyRow[]>('/saved-pois');
+      setSavedKeyRows(rows);
     } catch {
-      // silent — likely 401
+      // silent — likely 401 or transient; heart disable 退回「皆未收藏」 fallback。
     }
   }, []);
 
   useEffect(() => { void loadSaved(); }, [loadSaved]);
 
   const savedKeySet = useMemo(
-    () => new Set(saved.map((r) => `${r.poiType}::${r.poiName}`)),
-    [saved],
+    () => new Set(savedKeyRows.map((r) => `${r.poiType}::${r.poiName}`)),
+    [savedKeyRows],
   );
-
-  // Drop selections that no longer exist (after refetch)
-  useEffect(() => {
-    setSelectedSavedIds((prev) => {
-      const validIds = new Set(saved.map((s) => s.id));
-      let changed = false;
-      const next = new Set<number>();
-      for (const id of prev) {
-        if (validIds.has(id)) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [saved]);
 
   // AbortController + sequence guard — 防 auto-search / chip click / manual
   // submit 三路 fetch race，慢 response 覆蓋快 response。Submit-based UX 跟
@@ -540,18 +499,15 @@ export default function ExplorePage() {
   /** F6 design-review: landing empty state suggestion chips。 */
   const SUGGESTED_QUERIES = ['沖繩美麗海水族館', '首里城', '國際通', '古宇利大橋', '美國村'];
 
-  /* 2026-04-29 (E5 user 拍板「對齊 mockup default load 熱門 POI grid」):
-   * 移除 onboarding empty state「試試熱門 POI」,改 mount 後 region resolve 自動
-   * runSearch 拉熱門 POI grid。region 預設「全部地區」 fallback 用熱門目的地
-   * 「東京」做 seed,有 active trip 則 active trip's region(沖繩/首爾/台北)。 */
+  /* mount auto-search default seed — 對齊 mockup landing 熱門 POI grid。 */
   const [hasAutoSearched, setHasAutoSearched] = useState(false);
   useEffect(() => {
-    if (hasAutoSearched || tab !== 'search') return;
+    if (hasAutoSearched) return;
     const seed = region !== '全部地區' ? region : '東京';
     setHasAutoSearched(true);
     void runSearch(seed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [region, tab]);
+  }, [region]);
 
   async function handleSave(poi: PoiSearchResult) {
     setSavingIds((s) => new Set(s).add(poi.osm_id));
@@ -589,121 +545,30 @@ export default function ExplorePage() {
     }
   }
 
-  function toggleSavedSelection(id: number) {
-    setSelectedSavedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function clearSelection() { setSelectedSavedIds(new Set()); }
-
-  // PR-X 2026-04-26：批次刪除選中的 saved POI。ConfirmModal → Promise.all DELETE
-  // → optimistic local removal + reload。
-  function requestDeleteSelected() {
-    if (selectedSavedIds.size === 0) return;
-    setDeleteSelectedConfirmOpen(true);
-  }
-  async function handleDeleteSelected() {
-    const ids = Array.from(selectedSavedIds);
-    if (ids.length === 0) return;
-    setDeleteSelectedConfirmOpen(false);
-    setDeletingSelected(true);
-    try {
-      const results = await Promise.all(
-        ids.map((id) =>
-          apiFetch(`/saved-pois/${id}`, { method: 'DELETE' })
-            .then(() => ({ id, ok: true as const }))
-            .catch((err: unknown) => ({ id, ok: false as const, err })),
-        ),
-      );
-      const failed = results.filter((r) => !r.ok);
-      if (failed.length === 0) {
-        showToast(`已刪除 ${ids.length} 個收藏`, 'success', 2400);
-      } else if (failed.length < ids.length) {
-        showToast(`已刪除 ${ids.length - failed.length} 個，${failed.length} 個失敗`, 'error', 3000);
-      } else {
-        showToast(`刪除失敗，請稍後再試`, 'error', 3000);
-      }
-      setSelectedSavedIds(new Set());
-      await loadSaved();
-    } finally {
-      setDeletingSelected(false);
-    }
-  }
-
-  async function openTripPicker() {
-    if (selectedSavedIds.size === 0) return;
-    setShowTripPicker(true);
-    if (trips !== null) return;
-    try {
-      const myRes = await fetch('/api/my-trips', { credentials: 'same-origin' });
-      const allRes = await fetch('/api/trips?all=1', { credentials: 'same-origin' });
-      if (!myRes.ok || !allRes.ok) {
-        setTrips([]);
-        return;
-      }
-      const myJson = (await myRes.json()) as { tripId: string }[];
-      const allJson = (await allRes.json()) as TripPickerRow[];
-      const mine = new Set(myJson.map((r) => r.tripId));
-      setTrips(allJson.filter((t) => mine.has(t.tripId)));
-    } catch {
-      setTrips([]);
-    }
-  }
-
-  function pickTrip(tripId: string) {
-    setShowTripPicker(false);
-    const count = selectedSavedIds.size;
-    showToast(
-      `已選 ${count} 個 POI 加入「${tripId}」（待 entry POST API 接通）`,
-      'success',
-      2400,
-    );
-    setSelectedSavedIds(new Set());
-    navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-  }
-
   const main = (
     <div className="explore-shell">
       <style>{SCOPED_STYLES}</style>
-      {/* TitleBar 拉出 .explore-wrap,full-width sticky 對齊其他頁面 standard。 */}
+      {/* v2.21.0 IA reshuffle: TitleBar 右上 ghost action「收藏」 → /saved (T2) */}
       <TitleBar
-        title={tab === 'saved' ? '我的收藏' : '探索'}
-        back={tab === 'saved' ? () => setTab('search') : undefined}
-        backLabel={tab === 'saved' ? '返回探索' : undefined}
+        title="探索"
         actions={
-          tab === 'search' ? (
-            <button
-              type="button"
-              className="tp-titlebar-action"
-              onClick={() => setTab('saved')}
-              aria-label="我的收藏"
-              title="我的收藏"
-              data-testid="explore-saved-titlebar"
-            >
-              {/* 2026-04-29 mockup parity (E1):桌機 icon+「我的收藏」文字
-               * (對齊 mockup S18 line 7294/7370),手機 (<=760px) 縮回 icon-only。
-               * 「所有 title 規範」:.tp-titlebar-action class 統一 pattern。 */}
-              <Icon name="heart" />
-              <span className="tp-titlebar-action-label">我的收藏</span>
-            </button>
-          ) : null
+          <button
+            type="button"
+            className="tp-titlebar-action"
+            onClick={() => navigate('/saved')}
+            aria-label="收藏"
+            title="收藏"
+            data-testid="explore-saved-titlebar"
+          >
+            <Icon name="heart" />
+            <span className="tp-titlebar-action-label">收藏</span>
+          </button>
         }
       />
       <div className="explore-wrap" data-testid="explore-page">
         <ToastContainer />
 
-        {/* 收藏 view 內顯示 count meta，取代既有 tab badge，與 mockup
-          * section 18 single-content 結構一致 */}
-        {tab === 'saved' && saved.length > 0 && (
-          <p className="section-meta" data-testid="explore-saved-count">{saved.length} 個收藏 POI</p>
-        )}
-
-        {tab === 'search' && (
-          <>
+        <>
             {/* Section 4.9：對齊 mockup section 18 (line 7298-7311) element 順序
               * → region pill → search bar → subtab chips → grid */}
             <div className="explore-region-bar">
@@ -880,117 +745,8 @@ export default function ExplorePage() {
                 </div>
               </div>
             )}
-          </>
-        )}
-
-        {tab === 'saved' && (
-          <section className="explore-section" data-testid="explore-saved">
-            <h2>我的收藏</h2>
-            <p className="section-meta">勾選想加入行程的 POI，點「加入行程」一鍵丟進選定 trip。</p>
-
-            {selectedSavedIds.size > 0 && (
-              <div className="explore-toolbar" data-testid="explore-toolbar">
-                <span>已選 {selectedSavedIds.size} 個</span>
-                <div className="explore-toolbar-actions">
-                  <button
-                    type="button"
-                    className="explore-toolbar-btn explore-toolbar-btn-ghost"
-                    onClick={clearSelection}
-                    disabled={deletingSelected}
-                    data-testid="explore-clear-selection"
-                  >
-                    取消選擇
-                  </button>
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      className="explore-toolbar-btn"
-                      onClick={openTripPicker}
-                      disabled={deletingSelected}
-                      data-testid="explore-add-to-trip"
-                      data-trip-picker-trigger="true"
-                      aria-haspopup="dialog"
-                      aria-expanded={showTripPicker}
-                    >
-                      加入行程
-                    </button>
-                    {/* 2026-05-03 modal-to-fullpage migration audit: 原 modal-style
-                      * backdrop chooser 改 anchored popover (DESIGN.md 允許 popover
-                      * 範疇)。chooser 性質 + selection 立即 navigate，page 模式打斷 flow。 */}
-                    <TripPickerPopover
-                      open={showTripPicker}
-                      trips={trips}
-                      selectedCount={selectedSavedIds.size}
-                      onPick={pickTrip}
-                      onClose={() => setShowTripPicker(false)}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className="explore-toolbar-btn explore-toolbar-btn-destructive"
-                    onClick={requestDeleteSelected}
-                    disabled={deletingSelected}
-                    data-testid="explore-delete-selected"
-                  >
-                    {deletingSelected ? '刪除中…' : '刪除'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {saved.length === 0 ? (
-              <div className="explore-empty">還沒有儲存任何 POI。先去「搜尋」找幾個。</div>
-            ) : (
-              <div className="explore-poi-grid">
-                {saved.map((row) => {
-                  const isSelected = selectedSavedIds.has(row.id);
-                  const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
-                  return (
-                    <article
-                      className={`explore-poi-card ${isSelected ? 'is-selected' : ''}`}
-                      key={row.id}
-                      data-testid={`saved-card-${row.id}`}
-                    >
-                      <div className="poi-category">{row.poiType}</div>
-                      <div className="poi-name">{row.poiName}</div>
-                      {row.poiAddress && <div className="poi-address">{row.poiAddress}</div>}
-                      {usageCount > 0 && (
-                        <div className="poi-usage-badge" data-testid={`saved-usage-badge-${row.id}`}>
-                          目前在 {usageCount} 個行程
-                        </div>
-                      )}
-                      <div className="poi-actions poi-actions-saved">
-                        <label className="poi-select-label">
-                          <input
-                            type="checkbox"
-                            className="explore-poi-checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSavedSelection(row.id)}
-                            data-testid={`saved-check-${row.id}`}
-                          />
-                          <span>{isSelected ? '已選' : '選取'}</span>
-                        </label>
-                        <a
-                          href={`/saved-pois/${row.id}/add-to-trip`}
-                          className="poi-add-link"
-                          data-testid={`saved-add-to-trip-${row.id}`}
-                        >
-                          加入行程 →
-                        </a>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        )}
+        </>
       </div>
-
-      {/* 2026-05-03 modal-to-fullpage migration audit: trip picker modal block
-        * 整段移除 — chooser flow 改成 anchored popover (TripPickerPopover) 由
-        * toolbar「加入行程」 button 直接 anchor 出。原 backdrop / 取消 button /
-        * tp-trip-picker-* 大部分 CSS rules 隨 modal 退場。 */}
 
       {/* Region 自訂 input modal (取代 window.prompt) */}
       <InputModal
@@ -1006,17 +762,6 @@ export default function ExplorePage() {
           setRegionInputOpen(false);
         }}
         onCancel={() => setRegionInputOpen(false)}
-      />
-
-      {/* 收藏批次刪除 confirm (取代 window.confirm) */}
-      <ConfirmModal
-        open={deleteSelectedConfirmOpen}
-        title="確定刪除收藏？"
-        message={`即將刪除 ${selectedSavedIds.size} 個收藏 POI，此操作無法復原。`}
-        confirmLabel="刪除"
-        busy={deletingSelected}
-        onConfirm={handleDeleteSelected}
-        onCancel={() => setDeleteSelectedConfirmOpen(false)}
       />
     </div>
   );

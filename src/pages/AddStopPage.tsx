@@ -54,9 +54,10 @@ interface SavedPoiRow {
 
 interface DayApiRow {
   id: number;
-  day_num: number;
+  // _utils.json() 套 deepCamel — API 回 camelCase。v2.21.0 對齊 (was snake_case)
+  dayNum: number;
   date?: string | null;
-  day_of_week?: string | null;
+  dayOfWeek?: string | null;
 }
 
 type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
@@ -153,7 +154,7 @@ function deriveDayLabel(day: DayApiRow | null, dayNum: number): string {
   if (!m) return `DAY ${dayPad} · ${date}`;
   const month = parseInt(m[2]!, 10);
   const dom = parseInt(m[3]!, 10);
-  const weekdayChar = day.day_of_week ?? '';
+  const weekdayChar = day.dayOfWeek ?? '';
   return `DAY ${dayPad} · ${month}/${dom}${weekdayChar ? `（${weekdayChar}）` : ''}`;
 }
 
@@ -632,7 +633,7 @@ export default function AddStopPage() {
       try {
         const days = await apiFetch<DayApiRow[]>(`/trips/${encodeURIComponent(tripId)}/days`);
         if (cancelled) return;
-        const found = (days ?? []).find((d) => d.day_num === dayNum) ?? null;
+        const found = (days ?? []).find((d) => d.dayNum === dayNum) ?? null;
         setCurrentDay(found);
       } catch {
         // silent — label fallback to DAY NN

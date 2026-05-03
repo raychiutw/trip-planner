@@ -12,12 +12,15 @@ export class ApiError extends Error {
   readonly status: number;
   readonly detail?: string;
   readonly severity: ErrorSeverity;
+  /** v2.21.0: full response body for structured error payloads (e.g. 409 conflictWith). */
+  readonly payload?: unknown;
 
-  constructor(code: ErrorCodeType, status: number, detail?: string) {
+  constructor(code: ErrorCodeType, status: number, detail?: string, payload?: unknown) {
     super(ERROR_MESSAGES[code] || code);
     this.code = code;
     this.status = status;
     this.detail = detail;
+    this.payload = payload;
     this.severity = classifySeverity(code);
   }
 
@@ -34,6 +37,7 @@ export class ApiError extends Error {
             err.code as ErrorCodeType,
             res.status,
             err.detail as string | undefined,
+            body, // payload preserves full body for structured 409 etc.
           );
         }
       }
@@ -41,10 +45,10 @@ export class ApiError extends Error {
       // 舊格式：{ error: "string message" }
       if (typeof body.error === 'string') {
         const code = sniffErrorCode(res.status, body.error);
-        return new ApiError(code, res.status, body.error);
+        return new ApiError(code, res.status, body.error, body);
       }
 
-      return new ApiError(statusToCode(res.status), res.status);
+      return new ApiError(statusToCode(res.status), res.status, undefined, body);
     } catch {
       return new ApiError(statusToCode(res.status), res.status);
     }

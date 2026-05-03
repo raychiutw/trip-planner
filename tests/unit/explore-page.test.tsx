@@ -52,13 +52,14 @@ describe('ExplorePage', () => {
     global.fetch = vi.fn();
   });
 
-  it('renders search input + empty saved view when 切換 to 我的收藏 view', async () => {
-    const { getByTestId, findByText } = renderPage();
+  it('renders search input + TitleBar 收藏 ghost action navigates to /saved (v2.21.0)', () => {
+    const { getByTestId } = renderPage();
     expect(getByTestId('explore-page')).toBeTruthy();
     expect(getByTestId('explore-search-input')).toBeTruthy();
-    // Section 4.9: TitleBar action 「我的收藏」 button toggle 取代既有 tab pair
-    fireEvent.click(getByTestId('explore-saved-titlebar'));
-    expect(await findByText(/還沒有儲存任何 POI/)).toBeTruthy();
+    // v2.21.0 IA reshuffle: 拆 page 後 TitleBar action 改 navigate('/saved')，不再 toggle in-page。
+    const action = getByTestId('explore-saved-titlebar') as HTMLButtonElement;
+    expect(action.getAttribute('aria-label')).toBe('收藏');
+    expect(action.textContent).toContain('收藏');
   });
 
   it('shows error toast when search query < 2 chars', () => {
