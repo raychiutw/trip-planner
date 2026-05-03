@@ -156,6 +156,17 @@ html { color-scheme: light dark; }
     --spacing-page-pt: 24px;
     --spacing-nav-h: 48px;
 
+    /* Sticky chrome dynamic heights — single source of truth for TitleBar +
+     * DayNav strip + #dayN anchor scroll-margin. Dynamic via @media so anchor
+     * offset stays in sync if heights change.
+     * Desktop: 64 (titlebar) + 37 (day strip = min-height 36 + 1 border) = 101
+     * Compact: 56 + 37 = 93
+     * scroll-margin-top adds ~9px breathing room. */
+    --titlebar-h: 64px;
+    --day-strip-h: 37px;
+    --sticky-chrome-h: calc(var(--titlebar-h) + var(--day-strip-h));
+    --anchor-scroll-margin: calc(var(--sticky-chrome-h) + 9px);
+
     /* Z-index */
     --z-sticky-nav: 200;
     --z-fab: 300;
@@ -409,8 +420,7 @@ body.dark {
     .ocean-page { padding: 0 40px 48px; max-width: 1440px; margin: 0 auto; }
 
     /* Hero card inside each day — Airbnb editorial white card。
-     * scroll-margin-top: 110px desktop / 100px compact 讓 #dayN 錨點跳轉時
-     * 落在 sticky chrome (TitleBar 64/56 + DayNav strip ~37) 下方，避免被蓋。 */
+     * scroll-margin-top 用 --anchor-scroll-margin token (隨 chrome 高度變)。 */
     .ocean-hero {
         background: var(--color-accent);
         color: var(--color-accent-foreground);
@@ -418,7 +428,7 @@ body.dark {
         border: 0;
         padding: 20px 24px; margin-bottom: 20px;
         overflow: hidden;
-        scroll-margin-top: 110px;
+        scroll-margin-top: var(--anchor-scroll-margin);
     }
     .ocean-hero-chips {
         display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
@@ -658,9 +668,9 @@ body.dark {
         .ocean-page { padding: 0 16px calc(80px + env(safe-area-inset-bottom)); }
         .ocean-hero { padding: 22px 20px; border-radius: var(--radius-md); }
         .ocean-hero-title { font-size: 24px; } /* F003: DESIGN.md mobile hero title = 24px */
-        /* Mobile sticky chrome = TitleBar 56 + DayNav strip ~37 = ~93px
-         * + 7px breathing = 100px。 */
-        .ocean-day > .ocean-hero { scroll-margin-top: 100px; }
+        /* Compact viewport titlebar 從 64 縮 56，--titlebar-h 同步調，
+         * --sticky-chrome-h 跟 --anchor-scroll-margin 自動 follow。 */
+        :root { --titlebar-h: 56px; }
     }
 
     /* Mobile bottom tab bar (只在 ≤760px 顯示) */
@@ -1118,17 +1128,14 @@ body.dark {
 }
 
 /* Sticky chrome variant — trip detail page 把同一條 strip 黏在 TitleBar 下方。
- * border 從 top 翻到 bottom (sticky chrome group 底邊)。
- * MapPage 不用此 modifier (它的 tabs 是 bottom card-rail 的上邊界)。 */
+ * top 用 --titlebar-h token，跟 .tp-titlebar height + .ocean-hero scroll-margin
+ * 同源，不會 drift。 */
 .tp-map-day-tabs--sticky {
   position: sticky;
-  top: 64px;
+  top: var(--titlebar-h);
   z-index: calc(var(--z-sticky-nav, 200) - 1);
   border-top: none;
   border-bottom: 1px solid var(--color-border);
-}
-@media (max-width: 760px) {
-  .tp-map-day-tabs--sticky { top: 56px; }
 }
 body.print-mode .tp-map-day-tabs--sticky { display: none; }
 
@@ -1250,8 +1257,11 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     z-index: var(--z-sticky-nav, 200);
     align-self: flex-start;
     width: 100%;
-    height: 64px;
-    padding: 0 24px;
+    /* iOS PWA standalone：safe-area-inset-top 是 status bar inset (notch ~44px / non-notch 0)。
+     * 加進 height 讓 chrome 自動 grow，避免 status bar 蓋住內容。
+     * --titlebar-h token 已含 64px base，padding-top 補 inset。 */
+    height: calc(var(--titlebar-h) + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 24px 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1281,8 +1291,8 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     z-index: var(--z-sticky-nav, 200);
     align-self: flex-start;
     width: 100%;
-    height: 56px;
-    padding: 0 16px;
+    height: calc(var(--titlebar-h) + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 16px 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1385,12 +1395,6 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
 .tp-titlebar-action.is-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-@media (max-width: 760px) {
-  .tp-titlebar-action.is-primary {
-    background: var(--color-accent);
-    color: var(--color-accent-foreground);
-  }
 }
 
 /* Icon-only TitleBar button — for menu triggers (e.g. OverflowMenu ⋯).

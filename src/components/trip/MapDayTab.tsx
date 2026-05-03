@@ -1,12 +1,24 @@
 /**
- * MapDayTab — Map page bottom underline tab primitive.
+ * MapDayTab — Map page bottom underline tab primitive (also used by TripPage DayNav).
  *
  * Idle: 透明底 + dayColor eyebrow + muted text + transparent border-bottom
  * Active: accent text + accent border-bottom 2px + 保留 dayColor eyebrow
  *
  * 視覺對應：docs/design-sessions/terracotta-preview-v2.html Section 20 day tabs
- * Spec: openspec/changes/terracotta-pages-refactor/specs/terracotta-page-layout/spec.md
+ *
+ * a11y：用 plain `<button>` 不掛 role=tab — 上層 wrapper (DayNav / MapPage)
+ * 用 `<nav>` 包，符合 scroll-to-anchor pattern（panels 一直可見），不適用
+ * tablist 「panels 互斥顯示」 語意。`aria-current="true"` 表示目前 active。
  */
+
+/** Restrictive color regex — 只接受 hex (#fff #ffffff) 或 rgb()/hsl()。
+ * 防 dayColor 來自不可信來源時 (未來如果接 user-defined custom colors)
+ * 變 CSS injection 入口 (e.g. `red; background: url(evil)`)。 */
+const SAFE_COLOR_RE = /^(?:#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))$/;
+function safeColor(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return SAFE_COLOR_RE.test(value.trim()) ? value : undefined;
+}
 
 export interface MapDayTabProps {
   /** 上排 eyebrow 文字（"DAY 01" / "總覽"） */
@@ -26,18 +38,17 @@ export interface MapDayTabProps {
 }
 
 export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onClick, ariaLabel, testId }: MapDayTabProps) {
-  // Section 4.10 (terracotta-mockup-parity-v2)：active state border-bottom 用
-  // per-day color 取代固定 accent，呼應 mockup section 20 underline 用 day color
-  // 強化 day↔map polyline 視覺對應。CSS rule 讀 --day-color (有設值才覆蓋)。
-  const style = isActive && dayColor
-    ? ({ '--day-color': dayColor } as React.CSSProperties)
+  // Active state border-bottom 用 per-day color (mockup S20 underline 用 day color
+  // 強化 day↔map polyline 視覺對應)。CSS rule 讀 --day-color (有設值才覆蓋)。
+  const safeDayColor = safeColor(dayColor);
+  const style = isActive && safeDayColor
+    ? ({ '--day-color': safeDayColor } as React.CSSProperties)
     : undefined;
   return (
     <button
       type="button"
-      role="tab"
-      aria-selected={isActive}
       aria-label={ariaLabel}
+      aria-current={isActive ? 'true' : undefined}
       className={`tp-map-day-tab${isActive ? ' is-active' : ''}`}
       onClick={onClick}
       style={style}
@@ -45,7 +56,7 @@ export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onC
     >
       <span
         className="tp-map-day-tab-eyebrow"
-        style={dayColor ? { color: dayColor } : undefined}
+        style={safeDayColor ? { color: safeDayColor } : undefined}
       >
         {dayLabel}
       </span>

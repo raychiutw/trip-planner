@@ -489,7 +489,7 @@ export default function MapPage() {
       </main>
 
       {dayTabs.length > 1 && (
-        <nav className="tp-map-day-tabs" role="tablist" aria-label="行程日期">
+        <nav className="tp-map-day-tabs" aria-label="行程日期">
           {/* 「總覽」tab prepend 於 Day 01 之前 */}
           <MapDayTab
             key="overview"

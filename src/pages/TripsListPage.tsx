@@ -545,6 +545,7 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onCollab }: EmbeddedActionMen
 
   useLayoutEffect(() => {
     if (!open) return;
+    let rafId: number | null = null;
     function recompute() {
       const btn = triggerRef.current;
       if (!btn) return;
@@ -555,12 +556,22 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onCollab }: EmbeddedActionMen
       if (left + MENU_WIDTH > vw - VIEWPORT_MARGIN) left = vw - MENU_WIDTH - VIEWPORT_MARGIN;
       setPos({ top: r.bottom + 6, left });
     }
+    // rAF coalesce — scroll/resize 高頻 fire 時合併到單一 frame，避免 long
+    // timeline scroll 時 getBoundingClientRect + setState 每 ms 跑造成 jank。
+    function scheduleRecompute() {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        recompute();
+      });
+    }
     recompute();
-    window.addEventListener('resize', recompute);
-    window.addEventListener('scroll', recompute, true);
+    window.addEventListener('resize', scheduleRecompute);
+    window.addEventListener('scroll', scheduleRecompute, true);
     return () => {
-      window.removeEventListener('resize', recompute);
-      window.removeEventListener('scroll', recompute, true);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', scheduleRecompute);
+      window.removeEventListener('scroll', scheduleRecompute, true);
     };
   }, [open]);
 

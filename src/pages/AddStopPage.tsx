@@ -599,16 +599,12 @@ export default function AddStopPage() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [selectedSearch, setSelectedSearch] = useState<Set<number>>(new Set());
 
-  // Search query falls back to region when user hasn't typed (e.g. just opened
-  // the page with region preset to 「沖繩」 — show 「熱門景點 · 沖繩」).
-  const effectiveQuery = useMemo(() => {
-    const trimmed = query.trim();
-    if (trimmed.length >= 2) return trimmed;
-    return region !== '全部地區' ? region : '';
-  }, [query, region]);
+  // Region 不再 auto-fire search — Nominatim 公共 endpoint 1 req/s 限制，
+  // 每次開頁面 / 退到 1 字 都會 burn quota。改成 user 主動輸入才查；region
+  // 顯示在 empty state 推薦 chip 讓 user 點擊觸發。
   const { results: searchResults, searching } = usePoiSearch({
     enabled: tab === 'search',
-    query: effectiveQuery,
+    query: query.trim(),
     limit: 20,
     normalise: normalizeSearchResults,
   });

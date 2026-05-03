@@ -473,22 +473,31 @@ export default function ExplorePage() {
     });
   }, [saved]);
 
+  // AbortController + sequence guard — 防 auto-search / chip click / manual
+  // submit 三路 fetch race，慢 response 覆蓋快 response。Submit-based UX 跟
+  // usePoiSearch 的 debounce 範式不同 (按 Enter / chip 立即查)，留 fetch 但
+  // 加 abort + seq。
+  const searchAbortRef = useRef<AbortController | null>(null);
   async function runSearch(q: string) {
     if (q.length < 2) {
       showToast('至少輸入 2 個字', 'error', 2000);
       return;
     }
+    searchAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    searchAbortRef.current = ctrl;
     setSearching(true);
     try {
-      const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(q)}&limit=20`);
+      const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(q)}&limit=20`, { signal: ctrl.signal });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const body = (await resp.json()) as { results: PoiSearchResult[] };
-      setResults(body.results);
-    } catch {
+      if (searchAbortRef.current === ctrl) setResults(body.results);
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return;
       showToast('搜尋失敗（Nominatim 暫時無法連線）', 'error', 3000);
-      setResults([]);
+      if (searchAbortRef.current === ctrl) setResults([]);
     } finally {
-      setSearching(false);
+      if (searchAbortRef.current === ctrl) setSearching(false);
     }
   }
 

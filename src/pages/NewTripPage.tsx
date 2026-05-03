@@ -29,7 +29,7 @@
  *   - 取消改 navigate(-1)，建立後 navigate(`/trips?selected=:id`)
  *   - 「建立」 primary action 在 TitleBar (responsive icon+文字 / icon-only)
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -459,6 +459,7 @@ export default function NewTripPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recentDests, setRecentDests] = useState<string[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [destDays, setDestDays] = useState<Record<number, number>>({});
 
@@ -618,8 +619,7 @@ export default function NewTripPage() {
       busy={submitting}
       disabled={!canSubmit}
       onClick={() => {
-        const form = document.getElementById('new-trip-form') as HTMLFormElement | null;
-        if (form) form.requestSubmit();
+        formRef.current?.requestSubmit();
       }}
       testId="new-trip-titlebar-create"
     />
@@ -641,7 +641,7 @@ export default function NewTripPage() {
               actions={titleBarActions}
             />
 
-            <form id="new-trip-form" onSubmit={handleSubmit} className="tp-new-page-form">
+            <form ref={formRef} id="new-trip-form" onSubmit={handleSubmit} className="tp-new-page-form">
 
               <div className="tp-new-form-row">
                 <label htmlFor="new-trip-destination">目的地（可加多筆，拖拉排序）</label>

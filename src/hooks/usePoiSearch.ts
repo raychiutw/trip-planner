@@ -25,6 +25,18 @@ interface UsePoiSearchResult {
   searching: boolean;
 }
 
+/** Schema guard — discard rows missing required fields (osm_id + name + lat + lng). */
+function isValidPoi(row: unknown): row is PoiSearchResult {
+  if (!row || typeof row !== 'object') return false;
+  const r = row as Record<string, unknown>;
+  return (
+    typeof r.osm_id === 'number'
+    && typeof r.name === 'string'
+    && typeof r.lat === 'number'
+    && typeof r.lng === 'number'
+  );
+}
+
 /**
  * usePoiSearch — debounced + abort-safe POI search hook.
  *
@@ -37,7 +49,10 @@ interface UsePoiSearchResult {
  *   - AbortController per request: rapid typing cancels inflight requests so
  *     the most recent query always wins (no last-write-wins race)
  *   - Cleanup on unmount + on `query`/`enabled`/`limit` change
- *   - Silent on errors (caller can wrap in try/catch if needed via `normalise`)
+ *   - `normalise` + `onError` 透過 ref 引用，callers 不必 useCallback 也不會
+ *     觸發 effect re-run (PR #459 fix)。
+ *   - Schema guard：drop rows missing osm_id/name/lat/lng，避免 malformed
+ *     POI 進入 React state 造成 key collision / lat/lng undefined runtime crash
  */
 export function usePoiSearch({
   enabled = true,
@@ -51,6 +66,13 @@ export function usePoiSearch({
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Stable ref for callbacks — drop from effect deps so caller-side
+  // inline arrows don't re-trigger the effect on every parent render.
+  const normaliseRef = useRef(normalise);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { normaliseRef.current = normalise; }, [normalise]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -71,16 +93,17 @@ export function usePoiSearch({
           { signal: ctrl.signal },
         );
         if (!resp.ok) {
-          onError?.('http-error');
+          onErrorRef.current?.('http-error');
           if (abortRef.current === ctrl) setResults([]);
           return;
         }
         const raw = await resp.json() as unknown;
-        const rows = normalise ? normalise(raw) : (raw as PoiSearchResult[]);
+        const normalised = normaliseRef.current ? normaliseRef.current(raw) : (raw as PoiSearchResult[]);
+        const rows = Array.isArray(normalised) ? normalised.filter(isValidPoi) : [];
         if (abortRef.current === ctrl) setResults(rows);
       } catch (err) {
         if ((err as { name?: string })?.name === 'AbortError') return;
-        onError?.('network-error', err);
+        onErrorRef.current?.('network-error', err);
         if (abortRef.current === ctrl) setResults([]);
       } finally {
         if (abortRef.current === ctrl) setSearching(false);
@@ -90,7 +113,7 @@ export function usePoiSearch({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       abortRef.current?.abort();
     };
-  }, [enabled, query, limit, debounceMs, normalise, onError]);
+  }, [enabled, query, limit, debounceMs]);
 
   return { results, searching };
 }
