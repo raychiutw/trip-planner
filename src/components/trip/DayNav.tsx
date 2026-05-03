@@ -2,159 +2,103 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import type { DaySummary } from '../../types/trip';
 import { parseLocalDate } from '../../lib/mapDay';
+import { dayColor } from '../../lib/dayPalette';
 
 /* ===== Scoped styles ===== */
 
+/* DayNav — sticky underline tab strip (對齊 MapPage day tab 視覺 + sticky chrome)
+ * 2026-05-03: 從 chip card pill 改 colorful text + active underline,跟
+ * .tp-map-day-tab 同 family。Sticky 緊接 TitleBar (top 64/56px) 形成 sticky
+ * chrome group。 */
 const SCOPED_STYLES = `
 .ocean-day-strip {
-  display: flex; gap: 4px;
-  overflow-x: auto; scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  padding: 0 40px;
-  margin: -28px -40px 20px;
-  scrollbar-width: thin;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 12px;
+  margin: 0 -40px 20px;
   position: sticky;
   top: 64px;
   z-index: calc(var(--z-sticky-nav) - 1);
-  background: var(--color-glass-nav);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(var(--blur-glass, 14px));
+  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
   border-bottom: 1px solid var(--color-border);
-  /* QA 2026-04-26 BUG-002/036：右側漸層 fade 暗示「還有更多 day 可水平捲」。
-   * mask 不影響 active state 顏色（active fill 仍清楚顯示），只是淡出 overflow 邊。 */
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
   mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
 }
-.ocean-day-strip::-webkit-scrollbar { height: 3px; }
-.ocean-day-strip::-webkit-scrollbar-thumb { background: var(--color-line-strong); border-radius: 2px; }
+.ocean-day-strip::-webkit-scrollbar { display: none; }
 @media (max-width: 1200px) {
-  .ocean-day-strip { padding-left: 28px; padding-right: 28px; margin-left: -28px; margin-right: -28px; margin-top: -24px; }
+  .ocean-day-strip { margin-left: -28px; margin-right: -28px; }
 }
 @media (max-width: 1100px) {
   .ocean-day-strip { top: 56px; }
 }
-/* Mobile: topbar is hidden, so day-strip is the top sticky element.
- * QA 2026-04-26 PR-J：iOS Safari/Chrome URL bar 會跟 sticky top:0 day-strip
- * 視覺重疊 — 加 env(safe-area-inset-top) 讓 day cards 跟瀏覽器 chrome 之間
- * 有自然 buffer，cards 的 rounded top 不再被切看不見。 */
 @media (max-width: 760px) {
   .ocean-day-strip {
-    top: env(safe-area-inset-top, 0);
+    margin: 0 0 16px;
   }
 }
 body.print-mode .ocean-day-strip { display: none; }
 
-/* === Day strip — unified pill style for ALL viewports.
- * Lifts mockup-trip-v2.html .mobile-day-strip-btn pattern verbatim.
- * Vertical column (DAY 01 on top row, 7/26 Sat on bottom row). Border +
- * filled-accent on active. 44px min tap target. Both desktop and mobile
- * share this style per user direction「day-strip 比照手機版」. */
+/* DayNav button — alias of .tp-map-day-tab visual (sticky chrome group with
+ * MapPage). Colorful eyebrow per dayColor + active underline 2px。 */
 [data-dn] {
   flex: 0 0 auto;
-  scroll-snap-align: start;
-  padding: 7px 10px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
+  padding: 6px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
-  color: var(--color-foreground);
+  color: var(--color-muted);
   cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: background 160ms var(--transition-timing-function-apple),
-              border-color 160ms var(--transition-timing-function-apple),
-              color 160ms var(--transition-timing-function-apple);
-  position: relative;
+  font: inherit;
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 2px;
   min-height: 44px;
   white-space: nowrap;
+  transition: color 150ms, border-bottom-color 150ms;
 }
-[data-dn]:hover:not(.active) {
-  border-color: var(--color-accent);
-}
+[data-dn]:hover:not(.active) { color: var(--color-foreground); }
 [data-dn].active {
-  background: var(--color-accent);
-  color: var(--color-accent-foreground);
-  border-color: var(--color-accent);
+  color: var(--color-accent);
+  border-bottom-color: var(--day-color, var(--color-accent));
 }
-
-[data-dn] .dn-head { display: inline-flex; align-items: center; gap: 4px; }
 [data-dn] .dn-eyebrow {
   font-size: var(--font-size-eyebrow);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  opacity: 0.6;
-  line-height: 1;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-[data-dn].active .dn-eyebrow {
-  color: rgba(255, 255, 255, 0.85);
-  opacity: 0.85;
-}
-[data-dn] .dn-weather {
-  font-size: 9px;
-  font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 2px 5px;
-  border-radius: 4px;
-  background: var(--color-accent-subtle);
-  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+  line-height: 1;
 }
-[data-dn].active .dn-weather {
-  background: rgba(255, 255, 255, 0.18);
-  color: var(--color-accent-foreground);
-}
+[data-dn].active .dn-eyebrow { opacity: 1; }
 [data-dn] .dn-date {
-  font-size: 13px;
+  font-size: var(--font-size-footnote);
   font-weight: 600;
   line-height: 1;
   color: var(--color-foreground);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.005em;
 }
-[data-dn].active .dn-date { color: var(--color-accent-foreground); }
-[data-dn] .dn-dow {
-  font-size: var(--font-size-caption2);
-  font-weight: 500;
-  opacity: 0.55;
-  margin-left: 4px;
+[data-dn].active .dn-date { color: var(--color-accent); }
+
+[data-dn] .dn-eyebrow-today {
+  font-weight: 600;
+  opacity: 0.8;
 }
-[data-dn].active .dn-dow { opacity: 0.85; }
 [data-dn] .dn-area {
   font-size: var(--font-size-caption2);
-  opacity: 0.6;
+  opacity: 0.55;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* Section 4.4 (terracotta-mockup-parity-v2)：max-width 80→120px 給「美瑛拼布之路」
-   * 這種 4-5 字 area 名稱 完整顯示空間，不被 ellipsis 砍掉。container 既有
-   * flex layout 不會破版（DayNav 整列水平 scroll），測試 6 字 area 仍 fit。 */
   max-width: 120px;
-  padding-left: 0;
   line-height: 1;
-}
-[data-dn] .dn-area::before { display: none; }
-[data-dn].active .dn-area {
-  opacity: 0.85;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-body.dark [data-dn]:not(.active) { background: transparent; color: var(--color-foreground); }
-
-/* Mobile: match mockup-trip-v2.html .mobile-day-strip — chips read inside
- * the page gutter (no full-bleed background, no chip indent). The strip
- * sits within .ocean-page's 16px side padding. */
-@media (max-width: 760px) {
-  .ocean-day-strip {
-    gap: 6px;
-    /* QA 2026-04-26 PR-J：top padding 8 → 16 給 cards rounded corner 跟 URL bar
-     * 之間更明顯氣口，避免視覺被切。底部維持 8 + margin 16 不變。 */
-    padding: 16px 0 8px;
-    margin: 0 0 16px;
-  }
 }
 
 @keyframes dn-tooltip-in {
@@ -283,16 +227,16 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
               onMouseLeave={handleMouseLeave}
               onTouchStart={() => handleTouchStart(dayNum)}
               onTouchEnd={handleTouchEnd}
+              style={{ '--day-color': dayColor(dayNum) } as React.CSSProperties}
             >
-              <div className="dn-head">
-                {/* Section 4.4 (terracotta-ui-parity-polish): mockup eyebrow
-                 * 「DAY 03 · 今天」拿「· 今天」 suffix 取代 TODAY pill；date
-                 * 行去掉 dow 英文 extra row。 */}
-                <span className="dn-eyebrow">
-                  {parts.eyebrow}
-                  {isToday && <span className="dn-eyebrow-today" aria-label="今日"> · 今天</span>}
-                </span>
-              </div>
+              {/* 2026-05-03 underline tab format (對齊 MapPage day nav):
+                * eyebrow (DAY 01) 套 per-day color, date (7/2) 跟 active state 用 accent。
+                * 移除 .dn-head wrapper + .dn-area (混入 inline meta — area label 改放
+                * eyebrow 後 suffix 不單獨 row)。 */}
+              <span className="dn-eyebrow" style={{ color: dayColor(dayNum) }}>
+                {parts.eyebrow}
+                {isToday && <span className="dn-eyebrow-today" aria-label="今日"> · 今天</span>}
+              </span>
               <div className="dn-date">{parts.date}</div>
               {d.label && <div className="dn-area">{d.label}</div>}
               {showTooltip && (
@@ -318,11 +262,9 @@ export default function DayNav({ days, currentDayNum, onSwitchDay, todayDayNum, 
             data-testid="dn-overview-btn"
             type="button"
           >
-            <div className="dn-head">
-              <span className="dn-eyebrow">MAP</span>
-            </div>
+            {/* Overview button: no per-day color (用 accent fallback)。 */}
+            <span className="dn-eyebrow">MAP</span>
             <div className="dn-date">全覽</div>
-            <div className="dn-area">所有日程</div>
           </button>
         )}
       </div>
