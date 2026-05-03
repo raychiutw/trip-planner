@@ -25,7 +25,7 @@
  *   - 取消改 navigate(-1)，儲存後 navigate(`/trips?selected=:id`)
  *   - Form 邏輯 + state machine 完全沿用 EditTripModal v2.19.0
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
@@ -45,18 +45,8 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { TP_DRAG_ACCESSIBILITY } from '../lib/drag-announcements';
 import { TRIP_FORM_STYLES } from '../components/trip/_tripFormStyles';
-
-interface PoiSearchResult {
-  osm_id: number;
-  osm_type?: 'node' | 'way' | 'relation' | null;
-  name: string;
-  address?: string;
-  lat: number;
-  lng: number;
-  category?: string;
-  country?: string;
-  country_name?: string;
-}
+import { usePoiSearch } from '../hooks/usePoiSearch';
+import type { PoiSearchResult } from '../types/poi';
 
 interface DestinationRow {
   osm_id: number;
@@ -95,9 +85,6 @@ interface TripApi {
   startDate?: string;
   endDate?: string;
 }
-
-const POI_SEARCH_DEBOUNCE_MS = 300;
-const POI_SEARCH_MIN_LEN = 2;
 
 /**
  * SCOPED_STYLES 含：
@@ -354,11 +341,21 @@ export default function EditTripPage() {
   // POI search inline state
   const [showSearch, setShowSearch] = useState(false);
   const [destQuery, setDestQuery] = useState('');
-  const [poiResults, setPoiResults] = useState<PoiSearchResult[] | null>(null);
-  const [poiSearching, setPoiSearching] = useState(false);
   const [poiSearchError, setPoiSearchError] = useState<string | null>(null);
-  const poiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const poiAbortRef = useRef<AbortController | null>(null);
+  const { results: poiResults, searching: poiSearching } = usePoiSearch({
+    enabled: showSearch,
+    query: destQuery,
+    limit: 10,
+    normalise: (raw) => {
+      const arr = (raw as { results?: PoiSearchResult[] })?.results ?? [];
+      return Array.isArray(arr) ? arr : [];
+    },
+    onError: (kind) => setPoiSearchError(kind === 'http-error' ? '搜尋失敗，請稍後再試' : '網路連線失敗'),
+  });
+
+  useEffect(() => {
+    if (destQuery.trim().length < 2) setPoiSearchError(null);
+  }, [destQuery]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -406,41 +403,6 @@ export default function EditTripPage() {
     return () => { cancelled = true; };
   }, [auth.user, tripId]);
 
-  // POI search debounce
-  useEffect(() => {
-    if (!showSearch) return;
-    if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current);
-    const trimmed = destQuery.trim();
-    if (trimmed.length < POI_SEARCH_MIN_LEN) {
-      setPoiResults(null); setPoiSearching(false); setPoiSearchError(null);
-      poiAbortRef.current?.abort();
-      return;
-    }
-    poiDebounceRef.current = setTimeout(async () => {
-      poiAbortRef.current?.abort();
-      const ctrl = new AbortController();
-      poiAbortRef.current = ctrl;
-      setPoiSearching(true); setPoiSearchError(null);
-      try {
-        const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=10`, { signal: ctrl.signal });
-        if (!resp.ok) {
-          setPoiSearchError('搜尋失敗，請稍後再試');
-          setPoiResults([]);
-          return;
-        }
-        const data = (await resp.json()) as { results: PoiSearchResult[] };
-        setPoiResults(data.results ?? []);
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return;
-        setPoiSearchError('網路連線失敗');
-        setPoiResults([]);
-      } finally {
-        setPoiSearching(false);
-      }
-    }, POI_SEARCH_DEBOUNCE_MS);
-    return () => { if (poiDebounceRef.current) clearTimeout(poiDebounceRef.current); };
-  }, [destQuery, showSearch]);
-
   // Region change hint logic — only show if (a) destinations names changed
   // vs original AND (b) user hasn't manually edited title since open AND (c)
   // hint not dismissed.
@@ -457,7 +419,7 @@ export default function EditTripPage() {
 
   function selectPoi(poi: PoiSearchResult) {
     if (destinations.some((d) => d.osm_id === poi.osm_id)) {
-      setShowSearch(false); setDestQuery(''); setPoiResults(null);
+      setShowSearch(false); setDestQuery('');
       return;
     }
     setDestinations((prev) => [
@@ -474,7 +436,6 @@ export default function EditTripPage() {
     ]);
     setShowSearch(false);
     setDestQuery('');
-    setPoiResults(null);
   }
 
   function removeDest(osmId: number) {
@@ -665,14 +626,14 @@ export default function EditTripPage() {
                             autoComplete="off"
                             data-testid="edit-trip-dest-search-input"
                           />
-                          {(poiSearching || poiResults || poiSearchError) && destQuery.trim().length >= POI_SEARCH_MIN_LEN && (
+                          {destQuery.trim().length >= 2 && (
                             <div className="tp-edit-dest-dropdown" role="listbox" data-testid="edit-trip-dest-dropdown">
                               {poiSearching && <div className="tp-edit-dest-status">搜尋中⋯</div>}
                               {!poiSearching && poiSearchError && <div className="tp-edit-dest-status">{poiSearchError}</div>}
-                              {!poiSearching && !poiSearchError && poiResults && poiResults.length === 0 && (
+                              {!poiSearching && !poiSearchError && poiResults.length === 0 && (
                                 <div className="tp-edit-dest-status">沒找到結果，試試別的關鍵字</div>
                               )}
-                              {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (
+                              {!poiSearching && poiResults.length > 0 && poiResults.map((p) => (
                                 <button
                                   key={p.osm_id}
                                   type="button"
