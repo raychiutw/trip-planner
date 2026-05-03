@@ -5339,10 +5339,11 @@
   </div>
 </section>
 
-<!-- ===== Section 03 — New trip modal ===== -->
+<!-- ===== Section 03 — New trip / Edit trip Form Pages（2026-05-03 ex-Modal） ===== -->
 <section class="tp-section">
-  <h2 class="tp-section-title">New Trip Modal — Multi-destination Form</h2>
-  <p class="tp-section-lead">Form-first single-column。<strong>目的地支援多筆</strong>（拖拉排序），日期雙模式（固定日期 / 大概時間）。對齊 src/components/trip/NewTripModal.tsx。下方五個 frame：<strong>(1) Default state</strong>、<strong>(2) Search expanded</strong>、<strong>(3) Dest row expanded</strong>（day allocation popover）、<strong>(4) Flexible mode 桌機板</strong>、<strong>(5) Compact 375px</strong>。</p>
+  <h2 class="tp-section-title">New / Edit Trip Form Pages — Multi-destination Form</h2>
+  <p class="tp-section-lead" style="background:#fff5e8;border-left:3px solid #d46c3a;padding:10px 14px;border-radius:4px;">⚠ <strong>2026-05-03 modal-to-fullpage migration（PR #428, #429）</strong>：原 NewTripModal / EditTripModal 已退役，搬到 <code>src/pages/NewTripPage.tsx</code> @ <code>/trips/new</code> 與 <code>src/pages/EditTripPage.tsx</code> @ <code>/trip/:id/edit</code>。下方 mockup frame 仍維持以 modal 形式呈現 form 結構供參考，但實際 production 已是全頁 + TitleBar shell（左返回 + 中標題 + 右「建立」/「儲存」 action with <code>.tp-titlebar-action.is-primary</code>）。Form 內部 layout / typography / interaction 與此 mockup 一致，僅 outer chrome 由 modal-shell 換成 page-shell。</p>
+  <p class="tp-section-lead">Form-first single-column。<strong>目的地支援多筆</strong>（拖拉排序），日期雙模式（固定日期 / 大概時間）。對齊 src/pages/NewTripPage.tsx + src/pages/EditTripPage.tsx。下方五個 frame：<strong>(1) Default state</strong>、<strong>(2) Search expanded</strong>、<strong>(3) Dest row expanded</strong>（day allocation popover）、<strong>(4) Flexible mode 桌機板</strong>、<strong>(5) Compact 375px</strong>。</p>
 
   <div class="tp-new-trip-frame-label">FRAME 1 <span>Default state · Desktop · multi-dest collapsed · fixed mode active</span></div>
   <div class="tp-modal-grid">
@@ -6584,10 +6585,11 @@
   </div>
 </section>
 
-<!-- ===== Section 14 — Add Stop Modal (Mindtrip 3-tab pattern) ===== -->
+<!-- ===== Section 14 — Add Stop Page（2026-05-03 ex-Modal）===== -->
 <section class="tp-section">
-  <h2 class="tp-section-title">Add Stop Modal — Mindtrip 3-tab Pattern</h2>
-  <p class="tp-section-lead">行程明細頁「+ 加入景點」按下後彈出的 modal。Mindtrip pattern 3-tab：<strong>搜尋 / 收藏 / 自訂</strong>。視覺對齊 Terracotta editorial 風格（cream + terracotta accent），不沿用 Mindtrip 暗色 visual。下方 4 個 frame 展示搜尋、收藏有資料、收藏空狀態、自訂內容狀態。</p>
+  <h2 class="tp-section-title">Add Stop Page — Mindtrip 3-tab Pattern</h2>
+  <p class="tp-section-lead" style="background:#fff5e8;border-left:3px solid #d46c3a;padding:10px 14px;border-radius:4px;">⚠ <strong>2026-05-03 modal-to-fullpage migration（PR #431, v2.19.7）</strong>：原 AddStopModal 已退役，搬到 <code>src/pages/AddStopPage.tsx</code> @ <code>/trip/:id/add-stop?day=N</code>。EntryActionPopover（複製 / 移動景點）同期由 PR #430 改為 <code>/trip/:id/stop/:eid/(copy|move)</code> 全頁。下方 mockup frame 仍呈現 modal-style 結構供 form 內部 reference，但實際 production 已是全頁 + TitleBar (左返回 + 中「加入景點」 + 右「完成」 action) + bottom sticky bar (counter + 取消 + 完成)。3-tab / region pill / filter sheet / counter / day label 規格與本 mockup 完全一致，僅 outer chrome 換成 page-shell。</p>
+  <p class="tp-section-lead">行程明細頁「+ 加入景點」按下後 navigate 到 <code>/trip/:id/add-stop?day=N</code>。Mindtrip pattern 3-tab：<strong>搜尋 / 收藏 / 自訂</strong>。視覺對齊 Terracotta editorial 風格（cream + terracotta accent），不沿用 Mindtrip 暗色 visual。下方 4 個 frame 展示搜尋、收藏有資料、收藏空狀態、自訂內容狀態。</p>
 
   <div class="tp-add-modal-stack">
 
@@ -7368,6 +7370,7 @@
 <section class="tp-section">
   <h2 class="tp-section-title">Explore Page</h2>
   <p class="tp-section-lead">「探索」主功能頁標題 + POI grid mockup。桌機 grid 3-col、手機 2-col。Card hover 變 accent 邊框 + lift shadow，右上 ❤ 收藏 toggle。Reference: DESIGN.md + unified-layout-plan.md。</p>
+  <p class="tp-section-lead" style="background:#fff5e8;border-left:3px solid #d46c3a;padding:10px 14px;border-radius:4px;">⚠ <strong>2026-05-03 modal-to-fullpage migration（PR #433, v2.19.9）</strong>：「我的收藏」 saved-toolbar 上的「加入行程」 button 從原本彈 modal-style backdrop chooser 改為 anchored popover（<code>src/components/explore/TripPickerPopover.tsx</code>），出現在 button 下方（<code>top: 100%; right: 0; width: 320px</code>），點外或 Esc 關閉。Chooser branch 走 popover 而非全頁，理由：selection → 立即 navigate <code>/trips?selected=:id</code>，page 模式打斷 flow；URL deep-link 對 user-specific dynamic trip 列表沒意義；同 region-pill / category-subtab 同類 selection menu pattern。</p>
 
   <div class="tp-page-frame">
     <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col · titlebar:標題 + .tp-titlebar-action「我的收藏」(icon+label)</span></div>
