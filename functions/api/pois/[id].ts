@@ -41,7 +41,7 @@ export const onRequestPatch: PagesFunction<Env> = async (context) => {
 
   if (!auth.isAdmin) {
     if (!tripId) throw new AppError('DATA_VALIDATION', '非 admin 必須提供 tripId');
-    if (!await hasWritePermission(db, auth.email, tripId, false)) {
+    if (!await hasWritePermission(db, auth, tripId, false)) {
       throw new AppError('PERM_DENIED');
     }
     const link = await db.prepare(

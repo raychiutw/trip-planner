@@ -4,9 +4,8 @@
  *
  * 驗證：auth 必要；重複收藏 → 409；POI 不存在 → 404。
  *
- * V2 cutover (E-H2 dual-read, E-M1 single-query JOIN):
- *   - SELECT/INSERT 雙寫 email + user_id（auth.userId 可能為 null，nullable column 容忍）
- *   - 過濾條件: WHERE email = ? OR user_id = ? — backfilled row 兩條都對，舊 row 仍 email match
+ * V2 cutover phase 2 (migration 0047): saved_pois.email column dropped。
+ *   - 純 user_id query — pre-V2 sessions / service tokens 沒 user_id → 回傳空清單
  *   - usages 用 json_group_array 一次查（避免 N+1）回傳每個收藏目前在哪些 trip 出現
  */
 import { AppError } from './_errors';
@@ -16,13 +15,12 @@ import type { Env } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
+  if (!auth.userId) return json([]); // V2 cutover: 沒 user_id 沒收藏
 
   // E-M1 single-query JOIN: usages 透過 LEFT JOIN trip_pois (per saved poi → 0..N usage)
-  // GROUP_CONCAT 包成 JSON-ish string 因 SQLite 沒原生 json_group_array 在 D1 全版本。
-  // 改用 json_object + group_concat 串成 array 字串，前端 parse。
-  // (D1 SQLite 3.35+ 支援 json_group_array — 用之省手動串 JSON。)
+  // D1 SQLite 3.35+ 支援 json_group_array + json_object — 一次 query 反查 usages。
   const { results } = await context.env.DB.prepare(
-    `SELECT sp.id, sp.email, sp.user_id, sp.poi_id, sp.saved_at, sp.note,
+    `SELECT sp.id, sp.user_id, sp.poi_id, sp.saved_at, sp.note,
             p.name AS poi_name, p.address AS poi_address,
             p.lat AS poi_lat, p.lng AS poi_lng, p.type AS poi_type,
             COALESCE(
@@ -41,9 +39,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             ) AS usages_json
      FROM saved_pois sp
      JOIN pois p ON p.id = sp.poi_id
-     WHERE sp.email = ? OR sp.user_id = ?
+     WHERE sp.user_id = ?
      ORDER BY sp.saved_at DESC, sp.id DESC`,
-  ).bind(auth.email, auth.userId).all();
+  ).bind(auth.userId).all();
 
   // Parse usages_json client-side-friendly
   const enriched = (results ?? []).map((r) => {
@@ -75,13 +73,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first();
   if (!poi) throw new AppError('DATA_NOT_FOUND', 'POI 不存在');
 
+  if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能收藏');
   try {
     const row = await context.env.DB
       .prepare(
-        // E-H2 dual-write: email + user_id 同時寫，phase 2 drop email column 後改 user_id only
-        `INSERT INTO saved_pois (email, user_id, poi_id, note) VALUES (?, ?, ?, ?) RETURNING *`,
+        // V2 cutover phase 2: 純 user_id-keyed insert (email column 已 dropped)
+        `INSERT INTO saved_pois (user_id, poi_id, note) VALUES (?, ?, ?) RETURNING *`,
       )
-      .bind(auth.email, auth.userId, body.poiId, body.note ?? null)
+      .bind(auth.userId, body.poiId, body.note ?? null)
       .first();
     if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
     return json(row, 201);

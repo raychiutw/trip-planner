@@ -89,10 +89,10 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
 
   const db = context.env.DB;
 
-  // 1. saved_pois ownership check (E-H2 dual-read)
+  // 1. saved_pois ownership check (V2 cutover phase 2: 純 user_id)
   const saved = await db
     .prepare(
-      `SELECT sp.id, sp.email, sp.user_id, sp.poi_id, sp.note,
+      `SELECT sp.id, sp.user_id, sp.poi_id, sp.note,
               p.name AS poi_name, p.type AS poi_type
        FROM saved_pois sp
        JOIN pois p ON p.id = sp.poi_id
@@ -101,7 +101,6 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     .bind(savedPoiId)
     .first<{
       id: number;
-      email: string;
       user_id: string | null;
       poi_id: number;
       note: string | null;
@@ -109,9 +108,8 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
       poi_type: string;
     }>();
   if (!saved) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
-  const ownByEmail = saved.email === auth.email;
   const ownByUid = auth.userId !== null && saved.user_id === auth.userId;
-  if (!ownByEmail && !ownByUid && !auth.isAdmin) {
+  if (!ownByUid && !auth.isAdmin) {
     throw new AppError('PERM_DENIED', '只能加入自己的收藏');
   }
 

@@ -16,15 +16,15 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
   const id = parseIntParam(context.params.id as string);
   if (!id) throw new AppError('DATA_VALIDATION', 'id 須為正整數');
 
+  // V2 cutover phase 2: 純 user_id-keyed ownership check (email column dropped)
   const row = await context.env.DB
-    .prepare('SELECT email, user_id FROM saved_pois WHERE id = ?')
+    .prepare('SELECT user_id FROM saved_pois WHERE id = ?')
     .bind(id)
-    .first<{ email: string; user_id: string | null }>();
+    .first<{ user_id: string | null }>();
   if (!row) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
 
-  const ownByEmail = row.email === auth.email;
   const ownByUid = auth.userId !== null && row.user_id === auth.userId;
-  if (!ownByEmail && !ownByUid && !auth.isAdmin) {
+  if (!ownByUid && !auth.isAdmin) {
     throw new AppError('PERM_DENIED');
   }
 
