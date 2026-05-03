@@ -4885,7 +4885,10 @@
   }
   .tp-map-day-tab.is-active {
     color: var(--tp-accent);
-    border-bottom-color: var(--tp-accent);
+    /* Read --day-color inline override (Map page sets per-day palette).
+     * Fallback to Terracotta accent (Trip detail 不傳 dayColor → 用 accent)。
+     * Mirrors prod CSS at css/tokens.css:1103. */
+    border-bottom-color: var(--day-color, var(--tp-accent));
   }
   .tp-map-day-tab-eyebrow {
     font-size: 10px;
