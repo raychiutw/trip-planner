@@ -76,28 +76,6 @@ const SCOPED_STYLES = `
   display: block;
   min-height: 100%;
 }
-.tp-embedded-menu-trigger {
-  width: 36px; height: 36px;
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  color: var(--color-foreground);
-  display: grid; place-items: center;
-  cursor: pointer;
-  font: inherit;
-  flex-shrink: 0;
-  transition: border-color 120ms, color 120ms, background 120ms;
-}
-.tp-embedded-menu-trigger:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
-}
-.tp-embedded-menu-trigger:focus-visible {
-  outline: 2px solid var(--color-accent); outline-offset: 2px;
-}
-.tp-embedded-menu-trigger .svg-icon { width: 18px; height: 18px; }
-
 .tp-embedded-menu {
   position: fixed;
   min-width: 200px;
@@ -686,7 +664,7 @@ function EmbeddedActionMenu({ tripId, tripPageRef, onCollab }: EmbeddedActionMen
       <button
         ref={triggerRef}
         type="button"
-        className="tp-embedded-menu-trigger"
+        className="tp-titlebar-action tp-titlebar-action--icon-only"
         onClick={() => setOpen((v) => !v)}
         aria-label="行程動作"
         aria-haspopup="menu"
