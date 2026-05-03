@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.16] - 2026-05-03
+
+### Fixed
+
+- **Chat 訊息歷史終於看得到最新的（multi-message user 全解鎖）** — ChatPage 載入用 `sort=asc&limit=20` 永遠停在最舊 20 筆，4 月 5 月送的訊息全部看不到。HuiYun 反映「沒紀錄、回覆失敗」就是這個。改用 cursor pagination：初次載最新 5 筆 (`sort=desc&limit=5` reverse)，user scroll 到頂自動載前 5 筆 (`before/beforeId` cursor)，畫面位置不跳。
+- **CF Worker → Mac 即時觸發從 11 分鐘等 cron 變 1 秒（chat AI 回覆延遲修正）** — Tailscale `serve` (tailnet-only :443 → openclaw 18789) 取代了 `funnel`，CF Worker public TLS handshake 一律 525/530。Cron 15-min fallback 兜底但 user 體感很差。改 `tailscale funnel --bg --https=443 http://127.0.0.1:8080` 走回 Caddy 路徑路由 (`/tripline/api/*` → 6688)。Defense-in-depth 與 trust boundary header check 維持。Latency 11 分鐘 → 1 秒 (req 178 vs 179 對照驗證)。
+- **scroll behavior 不再被 SSE / send 同 tick 干擾** — 原 `prependScrollRef` scrollHeight delta 在 SSE bubble 取代 / 新訊息 setMessages 同 tick 觸發時會誤判，user 滾上去看舊訊息可能被拉回底。改用 first/last message id diff：first 變 = prepend 補位、last 變 = 新訊息拉到底、皆同 = 不動。
+
+### Added
+
+- **`useChatPagination<TRow, TMsg>` hook** — `src/hooks/useChatPagination.ts`。把 cursor pagination + scroll 行為 + race guard 從 ChatPage 抽出。Generic over row + message types。同步 `loadingOlderRef` 擋 iOS momentum scroll 同 tick 多重觸發、`activeTripIdRef` 比對防 trip switch 時舊 fetch 污染、`prependScrollRef` 在 trip switch 清空、連續失敗 backoff (`ERROR_BACKOFF_MS = 2000`)。
+- **Chat 載入失敗 inline retry banner** — 401/network error 時 `loadError` 觸發 sticky-top banner + retry button，不再 silent swallow + 無感 storm fetch。
+- **11 個 pagination unit test** — `tests/unit/use-chat-pagination.test.tsx`。涵蓋 initial fetch / cursor seeding / hasMoreOlder / inflight resume / fetch error / trip switch reset / loadOlder happy path / empty rows defensive / 並發 gate / race guard / retry。
+
+### Changed
+
+- **ChatPage.tsx 縮 +55/-47**（pagination 邏輯抽到 hook）— 1148 → 1100 行。Component 變回專注 UI composition，pagination 行為單元可測。
+
+### Infrastructure
+
+- **Tailscale funnel 三層架構文件** — `funnel :443 → Caddy :8080 → 後端 (tripline:6688 / openclaw:18789)`。Caddy header check 擋 funnel 來的 openclaw 流量（defense-in-depth），path strip 讓後端 service 不需知 `/tripline/api` 前綴。第二次 funnel→serve regression（昨日 openspec proposal 有提），下次 incident 可參考 memory `project_tailscale_funnel_caddy_architecture.md`。
+
 ## [2.19.15] - 2026-05-03
 
 ### Fixed
