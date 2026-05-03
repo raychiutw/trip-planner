@@ -59,36 +59,16 @@ const SCOPED_STYLES = `
 /* heading 改用統一 <TitleBar>。.tp-trips-heading 已退役。 */
 
 .tp-trips-grid {
-  /* 2026-04-29:user 反饋「行程版面超出版面」 — repeat(2, 1fr) 等同
-   * repeat(2, minmax(auto, 1fr)),當某張 card 內容(title)寬過 1fr 計算值時
-   * column auto 撐大,導致第二 col 超出 grid right edge(實測 viewport 390 +
-   * 第二 card right 418,overflow 28px)。改 minmax(0, 1fr) 強制 min: 0 不
-   * 被內容撐大,column 等寬。 */
+  /* minmax(0, 1fr) 不是 1fr：1fr 的 min 是 auto，會被 card title 撐大讓第二
+   * column 溢出 grid right edge。0 強制 min: 0 → column 等寬。 */
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 24px;
 }
 
-/* PR-NN 2026-04-26：mobile embedded mode 改成完整 mobile-topbar 模式
- * （對齊 docs/design-sessions/mockup-trip-v2.html line 438 .mobile-topbar）。
- * 取代 PR-AA 的 floating sticky back btn — 那個獨佔一行、跟 mockup 不符。
- *
- * 結構：[← back btn] [trip name] — 56px 全寬、sticky top、glass blur。 */
-/* 2026-05-03 root fix:從 flex-column 改 grid 「chrome auto + content 1fr」
- * 模式。原 flex-column + default flex-shrink:1 + min-height:auto 讓 TitleBar
- * 在父空間不足時 (TripPage 內容很長) 被擠壓到 children max-height (45px),
- * user 觀察「行程明細標題列比其他功能頁低」+「加景點外框不正確」(button 凸出)
- * 同 root cause。
- *
- * Grid template rows:
- *   row 1 (auto)  — TitleBar 用 CSS height: 56px (compact) / 64px (desktop) fixed
- *   row 2 (1fr)   — TripPage .ocean-shell 撐滿剩餘 viewport
- *
- * 比 flex column + flex-shrink:0 更 semantic: chrome (auto) + main (1fr)
- * 是 W3C grid layout standard pattern。同 ChatPage / MapPage 用 flex
- * column + child explicit flex:1 一致語意,但 grid 不需依賴 child set 對的
- * flex behavior,layout intent 完全在 parent。 */
+/* grid template rows (chrome auto + main 1fr) 取代 flex column —
+ * flex 的 default flex-shrink:1 會讓 TitleBar 在 main 內容很長時被擠壓。 */
 .tp-embedded-trip {
   position: relative;
   display: grid;
@@ -96,16 +76,6 @@ const SCOPED_STYLES = `
   height: 100%;
   min-height: 100%;
 }
-/* PR-QQ 2026-04-27：對齊 mockup-trip-selected-v1.html Variant A
- * （+ B 的單行 title）— 對齊 mockup-trip-v2.html line 438 .mobile-topbar
- * canonical 規格：56px 高、16px padding、glass blur、border-bottom hairline。
- * Back btn 36×36 帶 border + bg-background = mockup .icon-btn pattern，比原
- * 40×40 transparent 更貼齊 mockup affordance。Title 17px bold 單行，
- * 不加 day eyebrow（保持簡潔）。 */
-/* embedded topbar 改用統一 <TitleBar>。
- * 舊 .tp-embedded-topbar / -back / -trip-name / -actions CSS 已退役。
- * .tp-embedded-trip 仍是 wrapper（含 height: 100%），保留。
- * .tp-embedded-menu* 給 EmbeddedActionMenu sub-component 用，保留。 */
 .tp-embedded-menu-trigger {
   width: 36px; height: 36px;
   border-radius: var(--radius-md);
@@ -175,8 +145,8 @@ const SCOPED_STYLES = `
     gap: 16px;
   }
 }
-/* PR-Q 2026-04-26：每張 trip card 加 ... menu。card 改 wrapper（position:
- * relative）裝 button + menu trigger 兩個 children，避免 button-in-button。 */
+/* card wrapper 必須 position: relative — kebab menu trigger absolute positioned。
+ * 兩個 sibling button 取代 button-in-button (a11y + nested click target 衝突)。 */
 .tp-trip-card-wrap {
   position: relative;
 }
@@ -578,9 +548,6 @@ function cardMeta(trip: TripInfo): string {
   return '';
 }
 
-/* PR-UU 2026-04-27：embedded topbar 漢堡選單 — 共編 / 列印 / 下載 (4 formats)。
- * 共編 走 host 的 setCollabTripId（既有 InfoSheet path）。
- * 列印 + 下載 走 TripPage forwardRef handle。 */
 const MENU_WIDTH = 200;
 const VIEWPORT_MARGIN = 8;
 
@@ -746,9 +713,8 @@ export default function TripsListPage() {
   const [allTrips, setAllTrips] = useState<TripInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // PR-DD 2026-04-26：抽出 loadTrips 讓 mount + tp-trip-created event 都能觸發
-  // refetch。User onion523 反應「行程後要切換功能才看的到新行程」 — TripsListPage
-  // 原本只 mount 跑一次，新增完 navigate 過去 trip 詳情，回 list 看不到新 trip。
+  // 同 tab navigate 不會 remount TripsListPage — 必須由 tp-trip-created /
+  // tp-trip-updated event 觸發 refetch，否則新增/編輯後回 list 看不到變更。
   const loadTrips = useCallback(async () => {
     try {
       const [myRes, allRes] = await Promise.all([
@@ -775,13 +741,9 @@ export default function TripsListPage() {
 
   useEffect(() => { void loadTrips(); }, [loadTrips]);
 
-  // PR-DD：聽 NewTripContext 在 POST trips 成功後 dispatch 的 event，re-fetch
-  // list 拿新 trip。同 tab navigate 不會 remount TripsListPage，必須 explicit
-  // refetch 才會更新。
   useEffect(() => {
     function onTripCreated() { void loadTrips(); }
     window.addEventListener('tp-trip-created', onTripCreated);
-    // 2026-05-03: EditTripPage 儲存後 dispatch tp-trip-updated → 同 loadTrips refresh
     window.addEventListener('tp-trip-updated', onTripCreated);
     return () => {
       window.removeEventListener('tp-trip-created', onTripCreated);
@@ -854,16 +816,9 @@ export default function TripsListPage() {
     return visibleTrips[0]?.tripId ?? null;
   }, [selectedFromUrl, visibleTrips]);
 
-  // Both viewports: clicking a card sets ?selected=tripId. Mobile then
-  // renders the embedded TripPage as full-screen main; desktop swaps the
-  // right sheet to that trip. Per user direction the unified URL pattern is
-  // /trips?selected=X (no /trip/:id route navigation).
-  //
-  // 2026-04-29 race fix: 同步寫 ActiveTripContext。原本 active trip 設定靠
-  // embedded TripPage mount 後 useEffect 觸發 setActiveTrip，但如果 user
-  // 點完 card 立刻走 bottom-nav 切到 /chat，TripPage 還沒 mount → ChatPage
-  // 拿到舊 activeTripId，訊息會送錯 trip（lean.lean@gmail trip_requests:162
-  // 的 sympton：台南內容送進沖繩 trip）。Card click 同步寫 context 解決。
+  // Card click 同步寫 ActiveTripContext — 不能等 embedded TripPage mount 才設，
+  // 否則 user 點完立刻切 bottom-nav 到 /chat，ChatPage 拿舊 activeTripId 會把
+  // 訊息送錯 trip。
   const { setActiveTrip } = useActiveTrip();
   function handleCardClick(tripId: string, e: React.MouseEvent | React.KeyboardEvent) {
     e.preventDefault();
@@ -873,29 +828,17 @@ export default function TripsListPage() {
     setSearchParams(next, { replace: false });
   }
 
-  // v2.18.0:共編 sheet 升格獨立頁面 /trip/:id/collab。
-  // card kebab + EmbeddedActionMenu「共編」 → navigate 過去,不再開 InfoSheet。
-  /* PR-UU 2026-04-27:embedded TripPage forwardRef handle,給漢堡選單呼叫
-   * 列印 / 下載(TripPage 內部 state-bound handlers)。 */
   const tripPageRef = useRef<TripPageHandle>(null);
   const handleMenuCollab = useCallback(
     (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/collab`); },
     [navigate],
   );
 
-  // 2026-05-03 modal-to-fullpage migration: card kebab「編輯行程」改 navigate
-  // 到 /trip/:id/edit page (取代原本開 EditTripModal)。EditTripPage 自己處理
-  // load + submit + 成功後 navigate back + dispatch tp-trip-updated event。
-  // TripsListPage 只需 listen tp-trip-updated 來 refresh list（已有 listener
-  // 在另一個 useEffect — 見 PR-DD comment）。
   const handleMenuEdit = useCallback(
     (tripId: string) => { navigate(`/trip/${encodeURIComponent(tripId)}/edit`); },
     [navigate],
   );
 
-  // PR-Q：card kebab 「刪除行程」 → ConfirmModal + DELETE /api/trips/:id +
-  // optimistic remove from local list（避免 user 等待 reload）。
-  // 兩階段 state：requestMenuDelete 開 modal、handleConfirmDelete 真的執行。
   const [deleteTarget, setDeleteTarget] = useState<{ tripId: string; label: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -943,11 +886,8 @@ export default function TripsListPage() {
   // Heading meta 已棄用 — mockup 規定 TitleBar 單行 chrome 不放 meta。
   // 行程數隱性，user 看 cards 自然知道；toolbar 子 tabs / search / 排序 留 future PR。
 
-  // Mobile + ?selected → embedded TripPage IS the main content (full-screen
-  // trip detail). Cards hide. Per user spec, /trips?selected=X is the unified
-  // entry, no /trip/:id route navigation.
-  /* PR-PP：去 sheet 後，embedded mode 不分 mobile/desktop — 兩邊都把 main
-   * 換成滿版 TripPage（topbar [← back] [trip name] + timeline）。 */
+  // Mobile + desktop 共用 entry: ?selected=X 切換 main 為 embedded TripPage
+  // (滿版)。Cards 隱藏。/trip/:id 路由不再使用。
   const showEmbeddedTrip = !!effectiveSelectedId && !!selectedFromUrl;
 
   const cardGridMain = (
@@ -973,7 +913,6 @@ export default function TripsListPage() {
               aria-label="新增行程"
               data-testid="trips-list-new-trip-titlebar"
             >
-              {/* 2026-04-29:title action 統一規範 — 桌機 icon+文字,手機 icon only */}
               <Icon name="plus" />
               <span className="tp-titlebar-action-label">新增行程</span>
             </button>
@@ -1166,11 +1105,6 @@ export default function TripsListPage() {
     </>
   );
 
-  // PR-PP 2026-04-26：架構改 2-pane，sheet 不再用，永遠 undefined。
-
-  // PR-NN 2026-04-26：mobile embedded mode 改 .tp-embedded-topbar pattern
-  // （[← back] [trip name]）。原 PR-AA floating back btn 自己一行 + 跟 mockup
-  // mobile-topbar 不符，已棄用。
   function clearSelected() {
     /* Capture the trip id user was viewing BEFORE we drop ?selected — used
      * to restore keyboard focus to the originating card after re-render
@@ -1201,13 +1135,6 @@ export default function TripsListPage() {
         backLabel="返回行程列表"
         actions={effectiveSelectedId && (
           <>
-            {/* Section 3 (terracotta-add-stop-modal)：embedded mode 也提供
-              * 「加景點」 trigger，呼叫 TripPage exposed handle openAddStop。
-              * 否則 user 在 /trips?selected= flow（主要 entry）找不到加景點。
-              * 2026-05-03 polish：改用 .tp-titlebar-action 對齊 DESIGN.md
-              * 2026-05-03 v2.19.x「桌機 icon+text / 手機 icon-only」 規則,
-              * 跟一覽頁「新增行程」 button 視覺一致(取代原 .tp-embedded-menu-trigger
-              * square icon-only)。 */}
             <button
               type="button"
               className="tp-titlebar-action"
@@ -1232,17 +1159,14 @@ export default function TripsListPage() {
 
   return (
     <>
-      {/* PR-TT 2026-04-27：SCOPED_STYLES hoist 到頂層，永遠注入。
-       * 原本在 cardGridMain 內 → embedded mode 不渲染 cardGridMain → CSS
-       * 沒注入 → .tp-embedded-topbar 用 <header> UA 預設 display: block，
-       * 子元素 stack vertically (back btn + 共編 chip 變兩行)。 */}
+      {/* SCOPED_STYLES 必須 hoist 到頂層 — embedded mode 不渲染 cardGridMain，
+        * 注入在 cardGridMain 內就失效。 */}
       <style>{SCOPED_STYLES}</style>
       <AppShell
         sidebar={<DesktopSidebarConnected />}
         main={main}
         bottomNav={<GlobalBottomNav authed={!!user} />}
       />
-      {/* v2.18.0:共編 sheet 升格 /trip/:id/collab 獨立頁,既有 InfoSheet wrapper 移除。 */}
     </>
   );
 }

@@ -139,10 +139,8 @@ const SCOPED_STYLES = `
 }
 .tp-account-row-chevron .svg-icon { width: 14px; height: 14px; }
 
-/* Logout destructive variant — 2026-04-29 加強 visual:title + helper 都繼承
- * destructive red(原本只 row color set,但 title/helper 用 explicit color
- * override,沒繼承到 red),對齊 mockup S19 「登出」 row 整 row 紅字 visual。
- * icon 從 arrow-left 改 x-mark 對齊 mockup destructive 語意。 */
+/* destructive variant — title + helper 都覆寫成紅字（不能只設 row color，
+ * .tp-account-row-title/.tp-account-row-helper 有 explicit color 不繼承）。 */
 .tp-account-row.is-danger { color: var(--color-priority-high-dot, #c0392b); }
 .tp-account-row.is-danger .tp-account-row-title { color: var(--color-priority-high-dot, #c0392b); }
 .tp-account-row.is-danger .tp-account-row-helper { color: var(--color-priority-high-dot, #c0392b); opacity: 0.78; }
@@ -152,8 +150,6 @@ const SCOPED_STYLES = `
 }
 .tp-account-row.is-danger:hover { background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.06)); }
 
-/* 2026-05-03 P3 confirm-modal cleanup: tp-logout-* CSS 退役。登出二次確認
- * 改用標準化 <ConfirmModal> 元件，視覺由 ConfirmModal SCOPED_STYLES 統一管。 */
 .tp-logout-stats-error {
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
@@ -297,12 +293,6 @@ export default function AccountPage() {
         ))}
       </div>
 
-      {/* 2026-05-03 P3 confirm-modal cleanup: 取代手刻 tp-logout-modal。
-        * ConfirmModal 提供 portal + ESC + focus trap + alertdialog a11y +
-        * V2 Terracotta destructive 紅色 confirm button — 對齊 mockup S22
-        * Dialogs system. confirm 按鈕 testid 維持 account-logout-confirm
-        * (e2e backwards-compat) 透過 ConfirmModal data-testid="confirm-modal-confirm"
-        * 與 wrapper data-testid 並存。 */}
       <ConfirmModal
         open={showLogoutModal}
         title="確認登出？"

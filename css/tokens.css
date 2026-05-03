@@ -103,10 +103,10 @@ html { color-scheme: light dark; }
     --font-size-title2: 1.375rem;
     --font-size-title3: 1.25rem;
     --font-size-headline: 1.0625rem;
-    --font-size-body: 1rem; /* 16px — mockup body 規範（曾為 17px headline alias，2026-04-29 對齊 mockup 降 1px） */
+    --font-size-body: 1rem; /* 16px — mockup body 規範 */
     --font-size-callout: 1rem;
     --font-size-subheadline: 0.9375rem;
-    --font-size-footnote: 0.875rem; /* 14px — mockup support 規範（曾為 13px，2026-04-29 對齊 mockup 升 1px） */
+    --font-size-footnote: 0.875rem; /* 14px — mockup support 規範 */
     --font-size-caption: 0.75rem;
     --font-size-caption2: 0.6875rem;  /* 11px */
     --font-size-eyebrow: 0.625rem;    /* 10px — uppercase eyebrow labels (DAY 01, STOPS, etc.) */
@@ -159,9 +159,8 @@ html { color-scheme: light dark; }
     /* Z-index */
     --z-sticky-nav: 200;
     --z-fab: 300;
-    /* PR-S 2026-04-26：modal 必須高過所有 sticky 元素（sticky-nav 200 / fab
-     * 300 / quick-panel 350 / info-sheet 401）。9000 留 buffer 給未來更高
-     * priority overlay（emergency banner / toast 之類）。 */
+    /* modal 必須高過所有 sticky (sticky-nav 200 / fab 300 / quick-panel 350 /
+     * info-sheet 401)。9000 留 buffer 給未來 emergency banner / toast。 */
     --z-modal: 9000;
 
     /* Focus ring */
@@ -179,11 +178,8 @@ html { color-scheme: light dark; }
     --animate-toast-slide-up: toast-slide-up var(--transition-duration-normal) ease forwards;
 
     /* Layout composite */
-    /* PR-U 2026-04-26：原值 calc(48 + 12) = 60px 假設 page 有 sticky topbar，
-     * /explore /map /trips landing /sessions 等 mobile page 沒有 topbar 的，
-     * toast 60px 直接覆蓋 page heading（user 截圖回報「目前繁忙碌中」 蓋住
-     * 「探索」 標題）。改 max(16, safe-area-inset-top) 對齊 iOS HIG transient
-     * notification 慣例：頂部 safe area 下方就近顯示，跨 page 一致。 */
+    /* Toast 距頂使用 safe-area inset (對齊 iOS HIG transient notification)。
+     * 不能用固定 60px — page 沒 sticky topbar 時 toast 會直接蓋住 page heading。 */
     --spacing-toast-top: max(16px, env(safe-area-inset-top, 16px));
     --spacing-content-h: calc(100dvh - var(--spacing-nav-h));
 }
@@ -504,9 +500,8 @@ body.dark {
         display: none;
     }
 
-    /* 2026-05-01 mockup S12 Variant A 對齊 — 單層 5 欄 grid，移除冗餘 dot。
-     * Cols: grip(24) | time+dur(60) | icon(44) | content(1fr) | caret(24)。
-     * Grip 永遠淡顯（hover 變 accent），與 time/icon/content/caret 同 row。 */
+    /* mockup S12 Variant A — 單層 5 欄 grid，無冗餘 dot。
+     * Cols: grip(24) | time+dur(60) | icon(44) | content(1fr) | caret(24)。 */
     .ocean-rail-item {
         position: relative;
         display: grid;
@@ -575,9 +570,8 @@ body.dark {
         min-width: 0; overflow: hidden;
         display: flex; flex-direction: column; gap: 2px;
     }
-    /* 2026-04-29 mockup parity:meta.label 從 sub line 拉出為 chip eyebrow
-     * (mockup S12「HOTEL」「SIGHT · 景點」)— 11px caps + letter-spacing 0.12 +
-     * accent color。是 caps spacing 不是 chip background,輕量視覺權重。 */
+    /* meta chip eyebrow (mockup S12「HOTEL」「SIGHT · 景點」) — 11px caps +
+     * letter-spacing + accent color。是 caps spacing 不是 chip background。 */
     .ocean-rail-chip {
         font-size: var(--font-size-eyebrow);
         font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
@@ -784,8 +778,8 @@ body.dark {
         --color-cover-jp-to: #D97848;
         --color-cover-kr-from: #8A4520;
         --color-cover-kr-to: #5A4634;
-        /* PR-EE 2026-04-26：dark mode TW cover 太亮（#9E6800 amber 在深色 ui
-         * 上跳出來太搶眼），降到 deep amber-brown 跟 cover-other-from 接近。 */
+        /* dark mode TW cover 不能用 light-mode 的 amber #9E6800 — 在深色 UI
+         * 上會過度跳出，降到 deep amber-brown 跟 cover-other-from 接近。 */
         --color-cover-tw-from: #5A4220;
         --color-cover-tw-to: #4D372A;
         --color-cover-other-from: #4D372A;
@@ -880,10 +874,8 @@ body.dark {
 }
 
 
-/* ===== Page eyebrow + meta helpers (2026-05-03 PageHeader 退役後共用) =====
- * 替代原 PageHeader 的 eyebrow + meta 功能。settings 子頁 / list page 在
- * <TitleBar> 下方緊接這兩個 element 提供 context label + description。
- * Source: src/pages/ConnectedAppsPage / DeveloperAppsPage / SessionsPage. */
+/* ===== Page eyebrow + meta helpers (TitleBar 下方 context label + description) =====
+ * 用於 settings 子頁 / list page。Used by ConnectedAppsPage / DeveloperAppsPage / SessionsPage. */
 .tp-page-eyebrow {
   margin: 0 0 4px;
   font-size: var(--font-size-eyebrow);
@@ -1009,6 +1001,65 @@ body.dark {
 }
 
 
+/* ===== .tp-form / .tp-form-row — vertical form scaffold (auth + dev forms 共用) =====
+ * LoginPage / ForgotPasswordPage / DeveloperAppNewPage 原本各自重複定義。
+ * 預設輸入尺寸 = 表單密集 (10px 12px padding)；auth 變體加 .tp-form--auth
+ * 拉高 padding 到 12px 14px + 48px touch 高度。 */
+.tp-form { display: flex; flex-direction: column; gap: 16px; }
+.tp-form-row { display: flex; flex-direction: column; gap: 6px; }
+.tp-form-row > label {
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.tp-form-row > input,
+.tp-form-row > textarea {
+  font-family: inherit;
+  font-size: var(--font-size-callout);
+  padding: var(--tp-form-input-pad-y, 10px) var(--tp-form-input-pad-x, 12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  min-height: var(--tp-form-input-min-h, auto);
+}
+.tp-form-row > textarea {
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: var(--font-size-footnote);
+  min-height: 80px;
+  resize: vertical;
+}
+.tp-form-row > input:focus,
+.tp-form-row > textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  border-color: var(--color-accent);
+}
+.tp-form--auth {
+  --tp-form-input-pad-y: 12px;
+  --tp-form-input-pad-x: 14px;
+  --tp-form-input-min-h: 48px;
+}
+.tp-form-row .tp-hint-link {
+  color: var(--color-accent);
+  font-weight: 600;
+  font-size: var(--font-size-caption);
+  text-decoration: none;
+}
+.tp-form-row .tp-hint-link:hover { text-decoration: underline; }
+.tp-form-row .tp-hint {
+  font-size: var(--font-size-caption2);
+  color: var(--color-muted);
+  font-weight: 500;
+}
+.tp-form-row .tp-error {
+  font-size: var(--font-size-caption);
+  color: var(--color-destructive);
+}
+
+
 /* ===== MapDayTab — bottom underline tab (V2 Terracotta Map page) ===== */
 .tp-map-day-tabs {
   flex-shrink: 0;
@@ -1024,9 +1075,7 @@ body.dark {
 }
 .tp-map-day-tabs::-webkit-scrollbar { display: none; }
 .tp-map-day-tab {
-  /* 2026-04-29 mockup parity:user 反饋「Day 的格式不能太高」,padding
-   * 10/14 + min-height 44px → 6/14 + min-height 36px,跟 mockup S20 underline
-   * tabs 視覺一致(扁平 strip,不搶佔垂直空間)。 */
+  /* 扁平 strip — 不搶佔垂直空間，對齊 mockup S20 underline tabs spec。 */
   flex: 0 0 auto;
   padding: 6px 14px;
   border: none;
@@ -1273,12 +1322,9 @@ body.dark {
 .tp-titlebar-back:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
 .tp-titlebar-back .svg-icon { width: 18px; height: 18px; }
 
-/* 2026-04-29:title action button 帶文字 label。User 拍板「桌機 icon+文字、
- * 手機 icon only」是所有 title 規範。
- *
- * 用法:button class="tp-titlebar-action" 含 <Icon> + <span class="tp-titlebar-action-label">label</span>
- * 桌機(>=761):pill 樣式 icon + 文字 inline
- * 手機(<=760):縮回 icon-only 圓形(label hide) */
+/* TitleBar action button RWD：桌機 (>=761) pill 樣式 icon + 文字 inline；
+ * 手機 (<=760) 縮回 icon-only 圓形 (label hidden via @media)。
+ * 用法：<button class="tp-titlebar-action"><Icon /><span class="tp-titlebar-action-label">label</span></button> */
 .tp-titlebar-action {
   display: inline-flex;
   align-items: center;
@@ -1307,8 +1353,8 @@ body.dark {
   .tp-titlebar-action {
     width: var(--spacing-tap-min);
     padding: 0;
-    /* 2026-05-03 polish: 保留 1px border 跟桌機一致 + radius-md 跟桌機 + .tp-embedded-menu-trigger
-     * 同 family (rounded rectangle / icon-only square w/ rounded corners)。 */
+    /* mobile icon-only：保留 border + radius，跟桌機 + .tp-embedded-menu-trigger
+     * 同視覺 family (rounded rectangle)。 */
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     justify-content: center;
@@ -1316,9 +1362,8 @@ body.dark {
   .tp-titlebar-action-label { display: none; }
 }
 
-/* 2026-05-03: primary variant for confirm action button (儲存 / 完成 / 建立)。
- * Accent 實心，桌機 icon + 文字、手機 icon only (繼承 .tp-titlebar-action 的 RWD)。
- * 用法: <button class="tp-titlebar-action is-primary">…</button> */
+/* primary variant — confirm action (儲存 / 完成 / 建立)。Accent 實心，
+ * 桌機 icon+文字 / 手機 icon only (繼承 .tp-titlebar-action RWD)。 */
 .tp-titlebar-action.is-primary {
   background: var(--color-accent);
   color: var(--color-accent-foreground);
@@ -1433,8 +1478,8 @@ body.dark {
 .tp-titlebar-trip-row-title { font-weight: 700; font-size: var(--font-size-callout); }
 .tp-titlebar-trip-row-meta { font-size: var(--font-size-caption2); color: var(--color-muted); }
 
-/* mockup-parity-qa-fixes 2026-04-29: page-title compact override
- * mockup .tp-page-titlebar-title compact:4088 規範 page-title 24px on <760px viewport. */
+/* page-title compact override — mockup .tp-page-titlebar-title compact spec：
+ * 24px on <760px viewport (28px on desktop)。 */
 @media (max-width: 760px) {
   :root {
     --font-size-title: 1.5rem; /* 28px → 24px on compact */

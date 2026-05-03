@@ -32,14 +32,7 @@ import TitleBar from '../components/shell/TitleBar';
 /** Region 候選 (常用 destinations + 全部地區)。Active trip's region 自動加進來不重複。 */
 const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台北'] as const;
 
-interface PoiSearchResult {
-  osm_id: number;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  category: string;
-}
+import type { PoiSearchResult } from '../types/poi';
 
 interface SavedPoiRow {
   id: number;
@@ -536,11 +529,11 @@ export default function ExplorePage() {
         method: 'POST',
         body: JSON.stringify({
           name: poi.name,
-          type: mapNominatimCategory(poi.category),
+          type: mapNominatimCategory(poi.category ?? ''),
           lat: poi.lat,
           lng: poi.lng,
-          address: poi.address,
-          category: poi.category,
+          address: poi.address ?? '',
+          category: poi.category ?? '',
           source: 'user-explore',
         }),
       });
@@ -810,7 +803,7 @@ export default function ExplorePage() {
                           <div className="explore-poi-body">
                             <div className="poi-category">{poi.category || 'POI'}</div>
                             <div className="poi-name">{poi.name}</div>
-                            <div className="poi-address">{poi.address}</div>
+                            <div className="poi-address">{poi.address ?? ''}</div>
                             {/* Section 4.9：rating meta — 真實 rating 待 backend
                               提供 Google rating 接入；先用 placeholder ⭐ + 「待補」 */}
                             <div className="explore-poi-rating">

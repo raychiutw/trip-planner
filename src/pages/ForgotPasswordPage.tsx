@@ -45,25 +45,7 @@ ${AUTH_LAYOUT_STYLES}
   margin: 0; line-height: 1.5;
 }
 
-.tp-form { display: flex; flex-direction: column; gap: 16px; }
-.tp-form-row { display: flex; flex-direction: column; gap: 6px; }
-.tp-form-row label {
-  font-size: var(--font-size-footnote); font-weight: 600;
-}
-.tp-form-row input {
-  font-family: inherit; font-size: var(--font-size-callout);
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  min-height: 48px;
-}
-.tp-form-row input:focus {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-  border-color: var(--color-accent);
-}
-
+/* .tp-form / .tp-form-row 移到 css/tokens.css；用 .tp-form--auth 拉高觸控尺寸。 */
 /* .tp-btn family 移到 css/tokens.css 共用。 */
 
 .tp-banner {
@@ -173,7 +155,7 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            <form className="tp-form" onSubmit={handleSubmit} noValidate>
+            <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
               <div className="tp-form-row">
                 <label htmlFor="forgot-email">Email</label>
                 <input

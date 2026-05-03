@@ -50,33 +50,7 @@ ${AUTH_LAYOUT_STYLES}
   margin: 0;
 }
 
-.tp-form { display: flex; flex-direction: column; gap: 16px; }
-.tp-form-row { display: flex; flex-direction: column; gap: 6px; }
-.tp-form-row label {
-  font-size: var(--font-size-footnote); font-weight: 600;
-  display: flex; justify-content: space-between; align-items: baseline;
-}
-.tp-form-row .tp-hint {
-  font-size: var(--font-size-caption2);
-  color: var(--color-muted); font-weight: 500;
-}
-.tp-form-row input {
-  font-family: inherit; font-size: var(--font-size-callout);
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  min-height: 48px;
-}
-.tp-form-row input:focus {
-  outline: 2px solid var(--color-accent); outline-offset: -2px;
-  border-color: var(--color-accent);
-}
-.tp-form-row .tp-error {
-  font-size: var(--font-size-caption);
-  color: var(--color-destructive);
-}
+/* .tp-form / .tp-form-row 移到 css/tokens.css；用 .tp-form--auth 拉高觸控尺寸。 */
 
 .tp-pw-strength {
   display: flex; flex-direction: column; gap: 8px; margin-top: 4px;
@@ -306,7 +280,7 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <form className="tp-form" onSubmit={handleSubmit} noValidate>
+        <form className="tp-form tp-form--auth" onSubmit={handleSubmit} noValidate>
           <div className="tp-form-row">
             <label htmlFor="reset-password">
               新密碼 <span className="tp-hint">至少 8 字元</span>
