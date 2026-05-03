@@ -43,17 +43,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
      ORDER BY sp.saved_at DESC, sp.id DESC`,
   ).bind(auth.userId).all();
 
-  // Parse usages_json client-side-friendly
+  // SQLite json_group_array 保證輸出合法 JSON；不需 try/catch 兜底（malformed 代表 D1 bug 應顯露）
   const enriched = (results ?? []).map((r) => {
-    const row = r as Record<string, unknown>;
-    let usages: unknown[] = [];
-    try {
-      usages = typeof row.usages_json === 'string' ? JSON.parse(row.usages_json) : [];
-    } catch {
-      usages = [];
-    }
-    delete row.usages_json;
-    return { ...row, usages };
+    const { usages_json, ...rest } = r as Record<string, unknown> & { usages_json?: string };
+    return { ...rest, usages: usages_json ? JSON.parse(usages_json) : [] };
   });
 
   return json(enriched);

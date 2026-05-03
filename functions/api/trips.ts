@@ -198,13 +198,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const showAll = url.searchParams.get('all') === '1';
   const auth = getAuth(context);
 
-  // Migration 0045: dropped self_drive/auto_scroll/footer/is_default from baseCols.
-  // V2 cutover (migration 0047): trips.owner column dropped — owner_user_id +
-  // JOIN users 取 email for legacy display (TripsListPage 仍顯示 owner email)。
-  // member_count 改 COUNT DISTINCT user_id。
+  // V2 cutover (migration 0047): trips.owner email column dropped — owner_user_id
+  // is canonical; LEFT JOIN users 拿 owner email for legacy display。
   const baseCols = `t.id AS tripId, t.name,
-                    (SELECT email FROM users u WHERE u.id = t.owner_user_id) AS owner,
-                    t.owner_user_id,
+                    u.email AS owner, t.owner_user_id,
                     t.title,
                     t.countries, t.published, t.data_source, t.default_travel_mode, t.lang,
                     (SELECT COUNT(*) FROM trip_days d WHERE d.trip_id = t.id) AS day_count,
@@ -212,9 +209,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                     (SELECT MAX(date) FROM trip_days d WHERE d.trip_id = t.id AND date IS NOT NULL) AS end_date,
                     (SELECT COUNT(DISTINCT user_id) FROM trip_permissions p WHERE p.trip_id = t.id) AS member_count`;
 
+  const fromJoin = `FROM trips t LEFT JOIN users u ON u.id = t.owner_user_id`;
   const sql = showAll && auth?.isAdmin
-    ? `SELECT ${baseCols} FROM trips t ORDER BY t.name ASC`
-    : `SELECT ${baseCols} FROM trips t WHERE t.published = 1 ORDER BY t.name ASC`;
+    ? `SELECT ${baseCols} ${fromJoin} ORDER BY t.name ASC`
+    : `SELECT ${baseCols} ${fromJoin} WHERE t.published = 1 ORDER BY t.name ASC`;
 
   const { results } = await context.env.DB.prepare(sql).all();
   return json(results);

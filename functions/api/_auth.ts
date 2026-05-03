@@ -28,19 +28,15 @@ export function requireAuth(context: { data: unknown }): AuthData {
  */
 export async function hasPermission(
   db: D1Database,
-  emailOrAuth: string | AuthData,
+  auth: AuthData,
   tripId: string,
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
-  const { userId } = normalizeAuth(emailOrAuth);
-  if (!userId) return false; // V2 cutover: 沒 user_id 不可能是 trip member
+  if (!auth.userId) return false;
   const row = await db
-    .prepare(
-      `SELECT 1 FROM trip_permissions
-       WHERE user_id = ? AND trip_id = ?`,
-    )
-    .bind(userId, tripId)
+    .prepare('SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ?')
+    .bind(auth.userId, tripId)
     .first();
   return !!row;
 }
@@ -57,33 +53,17 @@ export async function hasPermission(
  */
 export async function hasWritePermission(
   db: D1Database,
-  emailOrAuth: string | AuthData,
+  auth: AuthData,
   tripId: string,
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
-  const { userId } = normalizeAuth(emailOrAuth);
-  if (!userId) return false;
+  if (!auth.userId) return false;
   const row = await db
-    .prepare(
-      `SELECT 1 FROM trip_permissions
-       WHERE user_id = ? AND trip_id = ? AND role != 'viewer'`,
-    )
-    .bind(userId, tripId)
+    .prepare("SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ? AND role != 'viewer'")
+    .bind(auth.userId, tripId)
     .first();
   return !!row;
-}
-
-/**
- * Backwards-compat shim: callers pass either a string email (legacy) or AuthData.
- * 對 V2 cutover 後的 user_id-only 流程，string caller 會被 reject（userId=null → false）。
- * 應全部改 pass AuthData。Legacy string callers 將在 phase 3 cleanup PR 一律砍掉。
- */
-function normalizeAuth(emailOrAuth: string | AuthData): { email: string; userId: string | null } {
-  if (typeof emailOrAuth === 'string') {
-    return { email: emailOrAuth, userId: null };
-  }
-  return { email: emailOrAuth.email, userId: emailOrAuth.userId };
 }
 
 /**

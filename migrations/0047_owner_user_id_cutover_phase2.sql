@@ -36,7 +36,7 @@ SELECT id, user_id, poi_id, saved_at, note FROM saved_pois;
 
 DROP TABLE saved_pois;
 ALTER TABLE saved_pois_new RENAME TO saved_pois;
-CREATE INDEX idx_saved_pois_user_id ON saved_pois(user_id);
+-- UNIQUE (user_id, poi_id) auto-creates index covering user_id lookups, only need poi_id index.
 CREATE INDEX idx_saved_pois_poi ON saved_pois(poi_id);
 
 -- =============================================
@@ -56,12 +56,11 @@ CREATE TABLE trip_permissions_new (
 INSERT INTO trip_permissions_new (id, user_id, trip_id, role)
 SELECT id, user_id, trip_id, role FROM trip_permissions
 WHERE user_id IS NOT NULL AND email != '*';
--- ↑ '*' wildcard 暫時 drop（未來 dedicated public_trips column）
+-- ↑ ABORT if NOT NULL violated (E-C1 assertion). '*' wildcard 暫時 drop（未來 dedicated public_trips column）
 
 DROP TABLE trip_permissions;
 ALTER TABLE trip_permissions_new RENAME TO trip_permissions;
-CREATE INDEX idx_permissions_user_id ON trip_permissions(user_id);
-CREATE INDEX idx_permissions_email ON trip_permissions(user_id, trip_id); -- alias for legacy code paths
+-- UNIQUE (user_id, trip_id) covers user_id-only and (user_id, trip_id) lookups.
 
 -- =============================================
 -- 3. trips: drop owner (email column), owner_user_id NOT NULL

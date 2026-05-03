@@ -1,26 +1,14 @@
 /**
- * AddSavedPoiToTripPage — 將「我的收藏」加入指定行程的全頁 form。
- *
- * V2 cutover (migration 0046) D-C1 + D-C2: full page (per DESIGN.md L390-414
- * "form 必走全頁") replacing earlier modal proposal。Hits fast-path REST endpoint
- * POST /api/saved-pois/:id/add-to-trip 避免 message-based tp-request 8 秒等待感。
- *
- * Route: /saved-pois/:id/add-to-trip
- *
- * D-C3 spec: 7 missing states 全 spec：
- *   loading        — fetching saved POI + trip list (skeleton)
- *   empty          — 沒 trip → CTA 建立新行程
- *   conflict       — 同 day 同時段已有 entry → reuse ConflictModal pattern (defer to v2.20.1 polish)
- *   error          — 網路斷 / 5xx → PersistentAlert (DESIGN.md 規範)
- *   success        — toast「已加入 Day N」+ navigate to /trip/:id?day=N
- *   optimistic     — 送出後 button disable + spinner，避免重 click
- *   partial        — 收藏存在但 trip list 空（user 第一次加 trip 走 onboarding flow）
+ * AddSavedPoiToTripPage — 全頁 form 將「我的收藏」加入指定 trip / day / position。
+ * Route: /saved-pois/:id/add-to-trip。
+ * Hits fast-path POST /api/saved-pois/:id/add-to-trip — travel_* 由背景 tp-request 之後算。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
-import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { apiFetch } from '../lib/apiClient';
+import { ApiError } from '../lib/errors';
 import type { SavedPoi } from '../types/api';
 
 interface TripBrief {
@@ -104,7 +92,6 @@ export default function AddSavedPoiToTripPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Step 1: load saved POI + trips list in parallel
   useEffect(() => {
     if (!Number.isInteger(savedPoiId) || savedPoiId <= 0) {
       setLoadError('收藏 ID 無效');
@@ -112,14 +99,8 @@ export default function AddSavedPoiToTripPage() {
     }
     let cancelled = false;
     Promise.all([
-      fetch('/api/saved-pois', { credentials: 'same-origin' }).then((r) => {
-        if (!r.ok) throw new Error('載入收藏失敗');
-        return r.json() as Promise<SavedPoi[]>;
-      }),
-      fetch('/api/my-trips', { credentials: 'same-origin' }).then((r) => {
-        if (!r.ok) throw new Error('載入行程失敗');
-        return r.json() as Promise<{ trips?: TripBrief[] } | TripBrief[]>;
-      }),
+      apiFetch<SavedPoi[]>('/saved-pois'),
+      apiFetch<TripBrief[] | { trips?: TripBrief[] }>('/my-trips'),
     ])
       .then(([savedList, tripsResp]) => {
         if (cancelled) return;
@@ -131,20 +112,15 @@ export default function AddSavedPoiToTripPage() {
         setSaved(found);
         const tripsList = Array.isArray(tripsResp) ? tripsResp : tripsResp.trips ?? [];
         setTrips(tripsList);
-        if (tripsList.length === 1) {
-          setTripId(tripsList[0]!.tripId);
-        }
+        if (tripsList.length === 1) setTripId(tripsList[0]!.tripId);
       })
-      .catch((err: Error) => {
+      .catch((err: unknown) => {
         if (cancelled) return;
-        setLoadError(err.message || '載入失敗');
+        setLoadError(err instanceof Error ? err.message : '載入失敗');
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [savedPoiId]);
 
-  // Step 2: when tripId selected, load that trip's days
   useEffect(() => {
     if (!tripId) {
       setDays(null);
@@ -152,11 +128,7 @@ export default function AddSavedPoiToTripPage() {
       return;
     }
     let cancelled = false;
-    fetch(`/api/trips/${encodeURIComponent(tripId)}`, { credentials: 'same-origin' })
-      .then((r) => {
-        if (!r.ok) throw new Error('載入天數失敗');
-        return r.json() as Promise<{ days?: DayBrief[] }>;
-      })
+    apiFetch<{ days?: DayBrief[] }>(`/trips/${encodeURIComponent(tripId)}`)
       .then((data) => {
         if (cancelled) return;
         const dayList = data.days ?? [];
@@ -167,16 +139,17 @@ export default function AddSavedPoiToTripPage() {
         if (cancelled) return;
         setDays([]);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [tripId]);
+
+  // Backend TIME_RE 同 functions/api/_poi-defaults.ts — 防 FE 過鬆讓 BE 回 400 surprise
+  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
   const canSubmit = useMemo(() => {
     if (!saved || !tripId || dayNum === '' || submitting) return false;
     if (position !== 'append' && !anchorEntryId) return false;
-    if (startTime && !/^\d{2}:\d{2}$/.test(startTime)) return false;
-    if (endTime && !/^\d{2}:\d{2}$/.test(endTime)) return false;
+    if (startTime && !TIME_RE.test(startTime)) return false;
+    if (endTime && !TIME_RE.test(endTime)) return false;
     return true;
   }, [saved, tripId, dayNum, position, anchorEntryId, startTime, endTime, submitting]);
 
@@ -185,31 +158,22 @@ export default function AddSavedPoiToTripPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await fetch(
-        `/api/saved-pois/${savedPoiId}/add-to-trip`,
-        {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tripId,
-            dayNum: Number(dayNum),
-            position,
-            anchorEntryId: position !== 'append' ? Number(anchorEntryId) : undefined,
-            startTime: startTime || undefined,
-            endTime: endTime || undefined,
-          }),
-        },
-      );
-      if (!res.ok) {
-        const errBody = (await res.json().catch(() => ({}))) as { message?: string; code?: string };
-        throw new Error(errBody.message || `加入失敗（HTTP ${res.status}）`);
-      }
-      // success → navigate to trip page with success toast hint
+      await apiFetch(`/saved-pois/${savedPoiId}/add-to-trip`, {
+        method: 'POST',
+        body: JSON.stringify({
+          tripId,
+          dayNum: Number(dayNum),
+          position,
+          anchorEntryId: position !== 'append' ? Number(anchorEntryId) : undefined,
+          startTime: startTime || undefined,
+          endTime: endTime || undefined,
+        }),
+      });
       const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
       navigate(`/trips?${params.toString()}`, { replace: true });
     } catch (err) {
-      setSubmitError((err as Error).message || '加入失敗');
+      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '加入失敗';
+      setSubmitError(msg);
       setSubmitting(false);
     }
   }, [canSubmit, savedPoiId, tripId, dayNum, position, anchorEntryId, startTime, endTime, navigate]);
@@ -270,21 +234,10 @@ export default function AddSavedPoiToTripPage() {
     );
   }
 
-  const submitAction = (
-    <TitleBarPrimaryAction
-      label="加入"
-      busyLabel="加入中⋯"
-      busy={submitting}
-      disabled={!canSubmit}
-      onClick={handleSubmit}
-      testId="saved-add-to-trip-submit-titlebar"
-    />
-  );
-
   return (
     <div className="tp-app">
       <style>{SCOPED_STYLES}</style>
-      <TitleBar title="加入行程" back={goBack} actions={submitAction} />
+      <TitleBar title="加入行程" back={goBack} />
       <main className="tp-page-content">
         <div className="tp-saved-add-to-trip">
           <div className="tp-poi-summary">

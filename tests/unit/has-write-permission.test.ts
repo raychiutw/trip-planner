@@ -66,9 +66,14 @@ describe('hasWritePermission — viewer is read-only', () => {
     expect(stmt.bind).toHaveBeenCalledWith('uid-123', 'trip-1');
   });
 
-  it('legacy string caller (userId=null) → false (V2 cutover blocks)', async () => {
+  it('AuthData with null userId → false (V2 cutover blocks pre-V2 sessions)', async () => {
     const { db } = makeDb({ row: { '1': 1 } });
-    const ok = await hasWritePermission(db, 'legacy@x.com', 'trip-1', false);
+    const ok = await hasWritePermission(
+      db,
+      { email: 'legacy@x.com', userId: null, isAdmin: false, isServiceToken: false },
+      'trip-1',
+      false,
+    );
     expect(ok).toBe(false);
   });
 });
