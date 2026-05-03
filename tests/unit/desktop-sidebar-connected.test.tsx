@@ -32,11 +32,17 @@ function renderConnected() {
 }
 
 describe('DesktopSidebarConnected', () => {
-  it('initial render (loading) shows "未登入" placeholder (avoid flicker)', () => {
+  it('initial render (loading) does not show logged-out or account UI', () => {
     vi.spyOn(global, 'fetch').mockImplementation(() => new Promise(() => {}));
     const { container } = renderConnected();
-    // sidebar 渲染未登入 chip — "?" initial
     expect(container.querySelector('[data-testid="desktop-sidebar"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
+    expect(container.querySelector('[data-testid="sidebar-account-card"]')).toBeNull();
+
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).not.toContain('登入');
+    expect(container.textContent).not.toContain('未登入');
   });
 
   it('after fetch success renders user displayName + email', async () => {
@@ -48,6 +54,7 @@ describe('DesktopSidebarConnected', () => {
       expect(container.textContent).toContain('My Name');
     });
     expect(container.textContent).toContain('me@example.com');
+    expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeNull();
   });
 
   it('falls back to email as name when displayName is null', async () => {
@@ -58,15 +65,17 @@ describe('DesktopSidebarConnected', () => {
     await waitFor(() => expect(container.textContent).toContain('me@example.com'));
   });
 
-  it('401 response → renders unauthed sidebar (no user chip)', async () => {
+  it('401 response → renders confirmed unauthed sidebar', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response('{}', { status: 401 }),
     );
     const { container } = renderConnected();
     await waitFor(() => {
-      // user 為 null → 「?」 initial 仍渲染
-      expect(container.querySelector('[data-testid="desktop-sidebar"]')).toBeTruthy();
+      expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeTruthy();
     });
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).toContain('登入');
+    expect(container.textContent).toContain('未登入');
     expect(container.textContent).not.toContain('me@example.com');
   });
 

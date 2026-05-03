@@ -1,0 +1,22 @@
+[
+  {"query": "處理旅伴請求，看看有沒有 pending 的", "should_trigger": true},
+  {"query": "/tp-request", "should_trigger": true},
+  {"query": "有沒有待處理的旅伴請求", "should_trigger": true},
+  {"query": "跑一下 request scheduler 處理 open 狀態的請求", "should_trigger": true},
+  {"query": "旅伴在 app 上送了一個修改行程的請求", "should_trigger": true},
+  {"query": "process pending trip requests from the D1 database", "should_trigger": true},
+  {"query": "D1 裡有 processing 狀態的 request，幫我處理", "should_trigger": true},
+  {"query": "companion 透過網頁送了改行程請求，查一下 requests table", "should_trigger": true},
+  {"query": "看一下 api/requests 有沒有新的 open request", "should_trigger": true},
+  {"query": "tp-request 排程該跑了，處理佇列中的請求", "should_trigger": true},
+  {"query": "幫我直接改沖繩行程 Day 3 的午餐", "should_trigger": false},
+  {"query": "新建一個東京行程", "should_trigger": false},
+  {"query": "檢查行程品質 R0-R18", "should_trigger": false},
+  {"query": "全面重整沖繩行程", "should_trigger": false},
+  {"query": "補齊所有 POI 的 phone 欄位", "should_trigger": false},
+  {"query": "改 API handler 的 permission code", "should_trigger": false},
+  {"query": "每日健康檢查", "should_trigger": false},
+  {"query": "幫旅伴直接在 Day 2 加一個景點", "should_trigger": false},
+  {"query": "commit 前跑品質驗證", "should_trigger": false},
+  {"query": "deploy to production", "should_trigger": false}
+]

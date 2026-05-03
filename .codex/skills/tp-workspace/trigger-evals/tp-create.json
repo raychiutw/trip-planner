@@ -1,0 +1,22 @@
+[
+  {"query": "幫我建一個沖繩五日自駕行程，7/29-8/2，偏好拉麵跟燒肉", "should_trigger": true},
+  {"query": "/tp-create 釜山四日大眾交通 for HuiYun", "should_trigger": true},
+  {"query": "建一個宜蘭兩天一夜的行程，板橋圈出遊用", "should_trigger": true},
+  {"query": "create a new Tokyo 5-day trip for next March, Ray's trip", "should_trigger": true},
+  {"query": "新行程：大阪五日，3/15-3/19，owner 是 AeronAn，偏好壽司", "should_trigger": true},
+  {"query": "我想去濟州島玩，幫我規劃個三天行程", "should_trigger": true},
+  {"query": "幫 HuiYun 建一個大阪四日自由行，要有購物行程", "should_trigger": true},
+  {"query": "plan a 7-day Okinawa self-drive trip starting July 29", "should_trigger": true},
+  {"query": "規劃一個板橋出發的花蓮三日遊", "should_trigger": true},
+  {"query": "建新的韓國行程，首爾+釜山 6 天", "should_trigger": true},
+  {"query": "沖繩行程 Day 3 的餐廳要換掉", "should_trigger": false},
+  {"query": "沖繩行程的品質有問題，幫我重整", "should_trigger": false},
+  {"query": "跑一下行程品質檢查", "should_trigger": false},
+  {"query": "旅伴送了修改請求", "should_trigger": false},
+  {"query": "補齊所有飯店的 googleRating", "should_trigger": false},
+  {"query": "TripPage 要加新功能", "should_trigger": false},
+  {"query": "更新沖繩行程的飯店資訊改成 Hilton", "should_trigger": false},
+  {"query": "行程的 Day 5 太趕了要刪一個景點", "should_trigger": false},
+  {"query": "沖繩行程要加一天 Day 6 延長行程", "should_trigger": false},
+  {"query": "review my PR before shipping", "should_trigger": false}
+]
