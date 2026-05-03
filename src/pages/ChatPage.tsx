@@ -23,6 +23,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { useRequestSSE } from '../hooks/useRequestSSE';
+import { useChatPagination } from '../hooks/useChatPagination';
 import { apiFetch } from '../lib/apiClient';
 import { useActiveTrip } from '../contexts/ActiveTripContext';
 import AppShell from '../components/shell/AppShell';
@@ -96,6 +97,9 @@ export function buildMessagesWithDividers(messages: ChatMessage[]): ChatMessage[
   }
   return out;
 }
+
+// Pagination 邏輯抽到 useChatPagination hook。CHAT_PAGE_SIZE 與 LOAD_OLDER_THRESHOLD_PX
+// 從 hook 模組讀取以保持單一來源。
 
 interface RawRequestRow {
   id: number;
@@ -190,6 +194,28 @@ const SCOPED_STYLES = `
   display: flex; flex-direction: column; gap: 12px;
 }
 @media (max-width: 760px) { .tp-chat-body { padding: 16px; } }
+
+/* Load error banner — sticky-top inside chat body, 出現在 401/network/loadOlder
+ * 失敗時。Retry button 重觸 loadOlder; hook 內 ERROR_BACKOFF_MS gate 防 storm。 */
+.tp-chat-load-error {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; gap: 12px; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-error-soft, color-mix(in srgb, var(--color-error) 12%, var(--color-background)));
+  color: var(--color-error, #b00020);
+  border-radius: var(--radius-md, 8px);
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.tp-chat-load-error-text { flex: 1; min-width: 0; }
+.tp-chat-load-error-retry {
+  height: 32px; padding: 0 12px;
+  background: var(--color-error, #b00020);
+  color: var(--color-on-error, #fff);
+  border: none; border-radius: var(--radius-sm, 4px);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.tp-chat-load-error-retry:hover { opacity: 0.92; }
 
 .tp-chat-empty {
   margin: auto;
@@ -433,6 +459,22 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const tripMenuRef = useRef<HTMLDivElement>(null);
 
+  // Cursor pagination + scroll behavior 抽到 useChatPagination hook。
+  // Hook owns: 初次載入、scroll-to-top loadOlder、prepend scrollTop 補位、
+  // race guards (loadingOlderRef / activeTripIdRef)、auto-scroll 訊息類型判斷。
+  // hasMoreOlder + loadOlder 由 hook 內部 scroll listener 自動處理,caller 只用
+  // loadError 顯示 banner、retryLoadOlder 給按鈕點按。
+  const { loadError, retryLoadOlder } = useChatPagination<RawRequestRow, ChatMessage>({
+    activeTripId,
+    bodyRef,
+    messages,
+    setMessages,
+    rowToMessages,
+    isInflightStatus: (row) => row.status === 'open' || row.status === 'processing',
+    onInitialResume: (resumeId) => setInflightId(resumeId),
+    setHistoryLoading,
+  });
+
   // Deep-link prefill: /chat?tripId=...&prefill=... — DaySection 的「+ 加景點」
   // 入口會帶這兩個 param 過來，讓 user 落地就看到準備好的請求草稿。撐到 active
   // trip 設好後再 populate input + 聚焦，不直接 send 讓 user 還能微調。讀完即
@@ -508,53 +550,6 @@ export default function ChatPage() {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, [tripMenuOpen]);
-
-  // Load historical chat for the active trip. Each tp-request row turns into
-  // one user bubble + one assistant bubble (or pending/failed placeholder).
-  // Re-runs whenever the user switches trips. Cancels in-flight fetches on
-  // trip change so a stale trip's history can't land into the new trip view.
-  useEffect(() => {
-    if (!activeTripId) {
-      setMessages([]);
-      return;
-    }
-    let cancelled = false;
-    setHistoryLoading(true);
-    setMessages([]);
-    (async () => {
-      try {
-        const res = await apiFetch<{ items: RawRequestRow[]; hasMore: boolean }>(
-          `/requests?tripId=${encodeURIComponent(activeTripId)}&limit=20&sort=asc`,
-        );
-        if (cancelled) return;
-        const rows = Array.isArray(res?.items) ? res.items : [];
-        const next: ChatMessage[] = [];
-        let resumeId: number | null = null;
-        for (const row of rows) {
-          for (const m of rowToMessages(row)) next.push(m);
-          if (row.status === 'open' || row.status === 'processing') resumeId = row.id;
-        }
-        setMessages(next);
-        // If a prior session left a request in-flight, resume the SSE so the
-        // pending bubble fills in once the Mac Mini finishes.
-        if (resumeId != null) setInflightId(resumeId);
-      } catch {
-        if (!cancelled) {
-          // Silent on history load fail — page still works for new sends.
-        }
-      } finally {
-        if (!cancelled) setHistoryLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [activeTripId]);
-
-  // Auto-scroll on new message
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages]);
 
   // Auto-grow textarea
   useEffect(() => {
@@ -731,6 +726,19 @@ export default function ChatPage() {
       />
 
       <div className="tp-chat-body" ref={bodyRef} data-testid="chat-body">
+        {loadError && activeTripId && (
+          <div className="tp-chat-load-error" role="alert" data-testid="chat-load-error">
+            <span className="tp-chat-load-error-text">載入訊息失敗</span>
+            <button
+              type="button"
+              className="tp-chat-load-error-retry"
+              onClick={retryLoadOlder}
+              data-testid="chat-load-error-retry"
+            >
+              重試
+            </button>
+          </div>
+        )}
         {!activeTripId && trips !== null && trips.length === 0 && (
           <div className="tp-chat-empty">
             <div className="tp-chat-empty-icon" aria-hidden="true"><Icon name="chat" /></div>
