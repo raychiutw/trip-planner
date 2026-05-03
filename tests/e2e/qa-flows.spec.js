@@ -194,8 +194,6 @@ test.describe('QA Flow 5 — 編輯行程', () => {
     await page.getByTestId('edit-trip-desc-input').fill('QA spec 編輯描述');
 
     // 用 TitleBar 「儲存」 (formRef.requestSubmit)。
-    // bottom edit-trip-submit 的 form="edit-trip-form" 對不到 form (form 沒設 id),
-    // 是 dead button — 不在這支 spec 修,記在 QA 報告 follow-up。
     const submit = page.getByTestId('edit-trip-titlebar-save');
     await expect(submit).toBeEnabled();
     await submit.click();
@@ -204,6 +202,31 @@ test.describe('QA Flow 5 — 編輯行程', () => {
     const body = JSON.parse(puts[0]);
     expect(body.title).toBe('沖繩 QA test 改名');
     expect(body.description).toContain('QA spec');
+  });
+
+  test('bottom edit-trip-submit button (form="edit-trip-form") 也應觸發 PUT', async ({ page }) => {
+    // Regression: v2.19.13 加 id="edit-trip-form" 到 form 後 (原本 form 沒設 id,
+    // bottom button form="edit-trip-form" 對不到 → click 不觸發 submit, 是 dead
+    // button)。本 spec lock bottom button click → PUT 觸發。
+    /** @type {string[]} */
+    const puts = [];
+    page.on('request', (req) => {
+      if (req.method() === 'PUT' && /\/api\/trips\/[^/]+$/.test(req.url())) {
+        puts.push(req.postData() ?? '');
+      }
+    });
+
+    await page.goto('/trip/okinawa-trip-2026-Ray/edit');
+    await expect(page.getByTestId('edit-trip-page')).toBeVisible();
+    await page.getByTestId('edit-trip-title-input').fill('bottom button 觸發測試');
+
+    const bottomSubmit = page.getByTestId('edit-trip-submit');
+    await expect(bottomSubmit).toBeEnabled();
+    await bottomSubmit.click();
+
+    await expect.poll(() => puts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
+    const body = JSON.parse(puts[0]);
+    expect(body.title).toBe('bottom button 觸發測試');
   });
 });
 
