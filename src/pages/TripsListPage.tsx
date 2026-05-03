@@ -1188,16 +1188,20 @@ export default function TripsListPage() {
           <>
             {/* Section 3 (terracotta-add-stop-modal)：embedded mode 也提供
               * 「加景點」 trigger，呼叫 TripPage exposed handle openAddStop。
-              * 否則 user 在 /trips?selected= flow（主要 entry）找不到加景點。 */}
+              * 否則 user 在 /trips?selected= flow（主要 entry）找不到加景點。
+              * 2026-05-03 polish：改用 .tp-titlebar-action 對齊 DESIGN.md
+              * 2026-05-03 v2.19.x「桌機 icon+text / 手機 icon-only」 規則,
+              * 跟一覽頁「新增行程」 button 視覺一致(取代原 .tp-embedded-menu-trigger
+              * square icon-only)。 */}
             <button
               type="button"
-              className="tp-embedded-menu-trigger"
+              className="tp-titlebar-action"
               onClick={() => tripPageRef.current?.openAddStop()}
               aria-label="加景點"
-              title="加景點"
               data-testid="trip-add-stop-trigger"
             >
               <Icon name="plus" />
+              <span className="tp-titlebar-action-label">加景點</span>
             </button>
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}
