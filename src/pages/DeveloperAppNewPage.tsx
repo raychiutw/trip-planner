@@ -29,7 +29,6 @@ import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import InlineError from '../components/shared/InlineError';
-import type { ClientApp } from './DeveloperAppsPage';
 
 const SCOPED_STYLES = `
 .tp-dev-new-shell {
@@ -268,25 +267,11 @@ export default function DeveloperAppNewPage() {
   }
 
   function ackSecret() {
-    if (!secretResult) {
-      navigate(routes.developerApps());
-      return;
-    }
-    const now = new Date().toISOString();
-    const app: ClientApp = {
-      client_id: secretResult.client_id,
-      client_type: secretResult.client_type as 'public' | 'confidential',
-      app_name: secretResult.app_name,
-      app_description: null,
-      homepage_url: null,
-      redirect_uris: secretResult.redirect_uris,
-      allowed_scopes: secretResult.allowed_scopes,
-      status: secretResult.status as 'active' | 'pending_review' | 'suspended',
-      created_at: now,
-      updated_at: now,
-    };
     setSecretResult(null);
-    window.dispatchEvent(new CustomEvent('tp-developer-app-created', { detail: { app } }));
+    // Notify DeveloperAppsPage to refetch — listener 跑 GET /api/dev/apps 拿
+    // 真實 server row。不傳 detail (PR #452 client-side fabricate row 有 race +
+    // 假造 created_at 不可靠，改 always refetch)。
+    window.dispatchEvent(new CustomEvent('tp-developer-app-created'));
     navigate(routes.developerApps());
   }
 

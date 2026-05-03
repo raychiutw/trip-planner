@@ -92,7 +92,10 @@ describe('ExplorePage', () => {
     fireEvent.change(input, { target: { value: '沖繩' } });
     fireEvent.click(getByTestId('explore-search-submit'));
     expect(await findByText('沖繩水族館')).toBeTruthy();
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/poi-search?q='));
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/poi-search?q='),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it('save button triggers find-or-create + saved-pois POST', async () => {

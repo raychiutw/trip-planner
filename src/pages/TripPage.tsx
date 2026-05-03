@@ -569,16 +569,6 @@ function TripPageInner(
     return () => scroller.removeEventListener('scroll', throttledScroll);
   }, [loading, dayNums, switchDay, isPrintMode]);
 
-  /* --- Stops count per day for DayNav progress marks --- */
-  const stopsByDay = useMemo(() => {
-    const map: Record<number, number> = {};
-    for (const dayNum of dayNums) {
-      const day = allDays[dayNum];
-      if (day) map[dayNum] = day.timeline.length;
-    }
-    return map;
-  }, [allDays, dayNums]);
-
   /* --- themeArt memo to avoid defeating DaySection memo with inline object --- */
   const themeArt = useMemo(() => ({ dark: isDark }), [isDark]);
 
@@ -670,7 +660,6 @@ function TripPageInner(
             currentDayNum={currentDayNum}
             onSwitchDay={handleSwitchDay}
             todayDayNum={todayDayNum}
-            stopsByDay={stopsByDay}
           />
         )}
 
