@@ -1,15 +1,17 @@
 /**
  * DesktopSidebar — app-level sidebar.
  *
- * 5-item primary nav matching mockup-trip-v2 / mockup-shell-v2-terracotta:
- *   聊天 / 行程 / 地圖 / 探索 / 登入
+ * Desktop primary nav matching terracotta-preview-v2:
+ *   聊天 / 行程 / 地圖 / 探索
+ * Anonymous users also see 登入; authenticated account access lives in the
+ * bottom account chip to avoid duplicating the Account entry on desktop.
  *
  * Settings (connected-apps, developer/apps, sessions) reach via direct URL
  * or future account-chip menu — they're admin/maintenance routes, not core
  * "produce/consume trips" actions.
  *
- * 「行程」nav matches /trips AND /manage AND /trip/* so per-trip sub-routes
- * stay highlighted on this nav, not the global /map view.
+ * 「地圖」nav owns /map and in-trip map routes. Other trip-scoped routes stay
+ * on 「行程」.
  *
  * 聊天 + 地圖 are placeholder pages (chat with LLM concierge / cross-trip
  * map). Visible in sidebar to set roadmap expectations even before full
@@ -38,6 +40,8 @@ interface NavItemConfig {
   matchPrefixes: readonly string[];
   /** When true, match only the exact prefix — no nested sub-routes. */
   exactOnly?: boolean;
+  /** Regex route families that should also activate this item. */
+  additionalActivePatterns?: readonly RegExp[];
   /** When true, item only shows for logged-in users (Section 2 account-hub-page) */
   authOnly?: boolean;
   /** When true, item only shows for logged-out users */
@@ -48,15 +52,23 @@ interface NavItemConfig {
 // 移除「帳號」 nav item。User 透過 sidebar 底部 user chip(.tp-account-card)
 // 進 /account。Mobile GlobalBottomNav 維持 5 tab 含「帳號」(底部空間有限,
 // 沒底部 user chip)。
+const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map\/?$/, /^\/trip\/[^/]+\/stop\/[^/]+\/map\/?$/];
+const TRIP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/map)\/?$).*)/];
+
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
-  { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips', '/trip'] },
-  { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true },
-  { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
-  { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'], guestOnly: true },
+  { key: 'chat',    label: '聊天', href: '/chat',    icon: 'sidebar-chat',    matchPrefixes: ['/chat'] },
+  { key: 'trips',   label: '行程', href: '/trips',   icon: 'sidebar-trip',    matchPrefixes: ['/trips'], additionalActivePatterns: TRIP_ACTIVE_PATTERNS },
+  { key: 'map',     label: '地圖', href: '/map',     icon: 'sidebar-map',     matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
+  { key: 'explore', label: '探索', href: '/explore', icon: 'sidebar-explore', matchPrefixes: ['/explore'] },
+  { key: 'login',   label: '登入', href: '/login',   icon: 'sidebar-user',    matchPrefixes: ['/login'], guestOnly: true },
 ];
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
+  if (item.additionalActivePatterns) {
+    for (const re of item.additionalActivePatterns) {
+      if (re.test(pathname)) return true;
+    }
+  }
   for (const prefix of item.matchPrefixes) {
     if (pathname === prefix) return true;
     if (!item.exactOnly && pathname.startsWith(prefix + '/')) return true;
@@ -67,21 +79,26 @@ function isItemActive(pathname: string, item: NavItemConfig): boolean {
 const SCOPED_STYLES = `
 .tp-sidebar {
   /* Section 4.1 (terracotta-ui-parity-polish): mockup dark sidebar
-   * (line 5126) — color-foreground 深棕底 on cream page。 */
-  background: var(--color-foreground);
-  border-right: 1px solid var(--color-foreground);
-  padding: 20px 14px 16px;
+   * (line 5126) — fixed deep-cocoa surface in both light and dark mode. */
+  background: #2A1F18;
+  border-right: 1px solid #2A1F18;
+  padding: 20px 14px;
   display: flex; flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   height: 100%;
   overflow-y: auto;
 }
+body.dark .tp-sidebar {
+  background: #0F0B08;
+  border-right-color: #0F0B08;
+}
 .tp-sidebar-brand {
-  padding: 6px 12px 20px;
+  padding: 0 8px;
+  margin-bottom: 18px;
   display: flex; align-items: center; gap: 8px;
-  font-size: 18px; font-weight: 800; letter-spacing: -0.02em;
+  font-size: 20px; font-weight: 700; letter-spacing: -0.01em;
   /* Dark sidebar 上文字反白 */
-  color: var(--color-background);
+  color: #FFFBF5;
 }
 .tp-sidebar-brand .accent-dot { color: var(--color-accent); }
 
@@ -92,25 +109,25 @@ const SCOPED_STYLES = `
   /* Section 4.1 (terracotta-ui-parity-polish): dark sidebar 上 inactive
    * 用半透明 white 替代 muted (muted 在深棕底對比不夠)。font-weight 600
    * 對齊 mockup line 5129。 */
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px; border-radius: 10px;
-  color: rgba(255, 251, 245, 0.6);
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  color: rgba(255, 251, 245, 0.78);
   font-size: 14px; font-weight: 600;
   cursor: pointer; text-decoration: none;
   transition: background 150ms var(--transition-timing-function-apple),
               color 150ms var(--transition-timing-function-apple);
-  min-height: var(--spacing-tap-min);
+  min-height: 40px;
 }
 .tp-nav-item:hover {
-  background: rgba(255, 251, 245, 0.08);
-  color: var(--color-background);
+  background: rgba(255, 251, 245, 0.06);
+  color: #FFFBF5;
 }
 .tp-nav-item.is-active {
   /* mockup HIGH active 為 accent 實心 (line 5128) */
   background: var(--color-accent);
   color: var(--color-accent-foreground);
 }
-.tp-nav-item .svg-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.tp-nav-item .svg-icon { width: 16px; height: 16px; flex-shrink: 0; }
 
 .tp-sidebar-cta {
   margin-top: auto;
@@ -135,44 +152,44 @@ const SCOPED_STYLES = `
 .tp-user-chip {
   display: flex; align-items: center; gap: 10px;
   padding: 8px; border-radius: var(--radius-md);
-  color: var(--color-muted); font-size: 13px;
+  color: rgba(255, 251, 245, 0.78); font-size: 13px;
 }
 .tp-user-chip .tp-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--color-accent-bg);
-  color: var(--color-accent);
-  display: grid; place-items: center;
-  font-size: 12px; font-weight: 700; flex-shrink: 0;
-}
-
-.tp-account-card {
-  padding: 12px;
-  border-radius: var(--radius-lg);
-  /* Dark sidebar 上 account card 用半透明 white over dark 取代 accent-subtle */
-  background: rgba(255, 251, 245, 0.08);
-  display: flex; align-items: center; gap: 10px;
-  text-decoration: none;
-  color: var(--color-background);
-  transition: filter 120ms;
-  min-height: var(--spacing-tap-min);
-}
-.tp-account-card:hover { filter: brightness(var(--hover-brightness)); }
-.tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.tp-account-card .tp-avatar-md {
-  width: 40px; height: 40px; border-radius: 50%;
+  width: 32px; height: 32px; border-radius: 50%;
   background: var(--color-accent);
   color: var(--color-accent-foreground);
   display: grid; place-items: center;
-  font-size: 14px; font-weight: 800; flex-shrink: 0;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
+}
+
+.tp-account-card {
+  padding: 10px;
+  border-radius: var(--radius-md);
+  /* Dark sidebar 上 account card 用半透明 white over dark 取代 accent-subtle */
+  background: transparent;
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none;
+  color: rgba(255, 251, 245, 0.78);
+  transition: background 150ms var(--transition-timing-function-apple);
+  min-height: 52px;
+}
+.tp-account-card:hover { background: rgba(255, 251, 245, 0.06); }
+.tp-account-card:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.tp-account-card .tp-avatar-md {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; flex-shrink: 0;
 }
 .tp-account-card .tp-account-body {
   flex: 1; min-width: 0;
   display: flex; flex-direction: column; gap: 2px;
 }
 .tp-account-card .tp-account-name {
-  font-size: 13px; font-weight: 700;
+  font-size: 13px; font-weight: 600;
   /* Dark sidebar：name 用 reverse foreground (cream on dark) */
-  color: var(--color-background);
+  color: #FFFBF5;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tp-account-card .tp-account-email {

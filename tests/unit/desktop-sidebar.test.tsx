@@ -1,8 +1,8 @@
 /**
  * DesktopSidebar — visual reference: docs/design-sessions/mockup-trip-v2.html
  *
- * Mockup 5-item primary nav: 聊天 / 行程 / 地圖 / 探索 / 登入.
- * Anonymous: all 5 visible. Logged-in: 4 (登入 hidden, replaced by account chip + 登出).
+ * Mockup desktop primary nav: 聊天 / 行程 / 地圖 / 探索.
+ * Anonymous: adds 登入. Logged-in: account access lives in the bottom chip.
  * Settings (connected-apps / developer/apps / sessions) reach via direct URL,
  * not primary nav.
  */
@@ -97,8 +97,36 @@ describe('DesktopSidebar — active state', () => {
     expect(links[1].className).toMatch(/is-active/);
   });
 
-  it('路由 /trip/abc/map 時「行程」item active（per-trip sub-route，不轉到全域 /map）', () => {
+  it('路由 /trip/abc/map 時「地圖」item active（in-trip map route）', () => {
     const { getAllByRole } = renderSidebar({ path: '/trip/abc/map' });
+    const links = getAllByRole('link');
+    expect(links[2].className).toMatch(/is-active/);
+    expect(links[1].className).not.toMatch(/is-active/);
+  });
+
+  it('路由 /trip/abc/map/ trailing slash 時「地圖」item active', () => {
+    const { getAllByRole } = renderSidebar({ path: '/trip/abc/map/' });
+    const links = getAllByRole('link');
+    expect(links[2].className).toMatch(/is-active/);
+    expect(links[1].className).not.toMatch(/is-active/);
+  });
+
+  it('路由 /trip/abc/stop/101/map 時「地圖」item active', () => {
+    const { getAllByRole } = renderSidebar({ path: '/trip/abc/stop/101/map' });
+    const links = getAllByRole('link');
+    expect(links[2].className).toMatch(/is-active/);
+    expect(links[1].className).not.toMatch(/is-active/);
+  });
+
+  it('路由 /trip/abc/stop/101/map/ trailing slash 時「地圖」item active', () => {
+    const { getAllByRole } = renderSidebar({ path: '/trip/abc/stop/101/map/' });
+    const links = getAllByRole('link');
+    expect(links[2].className).toMatch(/is-active/);
+    expect(links[1].className).not.toMatch(/is-active/);
+  });
+
+  it('路由 /trip/abc/stop/101/copy 時「行程」item active', () => {
+    const { getAllByRole } = renderSidebar({ path: '/trip/abc/stop/101/copy' });
     const links = getAllByRole('link');
     expect(links[1].className).toMatch(/is-active/);
     expect(links[2].className).not.toMatch(/is-active/);

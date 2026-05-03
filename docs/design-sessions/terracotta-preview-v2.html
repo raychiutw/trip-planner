@@ -1144,8 +1144,8 @@
   .tp-sidebar-standalone {
     width: 240px;
     min-height: 480px;
-    background: var(--tp-foreground);
-    color: var(--tp-on-accent);
+    background: #2A1F18;
+    color: #FFFBF5;
     border-radius: var(--tp-radius-lg);
     padding: 20px 14px;
     display: flex;
@@ -1155,8 +1155,10 @@
   }
   [data-theme="dark"] .tp-sidebar-standalone {
     background: #0F0B08;
+    color: #FFFBF5;
   }
   .tp-sidebar-brand {
+    color: #FFFBF5;
     font-size: 20px;
     font-weight: 700;
     margin-bottom: 18px;
@@ -1225,7 +1227,7 @@
   }
   .tp-sidebar-account-name {
     font-weight: 600;
-    color: var(--tp-on-accent);
+    color: #FFFBF5;
     flex: 1;
     min-width: 0;
     max-width: 140px;
@@ -5100,7 +5102,7 @@
 <!-- ===== Section 01 — Desktop Sidebar standalone ===== -->
 <section class="tp-section">
   <h2 class="tp-section-title">Desktop Sidebar</h2>
-  <p class="tp-section-lead">Desktop ≥1024px 顯示。IA 順序固定：聊天 / 行程 / 地圖 / 探索 / 帳號。Active state 用 terracotta accent 實心；其餘 warm neutral ink。寬度固定 240px，sticky 不收合。</p>
+  <p class="tp-section-lead">Desktop ≥1024px 顯示。Primary nav 順序固定：聊天 / 行程 / 地圖 / 探索；帳號固定在底部 account chip，匿名狀態才額外顯示「登入」。Active state 用 terracotta accent 實心；其餘 cream ink。寬度固定 240px，sticky 不收合。</p>
   <div class="tp-sidebar-row">
     <aside class="tp-sidebar-standalone" aria-label="Desktop sidebar example">
       <div class="tp-sidebar-brand">Tripline<span class="tp-accent-dot">.</span></div>
@@ -5108,7 +5110,6 @@
       <div class="tp-sidebar-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
       <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
       <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
-      <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
       <div class="tp-sidebar-divider"></div>
       <div class="tp-sidebar-account">
         <div class="tp-sidebar-avatar">張</div>
@@ -5122,12 +5123,12 @@
         <p>Active state 是當前主功能定位，不是 breadcrumb。子頁與明細頁的 active item 依所屬主功能決定，不新增子頁 tab。</p>
         <ul class="tp-spec-list">
           <li>寬度固定 <strong>240px</strong>（<code>--sidebar-width-desktop</code>）</li>
-          <li>背景 <code>--color-foreground</code>（深棕，dark sidebar on cream page）</li>
+          <li>背景固定深棕：light <code>#2A1F18</code>；dark <code>#0F0B08</code>（不可用 <code>--color-foreground</code>，避免 dark mode token 反轉成淺色背景）</li>
           <li>Item 高度最小 <strong>40px</strong>，內邊距 12px</li>
           <li>Active background <code>--color-accent</code>，文字 <code>--color-accent-foreground</code></li>
           <li>Item 字級 14px / line-height 20px / weight 600</li>
-          <li>底部 sticky 帳號區（avatar + name + email）</li>
-          <li>Anonymous 狀態：「帳號」入口替換成「登入」，位置不變</li>
+          <li>底部 sticky 帳號區（avatar + name + email），點擊進入 <code>/account</code></li>
+          <li>Anonymous 狀態：primary nav 額外顯示「登入」，底部 chip 顯示「未登入」</li>
           <li><strong>帳號名稱嚴格限制 10 char</strong>：runtime 用 <code>name.length &gt; 10 ? name.slice(0, 10) + '…' : name</code> 截字（中英混合一律按 char 計）；CSS 的 <code>max-width</code> + <code>overflow: hidden</code> 是 layout 防呆 fallback</li>
         </ul>
       </div>
@@ -5139,9 +5140,9 @@
         <tbody>
           <tr><td><code>/chat</code>、聊天明細</td><td>聊天</td></tr>
           <tr><td><code>/trips</code>、行程列表、明細、新增</td><td>行程</td></tr>
-          <tr><td><code>/map</code>、行程地圖、全域地圖</td><td>地圖</td></tr>
+          <tr><td><code>/map</code>、<code>/trip/:id/map</code>、<code>/trip/:id/stop/:eid/map</code></td><td>地圖</td></tr>
           <tr><td><code>/explore</code>、探索結果、POI 詳細</td><td>探索</td></tr>
-          <tr><td><code>/account</code>、connected/developer apps</td><td>帳號</td></tr>
+          <tr><td><code>/account</code>、connected/developer apps</td><td>底部 account chip</td></tr>
         </tbody>
       </table>
     </div>

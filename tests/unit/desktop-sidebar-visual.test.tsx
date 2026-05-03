@@ -2,12 +2,12 @@
  * DesktopSidebar visual + IA — Section 2 + 4.1 (terracotta-mockup-parity-v2)
  *
  * 驗 mockup-aligned 結構：
- *   - 5 nav item：聊天 / 行程 / 地圖 / 探索 / 帳號 (auth) | 登入 (guest)
+ *   - desktop nav：聊天 / 行程 / 地圖 / 探索；登入只在 guest 顯示
  *   - active item 套 .is-active CSS class
  *   - account chip name >10 字 → slice(0,10)+'…' truncation
  *   - account chip Link 指向 /account
  *   - logged-out 顯示「未登入」 chip 取代 account card
- *   - dark theme bg 用 var(--color-foreground) (透過 SCOPED_STYLES inline 確認)
+ *   - dark theme bg 固定 deep-cocoa，不吃會反轉的 --color-foreground token
  */
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -56,10 +56,16 @@ describe('DesktopSidebar — visual + nav IA', () => {
     expect(chatLink?.className).not.toContain('is-active');
   });
 
-  it('「行程」 nav matches /trip/* 子路由 (e.g. /trip/okinawa)', () => {
+  it('「行程」 nav matches non-map /trip/* 子路由 (e.g. /trip/okinawa)', () => {
     renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trip/okinawa' });
     const tripsLink = screen.getByText('行程').closest('a');
     expect(tripsLink?.className).toContain('is-active');
+  });
+
+  it('「地圖」 nav matches /trip/:id/map and does not also activate 行程', () => {
+    renderSidebar({ user: { name: 'Ray', email: 'ray@x.com' }, initialEntry: '/trip/okinawa/map' });
+    expect(screen.getByText('地圖').closest('a')?.className).toContain('is-active');
+    expect(screen.getByText('行程').closest('a')?.className).not.toContain('is-active');
   });
 
   it('「地圖」 nav exactOnly — /map 才 active，/manage/map-xxx 不 active', () => {
@@ -97,16 +103,17 @@ describe('DesktopSidebar — visual + nav IA', () => {
     expect(screen.getByTestId('sidebar-user-chip').textContent).toContain('未登入');
   });
 
-  it('dark theme bg — SCOPED_STYLES 含 color-foreground sidebar bg rule', () => {
+  it('dark theme bg — SCOPED_STYLES 固定 deep-cocoa light/dark 背景', () => {
     const { container } = renderSidebar({ user: null, initialEntry: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*var\(--color-foreground\)/);
+    expect(style).toMatch(/\.tp-sidebar\s*\{[^}]*background:\s*#2A1F18/);
+    expect(style).toMatch(/body\.dark \.tp-sidebar\s*\{[^}]*background:\s*#0F0B08/);
   });
 
-  it('inactive item 文字用半透明 cream rgba(255, 251, 245, 0.6)', () => {
+  it('inactive item 文字用 mockup 半透明 cream rgba(255, 251, 245, 0.78)', () => {
     const { container } = renderSidebar({ user: null, initialEntry: '/trips' });
     const style = container.querySelector('style')?.textContent ?? '';
-    expect(style).toContain('rgba(255, 251, 245, 0.6)');
+    expect(style).toContain('rgba(255, 251, 245, 0.78)');
   });
 
   it('active item bg 用 accent', () => {

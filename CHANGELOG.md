@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.16] - 2026-05-03
+
+### Fixed
+
+- **Desktop sidebar 對齊 Terracotta mockup** — 主導覽固定為「聊天 / 行程 / 地圖 / 探索」，`/trip/:id/map` 與 stop map route 正確高亮「地圖」，行程子頁保留「行程」高亮。Sidebar icon、spacing、typography、inactive contrast、account chip 也收斂到 mockup 規格，並補 dark mode 固定 cocoa background，避免 token reversal 讓 sidebar 變亮。
+
+### For contributors
+
+- DESIGN.md 與 `terracotta-preview-v2.html` 同步更新 desktop IA：帳號不是 primary nav，已登入使用 bottom account chip，未登入才顯示 login action。
+- 新增/更新 DesktopSidebar unit + visual tests，鎖住 map active route、4-item desktop nav、guest login、light/dark sidebar color tokens。
+
 ## [2.19.15] - 2026-05-03
 
 ### Fixed
