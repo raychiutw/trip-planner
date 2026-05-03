@@ -17,6 +17,11 @@
 
 PRAGMA foreign_keys = OFF;
 
+-- 若上次 phase 2 中途 fail，*_new 表可能殘留 — 先清理確保 idempotent re-run。
+DROP TABLE IF EXISTS saved_pois_new;
+DROP TABLE IF EXISTS trip_permissions_new;
+DROP TABLE IF EXISTS trips_new;
+
 -- =============================================
 -- 1. saved_pois: drop email, UNIQUE 改 (user_id, poi_id), user_id NOT NULL
 -- =============================================
@@ -96,3 +101,8 @@ ALTER TABLE trips_new RENAME TO trips;
 CREATE INDEX idx_trips_owner_user_id ON trips(owner_user_id);
 
 PRAGMA foreign_keys = ON;
+
+-- 重新整 query planner stats — 表 swap 後 sqlite_stat1 過期會誤選 index
+ANALYZE saved_pois;
+ANALYZE trip_permissions;
+ANALYZE trips;

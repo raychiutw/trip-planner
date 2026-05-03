@@ -121,29 +121,29 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   const start = startTime ?? defaultStartFor(saved.poi_type);
   const end = endTime ?? addMinutes(start, stayMinutesFor(saved.poi_type));
 
-  // INSERT entry first with RETURNING — atomic id retrieval (no race read-back)
-  if (stmts.length > 0) await db.batch(stmts);
-
-  const created = await db
-    .prepare(
+  // 原子性：shift/delete + INSERT entry + INSERT trip_pois 全包成單一 batch（D1 單 transaction）。
+  // trip_pois.entry_id 用 SQLite last_insert_rowid() 取上一句 INSERT 的 PK，省 round-trip 又
+  // 避免 partial-fail orphan（entry 寫入但 trip_pois 沒寫，或反之）。
+  stmts.push(
+    db.prepare(
       `INSERT INTO trip_entries (day_id, sort_order, time, title, description, source, note, poi_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-    )
-    .bind(day.id, sortOrder, `${start}-${end}`, saved.poi_name, null, 'fast-path', saved.note, saved.poi_id)
-    .first<{ id: number }>();
-  const newEntryId = created?.id ?? null;
+    ).bind(day.id, sortOrder, `${start}-${end}`, saved.poi_name, null, 'fast-path', saved.note, saved.poi_id),
+  );
+  stmts.push(
+    db.prepare(
+      `INSERT INTO trip_pois (trip_id, poi_id, context, day_id, entry_id, source)
+       VALUES (?, ?, 'timeline', ?, last_insert_rowid(), 'fast-path')`,
+    ).bind(tripId, saved.poi_id, day.id),
+  );
+
+  const batchResults = await db.batch<{ id: number }>(stmts);
+  // 倒數第二句是 INSERT trip_entries RETURNING id；最後一句是 trip_pois。
+  const insertEntryResult = batchResults[batchResults.length - 2];
+  const newEntryId = insertEntryResult?.results?.[0]?.id ?? null;
   if (newEntryId === null) {
     throw new AppError('SYS_INTERNAL', 'INSERT trip_entries RETURNING 未回傳 id');
   }
-
-  // trip_pois link (per-trip POI metadata)
-  await db
-    .prepare(
-      `INSERT INTO trip_pois (trip_id, poi_id, context, day_id, entry_id, source)
-       VALUES (?, ?, 'timeline', ?, ?, 'fast-path')`,
-    )
-    .bind(tripId, saved.poi_id, day.id, newEntryId)
-    .run();
 
   await logAudit(db, {
     tripId,

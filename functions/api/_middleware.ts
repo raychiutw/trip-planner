@@ -224,24 +224,26 @@ async function handleAuth(
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // Mock auth for local development — DEV_MOCK_EMAIL set in .env.local (not in version control)
+  // Mock auth for local development — DEV_MOCK_EMAIL set in .dev.vars (not committed)
   if (env.DEV_MOCK_EMAIL) {
+    // Fail-safe：DEV_MOCK_EMAIL 不應該在 prod 啟用，意外設定的話 admin flag bypass 風險高
+    if (env.ENVIRONMENT === 'production' || env.NODE_ENV === 'production') {
+      return errorResponse(new AppError('SYS_INTERNAL', 'DEV_MOCK_EMAIL 不可在 production 啟用'));
+    }
     const email = env.DEV_MOCK_EMAIL.toLowerCase();
-    // E-M3 dual-read: resolve mock email → user_id once at middleware level so
-    // downstream sees unified shape. Mock dev DB has lean.lean@gmail.com pre-seeded.
-    let userId: string | null = null;
-    try {
-      const userRow = await env.DB
-        .prepare('SELECT id FROM users WHERE email = ? LIMIT 1')
-        .bind(email)
-        .first<{ id: string }>();
-      if (userRow?.id) userId = userRow.id;
-    } catch {
-      // best-effort — unauthed mock if DB miss (dev only)
+    // V2 cutover：解析 mock email → user_id 一次。DB miss 一律 fail-closed，
+    // 避免「userId null + isAdmin true」短路 hasPermission 變成 admin bypass。
+    const userRow = await env.DB
+      .prepare('SELECT id FROM users WHERE email = ? LIMIT 1')
+      .bind(email)
+      .first<{ id: string }>()
+      .catch(() => null);
+    if (!userRow?.id) {
+      return errorResponse(new AppError('AUTH_REQUIRED', `DEV_MOCK_EMAIL=${email} 沒對應 users row — 跑 scripts/fixup-local-users.sql 或 V2 OAuth signup`));
     }
     (context.data as Record<string, unknown>).auth = {
       email,
-      userId,
+      userId: userRow.id,
       isAdmin: email === (env.ADMIN_EMAIL || '').toLowerCase(),
       isServiceToken: false,
     };

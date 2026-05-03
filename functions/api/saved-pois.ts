@@ -17,8 +17,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
   if (!auth.userId) return json([]); // V2 cutover: 沒 user_id 沒收藏
 
-  // E-M1 single-query JOIN: usages 透過 LEFT JOIN trip_pois (per saved poi → 0..N usage)
-  // D1 SQLite 3.35+ 支援 json_group_array + json_object — 一次 query 反查 usages。
+  // usages 只回傳「user 自己有 read 權限的 trip」 — 防 POI cross-user data leak。
+  // 沒做這個 filter 時，如果 user A 與 user B 都收藏同一個 POI、B 在私人 trip 裡用了
+  // 這個 POI，A 會看到 B 的 tripId/tripName/dayDate。EXISTS subquery 收緊到 user
+  // 的 owner trip + 自己有 trip_permissions row 的 trip。
   const { results } = await context.env.DB.prepare(
     `SELECT sp.id, sp.user_id, sp.poi_id, sp.saved_at, sp.note,
             p.name AS poi_name, p.address AS poi_address,
@@ -34,12 +36,20 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                 FROM trip_pois tp
                 LEFT JOIN trip_days td ON td.id = tp.day_id
                 LEFT JOIN trips t ON t.id = tp.trip_id
-                WHERE tp.poi_id = sp.poi_id),
+                WHERE tp.poi_id = sp.poi_id
+                  AND (
+                    t.owner_user_id = ?1
+                    OR EXISTS (
+                      SELECT 1 FROM trip_permissions perm
+                      WHERE perm.trip_id = tp.trip_id AND perm.user_id = ?1
+                    )
+                  )
+              ),
               '[]'
             ) AS usages_json
      FROM saved_pois sp
      JOIN pois p ON p.id = sp.poi_id
-     WHERE sp.user_id = ?
+     WHERE sp.user_id = ?1
      ORDER BY sp.saved_at DESC, sp.id DESC`,
   ).bind(auth.userId).all();
 
