@@ -11,6 +11,22 @@
 
 ---
 
+## Middleware service-token auth bypass — non-admin service token 繼承 ADMIN_EMAIL trip permissions
+
+**Found by**: /ship Codex adversarial on v2.19.13 PR (branch fix/entry-action-get-405-and-edit-trip-form-id, 2026-05-03)
+**Symptom**: `functions/api/_middleware.ts:325` 對所有 client_credentials service token 設 `email = env.ADMIN_EMAIL`（無論 scopes 是否含 admin）。雖然 `isAdmin` 正確 gate 在 `scopes.includes('admin')`，但 email 變成 admin 的後，`hasPermission(db, auth.email, tripId, false)` SQL lookup 用 admin email 在 `trip_permissions` 表找 → 找到 → grant read。`hasWritePermission` 同樣破。
+**Real-world impact**: 影響所有用 `hasPermission` / `hasWritePermission` 的 endpoint（50+），含 trips/entries/days/docs/permissions 全部 PATCH/DELETE/GET。
+**現狀 mitigation**: CLAUDE.md 規定 service token 只能由 admin 透過 `scripts/provision-admin-cli-client.js` 一次性 provision。目前只有 1 個 admin CLI client（含 admin scope）。所以 *目前* 沒實際 exploit case。但只要任何 future 流程 issue 一個 non-admin scope 的 client_credentials token（e.g. 第三方 dashboard, integration），這個 token 立刻擁有 admin trips 的全 CRUD 權限。
+**Fix options**:
+1. `_middleware.ts:325` 對非 admin scope service token 設 `email = ''`(empty string)，讓 hasPermission SQL lookup 找不到 row。最小改動。
+2. 加 `auth.isServiceToken` 旗標到 AuthData，`hasPermission` / `hasWritePermission` 對 isServiceToken=true 且 isAdmin=false 直接拒。更明確。
+3. Provision script 強制只能 issue `admin` scope token (去掉 non-admin issuance 路徑)。
+**Verify after fix**: 寫 integration test cover「non-admin service token + 別人的 trip → 403」。
+**Est**: 0.5-1 hr CC（含 audit + tests）
+**Priority**: **P0**（latent auth bypass，目前無 exploit case 因只有 1 個 admin client，但任何 non-admin client 一 issue 就破，且影響 50+ endpoints）
+
+---
+
 ## EntryActionPage / AddStopPage — API response snake/camel mismatch (Day 「空」 label)
 
 **Found by**: /office-hours implementation of P1 onRequestGet (2026-05-03)
