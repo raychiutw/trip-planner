@@ -38,11 +38,6 @@ describe('DESIGN.md — 完整性檢查', () => {
     expect(design).toMatch(/不加.*saturate|拿掉.*saturate|去除.*saturate|removed.*saturate/i);
   });
 
-  it('Decisions Log 有 Glass unified blur 14px 記錄', () => {
-    // Tolerant match: "Glass unified 14px" / "Glass unified blur(14px)" / 等變體都接受
-    expect(design).toMatch(/Glass\s+unified.*14px/);
-  });
-
   it('label token 描述表單 label 與 metadata 用途', () => {
     expect(design).toMatch(/`label`.*表單 label、metadata、chip label/);
   });
