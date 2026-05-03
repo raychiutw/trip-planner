@@ -61,6 +61,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # 2026-05-04 incident gate: scan for D1 cascade-wipe risk patterns in NEW
+      # migrations (DROP TABLE on cascade-parent without _backup_ pattern).
+      # See scripts/check-migration-safety.sh for the rule + post-incident note.
+      # Block deploy if any new/modified migration is unsafe.
+      - name: D1 migration safety check
+        run: bash scripts/check-migration-safety.sh --since=origin/master~1
+
       - name: Apply pending migrations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
