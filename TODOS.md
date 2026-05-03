@@ -9,6 +9,36 @@
 - **P3** — 想做再做（nice-to-have）
 - **P4** — 可能不做（長期觀察）
 
+---
+
+## EntryActionPage — GET /api/trips/:id/entries/:eid 在 prod 不存在 (405)
+
+**Found by**: /ship Codex review + testing specialist (cross-confirmed) on v2.19.12 PR (branch test/qa-flows-spec, 2026-05-03)
+**Symptom**: User goto `/trip/:id/stop/:eid/move` 或 `/copy` → EntryActionPage `useEffect` Promise.all 兩個 `apiFetch`，其中 GET `/api/trips/:id/entries/:eid` 在真 endpoint 沒 export `onRequestGet` (`functions/api/trips/[id]/entries/[eid].ts` 只有 PATCH/DELETE) → 405 → throw → `setLoadError('載入失敗')` → 頁面顯示「找不到這筆資料」alert，move/copy flow 整個 broken。
+**v2.19.12 PR**: 加 mock GET 讓 e2e Flow 7 過,但 mock hide bug。
+**Fix options**:
+1. 補 `onRequestGet` 到 `functions/api/trips/[id]/entries/[eid].ts` (preferred)
+2. 改 EntryActionPage 從 `/api/trips/:id/days?all=1` 的 `timeline.entries[]` 找 entry by id
+**Verify after fix**: 拿掉 `tests/e2e/api-mocks.js` 的 GET mock,Flow 7 仍應 PASS。
+**Est**: 0.5 hr CC
+**Priority**: P1 (move/copy flow 對 user 完全 broken)
+
+---
+
+## EditTripPage — bottom 「儲存變更」 button form="edit-trip-form" 無對應 form id
+
+**Found by**: /qa session writing Flow 5 spec (2026-05-03)
+**Symptom**: `src/pages/EditTripPage.tsx:797` button `<button type="submit" form="edit-trip-form">` 但 form (L576) 沒設 `id="edit-trip-form"` → click bottom button 不觸發 form submit。
+**Workaround**: TitleBar 「儲存」 button 走 `formRef.current.requestSubmit()` 是 canonical path,user 通常用 TitleBar 不會踩到 bottom dead button。
+**Fix options**:
+1. 補 `id="edit-trip-form"` 到 form (1 line)
+2. 改 bottom button onClick={() => formRef.current?.requestSubmit()},拿掉 form 屬性
+3. 完全拆掉 bottom 重複 button (TitleBar 已是 canonical)
+**Est**: 5 min CC
+**Priority**: P3 (dead button 但有 canonical replacement,user 體感無 bug)
+
+---
+
 ## Lighthouse — Blocking gate（2 週 baseline 後）
 
 **Current**: Lighthouse CI 已建立（PR #8），所有 assertion 為 warn 模式。

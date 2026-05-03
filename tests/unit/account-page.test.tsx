@@ -120,7 +120,9 @@ describe('AccountPage', () => {
     expect(screen.getByTestId('account-row-appearance').getAttribute('href')).toBe('/account/appearance');
     expect(screen.getByTestId('account-row-notifications').getAttribute('href')).toBe('/account/notifications');
     expect(screen.getByTestId('account-row-connected-apps').getAttribute('href')).toBe('/settings/connected-apps');
-    expect(screen.getByTestId('account-row-developer').getAttribute('href')).toBe('/settings/developer-apps');
+    // 1c15055 fix: row to=/developer/apps (was /settings/developer-apps which 404'd —
+    // canonical route per src/lib/routes.ts:36 developerApps())
+    expect(screen.getByTestId('account-row-developer').getAttribute('href')).toBe('/developer/apps');
     expect(screen.getByTestId('account-row-sessions').getAttribute('href')).toBe('/settings/sessions');
   });
 
