@@ -7,11 +7,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 
-- **AccountPage 「開發者選項」 row 點擊 404** — 原本 `to=/settings/developer-apps`
-  但實際 route 是 `/developer/apps`（per `src/lib/routes.ts:36`）, 點擊跳到
-  NotFound page。對齊 canonical route。
+- **帳號頁「開發者選項」 row 點下去進得了** — 之前 row link 指向
+  `/settings/developer-apps`, 但實際 route 是 `/developer/apps`
+  （per `src/lib/routes.ts:36`）, 點擊跳到 NotFound page。對齊 canonical
+  route, dev 用戶現在從帳號頁可以直接進開發者 OAuth client app 管理。
 
-### Added
+### For contributors
 
 - **11 個 QA flow Playwright e2e specs** (`tests/e2e/qa-flows.spec.js`) — cover
   使用者最常走的 CRUD 路徑：新增行程、新增景點 (custom)、搜尋加收藏、移除
@@ -22,14 +23,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
   (5 paths cover health probe + anti-enum + 真寄 reset email)。dry-run
   default,`--send` 才寄真信。Hardened 多重安全 gate (URL validation,
   email weaponize 防護, parallel-safe mktemp, env var fallback)。
-
-### Changed
-
 - **`tests/e2e/api-mocks.js`** — 補 PUT/DELETE `/api/trips/:id` +
   GET/PATCH/DELETE `/api/trips/:id/entries/:eid` + POST entry copy
   endpoints。`MOCK_DAYS_*` 加 `day_num` snake_case dual-key (對齊真 D1 API
   schema, 讓 EntryActionPage / AddStopPage 直讀 snake_case 不需 normalize)。
 
+## [2.19.11] - 2026-05-03
 
 ### Fixed
 
