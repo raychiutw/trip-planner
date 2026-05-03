@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.11] - 2026-05-03
+
+### Fixed
+
+- **`scripts/daily-check.js` `queryProdDataHygiene` SQL bug** — 連續 3 天靜默
+  失敗修復。原 SQL 從 `trip_entries` 取 `trip_id, day_num`，但這兩欄實際
+  在 `trip_days`。D1 自 4/30 起回 `400 SQLITE_ERROR no such column: trip_id`，
+  catch 把 error 包成 `status: 'ok'`，3 天 daily-check 假裝綠燈遮蓋 silent
+  failure。改 JOIN `trip_days td ON te.day_id = td.id`，catch 改回
+  `status: 'warning'` surface 失敗。
+- **`scripts/daily-check-scheduler.sh` Telegram 訊息漏報** — `build_telegram_msg`
+  沒讀 `r.dataHygiene`，即使 SQL 修好 + status='warning'，Telegram 仍顯示
+  「✅ 全綠」。補 issues block：error → 🔴「prod data hygiene 檢查失敗」、
+  `total>0` → ⚠️「N 筆 test marker 殘留」。
+
+### Notes
+
+- 本次修復承接 PR #416 (v2.18.4) 內容 — 該 PR 因 master 已進到 v2.19.x 不能
+  直接 merge，本 PR 把 code fix cherry-pick 過來重發 v2.19.11。原 PR #416
+  同步 close。
+- SQL injection-safe (hardcoded `PROD_DATA_TEST_MARKERS` constants +
+  `replace(/'/g, "''")` belt-and-braces)。
+- INNER JOIN 在 PK + indexed FK (`migration 0030 idx_trip_entries_order(day_id, ...)`) 效能無虞。
+- `trip_entries.day_id NOT NULL REFERENCES trip_days.id` (migration 0002 +
+  0014)，INNER JOIN 安全無孤兒風險。
+
 ## [2.19.10] - 2026-05-03
 
 ### Changed
