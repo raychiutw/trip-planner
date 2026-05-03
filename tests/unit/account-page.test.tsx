@@ -133,15 +133,15 @@ describe('AccountPage', () => {
 
   it('click 登出 → confirm modal 開啟', () => {
     renderPage();
-    expect(screen.queryByTestId('account-logout-confirm')).toBeNull();
+    expect(screen.queryByTestId('confirm-modal-confirm')).toBeNull();
     fireEvent.click(screen.getByTestId('account-row-logout'));
-    expect(screen.getByTestId('account-logout-confirm')).toBeTruthy();
+    expect(screen.getByTestId('confirm-modal-confirm')).toBeTruthy();
   });
 
   it('confirm logout → POST /api/oauth/logout + navigate /login', async () => {
     renderPage();
     fireEvent.click(screen.getByTestId('account-row-logout'));
-    fireEvent.click(screen.getByTestId('account-logout-confirm'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/oauth/logout',
@@ -156,9 +156,9 @@ describe('AccountPage', () => {
   it('confirm modal 取消 button → modal 關閉，fetch 不被打', () => {
     renderPage();
     fireEvent.click(screen.getByTestId('account-row-logout'));
-    expect(screen.getByTestId('account-logout-confirm')).toBeTruthy();
+    expect(screen.getByTestId('confirm-modal-confirm')).toBeTruthy();
     fireEvent.click(screen.getByText('取消'));
-    expect(screen.queryByTestId('account-logout-confirm')).toBeNull();
+    expect(screen.queryByTestId('confirm-modal-confirm')).toBeNull();
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });

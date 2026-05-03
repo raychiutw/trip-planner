@@ -89,7 +89,7 @@ describe('ConnectedAppsPage', () => {
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('connected-apps-revoke-tp_abc')).toBeTruthy());
     fireEvent.click(screen.getByTestId('connected-apps-revoke-tp_abc'));
-    expect(screen.getByTestId('connected-apps-confirm-modal')).toBeTruthy();
+    expect(screen.getByTestId('confirm-modal')).toBeTruthy();
     expect(screen.getByText(/撤銷 Trip Buddy/)).toBeTruthy();
   });
 
@@ -103,10 +103,10 @@ describe('ConnectedAppsPage', () => {
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('connected-apps-revoke-tp_abc')).toBeTruthy());
     fireEvent.click(screen.getByTestId('connected-apps-revoke-tp_abc'));
-    fireEvent.click(screen.getByTestId('connected-apps-cancel-revoke'));
+    fireEvent.click(screen.getByTestId('confirm-modal-cancel'));
 
     // Modal closed
-    expect(screen.queryByTestId('connected-apps-confirm-modal')).toBeNull();
+    expect(screen.queryByTestId('confirm-modal')).toBeNull();
     // Only initial GET, no DELETE
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -121,7 +121,7 @@ describe('ConnectedAppsPage', () => {
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('connected-apps-revoke-tp_abc')).toBeTruthy());
     fireEvent.click(screen.getByTestId('connected-apps-revoke-tp_abc'));
-    fireEvent.click(screen.getByTestId('connected-apps-confirm-revoke'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
 
     await waitFor(() => expect(screen.queryByTestId('connected-apps-row-tp_abc')).toBeNull());
     // tp_xyz still there
@@ -155,7 +155,7 @@ describe('ConnectedAppsPage', () => {
     render(<MemoryRouter><ConnectedAppsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('connected-apps-revoke-tp_a/b?c=1')).toBeTruthy());
     fireEvent.click(screen.getByTestId('connected-apps-revoke-tp_a/b?c=1'));
-    fireEvent.click(screen.getByTestId('connected-apps-confirm-revoke'));
+    fireEvent.click(screen.getByTestId('confirm-modal-confirm'));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const url = fetchMock.mock.calls[1]![0] as string;

@@ -52,9 +52,9 @@ test.describe('AccountPage — Section 2', () => {
 
   test('登出 row click → confirm modal 開啟', async ({ page }) => {
     await page.goto('/account');
-    await expect(page.getByTestId('account-logout-confirm')).not.toBeVisible();
+    await expect(page.getByTestId('confirm-modal-confirm')).not.toBeVisible();
     await page.getByTestId('account-row-logout').click();
-    await expect(page.getByTestId('account-logout-confirm')).toBeVisible();
+    await expect(page.getByTestId('confirm-modal-confirm')).toBeVisible();
     await expect(page.getByText('確認登出？')).toBeVisible();
   });
 
@@ -63,7 +63,7 @@ test.describe('AccountPage — Section 2', () => {
     await page.getByTestId('account-row-logout').click();
     await Promise.all([
       page.waitForRequest((req) => req.url().endsWith('/api/oauth/logout') && req.method() === 'POST'),
-      page.getByTestId('account-logout-confirm').click(),
+      page.getByTestId('confirm-modal-confirm').click(),
     ]);
     await expect(page).toHaveURL(/\/login$/);
   });
@@ -71,9 +71,9 @@ test.describe('AccountPage — Section 2', () => {
   test('登出 modal 取消 → modal 關閉，URL 不變', async ({ page }) => {
     await page.goto('/account');
     await page.getByTestId('account-row-logout').click();
-    await expect(page.getByTestId('account-logout-confirm')).toBeVisible();
+    await expect(page.getByTestId('confirm-modal-confirm')).toBeVisible();
     await page.getByRole('button', { name: '取消' }).click();
-    await expect(page.getByTestId('account-logout-confirm')).not.toBeVisible();
+    await expect(page.getByTestId('confirm-modal-confirm')).not.toBeVisible();
     await expect(page).toHaveURL(/\/account$/);
   });
 
