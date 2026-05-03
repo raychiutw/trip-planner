@@ -13,10 +13,6 @@ import DaySkeleton from './DaySkeleton';
 import HourlyWeather from './HourlyWeather';
 import Timeline from './Timeline';
 import Icon from '../shared/Icon';
-// Section 3 (terracotta-add-stop-modal)：DaySection 內 inline「+ 加景點」入口
-// 退役，trip-level 統一走 TripPage TitleBar 「+ 加景點」按鈕 → navigate 到
-// /trip/:id/add-stop?day=N 全頁 (2026-05-03 modal-to-fullpage migration)。
-// InlineAddPoi component 暫保留 file 為 follow-up cleanup。
 import { toTimelineEntry } from '../../lib/mapDay';
 import { validateDay } from '../../lib/validateDay';
 import { buildWeatherDay } from '../../lib/weather';
@@ -46,8 +42,6 @@ const MAP_CHIP_STYLES = `
 }
 
 `;
-/* PR3 v2.9：原 .day-add-stop-row / .day-add-stop-btn 由 InlineAddPoi 組件
- * 接管，CSS 一併移到 InlineAddPoi 的 SCOPED_STYLES。 */
 
 export interface DaySectionProps {
   dayNum: number;
