@@ -4,6 +4,7 @@
 !.claude/memory-sync/
 !.claude/settings.json
 .codex/
+.agents/
 .env
 .env.local
 .dev.vars
