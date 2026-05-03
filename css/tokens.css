@@ -1086,6 +1086,12 @@ body.dark {
     align-self: flex-start;
     width: 100%;
     height: 64px;
+    /* 2026-05-03 fix: 加 flex-shrink: 0 防 .tp-embedded-trip flex-column container
+     * 把 TitleBar 從 64px 壓縮到 children max-height 45px。User 觀察「行程明細
+     * 標題列比其他功能頁低」 + 「加景點外框不正確」 (button 44×44 凸出 squeezed
+     * TitleBar 邊界 1px) 同 root cause — flex item default flex-shrink: 1 + min-height: auto
+     * 讓 TitleBar 在父空間不足時被壓到 content min-size。 */
+    flex-shrink: 0;
     padding: 0 24px;
     display: flex;
     align-items: center;
@@ -1119,6 +1125,8 @@ body.dark {
     align-self: flex-start;
     width: 100%;
     height: 56px;
+    /* 2026-05-03 fix: 加 flex-shrink: 0 防 flex-column container 壓縮 — 詳見 desktop rule 註釋 */
+    flex-shrink: 0;
     padding: 0 16px;
     display: flex;
     align-items: center;
