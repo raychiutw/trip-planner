@@ -38,6 +38,16 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-subtab-food')).toBeVisible();
     await expect(page.getByTestId('add-stop-subtab-hotel')).toBeVisible();
     await expect(page.getByTestId('add-stop-subtab-shopping')).toBeVisible();
+  });
+
+  test('region 切到「沖繩」 → 觸發 search 顯示「熱門景點 · 沖繩」 + 結果卡', async ({ page }) => {
+    // 2026-05-03 modal-to-fullpage migration: 原 modal 有 defaultRegion prop 從
+    // trip context 推「沖繩」一打開就 search；改全頁後預設「全部地區」(更中性)，
+    // user 自己選 region 觸發 search。Mock 用 osm_id 90001 cover 「熱門景點 · 沖繩」 path。
+    await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
+    await expect(page.getByTestId('add-stop-page')).toBeVisible();
+    await page.getByTestId('add-stop-region-pill').click();
+    await page.getByRole('button', { name: '沖繩' }).click();
     await expect(page.getByText('熱門景點 · 沖繩')).toBeVisible();
     await expect(page.getByTestId('add-stop-search-card-90001')).toBeVisible();
   });
@@ -73,8 +83,8 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await page.goto('/trip/okinawa-trip-2026-Ray');
     await page.getByTestId('trip-add-stop-trigger').click();
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
-    // TitleBar 返回 button — TitleBar 標準 testid: titlebar-back
-    await page.getByTestId('titlebar-back').click();
+    // TitleBar 返回 button 用 aria-label 抓 (AddStopPage 設 backLabel="返回前頁")
+    await page.getByRole('button', { name: '返回前頁' }).click();
     await expect(page).toHaveURL(/\/trip\/okinawa-trip-2026-Ray$|\/trips/);
   });
 
