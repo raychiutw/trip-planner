@@ -28,14 +28,17 @@
  *   - 完成按鈕同時放 TitleBar action + bottom bar (兩處同步 disabled state)
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useNavigateBack } from '../hooks/useNavigateBack';
+import { routes } from '../lib/routes';
 import { apiFetch, apiFetchRaw } from '../lib/apiClient';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
+import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 
@@ -544,24 +547,7 @@ const SCOPED_STYLES = `
   }
 }
 
-/* page-level sticky bottom bar (取代 modal sticky footer) */
-.tp-add-stop-page-bottom-bar {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  z-index: 5;
-  display: flex; gap: 12px; align-items: center; justify-content: space-between;
-  padding: 12px 16px max(12px, env(safe-area-inset-bottom, 12px));
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-background) 94%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
-}
-@media (min-width: 1024px) {
-  .tp-add-stop-page-bottom-bar {
-    left: 240px;
-    padding: 16px 32px max(16px, env(safe-area-inset-bottom, 16px));
-  }
-}
+/* sticky bottom bar 已移到 css/tokens.css .tp-page-bottom-bar 共用 */
 .tp-add-stop-counter {
   font-size: var(--font-size-footnote);
   color: var(--color-muted);
@@ -607,7 +593,7 @@ export default function AddStopPage() {
   const { user } = useCurrentUser();
   const { tripId } = useParams<{ tripId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const handleBack = useNavigateBack(tripId ? routes.tripsSelected(tripId) : routes.trips());
 
   const dayNumParam = searchParams.get('day');
   const dayNum = dayNumParam ? parseInt(dayNumParam, 10) : NaN;
@@ -635,6 +621,7 @@ export default function AddStopPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const [currentDay, setCurrentDay] = useState<DayApiRow | null>(null);
 
@@ -655,7 +642,7 @@ export default function AddStopPage() {
     return () => { cancelled = true; };
   }, [auth.user, tripId, dayNum]);
 
-  // Search debounce
+  // Search debounce + abort: 快速打字時 cancel inflight 避免 last-write-wins race
   useEffect(() => {
     if (tab !== 'search') return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -667,20 +654,27 @@ export default function AddStopPage() {
       return;
     }
     debounceRef.current = setTimeout(async () => {
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
       setSearching(true);
       try {
-        const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(searchTerm)}&limit=20`);
+        const resp = await fetch(
+          `/api/poi-search?q=${encodeURIComponent(searchTerm)}&limit=20`,
+          { signal: ctrl.signal },
+        );
         if (resp.ok) {
           setSearchResults(normalizeSearchResults(await resp.json()));
         }
-      } catch {
-        // silent
+      } catch (err) {
+        if ((err as { name?: string })?.name === 'AbortError') return;
       } finally {
-        setSearching(false);
+        if (abortRef.current === ctrl) setSearching(false);
       }
     }, 300);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
     };
   }, [tab, query, region]);
 
@@ -729,16 +723,6 @@ export default function AddStopPage() {
   }, [tab, selectedSearch, selectedSaved, customTitle]);
 
   const confirmEnabled = tab === 'custom' ? !submitting : totalSelected > 0 && !submitting;
-
-  function handleBack() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      navigate(-1);
-    } else if (tripId) {
-      navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-    } else {
-      navigate('/trips');
-    }
-  }
 
   const handleConfirm = useCallback(async () => {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
@@ -806,7 +790,7 @@ export default function AddStopPage() {
         sidebar={<DesktopSidebarConnected />}
         main={
           <div className="tp-add-stop-page-shell" data-testid="add-stop-page">
-            <TitleBar title="加入景點" back={() => navigate('/trips')} backLabel="返回行程列表" />
+            <TitleBar title="加入景點" back={handleBack} backLabel="返回行程列表" />
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-muted)' }}>
               無效的行程或日期參數
             </div>
@@ -819,19 +803,15 @@ export default function AddStopPage() {
 
   const dayLabel = deriveDayLabel(currentDay, dayNum);
 
-  // TitleBar primary action (responsive icon + text / icon-only)
   const titleBarActions = (
-    <button
-      type="button"
-      className="tp-titlebar-action is-primary"
-      onClick={() => void handleConfirm()}
+    <TitleBarPrimaryAction
+      label="完成"
+      busyLabel="加入中⋯"
+      busy={submitting}
       disabled={!confirmEnabled}
-      aria-label={submitting ? '加入中' : '完成'}
-      data-testid="add-stop-titlebar-confirm"
-    >
-      <Icon name="check" />
-      <span className="tp-titlebar-action-label">{submitting ? '加入中⋯' : '完成'}</span>
-    </button>
+      onClick={() => void handleConfirm()}
+      testId="add-stop-titlebar-confirm"
+    />
   );
 
   return (
@@ -1155,7 +1135,7 @@ export default function AddStopPage() {
               )}
             </div>
 
-            <div className="tp-add-stop-page-bottom-bar">
+            <div className="tp-page-bottom-bar">
               <span className="tp-add-stop-counter" data-testid="add-stop-counter">
                 已選 <strong>{totalSelected}</strong> 個 · 將加入 {dayLabel}
                 {submitError && <span style={{ color: 'var(--color-destructive, #c0392b)', marginLeft: 8 }}>{submitError}</span>}
