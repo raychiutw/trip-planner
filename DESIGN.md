@@ -312,22 +312,23 @@
 
 ### Day Nav (Trip Detail + Map page 共用視覺)
 
-統一 colorful underline tab format — `.ocean-day-strip` (TripPage `<DayNav>`) 與 `.tp-map-day-tabs` (MapPage) 視覺對齊。
+Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab>` 元件 + `.tp-map-day-tab*` CSS family。Trip detail 透過 `<DayNav>` wrapper 加上 sticky modifier；MapPage 直接用 plain wrapper（黏在底部 card-rail 上方）。
 
-**Tab 規格 (`[data-dn]` / `.tp-map-day-tab`)**
+**Tab 規格 (`.tp-map-day-tab`)**
 - text-only (eyebrow + date)，無 chip background fill / border
 - Eyebrow: `DAY 01` 套 per-day color (`dayColor(dayNum)` from `src/lib/dayPalette` — 10-tone Tailwind -500 palette)
 - Date: 14px / 600 weight, `color-foreground` (active 套 accent color)
 - Active state: 2px `border-bottom` 用 `--day-color` inline override (per-day color underline)
 - Idle: muted text + transparent border-bottom
 - Hover (idle): `color-foreground`
-- 44px min tap target
+- 36px min height (扁平 strip — 不搶佔垂直空間，對齊 mockup S20)
+- Today marker: eyebrow 文字後綴「· 今天」（不是另一個 pill）
 
-**Strip container (`.ocean-day-strip` / `.tp-map-day-tabs`)**
-- Sticky chrome group: 緊接 TitleBar (top: 64px desktop / 56px compact, mobile top:0)
-- Background glass blur 14px + 1px bottom hairline border
-- Horizontal scroll, scrollbar hidden
-- 右側 mask 漸層 fade 暗示「還有更多 day 可水平捲」
+**Strip container (`.tp-map-day-tabs`)**
+- 共用 wrapper：horizontal scroll + scrollbar hidden + glass blur 14px
+- Trip detail 加 modifier `.tp-map-day-tabs--sticky`：position: sticky, top: 64px (desktop) / 56px (compact)，緊接 TitleBar 形成 sticky chrome group，加底邊 hairline + 右側 mask 漸層 fade（暗示水平可捲）
+- MapPage 不用 modifier：top border 當作底部 card-rail 上邊界，自然 stack 在頁面 flex column
+- TripPage 內 `<TitleBar>` 已 sticky top:0，`<DayNav>` 設 top:64/56px → 兩者凍結頂部成 sticky chrome group
 
 ### Trip Detail Page
 - Desktop / compact 共用同一份 `TripDetail` 內容樹：DayNav、stop list、住宿、交通、地圖摘要、錯誤訊息、空狀態都不可拆成兩套邏輯。

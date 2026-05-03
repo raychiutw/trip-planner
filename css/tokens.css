@@ -1124,6 +1124,23 @@ body.dark {
   color: var(--color-accent);
 }
 
+/* Sticky chrome variant — trip detail page 把同一條 strip 黏在 TitleBar 下方，
+ * border 從 top 翻到 bottom + 加右側 mask 漸層暗示「還有更多 day 可水平捲」。
+ * MapPage 不用此 modifier (它的 tabs 是 bottom card-rail 的上邊界)。 */
+.tp-map-day-tabs--sticky {
+  position: sticky;
+  top: 64px;
+  z-index: calc(var(--z-sticky-nav, 200) - 1);
+  border-top: none;
+  border-bottom: 1px solid var(--color-border);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+}
+@media (max-width: 1100px) {
+  .tp-map-day-tabs--sticky { top: 56px; }
+}
+body.print-mode .tp-map-day-tabs--sticky { display: none; }
+
 /* ===== MapEntryCard — horizontal snap-scroll item (V2 Terracotta Map page) ===== */
 .tp-map-entry-cards {
   flex-shrink: 0;
