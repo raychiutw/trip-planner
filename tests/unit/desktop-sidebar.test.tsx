@@ -13,13 +13,14 @@ import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
 
 function renderSidebar(opts: {
   path?: string;
-  user?: { name: string; email: string } | null;
+  user?: { name: string; email: string } | null | undefined;
   isAdmin?: boolean;
 } = {}) {
+  const user = Object.prototype.hasOwnProperty.call(opts, 'user') ? opts.user : null;
   return render(
     <MemoryRouter initialEntries={[opts.path ?? '/trips']}>
       <DesktopSidebar
-        user={opts.user ?? null}
+        user={user}
         isAdmin={opts.isAdmin ?? false}
       />
     </MemoryRouter>,
@@ -53,6 +54,20 @@ describe('DesktopSidebar — visible nav items (anonymous)', () => {
     const nav = container.querySelector('[aria-label="主要功能"]');
     expect(nav?.textContent).not.toContain('已連結應用');
     expect(nav?.textContent).not.toContain('開發者');
+  });
+
+  it('auth loading 時只顯示 4 個 primary nav，不先顯示「登入」', () => {
+    const { container, getAllByRole } = renderSidebar({ user: undefined });
+    const links = getAllByRole('link');
+    expect(links.length).toBe(4);
+    expect(links[0].textContent).toContain('聊天');
+    expect(links[1].textContent).toContain('行程');
+    expect(links[2].textContent).toContain('地圖');
+    expect(links[3].textContent).toContain('探索');
+
+    const nav = container.querySelector('[aria-label="主要功能"]');
+    expect(nav?.textContent).not.toContain('登入');
+    expect(nav?.textContent).not.toContain('帳號');
   });
 });
 
@@ -213,6 +228,14 @@ describe('DesktopSidebar — user chip', () => {
     const { container } = renderSidebar({ user: null });
     const nav = container.querySelector('[aria-label="主要功能"]');
     expect(nav?.textContent).toContain('登入');
+  });
+
+  it('auth loading 時保留 sidebar 底部高度，但不顯示「未登入」或 account card', () => {
+    const { container } = renderSidebar({ user: undefined });
+    expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="sidebar-user-chip"]')).toBeNull();
+    expect(container.querySelector('[data-testid="sidebar-account-card"]')).toBeNull();
+    expect(container.textContent).not.toContain('未登入');
   });
 });
 

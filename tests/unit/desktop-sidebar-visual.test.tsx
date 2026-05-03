@@ -15,10 +15,11 @@ import { MemoryRouter } from 'react-router-dom';
 import DesktopSidebar from '../../src/components/shell/DesktopSidebar';
 
 function renderSidebar(opts: {
-  user?: { name: string; email: string } | null;
+  user?: { name: string; email: string } | null | undefined;
   initialEntry?: string;
 }) {
-  const { user = null, initialEntry = '/trips' } = opts;
+  const user = Object.prototype.hasOwnProperty.call(opts, 'user') ? opts.user : null;
+  const { initialEntry = '/trips' } = opts;
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <DesktopSidebar user={user} />
@@ -46,6 +47,15 @@ describe('DesktopSidebar — visual + nav IA', () => {
     renderSidebar({ user: null, initialEntry: '/trips' });
     expect(screen.getByText('登入')).toBeTruthy();
     expect(screen.queryByText('帳號')).toBeNull();
+  });
+
+  it('auth loading 不顯示「登入」「未登入」或「帳號」', () => {
+    renderSidebar({ user: undefined, initialEntry: '/trips' });
+    expect(screen.queryByText('登入')).toBeNull();
+    expect(screen.queryByText('未登入')).toBeNull();
+    expect(screen.queryByText('帳號')).toBeNull();
+    expect(screen.queryByTestId('sidebar-account-card')).toBeNull();
+    expect(screen.getByTestId('sidebar-user-loading')).toBeTruthy();
   });
 
   it('current pathname 對應 nav item 套 .is-active', () => {

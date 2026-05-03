@@ -5129,6 +5129,7 @@
           <li>Item 字級 14px / line-height 20px / weight 600</li>
           <li>底部 sticky 帳號區（avatar + name + email），點擊進入 <code>/account</code></li>
           <li>Anonymous 狀態：primary nav 額外顯示「登入」，底部 chip 顯示「未登入」</li>
+          <li>Auth loading 狀態：不先猜 anonymous/authenticated；primary nav 維持 4 items，底部只保留 neutral loading chip，避免「登入 / 未登入 / 帳號」閃現後消失</li>
           <li><strong>帳號名稱嚴格限制 10 char</strong>：runtime 用 <code>name.length &gt; 10 ? name.slice(0, 10) + '…' : name</code> 截字（中英混合一律按 char 計）；CSS 的 <code>max-width</code> + <code>overflow: hidden</code> 是 layout 防呆 fallback</li>
         </ul>
       </div>

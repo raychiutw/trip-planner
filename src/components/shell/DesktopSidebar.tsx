@@ -32,7 +32,7 @@ import Icon from '../shared/Icon';
 import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'explore' | 'account' | 'login';
+  key: 'chat' | 'trips' | 'map' | 'explore' | 'login';
   label: string;
   href: string;
   icon: string;
@@ -161,6 +161,28 @@ body.dark .tp-sidebar {
   display: grid; place-items: center;
   font-size: 13px; font-weight: 700; flex-shrink: 0;
 }
+.tp-user-chip-loading {
+  min-height: 52px;
+}
+.tp-user-chip-loading .tp-avatar {
+  background: rgba(255, 251, 245, 0.12);
+  color: transparent;
+}
+.tp-user-skeleton-stack {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tp-user-skeleton-line {
+  display: block;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 251, 245, 0.14);
+}
+.tp-user-skeleton-line.is-primary { width: 76px; }
+.tp-user-skeleton-line.is-secondary {
+  width: 116px;
+  background: rgba(255, 251, 245, 0.09);
+}
 
 .tp-account-card {
   padding: 10px;
@@ -207,8 +229,8 @@ export interface SidebarUser {
 
 
 export interface DesktopSidebarProps {
-  /** Current authenticated user — null = 未登入 */
-  user?: SidebarUser | null;
+  /** undefined = auth loading, null = confirmed unauthenticated */
+  user?: SidebarUser | null | undefined;
   /** Optional brand slot override — 預設 "Tripline." */
   brand?: ReactNode;
 }
@@ -216,12 +238,14 @@ export interface DesktopSidebarProps {
 export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
   const { pathname } = useLocation();
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? '?';
+  const authResolved = user !== undefined;
+  const isAuthed = !!user;
 
-  // Section 2 (terracotta-account-hub-page): logged-in 顯示「帳號」隱藏「登入」；
-  // logged-out 反之。
+  // Section 2 (terracotta-account-hub-page): loading 不先猜 guest/auth，
+  // 等 userinfo resolve 後才顯示「登入」或 account chip，避免 auth flicker。
   const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (item.authOnly) return !!user;
-    if (item.guestOnly) return !user;
+    if (item.authOnly) return isAuthed;
+    if (item.guestOnly) return authResolved && !isAuthed;
     return true;
   });
 
@@ -253,7 +277,20 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
         <div className="tp-sidebar-cta">
           <ThemeToggle testId="sidebar-theme" />
 
-          {user ? (
+          {user === undefined ? (
+            <div
+              className="tp-user-chip tp-user-chip-loading"
+              data-testid="sidebar-user-loading"
+              role="status"
+              aria-label="正在確認登入狀態"
+            >
+              <div className="tp-avatar" aria-hidden="true" />
+              <div className="tp-user-skeleton-stack" aria-hidden="true">
+                <span className="tp-user-skeleton-line is-primary" />
+                <span className="tp-user-skeleton-line is-secondary" />
+              </div>
+            </div>
+          ) : user ? (
             <Link
               to="/account"
               className="tp-account-card"
