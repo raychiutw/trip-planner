@@ -11,7 +11,7 @@
 import { AppError } from './_errors';
 import { requireAuth } from './_auth';
 import { json, parseJsonBody } from './_utils';
-import { checkRateLimit, bumpRateLimit, RATE_LIMITS } from './_rate_limit';
+import { bumpRateLimit, RATE_LIMITS } from './_rate_limit';
 import type { Env } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -69,19 +69,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   // Rate limit: 10/min per user (admin bypasses). Defends POI enumeration oracle —
   // attacker POSTs many random poiId's; 404 vs 409 vs 201 reveals existence.
+  // bump-first pattern: every attempt counts (POSTs are not auth-failure-gated like
+  // login)；bumpRateLimit reject 自帶 ok=false + retryAfter，省一次 D1 query。
   if (!auth.isAdmin) {
     const bucket = `saved-pois-post:${auth.userId}`;
-    const check = await checkRateLimit(context.env.DB, bucket, RATE_LIMITS.SAVED_POIS_WRITE);
-    if (!check.ok) {
+    const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.SAVED_POIS_WRITE);
+    if (!bump.ok) {
       return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
         status: 429,
         headers: {
           'Content-Type': 'application/json',
-          'Retry-After': String(check.retryAfter ?? 60),
+          'Retry-After': String(bump.retryAfter ?? 60),
         },
       });
     }
-    await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.SAVED_POIS_WRITE);
   }
 
   const body = await parseJsonBody<{ poiId?: number; note?: string }>(context.request);
