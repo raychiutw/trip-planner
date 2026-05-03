@@ -63,26 +63,8 @@ function initialSavedPois() {
   return [];
 }
 
-function initialTripIdeas() {
-  return [
-    {
-      id: 7101,
-      tripId: 'okinawa-trip-2026-Ray',
-      poiId: 8001,
-      title: '沖繩美麗海水族館',
-      note: '從探索我的收藏加入',
-      addedAt: '2026-04-25T10:10:00Z',
-      addedBy: MOCK_USER.email,
-      promotedToEntryId: null,
-      archivedAt: null,
-      poiName: '沖繩美麗海水族館',
-      poiAddress: '沖繩縣國頭郡本部町石川424',
-      poiLat: 26.6944,
-      poiLng: 127.8781,
-      poiType: 'sight',
-    },
-  ];
-}
+// initialTripIdeas() retired in V2 cutover (migration 0046) — 備案概念合一進「我的收藏」
+// (saved_pois)。fixtures 繼承到 initialSavedPois() 若需要復原。
 
 /* ===== /api/trips/okinawa-trip-2026-Ray (single trip meta) =====
  * 2026-05-02 (migration 0045): ogDescription / selfDrive / autoScroll / footer
@@ -579,7 +561,7 @@ const MOCK_CONNECTED_APPS = [
  */
 async function setupApiMocks(page) {
   const savedPois = initialSavedPois();
-  const tripIdeas = initialTripIdeas();
+  // V2 cutover: tripIdeas removed — concept retired in migration 0046
   const sessions = MOCK_SESSIONS.map((s) => ({ ...s }));
   const connectedApps = MOCK_CONNECTED_APPS.map((a) => ({ ...a }));
   let nextSavedId = 8000;
@@ -703,28 +685,8 @@ async function setupApiMocks(page) {
     return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
   });
 
-  await page.route(/\/api\/trip-ideas(?:\/\d+)?/, async (route) => {
-    const request = route.request();
-    const path = new URL(request.url()).pathname;
-    if (request.method() === 'GET') {
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ideas: tripIdeas }) });
-    }
-    const id = Number(path.split('/').pop());
-    const idea = tripIdeas.find((i) => i.id === id);
-    if (!idea) {
-      return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ error: 'Not found' }) });
-    }
-    if (request.method() === 'PATCH') {
-      const body = request.postDataJSON?.() ?? {};
-      Object.assign(idea, body);
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(idea) });
-    }
-    if (request.method() === 'DELETE') {
-      idea.archivedAt = new Date().toISOString();
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
-    }
-    return route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ error: 'Method not allowed' }) });
-  });
+  // /api/trip-ideas route removed — endpoint retired in V2 cutover (migration 0046)。
+  // 任何 e2e 仍 hit 此 path 應該得到 default 404 (Worker handler not found)。
 
   await page.route(/\/api\/trips/, (route) => {
     const url = route.request().url();

@@ -1,7 +1,10 @@
 /**
  * DELETE /api/saved-pois/:id — 移除收藏
  *
- * 僅允許 owner（email 相符）或 admin 刪除；他人 → 403；不存在 → 404。
+ * 僅允許 owner（email 或 user_id 相符）或 admin 刪除；他人 → 403；不存在 → 404。
+ *
+ * V2 cutover dual-read: ownership check 同時看 email 與 user_id，phase 2 drop
+ * email column 後改 user_id only。
  */
 import { AppError } from '../_errors';
 import { requireAuth } from '../_auth';
@@ -14,12 +17,14 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
   if (!id) throw new AppError('DATA_VALIDATION', 'id 須為正整數');
 
   const row = await context.env.DB
-    .prepare('SELECT email FROM saved_pois WHERE id = ?')
+    .prepare('SELECT email, user_id FROM saved_pois WHERE id = ?')
     .bind(id)
-    .first<{ email: string }>();
+    .first<{ email: string; user_id: string | null }>();
   if (!row) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
 
-  if (row.email !== auth.email && !auth.isAdmin) {
+  const ownByEmail = row.email === auth.email;
+  const ownByUid = auth.userId !== null && row.user_id === auth.userId;
+  if (!ownByEmail && !ownByUid && !auth.isAdmin) {
     throw new AppError('PERM_DENIED');
   }
 

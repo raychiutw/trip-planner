@@ -113,11 +113,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Migration 0045: dropped self_drive/og_description/footer/food_prefs/auto_scroll/is_default.
   // Added data_source/default_travel_mode/lang. `region` not added — derived from
   // trip_destinations join in /api/trips/:id (commit 8).
+  // V2 cutover dual-write (E-H2): write owner email + owner_user_id together.
+  // Phase 2 will drop owner column. auth.userId is null only for legacy non-V2
+  // sessions or service tokens; we tolerate NULL during transition (RESTRICT FK
+  // accepts NULL — no orphan).
   stmts.push(
     db.prepare(
-      'INSERT INTO trips (id, name, owner, title, description, countries, published, data_source, default_travel_mode, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO trips (id, name, owner, owner_user_id, title, description, countries, published, data_source, default_travel_mode, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
-      id, name, owner,
+      id, name, owner, auth.userId,
       str(body.title),
       str(body.description),
       str(body.countries, 'JP'),
@@ -140,11 +144,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     );
   }
 
-  // trip_permissions: owner row (PR-CC 2026-04-26 owner role replaces admin)
+  // trip_permissions: owner row — dual-write email + user_id during V2 cutover.
   stmts.push(
     db.prepare(
-      'INSERT INTO trip_permissions (email, trip_id, role) VALUES (?, ?, ?)',
-    ).bind(auth.email, id, 'owner'),
+      'INSERT INTO trip_permissions (email, user_id, trip_id, role) VALUES (?, ?, ?, ?)',
+    ).bind(auth.email, auth.userId, id, 'owner'),
   );
 
   // trip_destinations: write each dest with dest_order (commit 7)

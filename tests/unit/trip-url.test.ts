@@ -1,8 +1,10 @@
 /**
  * trip-url.ts — parseSheetParam / setSheetParam / closeSheet tests
  *
- * URL query param driver for per-trip right sheet (`?sheet=itinerary|ideas|map|chat`).
+ * URL query param driver for per-trip right sheet (`?sheet=itinerary|map|chat`).
  * Invalid values degrade to null so URL injection can't crash the page.
+ *
+ * V2 cutover (migration 0046): 'ideas' tab retired — invalid value now degrades to null.
  */
 import { describe, it, expect, vi } from 'vitest';
 import {
@@ -15,7 +17,6 @@ import {
 
 describe('parseSheetParam', () => {
   it('returns tab when valid', () => {
-    expect(parseSheetParam('?sheet=ideas')).toBe('ideas');
     expect(parseSheetParam('?sheet=map')).toBe('map');
     expect(parseSheetParam('?sheet=itinerary')).toBe('itinerary');
     expect(parseSheetParam('?sheet=chat')).toBe('chat');
@@ -30,19 +31,21 @@ describe('parseSheetParam', () => {
     expect(parseSheetParam('?sheet=haxxor')).toBeNull();
     expect(parseSheetParam('?sheet=')).toBeNull();
     expect(parseSheetParam('?sheet=undefined')).toBeNull();
+    // 'ideas' was a valid value pre-cutover; now degrades to null (deep-link compat)
+    expect(parseSheetParam('?sheet=ideas')).toBeNull();
   });
 
   it('accepts URLSearchParams instance', () => {
-    const p = new URLSearchParams('sheet=ideas');
-    expect(parseSheetParam(p)).toBe('ideas');
+    const p = new URLSearchParams('sheet=map');
+    expect(parseSheetParam(p)).toBe('map');
   });
 });
 
 describe('setSheetParam', () => {
   it('calls navigate with ?sheet=tab replace:true', () => {
     const navigate = vi.fn();
-    setSheetParam(navigate, '/trip/abc', '', 'ideas');
-    expect(navigate).toHaveBeenCalledWith('/trip/abc?sheet=ideas', { replace: true });
+    setSheetParam(navigate, '/trip/abc', '', 'map');
+    expect(navigate).toHaveBeenCalledWith('/trip/abc?sheet=map', { replace: true });
   });
 
   it('preserves existing unrelated query params', () => {
@@ -53,7 +56,7 @@ describe('setSheetParam', () => {
 
   it('replaces existing sheet param', () => {
     const navigate = vi.fn();
-    setSheetParam(navigate, '/trip/abc', '?sheet=ideas&day=2', 'map');
+    setSheetParam(navigate, '/trip/abc', '?sheet=itinerary&day=2', 'map');
     expect(navigate).toHaveBeenCalledWith(
       '/trip/abc?sheet=map&day=2',
       { replace: true },
@@ -64,13 +67,13 @@ describe('setSheetParam', () => {
 describe('closeSheet', () => {
   it('removes sheet param via replace', () => {
     const navigate = vi.fn();
-    closeSheet(navigate, '/trip/abc', '?sheet=ideas');
+    closeSheet(navigate, '/trip/abc', '?sheet=map');
     expect(navigate).toHaveBeenCalledWith('/trip/abc', { replace: true });
   });
 
   it('preserves other params when removing sheet', () => {
     const navigate = vi.fn();
-    closeSheet(navigate, '/trip/abc', '?sheet=ideas&day=2');
+    closeSheet(navigate, '/trip/abc', '?sheet=map&day=2');
     expect(navigate).toHaveBeenCalledWith('/trip/abc?day=2', { replace: true });
   });
 
@@ -82,8 +85,8 @@ describe('closeSheet', () => {
 });
 
 describe('SHEET_TABS constant', () => {
-  it('has exactly 4 tabs in expected order', () => {
-    expect(SHEET_TABS).toEqual(['itinerary', 'ideas', 'map', 'chat']);
+  it('has exactly 3 tabs in expected order (post-V2-cutover)', () => {
+    expect(SHEET_TABS).toEqual(['itinerary', 'map', 'chat']);
   });
 
   it('SheetTab type matches tab values', () => {

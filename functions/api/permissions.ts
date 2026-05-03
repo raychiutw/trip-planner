@@ -29,16 +29,20 @@ import type { Env } from './_types';
 /** 檢查 auth user 是否為該 trip 的 owner（admin 自動 pass）。 */
 export async function ensureCanManageTripPerms(
   context: { env: Env },
-  auth: { email: string; isAdmin: boolean },
+  auth: { email: string; userId: string | null; isAdmin: boolean },
   tripId: string,
 ): Promise<void> {
   if (auth.isAdmin) return;
+  // V2 cutover dual-read (E-H2): match by owner_user_id (preferred) OR owner email.
+  // Phase 2 will drop owner column → query becomes owner_user_id only.
   const owner = await context.env.DB
-    .prepare('SELECT owner FROM trips WHERE id = ?')
+    .prepare('SELECT owner, owner_user_id FROM trips WHERE id = ?')
     .bind(tripId)
-    .first<{ owner: string | null }>();
+    .first<{ owner: string | null; owner_user_id: string | null }>();
   if (!owner) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
-  if ((owner.owner ?? '').toLowerCase() !== auth.email.toLowerCase()) {
+  const ownerByUid = auth.userId !== null && owner.owner_user_id === auth.userId;
+  const ownerByEmail = (owner.owner ?? '').toLowerCase() === auth.email.toLowerCase();
+  if (!ownerByUid && !ownerByEmail) {
     throw new AppError('PERM_ADMIN_ONLY', '僅行程擁有者或管理者可操作共編');
   }
 }

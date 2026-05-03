@@ -20,18 +20,30 @@ export function requireAuth(context: { data: unknown }): AuthData {
  * (read access). Admins and service tokens always pass. viewer / member / owner /
  * admin roles all return true — viewer is read-allowed.
  *
+ * V2 cutover dual-read (E-H2): prefer user_id match, fall back to email for rows
+ * not yet backfilled. After phase 2 DROP COLUMN email, the email branch becomes
+ * unreachable (column gone) — code change is then a one-liner cleanup.
+ *
  * For write/destructive operations, use `hasWritePermission` instead.
  */
 export async function hasPermission(
   db: D1Database,
-  email: string,
+  emailOrAuth: string | AuthData,
   tripId: string,
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
+  const { email, userId } = normalizeAuth(emailOrAuth);
+  // Dual-read: match by user_id OR email — either column hits is enough during transition.
+  // SQLite NULL semantics: `user_id = NULL` always FALSE, so null userId silently falls
+  // through to email match. After phase 2 drops email column, swap to user_id only.
   const row = await db
-    .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?)')
-    .bind(email.toLowerCase(), tripId, '*')
+    .prepare(
+      `SELECT 1 FROM trip_permissions
+       WHERE (email = ? OR user_id = ?)
+         AND (trip_id = ? OR trip_id = ?)`,
+    )
+    .bind(email.toLowerCase(), userId, tripId, '*')
     .first();
   return !!row;
 }
@@ -41,21 +53,41 @@ export async function hasPermission(
  * viewer role is BLOCKED here per migration 0043 ("viewer = read-only collaborator").
  * Admins and service tokens always pass. owner / admin / member roles return true.
  *
+ * V2 cutover dual-read (E-H2): same dual-read pattern as hasPermission.
+ *
  * v2.18.0: introduced alongside the 3-tier role model so write paths gate viewer out
  * while read paths (`hasPermission`) keep viewer access.
  */
 export async function hasWritePermission(
   db: D1Database,
-  email: string,
+  emailOrAuth: string | AuthData,
   tripId: string,
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
+  const { email, userId } = normalizeAuth(emailOrAuth);
   const row = await db
-    .prepare("SELECT 1 FROM trip_permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?) AND role != 'viewer'")
-    .bind(email.toLowerCase(), tripId, '*')
+    .prepare(
+      `SELECT 1 FROM trip_permissions
+       WHERE (email = ? OR user_id = ?)
+         AND (trip_id = ? OR trip_id = ?)
+         AND role != 'viewer'`,
+    )
+    .bind(email.toLowerCase(), userId, tripId, '*')
     .first();
   return !!row;
+}
+
+/**
+ * Backwards-compat shim: callers pass either a string email (legacy) or AuthData.
+ * Returns { email, userId } extracting both forms. userId may be null for legacy
+ * email-string callers — dual-read query handles that via NULL match.
+ */
+function normalizeAuth(emailOrAuth: string | AuthData): { email: string; userId: string | null } {
+  if (typeof emailOrAuth === 'string') {
+    return { email: emailOrAuth, userId: null };
+  }
+  return { email: emailOrAuth.email, userId: emailOrAuth.userId };
 }
 
 /**

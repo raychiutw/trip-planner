@@ -54,7 +54,9 @@ describe('hasWritePermission — viewer is read-only', () => {
   it('email is lowercased before bind', async () => {
     const { db, stmt } = makeDb({ row: { '1': 1 } });
     await hasWritePermission(db, 'Mixed@Case.COM', 'trip-1', false);
-    expect(stmt.bind).toHaveBeenCalledWith('mixed@case.com', 'trip-1', '*');
+    // V2 cutover dual-read: bind order = (email, userId, tripId, '*')。
+    // 字串 caller 沒帶 userId → null，SQL 自動 fall back to email match。
+    expect(stmt.bind).toHaveBeenCalledWith('mixed@case.com', null, 'trip-1', '*');
   });
 });
 
