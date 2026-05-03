@@ -10,6 +10,16 @@
 - ✅ PATCH /api/pois/{id} — 更新 POI master（必須帶 tripId，僅限 AI 查詢結果）
 - ❌ DELETE /api/pois/{id} — 旅伴不可刪除 pois master（僅 admin 或歇業偵測流程可刪）
 
+### V2 cutover 新增（migration 0046，DX-C3）
+
+- ✅ GET /api/saved-pois — 列出當前使用者收藏（auth scope: user_id）
+- ✅ GET /api/saved-pois/{id} — 取單筆收藏
+- ✅ POST /api/saved-pois — 新增收藏
+- ✅ DELETE /api/saved-pois/{id} — 移除收藏
+- ✅ POST /api/saved-pois/{id}/add-to-trip — 從收藏 fast-path 加入行程（D-C1）
+
+> **⚠️ companion scope 邊界（M2 security gate）**：以上 saved-pois 操作的 auth.user_id 必須是 **request 提交者** (`request.submitted_by` 對映 user)，**不是 trip owner**。`_middleware.ts` 內 companion scope check 強制這個邊界，防 prompt injection 透過 owner session 越權操作 attacker 的 saved_pois pool。
+
 ## 禁止的 API 操作（硬限制，任何情況都不可執行）
 - ❌ DELETE /api/trips/{tripId}/entries/{eid} — 不可刪除 entry
 - ❌ PUT /api/trips/{tripId}/days/{num} — 不可覆寫整天

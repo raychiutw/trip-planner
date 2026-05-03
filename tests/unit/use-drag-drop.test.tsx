@@ -42,16 +42,11 @@ describe('Keyboard a11y contract (Section 5)', () => {
     expect(USE_DRAG_DROP_SRC).not.toContain('activator:');
   });
 
-  it('5.4 IdeasTabContent + TimelineRail 都套用中文 announcements', () => {
-    const ideasSrc = fs.readFileSync(
-      path.resolve(__dirname, '../../src/components/trip/IdeasTabContent.tsx'),
-      'utf8',
-    );
+  it('5.4 TimelineRail 套用中文 announcements (IdeasTabContent retired in V2 cutover)', () => {
     const timelineSrc = fs.readFileSync(
       path.resolve(__dirname, '../../src/components/trip/TimelineRail.tsx'),
       'utf8',
     );
-    expect(ideasSrc).toContain('accessibility={TP_DRAG_ACCESSIBILITY}');
     expect(timelineSrc).toContain('accessibility={TP_DRAG_ACCESSIBILITY}');
   });
 });

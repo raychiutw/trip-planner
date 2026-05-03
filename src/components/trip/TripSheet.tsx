@@ -20,7 +20,7 @@ import Icon from '../shared/Icon';
 import type { MapPin } from '../../hooks/useMapData';
 
 const TripMapRail = lazy(() => import('./TripMapRail'));
-const IdeasTabContent = lazy(() => import('./IdeasTabContent'));
+// Ideas tab retired — V2 cutover (migration 0046) 把備案合一進「我的收藏」。
 
 const DEFAULT_TAB: SheetTab = 'map';
 
@@ -132,23 +132,6 @@ export default function TripSheet({ tripId, allPins, pinsByDay, dark }: TripShee
           <div className="eyebrow">Itinerary</div>
           <h3>行程已顯示在左側</h3>
           <p>Timeline 在 main 區已展開，未來會搬到這個 tab（Mindtrip 3-pane 模式）。</p>
-        </div>
-        <div
-          role="tabpanel"
-          id={sheetPanelId('ideas')}
-          aria-labelledby={sheetTabId('ideas')}
-          hidden={currentTab !== 'ideas'}
-          data-testid="tab-ideas"
-          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
-        >
-          {currentTab === 'ideas' && (
-            <Suspense fallback={<div className="trip-sheet-placeholder">載入中…</div>}>
-              <IdeasTabContent
-                tripId={tripId}
-                dayNumbers={Array.from(pinsByDay.keys()).sort((a, b) => a - b)}
-              />
-            </Suspense>
-          )}
         </div>
         <div
           role="tabpanel"

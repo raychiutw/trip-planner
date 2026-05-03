@@ -20,18 +20,23 @@ export function requireAuth(context: { data: unknown }): AuthData {
  * (read access). Admins and service tokens always pass. viewer / member / owner /
  * admin roles all return true — viewer is read-allowed.
  *
+ * V2 cutover phase 2 (migration 0047): email column dropped from trip_permissions.
+ * 純 user_id-based query。pre-V2 sessions / service tokens 沒 user_id → 直接 false（不
+ * 是 trip member）。
+ *
  * For write/destructive operations, use `hasWritePermission` instead.
  */
 export async function hasPermission(
   db: D1Database,
-  email: string,
+  auth: AuthData,
   tripId: string,
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
+  if (!auth.userId) return false;
   const row = await db
-    .prepare('SELECT 1 FROM trip_permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?)')
-    .bind(email.toLowerCase(), tripId, '*')
+    .prepare('SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ?')
+    .bind(auth.userId, tripId)
     .first();
   return !!row;
 }
@@ -41,19 +46,22 @@ export async function hasPermission(
  * viewer role is BLOCKED here per migration 0043 ("viewer = read-only collaborator").
  * Admins and service tokens always pass. owner / admin / member roles return true.
  *
+ * V2 cutover phase 2: 純 user_id-based query (email column 已 dropped)。
+ *
  * v2.18.0: introduced alongside the 3-tier role model so write paths gate viewer out
  * while read paths (`hasPermission`) keep viewer access.
  */
 export async function hasWritePermission(
   db: D1Database,
-  email: string,
+  auth: AuthData,
   tripId: string,
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
+  if (!auth.userId) return false;
   const row = await db
-    .prepare("SELECT 1 FROM trip_permissions WHERE email = ? AND (trip_id = ? OR trip_id = ?) AND role != 'viewer'")
-    .bind(email.toLowerCase(), tripId, '*')
+    .prepare("SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ? AND role != 'viewer'")
+    .bind(auth.userId, tripId)
     .first();
   return !!row;
 }

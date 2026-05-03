@@ -1,16 +1,19 @@
 /**
  * trip-url.ts — per-trip sheet URL driver.
  *
- * Sheet state lives in `?sheet=itinerary|ideas|map|chat` so the tab is deep-linkable,
+ * Sheet state lives in `?sheet=itinerary|map|chat` so the tab is deep-linkable,
  * browser back/forward works, and sharing a URL lands on the right pane.
  *
  * Invalid `?sheet=` values degrade to `null` (fallback = closed) so URL injection
  * or stale links can't throw.
+ *
+ * V2 cutover (migration 0046): 'ideas' tab retired. 備案概念合一進「我的收藏」
+ * (saved_pois)，跨 trip universal pool 由 ExplorePage saved tab 維護。
  */
 
 import type { NavigateFunction } from 'react-router-dom';
 
-export const SHEET_TABS = ['itinerary', 'ideas', 'map', 'chat'] as const;
+export const SHEET_TABS = ['itinerary', 'map', 'chat'] as const;
 export type SheetTab = typeof SHEET_TABS[number];
 
 const SHEET_TAB_SET = new Set<string>(SHEET_TABS);

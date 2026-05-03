@@ -9,6 +9,8 @@
  * - 切換後 focus 必須移到新 active tab button
  *
  * Reference: https://www.w3.org/WAI/ARIA/apg/patterns/tabs/examples/tabs-automatic/
+ *
+ * V2 cutover (migration 0046): SHEET_TABS = itinerary / map / chat (3 tabs)。
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
@@ -28,10 +30,10 @@ function getTablist(container: HTMLElement) {
 }
 
 describe('TripSheetTabs — keyboard navigation', () => {
-  it('ArrowRight 切到下一個 tab（itinerary→ideas）', () => {
+  it('ArrowRight 切到下一個 tab（itinerary→map）', () => {
     const { container, onChange } = setup('itinerary');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
-    expect(onChange).toHaveBeenCalledWith('ideas');
+    expect(onChange).toHaveBeenCalledWith('map');
   });
 
   it('ArrowRight 從最後一個 tab（chat）循環回第一個（itinerary）', () => {
@@ -40,10 +42,10 @@ describe('TripSheetTabs — keyboard navigation', () => {
     expect(onChange).toHaveBeenCalledWith('itinerary');
   });
 
-  it('ArrowLeft 切到前一個 tab（map→ideas）', () => {
+  it('ArrowLeft 切到前一個 tab（map→itinerary）', () => {
     const { container, onChange } = setup('map');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowLeft' });
-    expect(onChange).toHaveBeenCalledWith('ideas');
+    expect(onChange).toHaveBeenCalledWith('itinerary');
   });
 
   it('ArrowLeft 從第一個 tab（itinerary）循環到最後（chat）', () => {
@@ -74,7 +76,6 @@ describe('TripSheetTabs — keyboard navigation', () => {
 
   it('ArrowRight preventDefault — 避免頁面 horizontal scroll', () => {
     const { container } = setup('map');
-    // fireEvent return false 代表 event 被 cancel（preventDefault called）
     const notDefault = fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
     expect(notDefault).toBe(false);
   });
@@ -82,9 +83,9 @@ describe('TripSheetTabs — keyboard navigation', () => {
   it('切換後 focus 移到新 active tab button', () => {
     const { container, rerender } = setup('itinerary');
     fireEvent.keyDown(getTablist(container), { key: 'ArrowRight' });
-    // 模擬 parent re-render（onChange 更新 URL → location.search → currentTab='ideas'）
-    rerender(<TripSheetTabs currentTab="ideas" onChange={vi.fn()} />);
-    const ideasBtn = container.querySelector(`#${sheetTabId('ideas')}`);
-    expect(document.activeElement).toBe(ideasBtn);
+    // 模擬 parent re-render（onChange 更新 URL → location.search → currentTab='map'）
+    rerender(<TripSheetTabs currentTab="map" onChange={vi.fn()} />);
+    const mapBtn = container.querySelector(`#${sheetTabId('map')}`);
+    expect(document.activeElement).toBe(mapBtn);
   });
 });
