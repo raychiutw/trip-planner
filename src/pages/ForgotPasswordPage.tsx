@@ -64,18 +64,7 @@ ${AUTH_LAYOUT_STYLES}
   border-color: var(--color-accent);
 }
 
-.tp-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-family: inherit;
-  font-size: var(--font-size-callout); font-weight: 600;
-  border: none; cursor: pointer; min-height: 48px;
-  transition: background 120ms;
-}
-.tp-btn-primary { background: var(--color-accent); color: #fff; width: 100%; }
-.tp-btn-primary:hover:not(:disabled) { filter: brightness(0.92); }
-.tp-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+/* .tp-btn family 移到 css/tokens.css 共用。 */
 
 .tp-banner {
   display: flex; gap: 12px; padding: 14px 16px;

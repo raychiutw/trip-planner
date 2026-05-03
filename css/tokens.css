@@ -900,6 +900,84 @@ body.dark {
   line-height: 1.5;
 }
 
+/* ===== .tp-btn family — page content button (settings / auth / forms 共用) =====
+ * 對齊 mockup `terracotta-preview-v2.html` Section 09「Buttons & Tabs」 spec。
+ * 不同於 `.tp-titlebar-action` (chrome action, full radius pill)，`.tp-btn` 是
+ * page content 內 button，用 radius-md (8px) 中性圓角。
+ *
+ * Variants:
+ *   .tp-btn (default outline) | .tp-btn-primary (accent filled) |
+ *   .tp-btn-secondary (alias of default) | .tp-btn-destructive (destructive red) |
+ *   .tp-btn-ghost (transparent, no border) | .tp-btn-block (width 100%) |
+ *   .tp-btn-lg (height 48, larger padding for auth / form bottom bar)
+ *
+ * 過去 LoginPage / SessionsPage / ConnectedAppsPage / DeveloperAppsPage /
+ * DeveloperAppNewPage / EmailVerifyPendingPage / ForgotPasswordPage /
+ * ResetPasswordPage 各自重複定義 (radius sm/md mixed, padding/min-height 不一)，
+ * 統一進此 single source of truth。 */
+.tp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--spacing-tap-min);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-callout);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 150ms, border-color 150ms, color 150ms;
+}
+.tp-btn:hover:not(:disabled) { background: var(--color-hover); }
+.tp-btn:focus-visible { outline: none; box-shadow: var(--shadow-ring); }
+.tp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.tp-btn-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
+}
+.tp-btn-primary:hover:not(:disabled) {
+  background: var(--color-accent-deep);
+  border-color: var(--color-accent-deep);
+  filter: brightness(0.95);
+}
+
+.tp-btn-secondary {
+  /* alias of default outline */
+  background: var(--color-background);
+}
+
+.tp-btn-destructive {
+  color: var(--color-destructive);
+  border-color: var(--color-destructive);
+}
+.tp-btn-destructive:hover:not(:disabled) {
+  background: var(--color-destructive-bg);
+}
+.tp-btn-destructive.is-filled,
+.tp-btn-primary.tp-btn-destructive {
+  background: var(--color-destructive);
+  color: var(--color-accent-foreground);
+}
+
+.tp-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.tp-btn-ghost:hover:not(:disabled) { background: var(--color-hover); }
+
+.tp-btn-block { width: 100%; }
+.tp-btn-lg {
+  min-height: 48px;
+  padding: 12px 20px;
+}
+
 
 /* ===== MapDayTab — bottom underline tab (V2 Terracotta Map page) ===== */
 .tp-map-day-tabs {

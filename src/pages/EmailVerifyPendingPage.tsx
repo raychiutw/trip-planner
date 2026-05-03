@@ -70,24 +70,8 @@ ${AUTH_LAYOUT_STYLES}
 }
 .tp-verify-banner svg { flex-shrink: 0; width: 20px; height: 20px; margin-top: 1px; }
 
-.tp-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 100%; gap: 8px;
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-family: inherit; font-size: var(--font-size-callout); font-weight: 600;
-  border: 1px solid var(--color-border);
-  background: var(--color-background); color: var(--color-foreground);
-  cursor: pointer; min-height: 48px;
-  transition: background 120ms;
-  margin-bottom: 12px;
-  text-decoration: none;
-}
-.tp-btn-primary {
-  background: var(--color-accent); color: #fff; border: none;
-}
-.tp-btn-primary:hover:not(:disabled) { filter: brightness(0.92); }
-.tp-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+/* .tp-btn family 移到 css/tokens.css 共用。EmailVerifyPending 用 .tp-btn-block .tp-btn-lg + margin-bottom:12 (per-button)。 */
+.tp-btn { margin-bottom: 12px; }
 
 .tp-verify-footer {
   text-align: center; margin-top: 16px;
