@@ -1,5 +1,5 @@
 import { logAudit, computeDiff } from '../../../_audit';
-import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../_auth';
+import { hasPermission, hasWritePermission, verifyEntryBelongsToTrip } from '../../../_auth';
 import { AppError } from '../../../_errors';
 import { validateEntryBody, detectGarbledText } from '../../../_validate';
 import { json, getAuth, parseJsonBody, parseIntParam, buildUpdateClause } from '../../../_utils';
@@ -10,6 +10,38 @@ import type { Env } from '../../../_types';
 // v2.10 Wave 1 (Item 3 move 跨天)：加 day_id — 須驗證 targetDay 屬於同 trip，
 // 不可改成不同 trip 的 day_id（防越權）。
 const ALLOWED_FIELDS = ['day_id', 'sort_order', 'time', 'title', 'description', 'source', 'note', 'travel_type', 'travel_desc', 'travel_min'] as const;
+
+/**
+ * GET /api/trips/:id/entries/:eid → { id, day_id, title } 回單一 entry meta。
+ *
+ * v2.19.13: EntryActionPage (move/copy) 載 entry 當前 day_id 用,本來在 prod
+ * 沒這 handler 直接 405,move/copy flow broken。讀權限走 hasPermission (viewer
+ * 也可看)。
+ */
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const auth = getAuth(context);
+  if (!auth) throw new AppError('AUTH_REQUIRED');
+
+  const { id, eid: eidStr } = context.params as { id: string; eid: string };
+  const eid = parseIntParam(eidStr);
+  if (!eid) throw new AppError('DATA_VALIDATION', 'ID 格式錯誤');
+  const db = context.env.DB;
+
+  const [hasPerm, belongsToTrip] = await Promise.all([
+    hasPermission(db, auth.email, id, auth.isAdmin),
+    verifyEntryBelongsToTrip(db, eid, id),
+  ]);
+  if (!hasPerm) throw new AppError('PERM_DENIED');
+  if (!belongsToTrip) throw new AppError('DATA_NOT_FOUND');
+
+  const row = await db
+    .prepare('SELECT id, day_id, title FROM trip_entries WHERE id = ?')
+    .bind(eid)
+    .first();
+  if (!row) throw new AppError('DATA_NOT_FOUND');
+
+  return json(row);
+};
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);

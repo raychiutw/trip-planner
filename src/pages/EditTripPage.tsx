@@ -573,7 +573,7 @@ export default function EditTripPage() {
               actions={titleBarActions}
             />
 
-            <form ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
+            <form id="edit-trip-form" ref={formRef} onSubmit={handleSubmit} className="tp-edit-page-form">
               <p className="tp-edit-page-sub">修改行程基本設定 + 目的地。修改日期請另建新行程。</p>
 
               {loading ? (

@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.13] - 2026-05-03
+
+### Fixed
+
+- **景點移動／複製不再卡「找不到這筆資料」** — 進 `/trip/:id/stop/:eid/move`
+  或 `/copy` 之前會 hit GET `/api/trips/:id/entries/:eid` 拿當前 day。real
+  endpoint 沒 export `onRequestGet` → CF Pages 回 405 → 頁面顯示 alert
+  整個 broken。補 `onRequestGet` (auth + 讀權限 + cross-trip 驗證 + SELECT
+  id, day_id, title)。move/copy flow 解鎖。
+- **編輯行程「儲存變更」 button (bottom) 終於會 submit** — `<form>` 沒設
+  `id="edit-trip-form"`,但下方 button 寫 `form="edit-trip-form"` → 對不到
+  → click 沒反應。1 行加 `id` 修。TitleBar 上方「儲存」 button 走 formRef
+  一直是 canonical workaround,沒受影響。
+
+### For contributors
+
+- 新增 4 個 integration tests cover entries/[eid] GET 200/401/cross-trip-404/not-found-404
+- 新增 e2e Flow 5 bottom button submit assertion (regression lock)
+- TODOS.md 新增 P2 entry: EntryActionPage / AddStopPage 多處讀 snake_case
+  (d.day_num / entryData.day_id 等),但 `json()` helper 自動 deepCamel,
+  page 拿到 undefined 導致 day picker 顯示「Day 空」 label。功能 work,純
+  cosmetic。下個 PR 改 page consumers 對齊 camelCase。
+
 ## [2.19.12] - 2026-05-03
 
 ### Fixed

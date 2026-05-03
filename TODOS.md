@@ -11,31 +11,32 @@
 
 ---
 
-## EntryActionPage — GET /api/trips/:id/entries/:eid 在 prod 不存在 (405)
+## Middleware service-token auth bypass — non-admin service token 繼承 ADMIN_EMAIL trip permissions
 
-**Found by**: /ship Codex review + testing specialist (cross-confirmed) on v2.19.12 PR (branch test/qa-flows-spec, 2026-05-03)
-**Symptom**: User goto `/trip/:id/stop/:eid/move` 或 `/copy` → EntryActionPage `useEffect` Promise.all 兩個 `apiFetch`，其中 GET `/api/trips/:id/entries/:eid` 在真 endpoint 沒 export `onRequestGet` (`functions/api/trips/[id]/entries/[eid].ts` 只有 PATCH/DELETE) → 405 → throw → `setLoadError('載入失敗')` → 頁面顯示「找不到這筆資料」alert，move/copy flow 整個 broken。
-**v2.19.12 PR**: 加 mock GET 讓 e2e Flow 7 過,但 mock hide bug。
+**Found by**: /ship Codex adversarial on v2.19.13 PR (branch fix/entry-action-get-405-and-edit-trip-form-id, 2026-05-03)
+**Symptom**: `functions/api/_middleware.ts:325` 對所有 client_credentials service token 設 `email = env.ADMIN_EMAIL`（無論 scopes 是否含 admin）。雖然 `isAdmin` 正確 gate 在 `scopes.includes('admin')`，但 email 變成 admin 的後，`hasPermission(db, auth.email, tripId, false)` SQL lookup 用 admin email 在 `trip_permissions` 表找 → 找到 → grant read。`hasWritePermission` 同樣破。
+**Real-world impact**: 影響所有用 `hasPermission` / `hasWritePermission` 的 endpoint（50+），含 trips/entries/days/docs/permissions 全部 PATCH/DELETE/GET。
+**現狀 mitigation**: CLAUDE.md 規定 service token 只能由 admin 透過 `scripts/provision-admin-cli-client.js` 一次性 provision。目前只有 1 個 admin CLI client（含 admin scope）。所以 *目前* 沒實際 exploit case。但只要任何 future 流程 issue 一個 non-admin scope 的 client_credentials token（e.g. 第三方 dashboard, integration），這個 token 立刻擁有 admin trips 的全 CRUD 權限。
 **Fix options**:
-1. 補 `onRequestGet` 到 `functions/api/trips/[id]/entries/[eid].ts` (preferred)
-2. 改 EntryActionPage 從 `/api/trips/:id/days?all=1` 的 `timeline.entries[]` 找 entry by id
-**Verify after fix**: 拿掉 `tests/e2e/api-mocks.js` 的 GET mock,Flow 7 仍應 PASS。
-**Est**: 0.5 hr CC
-**Priority**: P1 (move/copy flow 對 user 完全 broken)
+1. `_middleware.ts:325` 對非 admin scope service token 設 `email = ''`(empty string)，讓 hasPermission SQL lookup 找不到 row。最小改動。
+2. 加 `auth.isServiceToken` 旗標到 AuthData，`hasPermission` / `hasWritePermission` 對 isServiceToken=true 且 isAdmin=false 直接拒。更明確。
+3. Provision script 強制只能 issue `admin` scope token (去掉 non-admin issuance 路徑)。
+**Verify after fix**: 寫 integration test cover「non-admin service token + 別人的 trip → 403」。
+**Est**: 0.5-1 hr CC（含 audit + tests）
+**Priority**: **P0**（latent auth bypass，目前無 exploit case 因只有 1 個 admin client，但任何 non-admin client 一 issue 就破，且影響 50+ endpoints）
 
 ---
 
-## EditTripPage — bottom 「儲存變更」 button form="edit-trip-form" 無對應 form id
+## EntryActionPage / AddStopPage — API response snake/camel mismatch (Day 「空」 label)
 
-**Found by**: /qa session writing Flow 5 spec (2026-05-03)
-**Symptom**: `src/pages/EditTripPage.tsx:797` button `<button type="submit" form="edit-trip-form">` 但 form (L576) 沒設 `id="edit-trip-form"` → click bottom button 不觸發 form submit。
-**Workaround**: TitleBar 「儲存」 button 走 `formRef.current.requestSubmit()` 是 canonical path,user 通常用 TitleBar 不會踩到 bottom dead button。
-**Fix options**:
-1. 補 `id="edit-trip-form"` 到 form (1 line)
-2. 改 bottom button onClick={() => formRef.current?.requestSubmit()},拿掉 form 屬性
-3. 完全拆掉 bottom 重複 button (TitleBar 已是 canonical)
-**Est**: 5 min CC
-**Priority**: P3 (dead button 但有 canonical replacement,user 體感無 bug)
+**Found by**: /office-hours implementation of P1 onRequestGet (2026-05-03)
+**Symptom**: `functions/api/_utils.ts:json()` 對所有 response 跑 `deepCamel` snake→camel,但 EntryActionPage L265-273 + AddStopPage L156, L635 還在讀 `d.day_num / d.day_of_week / d.entry_count / entryData.day_id`。real API 出 `dayNum / dayOfWeek / entryCount / dayId`,page 讀到全 undefined → day picker label 顯示「Day 空 7/1」(沒 day number),current day 不 highlight,stop count 永遠 0。功能仍 work(date+click 還在),純 cosmetic degrade。
+**Fix**:
+1. EntryActionPage interfaces L58-67 + reads L265-273 改 camelCase
+2. AddStopPage L156 + L635 改 camelCase
+3. tests/e2e/api-mocks.js MOCK_DAYS_* 拿掉 dual-key,只保留 camelCase
+**Est**: 15 min CC
+**Priority**: P2 (cosmetic but visible — picker 看起來壞掉)
 
 ---
 
@@ -152,6 +153,24 @@
 ---
 
 ## Completed
+
+### EntryActionPage GET /api/trips/:id/entries/:eid 在 prod 不存在 (405)
+
+**Priority**: P1
+**Completed**: v2.19.13 (2026-05-03)
+**PR**: fix/entry-action-get-405-and-edit-trip-form-id
+
+`functions/api/trips/[id]/entries/[eid].ts` 補 `onRequestGet` (auth + hasPermission + verifyEntryBelongsToTrip + SELECT id, day_id, title)。EntryActionPage move/copy 不再 405 → 「找不到這筆資料」alert，flow 解鎖。Integration tests 加 4 個 cover 200/401/404x2。e2e Flow 7 仍 PASS (mock GET 對齊真 API contract)。
+
+**Discovered & deferred**: 同一個 page 還有 snake/camel mismatch (P2，看上方新 entry)。
+
+### EditTripPage bottom 「儲存變更」 button form="edit-trip-form" 無對應 form id
+
+**Priority**: P3
+**Completed**: v2.19.13 (2026-05-03)
+**PR**: fix/entry-action-get-405-and-edit-trip-form-id
+
+`src/pages/EditTripPage.tsx:576` form 加 `id="edit-trip-form"` (1 line)。bottom 「儲存變更」 button click 現在正確觸發 form submit。e2e Flow 5 加新 test lock bottom button → PUT。
 
 ### OIDC discovery routing 錯亂（V2-P5 critical bug）
 
