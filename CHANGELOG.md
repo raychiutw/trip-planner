@@ -25,6 +25,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 
 - **Tailscale funnel 三層架構文件** — `funnel :443 → Caddy :8080 → 後端 (tripline:6688 / openclaw:18789)`。Caddy header check 擋 funnel 來的 openclaw 流量（defense-in-depth），path strip 讓後端 service 不需知 `/tripline/api` 前綴。第二次 funnel→serve regression（昨日 openspec proposal 有提），下次 incident 可參考 memory `project_tailscale_funnel_caddy_architecture.md`。
 
+## [2.19.16] - 2026-05-03
+
+### Fixed
+
+- **Desktop sidebar 對齊 Terracotta mockup** — 主導覽固定為「聊天 / 行程 / 地圖 / 探索」，`/trip/:id/map` 與 stop map route 正確高亮「地圖」，行程子頁保留「行程」高亮。Sidebar icon、spacing、typography、inactive contrast、account chip 也收斂到 mockup 規格，並補 dark mode 固定 cocoa background，避免 token reversal 讓 sidebar 變亮。
+
+### For contributors
+
+- DESIGN.md 與 `terracotta-preview-v2.html` 同步更新 desktop IA：帳號不是 primary nav，已登入使用 bottom account chip，未登入才顯示 login action。
+- 新增/更新 DesktopSidebar unit + visual tests，鎖住 map active route、4-item desktop nav、guest login、light/dark sidebar color tokens。
+
 ## [2.19.15] - 2026-05-03
 
 ### Fixed
