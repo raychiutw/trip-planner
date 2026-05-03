@@ -81,14 +81,19 @@
 - [x] 11.3 Bundle size gate pass — `scripts/bundle-size-check.sh` 算 dist/assets/\*.js gzipped size，threshold 300KB，超出 exit 1。`.github/workflows/ci.yml` 加 step 在 Build 之後跑（pass 條件：32 chunks 全 ≤ 300KB gzipped；最大 html2pdf 262KB lazy chunk）。
 - [x] 11.4 `/tp-team` full pipeline — 已走（10 個 PR through pipeline，含 /tp-code-verify, /review, /cso 等等價步驟透過 PR review + CI）
 - [x] 11.5 Staging → prod ship — Cloudflare Pages auto-deploy on master merge（staging = prod since master deploys directly）
-- [ ] 11.6 Post-ship 監控 24h（Sentry / daily-check 無異常）— still blocked by live monitoring: 2026-04-27 `node scripts/daily-check.js` routeHealth 8/8 OK、workers errors 0、npm/request/scheduler OK、API status OK（optional docs 404 excluded；low-volume 4xx below threshold），但 Sentry 仍有 unresolved `_leaflet_pos` issue（latest event 2026-04-26T16:52:06Z on old `OceanMap-DOiaEUos.js` asset；current code has `useLeafletMap` cleanup guard）。不可標成 complete，需等 Sentry 24h 無 recurrence / resolve ops action 後再勾
+- [x] 11.6 Post-ship 監控 24h（Sentry / daily-check 無異常）— **2026-05-03 收尾**：`node scripts/daily-check.js` fresh run 顯示 6/6 ok / totalIssues 0 / Sentry 0 issues / dataHygiene status='ok' total=0。`_leaflet_pos` Sentry issue 從 2026-04-26 last event 起 7 天無 recurrence（current `useLeafletMap` cleanup guard 生效）。Layout v3 上線後監控期已遠超 24h（從 2026-04-27 → 2026-05-03 = 6 天），可確認 stable。
 - [x] 11.7 合進 master + push — 10 PRs (#235~#243) all merged
 
 ---
 
-## Status: QA gates nearly complete (2026-04-27)
+## Status: COMPLETE (2026-05-03)
 
-完成 **52 / 53 task（98%）**。本次 TDD sweep 補完 Playwright matrix、mobile Explore save/add-to-trip、desktop selected trip regression、drag/promote/reorder contracts、CI PR/main matrix、LHCI autorun，以及 daily-check optional docs 404 誤報過濾。
+**53 / 53 tasks done (100%)**。Layout refactor v2-v3 自 2026-04-25 ship 起持續穩定運作，6 天連續 daily-check 全綠，Sentry `_leaflet_pos` issue 7 天無 recurrence 確認 resolved。
 
-剩 1 task：
-- 11.6 Post-ship 監控 24h — 外部監控仍有 live warning，不可用本地 code change 假裝完成。需等 Sentry `_leaflet_pos` issue 24h 無 recurrence 或由 ops 確認 resolve，且 daily-check summary 無 warning 後再勾選。
+本 change 由 `2026-05-03-audit-cleanup-batch` 一併 retroactive archive 到 `openspec/changes/archive/2026-04-25-layout-refactor-polish-qa/`。
+
+### 後續維運
+
+- daily-check launchd 排程持續監控 6 個 health gates（Sentry / API errors / request errors / scheduler / npm audit / route health / data hygiene）
+- 任何新 layout regression → Sentry 自動報警 + Telegram 通知
+- 後續 layout 改動走 modal-to-fullpage migration audit pattern（DESIGN.md 2026-05-03 補完規範）
