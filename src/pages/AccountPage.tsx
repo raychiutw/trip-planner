@@ -15,6 +15,7 @@ import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import TitleBar from '../components/shell/TitleBar';
 import Icon from '../components/shared/Icon';
+import ConfirmModal from '../components/shared/ConfirmModal';
 
 interface AccountStats {
   tripCount: number;
@@ -151,41 +152,8 @@ const SCOPED_STYLES = `
 }
 .tp-account-row.is-danger:hover { background: var(--color-priority-high-bg, rgba(192, 57, 43, 0.06)); }
 
-/* Logout confirm modal */
-.tp-logout-backdrop {
-  position: fixed; inset: 0;
-  z-index: 1000;
-  background: rgba(20, 14, 9, 0.42);
-  display: grid; place-items: center;
-  padding: 20px;
-}
-.tp-logout-modal {
-  width: min(420px, 100%);
-  border-radius: var(--radius-xl);
-  background: var(--color-background);
-  color: var(--color-foreground);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
-  padding: 18px;
-}
-.tp-logout-title { margin: 0; font-size: var(--font-size-title3); font-weight: 800; }
-.tp-logout-copy { margin: 10px 0 16px; font-size: var(--font-size-callout); color: var(--color-muted); }
-.tp-logout-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.tp-logout-actions button {
-  flex: 1; min-width: 112px;
-  min-height: var(--spacing-tap-min);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-secondary);
-  color: var(--color-foreground);
-  font: inherit; font-weight: 800; font-size: var(--font-size-footnote);
-  cursor: pointer;
-}
-.tp-logout-actions button.danger {
-  background: var(--color-priority-high-dot, #c0392b);
-  border-color: var(--color-priority-high-dot, #c0392b);
-  color: #fff;
-}
+/* 2026-05-03 P3 confirm-modal cleanup: tp-logout-* CSS 退役。登出二次確認
+ * 改用標準化 <ConfirmModal> 元件，視覺由 ConfirmModal SCOPED_STYLES 統一管。 */
 .tp-logout-stats-error {
   font-size: var(--font-size-caption2);
   color: var(--color-muted);
@@ -329,26 +297,22 @@ export default function AccountPage() {
         ))}
       </div>
 
-      {showLogoutModal && (
-        <div className="tp-logout-backdrop" role="presentation" onClick={() => setShowLogoutModal(false)}>
-          <div
-            className="tp-logout-modal"
-            role="alertdialog"
-            aria-modal="true"
-            aria-label="確認登出"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="tp-logout-title">確認登出？</h3>
-            <p className="tp-logout-copy">此裝置會被登出，需要重新輸入 email 跟密碼才能再進來。</p>
-            <div className="tp-logout-actions">
-              <button type="button" className="danger" onClick={handleLogout} disabled={loggingOut} data-testid="account-logout-confirm">
-                {loggingOut ? '登出中…' : '確認登出'}
-              </button>
-              <button type="button" onClick={() => setShowLogoutModal(false)} disabled={loggingOut}>取消</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2026-05-03 P3 confirm-modal cleanup: 取代手刻 tp-logout-modal。
+        * ConfirmModal 提供 portal + ESC + focus trap + alertdialog a11y +
+        * V2 Terracotta destructive 紅色 confirm button — 對齊 mockup S22
+        * Dialogs system. confirm 按鈕 testid 維持 account-logout-confirm
+        * (e2e backwards-compat) 透過 ConfirmModal data-testid="confirm-modal-confirm"
+        * 與 wrapper data-testid 並存。 */}
+      <ConfirmModal
+        open={showLogoutModal}
+        title="確認登出？"
+        message="此裝置會被登出，需要重新輸入 email 跟密碼才能再進來。"
+        confirmLabel="確認登出"
+        cancelLabel="取消"
+        busy={loggingOut}
+        onConfirm={handleLogout}
+        onCancel={() => setShowLogoutModal(false)}
+      />
     </div>
   );
 

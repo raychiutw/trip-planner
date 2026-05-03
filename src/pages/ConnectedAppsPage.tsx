@@ -14,6 +14,7 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import PageHeader from '../components/shell/PageHeader';
 import ErrorBanner from '../components/shared/ErrorBanner';
+import ConfirmModal from '../components/shared/ConfirmModal';
 
 const SCOPED_STYLES = `
 .tp-settings-shell {
@@ -124,42 +125,9 @@ const SCOPED_STYLES = `
   margin: 0;
 }
 
-.tp-modal-backdrop {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(42, 31, 24, 0.45);
-  display: grid; place-items: center;
-  padding: 24px;
-}
-.tp-modal {
-  background: var(--color-background);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  max-width: 420px; width: 100%;
-}
-.tp-modal-header { padding: 24px 28px 12px; text-align: center; }
-.tp-modal-icon {
-  width: 56px; height: 56px;
-  border-radius: var(--radius-full);
-  background: var(--color-destructive-bg);
-  color: var(--color-destructive);
-  display: grid; place-items: center;
-  margin: 0 auto 12px;
-}
-.tp-modal-icon svg { width: 28px; height: 28px; }
-.tp-modal-header h3 {
-  font-size: var(--font-size-headline); font-weight: 800;
-  margin: 0 0 4px;
-}
-.tp-modal-body {
-  padding: 8px 28px 16px; text-align: center;
-  font-size: var(--font-size-subheadline); color: var(--color-muted);
-  line-height: 1.5;
-}
-.tp-modal-footer {
-  padding: 12px 24px 24px;
-  display: flex; gap: 8px;
-}
-.tp-modal-footer .tp-btn { flex: 1; min-height: 44px; }
+/* 2026-05-03 P3 confirm-modal cleanup: tp-modal-* CSS (backdrop / shell /
+ * header / icon-circle / body / footer) 已退役。撤銷確認 dialog 改用
+ * 標準化 <ConfirmModal>，視覺由 ConfirmModal SCOPED_STYLES 統一管。 */
 
 .tp-loading, .tp-error-banner {
   padding: 32px; text-align: center;
@@ -314,45 +282,23 @@ export default function ConnectedAppsPage() {
       </div>
       </div>
 
-      {revokingId && target && (
-        <div className="tp-modal-backdrop" role="dialog" aria-modal="true" data-testid="connected-apps-confirm-modal">
-          <div className="tp-modal">
-            <div className="tp-modal-header">
-              <div className="tp-modal-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                  <line x1="12" y1="9" x2="12" y2="13" />
-                  <line x1="12" y1="17" x2="12.01" y2="17" />
-                </svg>
-              </div>
-              <h3>撤銷 {target.app_name} 的存取權？</h3>
-            </div>
-            <div className="tp-modal-body">
-              撤銷後 {target.app_name} 將立即無法讀取或修改你的行程。<br />
-              未來想再使用必須重新授權。
-            </div>
-            <div className="tp-modal-footer">
-              <button
-                className="tp-btn"
-                onClick={() => setRevokingId(null)}
-                disabled={revokeBusy}
-                data-testid="connected-apps-cancel-revoke"
-              >
-                取消
-              </button>
-              <button
-                className="tp-btn tp-btn-destructive"
-                style={{ background: 'var(--color-destructive)', color: '#fff', borderColor: 'var(--color-destructive)' }}
-                onClick={() => confirmRevoke(revokingId)}
-                disabled={revokeBusy}
-                data-testid="connected-apps-confirm-revoke"
-              >
-                {revokeBusy ? '撤銷中…' : '確認撤銷'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2026-05-03 P3 confirm-modal cleanup: 取代手刻 tp-modal-backdrop。
+        * ConfirmModal 提供 portal + ESC + focus trap + alertdialog a11y +
+        * V2 Terracotta destructive 紅色 confirm button + body 自動 ESC dismiss。
+        * 對齊 mockup S22 Dialogs system. e2e/unit testid 從 connected-apps-*-revoke
+        * 改為 ConfirmModal 標準 testid (confirm-modal-confirm / -cancel)。 */}
+      <ConfirmModal
+        open={!!revokingId && !!target}
+        title={target ? `撤銷 ${target.app_name} 的存取權？` : ''}
+        message={target
+          ? `撤銷後 ${target.app_name} 將立即無法讀取或修改你的行程。未來想再使用必須重新授權。`
+          : ''}
+        confirmLabel="確認撤銷"
+        cancelLabel="取消"
+        busy={revokeBusy}
+        onConfirm={() => { if (revokingId) confirmRevoke(revokingId); }}
+        onCancel={() => setRevokingId(null)}
+      />
       </>}
     />
   );
