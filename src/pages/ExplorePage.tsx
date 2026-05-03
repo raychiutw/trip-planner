@@ -23,6 +23,7 @@ import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
 import InputModal from '../components/shared/InputModal';
+import TripPickerPopover from '../components/explore/TripPickerPopover';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -368,57 +369,10 @@ const SCOPED_STYLES = `
   border-color: var(--color-accent);
 }
 
-/* Trip picker modal */
-.tp-trip-picker-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: var(--z-modal, 60);
-  display: grid; place-items: center;
-  padding: 16px;
-}
-.tp-trip-picker {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: 24px;
-  width: 100%; max-width: 420px;
-  max-height: min(80vh, 560px);
-  display: flex; flex-direction: column; gap: 12px;
-}
-.tp-trip-picker h2 { font-size: var(--font-size-title3); font-weight: 800; margin: 0; }
-.tp-trip-picker p { color: var(--color-muted); font-size: var(--font-size-footnote); margin: 0; }
-.tp-trip-picker-list {
-  flex: 1; min-height: 0;
-  overflow-y: auto;
-  display: flex; flex-direction: column; gap: 6px;
-  margin-top: 4px;
-}
-.tp-trip-picker-row {
-  text-align: left;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
-  font: inherit; cursor: pointer;
-  display: flex; flex-direction: column; gap: 2px;
-}
-.tp-trip-picker-row:hover { border-color: var(--color-accent); background: var(--color-hover); }
-.tp-trip-picker-row .row-title { font-weight: 700; font-size: var(--font-size-callout); }
-.tp-trip-picker-row .row-meta { color: var(--color-muted); font-size: var(--font-size-footnote); }
-.tp-trip-picker-empty {
-  padding: 16px; text-align: center; color: var(--color-muted);
-  font-size: var(--font-size-footnote);
-}
-.tp-trip-picker-actions {
-  display: flex; justify-content: flex-end; gap: 8px;
-}
-.tp-trip-picker-cancel {
-  padding: 8px 16px; border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: transparent; color: var(--color-foreground);
-  font: inherit; font-weight: 600; cursor: pointer; min-height: 36px;
-}
+/* 2026-05-03 modal-to-fullpage migration audit: tp-trip-picker-* (backdrop +
+ * modal shell + actions + cancel button) CSS 已退場。chooser 改 anchored
+ * popover，rules 全搬到 src/components/explore/TripPickerPopover.tsx
+ * SCOPED_STYLES。row hover / empty state 規則一併隨 component 走。 */
 `;
 
 type Tab = 'search' | 'saved';
@@ -920,15 +874,30 @@ export default function ExplorePage() {
                   >
                     取消選擇
                   </button>
-                  <button
-                    type="button"
-                    className="explore-toolbar-btn"
-                    onClick={openTripPicker}
-                    disabled={deletingSelected}
-                    data-testid="explore-add-to-trip"
-                  >
-                    加入行程
-                  </button>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      className="explore-toolbar-btn"
+                      onClick={openTripPicker}
+                      disabled={deletingSelected}
+                      data-testid="explore-add-to-trip"
+                      data-trip-picker-trigger="true"
+                      aria-haspopup="dialog"
+                      aria-expanded={showTripPicker}
+                    >
+                      加入行程
+                    </button>
+                    {/* 2026-05-03 modal-to-fullpage migration audit: 原 modal-style
+                      * backdrop chooser 改 anchored popover (DESIGN.md 允許 popover
+                      * 範疇)。chooser 性質 + selection 立即 navigate，page 模式打斷 flow。 */}
+                    <TripPickerPopover
+                      open={showTripPicker}
+                      trips={trips}
+                      selectedCount={selectedSavedIds.size}
+                      onPick={pickTrip}
+                      onClose={() => setShowTripPicker(false)}
+                    />
+                  </div>
                   <button
                     type="button"
                     className="explore-toolbar-btn explore-toolbar-btn-destructive"
@@ -982,47 +951,10 @@ export default function ExplorePage() {
         )}
       </div>
 
-      {showTripPicker && (
-        <div
-          className="tp-trip-picker-backdrop"
-          role="presentation"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowTripPicker(false); }}
-          data-testid="explore-trip-picker"
-        >
-          <div className="tp-trip-picker" role="dialog" aria-modal="true" aria-labelledby="trip-picker-title">
-            <h2 id="trip-picker-title">選擇要加入的行程</h2>
-            <p>已選 {selectedSavedIds.size} 個 POI</p>
-            <div className="tp-trip-picker-list">
-              {trips === null && <div className="tp-trip-picker-empty">載入中…</div>}
-              {trips !== null && trips.length === 0 && (
-                <div className="tp-trip-picker-empty">你還沒有任何行程，先去新增一個。</div>
-              )}
-              {trips !== null && trips.map((t) => (
-                <button
-                  key={t.tripId}
-                  type="button"
-                  className="tp-trip-picker-row"
-                  onClick={() => pickTrip(t.tripId)}
-                  data-testid={`explore-trip-pick-${t.tripId}`}
-                >
-                  <span className="row-title">{t.title || t.name || t.tripId}</span>
-                  <span className="row-meta">{(t.countries ?? '').toUpperCase() || '—'}</span>
-                </button>
-              ))}
-            </div>
-            <div className="tp-trip-picker-actions">
-              <button
-                type="button"
-                className="tp-trip-picker-cancel"
-                onClick={() => setShowTripPicker(false)}
-                data-testid="explore-trip-picker-cancel"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 2026-05-03 modal-to-fullpage migration audit: trip picker modal block
+        * 整段移除 — chooser flow 改成 anchored popover (TripPickerPopover) 由
+        * toolbar「加入行程」 button 直接 anchor 出。原 backdrop / 取消 button /
+        * tp-trip-picker-* 大部分 CSS rules 隨 modal 退場。 */}
 
       {/* Region 自訂 input modal (取代 window.prompt) */}
       <InputModal
