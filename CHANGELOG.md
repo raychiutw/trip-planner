@@ -3,6 +3,50 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.10] - 2026-05-03
+
+### Changed
+
+- **AccountPage 登出二次確認 + ConnectedAppsPage 撤銷第三方 app** 兩個手刻
+  modal 改用標準化 `<ConfirmModal>` 元件 (P3 confirm-modal cleanup 收官)。
+  對齊 mockup S22 「Dialogs system — ConfirmModal / InputModal / Toast」
+  統一視覺 + a11y (alertdialog role / portal / ESC dismiss / focus trap /
+  V2 Terracotta destructive 紅色 confirm button)。
+- **Unit test testid** 從 page-specific (`account-logout-confirm` /
+  `connected-apps-confirm-modal` / `connected-apps-confirm-revoke` /
+  `connected-apps-cancel-revoke`) 改為 ConfirmModal 標準 testid
+  (`confirm-modal-confirm` / `confirm-modal-cancel` / `confirm-modal`)
+  — 跨 page 一致，未來新 confirm 流程同 selector pattern。
+
+### Removed
+
+- **AccountPage `tp-logout-*` CSS** (~40 LOC backdrop / shell / title /
+  copy / actions / danger button) — 整段隨手刻 modal 退役，由 ConfirmModal
+  SCOPED_STYLES 統一管。
+- **ConnectedAppsPage `tp-modal-*` CSS** (~40 LOC backdrop / shell /
+  header / icon-circle / body / footer) — 同上隨手刻 modal 退役。
+- **AccountPage 手刻 modal JSX block** (~20 LOC) + **ConnectedAppsPage
+  手刻 revoke confirm JSX block** (~38 LOC) — 各自 swap 為一次 `<ConfirmModal>`
+  call。淨減 ~110 LOC code。
+
+### Notes
+
+- **Developer apps secret reveal modal 不在 cleanup 範圍** — critical
+  attention UX 例外（一次性 server response state，跳頁 back/share/refresh
+  會丟資料）。DESIGN.md audit table 標記 ✅ 保留。
+
+### Migration progress
+
+DESIGN.md 2026-05-03 「Modal vs Full Page Decision」 audit 全部結束:
+- ✅ EditTripModal → /trip/:id/edit (PR #428, v2.19.4)
+- ✅ NewTripModal → /trips/new (PR #429, v2.19.5)
+- ✅ EntryActionPopover → /trip/:id/stop/:eid/(copy|move) (PR #430, v2.19.6)
+- ✅ AddStopModal → /trip/:id/add-stop?day=N (PR #431, v2.19.7)
+- ✅ DeveloperAppsPage create-app modal → /developer/apps/new (PR #432, v2.19.8)
+- ✅ ExplorePage trip-picker → anchored popover (PR #433, v2.19.9)
+- ✅ DESIGN.md audit + mockup banner sync (PR #434)
+- ✅ **P3 confirm-modal cleanup (本次, v2.19.10)** ← audit 收官
+
 ## [2.19.9] - 2026-05-03
 
 ### Changed
