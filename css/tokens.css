@@ -626,13 +626,9 @@ body.dark {
     .ocean-side-card-title { font-size: var(--font-size-caption2); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted); }
 
     /* Day section wrapper.
-     * scroll-margin-top must apply to the element that owns id="day{N}" —
-     * that's .ocean-hero (DaySection.tsx renders <div class="ocean-hero" id="day{N}"…>).
-     * Putting it on .ocean-day (the outer section) silently no-ops.
-     *
-     * Value covers stacked sticky chrome: TitleBar (64) + day-strip (~80)
-     * + breathing room (~16) + headroom = 200px. */
-    .ocean-day > .ocean-hero { scroll-margin-top: 200px; }
+     * scroll-margin-top 統一在 .ocean-hero 主規則 (line ~421) 設 110px desktop /
+     * 100px compact (TitleBar 64/56 + DayNav strip 37 + 9px breathing)。
+     * 不在這邊覆寫 — 之前用 200px 過頭近 100px 留白，現用實測精確值。 */
     .ocean-day + .ocean-day { margin-top: 24px; }
 
     /* Embedded TripPage inside TripsListPage's right sheet (desktop).
@@ -1062,9 +1058,7 @@ body.dark {
 /* ===== MapDayTab — bottom underline tab (V2 Terracotta Map page) ===== */
 .tp-map-day-tabs {
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--color-background) 92%, transparent);
-  backdrop-filter: blur(var(--blur-glass, 14px));
-  -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+  background: var(--color-background);
   border-top: 1px solid var(--color-border);
   display: flex;
   gap: 2px;
@@ -1263,9 +1257,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-background) 94%, transparent);
-    backdrop-filter: blur(var(--blur-glass, 14px));
-    -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+    background: var(--color-background);
   }
   .tp-titlebar-title {
     /* mockup-parity-qa-fixes: mockup .tp-page-titlebar-title:4060 規範 desktop 20/28/700 (was 24px) */
@@ -1296,9 +1288,7 @@ body.print-mode .tp-map-day-tabs--sticky { display: none; }
     justify-content: space-between;
     gap: 12px;
     border-bottom: 1px solid var(--color-border);
-    background: color-mix(in srgb, var(--color-background) 94%, transparent);
-    backdrop-filter: blur(var(--blur-glass, 14px));
-    -webkit-backdrop-filter: blur(var(--blur-glass, 14px));
+    background: var(--color-background);
   }
   .tp-titlebar-title {
     font-size: 18px; /* mockup compact 18px (was 22px) */
