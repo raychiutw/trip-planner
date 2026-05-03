@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
-import PageHeader from '../components/shell/PageHeader';
+import TitleBar from '../components/shell/TitleBar';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import ConfirmModal from '../components/shared/ConfirmModal';
 
@@ -24,7 +24,7 @@ const SCOPED_STYLES = `
 .tp-settings-inner {
   max-width: 720px; margin: 0 auto;
 }
-/* page heading 改用統一的 <PageHeader>（src/components/shell/PageHeader.tsx），舊 .tp-page-heading 已退役 */
+/* page heading 改用統一 <TitleBar> + .tp-page-eyebrow / .tp-page-meta inline (2026-05-03 PageHeader 退役)。 */
 
 .tp-section {
   background: var(--color-background);
@@ -216,12 +216,10 @@ export default function ConnectedAppsPage() {
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-settings-shell" data-testid="connected-apps-page">
+      <TitleBar title="已連結的應用" />
       <div className="tp-settings-inner">
-        <PageHeader
-          eyebrow="設定"
-          title="已連結的應用"
-          meta="這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。"
-        />
+        <p className="tp-page-eyebrow">設定</p>
+        <p className="tp-page-meta">這些 app 可以使用你的 Tripline 帳號。撤銷後該 app 將立即失去存取權。</p>
 
         {error && <ErrorBanner message={error} testId="connected-apps-error" />}
 

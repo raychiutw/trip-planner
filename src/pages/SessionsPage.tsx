@@ -17,7 +17,7 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
-import PageHeader from '../components/shell/PageHeader';
+import TitleBar from '../components/shell/TitleBar';
 import ThemeToggle from '../components/shared/ThemeToggle';
 import ErrorBanner from '../components/shared/ErrorBanner';
 import ConfirmModal from '../components/shared/ConfirmModal';
@@ -29,7 +29,7 @@ const SCOPED_STYLES = `
 }
 .tp-sessions-inner { max-width: 920px; margin: 0 auto; }
 
-/* page heading 改用統一的 <PageHeader>（src/components/shell/PageHeader.tsx），舊 .tp-page-heading 已退役 */
+/* page heading 改用統一 <TitleBar> + .tp-page-eyebrow / .tp-page-meta inline (2026-05-03 PageHeader 退役)。 */
 
 .tp-list {
   background: var(--color-background);
@@ -256,22 +256,29 @@ export default function SessionsPage() {
       main={<>
       <style>{SCOPED_STYLES}</style>
       <div className="tp-sessions-shell" data-testid="sessions-page">
+      <TitleBar
+        title="登入裝置"
+        actions={otherSessions.length > 0 && (
+          <button
+            type="button"
+            className="tp-titlebar-action"
+            onClick={() => setRevokeAllConfirmOpen(true)}
+            disabled={revokingAll}
+            aria-label="登出其他全部裝置"
+            data-testid="sessions-revoke-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span className="tp-titlebar-action-label">{revokingAll ? '登出中…' : '登出其他裝置'}</span>
+          </button>
+        )}
+      />
       <div className="tp-sessions-inner">
-        <PageHeader
-          eyebrow="帳號"
-          title="帳號"
-          meta={user?.email && <span data-testid="sessions-user-email">{user.email}</span>}
-          actions={otherSessions.length > 0 && (
-            <button
-              className="tp-btn tp-btn-destructive"
-              onClick={() => setRevokeAllConfirmOpen(true)}
-              disabled={revokingAll}
-              data-testid="sessions-revoke-all"
-            >
-              {revokingAll ? '登出中…' : '登出其他全部裝置'}
-            </button>
-          )}
-        />
+        <p className="tp-page-eyebrow">帳號</p>
+        {user?.email && <p className="tp-page-meta" data-testid="sessions-user-email">{user.email}</p>}
 
         {sessions === null && !error && (
           <div className="tp-loading" data-testid="sessions-loading">載入中…</div>

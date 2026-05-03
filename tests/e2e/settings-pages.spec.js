@@ -7,9 +7,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('Settings pages', () => {
-  test('sessions page loads inside the shared shell with PageHeader hero', async ({ page }) => {
+  test('sessions page loads inside the shared shell with TitleBar hero', async ({ page }) => {
     await page.goto('/settings/sessions');
-    await expect(page.getByRole('heading', { name: '帳號' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '登入裝置' })).toBeVisible();
     await expect(page.getByTestId('sessions-user-email')).toContainText('lean.lean@gmail.com');
     await expect(page.getByTestId('sessions-row-current')).toContainText('Chrome on macOS');
   });

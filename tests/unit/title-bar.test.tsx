@@ -1,12 +1,11 @@
 /**
- * TitleBar — V2 Terracotta page chrome primitive.
+ * TitleBar — V2 Terracotta page chrome primitive (2026-05-03 PageHeader 退役後唯一)。
  *
- * 取代 mockup 涵蓋 6 主功能頁的 PageHeader 用法（Chat / Trips / Trip detail /
- * Map / Explore / Account）。簡化 API：title / back / actions / backLabel，
- * 無 eyebrow / meta / variant / align（splash 子頁繼續用 PageHeader，見 design.md D1）。
+ * 用於所有 page (主功能 / settings 子頁 / form 全頁)。簡化 API:
+ * title / back / actions / backLabel，無 eyebrow / meta / variant / align。
+ * eyebrow + meta 改用 inline .tp-page-eyebrow / .tp-page-meta。
  *
- * 視覺對應：docs/design-sessions/terracotta-preview-v2.html sections 13-20
- *           docs/design-sessions/2026-04-27-unified-layout-plan.md TitleBar 表格
+ * 視覺對應: docs/design-sessions/terracotta-preview-v2.html Section 23 + sections 13-20
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
