@@ -18,26 +18,60 @@
 #   ./scripts/qa-email-flows.sh --send      # 真寄一封 reset email 到 admin (lean.lean@gmail.com)
 #   ./scripts/qa-email-flows.sh --base http://localhost:8788 --send  # 本機測 (需 .dev.vars 設 TRIPLINE_API_URL)
 #
+# Env overrides (CLI flag 永遠覆蓋 env):
+#   TRIPLINE_QA_BASE        — default https://trip-planner-dby.pages.dev
+#   TRIPLINE_QA_ADMIN_EMAIL — default lean.lean@gmail.com
+#
 # Exit codes: 0 = all pass, 1 = any fail
 
 set -euo pipefail
 
-BASE="https://trip-planner-dby.pages.dev"
+BASE="${TRIPLINE_QA_BASE:-https://trip-planner-dby.pages.dev}"
 SEND_REAL=0
-ADMIN_EMAIL="lean.lean@gmail.com"
+ADMIN_EMAIL="${TRIPLINE_QA_ADMIN_EMAIL:-lean.lean@gmail.com}"
 NONEXISTENT_EMAIL="qa-nonexistent-$(date +%s)@example.invalid"
+
+usage() {
+  sed -n '2,30p' "$0"
+  exit "${1:-0}"
+}
+
+require_arg() {
+  # require_arg <flag> <next-arg-count>
+  if [ "$2" -lt 2 ]; then
+    echo "ERROR: $1 needs a value" >&2
+    exit 2
+  fi
+}
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --send) SEND_REAL=1 ;;
-    --base) shift; BASE="$1" ;;
-    --admin-email) shift; ADMIN_EMAIL="$1" ;;
-    -h|--help)
-      sed -n '2,30p' "$0"; exit 0 ;;
-    *) echo "Unknown arg: $1" >&2; exit 2 ;;
+    --base) require_arg "$1" "$#"; shift; BASE="$1" ;;
+    --admin-email) require_arg "$1" "$#"; shift; ADMIN_EMAIL="$1" ;;
+    -h|--help) usage 0 ;;
+    *) echo "Unknown arg: $1" >&2; usage 2 ;;
   esac
   shift
 done
+
+# Validate BASE (https:// 或 http://localhost — 拒 file://, http://任意外部)
+if ! printf '%s' "$BASE" | grep -qE '^(https://|http://localhost(:[0-9]+)?(/|$))'; then
+  echo "ERROR: --base must be https:// or http://localhost[:port]; got: $BASE" >&2
+  exit 2
+fi
+
+# --send + 非 admin email = 拒。避免誤打到第三方 email (anti-enum 200 後 prod 會
+# 真的寄一封 reset 信過去,屬於 weaponized abuse)。
+if [ "$SEND_REAL" = "1" ] && [ "$ADMIN_EMAIL" != "lean.lean@gmail.com" ]; then
+  echo "ERROR: --send requires ADMIN_EMAIL == lean.lean@gmail.com (got: $ADMIN_EMAIL)" >&2
+  echo "  改用 dry-run mode (拿掉 --send) 才能對任意 email 試 anti-enum path" >&2
+  exit 2
+fi
+
+# 用 mktemp 避免並行跑時 /tmp/qa-email-resp.txt race
+RESP_FILE=$(mktemp /tmp/qa-email-resp.XXXXXXXX)
+trap 'rm -f "$RESP_FILE"' EXIT
 
 PASS=0
 FAIL=0
@@ -54,14 +88,14 @@ run_test() {
   local resp http_code body_part
 
   if [ -n "$body" ]; then
-    resp=$(curl -sS -o /tmp/qa-email-resp.txt -w "%{http_code}" -X "$method" \
+    resp=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" -X "$method" \
       -H 'Content-Type: application/json' \
       --data "$body" "$url" 2>&1) || true
   else
-    resp=$(curl -sS -o /tmp/qa-email-resp.txt -w "%{http_code}" -X "$method" "$url" 2>&1) || true
+    resp=$(curl -sS -o "$RESP_FILE" -w "%{http_code}" -X "$method" "$url" 2>&1) || true
   fi
   http_code="$resp"
-  body_part=$(cat /tmp/qa-email-resp.txt 2>/dev/null | head -c 300)
+  body_part=$(head -c 300 "$RESP_FILE" 2>/dev/null)
 
   printf '  → '
   if [ "$http_code" = "$expected" ]; then
@@ -85,10 +119,11 @@ echo
 
 cyan "[1/5] Health probe — /api/public-config 應 emailVerification=true"
 run_test "public-config emailVerification flag" 200 GET "/api/public-config"
-if grep -q '"emailVerification":true' /tmp/qa-email-resp.txt 2>/dev/null; then
+if grep -q '"emailVerification":true' "$RESP_FILE" 2>/dev/null; then
   printf '  → '; green '✓ emailVerification=true (TRIPLINE_API_URL 已設)'; echo
 else
   printf '  → '; red '✗ emailVerification=false — TRIPLINE_API_URL 缺/錯,後續測試會 500'; echo
+  FAIL=$((FAIL+1))
   RESULTS+=("FAIL emailVerification flag")
 fi
 echo
@@ -110,7 +145,7 @@ if [ $SEND_REAL -eq 1 ]; then
   echo "  ⚠️  將寄真信到 admin inbox; rate limit 3/h 注意。"
   run_test "forgot-password admin (REAL SEND)" 200 POST "/api/oauth/forgot-password" \
     "{\"email\":\"${ADMIN_EMAIL}\"}"
-  if grep -q '"ok":true' /tmp/qa-email-resp.txt 2>/dev/null; then
+  if grep -q '"ok":true' "$RESP_FILE" 2>/dev/null; then
     printf '  → '; green '✓ 200 ok=true; '; echo "請於 1-2 分鐘內檢查 ${ADMIN_EMAIL} inbox"
     echo '    若未到 → 看 mac mini scripts/logs/api-server.log + Telegram bot alert'
   fi
@@ -123,9 +158,11 @@ cyan "═══ Summary ═══"
 printf '  Pass: '; green "$PASS"; echo
 printf '  Fail: '; red "$FAIL"; echo
 echo
-for r in "${RESULTS[@]}"; do
-  echo "  $r"
-done
+if [ "${#RESULTS[@]}" -gt 0 ]; then
+  for r in "${RESULTS[@]}"; do
+    echo "  $r"
+  done
+fi
 echo
 
 if [ $FAIL -gt 0 ]; then exit 1; fi

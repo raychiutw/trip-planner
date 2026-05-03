@@ -139,10 +139,12 @@ test.describe('QA Flow 4 — 移除收藏', () => {
     await page.goto('/explore');
     await page.getByTestId('explore-search-input').fill('沖繩');
     await page.getByTestId('explore-search-submit').click();
-    await page.getByTestId('explore-save-btn-90001').click();
-
-    // 等收藏入庫 (POST 完成)
-    await page.waitForResponse((res) => /\/api\/saved-pois$/.test(res.url()) && res.request().method() === 'POST');
+    // Race-safe: 註冊 waitForResponse 在 click 之前 (Promise.all),避免 mock
+    // 同步 fulfill 在 await 之前完成導致永久 hang
+    await Promise.all([
+      page.waitForResponse((res) => /\/api\/saved-pois$/.test(res.url()) && res.request().method() === 'POST'),
+      page.getByTestId('explore-save-btn-90001').click(),
+    ]);
 
     // Step 2: 切到 saved view
     await page.getByTestId('explore-saved-titlebar').click();
