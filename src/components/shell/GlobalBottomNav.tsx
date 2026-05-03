@@ -1,8 +1,13 @@
 /**
  * GlobalBottomNav — 5-tab mobile bottom nav (mockup section 02 align).
  *
- * 5-tab global IA(聊天 / 行程 / 地圖 / 探索 / 帳號 | 登入),所有 page 共用,
+ * 5-tab global IA(聊天 / 行程 / 地圖 / 收藏 / 帳號 | 登入),所有 page 共用,
  * 包含 trip-scoped /trip/:id。
+ *
+ * v2.21.0 IA reshuffle: 4th slot 「探索」→「收藏」 (heart icon, asymmetric label vs
+ * DesktopSidebar「我的收藏」 — bottom-nav 緊密用 2-char + heart icon 補語意)。
+ * /explore 仍是 valid route，via /saved TitleBar action 進入；走到 /explore 時
+ * bottom nav 仍 highlight「收藏」(SAVED_ACTIVE_PATTERNS).
  *
  * Logged-in users「帳號」 entry → /account。
  */
@@ -11,7 +16,7 @@ import clsx from 'clsx';
 import Icon from '../shared/Icon';
 
 interface NavItem {
-  key: 'chat' | 'trips' | 'map' | 'explore' | 'login' | 'account';
+  key: 'chat' | 'trips' | 'map' | 'saved' | 'login' | 'account';
   label: string;
   href: string;
   icon: string;
@@ -26,12 +31,14 @@ interface NavItem {
 const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map$/];
 // 「行程」 tab — /trips + /trip/:id 都 active，但 /trip/:id/map 視為地圖不算行程
 const TRIPS_ACTIVE_PATTERNS = [/^\/trip\/[^/]+$/];
+// v2.21.0「收藏」 tab — /saved primary + /saved-pois/* 子路由 + /explore (secondary entry)
+const SAVED_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/saved-pois\//];
 
 const NAV_ITEMS_ANON: ReadonlyArray<NavItem> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
   { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
+  { key: 'saved',   label: '收藏', href: '/saved',   icon: 'heart',  matchPrefixes: ['/saved'], additionalActivePatterns: SAVED_ACTIVE_PATTERNS },
   { key: 'login',   label: '登入', href: '/login',   icon: 'user',   matchPrefixes: ['/login'] },
 ];
 
@@ -39,7 +46,7 @@ const NAV_ITEMS_AUTH: ReadonlyArray<NavItem> = [
   { key: 'chat',    label: '聊天', href: '/chat',    icon: 'chat',   matchPrefixes: ['/chat'] },
   { key: 'trips',   label: '行程', href: '/trips',   icon: 'home',   matchPrefixes: ['/trips'], additionalActivePatterns: TRIPS_ACTIVE_PATTERNS },
   { key: 'map',     label: '地圖', href: '/map',     icon: 'map',    matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'explore', label: '探索', href: '/explore', icon: 'search', matchPrefixes: ['/explore'] },
+  { key: 'saved',   label: '收藏', href: '/saved',   icon: 'heart',  matchPrefixes: ['/saved'], additionalActivePatterns: SAVED_ACTIVE_PATTERNS },
   // Section 2 (terracotta-account-hub-page) + E4：帳號 entry 改 /account hub
   { key: 'account', label: '帳號', href: '/account', icon: 'user',   matchPrefixes: ['/account', '/settings'] },
 ];

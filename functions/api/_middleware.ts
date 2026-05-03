@@ -351,8 +351,11 @@ async function handleAuth(
           let isServiceToken = false;
           if (tokenRow.user_id === null) {
             isServiceToken = true;
-            email = env.ADMIN_EMAIL ?? '';
             isAdmin = tokenRow.scopes.includes('admin');
+            // Non-admin service tokens MUST NOT inherit ADMIN_EMAIL: audit_log.changed_by
+            // would forge admin identity. Use service:${client_id} sentinel; admin-scope
+            // tokens keep ADMIN_EMAIL since their actions are admin-equivalent.
+            email = isAdmin ? (env.ADMIN_EMAIL ?? '') : `service:${tokenRow.client_id}`;
           } else {
             try {
               const userRow = await env.DB

@@ -151,4 +151,10 @@ export const RATE_LIMITS = {
   FORGOT_PASSWORD: { maxAttempts: 3, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
   // OAuth token endpoint per-client: 100 attempts / minute, 5min lockout
   OAUTH_TOKEN: { maxAttempts: 100, windowMs: 60 * 1000, lockoutMs: 5 * 60 * 1000 },
+  // Saved POI write per-user: 10/min window, locked until window end.
+  // 防 POI enumeration oracle attack — too-fast POSTs probe non-existent poiId 404s.
+  // lockoutMs must be > 0：當 newCount > maxAttempts 時 bumpRateLimit 才把 locked_until
+  // 設成 now+lockoutMs，下一次 checkRateLimit 才能 reject。lockoutMs=0 會 collide with
+  // bump 時間戳，rate limit 失效。set 60s 對齊 window 1 分鐘節奏。
+  SAVED_POIS_WRITE: { maxAttempts: 10, windowMs: 60 * 1000, lockoutMs: 60 * 1000 },
 } as const;

@@ -1,7 +1,7 @@
 /**
  * DesktopSidebar — visual reference: docs/design-sessions/mockup-trip-v2.html
  *
- * Mockup desktop primary nav: 聊天 / 行程 / 地圖 / 探索.
+ * Mockup desktop primary nav (v2.21.0): 聊天 / 行程 / 地圖 / 我的收藏.
  * Anonymous: adds 登入. Logged-in: account access lives in the bottom chip.
  * Settings (connected-apps / developer/apps / sessions) reach via direct URL,
  * not primary nav.
@@ -35,7 +35,7 @@ describe('DesktopSidebar — visible nav items (anonymous)', () => {
     expect(links[0].textContent).toContain('聊天');
     expect(links[1].textContent).toContain('行程');
     expect(links[2].textContent).toContain('地圖');
-    expect(links[3].textContent).toContain('探索');
+    expect(links[3].textContent).toContain('我的收藏');
     expect(links[4].textContent).toContain('登入');
   });
 
@@ -45,7 +45,7 @@ describe('DesktopSidebar — visible nav items (anonymous)', () => {
     expect(links[0].getAttribute('href')).toBe('/chat');
     expect(links[1].getAttribute('href')).toBe('/trips');
     expect(links[2].getAttribute('href')).toBe('/map');
-    expect(links[3].getAttribute('href')).toBe('/explore');
+    expect(links[3].getAttribute('href')).toBe('/saved');
     expect(links[4].getAttribute('href')).toBe('/login');
   });
 
@@ -63,7 +63,7 @@ describe('DesktopSidebar — visible nav items (anonymous)', () => {
     expect(links[0].textContent).toContain('聊天');
     expect(links[1].textContent).toContain('行程');
     expect(links[2].textContent).toContain('地圖');
-    expect(links[3].textContent).toContain('探索');
+    expect(links[3].textContent).toContain('我的收藏');
 
     const nav = container.querySelector('[aria-label="主要功能"]');
     expect(nav?.textContent).not.toContain('登入');
@@ -160,7 +160,13 @@ describe('DesktopSidebar — active state', () => {
     expect(links[0].className).toMatch(/is-active/);
   });
 
-  it('路由 /explore 時「探索」item active', () => {
+  it('路由 /saved 時「我的收藏」item active (v2.21.0)', () => {
+    const { getAllByRole } = renderSidebar({ path: '/saved' });
+    const links = getAllByRole('link');
+    expect(links[3].className).toMatch(/is-active/);
+  });
+
+  it('路由 /explore (secondary entry) 時「我的收藏」item 仍 active (MF11)', () => {
     const { getAllByRole } = renderSidebar({ path: '/explore' });
     const links = getAllByRole('link');
     expect(links[3].className).toMatch(/is-active/);
@@ -221,7 +227,7 @@ describe('DesktopSidebar — user chip', () => {
     expect(nav?.textContent).toContain('聊天');
     expect(nav?.textContent).toContain('行程');
     expect(nav?.textContent).toContain('地圖');
-    expect(nav?.textContent).toContain('探索');
+    expect(nav?.textContent).toContain('我的收藏');
   });
 
   it('未登入時 nav 顯示「登入」item', () => {

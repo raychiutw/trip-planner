@@ -93,7 +93,7 @@ test.describe('QA Flow 2 — 新增景點 (custom tab confirm)', () => {
 });
 
 test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
-  test('Explore 搜尋 → 點 heart → POST /api/saved-pois → 切到收藏 view 看到該 POI', async ({ page }) => {
+  test('Explore 搜尋 → 點 heart → POST /api/saved-pois → 切到 /saved 看到該 POI (v2.21.0)', async ({ page }) => {
     /** @type {string[]} */
     const savedPosts = [];
     page.on('request', (req) => {
@@ -117,16 +117,17 @@ test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
     // POST /api/saved-pois 應發生
     await expect.poll(() => savedPosts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
-    // 切到 saved view → count 1 個 + 看到 POI 名稱
+    // v2.21.0: TitleBar action 「收藏」 navigate to /saved (was: in-page tab toggle)
     await page.getByTestId('explore-saved-titlebar').click();
-    await expect(page.getByTestId('explore-saved')).toBeVisible();
-    await expect(page.getByTestId('explore-saved-count')).toContainText('1 個');
+    await page.waitForURL(/\/saved$/, { timeout: 5000 });
+    await expect(page.getByTestId('saved-page')).toBeVisible();
+    await expect(page.getByTestId('saved-count')).toContainText('1 個');
     await expect(page.getByText('沖繩美麗海水族館').first()).toBeVisible();
   });
 });
 
-test.describe('QA Flow 4 — 移除收藏', () => {
-  test('saved view 勾選 → 刪除 → ConfirmModal 確認 → DELETE /api/saved-pois/:id', async ({ page }) => {
+test.describe('QA Flow 4 — 移除收藏 (v2.21.0 SavedPoisPage)', () => {
+  test('/saved 勾選 → 刪除 → ConfirmModal 確認 → DELETE /api/saved-pois/:id', async ({ page }) => {
     /** @type {string[]} */
     const deletes = [];
     page.on('request', (req) => {
@@ -135,28 +136,27 @@ test.describe('QA Flow 4 — 移除收藏', () => {
       }
     });
 
-    // Step 1: 先加一個收藏 (走 setupApiMocks 的 POST /saved-pois 路徑)
+    // Step 1: 先 explore 加一個收藏
     await page.goto('/explore');
     await page.getByTestId('explore-search-input').fill('沖繩');
     await page.getByTestId('explore-search-submit').click();
-    // Race-safe: 註冊 waitForResponse 在 click 之前 (Promise.all),避免 mock
-    // 同步 fulfill 在 await 之前完成導致永久 hang
     await Promise.all([
       page.waitForResponse((res) => /\/api\/saved-pois$/.test(res.url()) && res.request().method() === 'POST'),
       page.getByTestId('explore-save-btn-90001').click(),
     ]);
 
-    // Step 2: 切到 saved view
+    // Step 2: v2.21.0 TitleBar action navigate to /saved (was in-page tab toggle)
     await page.getByTestId('explore-saved-titlebar').click();
-    await expect(page.getByTestId('explore-saved')).toBeVisible();
-    await expect(page.getByTestId('explore-saved-count')).toContainText('1 個');
+    await page.waitForURL(/\/saved$/, { timeout: 5000 });
+    await expect(page.getByTestId('saved-page')).toBeVisible();
+    await expect(page.getByTestId('saved-count')).toContainText('1 個');
 
-    // Step 3: 勾選第一張卡 (id 由 setupApiMocks 動態生成 ≥ 8001)
+    // Step 3: 勾選第一張卡
     const firstCheck = page.locator('[data-testid^="saved-check-"]').first();
     await firstCheck.check();
 
     // toolbar 出現「刪除」 button
-    const deleteBtn = page.getByTestId('explore-delete-selected');
+    const deleteBtn = page.getByTestId('saved-delete-selected');
     await expect(deleteBtn).toBeEnabled();
     await deleteBtn.click();
 
@@ -165,9 +165,9 @@ test.describe('QA Flow 4 — 移除收藏', () => {
     await expect(confirmModal).toBeVisible();
     await page.getByTestId('confirm-modal-confirm').click();
 
-    // 等 DELETE 發出 + 卡片消失
+    // 等 DELETE 發出 + empty CTA 出現
     await expect.poll(() => deletes.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
-    await expect(page.getByText('還沒有儲存任何 POI').first()).toBeVisible();
+    await expect(page.getByTestId('saved-empty')).toBeVisible();
   });
 });
 
@@ -284,7 +284,8 @@ test.describe('QA Flow 7 — 移動景點 (cross-day)', () => {
 
     await expect.poll(() => patches.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
     const body = JSON.parse(patches[0].body || '{}');
-    expect(body.day_id).toBe(2);
+    // v2.21.0 P2 fix: EntryActionPage PATCH body 改 camelCase (was day_id)
+    expect(body.dayId).toBe(2);
   });
 });
 

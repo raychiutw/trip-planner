@@ -3,6 +3,55 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.21.0] - 2026-05-04
+
+**IA reshuffle** — sidebar 第 4 項「探索」→「我的收藏」升 primary nav (saved POIs universal
+pool first-class entity)；「探索」降為 `/saved` 頁右上 ghost secondary action。同 PR 含 P0
+service-token defense-in-depth + 數項 v2.20.1 follow-up cleanup。
+
+### Breaking
+
+- **Primary IA**：DesktopSidebar / GlobalBottomNav 第 4 項從 `/explore` 改為 `/saved`。
+  - DesktopSidebar 用「我的收藏」label（text-led）；GlobalBottomNav 用「收藏」（5-tab 緊密 + heart icon）— asymmetric labels intentional。
+  - `/explore` URL 仍 valid 為 secondary entry，sidebar/bottom-nav active 仍 highlight「我的收藏 / 收藏」（via `additionalActivePatterns: [/^\/explore/]`）。
+- **ExplorePage tab pair retired**：原 search/saved dual-tab 拆 page，`tab` state machine + `aria-label="我的收藏"` 殘留 ARIA 全清。
+- **`audit_log.changed_by` 對 non-admin service token 改為 `service:${client_id}` sentinel**（取代 ADMIN_EMAIL forgery）。FE / 第三方 reader 不該假設 changed_by 永遠是 email — 可能是 `service:*` 或 sentinel。
+
+### Added
+
+- **`SavedPoisPage`** (`src/pages/SavedPoisPage.tsx`, NEW)：top-level `/saved` route，page-hero + 5-state matrix（loading skel / empty CTA / error PageErrorState / data / optimistic-delete）+ search-within-saved client-side filter + POI type filter chips + multi-select 批次刪除（ConfirmModal）+「目前在 N 個行程」usage badges + 「加入行程 →」link to `/saved-pois/:id/add-to-trip`。
+- **`ConflictModal`** (`src/components/shared/ConflictModal.tsx`, NEW)：role=alertdialog，三選 action「取消 / 取代既有 / 改插入到後面」。AddSavedPoiToTripPage 接收 server 409 `{conflictWith:{entryId,time,title,dayNum}}` 自動彈出。Server 409 detection logic deferred to v2.21.1（component ready）.
+- **POST `/api/saved-pois` rate limit** — D1-backed via `_rate_limit.ts`（migration 0035 `rate_limit_buckets` table），10/min per user，`SAVED_POIS_WRITE` config preset，admin scope bypass。Defends POI enumeration oracle attack。429 with Retry-After header。
+- **`functions/api/_auth.ts` defense-in-depth**：`hasPermission` / `hasWritePermission` 對 `auth.isServiceToken && !isAdmin` 早 return false，belt-and-suspenders 補強既有 `userId=null` guard（防未來 code path 誤用 `auth.email`）。
+- **AddSavedPoiToTripPage AppShell wrap**：4 個 render branch（loadError/loading/empty/main）統一包進 `AppShell sidebar={...} bottomNav={...}`。Sidebar 與 bottom-nav 對齊其他主功能頁面。
+- **`ApiError.payload` field**：preserves full response body for structured error payloads (e.g., 409 `conflictWith` object).
+- **Integration test `tests/api/middleware-service-token.integration.test.ts`** (NEW)：admin scope 通過 / non-admin scope 拒絕 / forged userId 仍拒絕（defense-in-depth）/ user session 仍 gate by trip_permissions / audit attribution sentinel 行為。
+- **Integration test `tests/api/saved-pois-rate-limit.integration.test.ts`** (NEW)：10/min 通過 + 11 次回 429 + Retry-After / admin 不受 rate limit 影響。
+- **Unit test `tests/unit/conflict-modal.test.tsx`** (NEW)：render + interaction + busy state。
+
+### Changed
+
+- **`functions/api/_middleware.ts`**：service-token email 從無條件 `env.ADMIN_EMAIL` 改為「admin scope 才繼承 ADMIN_EMAIL；non-admin scope 設 `service:${client_id}` sentinel」防 audit attribution forgery。
+- **DESIGN.md** — L181（Primary IA list）/L257-260（TitleBar route 範例）/L297-298（Primary nav 順序 + asymmetric label rule）/L316-318（bottom-nav active 表格）/L482（SavedPoisPage replace ExplorePage 收藏批次「刪除」）/L628（IA chrome list）— 三方同步。新增 v2.21.0 IA Reshuffle section（SavedPoisPage 規格 + 5-state matrix + ExplorePage 變動）。
+- **mockup `docs/design-sessions/terracotta-preview-v2.html`** — sidebar 第 4 項 icon `i-explore` → `i-heart` + label「探索」→「我的收藏」（多處 bottom-nav demo 同步）；section-lead descriptions + bottom-nav active aria-label + explore page section description 全標 v2.21.0 secondary entry。
+- **`ExplorePage`**（純探索化）：移除 tab state machine + ARIA cleanup + TitleBar 右上 action 改 navigate `/saved`（label「收藏」）+ trips picker / saved batch operations 全部搬到 SavedPoisPage。仍 mini-fetch `/saved-pois` 維 `savedKeySet` 正確 disable heart toggle（option A，無 SWR）。
+- **`AddSavedPoiToTripPage`**：`useNavigateBack` default `/explore` → `/saved`；server 409 → ConflictModal 三選 action 自動彈出（reuse submitInsert with override args）。
+- **EntryActionPage / AddStopPage snake/camel mismatch (P2 from TODOS)** — `day_num` / `day_of_week` / `entry_count` / `day_id` interfaces + reads 改 camelCase（`_utils.json` deepCamel 後 API 真實回 camelCase；DAY「空」label cosmetic regression 修復）。
+- **`tests/e2e/api-mocks.js`** — `MOCK_DAYS_*` 拿掉 dual-key snake_case 殘留（與真 API 一致）。
+
+### Deferred to v2.21.1+
+
+- Server-side 409 conflict detection logic for `POST /api/saved-pois/:id/add-to-trip`（ConflictModal component ready；server-side detection 需 day-overlap 規則設計）。
+- 7 schema-pin API tests rewrite (account-stats / permissions-post / saved-pois* / trips.integration / oauth-signup / invitations-list-revoke / saved-pois-schema) — inline SQL 仍 reference V2.20.0 dropped columns（`trips.owner`, `saved_pois.email`），需逐檔 seedTrip helper migration。Re-skip 為 stable CI baseline。
+- Page-transition cache (no React Query/SWR in codebase, `/explore`→`/saved` 短 loading flash acceptable)。
+- LLM Decision Rubric prompt-injection regression test fixtures。
+- /design-review parallel worktree run for visual mockup parity audit。
+
+### Reviewed
+
+- **/autoplan 3-phase**（CEO + Design + Eng）— Codex usage limit (reset 03:01) 期間以 Claude subagent-only 跑。CEO subagent severe push back on PR shape (D2=A user override, B/C 推薦) + Approach (D3=B user override A 推薦)。Design subagent 6.5/10 with 2 must-fix（page-hero + search retain）。Eng subagent 6/10 with 3 high-severity（rate limit infra D1 not KV, ConflictModal absent, AppShell LOC re-estimate）。**11 must-fix + 2 taste 全接 via D4=A**。
+- Decision Audit Trail 寫入 design doc `~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260504-022947.md`。
+
 ## [2.20.0] - 2026-05-04
 
 **Major upgrade** — V2 owner email→user_id 完整 cutover + trip_ideas 概念退場

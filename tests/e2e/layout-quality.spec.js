@@ -60,11 +60,12 @@ test.describe('Layout quality gates', () => {
     // saved 狀態用 aria-label「已儲存」 + .is-saved class，不是 text content
     await expect(page.getByTestId('explore-save-btn-90001')).toHaveClass(/is-saved/);
 
-    // E3: 拿掉「搜尋 / 我的收藏」 tab pair，改用 TitleBar action button toggle
+    // v2.21.0: TitleBar 「收藏」 action navigate to /saved (was in-page tab toggle)
     await page.getByTestId('explore-saved-titlebar').click();
+    await page.waitForURL(/\/saved$/, { timeout: 5000 });
     await expect(page.getByTestId('saved-card-8001')).toBeVisible();
     await page.getByTestId('saved-check-8001').check();
-    await page.getByTestId('explore-add-to-trip').click();
+    await page.getByTestId('saved-add-to-trip').click();
     await page.getByTestId(`explore-trip-pick-${TRIP_ID}`).click();
 
     await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${TRIP_ID}`));

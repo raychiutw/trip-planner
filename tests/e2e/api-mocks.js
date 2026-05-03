@@ -101,21 +101,21 @@ const MOCK_TRIP_META_BUSAN = {
 };
 
 /* ===== /api/trips/:id/days (days summary) =====
- * 真 API (functions/api/trips/[id]/days.ts) 回 day_num snake_case (+ day_of_week)。
- * 部分 page (TripPage Timeline) 在 mapRow 後用 dayNum camelCase。為相容兩派
- * consumer (EntryActionPage / AddStopPage 直接讀 day_num),mock dual-key。 */
+ * 真 API (functions/api/trips/[id]/days.ts) 經 _utils.json() deepCamel 後回 camelCase。
+ * v2.21.0 P2 fix: EntryActionPage / AddStopPage 已改讀 camelCase，mock 拿掉 dual-key
+ * snake_case 殘留，避免「正式正確 / 測試也正確但兩邊 schema 不一致」錯覺。 */
 const MOCK_DAYS_OKINAWA = [
-  { id: 1, dayNum: 1, day_num: 1, date: '2026-07-01', dayOfWeek: '三', day_of_week: '三', label: '那霸市區' },
-  { id: 2, dayNum: 2, day_num: 2, date: '2026-07-02', dayOfWeek: '四', day_of_week: '四', label: '美國村' },
-  { id: 3, dayNum: 3, day_num: 3, date: '2026-07-03', dayOfWeek: '五', day_of_week: '五', label: '海洋博公園' },
-  { id: 4, dayNum: 4, day_num: 4, date: '2026-07-04', dayOfWeek: '六', day_of_week: '六', label: '北谷・恩納' },
-  { id: 5, dayNum: 5, day_num: 5, date: '2026-07-05', dayOfWeek: '日', day_of_week: '日', label: '回程' },
+  { id: 1, dayNum: 1, date: '2026-07-01', dayOfWeek: '三', label: '那霸市區' },
+  { id: 2, dayNum: 2, date: '2026-07-02', dayOfWeek: '四', label: '美國村' },
+  { id: 3, dayNum: 3, date: '2026-07-03', dayOfWeek: '五', label: '海洋博公園' },
+  { id: 4, dayNum: 4, date: '2026-07-04', dayOfWeek: '六', label: '北谷・恩納' },
+  { id: 5, dayNum: 5, date: '2026-07-05', dayOfWeek: '日', label: '回程' },
 ];
 
 const MOCK_DAYS_BUSAN = [
-  { id: 1, dayNum: 1, day_num: 1, date: '2026-08-10', dayOfWeek: '一', day_of_week: '一', label: '海雲臺' },
-  { id: 2, dayNum: 2, day_num: 2, date: '2026-08-11', dayOfWeek: '二', day_of_week: '二', label: '南浦洞' },
-  { id: 3, dayNum: 3, day_num: 3, date: '2026-08-12', dayOfWeek: '三', day_of_week: '三', label: '回程' },
+  { id: 1, dayNum: 1, date: '2026-08-10', dayOfWeek: '一', label: '海雲臺' },
+  { id: 2, dayNum: 2, date: '2026-08-11', dayOfWeek: '二', label: '南浦洞' },
+  { id: 3, dayNum: 3, date: '2026-08-12', dayOfWeek: '三', label: '回程' },
 ];
 
 /* ===== /api/trips/okinawa-trip-2026-Ray/days/1 (full day) ===== */
@@ -716,7 +716,7 @@ async function setupApiMocks(page) {
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ id: eidNum, day_id: 1, title: `Mock entry ${eid}` }),
+          body: JSON.stringify({ id: eidNum, dayId: 1, title: `Mock entry ${eid}` }),
         });
       }
       if (method === 'PATCH' || method === 'DELETE') {
