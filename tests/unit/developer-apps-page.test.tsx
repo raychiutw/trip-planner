@@ -1,9 +1,14 @@
 /**
  * DeveloperAppsPage unit test — V2-P4
+ *
+ * 2026-05-03 modal-to-fullpage migration: create-app modal 已搬到
+ * src/pages/DeveloperAppNewPage.tsx (/developer/apps/new)。原 modal flow
+ * tests (open/cancel/submit/validation) 移至 developer-app-new-page.test.tsx。
+ * 這裡只 cover list page (loading / empty / render / error / navigate)。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 // Bypass V2 auth gate — page is rendered as if user is logged in
 vi.mock('../../src/hooks/useRequireAuth', () => ({
@@ -69,133 +74,43 @@ describe('DeveloperAppsPage', () => {
     expect(screen.getByText('ACTIVE')).toBeTruthy();
   });
 
-  it('「建立新應用」 button → opens create modal', async () => {
+  it('「建立新應用」 button → navigate 到 /developer/apps/new (不再 mount modal)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ apps: [] }), { status: 200 }),
     ));
+    vi.useRealTimers();
+
+    render(
+      <MemoryRouter initialEntries={['/developer/apps']}>
+        <Routes>
+          <Route path="/developer/apps" element={<DeveloperAppsPage />} />
+          <Route path="/developer/apps/new" element={<div data-testid="new-page-stub">NEW PAGE</div>} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.queryByTestId('dev-apps-empty')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('dev-apps-new'));
+    // 1) modal 不再 mount
+    expect(screen.queryByTestId('dev-apps-create-modal')).toBeNull();
+    // 2) navigate 到 /developer/apps/new (用 stub route 驗 URL transition)
+    await waitFor(() => expect(screen.queryByTestId('new-page-stub')).toBeTruthy());
+  });
+
+  it('listens to tp-developer-app-created event → refetch list', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [SAMPLE_APP] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
     vi.useRealTimers();
 
     render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.queryByTestId('dev-apps-empty')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('dev-apps-new'));
-    expect(screen.getByTestId('dev-apps-create-modal')).toBeTruthy();
-  });
 
-  it('Cancel modal → closes', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ apps: [] }), { status: 200 }),
-    ));
-    vi.useRealTimers();
+    // Simulate NewPage submit success → ack secret → dispatch event
+    window.dispatchEvent(new CustomEvent('tp-developer-app-created'));
 
-    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-new')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('dev-apps-new'));
-    fireEvent.click(screen.getByTestId('dev-apps-create-cancel'));
-    expect(screen.queryByTestId('dev-apps-create-modal')).toBeNull();
-  });
-
-  it('Submit valid form → POST + show secret modal with client_secret', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({
-          client_id: 'tp_new',
-          client_secret: 'tps_secret123',
-          app_name: 'New',
-          client_type: 'confidential',
-          status: 'pending_review',
-          redirect_uris: ['https://x.com/cb'],
-          allowed_scopes: ['openid'],
-        }),
-        { status: 201 },
-      ))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [] }), { status: 200 })); // refresh
-    vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
-    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-new')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('dev-apps-new'));
-
-    fireEvent.change(screen.getByTestId('dev-apps-name'), { target: { value: 'My App' } });
-    fireEvent.change(screen.getByTestId('dev-apps-uris'), { target: { value: 'https://example.com/cb' } });
-    fireEvent.click(screen.getByTestId('dev-apps-type-confidential'));
-    fireEvent.click(screen.getByTestId('dev-apps-create-submit'));
-
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-secret-modal')).toBeTruthy());
-    expect(screen.getByTestId('dev-apps-secret-client-id').textContent).toBe('tp_new');
-    expect(screen.getByTestId('dev-apps-secret-client-secret').textContent).toBe('tps_secret123');
-    expect(screen.getByText(/不會再顯示/)).toBeTruthy();
-  });
-
-  it('Public client → no client_secret in result modal', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [] }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({
-          client_id: 'tp_pub',
-          client_secret: null,
-          app_name: 'Public App',
-          client_type: 'public',
-          status: 'pending_review',
-          redirect_uris: ['https://x.com/cb'],
-          allowed_scopes: ['openid'],
-        }),
-        { status: 201 },
-      ))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ apps: [] }), { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
-    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-new')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('dev-apps-new'));
-
-    fireEvent.change(screen.getByTestId('dev-apps-name'), { target: { value: 'Pub' } });
-    fireEvent.change(screen.getByTestId('dev-apps-uris'), { target: { value: 'https://x.com/cb' } });
-    fireEvent.click(screen.getByTestId('dev-apps-create-submit'));
-
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-secret-modal')).toBeTruthy());
-    expect(screen.getByTestId('dev-apps-secret-client-id')).toBeTruthy();
-    expect(screen.queryByTestId('dev-apps-secret-client-secret')).toBeNull();
-  });
-
-  it('Validation: app_name too short → inline error, no POST', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      new Response(JSON.stringify({ apps: [] }), { status: 200 }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
-    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-new')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('dev-apps-new'));
-
-    fireEvent.change(screen.getByTestId('dev-apps-name'), { target: { value: 'X' } });
-    fireEvent.change(screen.getByTestId('dev-apps-uris'), { target: { value: 'https://x.com/cb' } });
-    fireEvent.click(screen.getByTestId('dev-apps-create-submit'));
-
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-create-error')).toBeTruthy());
-    expect(fetchMock).toHaveBeenCalledTimes(1); // only initial GET, no POST
-  });
-
-  it('Validation: empty redirect_uris → inline error, no POST', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      new Response(JSON.stringify({ apps: [] }), { status: 200 }),
-    );
-    vi.stubGlobal('fetch', fetchMock);
-    vi.useRealTimers();
-
-    render(<MemoryRouter><DeveloperAppsPage /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-new')).toBeTruthy());
-    fireEvent.click(screen.getByTestId('dev-apps-new'));
-
-    fireEvent.change(screen.getByTestId('dev-apps-name'), { target: { value: 'My App' } });
-    // leave redirect_uris empty
-    fireEvent.click(screen.getByTestId('dev-apps-create-submit'));
-
-    await waitFor(() => expect(screen.queryByTestId('dev-apps-create-error')).toBeTruthy());
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByTestId('dev-apps-row-tp_abc')).toBeTruthy());
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('GET fail → error banner', async () => {

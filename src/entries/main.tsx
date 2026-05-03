@@ -81,6 +81,7 @@ const ForgotPasswordPage = lazyWithRetry(() => import('../pages/ForgotPasswordPa
 const ResetPasswordPage = lazyWithRetry(() => import('../pages/ResetPasswordPage'));
 const ConnectedAppsPage = lazyWithRetry(() => import('../pages/ConnectedAppsPage'));
 const DeveloperAppsPage = lazyWithRetry(() => import('../pages/DeveloperAppsPage'));
+const DeveloperAppNewPage = lazyWithRetry(() => import('../pages/DeveloperAppNewPage'));
 const SessionsPage = lazyWithRetry(() => import('../pages/SessionsPage'));
 // Section 2 (terracotta-account-hub-page) — unified Account hub + sub-settings
 const AccountPage = lazyWithRetry(() => import('../pages/AccountPage'));
@@ -157,6 +158,8 @@ if (el) {
               <Route path="/auth/password/reset" element={<ResetPasswordPage />} />
               <Route path="/settings/connected-apps" element={<ConnectedAppsPage />} />
               <Route path="/developer/apps" element={<DeveloperAppsPage />} />
+              {/* 2026-05-03 modal-to-fullpage migration: create-app modal → /developer/apps/new */}
+              <Route path="/developer/apps/new" element={<DeveloperAppNewPage />} />
               <Route path="/settings/sessions" element={<SessionsPage />} />
               {/* Section 2 (terracotta-account-hub-page) routes */}
               <Route path="/account" element={<AccountPage />} />
