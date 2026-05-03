@@ -3,6 +3,59 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.8] - 2026-05-03
+
+### Changed
+
+- **「建立新應用」 modal 改全頁** — DeveloperAppsPage TitleBar「建立新應用」
+  按鈕從原本 mount `dev-apps-create-modal` portal 改為 navigate 到
+  `/developer/apps/new` 全頁。9+ field form (app_name + redirect_uris textarea
+  + client_type radio cards + 5 scope checkboxes) 是 DESIGN.md 2026-05-03
+  audit 剩餘最大違規。原 `dev-apps-create-modal` (P1) 含複雜 form 流程，
+  symbol-perfect 對齊「複雜 form 必走全頁」規則。
+- **Secret reveal 仍以 modal-style 呈現** — DESIGN.md 允許 confirm-style
+  modal 例外。secret 是 server response 一次性 client-side state，不適合
+  走 page (back / share / refresh 都會丟資料)。NewPage submit 成功後
+  在 page 內 mount secret modal block，「我已複製，繼續」 → navigate
+  `/developer/apps` + dispatch `tp-developer-app-created` event。
+- **DeveloperAppsPage 列表自動 refresh** — 監聽 `tp-developer-app-created`
+  event 觸發 `loadApps()`，user ack secret 後不需手動重整即可看到新 client_id。
+- **TitleBar 「建立」 action button** + bottom sticky bar「建立應用」按鈕
+  同步 disabled state，桌機 icon + 文字 (`.tp-titlebar-action.is-primary`)、
+  手機 icon-only — 對齊 DESIGN.md 2026-05-03 TitleBar 三段式規則。
+
+### Removed
+
+- **DeveloperAppsPage create-modal block** (~155 LOC form + radio + checkbox
+  + 取消/建立 footer) — 整段搬到 `src/pages/DeveloperAppNewPage.tsx`
+  (~440 LOC AppShell 全頁版)。
+- **DeveloperAppsPage tp-modal* / tp-form* / tp-radio* / tp-secret* /
+  tp-code-block* CSS** (~100 LOC) — 同步搬到 NewPage SCOPED_STYLES。
+- **`NewAppResult` interface + `SCOPE_OPTIONS` const + `creating` /
+  `createForm` / `submitting` / `createError` / `secretResult` 5 個
+  state hooks** — list page 不再持有 form state，全部搬到 NewPage。
+- **`developer-apps-page.test.tsx` modal-flow tests** (open/cancel/submit/
+  validation 共 5 條) — 改放 `developer-app-new-page.test.tsx` (新 9 條，
+  cover render + default scopes + submit success/public/4xx + validation
+  + secret ack navigate + cancel)。list page test 改驗 `dev-apps-new`
+  按鈕 navigate 到 `/developer/apps/new` (取代原本 open modal) +
+  `tp-developer-app-created` event refresh listener。
+
+### Migration progress
+
+DESIGN.md 2026-05-03 「Modal vs Full Page Decision」 規則第 5 個遷移 PR：
+- ✅ EditTripModal → /trip/:id/edit (PR #428, v2.19.4)
+- ✅ NewTripModal → /trips/new (PR #429, v2.19.5)
+- ✅ EntryActionPopover → /trip/:id/stop/:eid/(copy|move) (PR #430, v2.19.6)
+- ✅ AddStopModal → /trip/:id/add-stop?day=N (PR #431, v2.19.7)
+- ✅ **DeveloperAppsPage create-app modal → /developer/apps/new (本次, v2.19.8)**
+
+Audit 剩餘 (低優先 / 不同類型違規)：
+- ExplorePage trip-picker modal (chooser 性質, 評估 popover vs page)
+- AccountPage logout / ConnectedAppsPage revoke / DeveloperAppsPage
+  secret-display 改用標準化 ConfirmModal (P3 confirm-style cleanup, 不算
+  違規但風格不一致)
+
 ## [2.19.7] - 2026-05-03
 
 ### Changed
