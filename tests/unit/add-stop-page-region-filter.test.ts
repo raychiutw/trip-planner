@@ -51,13 +51,12 @@ describe('mockup-parity-qa-fixes AddStopPage region + filter + DAY format', () =
   it('deriveDayLabel 產生「DAY 03 · 7/31（五）」全大寫格式', () => {
     // 2026-05-03 modal-to-fullpage migration: TripPage 原本 inline 算 dayLabel
     // 傳給 modal，現在改在 AddStopPage 裡 fetch days 後 deriveDayLabel 算。
-    // 規則仍鎖 mockup section 14:6442 全大寫格式。weekday 從 API row.day_of_week
-    // 直接取（取代原 TripPage 用 ['日','一',...] hardcode 陣列推算）。
+    // v2.21.0 P2 fix: weekday 改讀 camelCase `day.dayOfWeek` (was day_of_week,
+    // 對齊 _utils.json deepCamel — 真 API 回 camelCase)。
     expect(SRC).toMatch(/function deriveDayLabel/);
     expect(SRC).toMatch(/DAY \$\{dayPad\}/);
     expect(SRC).toMatch(/padStart\(2,\s*'0'\)/);
-    expect(SRC).toMatch(/day\.day_of_week/);
-    // 全大寫格式 + 全形括號（template literal 跨行 + escape，避免 special-char regex）
+    expect(SRC).toMatch(/day\.dayOfWeek/);
     expect(SRC).toContain('DAY ${dayPad} · ${month}/${dom}');
     expect(SRC).toContain('（${weekdayChar}）');
   });

@@ -11,6 +11,7 @@
 import { AppError } from './_errors';
 import { requireAuth } from './_auth';
 import { json, parseJsonBody } from './_utils';
+import { checkRateLimit, bumpRateLimit, RATE_LIMITS } from './_rate_limit';
 import type { Env } from './_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
@@ -64,6 +65,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   const auth = requireAuth(context);
+  if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能收藏');
+
+  // Rate limit: 10/min per user (admin bypasses). Defends POI enumeration oracle —
+  // attacker POSTs many random poiId's; 404 vs 409 vs 201 reveals existence.
+  if (!auth.isAdmin) {
+    const bucket = `saved-pois-post:${auth.userId}`;
+    const check = await checkRateLimit(context.env.DB, bucket, RATE_LIMITS.SAVED_POIS_WRITE);
+    if (!check.ok) {
+      return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': String(check.retryAfter ?? 60),
+        },
+      });
+    }
+    await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.SAVED_POIS_WRITE);
+  }
+
   const body = await parseJsonBody<{ poiId?: number; note?: string }>(context.request);
 
   if (!body.poiId || !Number.isInteger(body.poiId) || body.poiId <= 0) {
@@ -76,7 +96,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .first();
   if (!poi) throw new AppError('DATA_NOT_FOUND', 'POI 不存在');
 
-  if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能收藏');
   try {
     const row = await context.env.DB
       .prepare(

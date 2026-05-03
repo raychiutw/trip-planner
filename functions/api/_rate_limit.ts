@@ -151,4 +151,7 @@ export const RATE_LIMITS = {
   FORGOT_PASSWORD: { maxAttempts: 3, windowMs: 60 * 60 * 1000, lockoutMs: 60 * 60 * 1000 },
   // OAuth token endpoint per-client: 100 attempts / minute, 5min lockout
   OAUTH_TOKEN: { maxAttempts: 100, windowMs: 60 * 1000, lockoutMs: 5 * 60 * 1000 },
+  // Saved POI write per-user: 10 attempts / minute, no lockout (just deny burst)
+  // 防 POI enumeration oracle attack — too-fast POSTs probe non-existent poiId 404s.
+  SAVED_POIS_WRITE: { maxAttempts: 10, windowMs: 60 * 1000, lockoutMs: 0 },
 } as const;

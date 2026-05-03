@@ -178,7 +178,7 @@
 ## Layout
 
 ### Unified App Shell
-- **Primary IA:** 聊天 / 行程 / 地圖 / 探索 / 帳號。Desktop sidebar 將帳號呈現在底部 account chip；compact bottom nav 保留帳號 tab；匿名狀態顯示登入入口。
+- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 / 帳號。Desktop sidebar 將帳號呈現在底部 account chip；compact bottom nav 保留帳號 tab；匿名狀態顯示登入入口。「探索」自 v2.21.0 起降為 `/saved` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。
 - **Desktop shell:** sticky left sidebar + sticky page titlebar + standard centered content column。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。底部導航向下捲動隱藏、向上捲動顯示。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。
@@ -254,10 +254,10 @@
 - Title ellipsis (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis`)
 
 **結構**
-- 主功能 root (`/chat` `/trips` `/map` `/explore` `/account`):
+- 主功能 root (`/chat` `/trips` `/map` `/saved` `/account`):
   - 左側: 無 back button
-  - 中間: page identity (「聊天」/「行程」/「地圖」/「探索」/「帳號」)
-  - 右側: optional action (e.g.「+ 新增行程」/「我的收藏」)
+  - 中間: page identity (「聊天」/「行程」/「地圖」/「我的收藏」/「帳號」)
+  - 右側: optional action (e.g.「+ 新增行程」/「探索」)。`/saved` 頁右上 = `.tp-titlebar-action` ghost variant 「探索」（icon: search）→ navigate `/explore`。
 - 第二層 (form 全頁 / settings 子頁 / collab):
   - 左側: 36×36 chevron-left back button + `aria-label`
   - 中間: page identity (「編輯行程」/「加景點」/「共編設定」)
@@ -294,7 +294,8 @@
 
 ### Desktop Sidebar（`DesktopSidebar`）
 - 只在 desktop mode 顯示。
-- Primary nav 順序固定：聊天 / 行程 / 地圖 / 探索。登入只在匿名狀態顯示；已登入帳號入口固定在底部 account chip，避免 desktop 同時出現帳號 nav + account chip。
+- Primary nav 順序固定：聊天 / 行程 / 地圖 / 我的收藏。登入只在匿名狀態顯示；已登入帳號入口固定在底部 account chip，避免 desktop 同時出現帳號 nav + account chip。
+- DesktopSidebar label 用「我的收藏」（text-led，noun signals ownership）；GlobalBottomNav 用「收藏」（5-tab 緊密，icon 補語意 — heart）。Asymmetric labels intentional, sidebar/bottom-nav 各自最佳。
 - Auth loading 不預設成匿名狀態：userinfo 尚未 resolve 時，sidebar 維持 4 個 primary nav，底部只保留 neutral loading chip；不得先顯示「登入」「未登入」或 account chip 後再切換。
 - 背景固定深棕：light `#2A1F18`；dark `#0F0B08`。不得使用 `--color-foreground` 當背景，因為 dark mode 會反轉成淺色文字 token。
 - Active state 用 terracotta accent；其餘用 cream `rgba(255,251,245,.78)`。
@@ -313,7 +314,8 @@
 | `/chat`、聊天明細 | 聊天 |
 | `/trips`、行程列表、行程明細、新增行程 | 行程 |
 | `/map`、行程地圖、全域地圖 | 地圖 |
-| `/explore`、探索結果、POI 詳細 | 探索 |
+| `/saved`、`/saved-pois/:id/add-to-trip` | 收藏 |
+| `/explore`、探索結果、POI 詳細 | 收藏（active 同步「我的收藏」，via `additionalActivePatterns: [/^\/explore/]`）|
 | `/account`、connected apps、developer apps | 帳號 |
 
 ### Day Nav (Trip Detail + Map page 共用視覺)
@@ -479,8 +481,9 @@ Trip detail 與 Map page 共用同一個 underline tab primitive — `<MapDayTab
 ### Examples (現役)
 
 - TripsListPage card kebab「刪除」 → ConfirmModal
-- ExplorePage 收藏批次「刪除」 → ConfirmModal
+- SavedPoisPage 收藏批次「刪除」 → ConfirmModal
 - ExplorePage region pill「+ 自訂地區…」 → InputModal
+- AddSavedPoiToTripPage 同 day 同時段衝突 → ConflictModal（new component, v2.21.0）
 - SessionsPage「登出其他全部裝置」 → ConfirmModal
 - CollabPanel 移除成員 / 撤銷邀請 → ConfirmModal
 - TimelineRail 刪除景點 → ConfirmModal
@@ -615,17 +618,48 @@ email → user_id 完整切換。
 - **dual-write transition**：所有 write path 同寫 email + user_id 雙欄位（trips.owner + owner_user_id, saved_pois.email + user_id, trip_permissions.email + user_id）。
 - **Phase 2 cutover (migration 0047)**：drop `saved_pois.email` / `trip_permissions.email` / `trips.owner`（email column）+ UNIQUE constraint 改 `(user_id, poi_id)` / `(user_id, trip_id)`。runbook 強制 manual gate 確認 prod soak 後執行。
 
+### v2.21.0 IA Reshuffle — SavedPoisPage 升 primary nav
+
+「收藏」自 v2.21.0 升為第 4 個 primary nav slot（取代「探索」）。`SavedPoisPage` 為新建獨立 route `/saved`，從 ExplorePage L887-1011 saved-view section 抽出且擴展為 top-level 頁面。
+
+**SavedPoisPage 規格**
+
+| Slot | Content |
+|------|---------|
+| TitleBar | 中=「我的收藏」, 右=「探索」`.tp-titlebar-action` ghost variant (icon: search) → navigate `/explore` |
+| Hero | `tp-page-eyebrow` + count meta「N 個收藏 POI」+ 篩選 chip row（region pill / type filter, reuse ExplorePage L470-885 邏輯）+ search-within-saved (`<input type="search">` client-side filter，必保留 — 200+ POIs 不能丟搜尋) |
+| Body | saved POI grid + 「目前在 N 個行程」usage badges + 「加入行程 →」link to `/saved-pois/:id/add-to-trip` |
+
+**5-state matrix（必涵蓋）**
+
+| State | UI |
+|-------|----|
+| loading | `tp-skel` 3-card grid skeleton |
+| empty | `tp-empty-cta` block + 「還沒有收藏。去探索找景點」 CTA → `/explore` |
+| error | `PageErrorState` + retry button (fetch /api/saved-pois 失敗) |
+| data | grid + usage badges |
+| optimistic-delete | 刪除中 card opacity 0.5 + 「移除中…」label |
+| partial | grid render + 隱藏 usage badges silently（trips fetch 失敗）|
+
+**ExplorePage 變動（v2.21.0 同 PR）**
+
+- 移除 tab state machine 與 `aria-label="我的收藏"` 殘留 ARIA（screen reader 不再 announce 已不存在的 tab）
+- 純探索化（POI search + region pills + 「儲存到收藏」 heart toggle 仍在）
+- 仍 mini-fetch `/saved-pois` 取 `savedKeySet` 維 heart-disable 正確性（無 React Query/SWR，state 各頁獨立）
+- TitleBar 右側 action 改 navigate `/saved`
+
 ### Retired / 拔除
 
 - ❌ `trip_ideas` table + `IdeasTabContent.tsx` + `?sheet=ideas` URL pattern
 - ❌ tp-request `trip-edit` vs `trip-plan` mode 分流（HuiYun 誤判事件 → 改為依語意行動）
 - ❌ tp-request 「修改 vs 諮詢」 intent 分流（同上）
+- ❌ ExplorePage 內 saved/search dual-tab（v2.21.0 拆 page，saved 獨立路由）
 - ✅ `?sheet=ideas` legacy URL graceful degrade to default tab（不爆）
 
 ## Design Principles（開發時參考）
 1. **DESIGN.md + design-sessions 是單一來源** — `tokens.css` 是實作；若文件和程式衝突，先更新文件再實作。
 2. **Terracotta 單一 accent** — 只有 sight/food、active state、CTA 用 terracotta。其他一律 ink，避免七彩稀釋重點。
-3. **Chrome 一致優先** — 聊天、行程、地圖、探索、帳號的 sidebar / bottom nav / titlebar 行為要一致；desktop 帳號以 account chip 呈現，compact 帳號以 bottom-nav tab 呈現；地圖只例外在內容 full bleed。
+3. **Chrome 一致優先** — 聊天、行程、地圖、收藏、帳號的 sidebar / bottom nav / titlebar 行為要一致；desktop 帳號以 account chip 呈現，compact 帳號以 bottom-nav tab 呈現；地圖只例外在內容 full bleed。
 4. **內容寬度一致** — 一般頁面統一 `1040px` content max width；局部表單可在內部限寬，但外層節奏一致。
 5. **行程明細單一來源** — Desktop / compact 共用同一份內容樹與狀態來源，只讓 layout responsive。
 6. **Bottom nav 是主功能定位** — 子頁 active item 依所屬主功能，不把 bottom nav 當 breadcrumb。

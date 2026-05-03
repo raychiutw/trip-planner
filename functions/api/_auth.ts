@@ -33,6 +33,7 @@ export async function hasPermission(
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
+  if (auth.isServiceToken) return false;
   if (!auth.userId) return false;
   const row = await db
     .prepare('SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ?')
@@ -58,6 +59,7 @@ export async function hasWritePermission(
   isAdmin: boolean,
 ): Promise<boolean> {
   if (isAdmin) return true;
+  if (auth.isServiceToken) return false;
   if (!auth.userId) return false;
   const row = await db
     .prepare("SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ? AND role != 'viewer'")

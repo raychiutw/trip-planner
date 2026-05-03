@@ -55,16 +55,18 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 
 interface DaysApiRow {
   id: number;
-  day_num: number;
+  // _utils.json() 套 deepCamel — API 真實回 camelCase。下游 Day 「空 7/1」label
+  // 是因為這裡讀 snake_case 都 undefined → fall through。v2.21.0 修為 camelCase。
+  dayNum: number;
   date?: string | null;
-  day_of_week?: string | null;
+  dayOfWeek?: string | null;
   label?: string | null;
-  entry_count?: number | null;
+  entryCount?: number | null;
 }
 
 interface EntryApiRow {
   id?: number;
-  day_id?: number | null;
+  dayId?: number | null;
   title?: string | null;
 }
 
@@ -262,15 +264,15 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
         if (cancelled) return;
 
         const dayOptions: DayOption[] = (daysData ?? []).map((d) => ({
-          dayNum: d.day_num,
+          dayNum: d.dayNum,
           dayId: d.id,
-          label: `${d.date ?? ''}${d.day_of_week ? `（${d.day_of_week}）` : ''}`,
-          stopCount: d.entry_count ?? 0,
-          swatchColor: dayColor(d.day_num),
+          label: `${d.date ?? ''}${d.dayOfWeek ? `（${d.dayOfWeek}）` : ''}`,
+          stopCount: d.entryCount ?? 0,
+          swatchColor: dayColor(d.dayNum),
         }));
 
         setDays(dayOptions);
-        setCurrentDayId(entryData?.day_id ?? null);
+        setCurrentDayId(entryData?.dayId ?? null);
       } catch (err) {
         if (cancelled) return;
         setLoadError(err instanceof Error ? err.message : '載入失敗');
@@ -293,7 +295,7 @@ export default function EntryActionPage({ action }: EntryActionPageProps) {
     const method = action === 'copy' ? 'POST' : 'PATCH';
     const body = action === 'copy'
       ? JSON.stringify({ targetDayId: selectedDayId })
-      : JSON.stringify({ day_id: selectedDayId });
+      : JSON.stringify({ dayId: selectedDayId });
 
     try {
       const res = await apiFetchRaw(path, {

@@ -5102,14 +5102,14 @@
 <!-- ===== Section 01 — Desktop Sidebar standalone ===== -->
 <section class="tp-section">
   <h2 class="tp-section-title">Desktop Sidebar</h2>
-  <p class="tp-section-lead">Desktop ≥1024px 顯示。Primary nav 順序固定：聊天 / 行程 / 地圖 / 探索；帳號固定在底部 account chip，匿名狀態才額外顯示「登入」。Active state 用 terracotta accent 實心；其餘 cream ink。寬度固定 240px，sticky 不收合。</p>
+  <p class="tp-section-lead">Desktop ≥1024px 顯示。Primary nav 順序固定：聊天 / 行程 / 地圖 / 我的收藏（v2.21.0 起，原「探索」降為 `/saved` 頁右上 secondary action ghost）；帳號固定在底部 account chip，匿名狀態才額外顯示「登入」。Active state 用 terracotta accent 實心；其餘 cream ink。寬度固定 240px，sticky 不收合。Sidebar label 用「我的收藏」（text-led，noun signals ownership）；GlobalBottomNav 用「收藏」（5-tab 緊密，icon 補語意）。</p>
   <div class="tp-sidebar-row">
     <aside class="tp-sidebar-standalone" aria-label="Desktop sidebar example">
       <div class="tp-sidebar-brand">Tripline<span class="tp-accent-dot">.</span></div>
       <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
       <div class="tp-sidebar-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
       <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-      <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-sidebar-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
       <div class="tp-sidebar-divider"></div>
       <div class="tp-sidebar-account">
         <div class="tp-sidebar-avatar">張</div>
@@ -5142,7 +5142,8 @@
           <tr><td><code>/chat</code>、聊天明細</td><td>聊天</td></tr>
           <tr><td><code>/trips</code>、行程列表、明細、新增</td><td>行程</td></tr>
           <tr><td><code>/map</code>、<code>/trip/:id/map</code>、<code>/trip/:id/stop/:eid/map</code></td><td>地圖</td></tr>
-          <tr><td><code>/explore</code>、探索結果、POI 詳細</td><td>探索</td></tr>
+          <tr><td><code>/saved</code>、`/saved-pois/:id/add-to-trip`</td><td>收藏</td></tr>
+          <tr><td><code>/explore</code>、探索結果、POI 詳細（v2.21.0 起為 secondary entry）</td><td>收藏（active 同步「我的收藏」）</td></tr>
           <tr><td><code>/account</code>、connected/developer apps</td><td>底部 account chip</td></tr>
         </tbody>
       </table>
@@ -5153,7 +5154,7 @@
 <!-- ===== Section 02 — Compact Bottom Nav standalone ===== -->
 <section class="tp-section">
   <h2 class="tp-section-title">Compact Bottom Nav</h2>
-  <p class="tp-section-lead">Compact (<code>&lt;1024px</code> 或 <code>pointer:coarse</code>) 顯示。同 sidebar IA：聊天 / 行程 / 地圖 / 探索 / 帳號。向下捲動隱藏、向上捲動顯示，所有頁面共用同一套 scroll direction state。</p>
+  <p class="tp-section-lead">Compact (<code>&lt;1024px</code> 或 <code>pointer:coarse</code>) 顯示。同 sidebar IA：聊天 / 行程 / 地圖 / 收藏 / 帳號（v2.21.0 起，原「探索」降為 `/saved` 頁右上 secondary action）。向下捲動隱藏、向上捲動顯示，所有頁面共用同一套 scroll direction state。</p>
   <div class="tp-bnav-row">
     <div class="tp-bnav-stage">
       <span class="tp-bnav-state-label">5 個 active state（每 row 一個 tab active）</span>
@@ -5161,35 +5162,35 @@
         <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
       </nav>
       <nav class="tp-bnav-frame" aria-label="Bottom nav — 行程 active">
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
         <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
       </nav>
       <nav class="tp-bnav-frame" aria-label="Bottom nav — 地圖 active">
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
         <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
       </nav>
-      <nav class="tp-bnav-frame" aria-label="Bottom nav — 探索 active">
+      <nav class="tp-bnav-frame" aria-label="Bottom nav — 收藏 active">
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-        <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+        <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
       </nav>
       <nav class="tp-bnav-frame" aria-label="Bottom nav — 帳號 active">
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
         <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+        <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
         <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
       </nav>
 
@@ -5200,7 +5201,7 @@
             <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
             <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
             <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-            <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+            <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
             <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
           </nav>
           <div class="tp-bnav-scroll-caption">向上捲 · 顯示</div>
@@ -5210,7 +5211,7 @@
             <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
             <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
             <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-            <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+            <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
             <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
           </nav>
           <div class="tp-bnav-scroll-caption">向下捲 · 隱藏</div>
@@ -7158,7 +7159,7 @@
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
       <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
     </nav>
   </div>
@@ -7279,11 +7280,11 @@
 <!-- ===== Section 18 — Explore Page ===== -->
 <section class="tp-section">
   <h2 class="tp-section-title">Explore Page</h2>
-  <p class="tp-section-lead">「探索」主功能頁標題 + POI grid mockup。桌機 grid 3-col、手機 2-col。Card hover 變 accent 邊框 + lift shadow，右上 ❤ 收藏 toggle。Reference: DESIGN.md + unified-layout-plan.md。</p>
+  <p class="tp-section-lead">「探索」頁（v2.21.0 起為 secondary entry，從 `/saved` 頁右上 ghost action 進入；URL `/explore` 仍 valid）。POI grid mockup：桌機 3-col、手機 2-col。Card hover 變 accent 邊框 + lift shadow，右上 ❤ 收藏 toggle。Reference: DESIGN.md + unified-layout-plan.md。</p>
   <p class="tp-section-lead" style="background:#fff5e8;border-left:3px solid #d46c3a;padding:10px 14px;border-radius:4px;">⚠ <strong>2026-05-03 modal-to-fullpage migration（PR #433, v2.19.9）</strong>：「我的收藏」 saved-toolbar 上的「加入行程」 button 從原本彈 modal-style backdrop chooser 改為 anchored popover（<code>src/components/explore/TripPickerPopover.tsx</code>），出現在 button 下方（<code>top: 100%; right: 0; width: 320px</code>），點外或 Esc 關閉。Chooser branch 走 popover 而非全頁，理由：selection → 立即 navigate <code>/trips?selected=:id</code>，page 模式打斷 flow；URL deep-link 對 user-specific dynamic trip 列表沒意義；同 region-pill / category-subtab 同類 selection menu pattern。</p>
 
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col · titlebar:標題 + .tp-titlebar-action「我的收藏」(icon+label)</span></div>
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col · titlebar:標題 + .tp-titlebar-action「收藏」(icon+label, ghost) → /saved</span></div>
     <header class="tp-page-titlebar">
       <h3 class="tp-page-titlebar-title">探索</h3>
       <div class="tp-page-titlebar-actions">
@@ -7426,7 +7427,7 @@
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-      <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
     </nav>
   </div>
@@ -7864,7 +7865,7 @@
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
       <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
     </nav>
   </div>
@@ -8274,7 +8275,7 @@
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-chat"/></svg></span>聊天</div>
       <div class="tp-bnav-item is-active"><span class="tp-icon"><svg><use href="#i-trip"/></svg></span>行程</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-map"/></svg></span>地圖</div>
-      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-explore"/></svg></span>探索</div>
+      <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-heart"/></svg></span>收藏</div>
       <div class="tp-bnav-item"><span class="tp-icon"><svg><use href="#i-account"/></svg></span>帳號</div>
     </nav>
   </div>

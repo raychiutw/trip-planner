@@ -3,10 +3,15 @@
  * Route: /saved-pois/:id/add-to-trip。
  * Hits fast-path POST /api/saved-pois/:id/add-to-trip — travel_* 由背景 tp-request 之後算。
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
+import AppShell from '../components/shell/AppShell';
+import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
+import GlobalBottomNav from '../components/shell/GlobalBottomNav';
+import ConflictModal, { type ConflictWith } from '../components/shared/ConflictModal';
 import { useNavigateBack } from '../hooks/useNavigateBack';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
 import type { SavedPoi } from '../types/api';
@@ -72,7 +77,8 @@ export default function AddSavedPoiToTripPage() {
   const { id: idParam } = useParams<{ id: string }>();
   const savedPoiId = Number(idParam);
   const navigate = useNavigate();
-  const goBack = useNavigateBack('/explore');
+  // v2.21.0: default back target /saved (was /explore before page split)
+  const goBack = useNavigateBack('/saved');
 
   // Loading / data states
   const [saved, setSaved] = useState<SavedPoi | null>(null);
@@ -91,6 +97,11 @@ export default function AddSavedPoiToTripPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // v2.21.0 MF2: ConflictModal state — server 409 → 三選 action
+  const [conflictPayload, setConflictPayload] = useState<ConflictWith | null>(null);
+  const [conflictBusy, setConflictBusy] = useState(false);
+
+  const { user } = useCurrentUser();
 
   useEffect(() => {
     if (!Number.isInteger(savedPoiId) || savedPoiId <= 0) {
@@ -153,213 +164,261 @@ export default function AddSavedPoiToTripPage() {
     return true;
   }, [saved, tripId, dayNum, position, anchorEntryId, startTime, endTime, submitting]);
 
+  const submitInsert = useCallback(async (override?: { position: Position; anchorEntryId?: number }) => {
+    const finalPosition = override?.position ?? position;
+    const finalAnchor = override?.anchorEntryId ?? (position !== 'append' ? Number(anchorEntryId) : undefined);
+    await apiFetch(`/saved-pois/${savedPoiId}/add-to-trip`, {
+      method: 'POST',
+      body: JSON.stringify({
+        tripId,
+        dayNum: Number(dayNum),
+        position: finalPosition,
+        anchorEntryId: finalAnchor,
+        startTime: startTime || undefined,
+        endTime: endTime || undefined,
+      }),
+    });
+    const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
+    navigate(`/trips?${params.toString()}`, { replace: true });
+  }, [savedPoiId, tripId, dayNum, position, anchorEntryId, startTime, endTime, navigate]);
+
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await apiFetch(`/saved-pois/${savedPoiId}/add-to-trip`, {
-        method: 'POST',
-        body: JSON.stringify({
-          tripId,
-          dayNum: Number(dayNum),
-          position,
-          anchorEntryId: position !== 'append' ? Number(anchorEntryId) : undefined,
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
-        }),
-      });
-      const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
-      navigate(`/trips?${params.toString()}`, { replace: true });
+      await submitInsert();
     } catch (err) {
+      // v2.21.0 MF2: 409 conflict → open ConflictModal instead of inline error
+      if (err instanceof ApiError && err.status === 409) {
+        const payload = err.payload as { conflictWith?: ConflictWith } | undefined;
+        if (payload?.conflictWith) {
+          setConflictPayload(payload.conflictWith);
+          setSubmitting(false);
+          return;
+        }
+      }
       const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '加入失敗';
       setSubmitError(msg);
       setSubmitting(false);
     }
-  }, [canSubmit, savedPoiId, tripId, dayNum, position, anchorEntryId, startTime, endTime, navigate]);
+  }, [canSubmit, submitInsert]);
+
+  const handleConflictCancel = useCallback(() => {
+    setConflictPayload(null);
+  }, []);
+
+  const handleConflictReplace = useCallback(async () => {
+    if (!conflictPayload) return;
+    setConflictBusy(true);
+    try {
+      await submitInsert({ position: 'replace', anchorEntryId: conflictPayload.entryId });
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '取代失敗';
+      setSubmitError(msg);
+    } finally {
+      setConflictBusy(false);
+      setConflictPayload(null);
+    }
+  }, [conflictPayload, submitInsert]);
+
+  const handleConflictPushAfter = useCallback(async () => {
+    if (!conflictPayload) return;
+    setConflictBusy(true);
+    try {
+      await submitInsert({ position: 'after', anchorEntryId: conflictPayload.entryId });
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '插入失敗';
+      setSubmitError(msg);
+    } finally {
+      setConflictBusy(false);
+      setConflictPayload(null);
+    }
+  }, [conflictPayload, submitInsert]);
 
   // ========== Render ==========
+  // v2.21.0 MF3: AppShell wrap (sidebar + bottom-nav) — single shell, branch inside main.
 
-  // Hard error state
+  let mainContent: React.ReactElement;
   if (loadError) {
-    return (
-      <div className="tp-app">
-        <style>{SCOPED_STYLES}</style>
-        <TitleBar title="加入行程" back={goBack} />
-        <main className="tp-page-content">
-          <div className="tp-error" role="alert">
-            {loadError}
-          </div>
-        </main>
+    mainContent = (
+      <div className="tp-error" role="alert">
+        {loadError}
       </div>
     );
-  }
-
-  // Loading state
-  if (!saved || !trips) {
-    return (
-      <div className="tp-app">
-        <style>{SCOPED_STYLES}</style>
-        <TitleBar title="加入行程" back={goBack} />
-        <main className="tp-page-content">
-          <div className="tp-saved-add-to-trip" aria-busy="true" aria-label="載入中">
-            <div className="tp-skel" />
-            <div className="tp-skel" />
-            <div className="tp-skel" />
-          </div>
-        </main>
+  } else if (!saved || !trips) {
+    mainContent = (
+      <div className="tp-saved-add-to-trip" aria-busy="true" aria-label="載入中">
+        <div className="tp-skel" />
+        <div className="tp-skel" />
+        <div className="tp-skel" />
       </div>
     );
-  }
+  } else if (trips.length === 0) {
+    mainContent = (
+      <div className="tp-saved-add-to-trip">
+        <div className="tp-poi-summary">
+          <h3>{saved.poiName ?? '景點'}</h3>
+          {saved.poiAddress && <p>{saved.poiAddress}</p>}
+        </div>
+        <div className="tp-empty-cta">
+          <p>你還沒有任何行程</p>
+          <a href="/trips/new">建立第一個行程</a>
+        </div>
+      </div>
+    );
+  } else {
+    mainContent = (
+      <div className="tp-saved-add-to-trip">
+        <div className="tp-poi-summary">
+          <h3>{saved.poiName ?? '景點'}</h3>
+          {saved.poiAddress && <p>{saved.poiAddress}</p>}
+          {saved.note && <p>備註：{saved.note}</p>}
+        </div>
 
-  // Empty state — partial: saved POI loaded but user has no trip
-  if (trips.length === 0) {
-    return (
-      <div className="tp-app">
-        <style>{SCOPED_STYLES}</style>
-        <TitleBar title="加入行程" back={goBack} />
-        <main className="tp-page-content">
-          <div className="tp-saved-add-to-trip">
-            <div className="tp-poi-summary">
-              <h3>{saved.poiName ?? '景點'}</h3>
-              {saved.poiAddress && <p>{saved.poiAddress}</p>}
+        {submitError && (
+          <div className="tp-error" role="alert" data-testid="saved-add-to-trip-error">
+            {submitError}
+          </div>
+        )}
+
+        <div className="tp-form">
+          <div className="tp-form-row">
+            <label htmlFor="atstr-trip">行程</label>
+            <select
+              id="atstr-trip"
+              value={tripId}
+              onChange={(e) => setTripId(e.target.value)}
+              data-testid="saved-add-to-trip-trip"
+            >
+              <option value="">選擇行程…</option>
+              {trips.map((t) => (
+                <option key={t.tripId} value={t.tripId}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="tp-form-row">
+            <label htmlFor="atstr-day">第幾天</label>
+            <select
+              id="atstr-day"
+              value={String(dayNum)}
+              onChange={(e) => setDayNum(e.target.value === '' ? '' : Number(e.target.value))}
+              disabled={!days || days.length === 0}
+              data-testid="saved-add-to-trip-day"
+            >
+              {days === null && <option value="">載入中…</option>}
+              {days && days.length === 0 && <option value="">該行程沒有天數</option>}
+              {days && days.length > 0 && (
+                <>
+                  <option value="">選擇天數…</option>
+                  {days.map((d) => (
+                    <option key={d.dayNum} value={d.dayNum}>
+                      Day {d.dayNum}{d.label ? ` · ${d.label}` : ''} ({d.date})
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
+
+          <div className="tp-form-row">
+            <label htmlFor="atstr-position">放置位置</label>
+            <select
+              id="atstr-position"
+              value={position}
+              onChange={(e) => setPosition(e.target.value as Position)}
+              data-testid="saved-add-to-trip-position"
+            >
+              {(['append', 'before', 'after', 'replace'] as Position[]).map((p) => (
+                <option key={p} value={p}>
+                  {POSITION_LABELS[p]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {position !== 'append' && (
+            <div className="tp-form-row">
+              <label htmlFor="atstr-anchor">參考的景點 ID（{POSITION_LABELS[position]}）</label>
+              <input
+                id="atstr-anchor"
+                type="number"
+                min={1}
+                value={anchorEntryId === '' ? '' : String(anchorEntryId)}
+                onChange={(e) => setAnchorEntryId(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="entry id"
+                data-testid="saved-add-to-trip-anchor"
+              />
             </div>
-            <div className="tp-empty-cta">
-              <p>你還沒有任何行程</p>
-              <a href="/trips/new">建立第一個行程</a>
-            </div>
+          )}
+
+          <div className="tp-form-row">
+            <label htmlFor="atstr-start">開始時間（可空，依景點類型自動推）</label>
+            <input
+              id="atstr-start"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              data-testid="saved-add-to-trip-start"
+            />
           </div>
-        </main>
+
+          <div className="tp-form-row">
+            <label htmlFor="atstr-end">結束時間（可空，依停留時間預估推）</label>
+            <input
+              id="atstr-end"
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              data-testid="saved-add-to-trip-end"
+            />
+          </div>
+        </div>
       </div>
     );
   }
 
-  return (
+  const showBottomBar = !loadError && saved && trips && trips.length > 0;
+
+  const main = (
     <div className="tp-app">
       <style>{SCOPED_STYLES}</style>
       <TitleBar title="加入行程" back={goBack} />
       <main className="tp-page-content">
-        <div className="tp-saved-add-to-trip">
-          <div className="tp-poi-summary">
-            <h3>{saved.poiName ?? '景點'}</h3>
-            {saved.poiAddress && <p>{saved.poiAddress}</p>}
-            {saved.note && <p>備註：{saved.note}</p>}
-          </div>
-
-          {submitError && (
-            <div className="tp-error" role="alert" data-testid="saved-add-to-trip-error">
-              {submitError}
-            </div>
-          )}
-
-          <div className="tp-form">
-            <div className="tp-form-row">
-              <label htmlFor="atstr-trip">行程</label>
-              <select
-                id="atstr-trip"
-                value={tripId}
-                onChange={(e) => setTripId(e.target.value)}
-                data-testid="saved-add-to-trip-trip"
-              >
-                <option value="">選擇行程…</option>
-                {trips.map((t) => (
-                  <option key={t.tripId} value={t.tripId}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="tp-form-row">
-              <label htmlFor="atstr-day">第幾天</label>
-              <select
-                id="atstr-day"
-                value={String(dayNum)}
-                onChange={(e) => setDayNum(e.target.value === '' ? '' : Number(e.target.value))}
-                disabled={!days || days.length === 0}
-                data-testid="saved-add-to-trip-day"
-              >
-                {days === null && <option value="">載入中…</option>}
-                {days && days.length === 0 && <option value="">該行程沒有天數</option>}
-                {days && days.length > 0 && (
-                  <>
-                    <option value="">選擇天數…</option>
-                    {days.map((d) => (
-                      <option key={d.dayNum} value={d.dayNum}>
-                        Day {d.dayNum}{d.label ? ` · ${d.label}` : ''} ({d.date})
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
-
-            <div className="tp-form-row">
-              <label htmlFor="atstr-position">放置位置</label>
-              <select
-                id="atstr-position"
-                value={position}
-                onChange={(e) => setPosition(e.target.value as Position)}
-                data-testid="saved-add-to-trip-position"
-              >
-                {(['append', 'before', 'after', 'replace'] as Position[]).map((p) => (
-                  <option key={p} value={p}>
-                    {POSITION_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {position !== 'append' && (
-              <div className="tp-form-row">
-                <label htmlFor="atstr-anchor">參考的景點 ID（{POSITION_LABELS[position]}）</label>
-                <input
-                  id="atstr-anchor"
-                  type="number"
-                  min={1}
-                  value={anchorEntryId === '' ? '' : String(anchorEntryId)}
-                  onChange={(e) => setAnchorEntryId(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="entry id"
-                  data-testid="saved-add-to-trip-anchor"
-                />
-              </div>
-            )}
-
-            <div className="tp-form-row">
-              <label htmlFor="atstr-start">開始時間（可空，依景點類型自動推）</label>
-              <input
-                id="atstr-start"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                data-testid="saved-add-to-trip-start"
-              />
-            </div>
-
-            <div className="tp-form-row">
-              <label htmlFor="atstr-end">結束時間（可空，依停留時間預估推）</label>
-              <input
-                id="atstr-end"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                data-testid="saved-add-to-trip-end"
-              />
-            </div>
-          </div>
-        </div>
+        {mainContent}
       </main>
-      <div className="tp-page-bottom-bar">
-        <button
-          type="button"
-          className="tp-btn tp-btn--primary"
-          onClick={handleSubmit}
-          disabled={!canSubmit}
-          data-testid="saved-add-to-trip-submit"
-        >
-          {submitting ? '加入中…' : '加入行程'}
-        </button>
-      </div>
+      {showBottomBar && (
+        <div className="tp-page-bottom-bar">
+          <button
+            type="button"
+            className="tp-btn tp-btn--primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            data-testid="saved-add-to-trip-submit"
+          >
+            {submitting ? '加入中…' : '加入行程'}
+          </button>
+        </div>
+      )}
+      <ConflictModal
+        open={!!conflictPayload}
+        conflictWith={conflictPayload}
+        busy={conflictBusy}
+        onCancel={handleConflictCancel}
+        onReplace={handleConflictReplace}
+        onPushAfter={handleConflictPushAfter}
+      />
     </div>
+  );
+
+  return (
+    <AppShell
+      sidebar={<DesktopSidebarConnected />}
+      main={main}
+      bottomNav={<GlobalBottomNav authed={!!user} />}
+    />
   );
 }

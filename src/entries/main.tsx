@@ -74,6 +74,8 @@ const MapPage = lazyWithRetry(() => import('../pages/MapPage'));
 const ChatPage = lazyWithRetry(() => import('../pages/ChatPage'));
 const GlobalMapPage = lazyWithRetry(() => import('../pages/GlobalMapPage'));
 const ExplorePage = lazyWithRetry(() => import('../pages/ExplorePage'));
+// v2.21.0 IA reshuffle: 「我的收藏」升 primary nav (/saved)
+const SavedPoisPage = lazyWithRetry(() => import('../pages/SavedPoisPage'));
 const LoginPage = lazyWithRetry(() => import('../pages/LoginPage'));
 const SignupPage = lazyWithRetry(() => import('../pages/SignupPage'));
 const EmailVerifyPendingPage = lazyWithRetry(() => import('../pages/EmailVerifyPendingPage'));
@@ -153,6 +155,8 @@ if (el) {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
+              {/* v2.21.0: SavedPoisPage primary nav route */}
+              <Route path="/saved" element={<SavedPoisPage />} />
               {/* V2 cutover (migration 0046): saved_pois → trip fast-path page (D-C1 + D-C2) */}
               <Route path="/saved-pois/:id/add-to-trip" element={<AddSavedPoiToTripPage />} />
               <Route path="/login" element={<LoginPage />} />

@@ -2,8 +2,8 @@
  * GlobalBottomNav 5-tab unit test — Section 5 (terracotta-mockup-parity-v2 / E4)
  *
  * 驗 mockup section 02 對齊：
- *   - logged-in 5 tab：聊天 / 行程 / 地圖 / 探索 / 帳號
- *   - logged-out 5 tab：聊天 / 行程 / 地圖 / 探索 / 登入
+ *   - logged-in 5 tab (v2.21.0)：聊天 / 行程 / 地圖 / 收藏 / 帳號
+ *   - logged-out 5 tab (v2.21.0)：聊天 / 行程 / 地圖 / 收藏 / 登入
  *   - 帳號 entry → /account
  *   - 「地圖」 active 對 /map + /trip/:id/map (但不對 /manage/map-xxx)
  *   - 「行程」 active 對 /trips + /trip/:id (但不對 /trip/:id/map)
@@ -23,12 +23,12 @@ function renderNav(opts: { authed: boolean; pathname: string }) {
 }
 
 describe('GlobalBottomNav — 5-tab IA', () => {
-  it('logged-in render 5 tabs：聊天 / 行程 / 地圖 / 探索 / 帳號', () => {
+  it('logged-in render 5 tabs：聊天 / 行程 / 地圖 / 收藏 / 帳號 (v2.21.0)', () => {
     renderNav({ authed: true, pathname: '/trips' });
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-trips')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-map')).toBeTruthy();
-    expect(screen.getByTestId('global-bottom-nav-explore')).toBeTruthy();
+    expect(screen.getByTestId('global-bottom-nav-saved')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
   });
@@ -88,7 +88,7 @@ describe('GlobalBottomNav — 5-tab IA', () => {
 
   it('在 /explore「探索」 tab is-active', () => {
     renderNav({ authed: true, pathname: '/explore' });
-    expect(screen.getByTestId('global-bottom-nav-explore').className).toContain('is-active');
+    expect(screen.getByTestId('global-bottom-nav-saved').className).toContain('is-active');
   });
 
   it('CSS 含 min-height 44px (觸控目標 a11y)', () => {
