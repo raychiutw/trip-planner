@@ -3,6 +3,59 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.9] - 2026-05-03
+
+### Changed
+
+- **ExplorePage trip-picker modal 改 anchored popover** — 原 `tp-trip-picker`
+  modal-style backdrop chooser 改 anchored popover (DESIGN.md 2026-05-03 規則
+  允許 popover 範疇)。改 popover 而非全頁的理由：
+  - chooser 性質 (selection → 立即 navigate)，page 模式打斷 flow
+  - URL deep-link 沒意義 (trip 列表是 user-specific dynamic)
+  - 跟 region-pill / category-subtab 同類 selection menu pattern
+- **Anchor**: ExplorePage saved-toolbar「加入行程」按鈕包 `position: relative`
+  wrapper，popover 用 `position: absolute; top: 100%; right: 0` 出現在按鈕下方。
+  `aria-haspopup="dialog"` + `aria-expanded` 提供無障礙語意。
+- **Click-outside 處理**: popover mousedown listener 加 trigger button 例外
+  (`data-trip-picker-trigger="true"`)，避免「按按鈕關閉 + 立即重開」 race。
+  Esc key 關閉行為不變。
+
+### Added
+
+- **`src/components/explore/TripPickerPopover.tsx`** (~165 LOC) — anchored
+  popover 共用版，`open / trips (null=loading) / selectedCount / onPick /
+  onClose` props。Caller 包 `position: relative` wrapper 即可重用。
+
+### Removed
+
+- **ExplorePage trip-picker modal block** (~40 LOC backdrop + dialog +
+  cancel button + actions) — 整段移除，由 popover 取代。
+- **ExplorePage tp-trip-picker-* CSS** (~50 LOC backdrop / shell / list /
+  row hover / empty state / actions / cancel button) — 一併隨 modal 退場。
+  Component-scoped 等價規則搬到 TripPickerPopover SCOPED_STYLES。
+
+### Tests
+
+- **NEW** `tests/unit/trip-picker-popover.test.tsx` (8 specs)：open=false 不
+  render + open=true render rows (含 title/name/tripId fallback + countries '—'
+  fallback) + loading state + empty state + onPick + Esc onClose + 外部
+  mousedown onClose + trigger button 例外。
+- 1312 unit + 603 API 全綠，typecheck 乾淨。
+
+### Migration progress
+
+DESIGN.md 2026-05-03 「Modal vs Full Page Decision」 audit 第 6 個 PR：
+- ✅ EditTripModal → /trip/:id/edit (PR #428, v2.19.4)
+- ✅ NewTripModal → /trips/new (PR #429, v2.19.5)
+- ✅ EntryActionPopover → /trip/:id/stop/:eid/(copy|move) (PR #430, v2.19.6)
+- ✅ AddStopModal → /trip/:id/add-stop?day=N (PR #431, v2.19.7)
+- ✅ DeveloperAppsPage create-app modal → /developer/apps/new (PR #432, v2.19.8)
+- ✅ **ExplorePage trip-picker modal → anchored popover (本次, v2.19.9)**
+
+Audit 剩餘 (P3 confirm-modal cleanup, 不算違規但風格不一致)：
+- AccountPage logout / ConnectedAppsPage revoke / DeveloperAppsPage
+  secret-display 改用標準化 `ConfirmModal` 元件
+
 ## [2.19.8] - 2026-05-03
 
 ### Changed
