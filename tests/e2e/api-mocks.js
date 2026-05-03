@@ -739,6 +739,17 @@ async function setupApiMocks(page) {
       });
     }
 
+    // Exact POST /api/trips → 建立新行程，回 { tripId }
+    if (path === '/api/trips' && method === 'POST') {
+      const body = route.request().postDataJSON?.() ?? {};
+      const newTripId = body.id || `mock-trip-${Date.now()}`;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ tripId: newTripId }),
+      });
+    }
+
     // Exact: /api/trips (trip list)
     if (path === '/api/trips') {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_TRIPS_LIST) });
