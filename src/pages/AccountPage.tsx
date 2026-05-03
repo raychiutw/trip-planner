@@ -216,7 +216,7 @@ export default function AccountPage() {
       label: '共編 & 整合',
       rows: [
         { key: 'connected-apps', icon: 'device', title: '已連結 App', helper: '管理透過 Tripline 登入的應用程式', to: '/settings/connected-apps' },
-        { key: 'developer', icon: 'code', title: '開發者選項', helper: 'OAuth client app 註冊', to: '/settings/developer-apps' },
+        { key: 'developer', icon: 'code', title: '開發者選項', helper: 'OAuth client app 註冊', to: '/developer/apps' },
       ],
     },
     {
