@@ -26,7 +26,6 @@ const TripSheet = lazy(() => import('../components/trip/TripSheet'));
 // stays.
 import CollabSheet from '../components/trip/CollabSheet';
 import AlertPanel from '../components/shared/AlertPanel';
-import AddStopModal from '../components/trip/AddStopModal';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import AppShell from '../components/shell/AppShell';
@@ -43,15 +42,10 @@ import '../../css/tokens.css';
 
 const UNPUBLISHED_CLASS = 'text-muted mt-2';
 
-function deriveAddStopRegion(title?: string | null, name?: string | null, countries?: string | null): string {
-  const text = `${title ?? ''} ${name ?? ''} ${countries ?? ''}`;
-  if (/沖繩|okinawa/i.test(text)) return '沖繩';
-  if (/東京|tokyo/i.test(text)) return '東京';
-  if (/京都|kyoto/i.test(text)) return '京都';
-  if (/首爾|seoul|korea|kr/i.test(text)) return '首爾';
-  if (/台南|tainan/i.test(text)) return '台南';
-  return '全部地區';
-}
+// 2026-05-03 modal-to-fullpage migration: deriveAddStopRegion 移除。
+// 原本用 trip 名 / countries regex 推斷 default region，現在 AddStopPage
+// 自己處理 region selector (用 trip data fetch + 地區清單)，TripPage 不再
+// 需要轉換 — 直接 navigate 過去，AddStopPage 處理 default region。
 
 /* ===== Scoped styles — only rules Tailwind/tokens.css cannot express ===== */
 const SCOPED_STYLES = `
@@ -202,7 +196,10 @@ function TripPageInner(
   // Section 3 (terracotta-add-stop-modal)：trip-level「+ 加入景點」 modal state，
   // 帶當前 active day 進去；user 完成 commit 後 dispatch tp-entry-updated 觸發
   // refetch（既有 listener 處理）。
-  const [addStopOpen, setAddStopOpen] = useState(false);
+  // 2026-05-03 modal-to-fullpage migration: AddStopModal 由 /trip/:id/add-stop?day=N
+  // page 取代。openAddStop() handle 改 navigate (取代原本 setAddStopOpen)。
+  // navigate 在 TripPageInner scope 可從 useNavigate() 取，但我們已經用 router
+  // hooks 在這檔，直接 wire navigate 到 openAddStop。
   // showNavTitle removed along with old sticky-nav inline title
   const manualScrollTs = useRef(0);
   const initialScrollDone = useRef(false);
@@ -597,8 +594,12 @@ function TripPageInner(
     openSheet: (key: string) => setActiveSheet(key),
     triggerDownload: (format: string) => { void handleDownloadFormat(format); },
     togglePrint,
-    openAddStop: () => setAddStopOpen(true),
-  }), [handleDownloadFormat, togglePrint]);
+    openAddStop: () => {
+      const tid = trip?.id ?? effectiveUrlTripId;
+      if (!tid) return;
+      navigate(`/trip/${encodeURIComponent(tid)}/add-stop?day=${currentDayNum}`);
+    },
+  }), [handleDownloadFormat, togglePrint, trip, effectiveUrlTripId, navigate, currentDayNum]);
   const handleSheetClose = useCallback(() => { setActiveSheet(null); }, []);
 
   /* --- Early returns (#13: use hoisted static views) --- */
@@ -720,31 +721,11 @@ function TripPageInner(
         {trip ? <CollabSheet tripId={trip.id} /> : null}
       </InfoSheet>
 
-      {/* Section 3：trip-level「+ 加景點」 modal — 帶 currentDayNum，user 完成
-        * commit 後 AddStopModal 內部 dispatch tp-entry-updated，TripPage 既有
-        * listener (line 277) 會觸發 refetchCurrentDay。 */}
-      {trip && currentDayNum > 0 && (
-        <AddStopModal
-          open={addStopOpen}
-          tripId={trip.id}
-          dayNum={currentDayNum}
-          defaultRegion={deriveAddStopRegion(trip.title, trip.name, trip.countries)}
-          dayLabel={(() => {
-            // mockup-parity-qa-fixes: mockup section 14:6442 規範「DAY 03 · 7/31（五）」全大寫格式
-            const day = days.find((d) => d.dayNum === currentDayNum);
-            const date = day?.date ?? '';
-            const dayPad = String(currentDayNum).padStart(2, '0');
-            if (!date) return `DAY ${dayPad}`;
-            const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(date);
-            if (!m) return `DAY ${dayPad} · ${date}`;
-            const month = parseInt(m[2]!, 10);
-            const dom = parseInt(m[3]!, 10);
-            const weekdayChar = ['日', '一', '二', '三', '四', '五', '六'][new Date(date + 'T00:00:00Z').getUTCDay()] ?? '';
-            return `DAY ${dayPad} · ${month}/${dom}（${weekdayChar}）`;
-          })()}
-          onClose={() => setAddStopOpen(false)}
-        />
-      )}
+      {/* 2026-05-03 modal-to-fullpage migration: AddStopModal 由 /trip/:id/add-stop?day=N
+        * page 取代。openAddStop handle 直接 navigate，不再 mount modal。
+        * Page 自己 fetch days 取 dayLabel + 處理 region selector。AddStop 完成後
+        * dispatch tp-entry-updated event，TripPage 既有 listener (line 277) 觸發
+        * refetchCurrentDay。 */}
 
       {isPrintMode && (
         <button

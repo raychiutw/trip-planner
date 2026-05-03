@@ -23,7 +23,9 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
   // shared module + NewTripPage SCOPED_STYLES。
   const newTripPage = readFile('src/pages/NewTripPage.tsx');
   const tripFormStyles = readFile('src/components/trip/_tripFormStyles.ts');
-  const addStopModal = readFile('src/components/trip/AddStopModal.tsx');
+  // 2026-05-03 modal-to-fullpage migration: AddStopModal.tsx 已 DEL，
+  // form 移到 src/pages/AddStopPage.tsx。
+  const addStopPage = readFile('src/pages/AddStopPage.tsx');
   const bnav = readFile('src/components/shell/GlobalBottomNav.tsx');
 
   it('--font-size-body 對齊 mockup body 16px (1rem)', () => {
@@ -71,10 +73,14 @@ describe('mockup-parity-qa-fixes typography compliance', () => {
     expect(tripFormStyles).toContain('--font-size-title');
   });
 
-  it('AddStopModal title font-weight 700 (mockup spec)', () => {
-    const titleBlock = addStopModal.match(/\.tp-add-stop-title\s*\{[\s\S]*?font-weight:\s*(\d+)/);
-    expect(titleBlock).not.toBeNull();
-    expect(titleBlock?.[1]).toBe('700');
+  it('AddStopPage 用 TitleBar 處理 page heading (font-weight 700 由 .tp-titlebar-title token 負責)', () => {
+    // 2026-05-03 modal-to-fullpage migration: 原本驗 .tp-add-stop-title font-weight 700
+    // 改全頁後 modal h2 不存在，page heading 由 TitleBar render，font-weight 規則由
+    // tokens.css .tp-titlebar-title 統一管。此處改驗 AddStopPage import TitleBar +
+    // tokens.css 仍保有 .tp-titlebar-title 700 weight rule。
+    expect(addStopPage).toMatch(/import TitleBar from/);
+    expect(addStopPage).toMatch(/<TitleBar\s/);
+    expect(tokens).toMatch(/\.tp-titlebar-title\s*\{[\s\S]*?font-weight:\s*700/);
   });
 
   it('mobile bottom nav label 對齊 mockup section 02 11/14/700', () => {

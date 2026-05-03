@@ -3,6 +3,53 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.19.7] - 2026-05-03
+
+### Changed
+
+- **「加景點」 modal 改全頁** — TripPage TitleBar「+ 加景點」按鈕從原本 mount
+  `AddStopModal` portal 改為 navigate 到 `/trip/:tripId/add-stop?day=N` 全頁。
+  使用流程相同（搜尋 / 收藏 / 自訂 三 tab + region pill + filter sheet +
+  bottom counter），新增能力：URL deep-link（書籤、分享）、瀏覽器 back
+  取消、不被 mobile modal 高度限制、刷新保留位置。原 `AddStopModal` 含
+  9 種 form control + 多 tab + 動態 region menu / filter sheet，是
+  DESIGN.md 2026-05-03 規範「複雜 form 流程必走全頁」最大違規。
+- **TitleBar 「完成」 action button** 與 bottom sticky bar「完成」 同步
+  disabled state，桌機 icon + 文字（`.tp-titlebar-action.is-primary`）、
+  手機 icon-only — 對齊 DESIGN.md 2026-05-03 TitleBar 三段式規則。
+- **`deriveDayLabel` 從 TripPage 搬到 AddStopPage** — 原本 TripPage 算
+  `DAY 03 · 7/31（五）` 後 prop 傳給 modal；改全頁後 page 自己 fetch
+  `/api/trips/:id/days` 並用 API row `day_of_week` 直取週名（取代
+  `['日','一','二',...]` hardcode 陣列推算），label 邏輯收斂在 page 內。
+
+### Removed
+
+- **`src/components/trip/AddStopModal.tsx`** — 由 `src/pages/AddStopPage.tsx`
+  取代。`tests/unit/add-stop-modal.test.tsx` 同步刪除（modal-specific
+  render / Esc / backdrop click 已不適用 page 模式）。
+  `tests/unit/add-stop-modal-region-filter.test.ts` 改名 `add-stop-page-region-filter.test.ts`
+  並改 readFile path 到新 page；`tests/e2e/add-stop-modal.spec.js` 改名
+  `add-stop-page.spec.js` 並改 navigate URL flow + 加 TitleBar /
+  bottom bar 同步 disabled state 驗證。
+- **`deriveAddStopRegion` helper** 從 TripPage 移除 — region selector
+  自己處理 default region (page 從 trip context fetch + 6 個 hardcode
+  region 選項)，TripPage 不需推斷後 prop 傳遞。
+
+### Migration progress
+
+DESIGN.md 2026-05-03 「Modal vs Full Page Decision」 規則第 4 個遷移 PR：
+- ✅ EditTripModal → /trip/:id/edit (PR #428, v2.19.4)
+- ✅ NewTripModal → /trips/new (PR #429, v2.19.5)
+- ✅ EntryActionPopover → /trip/:id/stop/:eid/(copy|move) (PR #430, v2.19.6)
+- ✅ **AddStopModal → /trip/:id/add-stop?day=N (本次, v2.19.7)**
+
+Audit 剩餘 (低優先 / 不同類型違規)：
+- DeveloperAppsPage create-app modal (9+ field form, 預估走 /developer/apps/new)
+- ExplorePage trip-picker modal (chooser 性質, 評估 popover vs page)
+- AccountPage logout / ConnectedAppsPage revoke / DeveloperAppsPage
+  secret-display 改用標準化 ConfirmModal (P3 confirm-style cleanup, 不算
+  違規但風格不一致)
+
 ## [2.19.6] - 2026-05-03
 
 ### Changed
