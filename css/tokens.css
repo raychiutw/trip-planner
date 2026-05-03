@@ -1346,7 +1346,10 @@ body.dark {
   .tp-titlebar-action {
     width: var(--spacing-tap-min);
     padding: 0;
-    border: none;
+    /* 2026-05-03 polish: 保留 1px border 跟桌機一致。原本手機 border:none 讓
+     * button affordance 弱 + 跨 breakpoint 視覺斷層 (user 觀察「手機無框」)。
+     * 改回 outline pill (icon-only 但仍有 border)，跟桌機 + .is-primary 同 family。 */
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-full);
     justify-content: center;
   }
