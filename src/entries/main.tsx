@@ -96,6 +96,8 @@ const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
+// V2 cutover (migration 0046): saved_pois universal pool → 加入行程 fast-path page
+const AddSavedPoiToTripPage = lazyWithRetry(() => import('../pages/AddSavedPoiToTripPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -151,6 +153,8 @@ if (el) {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
+              {/* V2 cutover (migration 0046): saved_pois → trip fast-path page (D-C1 + D-C2) */}
+              <Route path="/saved-pois/:id/add-to-trip" element={<AddSavedPoiToTripPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />

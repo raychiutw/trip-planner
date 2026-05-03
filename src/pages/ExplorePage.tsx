@@ -42,6 +42,14 @@ interface SavedPoiRow {
   poiType: string;
   savedAt: string;
   note: string | null;
+  // V2 cutover (E-M1): usages 從 GET /api/saved-pois 一次撈，反查「目前在哪些 trip」。
+  usages?: Array<{
+    tripId: string;
+    tripName: string;
+    dayNum: number | null;
+    dayDate: string | null;
+    entryId: number | null;
+  }>;
 }
 
 interface TripPickerRow {
@@ -919,6 +927,9 @@ export default function ExplorePage() {
               <div className="explore-poi-grid">
                 {saved.map((row) => {
                   const isSelected = selectedSavedIds.has(row.id);
+                  // V2 cutover (E-M1): usages 從 GET /api/saved-pois 一次撈，反查
+                  // 「目前在哪些 trip」。row.usages 是 SavedPoiUsage[]。
+                  const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
                   return (
                     <article
                       className={`explore-poi-card ${isSelected ? 'is-selected' : ''}`}
@@ -928,7 +939,20 @@ export default function ExplorePage() {
                       <div className="poi-category">{row.poiType}</div>
                       <div className="poi-name">{row.poiName}</div>
                       {row.poiAddress && <div className="poi-address">{row.poiAddress}</div>}
-                      <div className="poi-actions">
+                      {usageCount > 0 && (
+                        <div
+                          className="poi-usage-badge"
+                          style={{
+                            fontSize: 'var(--font-size-footnote)',
+                            color: 'var(--color-muted)',
+                            marginTop: 4,
+                          }}
+                          data-testid={`saved-usage-badge-${row.id}`}
+                        >
+                          目前在 {usageCount} 個行程
+                        </div>
+                      )}
+                      <div className="poi-actions" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <label
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
                         >
@@ -943,6 +967,18 @@ export default function ExplorePage() {
                             {isSelected ? '已選' : '選取'}
                           </span>
                         </label>
+                        {/* D-C1 fast-path REST: per-row「加入行程」 link → AddSavedPoiToTripPage */}
+                        <a
+                          href={`/saved-pois/${row.id}/add-to-trip`}
+                          style={{
+                            fontSize: 'var(--font-size-footnote)',
+                            color: 'var(--color-accent)',
+                            textDecoration: 'none',
+                          }}
+                          data-testid={`saved-add-to-trip-${row.id}`}
+                        >
+                          加入行程 →
+                        </a>
                       </div>
                     </article>
                   );
