@@ -19,9 +19,13 @@ export interface MapDayTabProps {
   isActive: boolean;
   /** 點擊 callback */
   onClick: () => void;
+  /** Optional aria-label override（trip detail 帶日期 + day.label 的完整描述） */
+  ariaLabel?: string;
+  /** Optional data-testid for test selectors */
+  testId?: string;
 }
 
-export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onClick }: MapDayTabProps) {
+export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onClick, ariaLabel, testId }: MapDayTabProps) {
   // Section 4.10 (terracotta-mockup-parity-v2)：active state border-bottom 用
   // per-day color 取代固定 accent，呼應 mockup section 20 underline 用 day color
   // 強化 day↔map polyline 視覺對應。CSS rule 讀 --day-color (有設值才覆蓋)。
@@ -33,9 +37,11 @@ export default function MapDayTab({ dayLabel, dateLabel, dayColor, isActive, onC
       type="button"
       role="tab"
       aria-selected={isActive}
+      aria-label={ariaLabel}
       className={`tp-map-day-tab${isActive ? ' is-active' : ''}`}
       onClick={onClick}
       style={style}
+      data-testid={testId}
     >
       <span
         className="tp-map-day-tab-eyebrow"

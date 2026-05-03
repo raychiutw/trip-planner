@@ -63,8 +63,8 @@ export const APP_SHELL_STYLES = `
 /* Mobile <1024px：單欄 + bottom nav 常駐.
  *
  * Why height: 100dvh (not min-height): we need .app-shell-main to be a real
- * scroll container so sticky elements inside (like .ocean-day-strip) stick
- * to the top of main, not get carried away by the document scroll. With
+ * scroll container so sticky elements inside (like TitleBar + .tp-map-day-tabs)
+ * stick to the top of main, not get carried away by the document scroll. With
  * min-height the grid grows with content, main isn't constrained, and the
  * window scrolls instead — breaking sticky inside main. */
 @media (max-width: 1023px) {

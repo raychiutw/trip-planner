@@ -64,9 +64,6 @@ const SCOPED_STYLES = `
 .day-content-loaded {
   animation: fadeIn 300ms var(--transition-timing-function-apple) both;
 }
-/* Sticky-nav children z-index layering above DestinationArt */
-.sticky-nav > :not([aria-hidden="true"]) { position: relative; z-index: 1; }
-
 .trip-content { min-width: 0; }
 
 /* Compact-hidden TitleBar actions — 桌機(>=761px) 顯示「建議 / 共編 / 下載」
@@ -76,14 +73,13 @@ const SCOPED_STYLES = `
 }
 
 /* Print mode */
-.print-mode .sticky-nav { display: none; }
 .print-mode .print-exit-btn { display: block; }
 .print-mode .page-layout { padding-right: 0 !important; }
 .print-mode #tripContent section { background: var(--color-background) !important; }
 .print-mode .day-header { background: var(--color-background); position: relative !important; flex-wrap: wrap; padding: 8px 12px; }
 .print-mode .container { max-width: 210mm; margin: 0 auto; box-shadow: var(--shadow-lg); }
 @media print {
-  .sticky-nav, .print-exit-btn { display: none !important; }
+  .print-exit-btn { display: none !important; }
 }
 `;
 

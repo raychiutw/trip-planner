@@ -877,58 +877,9 @@
     letter-spacing: -0.01em;
   }
 
-  /* === Day chips === */
-  .tp-day-strip {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 8px;
-    scrollbar-width: thin;
-  }
-  .tp-day-chip {
-    min-width: 140px;
-    padding: 12px 14px;
-    border-radius: var(--tp-radius-md);
-    border: 1px solid var(--tp-border);
-    background: var(--tp-background);
-    cursor: pointer;
-    transition: border-color 150ms, background 150ms;
-    flex-shrink: 0;
-  }
-  .tp-day-chip:hover {
-    border-color: var(--tp-accent);
-  }
-  .tp-day-chip.is-active {
-    background: var(--tp-accent);
-    color: var(--tp-on-accent);
-    border-color: var(--tp-accent);
-  }
-  .tp-day-chip-eyebrow {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--tp-muted);
-    margin-bottom: 6px;
-    font-variant-numeric: tabular-nums;
-  }
-  .tp-day-chip.is-active .tp-day-chip-eyebrow {
-    color: rgba(255, 251, 245, 0.85);
-  }
-  .tp-day-chip-date {
-    font-size: 18px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
-  }
-  .tp-day-chip-area {
-    font-size: 12px;
-    color: var(--tp-muted);
-    margin-top: 4px;
-  }
-  .tp-day-chip.is-active .tp-day-chip-area {
-    color: rgba(255, 251, 245, 0.9);
-  }
+  /* === Day tabs (canonical) — see Section 4961 .tp-map-day-tabs / .tp-map-day-tab。
+   * Trip detail + Map page 共用同一條 underline tab strip (text-only eyebrow + date,
+   * 無 chip background fill / border)。 */
 
   /* === Stop cards === */
   .tp-stops {
@@ -1861,67 +1812,8 @@
     padding: 16px;
   }
 
-  /* DayNav strip */
-  .tp-detail-daynav {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding: 4px 0 12px;
-    margin-bottom: 16px;
-    scrollbar-width: none;
-  }
-  .tp-detail-daynav::-webkit-scrollbar { display: none; }
-  .tp-detail-daynav-pill {
-    flex-shrink: 0;
-    min-width: 96px;
-    padding: 8px 12px;
-    border: 1px solid var(--tp-border);
-    border-radius: var(--tp-radius-md);
-    background: var(--tp-background);
-    color: var(--tp-foreground);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    cursor: pointer;
-    font: inherit;
-    transition: border-color 150ms, background 150ms, color 150ms;
-    text-align: left;
-  }
-  .tp-detail-daynav-pill:hover:not(.is-active) {
-    border-color: var(--tp-accent);
-  }
-  .tp-detail-daynav-pill.is-active {
-    background: var(--tp-accent);
-    color: var(--tp-on-accent);
-    border-color: var(--tp-accent);
-  }
-  .tp-detail-daynav-pill-eyebrow {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--tp-muted);
-  }
-  .tp-detail-daynav-pill.is-active .tp-detail-daynav-pill-eyebrow {
-    color: rgba(255, 251, 245, 0.85);
-  }
-  .tp-detail-daynav-pill-date {
-    font-size: 14px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .tp-detail-daynav-pill-area {
-    font-size: 11px;
-    color: var(--tp-muted);
-  }
-  .tp-detail-daynav-pill.is-active .tp-detail-daynav-pill-area {
-    color: rgba(255, 251, 245, 0.85);
-  }
-  .tp-detail-mobile-frame .tp-detail-daynav-pill {
-    min-width: 84px;
-    padding: 6px 10px;
-  }
+  /* DayNav strip — 直接套用 .tp-map-day-tabs + .tp-map-day-tabs--sticky (Section 4961)。
+   * 舊 .tp-detail-daynav-pill chip 樣式已退役。 */
 
   /* Day Hero */
   .tp-detail-hero {
@@ -6037,37 +5929,32 @@
   </div>
 </section>
 
-<!-- ===== Section 11 — Day chips ===== -->
+<!-- ===== Section 11 — Day Tabs (Trip detail + Map page 共用) ===== -->
 <section class="tp-section">
-  <h2 class="tp-section-title">Day Chips</h2>
-  <p class="tp-section-lead">Active state 實心 Terracotta。</p>
-  <div class="tp-day-strip">
-    <div class="tp-day-chip">
-      <div class="tp-day-chip-eyebrow">DAY 01</div>
-      <div class="tp-day-chip-date">7/29</div>
-      <div class="tp-day-chip-area">北谷</div>
-    </div>
-    <div class="tp-day-chip">
-      <div class="tp-day-chip-eyebrow">DAY 02</div>
-      <div class="tp-day-chip-date">7/30</div>
-      <div class="tp-day-chip-area">浮潛・瀨底</div>
-    </div>
-    <div class="tp-day-chip is-active">
-      <div class="tp-day-chip-eyebrow">DAY 03 · 今天</div>
-      <div class="tp-day-chip-date">7/31</div>
-      <div class="tp-day-chip-area">水族館・古宇利</div>
-    </div>
-    <div class="tp-day-chip">
-      <div class="tp-day-chip-eyebrow">DAY 04</div>
-      <div class="tp-day-chip-date">8/01</div>
-      <div class="tp-day-chip-area">來客夢</div>
-    </div>
-    <div class="tp-day-chip">
-      <div class="tp-day-chip-eyebrow">DAY 05</div>
-      <div class="tp-day-chip-date">8/02</div>
-      <div class="tp-day-chip-area">首里城</div>
-    </div>
-  </div>
+  <h2 class="tp-section-title">Day Tabs</h2>
+  <p class="tp-section-lead">Trip detail + Map page 同一條 underline strip — text-only eyebrow + date,active 用 per-day color underline。Trip detail 加 <code>.tp-map-day-tabs--sticky</code> 黏在 TitleBar 下方。</p>
+  <nav class="tp-map-day-tabs">
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow" style="color:#0ea5e9">DAY 01</span>
+      <span class="tp-map-day-tab-date">7/29</span>
+    </button>
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow" style="color:#14b8a6">DAY 02</span>
+      <span class="tp-map-day-tab-date">7/30</span>
+    </button>
+    <button class="tp-map-day-tab is-active" type="button" style="--day-color:#f59e0b">
+      <span class="tp-map-day-tab-eyebrow" style="color:#f59e0b">DAY 03 · 今天</span>
+      <span class="tp-map-day-tab-date">7/31</span>
+    </button>
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow" style="color:#f43f5e">DAY 04</span>
+      <span class="tp-map-day-tab-date">8/01</span>
+    </button>
+    <button class="tp-map-day-tab" type="button">
+      <span class="tp-map-day-tab-eyebrow" style="color:#8b5cf6">DAY 05</span>
+      <span class="tp-map-day-tab-date">8/02</span>
+    </button>
+  </nav>
 </section>
 
 <!-- ===== Section 12 — Stop Card Redesign (Action Affordances) ===== -->
@@ -6265,31 +6152,26 @@
       </div>
     </header>
     <div class="tp-detail-content">
-      <nav class="tp-detail-daynav" aria-label="Day navigation">
-        <button class="tp-detail-daynav-pill" type="button">
-          <span class="tp-detail-daynav-pill-eyebrow">DAY 01</span>
-          <span class="tp-detail-daynav-pill-date">7/29</span>
-          <span class="tp-detail-daynav-pill-area">北谷</span>
+      <nav class="tp-map-day-tabs tp-map-day-tabs--sticky" aria-label="Day navigation">
+        <button class="tp-map-day-tab" type="button">
+          <span class="tp-map-day-tab-eyebrow" style="color:#0ea5e9">DAY 01</span>
+          <span class="tp-map-day-tab-date">7/29</span>
         </button>
-        <button class="tp-detail-daynav-pill" type="button">
-          <span class="tp-detail-daynav-pill-eyebrow">DAY 02</span>
-          <span class="tp-detail-daynav-pill-date">7/30</span>
-          <span class="tp-detail-daynav-pill-area">瀨底浮潛</span>
+        <button class="tp-map-day-tab" type="button">
+          <span class="tp-map-day-tab-eyebrow" style="color:#14b8a6">DAY 02</span>
+          <span class="tp-map-day-tab-date">7/30</span>
         </button>
-        <button class="tp-detail-daynav-pill is-active" type="button">
-          <span class="tp-detail-daynav-pill-eyebrow">DAY 03 · 今天</span>
-          <span class="tp-detail-daynav-pill-date">7/31</span>
-          <span class="tp-detail-daynav-pill-area">水族館・古宇利</span>
+        <button class="tp-map-day-tab is-active" type="button" style="--day-color:#f59e0b">
+          <span class="tp-map-day-tab-eyebrow" style="color:#f59e0b">DAY 03 · 今天</span>
+          <span class="tp-map-day-tab-date">7/31</span>
         </button>
-        <button class="tp-detail-daynav-pill" type="button">
-          <span class="tp-detail-daynav-pill-eyebrow">DAY 04</span>
-          <span class="tp-detail-daynav-pill-date">8/01</span>
-          <span class="tp-detail-daynav-pill-area">來客夢</span>
+        <button class="tp-map-day-tab" type="button">
+          <span class="tp-map-day-tab-eyebrow" style="color:#f43f5e">DAY 04</span>
+          <span class="tp-map-day-tab-date">8/01</span>
         </button>
-        <button class="tp-detail-daynav-pill" type="button">
-          <span class="tp-detail-daynav-pill-eyebrow">DAY 05</span>
-          <span class="tp-detail-daynav-pill-date">8/02</span>
-          <span class="tp-detail-daynav-pill-area">首里城</span>
+        <button class="tp-map-day-tab" type="button">
+          <span class="tp-map-day-tab-eyebrow" style="color:#8b5cf6">DAY 05</span>
+          <span class="tp-map-day-tab-date">8/02</span>
         </button>
       </nav>
 
@@ -6453,21 +6335,18 @@
       </div>
     </header>
       <div class="tp-detail-content">
-        <nav class="tp-detail-daynav" aria-label="Day navigation">
-          <button class="tp-detail-daynav-pill" type="button">
-            <span class="tp-detail-daynav-pill-eyebrow">D 02</span>
-            <span class="tp-detail-daynav-pill-date">7/30</span>
-            <span class="tp-detail-daynav-pill-area">瀨底</span>
+        <nav class="tp-map-day-tabs tp-map-day-tabs--sticky" aria-label="Day navigation">
+          <button class="tp-map-day-tab" type="button">
+            <span class="tp-map-day-tab-eyebrow" style="color:#14b8a6">DAY 02</span>
+            <span class="tp-map-day-tab-date">7/30</span>
           </button>
-          <button class="tp-detail-daynav-pill is-active" type="button">
-            <span class="tp-detail-daynav-pill-eyebrow">D 03 · 今天</span>
-            <span class="tp-detail-daynav-pill-date">7/31</span>
-            <span class="tp-detail-daynav-pill-area">古宇利</span>
+          <button class="tp-map-day-tab is-active" type="button" style="--day-color:#f59e0b">
+            <span class="tp-map-day-tab-eyebrow" style="color:#f59e0b">DAY 03 · 今天</span>
+            <span class="tp-map-day-tab-date">7/31</span>
           </button>
-          <button class="tp-detail-daynav-pill" type="button">
-            <span class="tp-detail-daynav-pill-eyebrow">D 04</span>
-            <span class="tp-detail-daynav-pill-date">8/01</span>
-            <span class="tp-detail-daynav-pill-area">來客夢</span>
+          <button class="tp-map-day-tab" type="button">
+            <span class="tp-map-day-tab-eyebrow" style="color:#f43f5e">DAY 04</span>
+            <span class="tp-map-day-tab-date">8/01</span>
           </button>
         </nav>
 
