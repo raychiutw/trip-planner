@@ -3,7 +3,7 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [2.19.16] - 2026-05-03
+## [2.19.17] - 2026-05-03
 
 ### Fixed
 
