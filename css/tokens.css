@@ -1229,7 +1229,7 @@ body.dark {
 .tp-titlebar-back {
   width: var(--spacing-tap-min);
   height: var(--spacing-tap-min);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -1255,7 +1255,7 @@ body.dark {
   gap: 6px;
   height: var(--spacing-tap-min);
   padding: 0 14px;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-foreground);
@@ -1277,11 +1277,10 @@ body.dark {
   .tp-titlebar-action {
     width: var(--spacing-tap-min);
     padding: 0;
-    /* 2026-05-03 polish: 保留 1px border 跟桌機一致。原本手機 border:none 讓
-     * button affordance 弱 + 跨 breakpoint 視覺斷層 (user 觀察「手機無框」)。
-     * 改回 outline pill (icon-only 但仍有 border)，跟桌機 + .is-primary 同 family。 */
+    /* 2026-05-03 polish: 保留 1px border 跟桌機一致 + radius-md 跟桌機 + .tp-embedded-menu-trigger
+     * 同 family (rounded rectangle / icon-only square w/ rounded corners)。 */
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-md);
     justify-content: center;
   }
   .tp-titlebar-action-label { display: none; }
@@ -1318,7 +1317,7 @@ body.dark {
 .tp-titlebar-icon-btn {
   width: var(--spacing-tap-min);
   height: var(--spacing-tap-min);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
   flex-shrink: 0;
