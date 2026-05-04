@@ -143,15 +143,14 @@
 
 - [x] 12.1 ~~mockup~~ 已產出 docs/design-sessions/2026-05-04-favorites-redesign.html v4 含 4 frames（B1 desktop 2-col / B2 phone stack / B3 day skeleton / B4 conflict modal / B5 7-state mini）
 - [x] 12.2 ~~user review~~ 已 sign-off（2026-05-04）
-- [ ] 12.3 寫 `tests/unit/add-poi-favorite-form-fields.test.tsx` 紅燈：4 fields 渲染（trip / day / startTime / endTime）、SHALL NOT 含 position radio / anchorEntryId field、stay-duration heuristic 預填
-- [ ] 12.4 寫 `tests/unit/add-poi-favorite-trip-day-skeleton.test.tsx` 紅燈：trip 切換時 day field 顯示 tp-skel skeleton + 提交按鈕 disabled
-- [ ] 12.5 寫 `tests/unit/add-poi-favorite-titlebar.test.tsx` 紅燈：TitleBar title 靠左（flex:1）、左側返回 button、右側無 confirm action
-- [ ] 12.6 寫 `tests/unit/add-poi-favorite-form-actions.test.tsx` 紅燈：「加入行程」primary button 在 `.tp-form-actions` wrapper 內、置中對齊、放在 4 fields 下方
-- [ ] 12.7 寫 `tests/unit/add-poi-favorite-responsive.test.tsx` 紅燈：viewport ≥1024 用 2-col grid（max-width 720px）；viewport ≤760 stack 單欄 + button full-width
-- [ ] 12.8 寫 `tests/unit/add-poi-favorite-states.test.tsx` 紅燈：7-state matrix（loading / empty-no-trip / conflict / error / success / optimistic / partial）
-- [ ] 12.9 重構 `src/pages/AddPoiFavoriteToTripPage.tsx` 對齊 mockup B1/B2/B3：移除既有 position radio + anchorEntryId、加 `.tp-form-grid-2col` desktop layout、加 `.tp-form-actions` 置中 primary button、TitleBar 不放 confirm action
-- [ ] 12.10 useAddToTrip hook（如有）API call body 改 `{ tripId, dayNum, startTime, endTime }` 4 fields
-- [ ] 12.11 跑 unit test 全綠
+- [x] 12.3 + 12.6 ~~form fields + actions test~~ tests/unit/poi-favorite-add-to-trip-form.test.tsx (7 tests，4 fields 渲染 / 無 position select / 無 anchorEntryId / API body 4 fields / API path /poi-favorites/:id/add-to-trip / .tp-form-actions wrapper / TitleBar 無 primary action) 🟢
+- [x] 12.4 + 12.8 ~~skeleton + 7-state test~~ tests/unit/poi-favorite-add-to-trip-states.test.tsx (6 tests，loading aria-busy / empty-no-trip / load-error / conflict ConflictModal / optimistic / day skeleton on trip switch) 🟢
+- [x] 12.5 + 12.7 ~~titlebar + responsive layout test~~ tests/unit/poi-favorite-add-to-trip-layout.test.tsx (5 tests，TitleBar back button / title / 無 primary action / .tp-form-grid-2col / .tp-form-row-pair start+end 並排) 🟢
+- [x] 12.9 ~~重構 AddPoiFavoriteToTripPage.tsx~~ 移除 position state + anchor state + Position type，4 fields 純時間驅動 / .tp-form-grid-2col desktop 2-col / .tp-form-row-pair start+end 並排 / .tp-form-actions 置中 primary button / day-loading state + tp-skel skeleton / API path 修正 /favorites/:id → /poi-favorites/:id / ConflictModal 改 4-field schema（移除 onReplace/onPushAfter UI，僅留 onCancel 讓 user 改時段重 submit）🟢
+- [x] 12.10 ~~API body 4 fields~~ AddPoiFavoriteToTripPage submit 直接送 { tripId, dayNum, startTime?, endTime? }；無獨立 hook（page-local logic） 🟢
+- [x] 12.11 ~~跑 unit test 全綠~~ npm test 1378/1378（+18 新增）+ tsc 0 errors 🟢
+
+**Note**: ConflictModal 改 onReplace/onPushAfter 為 optional props（hard cutover deviation：v2.22.0 add-to-trip 4-field schema 不支援 position-based conflict resolution，user 改時段重 submit 是唯一解法）。其他 page 用 ConflictModal 仍 work（介面 backwards compatible）。
 
 ## 13. CSS class rename + shared component 抽取
 

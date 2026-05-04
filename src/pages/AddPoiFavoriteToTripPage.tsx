@@ -1,6 +1,12 @@
 /**
- * AddPoiFavoriteToTripPage — 全頁 form 將「我的收藏」加入指定 trip / day / position。
+ * AddPoiFavoriteToTripPage — 全頁 form 將「收藏」加入指定 trip / day。
  * Route: /favorites/:id/add-to-trip。
+ * v2.22.0 改 4-field 純時間驅動：{ tripId, dayNum, startTime, endTime }。
+ * 不再含 position radio / anchorEntryId — server 依 startTime 自動排 sort_order。
+ *
+ * mockup-driven hard gate aligned (docs/design-sessions/2026-05-04-favorites-redesign.html v4
+ * sign-off 2026-05-04)。對齊 DESIGN.md L580-602 規範。
+ *
  * Hits fast-path POST /api/poi-favorites/:id/add-to-trip — travel_* 由背景 tp-request 之後算。
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -28,17 +34,26 @@ interface DayBrief {
   label: string | null;
 }
 
-type Position = 'append' | 'before' | 'after' | 'replace';
-
-const POSITION_LABELS: Record<Position, string> = {
-  append: '加在當天最後',
-  before: '插在某個景點前',
-  after: '插在某個景點後',
-  replace: '取代某個景點',
-};
-
 const SCOPED_STYLES = `
 .tp-favorites-add-to-trip { display: flex; flex-direction: column; gap: 16px; }
+
+.tp-favorites-add-to-trip .tp-form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (max-width: 760px) {
+  .tp-favorites-add-to-trip .tp-form-grid-2col { grid-template-columns: 1fr; gap: 12px; }
+}
+
+.tp-favorites-add-to-trip .tp-form-row { display: flex; flex-direction: column; gap: 6px; }
+.tp-favorites-add-to-trip .tp-form-row label {
+  font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-foreground);
+}
 .tp-favorites-add-to-trip .tp-form-row select,
 .tp-favorites-add-to-trip .tp-form-row input[type='time'] {
   padding: 10px 12px; border: 1px solid var(--color-border);
@@ -46,12 +61,56 @@ const SCOPED_STYLES = `
   color: var(--color-foreground); font: inherit; font-size: 15px;
   min-height: var(--spacing-tap-min);
 }
-.tp-favorites-add-to-trip .tp-skel { background: var(--color-bg-muted); border-radius: var(--radius-md); height: 36px; animation: tp-pulse 1.4s ease-in-out infinite; }
-.tp-favorites-add-to-trip .tp-skel + .tp-skel { margin-top: 12px; }
+.tp-favorites-add-to-trip .tp-form-row select:disabled,
+.tp-favorites-add-to-trip .tp-form-row input[type='time']:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+
+/* startTime + endTime 並排（grid 內 span 2 col + 內部 grid） */
+.tp-favorites-add-to-trip .tp-form-row-pair {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .tp-favorites-add-to-trip .tp-form-row-pair { grid-template-columns: 1fr; gap: 12px; }
+}
+
+.tp-favorites-add-to-trip .tp-form-actions {
+  margin-top: 8px;
+  max-width: 720px; width: 100%; margin-left: auto; margin-right: auto;
+  display: flex; justify-content: center;
+}
+.tp-favorites-add-to-trip .tp-form-actions .tp-btn--primary {
+  font: inherit; font-weight: 700; font-size: 15px;
+  padding: 12px 28px; border-radius: var(--radius-full);
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  border: 1px solid var(--color-accent);
+  cursor: pointer; min-height: var(--spacing-tap-min);
+  min-width: 200px;
+}
+.tp-favorites-add-to-trip .tp-form-actions .tp-btn--primary:disabled {
+  opacity: 0.55; cursor: not-allowed;
+}
+@media (max-width: 760px) {
+  .tp-favorites-add-to-trip .tp-form-actions .tp-btn--primary { width: 100%; }
+}
+
+.tp-favorites-add-to-trip .tp-skel {
+  background: var(--color-bg-muted, var(--color-tertiary));
+  border-radius: var(--radius-md); height: 44px;
+  animation: tp-pulse 1.4s ease-in-out infinite;
+}
 @keyframes tp-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) {
+  .tp-favorites-add-to-trip .tp-skel { animation: none; }
+}
+
 .tp-favorites-add-to-trip .tp-empty-cta {
   text-align: center; padding: 40px 24px; color: var(--color-muted);
   border: 1px dashed var(--color-border); border-radius: var(--radius-lg);
+  max-width: 720px; width: 100%; margin: 0 auto;
 }
 .tp-favorites-add-to-trip .tp-empty-cta a {
   display: inline-block; margin-top: 12px;
@@ -61,7 +120,9 @@ const SCOPED_STYLES = `
 }
 .tp-favorites-add-to-trip .tp-poi-summary {
   padding: 16px; border-radius: var(--radius-md);
-  background: var(--color-bg-muted); border: 1px solid var(--color-border);
+  background: var(--color-bg-muted, var(--color-tertiary));
+  border: 1px solid var(--color-border);
+  max-width: 720px; width: 100%; margin: 0 auto;
 }
 .tp-favorites-add-to-trip .tp-poi-summary h3 { margin: 0 0 4px 0; font-size: 16px; }
 .tp-favorites-add-to-trip .tp-poi-summary p { margin: 0; color: var(--color-muted); font-size: 13px; }
@@ -70,26 +131,25 @@ const SCOPED_STYLES = `
   background: color-mix(in srgb, var(--color-danger) 12%, transparent);
   color: var(--color-danger); border: 1px solid var(--color-danger);
   font-size: 14px;
+  max-width: 720px; width: 100%; margin: 0 auto;
 }
 `;
 
 export default function AddPoiFavoriteToTripPage() {
   const { id: idParam } = useParams<{ id: string }>();
-  const savedPoiId = Number(idParam);
+  const favoriteId = Number(idParam);
   const navigate = useNavigate();
-  // poi-favorites-rename: default back target /favorites (was /explore before page split)
   const goBack = useNavigateBack('/favorites');
 
   // Loading / data states
-  const [saved, setSaved] = useState<PoiFavorite | null>(null);
+  const [favorite, setFavorite] = useState<PoiFavorite | null>(null);
   const [trips, setTrips] = useState<TripBrief[] | null>(null);
   const [days, setDays] = useState<DayBrief[] | null>(null);
+  const [daysLoading, setDaysLoading] = useState(false);
 
-  // Form state
+  // Form state — 4 fields (純時間驅動 v2.22.0)
   const [tripId, setTripId] = useState('');
   const [dayNum, setDayNum] = useState<number | ''>('');
-  const [position, setPosition] = useState<Position>('append');
-  const [anchorEntryId, setAnchorEntryId] = useState<number | ''>('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
@@ -97,14 +157,12 @@ export default function AddPoiFavoriteToTripPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // v2.21.0 MF2: ConflictModal state — server 409 → 三選 action
   const [conflictPayload, setConflictPayload] = useState<ConflictWith | null>(null);
-  const [conflictBusy, setConflictBusy] = useState(false);
 
   const { user } = useCurrentUser();
 
   useEffect(() => {
-    if (!Number.isInteger(savedPoiId) || savedPoiId <= 0) {
+    if (!Number.isInteger(favoriteId) || favoriteId <= 0) {
       setLoadError('收藏 ID 無效');
       return;
     }
@@ -113,14 +171,14 @@ export default function AddPoiFavoriteToTripPage() {
       apiFetch<PoiFavorite[]>('/poi-favorites'),
       apiFetch<TripBrief[] | { trips?: TripBrief[] }>('/my-trips'),
     ])
-      .then(([savedList, tripsResp]) => {
+      .then(([favoritesList, tripsResp]) => {
         if (cancelled) return;
-        const found = savedList.find((s) => s.id === savedPoiId) ?? null;
+        const found = favoritesList.find((s) => s.id === favoriteId) ?? null;
         if (!found) {
           setLoadError('找不到該收藏（可能已被刪除）');
           return;
         }
-        setSaved(found);
+        setFavorite(found);
         const tripsList = Array.isArray(tripsResp) ? tripsResp : tripsResp.trips ?? [];
         setTrips(tripsList);
         if (tripsList.length === 1) setTripId(tripsList[0]!.tripId);
@@ -130,66 +188,62 @@ export default function AddPoiFavoriteToTripPage() {
         setLoadError(err instanceof Error ? err.message : '載入失敗');
       });
     return () => { cancelled = true; };
-  }, [savedPoiId]);
+  }, [favoriteId]);
 
   useEffect(() => {
     if (!tripId) {
       setDays(null);
+      setDaysLoading(false);
       setDayNum('');
       return;
     }
     let cancelled = false;
+    setDaysLoading(true);
+    setDayNum('');
     apiFetch<{ days?: DayBrief[] }>(`/trips/${encodeURIComponent(tripId)}`)
       .then((data) => {
         if (cancelled) return;
         const dayList = data.days ?? [];
         setDays(dayList);
+        setDaysLoading(false);
         if (dayList.length > 0) setDayNum(dayList[0]!.dayNum);
       })
       .catch(() => {
         if (cancelled) return;
         setDays([]);
+        setDaysLoading(false);
       });
     return () => { cancelled = true; };
   }, [tripId]);
 
-  // Backend TIME_RE 同 functions/api/_poi-defaults.ts — 防 FE 過鬆讓 BE 回 400 surprise
+  // Backend TIME_RE 同 functions/api/_poi-defaults.ts
   const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
   const canSubmit = useMemo(() => {
-    if (!saved || !tripId || dayNum === '' || submitting) return false;
-    if (position !== 'append' && !anchorEntryId) return false;
+    if (!favorite || !tripId || dayNum === '' || daysLoading || submitting) return false;
     if (startTime && !TIME_RE.test(startTime)) return false;
     if (endTime && !TIME_RE.test(endTime)) return false;
     return true;
-  }, [saved, tripId, dayNum, position, anchorEntryId, startTime, endTime, submitting]);
-
-  const submitInsert = useCallback(async (override?: { position: Position; anchorEntryId?: number }) => {
-    const finalPosition = override?.position ?? position;
-    const finalAnchor = override?.anchorEntryId ?? (position !== 'append' ? Number(anchorEntryId) : undefined);
-    await apiFetch(`/favorites/${savedPoiId}/add-to-trip`, {
-      method: 'POST',
-      body: JSON.stringify({
-        tripId,
-        dayNum: Number(dayNum),
-        position: finalPosition,
-        anchorEntryId: finalAnchor,
-        startTime: startTime || undefined,
-        endTime: endTime || undefined,
-      }),
-    });
-    const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
-    navigate(`/trips?${params.toString()}`, { replace: true });
-  }, [savedPoiId, tripId, dayNum, position, anchorEntryId, startTime, endTime, navigate]);
+  }, [favorite, tripId, dayNum, daysLoading, startTime, endTime, submitting]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await submitInsert();
+      await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
+        method: 'POST',
+        body: JSON.stringify({
+          tripId,
+          dayNum: Number(dayNum),
+          startTime: startTime || undefined,
+          endTime: endTime || undefined,
+        }),
+      });
+      const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
+      navigate(`/trips?${params.toString()}`, { replace: true });
     } catch (err) {
-      // v2.21.0 MF2: 409 conflict → open ConflictModal instead of inline error
+      // 409 conflict → 開 ConflictModal 顯示衝突資訊（4-field schema 下，user 改時段重 submit）
       if (err instanceof ApiError && err.status === 409) {
         const payload = err.payload as { conflictWith?: ConflictWith } | undefined;
         if (payload?.conflictWith) {
@@ -202,53 +256,29 @@ export default function AddPoiFavoriteToTripPage() {
       setSubmitError(msg);
       setSubmitting(false);
     }
-  }, [canSubmit, submitInsert]);
+  }, [canSubmit, favoriteId, tripId, dayNum, startTime, endTime, navigate]);
 
   const handleConflictCancel = useCallback(() => {
     setConflictPayload(null);
   }, []);
 
-  const handleConflictReplace = useCallback(async () => {
-    if (!conflictPayload) return;
-    setConflictBusy(true);
-    try {
-      await submitInsert({ position: 'replace', anchorEntryId: conflictPayload.entryId });
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '取代失敗';
-      setSubmitError(msg);
-    } finally {
-      setConflictBusy(false);
-      setConflictPayload(null);
-    }
-  }, [conflictPayload, submitInsert]);
-
-  const handleConflictPushAfter = useCallback(async () => {
-    if (!conflictPayload) return;
-    setConflictBusy(true);
-    try {
-      await submitInsert({ position: 'after', anchorEntryId: conflictPayload.entryId });
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '插入失敗';
-      setSubmitError(msg);
-    } finally {
-      setConflictBusy(false);
-      setConflictPayload(null);
-    }
-  }, [conflictPayload, submitInsert]);
-
   // ========== Render ==========
-  // v2.21.0 MF3: AppShell wrap (sidebar + bottom-nav) — single shell, branch inside main.
 
   let mainContent: React.ReactElement;
   if (loadError) {
     mainContent = (
-      <div className="tp-error" role="alert">
+      <div className="tp-error" role="alert" data-testid="favorites-add-to-trip-load-error">
         {loadError}
       </div>
     );
-  } else if (!saved || !trips) {
+  } else if (!favorite || !trips) {
     mainContent = (
-      <div className="tp-favorites-add-to-trip" aria-busy="true" aria-label="載入中">
+      <div
+        className="tp-favorites-add-to-trip"
+        aria-busy="true"
+        aria-label="載入中"
+        data-testid="favorites-add-to-trip-loading"
+      >
         <div className="tp-skel" />
         <div className="tp-skel" />
         <div className="tp-skel" />
@@ -258,10 +288,10 @@ export default function AddPoiFavoriteToTripPage() {
     mainContent = (
       <div className="tp-favorites-add-to-trip">
         <div className="tp-poi-summary">
-          <h3>{saved.poiName ?? '景點'}</h3>
-          {saved.poiAddress && <p>{saved.poiAddress}</p>}
+          <h3>{favorite.poiName ?? '景點'}</h3>
+          {favorite.poiAddress && <p>{favorite.poiAddress}</p>}
         </div>
-        <div className="tp-empty-cta">
+        <div className="tp-empty-cta" data-testid="favorites-add-to-trip-empty">
           <p>你還沒有任何行程</p>
           <a href="/trips/new">建立第一個行程</a>
         </div>
@@ -271,9 +301,9 @@ export default function AddPoiFavoriteToTripPage() {
     mainContent = (
       <div className="tp-favorites-add-to-trip">
         <div className="tp-poi-summary">
-          <h3>{saved.poiName ?? '景點'}</h3>
-          {saved.poiAddress && <p>{saved.poiAddress}</p>}
-          {saved.note && <p>備註：{saved.note}</p>}
+          <h3>{favorite.poiName ?? '景點'}</h3>
+          {favorite.poiAddress && <p>{favorite.poiAddress}</p>}
+          {favorite.note && <p>備註：{favorite.note}</p>}
         </div>
 
         {submitError && (
@@ -282,7 +312,7 @@ export default function AddPoiFavoriteToTripPage() {
           </div>
         )}
 
-        <div className="tp-form">
+        <div className="tp-form-grid-2col">
           <div className="tp-form-row">
             <label htmlFor="atstr-trip">行程</label>
             <select
@@ -302,96 +332,57 @@ export default function AddPoiFavoriteToTripPage() {
 
           <div className="tp-form-row">
             <label htmlFor="atstr-day">第幾天</label>
-            <select
-              id="atstr-day"
-              value={String(dayNum)}
-              onChange={(e) => setDayNum(e.target.value === '' ? '' : Number(e.target.value))}
-              disabled={!days || days.length === 0}
-              data-testid="favorites-add-to-trip-day"
-            >
-              {days === null && <option value="">載入中…</option>}
-              {days && days.length === 0 && <option value="">該行程沒有天數</option>}
-              {days && days.length > 0 && (
-                <>
-                  <option value="">選擇天數…</option>
-                  {days.map((d) => (
-                    <option key={d.dayNum} value={d.dayNum}>
-                      Day {d.dayNum}{d.label ? ` · ${d.label}` : ''} ({d.date})
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
+            {daysLoading ? (
+              <div className="tp-skel" data-testid="favorites-add-to-trip-day-skeleton" />
+            ) : (
+              <select
+                id="atstr-day"
+                value={String(dayNum)}
+                onChange={(e) => setDayNum(e.target.value === '' ? '' : Number(e.target.value))}
+                disabled={!days || days.length === 0}
+                data-testid="favorites-add-to-trip-day"
+              >
+                {days && days.length === 0 && <option value="">該行程沒有天數</option>}
+                {days && days.length > 0 && (
+                  <>
+                    <option value="">選擇天數…</option>
+                    {days.map((d) => (
+                      <option key={d.dayNum} value={d.dayNum}>
+                        Day {d.dayNum}{d.label ? ` · ${d.label}` : ''} ({d.date})
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            )}
           </div>
 
-          <div className="tp-form-row">
-            <label htmlFor="atstr-position">放置位置</label>
-            <select
-              id="atstr-position"
-              value={position}
-              onChange={(e) => setPosition(e.target.value as Position)}
-              data-testid="favorites-add-to-trip-position"
-            >
-              {(['append', 'before', 'after', 'replace'] as Position[]).map((p) => (
-                <option key={p} value={p}>
-                  {POSITION_LABELS[p]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {position !== 'append' && (
+          <div className="tp-form-row-pair">
             <div className="tp-form-row">
-              <label htmlFor="atstr-anchor">參考的景點 ID（{POSITION_LABELS[position]}）</label>
+              <label htmlFor="atstr-start">開始時間（可空，依景點類型自動推）</label>
               <input
-                id="atstr-anchor"
-                type="number"
-                min={1}
-                value={anchorEntryId === '' ? '' : String(anchorEntryId)}
-                onChange={(e) => setAnchorEntryId(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="entry id"
-                data-testid="favorites-add-to-trip-anchor"
+                id="atstr-start"
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                data-testid="favorites-add-to-trip-start"
               />
             </div>
-          )}
 
-          <div className="tp-form-row">
-            <label htmlFor="atstr-start">開始時間（可空，依景點類型自動推）</label>
-            <input
-              id="atstr-start"
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              data-testid="favorites-add-to-trip-start"
-            />
-          </div>
-
-          <div className="tp-form-row">
-            <label htmlFor="atstr-end">結束時間（可空，依停留時間預估推）</label>
-            <input
-              id="atstr-end"
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              data-testid="favorites-add-to-trip-end"
-            />
+            <div className="tp-form-row">
+              <label htmlFor="atstr-end">結束時間（可空，依停留時間預估推）</label>
+              <input
+                id="atstr-end"
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                data-testid="favorites-add-to-trip-end"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    );
-  }
 
-  const showBottomBar = !loadError && saved && trips && trips.length > 0;
-
-  const main = (
-    <div className="tp-app">
-      <style>{SCOPED_STYLES}</style>
-      <TitleBar title="加入行程" back={goBack} />
-      <main className="tp-page-content">
-        {mainContent}
-      </main>
-      {showBottomBar && (
-        <div className="tp-page-bottom-bar">
+        <div className="tp-form-actions">
           <button
             type="button"
             className="tp-btn tp-btn--primary"
@@ -402,14 +393,22 @@ export default function AddPoiFavoriteToTripPage() {
             {submitting ? '加入中…' : '加入行程'}
           </button>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  const main = (
+    <div className="tp-app">
+      <style>{SCOPED_STYLES}</style>
+      <TitleBar title="加入行程" back={goBack} />
+      <main className="tp-page-content">
+        {mainContent}
+      </main>
       <ConflictModal
         open={!!conflictPayload}
         conflictWith={conflictPayload}
-        busy={conflictBusy}
+        busy={false}
         onCancel={handleConflictCancel}
-        onReplace={handleConflictReplace}
-        onPushAfter={handleConflictPushAfter}
       />
     </div>
   );

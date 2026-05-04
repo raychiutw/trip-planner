@@ -118,8 +118,10 @@ export interface ConflictModalProps {
   conflictWith: ConflictWith | null;
   busy?: boolean;
   onCancel: () => void;
-  onReplace: () => void;
-  onPushAfter: () => void;
+  /** v2.22.0 4-field schema 不支援 replace；caller 不傳 → 隱藏 button */
+  onReplace?: () => void;
+  /** v2.22.0 4-field schema 不支援 push-after；caller 不傳 → 隱藏 button */
+  onPushAfter?: () => void;
 }
 
 export default function ConflictModal({
@@ -179,24 +181,28 @@ export default function ConflictModal({
             {conflictWith.title}
           </div>
           <div className="tp-conflict-actions">
-            <button
-              type="button"
-              className="tp-conflict-btn tp-conflict-btn-after"
-              onClick={onPushAfter}
-              disabled={busy}
-              data-testid="conflict-modal-after"
-            >
-              {busy ? '處理中…' : '改插入到後面'}
-            </button>
-            <button
-              type="button"
-              className="tp-conflict-btn tp-conflict-btn-replace"
-              onClick={onReplace}
-              disabled={busy}
-              data-testid="conflict-modal-replace"
-            >
-              {busy ? '處理中…' : '取代既有'}
-            </button>
+            {onPushAfter && (
+              <button
+                type="button"
+                className="tp-conflict-btn tp-conflict-btn-after"
+                onClick={onPushAfter}
+                disabled={busy}
+                data-testid="conflict-modal-after"
+              >
+                {busy ? '處理中…' : '改插入到後面'}
+              </button>
+            )}
+            {onReplace && (
+              <button
+                type="button"
+                className="tp-conflict-btn tp-conflict-btn-replace"
+                onClick={onReplace}
+                disabled={busy}
+                data-testid="conflict-modal-replace"
+              >
+                {busy ? '處理中…' : '取代既有'}
+              </button>
+            )}
             <button
               ref={cancelRef}
               type="button"
