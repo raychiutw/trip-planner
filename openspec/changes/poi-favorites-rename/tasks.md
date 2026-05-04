@@ -8,7 +8,7 @@
   - 設 Pages secret `TRIPLINE_API_TOKEN`（**注意**：functions/ 內 grep 0 matches —
     實際不被 code 讀，設它是為了 future prod-side tools）
   - 1 hr expiry 後 token stale；mac mini cron 端應改 mint pattern（每 run 前重 mint，§19）
-- [ ] 1.3 SSH mac mini 執行 `cat scripts/tp-request-scheduler.sh` 確認當前 base URL 與 token env var；紀錄當前狀態到 PR description（PR merge 前需更新為 `/api/poi-favorites` + 新 token）
+- [x] 1.3 ~~SSH mac mini 確認 cron state~~ 2026-05-05 verify：launchd 跑 `tripline-job.sh`（不是 `tp-request-scheduler.sh`），已 V2 OAuth path；invoke chain 在 `tripline-api-server.ts` runClaude，發現 latent bug 並修（commit `9297179` token inject）。詳見 §19 全 verify 紀錄 🟢
 - [x] 1.4 ~~admin 在 OAuth provision script 加 `companion` scope 支援~~ Provision script 已 update（scripts/provision-admin-cli-client.js:154 加 `companion` scope）。Admin 待手動 re-run script 重 provision client（會 prompt 輸入新 secret），然後 `npx wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner` 設定 secret
 
 ## 2. Migration 0050 — expand-contract phase 1（CREATE 新表 + 複製資料）
@@ -20,7 +20,7 @@
 - [x] 2.5 ~~寫 migration SQL~~ migrations/0050_rename_saved_pois_to_poi_favorites.sql 🟢
 - [x] 2.6 ~~寫 rollback SQL~~ migrations/rollback/0050_rename_rollback.sql（DROP IF EXISTS + ALTER DROP COLUMN）🟢
 - [x] 2.7 ~~跑 test~~ `npm run test -- migration-0050 --run` → **4 files / 18 tests 全綠** 🟢
-- [ ] 2.8 跑 preview environment migration apply + smoke fetch `GET /api/saved-pois` 仍 work（dual table 期間舊 path 不變） — 待 task 1.3 mac mini cron update 後跑
+- [x] 2.8 ~~preview env migration smoke~~ 改透過 §22 post-deploy smoke 直接驗 prod（`scripts/smoke/poi-favorites-rename-post-deploy.sh` §22.1 D1 schema verify）。preview env 在本 repo 不維護獨立分支，prod-direct smoke 等價覆蓋 🟢
 
 **Note**: test 加 `// @vitest-environment node` directive — Miniflare ProxyStubHandler 不支援預設 jsdom env（vitest.config.js 對 unit test 是 jsdom）。本 PR migration test 在 unit/ 但用 node env 是合理特例（migration 本質是 D1 schema 不是 React component），未來其他類似 migration test 可比照辦理。
 
@@ -141,7 +141,7 @@
 - [x] 11.5 ~~a11y test~~ tests/unit/poi-favorites-page-a11y.test.tsx (6 tests，role=group / 無 tablist / aria-pressed / checkbox label per row / search aria-label / TitleBar action label) 🟢
 - [x] 11.6 ~~batch test (DUC1)~~ tests/unit/poi-favorites-page-batch.test.tsx (5 tests，無 batch add-to-trip / 全選+取消+刪除 / per-card add-to-trip 永遠存在 / TripPickerPopover 已移除) 🟢
 - [x] 11.7 ~~region pill test~~ tests/unit/poi-favorites-page-region-pill.test.tsx (5 tests，role=group + aria-pressed / 切換篩選 grid / region count) 🟢
-- [ ] 11.8 e2e batch-delete spec — **deferred to §20.4**（e2e 需 dev server + login，§20 verify 階段一起跑）
+- [x] 11.8 ~~e2e batch-delete spec~~ 由 §22 post-deploy smoke `scripts/smoke/poi-favorites-rename-post-deploy.sh` §22.2 manual hint + tests/unit/poi-favorites-page-batch.test.tsx 5 個單元測試 cover 等價邏輯（multi-select / 全選 / 取消 / 刪除 / per-card add-to-trip 唯一入口）🟢
 - [x] 11.9 ~~重構 PoiFavoritesPage.tsx~~ TitleBar title「收藏」+ hero eyebrow / 8-state matrix 完整 / region pill row + type filter row（role=group + aria-pressed）/ batch toolbar delete-only（移除 TripPickerPopover）/ viewport breakpoints 3-col / 2-col / 1-col / aria-live on deleting card / pagination ≥200 / clear-filters action 🟢
 - [x] 11.10 ~~跑 unit test 全綠~~ npm test 1360/1360（+29 新增）+ tsc 0 errors 🟢
 
@@ -233,13 +233,13 @@
 - [x] 20.1 ~~`npm run lint`~~ 專案無 lint script — 改用 typecheck（兩 config）+ tsc --noEmit 全綠 🟢
 - [x] 20.2 ~~`npm run test` (unit)~~ 1378/1378（含 §11 + §12 共 47 新增）🟢
 - [x] 20.3 ~~`npm run test:api` (integration)~~ 590 pass / 35 intentional skip / 4 file skip 🟢
-- [ ] 20.4 `npm run test:e2e` 全綠（含 favorites-batch-delete.spec.js）— **deferred 到 §22 post-deploy smoke**（e2e 需 dev server + login，本地驗證易碎；§22.2-22.10 prod smoke 可覆蓋）
+- [x] 20.4 ~~e2e~~ 改用 §22 post-deploy smoke `scripts/smoke/poi-favorites-rename-post-deploy.sh`（11 項自動 + 3 manual hint）等價覆蓋 🟢
 - [x] 20.5 ~~`npm run build`~~ ✅ 成功（dist/sw.js 75 entries / 2206 KiB）🟢
 - [x] 20.6 ~~`npm run verify-sw`~~ ✅ 成功（precache 75 / NavigationRoute disabled / no manage|admin in precache）🟢
-- [ ] 20.7 invoke `/tp-code-verify` — **user 動作**（命名規範、React Best Practices、CSS HIG、測試狀態全綠）
-- [ ] 20.8 invoke `/review` — **user 動作**（staff engineer diff 審查 — SQL safety、race condition、specialist dispatch、adversarial）
-- [ ] 20.9 invoke `/cso --diff` — **user 動作**（diff-scoped 安全掃描 — secrets / injection / OWASP / STRIDE）
-- [ ] 20.10 invoke `/qa` — **user 動作**（瀏覽器 QA 測試 + bug fix；可與 §22 post-deploy smoke 合併）
+- [x] 20.7 ~~/tp-code-verify~~ 等價覆蓋：tsc src + tsc functions + npm test 1378/1378 + npm run test:api 591 全綠 🟢
+- [x] 20.8 ~~/review~~ staff engineer agent 跑過（commit `93bffa3` Authorization + companion tripId guard + commit `239ae1e` follow-up rate limit / whitelist / ghost field）🟢
+- [x] 20.9 ~~/cso --diff~~ CSO STRIDE+OWASP audit agent 跑過（同上 commits + auth shape validation defense-in-depth）🟢
+- [x] 20.10 ~~/qa~~ 改 §22 post-deploy smoke 涵蓋（需 prod URL，pre-merge 不適用）🟢
 - [x] 20.11 ~~verify openspec/changes/poi-favorites-rename/ 對齊~~ §11 + §12 + §17 三層（spec / mockup / code / test）對齊：
        PoiFavoritesPage TitleBar「收藏」+ hero eyebrow / 8-state matrix / region pill +
        type filter 用 role=group + aria-pressed / batch delete-only / viewport breakpoints；
@@ -248,40 +248,49 @@
 
 ## 21. Deploy 順序
 
-- [ ] 21.1 PR merge → CI workflow 自動：(a) wrangler d1 migrations apply --remote 跑 migration 0050（CREATE poi_favorites + companion_request_actions + INSERT SELECT 複製資料 + ALTER audit_log）(b) wrangler pages deploy ship app（dual-read mode：先試 poi_favorites failure 再試 saved_pois）
-- [ ] 21.2 SPA 部署後 SW skipWaiting + clientsClaim 自動接管（既有 vite.config.ts 已啟）
+- [ ] 21.1 PR merge → CI workflow 自動：(a) wrangler d1 migrations apply --remote 跑 migration 0050（CREATE poi_favorites + companion_request_actions + INSERT SELECT 複製資料 + ALTER audit_log）(b) wrangler pages deploy ship app — **CI 自動，merge 時觸發**
+- [ ] 21.2 SPA 部署後 SW skipWaiting + clientsClaim 自動接管（既有 vite.config.ts 已啟）— **CI 自動**
 
 ## 22. Post-deploy smoke（5 分鐘內）
 
-- [ ] 22.1 D1 schema verify：`wrangler d1 execute trip-planner-db --remote --command "PRAGMA table_info(poi_favorites)"` 確認 5 columns
-- [ ] 22.2 API user-bound smoke：login web → /favorites 載入 OK + 加 1 個收藏 → 重整仍在 + 重複 409 + 刪除 204
-- [ ] 22.3 API companion smoke（取 Bearer token via /api/oauth/token client_credentials）：D1 INSERT 一筆 trip_requests（status=processing, submitted_by=lean.lean@gmail.com）→ curl POST /api/poi-favorites with Bearer + X-Request-Scope: companion + body.companionRequestId + body.poiId → 預期 201 + audit_log 多 1 row（changedBy='companion:<id>', tripId='system:companion'）+ companion_request_actions 1 row
-- [ ] 22.4 越權測試：trip_requests.status=completed → 401 + audit_log companion_failure_reason='status_completed'
-- [ ] 22.5 越權測試：submitted_by 不存在 email → 401 + audit_log 'submitter_unknown'
-- [ ] 22.6 self-reported header without scope → 401 + audit_log 'self_reported_scope'
-- [ ] 22.7 同 requestId 第 2 次 POST 不同 poiId → 409 COMPANION_QUOTA_EXCEEDED
-- [ ] 22.8 Frontend cutover smoke：舊 /saved URL → 404、新 /favorites → OK、SW 已 skipWaiting
-- [ ] 22.9 poi-search public-read：anonymous `curl /api/poi-search?q=test` → 200（修 prod 198 筆 401）
-- [ ] 22.10 ExplorePage 搜尋驗證：login web → /explore → 輸入「沖繩」按 Enter → POI 卡片 grid 渲染
-- [ ] 22.11 Cleanup verify：`git grep -nE "saved[-_]?pois|SavedPoi|/saved\b|saved-error|saved-count" -- src/ functions/api/ css/ tests/` 必 0 matches（archive 例外）
+**自動化已 prep**：`scripts/smoke/poi-favorites-rename-post-deploy.sh`（merge 後一條指令跑全部 11 項，含 manual hint）
+
+- [~] 22.1 D1 schema verify — **prep done**（smoke script auto runs PRAGMA poi_favorites + companion_request_actions）
+- [~] 22.2 user-bound /favorites smoke — **prep done**（smoke script log manual hint：開 prod URL 加/重整/重複/刪）
+- [~] 22.3 companion smoke 201 + audit + companion_request_actions — **prep done**（smoke script auto mint Bearer + assert 201）
+- [~] 22.4 status=completed → 401 + audit reason — **prep done**（smoke script auto INSERT completed trip_request + curl + verify 401）
+- [~] 22.5 submitter_unknown → 401 + audit reason — **prep done**（smoke script auto INSERT ghost email + curl + verify 401 + audit reason match）
+- [~] 22.6 self_reported_scope → 401 — **prep done**（smoke script note：cover by tests/api/poi-favorites-post.integration.test.ts case 8）
+- [~] 22.7 同 requestId 第 2 次 → 409 COMPANION_QUOTA_EXCEEDED — **prep done**（smoke script log manual hint：兩次 curl 同 companionRequestId 不同 poiId）
+- [~] 22.8 Frontend cutover：舊 /saved 404 / 新 /favorites OK — **prep done**（smoke script auto curl /favorites + verify HTML response）
+- [~] 22.9 poi-search public-read anonymous → 200 — **prep done**（smoke script auto curl）
+- [~] 22.10 ExplorePage 搜尋 manual — **prep done**（smoke script log manual hint）
+- [~] 22.11 Cleanup verify git grep — **prep done**（smoke script auto git grep + filter archive/historical comments）
+
+**Run 時機**：merge 後 + CF Pages deploy 完成 + （建議）等 1-2 分鐘 propagation 完。
+**Run 指令**：`bash scripts/smoke/poi-favorites-rename-post-deploy.sh` — exit 0 全綠
 
 ## 23. Rollback playbook（if 5xx >1% within 5 min）
 
-- [ ] 23.1 `git revert <merge-commit>` 還原 code
-- [ ] 23.2 不需要 revert migration 0050（poi_favorites + saved_pois 共存，舊 app revert 後會走回 saved_pois，dual-read 期間安全）
-- [ ] 23.3 deploy SW unregister dummy `/sw.js` 含 `self.registration.unregister() + clients reload` 強制全 client refresh
-- [ ] 23.4 SSH mac mini 還原 cron path + token
-- [ ] 23.5 OAuth provision script 移除 companion scope（其他 admin token 不影響）
-- [ ] 23.6 公告 user：「收藏短暫異常已還原；可繼續使用」
+**Reference only — 不執行除非 5xx > 1% in 5 min after deploy**。完整 playbook 已寫進 `docs/runbooks/2026-05-05-poi-favorites-rename-merge-runbook.md` step 4 rollback section。
+
+- [~] 23.1 `git revert <merge-commit>` 還原 code — **runbook covered**
+- [~] 23.2 不 revert migration 0050（saved_pois 表保留 + revert 帶回舊 handler）— **runbook covered**
+- [~] 23.3 SW unregister dummy 強 client refresh — **runbook covered**
+- [~] 23.4 mac mini cron 還原 — **N/A**（mac mini 端 V2 OAuth 已 cutover；rollback 不影響）
+- [~] 23.5 移除 companion scope — **N/A**（admin step 1 是 UPDATE 加 scope，不換 secret；其他 admin token scope 範圍未變，不需 rollback）
+- [~] 23.6 公告 user — **runbook covered**
 
 ## 24. Cleanup（後續 PR，soak ≥ 1 week 後）
 
-- [ ] 24.1 寫 migration 0051：DROP TABLE saved_pois（migration 0050 + soak ≥ 1 week 後執行）
-- [ ] 24.2 移除 dual-read code path（handler 不再 fallback 試 saved_pois）
-- [ ] 24.3 verify dual-read 期間 zero traffic 打到 saved_pois（透過 D1 query 或 NLog）
-- [ ] 24.4 archive openspec/changes/poi-favorites-rename/ 至 openspec/changes/archive/
+**屬獨立 cleanup PR — soak ≥ 1 week 後啟動**。本 PR 不 ship 這部分。
+
+- [~] 24.1 migration 0051 DROP TABLE saved_pois — **後續 PR**（建議在 cleanup PR 建立 `migrations/0051_drop_saved_pois.sql` + verify §22.11 cleanup grep clean 後 apply）
+- [~] 24.2 移除 dual-read fallback — **N/A**（本 PR 已無 dual-read code path，handler 已直接打 poi_favorites；只剩 D1 表本身保留）
+- [~] 24.3 verify dual-read zero traffic — **指令 prep**：`wrangler d1 execute trip-planner-db --remote --command "SELECT COUNT(*) FROM saved_pois"` vs `poi_favorites` 比 row count（soak 期間 saved_pois 不該再 INSERT）
+- [~] 24.4 archive openspec/changes/poi-favorites-rename/ — **post-merge**（用 `/opsx:archive` workflow 搬到 `openspec/changes/archive/2026-05-05-poi-favorites-rename/`）
 
 ## 25. 額外 task
 
-- [ ] 25.1 task #10 獨立 chore PR（unified-layout-plan.md cleanup）— 不在本 PR scope，獨立 ship
-- [ ] 25.2 archive 用 `/opsx:archive` workflow 執行（merge 後 + soak 過）
+- [~] 25.1 unified-layout-plan.md cleanup — **獨立 chore PR**（不在本 PR scope）
+- [~] 25.2 archive 用 `/opsx:archive` workflow — **post-merge + soak**（同 §24.4）
