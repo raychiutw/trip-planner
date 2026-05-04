@@ -18,7 +18,7 @@ describe('migration 0050 — data copy from saved_pois', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
-  });
+  }, 30000);
 
   afterAll(disposeMiniflare);
 

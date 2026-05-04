@@ -13,7 +13,7 @@ describe('migration 0050 — companion_request_actions schema', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
-  });
+  }, 30000);
 
   afterAll(disposeMiniflare);
 

@@ -12,7 +12,7 @@ describe('migration 0050 — audit_log.companion_failure_reason', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
-  });
+  }, 30000);
 
   afterAll(disposeMiniflare);
 

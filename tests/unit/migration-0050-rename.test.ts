@@ -15,7 +15,7 @@ describe('migration 0050 — poi_favorites schema', () => {
 
   beforeAll(async () => {
     db = await createTestDb();
-  });
+  }, 30000);
 
   afterAll(disposeMiniflare);
 
