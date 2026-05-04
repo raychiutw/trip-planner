@@ -118,13 +118,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少必要欄位：tripId, message');
   }
 
-  // mode is now optional. tp-request skill on Mac Mini auto-classifies the
-  // message intent (改行程 vs 問建議). Frontend no longer needs to choose.
-  // Default to 'trip-plan' to satisfy DB CHECK (mode IN ('trip-edit','trip-plan'))
-  // — the field is vestigial from the skill's perspective; schema kept for
-  // backward compat with older client versions.
-  const mode = body.mode === 'trip-edit' || body.mode === 'trip-plan' ? body.mode : 'trip-plan';
-
+  // mode is vestigial (migration 0048 phase 1 nullable; phase 2 will DROP COLUMN).
   if (!await hasWritePermission(env.DB, auth, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
@@ -144,9 +138,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const result = await env.DB
     .prepare(
-      'INSERT INTO trip_requests (trip_id, mode, message, submitted_by) VALUES (?, ?, ?, ?) RETURNING *'
+      'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?) RETURNING *'
     )
-    .bind(tripId, mode, message, auth.email)
+    .bind(tripId, message, auth.email)
     .first();
 
   const newRow = result as Record<string, unknown>;
@@ -158,7 +152,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       recordId: newRow ? (newRow.id as number) : null,
       action: 'insert',
       changedBy: auth.email,
-      diffJson: JSON.stringify({ mode, message: message.substring(0, 100) }),
+      diffJson: JSON.stringify({ message: message.substring(0, 100) }),
     });
   } catch (auditErr) {
     console.error('[requests] logAudit failed (non-fatal):', auditErr);

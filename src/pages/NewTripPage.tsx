@@ -434,7 +434,6 @@ export default function NewTripPage() {
   const { user } = useCurrentUser();
   const navigate = useNavigate();
   const handleBack = useNavigateBack(routes.trips());
-  const ownerEmail = user?.email ?? '';
 
   // Destination uses POI autocomplete. User can select multiple POIs.
   const [destQuery, setDestQuery] = useState('');
@@ -572,7 +571,6 @@ export default function NewTripPage() {
         body: JSON.stringify({
           id: tripId,
           name: tripName,
-          owner: ownerEmail,
           startDate: dates.start,
           endDate: dates.end,
           countries,

@@ -36,5 +36,5 @@ const queries = [
 2. 執行腳本收集評分
 3. Step 2c 依結果分兩類 PATCH：
    - **entry 評分**：`PATCH /api/trips/{tripId}/entries/{eid}` Body: `{ google_rating: X.X }`
-   - **POI 評分**（餐廳/商店）：`PATCH /api/pois/{poiId}` Body: `{ google_rating: X.X }`
+   - **POI 評分**（餐廳/商店）：`PATCH /api/pois/{poiId}` Body: `{ rating: X.X }`（migration 0045 後 pois 表欄位為 `rating`）
 4. 用 `Promise.all` 批次 PATCH 所有評分
