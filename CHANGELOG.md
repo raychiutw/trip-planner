@@ -3,6 +3,44 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.21.3] - 2026-05-04
+
+**`trip_requests.mode` rip-out phase 2 — DROP COLUMN** — 完成 PR #471 留下的
+phase 2，schema 完全清掉 vestigial column。Override 24 hr soak 直接 ship（phase 1
+才 deploy ~10 min 但風險已 mitigate：column 已 nullable + code 已停止寫 + types 已
+optional，DROP COLUMN swap idiom 是 reversible 操作）。
+
+### Changed
+
+- **Migration 0049 phase 2** (`migrations/0049_trip_requests_mode_phase2.sql`):
+  DROP COLUMN `trip_requests.mode` via standard SQLite swap idiom。trip_requests
+  無 children FK，不需 0047 backup-restore pattern。Rollback 採 schema-only：
+  mode column 重建為 nullable，歷史值已遺失（true rollback 走 wrangler d1
+  time-travel）。
+- **`src/types/api.ts`** — `Request.mode` field 完全移除（phase 1 為 optional，
+  phase 2 schema 沒這 column 了，type 對齊）。
+- **schema-pin tests** — `tests/unit/requests-api.test.js` assertion 從「INSERT
+  不含 mode」延伸到「整個 handler 不 reference mode / 'trip-edit' / 'trip-plan'」。
+- **integration tests** — `tests/api/requests.integration.test.ts`:
+  - `data.mode` 期望從 `toBeNull()` 改 `not.toHaveProperty('mode')`（response shape
+    不再有 mode key）。
+  - `sanitizeReply` test 的 raw INSERT seed 移除 mode column（schema 沒這欄，
+    舊 SQL 會 SQLITE_ERROR）。
+
+### Deploy runbook
+
+同 phase 1 順序（CF Pages auto-deploy ↔ migration apply 不 atomic）：
+
+1. `bash scripts/backup-prod-d1.sh`
+2. `wrangler d1 time-travel info trip-planner-db --json | tee backups/bookmark-pre-0049.json`
+3. **先** `wrangler d1 migrations apply trip-planner-db --remote`（DROP COLUMN）
+4. **再** merge PR → CF Pages auto-deploy（types/code cleanup 上線）
+5. 驗證：`wrangler d1 execute trip-planner-db --remote --command "PRAGMA table_info(trip_requests);"`
+   不該見 mode column。
+
+順序顛倒會在新 code 與舊 schema 之間留 race window：舊 worker SELECT 仍會回 mode
+field 但新 type 沒這 key（runtime 不影響但 inconsistent）。
+
 ## [2.21.2] - 2026-05-04
 
 **V2 cutover audit + mode rip-out phase 1** — chat 觸發 tp-request 時發現

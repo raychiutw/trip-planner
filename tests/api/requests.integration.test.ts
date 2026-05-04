@@ -38,7 +38,7 @@ describe('POST /api/requests', () => {
     expect(data.status).toBe('open');
   });
 
-  it('mode rip-out: 缺 mode → 201（migration 0048 phase 1：mode column nullable，不再 default）', async () => {
+  it('mode rip-out phase 2: response shape 不含 mode (migration 0049 DROP COLUMN)', async () => {
     const ctx = mockContext({
       request: jsonRequest('https://test.com/api/requests', 'POST', {
         tripId: 'trip-req', message: '幫我推薦景點',
@@ -49,7 +49,7 @@ describe('POST /api/requests', () => {
     const resp = await callHandler(onRequestPost, ctx);
     expect(resp.status).toBe(201);
     const data = await resp.json() as Record<string, unknown>;
-    expect(data.mode).toBeNull();
+    expect(data).not.toHaveProperty('mode');
   });
 
   it('缺 message → 400', async () => {
@@ -116,8 +116,8 @@ describe('PATCH /api/requests/:id', () => {
   it('sanitizeReply 過濾敏感內容', async () => {
     // 先建一個新請求
     await db.prepare(
-      'INSERT INTO trip_requests (trip_id, mode, message, submitted_by) VALUES (?, ?, ?, ?)'
-    ).bind('trip-req', 'trip-edit', 'test', 'user@test.com').run();
+      'INSERT INTO trip_requests (trip_id, message, submitted_by) VALUES (?, ?, ?)'
+    ).bind('trip-req', 'test', 'user@test.com').run();
     const row = await db.prepare('SELECT id FROM trip_requests ORDER BY id DESC LIMIT 1').first<{ id: number }>();
 
     const ctx = mockContext({
