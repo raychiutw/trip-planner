@@ -53,3 +53,12 @@ Match → invoke `Skill` first.
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
 Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
+
+## Naming history
+
+- **v2.22.0** (migration 0050): `saved_pois` table → `poi_favorites`; `/saved` route → `/favorites`; `/api/saved-pois` → `/api/poi-favorites`; `SavedPoisPage` → `PoiFavoritesPage`; `AddSavedPoiToTripPage` → `AddPoiFavoriteToTripPage`. Hard cutover, no aliases. CSS class `tp-saved-*` → `tp-favorites-*`. Cross-skill auth header CF-Access → `Authorization: Bearer $TRIPLINE_API_TOKEN`.
+- **v2.21.3** (migration 0049): `trip_requests.mode` column DROPPED. tp-request skill auto-classifies intent.
+- **v2.21.2** (migration 0048): `trip_requests.mode` 改 nullable + drop CHECK constraint (phase 1 of mode rip-out).
+- **v2.21.0** (migration 0046+0047): `trip_ideas` → `saved_pois` universal pool; `trips.owner_email` → `owner_user_id`; `saved_pois.email` / `trip_permissions.email` DROPPED.
+- **v2.20.0** (migration 0046 phase 1): `trip_ideas` table retired; `tp-request mode` rip-out 啟動.
+- **v2.19.x** (migration 0045): `pois.google_rating` → `rating`; `pois.maps` DROPPED; `trips.{auto_scroll,og_description,footer,food_prefs,is_default,self_drive}` DROPPED.
