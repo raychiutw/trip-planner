@@ -99,12 +99,6 @@ export interface Request {
   id: number;
   /** DB column `trip_id` */
   tripId: string;
-  /**
-   * DB column `mode` — vestigial.
-   * Migration 0048 phase 1: nullable + CHECK constraint dropped; new requests no longer write mode.
-   * Migration 0049 phase 2 (follow-up): DROP COLUMN entirely. Field kept optional for backward compat with rows created before phase 1.
-   */
-  mode?: string | null;
   message: string;
   /** DB column `submitted_by` — email of the submitter */
   submittedBy?: string | null;
