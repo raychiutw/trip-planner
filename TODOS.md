@@ -152,6 +152,132 @@
 
 ---
 
+## poi-favorites-rename — Pre-merge gates (admin / SRE actions)
+
+### admin — provision TRIPLINE_API_TOKEN + TP_REQUEST_CLIENT_ID Pages secrets
+
+**Priority:** P0 — blocks merge of PR #474
+**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §1.2, §1.4
+**Symptom:** `TRIPLINE_API_TOKEN` 未 provisioned in Cloudflare Pages env → companion path 全 401。
+
+**步驟：**
+1. admin re-run `node scripts/provision-admin-cli-client.js`（已加 `companion` scope）取得新 client_secret（一次性 print）
+2. 用 `curl -X POST /api/oauth/token` with `client_credentials` + `client_secret` 換 access_token（含 `admin + companion` scopes）
+3. `wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner` 設為 access_token
+4. `wrangler pages secret put TP_REQUEST_CLIENT_ID --project-name trip-planner` 設為 `tripline-internal-cli`
+5. `wrangler pages secret list --project-name trip-planner` verify 兩個都有
+
+完成才能 merge PR #474。
+
+### SRE — mac mini cron sync (URL + OAuth token)
+
+**Priority:** P0 — blocks merge of PR #474
+**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §1.3, §19
+**Symptom:** mac mini cron `scripts/tp-request-scheduler.sh` 還在打 `/api/saved-pois`（middleware 白名單已 cutover 到 `/api/poi-favorites`）→ companion 會 403。
+
+**步驟：**
+1. SSH mac mini 改 `scripts/tp-request-scheduler.sh` base URL 4 條 endpoint：`/api/saved-pois*` → `/api/poi-favorites*`
+2. 換新 OAuth token（admin re-mint 含 `admin + companion` scope）並更新 cron env var
+3. dry-run smoke：trigger 測試 trip_requests row → assert tp-request 處理成功 + companion path 200
+4. PR description 附 commit hash / config diff / dry-run output 證據
+
+---
+
+## poi-favorites-rename — UI mockup-driven redesigns (PoiFavoritesPage + AddPoiFavoriteToTripPage)
+
+**Priority:** P2 — mockup signed-off (`docs/design-sessions/2026-05-04-favorites-redesign.html` v4)，React refactor 留 follow-up
+**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §11.3-§11.10, §12.3-§12.11
+
+**Scope:**
+
+§11 PoiFavoritesPage redesign（mockup-driven hard gate）：
+- region pill row + type filter row 對齊 mockup
+- 8-state matrix（loading / empty-pool / filter-no-results / error / data / optimistic-delete / bulk-action-busy / pagination）
+- batch flow delete-only（不支援 batch add-to-trip — DUC1 user accept）
+- a11y: filter chip `role="group"` + `aria-pressed`（不是 `role="tab"`）/ checkbox `aria-label` per row / optimistic-delete `aria-live`
+- viewport breakpoints: 1024+ 3-col / 640-1023 2-col / <430 1-col / max-width 1040px
+- hierarchy rules: 0 favorites 隱藏 filters / 50 grid 為主 / 200+ sticky search + pagination
+- 8 處 `border: 1px solid var(--color-border)` 違反 H7 一併修（從 master SavedPoisPage 繼承的 pre-existing pattern）
+
+§12 AddPoiFavoriteToTripPage redesign：
+- 4-field 純時間驅動 form（trip / day / startTime / endTime）— 廢除 position radio + anchorEntryId
+- desktop 2-col grid（max-width 720px）/ phone stack 單欄 + button full-width
+- TitleBar title 靠左（flex:1）/ 左側返回 button / 右側無 confirm action
+- 「加入行程」primary button 在 `.tp-form-actions` wrapper 內、置中對齊、放在 4 fields 下方
+- 7-state matrix（loading / empty-no-trip / conflict / error / success / optimistic / partial）
+- trip 切換時 day field skeleton + 提交按鈕 disabled
+
+**建議 flow：** invoke `/tp-claude-design` 對照 mockup 產 React → invoke `/design-review` 視覺稽核 → /tp-code-verify。
+
+---
+
+## poi-favorites-rename — Migration 0051 cleanup PR (DROP saved_pois)
+
+**Priority:** P2 — schedule after migration 0050 soak ≥ 1 week
+**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §24
+
+**Schedule:** 2026-05-11 之後（PR #474 merge + soak 1 week）。
+
+**Steps:**
+- §24.1 寫 migration 0051：`DROP TABLE saved_pois`
+- §24.2 移除 dual-read code path（handler 不再 fallback 試 saved_pois — 本 PR 已用 hard cutover，dual-read 實際未實作，但 verify 沒殘留 fallback try-catch）
+- §24.3 verify dual-read 期間 zero traffic 打到 saved_pois（D1 query: `SELECT COUNT(*) FROM saved_pois WHERE saved_at > <PR-merge-timestamp>` 應為 0）
+- §24.4 archive `openspec/changes/poi-favorites-rename/` → `openspec/changes/archive/2026-05-XX-poi-favorites-rename/`
+
+---
+
+## poi-favorites-rename — Shared components + skill / doc refinement
+
+**Priority:** P3 — quality-of-life，無功能阻擋
+**Source:** `openspec/changes/poi-favorites-rename/tasks.md` §13/§15/§16/§17/§18.3
+
+**Items:**
+
+§13 Shared component 抽取（與 §11/§12 mockup-driven redesign 一併處理較順）：
+- 抽 `<PageErrorState>` 共用 component 取代 `.favorites-error` inline pattern
+- 抽 `<EmptyState>` 共用 component 取代 `.favorites-empty-cta` inline pattern
+- 抽 `tp-action-btn` family 取代 `.favorites-toolbar-btn` 系列至 `css/components/action-button.css`
+
+§15 tp-request SKILL.md「加入收藏」flow（DX-F6.1 — 30s skim discoverability）：
+- 加 H3 段「3d.j 加入收藏 sub-flow」（top-level，不在 references 內藏）
+- 5 步流程 curl：(1) Google Maps 驗證 (2) GET /api/pois?name=X 取 poiId (3) POST /api/poi-favorites with companionRequestId + Bearer + X-Request-Scope (4) 處理 201/409/404/401 (5) PATCH /api/requests/:id status=completed
+- 401 debug 3-step checklist：(a) curl /api/oauth/introspect 確認 token (b) D1 SELECT id, status, submitted_by FROM trip_requests WHERE id=? (c) D1 SELECT id FROM users WHERE LOWER(email)=LOWER(?)
+
+§16 mockup-first systematic gate（部分已落 CLAUDE.md，Naming history 補完）：
+- §16.1 tp-team SKILL.md Build phase 加 sub-section「Mockup-first hard gate」展開規則
+- §16.3 CLAUDE.md 加「Naming history」section（saved_pois → poi_favorites, migration 0050, v2.22.0）
+- §16.4 DESIGN.md 加「Naming history」同上
+- §16.5 ARCHITECTURE.md 加「Naming history」同上
+
+§17 DESIGN.md asymmetric labels rewrite（9 處）：
+- L298 廢除「DesktopSidebar label 用『我的收藏』...asymmetric labels intentional」改為「Sidebar 與 BottomNav 第 4 slot 統一『收藏』，ownership 由 PoiFavoritesPage hero eyebrow 補回」
+- L259 TitleBar 文字「我的收藏」→「收藏」
+- L317 路由表 `/saved` → `/favorites`、`/saved-pois/:id/add-to-trip` → `/favorites/:id/add-to-trip`
+- L484 SavedPoisPage 收藏批次刪除 → PoiFavoritesPage
+- L565-657 整段「saved_pois universal pool」rename → 「poi_favorites universal pool」+ table/api/route 全 rename
+- 補 batch flow delete-only 規範
+- 補 PoiFavoritesPage 8-state matrix（取代原 5-state）
+- 補 viewport breakpoints + a11y 規範
+
+§18.3 archive saved-pois-schema banner：
+- 修改 `openspec/changes/archive/2026-04-25-layout-overlay-rules-and-schema/specs/saved-pois-schema/` README 頂端加 banner：`> ⚠️ Renamed to poi_favorites in migration 0050 — see openspec/changes/archive/2026-05-XX-poi-favorites-rename/`（archive 後 §24.4 才知最終 path）
+
+---
+
+## V2-P6 — rate_limit_buckets cleanup CRON 沒實作
+
+**Priority:** P3 — pre-existing tech debt（V2-P6 brute-force defence migration 0035），本 PR 未引入
+**Source:** `migrations/0035_rate_limit_buckets.sql:26-29` 註解
+**Symptom:** `migrations/0035` 註解承諾「V2-P6 cron job 每小時跑 DELETE WHERE locked_until IS NULL AND window_start + 1h < now」清過期 unlocked rows，但 cron 未在 repo 設定（`wrangler.toml [triggers]` 無 schedule）。`rate_limit_buckets` table 隨每個 unique bucket key（每個用過 POST 的 user / companion / IP）持續累積，long-running prod 會 index bloat。
+
+**Fix options:**
+- A) 加 `wrangler.toml [triggers] crons = ["0 * * * *"]` + `functions/_scheduled.ts` cleanup handler
+- B) opportunistic delete inside `bumpRateLimit`（1% probability `DELETE WHERE window_start+windowMs < ? AND locked_until IS NULL`）
+
+A 是標準做法但需 cron handler；B 簡單但 latency tail 可能受 1% 隨機影響。建議獨立 PR 處理。
+
+---
+
 ## Completed
 
 ### EntryActionPage GET /api/trips/:id/entries/:eid 在 prod 不存在 (405)
