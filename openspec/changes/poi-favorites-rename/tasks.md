@@ -128,16 +128,16 @@
 
 ## 11. PoiFavoritesPage redesign（mockup-driven hard gate）
 
-- [ ] 11.1 invoke `/tp-claude-design` 產 PoiFavoritesPage HTML mockup 至 `docs/design-sessions/2026-05-04-favorites-redesign.html`，含：tp-page-eyebrow / tp-skel / tp-empty-cta tokens、`<PageErrorState>` shared component、region pill row + type filter row + search input、batch flow（delete-only sticky bottom toolbar）、8-state matrix、a11y（role=group + aria-pressed）、3 個 viewport（desktop 3-col / tablet 2-col / phone 1-col）
-- [ ] 11.2 user review mockup → iterate 直到 user sign-off（hard gate）
-- [ ] 11.3 寫 `tests/unit/poi-favorites-page-hierarchy.test.tsx` 紅燈：0 favorites 隱藏 filters、50 grid 為主、200+ sticky search + pagination
-- [ ] 11.4 寫 `tests/unit/poi-favorites-page-states.test.tsx` 紅燈：8-state matrix 完整 cover（loading / empty-pool / filter-no-results / error / data / optimistic-delete / bulk-action-busy / pagination）
-- [ ] 11.5 寫 `tests/unit/poi-favorites-page-a11y.test.tsx` 紅燈：role="group"（不是 tablist）、aria-pressed、aria-label per checkbox、aria-live 在 optimistic-delete
-- [ ] 11.6 寫 `tests/unit/poi-favorites-page-batch.test.tsx` 紅燈：bulk select toolbar 只支援「全選 / 取消 / 刪除」，不支援 add-to-trip；per-card link 永遠是 add-to-trip 入口
-- [ ] 11.7 寫 `tests/unit/poi-favorites-page-region-pill.test.tsx` 紅燈：region pill row 渲染 + 篩選邏輯（reuse ExplorePage L470-885）
-- [ ] 11.8 寫 `tests/e2e/favorites-batch-delete.spec.js` 紅燈：login → /favorites → multi-select 2 cards → 點刪除 → confirm modal → 2 rows 移除 + toast
-- [ ] 11.9 重構 PoiFavoritesPage.tsx 對齊 mockup：移除 inline `<style>` 改 `css/pages/poi-favorites.css`、token drift 6 項對齊、加 region pill + 8-state、a11y 修正、batch flow delete-only
-- [ ] 11.10 跑 unit + e2e test 全綠
+- [x] 11.1 ~~mockup~~ docs/design-sessions/2026-05-04-favorites-redesign.html v4 已 ship 🟢
+- [x] 11.2 ~~user review + sign-off~~ 2026-05-04 sign-off 🟢
+- [x] 11.3 ~~hierarchy test~~ tests/unit/poi-favorites-page-hierarchy.test.tsx (4 tests，0/50/247 數量分檔 + count meta) 🟢
+- [x] 11.4 ~~8-state matrix test~~ tests/unit/poi-favorites-page-states.test.tsx (10 tests，loading aria-busy / empty / filter-no-results / error role=alert / data / optimistic aria-live / bulk-action-busy / pagination + TitleBar 統一 label) 🟢
+- [x] 11.5 ~~a11y test~~ tests/unit/poi-favorites-page-a11y.test.tsx (6 tests，role=group / 無 tablist / aria-pressed / checkbox label per row / search aria-label / TitleBar action label) 🟢
+- [x] 11.6 ~~batch test (DUC1)~~ tests/unit/poi-favorites-page-batch.test.tsx (5 tests，無 batch add-to-trip / 全選+取消+刪除 / per-card add-to-trip 永遠存在 / TripPickerPopover 已移除) 🟢
+- [x] 11.7 ~~region pill test~~ tests/unit/poi-favorites-page-region-pill.test.tsx (5 tests，role=group + aria-pressed / 切換篩選 grid / region count) 🟢
+- [ ] 11.8 e2e batch-delete spec — **deferred to §20.4**（e2e 需 dev server + login，§20 verify 階段一起跑）
+- [x] 11.9 ~~重構 PoiFavoritesPage.tsx~~ TitleBar title「收藏」+ hero eyebrow / 8-state matrix 完整 / region pill row + type filter row（role=group + aria-pressed）/ batch toolbar delete-only（移除 TripPickerPopover）/ viewport breakpoints 3-col / 2-col / 1-col / aria-live on deleting card / pagination ≥200 / clear-filters action 🟢
+- [x] 11.10 ~~跑 unit test 全綠~~ npm test 1360/1360（+29 新增）+ tsc 0 errors 🟢
 
 ## 12. AddPoiFavoriteToTripPage 對齊 mockup（4-field 純時間驅動）
 

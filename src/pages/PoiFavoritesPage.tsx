@@ -1,17 +1,18 @@
 /**
- * PoiFavoritesPage — V2 「我的收藏」 primary nav page (v2.21.0)
+ * PoiFavoritesPage — V2 「收藏」 primary nav (v2.21.0)
  *
- * 從 ExplorePage saved-tab 抽出升 top-level route /favorites。提供：
- *  - 5-state matrix: loading skeleton / empty CTA / error PageErrorState / data / optimistic-delete
- *  - search-within-favorites (client-side filter)
- *  - 篩選 chip row (POI type)
- *  - 多選 + 批次刪除 (ConfirmModal)
- *  - 「加入行程 →」link → /favorites/:id/add-to-trip
- *  - TitleBar 右上 secondary action「探索」(ghost) → navigate /explore
+ * mockup-driven hard gate aligned (docs/design-sessions/2026-05-04-favorites-redesign.html v4，
+ * user sign-off 2026-05-04)。對齊 DESIGN.md L623-665 規範：
+ *   - TitleBar title「收藏」（統一 nav label，ownership 由 hero eyebrow 補）
+ *   - 8-state matrix: loading / empty-pool / filter-no-results / error / data /
+ *                     optimistic-delete / bulk-action-busy / pagination
+ *   - region pill row + type filter row：role="group" + aria-pressed (NOT tablist)
+ *   - batch flow delete-only (DUC1 sign-off)：toolbar 只「全選 / 取消 / 刪除」，
+ *     per-card「加入行程 →」link 為唯一 add-to-trip 入口
+ *   - viewport breakpoints: ≥1024 3-col / 640-1023 2-col / <430 1-col
+ *   - a11y: aria-pressed / aria-label per row checkbox / aria-live on optimistic
  *
  * 不含原 ExplorePage 的 search/region/heart toggle — 那些留在 /explore。
- *
- * Reference: DESIGN.md L562-624 (V2 Owner Cutover saved_pois universal pool spec)
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -21,7 +22,6 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
-import TripPickerPopover from '../components/explore/TripPickerPopover';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -33,6 +33,7 @@ interface PoiFavoriteRow {
   poiName: string;
   poiAddress: string | null;
   poiType: string;
+  poiRegion?: string | null;
   favoritedAt: string;
   note: string | null;
   usages?: Array<{
@@ -42,13 +43,6 @@ interface PoiFavoriteRow {
     dayDate: string | null;
     entryId: number | null;
   }>;
-}
-
-interface TripPickerRow {
-  tripId: string;
-  name?: string;
-  title?: string | null;
-  countries?: string | null;
 }
 
 const TYPE_FILTER_OPTIONS = [
@@ -61,15 +55,30 @@ const TYPE_FILTER_OPTIONS = [
 
 type LoadStatus = 'loading' | 'data' | 'error';
 
+const PAGE_SIZE = 24;
+const PAGINATION_THRESHOLD = 200;
+
+function deriveRegion(addr: string | null | undefined): string {
+  if (!addr) return '其他';
+  if (/沖縄|沖繩/i.test(addr)) return '沖繩';
+  if (/京都/.test(addr)) return '京都';
+  if (/大阪/.test(addr)) return '大阪';
+  if (/東京/.test(addr)) return '東京';
+  if (/釜山|부산/i.test(addr)) return '釜山';
+  if (/首爾|서울/i.test(addr)) return '首爾';
+  if (/台北/i.test(addr)) return '台北';
+  return '其他';
+}
+
 const SCOPED_STYLES = `
 .favorites-shell { background: var(--color-secondary); height: 100%; overflow-y: auto; }
 .favorites-wrap {
   padding: 24px 24px 64px;
-  max-width: 960px; margin: 0 auto;
+  max-width: 1040px; margin: 0 auto;
   display: flex; flex-direction: column; gap: 16px;
   color: var(--color-foreground);
 }
-@media (max-width: 760px) { .favorites-wrap { padding: 16px 16px 32px; gap: 12px; } }
+@media (max-width: 1023px) { .favorites-wrap { padding: 16px 16px 32px; gap: 12px; } }
 
 .favorites-eyebrow {
   font-size: var(--font-size-eyebrow);
@@ -78,7 +87,11 @@ const SCOPED_STYLES = `
   text-transform: uppercase;
   color: var(--color-muted);
 }
-.favorites-count-meta { color: var(--color-muted); margin: 0; font-size: var(--font-size-footnote); }
+.favorites-count-meta {
+  color: var(--color-muted); margin: 0;
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
 
 .favorites-search {
   display: flex; align-items: center; gap: 8px;
@@ -95,26 +108,33 @@ const SCOPED_STYLES = `
 }
 .favorites-search input::placeholder { color: var(--color-muted); }
 
-.favorites-filters {
+.favorites-region-row,
+.favorites-type-row {
   display: flex; flex-wrap: wrap; gap: 8px;
 }
-.favorites-filter-chip {
+.favorites-chip {
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
   padding: 6px 14px; border-radius: var(--radius-full);
   background: var(--color-secondary); color: var(--color-muted);
   border: 1px solid var(--color-border);
   cursor: pointer;
   min-height: 36px;
+  display: inline-flex; align-items: center; gap: 6px;
   transition: background 120ms, color 120ms, border-color 120ms;
 }
-.favorites-filter-chip:hover { background: var(--color-tertiary); color: var(--color-foreground); }
-.favorites-filter-chip.is-active {
+.favorites-chip:hover { background: var(--color-tertiary); color: var(--color-foreground); }
+.favorites-chip[aria-pressed="true"] {
   background: var(--color-accent-subtle);
   color: var(--color-accent-deep);
   border-color: var(--color-accent-bg);
 }
+.favorites-chip-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600; color: var(--color-muted); opacity: 0.85;
+}
 
 .favorites-toolbar {
+  position: sticky; bottom: 0; z-index: 5;
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between;
   padding: 10px 14px; border-radius: var(--radius-md);
   background: var(--color-accent-subtle); border: 1px solid var(--color-accent-bg);
@@ -140,7 +160,8 @@ const SCOPED_STYLES = `
 .favorites-grid {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
 }
-@media (max-width: 760px) { .favorites-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (max-width: 1023px) and (min-width: 640px) { .favorites-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (max-width: 639px) { .favorites-grid { grid-template-columns: 1fr; gap: 12px; } }
 
 .favorites-card {
   background: var(--color-background);
@@ -225,7 +246,8 @@ const SCOPED_STYLES = `
 }
 
 .favorites-skeleton-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-@media (max-width: 760px) { .favorites-skeleton-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (max-width: 1023px) and (min-width: 640px) { .favorites-skeleton-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; } }
+@media (max-width: 639px) { .favorites-skeleton-grid { grid-template-columns: 1fr; gap: 12px; } }
 .favorites-skeleton-card {
   height: 140px; border-radius: var(--radius-md);
   background: linear-gradient(90deg, var(--color-secondary) 0%, var(--color-tertiary) 50%, var(--color-secondary) 100%);
@@ -241,7 +263,30 @@ const SCOPED_STYLES = `
   padding: 24px; background: var(--color-background);
   border: 1px dashed var(--color-border); border-radius: var(--radius-md);
   text-align: center; color: var(--color-muted); font-size: var(--font-size-footnote);
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
+.favorites-no-match-clear {
+  font: inherit; font-weight: 600;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  background: transparent; color: var(--color-foreground);
+  border: 1px solid var(--color-line-strong); cursor: pointer; min-height: 36px;
+}
+
+.favorites-pagination {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px;
+}
+.favorites-pagination-btn {
+  font: inherit; font-variant-numeric: tabular-nums;
+  min-width: 36px; min-height: 36px;
+  padding: 6px 10px; border-radius: var(--radius-md);
+  background: var(--color-background); color: var(--color-foreground);
+  border: 1px solid var(--color-border); cursor: pointer;
+}
+.favorites-pagination-btn[aria-current="page"] {
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
+}
+.favorites-pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 `;
 
 export default function PoiFavoritesPage() {
@@ -255,12 +300,12 @@ export default function PoiFavoritesPage() {
   const [deletingSelected, setDeletingSelected] = useState(false);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [showTripPicker, setShowTripPicker] = useState(false);
-  const [trips, setTrips] = useState<TripPickerRow[] | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [regionFilter, setRegionFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
 
-  const loadSaved = useCallback(async () => {
+  const loadFavorites = useCallback(async () => {
     setStatus('loading');
     try {
       const rows = await apiFetch<PoiFavoriteRow[]>('/poi-favorites');
@@ -273,7 +318,7 @@ export default function PoiFavoritesPage() {
     }
   }, []);
 
-  useEffect(() => { void loadSaved(); }, [loadSaved]);
+  useEffect(() => { void loadFavorites(); }, [loadFavorites]);
 
   // Drop selections that no longer exist after refetch
   useEffect(() => {
@@ -289,15 +334,47 @@ export default function PoiFavoritesPage() {
     });
   }, [favorites]);
 
-  const filteredSaved = useMemo(() => {
+  // Region 計數（含 "全部" = total）
+  const regionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    counts.set('all', favorites.length);
+    for (const row of favorites) {
+      const r = row.poiRegion ?? deriveRegion(row.poiAddress);
+      counts.set(r, (counts.get(r) ?? 0) + 1);
+    }
+    return counts;
+  }, [favorites]);
+
+  const regionOptions = useMemo(() => {
+    const keys = Array.from(regionCounts.keys()).filter((k) => k !== 'all');
+    keys.sort((a, b) => (regionCounts.get(b) ?? 0) - (regionCounts.get(a) ?? 0));
+    return keys;
+  }, [regionCounts]);
+
+  const filteredFavorites = useMemo(() => {
     const q = searchFilter.trim().toLowerCase();
     return favorites.filter((row) => {
       if (typeFilter !== 'all' && row.poiType !== typeFilter) return false;
+      if (regionFilter !== 'all') {
+        const r = row.poiRegion ?? deriveRegion(row.poiAddress);
+        if (r !== regionFilter) return false;
+      }
       if (!q) return true;
       const haystack = `${row.poiName} ${row.poiAddress ?? ''} ${row.note ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [favorites, searchFilter, typeFilter]);
+  }, [favorites, searchFilter, typeFilter, regionFilter]);
+
+  const usePagination = favorites.length >= PAGINATION_THRESHOLD;
+  const totalPages = usePagination ? Math.max(1, Math.ceil(filteredFavorites.length / PAGE_SIZE)) : 1;
+  const visibleFavorites = useMemo(() => {
+    if (!usePagination) return filteredFavorites;
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredFavorites.slice(start, start + PAGE_SIZE);
+  }, [filteredFavorites, usePagination, page]);
+
+  // 切換 filter / search 時重置 page
+  useEffect(() => { setPage(1); }, [searchFilter, typeFilter, regionFilter]);
 
   function toggleSelection(id: number) {
     setSelectedIds((prev) => {
@@ -308,6 +385,14 @@ export default function PoiFavoritesPage() {
     });
   }
   function clearSelection() { setSelectedIds(new Set()); }
+  function selectAllVisible() {
+    setSelectedIds(new Set(visibleFavorites.map((r) => r.id)));
+  }
+  function clearAllFilters() {
+    setSearchFilter('');
+    setTypeFilter('all');
+    setRegionFilter('all');
+  }
 
   function requestDeleteSelected() {
     if (selectedIds.size === 0) return;
@@ -322,7 +407,7 @@ export default function PoiFavoritesPage() {
     try {
       const results = await Promise.all(
         ids.map((id) =>
-          apiFetch(`/favorites/${id}`, { method: 'DELETE' })
+          apiFetch(`/poi-favorites/${id}`, { method: 'DELETE' })
             .then(() => ({ id, ok: true as const }))
             .catch((err: unknown) => ({ id, ok: false as const, err })),
         ),
@@ -336,50 +421,18 @@ export default function PoiFavoritesPage() {
         showToast('刪除失敗，請稍後再試', 'error', 3000);
       }
       setSelectedIds(new Set());
-      await loadSaved();
+      await loadFavorites();
     } finally {
       setDeletingSelected(false);
       setDeletingIds(new Set());
     }
   }
 
-  async function openTripPicker() {
-    if (selectedIds.size === 0) return;
-    setShowTripPicker(true);
-    if (trips !== null) return;
-    try {
-      const myRes = await fetch('/api/my-trips', { credentials: 'same-origin' });
-      const allRes = await fetch('/api/trips?all=1', { credentials: 'same-origin' });
-      if (!myRes.ok || !allRes.ok) {
-        setTrips([]);
-        return;
-      }
-      const myJson = (await myRes.json()) as { tripId: string }[];
-      const allJson = (await allRes.json()) as TripPickerRow[];
-      const mine = new Set(myJson.map((r) => r.tripId));
-      setTrips(allJson.filter((t) => mine.has(t.tripId)));
-    } catch {
-      setTrips([]);
-    }
-  }
-
-  function pickTrip(tripId: string) {
-    setShowTripPicker(false);
-    const count = selectedIds.size;
-    showToast(
-      `已選 ${count} 個 POI 加入「${tripId}」（待 entry POST API 接通）`,
-      'success',
-      2400,
-    );
-    setSelectedIds(new Set());
-    navigate(`/trips?selected=${encodeURIComponent(tripId)}`);
-  }
-
   const main = (
     <div className="favorites-shell">
       <style>{SCOPED_STYLES}</style>
       <TitleBar
-        title="我的收藏"
+        title="收藏"
         actions={
           <button
             type="button"
@@ -398,7 +451,12 @@ export default function PoiFavoritesPage() {
         <ToastContainer />
 
         {status === 'loading' && (
-          <div className="favorites-skeleton-grid" data-testid="favorites-loading">
+          <div
+            className="favorites-skeleton-grid"
+            data-testid="favorites-loading"
+            aria-busy="true"
+            aria-live="polite"
+          >
             <div className="favorites-skeleton-card" />
             <div className="favorites-skeleton-card" />
             <div className="favorites-skeleton-card" />
@@ -412,7 +470,7 @@ export default function PoiFavoritesPage() {
             <button
               type="button"
               className="favorites-error-btn"
-              onClick={() => void loadSaved()}
+              onClick={() => void loadFavorites()}
               data-testid="favorites-error-retry"
             >
               重試
@@ -439,7 +497,7 @@ export default function PoiFavoritesPage() {
         {status === 'data' && favorites.length > 0 && (
           <>
             <div>
-              <div className="favorites-eyebrow">my favorites</div>
+              <div className="favorites-eyebrow" data-testid="favorites-eyebrow">my favorites · 我的收藏</div>
               <p className="favorites-count-meta" data-testid="favorites-count">{favorites.length} 個收藏 POI</p>
             </div>
 
@@ -455,16 +513,49 @@ export default function PoiFavoritesPage() {
               />
             </div>
 
-            <div className="favorites-filters" role="tablist" aria-label="POI 類型篩選">
+            <div
+              className="favorites-region-row"
+              role="group"
+              aria-label="地區篩選"
+              data-testid="favorites-region-row"
+            >
+              <button
+                type="button"
+                className="favorites-chip"
+                aria-pressed={regionFilter === 'all'}
+                onClick={() => setRegionFilter('all')}
+                data-testid="favorites-region-all"
+              >
+                全部 <span className="favorites-chip-count">{regionCounts.get('all') ?? 0}</span>
+              </button>
+              {regionOptions.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className="favorites-chip"
+                  aria-pressed={regionFilter === r}
+                  onClick={() => setRegionFilter(r)}
+                  data-testid={`favorites-region-${r}`}
+                >
+                  {r} <span className="favorites-chip-count">{regionCounts.get(r) ?? 0}</span>
+                </button>
+              ))}
+            </div>
+
+            <div
+              className="favorites-type-row"
+              role="group"
+              aria-label="POI 類型篩選"
+              data-testid="favorites-type-row"
+            >
               {TYPE_FILTER_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
-                  role="tab"
-                  aria-selected={typeFilter === opt.key}
-                  className={`favorites-filter-chip ${typeFilter === opt.key ? 'is-active' : ''}`}
+                  className="favorites-chip"
+                  aria-pressed={typeFilter === opt.key}
                   onClick={() => setTypeFilter(opt.key)}
-                  data-testid={`favorites-filter-${opt.key}`}
+                  data-testid={`favorites-type-${opt.key}`}
                 >
                   {opt.label}
                 </button>
@@ -472,9 +563,23 @@ export default function PoiFavoritesPage() {
             </div>
 
             {selectedIds.size > 0 && (
-              <div className="favorites-toolbar" data-testid="favorites-toolbar">
+              <div
+                className="favorites-toolbar"
+                role="region"
+                aria-label="批次操作"
+                data-testid="favorites-toolbar"
+              >
                 <span>已選 {selectedIds.size} 個</span>
                 <div className="favorites-toolbar-actions">
+                  <button
+                    type="button"
+                    className="favorites-toolbar-btn favorites-toolbar-btn-ghost"
+                    onClick={selectAllVisible}
+                    disabled={deletingSelected}
+                    data-testid="favorites-select-all"
+                  >
+                    全選
+                  </button>
                   <button
                     type="button"
                     className="favorites-toolbar-btn favorites-toolbar-btn-ghost"
@@ -482,28 +587,8 @@ export default function PoiFavoritesPage() {
                     disabled={deletingSelected}
                     data-testid="favorites-clear-selection"
                   >
-                    取消選擇
+                    取消
                   </button>
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      className="favorites-toolbar-btn"
-                      onClick={openTripPicker}
-                      disabled={deletingSelected}
-                      data-testid="favorites-add-to-trip"
-                      aria-haspopup="dialog"
-                      aria-expanded={showTripPicker}
-                    >
-                      加入行程
-                    </button>
-                    <TripPickerPopover
-                      open={showTripPicker}
-                      trips={trips}
-                      selectedCount={selectedIds.size}
-                      onPick={pickTrip}
-                      onClose={() => setShowTripPicker(false)}
-                    />
-                  </div>
                   <button
                     type="button"
                     className="favorites-toolbar-btn favorites-toolbar-btn-destructive"
@@ -517,58 +602,108 @@ export default function PoiFavoritesPage() {
               </div>
             )}
 
-            {filteredSaved.length === 0 ? (
+            {filteredFavorites.length === 0 ? (
               <div className="favorites-no-match" data-testid="favorites-no-match">
-                沒有符合條件的收藏。試試清空搜尋或切換類型。
+                <span>目前的篩選沒有符合的收藏</span>
+                <button
+                  type="button"
+                  className="favorites-no-match-clear"
+                  onClick={clearAllFilters}
+                  data-testid="favorites-clear-filters"
+                >
+                  清除篩選
+                </button>
               </div>
             ) : (
-              <div className="favorites-grid">
-                {filteredSaved.map((row) => {
-                  const isSelected = selectedIds.has(row.id);
-                  const isDeleting = deletingIds.has(row.id);
-                  const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
-                  return (
-                    <article
-                      className={`favorites-card ${isSelected ? 'is-selected' : ''} ${isDeleting ? 'is-deleting' : ''}`}
-                      key={row.id}
-                      data-testid={`favorites-card-${row.id}`}
-                    >
-                      <div className="poi-category">{row.poiType}</div>
-                      <div className="poi-name">{row.poiName}</div>
-                      {row.poiAddress && <div className="poi-address">{row.poiAddress}</div>}
-                      {usageCount > 0 && (
-                        <div className="poi-usage-badge" data-testid={`favorites-usage-badge-${row.id}`}>
-                          目前在 {usageCount} 個行程
-                        </div>
-                      )}
-                      <div className="poi-actions">
-                        {isDeleting ? (
-                          <span className="poi-deleting-label">移除中…</span>
-                        ) : (
-                          <>
-                            <label className="poi-select-label">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleSelection(row.id)}
-                                data-testid={`favorites-check-${row.id}`}
-                              />
-                              <span>{isSelected ? '已選' : '選取'}</span>
-                            </label>
-                            <a
-                              href={`/favorites/${row.id}/add-to-trip`}
-                              className="poi-add-link"
-                              data-testid={`favorites-add-to-trip-${row.id}`}
-                            >
-                              加入行程 →
-                            </a>
-                          </>
+              <>
+                <div className="favorites-grid">
+                  {visibleFavorites.map((row) => {
+                    const isSelected = selectedIds.has(row.id);
+                    const isDeleting = deletingIds.has(row.id);
+                    const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
+                    return (
+                      <article
+                        className={`favorites-card ${isSelected ? 'is-selected' : ''} ${isDeleting ? 'is-deleting' : ''}`}
+                        key={row.id}
+                        data-testid={`favorites-card-${row.id}`}
+                        {...(isDeleting ? { 'aria-live': 'polite' } : {})}
+                      >
+                        <div className="poi-category">{row.poiType}</div>
+                        <div className="poi-name">{row.poiName}</div>
+                        {row.poiAddress && <div className="poi-address">{row.poiAddress}</div>}
+                        {usageCount > 0 && (
+                          <div className="poi-usage-badge" data-testid={`favorites-usage-badge-${row.id}`}>
+                            目前在 {usageCount} 個行程
+                          </div>
                         )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
+                        <div className="poi-actions">
+                          {isDeleting ? (
+                            <span className="poi-deleting-label">移除中…</span>
+                          ) : (
+                            <>
+                              <label className="poi-select-label">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelection(row.id)}
+                                  data-testid={`favorites-check-${row.id}`}
+                                  aria-label={`選取 ${row.poiName} 收藏`}
+                                />
+                                <span>{isSelected ? '已選' : '選取'}</span>
+                              </label>
+                              <a
+                                href={`/favorites/${row.id}/add-to-trip`}
+                                className="poi-add-link"
+                                data-testid={`favorites-add-to-trip-${row.id}`}
+                              >
+                                加入行程 →
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {usePagination && (
+                  <nav
+                    className="favorites-pagination"
+                    aria-label="分頁"
+                    data-testid="favorites-pagination"
+                  >
+                    <button
+                      type="button"
+                      className="favorites-pagination-btn"
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      aria-label="上一頁"
+                    >
+                      ←
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 8).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        className="favorites-pagination-btn"
+                        aria-current={page === n ? 'page' : undefined}
+                        onClick={() => setPage(n)}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="favorites-pagination-btn"
+                      disabled={page === totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      aria-label="下一頁"
+                    >
+                      →
+                    </button>
+                  </nav>
+                )}
+              </>
             )}
           </>
         )}
