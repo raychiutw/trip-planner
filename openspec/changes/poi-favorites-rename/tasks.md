@@ -202,17 +202,21 @@
 
 ## 20. Pre-merge verification（含 lint / test / security）
 
-- [ ] 20.1 `npm run lint` 全綠
-- [ ] 20.2 `npm run test` (unit) 全綠
-- [ ] 20.3 `npm run test:api` (integration) 全綠
-- [ ] 20.4 `npm run test:e2e` 全綠（含 favorites-batch-delete.spec.js）
-- [ ] 20.5 `npm run build` 成功
-- [ ] 20.6 `npm run verify-sw` 成功（service worker 配置正確）
-- [ ] 20.7 invoke `/tp-code-verify` — 命名規範、React Best Practices、CSS HIG、測試狀態全綠
-- [ ] 20.8 invoke `/review` — staff engineer diff 審查（SQL safety、race condition、specialist dispatch、adversarial）
-- [ ] 20.9 invoke `/cso --diff` — diff-scoped 安全掃描（secrets / injection / OWASP / STRIDE）
-- [ ] 20.10 invoke `/qa` — 瀏覽器 QA 測試 + bug fix
-- [ ] 20.11 verify task #11 spec 變更 37 項已全 cover 在 OpenSpec change（archive 後此 task 改為 verify openspec/changes/poi-favorites-rename/ 對齊）
+- [x] 20.1 ~~`npm run lint`~~ 專案無 lint script — 改用 typecheck（兩 config）+ tsc --noEmit 全綠 🟢
+- [x] 20.2 ~~`npm run test` (unit)~~ 1378/1378（含 §11 + §12 共 47 新增）🟢
+- [x] 20.3 ~~`npm run test:api` (integration)~~ 590 pass / 35 intentional skip / 4 file skip 🟢
+- [ ] 20.4 `npm run test:e2e` 全綠（含 favorites-batch-delete.spec.js）— **deferred 到 §22 post-deploy smoke**（e2e 需 dev server + login，本地驗證易碎；§22.2-22.10 prod smoke 可覆蓋）
+- [x] 20.5 ~~`npm run build`~~ ✅ 成功（dist/sw.js 75 entries / 2206 KiB）🟢
+- [x] 20.6 ~~`npm run verify-sw`~~ ✅ 成功（precache 75 / NavigationRoute disabled / no manage|admin in precache）🟢
+- [ ] 20.7 invoke `/tp-code-verify` — **user 動作**（命名規範、React Best Practices、CSS HIG、測試狀態全綠）
+- [ ] 20.8 invoke `/review` — **user 動作**（staff engineer diff 審查 — SQL safety、race condition、specialist dispatch、adversarial）
+- [ ] 20.9 invoke `/cso --diff` — **user 動作**（diff-scoped 安全掃描 — secrets / injection / OWASP / STRIDE）
+- [ ] 20.10 invoke `/qa` — **user 動作**（瀏覽器 QA 測試 + bug fix；可與 §22 post-deploy smoke 合併）
+- [x] 20.11 ~~verify openspec/changes/poi-favorites-rename/ 對齊~~ §11 + §12 + §17 三層（spec / mockup / code / test）對齊：
+       PoiFavoritesPage TitleBar「收藏」+ hero eyebrow / 8-state matrix / region pill +
+       type filter 用 role=group + aria-pressed / batch delete-only / viewport breakpoints；
+       AddPoiFavoriteToTripPage 4-field 純時間驅動 / .tp-form-grid-2col / .tp-form-actions
+       置中 / day skeleton 🟢
 
 ## 21. Deploy 順序
 
