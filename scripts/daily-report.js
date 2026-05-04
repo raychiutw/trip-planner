@@ -296,14 +296,14 @@ async function checkDataAnomalies() {
       anomalies.push('使用者錯誤回報（24h）：' + recentReports[0].c + ' 筆');
     }
 
-    // 4. POI 缺 google_rating 比例
+    // 4. POI 缺 rating 比例（migration 0045: pois.google_rating renamed to rating）
     var poiStats = await queryD1(
-      "SELECT COUNT(*) as total, SUM(CASE WHEN google_rating IS NULL THEN 1 ELSE 0 END) as missing FROM pois WHERE type IN ('hotel','restaurant','shopping')"
+      "SELECT COUNT(*) as total, SUM(CASE WHEN rating IS NULL THEN 1 ELSE 0 END) as missing FROM pois WHERE type IN ('hotel','restaurant','shopping')"
     );
     if (poiStats && poiStats[0] && poiStats[0].total > 0) {
       var pct = Math.round(poiStats[0].missing / poiStats[0].total * 100);
       if (pct > 30) {
-        anomalies.push('POI 缺 google_rating：' + poiStats[0].missing + '/' + poiStats[0].total + ' (' + pct + '%)');
+        anomalies.push('POI 缺 rating：' + poiStats[0].missing + '/' + poiStats[0].total + ' (' + pct + '%)');
       }
     }
   } catch (e) {

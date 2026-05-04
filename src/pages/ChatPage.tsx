@@ -628,9 +628,7 @@ export default function ChatPage() {
     ]);
 
     try {
-      // mode no longer sent — tp-request skill auto-classifies intent
-      // (改行程 vs 問建議). Server defaults to 'trip-plan' to satisfy the
-      // CHECK constraint, the skill ignores it.
+      // mode rip-out (migration 0048): tp-request skill auto-classifies intent.
       const res = await fetch('/api/requests', {
         method: 'POST',
         credentials: 'same-origin',

@@ -23,14 +23,18 @@ describe('POST /api/requests', () => {
     expect(requestsTs).toContain('body.body');
   });
 
-  it('inserts message column (not title + body)', () => {
-    expect(requestsTs).toContain('INSERT INTO trip_requests (trip_id, mode, message');
+  it('inserts message column without mode (migration 0048 phase 1 rip-out)', () => {
+    expect(requestsTs).toContain('INSERT INTO trip_requests (trip_id, message');
     expect(requestsTs).not.toContain("INSERT INTO trip_requests (trip_id, mode, title, body");
+    // mode rip-out: column 不再寫入 INSERT
+    expect(requestsTs).not.toMatch(/INSERT INTO trip_requests \([^)]*\bmode\b/);
   });
 
-  it('validates mode as trip-edit or trip-plan', () => {
-    expect(requestsTs).toContain("trip-edit");
-    expect(requestsTs).toContain("trip-plan");
+  it('does NOT validate mode anymore (rip-out: tp-request skill auto-classifies intent)', () => {
+    // Migration 0048 phase 1: mode column nullable + CHECK dropped. Code stops writing.
+    // Phase 2 (follow-up) will DROP COLUMN. No 'trip-edit' / 'trip-plan' literal in handler.
+    expect(requestsTs).not.toContain("body.mode === 'trip-edit'");
+    expect(requestsTs).not.toContain("body.mode === 'trip-plan'");
   });
 });
 
