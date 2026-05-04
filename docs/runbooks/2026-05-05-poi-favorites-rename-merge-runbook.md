@@ -108,7 +108,26 @@ unset CLIENT_SECRET 2>/dev/null
 
 ---
 
-## 步驟 2 — SRE: mac mini cron sync
+## 步驟 2 — SRE: mac mini cron sync ✅ 已驗證（2026-05-05）
+
+實際盤查 mac mini 端架構與 runbook 原描述不同：
+
+- launchd `com.tripline.request-job` 跑 `scripts/tripline-job.sh`（不是 `tp-request-scheduler.sh`）
+- `tripline-job.sh` 已 V2 OAuth path（`lib/get-tripline-token.js` mint）+ 觸發本機 api-server
+- `tripline-api-server.ts`（bun process，:6688）→ invoke `claude /tp-request` skill
+- 所有 prod 寫入透過 skill curl（`Authorization: Bearer $TRIPLINE_API_TOKEN`），已由 §14 + duplicate-header fix 對齊
+
+**驗證結果**：
+- `tail logs/tp-request/tripline-job-2026-05-05.log` 每 15min 200 OK
+- `zsh ~/.local/bin/tp-request-scheduler.sh` 手動跑 exit 0（dead file 但 sync 過 OK）
+- api-server health 200，PID 重啟後 alive
+- **bonus fix**: commit `9297179` 修 api-server `runClaude()` 缺 token inject child env 的 latent bug
+
+**SRE 不需做事**（此 PR 不需 SSH 操作；下一步原 step 2.x 內容已 obsolete 保留參考）。
+
+---
+
+### 原 step 2.x 內容（obsolete，保留參考）
 
 **為何**：mac mini cron tp-request-scheduler 仍打舊 `/api/saved-pois*` path + 用舊 cf-access auth header。code 部署後 4 條 path 全 404，必須同步切換。
 

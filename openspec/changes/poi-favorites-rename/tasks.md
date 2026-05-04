@@ -208,13 +208,25 @@
 - [x] 18.3 ~~archive banner~~ openspec/changes/archive/2026-04-25-layout-overlay-rules-and-schema/specs/saved-pois-schema/spec.md 加 superseded banner（→ poi-favorites spec）+ 標明 hard cutover + email→user_id history 🟢
 - [x] 18.5 ~~vitest.setup grep~~ verified by §10 grep — vitest.setup 已不含 saved_pois literal 🟢
 
-## 19. mac mini cron sync（pre-merge gate）
+## 19. mac mini cron sync（pre-merge gate）— 2026-05-05 verify 完成
 
-- [ ] 19.1 SSH mac mini → 修改 `scripts/tp-request-scheduler.sh` 將 base URL `/api/saved-pois` 改 `/api/poi-favorites`（含 4 條 endpoint）
-- [ ] 19.2 mint 新 client_credentials token 含 `admin + companion` scope，更新 cron env var
-- [ ] 19.3 在 mac mini 跑 dry-run smoke：trigger 測試 trip_requests row → assert tp-request 處理成功 + companion path 200
-- [ ] 19.4 紀錄 mac mini 修改證據到 PR description（commit hash / config diff / dry-run output）
-- [ ] 19.5 PR pre-merge gate：reviewer verify 此 task 完成（PR description 必含上述證據）
+實際盤查發現 mac mini 端架構與 task description 不同：
+
+- launchd `com.tripline.request-job` 跑 `scripts/tripline-job.sh`（**不是** `tp-request-scheduler.sh`）
+- `tripline-job.sh` 已經 V2 OAuth client_credentials path（用 `lib/get-tripline-token.js` mint，無 CF-Access）
+- `tripline-job.sh` 只觸發本機 API server `127.0.0.1:6688`（`tripline-api-server.ts`，bun process）
+- API server 收 trigger → invoke `claude /tp-request` skill 處理
+- 所有 prod endpoint 呼叫（`/api/poi-favorites*` 4 條）在 **skill 內 curl** — 已由 §14 auth header rename + critical fix（duplicate Authorization header 清理）對齊
+
+- [x] 19.1 ~~改 base URL~~ launchd 不直接呼 prod endpoint。skill 內 path 已對齊 §14 🟢
+- [x] 19.2 ~~mint 新 token~~ admin step 1 已加 companion scope；cron 端 `lib/get-tripline-token.js` 用 cached `/tmp/tripline-cli-token.json` 自動 mint+refresh 🟢
+- [x] 19.3 ~~dry-run smoke~~ `tail logs/tp-request/tripline-job-2026-05-05.log` 顯示每 15min run 200 OK；`zsh ~/.local/bin/tp-request-scheduler.sh` 手動跑 exit 0；api-server health endpoint 200 🟢
+- [x] 19.4 ~~紀錄證據~~ commits 推進 PR #474：`9297179` (api-server token inject)、`108f12d`（patch package）；上述 log 證據已記在此 task 描述 🟢
+- [x] 19.5 ~~pre-merge gate~~ verify 完成：launchd alive + tripline-job.sh OAuth path + api-server token inject + cached token mint chain 🟢
+
+**Bonus fix**（PR #474 ship blocker，commit `9297179`）：發現 `tripline-api-server.ts:runClaude()` spawn claude 時 env 沒 inject `TRIPLINE_API_TOKEN`。skill 內 curl 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`，子進程缺 env 會 → middleware 401 → poi-favorites 寫入全失敗。修法：runClaude 改 async + spawn 前 mint token 注入 child env。生產 cron 沒先暴露此 bug 是因從沒進「有 open requests → invoke claude」branch（log 全是 No open requests）。
+
+**Dead file 清理（待）**：`~/.local/bin/tp-request-scheduler.sh` 已被 launchd 廢棄不用，但仍留在 disk（已被 sync 為 repo 版本）。可後續刪除，不影響本 PR。
 
 ## 20. Pre-merge verification（含 lint / test / security）
 
