@@ -44,7 +44,7 @@ import ToastContainer, { showToast } from '../components/shared/Toast';
 import { usePoiSearch } from '../hooks/usePoiSearch';
 import type { PoiSearchResult } from '../types/poi';
 
-interface SavedPoiRow {
+interface PoiFavoriteRow {
   id: number;
   poiId: number;
   poiName: string;
@@ -65,7 +65,7 @@ type PoiCardTone = 'warm' | 'cool' | 'ocean' | 'amber';
 const REGION_OPTIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台南'] as const;
 type RegionOption = typeof REGION_OPTIONS[number];
 
-type Tab = 'search' | 'saved' | 'custom';
+type Tab = 'search' | 'favorites' | 'custom';
 
 type AddStopCategory = 'all' | 'attraction' | 'food' | 'hotel' | 'shopping';
 
@@ -110,7 +110,7 @@ function normalizeSearchResults(data: unknown): PoiSearchResult[] {
   });
 }
 
-function normalizeSavedPois(data: unknown): SavedPoiRow[] {
+function normalizePoiFavorites(data: unknown): PoiFavoriteRow[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((row) => {
     if (!row || typeof row !== 'object') return [];
@@ -454,7 +454,7 @@ const SCOPED_STYLES = `
   line-height: 1.6;
 }
 
-.tp-add-stop-saved-header {
+.tp-add-stop-favorites-header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -462,12 +462,12 @@ const SCOPED_STYLES = `
   margin-bottom: 14px;
   padding: 0 2px;
 }
-.tp-add-stop-saved-title {
+.tp-add-stop-favorites-title {
   font-size: var(--font-size-callout);
   font-weight: 700;
   margin: 0;
 }
-.tp-add-stop-saved-sort {
+.tp-add-stop-favorites-sort {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -610,7 +610,7 @@ export default function AddStopPage() {
     normalise: normalizeSearchResults,
   });
 
-  const [savedPois, setSavedPois] = useState<SavedPoiRow[] | null>(null);
+  const [poiFavorites, setPoiFavorites] = useState<PoiFavoriteRow[] | null>(null);
   const [savedLoading, setSavedLoading] = useState(false);
   const [selectedSaved, setSelectedSaved] = useState<Set<number>>(new Set());
 
@@ -646,23 +646,23 @@ export default function AddStopPage() {
 
   // Saved fetch (lazy 切到 tab 才打)
   useEffect(() => {
-    if (tab !== 'saved' || savedPois !== null) return;
+    if (tab !== 'favorites' || poiFavorites !== null) return;
     setSavedLoading(true);
     (async () => {
       try {
-        const resp = await fetch('/api/saved-pois', { credentials: 'same-origin' });
+        const resp = await fetch('/api/poi-favorites', { credentials: 'same-origin' });
         if (resp.ok) {
-          setSavedPois(normalizeSavedPois(await resp.json()));
+          setPoiFavorites(normalizePoiFavorites(await resp.json()));
         } else {
-          setSavedPois([]);
+          setPoiFavorites([]);
         }
       } catch {
-        setSavedPois([]);
+        setPoiFavorites([]);
       } finally {
         setSavedLoading(false);
       }
     })();
-  }, [tab, savedPois]);
+  }, [tab, poiFavorites]);
 
   function toggleSearch(id: number) {
     setSelectedSearch((prev) => {
@@ -684,7 +684,7 @@ export default function AddStopPage() {
 
   const totalSelected = useMemo(() => {
     if (tab === 'search') return selectedSearch.size;
-    if (tab === 'saved') return selectedSaved.size;
+    if (tab === 'favorites') return selectedSaved.size;
     return customTitle.trim() ? 1 : 0;
   }, [tab, selectedSearch, selectedSaved, customTitle]);
 
@@ -702,8 +702,8 @@ export default function AddStopPage() {
       payloads = searchResults
         .filter((r) => selectedSearch.has(r.osm_id))
         .map((r) => ({ title: r.name, note: r.address || undefined }));
-    } else if (tab === 'saved') {
-      const list = savedPois ?? [];
+    } else if (tab === 'favorites') {
+      const list = poiFavorites ?? [];
       payloads = list
         .filter((r) => selectedSaved.has(r.id))
         .map((r) => ({ title: r.poiName, note: r.poiAddress ?? undefined }));
@@ -747,7 +747,7 @@ export default function AddStopPage() {
       setSubmitting(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [submitting, tab, searchResults, selectedSearch, savedPois, selectedSaved, customTitle, customTime, customDuration, customNote, tripId, dayNum]);
+  }, [submitting, tab, searchResults, selectedSearch, poiFavorites, selectedSaved, customTitle, customTime, customDuration, customNote, tripId, dayNum]);
 
   if (!auth.user) return null;
   if (!tripId || !Number.isFinite(dayNum)) {
@@ -799,7 +799,7 @@ export default function AddStopPage() {
             <div className="tp-add-stop-tabs" role="tablist" aria-label="加入景點來源">
               {([
                 { key: 'search', label: '搜尋' },
-                { key: 'saved', label: '收藏' },
+                { key: 'favorites', label: '收藏' },
                 { key: 'custom', label: '自訂' },
               ] as const).map((t) => (
                 <button
@@ -817,7 +817,7 @@ export default function AddStopPage() {
             </div>
 
             <div className="tp-add-stop-body">
-              {(tab === 'search' || tab === 'saved') && (
+              {(tab === 'search' || tab === 'favorites') && (
                 <div className="tp-add-stop-subtabs" role="tablist" aria-label="POI 類別">
                   {CATEGORY_TABS.map((c) => (
                     <button
@@ -904,7 +904,7 @@ export default function AddStopPage() {
                     </div>
                   )}
                   {searching && <div className="tp-add-stop-empty">搜尋中⋯</div>}
-                  {!searching && query.trim().length === 0 && category === 'all' && savedPois && savedPois.length > 0 && (
+                  {!searching && query.trim().length === 0 && category === 'all' && poiFavorites && poiFavorites.length > 0 && (
                     <div className="tp-add-stop-empty">
                       輸入關鍵字搜尋，或切到「收藏」 tab 從你儲存的 POI 加入
                     </div>
@@ -962,26 +962,26 @@ export default function AddStopPage() {
                 </>
               )}
 
-              {tab === 'saved' && (
+              {tab === 'favorites' && (
                 <>
                   {savedLoading && <div className="tp-add-stop-empty">載入收藏⋯</div>}
-                  {!savedLoading && savedPois !== null && savedPois.length === 0 && (
+                  {!savedLoading && poiFavorites !== null && poiFavorites.length === 0 && (
                     <div className="tp-add-stop-empty">
                       <div className="tp-add-stop-empty-icon"><Icon name="heart" /></div>
                       <div className="tp-add-stop-empty-title">還沒收藏景點</div>
                       <div className="tp-add-stop-empty-desc">在探索頁或地圖上點收藏地點，下次行程就能直接從這裡加入。</div>
                     </div>
                   )}
-                  {savedPois !== null && savedPois.length > 0 && (() => {
-                    const filtered = savedPois.filter((r) => matchCategory(r.poiType, category));
+                  {poiFavorites !== null && poiFavorites.length > 0 && (() => {
+                    const filtered = poiFavorites.filter((r) => matchCategory(r.poiType, category));
                     if (filtered.length === 0) {
                       return <div className="tp-add-stop-empty">符合類別篩選的收藏為 0，試著切到「為你推薦」看全部</div>;
                     }
                     return (
                       <>
-                        <div className="tp-add-stop-saved-header">
-                          <h3 className="tp-add-stop-saved-title">我的收藏 · {savedPois.length} 個景點</h3>
-                          <button className="tp-add-stop-saved-sort" type="button">
+                        <div className="tp-add-stop-favorites-header">
+                          <h3 className="tp-add-stop-favorites-title">收藏 · {poiFavorites.length} 個景點</h3>
+                          <button className="tp-add-stop-favorites-sort" type="button">
                             按收藏時間排序 <Icon name="chevron-down" />
                           </button>
                         </div>
@@ -992,7 +992,7 @@ export default function AddStopPage() {
                               <label
                                 key={r.id}
                                 className={`tp-add-stop-card ${isSelected ? 'is-selected' : ''}`}
-                                data-testid={`add-stop-saved-card-${r.id}`}
+                                data-testid={`add-stop-favorites-card-${r.id}`}
                               >
                                 <input
                                   type="checkbox"

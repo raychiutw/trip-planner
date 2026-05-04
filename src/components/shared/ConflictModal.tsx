@@ -1,7 +1,7 @@
 /**
  * ConflictModal — 同 day 同時段衝突解決 dialog (v2.21.0 MF2)
  *
- * 用於 AddSavedPoiToTripPage 提交時 server 回 409。Server contract:
+ * 用於 AddPoiFavoriteToTripPage 提交時 server 回 409。Server contract:
  *   { error: 'CONFLICT', conflictWith: { entryId, time, title, dayNum } }
  *
  * 三選 action：

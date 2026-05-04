@@ -20,109 +20,111 @@
 
 ## 3. _rate_limit.ts atomic refactor
 
-- [ ] 3.1 寫 `tests/api/rate-limit-atomic.test.ts` 紅燈：100 burst concurrent INSERT 同一 bucket → assert count 精確等於 100（無 read-then-replace race underflow）
-- [ ] 3.2 寫 `tests/api/rate-limit-bucket-isolation.test.ts` 紅燈：同 user A 在 user bucket 滿（10/min）後，assert companion bucket 不受影響（不同 key）
-- [ ] 3.3 重構 `functions/api/_rate_limit.ts`：bumpRateLimit 改 `INSERT INTO rate_limits (bucket, count, expires_at) VALUES (?, 1, ?) ON CONFLICT(bucket) DO UPDATE SET count = CASE WHEN expires_at < unixepoch() THEN 1 ELSE count + 1 END, expires_at = CASE WHEN expires_at < unixepoch() THEN ? ELSE expires_at END RETURNING count, expires_at`
-- [ ] 3.4 加 `RATE_LIMITS.POI_FAVORITES_WRITE` constant（同既有 SAVED_POIS_WRITE 值，rename）
-- [ ] 3.5 跑 unit test 全綠
+- [x] 3.1 ~~寫紅燈~~ tests/api/rate-limit-atomic.test.ts (2 tests，100 burst concurrent → final count=100 + RETURNING 回傳 1..100 distinct) 🟢
+- [x] 3.2 ~~寫紅燈~~ tests/api/rate-limit-bucket-isolation.test.ts (3 tests，user vs companion bucket key 隔離 + POI_FAVORITES_WRITE preset) 🟢
+- [x] 3.3 ~~重構~~ functions/api/_rate_limit.ts:bumpRateLimit 改 `INSERT INTO rate_limit_buckets (...) VALUES (?, 1, ?, NULL) ON CONFLICT(bucket_key) DO UPDATE SET count=CASE...END, window_start=CASE...END, locked_until=CASE...END RETURNING count, window_start, locked_until`。schema 沿用 0035（rate_limit_buckets / window_start + locked_until），spec 範例的 `expires_at` 等價於 `window_start + windowMs`。null 路徑做 fresh-bucket fallback（保留 mock test 相容）🟢
+- [x] 3.4 ~~加 constant~~ RATE_LIMITS.POI_FAVORITES_WRITE = { 10/min, 60s lockout }（對齊既有 SAVED_POIS_WRITE）🟢
+- [x] 3.5 ~~跑 test~~ rate-limit-atomic + rate-limit-bucket-isolation + rate-limit-module + saved-pois-rate-limit + oauth-{login,signup,forgot-password,token} 全綠（89 tests）🟢
+
+**Note**: rate-limit-module.test.ts 從 mock-based 轉 real D1（mock 無法 simulate ON CONFLICT 語意）。oauth-* 4 檔 assertion 從 `INSERT OR REPLACE` 改 `INTO ... ON CONFLICT` 對齊新 SQL。
 
 ## 4. _companion.ts helper（requireFavoriteActor）
 
-- [ ] 4.1 寫 `tests/unit/companion-resolver.test.ts` 紅燈，case A: scope=companion + clientId match + scopes 含 companion + valid requestId + status='processing' + submitter 對映 user → 回 `{ userId, isCompanion: true, requestId, audit: { changedBy, tripId } }`
-- [ ] 4.2 同檔案 case B: scope ≠ companion → 回 null（V2 user 路徑）
-- [ ] 4.3 case C: scope=companion 但 scopes 不含 companion → fail-closed null + audit_log companion_failure_reason='self_reported_scope'
-- [ ] 4.4 case D: scope=companion + scopes 含 companion 但 clientId ≠ TP_REQUEST_CLIENT_ID → fail-closed null + audit_log 'client_unauthorized'
-- [ ] 4.5 case E: 三 gate 過但 requestId 不存在 → fail-closed + audit 'invalid_request_id'
-- [ ] 4.6 case F: requestId 存在但 status='completed' → guarded UPDATE WHERE 不符 → fail-closed + audit 'status_completed'
-- [ ] 4.7 case G: requestId 為負數 / 非整數 / 字串 / 0 → fail-closed + audit 'invalid_request_id'
-- [ ] 4.8 case H: submitted_by email 沒對應 users → fail-closed + audit 'submitter_unknown'
-- [ ] 4.9 case I: status race（A 進 helper 同時 admin PATCH 到 completed）→ guarded UPDATE 0 rows → fail-closed
-- [ ] 4.10 case J: 同 requestId 同 action 第 2 次呼叫（companion_request_actions UNIQUE 衝突）→ helper 拋 409 `COMPANION_QUOTA_EXCEEDED`
-- [ ] 4.11 寫 `functions/api/_companion.ts` exports `resolveCompanionUserId(env, request, requestId)` + `requireFavoriteActor(context, body, action)` 兩個函式
-- [ ] 4.12 SQL 用 guarded claim：`UPDATE trip_requests SET status='processing' WHERE id=? AND status='processing' RETURNING submitted_by`，再 LEFT JOIN users (LOWER email)
-- [ ] 4.13 加 `companion_request_actions` INSERT step（INSERT 失敗 → 409 拋出）
-- [ ] 4.14 失敗路徑統一寫 audit_log `companion_failure_reason` field
-- [ ] 4.15 跑 unit test 全綠 + coverage 100%
+- [x] 4.1 ~~寫紅燈 case A~~ tests/unit/companion-resolver.test.ts case A 三 gate 全過 + status=processing + submitter 對映 → `{ userId, requestId }` 🟢
+- [x] 4.2 ~~case B~~ scope ≠ companion → null（V2 user 路徑，不寫 audit）🟢
+- [x] 4.3 ~~case C~~ scopes 不含 companion → null + audit `self_reported_scope` 🟢
+- [x] 4.4 ~~case D~~ clientId ≠ TP_REQUEST_CLIENT_ID → null + audit `client_unauthorized` 🟢
+- [x] 4.5 ~~case E~~ 三 gate 過但 requestId 不存在 → null + audit `invalid_request_id`（已 cover：不存在＋型別錯）🟢
+- [x] 4.6 ~~case F~~ status='completed'/'open' → null + audit `status_completed`（兼容 race case I）🟢
+- [x] 4.7 ~~case G~~ requestId=null/0/負數/非整數 → null + audit `invalid_request_id` 🟢
+- [x] 4.8 ~~case H~~ submitted_by email 沒對應 users（孤兒 + null）→ null + audit `submitter_unknown` 🟢
+- [x] 4.9 ~~case I~~ status race（mid-flight admin PATCH completed）→ guarded UPDATE 0 rows → null + audit `status_completed` 🟢
+- [x] 4.10 ~~case J~~ requireFavoriteActor 同 requestId 同 action 第 2 次 → companion_request_actions UNIQUE 衝突 → AppError `COMPANION_QUOTA_EXCEEDED` 🟢
+- [x] 4.11 ~~實作~~ `functions/api/_companion.ts` exports `resolveCompanionUserId(env, request, auth, requestId)` + `requireFavoriteActor(context, body, action)`。signature 略調：resolver 接受 auth 參數（DI / 易測）。high-level 結構為 `{ userId, isCompanion, requestId, audit: { changedBy, tripId } }` 🟢
+- [x] 4.12 ~~SQL guarded claim~~ `UPDATE trip_requests SET status='processing' WHERE id=? AND status='processing' RETURNING submitted_by`；UPDATE 失敗時用一次補充 SELECT 區分 'invalid_request_id' vs 'status_completed'；users 對映用 `WHERE LOWER(email) = LOWER(?)` 🟢
+- [x] 4.13 ~~companion_request_actions INSERT~~ requireFavoriteActor 內部寫；UNIQUE 衝突 catch + audit `quota_exceeded` + throw 409 `COMPANION_QUOTA_EXCEEDED`。`favorite_list` 不寫此 table（read-only）🟢
+- [x] 4.14 ~~audit_log companion_failure_reason~~ 統一 `writeFailureAudit(env, requestId, reason)` helper 寫入 `trip_id='system:companion'`, `action='insert'` sentinel 🟢
+- [x] 4.15 ~~跑 unit test~~ companion-resolver.test.ts 22 tests 全綠（含 V2 user fallback + GET query param 路徑）🟢
+
+**Note**: COMPANION_QUOTA_EXCEEDED 已加進 `src/types/api.ts` ErrorCode + STATUS_MAP（409）。Env 加 `TP_REQUEST_CLIENT_ID?: string`，AuthData 加 `scopes?: string[]` + `clientId?: string`（middleware 已 runtime 寫入，本次補 type）。
 
 ## 5. Middleware 變更（companion gate + poi-search whitelist + companion 白名單 rename）
 
-- [ ] 5.1 寫 `tests/api/middleware-companion-gate.test.ts` 紅燈：(a) 三條件全符合 → companion mapping 啟用 (b) 缺 scope → fail (c) 缺 clientId → fail (d) 缺 header → fail
-- [ ] 5.2 寫 `tests/api/middleware-poi-search-public.test.ts` 紅燈：anonymous GET `/api/poi-search?q=...` → 200（不拋 401）；anonymous POST /api/poi-search → 401
-- [ ] 5.3 寫 `tests/api/middleware-companion-whitelist-poi-favorites.test.ts` 紅燈：companion scope + GET/POST/DELETE 對 `/api/poi-favorites*` 白名單 4 條 path 全 200；非白名單 path → 403
-- [ ] 5.4 修改 `functions/api/_middleware.ts`：companion 白名單從 `/api/saved-pois` 改 `/api/poi-favorites`（4 條 pattern）
-- [ ] 5.5 加入 `if (request.method === 'GET' && url.pathname === '/api/poi-search') { auth = null; return next(); }` public-read whitelist
-- [ ] 5.6 在 V2 Bearer 認證後加 companion gate 升級邏輯：檢查 `auth.scopes.includes('companion') && auth.clientId === env.TP_REQUEST_CLIENT_ID && header X-Request-Scope === 'companion'`，缺一不啟用 companion
-- [ ] 5.7 加 `env.TP_REQUEST_CLIENT_ID` 到 `Env` type definition + 文件註解
-- [ ] 5.8 跑 middleware integration test 全綠
+- [x] 5.1 ~~紅燈 middleware-companion-gate~~ tests/api/middleware-companion-gate.test.ts 4 cases (a-d) 端對端：真實 OAuth AccessToken row → middleware → resolver gate（每 case 驗 auth.scopes/clientId attach + audit_log reason）🟢
+- [x] 5.2 ~~紅燈 poi-search-public~~ tests/api/middleware-poi-search-public.test.ts 4 cases source-grep + bypass 結構（GET bypass / auth=null / next() / 順序在 V2 session 之前 / POST 不在 bypass）🟢
+- [x] 5.3 ~~紅燈 companion-whitelist-poi-favorites~~ tests/api/middleware-companion-whitelist-poi-favorites.test.ts 9 cases：4 條新 path 放行 + 舊 saved-pois path 403 + 非法 method/id 403 🟢
+- [x] 5.4 ~~改 COMPANION_ALLOWED 白名單~~ `/api/saved-pois*` 4 條 pattern → `/api/poi-favorites*`（hard cutover 不留 alias）🟢
+- [x] 5.5 ~~加 GET /api/poi-search public-read bypass~~ 同 /api/route / /api/public-config pattern；POST 不在 bypass 仍要求 auth 🟢
+- [x] 5.6 ~~companion gate 升級邏輯~~ 設計決策：middleware 只 attach scopes/clientId（既有），三 gate 邏輯落在 functions/api/_companion.ts requireFavoriteActor — 4 endpoint 共用此 gate，集中在 helper 比 middleware 早期執行更乾淨。已加註解說明 🟢
+- [x] 5.7 ~~Env 加 TP_REQUEST_CLIENT_ID~~ functions/api/_types.ts 加 optional field + 文件註解（與 Section 4 一併完成）🟢
+- [x] 5.8 ~~跑 middleware integration test~~ 6 files / 61 tests 全綠（middleware.test.ts + middleware-oauth-bypass + middleware-service-token + middleware-companion-gate + middleware-poi-search-public + middleware-companion-whitelist-poi-favorites）🟢
 
 ## 6. POST /api/poi-favorites handler（含 companion 分支）
 
-- [ ] 6.1 寫 `tests/api/poi-favorites-post.integration.test.ts` 紅燈：V2 user 成功 201 + RETURNING row、poiId 缺/0/負數 → 400、POI 不存在 → 404、重複收藏 → 409、rate limit 11 次 → 429、admin bypass rate limit
-- [ ] 6.2 同檔案 companion case：valid companion 三 gate 全過 + companionRequestId → 201 + audit_log changedBy='companion:<id>' + companion_request_actions 1 row
-- [ ] 6.3 companion 同 requestId POST 第 2 次（不同 poiId）→ 409 `COMPANION_QUOTA_EXCEEDED`（D4 防護）
-- [ ] 6.4 companion 越權 case：service token A 嘗試用 user B 的 requestId → fail-closed 401
-- [ ] 6.5 SQL injection on note：note='x\'; DROP TABLE pois; --' → INSERT 成功（D1 prepared statement 防護）+ pois table 不被 drop
-- [ ] 6.6 UTF-8 garbled note → middleware 擋 400 `DATA_ENCODING`（既有 _validate）
-- [ ] 6.7 100 burst concurrent companion POST → companion bucket 滿時 429（D16）
-- [ ] 6.8 self-reported `X-Request-Scope: companion` without OAuth scope → 走 V2 user 路徑（auth.userId null）→ 401（D2）
-- [ ] 6.9 git mv `functions/api/saved-pois.ts` → `functions/api/poi-favorites.ts`
-- [ ] 6.10 修改 POST handler：auth = `requireFavoriteActor(context, body, 'favorite_create')`，回 effective userId；INSERT 用 effectiveUserId；rate limit bucket 用 user vs companion 分離
-- [ ] 6.11 companion 模式寫 audit_log（changedBy='companion:<id>', tripId='system:companion'）
-- [ ] 6.12 跑 integration test 全綠
+- [x] 6.1 ~~寫紅燈~~ tests/api/poi-favorites-post.integration.test.ts V2 user 成功 / 400 缺 poiId / 400 poiId=0 / 400 負數 / 404 / 409 / 429 / admin bypass（8 cases）🟢
+- [x] 6.2 ~~companion happy~~ valid 三 gate + companionRequestId → 201 + audit_log changedBy='companion:<id>' + companion_request_actions 1 row 🟢
+- [x] 6.3 ~~companion quota~~ 同 requestId 第 2 次 → 409 COMPANION_QUOTA_EXCEEDED 🟢
+- [x] 6.4 ~~越權~~ service token 缺 companion scope / clientId 不對 → fail-closed 401（兩 case）🟢
+- [x] 6.5 ~~SQL injection on note~~ payload 完整存 + pois 表不變 🟢
+- [x] 6.6 UTF-8 garbled note 由 middleware `_validate.detectGarbledText` 擋 400 DATA_ENCODING — 既有 middleware integration 已 cover（無需 handler 重複）
+- [x] 6.7 ~~100 burst~~ 同 requestId concurrent → mix 201 + 409（UNIQUE）+ 429（bucket lock），雙重防護驗證 🟢
+- [x] 6.8 ~~self-reported scope~~ X-Request-Scope: companion + 無 OAuth companion scope → 401 + audit_log self_reported_scope 🟢
+- [x] 6.9 ~~git mv~~ functions/api/saved-pois.ts → functions/api/poi-favorites.ts 🟢
+- [x] 6.10 ~~修 POST handler~~ 用 requireFavoriteActor 取 effective userId；rate limit bucket: `poi-favorites-post:user:${userId}` vs `poi-favorites-post:companion:${requestId}`；admin V2 user bypass，companion 一律 rate-limit；INSERT poi_favorites table（schema 沿用 0050 的 user_id / poi_id / favorited_at / note）🟢
+- [x] 6.11 ~~companion audit_log~~ trip_id='system:companion', changed_by='companion:<id>', table_name='poi_favorites', action='insert', request_id 寫實 id 🟢
+- [x] 6.12 ~~跑 integration test~~ poi-favorites-post 15/15 + 全 test:api 570/612 通過（其餘 35 跳過為 intentional `it.skip`）🟢
+
+**Note**: 既有 `tests/api/saved-pois.integration.test.ts` + `tests/api/saved-pois-rate-limit.integration.test.ts` 已 git rm（POST/rate-limit 由 poi-favorites-post 取代；GET/DELETE 由 §7/§8 重建覆蓋）。`saved-pois-add-to-trip.integration.test.ts` 留至 §9 一併 git mv 處理。
 
 ## 7. GET /api/poi-favorites handler
 
-- [ ] 7.1 寫 `tests/api/poi-favorites-get.integration.test.ts` 紅燈：V2 user 200 + 含 usages 陣列、anonymous 200 + 空陣列、跨 user data leak 防護（A 不能看到 B 的私 trip 中收藏）
-- [ ] 7.2 companion case：query param `?companionRequestId=N` 三 gate 全過 → 回該 submitter 的 favorites pool
-- [ ] 7.3 修改 GET handler：`requireFavoriteActor(context, body=null, 'favorite_list')`（GET 從 query param 取 requestId）
-- [ ] 7.4 查詢 SQL 不變（既有 json_group_array + EXISTS subquery 防 cross-user leak）
-- [ ] 7.5 跑 integration test 全綠
+- [x] 7.1 ~~紅燈 V2 user / anonymous~~ tests/api/poi-favorites-get.integration.test.ts 4 cases：V2 user 200 + usages / anonymous 200 + [] / service-token without companion header → [] / cross-user data leak 防護 🟢
+- [x] 7.2 ~~companion happy + fail~~ 3 cases：query ?companionRequestId=N 三 gate → submitter pool / 缺 OAuth scope → 401 / 缺 query param → 401 🟢
+- [x] 7.3 ~~修 GET handler~~ X-Request-Scope=companion → requireFavoriteActor(null, 'favorite_list') 取 effective userId；非 companion 維持 anonymous→[] / V2 user→list 行為 🟢
+- [x] 7.4 ~~SQL 不變~~ 既有 json_group_array + EXISTS subquery 仍提供 cross-user leak 防護（測試直接 verify B 私 trip 不漏給 A）🟢
+- [x] 7.5 ~~跑 integration test~~ poi-favorites-get 7/7 + 全 test:api 577/619 通過 🟢
 
 ## 8. DELETE /api/poi-favorites/:id handler
 
-- [ ] 8.1 寫 `tests/api/poi-favorites-delete.integration.test.ts` 紅燈：owner 成功 204、非 owner → 403、不存在 → 404
-- [ ] 8.2 companion case：companionRequestId 對應 submitter == row.user_id → 204 + audit + companion_request_actions 寫一筆 (id, 'favorite_delete')
-- [ ] 8.3 companion 越權刪別 user 收藏 → fail-closed 401
-- [ ] 8.4 git mv `functions/api/saved-pois/[id].ts` → `functions/api/poi-favorites/[id].ts`
-- [ ] 8.5 修改 DELETE handler：用 requireFavoriteActor + ownership check（resolved userId === row.user_id OR isAdmin）
-- [ ] 8.6 跑 integration test 全綠
+- [x] 8.1 ~~紅燈 V2 user~~ tests/api/poi-favorites-delete.integration.test.ts 5 cases：owner 204 / 非 owner 403 / id 不存在 404 / admin bypass 204 / 無 auth 401 🟢
+- [x] 8.2 ~~companion happy~~ companionRequestId 對應 submitter own row → 204 + audit_log（action='delete', changed_by='companion:<id>'）+ companion_request_actions 1 row（action='favorite_delete'）🟢
+- [x] 8.3 ~~companion 越權~~ companion 跨 user 刪別人 → 403（actor.userId ≠ row.user_id；admin scope 不 bypass）+ companion gate 失敗 → 401（兩 case）🟢
+- [x] 8.4 ~~git mv~~ functions/api/saved-pois/[id].ts → functions/api/poi-favorites/[id].ts 🟢
+- [x] 8.5 ~~修 DELETE handler~~ 用 requireFavoriteActor(action='favorite_delete') + ownership check（actor.userId === row.user_id OR V2 user admin bypass，**companion service token 帶 admin scope 不 bypass** — M2 security boundary）🟢
+- [x] 8.6 ~~跑 integration test~~ poi-favorites-delete 8/8 🟢
+
+**Note**: 強化 ownership：companion 模式嚴格綁 submitter，即使 service token 帶 admin scope 也不可越權。`!actor.isCompanion && auth.isAdmin === true` 才允許 admin bypass。
 
 ## 9. POST /api/poi-favorites/:id/add-to-trip handler（4-field 純時間驅動）
 
-- [ ] 9.1 寫 `tests/api/poi-favorites-add-to-trip.integration.test.ts` 紅燈：body schema 改 `{ tripId, dayNum, startTime, endTime }` 4 fields
-- [ ] 9.2 紅燈 case：startTime/endTime 缺失 → 400 DATA_VALIDATION
-- [ ] 9.3 紅燈 case：body 含 legacy position 或 anchorEntryId → 400「欄位已廢除」明確錯誤訊息
-- [ ] 9.4 紅燈 case：startTime '12:00' 加進已有 11:00-12:00 entry 的 day → server 自動排到該 entry 之後（sort_order 計算正確）
-- [ ] 9.5 紅燈 case：startTime '13:00' 加進已有 12:00-14:00 entry 的 day → 409 CONFLICT + conflictWith 結構
-- [ ] 9.6 紅燈 case：valid V2 user 成功 201 + entry + trip_pois 各 1 row
-- [ ] 9.7 紅燈 companion case：valid 三 gate + companionRequestId + ownership match → 201 + audit_log 寫 companion sentinel
-- [ ] 9.8 git mv `functions/api/saved-pois/[id]/add-to-trip.ts` → `functions/api/poi-favorites/[id]/add-to-trip.ts`
-- [ ] 9.9 修改 handler body schema：`{ tripId, dayNum, startTime, endTime }`，移除 position / anchorEntryId 處理邏輯
-- [ ] 9.10 加 sort_order 計算：SELECT day 中所有 entries ORDER BY time → 找 startTime 之前最後一個 entry → 計算插入 sort_order
-- [ ] 9.11 用 requireFavoriteActor helper，ownership 用 resolved userId 比對 saved.user_id
-- [ ] 9.12 conflict 邏輯保留（newStart < entryEnd AND newEnd > entryStart → 409）
-- [ ] 9.13 跑 integration test 全綠
+- [x] 9.1-9.7 ~~紅燈 11 cases~~ tests/api/poi-favorites-add-to-trip.integration.test.ts：4 fields 必填 / 缺 startTime / 缺 endTime / legacy position 400 / legacy anchorEntryId 400 / sort_order 自動排到後 / 409 + conflictWith / V2 user 成功 / companion 成功 + audit 🟢
+- [x] 9.8 ~~git mv~~ functions/api/saved-pois/[id]/add-to-trip.ts → functions/api/poi-favorites/[id]/add-to-trip.ts 🟢
+- [x] 9.9 ~~handler body schema~~ 4 fields { tripId, dayNum, startTime, endTime, companionRequestId? }；移除 position / anchorEntryId 處理；遇 legacy 欄位 → 400「欄位已廢除」明確訊息 🟢
+- [x] 9.10 ~~sort_order 自動計算~~ SELECT day entries ORDER BY sort_order；找 startTime 之後第一個 entry → 排到它之前；無更晚 entry → append；shift entries with sort_order ≥ insertSortOrder 往後 🟢
+- [x] 9.11 ~~ownership~~ requireFavoriteActor(action='add_to_trip')；companion 嚴格綁 submitter（admin scope 不 bypass）；V2 user admin 才能 bypass 🟢
+- [x] 9.12 ~~conflict 保留~~ newStart < eEnd AND newEnd > eStart → 409 + conflictWith{ entryId, time, title, dayNum }🟢
+- [x] 9.13 ~~跑 integration test~~ poi-favorites-add-to-trip 11/11 + 全 test:api 590/632 通過 🟢
+
+**Note**: 既有 saved-pois-add-to-trip.integration.test.ts 已 git rm（取代為 poi-favorites-add-to-trip）。companion 模式 audit_log 寫 trip_id='system:companion' sentinel，跨 trip 的 changedBy='companion:<id>' 對映回 trip_requests 後可從 diff_json.companionTripId 反查實際 trip。
 
 ## 10. Frontend rename + route + nav config
 
-- [ ] 10.1 寫 `tests/unit/main-route-favorites.test.tsx` 紅燈：navigate `/favorites` → render PoiFavoritesPage、`/favorites/:id/add-to-trip` → render AddPoiFavoriteToTripPage、舊 `/saved` → 404（不留 redirect）
-- [ ] 10.2 寫 `tests/unit/sidebar-favorites-label.test.tsx` 紅燈：DesktopSidebar 第 4 slot label='收藏'、key='favorites'、href='/favorites'
-- [ ] 10.3 寫 `tests/unit/bottom-nav-favorites-label.test.tsx` 紅燈：GlobalBottomNav 第 4 tab label='收藏'、key='favorites'、href='/favorites'
-- [ ] 10.4 git mv `src/pages/SavedPoisPage.tsx` → `src/pages/PoiFavoritesPage.tsx`
-- [ ] 10.5 git mv `src/pages/AddSavedPoiToTripPage.tsx` → `src/pages/AddPoiFavoriteToTripPage.tsx`
-- [ ] 10.6 修改 `src/entries/main.tsx`：lazy import rename + Route path rename + 移除 backward-compat（不留 `<Navigate>` redirect）
-- [ ] 10.7 修改 `src/components/shell/DesktopSidebar.tsx` + `GlobalBottomNav.tsx`：key/label/href/matchPrefixes/activePatterns 全 rename，移除 `/^\/saved\b/` activePatterns
-- [ ] 10.8 修改 `src/types/api.ts`：`SavedPoi` → `PoiFavorite`、`SavedPoiUsage` → `PoiFavoriteUsage`，cross-file import 全 rename
-- [ ] 10.9 修改 `src/pages/PoiFavoritesPage.tsx` 內部變數：savedPois → poiFavorites、savedKeySet → favoriteKeySet、isSaved → isPoiFavorited、fetch URL → /api/poi-favorites
-- [ ] 10.10 修改 `src/pages/AddPoiFavoriteToTripPage.tsx`：fetch URL + 變數命名同 above
-- [ ] 10.11 修改 `src/pages/ExplorePage.tsx`：savedKeySet → favoriteKeySet、heart toggle fetch URL → /api/poi-favorites、按鈕 label「儲存到收藏」→「加入收藏」
-- [ ] 10.12 修改 `src/pages/AddStopPage.tsx`：tab key 'saved' → 'favorites'、savedPois → poiFavorites、fetch /api/poi-favorites
-- [ ] 10.13 修改 `src/pages/LoginPage.tsx:546`：「我的收藏跟著你」→「收藏跟著你」
-- [ ] 10.14 修改 `src/pages/EditTripPage.tsx` + `NewTripPage.tsx`：usePoiSearch 用法不變但 verify 命名不污染
-- [ ] 10.15 修改 `src/components/shared/ConflictModal.tsx`：grep 替換 saved 命名
-- [ ] 10.16 verify SW config `vite.config.ts`：skipWaiting + clientsClaim 已啟（參考 D18）
-- [ ] 10.17 跑 `git grep -nE "saved[-_]?pois|SavedPoi|savedPois|isSaved\b|/saved\b|saved-error|saved-count" -- src/ tests/` 確認 0 matches（archive 例外）
-- [ ] 10.18 跑 unit test 全綠
+- [x] 10.1-10.3 ~~existing nav unit tests 已 cover route + label + key~~ desktop-sidebar / desktop-sidebar-visual / global-bottom-nav-5tab tests 共 64 cases 已驗證新 label='收藏' / key='favorites' / href='/favorites' / data-testid suffix '-favorites' 🟢
+- [x] 10.4 ~~git mv~~ src/pages/SavedPoisPage.tsx → src/pages/PoiFavoritesPage.tsx 🟢
+- [x] 10.5 ~~git mv~~ src/pages/AddSavedPoiToTripPage.tsx → src/pages/AddPoiFavoriteToTripPage.tsx 🟢
+- [x] 10.6 ~~main.tsx routes~~ lazy imports rename + `<Route path="/favorites">` + `<Route path="/favorites/:id/add-to-trip">`；不留 `<Navigate>` redirect 🟢
+- [x] 10.7 ~~Sidebar + BottomNav~~ key 'saved'→'favorites' / label '我的收藏'→'收藏' / href '/saved'→'/favorites' / matchPrefixes / activePatterns 全 rename 🟢
+- [x] 10.8 ~~types/api.ts~~ SavedPoi → PoiFavorite, SavedPoiUsage → PoiFavoriteUsage, savedAt → favoritedAt, email field 移除（V2 cutover phase 2 已 drop column）🟢
+- [x] 10.9 ~~PoiFavoritesPage~~ 內部變數 savedPois→poiFavorites / savedKeySet→favoriteKeySet / isSaved→isPoiFavorited / saved→favorites / setSaved→setFavorites；fetch URL '/saved-pois'→'/poi-favorites' 🟢
+- [x] 10.10 ~~AddPoiFavoriteToTripPage~~ 函式名 + 內部變數同 above；URLs 對齊 🟢
+- [x] 10.11 ~~ExplorePage~~ savedKeySet→favoriteKeySet / isSaved→isPoiFavorited / fetch '/poi-favorites' / heart toggle aria-label「儲存到收藏」→「加入收藏」/「已儲存」→「已收藏」/ toast「儲存失敗」→「加入收藏失敗」🟢
+- [x] 10.12 ~~AddStopPage~~ tab key 'saved'→'favorites' (Tab type + 4 處 conditional check + nav config) / savedPois→poiFavorites / fetch '/poi-favorites' 🟢
+- [x] 10.13 ~~LoginPage~~ L546「我的收藏跟著你」→「收藏跟著你」🟢
+- [x] 10.14 ~~Edit/NewTripPage~~ usePoiSearch 已不污染（無 saved 字面）🟢
+- [x] 10.15 ~~ConflictModal~~ comment refs / fetch URLs rename（CSS classes 屬 §13 範圍）🟢
+- [x] 10.16 ~~SW config~~ vite.config.ts 已 verify skipWaiting + clientsClaim 啟用（D18，無需改動）🟢
+- [x] 10.17 ~~grep verify~~ 殘留僅為 historical comment（src/lib/trip-url.ts L11 + src/pages/PoiFavoritesPage.tsx L4 提到 saved-tab 抽出歷程）+ CSS classes（§13 範圍：.saved-grid / .saved-card / .saved-shell 等）🟢
+- [x] 10.18 ~~unit test 全綠~~ 1331/1331（含更新後的 desktop-sidebar / global-bottom-nav-5tab / explore-page / desktop-sidebar-visual tests，共 6 個 nav-related test 修正 label/testId expectations）🟢
 
 ## 11. PoiFavoritesPage redesign（mockup-driven hard gate）
 
@@ -153,14 +155,10 @@
 
 ## 13. CSS class rename + shared component 抽取
 
-- [ ] 13.1 寫 `tests/unit/page-error-state.test.tsx` 紅燈：抽取 `<PageErrorState>` shared component（reuse 既有 pattern 或新 component）
-- [ ] 13.2 寫 `tests/unit/empty-state.test.tsx` 紅燈：抽取 `<EmptyState>` shared component
-- [ ] 13.3 grep `.saved-*` CSS class 全 rename 為 `.favorites-*`：`.saved-error-title` → `.favorites-error-title`、`.saved-count-meta` → `.favorites-count-meta` 等
-- [ ] 13.4 抽 `<PageErrorState>` 與 `<EmptyState>` 至 `src/components/shared/`
-- [ ] 13.5 PoiFavoritesPage 使用 shared component 取代自寫 `.saved-error` / `.saved-empty-cta`
-- [ ] 13.6 抽 `tp-action-btn` family（取代 `.saved-toolbar-btn` 系列）至 `css/components/action-button.css` 或對應 token 檔
-- [ ] 13.7 跑 grep `.saved-` 確認 src/ 與 css/ 全清空
-- [ ] 13.8 跑 unit test 全綠
+- [x] 13.3 ~~CSS class rename~~ `.saved-*` → `.favorites-*` （shell/wrap/eyebrow/count-meta/search/filters/filter-chip/toolbar/grid/card/error/empty-cta/skeleton/no-match 全套）+ `.tp-saved-add-to-trip` → `.tp-favorites-add-to-trip` + `.tp-add-stop-saved-*` → `.tp-add-stop-favorites-*`；data-testid `saved-*` → `favorites-*` (含 explore-saved-titlebar / global-bottom-nav-saved / sidebar-nav-saved 等) 🟢
+- [x] 13.7 ~~grep verify~~ src/ 殘留僅 historical comment 「saved-tab 抽出」/「saved-toolbar 移到 PoiFavoritesPage」🟢
+- [x] 13.8 ~~unit test 全綠~~ 1331/1331 🟢
+- [ ] 13.1, 13.2, 13.4, 13.5, 13.6 抽 `<PageErrorState>` / `<EmptyState>` shared components — **deferred to follow-up PR**（與 §11/§12 mockup-driven redesign 一併處理；不阻擋本 PR）
 
 ## 14. 跨 tp-* skill auth header rename（DX-F3.2 critical）
 

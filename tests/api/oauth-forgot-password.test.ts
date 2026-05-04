@@ -161,9 +161,11 @@ describe('POST /api/oauth/forgot-password', () => {
     const res = await onRequestPost(makeContext({ email: 'u@x.com' }, env));
     expect(res.status).toBe(200); // generic 200 regardless
 
-    // Both buckets bumped
+    // Both buckets bumped (poi-favorites-rename §3.3: atomic INSERT...ON CONFLICT)
     const inserts = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+      (c) => typeof c[0] === 'string'
+        && c[0].includes('INTO rate_limit_buckets')
+        && c[0].includes('ON CONFLICT'),
     );
     expect(inserts.length).toBe(2);
   });

@@ -140,16 +140,19 @@ describe('POST /api/oauth/login', () => {
     const dbPrepare = vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('FROM rate_limit_buckets')) return makeStmt(null); // not locked
       if (sql.includes('SELECT user_id, password_hash')) return makeStmt(null); // user not found
-      if (sql.includes('INSERT OR REPLACE INTO rate_limit_buckets')) return makeStmt();
+      // poi-favorites-rename §3.3: bumpRateLimit 改 atomic INSERT...ON CONFLICT
+      if (sql.includes('INTO rate_limit_buckets') && sql.includes('ON CONFLICT')) return makeStmt();
       return makeStmt();
     });
     const env: MockEnv = { SESSION_SECRET: 's', DB: { prepare: dbPrepare } };
     const res = await onRequestPost(makeContext({ email: 'unknown@x.com', password: 'wrong' }, env));
     expect(res.status).toBe(401);
 
-    // Both ipKey + emailKey buckets should be bumped (INSERT OR REPLACE called twice)
+    // Both ipKey + emailKey buckets should be bumped (atomic INSERT...ON CONFLICT called twice)
     const inserts = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+      (c) => typeof c[0] === 'string'
+        && c[0].includes('INTO rate_limit_buckets')
+        && c[0].includes('ON CONFLICT'),
     );
     expect(inserts.length).toBe(2);
   }, 30_000);

@@ -194,15 +194,17 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   { method: 'PATCH', pattern: /^\/api\/pois\/\d+$/ },
   { method: 'GET',   pattern: /^\/api\/trips\// },
   { method: 'GET',   pattern: /^\/api\/requests/ },
-  // V2 cutover (DX-C3): saved_pois 雙向搬運。tp-request scheduler 需要：
-  //   - 查/建/刪 saved_pois（對映 entry → 收藏 / 收藏 → entry 流程）
+  // poi-favorites-rename §5.4: saved-pois → poi-favorites hard cutover（不留 alias）。
+  // tp-request scheduler 透過 companion 路徑做：
+  //   - 查/建/刪 poi_favorites（對映 entry → 收藏 / 收藏 → entry 流程）
   //   - 從收藏 fast-path 加入行程（D-C1 endpoint）
-  // companion scope binds writes to the request submitter (auth.userId), 不是 trip owner，
-  // 防 prompt injection 跨 user 操作（M2 security boundary）。
-  { method: 'GET',   pattern: /^\/api\/saved-pois(\/\d+)?$/ },
-  { method: 'POST',  pattern: /^\/api\/saved-pois$/ },
-  { method: 'DELETE', pattern: /^\/api\/saved-pois\/\d+$/ },
-  { method: 'POST',  pattern: /^\/api\/saved-pois\/\d+\/add-to-trip$/ },
+  // companion 真實 gate 在 functions/api/_companion.ts requireFavoriteActor —
+  // middleware 僅做 path 白名單（self-imposed restriction），實際 OAuth scope +
+  // clientId 三 gate 由 helper 套用（防 self-reported X-Request-Scope header）。
+  { method: 'GET',    pattern: /^\/api\/poi-favorites(\/\d+)?$/ },
+  { method: 'POST',   pattern: /^\/api\/poi-favorites$/ },
+  { method: 'DELETE', pattern: /^\/api\/poi-favorites\/\d+$/ },
+  { method: 'POST',   pattern: /^\/api\/poi-favorites\/\d+\/add-to-trip$/ },
 ];
 
 /** @internal — exported for unit testing */
@@ -305,6 +307,14 @@ async function handleAuth(
     return context.next();
   }
 
+  // 公開讀取：GET /api/poi-search（OSM Nominatim proxy；不回 user data）
+  // poi-favorites-rename §5.5：V2 cutover 漏列 → prod 198 筆 401。POST 不在 bypass，
+  // 仍要求 auth（防 abuse Nominatim quota）。
+  if (request.method === 'GET' && url.pathname === '/api/poi-search') {
+    (context.data as Record<string, unknown>).auth = null;
+    return context.next();
+  }
+
   // V2 OAuth — sole auth path (CF Access blocks below are kept transitional during cutover).
   //
   // Order: try V2 session cookie first (browser users), then V2 Bearer token (service
@@ -370,6 +380,12 @@ async function handleAuth(
               /* best-effort */
             }
           }
+          // poi-favorites-rename §5.6：companion gate 三條件（X-Request-Scope header
+          // + scopes 含 'companion' + clientId === env.TP_REQUEST_CLIENT_ID）由
+          // functions/api/_companion.ts requireFavoriteActor 套用。middleware 只負責
+          // attach scopes / clientId，gate 邏輯落在 helper 是因 4 個 poi-favorites
+          // endpoint 都需共用此 gate，集中在 helper 比 middleware 早期執行更乾淨
+          // （middleware-level 只能粗篩 path 白名單，不知 body.companionRequestId）。
           (context.data as Record<string, unknown>).auth = {
             email,
             userId: tokenRow.user_id,
