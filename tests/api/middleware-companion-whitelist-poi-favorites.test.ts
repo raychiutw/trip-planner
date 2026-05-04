@@ -27,8 +27,13 @@ describe('checkCompanionScope — /api/poi-favorites whitelist (§5.3)', () => {
     expect(check('GET', '/api/poi-favorites')).toBeNull();
   });
 
-  it('GET  /api/poi-favorites/123 → 放行（單筆讀取）', () => {
-    expect(check('GET', '/api/poi-favorites/123')).toBeNull();
+  it('GET  /api/poi-favorites/123 → 403（無 onRequestGet endpoint；CSO follow-up 收緊 whitelist）', () => {
+    // [id]/index.ts 只 export onRequestDelete，沒 onRequestGet → 此 path 永遠 405。
+    // 原 regex `/^\/api\/poi-favorites(\/\d+)?$/` over-eager 放行不存在的 endpoint，
+    // 收緊為 `/^\/api\/poi-favorites$/`（list-only GET）— 避免無謂 attack surface。
+    const resp = check('GET', '/api/poi-favorites/123');
+    expect(resp).not.toBeNull();
+    expect(resp!.status).toBe(403);
   });
 
   it('POST /api/poi-favorites → 放行', () => {

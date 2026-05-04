@@ -33,13 +33,15 @@ vi.mock('react-router-dom', async () => {
 import PoiFavoritesPage from '../../src/pages/PoiFavoritesPage';
 
 function makeRow(id: number, region: string, type = 'restaurant') {
+  // region 寫進 poiAddress 字串供 deriveRegion 解析（server 無 region field，client-side derive）
+  // 「沖繩」→ 寫「沖縄」(JP shinjitai) 確保 /沖縄|沖繩/ 兩種寫法 derive 對齊
+  const addrKeyword = region === '沖繩' ? '沖縄' : region;
   return {
     id,
     poiId: id * 100,
     poiName: `POI ${id} (${region})`,
-    poiAddress: 'addr',
+    poiAddress: `${addrKeyword}縣 demo address`,
     poiType: type,
-    poiRegion: region,
     favoritedAt: '2026-04-01T00:00:00Z',
     note: null,
     usages: [],

@@ -24,7 +24,18 @@ import { detectGarbledText } from '../../_validate';
 import { json, parseIntParam, parseJsonBody } from '../../_utils';
 import { TIME_RE } from '../../_poi-defaults';
 import { requireFavoriteActor } from '../../_companion';
+import { bumpRateLimit, RATE_LIMITS, type RateLimitResult } from '../../_rate_limit';
 import type { Env, AuthData } from '../../_types';
+
+function rateLimitedResponse(bump: RateLimitResult): Response {
+  return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
+    status: 429,
+    headers: {
+      'Content-Type': 'application/json',
+      'Retry-After': String(bump.retryAfter ?? 60),
+    },
+  });
+}
 
 interface Body {
   tripId?: string;
@@ -77,6 +88,29 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
   }
   if (!endTime || !TIME_RE.test(endTime)) {
     throw new AppError('DATA_VALIDATION', 'endTime 必填，須為 HH:MM 格式');
+  }
+
+  // Rate limit（CSO follow-up：原僅 companion 被 UNIQUE quota 擋，V2 user 無上限）：
+  //   - companion 一律 rate-limit（與 POST /api/poi-favorites 一致，bucket key 區隔）
+  //   - V2 user 非 admin → rate-limit；admin → bypass
+  // bucket key 與 POST 區隔（add-to-trip 自己一池），避免互相吃 quota。
+  const headerScope = context.request.headers.get('X-Request-Scope');
+  const claimedRequestId =
+    typeof body.companionRequestId === 'number'
+    && Number.isInteger(body.companionRequestId)
+    && body.companionRequestId > 0
+      ? body.companionRequestId
+      : null;
+  const isClaimedCompanion = headerScope === 'companion' && claimedRequestId !== null;
+  let rlBucket: string | null = null;
+  if (isClaimedCompanion) {
+    rlBucket = `poi-favorites-add-to-trip:companion:${claimedRequestId}`;
+  } else if (auth?.userId && !auth.isAdmin) {
+    rlBucket = `poi-favorites-add-to-trip:user:${auth.userId}`;
+  }
+  if (rlBucket) {
+    const bump = await bumpRateLimit(context.env.DB, rlBucket, RATE_LIMITS.POI_FAVORITES_WRITE);
+    if (!bump.ok) return rateLimitedResponse(bump);
   }
 
   // Resolve effective actor（V2 user 或 companion submitter；gate 失敗 → 401）

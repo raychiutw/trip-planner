@@ -35,7 +35,6 @@ interface PoiFavoriteRow {
   poiName: string;
   poiAddress: string | null;
   poiType: string;
-  poiRegion?: string | null;
   favoritedAt: string;
   note: string | null;
   usages?: Array<{
@@ -339,12 +338,12 @@ export default function PoiFavoritesPage() {
     });
   }, [favorites]);
 
-  // Region 計數（含 "全部" = total）
+  // Region 計數（含 "全部" = total）— 從 poiAddress derive（server 無 region field）
   const regionCounts = useMemo(() => {
     const counts = new Map<string, number>();
     counts.set('all', favorites.length);
     for (const row of favorites) {
-      const r = row.poiRegion ?? deriveRegion(row.poiAddress);
+      const r = deriveRegion(row.poiAddress);
       counts.set(r, (counts.get(r) ?? 0) + 1);
     }
     return counts;
@@ -361,8 +360,7 @@ export default function PoiFavoritesPage() {
     return favorites.filter((row) => {
       if (typeFilter !== 'all' && row.poiType !== typeFilter) return false;
       if (regionFilter !== 'all') {
-        const r = row.poiRegion ?? deriveRegion(row.poiAddress);
-        if (r !== regionFilter) return false;
+        if (deriveRegion(row.poiAddress) !== regionFilter) return false;
       }
       if (!q) return true;
       const haystack = `${row.poiName} ${row.poiAddress ?? ''} ${row.note ?? ''}`.toLowerCase();

@@ -3,7 +3,12 @@
 -- Strategy: expand-contract pattern phase 1
 --   - CREATE poi_favorites (schema 同 saved_pois，column 名 saved_at → favorited_at)
 --   - INSERT INTO poi_favorites SELECT FROM saved_pois (複製資料)
---   - 不動 saved_pois — 保留為 dual-read fallback during cutover
+--   - 不動 saved_pois — 此 PR DELETE 舊 handler files (functions/api/saved-pois*)，
+--     code-level dual-read 已不存在；表保留只為「migration apply 早於 code deploy」
+--     deploy-window race（避免 5xx 窗口）+ rollback 期間舊 code revert 後可重新讀。
+--     注意：deploy-window 內若舊 code 仍寫 saved_pois，這些 INSERT 不會自動鏡像到
+--     poi_favorites（無 trigger）— 後續 cleanup PR (0051) DROP 前需重跑 INSERT SELECT
+--     補齊或 accept drift（drift 視窗短，僅 deploy 期間幾秒）。
 --   - 後續 PR (migration 0051, soak ≥ 1 week) DROP TABLE saved_pois
 --
 -- Rationale: 避免 GitHub Actions deploy.yml migration → app deploy 順序造成 5xx 窗口

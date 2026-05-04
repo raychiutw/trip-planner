@@ -143,6 +143,11 @@ async function hashPassword(plain) {
     }
     await execD1('DELETE FROM client_apps WHERE client_id = ?', [CLIENT_ID]);
     console.error(`Existing client deleted (status was: ${existing[0].status}). Reissuing…`);
+    // Note (CSO follow-up): existing access_tokens issued under the old client are NOT
+    // cascade-deleted (they live in `oauth_access_tokens` keyed by jti，not client_id FK).
+    // Live tokens stay valid until natural expiry. If you need immediate revocation,
+    // run `wrangler d1 execute --remote --command "DELETE FROM oauth_access_tokens WHERE client_id = '${CLIENT_ID}'"`.
+    // For ordinary key rotation this is acceptable — tokens expire within `expires_in` seconds.
   }
 
   // Generate + hash + insert

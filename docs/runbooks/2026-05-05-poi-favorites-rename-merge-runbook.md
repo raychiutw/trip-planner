@@ -38,11 +38,22 @@ Generated client_secret: tp_xxx_yyyyyyyyyyyy
 read -rs CLIENT_SECRET
 # (paste secret + Enter — 不會在 terminal 顯示)
 
+# 用 mktemp + umask 077 確保 token 檔只有 owner 可讀（不被 root 之外的 user 讀取）
+TOKEN_FILE=$(mktemp -t tp-token.XXXXXX)
+chmod 600 "$TOKEN_FILE"
+
 curl -s -X POST https://trip-planner-dby.pages.dev/api/oauth/token \
   -d "grant_type=client_credentials" \
   -d "client_id=tripline-internal-cli" \
   -d "client_secret=$CLIENT_SECRET" \
-  | tee /tmp/tp-token.json
+  > "$TOKEN_FILE"
+
+# 立即 unset secret + scrub clipboard（避免 paste 殘留）
+unset CLIENT_SECRET
+pbcopy </dev/null 2>/dev/null || true   # macOS 清剪貼簿（如使用 paste-from-pwm）
+
+# 驗證 response（值仍只在 $TOKEN_FILE 內）
+jq -r '.scope' "$TOKEN_FILE"
 ```
 
 **預期 response**：
@@ -60,8 +71,8 @@ curl -s -X POST https://trip-planner-dby.pages.dev/api/oauth/token \
 ### Step 1.3 — 設 Pages secret
 
 ```bash
-# 1. TRIPLINE_API_TOKEN（access_token）
-jq -r '.access_token' /tmp/tp-token.json | npx wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner
+# 1. TRIPLINE_API_TOKEN（access_token）— 從 Step 1.2 的 $TOKEN_FILE 讀
+jq -r '.access_token' "$TOKEN_FILE" | npx wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner
 
 # 2. TP_REQUEST_CLIENT_ID（middleware companion gate 比對用）
 echo "tripline-internal-cli" | npx wrangler pages secret put TP_REQUEST_CLIENT_ID --project-name trip-planner
@@ -74,9 +85,11 @@ npx wrangler pages secret list --project-name trip-planner | grep -E "TRIPLINE_A
 ### Step 1.4 — 清理（重要）
 
 ```bash
-# token 已寫進 Pages，本地 /tmp 檔可刪
-shred -u /tmp/tp-token.json 2>/dev/null || rm -f /tmp/tp-token.json
-unset CLIENT_SECRET
+# token 已寫進 Pages，本地檔可刪（shred 多次覆寫避免 file recovery）
+shred -u "$TOKEN_FILE" 2>/dev/null || rm -f "$TOKEN_FILE"
+unset TOKEN_FILE
+# CLIENT_SECRET 已在 Step 1.2 unset；此處 fallback 確認
+unset CLIENT_SECRET 2>/dev/null
 ```
 
 ---
@@ -190,8 +203,10 @@ tail -f ~/.tripline-cron/logs/scheduler.log
 git revert <merge-commit>
 git push
 
-# 2. 不 revert migration 0050 — dual-table 期間舊 app 走 saved_pois 仍 work
-#    （新 app revert 後會 fallback 試舊 path）
+# 2. 不 revert migration 0050 — saved_pois 表仍存在（migration 不 DROP，只 ADD），
+#    git revert 後會把 functions/api/saved-pois{.ts,/[id].ts,/[id]/add-to-trip.ts}
+#    handler 帶回 → 舊 path 重新 work。code 自身沒有 dual-read fallback；恢復靠
+#    revert PR 帶回舊 handler，不靠任何 runtime fallback 邏輯。
 
 # 3. SW unregister 強 client refresh
 deploy SW unregister dummy: self.registration.unregister() + clients.reload()

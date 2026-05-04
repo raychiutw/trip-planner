@@ -201,7 +201,7 @@ const COMPANION_ALLOWED: Array<{ method: string; pattern: RegExp }> = [
   // companion 真實 gate 在 functions/api/_companion.ts requireFavoriteActor —
   // middleware 僅做 path 白名單（self-imposed restriction），實際 OAuth scope +
   // clientId 三 gate 由 helper 套用（防 self-reported X-Request-Scope header）。
-  { method: 'GET',    pattern: /^\/api\/poi-favorites(\/\d+)?$/ },
+  { method: 'GET',    pattern: /^\/api\/poi-favorites$/ },
   { method: 'POST',   pattern: /^\/api\/poi-favorites$/ },
   { method: 'DELETE', pattern: /^\/api\/poi-favorites\/\d+$/ },
   { method: 'POST',   pattern: /^\/api\/poi-favorites\/\d+\/add-to-trip$/ },
@@ -354,6 +354,13 @@ async function handleAuth(
         const tokenAdapter = new D1Adapter(env.DB, 'AccessToken');
         const tokenRow = (await tokenAdapter.find(bearerToken)) as AccessTokenPayload | undefined;
         if (tokenRow) {
+          // CSO follow-up: defense-in-depth — runtime shape validation of AccessTokenPayload.
+          // tokenAdapter.find returns Record<string, unknown> casts to AccessTokenPayload
+          // without runtime validation. If DB row is malformed (missing scopes / client_id),
+          // downstream `.includes()` would throw 500. Normalize to safe defaults.
+          const safeScopes = Array.isArray(tokenRow.scopes) ? tokenRow.scopes : [];
+          const safeClientId = typeof tokenRow.client_id === 'string' ? tokenRow.client_id : '';
+
           // user-bound bearer (authorization_code grant): look up email from users
           // service-bound bearer (client_credentials): user_id null, treat as service token
           let email = '';
@@ -361,11 +368,11 @@ async function handleAuth(
           let isServiceToken = false;
           if (tokenRow.user_id === null) {
             isServiceToken = true;
-            isAdmin = tokenRow.scopes.includes('admin');
+            isAdmin = safeScopes.includes('admin');
             // Non-admin service tokens MUST NOT inherit ADMIN_EMAIL: audit_log.changed_by
             // would forge admin identity. Use service:${client_id} sentinel; admin-scope
             // tokens keep ADMIN_EMAIL since their actions are admin-equivalent.
-            email = isAdmin ? (env.ADMIN_EMAIL ?? '') : `service:${tokenRow.client_id}`;
+            email = isAdmin ? (env.ADMIN_EMAIL ?? '') : `service:${safeClientId}`;
           } else {
             try {
               const userRow = await env.DB
@@ -391,8 +398,8 @@ async function handleAuth(
             userId: tokenRow.user_id,
             isAdmin,
             isServiceToken,
-            scopes: tokenRow.scopes,
-            clientId: tokenRow.client_id,
+            scopes: safeScopes,
+            clientId: safeClientId,
           };
           return context.next();
         }
