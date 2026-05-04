@@ -38,7 +38,6 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 1. **查詢待處理請求**（processing、open、或 received）：
    ```bash
    curl -s -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
-        -H "Authorization: $TRIPLINE_API_TOKEN" \
         "https://trip-planner-dby.pages.dev/api/requests?status=processing"
    ```
    若無結果，也依序查 `status=open` 和 `status=received`（向下相容）
@@ -52,7 +51,6 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 node -e "require('fs').writeFileSync('/tmp/status.json', JSON.stringify({status:'processing'}), 'utf8')"
 curl -s -X PATCH \
   -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
-  -H "Authorization: $TRIPLINE_API_TOKEN" \
   -H "Content-Type: application/json" \
   --data @/tmp/status.json \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"

@@ -17,7 +17,6 @@
 node -e "require('fs').writeFileSync('/tmp/{filename}.json', JSON.stringify({...}), 'utf8')"
 curl -s -X {METHOD} \
   -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
-  -H "Authorization: $TRIPLINE_API_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Origin: https://trip-planner-dby.pages.dev" \
   --data @/tmp/{filename}.json \

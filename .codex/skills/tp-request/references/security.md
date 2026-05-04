@@ -48,7 +48,6 @@
   node -e "require('fs').writeFileSync('/tmp/poi-update.json', JSON.stringify({tripId:'{tripId}', lat:26.3344, lng:127.7731, address:'沖繩縣那霸市前島2-3-1'}), 'utf8')"
   curl -s -X PATCH \
     -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
-    -H "Authorization: $TRIPLINE_API_TOKEN" \
     -H "Content-Type: application/json" \
     -H "X-Request-Scope: companion" \
     --data @/tmp/poi-update.json \

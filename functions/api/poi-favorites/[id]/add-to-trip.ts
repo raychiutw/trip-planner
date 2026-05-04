@@ -104,7 +104,14 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
         poi_type: string;
       }>(),
     actor.isCompanion
-      ? Promise.resolve(true)
+      ? // companion 模式：用 submitter (actor.userId) 對 body.tripId 檢查 write 權限。
+        // 防止 prompt-injected message 將 POI 加進 submitter 沒權限的 trip
+        // （CSO audit finding：原 short-circuit `Promise.resolve(true)` 跳過 tripId guard）。
+        db
+          .prepare("SELECT 1 FROM trip_permissions WHERE user_id = ? AND trip_id = ? AND role != 'viewer'")
+          .bind(actor.userId, tripId)
+          .first()
+          .then((row) => !!row)
       : hasWritePermission(db, auth!, tripId, auth?.isAdmin ?? false),
     db
       .prepare('SELECT id FROM trip_days WHERE trip_id = ? AND day_num = ?')

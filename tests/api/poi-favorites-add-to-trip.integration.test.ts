@@ -377,4 +377,49 @@ describe('POST /api/poi-favorites/:id/add-to-trip — §9.7 companion', () => {
     expect(audit!.changed_by).toBe(`companion:${requestId}`);
     expect(audit!.trip_id).toBe('system:companion');
   });
+
+  it('CSO finding fix: companion 送 tripId X，submitter 沒 write to X → 403（防 prompt-injected cross-trip）', async () => {
+    // Setup：submitter own 一個 trip A（用來建 trip_request）；建另一個 trip B
+    // 由 admin own，submitter 無權限。Companion 嘗試把收藏加進 B → 應 403。
+    const ownTripId = `companion-own-${Date.now()}`;
+    await seedAddTripFixture({ tripId: ownTripId, ownerEmail: SUBMITTER_EMAIL });
+
+    const foreignTripId = `companion-foreign-${Date.now()}`;
+    await seedAddTripFixture({ tripId: foreignTripId, ownerEmail: 'foreign-owner@test.com' });
+
+    const submitterUserRow = await db
+      .prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)')
+      .bind(SUBMITTER_EMAIL)
+      .first<{ id: string }>();
+    const submitterUserId = submitterUserRow!.id;
+    const poiId = await seedPoi(db, { name: 'POI cross-trip guard' });
+    const favRow = await db
+      .prepare('INSERT INTO poi_favorites (user_id, poi_id) VALUES (?, ?) RETURNING id')
+      .bind(submitterUserId, poiId)
+      .first<{ id: number }>();
+    const favId = favRow!.id;
+
+    // trip_request 對應 ownTripId（合法 context）
+    const r = await db
+      .prepare(
+        'INSERT INTO trip_requests (trip_id, message, submitted_by, status) VALUES (?, ?, ?, ?) RETURNING id',
+      )
+      .bind(ownTripId, 'cross-trip attempt', SUBMITTER_EMAIL, 'processing')
+      .first<{ id: number }>();
+    const requestId = r!.id;
+
+    // 攻擊：body.tripId 改成 foreignTripId（submitter 沒 write 權限）
+    const ctx = mockContext({
+      request: buildAddToTripRequest(
+        { tripId: foreignTripId, dayNum: 1, startTime: '10:00', endTime: '11:00', companionRequestId: requestId },
+        { 'X-Request-Scope': 'companion' },
+      ),
+      env,
+      auth: companionAuth(),
+      params: { id: String(favId) },
+    });
+    const resp = await callHandler(onRequestPost, ctx);
+    // 預期 403 PERM_DENIED（hasWritePermission 對 submitter 對 foreignTripId returns false）
+    expect(resp.status).toBe(403);
+  });
 });
