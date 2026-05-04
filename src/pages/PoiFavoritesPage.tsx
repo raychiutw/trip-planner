@@ -22,6 +22,8 @@ import { useCurrentUser } from '../hooks/useCurrentUser';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import ConfirmModal from '../components/shared/ConfirmModal';
+import PageErrorState from '../components/shared/PageErrorState';
+import EmptyState from '../components/shared/EmptyState';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
@@ -221,6 +223,9 @@ const SCOPED_STYLES = `
 .favorites-empty-cta .empty-title {
   margin: 0; font-size: var(--font-size-title3); font-weight: 800;
   color: var(--color-foreground);
+}
+.favorites-empty-cta .empty-message {
+  margin: 0; color: var(--color-muted); font-size: var(--font-size-footnote);
 }
 .favorites-empty-cta .empty-cta-btn {
   font: inherit; font-size: var(--font-size-footnote); font-weight: 600;
@@ -464,34 +469,27 @@ export default function PoiFavoritesPage() {
         )}
 
         {status === 'error' && (
-          <div className="favorites-error" data-testid="favorites-error" role="alert">
-            <p className="favorites-error-title">載入收藏失敗</p>
-            <p className="favorites-error-desc">資料暫時無法取得。你的內容仍在伺服器上。</p>
-            <button
-              type="button"
-              className="favorites-error-btn"
-              onClick={() => void loadFavorites()}
-              data-testid="favorites-error-retry"
-            >
-              重試
-            </button>
-          </div>
+          <PageErrorState
+            title="載入收藏失敗"
+            message="資料暫時無法取得。你的內容仍在伺服器上。"
+            onRetry={() => void loadFavorites()}
+            className="favorites-error"
+            testId="favorites-error"
+            retryTestId="favorites-error-retry"
+          />
         )}
 
         {status === 'data' && favorites.length === 0 && (
-          <div className="favorites-empty-cta" data-testid="favorites-empty">
-            <span className="empty-eyebrow">my favorites</span>
-            <h2 className="empty-title">還沒有收藏</h2>
-            <p className="favorites-count-meta">在「探索」找景點，點 heart 圖示收藏，下次行程就能直接從這裡加入。</p>
-            <button
-              type="button"
-              className="empty-cta-btn"
-              onClick={() => navigate('/explore')}
-              data-testid="favorites-empty-explore"
-            >
-              去探索找景點
-            </button>
-          </div>
+          <EmptyState
+            eyebrow="my favorites"
+            title="還沒有收藏"
+            message="在「探索」找景點，點 heart 圖示收藏，下次行程就能直接從這裡加入。"
+            ctaLabel="去探索找景點"
+            onCta={() => navigate('/explore')}
+            className="favorites-empty-cta"
+            testId="favorites-empty"
+            ctaTestId="favorites-empty-explore"
+          />
         )}
 
         {status === 'data' && favorites.length > 0 && (

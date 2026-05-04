@@ -157,7 +157,11 @@
 - [x] 13.3 ~~CSS class rename~~ `.saved-*` → `.favorites-*` （shell/wrap/eyebrow/count-meta/search/filters/filter-chip/toolbar/grid/card/error/empty-cta/skeleton/no-match 全套）+ `.tp-saved-add-to-trip` → `.tp-favorites-add-to-trip` + `.tp-add-stop-saved-*` → `.tp-add-stop-favorites-*`；data-testid `saved-*` → `favorites-*` (含 explore-saved-titlebar / global-bottom-nav-saved / sidebar-nav-saved 等) 🟢
 - [x] 13.7 ~~grep verify~~ src/ 殘留僅 historical comment 「saved-tab 抽出」/「saved-toolbar 移到 PoiFavoritesPage」🟢
 - [x] 13.8 ~~unit test 全綠~~ 1331/1331 🟢
-- [ ] 13.1, 13.2, 13.4, 13.5, 13.6 抽 `<PageErrorState>` / `<EmptyState>` shared components — **deferred to follow-up PR**（與 §11/§12 mockup-driven redesign 一併處理；不阻擋本 PR）
+- [x] 13.1 ~~抽 `<PageErrorState>`~~ src/components/shared/PageErrorState.tsx — generic page-level error block，root className 衍生 child class（`-title / -desc / -btn`），caller 提供 root class 沿用既有 CSS 0 改動 🟢
+- [x] 13.2 ~~抽 `<EmptyState>`~~ src/components/shared/EmptyState.tsx — generic empty-pool block + optional CTA（href 或 onCta），child class 用 `.empty-eyebrow / .empty-title / .empty-message / .empty-cta-btn`（與 PoiFavoritesPage 既有 convention 對齊）🟢
+- [x] 13.4 ~~PoiFavoritesPage 用 PageErrorState + EmptyState~~ 替換 favorites-error block + favorites-empty-cta block（zero CSS change，加 `.empty-message` rule）🟢
+- [x] 13.5 ~~AddPoiFavoriteToTripPage 用~~ load error → PageErrorState（retryLabel=null）；trips.length===0 → EmptyState（ctaHref="/trips/new"）🟢
+- [x] 13.6 ~~跑 unit test 全綠~~ 8 files / 47 tests pass (含 §11 + §12) + 1378/1378 全 unit + tsc 0 errors，refactor zero regression 🟢
 
 ## 14. 跨 tp-* skill auth header rename（DX-F3.2 critical）
 
@@ -166,12 +170,17 @@
 ## 15. tp-request SKILL.md 加「加入收藏」flow（DX-F6.1 critical）
 
 - [x] 15.4-15.6 ~~主檔白名單 + security.md 路徑 rename~~ tp-request SKILL.md L75「saved-pois 4 條 path」→「poi-favorites 4 條 path」；security.md 5 條 path 全 rename + saved_pois → poi_favorites；.claude / .codex 同步 🟢
-- [ ] 15.1, 15.2, 15.3, 15.7 「加入收藏」H3 段 + 5 步 flow + 401 debug checklist — **deferred to follow-up PR**（內容已部分由 §14 auth rename + §6/§7/§8 audit_log spec covered；獨立 SKILL.md prose addition 不阻擋本 PR 功能）
+- [x] 15.1 + 15.2 ~~「加入收藏」H3 段 + 5 步 flow~~ tp-request SKILL.md 加 3d-bis section（判斷規則表 + 5 步驟：找 POI / 查 master / POST poi-favorites / audit auto-write / 回覆）+ 強調 user-bound write 不影響 trip 🟢
+- [x] 15.3 ~~401 debug checklist~~ 加 3d-trib section（7 個 gate 檢查表：Authorization header / X-Request-Scope / companionRequestId 型別 / scope 含 companion / clientId 對齊 TP_REQUEST_CLIENT_ID / trip_requests.status / users.email LOWER match）+ companion_failure_reason 反查指令 🟢
+- [x] 15.7 ~~grep verify~~ .claude / .codex 同步（kill 鏡像 drift）🟢
 
 ## 16. Mockup-first systematic gate（UC3 + DX-F4 systematic）
 
 - [x] 16.2 ~~CLAUDE.md mockup-first gate~~ Hard Rules 加「Mockup-first hard gate：所有 new page / new component（≥1 layout 變化）→ /tp-claude-design 產 HTML mockup → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak 例外」🟢
-- [ ] 16.1, 16.3, 16.4, 16.5 tp-team SKILL.md Build phase 加 sub-section / CLAUDE.md / DESIGN.md / ARCHITECTURE.md Naming history section — **deferred to follow-up PR**（核心 hard gate 已在 CLAUDE.md 落地；tp-team SKILL.md 與 history sections 屬可獨立 ship 的文檔精修）
+- [x] 16.1 ~~tp-team SKILL.md Build phase 加「Mockup-first hard gate」sub-section~~ §3 Build 表加 /tp-claude-design row + 觸發條件表（new page / new component ≥1 layout / re-design vs bug fix exception）+ v2.22.0 對齊範例 5 步 + .codex 同步 🟢
+- [x] 16.3 ~~CLAUDE.md naming history~~ 已落地（commit 50685b1：v2.19.x ~ v2.22.0 列表）🟢
+- [x] 16.4 ~~ARCHITECTURE.md naming history section~~ 加「## Schema / IA Naming History」table（v2.19.x ~ v2.22.0 共 6 個版本 migration / rename 對照）+ 「找舊欄名／舊 route 規則」開發指引 🟢
+- [x] 16.5 ~~DESIGN.md naming history~~ L567 banner 從 v2.22.0 單行擴充為 3 個版本完整 history block（v2.22.0 page+route+component / v2.21.0 trip_ideas→saved_pois pool / v2.19.x pois 欄位 cutover）+ ref 到 ARCHITECTURE.md 詳表 🟢
 
 ## 17. DESIGN.md 廢除 asymmetric labels + favorites rename
 
@@ -190,7 +199,8 @@
 - [x] 18.1 ~~TRIPLINE_API_TOKEN~~ .dev.vars.example 加註解段 + commented stub + curl mint 說明 🟢
 - [x] 18.2 ~~TP_REQUEST_CLIENT_ID~~ .dev.vars.example 加 commented env binding + middleware companion gate 連結 🟢
 - [x] 18.4 ~~CHANGELOG~~ /ship workflow 自動處理（暫緩）🟢
-- [ ] 18.3 archive banner，18.5 vitest.setup grep — **deferred to follow-up PR**（archive 是 historical doc；vitest.setup 已不含 saved_pois literal — verified by Section 10 grep）
+- [x] 18.3 ~~archive banner~~ openspec/changes/archive/2026-04-25-layout-overlay-rules-and-schema/specs/saved-pois-schema/spec.md 加 superseded banner（→ poi-favorites spec）+ 標明 hard cutover + email→user_id history 🟢
+- [x] 18.5 ~~vitest.setup grep~~ verified by §10 grep — vitest.setup 已不含 saved_pois literal 🟢
 
 ## 19. mac mini cron sync（pre-merge gate）
 

@@ -16,6 +16,8 @@ import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
 import GlobalBottomNav from '../components/shell/GlobalBottomNav';
 import ConflictModal, { type ConflictWith } from '../components/shared/ConflictModal';
+import PageErrorState from '../components/shared/PageErrorState';
+import EmptyState from '../components/shared/EmptyState';
 import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
@@ -267,9 +269,13 @@ export default function AddPoiFavoriteToTripPage() {
   let mainContent: React.ReactElement;
   if (loadError) {
     mainContent = (
-      <div className="tp-error" role="alert" data-testid="favorites-add-to-trip-load-error">
-        {loadError}
-      </div>
+      <PageErrorState
+        title="載入失敗"
+        message={loadError}
+        retryLabel={null}
+        className="tp-error"
+        testId="favorites-add-to-trip-load-error"
+      />
     );
   } else if (!favorite || !trips) {
     mainContent = (
@@ -291,10 +297,13 @@ export default function AddPoiFavoriteToTripPage() {
           <h3>{favorite.poiName ?? '景點'}</h3>
           {favorite.poiAddress && <p>{favorite.poiAddress}</p>}
         </div>
-        <div className="tp-empty-cta" data-testid="favorites-add-to-trip-empty">
-          <p>你還沒有任何行程</p>
-          <a href="/trips/new">建立第一個行程</a>
-        </div>
+        <EmptyState
+          title="你還沒有任何行程"
+          ctaLabel="建立第一個行程"
+          ctaHref="/trips/new"
+          className="tp-empty-cta"
+          testId="favorites-add-to-trip-empty"
+        />
       </div>
     );
   } else {
