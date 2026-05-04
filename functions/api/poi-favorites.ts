@@ -19,10 +19,21 @@
  *   admin V2 user 仍 bypass；companion 一律 rate-limit（防 enumeration / abuse）。
  */
 import { AppError } from './_errors';
+import { logAudit } from './_audit';
 import { json, parseJsonBody } from './_utils';
-import { bumpRateLimit, RATE_LIMITS } from './_rate_limit';
+import { bumpRateLimit, RATE_LIMITS, type RateLimitResult } from './_rate_limit';
 import { requireFavoriteActor } from './_companion';
 import type { Env, AuthData } from './_types';
+
+function rateLimitedResponse(bump: RateLimitResult): Response {
+  return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
+    status: 429,
+    headers: {
+      'Content-Type': 'application/json',
+      'Retry-After': String(bump.retryAfter ?? 60),
+    },
+  });
+}
 
 interface PoiFavoritePostBody {
   poiId?: number;
@@ -107,38 +118,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // Rate limit (poi-favorites-rename §6.1 / §6.7 / D16)：
   //   - companion 一律 rate-limit（防 enumeration + 配合 companion_request_actions UNIQUE 雙重防護）
   //   - V2 user 非 admin → rate-limit；admin → bypass
+  let bucket: string | null = null;
   if (isClaimedCompanion) {
-    const bucket = `poi-favorites-post:companion:${claimedRequestId}`;
-    const bump = await bumpRateLimit(
-      context.env.DB,
-      bucket,
-      RATE_LIMITS.POI_FAVORITES_WRITE,
-    );
-    if (!bump.ok) {
-      return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
-        status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': String(bump.retryAfter ?? 60),
-        },
-      });
-    }
+    bucket = `poi-favorites-post:companion:${claimedRequestId}`;
   } else if (auth?.userId && !auth.isAdmin) {
-    const bucket = `poi-favorites-post:user:${auth.userId}`;
-    const bump = await bumpRateLimit(
-      context.env.DB,
-      bucket,
-      RATE_LIMITS.POI_FAVORITES_WRITE,
-    );
-    if (!bump.ok) {
-      return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
-        status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-          'Retry-After': String(bump.retryAfter ?? 60),
-        },
-      });
-    }
+    bucket = `poi-favorites-post:user:${auth.userId}`;
+  }
+  if (bucket) {
+    const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
+    if (!bump.ok) return rateLimitedResponse(bump);
   }
 
   // 真正解 effective userId。companion gate 失敗 → V2 user fallback；
@@ -151,14 +139,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('DATA_VALIDATION', '缺少或無效的 poiId');
   }
 
-  // POI 是否存在
-  const poi = await context.env.DB
-    .prepare('SELECT id FROM pois WHERE id = ?')
-    .bind(body.poiId)
-    .first();
-  if (!poi) throw new AppError('DATA_NOT_FOUND', 'POI 不存在');
-
-  // INSERT poi_favorites
+  // INSERT poi_favorites — FK 失敗（POI 不存在）轉 404；UNIQUE 違反 → 409
   let row: Record<string, unknown> | null = null;
   try {
     row = await context.env.DB
@@ -170,29 +151,25 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!row) throw new AppError('SYS_INTERNAL', 'INSERT RETURNING 未回傳資料');
   } catch (err) {
     if (err instanceof AppError) throw err;
-    if (err instanceof Error && err.message.includes('UNIQUE')) {
-      throw new AppError('DATA_CONFLICT', '該 POI 已收藏');
+    if (err instanceof Error) {
+      if (err.message.includes('UNIQUE')) throw new AppError('DATA_CONFLICT', '該 POI 已收藏');
+      if (err.message.includes('FOREIGN KEY')) throw new AppError('DATA_NOT_FOUND', 'POI 不存在');
     }
     throw err;
   }
 
-  // companion 模式寫 audit_log（D5 sentinel）
+  // companion 模式寫 audit_log（D5 sentinel）— fire-and-forget 不阻塞 response
   if (actor.isCompanion) {
-    await context.env.DB
-      .prepare(
-        `INSERT INTO audit_log
-           (trip_id, table_name, record_id, action, changed_by, request_id)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        actor.audit.tripId,
-        'poi_favorites',
-        row.id as number,
-        'insert',
-        actor.audit.changedBy,
-        actor.requestId,
-      )
-      .run();
+    context.waitUntil(
+      logAudit(context.env.DB, {
+        tripId: actor.audit.tripId,
+        tableName: 'poi_favorites',
+        recordId: row.id as number,
+        action: 'insert',
+        changedBy: actor.audit.changedBy,
+        requestId: actor.requestId,
+      }),
+    );
   }
 
   return json(row, 201);

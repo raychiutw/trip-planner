@@ -196,50 +196,28 @@ export const onRequestPost: PagesFunction<Env, 'id'> = async (context) => {
     throw new AppError('SYS_INTERNAL', 'INSERT trip_entries RETURNING 未回傳 id');
   }
 
-  // Audit log
-  if (actor.isCompanion) {
-    // companion 模式：寫 system:companion sentinel
-    await db
-      .prepare(
-        `INSERT INTO audit_log
-           (trip_id, table_name, record_id, action, changed_by, request_id, diff_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        actor.audit.tripId,
-        'trip_entries',
-        newEntryId,
-        'insert',
-        actor.audit.changedBy,
-        actor.requestId,
-        JSON.stringify({
-          via: 'poi-favorites-fast-path',
-          favoriteId,
-          poiId: favorite.poi_id,
-          dayNum,
-          startTime,
-          endTime,
-          companionTripId: tripId,
-        }),
-      )
-      .run();
-  } else {
-    await logAudit(db, {
-      tripId,
+  // Audit log — companion 走 system:companion sentinel + 攜 companionTripId 反查；
+  // V2 user 走實際 tripId + auth.email。fire-and-forget 不阻塞 response。
+  const auditDiff: Record<string, unknown> = {
+    via: 'poi-favorites-fast-path',
+    favoriteId,
+    poiId: favorite.poi_id,
+    dayNum,
+    startTime,
+    endTime,
+  };
+  if (actor.isCompanion) auditDiff.companionTripId = tripId;
+  context.waitUntil(
+    logAudit(db, {
+      tripId: actor.isCompanion ? actor.audit.tripId : tripId,
       tableName: 'trip_entries',
       recordId: newEntryId,
       action: 'insert',
-      changedBy: auth?.email ?? '',
-      diffJson: JSON.stringify({
-        via: 'poi-favorites-fast-path',
-        favoriteId,
-        poiId: favorite.poi_id,
-        dayNum,
-        startTime,
-        endTime,
-      }),
-    });
-  }
+      changedBy: actor.isCompanion ? actor.audit.changedBy : (auth?.email ?? ''),
+      requestId: actor.requestId,
+      diffJson: JSON.stringify(auditDiff),
+    }),
+  );
 
   return json({
     ok: true,

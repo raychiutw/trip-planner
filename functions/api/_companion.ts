@@ -22,10 +22,11 @@
  * server 端透過 audit_log.companion_failure_reason 區分 root cause（dev 從 D1 query）。
  */
 import { AppError } from './_errors';
+import { logAudit } from './_audit';
 import type { Env, AuthData } from './_types';
 
 // --------------------------------------------------------------------------
-// Types
+// Types + Sentinels
 // --------------------------------------------------------------------------
 
 export type FavoriteAction = 'favorite_create' | 'favorite_delete' | 'add_to_trip' | 'favorite_list';
@@ -44,6 +45,13 @@ export type CompanionFailureReason =
   | 'self_reported_scope'
   | 'client_unauthorized'
   | 'quota_exceeded';
+
+/** audit_log.trip_id sentinel for companion-path writes (D5) */
+export const COMPANION_AUDIT_TRIP_ID = 'system:companion';
+
+/** audit_log.changed_by builder for companion-path writes */
+export const companionChangedBy = (requestId: number | string | null): string =>
+  `companion:${requestId ?? 'unknown'}`;
 
 export interface FavoriteActor {
   /** Effective user_id：companion 模式為 trip_requests.submitted_by 對映之 users.id；V2 user 為 auth.userId */
@@ -213,8 +221,8 @@ export async function requireFavoriteActor(
       isCompanion: true,
       requestId: companion.requestId,
       audit: {
-        changedBy: `companion:${companion.requestId}`,
-        tripId: 'system:companion',
+        changedBy: companionChangedBy(companion.requestId),
+        tripId: COMPANION_AUDIT_TRIP_ID,
       },
     };
   }
@@ -240,30 +248,23 @@ export async function requireFavoriteActor(
 // --------------------------------------------------------------------------
 
 /**
- * companion path 失敗時統一 server-side log。Client 維持 401 + uniform
- * message（fail-closed oracle 防護），dev 透過 D1 query 此 table 區分根因。
- *
- * audit_log.action 受 CHECK 限制 ('insert'/'update'/'delete')，failure log
- * 用 'insert' 作 sentinel（代表「嘗試新增/操作但 fail-closed」）。
+ * companion path 失敗時統一 server-side log。透過 logAudit() 共用 detectGarbledText
+ * + 非 fatal try/catch（簡化原因細節塞 diff_json 是合法 fallback；本欄位 columns 1st-class）。
+ * audit_log.action 受 CHECK 限制 ('insert'/'update'/'delete')，failure log 用 'insert'
+ * 作 sentinel（代表「嘗試新增/操作但 fail-closed」）。
  */
 async function writeFailureAudit(
   env: Env,
   requestId: number | null,
   reason: CompanionFailureReason,
 ): Promise<void> {
-  await env.DB
-    .prepare(
-      `INSERT INTO audit_log
-         (trip_id, table_name, action, changed_by, request_id, companion_failure_reason)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    )
-    .bind(
-      'system:companion',
-      'poi_favorites',
-      'insert',
-      `companion:${requestId ?? 'unknown'}`,
-      requestId,
-      reason,
-    )
-    .run();
+  await logAudit(env.DB, {
+    tripId: COMPANION_AUDIT_TRIP_ID,
+    tableName: 'poi_favorites',
+    recordId: null,
+    action: 'insert',
+    changedBy: companionChangedBy(requestId),
+    requestId,
+    companionFailureReason: reason,
+  });
 }

@@ -11,6 +11,7 @@
  *   - 成功刪除寫 audit_log（changedBy='companion:<id>', tripId='system:companion'）
  */
 import { AppError } from '../_errors';
+import { logAudit } from '../_audit';
 import { parseIntParam, parseJsonBody } from '../_utils';
 import { requireFavoriteActor } from '../_companion';
 import type { Env, AuthData } from '../_types';
@@ -53,23 +54,18 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
     .bind(id)
     .run();
 
-  // companion 模式寫 audit_log
+  // companion 模式寫 audit_log（fire-and-forget 不阻塞 response）
   if (actor.isCompanion) {
-    await context.env.DB
-      .prepare(
-        `INSERT INTO audit_log
-           (trip_id, table_name, record_id, action, changed_by, request_id)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        actor.audit.tripId,
-        'poi_favorites',
-        id,
-        'delete',
-        actor.audit.changedBy,
-        actor.requestId,
-      )
-      .run();
+    context.waitUntil(
+      logAudit(context.env.DB, {
+        tripId: actor.audit.tripId,
+        tableName: 'poi_favorites',
+        recordId: id,
+        action: 'delete',
+        changedBy: actor.audit.changedBy,
+        requestId: actor.requestId,
+      }),
+    );
   }
 
   return new Response(null, { status: 204 });
