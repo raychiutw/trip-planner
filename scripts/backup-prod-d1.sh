@@ -22,14 +22,16 @@ LOG_TABLES=(api_logs error_reports auth_audit_log webhook_logs)
 
 # 動態抓所有 user table（排除 log tables 與 sqlite_*）。
 # pipefail（set -o pipefail 已在 set -euo pipefail）會在 wrangler 或 python 失敗時 abort。
+# 用 while-read loop 而非 mapfile，相容 macOS default bash 3.2（mapfile 是 bash 4+）。
 TABLES_JSON=$(npx wrangler d1 execute "$DB_NAME" --remote --json --command \
   "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name;")
 
-mapfile -t ALL_TABLES < <(
-  printf '%s' "$TABLES_JSON" | python3 -c "import sys, json; d = json.load(sys.stdin); [print(r['name']) for r in d[0]['results']]"
-)
+ALL_TABLES=()
+while IFS= read -r line; do
+  [ -n "$line" ] && ALL_TABLES+=("$line")
+done < <(printf '%s' "$TABLES_JSON" | python3 -c "import sys, json; d = json.load(sys.stdin); [print(r['name']) for r in d[0]['results']]")
 
-if [[ ${#ALL_TABLES[@]} -eq 0 ]]; then
+if [ ${#ALL_TABLES[@]} -eq 0 ]; then
   echo "❌ 抓不到 user tables — 確認 wrangler 認證 + DB_NAME 正確"
   exit 1
 fi
