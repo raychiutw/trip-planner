@@ -7,9 +7,23 @@
 
 ---
 
-## 步驟 1 — admin: provision TRIPLINE_API_TOKEN + TP_REQUEST_CLIENT_ID
+## 步驟 1 — admin: 加 companion scope + 設 Pages secret ✅ 已完成（2026-05-05）
 
-**為何**：companion path 全 401 風險。tp-request scheduler（mac mini cron）需 service-token Bearer 才能寫 `/api/poi-favorites*` 4 條 endpoint。Pages 還沒這 secret。
+**為何**：companion path 三條件 gate 比對 `env.TP_REQUEST_CLIENT_ID`（middleware 讀）+
+service token 帶 `companion` scope（DB 直接驗）。要讓 prod 接 companion path：
+1. `client_apps.allowed_scopes` 必須含 `companion`
+2. Pages secret 必須有 `TP_REQUEST_CLIENT_ID`
+
+**結果**：
+- ✅ UPDATE client_apps.allowed_scopes 加 `companion`（**不換 secret**）
+- ✅ 重 mint access_token 拿到含 4 個 scope 的 token
+- ✅ 設 Pages secret `TP_REQUEST_CLIENT_ID = "tripline-internal-cli"`（companion gate critical）
+- ✅ 設 Pages secret `TRIPLINE_API_TOKEN`（**注意**：此 secret 實際不被 functions
+  code 讀取 — `grep TRIPLINE_API_TOKEN functions/` 0 matches。設它是為了 future
+  prod-side debug 工具或預留 hook；對 PR ship 路徑無影響。1 hr expiry 後會 stale）
+
+**未做**：
+- ❌ provision-admin-cli-client.js re-secret 跑（user：「不要換 key」）— client_secret 維持不變
 
 **先決條件**（已 verify）：
 - ✅ `.env.local` 有 `CLOUDFLARE_API_TOKEN` / `CF_ACCOUNT_ID` / `D1_DATABASE_ID`
@@ -122,9 +136,10 @@ grep -nE "saved-pois|CF-Access-Client" scripts/tp-request-scheduler.sh
 +      -H "X-Request-Scope: companion" \
 ```
 
-### Step 2.2 — 更新 cron env 的 OAuth token
+### Step 2.2 — 更新 cron env：用 client_secret 每次 run 前重 mint token
 
-把 step 1.3 拿到的 access_token 寫進 cron .env：
+**重要**：access_token expires_in 只有 **3600 秒（1 hr）**，不能寫死進 .env。
+正確 pattern：**cron run 前用 client_secret mint 一次新 token，run 完丟棄**。
 
 ```bash
 # 找當前 .env path
@@ -134,11 +149,32 @@ nano ~/.tripline-cron/.env
 
 # 改成：
 # 移除舊：CF_ACCESS_CLIENT_ID=... / CF_ACCESS_CLIENT_SECRET=...
-# 加新：TRIPLINE_API_TOKEN=eyJ...
-#       TP_REQUEST_CLIENT_ID=tripline-internal-cli  # 給 companion gate 用
+# 加新：
+#   TRIPLINE_API_CLIENT_ID=tripline-internal-cli
+#   TRIPLINE_API_CLIENT_SECRET=<從 lean.lean@gmail.com 的 .env.local TRIPLINE_API_CLIENT_SECRET 複製>
+#   # 不再放 TRIPLINE_API_TOKEN — 改 cron run 前動態 mint
 ```
 
-> ⚠️ access_token expires_in 86400s（24 hr）— 之後要走 refresh flow 或重 mint。本 PR 先用 long-lived，spec 後續處理 token rotation。
+修改 `scripts/tp-request-scheduler.sh` 在主邏輯前加 mint step：
+
+```bash
+#!/bin/bash
+set -euo pipefail
+source ~/.tripline-cron/.env
+
+# 動態 mint access_token（每次 cron run 前一次）
+TRIPLINE_API_TOKEN=$(curl -sf -X POST https://trip-planner-dby.pages.dev/api/oauth/token \
+  -d "grant_type=client_credentials" \
+  -d "client_id=$TRIPLINE_API_CLIENT_ID" \
+  -d "client_secret=$TRIPLINE_API_CLIENT_SECRET" \
+  | jq -r '.access_token')
+export TRIPLINE_API_TOKEN
+
+# (... 後續主邏輯，curl 用 -H "Authorization: Bearer $TRIPLINE_API_TOKEN" ...)
+```
+
+> ⚠️ 1 hr expiry 對 cron 跑短任務（< 60 min）夠用；長任務需在中途重 mint。
+> 若要避免每次 mint，將來可加 token cache + expiry check（暫不在 PR scope）。
 
 ### Step 2.3 — dry-run smoke test
 

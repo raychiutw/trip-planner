@@ -1,7 +1,13 @@
 ## 1. Pre-flight verification（merge blocker）
 
 - [x] 1.1 ~~跑 wrangler d1 SELECT sqlite_version()~~ D1 限制 sqlite_version() 函式禁用（「not authorized to use function: sqlite_version」）。但本 migration 採 expand-contract pattern（CREATE TABLE 新表 + INSERT SELECT，**不依賴** ALTER TABLE RENAME COLUMN，僅需 ALTER TABLE ADD COLUMN — 所有 SQLite ≥3.2 支援），版本 verify 不再 blocker
-- [ ] 1.2 ⚠️ pre-flight gap：Pages prod 只有 `TRIPLINE_API_SECRET`（outbound to mac mini API server），缺 `TRIPLINE_API_TOKEN`（inbound from mac mini cron tp-request → /api/poi-favorites）。**admin 需 mint 含 admin+companion scope 的 client_credentials token + 加進 Pages env 為 `TRIPLINE_API_TOKEN` secret**（task 1.4 提供 provision script update，admin 跑 script 後手動 set Pages secret）
+- [x] 1.2 ~~admin: 加 companion scope + 設 Pages secret~~ 2026-05-05 完成：
+  - UPDATE client_apps.allowed_scopes 加 `companion`（不換 client_secret）
+  - 用既有 TRIPLINE_API_CLIENT_SECRET 重 mint access_token（含 admin+companion scope）
+  - 設 Pages secret `TP_REQUEST_CLIENT_ID = tripline-internal-cli`（middleware companion gate 用）
+  - 設 Pages secret `TRIPLINE_API_TOKEN`（**注意**：functions/ 內 grep 0 matches —
+    實際不被 code 讀，設它是為了 future prod-side tools）
+  - 1 hr expiry 後 token stale；mac mini cron 端應改 mint pattern（每 run 前重 mint，§19）
 - [ ] 1.3 SSH mac mini 執行 `cat scripts/tp-request-scheduler.sh` 確認當前 base URL 與 token env var；紀錄當前狀態到 PR description（PR merge 前需更新為 `/api/poi-favorites` + 新 token）
 - [x] 1.4 ~~admin 在 OAuth provision script 加 `companion` scope 支援~~ Provision script 已 update（scripts/provision-admin-cli-client.js:154 加 `companion` scope）。Admin 待手動 re-run script 重 provision client（會 prompt 輸入新 secret），然後 `npx wrangler pages secret put TRIPLINE_API_TOKEN --project-name trip-planner` 設定 secret
 
