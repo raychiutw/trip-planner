@@ -18,7 +18,7 @@
 | 項目 | 狀態 | 備註 |
 |------|:---:|------|
 | 單一 API base URL | ✅ | 統一 `trip-planner-dby.pages.dev`，定義在 tp-shared |
-| 認證 headers 定義 | ✅ | CF-Access-Client-Id/Secret 定義在 tp-shared |
+| 認證 headers 定義 | ✅ | Authorization/Secret 定義在 tp-shared |
 | Windows encoding 規避 | ✅ | curl + 中文 → node writeFileSync + --data @file |
 | 品質規則單一來源 | ✅ | R0-R18 定義在 tp-quality-rules，其他 skill 引用 |
 | 搜尋策略單一來源 | ✅ | googleRating 策略定義在 tp-shared + tp-search-strategies |
@@ -31,8 +31,8 @@
 
 | 變數/路徑 | 用途 | 使用 skill | 來源 |
 |-----------|------|-----------|------|
-| `CF_ACCESS_CLIENT_ID` | D1 API 認證 | tp-create, tp-patch, tp-request | `.env.local` |
-| `CF_ACCESS_CLIENT_SECRET` | D1 API 認證 | tp-create, tp-patch, tp-request | `.env.local` |
+| `TRIPLINE_API_TOKEN` | D1 API 認證 | tp-create, tp-patch, tp-request | `.env.local` |
+| `TRIPLINE_API_TOKEN` | D1 API 認證 | tp-create, tp-patch, tp-request | `.env.local` |
 | `CLOUDFLARE_API_TOKEN` | Cloudflare API | tp-daily-check | shell profile / `.env.local` |
 | `CF_ACCOUNT_ID` | Cloudflare account | tp-daily-check | shell profile / `.env.local` |
 | `D1_DATABASE_ID` | D1 database ID | tp-daily-check | shell profile / `.env.local` |

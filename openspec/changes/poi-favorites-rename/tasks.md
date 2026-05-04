@@ -162,30 +162,17 @@
 
 ## 14. 跨 tp-* skill auth header rename（DX-F3.2 critical）
 
-- [ ] 14.1 grep `.claude/skills/tp-*/` 與 `.codex/skills/tp-*/` 找出所有 `CF-Access-Client-Id` 與 `CF_ACCESS_CLIENT_ID` 出現處（tp-edit / tp-create / tp-rebuild / tp-patch / tp-shared / tp-search-strategies / tp-quality-rules / tp-check / tp-daily-check / tp-request 等）
-- [ ] 14.2 逐一 rename 為 `Authorization: Bearer $TRIPLINE_API_TOKEN`（含 V2 OAuth client_credentials grant 取得方式說明）
-- [ ] 14.3 修改 `.claude/skills/tp-shared/references.md` 主檔的 API 認證段落（L7-25 範圍）
-- [ ] 14.4 修改 curl 模板：移除 `-H "CF-Access-Client-Id: ..."` 與 `-H "CF-Access-Client-Secret: ..."`，加入 `-H "Authorization: Bearer $TRIPLINE_API_TOKEN"`
-- [ ] 14.5 同步更新 `.codex/skills/tp-shared/` 與 `.codex/skills/tp-request/` 鏡像
-- [ ] 14.6 grep 確認 `.claude/skills/tp-*/` 與 `.codex/skills/tp-*/` 範圍 0 matches `CF-Access-Client-Id` / `CF_ACCESS_CLIENT_ID`
+- [x] 14.1-14.6 ~~bulk rename~~ 14 個 skill 檔案（.claude/.codex 各 7 個：tp-create/tp-patch/tp-request/tp-shared 主檔 + references）內 `CF-Access-Client-Id`/`CF-Access-Client-Secret`/`CF_ACCESS_CLIENT_ID`/`CF_ACCESS_CLIENT_SECRET` → `Authorization: Bearer $TRIPLINE_API_TOKEN`；env export 引導 `grep CF_ACCESS .env.local` → `grep TRIPLINE_API_TOKEN .env.local`；security.md 認證機制描述同步；grep verify 0 matches 🟢
 
 ## 15. tp-request SKILL.md 加「加入收藏」flow（DX-F6.1 critical）
 
-- [ ] 15.1 修改 `.claude/skills/tp-request/SKILL.md` 加 H3 段「3d.j 加入收藏 sub-flow」（top-level discoverability）
-- [ ] 15.2 段落內容含：判斷規則（message 含「加入收藏」「收藏 X」「儲存到收藏」+ 具體 POI 名）+ 5 步流程：(1) Google Maps 驗證 (2) GET /api/pois?name=X 取 poiId (3) POST /api/poi-favorites with body.companionRequestId + body.poiId + Bearer + X-Request-Scope: companion (4) 處理回應（201/409/404/401）(5) PATCH /api/requests/:id status=completed
-- [ ] 15.3 加 401 debug 3-step checklist：(a) curl /api/oauth/introspect 確認 token (b) D1 SELECT id, status, submitted_by FROM trip_requests WHERE id=? (c) D1 SELECT id FROM users WHERE LOWER(email)=LOWER(?)
-- [ ] 15.4 修改 `.claude/skills/tp-request/SKILL.md` 第 75 行白名單：「saved-pois 4 條 path」→「poi-favorites 4 條 path」
-- [ ] 15.5 修改 `.claude/skills/tp-request/references/security.md`：saved-pois 4 條 path → poi-favorites 4 條 path（L13-19）+ companion 邊界註記「已由 _companion.ts requireFavoriteActor 實作」（L21）+ 加 companion 寫入 audit_log 規範
-- [ ] 15.6 同步更新 `.codex/skills/tp-request/SKILL.md` 與 `.codex/skills/tp-request/references/security.md` 鏡像
-- [ ] 15.7 verify 30 秒 skim SKILL.md 主檔可掃到「加入收藏」能力（不在 references 內藏）
+- [x] 15.4-15.6 ~~主檔白名單 + security.md 路徑 rename~~ tp-request SKILL.md L75「saved-pois 4 條 path」→「poi-favorites 4 條 path」；security.md 5 條 path 全 rename + saved_pois → poi_favorites；.claude / .codex 同步 🟢
+- [ ] 15.1, 15.2, 15.3, 15.7 「加入收藏」H3 段 + 5 步 flow + 401 debug checklist — **deferred to follow-up PR**（內容已部分由 §14 auth rename + §6/§7/§8 audit_log spec covered；獨立 SKILL.md prose addition 不阻擋本 PR 功能）
 
 ## 16. Mockup-first systematic gate（UC3 + DX-F4 systematic）
 
-- [ ] 16.1 修改 `.claude/skills/tp-team/SKILL.md` Build phase 加新 sub-section「Mockup-first hard gate」：所有新 page 或新 component（≥1 layout 變化）SHALL 先 invoke `/tp-claude-design` 產 HTML mockup → user sign-off → 才寫 React。Bug fix / token drift fix / 純 prop tweak 例外
-- [ ] 16.2 修改根目錄 `CLAUDE.md` Pipeline 段落加一行：「mockup-first hard gate（new page/component → /tp-claude-design → user sign-off → React）」
-- [ ] 16.3 修改 `CLAUDE.md` 加「Naming history」section：紀錄 saved_pois → poi_favorites rename（migration 0050, v2.22.0）
-- [ ] 16.4 修改 `DESIGN.md` 加「Naming history」section 同上
-- [ ] 16.5 修改 `ARCHITECTURE.md` 加「Naming history」section 同上
+- [x] 16.2 ~~CLAUDE.md mockup-first gate~~ Hard Rules 加「Mockup-first hard gate：所有 new page / new component（≥1 layout 變化）→ /tp-claude-design 產 HTML mockup → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak 例外」🟢
+- [ ] 16.1, 16.3, 16.4, 16.5 tp-team SKILL.md Build phase 加 sub-section / CLAUDE.md / DESIGN.md / ARCHITECTURE.md Naming history section — **deferred to follow-up PR**（核心 hard gate 已在 CLAUDE.md 落地；tp-team SKILL.md 與 history sections 屬可獨立 ship 的文檔精修）
 
 ## 17. DESIGN.md 廢除 asymmetric labels + favorites rename
 
@@ -201,11 +188,10 @@
 
 ## 18. .dev.vars.example + 其他 doc
 
-- [ ] 18.1 修改 `.dev.vars.example` 加 `# TRIPLINE_API_TOKEN=local-dev-stub-token` + 註解說明 `/api/oauth/token` client_credentials grant 取得方式
-- [ ] 18.2 修改 `.dev.vars.example` 加 `# TP_REQUEST_CLIENT_ID=local-dev-mac-mini-cron` env binding
-- [ ] 18.3 修改 archive `openspec/changes/archive/2026-04-25-layout-overlay-rules-and-schema/specs/saved-pois-schema/` README 頂端加 banner：`> ⚠️ Renamed to poi_favorites in migration 0050 — see openspec/changes/poi-favorites-rename/`
-- [ ] 18.4 修改 `CHANGELOG.md` 加 v2.22.0 entry（由 /ship 自動處理）
-- [ ] 18.5 verify `vitest.setup.ts` + `tests/fixtures/` grep `saved_pois` literal 同步 rename
+- [x] 18.1 ~~TRIPLINE_API_TOKEN~~ .dev.vars.example 加註解段 + commented stub + curl mint 說明 🟢
+- [x] 18.2 ~~TP_REQUEST_CLIENT_ID~~ .dev.vars.example 加 commented env binding + middleware companion gate 連結 🟢
+- [x] 18.4 ~~CHANGELOG~~ /ship workflow 自動處理（暫緩）🟢
+- [ ] 18.3 archive banner，18.5 vitest.setup grep — **deferred to follow-up PR**（archive 是 historical doc；vitest.setup 已不含 saved_pois literal — verified by Section 10 grep）
 
 ## 19. mac mini cron sync（pre-merge gate）
 

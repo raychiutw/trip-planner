@@ -16,7 +16,7 @@ user-invocable: true
 
 在 `/tmp/api-helper.js` 建立共用 helper，後續所有 API 呼叫都透過它。模板見 `references/api-helper-template.md`。
 
-呼叫前先 `export $(grep CF_ACCESS .env.local | xargs)`，再 `node -e "..."` 引用 helper。
+呼叫前先 `export $(grep TRIPLINE_API_TOKEN .env.local | xargs)`，再 `node -e "..."` 引用 helper。
 
 其他 API 設定、POI 欄位規格見 tp-shared/references.md
 

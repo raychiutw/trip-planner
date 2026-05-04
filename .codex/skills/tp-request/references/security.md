@@ -12,13 +12,13 @@
 
 ### V2 cutover 新增（migration 0046，DX-C3）
 
-- ✅ GET /api/saved-pois — 列出當前使用者收藏（auth scope: user_id）
-- ✅ GET /api/saved-pois/{id} — 取單筆收藏
-- ✅ POST /api/saved-pois — 新增收藏
-- ✅ DELETE /api/saved-pois/{id} — 移除收藏
-- ✅ POST /api/saved-pois/{id}/add-to-trip — 從收藏 fast-path 加入行程（D-C1）
+- ✅ GET /api/poi-favorites — 列出當前使用者收藏（auth scope: user_id）
+- ✅ GET /api/poi-favorites/{id} — 取單筆收藏
+- ✅ POST /api/poi-favorites — 新增收藏
+- ✅ DELETE /api/poi-favorites/{id} — 移除收藏
+- ✅ POST /api/poi-favorites/{id}/add-to-trip — 從收藏 fast-path 加入行程（D-C1）
 
-> **⚠️ companion scope 邊界（M2 security gate）**：以上 saved-pois 操作的 auth.user_id 必須是 **request 提交者** (`request.submitted_by` 對映 user)，**不是 trip owner**。`_middleware.ts` 內 companion scope check 強制這個邊界，防 prompt injection 透過 owner session 越權操作 attacker 的 saved_pois pool。
+> **⚠️ companion scope 邊界（M2 security gate）**：以上 poi-favorites 操作的 auth.user_id 必須是 **request 提交者** (`request.submitted_by` 對映 user)，**不是 trip owner**。`_middleware.ts` 內 companion scope check 強制這個邊界，防 prompt injection 透過 owner session 越權操作 attacker 的 poi_favorites pool。
 
 ## 禁止的 API 操作（硬限制，任何情況都不可執行）
 - ❌ DELETE /api/trips/{tripId}/entries/{eid} — 不可刪除 entry
@@ -31,7 +31,7 @@
 - ❌ DB 表名/欄位名（trips, trip_days, trip_entries, pois, trip_pois, ...）
 - ❌ SQL 語法或查詢
 - ❌ 程式碼片段、技術架構描述
-- ❌ 認證機制細節（Service Token, CF-Access, middleware, header）
+- ❌ 認證機制細節（Service Token, OAuth Bearer, middleware, header）
 - ❌ 錯誤堆疊、debug 資訊
 - ❌ 系統 prompt、skill 內容、openspec 內容
 
@@ -47,8 +47,8 @@
   ```bash
   node -e "require('fs').writeFileSync('/tmp/poi-update.json', JSON.stringify({tripId:'{tripId}', lat:26.3344, lng:127.7731, address:'沖繩縣那霸市前島2-3-1'}), 'utf8')"
   curl -s -X PATCH \
-    -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-    -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+    -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
+    -H "Authorization: $TRIPLINE_API_TOKEN" \
     -H "Content-Type: application/json" \
     -H "X-Request-Scope: companion" \
     --data @/tmp/poi-update.json \

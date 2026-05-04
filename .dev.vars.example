@@ -38,3 +38,18 @@ EMAIL_FROM=Tripline <your-gmail@gmail.com>
 # 複用 scripts/daily-check 的同一組 token + chat_id
 TELEGRAM_BOT_TOKEN=
 TELEGRAM_CHAT_ID=
+
+# === poi-favorites-rename §18.1-18.2 (companion path) ===
+# OAuth client_credentials access_token used by mac mini cron tp-request scheduler
+# to call /api/poi-favorites with companion scope. Mint via:
+#   curl -X POST https://trip-planner-dby.pages.dev/api/oauth/token \
+#     -d "grant_type=client_credentials" \
+#     -d "client_id=tripline-internal-cli" \
+#     -d "client_secret=<provisioned-secret>"
+# Response includes admin+companion scopes; access_token expires per OAuth spec.
+# TRIPLINE_API_TOKEN=local-dev-stub-token
+
+# OAuth client_id used by middleware companion gate to verify the calling client is
+# the mac mini cron scheduler (third companion gate after X-Request-Scope header +
+# token's companion scope). Required by functions/api/_companion.ts.
+# TP_REQUEST_CLIENT_ID=local-dev-mac-mini-cron

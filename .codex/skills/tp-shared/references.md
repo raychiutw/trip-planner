@@ -6,8 +6,8 @@
 
 - **Base URL**: `https://trip-planner-dby.pages.dev`
 - **認證**: Service Token headers（寫入操作必填）
-  - `CF-Access-Client-Id`: `$CF_ACCESS_CLIENT_ID`
-  - `CF-Access-Client-Secret`: `$CF_ACCESS_CLIENT_SECRET`
+  - `Authorization`: `$TRIPLINE_API_TOKEN`
+  - `Authorization`: `$TRIPLINE_API_TOKEN`
 
 ## curl 模板（Windows encoding）
 
@@ -16,8 +16,8 @@
 ```bash
 node -e "require('fs').writeFileSync('/tmp/{filename}.json', JSON.stringify({...}), 'utf8')"
 curl -s -X {METHOD} \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
+  -H "Authorization: $TRIPLINE_API_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Origin: https://trip-planner-dby.pages.dev" \
   --data @/tmp/{filename}.json \
