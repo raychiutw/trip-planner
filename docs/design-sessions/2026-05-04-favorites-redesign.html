@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<title>Favorites Redesign Mockup — 2026-05-04</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+/* ============================================================
+   Design tokens (對齊 css/tokens.css，inline 為 self-contained mockup)
+   ============================================================ */
+:root {
+  --color-accent: #D97848;
+  --color-accent-subtle: #FBEEE4;
+  --color-accent-bg: #F7DFCB;
+  --color-accent-deep: #B85C2E;
+  --color-accent-foreground: #FFFFFF;
+  --color-background: #FFFBF5;
+  --color-secondary: #FAF4EA;
+  --color-tertiary: #F2EAD9;
+  --color-hover: #F9EDE0;
+  --color-foreground: #2A1F18;
+  --color-muted: #6F5A47;
+  --color-border: #EADFCF;
+  --color-line-strong: #C8B89F;
+  --color-destructive: #C13515;
+  --color-destructive-bg: #FDECEC;
+  --color-success: #06A77D;
+  --color-disabled: #B8AC9B;
+  --color-overlay: rgba(42, 31, 24, 0.35);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(42, 31, 24, 0.05);
+  --shadow-md: 0 6px 16px rgba(42, 31, 24, 0.09);
+  --shadow-lg: 0 10px 28px rgba(42, 31, 24, 0.12);
+
+  --spacing-1: 4px;  --spacing-2: 8px;  --spacing-3: 12px;
+  --spacing-4: 16px; --spacing-5: 20px; --spacing-6: 24px;
+  --spacing-8: 32px; --spacing-10: 40px; --spacing-12: 48px;
+
+  --font-size-body: 1rem;       /* 16px */
+  --font-size-footnote: 0.875rem; /* 14px */
+  --font-size-caption: 0.75rem;   /* 12px */
+  --font-size-eyebrow: 0.625rem;  /* 10px */
+  --font-size-title: 1.25rem;     /* 20px */
+  --font-size-large-title: 1.625rem; /* 26px */
+
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', 'Noto Sans TC', system-ui, -apple-system, sans-serif;
+  font-size: var(--font-size-body);
+  line-height: 1.5;
+  color: var(--color-foreground);
+  background: var(--color-secondary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Mockup chrome — frame container, label, annotation
+   ============================================================ */
+.mockup-shell { padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
+
+.mockup-doc-header { margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid var(--color-border); }
+.mockup-doc-header h1 { margin: 0 0 8px; font-size: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.mockup-doc-header p { margin: 0; color: var(--color-muted); font-size: var(--font-size-footnote); }
+.mockup-doc-header .doc-meta { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+.mockup-doc-header .doc-meta span {
+  font-size: var(--font-size-caption); padding: 4px 10px; border-radius: var(--radius-sm);
+  background: var(--color-accent-subtle); color: var(--color-accent-deep);
+}
+
+.frame-section { margin-bottom: 64px; }
+.frame-section h2 {
+  font-size: 22px; font-weight: 600; letter-spacing: -0.005em;
+  margin: 0 0 8px; padding-bottom: 8px; border-bottom: 2px solid var(--color-accent);
+}
+.frame-section .section-lead { color: var(--color-muted); font-size: var(--font-size-footnote); margin: 0 0 24px; }
+
+.frame {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 32px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.frame-label {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-accent-subtle);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-accent-deep);
+}
+.frame-label .frame-tag {
+  font-size: var(--font-size-eyebrow); letter-spacing: 0.18em; text-transform: uppercase;
+  background: var(--color-background); padding: 2px 8px; border-radius: var(--radius-xs);
+  color: var(--color-muted); font-weight: 500;
+}
+.frame-stage {
+  padding: 0;
+  background: var(--color-background);
+}
+.frame-note {
+  padding: 12px 16px; background: var(--color-tertiary);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--font-size-caption); color: var(--color-muted);
+  font-family: 'JetBrains Mono', 'Menlo', monospace;
+  line-height: 1.6;
+}
+.frame-note strong { color: var(--color-foreground); font-family: 'Inter', 'Noto Sans TC', sans-serif; }
+
+/* ============================================================
+   App chrome (TitleBar + sidebar/bottom-nav placeholders)
+   ============================================================ */
+.tp-app { display: grid; min-height: 720px; }
+.tp-app-desktop { grid-template-columns: 240px 1fr; }
+.tp-app-tablet { grid-template-columns: 64px 1fr; min-height: 640px; }
+.tp-app-phone { grid-template-rows: 1fr 64px; min-height: 720px; max-width: 430px; margin: 0 auto; box-shadow: var(--shadow-lg); border-radius: var(--radius-lg); overflow: hidden; }
+
+.tp-sidebar {
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-right: 1px solid var(--color-border);
+  padding: 24px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tp-sidebar-brand { font-weight: 700; font-size: 18px; padding: 8px 12px; margin-bottom: 16px; }
+.tp-sidebar-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: var(--radius-md);
+  color: var(--color-muted); font-size: var(--font-size-footnote); font-weight: 500;
+  cursor: default;
+  min-height: 44px;
+}
+.tp-sidebar-item.is-active { background: var(--color-accent-subtle); color: var(--color-accent-deep); font-weight: 600; }
+.tp-sidebar-item:not(.is-active):hover { background: var(--color-hover); }
+.tp-sidebar-item-icon { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.tp-sidebar-item-icon svg { width: 100%; height: 100%; }
+.tp-bottom-nav-tab svg { width: 100%; height: 100%; }
+
+.tp-app-tablet .tp-sidebar { padding: 24px 8px; align-items: center; }
+.tp-app-tablet .tp-sidebar-brand,
+.tp-app-tablet .tp-sidebar-item-label { display: none; }
+.tp-app-tablet .tp-sidebar-item { width: 44px; height: 44px; padding: 0; justify-content: center; }
+
+.tp-bottom-nav {
+  display: flex; justify-content: space-around; align-items: stretch;
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--color-border);
+}
+.tp-bottom-nav-tab {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 8px; min-height: 64px;
+  color: var(--color-muted); font-size: var(--font-size-eyebrow); font-weight: 500;
+  letter-spacing: 0.05em;
+}
+.tp-bottom-nav-tab.is-active { color: var(--color-accent); }
+.tp-bottom-nav-tab-icon { width: 22px; height: 22px; }
+
+.tp-titlebar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 12px;
+  height: 64px; padding: 0 24px;
+  background: color-mix(in srgb, var(--color-background) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--color-border);
+}
+.tp-app-phone .tp-titlebar { height: 56px; padding: 0 16px; }
+.tp-app-tablet .tp-titlebar { padding: 0 16px; }
+.tp-titlebar-back {
+  width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; cursor: pointer; border-radius: var(--radius-md);
+  color: var(--color-foreground);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  flex-shrink: 0;
+}
+.tp-titlebar-back:hover { background: var(--color-hover); color: var(--color-accent); }
+.tp-titlebar-back:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-accent); }
+
+/* Production .tp-titlebar-action pattern (對齊 css/tokens.css:1347)
+   pill: padding 0 14px + radius-md + height 44px + gap 6px + font-weight 600
+   RWD: 桌機 icon + label inline; 手機 icon-only 44x44 方形 */
+.tp-titlebar-action {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 44px; padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 0; background: transparent;
+  color: var(--color-foreground);
+  font: inherit;
+  font-size: var(--font-size-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.tp-titlebar-action:hover { background: var(--color-hover); color: var(--color-accent); }
+.tp-titlebar-action:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-accent); }
+.tp-titlebar-action svg { width: 18px; height: 18px; }
+.tp-titlebar-action-label { white-space: nowrap; }
+@media (max-width: 760px) {
+  .tp-titlebar-action { width: 44px; padding: 0; justify-content: center; }
+  .tp-titlebar-action-label { display: none; }
+}
+
+/* Primary variant — confirm action (加入 / 儲存 / 完成)。Accent fill 實心。 */
+.tp-titlebar-action.is-primary {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-titlebar-action.is-primary:hover {
+  background: var(--color-accent-deep);
+  color: var(--color-accent-foreground);
+}
+.tp-titlebar-action.is-primary:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
+
+/* Production 規範：title 靠左 (flex:1 推 actions 靠右)，桌機 20px / compact 18px、weight 700 */
+.tp-titlebar-title {
+  flex: 1; min-width: 0;
+  font-size: 20px; line-height: 28px; font-weight: 700; letter-spacing: -0.01em;
+  margin: 0;
+  text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tp-app-phone .tp-titlebar-title { font-size: 18px; line-height: 24px; }
+.tp-titlebar-actions { display: inline-flex; gap: 4px; flex-shrink: 0; margin-left: auto; }
+
+/* page main */
+.tp-page-main {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: calc(720px - 64px);
+}
+.tp-app-phone .tp-page-main { padding: 16px; max-height: calc(720px - 56px - 64px); }
+.tp-app-tablet .tp-page-main { max-height: calc(640px - 64px); }
+
+.tp-page-content { max-width: 1040px; margin: 0 auto; }
+
+/* ============================================================
+   Hero (eyebrow + count meta + filters + search)
+   ============================================================ */
+.tp-page-eyebrow {
+  font-size: var(--font-size-eyebrow);
+  font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--color-muted);
+  margin: 0 0 6px;
+}
+.tp-page-meta {
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+  margin: 0 0 16px;
+  font-variant-numeric: tabular-nums;
+}
+.tp-page-meta strong { color: var(--color-foreground); font-weight: 600; }
+
+.favorites-region-row,
+.favorites-type-row {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 4px 0 12px; margin-bottom: 4px;
+  scrollbar-width: thin;
+}
+.favorites-region-row::-webkit-scrollbar,
+.favorites-type-row::-webkit-scrollbar { height: 4px; }
+
+.tp-chip {
+  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  color: var(--color-foreground);
+  font-size: var(--font-size-footnote);
+  font-weight: 500;
+  cursor: pointer;
+  min-height: 36px;
+  transition: all var(--transition-fast);
+}
+.tp-chip:hover { background: var(--color-hover); }
+.tp-chip[aria-pressed="true"] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+.tp-chip-count {
+  font-size: var(--font-size-caption);
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.tp-chip[aria-pressed="true"] .tp-chip-count { color: var(--color-accent-foreground); opacity: 0.8; }
+
+.favorites-search {
+  position: relative; margin: 12px 0 20px;
+}
+.favorites-search input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body);
+  color: var(--color-foreground);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.favorites-search input:focus {
+  outline: 0;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+.favorites-search-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: var(--color-muted); pointer-events: none;
+}
+
+/* ============================================================
+   Card grid + card
+   ============================================================ */
+.favorites-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, 1fr); /* desktop default */
+}
+.favorites-grid.is-tablet { grid-template-columns: repeat(2, 1fr); }
+.favorites-grid.is-phone { grid-template-columns: 1fr; }
+
+.favorites-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 16px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.favorites-card:hover { border-color: var(--color-line-strong); background: var(--color-hover); }
+.favorites-card.is-selected { border-color: var(--color-accent); background: var(--color-accent-subtle); }
+.favorites-card.is-deleting { opacity: 0.5; pointer-events: none; }
+
+.favorites-card-eyebrow {
+  font-size: var(--font-size-eyebrow);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+.favorites-card-title {
+  font-size: var(--font-size-body); font-weight: 600;
+  color: var(--color-foreground);
+  letter-spacing: -0.005em;
+}
+.favorites-card-address {
+  font-size: var(--font-size-caption); color: var(--color-muted);
+  line-height: 1.45;
+}
+.favorites-card-usage {
+  font-size: var(--font-size-footnote); color: var(--color-accent-deep);
+  background: var(--color-accent-subtle);
+  padding: 4px 10px; border-radius: var(--radius-sm);
+  align-self: flex-start;
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+.favorites-card-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--color-border);
+}
+.favorites-card-checkbox {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+  cursor: pointer;
+  min-height: 32px;
+}
+.favorites-card-checkbox input { width: 18px; height: 18px; accent-color: var(--color-accent); margin: 0; }
+.favorites-card-add-link {
+  font-size: var(--font-size-footnote); font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+.favorites-card-add-link:hover { background: var(--color-accent-subtle); }
+.favorites-card-deleting-label {
+  font-size: var(--font-size-footnote); color: var(--color-muted);
+  font-style: italic;
+}
+
+/* ============================================================
+   Shared: tp-skel / tp-empty-cta / PageErrorState / EmptyState
+   ============================================================ */
+.tp-skel {
+  position: relative; overflow: hidden;
+  background: var(--color-tertiary);
+  border-radius: var(--radius-md);
+}
+.tp-skel::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-background) 60%, transparent), transparent);
+  animation: skel-shimmer 1.6s infinite;
+}
+@keyframes skel-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.tp-skel-card { height: 168px; }
+.tp-skel-row { height: 16px; margin-bottom: 8px; }
+.tp-skel-row.short { width: 60%; }
+.tp-skel-row.short-wide { width: 80%; }
+
+.tp-empty-cta {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 56px 24px;
+  text-align: center;
+  background: var(--color-background);
+  border: 1px dashed var(--color-line-strong);
+  border-radius: var(--radius-lg);
+}
+.tp-empty-cta .empty-eyebrow {
+  font-size: var(--font-size-eyebrow);
+  letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--color-muted); font-weight: 600;
+}
+.tp-empty-cta .empty-title {
+  font-size: var(--font-size-title); font-weight: 600;
+  margin: 4px 0;
+  color: var(--color-foreground);
+}
+.tp-empty-cta .empty-desc {
+  color: var(--color-muted); max-width: 380px;
+  font-size: var(--font-size-footnote);
+  line-height: 1.55;
+}
+.tp-action-btn {
+  min-height: 44px; padding: 0 20px;
+  background: var(--color-accent); color: var(--color-accent-foreground);
+  border: 0; border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote); font-weight: 600;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  margin-top: 8px;
+}
+.tp-action-btn:hover { background: var(--color-accent-deep); }
+.tp-action-btn:active { transform: scale(0.98); }
+.tp-action-btn-ghost {
+  background: transparent; color: var(--color-foreground);
+  border: 1px solid var(--color-border);
+}
+.tp-action-btn-ghost:hover { background: var(--color-hover); }
+.tp-action-btn-destructive { background: var(--color-destructive); }
+.tp-action-btn-destructive:hover { background: color-mix(in srgb, var(--color-destructive) 80%, black); }
+
+.page-error-state {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 48px 24px; text-align: center;
+}
+.page-error-state-icon { width: 48px; height: 48px; color: var(--color-destructive); }
+.page-error-state-title { font-size: 18px; font-weight: 600; color: var(--color-foreground); margin: 0; }
+.page-error-state-desc { color: var(--color-muted); margin: 0; max-width: 380px; font-size: var(--font-size-footnote); }
+
+.tp-empty {
+  padding: 40px 24px; text-align: center;
+  background: var(--color-secondary);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+}
+.tp-empty p { margin: 0 0 12px; font-size: var(--font-size-footnote); }
+
+/* ============================================================
+   Bulk delete sticky toolbar (delete-only, NOT add-to-trip)
+   ============================================================ */
+.favorites-bulk-toolbar {
+  position: sticky; bottom: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 16px;
+  background: color-mix(in srgb, var(--color-background) 96%, transparent);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  margin: 16px -16px -16px;
+  box-shadow: var(--shadow-md);
+}
+.favorites-bulk-toolbar-status {
+  font-size: var(--font-size-footnote); color: var(--color-foreground); font-weight: 500;
+}
+.favorites-bulk-toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.favorites-bulk-toolbar .tp-action-btn { margin-top: 0; min-height: 36px; padding: 0 14px; }
+
+/* spinner inline */
+.spinner-inline {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle; margin-right: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================
+   Pagination state (>200 favorites)
+   ============================================================ */
+.favorites-sticky-search {
+  position: sticky; top: 64px; z-index: 5;
+  background: color-mix(in srgb, var(--color-background) 96%, transparent);
+  backdrop-filter: blur(8px);
+  margin: 0 -24px 16px; padding: 12px 24px;
+  border-bottom: 1px solid var(--color-border);
+}
+.favorites-pagination {
+  display: flex; justify-content: center; align-items: center; gap: 8px;
+  margin: 24px 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.favorites-pagination-btn {
+  min-width: 44px; min-height: 44px; padding: 0 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote); font-weight: 500;
+  cursor: pointer;
+  color: var(--color-foreground);
+}
+.favorites-pagination-btn.is-active { background: var(--color-accent); color: var(--color-accent-foreground); border-color: var(--color-accent); }
+.favorites-pagination-btn[disabled] { opacity: 0.4; cursor: default; }
+
+/* ============================================================
+   Form (AddPoiFavoriteToTripPage)
+   ============================================================ */
+.tp-form { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
+.tp-form-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) {
+  .tp-form-grid-2col { grid-template-columns: 1fr; }
+}
+.tp-form-field { display: flex; flex-direction: column; gap: 6px; }
+.tp-form-label {
+  font-size: var(--font-size-footnote); font-weight: 600; color: var(--color-foreground);
+}
+.tp-form-help { font-size: var(--font-size-caption); color: var(--color-muted); }
+.tp-form-input,
+.tp-form-select {
+  height: 44px; padding: 0 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body); color: var(--color-foreground);
+}
+.tp-form-input:focus,
+.tp-form-select:focus {
+  outline: 0; border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-subtle);
+}
+
+.tp-form-radio-group {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.tp-form-radio-option {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-footnote);
+  cursor: pointer;
+  min-height: 56px;
+}
+.tp-form-radio-option input { display: none; }
+.tp-form-radio-option:has(input:checked) {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  border-color: var(--color-accent);
+}
+
+.tp-form-time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Form actions row — 置中放在表單欄位下方（user 偏好）
+   取消由 TitleBar 左側返回 button 處理（iOS 慣例 + 避免重複），
+   form 內僅一個 primary「加入行程」button 置中。 */
+.tp-form-actions {
+  display: flex; justify-content: center; align-items: center;
+  padding: 24px 0 8px;
+  margin-top: 8px;
+}
+.tp-form-actions .tp-action-btn {
+  min-width: 200px; min-height: 48px;
+  padding: 0 32px;
+  font-size: var(--font-size-body); font-weight: 600;
+  margin-top: 0;
+  justify-content: center;
+}
+@media (max-width: 760px) {
+  .tp-form-actions .tp-action-btn {
+    width: 100%; min-width: 0;
+  }
+}
+
+.tp-form-poi-summary {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px;
+  background: var(--color-accent-subtle);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+.tp-form-poi-summary-eyebrow { font-size: var(--font-size-eyebrow); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-accent-deep); font-weight: 600; }
+.tp-form-poi-summary-title { font-size: var(--font-size-body); font-weight: 600; color: var(--color-foreground); }
+.tp-form-poi-summary-meta { font-size: var(--font-size-caption); color: var(--color-muted); }
+
+/* ============================================================
+   Conflict modal
+   ============================================================ */
+.tp-modal-backdrop {
+  position: absolute; inset: 0;
+  background: var(--color-overlay);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.tp-modal-card {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 420px; width: calc(100% - 32px);
+  box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.tp-modal-eyebrow { font-size: var(--font-size-eyebrow); letter-spacing: 0.22em; text-transform: uppercase; color: var(--color-destructive); font-weight: 600; }
+.tp-modal-title { font-size: 18px; font-weight: 600; margin: 0; }
+.tp-modal-body { color: var(--color-muted); font-size: var(--font-size-footnote); }
+.tp-modal-conflict-row {
+  background: var(--color-secondary);
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  font-size: var(--font-size-footnote);
+  font-variant-numeric: tabular-nums;
+}
+.tp-modal-actions {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 8px;
+}
+.tp-modal-actions .tp-action-btn { margin-top: 0; width: 100%; justify-content: center; }
+
+/* ============================================================
+   State legend dot
+   ============================================================ */
+.state-legend {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--font-size-caption);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-secondary);
+  color: var(--color-muted);
+  margin-left: 8px;
+}
+.state-legend::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+
+/* ============================================================
+   Annotations / a11y notes
+   ============================================================ */
+.a11y-callout {
+  font-size: var(--font-size-caption);
+  background: rgba(6, 167, 125, 0.08);
+  color: var(--color-success);
+  padding: 6px 10px; border-radius: var(--radius-sm);
+  display: inline-block;
+  margin: 4px 0;
+}
+.a11y-callout::before { content: '♿ '; }
+
+/* ============================================================
+   Mini state cards (7-state matrix overview)
+   ============================================================ */
+.mini-state-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px; padding: 16px;
+}
+.mini-state-card {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 120px;
+}
+.mini-state-card-tag {
+  font-size: var(--font-size-eyebrow); letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--color-accent-deep); font-weight: 700;
+}
+.mini-state-card-title { font-size: var(--font-size-footnote); font-weight: 600; }
+.mini-state-card-desc { font-size: var(--font-size-caption); color: var(--color-muted); line-height: 1.5; }
+
+/* tabular numerals everywhere for stats */
+.tabular { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="mockup-shell">
+  <div class="mockup-doc-header">
+    <h1>Favorites Redesign Mockup</h1>
+    <p>OpenSpec change <code>poi-favorites-rename</code> — PoiFavoritesPage + AddPoiFavoriteToTripPage 視覺定版稿。對應 specs/poi-favorites/spec.md 與 specs/terracotta-page-layout/spec.md。Token 全對齊 css/tokens.css，未自寫任何顏色 / 字級 / 間距值。</p>
+    <div class="doc-meta">
+      <span>Date: 2026-05-04</span>
+      <span>Branch: master</span>
+      <span>Designer: Claude Opus 4.7 + tp-claude-design</span>
+      <span>Status: Draft — 待 user sign-off 才寫 React</span>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       SECTION A — PoiFavoritesPage
+       ======================================================== -->
+  <div class="frame-section">
+    <h2>A. PoiFavoritesPage <span class="state-legend">/favorites</span></h2>
+    <p class="section-lead">Primary nav 第 4 slot。8-state matrix（loading / empty-pool / filter-no-results / error / data / optimistic-delete / bulk-action-busy / pagination）。Hero hierarchy 依收藏數量分檔（&lt;10 / 50 / &gt;200）。Batch flow delete-only — 加入行程一律走 per-card link。</p>
+
+    <!-- ============================================
+         FRAME A1 — Desktop data state (50 favorites, 3-col)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A1 · Desktop data state · 50 favorites</span>
+        <span class="frame-tag">≥1024px · 3-col · max-width 1040px</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item">
+              <span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+              <span class="tp-sidebar-item-label">聊天</span>
+            </div>
+            <div class="tp-sidebar-item">
+              <span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span>
+              <span class="tp-sidebar-item-label">行程</span>
+            </div>
+            <div class="tp-sidebar-item">
+              <span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span>
+              <span class="tp-sidebar-item-label">地圖</span>
+            </div>
+            <div class="tp-sidebar-item is-active">
+              <span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>
+              <span class="tp-sidebar-item-label">收藏</span>
+            </div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <p class="tp-page-meta"><strong class="tabular">52</strong> 個地點，已用於 <strong class="tabular">3</strong> 個行程</p>
+
+                <div class="favorites-region-row" role="group" aria-label="地區篩選">
+                  <button class="tp-chip" aria-pressed="true">全部 <span class="tp-chip-count">52</span></button>
+                  <button class="tp-chip" aria-pressed="false">沖繩 <span class="tp-chip-count">28</span></button>
+                  <button class="tp-chip" aria-pressed="false">京都 <span class="tp-chip-count">12</span></button>
+                  <button class="tp-chip" aria-pressed="false">釜山 <span class="tp-chip-count">8</span></button>
+                  <button class="tp-chip" aria-pressed="false">大阪 <span class="tp-chip-count">4</span></button>
+                </div>
+
+                <div class="favorites-type-row" role="group" aria-label="POI 類型篩選">
+                  <button class="tp-chip" aria-pressed="true">全部</button>
+                  <button class="tp-chip" aria-pressed="false">景點</button>
+                  <button class="tp-chip" aria-pressed="false">餐廳</button>
+                  <button class="tp-chip" aria-pressed="false">購物</button>
+                  <button class="tp-chip" aria-pressed="false">住宿</button>
+                </div>
+
+                <div class="favorites-search">
+                  <span class="favorites-search-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  </span>
+                  <input type="search" placeholder="搜尋收藏（名稱 / 地址 / 備註）" aria-label="搜尋收藏">
+                </div>
+
+                <div class="favorites-grid">
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">MARUMARO 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町美濱1-5-8</div>
+                    <div class="favorites-card-usage">目前在 2 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 MARUMARO 北谷店">
+                        <span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">景點</div>
+                    <div class="favorites-card-title">美麗海水族館</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡本部町石川424</div>
+                    <div class="favorites-card-usage">目前在 1 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 美麗海水族館">
+                        <span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">購物</div>
+                    <div class="favorites-card-title">美國村 Depot Island</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町美濱9-1</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 美國村 Depot Island">
+                        <span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">浜屋沖繩麵 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町宮城2-99</div>
+                    <div class="favorites-card-usage">目前在 1 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 浜屋沖繩麵 北谷店">
+                        <span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">景點</div>
+                    <div class="favorites-card-title">古宇利大橋展望台</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡今歸仁村古宇利</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 古宇利大橋展望台">
+                        <span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">住宿</div>
+                    <div class="favorites-card-title">Hotel Mahaina Wellness Resort</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡本部町山川1456</div>
+                    <div class="favorites-card-usage">目前在 1 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 Hotel Mahaina Wellness Resort">
+                        <span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「PoiFavoritesPage 頁面行為」+「8-state matrix」data state。<br>
+        <strong>Token</strong>：tp-page-eyebrow（10px / 0.22em letter-spacing）+ tp-page-meta（14px tabular-nums）。Region pill / type filter 用 tp-chip + role="group" + aria-pressed（不是 role="tablist"）。Card 用 1px hairline border + 8px radius（不用 shadow，DESIGN.md L667 hairline-over-shadow 原則）。<br>
+        <strong>A11y</strong>：filter chip wrapper role="group" + aria-label。每個 chip aria-pressed={selected} bool。Checkbox aria-label={`選取 ${row.poiName}`} 帶 row context。<br>
+        <strong>Hierarchy</strong>：50 favorites grid 為主 + controls 在 hero 下方 12px（spec 8.1 中段）。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A2 — Empty pool state
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A2 · Empty pool state · 0 favorites</span>
+        <span class="frame-tag">隱藏 filters / search</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <div class="tp-empty-cta" data-testid="favorites-empty">
+                  <span class="empty-eyebrow">START EXPLORING</span>
+                  <h2 class="empty-title">還沒有收藏</h2>
+                  <p class="empty-desc">在「探索」找景點，點 ♡ 圖示收藏，下次行程就能直接從這裡加入。</p>
+                  <button class="tp-action-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    去探索找景點
+                  </button>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「8-state matrix」empty-pool。<br>
+        <strong>Token</strong>：tp-empty-cta block + tp-action-btn primary CTA。dashed border 區隔 placeholder 性質。<br>
+        <strong>規則</strong>：&lt;10 favorites 時 SHALL 隱藏 region pill / type filter / search input（spec 8.1 規範，避免空 filter 噪音）。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A3 — Filter no-results state
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A3 · Filter no-results state</span>
+        <span class="frame-tag">filter applied · 0 matches</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <p class="tp-page-meta"><strong class="tabular">52</strong> 個地點，已用於 <strong class="tabular">3</strong> 個行程</p>
+
+                <div class="favorites-region-row" role="group" aria-label="地區篩選">
+                  <button class="tp-chip" aria-pressed="false">全部 <span class="tp-chip-count">52</span></button>
+                  <button class="tp-chip" aria-pressed="true">京都 <span class="tp-chip-count">12</span></button>
+                  <button class="tp-chip" aria-pressed="false">沖繩 <span class="tp-chip-count">28</span></button>
+                </div>
+                <div class="favorites-type-row" role="group" aria-label="POI 類型篩選">
+                  <button class="tp-chip" aria-pressed="false">全部</button>
+                  <button class="tp-chip" aria-pressed="true">住宿</button>
+                  <button class="tp-chip" aria-pressed="false">餐廳</button>
+                </div>
+                <div class="favorites-search">
+                  <span class="favorites-search-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  </span>
+                  <input type="search" value="ホテル" placeholder="搜尋收藏" aria-label="搜尋收藏">
+                </div>
+
+                <div class="tp-empty">
+                  <p>沒有符合條件的收藏。</p>
+                  <button class="tp-action-btn tp-action-btn-ghost">清空篩選</button>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「8-state matrix」filter-no-results。<br>
+        <strong>區別</strong>：empty-pool（A2，整池為空）顯示 tp-empty-cta + 探索 CTA；filter-no-results（A3，池有但 filter 篩掉）顯示 tp-empty + 清空篩選 reset。兩者 affordance 不同避免使用者誤導。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A4 — Error state (PageErrorState)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A4 · Error state</span>
+        <span class="frame-tag">PageErrorState shared component</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <div class="page-error-state" role="alert">
+                  <svg class="page-error-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <h2 class="page-error-state-title">載入收藏失敗</h2>
+                  <p class="page-error-state-desc">資料暫時無法取得。你的內容仍在伺服器上，請稍後再試一次。</p>
+                  <button class="tp-action-btn">重試</button>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「8-state matrix」error。<br>
+        <strong>Component</strong>：抽取為 src/components/shared/PageErrorState.tsx — props 含 title / desc / onRetry。Persistent surface（不用 toast，DESIGN.md L666「錯誤必須可見且可行動」）。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A5 — Loading skeleton state
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A5 · Loading state</span>
+        <span class="frame-tag">tp-skel · 3-card skeleton</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main" aria-busy="true" aria-live="polite">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <div class="tp-skel" style="height: 16px; width: 200px; margin-bottom: 24px;"></div>
+                <div class="favorites-grid">
+                  <div class="tp-skel tp-skel-card"></div>
+                  <div class="tp-skel tp-skel-card"></div>
+                  <div class="tp-skel tp-skel-card"></div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「8-state matrix」loading。<br>
+        <strong>Token</strong>：tp-skel shimmer 1.6s linear。`aria-busy="true"` + `aria-live="polite"` 在 main container（非 per card），screen reader 一次宣告載入狀態。<br>
+        <strong>Don't</strong>：不用 spinner overlay（破壞頁面結構認知）；skeleton 形狀對應 data state card outline。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A6 — Optimistic-delete + Bulk-action busy (combined)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A6 · Optimistic-delete + Bulk-action busy</span>
+        <span class="frame-tag">delete-only sticky toolbar</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main style="display: flex; flex-direction: column;">
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <p class="tp-page-meta"><strong class="tabular">5</strong> 已選 / <span class="tabular">52</span> 總計</p>
+                <div class="favorites-grid">
+                  <article class="favorites-card is-selected">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">MARUMARO 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町美濱1-5-8</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" checked aria-label="選取 MARUMARO 北谷店">
+                        <span>已選</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card is-selected is-deleting" aria-live="polite">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">浜屋沖繩麵 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町宮城2-99</div>
+                    <div class="favorites-card-actions">
+                      <span class="favorites-card-deleting-label">移除中…</span>
+                    </div>
+                  </article>
+                  <article class="favorites-card is-selected is-deleting" aria-live="polite">
+                    <div class="favorites-card-eyebrow">景點</div>
+                    <div class="favorites-card-title">古宇利大橋展望台</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡今歸仁村古宇利</div>
+                    <div class="favorites-card-actions">
+                      <span class="favorites-card-deleting-label">移除中…</span>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+            <div class="favorites-bulk-toolbar" role="region" aria-label="批次操作">
+              <span class="favorites-bulk-toolbar-status"><span class="tabular">5</span> 個已選</span>
+              <div class="favorites-bulk-toolbar-actions">
+                <button class="tp-action-btn tp-action-btn-ghost">全選</button>
+                <button class="tp-action-btn tp-action-btn-ghost">取消選擇</button>
+                <button class="tp-action-btn tp-action-btn-destructive" disabled>
+                  <span class="spinner-inline"></span>刪除中（<span class="tabular">2/5</span>）…
+                </button>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「8-state matrix」optimistic-delete + bulk-action-busy。<br>
+        <strong>關鍵決定</strong>：toolbar 只有「全選 / 取消選擇 / 刪除」3 個 action。<strong>沒有</strong> batch add-to-trip — 加入行程一律走 per-card「加入行程 →」link（DUC1 user accept）。<br>
+        <strong>A11y</strong>：is-deleting card 加 `aria-live="polite"`，screen reader 自動宣告「移除中…」。toolbar role="region" + aria-label。<br>
+        <strong>Optimistic delete pattern</strong>：card opacity 0.5 + 「移除中…」label，DELETE 成功 → 從 grid 移除；失敗 → 復原 opacity + toast error。<br>
+        <strong>Sticky toolbar</strong>：position: sticky bottom + glass blur 14px，不遮 grid 內容（main 是 flex column 推上去）。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A7 — Pagination state (>200 favorites)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A7 · Pagination state · 200+ favorites</span>
+        <span class="frame-tag">sticky search · count → meta · pagination</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <div class="favorites-sticky-search">
+                  <div class="favorites-search" style="margin: 0;">
+                    <span class="favorites-search-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </span>
+                    <input type="search" placeholder="搜尋 247 個收藏" aria-label="搜尋收藏">
+                  </div>
+                </div>
+                <p class="tp-page-meta"><strong class="tabular">247</strong> 個地點 · 第 <span class="tabular">1</span> / <span class="tabular">11</span> 頁</p>
+
+                <div class="favorites-grid">
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">MARUMARO 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町美濱1-5-8</div>
+                    <div class="favorites-card-usage">目前在 2 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 MARUMARO 北谷店"><span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">景點</div>
+                    <div class="favorites-card-title">美麗海水族館</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡本部町石川424</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 美麗海水族館"><span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">住宿</div>
+                    <div class="favorites-card-title">Hotel Mahaina</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡本部町山川1456</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox">
+                        <input type="checkbox" aria-label="選取 Hotel Mahaina"><span>選取</span>
+                      </label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                </div>
+
+                <nav class="favorites-pagination" aria-label="分頁">
+                  <button class="favorites-pagination-btn" disabled aria-label="上一頁">←</button>
+                  <button class="favorites-pagination-btn is-active" aria-current="page">1</button>
+                  <button class="favorites-pagination-btn">2</button>
+                  <button class="favorites-pagination-btn">3</button>
+                  <span style="color: var(--color-muted); padding: 0 8px;">…</span>
+                  <button class="favorites-pagination-btn">11</button>
+                  <button class="favorites-pagination-btn" aria-label="下一頁">→</button>
+                </nav>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「8-state matrix」pagination + hierarchy 規則「&gt;200 sticky search + pagination」。<br>
+        <strong>Hierarchy 變化</strong>：search 升為 sticky toolbar 置頂（top: 64px = TitleBar height） + count 降為 meta + pagination 加在 grid 下方。<br>
+        <strong>替代</strong>：可選 pagination（傳統頁碼）或 infinite scroll + windowing（react-window）。本 mockup 用頁碼方便 user 控制；implementation 階段可權衡。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A8 — Tablet 2-col (640-1023px)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A8 · Tablet viewport · 2-col</span>
+        <span class="frame-tag">640-1023px · sidebar 64px collapsed</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-tablet">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <p class="tp-page-meta"><strong class="tabular">52</strong> 個地點，已用於 <strong class="tabular">3</strong> 個行程</p>
+                <div class="favorites-region-row" role="group" aria-label="地區篩選">
+                  <button class="tp-chip" aria-pressed="true">全部</button>
+                  <button class="tp-chip" aria-pressed="false">沖繩</button>
+                  <button class="tp-chip" aria-pressed="false">京都</button>
+                </div>
+                <div class="favorites-grid is-tablet">
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">MARUMARO 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町美濱1-5-8</div>
+                    <div class="favorites-card-usage">目前在 2 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox"><input type="checkbox"><span>選取</span></label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">景點</div>
+                    <div class="favorites-card-title">美麗海水族館</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡本部町石川424</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox"><input type="checkbox"><span>選取</span></label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/terracotta-page-layout/spec.md viewport breakpoints 「640-1023 → 2-col」。<br>
+        <strong>Sidebar collapse</strong>：tablet 64px width，僅 icon（label 隱藏）。Active state 仍 visible（accent-subtle bg）。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME A9 — Phone 1-col (<430px)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>A9 · Phone viewport · 1-col</span>
+        <span class="frame-tag">&lt;430px · bottom-nav</span>
+      </div>
+      <div class="frame-stage" style="padding: 32px 0; display: flex; justify-content: center; background: var(--color-tertiary);">
+        <div class="tp-app tp-app-phone">
+          <main>
+            <header class="tp-titlebar">
+              <h1 class="tp-titlebar-title">收藏</h1>
+              <div class="tp-titlebar-actions">
+                <button class="tp-titlebar-action" aria-label="探索" title="探索">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <span class="tp-titlebar-action-label">探索</span>
+                </button>
+              </div>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <p class="tp-page-eyebrow">YOUR FAVORITES POOL</p>
+                <p class="tp-page-meta"><strong class="tabular">52</strong> 個地點</p>
+                <div class="favorites-region-row" role="group" aria-label="地區篩選">
+                  <button class="tp-chip" aria-pressed="true">全部</button>
+                  <button class="tp-chip" aria-pressed="false">沖繩</button>
+                  <button class="tp-chip" aria-pressed="false">京都</button>
+                </div>
+                <div class="favorites-search">
+                  <span class="favorites-search-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  </span>
+                  <input type="search" placeholder="搜尋收藏" aria-label="搜尋收藏">
+                </div>
+                <div class="favorites-grid is-phone">
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">餐廳</div>
+                    <div class="favorites-card-title">MARUMARO 北谷店</div>
+                    <div class="favorites-card-address">沖繩縣中頭郡北谷町美濱1-5-8</div>
+                    <div class="favorites-card-usage">目前在 2 個行程</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox"><input type="checkbox"><span>選取</span></label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                  <article class="favorites-card">
+                    <div class="favorites-card-eyebrow">景點</div>
+                    <div class="favorites-card-title">美麗海水族館</div>
+                    <div class="favorites-card-address">沖繩縣國頭郡本部町石川424</div>
+                    <div class="favorites-card-actions">
+                      <label class="favorites-card-checkbox"><input type="checkbox"><span>選取</span></label>
+                      <a href="#" class="favorites-card-add-link">加入行程 →</a>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </main>
+          <nav class="tp-bottom-nav" aria-label="主要導覽">
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>聊天</a>
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span>行程</a>
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span>地圖</a>
+            <a href="#" class="tp-bottom-nav-tab is-active"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>收藏</a>
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>帳號</a>
+          </nav>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/terracotta-page-layout/spec.md viewport breakpoints 「&lt;430 → 1-col」+ 「Primary nav label 統一『收藏』」。<br>
+        <strong>關鍵</strong>：bottom-nav 5 tab，第 4 active label「收藏」（與 desktop sidebar 一致，廢除 asymmetric）。Eyebrow「YOUR FAVORITES POOL」補回 ownership 語意。<br>
+        <strong>觸控目標</strong>：所有 chip / button / checkbox / link min-height ≥ 32-44px（DESIGN.md HIG 規範，44 為 primary action）。
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       SECTION B — AddPoiFavoriteToTripPage
+       ======================================================== -->
+  <div class="frame-section">
+    <h2>B. AddPoiFavoriteToTripPage <span class="state-legend">/favorites/:id/add-to-trip</span></h2>
+    <p class="section-lead">Per-card「加入行程 →」 link 進入此頁。Full page，不是 modal（DESIGN.md L580 規範：&gt;3 fields + select + time picker 必走全頁）。<strong>4-field form 純時間驅動</strong>（trip / day / startTime / endTime）+ stay-duration heuristic 預填 + 7-state matrix + phone sticky bottom action bar。系統依時間自動排序 entry，<strong>不需顯式選擇 position</strong>（append/before/after/replace）— 衝突仍由 ConflictModal 處理。</p>
+
+    <!-- ============================================
+         FRAME B1 — Desktop form data state
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>B1 · Desktop form data state · 4 fields (純時間驅動)</span>
+        <span class="frame-tag">≥1024px · single-column form</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <button class="tp-titlebar-back" aria-label="返回收藏">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <h1 class="tp-titlebar-title">加入行程</h1>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <div class="tp-form-poi-summary">
+                  <span class="tp-form-poi-summary-eyebrow">餐廳 · 收藏中</span>
+                  <span class="tp-form-poi-summary-title">MARUMARO 北谷店</span>
+                  <span class="tp-form-poi-summary-meta">沖繩縣中頭郡北谷町美濱1-5-8 · ★ 4.3</span>
+                </div>
+
+                <form id="add-favorite-form" class="tp-form" aria-label="加入行程表單">
+                  <div class="tp-form-grid-2col">
+                    <div class="tp-form-field">
+                      <label class="tp-form-label" for="trip-select">行程</label>
+                      <select class="tp-form-select" id="trip-select">
+                        <option>沖繩自駕 6 日 — 2026/05/12</option>
+                        <option>京都櫻花 4 日 — 2026/03/28</option>
+                      </select>
+                    </div>
+
+                    <div class="tp-form-field">
+                      <label class="tp-form-label" for="day-select">天數</label>
+                      <select class="tp-form-select" id="day-select">
+                        <option>Day 1 · 2026/05/12（出發 · 那霸）</option>
+                        <option selected>Day 2 · 2026/05/13（北谷 · 美國村）</option>
+                        <option>Day 3 · 2026/05/14（本部 · 美麗海）</option>
+                      </select>
+                      <span class="tp-form-help">Day 2 已有 4 個 entry · 12:00-19:30 已排</span>
+                    </div>
+
+                    <div class="tp-form-field">
+                      <label class="tp-form-label" for="start-time">開始時間</label>
+                      <input class="tp-form-input tabular" type="time" id="start-time" value="12:00">
+                    </div>
+
+                    <div class="tp-form-field">
+                      <label class="tp-form-label" for="end-time">結束時間</label>
+                      <input class="tp-form-input tabular" type="time" id="end-time" value="13:30">
+                      <span class="tp-form-help">餐廳預設 90 分鐘 · 系統依時間自動排入</span>
+                    </div>
+                  </div>
+
+                  <div class="tp-form-actions">
+                    <button type="submit" class="tp-action-btn">加入行程</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「AddPoiFavoriteToTripPage 頁面行為」+ specs/terracotta-page-layout/spec.md「AddPoiFavoriteToTripPage layout」。<br>
+        <strong>4 fields（純時間驅動）</strong>：trip / day / startTime / endTime。移除原本的 position radio + anchorEntryId — 系統依時間自動排序。<br>
+        <strong>Desktop 2-col grid</strong>：trip + day 同列、startTime + endTime 同列。max-width 720px。phone 自動 stack 單欄（@media &le;760）。<br>
+        <strong>TitleBar pattern</strong>：title 靠左（flex:1，對齊 css/tokens.css:1284 production 規範）；左側 <code>.tp-titlebar-back</code> 返回（取消 = 退出 form 且 unsaved changes 跳 confirm dialog）；右側無 action。<br>
+        <strong>提交按鈕</strong>：「加入行程」accent fill primary button 置中放在表單欄位下方（user 偏好），<code>.tp-form-actions</code> wrapper 居中對齊。Phone viewport button 自動延展為 full-width。<br>
+        <strong>排序邏輯</strong>：後端 add-to-trip handler 依 startTime 找 day 中的 sort_order 插入點；衝突（newStart &lt; entryEnd AND newEnd &gt; entryStart）回 409 → ConflictModal（B4）。<br>
+        <strong>Stay-duration heuristic</strong>：餐廳 90min（預填 12:00-13:30）。<br>
+        <strong>POI summary</strong>：top 區塊用 accent-subtle bg + accent border-left，提供 user 確認當前在加哪個 POI。<br>
+        <strong>⚠️ Spec impact</strong>：API contract change — add-to-trip handler 不再接受 body.position / anchorEntryId，僅接受 startTime/endTime。需 update specs/poi-favorites/spec.md + design.md D14 + tasks.md + functions/api/saved-pois/[id]/add-to-trip.ts handler。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME B2 — Phone form + sticky bottom bar
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>B2 · Phone form · sticky bottom action bar (4 fields)</span>
+        <span class="frame-tag">&lt;640px · stacked single column</span>
+      </div>
+      <div class="frame-stage" style="padding: 32px 0; display: flex; justify-content: center; background: var(--color-tertiary);">
+        <div class="tp-app tp-app-phone">
+          <main>
+            <header class="tp-titlebar">
+              <button class="tp-titlebar-back" aria-label="返回收藏">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <h1 class="tp-titlebar-title">加入行程</h1>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-form-poi-summary">
+                <span class="tp-form-poi-summary-eyebrow">餐廳</span>
+                <span class="tp-form-poi-summary-title">MARUMARO 北谷店</span>
+                <span class="tp-form-poi-summary-meta">沖繩縣 · ★ 4.3</span>
+              </div>
+              <form id="add-favorite-form-phone" class="tp-form">
+                <div class="tp-form-field">
+                  <label class="tp-form-label" for="t1">行程</label>
+                  <select class="tp-form-select" id="t1"><option>沖繩自駕 6 日</option></select>
+                </div>
+                <div class="tp-form-field">
+                  <label class="tp-form-label" for="d1">天數</label>
+                  <select class="tp-form-select" id="d1"><option>Day 2 · 2026/05/13</option></select>
+                </div>
+                <div class="tp-form-field">
+                  <label class="tp-form-label" for="t-start">開始時間</label>
+                  <input class="tp-form-input tabular" type="time" id="t-start" value="12:00">
+                </div>
+                <div class="tp-form-field">
+                  <label class="tp-form-label" for="t-end">結束時間</label>
+                  <input class="tp-form-input tabular" type="time" id="t-end" value="13:30">
+                  <span class="tp-form-help">餐廳預設 90 分鐘 · 系統依時間自動排序</span>
+                </div>
+
+                <div class="tp-form-actions">
+                  <button type="submit" class="tp-action-btn">加入行程</button>
+                </div>
+              </form>
+            </div>
+          </main>
+          <nav class="tp-bottom-nav">
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>聊天</a>
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span>行程</a>
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span>地圖</a>
+            <a href="#" class="tp-bottom-nav-tab is-active"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span>收藏</a>
+            <a href="#" class="tp-bottom-nav-tab"><span class="tp-bottom-nav-tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>帳號</a>
+          </nav>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/terracotta-page-layout/spec.md「TitleBar 統一 API」+「AddPoiFavoriteToTripPage layout」。<br>
+        <strong>TitleBar 規範對齊</strong>：title 靠左（flex:1）；左側返回 button（取消用），右側無 action。對齊 css/tokens.css:1257-1316 production 規範。<br>
+        <strong>提交按鈕置中</strong>（user 偏好 — 不放 TitleBar 右側）：「加入行程」accent fill primary button 在 form 欄位下方置中，phone viewport 自動延展 full-width 提升 tap area。<br>
+        <strong>4 fields stack</strong>：trip / day / startTime / endTime（單欄），整 form 約 360-400px 高（含 actions row）。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME B3 — trip → day skeleton state
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>B3 · trip 切換 → day skeleton state</span>
+        <span class="frame-tag">tp-skel · prevent layout jump</span>
+      </div>
+      <div class="frame-stage">
+        <div class="tp-app tp-app-desktop">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span class="tp-sidebar-item-label">聊天</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg></span><span class="tp-sidebar-item-label">行程</span></div>
+            <div class="tp-sidebar-item"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></span><span class="tp-sidebar-item-label">地圖</span></div>
+            <div class="tp-sidebar-item is-active"><span class="tp-sidebar-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span class="tp-sidebar-item-label">收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <button class="tp-titlebar-back" aria-label="返回">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <h1 class="tp-titlebar-title">加入行程</h1>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-page-content">
+                <div class="tp-form-poi-summary">
+                  <span class="tp-form-poi-summary-eyebrow">餐廳</span>
+                  <span class="tp-form-poi-summary-title">MARUMARO 北谷店</span>
+                </div>
+                <form class="tp-form">
+                  <div class="tp-form-grid-2col">
+                    <div class="tp-form-field">
+                      <label class="tp-form-label" for="t3">行程</label>
+                      <select class="tp-form-select" id="t3"><option>京都櫻花 4 日 — 2026/03/28（剛切換）</option></select>
+                    </div>
+                    <div class="tp-form-field">
+                      <label class="tp-form-label">天數</label>
+                      <div class="tp-skel" style="height: 44px;" aria-busy="true" aria-live="polite"></div>
+                      <span class="tp-form-help">載入該行程的天數中…</span>
+                    </div>
+                    <div class="tp-form-field">
+                      <label class="tp-form-label">開始時間</label>
+                      <input class="tp-form-input tabular" type="time" value="12:00" disabled>
+                    </div>
+                    <div class="tp-form-field">
+                      <label class="tp-form-label">結束時間</label>
+                      <input class="tp-form-input tabular" type="time" value="13:30" disabled>
+                      <span class="tp-form-help">須先確認天數</span>
+                    </div>
+                  </div>
+
+                  <div class="tp-form-actions">
+                    <button type="submit" class="tp-action-btn" disabled>加入行程</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/terracotta-page-layout/spec.md「trip → day skeleton」+ specs/poi-favorites/spec.md「trip 變更觸發 day 重載」。<br>
+        <strong>避免 layout jump</strong>：trip 切換 → day field 立刻替換為 tp-skel 1-row（44px 同 select 高），avoid 空欄位 → 載入 → 跳動。<br>
+        <strong>A11y</strong>：skeleton 包含 aria-busy + aria-live polite。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME B4 — Conflict modal (reuse existing pattern)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>B4 · Conflict state · ConflictModal pattern</span>
+        <span class="frame-tag">同 day 時段重疊 · 三選 action</span>
+      </div>
+      <div class="frame-stage" style="position: relative; min-height: 540px; background: var(--color-secondary);">
+        <div class="tp-app tp-app-desktop" style="opacity: 0.4; filter: blur(1px);">
+          <aside class="tp-sidebar">
+            <div class="tp-sidebar-brand">Tripline</div>
+            <div class="tp-sidebar-item is-active"><span>♡</span><span>收藏</span></div>
+          </aside>
+          <main>
+            <header class="tp-titlebar">
+              <button class="tp-titlebar-back" aria-label="返回">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </button>
+              <h1 class="tp-titlebar-title">加入行程</h1>
+            </header>
+            <div class="tp-page-main">
+              <div class="tp-form-poi-summary">
+                <span class="tp-form-poi-summary-title">MARUMARO 北谷店</span>
+              </div>
+            </div>
+          </main>
+        </div>
+        <div class="tp-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="conflict-title">
+          <div class="tp-modal-card">
+            <span class="tp-modal-eyebrow">時段衝突</span>
+            <h2 class="tp-modal-title" id="conflict-title">Day 2 已有重疊行程</h2>
+            <div class="tp-modal-body">
+              <p style="margin: 0 0 8px;">你選的時段 <strong class="tabular">12:00 - 13:30</strong> 跟以下 entry 重疊：</p>
+              <div class="tp-modal-conflict-row">
+                <strong>浜屋沖繩麵 北谷店</strong> · <span>11:30 - 12:30</span>
+              </div>
+            </div>
+            <div class="tp-modal-actions">
+              <button class="tp-action-btn">取代「浜屋沖繩麵 北谷店」</button>
+              <button class="tp-action-btn tp-action-btn-ghost">改插入到後面（13:30 之後）</button>
+              <button class="tp-action-btn tp-action-btn-ghost">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「同 day 時段衝突」+ DESIGN.md L608 ConflictModal pattern。<br>
+        <strong>三選 action</strong>：取代既有（destructive primary）/ 改插入後面（safe alternative）/ 取消（escape hatch）。primary action 是 destructive 因為 conflict resolution 通常需要使用者明確覆蓋。<br>
+        <strong>A11y</strong>：role="dialog" + aria-modal + aria-labelledby 指向 title id。
+      </div>
+    </div>
+
+    <!-- ============================================
+         FRAME B5 — 7-state matrix overview (mini cards)
+         ============================================ -->
+    <div class="frame">
+      <div class="frame-label">
+        <span>B5 · 7-state matrix overview</span>
+        <span class="frame-tag">DESIGN.md L602-612</span>
+      </div>
+      <div class="frame-stage">
+        <div class="mini-state-grid">
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S1 · Loading</span>
+            <h3 class="mini-state-card-title">tp-skel skeleton 3 rows</h3>
+            <p class="mini-state-card-desc">同 ChatPage / TripsListPage skeleton pattern。aria-busy + aria-live polite。</p>
+          </div>
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S2 · Empty (no trip)</span>
+            <h3 class="mini-state-card-title">tp-empty-cta + 「建立第一個行程」link</h3>
+            <p class="mini-state-card-desc">使用者沒有任何 owner trip 時，引導建立。dashed border + accent CTA。</p>
+          </div>
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S3 · Conflict</span>
+            <h3 class="mini-state-card-title">ConflictModal · 三選 action</h3>
+            <p class="mini-state-card-desc">同 day 時段重疊（newStart &lt; entryEnd AND newEnd &gt; entryStart）。見 B4。</p>
+          </div>
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S4 · Error</span>
+            <h3 class="mini-state-card-title">PersistentAlert · 不用 toast</h3>
+            <p class="mini-state-card-desc">網路 / 5xx 錯誤。Persistent surface + retry button。錯誤必須可見且可行動。</p>
+          </div>
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S5 · Success</span>
+            <h3 class="mini-state-card-title">navigate /trips?selected=:id&day=N&favorites_added=1</h3>
+            <p class="mini-state-card-desc">後續 toast 由 TripsListPage handle，避免 modal 卡住 UX。</p>
+          </div>
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S6 · Optimistic</span>
+            <h3 class="mini-state-card-title">submit busy + label「加入中…」+ disable</h3>
+            <p class="mini-state-card-desc">Apple HIG progress pattern。防重複 click。</p>
+          </div>
+          <div class="mini-state-card">
+            <span class="mini-state-card-tag">S7 · Partial (saved 但 trips 空)</span>
+            <h3 class="mini-state-card-title">empty CTA branch（同 S2）</h3>
+            <p class="mini-state-card-desc">收藏 fetch 成功但 trips fetch 失敗 → 退回 empty CTA，避免半 broken state。</p>
+          </div>
+        </div>
+      </div>
+      <div class="frame-note">
+        <strong>對映 spec</strong>：specs/poi-favorites/spec.md「AddPoiFavoriteToTripPage 7-state matrix」+ DESIGN.md L602-612。<br>
+        <strong>用途</strong>：開發階段 reviewer 可對照 7 state 是否完整 cover；test 階段每 state 一個 test case。
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       SECTION C — Design system summary
+       ======================================================== -->
+  <div class="frame-section">
+    <h2>C. Design System Summary</h2>
+    <p class="section-lead">所有 token 對齊 css/tokens.css。本 mockup <strong>0 自寫顏色 / 字級 / 間距值</strong>。實作時前端直接 reuse tokens.css 變數，無 token drift 風險。</p>
+    <div class="frame">
+      <div class="frame-label">
+        <span>C1 · Token reference table</span>
+        <span class="frame-tag">tokens.css 對應</span>
+      </div>
+      <div class="frame-stage" style="padding: 24px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: var(--font-size-footnote);">
+          <thead>
+            <tr style="background: var(--color-tertiary);">
+              <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-border);">Mockup 用法</th>
+              <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-border);">tokens.css 變數</th>
+              <th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--color-border);">值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Page background</td><td style="padding: 8px 12px;"><code>--color-background</code></td><td style="padding: 8px 12px;">#FFFBF5</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Card / form bg</td><td style="padding: 8px 12px;"><code>--color-background</code></td><td style="padding: 8px 12px;">#FFFBF5</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Hairline border</td><td style="padding: 8px 12px;"><code>--color-border</code></td><td style="padding: 8px 12px;">#EADFCF</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Body text</td><td style="padding: 8px 12px;"><code>--color-foreground</code></td><td style="padding: 8px 12px;">#2A1F18</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Muted text / hints</td><td style="padding: 8px 12px;"><code>--color-muted</code></td><td style="padding: 8px 12px;">#6F5A47</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Primary CTA / active chip</td><td style="padding: 8px 12px;"><code>--color-accent</code></td><td style="padding: 8px 12px;">#D97848</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Selected card bg / eyebrow tint</td><td style="padding: 8px 12px;"><code>--color-accent-subtle</code></td><td style="padding: 8px 12px;">#FBEEE4</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Destructive (delete / conflict)</td><td style="padding: 8px 12px;"><code>--color-destructive</code></td><td style="padding: 8px 12px;">#C13515</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Eyebrow font</td><td style="padding: 8px 12px;"><code>--font-size-eyebrow</code></td><td style="padding: 8px 12px;">10px / 0.22em</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Body font</td><td style="padding: 8px 12px;"><code>--font-size-body</code></td><td style="padding: 8px 12px;">16px</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Footnote (form hint)</td><td style="padding: 8px 12px;"><code>--font-size-footnote</code></td><td style="padding: 8px 12px;">14px</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Caption (address)</td><td style="padding: 8px 12px;"><code>--font-size-caption</code></td><td style="padding: 8px 12px;">12px</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Card radius</td><td style="padding: 8px 12px;"><code>--radius-md</code></td><td style="padding: 8px 12px;">8px</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Chip / pill radius</td><td style="padding: 8px 12px;"><code>--radius-full</code></td><td style="padding: 8px 12px;">9999px</td></tr>
+            <tr><td style="padding: 8px 12px; border-bottom: 1px solid var(--color-border);">Spacing 4pt grid</td><td style="padding: 8px 12px;"><code>--spacing-{1..12}</code></td><td style="padding: 8px 12px;">4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 48</td></tr>
+            <tr><td style="padding: 8px 12px;">Glass blur (titlebar / toolbar)</td><td style="padding: 8px 12px;">backdrop-filter</td><td style="padding: 8px 12px;">blur(14px)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="frame-note">
+        <strong>強制規範</strong>：實作 PoiFavoritesPage / AddPoiFavoriteToTripPage 時，<strong>禁止</strong>引入新 color value / font-size / spacing magic number。所有 style 必須 reference 上表變數。新 token 需求走 /design-consultation update 流程。
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       SECTION D — A11y checklist
+       ======================================================== -->
+  <div class="frame-section">
+    <h2>D. A11y Checklist <span class="state-legend">spec 強制要求</span></h2>
+    <p class="section-lead">每項 sign-off 前必須 verify。/qa 階段 will assert via @testing-library + axe.</p>
+    <div class="frame">
+      <div class="frame-label">
+        <span>D1 · A11y compliance matrix</span>
+        <span class="frame-tag">role / aria / keyboard / contrast</span>
+      </div>
+      <div class="frame-stage" style="padding: 24px;">
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+          <li class="a11y-callout">Region pill + Type filter chip：wrapper <code>role="group"</code> + <code>aria-label="..."</code>，每個 chip <code>&lt;button aria-pressed={selected}&gt;</code>。<strong>不是 role="tab"</strong>（filter 不切換 panel）。</li>
+          <li class="a11y-callout">Selection checkbox per card：<code>aria-label={`選取 ${row.poiName}`}</code> 帶 row context（screen reader 不只聽到「選取」）。</li>
+          <li class="a11y-callout">Optimistic-delete card：父層 <code>aria-live="polite"</code>，狀態文字「移除中…」自動播報。</li>
+          <li class="a11y-callout">Loading state：main container <code>aria-busy="true"</code> + <code>aria-live="polite"</code>，一次播報而非 per skeleton。</li>
+          <li class="a11y-callout">Heart toggle on ExplorePage：<code>aria-pressed={isFavorited}</code> 表達 toggle state。</li>
+          <li class="a11y-callout">ConflictModal：<code>role="dialog" aria-modal="true" aria-labelledby="conflict-title"</code>。Focus trap + ESC 關閉。</li>
+          <li class="a11y-callout">Pagination nav：<code>role="navigation" aria-label="分頁"</code> + active page <code>aria-current="page"</code>。</li>
+          <li class="a11y-callout">所有 interactive element 含 visible focus ring（accent ring 2-3px，DESIGN.md L561）。</li>
+          <li class="a11y-callout">Touch target：所有 button / link / chip min-height ≥ 44px（primary action）or ≥ 32px（secondary inline，如 card-add-link）。</li>
+          <li class="a11y-callout">Color contrast：foreground (#2A1F18) on background (#FFFBF5) = 14.8:1 ✓ AAA。muted (#6F5A47) on background = 5.5:1 ✓ AA。accent (#D97848) on background = 3.8:1（large text only — body text 必須在 accent bg 上用 accent-foreground 白色）。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       SECTION E — Sign-off checklist
+       ======================================================== -->
+  <div class="frame-section">
+    <h2>E. Sign-off Checklist <span class="state-legend">user review gate</span></h2>
+    <p class="section-lead">User 在進 React 重構前須 verify 以下項目，如有不滿意請 mark 並提供 feedback，iterate mockup 直到 sign-off。</p>
+    <div class="frame">
+      <div class="frame-label"><span>E1 · 待 user 確認項目</span></div>
+      <div class="frame-stage" style="padding: 24px;">
+        <ol style="margin: 0; padding-left: 24px; line-height: 1.9; font-size: var(--font-size-footnote);">
+          <li><strong>UI label「收藏」是否 OK？</strong>（A1 TitleBar / A9 bottom-nav / sidebar）— 廢除 asymmetric「我的收藏」</li>
+          <li><strong>Eyebrow「YOUR FAVORITES POOL / 你的跨行程收藏池」是否補足 ownership 語意？</strong>（A1 hero）</li>
+          <li><strong>Hero hierarchy 三檔（&lt;10 / 50 / &gt;200）是否合理？</strong>（A2 vs A1 vs A7 對比）</li>
+          <li><strong>Region pill row 排序與初始展開項目？</strong>（A1: 全部 / 沖繩 / 京都 / 釜山 / 大阪 — 依收藏數量排序）</li>
+          <li><strong>Card 設計：usage badge 位置 / per-card「加入行程 →」link 視覺權重？</strong>（A1）</li>
+          <li><strong>Batch flow delete-only — 同意不做 batch add-to-trip？</strong>（A6 toolbar 只有「全選 / 取消選擇 / 刪除」）</li>
+          <li><strong>Pagination 用頁碼 vs infinite scroll？</strong>（A7 mockup 用頁碼，可改為 react-window 動態載入）</li>
+          <li><strong>AddPoiFavoriteToTripPage 4-field 純時間驅動</strong>（trip / day / startTime / endTime，移除 position radio + anchorEntryId — 系統依時間自動排序）— 認同？（B1 / B2）</li>
+          <li><strong>ConflictModal 三選 action 順序（取代 / 後面 / 取消）？</strong>（B4：destructive primary 在最上面是否反直覺？）— time-based 排序下 conflict 仍用此 modal</li>
+          <li><strong>TitleBar title 靠左</strong>（全 frame）— flex layout, title flex:1 自然靠左對齊（不再 text-align: center）。對齊 css/tokens.css:1277-1289 production 規範 — OK？</li>
+          <li><strong>提交按鈕置中放在表單下方</strong>（B1/B2/B3） — TitleBar 不放 confirm action，「加入行程」primary button 在 4 fields 下方置中。Phone viewport button 自動 full-width。取消 = TitleBar 左側返回 button — OK？</li>
+          <li><strong>桌機 form 2-col grid</strong>（B1）— trip + day 同列、startTime + endTime 同列。max-width 720px。phone &le;760px 自動 stack 單欄（B2）— OK？</li>
+          <li><strong>POI summary top 區塊（accent-subtle bg + accent border-left）— 必要 vs 多餘？</strong>（B1 top）</li>
+          <li><strong>整體 token 對齊度滿意？</strong>（C1 對照表）</li>
+        </ol>
+        <p style="margin-top: 24px; padding: 16px; background: var(--color-accent-subtle); border-radius: var(--radius-md); border-left: 3px solid var(--color-accent); font-size: var(--font-size-footnote);">
+          <strong>Sign-off 後續</strong>：user 確認後我會接續走 OpenSpec change <code>poi-favorites-rename</code> tasks.md 階段 11（PoiFavoritesPage redesign）+ 階段 12（AddPoiFavoriteToTripPage redesign），TDD 紅燈先寫 → 重構 React component 對齊本 mockup。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
