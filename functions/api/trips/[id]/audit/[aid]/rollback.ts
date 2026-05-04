@@ -18,7 +18,9 @@ const TABLE_COLUMNS: Record<AllowedTable, readonly string[]> = {
   poi_relations:    ['id', 'poi_id', 'related_poi_id', 'relation_type', 'note'],
   trip_docs:     ['id', 'trip_id', 'doc_type', 'title', 'updated_at'],
   trip_doc_entries: ['id', 'doc_id', 'sort_order', 'section', 'title', 'content', 'updated_at'],
-  trip_requests:    ['id', 'trip_id', 'mode', 'message', 'submitted_by', 'reply', 'status', 'actions_taken', 'created_at'],
+  // V2 cutover (migration 0048 phase 1): trip_requests.mode is vestigial (nullable, no CHECK).
+  // Phase 2 (follow-up) will DROP COLUMN. Rollback path no longer references mode.
+  trip_requests:    ['id', 'trip_id', 'message', 'submitted_by', 'reply', 'status', 'actions_taken', 'created_at'],
   trip_permissions: ['id', 'user_id', 'trip_id', 'role', 'created_at'],
 };
 

@@ -3,6 +3,72 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.21.2] - 2026-05-04
+
+**V2 cutover audit + mode rip-out phase 1** — chat 觸發 tp-request 時發現
+`sanitizeReply` 攔截 footer，引發全面 audit。修補 migrations 0045–0047 的 spec/code
+殘留 drift，啟動 `trip_requests.mode` rip-out 第 1 階段（schema 改 nullable + drop
+CHECK constraint，code 停止寫 mode）。
+
+### Added
+
+- **Migration 0048 phase 1** (`migrations/0048_trip_requests_mode_phase1.sql`):
+  把 `trip_requests.mode` 從 NOT NULL + CHECK 改成 nullable，採 standard SQLite
+  swap idiom（trip_requests 無 children FK，不需 0047 backup-restore pattern）。
+  Rollback 採 best-effort schema-only：post-phase-1 mode=NULL row 用
+  `COALESCE(mode, 'trip-plan')` backfill。
+- **`scripts/backup-prod-d1.sh`** — D1 prod 完整備份 wrapper（migration apply 前的
+  安全網），動態抓 user table 排除 log tables（api_logs / error_reports /
+  auth_audit_log / webhook_logs），輸出 SQL dump 到 `./backups/`。
+- **schema-pin test for mode rip-out** — `tests/unit/requests-api.test.js` 新增
+  「INSERT 不含 mode column」+「不再驗證 trip-edit / trip-plan」negative assertions。
+
+### Changed
+
+- **`functions/api/requests.ts`** — POST 不再寫 `mode` column（INSERT 從
+  `(trip_id, mode, message, submitted_by)` 縮成 `(trip_id, message, submitted_by)`）；
+  audit `diffJson` 也移除 mode field。tp-request skill 自動判別意圖。
+- **`functions/api/trips/[id]/audit/[aid]/rollback.ts`** — `TABLE_COLUMNS.trip_requests`
+  移除 `mode`（phase 1 後 column 為 vestigial）。
+- **`src/types/api.ts`** — `Request.mode` 從 required `'trip-edit' | 'trip-plan' | 'trip-info'`
+  改成 `mode?: string | null`（schema 已 nullable，新 row 為 NULL）。
+- **`src/pages/ChatPage.tsx`** — stale comment 提到 "CHECK constraint default"（已不存在）
+  簡化為 mode rip-out 描述。
+- **`src/pages/NewTripPage.tsx`** — 移除 dead code `ownerEmail` 變數 + POST body
+  `owner` 欄位（v2.20.0 V2 cutover 後 `functions/api/trips.ts` POST handler 完全
+  用 `auth.userId`，body.owner 從未被讀取）。
+- **`scripts/daily-report.js`** — SQL `pois.google_rating` → `pois.rating`
+  （migration 0045 rename，原本 daily-check 此項會 SQL error 中靜默失敗）。
+- **tp-request skill spec** (`.claude/.codex` 鏡像同步):
+  - 刪除 `reply-format.md` DX-C2 整段「reply footer」規範與 actions_taken JSON 範例
+    （與 `sanitizeReply` 安全防線衝突，footer 機制 drop）。
+  - 刪除 `SKILL.md` step 3c-bis「Audit log via actions_taken column」整段。
+- **tp-create skill** `references/browse-rating-script.md` — POI 評分 PATCH body
+  從 `{ google_rating: X.X }` 改成 `{ rating: X.X }`（API 白名單只認 rating，舊欄名
+  會被 silent drop 導致 400「無有效欄位可更新」）。
+- **tp-quality-rules skill** R16 改寫：`pois.maps` 已 DROP，hotel POI 改建議檢查
+  `lat`+`lng`（frontend 透過 mapsUrl helper 衍生 Google Maps URL）+ `address`。
+- **tp-patch skill** description / `--field` arg：`google_rating` 改 `rating`，明確
+  標註「不接受 google_rating 別名」防止 LLM 誤用。
+
+### Removed
+
+- `.agents/` 整個本地 skill mirror 目錄（gitignored，3.2 MB；已不再使用，相關內容
+  從 `.claude/` 同步來，需要時可重建）。
+
+### Deploy runbook
+
+⚠️ **順序很重要**（避免 race condition：CF Pages auto-deploy 與 D1 migration apply
+不是 atomic，反序會在新 code 與舊 schema 之間留 NOT NULL violation 窗口）：
+
+1. `bash scripts/backup-prod-d1.sh` — 完整備份（排除 log tables）。
+2. `wrangler d1 time-travel bookmark create trip-planner-db --json | tee bookmark.json`
+3. **先 apply migration**：`wrangler d1 migrations apply trip-planner-db --remote`
+   （此時 mode 變 nullable，舊 worker 仍寫 `mode='trip-plan'` 也滿足 schema）。
+4. **再 merge PR** → CF Pages auto-deploy 新 code（不寫 mode，DB 為 NULL）。
+5. `/canary` monitor ≥ 1 hr，觀察 prod 5xx + console errors。
+6. Phase 2 follow-up PR：DROP COLUMN mode（soak ≥ 24 hr 後）。
+
 ## [2.21.1] - 2026-05-04
 
 **v2.21.0 deferred cleanup** — 完成 v2.21.0 PR 末尾留的 deferred follow-up：server-side
