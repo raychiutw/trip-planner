@@ -176,15 +176,15 @@
 
 ## 17. DESIGN.md 廢除 asymmetric labels + favorites rename
 
-- [ ] 17.1 修改 `DESIGN.md` L298 廢除 asymmetric labels 段落：刪除「DesktopSidebar label 用『我的收藏』...asymmetric labels intentional」描述，改為「DesktopSidebar 與 GlobalBottomNav 第 4 slot label 統一『收藏』，ownership 語意由 PoiFavoritesPage hero eyebrow 補回」
-- [ ] 17.2 修改 `DESIGN.md` L259 TitleBar 文字「我的收藏」→「收藏」
-- [ ] 17.3 修改 `DESIGN.md` L317 路由表 `/saved`、`/saved-pois/:id/add-to-trip` → `/favorites`、`/favorites/:id/add-to-trip`
-- [ ] 17.4 修改 `DESIGN.md` L484 SavedPoisPage 收藏批次刪除 → PoiFavoritesPage
-- [ ] 17.5 修改 `DESIGN.md` L565-657 整段「saved_pois universal pool」rename 為「poi_favorites universal pool」+ table/api/route 全 rename
-- [ ] 17.6 補進 batch flow delete-only 規範（取代既有「per-card 加入行程 →」與多選 toolbar 並存的描述）
-- [ ] 17.7 補進 PoiFavoritesPage 8-state matrix（取代原 5-state）
-- [ ] 17.8 補進 viewport breakpoints 規範（1024+ 3-col / 640-1023 2-col / <430 1-col）
-- [ ] 17.9 補進 a11y 規範（role="group" + aria-pressed + aria-label per row + aria-live）
+- [x] 17.1 ~~修改 `DESIGN.md` L298 廢除 asymmetric labels 段落~~ 已落地：「DesktopSidebar 與 GlobalBottomNav 第 4 slot 統一『收藏』label，ownership 語意由 PoiFavoritesPage hero eyebrow 補回」🟢
+- [x] 17.2 ~~修改 `DESIGN.md` TitleBar 文字「我的收藏」→「收藏」~~ L259 + L297 + L633 已對齊；hero eyebrow 仍保留「我的收藏」+ count 補回 ownership 語意 🟢
+- [x] 17.3 ~~修改 `DESIGN.md` 路由表 `/saved`/`/saved-pois/:id/add-to-trip` → `/favorites`/`/favorites/:id/add-to-trip`~~ L181 + L257 + L260 + L580 + L602 已對齊 🟢
+- [x] 17.4 ~~SavedPoisPage 規格 → PoiFavoritesPage 規格~~ L629 標題 + 內文 grid 描述全 rename 🟢
+- [x] 17.5 ~~整段「saved_pois universal pool」rename 為「poi_favorites universal pool」+ table/api/route 全 rename~~ L573-580 + L635 + L643 + L652 + L653 全對齊；L620-621 標歷史描述註記 🟢
+- [x] 17.6 ~~補進 batch flow delete-only 規範~~ L639-643 新增「Batch flow（DUC1 sign-off — delete-only）」段落 + L638 Batch toolbar slot 行明確「不支援 batch add-to-trip」🟢
+- [x] 17.7 ~~補進 PoiFavoritesPage 8-state matrix~~ L645-654 8-state 表（loading / empty-pool / filter-no-results / error / data / optimistic-delete / bulk-action-busy / pagination）取代原 5-state 🟢
+- [x] 17.8 ~~補進 viewport breakpoints 規範~~ L656-660 viewport 表（≥1024 3-col / 640-1023 2-col / <430 1-col）🟢
+- [x] 17.9 ~~補進 a11y 規範~~ L662-665 a11y 段落（role="group" + aria-pressed + aria-label per row + aria-live）🟢
 
 ## 18. .dev.vars.example + 其他 doc
 
