@@ -21,8 +21,7 @@
  * Telegram report on completion:
  *   ✅ Backfilled N POI: X active / Y closed / Z missing
  */
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { loadCronEnv, makeApiClient, alertTelegram, sleep } from './_lib/cron-shared';
 
 interface PoiRow {
   id: number;
@@ -53,62 +52,8 @@ interface EnrichResult {
 const DAILY_QUOTA = 50;
 const SLEEP_MS = 1500;
 
-function loadEnv(): { apiUrl: string; token: string } {
-  const envPath = join(process.cwd(), '.env.local');
-  const raw = (() => {
-    try { return readFileSync(envPath, 'utf-8'); } catch { return ''; }
-  })();
-  const map = new Map<string, string>();
-  for (const line of raw.split('\n')) {
-    if (!line || line.startsWith('#')) continue;
-    const idx = line.indexOf('=');
-    if (idx < 0) continue;
-    map.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim().replace(/^"|"$/g, ''));
-  }
-  const apiUrl = (process.env.TRIPLINE_API_URL || map.get('TRIPLINE_API_URL') || '').trim();
-  const token = (process.env.TRIPLINE_API_TOKEN || map.get('TRIPLINE_API_TOKEN') || '').trim();
-  if (!apiUrl || !token) {
-    throw new Error('Required env: TRIPLINE_API_URL + TRIPLINE_API_TOKEN');
-  }
-  return { apiUrl, token };
-}
-
-async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const { apiUrl, token } = ENV;
-  const res = await fetch(`${apiUrl}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`${method} ${path} → ${res.status}: ${text.slice(0, 200)}`);
-  }
-  return (await res.json()) as T;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-async function alertTelegram(msg: string): Promise<void> {
-  const tok = process.env.TELEGRAM_BOT_TOKEN || '';
-  const chat = process.env.TELEGRAM_CHAT_ID || '';
-  if (!tok || !chat) {
-    console.log('[Telegram skipped — TELEGRAM_BOT_TOKEN/CHAT_ID not set]');
-    return;
-  }
-  await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chat, text: msg }),
-  }).catch(() => undefined);
-}
-
-const ENV = loadEnv();
+const ENV = loadCronEnv();
+const api = makeApiClient(ENV);
 
 async function main(): Promise<void> {
   const args = new Set(process.argv.slice(2));

@@ -64,8 +64,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     .all<HealthRow>();
 
   const items = results || [];
-  const closed = items.filter((r) => r.status === 'closed').length;
-  const missing = items.filter((r) => r.status === 'missing').length;
+  let closed = 0;
+  let missing = 0;
+  for (const r of items) {
+    if (r.status === 'closed') closed++;
+    else if (r.status === 'missing') missing++;
+  }
 
   return new Response(
     JSON.stringify({ version: 1, closed, missing, items }),

@@ -17,15 +17,12 @@
  *     "last_backfill_run_at": ISO timestamp | null
  *   }
  */
-import { AppError } from '../_errors';
-import { requireAuth } from '../_auth';
+
+import { requireAdmin } from '../_auth';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = requireAuth(context);
-  if (!auth.isAdmin) {
-    throw new AppError('PERM_ADMIN_ONLY');
-  }
+  requireAdmin(context);
 
   const db = context.env.DB;
 

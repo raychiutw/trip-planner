@@ -68,12 +68,16 @@ const PAST_FG = '#C1C1C1';
 
 /**
  * markerIcon — build google.maps.Marker icon + label options.
- *
- * 用 google.maps.SymbolPath.CIRCLE 圓形 marker + label 顯數字。
- * dayColor 套 idle marker fill border；active 用 accent；past 用 muted。
- *
- * Exported 供 unit test 用（tests/unit/ocean-map-imperative-effects.test.tsx）。
+ * dayColor 套 idle marker；active 用 accent；past 用 muted。Exported for unit tests.
  */
+type MarkerState = 'focused' | 'past' | 'idle';
+
+const STATE_COLORS: Record<MarkerState, { fill: string; stroke: string; text: string }> = {
+  focused: { fill: ACCENT_COLOR, stroke: ACCENT_FG, text: ACCENT_FG },
+  past:    { fill: IDLE_BG,      stroke: PAST_BORDER, text: PAST_FG },
+  idle:    { fill: IDLE_BG,      stroke: IDLE_BORDER, text: IDLE_FG },
+};
+
 export function markerIcon(
   pin: MapPin,
   isFocused: boolean,
@@ -84,40 +88,27 @@ export function markerIcon(
   label: google.maps.MarkerLabel;
   zIndex?: number;
 } {
-  const size = isFocused ? 18 : 14;
-  let fillColor: string;
-  let strokeColor: string;
-  let textColor: string;
-
-  if (isFocused) {
-    fillColor = ACCENT_COLOR;
-    strokeColor = ACCENT_FG;
-    textColor = ACCENT_FG;
-  } else if (isPast) {
-    fillColor = IDLE_BG;
-    strokeColor = PAST_BORDER;
-    textColor = PAST_FG;
-  } else {
-    fillColor = IDLE_BG;
-    strokeColor = dayCol || IDLE_BORDER;
-    textColor = dayCol || IDLE_FG;
-  }
+  const state: MarkerState = isFocused ? 'focused' : isPast ? 'past' : 'idle';
+  const base = STATE_COLORS[state];
+  // dayCol overrides idle stroke + text only — focused/past keep their tokens.
+  const stroke = state === 'idle' && dayCol ? dayCol : base.stroke;
+  const text = state === 'idle' && dayCol ? dayCol : base.text;
 
   return {
     icon: {
       path: google.maps.SymbolPath.CIRCLE,
-      scale: size,
-      fillColor,
+      scale: isFocused ? 18 : 14,
+      fillColor: base.fill,
       fillOpacity: 1,
-      strokeColor,
+      strokeColor: stroke,
       strokeWeight: isFocused ? 2 : 1.5,
     },
     label: {
       text: String(pin.index),
-      color: textColor,
+      color: text,
       fontSize: isFocused ? '13px' : '12px',
       fontWeight: '700',
-      fontFamily: "Inter, sans-serif",
+      fontFamily: 'Inter, sans-serif',
     },
     zIndex: isFocused ? 1000 : undefined,
   };

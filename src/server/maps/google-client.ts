@@ -40,6 +40,9 @@ function fail(detail: string): never {
   throw new AppError('MAPS_UPSTREAM_FAILED', detail);
 }
 
+/** Google Places business_status enum (3 values per Places API spec). */
+export type GoogleBusinessStatus = 'OPERATIONAL' | 'CLOSED_TEMPORARILY' | 'CLOSED_PERMANENTLY';
+
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -71,8 +74,7 @@ export interface PlacesSearchTextResult {
   country_name?: string;
   /** Google rating 1-5, optional */
   rating?: number;
-  /** business_status: 'OPERATIONAL' / 'CLOSED_TEMPORARILY' / 'CLOSED_PERMANENTLY' */
-  business_status?: string;
+  business_status?: GoogleBusinessStatus;
 }
 
 interface PlacesSearchTextResponse {
@@ -152,7 +154,7 @@ export async function searchPlaces(
         country: country?.shortText?.toUpperCase(),
         country_name: country?.longText,
         rating: p.rating,
-        business_status: p.businessStatus,
+        business_status: p.businessStatus as GoogleBusinessStatus | undefined,
       };
     });
 }
@@ -168,8 +170,7 @@ export interface PlaceDetailsResult {
   lat: number;
   lng: number;
   rating?: number;
-  /** 'OPERATIONAL' / 'CLOSED_TEMPORARILY' / 'CLOSED_PERMANENTLY' */
-  business_status: string;
+  business_status: GoogleBusinessStatus;
   /** Open hours weekday descriptions, e.g. ["週一: 11:00 – 22:00", ...] */
   weekday_descriptions?: string[];
   phone?: string;
@@ -237,7 +238,7 @@ export async function getPlaceDetails(
     lat: json.location!.latitude,
     lng: json.location!.longitude,
     rating: json.rating,
-    business_status: json.businessStatus || 'OPERATIONAL',
+    business_status: (json.businessStatus as GoogleBusinessStatus | undefined) || 'OPERATIONAL',
     weekday_descriptions: json.regularOpeningHours?.weekdayDescriptions,
     phone: json.internationalPhoneNumber,
   };

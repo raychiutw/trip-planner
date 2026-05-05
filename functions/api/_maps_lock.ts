@@ -53,12 +53,13 @@ export async function readLockState(db: D1Database): Promise<LockState> {
          WHERE key IN ('google_maps_locked', 'google_maps_locked_reason')`,
       )
       .all<{ key: string; value: string }>();
-    const map = new Map(row.results.map((r) => [r.key, r.value]));
-    const next: LockState = {
-      locked: map.get('google_maps_locked') === 'true',
-      reason: map.get('google_maps_locked_reason') || '',
-      fetched_at: now,
-    };
+    let locked = false;
+    let reason = '';
+    for (const r of row.results) {
+      if (r.key === 'google_maps_locked') locked = r.value === 'true';
+      else if (r.key === 'google_maps_locked_reason') reason = r.value;
+    }
+    const next: LockState = { locked, reason, fetched_at: now };
     cachedState = next;
     return next;
   } catch {
@@ -86,4 +87,47 @@ export async function assertGoogleAvailable(db: D1Database): Promise<void> {
  */
 export function invalidateLockCache(): void {
   cachedState = null;
+}
+
+/**
+ * Atomic lock-state write: UPSERT app_settings rows + invalidate cache + audit_log.
+ * Used by both /api/admin/maps-lock and /api/admin/maps-unlock — keeps the three
+ * step sequence (DB write → cache invalidate → audit) consistent + idempotent.
+ *
+ * UPSERT (INSERT ON CONFLICT DO UPDATE) is mandatory: migration 0051 seeds the
+ * rows but a partial seed / manual cleanup would leave plain UPDATE as silent
+ * no-op while audit_log records a state change that didn't happen.
+ */
+export async function setLockState(
+  db: D1Database,
+  locked: boolean,
+  opts: { actor: string; reason: string },
+): Promise<{ at: string; previousReason: string }> {
+  const at = new Date().toISOString();
+  const reason = locked ? opts.reason.slice(0, 200) : '';
+
+  const prev = await db
+    .prepare(`SELECT value FROM app_settings WHERE key='google_maps_locked_reason'`)
+    .first<{ value: string }>();
+
+  await db.batch([
+    db.prepare(
+      `INSERT INTO app_settings (key, value, updated_at, updated_by, note)
+       VALUES ('google_maps_locked', ?, ?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, updated_by=excluded.updated_by, note=excluded.note`,
+    ).bind(locked ? 'true' : 'false', at, opts.actor, locked ? reason : 'manual unlock'),
+    db.prepare(
+      `INSERT INTO app_settings (key, value, updated_at, updated_by)
+       VALUES ('google_maps_locked_reason', ?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, updated_by=excluded.updated_by`,
+    ).bind(reason, at, opts.actor),
+    db.prepare(
+      `INSERT INTO app_settings (key, value, updated_at, updated_by)
+       VALUES ('google_maps_locked_at', ?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, updated_by=excluded.updated_by`,
+    ).bind(locked ? at : '', at, opts.actor),
+  ]);
+
+  invalidateLockCache();
+  return { at, previousReason: prev?.value || '' };
 }

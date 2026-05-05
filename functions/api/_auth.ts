@@ -16,6 +16,15 @@ export function requireAuth(context: { data: unknown }): AuthData {
 }
 
 /**
+ * Admin-only gate. Returns AuthData or throws AUTH_REQUIRED / PERM_ADMIN_ONLY.
+ */
+export function requireAdmin(context: { data: unknown }): AuthData {
+  const auth = requireAuth(context);
+  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
+  return auth;
+}
+
+/**
  * Returns true if the authenticated user has any permission row on the given trip
  * (read access). Admins and service tokens always pass. viewer / member / owner /
  * admin roles all return true — viewer is read-allowed.
