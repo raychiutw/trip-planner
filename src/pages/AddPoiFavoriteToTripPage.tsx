@@ -57,10 +57,14 @@ function tripDisplayName(t: TripBrief): string {
 }
 
 const SCOPED_STYLES = `
+/* page wrapper: 防 mobile 手指 horizontal scroll 出 viewport
+   （grid item min-width: auto 預設會被 child content 撐爆 grid track，連帶 page 可左右滑）。
+   overflow-x: clip 比 hidden 好（不創 scroll context、不影響 sticky positioning）。 */
 .tp-favorites-add-to-trip {
   display: flex; flex-direction: column; gap: 16px;
   max-width: 720px; width: 100%; margin: 0 auto;
   padding: 16px;
+  overflow-x: clip;
 }
 @media (max-width: 760px) {
   .tp-favorites-add-to-trip { padding: 12px; gap: 14px; }
@@ -82,10 +86,15 @@ const SCOPED_STYLES = `
 .tp-favorites-add-to-trip .tp-form-poi-summary-title {
   font-size: var(--font-size-callout); font-weight: 700;
   color: var(--color-foreground);
+  /* 長 POI 名（中文沒空格 break 點）會把 flex 容器撐爆 → 觸發 page horizontal scroll */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .tp-favorites-add-to-trip .tp-form-poi-summary-meta {
   font-size: var(--font-size-footnote);
   color: var(--color-muted);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Form */
@@ -103,6 +112,9 @@ const SCOPED_STYLES = `
 
 .tp-favorites-add-to-trip .tp-form-field {
   display: flex; flex-direction: column; gap: 6px;
+  /* grid item 預設 min-width: auto — 子 select/input 內含長 text（如 trip name）
+     會把 grid track 撐爆 viewport。設 min-width: 0 讓 grid track 縮回 1fr 大小。 */
+  min-width: 0;
 }
 .tp-favorites-add-to-trip .tp-form-label {
   font-size: var(--font-size-footnote); font-weight: 600;
