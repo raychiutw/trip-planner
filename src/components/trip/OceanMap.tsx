@@ -372,6 +372,8 @@ const OceanMap = memo(function OceanMap({
       marker.addTo(layer);
       markers.set(pin.id, marker);
     }
+    // marker rebuild 後 focus useEffect 立即跑（同 render cycle），會把 focused pin 的
+    // zIndexOffset 設 1000（其他維持 0）— 不需在此預先 set。
     markersRef.current = markers;
     return () => {
       layer.remove();
@@ -419,7 +421,11 @@ const OceanMap = memo(function OceanMap({
       const marker = markers.get(pinId);
       const pin = visiblePinsById.get(pinId);
       if (!marker || !pin) continue;
-      marker.setIcon(markerIcon(pin, pinId === focusId, isPastPin(pinId), pinIdToDayColor.get(pinId)));
+      const isFocused = pinId === focusId;
+      marker.setIcon(markerIcon(pin, isFocused, isPastPin(pinId), pinIdToDayColor.get(pinId)));
+      // Raise focused marker above all others（防被 overlapping markers 蓋住）。
+      // Leaflet 預設 zIndexOffset=0；正值即覆蓋同 lat 上的 markers。
+      marker.setZIndexOffset(isFocused ? 1000 : 0);
     }
 
     prevFocusRef.current = { focusId, focusedIdx, markers };
