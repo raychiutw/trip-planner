@@ -277,11 +277,15 @@ export default function AddPoiFavoriteToTripPage() {
     return () => { cancelled = true; };
   }, [tripId]);
 
-  // input type=time 已強制 HH:MM 格式，前端不再重複校驗（後端仍以 TIME_RE 守底）
+  // 後端 TIME_RE 同 functions/api/_poi-defaults.ts；前端 defense-in-depth，
+  // 防 legacy browser 把 type=time 退回 text、autofill 注入非 HH:MM、或測試直接 setState 髒值。
+  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const canSubmit = useMemo(() => {
     if (!favorite || !tripId || dayNum === '' || daysLoading || submitting) return false;
+    if (startTime && !TIME_RE.test(startTime)) return false;
+    if (endTime && !TIME_RE.test(endTime)) return false;
     return true;
-  }, [favorite, tripId, dayNum, daysLoading, submitting]);
+  }, [favorite, tripId, dayNum, daysLoading, startTime, endTime, submitting]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;

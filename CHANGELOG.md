@@ -24,8 +24,9 @@ companion-resolver 全綠。
   避免 listener 在每次 refresh toggle 時 re-attach。`setPullPx(0)` 三處加 `pullRef.current !== 0`
   guard，touchmove 60Hz 觸發路徑避免無變化的 re-render。
 - `AddPoiFavoriteToTripPage.tsx`：`POI_TYPE_LABEL` 移到 `src/lib/poiCategory.ts` 統一
-  zh-TW labels；`<input type=time>` 已強制 HH:MM 格式 + 後端 TIME_RE 守底，drop 前端
-  duplicate regex；nested ternary `err.message` 收斂成單層。
+  zh-TW labels；nested ternary `err.message` 收斂成單層。
+- 兩個 429 rate-limit response 透過 `buildRateLimitResponse` 多帶 `cache-control: no-store`
+  header（避免下游 cache 把 retry-after 響應留住）；既有 `Retry-After` 行為不變。
 
 ### Removed
 
