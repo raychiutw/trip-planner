@@ -25,12 +25,17 @@ interface UsePoiSearchResult {
   searching: boolean;
 }
 
-/** Schema guard — discard rows missing required fields (osm_id + name + lat + lng). */
+/**
+ * Schema guard — discard rows missing required fields (place_id + name + lat + lng).
+ *
+ * v2.23.0 google-maps-migration: osm_id (number) → place_id (string Google canonical id).
+ */
 function isValidPoi(row: unknown): row is PoiSearchResult {
   if (!row || typeof row !== 'object') return false;
   const r = row as Record<string, unknown>;
   return (
-    typeof r.osm_id === 'number'
+    typeof r.place_id === 'string'
+    && r.place_id.length > 0
     && typeof r.name === 'string'
     && typeof r.lat === 'number'
     && typeof r.lng === 'number'

@@ -1,57 +1,32 @@
 /**
- * MapFabs — Section 4.10 (terracotta-mockup-parity-v2)
+ * MapFabs — Section 4.10 (terracotta-mockup-parity-v2 + v2.23.0 google-maps-migration)
  *
- * 對應 mockup section 20。MapPage 右下角 FAB stack 兩顆 button：
- *   1. 圖層切換：popover 給 街道 / 衛星 / 地形 3 選項，click → swap Leaflet
- *      tile layer (instance.eachLayer 找 L.TileLayer remove + 新 add)
- *   2. 我的位置：navigator.geolocation 取座標 → map.flyTo + 顯示一顆 user marker
+ * MapPage 右下角 FAB stack 兩顆 button：
+ *   1. 圖層切換：popover 給 路線圖 / 衛星 / 混合 3 選項，click → google maps setMapTypeId
+ *   2. 我的位置：navigator.geolocation 取座標 → map.panTo + 顯示一顆 user marker
  *
- * 為了不直接耦合 Leaflet API，本 component 收 `map: L.Map | null` prop（由
- * MapPage 透過 OceanMap 既有 onMapReady 拉出來）。當 map 為 null（還沒 mount）
- * FAB 被 disable。
+ * v2.23.0: Leaflet → Google Maps JS API。preset 改用 google.maps.MapTypeId。
+ *
+ * 收 `map: google.maps.Map | null` prop（由 OceanMap 既有 onMapReady 拉出來）。
+ * 當 map 為 null（還沒 mount）FAB 被 disable。
  */
 import { useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
 import Icon from '../shared/Icon';
 import { showToast } from '../shared/Toast';
 
-export type MapTileStyle = 'street' | 'satellite' | 'terrain';
+export type MapTileStyle = 'roadmap' | 'satellite' | 'hybrid';
 
 interface TilePreset {
   key: MapTileStyle;
   label: string;
-  url: string;
-  attribution: string;
-  subdomains?: string;
-  maxZoom: number;
+  /** Google MapTypeId enum 對應 string ('roadmap' / 'satellite' / 'hybrid'). */
+  mapTypeId: string;
 }
 
 const TILE_PRESETS: TilePreset[] = [
-  {
-    key: 'street',
-    label: '街道',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    subdomains: 'abc',
-    maxZoom: 19,
-  },
-  {
-    key: 'satellite',
-    // Esri World Imagery — 公開不需 token，給 demo 用；prod scaling 需自家 key。
-    label: '衛星',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-    maxZoom: 19,
-  },
-  {
-    key: 'terrain',
-    // OpenTopoMap — OSM-based topographic, 需 attribution。
-    label: '地形',
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
-    subdomains: 'abc',
-    maxZoom: 17,
-  },
+  { key: 'roadmap',   label: '路線圖', mapTypeId: 'roadmap' },
+  { key: 'satellite', label: '衛星',   mapTypeId: 'satellite' },
+  { key: 'hybrid',    label: '混合',   mapTypeId: 'hybrid' },
 ];
 
 const SCOPED_STYLES = `
@@ -107,17 +82,17 @@ const SCOPED_STYLES = `
 `;
 
 export interface MapFabsProps {
-  map: L.Map | null;
+  map: google.maps.Map | null;
   /** Default style on mount. */
   initialStyle?: MapTileStyle;
 }
 
-export default function MapFabs({ map, initialStyle = 'street' }: MapFabsProps) {
+export default function MapFabs({ map, initialStyle = 'roadmap' }: MapFabsProps) {
   const [style, setStyle] = useState<MapTileStyle>(initialStyle);
   const [open, setOpen] = useState(false);
   const [locating, setLocating] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const userMarkerRef = useRef<L.CircleMarker | null>(null);
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -138,18 +113,7 @@ export default function MapFabs({ map, initialStyle = 'street' }: MapFabsProps) 
     }
     const preset = TILE_PRESETS.find((p) => p.key === next);
     if (!preset) return;
-    // 移除既有 tile layer
-    const existing: L.TileLayer[] = [];
-    map.eachLayer((layer) => {
-      if (layer instanceof L.TileLayer) existing.push(layer);
-    });
-    existing.forEach((t) => map.removeLayer(t));
-    // 加新 tile layer
-    L.tileLayer(preset.url, {
-      attribution: preset.attribution,
-      subdomains: preset.subdomains ?? 'abc',
-      maxZoom: preset.maxZoom,
-    }).addTo(map);
+    map.setMapTypeId(preset.mapTypeId);
     setStyle(next);
     setOpen(false);
   }
@@ -164,16 +128,26 @@ export default function MapFabs({ map, initialStyle = 'street' }: MapFabsProps) 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        map.flyTo([latitude, longitude], 14, { duration: 0.6 });
+        const latLng = new google.maps.LatLng(latitude, longitude);
+        map.panTo(latLng);
+        map.setZoom(14);
         // 換掉舊 marker 或新增
-        if (userMarkerRef.current) map.removeLayer(userMarkerRef.current);
-        userMarkerRef.current = L.circleMarker([latitude, longitude], {
-          radius: 8,
-          color: 'var(--color-accent)',
-          fillColor: 'var(--color-accent)',
-          fillOpacity: 0.85,
-          weight: 3,
-        }).addTo(map);
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setMap(null);
+        }
+        userMarkerRef.current = new google.maps.Marker({
+          map,
+          position: latLng,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#B85F2A',
+            fillOpacity: 0.85,
+            strokeColor: '#B85F2A',
+            strokeWeight: 3,
+          },
+          title: '我的位置',
+        });
         setLocating(false);
       },
       (err) => {
