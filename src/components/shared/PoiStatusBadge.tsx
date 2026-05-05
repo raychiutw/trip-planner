@@ -43,7 +43,7 @@ const PoiStatusBadgeStyles = `
   display: inline-flex; align-items: center; gap: 4px;
   padding: 2px 8px;
   border-radius: 10px;
-  font-size: 11px; font-weight: 600;
+  font-size: var(--font-size-caption2); font-weight: 600;
   vertical-align: middle;
   white-space: nowrap;
 }

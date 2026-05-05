@@ -16,7 +16,7 @@
  *   - Per-day polyline 按 dayColor(N)，hotel sortOrder=-1 入線（DESIGN.md
  *     「地圖 Polyline 規格」）。
  *   - 點 marker → setSelected → 右側 sheet 顯示 POI detail，flyTo 該 pin。
- *   - 透過 onMapReady 拿 L.Map 實例，給「全覽 / 我的位置」pill button 用。
+ *   - 透過 onMapReady 拿 google.maps.Map 實例，給「全覽 / 我的位置」pill button 用。
  *
  * Sheet（mockup-map-v2 對齊）：
  *   - Header: close（清掉 selectedPinId）+ 跳到行程 accent CTA
@@ -31,7 +31,7 @@
  * useNewTrip().openModal。
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type L from 'leaflet';
+
 import { Link, Navigate } from 'react-router-dom';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { useCurrentUser } from '../hooks/useCurrentUser';
@@ -647,7 +647,7 @@ export default function GlobalMapPage() {
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   // Step 1: fetch my trips + meta on mount.
   useEffect(() => {
@@ -740,7 +740,7 @@ export default function GlobalMapPage() {
     setSelectedPinId(pinId);
   }, []);
 
-  const onMapReady = useCallback((map: L.Map | null) => {
+  const onMapReady = useCallback((map: google.maps.Map | null) => {
     mapRef.current = map;
   }, []);
 
@@ -763,18 +763,20 @@ export default function GlobalMapPage() {
     setSelectedPinId(null);
     const map = mapRef.current;
     if (!map || !resolved || resolved.pins.length === 0) return;
-    const latlngs = resolved.pins.map((p) => [p.lat, p.lng] as [number, number]);
-    map.fitBounds(latlngs, { padding: [40, 40] });
+    const bounds = new google.maps.LatLngBounds();
+    for (const p of resolved.pins) bounds.extend({ lat: p.lat, lng: p.lng });
+    map.fitBounds(bounds, 40);
   }, [resolved]);
 
-  // 我的位置 — navigator.geolocation 取座標 → flyTo。
+  // 我的位置 — navigator.geolocation 取座標 → panTo + zoom。
   // 失敗（denied / unsupported）silent fail，pill button 也不丟錯，只是不動作。
   const locateMe = useCallback(() => {
     const map = mapRef.current;
     if (!map || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        map.setView([pos.coords.latitude, pos.coords.longitude], 14, { animate: true });
+        map.panTo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        map.setZoom(14);
       },
       () => {
         // permission denied / unavailable — silent
@@ -913,7 +915,7 @@ export default function GlobalMapPage() {
                   focusId={selectedPinId ?? undefined}
                   onMarkerClick={onMarkerClick}
                   onMapReady={onMapReady}
-                  zoomControlPosition="topright"
+                  zoomControlPosition="TOP_RIGHT"
                   dark={isDark}
                   className="ocean-map-container"
                 />
