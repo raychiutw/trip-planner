@@ -47,6 +47,7 @@ Think → Plan → Build → Review → Test → Ship → Reflect
 
 | skill | 做什麼 | 何時用 |
 |-------|--------|--------|
+| `/tp-claude-design` | mockup-first hard gate（new page / ≥1 layout 變化）| **不可跳過**（見下方 mockup-first gate） |
 | 寫 code | feature branch + TDD 開發 | **不可跳過** |
 | `/simplify` | 3 agent 平行審查（reuse / quality / efficiency） | **不可跳過** — Build 完必跑 |
 | `/codex` | OpenAI Codex 獨立審查 / adversarial challenge | 需要 cross-model 意見時 |
@@ -57,6 +58,29 @@ git checkout -b feat/描述  # 或 fix/描述
 
 **Build 順序指引（多元件變更時）：**
 1. Migration → 2. API handler → 3. Frontend → 4. Scripts/infra
+
+#### Mockup-first hard gate（UC3 / DX-F4，v2.22.0 起 systematic）
+
+**所有 new page / new component（≥1 layout 變化）→ 必須先做 mockup → user sign-off → 才寫 React。**
+
+| 觸發條件 | Gate 行為 |
+|----------|-----------|
+| New page（新 route + 全新 layout）| invoke `/tp-claude-design` 產 HTML mockup → user sign-off → TDD test → 寫 React |
+| New component（≥1 layout 變化、自製 wrapper / 新 sub-section）| 同上 |
+| Re-design（既有 page 全面改寫，影響 ≥2 region 或 ≥1 state）| 同上 |
+| Bug fix / token drift / 純 prop tweak | **例外** — 不需 mockup，直接走 TDD |
+
+**為何**：避免「LLM 寫完 React 才回頭改 layout」的反向 pipeline；mockup → user sign-off → spec / code 三方對齊，省下回頭重寫的 turnaround。
+
+**何時跳**：bug fix / config 調整 / typo 修正 / 純 token 對齊（無 layout 變化）。
+
+**對齊範例**（v2.22.0 PoiFavoritesPage redesign）：
+1. `/tp-claude-design` 產 `docs/design-sessions/2026-05-04-favorites-redesign.html`（4 輪 iteration）
+2. user sign-off（2026-05-04，emoji→SVG / TitleBar 規範 / 4-field form / 2-col grid）
+3. DESIGN.md 對齊 mockup（asymmetric labels 廢除 / 8-state matrix / viewport breakpoints / a11y）
+4. 寫 5 個 unit test 紅燈
+5. 重構 React component → 全綠
+6. 不允許「先寫 React 再回頭改 mockup」
 
 ### 4. Review — 程式碼審查
 

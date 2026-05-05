@@ -14,6 +14,7 @@ Cloudflare Pages + D1 + React SPA + V2 OAuth. Admin: lean.lean@gmail.com.
 ## Hard Rules
 
 - **Code change → invoke `/tp-team` first** (新功能、bug fix、refactor、migration、CSS、API endpoint)。行程資料用 `tp-*` data skills 直接打 API。
+- **Mockup-first hard gate**：所有 new page / new component（≥1 layout 變化）→ `/tp-claude-design` 產 HTML mockup → user sign-off → 才寫 React。Bug fix / token drift / 純 prop tweak 例外。
 - Feature branch + PR via `/ship`. Never push master directly.
 - `tp-*` skills hit API, not local files.
 - Agent tool only for worktree isolation.
@@ -51,4 +52,13 @@ Match → invoke `Skill` first.
 - Browse → `/browse`
 
 Detail: `ARCHITECTURE.md`, `GEMINI.md`, `DESIGN.md`, `.claude/skills/tp-team/SKILL.md`.
-Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP, sync=artifacts-only, repo=read-write, see `~/.gbrain/config.json`.
+Prod: https://trip-planner-dby.pages.dev/ · GBrain: pglite + MCP (user scope), sync=full, repo=read-write, 873 pages, setup 2026-05-04. Windows caveat: transcript ingest no-op (script POSIX-only). See `~/.gbrain/config.json`.
+
+## Naming history
+
+- **v2.22.0** (migration 0050): `saved_pois` table → `poi_favorites`; `/saved` route → `/favorites`; `/api/saved-pois` → `/api/poi-favorites`; `SavedPoisPage` → `PoiFavoritesPage`; `AddSavedPoiToTripPage` → `AddPoiFavoriteToTripPage`. Hard cutover, no aliases. CSS class `tp-saved-*` → `tp-favorites-*`. Cross-skill auth header CF-Access → `Authorization: Bearer $TRIPLINE_API_TOKEN`.
+- **v2.21.3** (migration 0049): `trip_requests.mode` column DROPPED. tp-request skill auto-classifies intent.
+- **v2.21.2** (migration 0048): `trip_requests.mode` 改 nullable + drop CHECK constraint (phase 1 of mode rip-out).
+- **v2.21.0** (migration 0046+0047): `trip_ideas` → `saved_pois` universal pool; `trips.owner_email` → `owner_user_id`; `saved_pois.email` / `trip_permissions.email` DROPPED.
+- **v2.20.0** (migration 0046 phase 1): `trip_ideas` table retired; `tp-request mode` rip-out 啟動.
+- **v2.19.x** (migration 0045): `pois.google_rating` → `rating`; `pois.maps` DROPPED; `trips.{auto_scroll,og_description,footer,food_prefs,is_default,self_drive}` DROPPED.

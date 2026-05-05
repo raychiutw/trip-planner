@@ -30,7 +30,7 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
     // 3 tabs
     await expect(page.getByTestId('add-stop-tab-search')).toBeVisible();
-    await expect(page.getByTestId('add-stop-tab-saved')).toBeVisible();
+    await expect(page.getByTestId('add-stop-tab-favorites')).toBeVisible();
     await expect(page.getByTestId('add-stop-tab-custom')).toBeVisible();
     // 5 subtabs (search default tab → 顯示 subtab bar)
     await expect(page.getByTestId('add-stop-subtab-all')).toBeVisible();
@@ -57,7 +57,7 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
 
   test('切到收藏 tab → render 收藏 grid 或 empty state', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
-    await page.getByTestId('add-stop-tab-saved').click();
+    await page.getByTestId('add-stop-tab-favorites').click();
     await expect(page.getByText(/還沒收藏景點/)).toBeVisible();
   });
 

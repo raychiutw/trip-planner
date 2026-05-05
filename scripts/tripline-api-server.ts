@@ -132,13 +132,30 @@ async function patchStatus(
   return true;
 }
 
-function runClaude(): Promise<boolean> {
+async function runClaude(): Promise<boolean> {
+  // v2.22.0：claude /tp-request skill 用 `Authorization: Bearer $TRIPLINE_API_TOKEN`
+  // 寫入 prod API（含 §6/§7/§8/§9 poi-favorites 4 條 path）。.env.local 只有
+  // TRIPLINE_API_CLIENT_ID/SECRET，沒 TOKEN — 必須 mint 後 inject 到 child env，
+  // 否則 skill 內 curl header 是 `Bearer ` (empty) → middleware 401 → skill 處理失敗。
+  let token = '';
+  try {
+    token = await tokenHelper.getToken();
+  } catch (err) {
+    logError(`Token mint 失敗，claude 不啟動：${(err as Error).message}`);
+    return false;
+  }
+
   return new Promise((resolve) => {
     const claudePath = '/Users/ray/.local/bin/claude';
     const proc = spawn(claudePath, ['--dangerously-skip-permissions', '-p', '/tp-request'], {
       cwd: PROJECT_DIR,
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, HOME: process.env.HOME, PATH: `${process.env.PATH}:/Users/ray/.local/bin` },
+      env: {
+        ...process.env,
+        HOME: process.env.HOME,
+        PATH: `${process.env.PATH}:/Users/ray/.local/bin`,
+        TRIPLINE_API_TOKEN: token,
+      },
     });
 
     const MAX_BUF = 10_000; // cap buffer to avoid unbounded memory

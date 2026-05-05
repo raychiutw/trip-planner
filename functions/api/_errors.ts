@@ -37,6 +37,7 @@ const STATUS_MAP: Partial<Record<ErrorCodeType, number>> = {
   SYS_INTERNAL: 500,
   SYS_DB_ERROR: 503,
   SYS_RATE_LIMIT: 429,
+  COMPANION_QUOTA_EXCEEDED: 409,
 };
 
 export class AppError extends Error {

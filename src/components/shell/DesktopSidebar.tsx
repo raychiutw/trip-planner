@@ -3,7 +3,7 @@
  *
  * Desktop primary nav matching terracotta-preview-v2 (v2.21.0):
  *   聊天 / 行程 / 地圖 / 我的收藏
- * 「探索」自 v2.21.0 起降為 /saved 頁右上 secondary action（ghost），不再是 primary nav。
+ * 「探索」自 v2.21.0 起降為 /favorites 頁右上 secondary action（ghost），不再是 primary nav。
  * Anonymous users also see 登入; authenticated account access lives in the
  * bottom account chip to avoid duplicating the Account entry on desktop.
  *
@@ -33,7 +33,7 @@ import Icon from '../shared/Icon';
 import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
-  key: 'chat' | 'trips' | 'map' | 'saved' | 'login';
+  key: 'chat' | 'trips' | 'map' | 'favorites' | 'login';
   label: string;
   href: string;
   icon: string;
@@ -56,17 +56,18 @@ interface NavItemConfig {
 const MAP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+\/map\/?$/, /^\/trip\/[^/]+\/stop\/[^/]+\/map\/?$/];
 const TRIP_ACTIVE_PATTERNS = [/^\/trip\/[^/]+(?:\/?$|\/(?!(?:map|stop\/[^/]+\/map)\/?$).*)/];
 
-// v2.21.0 IA reshuffle: 4th slot 「探索」→「我的收藏」(saved POIs universal pool primary nav).
-// /explore 仍 reachable via /saved TitleBar action; 走到 /explore 時 sidebar 仍 highlight
-// 「我的收藏」(MF11 additionalActivePatterns).
-const SAVED_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/saved-pois\//];
+// poi-favorites-rename: 4th slot 「收藏」(poi_favorites universal pool primary nav).
+// /explore 仍 reachable via /favorites TitleBar action; 走到 /explore 時 sidebar 仍
+// highlight 「收藏」(additionalActivePatterns)；DESIGN.md L298 廢除 asymmetric labels —
+// sidebar 與 bottom-nav 都用「收藏」，ownership 由 PoiFavoritesPage hero eyebrow 補回。
+const FAVORITES_ACTIVE_PATTERNS = [/^\/explore(?:\/|$)/, /^\/favorites\//];
 
 const NAV_ITEMS: ReadonlyArray<NavItemConfig> = [
-  { key: 'chat',    label: '聊天',     href: '/chat',    icon: 'sidebar-chat',    matchPrefixes: ['/chat'] },
-  { key: 'trips',   label: '行程',     href: '/trips',   icon: 'sidebar-trip',    matchPrefixes: ['/trips'], additionalActivePatterns: TRIP_ACTIVE_PATTERNS },
-  { key: 'map',     label: '地圖',     href: '/map',     icon: 'sidebar-map',     matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
-  { key: 'saved',   label: '我的收藏', href: '/saved',   icon: 'heart',           matchPrefixes: ['/saved'], additionalActivePatterns: SAVED_ACTIVE_PATTERNS },
-  { key: 'login',   label: '登入',     href: '/login',   icon: 'sidebar-user',    matchPrefixes: ['/login'], guestOnly: true },
+  { key: 'chat',      label: '聊天', href: '/chat',      icon: 'sidebar-chat', matchPrefixes: ['/chat'] },
+  { key: 'trips',     label: '行程', href: '/trips',     icon: 'sidebar-trip', matchPrefixes: ['/trips'], additionalActivePatterns: TRIP_ACTIVE_PATTERNS },
+  { key: 'map',       label: '地圖', href: '/map',       icon: 'sidebar-map',  matchPrefixes: ['/map'], exactOnly: true, additionalActivePatterns: MAP_ACTIVE_PATTERNS },
+  { key: 'favorites', label: '收藏', href: '/favorites', icon: 'heart',        matchPrefixes: ['/favorites'], additionalActivePatterns: FAVORITES_ACTIVE_PATTERNS },
+  { key: 'login',     label: '登入', href: '/login',     icon: 'sidebar-user', matchPrefixes: ['/login'], guestOnly: true },
 ];
 
 function isItemActive(pathname: string, item: NavItemConfig): boolean {
