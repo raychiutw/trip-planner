@@ -118,10 +118,10 @@ test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
     await expect.poll(() => savedPosts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
     // v2.21.0: TitleBar action 「收藏」 navigate to /favorites (was: in-page tab toggle)
-    await page.getByTestId('explore-saved-titlebar').click();
+    await page.getByTestId('explore-favorites-titlebar').click();
     await page.waitForURL(/\/favorites$/, { timeout: 5000 });
-    await expect(page.getByTestId('saved-page')).toBeVisible();
-    await expect(page.getByTestId('saved-count')).toContainText('1 個');
+    await expect(page.getByTestId('favorites-page')).toBeVisible();
+    await expect(page.getByTestId('favorites-count')).toContainText('1 個');
     await expect(page.getByText('沖繩美麗海水族館').first()).toBeVisible();
   });
 });
@@ -146,17 +146,17 @@ test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
     ]);
 
     // Step 2: v2.22.0 TitleBar action navigate to /favorites (was in-page tab toggle)
-    await page.getByTestId('explore-saved-titlebar').click();
+    await page.getByTestId('explore-favorites-titlebar').click();
     await page.waitForURL(/\/favorites$/, { timeout: 5000 });
-    await expect(page.getByTestId('saved-page')).toBeVisible();
-    await expect(page.getByTestId('saved-count')).toContainText('1 個');
+    await expect(page.getByTestId('favorites-page')).toBeVisible();
+    await expect(page.getByTestId('favorites-count')).toContainText('1 個');
 
     // Step 3: 勾選第一張卡
-    const firstCheck = page.locator('[data-testid^="saved-check-"]').first();
+    const firstCheck = page.locator('[data-testid^="favorites-check-"]').first();
     await firstCheck.check();
 
     // toolbar 出現「刪除」 button
-    const deleteBtn = page.getByTestId('saved-delete-selected');
+    const deleteBtn = page.getByTestId('favorites-delete-selected');
     await expect(deleteBtn).toBeEnabled();
     await deleteBtn.click();
 
@@ -167,7 +167,7 @@ test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
 
     // 等 DELETE 發出 + empty CTA 出現
     await expect.poll(() => deletes.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
-    await expect(page.getByTestId('saved-empty')).toBeVisible();
+    await expect(page.getByTestId('favorites-empty')).toBeVisible();
   });
 });
 

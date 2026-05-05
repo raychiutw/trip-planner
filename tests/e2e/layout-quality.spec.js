@@ -47,7 +47,10 @@ test.describe('Layout quality gates', () => {
     await expect(firstRow).toBeVisible();
   });
 
-  test('mobile Explore can save a POI and send selected saved POIs to a trip', async ({ page }) => {
+  // v2.22.0 (poi-favorites-rename DUC1)：batch toolbar 改 delete-only，
+  // 「multi-select 後 batch send to trip」概念已廢；per-card「加入行程 →」link
+  // 是唯一 add-to-trip 入口（testid `favorites-add-to-trip-{id}`）。
+  test('mobile Explore save POI → /favorites per-card add-to-trip link', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/explore');
     await expect(page.getByTestId('explore-page')).toBeVisible();
@@ -56,18 +59,12 @@ test.describe('Layout quality gates', () => {
     await page.getByTestId('explore-search-submit').click();
     await expect(page.getByTestId('explore-results')).toContainText('沖繩美麗海水族館');
     await page.getByTestId('explore-save-btn-90001').click();
-    // Section 4.9 (terracotta-mockup-parity-v2): heart button 是 icon-only，
-    // saved 狀態用 aria-label「已儲存」 + .is-saved class，不是 text content
     await expect(page.getByTestId('explore-save-btn-90001')).toHaveClass(/is-saved/);
 
-    // v2.21.0: TitleBar 「收藏」 action navigate to /favorites (was in-page tab toggle)
-    await page.getByTestId('explore-saved-titlebar').click();
-    await page.waitForURL(/\/favorites$/, { timeout: 5000 });
-    await expect(page.getByTestId('saved-card-8001')).toBeVisible();
-    await page.getByTestId('saved-check-8001').check();
-    await page.getByTestId('saved-add-to-trip').click();
-    await page.getByTestId(`explore-trip-pick-${TRIP_ID}`).click();
-
-    await expect(page).toHaveURL(new RegExp(`/trips\\?selected=${TRIP_ID}`));
+    await page.goto('/favorites');
+    await expect(page.getByTestId('favorites-card-8001')).toBeVisible();
+    // per-card add-to-trip link 是唯一 entry（DUC1 batch delete-only）
+    await expect(page.getByTestId('favorites-add-to-trip-8001'))
+      .toHaveAttribute('href', '/favorites/8001/add-to-trip');
   });
 });
