@@ -23,6 +23,18 @@ const POI_TYPE_WHITELIST = [
 
 export type PoiType = (typeof POI_TYPE_WHITELIST)[number];
 
+/** zh-TW labels for POI types — used by /favorites + /favorites/:id/add-to-trip */
+export const POI_TYPE_LABELS: Record<PoiType, string> = {
+  restaurant: '餐廳',
+  attraction: '景點',
+  shopping: '購物',
+  hotel: '飯店',
+  parking: '停車',
+  transport: '交通',
+  activity: '活動',
+  other: '其他',
+};
+
 /**
  * Nominatim category（OSM `class`）→ Tripline poi_type whitelist。
  * Fallback 'attraction'（最常見）— 已知 raw values 對應到 hotel/restaurant

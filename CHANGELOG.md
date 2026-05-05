@@ -3,6 +3,41 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.22.1] - 2026-05-05
+
+**poi-favorites-rename simplify pass — helper extraction + dead code + perf nits** —
+Internal cleanup riding on top of v2.22.0。零行為變化，1378 unit + 42 integration + 22
+companion-resolver 全綠。
+
+### Changed
+
+- **`functions/api/_companion.ts`** 抽出 `pickFavoriteRateLimitBucket` + `assertFavoriteOwnership`
+  shared helpers，3 個 handler（`poi-favorites.ts` / `[id].ts` / `[id]/add-to-trip.ts`）的
+  重複 rate-limit bucket selection + ownership check 縮成單行呼叫。
+- 2 個 handler 本地 `rateLimitedResponse` helper 改用既有 `buildRateLimitResponse` from
+  `functions/api/_errors.ts`。
+- `_audit.ts` 把 `CompanionFailureReason` union 搬到此處宣告，`logAudit.companionFailureReason`
+  從 `string` narrow 成 union；`_companion.ts` re-export 維持 import compatibility。
+- `PoiFavoritesPage.tsx`：REGIONS 改 module-level constant + 用 Map memoize `deriveRegion`
+  per row（原本 `regionCounts` + `filteredFavorites` 兩處各跑一次 7 條 regex per row）。
+- `usePullToRefresh.ts`：`refreshing` 改用 ref 同步，主 effect deps 不再含 `refreshing`，
+  避免 listener 在每次 refresh toggle 時 re-attach。`setPullPx(0)` 三處加 `pullRef.current !== 0`
+  guard，touchmove 60Hz 觸發路徑避免無變化的 re-render。
+- `AddPoiFavoriteToTripPage.tsx`：`POI_TYPE_LABEL` 移到 `src/lib/poiCategory.ts` 統一
+  zh-TW labels；nested ternary `err.message` 收斂成單層。
+- 兩個 429 rate-limit response 透過 `buildRateLimitResponse` 多帶 `cache-control: no-store`
+  header（避免下游 cache 把 retry-after 響應留住）；既有 `Retry-After` 行為不變。
+
+### Removed
+
+- `_companion.ts:resolveCompanionUserId` dead `typeof requestId !== 'number'` 檢查
+  （TS narrows `number | null` 後此分支 unreachable；`Number.isInteger` 與 `requestId <= 0`
+  涵蓋 case G 的 1.5 / -5 / 0 測試）。
+- `PoiFavoritesPage.tsx` 冗餘 `deletingIds` state（與 `selectedIds` 在刪除流程中等價）+
+  rebuild selectedIds 的冗餘 useEffect（`handleDeleteSelected` finally block 已 clear）。
+- `_companion.ts` + `poi-favorites.ts` 23 行 + 20 行 release-note 風格 preamble，留 fail-closed
+  rationale 與 rate-limit bucket key contract。
+
 ## [2.22.0] - 2026-05-04
 
 **poi-favorites-rename — saved_pois → poi_favorites + companion mapping infrastructure** —

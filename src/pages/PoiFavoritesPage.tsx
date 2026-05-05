@@ -59,15 +59,21 @@ type LoadStatus = 'loading' | 'data' | 'error';
 const PAGE_SIZE = 24;
 const PAGINATION_THRESHOLD = 200;
 
+const REGIONS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/沖縄|沖繩/i, '沖繩'],
+  [/京都/, '京都'],
+  [/大阪/, '大阪'],
+  [/東京/, '東京'],
+  [/釜山|부산/i, '釜山'],
+  [/首爾|서울/i, '首爾'],
+  [/台北/i, '台北'],
+];
+
 function deriveRegion(addr: string | null | undefined): string {
   if (!addr) return '其他';
-  if (/沖縄|沖繩/i.test(addr)) return '沖繩';
-  if (/京都/.test(addr)) return '京都';
-  if (/大阪/.test(addr)) return '大阪';
-  if (/東京/.test(addr)) return '東京';
-  if (/釜山|부산/i.test(addr)) return '釜山';
-  if (/首爾|서울/i.test(addr)) return '首爾';
-  if (/台北/i.test(addr)) return '台北';
+  for (const [re, name] of REGIONS) {
+    if (re.test(addr)) return name;
+  }
   return '其他';
 }
 
@@ -306,7 +312,6 @@ export default function PoiFavoritesPage() {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deletingSelected, setDeletingSelected] = useState(false);
-  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -328,30 +333,20 @@ export default function PoiFavoritesPage() {
 
   useEffect(() => { void loadFavorites(); }, [loadFavorites]);
 
-  // Drop selections that no longer exist after refetch
-  useEffect(() => {
-    setSelectedIds((prev) => {
-      const validIds = new Set(favorites.map((s) => s.id));
-      let changed = false;
-      const next = new Set<number>();
-      for (const id of prev) {
-        if (validIds.has(id)) next.add(id);
-        else changed = true;
-      }
-      return changed ? next : prev;
-    });
-  }, [favorites]);
-
   // Region 計數（含 "全部" = total）— 從 poiAddress derive（server 無 region field）
+  const regionByRow = useMemo(
+    () => new Map(favorites.map((row) => [row.id, deriveRegion(row.poiAddress)] as const)),
+    [favorites],
+  );
+
   const regionCounts = useMemo(() => {
     const counts = new Map<string, number>();
     counts.set('all', favorites.length);
-    for (const row of favorites) {
-      const r = deriveRegion(row.poiAddress);
-      counts.set(r, (counts.get(r) ?? 0) + 1);
+    for (const region of regionByRow.values()) {
+      counts.set(region, (counts.get(region) ?? 0) + 1);
     }
     return counts;
-  }, [favorites]);
+  }, [favorites.length, regionByRow]);
 
   const regionOptions = useMemo(() => {
     const keys = Array.from(regionCounts.keys()).filter((k) => k !== 'all');
@@ -363,14 +358,12 @@ export default function PoiFavoritesPage() {
     const q = searchFilter.trim().toLowerCase();
     return favorites.filter((row) => {
       if (typeFilter !== 'all' && row.poiType !== typeFilter) return false;
-      if (regionFilter !== 'all') {
-        if (deriveRegion(row.poiAddress) !== regionFilter) return false;
-      }
+      if (regionFilter !== 'all' && regionByRow.get(row.id) !== regionFilter) return false;
       if (!q) return true;
       const haystack = `${row.poiName} ${row.poiAddress ?? ''} ${row.note ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [favorites, searchFilter, typeFilter, regionFilter]);
+  }, [favorites, searchFilter, typeFilter, regionFilter, regionByRow]);
 
   const usePagination = favorites.length >= PAGINATION_THRESHOLD;
   const totalPages = usePagination ? Math.max(1, Math.ceil(filteredFavorites.length / PAGE_SIZE)) : 1;
@@ -410,7 +403,6 @@ export default function PoiFavoritesPage() {
     if (ids.length === 0) return;
     setDeleteConfirmOpen(false);
     setDeletingSelected(true);
-    setDeletingIds(new Set(ids));
     try {
       const results = await Promise.all(
         ids.map((id) =>
@@ -427,11 +419,10 @@ export default function PoiFavoritesPage() {
       } else {
         showToast('刪除失敗，請稍後再試', 'error', 3000);
       }
-      setSelectedIds(new Set());
       await loadFavorites();
     } finally {
+      setSelectedIds(new Set());
       setDeletingSelected(false);
-      setDeletingIds(new Set());
     }
   }
 
@@ -619,7 +610,7 @@ export default function PoiFavoritesPage() {
                 <div className="favorites-grid">
                   {visibleFavorites.map((row) => {
                     const isSelected = selectedIds.has(row.id);
-                    const isDeleting = deletingIds.has(row.id);
+                    const isDeleting = deletingSelected && isSelected;
                     const usageCount = Array.isArray(row.usages) ? row.usages.length : 0;
                     return (
                       <article

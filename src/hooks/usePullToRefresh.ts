@@ -41,16 +41,18 @@ export function usePullToRefresh(
   const [pullPx, setPullPx] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  // refs to avoid stale closure in event handlers
+  // refs to avoid stale closure + listener churn on refreshing toggle
   const startYRef = useRef<number | null>(null);
   const pullRef = useRef(0);
+  const refreshingRef = useRef(false);
+  useEffect(() => { refreshingRef.current = refreshing; }, [refreshing]);
 
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
 
     function handleTouchStart(e: TouchEvent) {
-      if (!el || el.scrollTop > 0 || refreshing) {
+      if (!el || el.scrollTop > 0 || refreshingRef.current) {
         startYRef.current = null;
         return;
       }
@@ -63,16 +65,20 @@ export function usePullToRefresh(
       // 中途滾出頂端（user scroll up 過程）→ 取消
       if (el.scrollTop > 0) {
         startYRef.current = null;
-        pullRef.current = 0;
-        setPullPx(0);
+        if (pullRef.current !== 0) {
+          pullRef.current = 0;
+          setPullPx(0);
+        }
         return;
       }
       const cy = e.touches[0]?.clientY ?? startYRef.current;
       const dy = cy - startYRef.current;
       if (dy <= 0) {
-        // user 往上拖（不是下拉）— reset
-        pullRef.current = 0;
-        setPullPx(0);
+        // user 往上拖（不是下拉）— reset 但避免無變化的 setState
+        if (pullRef.current !== 0) {
+          pullRef.current = 0;
+          setPullPx(0);
+        }
         return;
       }
       const visualPull = Math.min(dy * friction, maxPull);
@@ -84,7 +90,7 @@ export function usePullToRefresh(
       const pulled = pullRef.current;
       startYRef.current = null;
       pullRef.current = 0;
-      if (pulled >= threshold && !refreshing) {
+      if (pulled >= threshold && !refreshingRef.current) {
         setRefreshing(true);
         // keep visual at threshold during refresh
         setPullPx(threshold);
@@ -95,7 +101,7 @@ export function usePullToRefresh(
           setRefreshing(false);
           setPullPx(0);
         }
-      } else {
+      } else if (pulled !== 0) {
         setPullPx(0);
       }
     }
@@ -110,7 +116,7 @@ export function usePullToRefresh(
       el.removeEventListener('touchend', handleTouchEnd);
       el.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [scrollerRef, onRefresh, threshold, friction, maxPull, refreshing]);
+  }, [scrollerRef, onRefresh, threshold, friction, maxPull]);
 
   return { pullPx, refreshing };
 }
