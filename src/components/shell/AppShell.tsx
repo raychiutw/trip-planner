@@ -5,7 +5,8 @@
  *   keeps component state alive across breakpoints (avoids unmount/mount side effects
  *   when users rotate device or resize viewport).
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 export const APP_SHELL_STYLES = `
 .app-shell {
@@ -28,6 +29,50 @@ export const APP_SHELL_STYLES = `
   /* Prevent scroll-chaining: when one column hits its end, mouse-wheel /
    * touch should not propagate to the other columns or the document. */
   overscroll-behavior: contain;
+}
+
+/* Pull-to-refresh visual indicator. iOS Safari 對 inner scroll container 沒 native
+ * pull-to-refresh，自己 implement。indicator 在 main 頂端，translate by pullPx。 */
+.app-shell-ptr {
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translate(-50%, calc(-100% + var(--ptr-pull-px, 0px)));
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--color-background);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  pointer-events: none;
+  opacity: calc(var(--ptr-pull-px, 0px) / 80);
+  transition: opacity 200ms ease-out;
+  z-index: 1;
+}
+.app-shell-ptr-spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  transform: rotate(calc(var(--ptr-pull-px, 0px) * 4.5deg));
+  transition: transform 80ms ease-out;
+}
+.app-shell-ptr[data-refreshing="true"] .app-shell-ptr-spinner {
+  animation: app-shell-ptr-spin 0.8s linear infinite;
+}
+@keyframes app-shell-ptr-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-ptr[data-refreshing="true"] .app-shell-ptr-spinner { animation: none; }
+}
+
+/* main 拉動位移（pull friction）。transform 同時讓 PTR indicator 跟內容一起下拉 */
+.app-shell-main {
+  position: relative;
+  transition: transform 200ms ease-out;
+  will-change: transform;
+}
+.app-shell-main[data-pulling="true"] {
+  transition: none;
 }
 
 /* PR-VV 2026-04-27：bottom-nav 改 position: fixed overlay（從 grid row）。
@@ -128,6 +173,14 @@ export default function AppShell({ sidebar, main, sheet, bottomNav }: AppShellPr
   const [navHidden, setNavHidden] = useState(false);
   const lastYRef = useRef(0);
 
+  // Pull-to-refresh：scrollTop=0 時拖下 80px+ → reload
+  const onRefresh = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
+  }, []);
+  const { pullPx, refreshing } = usePullToRefresh(mainRef, onRefresh);
+
   useEffect(() => {
     const el = mainRef.current;
     if (!el || !bottomNav) return;
@@ -155,7 +208,28 @@ export default function AppShell({ sidebar, main, sheet, bottomNav }: AppShellPr
         <aside className="app-shell-sidebar" data-testid="app-shell-sidebar">
           {sidebar}
         </aside>
-        <main ref={mainRef} className="app-shell-main" data-testid="app-shell-main">
+        <main
+          ref={mainRef}
+          className="app-shell-main"
+          data-testid="app-shell-main"
+          data-pulling={pullPx > 0 && !refreshing ? 'true' : 'false'}
+          style={{
+            transform: pullPx > 0 ? `translateY(${pullPx}px)` : undefined,
+            // Pass pullPx to .app-shell-ptr CSS via custom property
+            ['--ptr-pull-px' as string]: `${pullPx}px`,
+          }}
+        >
+          {/* Pull-to-refresh visual indicator — only visible when pulled */}
+          {(pullPx > 0 || refreshing) && (
+            <div
+              className="app-shell-ptr"
+              data-testid="app-shell-ptr"
+              data-refreshing={refreshing ? 'true' : 'false'}
+              aria-hidden={!refreshing}
+            >
+              <div className="app-shell-ptr-spinner" />
+            </div>
+          )}
           {main}
         </main>
         {sheet && (
