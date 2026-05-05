@@ -32,8 +32,16 @@ export interface Env {
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
   // 2026-05-02 OSM integration — POI enrich + travel routing.
-  ORS_API_KEY?: string;          // OpenRouteService — POST /trips/:id/recompute-travel
-  OPENTRIPMAP_API_KEY?: string;  // OpenTripMap — POST /pois/:id/enrich
+  // v2.23.0 google-maps-migration: ORS + OPENTRIPMAP keys 仍保留 schema 但 code path 已 dead；
+  // 實際讀取的是 GOOGLE_MAPS_API_KEY。env vars 在下個 v2.24.0 PR 從 wrangler secrets 移除。
+  ORS_API_KEY?: string;          // DEPRECATED v2.23.0
+  OPENTRIPMAP_API_KEY?: string;  // DEPRECATED v2.23.0
+  // v2.23.0 Google Maps Platform — server-side single key (Places + Routes + Geocoding + Place Details).
+  // Frontend Maps JS 用獨立 GOOGLE_MAPS_BROWSER_KEY (referrer-restricted) — 不在此 Env，是 import.meta.env
+  GOOGLE_MAPS_API_KEY?: string;
+  // Cloud Monitoring API auth (quota check) — service account JSON string
+  GOOGLE_CLOUD_PROJECT_ID?: string;
+  GOOGLE_CLOUD_SA_KEY?: string;
   // poi-favorites-rename §5.7：companion gate 鎖定 mac mini cron OAuth client_id。
   // middleware 用此 env 比對 auth.clientId 作為 companion 啟用第三道 gate
   // （與 X-Request-Scope header + scopes 含 'companion' 同時成立才視為 companion）。

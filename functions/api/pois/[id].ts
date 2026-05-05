@@ -15,11 +15,15 @@ import type { Env } from '../_types';
 // Migration 0045: rename google_rating → rating; drop maps (use mapsUrl helper).
 // Added 6 OSM追溯 cols editable by enrich endpoint (commit 6) but exposed here
 // for tp-* skill batch updates.
+// Migration 0051 (v2.23.0 google-maps-migration): added place_id (Google canonical id)
+// + 4 lifecycle cols. osm_id/osm_type/wikidata_id/cuisine 仍 ALLOWED 為 forward-fix
+// safety net（schema column 不 drop），但新建 POI 應只填 place_id。
 const ALLOWED_FIELDS = [
   'name', 'description', 'note', 'address', 'phone', 'email', 'website',
   'hours', 'rating', 'category', 'mapcode', 'lat', 'lng',
   'country', 'source',
   'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source',
+  'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at',
 ] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {

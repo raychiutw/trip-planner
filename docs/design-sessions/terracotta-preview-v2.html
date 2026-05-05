@@ -10059,5 +10059,216 @@ body {
   }
 </script>
 
+<!-- ============================================================
+     v2.23.0 Google Maps Platform — 4 layout pieces
+     2026-05-06 autoplan-approved + tp-claude-design sign-off
+     對應 design doc: ~/.gstack/projects/raychiutw-trip-planner/ray-master-google-maps-platform-migration-20260506-003825.md
+     對應 React: src/components/{shared/PoiStatusBadge, trip/TripHealthBanner, trip/MapSkeleton}.tsx + 改動 OceanMap / MapFabs
+     ============================================================ -->
+
+<style>
+  .v23-section { padding: 32px 24px; max-width: 920px; margin: 0 auto; }
+  .v23-section h2 { font-size: 22px; margin: 32px 0 8px; padding-left: 12px;
+    border-left: 4px solid var(--tp-accent); }
+  .v23-section .v23-note { font-size: 13px; color: var(--tp-muted); margin: 0 0 20px; }
+  .v23-frame { background: var(--tp-bg); border-radius: 12px; box-shadow: var(--tp-shadow-md);
+    margin: 16px 0; overflow: hidden; position: relative; }
+  .v23-frame.compact { max-width: 390px; }
+  .v23-label { font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+    background: var(--tp-fg); color: var(--tp-bg); padding: 6px 12px; }
+
+  .v23-status-banner { display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--tp-warning-bg);
+    border-bottom: 1px solid rgba(200, 133, 0, 0.35);
+    color: var(--tp-fg); font-size: 14px; cursor: pointer; }
+  .v23-status-banner:hover { background: rgba(200, 133, 0, 0.20); }
+  .v23-status-banner:focus-visible { outline: 2px solid var(--tp-warning); outline-offset: -2px; }
+  .v23-status-banner-icon { width: 24px; height: 24px; display: grid; place-items: center;
+    border-radius: 50%; background: var(--tp-warning); color: #fff;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .v23-status-banner-text { flex: 1; min-width: 0; }
+  .v23-status-banner-text-compact { display: -webkit-box; -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical; overflow: hidden; }
+  .v23-status-banner-chevron { font-size: 18px; color: var(--tp-warning); flex-shrink: 0; }
+
+  .v23-map-area { height: 280px;
+    background: linear-gradient(135deg, #E8F0E5 0%, #D4DECF 100%);
+    position: relative; overflow: hidden; }
+  .v23-map-grid { position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 32px 32px; }
+  .v23-fab-stack { position: absolute; right: 16px; bottom: 16px;
+    display: flex; flex-direction: column; gap: 10px; z-index: 50; }
+  .v23-fab { width: 44px; height: 44px; border-radius: 50%; border: 0;
+    background: var(--tp-bg); color: var(--tp-fg); display: grid; place-items: center;
+    cursor: pointer; box-shadow: var(--tp-shadow-md); font-size: 20px; }
+  .v23-fab.is-active { background: var(--tp-accent); color: #fff; }
+  .v23-bottom-sheet { position: absolute; inset-inline: 0; bottom: 0;
+    background: var(--tp-bg); border-radius: 16px 16px 0 0;
+    padding: 12px 16px 24px; box-shadow: 0 -4px 20px rgba(0,0,0,0.12); z-index: 60;
+    border-top: 1px solid var(--tp-border); }
+  .v23-bottom-sheet-handle { width: 36px; height: 4px; background: var(--tp-border-strong);
+    border-radius: 2px; margin: 0 auto 12px; }
+  .v23-bottom-sheet-title { font-weight: 600; font-size: 15px; margin-bottom: 12px; }
+  .v23-radio-row { display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 8px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .v23-radio-row:hover { background: var(--tp-bg-subtle); }
+  .v23-radio-row.selected { border-color: var(--tp-accent); background: rgba(184, 95, 42, 0.06); }
+  .v23-radio-check { color: var(--tp-accent); font-weight: 700; }
+
+  .v23-marker { position: absolute; width: 32px; height: 40px; display: grid;
+    place-items: center; cursor: pointer; }
+  .v23-marker-pin { width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); display: grid; place-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+  .v23-marker-pin-inner { transform: rotate(45deg); color: #fff; font-weight: 700; font-size: 14px; }
+  .v23-marker.is-active .v23-marker-pin { background: var(--tp-accent); }
+  .v23-marker.is-closed .v23-marker-pin { background: var(--tp-destructive); filter: grayscale(0.3); }
+  .v23-marker.is-missing .v23-marker-pin { background: var(--tp-warning); }
+
+  .v23-timeline-entry { display: flex; gap: 12px; padding: 12px 16px;
+    border-bottom: 1px solid var(--tp-border); }
+  .v23-timeline-entry[data-closed="true"] { opacity: 0.65; }
+  .v23-timeline-time { font-variant-numeric: tabular-nums; color: var(--tp-muted);
+    font-size: 13px; min-width: 48px; }
+  .v23-timeline-name { font-weight: 500; }
+
+  .v23-skel-map { height: 240px; background: var(--tp-bg-subtle);
+    display: grid; place-items: center; position: relative; overflow: hidden; }
+  .v23-skel-map::before { content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+    animation: v23-shimmer 1.6s infinite; }
+  @keyframes v23-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  .v23-skel-content { display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 1; }
+  .v23-skel-spinner { width: 32px; height: 32px;
+    border: 3px solid var(--tp-border); border-top-color: var(--tp-accent);
+    border-radius: 50%; animation: v23-spin 0.8s linear infinite; }
+  @keyframes v23-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) {
+    .v23-skel-map::before { animation: none; }
+    .v23-skel-spinner { animation: none; border-top-color: var(--tp-border); }
+  }
+  .v23-page-error { height: 240px; background: var(--tp-bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 32px; text-align: center; }
+  .v23-page-error-icon { width: 48px; height: 48px; border-radius: 50%;
+    background: var(--tp-destructive-bg); color: var(--tp-destructive);
+    display: grid; place-items: center; font-size: 22px; font-weight: 700; }
+  .v23-page-error-action { margin-top: 8px; padding: 8px 18px; border-radius: 20px;
+    border: 1px solid var(--tp-border-strong); background: var(--tp-bg);
+    color: var(--tp-fg); font-size: 13px; cursor: pointer; }
+</style>
+
+<section class="v23-section" id="v23-google-maps-platform">
+
+<h2>v2.23.0 §1 — TripHealthBanner（sticky chrome group）</h2>
+<p class="v23-note">empty 不渲染（return null）。closed=2 missing=1 → 統一 warning 色。
+sticky 順序：TitleBar 56/64 → banner 41/45 → DayNav；scroll-margin-top 對應 110/100。
+role="status" + aria-live="polite" + 不可 dismiss。click 開 StopLightbox 第一個 issue。</p>
+
+<div class="v23-frame">
+  <div class="v23-label">DESKTOP — closed=2 + missing=1</div>
+  <div class="v23-status-banner" role="status" aria-live="polite" tabindex="0">
+    <div class="v23-status-banner-icon">!</div>
+    <div class="v23-status-banner-text">此行程有 2 個地點已歇業 + 1 個查無資料，點擊查看</div>
+    <div class="v23-status-banner-chevron">›</div>
+  </div>
+</div>
+
+<div class="v23-frame compact">
+  <div class="v23-label">COMPACT — 3 個地點異常</div>
+  <div class="v23-status-banner" role="status" aria-live="polite" tabindex="0">
+    <div class="v23-status-banner-icon">!</div>
+    <div class="v23-status-banner-text"><div class="v23-status-banner-text-compact">3 個地點異常</div></div>
+    <div class="v23-status-banner-chevron">›</div>
+  </div>
+</div>
+
+<h2>v2.23.0 §2 — Closed POI marker + InfoWindow + timeline opacity</h2>
+<p class="v23-note">map marker custom SVG（destructive token + ✕ glyph + aria-label="已歇業"）。
+timeline entry data-closed 套 opacity 0.65（沿用 data-past pattern）。色彩 redundant：
+badge text + marker color + InfoWindow status — 不依賴 color-only signal（WCAG 1.4.1）。</p>
+
+<div class="v23-frame">
+  <div class="v23-label">MAP + TIMELINE — 1 active / 1 missing / 1 closed</div>
+  <div class="v23-map-area">
+    <div class="v23-map-grid"></div>
+    <div class="v23-marker is-active" style="left:30%;top:35%;">
+      <div class="v23-marker-pin"><span class="v23-marker-pin-inner">1</span></div>
+    </div>
+    <div class="v23-marker is-missing" style="left:55%;top:45%;">
+      <div class="v23-marker-pin"><span class="v23-marker-pin-inner">2</span></div>
+    </div>
+    <div class="v23-marker is-closed" style="left:42%;top:60%;" aria-label="已歇業">
+      <div class="v23-marker-pin"><span class="v23-marker-pin-inner">✕</span></div>
+    </div>
+  </div>
+  <div class="v23-timeline-entry">
+    <div class="v23-timeline-time">12:30</div>
+    <div><span class="v23-timeline-name">首里城公園</span></div>
+  </div>
+  <div class="v23-timeline-entry">
+    <div class="v23-timeline-time">14:00</div>
+    <div><span class="v23-timeline-name">東町魚市場</span>
+      <span class="tp-badge is-warning"><span class="tp-badge-dot"></span>查無資料</span>
+    </div>
+  </div>
+  <div class="v23-timeline-entry" data-closed="true">
+    <div class="v23-timeline-time">18:00</div>
+    <div><span class="v23-timeline-name">古都壽司本店</span>
+      <span class="tp-badge is-destructive"><span class="tp-badge-dot"></span>已歇業</span>
+    </div>
+  </div>
+</div>
+
+<h2>v2.23.0 §3 — MapFabs picker（bottom-sheet mobile / popover desktop）</h2>
+<p class="v23-note">既有 .tp-map-fab 44px 直行 stack 不變。Phase β 只是換 preset 名稱：
+路線圖 / 衛星 / 混合（Google mapTypeId）。</p>
+
+<div class="v23-frame compact">
+  <div class="v23-label">COMPACT — bottom-sheet picker open</div>
+  <div class="v23-map-area" style="height:340px;">
+    <div class="v23-map-grid"></div>
+    <div class="v23-fab-stack">
+      <button class="v23-fab is-active" aria-label="圖層" aria-expanded="true">⊞</button>
+      <button class="v23-fab" aria-label="我的位置">◎</button>
+    </div>
+    <div class="v23-bottom-sheet">
+      <div class="v23-bottom-sheet-handle"></div>
+      <div class="v23-bottom-sheet-title">地圖類型</div>
+      <div class="v23-radio-row selected"><span>路線圖</span><span class="v23-radio-check">✓</span></div>
+      <div class="v23-radio-row"><span>衛星</span></div>
+      <div class="v23-radio-row"><span>混合</span></div>
+    </div>
+  </div>
+</div>
+
+<h2>v2.23.0 §4 — MapSkeleton + PageErrorState</h2>
+<p class="v23-note">Google Maps JS API loader 載入期間（~2-4s mobile）render MapSkeleton，
+load fail 改 PageErrorState（含 GOOGLE_LOCKED 503 case）。reduced-motion 自動關 shimmer + spinner。</p>
+
+<div class="v23-frame">
+  <div class="v23-label">LOADING — Google Maps JS 載入中</div>
+  <div class="v23-skel-map">
+    <div class="v23-skel-content">
+      <div class="v23-skel-spinner"></div>
+      <div style="color:var(--tp-muted);font-size:14px;">載入地圖中…</div>
+    </div>
+  </div>
+</div>
+
+<div class="v23-frame">
+  <div class="v23-label">ERROR — quota lock 503 / load fail</div>
+  <div class="v23-page-error">
+    <div class="v23-page-error-icon">!</div>
+    <div style="font-weight:600;font-size:15px;">服務暫停</div>
+    <div style="color:var(--tp-muted);font-size:13px;max-width:280px;">本月 Google API 已達配額，月初恢復。</div>
+    <button class="v23-page-error-action">重試</button>
+  </div>
+</div>
+
+</section>
+
 </body>
 </html>

@@ -11,6 +11,23 @@
 
 ---
 
+## Travel compute — 統一到 Mapbox（拔 ORS）
+
+**Found by**: 2026-05-06 user 問「車程計算用哪個 service」 → 發現 split：`/api/route` (Mapbox) + `src/server/travel/compute.ts` (ORS primary)
+**Why unify**: Mapbox 路網對東亞（沖繩 / 韓國 / 日本）比 ORS 準；polyline 細節一致；簡化 1 service / 1 token / 1 helper；移除 mac mini ORS_API_KEY env
+**Quota check**: 統一後 Mapbox usage ~3-6k/month (vs free 100k/month) — 安全
+**Implementation**:
+1. `src/server/travel/compute.ts` 加 `mapboxRoute(opts)` helper
+2. `computeTravel`: try Mapbox → Haversine fallback（跟 frontend `/api/route` 同 fallback chain）
+3. DELETE `src/server/routing/ors.ts`（or 標 @deprecated 留 1 week soak）
+4. mac mini cron `.env`：移除 ORS_API_KEY
+5. CHANGELOG 註記 ORS 退場
+**Risk**: 集中 Mapbox 一個 service — Mapbox down 全部走 Haversine（功能仍 work，只是 polyline 沒了）
+**Est**: 1 hr CC + 1 PR
+**Priority**: P3（technical debt cleanup，非 user-facing 痛點）
+
+---
+
 ## EntryActionPage / AddStopPage — API response snake/camel mismatch (Day 「空」 label)
 
 **Found by**: /office-hours implementation of P1 onRequestGet (2026-05-03)
