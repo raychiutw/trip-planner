@@ -1,13 +1,13 @@
 /**
  * ExplorePage — V2 探索 POI（v2.21.0 secondary entry）.
  *
- * 從 v2.21.0 起，「我的收藏」升 primary nav (`/saved` SavedPoisPage)，本頁變成純探索：
- *   - Nominatim search with single-click 儲存 per result
+ * 從 v2.21.0 起，「我的收藏」升 primary nav (`/favorites` PoiFavoritesPage)，本頁變成純探索：
+ *   - Nominatim search with single-click 加入收藏 per result
  *   - region pill / category subtab filter
- *   - heart toggle 加入「我的收藏」(loadSaved mini-fetch 維 savedKeySet 正確 disable)
+ *   - heart toggle 加入「我的收藏」(loadSaved mini-fetch 維 favoriteKeySet 正確 disable)
  *
  * Auth: useRequireAuth — page is for logged-in users.
- * TitleBar 右上 ghost action「收藏」→ navigate /saved.
+ * TitleBar 右上 ghost action「收藏」→ navigate /favorites.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,8 +30,8 @@ const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾',
 import type { PoiSearchResult } from '../types/poi';
 
 /**
- * Mini-fetch shape — 只用 poiType + poiName 算 savedKeySet (heart-disable correctness).
- * SavedPoisPage 用完整 SavedPoiRow 型別，這裡只取需要的欄位。
+ * Mini-fetch shape — 只用 poiType + poiName 算 favoriteKeySet (heart-disable correctness).
+ * PoiFavoritesPage 用完整 PoiFavoriteRow 型別，這裡只取需要的欄位。
  */
 interface SavedKeyRow {
   poiName: string;
@@ -385,7 +385,7 @@ export default function ExplorePage() {
   // Region selector + category subtab filter
   // region 預設用 active trip's countries → 對應地區名
   const { activeTripId } = useActiveTrip();
-  // ExplorePage 不再 fetch trips list (saved-toolbar 移到 SavedPoisPage)，但 active
+  // ExplorePage 不再 fetch trips list (saved-toolbar 移到 PoiFavoritesPage)，但 active
   // trip 的 region 仍從 ActiveTripContext 推導 — countries field 不在 context 裡，
   // 所以這裡 default region 退回「全部地區」，等使用者在 region pill 自選。
   const defaultRegion = useMemo(() => {
@@ -437,13 +437,13 @@ export default function ExplorePage() {
   }, [defaultRegion, region]);
 
   /**
-   * Mini-fetch /saved-pois → savedKeySet (MF6) — 只為了 heart toggle disable
-   * 正確性。SavedPoisPage 拆出後 ExplorePage 不再做完整 saved CRUD，但 heart
+   * Mini-fetch /poi-favorites → favoriteKeySet (MF6) — 只為了 heart toggle disable
+   * 正確性。PoiFavoritesPage 拆出後 ExplorePage 不再做完整 saved CRUD，但 heart
    * disable 「已收藏」 狀態仍要正確。codebase 沒 React Query/SWR，各頁獨立 fetch。
    */
   const loadSaved = useCallback(async () => {
     try {
-      const rows = await apiFetch<SavedKeyRow[]>('/saved-pois');
+      const rows = await apiFetch<SavedKeyRow[]>('/poi-favorites');
       setSavedKeyRows(rows);
     } catch {
       // silent — likely 401 or transient; heart disable 退回「皆未收藏」 fallback。
@@ -452,7 +452,7 @@ export default function ExplorePage() {
 
   useEffect(() => { void loadSaved(); }, [loadSaved]);
 
-  const savedKeySet = useMemo(
+  const favoriteKeySet = useMemo(
     () => new Set(savedKeyRows.map((r) => `${r.poiType}::${r.poiName}`)),
     [savedKeyRows],
   );
@@ -527,15 +527,15 @@ export default function ExplorePage() {
           source: 'user-explore',
         }),
       });
-      await apiFetch('/saved-pois', {
+      await apiFetch('/poi-favorites', {
         method: 'POST',
         body: JSON.stringify({ poiId: createResp.id }),
       });
-      showToast(`已儲存「${poi.name}」`, 'success', 2000);
+      showToast(`已加入收藏「${poi.name}」`, 'success', 2000);
       await loadSaved();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '未知錯誤';
-      showToast(`儲存失敗：${msg}`, 'error', 3000);
+      showToast(`加入收藏失敗：${msg}`, 'error', 3000);
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
@@ -548,17 +548,17 @@ export default function ExplorePage() {
   const main = (
     <div className="explore-shell">
       <style>{SCOPED_STYLES}</style>
-      {/* v2.21.0 IA reshuffle: TitleBar 右上 ghost action「收藏」 → /saved (T2) */}
+      {/* v2.21.0 IA reshuffle: TitleBar 右上 ghost action「收藏」 → /favorites */}
       <TitleBar
         title="探索"
         actions={
           <button
             type="button"
             className="tp-titlebar-action"
-            onClick={() => navigate('/saved')}
+            onClick={() => navigate('/favorites')}
             aria-label="收藏"
             title="收藏"
-            data-testid="explore-saved-titlebar"
+            data-testid="explore-favorites-titlebar"
           >
             <Icon name="heart" />
             <span className="tp-titlebar-action-label">收藏</span>
@@ -677,7 +677,7 @@ export default function ExplorePage() {
                   <div className="explore-poi-grid">
                     {filtered.map((poi) => {
                       const key = `${poi.category || 'poi'}::${poi.name}`;
-                      const isSaved = savedKeySet.has(key);
+                      const isPoiFavorited = favoriteKeySet.has(key);
                       const isSaving = savingIds.has(poi.osm_id);
                       // Stable tone 1-8 derived from osm_id 後綴 hash。
                       const tone = ((poi.osm_id ?? 0) % 8) + 1;
@@ -690,10 +690,10 @@ export default function ExplorePage() {
                           >
                             <button
                               type="button"
-                              className={`explore-poi-heart ${isSaved ? 'is-saved' : ''}`}
-                              onClick={() => !isSaved && !isSaving && handleSave(poi)}
-                              disabled={isSaving || isSaved}
-                              aria-label={isSaved ? '已儲存' : '儲存到收藏'}
+                              className={`explore-poi-heart ${isPoiFavorited ? 'is-saved' : ''}`}
+                              onClick={() => !isPoiFavorited && !isSaving && handleSave(poi)}
+                              disabled={isSaving || isPoiFavorited}
+                              aria-label={isPoiFavorited ? '已收藏' : '加入收藏'}
                               data-testid={`explore-save-btn-${poi.osm_id}`}
                             >
                               <Icon name="heart" />

@@ -543,7 +543,7 @@ export default function LoginPage() {
                 </svg>
               </div>
               <div className="tp-feat-body">
-                <div className="tp-feat-title">我的收藏跟著你</div>
+                <div className="tp-feat-title">收藏跟著你</div>
                 <div className="tp-feat-desc">看到喜歡的餐廳/景點按 ♡ 儲存，下次規劃直接拉進 trip。</div>
               </div>
             </div>

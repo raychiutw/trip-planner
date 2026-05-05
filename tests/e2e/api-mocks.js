@@ -652,7 +652,7 @@ async function setupApiMocks(page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id }) });
   });
 
-  await page.route(/\/api\/saved-pois(?:\/\d+)?$/, async (route) => {
+  await page.route(/\/api\/poi-favorites(?:\/\d+)?$/, async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
     if (request.method() === 'GET') {

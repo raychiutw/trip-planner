@@ -617,8 +617,11 @@ describe('POST /api/oauth/token — refresh_token grant', () => {
       code: 'c', redirect_uri: 'r',
     }, env));
     expect(res.status).toBe(401);
+    // poi-favorites-rename §3.3: bumpRateLimit 改 atomic INSERT...ON CONFLICT
     const inserts = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+      (c) => typeof c[0] === 'string'
+        && c[0].includes('INTO rate_limit_buckets')
+        && c[0].includes('ON CONFLICT'),
     );
     expect(inserts.length).toBe(1);
   });

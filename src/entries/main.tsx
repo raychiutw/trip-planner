@@ -74,8 +74,8 @@ const MapPage = lazyWithRetry(() => import('../pages/MapPage'));
 const ChatPage = lazyWithRetry(() => import('../pages/ChatPage'));
 const GlobalMapPage = lazyWithRetry(() => import('../pages/GlobalMapPage'));
 const ExplorePage = lazyWithRetry(() => import('../pages/ExplorePage'));
-// v2.21.0 IA reshuffle: 「我的收藏」升 primary nav (/saved)
-const SavedPoisPage = lazyWithRetry(() => import('../pages/SavedPoisPage'));
+// poi-favorites-rename: 「收藏」primary nav (/favorites)
+const PoiFavoritesPage = lazyWithRetry(() => import('../pages/PoiFavoritesPage'));
 const LoginPage = lazyWithRetry(() => import('../pages/LoginPage'));
 const SignupPage = lazyWithRetry(() => import('../pages/SignupPage'));
 const EmailVerifyPendingPage = lazyWithRetry(() => import('../pages/EmailVerifyPendingPage'));
@@ -98,8 +98,8 @@ const EditTripPage = lazyWithRetry(() => import('../pages/EditTripPage'));
 const NewTripPage = lazyWithRetry(() => import('../pages/NewTripPage'));
 const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
-// V2 cutover (migration 0046): saved_pois universal pool → 加入行程 fast-path page
-const AddSavedPoiToTripPage = lazyWithRetry(() => import('../pages/AddSavedPoiToTripPage'));
+// poi-favorites-rename: poi_favorites universal pool → 加入行程 fast-path page
+const AddPoiFavoriteToTripPage = lazyWithRetry(() => import('../pages/AddPoiFavoriteToTripPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -155,10 +155,10 @@ if (el) {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/map" element={<GlobalMapPage />} />
               <Route path="/explore" element={<ExplorePage />} />
-              {/* v2.21.0: SavedPoisPage primary nav route */}
-              <Route path="/saved" element={<SavedPoisPage />} />
-              {/* V2 cutover (migration 0046): saved_pois → trip fast-path page (D-C1 + D-C2) */}
-              <Route path="/saved-pois/:id/add-to-trip" element={<AddSavedPoiToTripPage />} />
+              {/* poi-favorites-rename: PoiFavoritesPage primary nav route */}
+              <Route path="/favorites" element={<PoiFavoritesPage />} />
+              {/* poi-favorites-rename: poi_favorites → trip fast-path page (D-C1 + D-C2)，4-field 純時間驅動 */}
+              <Route path="/favorites/:id/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />

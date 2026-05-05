@@ -182,8 +182,11 @@ describe('POST /api/oauth/signup', () => {
     }, env));
     // dup email → 409, but rate limit bucket should still be bumped
     expect(res.status).toBe(409);
+    // poi-favorites-rename §3.3: bumpRateLimit 改 atomic INSERT...ON CONFLICT
     const inserts = dbPrepare.mock.calls.filter(
-      (c) => typeof c[0] === 'string' && c[0].includes('INSERT OR REPLACE INTO rate_limit_buckets'),
+      (c) => typeof c[0] === 'string'
+        && c[0].includes('INTO rate_limit_buckets')
+        && c[0].includes('ON CONFLICT'),
     );
     expect(inserts.length).toBe(1); // single ipKey bucket (no per-email for signup)
   });

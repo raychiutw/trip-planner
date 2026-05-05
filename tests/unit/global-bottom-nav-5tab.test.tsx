@@ -28,7 +28,7 @@ describe('GlobalBottomNav — 5-tab IA', () => {
     expect(screen.getByTestId('global-bottom-nav-chat')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-trips')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-map')).toBeTruthy();
-    expect(screen.getByTestId('global-bottom-nav-saved')).toBeTruthy();
+    expect(screen.getByTestId('global-bottom-nav-favorites')).toBeTruthy();
     expect(screen.getByTestId('global-bottom-nav-account')).toBeTruthy();
     expect(screen.queryByTestId('global-bottom-nav-login')).toBeNull();
   });
@@ -88,7 +88,7 @@ describe('GlobalBottomNav — 5-tab IA', () => {
 
   it('在 /explore「探索」 tab is-active', () => {
     renderNav({ authed: true, pathname: '/explore' });
-    expect(screen.getByTestId('global-bottom-nav-saved').className).toContain('is-active');
+    expect(screen.getByTestId('global-bottom-nav-favorites').className).toContain('is-active');
   });
 
   it('CSS 含 min-height 44px (觸控目標 a11y)', () => {

@@ -8,8 +8,7 @@ reply 字串中的換行用 JS 單引號內的 `\n` 表示（會被 JSON.stringi
 ```bash
 node -e "require('fs').writeFileSync('/tmp/reply.json', JSON.stringify({reply:'#42\n第一行\n\n第二行', status:'completed'}), 'utf8')"
 curl -s -X PATCH \
-  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "Authorization: Bearer $TRIPLINE_API_TOKEN" \
   -H "Content-Type: application/json" \
   --data @/tmp/reply.json \
   "https://trip-planner-dby.pages.dev/api/requests/{requestId}"

@@ -9,6 +9,8 @@ export async function logAudit(db: D1Database, opts: {
   requestId?: number | null;
   diffJson?: string;
   snapshot?: string;
+  /** poi-favorites-rename §4: server-side reason for companion-path failures (D10) */
+  companionFailureReason?: string;
 }) {
   let finalDiffJson = opts.diffJson ?? null;
   if (finalDiffJson && detectGarbledText(finalDiffJson)) {
@@ -21,7 +23,7 @@ export async function logAudit(db: D1Database, opts: {
 
   try {
     await db.prepare(
-      'INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, request_id, diff_json, snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO audit_log (trip_id, table_name, record_id, action, changed_by, request_id, diff_json, snapshot, companion_failure_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(
       opts.tripId,
       opts.tableName,
@@ -31,6 +33,7 @@ export async function logAudit(db: D1Database, opts: {
       opts.requestId ?? null,
       finalDiffJson,
       opts.snapshot ?? null,
+      opts.companionFailureReason ?? null,
     ).run();
   } catch (err) {
     console.error('[audit] logAudit failed (non-fatal):', err);

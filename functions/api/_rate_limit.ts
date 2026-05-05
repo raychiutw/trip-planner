@@ -76,6 +76,18 @@ export async function checkRateLimit(
 
 /**
  * Increment rate limit count + maybe lock if exceeded。Call after a failed attempt。
+ *
+ * Atomic INSERT...ON CONFLICT 單 SQL upsert，避免 read-then-replace race
+ * （poi-favorites-rename §3.3, design.md D16）。
+ *
+ * 語意保持與原 read-then-replace 完全相同：
+ *   - new bucket → count=1, window_start=now, no lock
+ *   - within window → count+1, window_start 不動
+ *   - window expired → 重置 count=1, window_start=now, 清 lock
+ *   - count+1 > maxAttempts 且 window 未過期 → 設 locked_until=now+lockoutMs
+ *
+ * Schema 沿用 0035 (rate_limit_buckets / window_start + locked_until)；
+ * 沒有 expires_at 欄位，window 過期判斷用 window_start + windowMs < now。
  */
 export async function bumpRateLimit(
   db: D1Database,
@@ -83,42 +95,43 @@ export async function bumpRateLimit(
   config: RateLimitConfig,
 ): Promise<RateLimitResult> {
   const now = Date.now();
+  const lockExpiry = now + config.lockoutMs;
+
   const row = await db
-    .prepare('SELECT bucket_key, count, window_start, locked_until FROM rate_limit_buckets WHERE bucket_key = ?')
-    .bind(key)
-    .first<RateLimitRow>();
-
-  let newCount: number;
-  let windowStart: number;
-
-  if (!row || row.window_start + config.windowMs < now) {
-    // New row or window expired — reset
-    newCount = 1;
-    windowStart = now;
-  } else {
-    newCount = row.count + 1;
-    windowStart = row.window_start;
-  }
-
-  // Determine lock
-  let lockedUntil: number | null = null;
-  if (newCount > config.maxAttempts) {
-    lockedUntil = now + config.lockoutMs;
-  }
-
-  // Upsert
-  await db
     .prepare(
-      `INSERT OR REPLACE INTO rate_limit_buckets (bucket_key, count, window_start, locked_until)
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO rate_limit_buckets (bucket_key, count, window_start, locked_until)
+       VALUES (?, 1, ?, NULL)
+       ON CONFLICT(bucket_key) DO UPDATE
+       SET
+         count = CASE WHEN window_start + ? < ? THEN 1 ELSE count + 1 END,
+         window_start = CASE WHEN window_start + ? < ? THEN ? ELSE window_start END,
+         locked_until = CASE
+           WHEN window_start + ? < ? THEN NULL
+           WHEN count + 1 > ? THEN ?
+           ELSE locked_until
+         END
+       RETURNING count, window_start, locked_until`,
     )
-    .bind(key, newCount, windowStart, lockedUntil)
-    .run();
+    .bind(
+      key, now,
+      config.windowMs, now,
+      config.windowMs, now, now,
+      config.windowMs, now,
+      config.maxAttempts, lockExpiry,
+    )
+    .first<{ count: number; window_start: number; locked_until: number | null }>();
 
-  if (lockedUntil) {
-    return { ok: false, retryAfter: Math.ceil((lockedUntil - now) / 1000), count: newCount };
+  if (!row) {
+    // 防禦性 fallback：D1 INSERT...ON CONFLICT...RETURNING 在 production 永遠回 row。
+    // null 主要出現在 mock-based unit test 沒實作 RETURNING 的情形 — 此時當 fresh
+    // first-attempt 處理（count=1, no lock）保留語意連續性，不阻擋 caller 流程。
+    return { ok: true, count: 1 };
   }
-  return { ok: true, count: newCount };
+
+  if (row.locked_until && row.locked_until > now) {
+    return { ok: false, retryAfter: Math.ceil((row.locked_until - now) / 1000), count: row.count };
+  }
+  return { ok: true, count: row.count };
 }
 
 /**
@@ -157,4 +170,9 @@ export const RATE_LIMITS = {
   // 設成 now+lockoutMs，下一次 checkRateLimit 才能 reject。lockoutMs=0 會 collide with
   // bump 時間戳，rate limit 失效。set 60s 對齊 window 1 分鐘節奏。
   SAVED_POIS_WRITE: { maxAttempts: 10, windowMs: 60 * 1000, lockoutMs: 60 * 1000 },
+  // POI favorites write per-user / per-companion-request: 10/min window, 60s lockout.
+  // poi-favorites-rename §3.4 — 與 SAVED_POIS_WRITE 等值；handler 用兩個 bucket key
+  // 形態：`poi-favorites-post:user:${userId}` 與 `poi-favorites-post:companion:${requestId}`，
+  // 配合 D16 bucket 隔離防 companion 攻擊耗光 user web quota。
+  POI_FAVORITES_WRITE: { maxAttempts: 10, windowMs: 60 * 1000, lockoutMs: 60 * 1000 },
 } as const;

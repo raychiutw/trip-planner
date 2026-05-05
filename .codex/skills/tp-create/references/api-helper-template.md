@@ -7,8 +7,8 @@ const https = require('https');
 const TRIP_ID = '{tripId}';  // Phase 0 產生後填入
 const BASE = 'trip-planner-dby.pages.dev';
 const HEADERS = {
-  'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
-  'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+  'Authorization': process.env.TRIPLINE_API_TOKEN,
+  'Authorization': process.env.TRIPLINE_API_TOKEN,
   'Content-Type': 'application/json',
   'Origin': 'https://trip-planner-dby.pages.dev',
 };
@@ -31,4 +31,4 @@ function apiCall(method, path, body) {
 module.exports = { apiCall, TRIP_ID };
 ```
 
-呼叫前先 `export $(grep CF_ACCESS .env.local | xargs)`，再 `node -e "..."` 引用 helper。
+呼叫前先 `export $(grep TRIPLINE_API_TOKEN .env.local | xargs)`，再 `node -e "..."` 引用 helper。

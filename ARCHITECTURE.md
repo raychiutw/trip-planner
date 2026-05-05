@@ -308,6 +308,23 @@ tests/
 
 ---
 
+## Schema / IA Naming History
+
+過去 6 個版本的破壞性 rename / cutover（**hard cutover, no aliases**）。撞到 spec drift / 舊 sample code 時對照。
+
+| Version | Migration | 變更 |
+|---------|-----------|------|
+| **v2.22.0** | 0050 | `saved_pois` table → `poi_favorites`；route `/saved` → `/favorites`；API `/api/saved-pois` → `/api/poi-favorites`；`SavedPoisPage` → `PoiFavoritesPage`；`AddSavedPoiToTripPage` → `AddPoiFavoriteToTripPage`；CSS class `tp-saved-*` → `tp-favorites-*`。AddPoiFavoriteToTripPage 改 4-field 純時間驅動（廢 position + anchorEntryId）。Cross-skill auth header `CF-Access-*` → `Authorization: Bearer $TRIPLINE_API_TOKEN`。companion gate（middleware + `_companion.ts` requireFavoriteActor）+ `companion_request_actions` UNIQUE table 防 quota abuse + audit_log `companion_failure_reason` field。 |
+| **v2.21.3** | 0049 | `trip_requests.mode` column DROPPED（phase 2，標準 swap idiom）。tp-request skill 改 auto-classify intent，不再 dispatch by mode field。 |
+| **v2.21.2** | 0048 | `trip_requests.mode` 改 nullable + drop CHECK constraint（phase 1 of mode rip-out）。 |
+| **v2.21.0** | 0046+0047 | `trip_ideas` table 退場 → `saved_pois` 升 universal pool（跨 trip 願望清單）；`trips.owner_email` → `owner_user_id` cutover（V2 OAuth 對齊）；`saved_pois.email` / `trip_permissions.email` DROPPED；UNIQUE constraint 改 `(user_id, ...)`。0047 採 backup-restore pattern（trips/pois 有 children FK）。 |
+| **v2.20.0** | 0046 phase 1 | `trip_ideas` table 退場 phase 1；tp-request mode rip-out 啟動。 |
+| **v2.19.x** | 0045 | `pois.google_rating` → `rating`；`pois.maps` DROPPED；`trips.{auto_scroll,og_description,footer,food_prefs,is_default,self_drive}` DROPPED。 |
+
+**找舊欄名 / 舊 route 規則**：grep 整個 codebase 後 fail → 對照表確認是否已 rename → 改用新名 → 不要寫 alias。新功能 reference `openspec/specs/` 而非 `openspec/changes/archive/`（archive spec 有 banner 標明 superseded）。
+
+---
+
 ## Related Docs
 
 - [README.md](README.md) — 使用者介紹、功能特色

@@ -3,6 +3,115 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.22.0] - 2026-05-04
+
+**poi-favorites-rename — saved_pois → poi_favorites + companion mapping infrastructure** —
+Hard cutover rename 統一 D1 / API / frontend / skill / doc 命名，並補上 companion 路徑
+（旅伴請求自動加入收藏）所需的三 gate 真實認證、原子 rate limit、replay 防護、結構化
+失敗 log。Closes 6 critical findings from autoplan + request 181 痛點。
+
+### Added
+
+- **Companion mapping helper** (`functions/api/_companion.ts`): `resolveCompanionUserId`
+  + `requireFavoriteActor`，4 個 endpoint 共用。三 gate（`X-Request-Scope` header +
+  OAuth `companion` scope + `clientId === env.TP_REQUEST_CLIENT_ID`）+ guarded UPDATE
+  atomic claim trip_requests.status。失敗統一寫 `audit_log.companion_failure_reason`
+  enum（`self_reported_scope` / `client_unauthorized` / `invalid_request_id` /
+  `status_completed` / `submitter_unknown` / `quota_exceeded`），client 維持 401 uniform
+  message。
+- **`companion_request_actions` 表** (migration 0050): UNIQUE(request_id, action) 防
+  同 requestId 灌爆 favorites pool。同 request 第 2 次同 action → 409
+  `COMPANION_QUOTA_EXCEEDED`。
+- **`audit_log.companion_failure_reason` 欄位** (migration 0050 ADD COLUMN nullable):
+  server 端 differentiated log（dev 從 D1 query 區分 root cause），client 不洩漏 oracle。
+- **`RATE_LIMITS.POI_FAVORITES_WRITE` preset**（10/min, 60s lockout）+ companion bucket
+  獨立 key (`poi-favorites-post:companion:${requestId}` vs `poi-favorites-post:user:${userId}`)
+  防 companion 攻擊耗光 user web quota。
+- **GET /api/poi-search public-read bypass** (middleware): OSM Nominatim proxy 不需 auth
+  即可查（修 prod 198 筆 401）。POST 仍要求 auth。
+- **`COMPANION_QUOTA_EXCEEDED` error code**（HTTP 409）。
+- **Env `TP_REQUEST_CLIENT_ID`** + AuthData `scopes?` / `clientId?` 型別欄位（middleware
+  既有 runtime 寫入，本次補 type）。
+
+### Changed
+
+- **D1 schema** (migration 0050 expand-contract phase 1): `CREATE TABLE poi_favorites`
+  + `INSERT INTO poi_favorites SELECT FROM saved_pois`（複製，不動 saved_pois — soak
+  ≥ 1 week 後 migration 0051 DROP）。`saved_at` 欄位 rename 為 `favorited_at`。避免
+  GitHub Actions deploy.yml migration → app deploy 順序的 5xx 窗口。
+- **`_rate_limit.ts` bumpRateLimit**: read-then-replace race → 單一 `INSERT INTO ... ON
+  CONFLICT(bucket_key) DO UPDATE ... RETURNING` atomic SQL。100 burst concurrent 收斂
+  到 final count = 100（race 前測得 1）。
+- **API handlers** rename hard cutover：`functions/api/saved-pois.ts` → `poi-favorites.ts`
+  + `saved-pois/[id].ts` → `poi-favorites/[id].ts` + `saved-pois/[id]/add-to-trip.ts`
+  → `poi-favorites/[id]/add-to-trip.ts`。POST 用 `requireFavoriteActor` 取 effective
+  userId；ownership 嚴格綁 submitter（companion service token 帶 admin scope 不
+  bypass — M2 security boundary）。
+- **add-to-trip body schema** 從 6-field（含 position / anchorEntryId）改為 4-field 純
+  時間驅動（`tripId / dayNum / startTime / endTime`）— spec D14。Server 依 startTime
+  自動算 sort_order；conflict 邏輯保留（newStart < eEnd AND newEnd > eStart → 409 +
+  conflictWith）。送 legacy 欄位 → 400「欄位已廢除」明確訊息。
+- **Frontend rename hard cutover**: `SavedPoisPage` → `PoiFavoritesPage` /
+  `AddSavedPoiToTripPage` → `AddPoiFavoriteToTripPage`；routes `/saved` → `/favorites` /
+  `/saved-pois/:id/add-to-trip` → `/favorites/:id/add-to-trip`（不留 `<Navigate>`
+  redirect）；types `SavedPoi` → `PoiFavorite` / `SavedPoiUsage` → `PoiFavoriteUsage`；
+  內部變數 `savedPois` → `poiFavorites` / `savedKeySet` → `favoriteKeySet` / `isSaved`
+  → `isPoiFavorited`；fetch URL `/api/saved-pois` → `/api/poi-favorites`。
+- **Sidebar + BottomNav**: key `saved` → `favorites` / label「我的收藏」→「收藏」
+  （廢除 DESIGN.md L298 asymmetric labels；ownership 由 PoiFavoritesPage hero
+  eyebrow 補回）/ activePatterns 全 rename。
+- **CSS classes** `.saved-*` → `.favorites-*`（shell/wrap/eyebrow/grid/card/error/
+  toolbar 等）；data-testid 同步 rename；`.tp-saved-add-to-trip` →
+  `.tp-favorites-add-to-trip`；`.tp-add-stop-saved-*` → `.tp-add-stop-favorites-*`。
+- **Middleware**: companion 白名單 `/api/saved-pois*` 4 條 path → `/api/poi-favorites*`
+  （hard cutover）。
+- **Tp-* skill auth headers**: 14 個 skill 檔案（`.claude` + `.codex` 各 7 個）
+  `CF-Access-Client-Id` / `CF_ACCESS_CLIENT_ID` → `Authorization: Bearer
+  $TRIPLINE_API_TOKEN`（V2 OAuth client_credentials grant）；security.md 認證機制
+  描述同步。
+- **LoginPage** L546「我的收藏跟著你」→「收藏跟著你」；ExplorePage aria-label
+  「儲存到收藏」→「加入收藏」/「已儲存」→「已收藏」。
+- **`logAudit()` extension**: 加 optional `companionFailureReason` 欄位 + `audit_log`
+  INSERT 多寫一個 column（既有 caller 不受影響 — column nullable）。
+- **CLAUDE.md Hard Rules**: 加「Mockup-first hard gate — 所有 new page / new component
+  ≥1 layout 變化 → /tp-claude-design 產 HTML mockup → user sign-off → 才寫 React」。
+
+### Fixed
+
+- **request 181 401 痛點**: tp-request scheduler 持 V2 OAuth Bearer client_credentials
+  token（user_id null）打 `/api/saved-pois` 強制 `auth.userId` 觸發 401。本 PR 透過
+  companion 三 gate + submitter 對映補 effective userId 解此痛點。
+- **`/api/poi-search` 198 筆 prod 401**: V2 cutover 漏列 public-read whitelist。修 1 行。
+- **Rate limit race**: 100 burst concurrent 從 race 收斂到 1 → atomic SQL 收斂到 100
+  （+ companion bucket 隔離防 cross-attack）。
+
+### Tests
+
+- 18 migration tests (poi_favorites schema / companion_request_actions / audit_log
+  column / data copy)
+- 22 companion-resolver unit tests（10 cases A-J + V2 user fallback + GET query path）
+- 24 rate-limit tests（atomic 2 + bucket-isolation 3 + module 17 + saved-pois 2）
+- 16 middleware tests（companion-gate 4 + poi-search-public 4 + companion-whitelist 9）
+- 41 poi-favorites integration tests（POST 15 + GET 7 + DELETE 8 + add-to-trip 11）
+- 全 unit suite 1331/1331 ✓ / 全 test:api 590/632 ✓（35 intentional skipped）
+
+### Deferred to follow-up
+
+- §11/§12 mockup-driven UI redesigns（mockup 已 sign-off，React refactor 留 follow-up
+  PR — 不阻擋本 rename + companion infra）
+- §13 PageErrorState/EmptyState shared component 抽取
+- §15.1-15.3 tp-request SKILL.md「加入收藏」H3 段 + 401 debug checklist
+- §16.1, 16.3-16.5 tp-team SKILL.md / DESIGN.md / ARCHITECTURE.md history sections
+- §17 DESIGN.md asymmetric labels rewrite
+- migration 0051（DROP TABLE saved_pois，soak ≥ 1 week 後）
+
+### Pre-merge gates（admin / SRE 動作）
+
+- §1.2 `TRIPLINE_API_TOKEN` Cloudflare Pages secret provision（admin re-run
+  `scripts/provision-admin-cli-client.js` + `wrangler pages secret put`）
+- §1.3, §19 mac mini cron `scripts/tp-request-scheduler.sh` URL → `/api/poi-favorites`
+  + 換新 OAuth token 含 `admin + companion` scope
+
 ## [2.21.3] - 2026-05-04
 
 **`trip_requests.mode` rip-out phase 2 — DROP COLUMN** — 完成 PR #471 留下的

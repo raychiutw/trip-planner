@@ -46,18 +46,18 @@ describe('ExplorePage', () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
     apiFetchMock.mockImplementation((path: string) => {
-      if (path === '/saved-pois') return Promise.resolve([]);
+      if (path === '/poi-favorites') return Promise.resolve([]);
       return Promise.resolve({});
     });
     global.fetch = vi.fn();
   });
 
-  it('renders search input + TitleBar 收藏 ghost action navigates to /saved (v2.21.0)', () => {
+  it('renders search input + TitleBar 收藏 ghost action navigates to /favorites (v2.21.0)', () => {
     const { getByTestId } = renderPage();
     expect(getByTestId('explore-page')).toBeTruthy();
     expect(getByTestId('explore-search-input')).toBeTruthy();
-    // v2.21.0 IA reshuffle: 拆 page 後 TitleBar action 改 navigate('/saved')，不再 toggle in-page。
-    const action = getByTestId('explore-saved-titlebar') as HTMLButtonElement;
+    // v2.21.0 IA reshuffle: 拆 page 後 TitleBar action 改 navigate('/favorites')，不再 toggle in-page。
+    const action = getByTestId('explore-favorites-titlebar') as HTMLButtonElement;
     expect(action.getAttribute('aria-label')).toBe('收藏');
     expect(action.textContent).toContain('收藏');
   });
@@ -99,7 +99,7 @@ describe('ExplorePage', () => {
     );
   });
 
-  it('save button triggers find-or-create + saved-pois POST', async () => {
+  it('save button triggers find-or-create + poi-favorites POST', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({
@@ -107,7 +107,7 @@ describe('ExplorePage', () => {
       }),
     });
     apiFetchMock.mockImplementation((path: string) => {
-      if (path === '/saved-pois') return Promise.resolve([]);
+      if (path === '/poi-favorites') return Promise.resolve([]);
       if (path === '/pois/find-or-create') return Promise.resolve({ id: 42 });
       return Promise.resolve({});
     });
@@ -126,7 +126,7 @@ describe('ExplorePage', () => {
         expect.objectContaining({ method: 'POST' }),
       );
       expect(apiFetchMock).toHaveBeenCalledWith(
-        '/saved-pois',
+        '/poi-favorites',
         expect.objectContaining({ method: 'POST' }),
       );
     });
@@ -137,7 +137,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
   beforeEach(() => {
     apiFetchMock.mockReset();
     apiFetchMock.mockImplementation((path: string) => {
-      if (path === '/saved-pois') return Promise.resolve([]);
+      if (path === '/poi-favorites') return Promise.resolve([]);
       return Promise.resolve({});
     });
     global.fetch = vi.fn();

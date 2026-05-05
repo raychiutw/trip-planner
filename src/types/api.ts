@@ -32,6 +32,9 @@ export const ErrorCode = {
   SYS_INTERNAL: 'SYS_INTERNAL',
   SYS_DB_ERROR: 'SYS_DB_ERROR',
   SYS_RATE_LIMIT: 'SYS_RATE_LIMIT',
+  // Companion path（poi-favorites-rename §4 / §6.3）
+  // companion_request_actions UNIQUE 衝突 → 同 requestId 同 action 重複呼叫
+  COMPANION_QUOTA_EXCEEDED: 'COMPANION_QUOTA_EXCEEDED',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -53,6 +56,7 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   SYS_INTERNAL: '系統發生錯誤，已通知開發團隊',
   SYS_DB_ERROR: '資料庫忙碌中，請稍後再試',
   SYS_RATE_LIMIT: '操作太頻繁，請稍等',
+  COMPANION_QUOTA_EXCEEDED: '此 request 已執行過此操作',
 };
 
 // ---------------------------------------------------------------------------
@@ -75,6 +79,10 @@ export interface AuthData {
   userId: string | null;
   isAdmin: boolean;
   isServiceToken: boolean;
+  /** OAuth scopes from V2 Bearer token (client_credentials grant). Only present for service token. */
+  scopes?: string[];
+  /** OAuth client_id from V2 Bearer token. Only present for service token. */
+  clientId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,36 +153,35 @@ export interface Permission {
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// SavedPoi — 使用者跨 trip 的 POI 收藏（layout refactor Phase 1）
+// PoiFavorite — 使用者跨 trip 的 POI 收藏池（migration 0050 rename）
 // ---------------------------------------------------------------------------
 
 /**
- * A saved POI — 使用者跨 trip 的收藏清單，由 /explore 我的收藏維護。
+ * A POI favorite — 使用者跨 trip 的收藏清單，由 /favorites 頁面維護。
  *
- * DB table: saved_pois
- * Columns: id, email, poi_id, saved_at, note
+ * DB table: poi_favorites（migration 0050 rename from saved_pois）
+ * Columns: id, user_id, poi_id, favorited_at, note
  *
  * GET response 會 JOIN `pois` 補 POI 詳情（poiName / poiAddress / poiLat / poiLng / poiType）。
  *
  * mapRow renames (via json() deep camelCase):
+ *   user_id      -> userId
  *   poi_id       -> poiId
- *   saved_at     -> savedAt
+ *   favorited_at -> favoritedAt
  *   poi_name     -> poiName
  *   poi_address  -> poiAddress
  *   poi_lat      -> poiLat
  *   poi_lng      -> poiLng
  *   poi_type     -> poiType
  */
-export interface SavedPoi {
+export interface PoiFavorite {
   id: number;
-  /** owner email — V2 cutover dual-read: kept for transition, dropped in phase 2 (migration 0047) */
-  email: string;
   /** owner user_id — V2 cutover canonical identifier */
-  userId: string | null;
+  userId: string;
   /** DB column `poi_id` — FK to pois(id) */
   poiId: number;
-  /** DB column `saved_at` — ISO datetime */
-  savedAt: string;
+  /** DB column `favorited_at` — ISO datetime */
+  favoritedAt: string;
   note?: string | null;
   // JOIN pois 欄位（GET endpoint 會回）
   poiName?: string;
@@ -183,15 +190,15 @@ export interface SavedPoi {
   poiLng?: number | null;
   poiType?: string;
   /**
-   * GET /api/saved-pois 回傳每筆收藏目前出現在哪些 trip / day / entry。
-   * 透過 saved_pois.poi_id ← trip_pois.poi_id 反查（單一 LEFT JOIN + json_group_array）。
-   * 空陣列 = 此收藏尚未排進任何行程；可在 saved card 顯示「目前在 N 個 trip」徽章。
+   * GET /api/poi-favorites 回傳每筆收藏目前出現在哪些 trip / day / entry。
+   * 透過 poi_favorites.poi_id ← trip_pois.poi_id 反查（單一 LEFT JOIN + json_group_array）。
+   * 空陣列 = 此收藏尚未排進任何行程；可在 favorite card 顯示「目前在 N 個 trip」徽章。
    */
-  usages?: SavedPoiUsage[];
+  usages?: PoiFavoriteUsage[];
 }
 
-/** 一筆收藏在某 trip / day / entry 的出現紀錄（GET /api/saved-pois 回傳）。 */
-export interface SavedPoiUsage {
+/** 一筆收藏在某 trip / day / entry 的出現紀錄（GET /api/poi-favorites 回傳）。 */
+export interface PoiFavoriteUsage {
   tripId: string;
   tripName: string;
   dayNum: number | null;
@@ -203,10 +210,9 @@ export interface SavedPoiUsage {
 // TripIdea — RETIRED in migration 0046 (V2 owner cutover)
 // ---------------------------------------------------------------------------
 //
-// 「備案」概念合一進「我的收藏」(saved_pois) — 跨 trip universal pool。
-// 詳見 design doc: ~/.gstack/projects/raychiutw-trip-planner/ray-master-design-20260504-002256.md
-// 既有 trip_ideas 資料 active rows 已 migrate 進 saved_pois (trip owner's pool)。
-// 「目前在哪些 trip」資訊改透過 SavedPoi.usages JOIN trip_pois 反查。
+// 「備案」概念合一進「收藏」(poi_favorites) — 跨 trip universal pool。
+// 既有 trip_ideas 資料 active rows 已 migrate 進 poi_favorites (trip owner's pool)。
+// 「目前在哪些 trip」資訊改透過 PoiFavorite.usages JOIN trip_pois 反查。
 
 /**
  * An audit log entry recording every insert / update / delete.
