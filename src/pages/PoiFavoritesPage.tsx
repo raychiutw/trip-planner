@@ -108,6 +108,10 @@ const SCOPED_STYLES = `
   outline: none;
 }
 .favorites-search input::placeholder { color: var(--color-muted); }
+/* iOS Safari 對 input font-size < 16px 自動 zoom 破版；mobile 用 16px 防 zoom，desktop 維持 15px */
+@media (max-width: 760px) {
+  .favorites-search input { font-size: 16px; }
+}
 
 .favorites-region-row,
 .favorites-type-row {
