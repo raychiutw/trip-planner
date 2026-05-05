@@ -1,17 +1,17 @@
 /**
  * POST /api/trips/:id/recompute-travel?day=N|all
  *
+ * v2.23.0 google-maps-migration: ORS+Haversine → Google Routes API (src/server/maps/google-client).
+ * **NO** fallback per P11/T13 — single pair Google failure → travel_source='error', skip update for that pair.
+ * Aggregate Google failure → 502 MAPS_UPSTREAM_FAILED bubbled by computeRoute (caller handles).
+ *
  * Recomputes travel_* fields on trip_entries by walking adjacent (sort_order)
- * entries within each day, fetching pois.lat/lng, calling
- * src/server/travel/compute.ts (ORS primary, Haversine fallback).
+ * entries within each day. First entry per day stays NULL (no prior).
  *
- * Updates entry[i+1].travel_distance_m / travel_min / travel_computed_at /
- * travel_source. First entry per day stays NULL (no prior).
- *
- * Mode comes from trips.default_travel_mode.
+ * Mode comes from trips.default_travel_mode (google driving only currently).
  *
  * Triggered by:
- *   - TimelineRail.handleDragEnd (commit 16) when user reorders entries
+ *   - TimelineRail.handleDragEnd when user reorders entries
  *   - Manual recompute via UI/CLI
  *
  * Auth: trip write permission (owner/member with write).
@@ -20,8 +20,26 @@
 import { hasWritePermission } from '../../_auth';
 import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
-import { computeTravel, type TravelMode } from '../../../../src/server/travel/compute';
+import { assertGoogleAvailable } from '../../_maps_lock';
+import { computeRoute, type TravelMode as GoogleTravelMode } from '../../../../src/server/maps/google-client';
 import type { Env } from '../../_types';
+
+/** Map trips.default_travel_mode (lowercase) → Google Routes travelMode (uppercase enum). */
+function mapMode(trip_mode: string): GoogleTravelMode {
+  switch (trip_mode.toLowerCase()) {
+    case 'walking':
+    case 'walk':
+      return 'WALK';
+    case 'transit':
+      return 'TRANSIT';
+    case 'cycling':
+    case 'bicycle':
+      return 'BICYCLE';
+    case 'driving':
+    default:
+      return 'DRIVE';
+  }
+}
 
 interface EntryWithCoords {
   id: number;
@@ -54,7 +72,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     .bind(tripId)
     .first<{ default_travel_mode: string | null }>();
   if (!trip) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
-  const mode = (trip.default_travel_mode ?? 'driving') as TravelMode;
+  const tripMode = trip.default_travel_mode ?? 'driving';
+  const googleMode = mapMode(tripMode);
+
+  const apiKey = context.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');
+  await assertGoogleAvailable(db);
 
   // Resolve day filter
   const url = new URL(context.request.url);
@@ -100,20 +123,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       // Skip if either side missing coords — can't compute meaningful travel
       if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) continue;
 
-      const result = await computeTravel({
-        orsApiKey: context.env.ORS_API_KEY,
-        mode,
-        origin: { lat: prev.lat, lng: prev.lng },
-        dest: { lat: curr.lat, lng: curr.lng },
-      });
-      updates.push({
-        entryId: curr.id,
-        distance_m: result.distance_m,
-        duration_s: result.duration_s,
-        source: result.source,
-      });
-      sourceBreakdown[result.source] = (sourceBreakdown[result.source] ?? 0) + 1;
-      pairsComputed++;
+      try {
+        const result = await computeRoute(
+          apiKey,
+          { lat: prev.lat, lng: prev.lng },
+          { lat: curr.lat, lng: curr.lng },
+          googleMode,
+        );
+        updates.push({
+          entryId: curr.id,
+          distance_m: result.distance_meters,
+          duration_s: result.duration_seconds,
+          source: 'google',
+        });
+        sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
+        pairsComputed++;
+      } catch (err) {
+        // Single-pair failure: log but continue（design doc T13: no fallback）。
+        // 整段 Google service down 時，會在第一 pair 就 throw MAPS_UPSTREAM_FAILED 上來
+        // (computeRoute 內部 throw)，整 batch 失敗 — 此 try 只 catch invalid coords / 個別 4xx。
+        sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
+        if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
+        // Other errors → swallow per pair, continue with rest
+      }
     }
   }
 
@@ -138,6 +170,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     days_processed: daysRes.results.length,
     pairs_computed: pairsComputed,
     source_breakdown: sourceBreakdown,
-    mode,
+    mode: tripMode,
   });
 };
