@@ -15,14 +15,12 @@
  *   locked_at: string | null
  * }
  */
-import { AppError } from '../_errors';
-import { requireAuth } from '../_auth';
+
+import { requireAdmin } from '../_auth';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = requireAuth(context);
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
-
+  requireAdmin(context);
   const { results } = await context.env.DB.prepare(
     `SELECT key, value FROM app_settings
      WHERE key IN (

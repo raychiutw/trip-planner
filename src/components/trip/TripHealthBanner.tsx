@@ -20,6 +20,7 @@
  * Refresh trigger: caller 改變 `refreshKey` prop → 重 fetch（POI mutation 後 invalidate）。
  */
 import { useEffect, useState } from 'react';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 interface HealthItem {
   poi_id: number;
@@ -99,17 +100,7 @@ export default function TripHealthBanner({
 }: TripHealthBannerProps) {
   const [data, setData] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [autoCompact, setAutoCompact] = useState<boolean>(false);
-
-  // Auto-detect mobile compact (≤1023px) — caller can override via `compact` prop.
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mql = window.matchMedia('(max-width: 1023px)');
-    const handler = (e: MediaQueryListEvent) => setAutoCompact(e.matches);
-    setAutoCompact(mql.matches);
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
+  const autoCompact = useMediaQuery('(max-width: 1023px)');
 
   useEffect(() => {
     const ctl = new AbortController();

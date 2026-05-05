@@ -25,6 +25,5 @@ export interface PoiSearchResult {
   country_name?: string;
   /** Google rating 1-5, optional. */
   rating?: number;
-  /** business_status: 'OPERATIONAL' / 'CLOSED_TEMPORARILY' / 'CLOSED_PERMANENTLY' */
-  business_status?: string;
+  business_status?: 'OPERATIONAL' | 'CLOSED_TEMPORARILY' | 'CLOSED_PERMANENTLY';
 }

@@ -14,14 +14,12 @@
  * Response: Array<{ service: string, count_24h: number }>
  *   Services: search_text / place_details / directions / maps_js / geocoding / autocomplete
  */
-import { AppError } from '../_errors';
-import { requireAuth } from '../_auth';
+
+import { requireAdmin } from '../_auth';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = requireAuth(context);
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
-
+  requireAdmin(context);
   const db = context.env.DB;
 
   // Search Text: count cache misses fetched in last 24h (cache HIT vs MISS proxy).

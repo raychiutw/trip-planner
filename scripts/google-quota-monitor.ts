@@ -23,8 +23,7 @@
  * which uses Google Maps Platform Console quota usage API (simpler shim).
  * Full Cloud Monitoring integration deferred to v2.24.0 (TODO).
  */
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { loadCronEnv, makeApiClient, alertTelegram } from './_lib/cron-shared';
 
 const PRICE_PER_1K = {
   search_text: 32, // Places API Text Search
@@ -47,52 +46,8 @@ interface AppSettings {
   is_locked: boolean;
 }
 
-function loadEnv(): { apiUrl: string; token: string } {
-  const envPath = join(process.cwd(), '.env.local');
-  const raw = (() => {
-    try { return readFileSync(envPath, 'utf-8'); } catch { return ''; }
-  })();
-  const map = new Map<string, string>();
-  for (const line of raw.split('\n')) {
-    if (!line || line.startsWith('#')) continue;
-    const idx = line.indexOf('=');
-    if (idx < 0) continue;
-    map.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim().replace(/^"|"$/g, ''));
-  }
-  const apiUrl = (process.env.TRIPLINE_API_URL || map.get('TRIPLINE_API_URL') || '').trim();
-  const token = (process.env.TRIPLINE_API_TOKEN || map.get('TRIPLINE_API_TOKEN') || '').trim();
-  if (!apiUrl || !token) throw new Error('Required env: TRIPLINE_API_URL + TRIPLINE_API_TOKEN');
-  return { apiUrl, token };
-}
-
-const ENV = loadEnv();
-
-async function api<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const res = await fetch(`${ENV.apiUrl}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${ENV.token}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`${method} ${path} → ${res.status}: ${text.slice(0, 200)}`);
-  }
-  return (await res.json()) as T;
-}
-
-async function alertTelegram(msg: string): Promise<void> {
-  const tok = process.env.TELEGRAM_BOT_TOKEN || '';
-  const chat = process.env.TELEGRAM_CHAT_ID || '';
-  if (!tok || !chat) return;
-  await fetch(`https://api.telegram.org/bot${tok}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chat, text: msg }),
-  }).catch(() => undefined);
-}
+const ENV = loadCronEnv();
+const api = makeApiClient(ENV);
 
 /** Estimate cost ($) from per-service 24h counts. */
 function estimateCost(estimates: QuotaEstimate[]): number {
@@ -147,6 +102,14 @@ async function main(): Promise<void> {
     const sendDaily = mtdPct >= 50 || dayOfMonth === 1 || dayOfMonth === 15;
     if (sendDaily) await alertTelegram(summary);
     console.log(summary);
+  }
+
+  // Cleanup expired pois_search_cache rows so 24h-TTL table doesn't grow unbounded.
+  try {
+    const { deleted } = await api<{ deleted: number }>('POST', '/api/admin/cache-cleanup');
+    if (deleted > 0) console.log(`🧹 Cleaned ${deleted} expired cache rows.`);
+  } catch (err) {
+    console.warn('Cache cleanup failed (non-fatal):', err instanceof Error ? err.message : err);
   }
 }
 

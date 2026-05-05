@@ -15,14 +15,12 @@
  *
  * Response: { rows: Array<{ id, name, place_id, last_refreshed_at }> }
  */
-import { AppError } from '../_errors';
-import { requireAuth } from '../_auth';
+
+import { requireAdmin } from '../_auth';
 import type { Env } from '../_types';
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
-  const auth = requireAuth(context);
-  if (!auth.isAdmin) throw new AppError('PERM_ADMIN_ONLY');
-
+  requireAdmin(context);
   const url = new URL(context.request.url);
   const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '50', 10) || 50, 1), 200);
 
