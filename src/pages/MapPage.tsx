@@ -36,7 +36,7 @@ import MapDayTab from '../components/trip/MapDayTab';
 import MapEntryCard, { type EntryKind } from '../components/trip/MapEntryCard';
 import MapFabs from '../components/trip/MapFabs';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import type * as L from 'leaflet';
+
 
 const OceanMap = lazy(() => import('../components/trip/OceanMap'));
 
@@ -268,9 +268,9 @@ export default function MapPage() {
   const [activeTab, setActiveTab] = useState<'overview' | number>(initialTab);
   const isOverview = activeTab === 'overview';
 
-  // Section 4.10：MapFabs 需要 L.Map instance；OceanMap 透過 onMapReady prop
+  // Section 4.10：MapFabs 需要 google.maps.Map instance；OceanMap 透過 onMapReady prop
   // 在 mount 時 surface ref，unmount 時 reset 為 null。
-  const [leafletMap, setLeafletMap] = useState<L.Map | null>(null);
+  const [googleMap, setGoogleMap] = useState<google.maps.Map | null>(null);
 
   // Keep activeTab synced with URL on first load
   useEffect(() => {
@@ -479,13 +479,13 @@ export default function MapPage() {
               fillParent={true}
               pinsByDay={isOverview ? overviewData?.pinsByDay : undefined}
               dayNum={isOverview ? undefined : (activeTab as number)}
-              onMapReady={setLeafletMap}
+              onMapReady={setGoogleMap}
               onMarkerClick={handleCardClick}
             />
           </Suspense>
         )}
         {/* Section 4.10：右下 FAB stack — 圖層切換 + 我的位置 */}
-        <MapFabs map={leafletMap} />
+        <MapFabs map={googleMap} />
       </main>
 
       {dayTabs.length > 1 && (

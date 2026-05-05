@@ -84,13 +84,13 @@ CREATE TABLE app_settings (
 );
 
 INSERT INTO app_settings (key, value, note) VALUES
-  ('google_maps_locked',                'false',  'set to true by daily-check at MTD ≥ 90% of free credit'),
-  ('google_maps_locked_reason',         '',       'human-readable reason e.g. "MTD $182.30 / $200 (91.15%)"'),
+  ('google_maps_locked',                'false',  'set to true by daily-check at MTD over 90 percent of free credit'),
+  ('google_maps_locked_reason',         '',       'human-readable reason e.g. MTD 182.30 of 200'),
   ('google_maps_locked_at',             '',       'ISO timestamp of lock'),
   ('google_maps_budget_usd',            '200',    'monthly free credit (review monthly)'),
-  ('google_maps_lock_threshold_pct',    '90',     'lock at MTD >= N% of budget'),
-  ('google_maps_unlock_threshold_pct',  '50',     'unlock at MTD <= N% of budget (hysteresis prevents flapping)'),
-  ('google_maps_migration_applied_at',  datetime('now'), 'migration 0051 apply time; backfill scheduling sentinel');
+  ('google_maps_lock_threshold_pct',    '90',     'lock at MTD over N percent of budget'),
+  ('google_maps_unlock_threshold_pct',  '50',     'unlock at MTD under N percent of budget (hysteresis prevents flapping)'),
+  ('google_maps_migration_applied_at',  datetime('now'), 'migration 0051 apply time + backfill scheduling sentinel');
 
 -- =============================================
 -- 5. ANALYZE — refresh query planner stats

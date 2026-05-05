@@ -84,7 +84,7 @@ describe('ExplorePage', () => {
       ok: true,
       json: () => Promise.resolve({
         results: [
-          { osm_id: 1, name: '沖繩水族館', address: 'Japan', lat: 26.6941, lng: 127.8778, category: 'tourism' },
+          { place_id: "p1", name: '沖繩水族館', address: 'Japan', lat: 26.6941, lng: 127.8778, category: 'tourism' },
         ],
       }),
     });
@@ -103,7 +103,7 @@ describe('ExplorePage', () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({
-        results: [{ osm_id: 99, name: 'Test POI', address: 'Addr', lat: 25, lng: 121, category: 'food' }],
+        results: [{ place_id: "p99", name: 'Test POI', address: 'Addr', lat: 25, lng: 121, category: 'food' }],
       }),
     });
     apiFetchMock.mockImplementation((path: string) => {
@@ -117,7 +117,7 @@ describe('ExplorePage', () => {
     fireEvent.change(input, { target: { value: 'Test' } });
     fireEvent.click(getByTestId('explore-search-submit'));
 
-    const saveBtn = await findByTestId('explore-save-btn-99');
+    const saveBtn = await findByTestId('explore-save-btn-p99');
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
@@ -177,7 +177,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
       ok: true,
       json: () => Promise.resolve({
         results: [
-          { osm_id: 7, name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
+          { place_id: "p7", name: '美ら海水族館', address: '沖縄県', lat: 26.69, lng: 127.87, category: 'tourism' },
         ],
       }),
     });
@@ -185,13 +185,13 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: '美ら海' } });
     fireEvent.click(getByTestId('explore-search-submit'));
     await waitFor(() => {
-      expect(getByTestId('explore-save-btn-7')).toBeTruthy();
+      expect(getByTestId('explore-save-btn-p7')).toBeTruthy();
     });
     // cover element 含 data-tone (1-8)
     const cover = container.querySelector('.explore-poi-cover');
     expect(cover?.getAttribute('data-tone')).toMatch(/^[1-8]$/);
     // heart button class 含 explore-poi-heart
-    const heartBtn = getByTestId('explore-save-btn-7');
+    const heartBtn = getByTestId('explore-save-btn-p7');
     expect(heartBtn.className).toContain('explore-poi-heart');
   });
 
@@ -200,7 +200,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
       ok: true,
       json: () => Promise.resolve({
         results: [
-          { osm_id: 8, name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism' },
+          { place_id: "p8", name: '首爾塔', address: '首爾', lat: 37.5, lng: 126.99, category: 'tourism' },
         ],
       }),
     });
@@ -208,7 +208,7 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: '首爾' } });
     fireEvent.click(getByTestId('explore-search-submit'));
     await waitFor(() => {
-      expect(getByTestId('explore-save-btn-8')).toBeTruthy();
+      expect(getByTestId('explore-save-btn-p8')).toBeTruthy();
     });
     const rating = container.querySelector('.explore-poi-rating');
     expect(rating?.textContent).toContain('★');
@@ -219,8 +219,8 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
       ok: true,
       json: () => Promise.resolve({
         results: [
-          { osm_id: 1, name: 'A 餐廳', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
-          { osm_id: 2, name: 'B 景點', address: 'X', lat: 1, lng: 1, category: 'tourism' },
+          { place_id: "p1", name: 'A 餐廳', address: 'X', lat: 1, lng: 1, category: 'restaurant' },
+          { place_id: "p2", name: 'B 景點', address: 'X', lat: 1, lng: 1, category: 'tourism' },
         ],
       }),
     });
@@ -228,12 +228,12 @@ describe('ExplorePage — Section 4.9 card cover + region + subtabs', () => {
     fireEvent.change(getByTestId('explore-search-input'), { target: { value: 'foo' } });
     fireEvent.click(getByTestId('explore-search-submit'));
     await waitFor(() => {
-      expect(getByTestId('explore-save-btn-1')).toBeTruthy();
-      expect(getByTestId('explore-save-btn-2')).toBeTruthy();
+      expect(getByTestId('explore-save-btn-p1')).toBeTruthy();
+      expect(getByTestId('explore-save-btn-p2')).toBeTruthy();
     });
     // 切 food → 只剩 restaurant
     fireEvent.click(getByTestId('explore-subtab-food'));
-    expect(() => getByTestId('explore-save-btn-2')).toThrow();
-    expect(getByTestId('explore-save-btn-1')).toBeTruthy();
+    expect(() => getByTestId('explore-save-btn-p2')).toThrow();
+    expect(getByTestId('explore-save-btn-p1')).toBeTruthy();
   });
 });
