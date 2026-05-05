@@ -385,7 +385,7 @@ export default function ExplorePage() {
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<PoiSearchResult[]>([]);
   const [savedKeyRows, setSavedKeyRows] = useState<SavedKeyRow[]>([]);
-  const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
   // Region selector + category subtab filter
   // region 預設用 active trip's countries → 對應地區名
   const { activeTripId } = useActiveTrip();
@@ -514,7 +514,7 @@ export default function ExplorePage() {
   }, [region]);
 
   async function handleSave(poi: PoiSearchResult) {
-    setSavingIds((s) => new Set(s).add(poi.osm_id));
+    setSavingIds((s) => new Set(s).add(poi.place_id));
     try {
       // PR-T 2026-04-26：原本直接送 poi.category（Nominatim raw 'tourism' /
       // 'amenity' / 'shop' 等），會被 pois.type CHECK constraint 拒收 → 503。
@@ -543,7 +543,7 @@ export default function ExplorePage() {
     } finally {
       setSavingIds((s) => {
         const next = new Set(s);
-        next.delete(poi.osm_id);
+        next.delete(poi.place_id);
         return next;
       });
     }
@@ -682,11 +682,12 @@ export default function ExplorePage() {
                     {filtered.map((poi) => {
                       const key = `${poi.category || 'poi'}::${poi.name}`;
                       const isPoiFavorited = favoriteKeySet.has(key);
-                      const isSaving = savingIds.has(poi.osm_id);
-                      // Stable tone 1-8 derived from osm_id 後綴 hash。
-                      const tone = ((poi.osm_id ?? 0) % 8) + 1;
+                      const isSaving = savingIds.has(poi.place_id);
+                      // Stable tone 1-8 derived from place_id char-sum hash（v2.23.0：string id）。
+                      const placeIdHash = (poi.place_id || '').split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+                      const tone = (placeIdHash % 8) + 1;
                       return (
-                        <article className="explore-poi-card" key={poi.osm_id}>
+                        <article className="explore-poi-card" key={poi.place_id}>
                           <div
                             className="explore-poi-cover"
                             data-tone={String(tone)}
@@ -698,7 +699,7 @@ export default function ExplorePage() {
                               onClick={() => !isPoiFavorited && !isSaving && handleSave(poi)}
                               disabled={isSaving || isPoiFavorited}
                               aria-label={isPoiFavorited ? '已收藏' : '加入收藏'}
-                              data-testid={`explore-save-btn-${poi.osm_id}`}
+                              data-testid={`explore-save-btn-${poi.place_id}`}
                             >
                               <Icon name="heart" />
                             </button>

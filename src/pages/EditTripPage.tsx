@@ -49,8 +49,8 @@ import { usePoiSearch } from '../hooks/usePoiSearch';
 import type { PoiSearchResult } from '../types/poi';
 
 interface DestinationRow {
-  osm_id: number;
-  osm_type?: 'node' | 'way' | 'relation' | null;
+  place_id: string;
+
   name: string;
   lat?: number | null;
   lng?: number | null;
@@ -67,8 +67,8 @@ interface TripDestApi {
   lat?: number | null;
   lng?: number | null;
   day_quota?: number | null;
-  osm_id?: number | null;
-  osm_type?: 'node' | 'way' | 'relation' | null;
+  place_id?: number | null;
+
 }
 
 interface TripApi {
@@ -257,12 +257,12 @@ const SCOPED_STYLES = `
 interface SortableDestinationRowProps {
   dest: DestinationRow;
   index: number;
-  onRemove: (osmId: number) => void;
+  onRemove: (placeId: string) => void;
 }
 
 function SortableDestRow({ dest, index, onRemove }: SortableDestinationRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: dest.osm_id,
+    id: dest.place_id,
   });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
@@ -270,7 +270,7 @@ function SortableDestRow({ dest, index, onRemove }: SortableDestinationRowProps)
       ref={setNodeRef}
       style={style}
       className={`tp-edit-dest-row ${isDragging ? 'is-dragging' : ''} ${dest.isNew ? 'is-new' : ''}`}
-      data-testid={`edit-trip-dest-row-${dest.osm_id}`}
+      data-testid={`edit-trip-dest-row-${dest.place_id}`}
     >
       <button
         type="button"
@@ -292,7 +292,7 @@ function SortableDestRow({ dest, index, onRemove }: SortableDestinationRowProps)
       <button
         type="button"
         className="tp-edit-dest-remove"
-        onClick={() => onRemove(dest.osm_id)}
+        onClick={() => onRemove(dest.place_id)}
         aria-label={`移除目的地：${dest.name}`}
       >
         <Icon name="x-mark" />
@@ -375,11 +375,11 @@ export default function EditTripPage() {
         if (cancelled) return;
         setOriginal(data);
         const initialDests: DestinationRow[] = (data.destinations ?? [])
-          .filter((d): d is TripDestApi & { osm_id: number; name: string } =>
-            typeof d.osm_id === 'number' && typeof d.name === 'string')
+          .filter((d): d is TripDestApi & { place_id: string; name: string } =>
+            typeof d.place_id === 'number' && typeof d.name === 'string')
           .map((d) => ({
-            osm_id: d.osm_id,
-            osm_type: d.osm_type ?? null,
+            place_id: d.place_id,
+
             name: d.name,
             lat: d.lat ?? null,
             lng: d.lng ?? null,
@@ -419,34 +419,34 @@ export default function EditTripPage() {
   );
 
   function selectPoi(poi: PoiSearchResult) {
-    if (destinations.some((d) => d.osm_id === poi.osm_id)) {
+    if (destinations.some((d) => d.place_id === poi.place_id)) {
       setShowSearch(false); setDestQuery('');
       return;
     }
     setDestinations((prev) => [
       ...prev,
       {
-        osm_id: poi.osm_id,
-        osm_type: poi.osm_type ?? null,
+        place_id: poi.place_id,
+
         name: poi.name,
         lat: poi.lat,
         lng: poi.lng,
         day_quota: null,
-        isNew: !originalDests.some((d) => d.osm_id === poi.osm_id),
+        isNew: !originalDests.some((d) => d.place_id === poi.place_id),
       },
     ]);
     setShowSearch(false);
     setDestQuery('');
   }
 
-  function removeDest(osmId: number) {
-    setDestinations((prev) => prev.filter((d) => d.osm_id !== osmId));
+  function removeDest(placeId: string) {
+    setDestinations((prev) => prev.filter((d) => d.place_id !== placeId));
   }
 
   function handleDragEnd(e: DragEndEvent) {
     if (!e.over || e.active.id === e.over.id) return;
-    const fromIdx = destinations.findIndex((d) => d.osm_id === e.active.id);
-    const toIdx = destinations.findIndex((d) => d.osm_id === e.over!.id);
+    const fromIdx = destinations.findIndex((d) => d.place_id === e.active.id);
+    const toIdx = destinations.findIndex((d) => d.place_id === e.over!.id);
     if (fromIdx < 0 || toIdx < 0) return;
     setDestinations((prev) => arrayMove(prev, fromIdx, toIdx));
   }
@@ -479,15 +479,15 @@ export default function EditTripPage() {
     const destsChanged = !destNamesEqual(destinations, originalDests)
       || destinations.some((d, i) => {
         const o = originalDests[i];
-        return !o || o.osm_id !== d.osm_id || (o.day_quota ?? null) !== (d.day_quota ?? null);
+        return !o || o.place_id !== d.place_id || (o.day_quota ?? null) !== (d.day_quota ?? null);
       });
     if (destsChanged) {
       body.destinations = destinations.map((d) => ({
         name: d.name,
         lat: d.lat ?? null,
         lng: d.lng ?? null,
-        osm_id: d.osm_id,
-        osm_type: d.osm_type ?? null,
+        place_id: d.place_id,
+
         day_quota: d.day_quota ?? null,
       }));
     }
@@ -589,10 +589,10 @@ export default function EditTripPage() {
                         accessibility={TP_DRAG_ACCESSIBILITY}
                         onDragEnd={handleDragEnd}
                       >
-                        <SortableContext items={destinations.map((d) => d.osm_id)} strategy={verticalListSortingStrategy}>
+                        <SortableContext items={destinations.map((d) => d.place_id)} strategy={verticalListSortingStrategy}>
                           <div className="tp-edit-dest-rows" data-testid="edit-trip-dest-rows">
                             {destinations.map((d, i) => (
-                              <SortableDestRow key={d.osm_id} dest={d} index={i} onRemove={removeDest} />
+                              <SortableDestRow key={d.place_id} dest={d} index={i} onRemove={removeDest} />
                             ))}
                           </div>
                         </SortableContext>
@@ -633,12 +633,12 @@ export default function EditTripPage() {
                               )}
                               {!poiSearching && poiResults.length > 0 && poiResults.map((p) => (
                                 <button
-                                  key={p.osm_id}
+                                  key={p.place_id}
                                   type="button"
                                   role="option"
                                   className="tp-edit-dest-result"
                                   onClick={() => selectPoi(p)}
-                                  data-testid={`edit-trip-dest-result-${p.osm_id}`}
+                                  data-testid={`edit-trip-dest-result-${p.place_id}`}
                                 >
                                   <span className="name">{p.name}</span>
                                   <span className="addr">{p.address}</span>
