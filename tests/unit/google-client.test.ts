@@ -1,6 +1,6 @@
 /**
  * google-client unit tests — verify request shape + response parsing for
- * each Places / Routes / Geocoding endpoint.
+ * each Places / Routes endpoint.
  *
  * Mocks global fetch; no real Google API calls.
  */
@@ -9,7 +9,6 @@ import {
   searchPlaces,
   getPlaceDetails,
   computeRoute,
-  reverseGeocode,
 } from '../../src/server/maps/google-client';
 
 const mockFetch = vi.fn();
@@ -211,44 +210,3 @@ describe('computeRoute', () => {
   });
 });
 
-describe('reverseGeocode', () => {
-  it('GET to maps API geocode with latlng + key', async () => {
-    fetchOk({
-      status: 'OK',
-      results: [{
-        formatted_address: '沖縄県那覇市',
-        address_components: [
-          { short_name: 'JP', long_name: '日本', types: ['country'] },
-        ],
-      }],
-    });
-    const result = await reverseGeocode('test-key', 26.21, 127.68);
-    const [url] = mockFetch.mock.calls[0]!;
-    expect(url).toContain('maps.googleapis.com/maps/api/geocode/json');
-    expect(url).toContain('latlng=26.21,127.68');
-    expect(url).toContain('key=test-key');
-    expect(result).toMatchObject({
-      formatted_address: '沖縄県那覇市',
-      country_code: 'JP',
-      country_name: '日本',
-    });
-  });
-
-  it('ZERO_RESULTS → returns null', async () => {
-    fetchOk({ status: 'ZERO_RESULTS', results: [] });
-    const result = await reverseGeocode('k', 0, 0);
-    expect(result).toBeNull();
-  });
-
-  it('non-OK status → throws MAPS_UPSTREAM_FAILED', async () => {
-    fetchOk({ status: 'OVER_QUERY_LIMIT', results: [] });
-    try {
-      await reverseGeocode('k', 0, 0);
-      throw new Error('should have thrown');
-    } catch (err) {
-      const e = err as { code: string; detail?: string };
-      expect(e.code).toBe('MAPS_UPSTREAM_FAILED');
-      expect(e.detail).toContain('OVER_QUERY_LIMIT');
-    }
-  });
-});

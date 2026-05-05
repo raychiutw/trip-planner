@@ -26,8 +26,8 @@ vi.mock('../../src/hooks/useCurrentUser', () => ({
 }));
 vi.mock('../../src/components/shell/DesktopSidebarConnected', () => ({ default: () => null }));
 vi.mock('../../src/components/shell/GlobalBottomNav', () => ({ default: () => null }));
-vi.mock('../../src/hooks/useLeafletMap', () => ({
-  useLeafletMap: () => ({ containerRef: { current: null }, map: null, flyTo: () => {}, fitBounds: () => {} }),
+vi.mock('../../src/hooks/useGoogleMap', () => ({
+  useGoogleMap: () => ({ containerRef: { current: null }, map: null, loadError: null, flyTo: () => {}, fitBounds: () => {} }),
 }));
 
 import ChatPage from '../../src/pages/ChatPage';
