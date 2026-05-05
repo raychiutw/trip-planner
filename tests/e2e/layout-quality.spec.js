@@ -60,9 +60,9 @@ test.describe('Layout quality gates', () => {
     // saved 狀態用 aria-label「已儲存」 + .is-saved class，不是 text content
     await expect(page.getByTestId('explore-save-btn-90001')).toHaveClass(/is-saved/);
 
-    // v2.21.0: TitleBar 「收藏」 action navigate to /saved (was in-page tab toggle)
+    // v2.21.0: TitleBar 「收藏」 action navigate to /favorites (was in-page tab toggle)
     await page.getByTestId('explore-saved-titlebar').click();
-    await page.waitForURL(/\/saved$/, { timeout: 5000 });
+    await page.waitForURL(/\/favorites$/, { timeout: 5000 });
     await expect(page.getByTestId('saved-card-8001')).toBeVisible();
     await page.getByTestId('saved-check-8001').check();
     await page.getByTestId('saved-add-to-trip').click();

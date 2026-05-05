@@ -7,9 +7,9 @@
  * 2. 新增景點 (AddStopPage /trip/:id/add-stop?day=N)
  *    custom tab → 填 title → 完成 → POST /api/trips/:id/days/:n/entries
  * 3. 搜尋景點加入收藏 (ExplorePage)
- *    搜尋 → 點 heart → POST /api/saved-pois → saved view 出現
+ *    搜尋 → 點 heart → POST /api/poi-favorites → saved view 出現
  * 4. 移除收藏 (ExplorePage saved view)
- *    切到收藏 → 勾選 → 刪除 → ConfirmModal → DELETE /api/saved-pois/:id
+ *    切到收藏 → 勾選 → 刪除 → ConfirmModal → DELETE /api/poi-favorites/:id
  *
  * 依賴 tests/e2e/api-mocks.js 的 setupApiMocks (含 POST /api/trips mock)
  *
@@ -93,11 +93,11 @@ test.describe('QA Flow 2 — 新增景點 (custom tab confirm)', () => {
 });
 
 test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
-  test('Explore 搜尋 → 點 heart → POST /api/saved-pois → 切到 /saved 看到該 POI (v2.21.0)', async ({ page }) => {
+  test('Explore 搜尋 → 點 heart → POST /api/poi-favorites → 切到 /favorites 看到該 POI (v2.21.0)', async ({ page }) => {
     /** @type {string[]} */
     const savedPosts = [];
     page.on('request', (req) => {
-      if (req.method() === 'POST' && /\/api\/saved-pois$/.test(req.url())) {
+      if (req.method() === 'POST' && /\/api\/poi-favorites$/.test(req.url())) {
         savedPosts.push(req.postData() ?? '');
       }
     });
@@ -114,24 +114,24 @@ test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
     await expect(heartBtn).toBeVisible();
     await heartBtn.click();
 
-    // POST /api/saved-pois 應發生
+    // POST /api/poi-favorites 應發生
     await expect.poll(() => savedPosts.length, { timeout: 5000 }).toBeGreaterThanOrEqual(1);
 
-    // v2.21.0: TitleBar action 「收藏」 navigate to /saved (was: in-page tab toggle)
+    // v2.21.0: TitleBar action 「收藏」 navigate to /favorites (was: in-page tab toggle)
     await page.getByTestId('explore-saved-titlebar').click();
-    await page.waitForURL(/\/saved$/, { timeout: 5000 });
+    await page.waitForURL(/\/favorites$/, { timeout: 5000 });
     await expect(page.getByTestId('saved-page')).toBeVisible();
     await expect(page.getByTestId('saved-count')).toContainText('1 個');
     await expect(page.getByText('沖繩美麗海水族館').first()).toBeVisible();
   });
 });
 
-test.describe('QA Flow 4 — 移除收藏 (v2.21.0 SavedPoisPage)', () => {
-  test('/saved 勾選 → 刪除 → ConfirmModal 確認 → DELETE /api/saved-pois/:id', async ({ page }) => {
+test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
+  test('/favorites 勾選 → 刪除 → ConfirmModal 確認 → DELETE /api/poi-favorites/:id', async ({ page }) => {
     /** @type {string[]} */
     const deletes = [];
     page.on('request', (req) => {
-      if (req.method() === 'DELETE' && /\/api\/saved-pois\/\d+$/.test(req.url())) {
+      if (req.method() === 'DELETE' && /\/api\/poi-favorites\/\d+$/.test(req.url())) {
         deletes.push(req.url());
       }
     });
@@ -141,13 +141,13 @@ test.describe('QA Flow 4 — 移除收藏 (v2.21.0 SavedPoisPage)', () => {
     await page.getByTestId('explore-search-input').fill('沖繩');
     await page.getByTestId('explore-search-submit').click();
     await Promise.all([
-      page.waitForResponse((res) => /\/api\/saved-pois$/.test(res.url()) && res.request().method() === 'POST'),
+      page.waitForResponse((res) => /\/api\/poi-favorites$/.test(res.url()) && res.request().method() === 'POST'),
       page.getByTestId('explore-save-btn-90001').click(),
     ]);
 
-    // Step 2: v2.21.0 TitleBar action navigate to /saved (was in-page tab toggle)
+    // Step 2: v2.22.0 TitleBar action navigate to /favorites (was in-page tab toggle)
     await page.getByTestId('explore-saved-titlebar').click();
-    await page.waitForURL(/\/saved$/, { timeout: 5000 });
+    await page.waitForURL(/\/favorites$/, { timeout: 5000 });
     await expect(page.getByTestId('saved-page')).toBeVisible();
     await expect(page.getByTestId('saved-count')).toContainText('1 個');
 
