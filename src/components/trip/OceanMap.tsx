@@ -202,7 +202,7 @@ const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: Segme
   useEffect(() => {
     if (!map || !route) return;
     const path = route.polyline.map(([lat, lng]) => ({ lat, lng }));
-    const style = segmentStyle(isActive, route.approx === true, dayNum);
+    const style = segmentStyle(isActive, false, dayNum);
     const line = new google.maps.Polyline({
       path,
       map,
@@ -221,7 +221,7 @@ const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: Segme
   useEffect(() => {
     const line = lineRef.current;
     if (!line || !route) return;
-    const style = segmentStyle(isActive, route.approx === true, dayNum);
+    const style = segmentStyle(isActive, false, dayNum);
     line.setOptions({
       strokeColor: style.strokeColor,
       strokeOpacity: style.strokeOpacity,

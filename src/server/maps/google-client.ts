@@ -31,7 +31,6 @@ import { AppError } from '../../../functions/api/_errors';
 
 const PLACES_BASE = 'https://places.googleapis.com';
 const DIRECTIONS_BASE = 'https://routes.googleapis.com';
-const GEOCODE_BASE = 'https://maps.googleapis.com/maps/api/geocode';
 
 const TIMEOUT_MS = 8_000;
 
@@ -324,48 +323,4 @@ export async function computeRoute(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Geocoding API — reverse geocoding (server-side)
-// ---------------------------------------------------------------------------
-
-export interface ReverseGeocodeResult {
-  formatted_address: string;
-  /** ISO 3166-1 alpha-2 uppercase */
-  country_code?: string;
-  country_name?: string;
-}
-
-export async function reverseGeocode(
-  apiKey: string,
-  lat: number,
-  lng: number,
-): Promise<ReverseGeocodeResult | null> {
-  const url = `${GEOCODE_BASE}/json?latlng=${lat},${lng}&language=zh-TW&key=${apiKey}`;
-  const res = await fetchWithTimeout(url, { method: 'GET' });
-  if (!res.ok) fail(`Geocoding ${res.status}`);
-
-  const json = (await res.json().catch(() => null)) as {
-    status?: string;
-    results?: Array<{
-      formatted_address?: string;
-      address_components?: Array<{
-        short_name?: string;
-        long_name?: string;
-        types?: string[];
-      }>;
-    }>;
-  } | null;
-
-  if (json?.status === 'ZERO_RESULTS') return null;
-  if (json?.status !== 'OK') fail(`Geocoding status=${json?.status || 'UNKNOWN'}`);
-
-  const top = json.results?.[0];
-  if (!top?.formatted_address) return null;
-
-  const country = top.address_components?.find((c) => c.types?.includes('country'));
-  return {
-    formatted_address: top.formatted_address,
-    country_code: country?.short_name?.toUpperCase(),
-    country_name: country?.long_name,
-  };
-}
+// Geocoding reverse lookup intentionally omitted — add when /api/geocode endpoint ships.

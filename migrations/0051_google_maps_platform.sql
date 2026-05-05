@@ -83,7 +83,9 @@ CREATE TABLE app_settings (
   note       TEXT
 );
 
-INSERT INTO app_settings (key, value, note) VALUES
+-- INSERT OR IGNORE so re-apply (test fixture re-init / incident recovery) is idempotent.
+-- google_maps_migration_applied_at sentinel reflects FIRST apply only — desired for backfill scheduling.
+INSERT OR IGNORE INTO app_settings (key, value, note) VALUES
   ('google_maps_locked',                'false',  'set to true by daily-check at MTD over 90 percent of free credit'),
   ('google_maps_locked_reason',         '',       'human-readable reason e.g. MTD 182.30 of 200'),
   ('google_maps_locked_at',             '',       'ISO timestamp of lock'),
