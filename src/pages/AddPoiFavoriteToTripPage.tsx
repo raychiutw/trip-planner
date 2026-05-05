@@ -25,6 +25,7 @@ import { useNavigateBack } from '../hooks/useNavigateBack';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { apiFetch } from '../lib/apiClient';
 import { ApiError } from '../lib/errors';
+import { POI_TYPE_LABELS, type PoiType } from '../lib/poiCategory';
 import type { PoiFavorite } from '../types/api';
 
 interface TripBrief {
@@ -39,17 +40,6 @@ interface DayBrief {
   date: string;
   label: string | null;
 }
-
-const POI_TYPE_LABEL: Record<string, string> = {
-  restaurant: '餐廳',
-  attraction: '景點',
-  shopping: '購物',
-  hotel: '飯店',
-  parking: '停車',
-  transport: '交通',
-  activity: '活動',
-  other: '其他',
-};
 
 /** trip dropdown 顯示文字：name 優先，其次 title，fallback tripId */
 function tripDisplayName(t: TripBrief): string {
@@ -287,9 +277,9 @@ export default function AddPoiFavoriteToTripPage() {
     return () => { cancelled = true; };
   }, [tripId]);
 
-  // Backend TIME_RE 同 functions/api/_poi-defaults.ts
+  // 後端 TIME_RE 同 functions/api/_poi-defaults.ts；前端 defense-in-depth，
+  // 防 legacy browser 把 type=time 退回 text、autofill 注入非 HH:MM、或測試直接 setState 髒值。
   const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-
   const canSubmit = useMemo(() => {
     if (!favorite || !tripId || dayNum === '' || daysLoading || submitting) return false;
     if (startTime && !TIME_RE.test(startTime)) return false;
@@ -323,8 +313,7 @@ export default function AddPoiFavoriteToTripPage() {
           return;
         }
       }
-      const msg = err instanceof ApiError ? err.message : err instanceof Error ? err.message : '加入失敗';
-      setSubmitError(msg);
+      setSubmitError(err instanceof Error ? err.message : '加入失敗');
       setSubmitting(false);
     }
   }, [canSubmit, favoriteId, tripId, dayNum, startTime, endTime, navigate]);
@@ -339,7 +328,9 @@ export default function AddPoiFavoriteToTripPage() {
   }, [handleSubmit]);
 
   // POI summary 對應 mockup B1 — eyebrow + title + meta（type 中文 + 收藏中 / address）
-  const poiTypeLabel = favorite?.poiType ? POI_TYPE_LABEL[favorite.poiType] ?? favorite.poiType : '';
+  const poiTypeLabel = favorite?.poiType
+    ? POI_TYPE_LABELS[favorite.poiType as PoiType] ?? favorite.poiType
+    : '';
   const poiEyebrow = poiTypeLabel ? `${poiTypeLabel} · 收藏中` : '收藏中';
 
   // ========== Render ==========

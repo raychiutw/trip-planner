@@ -1,28 +1,14 @@
 /**
- * Companion mapping helper — poi-favorites-rename §4
+ * Companion mapping helper — poi-favorites-rename §4.
  *
- * 提供兩個函式給 4 個 poi-favorites endpoint 統一使用：
+ * Spec: openspec/changes/poi-favorites-rename/specs/tp-companion-mapping/spec.md
  *
- *   - resolveCompanionUserId(env, request, auth, requestId)
- *       純解析：跑 companion 三 gate（X-Request-Scope header / OAuth scopes /
- *       clientId）→ 若全過則 guarded UPDATE trip_requests SET status=processing
- *       WHERE id=? AND status='processing' RETURNING submitted_by → 對映 users.id。
- *       任一步失敗回 null + 寫 audit_log.companion_failure_reason；非 companion
- *       header 直接回 null（V2 user 路徑，不寫 audit）。
- *
- *   - requireFavoriteActor(context, body, action)
- *       高階 helper：先試 companion，成功則 INSERT companion_request_actions
- *       (requestId, action, poiId)（UNIQUE 衝突 → throw 409 COMPANION_QUOTA_EXCEEDED）。
- *       不成功且非 companion header 則 fallback V2 user。auth.userId 缺則 401。
- *       回 `{ userId, isCompanion, requestId, audit: { changedBy, tripId } }` 統一結構。
- *
- * Spec 對映：openspec/changes/poi-favorites-rename/specs/tp-companion-mapping/spec.md
- *
- * 失敗結構化 log（D10）：client 統一 401 `AUTH_REQUIRED`（fail-closed oracle 防護），
- * server 端透過 audit_log.companion_failure_reason 區分 root cause（dev 從 D1 query）。
+ * Failure path is fail-closed: client always sees 401 `AUTH_REQUIRED`; the
+ * specific reason lives in audit_log.companion_failure_reason so prod can
+ * distinguish root cause without leaking gate semantics to attackers.
  */
 import { AppError } from './_errors';
-import { logAudit } from './_audit';
+import { logAudit, type CompanionFailureReason } from './_audit';
 import type { Env, AuthData } from './_types';
 
 // --------------------------------------------------------------------------
@@ -38,13 +24,7 @@ const ACTIONS_RECORDED: ReadonlySet<FavoriteAction> = new Set([
   'add_to_trip',
 ]);
 
-export type CompanionFailureReason =
-  | 'invalid_request_id'
-  | 'status_completed'
-  | 'submitter_unknown'
-  | 'self_reported_scope'
-  | 'client_unauthorized'
-  | 'quota_exceeded';
+export type { CompanionFailureReason };
 
 /** audit_log.trip_id sentinel for companion-path writes (D5) */
 export const COMPANION_AUDIT_TRIP_ID = 'system:companion';
@@ -108,12 +88,7 @@ export async function resolveCompanionUserId(
   }
 
   // Case E/G: requestId 型別錯誤（null / 非整數 / 非正數）
-  if (
-    requestId === null
-    || typeof requestId !== 'number'
-    || !Number.isInteger(requestId)
-    || requestId <= 0
-  ) {
+  if (requestId === null || !Number.isInteger(requestId) || requestId <= 0) {
     await writeFailureAudit(env, requestId, 'invalid_request_id');
     return null;
   }
@@ -241,6 +216,61 @@ export async function requireFavoriteActor(
       tripId: 'user',
     },
   };
+}
+
+// --------------------------------------------------------------------------
+// Shared rate-limit + ownership helpers (4 endpoints)
+// --------------------------------------------------------------------------
+
+/**
+ * Bucket key picker for poi-favorites write endpoints.
+ *
+ * Companion (header + valid claimed requestId) is always rate-limited even when
+ * the underlying service token has admin scope — companion path lives behind
+ * separate enumeration / abuse boundary. V2 user is bypassed only for admin.
+ *
+ * Returns null when no bucket should apply (admin V2 user, or unauthenticated
+ * caller — gate will reject downstream).
+ */
+export function pickFavoriteRateLimitBucket(
+  request: Request,
+  body: { companionRequestId?: unknown },
+  prefix: string,
+  auth: AuthData | null,
+): string | null {
+  const headerScope = request.headers.get('X-Request-Scope');
+  const claimedRequestId =
+    typeof body.companionRequestId === 'number'
+      && Number.isInteger(body.companionRequestId)
+      && body.companionRequestId > 0
+      ? body.companionRequestId
+      : null;
+  if (headerScope === 'companion' && claimedRequestId !== null) {
+    return `${prefix}:companion:${claimedRequestId}`;
+  }
+  if (auth?.userId && !auth.isAdmin) {
+    return `${prefix}:user:${auth.userId}`;
+  }
+  return null;
+}
+
+/**
+ * Ownership gate shared by DELETE / add-to-trip handlers.
+ *
+ * Companion path is strict: even when the service token carries admin scope it
+ * cannot bypass `actor.userId === ownerUserId`. V2 user admin bypasses.
+ */
+export function assertFavoriteOwnership(
+  actor: FavoriteActor,
+  auth: AuthData | null,
+  ownerUserId: string | null,
+  detail?: string,
+): void {
+  const ownByUid = ownerUserId === actor.userId;
+  const adminBypass = !actor.isCompanion && auth?.isAdmin === true;
+  if (!ownByUid && !adminBypass) {
+    throw new AppError('PERM_DENIED', detail);
+  }
 }
 
 // --------------------------------------------------------------------------
