@@ -400,6 +400,11 @@ const SCOPED_STYLES = `
   min-height: 44px; max-height: 160px;
   line-height: 1.5;
 }
+/* iOS Safari 對 input/textarea font-size < 16px 自動 zoom（讓字 16px 可讀），
+   把 viewport 放大造成破版。mobile 一律 16px 防 auto-zoom；desktop 維持 14px 設計感。 */
+@media (max-width: 760px) {
+  .tp-chat-input { font-size: 16px; }
+}
 .tp-chat-input:focus {
   outline: none; border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-subtle);

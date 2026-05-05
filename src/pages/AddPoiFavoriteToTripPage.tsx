@@ -67,6 +67,13 @@ const SCOPED_STYLES = `
 .tp-favorites-add-to-trip .tp-form-row input[type='time']:disabled {
   opacity: 0.5; cursor: not-allowed;
 }
+/* iOS Safari 對 input/select font-size < 16px 自動 zoom 破版；mobile 用 16px 防 zoom */
+@media (max-width: 760px) {
+  .tp-favorites-add-to-trip .tp-form-row select,
+  .tp-favorites-add-to-trip .tp-form-row input[type='time'] {
+    font-size: 16px;
+  }
+}
 
 /* startTime + endTime 並排（grid 內 span 2 col + 內部 grid） */
 .tp-favorites-add-to-trip .tp-form-row-pair {
