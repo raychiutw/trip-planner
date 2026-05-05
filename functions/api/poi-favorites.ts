@@ -2,38 +2,16 @@
  * GET  /api/poi-favorites            — 列出當前使用者的 POI 收藏（JOIN pois + usages）
  * POST /api/poi-favorites { poiId, note?, companionRequestId? } — 新增收藏
  *
- * Rename：原 saved_pois → poi_favorites + saved_at → favorited_at
- *
- * 驗證：auth 必要；重複收藏 → 409；POI 不存在 → 404。
- *
- * Companion 分支（poi-favorites-rename §6）：
- *   - 透過 functions/api/_companion.ts requireFavoriteActor 統一 effective userId
- *   - companion 模式：actor.userId 對映 trip_requests.submitted_by → users.id；
- *     寫 audit_log（changedBy=`companion:<id>`, tripId='system:companion'）；
- *     寫 companion_request_actions（UNIQUE 衝突 → 409 COMPANION_QUOTA_EXCEEDED）。
- *   - V2 user 模式：actor.userId === auth.userId；handler 行為與 cutover 前一致。
- *
- * Rate limit：bucket key 由 isClaimedCompanion 決定
- *   user：`poi-favorites-post:user:${userId}`
- *   companion：`poi-favorites-post:companion:${requestId}`
- *   admin V2 user 仍 bypass；companion 一律 rate-limit（防 enumeration / abuse）。
+ * Companion path: see functions/api/_companion.ts (requireFavoriteActor +
+ * pickFavoriteRateLimitBucket). companion always rate-limited; V2 user admin bypasses.
  */
 import { AppError } from './_errors';
+import { buildRateLimitResponse } from './_errors';
 import { logAudit } from './_audit';
 import { json, parseJsonBody } from './_utils';
-import { bumpRateLimit, RATE_LIMITS, type RateLimitResult } from './_rate_limit';
-import { requireFavoriteActor } from './_companion';
+import { bumpRateLimit, RATE_LIMITS } from './_rate_limit';
+import { pickFavoriteRateLimitBucket, requireFavoriteActor } from './_companion';
 import type { Env, AuthData } from './_types';
-
-function rateLimitedResponse(bump: RateLimitResult): Response {
-  return new Response(JSON.stringify({ error: 'RATE_LIMITED' }), {
-    status: 429,
-    headers: {
-      'Content-Type': 'application/json',
-      'Retry-After': String(bump.retryAfter ?? 60),
-    },
-  });
-}
 
 interface PoiFavoritePostBody {
   poiId?: number;
@@ -104,29 +82,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // 解析 body 第一步（要 companionRequestId 算 bucket key）。malformed body 直接 400。
   const body = await parseJsonBody<PoiFavoritePostBody>(context.request);
 
-  // 預判 isClaimedCompanion：header + body.companionRequestId。
-  // 真正的 gate 由 requireFavoriteActor 內部 resolveCompanionUserId 套（三 gate）。
-  const headerScope = context.request.headers.get('X-Request-Scope');
-  const claimedRequestId =
-    typeof body.companionRequestId === 'number'
-    && Number.isInteger(body.companionRequestId)
-    && body.companionRequestId > 0
-      ? body.companionRequestId
-      : null;
-  const isClaimedCompanion = headerScope === 'companion' && claimedRequestId !== null;
-
-  // Rate limit (poi-favorites-rename §6.1 / §6.7 / D16)：
-  //   - companion 一律 rate-limit（防 enumeration + 配合 companion_request_actions UNIQUE 雙重防護）
-  //   - V2 user 非 admin → rate-limit；admin → bypass
-  let bucket: string | null = null;
-  if (isClaimedCompanion) {
-    bucket = `poi-favorites-post:companion:${claimedRequestId}`;
-  } else if (auth?.userId && !auth.isAdmin) {
-    bucket = `poi-favorites-post:user:${auth.userId}`;
-  }
+  const bucket = pickFavoriteRateLimitBucket(context.request, body, 'poi-favorites-post', auth);
   if (bucket) {
     const bump = await bumpRateLimit(context.env.DB, bucket, RATE_LIMITS.POI_FAVORITES_WRITE);
-    if (!bump.ok) return rateLimitedResponse(bump);
+    if (!bump.ok) return buildRateLimitResponse(bump.retryAfter ?? 60, { error: 'RATE_LIMITED' });
   }
 
   // 真正解 effective userId。companion gate 失敗 → V2 user fallback；

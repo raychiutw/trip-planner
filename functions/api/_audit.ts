@@ -1,5 +1,14 @@
 import { detectGarbledText } from './_validate';
 
+/** Server-side reason set for companion-path failures (poi-favorites-rename §4 / D10). */
+export type CompanionFailureReason =
+  | 'invalid_request_id'
+  | 'status_completed'
+  | 'submitter_unknown'
+  | 'self_reported_scope'
+  | 'client_unauthorized'
+  | 'quota_exceeded';
+
 export async function logAudit(db: D1Database, opts: {
   tripId: string;
   tableName: string;
@@ -9,8 +18,7 @@ export async function logAudit(db: D1Database, opts: {
   requestId?: number | null;
   diffJson?: string;
   snapshot?: string;
-  /** poi-favorites-rename §4: server-side reason for companion-path failures (D10) */
-  companionFailureReason?: string;
+  companionFailureReason?: CompanionFailureReason;
 }) {
   let finalDiffJson = opts.diffJson ?? null;
   if (finalDiffJson && detectGarbledText(finalDiffJson)) {

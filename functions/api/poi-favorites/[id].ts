@@ -13,7 +13,7 @@
 import { AppError } from '../_errors';
 import { logAudit } from '../_audit';
 import { parseIntParam, parseJsonBody } from '../_utils';
-import { requireFavoriteActor } from '../_companion';
+import { assertFavoriteOwnership, requireFavoriteActor } from '../_companion';
 import type { Env, AuthData } from '../_types';
 
 interface DeleteBody {
@@ -41,13 +41,7 @@ export const onRequestDelete: PagesFunction<Env, 'id'> = async (context) => {
     .first<{ user_id: string | null }>();
   if (!row) throw new AppError('DATA_NOT_FOUND', '找不到該收藏');
 
-  // ownership：companion 模式嚴格綁 submitter（即使 service token 帶 admin scope
-  // 也不可越權，security boundary M2）。V2 user admin 才能 bypass。
-  const ownByUid = row.user_id === actor.userId;
-  const adminBypass = !actor.isCompanion && auth?.isAdmin === true;
-  if (!ownByUid && !adminBypass) {
-    throw new AppError('PERM_DENIED');
-  }
+  assertFavoriteOwnership(actor, auth, row.user_id);
 
   await context.env.DB
     .prepare('DELETE FROM poi_favorites WHERE id = ?')
