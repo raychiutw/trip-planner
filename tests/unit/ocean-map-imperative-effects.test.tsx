@@ -45,7 +45,7 @@ vi.mock('../../src/hooks/useRoute', () => ({
 vi.mock('leaflet', async (importOriginal) => {
   const orig = await importOriginal<typeof import('leaflet')>();
   const fakeLayer = { addTo: vi.fn().mockReturnThis(), remove: vi.fn(), clearLayers: vi.fn() };
-  const fakeMarker = { addTo: vi.fn().mockReturnThis(), on: vi.fn().mockReturnThis(), remove: vi.fn(), setIcon: vi.fn() };
+  const fakeMarker = { addTo: vi.fn().mockReturnThis(), on: vi.fn().mockReturnThis(), remove: vi.fn(), setIcon: vi.fn(), setZIndexOffset: vi.fn() };
   return {
     ...orig,
     default: {
