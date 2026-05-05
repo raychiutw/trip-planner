@@ -98,14 +98,16 @@ describe('AddPoiFavoriteToTripPage — 2-col grid layout', () => {
     expect(grid).toBeTruthy();
   });
 
-  it('startTime + endTime 包在同一 .tp-form-row-pair (mockup 規範並排)', async () => {
+  it('startTime + endTime 同在 .tp-form-grid-2col (mockup B1 規範 4-field grid)', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-start')).toBeTruthy());
     const startInput = screen.getByTestId('favorites-add-to-trip-start');
     const endInput = screen.getByTestId('favorites-add-to-trip-end');
-    // 兩 input 共 nearest .tp-form-row-pair ancestor
-    const pair = startInput.closest('.tp-form-row-pair');
-    expect(pair).toBeTruthy();
-    expect(pair?.contains(endInput)).toBe(true);
+    // mockup B1 直接把 4 個 field 放 grid（trip+day row 1，start+end row 2），
+    // 不另用 row-pair wrapper — 兩 input 應 share 同一 .tp-form-grid-2col ancestor
+    const startGrid = startInput.closest('.tp-form-grid-2col');
+    const endGrid = endInput.closest('.tp-form-grid-2col');
+    expect(startGrid).toBeTruthy();
+    expect(startGrid).toBe(endGrid);
   });
 });
