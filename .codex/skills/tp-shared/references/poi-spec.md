@@ -1,5 +1,38 @@
 # POI 欄位規格與查詢策略
 
+## v2.23.0 Google Maps Platform — Place Details API（11 個 tp-* skill 共用 reference）
+
+從 v2.23.0 起，POI rating / hours / business_status / phone / address 來源統一從 Google Place Details API。**不再** WebSearch scrape Google Maps page，**不再** OSM Overpass。
+
+**Canonical curl block**（11 個 skill 全引用此處，autoplan T15 fix）：
+
+```bash
+# Step 1: search by name + region → 取 place_id
+curl -s -H "X-Goog-Api-Key: $GOOGLE_MAPS_API_KEY" \
+  -H "X-Goog-FieldMask: places.id,places.displayName,places.formattedAddress,places.location" \
+  -H "Content-Type: application/json" \
+  -X POST "https://places.googleapis.com/v1/places:searchText" \
+  -d '{"textQuery":"沖繩美麗海水族館","regionCode":"jp","languageCode":"zh-TW","maxResultCount":1}'
+# → response.places[0].id 是 place_id（"ChIJ..." 格式）
+
+# Step 2: Place Details by place_id → 取 rating / hours / business_status / phone
+curl -s -H "X-Goog-Api-Key: $GOOGLE_MAPS_API_KEY" \
+  -H "X-Goog-FieldMask: id,displayName,formattedAddress,location,rating,businessStatus,regularOpeningHours.weekdayDescriptions,internationalPhoneNumber" \
+  "https://places.googleapis.com/v1/places/$PLACE_ID?languageCode=zh-TW"
+```
+
+**Field 對映**：
+- `rating` (1-5 scale) → pois.rating
+- `businessStatus` 'OPERATIONAL' / 'CLOSED_TEMPORARILY' / 'CLOSED_PERMANENTLY' → pois.status (active/active/closed)
+- `regularOpeningHours.weekdayDescriptions` → pois.hours（join '\n'）
+- `internationalPhoneNumber` → pois.phone
+- 404 NOT_FOUND → pois.status='missing' + status_reason='Google Maps 查無資料'
+
+**首次失敗 401 alert**（autoplan T15 fix）：
+mac mini cron 第一個 request 401 → Telegram 「[tp-cron] GOOGLE_MAPS_API_KEY rejected — 檢查 ~/.tripline-cron/.env」並 exit non-zero。實作位於 `scripts/google-poi-refresh-30d.ts`。
+
+**Quota safety**：50/day Place Details for backfill + 50/day for 30d refresh = 100/day cap（autoplan T11 fix）。Live `/api/poi-search` 走 D1 cache（24h TTL），cache miss 才打 Places。
+
 ## POI 欄位規格
 
 ### findOrCreatePoi 支援的完整欄位

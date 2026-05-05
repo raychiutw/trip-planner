@@ -1,4 +1,7 @@
 ---
+
+> **v2.23.0 Google Maps Platform 更新**：rating / hours / business_status / phone 來源統一改用 Google Place Details API（不再 WebSearch / OSM Overpass）。canonical curl block + field 對映 + 401 alert 路徑見 `tp-shared/references/poi-spec.md`「v2.23.0 Google Maps Platform」section。
+
 name: tp-rebuild
 description: 全面重整行程品質時使用 — 逐項檢查 R0-R18 並修正違規，不改時間軸順序（重整、修復品質、修紅燈、rebuild）。局部修改用 /tp-edit。
 user-invocable: true
