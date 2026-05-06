@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.5] - 2026-05-06
+
+**hotfix: search cache key 用 raw city 區分** — v2.23.4 ship 後 prod smoke：
+`region=東京` 正確吐東京拉麵，但 `region=沖繩` 接著查也吐同一批東京資料。
+原因：`region` normalize 成 ISO（`'東京'/'沖繩' → 'JP'`），cache key 用 ISO 後
+兩個城市共用同一 row。`region=東京` 先 fetch 寫 cache，`region=沖繩` 同一
+24h 內 hit cache → 拿到東京 results。
+
+### Fixed
+
+- `functions/api/poi-search.ts` 拆兩個變數：`region`（送 Google 的 ISO）+
+  `cacheKey`（D1 cache 用 raw city 字串）。`getCachedSearch` / `setCachedSearch`
+  改用 `cacheKey` → 不同 city 不撞 cache row
+- 同 PR 一次性 nuke prod `pois_search_cache` 全表（209 rows）— v2.23.3 殘留
+  資料含台灣 IP fallback 結果，留著會持續污染 24h
+
 ## [2.23.4] - 2026-05-06
 
 **hotfix: regionCode 不夠強 — 改 locationBias circle 鎖城市** — v2.23.3 ship 後
