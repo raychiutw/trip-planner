@@ -327,4 +327,10 @@ export interface Trip {
   destinations?: TripDestination[];
   createdAt?: string;
   updatedAt?: string;
+  // v2.23.8 self-drive (migration 0052) — 全 nullable，支援後補
+  selfDriveEnabled?: number | null;            // 0 / 1
+  selfDrivePickupAt?: string | null;           // ISO datetime YYYY-MM-DDTHH:MM
+  selfDriveReturnAt?: string | null;           // ISO datetime
+  selfDrivePickupLocation?: string | null;
+  selfDriveReturnLocation?: string | null;
 }

@@ -296,8 +296,11 @@ export async function computeRoute(
   origin: { lat: number; lng: number },
   destination: { lat: number; lng: number },
   mode: TravelMode = 'DRIVE',
+  /** v2.23.8 self-drive：TRANSIT mode 必須帶 departureTime（ISO 8601 UTC）才有 schedule。
+   * DRIVE/WALK 不需，傳了會被 Routes API 拒（only valid for TRANSIT/DRIVE）。 */
+  departureTime?: string,
 ): Promise<ComputeRouteResult> {
-  const body = {
+  const body: Record<string, unknown> = {
     origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
     destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },
     travelMode: mode,
@@ -306,6 +309,9 @@ export async function computeRoute(
     languageCode: 'zh-TW',
     units: 'METRIC',
   };
+  if (mode === 'TRANSIT' && departureTime) {
+    body.departureTime = departureTime;
+  }
 
   const res = await fetchWithTimeout(`${DIRECTIONS_BASE}/directions/v2:computeRoutes`, {
     method: 'POST',
