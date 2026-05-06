@@ -3,6 +3,65 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.0] - 2026-05-06
+
+**Google Maps Platform 全套切換** — OSM Nominatim + Mapbox + ORS + Leaflet + Haversine
+全部 ripped out，no fallback。亞洲 POI search 從 Asia-weak OSM 換成 Google Places API
+(New v1)，UI 從 Leaflet → Google Maps JS API，polyline 從 Mapbox → Google Routes v2。
+配 D1 24h cache + monthly $200 budget kill switch (90/50 hysteresis) + POI lifecycle
+(active/closed/missing) + 30 天 refresh + Telegram alert。Big Bang 1 PR / 9 commits /
+~6700 changed lines。Pre-merge gates：/autoplan APPROVED WITH OVERRIDES + /simplify pass
++ /review pass + 1384 unit tests pass + tsc clean。
+
+### Added
+
+- server-side Google client `src/server/maps/google-client.ts` (Places + Routes + GoogleBusinessStatus union, no fallback per P11)
+- D1 cache `src/lib/maps/cache.ts` (24h TTL + cleanupExpiredCache via daily cron)
+- kill switch `functions/api/_maps_lock.ts` (10s in-memory cache + setLockState atomic UPSERT)
+- 8 admin endpoints `functions/api/admin/{maps-lock,maps-unlock,backfill-status,maps-settings,quota-estimate,pois-pending-place-id,pois-due-refresh,cache-cleanup}.ts` (requireAdmin gate + audit_log)
+- trip POI health `/api/trips/:id/health` (versioned response shape, GROUP BY 避 N+1)
+- 3 React 元件 `<PoiStatusBadge>` / `<TripHealthBanner>` / `<MapSkeleton>` (對齊 DESIGN.md tp-badge primitive，禁 emoji + 禁 strikethrough，過 no-emoji-icons.test.ts CI gate)
+- 3 mac mini cron scripts (initial backfill 50/day + 30d refresh + quota monitor with hysteresis)
+- Migration 0051 (place_id + 4 lifecycle cols + pois_search_cache + app_settings + 3 indexes; forward-only + INSERT OR IGNORE idempotent)
+- 6 new test files (90 tests total: poi-status-badge / trip-health-banner / map-skeleton / google-client / maps-lock / shared __mocks__/google-maps.ts)
+- npm scripts `backfill:google` / `refresh:google` / `quota:google`
+- deps `@googlemaps/js-api-loader ^2.0` + `@types/google.maps ^3.64`
+
+### Changed
+
+- `functions/api/poi-search.ts` — OSM Nominatim → Google Places Text Search + cache + kill switch
+- `functions/api/route.ts` — Mapbox Directions → Google Routes v2 (Haversine fallback removed per P11/T13)
+- `functions/api/pois/[id]/enrich.ts` — 4-vendor OSM chain → 單一 Place Details call (business_status → status enum)
+- `functions/api/trips/[id]/recompute-travel.ts` — ORS+Haversine → Google Routes per pair
+- `src/components/trip/OceanMap.tsx` — Leaflet → Google Maps JS rewrite (700 LOC) + SymbolPath.CIRCLE + state-keyed lookup table
+- `src/components/trip/MapFabs.tsx` — preset 街道/衛星/地形 → 路線圖/衛星/混合 (Google MapTypeId)
+- `src/hooks/useGoogleMap.ts` (new) replaces `useLeafletMap` (setOptions + importLibrary + reduced-motion)
+- `src/hooks/useRoute.ts` — null on backend 502/503 (no Haversine fallback)
+- `src/hooks/usePoiSearch.ts` — schema guard `osm_id` → `place_id`
+- `src/types/poi.ts` — osm_id (number) → place_id (Google ChIJ string) + business_status union
+- 6 page files osm_id → place_id rename + L.Map → google.maps.Map type
+- 11 tp-* SKILL.md files (× .claude + .codex = 22 syncs) — rating/hours/business_status/phone 來源統一 Place Details API (canonical curl block 在 tp-shared/references/poi-spec.md)
+- `functions/api/_errors.ts` + `src/types/api.ts` — MAPS_LOCKED (503) + MAPS_UPSTREAM_FAILED (502) error codes
+- `scripts/_lib/cron-shared.ts` (new) — OAuth client_credentials minting + token cache + retry-on-401
+
+### Removed
+
+- `src/server/osm/{nominatim,overpass,opentripmap,wikidata}.ts` (OSM POI enrichment)
+- `src/server/poi/enrich.ts` (replaced by Place Details direct call)
+- `src/server/routing/ors.ts` + `src/server/travel/compute.ts` (Haversine + ORS)
+- `src/hooks/useLeafletMap.ts`
+- `scripts/poi-enrich-batch.ts` (replaced by `google-poi-initial-backfill.ts`)
+- `leaflet` + `@types/leaflet` npm deps
+- `MAPBOX_TOKEN` + old `VITE_GOOGLE_MAPS_API_KEY` CF Pages secrets (renamed to VITE_GOOGLE_MAPS_BROWSER_KEY)
+- 3 obsolete `reverseGeocode` tests (dead export — no /api/geocode endpoint)
+
+### Fixed
+
+- Migration 0051 INSERT not idempotent → INSERT OR IGNORE (re-apply safe)
+- `useRoute.ts` Haversine fallback defeating P11/T13 contract → null on failure
+- 4 obsolete `vi.mock useLeafletMap` no-op stubs → useGoogleMap stubs (false-green coverage)
+- `reverseGeocode` dead export + URL-query key exposure → removed entirely
+
 ## [2.22.1] - 2026-05-05
 
 **poi-favorites-rename simplify pass — helper extraction + dead code + perf nits** —

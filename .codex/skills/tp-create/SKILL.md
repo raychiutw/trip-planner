@@ -1,4 +1,7 @@
 ---
+
+> **v2.23.0 Google Maps Platform 更新**：rating / hours / business_status / phone 來源統一改用 Google Place Details API（不再 WebSearch / OSM Overpass）。canonical curl block + field 對映 + 401 alert 路徑見 `tp-shared/references/poi-spec.md`「v2.23.0 Google Maps Platform」section。
+
 name: tp-create
 description: 建立新行程時使用 — 從零產生完整行程（建行程、新行程、規劃旅遊、plan a trip）。提供目的地、日期、旅行方式即可。修改既有行程用 /tp-edit，重整品質用 /tp-rebuild。
 user-invocable: true

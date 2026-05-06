@@ -35,6 +35,9 @@ export const ErrorCode = {
   // Companion path（poi-favorites-rename §4 / §6.3）
   // companion_request_actions UNIQUE 衝突 → 同 requestId 同 action 重複呼叫
   COMPANION_QUOTA_EXCEEDED: 'COMPANION_QUOTA_EXCEEDED',
+  // Google Maps Platform (v2.23.0 google-maps-migration)
+  MAPS_LOCKED: 'MAPS_LOCKED',
+  MAPS_UPSTREAM_FAILED: 'MAPS_UPSTREAM_FAILED',
 } as const;
 
 export type ErrorCodeType = typeof ErrorCode[keyof typeof ErrorCode];
@@ -57,6 +60,8 @@ export const ERROR_MESSAGES: Record<ErrorCodeType, string> = {
   SYS_DB_ERROR: '資料庫忙碌中，請稍後再試',
   SYS_RATE_LIMIT: '操作太頻繁，請稍等',
   COMPANION_QUOTA_EXCEEDED: '此 request 已執行過此操作',
+  MAPS_LOCKED: '本月 Google API 已達配額，月初恢復',
+  MAPS_UPSTREAM_FAILED: 'Google Maps 服務暫時無法回應，請稍後再試',
 };
 
 // ---------------------------------------------------------------------------

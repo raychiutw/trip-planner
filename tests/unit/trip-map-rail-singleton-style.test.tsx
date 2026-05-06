@@ -16,13 +16,8 @@ vi.mock('../../src/hooks/useMediaQuery', () => ({
 }));
 
 /* ===== mock useLeafletMap ===== */
-vi.mock('../../src/hooks/useLeafletMap', () => ({
-  useLeafletMap: () => ({
-    containerRef: { current: null },
-    map: null,
-    flyTo: vi.fn(),
-    fitBounds: vi.fn(),
-  }),
+vi.mock('../../src/hooks/useGoogleMap', () => ({
+  useGoogleMap: () => ({ containerRef: { current: null }, map: null, loadError: null, flyTo: vi.fn(), fitBounds: vi.fn() }),
 }));
 
 const { default: TripMapRail } = await import('../../src/components/trip/TripMapRail');

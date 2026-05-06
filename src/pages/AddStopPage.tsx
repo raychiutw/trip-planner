@@ -96,11 +96,11 @@ function normalizeSearchResults(data: unknown): PoiSearchResult[] {
   return rows.flatMap((row) => {
     if (!row || typeof row !== 'object') return [];
     const item = row as Record<string, unknown>;
-    const id = Number(item.osm_id ?? item.osmId);
+    const id = typeof item.place_id === 'string' ? item.place_id : '';
     const name = typeof item.name === 'string' ? item.name : '';
-    if (!Number.isFinite(id) || !name.trim()) return [];
+    if (!id || !name.trim()) return [];
     return [{
-      osm_id: id,
+      place_id: id,
       name,
       address: typeof item.address === 'string' ? item.address : '',
       lat: Number(item.lat) || 0,
@@ -598,7 +598,7 @@ export default function AddStopPage() {
   const [region, setRegion] = useState<RegionOption>('全部地區');
   const [regionMenuOpen, setRegionMenuOpen] = useState(false);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
-  const [selectedSearch, setSelectedSearch] = useState<Set<number>>(new Set());
+  const [selectedSearch, setSelectedSearch] = useState<Set<string>>(new Set());
 
   // Region 不再 auto-fire search — Nominatim 公共 endpoint 1 req/s 限制，
   // 每次開頁面 / 退到 1 字 都會 burn quota。改成 user 主動輸入才查；region
@@ -664,7 +664,7 @@ export default function AddStopPage() {
     })();
   }, [tab, poiFavorites]);
 
-  function toggleSearch(id: number) {
+  function toggleSearch(id: string) {
     setSelectedSearch((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -700,7 +700,7 @@ export default function AddStopPage() {
 
     if (tab === 'search') {
       payloads = searchResults
-        .filter((r) => selectedSearch.has(r.osm_id))
+        .filter((r) => selectedSearch.has(r.place_id))
         .map((r) => ({ title: r.name, note: r.address || undefined }));
     } else if (tab === 'favorites') {
       const list = poiFavorites ?? [];
@@ -925,18 +925,18 @@ export default function AddStopPage() {
                         <h3 className="tp-add-stop-result-title">熱門景點 · {region}</h3>
                         <div className="tp-add-stop-grid">
                           {filtered.map((r, index) => {
-                            const isSelected = selectedSearch.has(r.osm_id);
+                            const isSelected = selectedSearch.has(r.place_id);
                             return (
                               <label
-                                key={r.osm_id}
+                                key={r.place_id}
                                 className={`tp-add-stop-card ${isSelected ? 'is-selected' : ''}`}
-                                data-testid={`add-stop-search-card-${r.osm_id}`}
+                                data-testid={`add-stop-search-card-${r.place_id}`}
                               >
                                 <input
                                   type="checkbox"
                                   className="tp-add-stop-card-checkbox"
                                   checked={isSelected}
-                                  onChange={() => toggleSearch(r.osm_id)}
+                                  onChange={() => toggleSearch(r.place_id)}
                                 />
                                 <div className="tp-add-stop-card-photo" data-tone={poiTone(r.category, index)}>
                                   <Icon name="location-pin" />

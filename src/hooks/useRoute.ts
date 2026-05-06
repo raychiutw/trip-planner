@@ -2,14 +2,16 @@
  * useRoute — single-segment driving route via /api/route proxy
  *
  * - IndexedDB LRU cache (100 entries max), survives reloads
- * - Haversine straight-line fallback on network/API failure (with `approx: true` flag)
+ * - On /api/route failure (502 MAPS_UPSTREAM_FAILED / 503 MAPS_LOCKED) → returns null.
+ *   No frontend Haversine fallback per v2.23.0 P11/T13. UI must handle null (e.g. hide
+ *   polyline + show fallback row meta).
  * - Cache invalidation when POI `updated_at` is newer than cached timestamp
  *
  *   ┌── cache hit ──► return immediately
  *   │
  *   ├── cache miss ──► fetch /api/route?from=lng,lat&to=lng,lat
  *   │                     ├── success → store + return
- *   │                     └── error → Haversine fallback (approx)
+ *   │                     └── error → setResult(null)
  *   │
  *   └── invalidate if fromUpdatedAt/toUpdatedAt > cachedTs
  */
@@ -18,14 +20,12 @@ import { useEffect, useState } from 'react';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 
 export interface RouteResult {
-  /** [lat, lng] points for Leaflet polyline */
+  /** [lat, lng] points for polyline */
   polyline: [number, number][];
-  /** seconds; null when unknown (approx fallback) */
+  /** seconds */
   duration: number | null;
   /** meters */
   distance: number;
-  /** true when Haversine fallback was used (no real road path) */
-  approx?: boolean;
 }
 
 interface CacheEntry {
@@ -33,7 +33,6 @@ interface CacheEntry {
   polyline: [number, number][];
   duration: number | null;
   distance: number;
-  approx: 0 | 1;
   ts: number;
 }
 
@@ -67,17 +66,6 @@ function getDb(): Promise<IDBPDatabase<RouteCacheSchema>> {
 function cacheKey(from: Coord, to: Coord): string {
   const round = (n: number) => n.toFixed(5);
   return `v1:${round(from.lat)},${round(from.lng)}->${round(to.lat)},${round(to.lng)}`;
-}
-
-function haversineMeters(a: Coord, b: Coord): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
 }
 
 async function writeWithLru(entry: CacheEntry): Promise<void> {
@@ -139,7 +127,6 @@ export function useRoute(
             polyline: cached.polyline,
             duration: cached.duration,
             distance: cached.distance,
-            approx: cached.approx === 1,
           });
           return;
         }
@@ -156,18 +143,13 @@ export function useRoute(
           polyline: [number, number][];
           duration: number | null;
           distance: number;
-          approx?: boolean;
         };
         if (cancelled) return;
-        // Backend may return 200 + approx:true for ferry-only / unreachable pairs —
-        // preserve the flag through cache + setResult so UI can show "直線距離" hint.
-        const isApprox = data.approx === true;
         const entry: CacheEntry = {
           key,
           polyline: data.polyline,
           duration: data.duration,
           distance: data.distance,
-          approx: isApprox ? 1 : 0,
           ts: Date.now(),
         };
         try {
@@ -179,20 +161,12 @@ export function useRoute(
           polyline: data.polyline,
           duration: data.duration,
           distance: data.distance,
-          approx: isApprox,
         });
       } catch {
         if (cancelled) return;
-        const approx: RouteResult = {
-          polyline: [
-            [from.lat, from.lng],
-            [to.lat, to.lng],
-          ],
-          duration: null,
-          distance: haversineMeters(from, to),
-          approx: true,
-        };
-        setResult(approx);
+        // v2.23.0 P11/T13: no Haversine fallback. Backend 502/503 → null;
+        // UI handles missing polyline (skip render or show error meta).
+        setResult(null);
       }
     })();
 
@@ -213,4 +187,4 @@ export function useRoute(
 }
 
 /** Exposed for testing only. */
-export const __internal = { cacheKey, haversineMeters };
+export const __internal = { cacheKey };

@@ -36,11 +36,11 @@ test.describe('QA Flow 1 — 新增行程', () => {
     await page.goto('/trips/new');
     await expect(page.getByTestId('new-trip-page')).toBeVisible();
 
-    // 搜尋目的地 → mock 回沖繩美麗海水族館 (osm_id 90001)
+    // 搜尋目的地 → mock 回沖繩美麗海水族館 (place_id ChIJPZ5hUjH65DQR_p_dD3CmCOo)
     await page.getByTestId('new-trip-destination-input').fill('沖繩');
     await expect(page.getByTestId('new-trip-dest-dropdown')).toBeVisible();
-    await page.getByTestId('new-trip-dest-result-90001').click();
-    await expect(page.getByTestId('new-trip-destination-row-90001')).toBeVisible();
+    await page.getByTestId('new-trip-dest-result-ChIJPZ5hUjH65DQR_p_dD3CmCOo').click();
+    await expect(page.getByTestId('new-trip-destination-row-ChIJPZ5hUjH65DQR_p_dD3CmCOo')).toBeVisible();
 
     // 預設 dateMode = select → 填 start/end
     await page.getByTestId('new-trip-start-input').fill('2026-08-01');
@@ -109,8 +109,8 @@ test.describe('QA Flow 3 — 搜尋景點加入收藏', () => {
     await page.getByTestId('explore-search-input').fill('沖繩');
     await page.getByTestId('explore-search-submit').click();
 
-    // mock results → osm_id 90001 卡片
-    const heartBtn = page.getByTestId('explore-save-btn-90001');
+    // mock results → place_id ChIJPZ5hUjH65DQR_p_dD3CmCOo 卡片
+    const heartBtn = page.getByTestId('explore-save-btn-ChIJPZ5hUjH65DQR_p_dD3CmCOo');
     await expect(heartBtn).toBeVisible();
     await heartBtn.click();
 
@@ -142,7 +142,7 @@ test.describe('QA Flow 4 — 移除收藏 (v2.22.0 PoiFavoritesPage)', () => {
     await page.getByTestId('explore-search-submit').click();
     await Promise.all([
       page.waitForResponse((res) => /\/api\/poi-favorites$/.test(res.url()) && res.request().method() === 'POST'),
-      page.getByTestId('explore-save-btn-90001').click(),
+      page.getByTestId('explore-save-btn-ChIJPZ5hUjH65DQR_p_dD3CmCOo').click(),
     ]);
 
     // Step 2: v2.22.0 TitleBar action navigate to /favorites (was in-page tab toggle)
