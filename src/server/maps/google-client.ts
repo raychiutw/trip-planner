@@ -111,11 +111,21 @@ const SEARCH_TEXT_FIELD_MASK = [
  * @param region   ISO 3166-1 alpha-2 lowercase 限制搜尋區域，e.g. "jp"
  * @param maxCount 1–20，預設 10
  */
+export interface LocationBias {
+  /** Center lat in degrees */
+  lat: number;
+  /** Center lng in degrees */
+  lng: number;
+  /** Bias circle radius in meters. 0 < r ≤ 50000 per Google API. */
+  radiusMeters: number;
+}
+
 export async function searchPlaces(
   apiKey: string,
   query: string,
   region?: string,
   maxCount = 10,
+  locationBias?: LocationBias,
 ): Promise<PlacesSearchTextResult[]> {
   const body: Record<string, unknown> = {
     textQuery: query,
@@ -123,6 +133,14 @@ export async function searchPlaces(
     languageCode: 'zh-TW',
   };
   if (region) body.regionCode = region.toLowerCase();
+  if (locationBias) {
+    body.locationBias = {
+      circle: {
+        center: { latitude: locationBias.lat, longitude: locationBias.lng },
+        radius: Math.min(Math.max(locationBias.radiusMeters, 1), 50000),
+      },
+    };
+  }
 
   const res = await fetchWithTimeout(`${PLACES_BASE}/v1/places:searchText`, {
     method: 'POST',
