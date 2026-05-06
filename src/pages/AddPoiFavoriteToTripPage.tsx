@@ -261,10 +261,11 @@ export default function AddPoiFavoriteToTripPage() {
     let cancelled = false;
     setDaysLoading(true);
     setDayNum('');
-    apiFetch<{ days?: DayBrief[] }>(`/trips/${encodeURIComponent(tripId)}`)
+    // 改打 /trips/:id/days array endpoint — `/trips/:id` 只回 trip meta，不含 days
+    apiFetch<DayBrief[]>(`/trips/${encodeURIComponent(tripId)}/days`)
       .then((data) => {
         if (cancelled) return;
-        const dayList = data.days ?? [];
+        const dayList = Array.isArray(data) ? data : [];
         setDays(dayList);
         setDaysLoading(false);
         if (dayList.length > 0) setDayNum(dayList[0]!.dayNum);

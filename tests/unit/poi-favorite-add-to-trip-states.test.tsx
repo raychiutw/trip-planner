@@ -95,7 +95,7 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     apiFetchMock.mockImplementation((path) => {
       if (path === '/poi-favorites') return Promise.resolve([SAMPLE_FAVORITE]);
       if (path === '/my-trips') return Promise.resolve([{ tripId: 't1', name: 'T1', totalDays: 3 }]);
-      if (path.startsWith('/trips/t1')) return Promise.resolve({ days: [{ dayNum: 1, date: '2026-07-26', label: 'D1' }] });
+      if (path.startsWith('/trips/t1/days')) return Promise.resolve([{ dayNum: 1, date: '2026-07-26', label: 'D1' }]);
       if (path.includes('/add-to-trip')) {
         return Promise.reject(
           new ApiError('CONFLICT_TIME_OVERLAP', 409, '衝突', {
@@ -124,7 +124,7 @@ describe('AddPoiFavoriteToTripPage — 7-state matrix', () => {
     apiFetchMock.mockImplementation((path) => {
       if (path === '/poi-favorites') return Promise.resolve([SAMPLE_FAVORITE]);
       if (path === '/my-trips') return Promise.resolve([{ tripId: 't1', name: 'T1', totalDays: 3 }]);
-      if (path.startsWith('/trips/t1')) return Promise.resolve({ days: [{ dayNum: 1, date: '2026-07-26', label: 'D1' }] });
+      if (path.startsWith('/trips/t1/days')) return Promise.resolve([{ dayNum: 1, date: '2026-07-26', label: 'D1' }]);
       if (path.includes('/add-to-trip')) return new Promise(() => {}); // pending
       return Promise.resolve({});
     });
@@ -152,8 +152,8 @@ describe('AddPoiFavoriteToTripPage — trip-day skeleton (§12.4)', () => {
         { tripId: 't1', name: 'T1', totalDays: 3 },
         { tripId: 't2', name: 'T2', totalDays: 5 },
       ]);
-      if (path.startsWith('/trips/t1')) return Promise.resolve({ days: [{ dayNum: 1, date: '2026-07-26', label: 'D1' }] });
-      if (path.startsWith('/trips/t2')) return daysPending; // pending
+      if (path.startsWith('/trips/t1/days')) return Promise.resolve([{ dayNum: 1, date: '2026-07-26', label: 'D1' }]);
+      if (path.startsWith('/trips/t2/days')) return daysPending; // pending
       return Promise.resolve({});
     });
     renderPage();
