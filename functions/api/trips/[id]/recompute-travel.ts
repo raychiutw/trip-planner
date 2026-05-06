@@ -243,11 +243,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         pairsComputed++;
       } catch (err) {
         sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
-        const msg = err instanceof Error ? err.message : String(err);
-        errorsDetail.push({ entryId: curr.id, message: msg.slice(0, 200) });
+        // v2.23.15: AppError 的 message 是 catalog default，detail 才有真實 cause（如 "Routes 429"）
+        const detail = err instanceof AppError ? (err.detail ?? err.message) : (err instanceof Error ? err.message : String(err));
+        errorsDetail.push({ entryId: curr.id, message: detail.slice(0, 200) });
         if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
         // Other errors → swallow per pair, continue
       }
+      // v2.23.15: 50ms throttle 避免 Routes API per-second QPS 限制（burst >50/sec 會 429）
+      // CF Pages function 30s 內可處理 ~500 pairs sequential。
+      await new Promise((r) => setTimeout(r, 50));
     }
   }
 
