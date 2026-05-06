@@ -198,7 +198,13 @@ describe('GET /api/trips/:id/days?all=1 — batch 模式', () => {
 
     const d1Timeline = data[0].timeline as Array<Record<string, unknown>>;
     const travel = d1Timeline[0].travel as Record<string, unknown> | null;
-    expect(travel).toEqual({ type: 'car', desc: '開車前往', min: 30 });
+    expect(travel).toEqual({
+      type: 'car',
+      desc: '開車前往',
+      min: 30,
+      distanceM: null,
+      source: null,
+    });
 
     // Day2 entry 沒設 travel → null
     const d2Timeline = data[1].timeline as Array<Record<string, unknown>>;

@@ -24,7 +24,7 @@ export interface TravelData {
   /** Travel duration in minutes. */
   min?: number | null;
   /** Driving distance in meters (Google Routes API). NULL for legacy entries. */
-  distance_m?: number | null;
+  distanceM?: number | null;
   /** Legacy alias kept for backwards compat — map source still emits `text`. */
   text?: string | null;
 }

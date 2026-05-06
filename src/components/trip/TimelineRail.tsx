@@ -800,7 +800,7 @@ const TimelineRail = memo(function TimelineRail({ events, nowIndex = -1, dayId }
                   type={travelObj.type ?? null}
                   desc={travelObj.desc ?? null}
                   min={travelObj.min ?? null}
-                  distanceM={travelObj.distance_m ?? null}
+                  distanceM={travelObj.distanceM ?? null}
                 />
               )}
               <RailRow

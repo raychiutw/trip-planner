@@ -31,13 +31,13 @@ export interface Location {
   geocodeStatus?: string;
 }
 
-/** Travel leg assembled from entries.travel_* columns */
+/** Travel leg assembled from entries.travel_* columns (API auto-camelCases). */
 export interface Travel {
   type: string;
   desc?: string | null;
   min?: number | null;
   /** Driving distance in meters (Google Routes API). NULL for legacy entries pre-v2.23.0. */
-  distance_m?: number | null;
+  distanceM?: number | null;
   /** 'google' / 'error' (travel_source col). NULL for legacy. */
   source?: string | null;
 }
