@@ -141,10 +141,10 @@ const SCOPED_STYLES = `
   color: var(--color-muted);
 }
 
-/* Submit button (mockup .tp-action-btn) */
+/* Submit + cancel buttons (mockup .tp-action-btn pair) */
 .tp-favorites-add-to-trip .tp-form-actions {
   margin-top: 8px;
-  display: flex; justify-content: center;
+  display: flex; justify-content: center; gap: 12px;
 }
 .tp-favorites-add-to-trip .tp-action-btn {
   font: inherit; font-weight: 700; font-size: 15px;
@@ -152,15 +152,25 @@ const SCOPED_STYLES = `
   background: var(--color-accent); color: var(--color-accent-foreground);
   border: 1px solid var(--color-accent);
   cursor: pointer; min-height: var(--spacing-tap-min);
-  min-width: 200px;
+  min-width: 160px;
+}
+.tp-favorites-add-to-trip .tp-action-btn-cancel {
+  background: var(--color-secondary);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+  font-weight: 600;
 }
 .tp-favorites-add-to-trip .tp-action-btn:hover:not(:disabled) {
   filter: brightness(0.95);
+}
+.tp-favorites-add-to-trip .tp-action-btn-cancel:hover:not(:disabled) {
+  background: var(--color-hover);
 }
 .tp-favorites-add-to-trip .tp-action-btn:disabled {
   opacity: 0.55; cursor: not-allowed;
 }
 @media (max-width: 760px) {
+  .tp-favorites-add-to-trip .tp-form-actions { flex-direction: column-reverse; }
   .tp-favorites-add-to-trip .tp-action-btn { width: 100%; }
 }
 
@@ -488,6 +498,15 @@ export default function AddPoiFavoriteToTripPage() {
           </div>
 
           <div className="tp-form-actions">
+            <button
+              type="button"
+              className="tp-action-btn tp-action-btn-cancel"
+              onClick={goBack}
+              disabled={submitting}
+              data-testid="favorites-add-to-trip-cancel"
+            >
+              返回
+            </button>
             <button
               type="submit"
               className="tp-action-btn"

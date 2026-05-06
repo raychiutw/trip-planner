@@ -156,6 +156,15 @@ describe('AddPoiFavoriteToTripPage — primary button placement (mockup B1)', ()
     expect(submitBtn.closest('.tp-page-bottom-bar')).toBeNull();
   });
 
+  it('「返回」secondary button 與「加入行程」並排在 .tp-form-actions（v2.23.7 用戶反饋）', async () => {
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-submit')).toBeTruthy());
+    const cancelBtn = screen.getByTestId('favorites-add-to-trip-cancel');
+    expect(cancelBtn).toBeTruthy();
+    expect(cancelBtn.textContent).toContain('返回');
+    expect(cancelBtn.closest('.tp-form-actions')).toBeTruthy();
+  });
+
   it('TitleBar 右側 SHALL NOT 含 confirm action (left back only)', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByTestId('favorites-add-to-trip-submit')).toBeTruthy());

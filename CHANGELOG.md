@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.7] - 2026-05-06
+
+**hotfix: 加入行程頁加返回按鈕** — 用戶反饋「加入行程頁 要有回上一頁」。
+TitleBar 左上 36×36 back icon 在 mobile 不夠醒目，跟 AddStopPage / NewTripPage
+form-bottom 「取消 + 主要 CTA」一致 pattern 不符。
+
+### Fixed
+
+- `AddPoiFavoriteToTripPage`：`.tp-form-actions` 加 secondary `返回` button 並列
+  「加入行程」submit。click 走既有 `goBack`（useNavigateBack history-aware）
+- 樣式：secondary 用 `--color-secondary` 底 + `--color-border`，min-width 160px。
+  Mobile (<760px) `column-reverse` 讓「返回」在下方 + full-width
+- 測試 +1 case 守 cancel button + label「返回」 + `.tp-form-actions` wrapper
+  （19 tests pass）
+
 ## [2.23.6] - 2026-05-06
 
 **hotfix: travel pill 不顯示距離 + recompute 後 pill 不渲染** — 用戶 prod 截圖
