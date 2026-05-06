@@ -125,10 +125,15 @@ export function assembleDay(
 
   const timeline = entries.map(e => {
     const eid = e.id as number;
-    const travel = e.travel_type ? {
-      type: e.travel_type,
+    // v2.23.6：surface distance_m + source。recompute-travel 後 assembleDay 應
+    // surface travel object 即使 travel_type 仍 NULL（fallback 'car'），因為使用者要看到 km/min。
+    const hasTravelData = e.travel_type || e.travel_min != null || e.travel_distance_m != null;
+    const travel = hasTravelData ? {
+      type: e.travel_type ?? 'car',
       desc: e.travel_desc,
       min: e.travel_min,
+      distance_m: e.travel_distance_m,
+      source: e.travel_source,
     } : null;
 
     // Phase 3: entry.poi_id JOIN pois master（spatial 欄位唯一來源）
