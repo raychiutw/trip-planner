@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.1] - 2026-05-06
+
+**hotfix: 新增景點重算 travel time** — v2.23.0 prod testing 暴露 pre-existing bug：
+AddStopPage `handleConfirm` 只傳 `{ title, note }` 給 `POST /entries`，drop 掉 search
+result 的 `lat/lng`，導致 `findOrCreatePoi` 建出無座標的 POI；加完景點也沒 trigger
+`/api/trips/:id/recompute-travel`，所以 travel pill 一直空白。
+
+### Fixed
+
+- `src/pages/AddStopPage.tsx` `handleConfirm`：
+  - search tab payload 加 `lat / lng / source: 'google'`（從 PoiSearchResult 拿）
+  - favorites tab payload 加 `lat / lng / source: 'favorite'`（從 PoiFavoriteRow.poiLat/poiLng 拿，backend 已有 deepCamel 過的 `poi_lat`/`poi_lng`）
+  - POST entries 完成後 fire-and-forget `POST /api/trips/:id/recompute-travel?day=N`，
+    UI 立即返回 trip view，travel pill 在 server 算完後 refresh
+- `PoiFavoriteRow` interface 加 `poiLat?` + `poiLng?`（backend 早就回，前端 type 沒同步）
+
 ## [2.23.0] - 2026-05-06
 
 **Google Maps Platform 全套切換** — OSM Nominatim + Mapbox + ORS + Leaflet + Haversine

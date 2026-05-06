@@ -50,6 +50,8 @@ interface PoiFavoriteRow {
   poiName: string;
   poiAddress: string | null;
   poiType: string;
+  poiLat?: number | null;
+  poiLng?: number | null;
 }
 
 interface DayApiRow {
@@ -694,19 +696,38 @@ export default function AddStopPage() {
     if (submitting || !tripId || !Number.isFinite(dayNum)) return;
     setSubmitError(null);
 
-    type Body = { title: string; time?: string; note?: string };
+    type Body = {
+      title: string;
+      time?: string;
+      note?: string;
+      lat?: number;
+      lng?: number;
+      source?: string;
+    };
 
     let payloads: Body[] = [];
 
     if (tab === 'search') {
       payloads = searchResults
         .filter((r) => selectedSearch.has(r.place_id))
-        .map((r) => ({ title: r.name, note: r.address || undefined }));
+        .map((r) => ({
+          title: r.name,
+          note: r.address || undefined,
+          lat: r.lat,
+          lng: r.lng,
+          source: 'google',
+        }));
     } else if (tab === 'favorites') {
       const list = poiFavorites ?? [];
       payloads = list
         .filter((r) => selectedSaved.has(r.id))
-        .map((r) => ({ title: r.poiName, note: r.poiAddress ?? undefined }));
+        .map((r) => ({
+          title: r.poiName,
+          note: r.poiAddress ?? undefined,
+          lat: r.poiLat ?? undefined,
+          lng: r.poiLng ?? undefined,
+          source: 'favorite',
+        }));
     } else {
       const title = customTitle.trim();
       if (!title) {
@@ -738,6 +759,13 @@ export default function AddStopPage() {
         setSubmitError(`${failed.length}/${payloads.length} 個項目儲存失敗，請重試`);
         return;
       }
+      // Fire-and-forget recompute-travel for this day so newly added entries
+      // get travel_distance_m / travel_min populated. Non-blocking — UI returns
+      // to trip view immediately; travel pills update after server done.
+      apiFetchRaw(`/trips/${encodeURIComponent(tripId)}/recompute-travel?day=${dayNum}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }).catch(() => undefined);
       window.dispatchEvent(new CustomEvent('tp-entry-updated', { detail: { tripId, dayNum } }));
       showToast(`已加入 ${payloads.length} 個景點`, 'success');
       handleBack();
