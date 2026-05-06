@@ -42,6 +42,7 @@ import TitleBarPrimaryAction from '../components/shell/TitleBarPrimaryAction';
 import Icon from '../components/shared/Icon';
 import ToastContainer, { showToast } from '../components/shared/Toast';
 import { usePoiSearch } from '../hooks/usePoiSearch';
+import { regionToCountryCode } from '../lib/maps/region';
 import type { PoiSearchResult } from '../types/poi';
 
 interface PoiFavoriteRow {
@@ -608,6 +609,7 @@ export default function AddStopPage() {
   const { results: searchResults, searching } = usePoiSearch({
     enabled: tab === 'search',
     query: query.trim(),
+    region: regionToCountryCode(region),
     limit: 20,
     normalise: normalizeSearchResults,
   });

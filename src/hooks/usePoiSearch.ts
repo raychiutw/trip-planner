@@ -6,6 +6,12 @@ interface UsePoiSearchOptions {
   enabled?: boolean;
   /** Search query — empty / <2 chars triggers no fetch and clears results. */
   query: string;
+  /**
+   * ISO 3166-1 alpha-2 country code (JP / TW / KR) forwarded to Google Places
+   * `regionCode`. Without it, Google falls back to caller-IP geolocation —
+   * Taiwan IP searching for Tokyo POIs returns Taipei results.
+   */
+  region?: string;
   /** Result count cap. Default: 20. */
   limit?: number;
   /** Debounce window in ms. Default: 300. */
@@ -62,6 +68,7 @@ function isValidPoi(row: unknown): row is PoiSearchResult {
 export function usePoiSearch({
   enabled = true,
   query,
+  region,
   limit = 20,
   debounceMs = 300,
   normalise,
@@ -93,8 +100,9 @@ export function usePoiSearch({
       abortRef.current = ctrl;
       setSearching(true);
       try {
+        const regionParam = region ? `&region=${encodeURIComponent(region)}` : '';
         const resp = await fetch(
-          `/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}`,
+          `/api/poi-search?q=${encodeURIComponent(trimmed)}&limit=${limit}${regionParam}`,
           { signal: ctrl.signal },
         );
         if (!resp.ok) {
@@ -118,7 +126,7 @@ export function usePoiSearch({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       abortRef.current?.abort();
     };
-  }, [enabled, query, limit, debounceMs]);
+  }, [enabled, query, region, limit, debounceMs]);
 
   return { results, searching };
 }

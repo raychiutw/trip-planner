@@ -28,6 +28,7 @@ import TitleBar from '../components/shell/TitleBar';
 const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾', '台北'] as const;
 
 import type { PoiSearchResult } from '../types/poi';
+import { regionToCountryCode } from '../lib/maps/region';
 
 /**
  * Mini-fetch shape — 只用 poiType + poiName 算 favoriteKeySet (heart-disable correctness).
@@ -476,7 +477,9 @@ export default function ExplorePage() {
     searchAbortRef.current = ctrl;
     setSearching(true);
     try {
-      const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(q)}&limit=20`, { signal: ctrl.signal });
+      const countryCode = regionToCountryCode(region);
+      const regionParam = countryCode ? `&region=${encodeURIComponent(countryCode)}` : '';
+      const resp = await fetch(`/api/poi-search?q=${encodeURIComponent(q)}&limit=20${regionParam}`, { signal: ctrl.signal });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const body = (await resp.json()) as { results: PoiSearchResult[] };
       if (searchAbortRef.current === ctrl) setResults(body.results);

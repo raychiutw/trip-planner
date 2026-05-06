@@ -3,6 +3,29 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.3] - 2026-05-06
+
+**hotfix: 篩選東京搜尋出 Taipei 結果** — `usePoiSearch` hook 從不接受 / 不傳
+`region` 參數給 `/api/poi-search`，所以 AddStopPage / ExplorePage 上的 region pill
+（「東京 / 沖繩 / 首爾 / 台南」）只是裝飾。Google Places `regionCode` 沒收到 →
+fallback 用 caller IP（台灣）→ Taipei results。
+
+### Fixed
+
+- `src/hooks/usePoiSearch.ts` 加 `region?: string` 入口，append `&region=` 到 fetch URL，
+  納入 effect deps（region 換時 re-fetch）
+- `src/lib/maps/region.ts`（新）city 中文 → ISO alpha-2 country code mapping。
+  涵蓋 JP / KR / TW / HK / MO / TH / SG / MY / VN / ID / PH。
+  `'全部地區'` / 未收錄 city → undefined（保留 caller-IP fallback 舊行為）
+- `src/pages/AddStopPage.tsx` + `src/pages/ExplorePage.tsx` 用新 helper 把 region 中文
+  轉 ISO 傳到 hook / API
+- 新測試 `tests/unit/region-to-country-code.test.ts` 7 個 case 守住 mapping
+
+### Limitation
+
+`regionCode` 只認 country level — 「東京 vs 京都」皆映射到 JP，無 city-level
+bias。City 級別 bias 需走 `locationBias circle` 帶 lat/lng（v2.24.0 enhancement）。
+
 ## [2.23.2] - 2026-05-06
 
 **hotfix: enrich.ts 漏寫 lat/lng/address/phone/hours** — v2.23.0 backfill 後驚覺
