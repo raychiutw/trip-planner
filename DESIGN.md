@@ -178,7 +178,7 @@
 ## Layout
 
 ### Unified App Shell
-- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 / 帳號。Desktop sidebar 將帳號呈現在底部 account chip；compact bottom nav 保留帳號 tab；匿名狀態顯示登入入口。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。
+- **Primary IA:** 聊天 / 行程 / 地圖 / 收藏 / 帳號。Desktop sidebar 將帳號呈現在底部 account chip；compact bottom nav 保留帳號 tab；匿名狀態顯示登入入口。「探索」自 v2.21.0 起降為 `/favorites` 頁右上 secondary action（ghost variant），保留路由 `/explore` 為次要 entry。`/explore` TitleBar 含**左側返回 button**（v2.23.7）→ `/favorites`，因其為 secondary route 非 primary nav slot；history-aware fallback `/favorites`。
 - **Desktop shell:** sticky left sidebar + sticky page titlebar + standard centered content column。
 - **Compact shell:** sticky page titlebar + right-side hamburger menu + bottom nav。底部導航向下捲動隱藏、向上捲動顯示。
 - **Header rule:** 所有主功能頁 titlebar 一律 sticky；桌機與 compact 都是單行標題，不放 eyebrow、meta、helper text。
