@@ -69,8 +69,8 @@ beforeEach(() => {
   apiFetchMock.mockImplementation((path) => {
     if (path === '/poi-favorites') return Promise.resolve([SAMPLE_FAVORITE]);
     if (path === '/my-trips') return Promise.resolve(SAMPLE_TRIPS);
-    if (path.startsWith('/trips/t1')) return Promise.resolve({ days: SAMPLE_DAYS });
-    if (path.startsWith('/trips/t2')) return Promise.resolve({ days: [] });
+    if (path.startsWith('/trips/t1/days')) return Promise.resolve(SAMPLE_DAYS);
+    if (path.startsWith('/trips/t2/days')) return Promise.resolve([]);
     if (path.includes('/add-to-trip')) return Promise.resolve({});
     return Promise.resolve({});
   });

@@ -7284,8 +7284,11 @@
   <p class="tp-section-lead" style="background:#fff5e8;border-left:3px solid #d46c3a;padding:10px 14px;border-radius:4px;">⚠ <strong>2026-05-03 modal-to-fullpage migration（PR #433, v2.19.9）</strong>：「我的收藏」 saved-toolbar 上的「加入行程」 button 從原本彈 modal-style backdrop chooser 改為 anchored popover（<code>src/components/explore/TripPickerPopover.tsx</code>），出現在 button 下方（<code>top: 100%; right: 0; width: 320px</code>），點外或 Esc 關閉。Chooser branch 走 popover 而非全頁，理由：selection → 立即 navigate <code>/trips?selected=:id</code>，page 模式打斷 flow；URL deep-link 對 user-specific dynamic trip 列表沒意義；同 region-pill / category-subtab 同類 selection menu pattern。</p>
 
   <div class="tp-page-frame">
-    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col · titlebar:標題 + .tp-titlebar-action「收藏」(icon+label, ghost) → /saved</span></div>
+    <div class="tp-page-frame-label">DESKTOP <span>1024px+ · 1040px content · POI grid 3-col · titlebar: ←返回 + 標題 + .tp-titlebar-action「收藏」(icon+label, ghost) → /saved</span></div>
     <header class="tp-page-titlebar">
+      <button class="tp-titlebar-back" type="button" aria-label="返回收藏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
       <h3 class="tp-page-titlebar-title">探索</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-action" type="button" aria-label="我的收藏">
@@ -7363,8 +7366,11 @@
   </div>
 
   <div class="tp-page-frame tp-page-frame-compact">
-    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 2-col grid · titlebar action 縮 icon-only · 底部 GlobalBottomNav 5-tab</span></div>
+    <div class="tp-page-frame-label">COMPACT <span>≤1024px · 2-col grid · titlebar ←返回 + action 縮 icon-only · 底部 GlobalBottomNav 5-tab</span></div>
     <header class="tp-page-titlebar">
+      <button class="tp-titlebar-back" type="button" aria-label="返回收藏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      </button>
       <h3 class="tp-page-titlebar-title">探索</h3>
       <div class="tp-page-titlebar-actions">
         <button class="tp-titlebar-action" type="button" aria-label="我的收藏">

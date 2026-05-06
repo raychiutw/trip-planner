@@ -29,6 +29,7 @@ const POPULAR_REGIONS = ['全部地區', '沖繩', '東京', '京都', '首爾',
 
 import type { PoiSearchResult } from '../types/poi';
 import { regionToApiParam } from '../lib/maps/region';
+import { useNavigateBack } from '../hooks/useNavigateBack';
 
 /**
  * Mini-fetch shape — 只用 poiType + poiName 算 favoriteKeySet (heart-disable correctness).
@@ -381,6 +382,7 @@ export default function ExplorePage() {
   useRequireAuth();
   const { user } = useCurrentUser();
   const navigate = useNavigate();
+  const goBack = useNavigateBack('/favorites');
 
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
@@ -485,7 +487,7 @@ export default function ExplorePage() {
       if (searchAbortRef.current === ctrl) setResults(body.results);
     } catch (err) {
       if ((err as { name?: string })?.name === 'AbortError') return;
-      showToast('搜尋失敗（Nominatim 暫時無法連線）', 'error', 3000);
+      showToast('搜尋失敗，請稍後再試', 'error', 3000);
       if (searchAbortRef.current === ctrl) setResults([]);
     } finally {
       if (searchAbortRef.current === ctrl) setSearching(false);
@@ -558,6 +560,8 @@ export default function ExplorePage() {
       {/* v2.21.0 IA reshuffle: TitleBar 右上 ghost action「收藏」 → /favorites */}
       <TitleBar
         title="探索"
+        back={goBack}
+        backLabel="返回收藏"
         actions={
           <button
             type="button"
@@ -663,10 +667,11 @@ export default function ExplorePage() {
             </div>
 
             {results.length > 0 && (() => {
-              // Section 4.9：純 client-side filter — region 對應 address contains，
-              // category 對應 poi.category text；無資料就 fallback 全顯示。
+              // Section 4.9：client-side category filter only。region bias 從 v2.23.4
+              // 起改走 server-side locationBias circle（functions/api/poi-search.ts）—
+              // address-includes 中文 city 名 client filter 對英文 address「Tokyo, Japan」
+              // 永遠 mismatch，drop。
               const filtered = results.filter((p) => {
-                if (region !== '全部地區' && !(p.address ?? '').includes(region)) return false;
                 if (category === 'all') return true;
                 const cat = (p.category ?? '').toLowerCase();
                 if (category === 'food' && /restaurant|cafe|food|bar|bakery|餐|食/.test(cat)) return true;

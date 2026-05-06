@@ -58,7 +58,7 @@ beforeEach(() => {
   apiFetchMock.mockImplementation((path) => {
     if (path === '/poi-favorites') return Promise.resolve([SAMPLE_FAVORITE]);
     if (path === '/my-trips') return Promise.resolve([{ tripId: 't1', name: 'T1', totalDays: 3 }]);
-    if (path.startsWith('/trips/t1')) return Promise.resolve({ days: [{ dayNum: 1, date: '2026-07-26', label: 'D1' }] });
+    if (path.startsWith('/trips/t1/days')) return Promise.resolve([{ dayNum: 1, date: '2026-07-26', label: 'D1' }]);
     return Promise.resolve({});
   });
 });
