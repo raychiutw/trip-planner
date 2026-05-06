@@ -125,6 +125,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   let pairsComputed = 0;
   const sourceBreakdown: Record<string, number> = {};
   const modeBreakdown: Record<string, number> = {};
+  const errorsDetail: Array<{ entryId: number; message: string }> = [];
   const updates: Array<{
     entryId: number;
     distance_m: number;
@@ -235,6 +236,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         pairsComputed++;
       } catch (err) {
         sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
+        const msg = err instanceof Error ? err.message : String(err);
+        errorsDetail.push({ entryId: curr.id, message: msg.slice(0, 200) });
         if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
         // Other errors → swallow per pair, continue
       }
@@ -267,6 +270,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     pairs_computed: pairsComputed,
     source_breakdown: sourceBreakdown,
     mode_breakdown: modeBreakdown,
+    errors_detail: errorsDetail,    // v2.23.13 debug
     self_drive: selfDriveEnabled
       ? { enabled: true, pickup_at: pickupAt, return_at: returnAt }
       : { enabled: false },
