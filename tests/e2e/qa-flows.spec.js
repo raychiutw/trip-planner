@@ -73,9 +73,10 @@ test.describe('QA Flow 2 — 新增景點 (custom tab confirm)', () => {
       }
     });
 
-    // 先 goto /trip/:id 建 history,再透過 + 加景點 navigate → handleBack 可回得到
+    // 先 goto /trip/:id 建 history，再 goto AddStopPage URL → handleBack 可回得到
+    // (v2.23.7：trip TitleBar 從「加景點」改「探索」，AddStopPage 直接 URL 進入)
     await page.goto('/trip/okinawa-trip-2026-Ray');
-    await page.getByTestId('trip-add-stop-trigger').click();
+    await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
 
     await page.getByTestId('add-stop-tab-custom').click();

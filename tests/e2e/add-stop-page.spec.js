@@ -16,12 +16,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
-  test('TripPage TitleBar「加景點」 button → navigate 到 /add-stop?day=N page', async ({ page }) => {
-    await page.goto('/trip/okinawa-trip-2026-Ray');
-    const trigger = page.getByTestId('trip-add-stop-trigger');
-    await expect(trigger).toBeVisible();
-    await trigger.click();
-    await expect(page).toHaveURL(/\/trip\/okinawa-trip-2026-Ray\/add-stop\?day=\d+/);
+  test('AddStopPage 直接 URL 進入（v2.23.7：trip TitleBar 從「加景點」改「探索」，AddStopPage 仍 deep-link reachable）', async ({ page }) => {
+    await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
   });
 
@@ -84,7 +80,7 @@ test.describe('AddStopPage — Section 3 (modal-to-fullpage migration)', () => {
 
   test('TitleBar 返回按鈕 → 回到 trip 頁面', async ({ page }) => {
     await page.goto('/trip/okinawa-trip-2026-Ray');
-    await page.getByTestId('trip-add-stop-trigger').click();
+    await page.goto('/trip/okinawa-trip-2026-Ray/add-stop?day=1');
     await expect(page.getByTestId('add-stop-page')).toBeVisible();
     // TitleBar 返回 button 用 aria-label 抓 (AddStopPage 設 backLabel="返回前頁")
     await page.getByRole('button', { name: '返回前頁' }).click();
