@@ -46,9 +46,10 @@ const MOCK_USER = {
   createdAt: '2026-01-01T00:00:00Z',
 };
 
+// v2.23.0 google-maps-migration: osm_id (number) → place_id (Google ChIJ string)
 const MOCK_POI_SEARCH_RESULTS = [
   {
-    osm_id: 90001,
+    place_id: 'ChIJPZ5hUjH65DQR_p_dD3CmCOo',
     name: '沖繩美麗海水族館',
     address: '沖繩縣國頭郡本部町石川424',
     lat: 26.6944,
@@ -664,7 +665,7 @@ async function setupApiMocks(page) {
       const row = {
         id: ++nextSavedId,
         email: MOCK_USER.email,
-        poiId: body.poiId ?? searchPoi.osm_id,
+        poiId: body.poiId ?? nextPoiId++,
         savedAt: new Date().toISOString(),
         note: body.note ?? null,
         poiName: searchPoi.name,
