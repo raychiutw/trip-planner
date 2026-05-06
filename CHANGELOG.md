@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.9] - 2026-05-06
+
+**feat: self-drive trip + per-pair travel mode + 變更 POI** — 用戶 sprint：
+(1) 新增行程加自駕選項 + 取車/還車時間 + 取/還車地點 (2) recompute 改 per-pair
+mode：自駕區間 → DRIVE / 區間外走路 ≤10min → WALK / 超過 → TRANSIT
+(3) timeline row 加「變更 POI」 action。
+
+### Added
+
+- migration `0052_trips_self_drive.sql`：trips 加 5 cols (self_drive_enabled
+  + 4 nullable text/datetime fields) + partial index。全 nullable 支援後補。
+- `functions/api/trips.ts` POST + `functions/api/trips/[id].ts` PATCH ALLOWED
+  +5 self-drive fields
+- `functions/api/trips/[id]/recompute-travel.ts` 大改：per-pair mode logic。讀
+  trip self_drive 區間 + 每對 pair 的 entry datetime → 決定 DRIVE / WALK /
+  TRANSIT。WALK ≤10min threshold；超過時 2nd Routes call TRANSIT。response 加
+  `mode_breakdown` + `self_drive` summary。
+- `src/server/maps/google-client.ts` `computeRoute` 加 optional `departureTime`
+  param（TRANSIT mode 必須帶才有 schedule）
+- `src/pages/NewTripPage.tsx` 加 self-drive section：toggle + 4 inputs
+  （datetime-local + text）
+- `src/pages/EditTripPage.tsx` 同上 + 後補 PATCH diff 邏輯
+- `src/types/trip.ts Trip` interface +5 self-drive fields (camelCase API shape)
+- `src/pages/ChangePoiPage.tsx` 新頁 — search/favorites 雙 tab，single-select
+  → PUT `/trips/:id/entries/:eid/poi-id` (find-or-create OR existing poi_id mode)
+- `functions/api/trips/[id]/entries/[eid]/poi-id.ts` PUT 加 find-or-create mode：
+  body 接 `{ name, lat, lng, source }` 時自動建 POI 並重掛 entry，title 同步更新
+- `src/components/trip/TimelineRail.tsx` row action 加「變更 POI」 button →
+  navigate `/trip/:id/stop/:eid/change-poi`
+- Route `/trip/:tripId/stop/:entryId/change-poi`
+
+### Cost impact
+
+- 自駕模式 entries：1 Routes call/pair (DRIVE)，同舊
+- 非自駕區間 entries：1-2 calls/pair (WALK 或 WALK+TRANSIT)
+- Quota 5000/day 仍夠 (典型 trip ≤80 pairs)
+
 ## [2.23.8] - 2026-05-06
 
 **feat: trip TitleBar 加景點 退役 → 探索 + 探索 POI 卡可選收藏 OR 直接加入行程** —

@@ -13,6 +13,9 @@ const ALLOWED_FIELDS = [
   'name', 'title', 'description',
   'countries', 'published',
   'data_source', 'default_travel_mode', 'lang',
+  // v2.23.8 self-drive (migration 0052) — PATCH 後補 ability
+  'self_drive_enabled', 'self_drive_pickup_at', 'self_drive_return_at',
+  'self_drive_pickup_location', 'self_drive_return_location',
 ] as const;
 
 interface TripDestRow {

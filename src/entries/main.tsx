@@ -100,6 +100,8 @@ const EntryActionPage = lazyWithRetry(() => import('../pages/EntryActionPage'));
 const AddStopPage = lazyWithRetry(() => import('../pages/AddStopPage'));
 // poi-favorites-rename: poi_favorites universal pool → 加入行程 fast-path page
 const AddPoiFavoriteToTripPage = lazyWithRetry(() => import('../pages/AddPoiFavoriteToTripPage'));
+// v2.23.8: 變更 POI 全頁 form
+const ChangePoiPage = lazyWithRetry(() => import('../pages/ChangePoiPage'));
 
 const DEFAULT_TRIP = 'okinawa-trip-2026-Ray';
 const FALLBACK_STYLE = { padding: '2rem', textAlign: 'center' as const };
@@ -195,6 +197,8 @@ if (el) {
                 {/* 2026-05-03 modal-to-fullpage migration: EntryActionPopover → /stop/:eid/(copy|move) */}
                 <Route path="stop/:entryId/copy" element={<EntryActionPage action="copy" />} />
                 <Route path="stop/:entryId/move" element={<EntryActionPage action="move" />} />
+                {/* v2.23.8 變更 POI — :tripId + :entryId from parent route */}
+                <Route path="stop/:entryId/change-poi" element={<ChangePoiPage />} />
                 {/* 2026-05-03 modal-to-fullpage migration: AddStopModal → /add-stop?day=N */}
                 <Route path="add-stop" element={<AddStopPage />} />
               </Route>

@@ -5,16 +5,27 @@
  * 任何編輯者改指任意 POI（跨 trip 資料外洩 / FK 違反）。這條路徑提供安全的
  * 重掛能力：驗證 POI 存在、驗證 entry 屬於這個 trip、記錄稽核。
  *
- * Body: { poi_id: number | null }
- *   - 數字：指向 pois.id；須先驗證 POI 存在
- *   - null：清空 poi_id（entry 變成無 POI master 狀態）
+ * Body 兩種 mode（v2.23.8）：
+ *   1. { poi_id: number | null } — 直接重掛到既有 POI 或清空
+ *   2. { name: string, lat: number, lng: number, source?: string } — 從 search 結果
+ *      新建 POI（find-or-create by lat/lng）並重掛。entry.title 也同步更新為 name。
  */
 
+import { findOrCreatePoi } from '../../../../_poi';
 import { logAudit } from '../../../../_audit';
 import { hasWritePermission, verifyEntryBelongsToTrip } from '../../../../_auth';
 import { AppError } from '../../../../_errors';
 import { json, getAuth, parseJsonBody, parseIntParam } from '../../../../_utils';
 import type { Env } from '../../../../_types';
+
+interface ChangePoiBody {
+  poi_id?: number | null;
+  // direct-from-search mode
+  name?: string;
+  lat?: number;
+  lng?: number;
+  source?: string;
+}
 
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   const auth = getAuth(context);
@@ -32,24 +43,44 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   if (!hasPerm) throw new AppError('PERM_DENIED');
   if (!belongsToTrip) throw new AppError('PERM_DENIED', '此 entry 不屬於該行程');
 
-  const body = await parseJsonBody<{ poi_id?: number | null }>(context.request);
-  if (!('poi_id' in body)) throw new AppError('DATA_VALIDATION', '缺少 poi_id');
+  const body = await parseJsonBody<ChangePoiBody>(context.request);
 
-  const newPoiId = body.poi_id;
-  if (newPoiId !== null && (typeof newPoiId !== 'number' || !Number.isInteger(newPoiId) || newPoiId <= 0)) {
-    throw new AppError('DATA_VALIDATION', 'poi_id 須為正整數或 null');
-  }
-
-  // Verify POI exists（null 直接略過）
-  if (newPoiId !== null) {
-    const poi = await db.prepare('SELECT id FROM pois WHERE id = ?').bind(newPoiId).first();
-    if (!poi) throw new AppError('DATA_NOT_FOUND', `pois.id=${newPoiId} 不存在`);
+  // Resolve mode：poi_id mode (existing) vs find-or-create mode (new from search)
+  let newPoiId: number | null;
+  let newTitle: string | null = null;
+  if ('poi_id' in body) {
+    newPoiId = body.poi_id ?? null;
+    if (newPoiId !== null && (typeof newPoiId !== 'number' || !Number.isInteger(newPoiId) || newPoiId <= 0)) {
+      throw new AppError('DATA_VALIDATION', 'poi_id 須為正整數或 null');
+    }
+    if (newPoiId !== null) {
+      const poi = await db.prepare('SELECT id FROM pois WHERE id = ?').bind(newPoiId).first();
+      if (!poi) throw new AppError('DATA_NOT_FOUND', `pois.id=${newPoiId} 不存在`);
+    }
+  } else if (body.name && typeof body.lat === 'number' && typeof body.lng === 'number') {
+    // find-or-create from search payload
+    newPoiId = await findOrCreatePoi(db, {
+      name: body.name,
+      type: 'attraction',
+      lat: body.lat,
+      lng: body.lng,
+      source: body.source ?? 'google',
+    });
+    newTitle = body.name;
+  } else {
+    throw new AppError('DATA_VALIDATION', '須提供 poi_id 或 { name, lat, lng }');
   }
 
   const oldRow = await db.prepare('SELECT poi_id FROM trip_entries WHERE id = ?').bind(entryId).first() as { poi_id: number | null } | null;
   if (!oldRow) throw new AppError('DATA_NOT_FOUND', '找不到 entry');
 
-  await db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(newPoiId, entryId).run();
+  if (newTitle !== null) {
+    // Find-or-create mode：title 同步更新（user 從 search 換 POI 時，entry.title 應跟新 POI 對齊）
+    await db.prepare('UPDATE trip_entries SET poi_id = ?, title = ? WHERE id = ?')
+      .bind(newPoiId, newTitle, entryId).run();
+  } else {
+    await db.prepare('UPDATE trip_entries SET poi_id = ? WHERE id = ?').bind(newPoiId, entryId).run();
+  }
 
   await logAudit(db, {
     tripId: id,

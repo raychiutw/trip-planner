@@ -582,6 +582,22 @@ const RailRow = memo(function RailRow({ entry, index, expanded, onToggle, isPast
             >
               <Icon name="pencil" />
             </button>
+            {/* v2.23.8 變更 POI — navigate to ChangePoiPage */}
+            {tripId && entry.id != null && (
+              <button
+                type="button"
+                className="tp-rail-action-icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/trip/${encodeURIComponent(tripId)}/stop/${entry.id}/change-poi`);
+                }}
+                aria-label="變更 POI"
+                title="變更 POI"
+                data-testid={`timeline-rail-change-poi-${entry.id}`}
+              >
+                <Icon name="pin" />
+              </button>
+            )}
             <div className="tp-rail-action-spacer" />
             <button
               type="button"
