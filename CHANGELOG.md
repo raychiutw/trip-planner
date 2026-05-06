@@ -3,6 +3,37 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.7] - 2026-05-06
+
+**hotfix: ExplorePage 三個用戶反饋串連 + days endpoint contract drift** — 用戶反饋
+連續三件：(1)「探索」TitleBar 缺左上返回；(2)「加入行程頁」選 trip 後 day dropdown
+顯「該行程沒有天數」；(3)「探索無法搜尋」。
+
+### Root cause
+
+1. `ExplorePage` TitleBar 未傳 `back` prop。`/explore` 自 v2.21.0 是 secondary entry
+   (從 `/favorites` 進)，需返回 affordance — mockup section 18 line 7289+7368 也漏。
+2. `AddPoiFavoriteToTripPage` line 264 打 `apiFetch('/trips/${tripId}')` 期望 `data.days`，
+   但 `/api/trips/:id` 只回 trip metadata（id/name/owner/...）— 無 days 欄位。獨立 endpoint
+   是 `/api/trips/:id/days`（回 array）。Contract drift 從 v2.22.0 沒抓到，因 test mock
+   也錯誤 stub `{ days: [...] }` 對應同一個 endpoint。
+3. `ExplorePage` line 673 client-side filter `p.address.includes(region)` —「東京」中文
+   vs Google 回的英文 address「Tokyo, Japan」永遠 mismatch → 全部 results 被過濾掉 →
+   看起來「無法搜尋」。Server-side locationBias (v2.23.4) 已做城市級 bias，client 重複過濾
+   只會壞掉。
+
+### Fixed
+
+- `ExplorePage`：TitleBar 加 `back={goBack}` + `backLabel="返回收藏"`，walk `useNavigateBack('/favorites')`
+- `AddPoiFavoriteToTripPage` line 264：改打 `/trips/${tripId}/days` 並讀 array
+- `ExplorePage` line 673：drop region client filter（locationBias server-side 處理），
+  保留 category filter
+- `ExplorePage`：stale toast「Nominatim 暫時無法連線」→「搜尋失敗，請稍後再試」
+- 同步更新 mockup `docs/design-sessions/terracotta-preview-v2.html` Section 18 desktop +
+  compact frame 加 `.tp-titlebar-back` button
+- `DESIGN.md` L181 記載 `/explore` TitleBar back button 規範
+- 修 3 個 sibling test mock（form/states/layout）對齊新 days endpoint
+
 ## [2.23.6] - 2026-05-06
 
 **hotfix: travel pill 不顯示距離 + recompute 後 pill 不渲染** — 用戶 prod 截圖
