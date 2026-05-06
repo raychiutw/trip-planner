@@ -1,23 +1,28 @@
 /**
- * OceanMap — Leaflet + OSM map component
+ * OceanMap — Google Maps JS map component (v2.23.0 google-maps-migration).
+ *
+ * Replaces Leaflet+OSM with Google Maps Platform. Same prop surface as
+ * Leaflet version — caller pages/imports unchanged.
  *
  * One component serves both entry points:
  *   - mode='detail'   → single focus pin, 280px tall
  *   - mode='overview' → all pins + polyline (no clustering)
  *
- * Numbered accent-color pin (matches rail dot). Polylines fetch lazily via
- * /api/route proxy (Mapbox), falls back to Haversine straight line on failure.
+ * Numbered accent-color pin (matches rail dot). Polylines fetch via
+ * /api/route proxy (Google Routes). On any Google failure → 503 from
+ * server (no Haversine fallback per P11/T13); useRoute returns null.
  *
- *  pins[] ─┬─► L.divIcon numbered marker ─────────► map
- *          └─► useRoute(a,b) per segment ─► L.polyline ─► map
+ *  pins[] ─┬─► google.maps.Marker (label + icon) ──────► map
+ *          └─► useRoute(a,b) per segment ─► google.maps.Polyline ─► map
  */
 
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
-import L from 'leaflet';
-import { useLeafletMap } from '../../hooks/useLeafletMap';
+import { useGoogleMap } from '../../hooks/useGoogleMap';
 import { useRoute, type Coord } from '../../hooks/useRoute';
 import { dayColor, dayPolylineStyle } from '../../lib/dayPalette';
 import type { MapPin } from '../../hooks/useMapData';
+import MapSkeleton from './MapSkeleton';
+import PageErrorState from '../shared/PageErrorState';
 
 /* ===== Props ===== */
 
@@ -42,88 +47,82 @@ export interface OceanMapProps {
   dayNum?: number;
   /** Imperative soft pan — panTo this coord without changing zoom. Used by TripMapRail scroll spy. */
   panToCoord?: { lat: number; lng: number };
-  /** When true, fitBounds runs once on mount then preserves user drag/pan. Used by TripMapRail
-      because parent TripPage rebuilds pins inline on every render — without this, every re-render
-      would snap the rail back to full-trip bounds and wipe manual map moves + scroll-spy pan. */
+  /** When true, fitBounds runs once on mount then preserves user drag/pan. */
   fitOnce?: boolean;
-  /** Imperative L.Map handle for parent — used by /map page 全覽/我的位置/zoom 控制。
-   *  Called once on mount and on cleanup with null。Parent should ref-store, not state-store. */
-  onMapReady?: (map: L.Map | null) => void;
-  /** Override Leaflet zoom control position (default 'topleft')。/map 用 'bottomright'
-   *  避免跟左上 trip-switcher overlap。 */
-  zoomControlPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
+  /** Imperative google.maps.Map handle for parent — used by /map page MapFabs / 全覽 / 我的位置.
+   *  Called once on mount and on cleanup with null. */
+  onMapReady?: (map: google.maps.Map | null) => void;
+  /** Override Google zoom control position (default 'TOP_LEFT'). */
+  zoomControlPosition?: 'TOP_LEFT' | 'TOP_RIGHT' | 'BOTTOM_LEFT' | 'BOTTOM_RIGHT';
 }
 
-/* ===== Marker construction ===== */
+/* ===== Marker icon construction (Google Maps Symbol path + label) ===== */
+
+const ACCENT_COLOR = '#D97848';
+const ACCENT_FG = '#FFFFFF';
+const IDLE_BG = '#FFFFFF';
+const IDLE_BORDER = '#C1C1C1';
+const IDLE_FG = '#6A6A6A';
+const PAST_BORDER = '#E0E0E0';
+const PAST_FG = '#C1C1C1';
 
 /**
- * markerIcon — 建構 Leaflet divIcon 給 map marker。
- *
- * Hotel 跟 entry pin 共用同一 label 規則：純數字 String(pin.index)，
- * 不再用 🛏 emoji（DESIGN.md L383「不用 emoji」+ anti-slop L2-5）。
- * Type 區分（hotel 視為 day anchor 等）已轉移到 entry card 的 leading icon
- * （見 src/components/trip/MapEntryCard.tsx），map marker 只負責 day-local order +
- * dayColor border + active highlight。
- *
- * dayColor 套 idle marker inline border-color + color；active / past 不套（由 CSS
- * .ocean-map-pin[data-state="active|past"] 處理 accent fill 與 muted）。
- *
- * Exported 供 unit test 用（tests/unit/ocean-map-marker-no-emoji.test.tsx）。
+ * markerIcon — build google.maps.Marker icon + label options.
+ * dayColor 套 idle marker；active 用 accent；past 用 muted。Exported for unit tests.
  */
+type MarkerState = 'focused' | 'past' | 'idle';
+
+const STATE_COLORS: Record<MarkerState, { fill: string; stroke: string; text: string }> = {
+  focused: { fill: ACCENT_COLOR, stroke: ACCENT_FG, text: ACCENT_FG },
+  past:    { fill: IDLE_BG,      stroke: PAST_BORDER, text: PAST_FG },
+  idle:    { fill: IDLE_BG,      stroke: IDLE_BORDER, text: IDLE_FG },
+};
+
 export function markerIcon(
   pin: MapPin,
   isFocused: boolean,
   isPast: boolean,
-  dayColor?: string,
-): L.DivIcon {
-  const label = String(pin.index);
-  const state = isFocused ? 'active' : isPast ? 'past' : 'idle';
-  // dayColor 只套 idle 狀態。值來自 dayPalette（受控），可直接內嵌進 inline style。
-  const styleAttr =
-    state === 'idle' && dayColor
-      ? ` style="border-color: ${dayColor}; color: ${dayColor};"`
-      : '';
-  return L.divIcon({
-    className: 'ocean-map-pin-wrap',
-    html: `<span class="ocean-map-pin" data-state="${state}" data-type="${pin.type}"${styleAttr}>${label}</span>`,
-    iconSize: [isFocused ? 36 : 28, isFocused ? 36 : 28],
-    iconAnchor: [isFocused ? 18 : 14, isFocused ? 18 : 14],
-  });
+  dayCol?: string,
+): {
+  icon: google.maps.Symbol;
+  label: google.maps.MarkerLabel;
+  zIndex?: number;
+} {
+  const state: MarkerState = isFocused ? 'focused' : isPast ? 'past' : 'idle';
+  const base = STATE_COLORS[state];
+  // dayCol overrides idle stroke + text only — focused/past keep their tokens.
+  const stroke = state === 'idle' && dayCol ? dayCol : base.stroke;
+  const text = state === 'idle' && dayCol ? dayCol : base.text;
+
+  return {
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: isFocused ? 18 : 14,
+      fillColor: base.fill,
+      fillOpacity: 1,
+      strokeColor: stroke,
+      strokeWeight: isFocused ? 2 : 1.5,
+    },
+    label: {
+      text: String(pin.index),
+      color: text,
+      fontSize: isFocused ? '13px' : '12px',
+      fontWeight: '700',
+      fontFamily: 'Inter, sans-serif',
+    },
+    zIndex: isFocused ? 1000 : undefined,
+  };
 }
 
 /* ===== Inline styles (scoped to this component) ===== */
 
 const SCOPED_STYLES = `
-.ocean-map-pin-wrap { background: transparent !important; border: none !important; }
-.ocean-map-pin {
-  display: grid; place-items: center;
-  border-radius: 50%;
-  font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
-  /* Explicit Inter stack — inherit from .leaflet-container falls back to Helvetica Neue */
-  font-family: var(--font-family-system, 'Inter', sans-serif);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-  background: var(--color-background, #fff);
-  border: 1.5px solid var(--color-lineStrong, #C1C1C1);
-  color: var(--color-muted, #6A6A6A);
-  width: 28px; height: 28px; font-size: 12px;
-  line-height: 1;
-}
-.ocean-map-pin[data-state="active"] {
-  width: 36px; height: 36px; font-size: 13px;
-  background: var(--color-accent, #D97848);
-  border-color: var(--color-accent-foreground, #fff);
-  color: var(--color-accent-foreground, #fff);
-  box-shadow: 0 4px 12px rgba(217, 120, 72, 0.30);
-}
-.ocean-map-pin[data-state="past"] {
-  border-color: #E0E0E0;
-  color: #C1C1C1;
-}
 .ocean-map-container {
   width: 100%;
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
   border: 1px solid var(--color-border, #EBEBEB);
+  position: relative;
 }
 .ocean-map-container[data-mode="detail"] { height: 280px; }
 .ocean-map-container[data-mode="overview"] { height: 420px; }
@@ -132,21 +131,12 @@ const SCOPED_STYLES = `
   min-height: 0;
   border-radius: 0;
 }
-.ocean-map-container .leaflet-control-attribution {
-  font-size: 9px;
-  background: rgba(255,255,255,0.85);
-}
-/* Override Leaflet default Lucida Console on +/- zoom controls */
-.ocean-map-container .leaflet-bar a,
-.ocean-map-container .leaflet-control-attribution {
-  font-family: var(--font-family-system, 'Inter', sans-serif);
-}
 `;
 
 /* ===== Single polyline component (per segment, lazy via useRoute) ===== */
 
 interface SegmentProps {
-  map: L.Map | null;
+  map: google.maps.Map | null;
   from: Coord;
   to: Coord;
   isActive: boolean;
@@ -154,43 +144,76 @@ interface SegmentProps {
   dayNum?: number;
 }
 
-function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number): L.PolylineOptions {
+interface PolylineStyle {
+  strokeColor: string;
+  strokeOpacity: number;
+  strokeWeight: number;
+  /** Set to dashed when approx fallback OR even-day (color-blind aid). */
+  icons?: google.maps.IconSequence[];
+}
+
+/**
+ * Build Google Polyline style options matching prior Leaflet style logic.
+ * dashArray '6,6' → use IconSequence with line dash icon (Google's idiom).
+ */
+function segmentStyle(isActive: boolean, approx: boolean, dayNum?: number): PolylineStyle {
+  let color: string;
+  let weight: number;
+  let dashed: boolean;
+
   if (dayNum !== undefined) {
-    // Day palette mode: dayColor + dashArray (odd=solid, even=dashed) for color-blind aid.
-    // approx fallback overrides dashArray for visual distinction.
     const palette = dayPolylineStyle(dayNum);
-    return {
-      color: palette.color,
-      weight: isActive ? 4 : palette.weight,
-      opacity: isActive ? 0.85 : 0.6,
-      dashArray: approx ? '6,6' : palette.dashArray,
-      interactive: false,
-    };
+    color = palette.color;
+    weight = isActive ? 4 : palette.weight;
+    dashed = approx || palette.dashArray !== undefined;
+  } else {
+    color = isActive ? ACCENT_COLOR : '#C8B89F';
+    weight = isActive ? 4 : 3;
+    dashed = approx;
   }
-  // Default (no dayNum): accent for active, line-strong for idle.
-  return {
-    color: isActive ? 'var(--color-accent, #D97848)' : 'var(--color-line-strong, #C8B89F)',
-    weight: isActive ? 4 : 3,
-    opacity: isActive ? 0.85 : 0.6,
-    dashArray: approx ? '6,6' : undefined,
-    interactive: false,
+
+  const style: PolylineStyle = {
+    strokeColor: color,
+    strokeOpacity: dashed ? 0 : (isActive ? 0.85 : 0.6),
+    strokeWeight: weight,
   };
+
+  if (dashed) {
+    style.icons = [
+      {
+        icon: {
+          path: 'M 0,-1 0,1',
+          strokeOpacity: isActive ? 0.85 : 0.6,
+          scale: weight,
+        },
+        offset: '0',
+        repeat: '12px',
+      },
+    ];
+  }
+
+  return style;
 }
 
 const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: SegmentProps) {
   const route = useRoute(from, to);
-  const lineRef = useRef<L.Polyline | null>(null);
+  const lineRef = useRef<google.maps.Polyline | null>(null);
 
-  // Create polyline once per route (re-fetched polyline = new line)
   useEffect(() => {
     if (!map || !route) return;
-    const line = L.polyline(route.polyline, segmentStyle(isActive, route.approx === true, dayNum)).addTo(map);
+    const path = route.polyline.map(([lat, lng]) => ({ lat, lng }));
+    const style = segmentStyle(isActive, false, dayNum);
+    const line = new google.maps.Polyline({
+      path,
+      map,
+      ...style,
+      clickable: false,
+    });
     lineRef.current = line;
     return () => {
-      line.remove();
+      line.setMap(null);
       if (lineRef.current === line) lineRef.current = null;
     };
-    // isActive / dayNum handled by the style-update effect below
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, route]);
 
@@ -198,7 +221,13 @@ const Segment = memo(function Segment({ map, from, to, isActive, dayNum }: Segme
   useEffect(() => {
     const line = lineRef.current;
     if (!line || !route) return;
-    line.setStyle(segmentStyle(isActive, route.approx === true, dayNum));
+    const style = segmentStyle(isActive, false, dayNum);
+    line.setOptions({
+      strokeColor: style.strokeColor,
+      strokeOpacity: style.strokeOpacity,
+      strokeWeight: style.strokeWeight,
+      icons: style.icons,
+    });
   }, [isActive, route, dayNum]);
 
   return null;
@@ -214,15 +243,6 @@ export interface SegmentPair {
   dayNum?: number;
 }
 
-/**
- * Build consecutive polyline pairs from pins.
- *
- * - pinsByDay mode: per-day polyline, cross-day segments NOT drawn. Hotel
- *   pins ARE included as the day's start point (sortOrder=-1) per
- *   DESIGN.md「地圖 Polyline 規格」— skipping the hotel left the first
- *   entry visually orphaned.
- * - Flat pins mode: connects every consecutive pair.
- */
 export function buildSegments(params: {
   pins: MapPin[];
   pinsByDay?: Map<number, MapPin[]>;
@@ -236,7 +256,6 @@ export function buildSegments(params: {
   if (pinsByDay && pinsByDay.size > 0) {
     const sortedDays = [...pinsByDay.keys()].sort((a, b) => a - b);
     for (const d of sortedDays) {
-      // Sort by sortOrder so hotel (-1) leads the chain naturally.
       const dayPins = [...(pinsByDay.get(d) ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
       for (let i = 0; i < dayPins.length - 1; i++) {
         const a = dayPins[i]!;
@@ -279,7 +298,7 @@ const OceanMap = memo(function OceanMap({
   routes,
   fillParent = false,
   onMarkerClick,
-  dark = false,
+  dark: _dark = false, // unused with Google Maps（mapTypeId 'roadmap' 顏色固定）
   className,
   style,
   pinsByDay,
@@ -291,14 +310,12 @@ const OceanMap = memo(function OceanMap({
 }: OceanMapProps) {
   const showRoutes = routes ?? (mode === 'overview');
 
-  const { containerRef, map, fitBounds, flyTo } = useLeafletMap({
+  const { containerRef, map, loadError, fitBounds, flyTo } = useGoogleMap({
     zoomControl: mode === 'overview',
     zoomControlPosition,
-    dark,
   });
 
-  // Expose L.Map handle to parent (one-shot when ready, null on cleanup).
-  // 給 GlobalMapPage 的「全覽 / 我的位置」pill button 用。
+  // Expose google.maps.Map handle to parent (one-shot when ready, null on cleanup).
   useEffect(() => {
     if (!onMapReady) return;
     onMapReady(map);
@@ -329,18 +346,11 @@ const OceanMap = memo(function OceanMap({
     return m;
   }, [visiblePins]);
 
-  /** True when pinId sits before the currently focused pin in tour order. */
   const isPastPin = useCallback(
     (pinId: number) => focusedIdx >= 0 && (pinIndexById.get(pinId) ?? -1) < focusedIdx,
     [focusedIdx, pinIndexById],
   );
 
-  /**
-   * pinIdToDayColor — 每個 pin 對應的 dayColor hex（idle marker border + text）。
-   * pinsByDay 模式：用反向 lookup（pinId → dayNum → dayColor）；
-   * single-day 模式（dayNum prop）：所有 pin 共用同一 dayColor；
-   * 都沒設：undefined（marker 走 CSS muted 預設）。
-   */
   const pinIdToDayColor = useMemo(() => {
     const m = new Map<number, string>();
     if (pinsByDay && pinsByDay.size > 0) {
@@ -356,40 +366,39 @@ const OceanMap = memo(function OceanMap({
   }, [pinsByDay, dayNum, pins]);
 
   /* --- Markers: create once per pin-set, diff-update on focus change --- */
-  const markersRef = useRef<Map<number, L.Marker>>(new Map());
+  const markersRef = useRef<Map<number, google.maps.Marker>>(new Map());
 
   useEffect(() => {
     if (!map) return;
-    const layer = L.layerGroup().addTo(map);
-    const markers = new Map<number, L.Marker>();
+    const markers = new Map<number, google.maps.Marker>();
+    const listeners: google.maps.MapsEventListener[] = [];
     for (const pin of visiblePins) {
-      const marker = L.marker([pin.lat, pin.lng], {
-        icon: markerIcon(pin, false, false, pinIdToDayColor.get(pin.id)),
-        keyboard: true,
-        alt: `第 ${pin.index} 站：${pin.title}`,
+      const opts = markerIcon(pin, false, false, pinIdToDayColor.get(pin.id));
+      const marker = new google.maps.Marker({
+        position: { lat: pin.lat, lng: pin.lng },
+        map,
+        icon: opts.icon,
+        label: opts.label,
+        title: `第 ${pin.index} 站：${pin.title}`,
       });
-      if (onMarkerClick) marker.on('click', () => onMarkerClick(pin.id));
-      marker.addTo(layer);
+      if (onMarkerClick) {
+        listeners.push(marker.addListener('click', () => onMarkerClick(pin.id)));
+      }
       markers.set(pin.id, marker);
     }
-    // marker rebuild 後 focus useEffect 立即跑（同 render cycle），會把 focused pin 的
-    // zIndexOffset 設 1000（其他維持 0）— 不需在此預先 set。
     markersRef.current = markers;
     return () => {
-      layer.remove();
-      // Only clear ref if it still points to OUR map — avoids clobbering a newer
-      // map set by a re-mount (Strict Mode) before this cleanup runs.
+      for (const l of listeners) l.remove();
+      for (const m of markers.values()) m.setMap(null);
       if (markersRef.current === markers) markersRef.current = new Map();
     };
   }, [map, visiblePins, onMarkerClick, pinIdToDayColor]);
 
-  // Diff-based focus update: compute which pins' icon state actually changed
-  // (prev focused, new focused, past-boundary crossing) and only setIcon on those.
-  // Full-update fallback when markers were just rebuilt (different Map identity).
+  // Diff-based focus update.
   const prevFocusRef = useRef<{
     focusId?: number;
     focusedIdx: number;
-    markers: Map<number, L.Marker> | null;
+    markers: Map<number, google.maps.Marker> | null;
   }>({ focusedIdx: -1, markers: null });
 
   useEffect(() => {
@@ -422,10 +431,10 @@ const OceanMap = memo(function OceanMap({
       const pin = visiblePinsById.get(pinId);
       if (!marker || !pin) continue;
       const isFocused = pinId === focusId;
-      marker.setIcon(markerIcon(pin, isFocused, isPastPin(pinId), pinIdToDayColor.get(pinId)));
-      // Raise focused marker above all others（防被 overlapping markers 蓋住）。
-      // Leaflet 預設 zIndexOffset=0；正值即覆蓋同 lat 上的 markers。
-      marker.setZIndexOffset(isFocused ? 1000 : 0);
+      const opts = markerIcon(pin, isFocused, isPastPin(pinId), pinIdToDayColor.get(pinId));
+      marker.setIcon(opts.icon);
+      marker.setLabel(opts.label);
+      marker.setZIndex(isFocused ? 1000 : 0);
     }
 
     prevFocusRef.current = { focusId, focusedIdx, markers };
@@ -436,20 +445,21 @@ const OceanMap = memo(function OceanMap({
   useEffect(() => {
     if (!map) return;
     if (mode === 'detail' && visiblePins[0]) {
-      map.setView([visiblePins[0].lat, visiblePins[0].lng], 15);
+      map.setCenter({ lat: visiblePins[0].lat, lng: visiblePins[0].lng });
+      map.setZoom(15);
       return;
     }
     if (focusId !== undefined) {
       const idx = pinIndexById.get(focusId);
       const pin = idx !== undefined ? pins[idx] : undefined;
       if (pin) {
-        flyTo([pin.lat, pin.lng], map.getZoom() < 12 ? 13 : undefined);
+        const z = map.getZoom() ?? 11;
+        flyTo({ lat: pin.lat, lng: pin.lng }, z < 12 ? 13 : undefined);
         return;
       }
     }
-    // fitOnce: after the first fit, don't re-fit on parent re-renders (would wipe user drag)
     if (fitOnce && fitDoneRef.current) return;
-    const latlngs = visiblePins.map((p) => [p.lat, p.lng] as L.LatLngExpression);
+    const latlngs = visiblePins.map((p) => ({ lat: p.lat, lng: p.lng }));
     fitBounds(latlngs);
     fitDoneRef.current = true;
   }, [map, mode, focusId, pins, pinIndexById, visiblePins, fitBounds, flyTo, fitOnce]);
@@ -457,14 +467,16 @@ const OceanMap = memo(function OceanMap({
   /* --- Resize on container changes (Suspense / mode toggle) --- */
   useEffect(() => {
     if (!map) return;
-    const t = setTimeout(() => map.invalidateSize(), 50);
+    const t = setTimeout(() => {
+      google.maps.event.trigger(map, 'resize');
+    }, 50);
     return () => clearTimeout(t);
   }, [map, mode]);
 
-  /* --- Imperative soft pan (used by TripMapRail scroll spy to pan per-day without zooming) --- */
+  /* --- Imperative soft pan --- */
   useEffect(() => {
     if (!map || !panToCoord) return;
-    map.panTo([panToCoord.lat, panToCoord.lng]);
+    map.panTo({ lat: panToCoord.lat, lng: panToCoord.lng });
   }, [map, panToCoord]);
 
   /* --- Segments (polylines) --- */
@@ -473,18 +485,43 @@ const OceanMap = memo(function OceanMap({
     return buildSegments({ pins, pinsByDay, focusedIdx, pinIndexById, dayNum });
   }, [pins, showRoutes, focusedIdx, pinsByDay, pinIndexById, dayNum]);
 
+  // Loading + error overlay (Google Maps JS bundle ~300-500KB)
+  const showSkeleton = !map && !loadError;
+  const showError = loadError !== null;
+
   return (
     <>
       <style>{SCOPED_STYLES}</style>
       <div
-        ref={containerRef}
         className={className ? `ocean-map-container ${className}` : 'ocean-map-container'}
         data-mode={mode}
         data-fill-parent={fillParent ? 'true' : undefined}
         style={style}
-        role="application"
-        aria-label={mode === 'detail' ? '地圖：單點景點' : '地圖：行程景點總覽'}
-      />
+      >
+        <div
+          ref={containerRef}
+          style={{ width: '100%', height: '100%', visibility: map ? 'visible' : 'hidden' }}
+          role="application"
+          aria-label={mode === 'detail' ? '地圖：單點景點' : '地圖：行程景點總覽'}
+        />
+        {showSkeleton && (
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <MapSkeleton />
+          </div>
+        )}
+        {showError && (
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <PageErrorState
+              title="服務暫停"
+              message={loadError?.message?.includes('quota') || loadError?.message?.includes('LOCKED')
+                ? '本月 Google API 已達配額，月初恢復。'
+                : '地圖載入失敗，請稍後再試。'}
+              onRetry={() => window.location.reload()}
+              className="tp-page-error"
+            />
+          </div>
+        )}
+      </div>
       {segments.map((s) => (
         <Segment key={s.key} map={map} from={s.from} to={s.to} isActive={s.isActive} dayNum={s.dayNum} />
       ))}

@@ -1,6 +1,6 @@
 {
   "name": "tripline",
-  "version": "2.22.1",
+  "version": "2.23.0",
   "private": true,
   "scripts": {
     "dev": "concurrently -n vite,api -c cyan,green \"vite\" \"wrangler pages dev dist --local --port 8788\"",
@@ -20,7 +20,10 @@
     "test:e2e": "playwright test",
     "verify-sw": "node scripts/verify-sw.js",
     "memory:export": "bash scripts/memory-sync.sh export",
-    "memory:import": "bash scripts/memory-sync.sh import"
+    "memory:import": "bash scripts/memory-sync.sh import",
+    "backfill:google": "bun scripts/google-poi-initial-backfill.ts",
+    "refresh:google": "bun scripts/google-poi-refresh-30d.ts",
+    "quota:google": "bun scripts/google-quota-monitor.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260329.1",
@@ -29,7 +32,6 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/leaflet": "^1.9.21",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -54,13 +56,14 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@sentry/react": "^10.45.0",
     "@sentry/vite-plugin": "^5.1.1",
+    "@types/google.maps": "^3.64.0",
     "@vitejs/plugin-react": "^6.0.1",
     "clsx": "^2.1.1",
     "html2pdf.js": "^0.14.0",
     "idb": "^8.0.3",
-    "leaflet": "^1.9.4",
     "marked": "^17.0.4",
     "nodemailer": "^8.0.7",
     "oidc-provider": "^9.8.2",

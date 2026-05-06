@@ -58,8 +58,8 @@ test.describe('Layout quality gates', () => {
     await page.getByTestId('explore-search-input').fill('水族館');
     await page.getByTestId('explore-search-submit').click();
     await expect(page.getByTestId('explore-results')).toContainText('沖繩美麗海水族館');
-    await page.getByTestId('explore-save-btn-90001').click();
-    await expect(page.getByTestId('explore-save-btn-90001')).toHaveClass(/is-saved/);
+    await page.getByTestId('explore-save-btn-ChIJPZ5hUjH65DQR_p_dD3CmCOo').click();
+    await expect(page.getByTestId('explore-save-btn-ChIJPZ5hUjH65DQR_p_dD3CmCOo')).toHaveClass(/is-saved/);
 
     await page.goto('/favorites');
     await expect(page.getByTestId('favorites-card-8001')).toBeVisible();

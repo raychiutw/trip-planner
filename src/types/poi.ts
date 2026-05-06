@@ -4,23 +4,26 @@
  * Used by NewTripPage / EditTripPage / AddStopPage / ExplorePage POI search +
  * the `usePoiSearch` hook (`src/hooks/usePoiSearch.ts`).
  *
- * Source backend: `functions/api/poi-search.ts` returns OSM-derived rows
- * (Nominatim + Overpass enrichment). The most permissive shape (EditTripPage)
- * is canonical here so all consumers can reuse without re-typing.
+ * v2.23.0 google-maps-migration: OSM Nominatim → Google Places Text Search.
+ * Canonical id = `place_id` (Google ChIJ... string). Legacy `osm_id` schema cols
+ * 仍存於 D1（forward-fix safety net）但 frontend 只用 place_id。
  */
 
 export interface PoiSearchResult {
-  osm_id: number;
-  osm_type?: 'node' | 'way' | 'relation' | null;
+  /** Google canonical place id (e.g. "ChIJ..."). v2.23.0+ canonical key. */
+  place_id: string;
   name: string;
-  /** Human-readable address. May be empty for some OSM nodes. */
+  /** Human-readable address. */
   address?: string;
   lat: number;
   lng: number;
-  /** OSM tag-derived category (e.g. 'tourism', 'amenity'). May be normalised by `mapNominatimCategory`. */
+  /** Google primary type, e.g. "restaurant" / "tourist_attraction". */
   category?: string;
-  /** ISO country code (e.g. 'JP', 'TW'). Optional — Nominatim returns it when zoom>0. */
+  /** ISO 3166-1 alpha-2 uppercase, e.g. "JP". */
   country?: string;
-  /** Localised country name (e.g. 'Japan', 'Taiwan'). */
+  /** Country localized name (zh-TW), e.g. "日本". */
   country_name?: string;
+  /** Google rating 1-5, optional. */
+  rating?: number;
+  business_status?: 'OPERATIONAL' | 'CLOSED_TEMPORARILY' | 'CLOSED_PERMANENTLY';
 }

@@ -28,6 +28,8 @@ const POI_MASTER_ONLY_FIELDS = [
   'rating', 'category', 'mapcode', 'lat', 'lng',
   'country', 'source',
   'osm_id', 'osm_type', 'wikidata_id', 'cuisine', 'data_source',
+  // Migration 0051 (v2.23.0 google-maps-migration): place_id + lifecycle cols
+  'place_id', 'status', 'status_reason', 'status_checked_at', 'last_refreshed_at',
 ] as const;
 
 export const onRequestPatch: PagesFunction<Env> = async (context) => {

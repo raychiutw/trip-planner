@@ -1,111 +1,98 @@
 /**
- * OceanMap markerIcon — no-emoji regression test.
+ * ocean-map-marker-no-emoji — verify markerIcon never produces emoji label or
+ * decorative symbols (post v2.23.0 Google Maps rewrite).
  *
- * Spec: openspec/changes/terracotta-pages-refactor/specs/terracotta-page-layout/spec.md
- *       Requirement「Marker 視覺規格（移除 emoji）」
- *
- * 對應 DESIGN.md L383「不用 emoji」+ anti-slop L2-5。
- * Hotel marker 必須跟 entry marker 一樣顯示純數字 String(pin.index)，
- * 不得使用 🛏 或任何 emoji 字元。
+ * Old Leaflet version used `L.divIcon({ html: '...' })` which COULD smuggle
+ * emoji into HTML; v2.23 uses `google.maps.MarkerLabel` { text } where the
+ * text is `String(pin.index)` — pure number, no emoji possible. This test
+ * locks that invariant against future regressions (someone adding 🛏 hotel
+ * icon back, etc).
  */
-import { describe, it, expect } from 'vitest';
-import type { MapPin } from '../../src/hooks/useMapData';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { setupGoogleMapsMock } from './__mocks__/google-maps';
 import { markerIcon } from '../../src/components/trip/OceanMap';
+import type { MapPin } from '../../src/hooks/useMapData';
 
-const HOTEL_PIN: MapPin = {
+beforeEach(setupGoogleMapsMock);
+
+const SAMPLE: MapPin = {
   id: 1,
-  type: 'hotel',
-  index: 1,
-  title: 'Super Hotel 名護',
-  lat: 26.6,
-  lng: 127.97,
-  sortOrder: -1,
+  index: 3,
+  title: '首里城公園',
+  type: 'attraction',
+  lat: 26.21,
+  lng: 127.72,
+  sortOrder: 1,
 };
 
-const ENTRY_PIN: MapPin = {
-  id: 2,
-  type: 'entry',
-  index: 2,
-  title: '古宇利大橋',
-  lat: 26.7,
-  lng: 127.99,
-  sortOrder: 0,
-};
+const HOTEL: MapPin = { ...SAMPLE, id: 2, index: 1, title: 'Hotel ABC', type: 'hotel' };
 
-function getHtml(icon: ReturnType<typeof markerIcon>): string {
-  // L.divIcon stores html in options.html
-  // Access via the internal options hash
-  const html = (icon.options as { html?: string }).html ?? '';
-  return typeof html === 'string' ? html : '';
+/**
+ * 任何包含 emoji / surrogate pair / 非 BMP 字元 的字串都該 fail 此 detector.
+ * Plain ASCII + CJK + 標點都 OK。
+ */
+function containsEmoji(s: string): boolean {
+  for (const ch of s) {
+    const cp = ch.codePointAt(0);
+    if (cp === undefined) continue;
+    // Emoji ranges (loose): surrogate pairs (cp > 0xFFFF) + Misc Symbols/Dingbats blocks
+    if (cp > 0xFFFF) return true;
+    if (cp >= 0x2600 && cp <= 0x27BF) return true;
+  }
+  return false;
 }
 
-describe('OceanMap markerIcon — 純數字（無 emoji）', () => {
-  it('hotel pin label = String(pin.index)，無 🛏 emoji', () => {
-    const icon = markerIcon(HOTEL_PIN, false, false);
-    const html = getHtml(icon);
-    expect(html).not.toContain('🛏');
-    // 驗 label 為純數字
-    expect(html).toMatch(/>1</);
+describe('OceanMap markerIcon — no emoji label (post v2.23.0)', () => {
+  it('idle entry pin: label.text 是純數字「3」', () => {
+    const opts = markerIcon(SAMPLE, false, false);
+    expect(opts.label.text).toBe('3');
+    expect(containsEmoji(opts.label.text)).toBe(false);
   });
 
-  it('entry pin label = String(pin.index)', () => {
-    const icon = markerIcon(ENTRY_PIN, false, false);
-    const html = getHtml(icon);
-    expect(html).toMatch(/>2</);
+  it('hotel pin: label.text 也是純數字（不再 🛏）', () => {
+    const opts = markerIcon(HOTEL, false, false);
+    expect(opts.label.text).toBe('1');
+    expect(containsEmoji(opts.label.text)).toBe(false);
   });
 
-  it('hotel + entry 共用同一 label 渲染規則（皆 String(pin.index)）', () => {
-    const hotel = getHtml(markerIcon({ ...HOTEL_PIN, index: 5 }, false, false));
-    const entry = getHtml(markerIcon({ ...ENTRY_PIN, index: 5 }, false, false));
-    // 兩者都應該有 >5< — entry 是純數字、hotel 不再是 🛏
-    expect(hotel).toMatch(/>5</);
-    expect(entry).toMatch(/>5</);
+  it('focused (active) marker: 仍是純數字 + 較大 size', () => {
+    const opts = markerIcon(SAMPLE, true, false);
+    expect(opts.label.text).toBe('3');
+    expect(containsEmoji(opts.label.text)).toBe(false);
+    expect(opts.icon.scale).toBeGreaterThan(15); // larger than idle 14
   });
 
-  it('沒有任何 emoji unicode（U+1F000 - U+1FFFF range）出現在 marker html', () => {
-    // 跨多種 pin index 與 state 確認
-    const pins: MapPin[] = [
-      { ...HOTEL_PIN, index: 1 },
-      { ...HOTEL_PIN, index: 99 },
-      { ...ENTRY_PIN, index: 1 },
-    ];
-    for (const pin of pins) {
-      for (const focused of [true, false]) {
-        for (const past of [true, false]) {
-          const html = getHtml(markerIcon(pin, focused, past));
-          // /[\u{1F300}-\u{1FAFF}]/u 涵蓋 emoji 主要範圍
-          expect(html).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
-        }
-      }
-    }
-  });
-});
-
-describe('OceanMap markerIcon — dayColor inline style (idle only)', () => {
-  it('idle marker 帶 dayColor：html 含 inline border-color + color 等於 dayColor', () => {
-    const html = getHtml(markerIcon(ENTRY_PIN, false, false, '#7C3AED'));
-    expect(html).toMatch(/style="[^"]*border-color:\s*#7C3AED/i);
-    expect(html).toMatch(/style="[^"]*color:\s*#7C3AED/i);
+  it('past pin: label 同 idle，色彩降級 mute', () => {
+    const opts = markerIcon(SAMPLE, false, true);
+    expect(opts.label.text).toBe('3');
+    expect(containsEmoji(opts.label.text)).toBe(false);
   });
 
-  it('active marker 即使有 dayColor 也不套 inline style（保留 src 既有 accent fill via CSS）', () => {
-    const html = getHtml(markerIcon(ENTRY_PIN, true, false, '#7C3AED'));
-    // active 時不套 inline border-color / color，由 .ocean-map-pin[data-state="active"] CSS 套 accent
-    expect(html).not.toMatch(/style="[^"]*border-color/i);
+  it('icon path 是 SymbolPath.CIRCLE（不是任何 SVG path with decorative shape）', () => {
+    const opts = markerIcon(SAMPLE, false, false);
+    // SymbolPath.CIRCLE = 0 in our mock; in real google.maps it's enum 0
+    expect(opts.icon.path).toBe(0);
   });
 
-  it('past marker 即使有 dayColor 也不套 inline style（past 是 muted 灰）', () => {
-    const html = getHtml(markerIcon(ENTRY_PIN, false, true, '#7C3AED'));
-    expect(html).not.toMatch(/style="[^"]*border-color/i);
+  it('focused pin sets zIndex 1000 (raises above overlapping markers)', () => {
+    const opts = markerIcon(SAMPLE, true, false);
+    expect(opts.zIndex).toBe(1000);
   });
 
-  it('無 dayColor 參數：html 不含 inline border-color', () => {
-    const html = getHtml(markerIcon(ENTRY_PIN, false, false));
-    expect(html).not.toMatch(/style="[^"]*border-color/i);
+  it('idle pin zIndex undefined (Google default)', () => {
+    const opts = markerIcon(SAMPLE, false, false);
+    expect(opts.zIndex).toBeUndefined();
   });
 
-  it('hotel pin 也接受 dayColor（跟 entry 一致）', () => {
-    const html = getHtml(markerIcon(HOTEL_PIN, false, false, '#BE123C'));
-    expect(html).toMatch(/style="[^"]*border-color:\s*#BE123C/i);
+  it('dayColor inline style applies to idle marker stroke + label color', () => {
+    const opts = markerIcon(SAMPLE, false, false, '#FF6B35');
+    expect(opts.icon.strokeColor).toBe('#FF6B35');
+    expect(opts.label.color).toBe('#FF6B35');
+  });
+
+  it('dayColor IGNORED when active (accent color overrides)', () => {
+    const opts = markerIcon(SAMPLE, true, false, '#FF6B35');
+    expect(opts.icon.strokeColor).not.toBe('#FF6B35');
+    expect(opts.label.color).not.toBe('#FF6B35');
   });
 });

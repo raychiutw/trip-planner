@@ -1,131 +1,165 @@
 /**
- * ocean-map-imperative-effects.test.tsx — runtime coverage for OceanMap
- * imperative useEffect hooks: panToCoord and fitOnce.
+ * ocean-map-imperative-effects — verify pure helpers exported from OceanMap.tsx
+ * (post v2.23.0 Google Maps rewrite).
  *
- * These are the hooks TripMapRail relies on:
- *   - panToCoord: scroll spy pans map to day center without zoom change
- *   - fitOnce: first fitBounds runs, subsequent pins-identity changes are ignored
- *     (TripPage rebuilds pins inline on every render — without this guard the rail
- *     would snap back to full-trip bounds and wipe user drag + scroll-spy pan)
+ * Old test focused on Leaflet imperative side effects (marker.setIcon /
+ * map.panTo / etc.). The Google rewrite delegates much of that to googleMaps.*
+ * native methods, so direct DOM/effect testing is not high-value. This rewrite
+ * tests the **pure functions** OceanMap exports — buildSegments() — which is
+ * where the per-day polyline pairing logic lives. That's the bug-prone area.
+ *
+ * Also verify markerIcon's day-color contract round-trip (idle uses dayColor;
+ * active overrides; past mutes).
  */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { setupGoogleMapsMock } from './__mocks__/google-maps';
+import { markerIcon, buildSegments } from '../../src/components/trip/OceanMap';
 import type { MapPin } from '../../src/hooks/useMapData';
 
-/* ===== mocks: useLeafletMap + Leaflet primitives ===== */
+beforeEach(setupGoogleMapsMock);
 
-const panToSpy = vi.fn();
-const fitBoundsSpy = vi.fn();
-const flyToSpy = vi.fn();
-const containerRefObj = { current: null as HTMLDivElement | null };
-
-const fakeMap = {
-  getZoom: () => 11,
-  getBounds: () => ({ getWest: () => 0, getSouth: () => 0, getEast: () => 0, getNorth: () => 0 }),
-  on: vi.fn(),
-  off: vi.fn(),
-  invalidateSize: vi.fn(),
-  panTo: panToSpy,
-};
-
-vi.mock('../../src/hooks/useLeafletMap', () => ({
-  useLeafletMap: () => ({
-    containerRef: containerRefObj,
-    map: fakeMap,
-    flyTo: flyToSpy,
-    fitBounds: fitBoundsSpy,
-  }),
-}));
-
-vi.mock('../../src/hooks/useRoute', () => ({
-  useRoute: () => null,
-}));
-
-vi.mock('leaflet', async (importOriginal) => {
-  const orig = await importOriginal<typeof import('leaflet')>();
-  const fakeLayer = { addTo: vi.fn().mockReturnThis(), remove: vi.fn(), clearLayers: vi.fn() };
-  const fakeMarker = { addTo: vi.fn().mockReturnThis(), on: vi.fn().mockReturnThis(), remove: vi.fn(), setIcon: vi.fn(), setZIndexOffset: vi.fn() };
-  return {
-    ...orig,
-    default: {
-      ...orig,
-      marker: vi.fn(() => fakeMarker),
-      polyline: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), remove: vi.fn() })),
-      divIcon: vi.fn(() => ({})),
-      layerGroup: vi.fn(() => fakeLayer),
-    },
-    marker: vi.fn(() => fakeMarker),
-    polyline: vi.fn(() => ({ addTo: vi.fn().mockReturnThis(), remove: vi.fn() })),
-    divIcon: vi.fn(() => ({})),
-    layerGroup: vi.fn(() => fakeLayer),
-  };
+const pin = (id: number, idx: number, dayLat = 26, dayLng = 127, sortOrder = idx): MapPin => ({
+  id,
+  index: idx,
+  title: `POI-${id}`,
+  type: 'attraction',
+  lat: dayLat,
+  lng: dayLng,
+  sortOrder,
 });
 
-const { default: OceanMap } = await import('../../src/components/trip/OceanMap');
-
-const PINS: MapPin[] = [
-  { id: 1, type: 'entry', index: 1, title: 'A', lat: 26.10, lng: 127.60, sortOrder: 0 },
-  { id: 2, type: 'entry', index: 2, title: 'B', lat: 26.20, lng: 127.70, sortOrder: 1 },
-];
-
-describe('OceanMap — panToCoord useEffect', () => {
-  beforeEach(() => {
-    panToSpy.mockClear();
-    fitBoundsSpy.mockClear();
-    flyToSpy.mockClear();
+describe('OceanMap.buildSegments (flat pins mode)', () => {
+  it('empty pins → no segments', () => {
+    const result = buildSegments({
+      pins: [],
+      focusedIdx: -1,
+      pinIndexById: new Map(),
+    });
+    expect(result).toEqual([]);
   });
 
-  it('calls map.panTo with [lat, lng] when panToCoord is set', () => {
-    render(
-      <OceanMap
-        pins={PINS}
-        mode="overview"
-        panToCoord={{ lat: 26.15, lng: 127.65 }}
-      />,
-    );
-    expect(panToSpy).toHaveBeenCalledWith([26.15, 127.65]);
+  it('single pin → no segments (need ≥2 to draw line)', () => {
+    const pins = [pin(1, 1)];
+    const result = buildSegments({
+      pins,
+      focusedIdx: 0,
+      pinIndexById: new Map([[1, 0]]),
+    });
+    expect(result).toEqual([]);
   });
 
-  it('does NOT call panTo when panToCoord is undefined', () => {
-    render(<OceanMap pins={PINS} mode="overview" />);
-    expect(panToSpy).not.toHaveBeenCalled();
+  it('3 pins → 2 consecutive segments with stable keys', () => {
+    const pins = [pin(1, 1), pin(2, 2), pin(3, 3)];
+    const result = buildSegments({
+      pins,
+      focusedIdx: -1,
+      pinIndexById: new Map([[1, 0], [2, 1], [3, 2]]),
+    });
+    expect(result).toHaveLength(2);
+    expect(result[0]?.key).toBe('1->2');
+    expect(result[1]?.key).toBe('2->3');
   });
 
-  it('calls panTo with new coord on rerender', () => {
-    const { rerender } = render(
-      <OceanMap pins={PINS} mode="overview" panToCoord={{ lat: 26.1, lng: 127.6 }} />,
-    );
-    expect(panToSpy).toHaveBeenCalledTimes(1);
-    rerender(<OceanMap pins={PINS} mode="overview" panToCoord={{ lat: 26.3, lng: 127.8 }} />);
-    expect(panToSpy).toHaveBeenCalledTimes(2);
-    expect(panToSpy).toHaveBeenLastCalledWith([26.3, 127.8]);
+  it('focusedIdx=1 → both adjacent segments isActive', () => {
+    const pins = [pin(1, 1), pin(2, 2), pin(3, 3)];
+    const result = buildSegments({
+      pins,
+      focusedIdx: 1,
+      pinIndexById: new Map([[1, 0], [2, 1], [3, 2]]),
+    });
+    expect(result[0]?.isActive).toBe(true);  // 0→1 includes idx 1
+    expect(result[1]?.isActive).toBe(true);  // 1→2 includes idx 1
+  });
+
+  it('dayNum 套到所有 segments (single-day mode)', () => {
+    const pins = [pin(1, 1), pin(2, 2)];
+    const result = buildSegments({
+      pins,
+      focusedIdx: -1,
+      pinIndexById: new Map([[1, 0], [2, 1]]),
+      dayNum: 4,
+    });
+    expect(result[0]?.dayNum).toBe(4);
   });
 });
 
-describe('OceanMap — fitOnce useEffect', () => {
-  beforeEach(() => {
-    panToSpy.mockClear();
-    fitBoundsSpy.mockClear();
-    flyToSpy.mockClear();
+describe('OceanMap.buildSegments (per-day mode)', () => {
+  it('cross-day pairs NOT drawn (僅 within-day segments)', () => {
+    // Day 1: pin 1, 2 / Day 2: pin 3, 4
+    // Should produce 2 segments (1→2 in day1, 3→4 in day2), NOT 2→3 cross-day
+    const pinsByDay = new Map<number, MapPin[]>([
+      [1, [pin(1, 1), pin(2, 2)]],
+      [2, [pin(3, 3), pin(4, 4)]],
+    ]);
+    const flat = [pin(1, 1), pin(2, 2), pin(3, 3), pin(4, 4)];
+    const result = buildSegments({
+      pins: flat,
+      pinsByDay,
+      focusedIdx: -1,
+      pinIndexById: new Map([[1, 0], [2, 1], [3, 2], [4, 3]]),
+    });
+    expect(result).toHaveLength(2);
+    const keys = result.map((s) => s.key);
+    expect(keys).toContain('1->2');
+    expect(keys).toContain('3->4');
+    expect(keys).not.toContain('2->3'); // no cross-day
   });
 
-  it('without fitOnce: fitBounds runs on every pins identity change', () => {
-    const { rerender } = render(<OceanMap pins={PINS} mode="overview" />);
-    const callsAfterMount = fitBoundsSpy.mock.calls.length;
-    expect(callsAfterMount).toBeGreaterThan(0);
-    // New pins array reference (TripPage rebuild simulation)
-    rerender(<OceanMap pins={[...PINS]} mode="overview" />);
-    expect(fitBoundsSpy.mock.calls.length).toBeGreaterThan(callsAfterMount);
+  it('hotel sortOrder=-1 starts the chain (within day)', () => {
+    // Day 1: hotel(id=99, sort=-1) + entry(id=1, sort=1) + entry(id=2, sort=2)
+    const hotel = { ...pin(99, 0), sortOrder: -1 };
+    const e1 = pin(1, 1, 26, 127, 1);
+    const e2 = pin(2, 2, 26, 127, 2);
+    const pinsByDay = new Map([[1, [e1, e2, hotel]]]);  // unsorted input
+    const flat = [hotel, e1, e2];
+    const result = buildSegments({
+      pins: flat,
+      pinsByDay,
+      focusedIdx: -1,
+      pinIndexById: new Map([[99, 0], [1, 1], [2, 2]]),
+    });
+    // Sorted by sortOrder (-1 first): hotel → e1 → e2
+    expect(result[0]?.key).toBe('99->1');
+    expect(result[1]?.key).toBe('1->2');
   });
 
-  it('fitOnce=true: fitBounds runs ONCE, subsequent pins identity changes ignored', () => {
-    const { rerender } = render(<OceanMap pins={PINS} mode="overview" fitOnce={true} />);
-    const callsAfterMount = fitBoundsSpy.mock.calls.length;
-    expect(callsAfterMount).toBe(1);
-    // Simulate TripPage re-render rebuilding pins inline
-    rerender(<OceanMap pins={[...PINS]} mode="overview" fitOnce={true} />);
-    rerender(<OceanMap pins={[...PINS]} mode="overview" fitOnce={true} />);
-    expect(fitBoundsSpy.mock.calls.length).toBe(1);
+  it('per-day mode preserves dayNum on each pair', () => {
+    const pinsByDay = new Map([
+      [3, [pin(1, 1), pin(2, 2)]],
+    ]);
+    const result = buildSegments({
+      pins: [pin(1, 1), pin(2, 2)],
+      pinsByDay,
+      focusedIdx: -1,
+      pinIndexById: new Map([[1, 0], [2, 1]]),
+    });
+    expect(result[0]?.dayNum).toBe(3);
+  });
+});
+
+describe('OceanMap.markerIcon (color contract)', () => {
+  it('idle marker uses dayColor for stroke + label', () => {
+    const opts = markerIcon(pin(1, 1), false, false, '#FF6B35');
+    expect(opts.icon.strokeColor).toBe('#FF6B35');
+    expect(opts.label.color).toBe('#FF6B35');
+  });
+
+  it('idle without dayColor falls back to muted neutral', () => {
+    const opts = markerIcon(pin(1, 1), false, false);
+    expect(opts.icon.strokeColor).toBe('#C1C1C1');
+    expect(opts.label.color).toBe('#6A6A6A');
+  });
+
+  it('past marker mutes both stroke + label (regardless of dayColor)', () => {
+    const opts = markerIcon(pin(1, 1), false, true, '#FF6B35');
+    expect(opts.icon.strokeColor).toBe('#E0E0E0');
+    expect(opts.label.color).toBe('#C1C1C1');
+  });
+
+  it('focused marker uses accent color + larger size', () => {
+    const opts = markerIcon(pin(1, 1), true, false, '#FF6B35');
+    expect(opts.icon.fillColor).toBe('#D97848'); // ACCENT_COLOR
+    expect(opts.label.color).toBe('#FFFFFF');    // ACCENT_FG
+    expect(opts.icon.scale).toBeGreaterThan(15); // larger than idle 14
   });
 });

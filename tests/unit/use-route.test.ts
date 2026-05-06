@@ -1,11 +1,9 @@
 /**
- * useRoute — cache + Haversine fallback unit tests
+ * useRoute — cache + null-on-failure unit tests (post v2.23.0 google-maps-migration)
  *
- * Covers the critical paths flagged in /plan-eng-review:
- *  - Mapbox proxy success → cache hit on second call
- *  - Fetch failure → Haversine fallback with approx=true
- *  - LRU eviction when cache exceeds 100 entries
- *  - IndexedDB open error → silent skip, still returns network result
+ *  - Successful fetch → cache stored
+ *  - Fetch failure → setResult(null) (no Haversine fallback per P11/T13)
+ *  - cacheKey stable across coord precision noise
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -18,15 +16,8 @@ const TO: Coord = { lat: 26.6933, lng: 127.8773 };
 
 describe('useRoute', () => {
   beforeEach(() => {
-    // Reset fake IndexedDB between tests
     indexedDB.deleteDatabase('trip-planner-routes');
     vi.restoreAllMocks();
-  });
-
-  it('Haversine fallback on fetch failure has approx=true and non-zero distance', () => {
-    const d = __internal.haversineMeters(FROM, TO);
-    expect(d).toBeGreaterThan(50000);
-    expect(d).toBeLessThan(60000);
   });
 
   it('cacheKey is stable across coord precision noise', () => {
@@ -45,22 +36,26 @@ describe('useRoute', () => {
     expect(result.current).toBeNull();
   });
 
-  it('Haversine fallback triggered when fetch errors', async () => {
+  it('returns null on fetch error (no Haversine fallback per P11/T13)', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('network'));
     const { result } = renderHook(() => useRoute(FROM, TO));
-    await waitFor(() => {
-      expect(result.current).not.toBeNull();
-    });
-    expect(result.current?.approx).toBe(true);
-    expect(result.current?.polyline).toEqual([
-      [FROM.lat, FROM.lng],
-      [TO.lat, TO.lng],
-    ]);
-    expect(result.current?.duration).toBeNull();
-    expect(result.current?.distance).toBeGreaterThan(1000);
+    // Wait long enough for any async resolution (null is the expected end state)
+    await new Promise((r) => setTimeout(r, 50));
+    expect(result.current).toBeNull();
   });
 
-  it('returns Mapbox polyline on successful fetch', async () => {
+  it('returns null on backend 502/503 (MAPS_UPSTREAM_FAILED / MAPS_LOCKED)', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: { code: 'MAPS_LOCKED' } }),
+    } as unknown as Response);
+    const { result } = renderHook(() => useRoute(FROM, TO));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(result.current).toBeNull();
+  });
+
+  it('returns polyline on successful fetch (Google Routes shape)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -71,13 +66,8 @@ describe('useRoute', () => {
     } as unknown as Response);
     const { result } = renderHook(() => useRoute(FROM, TO));
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current?.approx).toBe(false);
     expect(result.current?.duration).toBe(1200);
     expect(result.current?.distance).toBe(55000);
     expect(result.current?.polyline).toHaveLength(2);
   });
-
-  // NOTE: cache hit and invalidation behaviors verified via manual testing;
-  // unit testing them is blocked by module-level dbPromise singleton retention
-  // across fake-indexeddb resets. Covered by e2e instead.
 });

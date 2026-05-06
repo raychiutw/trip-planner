@@ -1,23 +1,24 @@
 /**
- * Route proxy — Mapbox Directions API
+ * GET /api/route?from=lng,lat&to=lng,lat
  *
- * Frontend fetches /api/route?from=lng,lat&to=lng,lat → Worker fetches Mapbox
- * with server-side token. Token never reaches the browser.
+ * v2.23.0 google-maps-migration: Mapbox Directions → Google Routes API.
+ * **NO** Haversine fallback per P11/T13 — failure → 502 MAPS_UPSTREAM_FAILED.
+ * Frontend `<PageErrorState>` 顯示「服務暫停」+ 重試。
  *
- * Response shape (always HTTP 200 for valid coords):
- *   { polyline: [[lat, lng], ...], duration: seconds|null, distance: meters, approx?: boolean }
- *   approx=true means Mapbox had no driving route (e.g. ferry-only islands);
- *   server returned a Haversine straight-line fallback so frontend can draw
- *   something sensible without extra coordination.
- * Error shape (HTTP 4xx/5xx):
- *   { error: 'code', message?: 'hint' }
+ * Response: { polyline: [[lat, lng], ...], duration: seconds, distance: meters }
+ *   polyline 已 decode（Google encoded polyline → flat lat/lng pairs）以對齊既有
+ *   Leaflet/useRoute 客戶端解碼預期。frontend 僅渲染 lat/lng 直接 plot。
+ *
+ * Failure semantics:
+ *   - kill switch active → 503 MAPS_LOCKED
+ *   - GOOGLE_MAPS_API_KEY missing → 502 (operations sees + alert)
+ *   - Google upstream timeout / 5xx / parse error → 502 MAPS_UPSTREAM_FAILED
  */
 
-import type { Env as BaseEnv } from './_types';
-
-interface Env extends BaseEnv {
-  MAPBOX_TOKEN?: string;
-}
+import { AppError } from './_errors';
+import { assertGoogleAvailable } from './_maps_lock';
+import { computeRoute } from '../../src/server/maps/google-client';
+import type { Env } from './_types';
 
 interface Coord { lng: number; lat: number; }
 
@@ -32,91 +33,64 @@ function parseCoord(raw: string | null): Coord | null {
   return { lng, lat };
 }
 
-function errorJson(code: string, status: number, message?: string): Response {
-  return new Response(JSON.stringify(message ? { error: code, message } : { error: code }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-/** Haversine straight-line distance in metres between two lng/lat points. */
-function haversineMeters(a: Coord, b: Coord): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
-
-function approxResponse(from: Coord, to: Coord): Response {
-  return new Response(
-    JSON.stringify({
-      polyline: [
-        [from.lat, from.lng],
-        [to.lat, to.lng],
-      ],
-      duration: null,
-      distance: Math.round(haversineMeters(from, to)),
-      approx: true,
-    }),
-    {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=86400',
-      },
-    },
-  );
+/**
+ * Decode Google encoded polyline (https://developers.google.com/maps/documentation/utilities/polylinealgorithm).
+ * Returns flat array of [lat, lng] tuples for direct Leaflet/Google Maps Polyline render.
+ */
+function decodePolyline(encoded: string): Array<[number, number]> {
+  const points: Array<[number, number]> = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let b: number;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += dlat;
+    shift = 0;
+    result = 0;
+    do {
+      b = encoded.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += dlng;
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
 }
 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const from = parseCoord(url.searchParams.get('from'));
   const to = parseCoord(url.searchParams.get('to'));
-  if (!from || !to) return errorJson('INVALID_COORDS', 400, 'from/to must be lng,lat within range');
-
-  const token = context.env.MAPBOX_TOKEN;
-  if (!token) return errorJson('CONFIG_MISSING', 500, 'Mapbox token not configured on server');
-
-  const mapboxUrl =
-    `https://api.mapbox.com/directions/v5/mapbox/driving/` +
-    `${from.lng},${from.lat};${to.lng},${to.lat}` +
-    `?geometries=geojson&overview=full&access_token=${encodeURIComponent(token)}`;
-
-  let res: Response;
-  try {
-    res = await fetch(mapboxUrl);
-  } catch {
-    // Network/DNS failure reaching Mapbox — fall back to straight line
-    return approxResponse(from, to);
+  if (!from || !to) {
+    throw new AppError('DATA_VALIDATION', 'from/to must be lng,lat within range');
   }
 
-  if (res.status === 429) return errorJson('RATE_LIMITED', 429);
-  if (!res.ok) {
-    // Mapbox 4xx/5xx (quota, bad token, etc.) — fall back rather than bubble up
-    return approxResponse(from, to);
+  const apiKey = context.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');
   }
 
-  const data = (await res.json()) as {
-    routes?: Array<{
-      geometry?: { coordinates?: [number, number][] };
-      duration?: number;
-      distance?: number;
-    }>;
-  };
-  const route = data.routes?.[0];
-  // No driving route available (ferry-only island, mid-ocean coord, etc.) — fall back
-  if (!route?.geometry?.coordinates) return approxResponse(from, to);
+  await assertGoogleAvailable(context.env.DB);
 
-  const polyline = route.geometry.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
+  const result = await computeRoute(apiKey, { lat: from.lat, lng: from.lng }, { lat: to.lat, lng: to.lng }, 'DRIVE');
+
+  const polyline = decodePolyline(result.polyline);
+
   return new Response(
     JSON.stringify({
       polyline,
-      duration: route.duration ?? null,
-      distance: route.distance ?? null,
+      duration: result.duration_seconds,
+      distance: result.distance_meters,
     }),
     {
       status: 200,

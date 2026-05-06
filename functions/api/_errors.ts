@@ -38,6 +38,8 @@ const STATUS_MAP: Partial<Record<ErrorCodeType, number>> = {
   SYS_DB_ERROR: 503,
   SYS_RATE_LIMIT: 429,
   COMPANION_QUOTA_EXCEEDED: 409,
+  MAPS_LOCKED: 503,
+  MAPS_UPSTREAM_FAILED: 502,
 };
 
 export class AppError extends Error {

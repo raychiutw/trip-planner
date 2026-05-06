@@ -355,12 +355,12 @@ function genTripId(name: string): string {
 interface SortableDestinationRowProps {
   poi: PoiSearchResult;
   index: number;
-  onRemove: (osmId: number) => void;
+  onRemove: (placeId: string) => void;
 }
 
 function SortableDestinationRow({ poi, index, onRemove }: SortableDestinationRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: poi.osm_id,
+    id: poi.place_id,
   });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
@@ -368,7 +368,7 @@ function SortableDestinationRow({ poi, index, onRemove }: SortableDestinationRow
       ref={setNodeRef}
       style={style}
       className={`tp-new-dest-row ${isDragging ? 'is-dragging' : ''}`}
-      data-testid={`new-trip-destination-row-${poi.osm_id}`}
+      data-testid={`new-trip-destination-row-${poi.place_id}`}
     >
       <button
         type="button"
@@ -387,7 +387,7 @@ function SortableDestinationRow({ poi, index, onRemove }: SortableDestinationRow
       <button
         type="button"
         className="tp-new-dest-remove"
-        onClick={() => onRemove(poi.osm_id)}
+        onClick={() => onRemove(poi.place_id)}
         aria-label={`移除目的地：${poi.name}`}
       >
         <Icon name="x-mark" />
@@ -399,14 +399,14 @@ function SortableDestinationRow({ poi, index, onRemove }: SortableDestinationRow
 interface SortableDestinationListProps {
   pois: PoiSearchResult[];
   onReorder: (fromIdx: number, toIdx: number) => void;
-  onRemove: (osmId: number) => void;
+  onRemove: (placeId: string) => void;
 }
 
 function SortableDestinationList({ pois, onReorder, onRemove }: SortableDestinationListProps) {
   function handleDragEnd(e: DragEndEvent) {
     if (!e.over || e.active.id === e.over.id) return;
-    const fromIdx = pois.findIndex((p) => p.osm_id === e.active.id);
-    const toIdx = pois.findIndex((p) => p.osm_id === e.over!.id);
+    const fromIdx = pois.findIndex((p) => p.place_id === e.active.id);
+    const toIdx = pois.findIndex((p) => p.place_id === e.over!.id);
     if (fromIdx < 0 || toIdx < 0) return;
     onReorder(fromIdx, toIdx);
   }
@@ -416,10 +416,10 @@ function SortableDestinationList({ pois, onReorder, onRemove }: SortableDestinat
       accessibility={TP_DRAG_ACCESSIBILITY}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={pois.map((p) => p.osm_id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={pois.map((p) => p.place_id)} strategy={verticalListSortingStrategy}>
         <div className="tp-new-dest-rows" data-testid="new-trip-destination-rows">
           {pois.map((p, i) => (
-            <SortableDestinationRow key={p.osm_id} poi={p} index={i} onRemove={onRemove} />
+            <SortableDestinationRow key={p.place_id} poi={p} index={i} onRemove={onRemove} />
           ))}
         </div>
       </SortableContext>
@@ -460,7 +460,7 @@ export default function NewTripPage() {
   const [recentDests, setRecentDests] = useState<string[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [destDays, setDestDays] = useState<Record<number, number>>({});
+  const [destDays, setDestDays] = useState<Record<string, number>>({});
 
   // monthChoices 一次計算 — page mount 時。
   const monthChoices = useMemo(() => buildMonthChoices(new Date()), []);
@@ -488,23 +488,23 @@ export default function NewTripPage() {
     }
     const perDest = Math.floor(totalTripDays / selectedPois.length);
     const remainder = totalTripDays - perDest * selectedPois.length;
-    const next: Record<number, number> = {};
+    const next: Record<string, number> = {};
     selectedPois.forEach((p, i) => {
-      next[p.osm_id] = perDest + (i < remainder ? 1 : 0);
+      next[p.place_id] = perDest + (i < remainder ? 1 : 0);
     });
     setDestDays(next);
   }, [selectedPois, totalTripDays]);
 
   const destDaysSum = useMemo(
-    () => selectedPois.reduce((s, p) => s + (destDays[p.osm_id] ?? 0), 0),
+    () => selectedPois.reduce((s, p) => s + (destDays[p.place_id] ?? 0), 0),
     [selectedPois, destDays],
   );
 
-  function bumpDestDays(osmId: number, delta: number) {
+  function bumpDestDays(placeId: string, delta: number) {
     setDestDays((prev) => {
-      const cur = prev[osmId] ?? 0;
+      const cur = prev[placeId] ?? 0;
       const next = Math.max(0, cur + delta);
-      return { ...prev, [osmId]: next };
+      return { ...prev, [placeId]: next };
     });
   }
 
@@ -515,7 +515,7 @@ export default function NewTripPage() {
 
   function selectPoi(poi: PoiSearchResult) {
     setSelectedPois((prev) => (
-      prev.some((p) => p.osm_id === poi.osm_id) ? prev : [...prev, poi]
+      prev.some((p) => p.place_id === poi.place_id) ? prev : [...prev, poi]
     ));
     setDestQuery(''); // Clearing query auto-clears poiResults via hook
     setPoiSearchError(null);
@@ -526,8 +526,8 @@ export default function NewTripPage() {
   function reorderSelectedPois(fromIdx: number, toIdx: number) {
     setSelectedPois((prev) => arrayMove(prev, fromIdx, toIdx));
   }
-  function removeSelectedPoi(osmId: number) {
-    setSelectedPois((prev) => prev.filter((p) => p.osm_id !== osmId));
+  function removeSelectedPoi(placeId: string) {
+    setSelectedPois((prev) => prev.filter((p) => p.place_id !== placeId));
   }
 
 
@@ -552,7 +552,7 @@ export default function NewTripPage() {
     let combinedDescription = preferences.trim();
     if (selectedPois.length >= 2 && totalTripDays > 0 && destDaysSum === totalTripDays) {
       const allocation = selectedPois
-        .map((p) => `${p.name} ${destDays[p.osm_id] ?? 0} 天`)
+        .map((p) => `${p.name} ${destDays[p.place_id] ?? 0} 天`)
         .join(' / ');
       const note = `目的地天數分配：${allocation}`;
       combinedDescription = combinedDescription ? `${combinedDescription}\n\n${note}` : note;
@@ -561,8 +561,8 @@ export default function NewTripPage() {
       name: poi.name,
       lat: poi.lat,
       lng: poi.lng,
-      osm_id: poi.osm_id,
-      day_quota: selectedPois.length >= 2 ? destDays[poi.osm_id] ?? null : null,
+      place_id: poi.place_id,
+      day_quota: selectedPois.length >= 2 ? destDays[poi.place_id] ?? null : null,
     }));
     try {
       const res = await apiFetchRaw('/trips', {
@@ -669,29 +669,29 @@ export default function NewTripPage() {
                       </div>
                       <div className="tp-new-quota-rows">
                         {selectedPois.map((p, i) => (
-                          <div key={p.osm_id} className="tp-new-quota-row" data-testid={`new-trip-quota-row-${p.osm_id}`}>
+                          <div key={p.place_id} className="tp-new-quota-row" data-testid={`new-trip-quota-row-${p.place_id}`}>
                             <span className="tp-new-quota-num" aria-hidden="true">{i + 1}</span>
                             <span className="tp-new-quota-name">{p.name}</span>
                             <div className="tp-new-quota-stepper">
                               <button
                                 type="button"
                                 className="tp-new-quota-step-btn"
-                                onClick={() => bumpDestDays(p.osm_id, -1)}
-                                disabled={(destDays[p.osm_id] ?? 0) <= 0}
+                                onClick={() => bumpDestDays(p.place_id, -1)}
+                                disabled={(destDays[p.place_id] ?? 0) <= 0}
                                 aria-label={`${p.name} 減 1 天`}
-                                data-testid={`new-trip-quota-minus-${p.osm_id}`}
+                                data-testid={`new-trip-quota-minus-${p.place_id}`}
                               >
                                 −
                               </button>
-                              <span className="tp-new-quota-value" data-testid={`new-trip-quota-value-${p.osm_id}`}>
-                                {destDays[p.osm_id] ?? 0}
+                              <span className="tp-new-quota-value" data-testid={`new-trip-quota-value-${p.place_id}`}>
+                                {destDays[p.place_id] ?? 0}
                               </span>
                               <button
                                 type="button"
                                 className="tp-new-quota-step-btn"
-                                onClick={() => bumpDestDays(p.osm_id, +1)}
+                                onClick={() => bumpDestDays(p.place_id, +1)}
                                 aria-label={`${p.name} 加 1 天`}
-                                data-testid={`new-trip-quota-plus-${p.osm_id}`}
+                                data-testid={`new-trip-quota-plus-${p.place_id}`}
                               >
                                 +
                               </button>
@@ -721,12 +721,12 @@ export default function NewTripPage() {
                       )}
                       {!poiSearching && poiResults && poiResults.length > 0 && poiResults.map((p) => (
                         <button
-                          key={p.osm_id}
+                          key={p.place_id}
                           type="button"
                           role="option"
                           className="tp-new-dest-result"
                           onClick={() => selectPoi(p)}
-                          data-testid={`new-trip-dest-result-${p.osm_id}`}
+                          data-testid={`new-trip-dest-result-${p.place_id}`}
                         >
                           <span className="name">{p.name}</span>
                           <span className="addr">{p.address}</span>
