@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.11] - 2026-05-07
+
+**hotfix: WALK fail → fallback DRIVE last resort** — v2.23.10 修 TRANSIT 後仍見
+okinawa-Ray Day 2 4 errors。Routes API WALK 對長距離 (那霸→恩納 50km / 跨島)
+也回 empty。
+
+### Fixed
+
+- `recompute-travel.ts`：WALK call 加 inner try-catch。失敗 → DRIVE last
+  resort，誠實 mark mode='driving'。non-self-drive trip 用戶仍能看到「開車要多久」
+  當參考。
+- 完整 fallback chain（非自駕區間）：
+  1. WALK → ≤10min: walking
+  2. WALK ok 但 >10min → TRANSIT → 失敗 fallback walking
+  3. WALK fail（跨島/超 50km）→ DRIVE last resort
+
 ## [2.23.10] - 2026-05-07
 
 **hotfix: Routes API TRANSIT 對 Tokyo 吐 empty → recompute 全 error** —

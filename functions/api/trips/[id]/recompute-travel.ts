@@ -171,37 +171,53 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             'DRIVE',
           );
         } else {
-          // try WALK first
-          const walkResult = await computeRoute(
-            apiKey,
-            { lat: prev.lat, lng: prev.lng },
-            { lat: curr.lat, lng: curr.lng },
-            'WALK',
-          );
-          const walkMin = walkResult.duration_seconds / 60;
-          if (walkMin <= WALK_THRESHOLD_MIN) {
-            chosenTravelType = 'walking';
-            result = walkResult;
+          // try WALK first；失敗（跨島 / 距離超 50km / 無步行路徑）→ fallback DRIVE
+          // (v2.23.11：Okinawa 那霸→恩納 50km WALK 也回 empty。non-self-drive trip
+          //  用戶仍需看「開車多久」當參考，DRIVE 兜底比 error 好。)
+          let walkResult: { distance_meters: number; duration_seconds: number } | null = null;
+          try {
+            walkResult = await computeRoute(
+              apiKey,
+              { lat: prev.lat, lng: prev.lng },
+              { lat: curr.lat, lng: curr.lng },
+              'WALK',
+            );
+          } catch {
+            walkResult = null;
+          }
+
+          if (walkResult === null) {
+            // WALK 不能算 → DRIVE last resort
+            result = await computeRoute(
+              apiKey,
+              { lat: prev.lat, lng: prev.lng },
+              { lat: curr.lat, lng: curr.lng },
+              'DRIVE',
+            );
+            chosenTravelType = 'driving';
           } else {
-            // walk >10min → 試 TRANSIT；失敗（region 沒 transit 資料 / API 限制）→ fallback walking
-            // (v2.23.10：Routes API TRANSIT 對 Tokyo 主站都吐 empty {}，可能需 enable
-            //  Directions API 或專屬 TRANSIT SKU。先 fallback walking 不擋 recompute。)
-            const departureTime = currDt
-              ? new Date(currDt).toISOString()
-              : new Date().toISOString();
-            try {
-              result = await computeRoute(
-                apiKey,
-                { lat: prev.lat, lng: prev.lng },
-                { lat: curr.lat, lng: curr.lng },
-                'TRANSIT',
-                departureTime,
-              );
-              chosenTravelType = 'transit';
-            } catch {
-              // TRANSIT not available — use walk result with walking type
-              result = walkResult;
+            const walkMin = walkResult.duration_seconds / 60;
+            if (walkMin <= WALK_THRESHOLD_MIN) {
               chosenTravelType = 'walking';
+              result = walkResult;
+            } else {
+              // walk >10min → 試 TRANSIT；失敗 → fallback walk result（誠實 walking time）
+              const departureTime = currDt
+                ? new Date(currDt).toISOString()
+                : new Date().toISOString();
+              try {
+                result = await computeRoute(
+                  apiKey,
+                  { lat: prev.lat, lng: prev.lng },
+                  { lat: curr.lat, lng: curr.lng },
+                  'TRANSIT',
+                  departureTime,
+                );
+                chosenTravelType = 'transit';
+              } catch {
+                result = walkResult;
+                chosenTravelType = 'walking';
+              }
             }
           }
         }
