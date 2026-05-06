@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.15] - 2026-05-07
+
+**hotfix: full-trip recompute 21 errors → throttle Routes API per-pair** —
+v2.23.14 後 per-day recompute 全綠 (Day 5/6/7 各 9/9/3 pairs 0 errors)，但 full
+trip 一次跑就 26 pairs / 21 errors。判斷是 Routes API per-second QPS 限制 —
+HuiYun 7 days × 6-9 pairs × 1-2 calls = ~80 calls burst 觸發 429。
+
+### Fixed
+
+- `recompute-travel.ts`：每對 pair 處理完加 50ms `setTimeout` throttle。
+  保持 < 20 calls/sec，遠低於 Routes API per-second 限制
+- `errors_detail` 改 capture `AppError.detail`（真實 upstream message 如 "Routes 429"），
+  而非 catalog default "Google Maps 服務暫時無法回應"
+- Trade-off：full-trip recompute 多 ~5 sec latency（80 pairs × 50ms = 4s），可接受
+
 ## [2.23.14] - 2026-05-07
 
 **hotfix: entry.time time-range format → recompute Invalid time value** —
