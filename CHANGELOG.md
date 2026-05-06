@@ -3,6 +3,23 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.14] - 2026-05-07
+
+**hotfix: entry.time time-range format → recompute Invalid time value** —
+v2.23.13 debug instrumentation 暴露 root cause。`entry.time` 實際格式是
+`"HH:MM-HH:MM"` (time range)，不是 single `HH:MM`。
+
+`entryDateTime()` naive 組 `${date}T${time}:00` →
+`"2026-07-29T12:10-12:40:00"` → invalid ISO → `new Date(...).toISOString()` throws
+`Invalid time value`。每對自駕區間外 + walk >10min 的 pair 都 hit TRANSIT path 然後
+這行 throw → outer catch → error count++。
+
+### Fixed
+
+- `recompute-travel.ts entryDateTime()`：parse time range，取起始 `HH:MM`。
+  invalid format → return null（fallback default mode）
+- `errors_detail` field 保留（v2.23.15 觀察一週後 remove）
+
 ## [2.23.13] - 2026-05-07
 
 **debug: recompute response 加 `errors_detail`** — v2.23.10/11/12 三輪 fix 後

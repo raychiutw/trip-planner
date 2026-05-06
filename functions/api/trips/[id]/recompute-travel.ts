@@ -49,12 +49,19 @@ interface TripMeta {
 
 /**
  * Build effective ISO datetime for an entry: combine day.date + entry.time.
- * Returns null if entry has no time (caller falls back to default mode).
+ *
+ * v2.23.14: entry.time 實際格式可能是：
+ *   - "HH:MM" — 單一時間（v2.23.0 新建 entry）
+ *   - "HH:MM-HH:MM" — time range（legacy 多數既有 entry）
+ * 取起始 HH:MM 組 ISO datetime。Range 末段忽略。
+ *
+ * Returns null if time is missing or unparseable (caller falls back to default mode).
  */
 function entryDateTime(date: string, time: string | null): string | null {
   if (!time) return null;
-  // assume time is HH:MM
-  return `${date}T${time}:00`;
+  const startTime = (time.split('-')[0] ?? '').trim();
+  if (!/^\d{2}:\d{2}$/.test(startTime)) return null;
+  return `${date}T${startTime}:00`;
 }
 
 /**
