@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.10] - 2026-05-07
+
+**hotfix: Routes API TRANSIT 對 Tokyo 吐 empty → recompute 全 error** —
+v2.23.9 ship 後 prod smoke 暴露 regression：okinawa-Ray Day 2 6 對 pair，2 succeed
+(WALK ≤10min) + 5 fail (走路 >10min 落入 TRANSIT path → empty `{}` → fail throws)。
+
+### Root cause
+
+Routes API TRANSIT mode 對 Tokyo 主站對主站都吐 `{geocodingResults:{}}` 空回。可能：
+- Routes API on this Cloud project 沒 enable TRANSIT mode
+- 需 enable 舊 Directions API 或專屬 TRANSIT SKU
+- 區域 transit data 缺漏
+
+`computeRoute()` 的 polyline 必填檢查讓 TRANSIT empty 立刻 fail()，
+recompute-travel 的 try-catch 把它計入 `error` count，不寫 entry。
+
+### Fixed
+
+- `recompute-travel.ts`：TRANSIT call wrap 額外 try-catch。失敗 → fallback
+  到 walk result 並 mark mode='walking'（誠實 report walking time，不擋 recompute）
+- v2.24.0 真要 enable TRANSIT 得確認 Cloud project APIs + SKU 設定
+
 ## [2.23.9] - 2026-05-06
 
 **feat: self-drive trip + per-pair travel mode + 變更 POI** — 用戶 sprint：

@@ -183,19 +183,26 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             chosenTravelType = 'walking';
             result = walkResult;
           } else {
-            // walk >10min → TRANSIT (2nd call)
-            // departureTime: prefer curr entry datetime, else now
+            // walk >10min → 試 TRANSIT；失敗（region 沒 transit 資料 / API 限制）→ fallback walking
+            // (v2.23.10：Routes API TRANSIT 對 Tokyo 主站都吐 empty {}，可能需 enable
+            //  Directions API 或專屬 TRANSIT SKU。先 fallback walking 不擋 recompute。)
             const departureTime = currDt
               ? new Date(currDt).toISOString()
               : new Date().toISOString();
-            chosenTravelType = 'transit';
-            result = await computeRoute(
-              apiKey,
-              { lat: prev.lat, lng: prev.lng },
-              { lat: curr.lat, lng: curr.lng },
-              'TRANSIT',
-              departureTime,
-            );
+            try {
+              result = await computeRoute(
+                apiKey,
+                { lat: prev.lat, lng: prev.lng },
+                { lat: curr.lat, lng: curr.lng },
+                'TRANSIT',
+                departureTime,
+              );
+              chosenTravelType = 'transit';
+            } catch {
+              // TRANSIT not available — use walk result with walking type
+              result = walkResult;
+              chosenTravelType = 'walking';
+            }
           }
         }
 
