@@ -333,16 +333,19 @@ export async function computeRoute(
   } | null;
 
   const route = json?.routes?.[0];
-  if (!route?.polyline?.encodedPolyline || typeof route.distanceMeters !== 'number') {
+  if (!route?.polyline?.encodedPolyline) {
     fail('Routes empty result');
   }
 
+  // v2.23.12: Routes API 對 zero-distance pair（前後 entry 同 lat/lng）回 duration:"0s"
+  // 但 *缺* distanceMeters 欄。視為 distance=0 而非 fail，否則「午餐/購物」共用 lat
+  // 的 entry 全 error。
   const durationStr = route.duration || '0s';
   const durationSeconds = parseInt(durationStr.replace(/s$/, ''), 10) || 0;
 
   return {
     polyline: route.polyline!.encodedPolyline!,
-    distance_meters: route.distanceMeters!,
+    distance_meters: route.distanceMeters ?? 0,
     duration_seconds: durationSeconds,
   };
 }
