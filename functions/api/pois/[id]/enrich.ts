@@ -76,6 +76,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   let status: 'active' | 'closed' | 'missing';
   let statusReason: string | null;
   let rating: number | null = null;
+  let lat: number | null = null;
+  let lng: number | null = null;
+  let address: string | null = null;
+  let phone: string | null = null;
+  let hours: string | null = null;
 
   if (details === null) {
     // Google 404 — POI delisted from Google Maps
@@ -83,6 +88,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     statusReason = 'Google Maps 查無資料';
   } else {
     rating = details.rating ?? null;
+    lat = details.lat;
+    lng = details.lng;
+    address = details.address || null;
+    phone = details.phone || null;
+    hours = details.weekday_descriptions?.join('\n') || null;
     if (details.business_status === 'CLOSED_PERMANENTLY') {
       status = 'closed';
       statusReason = '永久歇業';
@@ -92,15 +102,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
   }
 
+  // COALESCE on lat/lng/address/phone/hours: only overwrite when Place Details returns
+  // a value, preserving any manually-edited POI data.
   await db
     .prepare(
       `UPDATE pois SET
          rating = COALESCE(?, rating),
+         lat = COALESCE(?, lat),
+         lng = COALESCE(?, lng),
+         address = COALESCE(?, address),
+         phone = COALESCE(?, phone),
+         hours = COALESCE(?, hours),
          status = ?, status_reason = ?,
          status_checked_at = ?, last_refreshed_at = ?
        WHERE id = ?`,
     )
-    .bind(rating, status, statusReason, now, now, poiId)
+    .bind(rating, lat, lng, address, phone, hours, status, statusReason, now, now, poiId)
     .run();
 
   return json({
