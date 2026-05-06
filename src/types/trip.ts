@@ -31,11 +31,15 @@ export interface Location {
   geocodeStatus?: string;
 }
 
-/** Travel leg assembled from entries.travel_type / travel_desc / travel_min */
+/** Travel leg assembled from entries.travel_* columns */
 export interface Travel {
   type: string;
   desc?: string | null;
   min?: number | null;
+  /** Driving distance in meters (Google Routes API). NULL for legacy entries pre-v2.23.0. */
+  distance_m?: number | null;
+  /** 'google' / 'error' (travel_source col). NULL for legacy. */
+  source?: string | null;
 }
 
 /** Parking object stored in hotels.parking (JSON parsed by mapRow) */

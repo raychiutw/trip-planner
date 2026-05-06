@@ -72,12 +72,25 @@ export interface TravelPillProps {
   type?: string | null;
   desc?: string | null;
   min?: number | null;
+  distanceM?: number | null;
 }
 
-export default function TravelPill({ type, desc, min }: TravelPillProps) {
+/**
+ * Format distance in meters → human label.
+ *  ≥1000 m → "X.X km"（小數一位）
+ *  <1000 m → "Y00 m"（rounded to 50m）
+ */
+function formatDistance(m: number): string {
+  if (m >= 1000) return `${(m / 1000).toFixed(1)} km`;
+  const rounded = Math.round(m / 50) * 50;
+  return `${rounded} m`;
+}
+
+export default function TravelPill({ type, desc, min, distanceM }: TravelPillProps) {
   const hasMin = typeof min === 'number' && min > 0;
+  const hasDist = typeof distanceM === 'number' && distanceM > 0;
   const hasDesc = typeof desc === 'string' && desc.trim().length > 0;
-  if (!hasMin && !hasDesc) return null;
+  if (!hasMin && !hasDist && !hasDesc) return null;
   const iconName = TYPE_ICON_MAP[(type ?? '').toLowerCase()] ?? 'car';
   return (
     <>
@@ -87,8 +100,10 @@ export default function TravelPill({ type, desc, min }: TravelPillProps) {
           <Icon name={iconName} />
         </span>
         <span className="tp-travel-pill-meta">
+          {hasDist && <span className="tp-travel-pill-min">{formatDistance(distanceM!)}</span>}
+          {hasDist && hasMin && <span className="tp-travel-pill-sep">·</span>}
           {hasMin && <span className="tp-travel-pill-min">{min} min</span>}
-          {hasMin && hasDesc && <span className="tp-travel-pill-sep">·</span>}
+          {(hasDist || hasMin) && hasDesc && <span className="tp-travel-pill-sep">·</span>}
           {hasDesc && <span className="tp-travel-pill-desc">{desc}</span>}
         </span>
       </div>

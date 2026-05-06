@@ -55,4 +55,29 @@ describe('TravelPill', () => {
     expect(carPath).toBeTruthy();
     expect(walkPath).not.toBe(carPath);
   });
+
+  // v2.23.6: distance display
+  it('distanceM ≥ 1000 → 「X.X km」格式', () => {
+    render(<TravelPill type="car" min={22} distanceM={6230} />);
+    const pill = screen.getByTestId('travel-pill');
+    expect(pill.textContent).toContain('6.2 km');
+    expect(pill.textContent).toContain('22 min');
+  });
+
+  it('distanceM < 1000 → 「Y00 m」rounded to 50m', () => {
+    render(<TravelPill type="walk" min={2} distanceM={196} />);
+    const pill = screen.getByTestId('travel-pill');
+    expect(pill.textContent).toContain('200 m');
+  });
+
+  it('只給 distanceM 也 render（無 min）', () => {
+    render(<TravelPill type="car" distanceM={5285} />);
+    const pill = screen.getByTestId('travel-pill');
+    expect(pill.textContent).toContain('5.3 km');
+  });
+
+  it('distanceM = 0 視為 empty（與 min=0 同 semantic）', () => {
+    const { container } = render(<TravelPill type="car" distanceM={0} />);
+    expect(container.firstChild).toBeNull();
+  });
 });

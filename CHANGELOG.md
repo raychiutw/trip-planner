@@ -3,6 +3,43 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.6] - 2026-05-06
+
+**hotfix: travel pill 不顯示距離 + recompute 後 pill 不渲染** — 用戶 prod 截圖
+反饋：行程內 segment 只顯示「6 min」，沒有 km 距離；且 v2.23.0 後新算的 segment
+（如 QA test trip）pill 直接不渲染。
+
+### Root cause
+
+1. `TravelPill` props 從來只有 `{type, desc, min}` — 從沒接 distance
+2. `assembleDay` (functions/api/trips/[id]/days/_merge.ts:128) 用
+   `e.travel_type ? {...} : null` gate travel object，但 `recompute-travel.ts`
+   UPDATE 只寫 `travel_distance_m / travel_min / travel_source`，從不寫
+   `travel_type`。新算的 segment 永遠 `travel_type=NULL → travel=null → pill
+   不渲染`。
+3. legacy entries (v2.19.x 時代) 有 `travel_type='car'` + `travel_min` 但
+   `travel_distance_m=NULL`，pill 顯示分鐘但沒有 km
+
+### Fixed
+
+- `recompute-travel.ts` UPDATE statement 加 `travel_type = COALESCE(travel_type, ?)`
+  用 trip.default_travel_mode 當 fallback。COALESCE 保留人工選擇（火車/步行 etc.）
+- `_merge.ts assembleDay`：travel object 不再 gate 於 travel_type；只要
+  `travel_type / travel_min / travel_distance_m` 任一非 NULL 就 surface。
+  type 預設 `'car'`。回傳新增 `distance_m + source` 欄位
+- `src/types/trip.ts Travel` 加 `distance_m + source` 欄位
+- `src/components/trip/TimelineEvent.tsx TravelData` 加 `distance_m`
+- `src/components/trip/TravelPill.tsx` 加 `distanceM` prop +
+  `formatDistance()` helper：≥1km → "X.X km"、<1km → rounded 50m → "Y00 m"
+- `TimelineRail` 把 `entry.travel.distance_m` 透給 `<TravelPill>`
+- `tests/unit/travel-pill.test.tsx` 加 4 個 distance display case (11 tests total)
+
+### Known limitation（待 v2.24.0 sprint）
+
+「加入行程」flow 在 AddStopPage 的 search/favorites tab 沒 startTime/endTime
+input，只有 custom tab 有。`AddPoiFavoriteToTripPage` 是唯一帶完整時間 form 的
+canonical page。下個 sprint 統一 add-to-trip flow 走同一頁。
+
 ## [2.23.5] - 2026-05-06
 
 **hotfix: search cache key 用 raw city 區分** — v2.23.4 ship 後 prod smoke：

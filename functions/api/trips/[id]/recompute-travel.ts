@@ -150,16 +150,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 
   // Batch UPDATE trip_entries
+  // travel_type 用 COALESCE 保留人工選擇（火車/步行 etc.），NULL 才補 trip mode →
+  // 沒寫 type 的舊 entry 經 recompute 後 assembleDay 才會 surface travel object，
+  // pill 才會渲染。
   const now = Date.now();
   if (updates.length > 0) {
     const stmts = updates.map((u) =>
       db
         .prepare(
           `UPDATE trip_entries
-           SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?, travel_source = ?
+           SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?, travel_source = ?,
+               travel_type = COALESCE(travel_type, ?)
            WHERE id = ?`,
         )
-        .bind(u.distance_m, Math.round(u.duration_s / 60), now, u.source, u.entryId),
+        .bind(u.distance_m, Math.round(u.duration_s / 60), now, u.source, tripMode, u.entryId),
     );
     await db.batch(stmts);
   }
