@@ -3,6 +3,21 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.12] - 2026-05-07
+
+**hotfix: zero-distance pair (相同 lat/lng) → recompute fail** — v2.23.11 ship 後
+okinawa-Ray 仍 19 errors / okinawa-HuiYun 41 errors。Routes API 對相同 lat/lng
+pair 回 `{duration:"0s"}` 缺 `distanceMeters` 欄，computeRoute 嚴格檢查
+`typeof distanceMeters === 'number'` → fail。
+
+Okinawa trips 多有「午餐/晚餐/購物」共用前一 entry 的 lat（例如 PARCO CITY 商場
+裡的 lunch+shopping 兩個 entry），全部 error。
+
+### Fixed
+
+- `src/server/maps/google-client.ts computeRoute()`：drop 嚴格 distanceMeters
+  存在性檢查，缺欄位視為 distance=0（zero-distance pair 是合法輸出）
+
 ## [2.23.11] - 2026-05-07
 
 **hotfix: WALK fail → fallback DRIVE last resort** — v2.23.10 修 TRANSIT 後仍見
