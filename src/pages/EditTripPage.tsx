@@ -84,6 +84,12 @@ interface TripApi {
   destinations?: TripDestApi[];
   startDate?: string;
   endDate?: string;
+  // v2.23.8 self-drive — 後補 friendly
+  selfDriveEnabled?: number | null;
+  selfDrivePickupAt?: string | null;
+  selfDriveReturnAt?: string | null;
+  selfDrivePickupLocation?: string | null;
+  selfDriveReturnLocation?: string | null;
 }
 
 /**
@@ -337,6 +343,12 @@ export default function EditTripPage() {
   const [lang, setLang] = useState<Lang>('zh-TW');
   const [travelMode, setTravelMode] = useState<TravelMode>('driving');
   const [published, setPublished] = useState(0);
+  // v2.23.8 self-drive
+  const [selfDriveEnabled, setSelfDriveEnabled] = useState(false);
+  const [selfDrivePickupAt, setSelfDrivePickupAt] = useState('');
+  const [selfDriveReturnAt, setSelfDriveReturnAt] = useState('');
+  const [selfDrivePickupLocation, setSelfDrivePickupLocation] = useState('');
+  const [selfDriveReturnLocation, setSelfDriveReturnLocation] = useState('');
 
   // POI search inline state
   const [showSearch, setShowSearch] = useState(false);
@@ -394,6 +406,12 @@ export default function EditTripPage() {
         setLang((data.lang as Lang) ?? 'zh-TW');
         setTravelMode((data.default_travel_mode as TravelMode) ?? 'driving');
         setPublished(data.published ?? 0);
+        // v2.23.8 self-drive — load from API（datetime-local 接受 YYYY-MM-DDTHH:MM 格式）
+        setSelfDriveEnabled(data.selfDriveEnabled === 1);
+        setSelfDrivePickupAt(data.selfDrivePickupAt ?? '');
+        setSelfDriveReturnAt(data.selfDriveReturnAt ?? '');
+        setSelfDrivePickupLocation(data.selfDrivePickupLocation ?? '');
+        setSelfDriveReturnLocation(data.selfDriveReturnLocation ?? '');
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : '載入行程失敗');
@@ -475,6 +493,14 @@ export default function EditTripPage() {
     if (lang !== ((original.lang as Lang) ?? 'zh-TW')) body.lang = lang;
     if (travelMode !== ((original.default_travel_mode as TravelMode) ?? 'driving')) body.default_travel_mode = travelMode;
     if (published !== (original.published ?? 0)) body.published = published;
+
+    // v2.23.8 self-drive — diff each field individually
+    const origSelfDriveEnabled = original.selfDriveEnabled === 1;
+    if (selfDriveEnabled !== origSelfDriveEnabled) body.self_drive_enabled = selfDriveEnabled ? 1 : 0;
+    if (selfDrivePickupAt !== (original.selfDrivePickupAt ?? '')) body.self_drive_pickup_at = selfDrivePickupAt || null;
+    if (selfDriveReturnAt !== (original.selfDriveReturnAt ?? '')) body.self_drive_return_at = selfDriveReturnAt || null;
+    if (selfDrivePickupLocation !== (original.selfDrivePickupLocation ?? '')) body.self_drive_pickup_location = selfDrivePickupLocation || null;
+    if (selfDriveReturnLocation !== (original.selfDriveReturnLocation ?? '')) body.self_drive_return_location = selfDriveReturnLocation || null;
 
     const destsChanged = !destNamesEqual(destinations, originalDests)
       || destinations.some((d, i) => {
@@ -749,6 +775,71 @@ export default function EditTripPage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* v2.23.8 self-drive — 後補 friendly */}
+                  <div className="tp-edit-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={selfDriveEnabled}
+                        onChange={(e) => setSelfDriveEnabled(e.target.checked)}
+                        data-testid="edit-trip-self-drive-toggle"
+                        style={{ marginRight: 8 }}
+                      />
+                      自駕行程（租車）
+                    </label>
+                    <p style={{ fontSize: 'var(--font-size-footnote)', color: 'var(--color-muted)', margin: '4px 0 0 24px' }}>
+                      取車 ~ 還車期間用汽車估車程；其餘時段走路 ≤10 分鐘走路、超過用大眾運輸
+                    </p>
+                  </div>
+                  {selfDriveEnabled && (
+                    <>
+                      <div className="tp-edit-row">
+                        <label htmlFor="edit-trip-self-drive-pickup-at">取車時間</label>
+                        <input
+                          id="edit-trip-self-drive-pickup-at"
+                          type="datetime-local"
+                          value={selfDrivePickupAt}
+                          onChange={(e) => setSelfDrivePickupAt(e.target.value)}
+                          data-testid="edit-trip-self-drive-pickup-at"
+                        />
+                      </div>
+                      <div className="tp-edit-row">
+                        <label htmlFor="edit-trip-self-drive-pickup-loc">取車地點</label>
+                        <input
+                          id="edit-trip-self-drive-pickup-loc"
+                          type="text"
+                          value={selfDrivePickupLocation}
+                          onChange={(e) => setSelfDrivePickupLocation(e.target.value)}
+                          placeholder="例：那霸機場 OTS 取車櫃台"
+                          maxLength={200}
+                          data-testid="edit-trip-self-drive-pickup-loc"
+                        />
+                      </div>
+                      <div className="tp-edit-row">
+                        <label htmlFor="edit-trip-self-drive-return-at">還車時間</label>
+                        <input
+                          id="edit-trip-self-drive-return-at"
+                          type="datetime-local"
+                          value={selfDriveReturnAt}
+                          onChange={(e) => setSelfDriveReturnAt(e.target.value)}
+                          data-testid="edit-trip-self-drive-return-at"
+                        />
+                      </div>
+                      <div className="tp-edit-row">
+                        <label htmlFor="edit-trip-self-drive-return-loc">還車地點</label>
+                        <input
+                          id="edit-trip-self-drive-return-loc"
+                          type="text"
+                          value={selfDriveReturnLocation}
+                          onChange={(e) => setSelfDriveReturnLocation(e.target.value)}
+                          placeholder="例：那霸機場 OTS 還車櫃台"
+                          maxLength={200}
+                          data-testid="edit-trip-self-drive-return-loc"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {error && <InlineError message={error} testId="edit-trip-error" />}
                 </>

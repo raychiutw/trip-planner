@@ -1,18 +1,17 @@
 /**
  * POST /api/trips/:id/recompute-travel?day=N|all
  *
- * v2.23.0 google-maps-migration: ORS+Haversine → Google Routes API (src/server/maps/google-client).
- * **NO** fallback per P11/T13 — single pair Google failure → travel_source='error', skip update for that pair.
- * Aggregate Google failure → 502 MAPS_UPSTREAM_FAILED bubbled by computeRoute (caller handles).
+ * v2.23.0 google-maps-migration: ORS+Haversine → Google Routes API.
+ * v2.23.8 self-drive: per-pair mode logic (DRIVE / WALK / TRANSIT).
  *
- * Recomputes travel_* fields on trip_entries by walking adjacent (sort_order)
- * entries within each day. First entry per day stays NULL (no prior).
+ * Mode resolution per pair (curr entry):
+ *   - self_drive_enabled AND curr datetime ∈ [pickup_at, return_at] → DRIVE
+ *   - else: WALK 試算（1 call）→ duration ≤10min → WALK
+ *   - else: TRANSIT（2nd call，departureTime = curr datetime）
  *
- * Mode comes from trips.default_travel_mode (google driving only currently).
+ * Fallback when entry has no time: assume DRIVE (within self-drive window if enabled).
  *
- * Triggered by:
- *   - TimelineRail.handleDragEnd when user reorders entries
- *   - Manual recompute via UI/CLI
+ * NO Haversine fallback per P11/T13 — single pair Google failure → travel_source='error', skip.
  *
  * Auth: trip write permission (owner/member with write).
  */
@@ -21,30 +20,16 @@ import { hasWritePermission } from '../../_auth';
 import { AppError } from '../../_errors';
 import { json, getAuth } from '../../_utils';
 import { assertGoogleAvailable } from '../../_maps_lock';
-import { computeRoute, type TravelMode as GoogleTravelMode } from '../../../../src/server/maps/google-client';
+import { computeRoute } from '../../../../src/server/maps/google-client';
 import type { Env } from '../../_types';
 
-/** Map trips.default_travel_mode (lowercase) → Google Routes travelMode (uppercase enum). */
-function mapMode(trip_mode: string): GoogleTravelMode {
-  switch (trip_mode.toLowerCase()) {
-    case 'walking':
-    case 'walk':
-      return 'WALK';
-    case 'transit':
-      return 'TRANSIT';
-    case 'cycling':
-    case 'bicycle':
-      return 'BICYCLE';
-    case 'driving':
-    default:
-      return 'DRIVE';
-  }
-}
+const WALK_THRESHOLD_MIN = 10;
 
 interface EntryWithCoords {
   id: number;
   day_id: number;
   sort_order: number;
+  time: string | null;     // entry start time HH:MM, may be NULL
   lat: number | null;
   lng: number | null;
 }
@@ -52,6 +37,38 @@ interface EntryWithCoords {
 interface TripDay {
   id: number;
   day_num: number;
+  date: string;            // YYYY-MM-DD
+}
+
+interface TripMeta {
+  default_travel_mode: string | null;
+  self_drive_enabled: number | null;
+  self_drive_pickup_at: string | null;     // ISO datetime YYYY-MM-DDTHH:MM
+  self_drive_return_at: string | null;
+}
+
+/**
+ * Build effective ISO datetime for an entry: combine day.date + entry.time.
+ * Returns null if entry has no time (caller falls back to default mode).
+ */
+function entryDateTime(date: string, time: string | null): string | null {
+  if (!time) return null;
+  // assume time is HH:MM
+  return `${date}T${time}:00`;
+}
+
+/**
+ * Determine if entry's effective datetime falls within self-drive window.
+ * If entry has no datetime: default true (assume in window — DRIVE conservative).
+ */
+function isInSelfDriveWindow(
+  entryDt: string | null,
+  pickupAt: string | null,
+  returnAt: string | null,
+): boolean {
+  if (!pickupAt || !returnAt) return false;
+  if (!entryDt) return true; // entry no time → assume during self-drive window
+  return entryDt >= pickupAt && entryDt <= returnAt;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -66,14 +83,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     throw new AppError('PERM_DENIED');
   }
 
-  // Resolve trip mode (defaults to 'driving')
+  // Resolve trip meta — default_travel_mode + self-drive window
   const trip = await db
-    .prepare('SELECT default_travel_mode FROM trips WHERE id = ?')
+    .prepare(
+      `SELECT default_travel_mode, self_drive_enabled,
+              self_drive_pickup_at, self_drive_return_at
+         FROM trips WHERE id = ?`,
+    )
     .bind(tripId)
-    .first<{ default_travel_mode: string | null }>();
+    .first<TripMeta>();
   if (!trip) throw new AppError('DATA_NOT_FOUND', '找不到該行程');
-  const tripMode = trip.default_travel_mode ?? 'driving';
-  const googleMode = mapMode(tripMode);
+
+  const tripDefaultMode = trip.default_travel_mode ?? 'driving';
+  const selfDriveEnabled = trip.self_drive_enabled === 1;
+  const pickupAt = trip.self_drive_pickup_at;
+  const returnAt = trip.self_drive_return_at;
 
   const apiKey = context.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) throw new AppError('MAPS_UPSTREAM_FAILED', 'GOOGLE_MAPS_API_KEY not configured');
@@ -91,22 +115,29 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     dayNumFilter = n;
   }
 
-  // Fetch days to process
+  // Fetch days to process — incl date for entry datetime synthesis
   const daysSql = dayNumFilter !== null
-    ? 'SELECT id, day_num FROM trip_days WHERE trip_id = ? AND day_num = ? ORDER BY day_num'
-    : 'SELECT id, day_num FROM trip_days WHERE trip_id = ? ORDER BY day_num';
+    ? 'SELECT id, day_num, date FROM trip_days WHERE trip_id = ? AND day_num = ? ORDER BY day_num'
+    : 'SELECT id, day_num, date FROM trip_days WHERE trip_id = ? ORDER BY day_num';
   const daysBind = dayNumFilter !== null ? [tripId, dayNumFilter] : [tripId];
   const daysRes = await db.prepare(daysSql).bind(...daysBind).all<TripDay>();
 
   let pairsComputed = 0;
   const sourceBreakdown: Record<string, number> = {};
-  const updates: Array<{ entryId: number; distance_m: number; duration_s: number; source: string }> = [];
+  const modeBreakdown: Record<string, number> = {};
+  const updates: Array<{
+    entryId: number;
+    distance_m: number;
+    duration_s: number;
+    source: string;
+    travelType: string;     // 'driving' | 'walking' | 'transit'
+  }> = [];
 
   // Walk each day's entries in sort_order
   for (const day of daysRes.results) {
     const entries = await db
       .prepare(
-        `SELECT e.id, e.day_id, e.sort_order, p.lat, p.lng
+        `SELECT e.id, e.day_id, e.sort_order, e.time, p.lat, p.lng
          FROM trip_entries e
          LEFT JOIN pois p ON p.id = e.poi_id
          WHERE e.day_id = ?
@@ -120,50 +151,88 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const prev = list[i - 1];
       const curr = list[i];
       if (!prev || !curr) continue;
-      // Skip if either side missing coords — can't compute meaningful travel
       if (prev.lat == null || prev.lng == null || curr.lat == null || curr.lng == null) continue;
 
+      const currDt = entryDateTime(day.date, curr.time);
+
+      // 決定 mode：self-drive window 內 → DRIVE；否則 WALK 試算後決定 WALK / TRANSIT
+      let chosenTravelType = 'driving';
+      let result: { distance_meters: number; duration_seconds: number } | null = null;
+
+      const inWindow = selfDriveEnabled && isInSelfDriveWindow(currDt, pickupAt, returnAt);
+
       try {
-        const result = await computeRoute(
-          apiKey,
-          { lat: prev.lat, lng: prev.lng },
-          { lat: curr.lat, lng: curr.lng },
-          googleMode,
-        );
+        if (inWindow) {
+          chosenTravelType = 'driving';
+          result = await computeRoute(
+            apiKey,
+            { lat: prev.lat, lng: prev.lng },
+            { lat: curr.lat, lng: curr.lng },
+            'DRIVE',
+          );
+        } else {
+          // try WALK first
+          const walkResult = await computeRoute(
+            apiKey,
+            { lat: prev.lat, lng: prev.lng },
+            { lat: curr.lat, lng: curr.lng },
+            'WALK',
+          );
+          const walkMin = walkResult.duration_seconds / 60;
+          if (walkMin <= WALK_THRESHOLD_MIN) {
+            chosenTravelType = 'walking';
+            result = walkResult;
+          } else {
+            // walk >10min → TRANSIT (2nd call)
+            // departureTime: prefer curr entry datetime, else now
+            const departureTime = currDt
+              ? new Date(currDt).toISOString()
+              : new Date().toISOString();
+            chosenTravelType = 'transit';
+            result = await computeRoute(
+              apiKey,
+              { lat: prev.lat, lng: prev.lng },
+              { lat: curr.lat, lng: curr.lng },
+              'TRANSIT',
+              departureTime,
+            );
+          }
+        }
+
+        if (!result) continue;
         updates.push({
           entryId: curr.id,
           distance_m: result.distance_meters,
           duration_s: result.duration_seconds,
           source: 'google',
+          travelType: chosenTravelType,
         });
         sourceBreakdown['google'] = (sourceBreakdown['google'] ?? 0) + 1;
+        modeBreakdown[chosenTravelType] = (modeBreakdown[chosenTravelType] ?? 0) + 1;
         pairsComputed++;
       } catch (err) {
-        // Single-pair failure: log but continue（design doc T13: no fallback）。
-        // 整段 Google service down 時，會在第一 pair 就 throw MAPS_UPSTREAM_FAILED 上來
-        // (computeRoute 內部 throw)，整 batch 失敗 — 此 try 只 catch invalid coords / 個別 4xx。
         sourceBreakdown['error'] = (sourceBreakdown['error'] ?? 0) + 1;
         if (err instanceof AppError && err.code === 'MAPS_LOCKED') throw err;
-        // Other errors → swallow per pair, continue with rest
+        // Other errors → swallow per pair, continue
       }
     }
   }
 
-  // Batch UPDATE trip_entries
-  // travel_type 用 COALESCE 保留人工選擇（火車/步行 etc.），NULL 才補 trip mode →
-  // 沒寫 type 的舊 entry 經 recompute 後 assembleDay 才會 surface travel object，
-  // pill 才會渲染。
+  // Batch UPDATE trip_entries — 每 pair 寫 travel_type per chosen mode
+  // (覆蓋 prior NULL，保留 user 手動 override：若 entry.travel_type 已是非 'driving'/'walking'/'transit'
+  // 字串例「火車」/「徒步 5min」，視為人工註記，COALESCE 保留 — 但這條件無法在 SQL 直接 expr。
+  // 妥協：v2.23.8 起 recompute 強制覆寫 travel_type 為自動模式。人工註記用 travel_desc 欄位。)
   const now = Date.now();
   if (updates.length > 0) {
     const stmts = updates.map((u) =>
       db
         .prepare(
           `UPDATE trip_entries
-           SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?, travel_source = ?,
-               travel_type = COALESCE(travel_type, ?)
+           SET travel_distance_m = ?, travel_min = ?, travel_computed_at = ?,
+               travel_source = ?, travel_type = ?
            WHERE id = ?`,
         )
-        .bind(u.distance_m, Math.round(u.duration_s / 60), now, u.source, tripMode, u.entryId),
+        .bind(u.distance_m, Math.round(u.duration_s / 60), now, u.source, u.travelType, u.entryId),
     );
     await db.batch(stmts);
   }
@@ -174,6 +243,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     days_processed: daysRes.results.length,
     pairs_computed: pairsComputed,
     source_breakdown: sourceBreakdown,
-    mode: tripMode,
+    mode_breakdown: modeBreakdown,
+    self_drive: selfDriveEnabled
+      ? { enabled: true, pickup_at: pickupAt, return_at: returnAt }
+      : { enabled: false },
+    default_mode: tripDefaultMode,
   });
 };

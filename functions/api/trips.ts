@@ -114,7 +114,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!auth.userId) throw new AppError('AUTH_REQUIRED', '需 V2 OAuth 登入才能建立行程');
   stmts.push(
     db.prepare(
-      'INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, default_travel_mode, lang) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO trips (id, name, owner_user_id, title, description, countries, published, data_source, default_travel_mode, lang, self_drive_enabled, self_drive_pickup_at, self_drive_return_at, self_drive_pickup_location, self_drive_return_location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(
       id, name, auth.userId,
       str(body.title),
@@ -124,6 +124,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       str(body.data_source, 'manual'),
       str(body.default_travel_mode, 'driving'),
       str(body.lang, 'zh-TW'),
+      // v2.23.8 self-drive — 全 nullable（POST 不填 = 後補）
+      body.self_drive_enabled ? 1 : 0,
+      nullableStr(body.self_drive_pickup_at),
+      nullableStr(body.self_drive_return_at),
+      nullableStr(body.self_drive_pickup_location),
+      nullableStr(body.self_drive_return_location),
     ),
   );
 
