@@ -62,7 +62,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!tripId) throw new AppError('DATA_VALIDATION', '缺少 tripId');
 
   const db = context.env.DB;
-  if (!await hasWritePermission(db, auth, tripId, false)) {
+  if (!await hasWritePermission(db, auth, tripId, auth.isAdmin)) {
     throw new AppError('PERM_DENIED');
   }
 
