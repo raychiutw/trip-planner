@@ -188,6 +188,24 @@ const SCOPED_STYLES = `
   background: var(--color-accent); color: var(--color-accent-foreground);
 }
 .explore-poi-card .explore-poi-heart .svg-icon { width: 18px; height: 18px; }
+/* v2.23.8: ➕ 加入行程 button — accent 實心並排 ❤ 右側偏左 */
+.explore-poi-card .explore-poi-add-to-trip {
+  position: absolute;
+  top: 8px; right: 52px;
+  width: 36px; height: 36px;
+  border: 0; border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background 120ms, transform 120ms;
+  backdrop-filter: blur(8px);
+}
+.explore-poi-card .explore-poi-add-to-trip:hover {
+  filter: brightness(0.95);
+  transform: scale(1.05);
+}
+.explore-poi-card .explore-poi-add-to-trip .svg-icon { width: 18px; height: 18px; }
 .explore-poi-body {
   padding: 14px 16px;
   display: flex; flex-direction: column; gap: 6px;
@@ -710,6 +728,27 @@ export default function ExplorePage() {
                               data-testid={`explore-save-btn-${poi.place_id}`}
                             >
                               <Icon name="heart" />
+                            </button>
+                            {/* v2.23.8: ➕ 加入行程 — direct-mode AddPoiFavoriteToTripPage（不需先收藏） */}
+                            <button
+                              type="button"
+                              className="explore-poi-add-to-trip"
+                              onClick={() => {
+                                const params = new URLSearchParams({
+                                  place_id: poi.place_id,
+                                  name: poi.name,
+                                  lat: String(poi.lat),
+                                  lng: String(poi.lng),
+                                });
+                                if (poi.address) params.set('address', poi.address);
+                                if (poi.category) params.set('category', poi.category);
+                                navigate(`/add-to-trip?${params.toString()}`);
+                              }}
+                              aria-label="加入行程"
+                              title="加入行程"
+                              data-testid={`explore-add-to-trip-btn-${poi.place_id}`}
+                            >
+                              <Icon name="plus" />
                             </button>
                           </div>
                           <div className="explore-poi-body">

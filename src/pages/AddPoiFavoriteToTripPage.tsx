@@ -13,7 +13,7 @@
  * Hits fast-path POST /api/poi-favorites/:id/add-to-trip — travel_* 由背景 tp-request 之後算。
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import TitleBar from '../components/shell/TitleBar';
 import AppShell from '../components/shell/AppShell';
 import DesktopSidebarConnected from '../components/shell/DesktopSidebarConnected';
@@ -199,8 +199,14 @@ const SCOPED_STYLES = `
 export default function AddPoiFavoriteToTripPage() {
   const { id: idParam } = useParams<{ id: string }>();
   const favoriteId = Number(idParam);
+  // v2.23.8: direct mode — 從 ExplorePage ➕ 加入行程 進來，無 favorite，POI 走 query params
+  // route /add-to-trip?place_id=X&name=Y&lat=Z&lng=W&address=A&category=C
+  // 有 idParam → favorite mode（走 /api/poi-favorites/:id/add-to-trip rate-limit + companion gate）
+  // 無 idParam → direct mode（走 /api/trips/:tripId/days/:dayNum/entries 直建 entry）
+  const isDirectMode = !idParam;
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const goBack = useNavigateBack('/favorites');
+  const goBack = useNavigateBack(isDirectMode ? '/explore' : '/favorites');
 
   // Loading / data states
   const [favorite, setFavorite] = useState<PoiFavorite | null>(null);
@@ -222,7 +228,50 @@ export default function AddPoiFavoriteToTripPage() {
 
   const { user } = useCurrentUser();
 
+  // Direct mode：從 query params 解 POI；用同一 favorite shape pattern 餵 form summary 區塊
+  const directPoi = useMemo<PoiFavorite | null>(() => {
+    if (!isDirectMode) return null;
+    const placeId = searchParams.get('place_id') ?? '';
+    const name = searchParams.get('name') ?? '';
+    const lat = Number(searchParams.get('lat'));
+    const lng = Number(searchParams.get('lng'));
+    if (!placeId || !name || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return {
+      id: 0, // sentinel — direct mode 不對應 favorite row
+      poiId: 0,
+      poiName: name,
+      poiAddress: searchParams.get('address') || null,
+      poiType: searchParams.get('category') || null,
+      favoritedAt: '',
+      note: null,
+      poiLat: lat,
+      poiLng: lng,
+    } as PoiFavorite;
+  }, [isDirectMode, searchParams]);
+
   useEffect(() => {
+    if (isDirectMode) {
+      // direct mode：不打 /poi-favorites endpoint
+      if (!directPoi) {
+        setLoadError('POI 資料缺漏 — 請從探索頁重新進入');
+        return;
+      }
+      let cancelled = false;
+      apiFetch<TripBrief[] | { trips?: TripBrief[] }>('/my-trips')
+        .then((tripsResp) => {
+          if (cancelled) return;
+          setFavorite(directPoi);
+          const tripsList = Array.isArray(tripsResp) ? tripsResp : tripsResp.trips ?? [];
+          setTrips(tripsList);
+          if (tripsList.length === 1) setTripId(tripsList[0]!.tripId);
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          setLoadError(err instanceof Error ? err.message : '載入失敗');
+        });
+      return () => { cancelled = true; };
+    }
+
     if (!Number.isInteger(favoriteId) || favoriteId <= 0) {
       setLoadError('收藏 ID 無效');
       return;
@@ -249,7 +298,7 @@ export default function AddPoiFavoriteToTripPage() {
         setLoadError(err instanceof Error ? err.message : '載入失敗');
       });
     return () => { cancelled = true; };
-  }, [favoriteId]);
+  }, [favoriteId, isDirectMode, directPoi]);
 
   useEffect(() => {
     if (!tripId) {
@@ -293,15 +342,35 @@ export default function AddPoiFavoriteToTripPage() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
-        method: 'POST',
-        body: JSON.stringify({
-          tripId,
-          dayNum: Number(dayNum),
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
-        }),
-      });
+      if (isDirectMode && favorite) {
+        // direct mode：POI 從 explore 帶來，沒對應 favorite → 直接 POST entries（同 AddStopPage 'search' tab）
+        await apiFetch(`/trips/${encodeURIComponent(tripId)}/days/${dayNum}/entries`, {
+          method: 'POST',
+          body: JSON.stringify({
+            title: favorite.poiName,
+            note: favorite.poiAddress || undefined,
+            lat: favorite.poiLat,
+            lng: favorite.poiLng,
+            source: 'google',
+            startTime: startTime || undefined,
+            endTime: endTime || undefined,
+          }),
+        });
+        // recompute travel for this day (fire-and-forget；同 v2.23.1 AddStopPage pattern)
+        void apiFetch(`/trips/${encodeURIComponent(tripId)}/recompute-travel?day=${dayNum}`, {
+          method: 'POST',
+        }).catch(() => undefined);
+      } else {
+        await apiFetch(`/poi-favorites/${favoriteId}/add-to-trip`, {
+          method: 'POST',
+          body: JSON.stringify({
+            tripId,
+            dayNum: Number(dayNum),
+            startTime: startTime || undefined,
+            endTime: endTime || undefined,
+          }),
+        });
+      }
       const params = new URLSearchParams({ selected: tripId, day: String(dayNum), saved_added: '1' });
       navigate(`/trips?${params.toString()}`, { replace: true });
     } catch (err) {
@@ -317,7 +386,7 @@ export default function AddPoiFavoriteToTripPage() {
       setSubmitError(err instanceof Error ? err.message : '加入失敗');
       setSubmitting(false);
     }
-  }, [canSubmit, favoriteId, tripId, dayNum, startTime, endTime, navigate]);
+  }, [canSubmit, favoriteId, tripId, dayNum, startTime, endTime, navigate, isDirectMode, favorite]);
 
   const handleConflictCancel = useCallback(() => {
     setConflictPayload(null);
