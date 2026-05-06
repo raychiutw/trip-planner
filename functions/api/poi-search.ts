@@ -35,6 +35,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   // city 中文 → locationBias circle（強制 city-level bias）；ISO → regionCode only（弱 ranking 提示）
   const cityBias = regionToLocationBias(regionRaw);
   const region = cityBias?.countryCode ?? regionRaw?.toUpperCase();
+  // Cache key 必須用 raw city 字串（"東京"/"沖繩"），不能 normalize 成 ISO，
+  // 否則「東京」/「沖繩」共用同一 cache row 撞 v2.23.3 殘留資料（都歸 JP）。
+  const cacheKey = regionRaw ?? region;
   const limitParam = url.searchParams.get('limit');
 
   if (!q || q.length < 2) {
@@ -54,7 +57,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   await assertGoogleAvailable(context.env.DB);
 
   // D1 cache check
-  const cached = await getCachedSearch(context.env.DB, q, region);
+  const cached = await getCachedSearch(context.env.DB, q, cacheKey);
   if (cached) {
     return jsonResponse(
       { results: cached.slice(0, limit) },
@@ -66,7 +69,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const results = await searchPlaces(apiKey, q, region, limit, cityBias);
 
   // Fire-and-forget cache write — don't block response
-  context.waitUntil(setCachedSearch(context.env.DB, q, region, results));
+  context.waitUntil(setCachedSearch(context.env.DB, q, cacheKey, results));
 
   return jsonResponse(
     { results },
