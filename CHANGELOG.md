@@ -3,6 +3,17 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.13] - 2026-05-07
+
+**debug: recompute response 加 `errors_detail`** — v2.23.10/11/12 三輪 fix 後
+仍有 ~50% pairs error。猜不到 root cause，加 per-pair error message capture
+方便診斷。
+
+### Changed
+
+- `recompute-travel.ts` response 加 `errors_detail: [{ entryId, message }]`，
+  每 pair fail 的 error.message 切 200 char。debug 後 v2.23.14 會 remove。
+
 ## [2.23.12] - 2026-05-07
 
 **hotfix: zero-distance pair (相同 lat/lng) → recompute fail** — v2.23.11 ship 後
