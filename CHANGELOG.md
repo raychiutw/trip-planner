@@ -3,6 +3,36 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.8] - 2026-05-06
+
+**feat: trip TitleBar 加景點 退役 → 探索 + 探索 POI 卡可選收藏 OR 直接加入行程** —
+用戶 IA 重構：(a)「加景點」 button 從 trip TitleBar 退役改「探索」 → /explore
+(b) 探索 POI 卡並排 ❤ 收藏 + ➕ 加入行程 (Plan B：直接走加入行程頁無需先收藏)。
+
+### Changed
+
+- `TripsListPage.tsx:1125-1143` TitleBar action「加景點」→ 「探索」 → navigate
+  `/explore`. Icon: plus → search. testid: trip-add-stop-trigger →
+  trip-explore-trigger
+- `ExplorePage.tsx` POI card 加 ➕ 加入行程 button 並排 ❤；click 帶 POI query
+  params navigate `/add-to-trip?place_id=X&name=Y&lat=Z&lng=W&address=A&category=C`
+- `AddPoiFavoriteToTripPage.tsx` 加 direct mode：
+  - 無 :id route param → 從 query params 解 POI（place_id/name/lat/lng/address/category）
+  - 載入只打 `/my-trips`（跳過 favorites fetch）
+  - submit 走 `POST /api/trips/:tripId/days/:dayNum/entries` 直建 entry，
+    fire-and-forget recompute travel（同 v2.23.1 AddStopPage pattern）
+  - goBack fallback 改 `/explore`（vs favorite mode 的 `/favorites`）
+- `entries/main.tsx` 加 route `/add-to-trip` → AddPoiFavoriteToTripPage（同 component
+  雙 mode）
+- `tests/e2e/add-stop-page.spec.js` + `qa-flows.spec.js` 改用 direct URL
+  goto AddStopPage（trip-add-stop-trigger testid 已退役）
+
+### Backward compat
+
+- AddStopPage 仍保留：route `/trip/:id/add-stop?day=N` 仍 reachable via
+  deep-link，trip TitleBar 不再 link。`tripPageRef.openAddStop()` API 也保留。
+- 既有 `/favorites/:id/add-to-trip` favorite mode 完全不動。
+
 ## [2.23.7] - 2026-05-06
 
 **hotfix: ExplorePage 三個用戶反饋串連 + days endpoint contract drift** — 用戶反饋

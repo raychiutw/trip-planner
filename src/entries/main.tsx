@@ -159,6 +159,8 @@ if (el) {
               <Route path="/favorites" element={<PoiFavoritesPage />} />
               {/* poi-favorites-rename: poi_favorites → trip fast-path page (D-C1 + D-C2)，4-field 純時間驅動 */}
               <Route path="/favorites/:id/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
+              {/* v2.23.8: direct-mode add-to-trip — Explore POI 不需先收藏，query params 帶 POI 進來 */}
+              <Route path="/add-to-trip" element={<AddPoiFavoriteToTripPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/signup/check-email" element={<EmailVerifyPendingPage />} />

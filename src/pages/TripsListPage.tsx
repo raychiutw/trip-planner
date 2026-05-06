@@ -1127,12 +1127,13 @@ export default function TripsListPage() {
             <button
               type="button"
               className="tp-titlebar-action"
-              onClick={() => tripPageRef.current?.openAddStop()}
-              aria-label="加景點"
-              data-testid="trip-add-stop-trigger"
+              onClick={() => navigate('/explore')}
+              aria-label="探索"
+              title="探索"
+              data-testid="trip-explore-trigger"
             >
-              <Icon name="plus" />
-              <span className="tp-titlebar-action-label">加景點</span>
+              <Icon name="search" />
+              <span className="tp-titlebar-action-label">探索</span>
             </button>
             <EmbeddedActionMenu
               tripId={effectiveSelectedId}
