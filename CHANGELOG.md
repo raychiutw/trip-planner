@@ -3,6 +3,22 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.2] - 2026-05-06
+
+**hotfix: enrich.ts 漏寫 lat/lng/address/phone/hours** — v2.23.0 backfill 後驚覺
+185 個 POI 拿到 `place_id` 但 `lat/lng` 全是 NULL。recompute-travel 在 trip-a7df
+（東京都 + 青森縣）回傳 `pairs_computed: 0` 即源於此：JOIN `trip_entries` →
+`pois` 雖找到 row，但 `lat IS NULL` 導致 segment 被 skip。
+
+### Fixed
+
+- `functions/api/pois/[id]/enrich.ts` UPDATE statement：原本只寫
+  `rating / status / status_reason / status_checked_at / last_refreshed_at`，
+  漏掉 Place Details 回的 `lat / lng / address / phone / weekday_descriptions`。
+  改為用 `COALESCE(?, lat)` 等保留人工編輯值的同時 backfill 新欄位。
+- 對既有 185 個 backfilled POIs 執行 re-enrich pass 補齊座標 → recompute-travel
+  會在下次 trip view 觸發（或手動 POST 端點）。
+
 ## [2.23.1] - 2026-05-06
 
 **hotfix: 新增景點重算 travel time** — v2.23.0 prod testing 暴露 pre-existing bug：
