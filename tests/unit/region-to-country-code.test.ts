@@ -5,7 +5,7 @@
  * caller IP（台灣）→ Taipei results。修：city 中文 → ISO alpha-2 mapping。
  */
 import { describe, it, expect } from 'vitest';
-import { regionToCountryCode } from '../../src/lib/maps/region';
+import { regionToCountryCode, regionToLocationBias, regionToApiParam } from '../../src/lib/maps/region';
 
 describe('regionToCountryCode', () => {
   it('Japan cities → JP', () => {
@@ -43,5 +43,52 @@ describe('regionToCountryCode', () => {
 
   it('trims surrounding whitespace', () => {
     expect(regionToCountryCode('  東京  ')).toBe('JP');
+  });
+});
+
+describe('regionToLocationBias', () => {
+  it('東京 → JP locationBias circle 中心 ≈ 35.67, 139.65（v2.23.4 city-level bias）', () => {
+    const b = regionToLocationBias('東京');
+    expect(b).toBeDefined();
+    expect(b!.countryCode).toBe('JP');
+    expect(b!.lat).toBeCloseTo(35.67, 1);
+    expect(b!.lng).toBeCloseTo(139.65, 1);
+    expect(b!.radiusMeters).toBeGreaterThan(0);
+    expect(b!.radiusMeters).toBeLessThanOrEqual(50000);
+  });
+
+  it('沖繩 → JP locationBias 那霸（≈ 26.21, 127.68）', () => {
+    const b = regionToLocationBias('沖繩');
+    expect(b!.countryCode).toBe('JP');
+    expect(b!.lat).toBeCloseTo(26.21, 1);
+    expect(b!.lng).toBeCloseTo(127.68, 1);
+  });
+
+  it('「全部地區」/ 未收錄 / null → undefined', () => {
+    expect(regionToLocationBias('全部地區')).toBeUndefined();
+    expect(regionToLocationBias('Atlantis')).toBeUndefined();
+    expect(regionToLocationBias(null)).toBeUndefined();
+  });
+});
+
+describe('regionToApiParam', () => {
+  it('keep city 中文 raw（API endpoint 用來查 locationBias）', () => {
+    expect(regionToApiParam('東京')).toBe('東京');
+    expect(regionToApiParam('沖繩')).toBe('沖繩');
+  });
+
+  it('「全部地區」→ undefined（URL 不加 region 參數）', () => {
+    expect(regionToApiParam('全部地區')).toBeUndefined();
+  });
+
+  it('null / empty / whitespace-only → undefined', () => {
+    expect(regionToApiParam(null)).toBeUndefined();
+    expect(regionToApiParam(undefined)).toBeUndefined();
+    expect(regionToApiParam('')).toBeUndefined();
+    expect(regionToApiParam('   ')).toBeUndefined();
+  });
+
+  it('trims whitespace', () => {
+    expect(regionToApiParam('  東京  ')).toBe('東京');
   });
 });

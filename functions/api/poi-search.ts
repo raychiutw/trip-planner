@@ -15,6 +15,7 @@ import { AppError } from './_errors';
 import { assertGoogleAvailable } from './_maps_lock';
 import { searchPlaces, type PlacesSearchTextResult } from '../../src/server/maps/google-client';
 import { getCachedSearch, setCachedSearch } from '../../src/lib/maps/cache';
+import { regionToLocationBias } from '../../src/lib/maps/region';
 import type { Env } from './_types';
 
 export type PoiSearchResult = PlacesSearchTextResult;
@@ -29,7 +30,11 @@ function jsonResponse(data: unknown, status = 200, extraHeaders: Record<string, 
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   const url = new URL(context.request.url);
   const q = url.searchParams.get('q')?.trim();
-  const region = url.searchParams.get('region')?.trim().toUpperCase() || undefined;
+  const regionRaw = url.searchParams.get('region')?.trim() || undefined;
+  // 兼容 v2.23.3：region 可能是 ISO code (e.g. "JP") 或 city 中文 ("東京")。
+  // city 中文 → locationBias circle（強制 city-level bias）；ISO → regionCode only（弱 ranking 提示）
+  const cityBias = regionToLocationBias(regionRaw);
+  const region = cityBias?.countryCode ?? regionRaw?.toUpperCase();
   const limitParam = url.searchParams.get('limit');
 
   if (!q || q.length < 2) {
@@ -58,7 +63,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     );
   }
 
-  const results = await searchPlaces(apiKey, q, region, limit);
+  const results = await searchPlaces(apiKey, q, region, limit, cityBias);
 
   // Fire-and-forget cache write — don't block response
   context.waitUntil(setCachedSearch(context.env.DB, q, region, results));

@@ -3,6 +3,28 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.23.4] - 2026-05-06
+
+**hotfix: regionCode 不夠強 — 改 locationBias circle 鎖城市** — v2.23.3 ship 後
+prod smoke test：`region=JP&q=拉麵` 在台灣 IP 上還是吐 5 筆台灣拉麵店。Google
+Places API 文檔明寫 `regionCode` 「only affects ranking, does not restrict」—
+City-level bias 必須走 `locationBias { circle: { center, radius } }`。
+
+### Fixed
+
+- `src/lib/maps/region.ts` 改回 city → `LocationBiasCircle` mapping（lat/lng +
+  radiusMeters），覆蓋 JP / KR / TW / HK / MO / TH / SG / MY / VN / ID / PH 主要
+  城市。Tokyo 35km radius、沖繩 50km、京都 25km 等
+- `src/server/maps/google-client.ts` `searchPlaces()` 加 optional `locationBias`
+  參數，body 帶 `locationBias.circle.center.{lat,lng} + radius`
+- `functions/api/poi-search.ts` 收 `region` query param 後雙模式：
+  - city 中文 → `regionToLocationBias()` → 強制 city-level bias 傳 locationBias
+  - ISO 2-char → fallback 用 regionCode 弱 ranking 提示（v2.23.3 backward compat）
+- `regionToApiParam()` 新 helper：frontend 把 raw city 中文傳給 API（不再做 ISO
+  轉換）。「全部地區」→ undefined，URL 略過參數
+- `AddStopPage` + `ExplorePage` 改用 `regionToApiParam`
+- 測試擴增至 21 case 守 mapping + locationBias 中心點 + API param 規範
+
 ## [2.23.3] - 2026-05-06
 
 **hotfix: 篩選東京搜尋出 Taipei 結果** — `usePoiSearch` hook 從不接受 / 不傳
