@@ -61,6 +61,9 @@ interface ChatMessage {
    * `submittedBy` email 來)。Render bubble meta 時 split email local-part 當
    * displayName(避免歷史訊息全標當前登入者)。 */
   submittedBy?: string | null;
+  /** 2026-05-07：sender 的 users.display_name（後端 LEFT JOIN）給 avatar /
+   *  sender label 顯示「帳號名稱」第一字母。null → fallback email local part。 */
+  submittedByDisplayName?: string | null;
 }
 
 /** Section 4.8: format day-divider header — `2026/04/27（週六）`。 */
@@ -109,6 +112,9 @@ interface RawRequestRow {
   reply?: string | null;
   status: 'open' | 'processing' | 'completed' | 'failed';
   submittedBy?: string | null;
+  /** 2026-05-07：submitter 帳號 display_name（API LEFT JOIN users）給 chat
+   *  avatar/sender label 顯示「帳號名稱」第一字母。null = users 表無對應。 */
+  submittedByDisplayName?: string | null;
   processedBy?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
@@ -154,7 +160,14 @@ function rowToMessages(row: RawRequestRow): ChatMessage[] {
   const userTs = row.createdAt ?? row.updatedAt ?? null;
   const assistantTs = row.updatedAt ?? row.createdAt ?? null;
   if (row.message) {
-    out.push({ id: baseId, role: 'user', text: row.message, createdAt: userTs, submittedBy: row.submittedBy ?? null });
+    out.push({
+      id: baseId,
+      role: 'user',
+      text: row.message,
+      createdAt: userTs,
+      submittedBy: row.submittedBy ?? null,
+      submittedByDisplayName: row.submittedByDisplayName ?? null,
+    });
   }
   if (row.status === 'completed' && row.reply) {
     out.push({ id: baseId + 1, role: 'assistant', text: row.reply, markdown: true, createdAt: assistantTs });
@@ -628,7 +641,7 @@ export default function ChatPage() {
     // `{m.createdAt && ...}` 永不為真)。改用 createdAt + ISO 8601。
     setMessages((prev) => [
       ...prev,
-      { id: now, role: 'user', text, createdAt: new Date(now).toISOString(), submittedBy: user?.email ?? null },
+      { id: now, role: 'user', text, createdAt: new Date(now).toISOString(), submittedBy: user?.email ?? null, submittedByDisplayName: user?.displayName ?? null },
       { id: now + 1, role: 'assistant', text: '思考中…', pendingRequestId: -1 },
     ]);
 
@@ -806,8 +819,15 @@ export default function ChatPage() {
            * Legacy 訊息沒 submittedBy 視為自己(避免老資料全變對方 view)。 */
           const senderLocalPart = m.submittedBy?.split('@')[0];
           const isOtherUser = !isAssistant && !!m.submittedBy && m.submittedBy !== user?.email;
-          const senderDisplay = senderLocalPart || user?.displayName || user?.email?.split('@')[0] || '我';
-          const senderInitial = (senderLocalPart || senderDisplay || '?').charAt(0).toUpperCase();
+          // 2026-05-07：sender label 與 avatar initial 用「帳號名稱」(displayName)
+          // 第一字母 — 不是 email。
+          //   - 自己（is-user）：current user displayName
+          //   - 他人（is-other-user）：API LEFT JOIN users 帶 submittedByDisplayName，
+          //     fallback email local part（users 表查無對應的 legacy 帳號）
+          const otherDisplayName = m.submittedByDisplayName || senderLocalPart || '?';
+          const selfDisplayName = user?.displayName || user?.email?.split('@')[0] || '我';
+          const senderDisplay = isOtherUser ? otherDisplayName : selfDisplayName;
+          const senderInitial = senderDisplay.charAt(0).toUpperCase();
           const rowClass = isAssistant ? 'is-assistant' : isOtherUser ? 'is-other-user' : 'is-user';
           return (
             <Fragment key={m.id}>
@@ -817,6 +837,11 @@ export default function ChatPage() {
                 )}
                 {isOtherUser && (
                   <div className="tp-chat-avatar is-other-user" aria-hidden="true" data-testid={`chat-avatar-other-${m.id}`}>
+                    {senderInitial}
+                  </div>
+                )}
+                {!isAssistant && !isOtherUser && (
+                  <div className="tp-chat-avatar is-user" aria-hidden="true" data-testid={`chat-avatar-self-${m.id}`}>
                     {senderInitial}
                   </div>
                 )}

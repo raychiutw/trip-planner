@@ -3,6 +3,38 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.25.0] - 2026-05-07
+
+**Sidebar / Trip card / Chat 帳號顯示一致化：avatar initial 改用「帳號名稱」第一字母（不是 email）。**
+
+### Changed
+
+- `src/components/shell/DesktopSidebar.tsx`：
+  - 移除 sidebar 底部 account card 的 email 行（個人資訊保留在 `/account` hero）
+  - 移除 sidebar 底部 ThemeToggle（切換移到 `/account → /settings/appearance`）
+  - 簡化 `.tp-account-body` CSS（單一 child 不需 flex column / gap）
+- `src/pages/TripsListPage.tsx`：trip card avatar initial 自己的 trip 用 `user.displayName.charAt(0)`，他人 trip 仍 fallback email[0]（後端 trips list 沒帶 owner displayName）
+- `src/pages/ChatPage.tsx`：
+  - 自己訊息也 render avatar（先前只 other-user 有），用 `user.displayName.charAt(0)`
+  - 他人訊息 avatar + sender label 用後端 `submittedByDisplayName` (LEFT JOIN users)，fallback email local part
+  - 樂觀 POST 帶 `submittedByDisplayName` 給 optimistic bubble 立即顯示正確 initial
+
+### Backend
+
+- `functions/api/requests.ts` GET：`SELECT r.*, u.display_name AS submitted_by_display_name FROM trip_requests r LEFT JOIN users u ON u.email = r.submitted_by`
+- `functions/api/requests/[id]/index.ts` GET：同樣 LEFT JOIN
+- 影響：chat-messages 列表 + single request 都會帶 sender displayName
+
+### Tests
+
+- `tests/unit/desktop-sidebar.test.tsx`：email 斷言改 `not.toContain`
+- `tests/unit/desktop-sidebar-connected.test.tsx`：email 斷言改 `not.toContain`，displayName fallback test 改 partial match
+
+### Verified
+
+- tsc clean (frontend + functions)
+- 1429/1429 unit tests + 607/607 API tests green
+
 ## [2.24.6] - 2026-05-07
 
 **fix(test): drag-flows :73 + :100 改用 atomic native `scrollIntoView` via
