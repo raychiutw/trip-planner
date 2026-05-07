@@ -3,6 +3,46 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.2] - 2026-05-07
+
+**v2.24.0 sprint γ.1：TimelineRail 接 segments fetch + pass to TravelPill。**
+γ.0 ship 的 TravelPill tap-switch UI 是 dormant scaffold；本次接線後使用者
+真的看到可點 pill + 開 dialog 切換 mode。
+
+### Added
+
+- `src/hooks/useTripSegments.ts` — fetch GET `/api/trips/:id/segments` 後 build
+  Map indexed by `${fromEntryId}-${toEntryId}` 給 TimelineRail render loop O(1)
+  lookup。Listen `tp-segment-updated` + `tp-entry-updated` event 自動 re-fetch
+  （PATCH 完 / entry sort_order 變動 / recompute-travel 完 → segments fresh）。
+  Empty/null tripId → no fetch，failure → silently 留 empty map（caller graceful
+  degrade，TravelPill 退回 v2.23 唯讀渲染）。
+
+### Changed
+
+- `src/components/trip/TimelineRail.tsx` — 接線 useTripSegments(tripId)，render
+  loop 為每對 (prev, curr) entry 從 segmentMap 取對應 row，並把 `segment +
+  tripId + fromName + toName` props 傳給 TravelPill。Backwards compat：
+  segment 沒對到（migration 沒跑 / 新 entry 還沒 recompute）但 entry.travel
+  legacy 仍存在 → fallback 用 travel obj 唯讀渲染。
+
+### Tests
+
+- `tests/unit/timeline-rail-segments-wiring.test.tsx`（7 tests）— 驗 hook
+  call passes tripId、segmentMap → TravelPill button render、modeSource=user
+  顯示鎖頭、multi-pair lookup、no segment + no travel → no pill、first entry
+  上方無 pill。
+- `tests/unit/timeline-rail-toolbar-pencil.test.tsx` +
+  `tests/unit/timeline-rail-inline-expand.test.tsx` — 加 `vi.mock` 攔
+  useTripSegments 避免 segments fetch 干擾既有 fetchSpy 斷言。
+
+### Notes
+
+- 純 frontend 變更，no API / migration / backend changes
+- v2.24.0 sprint γ phase 完結（α schema + β backend + γ.0 UI scaffold + γ.1 wiring）
+- Phase δ（skill files segments path 更新）+ Phase ε（DROP trip_entries.travel_*）
+  分離 PR 不阻擋本次 ship
+
 ## [2.24.1] - 2026-05-07
 
 **v2.24.0 sprint γ.0：TravelPill tap-switch UI scaffolding（mockup + React component + TDD）。**
