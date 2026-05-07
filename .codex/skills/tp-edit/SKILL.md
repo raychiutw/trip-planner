@@ -36,10 +36,10 @@ API 設定、呼叫格式、Windows encoding 注意事項見 tp-shared/reference
 5. 依修改類型選擇 API（POST entry / PATCH entry / PUT 整天 / POST trip-pois / PUT doc）— **端點見 tp-shared/references.md「行程修改共用步驟」**
    > ⚠️ **目標 entry 不存在時**（如該天沒有早餐 entry 但需要加入早餐）：先用 `POST /api/trips/{tripId}/days/{dayNum}/entries` 建立 entry（必填 `title`），取得 `eid` 後再掛 POI。
 6. **location 座標更新（鐵律）**：新增或替換景點時，必須用 `PATCH /entries/:eid` 補寫 `location` JSON（含 lat/lng）。用 Google Maps 查詢取得座標。格式：`[{"name":"地點名","lat":24.xx,"lng":121.xx,"googleQuery":"...","appleQuery":"...","geocode_status":"ok"}]`。缺座標 = 天氣失效 + 地圖無法顯示 + travel 無法計算。
-7. **Doc 連動 + travel 重算（鐵律）** — 規則見 tp-shared/references.md。特別注意：
-   - 插入/移除/替換 entry 時，重算 **前一站→本站** 和 **本站→下一站** 兩段 travel
-   - 餐廳首選（sort_order=0）變動時，用新餐廳的 lat/lng 重算前後兩段 travel
-   - 計算方式：用前後 entry 的 location lat/lng，meal entry 用首選餐廳 lat/lng
+7. **Doc 連動 + travel 重算（鐵律）** — 規則見 tp-shared/references.md §4。v2.24.0 起改呼叫 backend：
+   - 插入/移除/替換 entry **或** 改 location 座標 **或** meal entry sort_order=0 餐廳變動 → `POST /api/trips/{tripId}/recompute-travel?day={N}`（受影響的天）
+   - 跨天移動 → 兩天都 recompute（或直接 `?day=all`）
+   - **不再手動算 Haversine**，不寫 `travel_type/desc/min` flat fields — backend 跑 1km gate + Google Routes 自動寫 trip_segments
    - **R19 維持（見 tp-quality-rules）**：若修改動到 `timeline[0]`（插入、移除、移動），必須保持 R19 語意 — Day 1 首 entry 為抵達點、Day N≥2 首 entry 為前日 `day.hotel` 的同 POI check-out；禁止把非 R19 entry 推到 index 0。使用者若要求「把早餐移到 Day 2 最前面」，先保留前日飯店 check-out 為 index 0，早餐放 index 1
 8. 執行 tp-check 精簡模式，輸出：`tp-check: 🟢 N  🟡 N  🔴 N`
 9. 不自動 commit（資料已直接寫入 D1 database，無需 git 操作）

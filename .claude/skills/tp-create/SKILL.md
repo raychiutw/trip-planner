@@ -81,9 +81,12 @@ user-invocable: true
      - 早餐（若在飯店吃，由 `day.hotel.breakfast` 表達；若在飯店外吃，才產生正式早餐 entry）
      - 午餐 `12:00`（title: `"午餐"`，附 3 家 restaurants 推薦）
      - 晚餐 `18:00`（title: `"晚餐"`，附 3 家 restaurants 推薦）
-   - 三餐 entry 的 travel：以 sort_order=0（首選）餐廳的 location 計算車程，而非 entry 本身的 location
+   - 三餐 entry 的 location：用 sort_order=0（首選）餐廳的 lat/lng（recompute-travel 會吃這個座標跑 1km gate）
 
-   > ⚠️ **travel 語意見 tp-shared/references.md**：travel = 從此地「出發」到下一站，放在出發地 entry 上。最後一個 entry 的 travel 為 null。
+   > ⚠️ **travel 語意見 tp-shared/references.md**：travel = 從此地「出發」到下一站。
+   > **v2.24.0 起 skill 不手動算 travel** — 全 trip PUT 完成後呼叫
+   > `POST /api/trips/{tripId}/recompute-travel?day=all` 一次，backend 跑 1km gate
+   > + Google Routes 自動算 segments。
    - restaurants infoBox（早餐/午餐/晚餐 entry 下各 3 家推薦）
    - shopping infoBox（非家飯店 entry 下）
    - **Google Maps 驗證（鐵律）**：所有 POI 必須先確認 Google Maps 上存在。查不到 = 無效，不得新增。驗證流程見 `tp-search-strategies`。
@@ -110,6 +113,8 @@ user-invocable: true
    使用 `PUT /api/trips/{tripId}/docs/{type}`，Body: `{title: "...", entries: [{section, title, content}, ...]}`
 
    > ⚠️ **新建行程一律用新格式**（`entries` 陣列），不用舊格式（`content: JSON字串`）。完整規格見 tp-shared/references.md「Doc 結構規格」。
+
+8b. **Travel 重算（鐵律，v2.24.0+）**：所有天 PUT 完成 + 所有 entry location 補完後，呼叫 `POST /api/trips/{tripId}/recompute-travel?day=all` 一次。Backend 跑 1km gate Haversine + Google Routes API + 寫 trip_segments。PUT body 內若已含 `travel: {...}` 巢狀欄位（backwards-compat dual-write），recompute 完成後 segments table 為 SoT。
 
 ### Phase 2：Google 評分充填（browse-first）
 
