@@ -3,6 +3,32 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.5] - 2026-05-07
+
+**fix(test): drag-flows.spec.js:73 mobile-safari `scrollIntoViewIfNeeded`
+intermittent flake — webkit + sticky/transform 容器內 React useEffect
+re-render race condition。**
+
+### Fixed
+
+- `tests/e2e/drag-flows.spec.js:73` 刪掉 `firstGrip.scrollIntoViewIfNeeded()`
+  call。Test 只測 grip dimensions（24x24 tap target），`getBoundingClientRect`
+  對 off-screen 元素也 work，不需要先 scroll into view
+- v2.24.4 (chronic flake fix) 之後 sole remaining mobile-safari flake，5/5
+  consecutive runs 通過 + 完整 mobile-safari/mobile-chrome suite 各 43/44 ✓
+- 刪 scrollIntoView 後 webkit 不再踩 React useEffect re-render 中觸發
+  "Element is not attached to the DOM" intermittent error
+
+### Notes
+
+- 純 test code 變更（4 行刪 + 4 行 comment 增加），無 src / API / migration
+- 這是 v2.24.0 sprint chronic flake hunt 收尾。完整 chronic flake history：
+  - **Before**：23 連續 master CI runs fail，每 run 8 specs × 2 mobile browsers 同樣 fail
+  - **v2.24.4**：root cause `.app-shell-main` 全時 `will-change: transform` 變
+    stacking context → bottom-bar pointer events 被 nav 攔截 → 8→1 fail (87.5%)
+  - **v2.24.5 (this)**：webkit-only `scrollIntoView` race → 1→0 fail
+- 預期之後 master CI 連續綠，retry --failed 不再需要
+
 ## [2.24.4] - 2026-05-07
 
 **fix(shell): 修 22+ master CI runs chronic mobile e2e flake — `.app-shell-main`
