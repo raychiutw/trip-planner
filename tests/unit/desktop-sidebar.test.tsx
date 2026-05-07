@@ -186,14 +186,14 @@ describe('DesktopSidebar — user chip', () => {
     expect(chip?.textContent).toContain('未登入');
   });
 
-  it('已登入：顯示帳號 chip 含 name + email', () => {
+  it('已登入：顯示帳號 chip 含 name（不含 email — 2026-05-07 移除）', () => {
     const { container } = renderSidebar({
       user: { name: 'Ray Chiu', email: 'ray@trip.io' },
     });
     const chip = container.querySelector('[data-testid="sidebar-account-card"]');
     expect(chip).toBeTruthy();
     expect(chip?.textContent).toContain('Ray Chiu');
-    expect(chip?.textContent).toContain('ray@trip.io');
+    expect(chip?.textContent).not.toContain('ray@trip.io');
   });
 
   it('已登入時不顯示「未登入」chip', () => {

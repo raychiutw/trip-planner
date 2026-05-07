@@ -455,6 +455,10 @@ interface TripInfo {
   tripId: string;
   name: string;
   owner?: string;
+  /** 2026-05-07：owner.users.display_name（API LEFT JOIN）給 trip card avatar
+   *  initial 顯示「帳號名稱」第一字母，不是 email[0]。null/undefined →
+   *  fallback email local part 或 email[0]。 */
+  ownerDisplayName?: string | null;
   title?: string | null;
   countries?: string | null;
   published?: number | boolean;
@@ -1041,9 +1045,19 @@ export default function TripsListPage() {
               {visibleTrips.map((t) => {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
                 const ownerEmail = (t.owner ?? '').trim();
-                const ownerInitial = ownerEmail ? ownerEmail.charAt(0).toUpperCase() : '·';
+                const isOwnTrip = ownerEmail.toLowerCase() === userEmail;
+                // 2026-05-07：avatar initial 一律用「帳號名稱」第一字母（不是 email）。
+                // 自己的 trip 用 current user displayName（API 也帶 ownerDisplayName，
+                // 但 client-side 已知 displayName 較即時）；他人 trip 用後端 LEFT JOIN
+                // 帶來的 ownerDisplayName，fallback email[0]（users 表查無對應）。
+                const ownerName = isOwnTrip
+                  ? (user?.displayName ?? t.ownerDisplayName ?? ownerEmail)
+                  : (t.ownerDisplayName ?? ownerEmail);
+                const ownerInitial = ownerEmail
+                  ? (ownerName.charAt(0) || ownerEmail.charAt(0)).toUpperCase()
+                  : '·';
                 const ownerLabel = ownerEmail
-                  ? (ownerEmail.toLowerCase() === userEmail ? '由你建立' : ownerEmail.split('@')[0])
+                  ? (isOwnTrip ? '由你建立' : (t.ownerDisplayName ?? ownerEmail.split('@')[0]))
                   : '';
                 return (
                   <div key={t.tripId} className="tp-trip-card-wrap">

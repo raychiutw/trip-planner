@@ -45,7 +45,7 @@ describe('DesktopSidebarConnected', () => {
     expect(container.textContent).not.toContain('未登入');
   });
 
-  it('after fetch success renders user displayName + email', async () => {
+  it('after fetch success renders user displayName (email row removed 2026-05-07)', async () => {
     vi.spyOn(global, 'fetch').mockResolvedValue(
       new Response(JSON.stringify(SAMPLE_USER), { status: 200 }),
     );
@@ -53,7 +53,8 @@ describe('DesktopSidebarConnected', () => {
     await waitFor(() => {
       expect(container.textContent).toContain('My Name');
     });
-    expect(container.textContent).toContain('me@example.com');
+    // 2026-05-07：email 從 sidebar account card 移除（保留在 /account hero）
+    expect(container.textContent).not.toContain('me@example.com');
     expect(container.querySelector('[data-testid="sidebar-user-loading"]')).toBeNull();
   });
 
@@ -62,7 +63,8 @@ describe('DesktopSidebarConnected', () => {
       new Response(JSON.stringify({ ...SAMPLE_USER, displayName: null }), { status: 200 }),
     );
     const { container } = renderConnected();
-    await waitFor(() => expect(container.textContent).toContain('me@example.com'));
+    // displayName=null → name 退回 email；name 仍渲染（slice 10 + ellipsis）
+    await waitFor(() => expect(container.textContent).toContain('me@exampl'));
   });
 
   it('401 response → renders confirmed unauthed sidebar', async () => {
@@ -88,7 +90,8 @@ describe('DesktopSidebarConnected', () => {
         <DesktopSidebarConnected />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(container.textContent).toContain('me@example.com'));
+    // 2026-05-07：sidebar 移除 email 後改驗 displayName 渲染
+    await waitFor(() => expect(container.textContent).toContain('My Name'));
     expect(container.querySelector('[data-testid="desktop-sidebar"]')).toBeTruthy();
     // sidebar 不再有「+ 新增行程」按鈕（入口改在 TripsListPage / GlobalMap empty state）
     expect(container.querySelector('[data-testid="sidebar-new-trip-btn"]')).toBeNull();

@@ -30,7 +30,6 @@ import type { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import Icon from '../shared/Icon';
-import ThemeToggle from '../shared/ThemeToggle';
 
 interface NavItemConfig {
   key: 'chat' | 'trips' | 'map' | 'favorites' | 'login';
@@ -213,18 +212,11 @@ body.dark .tp-sidebar {
 }
 .tp-account-card .tp-account-body {
   flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 2px;
 }
 .tp-account-card .tp-account-name {
   font-size: 13px; font-weight: 600;
   /* Dark sidebar：name 用 reverse foreground (cream on dark) */
   color: #FFFBF5;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.tp-account-card .tp-account-email {
-  font-size: var(--font-size-caption2);
-  /* Dark sidebar：email 用半透明 cream */
-  color: rgba(255, 251, 245, 0.6);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 `;
@@ -282,8 +274,8 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
         </nav>
 
         <div className="tp-sidebar-cta">
-          <ThemeToggle testId="sidebar-theme" />
-
+          {/* 2026-05-07：移除 sidebar ThemeToggle —— 主題切換在 /account →
+           * /settings/appearance 內，避免 sidebar 底部過於擁擠。 */}
           {user === undefined ? (
             <div
               className="tp-user-chip tp-user-chip-loading"
@@ -309,11 +301,13 @@ export default function DesktopSidebar({ user, brand }: DesktopSidebarProps) {
                 {/* Section 4.1 (terracotta-ui-parity-polish): mockup line 5132
                  * 規定 name.length > 10 → slice(0,10)+'…' JS-level truncation。
                  * Sidebar nav 點 Account card 改 navigate /account（取代既有
-                 * /settings/sessions直連）— Section 2 account-hub-page 對齊。 */}
+                 * /settings/sessions直連）— Section 2 account-hub-page 對齊。
+                 * 2026-05-07：移除 email row（個人資訊保留在 /account hero
+                 * page）。Card parent flex align-items: center 已將 name 跟
+                 * avatar 上下置中對齊。 */}
                 <div className="tp-account-name">
                   {user.name.length > 10 ? `${user.name.slice(0, 10)}…` : user.name}
                 </div>
-                <div className="tp-account-email">{user.email}</div>
               </div>
             </Link>
           ) : (
