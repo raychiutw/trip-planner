@@ -1041,9 +1041,18 @@ export default function TripsListPage() {
               {visibleTrips.map((t) => {
                 const isActive = isDesktop && t.tripId === effectiveSelectedId;
                 const ownerEmail = (t.owner ?? '').trim();
-                const ownerInitial = ownerEmail ? ownerEmail.charAt(0).toUpperCase() : '·';
+                const isOwnTrip = ownerEmail.toLowerCase() === userEmail;
+                // 2026-05-07：avatar initial 改用「帳號名稱」第一字母（不是 email）。
+                // 自己的 trip 有 displayName 可用 → 取其第一字母；他人的 trip
+                // 後端只給 email，仍回退 email 第一字母（fix that 需 backend 加
+                // owner displayName 欄位）。
+                const ownerInitial = ownerEmail
+                  ? (isOwnTrip
+                      ? (user?.displayName?.charAt(0) ?? ownerEmail.charAt(0)).toUpperCase()
+                      : ownerEmail.charAt(0).toUpperCase())
+                  : '·';
                 const ownerLabel = ownerEmail
-                  ? (ownerEmail.toLowerCase() === userEmail ? '由你建立' : ownerEmail.split('@')[0])
+                  ? (isOwnTrip ? '由你建立' : ownerEmail.split('@')[0])
                   : '';
                 return (
                   <div key={t.tripId} className="tp-trip-card-wrap">

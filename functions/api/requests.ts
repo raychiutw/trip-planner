@@ -46,33 +46,36 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   const isPaginated = limitParam !== null || before !== null || after !== null;
   const limit = Math.min(Math.max(parseInt(limitParam || '10', 10) || 10, 1), 50);
 
-  let sql = 'SELECT * FROM trip_requests';
+  // 2026-05-07：LEFT JOIN users 取 submitted_by → users.display_name 給 chat
+  // avatar / sender label 用「帳號名稱」第一字母（不是 email）。submitted_by
+  // 是 email；users.email 唯一索引；找不到 → display_name=null fallback 到 email。
+  let sql = 'SELECT r.*, u.display_name AS submitted_by_display_name FROM trip_requests r LEFT JOIN users u ON u.email = r.submitted_by';
   const params: (string | number)[] = [];
   const conditions: string[] = [];
 
   if (tripId) {
-    conditions.push('trip_id = ?');
+    conditions.push('r.trip_id = ?');
     params.push(tripId);
   }
   if (status) {
-    conditions.push('status = ?');
+    conditions.push('r.status = ?');
     params.push(status);
   }
   if (before) {
     if (beforeId) {
-      conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
+      conditions.push('(r.created_at < ? OR (r.created_at = ? AND r.id < ?))');
       params.push(before, before, parseInt(beforeId, 10) || 0);
     } else {
-      conditions.push('created_at < ?');
+      conditions.push('r.created_at < ?');
       params.push(before);
     }
   }
   if (after) {
     if (afterId) {
-      conditions.push('(created_at < ? OR (created_at = ? AND id < ?))');
+      conditions.push('(r.created_at < ? OR (r.created_at = ? AND r.id < ?))');
       params.push(after, after, parseInt(afterId, 10) || 0);
     } else {
-      conditions.push('created_at < ?');
+      conditions.push('r.created_at < ?');
       params.push(after);
     }
   }
@@ -81,9 +84,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 
   if (sort === 'asc') {
-    sql += ' ORDER BY created_at ASC, id ASC';
+    sql += ' ORDER BY r.created_at ASC, r.id ASC';
   } else {
-    sql += ' ORDER BY created_at DESC, id DESC';
+    sql += ' ORDER BY r.created_at DESC, r.id DESC';
   }
   sql += isPaginated ? ` LIMIT ${limit + 1}` : ' LIMIT 50';
 

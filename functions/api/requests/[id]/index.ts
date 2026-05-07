@@ -17,7 +17,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!auth) throw new AppError('AUTH_REQUIRED');
   const id = params.id as string;
 
-  const row = await env.DB.prepare('SELECT * FROM trip_requests WHERE id = ?').bind(id).first();
+  // 2026-05-07：LEFT JOIN users 取 display_name 給 chat avatar / sender label。
+  const row = await env.DB
+    .prepare('SELECT r.*, u.display_name AS submitted_by_display_name FROM trip_requests r LEFT JOIN users u ON u.email = r.submitted_by WHERE r.id = ?')
+    .bind(id)
+    .first();
   if (!row) throw new AppError('DATA_NOT_FOUND');
 
   const tripId = (row as Record<string, unknown>).trip_id as string;
