@@ -3,6 +3,40 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.3] - 2026-05-07
+
+**v2.24.0 sprint Phase δ：tp-* skill files 切換到 segments path（recompute-travel endpoint）。**
+
+### Changed
+
+- `.claude/skills/tp-shared/references/modify-steps.md` — §4 travel 重算改述：
+  - 結構動完後呼叫 `POST /api/trips/:id/recompute-travel?day=N|all`，backend 跑 1km gate
+    + Google Routes 自動寫 trip_segments
+  - `PATCH /entries/:eid` API 表格 row 加 **禁止寫 `travel_type/desc/min`** 規則
+  - `PUT /days/:N` 註明 `travel: {...}` 巢狀為 backwards-compat dual-write，Phase ε 後忽略
+  - 加新 row：「重算 travel」(`POST /recompute-travel`) + 「手動覆寫 segment」(`PATCH /segments/:sid`)
+  - 移除舊指引「Haversine + ~30km/h 在 client 算後 PATCH」，改為**明文禁止**
+- `tp-create/SKILL.md` — 加 step 8b：Phase 1 所有天 PUT + location 補完後呼叫
+  `POST /recompute-travel?day=all` 一次
+- `tp-edit/SKILL.md` — step 7 改述：插入 / 移除 / 替換 / 改 location / 餐廳首選變動 →
+  呼叫 `recompute-travel?day={受影響天}`
+- `tp-rebuild/SKILL.md` — step 6 改述：所有結構修正完成後 `recompute-travel?day=all`
+- `tp-patch/SKILL.md` — step 10 改述：location 補齊後 `recompute-travel?day=all`
+- `tp-request/SKILL.md` — step f2 改述：companion 動完結構後 `recompute-travel?day={天}`
+
+### Mirrored
+
+- 同步 6 個檔到 `.codex/skills/tp-{shared,create,edit,rebuild,patch,request}/`
+  （Codex CLI parallel invocation path）
+
+### Notes
+
+- **Behavioural change**：v2.23 前 skill 自己跑 Haversine + ~30km/h 估計算後 PATCH
+  flat fields；v2.24.0+ 改交 backend 跑 1km gate + Google Routes API + 寫 segments
+- 純 docs change，無 code 變更，無 migration、API、test 影響
+- Phase ε（DROP `trip_entries.travel_*`）後 PUT /days 巢狀 travel 仍然會被 ignore
+  silently — 不阻斷舊 client 但 segments 才是 SoT
+
 ## [2.24.2] - 2026-05-07
 
 **v2.24.0 sprint γ.1：TimelineRail 接 segments fetch + pass to TravelPill。**
