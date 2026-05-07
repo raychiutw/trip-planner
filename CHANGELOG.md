@@ -3,6 +3,66 @@
 All notable changes to Tripline will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.24.0] - 2026-05-07
+
+**v2.24.0 trip-segments sprint α + β：新 `trip_segments` first-class entity +
+1km Haversine gate 取代 v2.23.x 多層 fallback chain。** Sprint γ（TravelPill
+tap-switch UI）+ δ（skill files 改 segments path）+ ε（DROP trip_entries.travel_*）
+後續分批進來。
+
+### Why
+
+v2.23.0 切到 Google Routes API 之後 full-trip recompute 撞 Cloudflare Workers
+free-tier 50 subrequest/invocation 上限。每對 pair 用 1-2 calls（WALK 試 → 失敗
+fallback DRIVE，或 walk >10min 試 TRANSIT）累計 ~94 calls 對 47 pairs 的 trip
+直接爆。Japan Google Routes API 沒 transit 數據（已驗證 Tokyo Station→Shinjuku
+回 empty `routes` array），TRANSIT path 一直是無效呼叫。
+
+v2.24.0 拔掉 fallback chain，改用本地 Haversine 在叫 Routes API 前算距離：
+≤1km → walking + 1 WALK call；>1km → driving + 1 DRIVE call。每對永遠 1 call
+不論結果。HuiYun 47 pairs 從 ~94 → ~58 subreq（仍擦邊 50 上限，但 day filter
+recompute 永遠安全）。
+
+### Added
+
+- **`trip_segments` table** (migration 0053)：first-class entity 紀錄兩 entry
+  之間的交通段。`(from_entry_id, to_entry_id) UNIQUE` + FK CASCADE 對 trips +
+  trip_entries。`mode` ∈ {driving, walking, transit}，`mode_source` ∈ {auto, user}
+  區分系統算的 vs user 手動覆寫，三 column CHECK constraint 鎖白名單。
+- **`GET /api/trips/:id/segments`** — 回傳該行程所有 segments，按 day_num + sort_order
+  排序。前端 TimelineRail / TravelPill 用此 list 配對 entry 自行 join。
+- **`PATCH /api/trips/:id/segments/:sid`** — user override travel mode。set
+  `mode_source='user'` → recompute 不再覆寫此 segment。`mode='transit'` 時 `min`
+  必填（手動輸入 0–1440 分鐘，因 Japan 沒 Google API 數據）；driving/walking
+  時 min 可選。IDOR 防護：驗 segment.trip_id === URL tripId。
+- **`src/server/maps/haversine.ts`** — 純 function 大圓距離（IUGG mean radius
+  6,371,008.8m）。0 API call，作為 1km gate pre-check。+ 5 unit tests。
+
+### Changed
+
+- **`POST /api/trips/:id/recompute-travel`** 完全改寫：
+  - 1km gate 統一邏輯（self-drive 窗內也吃，短程 walk 比找停車快）
+  - 永遠 1 Google Routes call/pair（移除 WALK→TRANSIT→DRIVE fallback chain）
+  - 寫 `trip_segments` 為 source of truth + dual-write `trip_entries.travel_*`
+    至 Phase ε（既有 React UI 不破）
+  - 既有 `mode_source='user'` segment **跳過**，保留 user override
+  - `INSERT ... ON CONFLICT DO UPDATE WHERE mode_source='auto'` 防 TOCTOU race：
+    並發 recompute 不會撞 UNIQUE atomic fail；且 preload→write 期間若 user PATCH
+    過 mode 也不被覆寫
+  - 單一 `db.batch()` 寫入所有 upserts（1 subrequest 不論 statement 數）+ 預先
+    SELECT existing segments to Map 省 N×D1 query
+- **Subrequest budget**：HuiYun day=all ≈ 58 subreq（vs free-tier 50）— **day=N
+  filter 永遠安全**（~14 subreq）。Phase ε DROP `trip_entries.travel_*` 後可再
+  省 ~47 subreq（legacy entry UPDATE 那段移除）。
+
+### Removed
+
+- `recompute-travel` 的 50ms per-pair throttle（v2.23.15）— 真兇是 CF subreq 上限
+  不是 QPS，throttle 不對症。改 1 call/pair 是根本解
+- TRANSIT mode 自動算（Japan 沒資料）— user 想要 transit 透過 PATCH segment +
+  手動填 min（Phase γ TravelPill tap-switch dialog 給 UI）
+- WALK→TRANSIT→DRIVE fallback chain（recompute-travel 整段砍）
+
 ## [2.23.15] - 2026-05-07
 
 **hotfix: full-trip recompute 21 errors → throttle Routes API per-pair** —
